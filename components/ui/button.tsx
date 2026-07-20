@@ -25,5 +25,6 @@ export function Button({ children, variant = "primary", size = "medium", fullWid
     return <a className={classes} aria-disabled={disabled || loading || undefined} tabIndex={disabled || loading ? -1 : anchorProps.tabIndex} {...anchorProps}>{content}</a>;
   }
 
-  return <button {...props} className={classes} disabled={props.disabled || loading} aria-busy={loading || undefined}>{content}</button>;
+  const nativeProps = props as NativeButtonProps;
+  return <button {...nativeProps} className={classes} disabled={nativeProps.disabled || loading} aria-busy={loading || undefined}>{content}</button>;
 }
