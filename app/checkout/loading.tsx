@@ -1,0 +1,1 @@
+export default function CheckoutLoading(){return <main id="main-content" className="checkout-page"><div className="site-container checkout-main" role="status">جارٍ تحميل خطوات Checkout التجريبية…</div></main>}
