@@ -12,7 +12,7 @@ export function SiteHeader() {
   return (
     <header className="site-header">
       <Container className="site-header-inner">
-        <a className="site-brand" href="#top" aria-label={siteConfig.nameAr}>
+        <a className="site-brand" href="/" aria-label={siteConfig.nameAr}>
           <BrandMark compact />
           <span className="site-brand-copy"><strong>{siteConfig.nameAr}</strong><small>{siteConfig.nameEn}</small></span>
         </a>
@@ -20,10 +20,10 @@ export function SiteHeader() {
           {primaryNavigation.map((item) => <a key={item.label} href={item.href}>{item.label}</a>)}
         </nav>
         <div className="desktop-header-actions">
-          <LanguageSelector compact /><CurrencySelector compact /><BasketTrigger compact /><Button href="#donate" size="small">تبرع الآن</Button>
+          <LanguageSelector compact /><CurrencySelector compact /><BasketTrigger compact /><Button href="/#donate" size="small">تبرع الآن</Button>
         </div>
         <div className="mobile-header-actions">
-          <BasketTrigger compact /><Button href="#donate" size="small">تبرع</Button><MobileNavigation />
+          <BasketTrigger compact /><Button href="/#donate" size="small">تبرع</Button><MobileNavigation />
         </div>
       </Container>
     </header>
