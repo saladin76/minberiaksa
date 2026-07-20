@@ -4,6 +4,8 @@ import "./globals.css";
 import "../styles/homepage.css";
 import "../styles/projects.css";
 import "../styles/zakat.css";
+import "../styles/waqf.css";
+import "../styles/waqf-responsive.css";
 
 export const metadata: Metadata = {
   title: "مؤسسة منبر الأقصى الدولية",
