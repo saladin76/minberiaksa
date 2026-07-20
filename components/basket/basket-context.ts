@@ -13,4 +13,9 @@ export type BasketContextValue = {
   removeItem: (id: string) => void;
   restoreItem: (item: BasketItem, index?: number) => void;
   clearBasket: () => void;
-  openDrawer: (returnFocus?:
+  openDrawer: (returnFocus?: HTMLElement | null) => void;
+  closeDrawer: () => void;
+  setCheckoutSnapshot: (snapshot: CheckoutSnapshot | null) => void;
+};
+
+export const BasketContext = createContext<BasketContextValue | null>(null);
