@@ -2,7 +2,6 @@ import { SiteFooter } from "@/components/layout/site-footer";
 import { SiteHeader } from "@/components/layout/site-header";
 import { StickyDonateBar } from "@/components/layout/sticky-donate-bar";
 import { TopUtilityBar } from "@/components/layout/top-utility-bar";
-import { HomepageRouteEnhancer } from "@/components/homepage/homepage-route-enhancer";
 import {
   HomepageHero,
   ImpactReels,
@@ -38,7 +37,6 @@ export default function HomePage() {
         <TrustProof />
         <KnowledgeCenter />
         <SoftGateway />
-        <HomepageRouteEnhancer />
       </main>
       <SiteFooter />
       <StickyDonateBar />
