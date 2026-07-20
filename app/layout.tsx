@@ -6,12 +6,7 @@ import "../styles/projects.css";
 import "../styles/zakat.css";
 import "../styles/waqf.css";
 import "../styles/waqf-responsive.css";
-
-export const metadata: Metadata = {
-  title: "مؤسسة منبر الأقصى الدولية",
-  description: "منصة تبرعات مؤسسية تربط مساهمتك بالمشروع والإيصال وتحديثات الأثر.",
-};
-
-export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
-  return <html lang="ar" dir="rtl"><body><a className="skip-link" href="#main-content">انتقل إلى المحتوى الرئيسي</a>{children}</body></html>;
-}
+import "../styles/recurring.css";
+import "../styles/recurring-responsive.css";
+export const metadata: Metadata = {title: "مؤسسة منبر الأقصى الدولية",description: "منصة تبرعات مؤسسية تربط مساهمتك بالمشروع والإيصال وتحديثات الأثر."};
+export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {return <html lang="ar" dir="rtl"><body><a className="skip-link" href="#main-content">انتقل إلى المحتوى الرئيسي</a>{children}</body></html>;}
