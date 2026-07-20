@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import "./globals.css";
 import "../styles/homepage.css";
 import "../styles/projects.css";
+import "../styles/zakat.css";
 
 export const metadata: Metadata = {
   title: "مؤسسة منبر الأقصى الدولية",
