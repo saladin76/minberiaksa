@@ -1,0 +1,1 @@
+export function BrandMark({compact=false}:{compact?:boolean}){return <span className={`brand-mark-placeholder${compact?" brand-mark-placeholder--compact":""}`} aria-label="مكان الشعار الرسمي"><span aria-hidden="true">LOGO</span><small>OFFICIAL LOGO REQUIRED</small></span>}
