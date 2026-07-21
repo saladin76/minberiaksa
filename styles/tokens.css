@@ -1,6 +1,7 @@
 :root {
-  --font-arabic: Cairo, Almarai, Tajawal, "Noto Sans Arabic", Arial, sans-serif;
-  --font-latin: Poppins, Montserrat, Arial, sans-serif;
+  --font-arabic: "Tajawal", "Cairo", "Almarai", "Noto Sans Arabic", Arial, sans-serif;
+  --font-latin: "Poppins", "Montserrat", Arial, sans-serif;
+
   --color-trust-navy: #10212b;
   --color-deep-navy: #132c38;
   --color-aqsa-gold: #d39a27;
@@ -14,14 +15,65 @@
   --color-muted-surface: #f2f5f3;
   --color-focus-ring: #2f7fb0;
   --color-success: #247a52;
-  --color-warning: #a56b13;
+  --color-warning: #8d6418;
   --color-error: #a93428;
-  --space-1: .25rem; --space-2: .5rem; --space-3: .75rem; --space-4: 1rem; --space-6: 1.5rem; --space-8: 2rem; --space-12: 3rem; --space-16: 4rem; --space-20: 5rem; --space-24: 6rem; --space-30: 7.5rem;
-  --radius-small: .375rem; --radius-medium: .625rem; --radius-large: 1rem;
-  --shadow-soft: 0 12px 32px rgba(16,33,43,.08); --shadow-drawer: 0 24px 60px rgba(16,33,43,.22);
-  --container-max: 80rem; --container-padding: clamp(1rem,3vw,2.25rem);
-  --type-display: clamp(2.5rem,5vw,5.25rem); --type-h1: clamp(2.25rem,4vw,4.25rem); --type-h2: clamp(1.75rem,3vw,3rem); --type-h3: clamp(1.25rem,2vw,1.625rem); --type-body-large: clamp(1.0625rem,1.4vw,1.25rem); --type-body: 1rem; --type-small: .875rem; --type-label: .8125rem; --type-button: .9375rem; --type-numeric: 1.125rem;
-  --header-height: 5rem; --mobile-donate-space: 0px;
+
+  --color-brand-orange: #c96f1a;
+  --color-brand-orange-dark: #9e431f;
+  --color-golden-soft: #f7ebd4;
+  --color-warm-stone: #f6f4ef;
+  --color-warm-surface: #fbf8f1;
+  --color-warm-border: #e7ded0;
+  --color-warm-green: #315f43;
+
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-12: 3rem;
+  --space-16: 4rem;
+  --space-20: 5rem;
+  --space-24: 6rem;
+  --space-30: 7.5rem;
+
+  --radius-small: 0.3rem;
+  --radius-medium: 0.5rem;
+  --radius-large: 0.75rem;
+  --radius-editorial: 1.15rem;
+
+  --shadow-soft: 0 8px 24px rgba(16, 33, 43, 0.07);
+  --shadow-raised: 0 16px 42px rgba(16, 33, 43, 0.1);
+  --shadow-drawer: 0 24px 60px rgba(16, 33, 43, 0.2);
+
+  --container-max: 82rem;
+  --container-padding: clamp(1rem, 3vw, 2.25rem);
+
+  --type-display: clamp(2.5rem, 5vw, 5.25rem);
+  --type-h1: clamp(2.25rem, 4vw, 4.25rem);
+  --type-h2: clamp(1.75rem, 3vw, 3rem);
+  --type-h3: clamp(1.25rem, 2vw, 1.625rem);
+  --type-body-large: clamp(1.0625rem, 1.4vw, 1.25rem);
+  --type-body: 1rem;
+  --type-small: 0.875rem;
+  --type-label: 0.8125rem;
+  --type-button: 0.9375rem;
+  --type-numeric: 1.125rem;
+
+  --header-height: 5rem;
+  --mobile-donate-space: 0px;
 }
-@media(max-width:1099px){:root{--header-height:4.5rem}}
-@media(max-width:767px){:root{--container-padding:clamp(1rem,5vw,1.25rem);--mobile-donate-space:6.75rem}}
+
+@media (max-width: 1099px) {
+  :root {
+    --header-height: 4.5rem;
+  }
+}
+
+@media (max-width: 767px) {
+  :root {
+    --container-padding: clamp(1rem, 5vw, 1.25rem);
+    --mobile-donate-space: 6.75rem;
+  }
+}
