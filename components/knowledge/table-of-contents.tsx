@@ -1,0 +1,1 @@
+import type{ArticleSection}from"@/types/knowledge";export function TableOfContents({sections}:{sections:ArticleSection[]}){return <details className="article-toc" open><summary>محتويات المقال</summary><nav aria-label="محتويات المقال"><ol>{sections.map(s=><li key={s.id}><a href={`#${s.id}`}>{s.heading}</a></li>)}</ol></nav></details>}
