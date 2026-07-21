@@ -23,13 +23,17 @@ function isStoredItem(value: unknown): value is BasketItem {
   if (!isRecord(value)) return false;
   return Boolean(stringValue(value.id) && stringValue(value.projectTitle) && stringValue(value.intent) && stringValue(value.intentLabel) && stringValue(value.donationMode) && positiveNumber(value.amount) && value.currency === "USD");
 }
+function restorePrivacyState(item: BasketItem): BasketItem {
+  const personalRequired = (item.intent === "waqf" && !item.ownerName) || (item.donationMode === "gift" && !item.giftRecipient);
+  return personalRequired ? { ...item, metadata: { ...item.metadata, sensitiveDetailsExpired: true } } : item;
+}
 function readStoredBasket(): BasketItem[] {
   try {
     const raw = sessionStorage.getItem(STORAGE_KEY);
     if (!raw) return [];
     const parsed: unknown = JSON.parse(raw);
     if (!isRecord(parsed) || parsed.version !== STORAGE_VERSION || !Array.isArray(parsed.items)) return [];
-    return parsed.items.filter(isStoredItem);
+    return parsed.items.filter(isStoredItem).map(restorePrivacyState);
   } catch { return []; }
 }
 function normalizeLegacyDetail(raw: unknown): BasketItemInput | null {
@@ -79,5 +83,5 @@ export function BasketProvider({ children }: { children: ReactNode }) {
   const closeDrawer = useCallback(() => { setDrawerOpen(false); const target = returnFocusRef.current; window.requestAnimationFrame(() => target?.focus()); }, []);
   useEffect(() => { const bridge = (event: Event) => { const normalized = normalizeLegacyDetail((event as CustomEvent<unknown>).detail); if (normalized) addItem(normalized); }; window.addEventListener("minber:add-to-basket", bridge); return () => window.removeEventListener("minber:add-to-basket", bridge); }, [addItem]);
   const value = useMemo(() => ({ items, hydrated, drawerOpen, checkoutSnapshot, addItem, updateItem, removeItem, restoreItem, clearBasket, openDrawer, closeDrawer, setCheckoutSnapshot }), [items, hydrated, drawerOpen, checkoutSnapshot, addItem, updateItem, removeItem, restoreItem, clearBasket, openDrawer, closeDrawer]);
-  return <BasketContext.Provider value={value}>{children}<BasketDrawer /></BasketContext.Provider>;
+  return <BasketContext.Provider value={value}>{children}<BasketDrawer/></BasketContext.Provider>;
 }
