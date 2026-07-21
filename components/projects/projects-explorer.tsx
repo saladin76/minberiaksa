@@ -1,35 +1,342 @@
 "use client";
-import {useEffect,useMemo,useRef,useState} from "react";
-import {Button} from "@/components/ui/button";
-import type {DonationType,ProjectRecord,ProjectRegion,ProjectStatus} from "@/data/projects";
-import type {ProjectMetric} from "@/data/project-metrics";
 
-const R:Record<ProjectRegion,string>={"al-quds":"القدس","al-aqsa":"الأقصى",gaza:"غزة",syria:"سوريا",sudan:"السودان",yemen:"اليمن",global:"عام"};
-const D:Record<DonationType,string>={sadaqah:"صدقة",zakat:"زكاة",waqf:"وقف",recurring:"تبرع مستمر",qurbani:"أضاحي"};
-const S:Record<ProjectStatus,string>={active:"نشط",seasonal:"موسمي",archived:"مكتمل","needs-verification":"يحتاج تحقق"};
-const T:Record<string,string>={food:"غذاء",meals:"غذاء",bread:"غذاء",water:"مياه",restoration:"ترميم",housing:"ترميم",education:"تعليم",courses:"تعليم",relief:"إغاثة",emergency:"إغاثة",winter:"شتاء",ramadan:"رمضان",families:"رعاية أسر",quran:"تعليم",youth:"تعليم",shelter:"إغاثة"};
-type Status=ProjectStatus|"urgent";type Filters={region:ProjectRegion|"all";donation:DonationType|"all";field:string;status:Status|"all";zakat:boolean;recurring:boolean};
-const EMPTY:Filters={region:"all",donation:"all",field:"all",status:"all",zakat:false,recurring:false};
-const urgent=(p:ProjectRecord)=>p.tags.includes("emergency")||p.tags.includes("urgent");
-function Visual({p,big=false}:{p:ProjectRecord;big?:boolean}){return p.image?<div className={`project-visual ${big?"project-visual--featured":""}`}><img src={p.image.sourceUrl} alt={p.image.alt.ar} loading={big?"eager":"lazy"}/><span>Temporary source</span></div>:<div className={`project-image-placeholder ${big?"project-image-placeholder--featured":""}`} role="img" aria-label={`صورة مطلوبة لمشروع ${p.title.ar}`}><strong>{p.title.ar}</strong><span>{R[p.region]} · Verified official image required</span><small>Mobile crop · No AI</small></div>}
-function Proof({p}:{p:ProjectRecord}){return <span className="proof-status"><b aria-hidden="true">✓</b>{p.image?"تحديثات متاحة":p.status==="needs-verification"?"قيد التحقق":"بيانات مطلوبة"}</span>}
-function Funding({m,title}:{m?:ProjectMetric;title:string}){if(!m)return <p className="metric-empty">بيانات التمويل قيد التحقق</p>;const v=Math.min(100,m.raised/m.goal*100);return <><div className="listing-progress" role="progressbar" aria-label={`نسبة تمويل ${title}`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(v)}><span style={{width:`${v}%`}}/></div><div className="listing-metric-row"><span>{m.raised.toLocaleString("en-US")} USD</span><span>من {m.goal.toLocaleString("en-US")} USD</span></div><small className="verification-label">DATA REQUIRES FINAL VERIFICATION</small></>}
-function Select({label,value,options,onChange}:{label:string;value:string;options:[string,string][];onChange:(v:string)=>void}){return <label><span>{label}</span><select value={value} onChange={e=>onChange(e.target.value)}>{options.map(([v,l])=><option value={v} key={v}>{l}</option>)}</select></label>}
-export function ProjectsExplorer({projects,metrics}:{projects:ProjectRecord[];metrics:ProjectMetric[]}){
- const [q,setQ]=useState(""),[f,setF]=useState<Filters>(EMPTY),[sort,setSort]=useState("priority"),[sheet,setSheet]=useState(false),[quick,setQuick]=useState<ProjectRecord|null>(null),[amount,setAmount]=useState(100),[custom,setCustom]=useState(""),[toast,setToast]=useState(false);const close=useRef<HTMLButtonElement|null>(null),last=useRef<HTMLElement|null>(null);
- const mm=useMemo(()=>new Map(metrics.map(m=>[m.projectId,m])),[metrics]);const regions=useMemo(()=>Array.from(new Set(projects.map(p=>p.region))),[projects]);const donations=useMemo(()=>Array.from(new Set(projects.flatMap(p=>p.donationTypes))),[projects]);const statuses=useMemo(()=>Array.from(new Set(projects.map(p=>p.status))),[projects]);const fields=useMemo(()=>Array.from(new Set(projects.flatMap(p=>p.tags.map(t=>T[t]).filter(Boolean)))).sort(),[projects]);
- const shown=useMemo(()=>{const n=q.trim().toLowerCase();const a=projects.filter(p=>{const text=[p.title.ar,p.summary.ar,R[p.region],...p.tags,...p.donationTypes.map(x=>D[x])].join(" ").toLowerCase();return(!n||text.includes(n))&&(f.region==="all"||p.region===f.region)&&(f.donation==="all"||p.donationTypes.includes(f.donation))&&(f.field==="all"||p.tags.some(t=>T[t]===f.field))&&(f.status==="all"||(f.status==="urgent"?urgent(p):p.status===f.status))&&(!f.zakat||p.donationTypes.includes("zakat"))&&(!f.recurring||p.donationTypes.includes("recurring"))});return [...a].sort((a,b)=>sort==="urgent"?Number(urgent(b))-Number(urgent(a)):sort==="featured"?Number(!!b.featured)-Number(!!a.featured):sort==="seasonal"?Number(!!b.seasonal)-Number(!!a.seasonal):Number(!!b.featured)-Number(!!a.featured)||Number(urgent(b))-Number(urgent(a)))},[projects,q,f,sort]);
- const featured=shown.find(p=>p.featured&&p.status==="active")||shown.find(urgent)||shown[0];const cards=featured?shown.filter(p=>p.id!==featured.id):[];const active=[f.region!=="all"?["region",R[f.region]]:null,f.donation!=="all"?["donation",D[f.donation]]:null,f.field!=="all"?["field",f.field]:null,f.status!=="all"?["status",f.status==="urgent"?"عاجل":S[f.status]]:null,f.zakat?["zakat","يقبل الزكاة"]:null,f.recurring?["recurring","تبرع مستمر"]:null].filter(Boolean) as string[][];
- const opts={region:[["all","الكل"],...regions.map(x=>[x,R[x]])] as [string,string][],donation:[["all","الكل"],...donations.map(x=>[x,D[x]])] as [string,string][],field:[["all","الكل"],...fields.map(x=>[x,x])] as [string,string][],status:[["all","الكل"],["urgent","عاجل"],...statuses.map(x=>[x,S[x]])] as [string,string][]};
- useEffect(()=>{if(!sheet&&!quick)return;last.current=document.activeElement as HTMLElement;const old=document.body.style.overflow;document.body.style.overflow="hidden";setTimeout(()=>close.current?.focus(),0);const key=(e:KeyboardEvent)=>{if(e.key==="Escape"){setSheet(false);setQuick(null)}};document.addEventListener("keydown",key);return()=>{document.body.style.overflow=old;document.removeEventListener("keydown",key);last.current?.focus()}},[sheet,quick]);useEffect(()=>{setAmount(mm.get(quick?.id||"")?.unitAmount||100);setCustom("")},[quick,mm]);
- const add=(p:ProjectRecord,a:number)=>{const intent=p.donationTypes.includes("zakat")?"zakat":p.donationTypes.includes("waqf")?"waqf":urgent(p)?"urgent":"general";window.dispatchEvent(new CustomEvent("minber:add-to-basket",{detail:{projectId:p.id,intent,intentLabel:D[p.donationTypes[0]],project:p.title.ar,amount:a,currency:"USD"}}));setToast(true);setTimeout(()=>setToast(false),2200)};
- const remove=(k:string)=>setF(x=>({...x,[k]:k==="zakat"||k==="recurring"?false:"all"} as Filters));
- return <section className="projects-explorer" id="projects-explorer"><div className="site-container"><div className="projects-toolbar"><label className="projects-search"><span className="sr-only">ابحث عن مشروع</span><b aria-hidden="true">⌕</b><input value={q} onChange={e=>setQ(e.target.value)} placeholder="ابحث عن مشروع أو منطقة أو نوع عطاء"/>{q&&<button type="button" onClick={()=>setQ("")} aria-label="مسح البحث">×</button>}</label><div className="desktop-filters"><Select label="المنطقة" value={f.region} options={opts.region} onChange={v=>setF(x=>({...x,region:v as Filters["region"]}))}/><Select label="نوع العطاء" value={f.donation} options={opts.donation} onChange={v=>setF(x=>({...x,donation:v as Filters["donation"]}))}/><Select label="المجال" value={f.field} options={opts.field} onChange={v=>setF(x=>({...x,field:v}))}/><Select label="الحالة" value={f.status} options={opts.status} onChange={v=>setF(x=>({...x,status:v as Filters["status"]}))}/></div><button type="button" className="mobile-filter-button" onClick={()=>setSheet(true)}>تصفية المشاريع <span>{active.length||""}</span></button><label className="projects-sort"><span>الترتيب</span><select value={sort} onChange={e=>setSort(e.target.value)}><option value="priority">حسب الأولوية</option><option value="urgent">المشاريع العاجلة</option><option value="featured">المشاريع المميزة</option><option value="seasonal">المشاريع الموسمية</option></select></label></div><div className="filter-toggles"><label><input type="checkbox" checked={f.zakat} onChange={e=>setF(x=>({...x,zakat:e.target.checked}))}/>يقبل الزكاة</label><label><input type="checkbox" checked={f.recurring} onChange={e=>setF(x=>({...x,recurring:e.target.checked}))}/>مناسب للتبرع المستمر</label>{active.length>0&&<button type="button" onClick={()=>setF(EMPTY)}>مسح الفلاتر</button>}</div><div className="results-summary" aria-live="polite"><strong>عرض {shown.length} {shown.length===1?"مشروع":"مشاريع"}</strong><div className="active-filters">{active.map(([k,l])=><button type="button" key={k} onClick={()=>remove(k)}>{l} <span aria-hidden="true">×</span></button>)}</div></div>{featured?<Featured p={featured} m={mm.get(featured.id)} open={()=>setQuick(featured)} add={a=>add(featured,a)}/>:<NoResults reset={()=>{setF(EMPTY);setQ("")}}/>}<div className="projects-listing-grid">{cards.map(p=><Card key={p.id} p={p} m={mm.get(p.id)} open={()=>setQuick(p)} add={()=>add(p,mm.get(p.id)?.unitAmount||100)}/>)}</div></div><Guide setF={setF}/><Partner/>{sheet&&<Sheet f={f} setF={setF} opts={opts} count={shown.length} closeRef={close} close={()=>setSheet(false)}/>} {quick&&<Quick p={quick} m={mm.get(quick.id)} amount={amount} setAmount={setAmount} custom={custom} setCustom={setCustom} closeRef={close} close={()=>setQuick(null)} add={()=>{add(quick,custom?Math.max(1,Number(custom)||1):amount);setQuick(null)}}/>}<div className={toast?"toast is-visible":"toast"} role="status" aria-live="polite">تمت إضافة المشروع إلى سلة العطاء</div></section>
+import { useMemo, useState } from "react";
+import { Button } from "@/components/ui/button";
+import type { DonationType, ProjectRecord, ProjectRegion, ProjectStatus } from "@/data/projects";
+import type { ProjectMetric } from "@/data/project-metrics";
+
+const regionLabels: Record<ProjectRegion, string> = {
+  "al-quds": "القدس",
+  "al-aqsa": "الأقصى",
+  gaza: "غزة",
+  syria: "سوريا",
+  sudan: "السودان",
+  yemen: "اليمن",
+  global: "مشاريع عامة",
+};
+
+const donationLabels: Record<DonationType, string> = {
+  sadaqah: "صدقة",
+  zakat: "زكاة",
+  waqf: "وقف",
+  recurring: "عطاء مستمر",
+  qurbani: "أضاحي",
+};
+
+const statusLabels: Record<ProjectStatus, string> = {
+  active: "متاح للدعم",
+  seasonal: "موسمي",
+  archived: "مكتمل",
+  "needs-verification": "قيد المراجعة",
+};
+
+const fieldLabels: Record<string, string> = {
+  food: "غذاء",
+  meals: "غذاء",
+  bread: "غذاء",
+  water: "مياه",
+  restoration: "ترميم",
+  housing: "ترميم",
+  education: "تعليم",
+  courses: "تعليم",
+  quran: "تعليم",
+  youth: "تعليم",
+  relief: "إغاثة",
+  emergency: "إغاثة",
+  shelter: "إغاثة",
+  families: "رعاية أسر",
+  winter: "احتياجات موسمية",
+  ramadan: "احتياجات موسمية",
+};
+
+type Filters = {
+  region: ProjectRegion | "all";
+  donation: DonationType | "all";
+  field: string;
+  status: ProjectStatus | "all";
+};
+
+const emptyFilters: Filters = {
+  region: "all",
+  donation: "all",
+  field: "all",
+  status: "active",
+};
+
+function ProjectVisual({ project, featured = false }: { project: ProjectRecord; featured?: boolean }) {
+  if (project.image) {
+    return (
+      <div className={`project-visual${featured ? " project-visual--featured" : ""}`}>
+        <img src={project.image.sourceUrl} alt={project.image.alt.ar} loading={featured ? "eager" : "lazy"} />
+      </div>
+    );
+  }
+
+  return (
+    <div className={`project-image-placeholder${featured ? " project-image-placeholder--featured" : ""}`} role="img" aria-label={`صورة مشروع ${project.title.ar} قيد الإضافة`}>
+      <span>{regionLabels[project.region]}</span>
+      <strong>{project.title.ar}</strong>
+    </div>
+  );
 }
-function Featured({p,m,open,add}:{p:ProjectRecord;m?:ProjectMetric;open:()=>void;add:(a:number)=>void}){const a=m?[m.unitAmount,m.unitAmount*2,m.unitAmount*5]:[50,100,250];return <article className="featured-listing-project"><Visual p={p} big/><div className="featured-listing-content"><div className="listing-badges"><span>مشروع رسمي من منبر الأقصى</span><b>{R[p.region]}</b><i>{S[p.status]}</i></div><h2>{p.title.ar}</h2><p>{p.summary.ar}</p><div className="donation-type-list">{p.donationTypes.map(x=><span key={x}>{D[x]}</span>)}</div><Proof p={p}/><Funding m={m} title={p.title.ar}/><div className="featured-amounts">{a.map(x=><button type="button" key={x} onClick={()=>add(x)}>{x} USD</button>)}</div><div className="listing-actions"><Button type="button" onClick={()=>add(a[0])}>تبرع الآن</Button><Button type="button" variant="outline" onClick={open}>عرض التفاصيل</Button><button type="button" className="text-action" onClick={open}>عرض التحديثات</button></div></div></article>}
-function Card({p,m,open,add}:{p:ProjectRecord;m?:ProjectMetric;open:()=>void;add:()=>void}){return <article className="listing-project-card"><Visual p={p}/><div className="listing-card-body"><div className="listing-card-meta"><span>مشروع رسمي</span><b>{R[p.region]} · {S[p.status]}</b></div><h3>{p.title.ar}</h3><p>{p.summary.ar}</p><div className="donation-type-list">{p.donationTypes.map(x=><span key={x}>{D[x]}</span>)}</div><Proof p={p}/><Funding m={m} title={p.title.ar}/><div className="listing-actions"><Button type="button" variant="outline" onClick={open}>عرض المشروع</Button><Button type="button" variant="ghost" onClick={add}>أضف إلى سلة العطاء</Button></div></div></article>}
-function NoResults({reset}:{reset:()=>void}){return <div className="projects-no-results"><span aria-hidden="true">⌕</span><h2>لم نجد مشاريع مطابقة لاختياراتك</h2><p>جرّب إزالة بعض الفلاتر أو استعرض جميع المشاريع الرسمية.</p><div><Button type="button" onClick={reset}>مسح الفلاتر</Button><Button type="button" variant="outline" onClick={reset}>عرض جميع المشاريع</Button><Button href="/#donate" variant="text">تبرع حيث الحاجة أشد</Button></div></div>}
-function Guide({setF}:{setF:(f:Filters)=>void}){return <section className="project-selection-guide"><div className="site-container"><div><span className="section-eyebrow">دليل الاختيار</span><h2>لست متأكدًا أي مشروع تختار؟</h2><p>اختر المسار الأقرب لنيتك، وسنطبّق الفلتر المناسب مباشرة.</p></div><div className="selection-paths"><button type="button" onClick={()=>setF({...EMPTY,status:"urgent"})}><span>01</span><strong>احتياج عاجل</strong><small>دعم المشاريع العاجلة في غزة</small></button><button type="button" onClick={()=>setF({...EMPTY,donation:"waqf"})}><span>02</span><strong>أثر مستمر</strong><small>دعم مشاريع الوقف في القدس</small></button><button type="button" onClick={()=>setF({...EMPTY,zakat:true})}><span>03</span><strong>نية شرعية</strong><small>المشاريع التي تقبل الزكاة</small></button></div><Button href="#projects-explorer" variant="outline">ساعدني في اختيار مسار العطاء</Button></div></section>}
-function Partner(){return <section className="partner-projects-gateway"><div className="site-container"><div><span>صفحة مستقلة — ستُنفذ لاحقًا</span><h2>تبحث عن مشاريع المؤسسات الشريكة؟</h2><p>مشاريع الشركاء تظهر في مساحة مستقلة وبشارة واضحة، ولا تختلط بمشاريع منبر الأقصى الرسمية.</p></div><Button href="/partner-projects" variant="outline">استكشف مشاريع الشركاء</Button></div></section>}
-function Sheet({f,setF,opts,count,closeRef,close}:{f:Filters;setF:(v:Filters|((x:Filters)=>Filters))=>void;opts:{region:[string,string][];donation:[string,string][];field:[string,string][];status:[string,string][]};count:number;closeRef:React.RefObject<HTMLButtonElement|null>;close:()=>void}){return <div className="projects-layer"><button className="projects-backdrop" type="button" aria-label="إغلاق الفلاتر" onClick={close}/><aside className="mobile-filter-sheet" role="dialog" aria-modal="true" aria-labelledby="filter-title"><header><h2 id="filter-title">تصفية المشاريع</h2><button ref={closeRef} type="button" onClick={close} aria-label="إغلاق">×</button></header><div className="mobile-filter-content"><Select label="المنطقة" value={f.region} options={opts.region} onChange={v=>setF(x=>({...x,region:v as Filters["region"]}))}/><Select label="نوع العطاء" value={f.donation} options={opts.donation} onChange={v=>setF(x=>({...x,donation:v as Filters["donation"]}))}/><Select label="المجال" value={f.field} options={opts.field} onChange={v=>setF(x=>({...x,field:v}))}/><Select label="الحالة" value={f.status} options={opts.status} onChange={v=>setF(x=>({...x,status:v as Filters["status"]}))}/><label className="sheet-toggle"><input type="checkbox" checked={f.zakat} onChange={e=>setF(x=>({...x,zakat:e.target.checked}))}/>يقبل الزكاة</label><label className="sheet-toggle"><input type="checkbox" checked={f.recurring} onChange={e=>setF(x=>({...x,recurring:e.target.checked}))}/>تبرع مستمر</label></div><footer><Button type="button" fullWidth onClick={close}>عرض {count} مشروعًا</Button><Button type="button" variant="text" onClick={()=>setF(EMPTY)}>مسح الكل</Button></footer></aside></div>}
-function Quick({p,m,amount,setAmount,custom,setCustom,closeRef,close,add}:{p:ProjectRecord;m?:ProjectMetric;amount:number;setAmount:(v:number)=>void;custom:string;setCustom:(v:string)=>void;closeRef:React.RefObject<HTMLButtonElement|null>;close:()=>void;add:()=>void}){const a=m?[m.unitAmount,m.unitAmount*2,m.unitAmount*5]:[50,100,250];return <div className="projects-layer"><button className="projects-backdrop" type="button" aria-label="إغلاق المعاينة" onClick={close}/><aside className="project-quick-view" role="dialog" aria-modal="true" aria-labelledby="quick-title"><header><span>معاينة سريعة</span><button ref={closeRef} type="button" onClick={close} aria-label="إغلاق">×</button></header><div className="quick-view-scroll"><Visual p={p}/><div className="quick-view-body"><span className="official-project-label">مشروع رسمي من منبر الأقصى</span><h2 id="quick-title">{p.title.ar}</h2><p>{R[p.region]} · {S[p.status]}</p><div className="donation-type-list">{p.donationTypes.map(x=><span key={x}>{D[x]}</span>)}</div><p>{p.summary.ar}</p><Proof p={p}/><Funding m={m} title={p.title.ar}/><fieldset><legend>اختر مبلغًا</legend><div className="quick-view-amounts">{a.map(x=><button type="button" key={x} className={!custom&&amount===x?"is-selected":""} aria-pressed={!custom&&amount===x} onClick={()=>{setAmount(x);setCustom("")}}>{x} USD</button>)}</div><label><span>مبلغ مخصص</span><input inputMode="decimal" value={custom} onChange={e=>setCustom(e.target.value)}/></label></fieldset><Button type="button" fullWidth onClick={add}>أضف إلى سلة العطاء</Button><Button type="button" fullWidth variant="outline" disabled>صفحة التفاصيل قريبًا</Button></div></div></aside></div>}
+
+function ProjectEvidence({ project }: { project: ProjectRecord }) {
+  const message = project.image
+    ? "صورة ميدانية مرتبطة بالمشروع"
+    : project.status === "needs-verification"
+      ? "بيانات المشروع قيد المراجعة"
+      : "التوثيق الميداني يُضاف عند اعتماده";
+
+  return <p className="proof-status"><span aria-hidden="true" />{message}</p>;
+}
+
+function SelectFilter({
+  label,
+  value,
+  options,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  options: Array<[string, string]>;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <label>
+      <span>{label}</span>
+      <select value={value} onChange={(event) => onChange(event.target.value)}>
+        {options.map(([optionValue, optionLabel]) => (
+          <option value={optionValue} key={optionValue}>{optionLabel}</option>
+        ))}
+      </select>
+    </label>
+  );
+}
+
+export function ProjectsExplorer({
+  projects,
+  metrics,
+}: {
+  projects: ProjectRecord[];
+  metrics: ProjectMetric[];
+}) {
+  void metrics;
+  const [query, setQuery] = useState("");
+  const [filters, setFilters] = useState<Filters>(emptyFilters);
+  const [sort, setSort] = useState("priority");
+  const [toast, setToast] = useState(false);
+
+  const regions = useMemo(() => Array.from(new Set(projects.map((project) => project.region))), [projects]);
+  const donationTypes = useMemo(() => Array.from(new Set(projects.flatMap((project) => project.donationTypes))), [projects]);
+  const fields = useMemo(
+    () => Array.from(new Set(projects.flatMap((project) => project.tags.map((tag) => fieldLabels[tag]).filter(Boolean)))).sort(),
+    [projects],
+  );
+
+  const filtered = useMemo(() => {
+    const normalizedQuery = query.trim().toLowerCase();
+    const result = projects.filter((project) => {
+      const searchable = [
+        project.title.ar,
+        project.summary.ar,
+        regionLabels[project.region],
+        ...project.tags,
+        ...project.donationTypes.map((type) => donationLabels[type]),
+      ].join(" ").toLowerCase();
+
+      return (!normalizedQuery || searchable.includes(normalizedQuery))
+        && (filters.region === "all" || project.region === filters.region)
+        && (filters.donation === "all" || project.donationTypes.includes(filters.donation))
+        && (filters.field === "all" || project.tags.some((tag) => fieldLabels[tag] === filters.field))
+        && (filters.status === "all" || project.status === filters.status);
+    });
+
+    return result.sort((first, second) => {
+      if (sort === "featured") return Number(Boolean(second.featured)) - Number(Boolean(first.featured));
+      if (sort === "seasonal") return Number(Boolean(second.seasonal)) - Number(Boolean(first.seasonal));
+      if (sort === "region") return regionLabels[first.region].localeCompare(regionLabels[second.region], "ar");
+      return Number(Boolean(second.featured)) - Number(Boolean(first.featured))
+        || Number(second.status === "active") - Number(first.status === "active");
+    });
+  }, [projects, query, filters, sort]);
+
+  const featured = filtered.find((project) => project.featured) ?? filtered[0];
+  const remaining = featured ? filtered.filter((project) => project.id !== featured.id) : [];
+
+  const addToBasket = (project: ProjectRecord, amount = 100) => {
+    const intent = project.donationTypes.includes("zakat")
+      ? "zakat"
+      : project.donationTypes.includes("waqf")
+        ? "waqf"
+        : project.tags.includes("emergency")
+          ? "urgent"
+          : "general";
+
+    window.dispatchEvent(new CustomEvent("minber:add-to-basket", {
+      detail: {
+        projectId: project.id,
+        intent,
+        intentLabel: donationLabels[project.donationTypes[0]],
+        project: project.title.ar,
+        amount,
+        currency: "USD",
+      },
+    }));
+    setToast(true);
+    window.setTimeout(() => setToast(false), 2200);
+  };
+
+  const reset = () => {
+    setQuery("");
+    setFilters({ ...emptyFilters, status: "all" });
+  };
+
+  return (
+    <section className="projects-explorer" id="projects-explorer" aria-labelledby="projects-explorer-title">
+      <div className="site-container">
+        <header className="projects-explorer-heading">
+          <div>
+            <span className="section-eyebrow">مستكشف المشاريع</span>
+            <h2 id="projects-explorer-title">ابحث حسب المنطقة أو نية العطاء</h2>
+          </div>
+          <p>لا تظهر أرقام تمويل أو نسب إنجاز قبل ربطها بمصدر وتقارير معتمدة.</p>
+        </header>
+
+        <div className="projects-toolbar">
+          <label className="projects-search">
+            <span>ابحث عن مشروع</span>
+            <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="مثال: غزة، تعليم، مياه، وقف" />
+            {query ? <button type="button" onClick={() => setQuery("")} aria-label="مسح البحث">×</button> : null}
+          </label>
+
+          <div className="desktop-filters">
+            <SelectFilter
+              label="المنطقة"
+              value={filters.region}
+              options={[["all", "كل المناطق"], ...regions.map((region) => [region, regionLabels[region]] as [string, string])]}
+              onChange={(value) => setFilters((current) => ({ ...current, region: value as Filters["region"] }))}
+            />
+            <SelectFilter
+              label="نوع العطاء"
+              value={filters.donation}
+              options={[["all", "كل أنواع العطاء"], ...donationTypes.map((type) => [type, donationLabels[type]] as [string, string])]}
+              onChange={(value) => setFilters((current) => ({ ...current, donation: value as Filters["donation"] }))}
+            />
+            <SelectFilter
+              label="المجال"
+              value={filters.field}
+              options={[["all", "كل المجالات"], ...fields.map((field) => [field, field] as [string, string])]}
+              onChange={(value) => setFilters((current) => ({ ...current, field: value }))}
+            />
+            <SelectFilter
+              label="الحالة"
+              value={filters.status}
+              options={[
+                ["all", "كل الحالات"],
+                ["active", "متاح للدعم"],
+                ["seasonal", "موسمي"],
+                ["archived", "مكتمل"],
+                ["needs-verification", "قيد المراجعة"],
+              ]}
+              onChange={(value) => setFilters((current) => ({ ...current, status: value as Filters["status"] }))}
+            />
+          </div>
+
+          <label className="projects-sort">
+            <span>الترتيب</span>
+            <select value={sort} onChange={(event) => setSort(event.target.value)}>
+              <option value="priority">حسب الأولوية</option>
+              <option value="featured">المشاريع المميزة</option>
+              <option value="seasonal">المشاريع الموسمية</option>
+              <option value="region">حسب المنطقة</option>
+            </select>
+          </label>
+        </div>
+
+        <div className="results-summary" aria-live="polite">
+          <strong>{filtered.length} {filtered.length === 1 ? "مشروع" : "مشروعًا"}</strong>
+          {(query || filters.region !== "all" || filters.donation !== "all" || filters.field !== "all" || filters.status !== "all") ? (
+            <button type="button" className="text-action" onClick={reset}>مسح البحث والفلاتر</button>
+          ) : null}
+        </div>
+
+        {featured ? (
+          <article className="featured-listing-project">
+            <ProjectVisual project={featured} featured />
+            <div className="featured-listing-content">
+              <div className="listing-badges">
+                <span>{regionLabels[featured.region]}</span>
+                <b>{statusLabels[featured.status]}</b>
+              </div>
+              <h2>{featured.title.ar}</h2>
+              <p>{featured.summary.ar}</p>
+              <div className="donation-type-list">
+                {featured.donationTypes.map((type) => <span key={type}>{donationLabels[type]}</span>)}
+              </div>
+              <ProjectEvidence project={featured} />
+              <div className="listing-actions">
+                <Button href={`/projects/${featured.slug}`}>عرض المشروع</Button>
+                <Button type="button" variant="outline" onClick={() => addToBasket(featured)}>أضف 100 USD إلى السلة</Button>
+              </div>
+            </div>
+          </article>
+        ) : (
+          <div className="projects-no-results">
+            <h2>لم نجد مشروعًا مطابقًا</h2>
+            <p>غيّر كلمة البحث أو امسح بعض الفلاتر لعرض خيارات أخرى.</p>
+            <Button type="button" onClick={reset}>عرض جميع المشاريع</Button>
+          </div>
+        )}
+
+        <div className="projects-listing-grid">
+          {remaining.map((project) => (
+            <article className="listing-project-card" key={project.id}>
+              <ProjectVisual project={project} />
+              <div className="listing-card-body">
+                <div className="listing-card-meta">
+                  <span>{regionLabels[project.region]}</span>
+                  <b>{statusLabels[project.status]}</b>
+                </div>
+                <h3>{project.title.ar}</h3>
+                <p>{project.summary.ar}</p>
+                <div className="donation-type-list">
+                  {project.donationTypes.map((type) => <span key={type}>{donationLabels[type]}</span>)}
+                </div>
+                <ProjectEvidence project={project} />
+                <div className="listing-actions">
+                  <Button href={`/projects/${project.slug}`} variant="outline">التفاصيل</Button>
+                  <Button type="button" variant="ghost" onClick={() => addToBasket(project)}>أضف إلى السلة</Button>
+                </div>
+              </div>
+            </article>
+          ))}
+        </div>
+      </div>
+
+      <section className="project-selection-guide" aria-labelledby="selection-guide-title">
+        <div className="site-container">
+          <div>
+            <span className="section-eyebrow">دليل الاختيار</span>
+            <h2 id="selection-guide-title">اختر المشروع انطلاقًا من نيتك</h2>
+            <p>ابدأ بالاحتياج العاجل، أو مشاريع الوقف، أو المشروعات المؤهلة للزكاة.</p>
+          </div>
+          <div className="selection-paths">
+            <button type="button" onClick={() => setFilters({ ...emptyFilters, region: "gaza" })}>
+              <span>01</span><strong>دعم غزة</strong><small>الغذاء والمياه والإغاثة</small>
+            </button>
+            <button type="button" onClick={() => setFilters({ ...emptyFilters, donation: "waqf" })}>
+              <span>02</span><strong>وقف للقدس</strong><small>أثر طويل المدى</small>
+            </button>
+            <button type="button" onClick={() => setFilters({ ...emptyFilters, donation: "zakat" })}>
+              <span>03</span><strong>إخراج الزكاة</strong><small>مشروعات مؤهلة للزكاة</small>
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <div className={toast ? "toast is-visible" : "toast"} role="status" aria-live="polite">
+        تمت إضافة المشروع إلى سلة العطاء
+      </div>
+    </section>
+  );
+}
