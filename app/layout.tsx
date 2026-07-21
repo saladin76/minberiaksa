@@ -5,6 +5,7 @@ import "./globals.css";
 import "../styles/homepage.css";
 import "../styles/projects.css";
 import "../styles/zakat.css";
+import "../styles/zakat-premium.css";
 import "../styles/waqf.css";
 import "../styles/waqf-responsive.css";
 import "../styles/recurring.css";
