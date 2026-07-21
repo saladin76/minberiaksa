@@ -18,5 +18,11 @@ import "../styles/account-integration.css";
 import "../styles/account.css";
 import "../styles/account-responsive.css";
 import "../styles/account-polish.css";
+import "../styles/golden-identity.css";
+import "../styles/selectors.css";
+
 export const metadata: Metadata = { title: "مؤسسة منبر الأقصى الدولية", description: "منصة تبرعات مؤسسية تربط مساهمتك بالمشروع والإيصال وتحديثات الأثر." };
-export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) { return <html lang="ar" dir="rtl"><body><a className="skip-link" href="#main-content">انتقل إلى المحتوى الرئيسي</a><BasketProvider>{children}</BasketProvider></body></html>; }
+
+export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
+  return <html lang="ar" dir="rtl"><body><a className="skip-link" href="#main-content">انتقل إلى المحتوى الرئيسي</a><BasketProvider>{children}</BasketProvider></body></html>;
+}
