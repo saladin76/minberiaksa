@@ -1,17 +1,13 @@
+export type LanguageDirection = "rtl" | "ltr";
+
 export type LanguageOption = {
   code: string;
   label: string;
   nativeLabel: string;
-  direction: "rtl" | "ltr";
+  direction: LanguageDirection;
+  translated: boolean;
 };
 
 export const languages: LanguageOption[] = [
-  { code: "ar", label: "Arabic", nativeLabel: "العربية", direction: "rtl" },
-  { code: "tr", label: "Turkish", nativeLabel: "Türkçe", direction: "ltr" },
-  { code: "en", label: "English", nativeLabel: "English", direction: "ltr" },
-  { code: "fr", label: "French", nativeLabel: "Français", direction: "ltr" },
-  { code: "de", label: "German", nativeLabel: "Deutsch", direction: "ltr" },
-  { code: "es", label: "Spanish", nativeLabel: "Español", direction: "ltr" },
-  { code: "id", label: "Indonesian", nativeLabel: "Bahasa Indonesia", direction: "ltr" },
-  { code: "pt", label: "Portuguese", nativeLabel: "Português", direction: "ltr" },
-];
+  ["ar","Arabic","العربية","rtl"],["tr","Turkish","Türkçe","ltr"],["en","English","English","ltr"],["fr","French","Français","ltr"],["de","German","Deutsch","ltr"],["es","Spanish","Español","ltr"],["id","Indonesian","Bahasa Indonesia","ltr"],["pt","Portuguese","Português","ltr"],["ur","Urdu","اردو","rtl"],["sq","Albanian","Shqip","ltr"],["it","Italian","Italiano","ltr"],["nl","Dutch","Nederlands","ltr"],["sv","Swedish","Svenska","ltr"]
+].map(([code,label,nativeLabel,direction]) => ({code,label,nativeLabel,direction: direction as LanguageDirection,translated: code === "ar"}));
