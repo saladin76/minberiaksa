@@ -1,0 +1,22 @@
+:root {
+  --color-brand-orange: #c96f1a;
+  --color-brand-orange-dark: #9e431f;
+  --color-golden-soft: #f7ebd4;
+  --color-warm-stone: #f6f4ef;
+  --color-warm-surface: #fbf8f1;
+  --color-warm-border: #e7ded0;
+  --color-warm-green: #315f43;
+}
+
+.golden-accent {
+  border-color: var(--color-aqsa-gold);
+}
+
+.golden-surface {
+  background: var(--color-warm-surface);
+}
+
+.document-golden-frame {
+  border: 1px solid var(--color-aqsa-gold);
+  background: var(--color-light-ivory);
+}

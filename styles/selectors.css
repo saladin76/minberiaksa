@@ -1,0 +1,20 @@
+.selector-sheet {
+  background: var(--color-surface);
+  color: var(--color-trust-navy);
+}
+
+.selector-sheet__search,
+.selector-sheet__option {
+  min-height: 44px;
+}
+
+.selector-sheet__option[aria-selected="true"] {
+  border-color: var(--color-brand-orange);
+  background: var(--color-golden-soft);
+}
+
+@media (max-width: 767px) {
+  .selector-sheet {
+    padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  }
+}
