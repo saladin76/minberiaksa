@@ -11,6 +11,7 @@ import "../styles/waqf-responsive.css";
 import "../styles/waqf-premium.css";
 import "../styles/recurring.css";
 import "../styles/recurring-responsive.css";
+import "../styles/recurring-premium.css";
 import "../styles/basket.css";
 import "../styles/basket-responsive.css";
 import "../styles/checkout.css";
@@ -22,6 +23,5 @@ import "../styles/account-responsive.css";
 import "../styles/account-polish.css";
 import "../styles/golden-identity.css";
 import "../styles/selectors.css";
-
 export const metadata: Metadata = { title: "مؤسسة منبر الأقصى الدولية", description: "منصة تبرعات مؤسسية تربط مساهمتك بالمشروع والإيصال وتحديثات الأثر." };
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) { return <html lang="ar" dir="rtl"><body><a className="skip-link" href="#main-content">انتقل إلى المحتوى الرئيسي</a><BasketProvider>{children}</BasketProvider></body></html>; }
