@@ -2,7 +2,6 @@ import { Button } from "@/components/ui/button";
 import { ProjectFaq } from "@/components/project-detail/project-faq";
 import { AlQudsGoldCoin } from "@/components/brand/al-quds-gold-coin";
 import { GoldenIdentityPattern } from "@/components/brand/golden-identity-pattern";
-import { ReligiousQuote } from "@/components/brand/religious-quote";
 import { RecurringManagementPreview, RecurringPlanBuilder, RecurringProjectSelectButton } from "./recurring-plan-builder";
 import { recurringFaq, recurringHowItWorks, recurringImpactSteps, recurringRhythm } from "@/data/recurring";
 import type { ProjectRecord } from "@/data/projects";
@@ -10,17 +9,57 @@ import type { ProjectRecord } from "@/data/projects";
 const region = (value: string) => value === "gaza" ? "غزة" : value === "al-quds" ? "القدس" : value === "al-aqsa" ? "الأقصى" : "مشروع رسمي";
 
 export function RecurringExperience({ projects }: { projects: ProjectRecord[] }) {
-  return <main id="main-content" className="recurring-page recurring-page--golden">
-    <div className="site-container"><nav className="recurring-breadcrumb" aria-label="مسار التنقل"><a href="/">الرئيسية</a><span aria-hidden="true">←</span><span aria-current="page">التبرع المستمر</span></nav></div>
-    <section className="recurring-hero recurring-hero--golden"><GoldenIdentityPattern /><div className="site-container recurring-hero-grid recurring-hero-grid--builder"><div className="recurring-hero-copy"><span className="recurring-eyebrow">عطاء يتجدد</span><h1>تبرع يتكرر<br />وأثر يبقى</h1><p>اختر مبلغًا ودورية ووجهة، وراجع التقدير الشهري والسنوي قبل إضافة الخطة إلى السلة. لا يتم تنفيذ خصم متكرر حقيقي.</p><ul><li>يومي</li><li>كل جمعة</li><li>شهري</li><li>يمكن التعديل أو الإيقاف مستقبلًا</li></ul><div className="recurring-coin-plant" aria-label="تكوين العملة والنبتة يحتاج الأصل الرسمي"><AlQudsGoldCoin decorative /><div className="recurring-plant-placeholder"><strong>APPROVED COIN + PLANT COMPOSITION REQUIRED</strong><span>Registry asset required before replacing this placeholder</span></div></div></div><div id="recurring-plan-builder" className="recurring-hero-builder"><div className="recurring-section-heading"><span>خطتك المرنة</span><h2>أنشئ خطة عطائك المستمر</h2><p>اختر الدورية والجهة والمبلغ وتاريخ البداية، ثم راجع الملخص.</p></div><RecurringPlanBuilder projects={projects} /></div></div></section>
-    <section className="recurring-rhythm" aria-label="مسار العطاء المستمر"><div className="site-container">{recurringRhythm.map((item, index) => <div key={item}><span>{String(index + 1).padStart(2, "0")}</span><strong>{item}</strong>{index < recurringRhythm.length - 1 && <b aria-hidden="true">←</b>}</div>)}</div></section>
-    <section className="recurring-section recurring-impact"><div className="site-container"><div className="recurring-section-heading"><span>ما هو العطاء المستمر؟</span><h2>خطة بسيطة تتكرر وفق اختيارك</h2><p>النموذج يحسب قيمة كل عملية والتقدير الشهري والسنوي، بينما التنفيذ الفعلي يحتاج ربطًا بنظام الدفع والسياسات المعتمدة.</p></div><ol>{recurringImpactSteps.map(([title, text], index) => <li key={title}><span>{String(index + 1).padStart(2, "0")}</span><div><h3>{title}</h3><p>{text}</p></div></li>)}</ol></div></section>
-    <section id="recurring-projects" className="recurring-section recurring-projects recurring-project-journey"><div className="site-container"><div className="recurring-section-heading"><span>رحلة المشاريع</span><h2>مشاريع يخدمها عطاؤك المستمر</h2><p>القائمة مشتقة من أهلية recurring في بيانات المشاريع فقط.</p></div><div className="recurring-project-orbit" role="list">{projects.slice(0, 5).map((project) => <article key={project.id} role="listitem">{project.image ? <img src={project.image.sourceUrl} alt={project.image.alt.ar} /> : <div className="recurring-project-placeholder">APPROVED PROJECT IMAGE REQUIRED</div>}<div><small>{region(project.region)} · {project.status === "active" ? "نشط" : "قيد المراجعة"}</small><h3>{project.title.ar}</h3><p>{project.summary.ar}</p><span>{project.image ? "مصدر ميداني مؤقت متاح" : "Proof status: قيد الاعتماد"}</span><div><Button href={`/projects/${project.slug}`} variant="text" size="small">عرض المشروع</Button><RecurringProjectSelectButton id={project.id} /></div></div></article>)}</div></div></section>
-    <section className="recurring-section recurring-how"><div className="site-container"><div className="recurring-section-heading"><span>خطوات واضحة</span><h2>كيف يعمل عطاؤك المستمر؟</h2></div><ol>{recurringHowItWorks.map((item, index) => <li key={item}><b>{index + 1}</b><span>{item}</span></li>)}</ol><p>تنفيذ العمليات والتعديل والإيقاف يحتاجان ربطًا بالنظام التشغيلي وحساب المتبرع.</p></div></section>
-    <section className="recurring-section recurring-management"><div className="site-container recurring-two-column"><div><div className="recurring-section-heading"><span>إدارة مستقبلية</span><h2>تحكّم بخطتك مستقبلًا</h2><p>معاينة بصرية لخطة واحدة، وليست حساب متبرع أو Dashboard كاملة.</p></div><RecurringManagementPreview /></div><div className="recurring-receipt-stack"><article className="recurring-receipt"><small>معاينة تصميمية فقط</small><div>OFFICIAL LOGO REQUIRED</div><h3>إيصال عملية متكررة</h3><dl><div><dt>النوع</dt><dd>تبرع مستمر</dd></div><div><dt>المبلغ</dt><dd>50 USD</dd></div><div><dt>الدورية</dt><dd>كل جمعة</dd></div><div><dt>الجهة</dt><dd>حيث الحاجة أشد</dd></div></dl><code>PREVIEW-RECURRING-0001</code></article><article className="recurring-impact-summary"><small>ملخص أثر دوري</small><h3>أثر عطائك مع الوقت</h3><dl><div><dt>عدد العمليات</dt><dd>DATA REQUIRED</dd></div><div><dt>إجمالي المساهمة</dt><dd>DATA REQUIRED</dd></div><div><dt>آخر تحديث</dt><dd>DATA REQUIRED</dd></div><div><dt>التقرير</dt><dd>سيُضاف لاحقًا</dd></div></dl></article></div></div></section>
-    <section className="recurring-section recurring-flexibility"><div className="site-container"><div className="recurring-section-heading"><span>ثقة ومرونة</span><h2>مرونة واضحة دون التزام مخفي</h2></div><div>{["ترى قيمة كل عملية قبل التأكيد.", "ترى الدورية بوضوح.", "يمكن تعديل الخطة مستقبلًا.", "يمكن إيقافها مستقبلًا.", "لا يتم تغيير المبلغ دون موافقتك.", "الإيصالات والتحديثات تبقى مرتبطة بالخطة."].map((item) => <p key={item}>✓ {item}</p>)}</div><small>تفاصيل الإلغاء والاسترداد والدفع المتكرر تحتاج اعتماد السياسة التشغيلية والقانونية.</small></div></section>
-    <section className="recurring-section recurring-faq"><div className="site-container"><div className="recurring-section-heading"><span>قبل البدء</span><h2>الأسئلة الشائعة</h2></div><ProjectFaq items={recurringFaq} /></div></section>
-    <section className="recurring-religious"><div className="site-container"><ReligiousQuote status="source-required">APPROVED RELIGIOUS TEXT REQUIRED — يُضاف النص المعتمد حرفيًا بعد تزويده ومراجعته.</ReligiousQuote></div></section>
-    <section className="recurring-final"><div className="site-container"><div><span>ابدأ بخطوة بسيطة</span><h2>ابدأ بخطة تناسبك<br />ودع أثرها يستمر</h2></div><div><Button href="#recurring-plan-builder" size="large">أنشئ خطة عطاء</Button><Button href="/#donate" variant="outline" size="large">تبرع لمرة واحدة</Button></div></div></section>
-  </main>;
+  const featured = projects.find((project) => project.image) || projects[0];
+
+  return (
+    <main id="main-content" className="recurring-page recurring-page--golden">
+      <div className="site-container"><nav className="recurring-breadcrumb" aria-label="مسار التنقل"><a href="/">الرئيسية</a><span aria-hidden="true">←</span><span aria-current="page">العطاء المستمر</span></nav></div>
+
+      <section className="recurring-hero recurring-hero--golden">
+        <GoldenIdentityPattern />
+        <div className="site-container recurring-hero-grid recurring-hero-grid--builder">
+          <div className="recurring-hero-copy">
+            <span className="recurring-eyebrow">عطاء يتجدد</span>
+            <h1>عطاؤك المستمر<br />يصنع أثرًا لا يتوقف.</h1>
+            <p>اختر الدورية والجهة والمبلغ، ثم راجع تقدير خطتك قبل المتابعة إلى السلة وإتمام العملية.</p>
+            <ul><li>يومي</li><li>كل جمعة</li><li>شهري</li><li>مراجعة واضحة قبل التأكيد</li></ul>
+            <div className="recurring-coin-plant">
+              {featured?.image ? <img src={featured.image.sourceUrl} alt={featured.image.alt.ar} /> : null}
+              <AlQudsGoldCoin decorative />
+            </div>
+          </div>
+          <div id="recurring-plan-builder" className="recurring-hero-builder">
+            <div className="recurring-section-heading"><span>خطتك المرنة</span><h2>أنشئ خطة عطائك المستمر</h2><p>اختر الدورية والجهة والمبلغ وتاريخ البداية، ثم راجع الملخص.</p></div>
+            <RecurringPlanBuilder projects={projects} />
+          </div>
+        </div>
+      </section>
+
+      <section className="recurring-rhythm" aria-label="مسار العطاء المستمر"><div className="site-container">{recurringRhythm.map((item, index) => <div key={item}><span>{String(index + 1).padStart(2, "0")}</span><strong>{item}</strong>{index < recurringRhythm.length - 1 ? <b aria-hidden="true">←</b> : null}</div>)}</div></section>
+
+      <section className="recurring-section recurring-impact">
+        <div className="site-container"><div className="recurring-section-heading"><span>ما هو العطاء المستمر؟</span><h2>خطة بسيطة تتكرر وفق اختيارك</h2><p>تحدد قيمة كل عملية والدورية والجهة، وتراجع التقدير الشهري والسنوي قبل التأكيد.</p></div><ol>{recurringImpactSteps.map(([title, text], index) => <li key={title}><span>{String(index + 1).padStart(2, "0")}</span><div><h3>{title}</h3><p>{text}</p></div></li>)}</ol></div>
+      </section>
+
+      <section id="recurring-projects" className="recurring-section recurring-projects recurring-project-journey">
+        <div className="site-container"><div className="recurring-section-heading"><span>وجهات العطاء</span><h2>مشاريع يخدمها عطاؤك المستمر</h2><p>تظهر المشروعات المسجلة ضمن نوع العطاء المستمر فقط.</p></div><div className="recurring-project-orbit" role="list">{projects.slice(0, 5).map((project) => <article key={project.id} role="listitem">{project.image ? <img src={project.image.sourceUrl} alt={project.image.alt.ar} loading="lazy" /> : <div className="recurring-project-placeholder"><span>{region(project.region)}</span><strong>{project.title.ar}</strong></div>}<div><small>{region(project.region)} · {project.status === "active" ? "متاح للدعم" : "قيد المراجعة"}</small><h3>{project.title.ar}</h3><p>{project.summary.ar}</p><span className="recurring-proof"><i aria-hidden="true" />{project.image ? "صورة ميدانية مرتبطة بالمشروع" : "الوسائط تُضاف بعد اعتمادها"}</span><div><Button href={`/projects/${project.slug}`} variant="text" size="small">عرض المشروع</Button><RecurringProjectSelectButton id={project.id} /></div></div></article>)}</div></div>
+      </section>
+
+      <section className="recurring-section recurring-how">
+        <div className="site-container"><div className="recurring-section-heading"><span>خطوات واضحة</span><h2>كيف تبدأ خطتك؟</h2></div><ol>{recurringHowItWorks.map((item, index) => <li key={item}><b>{index + 1}</b><span>{item}</span></li>)}</ol><p>تظهر كل تفاصيل الدورية والمبلغ والجهة قبل تأكيد العملية.</p></div>
+      </section>
+
+      <section className="recurring-section recurring-management">
+        <div className="site-container recurring-two-column"><div><div className="recurring-section-heading"><span>إدارة الخطة</span><h2>خطتك تبقى واضحة داخل حسابك</h2><p>يظهر سجل الخطة والعمليات والوجهة في مساحة واحدة بعد تفعيل النظام التشغيلي.</p></div><RecurringManagementPreview /></div><aside className="recurring-plan-record"><span>ما الذي يرتبط بالخطة؟</span><h3>سجل منظم لكل عملية</h3><ul><li>الدورية والمبلغ</li><li>الجهة أو المشروع</li><li>تاريخ كل عملية</li><li>التحديثات والتقارير المتاحة</li></ul><Button href="/account/recurring" variant="outline">صفحة الخطط المستمرة</Button></aside></div>
+      </section>
+
+      <section className="recurring-section recurring-flexibility">
+        <div className="site-container"><div className="recurring-section-heading"><span>ثقة ومرونة</span><h2>لا التزام مخفي داخل الخطة</h2></div><div>{["قيمة كل عملية ظاهرة قبل التأكيد.", "الدورية والجهة واضحتان في الملخص.", "لا يتغير المبلغ دون إجراء من صاحب الحساب.", "ترتبط العمليات والتحديثات بالخطة نفسها."].map((item) => <p key={item}>✓ {item}</p>)}</div><small>تُعرض سياسات الإلغاء والاسترداد والدفع المتكرر بعد اعتمادها قانونيًا وتشغيليًا.</small></div>
+      </section>
+
+      <section className="recurring-section recurring-faq"><div className="site-container"><div className="recurring-section-heading"><span>قبل البدء</span><h2>الأسئلة الشائعة</h2></div><ProjectFaq items={recurringFaq} /></div></section>
+
+      <section className="recurring-final"><div className="site-container"><div><span>ابدأ بخطوة بسيطة</span><h2>اختر خطة تناسبك<br />ودع أثرها يستمر</h2></div><div><Button href="#recurring-plan-builder" size="large">أنشئ خطة عطاء</Button><Button href="/#donate" variant="outline" size="large">تبرع لمرة واحدة</Button></div></div></section>
+    </main>
+  );
 }
