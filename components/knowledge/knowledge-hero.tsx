@@ -1,1 +1,27 @@
-import{AlQudsGoldCoin}from"@/components/brand/al-quds-gold-coin";import type{KnowledgeArticle}from"@/types/knowledge";export function KnowledgeHero({article}:{article:KnowledgeArticle}){return <section className="knowledge-hero"><div className="site-container knowledge-hero-grid"><div><span className="eyebrow">مركز المعرفة</span><h1>اعرف قبل أن تعطي</h1><p>أدلة واضحة تساعدك على اختيار نية التبرع وفهم الزكاة والوقف والعطاء المستمر ومتابعة أثر مساهمتك.</p><a className="button button-primary" href="#knowledge-explorer">ابدأ بالدليل المناسب</a></div><article className="featured-guide"><span>دليل مختار</span><h2>{article.title}</h2><p>{article.summary}</p><a href={`/knowledge/${article.slug}`}>اقرأ الدليل</a><div className="guide-document" role="img" aria-label="صورة أو وثيقة معتمدة مطلوبة">APPROVED GUIDE ASSET REQUIRED</div><AlQudsGoldCoin decorative/></article></div></section>}
+import type { KnowledgeArticle } from "@/types/knowledge";
+
+export function KnowledgeHero({ article }: { article: KnowledgeArticle }) {
+  return (
+    <section className="knowledge-hero">
+      <div className="site-container knowledge-hero-grid">
+        <div>
+          <span className="eyebrow">مركز المعرفة</span>
+          <h1>اعرف قبل أن تعطي</h1>
+          <p>أدلة واضحة تساعدك على فهم رحلة التبرع واختيار المسار المناسب ومتابعة التحديثات والوثائق.</p>
+          <a className="button button-primary" href="#knowledge-explorer">ابدأ بالدليل المناسب</a>
+        </div>
+        <article className="featured-guide">
+          <span>دليل مختار</span>
+          <h2>{article.title}</h2>
+          <p>{article.summary}</p>
+          <ul>
+            <li>شرح مباشر دون مصطلحات معقدة</li>
+            <li>تنبيهات واضحة عند الحاجة إلى مراجعة مختصة</li>
+            <li>روابط إلى المسار المناسب داخل الموقع</li>
+          </ul>
+          <a href={`/knowledge/${article.slug}`}>اقرأ الدليل</a>
+        </article>
+      </div>
+    </section>
+  );
+}
