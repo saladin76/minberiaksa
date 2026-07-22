@@ -104,13 +104,11 @@ jobs:
           cat /tmp/minberi-next.log
           exit 1
       - name: Run pattern safeguards
-        id: pattern_safeguards
-        continue-on-error: true
         env:
           PLAYWRIGHT_BASE_URL: http://127.0.0.1:3000
         run: |
           mkdir -p artifacts/test-debug
-          npm run test:pattern > artifacts/test-debug/playwright.log 2>&1
+          npm run test:pattern | tee artifacts/test-debug/playwright.log
       - name: Upload safeguard diagnostics
         if: always()
         uses: actions/upload-artifact@v4
@@ -119,11 +117,6 @@ jobs:
           path: artifacts/test-debug
           if-no-files-found: error
           retention-days: 3
-      - name: Stop when safeguards failed
-        if: steps.pattern_safeguards.outcome == 'failure'
-        run: |
-          cat artifacts/test-debug/playwright.log
-          exit 1
       - name: Capture local production screenshots
         env:
           PLAYWRIGHT_BASE_URL: http://127.0.0.1:3000
