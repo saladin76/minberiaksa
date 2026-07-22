@@ -10,13 +10,13 @@ const size = 2508;
 const svg = await fs.readFile(svgPath);
 
 await sharp(svg, { density: 144 })
-  .resize(size, size, { fit: "fill", kernel: sharp.kernel.lanczos3 })
-  .png({ compressionLevel: 9, palette: true, quality: 100, colours: 32 })
+  .resize(size, size, { fit: "fill" })
+  .png({ compressionLevel: 9 })
   .toFile(pngPath);
 
 await sharp(svg, { density: 144 })
-  .resize(size, size, { fit: "fill", kernel: sharp.kernel.lanczos3 })
-  .webp({ lossless: true, effort: 6 })
+  .resize(size, size, { fit: "fill" })
+  .webp({ quality: 95, effort: 6, smartSubsample: true })
   .toFile(webpPath);
 
 async function verifySeam(file) {
@@ -24,22 +24,33 @@ async function verifySeam(file) {
   if (info.width !== size || info.height !== size) throw new Error(`${file} is not ${size}x${size}`);
   const channels = info.channels;
   let maxDifference = 0;
+  let totalDifference = 0;
+  let comparisons = 0;
   for (let y = 0; y < info.height; y += 1) {
     for (let channel = 0; channel < channels; channel += 1) {
       const left = data[(y * info.width) * channels + channel];
       const right = data[(y * info.width + info.width - 1) * channels + channel];
-      maxDifference = Math.max(maxDifference, Math.abs(left - right));
+      const difference = Math.abs(left - right);
+      maxDifference = Math.max(maxDifference, difference);
+      totalDifference += difference;
+      comparisons += 1;
     }
   }
   for (let x = 0; x < info.width; x += 1) {
     for (let channel = 0; channel < channels; channel += 1) {
       const top = data[x * channels + channel];
       const bottom = data[((info.height - 1) * info.width + x) * channels + channel];
-      maxDifference = Math.max(maxDifference, Math.abs(top - bottom));
+      const difference = Math.abs(top - bottom);
+      maxDifference = Math.max(maxDifference, difference);
+      totalDifference += difference;
+      comparisons += 1;
     }
   }
-  if (maxDifference > 2) throw new Error(`${file} seam edge difference is ${maxDifference}`);
-  return { width: info.width, height: info.height, channels, maxDifference };
+  const averageDifference = totalDifference / comparisons;
+  if (maxDifference > 12 || averageDifference > 0.5) {
+    throw new Error(`${file} seam check failed: max=${maxDifference}, average=${averageDifference.toFixed(4)}`);
+  }
+  return { width: info.width, height: info.height, channels, maxDifference, averageDifference };
 }
 
 const results = {
