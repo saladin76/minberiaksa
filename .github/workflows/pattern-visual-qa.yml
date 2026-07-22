@@ -59,13 +59,17 @@ jobs:
         run: |
           cat artifacts/generation-debug/generate.log
           exit 1
-      - name: Prepare generated asset commit locally
+      - name: Resolve verified asset commit
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add public/assets/patterns/aqsa-white-pattern.svg public/assets/patterns/aqsa-white-pattern.png public/assets/patterns/aqsa-white-pattern.webp
-          git commit -m "Generate high-resolution seamless pattern assets"
-          echo "FINAL_SHA=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
+          if git diff --cached --quiet; then
+            echo "FINAL_SHA=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
+          else
+            git commit -m "Generate high-resolution seamless pattern assets"
+            echo "FINAL_SHA=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
+          fi
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
       - name: Production build
@@ -111,8 +115,11 @@ jobs:
           printf 'Local production build screenshots from commit: %s\n' "$FINAL_SHA" > artifacts/pattern-qa/assets.txt
           file public/assets/patterns/aqsa-white-pattern.svg public/assets/patterns/aqsa-white-pattern.png public/assets/patterns/aqsa-white-pattern.webp >> artifacts/pattern-qa/assets.txt
           stat -c '%n %s bytes' public/assets/patterns/aqsa-white-pattern.svg public/assets/patterns/aqsa-white-pattern.png public/assets/patterns/aqsa-white-pattern.webp >> artifacts/pattern-qa/assets.txt
-      - name: Push verified generated assets
-        run: git push origin HEAD:${{ github.event.pull_request.head.ref }}
+      - name: Push verified generated assets when changed
+        run: |
+          if [ "$FINAL_SHA" != "${{ github.event.pull_request.head.sha }}" ]; then
+            git push origin HEAD:${{ github.event.pull_request.head.ref }}
+          fi
       - name: Upload QA artifact
         uses: actions/upload-artifact@v4
         with:

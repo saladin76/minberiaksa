@@ -3,7 +3,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 
 const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? "http://127.0.0.1:3000";
-const commit = process.env.GITHUB_SHA ?? process.env.COMMIT_SHA ?? "local-uncommitted";
+const commit = process.env.COMMIT_SHA ?? process.env.GITHUB_SHA ?? "local-uncommitted";
 const output = path.resolve("artifacts/pattern-qa");
 await fs.mkdir(output, { recursive: true });
 
