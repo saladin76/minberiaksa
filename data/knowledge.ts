@@ -3,9 +3,7 @@ import type { KnowledgeArticle, KnowledgeTopic } from "@/types/knowledge";
 export const knowledgeTopics: Array<{ id: KnowledgeTopic; label: string }> = [
   { id: "zakat", label: "الزكاة" },
   { id: "waqf", label: "الوقف" },
-  { id: "recurring", label: "التبرع المستمر" },
-  { id: "al-quds", label: "القدس والأقصى" },
-  { id: "gaza", label: "غزة والإغاثة" },
+  { id: "recurring", label: "العطاء المستمر" },
   { id: "transparency", label: "الشفافية والتقارير" },
   { id: "donation-journey", label: "رحلة التبرع" },
 ];
@@ -13,65 +11,140 @@ export const knowledgeTopics: Array<{ id: KnowledgeTopic; label: string }> = [
 export const knowledgeArticles: KnowledgeArticle[] = [
   {
     slug: "estimate-your-zakat",
-    title: "كيف تحسب زكاتك تقديريًا؟",
-    summary: "دليل عملي لفهم الحاسبة التقديرية مع الحفاظ على نية الزكاة مستقلة.",
+    title: "كيف تستخدم حاسبة الزكاة التقديرية؟",
+    summary: "شرح لطريقة إدخال الأصول والالتزامات ومراجعة النتيجة قبل اختيار مسار الزكاة.",
     topic: "zakat",
-    tags: ["زكاة", "حاسبة", "نية التبرع"],
-    projectId: "gaza-food-parcels",
-    reviewStatus: "sharia-review-required",
-    readingMinutes: 5,
+    tags: ["الزكاة", "الحاسبة", "الخصوصية"],
+    reviewStatus: "draft",
+    readingMinutes: 4,
     sections: [
-      { id: "purpose", heading: "ما الذي تقدمه الحاسبة؟", paragraphs: ["تقدّم الحاسبة نتيجة تقديرية مبنية على البيانات التي يدخلها المستخدم، ولا تستبدل الاستشارة الشرعية عند الحاجة."] },
-      { id: "nisab", heading: "النصاب والبيانات الاختيارية", paragraphs: ["يمكن إدخال النصاب بصورة اختيارية وفق منطق النموذج الحالي، مع إبقاء النتيجة واضحة داخل لوحة منفصلة."] },
-      { id: "intention", heading: "حفظ نية الزكاة", paragraphs: ["تبقى مساهمة الزكاة منفصلة داخل السلة ويؤكد المستخدم النية قبل الإضافة."], note: "النص يحتاج مراجعة شرعية قبل النشر العام." },
+      {
+        id: "purpose",
+        heading: "ما الذي تفعله الحاسبة؟",
+        paragraphs: [
+          "تجمع الحاسبة القيم التي تدخلها، وتطرح الالتزامات قصيرة الأجل، ثم تعرض تقديرًا حسابيًا بنسبة 2.5% من صافي المال المدخل.",
+          "لا تحفظ المنصة تفاصيل أصولك داخل سلة العطاء، ويصل إلى السلة مبلغ الزكاة والمسار الذي اخترته فقط.",
+        ],
+      },
+      {
+        id: "limits",
+        heading: "ما الذي لا تحدده الحاسبة؟",
+        paragraphs: [
+          "لا تتحقق الحاسبة تلقائيًا من جميع الشروط الخاصة بحالتك، ولا تقدم فتوى أو بديلًا عن الاستشارة المختصة عند وجود تفاصيل غير واضحة.",
+        ],
+        note: "استخدم النتيجة كتقدير حسابي، وراجع الجهة الشرعية التي تثق بها عند الحاجة.",
+      },
+      {
+        id: "journey",
+        heading: "بعد ظهور النتيجة",
+        paragraphs: [
+          "يمكنك استخدام المبلغ المحسوب أو إدخال مبلغ مختلف، ثم تأكيد نية الزكاة واختيار الصندوق أو المشروع المؤهل قبل إضافته إلى سلة العطاء.",
+        ],
+      },
     ],
     sources: [],
-    relatedSlugs: ["waqf-versus-charity", "follow-project-reports"],
+    relatedSlugs: ["follow-project-reports", "continuous-giving-plan"],
   },
   {
     slug: "waqf-versus-charity",
-    title: "ما الفرق بين الوقف والصدقة؟",
-    summary: "مقدمة تحريرية تساعد المتبرع على فهم مسار الوقف دون إنشاء حكم شرعي جديد.",
+    title: "كيف يختلف مسار الوقف داخل المنصة؟",
+    summary: "دليل تشغيلي يوضح البيانات المطلوبة لإنشاء مساهمة وقفية ومتابعة وثائقها لاحقًا.",
     topic: "waqf",
-    tags: ["وقف", "صدقة", "شهادة الوقف"],
-    projectId: "al-quds-home-restoration",
-    reviewStatus: "sharia-review-required",
+    tags: ["الوقف", "صاحب الوقف", "الوثائق"],
+    reviewStatus: "draft",
     readingMinutes: 4,
     sections: [
-      { id: "overview", heading: "مساران للعطاء", paragraphs: ["تشرح هذه الصفحة الفرق التشغيلي داخل المنصة فقط: مساهمة مباشرة في مشروع، أو إنشاء وقف مرتبط بخيار معتمد وشهادة بعد المراجعة."] },
-      { id: "certificate", heading: "شهادة الوقف", paragraphs: ["شهادة الوقف معاينة إلى أن تكتمل البيانات والدفع والمراجعة والإصدار الرسمي."] },
+      {
+        id: "path",
+        heading: "مسار مستقل داخل سلة العطاء",
+        paragraphs: [
+          "يُسجل الوقف كعنصر مستقل يتضمن المشروع أو المسار، والمبلغ، واسم صاحب الوقف، ونص الإهداء عند إضافته.",
+          "لا تختلط بيانات الوقف بعناصر الصدقة أو الزكاة الموجودة في السلة نفسها.",
+        ],
+      },
+      {
+        id: "certificate",
+        heading: "متى تظهر شهادة الوقف؟",
+        paragraphs: [
+          "لا تُعرض شهادة نهائية قبل إتمام العملية ومراجعة البيانات وإصدار الوثيقة من النظام التشغيلي للمؤسسة.",
+        ],
+      },
+      {
+        id: "financial",
+        heading: "مساهمة وليست منتجًا ماليًا",
+        paragraphs: [
+          "تجربة الوقف في الموقع مخصصة للعطاء المرتبط بالمشروع، ولا تعرض أرباحًا أو عائدًا ماليًا للمتبرع.",
+        ],
+      },
     ],
     sources: [],
-    relatedSlugs: ["estimate-your-zakat", "continuous-giving-plan"],
+    relatedSlugs: ["estimate-your-zakat", "follow-project-reports"],
   },
   {
     slug: "continuous-giving-plan",
-    title: "كيف يعمل العطاء المستمر؟",
-    summary: "شرح لنموذج الخطة اليومية أو الأسبوعية أو الشهرية بوصفه Prototype دون خصم فعلي.",
+    title: "كيف تنشئ خطة عطاء مستمر؟",
+    summary: "اختر الدورية والجهة والمبلغ، ثم راجع التقدير قبل الانتقال إلى سلة العطاء.",
     topic: "recurring",
-    tags: ["عطاء مستمر", "خطة", "تبرع شهري"],
-    projectId: "gaza-water",
-    reviewStatus: "institution-approved",
-    readingMinutes: 4,
+    tags: ["عطاء مستمر", "كل جمعة", "تبرع شهري"],
+    reviewStatus: "draft",
+    readingMinutes: 3,
     sections: [
-      { id: "frequency", heading: "اختر الدورية", paragraphs: ["تتيح الواجهة اختيار تبرع يومي أو كل جمعة أو شهري مع عرض ملخص شهري وسنوي تقديري."] },
-      { id: "prototype", heading: "حالة النموذج", paragraphs: ["لا يتم تنفيذ خصم تلقائي أو إنشاء خطة حقيقية في هذه النسخة الأمامية."] },
+      {
+        id: "frequency",
+        heading: "اختر الدورية المناسبة",
+        paragraphs: [
+          "تتيح الواجهة الاختيار بين يومي، وكل جمعة، وشهري. يعرض الملخص قيمة كل عملية وتقديرًا شهريًا وسنويًا يساعدك على مراجعة الخطة.",
+        ],
+      },
+      {
+        id: "destination",
+        heading: "حدد جهة العطاء",
+        paragraphs: [
+          "يمكن توجيه الخطة إلى صندوق عام أو مشروع يقبل العطاء المستمر. تبقى الجهة والمبلغ والدورية ظاهرة قبل المتابعة.",
+        ],
+      },
+      {
+        id: "activation",
+        heading: "تفعيل الخطة وإدارتها",
+        paragraphs: [
+          "يحتاج الخصم المتكرر وإدارة المواعيد والإيقاف إلى بوابة دفع وحساب متبرع مرتبطين بالنظام التشغيلي.",
+          "لا تطلب الواجهة الحالية بيانات بطاقة قبل اكتمال هذا الربط.",
+        ],
+      },
     ],
-    sources: ["واجهة العطاء المستمر داخل المنصة"],
-    relatedSlugs: ["follow-project-reports", "estimate-your-zakat"],
+    sources: [],
+    relatedSlugs: ["estimate-your-zakat", "follow-project-reports"],
   },
   {
     slug: "follow-project-reports",
-    title: "كيف تصل إلى تقارير مشروعك؟",
-    summary: "تعرف إلى العلاقة بين المشروع والتحديث الميداني والوثائق وتقارير الأثر.",
+    title: "كيف تتابع تحديثات وتقارير المشروع؟",
+    summary: "تعرف على العلاقة بين صفحة المشروع والتحديث الميداني والتقرير وحساب المتبرع.",
     topic: "transparency",
-    tags: ["تقارير", "شفافية", "أثر"],
-    projectId: "al-quds-home-restoration",
-    reviewStatus: "sources-required",
-    readingMinutes: 5,
+    tags: ["تقارير", "شفافية", "تحديثات المشاريع"],
+    reviewStatus: "draft",
+    readingMinutes: 4,
     sections: [
-      { id: "journey", heading: "من المشروع إلى التقرير", paragraphs: ["يرتبط كل تحديث بمعرّف مشروع موجود، ثم تظهر حالة التوثيق والوثيقة المرتبطة دون اختراع نتيجة أو رقم."] },
-      { id: "states", heading: "حالات التحقق", paragraphs: ["قد يظهر العنصر موثّقًا أو قيد المراجعة أو تقريرًا قيد الإعداد أو بيانات مطلوبة."] },
+      {
+        id: "project",
+        heading: "صفحة المشروع هي المرجع الأساسي",
+        paragraphs: [
+          "تعرض صفحة المشروع هدفه ومسار التنفيذ والتحديثات المتاحة وحالة التوثيق. لا تُصنف المرحلة كمكتملة لمجرد وجود المشروع في الموقع.",
+        ],
+      },
+      {
+        id: "verification",
+        heading: "مراجعة التحديث قبل النشر",
+        paragraphs: [
+          "تُراجع الصور والتواريخ والنتائج والوثائق قبل ربطها بالمشروع. قد يظهر المشروع دون تحديثات إلى أن تصل مادة مناسبة للنشر.",
+        ],
+      },
+      {
+        id: "account",
+        heading: "المتابعة داخل حساب العطاء",
+        paragraphs: [
+          "بعد تفعيل الحساب وربطه بالعمليات الفعلية، يمكن عرض التحديثات والوثائق المرتبطة بمساهمات المتبرع من مساحة واحدة.",
+        ],
+      },
     ],
     sources: [],
     relatedSlugs: ["continuous-giving-plan", "waqf-versus-charity"],
