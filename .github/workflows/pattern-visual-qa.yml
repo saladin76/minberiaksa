@@ -1,0 +1,92 @@
+name: Pattern Visual QA
+
+on:
+  pull_request:
+    branches:
+      - main
+    types: [opened, synchronize, reopened]
+    paths:
+      - public/assets/patterns/**
+      - styles/pattern-background.css
+      - components/brand/pattern-background.tsx
+      - config/visual-assets.ts
+      - tests/pattern-background.spec.ts
+      - scripts/aqsa-pattern.svg.gz.b64
+      - scripts/write-pattern-svg.mjs
+      - scripts/generate-pattern-assets.mjs
+      - scripts/capture-pattern-qa.mjs
+      - playwright.config.ts
+      - package.json
+      - .github/workflows/pattern-visual-qa.yml
+
+permissions:
+  contents: write
+
+jobs:
+  visual-qa:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: ${{ github.event.pull_request.head.repo.full_name }}
+          ref: ${{ github.event.pull_request.head.ref }}
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: package.json
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Generate high-resolution seamless assets
+        run: npm run generate:pattern
+      - name: Prepare generated asset commit locally
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add public/assets/patterns/aqsa-white-pattern.svg public/assets/patterns/aqsa-white-pattern.png public/assets/patterns/aqsa-white-pattern.webp
+          git commit -m "Generate high-resolution seamless pattern assets"
+          echo "FINAL_SHA=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Production build
+        run: npm run build
+      - name: Start production server
+        run: |
+          npm run start -- -p 3000 > /tmp/minberi-next.log 2>&1 &
+          echo $! > /tmp/minberi-next.pid
+          for attempt in {1..60}; do
+            if curl --fail --silent http://127.0.0.1:3000/ > /dev/null; then exit 0; fi
+            sleep 1
+          done
+          cat /tmp/minberi-next.log
+          exit 1
+      - name: Run pattern safeguards
+        env:
+          PLAYWRIGHT_BASE_URL: http://127.0.0.1:3000
+        run: npm run test:pattern
+      - name: Capture local production screenshots
+        env:
+          PLAYWRIGHT_BASE_URL: http://127.0.0.1:3000
+          COMMIT_SHA: ${{ env.FINAL_SHA }}
+        run: npm run capture:pattern
+      - name: Record asset metadata
+        run: |
+          printf 'Local production build screenshots from commit: %s\n' "$FINAL_SHA" > artifacts/pattern-qa/assets.txt
+          file public/assets/patterns/aqsa-white-pattern.svg public/assets/patterns/aqsa-white-pattern.png public/assets/patterns/aqsa-white-pattern.webp >> artifacts/pattern-qa/assets.txt
+          stat -c '%n %s bytes' public/assets/patterns/aqsa-white-pattern.svg public/assets/patterns/aqsa-white-pattern.png public/assets/patterns/aqsa-white-pattern.webp >> artifacts/pattern-qa/assets.txt
+      - name: Push verified generated assets
+        run: git push origin HEAD:${{ github.event.pull_request.head.ref }}
+      - name: Upload QA artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: pattern-visual-qa-${{ env.FINAL_SHA }}
+          path: artifacts/pattern-qa
+          if-no-files-found: error
+          retention-days: 14
+      - name: Stop production server
+        if: always()
+        run: |
+          if [ -f /tmp/minberi-next.pid ]; then kill "$(cat /tmp/minberi-next.pid)" || true; fi

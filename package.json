@@ -2,8 +2,30 @@
   "name": "minberi-aksa-v2",
   "version": "0.1.0",
   "private": true,
-  "scripts": { "dev": "next dev", "build": "next build", "start": "next start" },
-  "dependencies": { "lucide-react": "^0.468.0", "next": "16.0.11", "react": "19.2.4", "react-dom": "19.2.4", "swiper": "^11.2.10" },
-  "devDependencies": { "@types/node": "24.10.1", "@types/react": "19.2.7", "@types/react-dom": "19.2.3", "typescript": "5.9.3" },
-  "engines": { "node": ">=20.9.0" }
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "generate:pattern": "node scripts/write-pattern-svg.mjs && node scripts/generate-pattern-assets.mjs",
+    "test:pattern": "playwright test tests/pattern-background.spec.ts",
+    "capture:pattern": "node scripts/capture-pattern-qa.mjs"
+  },
+  "dependencies": {
+    "lucide-react": "^0.468.0",
+    "next": "16.0.11",
+    "react": "19.2.4",
+    "react-dom": "19.2.4",
+    "swiper": "^11.2.10"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.55.0",
+    "@types/node": "24.10.1",
+    "@types/react": "19.2.7",
+    "@types/react-dom": "19.2.3",
+    "sharp": "0.34.3",
+    "typescript": "5.9.3"
+  },
+  "engines": {
+    "node": ">=20.9.0"
+  }
 }
