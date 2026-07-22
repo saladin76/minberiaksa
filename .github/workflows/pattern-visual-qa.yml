@@ -104,7 +104,7 @@ jobs:
           cat /tmp/minberi-next.log
           exit 1
       - name: Run pattern safeguards
-        id: pattern-safeguards
+        id: pattern_safeguards
         continue-on-error: true
         env:
           PLAYWRIGHT_BASE_URL: http://127.0.0.1:3000
@@ -120,7 +120,7 @@ jobs:
           if-no-files-found: error
           retention-days: 3
       - name: Stop when safeguards failed
-        if: steps.pattern-safeguards.outcome == 'failure'
+        if: steps.pattern_safeguards.outcome == 'failure'
         run: |
           cat artifacts/test-debug/playwright.log
           exit 1
