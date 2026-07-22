@@ -1,4 +1,48 @@
-"use client";
-import{useEffect,useRef,useState}from"react";import{Button}from"@/components/ui/button";import{donorDemo}from"@/data/donor-demo";import{projects}from"@/data/projects";import type{RecurringFrequency,RecurringPlan}from"@/types/donor-account";
-type Action="amount"|"destination"|"frequency"|"pause"|"resume"|"end";const frequencies:Record<RecurringFrequency,string>={daily:"يومي",friday:"كل جمعة",monthly:"شهري"};const focusable='button:not([disabled]),input:not([disabled]),select:not([disabled]),a[href],[tabindex]:not([tabindex="-1"])';const estimate=(f:RecurringFrequency,a:number)=>f==="daily"?{m:a*30,y:a*365}:f==="friday"?{m:a*4.33,y:a*52}:{m:a,y:a*12};
-export function RecurringPlansManager(){const[plans,setPlans]=useState<RecurringPlan[]>(donorDemo.recurringPlans),[active,setActive]=useState<{plan:RecurringPlan;action:Action}|null>(null),[amount,setAmount]=useState(""),[frequency,setFrequency]=useState<RecurringFrequency>("monthly"),[destination,setDestination]=useState(""),[notice,setNotice]=useState("");const dialog=useRef<HTMLDivElement>(null),returnFocus=useRef<HTMLElement|null>(null);useEffect(()=>{if(!active||!dialog.current)return;const old=document.body.style.overflow;document.body.style.overflow="hidden";const items=()=>Array.from(dialog.current!.querySelectorAll<HTMLElement>(focusable));requestAnimationFrame(()=>items()[0]?.focus());const key=(e:KeyboardEvent)=>{if(e.key==="Escape"){setActive(null);return}if(e.key!=="Tab")return;const list=items();if(!list.length)return;const first=list[0],last=list[list.length-1];if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus()}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus()}};document.addEventListener("keydown",key);return()=>{document.body.style.overflow=old;document.removeEventListener("keydown",key);requestAnimationFrame(()=>returnFocus.current?.focus())}},[active]);const open=(plan:RecurringPlan,action:Action,trigger:HTMLElement)=>{returnFocus.current=trigger;setAmount(String(plan.amount));setFrequency(plan.frequency);setDestination(plan.projectId??plan.fundLabel??"");setActive({plan,action})};const patch=(id:string,u:Partial<RecurringPlan>,message:string)=>{setPlans(current=>current.map(plan=>plan.id===id?{...plan,...u}:plan));setNotice(message);setActive(null)};const confirm=()=>{if(!active)return;const{plan,action}=active;if(action==="amount"){const value=Number(amount);if(value<=0)return;const e=estimate(plan.frequency,value);patch(plan.id,{amount:value,estimatedMonthly:+e.m.toFixed(2),estimatedAnnual:+e.y.toFixed(2)},"تم تعديل المبلغ داخل Demo State فقط.")}else if(action==="frequency"){const e=estimate(frequency,plan.amount);patch(plan.id,{frequency,estimatedMonthly:+e.m.toFixed(2),estimatedAnnual:+e.y.toFixed(2)},"تم تغيير الدورية داخل Demo State فقط.")}else if(action==="destination"){const project=projects.find(x=>x.id===destination);patch(plan.id,project?{projectId:project.id,fundLabel:undefined}:{projectId:undefined,fundLabel:destination||"حيث الحاجة أشد"},"تم تغيير الجهة داخل Demo State فقط.")}else if(action==="pause")patch(plan.id,{status:"paused"},"تم عرض الإيقاف المؤقت تجريبيًا.");else if(action==="resume")patch(plan.id,{status:"active"},"تم عرض الاستئناف تجريبيًا.");else patch(plan.id,{status:"ended"},"تم إنهاء المعاينة محليًا دون تغيير خطة حقيقية.")};return <div className="account-page recurring-manager-page"><header className="account-page-heading"><span>Recurring Plans · Demo</span><h1>خطط عطائك المستمر</h1><p>راجع الخطط اليومية أو الأسبوعية أو الشهرية وتصور طريقة إدارتها مستقبلًا.</p></header><section className="account-auth-required"><strong>PLAN MANAGEMENT BACKEND REQUIRED</strong><p>كل الإجراءات محلية ولا تُحفظ بعد Refresh ولا تُرسل إلى وسيلة دفع.</p></section>{notice?<p role="status" aria-live="polite">{notice}</p>:null}<section className="recurring-plan-grid">{plans.map(plan=>{const project=projects.find(x=>x.id===plan.projectId);return <article className="recurring-plan-card" key={plan.id}><header><div><span>خطة Demo</span><h2>{project?.title.ar??plan.fundLabel}</h2></div><b className="account-status-badge">{plan.status==="active"?"نشطة":plan.status==="paused"?"متوقفة مؤقتًا":"منتهية"}</b></header><dl className="plan-detail-list"><div><dt>الدورية</dt><dd>{frequencies[plan.frequency]}</dd></div><div><dt>المبلغ لكل عملية</dt><dd>{plan.amount} USD</dd></div><div><dt>التقدير الشهري</dt><dd>{plan.estimatedMonthly.toFixed(2)} USD</dd></div><div><dt>التقدير السنوي</dt><dd>{plan.estimatedAnnual.toFixed(2)} USD</dd></div><div><dt>بداية الخطة</dt><dd>{plan.startLabel}</dd></div><div><dt>العملية القادمة</dt><dd>بيانات النظام مطلوبة</dd></div></dl><div className="plan-actions"><Button type="button" variant="outline" size="small" onClick={e=>open(plan,"amount",e.currentTarget)}>تعديل المبلغ</Button><Button type="button" variant="outline" size="small" onClick={e=>open(plan,"destination",e.currentTarget)}>تغيير الجهة</Button><Button type="button" variant="outline" size="small" onClick={e=>open(plan,"frequency",e.currentTarget)}>تغيير الدورية</Button>{plan.status==="active"?<Button type="button" variant="text" size="small" onClick={e=>open(plan,"pause",e.currentTarget)}>إيقاف مؤقت</Button>:plan.status==="paused"?<Button type="button" variant="text" size="small" onClick={e=>open(plan,"resume",e.currentTarget)}>استئناف</Button>:null}<Button type="button" variant="text" size="small" disabled={plan.status==="ended"} onClick={e=>open(plan,"end",e.currentTarget)}>إنهاء</Button></div></article>})}</section><Button href="/recurring" variant="outline">إنشاء خطة أخرى</Button>{active?<div className="account-dialog-layer"><button className="account-dialog-backdrop" type="button" aria-label="إغلاق إدارة الخطة" onClick={()=>setActive(null)}/><div ref={dialog} className="account-dialog" role="dialog" aria-modal="true" aria-labelledby="plan-dialog-title"><header><h2 id="plan-dialog-title">{active.action==="end"?"إنهاء هذه الخطة التجريبية؟":"تعديل الخطة التجريبية"}</h2><button type="button" onClick={()=>setActive(null)} aria-label="إغلاق">×</button></header>{active.action==="amount"?<label><span>المبلغ</span><input inputMode="decimal" value={amount} onChange={e=>setAmount(e.target.value.replace(/[^0-9.]/g,""))}/></label>:null}{active.action==="frequency"?<fieldset><legend>الدورية</legend>{(Object.keys(frequencies)as RecurringFrequency[]).map(value=><label key={value}><input type="radio" checked={frequency===value} onChange={()=>setFrequency(value)}/>{frequencies[value]}</label>)}</fieldset>:null}{active.action==="destination"?<label><span>الجهة</span><select value={destination} onChange={e=>setDestination(e.target.value)}><option>حيث الحاجة أشد</option>{projects.filter(p=>p.donationTypes.includes("recurring")).slice(0,6).map(p=><option key={p.id} value={p.id}>{p.title.ar}</option>)}</select></label>:null}<p>{active.action==="end"?"لن يتم تنفيذ أي تغيير حقيقي على وسيلة دفع أو خطة فعلية.":"هذا التغيير يخص Demo State فقط ولن يبقى بعد تحديث الصفحة."}</p><footer><Button type="button" onClick={confirm}>{active.action==="end"?"إنهاء المعاينة":"تطبيق داخل المعاينة"}</Button><Button type="button" variant="outline" onClick={()=>setActive(null)}>إلغاء</Button></footer></div></div>:null}</div>}
+import { Button } from "@/components/ui/button";
+
+export function RecurringPlansManager() {
+  return (
+    <div className="account-page recurring-manager-page">
+      <header className="account-page-heading">
+        <span>العطاء المستمر</span>
+        <h1>خطط عطائك المستمر</h1>
+        <p>ستعرض هذه الصفحة خططك اليومية أو كل جمعة أو الشهرية بعد ربط الحساب بنظام الدفع المتكرر.</p>
+      </header>
+
+      <section className="account-empty-state">
+        <h2>لا توجد خطط مرتبطة بالحساب بعد</h2>
+        <p>عند تفعيل أول خطة حقيقية، ستظهر هنا الدورية والمبلغ والجهة وموعد العملية القادمة وحالة الخطة.</p>
+        <div>
+          <Button href="/recurring">أنشئ خطة عطاء</Button>
+          <Button href="/projects" variant="outline">استكشف المشاريع</Button>
+        </div>
+      </section>
+
+      <section className="account-account-roadmap">
+        <h2>إدارة واضحة بعد التفعيل</h2>
+        <div>
+          <article>
+            <span>01</span>
+            <h3>تعديل المبلغ والدورية</h3>
+            <p>تغيير قيمة العملية أو تكرارها بعد تأكيد هوية المتبرع.</p>
+          </article>
+          <article>
+            <span>02</span>
+            <h3>تغيير جهة العطاء</h3>
+            <p>نقل الخطة إلى مشروع مؤهل أو صندوق عام دون إنشاء خطة مكررة.</p>
+          </article>
+          <article>
+            <span>03</span>
+            <h3>الإيقاف أو الإنهاء</h3>
+            <p>إيقاف الخطة مؤقتًا أو إنهاؤها وفق السياسة التشغيلية المعتمدة.</p>
+          </article>
+        </div>
+      </section>
+
+      <section className="account-auth-required">
+        <strong>إدارة الخطط تحتاج تسجيل دخول وربطًا ببوابة الدفع</strong>
+        <p>لا تُعرض خطة أو عملية قادمة قبل استلام بياناتها من النظام التشغيلي الفعلي.</p>
+      </section>
+    </div>
+  );
+}
