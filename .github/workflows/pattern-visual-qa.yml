@@ -107,6 +107,7 @@ jobs:
         env:
           PLAYWRIGHT_BASE_URL: http://127.0.0.1:3000
         run: |
+          set -o pipefail
           mkdir -p artifacts/test-debug
           npm run test:pattern | tee artifacts/test-debug/playwright.log
       - name: Upload safeguard diagnostics
