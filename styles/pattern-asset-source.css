@@ -4,9 +4,7 @@
     url("/assets/patterns/aqsa-white-pattern.webp") type("image/webp") 1x,
     url("/assets/patterns/aqsa-white-pattern.png") type("image/png") 1x
   );
-  --aqsa-pattern-svg-modern: image-set(
-    url("/assets/patterns/aqsa-white-pattern.svg") type("image/svg+xml") 1x
-  );
+  --aqsa-pattern-svg-modern: url("/assets/patterns/aqsa-white-pattern.svg");
 }
 
 .pattern-background__ornament,
