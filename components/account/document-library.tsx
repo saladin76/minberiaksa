@@ -1,4 +1,33 @@
-"use client";
-import{useEffect,useMemo,useRef,useState}from"react";import{Button}from"@/components/ui/button";import{donorDemo}from"@/data/donor-demo";import{projects}from"@/data/projects";import type{DonationDocument,DocumentKind,DocumentStatus}from"@/types/donor-account";
-const kinds:Record<DocumentKind,string>={"general-receipt":"إيصال تبرع","zakat-receipt":"إيصال زكاة","waqf-certificate":"شهادة وقف","gift-card":"بطاقة إهداء","recurring-summary":"ملخص تبرع مستمر","field-report":"تقرير ميداني","thank-you":"شهادة شكر"},statuses:Record<DocumentStatus,string>={"preview-ready":"متاحة للمعاينة","after-payment":"ستُصدر بعد الدفع","under-review":"قيد المراجعة","needs-details":"تحتاج بيانات","coming-later":"التقرير سيُضاف لاحقًا"};const projectById=(id?:string)=>projects.find(project=>project.id===id);const focusable='a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),[tabindex]:not([tabindex="-1"])';
-export function DocumentLibrary(){const[kind,setKind]=useState<"all"|DocumentKind>("all"),[selected,setSelected]=useState<DonationDocument|null>(null);const dialog=useRef<HTMLDivElement>(null),returnFocus=useRef<HTMLElement|null>(null);const visible=useMemo(()=>donorDemo.documents.filter(document=>kind==="all"||document.kind===kind),[kind]);useEffect(()=>{if(!selected||!dialog.current)return;const old=document.body.style.overflow;document.body.style.overflow="hidden";const list=()=>Array.from(dialog.current!.querySelectorAll<HTMLElement>(focusable));requestAnimationFrame(()=>list()[0]?.focus());const key=(e:KeyboardEvent)=>{if(e.key==="Escape"){setSelected(null);return}if(e.key!=="Tab")return;const items=list();if(!items.length)return;const first=items[0],last=items[items.length-1];if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus()}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus()}};document.addEventListener("keydown",key);return()=>{document.body.style.overflow=old;document.removeEventListener("keydown",key);requestAnimationFrame(()=>returnFocus.current?.focus())}},[selected]);const donation=donorDemo.donations.find(record=>record.id===selected?.donationId),project=projectById(selected?.projectId??donation?.projectId);return <div className="account-page document-library-page"><header className="account-page-heading"><span>Document Library · Demo</span><h1>وثائق عطائك</h1><p>استعرض الإيصالات والشهادات والتقارير المرتبطة بمساهماتك.</p></header><section className="document-filter"><label><span>نوع الوثيقة</span><select value={kind} onChange={e=>setKind(e.target.value as "all"|DocumentKind)}><option value="all">كل الوثائق الموجودة</option>{Array.from(new Set(donorDemo.documents.map(document=>document.kind))).map(value=><option key={value} value={value}>{kinds[value]}</option>)}</select></label><p aria-live="polite">{visible.length} وثائق Demo.</p></section><section className="document-grid" aria-label="مكتبة الوثائق التجريبية">{visible.map(document=>{const p=projectById(document.projectId);return <article className="document-card" key={document.id}><header><span>{kinds[document.kind]}</span><b className="account-status-badge">{statuses[document.status]}</b></header><h2>{document.title}</h2><p>{p?.title.ar??"مسار عطاء تجريبي"}</p><small>{document.dateLabel}</small><code>{document.reference}</code><div className="document-actions"><Button type="button" variant="outline" size="small" onClick={e=>{returnFocus.current=e.currentTarget;setSelected(document)}}>معاينة</Button><button type="button" disabled>Download · Prototype</button></div></article>})}</section>{selected?<div className="account-dialog-layer"><button className="account-dialog-backdrop" type="button" aria-label="إغلاق معاينة الوثيقة" onClick={()=>setSelected(null)}/><div ref={dialog} className="account-dialog" role="dialog" aria-modal="true" aria-labelledby="document-preview-title"><header><div><span>Demo document — not legally valid</span><h2 id="document-preview-title">معاينة {kinds[selected.kind]}</h2></div><button type="button" onClick={()=>setSelected(null)} aria-label="إغلاق">×</button></header><div className="document-preview"><div>OFFICIAL LOGO REQUIRED</div><p>مؤسسة منبر الأقصى الدولية</p><h3>{selected.title}</h3><dl><div><dt>المشروع</dt><dd>{project?.title.ar??donation?.fundLabel??"مسار تجريبي"}</dd></div>{donation?<><div><dt>النية</dt><dd>{donation.intent}</dd></div><div><dt>المبلغ</dt><dd>{donation.amount} USD · Demo</dd></div></>:null}{selected.kind==="waqf-certificate"?<div><dt>صاحب الوقف</dt><dd>{donation?.ownerLabel??"التفاصيل تحتاج استكمالًا"}</dd></div>:null}<div><dt>الحالة</dt><dd>{statuses[selected.status]}</dd></div></dl><code>{selected.reference}</code><strong>Demo document — not legally valid</strong><p>لا يوجد ختم أو توقيع أو QR أو Barcode فعال.</p></div><footer><Button type="button" onClick={()=>setSelected(null)}>إغلاق المعاينة</Button><Button type="button" variant="outline" disabled>Download · Prototype</Button></footer></div></div>:null}</div>}
+import { Button } from "@/components/ui/button";
+
+export function DocumentLibrary() {
+  return (
+    <div className="account-page document-library-page">
+      <header className="account-page-heading">
+        <span>الوثائق والشهادات</span>
+        <h1>وثائق عطائك في مكان واحد</h1>
+        <p>تظهر الإيصالات وشهادات الوقف وبطاقات الإهداء والتقارير بعد إصدارها واعتمادها رسميًا.</p>
+      </header>
+
+      <section className="account-empty-records">
+        <div>
+          <span>لا توجد وثائق صادرة بعد</span>
+          <h2>لن نعرض مستندًا أو رقمًا مرجعيًا قبل إنشائه فعليًا</h2>
+          <p>عند اكتمال عملية تبرع مرتبطة بحسابك، تظهر الوثيقة هنا بحالتها وتاريخ إصدارها والمشروع المرتبط بها.</p>
+        </div>
+
+        <div className="account-empty-features">
+          <article><strong>إيصالات التبرعات</strong><p>ترتبط بالمبلغ والعملة والنية والعملية الفعلية.</p></article>
+          <article><strong>شهادات الوقف</strong><p>تُبنى من بيانات صاحب الوقف والمشروع بعد اعتمادها.</p></article>
+          <article><strong>التقارير الميدانية</strong><p>تظهر فقط عند نشر تقرير معتمد للمشروع.</p></article>
+        </div>
+
+        <div className="account-empty-actions">
+          <Button href="/account/donations">سجل التبرعات</Button>
+          <Button href="/waqf" variant="outline">أنشئ وقفًا</Button>
+          <Button href="/impact" variant="outline">مركز الأثر والتقارير</Button>
+        </div>
+      </section>
+    </div>
+  );
+}
