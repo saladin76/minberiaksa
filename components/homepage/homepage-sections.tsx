@@ -1,3 +1,5 @@
+import { PatternBackground } from "@/components/brand/pattern-background";
+import { ProjectsCarousel } from "@/components/projects/projects-carousel";
 import { Button } from "@/components/ui/button";
 import { Container } from "@/components/ui/container";
 import { projects } from "@/data/projects";
@@ -21,7 +23,8 @@ const regionLabels: Record<string, string> = {
   global: "مشاريع عامة",
 };
 
-const featuredProjects = projects.filter((project) => project.featured).slice(0, 3);
+const featuredProjects = projects.filter((project) => project.featured).slice(0, 6);
+const homepageProjects = featuredProjects.length >= 3 ? featuredProjects : projects.filter((project) => project.status === "active").slice(0, 6);
 const heroProject = featuredProjects.find((project) => project.image) ?? projects.find((project) => project.image);
 
 function ProjectImage({ project, className = "" }: { project: (typeof projects)[number]; className?: string }) {
@@ -85,28 +88,21 @@ export function HomepageHero() {
 
 export function OfficialProjects() {
   return (
-    <section className="home-section official-projects" id="projects" aria-labelledby="projects-title">
-      <Container>
-        <div className="section-heading-row">
-          <div><span className="section-eyebrow">مشاريع من الميدان</span><h2 id="projects-title">اختر مشروعًا واضح الهدف</h2><p>تعرف على الاحتياج، وطريقة التنفيذ، وحالة المشروع قبل اتخاذ قرار التبرع.</p></div>
-          <Button href="/projects" variant="outline">عرض جميع المشاريع</Button>
-        </div>
-        <div className="projects-showcase">
-          {featuredProjects.map((project, index) => (
-            <article className={index === 0 ? "project-featured" : "project-secondary"} key={project.id}>
-              <ProjectImage project={project} />
-              <div className="project-content">
-                <div className="project-meta"><span>{regionLabels[project.region]}</span><b>{project.donationTypes.includes("zakat") ? "يقبل الزكاة" : "تبرع عام"}</b></div>
-                <h3>{project.title.ar}</h3>
-                <p>{project.summary.ar}</p>
-                <div className="project-proof-line"><span>الحالة</span><strong>{project.status === "active" ? "متاح للدعم" : "يحتاج مراجعة"}</strong></div>
-                <div className="project-actions"><Button href={`/projects/${project.slug}`}>عرض المشروع</Button><Button href="#donate" variant="text">تبرع سريع</Button></div>
-              </div>
-            </article>
-          ))}
-        </div>
-      </Container>
-    </section>
+    <PatternBackground intensity="soft" position="full" fadeDirection="both" className="home-projects-carousel-section">
+      <section className="home-section official-projects" id="projects" aria-labelledby="projects-title">
+        <Container>
+          <div className="section-heading-row">
+            <div>
+              <span className="section-eyebrow">مشاريع ميدانية موثقة</span>
+              <h2 id="projects-title">اختر المشروع الأقرب إلى نية عطائك</h2>
+              <p>استعرض المشاريع المتاحة، وتعرّف على الاحتياج ومسار التنفيذ والتوثيق قبل إتمام مساهمتك.</p>
+            </div>
+            <Button href="/projects" variant="outline">عرض جميع المشاريع</Button>
+          </div>
+          <ProjectsCarousel projects={homepageProjects} />
+        </Container>
+      </section>
+    </PatternBackground>
   );
 }
 
