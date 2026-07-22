@@ -1,5 +1,61 @@
 import { Button } from "@/components/ui/button";
-import { donorDemo } from "@/data/donor-demo";
 import { projects } from "@/data/projects";
-const projectById=(id?:string)=>projects.find(project=>project.id===id);
-export function AccountOverview(){const latestDonation=donorDemo.donations[donorDemo.donations.length-1];const featuredUpdate=donorDemo.impactUpdates.find(update=>update.status==="field-update")??donorDemo.impactUpdates[0];const featuredProject=projectById(featuredUpdate.projectId);const intentions=new Set(donorDemo.donations.map(record=>record.intent)).size;const linkedProjects=new Set(donorDemo.donations.map(record=>record.projectId).filter(Boolean)).size;return <div className="account-page account-overview-page"><header className="account-page-heading"><span>نظرة عامة · Demo data</span><h1>مرحبًا بك في مساحة عطائك</h1><p>راجع آخر تحديثات مشاريعك ووثائقك وخطط عطائك من مكان واحد.</p></header><section className="account-overview-hero" aria-labelledby="overview-summary-title"><div><span>رحلتك التجريبية</span><h2 id="overview-summary-title">العطاء هنا رحلة موثقة، لا رصيدًا ماليًا</h2><p>آخر مساهمة: {latestDonation.amount} {latestDonation.currency} · {latestDonation.dateLabel}</p></div><dl><div><dt>النيات</dt><dd>{intentions} نيات Demo</dd></div><div><dt>المشاريع المرتبطة</dt><dd>{linkedProjects}</dd></div><div><dt>الوثائق</dt><dd>{donorDemo.documents.length}</dd></div><div><dt>الخطط المستمرة</dt><dd>{donorDemo.recurringPlans.length}</dd></div></dl></section><section className="account-priority-panel"><header><span>ما يحتاج انتباهًا</span><h2>خطوات صغيرة تُكمل رحلة التوثيق</h2></header><div><a href="/account/documents?demo=1"><strong>شهادة وقف تحتاج بيانات</strong><span>التفاصيل الشخصية لم تُحفظ حفاظًا على الخصوصية.</span></a><a href="/account/impact?demo=1"><strong>تحديث مشروع جديد</strong><span>Demo update — final field report required.</span></a><a href="/account/recurring?demo=1"><strong>خطة متوقفة تجريبيًا</strong><span>يمكن معاينة الاستئناف أو الإنهاء محليًا فقط.</span></a></div></section><section className="account-featured-impact"><div className="account-field-visual">{featuredProject?.image?<img src={featuredProject.image.sourceUrl} alt={featuredProject.image.alt.ar}/>:<div role="img" aria-label="صورة ميدانية معتمدة مطلوبة">APPROVED FIELD IMAGE REQUIRED</div>}</div><div><span>آخر تحديث أثر · Demo</span><h2>{featuredProject?.title.ar??"مشروع مرتبط"}</h2><p>{featuredUpdate.summary}</p><dl><div><dt>المرحلة</dt><dd>{featuredUpdate.stage}</dd></div><div><dt>التوثيق</dt><dd>قيد مراجعة التقرير النهائي</dd></div></dl><Button href="/account/impact?demo=1">عرض رحلة الأثر</Button></div></section><section className="account-quick-actions"><h2>الوصول إلى مساحتك</h2><div><Button href="/account/impact?demo=1">محفظة الأثر</Button><Button href="/account/donations?demo=1" variant="outline">عرض التبرعات</Button><Button href="/account/documents?demo=1" variant="outline">عرض الوثائق</Button><Button href="/account/recurring?demo=1" variant="outline">إدارة العطاء المستمر</Button><Button href="/projects" variant="text">استكشف مشروعًا جديدًا</Button></div></section></div>}
+
+export function AccountOverview() {
+  const fieldProject = projects.find((project) => project.image);
+
+  return (
+    <div className="account-page account-overview-page">
+      <header className="account-page-heading">
+        <span>مساحة المتبرع</span>
+        <h1>تابع عطائك من مكان واحد</h1>
+        <p>تجمع مساحة المتبرع سجل المساهمات والوثائق وخطط العطاء وتحديثات المشاريع بعد ربط الحساب بالنظام التشغيلي.</p>
+      </header>
+
+      <section className="account-overview-hero" aria-labelledby="overview-summary-title">
+        <div>
+          <span>محفظة الأثر</span>
+          <h2 id="overview-summary-title">العطاء رحلة مرتبطة بالمشروع، لا رصيدًا ماليًا</h2>
+          <p>ستظهر مساهماتك هنا بعد تسجيل الدخول وربط العمليات بحسابك.</p>
+        </div>
+        <div className="account-overview-principles">
+          <article><strong>سجل مستقل لكل نية</strong><p>الزكاة والوقف والعطاء المستمر تبقى منفصلة.</p></article>
+          <article><strong>وثائق مرتبطة بالعملية</strong><p>تظهر الإيصالات والشهادات بعد إصدارها واعتمادها.</p></article>
+          <article><strong>تحديثات من المشروع</strong><p>يصل كل تحديث إلى المساهمة المرتبطة به.</p></article>
+        </div>
+      </section>
+
+      <section className="account-priority-panel">
+        <header><span>ما الذي ستجده هنا؟</span><h2>مساحة واضحة لمتابعة رحلة عطائك</h2></header>
+        <div>
+          <a href="/account/donations"><strong>سجل التبرعات</strong><span>المبالغ والعملات والنيات والمشاريع المرتبطة.</span></a>
+          <a href="/account/documents"><strong>الوثائق والشهادات</strong><span>الوصول إلى ما صدر رسميًا لكل عملية.</span></a>
+          <a href="/account/recurring"><strong>خطط العطاء المستمر</strong><span>مراجعة الدورية والوجهة وحالة الخطة.</span></a>
+        </div>
+      </section>
+
+      <section className="account-featured-impact">
+        <div className="account-field-visual">
+          {fieldProject?.image ? <img src={fieldProject.image.sourceUrl} alt={fieldProject.image.alt.ar} /> : <div role="img" aria-label="مشروعات المؤسسة في الميدان">مشروعات المؤسسة</div>}
+        </div>
+        <div>
+          <span>الأثر المرتبط بعطائك</span>
+          <h2>{fieldProject?.title.ar ?? "تابع المشروع الذي دعمته"}</h2>
+          <p>عند نشر تحديث ميداني معتمد، يظهر داخل محفظة الأثر مرتبطًا بالمشروع والتبرع ذي الصلة.</p>
+          <Button href="/account/impact">عرض محفظة الأثر</Button>
+        </div>
+      </section>
+
+      <section className="account-quick-actions">
+        <h2>الوصول إلى أقسام الحساب</h2>
+        <div>
+          <Button href="/account/impact">محفظة الأثر</Button>
+          <Button href="/account/donations" variant="outline">سجل التبرعات</Button>
+          <Button href="/account/documents" variant="outline">الوثائق</Button>
+          <Button href="/account/recurring" variant="outline">العطاء المستمر</Button>
+          <Button href="/projects" variant="text">استكشف مشروعًا جديدًا</Button>
+        </div>
+      </section>
+    </div>
+  );
+}
