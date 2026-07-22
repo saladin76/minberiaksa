@@ -1,3 +1,4 @@
+import { PatternBackground } from "@/components/brand/pattern-background";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { SiteHeader } from "@/components/layout/site-header";
 import { StickyDonateBar } from "@/components/layout/sticky-donate-bar";
@@ -25,7 +26,9 @@ export default function HomePage() {
       <SiteHeader />
       <main id="main-content">
         <ImpactStories />
-        <HomepageHero />
+        <PatternBackground intensity="medium" position="full" fadeDirection="both" className="homepage-pattern-shell">
+          <HomepageHero />
+        </PatternBackground>
         <QuickDonation />
         <OfficialProjects />
         <MinberFunds />
@@ -33,10 +36,14 @@ export default function HomePage() {
         <WaqfGateway />
         <RecurringGiving />
         <ImpactReels />
-        <ImpactStats />
+        <PatternBackground intensity="soft" position="full" fadeDirection="both" className="wide-divider-pattern">
+          <ImpactStats />
+        </PatternBackground>
         <TrustProof />
         <KnowledgeCenter />
-        <SoftGateway />
+        <PatternBackground intensity="medium" position="bottom" fadeDirection="top" className="final-cta-pattern">
+          <SoftGateway />
+        </PatternBackground>
       </main>
       <SiteFooter />
       <StickyDonateBar />
