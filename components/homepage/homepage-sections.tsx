@@ -89,7 +89,7 @@ export function HomepageHero() {
 export function OfficialProjects() {
   return (
     <PatternBackground intensity="soft" position="full" fadeDirection="both" className="home-projects-carousel-section">
-      <section className="home-section official-projects" id="projects" aria-labelledby="projects-title">
+      <section className="home-section project-carousel-showcase" id="projects" aria-labelledby="projects-title">
         <Container>
           <div className="section-heading-row">
             <div>
