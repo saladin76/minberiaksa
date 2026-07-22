@@ -13,7 +13,6 @@ export default defineConfig({
     video: "off",
     locale: "ar-SA",
     colorScheme: "light",
-    reducedMotion: "reduce",
   },
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
   outputDir: "artifacts/test-results",
