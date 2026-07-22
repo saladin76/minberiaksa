@@ -1,6 +1,5 @@
 import { Button } from "@/components/ui/button";
 import type { ProjectRecord } from "@/data/projects";
-import { impactRecords } from "@/data/impact";
 
 export function ProjectGivingRouteLinks({ project }: { project: ProjectRecord }) {
   const links = [
@@ -13,12 +12,8 @@ export function ProjectGivingRouteLinks({ project }: { project: ProjectRecord })
     project.donationTypes.includes("recurring")
       ? { href: "/recurring", label: "أنشئ عطاءً مستمرًا" }
       : null,
-    impactRecords.some((record) => record.projectId === project.id)
-      ? { href: "/impact", label: "عرض مركز الأثر" }
-      : null,
+    { href: "/impact", label: "منهجية متابعة الأثر" },
   ].filter(Boolean) as Array<{ href: string; label: string }>;
-
-  if (!links.length) return null;
 
   return (
     <section className="project-giving-route-links" aria-label="مسارات مرتبطة بالمشروع">
