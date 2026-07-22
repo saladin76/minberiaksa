@@ -8,6 +8,8 @@ on:
     paths:
       - public/assets/patterns/**
       - styles/pattern-background.css
+      - styles/pattern-asset-source.css
+      - app/layout.tsx
       - components/brand/pattern-background.tsx
       - config/visual-assets.ts
       - tests/pattern-background.spec.ts
@@ -102,9 +104,26 @@ jobs:
           cat /tmp/minberi-next.log
           exit 1
       - name: Run pattern safeguards
+        id: pattern-safeguards
+        continue-on-error: true
         env:
           PLAYWRIGHT_BASE_URL: http://127.0.0.1:3000
-        run: npm run test:pattern
+        run: |
+          mkdir -p artifacts/test-debug
+          npm run test:pattern > artifacts/test-debug/playwright.log 2>&1
+      - name: Upload safeguard diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pattern-test-debug-${{ github.event.pull_request.head.sha }}
+          path: artifacts/test-debug
+          if-no-files-found: error
+          retention-days: 3
+      - name: Stop when safeguards failed
+        if: steps.pattern-safeguards.outcome == 'failure'
+        run: |
+          cat artifacts/test-debug/playwright.log
+          exit 1
       - name: Capture local production screenshots
         env:
           PLAYWRIGHT_BASE_URL: http://127.0.0.1:3000
