@@ -41,7 +41,24 @@ jobs:
       - name: Install dependencies
         run: npm install --no-audit --no-fund
       - name: Generate high-resolution seamless assets
-        run: npm run generate:pattern
+        id: generate
+        continue-on-error: true
+        run: |
+          mkdir -p artifacts/generation-debug
+          npm run generate:pattern > artifacts/generation-debug/generate.log 2>&1
+      - name: Upload generation diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pattern-generation-debug-${{ github.event.pull_request.head.sha }}
+          path: artifacts/generation-debug
+          if-no-files-found: error
+          retention-days: 3
+      - name: Stop when generation failed
+        if: steps.generate.outcome == 'failure'
+        run: |
+          cat artifacts/generation-debug/generate.log
+          exit 1
       - name: Prepare generated asset commit locally
         run: |
           git config user.name "github-actions[bot]"
