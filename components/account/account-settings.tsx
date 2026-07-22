@@ -1,3 +1,44 @@
-"use client";
-import{useEffect,useRef,useState}from"react";import{Button}from"@/components/ui/button";import{donorDemo}from"@/data/donor-demo";import type{NotificationPreference}from"@/types/donor-account";const focusable='button:not([disabled]),input:not([disabled]),select:not([disabled]),a[href],[tabindex]:not([tabindex="-1"])';
-export function AccountSettings(){const[profile,setProfile]=useState({name:donorDemo.profile.displayName,email:donorDemo.profile.email,phone:donorDemo.profile.phone,country:donorDemo.profile.country}),[language,setLanguage]=useState("العربية"),[currency,setCurrency]=useState("USD"),[preferences,setPreferences]=useState<NotificationPreference[]>(donorDemo.notificationPreferences),[notice,setNotice]=useState(""),[deleteOpen,setDeleteOpen]=useState(false);const dialog=useRef<HTMLDivElement>(null),trigger=useRef<HTMLButtonElement>(null);useEffect(()=>{if(!deleteOpen||!dialog.current)return;const old=document.body.style.overflow;document.body.style.overflow="hidden";const items=()=>Array.from(dialog.current!.querySelectorAll<HTMLElement>(focusable));requestAnimationFrame(()=>items()[0]?.focus());const key=(e:KeyboardEvent)=>{if(e.key==="Escape"){setDeleteOpen(false);return}if(e.key!=="Tab")return;const list=items();if(!list.length)return;const first=list[0],last=list[list.length-1];if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus()}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus()}};document.addEventListener("keydown",key);return()=>{document.body.style.overflow=old;document.removeEventListener("keydown",key);requestAnimationFrame(()=>trigger.current?.focus())}},[deleteOpen]);const toggle=(id:NotificationPreference["id"])=>setPreferences(current=>current.map(item=>item.id===id?{...item,enabled:!item.enabled}:item));return <div className="account-page account-settings-page"><header className="account-page-heading"><span>Account Settings · Demo</span><h1>إعدادات حساب العطاء</h1><p>عاين شكل البيانات والتفضيلات دون تغيير حساب أو بيانات حقيقية.</p></header><section className="account-auth-required"><strong>Demo form — values are not saved</strong><p>لا تدخل بيانات شخصية حقيقية. كل القيم React State مؤقتة فقط.</p></section>{notice?<p role="status" aria-live="polite">{notice}</p>:null}<section className="settings-section"><h2>البيانات الشخصية</h2><div className="settings-grid"><label><span>الاسم</span><input value={profile.name} onChange={e=>setProfile({...profile,name:e.target.value})}/></label><label><span>البريد</span><input value={profile.email} onChange={e=>setProfile({...profile,email:e.target.value})}/></label><label><span>الهاتف</span><input value={profile.phone} onChange={e=>setProfile({...profile,phone:e.target.value})}/></label><label><span>الدولة</span><input value={profile.country} onChange={e=>setProfile({...profile,country:e.target.value})}/></label></div><Button type="button" variant="outline" onClick={()=>setNotice("تم تحديث Demo State فقط. لا توجد عملية حفظ أو Network Request.")}>حفظ داخل المعاينة</Button></section><section className="settings-section"><h2>اللغة والعملة</h2><div className="settings-grid"><label><span>اللغة</span><select value={language} onChange={e=>setLanguage(e.target.value)}><option>العربية</option><option>Türkçe</option><option>English</option></select></label><label><span>العملة</span><select value={currency} onChange={e=>setCurrency(e.target.value)}><option>USD</option><option>EUR</option><option>TRY</option><option>SAR</option></select><small>لا يتم تحويل مبالغ فعلية.</small></label></div></section><section className="settings-section settings-toggles"><h2>تحديثات الأثر والتواصل</h2><fieldset><legend>Notification preferences · Demo</legend>{preferences.map(item=><label key={item.id}><span>{item.label}</span><input type="checkbox" role="switch" checked={item.enabled} onChange={()=>toggle(item.id)}/></label>)}</fieldset></section><section className="settings-section"><h2>الإيصالات والخصوصية</h2><div className="settings-actions"><button type="button" onClick={()=>setNotice("Backend required")}>تنزيل بياناتي</button><button type="button" onClick={()=>setNotice("Support flow required")}>طلب تصحيح البيانات</button><button type="button" onClick={()=>setNotice("LEGAL CONTENT REQUIRED")}>سياسة الخصوصية</button></div></section><section className="settings-section danger-zone"><h2>حذف الحساب</h2><p>لا توجد هوية أو بيانات حقيقية لحذفها.</p><button ref={trigger} type="button" onClick={()=>setDeleteOpen(true)}>طلب حذف الحساب</button></section>{deleteOpen?<div className="account-dialog-layer"><button className="account-dialog-backdrop" type="button" aria-label="إغلاق طلب الحذف" onClick={()=>setDeleteOpen(false)}/><div ref={dialog} className="account-dialog" role="dialog" aria-modal="true" aria-labelledby="delete-account-title"><h2 id="delete-account-title">طلب حذف الحساب</h2><strong>ACCOUNT DELETION FLOW REQUIRED</strong><p>لن يتم حذف أي شيء، ولا يوجد حساب حقيقي.</p><div><Button type="button" onClick={()=>{setDeleteOpen(false);setNotice("تم إغلاق المعاينة دون تنفيذ تغيير.")}}>فهمت</Button><Button type="button" variant="outline" onClick={()=>setDeleteOpen(false)}>إلغاء</Button></div></div></div>:null}</div>}
+import { Button } from "@/components/ui/button";
+
+export function AccountSettings() {
+  return (
+    <div className="account-page account-settings-page">
+      <header className="account-page-heading">
+        <span>إعدادات الحساب</span>
+        <h1>إعدادات حساب العطاء</h1>
+        <p>ستُدار بياناتك وتفضيلاتك من هذه الصفحة بعد تفعيل تسجيل الدخول وربط الحساب ببيانات المتبرع الفعلية.</p>
+      </header>
+
+      <section className="account-empty-state">
+        <h2>الإعدادات غير مفعلة بعد</h2>
+        <p>لا نعرض بيانات شخصية افتراضية، ولا نحفظ تغييرات محلية توحي بأنها مرتبطة بحساب حقيقي.</p>
+        <Button href="/account/sign-in">الانتقال إلى تسجيل الدخول</Button>
+      </section>
+
+      <section className="settings-section">
+        <h2>ما الذي ستتمكن من إدارته؟</h2>
+        <div className="account-account-roadmap">
+          <div>
+            <article><span>01</span><h3>البيانات الأساسية</h3><p>الاسم ووسائل التواصل والدولة بعد التحقق من الحساب.</p></article>
+            <article><span>02</span><h3>اللغة والعملة</h3><p>اختيار لغة الحساب وعملة العرض دون تغيير سجلات التبرعات الأصلية.</p></article>
+            <article><span>03</span><h3>تفضيلات التواصل</h3><p>التحكم في تحديثات الأثر والإيصالات ورسائل الخطط المستمرة.</p></article>
+          </div>
+        </div>
+      </section>
+
+      <section className="settings-section">
+        <h2>الخصوصية وطلبات البيانات</h2>
+        <p>طلبات تصحيح البيانات أو تنزيلها أو حذف الحساب يجب أن تمر عبر مسار موثّق مرتبط بهوية المستخدم وسياسة المؤسسة.</p>
+        <div className="settings-actions">
+          <a href="mailto:info@minberiaksa.org">تواصل مع المؤسسة</a>
+          <a href="/knowledge">مركز المعرفة</a>
+        </div>
+      </section>
+
+      <section className="account-auth-required">
+        <strong>لا تُجرى أي تغييرات قبل تفعيل المصادقة</strong>
+        <p>هذا يمنع ظهور بيانات أو إعدادات محفوظة محليًا على أنها جزء من حساب فعلي.</p>
+      </section>
+    </div>
+  );
+}
