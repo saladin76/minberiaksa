@@ -1,0 +1,59 @@
+name: Navigation Shell QA
+
+on:
+  pull_request:
+    branches:
+      - main
+    types: [opened, synchronize, reopened]
+    paths:
+      - app/layout.tsx
+      - config/navigation.ts
+      - components/layout/**
+      - components/selectors/**
+      - components/ui/basket-trigger.tsx
+      - styles/navigation-shell.css
+      - tests/navigation-shell.spec.ts
+      - .github/workflows/navigation-shell-qa.yml
+
+permissions:
+  contents: read
+
+jobs:
+  visual-qa:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: ${{ github.event.pull_request.head.repo.full_name }}
+          ref: ${{ github.event.pull_request.head.ref }}
+          fetch-depth: 1
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: package.json
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Production build
+        run: npm run build
+      - name: Start production server
+        run: |
+          npm run start -- -p 3000 > /tmp/minberi-navigation.log 2>&1 &
+          echo $! > /tmp/minberi-navigation.pid
+          for attempt in {1..60}; do
+            if curl --fail --silent http://127.0.0.1:3000/ > /dev/null; then exit 0; fi
+            sleep 1
+          done
+          cat /tmp/minberi-navigation.log
+          exit 1
+      - name: Run navigation safeguards
+        env:
+          PLAYWRIGHT_BASE_URL: http://127.0.0.1:3000
+        run: npx playwright test tests/navigation-shell.spec.ts
+      - name: Stop production server
+        if: always()
+        run: |
+          if [ -f /tmp/minberi-navigation.pid ]; then kill "$(cat /tmp/minberi-navigation.pid)" || true; fi
