@@ -51,16 +51,16 @@ export function HomepageHero() {
     <section className="home-hero-v4" id="top" aria-labelledby="home-hero-v4-title">
       <Container className="home-hero-v4__grid">
         <div className="home-hero-v4__copy">
-          <span className="home-hero-v4__kicker">منصة عطاء مقدسية عالمية</span>
-          <h1 id="home-hero-v4-title">اجعل أثر عطائك واضحًا في القدس والأقصى وغزة</h1>
-          <p>اختر نية عطائك، ثم تابع مساهمتك من الإيصال إلى تحديثات الأثر.</p>
+          <span className="home-hero-v4__kicker">لأجل الأقصى وأهل غزة</span>
+          <h1 id="home-hero-v4-title">تبرع لمشاريع القدس والأقصى وغزة</h1>
+          <p>اختر المشروع والمبلغ، ثم أضف تبرعك إلى السلة.</p>
           <div className="home-hero-v4__actions">
             <Button href="#donate" size="large">تبرع الآن</Button>
             <a href="/projects" className="home-hero-v4__secondary">استكشف المشاريع <ArrowLeft size={17} aria-hidden="true" /></a>
           </div>
           <div className="home-hero-v4__assurance">
             <ShieldCheck size={19} aria-hidden="true" />
-            <span>مسارات منفصلة للزكاة والوقف والعطاء المستمر، مع مراجعة واضحة قبل المتابعة.</span>
+            <span>اختر بين التبرع العام والزكاة والوقف والتبرع الدوري.</span>
           </div>
         </div>
 
@@ -78,12 +78,12 @@ export function HomepageHero() {
 }
 
 const givingIntents = [
-  { label: "القدس", text: "مشاريع تحفظ صمود العائلات وتدعم التعليم والترميم.", href: "/projects?region=al-quds", tone: "quds", featured: true },
-  { label: "الزكاة", text: "مسار مستقل يوجّه الزكاة إلى المشاريع المؤهلة.", href: "/zakat", tone: "zakat" },
-  { label: "الأوقاف", text: "عطاء طويل الأثر مرتبط بمشاريع القدس والأقصى.", href: "/waqf", tone: "waqf" },
-  { label: "العطاء المستمر", text: "مساهمة يومية أو أسبوعية أو شهرية قابلة للإدارة.", href: "/recurring", tone: "recurring" },
-  { label: "الإغاثة العاجلة", text: "استجابة للاحتياجات الإنسانية الأكثر إلحاحًا.", href: "/projects?intent=relief", tone: "relief" },
-  { label: "غزة", text: "غذاء ومياه وإيواء ومشاريع دعم الأسر المتضررة.", href: "/projects?region=gaza", tone: "gaza" },
+  { label: "القدس", text: "مشاريع لدعم أهل القدس وخدمة الأقصى.", href: "/projects?region=al-quds", tone: "quds", featured: true },
+  { label: "الزكاة", text: "احسب زكاتك واختر مشروعًا يقبل الزكاة.", href: "/zakat", tone: "zakat" },
+  { label: "الأوقاف", text: "اختر مشروع وقف وحدد قيمة مساهمتك.", href: "/waqf", tone: "waqf" },
+  { label: "العطاء المستمر", text: "تبرع يوميًا أو كل جمعة أو شهريًا.", href: "/recurring", tone: "recurring" },
+  { label: "الإغاثة العاجلة", text: "ادعم الاحتياجات الإنسانية العاجلة.", href: "/projects?intent=relief", tone: "relief" },
+  { label: "غزة", text: "غذاء ومياه وإغاثة لأهل غزة.", href: "/projects?region=gaza", tone: "gaza" },
 ] as const;
 
 export function GivingIntentNavigation() {
@@ -91,9 +91,9 @@ export function GivingIntentNavigation() {
     <section className="home-section-v4 intent-editorial" aria-labelledby="intent-editorial-title">
       <Container>
         <header className="home-section-v4__heading">
-          <span>ابدأ من نيتك</span>
-          <h2 id="intent-editorial-title">ستة مسارات، وتجربة عطاء واحدة واضحة</h2>
-          <p>اختر الوجهة الأقرب إلى نيتك، ثم انتقل مباشرة إلى المشاريع أو الأداة المناسبة.</p>
+          <span>مجالات التبرع</span>
+          <h2 id="intent-editorial-title">اختر المجال الذي تريد دعمه</h2>
+          <p>انتقل مباشرة إلى المشاريع أو نوع التبرع المناسب.</p>
         </header>
         <div className="intent-editorial__grid">
           {givingIntents.map((intent, index) => (
@@ -120,9 +120,9 @@ export function OfficialProjects() {
         <Container>
           <div className="home-section-v4__heading-row">
             <header className="home-section-v4__heading">
-              <span>مشاريع ميدانية متاحة للعطاء</span>
-              <h2 id="projects-title">اختر المشروع الأقرب إلى نية عطائك</h2>
-              <p>استعرض المشاريع المتاحة وتعرّف على الاحتياج ومسار التنفيذ قبل إتمام مساهمتك.</p>
+              <span>مشاريع متاحة للتبرع</span>
+              <h2 id="projects-title">اختر مشروعًا واطّلع على تفاصيله</h2>
+              <p>تعرف على المنطقة والمستفيدين وطريقة المساهمة قبل التبرع.</p>
             </header>
             <Button href="/projects" variant="outline">عرض جميع المشاريع</Button>
           </div>
@@ -134,10 +134,10 @@ export function OfficialProjects() {
 }
 
 const journeySteps = [
-  ["اختر نية عطائك", "حدد الزكاة أو الوقف أو الإغاثة أو العطاء المستمر."],
-  ["اختر المشروع أو التخصيص", "راجع المنطقة والاحتياج ومسار التنفيذ."],
-  ["أتمم مساهمتك", "راجع عناصر السلة وبياناتك قبل المتابعة."],
-  ["تابع الإيصال وتحديثات الأثر", "ارجع إلى حسابك والوثائق المتاحة للمشروع."],
+  ["اختر نوع التبرع", "تبرع عام أو زكاة أو وقف أو تبرع دوري."],
+  ["اختر المشروع والمبلغ", "راجع المنطقة والاحتياج قبل الإضافة."],
+  ["راجع السلة", "تأكد من المشاريع والمبالغ قبل المتابعة."],
+  ["تابع المشروع", "اقرأ التحديثات والتقارير عند نشرها."],
 ] as const;
 
 export function DonationJourney() {
@@ -145,8 +145,8 @@ export function DonationJourney() {
     <section className="home-section-v4 journey-v4" aria-labelledby="journey-v4-title">
       <Container>
         <header className="home-section-v4__heading journey-v4__heading">
-          <span>رحلة تبرع مختصرة</span>
-          <h2 id="journey-v4-title">من النية إلى متابعة الأثر</h2>
+          <span>كيف تتبرع؟</span>
+          <h2 id="journey-v4-title">أربع خطوات بسيطة</h2>
         </header>
         <ol className="journey-v4__track">
           {journeySteps.map(([title, text], index) => (
@@ -166,36 +166,36 @@ export function GivingPathways() {
     <section className="home-section-v4 pathways-v4" aria-labelledby="pathways-v4-title">
       <Container>
         <header className="home-section-v4__heading">
-          <span>مسارات متخصصة</span>
-          <h2 id="pathways-v4-title">لكل نية تجربة تناسبها</h2>
-          <p>مساحات مختصرة تقودك إلى الأدوات والصفحات المتخصصة دون تكرار أو ازدحام.</p>
+          <span>أنواع التبرع</span>
+          <h2 id="pathways-v4-title">الزكاة والوقف والتبرع الدوري</h2>
+          <p>اختر النوع المناسب، ثم حدّد المشروع والمبلغ.</p>
         </header>
 
         <div className="pathways-v4__grid">
           <article className="pathway-v4 pathway-v4--zakat">
             <div className="pathway-v4__icon"><HandHeart size={24} aria-hidden="true" /></div>
             <span>الزكاة</span>
-            <h3>احسب تقديريًا، ثم اختر مشروعًا مؤهلًا</h3>
-            <p>مسار واضح يحافظ على نية الزكاة مستقلة ويقودك إلى الحاسبة والمشاريع المرتبطة بها.</p>
-            <a href="/zakat">ابدأ مسار الزكاة <ArrowLeft size={17} aria-hidden="true" /></a>
+            <h3>احسب زكاتك واختر مشروعًا</h3>
+            <p>استخدم الحاسبة التقديرية، ثم اختر مشروعًا يقبل الزكاة.</p>
+            <a href="/zakat">احسب زكاتك <ArrowLeft size={17} aria-hidden="true" /></a>
           </article>
 
           <article className="pathway-v4 pathway-v4--waqf">
             <div className="pathway-v4__icon"><Landmark size={24} aria-hidden="true" /></div>
             <span>الوقف</span>
-            <h3>أثر طويل الأجل للقدس والأقصى</h3>
-            <p>اختر المشروع وصاحب الوقف وتعرّف على مسار الشهادة قبل إتمام المساهمة.</p>
-            <a href="/waqf">استكشف مشاريع الوقف <ArrowLeft size={17} aria-hidden="true" /></a>
+            <h3>اختر مشروع الوقف</h3>
+            <p>تعرف على المشروع، وحدد صاحب الوقف والمبلغ.</p>
+            <a href="/waqf">استكشف الأوقاف <ArrowLeft size={17} aria-hidden="true" /></a>
           </article>
 
           <article className="pathway-v4 pathway-v4--recurring">
             <div className="pathway-v4__icon"><RefreshCw size={24} aria-hidden="true" /></div>
             <div>
               <span>العطاء المستمر</span>
-              <h3>يوميًا أو كل جمعة أو شهريًا</h3>
-              <p>أنشئ إيقاعًا ثابتًا يناسبك، مع سجل مستقل لكل مساهمة وخطة قابلة للإدارة.</p>
+              <h3>تبرع يوميًا أو أسبوعيًا أو شهريًا</h3>
+              <p>اختر التكرار والمبلغ والمشروع الذي تريد دعمه.</p>
             </div>
-            <a href="/recurring">أنشئ خطة عطاء <ArrowLeft size={17} aria-hidden="true" /></a>
+            <a href="/recurring">أنشئ تبرعًا دوريًا <ArrowLeft size={17} aria-hidden="true" /></a>
           </article>
         </div>
       </Container>
@@ -204,10 +204,10 @@ export function GivingPathways() {
 }
 
 const trustItems = [
-  ["منهج التوثيق", "لا تُعرض الأرقام أو الوثائق إلا وفق حالتها الفعلية.", ShieldCheck],
-  ["التقارير الميدانية", "تحديثات مرتبطة بالمشروع والمنطقة عند توفرها.", FileCheck2],
-  ["الإيصالات والوثائق", "مسار مستقل لكل نية عطاء ووثيقة متاحة.", CheckCircle2],
-  ["رحلة الأثر", "متابعة من الاحتياج إلى التنفيذ والتحديث.", HandHeart],
+  ["معلومات واضحة", "نعرض تفاصيل المشروع المتاحة دون أرقام غير معتمدة.", ShieldCheck],
+  ["تقارير ميدانية", "تظهر التحديثات بعد مراجعتها واعتمادها.", FileCheck2],
+  ["إيصالات التبرع", "يظهر نوع التبرع والمشروع في السلة والإيصال.", CheckCircle2],
+  ["متابعة المشروع", "يمكنك العودة إلى صفحة المشروع لقراءة آخر التحديثات.", HandHeart],
 ] as const;
 
 export function ImpactAndTrust() {
@@ -215,10 +215,10 @@ export function ImpactAndTrust() {
     <section className="home-section-v4 trust-v4" aria-labelledby="trust-v4-title">
       <Container className="trust-v4__layout">
         <header className="trust-v4__intro">
-          <span>الأثر والثقة</span>
-          <h2 id="trust-v4-title">وضوح مؤسسي قبل أي رقم</h2>
-          <p>نعرض حالة المشروع والتقرير والوثيقة بوضوح، ونربط التحديثات بمسار العطاء دون ادعاءات غير معتمدة.</p>
-          <a href="/impact">استكشف مركز الأثر <ArrowLeft size={18} aria-hidden="true" /></a>
+          <span>التقارير والثقة</span>
+          <h2 id="trust-v4-title">اعرف أين يذهب تبرعك</h2>
+          <p>نوضح المشروع ونوع التبرع، وننشر التقارير والتحديثات عند اعتمادها.</p>
+          <a href="/impact">عرض التقارير والتحديثات <ArrowLeft size={18} aria-hidden="true" /></a>
         </header>
         <div className="trust-v4__list">
           {trustItems.map(([title, text, Icon]) => (
@@ -235,8 +235,8 @@ export function ImpactAndTrust() {
 
 const knowledgeLinks = [
   { label: "الوقف", title: "ما الفرق بين الوقف والصدقة الجارية؟", href: "/knowledge/waqf-versus-charity" },
-  { label: "الصدقة الجارية", title: "كيف تختار مسارًا ممتد الأثر؟", href: "/knowledge" },
-  { label: "العطاء المستمر", title: "كيف تنشئ خطة عطاء منتظمة؟", href: "/knowledge/continuous-giving-plan" },
+  { label: "الصدقة الجارية", title: "كيف تختار مشروعًا ممتد النفع؟", href: "/knowledge" },
+  { label: "التبرع الدوري", title: "كيف تنشئ تبرعًا منتظمًا؟", href: "/knowledge/continuous-giving-plan" },
 ] as const;
 
 export function KnowledgeCenter() {
@@ -245,17 +245,17 @@ export function KnowledgeCenter() {
       <Container>
         <div className="home-section-v4__heading-row">
           <header className="home-section-v4__heading">
-            <span>المعرفة قبل العطاء</span>
-            <h2 id="knowledge-v4-title">محتوى يساعدك على اتخاذ قرار أوضح</h2>
+            <span>معلومات مهمة</span>
+            <h2 id="knowledge-v4-title">اقرأ قبل التبرع</h2>
           </header>
-          <Button href="/knowledge" variant="outline">مركز المعرفة</Button>
+          <Button href="/knowledge" variant="outline">عرض الأدلة</Button>
         </div>
 
         <div className="knowledge-v4__layout">
           <article className="knowledge-v4__feature">
             <span>دليل الزكاة</span>
-            <h3>كيف تخرج زكاتك لفلسطين بوضوح؟</h3>
-            <p>تعرف على الحساب التقديري، وحفظ النية، وكيفية الانتقال إلى المشاريع المؤهلة دون خلطها بالتبرعات العامة.</p>
+            <h3>كيف تحسب زكاتك وتختار المشروع؟</h3>
+            <p>تعرف على الحاسبة التقديرية والمشاريع التي تقبل الزكاة.</p>
             <a href="/knowledge/estimate-your-zakat">اقرأ الدليل <ArrowLeft size={18} aria-hidden="true" /></a>
           </article>
           <div className="knowledge-v4__links">
@@ -278,13 +278,13 @@ export function SoftGateway() {
     <section className="final-giving-cta" id="about" aria-labelledby="final-giving-cta-title">
       <Container className="final-giving-cta__layout">
         <div>
-          <span>خطوتك التالية</span>
-          <h2 id="final-giving-cta-title">اختر مشروعك، وابدأ أثرًا واضحًا</h2>
-          <p>استكشف المشاريع المتاحة، ثم راجع نيتك ومساهمتك داخل سلة العطاء.</p>
+          <span>ابدأ الآن</span>
+          <h2 id="final-giving-cta-title">اختر مشروعًا وأضف تبرعك</h2>
+          <p>استعرض المشاريع، وحدد المبلغ، ثم راجع السلة.</p>
         </div>
         <div className="final-giving-cta__actions">
           <Button href="/projects" size="large">استكشف المشاريع</Button>
-          <a href="/#donate">انتقل إلى العطاء السريع</a>
+          <a href="/#donate">تبرع الآن</a>
         </div>
       </Container>
     </section>
