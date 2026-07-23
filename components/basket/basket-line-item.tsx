@@ -7,8 +7,8 @@ import { BasketAmountControl } from "./basket-amount-control";
 
 const modeLabels = {
   "one-time": "مرة واحدة",
-  recurring: "عطاء مستمر",
-  gift: "إهداء عطاء",
+  recurring: "تبرع دوري",
+  gift: "إهداء",
 } as const;
 
 export function BasketLineItem({
@@ -66,14 +66,14 @@ export function BasketLineItem({
       {!available ? (
         <div className="giving-basket-unavailable" role="status">
           <AlertTriangle size={18} aria-hidden="true" />
-          <div><strong>هذا المشروع غير متاح حاليًا للعطاء.</strong><span>يمكنك عرض المشروع أو إزالته من السلة.</span></div>
+          <div><strong>هذا المشروع غير متاح حاليًا.</strong><span>يمكنك عرضه أو إزالته من السلة.</span></div>
         </div>
       ) : null}
 
       {needsDetails ? (
         <div className="giving-basket-details-note" role="status">
-          <span>بعض تفاصيل هذه النية تحتاج إلى استكمال.</span>
-          {onEditDetails ? <button type="button" onClick={onEditDetails}>تعديل التفاصيل</button> : null}
+          <span>أكمل البيانات المطلوبة قبل المتابعة.</span>
+          {onEditDetails ? <button type="button" onClick={onEditDetails}>تعديل</button> : null}
         </div>
       ) : null}
 
