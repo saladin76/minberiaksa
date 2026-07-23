@@ -6,18 +6,18 @@ import { TableOfContents } from "./table-of-contents";
 const topicLabel = {
   zakat: "الزكاة",
   waqf: "الوقف",
-  recurring: "العطاء المستمر",
+  recurring: "التبرع الدوري",
   "al-quds": "القدس والأقصى",
   gaza: "غزة والإغاثة",
-  transparency: "الشفافية والتقارير",
-  "donation-journey": "رحلة التبرع",
+  transparency: "التقارير والتحديثات",
+  "donation-journey": "التبرع والدفع",
 } as const;
 
 function cta(article: KnowledgeArticle) {
-  if (article.topic === "zakat") return [{ href: "/zakat#zakat-calculator", label: "انتقل إلى حاسبة الزكاة" }];
-  if (article.topic === "waqf") return [{ href: "/waqf#waqf-builder", label: "استكشف مسار الوقف" }];
-  if (article.topic === "recurring") return [{ href: "/recurring#recurring-plan-builder", label: "أنشئ خطة عطاء" }];
-  if (article.topic === "transparency") return [{ href: "/impact", label: "الأثر والتقارير" }];
+  if (article.topic === "zakat") return [{ href: "/zakat#zakat-calculator", label: "احسب زكاتك" }];
+  if (article.topic === "waqf") return [{ href: "/waqf#waqf-builder", label: "اختر مشروع الوقف" }];
+  if (article.topic === "recurring") return [{ href: "/recurring#recurring-plan-builder", label: "ابدأ تبرعًا دوريًا" }];
+  if (article.topic === "transparency") return [{ href: "/impact", label: "عرض التقارير والتحديثات" }];
   return [{ href: "/projects", label: "استكشف المشاريع" }];
 }
 
@@ -27,13 +27,13 @@ export function ArticleLayout({ article, project, related }: { article: Knowledg
       <header className="article-header">
         <div className="site-container">
           <nav className="breadcrumb" aria-label="مسار الصفحة">
-            <a href="/">الرئيسية</a><span aria-hidden="true">/</span><a href="/knowledge">مركز المعرفة</a><span aria-hidden="true">/</span><span aria-current="page">{article.title}</span>
+            <a href="/">الرئيسية</a><span aria-hidden="true">/</span><a href="/knowledge">المعرفة</a><span aria-hidden="true">/</span><span aria-current="page">{article.title}</span>
           </nav>
           <span className="article-topic">{topicLabel[article.topic]}</span>
           <h1>{article.title}</h1>
           <p>{article.summary}</p>
           <div className="article-byline">
-            <span>محتوى إرشادي عام</span>
+            <span>معلومات عامة</span>
             <span>{article.readingMinutes} دقائق قراءة</span>
           </div>
         </div>
@@ -46,19 +46,19 @@ export function ArticleLayout({ article, project, related }: { article: Knowledg
             <section key={section.id} id={section.id}>
               <h2>{section.heading}</h2>
               {section.paragraphs.map((paragraph, index) => <p key={index}>{paragraph}</p>)}
-              {section.note ? <aside className="article-note"><strong>تنبيه</strong><p>{section.note}</p></aside> : null}
+              {section.note ? <aside className="article-note"><strong>ملاحظة</strong><p>{section.note}</p></aside> : null}
             </section>
           ))}
 
           {article.sources.length ? (
             <section>
-              <h2>مراجع هذا الدليل</h2>
+              <h2>المصادر</h2>
               <ul>{article.sources.map((source) => <li key={source}>{source}</li>)}</ul>
             </section>
           ) : null}
 
           {project ? (
-            <p className="project-reference">مسار مرتبط: <Link href={`/projects/${project.slug}`}>{project.title.ar}</Link></p>
+            <p className="project-reference">مشروع مرتبط: <Link href={`/projects/${project.slug}`}>{project.title.ar}</Link></p>
           ) : null}
 
           <div className="contextual-cta">
@@ -70,7 +70,7 @@ export function ArticleLayout({ article, project, related }: { article: Knowledg
       {related.length ? (
         <section className="related-articles">
           <div className="site-container">
-            <h2>أدلة مرتبطة</h2>
+            <h2>مقالات مرتبطة</h2>
             <div>{related.map((item) => <article key={item.slug}><h3><Link href={`/knowledge/${item.slug}`}>{item.title}</Link></h3><p>{item.summary}</p></article>)}</div>
           </div>
         </section>
