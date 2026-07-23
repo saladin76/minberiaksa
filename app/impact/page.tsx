@@ -8,7 +8,7 @@ import { projects } from "@/data/projects";
 
 export const metadata: Metadata = {
   title: "الأثر والتقارير | مؤسسة منبر الأقصى الدولية",
-  description: "تعرف على منهجية المؤسسة في توثيق المشاريع والتحديثات والتقارير الميدانية.",
+  description: "تابع تقارير المشاريع والتحديثات الميدانية التي تعتمدها المؤسسة.",
 };
 
 const activeProjects = projects.filter((project) => project.status === "active").slice(0, 6);
@@ -25,9 +25,9 @@ export default function ImpactPage() {
 
         <section className="impact-hero">
           <div className="site-container">
-            <span>الأثر يبدأ بالوضوح</span>
-            <h1>نوثّق ما تم تنفيذه<br />وننشر ما تم اعتماده</h1>
-            <p>هذه المساحة مخصصة لتحديثات المشاريع والتقارير والوثائق الميدانية. لا نعرض أرقامًا أو إنجازات أو قصصًا قبل مراجعتها واعتمادها.</p>
+            <span>التقارير والتحديثات</span>
+            <h1>تابع ما نُشر عن المشاريع</h1>
+            <p>نعرض هنا التقارير والصور والتحديثات بعد مراجعتها واعتمادها من المؤسسة.</p>
             <div>
               <Button href="/projects" size="large">استكشف المشاريع</Button>
               <Button href="/stories" variant="outline" size="large">القصص الميدانية</Button>
@@ -38,15 +38,15 @@ export default function ImpactPage() {
         <section className="impact-section">
           <div className="site-container">
             <header className="section-intro">
-              <span>منهجية النشر</span>
-              <h2>كيف تصل المعلومة إلى صفحة الأثر؟</h2>
-              <p>تمر كل مادة ميدانية بمراحل واضحة قبل ظهورها للمتبرع أو الزائر.</p>
+              <span>كيف نوثق المشاريع؟</span>
+              <h2>مراجعة المعلومات قبل نشرها</h2>
+              <p>نتحقق من مصدر التحديث والصور والبيانات قبل ظهورها على الموقع.</p>
             </header>
             <ol className="impact-method-list">
-              <li><span>01</span><h3>استلام التحديث</h3><p>يرتبط التحديث بمشروع ومصدر ميداني محددين.</p></li>
-              <li><span>02</span><h3>مراجعة المحتوى</h3><p>تُراجع الأرقام والتواريخ والصور والوثائق قبل النشر.</p></li>
-              <li><span>03</span><h3>اعتماد الحالة</h3><p>لا تُصنف المرحلة كمكتملة قبل وجود دليل مناسب.</p></li>
-              <li><span>04</span><h3>النشر والربط</h3><p>يظهر التحديث داخل المشروع ومركز الأثر وحساب المتبرع عند توفره.</p></li>
+              <li><span>01</span><h3>استلام التحديث</h3><p>يصل التحديث مرتبطًا بمشروع ومصدر محددين.</p></li>
+              <li><span>02</span><h3>مراجعة المعلومات</h3><p>نراجع الأرقام والتواريخ والصور والوثائق.</p></li>
+              <li><span>03</span><h3>اعتماد المحتوى</h3><p>لا ننشر أي مادة قبل التأكد منها.</p></li>
+              <li><span>04</span><h3>نشر التحديث</h3><p>يظهر التحديث في صفحة المشروع وهذه الصفحة.</p></li>
             </ol>
           </div>
         </section>
@@ -54,15 +54,15 @@ export default function ImpactPage() {
         <section className="impact-section progress-projects">
           <div className="site-container">
             <header className="section-intro">
-              <span>مشاريع نشطة</span>
-              <h2>تابع المشاريع من صفحاتها الرسمية</h2>
-              <p>تظهر التحديثات داخل صفحة المشروع فور اعتمادها، دون استخدام بيانات أو وثائق تجريبية.</p>
+              <span>المشاريع الحالية</span>
+              <h2>تابع كل مشروع من صفحته</h2>
+              <p>تظهر التحديثات والتقارير داخل صفحة المشروع بعد اعتمادها.</p>
             </header>
             <div className="related-projects-grid">
               {activeProjects.map((project) => (
                 <article key={project.id}>
                   <a className="related-project-media" href={`/projects/${project.slug}`}>
-                    {project.image ? <img src={project.image.sourceUrl} alt={project.image.alt.ar} loading="lazy" /> : <span>{project.title.ar}</span>}
+                    {project.image ? <img src={project.image.sourceUrl} alt={project.image.alt.ar} loading="lazy" /> : null}
                   </a>
                   <div>
                     <h3><a href={`/projects/${project.slug}`}>{project.title.ar}</a></h3>
@@ -79,21 +79,21 @@ export default function ImpactPage() {
           <div className="site-container">
             <header className="section-intro">
               <span>التقارير والوثائق</span>
-              <h2>لا توجد تقارير عامة معتمدة للنشر بعد</h2>
-              <p>ستظهر هنا الملفات الرسمية فقط بعد اعتمادها، مع اسم المشروع وفترة التقرير وتاريخ النشر.</p>
+              <h2>لا توجد تقارير عامة منشورة حاليًا</h2>
+              <p>ستظهر الملفات الرسمية هنا بعد اعتمادها، مع اسم المشروع وتاريخ النشر.</p>
             </header>
             <div className="account-empty-state">
-              <h3>مركز التقارير قيد الإعداد</h3>
-              <p>لن نعرض ملفات نموذجية أو أرقام مراجع أو شهادات غير صادرة فعليًا.</p>
-              <Button href="/knowledge" variant="outline">زيارة مركز المعرفة</Button>
+              <h3>لا توجد ملفات متاحة الآن</h3>
+              <p>يمكنك متابعة صفحات المشاريع لمعرفة آخر التحديثات المنشورة.</p>
+              <Button href="/projects" variant="outline">عرض المشاريع</Button>
             </div>
           </div>
         </section>
 
         <section className="impact-final">
           <div className="site-container">
-            <div><span>ساهم في أثر قابل للمتابعة</span><h2>اختر مشروعًا واضح الهدف ومسار التنفيذ</h2></div>
-            <Button href="/projects">ادعم مشروعًا</Button>
+            <div><span>ادعم مشروعًا</span><h2>اختر المشروع الذي تريد دعمه</h2></div>
+            <Button href="/projects">استكشف المشاريع</Button>
           </div>
         </section>
       </main>

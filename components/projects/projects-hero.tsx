@@ -21,30 +21,26 @@ export function ProjectsHero({ projects }: { projects: ProjectRecord[] }) {
       <Container className="projects-hero-grid">
         <div className="projects-hero-copy">
           <span className="section-eyebrow">مشاريع منبر الأقصى</span>
-          <h1 id="projects-page-title">اختر مشروعًا واضح الهدف، وتابع أثره.</h1>
-          <p>استكشف المشاريع حسب المنطقة ونوع العطاء، واطّلع على حالة المشروع ومسار التوثيق قبل إضافة مساهمتك إلى السلة.</p>
+          <h1 id="projects-page-title">اختر المشروع الذي تريد دعمه</h1>
+          <p>تعرّف على المشروع والمنطقة والمستفيدين، ثم اختر المبلغ وأضفه إلى السلة.</p>
           <div className="projects-hero-actions">
             <Button href="#projects-explorer" size="large">استكشف المشاريع</Button>
             <Button href="/#donate" variant="outline" size="large">تبرع حيث الحاجة أشد</Button>
           </div>
-          <ul className="projects-trust-line" aria-label="مزايا تجربة المشاريع">
-            <li>مشروعات مرتبطة ببياناتها</li>
-            <li>نية العطاء واضحة</li>
-            <li>التوثيق يظهر بحالته الفعلية</li>
+          <ul className="projects-trust-line" aria-label="معلومات المشاريع">
+            <li>تفاصيل واضحة لكل مشروع</li>
+            <li>نوع التبرع محدد</li>
+            <li>التقارير تظهر عند اعتمادها</li>
           </ul>
         </div>
 
         <div className="projects-hero-visual">
           {featured?.image ? (
             <img src={featured.image.sourceUrl} alt={featured.image.alt.ar} />
-          ) : (
-            <div className="projects-image-fallback" role="img" aria-label="صورة ميدانية للمشاريع قيد الإضافة">
-              <span>مشاريع القدس والأقصى وغزة</span>
-            </div>
-          )}
+          ) : null}
           <a className="projects-featured-link" href={featured ? `/projects/${featured.slug}` : "/projects"}>
-            <span>مشروع من الميدان</span>
-            <strong>{featured?.title.ar ?? "استكشف مشروعات المؤسسة"}</strong>
+            <span>من مشاريعنا</span>
+            <strong>{featured?.title.ar ?? "استكشف مشاريع المؤسسة"}</strong>
             <small>{featured ? regionLabels[featured.region] : "فلسطين"} · عرض المشروع</small>
           </a>
         </div>

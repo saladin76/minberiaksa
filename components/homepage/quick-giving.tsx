@@ -47,14 +47,14 @@ export function QuickGiving() {
     <section className="quick-giving-v4" id="donate" aria-labelledby="quick-giving-title">
       <div className="site-container quick-giving-v4__shell">
         <div className="quick-giving-v4__heading">
-          <span>عطاء سريع</span>
-          <h2 id="quick-giving-title">اختر نيتك ومبلغك</h2>
-          <p>أضف مساهمتك إلى السلة، ثم راجع تفاصيلها قبل المتابعة.</p>
+          <span>تبرع سريع</span>
+          <h2 id="quick-giving-title">اختر نوع التبرع والمبلغ</h2>
+          <p>أضف التبرع إلى السلة، ثم راجع التفاصيل.</p>
         </div>
 
-        <div className="quick-giving-v4__form" role="group" aria-label="أداة العطاء السريع">
+        <div className="quick-giving-v4__form" role="group" aria-label="أداة التبرع السريع">
           <fieldset>
-            <legend>نية العطاء</legend>
+            <legend>نوع التبرع</legend>
             <div className="quick-giving-v4__choices quick-giving-v4__choices--intent">
               {quickIntents.map((item) => (
                 <button
@@ -101,7 +101,7 @@ export function QuickGiving() {
 
           <label className="quick-giving-v4__currency">
             <span>العملة</span>
-            <select value={currency} onChange={(event) => setCurrency(event.target.value)} aria-label="عملة العطاء السريع">
+            <select value={currency} onChange={(event) => setCurrency(event.target.value)} aria-label="عملة التبرع">
               {currencies.filter((item) => item.enabled).map((item) => (
                 <option key={item.code} value={item.code}>{item.code} · {item.symbol}</option>
               ))}
@@ -110,10 +110,10 @@ export function QuickGiving() {
 
           <div className="quick-giving-v4__action">
             <Button type="button" onClick={addToBasket} disabled={selectedAmount <= 0}>
-              <span>متابعة إلى السلة</span>
+              <span>أضف إلى السلة</span>
               <ArrowLeft size={18} aria-hidden="true" />
             </Button>
-            <p role="status" aria-live="polite">{added ? "أُضيفت المساهمة إلى سلة العطاء." : "يمكنك تعديل النية والمبلغ داخل السلة."}</p>
+            <p role="status" aria-live="polite">{added ? "تمت إضافة التبرع إلى السلة." : "يمكنك تعديل النوع والمبلغ داخل السلة."}</p>
           </div>
         </div>
       </div>
