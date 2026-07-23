@@ -16,7 +16,7 @@ export const primaryNavigation: NavigationItem[] = [
   { label: "العطاء المستمر", href: "/recurring" },
   { label: "الأثر والإنجازات", href: "/impact" },
   { label: "المعرفة", href: "/knowledge" },
-  { label: "من نحن", href: "/#about" },
+  { label: "من نحن", href: "/about" },
 ];
 
 export const utilityNavigation: NavigationItem[] = [
@@ -42,7 +42,7 @@ export const mobileNavigationGroups: NavigationGroup[] = [
   {
     title: "المؤسسة",
     links: [
-      { label: "من نحن", href: "/#about" },
+      { label: "من نحن", href: "/about" },
       { label: "تطوع معنا", href: "mailto:info@minberiaksa.org?subject=طلب تطوع مع مؤسسة منبر الأقصى" },
       { label: "كن شريكًا", href: "mailto:info@minberiaksa.org?subject=طلب شراكة مع مؤسسة منبر الأقصى" },
       { label: "مشاريع الشركاء", href: "/projects" },
@@ -73,7 +73,7 @@ export const footerNavigation = [
   {
     title: "المؤسسة",
     links: [
-      { label: "من نحن", href: "/#about" },
+      { label: "من نحن", href: "/about" },
       { label: "تطوع معنا", href: "mailto:info@minberiaksa.org?subject=طلب تطوع مع مؤسسة منبر الأقصى" },
       { label: "كن شريكًا", href: "mailto:info@minberiaksa.org?subject=طلب شراكة مع مؤسسة منبر الأقصى" },
       { label: "تواصل معنا", href: "#contact" },
