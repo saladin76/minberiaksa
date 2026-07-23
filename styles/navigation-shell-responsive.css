@@ -3,3 +3,25 @@
     display: block;
   }
 }
+
+.mobile-nav-header {
+  position: relative;
+  z-index: 4;
+}
+
+.mobile-nav-content {
+  flex: 1 1 auto;
+  min-height: 0;
+  scroll-padding-block: 1rem;
+}
+
+.mobile-nav-donate {
+  position: relative;
+  inset-block-end: auto;
+  z-index: 3;
+}
+
+.mobile-nav-setting-row,
+.mobile-nav-account-row {
+  scroll-margin-block: 1rem;
+}
