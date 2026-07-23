@@ -1,16 +1,17 @@
+import {
+  ArrowLeft,
+  CheckCircle2,
+  FileCheck2,
+  HandHeart,
+  Landmark,
+  RefreshCw,
+  ShieldCheck,
+} from "lucide-react";
 import { PatternBackground } from "@/components/brand/pattern-background";
 import { ProjectsCarousel } from "@/components/projects/projects-carousel";
 import { Button } from "@/components/ui/button";
 import { Container } from "@/components/ui/container";
 import { projects } from "@/data/projects";
-import { knowledge, stories } from "@/data/homepage";
-import {
-  QuickDonation,
-  RecurringGivingTool,
-  ReelsExperience,
-  WaqfBuilder,
-  ZakatCalculator,
-} from "./homepage-interactions";
 
 const regionLabels: Record<string, string> = {
   gaza: "غزة",
@@ -28,101 +29,82 @@ const homepageProjects = featuredProjects.length >= 3
   : projects.filter((project) => project.status === "active").slice(0, 6);
 const heroProject = featuredProjects.find((project) => project.image) ?? projects.find((project) => project.image);
 
-function ProjectImage({ project, className = "" }: { project: (typeof projects)[number]; className?: string }) {
-  return project.image ? (
+function ProjectImage({ project }: { project: (typeof projects)[number] }) {
+  if (!project.image) return null;
+  return (
     <img
-      className={className}
+      className="home-hero-v4__image"
       src={project.image.sourceUrl}
       alt={project.image.alt.ar}
       width={1400}
       height={1000}
       loading="eager"
+      fetchPriority="high"
       decoding="async"
       style={{ objectPosition: project.slug === "gaza-food-parcels" ? "50% 34%" : "50% 42%" }}
     />
-  ) : (
-    <div className={`project-image-fallback ${className}`} role="img" aria-label={`${regionLabels[project.region] ?? "فلسطين"}: ${project.title.ar}`}>
-      <span>{regionLabels[project.region] ?? "فلسطين"}</span>
-    </div>
-  );
-}
-
-export function ImpactStories() {
-  return (
-    <section className="stories-section" aria-label="مسارات المؤسسة">
-      <Container>
-        <div className="stories-strip">
-          {stories.map(([title, status, tone]) => (
-            <a href="/stories" className="story-item" key={title}>
-              <span className={`story-thumb story-thumb--${tone}`} aria-hidden="true" />
-              <strong>{title}</strong>
-              <small>{status}</small>
-            </a>
-          ))}
-        </div>
-      </Container>
-    </section>
   );
 }
 
 export function HomepageHero() {
   return (
-    <section className="homepage-hero" id="top" aria-labelledby="hero-title">
-      <Container className="homepage-hero-grid">
-        <div className="homepage-hero-copy">
-          <span className="hero-kicker">من القدس والأقصى وغزة إلى العالم</span>
-          <h1 id="hero-title">اجعل أثر عطائك واضحًا في القدس والأقصى وغزة</h1>
+    <section className="home-hero-v4" id="top" aria-labelledby="home-hero-v4-title">
+      <Container className="home-hero-v4__grid">
+        <div className="home-hero-v4__copy">
+          <span className="home-hero-v4__kicker">منصة عطاء مقدسية عالمية</span>
+          <h1 id="home-hero-v4-title">اجعل أثر عطائك واضحًا في القدس والأقصى وغزة</h1>
           <p>اختر نية عطائك، ثم تابع مساهمتك من الإيصال إلى تحديثات الأثر.</p>
-          <div className="hero-actions">
-            <Button href="#donate" size="large">ابدأ التبرع</Button>
-            <Button href="/projects" variant="outline" size="large">استكشف المشاريع</Button>
+          <div className="home-hero-v4__actions">
+            <Button href="#donate" size="large">تبرع الآن</Button>
+            <a href="/projects" className="home-hero-v4__secondary">استكشف المشاريع <ArrowLeft size={17} aria-hidden="true" /></a>
           </div>
-          <ul className="hero-trust-list">
-            <li>مسارات مستقلة للزكاة والوقف</li>
-            <li>سلة عطاء واحدة وواضحة</li>
-            <li>تحديثات مرتبطة بالمشروع</li>
-          </ul>
+          <div className="home-hero-v4__assurance">
+            <ShieldCheck size={19} aria-hidden="true" />
+            <span>مسارات منفصلة للزكاة والوقف والعطاء المستمر، مع مراجعة واضحة قبل المتابعة.</span>
+          </div>
         </div>
 
-        <div className="hero-visual">
-          {heroProject ? <ProjectImage project={heroProject} className="hero-field-image" /> : null}
-          <aside className="field-update">
-            <span>مشروع ميداني متاح</span>
-            <h2>{heroProject?.title.ar ?? "مشاريع منبر الأقصى"}</h2>
-            <div><b>{heroProject ? regionLabels[heroProject.region] : "فلسطين"}</b><a href={heroProject ? `/projects/${heroProject.slug}` : "/projects"}>عرض المشروع</a></div>
-          </aside>
-        </div>
+        <figure className="home-hero-v4__visual">
+          {heroProject ? <ProjectImage project={heroProject} /> : null}
+          <figcaption>
+            <span>{heroProject ? regionLabels[heroProject.region] : "فلسطين"}</span>
+            <strong>{heroProject?.title.ar ?? "مشاريع منبر الأقصى"}</strong>
+            <a href={heroProject ? `/projects/${heroProject.slug}` : "/projects"}>عرض المشروع</a>
+          </figcaption>
+        </figure>
       </Container>
     </section>
   );
 }
 
-export function GivingIntentNavigation() {
-  const intents = [
-    { label: "زكاة", description: "مسار مستقل لحفظ النية", href: "/zakat", tone: "zakat", number: "01" },
-    { label: "وقف", description: "أثر ممتد للقدس والأقصى", href: "/waqf", tone: "waqf", number: "02" },
-    { label: "عطاء مستمر", description: "يومي أو كل جمعة أو شهري", href: "/recurring", tone: "recurring", number: "03" },
-    { label: "إغاثة عاجلة", description: "استجابة للاحتياجات الأشد", href: "/projects?intent=relief", tone: "relief", number: "04" },
-    { label: "مشاريع القدس", description: "ترميم وتعليم ورعاية أسر", href: "/projects?region=al-quds", tone: "quds", number: "05" },
-    { label: "مشاريع غزة", description: "غذاء ومياه وإغاثة", href: "/projects?region=gaza", tone: "gaza", number: "06" },
-  ];
+const givingIntents = [
+  { label: "القدس", text: "مشاريع تحفظ صمود العائلات وتدعم التعليم والترميم.", href: "/projects?region=al-quds", tone: "quds", featured: true },
+  { label: "الزكاة", text: "مسار مستقل يوجّه الزكاة إلى المشاريع المؤهلة.", href: "/zakat", tone: "zakat" },
+  { label: "الأوقاف", text: "عطاء طويل الأثر مرتبط بمشاريع القدس والأقصى.", href: "/waqf", tone: "waqf" },
+  { label: "العطاء المستمر", text: "مساهمة يومية أو أسبوعية أو شهرية قابلة للإدارة.", href: "/recurring", tone: "recurring" },
+  { label: "الإغاثة العاجلة", text: "استجابة للاحتياجات الإنسانية الأكثر إلحاحًا.", href: "/projects?intent=relief", tone: "relief" },
+  { label: "غزة", text: "غذاء ومياه وإيواء ومشاريع دعم الأسر المتضررة.", href: "/projects?region=gaza", tone: "gaza" },
+] as const;
 
+export function GivingIntentNavigation() {
   return (
-    <section className="home-section giving-intents-section" aria-labelledby="giving-intents-title">
+    <section className="home-section-v4 intent-editorial" aria-labelledby="intent-editorial-title">
       <Container>
-        <div className="section-heading-row">
-          <div>
-            <span className="section-eyebrow">ابدأ من نيتك</span>
-            <h2 id="giving-intents-title">اختر مسار العطاء قبل اختيار المبلغ</h2>
-            <p>كل مسار يقودك إلى المشاريع والأدوات المناسبة دون خلط بين الزكاة والوقف والإغاثة والعطاء المستمر.</p>
-          </div>
-        </div>
-        <div className="giving-intent-nav">
-          {intents.map((intent) => (
-            <a className={`giving-intent-row giving-intent-row--${intent.tone}`} href={intent.href} key={intent.label}>
-              <span>{intent.number}</span>
-              <div><strong>{intent.label}</strong><small>{intent.description}</small></div>
-              <b aria-hidden="true">←</b>
+        <header className="home-section-v4__heading">
+          <span>ابدأ من نيتك</span>
+          <h2 id="intent-editorial-title">ستة مسارات، وتجربة عطاء واحدة واضحة</h2>
+          <p>اختر الوجهة الأقرب إلى نيتك، ثم انتقل مباشرة إلى المشاريع أو الأداة المناسبة.</p>
+        </header>
+        <div className="intent-editorial__grid">
+          {givingIntents.map((intent, index) => (
+            <a
+              className={`intent-editorial__item intent-editorial__item--${intent.tone}${intent.featured ? " is-featured" : ""}`}
+              href={intent.href}
+              key={intent.label}
+            >
+              <span className="intent-editorial__number">0{index + 1}</span>
+              <div><strong>{intent.label}</strong><p>{intent.text}</p></div>
+              <ArrowLeft size={20} aria-hidden="true" />
             </a>
           ))}
         </div>
@@ -133,15 +115,15 @@ export function GivingIntentNavigation() {
 
 export function OfficialProjects() {
   return (
-    <PatternBackground intensity="soft" position="full" fadeDirection="both" variant="section" tone="home" className="home-projects-carousel-section">
-      <section className="home-section project-carousel-showcase" id="projects" aria-labelledby="projects-title">
+    <PatternBackground intensity="soft" position="full" fadeDirection="both" variant="section" tone="home" className="home-projects-v4">
+      <section className="home-section-v4 project-carousel-showcase" id="projects" aria-labelledby="projects-title">
         <Container>
-          <div className="section-heading-row">
-            <div>
-              <span className="section-eyebrow">مشاريع ميدانية متاحة للعطاء</span>
+          <div className="home-section-v4__heading-row">
+            <header className="home-section-v4__heading">
+              <span>مشاريع ميدانية متاحة للعطاء</span>
               <h2 id="projects-title">اختر المشروع الأقرب إلى نية عطائك</h2>
               <p>استعرض المشاريع المتاحة وتعرّف على الاحتياج ومسار التنفيذ قبل إتمام مساهمتك.</p>
-            </div>
+            </header>
             <Button href="/projects" variant="outline">عرض جميع المشاريع</Button>
           </div>
           <ProjectsCarousel projects={homepageProjects} />
@@ -151,30 +133,26 @@ export function OfficialProjects() {
   );
 }
 
-export function DonationJourney() {
-  const steps = [
-    ["01", "اختر نية عطائك", "زكاة أو وقف أو إغاثة أو عطاء مستمر."],
-    ["02", "اختر المشروع أو التخصيص", "راجع الاحتياج والمنطقة ومسار التنفيذ."],
-    ["03", "أتمم المساهمة", "راجع عناصر السلة وبياناتك قبل التأكيد."],
-    ["04", "تابع الإيصال والأثر", "ارجع إلى حسابك وتقارير المشروع عند توفرها."],
-  ];
+const journeySteps = [
+  ["اختر نية عطائك", "حدد الزكاة أو الوقف أو الإغاثة أو العطاء المستمر."],
+  ["اختر المشروع أو التخصيص", "راجع المنطقة والاحتياج ومسار التنفيذ."],
+  ["أتمم مساهمتك", "راجع عناصر السلة وبياناتك قبل المتابعة."],
+  ["تابع الإيصال وتحديثات الأثر", "ارجع إلى حسابك والوثائق المتاحة للمشروع."],
+] as const;
 
+export function DonationJourney() {
   return (
-    <section className="home-section donation-journey-section" aria-labelledby="journey-title">
+    <section className="home-section-v4 journey-v4" aria-labelledby="journey-v4-title">
       <Container>
-        <div className="section-heading-row">
-          <div>
-            <span className="section-eyebrow">رحلة عطاء واحدة</span>
-            <h2 id="journey-title">من النية إلى متابعة الأثر</h2>
-            <p>تجربة واضحة تحافظ على نوع مساهمتك وتربطها بالمشروع والوثائق المتاحة.</p>
-          </div>
-        </div>
-        <ol className="donation-journey">
-          {steps.map(([number, title, text], index) => (
-            <li key={number}>
-              <span>{number}</span>
+        <header className="home-section-v4__heading journey-v4__heading">
+          <span>رحلة تبرع مختصرة</span>
+          <h2 id="journey-v4-title">من النية إلى متابعة الأثر</h2>
+        </header>
+        <ol className="journey-v4__track">
+          {journeySteps.map(([title, text], index) => (
+            <li key={title}>
+              <span>0{index + 1}</span>
               <div><strong>{title}</strong><p>{text}</p></div>
-              {index < steps.length - 1 ? <i aria-hidden="true" /> : null}
             </li>
           ))}
         </ol>
@@ -183,44 +161,132 @@ export function DonationJourney() {
   );
 }
 
-export function ZakatGateway() {
-  return <PatternBackground variant="directional" tone="zakat" position="top" fadeDirection="bottom"><section className="home-section zakat-section" id="zakat" aria-labelledby="zakat-title"><Container><div className="gateway-heading"><span>مسار مستقل للزكاة</span><h2 id="zakat-title">احسب زكاتك تقديريًا<br />ثم وجّهها بثقة</h2><p>تحافظ التجربة على نية الزكاة مستقلة وتعرض المشاريع المؤهلة لها فقط.</p><Button href="/zakat" variant="outline">صفحة الزكاة</Button></div><ZakatCalculator /></Container></section></PatternBackground>;
+export function GivingPathways() {
+  return (
+    <section className="home-section-v4 pathways-v4" aria-labelledby="pathways-v4-title">
+      <Container>
+        <header className="home-section-v4__heading">
+          <span>مسارات متخصصة</span>
+          <h2 id="pathways-v4-title">لكل نية تجربة تناسبها</h2>
+          <p>مساحات مختصرة تقودك إلى الأدوات والصفحات المتخصصة دون تكرار أو ازدحام.</p>
+        </header>
+
+        <div className="pathways-v4__grid">
+          <article className="pathway-v4 pathway-v4--zakat">
+            <div className="pathway-v4__icon"><HandHeart size={24} aria-hidden="true" /></div>
+            <span>الزكاة</span>
+            <h3>احسب تقديريًا، ثم اختر مشروعًا مؤهلًا</h3>
+            <p>مسار واضح يحافظ على نية الزكاة مستقلة ويقودك إلى الحاسبة والمشاريع المرتبطة بها.</p>
+            <a href="/zakat">ابدأ مسار الزكاة <ArrowLeft size={17} aria-hidden="true" /></a>
+          </article>
+
+          <article className="pathway-v4 pathway-v4--waqf">
+            <div className="pathway-v4__icon"><Landmark size={24} aria-hidden="true" /></div>
+            <span>الوقف</span>
+            <h3>أثر طويل الأجل للقدس والأقصى</h3>
+            <p>اختر المشروع وصاحب الوقف وتعرّف على مسار الشهادة قبل إتمام المساهمة.</p>
+            <a href="/waqf">استكشف مشاريع الوقف <ArrowLeft size={17} aria-hidden="true" /></a>
+          </article>
+
+          <article className="pathway-v4 pathway-v4--recurring">
+            <div className="pathway-v4__icon"><RefreshCw size={24} aria-hidden="true" /></div>
+            <div>
+              <span>العطاء المستمر</span>
+              <h3>يوميًا أو كل جمعة أو شهريًا</h3>
+              <p>أنشئ إيقاعًا ثابتًا يناسبك، مع سجل مستقل لكل مساهمة وخطة قابلة للإدارة.</p>
+            </div>
+            <a href="/recurring">أنشئ خطة عطاء <ArrowLeft size={17} aria-hidden="true" /></a>
+          </article>
+        </div>
+      </Container>
+    </section>
+  );
 }
 
-export function WaqfGateway() {
-  return <PatternBackground variant="directional" tone="waqf" position="top" fadeDirection="bottom"><section className="home-section waqf-section" id="waqf" aria-labelledby="waqf-title"><Container><div className="gateway-heading"><span>أثر ممتد</span><h2 id="waqf-title">وقف للقدس<br />يبقى أثره</h2><p>حدّد صاحب الوقف واختر المشروع وشاهد تفاصيل الشهادة قبل المتابعة.</p><Button href="/waqf" variant="outline">مشاريع الوقف</Button></div><WaqfBuilder /></Container></section></PatternBackground>;
+const trustItems = [
+  ["منهج التوثيق", "لا تُعرض الأرقام أو الوثائق إلا وفق حالتها الفعلية.", ShieldCheck],
+  ["التقارير الميدانية", "تحديثات مرتبطة بالمشروع والمنطقة عند توفرها.", FileCheck2],
+  ["الإيصالات والوثائق", "مسار مستقل لكل نية عطاء ووثيقة متاحة.", CheckCircle2],
+  ["رحلة الأثر", "متابعة من الاحتياج إلى التنفيذ والتحديث.", HandHeart],
+] as const;
+
+export function ImpactAndTrust() {
+  return (
+    <section className="home-section-v4 trust-v4" aria-labelledby="trust-v4-title">
+      <Container className="trust-v4__layout">
+        <header className="trust-v4__intro">
+          <span>الأثر والثقة</span>
+          <h2 id="trust-v4-title">وضوح مؤسسي قبل أي رقم</h2>
+          <p>نعرض حالة المشروع والتقرير والوثيقة بوضوح، ونربط التحديثات بمسار العطاء دون ادعاءات غير معتمدة.</p>
+          <a href="/impact">استكشف مركز الأثر <ArrowLeft size={18} aria-hidden="true" /></a>
+        </header>
+        <div className="trust-v4__list">
+          {trustItems.map(([title, text, Icon]) => (
+            <article key={title}>
+              <Icon size={22} aria-hidden="true" />
+              <div><h3>{title}</h3><p>{text}</p></div>
+            </article>
+          ))}
+        </div>
+      </Container>
+    </section>
+  );
 }
 
-export function RecurringGiving() {
-  return <PatternBackground variant="directional" tone="recurring" position="top" fadeDirection="bottom"><section className="home-section recurring-section" id="recurring" aria-labelledby="recurring-title"><Container><div className="gateway-heading"><span>عطاء منتظم</span><h2 id="recurring-title">يوميًا أو كل جمعة<br />أو شهريًا</h2><p>اختر الإيقاع الذي يناسبك والمشروع الذي ترغب في دعمه باستمرار.</p><Button href="/recurring" variant="outline">أنشئ خطة عطاء</Button></div><RecurringGivingTool /></Container></section></PatternBackground>;
-}
-
-export function ImpactReels() {
-  return <section className="home-section reels-section" id="impact-stories" aria-labelledby="reels-title"><Container><div className="section-heading-row"><div><span className="section-eyebrow">من الميدان</span><h2 id="reels-title">تحديثات مرتبطة بالمشروعات</h2><p>صور وفيديوهات وتحديثات توضح سياق التنفيذ عند توفرها واعتمادها.</p></div><Button href="/stories" variant="outline">عرض القصص</Button></div><ReelsExperience /></Container></section>;
-}
-
-export function ImpactStats() {
-  const items = [
-    ["التقارير الميدانية", "تحديثات مرتبطة بالمشروع والمنطقة"],
-    ["الوثائق", "تظهر عند توفرها واعتمادها"],
-    ["رحلة الأثر", "من الاحتياج إلى التنفيذ والمتابعة"],
-    ["منهج التوثيق", "لا نعرض رقمًا بلا مصدر واضح"],
-  ];
-  return <section className="home-section stats-section" aria-labelledby="stats-title"><Container><div className="stats-intro"><span className="section-eyebrow">الثقة قبل الأرقام</span><h2 id="stats-title">اعرف كيف تُعرض حالة المشروع</h2><p>نوضح حالة التقرير والوثيقة والتحديث بدل تقديم مؤشرات غير معتمدة.</p><Button href="/impact" variant="outline">مركز الأثر والتقارير</Button></div><div className="stats-list">{items.map(([title, text], index) => <div key={title}><span>0{index + 1}</span><strong>{title}</strong><p>{text}</p></div>)}</div></Container></section>;
-}
-
-export function TrustProof() {
-  const docs = ["إيصال التبرع", "إيصال الزكاة", "شهادة الوقف", "التحديث الميداني", "تقرير المشروع"];
-  return <section className="home-section trust-section" aria-labelledby="trust-title"><Container><div className="section-heading-row"><div><span className="section-eyebrow">وثائق بحسب نية العطاء</span><h2 id="trust-title">مسار واضح لكل مساهمة</h2><p>تبقى الزكاة والوقف والتبرعات العامة منفصلة داخل السلة والإيصال والمتابعة.</p></div></div><div className="trust-layout"><div className="document-preview"><span>رحلة الوثيقة</span><h3>يظهر كل مستند عند توفره واعتماده</h3><p>لا تعرض المنصة شهادة أو تقريرًا قبل إصداره فعليًا.</p><Button href="/impact" variant="outline">شاهد رحلة الأثر</Button></div><div className="document-list">{docs.map((item, index) => <div key={item}><span>0{index + 1}</span><strong>{item}</strong><small>وفق حالة المشروع والاعتماد</small></div>)}</div></div></Container></section>;
-}
+const knowledgeLinks = [
+  { label: "الوقف", title: "ما الفرق بين الوقف والصدقة الجارية؟", href: "/knowledge/waqf-versus-charity" },
+  { label: "الصدقة الجارية", title: "كيف تختار مسارًا ممتد الأثر؟", href: "/knowledge" },
+  { label: "العطاء المستمر", title: "كيف تنشئ خطة عطاء منتظمة؟", href: "/knowledge/continuous-giving-plan" },
+] as const;
 
 export function KnowledgeCenter() {
-  const links = ["/knowledge/estimate-your-zakat", "/knowledge/waqf-versus-charity", "/knowledge/continuous-giving-plan", "/knowledge/follow-project-reports", "/knowledge"];
-  return <section className="home-section knowledge-section" id="knowledge" aria-labelledby="knowledge-title"><Container><div className="section-heading-row"><div><span className="section-eyebrow">مركز المعرفة</span><h2 id="knowledge-title">اعرف قبل أن تعطي</h2><p>أدلة مختصرة تساعدك على فهم الزكاة والوقف والعطاء المستمر ومسار التقارير.</p></div><Button href="/knowledge" variant="outline">عرض جميع الأدلة</Button></div><div className="knowledge-layout"><article className="knowledge-featured"><span>دليل الزكاة</span><h3>{knowledge[0]}</h3><p>شرح مبسّط للنية والحساب التقديري ومسار التوثيق.</p><a href={links[0]}>اقرأ الدليل</a></article><div className="knowledge-list">{knowledge.slice(1).map((item, index) => <article key={item}><span>0{index + 2}</span><h3>{item}</h3><a href={links[index + 1]}>اقرأ المقال</a></article>)}</div></div></Container></section>;
+  return (
+    <section className="home-section-v4 knowledge-v4" id="knowledge" aria-labelledby="knowledge-v4-title">
+      <Container>
+        <div className="home-section-v4__heading-row">
+          <header className="home-section-v4__heading">
+            <span>المعرفة قبل العطاء</span>
+            <h2 id="knowledge-v4-title">محتوى يساعدك على اتخاذ قرار أوضح</h2>
+          </header>
+          <Button href="/knowledge" variant="outline">مركز المعرفة</Button>
+        </div>
+
+        <div className="knowledge-v4__layout">
+          <article className="knowledge-v4__feature">
+            <span>دليل الزكاة</span>
+            <h3>كيف تخرج زكاتك لفلسطين بوضوح؟</h3>
+            <p>تعرف على الحساب التقديري، وحفظ النية، وكيفية الانتقال إلى المشاريع المؤهلة دون خلطها بالتبرعات العامة.</p>
+            <a href="/knowledge/estimate-your-zakat">اقرأ الدليل <ArrowLeft size={18} aria-hidden="true" /></a>
+          </article>
+          <div className="knowledge-v4__links">
+            {knowledgeLinks.map((item, index) => (
+              <a href={item.href} key={item.title}>
+                <span>0{index + 2}</span>
+                <div><small>{item.label}</small><strong>{item.title}</strong></div>
+                <ArrowLeft size={18} aria-hidden="true" />
+              </a>
+            ))}
+          </div>
+        </div>
+      </Container>
+    </section>
+  );
 }
 
 export function SoftGateway() {
-  return <section className="home-section soft-gateway" id="about" aria-labelledby="soft-title"><Container><div><span className="section-eyebrow">خطوتك التالية</span><h2 id="soft-title">ابدأ عطائك من نية واضحة</h2><p>اختر المشروع أو المسار المناسب، ثم راجع مساهمتك داخل سلة عطاء واحدة.</p></div><div className="soft-gateway-actions"><Button href="#donate" size="large">تبرع الآن</Button><Button href="/projects" variant="outline" size="large">استكشف المشاريع</Button></div></Container></section>;
+  return (
+    <section className="final-giving-cta" id="about" aria-labelledby="final-giving-cta-title">
+      <Container className="final-giving-cta__layout">
+        <div>
+          <span>خطوتك التالية</span>
+          <h2 id="final-giving-cta-title">اختر مشروعك، وابدأ أثرًا واضحًا</h2>
+          <p>استكشف المشاريع المتاحة، ثم راجع نيتك ومساهمتك داخل سلة العطاء.</p>
+        </div>
+        <div className="final-giving-cta__actions">
+          <Button href="/projects" size="large">استكشف المشاريع</Button>
+          <a href="/#donate">انتقل إلى العطاء السريع</a>
+        </div>
+      </Container>
+    </section>
+  );
 }
-
-export { QuickDonation };
