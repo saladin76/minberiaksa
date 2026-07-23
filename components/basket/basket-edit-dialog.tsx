@@ -68,7 +68,7 @@ export function BasketEditDialog({ item, onClose, onSave }: { item: BasketItem; 
   const save = () => {
     const normalized = amount.trim().replace(",", ".");
     if (!/^\d+(\.\d+)?$/.test(normalized)) {
-      setError("يرجى استخدام أرقام فقط.");
+      setError("أدخل مبلغًا صحيحًا.");
       return;
     }
     const value = Number(normalized);
@@ -89,7 +89,7 @@ export function BasketEditDialog({ item, onClose, onSave }: { item: BasketItem; 
       return;
     }
     if ((item.intent === "zakat" || item.intent === "waqf" || recurring) && !target) {
-      setError("اختر وجهة مؤهلة.");
+      setError("اختر المشروع.");
       return;
     }
 
@@ -117,19 +117,20 @@ export function BasketEditDialog({ item, onClose, onSave }: { item: BasketItem; 
     <div className="basket-modal-layer">
       <button className="basket-modal-backdrop" type="button" aria-label="إغلاق نافذة التعديل" onClick={onClose} />
       <div ref={root} className="basket-edit-dialog basket-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="basket-edit-title">
-        <header><h2 id="basket-edit-title">تعديل {item.projectTitle}</h2><button ref={close} type="button" aria-label="إغلاق" onClick={onClose}>×</button></header>
+        <header><h2 id="basket-edit-title">تعديل التبرع</h2><button ref={close} type="button" aria-label="إغلاق" onClick={onClose}>×</button></header>
         <div className="basket-edit-form">
+          <p>{item.projectTitle}</p>
           <label><span>المبلغ · {item.currency}</span><input inputMode="decimal" value={amount} onChange={(event) => setAmount(event.target.value)} /></label>
           {(item.intent === "zakat" || item.intent === "waqf" || recurring) ? (
-            <label><span>الوجهة المؤهلة</span><select value={target} onChange={(event) => setTarget(event.target.value)}><option value="">اختر</option>{recurring ? <optgroup label="صناديق عامة">{recurringFunds.map((fund) => <option key={fund.id} value={`fund:${fund.id}`}>{fund.title}</option>)}</optgroup> : null}<optgroup label="مشاريع مؤهلة">{eligible.map((project) => <option key={project.id} value={`project:${project.id}`}>{project.title.ar}</option>)}</optgroup></select></label>
+            <label><span>المشروع</span><select value={target} onChange={(event) => setTarget(event.target.value)}><option value="">اختر المشروع</option>{recurring ? <optgroup label="خيارات عامة">{recurringFunds.map((fund) => <option key={fund.id} value={`fund:${fund.id}`}>{fund.title}</option>)}</optgroup> : null}<optgroup label="المشاريع المتاحة">{eligible.map((project) => <option key={project.id} value={`project:${project.id}`}>{project.title.ar}</option>)}</optgroup></select></label>
           ) : null}
-          {item.intent === "zakat" ? <p>نية الزكاة ثابتة ولا تتحول إلى صدقة.</p> : null}
-          {item.intent === "waqf" ? <><label><span>صاحب الوقف</span><input value={owner} onChange={(event) => setOwner(event.target.value)} /></label><label><span>الإهداء</span><textarea maxLength={180} value={dedication} onChange={(event) => setDedication(event.target.value)} /></label></> : null}
-          {recurring ? <><fieldset><legend>الدورية</legend>{[["daily", "يومي"], ["friday", "كل جمعة"], ["monthly", "شهري"]].map(([value, label]) => <button key={value} type="button" aria-pressed={frequency === value} onClick={() => setFrequency(value)}>{label}</button>)}</fieldset><fieldset><legend>بداية الخطة</legend><button type="button" aria-pressed={start === "after-confirmation"} onClick={() => setStart("after-confirmation")}>بعد التأكيد</button><button type="button" aria-pressed={start === "next-month"} onClick={() => setStart("next-month")}>بداية الشهر القادم</button></fieldset></> : null}
-          {item.donationMode === "gift" ? <><label><span>المهدى إليه</span><input value={recipient} onChange={(event) => setRecipient(event.target.value)} /></label><label><span>البريد</span><input type="email" value={email} onChange={(event) => setEmail(event.target.value)} /></label><label><span>المناسبة</span><input value={occasion} onChange={(event) => setOccasion(event.target.value)} /></label><label><span>الرسالة</span><textarea maxLength={180} value={message} onChange={(event) => setMessage(event.target.value)} /></label><label><span>المرسل</span><input value={sender} onChange={(event) => setSender(event.target.value)} /></label></> : null}
+          {item.intent === "zakat" ? <p>سيبقى هذا التبرع مسجلًا كزكاة.</p> : null}
+          {item.intent === "waqf" ? <><label><span>صاحب الوقف</span><input value={owner} onChange={(event) => setOwner(event.target.value)} /></label><label><span>رسالة الإهداء</span><textarea maxLength={180} value={dedication} onChange={(event) => setDedication(event.target.value)} /></label></> : null}
+          {recurring ? <><fieldset><legend>التكرار</legend>{[["daily", "يومي"], ["friday", "كل جمعة"], ["monthly", "شهري"]].map(([value, label]) => <button key={value} type="button" aria-pressed={frequency === value} onClick={() => setFrequency(value)}>{label}</button>)}</fieldset><fieldset><legend>موعد البدء</legend><button type="button" aria-pressed={start === "after-confirmation"} onClick={() => setStart("after-confirmation")}>بعد التأكيد</button><button type="button" aria-pressed={start === "next-month"} onClick={() => setStart("next-month")}>بداية الشهر القادم</button></fieldset></> : null}
+          {item.donationMode === "gift" ? <><label><span>المهدى إليه</span><input value={recipient} onChange={(event) => setRecipient(event.target.value)} /></label><label><span>البريد الإلكتروني</span><input type="email" value={email} onChange={(event) => setEmail(event.target.value)} /></label><label><span>المناسبة</span><input value={occasion} onChange={(event) => setOccasion(event.target.value)} /></label><label><span>الرسالة</span><textarea maxLength={180} value={message} onChange={(event) => setMessage(event.target.value)} /></label><label><span>اسم المرسل</span><input value={sender} onChange={(event) => setSender(event.target.value)} /></label></> : null}
           {error ? <p role="alert">{error}</p> : null}
         </div>
-        <div className="basket-modal-actions"><Button type="button" variant="outline" onClick={onClose}>إلغاء</Button><Button type="button" onClick={save}>حفظ التعديل</Button></div>
+        <div className="basket-modal-actions"><Button type="button" variant="outline" onClick={onClose}>إلغاء</Button><Button type="button" onClick={save}>حفظ التغييرات</Button></div>
       </div>
     </div>
   );
