@@ -1,9 +1,75 @@
-import type { BasketItem, BasketTotals } from "@/types/basket";
-export type BasketDocument={id:"general"|"zakat"|"waqf"|"gift"|"recurring";title:string;description:string};
-export const frequencyLabels:Record<string,string>={daily:"يومي",friday:"كل جمعة",monthly:"شهري","يومي":"يومي","كل جمعة":"كل جمعة","شهري":"شهري"};
-export const getFrequencyLabel=(value?:string)=>value?frequencyLabels[value]??value:"غير محددة";
-export function calculateBasketTotals(items:BasketItem[]):BasketTotals{const recurringPlans=items.filter(i=>i.intent==="recurring"||i.donationMode==="recurring");const recurringIds=new Set(recurringPlans.map(i=>i.id));const oneTimeItems=items.filter(i=>!recurringIds.has(i.id));const zakatAmount=oneTimeItems.filter(i=>i.intent==="zakat").reduce((s,i)=>s+i.amount,0);const waqfAmount=oneTimeItems.filter(i=>i.intent==="waqf").reduce((s,i)=>s+i.amount,0);const giftAmount=oneTimeItems.filter(i=>i.intent!=="zakat"&&i.intent!=="waqf"&&i.donationMode==="gift").reduce((s,i)=>s+i.amount,0);const generalOneTimeAmount=oneTimeItems.filter(i=>i.intent!=="zakat"&&i.intent!=="waqf"&&i.donationMode!=="gift").reduce((s,i)=>s+i.amount,0);const oneTimeAmount=oneTimeItems.reduce((s,i)=>s+i.amount,0);return{oneTimeAmount,zakatAmount,waqfAmount,giftAmount,generalOneTimeAmount,amountDueNow:oneTimeAmount,recurringPlans}}
-export function getIntentionCounts(items:BasketItem[]){return items.reduce<Record<string,number>>((counts,item)=>{const key=item.intent==="general"&&item.donationMode==="gift"?"إهداء":item.intentLabel;counts[key]=(counts[key]??0)+1;return counts},{})}
-export function getBasketDocuments(items:BasketItem[]):BasketDocument[]{const docs:BasketDocument[]=[];if(items.some(i=>i.intent!=="zakat"&&i.intent!=="waqf"&&i.intent!=="recurring"&&i.donationMode!=="gift"))docs.push({id:"general",title:"إيصال تبرع",description:"إيصال عام للعناصر غير المخصصة للزكاة أو الوقف."});if(items.some(i=>i.intent==="zakat"))docs.push({id:"zakat",title:"إيصال زكاة",description:"يبقى منفصلًا عن بقية النيات."});if(items.some(i=>i.intent==="waqf"))docs.push({id:"waqf",title:"شهادة وقف",description:"معاينة لكل صاحب وقف بعد الدفع الحقيقي."});if(items.some(i=>i.donationMode==="gift"))docs.push({id:"gift",title:"بطاقة إهداء",description:"معاينة مرتبطة ببيانات الإهداء."});if(items.some(i=>i.intent==="recurring"||i.donationMode==="recurring"))docs.push({id:"recurring",title:"ملخص خطة تبرع مستمر",description:"الدورية والوجهة والتقديرات المتوقعة."});return docs}
-export function maskEmail(value?:string){if(!value||!value.includes("@"))return"غير مضاف";const[name,domain]=value.split("@");return`${name.slice(0,1)}***@${domain}`}
-export function recurringEstimates(frequency:string|undefined,amount:number){if(frequency==="daily"||frequency==="يومي")return{monthly:amount*30,annual:amount*365};if(frequency==="friday"||frequency==="كل جمعة")return{monthly:amount*4.33,annual:amount*52};return{monthly:amount,annual:amount*12}}
+import type { BasketCurrency, BasketItem, BasketTotals } from "@/types/basket";
+
+export type BasketDocument = {
+  id: "general" | "zakat" | "waqf" | "gift" | "recurring";
+  title: string;
+  description: string;
+};
+
+export type BasketCurrencyTotal = {
+  currency: BasketCurrency;
+  amount: number;
+};
+
+export const frequencyLabels: Record<string, string> = {
+  daily: "يومي",
+  friday: "كل جمعة",
+  monthly: "شهري",
+  "يومي": "يومي",
+  "كل جمعة": "كل جمعة",
+  "شهري": "شهري",
+};
+
+export const getFrequencyLabel = (value?: string) => value ? frequencyLabels[value] ?? value : "غير محددة";
+export const formatBasketAmount = (amount: number) => amount.toLocaleString("en-US", { maximumFractionDigits: 3 });
+
+export function calculateCurrencyTotals(items: BasketItem[]): BasketCurrencyTotal[] {
+  const totals = new Map<BasketCurrency, number>();
+  items.forEach((item) => {
+    if (item.available === false || !Number.isFinite(item.amount) || item.amount <= 0) return;
+    totals.set(item.currency, (totals.get(item.currency) ?? 0) + item.amount);
+  });
+  return [...totals.entries()].map(([currency, amount]) => ({ currency, amount }));
+}
+
+export function calculateBasketTotals(items: BasketItem[]): BasketTotals {
+  const recurringPlans = items.filter((item) => item.intent === "recurring" || item.donationMode === "recurring");
+  const recurringIds = new Set(recurringPlans.map((item) => item.id));
+  const oneTimeItems = items.filter((item) => !recurringIds.has(item.id) && item.available !== false);
+  const zakatAmount = oneTimeItems.filter((item) => item.intent === "zakat").reduce((sum, item) => sum + item.amount, 0);
+  const waqfAmount = oneTimeItems.filter((item) => item.intent === "waqf").reduce((sum, item) => sum + item.amount, 0);
+  const giftAmount = oneTimeItems.filter((item) => item.intent !== "zakat" && item.intent !== "waqf" && item.donationMode === "gift").reduce((sum, item) => sum + item.amount, 0);
+  const generalOneTimeAmount = oneTimeItems.filter((item) => item.intent !== "zakat" && item.intent !== "waqf" && item.donationMode !== "gift").reduce((sum, item) => sum + item.amount, 0);
+  const oneTimeAmount = oneTimeItems.reduce((sum, item) => sum + item.amount, 0);
+  return { oneTimeAmount, zakatAmount, waqfAmount, giftAmount, generalOneTimeAmount, amountDueNow: oneTimeAmount, recurringPlans };
+}
+
+export function getIntentionCounts(items: BasketItem[]) {
+  return items.reduce<Record<string, number>>((counts, item) => {
+    const key = item.intent === "general" && item.donationMode === "gift" ? "إهداء" : item.intentLabel;
+    counts[key] = (counts[key] ?? 0) + 1;
+    return counts;
+  }, {});
+}
+
+export function getBasketDocuments(items: BasketItem[]): BasketDocument[] {
+  const documents: BasketDocument[] = [];
+  if (items.some((item) => item.intent !== "zakat" && item.intent !== "waqf" && item.intent !== "recurring" && item.donationMode !== "gift")) documents.push({ id: "general", title: "إيصال تبرع", description: "إيصال عام للعناصر غير المخصصة للزكاة أو الوقف." });
+  if (items.some((item) => item.intent === "zakat")) documents.push({ id: "zakat", title: "إيصال زكاة", description: "يبقى منفصلًا عن بقية النيات." });
+  if (items.some((item) => item.intent === "waqf")) documents.push({ id: "waqf", title: "شهادة وقف", description: "تصدر عند اعتمادها وإتاحتها فعليًا." });
+  if (items.some((item) => item.donationMode === "gift")) documents.push({ id: "gift", title: "بطاقة إهداء", description: "مرتبطة ببيانات الإهداء عند توفرها." });
+  if (items.some((item) => item.intent === "recurring" || item.donationMode === "recurring")) documents.push({ id: "recurring", title: "ملخص خطة عطاء مستمر", description: "الدورية والوجهة والتقديرات المسجلة." });
+  return documents;
+}
+
+export function maskEmail(value?: string) {
+  if (!value || !value.includes("@")) return "غير مضاف";
+  const [name, domain] = value.split("@");
+  return `${name.slice(0, 1)}***@${domain}`;
+}
+
+export function recurringEstimates(frequency: string | undefined, amount: number) {
+  if (frequency === "daily" || frequency === "يومي") return { monthly: amount * 30, annual: amount * 365 };
+  if (frequency === "friday" || frequency === "كل جمعة") return { monthly: amount * 4.33, annual: amount * 52 };
+  return { monthly: amount, annual: amount * 12 };
+}

@@ -1,19 +1,47 @@
 import type { BasketItem } from "@/types/basket";
-import { calculateBasketTotals, getFrequencyLabel } from "./basket-utils";
+import { Button } from "@/components/ui/button";
+import { calculateCurrencyTotals, formatBasketAmount } from "./basket-utils";
 
-export function BasketSummary({ items }: { items: BasketItem[] }) {
-  const totals = calculateBasketTotals(items);
-  return <aside className="basket-order-summary" aria-labelledby="basket-summary-title">
-    <span>ملخص مالي واضح</span><h2 id="basket-summary-title">ملخص سلة العطاء</h2>
-    <dl>
-      <div><dt>تبرعات لمرة واحدة</dt><dd>{totals.oneTimeAmount.toLocaleString("en-US")} USD</dd></div>
-      <div><dt>الزكاة</dt><dd>{totals.zakatAmount.toLocaleString("en-US")} USD</dd></div>
-      <div><dt>الأوقاف</dt><dd>{totals.waqfAmount.toLocaleString("en-US")} USD</dd></div>
-      <div><dt>صدقات وإغاثة لمرة واحدة</dt><dd>{totals.generalOneTimeAmount.toLocaleString("en-US")} USD</dd></div>
-      <div><dt>الإهداءات</dt><dd>{totals.giftAmount.toLocaleString("en-US")} USD</dd></div>
-      <div className="basket-due-now"><dt>المبلغ المتوقع دفعه الآن</dt><dd>{totals.amountDueNow.toLocaleString("en-US")} USD</dd></div>
-    </dl>
-    <div className="basket-recurring-summary"><h3>الخطط التي ستبدأ لاحقًا</h3>{totals.recurringPlans.length ? totals.recurringPlans.map((plan) => <p key={plan.id}><strong>{plan.amount} USD</strong> {getFrequencyLabel(plan.frequency)} · {plan.projectTitle}</p>) : <p>لا توجد خطط مستمرة في السلة.</p>}</div>
-    <small>لا توجد رسوم إضافية معروضة في هذا النموذج التجريبي. الخطط المستمرة لا تُجمع داخل مبلغ الدفع لمرة واحدة.</small>
-  </aside>;
+function intentionLabel(count: number) {
+  return count === 1 ? "نية عطاء واحدة" : `${count.toLocaleString("ar")} نوايا عطاء`;
+}
+
+export function BasketSummary({
+  items,
+  actionHref,
+  invalidCount = 0,
+  incompleteCount = 0,
+  compact = false,
+}: {
+  items: BasketItem[];
+  actionHref: string;
+  invalidCount?: number;
+  incompleteCount?: number;
+  compact?: boolean;
+}) {
+  const totals = calculateCurrencyTotals(items);
+  const unavailableCount = items.filter((item) => item.available === false).length;
+  const blocked = invalidCount > 0 || incompleteCount > 0 || unavailableCount > 0;
+  const reason = invalidCount > 0
+    ? "صحح المبلغ قبل المتابعة."
+    : unavailableCount > 0
+      ? "أزل المشروع غير المتاح قبل المتابعة."
+      : incompleteCount > 0
+        ? "استكمل تفاصيل النية قبل المتابعة."
+        : "";
+
+  return (
+    <section className={`basket-review-summary${compact ? " basket-review-summary--compact" : ""}`} aria-labelledby={compact ? "drawer-basket-summary-title" : "basket-summary-title"}>
+      <div className="basket-review-summary__heading">
+        <div><span>عدد النوايا</span><strong>{intentionLabel(items.length)}</strong></div>
+        <div className="basket-review-summary__totals">
+          <span id={compact ? "drawer-basket-summary-title" : "basket-summary-title"}>الإجمالي</span>
+          {totals.map((total) => <strong key={total.currency}>{formatBasketAmount(total.amount)} <b>{total.currency}</b></strong>)}
+        </div>
+      </div>
+      {totals.length > 1 ? <p className="basket-currency-note">تُعرض كل عملة بصورة مستقلة دون تحويل.</p> : null}
+      {reason ? <p className="basket-summary-blocked" role="status">{reason}</p> : null}
+      <Button href={actionHref} fullWidth disabled={blocked}>متابعة مراجعة العطاء</Button>
+    </section>
+  );
 }

@@ -1,6 +1,20 @@
 export type BasketIntent = "zakat" | "waqf" | "recurring" | "urgent" | "general";
 export type DonationMode = "one-time" | "recurring" | "gift";
-export type BasketCurrency = "USD";
+export type BasketCurrency =
+  | "USD"
+  | "EUR"
+  | "GBP"
+  | "TRY"
+  | "SAR"
+  | "AED"
+  | "CAD"
+  | "AUD"
+  | "KWD"
+  | "QAR"
+  | "BHD"
+  | "OMR"
+  | "JOD"
+  | "MAD";
 export type ReceiptType = "general" | "zakat" | "recurring";
 export type CertificateType = "waqf";
 
@@ -20,6 +34,8 @@ export type BasketItem = {
   frequency?: string;
   amount: number;
   currency: BasketCurrency;
+  available?: boolean;
+  minimumAmount?: number;
   source?: string;
   receiptType?: ReceiptType;
   certificateType?: CertificateType;
