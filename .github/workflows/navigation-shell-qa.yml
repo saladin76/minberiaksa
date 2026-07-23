@@ -52,7 +52,21 @@ jobs:
       - name: Run navigation safeguards
         env:
           PLAYWRIGHT_BASE_URL: http://127.0.0.1:3000
-        run: npx playwright test tests/navigation-shell.spec.ts
+        run: |
+          set +e
+          npx playwright test tests/navigation-shell.spec.ts --reporter=line 2>&1 | tee navigation-test.log
+          status=${PIPESTATUS[0]}
+          exit $status
+      - name: Upload navigation diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: navigation-shell-diagnostics-${{ github.event.pull_request.head.sha }}
+          path: |
+            navigation-test.log
+            test-results
+          if-no-files-found: warn
+          retention-days: 7
       - name: Stop production server
         if: always()
         run: |
