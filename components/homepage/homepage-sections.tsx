@@ -98,7 +98,7 @@ export function GivingIntentNavigation() {
         <div className="intent-editorial__grid">
           {givingIntents.map((intent, index) => (
             <a
-              className={`intent-editorial__item intent-editorial__item--${intent.tone}${intent.featured ? " is-featured" : ""}`}
+              className={`intent-editorial__item intent-editorial__item--${intent.tone}${"featured" in intent && intent.featured ? " is-featured" : ""}`}
               href={intent.href}
               key={intent.label}
             >
