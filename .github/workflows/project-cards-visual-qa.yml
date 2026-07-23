@@ -40,6 +40,7 @@ jobs:
       - name: Production build
         run: |
           mkdir -p artifacts/project-cards-build
+          set -o pipefail
           npm run build 2>&1 | tee artifacts/project-cards-build/build.log
       - name: Start production server
         run: |
@@ -52,9 +53,25 @@ jobs:
           cat /tmp/minberi-project-cards.log
           exit 1
       - name: Run Playwright safeguards
+        id: project-card-tests
+        continue-on-error: true
         env:
           PLAYWRIGHT_BASE_URL: http://127.0.0.1:3000
-        run: npx playwright test tests/project-cards.spec.ts
+        run: |
+          mkdir -p artifacts/project-cards-tests
+          set -o pipefail
+          npx playwright test tests/project-cards.spec.ts 2>&1 | tee artifacts/project-cards-tests/playwright.log
+      - name: Upload Playwright diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: project-cards-test-debug-${{ github.event.pull_request.head.sha }}
+          path: artifacts/project-cards-tests
+          if-no-files-found: error
+          retention-days: 3
+      - name: Stop when Playwright failed
+        if: steps.project-card-tests.outcome == 'failure'
+        run: exit 1
       - name: Capture local production screenshots
         env:
           PLAYWRIGHT_BASE_URL: http://127.0.0.1:3000
