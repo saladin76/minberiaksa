@@ -60,10 +60,13 @@ jobs:
           set -o pipefail
           npx playwright test tests/basket-ux.spec.ts 2>&1 | tee artifacts/basket-build/test.log
       - name: Capture local production screenshots
+        shell: bash
         env:
           PLAYWRIGHT_BASE_URL: http://127.0.0.1:3000
           COMMIT_SHA: ${{ github.event.pull_request.head.sha }}
-        run: node scripts/capture-basket-qa.mjs
+        run: |
+          set -o pipefail
+          node scripts/capture-basket-qa.mjs 2>&1 | tee artifacts/basket-build/capture.log
       - name: Upload basket visual QA
         if: always()
         uses: actions/upload-artifact@v4
