@@ -5,21 +5,21 @@ export function KnowledgeHero({ article }: { article: KnowledgeArticle }) {
     <section className="knowledge-hero">
       <div className="site-container knowledge-hero-grid">
         <div>
-          <span className="eyebrow">مركز المعرفة</span>
-          <h1>اعرف قبل أن تعطي</h1>
-          <p>أدلة واضحة تساعدك على فهم رحلة التبرع واختيار المسار المناسب ومتابعة التحديثات والوثائق.</p>
-          <a className="button button-primary" href="#knowledge-explorer">ابدأ بالدليل المناسب</a>
+          <span className="eyebrow">المعرفة</span>
+          <h1>إجابات واضحة قبل التبرع</h1>
+          <p>اقرأ عن الزكاة والوقف والتبرع الدوري وتقارير المشاريع.</p>
+          <a className="button button-primary" href="#knowledge-explorer">عرض المقالات</a>
         </div>
         <article className="featured-guide">
-          <span>دليل مختار</span>
+          <span>مقال مختار</span>
           <h2>{article.title}</h2>
           <p>{article.summary}</p>
           <ul>
-            <li>شرح مباشر دون مصطلحات معقدة</li>
-            <li>تنبيهات واضحة عند الحاجة إلى مراجعة مختصة</li>
-            <li>روابط إلى المسار المناسب داخل الموقع</li>
+            <li>شرح مباشر وسهل.</li>
+            <li>تنبيه عند الحاجة إلى مراجعة شرعية.</li>
+            <li>روابط إلى الصفحات ذات الصلة.</li>
           </ul>
-          <a href={`/knowledge/${article.slug}`}>اقرأ الدليل</a>
+          <a href={`/knowledge/${article.slug}`}>اقرأ المقال</a>
         </article>
       </div>
     </section>

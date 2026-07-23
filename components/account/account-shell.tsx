@@ -9,11 +9,11 @@ import { siteConfig } from "@/config/site";
 
 const accountLinks = [
   { href: "/account", label: "نظرة عامة" },
-  { href: "/account/impact", label: "محفظة الأثر" },
-  { href: "/account/donations", label: "التبرعات" },
+  { href: "/account/donations", label: "تبرعاتي" },
+  { href: "/account/recurring", label: "التبرعات الدورية" },
   { href: "/account/documents", label: "الوثائق" },
-  { href: "/account/recurring", label: "العطاء المستمر" },
-  { href: "/account/settings", label: "الإعدادات" },
+  { href: "/account/impact", label: "التقارير والتحديثات" },
+  { href: "/account/settings", label: "بيانات الحساب" },
 ] as const;
 
 const focusable = 'a[href],button:not([disabled]),[tabindex]:not([tabindex="-1"])';
@@ -50,7 +50,7 @@ export function AccountShell({ children }: { children: ReactNode }) {
   }, [menuOpen]);
 
   const navigation = (
-    <nav className="account-navigation" aria-label="التنقل داخل حساب العطاء">
+    <nav className="account-navigation" aria-label="التنقل داخل حساب المتبرع">
       {accountLinks.map((item) => {
         const active = item.href === "/account" ? pathname === item.href : pathname.startsWith(item.href);
         return <a key={item.href} href={item.href} aria-current={active ? "page" : undefined} onClick={() => setMenuOpen(false)}>{item.label}</a>;
@@ -62,17 +62,17 @@ export function AccountShell({ children }: { children: ReactNode }) {
     <div className="account-shell">
       <div className="account-demo-banner" role="status" aria-label="حالة الحساب">
         <strong>الحساب غير متصل</strong>
-        <span>لا تظهر بيانات شخصية أو سجلات تبرع قبل تفعيل المصادقة وربط النظام.</span>
+        <span>لن تظهر بيانات شخصية أو تبرعات قبل تسجيل الدخول.</span>
       </div>
 
       <header className="account-header">
         <a className="account-brand" href="/" aria-label={`العودة إلى ${siteConfig.nameAr}`}>
           <BrandMark compact />
-          <span><strong>{siteConfig.nameAr}</strong><small>مساحة العطاء</small></span>
+          <span><strong>{siteConfig.nameAr}</strong><small>حساب المتبرع</small></span>
         </a>
         <div className="account-header-user"><span>حالة الحساب</span><strong>غير متصل</strong></div>
         <div className="account-header-actions">
-          <a href="/">العودة للموقع</a>
+          <a href="/">العودة إلى الموقع</a>
           <Button href="/projects" size="small" variant="outline">استكشف المشاريع</Button>
           <a href="/account/sign-in">تسجيل الدخول</a>
         </div>
@@ -81,7 +81,7 @@ export function AccountShell({ children }: { children: ReactNode }) {
 
       <div className="account-layout">
         <aside className="account-sidebar">
-          <div><span>حساب العطاء</span><strong>غير متصل</strong></div>
+          <div><span>حساب المتبرع</span><strong>غير متصل</strong></div>
           {navigation}
           <a href="/account/sign-in">تسجيل الدخول</a>
         </aside>
@@ -93,7 +93,7 @@ export function AccountShell({ children }: { children: ReactNode }) {
           <button className="account-mobile-backdrop" type="button" aria-label="إغلاق قائمة الحساب" onClick={() => setMenuOpen(false)} />
           <aside ref={panelRef} id={panelId} className="account-mobile-panel" role="dialog" aria-modal="true" aria-labelledby={`${panelId}-title`}>
             <header>
-              <div><span>حساب العطاء</span><h2 id={`${panelId}-title`}>التنقل داخل الحساب</h2></div>
+              <div><span>حساب المتبرع</span><h2 id={`${panelId}-title`}>قائمة الحساب</h2></div>
               <button type="button" onClick={() => setMenuOpen(false)} aria-label="إغلاق">×</button>
             </header>
             {navigation}

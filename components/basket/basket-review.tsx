@@ -45,7 +45,7 @@ export function BasketReview() {
   };
 
   if (!hydrated) {
-    return <div className="basket-loading-state" role="status"><span /><span /><span /></div>;
+    return <div className="basket-loading-state" role="status" aria-label="جارٍ تحميل سلة التبرعات"><span /><span /><span /></div>;
   }
 
   if (!items.length) return <BasketEmptyState page />;
@@ -53,16 +53,16 @@ export function BasketReview() {
   return (
     <>
       <section className="basket-review-header">
-        <span>مراجعة نوايا العطاء</span>
-        <h1>سلة العطاء</h1>
-        <p>راجع نوايا عطائك قبل المتابعة</p>
+        <span>راجع تبرعاتك</span>
+        <h1>سلة التبرعات</h1>
+        <p>راجع المشاريع والمبالغ قبل المتابعة.</p>
       </section>
 
       <div className="basket-layout">
         <section className="basket-items-column" aria-labelledby="basket-items-title">
           <div className="basket-items-heading">
-            <div><h2 id="basket-items-title">اختياراتك</h2><p>يمكنك تعديل المبلغ أو إزالة أي نية قبل المتابعة.</p></div>
-            <span>{items.length === 1 ? "نية واحدة" : `${items.length.toLocaleString("ar")} نوايا`}</span>
+            <div><h2 id="basket-items-title">التبرعات المضافة</h2><p>يمكنك تعديل المبلغ أو إزالة أي تبرع.</p></div>
+            <span>{items.length === 1 ? "تبرع واحد" : `${items.length.toLocaleString("ar")} تبرعات`}</span>
           </div>
           {items.map((item) => (
             <BasketLineItem
@@ -83,7 +83,7 @@ export function BasketReview() {
             invalidCount={invalidItems.size}
             incompleteCount={incomplete.length}
           />
-          <a className="basket-add-another" href="/projects">إضافة مشروع آخر</a>
+          <a className="basket-add-another" href="/projects">أضف مشروعًا آخر</a>
         </aside>
       </div>
 
@@ -100,7 +100,7 @@ export function BasketReview() {
 
       {undoItem ? (
         <div className="basket-undo-toast" role="status" aria-live="polite">
-          <span>تمت إزالة العنصر من السلة.</span>
+          <span>تمت إزالة التبرع من السلة.</span>
           <button type="button" onClick={() => {
             restoreItem(undoItem.item, undoItem.index);
             setUndoItem(null);

@@ -9,31 +9,31 @@ export function AccountSignIn() {
         <header>
           <a href="/" aria-label={siteConfig.nameAr}>
             <BrandMark compact />
-            <span><strong>{siteConfig.nameAr}</strong><small>حساب العطاء</small></span>
+            <span><strong>{siteConfig.nameAr}</strong><small>حساب المتبرع</small></span>
           </a>
-          <a href="/">العودة للموقع</a>
+          <a href="/">العودة إلى الموقع</a>
         </header>
 
         <section className="account-sign-in-card">
-          <span>حساب العطاء</span>
-          <h1>الدخول الآمن قيد التجهيز</h1>
-          <p>سيتيح لك الحساب متابعة التبرعات والإيصالات وشهادات الوقف وخطط العطاء المستمر وتحديثات المشاريع من مكان واحد.</p>
+          <span>حساب المتبرع</span>
+          <h1>تسجيل الدخول غير متاح حاليًا</h1>
+          <p>سيتيح لك الحساب مراجعة تبرعاتك ووثائقك وتحديث بياناتك عند تفعيله.</p>
 
           <div className="account-auth-required">
-            <strong>لن نطلب بريدك أو رمز دخول قبل ربط خدمة المصادقة</strong>
+            <strong>لن تظهر أي بيانات شخصية قبل تسجيل الدخول</strong>
             <ul>
-              <li>دخول آمن دون عرض حسابات أو بيانات افتراضية.</li>
-              <li>ربط التبرعات بالمتبرع بعد التحقق من الهوية.</li>
-              <li>حماية الوثائق والتحديثات من الوصول غير المصرح.</li>
+              <li>تبرعاتك ووثائقك تبقى خاصة.</li>
+              <li>تظهر بيانات الحساب بعد التحقق من تسجيل الدخول.</li>
+              <li>يمكنك متابعة المشاريع من الموقع دون حساب.</li>
             </ul>
           </div>
 
           <div className="account-sign-in-actions">
             <Button href="/projects">استكشف المشاريع</Button>
-            <Button href="mailto:info@minberiaksa.org" variant="outline">تواصل مع المؤسسة</Button>
+            <Button href="mailto:info@minberiaksa.org" variant="outline">تواصل معنا</Button>
           </div>
 
-          <small>لن تُفتح مساحة الحساب أو تظهر بيانات المتبرعين قبل تفعيل المصادقة وربط النظام التشغيلي.</small>
+          <small>سيظهر نموذج تسجيل الدخول هنا بعد تفعيل الحساب.</small>
         </section>
       </div>
     </main>
