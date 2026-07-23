@@ -5,6 +5,8 @@ type PatternBackgroundProps = {
   intensity?: "soft" | "medium";
   position?: "full" | "top" | "bottom";
   fadeDirection?: "top" | "bottom" | "both";
+  variant?: "ambient" | "section" | "directional" | "dark";
+  tone?: "neutral" | "home" | "zakat" | "waqf" | "recurring" | "relief";
   className?: string;
 };
 
@@ -13,6 +15,8 @@ export function PatternBackground({
   intensity = "soft",
   position = "full",
   fadeDirection = "both",
+  variant = "section",
+  tone = "neutral",
   className = "",
 }: PatternBackgroundProps) {
   const classes = [
@@ -20,10 +24,10 @@ export function PatternBackground({
     `pattern-background-${intensity}`,
     `pattern-position-${position}`,
     `pattern-fade-${fadeDirection}`,
+    `pattern-variant-${variant}`,
+    `pattern-tone-${tone}`,
     className,
-  ]
-    .filter(Boolean)
-    .join(" ");
+  ].filter(Boolean).join(" ");
 
   return (
     <div className={classes}>

@@ -1,6 +1,7 @@
 export type NavigationItem = {
   label: string;
   href: string;
+  external?: boolean;
 };
 
 export const primaryNavigation: NavigationItem[] = [
@@ -8,20 +9,20 @@ export const primaryNavigation: NavigationItem[] = [
   { label: "الزكاة", href: "/zakat" },
   { label: "الأوقاف", href: "/waqf" },
   { label: "العطاء المستمر", href: "/recurring" },
-  { label: "الأثر والتقارير", href: "/impact" },
-  { label: "من الميدان", href: "/stories" },
+  { label: "الأثر والإنجازات", href: "/impact" },
   { label: "المعرفة", href: "/knowledge" },
+  { label: "من نحن", href: "/#about" },
 ];
 
 export const utilityNavigation: NavigationItem[] = [
-  { label: "الأثر والتقارير", href: "/impact" },
-  { label: "حساب المتبرع", href: "/account" },
-  { label: "مركز المعرفة", href: "/knowledge" },
+  { label: "كن شريكًا", href: "mailto:info@minberiaksa.org?subject=طلب شراكة مع مؤسسة منبر الأقصى" },
+  { label: "تطوع معنا", href: "mailto:info@minberiaksa.org?subject=طلب تطوع مع مؤسسة منبر الأقصى" },
+  { label: "استكشف مشاريع الشركاء", href: "/projects" },
 ];
 
-export const footerNavigation = {
-  donation: {
-    title: "مسارات العطاء",
+export const footerNavigation = [
+  {
+    title: "التبرع",
     links: [
       { label: "المشاريع", href: "/projects" },
       { label: "الزكاة", href: "/zakat" },
@@ -29,22 +30,30 @@ export const footerNavigation = {
       { label: "العطاء المستمر", href: "/recurring" },
     ],
   },
-  trust: {
-    title: "الأثر والشفافية",
+  {
+    title: "الثقة",
     links: [
-      { label: "الأثر والتقارير", href: "/impact" },
-      { label: "التقارير والوثائق", href: "/impact#documents" },
-      { label: "القصص الميدانية", href: "/stories" },
-      { label: "مركز المعرفة", href: "/knowledge" },
+      { label: "الإنجازات", href: "/impact" },
+      { label: "التقارير الميدانية", href: "/impact#documents" },
+      { label: "الحسابات البنكية", href: "https://minberiaksa.org/hesapnumaralarimiz", external: true },
+      { label: "الأسئلة الشائعة", href: "/knowledge" },
     ],
   },
-  account: {
-    title: "حساب المتبرع",
+  {
+    title: "المؤسسة",
     links: [
-      { label: "نظرة عامة", href: "/account" },
-      { label: "سجل التبرعات", href: "/account/donations" },
-      { label: "محفظة الأثر", href: "/account/impact" },
-      { label: "الوثائق", href: "/account/documents" },
+      { label: "من نحن", href: "/#about" },
+      { label: "تطوع معنا", href: "mailto:info@minberiaksa.org?subject=طلب تطوع مع مؤسسة منبر الأقصى" },
+      { label: "كن شريكًا", href: "mailto:info@minberiaksa.org?subject=طلب شراكة مع مؤسسة منبر الأقصى" },
+      { label: "تواصل معنا", href: "#contact" },
     ],
   },
-} as const;
+  {
+    title: "القانوني",
+    links: [
+      { label: "الخصوصية", href: "https://minberiaksa.org/cerez-politikasi", external: true },
+      { label: "الشروط والأحكام", href: "https://minberiaksa.org/cerez-politikasi", external: true },
+      { label: "سياسة التبرع", href: "https://minberiaksa.org/cerez-politikasi", external: true },
+    ],
+  },
+] as const;

@@ -10,45 +10,42 @@ export function SiteFooter() {
   const year = new Date().getFullYear();
 
   return (
-    <PatternBackground intensity="soft" position="top" fadeDirection="bottom" className="footer-pattern-shell">
+    <PatternBackground intensity="soft" position="top" fadeDirection="bottom" variant="dark" className="footer-pattern-shell">
       <footer className="site-footer" id="contact">
         <Container>
           <div className="footer-main-grid">
             <div className="footer-brand-column">
-              <BrandMark />
+              <BrandMark inverse />
               <h2>{siteConfig.nameAr}</h2>
               <p className="footer-name-en">{siteConfig.nameEn}</p>
               <p>{siteConfig.description}</p>
               <address>
                 <a href={`mailto:${siteConfig.email}`}>{siteConfig.email}</a>
-                {siteConfig.phones.map((phone) => (
-                  <a key={phone} href={`tel:${phone.replace(/\s/g, "")}`}>{phone}</a>
-                ))}
+                {siteConfig.phones.map((phone) => <a key={phone} href={`tel:${phone.replace(/\s/g, "")}`}>{phone}</a>)}
                 <span>{siteConfig.address}</span>
               </address>
             </div>
 
-            {Object.values(footerNavigation).map((column) => (
-              <nav className="footer-link-column" aria-label={column.title} key={column.title}>
-                <h3>{column.title}</h3>
-                {column.links.map((item) => (
-                  <a key={item.label} href={item.href}>{item.label}</a>
-                ))}
-              </nav>
-            ))}
-          </div>
-
-          <div className="footer-controls-row">
-            <p>اختر اللغة والعملة المناسبة لتجربة التصفح.</p>
-            <div className="footer-selectors">
-              <LanguageSelector compact />
-              <CurrencySelector compact />
+            <div className="footer-navigation-grid">
+              {footerNavigation.map((column) => (
+                <nav className="footer-link-column" aria-label={column.title} key={column.title}>
+                  <h3>{column.title}</h3>
+                  {column.links.map((item) => (
+                    <a key={item.label} href={item.href} target={"external" in item && item.external ? "_blank" : undefined} rel={"external" in item && item.external ? "noreferrer" : undefined}>{item.label}</a>
+                  ))}
+                </nav>
+              ))}
             </div>
           </div>
 
-          <div className="footer-bottom-row">
+          <div className="footer-controls-row">
+            <p>اختر لغتك وعملتك دون حذف أي خيار متاح في المنصة.</p>
+            <div className="footer-selectors"><LanguageSelector compact /><CurrencySelector compact /></div>
+          </div>
+
+          <div className="footer-bottom-row" id="legal">
             <p>© {year} {siteConfig.nameAr}. جميع الحقوق محفوظة.</p>
-            <p>البيانات والتقارير المنشورة تُعرض وفق حالة اعتمادها.</p>
+            <p>تعرض الوثائق والتقارير وفق حالة اعتمادها الفعلية.</p>
           </div>
         </Container>
       </footer>
