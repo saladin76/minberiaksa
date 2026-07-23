@@ -1,0 +1,5 @@
+@media (min-width: 900px) and (max-width: 1179px) {
+  .top-utility-bar {
+    display: block;
+  }
+}

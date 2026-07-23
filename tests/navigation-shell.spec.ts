@@ -67,8 +67,9 @@ test.describe("Navigation shell visual and UX safeguards", () => {
     await page.setViewportSize({ width: 768, height: 900 });
     await expect(page.locator(".top-utility-bar")).toBeHidden();
     await openMobileMenu(page);
-    await expect(page.getByRole("heading", { name: "الإعدادات" })).toBeVisible();
-    await expect(page.getByRole("link", { name: "حساب المتبرع" })).toBeVisible();
+    const dialog = page.getByRole("dialog", { name: "القائمة الرئيسية" });
+    await expect(dialog.getByRole("heading", { name: "الإعدادات" })).toBeVisible();
+    await expect(dialog.getByRole("link", { name: "حساب المتبرع" })).toBeVisible();
   });
 
   test("mobile menu is grouped and never overlaps the basket", async ({ page }) => {
@@ -76,13 +77,14 @@ test.describe("Navigation shell visual and UX safeguards", () => {
     await page.goto("/", { waitUntil: "networkidle" });
     await openMobileMenu(page);
 
+    const dialog = page.getByRole("dialog", { name: "القائمة الرئيسية" });
     for (const heading of ["العطاء", "الثقة والمعرفة", "المؤسسة", "الإعدادات"]) {
-      await expect(page.getByRole("heading", { name: heading, exact: true })).toBeVisible();
+      await expect(dialog.getByRole("heading", { name: heading, exact: true })).toBeVisible();
     }
-    await expect(page.getByRole("dialog", { name: "القائمة الرئيسية" })).toBeVisible();
+    await expect(dialog).toBeVisible();
     await expect(page.getByRole("dialog", { name: "سلة العطاء" })).toHaveCount(0);
 
-    await page.locator(".mobile-nav-header").getByRole("button", { name: "إغلاق القائمة" }).click();
+    await dialog.locator(".mobile-nav-header").getByRole("button", { name: "إغلاق القائمة" }).click();
     await page.locator(".mobile-header-actions").getByRole("button", { name: /سلة العطاء/ }).click();
     await expect(page.getByRole("dialog", { name: "سلة العطاء" })).toBeVisible();
     await expect(page.getByRole("dialog", { name: "القائمة الرئيسية" })).toHaveCount(0);
@@ -97,7 +99,10 @@ test.describe("Navigation shell visual and UX safeguards", () => {
     await page.goto("/", { waitUntil: "networkidle" });
     await openMobileMenu(page);
 
-    await page.getByRole("button", { name: /اختيار اللغة/ }).click();
+    const navigationDialog = page.getByRole("dialog", { name: "القائمة الرئيسية" });
+    const settings = navigationDialog.getByRole("region", { name: "الإعدادات" });
+
+    await settings.getByRole("button", { name: /اختيار اللغة/ }).click();
     const languageDialog = page.getByRole("dialog", { name: "اختر اللغة" });
     await expect(languageDialog).toBeVisible();
     await expect(languageDialog.getByRole("option")).toHaveCount(13);
@@ -105,7 +110,7 @@ test.describe("Navigation shell visual and UX safeguards", () => {
     await expect(languageDialog.getByRole("option", { name: /اردو/ })).toBeVisible();
     await languageDialog.getByRole("button", { name: "إغلاق" }).click();
 
-    await page.getByRole("button", { name: /اختيار العملة/ }).click();
+    await settings.getByRole("button", { name: /اختيار العملة/ }).click();
     const currencyDialog = page.getByRole("dialog", { name: "اختر عملة العرض" });
     await expect(currencyDialog).toBeVisible();
     await expect(currencyDialog.getByRole("option")).toHaveCount(14);
@@ -134,13 +139,13 @@ test.describe("Navigation shell visual and UX safeguards", () => {
     const sticky = page.locator(".sticky-donate-bar");
     await expect(sticky).not.toHaveClass(/is-visible/);
 
-    await page.evaluate(() => window.scrollTo(0, 1100));
+    await page.locator(".home-projects-v4").scrollIntoViewIfNeeded();
     await page.waitForTimeout(250);
     await expect(sticky).toHaveClass(/is-visible/);
 
     await openMobileMenu(page);
     await expect(sticky).toBeHidden();
-    await page.locator(".mobile-nav-header").getByRole("button", { name: "إغلاق القائمة" }).click();
+    await page.getByRole("dialog", { name: "القائمة الرئيسية" }).locator(".mobile-nav-header").getByRole("button", { name: "إغلاق القائمة" }).click();
 
     await page.locator("footer").scrollIntoViewIfNeeded();
     await page.waitForTimeout(250);
