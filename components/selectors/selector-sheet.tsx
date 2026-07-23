@@ -3,7 +3,15 @@
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import type { RefObject } from "react";
 
-type SelectorOption = { id: string; primary: string; secondary?: string; badge?: string };
+type SelectorOption = {
+  id: string;
+  primary: string;
+  secondary?: string;
+  badge?: string;
+  direction?: "rtl" | "ltr";
+  lang?: string;
+};
+
 type Props = {
   open: boolean;
   title: string;
@@ -33,6 +41,7 @@ export function SelectorSheet({ open, title, searchLabel, emptyLabel, selectedId
     if (!open || !dialogRef.current) return;
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
+    document.body.classList.add("selector-sheet-open");
     const dialog = dialogRef.current;
     const items = () => Array.from(dialog.querySelectorAll<HTMLElement>(focusable));
     requestAnimationFrame(() => dialog.querySelector<HTMLInputElement>("input")?.focus());
@@ -49,6 +58,7 @@ export function SelectorSheet({ open, title, searchLabel, emptyLabel, selectedId
     document.addEventListener("keydown", onKeyDown);
     return () => {
       document.body.style.overflow = previousOverflow;
+      document.body.classList.remove("selector-sheet-open");
       document.removeEventListener("keydown", onKeyDown);
       triggerRef.current?.focus();
       setQuery("");
@@ -66,7 +76,7 @@ export function SelectorSheet({ open, title, searchLabel, emptyLabel, selectedId
         <div className="selector-sheet__options" role="listbox" aria-label={title}>
           {filtered.map((option) => (
             <button key={option.id} className="selector-sheet__option" type="button" role="option" aria-selected={selectedId === option.id} onClick={() => onSelect(option.id)}>
-              <span><strong>{option.primary}</strong>{option.secondary ? <small>{option.secondary}</small> : null}</span>
+              <span className="selector-sheet__option-copy" dir={option.direction} lang={option.lang}><strong>{option.primary}</strong>{option.secondary ? <small>{option.secondary}</small> : null}</span>
               {option.badge ? <b>{option.badge}</b> : null}
               {selectedId === option.id ? <i aria-hidden="true">✓</i> : null}
             </button>

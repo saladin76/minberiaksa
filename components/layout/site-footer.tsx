@@ -14,16 +14,26 @@ export function SiteFooter() {
       <footer className="site-footer" id="contact">
         <Container>
           <div className="footer-main-grid">
-            <div className="footer-brand-column">
-              <BrandMark inverse />
-              <h2>{siteConfig.nameAr}</h2>
-              <p className="footer-name-en">{siteConfig.nameEn}</p>
-              <p>{siteConfig.description}</p>
-              <address>
-                <a href={`mailto:${siteConfig.email}`}>{siteConfig.email}</a>
-                {siteConfig.phones.map((phone) => <a key={phone} href={`tel:${phone.replace(/\s/g, "")}`}>{phone}</a>)}
-                <span>{siteConfig.address}</span>
-              </address>
+            <div className="footer-institution-column">
+              <div className="footer-brand-column">
+                <BrandMark inverse />
+                <h2>{siteConfig.nameAr}</h2>
+                <p className="footer-name-en">{siteConfig.nameEn}</p>
+                <p>{siteConfig.description}</p>
+              </div>
+
+              <section className="footer-contact-block" aria-labelledby="footer-contact-title">
+                <h3 id="footer-contact-title">بيانات المؤسسة</h3>
+                <address>
+                  <a className="footer-contact-email" href={`mailto:${siteConfig.email}`}>{siteConfig.email}</a>
+                  <div className="footer-contact-phones">
+                    {siteConfig.phones.map((phone) => (
+                      <a dir="ltr" key={phone} href={`tel:${phone.replace(/\s/g, "")}`}>{phone}</a>
+                    ))}
+                  </div>
+                  <span dir="ltr">{siteConfig.address}</span>
+                </address>
+              </section>
             </div>
 
             <div className="footer-navigation-grid">
@@ -31,7 +41,14 @@ export function SiteFooter() {
                 <nav className="footer-link-column" aria-label={column.title} key={column.title}>
                   <h3>{column.title}</h3>
                   {column.links.map((item) => (
-                    <a key={item.label} href={item.href} target={"external" in item && item.external ? "_blank" : undefined} rel={"external" in item && item.external ? "noreferrer" : undefined}>{item.label}</a>
+                    <a
+                      key={item.label}
+                      href={item.href}
+                      target={"external" in item && item.external ? "_blank" : undefined}
+                      rel={"external" in item && item.external ? "noreferrer" : undefined}
+                    >
+                      {item.label}
+                    </a>
                   ))}
                 </nav>
               ))}
@@ -39,7 +56,7 @@ export function SiteFooter() {
           </div>
 
           <div className="footer-controls-row">
-            <p>اختر لغتك وعملتك دون حذف أي خيار متاح في المنصة.</p>
+            <p>اختر لغة العرض وعملته.</p>
             <div className="footer-selectors"><LanguageSelector compact /><CurrencySelector compact /></div>
           </div>
 

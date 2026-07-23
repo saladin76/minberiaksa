@@ -13,9 +13,12 @@ export function TopUtilityBar() {
             <a href={item.href} key={item.label}>{item.label}</a>
           ))}
         </nav>
+
         <div className="utility-account-controls" aria-label="إعدادات التصفح والحساب">
-          <LanguageSelector compact />
-          <CurrencySelector compact />
+          <div className="utility-selector-cluster" aria-label="اللغة والعملة">
+            <LanguageSelector compact />
+            <CurrencySelector compact />
+          </div>
           <a className="utility-account-link" href="/account">حساب المتبرع</a>
           <BasketTrigger compact />
         </div>

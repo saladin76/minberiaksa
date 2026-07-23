@@ -4,6 +4,11 @@ export type NavigationItem = {
   external?: boolean;
 };
 
+export type NavigationGroup = {
+  title: string;
+  links: NavigationItem[];
+};
+
 export const primaryNavigation: NavigationItem[] = [
   { label: "المشاريع", href: "/projects" },
   { label: "الزكاة", href: "/zakat" },
@@ -18,6 +23,32 @@ export const utilityNavigation: NavigationItem[] = [
   { label: "كن شريكًا", href: "mailto:info@minberiaksa.org?subject=طلب شراكة مع مؤسسة منبر الأقصى" },
   { label: "تطوع معنا", href: "mailto:info@minberiaksa.org?subject=طلب تطوع مع مؤسسة منبر الأقصى" },
   { label: "استكشف مشاريع الشركاء", href: "/projects" },
+];
+
+export const mobileNavigationGroups: NavigationGroup[] = [
+  {
+    title: "العطاء",
+    links: primaryNavigation.slice(0, 4),
+  },
+  {
+    title: "الثقة والمعرفة",
+    links: [
+      { label: "الأثر والإنجازات", href: "/impact" },
+      { label: "التقارير", href: "/impact#documents" },
+      { label: "المعرفة", href: "/knowledge" },
+      { label: "الأسئلة الشائعة", href: "/knowledge#faq" },
+    ],
+  },
+  {
+    title: "المؤسسة",
+    links: [
+      { label: "من نحن", href: "/#about" },
+      { label: "تطوع معنا", href: "mailto:info@minberiaksa.org?subject=طلب تطوع مع مؤسسة منبر الأقصى" },
+      { label: "كن شريكًا", href: "mailto:info@minberiaksa.org?subject=طلب شراكة مع مؤسسة منبر الأقصى" },
+      { label: "مشاريع الشركاء", href: "/projects" },
+      { label: "تواصل معنا", href: "/#contact" },
+    ],
+  },
 ];
 
 export const footerNavigation = [

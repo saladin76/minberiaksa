@@ -4,6 +4,7 @@ import { BasketTrigger } from "@/components/ui/basket-trigger";
 import { BrandMark } from "@/components/ui/brand-mark";
 import { Button } from "@/components/ui/button";
 import { Container } from "@/components/ui/container";
+import { DesktopNavigation } from "./desktop-navigation";
 import { MobileNavigation } from "./mobile-navigation";
 
 export function SiteHeader() {
@@ -18,17 +19,13 @@ export function SiteHeader() {
           </span>
         </a>
 
-        <nav className="desktop-navigation" aria-label="التنقل الرئيسي">
-          {primaryNavigation.map((item) => (
-            <a key={item.label} href={item.href}>{item.label}</a>
-          ))}
-        </nav>
+        <DesktopNavigation items={primaryNavigation} />
 
         <div className="desktop-header-actions">
           <Button href="/#donate" size="small">تبرع الآن</Button>
         </div>
 
-        <div className="mobile-header-actions">
+        <div className="mobile-header-actions" aria-label="إجراءات الهاتف">
           <BasketTrigger compact />
           <MobileNavigation />
         </div>
