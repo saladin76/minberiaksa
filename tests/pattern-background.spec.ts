@@ -5,7 +5,7 @@ import sharp from "sharp";
 
 const routes = ["/", "/zakat", "/waqf", "/recurring"];
 const heroes = [
-  { path: "/", selector: ".homepage-hero" },
+  { path: "/", selector: ".home-hero-v4" },
   { path: "/zakat", selector: ".z-hero" },
   { path: "/waqf", selector: ".w-hero" },
   { path: "/recurring", selector: ".recurring-hero" },
