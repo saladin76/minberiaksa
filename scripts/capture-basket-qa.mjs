@@ -25,7 +25,7 @@ async function prepare(width, height, items = []) {
   await trigger.waitFor({ state: "visible" });
   if (items.length) {
     await page.evaluate((entries) => entries.forEach((detail) => window.dispatchEvent(new CustomEvent("minber:add-to-basket", { detail }))), items);
-    await page.waitForFunction((count) => document.querySelector(".basket-count:visible")?.textContent === String(count), items.length);
+    await page.waitForFunction((count) => Array.from(document.querySelectorAll(".basket-count")).some((element) => element.textContent === String(count)), items.length);
   }
   await trigger.click();
   await page.getByRole("dialog", { name: "سلة العطاء" }).waitFor({ state: "visible" });
