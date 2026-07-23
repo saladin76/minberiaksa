@@ -53,8 +53,6 @@ jobs:
           cat /tmp/minberi-project-cards.log
           exit 1
       - name: Run Playwright safeguards
-        id: project-card-tests
-        continue-on-error: true
         env:
           PLAYWRIGHT_BASE_URL: http://127.0.0.1:3000
         run: |
@@ -69,9 +67,6 @@ jobs:
           path: artifacts/project-cards-tests
           if-no-files-found: error
           retention-days: 3
-      - name: Stop when Playwright failed
-        if: steps.project-card-tests.outcome == 'failure'
-        run: exit 1
       - name: Capture local production screenshots
         env:
           PLAYWRIGHT_BASE_URL: http://127.0.0.1:3000
