@@ -53,9 +53,12 @@ jobs:
           cat /tmp/minberi-basket.log
           exit 1
       - name: Run basket safeguards
+        shell: bash
         env:
           PLAYWRIGHT_BASE_URL: http://127.0.0.1:3000
-        run: npx playwright test tests/basket-ux.spec.ts
+        run: |
+          set -o pipefail
+          npx playwright test tests/basket-ux.spec.ts 2>&1 | tee artifacts/basket-build/test.log
       - name: Capture local production screenshots
         env:
           PLAYWRIGHT_BASE_URL: http://127.0.0.1:3000
