@@ -1,0 +1,1 @@
+export default function Loading(){return <main className="z-loading" aria-busy="true" aria-label="جارٍ تحميل صفحة الزكاة"><div className="site-container"><div/><div/><div className="z-loading-grid"><span/><span/></div></div></main>}

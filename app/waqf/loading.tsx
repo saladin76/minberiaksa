@@ -1,0 +1,1 @@
+export default function Loading(){return <main className="w-loading" aria-busy="true" aria-label="جارٍ تحميل صفحة الوقف"><div className="site-container"><div/><div/><div className="w-loading-grid"><span/><span/></div></div></main>}

@@ -1,0 +1,1 @@
+export default function BasketLoading(){return <main id="main-content" className="basket-page"><div className="site-container basket-route-skeleton" role="status" aria-label="جارٍ تحميل سلة العطاء"><span/><span/><span/></div></main>}

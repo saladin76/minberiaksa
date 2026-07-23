@@ -1,0 +1,156 @@
+@media (max-width: 900px) {
+  .basket-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .basket-summary-column {
+    position: static;
+  }
+}
+
+@media (max-width: 767px) {
+  .giving-drawer {
+    width: 100%;
+    border-inline-start: 0;
+    box-shadow: none;
+  }
+
+  .giving-drawer-header {
+    min-height: 4.75rem;
+    padding-inline: 1rem;
+  }
+
+  .giving-drawer-body {
+    padding: 0.85rem 0.85rem 1.2rem;
+  }
+
+  .giving-drawer-items__heading {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 0.18rem;
+  }
+
+  .giving-basket-item {
+    border-radius: 0.72rem;
+    padding: 0.9rem;
+  }
+
+  .giving-basket-item__title-row {
+    gap: 0.6rem;
+  }
+
+  .giving-basket-project-link {
+    font-size: 0.68rem;
+  }
+
+  .basket-amount-editor {
+    grid-template-columns: 4.25rem minmax(0, 1fr);
+  }
+
+  .basket-amount-control-row {
+    grid-template-columns: 3rem minmax(0, 1fr) 3rem;
+  }
+
+  .basket-amount-control-row button,
+  .basket-amount-control-row input {
+    min-height: 3rem;
+  }
+
+  .giving-drawer-summary {
+    padding: 0.85rem 1rem calc(0.85rem + env(safe-area-inset-bottom));
+  }
+
+  .basket-starting-points > div {
+    grid-template-columns: 1fr;
+  }
+
+  .basket-starting-point {
+    min-height: 3.2rem;
+    font-size: 0.74rem;
+  }
+
+  .giving-basket-empty {
+    padding-inline: 0.35rem;
+  }
+
+  .basket-review-header {
+    padding-block: 1.5rem 1rem;
+  }
+
+  .basket-review-header h1 {
+    font-size: 2rem;
+  }
+
+  .basket-items-heading {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 0.35rem;
+  }
+
+  .flow-trust {
+    display: none;
+  }
+
+  .basket-modal-dialog {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    max-height: none;
+    margin: 0;
+    border: 0;
+    border-radius: 0;
+    padding-bottom: calc(1rem + env(safe-area-inset-bottom));
+  }
+}
+
+@media (max-width: 390px) {
+  .giving-drawer-header h2 {
+    font-size: 1.2rem;
+  }
+
+  .giving-drawer-header p {
+    font-size: 0.74rem;
+  }
+
+  .giving-basket-item__topline,
+  .giving-basket-item__title-row {
+    align-items: flex-start;
+  }
+
+  .giving-basket-item__title-row {
+    flex-direction: column;
+  }
+
+  .giving-basket-project-link {
+    align-self: flex-start;
+  }
+
+  .basket-amount-editor {
+    grid-template-columns: 1fr;
+  }
+
+  .basket-amount-label {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .basket-amount-error,
+  .basket-amount-editor > small {
+    grid-column: 1;
+  }
+
+  .basket-review-summary__heading {
+    gap: 0.55rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .giving-drawer,
+  .basket-modal-dialog,
+  .giving-drawer-loading span,
+  .basket-loading-state span {
+    animation: none !important;
+    scroll-behavior: auto;
+  }
+}

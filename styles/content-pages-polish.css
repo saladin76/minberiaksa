@@ -1,0 +1,86 @@
+html,
+body {
+  max-width: 100%;
+  overflow-x: clip;
+}
+
+.impact-section,
+.stories-section,
+.knowledge-section,
+.knowledge-article section {
+  scroll-margin-top: 6rem;
+}
+
+.topic-navigation button,
+.knowledge-search button,
+.article-toc summary {
+  min-height: 44px;
+  touch-action: manipulation;
+}
+
+.knowledge-explorer :focus-visible,
+.article-toc :focus-visible {
+  outline: 3px solid var(--color-focus-ring);
+  outline-offset: 3px;
+}
+
+.desktop-navigation {
+  gap: clamp(.55rem, 1vw, 1rem);
+}
+
+.desktop-navigation a {
+  white-space: nowrap;
+}
+
+.site-header-inner,
+.article-content {
+  min-width: 0;
+}
+
+.knowledge-article {
+  overflow-x: clip;
+}
+
+@media (min-width: 1440px) {
+  .impact-hero > .site-container,
+  .stories-hero > .site-container,
+  .knowledge-hero-grid,
+  .article-body-layout {
+    max-width: 86rem;
+  }
+
+  .impact-hero h1,
+  .stories-hero h1,
+  .knowledge-hero h1,
+  .article-header h1 {
+    text-wrap: balance;
+  }
+}
+
+@media (max-width: 1180px) {
+  .desktop-navigation {
+    display: none;
+  }
+
+  .mobile-header-actions {
+    display: flex;
+  }
+}
+
+@media (max-width: 768px) {
+  .sticky-donate-bar {
+    padding-bottom: max(.65rem, env(safe-area-inset-bottom));
+  }
+}
+
+@media (max-width: 390px) {
+  .site-container {
+    --container-padding: 1rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html:focus-within {
+    scroll-behavior: auto;
+  }
+}

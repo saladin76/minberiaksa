@@ -1,0 +1,3 @@
+import type{Metadata}from"next";import{BasketReview}from"@/components/basket/basket-review";import{CheckoutShell}from"@/components/checkout/checkout-shell";
+export const metadata:Metadata={title:"سلة العطاء | مؤسسة منبر الأقصى الدولية",description:"راجع نيات تبرعك ومشاريعك وخططك قبل الانتقال إلى خطوة التأكيد."};
+export default function BasketPage(){return <CheckoutShell><main id="main-content" className="basket-page"><div className="site-container"><nav className="basket-breadcrumb" aria-label="مسار التنقل"><a href="/">الرئيسية</a><span aria-hidden="true">←</span><span aria-current="page">سلة العطاء</span></nav><BasketReview/></div></main></CheckoutShell>}

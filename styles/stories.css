@@ -1,0 +1,138 @@
+.stories-hero {
+  padding: clamp(4rem, 8vw, 7rem) 0;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-light-ivory);
+}
+
+.stories-hero > .site-container {
+  max-width: 58rem;
+}
+
+.stories-hero h1 {
+  max-width: 12ch;
+  margin: .75rem 0 1.25rem;
+  font-size: clamp(2.8rem, 6vw, 5.4rem);
+  line-height: 1.05;
+  letter-spacing: -.035em;
+}
+
+.stories-hero p {
+  max-width: 44rem;
+  color: var(--color-muted-text);
+  font-size: var(--type-body-large);
+  line-height: 1.9;
+}
+
+.stories-hero > .site-container > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .75rem;
+  margin-top: 1.5rem;
+}
+
+.stories-section {
+  padding: clamp(4rem, 7vw, 6rem) 0;
+}
+
+.stories-section:nth-of-type(even) {
+  background: var(--color-light-ivory);
+}
+
+.stories-standards {
+  background: var(--color-deep-navy) !important;
+  color: #fff;
+}
+
+.stories-standards .section-intro p,
+.stories-standards li p {
+  color: #c8d2d6;
+}
+
+.stories-standards ol {
+  list-style: none;
+  margin: 2rem 0 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  border-block: 1px solid rgba(255,255,255,.16);
+}
+
+.stories-standards li {
+  min-height: 14rem;
+  padding: 1.4rem;
+  border-inline-start: 1px solid rgba(255,255,255,.16);
+  display: flex;
+  flex-direction: column;
+  justify-content: end;
+}
+
+.stories-standards li > span {
+  margin-bottom: auto;
+  color: var(--color-aqsa-gold);
+  font-family: var(--font-latin);
+  font-size: .75rem;
+}
+
+.stories-standards h3 {
+  margin: 1rem 0 .4rem;
+}
+
+.stories-standards p {
+  margin: 0;
+  line-height: 1.75;
+}
+
+.stories-final {
+  padding: clamp(3.5rem, 6vw, 5rem) 0;
+  background: var(--color-trust-navy);
+  color: #fff;
+}
+
+.stories-final > .site-container {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 2rem;
+}
+
+.stories-final h2 {
+  margin: .45rem 0 0;
+  font-size: clamp(2rem, 4vw, 3.5rem);
+}
+
+@media (max-width: 900px) {
+  .stories-standards ol {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .stories-hero {
+    padding-block: 3.5rem;
+  }
+
+  .stories-hero h1 {
+    max-width: none;
+    font-size: clamp(2.45rem, 12vw, 3.5rem);
+  }
+
+  .stories-hero > .site-container > div,
+  .stories-final > .site-container {
+    display: grid;
+  }
+
+  .stories-hero .ui-button,
+  .stories-final .ui-button {
+    width: 100%;
+  }
+
+  .stories-standards ol {
+    grid-template-columns: 1fr;
+  }
+
+  .stories-standards li {
+    min-height: 11rem;
+    border-inline-start: 0;
+    border-bottom: 1px solid rgba(255,255,255,.16);
+  }
+}

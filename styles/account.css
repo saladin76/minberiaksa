@@ -1,0 +1,489 @@
+.account-shell,
+.account-sign-in-page,
+.account-gate {
+  min-height: 100vh;
+  background: var(--color-light-ivory);
+  color: var(--color-deep-navy);
+}
+
+.account-demo-banner {
+  min-height: 2.6rem;
+  padding: .5rem 1rem;
+  background: var(--color-trust-navy);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: .75rem;
+  font-size: .78rem;
+  text-align: center;
+}
+
+.account-demo-banner strong {
+  color: #f2d38b;
+}
+
+.account-header {
+  min-height: 5rem;
+  padding: .7rem clamp(1rem, 4vw, 3.5rem);
+  border-bottom: 1px solid var(--color-border);
+  background: #fff;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 1rem;
+}
+
+.account-brand,
+.account-sign-in-shell > header > a:first-child {
+  display: flex;
+  align-items: center;
+  gap: .65rem;
+}
+
+.account-brand span,
+.account-sign-in-shell > header > a:first-child span {
+  display: grid;
+}
+
+.account-brand small,
+.account-header-user span {
+  color: var(--color-muted-text);
+  font-size: .72rem;
+}
+
+.account-header-user {
+  text-align: center;
+}
+
+.account-header-user span,
+.account-header-user strong {
+  display: block;
+}
+
+.account-header-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: .7rem;
+}
+
+.account-header-actions > a,
+.account-sidebar > a,
+.account-mobile-panel > a {
+  min-height: 2.75rem;
+  padding: .5rem .7rem;
+  display: inline-flex;
+  align-items: center;
+  font-weight: 700;
+}
+
+.account-layout {
+  min-height: calc(100vh - 7.6rem);
+  display: grid;
+  grid-template-columns: 16rem minmax(0, 1fr);
+}
+
+.account-sidebar {
+  padding: 1.5rem 1rem;
+  border-inline-end: 1px solid var(--color-border);
+  background: #fff;
+}
+
+.account-sidebar > div {
+  padding: .75rem;
+  display: grid;
+}
+
+.account-sidebar span {
+  color: var(--color-muted-text);
+  font-size: .72rem;
+}
+
+.account-navigation {
+  margin: 1rem 0;
+  display: grid;
+  gap: .3rem;
+}
+
+.account-navigation a {
+  min-height: 2.75rem;
+  padding: .55rem .75rem;
+  color: var(--color-muted-text);
+  display: flex;
+  align-items: center;
+  font-weight: 700;
+}
+
+.account-navigation a[aria-current="page"] {
+  border-inline-start: 3px solid var(--color-aqsa-gold);
+  background: var(--color-soft-sand);
+  color: var(--color-trust-navy);
+}
+
+.account-main {
+  min-width: 0;
+  padding: clamp(1.25rem, 4vw, 3.5rem);
+}
+
+.account-page {
+  max-width: 78rem;
+  margin: auto;
+}
+
+.account-page-heading {
+  margin-bottom: 2rem;
+}
+
+.account-page-heading > span,
+.impact-editorial-summary > div > span {
+  color: var(--color-minber-red);
+  font-size: .78rem;
+  font-weight: 800;
+}
+
+.account-page-heading h1 {
+  margin: .35rem 0;
+  font-size: clamp(2rem, 4vw, 3.7rem);
+}
+
+.account-page-heading p {
+  max-width: 48rem;
+  color: var(--color-muted-text);
+  font-size: 1.05rem;
+  line-height: 1.8;
+}
+
+.account-empty-state {
+  padding: clamp(1.5rem, 4vw, 3rem);
+  border: 1px solid var(--color-border);
+  background: #fff;
+  text-align: center;
+}
+
+.account-empty-state h2,
+.account-empty-state h3 {
+  margin-top: 0;
+}
+
+.account-empty-state p {
+  max-width: 42rem;
+  margin-inline: auto;
+  color: var(--color-muted-text);
+  line-height: 1.8;
+}
+
+.account-empty-state > div,
+.settings-actions,
+.account-sign-in-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: .7rem;
+}
+
+.impact-editorial-summary {
+  margin: 1.5rem 0;
+  padding: 1.5rem;
+  border: 1px solid var(--color-border);
+  background: #fff;
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 1.5rem;
+}
+
+.impact-editorial-summary ul {
+  margin: 0;
+  display: grid;
+  gap: .55rem;
+}
+
+.account-account-roadmap {
+  margin-top: 2rem;
+}
+
+.account-account-roadmap > div {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.account-account-roadmap article {
+  min-height: 12rem;
+  padding: 1.25rem;
+  border: 1px solid var(--color-border);
+  background: #fff;
+  display: flex;
+  flex-direction: column;
+}
+
+.account-account-roadmap article > span {
+  color: var(--color-aqsa-gold-deep);
+  font-family: var(--font-latin);
+  font-weight: 800;
+}
+
+.account-account-roadmap h3 {
+  margin: auto 0 .45rem;
+}
+
+.account-account-roadmap p {
+  margin: 0;
+  color: var(--color-muted-text);
+  line-height: 1.7;
+}
+
+.settings-section {
+  margin-top: 1.5rem;
+  padding: 1.25rem;
+  border: 1px solid var(--color-border);
+  background: #fff;
+}
+
+.settings-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: .8rem;
+}
+
+.settings-section label {
+  display: grid;
+  gap: .35rem;
+}
+
+.settings-section input,
+.settings-section select {
+  min-height: 2.75rem;
+  padding: .55rem .7rem;
+  border: 1px solid var(--color-border);
+  background: #fff;
+}
+
+.settings-actions {
+  justify-content: flex-start;
+  margin-top: 1rem;
+}
+
+.settings-actions a {
+  min-height: 2.75rem;
+  padding: .55rem .8rem;
+  border: 1px solid var(--color-border);
+  background: #fff;
+  display: inline-flex;
+  align-items: center;
+}
+
+.account-gate {
+  padding: 1rem;
+  display: grid;
+  place-items: center;
+}
+
+.account-gate section {
+  max-width: 38rem;
+  padding: clamp(1.5rem, 4vw, 3rem);
+  border: 1px solid var(--color-border);
+  background: #fff;
+  text-align: center;
+}
+
+.account-sign-in-shell {
+  width: min(70rem, 100%);
+  margin: auto;
+  padding: 1rem;
+}
+
+.account-sign-in-shell > header {
+  min-height: 5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.account-sign-in-card {
+  width: min(36rem, 100%);
+  margin: 3rem auto;
+  padding: clamp(1.5rem, 5vw, 3.5rem);
+  border: 1px solid var(--color-border);
+  background: #fff;
+}
+
+.account-sign-in-card h1 {
+  font-size: clamp(2rem, 5vw, 3rem);
+}
+
+.account-auth-required {
+  padding: 1rem;
+  background: var(--color-soft-sand);
+}
+
+.account-sign-in-actions {
+  justify-content: flex-start;
+  margin-top: 1rem;
+}
+
+.account-mobile-menu-trigger,
+.account-mobile-layer {
+  display: none;
+}
+
+.account-mobile-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 180;
+  place-items: center;
+  padding: 1rem;
+}
+
+.account-mobile-backdrop {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  background: rgba(7,19,26,.65);
+}
+
+.account-mobile-panel {
+  position: relative;
+  z-index: 1;
+  width: min(42rem, 100%);
+  max-height: 90vh;
+  overflow: auto;
+  padding: 1.2rem;
+  background: #fff;
+}
+
+.account-mobile-panel > header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.account-mobile-panel > header button {
+  width: 2.75rem;
+  height: 2.75rem;
+  border: 0;
+  background: var(--color-muted-surface);
+}
+
+.account-route-loading {
+  min-height: 60vh;
+  display: grid;
+  place-items: center;
+}
+
+@media (max-width: 1000px) {
+  .account-layout {
+    grid-template-columns: 12rem minmax(0, 1fr);
+  }
+
+  .account-header-user {
+    display: none;
+  }
+}
+
+@media (max-width: 767px) {
+  .account-demo-banner {
+    display: grid;
+  }
+
+  .account-header {
+    grid-template-columns: 1fr auto;
+    padding: .6rem 1rem;
+  }
+
+  .account-brand small,
+  .account-header-actions,
+  .account-sidebar {
+    display: none;
+  }
+
+  .account-layout {
+    display: block;
+  }
+
+  .account-main {
+    padding: 1.1rem 1rem 6rem;
+  }
+
+  .account-mobile-menu-trigger {
+    min-height: 2.75rem;
+    padding: .5rem .75rem;
+    border: 1px solid var(--color-border);
+    background: #fff;
+    display: inline-flex;
+    align-items: center;
+  }
+
+  .account-mobile-layer {
+    display: grid;
+    align-items: end;
+    padding: 0;
+  }
+
+  .account-mobile-panel {
+    width: 100%;
+    max-height: 90vh;
+    padding: 1rem 1rem calc(1rem + env(safe-area-inset-bottom));
+  }
+
+  .account-mobile-panel > a {
+    width: 100%;
+  }
+
+  .account-page-heading h1 {
+    font-size: 2.15rem;
+  }
+
+  .impact-editorial-summary,
+  .settings-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .account-account-roadmap > div {
+    display: flex;
+    overflow-x: auto;
+    margin-inline: calc(-1 * var(--container-padding));
+    padding-inline: var(--container-padding);
+    scroll-snap-type: x proximity;
+  }
+
+  .account-account-roadmap article {
+    flex: 0 0 82vw;
+    scroll-snap-align: start;
+  }
+
+  .account-empty-state > div,
+  .settings-actions,
+  .account-sign-in-actions {
+    display: grid;
+  }
+
+  .account-empty-state .ui-button,
+  .settings-actions a,
+  .account-sign-in-actions .ui-button {
+    width: 100%;
+  }
+
+  .account-sign-in-shell {
+    padding: .6rem;
+  }
+
+  .account-sign-in-shell > header {
+    min-height: 4rem;
+  }
+
+  .account-sign-in-card {
+    margin: 1rem auto;
+    padding: 1.2rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .account-shell *,
+  .account-sign-in-page * {
+    scroll-behavior: auto !important;
+    transition: none !important;
+    animation: none !important;
+  }
+}

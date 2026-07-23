@@ -1,0 +1,84 @@
+name: Basket Visual QA
+
+on:
+  pull_request:
+    branches:
+      - main
+    types: [opened, synchronize, reopened]
+    paths:
+      - types/basket.ts
+      - components/basket/**
+      - styles/basket.css
+      - styles/basket-responsive.css
+      - tests/basket-ux.spec.ts
+      - scripts/capture-basket-qa.mjs
+      - .github/workflows/basket-visual-qa.yml
+
+permissions:
+  contents: read
+
+jobs:
+  visual-qa:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: ${{ github.event.pull_request.head.repo.full_name }}
+          ref: ${{ github.event.pull_request.head.ref }}
+          fetch-depth: 1
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: package.json
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Production build
+        shell: bash
+        run: |
+          set -o pipefail
+          mkdir -p artifacts/basket-build
+          npm run build 2>&1 | tee artifacts/basket-build/build.log
+      - name: Start production server
+        run: |
+          npm run start -- -p 3000 > /tmp/minberi-basket.log 2>&1 &
+          echo $! > /tmp/minberi-basket.pid
+          for attempt in {1..60}; do
+            if curl --fail --silent http://127.0.0.1:3000/ > /dev/null; then exit 0; fi
+            sleep 1
+          done
+          cat /tmp/minberi-basket.log
+          exit 1
+      - name: Run basket safeguards
+        shell: bash
+        env:
+          PLAYWRIGHT_BASE_URL: http://127.0.0.1:3000
+        run: |
+          set -o pipefail
+          npx playwright test tests/basket-ux.spec.ts 2>&1 | tee artifacts/basket-build/test.log
+      - name: Capture local production screenshots
+        shell: bash
+        env:
+          PLAYWRIGHT_BASE_URL: http://127.0.0.1:3000
+          COMMIT_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -o pipefail
+          node scripts/capture-basket-qa.mjs 2>&1 | tee artifacts/basket-build/capture.log
+      - name: Upload basket visual QA
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: basket-visual-qa-${{ github.event.pull_request.head.sha }}
+          path: |
+            artifacts/basket-visual-qa
+            artifacts/basket-build
+            test-results
+          if-no-files-found: warn
+          retention-days: 14
+      - name: Stop production server
+        if: always()
+        run: |
+          if [ -f /tmp/minberi-basket.pid ]; then kill "$(cat /tmp/minberi-basket.pid)" || true; fi

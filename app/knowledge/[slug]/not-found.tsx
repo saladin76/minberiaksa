@@ -1,0 +1,1 @@
+export default function NotFound(){return <main className="knowledge-not-found"><div><span>404</span><h1>المقال غير موجود</h1><p>قد يكون الرابط غير صحيح أو أن المحتوى لم يُعتمد بعد.</p><a className="button button-primary" href="/knowledge">العودة إلى مركز المعرفة</a></div></main>}
