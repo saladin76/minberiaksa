@@ -53,11 +53,11 @@ await capture("basket-filled-mobile-390x844", 390, 844, baseItems);
 await capture("basket-filled-mobile-360x800", 360, 800, baseItems);
 await capture("basket-multi-currency-desktop-1440x1000", 1440, 1000, baseItems.map((item, index) => ({ ...item, currency: ["USD", "TRY", "SAR"][index] })));
 await capture("basket-unavailable-desktop-1440x1000", 1440, 1000, [{ ...baseItems[2], available: false }, baseItems[0]]);
-await capture("basket-edit-error-mobile-390x844", 390, 844, [baseItems[0]], async (page) => {
+await capture("basket-edit-error-mobile-390x844", 390, 844, [{ ...baseItems[0], minimumAmount: 300 }], async (page) => {
   const drawer = page.getByRole("dialog", { name: "سلة العطاء" });
   const item = drawer.locator("[data-basket-item='qa-zakat']");
-  await item.locator("input").fill("abc");
-  await item.locator("[role='alert']").waitFor({ state: "visible" });
+  await item.locator("input").fill("200");
+  await page.waitForTimeout(250);
 });
 await capture("basket-long-mobile-390x844", 390, 844, [...baseItems, ...baseItems.map((item, index) => ({ ...item, id: `long-${index}`, projectTitle: `${item.projectTitle} — متابعة` }))]);
 await capture("basket-after-remove-mobile-390x844", 390, 844, [baseItems[0]], async (page) => {
