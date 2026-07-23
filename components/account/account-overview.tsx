@@ -7,53 +7,53 @@ export function AccountOverview() {
   return (
     <div className="account-page account-overview-page">
       <header className="account-page-heading">
-        <span>مساحة المتبرع</span>
-        <h1>تابع عطائك من مكان واحد</h1>
-        <p>تجمع مساحة المتبرع سجل المساهمات والوثائق وخطط العطاء وتحديثات المشاريع بعد ربط الحساب بالنظام التشغيلي.</p>
+        <span>حساب المتبرع</span>
+        <h1>نظرة عامة</h1>
+        <p>راجع تبرعاتك ووثائقك والتبرعات الدورية بعد تسجيل الدخول.</p>
       </header>
 
       <section className="account-overview-hero" aria-labelledby="overview-summary-title">
         <div>
-          <span>محفظة الأثر</span>
-          <h2 id="overview-summary-title">العطاء رحلة مرتبطة بالمشروع، لا رصيدًا ماليًا</h2>
-          <p>ستظهر مساهماتك هنا بعد تسجيل الدخول وربط العمليات بحسابك.</p>
+          <span>حسابك</span>
+          <h2 id="overview-summary-title">كل تبرعاتك في مكان واحد</h2>
+          <p>تظهر بياناتك هنا بعد تسجيل الدخول.</p>
         </div>
         <div className="account-overview-principles">
-          <article><strong>سجل مستقل لكل نية</strong><p>الزكاة والوقف والعطاء المستمر تبقى منفصلة.</p></article>
-          <article><strong>وثائق مرتبطة بالعملية</strong><p>تظهر الإيصالات والشهادات بعد إصدارها واعتمادها.</p></article>
-          <article><strong>تحديثات من المشروع</strong><p>يصل كل تحديث إلى المساهمة المرتبطة به.</p></article>
+          <article><strong>تبرعاتي</strong><p>المشاريع والمبالغ والعملات.</p></article>
+          <article><strong>الوثائق</strong><p>الإيصالات والشهادات الصادرة.</p></article>
+          <article><strong>التحديثات</strong><p>آخر ما نُشر عن المشاريع التي دعمتها.</p></article>
         </div>
       </section>
 
       <section className="account-priority-panel">
-        <header><span>ما الذي ستجده هنا؟</span><h2>مساحة واضحة لمتابعة رحلة عطائك</h2></header>
+        <header><span>أقسام الحساب</span><h2>اختر ما تريد مراجعته</h2></header>
         <div>
-          <a href="/account/donations"><strong>سجل التبرعات</strong><span>المبالغ والعملات والنيات والمشاريع المرتبطة.</span></a>
-          <a href="/account/documents"><strong>الوثائق والشهادات</strong><span>الوصول إلى ما صدر رسميًا لكل عملية.</span></a>
-          <a href="/account/recurring"><strong>خطط العطاء المستمر</strong><span>مراجعة الدورية والوجهة وحالة الخطة.</span></a>
+          <a href="/account/donations"><strong>تبرعاتي</strong><span>المشاريع والمبالغ والعملات.</span></a>
+          <a href="/account/documents"><strong>الوثائق</strong><span>الإيصالات والشهادات الصادرة.</span></a>
+          <a href="/account/recurring"><strong>التبرعات الدورية</strong><span>المبلغ والتكرار والحالة.</span></a>
         </div>
       </section>
 
       <section className="account-featured-impact">
         <div className="account-field-visual">
-          {fieldProject?.image ? <img src={fieldProject.image.sourceUrl} alt={fieldProject.image.alt.ar} /> : <div role="img" aria-label="مشروعات المؤسسة في الميدان">مشروعات المؤسسة</div>}
+          {fieldProject?.image ? <img src={fieldProject.image.sourceUrl} alt={fieldProject.image.alt.ar} /> : null}
         </div>
         <div>
-          <span>الأثر المرتبط بعطائك</span>
+          <span>تحديثات المشاريع</span>
           <h2>{fieldProject?.title.ar ?? "تابع المشروع الذي دعمته"}</h2>
-          <p>عند نشر تحديث ميداني معتمد، يظهر داخل محفظة الأثر مرتبطًا بالمشروع والتبرع ذي الصلة.</p>
-          <Button href="/account/impact">عرض محفظة الأثر</Button>
+          <p>تظهر هنا التحديثات المنشورة للمشاريع المرتبطة بتبرعاتك.</p>
+          <Button href="/account/impact">عرض التقارير والتحديثات</Button>
         </div>
       </section>
 
       <section className="account-quick-actions">
-        <h2>الوصول إلى أقسام الحساب</h2>
+        <h2>روابط الحساب</h2>
         <div>
-          <Button href="/account/impact">محفظة الأثر</Button>
-          <Button href="/account/donations" variant="outline">سجل التبرعات</Button>
+          <Button href="/account/donations">تبرعاتي</Button>
           <Button href="/account/documents" variant="outline">الوثائق</Button>
-          <Button href="/account/recurring" variant="outline">العطاء المستمر</Button>
-          <Button href="/projects" variant="text">استكشف مشروعًا جديدًا</Button>
+          <Button href="/account/recurring" variant="outline">التبرعات الدورية</Button>
+          <Button href="/account/settings" variant="outline">بيانات الحساب</Button>
+          <Button href="/projects" variant="text">استكشف المشاريع</Button>
         </div>
       </section>
     </div>
