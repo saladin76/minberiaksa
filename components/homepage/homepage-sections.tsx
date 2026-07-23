@@ -61,7 +61,7 @@ export function HomepageHero() {
       <Container className="homepage-hero-grid">
         <div className="homepage-hero-copy">
           <span className="hero-kicker">من القدس والأقصى وغزة</span>
-          <h1 id="hero-title">عطاء واضح.<br />مشروع موثّق.<br />أثر يمكن متابعته.</h1>
+          <h1 id="hero-title">عطاء واضح.<br />مشروع متاح.<br />أثر يمكن متابعته.</h1>
           <p>اختر مشروعك أو نية عطائك، ثم تابع مسار المساهمة من التسجيل إلى التنفيذ والتحديثات الميدانية.</p>
           <div className="hero-actions">
             <Button href="#donate" size="large">ابدأ التبرع</Button>
@@ -93,9 +93,9 @@ export function OfficialProjects() {
         <Container>
           <div className="section-heading-row">
             <div>
-              <span className="section-eyebrow">مشاريع ميدانية موثقة</span>
+              <span className="section-eyebrow">مشاريع ميدانية متاحة للعطاء</span>
               <h2 id="projects-title">اختر المشروع الأقرب إلى نية عطائك</h2>
-              <p>استعرض المشاريع المتاحة، وتعرّف على الاحتياج ومسار التنفيذ والتوثيق قبل إتمام مساهمتك.</p>
+              <p>استعرض المشاريع المتاحة وتعرّف على الاحتياج ومسار التنفيذ قبل إتمام مساهمتك.</p>
             </div>
             <Button href="/projects" variant="outline">عرض جميع المشاريع</Button>
           </div>
@@ -124,7 +124,7 @@ export function ImpactStats() {
 
 export function TrustProof() {
   const docs = ["إيصال التبرع", "إيصال الزكاة", "شهادة الوقف", "التحديث الميداني", "تقرير المشروع"];
-  return <section className="home-section trust-section" aria-labelledby="trust-title"><Container><div className="section-heading-row"><div><span className="section-eyebrow">رحلة موثّقة</span><h2 id="trust-title">من نية العطاء إلى أثر المشروع</h2></div></div><div className="trust-layout"><div className="document-preview"><span>وثائق المتبرع</span><h3>كل نية لها مسارها</h3><p>تبقى الزكاة والوقف والتبرعات العامة منفصلة داخل السلة والإيصال والمتابعة.</p><Button href="/impact" variant="outline">شاهد رحلة الأثر</Button></div><div className="document-list">{docs.map((item, index) => <div key={item}><span>0{index + 1}</span><strong>{item}</strong><small>يظهر عند توفره واعتماده</small></div>)}</div></div></Container></section>;
+  return <section className="home-section trust-section" aria-labelledby="trust-title"><Container><div className="section-heading-row"><div><span className="section-eyebrow">رحلة عطاء واضحة</span><h2 id="trust-title">من نية العطاء إلى أثر المشروع</h2></div></div><div className="trust-layout"><div className="document-preview"><span>وثائق المتبرع</span><h3>كل نية لها مسارها</h3><p>تبقى الزكاة والوقف والتبرعات العامة منفصلة داخل السلة والإيصال والمتابعة.</p><Button href="/impact" variant="outline">شاهد رحلة الأثر</Button></div><div className="document-list">{docs.map((item, index) => <div key={item}><span>0{index + 1}</span><strong>{item}</strong><small>يظهر عند توفره واعتماده</small></div>)}</div></div></Container></section>;
 }
 
 export function KnowledgeCenter() {

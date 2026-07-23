@@ -1,0 +1,75 @@
+name: Project Cards Visual QA
+
+on:
+  pull_request:
+    branches:
+      - main
+    types: [opened, synchronize, reopened]
+    paths:
+      - components/projects/project-card.tsx
+      - components/projects/projects-carousel.tsx
+      - components/projects/projects-explorer.tsx
+      - components/homepage/homepage-sections.tsx
+      - styles/project-cards.css
+      - tests/project-cards.spec.ts
+      - scripts/capture-project-cards-qa.mjs
+      - .github/workflows/project-cards-visual-qa.yml
+
+permissions:
+  contents: read
+
+jobs:
+  visual-qa:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: ${{ github.event.pull_request.head.repo.full_name }}
+          ref: ${{ github.event.pull_request.head.ref }}
+          fetch-depth: 1
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: package.json
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Production build
+        run: |
+          mkdir -p artifacts/project-cards-build
+          npm run build 2>&1 | tee artifacts/project-cards-build/build.log
+      - name: Start production server
+        run: |
+          npm run start -- -p 3000 > /tmp/minberi-project-cards.log 2>&1 &
+          echo $! > /tmp/minberi-project-cards.pid
+          for attempt in {1..60}; do
+            if curl --fail --silent http://127.0.0.1:3000/ > /dev/null; then exit 0; fi
+            sleep 1
+          done
+          cat /tmp/minberi-project-cards.log
+          exit 1
+      - name: Run Playwright safeguards
+        env:
+          PLAYWRIGHT_BASE_URL: http://127.0.0.1:3000
+        run: npx playwright test tests/project-cards.spec.ts
+      - name: Capture local production screenshots
+        env:
+          PLAYWRIGHT_BASE_URL: http://127.0.0.1:3000
+          COMMIT_SHA: ${{ github.event.pull_request.head.sha }}
+        run: node scripts/capture-project-cards-qa.mjs
+      - name: Upload visual QA artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: project-cards-visual-qa-${{ github.event.pull_request.head.sha }}
+          path: |
+            artifacts/project-cards-qa
+            artifacts/project-cards-build
+          if-no-files-found: error
+          retention-days: 14
+      - name: Stop production server
+        if: always()
+        run: |
+          if [ -f /tmp/minberi-project-cards.pid ]; then kill "$(cat /tmp/minberi-project-cards.pid)" || true; fi

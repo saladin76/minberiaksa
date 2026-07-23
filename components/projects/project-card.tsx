@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ArrowLeft, Bookmark, CircleDot, MapPin, Users } from "lucide-react";
+import { ArrowLeft, Bookmark, CircleDot, ImageOff, MapPin, Users } from "lucide-react";
 import type { DonationType, ProjectRecord, ProjectRegion, ProjectStatus } from "@/data/projects";
 
 export const projectRegionLabels: Record<ProjectRegion, string> = {
@@ -49,13 +49,19 @@ export const projectFieldLabels: Record<string, string> = {
   qurbani: "أضاحي",
 };
 
+const projectImageFocalPositions: Partial<Record<string, string>> = {
+  "gaza-food-parcels": "50% 34%",
+  "al-quds-home-restoration": "50% 42%",
+};
+
 export type ProjectCardProps = {
   slug: string;
   title: string;
-  summary: string;
+  summary?: string;
   image?: {
     src: string;
     alt: string;
+    focalPosition?: string;
   };
   organizationLabel?: string;
   regionLabel?: string;
@@ -65,6 +71,7 @@ export type ProjectCardProps = {
   goal?: number;
   currency?: string;
   statusLabel?: string;
+  priority?: boolean;
 };
 
 export function toProjectCardProps(project: ProjectRecord): ProjectCardProps {
@@ -75,7 +82,11 @@ export function toProjectCardProps(project: ProjectRecord): ProjectCardProps {
     slug: project.slug,
     title: project.title.ar,
     summary: project.summary.ar,
-    image: project.image ? { src: project.image.sourceUrl, alt: project.image.alt.ar } : undefined,
+    image: project.image ? {
+      src: project.image.sourceUrl,
+      alt: project.image.alt.ar,
+      focalPosition: projectImageFocalPositions[project.slug],
+    } : undefined,
     organizationLabel: "مؤسسة منبر الأقصى الدولية",
     regionLabel: projectRegionLabels[project.region],
     categoryLabel,
@@ -102,34 +113,52 @@ export function ProjectCard({
   goal,
   currency = "USD",
   statusLabel,
+  priority = false,
 }: ProjectCardProps) {
   const [saved, setSaved] = useState(false);
+  const hasDonors = typeof donorCount === "number" && donorCount > 0;
   const hasFunding = typeof raised === "number" && typeof goal === "number" && goal > 0 && raised >= 0;
+  const hasMetrics = hasDonors || hasFunding;
   const progress = hasFunding ? Math.min(100, Math.max(0, (raised / goal) * 100)) : 0;
 
   return (
-    <article className={`project-image-card${image ? " has-image" : " no-image"}`}>
+    <article
+      className={`project-image-card${image ? " has-image" : " no-image"}${hasMetrics ? " has-metrics" : " is-compact"}`}
+      data-project-slug={slug}
+      data-has-metrics={hasMetrics ? "true" : "false"}
+    >
       <div className="project-image-card__media">
         {image ? (
-          <img src={image.src} alt={image.alt} loading="lazy" decoding="async" />
+          <img
+            src={image.src}
+            alt={image.alt}
+            width={1200}
+            height={1600}
+            sizes="(max-width: 640px) 88vw, (max-width: 1024px) 45vw, 33vw"
+            loading={priority ? "eager" : "lazy"}
+            fetchPriority={priority ? "high" : "auto"}
+            decoding="async"
+            style={{ objectPosition: image.focalPosition ?? "50% 40%" }}
+          />
         ) : (
           <div className="project-image-card__fallback" role="img" aria-label={`${regionLabel ?? "فلسطين"}: ${title}`}>
+            <ImageOff size={28} strokeWidth={1.7} aria-hidden="true" />
             <span>{regionLabel ?? "فلسطين"}</span>
           </div>
         )}
       </div>
 
       <div className="project-image-card__topline">
-        <span className="project-image-card__organization">
+        <span className="project-image-card__organization" title={organizationLabel}>
           <i aria-hidden="true" />
-          {organizationLabel}
+          <span>{organizationLabel}</span>
         </span>
         <button
           type="button"
           className={`project-image-card__bookmark${saved ? " is-saved" : ""}`}
-          aria-label={saved ? `إلغاء حفظ مشروع ${title} محليًا` : `حفظ مشروع ${title} محليًا`}
+          aria-label={saved ? `إزالة المشروع من المحفوظات: ${title}` : `حفظ المشروع: ${title}`}
           aria-pressed={saved}
-          title="حفظ بصري محلي فقط"
+          title="حفظ محلي داخل هذه الصفحة"
           onClick={() => setSaved((value) => !value)}
         >
           <Bookmark size={18} strokeWidth={2.2} fill={saved ? "currentColor" : "none"} aria-hidden="true" />
@@ -144,9 +173,9 @@ export function ProjectCard({
         </div>
 
         <h3><a href={`/projects/${slug}`}>{title}</a></h3>
-        <p>{summary}</p>
+        {summary ? <p>{summary}</p> : null}
 
-        {typeof donorCount === "number" && donorCount > 0 ? (
+        {hasDonors ? (
           <div className="project-image-card__donors"><Users size={15} aria-hidden="true" /><span>{donorCount.toLocaleString("ar")} مساهمًا</span></div>
         ) : null}
 
