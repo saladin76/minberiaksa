@@ -59,14 +59,15 @@ const baseItems: FixtureItem[] = [
 async function openHomepage(page: import("@playwright/test").Page, width = 1440, height = 1000) {
   await page.setViewportSize({ width, height });
   await page.goto("/", { waitUntil: "networkidle" });
-  await page.locator(".basket-trigger").first().waitFor({ state: "visible" });
+  const selector = width < 900 ? ".mobile-header-actions .basket-trigger" : ".utility-account-controls .basket-trigger";
+  await page.locator(selector).waitFor({ state: "visible" });
 }
 
 async function addItems(page: import("@playwright/test").Page, items: FixtureItem[]) {
   await page.evaluate((entries) => {
     entries.forEach((detail) => window.dispatchEvent(new CustomEvent("minber:add-to-basket", { detail })));
   }, items);
-  await expect.poll(async () => page.locator(".basket-count").first().textContent()).toBe(String(items.length));
+  await expect.poll(async () => page.locator(".basket-count:visible").first().textContent()).toBe(String(items.length));
 }
 
 async function openBasket(page: import("@playwright/test").Page, mobile = false) {
@@ -124,7 +125,7 @@ test.describe("Giving Basket UX", () => {
     const drawer = page.getByRole("dialog", { name: "سلة العطاء" });
     await drawer.getByRole("button", { name: /إزالة طرود غذائية/ }).click();
     await expect(drawer.getByText("سلة عطائك فارغة", { exact: true })).toBeVisible();
-    await expect(page.locator(".basket-count").first()).toHaveText("0");
+    await expect(page.locator(".basket-count:visible").first()).toHaveText("0");
   });
 
   test("unavailable items are distinct and block continuation", async ({ page }) => {
