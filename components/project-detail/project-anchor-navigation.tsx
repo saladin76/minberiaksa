@@ -3,12 +3,12 @@
 import { useEffect, useState } from "react";
 
 const items = [
-  ["story", "قصة المشروع"],
-  ["impact-plan", "أين يذهب تبرعك؟"],
+  ["story", "عن المشروع"],
+  ["impact-plan", "كيف يصل تبرعك؟"],
   ["updates", "التحديثات"],
-  ["proof", "التوثيق"],
-  ["media", "الوسائط"],
-  ["faq", "الأسئلة الشائعة"],
+  ["proof", "التقارير"],
+  ["media", "الصور"],
+  ["faq", "أسئلة شائعة"],
 ] as const;
 
 export function ProjectAnchorNavigation() {
@@ -21,5 +21,5 @@ export function ProjectAnchorNavigation() {
     items.forEach(([id]) => { const node = document.getElementById(id); if (node) observer.observe(node); });
     return () => observer.disconnect();
   }, []);
-  return <nav className="project-anchor-nav" aria-label="التنقل داخل صفحة المشروع"><div className="project-anchor-scroll">{items.map(([id, label]) => <a key={id} href={`#${id}`} className={active === id ? "is-active" : ""} aria-current={active === id ? "location" : undefined}>{label}</a>)}</div></nav>;
+  return <nav className="project-anchor-nav" aria-label="أقسام صفحة المشروع"><div className="project-anchor-scroll">{items.map(([id, label]) => <a key={id} href={`#${id}`} className={active === id ? "is-active" : ""} aria-current={active === id ? "location" : undefined}>{label}</a>)}</div></nav>;
 }
