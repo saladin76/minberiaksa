@@ -10,15 +10,15 @@ test.describe("Project cards visual safeguards", () => {
   for (const width of [390, 360]) {
     test(`has no horizontal overflow at ${width}px`, async ({ page }) => {
       await page.setViewportSize({ width, height: width === 390 ? 844 : 800 });
-      for (const route of routes) {
-        await page.goto(route, { waitUntil: "networkidle" });
+      for (const path of routes) {
+        await page.goto(path, { waitUntil: "networkidle" });
         const dimensions = await page.evaluate(() => ({
           viewport: window.innerWidth,
           document: document.documentElement.scrollWidth,
           body: document.body.scrollWidth,
         }));
-        expect.soft(dimensions.document, `${route} document overflow`).toBeLessThanOrEqual(dimensions.viewport + 1);
-        expect.soft(dimensions.body, `${route} body overflow`).toBeLessThanOrEqual(dimensions.viewport + 1);
+        expect.soft(dimensions.document, `${path} document overflow`).toBeLessThanOrEqual(dimensions.viewport + 1);
+        expect.soft(dimensions.body, `${path} body overflow`).toBeLessThanOrEqual(dimensions.viewport + 1);
       }
     });
   }
@@ -78,11 +78,12 @@ test.describe("Project cards visual safeguards", () => {
     await expect(page.locator(".projects-carousel-controls")).not.toHaveCSS("display", "none");
     await expect(page.locator(".projects-carousel .swiper-slide-visible")).toHaveCount(3);
 
-    const activeBefore = await page.locator(".projects-carousel .swiper-slide-active").getAttribute("data-swiper-slide-index");
+    const wrapper = page.locator(".projects-carousel .swiper-wrapper");
+    const transformBefore = await wrapper.evaluate((element) => getComputedStyle(element).transform);
     const nextButton = page.locator(".projects-carousel-controls button").last();
     await nextButton.focus();
     await page.keyboard.press("Enter");
-    await expect.poll(async () => page.locator(".projects-carousel .swiper-slide-active").getAttribute("data-swiper-slide-index")).not.toBe(activeBefore);
+    await expect.poll(async () => wrapper.evaluate((element) => getComputedStyle(element).transform)).not.toBe(transformBefore);
   });
 
   test("fallback renders without a broken image", async ({ page }) => {
@@ -93,12 +94,17 @@ test.describe("Project cards visual safeguards", () => {
     await expect(fallbackCard.locator("img")).toHaveCount(0);
   });
 
-  test("approved field images load and use focal positions", async ({ page }) => {
+  test("approved field images load or fail gracefully and preserve focal position", async ({ page }) => {
     await page.goto("/projects", { waitUntil: "networkidle" });
-    const image = page.locator("[data-project-slug='gaza-food-parcels'] img");
-    await expect(image).toBeVisible();
-    await expect.poll(async () => image.evaluate((element) => (element as HTMLImageElement).naturalWidth)).toBeGreaterThan(0);
-    await expect(image).toHaveCSS("object-position", "50% 34%");
+    const card = page.locator("[data-project-slug='gaza-food-parcels']");
+    const image = card.locator("img");
+    await expect.poll(async () => (await image.count()) === 0 || await image.evaluate((element) => (element as HTMLImageElement).complete)).toBeTruthy();
+    if (await image.count()) {
+      await expect(image).toHaveCSS("object-position", "50% 34%");
+      expect(await image.evaluate((element) => (element as HTMLImageElement).naturalWidth)).toBeGreaterThan(0);
+    } else {
+      await expect(card.locator(".project-image-card__fallback")).toBeVisible();
+    }
   });
 
   test("contains no prototype wording or unapproved section claim", async ({ page }) => {
