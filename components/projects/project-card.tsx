@@ -54,6 +54,16 @@ const projectImageFocalPositions: Partial<Record<string, string>> = {
   "al-quds-home-restoration": "50% 42%",
 };
 
+const optimizedDriveImage = (sourceUrl: string) => {
+  try {
+    const url = new URL(sourceUrl);
+    const fileId = url.searchParams.get("id");
+    return fileId ? `https://drive.google.com/thumbnail?id=${encodeURIComponent(fileId)}&sz=w1600` : sourceUrl;
+  } catch {
+    return sourceUrl;
+  }
+};
+
 export type ProjectCardProps = {
   slug: string;
   title: string;
@@ -83,7 +93,7 @@ export function toProjectCardProps(project: ProjectRecord): ProjectCardProps {
     title: project.title.ar,
     summary: project.summary.ar,
     image: project.image ? {
-      src: project.image.sourceUrl,
+      src: optimizedDriveImage(project.image.sourceUrl),
       alt: project.image.alt.ar,
       focalPosition: projectImageFocalPositions[project.slug],
     } : undefined,
@@ -116,6 +126,8 @@ export function ProjectCard({
   priority = false,
 }: ProjectCardProps) {
   const [saved, setSaved] = useState(false);
+  const [imageFailed, setImageFailed] = useState(false);
+  const hasImage = Boolean(image && !imageFailed);
   const hasDonors = typeof donorCount === "number" && donorCount > 0;
   const hasFunding = typeof raised === "number" && typeof goal === "number" && goal > 0 && raised >= 0;
   const hasMetrics = hasDonors || hasFunding;
@@ -123,12 +135,12 @@ export function ProjectCard({
 
   return (
     <article
-      className={`project-image-card${image ? " has-image" : " no-image"}${hasMetrics ? " has-metrics" : " is-compact"}`}
+      className={`project-image-card${hasImage ? " has-image" : " no-image"}${hasMetrics ? " has-metrics" : " is-compact"}`}
       data-project-slug={slug}
       data-has-metrics={hasMetrics ? "true" : "false"}
     >
       <div className="project-image-card__media">
-        {image ? (
+        {hasImage && image ? (
           <img
             src={image.src}
             alt={image.alt}
@@ -139,6 +151,7 @@ export function ProjectCard({
             fetchPriority={priority ? "high" : "auto"}
             decoding="async"
             style={{ objectPosition: image.focalPosition ?? "50% 40%" }}
+            onError={() => setImageFailed(true)}
           />
         ) : (
           <div className="project-image-card__fallback" role="img" aria-label={`${regionLabel ?? "فلسطين"}: ${title}`}>
