@@ -4,12 +4,13 @@ import { SiteHeader } from "@/components/layout/site-header";
 import { StickyDonateBar } from "@/components/layout/sticky-donate-bar";
 import { TopUtilityBar } from "@/components/layout/top-utility-bar";
 import {
+  DonationJourney,
+  GivingIntentNavigation,
   HomepageHero,
   ImpactReels,
   ImpactStats,
   ImpactStories,
   KnowledgeCenter,
-  MinberFunds,
   OfficialProjects,
   QuickDonation,
   RecurringGiving,
@@ -25,23 +26,24 @@ export default function HomePage() {
       <TopUtilityBar />
       <SiteHeader />
       <main id="main-content">
-        <ImpactStories />
-        <PatternBackground intensity="medium" position="full" fadeDirection="both" className="homepage-pattern-shell">
+        <PatternBackground intensity="medium" position="full" fadeDirection="both" variant="directional" tone="home" className="homepage-pattern-shell">
           <HomepageHero />
         </PatternBackground>
         <QuickDonation />
+        <GivingIntentNavigation />
         <OfficialProjects />
-        <MinberFunds />
+        <DonationJourney />
         <ZakatGateway />
         <WaqfGateway />
         <RecurringGiving />
-        <ImpactReels />
-        <PatternBackground intensity="soft" position="full" fadeDirection="both" className="wide-divider-pattern">
+        <PatternBackground intensity="soft" position="full" fadeDirection="both" variant="dark" className="impact-trust-pattern">
           <ImpactStats />
         </PatternBackground>
         <TrustProof />
+        <ImpactStories />
+        <ImpactReels />
         <KnowledgeCenter />
-        <PatternBackground intensity="medium" position="bottom" fadeDirection="top" className="final-cta-pattern">
+        <PatternBackground intensity="medium" position="bottom" fadeDirection="top" variant="dark" className="final-cta-pattern">
           <SoftGateway />
         </PatternBackground>
       </main>

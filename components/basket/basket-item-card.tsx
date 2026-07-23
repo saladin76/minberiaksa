@@ -4,10 +4,31 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import type { BasketItem } from "@/types/basket";
 import { getFrequencyLabel, maskEmail } from "./basket-utils";
+
 const modeLabels = { "one-time": "مرة واحدة", recurring: "تبرع مستمر", gift: "إهداء تبرع" } as const;
 const tone = (intent: BasketItem["intent"]): "zakat" | "waqf" | "urgent" | "neutral" => intent === "zakat" ? "zakat" : intent === "waqf" ? "waqf" : intent === "urgent" ? "urgent" : "neutral";
+
 export function BasketItemCard({ item, onEdit, onDelete }: { item: BasketItem; onEdit: () => void; onDelete: () => void }) {
   const recurring = item.intent === "recurring" || item.donationMode === "recurring";
   const expired = Boolean(item.metadata?.sensitiveDetailsExpired) || (item.intent === "waqf" && !item.ownerName) || (item.donationMode === "gift" && !item.giftRecipient);
-  return <article className={`basket-review-item basket-review-item--${item.intent}`}><header><div><Badge tone={tone(item.intent)}>{item.intentLabel}</Badge><span>{modeLabels[item.donationMode]}</span>{expired ? <b className="basket-details-status">التفاصيل تحتاج استكمالًا</b> : null}</div><div><Button type="button" variant="text" size="small" onClick={onEdit}>تعديل</Button><Button type="button" variant="text" size="small" className="basket-remove-action" onClick={onDelete}>إزالة</Button></div></header>{expired ? <div className="basket-privacy-expired"><strong>تحتاج بعض التفاصيل الشخصية إلى إعادة الإدخال حفاظًا على الخصوصية.</strong><p>لم يتم حفظ اسم صاحب الوقف أو بيانات الإهداء عند تحديث الصفحة.</p></div> : null}<h2>{item.projectTitle}</h2>{item.region ? <p>المنطقة: {item.region}</p> : null}<div className="basket-item-amount"><strong>{item.amount.toLocaleString("en-US")} {item.currency}</strong><span>{recurring ? "لكل عملية" : "مساهمة لمرة واحدة"}</span></div><dl className="basket-item-details">{item.intent === "zakat" ? <><div><dt>النية</dt><dd>زكاة ثابتة لا تتحول إلى صدقة</dd></div><div><dt>الوثيقة</dt><dd>إيصال زكاة مستقل</dd></div></> : null}{item.intent === "waqf" ? <><div><dt>نوع الوقف</dt><dd>{item.waqfType || "مساهمة وقفية"}</dd></div><div><dt>صاحب الوقف</dt><dd>{item.ownerName || "أعد إدخال التفاصيل"}</dd></div><div><dt>الإهداء</dt><dd>{item.dedication || "غير مضاف"}</dd></div><div><dt>الوثيقة</dt><dd>شهادة وقف Preview</dd></div></> : null}{recurring ? <><div><dt>الدورية</dt><dd>{getFrequencyLabel(item.frequency)}</dd></div><div><dt>بداية الخطة</dt><dd>{item.startPreference === "next-month" ? "بداية الشهر القادم" : "بعد التأكيد"}</dd></div><div><dt>التقدير الشهري</dt><dd>{item.estimatedMonthly?.toFixed(2) ?? "—"} USD</dd></div><div><dt>التقدير السنوي</dt><dd>{item.estimatedAnnual?.toFixed(2) ?? "—"} USD</dd></div></> : null}{item.donationMode === "gift" ? <><div><dt>المهدى إليه</dt><dd>{item.giftRecipient || "أعد إدخال التفاصيل"}</dd></div><div><dt>المناسبة</dt><dd>{item.giftOccasion || "هدية عامة"}</dd></div><div><dt>البريد</dt><dd aria-label="البريد الإلكتروني مخفي جزئيًا">{maskEmail(item.giftEmail)}</dd></div><div><dt>الرسالة</dt><dd>{item.giftMessage || "غير مضافة"}</dd></div><div><dt>المرسل</dt><dd>{item.giftSender || "غير مضاف"}</dd></div></> : null}</dl>{item.donationMode === "gift" ? <div className="gift-card-mini"><small>Preview only</small><strong>{item.giftRecipient || "تفاصيل الإهداء تحتاج استكمالًا"}</strong><p>{item.giftMessage || "ستظهر رسالة الإهداء هنا"}</p></div> : null}</article>;
+
+  return (
+    <article className={`basket-review-item basket-review-item--${item.intent}`}>
+      <header>
+        <div><Badge tone={tone(item.intent)}>{item.intentLabel}</Badge><span>{modeLabels[item.donationMode]}</span>{expired ? <b className="basket-details-status">التفاصيل تحتاج استكمالًا</b> : null}</div>
+        <div><Button type="button" variant="text" size="small" onClick={onEdit}>تعديل</Button><Button type="button" variant="text" size="small" className="basket-remove-action" onClick={onDelete}>إزالة</Button></div>
+      </header>
+      {expired ? <div className="basket-privacy-expired"><strong>تحتاج بعض التفاصيل الشخصية إلى إعادة الإدخال حفاظًا على الخصوصية.</strong><p>لم يتم حفظ اسم صاحب الوقف أو بيانات الإهداء عند تحديث الصفحة.</p></div> : null}
+      <h2>{item.projectTitle}</h2>
+      {item.region ? <p>المنطقة: {item.region}</p> : null}
+      <div className="basket-item-amount"><strong>{item.amount.toLocaleString("en-US")} {item.currency}</strong><span>{recurring ? "لكل عملية" : "مساهمة لمرة واحدة"}</span></div>
+      <dl className="basket-item-details">
+        {item.intent === "zakat" ? <><div><dt>النية</dt><dd>زكاة ثابتة لا تتحول إلى صدقة</dd></div><div><dt>الوثيقة</dt><dd>إيصال زكاة مستقل عند إصداره</dd></div></> : null}
+        {item.intent === "waqf" ? <><div><dt>نوع الوقف</dt><dd>{item.waqfType || "مساهمة وقفية"}</dd></div><div><dt>صاحب الوقف</dt><dd>{item.ownerName || "أعد إدخال التفاصيل"}</dd></div><div><dt>الإهداء</dt><dd>{item.dedication || "غير مضاف"}</dd></div><div><dt>الوثيقة</dt><dd>شهادة وقف عند اعتمادها وإصدارها</dd></div></> : null}
+        {recurring ? <><div><dt>الدورية</dt><dd>{getFrequencyLabel(item.frequency)}</dd></div><div><dt>بداية الخطة</dt><dd>{item.startPreference === "next-month" ? "بداية الشهر القادم" : "بعد التأكيد"}</dd></div><div><dt>التقدير الشهري</dt><dd>{item.estimatedMonthly?.toFixed(2) ?? "—"} USD</dd></div><div><dt>التقدير السنوي</dt><dd>{item.estimatedAnnual?.toFixed(2) ?? "—"} USD</dd></div></> : null}
+        {item.donationMode === "gift" ? <><div><dt>المهدى إليه</dt><dd>{item.giftRecipient || "أعد إدخال التفاصيل"}</dd></div><div><dt>المناسبة</dt><dd>{item.giftOccasion || "هدية عامة"}</dd></div><div><dt>البريد</dt><dd aria-label="البريد الإلكتروني مخفي جزئيًا">{maskEmail(item.giftEmail)}</dd></div><div><dt>الرسالة</dt><dd>{item.giftMessage || "غير مضافة"}</dd></div><div><dt>المرسل</dt><dd>{item.giftSender || "غير مضاف"}</dd></div></> : null}
+      </dl>
+      {item.donationMode === "gift" ? <div className="gift-card-mini"><small>معاينة بطاقة الإهداء</small><strong>{item.giftRecipient || "تفاصيل الإهداء تحتاج استكمالًا"}</strong><p>{item.giftMessage || "ستظهر رسالة الإهداء هنا"}</p></div> : null}
+    </article>
+  );
 }

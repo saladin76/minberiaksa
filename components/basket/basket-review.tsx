@@ -39,19 +39,21 @@ export function BasketReview() {
     setDeleteItem(null);
   };
 
-  if (!hydrated) return <div role="status">جارٍ استعادة سلة العطاء…</div>;
+  if (!hydrated) return <div className="basket-loading-state" role="status">جارٍ استعادة سلة العطاء…</div>;
 
   if (!items.length) {
     return (
       <section className="basket-empty-page">
-        <h1>سلة عطائك فارغة</h1>
-        <p>ابدأ باختيار مشروع أو زكاة أو وقف أو خطة عطاء مستمر.</p>
-        <div className="basket-empty-actions">
-          <Button href="/projects">استكشف المشاريع</Button>
-          <Button href="/zakat" variant="outline">احسب زكاتك</Button>
-          <Button href="/waqf" variant="outline">أنشئ وقفًا</Button>
-          <Button href="/recurring" variant="outline">أنشئ خطة عطاء</Button>
+        <span className="section-eyebrow">سلة العطاء</span>
+        <h1>سلة عطائك فارغة الآن</h1>
+        <p>ابدأ من نية واضحة، ثم أضف المشروع أو المسار المناسب. ستتمكن من مراجعة كل عنصر قبل أي خطوة لاحقة.</p>
+        <Button href="/projects">استكشف المشاريع</Button>
+        <div className="basket-empty-intents" aria-label="اقتراحات سريعة لبدء العطاء">
+          <a href="/zakat"><strong>زكاة لفلسطين</strong><span>مسار زكاة مستقل</span></a>
+          <a href="/waqf"><strong>سهم وقفي للقدس</strong><span>أثر ممتد باسمك أو من تحب</span></a>
+          <a href="/projects?region=gaza"><strong>إغاثة غزة</strong><span>استعرض الاحتياجات المتاحة</span></a>
         </div>
+        <small>السلة الحالية للمراجعة والتنظيم ولا تعني إتمام عملية دفع.</small>
       </section>
     );
   }
@@ -63,24 +65,24 @@ export function BasketReview() {
   return (
     <>
       <section className="basket-hero">
-        <span>الخطوة 1 من 4</span>
-        <h1>راجع سلة عطائك</h1>
-        <p>تأكد من المشروع والنية والمبلغ والتفاصيل المرتبطة بكل مساهمة قبل المتابعة.</p>
-        <ol className="basket-progress"><li aria-current="step">مراجعة السلة</li><li>بيانات المتبرع</li><li>طريقة الدفع</li><li>التأكيد</li></ol>
+        <span>مراجعة السلة</span>
+        <h1>راجع نيات عطائك ومشروعاتك</h1>
+        <p>تأكد من المشروع والنية والمبلغ والتفاصيل المرتبطة بكل مساهمة قبل الانتقال إلى الخطوة التالية.</p>
+        <ol className="basket-progress"><li aria-current="step">مراجعة السلة</li><li>بيانات المتبرع</li><li>المراجعة النهائية</li><li>التأكيد</li></ol>
       </section>
 
       <div className="basket-layout">
         <div className="basket-items-column">
           <section>
             <h2>المساهمات والنيات</h2>
-            <p>تبقى الزكاة والوقف والعطاء المستمر منفصلة بوضوح داخل السلة.</p>
+            <p>تبقى الزكاة والوقف والإغاثة والعطاء المستمر منفصلة بوضوح داخل السلة.</p>
             {items.map((item) => <BasketItemCard key={item.id} item={item} onEdit={() => setEditItem(item)} onDelete={() => setDeleteItem(item)} />)}
           </section>
 
           {incomplete.length ? (
             <section className="basket-sensitive-summary" role="status">
               <h2>بعض التفاصيل تحتاج استكمالًا</h2>
-              <p>أعد إدخال البيانات المرتبطة بـ{incomplete.length} من عناصر الوقف أو الإهداء قبل الانتقال إلى إتمام التبرع.</p>
+              <p>أعد إدخال البيانات المرتبطة بـ{incomplete.length} من عناصر الوقف أو الإهداء قبل المتابعة.</p>
             </section>
           ) : null}
 
@@ -94,21 +96,21 @@ export function BasketReview() {
 
           <section className="basket-trust">
             <h2>الخصوصية قبل كل شيء</h2>
-            <p>لا تُحفظ بيانات البطاقة أو تفاصيل أصول حاسبة الزكاة داخل السلة. وقد تُطلب بيانات الوقف أو الإهداء مرة أخرى عند انتهاء الجلسة لحمايتها.</p>
+            <p>لا تُحفظ بيانات البطاقة أو تفاصيل أصول حاسبة الزكاة داخل السلة. وقد تُطلب بيانات الوقف أو الإهداء مرة أخرى عند انتهاء الجلسة.</p>
           </section>
         </div>
 
         <div>
           <BasketSummary items={items} />
           <div className="basket-page-actions">
-            {incomplete.length ? <Button type="button" disabled fullWidth>استكمل التفاصيل أولًا</Button> : <Button href="/checkout" fullWidth>المتابعة لإتمام التبرع</Button>}
+            {incomplete.length ? <Button type="button" disabled fullWidth>استكمل التفاصيل أولًا</Button> : <Button href="/checkout" fullWidth>المتابعة للمراجعة</Button>}
             <Button href="/projects" variant="outline" fullWidth>إضافة مشروع آخر</Button>
           </div>
         </div>
       </div>
 
       <div className="basket-mobile-bar">
-        <div><span>إجمالي التبرعات لمرة واحدة</span><strong>{due.toLocaleString("en-US")} USD</strong></div>
+        <div><span>إجمالي المساهمات لمرة واحدة</span><strong>{due.toLocaleString("en-US")} USD</strong></div>
         {incomplete.length ? <Button type="button" disabled>استكمل التفاصيل</Button> : <Button href="/checkout">المتابعة</Button>}
       </div>
 
