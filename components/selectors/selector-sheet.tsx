@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import type { RefObject } from "react";
+import { createPortal } from "react-dom";
 
 type SelectorOption = {
   id: string;
@@ -65,9 +66,9 @@ export function SelectorSheet({ open, title, searchLabel, emptyLabel, selectedId
     };
   }, [onClose, open, triggerRef]);
 
-  if (!open) return null;
+  if (!open || typeof document === "undefined") return null;
 
-  return (
+  return createPortal(
     <div className="selector-layer">
       <button className="selector-backdrop" type="button" aria-label="إغلاق" onClick={onClose} />
       <div ref={dialogRef} className="selector-sheet" role="dialog" aria-modal="true" aria-labelledby={titleId}>
@@ -85,6 +86,7 @@ export function SelectorSheet({ open, title, searchLabel, emptyLabel, selectedId
         </div>
         {notice ? <p className="selector-sheet__notice" role="status">{notice}</p> : null}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
