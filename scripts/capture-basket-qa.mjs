@@ -20,12 +20,14 @@ async function prepare(width, height, items = []) {
   const context = await browser.newContext({ viewport: { width, height }, locale: "ar-SA", colorScheme: "light", reducedMotion: "reduce" });
   const page = await context.newPage();
   await page.goto(baseURL, { waitUntil: "networkidle" });
+  const mobile = width < 900;
+  const trigger = page.locator(mobile ? ".mobile-header-actions .basket-trigger" : ".utility-account-controls .basket-trigger");
+  await trigger.waitFor({ state: "visible" });
   if (items.length) {
     await page.evaluate((entries) => entries.forEach((detail) => window.dispatchEvent(new CustomEvent("minber:add-to-basket", { detail }))), items);
-    await page.waitForFunction((count) => document.querySelector(".basket-count")?.textContent === String(count), items.length);
+    await page.waitForFunction((count) => document.querySelector(".basket-count:visible")?.textContent === String(count), items.length);
   }
-  const mobile = width < 900;
-  await page.locator(mobile ? ".mobile-header-actions .basket-trigger" : ".utility-account-controls .basket-trigger").click();
+  await trigger.click();
   await page.getByRole("dialog", { name: "سلة العطاء" }).waitFor({ state: "visible" });
   await page.evaluate(() => document.fonts.ready);
   await page.waitForTimeout(180);
@@ -34,9 +36,12 @@ async function prepare(width, height, items = []) {
 
 async function capture(name, width, height, items = [], action) {
   const { context, page } = await prepare(width, height, items);
-  if (action) await action(page);
-  await page.screenshot({ path: path.join(output, `${name}.png`), animations: "disabled" });
-  await context.close();
+  try {
+    if (action) await action(page);
+    await page.screenshot({ path: path.join(output, `${name}.png`), animations: "disabled" });
+  } finally {
+    await context.close();
+  }
 }
 
 await capture("basket-empty-desktop-1440x1000", 1440, 1000);
@@ -49,14 +54,16 @@ await capture("basket-filled-mobile-360x800", 360, 800, baseItems);
 await capture("basket-multi-currency-desktop-1440x1000", 1440, 1000, baseItems.map((item, index) => ({ ...item, currency: ["USD", "TRY", "SAR"][index] })));
 await capture("basket-unavailable-desktop-1440x1000", 1440, 1000, [{ ...baseItems[2], available: false }, baseItems[0]]);
 await capture("basket-edit-error-mobile-390x844", 390, 844, [baseItems[0]], async (page) => {
-  const input = page.getByRole("dialog", { name: "سلة العطاء" }).getByRole("textbox", { name: /مبلغ طرود غذائية/ });
-  await input.fill("abc");
-  await page.getByRole("alert").waitFor({ state: "visible" });
+  const drawer = page.getByRole("dialog", { name: "سلة العطاء" });
+  const item = drawer.locator("[data-basket-item='qa-zakat']");
+  await item.locator("input").fill("abc");
+  await item.locator("[role='alert']").waitFor({ state: "visible" });
 });
 await capture("basket-long-mobile-390x844", 390, 844, [...baseItems, ...baseItems.map((item, index) => ({ ...item, id: `long-${index}`, projectTitle: `${item.projectTitle} — متابعة` }))]);
 await capture("basket-after-remove-mobile-390x844", 390, 844, [baseItems[0]], async (page) => {
-  await page.getByRole("button", { name: /إزالة طرود غذائية/ }).click();
-  await page.getByText("سلة عطائك فارغة", { exact: true }).waitFor({ state: "visible" });
+  const drawer = page.getByRole("dialog", { name: "سلة العطاء" });
+  await drawer.getByRole("button", { name: /إزالة طرود غذائية/ }).click();
+  await drawer.getByText("سلة عطائك فارغة", { exact: true }).waitFor({ state: "visible" });
 });
 
 async function contactSheet(names, columns, tileWidth, tileHeight, filename) {
