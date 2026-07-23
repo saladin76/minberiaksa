@@ -28,6 +28,7 @@ import "../styles/impact.css";
 import "../styles/stories.css";
 import "../styles/knowledge.css";
 import "../styles/content-pages-polish.css";
+import "../styles/about.css";
 import "../styles/pattern-background.css";
 import "../styles/pattern-asset-source.css";
 import "../styles/platform-identity.css";
