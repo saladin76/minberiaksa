@@ -31,7 +31,7 @@ button:not(.project-intent-card):not(.project-filter-button):not(.checkout-progr
 }
 
 /* Keep page-level titles prominent without allowing secondary pages to dominate the viewport. */
-.impact-page h1,
+.impact-hero h1,
 .knowledge-hero h1,
 .knowledge-article .article-header h1,
 .about-hero h1,
@@ -119,7 +119,7 @@ figure.is-image-unavailable::after,
 }
 
 @media (max-width: 700px) {
-  .impact-page h1,
+  .impact-hero h1,
   .knowledge-hero h1,
   .knowledge-article .article-header h1,
   .about-hero h1,
