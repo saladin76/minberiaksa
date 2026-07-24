@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import { usePathname } from "next/navigation";
 import { BrandMark } from "@/components/ui/brand-mark";
 import { Button } from "@/components/ui/button";
+import { CompactFooter } from "@/components/layout/compact-footer";
 import { siteConfig } from "@/config/site";
 
 const accountLinks = [
@@ -87,6 +88,8 @@ export function AccountShell({ children }: { children: ReactNode }) {
         </aside>
         <main id="main-content" className="account-main">{children}</main>
       </div>
+
+      <CompactFooter selectors={false} />
 
       {menuOpen ? (
         <div className="account-mobile-layer">
