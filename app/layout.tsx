@@ -40,6 +40,7 @@ import "../styles/visual-ux-qa.css";
 import "../styles/visual-reset-final.css";
 import "../styles/visual-reset-hotfix.css";
 import "../styles/final-visual-approval.css";
+import "../styles/final-approval-addendum.css";
 
 export const metadata: Metadata = {
   title: "مؤسسة منبر الأقصى الدولية",
