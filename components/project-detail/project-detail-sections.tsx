@@ -6,9 +6,7 @@ import type { ProjectMetric } from "@/data/project-metrics";
 import type { DonationType, ProjectRecord, ProjectRegion, ProjectStatus } from "@/data/projects";
 import type { ResolvedProjectDetail } from "@/data/project-details";
 
-const regionLabels: Record<ProjectRegion, string> = {
-  "al-quds": "القدس", "al-aqsa": "الأقصى", gaza: "غزة", syria: "سوريا", sudan: "السودان", yemen: "اليمن", global: "فلسطين والعالم",
-};
+const regionLabels: Record<ProjectRegion, string> = { "al-quds": "القدس", "al-aqsa": "الأقصى", gaza: "غزة", syria: "سوريا", sudan: "السودان", yemen: "اليمن", global: "فلسطين والعالم" };
 const donationLabels: Record<DonationType, string> = { sadaqah: "صدقة", zakat: "زكاة", waqf: "وقف", recurring: "تبرع دوري", qurbani: "أضاحي" };
 const statusLabels: Record<ProjectStatus, string> = { active: "متاح للتبرع", seasonal: "موسمي", archived: "مكتمل", "needs-verification": "قيد المراجعة" };
 const updateStatusLabels = { verified: "منشور", review: "قيد المراجعة", planned: "قيد التجهيز", report: "تقرير متاح", required: "لا يوجد تحديث بعد" } as const;
@@ -36,7 +34,6 @@ export function ProjectDetailExperience({ project, detail, metric, relatedProjec
 }) {
   const urgent = project.tags.includes("emergency") || project.tags.includes("urgent");
   const visualType = getProjectVisualType(project);
-  const donationPanel = <ProjectDonationPanel project={project} metric={metric} suggestedAmounts={detail.suggestedAmounts} acceptsGift={detail.acceptsGift} />;
 
   return (
     <main id="main-content" className={`project-detail-page project-detail-page--${visualType}${project.image ? " has-project-image" : " has-project-fallback"}`}>
@@ -50,12 +47,11 @@ export function ProjectDetailExperience({ project, detail, metric, relatedProjec
                 <div className="project-detail-badges"><span>{visualTypeLabels[visualType]}</span><b>{regionLabels[project.region]}</b><i>{urgent ? "عاجل" : statusLabels[project.status]}</i></div>
                 <h1 id="project-title">{project.title.ar}</h1><p>{project.summary.ar}</p>
                 <div className="project-detail-donation-types">{project.donationTypes.map((type) => <span key={type}>{donationLabels[type]}</span>)}</div>
-                <div className="project-detail-quick-actions"><a href="#donation-panel-mobile">تبرع الآن</a><a href="#updates">تحديثات المشروع</a><a href="#proof">عرض التقارير</a></div>
+                <div className="project-detail-quick-actions"><a href="#donation-panel">تبرع الآن</a><a href="#updates">تحديثات المشروع</a><a href="#proof">عرض التقارير</a></div>
                 {project.image ? <div className="project-proof-line"><span aria-hidden="true" /><strong>صورة ميدانية للمشروع</strong></div> : null}
                 {detail.isFallback ? <p className="fallback-detail-label">تُضاف التفاصيل والتقارير بعد مراجعتها.</p> : null}
               </div>
             </section>
-            <div id="donation-panel-mobile" className="project-donation-mobile">{donationPanel}</div>
             <ProjectAnchorNavigation />
             <div className="project-detail-content-grid">
               <section id="story" className="project-editorial-section project-story" aria-labelledby="story-title"><div className="project-section-heading"><span>عن المشروع</span><h2 id="story-title">لماذا نعمل على هذا المشروع؟</h2></div><div className="project-story-layout"><div className="project-story-copy">{detail.story.map((paragraph) => <p key={paragraph}>{paragraph}</p>)}<blockquote>{detail.highlight}</blockquote></div><div className="project-story-facts"><div><span>الاحتياج</span><strong>{detail.need}</strong></div><div><span>ماذا يقدم المشروع؟</span><strong>{detail.goal}</strong></div><div><span>مكان التنفيذ</span><strong>{detail.location}</strong></div><div><span>الحالة الحالية</span><strong>{detail.currentStage}</strong></div></div></div></section>
@@ -66,7 +62,7 @@ export function ProjectDetailExperience({ project, detail, metric, relatedProjec
             </div>
             <section className="project-editorial-section related-projects" aria-labelledby="related-title"><div className="project-section-heading"><span>مشاريع أخرى</span><h2 id="related-title">مشاريع يمكنك دعمها</h2></div><div className="related-projects-grid">{relatedProjects.map((related) => <article key={related.id}><a className="related-project-media" href={`/projects/${related.slug}`} aria-label={`عرض مشروع ${related.title.ar}`}>{related.image ? <img src={related.image.sourceUrl} alt={related.image.alt.ar} loading="lazy" /> : <span>{regionLabels[related.region]}</span>}</a><div><small>{regionLabels[related.region]}</small><h3><a href={`/projects/${related.slug}`}>{related.title.ar}</a></h3><div>{related.donationTypes.map((type) => <span key={type}>{donationLabels[type]}</span>)}</div><Button href={`/projects/${related.slug}`} variant="outline" size="small">عرض المشروع</Button></div></article>)}</div></section>
           </div>
-          <aside id="donation-panel" className="project-donation-column">{donationPanel}</aside>
+          <aside id="donation-panel" className="project-donation-column"><ProjectDonationPanel project={project} metric={metric} suggestedAmounts={detail.suggestedAmounts} acceptsGift={detail.acceptsGift} /></aside>
         </div>
       </div>
     </main>
