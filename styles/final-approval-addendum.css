@@ -1,0 +1,1 @@
+.account-sign-in-layout{min-height:100dvh;display:flex;flex-direction:column}.account-sign-in-layout .account-sign-in-page{flex:1}.account-sign-in-layout .compact-footer{margin-top:auto}@media(max-width:700px){.account-sign-in-layout .account-sign-in-page{min-height:0}.account-sign-in-layout .account-sign-in-shell{padding-bottom:1rem}}
