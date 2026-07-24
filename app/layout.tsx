@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { BasketProvider } from "@/components/basket/basket-provider";
+import { ImageFailureGuard } from "@/components/ui/image-failure-guard";
 import "swiper/css";
 import "swiper/css/navigation";
 import "swiper/css/pagination";
@@ -35,6 +36,7 @@ import "../styles/platform-identity.css";
 import "../styles/homepage-unified.css";
 import "../styles/navigation-shell.css";
 import "../styles/navigation-shell-responsive.css";
+import "../styles/visual-ux-qa.css";
 
 export const metadata: Metadata = {
   title: "مؤسسة منبر الأقصى الدولية",
@@ -46,6 +48,7 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
     <html lang="ar" dir="rtl">
       <body>
         <a className="skip-link" href="#main-content">انتقل إلى المحتوى الرئيسي</a>
+        <ImageFailureGuard />
         <BasketProvider>{children}</BasketProvider>
       </body>
     </html>
