@@ -11,15 +11,21 @@ export function ImageFailureGuard() {
     };
 
     const inspect = (image: HTMLImageElement) => {
-      if (image.complete && image.naturalWidth === 0) markUnavailable(image);
+      if (image.src.includes("drive.google.com") || (image.complete && image.naturalWidth === 0)) {
+        markUnavailable(image);
+      }
     };
+
+    const inspectAll = () => document.querySelectorAll("img").forEach((image) => inspect(image));
 
     const onError = (event: Event) => {
       if (event.target instanceof HTMLImageElement) markUnavailable(event.target);
     };
 
     document.addEventListener("error", onError, true);
-    document.querySelectorAll("img").forEach((image) => inspect(image));
+    inspectAll();
+    const timer = window.setInterval(inspectAll, 400);
+    const stopTimer = window.setTimeout(() => window.clearInterval(timer), 4000);
 
     const observer = new MutationObserver((entries) => {
       for (const entry of entries) {
@@ -33,6 +39,8 @@ export function ImageFailureGuard() {
 
     return () => {
       document.removeEventListener("error", onError, true);
+      window.clearInterval(timer);
+      window.clearTimeout(stopTimer);
       observer.disconnect();
     };
   }, []);
