@@ -1,0 +1,206 @@
+/* Final responsive refinements based on full-page screenshot review. */
+@media (min-width: 1001px) {
+  .homepage-v5 .home-hero-v4__copy h1 {
+    font-size: clamp(3rem, 4.6vw, 4.6rem) !important;
+    max-width: 14ch !important;
+  }
+
+  .project-detail-hero-copy h1 {
+    font-size: clamp(2.4rem, 3.5vw, 3.75rem) !important;
+    max-width: 16ch !important;
+  }
+}
+
+.project-donation-mobile {
+  display: none;
+}
+
+@media (max-width: 700px) {
+  .project-donation-column {
+    display: none;
+  }
+
+  .project-donation-mobile {
+    display: block;
+    margin-block: 0.8rem 1rem;
+    scroll-margin-top: 5rem;
+  }
+
+  .project-detail-hero-media,
+  .project-visual-fallback {
+    min-height: 16rem !important;
+  }
+
+  .project-detail-hero-copy {
+    padding: 0.25rem !important;
+  }
+
+  .project-detail-hero-copy h1 {
+    font-size: clamp(2.15rem, 10vw, 3rem) !important;
+    line-height: 1.06 !important;
+  }
+
+  .project-anchor-navigation {
+    margin-block: 0.6rem 1rem !important;
+  }
+
+  .project-detail-content-grid {
+    gap: 0.65rem !important;
+  }
+
+  .project-editorial-section {
+    padding: 0.9rem !important;
+    border-inline: 0 !important;
+  }
+
+  .project-section-heading {
+    margin-bottom: 0.8rem !important;
+  }
+
+  .project-section-heading h2 {
+    font-size: clamp(1.45rem, 7vw, 1.9rem) !important;
+  }
+
+  .project-story-copy p,
+  .project-story-copy blockquote,
+  .project-editorial-section p {
+    margin-block: 0.45rem !important;
+  }
+
+  .project-story-facts,
+  .project-proof-list {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 0.55rem !important;
+  }
+
+  .project-story-facts > div,
+  .project-proof-list > article {
+    min-height: 0 !important;
+    padding: 0.8rem !important;
+  }
+
+  .project-story-facts strong,
+  .project-proof-list p {
+    font-size: 0.82rem !important;
+    line-height: 1.5 !important;
+  }
+
+  .impact-plan-steps {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 0.5rem !important;
+  }
+
+  .impact-plan-steps li {
+    padding: 0.75rem !important;
+    min-height: 0 !important;
+  }
+
+  .beneficiary-strip,
+  .project-updates-empty,
+  .project-document-preview {
+    padding: 0.9rem !important;
+  }
+
+  .project-faq details {
+    margin-block: 0.35rem !important;
+  }
+
+  .project-faq summary {
+    padding-block: 0.8rem !important;
+  }
+
+  .related-projects {
+    overflow: hidden;
+  }
+
+  .related-projects-grid {
+    display: flex !important;
+    gap: 0.75rem !important;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    overscroll-behavior-inline: contain;
+    padding-bottom: 0.5rem;
+  }
+
+  .related-projects-grid > article {
+    flex: 0 0 78vw;
+    scroll-snap-align: start;
+  }
+
+  .related-project-media {
+    min-height: 9rem !important;
+  }
+
+  .recurring-project-orbit {
+    display: flex !important;
+    grid-template-columns: none !important;
+    gap: 0.75rem !important;
+    overflow-x: auto !important;
+    scroll-snap-type: x mandatory;
+    overscroll-behavior-inline: contain;
+    padding-bottom: 0.6rem;
+  }
+
+  .recurring-project-orbit > article {
+    flex: 0 0 82vw !important;
+    scroll-snap-align: start;
+  }
+
+  .recurring-section,
+  .recurring-rhythm,
+  .recurring-final {
+    padding-block: 2rem !important;
+  }
+
+  .recurring-impact ol,
+  .recurring-how ol {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.55rem;
+  }
+
+  .recurring-impact li,
+  .recurring-how li {
+    min-height: 0 !important;
+    padding: 0.75rem !important;
+  }
+
+  .account-main {
+    min-height: 0 !important;
+  }
+
+  .account-empty-state,
+  .account-empty-records {
+    padding-block: 1.5rem !important;
+  }
+
+  .compact-footer {
+    padding-block: 1rem !important;
+  }
+
+  .compact-footer__inner {
+    gap: 0.8rem !important;
+  }
+
+  .compact-footer__brand small,
+  .compact-footer__contact,
+  .compact-footer p {
+    font-size: 0.72rem !important;
+  }
+}
+
+@media (max-width: 390px) {
+  .project-story-facts,
+  .project-proof-list,
+  .impact-plan-steps,
+  .recurring-impact ol,
+  .recurring-how ol {
+    grid-template-columns: 1fr !important;
+  }
+
+  .related-projects-grid > article,
+  .recurring-project-orbit > article {
+    flex-basis: 86vw !important;
+  }
+}
