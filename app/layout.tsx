@@ -37,6 +37,7 @@ import "../styles/homepage-unified.css";
 import "../styles/navigation-shell.css";
 import "../styles/navigation-shell-responsive.css";
 import "../styles/visual-ux-qa.css";
+import "../styles/visual-reset-final.css";
 
 export const metadata: Metadata = {
   title: "مؤسسة منبر الأقصى الدولية",
