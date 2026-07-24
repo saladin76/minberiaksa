@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - agent/critical-production-fixes
+  pull_request:
+    branches:
+      - main
   workflow_dispatch:
 
 jobs:
