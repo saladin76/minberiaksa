@@ -1,0 +1,164 @@
+/* Visual QA refinements after the donor-facing copy review. */
+
+html,
+body {
+  max-width: 100%;
+  overflow-x: clip;
+}
+
+img[hidden] {
+  display: none !important;
+}
+
+h1,
+h2,
+h3,
+p,
+a,
+button {
+  overflow-wrap: break-word;
+}
+
+h1,
+h2,
+h3 {
+  text-wrap: balance;
+}
+
+.button,
+button:not(.project-intent-card):not(.project-filter-button):not(.checkout-progress button) {
+  text-wrap: balance;
+}
+
+/* Keep page-level titles prominent without allowing secondary pages to dominate the viewport. */
+.impact-page h1,
+.knowledge-hero h1,
+.knowledge-article .article-header h1,
+.about-hero h1,
+.recurring-hero h1 {
+  font-size: clamp(3rem, 5vw, 4.5rem);
+  line-height: 1.08;
+  max-width: 15ch;
+}
+
+.recurring-hero-copy h1 {
+  max-width: 12ch;
+}
+
+.knowledge-article .article-header h1 {
+  max-width: 18ch;
+}
+
+/* Do not reserve a full media frame when an approved external image cannot load. */
+.is-image-unavailable {
+  background-image: linear-gradient(145deg, rgba(202, 171, 91, 0.1), rgba(8, 45, 53, 0.06));
+}
+
+figure.is-image-unavailable,
+.project-media-feature.is-image-unavailable,
+.account-field-visual.is-image-unavailable,
+.project-detail-hero-media.is-image-unavailable {
+  min-height: 0 !important;
+  aspect-ratio: auto !important;
+  padding: clamp(1.5rem, 4vw, 3rem);
+}
+
+figure.is-image-unavailable::after,
+.project-media-feature.is-image-unavailable::after,
+.account-field-visual.is-image-unavailable::after,
+.project-detail-hero-media.is-image-unavailable::after {
+  content: "";
+  display: block;
+  min-height: clamp(5rem, 12vw, 9rem);
+}
+
+.brand-mark.is-image-unavailable {
+  display: inline-grid;
+  place-items: center;
+  min-width: 42px;
+  min-height: 42px;
+  border: 1px solid rgba(202, 171, 91, 0.45);
+  border-radius: 50%;
+  background: rgba(202, 171, 91, 0.1);
+}
+
+.brand-mark.is-image-unavailable::before {
+  content: "م";
+  font-weight: 800;
+  color: var(--color-primary, #0b3b42);
+  line-height: 1;
+}
+
+.brand-mark.is-image-unavailable > span {
+  display: none;
+}
+
+/* Shorter copy should not leave oversized empty shells. */
+.giving-basket-empty--page,
+.checkout-empty-state,
+.account-empty-state,
+.account-empty-records,
+.result-guard-state {
+  min-height: 0 !important;
+  padding-block: clamp(2.5rem, 6vw, 5rem) !important;
+}
+
+.account-page-heading,
+.basket-review-header,
+.checkout-hero,
+.article-header,
+.knowledge-hero,
+.about-hero {
+  padding-block-start: clamp(2.25rem, 5vw, 4.5rem);
+  padding-block-end: clamp(2rem, 4vw, 3.75rem);
+}
+
+.checkout-legal-footer p {
+  max-width: 52ch;
+}
+
+@media (max-width: 700px) {
+  .impact-page h1,
+  .knowledge-hero h1,
+  .knowledge-article .article-header h1,
+  .about-hero h1,
+  .recurring-hero h1 {
+    font-size: clamp(2.25rem, 11vw, 3.25rem);
+    line-height: 1.12;
+    max-width: 100%;
+  }
+
+  .recurring-hero-copy h1 {
+    max-width: 11ch;
+  }
+
+  .button,
+  button,
+  a {
+    min-width: 0;
+  }
+
+  .checkout-journey-header .site-container,
+  .site-header .site-container,
+  .account-header {
+    min-width: 0;
+  }
+
+  .giving-basket-empty--page,
+  .checkout-empty-state,
+  .account-empty-state,
+  .account-empty-records,
+  .result-guard-state {
+    padding-block: 2.25rem !important;
+  }
+
+  .account-page-heading,
+  .basket-review-header,
+  .checkout-hero,
+  .article-header,
+  .knowledge-hero,
+  .about-hero {
+    padding-block-start: 2rem;
+    padding-block-end: 1.75rem;
+  }
+}
