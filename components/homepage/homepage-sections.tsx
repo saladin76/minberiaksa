@@ -34,7 +34,7 @@ function ProjectImage({ project }: { project: (typeof projects)[number] }) {
   return (
     <img
       className="home-hero-v4__image"
-      src={project.image.sourceUrl}
+      src={project.image.heroSourceUrl || project.image.sourceUrl}
       alt={project.image.alt.ar}
       width={1400}
       height={1000}
@@ -206,7 +206,7 @@ export function GivingPathways() {
 const trustItems = [
   ["معلومات واضحة", "نعرض تفاصيل المشروع المتاحة دون أرقام غير معتمدة.", ShieldCheck],
   ["تقارير ميدانية", "تظهر التحديثات بعد مراجعتها واعتمادها.", FileCheck2],
-  ["إيصالات التبرع", "يظهر نوع التبرع والمشروع في السلة والإيصال.", CheckCircle2],
+  ["مراجعة التبرع", "يظهر نوع التبرع والمشروع بوضوح داخل السلة.", CheckCircle2],
   ["متابعة المشروع", "يمكنك العودة إلى صفحة المشروع لقراءة آخر التحديثات.", HandHeart],
 ] as const;
 

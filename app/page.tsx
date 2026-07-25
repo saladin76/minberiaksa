@@ -4,8 +4,6 @@ import { SiteHeader } from "@/components/layout/site-header";
 import { StickyDonateBar } from "@/components/layout/sticky-donate-bar";
 import { TopUtilityBar } from "@/components/layout/top-utility-bar";
 import {
-  DonationJourney,
-  GivingIntentNavigation,
   GivingPathways,
   HomepageHero,
   ImpactAndTrust,
@@ -26,9 +24,7 @@ export default function HomePage() {
         </PatternBackground>
         <QuickGiving />
         <OfficialProjects />
-        <GivingIntentNavigation />
         <div className="homepage-v5__paired homepage-v5__paired--giving">
-          <DonationJourney />
           <GivingPathways />
         </div>
         <div className="homepage-v5__paired homepage-v5__paired--trust">

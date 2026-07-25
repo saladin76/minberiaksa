@@ -17,7 +17,7 @@ const emptyFilters: Filters = {
   region: "all",
   donation: "all",
   field: "all",
-  status: "active",
+  status: "all",
 };
 
 function SelectFilter({ label, value, options, onChange }: {

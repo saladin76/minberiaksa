@@ -137,12 +137,6 @@ export function ProjectDonationPanel({
     window.setTimeout(() => setToast(false), 2200);
   };
 
-  const continueToCheckout = () => {
-    if (!canSubmit) return;
-    window.dispatchEvent(new CustomEvent("minber:add-to-basket", { detail: basketPayload() }));
-    window.location.assign("/checkout");
-  };
-
   const renderFormContent = (mobile = false) => (
     <div className={mobile ? "donation-form donation-form--mobile" : "donation-form"}>
       <fieldset className="donation-mode-selector">
@@ -254,11 +248,7 @@ export function ProjectDonationPanel({
               <label><span>اسم صاحب الوقف</span><input value={waqfName} onChange={(event) => setWaqfName(event.target.value)} required /></label>
               <label><span>إهداء أو نية الوقف — اختياري</span><textarea value={dedication} onChange={(event) => setDedication(event.target.value.slice(0, 180))} maxLength={180} /></label>
               {!waqfName.trim() ? <small className="field-error">اسم صاحب الوقف مطلوب.</small> : null}
-              <div className="waqf-certificate-mini">
-                <small>بيانات شهادة الوقف</small>
-                <strong>{waqfName || "اسم صاحب الوقف"}</strong>
-                <span>{dedication || "تُضاف نية الوقف هنا"}</span>
-              </div>
+
             </div>
           ) : null}
 
@@ -283,8 +273,7 @@ export function ProjectDonationPanel({
           </div>
 
           <div className="donation-actions">
-            <Button type="button" fullWidth onClick={continueToCheckout} disabled={!canSubmit}>المتابعة لإتمام التبرع</Button>
-            <Button type="button" variant="outline" fullWidth onClick={addToBasket} disabled={!canSubmit}>أضف إلى سلة العطاء</Button>
+            <Button type="button" fullWidth onClick={addToBasket} disabled={!canSubmit}>إضافة التبرع إلى السلة</Button>
           </div>
           <p className="donation-reassurance">يمكنك مراجعة المشروع والنية والمبلغ قبل تأكيد العملية.</p>
         </>

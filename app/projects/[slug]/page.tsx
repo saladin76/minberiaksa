@@ -1,4 +1,7 @@
 import type { Metadata } from "next";
+import { SiteFooter } from "@/components/layout/site-footer";
+import { SiteHeader } from "@/components/layout/site-header";
+import { TopUtilityBar } from "@/components/layout/top-utility-bar";
 import { notFound } from "next/navigation";
 import { ProjectDetailExperience } from "@/components/project-detail/project-detail-sections";
 import { ProjectGivingRouteLinks } from "@/components/project-detail/project-giving-route-links";
@@ -26,18 +29,18 @@ export async function generateMetadata({ params }: ProjectPageProps): Promise<Me
 
 function buildFallbackDetail(source: ProjectRecord): ResolvedProjectDetail {
   return {
-    story: [source.summary.ar, "نعرض هنا المعلومات المعتمدة حاليًا، وتُضاف التفاصيل الميدانية الجديدة بعد مراجعتها من فريق المؤسسة."],
+    story: [source.summary.ar, "تظهر هنا المعلومات المتاحة عن المشروع، وتُضاف التحديثات الميدانية عند نشرها."],
     need: "يستجيب المشروع لاحتياج ميداني ضمن مجال عمله والمنطقة المستهدفة.",
     goal: "توجيه المساهمات إلى نشاط واضح ومتابعة التنفيذ بالتحديثات المتاحة.",
     location: "تُحدد منطقة التنفيذ بحسب خطة المشروع واحتياجات الميدان.",
     currentStage: source.status === "seasonal" ? "مشروع موسمي يُنفذ ضمن فترته المعتمدة." : "المشروع متاح للدعم وتُحدّث حالته عند اعتماد مستجدات التنفيذ.",
-    highlight: "لا تُعرض أرقام أو نتائج قبل اعتماد مصدرها وتوثيقها.",
+    highlight: "تظهر نتائج المشروع وتحديثاته بعد مراجعتها ونشرها.",
     impactPlan: ["مراجعة الاحتياج", "تجهيز متطلبات التنفيذ", "تنفيذ النشاط وفق الأولويات الميدانية", "توثيق التنفيذ ومتابعته"],
     updates: [],
     proofItems: [
-      { label: "صور التنفيذ", status: source.image ? "verification" : "later", note: source.image ? "صورة مرتبطة بالمشروع وتخضع للمراجعة التحريرية." : "تُضاف الصور بعد اعتمادها." },
+      { label: "صور التنفيذ", status: source.image ? "verification" : "later", note: source.image ? "صورة ميدانية مرتبطة بالمشروع." : "تُضاف الصور بعد اعتمادها." },
       { label: "التقرير الميداني", status: "later", note: "يُنشر التقرير عند اكتمال مراجعته واعتماده." },
-      { label: "مصدر المعلومات", status: "verification", note: "تُراجع بيانات المشروع قبل نشر أي تحديث جديد." },
+      { label: "مصدر المعلومات", status: "verification", note: "تُنشر معلومات المشروع وتحديثاته بعد مراجعتها." },
     ],
     media: [{ kind: "image", label: "وسائط المشروع", requirement: "تُضاف الوسائط الميدانية المعتمدة عند توفرها." }],
     acceptsGift: true,
@@ -53,7 +56,7 @@ function buildFaqs(source: ProjectRecord) {
     { question: "هل يقبل المشروع الزكاة؟", answer: zakat ? "نعم، يظهر خيار الزكاة بنية مستقلة داخل مسار التبرع." : "لا يظهر خيار الزكاة لهذا المشروع لأن بياناته الحالية لا تتضمن أهلية الزكاة." },
     { question: "هل يمكن التبرع بشكل مستمر؟", answer: recurring ? "نعم، يمكنك إنشاء خطة يومية أو كل جمعة أو شهرية من صفحة العطاء المستمر." : "هذا المشروع لا يدعم التبرع المتكرر حاليًا." },
     { question: "متى تظهر تحديثات التنفيذ؟", answer: "تُنشر التحديثات بعد مراجعتها واعتمادها من الفريق المسؤول، ولا تُعرض تواريخ أو نتائج غير موثقة." },
-    { question: "هل أحصل على إيصال؟", answer: "يظهر الإيصال ضمن حساب المتبرع بعد إتمام عملية التبرع وربط نظام الدفع." },
+    { question: "هل أحصل على إيصال؟", answer: "تتوقف التجربة الحالية عند إضافة التبرع إلى السلة إلى حين ربط نظام الدفع." },
     { question: "هل يمكن إهداء التبرع؟", answer: "يمكن اختيار الإهداء وإضافة اسم المهدى إليه ورسالة قصيرة ضمن مسار التبرع." },
   ];
 }
@@ -81,6 +84,8 @@ export default async function ProjectDetailPage({ params }: ProjectPageProps) {
 
   return (
     <>
+      <TopUtilityBar />
+      <SiteHeader />
       <ProjectDetailExperience
         project={item}
         detail={detail}
@@ -89,6 +94,7 @@ export default async function ProjectDetailPage({ params }: ProjectPageProps) {
         faqs={buildFaqs(item)}
       />
       <ProjectGivingRouteLinks project={item} />
+      <SiteFooter />
     </>
   );
 }

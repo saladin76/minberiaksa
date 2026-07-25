@@ -41,10 +41,11 @@ import "../styles/visual-reset-final.css";
 import "../styles/visual-reset-hotfix.css";
 import "../styles/final-visual-approval.css";
 import "../styles/final-approval-addendum.css";
+import "../styles/production-readiness.css";
 
 export const metadata: Metadata = {
   title: "مؤسسة منبر الأقصى الدولية",
-  description: "منصة عطاء مقدسية عالمية تربط مساهمتك بالمشروع والإيصال وتحديثات الأثر.",
+  description: "مشاريع إنسانية لدعم القدس والأقصى وأهل غزة مع معلومات واضحة عن كل مشروع.",
 };
 
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {

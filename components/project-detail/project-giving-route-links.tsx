@@ -4,15 +4,15 @@ import type { ProjectRecord } from "@/data/projects";
 export function ProjectGivingRouteLinks({ project }: { project: ProjectRecord }) {
   const links = [
     project.donationTypes.includes("zakat")
-      ? { href: "/zakat", label: "استكشف مسار الزكاة" }
+      ? { href: "/zakat", label: "استكشف الزكاة" }
       : null,
     project.donationTypes.includes("waqf")
-      ? { href: "/waqf", label: "استكشف مسار الوقف" }
+      ? { href: "/waqf", label: "استكشف الوقف" }
       : null,
     project.donationTypes.includes("recurring")
       ? { href: "/recurring", label: "أنشئ عطاءً مستمرًا" }
       : null,
-    { href: "/impact", label: "منهجية متابعة الأثر" },
+    { href: "/impact", label: "الأثر والتقارير" },
   ].filter(Boolean) as Array<{ href: string; label: string }>;
 
   return (
@@ -20,7 +20,7 @@ export function ProjectGivingRouteLinks({ project }: { project: ProjectRecord })
       <div className="site-container">
         <div>
           <span>مسارات مرتبطة</span>
-          <h2>اختر طريقة العطاء أو تعرّف إلى منهجية متابعة الأثر</h2>
+          <h2>اختر طريقة العطاء أو تعرّف إلى الأثر والتقارير</h2>
         </div>
         <div>
           {links.map((link) => (

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ArrowLeft, Bookmark, CircleDot, ImageOff, MapPin, Users } from "lucide-react";
+import { ArrowLeft, Bookmark, CircleDot, MapPin, Users } from "lucide-react";
 import type { DonationType, ProjectRecord, ProjectRegion, ProjectStatus } from "@/data/projects";
 
 export const projectRegionLabels: Record<ProjectRegion, string> = {
@@ -54,15 +54,7 @@ const projectImageFocalPositions: Partial<Record<string, string>> = {
   "al-quds-home-restoration": "50% 42%",
 };
 
-const optimizedDriveImage = (sourceUrl: string) => {
-  try {
-    const url = new URL(sourceUrl);
-    const fileId = url.searchParams.get("id");
-    return fileId ? `https://drive.google.com/thumbnail?id=${encodeURIComponent(fileId)}&sz=w1600` : sourceUrl;
-  } catch {
-    return sourceUrl;
-  }
-};
+const optimizedDriveImage = (sourceUrl: string) => sourceUrl;
 
 export type ProjectCardProps = {
   slug: string;
@@ -97,7 +89,6 @@ export function toProjectCardProps(project: ProjectRecord): ProjectCardProps {
       alt: project.image.alt.ar,
       focalPosition: projectImageFocalPositions[project.slug],
     } : undefined,
-    organizationLabel: "مؤسسة منبر الأقصى الدولية",
     regionLabel: projectRegionLabels[project.region],
     categoryLabel,
     statusLabel: projectStatusLabels[project.status],
@@ -154,18 +145,12 @@ export function ProjectCard({
             onError={() => setImageFailed(true)}
           />
         ) : (
-          <div className="project-image-card__fallback" role="img" aria-label={`${regionLabel ?? "فلسطين"}: ${title}`}>
-            <ImageOff size={28} strokeWidth={1.7} aria-hidden="true" />
-            <span>{regionLabel ?? "فلسطين"}</span>
-          </div>
+          <div className="project-image-card__fallback" role="img" aria-label={`${regionLabel ?? "فلسطين"}: ${title}`}><span>{regionLabel ?? "فلسطين"}</span><strong>{title}</strong><small>{categoryLabel ?? "مشروع إنساني"}</small><i aria-hidden="true" /></div>
         )}
       </div>
 
       <div className="project-image-card__topline">
-        <span className="project-image-card__organization" title={organizationLabel}>
-          <i aria-hidden="true" />
-          <span>{organizationLabel}</span>
-        </span>
+<span aria-hidden="true" />
         <button
           type="button"
           className={`project-image-card__bookmark${saved ? " is-saved" : ""}`}

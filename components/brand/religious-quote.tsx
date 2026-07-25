@@ -11,7 +11,7 @@ export function ReligiousQuote({ children, source, status = "approved" }: Props)
     <figure className="religious-quote">
       <blockquote>{children}</blockquote>
       {source ? <figcaption>{source}</figcaption> : null}
-      {status === "source-required" ? <small>SOURCE REFERENCE REQUIRED</small> : null}
+      
     </figure>
   );
 }

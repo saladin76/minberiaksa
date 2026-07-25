@@ -4,9 +4,9 @@ export const stories = [
 ] as const;
 
 export const officialProjects = [
-  { id:"million-meals", title:"حملة مليون وجبة لأهل غزة", type:"غزة · إغاثة غذائية", description:"مساهمة في توفير وجبات جاهزة للأسر الأكثر احتياجًا ضمن حملة غذائية مستمرة.", raised:239090.51, goal:1000000, donors:4097, unit:10, featured:true, image:"GAZA MEALS — APPROVED FIELD IMAGE REQUIRED" },
-  { id:"food-parcels", title:"الطرود الغذائية لأهل غزة", type:"غزة · غذاء", description:"طرود غذائية متكاملة تدعم الأسر المتضررة وتساعدها على تأمين احتياجاتها الأساسية.", raised:7579.36, goal:30000, donors:149, unit:70, image:"GAZA PARCELS — APPROVED FIELD IMAGE REQUIRED" },
-  { id:"quds-restoration", title:"ترميم عاجل في القدس", type:"القدس · ترميم", description:"المساهمة في ترميم منزل مقدسي قديم ليبقى مأوى آمنًا لعائلة داخل المدينة.", raised:2604.42, goal:60000, donors:80, unit:400, image:"AL-QUDS RESTORATION — APPROVED FIELD IMAGE REQUIRED" },
+  { id:"million-meals", title:"حملة مليون وجبة لأهل غزة", type:"غزة · إغاثة غذائية", description:"مساهمة في توفير وجبات جاهزة للأسر الأكثر احتياجًا ضمن حملة غذائية مستمرة.", raised:239090.51, goal:1000000, donors:4097, unit:10, featured:true, image:"/assets/projects/gaza-hot-meals/card.jpg" },
+  { id:"food-parcels", title:"الطرود الغذائية لأهل غزة", type:"غزة · غذاء", description:"طرود غذائية متكاملة تدعم الأسر المتضررة وتساعدها على تأمين احتياجاتها الأساسية.", raised:7579.36, goal:30000, donors:149, unit:70, image:"/assets/projects/gaza-food-parcels/card.jpg" },
+  { id:"quds-restoration", title:"ترميم عاجل في القدس", type:"القدس · ترميم", description:"المساهمة في ترميم منزل مقدسي قديم ليبقى مأوى آمنًا لعائلة داخل المدينة.", raised:2604.42, goal:60000, donors:80, unit:400, image:"/assets/projects/al-quds-restoration/card.jpg" },
 ] as const;
 
 export const funds = [

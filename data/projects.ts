@@ -29,6 +29,7 @@ export type LocalizedText = {
 export type ProjectImage = {
   /** Temporary source reference. Replace with an optimized local/CDN asset before launch. */
   sourceUrl: string;
+  heroSourceUrl?: string;
   sourceLabel: string;
   alt: LocalizedText;
   usage: "hero" | "card" | "proof" | "gallery";
@@ -48,9 +49,6 @@ export type ProjectRecord = {
   image?: ProjectImage;
   tags: string[];
 };
-
-const drive = (fileId: string) =>
-  `https://drive.google.com/uc?export=view&id=${fileId}`;
 
 export const projects: ProjectRecord[] = [
   {
@@ -72,8 +70,9 @@ export const projects: ProjectRecord[] = [
     featured: true,
     legacySource: "Legacy website + Drive: Gaza / طرود غزة",
     image: {
-      sourceUrl: drive("14ExUX9TVvMB-jc_mWa_iPnqSjl_UH0lv"),
-      sourceLabel: "IMG_5298.JPG — direct field delivery",
+      sourceUrl: "/assets/projects/gaza-food-parcels/card.jpg",
+      heroSourceUrl: "/assets/projects/gaza-food-parcels/hero.jpg",
+      sourceLabel: "توثيق ميداني معتمد للمشروع",
       usage: "card",
       alt: {
         ar: "تسليم طرد غذائي لعائلة في مخيم بغزة",
@@ -101,6 +100,13 @@ export const projects: ProjectRecord[] = [
     status: "active",
     featured: true,
     legacySource: "Legacy campaign: 1,000,000 hot meals + Drive Gaza meal folders",
+    image: {
+      sourceUrl: "/assets/projects/gaza-hot-meals/card.jpg",
+      heroSourceUrl: "/assets/projects/gaza-hot-meals/hero.jpg",
+      sourceLabel: "توثيق ميداني معتمد للمشروع",
+      usage: "hero",
+      alt: { ar: "إعداد وتوزيع وجبات ساخنة في غزة", tr: "Gazze'de sıcak yemek hazırlanması ve dağıtımı", en: "Preparing and distributing hot meals in Gaza" },
+    },
     tags: ["gaza", "meals", "emergency"],
   },
   {
@@ -120,6 +126,13 @@ export const projects: ProjectRecord[] = [
     donationTypes: ["sadaqah", "zakat", "recurring"],
     status: "active",
     legacySource: "Drive: غزة / خبز - رمضان",
+    image: {
+      sourceUrl: "/assets/projects/gaza-bread/card.png",
+      heroSourceUrl: "/assets/projects/gaza-bread/hero.png",
+      sourceLabel: "توثيق ميداني معتمد للمشروع",
+      usage: "hero",
+      alt: { ar: "توزيع الخبز على الأسر في غزة", tr: "Gazze'de ailelere ekmek dağıtımı", en: "Bread distribution to families in Gaza" },
+    },
     tags: ["gaza", "bread", "food"],
   },
   {
@@ -139,6 +152,13 @@ export const projects: ProjectRecord[] = [
     donationTypes: ["sadaqah", "zakat", "recurring"],
     status: "active",
     legacySource: "Drive: غزة / سقيا الماء - رمضان",
+    image: {
+      sourceUrl: "/assets/projects/gaza-water/card.jpg",
+      heroSourceUrl: "/assets/projects/gaza-water/hero.jpg",
+      sourceLabel: "توثيق ميداني معتمد للمشروع",
+      usage: "hero",
+      alt: { ar: "توزيع مياه الشرب على الأسر في غزة", tr: "Gazze'de ailelere içme suyu dağıtımı", en: "Drinking water distribution to families in Gaza" },
+    },
     tags: ["gaza", "water", "emergency"],
   },
   {
@@ -220,9 +240,10 @@ export const projects: ProjectRecord[] = [
     featured: true,
     legacySource: "Legacy website + Drive: القدس / الترميم",
     image: {
-      sourceUrl: drive("1vslhxCj1c7KpF0dziaG5ZRJBO8OQFmDu"),
-      sourceLabel: "1S7A8142.JPG — restoration project documentation",
-      usage: "proof",
+      sourceUrl: "/assets/projects/al-quds-restoration/card.jpg",
+      heroSourceUrl: "/assets/projects/al-quds-restoration/hero.jpg",
+      sourceLabel: "توثيق ميداني معتمد للمشروع",
+      usage: "hero",
       alt: {
         ar: "توثيق مشروع ترميم منزل في القدس",
         tr: "Kudüs'te bir ev tadilat projesinin saha belgesi",

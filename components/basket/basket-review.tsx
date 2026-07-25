@@ -79,7 +79,7 @@ export function BasketReview() {
         <aside className="basket-summary-column">
           <BasketSummary
             items={items}
-            actionHref="/checkout"
+            actionHref="/projects"
             invalidCount={invalidItems.size}
             incompleteCount={incomplete.length}
           />

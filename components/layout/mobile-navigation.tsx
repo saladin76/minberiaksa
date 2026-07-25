@@ -138,9 +138,7 @@ export function MobileNavigation() {
                 <h2 id="mobile-settings-title">الإعدادات</h2>
                 <div className="mobile-nav-setting-row"><span>اللغة</span><LanguageSelector /></div>
                 <div className="mobile-nav-setting-row"><span>العملة</span><CurrencySelector /></div>
-                <a className="mobile-nav-account-row" href="/account" onClick={closeMenu}>
-                  <span>حساب المتبرع</span><ArrowLeft size={16} aria-hidden="true" />
-                </a>
+
               </section>
             </div>
 

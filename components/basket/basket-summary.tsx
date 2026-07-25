@@ -41,7 +41,7 @@ export function BasketSummary({
       </div>
       {totals.length > 1 ? <p className="basket-currency-note">إجمالي كل عملة يظهر منفصلًا.</p> : null}
       {reason ? <p className="basket-summary-blocked" role="status">{reason}</p> : null}
-      <Button href={actionHref} fullWidth disabled={blocked}>متابعة</Button>
+      <Button href={actionHref} fullWidth disabled={blocked}>استكشاف مشاريع أخرى</Button>
     </section>
   );
 }
