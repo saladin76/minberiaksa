@@ -56,7 +56,10 @@ const mainRoutes = [
 ];
 
 const viewports = [
-  { name: "desktop", width: 1440, height: 1000, maxHeadingLines: 3 },
+  { name: "desktop-1440", width: 1440, height: 1000, maxHeadingLines: 3 },
+  { name: "desktop-1280", width: 1280, height: 900, maxHeadingLines: 3 },
+  { name: "tablet-1024", width: 1024, height: 900, maxHeadingLines: 4 },
+  { name: "tablet-768", width: 768, height: 1024, maxHeadingLines: 4 },
   { name: "mobile-390", width: 390, height: 844, maxHeadingLines: 4 },
   { name: "mobile-360", width: 360, height: 800, maxHeadingLines: 4 },
 ];
@@ -128,7 +131,7 @@ async function auditPage(page, viewport) {
       .map((el) => ({ selector: selector(el), height: Math.round(el.getBoundingClientRect().height), textLength: (el.textContent?.trim().length ?? 0), media: el.querySelectorAll("img,video,form,input,select,textarea").length }))
       .filter((item) => item.height > window.innerHeight * 1.25 && item.textLength < 90 && item.media === 0);
     const externalPlaceholders = [...document.querySelectorAll("body *")]
-      .filter((el) => visible(el) && el.children.length === 0 && /placeholder|stack trace|api error|frontend|backend/i.test(el.textContent ?? ""))
+      .filter((el) => visible(el) && el.children.length === 0 && /required|approved|placeholder|document|asset|media required|price data|demo|prototype|frontend|backend|mock|coming soon|stack trace|api error/i.test(el.textContent ?? ""))
       .map((el) => ({ selector: selector(el), text: el.textContent?.trim().slice(0, 120) }));
 
     return {
@@ -142,6 +145,10 @@ async function auditPage(page, viewport) {
       headingIssues,
       emptyLargeSections,
       externalPlaceholders,
+      unavailableEntryPoints: [...document.querySelectorAll("a[href], form[action]")]
+        .filter(visible)
+        .map((el) => ({ selector: selector(el), href: el.getAttribute("href") || el.getAttribute("action") || "", text: el.textContent?.trim().replace(/\s+/g, " ").slice(0, 100) }))
+        .filter((item) => /^\/(account|checkout)(\/|$)/.test(item.href)),
     };
   }, viewport);
 }
@@ -187,7 +194,7 @@ for (const viewport of viewports) {
   await captureRoute("checkout-failure", "/checkout/failure", viewport, "basket");
 }
 
-for (const viewport of viewports.filter((item) => item.name !== "mobile-360")) {
+for (const viewport of viewports.filter((item) => ["desktop-1440", "mobile-390"].includes(item.name))) {
   for (const slug of projectSlugs) await captureRoute(`project-${slug}`, `/projects/${slug}`, viewport);
 }
 
@@ -199,6 +206,7 @@ const critical = report.pages.flatMap((page) => {
   if (page.clippedControls?.length) issues.push({ route: page.route, viewport: page.viewport, type: "clipped-controls", details: page.clippedControls });
   if (page.headingIssues?.length) issues.push({ route: page.route, viewport: page.viewport, type: "heading", details: page.headingIssues });
   if (page.externalPlaceholders?.length) issues.push({ route: page.route, viewport: page.viewport, type: "technical-placeholder", details: page.externalPlaceholders });
+  if (page.unavailableEntryPoints?.length && !page.route.startsWith("/account") && !page.route.startsWith("/checkout")) issues.push({ route: page.route, viewport: page.viewport, type: "unavailable-entry-point", details: page.unavailableEntryPoints });
   return issues;
 });
 
@@ -235,9 +243,9 @@ async function contactSheet(viewportName, routeNames, filename, columns, tileWid
 }
 
 const mainNames = [...mainRoutes.map(([name]) => name), "basket-populated", "checkout-review", "checkout-failure"];
-await contactSheet("desktop", mainNames, "desktop-main-pages-contact-sheet.png", 4, 320, 260);
+await contactSheet("desktop-1440", mainNames, "desktop-main-pages-contact-sheet.png", 4, 320, 260);
 await contactSheet("mobile-390", mainNames, "mobile-main-pages-contact-sheet.png", 4, 220, 420);
-await contactSheet("desktop", projectSlugs.map((slug) => `project-${slug}`), "desktop-projects-contact-sheet.png", 4, 320, 260);
+await contactSheet("desktop-1440", projectSlugs.map((slug) => `project-${slug}`), "desktop-projects-contact-sheet.png", 4, 320, 260);
 await contactSheet("mobile-390", projectSlugs.map((slug) => `project-${slug}`), "mobile-projects-contact-sheet.png", 4, 220, 420);
 
 await browser.close();
