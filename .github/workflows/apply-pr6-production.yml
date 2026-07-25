@@ -47,7 +47,7 @@ jobs:
           make_card() {
             local input="$1"
             local output="$2"
-            magick "$input" -auto-orient -resize "900x620>" -background "#eee7d8" -gravity center -extent 1000x700 -strip -quality 88 "$output"
+            convert "$input" -auto-orient -resize "900x620>" -background "#eee7d8" -gravity center -extent 1000x700 -strip -quality 88 "$output"
           }
 
           fetch_drive "14ExUX9TVvMB-jc_mWa_iPnqSjl_UH0lv" public/assets/projects/gaza-food-parcels/hero.jpg
@@ -67,7 +67,7 @@ jobs:
 
           fetch_drive "1tpr2JqVGqJrgDYyy_9VmqkNri2Cm8krf" /tmp/minber-logo.pdf
           pdftoppm -png -f 1 -singlefile -r 180 /tmp/minber-logo.pdf /tmp/minber-logo
-          magick /tmp/minber-logo.png -trim +repage -strip public/assets/brand/minber-al-aqsa-logo.png
+          convert /tmp/minber-logo.png -trim +repage -strip public/assets/brand/minber-al-aqsa-logo.png
 
           file public/assets/brand/minber-al-aqsa-logo.png public/assets/projects/*/*
 
