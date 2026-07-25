@@ -1,0 +1,85 @@
+name: Apply PR6 production fixes
+
+on:
+  push:
+    branches:
+      - pr6-patch-staging-2
+    paths:
+      - .github/workflows/apply-pr6-production.yml
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: pr6-patch-staging-2
+          fetch-depth: 0
+
+      - name: Install image tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y imagemagick poppler-utils
+
+      - name: Apply reviewed source changes
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat .github/pr6-payload/part-* | base64 -d > /tmp/pr6-text.tar.gz
+          tar -xzf /tmp/pr6-text.tar.gz
+
+      - name: Download approved assets into the repository
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p public/assets/brand
+          mkdir -p public/assets/projects/{gaza-hot-meals,gaza-water,gaza-bread,gaza-food-parcels,al-quds-restoration}
+
+          fetch_drive() {
+            local id="$1"
+            local output="$2"
+            curl -L --fail --retry 3 --retry-delay 2 "https://drive.usercontent.google.com/download?id=${id}&export=download&confirm=t" -o "$output"
+          }
+
+          make_card() {
+            local input="$1"
+            local output="$2"
+            magick "$input" -auto-orient -resize "900x620>" -background "#eee7d8" -gravity center -extent 1000x700 -strip -quality 88 "$output"
+          }
+
+          fetch_drive "14ExUX9TVvMB-jc_mWa_iPnqSjl_UH0lv" public/assets/projects/gaza-food-parcels/hero.jpg
+          make_card public/assets/projects/gaza-food-parcels/hero.jpg public/assets/projects/gaza-food-parcels/card.jpg
+
+          fetch_drive "1vslhxCj1c7KpF0dziaG5ZRJBO8OQFmDu" public/assets/projects/al-quds-restoration/hero.jpg
+          make_card public/assets/projects/al-quds-restoration/hero.jpg public/assets/projects/al-quds-restoration/card.jpg
+
+          fetch_drive "1-Ccw-8LDe4lFk2Psg06nPsroQr3eog4m" public/assets/projects/gaza-hot-meals/hero.jpg
+          make_card public/assets/projects/gaza-hot-meals/hero.jpg public/assets/projects/gaza-hot-meals/card.jpg
+
+          fetch_drive "1tF8TEvILnF-ebulNaiY3S6UV8dfUh16R" public/assets/projects/gaza-water/hero.jpg
+          make_card public/assets/projects/gaza-water/hero.jpg public/assets/projects/gaza-water/card.jpg
+
+          fetch_drive "1onNVuCoVXuuO-FZXHUP9jHe2q-sdncAO" public/assets/projects/gaza-bread/hero.png
+          make_card public/assets/projects/gaza-bread/hero.png public/assets/projects/gaza-bread/card.png
+
+          fetch_drive "1tpr2JqVGqJrgDYyy_9VmqkNri2Cm8krf" /tmp/minber-logo.pdf
+          pdftoppm -png -f 1 -singlefile -r 180 /tmp/minber-logo.pdf /tmp/minber-logo
+          magick /tmp/minber-logo.png -trim +repage -strip public/assets/brand/minber-al-aqsa-logo.png
+
+          file public/assets/brand/minber-al-aqsa-logo.png public/assets/projects/*/*
+
+      - name: Commit final source and static assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf .github/pr6-payload
+          rm -f .github/workflows/apply-pr6-production.yml
+          rm -f .github/workflows/export-source.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Complete PR 6 production UX fixes"
+          git push origin HEAD:pr6-patch-staging-2
