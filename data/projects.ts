@@ -127,8 +127,8 @@ export const projects: ProjectRecord[] = [
     status: "active",
     legacySource: "Drive: غزة / خبز - رمضان",
     image: {
-      sourceUrl: "/assets/projects/gaza-bread/card.png",
-      heroSourceUrl: "/assets/projects/gaza-bread/hero.png",
+      sourceUrl: "/assets/projects/gaza-bread/card.jpg",
+      heroSourceUrl: "/assets/projects/gaza-bread/hero.jpg",
       sourceLabel: "توثيق ميداني معتمد للمشروع",
       usage: "hero",
       alt: { ar: "توزيع الخبز على الأسر في غزة", tr: "Gazze'de ailelere ekmek dağıtımı", en: "Bread distribution to families in Gaza" },
