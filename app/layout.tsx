@@ -48,9 +48,48 @@ export const metadata: Metadata = {
   description: "مشاريع إنسانية لدعم القدس والأقصى وأهل غزة مع معلومات واضحة عن كل مشروع.",
 };
 
+const phaseThreeMobileProjectFixes = `
+@media (max-width: 768px) {
+  .project-detail-shell .project-donation-column {
+    display: block !important;
+    position: static !important;
+    width: 100% !important;
+  }
+
+  .project-detail-shell .project-donation-panel {
+    display: block !important;
+    position: static !important;
+    width: 100% !important;
+    max-width: none !important;
+  }
+
+  .contextual-mobile-donate,
+  .mobile-donation-layer {
+    display: none !important;
+  }
+
+  .project-selection-guide .selection-paths {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    transform: none !important;
+  }
+
+  .project-selection-guide .selection-paths > button {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+  }
+}
+`;
+
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
   return (
     <html lang="ar" dir="rtl">
+      <head>
+        <style dangerouslySetInnerHTML={{ __html: phaseThreeMobileProjectFixes }} />
+      </head>
       <body>
         <a className="skip-link" href="#main-content">انتقل إلى المحتوى الرئيسي</a>
         <ImageFailureGuard />
