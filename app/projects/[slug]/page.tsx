@@ -1,7 +1,4 @@
 import type { Metadata } from "next";
-import { SiteFooter } from "@/components/layout/site-footer";
-import { SiteHeader } from "@/components/layout/site-header";
-import { TopUtilityBar } from "@/components/layout/top-utility-bar";
 import { notFound } from "next/navigation";
 import { ProjectDetailExperience } from "@/components/project-detail/project-detail-sections";
 import { ProjectGivingRouteLinks } from "@/components/project-detail/project-giving-route-links";
@@ -84,8 +81,6 @@ export default async function ProjectDetailPage({ params }: ProjectPageProps) {
 
   return (
     <>
-      <TopUtilityBar />
-      <SiteHeader />
       <ProjectDetailExperience
         project={item}
         detail={detail}
@@ -94,7 +89,6 @@ export default async function ProjectDetailPage({ params }: ProjectPageProps) {
         faqs={buildFaqs(item)}
       />
       <ProjectGivingRouteLinks project={item} />
-      <SiteFooter />
     </>
   );
 }
