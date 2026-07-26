@@ -1,5 +1,3 @@
-import { LanguageSelectorSheet } from "@/components/selectors/language-selector-sheet";
-
-export function LanguageSelector({ compact = false }: { compact?: boolean }) {
-  return <LanguageSelectorSheet compact={compact} />;
+export function LanguageSelector({ compact: _compact = false }: { compact?: boolean }) {
+  return null;
 }

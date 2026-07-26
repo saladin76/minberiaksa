@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { BasketProvider } from "@/components/basket/basket-provider";
+import { CurrencyProvider } from "@/components/currency/currency-provider";
 import { ImageFailureGuard } from "@/components/ui/image-failure-guard";
 import "swiper/css";
 import "swiper/css/navigation";
@@ -93,7 +94,7 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
       <body>
         <a className="skip-link" href="#main-content">انتقل إلى المحتوى الرئيسي</a>
         <ImageFailureGuard />
-        <BasketProvider>{children}</BasketProvider>
+        <CurrencyProvider><BasketProvider>{children}</BasketProvider></CurrencyProvider>
       </body>
     </html>
   );

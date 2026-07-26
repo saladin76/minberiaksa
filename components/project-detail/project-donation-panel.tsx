@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { useCurrency } from "@/components/currency/currency-provider";
 import type { DonationType, ProjectRecord } from "@/data/projects";
 import type { ProjectMetric } from "@/data/project-metrics";
 
@@ -54,6 +55,7 @@ export function ProjectDonationPanel({
   const [toast, setToast] = useState(false);
   const sheetRef = useRef<HTMLElement | null>(null);
   const mobileTriggerRef = useRef<HTMLButtonElement | null>(null);
+  const { currency } = useCurrency();
 
   const recurringSupported = project.donationTypes.includes("recurring");
   const qurbaniSelected = intent === "qurbani";
@@ -125,7 +127,7 @@ export function ProjectDonationPanel({
     donationMode: mode,
     frequency: mode === "recurring" ? frequency : undefined,
     amount: selectedAmount,
-    currency: "USD",
+    currency: currency.code,
     giftData: mode === "gift" ? { recipient: giftRecipient, message: giftMessage } : undefined,
     dedicationData: intent === "waqf" ? { ownerName: waqfName, dedication } : undefined,
   });
@@ -208,7 +210,7 @@ export function ProjectDonationPanel({
             </div>
           ) : (
             <fieldset>
-              <legend>اختر المبلغ · USD</legend>
+              <legend>اختر المبلغ · {currency.code}</legend>
               <div className="donation-amounts">
                 {currentAmounts.map((value) => (
                   <button
@@ -268,7 +270,7 @@ export function ProjectDonationPanel({
               <div><dt>النية</dt><dd>{donationLabels[intent]}</dd></div>
               <div><dt>الطريقة</dt><dd>{modeLabels[mode]}</dd></div>
               {mode === "recurring" ? <div><dt>الدورية</dt><dd>{frequency}</dd></div> : null}
-              <div><dt>المبلغ</dt><dd>{qurbaniSelected ? "غير متاح" : `${amountValid ? selectedAmount : 0} USD`}</dd></div>
+              <div><dt>المبلغ</dt><dd>{qurbaniSelected ? "غير متاح" : `${amountValid ? selectedAmount : 0} ${currency.code}`}</dd></div>
             </dl>
           </div>
 
@@ -289,7 +291,7 @@ export function ProjectDonationPanel({
       </aside>
 
       <div className="contextual-mobile-donate">
-        <div><small>{project.title.ar}</small><strong>{qurbaniSelected ? "غير متاح حاليًا" : amountValid ? `${selectedAmount} USD` : "اختر مبلغك"}</strong></div>
+        <div><small>{project.title.ar}</small><strong>{qurbaniSelected ? "غير متاح حاليًا" : amountValid ? `${selectedAmount} ${currency.code}` : "اختر مبلغك"}</strong></div>
         <button ref={mobileTriggerRef} type="button" onClick={() => setMobileOpen(true)}>تبرع الآن</button>
       </div>
 

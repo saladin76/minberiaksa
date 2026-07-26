@@ -66,7 +66,6 @@ export const footerNavigation = [
     links: [
       { label: "الإنجازات", href: "/impact" },
       { label: "التقارير الميدانية", href: "/impact#documents" },
-      { label: "الحسابات البنكية", href: "https://minberiaksa.org/hesapnumaralarimiz", external: true },
       { label: "الأسئلة الشائعة", href: "/knowledge" },
     ],
   },

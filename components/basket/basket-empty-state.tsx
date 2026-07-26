@@ -13,7 +13,7 @@ export function BasketEmptyState({ onNavigate, page = false }: { onNavigate?: ()
       <span className="giving-basket-empty__icon" aria-hidden="true"><HandHeart size={28} /></span>
       <h1>{page ? "سلتك فارغة" : undefined}</h1>
       {!page ? <h3>سلتك فارغة</h3> : null}
-      <p>لم تضف أي تبرع إلى السلة بعد. اختر مشروعًا وحدد المبلغ، ثم أضفه إلى السلة.</p>
+      <p>اختر مشروعًا وحدد المبلغ، ثم أضفه إلى السلة.</p>
       <Button href="/projects" onClick={onNavigate}>استكشف المشاريع</Button>
       <div className="basket-starting-points">
         <span>مشاريع مقترحة</span>

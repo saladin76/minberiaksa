@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { useCurrency } from "@/components/currency/currency-provider";
 import { funds, reels } from "@/data/homepage";
 
 type Intent = {
@@ -23,6 +24,7 @@ const frequencies = ["مرة واحدة", "يومي", "كل جمعة", "شهري
 const amounts = [25, 50, 100, 250];
 
 export function QuickDonation() {
+  const { currency } = useCurrency();
   const [intent, setIntent] = useState(intents[5]);
   const [frequency, setFrequency] = useState(frequencies[0]);
   const [amount, setAmount] = useState(100);
@@ -38,7 +40,7 @@ export function QuickDonation() {
           intentLabel: intent.label,
           project: intent.label,
           amount: selected,
-          currency: "USD",
+          currency: currency.code,
           frequency,
         },
       }),
@@ -95,7 +97,7 @@ export function QuickDonation() {
             </fieldset>
 
             <fieldset>
-              <legend>المبلغ · USD</legend>
+              <legend>المبلغ · {currency.code}</legend>
               <div className="choice-wrap amount-choices">
                 {amounts.map((item) => (
                   <button
@@ -117,7 +119,7 @@ export function QuickDonation() {
                     inputMode="decimal"
                     value={custom}
                     onChange={(event) => setCustom(event.target.value)}
-                    aria-label="مبلغ آخر بالدولار"
+                    aria-label={`مبلغ آخر بعملة ${currency.code}`}
                   />
                 </label>
               </div>
@@ -129,7 +131,7 @@ export function QuickDonation() {
             <dl>
               <div><dt>النية</dt><dd>{intent.label}</dd></div>
               <div><dt>الدورية</dt><dd>{frequency}</dd></div>
-              <div><dt>المبلغ</dt><dd>{selected} USD</dd></div>
+              <div><dt>المبلغ</dt><dd>{selected} {currency.code}</dd></div>
             </dl>
             <p>ستتمكن من مراجعة المسار والمبلغ مرة أخرى داخل سلة العطاء.</p>
             <Button fullWidth onClick={add} disabled={selected <= 0}>أضف إلى سلة العطاء</Button>
@@ -177,6 +179,7 @@ export function FundsSelector() {
 }
 
 export function ZakatCalculator() {
+  const { currency } = useCurrency();
   const [cash, setCash] = useState("");
   const [gold, setGold] = useState("");
   const [trade, setTrade] = useState("");
@@ -202,7 +205,7 @@ export function ZakatCalculator() {
             <span>{label}</span>
             <div>
               <input inputMode="decimal" value={value} onChange={(event) => setter(event.target.value)} />
-              <b>USD</b>
+              <b>{currency.code}</b>
             </div>
           </label>
         ))}
@@ -210,8 +213,8 @@ export function ZakatCalculator() {
       <aside className="zakat-result">
         <small>حساب تقديري للمساعدة في تحديد المبلغ، ولا يُعد فتوى شرعية.</small>
         <dl>
-          <div><dt>صافي المال الزكوي</dt><dd>{base.toFixed(2)} USD</dd></div>
-          <div><dt>الزكاة التقديرية</dt><dd>{zakat.toFixed(2)} USD</dd></div>
+          <div><dt>صافي المال الزكوي</dt><dd>{base.toFixed(2)} {currency.code}</dd></div>
+          <div><dt>الزكاة التقديرية</dt><dd>{zakat.toFixed(2)} {currency.code}</dd></div>
         </dl>
         <label className="check-row">
           <input type="checkbox" />
@@ -225,6 +228,7 @@ export function ZakatCalculator() {
 }
 
 export function WaqfBuilder() {
+  const { currency } = useCurrency();
   const [type, setType] = useState("مساهمة مفتوحة");
   const [name, setName] = useState("");
   const [amount, setAmount] = useState(250);
@@ -264,7 +268,7 @@ export function WaqfBuilder() {
         <p>تشهد مؤسسة منبر الأقصى الدولية بأن</p>
         <h3>{name || "اسم صاحب الوقف"}</h3>
         <p>له مساهمة في: <strong>{type}</strong></p>
-        <b>{amount} USD</b>
+        <b>{amount} {currency.code}</b>
         <span className="certificate-status">تصدر الشهادة النهائية بعد إتمام المساهمة واعتماد بياناتها.</span>
       </div>
     </div>

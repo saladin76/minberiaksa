@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { currencies } from "@/config/currencies";
+import { useCurrency } from "@/components/currency/currency-provider";
 
 type QuickIntent = {
   label: string;
@@ -20,10 +20,10 @@ const quickIntents: QuickIntent[] = [
 const quickAmounts = [25, 50, 100, 250];
 
 export function QuickGiving() {
+  const { currency } = useCurrency();
   const [intent, setIntent] = useState(quickIntents[0]);
   const [amount, setAmount] = useState(100);
   const [customAmount, setCustomAmount] = useState("");
-  const [currency, setCurrency] = useState("USD");
   const [added, setAdded] = useState(false);
   const selectedAmount = customAmount ? Math.max(0, Number(customAmount) || 0) : amount;
 
@@ -35,7 +35,7 @@ export function QuickGiving() {
         intentLabel: intent.label,
         project: intent.label,
         amount: selectedAmount,
-        currency,
+        currency: currency.code,
         frequency: "مرة واحدة",
       },
     }));
@@ -99,14 +99,10 @@ export function QuickGiving() {
             </div>
           </fieldset>
 
-          <label className="quick-giving-v4__currency">
+          <div className="quick-giving-v4__currency" aria-label={`عملة التبرع ${currency.code}`}>
             <span>العملة</span>
-            <select value={currency} onChange={(event) => setCurrency(event.target.value)} aria-label="عملة التبرع">
-              {currencies.filter((item) => item.enabled).map((item) => (
-                <option key={item.code} value={item.code}>{item.code} · {item.symbol}</option>
-              ))}
-            </select>
-          </label>
+            <strong>{currency.code} · {currency.symbol}</strong>
+          </div>
 
           <div className="quick-giving-v4__action">
             <Button type="button" onClick={addToBasket} disabled={selectedAmount <= 0}>
