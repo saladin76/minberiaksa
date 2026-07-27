@@ -7,7 +7,6 @@ import { mobileNavigationGroups } from "@/config/navigation";
 import type { NavigationItem } from "@/config/navigation";
 import { useBasket } from "@/components/basket/use-basket";
 import { CurrencySelector } from "@/components/ui/currency-selector";
-import { LanguageSelector } from "@/components/ui/language-selector";
 import { BrandMark } from "@/components/ui/brand-mark";
 import { CloseIcon, MenuIcon } from "@/components/ui/icons";
 import { IconButton } from "@/components/ui/icon-button";
@@ -136,9 +135,7 @@ export function MobileNavigation() {
 
               <section className="mobile-nav-settings" aria-labelledby="mobile-settings-title">
                 <h2 id="mobile-settings-title">الإعدادات</h2>
-                <div className="mobile-nav-setting-row"><span>اللغة</span><LanguageSelector /></div>
                 <div className="mobile-nav-setting-row"><span>العملة</span><CurrencySelector /></div>
-
               </section>
             </div>
 

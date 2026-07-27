@@ -9,6 +9,8 @@ on:
       - components/basket/**
       - components/currency/**
       - components/homepage/**
+      - components/layout/mobile-navigation.tsx
+      - components/layout/top-utility-bar.tsx
       - components/project-detail/**
       - components/recurring/**
       - components/selectors/**
@@ -16,7 +18,7 @@ on:
       - components/waqf/**
       - components/zakat/**
       - config/navigation.ts
-      - scripts/pr6-phase4-job.mjs
+      - scripts/pr6-phase4-final-audit.mjs
       - .github/workflows/basket-visual-qa.yml
 
 permissions:
@@ -26,7 +28,7 @@ jobs:
   phase4:
     name: ${{ matrix.label }}
     runs-on: ubuntu-latest
-    timeout-minutes: 35
+    timeout-minutes: 25
     strategy:
       fail-fast: false
       matrix:
@@ -81,7 +83,7 @@ jobs:
           PHASE4_OUTPUT: artifacts/phase4/${{ matrix.id }}
         run: |
           set -o pipefail
-          node scripts/pr6-phase4-job.mjs 2>&1 | tee "artifacts/phase4/${{ matrix.id }}/run.log"
+          node scripts/pr6-phase4-final-audit.mjs 2>&1 | tee "artifacts/phase4/${{ matrix.id }}/run.log"
       - name: Upload phase 4 artifact
         if: always()
         uses: actions/upload-artifact@v4

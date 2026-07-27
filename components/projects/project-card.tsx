@@ -85,7 +85,7 @@ export function toProjectCardProps(project: ProjectRecord): ProjectCardProps {
     title: project.title.ar,
     summary: project.summary.ar,
     image: project.image ? {
-      src: optimizedDriveImage(project.image.sourceUrl),
+      src: optimizedDriveImage(project.image.heroSourceUrl ?? project.image.sourceUrl),
       alt: project.image.alt.ar,
       focalPosition: projectImageFocalPositions[project.slug],
     } : undefined,

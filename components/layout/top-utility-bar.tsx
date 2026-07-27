@@ -1,7 +1,6 @@
 import { utilityNavigation } from "@/config/navigation";
 import { Container } from "@/components/ui/container";
 import { CurrencySelector } from "@/components/ui/currency-selector";
-import { LanguageSelector } from "@/components/ui/language-selector";
 import { BasketTrigger } from "@/components/ui/basket-trigger";
 
 export function TopUtilityBar() {
@@ -15,8 +14,7 @@ export function TopUtilityBar() {
         </nav>
 
         <div className="utility-account-controls" aria-label="إعدادات التصفح">
-          <div className="utility-selector-cluster" aria-label="اللغة والعملة">
-            <LanguageSelector compact />
+          <div className="utility-selector-cluster" aria-label="العملة">
             <CurrencySelector compact />
           </div>
           <BasketTrigger compact />

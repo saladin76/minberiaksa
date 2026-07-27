@@ -50,6 +50,12 @@ export const metadata: Metadata = {
 };
 
 const phaseThreeMobileProjectFixes = `
+.footer-link-column summary:focus-visible {
+  outline: 3px solid #e6c47d !important;
+  outline-offset: 4px !important;
+  border-radius: 0.35rem;
+}
+
 @media (max-width: 768px) {
   .project-detail-shell .project-donation-column {
     display: block !important;
