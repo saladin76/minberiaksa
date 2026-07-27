@@ -1,0 +1,447 @@
+name: PR6 Final Gate QA
+
+on:
+  push:
+    branches:
+      - qa/pr6-final-gate-77a7bcf
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  SOURCE_COMMIT: 77a7bcf5139c064c8711b445074648171095ba42
+  CHECKOUT_MODE: explicit-head-sha
+  PLAYWRIGHT_BASE_URL: http://127.0.0.1:3000
+
+jobs:
+  job-a:
+    name: A - Global Visual Matrix
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    steps:
+      - name: Checkout product source explicitly
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.SOURCE_COMMIT }}
+          path: product
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Checkout QA harness
+        uses: actions/checkout@v4
+        with:
+          ref: qa/pr6-final-gate-77a7bcf
+          path: qa
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Decode and validate QA harness
+        shell: bash
+        run: |
+          base64 -d qa/scripts/pr6-final-gate.mjs.gz.b64 | gzip -d > /tmp/pr6-final-gate.mjs
+          node --check /tmp/pr6-final-gate.mjs
+      - name: Prove exact source and clean tree
+        shell: bash
+        run: |
+          set -euo pipefail
+          HEAD_SHA="$(git -C product rev-parse HEAD)"
+          TREE_SHA="$(git -C product rev-parse 'HEAD^{tree}')"
+          STATUS="$(git -C product status --porcelain)"
+          test "$HEAD_SHA" = "$SOURCE_COMMIT"
+          test -z "$STATUS"
+          git -C product diff --exit-code
+          git -C product diff --cached --exit-code
+          printf 'HEAD: %s\nTREE: %s\nSTATUS: %s\n' "$HEAD_SHA" "$TREE_SHA" "${STATUS:-CLEAN}" | tee source-proof.txt
+          echo "SOURCE_TREE=$TREE_SHA" >> "$GITHUB_ENV"
+          echo "WORKING_TREE_CLEAN=true" >> "$GITHUB_ENV"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install dependencies and Chromium
+        working-directory: product
+        run: |
+          npm install --no-audit --no-fund
+          npx playwright install --with-deps chromium
+      - name: Production build
+        shell: bash
+        run: |
+          mkdir -p artifacts/job-a/build
+          set -o pipefail
+          npm --prefix product run build 2>&1 | tee artifacts/job-a/build/build.log
+      - name: Start production server
+        shell: bash
+        run: |
+          npm --prefix product run start -- -p 3000 > /tmp/pr6-job-a-server.log 2>&1 &
+          echo $! > /tmp/pr6-job-a-server.pid
+          for attempt in {1..60}; do
+            if curl --fail --silent http://127.0.0.1:3000/ > /dev/null; then exit 0; fi
+            sleep 1
+          done
+          cat /tmp/pr6-job-a-server.log
+          exit 1
+      - name: Run Job A harness
+        env:
+          QA_JOB: job-a
+          PRODUCT_ROOT: product
+          QA_OUTPUT: artifacts/job-a
+        run: node /tmp/pr6-final-gate.mjs
+      - name: Save source proof
+        if: always()
+        run: cp source-proof.txt artifacts/job-a/source-proof.txt || true
+      - name: Upload Job A artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr6-final-gate-job-a-${{ env.SOURCE_COMMIT }}
+          path: artifacts/job-a
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
+      - name: Stop server
+        if: always()
+        run: if [ -f /tmp/pr6-job-a-server.pid ]; then kill "$(cat /tmp/pr6-job-a-server.pid)" || true; fi
+
+  job-b:
+    name: B - All 22 Project Pages
+    runs-on: ubuntu-latest
+    timeout-minutes: 70
+    steps:
+      - name: Checkout product source explicitly
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.SOURCE_COMMIT }}
+          path: product
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Checkout QA harness
+        uses: actions/checkout@v4
+        with:
+          ref: qa/pr6-final-gate-77a7bcf
+          path: qa
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Decode and validate QA harness
+        shell: bash
+        run: |
+          base64 -d qa/scripts/pr6-final-gate.mjs.gz.b64 | gzip -d > /tmp/pr6-final-gate.mjs
+          node --check /tmp/pr6-final-gate.mjs
+      - name: Prove exact source and clean tree
+        shell: bash
+        run: |
+          set -euo pipefail
+          HEAD_SHA="$(git -C product rev-parse HEAD)"
+          TREE_SHA="$(git -C product rev-parse 'HEAD^{tree}')"
+          STATUS="$(git -C product status --porcelain)"
+          test "$HEAD_SHA" = "$SOURCE_COMMIT"
+          test -z "$STATUS"
+          git -C product diff --exit-code
+          git -C product diff --cached --exit-code
+          printf 'HEAD: %s\nTREE: %s\nSTATUS: %s\n' "$HEAD_SHA" "$TREE_SHA" "${STATUS:-CLEAN}" | tee source-proof.txt
+          echo "SOURCE_TREE=$TREE_SHA" >> "$GITHUB_ENV"
+          echo "WORKING_TREE_CLEAN=true" >> "$GITHUB_ENV"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install dependencies and Chromium
+        working-directory: product
+        run: |
+          npm install --no-audit --no-fund
+          npx playwright install --with-deps chromium
+      - name: Production build
+        shell: bash
+        run: |
+          mkdir -p artifacts/job-b/build
+          set -o pipefail
+          npm --prefix product run build 2>&1 | tee artifacts/job-b/build/build.log
+      - name: Start production server
+        shell: bash
+        run: |
+          npm --prefix product run start -- -p 3000 > /tmp/pr6-job-b-server.log 2>&1 &
+          echo $! > /tmp/pr6-job-b-server.pid
+          for attempt in {1..60}; do
+            if curl --fail --silent http://127.0.0.1:3000/ > /dev/null; then exit 0; fi
+            sleep 1
+          done
+          cat /tmp/pr6-job-b-server.log
+          exit 1
+      - name: Run Job B harness
+        env:
+          QA_JOB: job-b
+          PRODUCT_ROOT: product
+          QA_OUTPUT: artifacts/job-b
+        run: node /tmp/pr6-final-gate.mjs
+      - name: Save source proof
+        if: always()
+        run: cp source-proof.txt artifacts/job-b/source-proof.txt || true
+      - name: Upload Job B artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr6-final-gate-job-b-${{ env.SOURCE_COMMIT }}
+          path: artifacts/job-b
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
+      - name: Stop server
+        if: always()
+        run: if [ -f /tmp/pr6-job-b-server.pid ]; then kill "$(cat /tmp/pr6-job-b-server.pid)" || true; fi
+
+  job-c:
+    name: C - Mobile Menu and Missing Interactions
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout product source explicitly
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.SOURCE_COMMIT }}
+          path: product
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Checkout QA harness
+        uses: actions/checkout@v4
+        with:
+          ref: qa/pr6-final-gate-77a7bcf
+          path: qa
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Decode and validate QA harness
+        shell: bash
+        run: |
+          base64 -d qa/scripts/pr6-final-gate.mjs.gz.b64 | gzip -d > /tmp/pr6-final-gate.mjs
+          node --check /tmp/pr6-final-gate.mjs
+      - name: Prove exact source and clean tree
+        shell: bash
+        run: |
+          set -euo pipefail
+          HEAD_SHA="$(git -C product rev-parse HEAD)"
+          TREE_SHA="$(git -C product rev-parse 'HEAD^{tree}')"
+          STATUS="$(git -C product status --porcelain)"
+          test "$HEAD_SHA" = "$SOURCE_COMMIT"
+          test -z "$STATUS"
+          git -C product diff --exit-code
+          git -C product diff --cached --exit-code
+          printf 'HEAD: %s\nTREE: %s\nSTATUS: %s\n' "$HEAD_SHA" "$TREE_SHA" "${STATUS:-CLEAN}" | tee source-proof.txt
+          echo "SOURCE_TREE=$TREE_SHA" >> "$GITHUB_ENV"
+          echo "WORKING_TREE_CLEAN=true" >> "$GITHUB_ENV"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install dependencies and Chromium
+        working-directory: product
+        run: |
+          npm install --no-audit --no-fund
+          npx playwright install --with-deps chromium
+      - name: Production build
+        shell: bash
+        run: |
+          mkdir -p artifacts/job-c/build
+          set -o pipefail
+          npm --prefix product run build 2>&1 | tee artifacts/job-c/build/build.log
+      - name: Start production server
+        shell: bash
+        run: |
+          npm --prefix product run start -- -p 3000 > /tmp/pr6-job-c-server.log 2>&1 &
+          echo $! > /tmp/pr6-job-c-server.pid
+          for attempt in {1..60}; do
+            if curl --fail --silent http://127.0.0.1:3000/ > /dev/null; then exit 0; fi
+            sleep 1
+          done
+          cat /tmp/pr6-job-c-server.log
+          exit 1
+      - name: Run Job C harness
+        env:
+          QA_JOB: job-c
+          PRODUCT_ROOT: product
+          QA_OUTPUT: artifacts/job-c
+        run: node /tmp/pr6-final-gate.mjs
+      - name: Save source proof
+        if: always()
+        run: cp source-proof.txt artifacts/job-c/source-proof.txt || true
+      - name: Upload Job C artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr6-final-gate-job-c-${{ env.SOURCE_COMMIT }}
+          path: artifacts/job-c
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
+      - name: Stop server
+        if: always()
+        run: if [ -f /tmp/pr6-job-c-server.pid ]; then kill "$(cat /tmp/pr6-job-c-server.pid)" || true; fi
+
+  job-d:
+    name: D - Network Ledger and Configuration
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout product source explicitly
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.SOURCE_COMMIT }}
+          path: product
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Checkout QA harness
+        uses: actions/checkout@v4
+        with:
+          ref: qa/pr6-final-gate-77a7bcf
+          path: qa
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Decode and validate QA harness
+        shell: bash
+        run: |
+          base64 -d qa/scripts/pr6-final-gate.mjs.gz.b64 | gzip -d > /tmp/pr6-final-gate.mjs
+          node --check /tmp/pr6-final-gate.mjs
+      - name: Prove exact source and clean tree
+        shell: bash
+        run: |
+          set -euo pipefail
+          HEAD_SHA="$(git -C product rev-parse HEAD)"
+          TREE_SHA="$(git -C product rev-parse 'HEAD^{tree}')"
+          STATUS="$(git -C product status --porcelain)"
+          test "$HEAD_SHA" = "$SOURCE_COMMIT"
+          test -z "$STATUS"
+          git -C product diff --exit-code
+          git -C product diff --cached --exit-code
+          printf 'HEAD: %s\nTREE: %s\nSTATUS: %s\n' "$HEAD_SHA" "$TREE_SHA" "${STATUS:-CLEAN}" | tee source-proof.txt
+          echo "SOURCE_TREE=$TREE_SHA" >> "$GITHUB_ENV"
+          echo "WORKING_TREE_CLEAN=true" >> "$GITHUB_ENV"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install dependencies and Chromium
+        working-directory: product
+        run: |
+          npm install --no-audit --no-fund
+          npx playwright install --with-deps chromium
+      - name: Production build
+        shell: bash
+        run: |
+          mkdir -p artifacts/job-d/build
+          set -o pipefail
+          npm --prefix product run build 2>&1 | tee artifacts/job-d/build/build.log
+      - name: Start production server
+        shell: bash
+        run: |
+          npm --prefix product run start -- -p 3000 > /tmp/pr6-job-d-server.log 2>&1 &
+          echo $! > /tmp/pr6-job-d-server.pid
+          for attempt in {1..60}; do
+            if curl --fail --silent http://127.0.0.1:3000/ > /dev/null; then exit 0; fi
+            sleep 1
+          done
+          cat /tmp/pr6-job-d-server.log
+          exit 1
+      - name: Run Job D harness
+        env:
+          QA_JOB: job-d
+          PRODUCT_ROOT: product
+          QA_OUTPUT: artifacts/job-d
+        run: node /tmp/pr6-final-gate.mjs
+      - name: Save source proof
+        if: always()
+        run: cp source-proof.txt artifacts/job-d/source-proof.txt || true
+      - name: Upload Job D artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr6-final-gate-job-d-${{ env.SOURCE_COMMIT }}
+          path: artifacts/job-d
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
+      - name: Stop server
+        if: always()
+        run: if [ -f /tmp/pr6-job-d-server.pid ]; then kill "$(cat /tmp/pr6-job-d-server.pid)" || true; fi
+
+  job-e:
+    name: E - Final Gate Smoke
+    needs: [job-a, job-b, job-c, job-d]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout product source explicitly
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.SOURCE_COMMIT }}
+          path: product
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Checkout QA harness
+        uses: actions/checkout@v4
+        with:
+          ref: qa/pr6-final-gate-77a7bcf
+          path: qa
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Decode and validate QA harness
+        shell: bash
+        run: |
+          base64 -d qa/scripts/pr6-final-gate.mjs.gz.b64 | gzip -d > /tmp/pr6-final-gate.mjs
+          node --check /tmp/pr6-final-gate.mjs
+      - name: Prove exact source and clean tree
+        shell: bash
+        run: |
+          set -euo pipefail
+          HEAD_SHA="$(git -C product rev-parse HEAD)"
+          TREE_SHA="$(git -C product rev-parse 'HEAD^{tree}')"
+          STATUS="$(git -C product status --porcelain)"
+          test "$HEAD_SHA" = "$SOURCE_COMMIT"
+          test -z "$STATUS"
+          git -C product diff --exit-code
+          git -C product diff --cached --exit-code
+          printf 'HEAD: %s\nTREE: %s\nSTATUS: %s\n' "$HEAD_SHA" "$TREE_SHA" "${STATUS:-CLEAN}" | tee source-proof.txt
+          echo "SOURCE_TREE=$TREE_SHA" >> "$GITHUB_ENV"
+          echo "WORKING_TREE_CLEAN=true" >> "$GITHUB_ENV"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install dependencies and Chromium
+        working-directory: product
+        run: |
+          npm install --no-audit --no-fund
+          npx playwright install --with-deps chromium
+      - name: Production build
+        shell: bash
+        run: |
+          mkdir -p artifacts/job-e/build
+          set -o pipefail
+          npm --prefix product run build 2>&1 | tee artifacts/job-e/build/build.log
+      - name: Start production server
+        shell: bash
+        run: |
+          npm --prefix product run start -- -p 3000 > /tmp/pr6-job-e-server.log 2>&1 &
+          echo $! > /tmp/pr6-job-e-server.pid
+          for attempt in {1..60}; do
+            if curl --fail --silent http://127.0.0.1:3000/ > /dev/null; then exit 0; fi
+            sleep 1
+          done
+          cat /tmp/pr6-job-e-server.log
+          exit 1
+      - name: Run Job E harness
+        env:
+          QA_JOB: job-e
+          PRODUCT_ROOT: product
+          QA_OUTPUT: artifacts/job-e
+          UPSTREAM_A: ${{ needs.job-a.result }}
+          UPSTREAM_B: ${{ needs.job-b.result }}
+          UPSTREAM_C: ${{ needs.job-c.result }}
+          UPSTREAM_D: ${{ needs.job-d.result }}
+        run: node /tmp/pr6-final-gate.mjs
+      - name: Save source proof
+        if: always()
+        run: cp source-proof.txt artifacts/job-e/source-proof.txt || true
+      - name: Upload Job E artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr6-final-gate-job-e-${{ env.SOURCE_COMMIT }}
+          path: artifacts/job-e
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
+      - name: Stop server
+        if: always()
+        run: if [ -f /tmp/pr6-job-e-server.pid ]; then kill "$(cat /tmp/pr6-job-e-server.pid)" || true; fi
