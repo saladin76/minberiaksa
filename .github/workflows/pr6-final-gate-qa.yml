@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - qa/pr6-final-gate-77a7bcf
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
   workflow_dispatch:
 
 permissions:
