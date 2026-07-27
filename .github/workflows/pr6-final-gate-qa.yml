@@ -2,6 +2,9 @@ name: PR6 Final Gate QA
 on:
   push:
     branches: [qa/pr6-final-gate-77a7bcf]
+  pull_request:
+    branches: [main]
+    types: [synchronize]
   workflow_dispatch:
 permissions:
   contents: read
