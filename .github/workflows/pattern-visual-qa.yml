@@ -22,19 +22,19 @@ on:
       - .github/workflows/pattern-visual-qa.yml
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   visual-qa:
-    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
         with:
           repository: ${{ github.event.pull_request.head.repo.full_name }}
-          ref: ${{ github.event.pull_request.head.ref }}
-          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 1
+          persist-credentials: false
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -46,32 +46,36 @@ jobs:
         id: generate
         continue-on-error: true
         run: |
-          mkdir -p artifacts/generation-debug
+          mkdir -p artifacts/generation-debug artifacts/pattern-diff
           npm run generate:pattern > artifacts/generation-debug/generate.log 2>&1
+      - name: Record generated asset differences
+        if: steps.generate.outcome == 'success'
+        run: |
+          git status --short -- public/assets/patterns > artifacts/pattern-diff/status.txt
+          git diff -- public/assets/patterns > artifacts/pattern-diff/generated-assets.diff
+          if git diff --quiet -- public/assets/patterns; then
+            echo "PATTERN_DIFF=false" >> "$GITHUB_ENV"
+          else
+            echo "PATTERN_DIFF=true" >> "$GITHUB_ENV"
+          fi
       - name: Upload generation diagnostics
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: pattern-generation-debug-${{ github.event.pull_request.head.sha }}
-          path: artifacts/generation-debug
-          if-no-files-found: error
+          path: |
+            artifacts/generation-debug
+            artifacts/pattern-diff
+            public/assets/patterns/aqsa-white-pattern.svg
+            public/assets/patterns/aqsa-white-pattern.png
+            public/assets/patterns/aqsa-white-pattern.webp
+          if-no-files-found: warn
           retention-days: 3
       - name: Stop when generation failed
         if: steps.generate.outcome == 'failure'
         run: |
           cat artifacts/generation-debug/generate.log
           exit 1
-      - name: Resolve verified asset commit
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add public/assets/patterns/aqsa-white-pattern.svg public/assets/patterns/aqsa-white-pattern.png public/assets/patterns/aqsa-white-pattern.webp
-          if git diff --cached --quiet; then
-            echo "FINAL_SHA=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
-          else
-            git commit -m "Generate high-resolution seamless pattern assets"
-            echo "FINAL_SHA=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
-          fi
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
       - name: Production build
@@ -121,25 +125,26 @@ jobs:
       - name: Capture local production screenshots
         env:
           PLAYWRIGHT_BASE_URL: http://127.0.0.1:3000
-          COMMIT_SHA: ${{ env.FINAL_SHA }}
+          COMMIT_SHA: ${{ github.event.pull_request.head.sha }}
         run: npm run capture:pattern
       - name: Record asset metadata
         run: |
-          printf 'Local production build screenshots from commit: %s\n' "$FINAL_SHA" > artifacts/pattern-qa/assets.txt
+          printf 'Local production build screenshots from source commit: %s\n' "${{ github.event.pull_request.head.sha }}" > artifacts/pattern-qa/assets.txt
           file public/assets/patterns/aqsa-white-pattern.svg public/assets/patterns/aqsa-white-pattern.png public/assets/patterns/aqsa-white-pattern.webp >> artifacts/pattern-qa/assets.txt
           stat -c '%n %s bytes' public/assets/patterns/aqsa-white-pattern.svg public/assets/patterns/aqsa-white-pattern.png public/assets/patterns/aqsa-white-pattern.webp >> artifacts/pattern-qa/assets.txt
-      - name: Push verified generated assets when changed
-        run: |
-          if [ "$FINAL_SHA" != "${{ github.event.pull_request.head.sha }}" ]; then
-            git push origin HEAD:${{ github.event.pull_request.head.ref }}
-          fi
       - name: Upload QA artifact
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: pattern-visual-qa-${{ env.FINAL_SHA }}
+          name: pattern-visual-qa-${{ github.event.pull_request.head.sha }}
           path: artifacts/pattern-qa
-          if-no-files-found: error
+          if-no-files-found: warn
           retention-days: 14
+      - name: Require review when generated assets differ
+        if: env.PATTERN_DIFF == 'true'
+        run: |
+          echo "Generated pattern assets differ from the committed files. Review the uploaded diff and generated artifacts."
+          exit 1
       - name: Stop production server
         if: always()
         run: |
