@@ -1,0 +1,93 @@
+name: PR6 Final Gate QA
+on:
+  push:
+    branches: [qa/pr6-final-gate-77a7bcf]
+  workflow_dispatch:
+permissions:
+  contents: read
+env:
+  SOURCE_COMMIT: ecbd03e26c83b805255d3329e2cdb31b61f17447
+  CHECKOUT_MODE: explicit-head-sha
+  PLAYWRIGHT_BASE_URL: http://127.0.0.1:3000
+jobs:
+  gate:
+    name: ${{ matrix.label }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {id: job-a, label: A - Global Visual Matrix}
+          - {id: job-b, label: B - All 22 Project Pages}
+          - {id: job-c, label: C - Interactive UX}
+          - {id: job-d, label: D - Network and Configuration}
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: "${{ env.SOURCE_COMMIT }}", path: product, fetch-depth: 1, persist-credentials: false}
+      - uses: actions/checkout@v4
+        with: {ref: qa/pr6-final-gate-77a7bcf, path: qa, fetch-depth: 1, persist-credentials: false}
+      - name: Prepare harness
+        run: base64 -d qa/scripts/pr6-final-gate.mjs.gz.b64 | gzip -d > /tmp/pr6-final-gate.mjs && node --check /tmp/pr6-final-gate.mjs
+      - name: Prove source
+        shell: bash
+        run: |
+          set -euo pipefail
+          H="$(git -C product rev-parse HEAD)"; T="$(git -C product rev-parse 'HEAD^{tree}')"; S="$(git -C product status --porcelain)"
+          test "$H" = "$SOURCE_COMMIT"; test -z "$S"; git -C product diff --exit-code; git -C product diff --cached --exit-code
+          printf 'HEAD: %s\nTREE: %s\nSTATUS: CLEAN\n' "$H" "$T" | tee source-proof.txt
+          echo "SOURCE_TREE=$T" >> "$GITHUB_ENV"; echo "WORKING_TREE_CLEAN=true" >> "$GITHUB_ENV"
+      - uses: actions/setup-node@v4
+        with: {node-version: 22}
+      - name: Install
+        working-directory: product
+        run: npm install --no-audit --no-fund && npx playwright install --with-deps chromium
+      - name: Build
+        run: mkdir -p "artifacts/${{ matrix.id }}/build" && set -o pipefail && npm --prefix product run build 2>&1 | tee "artifacts/${{ matrix.id }}/build/build.log"
+      - name: Start
+        run: npm --prefix product run start -- -p 3000 > "/tmp/${{ matrix.id }}.log" 2>&1 & echo $! > "/tmp/${{ matrix.id }}.pid"; for i in {1..60}; do curl -fsS http://127.0.0.1:3000/ >/dev/null && exit 0; sleep 1; done; cat "/tmp/${{ matrix.id }}.log"; exit 1
+      - name: Run gate
+        env: {QA_JOB: "${{ matrix.id }}", PRODUCT_ROOT: product, QA_OUTPUT: "artifacts/${{ matrix.id }}"}
+        run: node /tmp/pr6-final-gate.mjs
+      - if: always()
+        run: cp source-proof.txt "artifacts/${{ matrix.id }}/source-proof.txt" || true
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with: {name: "pr6-final-gate-${{ matrix.id }}-${{ env.SOURCE_COMMIT }}", path: "artifacts/${{ matrix.id }}", if-no-files-found: error, retention-days: 14, compression-level: 0}
+      - if: always()
+        run: test ! -f "/tmp/${{ matrix.id }}.pid" || kill "$(cat "/tmp/${{ matrix.id }}.pid")" || true
+  job-e:
+    name: E - Final Gate Smoke
+    needs: gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: "${{ env.SOURCE_COMMIT }}", path: product, fetch-depth: 1, persist-credentials: false}
+      - uses: actions/checkout@v4
+        with: {ref: qa/pr6-final-gate-77a7bcf, path: qa, fetch-depth: 1, persist-credentials: false}
+      - name: Prepare harness
+        run: base64 -d qa/scripts/pr6-final-gate.mjs.gz.b64 | gzip -d > /tmp/pr6-final-gate.mjs && node --check /tmp/pr6-final-gate.mjs
+      - name: Prove source
+        shell: bash
+        run: |
+          set -euo pipefail
+          H="$(git -C product rev-parse HEAD)"; T="$(git -C product rev-parse 'HEAD^{tree}')"; S="$(git -C product status --porcelain)"
+          test "$H" = "$SOURCE_COMMIT"; test -z "$S"; git -C product diff --exit-code; git -C product diff --cached --exit-code
+          printf 'HEAD: %s\nTREE: %s\nSTATUS: CLEAN\n' "$H" "$T" | tee source-proof.txt
+          echo "SOURCE_TREE=$T" >> "$GITHUB_ENV"; echo "WORKING_TREE_CLEAN=true" >> "$GITHUB_ENV"
+      - uses: actions/setup-node@v4
+        with: {node-version: 22}
+      - working-directory: product
+        run: npm install --no-audit --no-fund && npx playwright install --with-deps chromium
+      - run: mkdir -p artifacts/job-e/build && set -o pipefail && npm --prefix product run build 2>&1 | tee artifacts/job-e/build/build.log
+      - run: npm --prefix product run start -- -p 3000 > /tmp/job-e.log 2>&1 & echo $! > /tmp/job-e.pid; for i in {1..60}; do curl -fsS http://127.0.0.1:3000/ >/dev/null && exit 0; sleep 1; done; cat /tmp/job-e.log; exit 1
+      - env: {QA_JOB: job-e, PRODUCT_ROOT: product, QA_OUTPUT: artifacts/job-e}
+        run: node /tmp/pr6-final-gate.mjs
+      - if: always()
+        run: cp source-proof.txt artifacts/job-e/source-proof.txt || true
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with: {name: "pr6-final-gate-job-e-${{ env.SOURCE_COMMIT }}", path: artifacts/job-e, if-no-files-found: error, retention-days: 14, compression-level: 0}
+      - if: always()
+        run: test ! -f /tmp/job-e.pid || kill "$(cat /tmp/job-e.pid)" || true
