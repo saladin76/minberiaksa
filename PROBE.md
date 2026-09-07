@@ -1,3 +1,0 @@
-# MinarAlAqsa
-
-Connectivity probe.
