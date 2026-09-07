@@ -1,0 +1,23 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "strict": true,
+    "noEmit": true,
+    "incremental": false,
+    "skipLibCheck": true
+  },
+  "include": [
+    "next-env.d.ts",
+    "types/next-auth.d.ts",
+    "lib/integration-settings/**/*.ts",
+    "lib/audit-log.ts",
+    "lib/communication/runtime-config.ts",
+    "lib/communication/provider-router.ts",
+    "lib/communication/provider-connections.ts",
+    "lib/communication/campaign-send-planner.ts",
+    "lib/communication/campaign-send-executor.ts",
+    "lib/communication/system-email.ts",
+    "lib/communication/providers/**/*.ts"
+  ],
+  "exclude": ["node_modules", ".next", ".integration-test-build", "lib/events/**", "lib/tracking/**"]
+}

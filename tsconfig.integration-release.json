@@ -1,0 +1,21 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "strict": true,
+    "noEmit": true,
+    "incremental": false,
+    "skipLibCheck": true
+  },
+  "include": [
+    "next-env.d.ts",
+    "lib/integration-settings/release-readiness.ts",
+    "lib/integration-settings/canonical-url.ts",
+    "lib/integration-settings/crypto.ts",
+    "lib/communication/cron-auth.ts",
+    "scripts/integration-settings-db-inspection.ts",
+    "scripts/preflight-integration-settings.ts",
+    "scripts/verify-integration-settings-migration.ts",
+    "prisma/mongodb-migrations/20260714-integration-settings.ts"
+  ],
+  "exclude": ["node_modules", ".next", ".integration-test-build"]
+}

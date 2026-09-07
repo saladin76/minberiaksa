@@ -1,0 +1,44 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/integration-settings-client"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+model IntegrationSetting {
+  id                         String   @id @default(auto()) @map("_id") @db.ObjectId
+  provider                   String
+  key                        String
+  encryptedValue             String?  @db.String
+  plainValue                 String?  @db.String
+  isSecret                   Boolean
+  enabled                    Boolean  @default(true)
+  version                    Int      @default(0)
+  source                     String   @default("DATABASE")
+  pendingEncryptedValue      String?  @db.String
+  pendingPlainValue          String?  @db.String
+  pendingVersion             Int?
+  pendingCandidateVersion    String?
+  pendingCreatedAt           DateTime?
+  pendingUpdatedBy           String?  @db.ObjectId
+  candidateVersion           String?
+  candidateCreatedAt         DateTime?
+  candidateLastTestVersion   String?
+  candidateLastTestAt        DateTime?
+  candidateLastTestResult    String?
+  candidateFailureReasonSafe String?
+  createdAt                  DateTime @default(now())
+  updatedAt                  DateTime @updatedAt
+  updatedBy                  String?  @db.ObjectId
+  lastTestAt                 DateTime?
+  lastTestResult             String?
+  lastFailureReasonSafe      String?
+
+  @@unique([provider, key])
+  @@index([provider, enabled])
+  @@index([provider, pendingCandidateVersion])
+  @@index([updatedAt(sort: Desc)])
+}

@@ -1,0 +1,55 @@
+export const MARKETING_OPERATING_FLOW = [
+  {
+    step: "01",
+    title: "Setup",
+    subtitle: "الربط والتتبع",
+    href: "/dashboard/marketing/tracking-hub",
+    description: "ربط الحسابات، البكسلات، AI، وتجهيز مزامنة البيانات بدون تكرار إعدادات.",
+    action: "فتح الإعدادات",
+    source: "MarketingPlatformConnection",
+  },
+  {
+    step: "02",
+    title: "Campaign Builder",
+    subtitle: "الروابط والحملات",
+    href: "/dashboard/link-generator",
+    description: "إنشاء روابط UTM وروابط تبرع منظمة للحملات بدل الروابط العشوائية.",
+    action: "إنشاء رابط حملة",
+    source: "Link Generator الحالي",
+  },
+  {
+    step: "03",
+    title: "Conversions",
+    subtitle: "تسليم التحويلات",
+    href: "/dashboard/marketing/quality",
+    description: "مراجعة جودة التتبع، التحويلات الناقصة، ومشاكل browser/server conversions.",
+    action: "فحص التحويلات",
+    source: "ConversionEvent",
+  },
+  {
+    step: "04",
+    title: "Performance",
+    subtitle: "الأداء والنتائج",
+    href: "/dashboard/marketing/insights",
+    description: "قراءة الصرف، التبرعات، ROAS، أداء المنصات، وأداء الحملات من البيانات الحالية.",
+    action: "عرض الأداء",
+    source: "Donation DB + Snapshots",
+  },
+  {
+    step: "05",
+    title: "Intelligence",
+    subtitle: "القرار والتوصية",
+    href: "/dashboard/marketing/insights",
+    description: "تحويل النتائج إلى قرارات: زوّد، قلّل، أصلح التتبع، غيّر الرسالة، أو كرر المحتوى الناجح.",
+    action: "فتح التوصيات",
+    source: "Recommendations + Learnings",
+  },
+] as const;
+
+export const MARKETING_TRUTH_SOURCES = [
+  ["الأموال والتبرعات", "Donation DB: PAID + paidAt"],
+  ["تسليم التحويلات", "ConversionEvent"],
+  ["ربط المنصات", "MarketingPlatformConnection"],
+  ["بيانات المنصات", "AdCampaignSnapshot / AdGroupSnapshot / AdSnapshot"],
+  ["الرسائل", "SentMessage + EmailTemplate + WhatsappTemplate"],
+] as const;

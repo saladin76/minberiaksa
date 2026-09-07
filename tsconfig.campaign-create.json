@@ -1,0 +1,30 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "allowJs": false,
+    "incremental": false,
+    "noEmit": true,
+    "strict": true,
+    "skipLibCheck": true,
+    "types": ["node"]
+  },
+  "include": [
+    "next-env.d.ts",
+    "types/**/*.d.ts",
+    "lib/campaign/admin-create-core.ts",
+    "lib/campaign/admin-create.ts",
+    "lib/locales.ts",
+    "lib/slug.ts",
+    "lib/campaign/categories.ts",
+    "lib/campaign/suggested-donations.ts",
+    "lib/campaign/suggested-team-support.ts",
+    "lib/campaign/campaign-modes.ts",
+    "lib/campaign/share-labels.ts",
+    "lib/prisma.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    ".next",
+    "tests"
+  ]
+}

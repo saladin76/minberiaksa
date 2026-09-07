@@ -1,0 +1,571 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+/*
+  Dashboard foundation schema slice.
+
+  Purpose:
+  - Keep the first DB migration slice reviewable before appending it to the main Prisma schema.
+  - Avoid changing runtime behavior until repositories are cut over one by one.
+  - Keep BrandAsset separate from ArchiveAsset and keep outbound actions manual-first.
+
+  Safety:
+  - No payment changes.
+  - No tracking runtime changes.
+  - No external platform calls.
+  - No automatic sending or publishing.
+  - No AI auto-approval.
+*/
+
+/* ===================== BRAND CENTER FIRST SLICE ===================== */
+
+model BrandProfile {
+  id                String   @id @default(auto()) @map("_id") @db.ObjectId
+  key               String   @unique
+  name              String
+  description       String?
+  mission           String?
+  vision            String?
+  contentVoice      String?
+  messagePhilosophy String?
+  primaryLocale     String   @default("tr")
+  supportedLocales  String[] @default([])
+  website           String?
+  isActive          Boolean  @default(false)
+  status            String   @default("FOUNDATION")
+  verificationNote  String?
+  createdBy         String?  @db.ObjectId
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([name])
+  @@index([isActive])
+  @@index([status])
+}
+
+model BrandAsset {
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  profileId    String   @db.ObjectId
+  title        String
+  type         String
+  format       String
+  fileUrl      String?
+  previewUrl   String?
+  usage        String
+  locale       String   @default("all")
+  notes        String?
+  downloadable Boolean  @default(false)
+  status       String   @default("TO_VERIFY")
+  createdBy    String?  @db.ObjectId
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([profileId])
+  @@index([type])
+  @@index([format])
+  @@index([downloadable])
+  @@index([status])
+}
+
+model BrandColor {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  profileId   String   @db.ObjectId
+  name        String
+  hex         String
+  rgb         String?
+  usage       String
+  description String?
+  order       Int      @default(0)
+  createdBy   String?  @db.ObjectId
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([profileId])
+  @@index([hex])
+  @@index([usage])
+  @@index([order])
+}
+
+model BrandFont {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  profileId String   @db.ObjectId
+  name      String
+  usage     String
+  fallback  String?
+  source    String?
+  notes     String?
+  order     Int      @default(0)
+  status    String   @default("TO_VERIFY")
+  createdBy String?  @db.ObjectId
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([profileId])
+  @@index([usage])
+  @@index([status])
+  @@index([order])
+}
+
+model BrandGuideline {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  profileId String   @db.ObjectId
+  section   String
+  title     String
+  body      String
+  examples  String[] @default([])
+  order     Int      @default(0)
+  createdBy String?  @db.ObjectId
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([profileId])
+  @@index([section])
+  @@index([order])
+}
+
+model BrandMessageFramework {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  profileId  String   @db.ObjectId
+  name       String
+  type       String
+  locale     String   @default("tr")
+  structure  Json?
+  sampleText String?
+  doList     String[] @default([])
+  dontList   String[] @default([])
+  order      Int      @default(0)
+  status     String   @default("TO_VERIFY")
+  createdBy  String?  @db.ObjectId
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([profileId])
+  @@index([type])
+  @@index([locale])
+  @@index([status])
+  @@index([order])
+}
+
+/* ===================== SMART ARCHIVE FIRST SLICE ===================== */
+
+model ArchiveCollection {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  name        String
+  slug        String   @unique
+  type        String
+  description String?
+  order       Int      @default(0)
+  isActive    Boolean  @default(true)
+  createdBy   String?  @db.ObjectId
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([type])
+  @@index([isActive])
+  @@index([order])
+}
+
+model ArchiveProject {
+  id                  String   @id @default(auto()) @map("_id") @db.ObjectId
+  collectionId        String?  @db.ObjectId
+  title               String
+  year                Int?
+  country             String?
+  city                String?
+  theme               String?
+  projectType         String?
+  description         String?
+  implementationDate  DateTime?
+  startDate           DateTime?
+  endDate             DateTime?
+  status              String   @default("ACTIVE")
+  documentationStatus String   @default("NEEDS_REVIEW")
+  marketingStatus     String   @default("NOT_REVIEWED")
+  notes               String?
+  createdBy           String?  @db.ObjectId
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  @@index([collectionId])
+  @@index([year])
+  @@index([country])
+  @@index([status])
+  @@index([documentationStatus])
+  @@index([marketingStatus])
+}
+
+model ArchiveDriveLink {
+  id             String    @id @default(auto()) @map("_id") @db.ObjectId
+  projectId      String?   @db.ObjectId
+  title          String
+  driveUrl       String
+  driveFolderId  String?
+  driveFileId    String?
+  sharedDriveId  String?
+  linkType       String    @default("FOLDER")
+  syncStatus     String    @default("NOT_SYNCED")
+  lastSyncedAt   DateTime?
+  lastError      String?
+  totalFiles     Int       @default(0)
+  totalImages    Int       @default(0)
+  totalVideos    Int       @default(0)
+  totalOther     Int       @default(0)
+  createdBy      String?   @db.ObjectId
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([projectId])
+  @@index([linkType])
+  @@index([syncStatus])
+  @@index([driveFolderId])
+  @@index([driveFileId])
+}
+
+model ArchiveAsset {
+  id                    String    @id @default(auto()) @map("_id") @db.ObjectId
+  projectId             String?   @db.ObjectId
+  driveLinkId           String?   @db.ObjectId
+  googleFileId          String?
+  googleFolderId        String?
+  fileName              String
+  mimeType              String?
+  fileType              String
+  webViewLink           String?
+  webContentLink        String?
+  thumbnailLink         String?
+  previewUrl            String?
+  sizeBytes             Float?
+  createdTime           DateTime?
+  modifiedTime          DateTime?
+  aiStatus              String    @default("NOT_ANALYZED")
+  humanReviewStatus     String    @default("PENDING")
+  marketingApproved     Boolean   @default(false)
+  documentationApproved Boolean   @default(false)
+  tags                  String[]  @default([])
+  aiSummary             String?
+  aiWarnings            String?
+  recommendedUse        String?
+  marketingScore        Int?
+  qualityScore          Int?
+  emotionScore          Int?
+  clarityScore          Int?
+  sensitivityScore      Int?
+  hasChildren           Boolean   @default(false)
+  hasFaces              Boolean   @default(false)
+  needsBlur             Boolean   @default(false)
+  isSensitive           Boolean   @default(false)
+  reviewedBy            String?   @db.ObjectId
+  reviewedAt            DateTime?
+  reviewerNote          String?
+  createdBy             String?   @db.ObjectId
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@index([projectId])
+  @@index([driveLinkId])
+  @@index([googleFileId])
+  @@index([fileType])
+  @@index([aiStatus])
+  @@index([humanReviewStatus])
+  @@index([marketingApproved])
+  @@index([documentationApproved])
+  @@index([recommendedUse])
+  @@index([needsBlur])
+  @@index([isSensitive])
+}
+
+model ArchiveVideoFrame {
+  id                  String   @id @default(auto()) @map("_id") @db.ObjectId
+  assetId             String   @db.ObjectId
+  timestampSec        Int
+  frameUrl            String
+  thumbnailUrl        String?
+  aiSummary           String?
+  recommendedUse      String?
+  marketingScore      Int?
+  tags                String[] @default([])
+  needsBlur           Boolean  @default(false)
+  isSensitive         Boolean  @default(false)
+  humanReviewRequired Boolean  @default(true)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  @@index([assetId])
+  @@index([timestampSec])
+  @@index([recommendedUse])
+  @@index([marketingScore])
+  @@index([needsBlur])
+  @@index([isSensitive])
+}
+
+/* ===================== OPERATIONS FIRST SLICE ===================== */
+
+model OperationTask {
+  id                String   @id @default(auto()) @map("_id") @db.ObjectId
+  title             String
+  description       String?
+  taskType          String
+  status            String   @default("PENDING")
+  priority          String   @default("MEDIUM")
+  assignedTo        String?  @db.ObjectId
+  contentItemId     String?  @db.ObjectId
+  planId            String?  @db.ObjectId
+  seasonId          String?  @db.ObjectId
+  sourceType        String?
+  sourceId          String?  @db.ObjectId
+  dueAt             DateTime?
+  startedAt         DateTime?
+  reviewRequestedAt DateTime?
+  completedAt       DateTime?
+  approvedAt        DateTime?
+  blockedReason     String?
+  qualityRating     Int?
+  workloadScore     Int?
+  resultNotes       String?
+  createdBy         String?  @db.ObjectId
+  updatedBy         String?  @db.ObjectId
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([status])
+  @@index([taskType])
+  @@index([assignedTo])
+  @@index([contentItemId])
+  @@index([sourceType, sourceId])
+  @@index([dueAt])
+}
+
+model OperationSeason {
+  id             String    @id @default(auto()) @map("_id") @db.ObjectId
+  name           String
+  type           String
+  theme          String?
+  startsAt       DateTime?
+  endsAt         DateTime?
+  hijriDate      String?
+  source         String?
+  sourceNote     String?
+  aiSuggestedAt  DateTime?
+  manuallyEdited Boolean   @default(false)
+  editedBy       String?   @db.ObjectId
+  status         String    @default("DRAFT")
+  readiness      Int       @default(0)
+  notes          String?
+  createdBy      String?   @db.ObjectId
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([type])
+  @@index([status])
+  @@index([startsAt])
+  @@index([endsAt])
+}
+
+model MonthlyContentPlan {
+  id           String    @id @default(auto()) @map("_id") @db.ObjectId
+  title        String
+  month        Int?
+  year         Int?
+  seasonId     String?   @db.ObjectId
+  theme        String?
+  goals        Json?
+  weeklyThemes Json?
+  status       String    @default("DRAFT")
+  createdBy    String?   @db.ObjectId
+  approvedBy   String?   @db.ObjectId
+  approvedAt   DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@index([year, month])
+  @@index([seasonId])
+  @@index([status])
+}
+
+model ContentItem {
+  id                 String    @id @default(auto()) @map("_id") @db.ObjectId
+  title              String
+  theme              String?
+  format             String
+  primaryLocale      String    @default("tr")
+  targetLocales      String[]  @default([])
+  proposedCopy       String?
+  copyByLocale       Json?
+  translationMode    String?
+  seo                Json?
+  relatedPostId      String?   @db.ObjectId
+  relatedCampaignIds String[]  @default([])
+  sourceType         String    @default("MANUAL")
+  sourceAssetId      String?   @db.ObjectId
+  sourceProjectId    String?   @db.ObjectId
+  designUrl          String?
+  videoUrl           String?
+  figmaUrl           String?
+  driveUrl           String?
+  finalAssetUrl      String?
+  assignedTo         String?   @db.ObjectId
+  dueAt              DateTime?
+  publishAt          DateTime?
+  status             String    @default("IDEA")
+  progress           Int       @default(0)
+  reviewStatus       String    @default("PENDING")
+  createdBy          String?   @db.ObjectId
+  updatedBy          String?   @db.ObjectId
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  @@index([format])
+  @@index([status])
+  @@index([reviewStatus])
+  @@index([primaryLocale])
+  @@index([assignedTo])
+  @@index([dueAt])
+  @@index([publishAt])
+  @@index([sourceType, sourceAssetId])
+  @@index([sourceType, sourceProjectId])
+}
+
+model ContentPublication {
+  id            String    @id @default(auto()) @map("_id") @db.ObjectId
+  contentItemId String?   @db.ObjectId
+  platform      String
+  status        String    @default("PENDING")
+  publishedUrl  String?
+  scheduledAt   DateTime?
+  publishedAt   DateTime?
+  checkedBy     String?   @db.ObjectId
+  notes         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([contentItemId])
+  @@index([platform])
+  @@index([status])
+  @@index([scheduledAt])
+  @@index([publishedAt])
+}
+
+model MessageSchedule {
+  id             String    @id @default(auto()) @map("_id") @db.ObjectId
+  contentItemId  String?   @db.ObjectId
+  channel        String
+  templateId     String?   @db.ObjectId
+  provider       String?
+  status         String    @default("DRAFT")
+  scheduledAt    DateTime?
+  sentAt         DateTime?
+  manuallySentAt DateTime?
+  cancelledAt    DateTime?
+  confirmedBy    String?   @db.ObjectId
+  notes          String?
+  createdBy      String?   @db.ObjectId
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([contentItemId])
+  @@index([channel])
+  @@index([status])
+  @@index([scheduledAt])
+}
+
+model DonorReactivationReminder {
+  id               String    @id @default(auto()) @map("_id") @db.ObjectId
+  donorId          String?   @db.ObjectId
+  lastDonationId   String?   @db.ObjectId
+  channel          String
+  locale           String    @default("ar")
+  status           String    @default("PENDING")
+  reason           String?
+  suggestedMessage String?
+  scheduledAt      DateTime?
+  sentAt           DateTime?
+  manuallySentAt   DateTime?
+  skippedAt        DateTime?
+  dismissedAt      DateTime?
+  assignedTaskId   String?   @db.ObjectId
+  createdBy        String?   @db.ObjectId
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@index([donorId])
+  @@index([channel])
+  @@index([locale])
+  @@index([status])
+  @@index([scheduledAt])
+}
+
+model MarketingLearning {
+  id             String   @id @default(auto()) @map("_id") @db.ObjectId
+  sourceType     String
+  sourceId       String?  @db.ObjectId
+  campaignId     String?
+  contentItemId  String?  @db.ObjectId
+  summary        String
+  recommendation String?
+  confidence     Int?
+  status         String   @default("DRAFT")
+  createdBy      String?  @db.ObjectId
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([sourceType, sourceId])
+  @@index([campaignId])
+  @@index([contentItemId])
+  @@index([status])
+}
+
+model ContentAdLink {
+  id            String   @id @default(auto()) @map("_id") @db.ObjectId
+  contentItemId String   @db.ObjectId
+  platform      String
+  campaignId    String?
+  adGroupId     String?
+  adId          String?
+  connectionId  String?  @db.ObjectId
+  notes         String?
+  createdBy     String?  @db.ObjectId
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([contentItemId])
+  @@index([platform])
+  @@index([campaignId])
+  @@index([adGroupId])
+  @@index([adId])
+  @@index([connectionId])
+}
+
+/* ===================== SHARED AI CORE FIRST SLICE ===================== */
+
+model AiOperationRun {
+  id                    String   @id @default(auto()) @map("_id") @db.ObjectId
+  action                String
+  context               String
+  requestedTool         String?
+  promptPreview         String?
+  input                 Json?
+  output                Json?
+  status                String   @default("DRAFT")
+  riskLevel             String   @default("LOW")
+  humanApprovalRequired Boolean  @default(true)
+  approvedBy            String?  @db.ObjectId
+  approvedAt            DateTime?
+  error                 String?
+  createdBy             String?  @db.ObjectId
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@index([context])
+  @@index([action])
+  @@index([requestedTool])
+  @@index([status])
+  @@index([riskLevel])
+  @@index([createdBy])
+  @@index([createdAt])
+}

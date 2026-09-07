@@ -1,0 +1,28 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/exchange-rates",
+      "schedule": "0 * * * *"
+    },
+    {
+      "path": "/api/cron/marketing-platform-sync",
+      "schedule": "15 */3 * * *"
+    },
+    {
+      "path": "/api/cron/communication-run-due",
+      "schedule": "*/10 * * * *"
+    },
+    {
+      "path": "/api/cron/communication-sync-email-events",
+      "schedule": "*/15 * * * *"
+    },
+    {
+      "path": "/api/cron/donation-reminders",
+      "schedule": "0 9 * * *"
+    },
+    {
+      "path": "/api/cron/reconcile-donations",
+      "schedule": "30 3 * * *"
+    }
+  ]
+}

@@ -1,0 +1,28 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "incremental": false
+  },
+  "include": [
+    "next-env.d.ts",
+    "types/**/*.d.ts",
+    "lib/dashboard/permissions.ts",
+    "lib/dashboard/nav-config.ts",
+    "lib/dashboard/page-access.ts",
+    "lib/dashboard/page-permission.ts",
+    "lib/dashboard/require-page-permission.ts",
+    "lib/dashboard/api-auth.ts",
+    "lib/blog/admin-editor-data-core.ts",
+    "lib/blog/admin-editor-data.ts",
+    "lib/content-localization/access.ts",
+    "app/(dashboard)/dashboard/campaigns/layout.tsx",
+    "app/(dashboard)/dashboard/categories/layout.tsx",
+    "app/(dashboard)/dashboard/blog/layout.tsx",
+    "app/(dashboard)/dashboard/_components/ContentLocalizationAuditCard.tsx",
+    "app/(dashboard)/dashboard/_components/ContentLocalizationPreviewDialog.tsx",
+    "app/api/admin/content-localization/audit/route.ts",
+    "app/api/admin/content-localization/preview/route.ts",
+    "app/api/admin/content-localization/arabic-bulk-proofread/route.ts"
+  ]
+}

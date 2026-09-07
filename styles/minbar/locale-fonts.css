@@ -1,0 +1,48 @@
+/* ─────────────────────────────────────────────────────────────────────────────
+ * Non-Latin locale fonts — ported from Minbar/locale-fonts.css
+ * ─────────────────────────────────────────────────────────────────────────────
+ * The identity type stack (Cairo/Almarai/Tajawal/Montserrat/Poppins) covers
+ * Arabic and Latin only. Three locales need glyphs outside it; without this file
+ * they render in a system fallback and read as unbranded and uneven in weight:
+ *
+ *   ja  Japanese → Noto Sans JP          (kana + kanji)
+ *   zh  Chinese  → Noto Sans SC          (simplified)
+ *   hi  Hindi    → Noto Sans Devanagari
+ *
+ * Loading is display=swap with a narrow weight set (400/700/900) because CJK
+ * files are large — the browser only fetches one when the locale is selected.
+ *
+ * Adding another non-Latin locale needs a family here plus an `[lang=".."]`
+ * rule below, and a line in LOCALIZATION_STATUS.md.
+ * ───────────────────────────────────────────────────────────────────────────── */
+
+@import url("https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700;900&family=Noto+Sans+SC:wght@400;700;900&family=Noto+Sans+Devanagari:wght@400;700;900&display=swap");
+
+/* Priority: locale font first, then the identity stack as the fallback for
+   digits and Latin glyphs (prices, currency symbols, IBAN) so those stay
+   consistent with the rest of the site. */
+html[lang="ja"] .mia-scope { font-family: "Noto Sans JP", Montserrat, Cairo, system-ui, sans-serif; }
+html[lang="zh"] .mia-scope { font-family: "Noto Sans SC", Montserrat, Cairo, system-ui, sans-serif; }
+html[lang="hi"] .mia-scope { font-family: "Noto Sans Devanagari", Montserrat, Cairo, system-ui, sans-serif; }
+
+/* Headings and controls carry an explicit font-family in their inline styles,
+   so those are overridden for these three locales only — never site-wide. */
+html[lang="ja"] .mia-scope :is(h1, h2, h3, button, input, select) {
+  font-family: "Noto Sans JP", Montserrat, sans-serif !important;
+}
+html[lang="zh"] .mia-scope :is(h1, h2, h3, button, input, select) {
+  font-family: "Noto Sans SC", Montserrat, sans-serif !important;
+}
+html[lang="hi"] .mia-scope :is(h1, h2, h3, button, input, select) {
+  font-family: "Noto Sans Devanagari", Montserrat, sans-serif !important;
+}
+
+/* CJK cannot take negative tracking: site headings use letter-spacing:-.01em,
+   which crowds Chinese and Japanese glyphs. Zeroed for those two only (not
+   Hindi — Devanagari has a Latin-like rhythm here), with a slightly looser
+   line for comfort. */
+html[lang="ja"] .mia-scope :is(h1, h2, h3),
+html[lang="zh"] .mia-scope :is(h1, h2, h3) { letter-spacing: 0 !important; }
+html[lang="ja"] .mia-scope p,
+html[lang="zh"] .mia-scope p,
+html[lang="hi"] .mia-scope p { line-height: 1.95; }

@@ -1,0 +1,36 @@
+import type { MarketingPerformanceRecord } from "./performance-types";
+
+export const marketingPerformanceRecords: MarketingPerformanceRecord[] = [
+  {
+    id: "perf_meta_gaza_video_sample",
+    title: "فيديو حملة غزة",
+    platform: "META",
+    campaignName: "Gaza Emergency - Video",
+    period: "آخر 7 أيام",
+    spend: 1250,
+    donations: 18,
+    donationValue: 9200,
+    clicks: 640,
+    impressions: 24800,
+    conversions: 18,
+    status: "ACTIVE",
+    owner: "فريق الإعلانات",
+    notes: "بيان تأسيسي قابل للتعديل أو الحذف.",
+  },
+  {
+    id: "perf_google_zakat_sample",
+    title: "صفحة الزكاة",
+    platform: "GOOGLE",
+    campaignName: "Zakat Search",
+    period: "آخر 7 أيام",
+    spend: 900,
+    donations: 11,
+    donationValue: 6100,
+    clicks: 310,
+    impressions: 8900,
+    conversions: 11,
+    status: "ACTIVE",
+    owner: "فريق الإعلانات",
+    notes: "لا توجد أي تعديلات تلقائية على الميزانية.",
+  },
+];

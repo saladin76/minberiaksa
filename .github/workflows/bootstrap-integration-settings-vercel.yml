@@ -1,0 +1,86 @@
+name: Bootstrap Integration Settings on Vercel
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - agent/secure-integration-settings-backend
+    paths:
+      - .github/workflows/bootstrap-integration-settings-vercel.yml
+      - scripts/bootstrap-integration-settings-vercel-ci.sh
+  pull_request:
+    branches:
+      - main
+    types:
+      - synchronize
+    paths:
+      - .github/workflows/bootstrap-integration-settings-vercel.yml
+      - scripts/bootstrap-integration-settings-vercel-ci.sh
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+
+concurrency:
+  group: bootstrap-integration-settings-vercel-agent-secure-integration-settings-backend
+  cancel-in-progress: true
+
+jobs:
+  bootstrap:
+    if: >-
+      (github.event_name == 'push' && github.ref == 'refs/heads/agent/secure-integration-settings-backend') ||
+      (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/agent/secure-integration-settings-backend') ||
+      (github.event_name == 'pull_request' && github.event.pull_request.number == 127 && github.head_ref == 'agent/secure-integration-settings-backend')
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      VERCEL_PROJECT_NAME: gozbebekleri
+      VERCEL_PROJECT_ID: prj_hkMyu8iABc7AAqF7T1DvYRpKYRqV
+      VERCEL_TEAM_SCOPE: gozbebekleri-dernek
+      VERCEL_TEAM_ID: team_zLLO1Hql8hFDCswcnpMMDCBj
+      TARGET_BRANCH: agent/secure-integration-settings-backend
+      SAFE_REPORT: ${{ runner.temp }}/bootstrap-integration-settings-summary.md
+
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v4
+        with:
+          ref: agent/secure-integration-settings-backend
+          fetch-depth: 1
+
+      - name: Use project Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Vercel CLI
+        run: npm install --global vercel@latest
+
+      - name: Bootstrap Vercel safely
+        shell: bash
+        run: bash scripts/bootstrap-integration-settings-vercel-ci.sh
+
+      - name: Publish sanitized result to PR
+        if: always()
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -Eeuo pipefail
+          if [[ ! -f "$SAFE_REPORT" ]]; then
+            cat > "$SAFE_REPORT" <<'REPORT'
+          ## Vercel Integration Settings Bootstrap
+
+          | Check | Result |
+          |---|---|
+          | Overall | BLOCKED |
+          | Blocker | WORKFLOW_FAILED_BEFORE_SANITIZED_REPORT |
+          REPORT
+          fi
+          gh pr comment 127 --repo AdhamRef/gozbebekleri --body-file "$SAFE_REPORT"

@@ -1,0 +1,62 @@
+import type { ScheduledContentItem } from "./scheduler-types";
+
+// Foundation scheduler data. Later this can be replaced by a Prisma-backed repository
+// while keeping the dashboard page and API contract stable.
+export const scheduledContentItems: ScheduledContentItem[] = [
+  {
+    id: "fri-gaza-whatsapp",
+    title: "رسالة واتساب لعطاء الجمعة - غزة",
+    channel: "WHATSAPP",
+    status: "SCHEDULED",
+    campaignTheme: "Friday Giving / Gaza",
+    scheduledFor: "الجمعة 10:00",
+    owner: "Marketing Team",
+    providerKey: "whatsapp",
+    contentUrl: "/dashboard/operations/production",
+    note: "تحتاج مراجعة نهائية للنص قبل الإرسال.",
+  },
+  {
+    id: "waqf-email-story",
+    title: "إيميل قصة وقف الأقصى",
+    channel: "EMAIL",
+    status: "READY",
+    campaignTheme: "Al-Quds Waqf",
+    scheduledFor: "الأحد 18:00",
+    owner: "Content Team",
+    providerKey: "email",
+    contentUrl: "/dashboard/operations/archive",
+    note: "جاهز للتسليم بعد مراجعة رابط التبرع.",
+  },
+  {
+    id: "ramadan-team-reminder",
+    title: "تذكير تجهيز خطة رمضان",
+    channel: "TEAM_REMINDER",
+    status: "SCHEDULED",
+    campaignTheme: "Ramadan Planning",
+    scheduledFor: "قبل رمضان بـ 45 يوم",
+    owner: "Operations Lead",
+    note: "تنبيه داخلي فقط، لا إرسال خارجي.",
+  },
+  {
+    id: "sms-zakat-reminder",
+    title: "SMS تذكير الزكاة",
+    channel: "SMS",
+    status: "BLOCKED",
+    campaignTheme: "Zakat",
+    scheduledFor: "الخميس 14:00",
+    owner: "Marketing Team",
+    providerKey: "netgsm",
+    note: "محجوب لحين اكتمال اتصال Netgsm وصحة القالب.",
+  },
+  {
+    id: "social-reel-proof",
+    title: "نشر Reel إثبات توزيع",
+    channel: "SOCIAL",
+    status: "DRAFT",
+    campaignTheme: "Proof / Impact",
+    scheduledFor: "الثلاثاء 20:30",
+    owner: "Media Team",
+    contentUrl: "/dashboard/operations/archive",
+    note: "يحتاج اختيار فيديو من الأرشيف وربطه بالحملة.",
+  },
+];

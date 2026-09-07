@@ -1,0 +1,71 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+model ContentItem {
+  id                 String    @id @default(auto()) @map("_id") @db.ObjectId
+  title              String
+  theme              String?
+  format             String
+  primaryLocale      String    @default("tr")
+  targetLocales      String[]  @default([])
+  proposedCopy       String?
+  copyByLocale       Json?
+  translationMode    String?
+  seo                Json?
+  relatedPostId      String?   @db.ObjectId
+  relatedCampaignIds String[]  @default([])
+  sourceType         String    @default("MANUAL")
+  sourceAssetId      String?   @db.ObjectId
+  sourceProjectId    String?   @db.ObjectId
+  designUrl          String?
+  videoUrl           String?
+  figmaUrl           String?
+  driveUrl           String?
+  finalAssetUrl      String?
+  assignedTo         String?   @db.ObjectId
+  dueAt              DateTime?
+  publishAt          DateTime?
+  status             String    @default("IDEA")
+  progress           Int       @default(0)
+  reviewStatus       String    @default("PENDING")
+  createdBy          String?   @db.ObjectId
+  updatedBy          String?   @db.ObjectId
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  @@index([format])
+  @@index([status])
+  @@index([reviewStatus])
+  @@index([primaryLocale])
+  @@index([assignedTo])
+  @@index([dueAt])
+  @@index([publishAt])
+  @@index([sourceType, sourceAssetId])
+  @@index([sourceType, sourceProjectId])
+}
+
+model ContentPublication {
+  id            String    @id @default(auto()) @map("_id") @db.ObjectId
+  contentItemId String?   @db.ObjectId
+  platform      String
+  status        String    @default("PENDING")
+  publishedUrl  String?
+  scheduledAt   DateTime?
+  publishedAt   DateTime?
+  checkedBy     String?   @db.ObjectId
+  notes         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([contentItemId])
+  @@index([platform])
+  @@index([status])
+  @@index([scheduledAt])
+  @@index([publishedAt])
+}

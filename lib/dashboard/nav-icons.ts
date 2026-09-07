@@ -1,0 +1,56 @@
+import {
+  Activity, Archive, Award, BarChart3, Briefcase, Calendar, Contact, FileClock,
+  FileStack, Globe, Heart, HeartHandshake, HeartPulse, History, Images, Inbox,
+  Landmark, LayoutDashboard, LayoutTemplate, Lightbulb, Link2, ListChecks, Mail,
+  Megaphone, MessageCircle, MessageSquare, PenLine, Plug, Radar, Repeat, ScrollText, Send,
+  Server, Settings, Target, Ticket, TrendingUp, UserCog, Users, Webhook,
+  type LucideIcon,
+} from "lucide-react";
+
+// Kept as a name->component registry rather than putting `LucideIcon` values directly in
+// nav-config.ts, so nav-config stays a plain serialisable data module that server
+// components (the team permissions page) can import without dragging in icon components.
+export const NAV_ICONS = {
+  activity: Activity,
+  archive: Archive,
+  award: Award,
+  barChart: BarChart3,
+  briefcase: Briefcase,
+  calendar: Calendar,
+  contact: Contact,
+  fileClock: FileClock,
+  fileStack: FileStack,
+  globe: Globe,
+  heart: Heart,
+  heartHandshake: HeartHandshake,
+  heartPulse: HeartPulse,
+  history: History,
+  images: Images,
+  inbox: Inbox,
+  landmark: Landmark,
+  layoutDashboard: LayoutDashboard,
+  layoutTemplate: LayoutTemplate,
+  lightbulb: Lightbulb,
+  link: Link2,
+  listChecks: ListChecks,
+  mail: Mail,
+  megaphone: Megaphone,
+  messageCircle: MessageCircle,
+  messageSquare: MessageSquare,
+  penLine: PenLine,
+  plug: Plug,
+  radar: Radar,
+  repeat: Repeat,
+  scrollText: ScrollText,
+  send: Send,
+  server: Server,
+  settings: Settings,
+  target: Target,
+  ticket: Ticket,
+  trendingUp: TrendingUp,
+  userCog: UserCog,
+  users: Users,
+  webhook: Webhook,
+} satisfies Record<string, LucideIcon>;
+
+export type NavIconName = keyof typeof NAV_ICONS;

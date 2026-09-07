@@ -1,0 +1,14 @@
+[production]
+# Bumped to versions that support Array.prototype.at, Object.hasOwn, etc.
+# natively, which lets SWC drop ~14 KiB of inline polyfills from our chunks.
+Chrome >= 93
+Firefox >= 92
+Safari >= 15.4
+Edge >= 93
+not IE 11
+not op_mini all
+
+[development]
+last 1 chrome version
+last 1 firefox version
+last 1 safari version
