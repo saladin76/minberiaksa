@@ -7,7 +7,7 @@ import { Link } from '@/i18n/routing';
 import { Heart, ArrowRight } from 'lucide-react';
 import GoogleSignInButton from '@/components/GoogleSignInButton';
 
-const LOGO_URL = '/yedicijan_logo.png';
+const LOGO_URL = '/logometaminber.avif';
 
 export default function SignIn() {
   const locale = useLocale();

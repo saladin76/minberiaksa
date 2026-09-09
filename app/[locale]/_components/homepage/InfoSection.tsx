@@ -3,7 +3,7 @@ import Image from "next/image";
 
 const sections = [
   {
-    title: "عن يدي جيهان",
+    title: "عن منبر الأقصي",
     description: "تنمية قدرات الفرد، وتوفير الدعم لمستحقيه من أجل مجتمع أفضل.",
     image: "/who-are-us.jpg", // استبدل بمسار الصورة الفعلي
     link: "/about-us",

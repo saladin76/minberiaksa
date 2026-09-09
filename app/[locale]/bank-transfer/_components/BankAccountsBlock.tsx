@@ -22,7 +22,7 @@ interface Bank {
   logo?: string;
 }
 
-const ACCOUNT_HOLDER = "Yedicihan Uluslararası Yardımlaşma Derneği";
+const ACCOUNT_HOLDER = "Minberiaksa Uluslararası Yardımlaşma Derneği";
 
 const BANKS: Bank[] = [
   {
@@ -180,8 +180,8 @@ export default function BankAccountsBlock() {
       ))}
       <p className="text-center text-sm text-gray-400 pt-2">
         {t("footer")}{" "}
-        <a href="mailto:info@yedicihan.org" className="text-[#A5243D] font-semibold hover:underline">
-          info@yedicihan.org
+        <a href="mailto:info@minberiaksa.org" className="text-[#A5243D] font-semibold hover:underline">
+          info@minberiaksa.org
         </a>
       </p>
     </div>

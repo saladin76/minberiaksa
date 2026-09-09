@@ -51,7 +51,7 @@ test("Elastic Email field validation rejects bad values", () => {
 test("transactional payload matches the Elastic Email v4 contract", () => {
   const payload = buildElasticEmailPayload(
     { to: "donor@example.org", subject: "شكرًا لتبرعك", html: "<p>شكرًا</p>", text: "شكرًا" },
-    { email: "noreply@yedicihan.org.tr", name: "Gözbebekleri" }
+    { email: "noreply@minberiaksa.org.tr", name: "Gözbebekleri" }
   ) as {
     Recipients: { To: string[] };
     Content: { From: string; Subject: string; Body: { ContentType: string; Content: string; Charset: string }[] };
@@ -59,7 +59,7 @@ test("transactional payload matches the Elastic Email v4 contract", () => {
   };
 
   assert.deepEqual(payload.Recipients.To, ["donor@example.org"]);
-  assert.equal(payload.Content.From, "Gözbebekleri <noreply@yedicihan.org.tr>");
+  assert.equal(payload.Content.From, "Gözbebekleri <noreply@minberiaksa.org.tr>");
   assert.equal(payload.Content.Subject, "شكرًا لتبرعك");
   assert.deepEqual(payload.Content.Body.map((part) => part.ContentType), ["HTML", "PlainText"]);
   assert.equal(payload.Content.Body[0].Charset, "utf-8");
@@ -246,7 +246,7 @@ const LIVE_EVENT_FEED = [
   {
     TransactionID: "f01ce91d-22a4-823d-001d-aef4225c5024",
     MsgID: "ho3apRyH2qK9s5TBPlMkew2",
-    FromEmail: "info@yedicihan.org",
+    FromEmail: "info@minberiaksa.org",
     To: "salahelnabtity@gamil.com",
     EventType: "Suppress",
     EventDate: "2026-08-06T12:47:46Z",
@@ -256,7 +256,7 @@ const LIVE_EVENT_FEED = [
   {
     TransactionID: "f01ce904-1ea4-0149-c004-dced3b45495b",
     MsgID: "oxqUU2gsBIPZ_UwdTz2w8g2",
-    FromEmail: "info@yedicihan.org",
+    FromEmail: "info@minberiaksa.org",
     To: "theaxhunter303@gmail.com",
     EventType: "Error",
     EventDate: "2026-08-06T12:47:41Z",

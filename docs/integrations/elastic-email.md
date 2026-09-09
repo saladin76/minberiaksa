@@ -29,7 +29,7 @@ Readiness helper for env-only checks: `getElasticEmailConfig()` in `lib/communic
   {
     "Recipients": { "To": ["donor@example.org"] },
     "Content": {
-      "From": "Gözbebekleri <noreply@yedicihan.org.tr>",
+      "From": "Gözbebekleri <noreply@minberiaksa.org.tr>",
       "Subject": "…",
       "Body": [
         { "ContentType": "HTML", "Content": "…", "Charset": "utf-8" },

@@ -161,12 +161,12 @@ test("Elastic Email tester confirms the sender domain is verified without sendin
   const calls: string[] = [];
   const fakeFetch: ProviderFetch = async (input) => {
     calls.push(String(input));
-    return response(200, [{ Domain: "yedicihan.org.tr", Spf: true, Dkim: true }]);
+    return response(200, [{ Domain: "minberiaksa.org.tr", Spf: true, Dkim: true }]);
   };
   const result = await new ElasticEmailConnectionTester(fakeFetch).test({
     provider: "ELASTIC_EMAIL",
     candidateVersion: null,
-    values: { API_KEY: "elastic-api-key-1234567890", SENDER_EMAIL: "noreply@yedicihan.org.tr" },
+    values: { API_KEY: "elastic-api-key-1234567890", SENDER_EMAIL: "noreply@minberiaksa.org.tr" },
   });
   assert.equal(result.success, true);
   assert.deepEqual(calls, ["https://api.elasticemail.com/v4/domains"]);
@@ -177,11 +177,11 @@ test("Elastic Email tester accepts a domain verified for one sender address", as
   // Real response shape from the live account: a sender-scoped verification carries the address
   // inline, which an exact string compare against the bare domain can never match.
   const fakeFetch: ProviderFetch = async () =>
-    response(200, [{ Domain: "yedicihan.org.tr (info@yedicihan.org.tr)", Spf: true, Dkim: true }]);
+    response(200, [{ Domain: "minberiaksa.org.tr (info@minberiaksa.org.tr)", Spf: true, Dkim: true }]);
   const result = await new ElasticEmailConnectionTester(fakeFetch).test({
     provider: "ELASTIC_EMAIL",
     candidateVersion: null,
-    values: { API_KEY: "elastic-api-key-1234567890", SENDER_EMAIL: "info@yedicihan.org.tr" },
+    values: { API_KEY: "elastic-api-key-1234567890", SENDER_EMAIL: "info@minberiaksa.org.tr" },
   });
   assert.equal(result.success, true);
 });
@@ -191,7 +191,7 @@ test("Elastic Email tester fails when the sender domain is not verified", async 
   const result = await new ElasticEmailConnectionTester(fakeFetch).test({
     provider: "ELASTIC_EMAIL",
     candidateVersion: null,
-    values: { API_KEY: "elastic-api-key-1234567890", SENDER_EMAIL: "noreply@yedicihan.org.tr" },
+    values: { API_KEY: "elastic-api-key-1234567890", SENDER_EMAIL: "noreply@minberiaksa.org.tr" },
   });
   assert.equal(result.success, false);
   assert.equal(result.failureCode, "ELASTIC_EMAIL_SENDER_DOMAIN_NOT_VERIFIED");
@@ -202,7 +202,7 @@ test("Elastic Email tester reports an invalid key without leaking it", async () 
   const result = await new ElasticEmailConnectionTester(fakeFetch).test({
     provider: "ELASTIC_EMAIL",
     candidateVersion: null,
-    values: { API_KEY: "elastic-secret-key-value-000", SENDER_EMAIL: "noreply@yedicihan.org.tr" },
+    values: { API_KEY: "elastic-secret-key-value-000", SENDER_EMAIL: "noreply@minberiaksa.org.tr" },
   });
   assert.equal(result.success, false);
   assert.equal(result.failureCode, "ELASTIC_EMAIL_UNAUTHORIZED");
@@ -214,7 +214,7 @@ test("Elastic Email tester tolerates a send-scoped key that cannot list domains"
   const result = await new ElasticEmailConnectionTester(fakeFetch).test({
     provider: "ELASTIC_EMAIL",
     candidateVersion: null,
-    values: { API_KEY: "elastic-api-key-1234567890", SENDER_EMAIL: "noreply@yedicihan.org.tr" },
+    values: { API_KEY: "elastic-api-key-1234567890", SENDER_EMAIL: "noreply@minberiaksa.org.tr" },
   });
   assert.equal(result.success, true);
   assert.match(result.messageAr, /لم يتم التحقق من توثيق نطاق المرسل/);
@@ -229,7 +229,7 @@ test("Elastic Email tester treats HTTP 400 'Access Denied' as a scope limit, not
   const result = await new ElasticEmailConnectionTester(fakeFetch).test({
     provider: "ELASTIC_EMAIL",
     candidateVersion: null,
-    values: { API_KEY: "elastic-api-key-1234567890", SENDER_EMAIL: "noreply@yedicihan.org.tr" },
+    values: { API_KEY: "elastic-api-key-1234567890", SENDER_EMAIL: "noreply@minberiaksa.org.tr" },
   });
   assert.equal(result.success, true);
   assert.match(result.messageAr, /لم يتم التحقق من توثيق نطاق المرسل/);
@@ -240,7 +240,7 @@ test("Elastic Email tester reports HTTP 400 'APIKey Expired' as an invalid key",
   const result = await new ElasticEmailConnectionTester(fakeFetch).test({
     provider: "ELASTIC_EMAIL",
     candidateVersion: null,
-    values: { API_KEY: "elastic-api-key-1234567890", SENDER_EMAIL: "noreply@yedicihan.org.tr" },
+    values: { API_KEY: "elastic-api-key-1234567890", SENDER_EMAIL: "noreply@minberiaksa.org.tr" },
   });
   assert.equal(result.success, false);
   assert.equal(result.failureCode, "ELASTIC_EMAIL_UNAUTHORIZED");
@@ -251,7 +251,7 @@ test("Elastic Email tester still fails loudly on a genuine server error", async 
   const result = await new ElasticEmailConnectionTester(fakeFetch).test({
     provider: "ELASTIC_EMAIL",
     candidateVersion: null,
-    values: { API_KEY: "elastic-api-key-1234567890", SENDER_EMAIL: "noreply@yedicihan.org.tr" },
+    values: { API_KEY: "elastic-api-key-1234567890", SENDER_EMAIL: "noreply@minberiaksa.org.tr" },
   });
   assert.equal(result.success, false);
   assert.equal(result.failureCode, "ELASTIC_EMAIL_ACCOUNT_UNAVAILABLE");

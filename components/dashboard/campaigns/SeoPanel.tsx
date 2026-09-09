@@ -204,7 +204,7 @@ export function SeoPanel({ campaignId }: { campaignId: string }) {
                     <Search className="h-4 w-4" />
                     معاينة Google
                   </div>
-                  <div className="text-xs text-green-700">yedicihan.org › campaigns › ...</div>
+                  <div className="text-xs text-green-700">minberiaksa.org › campaigns › ...</div>
                   <div className="mt-1 line-clamp-2 text-lg text-blue-700">{googleTitle}</div>
                   <div className="mt-1 line-clamp-3 text-sm text-gray-600">{googleDescription}</div>
                 </div>

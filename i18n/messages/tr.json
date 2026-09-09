@@ -170,14 +170,14 @@
     "communityImpact": "Toplumsal Etki",
     "faq1Question": "Gönüllü olarak nasıl katılabilirim?",
     "faq1Answer": "Web sitemizdeki formu doldurarak başvuru yapabilirsiniz. Sonrasında ilk yönlendirme ve gerekli adımlar hakkında size bilgi verilecektir.",
-    "faq2Question": "Yedicihan ekibinde gönüllülük ücretli mi?",
+    "faq2Question": "Minberiaksa ekibinde gönüllülük ücretli mi?",
     "faq2Answer": "Hayır, gönüllülük tamamen ücretsizdir. Bazı programlarda aktif gönüllüler için ulaşım desteği veya teşekkür hediyeleri sağlanabilir.",
     "faq3Question": "Projelere gönüllüler nasıl seçilir?",
     "faq3Answer": "Seçim; uzmanlık alanı, coğrafi konum ve uygunluk gibi kriterlere göre yapılır. Her gönüllüyü en uygun görevle buluşturmaya çalışıyoruz.",
     "faq4Question": "Uzaktan gönüllü olabilir miyim?",
     "faq4Answer": "Evet. İçerik yönetimi, grafik tasarım, dijital pazarlama ve destekçilerle iletişim gibi alanlarda uzaktan gönüllülük imkanlarımız bulunmaktadır.",
     "faq5Question": "Kendi girişimimi nasıl önerebilirim?",
-    "faq5Answer": "İnsani bir proje fikriniz varsa, Yedicihan ekibi kaynak ve lojistik destek sağlayarak fikrinizi hayata geçirmenize yardımcı olabilir.",
+    "faq5Answer": "İnsani bir proje fikriniz varsa, Minberiaksa ekibi kaynak ve lojistik destek sağlayarak fikrinizi hayata geçirmenize yardımcı olabilir.",
     "featuredProjects": "Öne Çıkan Projeler",
     "currentProjects": "Güncel Projeler",
     "viewAll": "Tümünü Gör",
@@ -228,7 +228,7 @@
     "loadError": "Projeler yüklenemedi. Lütfen tekrar deneyin."
   },
   "QuickDonate": {
-    "associationName": "Yedicihan Yardımlaşma ve Dayanışma Derneği",
+    "associationName": "Minberiaksa Yardımlaşma ve Dayanışma Derneği",
     "hadithQuote": "Allah Resulü ﷺ buyurdu",
     "hadithText": "Sadakanın en hayırlısı, az da olsa sürekli olanıdır.",
     "description": "Aylık bağış, geçici yardımı kalıcı bir güvene dönüştürür: her ay ulaşan gıda, başların üstünde kalan bir çatı ve yarıda kesilmeyen bir tedavi. Tutarını seç; biz en çok ihtiyaç duyan ailelere ulaştıralım.",
@@ -262,7 +262,7 @@
   },
   "Footer": {
     "aboutUsDesc1": "1961’den bu yana hizmet veren, kamu yararına çalışan bir yardımlaşma derneği.",
-    "description": "Yedicihan Uluslararası Yardımlaşma Derneği, 1961’den bu yana sağlık, acil yardım, afet ve eğitim alanlarında ihtiyaç sahiplerinin yanında olan, kamu yararına çalışan bir dernektir.",
+    "description": "Minberiaksa Uluslararası Yardımlaşma Derneği, 1961’den bu yana sağlık, acil yardım, afet ve eğitim alanlarında ihtiyaç sahiplerinin yanında olan, kamu yararına çalışan bir dernektir.",
     "messageTitle": "Bize mesaj gönderin",
     "messageDesc": "Bir sorunuz veya öneriniz mi var? Bize ulaşın, en kısa sürede size dönelim.",
     "messagePlaceholder": "Mesajınızı buraya yazın...",
@@ -281,14 +281,14 @@
     "quickLinks": "Hızlı Bağlantılar",
     "categories": "Kampanyalar",
     "contactUs": "İletişim",
-    "copyright": "© {year} Yedicihan. Tüm hakları saklıdır.",
+    "copyright": "© {year} Minberiaksa. Tüm hakları saklıdır.",
     "developedBy": "2026'da geliştirildi"
   },
   "AboutUs": {
     "pageTitle": "Hakkımızda",
-    "associationName": "Yedicihan Uluslararası Yardımlaşma Derneği",
+    "associationName": "Minberiaksa Uluslararası Yardımlaşma Derneği",
     "aboutUsTitle": "Biz Kimiz?",
-    "aboutUsDesc1": "Yedicihan Uluslararası Yardımlaşma Derneği, başta Haydarpaşa Numune Hastanesi’nin imkânlarının geliştirilmesi olmak üzere sağlık alanında pek çok faaliyet yürütmüştür. Türkiye’de sağlık sisteminin aksadığı yıllarda, maddi imkânları kısıtlı hastalara hem muayene süreçlerinde hem de ilaç temininde destek olunmuştur. Bir grup doktor ve hemşirenin bir araya gelerek 09/11/1961 tarihinde hizmete açtığı bu hayır kapısı, altmış yılı aşkın süredir gururla hizmet etmektedir.",
+    "aboutUsDesc1": "Minberiaksa Uluslararası Yardımlaşma Derneği, başta Haydarpaşa Numune Hastanesi’nin imkânlarının geliştirilmesi olmak üzere sağlık alanında pek çok faaliyet yürütmüştür. Türkiye’de sağlık sisteminin aksadığı yıllarda, maddi imkânları kısıtlı hastalara hem muayene süreçlerinde hem de ilaç temininde destek olunmuştur. Bir grup doktor ve hemşirenin bir araya gelerek 09/11/1961 tarihinde hizmete açtığı bu hayır kapısı, altmış yılı aşkın süredir gururla hizmet etmektedir.",
     "aboutUsDesc2": "Derneğimiz, samimi ve gayretli çalışmaları neticesinde 10/08/1963 tarih ve 6/2090 sayılı Bakanlar Kurulu Kararı ile “Kamu Yararına Çalışan Dernekler Statüsü” kazanmıştır. Dünyanın bir köşesindeki savaşın veya doğal afetin tüm dünyayı etkileyebildiği bir dönemde, 2023 yılındaki kongremizde alınan yönetim ve tüzük değişikliği kararıyla faaliyet alanımız doğal afetler, acil yardım ve eğitim yardımları gibi alanları da kapsayacak şekilde genişletilmiştir.",
     "beneficiaries": "Yararlanıcılar",
     "vision": "Vizyonumuz",
@@ -301,7 +301,7 @@
     "goalsSubtitle": "Daha İyi Bir Gelecek İçin",
     "presidentMessage": "Başkanın Mesajı",
     "presidentTitle": "Derneğimizden Bir Mesaj",
-    "presidentName": "Yedicihan Uluslararası Yardımlaşma Derneği",
+    "presidentName": "Minberiaksa Uluslararası Yardımlaşma Derneği",
     "presidentPosition": "Yönetim Kurulu",
     "ctaTitle": "Değişimin Parçası Olun",
     "ctaDesc": "Dünya genelinde çocuklar için daha iyi bir gelecek inşa etme yolculuğumuzda bize katılın.",
@@ -358,7 +358,7 @@
     "whatsapp": "WhatsApp"
   },
   "Blog": {
-    "metaTitleSuffix": " - Yedicihan",
+    "metaTitleSuffix": " - Minberiaksa",
     "sharePost": "Yazıyı Paylaş",
     "similarPosts": "Benzer Yazılar",
     "relatedCampaign": "İlgili Projeler",
@@ -502,7 +502,7 @@
     "viewAllInCategory": "Tümünü gör"
   },
   "SignInDialog": {
-    "welcomeTitle": "Yedicihan Platformuna Hoş Geldiniz",
+    "welcomeTitle": "Minberiaksa Platformuna Hoş Geldiniz",
     "welcomeSubtitle": "Devam etmek ve iyiliği paylaşmak için giriş yapın.",
     "checkoutTitle": "Sadece kısa bir adım",
     "checkoutSubtitle": "Şimdi giriş yapın; ardından ödeme adımına geri döneceksiniz.",

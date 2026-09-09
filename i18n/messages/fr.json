@@ -170,14 +170,14 @@
     "communityImpact": "Impact social",
     "faq1Question": "Comment puis-je devenir bénévole ?",
     "faq1Answer": "Vous pouvez vous inscrire via notre site en remplissant le formulaire prévu à cet effet. Vous recevrez ensuite un message indiquant les prochaines étapes et les informations d'orientation.",
-    "faq2Question": "Le bénévolat au sein de l'équipe Yedicihan est-il rémunéré ?",
+    "faq2Question": "Le bénévolat au sein de l'équipe Minberiaksa est-il rémunéré ?",
     "faq2Answer": "Non, le bénévolat est généralement non rémunéré. Toutefois, certains programmes peuvent proposer une aide au transport ou une marque de reconnaissance aux bénévoles actifs.",
     "faq3Question": "Comment les bénévoles sont-ils sélectionnés pour les projets ?",
     "faq3Answer": "La sélection dépend de plusieurs critères, notamment les compétences, la localisation et la disponibilité. Nous cherchons à orienter chaque bénévole vers la mission la plus adaptée.",
     "faq4Question": "Puis-je faire du bénévolat à distance ?",
     "faq4Answer": "Oui. Nous proposons des missions de bénévolat à distance, notamment en gestion de contenu, design graphique, marketing numérique et communication avec les partenaires.",
     "faq5Question": "Comment proposer ma propre initiative ?",
-    "faq5Answer": "Si vous avez une idée de projet humanitaire, l'équipe Yedicihan peut vous accompagner dans sa mise en œuvre en apportant des ressources et un soutien logistique.",
+    "faq5Answer": "Si vous avez une idée de projet humanitaire, l'équipe Minberiaksa peut vous accompagner dans sa mise en œuvre en apportant des ressources et un soutien logistique.",
     "featuredProjects": "Projets à la une",
     "currentProjects": "Projets en cours",
     "viewAll": "Voir tout",
@@ -228,7 +228,7 @@
     "loadError": "Impossible de charger les projets. Veuillez réessayer."
   },
   "QuickDonate": {
-    "associationName": "Association de secours et de solidarité Yedicihan",
+    "associationName": "Association de secours et de solidarité Minberiaksa",
     "hadithQuote": "Le Messager d'Allah ﷺ a dit",
     "hadithText": "La meilleure aumône est celle qui dure, même si elle est modeste.",
     "description": "Un don mensuel transforme un secours passager en sécurité durable : de la nourriture qui arrive chaque mois, un toit qui tient, des soins qui ne s'arrêtent pas à mi-chemin. Choisissez votre montant, nous l'acheminons aux familles qui en ont le plus besoin.",
@@ -262,7 +262,7 @@
   },
   "Footer": {
     "aboutUsDesc1": "Une association de solidarité d'utilité publique au service depuis 1961.",
-    "description": "L'Association Internationale de Solidarité Yedicihan est une association d'utilité publique qui se tient aux côtés des personnes dans le besoin depuis 1961, dans la santé, l'aide d'urgence, la réponse aux catastrophes et l'éducation.",
+    "description": "L'Association Internationale de Solidarité Minberiaksa est une association d'utilité publique qui se tient aux côtés des personnes dans le besoin depuis 1961, dans la santé, l'aide d'urgence, la réponse aux catastrophes et l'éducation.",
     "messageTitle": "Envoyez-nous un message",
     "messageDesc": "Une question ou une suggestion ? Contactez-nous et nous vous répondrons rapidement.",
     "messagePlaceholder": "Écrivez votre message ici...",
@@ -281,14 +281,14 @@
     "quickLinks": "Liens rapides",
     "categories": "Campagnes",
     "contactUs": "Contact",
-    "copyright": "© {year} Yedicihan. Tous droits réservés.",
+    "copyright": "© {year} Minberiaksa. Tous droits réservés.",
     "developedBy": "Développé en 2026"
   },
   "AboutUs": {
     "pageTitle": "À propos",
-    "associationName": "Association Internationale de Solidarité Yedicihan",
+    "associationName": "Association Internationale de Solidarité Minberiaksa",
     "aboutUsTitle": "Qui sommes-nous ?",
-    "aboutUsDesc1": "L'Association Internationale de Solidarité Yedicihan a commencé son action dans le domaine de la santé, notamment en contribuant au développement des moyens de l'hôpital Haydarpaşa Numune. Durant les années où le système de santé turc était sous tension, l'association a aidé les patients aux ressources limitées, tant pour leurs consultations que pour l'achat de leurs médicaments. Ouverte le 9 novembre 1961 par un groupe de médecins et d'infirmiers, cette porte de bienfaisance sert avec fierté depuis plus de soixante ans.",
+    "aboutUsDesc1": "L'Association Internationale de Solidarité Minberiaksa a commencé son action dans le domaine de la santé, notamment en contribuant au développement des moyens de l'hôpital Haydarpaşa Numune. Durant les années où le système de santé turc était sous tension, l'association a aidé les patients aux ressources limitées, tant pour leurs consultations que pour l'achat de leurs médicaments. Ouverte le 9 novembre 1961 par un groupe de médecins et d'infirmiers, cette porte de bienfaisance sert avec fierté depuis plus de soixante ans.",
     "aboutUsDesc2": "En reconnaissance de ce travail sincère et constant, l'association a obtenu le statut d'« association d'utilité publique » par la décision du Conseil des ministres n° 6/2090 du 10 août 1963. À une époque où une guerre ou une catastrophe naturelle survenue à l'autre bout du monde peut nous affecter tous, notre congrès de 2023 a adopté des modifications de gouvernance et de statuts élargissant notre champ d'action aux catastrophes naturelles, à l'aide d'urgence et à l'aide à l'éducation.",
     "beneficiaries": "Bénéficiaires",
     "vision": "Notre vision",
@@ -301,7 +301,7 @@
     "goalsSubtitle": "Pour un avenir meilleur",
     "presidentMessage": "Message du président",
     "presidentTitle": "Un message de l'association",
-    "presidentName": "Association Internationale de Solidarité Yedicihan",
+    "presidentName": "Association Internationale de Solidarité Minberiaksa",
     "presidentPosition": "Conseil d'administration",
     "ctaTitle": "Faites partie du changement",
     "ctaDesc": "Rejoignez-nous pour bâtir un avenir meilleur pour les enfants du monde entier.",
@@ -358,7 +358,7 @@
     "whatsapp": "WhatsApp"
   },
   "Blog": {
-    "metaTitleSuffix": " - Yedicihan",
+    "metaTitleSuffix": " - Minberiaksa",
     "sharePost": "Partager l'article",
     "similarPosts": "Articles similaires",
     "relatedCampaign": "Projet associé",
@@ -502,7 +502,7 @@
     "viewAllInCategory": "Voir tout"
   },
   "SignInDialog": {
-    "welcomeTitle": "Bienvenue sur la plateforme Yedicihan",
+    "welcomeTitle": "Bienvenue sur la plateforme Minberiaksa",
     "welcomeSubtitle": "Connectez-vous pour continuer et partager le bien.",
     "checkoutTitle": "Une dernière étape rapide",
     "checkoutSubtitle": "Connectez-vous maintenant, puis vous reviendrez directement au paiement.",

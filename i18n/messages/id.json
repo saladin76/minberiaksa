@@ -170,14 +170,14 @@
     "communityImpact": "Dampak Sosial",
     "faq1Question": "Bagaimana saya bisa bergabung sebagai relawan?",
     "faq1Answer": "Anda dapat mendaftar melalui situs kami dengan mengisi formulir yang tersedia. Setelah itu, Anda akan menerima pesan berisi langkah berikutnya dan informasi orientasi awal.",
-    "faq2Question": "Apakah relawan di tim Yedicihan dibayar?",
+    "faq2Question": "Apakah relawan di tim Minberiaksa dibayar?",
     "faq2Answer": "Tidak, kegiatan relawan pada dasarnya tidak berbayar. Namun, pada beberapa program, relawan aktif dapat menerima dukungan transportasi atau bentuk apresiasi tertentu.",
     "faq3Question": "Bagaimana relawan dipilih untuk proyek?",
     "faq3Answer": "Pemilihan relawan bergantung pada beberapa faktor, seperti keahlian, lokasi, dan ketersediaan waktu. Kami berupaya menempatkan setiap relawan pada tugas yang paling sesuai.",
     "faq4Question": "Bisakah saya menjadi relawan jarak jauh?",
     "faq4Answer": "Ya. Kami memiliki peluang relawan digital, seperti manajemen konten, desain grafis, pemasaran digital, dan komunikasi dengan para pendukung.",
     "faq5Question": "Bagaimana saya bisa mengusulkan inisiatif sendiri?",
-    "faq5Answer": "Jika Anda memiliki ide proyek kemanusiaan, tim Yedicihan dapat membantu mewujudkannya melalui dukungan sumber daya dan logistik.",
+    "faq5Answer": "Jika Anda memiliki ide proyek kemanusiaan, tim Minberiaksa dapat membantu mewujudkannya melalui dukungan sumber daya dan logistik.",
     "featuredProjects": "Proyek Unggulan",
     "currentProjects": "Proyek Saat Ini",
     "viewAll": "Lihat Semua",
@@ -228,7 +228,7 @@
     "loadError": "Gagal memuat proyek. Silakan coba lagi."
   },
   "QuickDonate": {
-    "associationName": "Asosiasi Bantuan dan Solidaritas Yedicihan",
+    "associationName": "Asosiasi Bantuan dan Solidaritas Minberiaksa",
     "hadithQuote": "Rasulullah ﷺ bersabda",
     "hadithText": "Sedekah terbaik adalah yang berkelanjutan, meskipun sedikit.",
     "description": "Donasi bulanan mengubah bantuan sesaat menjadi rasa aman yang bertahan: makanan yang datang setiap bulan, atap yang tetap berdiri, dan pengobatan yang tidak berhenti di tengah jalan. Pilih jumlahnya, dan kami antarkan kepada keluarga yang paling membutuhkan.",
@@ -262,7 +262,7 @@
   },
   "Footer": {
     "aboutUsDesc1": "Asosiasi solidaritas untuk kepentingan umum, melayani sejak 1961.",
-    "description": "Asosiasi Solidaritas Internasional Yedicihan adalah perkumpulan untuk kepentingan umum yang mendampingi mereka yang membutuhkan sejak 1961, di bidang kesehatan, bantuan darurat, penanganan bencana, dan pendidikan.",
+    "description": "Asosiasi Solidaritas Internasional Minberiaksa adalah perkumpulan untuk kepentingan umum yang mendampingi mereka yang membutuhkan sejak 1961, di bidang kesehatan, bantuan darurat, penanganan bencana, dan pendidikan.",
     "messageTitle": "Kirim pesan kepada kami",
     "messageDesc": "Ada pertanyaan atau saran? Hubungi kami dan kami akan segera membalas.",
     "messagePlaceholder": "Tulis pesan Anda di sini...",
@@ -281,14 +281,14 @@
     "quickLinks": "Tautan Cepat",
     "categories": "Kampanye",
     "contactUs": "Hubungi Kami",
-    "copyright": "© {year} Yedicihan. Seluruh hak dilindungi.",
+    "copyright": "© {year} Minberiaksa. Seluruh hak dilindungi.",
     "developedBy": "Dikembangkan pada 2026"
   },
   "AboutUs": {
     "pageTitle": "Tentang Kami",
-    "associationName": "Asosiasi Solidaritas Internasional Yedicihan",
+    "associationName": "Asosiasi Solidaritas Internasional Minberiaksa",
     "aboutUsTitle": "Siapa Kami?",
-    "aboutUsDesc1": "Asosiasi Solidaritas Internasional Yedicihan memulai kiprahnya di bidang kesehatan, terutama dengan membantu mengembangkan fasilitas Rumah Sakit Haydarpaşa Numune. Pada tahun-tahun ketika sistem kesehatan Turki berada di bawah tekanan, asosiasi mendampingi pasien dengan keterbatasan biaya, baik dalam proses pemeriksaan maupun dalam pengadaan obat. Dibuka pada 9 November 1961 oleh sekelompok dokter dan perawat, pintu kebaikan ini telah melayani dengan bangga selama lebih dari enam puluh tahun.",
+    "aboutUsDesc1": "Asosiasi Solidaritas Internasional Minberiaksa memulai kiprahnya di bidang kesehatan, terutama dengan membantu mengembangkan fasilitas Rumah Sakit Haydarpaşa Numune. Pada tahun-tahun ketika sistem kesehatan Turki berada di bawah tekanan, asosiasi mendampingi pasien dengan keterbatasan biaya, baik dalam proses pemeriksaan maupun dalam pengadaan obat. Dibuka pada 9 November 1961 oleh sekelompok dokter dan perawat, pintu kebaikan ini telah melayani dengan bangga selama lebih dari enam puluh tahun.",
     "aboutUsDesc2": "Sebagai pengakuan atas kerja yang tulus dan berkesinambungan itu, asosiasi memperoleh status “Perkumpulan yang Bekerja untuk Kepentingan Umum” melalui Keputusan Dewan Menteri No. 6/2090 tertanggal 10 Agustus 1963. Di masa ketika perang atau bencana alam di satu sudut dunia dapat memengaruhi kita semua, kongres kami tahun 2023 menetapkan perubahan kepengurusan dan anggaran dasar yang memperluas bidang kerja kami ke bencana alam, bantuan darurat, dan bantuan pendidikan.",
     "beneficiaries": "Penerima Manfaat",
     "vision": "Visi Kami",
@@ -301,7 +301,7 @@
     "goalsSubtitle": "Untuk Masa Depan yang Lebih Baik",
     "presidentMessage": "Pesan Ketua",
     "presidentTitle": "Pesan dari Asosiasi",
-    "presidentName": "Asosiasi Solidaritas Internasional Yedicihan",
+    "presidentName": "Asosiasi Solidaritas Internasional Minberiaksa",
     "presidentPosition": "Dewan Pengurus",
     "ctaTitle": "Jadilah Bagian dari Perubahan",
     "ctaDesc": "Bergabunglah dengan kami untuk membangun masa depan yang lebih baik bagi anak-anak di seluruh dunia.",
@@ -358,7 +358,7 @@
     "whatsapp": "WhatsApp"
   },
   "Blog": {
-    "metaTitleSuffix": " - Yedicihan",
+    "metaTitleSuffix": " - Minberiaksa",
     "sharePost": "Bagikan Artikel",
     "similarPosts": "Artikel Serupa",
     "relatedCampaign": "Proyek terkait",
@@ -502,7 +502,7 @@
     "viewAllInCategory": "Lihat semua"
   },
   "SignInDialog": {
-    "welcomeTitle": "Selamat datang di Platform Yedicihan",
+    "welcomeTitle": "Selamat datang di Platform Minberiaksa",
     "welcomeSubtitle": "Masuk untuk melanjutkan dan berbagi kebaikan.",
     "checkoutTitle": "Satu langkah singkat",
     "checkoutSubtitle": "Masuk sekarang, lalu Anda akan kembali langsung ke proses pembayaran.",

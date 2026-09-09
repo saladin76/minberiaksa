@@ -45,7 +45,7 @@ export interface MinbarBank {
   currencies: BankCurrencyAccount[];
 }
 
-const ACCOUNT_HOLDER = "Yedicihan Uluslararası Yardımlaşma Derneği";
+const ACCOUNT_HOLDER = "Minberiaksa Uluslararası Yardımlaşma Derneği";
 
 const BANKS: readonly MinbarBank[] = [
   {

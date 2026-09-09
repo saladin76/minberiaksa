@@ -34,7 +34,7 @@ function ChevronDown() {
   );
 }
 
-const LOGO_URL = "/yedicijan_logo.png";
+const LOGO_URL = "/logometaminber.avif";
 // Same field photo the QuickDonate panel uses — here it sits far behind the brand
 // wash as a texture, so the auth screen shares the homepage's visual language.
 const TEXTURE_URL = "https://i.ibb.co/N2zVsqfg/calisma-alanlarimiz-egitim-sektoru.jpg";

@@ -170,14 +170,14 @@
     "communityImpact": "Gesellschaftliche Wirkung",
     "faq1Question": "Wie kann ich mich als Freiwillige oder Freiwilliger anmelden?",
     "faq1Answer": "Du kannst dich über unsere Website registrieren, indem du das Mitgliedschaftsformular ausfüllst. Danach erhältst du eine Nachricht mit den nächsten Schritten, etwa einer ersten Orientierung und weiteren Informationen.",
-    "faq2Question": "Ist die Freiwilligenarbeit im Yedicihan-Team bezahlt?",
+    "faq2Question": "Ist die Freiwilligenarbeit im Minberiaksa-Team bezahlt?",
     "faq2Answer": "Nein, die Freiwilligenarbeit ist grundsätzlich unbezahlt. In manchen Programmen können jedoch Fahrtkostenzuschüsse oder Anerkennungen für aktive Freiwillige angeboten werden.",
     "faq3Question": "Wie werden Freiwillige für Projekte ausgewählt?",
     "faq3Answer": "Die Auswahl hängt von mehreren Faktoren ab, darunter Fachgebiet, Standort und zeitliche Verfügbarkeit. Wir versuchen, jede Person der passenden Aufgabe zuzuordnen.",
     "faq4Question": "Kann ich auch aus der Ferne freiwillig helfen?",
     "faq4Answer": "Ja. Wir bieten digitale Freiwilligenmöglichkeiten an, zum Beispiel Content-Management, Grafikdesign, digitales Marketing und Kommunikation mit unterstützenden Partnern.",
     "faq5Question": "Wie kann ich eine eigene Initiative vorschlagen?",
-    "faq5Answer": "Wenn du eine Idee für ein humanitäres Projekt hast, kann das Yedicihan-Team dich bei der Umsetzung unterstützen, etwa durch Ressourcen und logistische Hilfe.",
+    "faq5Answer": "Wenn du eine Idee für ein humanitäres Projekt hast, kann das Minberiaksa-Team dich bei der Umsetzung unterstützen, etwa durch Ressourcen und logistische Hilfe.",
     "featuredProjects": "Ausgewählte Projekte",
     "currentProjects": "Aktuelle Projekte",
     "viewAll": "Alle anzeigen",
@@ -228,7 +228,7 @@
     "loadError": "Projekte konnten nicht geladen werden. Bitte versuche es erneut."
   },
   "QuickDonate": {
-    "associationName": "Yedicihan Hilfs- und Solidaritätsverein",
+    "associationName": "Minberiaksa Hilfs- und Solidaritätsverein",
     "hadithQuote": "Der Gesandte Allahs ﷺ sagte",
     "hadithText": "Die beste Spende ist die, die dauerhaft ist, selbst wenn sie klein ist.",
     "description": "Eine monatliche Spende macht aus kurzer Nothilfe dauerhafte Sicherheit: Essen, das jeden Monat ankommt, ein Dach, das bleibt, und eine Behandlung, die nicht auf halbem Weg endet. Wähle deinen Betrag – wir bringen ihn zu den Familien, die ihn am dringendsten brauchen.",
@@ -262,7 +262,7 @@
   },
   "Footer": {
     "aboutUsDesc1": "Ein gemeinnützig tätiger Solidaritätsverein, im Dienst seit 1961.",
-    "description": "Der Yedicihan Internationale Solidaritätsverein ist ein gemeinnützig tätiger Verein, der seit 1961 Menschen in Not zur Seite steht — im Gesundheitswesen, in der Nothilfe, in der Katastrophenhilfe und in der Bildung.",
+    "description": "Der Minberiaksa Internationale Solidaritätsverein ist ein gemeinnützig tätiger Verein, der seit 1961 Menschen in Not zur Seite steht — im Gesundheitswesen, in der Nothilfe, in der Katastrophenhilfe und in der Bildung.",
     "messageTitle": "Sende uns eine Nachricht",
     "messageDesc": "Hast du eine Frage oder einen Vorschlag? Kontaktiere uns, wir melden uns bald bei dir.",
     "messagePlaceholder": "Schreibe deine Nachricht hier...",
@@ -281,14 +281,14 @@
     "quickLinks": "Schnellzugriff",
     "categories": "Kampagnen",
     "contactUs": "Kontakt",
-    "copyright": "© {year} Yedicihan. Alle Rechte vorbehalten.",
+    "copyright": "© {year} Minberiaksa. Alle Rechte vorbehalten.",
     "developedBy": "Entwickelt 2026"
   },
   "AboutUs": {
     "pageTitle": "Über uns",
-    "associationName": "Yedicihan Internationaler Solidaritätsverein",
+    "associationName": "Minberiaksa Internationaler Solidaritätsverein",
     "aboutUsTitle": "Wer wir sind",
-    "aboutUsDesc1": "Der Yedicihan Internationale Solidaritätsverein begann seine Arbeit im Gesundheitswesen, vor allem mit dem Ausbau der Möglichkeiten des Haydarpaşa-Numune-Krankenhauses. In Jahren, in denen das türkische Gesundheitssystem stark belastet war, unterstützte der Verein Patientinnen und Patienten mit geringen Mitteln sowohl bei den Untersuchungen als auch bei den Kosten für Medikamente. Diese am 9. November 1961 von einer Gruppe von Ärzten und Pflegekräften geöffnete Tür der Wohltätigkeit dient seit über sechzig Jahren mit Stolz.",
+    "aboutUsDesc1": "Der Minberiaksa Internationale Solidaritätsverein begann seine Arbeit im Gesundheitswesen, vor allem mit dem Ausbau der Möglichkeiten des Haydarpaşa-Numune-Krankenhauses. In Jahren, in denen das türkische Gesundheitssystem stark belastet war, unterstützte der Verein Patientinnen und Patienten mit geringen Mitteln sowohl bei den Untersuchungen als auch bei den Kosten für Medikamente. Diese am 9. November 1961 von einer Gruppe von Ärzten und Pflegekräften geöffnete Tür der Wohltätigkeit dient seit über sechzig Jahren mit Stolz.",
     "aboutUsDesc2": "In Anerkennung dieser aufrichtigen und beständigen Arbeit wurde dem Verein mit Ministerratsbeschluss Nr. 6/2090 vom 10. August 1963 der Status eines „gemeinnützig tätigen Vereins“ verliehen. In einer Zeit, in der ein Krieg oder eine Naturkatastrophe in einem Winkel der Welt uns alle betreffen kann, hat unser Kongress 2023 Änderungen an Leitung und Satzung beschlossen, die unser Tätigkeitsfeld auf Naturkatastrophen, Nothilfe und Bildungshilfe erweitern.",
     "beneficiaries": "Begünstigte",
     "vision": "Unsere Vision",
@@ -301,7 +301,7 @@
     "goalsSubtitle": "Für eine bessere Zukunft",
     "presidentMessage": "Botschaft des Vorsitzenden",
     "presidentTitle": "Eine Botschaft des Vereins",
-    "presidentName": "Yedicihan Internationaler Solidaritätsverein",
+    "presidentName": "Minberiaksa Internationaler Solidaritätsverein",
     "presidentPosition": "Vorstand",
     "ctaTitle": "Werde Teil der Veränderung",
     "ctaDesc": "Begleite uns auf unserem Weg, eine bessere Zukunft für Kinder weltweit aufzubauen.",
@@ -358,7 +358,7 @@
     "whatsapp": "WhatsApp"
   },
   "Blog": {
-    "metaTitleSuffix": " - Yedicihan",
+    "metaTitleSuffix": " - Minberiaksa",
     "sharePost": "Beitrag teilen",
     "similarPosts": "Ähnliche Beiträge",
     "relatedCampaign": "Verwandte Projekte",
@@ -502,7 +502,7 @@
     "viewAllInCategory": "Alle anzeigen"
   },
   "SignInDialog": {
-    "welcomeTitle": "Willkommen auf der Yedicihan Plattform",
+    "welcomeTitle": "Willkommen auf der Minberiaksa Plattform",
     "welcomeSubtitle": "Melde dich an, um fortzufahren und Gutes zu teilen.",
     "checkoutTitle": "Nur ein kurzer Schritt",
     "checkoutSubtitle": "Melde dich jetzt an. Danach kehrst du direkt zur Zahlung zurück.",

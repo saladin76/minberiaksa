@@ -8,7 +8,7 @@ import ar from "../../../i18n/messages/ar.json";
 export const metadata: Metadata = {
   title: "لوحة التحكم | قرة العيون",
   description: "إدارة المشاريع والتبرعات والمستخدمين",
-  icons: { icon: "/logometayedi.avif" },
+  icons: { icon: "/logometaminber.avif" },
   robots: { index: false, follow: false },
 };
 

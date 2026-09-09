@@ -170,14 +170,14 @@
     "communityImpact": "Impacto social",
     "faq1Question": "Como posso participar como voluntário?",
     "faq1Answer": "Você pode se cadastrar pelo nosso site preenchendo o formulário disponível. Depois disso, receberá uma mensagem com as próximas etapas e as orientações iniciais.",
-    "faq2Question": "O voluntariado na equipe Yedicihan é remunerado?",
+    "faq2Question": "O voluntariado na equipe Minberiaksa é remunerado?",
     "faq2Answer": "Não, o voluntariado geralmente não é remunerado. No entanto, em alguns programas, voluntários ativos podem receber apoio para transporte ou formas de reconhecimento.",
     "faq3Question": "Como os voluntários são selecionados para os projetos?",
     "faq3Answer": "A seleção depende de fatores como especialidade, localização e disponibilidade. Procuramos direcionar cada voluntário para a missão mais adequada.",
     "faq4Question": "Posso atuar como voluntário à distância?",
     "faq4Answer": "Sim. Temos oportunidades de voluntariado digital, incluindo gestão de conteúdo, design gráfico, marketing digital e comunicação com apoiadores.",
     "faq5Question": "Como posso sugerir minha própria iniciativa?",
-    "faq5Answer": "Se você tem uma ideia de projeto humanitário, a equipe Yedicihan pode ajudar a colocá-la em prática oferecendo recursos e apoio logístico.",
+    "faq5Answer": "Se você tem uma ideia de projeto humanitário, a equipe Minberiaksa pode ajudar a colocá-la em prática oferecendo recursos e apoio logístico.",
     "featuredProjects": "Projetos em destaque",
     "currentProjects": "Projetos atuais",
     "viewAll": "Ver tudo",
@@ -228,7 +228,7 @@
     "loadError": "Não foi possível carregar os projetos. Tente novamente."
   },
   "QuickDonate": {
-    "associationName": "Associação de Socorro e Solidariedade Yedicihan",
+    "associationName": "Associação de Socorro e Solidariedade Minberiaksa",
     "hadithQuote": "O Mensageiro de Allah ﷺ disse",
     "hadithText": "A melhor caridade é aquela que continua, mesmo que seja pequena.",
     "description": "Uma doação mensal transforma o socorro passageiro em segurança duradoura: comida que chega todos os meses, um teto que permanece de pé e um tratamento que não para no meio do caminho. Escolha o seu valor e nós o levamos às famílias que mais precisam.",
@@ -262,7 +262,7 @@
   },
   "Footer": {
     "aboutUsDesc1": "Uma associação de solidariedade de utilidade pública ao serviço desde 1961.",
-    "description": "A Associação Internacional de Solidariedade Yedicihan é uma associação de utilidade pública que acompanha quem precisa desde 1961, na saúde, na ajuda de emergência, na resposta a catástrofes e na educação.",
+    "description": "A Associação Internacional de Solidariedade Minberiaksa é uma associação de utilidade pública que acompanha quem precisa desde 1961, na saúde, na ajuda de emergência, na resposta a catástrofes e na educação.",
     "messageTitle": "Envie-nos uma mensagem",
     "messageDesc": "Tem uma pergunta ou sugestão? Entre em contato conosco e responderemos em breve.",
     "messagePlaceholder": "Escreva sua mensagem aqui...",
@@ -281,14 +281,14 @@
     "quickLinks": "Links rápidos",
     "categories": "Campanhas",
     "contactUs": "Contato",
-    "copyright": "© {year} Yedicihan. Todos os direitos reservados.",
+    "copyright": "© {year} Minberiaksa. Todos os direitos reservados.",
     "developedBy": "Desenvolvido em 2026"
   },
   "AboutUs": {
     "pageTitle": "Sobre nós",
-    "associationName": "Associação Internacional de Solidariedade Yedicihan",
+    "associationName": "Associação Internacional de Solidariedade Minberiaksa",
     "aboutUsTitle": "Quem somos?",
-    "aboutUsDesc1": "A Associação Internacional de Solidariedade Yedicihan iniciou o seu trabalho na área da saúde, sobretudo contribuindo para desenvolver os meios do Hospital Haydarpaşa Numune. Nos anos em que o sistema de saúde turco esteve sob pressão, a associação apoiou doentes com poucos recursos, tanto nas consultas como no custo dos medicamentos. Aberta a 9 de novembro de 1961 por um grupo de médicos e enfermeiros, esta porta de caridade serve com orgulho há mais de sessenta anos.",
+    "aboutUsDesc1": "A Associação Internacional de Solidariedade Minberiaksa iniciou o seu trabalho na área da saúde, sobretudo contribuindo para desenvolver os meios do Hospital Haydarpaşa Numune. Nos anos em que o sistema de saúde turco esteve sob pressão, a associação apoiou doentes com poucos recursos, tanto nas consultas como no custo dos medicamentos. Aberta a 9 de novembro de 1961 por um grupo de médicos e enfermeiros, esta porta de caridade serve com orgulho há mais de sessenta anos.",
     "aboutUsDesc2": "Em reconhecimento desse trabalho sincero e continuado, a associação recebeu o estatuto de «associação de utilidade pública» pela Decisão do Conselho de Ministros n.º 6/2090, de 10 de agosto de 1963. Numa época em que uma guerra ou uma catástrofe natural num canto do mundo pode afetar-nos a todos, o nosso congresso de 2023 aprovou alterações de gestão e de estatutos que alargaram o nosso campo de ação às catástrofes naturais, à ajuda de emergência e ao apoio à educação.",
     "beneficiaries": "Beneficiários",
     "vision": "A nossa visão",
@@ -301,7 +301,7 @@
     "goalsSubtitle": "Por um futuro melhor",
     "presidentMessage": "Mensagem do presidente",
     "presidentTitle": "Uma mensagem da associação",
-    "presidentName": "Associação Internacional de Solidariedade Yedicihan",
+    "presidentName": "Associação Internacional de Solidariedade Minberiaksa",
     "presidentPosition": "Direção",
     "ctaTitle": "Faça parte da mudança",
     "ctaDesc": "Junte-se a nós na jornada para construir um futuro melhor para crianças em todo o mundo.",
@@ -358,7 +358,7 @@
     "whatsapp": "WhatsApp"
   },
   "Blog": {
-    "metaTitleSuffix": " - Yedicihan",
+    "metaTitleSuffix": " - Minberiaksa",
     "sharePost": "Compartilhar artigo",
     "similarPosts": "Artigos semelhantes",
     "relatedCampaign": "Projeto relacionado",
@@ -502,7 +502,7 @@
     "viewAllInCategory": "Ver tudo"
   },
   "SignInDialog": {
-    "welcomeTitle": "Bem-vindo à Plataforma Yedicihan",
+    "welcomeTitle": "Bem-vindo à Plataforma Minberiaksa",
     "welcomeSubtitle": "Entre para continuar e compartilhar o bem.",
     "checkoutTitle": "Só mais uma etapa rápida",
     "checkoutSubtitle": "Entre agora e você voltará diretamente para o pagamento.",

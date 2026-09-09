@@ -53,13 +53,13 @@ const RECEIPT_LABELS = {
     total: 'Total',
     nextBilling: 'Next billing date',
     thankYou: 'Thank you for your generous donation.',
-    thankYouFrom: 'With gratitude,\nYedicihan Relief and Solidarity Association',
+    thankYouFrom: 'With gratitude,\nMinberiaksa Relief and Solidarity Association',
     thankYouMessage: 'Your kindness brings hope and relief to those in need. Together we are making a lasting difference in the lives of children and families. This receipt confirms your support we are deeply grateful.',
     footer: 'This is an official receipt. For questions, contact support.',
   },
   ar: {
     title: 'إيصال تبرع',
-    orgName: 'يدي جيهان',
+    orgName: 'منبر الأقصي',
     receiptNo: 'رقم الإيصال',
     date: 'التاريخ',
     time: 'الوقت',
@@ -90,7 +90,7 @@ const RECEIPT_LABELS = {
     total: 'الإجمالي',
     nextBilling: 'تاريخ الخصم القادم',
     thankYou: 'شكراً لتبرعكم السخي.',
-    thankYouFrom: 'بامتنان،\nجمعية يدي جيهان للإغاثة والتضامن',
+    thankYouFrom: 'بامتنان،\nجمعية منبر الأقصي للإغاثة والتضامن',
     thankYouMessage: 'لطفكم يبعث الأمل والإغاثة لمن هم في حاجة. معاً نصنع فرقاً دائمياً في حياة الأطفال والأسر. هذا الإيصال يؤكد دعمكم نحن ممتنون جداً.',
     footer: 'هذا إيصال رسمي. للاستفسارات يرجى التواصل مع الدعم.',
   },
@@ -127,7 +127,7 @@ const RECEIPT_LABELS = {
     total: 'Total',
     nextBilling: 'Prochaine date de prélèvement',
     thankYou: 'Merci pour votre généreux don.',
-    thankYouFrom: 'Avec gratitude,\nYedicihan – Association de secours et de solidarité',
+    thankYouFrom: 'Avec gratitude,\nMinberiaksa – Association de secours et de solidarité',
     thankYouMessage: 'Votre générosité apporte espoir et réconfort à ceux qui en ont besoin. Ensemble nous faisons une différence durable dans la vie des enfants et des familles. Ce reçu confirme votre soutien—nous vous en sommes profondément reconnaissants.',
     footer: 'Ceci est un reçu officiel. Pour toute question, contactez le support.',
   },
@@ -491,7 +491,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       y += 6;
     }
 
-    // ----- Thank you (charming message from Yedicihan) -----
+    // ----- Thank you (charming message from Minberiaksa) -----
     y += 10;
     addLine(y);
     y += 12;
@@ -507,7 +507,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     y += 8;
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(11);
-    const signOff = (L.thankYouFrom ?? 'With gratitude, Yedicihan') as string;
+    const signOff = (L.thankYouFrom ?? 'With gratitude, Minberiaksa') as string;
     const signOffLines = signOff.split('\n');
     signOffLines.forEach((line: string) => {
       addText(line, pageW / 2, y, { align: 'center' });

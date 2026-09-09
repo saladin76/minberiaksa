@@ -217,7 +217,7 @@ export function defaultDocument(): EmailDocument {
     [ctaId]: {
       type: "Button",
       data: {
-        props: { text: "زيارة الموقع", url: "https://yedicihan.org.tr", buttonStyle: "rectangle" },
+        props: { text: "زيارة الموقع", url: "https://minberiaksa.org.tr", buttonStyle: "rectangle" },
         style: {
           padding: { top: 8, bottom: 32, right: 24, left: 24 },
           backgroundColor: "#FA5D17",

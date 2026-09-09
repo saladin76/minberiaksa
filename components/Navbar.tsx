@@ -52,8 +52,8 @@ interface CartItem {
   };
 }
 
-const LOGO_URL = "/yedicijan_logo.png";
-const LOGO_MOBILE_URL = "/yedicijan_logo.png";
+const LOGO_URL = "/logometaminber.avif";
+const LOGO_MOBILE_URL = "/logometaminber.avif";
 
 const Navbar = () => {
   const t = useTranslations("Navbar");

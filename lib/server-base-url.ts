@@ -30,5 +30,5 @@ export async function getServerBaseUrl(): Promise<string> {
   }
   if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`;
 
-  return (process.env.NEXT_PUBLIC_SITE_URL || "https://www.yedicihan.org").replace(/\/$/, "");
+  return (process.env.NEXT_PUBLIC_SITE_URL || "https://www.minberiaksa.org").replace(/\/$/, "");
 }

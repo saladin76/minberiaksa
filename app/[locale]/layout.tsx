@@ -42,7 +42,7 @@ export async function generateMetadata({
     title: { default: seo.title, template: seo.titleTemplate },
     description: seo.description,
     keywords: seo.keywords,
-    icons: { icon: "/yedicijan_logo.png" },
+    icons: { icon: "/logometaminber.avif" },
     alternates,
     openGraph: {
       title: seo.title,

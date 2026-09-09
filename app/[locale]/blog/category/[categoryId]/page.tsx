@@ -32,10 +32,10 @@ export async function generateMetadata({ params }: CategoryProps): Promise<Metad
   const category = await fetchCategoryData();
 
   return {
-    title: `${category.title} - يدي جيهان`,
+    title: `${category.title} - منبر الأقصي`,
     description: category.description,
     openGraph: {
-      title: `${category.title} - يدي جيهان`,
+      title: `${category.title} - منبر الأقصي`,
       description: category.description,
       images: [
         {
@@ -50,7 +50,7 @@ export async function generateMetadata({ params }: CategoryProps): Promise<Metad
     },
     twitter: {
       card: "summary_large_image",
-      title: `${category.title} - يدي جيهان`,
+      title: `${category.title} - منبر الأقصي`,
       description: category.description,
       images: [category.image || "/default-category-bg.jpg"],
     },

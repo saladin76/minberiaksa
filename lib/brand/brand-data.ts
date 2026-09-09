@@ -19,7 +19,7 @@ export const brandProfiles: BrandProfile[] = [
     messagePhilosophy: "أبقِ المتبرع قريبًا من الميدان دون مبالغة؛ اعرض الدليل والإيصال والخطوة التالية بوضوح.",
     primaryLocale: "tr",
     supportedLocales: ["tr", "ar", "en"],
-    website: "yedicihan.org",
+    website: "minberiaksa.org",
     isActive: true,
     status: "FOUNDATION",
     verificationNote: "ملف اللوحة النشط؛ لا تزال ملفات الشعار/الأصول الرسمية بحاجة إلى تأكيد الرفع النهائي.",

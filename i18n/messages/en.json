@@ -170,14 +170,14 @@
     "communityImpact": "Community Impact",
     "faq1Question": "How can I join as a volunteer?",
     "faq1Answer": "You can register through our website by filling out the volunteer form. You will then receive a message with the next steps and initial orientation details.",
-    "faq2Question": "Is volunteering with the Yedicihan team paid?",
+    "faq2Question": "Is volunteering with the Minberiaksa team paid?",
     "faq2Answer": "No, volunteering is generally unpaid. In some programs, active volunteers may receive transportation support or appreciation rewards.",
     "faq3Question": "How are volunteers selected for projects?",
     "faq3Answer": "Selection depends on factors such as skills, location, and availability. We try to match each volunteer with the most suitable opportunity.",
     "faq4Question": "Can I volunteer remotely?",
     "faq4Answer": "Yes. We have digital volunteering opportunities in areas such as content management, graphic design, digital marketing, and communication with supporters.",
     "faq5Question": "How can I suggest my own initiative?",
-    "faq5Answer": "If you have an idea for a humanitarian project, the Yedicihan team can help you bring it to life by providing resources and logistical support.",
+    "faq5Answer": "If you have an idea for a humanitarian project, the Minberiaksa team can help you bring it to life by providing resources and logistical support.",
     "featuredProjects": "Featured Projects",
     "currentProjects": "Current Projects",
     "viewAll": "View All",
@@ -228,7 +228,7 @@
     "loadError": "Could not load projects. Please try again."
   },
   "QuickDonate": {
-    "associationName": "Yedicihan Relief and Solidarity Association",
+    "associationName": "Minberiaksa Relief and Solidarity Association",
     "hadithQuote": "The Messenger of Allah ﷺ said",
     "hadithText": "The best charity is the one that continues, even if it is small.",
     "description": "A monthly gift turns short-lived relief into lasting safety: food that arrives every month, a roof that stays over their heads, treatment that never stops halfway. Choose your amount — we'll get it to the families who need it most.",
@@ -262,7 +262,7 @@
   },
   "Footer": {
     "aboutUsDesc1": "A public-benefit solidarity association serving since 1961.",
-    "description": "Yedicihan International Solidarity Association is a public-benefit association that has stood beside people in need since 1961, working in healthcare, emergency relief, disaster response and education.",
+    "description": "Minberiaksa International Solidarity Association is a public-benefit association that has stood beside people in need since 1961, working in healthcare, emergency relief, disaster response and education.",
     "messageTitle": "Send us a message",
     "messageDesc": "Have a question or suggestion? Contact us and we will get back to you soon.",
     "messagePlaceholder": "Write your message here...",
@@ -281,14 +281,14 @@
     "quickLinks": "Quick Links",
     "categories": "Campaigns",
     "contactUs": "Contact Us",
-    "copyright": "© {year} Yedicihan. All rights reserved.",
+    "copyright": "© {year} Minberiaksa. All rights reserved.",
     "developedBy": "Developed in 2026"
   },
   "AboutUs": {
     "pageTitle": "About Us",
-    "associationName": "Yedicihan International Solidarity Association",
+    "associationName": "Minberiaksa International Solidarity Association",
     "aboutUsTitle": "Who Are We?",
-    "aboutUsDesc1": "Yedicihan International Solidarity Association began its work in healthcare, most notably by helping to develop the facilities of Haydarpaşa Numune Hospital. In years when Turkey's health system was under strain, the association supported patients of limited means with both their medical examinations and the cost of their medicines. Opened on 9 November 1961 by a group of doctors and nurses, this door of charity has served with pride for more than sixty years.",
+    "aboutUsDesc1": "Minberiaksa International Solidarity Association began its work in healthcare, most notably by helping to develop the facilities of Haydarpaşa Numune Hospital. In years when Turkey's health system was under strain, the association supported patients of limited means with both their medical examinations and the cost of their medicines. Opened on 9 November 1961 by a group of doctors and nurses, this door of charity has served with pride for more than sixty years.",
     "aboutUsDesc2": "In recognition of that sincere and sustained work, the association was granted the status of an “Association Working for the Public Benefit” by Council of Ministers Decision No. 6/2090, dated 10 August 1963. In an age when a war or a natural disaster in one corner of the world can affect us all, our 2023 congress adopted changes to the association's management and statutes that widened our field of work to include natural disasters, emergency relief and educational aid.",
     "beneficiaries": "Beneficiaries",
     "vision": "Our Vision",
@@ -301,7 +301,7 @@
     "goalsSubtitle": "For a Better Future",
     "presidentMessage": "President's Message",
     "presidentTitle": "A Message from the Association",
-    "presidentName": "Yedicihan International Solidarity Association",
+    "presidentName": "Minberiaksa International Solidarity Association",
     "presidentPosition": "Board of Directors",
     "ctaTitle": "Be Part of the Change",
     "ctaDesc": "Join us on our journey to build a better future for children around the world.",
@@ -358,7 +358,7 @@
     "whatsapp": "WhatsApp"
   },
   "Blog": {
-    "metaTitleSuffix": " - Yedicihan",
+    "metaTitleSuffix": " - Minberiaksa",
     "sharePost": "Share Post",
     "similarPosts": "Similar Posts",
     "relatedCampaign": "Related Project",
@@ -502,7 +502,7 @@
     "viewAllInCategory": "View all"
   },
   "SignInDialog": {
-    "welcomeTitle": "Welcome to Yedicihan Platform",
+    "welcomeTitle": "Welcome to Minberiaksa Platform",
     "welcomeSubtitle": "Sign in to continue and share goodness.",
     "checkoutTitle": "Just one quick step",
     "checkoutSubtitle": "Sign in now, then you'll return right back to payment.",
