@@ -4,6 +4,7 @@ import crypto from "crypto";
 import {
   ALBARAKA_FORM_FIELDS,
   ALBARAKA_PAYMENT_MAC_PARAMS,
+  ALBARAKA_MIN_ENC_KEY_LENGTH,
   ALBARAKA_RESPONSE_MAC_FIELDS,
   albarakaConfig,
   albarakaCurrencyCode,
@@ -237,4 +238,30 @@ test("readiness requires every identifier, not just the key", () => {
   assert.equal(isAlbarakaConfigured({ ...complete, terminalNo: "" }), false);
   assert.equal(isAlbarakaConfigured({ ...complete, posnetId: "" }), false);
   assert.equal(isAlbarakaConfigured({ ...complete, merchantNo: "" }), false);
+});
+
+test("a placeholder enc key does not arm the live gateway", () => {
+  const complete = {
+    merchantNo: "6701717316",
+    terminalNo: "67630036",
+    posnetId: "1010191131630431",
+    encKey: KEY,
+    tdsUrl: "https://example.invalid/3ds",
+    serviceUrl: "https://example.invalid/svc",
+    useOOS: false,
+    useJokerVadaa: false,
+  };
+  // A merely non-empty key would let the dashboard offer Albaraka and the checkout
+  // collect real cards, with every payment then rejected by the bank for a bad MAC
+  // after a donation row already existed.
+  for (const placeholder of ["1", "0", "x", "test", "key", "   ", "1234567"]) {
+    assert.equal(
+      isAlbarakaConfigured({ ...complete, encKey: placeholder }),
+      false,
+      `"${placeholder}" should not count as configured`
+    );
+  }
+  // Keys from "Anahtar Yaratma" are ~16 characters; the floor must not reject one.
+  assert.equal(isAlbarakaConfigured({ ...complete, encKey: "A7f3Kd92Lm0Qx4Rt" }), true);
+  assert.equal(ALBARAKA_MIN_ENC_KEY_LENGTH, 8);
 });

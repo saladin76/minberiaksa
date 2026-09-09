@@ -70,9 +70,25 @@ export function albarakaConfig(): AlbarakaConfig {
   };
 }
 
-/** Nothing is defaulted, so readiness means all four identifiers are actually set. */
+/**
+ * Nothing is defaulted, so readiness means all four identifiers are actually set —
+ * and that the key is long enough to be a real one.
+ *
+ * The length floor matters more than it looks. "Non-empty" lets a placeholder like
+ * `1` or `changeme` arm the live gateway: the dashboard offers Albaraka, the
+ * checkout collects real cards, and every payment is then rejected by the bank for
+ * a bad MAC *after* a donation row exists. Keys from "Anahtar Yaratma" are ~16
+ * alphanumeric characters, so anything under 8 is a placeholder, not a short key.
+ */
+export const ALBARAKA_MIN_ENC_KEY_LENGTH = 8;
+
 export function isAlbarakaConfigured(cfg: AlbarakaConfig = albarakaConfig()): boolean {
-  return Boolean(cfg.encKey && cfg.merchantNo && cfg.terminalNo && cfg.posnetId);
+  return Boolean(
+    cfg.encKey.trim().length >= ALBARAKA_MIN_ENC_KEY_LENGTH &&
+      cfg.merchantNo &&
+      cfg.terminalNo &&
+      cfg.posnetId
+  );
 }
 
 export function albarakaCurrencyCode(currency: string): AlbarakaCurrencyCode {
