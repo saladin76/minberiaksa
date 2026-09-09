@@ -91,6 +91,36 @@ export function isAlbarakaConfigured(cfg: AlbarakaConfig = albarakaConfig()): bo
   );
 }
 
+/**
+ * Which currency Albaraka is asked to charge in.
+ *
+ *   TRY   — convert every donation to Turkish lira and charge TL.
+ *   USD   — convert every donation to US dollars and charge US.
+ *   DONOR — charge in the donor's own currency when the bank accepts it
+ *           (TL/US/EU), converting everything else to TRY.
+ *
+ * The site takes 14 currencies but Albaraka understands only three codes, so
+ * something always converts. This decides what to.
+ */
+export type AlbarakaChargeCurrency = "TRY" | "USD" | "DONOR";
+
+/**
+ * Reads ALBARAKA_CHARGE_CURRENCY, falling back to the older
+ * ALBARAKA_MULTI_CURRENCY boolean so an existing deployment keeps its behaviour
+ * until the new variable is set.
+ *
+ * Anything unrecognised resolves to TRY: the merchant account is Turkish, so
+ * lira is the setting that is always accepted, and a typo should not send live
+ * donations down a rail the bank may refuse.
+ */
+export function albarakaChargeCurrency(): AlbarakaChargeCurrency {
+  const raw = String(process.env.ALBARAKA_CHARGE_CURRENCY ?? "").trim().toUpperCase();
+  if (raw === "USD" || raw === "US") return "USD";
+  if (raw === "DONOR") return "DONOR";
+  if (raw === "TRY" || raw === "TL") return "TRY";
+  return process.env.ALBARAKA_MULTI_CURRENCY === "1" ? "DONOR" : "TRY";
+}
+
 export function albarakaCurrencyCode(currency: string): AlbarakaCurrencyCode {
   const c = String(currency || "").toUpperCase();
   if (c === "USD" || c === "US") return "US";

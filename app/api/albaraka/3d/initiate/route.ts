@@ -6,17 +6,20 @@ import { prisma } from "@/lib/prisma";
 import {
   ALBARAKA_FORM_FIELDS,
   albarakaConfig,
+  albarakaChargeCurrency,
   albarakaCurrencyCode,
   albarakaFormMac,
   albarakaLang,
   albarakaMinorUnits,
   albarakaOrderId,
   isAlbarakaConfigured,
+  type AlbarakaCurrencyCode,
   type AlbarakaFormFields,
 } from "@/lib/albaraka";
 import { parseMainGateway } from "@/lib/payment-gateway";
 import {
   convertAmountInCurrencyToTry,
+  convertAmountInCurrencyToUsd,
   getUsdBaseRatesForServer,
 } from "@/lib/exchange/rates-service";
 import { decryptCard } from "@/lib/card-crypto";
@@ -57,6 +60,12 @@ type InitiateBody = {
 async function toTRY(amount: number, fromCurrency: string): Promise<number> {
   const rates = await getUsdBaseRatesForServer();
   return convertAmountInCurrencyToTry(amount, fromCurrency, rates);
+}
+
+/** Same rates, one step: the table is USD-based, so this is a single division. */
+async function toUSD(amount: number, fromCurrency: string): Promise<number> {
+  const rates = await getUsdBaseRatesForServer();
+  return convertAmountInCurrencyToUsd(amount, fromCurrency, rates);
 }
 
 /**
@@ -125,19 +134,30 @@ export async function POST(req: NextRequest) {
     const origin = process.env.APP_URL?.replace(/\/$/, "") ?? new URL(req.url).origin;
     const locale = (body.locale ?? donation.locale ?? "en").toString().toLowerCase();
 
-    // The merchant account is Turkish, so by default every donation is converted to
-    // TRY and charged in TL. Set ALBARAKA_MULTI_CURRENCY=1 only once the bank has
-    // enabled USD/EUR terminals for this merchant.
-    const multiCurrency = process.env.ALBARAKA_MULTI_CURRENCY === "1";
+    /* The site takes 14 currencies and Albaraka understands three, so something
+       always converts. ALBARAKA_CHARGE_CURRENCY decides what to; see
+       `albarakaChargeCurrency`. Whichever branch runs, the donation row keeps its
+       own currency — this only changes what the bank is asked to charge. */
     const donationCurrency = String(donation.currency || "TRY").toUpperCase();
-    const chargeInDonationCurrency =
-      multiCurrency && ["TRY", "TL", "USD", "US", "EUR", "EU"].includes(donationCurrency);
-    const chargeAmount = chargeInDonationCurrency
-      ? donation.totalAmount
-      : await toTRY(donation.totalAmount, donation.currency);
-    const currencyCode = chargeInDonationCurrency
-      ? albarakaCurrencyCode(donationCurrency)
-      : "TL";
+    const policy = albarakaChargeCurrency();
+
+    let chargeAmount: number;
+    let currencyCode: AlbarakaCurrencyCode;
+
+    if (policy === "USD") {
+      chargeAmount = await toUSD(donation.totalAmount, donation.currency);
+      currencyCode = "US";
+    } else if (
+      policy === "DONOR" &&
+      ["TRY", "TL", "USD", "US", "EUR", "EU"].includes(donationCurrency)
+    ) {
+      chargeAmount = donation.totalAmount;
+      currencyCode = albarakaCurrencyCode(donationCurrency);
+    } else {
+      chargeAmount = await toTRY(donation.totalAmount, donation.currency);
+      currencyCode = "TL";
+    }
+
     const amount = albarakaMinorUnits(chargeAmount);
     if (amount <= 0) {
       return NextResponse.json({ error: "Invalid donation amount" }, { status: 400 });

@@ -6,6 +6,7 @@ import {
   ALBARAKA_PAYMENT_MAC_PARAMS,
   ALBARAKA_MIN_ENC_KEY_LENGTH,
   ALBARAKA_RESPONSE_MAC_FIELDS,
+  albarakaChargeCurrency,
   albarakaConfig,
   albarakaCurrencyCode,
   albarakaFormMac,
@@ -17,6 +18,10 @@ import {
   isAlbarakaConfigured,
   type AlbarakaFormFields,
 } from "../../lib/albaraka";
+import {
+  convertAmountInCurrencyToTry,
+  convertAmountInCurrencyToUsd,
+} from "../../lib/exchange/convert";
 
 /**
  * Contract tests for the Albaraka Türk EPOS MACs.
@@ -264,4 +269,69 @@ test("a placeholder enc key does not arm the live gateway", () => {
   // Keys from "Anahtar Yaratma" are ~16 characters; the floor must not reject one.
   assert.equal(isAlbarakaConfigured({ ...complete, encKey: "A7f3Kd92Lm0Qx4Rt" }), true);
   assert.equal(ALBARAKA_MIN_ENC_KEY_LENGTH, 8);
+});
+
+test("the charge-currency policy resolves from the environment", () => {
+  const saved = [
+    ["ALBARAKA_CHARGE_CURRENCY", process.env.ALBARAKA_CHARGE_CURRENCY],
+    ["ALBARAKA_MULTI_CURRENCY", process.env.ALBARAKA_MULTI_CURRENCY],
+  ] as const;
+
+  try {
+    for (const [value, expected] of [
+      ["USD", "USD"],
+      ["usd", "USD"],
+      ["US", "USD"],
+      ["TRY", "TRY"],
+      ["TL", "TRY"],
+      ["DONOR", "DONOR"],
+      // A typo must not send live donations down a rail the bank may refuse.
+      ["dollars", "TRY"],
+      ["", "TRY"],
+    ] as const) {
+      process.env.ALBARAKA_CHARGE_CURRENCY = value;
+      delete process.env.ALBARAKA_MULTI_CURRENCY;
+      assert.equal(albarakaChargeCurrency(), expected, `"${value}"`);
+    }
+
+    // With the new variable unset, the older boolean still decides, so an existing
+    // deployment keeps its behaviour until the variable is added.
+    delete process.env.ALBARAKA_CHARGE_CURRENCY;
+    process.env.ALBARAKA_MULTI_CURRENCY = "1";
+    assert.equal(albarakaChargeCurrency(), "DONOR");
+    process.env.ALBARAKA_MULTI_CURRENCY = "0";
+    assert.equal(albarakaChargeCurrency(), "TRY");
+    delete process.env.ALBARAKA_MULTI_CURRENCY;
+    assert.equal(albarakaChargeCurrency(), "TRY");
+  } finally {
+    for (const [name, value] of saved) {
+      if (value === undefined) delete process.env[name];
+      else process.env[name] = value;
+    }
+  }
+});
+
+test("any supported currency converts to USD in one step", () => {
+  // USD-based table: 1 USD = 0.79 GBP = 34 TRY = 3.75 SAR.
+  const rates = { USD: 1, GBP: 0.79, TRY: 34, SAR: 3.75, EUR: 0.92 };
+
+  assert.equal(convertAmountInCurrencyToUsd(100, "USD", rates), 100);
+  assert.equal(convertAmountInCurrencyToUsd(79, "GBP", rates), 100);
+  assert.equal(convertAmountInCurrencyToUsd(375, "SAR", rates), 100);
+  assert.equal(convertAmountInCurrencyToUsd(3400, "TRY", rates), 100);
+  assert.equal(convertAmountInCurrencyToUsd(50, "gbp", rates), 63.29);
+
+  // A currency with no rate must throw rather than charge a wrong amount.
+  assert.throws(() => convertAmountInCurrencyToUsd(10, "KWD", rates), /Missing USD-base rate/);
+  assert.throws(() => convertAmountInCurrencyToUsd(10, "GBP", { GBP: 0 }), /Missing USD-base rate/);
+});
+
+test("converting to USD does not drift the way a round-trip through TRY does", () => {
+  const rates = { USD: 1, GBP: 0.79, TRY: 34 };
+  // The point of charging in USD: the amount the bank is asked for is one
+  // division from the stored value, not a division and a multiplication.
+  const direct = convertAmountInCurrencyToUsd(79, "GBP", rates);
+  const viaTry = convertAmountInCurrencyToTry(79, "GBP", rates) / rates.TRY;
+  assert.equal(direct, 100);
+  assert.ok(Math.abs(direct - viaTry) < 0.01);
 });

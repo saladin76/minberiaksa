@@ -116,21 +116,6 @@ export async function getUsdBaseRatesForServer(): Promise<Record<string, number>
   return await refreshExchangeRatesFromApi();
 }
 
-export function convertAmountInCurrencyToTry(
-  amount: number,
-  fromCurrency: string,
-  rates: Record<string, number>
-): number {
-  const from = String(fromCurrency || "USD")
-    .trim()
-    .toUpperCase();
-  if (from === "TRY") return amount;
-  const rFrom = rates[from];
-  const rTry = rates.TRY;
-  if (!rFrom || !rTry || rFrom <= 0 || rTry <= 0) {
-    throw new Error(`Missing USD-base rate for ${from} or TRY`);
-  }
-  const usd = amount / rFrom;
-  const tryAmount = usd * rTry;
-  return Math.round(tryAmount * 100) / 100;
-}
+/* Re-exported so every existing `from "@/lib/exchange/rates-service"` import keeps
+   working. The implementations live in ./convert, which has no Prisma dependency. */
+export { convertAmountInCurrencyToTry, convertAmountInCurrencyToUsd } from "./convert";
