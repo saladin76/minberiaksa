@@ -53,6 +53,7 @@
     "lib/bank-transfers/statement-columns.ts",
     "lib/bank-transfers/statement-parser.ts",
     "lib/albaraka.ts",
+    "lib/payfor.ts",
     "lib/locales.ts",
     "lib/content-localization/access.ts",
     "tests/integration-settings/**/*.ts"

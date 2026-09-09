@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/options";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import crypto from "crypto";
 import {
@@ -108,9 +109,10 @@ export async function POST(req: NextRequest) {
       donation.id
     )}&locale=${encodeURIComponent(locale)}`;
 
-    // Hash = hex(SHA1(MbrId + OrderId + PurchAmount + OkUrl + FailUrl + TxnType + InstallmentCount + Rnd + MerchantPass))
+    // Hash = base64(SHA1(MbrId + OrderId + PurchAmount + OkUrl + FailUrl + TxnType + InstallmentCount + Rnd + MerchantPass))
     // Docs formula confirmed; MerchantID and UserCode are NOT part of the hash for this bank.
-    const hashInput = [mbrId, orderId, purchAmount, okUrl, failUrl, txnType, installmentCount, rnd, merchantPass].join("");
+    // The concatenation lives only inside payForHash — it ends with MerchantPass and
+    // must not exist as a local that something could later log.
     const hash = payForHash({
       mbrId,
       orderId,
@@ -123,6 +125,10 @@ export async function POST(req: NextRequest) {
       merchantPass,
     });
 
+    /* `hashInput` ends with MerchantPass, so logging it would print the 3D password
+       in full on every attempt — and defeat the masking two lines above. The hash
+       itself is safe to log and is what the bank asks for when diagnosing a
+       rejection; the inputs to it are all logged individually here anyway. */
     console.log("[PayFor INITIATE] Hash debug:", {
       mbrId,
       orderId,
@@ -132,8 +138,6 @@ export async function POST(req: NextRequest) {
       txnType,
       installmentCount,
       rnd,
-      merchantPass: merchantPass.slice(0, 3) + "***", // partial for security
-      hashInput,
       hash,
       currency,
     });
@@ -145,6 +149,22 @@ export async function POST(req: NextRequest) {
         provider: "PAYFOR",
         providerOrderId: orderId,
         providerTxnType: txnType,
+        /* Snapshot of what we actually asked the bank to charge, so the callback
+           can detect an amount swap. The FX conversion above is not re-run there:
+           rates move, and re-deriving the expected amount would make a legitimate
+           payment look tampered with. Mirrors the Albaraka rail. */
+        providerRaw: {
+          ...(typeof donation.providerRaw === "object" && donation.providerRaw
+            ? (donation.providerRaw as Record<string, unknown>)
+            : {}),
+          payforRequest: {
+            orderId,
+            purchAmount,
+            currency,
+            txnType,
+            createdAt: new Date().toISOString(),
+          },
+        } as Prisma.InputJsonValue,
       },
     });
 
@@ -213,9 +233,26 @@ export async function POST(req: NextRequest) {
       formFields.CardHolderName = savedCard.cardholderName ?? "";
     }
 
+    /* On the saved-card path `formFields` carries a decrypted PAN, so the whole
+       object can never be spread into a log. Only the non-card fields are named
+       explicitly — a future field is then absent from the log rather than silently
+       exposed by it. */
     console.log("[PayFor INITIATE] Sending fields to bank:", {
-      ...formFields,
-      UserPass: "***",
+      MbrId: formFields.MbrId,
+      MerchantID: formFields.MerchantID,
+      UserCode: formFields.UserCode,
+      SecureType: formFields.SecureType,
+      TxnType: formFields.TxnType,
+      InstallmentCount: formFields.InstallmentCount,
+      Currency: formFields.Currency,
+      OkUrl: formFields.OkUrl,
+      FailUrl: formFields.FailUrl,
+      OrderId: formFields.OrderId,
+      PurchAmount: formFields.PurchAmount,
+      Lang: formFields.Lang,
+      Rnd: formFields.Rnd,
+      Hash: formFields.Hash,
+      cardSource: formFields.Pan ? "saved" : "browser",
     });
 
     return NextResponse.json({

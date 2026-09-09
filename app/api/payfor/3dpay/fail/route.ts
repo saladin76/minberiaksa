@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { dispatchEvent } from "@/lib/events/dispatch";
 import { sendDonationFailedConversions } from "@/lib/tracking/donation-conversion-server";
+import { mergePayForProviderRaw, redactPayForResponse } from "@/lib/payfor";
 
 export async function POST(req: NextRequest) {
   const origin = new URL(req.url).origin;
@@ -16,7 +18,7 @@ export async function POST(req: NextRequest) {
   const form = await req.formData();
   const raw = Object.fromEntries(form.entries());
 
-  console.error("[PayFor FAIL] Bank response:", JSON.stringify(raw, null, 2));
+  console.error("[PayFor FAIL] Bank response:", JSON.stringify(redactPayForResponse(raw), null, 2));
 
   const orderId = String(raw.OrderId || raw.orderId || "");
   const procReturnCode = String(raw.ProcReturnCode || raw.procReturnCode || "");
@@ -38,7 +40,7 @@ export async function POST(req: NextRequest) {
           providerProcReturnCode: procReturnCode || null,
           providerTxnResult: txnResult || null,
           providerErrorMessage: errorMessage || null,
-          providerRaw: raw as Record<string, unknown>,
+          providerRaw: mergePayForProviderRaw(donation.providerRaw, raw) as Prisma.InputJsonValue,
         },
       });
       void dispatchEvent("DONATION_FAILED", { donationId });

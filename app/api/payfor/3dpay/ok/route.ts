@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 // Donate (success) CAPI now fires server-side from `dispatchDonationPaid`
 // the moment the donation flips to PAID — that's the only path that
@@ -11,6 +12,7 @@ import { prisma } from "@/lib/prisma";
 // get the signal on bank rejects.
 import { sendDonationFailedConversions } from "@/lib/tracking/donation-conversion-server";
 import { dispatchDonationPaid, dispatchEvent } from "@/lib/events/dispatch";
+import { mergePayForProviderRaw, redactPayForResponse } from "@/lib/payfor";
 
 export async function POST(req: NextRequest) {
   const origin = new URL(req.url).origin;
@@ -26,9 +28,10 @@ export async function POST(req: NextRequest) {
   const raw = Object.fromEntries(form.entries());
 
   // Log full bank response for debugging
-  console.log("[PayFor OK] Bank response:", JSON.stringify(raw, null, 2));
+  console.log("[PayFor OK] Bank response:", JSON.stringify(redactPayForResponse(raw), null, 2));
 
   const orderId = String(raw.OrderId || raw.orderId || "");
+  const purchAmount = String(raw.PurchAmount || raw.purchAmount || "");
   const procReturnCode = String(raw.ProcReturnCode || raw.ProcReturnCode?.toString?.() || raw.procReturnCode || "");
   const txnResult = String(raw.TxnResult || raw.txnResult || "");
   const errorMessage = String(raw.ErrorMessage || raw.errorMessage || "");
@@ -49,6 +52,37 @@ export async function POST(req: NextRequest) {
       // Idempotency: if already confirmed by a prior callback, just redirect to success
       if (donation.paidAt !== null) return { ok: true as const };
 
+      /* The amount must be the one we asked the bank for. `payforRequest` was
+         snapshotted at initiate; the FX conversion is deliberately not re-run
+         here, because rates move and a legitimate payment would then look
+         tampered with. Compared as numbers so "10.00" and "10.0" agree. */
+      const snapshot =
+        typeof donation.providerRaw === "object" && donation.providerRaw
+          ? ((donation.providerRaw as Record<string, unknown>).payforRequest as
+              | { purchAmount?: string }
+              | undefined)
+          : undefined;
+      const expectedAmount = Number(snapshot?.purchAmount);
+      const returnedAmount = Number(purchAmount);
+      if (
+        Number.isFinite(expectedAmount) &&
+        Number.isFinite(returnedAmount) &&
+        expectedAmount !== returnedAmount
+      ) {
+        await tx.donation.update({
+          where: { id: donation.id },
+          data: {
+            status: "FAILED",
+            provider: "PAYFOR",
+            providerProcReturnCode: procReturnCode || null,
+            providerTxnResult: txnResult || null,
+            providerErrorMessage: `Amount mismatch (expected ${expectedAmount}, got ${returnedAmount})`,
+            providerRaw: mergePayForProviderRaw(donation.providerRaw, raw) as Prisma.InputJsonValue,
+          },
+        });
+        return { ok: false as const, reason: "order_mismatch" as const };
+      }
+
       // Basic linkage check
       if (donation.providerOrderId && orderId && donation.providerOrderId !== orderId) {
         await tx.donation.update({
@@ -61,7 +95,7 @@ export async function POST(req: NextRequest) {
             providerAuthCode: authCode || null,
             providerHostRefNum: hostRefNum || null,
             providerErrorMessage: `OrderId mismatch`,
-            providerRaw: raw as any,
+            providerRaw: mergePayForProviderRaw(donation.providerRaw, raw) as Prisma.InputJsonValue,
           },
         });
         return { ok: false as const, reason: "order_mismatch" as const };
@@ -79,7 +113,7 @@ export async function POST(req: NextRequest) {
             providerAuthCode: authCode || null,
             providerHostRefNum: hostRefNum || null,
             providerErrorMessage: errorMessage || "Payment failed",
-            providerRaw: raw as any,
+            providerRaw: mergePayForProviderRaw(donation.providerRaw, raw) as Prisma.InputJsonValue,
           },
         });
         return { ok: false as const, reason: "failed" as const };
@@ -96,7 +130,7 @@ export async function POST(req: NextRequest) {
           providerAuthCode: authCode || null,
           providerHostRefNum: hostRefNum || null,
           providerErrorMessage: null,
-          providerRaw: raw as any,
+          providerRaw: mergePayForProviderRaw(donation.providerRaw, raw) as Prisma.InputJsonValue,
         },
       });
 
