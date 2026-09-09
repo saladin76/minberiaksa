@@ -449,7 +449,7 @@ export default function LinkGeneratorPage() {
               <button type="button" onClick={() => setLinkMode("standard")} className={cn("rounded-xl border p-4 text-right transition", linkMode === "standard" ? "border-brand bg-blue-50 text-brand" : "border-border bg-white hover:bg-muted/40")}>
                 <Link2 className="mb-2 h-5 w-5" /><div className="font-bold">رابط موقع عادي</div><p className="mt-1 text-xs text-muted-foreground">صفحة، لغة، عملة، إحالة.</p>
               </button>
-              <button type="button" onClick={() => setLinkMode("marketing")} className={cn("rounded-xl border p-4 text-right transition", linkMode === "marketing" ? "border-brand-orange bg-orange-50 text-[#c7470d]" : "border-border bg-white hover:bg-muted/40")}>
+              <button type="button" onClick={() => setLinkMode("marketing")} className={cn("rounded-xl border p-4 text-right transition", linkMode === "marketing" ? "border-brand-orange bg-orange-50 text-[#8f3a23]" : "border-border bg-white hover:bg-muted/40")}>
                 <Megaphone className="mb-2 h-5 w-5" /><div className="font-bold">حملة تسويقية</div><p className="mt-1 text-xs text-muted-foreground">UTM + بيانات منصة + حفظ في سجل الحملات.</p>
               </button>
             </div>
@@ -523,7 +523,7 @@ export default function LinkGeneratorPage() {
             <div className="flex flex-wrap gap-2">
               <Button type="button" onClick={copyUrl} disabled={!fullUrl} className="gap-2"><Copy className="h-4 w-4" />نسخ الرابط</Button>
               <Button type="button" onClick={() => saveRegistryLink(false)} disabled={!fullUrl || saving} variant="outline" className="gap-2">{saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}Save to Campaign Registry</Button>
-              <Button type="button" onClick={() => saveRegistryLink(true)} disabled={!fullUrl || saving} className="gap-2 bg-brand-orange hover:bg-[#d94c12]">{saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}حفظ ونسخ الرابط</Button>
+              <Button type="button" onClick={() => saveRegistryLink(true)} disabled={!fullUrl || saving} className="gap-2 bg-brand-orange hover:bg-[#c6613c]">{saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}حفظ ونسخ الرابط</Button>
               {fullUrl ? <Button asChild type="button" variant="secondary" className="gap-2"><a href={fullUrl} target="_blank" rel="noreferrer"><ExternalLink className="h-4 w-4" />فتح</a></Button> : null}
             </div>
             {lastSavedLink ? (

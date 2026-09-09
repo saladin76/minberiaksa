@@ -102,7 +102,7 @@ export default function BadgesPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<BadgeForm>({
     name: "",
-    color: "#3b82f6",
+    color: "#35708f",
     criteria: defaultCriteria(),
     translations: { ar: "", en: "", fr: "", tr: "", id: "", pt: "", es: "" },
   });
@@ -129,7 +129,7 @@ export default function BadgesPage() {
     setEditingId(null);
     setForm({
       name: "",
-      color: "#3b82f6",
+      color: "#35708f",
       criteria: defaultCriteria(),
       translations: { ar: "", en: "", fr: "", tr: "", id: "", pt: "", es: "" },
     });
@@ -147,7 +147,7 @@ export default function BadgesPage() {
       });
       setForm({
         name: b.name ?? "",
-        color: b.color ?? "#3b82f6",
+        color: b.color ?? "#35708f",
         criteria: {
           type: (b.criteria?.type as BadgeCriteriaType) ?? "TOTAL_LIFETIME",
           amountMinUSD: b.criteria?.amountMinUSD,

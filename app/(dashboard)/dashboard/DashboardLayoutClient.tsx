@@ -260,7 +260,7 @@ export default function DashboardLayoutClient({
           <ConfettiProvider />
           <Toaster position="top-center" toastOptions={{
             style: { fontFamily: 'inherit', fontSize: '14px' },
-            success: { iconTheme: { primary: '#025EB8', secondary: '#fff' } },
+            success: { iconTheme: { primary: '#1F3F4F', secondary: '#fff' } },
           }} />
         </SessionProvider>
       </CurrencyProvider>

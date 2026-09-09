@@ -118,7 +118,7 @@ function renderSlugEditor(projectId: string, links: LocaleLink[], target: HTMLEl
     </div>
     <div class="grid gap-3">${rows}</div>
     <div class="mt-4 flex flex-wrap gap-2">
-      <button type="button" data-save-slugs class="h-10 rounded-md bg-brand px-4 text-sm font-semibold text-white hover:bg-[#014f9d]">حفظ الروابط</button>
+      <button type="button" data-save-slugs class="h-10 rounded-md bg-brand px-4 text-sm font-semibold text-white hover:bg-[#19323f]">حفظ الروابط</button>
       <button type="button" data-refresh-slugs class="h-10 rounded-md border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 hover:bg-slate-100">تحديث البيانات</button>
     </div>
     <div data-slug-editor-status class="mt-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">جاهز للتعديل.</div>

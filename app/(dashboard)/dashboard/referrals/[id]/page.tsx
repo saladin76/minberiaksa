@@ -178,11 +178,11 @@ const PERIOD_LABELS: Record<ChartPeriod, string> = {
 };
 
 const CHART_COLORS = {
-  primary: "#2563eb",
-  primaryLight: "#93c5fd",
-  secondary: "#1d4ed8",
-  grid: "#e2e8f0",
-  text: "#334155",
+  primary: "#295a75",
+  primaryLight: "#83b2c9",
+  secondary: "#234a60",
+  grid: "#dde4e8",
+  text: "#3e4c55",
 };
 
 const DASHBOARD_CURRENCY_SYMBOL: Record<string, string> = {
@@ -473,12 +473,12 @@ export default function ReferralAnalyticsPage() {
   const oneTimeTotal = stats.oneTimeTotalAmount ?? 0;
   const monthlyTotal = stats.monthlyTotalAmount ?? 0;
   const revenueSplitData = [
-    { name: "مشاريع", value: stats.campaignDonationsTotal ?? 0, count: stats.campaignDonationsCount ?? 0, color: "#2563eb" },
-    { name: "فئات", value: stats.categoryDonationsTotal ?? 0, count: stats.categoryDonationsCount ?? 0, color: "#64748b" },
+    { name: "مشاريع", value: stats.campaignDonationsTotal ?? 0, count: stats.campaignDonationsCount ?? 0, color: "#295a75" },
+    { name: "فئات", value: stats.categoryDonationsTotal ?? 0, count: stats.categoryDonationsCount ?? 0, color: "#6e818b" },
   ].filter((d) => d.value > 0 || d.count > 0);
   const typeSplitData = [
-    { name: "مرة واحدة", value: oneTimeTotal, count: stats.oneTimeCount ?? 0, color: "#3b82f6" },
-    { name: "شهرية", value: monthlyTotal, count: stats.monthlyCount ?? 0, color: "#1d4ed8" },
+    { name: "مرة واحدة", value: oneTimeTotal, count: stats.oneTimeCount ?? 0, color: "#35708f" },
+    { name: "شهرية", value: monthlyTotal, count: stats.monthlyCount ?? 0, color: "#234a60" },
   ].filter((d) => d.value > 0 || d.count > 0);
 
   return (
@@ -596,7 +596,7 @@ export default function ReferralAnalyticsPage() {
                             <XAxis dataKey="date" tick={{ fill: CHART_COLORS.text, fontSize: 12 }} tickFormatter={(v) => formatIstanbulDateKeyLabel(v, "en-US", { day: "numeric", month: "short" })} interval="preserveStartEnd" />
                             <YAxis tick={{ fill: CHART_COLORS.text, fontSize: 11 }} tickFormatter={(v) => formatMoney(Number(v))} domain={[0, "auto"]} />
                             <Tooltip
-                              contentStyle={{ backgroundColor: "#fff", border: "1px solid #e2e8f0", borderRadius: "8px", boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)" }}
+                              contentStyle={{ backgroundColor: "#fff", border: "1px solid #dde4e8", borderRadius: "8px", boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)" }}
                               labelFormatter={(v) => formatIstanbulDateKeyLabel(String(v), "en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}
                               formatter={(value: number, name: string) => {
                                 if (name === "amountOneTime") return [formatMoney(Number(value), undefined, undefined, true), "مبلغ مرة واحدة"];
@@ -625,8 +625,8 @@ export default function ReferralAnalyticsPage() {
                               }}
                             />
                             <Legend />
-                            <Bar dataKey="amountOneTime" fill="#3b82f6" radius={[4, 4, 0, 0]} maxBarSize={32} name="مبلغ مرة واحدة" />
-                            <Bar dataKey="amountMonthly" fill="#1d4ed8" radius={[4, 4, 0, 0]} maxBarSize={32} name="مبلغ شهري" />
+                            <Bar dataKey="amountOneTime" fill="#35708f" radius={[4, 4, 0, 0]} maxBarSize={32} name="مبلغ مرة واحدة" />
+                            <Bar dataKey="amountMonthly" fill="#234a60" radius={[4, 4, 0, 0]} maxBarSize={32} name="مبلغ شهري" />
                           </BarChart>
                         </ResponsiveContainer>
                       ) : (
@@ -636,10 +636,10 @@ export default function ReferralAnalyticsPage() {
                             <XAxis dataKey="date" tick={{ fill: CHART_COLORS.text, fontSize: 12 }} tickFormatter={(v) => formatIstanbulDateKeyLabel(v, "en-US", { day: "numeric", month: "short" })} interval="preserveStartEnd" />
                             <YAxis yAxisId="amount" orientation="left" tick={{ fill: CHART_COLORS.text, fontSize: 11 }} tickFormatter={(v) => formatMoney(Number(v))} domain={[0, "auto"]} />
                             <YAxis yAxisId="count" orientation="right" tick={{ fill: CHART_COLORS.text, fontSize: 11 }} tickFormatter={(v) => String(Math.round(Number(v)))} domain={[0, "auto"]} />
-                            <Tooltip contentStyle={{ backgroundColor: "#fff", border: "1px solid #e2e8f0", borderRadius: "8px", boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)" }} labelFormatter={(v) => formatIstanbulDateKeyLabel(String(v), "en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" })} formatter={(value: number, name: string) => [(name === "count" || name === "عدد التبرعات") ? String(Math.round(Number(value))) : formatMoney(Number(value), undefined, undefined, true), chartMetric === "teamSupport" ? "دعم الفريق" : "الرسوم"]} />
+                            <Tooltip contentStyle={{ backgroundColor: "#fff", border: "1px solid #dde4e8", borderRadius: "8px", boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)" }} labelFormatter={(v) => formatIstanbulDateKeyLabel(String(v), "en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" })} formatter={(value: number, name: string) => [(name === "count" || name === "عدد التبرعات") ? String(Math.round(Number(value))) : formatMoney(Number(value), undefined, undefined, true), chartMetric === "teamSupport" ? "دعم الفريق" : "الرسوم"]} />
                             <Legend />
-                            <Bar yAxisId="amount" dataKey={chartMetric} fill={chartMetric === "teamSupport" ? "#f59e0b" : "#ea580c"} radius={[4, 4, 0, 0]} maxBarSize={36} name={chartMetric === "teamSupport" ? "دعم الفريق" : "الرسوم"} />
-                            <Line yAxisId="count" type="monotone" dataKey="count" stroke="#0f766e" strokeWidth={2} dot={false} name="عدد التبرعات" />
+                            <Bar yAxisId="amount" dataKey={chartMetric} fill={chartMetric === "teamSupport" ? "#d39a27" : "#b04a2c"} radius={[4, 4, 0, 0]} maxBarSize={36} name={chartMetric === "teamSupport" ? "دعم الفريق" : "الرسوم"} />
+                            <Line yAxisId="count" type="monotone" dataKey="count" stroke="#1a6340" strokeWidth={2} dot={false} name="عدد التبرعات" />
                           </ComposedChart>
                         </ResponsiveContainer>
                       )
@@ -650,10 +650,10 @@ export default function ReferralAnalyticsPage() {
                           <XAxis dataKey="date" tick={{ fill: CHART_COLORS.text, fontSize: 12 }} tickFormatter={(v) => formatIstanbulDateKeyLabel(v, "en-US", { day: "numeric", month: "short" })} interval="preserveStartEnd" />
                           <YAxis yAxisId="amount" orientation="right" tick={{ fill: CHART_COLORS.text, fontSize: 11 }} tickFormatter={(v) => formatMoney(Number(v))} />
                           <YAxis yAxisId="count" orientation="left" tick={{ fill: CHART_COLORS.text, fontSize: 11 }} tickFormatter={(v) => String(Math.round(Number(v)))} domain={[0, "auto"]} />
-                          <Tooltip contentStyle={{ backgroundColor: "#fff", border: "1px solid #e2e8f0", borderRadius: "8px", boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)" }} labelFormatter={(v) => formatIstanbulDateKeyLabel(String(v), "en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" })} formatter={(value: number, name: string) => [(name === "count" || name === "عدد التبرعات") ? String(Math.round(Number(value))) : formatMoney(Number(value), undefined, undefined, true), chartMetric === "amount" ? "المبلغ" : chartMetric === "teamSupport" ? "دعم الفريق" : "الرسوم"]} />
+                          <Tooltip contentStyle={{ backgroundColor: "#fff", border: "1px solid #dde4e8", borderRadius: "8px", boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)" }} labelFormatter={(v) => formatIstanbulDateKeyLabel(String(v), "en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" })} formatter={(value: number, name: string) => [(name === "count" || name === "عدد التبرعات") ? String(Math.round(Number(value))) : formatMoney(Number(value), undefined, undefined, true), chartMetric === "amount" ? "المبلغ" : chartMetric === "teamSupport" ? "دعم الفريق" : "الرسوم"]} />
                           <Legend />
-                          <Line yAxisId="amount" type="monotone" dataKey={chartMetric === "amount" ? "amountUSD" : chartMetric} stroke={chartMetric === "amount" ? "#2563eb" : chartMetric === "teamSupport" ? "#f59e0b" : "#ea580c"} strokeWidth={2} dot={false} name={chartMetric === "amount" ? "المبلغ" : chartMetric === "teamSupport" ? "دعم الفريق" : "الرسوم"} />
-                          <Line yAxisId="count" type="monotone" dataKey="count" stroke="#0f766e" strokeWidth={2} dot={false} name="عدد التبرعات" />
+                          <Line yAxisId="amount" type="monotone" dataKey={chartMetric === "amount" ? "amountUSD" : chartMetric} stroke={chartMetric === "amount" ? "#295a75" : chartMetric === "teamSupport" ? "#d39a27" : "#b04a2c"} strokeWidth={2} dot={false} name={chartMetric === "amount" ? "المبلغ" : chartMetric === "teamSupport" ? "دعم الفريق" : "الرسوم"} />
+                          <Line yAxisId="count" type="monotone" dataKey="count" stroke="#1a6340" strokeWidth={2} dot={false} name="عدد التبرعات" />
                         </ComposedChart>
                       </ResponsiveContainer>
                     ) : (
@@ -663,10 +663,10 @@ export default function ReferralAnalyticsPage() {
                           <XAxis dataKey="date" tick={{ fill: CHART_COLORS.text, fontSize: 12 }} tickFormatter={(v) => formatIstanbulDateKeyLabel(v, "en-US", { day: "numeric", month: "short" })} interval="preserveStartEnd" />
                           <YAxis yAxisId="amount" orientation="right" tick={{ fill: CHART_COLORS.text, fontSize: 11 }} tickFormatter={(v) => formatMoney(Number(v))} />
                           <YAxis yAxisId="count" orientation="left" tick={{ fill: CHART_COLORS.text, fontSize: 11 }} tickFormatter={(v) => String(Math.round(Number(v)))} domain={[0, "auto"]} />
-                          <Tooltip contentStyle={{ backgroundColor: "#fff", border: "1px solid #e2e8f0", borderRadius: "8px", boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)" }} labelFormatter={(v) => formatIstanbulDateKeyLabel(String(v), "en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" })} formatter={(value: number, name: string) => [(name === "count" || name === "عدد التبرعات") ? String(Math.round(Number(value))) : formatMoney(Number(value), undefined, undefined, true), chartMetric === "amount" ? "المبلغ" : chartMetric === "teamSupport" ? "دعم الفريق" : "الرسوم"]} />
+                          <Tooltip contentStyle={{ backgroundColor: "#fff", border: "1px solid #dde4e8", borderRadius: "8px", boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)" }} labelFormatter={(v) => formatIstanbulDateKeyLabel(String(v), "en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" })} formatter={(value: number, name: string) => [(name === "count" || name === "عدد التبرعات") ? String(Math.round(Number(value))) : formatMoney(Number(value), undefined, undefined, true), chartMetric === "amount" ? "المبلغ" : chartMetric === "teamSupport" ? "دعم الفريق" : "الرسوم"]} />
                           <Legend />
-                          <Area yAxisId="amount" type="monotone" dataKey={chartMetric === "amount" ? "amountUSD" : chartMetric} stroke={chartMetric === "amount" ? "#2563eb" : chartMetric === "teamSupport" ? "#f59e0b" : "#ea580c"} fill={chartMetric === "amount" ? "#93c5fd" : chartMetric === "teamSupport" ? "#fcd34d" : "#fdba74"} fillOpacity={0.4} strokeWidth={2} name={chartMetric === "amount" ? "المبلغ" : chartMetric === "teamSupport" ? "دعم الفريق" : "الرسوم"} />
-                          <Line yAxisId="count" type="monotone" dataKey="count" stroke="#0f766e" strokeWidth={2} dot={false} name="عدد التبرعات" />
+                          <Area yAxisId="amount" type="monotone" dataKey={chartMetric === "amount" ? "amountUSD" : chartMetric} stroke={chartMetric === "amount" ? "#295a75" : chartMetric === "teamSupport" ? "#d39a27" : "#b04a2c"} fill={chartMetric === "amount" ? "#83b2c9" : chartMetric === "teamSupport" ? "#ecc977" : "#e8a783"} fillOpacity={0.4} strokeWidth={2} name={chartMetric === "amount" ? "المبلغ" : chartMetric === "teamSupport" ? "دعم الفريق" : "الرسوم"} />
+                          <Line yAxisId="count" type="monotone" dataKey="count" stroke="#1a6340" strokeWidth={2} dot={false} name="عدد التبرعات" />
                         </ComposedChart>
                       </ResponsiveContainer>
                     )}

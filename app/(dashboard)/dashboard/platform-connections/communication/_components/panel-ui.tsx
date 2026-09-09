@@ -18,7 +18,7 @@ import { cn } from "@/lib/utils";
  *  - radii: panels `rounded-xl`, blocks inside them `rounded-lg`, code `rounded-md`
  *  - weight: `font-semibold` for headings, `font-medium` for labels, never `font-black`
  *  - colour: the `brand` scale for brand blue (the file was full of raw `blue-*`,
- *    which is a different hue from `#025EB8` and visibly clashed with it);
+ *    which is a different hue from `#1F3F4F` and visibly clashed with it);
  *    emerald / amber / rose stay reserved for status meaning.
  */
 

@@ -220,7 +220,7 @@ export function ContentLocalizationAuditCard({ section }: { section: Section }) 
               <Button
                 size="sm"
                 onClick={() => setPreviewOpen(true)}
-                className="gap-2 bg-brand hover:bg-[#014f9c]"
+                className="gap-2 bg-brand hover:bg-[#19323f]"
               >
                 <Sparkles className="h-4 w-4" />
                 فتح المعاينة الآمنة

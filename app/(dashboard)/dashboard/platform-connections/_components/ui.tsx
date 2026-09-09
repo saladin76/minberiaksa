@@ -127,7 +127,7 @@ export function EnvOnlyNote() {
 export function QuickLink({ href, label, icon }: { href: string; label: string; icon: ReactNode }) {
   return (
     <Link href={href} className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition hover:border-brand/50 hover:shadow">
-      {/* bg-blue-50 is a different hue from brand (#025EB8) and clashed with the
+      {/* bg-blue-50 is a different hue from brand (#1F3F4F) and clashed with the
           brand-coloured icon sitting on it. */}
       <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-50 text-brand">{icon}</span>
       <span className="text-sm font-semibold text-slate-800">{label}</span>
