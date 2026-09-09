@@ -669,6 +669,8 @@
     "monthlyActive": "Bulanan ✓",
     "cardHolder": "Nama Pemegang Kad",
     "paypalRedirect": "Anda boleh melengkapkan pembayaran melalui PayPal.",
+    "cardOnBankPage": "You will enter your card details securely on the bank’s own payment page after you continue.",
+    "cardUnavailable": "Card payment is temporarily unavailable. Please use bank transfer or PayPal.",
     "bankPageTitle": "Akaun Bank Kami",
     "bankPageLead": "Anda boleh menderma terus melalui pindahan bank ke salah satu akaun rasmi yayasan di bawah, dalam mata wang yang sesuai. Selepas pemindahan, hantar foto resit agar derma anda diproses.",
     "bankDirectTitle": "Terus masuk ke halaman ini?",

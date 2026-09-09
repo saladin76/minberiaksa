@@ -98,6 +98,7 @@ export default function CheckoutPage({ projects, banks, donor }: CheckoutPagePro
     mainGateway: MainGateway;
     payforEnabled: boolean;
     albarakaUseOOS: boolean;
+    albarakaConfigured: boolean;
   } | null>(null);
 
   useEffect(() => {
@@ -109,6 +110,7 @@ export default function CheckoutPage({ projects, banks, donor }: CheckoutPagePro
           mainGateway: settings.mainGateway,
           payforEnabled: settings.payforEnabled,
           albarakaUseOOS: settings.albarakaUseOOS,
+          albarakaConfigured: settings.albarakaConfigured,
         });
       })
       .catch(() => {
@@ -136,6 +138,32 @@ export default function CheckoutPage({ projects, banks, donor }: CheckoutPagePro
   const total = items.reduce((sum, item) => sum + item.amount, 0);
   /* One type for the whole order; the cart page does not let the two mix. */
   const orderTypeForCart = items.some((item) => item.freqKey !== "once") ? "MONTHLY" : "ONE_TIME";
+
+  /* The rail this basket will run on, resolved the same way the server resolves
+     it, so the card step can render what that rail actually needs. Before the
+     settings arrive this is Stripe, which collects the card on our page — the
+     same thing the design shows, so nothing flickers. */
+  const gateway = resolveGateway({
+    mainGateway: gatewayConfig?.mainGateway ?? "STRIPE",
+    payforEnabled: gatewayConfig?.payforEnabled ?? true,
+    currency,
+    donationType: orderTypeForCart,
+  });
+
+  /* Albaraka in Ortak Ödeme Sayfası mode collects the card on the bank's own
+     page. Asking for it here too would make the donor type it twice, and the
+     copy we'd send is discarded — so the card fields are replaced by a line
+     saying where the card is entered. */
+  const bankCollectsCard = gateway === "ALBARAKA" && gatewayConfig?.albarakaUseOOS === true;
+
+  /* Albaraka signs everything with ALBARAKA_ENC_KEY. Without it the initiate
+     route refuses, and the donor would only find out after an order had been
+     created and failed. Hide the rail instead. */
+  const cardRailUnavailable =
+    gateway === "ALBARAKA" && gatewayConfig !== null && !gatewayConfig.albarakaConfigured;
+
+  /* A card we never collect can't be validated, and the bank rails need one. */
+  const needsOwnCardForm = !bankCollectsCard && !cardRailUnavailable;
   const selectedBank = banks.find((b) => b.id === bankId) ?? banks[0];
 
   const copy = async (key: string, value: string) => {
@@ -168,6 +196,19 @@ export default function CheckoutPage({ projects, banks, donor }: CheckoutPagePro
       return;
     }
 
+    /* Guard the card rail before an order exists. Creating a donation we then
+       can't charge leaves a FAILED row behind for no reason. */
+    if (method === "card") {
+      if (cardRailUnavailable) {
+        setError(tSystem("techErrorLead"));
+        return;
+      }
+      if (needsOwnCardForm && (!cardNumber.trim() || !cardExpiry.trim() || !cardCvc.trim())) {
+        setError(tValidation("required"));
+        return;
+      }
+    }
+
     setSubmitting(true);
     setError(null);
 
@@ -197,13 +238,6 @@ export default function CheckoutPage({ projects, banks, donor }: CheckoutPagePro
         return;
       }
 
-      const gateway = resolveGateway({
-        mainGateway: gatewayConfig?.mainGateway ?? "STRIPE",
-        payforEnabled: gatewayConfig?.payforEnabled ?? true,
-        currency,
-        donationType: orderTypeForCart,
-      });
-
       if (gateway === "STRIPE") {
         await chargeWithStripe(donation.id, locale);
         clearCart();
@@ -215,7 +249,10 @@ export default function CheckoutPage({ projects, banks, donor }: CheckoutPagePro
          values go to the server; PayFor leaves them out of the hash, so the
          browser appends them and the number never reaches this origin. */
       const [expiryMonth = "", expiryYear = ""] = cardExpiry.split("/");
-      const sendCardToServer = gateway === "ALBARAKA" && !gatewayConfig?.albarakaUseOOS;
+      /* In OOS mode the card fields go to the bank empty and its hosted page
+         fills them; sending anything here would sign values the donor never
+         confirmed. */
+      const sendCardToServer = gateway === "ALBARAKA" && !bankCollectsCard;
 
       const form = await initiateBankPayment(
         donation.id,
@@ -527,7 +564,15 @@ export default function CheckoutPage({ projects, banks, donor }: CheckoutPagePro
                 </div>
               ) : null}
 
-              {method === "card" ? (
+              {method === "card" && !needsOwnCardForm ? (
+                <div style={{ display: "grid", gap: 12, justifyItems: "center", padding: "16px 14px", background: "var(--sand)", border: "1px solid var(--border)", borderRadius: 12 }}>
+                  <span style={{ fontSize: 13.5, fontWeight: 800, color: cardRailUnavailable ? "var(--red)" : "var(--deep)", textAlign: "center", lineHeight: 1.8 }}>
+                    {cardRailUnavailable ? t("cardUnavailable") : t("cardOnBankPage")}
+                  </span>
+                </div>
+              ) : null}
+
+              {method === "card" && needsOwnCardForm ? (
                 <div style={{ display: "grid", gap: 14 }}>
                   <CardPreview number={cardNumber} name={cardName || `${firstName} ${lastName}`.trim()} expiry={cardExpiry} cvc={cardCvc} flipped={cvcFocused} />
                   <div id="card-fields" style={{ display: "grid", gridTemplateColumns: "repeat(2,minmax(0,1fr))", gap: 14 }}>
@@ -604,7 +649,7 @@ export default function CheckoutPage({ projects, banks, donor }: CheckoutPagePro
             ) : (
               <button
                 type="submit"
-                disabled={submitting || !items.length}
+                disabled={submitting || !items.length || (method === "card" && cardRailUnavailable)}
                 className="mia-card-cta"
                 style={{ width: "100%", height: 52, border: 0, borderRadius: 8, background: "var(--red)", color: "#fff", fontFamily: "inherit", fontWeight: 900, fontSize: 16, cursor: "pointer", boxShadow: "var(--shadow-cta)", transition: "filter .18s ease" }}
               >

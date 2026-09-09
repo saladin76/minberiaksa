@@ -1701,6 +1701,8 @@
     "monthlyActive": "Aylık ✓",
     "cardHolder": "Kart Sahibinin Adı",
     "paypalRedirect": "Ödemeyi PayPal üzerinden tamamlayabilirsin.",
+    "cardOnBankPage": "Kart bilgilerinizi, devam ettikten sonra bankanın kendi güvenli ödeme sayfasında gireceksiniz.",
+    "cardUnavailable": "Kartla ödeme geçici olarak kullanılamıyor. Lütfen banka havalesi veya PayPal kullanın.",
     "bankPageTitle": "Banka Hesaplarımız",
     "bankPageLead": "Aşağıdaki resmî dernek hesaplarından birine, size uygun para biriminde doğrudan havale ile bağış yapabilirsiniz. Havaleden sonra bağışınızın işleme alınması için dekont görselini gönderin.",
     "bankDirectTitle": "Bu sayfaya doğrudan mı geldiniz?",

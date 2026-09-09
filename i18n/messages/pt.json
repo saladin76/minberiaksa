@@ -1701,6 +1701,8 @@
     "monthlyActive": "Mensal ✓",
     "cardHolder": "Nome do Titular",
     "paypalRedirect": "Pode concluir o pagamento através do PayPal.",
+    "cardOnBankPage": "You will enter your card details securely on the bank’s own payment page after you continue.",
+    "cardUnavailable": "Card payment is temporarily unavailable. Please use bank transfer or PayPal.",
     "bankPageTitle": "As nossas contas bancárias",
     "bankPageLead": "Pode doar diretamente por transferência bancária para uma das contas oficiais abaixo, na moeda que preferir. Após a transferência, envie uma foto do comprovativo para processar o seu donativo.",
     "bankDirectTitle": "Chegou diretamente a esta página?",

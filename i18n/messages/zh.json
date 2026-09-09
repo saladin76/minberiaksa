@@ -669,6 +669,8 @@
     "monthlyActive": "每月 ✓",
     "cardHolder": "持卡人姓名",
     "paypalRedirect": "您可以通过 PayPal 完成付款。",
+    "cardOnBankPage": "You will enter your card details securely on the bank’s own payment page after you continue.",
+    "cardUnavailable": "Card payment is temporarily unavailable. Please use bank transfer or PayPal.",
     "bankPageTitle": "我们的银行账户",
     "bankPageLead": "您可以选择合适的币种，直接向下方本会官方账户进行银行转账捐赠。转账后请发送凭证照片，以便处理您的捐款。",
     "bankDirectTitle": "直接进入本页面？",

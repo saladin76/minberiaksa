@@ -37,18 +37,26 @@ export type AlbarakaConfig = {
 };
 
 /**
- * Merchant identifiers default to the values issued for this merchant; they are not
- * secrets (the same numbers are printed in the bank's merchant portal) and having
- * defaults keeps the gateway working without extra deploy config.
+ * No merchant identifier is defaulted.
  *
- * ALBARAKA_ENC_KEY has no default on purpose — it is the shared secret behind every
- * MAC, and is created from Kurumsal İnternet Bankacılığı → "Anahtar Yaratma".
+ * They are not secrets — the same numbers are printed in the bank's merchant portal
+ * under "Üye İşyeri Bilgilerim" — but a wrong one is worse than a missing one: a
+ * hard-coded fallback means an unset env var silently signs live 3D forms with some
+ * other merchant's numbers instead of failing. `isAlbarakaConfigured` gates on all
+ * four, so an incomplete deployment refuses to initiate rather than mis-routing.
+ *
+ * A merchant may hold several terminals (this one holds three). Each has its own
+ * TerminalNo *and* its own PosnetID, and the two must come from the same row of the
+ * portal — mixing them across terminals fails MAC verification at the bank.
+ *
+ * ALBARAKA_ENC_KEY is the shared secret behind every MAC, created from Kurumsal
+ * İnternet Bankacılığı → Üye İşyeri → "Anahtar Yaratma".
  */
 export function albarakaConfig(): AlbarakaConfig {
   return {
-    merchantNo: process.env.ALBARAKA_MERCHANT_NO ?? "6702225453",
-    terminalNo: process.env.ALBARAKA_TERMINAL_NO ?? "67A670C0",
-    posnetId: process.env.ALBARAKA_POSNET_ID ?? "1010514193725288",
+    merchantNo: process.env.ALBARAKA_MERCHANT_NO ?? "",
+    terminalNo: process.env.ALBARAKA_TERMINAL_NO ?? "",
+    posnetId: process.env.ALBARAKA_POSNET_ID ?? "",
     encKey: process.env.ALBARAKA_ENC_KEY ?? "",
     tdsUrl:
       process.env.ALBARAKA_3DS_URL ??
@@ -62,7 +70,7 @@ export function albarakaConfig(): AlbarakaConfig {
   };
 }
 
-/** The encryption key is the only piece that can't be defaulted, so it gates readiness. */
+/** Nothing is defaulted, so readiness means all four identifiers are actually set. */
 export function isAlbarakaConfigured(cfg: AlbarakaConfig = albarakaConfig()): boolean {
   return Boolean(cfg.encKey && cfg.merchantNo && cfg.terminalNo && cfg.posnetId);
 }

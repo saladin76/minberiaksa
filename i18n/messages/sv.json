@@ -669,6 +669,8 @@
     "monthlyActive": "Månatlig ✓",
     "cardHolder": "Kortinnehavarens Namn",
     "paypalRedirect": "Du kan slutföra betalningen via PayPal.",
+    "cardOnBankPage": "You will enter your card details securely on the bank’s own payment page after you continue.",
+    "cardUnavailable": "Card payment is temporarily unavailable. Please use bank transfer or PayPal.",
     "bankPageTitle": "Våra Bankkonton",
     "bankPageLead": "Du kan donera direkt via banköverföring till ett av organisationens officiella konton nedan, i valfri valuta. Skicka en bild på kvittot efter överföringen så att din gåva kan behandlas.",
     "bankDirectTitle": "Kom du direkt till den här sidan?",

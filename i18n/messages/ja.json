@@ -669,6 +669,8 @@
     "monthlyActive": "毎月 ✓",
     "cardHolder": "カード名義人",
     "paypalRedirect": "PayPalでお支払いを完了できます。",
+    "cardOnBankPage": "You will enter your card details securely on the bank’s own payment page after you continue.",
+    "cardUnavailable": "Card payment is temporarily unavailable. Please use bank transfer or PayPal.",
     "bankPageTitle": "当協会の銀行口座",
     "bankPageLead": "下記の公式口座へ、ご都合の良い通貨で直接お振込みいただけます。振込後、ご寄付を処理するために領収書の写真をお送りください。",
     "bankDirectTitle": "このページに直接アクセスされましたか？",

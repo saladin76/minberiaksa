@@ -1701,6 +1701,8 @@
     "monthlyActive": "Bulanan ✓",
     "cardHolder": "Nama Pemegang Kartu",
     "paypalRedirect": "Anda dapat menyelesaikan pembayaran melalui PayPal.",
+    "cardOnBankPage": "You will enter your card details securely on the bank’s own payment page after you continue.",
+    "cardUnavailable": "Card payment is temporarily unavailable. Please use bank transfer or PayPal.",
     "bankPageTitle": "Rekening Bank Kami",
     "bankPageLead": "Anda dapat berdonasi langsung melalui transfer bank ke salah satu rekening resmi yayasan di bawah ini, dalam mata uang yang sesuai. Setelah transfer, kirim foto bukti agar donasi Anda diproses.",
     "bankDirectTitle": "Langsung masuk ke halaman ini?",

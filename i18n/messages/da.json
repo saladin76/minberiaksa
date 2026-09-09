@@ -669,6 +669,8 @@
     "monthlyActive": "Månedlig ✓",
     "cardHolder": "Kortholders Navn",
     "paypalRedirect": "Du kan gennemføre betalingen via PayPal.",
+    "cardOnBankPage": "You will enter your card details securely on the bank’s own payment page after you continue.",
+    "cardUnavailable": "Card payment is temporarily unavailable. Please use bank transfer or PayPal.",
     "bankPageTitle": "Vores Bankkonti",
     "bankPageLead": "Du kan donere direkte via bankoverførsel til en af organisationens officielle konti nedenfor, i den valuta der passer dig. Send et billede af kvitteringen efter overførslen, så din gave kan behandles.",
     "bankDirectTitle": "Kom du direkte til denne side?",

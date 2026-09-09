@@ -669,6 +669,8 @@
     "monthlyActive": "Maandelijks ✓",
     "cardHolder": "Naam Kaarthouder",
     "paypalRedirect": "Je kunt de betaling via PayPal afronden.",
+    "cardOnBankPage": "You will enter your card details securely on the bank’s own payment page after you continue.",
+    "cardUnavailable": "Card payment is temporarily unavailable. Please use bank transfer or PayPal.",
     "bankPageTitle": "Onze bankrekeningen",
     "bankPageLead": "U kunt rechtstreeks doneren via bankoverschrijving naar een van de officiële rekeningen hieronder, in de valuta van uw keuze. Stuur na de overschrijving een foto van het bewijs zodat uw donatie wordt verwerkt.",
     "bankDirectTitle": "Direct op deze pagina beland?",

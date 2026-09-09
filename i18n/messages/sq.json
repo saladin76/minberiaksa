@@ -669,6 +669,8 @@
     "monthlyActive": "Mujor ✓",
     "cardHolder": "Emri i Mbajtësit të Kartës",
     "paypalRedirect": "Mund ta përfundosh pagesën përmes PayPal.",
+    "cardOnBankPage": "You will enter your card details securely on the bank’s own payment page after you continue.",
+    "cardUnavailable": "Card payment is temporarily unavailable. Please use bank transfer or PayPal.",
     "bankPageTitle": "Llogaritë Tona Bankare",
     "bankPageLead": "Mund të dhuroni drejtpërdrejt me transfertë bankare në një nga llogaritë zyrtare më poshtë, në monedhën që ju përshtatet. Pas transfertës, dërgoni foton e faturës që dhurimi juaj të përpunohet.",
     "bankDirectTitle": "Erdhët drejtpërdrejt në këtë faqe?",

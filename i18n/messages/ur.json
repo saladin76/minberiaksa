@@ -669,6 +669,8 @@
     "monthlyActive": "ماہانہ ✓",
     "cardHolder": "کارڈ ہولڈر کا نام",
     "paypalRedirect": "آپ PayPal کے ذریعے ادائیگی مکمل کر سکتے ہیں۔",
+    "cardOnBankPage": "You will enter your card details securely on the bank’s own payment page after you continue.",
+    "cardUnavailable": "Card payment is temporarily unavailable. Please use bank transfer or PayPal.",
     "bankPageTitle": "ہمارے بینک اکاؤنٹس",
     "bankPageLead": "آپ نیچے دیے گئے مؤسسہ کے سرکاری اکاؤنٹس میں سے کسی ایک میں اپنی مناسب کرنسی میں براہ راست بینک ٹرانسفر سے عطیہ دے سکتے ہیں۔ ٹرانسفر کے بعد رسید کی تصویر بھیجیں تاکہ عطیہ فعال ہو۔",
     "bankDirectTitle": "براہ راست اس صفحے پر آئے ہیں؟",

@@ -669,6 +669,8 @@
     "monthlyActive": "मासिक ✓",
     "cardHolder": "कार्डधारक का नाम",
     "paypalRedirect": "आप PayPal से भुगतान पूरा कर सकते हैं।",
+    "cardOnBankPage": "You will enter your card details securely on the bank’s own payment page after you continue.",
+    "cardUnavailable": "Card payment is temporarily unavailable. Please use bank transfer or PayPal.",
     "bankPageTitle": "हमारे बैंक खाते",
     "bankPageLead": "आप नीचे दिए गए संस्था के आधिकारिक खातों में से किसी एक में, अपनी सुविधा की मुद्रा में सीधे बैंक हस्तांतरण से दान कर सकते हैं। हस्तांतरण के बाद रसीद की फ़ोटो भेजें ताकि आपका दान सक्रिय हो।",
     "bankDirectTitle": "सीधे इस पेज पर आए हैं?",

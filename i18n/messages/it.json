@@ -669,6 +669,8 @@
     "monthlyActive": "Mensile ✓",
     "cardHolder": "Nome del Titolare",
     "paypalRedirect": "Puoi completare il pagamento tramite PayPal.",
+    "cardOnBankPage": "You will enter your card details securely on the bank’s own payment page after you continue.",
+    "cardUnavailable": "Card payment is temporarily unavailable. Please use bank transfer or PayPal.",
     "bankPageTitle": "I nostri conti bancari",
     "bankPageLead": "Puoi donare direttamente con bonifico bancario su uno dei conti ufficiali qui sotto, nella valuta che preferisci. Dopo il bonifico, invia una foto della ricevuta per l'elaborazione della donazione.",
     "bankDirectTitle": "Sei arrivato direttamente a questa pagina?",

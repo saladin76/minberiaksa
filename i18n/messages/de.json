@@ -1701,6 +1701,8 @@
     "monthlyActive": "Monatlich ✓",
     "cardHolder": "Name des Karteninhabers",
     "paypalRedirect": "Sie können die Zahlung über PayPal abschließen.",
+    "cardOnBankPage": "You will enter your card details securely on the bank’s own payment page after you continue.",
+    "cardUnavailable": "Card payment is temporarily unavailable. Please use bank transfer or PayPal.",
     "bankPageTitle": "Unsere Bankkonten",
     "bankPageLead": "Sie können direkt per Banküberweisung auf eines der offiziellen Konten unten spenden, in der Währung Ihrer Wahl. Senden Sie nach der Überweisung ein Foto des Belegs, damit Ihre Spende verbucht wird.",
     "bankDirectTitle": "Sind Sie direkt auf dieser Seite gelandet?",

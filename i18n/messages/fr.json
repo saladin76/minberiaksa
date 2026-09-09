@@ -1701,6 +1701,8 @@
     "monthlyActive": "Mensuel ✓",
     "cardHolder": "Nom du Titulaire",
     "paypalRedirect": "Vous pouvez finaliser votre paiement via PayPal.",
+    "cardOnBankPage": "You will enter your card details securely on the bank’s own payment page after you continue.",
+    "cardUnavailable": "Card payment is temporarily unavailable. Please use bank transfer or PayPal.",
     "bankPageTitle": "Nos comptes bancaires",
     "bankPageLead": "Vous pouvez faire un don par virement bancaire sur l'un des comptes officiels ci-dessous, dans la devise de votre choix. Après le virement, envoyez une photo du reçu pour que votre don soit traité.",
     "bankDirectTitle": "Vous êtes arrivé directement sur cette page ?",
