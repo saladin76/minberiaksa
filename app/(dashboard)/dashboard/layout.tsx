@@ -6,7 +6,7 @@ import DashboardLayoutClient from "./DashboardLayoutClient";
 import ar from "../../../i18n/messages/ar.json";
 
 export const metadata: Metadata = {
-  title: "لوحة التحكم | قرة العيون",
+  title: "لوحة التحكم",
   description: "إدارة المشاريع والتبرعات والمستخدمين",
   icons: { icon: "/logometaminber.avif" },
   robots: { index: false, follow: false },
