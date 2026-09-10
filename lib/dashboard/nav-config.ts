@@ -56,6 +56,10 @@ export const DASHBOARD_NAV_GROUPS: DashboardNavGroup[] = [
       // PUBLIC site renders, so leaving them unlinked meant no one could edit live UI.
       { key: "slides", title: "الشرائح", href: "/dashboard/slides", icon: "images", keywords: ["slides", "slider", "hero"] },
       { key: "siteContent", title: "شريط القصص", href: "/dashboard/stories", icon: "images", keywords: ["stories", "قصص", "rail", "highlights"] },
+      { key: "siteContent", title: "الفيديوهات", href: "/dashboard/videos", icon: "video", keywords: ["videos", "فيديو", "achievements", "endorsements", "إنجازات", "تزكيات"] },
+      { key: "siteContent", title: "التقارير", href: "/dashboard/reports", icon: "fileText", keywords: ["reports", "تقارير", "pdf", "annual"] },
+      { key: "siteContent", title: "الكتيبات", href: "/dashboard/booklets", icon: "bookOpen", keywords: ["booklets", "كتيبات", "pdf", "library"] },
+      { key: "siteContent", title: "الأسئلة الشائعة", href: "/dashboard/faqs", icon: "helpCircle", keywords: ["faq", "أسئلة", "questions", "help"] },
       { key: "ticker", title: "شريط التبرعات", href: "/dashboard/ticker", icon: "ticket", keywords: ["ticker", "marquee"] },
     ],
   },
