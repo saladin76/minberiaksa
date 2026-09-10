@@ -28,7 +28,7 @@
     "migrate:integration-settings": "prisma generate --schema prisma/integration-settings.schema.prisma && tsx prisma/mongodb-migrations/20260714-integration-settings.ts"
   },
   "prisma": {
-    "seed": "tsx prisma/seed.ts"
+    "seed": "tsx prisma/seed/seed.ts"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.7.4",

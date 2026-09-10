@@ -1696,3 +1696,436 @@ model CommunicationCampaignTrackingLink {
 
   @@index([campaignId, status])
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Site content models.
+//
+// These replace the static modules under `lib/minbar/content/` and
+// `lib/minbar/banks.ts`, each of which carries a `[DASHBOARD-INTEGRATION]` note
+// naming the model that takes it over. Until a model holds rows the page keeps
+// reading its static list, so adding the schema changes nothing on its own.
+//
+// Conventions follow the rest of this file exactly: ObjectId ids, timestamps on
+// the parent only, a sibling *Translation per translatable model keyed
+// @@unique([<parent>Id, locale]) and cascading from it, and `slug` unique on the
+// parent. Arabic is the master copy and lives on the parent row; the translation
+// table holds every other locale.
+// ─────────────────────────────────────────────────────────────────────────────
+
+enum PlaylistKind {
+  PROGRAM
+  SERIES
+}
+
+enum VideoType {
+  ACHIEVEMENT
+  ENDORSEMENT
+  FIELD
+}
+
+/// Homepage story rail.
+///
+/// `startsAt`/`endsAt` are a publishing window, not decoration: a story outside
+/// its window is not returned. Both are nullable because "runs forever" has to
+/// be expressible — that is the dashboard's unlimited option, stored as
+/// `endsAt = null` rather than a sentinel date far in the future. The 24-hour
+/// default is applied when a story is created, not here: Prisma defaults are
+/// static, so `now() + 24h` cannot be a schema default and belongs in the
+/// create path.
+model Story {
+  id       String    @id @default(auto()) @map("_id") @db.ObjectId
+  slug     String    @unique
+  title    String
+  image    String
+  linkUrl  String?
+  order    Int       @default(0)
+  isActive Boolean   @default(true)
+  startsAt DateTime?
+  endsAt   DateTime?
+
+  translations StoryTranslation[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([isActive, order])
+}
+
+model StoryTranslation {
+  id      String @id @default(auto()) @map("_id") @db.ObjectId
+  storyId String @db.ObjectId
+  locale  String
+  title   String
+
+  story Story @relation(fields: [storyId], references: [id], onDelete: Cascade)
+
+  @@unique([storyId, locale])
+}
+
+/// "برامجنا المصورة" — a YouTube playlist or series, with its episodes.
+model VideoPlaylist {
+  id                 String       @id @default(auto()) @map("_id") @db.ObjectId
+  slug               String       @unique
+  title              String
+  description        String?
+  youtubePlaylistUrl String?
+  kind               PlaylistKind @default(PROGRAM)
+  coverImage         String?
+  order              Int          @default(0)
+  isActive           Boolean      @default(true)
+
+  translations PlaylistTranslation[]
+  videos       PlaylistVideo[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([isActive, order])
+}
+
+model PlaylistTranslation {
+  id          String  @id @default(auto()) @map("_id") @db.ObjectId
+  playlistId  String  @db.ObjectId
+  locale      String
+  title       String
+  description String?
+
+  playlist VideoPlaylist @relation(fields: [playlistId], references: [id], onDelete: Cascade)
+
+  @@unique([playlistId, locale])
+}
+
+/// One episode inside a playlist.
+///
+/// Episode titles are not translated: they are the titles YouTube itself serves,
+/// and a translated title that does not match what the viewer reads on the video
+/// is worse than an untranslated one.
+model PlaylistVideo {
+  id              String  @id @default(auto()) @map("_id") @db.ObjectId
+  playlistId      String  @db.ObjectId
+  youtubeId       String
+  url             String
+  thumbnail       String?
+  title           String?
+  durationSeconds Int?
+  order           Int     @default(0)
+  isActive        Boolean @default(true)
+
+  playlist VideoPlaylist @relation(fields: [playlistId], references: [id], onDelete: Cascade)
+
+  @@index([playlistId, order])
+}
+
+/// "دوراتنا".
+///
+/// Three shapes of course exist and the flags keep them apart: one with a full
+/// detail page (`hasDetailPage`), one that only opens its intro video, and one
+/// hosted elsewhere (`isExternal` + `externalUrl`). `isPinned` leads the
+/// homepage rail — which course is pinned is the foundation's editorial call,
+/// so it belongs in data rather than in code.
+model Course {
+  id            String  @id @default(auto()) @map("_id") @db.ObjectId
+  slug          String  @unique
+  title         String
+  description   String?
+  coverImage    String?
+  introVideoId  String?
+  introVideoUrl String?
+  unitsCount    Int?
+  isPinned      Boolean @default(false)
+  isExternal    Boolean @default(false)
+  externalUrl   String?
+  hasDetailPage Boolean @default(false)
+  order         Int     @default(0)
+  isActive      Boolean @default(true)
+
+  translations CourseTranslation[]
+  videos       CourseVideo[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([isActive, isPinned, order])
+}
+
+model CourseTranslation {
+  id          String  @id @default(auto()) @map("_id") @db.ObjectId
+  courseId    String  @db.ObjectId
+  locale      String
+  title       String
+  description String?
+
+  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@unique([courseId, locale])
+}
+
+model CourseVideo {
+  id        String  @id @default(auto()) @map("_id") @db.ObjectId
+  courseId  String  @db.ObjectId
+  youtubeId String
+  url       String
+  thumbnail String?
+  title     String?
+  order     Int     @default(0)
+
+  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@index([courseId, order])
+}
+
+/// Standalone videos — "إنجازاتنا" and "تزكياتنا".
+///
+/// `localeFilter` restricts a video to specific locales; empty means every
+/// locale. It exists because the Turkish endorsements are spoken in Turkish and
+/// subtitled nowhere, so showing them to an Arabic or French visitor offers a
+/// testimonial that visitor cannot follow.
+///
+/// `startSeconds` lets one long recording be published as several entries that
+/// each open at their own moment.
+model Video {
+  id           String    @id @default(auto()) @map("_id") @db.ObjectId
+  slug         String    @unique
+  type         VideoType
+  title        String
+  youtubeId    String?
+  url          String?
+  startSeconds Int?
+  thumbnail    String?
+  regionKey    String?
+  localeFilter String[]  @default([])
+  showOnHome   Boolean   @default(false)
+  order        Int       @default(0)
+  isActive     Boolean   @default(true)
+
+  translations VideoTranslation[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([type, isActive, order])
+}
+
+model VideoTranslation {
+  id      String @id @default(auto()) @map("_id") @db.ObjectId
+  videoId String @db.ObjectId
+  locale  String
+  title   String
+
+  video Video @relation(fields: [videoId], references: [id], onDelete: Cascade)
+
+  @@unique([videoId, locale])
+}
+
+/// "التقارير" — published PDF reports.
+model Report {
+  id          String  @id @default(auto()) @map("_id") @db.ObjectId
+  slug        String  @unique
+  title       String
+  description String?
+  fileUrl     String
+  coverImage  String?
+  year        Int?
+  order       Int     @default(0)
+  isPublished Boolean @default(true)
+
+  translations ReportTranslation[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([isPublished, year, order])
+}
+
+model ReportTranslation {
+  id          String  @id @default(auto()) @map("_id") @db.ObjectId
+  reportId    String  @db.ObjectId
+  locale      String
+  title       String
+  description String?
+
+  report Report @relation(fields: [reportId], references: [id], onDelete: Cascade)
+
+  @@unique([reportId, locale])
+}
+
+/// "كتيبات المؤسسة".
+model Booklet {
+  id          String  @id @default(auto()) @map("_id") @db.ObjectId
+  slug        String  @unique
+  title       String
+  description String?
+  fileUrl     String
+  coverImage  String?
+  order       Int     @default(0)
+  isPublished Boolean @default(true)
+
+  translations BookletTranslation[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([isPublished, order])
+}
+
+model BookletTranslation {
+  id          String  @id @default(auto()) @map("_id") @db.ObjectId
+  bookletId   String  @db.ObjectId
+  locale      String
+  title       String
+  description String?
+
+  booklet Booklet @relation(fields: [bookletId], references: [id], onDelete: Cascade)
+
+  @@unique([bookletId, locale])
+}
+
+/// Bank accounts for the bank-transfer donation path.
+///
+/// `locales` publishes an account only to the languages it is meant for: a
+/// Turkish donor and a Gulf donor should not be handed the same IBAN. Empty
+/// means every locale.
+///
+/// NOTHING HERE IS EVER SEEDED. IBANs and SWIFT codes are live payment
+/// destinations, and a placeholder that reaches production sends a donor's
+/// transfer nowhere. Rows are entered from the dashboard against official
+/// documentation only.
+model BankAccount {
+  id       String   @id @default(auto()) @map("_id") @db.ObjectId
+  slug     String   @unique
+  name     String
+  branch   String?
+  swift    String?
+  holder   String
+  logo     String?
+  locales  String[] @default([])
+  order    Int      @default(0)
+  isActive Boolean  @default(true)
+
+  translations BankAccountTranslation[]
+  currencies   BankAccountCurrency[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([isActive, order])
+}
+
+/// One currency held on an account, with its own number and IBAN.
+model BankAccountCurrency {
+  id            String  @id @default(auto()) @map("_id") @db.ObjectId
+  bankAccountId String  @db.ObjectId
+  /// ISO 4217.
+  code          String
+  accountNo     String?
+  extNo         String?
+  iban          String?
+
+  bankAccount BankAccount @relation(fields: [bankAccountId], references: [id], onDelete: Cascade)
+
+  @@index([bankAccountId])
+}
+
+/// Only the words are translated. Account numbers, IBANs and SWIFT codes are
+/// identifiers rather than language, and stay on the parent row alone.
+model BankAccountTranslation {
+  id            String  @id @default(auto()) @map("_id") @db.ObjectId
+  bankAccountId String  @db.ObjectId
+  locale        String
+  name          String
+  branch        String?
+  holder        String?
+
+  bankAccount BankAccount @relation(fields: [bankAccountId], references: [id], onDelete: Cascade)
+
+  @@unique([bankAccountId, locale])
+}
+
+/// Urgent campaign banner, with an expiry so it cannot outlive its emergency.
+///
+/// `campaignId` is a soft reference rather than a relation: a relation needs a
+/// back-field on `Campaign`, and no existing model in this schema is modified.
+/// A banner also outlives the campaign it points at — it stays on the record
+/// after that campaign is archived.
+model UrgentBanner {
+  id               String    @id @default(auto()) @map("_id") @db.ObjectId
+  slug             String    @unique
+  title            String
+  description      String?
+  image            String?
+  ctaLabel         String?
+  ctaUrl           String?
+  campaignId       String?   @db.ObjectId
+  suggestedAmounts Int[]     @default([])
+  priority         Int       @default(0)
+  locales          String[]  @default([])
+  startsAt         DateTime?
+  endsAt           DateTime?
+  isActive         Boolean   @default(true)
+
+  translations UrgentBannerTranslation[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([isActive, priority])
+}
+
+model UrgentBannerTranslation {
+  id             String  @id @default(auto()) @map("_id") @db.ObjectId
+  urgentBannerId String  @db.ObjectId
+  locale         String
+  title          String
+  description    String?
+  ctaLabel       String?
+
+  urgentBanner UrgentBanner @relation(fields: [urgentBannerId], references: [id], onDelete: Cascade)
+
+  @@unique([urgentBannerId, locale])
+}
+
+/// Frequently asked questions. `page` scopes an entry to one page; null shows it
+/// wherever FAQs are rendered.
+model Faq {
+  id       String  @id @default(auto()) @map("_id") @db.ObjectId
+  question String
+  answer   String
+  page     String?
+  order    Int     @default(0)
+  isActive Boolean @default(true)
+
+  translations FaqTranslation[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([page, isActive, order])
+}
+
+model FaqTranslation {
+  id       String @id @default(auto()) @map("_id") @db.ObjectId
+  faqId    String @db.ObjectId
+  locale   String
+  question String
+  answer   String
+
+  faq Faq @relation(fields: [faqId], references: [id], onDelete: Cascade)
+
+  @@unique([faqId, locale])
+}
+
+/// One editable setting per key — contact details, social links, the WhatsApp
+/// number. `value` is Json so a setting can be a string, a list or an object
+/// without a schema change each time; `group` is what the dashboard renders as
+/// a section heading.
+model SiteSetting {
+  id    String  @id @default(auto()) @map("_id") @db.ObjectId
+  key   String  @unique
+  value Json
+  group String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([group])
+}

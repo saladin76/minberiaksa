@@ -1,0 +1,861 @@
+{
+  "_meta": {
+    "generatedAt": "2026-09-10T20:12:01.438Z",
+    "canonicalLanguage": "ar",
+    "note": "نماذج محتوى غير موجودة في المخطط الحالي — Story · VideoPlaylist · PlaylistVideo · Course · CourseVideo · Video. البيانات من مصادر الموقع الفعلية.",
+    "counts": {
+      "stories": 6,
+      "playlists": 4,
+      "playlistVideos": 12,
+      "courses": 7,
+      "videos": 16
+    }
+  },
+  "stories": [
+    {
+      "slug": "story-storygaza",
+      "title": "غزة",
+      "image": "https://drive.google.com/thumbnail?id=1cuaNUr0YAgACFmRPN4PqRe7NqQa8Dn1n&sz=w1600",
+      "linkUrl": "/projects#gaza",
+      "order": 1,
+      "isActive": true,
+      "startsAt": null,
+      "endsAt": null,
+      "translations": [
+        {
+          "locale": "tr",
+          "title": "Gazze"
+        },
+        {
+          "locale": "en",
+          "title": "Gaza"
+        }
+      ]
+    },
+    {
+      "slug": "story-regionaqsa",
+      "title": "الأقصى",
+      "image": "https://drive.google.com/thumbnail?id=1w3n8DABq9o4P_tCr-yFe9NCvMfGHEO5D&sz=w1600",
+      "linkUrl": "/al-aqsa",
+      "order": 2,
+      "isActive": true,
+      "startsAt": null,
+      "endsAt": null,
+      "translations": [
+        {
+          "locale": "tr",
+          "title": "Aksâ"
+        },
+        {
+          "locale": "en",
+          "title": "Al-Aqsa"
+        }
+      ]
+    },
+    {
+      "slug": "story-regionquds",
+      "title": "القدس",
+      "image": "https://drive.google.com/thumbnail?id=1lv4Mmx0GPxyytDHGhHW6RgGdmR8NIE4z&sz=w1600",
+      "linkUrl": "/jerusalem",
+      "order": 3,
+      "isActive": true,
+      "startsAt": null,
+      "endsAt": null,
+      "translations": [
+        {
+          "locale": "tr",
+          "title": "Kudüs"
+        },
+        {
+          "locale": "en",
+          "title": "Al-Quds"
+        }
+      ]
+    },
+    {
+      "slug": "story-storyiftar",
+      "title": "إفطار",
+      "image": "https://drive.google.com/thumbnail?id=16D72JzXMHbp72ZJCHHFWLjUYrmUX4ta1&sz=w1600",
+      "linkUrl": "/projects#iftar",
+      "order": 4,
+      "isActive": true,
+      "startsAt": null,
+      "endsAt": null,
+      "translations": []
+    },
+    {
+      "slug": "story-storywaqf",
+      "title": "الوقف",
+      "image": "https://drive.google.com/thumbnail?id=1M8ko8LbhKpuDRYIlyNTewegv-gTuCnkI&sz=w1600",
+      "linkUrl": "/waqf",
+      "order": 5,
+      "isActive": true,
+      "startsAt": null,
+      "endsAt": null,
+      "translations": []
+    },
+    {
+      "slug": "story-storyreports",
+      "title": "التقارير",
+      "image": "https://drive.google.com/thumbnail?id=1HxtEvt3utPDAKBsFiKsL955btDa_rBoY&sz=w1600",
+      "linkUrl": "/achievements",
+      "order": 6,
+      "isActive": true,
+      "startsAt": null,
+      "endsAt": null,
+      "translations": [
+        {
+          "locale": "tr",
+          "title": "Raporlar"
+        },
+        {
+          "locale": "en",
+          "title": "Reports"
+        }
+      ]
+    }
+  ],
+  "playlists": [
+    {
+      "slug": "ibadan",
+      "title": "عبادًا لنا",
+      "description": "سلسلة مشروع (عبادًا لنا) لإعداد جيل يحمي القدس والمسجد الأقصى",
+      "youtubePlaylistUrl": "https://www.youtube.com/playlist?list=PLCrFGtYrL9HJbWUki4EAtpJ6Vfbg4vbpv",
+      "kind": "PROGRAM",
+      "order": 1,
+      "isActive": true,
+      "translations": [
+        {
+          "locale": "tr",
+          "title": "Ibadan Lana",
+          "description": "Kudüs'ü ve Mescid-i Aksâ'yı koruyacak bir nesil yetiştiren proje serisi"
+        },
+        {
+          "locale": "en",
+          "title": "Ibadan Lana",
+          "description": "The project series raising a generation that protects Al-Quds and Al-Aqsa"
+        }
+      ],
+      "videos": [
+        {
+          "youtubeId": "WoR_GhjB4YE",
+          "url": "https://www.youtube.com/watch?v=WoR_GhjB4YE",
+          "thumbnail": "https://img.youtube.com/vi/WoR_GhjB4YE/hqdefault.jpg",
+          "order": 1,
+          "isActive": true
+        },
+        {
+          "youtubeId": "rWU9MBROBoA",
+          "url": "https://www.youtube.com/watch?v=rWU9MBROBoA",
+          "thumbnail": "https://img.youtube.com/vi/rWU9MBROBoA/hqdefault.jpg",
+          "order": 2,
+          "isActive": true
+        },
+        {
+          "youtubeId": "fqvkXCC2AUs",
+          "url": "https://www.youtube.com/watch?v=fqvkXCC2AUs",
+          "thumbnail": "https://img.youtube.com/vi/fqvkXCC2AUs/hqdefault.jpg",
+          "order": 3,
+          "isActive": true
+        }
+      ]
+    },
+    {
+      "slug": "kalimat",
+      "title": "كلمات منبرية",
+      "description": "كلمات ووقفات إيمانية من منبر الأقصى حول القدس والمسجد الأقصى المبارك",
+      "youtubePlaylistUrl": "https://www.youtube.com/playlist?list=PLCrFGtYrL9HITvi-mH57JBPiLGusKVJ1y",
+      "kind": "PROGRAM",
+      "order": 2,
+      "isActive": true,
+      "translations": [
+        {
+          "locale": "tr",
+          "title": "Minber Sözleri",
+          "description": "Aksâ minberinden Kudüs ve Mescid-i Aksâ üzerine imani sözler ve duruşlar"
+        },
+        {
+          "locale": "en",
+          "title": "Words from the Minbar",
+          "description": "Words of faith from the Al-Aqsa minbar on Al-Quds and the blessed mosque"
+        }
+      ],
+      "videos": [
+        {
+          "youtubeId": "lDgTUbnfJtI",
+          "url": "https://www.youtube.com/watch?v=lDgTUbnfJtI",
+          "thumbnail": "https://img.youtube.com/vi/lDgTUbnfJtI/hqdefault.jpg",
+          "order": 1,
+          "isActive": true
+        },
+        {
+          "youtubeId": "AFAeGw--djc",
+          "url": "https://www.youtube.com/watch?v=AFAeGw--djc",
+          "thumbnail": "https://img.youtube.com/vi/AFAeGw--djc/hqdefault.jpg",
+          "order": 2,
+          "isActive": true
+        },
+        {
+          "youtubeId": "K5G1yFjCkms",
+          "url": "https://www.youtube.com/watch?v=K5G1yFjCkms",
+          "thumbnail": "https://img.youtube.com/vi/K5G1yFjCkms/hqdefault.jpg",
+          "order": 3,
+          "isActive": true
+        }
+      ]
+    },
+    {
+      "slug": "hikaya",
+      "title": "حكاية صمود القدس",
+      "description": "برنامج وثائقي عن صمود المقدسيين حول المسجد الأقصى",
+      "youtubePlaylistUrl": "https://www.youtube.com/playlist?list=PLCrFGtYrL9HK7v1m-OEMzg7oiwjAXseNz",
+      "kind": "PROGRAM",
+      "order": 3,
+      "isActive": true,
+      "translations": [
+        {
+          "locale": "tr",
+          "title": "Kudüs'ün Direniş Hikâyesi",
+          "description": "Mescid-i Aksâ çevresindeki Kudüslülerin direnişini anlatan belgesel program"
+        },
+        {
+          "locale": "en",
+          "title": "The Story of Al-Quds' Steadfastness",
+          "description": "A documentary on the steadfastness of Jerusalemites around Al-Aqsa Mosque"
+        }
+      ],
+      "videos": [
+        {
+          "youtubeId": "1-PzVBus8IE",
+          "url": "https://www.youtube.com/watch?v=1-PzVBus8IE",
+          "thumbnail": "https://img.youtube.com/vi/1-PzVBus8IE/hqdefault.jpg",
+          "order": 1,
+          "isActive": true
+        },
+        {
+          "youtubeId": "rSSmajvAtiA",
+          "url": "https://www.youtube.com/watch?v=rSSmajvAtiA",
+          "thumbnail": "https://img.youtube.com/vi/rSSmajvAtiA/hqdefault.jpg",
+          "order": 2,
+          "isActive": true
+        },
+        {
+          "youtubeId": "jbKxQqUIgkg",
+          "url": "https://www.youtube.com/watch?v=jbKxQqUIgkg",
+          "thumbnail": "https://img.youtube.com/vi/jbKxQqUIgkg/hqdefault.jpg",
+          "order": 3,
+          "isActive": true
+        }
+      ]
+    },
+    {
+      "slug": "khawatir",
+      "title": "خواطر مقدسية",
+      "description": "سلسلة خواطر إيمانية وتربوية حول القدس والمسجد الأقصى",
+      "youtubePlaylistUrl": "https://www.youtube.com/playlist?list=PLCrFGtYrL9HKNBYY5NDRaYASEjoSP_1pk",
+      "kind": "PROGRAM",
+      "order": 4,
+      "isActive": true,
+      "translations": [
+        {
+          "locale": "tr",
+          "title": "Kudüs Düşünceleri",
+          "description": "Kudüs ve Mescid-i Aksâ üzerine imani ve eğitici düşünceler serisi"
+        },
+        {
+          "locale": "en",
+          "title": "Reflections on Al-Quds",
+          "description": "A series of faith-based and educational reflections on Al-Quds and Al-Aqsa"
+        }
+      ],
+      "videos": [
+        {
+          "youtubeId": "hEOGoPUlG80",
+          "url": "https://www.youtube.com/watch?v=hEOGoPUlG80",
+          "thumbnail": "https://img.youtube.com/vi/hEOGoPUlG80/hqdefault.jpg",
+          "order": 1,
+          "isActive": true
+        },
+        {
+          "youtubeId": "7jJJBgeyQuk",
+          "url": "https://www.youtube.com/watch?v=7jJJBgeyQuk",
+          "thumbnail": "https://img.youtube.com/vi/7jJJBgeyQuk/hqdefault.jpg",
+          "order": 2,
+          "isActive": true
+        },
+        {
+          "youtubeId": "7KFxSqlabzk",
+          "url": "https://www.youtube.com/watch?v=7KFxSqlabzk",
+          "thumbnail": "https://img.youtube.com/vi/7KFxSqlabzk/hqdefault.jpg",
+          "order": 3,
+          "isActive": true
+        }
+      ]
+    }
+  ],
+  "courses": [
+    {
+      "slug": "zenki",
+      "title": "دورة نور الدين محمود زنكي",
+      "description": "دورة علمية في قضية بيت المقدس والمسجد الأقصى — تسع وحدات وملحق تكميلي للخطباء والدعاة",
+      "coverImage": "https://img.youtube.com/vi/vC1A_17VBpQ/hqdefault.jpg",
+      "introVideoId": "vC1A_17VBpQ",
+      "introVideoUrl": "https://www.youtube.com/watch?v=vC1A_17VBpQ",
+      "unitsCount": 9,
+      "isPinned": true,
+      "isExternal": false,
+      "externalUrl": null,
+      "hasDetailPage": true,
+      "order": 1,
+      "isActive": true,
+      "translations": [
+        {
+          "locale": "tr",
+          "title": "Nûreddin Mahmud Zengî Eğitim Programı",
+          "description": "دورة علمية في قضية بيت المقدس والمسجد الأقصى — تسع وحدات وملحق تكميلي للخطباء والدعاة"
+        },
+        {
+          "locale": "en",
+          "title": "The Nur ad-Din Zangi Course",
+          "description": "دورة علمية في قضية بيت المقدس والمسجد الأقصى — تسع وحدات وملحق تكميلي للخطباء والدعاة"
+        }
+      ],
+      "videos": []
+    },
+    {
+      "slug": "afaq-Al-Amal",
+      "title": "ندوة: آفاق العمل للقدس في الدول الإسلامية",
+      "description": "ندوة علمية من ندوات المؤسسة حول آفاق العمل لخدمة القدس في الدول الإسلامية",
+      "coverImage": "https://img.youtube.com/vi/olXuOaactnQ/hqdefault.jpg",
+      "introVideoId": "olXuOaactnQ",
+      "introVideoUrl": "https://www.youtube.com/watch?v=olXuOaactnQ",
+      "unitsCount": null,
+      "isPinned": false,
+      "isExternal": true,
+      "externalUrl": "https://www.youtube.com/watch?v=olXuOaactnQ",
+      "hasDetailPage": false,
+      "order": 2,
+      "isActive": true,
+      "translations": [
+        {
+          "locale": "tr",
+          "title": "Panel: İslam Ülkelerinde Kudüs İçin Çalışma Ufukları",
+          "description": "ندوة علمية من ندوات المؤسسة حول آفاق العمل لخدمة القدس في الدول الإسلامية"
+        },
+        {
+          "locale": "en",
+          "title": "Seminar: Horizons of Work for Al-Quds in Muslim Countries",
+          "description": "ندوة علمية من ندوات المؤسسة حول آفاق العمل لخدمة القدس في الدول الإسلامية"
+        }
+      ],
+      "videos": []
+    },
+    {
+      "slug": "alquds-waqi",
+      "title": "ندوة: القدس الواقع والاحتياجات",
+      "description": "ندوة علمية من ندوات المؤسسة حول واقع القدس واحتياجات أهلها",
+      "coverImage": "https://img.youtube.com/vi/oQd7SFzmacM/hqdefault.jpg",
+      "introVideoId": "oQd7SFzmacM",
+      "introVideoUrl": "https://www.youtube.com/watch?v=oQd7SFzmacM",
+      "unitsCount": null,
+      "isPinned": false,
+      "isExternal": true,
+      "externalUrl": "https://www.youtube.com/watch?v=oQd7SFzmacM",
+      "hasDetailPage": false,
+      "order": 3,
+      "isActive": true,
+      "translations": [
+        {
+          "locale": "tr",
+          "title": "Panel: Kudüs — Mevcut Durum ve İhtiyaçlar",
+          "description": "ندوة علمية من ندوات المؤسسة حول واقع القدس واحتياجات أهلها"
+        },
+        {
+          "locale": "en",
+          "title": "Seminar: Al-Quds — Reality and Needs",
+          "description": "ندوة علمية من ندوات المؤسسة حول واقع القدس واحتياجات أهلها"
+        }
+      ],
+      "videos": []
+    },
+    {
+      "slug": "social-media",
+      "title": "دورة: مهارات وتقنيات وسائل التواصل الاجتماعي في خدمة قضية القدس",
+      "description": "دورة تدريبية في توظيف وسائل التواصل الاجتماعي لخدمة قضية القدس",
+      "coverImage": "https://img.youtube.com/vi/4u-PcbBNr2Q/hqdefault.jpg",
+      "introVideoId": "4u-PcbBNr2Q",
+      "introVideoUrl": "https://www.youtube.com/watch?v=4u-PcbBNr2Q",
+      "unitsCount": null,
+      "isPinned": false,
+      "isExternal": true,
+      "externalUrl": "https://www.youtube.com/watch?v=4u-PcbBNr2Q",
+      "hasDetailPage": false,
+      "order": 4,
+      "isActive": true,
+      "translations": [
+        {
+          "locale": "tr",
+          "title": "Eğitim: Kudüs Davası Hizmetinde Sosyal Medya Beceri ve Teknikleri",
+          "description": "دورة تدريبية في توظيف وسائل التواصل الاجتماعي لخدمة قضية القدس"
+        },
+        {
+          "locale": "en",
+          "title": "Course: Social Media Skills and Techniques in Service of Al-Quds",
+          "description": "دورة تدريبية في توظيف وسائل التواصل الاجتماعي لخدمة قضية القدس"
+        }
+      ],
+      "videos": []
+    },
+    {
+      "slug": "media-appearance",
+      "title": "دورة: الظهور الإعلامي ودوره في خدمة قضية القدس",
+      "description": "دورة تدريبية في مهارات الظهور الإعلامي لخدمة قضية القدس",
+      "coverImage": "https://img.youtube.com/vi/R-nRNkpM4nA/hqdefault.jpg",
+      "introVideoId": "R-nRNkpM4nA",
+      "introVideoUrl": "https://www.youtube.com/watch?v=R-nRNkpM4nA",
+      "unitsCount": null,
+      "isPinned": false,
+      "isExternal": true,
+      "externalUrl": "https://www.youtube.com/watch?v=R-nRNkpM4nA",
+      "hasDetailPage": false,
+      "order": 5,
+      "isActive": true,
+      "translations": [
+        {
+          "locale": "tr",
+          "title": "Eğitim: Medyada Görünürlük ve Kudüs Davasına Katkısı",
+          "description": "دورة تدريبية في مهارات الظهور الإعلامي لخدمة قضية القدس"
+        },
+        {
+          "locale": "en",
+          "title": "Course: Media Appearance and Its Role in Serving Al-Quds",
+          "description": "دورة تدريبية في مهارات الظهور الإعلامي لخدمة قضية القدس"
+        }
+      ],
+      "videos": []
+    },
+    {
+      "slug": "mosque-work",
+      "title": "دورة: مأسسة العمل المسجدي وتطويعه لخدمة قضية القدس",
+      "description": "دورة تدريبية في تنظيم العمل المسجدي وتوجيهه لخدمة قضية القدس",
+      "coverImage": "https://img.youtube.com/vi/vNHWeaG4CUg/hqdefault.jpg",
+      "introVideoId": "vNHWeaG4CUg",
+      "introVideoUrl": "https://www.youtube.com/watch?v=vNHWeaG4CUg",
+      "unitsCount": null,
+      "isPinned": false,
+      "isExternal": true,
+      "externalUrl": "https://www.youtube.com/watch?v=vNHWeaG4CUg",
+      "hasDetailPage": false,
+      "order": 6,
+      "isActive": true,
+      "translations": [
+        {
+          "locale": "tr",
+          "title": "Eğitim: Cami Çalışmalarının Kurumsallaşması ve Kudüs Davasına Yönlendirilmesi",
+          "description": "دورة تدريبية في تنظيم العمل المسجدي وتوجيهه لخدمة قضية القدس"
+        },
+        {
+          "locale": "en",
+          "title": "Course: Institutionalising Mosque Work in Service of Al-Quds",
+          "description": "دورة تدريبية في تنظيم العمل المسجدي وتوجيهه لخدمة قضية القدس"
+        }
+      ],
+      "videos": []
+    },
+    {
+      "slug": "sharia-studies",
+      "title": "دورة: دراسات شرعية في علوم بيت المقدس",
+      "description": "دورة علمية في الدراسات الشرعية المتعلقة بعلوم بيت المقدس",
+      "coverImage": "https://img.youtube.com/vi/pz88m7MgLss/hqdefault.jpg",
+      "introVideoId": "pz88m7MgLss",
+      "introVideoUrl": "https://www.youtube.com/watch?v=pz88m7MgLss",
+      "unitsCount": null,
+      "isPinned": false,
+      "isExternal": true,
+      "externalUrl": "https://www.youtube.com/watch?v=pz88m7MgLss",
+      "hasDetailPage": false,
+      "order": 7,
+      "isActive": true,
+      "translations": [
+        {
+          "locale": "tr",
+          "title": "Eğitim: Beytülmakdis İlimlerinde Şer'î Araştırmalar",
+          "description": "دورة علمية في الدراسات الشرعية المتعلقة بعلوم بيت المقدس"
+        },
+        {
+          "locale": "en",
+          "title": "Course: Sharia Studies in the Sciences of Bayt al-Maqdis",
+          "description": "دورة علمية في الدراسات الشرعية المتعلقة بعلوم بيت المقدس"
+        }
+      ],
+      "videos": []
+    }
+  ],
+  "videos": [
+    {
+      "slug": "parcels-achievement-1",
+      "type": "ACHIEVEMENT",
+      "title": "تجهيز طرود غزة",
+      "youtubeId": null,
+      "url": null,
+      "startSeconds": null,
+      "thumbnail": "https://drive.google.com/thumbnail?id=1cuaNUr0YAgACFmRPN4PqRe7NqQa8Dn1n&sz=w1600",
+      "regionKey": "regionGaza",
+      "regionLabel": "غزة",
+      "localeFilter": [],
+      "isActive": true,
+      "order": 1,
+      "showOnHome": true,
+      "translations": [
+        {
+          "locale": "tr",
+          "title": "Gazze Kolilerinin Hazırlanması"
+        },
+        {
+          "locale": "en",
+          "title": "Preparing Gaza Parcels"
+        }
+      ]
+    },
+    {
+      "slug": "water-achievement-2",
+      "type": "ACHIEVEMENT",
+      "title": "توزيع المياه في غزة",
+      "youtubeId": null,
+      "url": null,
+      "startSeconds": null,
+      "thumbnail": "https://drive.google.com/thumbnail?id=16D72JzXMHbp72ZJCHHFWLjUYrmUX4ta1&sz=w1600",
+      "regionKey": "regionGaza",
+      "regionLabel": "غزة",
+      "localeFilter": [],
+      "isActive": true,
+      "order": 2,
+      "showOnHome": true,
+      "translations": [
+        {
+          "locale": "tr",
+          "title": "Gazze'de Su Dağıtımı"
+        },
+        {
+          "locale": "en",
+          "title": "Water Distribution in Gaza"
+        }
+      ]
+    },
+    {
+      "slug": "home-achievement-3",
+      "type": "ACHIEVEMENT",
+      "title": "ترميم منزل في القدس",
+      "youtubeId": null,
+      "url": null,
+      "startSeconds": null,
+      "thumbnail": "https://drive.google.com/thumbnail?id=1lv4Mmx0GPxyytDHGhHW6RgGdmR8NIE4z&sz=w1600",
+      "regionKey": "regionQuds",
+      "regionLabel": "القدس",
+      "localeFilter": [],
+      "isActive": true,
+      "order": 3,
+      "showOnHome": true,
+      "translations": [
+        {
+          "locale": "tr",
+          "title": "Kudüs'te Ev Restorasyonu"
+        },
+        {
+          "locale": "en",
+          "title": "Restoring a Home in Al-Quds"
+        }
+      ]
+    },
+    {
+      "slug": "aqsa-achievement-4",
+      "type": "ACHIEVEMENT",
+      "title": "دعم الأقصى",
+      "youtubeId": null,
+      "url": null,
+      "startSeconds": null,
+      "thumbnail": "https://drive.google.com/thumbnail?id=1w3n8DABq9o4P_tCr-yFe9NCvMfGHEO5D&sz=w1600",
+      "regionKey": "regionAqsa",
+      "regionLabel": "الأقصى",
+      "localeFilter": [],
+      "isActive": true,
+      "order": 4,
+      "showOnHome": true,
+      "translations": [
+        {
+          "locale": "tr",
+          "title": "Aksa'ya Destek"
+        },
+        {
+          "locale": "en",
+          "title": "Supporting Al-Aqsa"
+        }
+      ]
+    },
+    {
+      "slug": "tour-achievement-5",
+      "type": "ACHIEVEMENT",
+      "title": "جولة الفريق الميداني",
+      "youtubeId": null,
+      "url": null,
+      "startSeconds": null,
+      "thumbnail": "https://drive.google.com/thumbnail?id=1HxtEvt3utPDAKBsFiKsL955btDa_rBoY&sz=w1600",
+      "regionKey": "regionField",
+      "regionLabel": "الميدان",
+      "localeFilter": [],
+      "isActive": true,
+      "order": 5,
+      "showOnHome": true,
+      "translations": [
+        {
+          "locale": "tr",
+          "title": "Saha Ekibinin Turu"
+        },
+        {
+          "locale": "en",
+          "title": "Field Team Tour"
+        }
+      ]
+    },
+    {
+      "slug": "prof-dr-mehmet-g-rmez-endorsement-1",
+      "type": "ENDORSEMENT",
+      "title": "Prof. Dr. Mehmet Görmez",
+      "youtubeId": "eiDqMoM7jis",
+      "url": "https://www.youtube.com/watch?v=eiDqMoM7jis&t=70s",
+      "startSeconds": 70,
+      "thumbnail": "https://img.youtube.com/vi/eiDqMoM7jis/hqdefault.jpg",
+      "regionKey": "tagTezkiye",
+      "regionLabel": "تزكية",
+      "localeFilter": [
+        "tr"
+      ],
+      "isActive": true,
+      "order": 1,
+      "showOnHome": true,
+      "translations": []
+    },
+    {
+      "slug": "yunus-balc-o-lu-aml-ca-camii-i-mam-hatibi-endorsement-2",
+      "type": "ENDORSEMENT",
+      "title": "Yunus Balcıoğlu — Çamlıca Camii İmam Hatibi",
+      "youtubeId": "Wj00W4jIlwM",
+      "url": "https://www.youtube.com/watch?v=Wj00W4jIlwM&t=39s",
+      "startSeconds": 39,
+      "thumbnail": "https://img.youtube.com/vi/Wj00W4jIlwM/hqdefault.jpg",
+      "regionKey": "tagTezkiye",
+      "regionLabel": "تزكية",
+      "localeFilter": [
+        "tr"
+      ],
+      "isActive": true,
+      "order": 2,
+      "showOnHome": true,
+      "translations": []
+    },
+    {
+      "slug": "prof-dr-abdurrahman-ha-kal--endorsement-3",
+      "type": "ENDORSEMENT",
+      "title": "Prof. Dr. Abdurrahman Haçkalı",
+      "youtubeId": "bJfQ911G-F4",
+      "url": "https://www.youtube.com/watch?v=bJfQ911G-F4&t=41s",
+      "startSeconds": 41,
+      "thumbnail": "https://img.youtube.com/vi/bJfQ911G-F4/hqdefault.jpg",
+      "regionKey": "tagTezkiye",
+      "regionLabel": "تزكية",
+      "localeFilter": [
+        "tr"
+      ],
+      "isActive": true,
+      "order": 3,
+      "showOnHome": true,
+      "translations": []
+    },
+    {
+      "slug": "hasan-turan-endorsement-4",
+      "type": "ENDORSEMENT",
+      "title": "Hasan Turan",
+      "youtubeId": "l4hCA5t7IbU",
+      "url": "https://www.youtube.com/watch?v=l4hCA5t7IbU&t=23s",
+      "startSeconds": 23,
+      "thumbnail": "https://img.youtube.com/vi/l4hCA5t7IbU/hqdefault.jpg",
+      "regionKey": "tagTezkiye",
+      "regionLabel": "تزكية",
+      "localeFilter": [
+        "tr"
+      ],
+      "isActive": true,
+      "order": 4,
+      "showOnHome": true,
+      "translations": []
+    },
+    {
+      "slug": "abdullah-cahit-din--endorsement-5",
+      "type": "ENDORSEMENT",
+      "title": "Abdullah Cahit Dinç",
+      "youtubeId": "hEazO4AoH20",
+      "url": "https://www.youtube.com/watch?v=hEazO4AoH20",
+      "startSeconds": null,
+      "thumbnail": "https://img.youtube.com/vi/hEazO4AoH20/hqdefault.jpg",
+      "regionKey": "tagTezkiye",
+      "regionLabel": "تزكية",
+      "localeFilter": [
+        "tr"
+      ],
+      "isActive": true,
+      "order": 5,
+      "showOnHome": true,
+      "translations": []
+    },
+    {
+      "slug": "supporter-endorsement-6",
+      "type": "ENDORSEMENT",
+      "title": "شهادة داعم للمؤسسة",
+      "youtubeId": "yOkCybUFyoc",
+      "url": "https://www.youtube.com/watch?v=yOkCybUFyoc",
+      "startSeconds": null,
+      "thumbnail": "https://img.youtube.com/vi/yOkCybUFyoc/hqdefault.jpg",
+      "regionKey": "tagTezkiye",
+      "regionLabel": "تزكية",
+      "localeFilter": [],
+      "isActive": true,
+      "order": 6,
+      "showOnHome": true,
+      "translations": [
+        {
+          "locale": "tr",
+          "title": "Bir Destekçinin Tanıklığı"
+        },
+        {
+          "locale": "en",
+          "title": "A Supporter's Testimony"
+        }
+      ]
+    },
+    {
+      "slug": "scholars-endorsement-7",
+      "type": "ENDORSEMENT",
+      "title": "رسالة إلى علماء الأمة",
+      "youtubeId": null,
+      "url": null,
+      "startSeconds": null,
+      "thumbnail": "https://drive.google.com/thumbnail?id=1M8ko8LbhKpuDRYIlyNTewegv-gTuCnkI&sz=w1600",
+      "regionKey": "regionAqsa",
+      "regionLabel": "الأقصى",
+      "localeFilter": [],
+      "isActive": true,
+      "order": 7,
+      "showOnHome": true,
+      "translations": [
+        {
+          "locale": "tr",
+          "title": "Ümmetin Âlimlerine Mesaj"
+        },
+        {
+          "locale": "en",
+          "title": "A Message to the Scholars of the Ummah"
+        }
+      ]
+    },
+    {
+      "slug": "redline-endorsement-8",
+      "type": "ENDORSEMENT",
+      "title": "القدس خطنا الأحمر",
+      "youtubeId": null,
+      "url": null,
+      "startSeconds": null,
+      "thumbnail": "https://drive.google.com/thumbnail?id=1HxtEvt3utPDAKBsFiKsL955btDa_rBoY&sz=w1600",
+      "regionKey": "regionQuds",
+      "regionLabel": "القدس",
+      "localeFilter": [],
+      "isActive": true,
+      "order": 8,
+      "showOnHome": true,
+      "translations": [
+        {
+          "locale": "tr",
+          "title": "Kudüs Kırmızı Çizgimizdir"
+        },
+        {
+          "locale": "en",
+          "title": "Al-Quds Is Our Red Line"
+        }
+      ]
+    },
+    {
+      "slug": "iamquds-endorsement-9",
+      "type": "ENDORSEMENT",
+      "title": "أنا القدس",
+      "youtubeId": null,
+      "url": null,
+      "startSeconds": null,
+      "thumbnail": "https://drive.google.com/thumbnail?id=1w3n8DABq9o4P_tCr-yFe9NCvMfGHEO5D&sz=w1600",
+      "regionKey": "regionQuds",
+      "regionLabel": "القدس",
+      "localeFilter": [],
+      "isActive": true,
+      "order": 9,
+      "showOnHome": false,
+      "translations": [
+        {
+          "locale": "tr",
+          "title": "Ben Kudüs'üm"
+        },
+        {
+          "locale": "en",
+          "title": "I Am Al-Quds"
+        }
+      ]
+    },
+    {
+      "slug": "fieldword-endorsement-10",
+      "type": "ENDORSEMENT",
+      "title": "كلمة من الفريق الميداني",
+      "youtubeId": null,
+      "url": null,
+      "startSeconds": null,
+      "thumbnail": "https://drive.google.com/thumbnail?id=1cuaNUr0YAgACFmRPN4PqRe7NqQa8Dn1n&sz=w1600",
+      "regionKey": "regionField",
+      "regionLabel": "الميدان",
+      "localeFilter": [],
+      "isActive": true,
+      "order": 10,
+      "showOnHome": false,
+      "translations": [
+        {
+          "locale": "tr",
+          "title": "Saha Ekibinden Bir Mesaj"
+        },
+        {
+          "locale": "en",
+          "title": "A Word From the Field Team"
+        }
+      ]
+    },
+    {
+      "slug": "fieldpartner-endorsement-11",
+      "type": "ENDORSEMENT",
+      "title": "شهادة شريك ميداني",
+      "youtubeId": null,
+      "url": null,
+      "startSeconds": null,
+      "thumbnail": "https://drive.google.com/thumbnail?id=1lv4Mmx0GPxyytDHGhHW6RgGdmR8NIE4z&sz=w1600",
+      "regionKey": "regionField",
+      "regionLabel": "الميدان",
+      "localeFilter": [],
+      "isActive": true,
+      "order": 11,
+      "showOnHome": false,
+      "translations": [
+        {
+          "locale": "tr",
+          "title": "Saha Ortağının Tanıklığı"
+        },
+        {
+          "locale": "en",
+          "title": "A Field Partner's Testimony"
+        }
+      ]
+    }
+  ]
+}
