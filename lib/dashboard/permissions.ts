@@ -8,6 +8,16 @@ export const DASHBOARD_PERMISSION_KEYS = [
   // "operations" was removed with the التشغيل section. Any value still stored on a user row is
   // simply inert — it maps to no page and grants nothing.
   "ticker", "pixels", "ads", "platformConnections", "archive",
+  // Site content: stories, video programmes, courses, videos, reports, booklets,
+  // urgent banners, FAQs and site settings. One key for the group, the way
+  // "blog" already covers both posts and their categories.
+  "siteContent",
+  // Bank accounts are gated separately from the rest of the content. A row here
+  // is a live payment destination — publishing a wrong IBAN sends a donor's
+  // transfer to someone else — so editing them is not the same privilege as
+  // editing a video title. Distinct from "bankTransfers", which only reads the
+  // incoming transfer list.
+  "bankAccounts",
   "generalSettings", "platformConnectionsTest", "platformConnectionsManage",
   "platformConnectionsAdmin", "archiveUpload", "archiveDelete", "archiveAnalyze",
   "archiveDocuments", "donationsEdit", "reportsExport",
