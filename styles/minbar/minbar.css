@@ -724,6 +724,135 @@
 }
 
 /* ─────────────────────────────────────────────────────────────────────────────
+ * Homepage on a phone: everything slides.
+ *
+ * Below 768px every multi-column grid on the homepage becomes a horizontal
+ * snap rail instead of a stack. Stacking four article cards or five path steps
+ * makes a phone page several screens longer than it needs to be; a rail keeps
+ * each section to one gesture and shows the next card peeking, which is what
+ * says "there is more" without a caption. Widths are in viewport units so the
+ * peek survives every phone size; `!important` is required because the grids
+ * are laid out inline.
+ *
+ * These rules come AFTER the stacking rules above and win on specificity plus
+ * order, so the earlier "one per row" treatments for the impact figures and
+ * the path steps are undone here on purpose.
+ * ───────────────────────────────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .mia-scope #events-cards,
+  .mia-scope #path-steps,
+  .mia-scope #impact-metrics,
+  .mia-scope #sector-metrics,
+  .mia-scope #regions,
+  .mia-scope #waqf-areas,
+  .mia-scope #account-features,
+  .mia-scope #articles-grid,
+  .mia-scope #news-list {
+    display: flex !important;
+    grid-template-columns: none !important;
+    flex-wrap: nowrap !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    scroll-snap-type: x mandatory;
+    scroll-padding-inline: 4px;
+    gap: 12px !important;
+    padding: 4px 4px 14px !important;
+    margin: 0 !important;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    overscroll-behavior-x: contain;
+  }
+  .mia-scope #events-cards::-webkit-scrollbar,
+  .mia-scope #path-steps::-webkit-scrollbar,
+  .mia-scope #impact-metrics::-webkit-scrollbar,
+  .mia-scope #sector-metrics::-webkit-scrollbar,
+  .mia-scope #regions::-webkit-scrollbar,
+  .mia-scope #waqf-areas::-webkit-scrollbar,
+  .mia-scope #account-features::-webkit-scrollbar,
+  .mia-scope #articles-grid::-webkit-scrollbar,
+  .mia-scope #news-list::-webkit-scrollbar { display: none; }
+
+  .mia-scope #events-cards > *,
+  .mia-scope #path-steps > *,
+  .mia-scope #impact-metrics > *,
+  .mia-scope #sector-metrics > *,
+  .mia-scope #regions > *,
+  .mia-scope #waqf-areas > *,
+  .mia-scope #account-features > *,
+  .mia-scope #articles-grid > *,
+  .mia-scope #news-list > * {
+    flex: 0 0 auto !important;
+    scroll-snap-align: start;
+    scroll-snap-stop: normal;
+    min-width: 0;
+  }
+
+  /* Slide widths: wide enough to read, narrow enough to show the next one. */
+  .mia-scope #events-cards > *   { width: 82vw !important; max-width: 380px; }
+  .mia-scope #articles-grid > *  { width: 76vw !important; max-width: 340px; }
+  .mia-scope #news-list > *      { width: 84vw !important; max-width: 380px; }
+  .mia-scope #regions > *        { width: 78vw !important; max-width: 360px; }
+  .mia-scope #waqf-areas > *     { width: 68vw !important; max-width: 300px; }
+  .mia-scope #account-features > * { width: 62vw !important; max-width: 280px; }
+  .mia-scope #sector-metrics > * { width: 46vw !important; max-width: 220px; }
+
+  /* Impact figures ride as cards. The 960px rules above made them full-width
+     rows divided by hairlines; on a rail each needs its own surface. */
+  .mia-scope #impact-metrics > * {
+    width: 64vw !important; max-width: 290px;
+    border: 1px solid var(--border) !important;
+    border-radius: 14px !important;
+    background: #fff !important;
+    padding: 20px 18px !important;
+    box-shadow: 0 1px 2px rgba(16,33,43,.04);
+  }
+
+  /* Path steps likewise: the row-per-step layout becomes a card per step, with
+     the number above the text rather than beside it. */
+  .mia-scope #path-steps > * {
+    width: 70vw !important; max-width: 300px;
+    grid-template-columns: minmax(0,1fr) !important;
+    row-gap: 10px !important;
+    padding: 18px 16px !important;
+    border: 1px solid var(--border) !important;
+    border-radius: 14px !important;
+    background: #fff !important;
+  }
+  .mia-scope #path-steps > * > span:first-child { grid-row: auto !important; grid-column: auto !important; }
+  .mia-scope #path-steps > * > b,
+  .mia-scope #path-steps > * > span:last-child { grid-column: auto !important; }
+
+  /* News: the lead stays full-width above the rail. */
+  .mia-scope #news-grid { grid-template-columns: minmax(0,1fr) !important; gap: 14px !important; }
+
+  /* FAQ filter chips scroll sideways instead of wrapping into three rows. */
+  .mia-scope #faq-chips {
+    flex-wrap: nowrap !important;
+    overflow-x: auto !important;
+    padding-bottom: 6px !important;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+    max-width: 100%;
+  }
+  .mia-scope #faq-chips::-webkit-scrollbar { display: none; }
+  .mia-scope #faq-chips > * { flex: 0 0 auto !important; }
+
+
+  /* The verse band: tighter on a phone, and the meta row stacks cleanly. */
+  .mia-scope #verse-inner { padding: 18px 18px 16px !important; gap: 10px !important; }
+  .mia-scope #verse-inner > p:first-of-type { font-size: 18px !important; line-height: 1.9 !important; }
+  .mia-scope #verse-meta { gap: 8px !important; }
+}
+
+/* Stories: the ring is a <button> when it opens the viewer and an <a> when it
+   is a fallback link. The phone sizing must cover both. */
+@media (max-width: 560px) {
+  .mia-scope #stories-rail > button { width: 64px !important; gap: 5px !important; }
+  .mia-scope #stories-rail > button > span:first-child { width: 60px !important; height: 60px !important; }
+  .mia-scope #stories-rail > button > span:last-child { font-size: 11px !important; }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
  * Shared banners — Journey to Al-Aqsa, 'Ibādan Lanā, and the zakat band.
  * Ported from Minbar/شد الرحال.dc.html, عبادا لنا بانر.dc.html and بنر الزكاة.dc.html.
  * ───────────────────────────────────────────────────────────────────────────── */

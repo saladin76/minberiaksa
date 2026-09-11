@@ -19,9 +19,14 @@ import { youtubeEmbed } from "@/lib/minbar/content/media";
  */
 
 /* ── Verse strip ─────────────────────────────────────────────────────────────
- * Al-Isra 1. The Arabic is shown in every language edition; the translation of
- * the meaning and its edition attribution appear beneath it in non-Arabic
- * sessions. See `lib/minbar/quran.ts` for why. */
+ * Al-Isra 1, directly under the hero — the verse the whole site stands on.
+ * The Arabic is shown in every language edition; the translation of the
+ * meaning and its edition attribution appear beneath it in non-Arabic
+ * sessions. See `lib/minbar/quran.ts` for why.
+ *
+ * It wraps. The earlier strip was a single non-wrapping line with an ellipsis,
+ * which on a phone cut the verse mid-clause — the one text on the page that
+ * must never be truncated. */
 export function VerseStrip() {
   const locale = useLocale();
   const t = useTranslations("homepage");
@@ -33,7 +38,7 @@ export function VerseStrip() {
       id="aqsa"
       style={{
         position: "relative",
-        background: "#FFFDF8",
+        background: "linear-gradient(180deg, #FFFDF8 0%, #FBF6EC 100%)",
         borderTop: "1px solid rgba(211,154,39,.35)",
         borderBottom: "1px solid rgba(211,154,39,.35)",
         overflow: "hidden",
@@ -52,68 +57,42 @@ export function VerseStrip() {
           pointerEvents: "none",
         }}
       />
-      <span
-        aria-hidden="true"
-        style={{
-          position: "absolute",
-          insetBlock: 0,
-          insetInlineStart: 0,
-          width: 3,
-          background: "linear-gradient(180deg, var(--gold), rgba(211,154,39,.2))",
-        }}
-      />
-      <div style={{ position: "relative", maxWidth: 1240, margin: "0 auto", padding: "14px 24px 12px", display: "grid", justifyItems: "center", gap: 9 }}>
+      {/* A thin gold rule at each end, framing the verse rather than underlining it. */}
+      <span aria-hidden="true" style={{ position: "absolute", insetBlock: 0, insetInlineStart: 0, width: 3, background: "linear-gradient(180deg, var(--gold), rgba(211,154,39,.2))" }} />
+      <span aria-hidden="true" style={{ position: "absolute", insetBlock: 0, insetInlineEnd: 0, width: 3, background: "linear-gradient(0deg, var(--gold), rgba(211,154,39,.2))" }} />
+
+      <div id="verse-inner" style={{ position: "relative", maxWidth: 980, margin: "0 auto", padding: "26px 24px 22px", display: "grid", justifyItems: "center", gap: 12 }}>
+        <span aria-hidden="true" style={{ width: 44, height: 3, borderRadius: 2, background: "linear-gradient(90deg, rgba(211,154,39,.25), var(--gold), rgba(211,154,39,.25))" }} />
         {/* Always RTL and always in the Qur'anic face, whatever the page language. */}
         <p
           dir="rtl"
           style={{
             margin: 0,
-            minWidth: 0,
             textAlign: "center",
             fontFamily: "var(--font-quran)",
-            fontSize: "clamp(15px,1.6vw,21px)",
-            lineHeight: 1.85,
+            fontSize: "clamp(19px, 2.4vw, 30px)",
+            lineHeight: 1.95,
             color: "#7C2318",
             fontWeight: 700,
-            whiteSpace: "nowrap",
-            maxWidth: "100%",
-            overflow: "hidden",
-            textOverflow: "ellipsis",
+            textWrap: "balance",
           }}
         >
           {verse.arabic}
         </p>
         {verse.translation ? (
-          <span style={{ textAlign: "center", fontSize: 13.5, lineHeight: 1.85, color: "#3E4C55", textWrap: "pretty", maxWidth: 720 }}>
+          <p style={{ margin: 0, textAlign: "center", fontSize: "clamp(13px, 1.2vw, 15.5px)", lineHeight: 1.85, color: "#3E4C55", maxWidth: 720, textWrap: "pretty" }}>
             {verse.translation}
-          </span>
+          </p>
         ) : null}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, flexWrap: "nowrap" }}>
+        <div id="verse-meta" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, flexWrap: "wrap" }}>
           <span
             dir="rtl"
-            style={{
-              unicodeBidi: "isolate",
-              display: "inline-flex",
-              alignItems: "center",
-              flex: "0 0 auto",
-              height: 30,
-              padding: "0 14px",
-              borderRadius: 999,
-              background: "rgba(211,154,39,.14)",
-              border: "1px solid rgba(211,154,39,.45)",
-              color: "#8a5d16",
-              fontFamily: "var(--font-ar)",
-              fontSize: 11.5,
-              fontWeight: 900,
-              whiteSpace: "nowrap",
-            }}
+            style={{ unicodeBidi: "isolate", display: "inline-flex", alignItems: "center", height: 30, padding: "0 14px", borderRadius: 999, background: "rgba(211,154,39,.14)", border: "1px solid rgba(211,154,39,.45)", color: "#8a5d16", fontFamily: "var(--font-ar)", fontSize: 11.5, fontWeight: 900, whiteSpace: "nowrap" }}
           >
             {verse.label || t("verseCitation")}
           </span>
           {verse.attribution ? (
-            <span style={{ flex: "0 1 auto", minWidth: 0, fontSize: 10.5, color: "#52616B", opacity: 0.85, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-              {verse.attribution}
-            </span>
+            <span style={{ fontSize: 10.5, color: "#52616B", opacity: 0.85 }}>{verse.attribution}</span>
           ) : null}
           <Link href={miaPath("aqsa", locale)} className="mia-pill-link" style={pillLink}>
             {t("aqsaPage")}

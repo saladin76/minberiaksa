@@ -65,9 +65,9 @@ export default function HomePage({
         }}
       />
 
-      <VerseStrip />
       <StoriesRail />
       <Hero onPlayIntro={video.open} />
+      <VerseStrip />
       <QuickDonateBar projects={projects} />
       <EventsSection />
       <ReelsSection onPlay={video.open} endorsements={content.endorsements} achievements={content.achievements} />

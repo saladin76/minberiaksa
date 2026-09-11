@@ -128,7 +128,7 @@ export function NewsSection({ news }: { news: MinbarArticle[] }) {
             </span>
           </Link>
           {rest.length ? (
-            <div style={{ display: "grid", gap: 12 }}>
+            <div id="news-list" style={{ display: "grid", gap: 12 }}>
               {rest.map((item) => (
                 <Link
                   key={item.id}
@@ -207,7 +207,7 @@ export function FaqSection({ faqs, whatsappNumber = "905398436050" }: { faqs: Cm
       <div id="faq-grid" style={{ position: "relative", maxWidth: 1240, margin: "0 auto", padding: "0 24px", display: "grid", gridTemplateColumns: "minmax(0,.34fr) minmax(0,1fr)", gap: 44, alignItems: "start" }}>
         <div style={{ display: "grid", gap: 18, justifyItems: "start", position: "sticky", top: 90 }}>
           <h2 style={{ margin: 0, fontSize: "clamp(28px,3vw,42px)", lineHeight: 1.2, fontWeight: 900, letterSpacing: "-.01em" }}>{t("faqTitle")}</h2>
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <div id="faq-chips" style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             {["all", ...categories].map((id) => (
               <button
                 key={id}
