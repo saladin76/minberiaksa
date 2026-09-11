@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type CSSProperties, type FormEvent } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import { localeDirection } from "@/lib/locales";
 import { miaPath } from "@/lib/minbar/routes";
@@ -46,6 +46,7 @@ export default function QuickDonate({ amounts = DEFAULT_AMOUNTS }: QuickDonatePr
   const t = useTranslations("common");
   const router = useRouter();
 
+  const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [groups, setGroups] = useState<RegionGroup[]>([]);
   const [openRegions, setOpenRegions] = useState<Record<string, boolean>>({});
@@ -183,10 +184,15 @@ export default function QuickDonate({ amounts = DEFAULT_AMOUNTS }: QuickDonatePr
     router.push(miaPath("cart", locale));
   };
 
+  /* The homepage carries its own quick-donation card under the hero; a second
+     widget floating beside it would compete with it and cover the hero's film
+     card. Every other page keeps the pill. */
+  if (/^\/[a-z]{2}(?:-[A-Za-z]{2})?\/?$/.test(pathname ?? "")) return null;
+
   return (
     <div
       ref={fabRef}
-      id="quick"
+      id="quick-fab"
       className="quickfab"
       data-qopen={open ? "true" : "false"}
       dir={dir}
