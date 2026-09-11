@@ -42,6 +42,8 @@ export interface DocumentFormValues {
   coverImage: string;
   /** Kept as a string so an empty input stays empty rather than becoming 0. */
   year: string;
+  /** Booklets only: shown under the title in its own script. */
+  author: string;
   isPublished: boolean;
   translations: TranslationMap;
 }
@@ -54,6 +56,7 @@ export function emptyDocument(): DocumentFormValues {
     fileUrl: '',
     coverImage: '',
     year: '',
+    author: '',
     isPublished: true,
     translations: emptyTranslations(DOCUMENT_TRANSLATION_FIELDS),
   };
@@ -154,7 +157,7 @@ export function DocumentForm({
         description: values.description.trim(),
         fileUrl: values.fileUrl.trim(),
         coverImage: values.coverImage,
-        ...(copy.showYear ? { year: values.year.trim() ? Number(values.year) : null } : {}),
+        ...(copy.showYear ? { year: values.year.trim() ? Number(values.year) : null } : { author: values.author.trim() }),
         isPublished: values.isPublished,
         translations: values.translations,
       };
@@ -199,6 +202,12 @@ export function DocumentForm({
             <span className="text-xs font-semibold text-slate-600">المعرّف (slug) *</span>
             <Input dir="ltr" value={values.slug} onChange={(e) => set('slug', e.target.value)} />
           </label>
+          {!copy.showYear ? (
+            <label className="space-y-1.5">
+              <span className="text-xs font-semibold text-slate-600">المؤلف</span>
+              <Input value={values.author} onChange={(e) => set('author', e.target.value)} />
+            </label>
+          ) : null}
           {copy.showYear ? (
             <label className="space-y-1.5">
               <span className="text-xs font-semibold text-slate-600">السنة</span>

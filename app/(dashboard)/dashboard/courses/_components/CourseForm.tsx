@@ -10,6 +10,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '@/components/ui/select';
 import { errorMessage } from '@/lib/dashboard/client-error-message';
 import {
   ContentTranslationTabs,
@@ -26,10 +29,13 @@ export const COURSE_TRANSLATION_FIELDS: readonly TranslationField[] = [
   { name: 'description', label: 'الوصف', multiline: true },
 ];
 
+export const COURSE_KIND_LABELS: Record<string, string> = { COURSE: 'دورة', SEMINAR: 'ندوة' };
+
 export interface CourseFormValues {
   slug: string;
   title: string;
   description: string;
+  kind: string;
   coverImage: string;
   introVideoId: string;
   introVideoUrl: string;
@@ -48,6 +54,7 @@ export function emptyCourse(): CourseFormValues {
     slug: '',
     title: '',
     description: '',
+    kind: 'COURSE',
     coverImage: '',
     introVideoId: '',
     introVideoUrl: '',
@@ -103,6 +110,7 @@ export function CourseForm({
         slug: values.slug.trim(),
         title: values.title.trim(),
         description: values.description.trim(),
+        kind: values.kind,
         coverImage: values.coverImage,
         introVideoId: values.introVideoId.trim(),
         introVideoUrl: values.introVideoUrl.trim(),
@@ -163,6 +171,17 @@ export function CourseForm({
             <span className="text-xs font-semibold text-slate-600">الوصف (بالعربية)</span>
             <Textarea rows={3} value={values.description} onChange={(e) => set('description', e.target.value)} />
           </label>
+          <div className="space-y-1.5">
+            <span className="text-xs font-semibold text-slate-600">النوع</span>
+            <Select value={values.kind} onValueChange={(v) => set('kind', v)}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {Object.entries(COURSE_KIND_LABELS).map(([value, label]) => (
+                  <SelectItem key={value} value={value}>{label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
           <label className="space-y-1.5">
             <span className="text-xs font-semibold text-slate-600">فيديو التعريف (معرّف يوتيوب)</span>
             <Input

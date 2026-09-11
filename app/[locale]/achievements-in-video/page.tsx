@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
 import { buildPageMetadata } from "@/lib/seo";
 import { slugFor } from "@/lib/minbar/routes";
-import { ACHIEVEMENT_VIDEOS } from "@/lib/minbar/content/catalog";
+import { listVideos } from "@/lib/minbar/cms";
 import MinbarMessages from "@/components/minbar/MinbarMessages";
 import VideoGridPage from "@/components/minbar/videos/VideoGridPage";
 
@@ -31,10 +31,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
  */
 export default async function Page({ params }: Props) {
   const { locale } = await params;
+  const videos = await listVideos(locale, "ACHIEVEMENT");
 
   return (
     <MinbarMessages locale={locale} namespaces={NAMESPACES}>
-      <VideoGridPage videos={ACHIEVEMENT_VIDEOS.items} titleKey="achVideosPageTitle" leadKey="achVideosPageLead" />
+      <VideoGridPage videos={videos} titleKey="achVideosPageTitle" leadKey="achVideosPageLead" />
     </MinbarMessages>
   );
 }

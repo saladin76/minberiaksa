@@ -90,25 +90,8 @@ export const MILESTONES: ReadonlyArray<{ whenKey: string; titleKey: string; text
   { whenKey: "ms5When", titleKey: "ms5Title", textKey: "ms5Text" },
 ];
 
-/**
- * The published documents.
- *
- * These are the real PDFs from the handoff's `Minbar/src/`, served from
- * `public/minbar/reports/`. The design's own note is that a report appears here
- * only once the foundation's management has approved it — so this list is the
- * approved set, and nothing is listed as "coming soon".
- */
-export const REPORTS: ReadonlyArray<{ titleKey: string; metaKey: string; file: string }> = [
-  { titleKey: "report1Title", metaKey: "report1Meta", file: "rep-yearly.pdf" },
-  { titleKey: "report2Title", metaKey: "report2Meta", file: "rep-brochure.pdf" },
-  { titleKey: "report3Title", metaKey: "report3Meta", file: "prj-tahfiz.pdf" },
-  { titleKey: "report4Title", metaKey: "report4Meta", file: "prj-kursi.pdf" },
-  { titleKey: "report5Title", metaKey: "report5Meta", file: "prj-school.pdf" },
-  { titleKey: "report6Title", metaKey: "report6Meta", file: "prj-families.pdf" },
-];
-
-/** Where the report PDFs are served from. */
-export const REPORT_BASE = "/minbar/reports";
+/* The published report PDFs used to be listed here. They are Report rows now,
+   managed from the dashboard and read through `lib/minbar/cms.ts`. */
 
 /** The hero photograph and the photograph behind the closing call. */
 export const HERO_IMAGE = "16D72JzXMHbp72ZJCHHFWLjUYrmUX4ta1";

@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { PROGRAMS } from "@/lib/minbar/content/catalog";
+import type { CmsPlaylist } from "@/lib/minbar/cms";
 import { youtubeEmbed, youtubeThumb, youtubeWatch } from "@/lib/minbar/content/media";
 import VideoModal, { useVideoModal } from "@/components/minbar/VideoModal";
 
@@ -9,9 +9,9 @@ import VideoModal, { useVideoModal } from "@/components/minbar/VideoModal";
  * Our video programmes — ported from `Minbar/برامجنا المصورة.dc.html`.
  *
  * One band per series: its name, what it is, a link to the whole playlist, and
- * the three most recent episodes as thumbnails. Publishing an episode at the
- * head of a series in `lib/minbar/content/catalog.ts` updates both this page
- * and the homepage rail, which is the single source the handoff specifies.
+ * its episodes as thumbnails. Both this page and the homepage rail read the
+ * same playlists from the CMS, so publishing an episode in the dashboard
+ * updates both — the single source the handoff specifies.
  *
  * Playlists and episodes both open in the overlay player rather than sending
  * the visitor to YouTube — but every card is still a real anchor to the real
@@ -23,7 +23,7 @@ function playlistId(href: string): string | null {
   return href.match(/list=([\w-]+)/)?.[1] ?? null;
 }
 
-export default function ProgramsPage() {
+export default function ProgramsPage({ playlists }: { playlists: CmsPlaylist[] }) {
   const t = useTranslations("homepage");
   const tCommon = useTranslations("common");
   const { embed, open, close } = useVideoModal();
@@ -42,18 +42,19 @@ export default function ProgramsPage() {
         </div>
       </section>
 
-      {PROGRAMS.map((series) => {
-        const list = playlistId(series.href);
+      {playlists.map((series) => {
+        const list = series.youtubePlaylistUrl ? playlistId(series.youtubePlaylistUrl) : null;
         return (
-          <section key={series.titleKey} className="prg-band" style={{ position: "relative", zIndex: 1, padding: "48px 0", borderBottom: "1px solid var(--border)" }}>
+          <section key={series.id} className="prg-band" style={{ position: "relative", zIndex: 1, padding: "48px 0", borderBottom: "1px solid var(--border)" }}>
             <div style={{ maxWidth: 1240, margin: "0 auto", padding: "0 24px", display: "grid", gap: 18 }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
                 <div style={{ display: "grid", gap: 3 }}>
-                  <b style={{ fontSize: "clamp(19px,2vw,25px)", fontWeight: 900 }}>{t(series.titleKey)}</b>
-                  <span style={{ color: "var(--muted)", fontSize: 13.5 }}>{t(`${series.titleKey}Sub`)}</span>
+                  <b style={{ fontSize: "clamp(19px,2vw,25px)", fontWeight: 900 }}>{series.title}</b>
+                  {series.description ? <span style={{ color: "var(--muted)", fontSize: 13.5 }}>{series.description}</span> : null}
                 </div>
+                {series.youtubePlaylistUrl ? (
                 <a
-                  href={series.href}
+                  href={series.youtubePlaylistUrl}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="prg-all"
@@ -69,27 +70,28 @@ export default function ProgramsPage() {
                     <path d="M10 6l6 6-6 6" />
                   </svg>
                 </a>
+                ) : null}
               </div>
 
               <div className="prg-eps" style={{ display: "grid", gridTemplateColumns: "repeat(3,minmax(0,1fr))", gap: 16 }}>
                 {series.episodes.map((episode) => (
                   <a
-                    key={episode.id}
-                    href={youtubeWatch(episode.id)}
+                    key={episode.youtubeId}
+                    href={episode.url || youtubeWatch(episode.youtubeId)}
                     className="prg-ep"
-                    aria-label={t(series.titleKey)}
+                    aria-label={episode.title || series.title}
                     style={{ display: "block", overflow: "hidden", borderRadius: 8 }}
                     onClick={(event) => {
                       if (event.metaKey || event.ctrlKey || event.shiftKey || event.button !== 0) return;
                       event.preventDefault();
-                      open(youtubeEmbed(episode.id, { autoplay: true }));
+                      open(youtubeEmbed(episode.youtubeId, { autoplay: true }));
                     }}
                   >
                     <span style={{ position: "relative", display: "block", aspectRatio: "16/9", borderRadius: 8, overflow: "hidden", background: "var(--navy)" }}>
                       <span
                         aria-hidden="true"
                         className="prg-thumb"
-                        style={{ position: "absolute", inset: 0, backgroundImage: `url('${youtubeThumb(episode.id)}')`, backgroundSize: "cover", backgroundPosition: "center" }}
+                        style={{ position: "absolute", inset: 0, backgroundImage: `url('${episode.thumbnail || youtubeThumb(episode.youtubeId)}')`, backgroundSize: "cover", backgroundPosition: "center" }}
                       />
                       <span aria-hidden="true" style={{ position: "absolute", inset: 0, display: "grid", placeItems: "center" }}>
                         <span className="prg-play" style={{ width: 48, height: 48, borderRadius: "50%", background: "rgba(16,33,43,.55)", display: "grid", placeItems: "center", border: "1.5px solid rgba(255,255,255,.6)" }}>

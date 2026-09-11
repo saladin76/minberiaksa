@@ -1877,6 +1877,14 @@ model PlaylistVideo {
   @@index([playlistId, order])
 }
 
+/// Course or seminar. Stated rather than inferred from the title — the handoff
+/// tested whether the Arabic title starts with "ندوة", which stops being true
+/// the moment the title is translated.
+enum CourseKind {
+  COURSE
+  SEMINAR
+}
+
 /// "دوراتنا".
 ///
 /// Three shapes of course exist and the flags keep them apart: one with a full
@@ -1889,6 +1897,7 @@ model Course {
   slug          String  @unique
   title         String
   description   String?
+  kind          CourseKind @default(COURSE)
   coverImage    String?
   introVideoId  String?
   introVideoUrl String?
@@ -2016,6 +2025,8 @@ model Booklet {
   slug        String  @unique
   title       String
   description String?
+  /// Shown under the title in the author's own script; not translated.
+  author      String?
   fileUrl     String
   coverImage  String?
   order       Int     @default(0)

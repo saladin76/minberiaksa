@@ -35,6 +35,7 @@ export const BOOKLET_WITH_TRANSLATIONS_SELECT = {
   slug: true,
   title: true,
   description: true,
+  author: true,
   fileUrl: true,
   coverImage: true,
   order: true,
@@ -85,5 +86,12 @@ export function buildReportScalarPatch(body: Record<string, unknown>) {
   return patch;
 }
 
-export const buildBookletScalars = buildSharedScalars;
-export const buildBookletScalarPatch = buildSharedPatch;
+export function buildBookletScalars(body: Record<string, unknown>) {
+  return { ...buildSharedScalars(body), author: optionalStr(body.author) };
+}
+
+export function buildBookletScalarPatch(body: Record<string, unknown>) {
+  const patch = buildSharedPatch(body);
+  if (body.author !== undefined) patch.author = optionalStr(body.author) ?? null;
+  return patch;
+}

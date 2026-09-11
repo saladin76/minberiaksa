@@ -7,6 +7,7 @@ import { verseBlock } from "@/lib/minbar/quran";
 import { listProjects } from "@/lib/minbar/projects";
 import MinbarMessages from "@/components/minbar/MinbarMessages";
 import IbadanPage from "@/components/minbar/projects/IbadanPage";
+import { listPlaylists } from "@/lib/minbar/cms";
 
 interface Props {
   params: Promise<{ locale: string }>;
@@ -40,14 +41,16 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function Ibadan({ params }: Props) {
   const { locale } = await params;
 
-  const all = await listProjects(locale);
+  const [all, playlists] = await Promise.all([listProjects(locale), listPlaylists(locale)]);
   const projects = all.filter((project) => project.region === REGION);
+  /* The programme's own series, by the slug the seed gave it. */
+  const series = playlists.find((p) => p.slug === "ibadan") ?? null;
 
   const quran = messagesFor(locale).quran as Parameters<typeof verseBlock>[0];
 
   return (
     <MinbarMessages locale={locale} namespaces={NAMESPACES}>
-      <IbadanPage projects={projects} verse={verseBlock(quran, "isra_5", locale)} />
+      <IbadanPage projects={projects} verse={verseBlock(quran, "isra_5", locale)} series={series} />
     </MinbarMessages>
   );
 }

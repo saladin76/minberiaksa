@@ -4,6 +4,7 @@ import { buildPageMetadata } from "@/lib/seo";
 import { slugFor } from "@/lib/minbar/routes";
 import MinbarMessages from "@/components/minbar/MinbarMessages";
 import ProgramsPage from "@/components/minbar/videos/ProgramsPage";
+import { listPlaylists } from "@/lib/minbar/cms";
 
 interface Props {
   params: Promise<{ locale: string }>;
@@ -25,10 +26,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 /** Our video programmes — ported from `Minbar/برامجنا المصورة.dc.html`. */
 export default async function Programs({ params }: Props) {
   const { locale } = await params;
+  const playlists = await listPlaylists(locale);
 
   return (
     <MinbarMessages locale={locale} namespaces={NAMESPACES}>
-      <ProgramsPage />
+      <ProgramsPage playlists={playlists} />
     </MinbarMessages>
   );
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useLocale, useTranslations } from "next-intl";
+import type { CmsDocument } from "@/lib/minbar/cms";
 import { localeDirection } from "@/lib/locales";
 
 /**
@@ -23,25 +24,10 @@ import { localeDirection } from "@/lib/locales";
  * the same rule the video catalog applies to named speakers. Everything else is
  * interface copy and resolves through the `common` namespace.
  */
-const BOOKLETS: ReadonlyArray<{
-  id: string;
-  title: string;
-  author: string;
-  summaryKey: string;
-  file: string;
-}> = [
-  {
-    id: "isharat-altanzil",
-    title: "عبادًا لنا: إشارات التنزيل إلى صفات البعث على بني إسرائيل",
-    author: "أسامة أبو بكر",
-    summaryKey: "bookletIsharatSummary",
-    file: "/minbar/assets/books/isharat-altanzil.pdf",
-  },
-];
 
 const SECTION = { maxWidth: 1240, margin: "0 auto", padding: "0 24px" } as const;
 
-export default function PublicationsPage() {
+export default function PublicationsPage({ booklets }: { booklets: CmsDocument[] }) {
   const locale = useLocale();
   const dir = localeDirection(locale);
   const t = useTranslations("common");
@@ -64,7 +50,7 @@ export default function PublicationsPage() {
 
       <section style={{ position: "relative", zIndex: 1, padding: "60px 0 70px" }}>
         <div className="bk-grid" style={{ ...SECTION, display: "grid", gridTemplateColumns: "repeat(4,minmax(0,1fr))", gap: 20 }}>
-          {BOOKLETS.map((booklet) => (
+          {booklets.map((booklet) => (
             <div
               key={booklet.id}
               className="bk-card"
@@ -73,7 +59,7 @@ export default function PublicationsPage() {
               {/* The booklet has no cover artwork in the handoff, so the panel is
                   the sand ground with its gold rule rather than a stand-in
                   photograph from somewhere else. */}
-              <span aria-hidden="true" style={{ position: "relative", display: "block", aspectRatio: "3 / 4", background: "var(--sand)", overflow: "hidden", borderBottom: "3px solid var(--gold)" }} />
+              <span aria-hidden="true" style={{ position: "relative", display: "block", aspectRatio: "3 / 4", background: "var(--sand)", overflow: "hidden", borderBottom: "3px solid var(--gold)", backgroundImage: booklet.coverImage ? `url('${booklet.coverImage}')` : undefined, backgroundSize: "cover", backgroundPosition: "center" }} />
 
               <span style={{ display: "grid", gap: 9, padding: 15 }}>
                 <span style={{ display: "inline-flex", width: "fit-content", padding: "4px 12px", borderRadius: 999, background: "rgba(211,154,39,.14)", border: "1px solid rgba(211,154,39,.4)", color: "#8A5D16", fontSize: 9, fontWeight: 900, letterSpacing: ".02em", whiteSpace: "nowrap" }}>
@@ -82,8 +68,8 @@ export default function PublicationsPage() {
                 {/* A book title and an author's name keep their own script and
                     direction whatever language the page is read in. */}
                 <b dir="rtl" style={{ fontSize: 15, lineHeight: 1.5, unicodeBidi: "isolate" }}>{booklet.title}</b>
-                <span dir="rtl" style={{ color: "var(--gold)", fontSize: 13, fontWeight: 800, unicodeBidi: "isolate" }}>{booklet.author}</span>
-                <span style={{ color: "var(--muted)", fontSize: 13, lineHeight: 1.8 }}>{t(booklet.summaryKey)}</span>
+                {booklet.author ? <span dir="rtl" style={{ color: "var(--gold)", fontSize: 13, fontWeight: 800, unicodeBidi: "isolate" }}>{booklet.author}</span> : null}
+                {booklet.description ? <span style={{ color: "var(--muted)", fontSize: 13, lineHeight: 1.8 }}>{booklet.description}</span> : null}
 
                 <span style={{ display: "flex", alignItems: "center", gap: 14, fontSize: 12.5, color: "var(--muted)", fontWeight: 700, paddingTop: 10, borderTop: "1px solid var(--border)" }}>
                   <span>{t("bookletFormatPdf")}</span>
@@ -92,7 +78,7 @@ export default function PublicationsPage() {
 
                 <span style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
                   <a
-                    href={booklet.file}
+                    href={booklet.fileUrl}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="bk-read"
@@ -105,7 +91,7 @@ export default function PublicationsPage() {
                     {t("readBooklet")}
                   </a>
                   <a
-                    href={booklet.file}
+                    href={booklet.fileUrl}
                     download
                     className="bk-dl"
                     style={{ flex: "0 0 auto", height: 40, padding: "0 13px", display: "inline-flex", alignItems: "center", gap: 7, borderRadius: 10, border: "1px solid var(--border)", fontWeight: 800, fontSize: 13, color: "var(--deep)" }}

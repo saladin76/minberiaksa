@@ -1,8 +1,8 @@
 "use client";
 
-import { useLocale, useTranslations } from "next-intl";
-import { IMG, youtubeEmbed, youtubeThumb, youtubeWatch, type ImageKey } from "@/lib/minbar/content/media";
-import type { MinbarVideo } from "@/lib/minbar/content/catalog";
+import { useTranslations } from "next-intl";
+import { youtubeEmbed, youtubeThumb, youtubeWatch } from "@/lib/minbar/content/media";
+import type { CmsVideo } from "@/lib/minbar/cms";
 import VideoModal, { useVideoModal } from "@/components/minbar/VideoModal";
 import ZakatBanner from "@/components/minbar/banners/ZakatBanner";
 
@@ -19,21 +19,20 @@ import ZakatBanner from "@/components/minbar/banners/ZakatBanner";
  */
 
 export interface VideoGridPageProps {
-  /** Ordered set from `lib/minbar/content/catalog.ts`. */
-  videos: readonly MinbarVideo[];
+  /** Already narrowed to this locale by `listVideos` on the server. */
+  videos: readonly CmsVideo[];
   /** Keys in the `homepage` namespace for the page's own title and lead. */
   titleKey: string;
   leadKey: string;
 }
 
 export default function VideoGridPage({ videos, titleKey, leadKey }: VideoGridPageProps) {
-  const locale = useLocale();
   const t = useTranslations("homepage");
   const { embed, open, close } = useVideoModal();
 
-  /* A video restricted to particular language editions is only listed in them —
-     the Turkish endorsements are recorded for a Turkish audience. */
-  const shown = videos.filter((video) => video.published && (!video.locales || video.locales.includes(locale)));
+  /* The locale allow-list (the Turkish endorsements are recorded for a Turkish
+     audience) is applied by the reader; what arrives is what this edition shows. */
+  const shown = videos;
 
   return (
     <div className="vg-page">
@@ -50,12 +49,9 @@ export default function VideoGridPage({ videos, titleKey, leadKey }: VideoGridPa
         <div style={{ maxWidth: 1240, margin: "0 auto", padding: "0 24px" }}>
           <div className="vg-grid" style={{ display: "grid", gridTemplateColumns: "repeat(3,minmax(0,1fr))", gap: 18 }}>
             {shown.map((video) => {
-              const title = video.titleKey ? t(video.titleKey) : video.title;
-              const image = video.youtubeId
-                ? youtubeThumb(video.youtubeId)
-                : video.imageKey
-                  ? IMG[video.imageKey as ImageKey]
-                  : null;
+              const title = video.title;
+              const image = video.thumbnail || (video.youtubeId ? youtubeThumb(video.youtubeId) : null);
+              const tag = video.regionKey ? (t.has(video.regionKey) ? t(video.regionKey) : video.regionKey) : "";
 
               const card = (
                 <>
@@ -65,9 +61,11 @@ export default function VideoGridPage({ videos, titleKey, leadKey }: VideoGridPa
                     style={{ position: "absolute", inset: 0, backgroundImage: image ? `url('${image}')` : undefined, backgroundColor: image ? undefined : "var(--navy)", backgroundSize: "cover", backgroundPosition: "center" }}
                   />
                   <span aria-hidden="true" style={{ position: "absolute", inset: 0, background: "linear-gradient(0deg, rgba(16,33,43,.92) 10%, rgba(16,33,43,.4) 46%, rgba(16,33,43,.1) 80%)", pointerEvents: "none" }} />
-                  <span style={{ position: "absolute", insetInlineStart: 12, top: 12, padding: "4px 11px", borderRadius: 999, background: "rgba(16,33,43,.72)", color: "#fff", fontSize: 11, fontWeight: 900 }}>
-                    {t(video.regionKey)}
-                  </span>
+                  {tag ? (
+                    <span style={{ position: "absolute", insetInlineStart: 12, top: 12, padding: "4px 11px", borderRadius: 999, background: "rgba(16,33,43,.72)", color: "#fff", fontSize: 11, fontWeight: 900 }}>
+                      {tag}
+                    </span>
+                  ) : null}
                   {video.youtubeId ? (
                     <span aria-hidden="true" style={{ position: "absolute", inset: 0, display: "grid", placeItems: "center" }}>
                       <span style={{ width: 46, height: 46, borderRadius: "50%", background: "rgba(16,33,43,.55)", display: "grid", placeItems: "center", border: "1.5px solid rgba(255,255,255,.6)", color: "#fff" }}>
@@ -95,8 +93,8 @@ export default function VideoGridPage({ videos, titleKey, leadKey }: VideoGridPa
 
               return video.youtubeId ? (
                 <a
-                  key={video.title}
-                  href={youtubeWatch(video.youtubeId, video.start)}
+                  key={video.id}
+                  href={youtubeWatch(video.youtubeId, video.startSeconds ?? undefined)}
                   className="vg-card"
                   style={{ ...frame, cursor: "pointer" }}
                   onClick={(event) => {
@@ -104,13 +102,13 @@ export default function VideoGridPage({ videos, titleKey, leadKey }: VideoGridPa
                        the href they land on is the real video. */
                     if (event.metaKey || event.ctrlKey || event.shiftKey || event.button !== 0) return;
                     event.preventDefault();
-                    open(youtubeEmbed(video.youtubeId!, { autoplay: true, start: video.start }));
+                    open(youtubeEmbed(video.youtubeId, { autoplay: true, start: video.startSeconds ?? undefined }));
                   }}
                 >
                   {card}
                 </a>
               ) : (
-                <div key={video.title} className="vg-card vg-card--still" style={frame}>
+                <div key={video.id} className="vg-card vg-card--still" style={frame}>
                   {card}
                 </div>
               );

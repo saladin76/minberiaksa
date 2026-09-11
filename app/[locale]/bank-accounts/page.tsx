@@ -32,10 +32,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
  */
 export default async function BankAccounts({ params }: Props) {
   const { locale } = await params;
+  const banks = await banksFor(locale);
 
   return (
     <MinbarMessages locale={locale} namespaces={NAMESPACES}>
-      <BankAccountsPage banks={banksFor(locale)} />
+      <BankAccountsPage banks={banks} />
     </MinbarMessages>
   );
 }

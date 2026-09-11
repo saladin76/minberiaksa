@@ -4,6 +4,8 @@ import { LOCALE_SEO, buildPageMetadata, SITE_URL } from "@/lib/seo";
 import type { Locale } from "@/lib/seo";
 import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 import { listProjects } from "@/lib/minbar/projects";
+import { listArticles, listNews } from "@/lib/minbar/posts";
+import { listCourses, listFaqs, listPlaylists, listVideos } from "@/lib/minbar/cms";
 import MinbarMessages from "@/components/minbar/MinbarMessages";
 import HomePage from "@/components/minbar/home/HomePage";
 
@@ -41,10 +43,19 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function Home({ params }: Props) {
   const { locale } = await params;
 
-  // The rail shows the leading projects; the full set lives on /projects.
-  const [projects, session] = await Promise.all([
+  // Every section's content is read here, in parallel, so the whole homepage is
+  // in the first HTML response rather than filled in by client fetches — the
+  // rails show a leading slice; each full set lives on its own page.
+  const [projects, session, courses, playlists, endorsements, achievements, faqs, articlesPage, news] = await Promise.all([
     listProjects(locale, 12),
     getServerSession(authOptions),
+    listCourses(locale),
+    listPlaylists(locale),
+    listVideos(locale, "ENDORSEMENT"),
+    listVideos(locale, "ACHIEVEMENT"),
+    listFaqs(locale),
+    listArticles({ locale, take: 4 }),
+    listNews(locale, 4),
   ]);
 
   const organisationSchema = {
@@ -66,7 +77,11 @@ export default async function Home({ params }: Props) {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(organisationSchema) }}
       />
       <MinbarMessages locale={locale} namespaces={NAMESPACES}>
-        <HomePage projects={projects} signedIn={!!session?.user} />
+        <HomePage
+          projects={projects}
+          content={{ courses, playlists, endorsements, achievements, faqs, articles: articlesPage.items, news }}
+          signedIn={!!session?.user}
+        />
       </MinbarMessages>
     </>
   );

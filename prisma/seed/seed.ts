@@ -302,6 +302,7 @@ async function main() {
   for (const c of extra.courses) {
     const base = {
       title: c.title,
+      kind: ((c as { kind?: string }).kind === "SEMINAR" ? "SEMINAR" : "COURSE") as "COURSE" | "SEMINAR",
       description: c.description ?? undefined,
       coverImage: publicPath(c.coverImage),
       introVideoId: c.introVideoId ?? undefined,

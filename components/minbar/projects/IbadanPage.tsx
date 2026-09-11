@@ -2,9 +2,9 @@
 
 import { useLocale, useTranslations } from "next-intl";
 import { localeDirection } from "@/lib/locales";
-import { PROGRAMS } from "@/lib/minbar/content/catalog";
 import { youtubeEmbed, youtubeThumb, youtubeWatch } from "@/lib/minbar/content/media";
 import type { MinbarProject } from "@/lib/minbar/projects";
+import type { CmsPlaylist } from "@/lib/minbar/cms";
 import type { VerseBlock } from "@/lib/minbar/quran";
 import ProjectDonateCard from "@/components/minbar/ProjectDonateCard";
 import VideoModal, { useVideoModal } from "@/components/minbar/VideoModal";
@@ -58,17 +58,18 @@ export interface IbadanPageProps {
   projects: MinbarProject[];
   /** Al-Isra 5 — the verse the project takes its name from. */
   verse: VerseBlock;
+  /** The programme's documentary series from the CMS, or null when none is published. */
+  series: CmsPlaylist | null;
 }
 
-export default function IbadanPage({ projects, verse }: IbadanPageProps) {
+export default function IbadanPage({ projects, verse, series }: IbadanPageProps) {
   const locale = useLocale();
   const rtl = localeDirection(locale) === "rtl";
   const t = useTranslations("projects");
   const tHome = useTranslations("homepage");
   const { embed, open, close } = useVideoModal();
 
-  const series = PROGRAMS.find((program) => program.titleKey === "progIbadan");
-  const playlist = series?.href.match(/list=([\w-]+)/)?.[1] ?? null;
+  const playlist = series?.youtubePlaylistUrl?.match(/list=([\w-]+)/)?.[1] ?? null;
   const arrow = rtl ? "←" : "→";
 
   /* The project's wordmark is Arabic calligraphy; the other language editions
@@ -204,7 +205,7 @@ export default function IbadanPage({ projects, verse }: IbadanPageProps) {
       </section>
 
       {/* ── The documentary series ────────────────────────────────────────── */}
-      {series ? (
+      {series && series.episodes.length ? (
         <section id="series" style={{ position: "relative", zIndex: 1, padding: "0 0 56px", borderTop: "1px solid var(--border)" }}>
           <div style={{ ...SECTION, padding: "48px 24px 0", display: "grid", gap: 18 }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
@@ -212,8 +213,9 @@ export default function IbadanPage({ projects, verse }: IbadanPageProps) {
                 <b style={{ fontSize: "clamp(19px,2vw,25px)", fontWeight: 900 }}>{t("ibadanSeriesTitle")}</b>
                 <span style={{ color: "var(--muted)", fontSize: 13.5 }}>{t("ibadanSeriesSub")}</span>
               </div>
+              {series.youtubePlaylistUrl ? (
               <a
-                href={series.href}
+                href={series.youtubePlaylistUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="prg-all"
@@ -227,27 +229,28 @@ export default function IbadanPage({ projects, verse }: IbadanPageProps) {
                 {tHome("watchFullSeries")}
                 <span aria-hidden="true">{arrow}</span>
               </a>
+              ) : null}
             </div>
 
             <div className="prg-eps" style={{ display: "grid", gridTemplateColumns: "repeat(3,minmax(0,1fr))", gap: 16 }}>
               {series.episodes.map((episode) => (
                 <a
-                  key={episode.id}
-                  href={youtubeWatch(episode.id)}
+                  key={episode.youtubeId}
+                  href={episode.url || youtubeWatch(episode.youtubeId)}
                   className="prg-ep"
                   aria-label={t("ibadanSeriesTitle")}
                   style={{ display: "block", overflow: "hidden", borderRadius: 8 }}
                   onClick={(event) => {
                     if (event.metaKey || event.ctrlKey || event.shiftKey || event.button !== 0) return;
                     event.preventDefault();
-                    open(youtubeEmbed(episode.id, { autoplay: true }));
+                    open(youtubeEmbed(episode.youtubeId, { autoplay: true }));
                   }}
                 >
                   <span style={{ position: "relative", display: "block", aspectRatio: "16/9", borderRadius: 8, overflow: "hidden", background: "var(--navy)" }}>
                     <span
                       aria-hidden="true"
                       className="prg-thumb"
-                      style={{ position: "absolute", inset: 0, backgroundImage: `url('${youtubeThumb(episode.id)}')`, backgroundSize: "cover", backgroundPosition: "center" }}
+                      style={{ position: "absolute", inset: 0, backgroundImage: `url('${episode.thumbnail || youtubeThumb(episode.youtubeId)}')`, backgroundSize: "cover", backgroundPosition: "center" }}
                     />
                     <span aria-hidden="true" style={{ position: "absolute", inset: 0, display: "grid", placeItems: "center" }}>
                       <span className="prg-play" style={{ width: 48, height: 48, borderRadius: "50%", background: "rgba(16,33,43,.55)", display: "grid", placeItems: "center", border: "1.5px solid rgba(255,255,255,.6)" }}>

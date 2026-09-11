@@ -4,6 +4,7 @@ import { buildPageMetadata } from "@/lib/seo";
 import { slugFor } from "@/lib/minbar/routes";
 import MinbarMessages from "@/components/minbar/MinbarMessages";
 import ReportsPage from "@/components/minbar/reports/ReportsPage";
+import { listReports } from "@/lib/minbar/cms";
 
 interface Props {
   params: Promise<{ locale: string }>;
@@ -30,10 +31,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
  */
 export default async function Achievements({ params }: Props) {
   const { locale } = await params;
+  const reports = await listReports(locale);
 
   return (
     <MinbarMessages locale={locale} namespaces={NAMESPACES}>
-      <ReportsPage />
+      <ReportsPage reports={reports} />
     </MinbarMessages>
   );
 }

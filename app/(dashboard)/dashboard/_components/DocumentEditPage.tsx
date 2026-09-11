@@ -34,6 +34,7 @@ export function DocumentEditPage({ id, copy }: { id: string; copy: DocumentSecti
           fileUrl: d.fileUrl ?? '',
           coverImage: d.coverImage ?? '',
           year: d.year == null ? '' : String(d.year),
+          author: d.author ?? '',
           isPublished: d.isPublished !== false,
           translations: translationsFromRows(d.translations ?? [], DOCUMENT_TRANSLATION_FIELDS),
         });

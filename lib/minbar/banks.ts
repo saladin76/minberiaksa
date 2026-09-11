@@ -1,31 +1,19 @@
 /**
  * Bank accounts for the bank-transfer donation path.
  *
- * Shape follows `Minbar/الحسابات البنكية.dc.html`: a bank can hold several
- * currencies, each with its own account number and IBAN, and several banks can
- * be published at once.
+ * These used to be a hand-written list in this file. They are now rows of the
+ * BankAccount model, entered and maintained from the dashboard, and this module
+ * is the seam the bank-transfer page and the checkout read them through — the
+ * shape they render is unchanged, so neither had to be touched.
  *
- * SOURCE OF THE VALUES: these are the association's real, published accounts,
- * carried over verbatim from `app/[locale]/bank-transfer/_components/
- * BankAccountsBlock.tsx`. The handoff's own page ships placeholders ("—") with
- * `common.toBeVerified` "حتى تصل البيانات الرسمية" — until the official details
- * arrive. Shipping those placeholders as live payment details would send donors'
- * transfers nowhere, so the real accounts are used and the handoff's *design* is
- * what was ported, not its sample data.
- *
- * `[DASHBOARD-INTEGRATION]`: the handoff specifies accounts per language /
- * region managed from the dashboard, because a Turkish donor and a Gulf donor
- * should not be given the same IBAN. `banksFor(locale)` is the seam for that —
- * it returns the same list for every locale today and becomes a query once the
- * `BankAccount` model exists.
- *
- * Numeric identifiers (IBAN, SWIFT, account number) are never translated and
- * are always rendered `dir="ltr"` with `unicode-bidi: isolate`; they are also
- * the one place the design permits `word-break: break-all`.
+ * `locales` on a row is an allow-list: an account published only to the
+ * Turkish edition is not handed to a Gulf donor. Empty means every edition.
  */
 
+import { listBankAccounts } from "@/lib/minbar/cms";
+
 export interface BankCurrencyAccount {
-  /** ISO code, or the local label the bank itself uses (e.g. "TL"). */
+  /** ISO 4217 code. */
   code: string;
   iban: string;
   accountNo?: string;
@@ -36,45 +24,33 @@ export interface BankCurrencyAccount {
 export interface MinbarBank {
   id: string;
   name: string;
-  /** Legal account holder. Not translated — it is a registered name. */
+  /** Legal account holder. */
   holder: string;
   swift: string;
   branch?: string;
-  /** Path under /public, when a logo is available. */
+  /** Logo URL, when one is available. */
   logo?: string;
   currencies: BankCurrencyAccount[];
 }
 
-const ACCOUNT_HOLDER = "Minberiaksa Uluslararası Yardımlaşma Derneği";
-
-const BANKS: readonly MinbarBank[] = [
-  {
-    id: "ziraat-katilim",
-    name: "Ziraat Katılım Bankası",
-    holder: ACCOUNT_HOLDER,
-    swift: "ZKBATRIS",
-    logo: "/ziraat-katilim.jpg",
-    currencies: [
-      { code: "TL", iban: "TR750020900001843729000001" },
-      { code: "EUR", iban: "TR210020900001843729000003" },
-      { code: "USD", iban: "TR480020900001843729000002" },
-    ],
-  },
-  {
-    id: "albaraka",
-    name: "AlbarakaTürk Katılım Bankası",
-    holder: ACCOUNT_HOLDER,
-    swift: "BTFHTRIS",
-    currencies: [{ code: "TL", iban: "TR710020300009942518000001" }],
-  },
-];
-
-/** Published banks for a locale. One list today; per-region once in the CMS. */
-export function banksFor(_locale: string): readonly MinbarBank[] {
-  return BANKS;
+/** The accounts published to this locale, in the order the dashboard set. */
+export async function banksFor(locale: string): Promise<readonly MinbarBank[]> {
+  const rows = await listBankAccounts(locale);
+  return rows.map((b) => ({
+    id: b.slug,
+    name: b.name,
+    holder: b.holder,
+    swift: b.swift,
+    branch: b.branch || undefined,
+    logo: b.logo || undefined,
+    /* A currency row with no IBAN is not something a donor can transfer to;
+       the dashboard refuses to save one, but read defensively. */
+    currencies: b.currencies
+      .filter((c) => c.iban)
+      .map((c) => ({ code: c.code, iban: c.iban, accountNo: c.accountNo || undefined, extNo: c.extNo || undefined })),
+  }));
 }
 
-/** Group an IBAN into fours so it can be read and checked against a statement. */
 export function formatIban(iban: string): string {
   return iban.replace(/(.{4})/g, "$1 ").trim();
 }

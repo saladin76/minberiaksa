@@ -4,6 +4,7 @@ import { buildPageMetadata } from "@/lib/seo";
 import { slugFor } from "@/lib/minbar/routes";
 import MinbarMessages from "@/components/minbar/MinbarMessages";
 import CoursesPage from "@/components/minbar/videos/CoursesPage";
+import { listCourses } from "@/lib/minbar/cms";
 
 interface Props {
   params: Promise<{ locale: string }>;
@@ -25,10 +26,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 /** Our courses — ported from `Minbar/دوراتنا.dc.html`. */
 export default async function Courses({ params }: Props) {
   const { locale } = await params;
+  const courses = await listCourses(locale);
 
   return (
     <MinbarMessages locale={locale} namespaces={NAMESPACES}>
-      <CoursesPage />
+      <CoursesPage courses={courses} />
     </MinbarMessages>
   );
 }

@@ -368,7 +368,8 @@
           "description": "دورة علمية في قضية بيت المقدس والمسجد الأقصى — تسع وحدات وملحق تكميلي للخطباء والدعاة"
         }
       ],
-      "videos": []
+      "videos": [],
+      "kind": "COURSE"
     },
     {
       "slug": "afaq-Al-Amal",
@@ -396,7 +397,8 @@
           "description": "ندوة علمية من ندوات المؤسسة حول آفاق العمل لخدمة القدس في الدول الإسلامية"
         }
       ],
-      "videos": []
+      "videos": [],
+      "kind": "SEMINAR"
     },
     {
       "slug": "alquds-waqi",
@@ -424,7 +426,8 @@
           "description": "ندوة علمية من ندوات المؤسسة حول واقع القدس واحتياجات أهلها"
         }
       ],
-      "videos": []
+      "videos": [],
+      "kind": "SEMINAR"
     },
     {
       "slug": "social-media",
@@ -452,7 +455,8 @@
           "description": "دورة تدريبية في توظيف وسائل التواصل الاجتماعي لخدمة قضية القدس"
         }
       ],
-      "videos": []
+      "videos": [],
+      "kind": "COURSE"
     },
     {
       "slug": "media-appearance",
@@ -480,7 +484,8 @@
           "description": "دورة تدريبية في مهارات الظهور الإعلامي لخدمة قضية القدس"
         }
       ],
-      "videos": []
+      "videos": [],
+      "kind": "COURSE"
     },
     {
       "slug": "mosque-work",
@@ -508,7 +513,8 @@
           "description": "دورة تدريبية في تنظيم العمل المسجدي وتوجيهه لخدمة قضية القدس"
         }
       ],
-      "videos": []
+      "videos": [],
+      "kind": "COURSE"
     },
     {
       "slug": "sharia-studies",
@@ -536,7 +542,8 @@
           "description": "دورة علمية في الدراسات الشرعية المتعلقة بعلوم بيت المقدس"
         }
       ],
-      "videos": []
+      "videos": [],
+      "kind": "COURSE"
     }
   ],
   "videos": [

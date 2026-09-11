@@ -19,11 +19,18 @@ import {
   youtubeId as parseYoutubeId,
 } from "./translation-write";
 
+export const COURSE_KINDS = ["COURSE", "SEMINAR"] as const;
+export type CourseKindValue = (typeof COURSE_KINDS)[number];
+export function isCourseKind(v: unknown): v is CourseKindValue {
+  return typeof v === "string" && (COURSE_KINDS as readonly string[]).includes(v);
+}
+
 export const COURSE_WITH_CHILDREN_SELECT = {
   id: true,
   slug: true,
   title: true,
   description: true,
+  kind: true,
   coverImage: true,
   introVideoId: true,
   introVideoUrl: true,
@@ -50,6 +57,7 @@ export function buildCourseScalars(body: Record<string, unknown>) {
     slug: str(body.slug),
     title: str(body.title),
     description: optionalStr(body.description),
+    kind: (isCourseKind(body.kind) ? body.kind : "COURSE") as CourseKindValue,
     coverImage: optionalStr(body.coverImage),
     introVideoId: optionalStr(body.introVideoId),
     introVideoUrl: optionalStr(body.introVideoUrl),
@@ -68,6 +76,7 @@ export function buildCourseScalarPatch(body: Record<string, unknown>) {
   if (body.slug !== undefined) patch.slug = str(body.slug);
   if (body.title !== undefined) patch.title = str(body.title);
   if (body.description !== undefined) patch.description = optionalStr(body.description) ?? null;
+  if (body.kind !== undefined && isCourseKind(body.kind)) patch.kind = body.kind;
   if (body.coverImage !== undefined) patch.coverImage = optionalStr(body.coverImage) ?? null;
   if (body.introVideoId !== undefined) patch.introVideoId = optionalStr(body.introVideoId) ?? null;
   if (body.introVideoUrl !== undefined) patch.introVideoUrl = optionalStr(body.introVideoUrl) ?? null;

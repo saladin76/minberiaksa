@@ -30,7 +30,7 @@ export const metadata: Metadata = {
  */
 export default async function Checkout({ params }: Props) {
   const { locale } = await params;
-  const [projects, session] = await Promise.all([listProjects(locale), getServerSession(authOptions)]);
+  const [projects, session, banks] = await Promise.all([listProjects(locale), getServerSession(authOptions), banksFor(locale)]);
 
   const user = session?.user as
     | { name?: string | null; email?: string | null; phone?: string | null }
@@ -50,7 +50,7 @@ export default async function Checkout({ params }: Props) {
 
   return (
     <MinbarMessages locale={locale} namespaces={NAMESPACES}>
-      <CheckoutPage projects={projects} banks={banksFor(locale)} donor={donor} />
+      <CheckoutPage projects={projects} banks={banks} donor={donor} />
     </MinbarMessages>
   );
 }

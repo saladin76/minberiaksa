@@ -33,6 +33,7 @@ export default function EditCoursePage({ params }: { params: Promise<{ id: strin
           slug: c.slug ?? '',
           title: c.title ?? '',
           description: c.description ?? '',
+          kind: c.kind === 'SEMINAR' ? 'SEMINAR' : 'COURSE',
           coverImage: c.coverImage ?? '',
           introVideoId: c.introVideoId ?? '',
           introVideoUrl: c.introVideoUrl ?? '',

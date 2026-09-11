@@ -4,6 +4,7 @@ import { buildPageMetadata } from "@/lib/seo";
 import { slugFor } from "@/lib/minbar/routes";
 import MinbarMessages from "@/components/minbar/MinbarMessages";
 import PublicationsPage from "@/components/minbar/publications/PublicationsPage";
+import { listBooklets } from "@/lib/minbar/cms";
 
 interface Props {
   params: Promise<{ locale: string }>;
@@ -30,10 +31,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
  */
 export default async function Publications({ params }: Props) {
   const { locale } = await params;
+  const booklets = await listBooklets(locale);
 
   return (
     <MinbarMessages locale={locale} namespaces={NAMESPACES}>
-      <PublicationsPage />
+      <PublicationsPage booklets={booklets} />
     </MinbarMessages>
   );
 }

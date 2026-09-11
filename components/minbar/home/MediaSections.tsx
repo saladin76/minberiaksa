@@ -4,18 +4,9 @@ import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
 import Rail from "@/components/minbar/Rail";
 import { miaPath } from "@/lib/minbar/routes";
-import { IMG, type ImageKey, youtubeEmbed, youtubeThumb } from "@/lib/minbar/content/media";
-import {
-  ACHIEVEMENT_VIDEOS,
-  CONFERENCE_2_EMBED,
-  CONFERENCE_3_EMBED,
-  COURSES_FOR_HOME,
-  ENDORSEMENT_VIDEOS,
-  PROGRAMS,
-  khatibEmbed,
-  videosForHome,
-  type MinbarVideo,
-} from "@/lib/minbar/content/catalog";
+import { youtubeEmbed, youtubeThumb } from "@/lib/minbar/content/media";
+import { CONFERENCE_2_EMBED, CONFERENCE_3_EMBED, khatibEmbed } from "@/lib/minbar/content/catalog";
+import type { CmsCourse, CmsPlaylist, CmsVideo } from "@/lib/minbar/cms";
 import { ArrowGlyph } from "./TopSections";
 
 /**
@@ -23,8 +14,10 @@ import { ArrowGlyph } from "./TopSections";
  * programmes rail and the courses rail. Ported from
  * `Minbar/الصفحة الرئيسية.dc.html`.
  *
- * Region and category tags are interface copy translated ×19. Video titles are
- * either a translated key (interface copy) or a proper name kept as written.
+ * The reels, programmes and courses are CMS content, read on the server by the
+ * page and passed down already in the visitor's locale. A video's `regionKey`
+ * is an interface string when one exists for it (regionGaza, tagTezkiye…) and
+ * shown as written otherwise, so an editor can tag freely.
  */
 
 /* ── Events ─────────────────────────────────────────────────────────────────
@@ -96,7 +89,7 @@ function ReelRail({
   title: string;
   viewAllLabel: string;
   viewAllHref: string;
-  videos: MinbarVideo[];
+  videos: CmsVideo[];
   showMeta: boolean;
   watchLabel: string;
   onPlay: (embed: string) => void;
@@ -119,13 +112,10 @@ function ReelRail({
       }
     >
       {videos.map((video) => {
-        const label = video.titleKey ? t(video.titleKey) : video.title;
-        const image = video.youtubeId
-          ? youtubeThumb(video.youtubeId)
-          : video.imageKey
-            ? IMG[video.imageKey as ImageKey]
-            : null;
+        const label = video.title;
+        const image = video.thumbnail || (video.youtubeId ? youtubeThumb(video.youtubeId) : null);
         const playable = Boolean(video.youtubeId);
+        const tag = video.regionKey ? (t.has(video.regionKey) ? t(video.regionKey) : video.regionKey) : "";
 
         const content = (
           <>
@@ -149,7 +139,7 @@ function ReelRail({
             <span style={{ position: "absolute", insetInline: 14, bottom: 14, display: "grid", gap: 8 }}>
               <b style={{ color: "#fff", fontWeight: 800, fontSize: 16, lineHeight: 1.45 }}>{label}</b>
               <span style={{ display: "flex", alignItems: "center", gap: 8, paddingTop: 8, borderTop: "1px solid rgba(255,255,255,.18)", color: "rgba(255,255,255,.74)", fontSize: 11.5, fontWeight: 700 }}>
-                {showMeta ? t(video.regionKey) : null}
+                {showMeta && tag ? tag : null}
                 {playable ? (
                   <span style={{ marginInlineStart: "auto", color: "var(--gold)", fontWeight: 900, display: "inline-flex", alignItems: "center", gap: 4 }}>
                     {watchLabel}
@@ -176,16 +166,16 @@ function ReelRail({
 
         return playable ? (
           <button
-            key={label}
+            key={video.id}
             type="button"
             className="mia-reel"
-            onClick={() => onPlay(youtubeEmbed(video.youtubeId as string, { autoplay: true, start: video.start }))}
+            onClick={() => onPlay(youtubeEmbed(video.youtubeId, { autoplay: true, start: video.startSeconds ?? undefined }))}
             style={{ ...cardStyle, cursor: "pointer", textAlign: "start" }}
           >
             {content}
           </button>
         ) : (
-          <div key={label} className="mia-reel" style={cardStyle}>
+          <div key={video.id} className="mia-reel" style={cardStyle}>
             {content}
           </div>
         );
@@ -194,9 +184,23 @@ function ReelRail({
   );
 }
 
-export function ReelsSection({ onPlay }: { onPlay: (embed: string) => void }) {
+/** How many of each reel the homepage shows; the full set lives on its own page. */
+const HOME_ENDORSEMENTS = 8;
+const HOME_ACHIEVEMENTS = 5;
+
+export function ReelsSection({
+  onPlay,
+  endorsements,
+  achievements,
+}: {
+  onPlay: (embed: string) => void;
+  endorsements: CmsVideo[];
+  achievements: CmsVideo[];
+}) {
   const locale = useLocale();
   const t = useTranslations("homepage");
+
+  if (endorsements.length === 0 && achievements.length === 0) return null;
 
   return (
     <section style={{ position: "relative", zIndex: 1, background: "linear-gradient(to left, rgba(247,242,234,.14), rgba(247,242,234,.42))", borderTop: "1px solid var(--border)", padding: "56px 0", overflow: "hidden" }}>
@@ -206,7 +210,7 @@ export function ReelsSection({ onPlay }: { onPlay: (embed: string) => void }) {
           title={t("ourTestimonials")}
           viewAllLabel={t("endViewAll")}
           viewAllHref={miaPath("endorsementVideos", locale)}
-          videos={videosForHome(ENDORSEMENT_VIDEOS, locale)}
+          videos={endorsements.slice(0, HOME_ENDORSEMENTS)}
           showMeta
           watchLabel={t("watch")}
           onPlay={onPlay}
@@ -216,7 +220,7 @@ export function ReelsSection({ onPlay }: { onPlay: (embed: string) => void }) {
           title={t("ourAchievements")}
           viewAllLabel={t("achViewAll")}
           viewAllHref={miaPath("achievementVideos", locale)}
-          videos={videosForHome(ACHIEVEMENT_VIDEOS, locale)}
+          videos={achievements.slice(0, HOME_ACHIEVEMENTS)}
           showMeta={false}
           watchLabel={t("watchImplementation")}
           onPlay={onPlay}
@@ -229,9 +233,11 @@ export function ReelsSection({ onPlay }: { onPlay: (embed: string) => void }) {
 /* ── Programmes ─────────────────────────────────────────────────────────────
  * The first episode of each programme is the poster frame, so publishing a new
  * episode at the head of a programme updates the homepage with no other edit. */
-export function ProgramsRail() {
+export function ProgramsRail({ playlists }: { playlists: CmsPlaylist[] }) {
   const locale = useLocale();
   const t = useTranslations("homepage");
+
+  if (playlists.length === 0) return null;
 
   return (
     <section id="programs" style={{ position: "relative", zIndex: 1, background: "var(--ivory)", padding: "0 0 56px" }}>
@@ -244,9 +250,9 @@ export function ProgramsRail() {
           </Link>
         </div>
         <div id="programs-rail" className="mia-rail" style={railStyle}>
-          {PROGRAMS.map((program) => (
+          {playlists.map((program) => (
             <Link
-              key={program.titleKey}
+              key={program.id}
               href={miaPath("programs", locale)}
               style={{ flex: "0 0 285px", scrollSnapAlign: "start", display: "grid", gap: 10, textDecoration: "none", color: "var(--deep)" }}
             >
@@ -255,7 +261,7 @@ export function ProgramsRail() {
                   style={{
                     position: "absolute",
                     inset: 0,
-                    backgroundImage: `url('${youtubeThumb(program.episodes[0]?.id ?? "")}')`,
+                    backgroundImage: `url('${program.coverImage || program.episodes[0]?.thumbnail || youtubeThumb(program.episodes[0]?.youtubeId ?? "")}')`,
                     backgroundSize: "cover",
                     backgroundPosition: "center",
                   }}
@@ -267,7 +273,7 @@ export function ProgramsRail() {
                   </svg>
                 </span>
               </span>
-              <b style={{ fontSize: 15, fontWeight: 900, lineHeight: 1.5 }}>{t(program.titleKey)}</b>
+              <b style={{ fontSize: 15, fontWeight: 900, lineHeight: 1.5 }}>{program.title}</b>
             </Link>
           ))}
         </div>
@@ -279,9 +285,11 @@ export function ProgramsRail() {
 /* ── Courses ────────────────────────────────────────────────────────────────
  * A course with an internal page links there; one hosted on YouTube opens its
  * intro film in the in-site player instead of leaving the site. */
-export function CoursesRail({ onPlay }: { onPlay: (embed: string) => void }) {
+export function CoursesRail({ onPlay, courses }: { onPlay: (embed: string) => void; courses: CmsCourse[] }) {
   const locale = useLocale();
   const t = useTranslations("homepage");
+
+  if (courses.length === 0) return null;
 
   return (
     <section id="courses" style={{ position: "relative", zIndex: 1, background: "var(--ivory)", padding: "0 0 56px" }}>
@@ -294,11 +302,12 @@ export function CoursesRail({ onPlay }: { onPlay: (embed: string) => void }) {
           </Link>
         </div>
         <div id="courses-rail" className="mia-rail" style={railStyle}>
-          {COURSES_FOR_HOME.map((course) => {
-            const label = course.titleKey ? t(course.titleKey) : course.title;
+          {courses.map((course) => {
+            const label = course.title;
+            const cover = course.coverImage || (course.introVideoId ? youtubeThumb(course.introVideoId) : "");
             const inner = (
               <span style={{ position: "relative", display: "block", width: "100%", aspectRatio: "16/9", borderRadius: 10, overflow: "hidden", background: "var(--navy)", boxShadow: "0 12px 30px rgba(16,33,43,.12)" }}>
-                <span role="img" aria-label={label} style={{ position: "absolute", inset: 0, backgroundImage: `url('${course.cover}')`, backgroundSize: "cover", backgroundPosition: "center" }} />
+                <span role="img" aria-label={label} style={{ position: "absolute", inset: 0, backgroundImage: `url('${cover}')`, backgroundSize: "cover", backgroundPosition: "center" }} />
                 <span aria-hidden="true" style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(16,33,43,.55), transparent 60%)" }} />
                 <b style={{ position: "absolute", insetInlineStart: 12, bottom: 10, color: "#fff", fontSize: 14.5, fontWeight: 900, textShadow: "0 1px 8px rgba(16,33,43,.6)" }}>{label}</b>
               </span>
@@ -316,20 +325,30 @@ export function CoursesRail({ onPlay }: { onPlay: (embed: string) => void }) {
               textAlign: "start",
             };
 
-            return course.external && course.introVideoId ? (
-              <button
-                key={course.slug}
-                type="button"
-                onClick={() => onPlay(youtubeEmbed(course.introVideoId as string, { autoplay: true }))}
-                style={{ ...style, cursor: "pointer" }}
-              >
-                {inner}
-              </button>
-            ) : (
-              <Link key={course.slug} href={miaPath("zenkiCourse", locale)} style={style}>
-                {inner}
-              </Link>
-            );
+            /* Where a card leads follows the row's flags, in this order: a course
+               with its own page goes there (the Zengi course is the one built);
+               one hosted elsewhere opens that site; one with only an intro film
+               plays it in place; anything else goes to the courses page. */
+            if (course.hasDetailPage) {
+              const href = course.slug === "zenki" ? miaPath("zenkiCourse", locale) : miaPath("courses", locale);
+              return <Link key={course.id} href={href} style={style}>{inner}</Link>;
+            }
+            if (course.isExternal && course.externalUrl) {
+              return <a key={course.id} href={course.externalUrl} target="_blank" rel="noopener noreferrer" style={style}>{inner}</a>;
+            }
+            if (course.introVideoId) {
+              return (
+                <button
+                  key={course.id}
+                  type="button"
+                  onClick={() => onPlay(youtubeEmbed(course.introVideoId, { autoplay: true }))}
+                  style={{ ...style, cursor: "pointer" }}
+                >
+                  {inner}
+                </button>
+              );
+            }
+            return <Link key={course.id} href={miaPath("courses", locale)} style={style}>{inner}</Link>;
           })}
         </div>
       </div>

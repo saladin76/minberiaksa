@@ -22,12 +22,11 @@ import {
   MILESTONES,
   PROGRAMS,
   QUDS_METRICS,
-  REPORTS,
-  REPORT_BASE,
   SCENES,
   SECTOR_STATS,
   VOICES,
 } from "@/lib/minbar/achievements";
+import type { CmsDocument } from "@/lib/minbar/cms";
 
 /**
  * Achievements and reports — ported from
@@ -86,7 +85,7 @@ function useMinbarNumber() {
   return { format: formatNumber } as const;
 }
 
-export default function ReportsPage() {
+export default function ReportsPage({ reports }: { reports: CmsDocument[] }) {
   const locale = useLocale();
   const rtl = localeDirection(locale) === "rtl";
   const t = useTranslations("achievements");
@@ -393,26 +392,28 @@ export default function ReportsPage() {
             </Button>
           </Rise>
 
-          <div style={{ display: "grid", borderTop: REPORTS.length ? "1px solid rgba(255,255,255,.12)" : "0" }}>
-            {REPORTS.length === 0 ? (
+          <div style={{ display: "grid", borderTop: reports.length ? "1px solid rgba(255,255,255,.12)" : "0" }}>
+            {reports.length === 0 ? (
               /* The handoff drops its own empty state in here on a white card,
                  because the section around it is dark. */
               <div style={{ background: "#fff", borderRadius: 14, overflow: "hidden" }}>
                 <NoReports />
               </div>
             ) : null}
-            {REPORTS.map((report) => (
+            {reports.map((report) => (
               <a
-                key={report.file}
-                href={`${REPORT_BASE}/${report.file}`}
+                key={report.id}
+                href={report.fileUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="rp-report"
                 style={{ display: "flex", alignItems: "center", gap: 16, padding: "22px 4px", borderBottom: "1px solid rgba(255,255,255,.12)", color: "#fff" }}
               >
                 <span style={{ display: "grid", gap: 4, minWidth: 0 }}>
-                  <b style={{ fontSize: 17.5, lineHeight: 1.45, color: "#fff" }}>{t(report.titleKey)}</b>
-                  <span style={{ color: "rgba(255,255,255,.55)", fontSize: 13 }}>PDF · {t(report.metaKey)}</span>
+                  <b style={{ fontSize: 17.5, lineHeight: 1.45, color: "#fff" }}>{report.title}</b>
+                  <span style={{ color: "rgba(255,255,255,.55)", fontSize: 13 }}>
+                    PDF{report.year ? ` · ${report.year}` : ""}{report.description ? ` · ${report.description}` : ""}
+                  </span>
                 </span>
                 <span style={{ marginInlineStart: "auto", flex: "0 0 auto", padding: "6px 12px", borderRadius: 999, background: "rgba(255,255,255,.07)", border: "1px solid rgba(255,255,255,.16)", color: "rgba(255,255,255,.66)", fontSize: 12, fontWeight: 900, whiteSpace: "nowrap" }}>
                   {t("reportStatusAvailable")}

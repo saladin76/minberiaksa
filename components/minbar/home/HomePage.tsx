@@ -3,6 +3,19 @@
 import VideoModal, { useVideoModal } from "@/components/minbar/VideoModal";
 import { IMG } from "@/lib/minbar/content/media";
 import type { MinbarProject } from "@/lib/minbar/projects";
+import type { MinbarArticle } from "@/lib/minbar/posts";
+import type { CmsCourse, CmsFaq, CmsPlaylist, CmsVideo } from "@/lib/minbar/cms";
+
+/** Everything the homepage shows that an editor publishes, read by the page. */
+export interface HomeContent {
+  courses: CmsCourse[];
+  playlists: CmsPlaylist[];
+  endorsements: CmsVideo[];
+  achievements: CmsVideo[];
+  faqs: CmsFaq[];
+  articles: MinbarArticle[];
+  news: MinbarArticle[];
+}
 import { Hero, StoriesRail, VerseStrip } from "./TopSections";
 import QuickDonateBar from "./QuickDonateBar";
 import { CoursesRail, EventsSection, ProgramsRail, ReelsSection } from "./MediaSections";
@@ -25,9 +38,11 @@ import ZakatBanner from "@/components/minbar/banners/ZakatBanner";
  */
 export default function HomePage({
   projects,
+  content,
   signedIn,
 }: {
   projects: MinbarProject[];
+  content: HomeContent;
   signedIn: boolean;
 }) {
   const video = useVideoModal();
@@ -55,10 +70,10 @@ export default function HomePage({
       <Hero onPlayIntro={video.open} />
       <QuickDonateBar projects={projects} />
       <EventsSection />
-      <ReelsSection onPlay={video.open} />
+      <ReelsSection onPlay={video.open} endorsements={content.endorsements} achievements={content.achievements} />
       <PathSection />
-      <ProgramsRail />
-      <CoursesRail onPlay={video.open} />
+      <ProgramsRail playlists={content.playlists} />
+      <CoursesRail onPlay={video.open} courses={content.courses} />
       <ImpactSection />
       <TravelBanner />
       <IbadanBanner />
@@ -68,9 +83,9 @@ export default function HomePage({
       <RecurringSection />
       <RegionCards images={{ quds: IMG.quds, aqsa: IMG.aqsa, relief: IMG.parcels }} />
       <AccountSection signedIn={signedIn} />
-      <ArticlesSection />
-      <NewsSection />
-      <FaqSection />
+      <ArticlesSection articles={content.articles} />
+      <NewsSection news={content.news} />
+      <FaqSection faqs={content.faqs} />
 
       <VideoModal embed={video.embed} onClose={video.close} />
     </div>
