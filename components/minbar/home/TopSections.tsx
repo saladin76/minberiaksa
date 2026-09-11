@@ -227,7 +227,7 @@ function HeroStat({ value, label }: { value: number; label: string }) {
   const { ref, value: shown } = useMinbarCountUp(value, 1600);
   return (
     <div ref={ref as React.RefObject<HTMLDivElement>} className="mia-hero-stat">
-      <b dir="ltr">
+      <b>
         {new Intl.NumberFormat(locale).format(shown)}
         <span>+</span>
       </b>

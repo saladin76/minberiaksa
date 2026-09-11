@@ -188,7 +188,7 @@ export default function StoriesPage() {
       setDeleting(false);
     }
   };
-
+//asd
   if (loading) {
     return (
       <div className="flex items-center justify-center py-24">
