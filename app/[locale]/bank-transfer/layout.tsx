@@ -10,8 +10,8 @@ import { buildPageMetadata, LOCALE_SEO, type Locale } from "@/lib/seo";
 type PageSeo = { title: string; description: string };
 const BANK_TRANSFER_SEO: { en: PageSeo } & Partial<Record<Locale, PageSeo>> = {
   ar: {
-    title: "التبرع عبر التحويل البنكي | جمعية منبر الأقصي",
-    description: "اطّلع على حسابات جمعية منبر الأقصي البنكية وتبرع بأمان عبر التحويل البنكي لدعم المشاريع الإنسانية والطبية والتعليمية.",
+    title: "التبرع عبر التحويل البنكي | مؤسسة منبر الأقصى الدولية",
+    description: "اطّلع على حسابات مؤسسة منبر الأقصى الدولية البنكية وتبرع بأمان عبر التحويل البنكي لدعم المشاريع الإنسانية والطبية والتعليمية.",
   },
   en: {
     title: "Donate by Bank Transfer | Minberiaksa",

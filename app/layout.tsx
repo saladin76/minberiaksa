@@ -60,15 +60,15 @@ export const metadata: Metadata = {
   metadataBase: new URL(SITE),
 
   title: {
-    default: "جمعية منبر الأقصي | زكاة، تبرع، صدقة، إغاثة إنسانية",
-    template: "%s | جمعية منبر الأقصي",
+    default: "مؤسسة منبر الأقصى الدولية | زكاة، تبرع، صدقة، إغاثة إنسانية",
+    template: "%s | مؤسسة منبر الأقصى الدولية",
   },
 
   description:
-    "جمعية منبر الأقصي الدولية للتضامن: جمعية تركية عاملة للنفع العام تأسست عام 1961، تعمل في الصحة والإغاثة العاجلة والاستجابة للكوارث والمساعدات التعليمية. تبرع، زكاة، صدقة جارية. Minberiaksa International Solidarity Association — a Turkish public-benefit association founded in 1961, working in healthcare, emergency relief, disaster response and educational aid.",
+    "مؤسسة منبر الأقصى الدولية الدولية للتضامن: جمعية تركية عاملة للنفع العام تأسست عام 1961، تعمل في الصحة والإغاثة العاجلة والاستجابة للكوارث والمساعدات التعليمية. تبرع، زكاة، صدقة جارية. Minberiaksa International Solidarity Association — a Turkish public-benefit association founded in 1961, working in healthcare, emergency relief, disaster response and educational aid.",
 
   keywords: [
-    "منبر الأقصي", "جمعية منبر الأقصي", "جمعية عاملة للنفع العام", "جمعية خيرية تركية",
+    "منبر الأقصي", "مؤسسة منبر الأقصى الدولية", "جمعية عاملة للنفع العام", "جمعية خيرية تركية",
     "تبرع", "زكاة المال", "صدقة جارية", "تبرع اونلاين", "زكاة اونلاين",
     "إغاثة عاجلة", "إغاثة الكوارث", "مساعدات تعليمية", "مساعدات طبية",
     "تبرع للزلزال", "ترميم المنازل", "مشاريع إنسانية", "حملات تبرع", "تبرع رمضان",
@@ -121,7 +121,7 @@ export const metadata: Metadata = {
     type: "website",
     url: SITE,
     siteName: "Minberiaksa | منبر الأقصي",
-    title: "جمعية منبر الأقصي | زكاة، تبرع، صدقة، إغاثة إنسانية",
+    title: "مؤسسة منبر الأقصى الدولية | زكاة، تبرع، صدقة، إغاثة إنسانية",
     description:
       "جمعية عاملة للنفع العام منذ 1961 — الصحة، الإغاثة العاجلة، الاستجابة للكوارث، والتعليم. تبرع، زكاة، صدقة جارية. A Turkish public-benefit association serving since 1961 in healthcare, emergency relief, disaster response and education.",
     images: [{ url: OG_IMAGE, width: 1200, height: 630, alt: "Minberiaksa – منبر الأقصي" }],
@@ -226,7 +226,7 @@ const faqSchema = {
   mainEntity: [
     {
       "@type": "Question",
-      name: "كيف يمكنني التبرع لجمعية منبر الأقصي؟",
+      name: "كيف يمكنني التبرع لمؤسسة منبر الأقصى الدولية؟",
       acceptedAnswer: {
         "@type": "Answer",
         text: "يمكنك التبرع مباشرة عبر موقعنا الإلكتروني باختيار المشروع المناسب وإتمام الدفع بأمان عبر بطاقتك الائتمانية، أو عبر التحويل البنكي إلى أحد حساباتنا المعلنة في صفحة الحسابات البنكية. جميع التبرعات موثقة وتصل إلى المستفيدين.",
