@@ -566,7 +566,7 @@
 @media (max-width: 1180px) { .mia-scope #quick { position: static !important; } }
 @media (max-width: 1100px) { .mia-scope #events-cards { grid-template-columns: repeat(2, minmax(0,1fr)) !important; } }
 @media (max-width: 980px) {
-  .mia-scope #hero-main { grid-template-columns: minmax(0,1fr) !important; padding-bottom: 56px !important; }
+  .mia-scope #hero-main { grid-template-columns: minmax(0,1fr) !important; }
   .mia-scope #regions { grid-template-columns: minmax(0,1fr) !important; }
   .mia-scope #waqf-areas { grid-template-columns: repeat(2, minmax(0,1fr)) !important; }
 }
@@ -721,10 +721,6 @@
   .mia-scope #urgent-rail, .mia-scope #reels-a, .mia-scope #reels-b { gap: 10px !important; }
 
   /* Stories: smaller circles, thinner strip. */
-  .mia-scope #stories-rail { gap: 12px !important; padding: 2px !important; }
-  .mia-scope #stories-rail > a { width: 64px !important; gap: 5px !important; }
-  .mia-scope #stories-rail > a > span:first-child { width: 60px !important; height: 60px !important; }
-  .mia-scope #stories-rail > a > span:last-child { font-size: 11px !important; }
 
   .mia-scope #articles-grid { grid-template-columns: minmax(0,1fr) !important; }
   .mia-scope #account-features { grid-template-columns: repeat(2, minmax(0,1fr)) !important; }
@@ -733,68 +729,144 @@
 }
 
 /* ─────────────────────────────────────────────────────────────────────────────
- * Hero — the landing section.
- * Layered ivory ground with gold glows toward the film, the intro film's own
- * 0:03 frame as poster inside a gradient hairline frame with an offset outline,
- * a pulsing play control, and one fade-up per column on entry.
+ * Landing — one section in three rows: the story strip, the headline beside
+ * the intro film, and the proof band. Ivory ground with gold glows toward the
+ * film, the film's own 0:03 frame as poster inside a gradient hairline frame
+ * with an offset outline, a pulsing play control, and one fade-up per column.
  * ───────────────────────────────────────────────────────────────────────────── */
-.mia-scope .mia-hero { isolation: isolate; }
-.mia-scope .mia-hero [data-aqsa-pattern] { opacity: .045 !important; }
+.mia-scope .mia-hero { position: relative; z-index: 1; isolation: isolate; overflow: hidden; background: var(--ivory); }
+.mia-scope .mia-hero-pattern {
+  position: absolute; inset: 0; pointer-events: none;
+  background: url('/minbar/assets/patterns/aqsa-white-pattern.webp') repeat; background-size: 420px 420px;
+  opacity: .045 !important;
+}
+.mia-scope .mia-hero-wrap { position: relative; width: 100%; max-width: 1240px; margin: 0 auto; padding: 0 24px; }
 
 /* Two soft glows, weighted toward the film side (the inline-end in RTL, the
    inline-start in LTR — so they are placed with logical offsets). */
 .mia-scope .mia-hero-glow {
   position: absolute; inset: 0; pointer-events: none;
   background:
-    radial-gradient(ellipse 46% 60% at 82% 48%, rgba(211,154,39,.22), transparent 70%),
-    radial-gradient(ellipse 34% 40% at 16% 18%, rgba(169,52,40,.07), transparent 70%),
+    radial-gradient(ellipse 44% 58% at 80% 56%, rgba(211,154,39,.22), transparent 70%),
+    radial-gradient(ellipse 34% 40% at 14% 24%, rgba(169,52,40,.07), transparent 70%),
     linear-gradient(180deg, #FFFDF8 0%, #FBF6EC 100%);
 }
 [dir="ltr"] .mia-scope .mia-hero-glow {
   background:
-    radial-gradient(ellipse 46% 60% at 18% 48%, rgba(211,154,39,.22), transparent 70%),
-    radial-gradient(ellipse 34% 40% at 84% 18%, rgba(169,52,40,.07), transparent 70%),
+    radial-gradient(ellipse 44% 58% at 20% 56%, rgba(211,154,39,.22), transparent 70%),
+    radial-gradient(ellipse 34% 40% at 86% 24%, rgba(169,52,40,.07), transparent 70%),
     linear-gradient(180deg, #FFFDF8 0%, #FBF6EC 100%);
 }
 .mia-scope .mia-hero-dome {
-  position: absolute; bottom: -6%; inset-inline-end: -4%; width: min(52vw, 640px); height: auto;
+  position: absolute; bottom: -4%; inset-inline-end: -4%; width: min(48vw, 600px); height: auto;
   opacity: .06 !important; pointer-events: none; user-select: none;
 }
 
-/* Copy column */
-.mia-scope .mia-hero-copy { animation: mia-in .7s cubic-bezier(.22,.61,.36,1) both; }
-.mia-scope .mia-hero-media { animation: mia-in .7s .12s cubic-bezier(.22,.61,.36,1) both; }
+/* Row 1 — the story strip. */
+.mia-scope .mia-stories {
+  position: relative; display: flex; align-items: center; gap: 12px;
+  padding: 14px 0 10px; border-bottom: 1px solid rgba(211,154,39,.28);
+}
+.mia-scope .mia-stories-rail {
+  display: flex; gap: 6px; flex: 1 1 auto; min-width: 0;
+  overflow-x: auto; scroll-snap-type: x proximity; scrollbar-width: none;
+  padding: 4px 2px; margin: -4px -2px;
+}
+.mia-scope .mia-stories-rail::-webkit-scrollbar { display: none; }
+.mia-scope .mia-story {
+  flex: 0 0 auto; display: grid; gap: 7px; justify-items: center; width: 84px;
+  padding: 0; border: 0; background: none; font: inherit; color: inherit; cursor: pointer;
+  text-decoration: none; text-align: center; scroll-snap-align: start; border-radius: 12px;
+}
+.mia-scope .mia-story:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+.mia-scope .mia-story-ring {
+  position: relative; display: block; width: 62px; height: 62px; border-radius: 50%; padding: 2.5px; box-sizing: border-box;
+  background: rgba(16,33,43,.14);
+  transition: transform .25s cubic-bezier(.22,.61,.36,1);
+}
+.mia-scope .mia-story-ring[data-new="true"] {
+  background: conic-gradient(from 210deg, #A93428, #D39A27 30%, #FFE8B0 52%, #D39A27 72%, #A93428);
+  box-shadow: 0 6px 16px -6px rgba(169,52,40,.45);
+}
+.mia-scope .mia-story:hover .mia-story-ring { transform: scale(1.06); }
+.mia-scope .mia-story-disc { display: block; width: 100%; height: 100%; border-radius: 50%; background: var(--ivory); padding: 2.5px; box-sizing: border-box; }
+.mia-scope .mia-story-img { display: block; width: 100%; height: 100%; border-radius: 50%; background-size: cover; background-position: center; }
+.mia-scope .mia-story-badge {
+  position: absolute; bottom: -4px; left: 50%; transform: translateX(-50%);
+  padding: 1px 7px; border-radius: 999px; background: var(--red); color: #fff;
+  font-size: 9px; font-weight: 900; line-height: 1.5; border: 2px solid var(--ivory); white-space: nowrap;
+}
+.mia-scope .mia-story-label {
+  display: block; max-width: 84px; font-size: 12px; font-weight: 800; line-height: 1.3; color: var(--muted);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.mia-scope .mia-story-label[data-new="true"] { color: var(--deep); }
+.mia-scope .mia-stories-nav { display: none; flex: 0 0 auto; gap: 6px; align-self: flex-start; margin-top: 14px; }
+.mia-scope .mia-stories[data-overflow="true"] .mia-stories-nav { display: flex; }
+.mia-scope .mia-stories-arrow {
+  display: inline-grid; place-items: center; width: 32px; height: 32px; border-radius: 9px;
+  border: 1px solid rgba(211,154,39,.45); background: rgba(255,255,255,.75); color: var(--deep); cursor: pointer;
+  transition: all .15s ease;
+}
+.mia-scope .mia-stories-arrow:hover { border-color: var(--gold); color: var(--gold); }
+/* "next" points at the end edge in either direction. */
+.mia-scope .mia-stories-arrow[data-dir="next"] svg { transform: scaleX(-1); }
+[dir="ltr"] .mia-scope .mia-stories-arrow[data-dir="next"] svg { transform: none; }
+[dir="ltr"] .mia-scope .mia-stories-arrow[data-dir="prev"] svg { transform: scaleX(-1); }
+
+/* Row 2 — headline and film. */
+.mia-scope .mia-hero-main {
+  display: grid; grid-template-columns: minmax(320px, 1fr) minmax(340px, .96fr);
+  gap: 48px; align-items: center; padding: 38px 0 30px;
+}
+.mia-scope .mia-hero-copy { display: grid; gap: 18px; justify-items: start; min-width: 0; animation: mia-in .7s cubic-bezier(.22,.61,.36,1) both; }
+.mia-scope .mia-hero-media { position: relative; display: grid; min-width: 0; animation: mia-in .7s .12s cubic-bezier(.22,.61,.36,1) both; }
 
 .mia-scope .mia-hero-eyebrow {
   display: inline-flex; align-items: center; gap: 9px;
-  padding: 7px 14px 7px 12px; border-radius: 999px;
+  padding: 6px 13px 6px 11px; border-radius: 999px;
   background: rgba(255,255,255,.7); border: 1px solid rgba(211,154,39,.45);
-  color: #8a5d16; font-size: 12.5px; font-weight: 900; letter-spacing: .01em;
+  color: #8a5d16; font-size: 12px; font-weight: 900; letter-spacing: .01em;
   backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
   box-shadow: 0 1px 2px rgba(16,33,43,.04);
 }
 .mia-scope .mia-hero-eyebrow-dot {
-  width: 8px; height: 8px; border-radius: 50%; background: var(--gold);
+  width: 7px; height: 7px; border-radius: 50%; background: var(--gold);
   box-shadow: 0 0 0 4px rgba(211,154,39,.18);
   animation: mia-pulse 2.4s ease-in-out infinite;
 }
-.mia-scope .mia-hero-sub { color: var(--gold-2); }
+.mia-scope .mia-hero-h1 {
+  margin: 0; max-width: 100%; display: grid; gap: 6px;
+  font-size: clamp(30px, 3.4vw, 52px); line-height: 1.16; font-weight: 900; color: var(--deep);
+  letter-spacing: -.015em; text-wrap: balance;
+}
+.mia-scope .mia-hero-sub { color: var(--gold-2); font-size: clamp(18px, 1.9vw, 29px); font-weight: 900; line-height: 1.3; }
+.mia-scope .mia-hero-lead { margin: 0; max-width: 46ch; font-size: clamp(15px, 1.1vw, 17px); line-height: 1.85; color: var(--muted); text-wrap: pretty; }
+.mia-scope .mia-hero-actions { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; margin-top: 4px; }
+.mia-scope .mia-hero-btn { white-space: nowrap; padding-inline: 28px; }
+
+/* Row 3 — the proof band. */
+.mia-scope .mia-hero-proof {
+  display: flex; align-items: center; gap: 28px; flex-wrap: wrap;
+  padding: 18px 0 26px; border-top: 1px solid rgba(211,154,39,.28);
+}
+.mia-scope .mia-hero-proof-rule { width: 1px; height: 34px; background: rgba(16,33,43,.12); }
+.mia-scope .mia-hero-stat { display: grid; gap: 2px; min-width: 0; }
+.mia-scope .mia-hero-stat > b {
+  font-size: clamp(22px, 2.1vw, 30px); line-height: 1; font-weight: 900; color: var(--deep);
+  letter-spacing: -.01em; font-variant-numeric: tabular-nums;
+}
+.mia-scope .mia-hero-stat > b > span { color: var(--gold); }
+.mia-scope .mia-hero-stat > span { font-size: 12.5px; font-weight: 700; color: var(--muted); white-space: nowrap; }
 .mia-scope .mia-hero-textlink {
-  display: inline-flex; align-items: center; gap: 8px;
-  min-height: 54px; padding: 0 12px;
-  color: var(--deep); font-weight: 800; font-size: 15px; text-decoration: none;
+  display: inline-flex; align-items: center; gap: 8px; margin-inline-start: auto;
+  min-height: 44px; padding: 0 2px;
+  color: var(--deep); font-weight: 800; font-size: 14.5px; text-decoration: none;
   border-bottom: 2px solid transparent; transition: color .18s ease, border-color .18s ease;
 }
 .mia-scope .mia-hero-textlink:hover { color: var(--red); border-color: rgba(169,52,40,.35); }
 
-.mia-scope .mia-hero-proof {
-  display: flex; align-items: center; gap: 22px; flex-wrap: wrap;
-  margin-top: 6px; padding-top: 18px; border-top: 1px solid rgba(211,154,39,.28);
-  width: 100%; max-width: 520px;
-}
-.mia-scope .mia-hero-proof-rule { width: 1px; height: 36px; background: rgba(16,33,43,.12); }
-
-/* Film column */
+/* Film */
 .mia-scope .mia-hero-media-back {
   position: absolute; inset: 14px -14px -14px 14px; border-radius: 26px;
   border: 1px solid rgba(211,154,39,.35); pointer-events: none;
@@ -825,7 +897,7 @@
     linear-gradient(180deg, rgba(10,20,26,.32) 0%, rgba(10,20,26,0) 26%);
 }
 .mia-scope .mia-hero-chip {
-  position: absolute; top: 16px; inset-inline-start: 16px;
+  position: absolute; top: 14px; inset-inline-start: 14px;
   display: inline-flex; align-items: center; gap: 7px;
   padding: 6px 11px; border-radius: 999px;
   background: rgba(255,253,248,.92); color: var(--red); font-size: 11.5px; font-weight: 900;
@@ -834,7 +906,7 @@
 .mia-scope .mia-hero-play { position: absolute; inset: 0; display: grid; place-items: center; }
 .mia-scope .mia-hero-play > * { grid-area: 1 / 1; }
 .mia-scope .mia-hero-play-btn {
-  display: grid; place-items: center; width: 78px; height: 78px; border-radius: 50%;
+  display: grid; place-items: center; width: 74px; height: 74px; border-radius: 50%;
   background: rgba(255,253,248,.96); color: var(--red);
   box-shadow: 0 12px 34px rgba(0,0,0,.35), inset 0 0 0 1px rgba(211,154,39,.35);
   transition: transform .3s cubic-bezier(.22,.61,.36,1);
@@ -842,40 +914,101 @@
 .mia-scope .mia-hero-play-btn svg { margin-inline-start: 3px; }
 .mia-scope .mia-hero-frame:hover .mia-hero-play-btn { transform: scale(1.07); }
 .mia-scope .mia-hero-play-ring {
-  width: 78px; height: 78px; border-radius: 50%;
+  width: 74px; height: 74px; border-radius: 50%;
   border: 2px solid rgba(255,253,248,.7);
   animation: mia-hero-ring 2.6s cubic-bezier(.2,.6,.3,1) infinite;
 }
 .mia-scope .mia-hero-play-ring--2 { animation-delay: 1.3s; }
 @keyframes mia-hero-ring { 0% { transform: scale(1); opacity: .8; } 100% { transform: scale(1.9); opacity: 0; } }
-.mia-scope .mia-hero-caption {
-  position: absolute; inset-inline: 20px; bottom: 18px;
-  display: grid; gap: 5px; padding-inline-end: 8px;
+.mia-scope .mia-hero-caption { position: absolute; inset-inline: 18px; bottom: 16px; display: grid; gap: 4px; padding-inline-end: 8px; }
+.mia-scope .mia-hero-caption > b { color: #fff; font-size: clamp(16px, 1.4vw, 20px); line-height: 1.35; text-shadow: 0 1px 10px rgba(0,0,0,.35); }
+.mia-scope .mia-hero-caption > span { color: rgba(255,255,255,.78); font-size: 12.5px; font-weight: 700; }
+
+/* ── The verse band beneath ─────────────────────────────────────────────── */
+.mia-scope .mia-verse {
+  position: relative; overflow: hidden;
+  background: linear-gradient(180deg, #FFFDF8 0%, #FBF6EC 100%);
+  border-top: 1px solid rgba(211,154,39,.35); border-bottom: 1px solid rgba(211,154,39,.35);
+}
+.mia-scope .mia-verse-pattern {
+  position: absolute; inset: 0; pointer-events: none;
+  background: url('/minbar/assets/patterns/aqsa-white-pattern.webp') repeat; background-size: 300px 300px; opacity: .05;
+}
+.mia-scope .mia-verse::before, .mia-scope .mia-verse::after {
+  content: ""; position: absolute; inset-block: 0; width: 3px;
+  background: linear-gradient(180deg, var(--gold), rgba(211,154,39,.2));
+}
+.mia-scope .mia-verse::before { inset-inline-start: 0; }
+.mia-scope .mia-verse::after { inset-inline-end: 0; background: linear-gradient(0deg, var(--gold), rgba(211,154,39,.2)); }
+.mia-scope .mia-verse-inner { position: relative; max-width: 1000px; margin: 0 auto; padding: 18px 24px 16px; display: grid; justify-items: center; gap: 8px; }
+.mia-scope .mia-verse-ar {
+  margin: 0; text-align: center; font-family: var(--font-quran); font-size: clamp(19px, 2.2vw, 28px);
+  line-height: 1.9; color: #7C2318; font-weight: 700; text-wrap: balance;
+}
+.mia-scope .mia-verse-tr { margin: 0; text-align: center; font-size: clamp(13px, 1.1vw, 15px); line-height: 1.8; color: #3E4C55; max-width: 720px; text-wrap: pretty; }
+.mia-scope .mia-verse-meta { display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap; }
+.mia-scope .mia-verse-cite {
+  unicode-bidi: isolate; display: inline-flex; align-items: center; height: 28px; padding: 0 13px; border-radius: 999px;
+  background: rgba(211,154,39,.14); border: 1px solid rgba(211,154,39,.45); color: #8a5d16;
+  font-family: var(--font-ar); font-size: 11.5px; font-weight: 900; white-space: nowrap;
+}
+.mia-scope .mia-verse-attr { font-size: 10.5px; color: #52616B; opacity: .85; }
+.mia-scope .mia-verse-link {
+  flex: 0 0 auto; display: inline-flex; align-items: center; gap: 8px; height: 28px; padding: 0 14px; border-radius: 999px;
+  border: 1px solid rgba(211,154,39,.55); background: #fff; color: var(--deep); font-weight: 800; font-size: 12px; white-space: nowrap;
+  transition: all .18s ease; text-decoration: none;
 }
 
 @media (prefers-reduced-motion: reduce) {
   .mia-scope .mia-hero-copy, .mia-scope .mia-hero-media { animation: none; }
   .mia-scope .mia-hero-play-ring, .mia-scope .mia-hero-eyebrow-dot { animation: none; }
-  .mia-scope .mia-hero-frame, .mia-scope .mia-hero-poster, .mia-scope .mia-hero-play-btn { transition: none; }
+  .mia-scope .mia-hero-frame, .mia-scope .mia-hero-poster, .mia-scope .mia-hero-play-btn, .mia-scope .mia-story-ring { transition: none; }
 }
 
+@media (max-width: 1100px) {
+  .mia-scope .mia-hero-main { gap: 36px; }
+}
 @media (max-width: 980px) {
-  .mia-scope #hero-main { gap: 34px !important; padding-top: 44px !important; padding-bottom: 60px !important; }
+  .mia-scope .mia-hero-main { grid-template-columns: minmax(0,1fr) !important; gap: 28px; padding: 28px 0 24px; }
   .mia-scope .mia-hero-dome { width: 70vw; bottom: auto; top: -8%; opacity: .045 !important; }
   .mia-scope .mia-hero-media-back { display: none; }
+  .mia-scope .mia-hero-lead { max-width: 60ch; }
+  .mia-scope .mia-hero-proof { padding: 16px 0 22px; gap: 22px; }
 }
 @media (max-width: 560px) {
-  .mia-scope #hero-main { padding-top: 30px !important; padding-bottom: 40px !important; gap: 26px !important; }
-  .mia-scope .mia-hero h1 { font-size: 30px !important; line-height: 1.22 !important; }
-  .mia-scope .mia-hero-sub { font-size: 19px !important; }
-  .mia-scope .mia-hero-actions > * { flex: 1 1 100%; justify-content: center; }
-  .mia-scope .mia-hero-textlink { justify-content: center; min-height: 44px; }
-  .mia-scope .mia-hero-proof { gap: 16px; max-width: none; }
-  .mia-scope .mia-hero-play-btn { width: 64px; height: 64px; }
-  .mia-scope .mia-hero-play-ring { width: 64px; height: 64px; }
+  .mia-scope .mia-hero-wrap { padding: 0 16px; }
+  /* Stories bleed to the screen edges and scroll under the gutters. */
+  .mia-scope .mia-stories { padding: 10px 0 8px; margin: 0 -16px; border-bottom-color: rgba(211,154,39,.22); }
+  .mia-scope .mia-stories-rail { padding: 4px 16px; margin: -4px 0; gap: 4px; }
+  .mia-scope .mia-story { width: 70px; gap: 5px; }
+  .mia-scope .mia-story-ring { width: 56px; height: 56px; padding: 2px; }
+  .mia-scope .mia-story-disc { padding: 2px; }
+  .mia-scope .mia-story-label { font-size: 11px; max-width: 70px; }
+  .mia-scope .mia-story-badge { font-size: 8.5px; padding: 0 6px; bottom: -3px; }
+  .mia-scope .mia-stories-nav { display: none !important; }
+
+  .mia-scope .mia-hero-main { padding: 22px 0 22px; gap: 22px; }
+  .mia-scope .mia-hero-copy { gap: 14px; }
+  .mia-scope .mia-hero-h1 { font-size: 29px !important; line-height: 1.2 !important; gap: 4px; }
+  .mia-scope .mia-hero-sub { font-size: 18px !important; }
+  .mia-scope .mia-hero-lead { font-size: 14.5px !important; line-height: 1.75 !important; }
+  .mia-scope .mia-hero-actions { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 10px; width: 100%; margin-top: 2px; }
+  .mia-scope .mia-hero-btn { padding-inline: 10px !important; justify-content: center; font-size: 14.5px !important; }
+  .mia-scope .mia-hero-proof { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 12px 16px; padding: 14px 0 18px; }
+  .mia-scope .mia-hero-proof-rule { display: none; }
+  .mia-scope .mia-hero-stat > b { font-size: 23px; }
+  .mia-scope .mia-hero-stat > span { font-size: 12px; white-space: normal; }
+  .mia-scope .mia-hero-textlink { grid-column: 1 / -1; margin-inline-start: 0; min-height: 36px; font-size: 14px; justify-self: start; }
+  .mia-scope .mia-hero-play-btn { width: 62px; height: 62px; }
+  .mia-scope .mia-hero-play-ring { width: 62px; height: 62px; }
   .mia-scope .mia-hero-frame { border-radius: 18px; }
-  .mia-scope .mia-hero-card { border-radius: 17px; aspect-ratio: 16 / 11; }
+  .mia-scope .mia-hero-card { border-radius: 17px; aspect-ratio: 16 / 10; }
   .mia-scope .mia-hero-caption { inset-inline: 14px; bottom: 12px; }
+  .mia-scope .mia-hero-caption > b { font-size: 15px !important; }
+
+  .mia-scope .mia-verse-inner { padding: 14px 16px 12px; gap: 7px; }
+  .mia-scope .mia-verse-ar { font-size: 18px !important; line-height: 1.85 !important; }
+  .mia-scope .mia-verse-meta { gap: 8px; }
 }
 
 /* ─────────────────────────────────────────────────────────────────────────────
@@ -1164,14 +1297,6 @@
   .mia-scope #verse-inner { padding: 18px 18px 16px !important; gap: 10px !important; }
   .mia-scope #verse-inner > p:first-of-type { font-size: 18px !important; line-height: 1.9 !important; }
   .mia-scope #verse-meta { gap: 8px !important; }
-}
-
-/* Stories: the ring is a <button> when it opens the viewer and an <a> when it
-   is a fallback link. The phone sizing must cover both. */
-@media (max-width: 560px) {
-  .mia-scope #stories-rail > button { width: 64px !important; gap: 5px !important; }
-  .mia-scope #stories-rail > button > span:first-child { width: 60px !important; height: 60px !important; }
-  .mia-scope #stories-rail > button > span:last-child { font-size: 11px !important; }
 }
 
 /* ─────────────────────────────────────────────────────────────────────────────

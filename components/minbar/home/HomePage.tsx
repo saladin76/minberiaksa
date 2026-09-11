@@ -16,7 +16,7 @@ export interface HomeContent {
   articles: MinbarArticle[];
   news: MinbarArticle[];
 }
-import { Hero, StoriesRail, VerseStrip } from "./TopSections";
+import { Hero, VerseStrip } from "./TopSections";
 import QuickDonateBar from "./QuickDonateBar";
 import { CoursesRail, EventsSection, ProgramsRail, ReelsSection } from "./MediaSections";
 import { ImpactSection, PathSection, RegionCards, UrgentProjectsSection } from "./ImpactSections";
@@ -65,7 +65,6 @@ export default function HomePage({
         }}
       />
 
-      <StoriesRail />
       <Hero onPlayIntro={video.open} />
       <VerseStrip />
       <QuickDonateBar projects={projects} />
