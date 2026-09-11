@@ -182,11 +182,11 @@ async function main() {
    * path, not here: a seed re-run must not start rewriting the windows of
    * stories an editor has already scheduled. */
   let storyCount = 0;
+  let slideCount = 0;
   for (const s of extra.stories) {
     const base = {
       title: s.title,
       image: publicPath(s.image)!,
-      linkUrl: s.linkUrl ?? undefined,
       order: s.order,
       isActive: s.isActive,
       startsAt: s.startsAt ? new Date(s.startsAt) : null,
@@ -204,9 +204,40 @@ async function main() {
         create: { storyId: row.id, locale: t.locale, title: t.title! },
       });
     }
+
+    /* Slides. The data file may carry an explicit `slides` list; the legacy
+       shape carries only `image` + `linkUrl`, which becomes one slide whose CTA
+       is that link — the resolver localises it per visitor. Replaced wholesale,
+       like playlist episodes: no stable key of their own, so a re-run must not
+       stack duplicates. */
+    type SeedSlide = {
+      mediaType?: string; mediaUrl: string; durationSeconds?: number; caption?: string;
+      ctaLabel?: string; ctaKind?: string; ctaValue?: string;
+    };
+    const legacy = s as unknown as { linkUrl?: string | null; slides?: SeedSlide[] };
+    const slides: SeedSlide[] = Array.isArray(legacy.slides) && legacy.slides.length
+      ? legacy.slides
+      : [{ mediaUrl: s.image, ...(legacy.linkUrl ? { ctaKind: "URL", ctaValue: legacy.linkUrl } : {}) }];
+
+    await prisma.storySlide.deleteMany({ where: { storyId: row.id } });
+    await prisma.storySlide.createMany({
+      data: slides.map((sl, i) => ({
+        storyId: row.id,
+        mediaType: sl.mediaType === "VIDEO" ? "VIDEO" : "IMAGE",
+        mediaUrl: publicPath(sl.mediaUrl)!,
+        durationSeconds: sl.durationSeconds ?? 5,
+        caption: sl.caption ?? undefined,
+        ctaLabel: sl.ctaLabel ?? undefined,
+        ...(sl.ctaKind && sl.ctaValue
+          ? { ctaKind: sl.ctaKind as "PAGE" | "CAMPAIGN" | "POST" | "URL", ctaValue: sl.ctaValue }
+          : {}),
+        order: i,
+      })),
+    });
+    slideCount += slides.length;
     storyCount++;
   }
-  console.log(`✓ stories: ${storyCount}`);
+  console.log(`✓ stories: ${storyCount} (slides: ${slideCount})`);
 
   /* ── 6) VideoPlaylist + PlaylistVideo (برامجنا المصورة) ─────
    * Episodes are replaced wholesale rather than upserted: they have no stable

@@ -12,6 +12,13 @@ import {
   emptyStory,
   type StoryFormValues,
 } from '../../_components/StoryForm';
+import { SLIDE_TRANSLATION_FIELDS, emptySlide, type SlideRow } from '../../_components/StorySlidesEditor';
+
+type ApiSlide = {
+  id: string; mediaType: 'IMAGE' | 'VIDEO'; mediaUrl: string; durationSeconds: number;
+  caption: string | null; ctaLabel: string | null; ctaKind: string | null; ctaValue: string | null;
+  translations: Array<{ locale: string; caption: string | null; ctaLabel: string | null }>;
+};
 
 export default function EditStoryPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -30,11 +37,26 @@ export default function EditStoryPage({ params }: { params: Promise<{ id: string
           slug: s.slug ?? '',
           title: s.title ?? '',
           image: s.image ?? '',
-          linkUrl: s.linkUrl ?? '',
           isActive: s.isActive !== false,
           startsAt: s.startsAt ?? '',
           endsAt: s.endsAt ?? '',
           translations: translationsFromRows(s.translations ?? [], STORY_TRANSLATION_FIELDS),
+          slides: ((s.slides ?? []) as ApiSlide[]).map<SlideRow>((sl) => ({
+            ...emptySlide(),
+            id: sl.id,
+            mediaType: sl.mediaType === 'VIDEO' ? 'VIDEO' : 'IMAGE',
+            mediaUrl: sl.mediaUrl ?? '',
+            durationSeconds: String(sl.durationSeconds ?? 5),
+            caption: sl.caption ?? '',
+            ctaLabel: sl.ctaLabel ?? '',
+            ctaKind: sl.ctaKind ?? '',
+            ctaValue: sl.ctaValue ?? '',
+            /* Nullable columns come back as null; the tabs want strings. */
+            translations: translationsFromRows(
+              (sl.translations ?? []).map((t) => ({ locale: t.locale, caption: t.caption ?? '', ctaLabel: t.ctaLabel ?? '' })),
+              SLIDE_TRANSLATION_FIELDS
+            ),
+          })),
         });
       })
       .catch((e) => {

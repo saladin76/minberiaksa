@@ -8,7 +8,9 @@ import { writeErrorMessage } from "@/lib/dashboard/write-error-message";
 import {
   STORY_WITH_TRANSLATIONS_SELECT,
   buildStoryScalarPatch,
+  parseStorySlides,
   parseStoryTranslations,
+  slidesCreateData,
 } from "@/lib/content/story-write";
 
 export async function GET(
@@ -53,6 +55,14 @@ export async function PUT(
       body.translations === undefined
         ? { write: [], clear: [] as string[] }
         : parseStoryTranslations(body.translations);
+    const slides = parseStorySlides(body.slides);
+
+    /* Replacing the slide list with nothing would leave a ring that opens onto
+       nothing. An absent key is fine — that is the toggle path — but an
+       explicit empty list is refused. */
+    if (slides !== undefined && slides.length === 0) {
+      return NextResponse.json({ error: "أضف شريحة واحدة على الأقل" }, { status: 400 });
+    }
 
     /* One nested write rather than an awaited upsert per locale: the form posts
        every locale at once, and sequential upserts inside an interactive
@@ -76,6 +86,12 @@ export async function PUT(
                 ...(clear.length ? { deleteMany: { locale: { in: clear } } } : {}),
               },
             }
+          : {}),
+        /* Slides are replaced wholesale — the posted list IS the list. Both
+           halves run inside the one nested write, so a failure leaves the old
+           slides in place rather than none. Slide translations cascade. */
+        ...(slides !== undefined
+          ? { slides: { deleteMany: {}, create: slidesCreateData(slides) } }
           : {}),
       },
       select: STORY_WITH_TRANSLATIONS_SELECT,
@@ -118,7 +134,7 @@ export async function DELETE(
     });
     if (!existing) return NextResponse.json({ error: "Story not found" }, { status: 404 });
 
-    // Translations cascade from the schema.
+    // Translations and slides both cascade from the schema.
     await prisma.story.delete({ where: { id } });
 
     const actor = auditActorFromDashboardSession(session!);

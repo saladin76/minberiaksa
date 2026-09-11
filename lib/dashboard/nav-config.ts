@@ -47,25 +47,21 @@ export const DASHBOARD_NAV_GROUPS: DashboardNavGroup[] = [
     ],
   },
   {
-    group: "الحملات والمحتوى",
+    // Everything an editor publishes to the public site — the fundraising catalogue
+    // (projects, categories, blog, hero slides, ticker) and the CMS content behind the
+    // homepage rails. Per-item permissions still apply; a staffer sees the rows they hold.
+    group: "محتوى الموقع",
     items: [
+      // The fundraising entries that used to head their own "الحملات والمحتوى" group. One
+      // content group now: projects, categories and the blog are as much site content as
+      // the stories and videos below them, and splitting fifteen items across two headings
+      // put related things behind different folds.
       { key: "campaigns", title: "المشاريع", href: "/dashboard/campaigns", icon: "heart", keywords: ["projects", "campaigns", "مشاريع"] },
       { key: "categories", title: "الحملات والدول", href: "/dashboard/categories", icon: "globe", keywords: ["categories", "countries", "تصنيفات"] },
       { key: "blog", title: "المدونة", href: "/dashboard/blog", icon: "penLine", keywords: ["blog", "posts", "مقالات"] },
-      // Built, API-backed, and previously unreachable. Slides and ticker both control what the
-      // PUBLIC site renders, so leaving them unlinked meant no one could edit live UI.
       { key: "slides", title: "الشرائح", href: "/dashboard/slides", icon: "images", keywords: ["slides", "slider", "hero"] },
       { key: "ticker", title: "شريط التبرعات", href: "/dashboard/ticker", icon: "ticket", keywords: ["ticker", "marquee"] },
-    ],
-  },
-  {
-    // The CMS-backed site content: everything under lib/content that the public pages read.
-    // Its own group rather than ten more rows under "الحملات والمحتوى" — that group already
-    // holds the fundraising entries, and fifteen items under one heading is a list nobody
-    // scans. All ten share the `siteContent` permission, so a staffer either sees the whole
-    // section or none of it.
-    group: "محتوى الموقع",
-    items: [
+      // ── CMS content (lib/content), all under the one siteContent permission ──
       { key: "siteContent", title: "شريط القصص", href: "/dashboard/stories", icon: "images", keywords: ["stories", "قصص", "rail", "highlights"] },
       { key: "siteContent", title: "بانرات الطوارئ", href: "/dashboard/urgent-banners", icon: "alertTriangle", keywords: ["urgent", "banner", "emergency", "طوارئ", "بانر", "عاجل"] },
       { key: "siteContent", title: "الفيديوهات", href: "/dashboard/videos", icon: "video", keywords: ["videos", "فيديو", "achievements", "endorsements", "إنجازات", "تزكيات"] },
@@ -165,15 +161,15 @@ export const DASHBOARD_PERMISSION_ROWS: {
   { key: "monthly", group: "الرئيسية", title: "التبرعات الشهرية" },
   { key: "bankTransfers", group: "الرئيسية", title: "التحويلات البنكية" },
   { key: "donors", group: "الرئيسية", title: "المتبرعون" },
-  { key: "campaigns", group: "الحملات والمحتوى", title: "المشاريع" },
-  { key: "categories", group: "الحملات والمحتوى", title: "الحملات والدول" },
-  { key: "blog", group: "الحملات والمحتوى", title: "المدونة" },
+  { key: "campaigns", group: "محتوى الموقع", title: "المشاريع" },
+  { key: "categories", group: "محتوى الموقع", title: "الحملات والدول" },
+  { key: "blog", group: "محتوى الموقع", title: "المدونة" },
   // P3-2: these five keys were valid in DASHBOARD_PERMISSION_KEYS and enforced by the API
   // guards, but appeared in NO grant UI — so they could never actually be granted, and a user
   // holding one saw an empty sidebar and got bounced out of the dashboard. Now that their
   // pages are linked in the nav above, they must also be grantable.
-  { key: "slides", group: "الحملات والمحتوى", title: "الشرائح" },
-  { key: "ticker", group: "الحملات والمحتوى", title: "شريط التبرعات" },
+  { key: "slides", group: "محتوى الموقع", title: "الشرائح" },
+  { key: "ticker", group: "محتوى الموقع", title: "شريط التبرعات" },
   // One key for the whole "محتوى الموقع" group. Was enforced by every /api/* content route and
   // shown in the nav, but absent here — the same P3-2 shape: valid, checked, and ungrantable.
   { key: "siteContent", group: "محتوى الموقع", title: "محتوى الموقع (قصص، فيديو، تقارير، أسئلة…)" },

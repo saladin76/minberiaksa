@@ -18,6 +18,7 @@ import {
   type TranslationField,
   type TranslationMap,
 } from '../../_components/ContentTranslationTabs';
+import { StorySlidesEditor, type SlideRow } from './StorySlidesEditor';
 
 /** Stories translate their title only. */
 export const STORY_TRANSLATION_FIELDS: readonly TranslationField[] = [
@@ -28,12 +29,12 @@ export interface StoryFormValues {
   slug: string;
   title: string;
   image: string;
-  linkUrl: string;
   isActive: boolean;
   /** ISO strings, or '' for "no limit". */
   startsAt: string;
   endsAt: string;
   translations: TranslationMap;
+  slides: SlideRow[];
 }
 
 export function emptyStory(): StoryFormValues {
@@ -41,11 +42,11 @@ export function emptyStory(): StoryFormValues {
     slug: '',
     title: '',
     image: '',
-    linkUrl: '',
     isActive: true,
     startsAt: '',
     endsAt: '',
     translations: emptyTranslations(STORY_TRANSLATION_FIELDS),
+    slides: [],
   };
 }
 
@@ -107,7 +108,8 @@ export function StoryForm({
     e.preventDefault();
     if (!values.title.trim()) return toast.error('العنوان بالعربية مطلوب');
     if (!values.slug.trim()) return toast.error('المعرّف (slug) مطلوب');
-    if (!values.image.trim()) return toast.error('صورة القصة مطلوبة');
+    if (!values.image.trim()) return toast.error('صورة الغلاف مطلوبة');
+    if (!values.slides.some((sl) => sl.mediaUrl.trim())) return toast.error('أضف شريحة واحدة على الأقل');
 
     setSaving(true);
     try {
@@ -115,7 +117,6 @@ export function StoryForm({
         slug: values.slug.trim(),
         title: values.title.trim(),
         image: values.image,
-        linkUrl: values.linkUrl.trim(),
         isActive: values.isActive,
         startsAt: values.startsAt || null,
         /* Sent explicitly in both directions: the API treats an ABSENT `endsAt`
@@ -123,6 +124,19 @@ export function StoryForm({
            has to say null rather than omit the key. */
         endsAt: unlimited ? null : values.endsAt || null,
         translations: values.translations,
+        /* Posted whole; the API replaces the stored slides with exactly this.
+           Rows with no media are dropped server-side, so an empty trailing row
+           is harmless. */
+        slides: values.slides.map((sl) => ({
+          mediaType: sl.mediaType,
+          mediaUrl: sl.mediaUrl.trim(),
+          durationSeconds: sl.durationSeconds.trim() ? Number(sl.durationSeconds) : 5,
+          caption: sl.caption.trim(),
+          ctaLabel: sl.ctaLabel.trim(),
+          ctaKind: sl.ctaKind || null,
+          ctaValue: sl.ctaValue.trim(),
+          translations: sl.translations,
+        })),
       };
 
       if (mode === 'create') {
@@ -163,19 +177,10 @@ export function StoryForm({
             <span className="text-xs font-semibold text-slate-600">المعرّف (slug) *</span>
             <Input dir="ltr" value={values.slug} onChange={(e) => set('slug', e.target.value)} />
           </label>
-          <label className="space-y-1.5 md:col-span-2">
-            <span className="text-xs font-semibold text-slate-600">الرابط عند الضغط</span>
-            <Input
-              dir="ltr"
-              placeholder="/projects#gaza"
-              value={values.linkUrl}
-              onChange={(e) => set('linkUrl', e.target.value)}
-            />
-          </label>
         </div>
 
         <div className="space-y-1.5">
-          <span className="text-xs font-semibold text-slate-600">الصورة *</span>
+          <span className="text-xs font-semibold text-slate-600">صورة الغلاف (الدائرة في الشريط) *</span>
           {values.image ? (
             <div className="relative w-40">
               {/* Sources include Google Drive thumbnails, which next/image would
@@ -236,7 +241,18 @@ export function StoryForm({
 
       <Card className="p-4 space-y-3">
         <div className="flex items-center justify-between">
-          <h2 className="text-sm font-bold">الترجمات</h2>
+          <h2 className="text-sm font-bold">الشرائح</h2>
+          <span className="text-xs text-slate-500">{values.slides.length} شريحة</span>
+        </div>
+        <p className="text-xs text-slate-500">
+          ما يراه الزائر بعد الضغط على الدائرة، شريحة بعد شريحة كما في إنستغرام. لكل شريحة صورة أو فيديو ونص وزر اختياريان.
+        </p>
+        <StorySlidesEditor rows={values.slides} onChange={(next) => set('slides', next)} />
+      </Card>
+
+      <Card className="p-4 space-y-3">
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-bold">ترجمات العنوان</h2>
           <span className="text-xs text-slate-500">{translated} لغة مترجمة</span>
         </div>
         <ContentTranslationTabs

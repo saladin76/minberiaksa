@@ -1,6 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import { useCallback, useEffect, useState } from "react";
+import { LOCALES } from "@/lib/locales";
+import StoryViewer, { type PublicStory } from "./StoryViewer";
 import { useLocale, useMessages, useTranslations } from "next-intl";
 import { Button } from "@/components/minbar/ds";
 import Rail from "@/components/minbar/Rail";
@@ -123,15 +126,52 @@ export function VerseStrip() {
 }
 
 /* ── Story rail ──────────────────────────────────────────────────────────────
- * Labels are translated; the identity of each entry is its link, never the
- * label. Media is dashboard-managed. */
+ * Data-driven from the CMS (`/api/stories`), opening into the full-screen
+ * viewer the way Instagram does. The hand-written list below is the fallback
+ * for when no story is live — it keeps the rail from vanishing on an empty
+ * database, and those entries stay plain links.
+ *
+ * Titles and captions arrive already in this locale, and every CTA arrives
+ * already resolved to an href for it; the rail only renders. A story's ring is
+ * gold until it has been opened once, tracked per browser. */
+const SEEN_KEY = "mia_stories_seen";
+
+function readSeen(): Set<string> {
+  try { return new Set(JSON.parse(window.localStorage.getItem(SEEN_KEY) || "[]") as string[]); } catch { return new Set(); }
+}
+
 export function StoriesRail() {
   const locale = useLocale();
   const t = useTranslations("homepage");
   const tNav = useTranslations("navigation");
   const tCommon = useTranslations("common");
+  const dir = (LOCALES as Record<string, { direction?: "rtl" | "ltr" }>)[locale]?.direction ?? "rtl";
 
-  const stories = [
+  const [cms, setCms] = useState<PublicStory[] | null>(null);
+  const [open, setOpen] = useState<number | null>(null);
+  const [seen, setSeen] = useState<Set<string>>(() => new Set());
+
+  useEffect(() => {
+    let live = true;
+    setSeen(readSeen());
+    fetch(`/api/stories?locale=${encodeURIComponent(locale)}`)
+      .then((r) => (r.ok ? r.json() : { items: [] }))
+      .then((d) => { if (live) setCms(Array.isArray(d?.items) ? d.items : []); })
+      .catch(() => { if (live) setCms([]); });
+    return () => { live = false; };
+  }, [locale]);
+
+  const markSeen = useCallback((id: string) => {
+    setSeen((prev) => {
+      if (prev.has(id)) return prev;
+      const next = new Set(prev);
+      next.add(id);
+      try { window.localStorage.setItem(SEEN_KEY, JSON.stringify([...next])); } catch { /* private mode */ }
+      return next;
+    });
+  }, []);
+
+  const fallback = [
     { label: t("storyGaza"), image: IMG.parcels, href: `${miaPath("projects", locale)}#gaza` },
     { label: t("regionAqsa"), image: IMG.aqsa, href: miaPath("aqsa", locale) },
     { label: t("storyFriday"), image: IMG.meals, href: miaPath("recurring", locale) },
@@ -140,6 +180,11 @@ export function StoriesRail() {
     { label: t("storyReports"), image: IMG.redline, href: miaPath("reports", locale) },
     { label: t("storyField"), image: IMG.parcels, href: miaPath("about", locale) },
   ];
+
+  const useCms = cms !== null && cms.length > 0;
+  const entries = useCms
+    ? cms.map((s, i) => ({ key: s.id, label: s.title, image: s.image, isNew: !seen.has(s.id), onOpen: () => setOpen(i) }))
+    : fallback.map((f, i) => ({ key: f.href, label: f.label, image: f.image, isNew: i < 3, href: f.href }));
 
   return (
     <section style={{ position: "relative", zIndex: 1, background: "#FFFDF8", borderBottom: "1px solid var(--border)", padding: "16px 0", overflow: "hidden" }}>
@@ -158,11 +203,9 @@ export function StoriesRail() {
       />
       <div style={{ position: "relative", padding: "0 18px" }}>
         <Rail step={474} prevLabel={t("storyPrev")} nextLabel={t("storyNext")} id="stories-rail">
-          {stories.map((story, i) => {
-            // The first three carry the gold "new" ring; the rest are muted.
-            const isNew = i < 3;
-            return (
-              <Link key={story.href} href={story.href} style={{ flex: "0 0 auto", display: "grid", gap: 8, justifyItems: "center", width: 96, textAlign: "center" }}>
+          {entries.map((story) => {
+            const inner = (
+              <>
                 <span
                   style={{
                     display: "block",
@@ -171,7 +214,7 @@ export function StoriesRail() {
                     borderRadius: "50%",
                     padding: 3,
                     boxSizing: "border-box",
-                    background: isNew
+                    background: story.isNew
                       ? "conic-gradient(from 210deg, #A93428, #D39A27, #FFE8B0, #A93428)"
                       : "rgba(16,33,43,.16)",
                   }}
@@ -190,7 +233,7 @@ export function StoriesRail() {
                         backgroundPosition: "center",
                       }}
                     />
-                    {isNew ? (
+                    {story.isNew ? (
                       <span
                         style={{
                           position: "absolute",
@@ -215,7 +258,7 @@ export function StoriesRail() {
                     fontSize: 12.5,
                     fontWeight: 800,
                     lineHeight: 1.35,
-                    color: isNew ? "var(--deep)" : "var(--muted)",
+                    color: story.isNew ? "var(--deep)" : "var(--muted)",
                     overflow: "hidden",
                     textOverflow: "ellipsis",
                     whiteSpace: "nowrap",
@@ -225,11 +268,31 @@ export function StoriesRail() {
                 >
                   {story.label}
                 </span>
-              </Link>
+              </>
+            );
+            const itemStyle: React.CSSProperties = { flex: "0 0 auto", display: "grid", gap: 8, justifyItems: "center", width: 96, textAlign: "center" };
+            return "href" in story ? (
+              <Link key={story.key} href={story.href!} style={itemStyle}>{inner}</Link>
+            ) : (
+              /* A button, not a link: nothing navigates. The viewer opens in place. */
+              <button key={story.key} type="button" onClick={story.onOpen} style={{ ...itemStyle, background: "none", border: 0, padding: 0, cursor: "pointer", font: "inherit" }}>
+                {inner}
+              </button>
             );
           })}
         </Rail>
       </div>
+
+      {useCms && open !== null ? (
+        <StoryViewer
+          stories={cms!}
+          startIndex={open}
+          onClose={() => setOpen(null)}
+          onStorySeen={markSeen}
+          dir={dir}
+          labels={{ close: tCommon("close"), next: tCommon("next"), prev: tCommon("prev"), defaultCta: tCommon("readMore") }}
+        />
+      ) : null}
     </section>
   );
 }

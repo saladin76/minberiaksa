@@ -1732,18 +1732,23 @@ enum VideoType {
 /// default is applied when a story is created, not here: Prisma defaults are
 /// static, so `now() + 24h` cannot be a schema default and belongs in the
 /// create path.
+///
+/// A story is the tapped circle in the homepage rail; what it opens is its
+/// slides, shown full-screen one after another the way Instagram does. The
+/// cover `image` is only the ring — the content lives on StorySlide.
 model Story {
   id       String    @id @default(auto()) @map("_id") @db.ObjectId
   slug     String    @unique
   title    String
+  /// Ring thumbnail. Not shown inside the viewer.
   image    String
-  linkUrl  String?
   order    Int       @default(0)
   isActive Boolean   @default(true)
   startsAt DateTime?
   endsAt   DateTime?
 
   translations StoryTranslation[]
+  slides       StorySlide[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1760,6 +1765,62 @@ model StoryTranslation {
   story Story @relation(fields: [storyId], references: [id], onDelete: Cascade)
 
   @@unique([storyId, locale])
+}
+
+enum StoryMediaType {
+  IMAGE
+  VIDEO
+}
+
+/// Where a slide's button leads. Stored as a KIND plus a VALUE rather than a
+/// finished href, because the href depends on who is looking: a campaign has a
+/// different slug per locale, a page has a localised path, and the visitor's
+/// language is only known at request time. The public API resolves it then.
+///   PAGE     → value is a MinbarRoute key ("zakat", "projects", …)
+///   CAMPAIGN → value is a Campaign id
+///   POST     → value is a Post id
+///   URL      → value is an href; a site-relative one gets the locale prefix
+enum StoryCtaKind {
+  PAGE
+  CAMPAIGN
+  POST
+  URL
+}
+
+/// One full-screen frame inside a story. Slides are replaced wholesale when a
+/// story is saved — the dashboard posts the list, the route swaps it — so
+/// `order` is always the array position and never has gaps.
+model StorySlide {
+  id              String         @id @default(auto()) @map("_id") @db.ObjectId
+  storyId         String         @db.ObjectId
+  mediaType       StoryMediaType @default(IMAGE)
+  mediaUrl        String
+  /// How long an IMAGE slide stays up. A VIDEO slide runs to its end instead.
+  durationSeconds Int            @default(5)
+  caption         String?
+  ctaLabel        String?
+  ctaKind         StoryCtaKind?
+  ctaValue        String?
+  order           Int            @default(0)
+
+  story        Story                   @relation(fields: [storyId], references: [id], onDelete: Cascade)
+  translations StorySlideTranslation[]
+
+  @@index([storyId, order])
+}
+
+/// Only the words translate; the media and the CTA target are the same for
+/// every language.
+model StorySlideTranslation {
+  id       String  @id @default(auto()) @map("_id") @db.ObjectId
+  slideId  String  @db.ObjectId
+  locale   String
+  caption  String?
+  ctaLabel String?
+
+  slide StorySlide @relation(fields: [slideId], references: [id], onDelete: Cascade)
+
+  @@unique([slideId, locale])
 }
 
 /// "برامجنا المصورة" — a YouTube playlist or series, with its episodes.

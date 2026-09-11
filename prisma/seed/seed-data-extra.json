@@ -16,7 +16,6 @@
       "slug": "story-storygaza",
       "title": "غزة",
       "image": "https://drive.google.com/thumbnail?id=1cuaNUr0YAgACFmRPN4PqRe7NqQa8Dn1n&sz=w1600",
-      "linkUrl": "/projects#gaza",
       "order": 1,
       "isActive": true,
       "startsAt": null,
@@ -30,13 +29,21 @@
           "locale": "en",
           "title": "Gaza"
         }
+      ],
+      "slides": [
+        {
+          "mediaType": "IMAGE",
+          "mediaUrl": "https://drive.google.com/thumbnail?id=1cuaNUr0YAgACFmRPN4PqRe7NqQa8Dn1n&sz=w1600",
+          "durationSeconds": 5,
+          "ctaKind": "URL",
+          "ctaValue": "/projects#gaza"
+        }
       ]
     },
     {
       "slug": "story-regionaqsa",
       "title": "الأقصى",
       "image": "https://drive.google.com/thumbnail?id=1w3n8DABq9o4P_tCr-yFe9NCvMfGHEO5D&sz=w1600",
-      "linkUrl": "/al-aqsa",
       "order": 2,
       "isActive": true,
       "startsAt": null,
@@ -50,13 +57,21 @@
           "locale": "en",
           "title": "Al-Aqsa"
         }
+      ],
+      "slides": [
+        {
+          "mediaType": "IMAGE",
+          "mediaUrl": "https://drive.google.com/thumbnail?id=1w3n8DABq9o4P_tCr-yFe9NCvMfGHEO5D&sz=w1600",
+          "durationSeconds": 5,
+          "ctaKind": "PAGE",
+          "ctaValue": "aqsa"
+        }
       ]
     },
     {
       "slug": "story-regionquds",
       "title": "القدس",
       "image": "https://drive.google.com/thumbnail?id=1lv4Mmx0GPxyytDHGhHW6RgGdmR8NIE4z&sz=w1600",
-      "linkUrl": "/jerusalem",
       "order": 3,
       "isActive": true,
       "startsAt": null,
@@ -70,35 +85,59 @@
           "locale": "en",
           "title": "Al-Quds"
         }
+      ],
+      "slides": [
+        {
+          "mediaType": "IMAGE",
+          "mediaUrl": "https://drive.google.com/thumbnail?id=1lv4Mmx0GPxyytDHGhHW6RgGdmR8NIE4z&sz=w1600",
+          "durationSeconds": 5,
+          "ctaKind": "PAGE",
+          "ctaValue": "jerusalem"
+        }
       ]
     },
     {
       "slug": "story-storyiftar",
       "title": "إفطار",
       "image": "https://drive.google.com/thumbnail?id=16D72JzXMHbp72ZJCHHFWLjUYrmUX4ta1&sz=w1600",
-      "linkUrl": "/projects#iftar",
       "order": 4,
       "isActive": true,
       "startsAt": null,
       "endsAt": null,
-      "translations": []
+      "translations": [],
+      "slides": [
+        {
+          "mediaType": "IMAGE",
+          "mediaUrl": "https://drive.google.com/thumbnail?id=16D72JzXMHbp72ZJCHHFWLjUYrmUX4ta1&sz=w1600",
+          "durationSeconds": 5,
+          "ctaKind": "URL",
+          "ctaValue": "/projects#iftar"
+        }
+      ]
     },
     {
       "slug": "story-storywaqf",
       "title": "الوقف",
       "image": "https://drive.google.com/thumbnail?id=1M8ko8LbhKpuDRYIlyNTewegv-gTuCnkI&sz=w1600",
-      "linkUrl": "/waqf",
       "order": 5,
       "isActive": true,
       "startsAt": null,
       "endsAt": null,
-      "translations": []
+      "translations": [],
+      "slides": [
+        {
+          "mediaType": "IMAGE",
+          "mediaUrl": "https://drive.google.com/thumbnail?id=1M8ko8LbhKpuDRYIlyNTewegv-gTuCnkI&sz=w1600",
+          "durationSeconds": 5,
+          "ctaKind": "PAGE",
+          "ctaValue": "waqf"
+        }
+      ]
     },
     {
       "slug": "story-storyreports",
       "title": "التقارير",
       "image": "https://drive.google.com/thumbnail?id=1HxtEvt3utPDAKBsFiKsL955btDa_rBoY&sz=w1600",
-      "linkUrl": "/achievements",
       "order": 6,
       "isActive": true,
       "startsAt": null,
@@ -111,6 +150,15 @@
         {
           "locale": "en",
           "title": "Reports"
+        }
+      ],
+      "slides": [
+        {
+          "mediaType": "IMAGE",
+          "mediaUrl": "https://drive.google.com/thumbnail?id=1HxtEvt3utPDAKBsFiKsL955btDa_rBoY&sz=w1600",
+          "durationSeconds": 5,
+          "ctaKind": "PAGE",
+          "ctaValue": "reports"
         }
       ]
     }

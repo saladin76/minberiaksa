@@ -25,12 +25,11 @@ export async function GET(request: NextRequest) {
         slug: true,
         title: true,
         image: true,
-        linkUrl: true,
         order: true,
         isActive: true,
         startsAt: true,
         endsAt: true,
-        _count: { select: { translations: true } },
+        _count: { select: { translations: true, slides: true } },
       },
     });
 
@@ -40,12 +39,12 @@ export async function GET(request: NextRequest) {
       slug: s.slug,
       title: s.title,
       image: s.image,
-      linkUrl: s.linkUrl ?? "",
       order: s.order,
       isActive: s.isActive,
       startsAt: s.startsAt?.toISOString() ?? null,
       endsAt: s.endsAt?.toISOString() ?? null,
       translationCount: s._count.translations,
+      slideCount: s._count.slides,
       /* The list shows why a story is not on the site, which "isActive" alone
          cannot say: an active story can still be scheduled or expired. */
       expired: s.endsAt ? s.endsAt.getTime() < now : false,

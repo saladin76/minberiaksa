@@ -26,7 +26,7 @@ interface Story {
   slug: string;
   title: string;
   image: string;
-  linkUrl: string;
+  slideCount: number;
   order: number;
   isActive: boolean;
   startsAt: string | null;
@@ -204,7 +204,7 @@ export default function StoriesPage() {
           <div>
             <h1 className="text-lg font-bold">شريط القصص</h1>
             <p className="text-xs text-slate-500">
-              يظهر في أعلى الصفحة الرئيسية. القصة تختفي تلقائيًا عند انتهاء مدتها.
+              يظهر في أعلى الصفحة الرئيسية ويُفتح كقصص إنستغرام. القصة تختفي تلقائيًا عند انتهاء مدتها.
             </p>
           </div>
           <Button onClick={() => router.push('/dashboard/stories/new')}>
@@ -233,6 +233,7 @@ export default function StoriesPage() {
                   <TableHead className="w-12" />
                   <TableHead>الصورة</TableHead>
                   <TableHead>العنوان</TableHead>
+                  <TableHead>الشرائح</TableHead>
                   <TableHead>الحالة</TableHead>
                   <TableHead>تنتهي</TableHead>
                   <TableHead>الترجمات</TableHead>
@@ -257,6 +258,7 @@ export default function StoriesPage() {
                       <div className="font-semibold">{story.title}</div>
                       <div className="text-xs text-slate-500" dir="ltr">{story.slug}</div>
                     </TableCell>
+                    <TableCell className="text-xs text-slate-600">{story.slideCount}</TableCell>
                     <TableCell><StatusBadge story={story} /></TableCell>
                     <TableCell className="text-xs text-slate-600">{formatWindow(story)}</TableCell>
                     <TableCell className="text-xs text-slate-600">{story.translationCount}</TableCell>
@@ -293,7 +295,7 @@ export default function StoriesPage() {
             <AlertDialogHeader>
               <AlertDialogTitle>حذف القصة</AlertDialogTitle>
               <AlertDialogDescription>
-                سيتم حذف «{deleteTarget?.title}» وكل ترجماتها نهائيًا.
+                سيتم حذف «{deleteTarget?.title}» بشرائحها وكل ترجماتها نهائيًا.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
