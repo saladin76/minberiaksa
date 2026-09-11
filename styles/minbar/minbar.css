@@ -477,22 +477,13 @@
   .mia-foot .social-ic { width: 42px !important; height: 42px !important; }
 }
 
-/* The quick-donation bar is pinned to the bottom of the viewport on phones
- * (z-index 95), so the WhatsApp button is lifted above it. */
+/* The WhatsApp button keeps clear of the page's own bottom edge on phones. */
 @media (max-width: 960px) {
   .mia-wa-fab {
-    bottom: calc(96px + env(safe-area-inset-bottom, 0px)) !important;
+    bottom: calc(18px + env(safe-area-inset-bottom, 0px)) !important;
     z-index: 94 !important;
     width: 48px !important;
     height: 48px !important;
-    transition: bottom .28s cubic-bezier(.22, .61, .36, 1);
-  }
-  /* With the quick-donation sheet expanded, the button rises above it rather
-     than being covered. */
-  body[data-quick-open] .mia-wa-fab {
-    opacity: 0 !important;
-    pointer-events: none !important;
-    transform: translateY(16px) !important;
   }
 }
 
@@ -568,7 +559,6 @@
 .mia-scope .mia-reel:hover { transform: translateY(-4px); box-shadow: 0 20px 40px rgba(16,33,43,.16); border-color: rgba(211,154,39,.5); }
 
 /* Homepage responsive rules carried over from the page's own <style> blocks. */
-@media (max-width: 1180px) { .mia-scope #quick { position: static !important; } }
 @media (max-width: 1100px) { .mia-scope #events-cards { grid-template-columns: repeat(2, minmax(0,1fr)) !important; } }
 @media (max-width: 980px) {
   .mia-scope #hero-main { grid-template-columns: minmax(0,1fr) !important; }
@@ -613,7 +603,7 @@
  * deliberately not the same density everywhere. */
 .mia-scope [data-aqsa-pattern] { opacity: .035 !important; }
 .mia-scope #aqsa [data-aqsa-pattern] { opacity: .055 !important; }
-.mia-scope #quick [data-aqsa-pattern] { opacity: .06 !important; }
+.mia-scope #quick [data-aqsa-pattern] { opacity: .035 !important; }
 .mia-scope #zakat [data-aqsa-pattern] { opacity: .085 !important; }
 .mia-scope img[src*="aqsa-dome-line"] { opacity: .05 !important; }
 
@@ -623,9 +613,6 @@
 .mia-scope button[data-chip="faq"] { background: var(--deep) !important; border-color: var(--deep) !important; color: #fff !important; }
 .mia-scope button[data-amt="card"] { background: var(--gold) !important; border-color: var(--gold) !important; color: var(--deep) !important; font-weight: 900 !important; }
 .mia-scope button[data-chip="amt"] { background: var(--deep) !important; border-color: var(--deep) !important; color: #fff !important; font-weight: 900 !important; box-shadow: 0 4px 12px rgba(16,33,43,.18); }
-
-/* The phone sheet is hidden until the viewport is narrow enough for it. */
-.mia-scope .mia-qm { display: none; }
 
 @media (max-width: 960px) {
   .mia-scope #waqf-grid,
@@ -663,51 +650,6 @@
   .mia-scope h1 { font-size: 34px !important; }
   .mia-scope h2 { font-size: 27px !important; }
 
-  /* The quick-donation bar becomes a bottom sheet fixed to the viewport. */
-  .mia-scope #quick {
-    position: fixed !important;
-    inset-inline: 0;
-    bottom: 0;
-    top: auto !important;
-    margin: 0 !important;
-    z-index: 95;
-    scroll-margin-top: 0 !important;
-  }
-  .mia-scope #quick > div { padding: 0 !important; max-width: none !important; }
-  .mia-scope #quick .mia-qdesk { display: none !important; }
-  .mia-scope #quick .mia-qm {
-    display: block !important;
-    background: #fff;
-    border: 1px solid rgba(211,154,39,.5);
-    border-bottom: 0;
-    border-radius: 16px 16px 0 0;
-    box-shadow: 0 -16px 44px rgba(16,33,43,.24);
-    padding: 0 14px calc(10px + env(safe-area-inset-bottom, 0px));
-  }
-  /* Room for the fixed sheet so it never covers the end of the page. */
-  body:has(.mia-scope #quick) { padding-bottom: 96px !important; }
-  .mia-scope #quick[data-qopen="false"] .mia-qm-body { display: none !important; }
-  .mia-scope .mia-qm-body {
-    display: grid; gap: 16px; padding: 6px 2px 16px;
-    max-height: min(72vh, calc(100dvh - 150px)); overflow-y: auto; border-bottom: 1px solid var(--border);
-  }
-  /* Dimmed page behind the open sheet; a tap on it collapses the sheet. Sits
-     under the sheet inside #quick's own stacking context, above the page. */
-  .mia-scope #quick[data-qopen="true"] .mia-qm-scrim {
-    display: block; position: fixed; inset: 0; z-index: -1;
-    background: rgba(16,33,43,.42); backdrop-filter: blur(2px); -webkit-backdrop-filter: blur(2px);
-  }
-  .mia-scope #quick .mia-qm { position: relative; isolation: isolate; }
-  .mia-scope .mia-qm-handle { display: block; width: 42px; height: 4px; margin: 10px auto 2px; border-radius: 999px; background: rgba(16,33,43,.16); }
-  .mia-scope .mia-qm-bar { display: flex; align-items: center; gap: 12px; padding: 12px 0 2px; }
-  .mia-scope .mia-qm-toggle {
-    display: inline-flex; align-items: center; justify-content: center;
-    width: 46px; height: 46px; flex: 0 0 46px; padding: 0;
-    border-radius: 10px; border: 1px solid var(--border);
-    background: var(--sand); color: var(--deep); cursor: pointer;
-  }
-  .mia-scope .mia-qm-toggle svg { transition: transform .22s ease; }
-  .mia-scope #quick[data-qopen="true"] .mia-qm-toggle svg { transform: rotate(180deg); }
 }
 
 @media (max-width: 560px) {
@@ -730,7 +672,6 @@
   .mia-scope #articles-grid { grid-template-columns: minmax(0,1fr) !important; }
   .mia-scope #account-features { grid-template-columns: repeat(2, minmax(0,1fr)) !important; }
   .mia-scope #sector-metrics { gap: 8px !important; margin-top: 18px !important; grid-template-columns: repeat(2, minmax(0,1fr)) !important; }
-  body:has(.mia-scope #quick) { padding-bottom: 84px !important; }
 }
 
 /* ─────────────────────────────────────────────────────────────────────────────
@@ -1037,170 +978,164 @@
 }
 
 /* ─────────────────────────────────────────────────────────────────────────────
- * Quick donation — the card under the hero, its phone sheet, and the slim bar
- * that stands in for the card once it has scrolled away.
+ * Quick donation — one card, in the flow of the page at every width.
+ *
+ * The choices sit on one side and what they add up to on the other, the way a
+ * checkout does. Nothing here is fixed, sticky or overlaid: an earlier version
+ * pinned a summary bar under the header (where it covered the navigation) and
+ * turned the card into a bottom sheet on phones (where it covered the page).
+ * Below 900px the two columns become one and the panel is simply the last
+ * block in the card.
  * ───────────────────────────────────────────────────────────────────────────── */
-.mia-scope .mia-q-card {
+.mia-scope .mia-qd-sec { position: relative; z-index: 1; padding: 34px 24px 8px; scroll-margin-top: 96px; }
+
+.mia-scope .mia-qd {
   position: relative; overflow: hidden;
-  padding: 22px 26px 24px;
-  background: #fff;
-  border: 1px solid rgba(211,154,39,.45);
-  border-radius: 18px;
-  box-shadow: 0 30px 70px -24px rgba(16,33,43,.28), 0 2px 6px rgba(16,33,43,.05);
+  max-width: 1180px; margin: 0 auto;
+  display: grid; grid-template-columns: minmax(0,1fr) minmax(290px, .48fr);
+  background: #fff; border: 1px solid rgba(211,154,39,.42); border-radius: 20px;
+  box-shadow: 0 26px 60px -30px rgba(16,33,43,.4), 0 2px 8px rgba(16,33,43,.05);
 }
-.mia-scope .mia-q-pattern {
-  position: absolute; inset: 0; pointer-events: none; z-index: 0;
-  background-image: url('/minbar/assets/patterns/aqsa-white-pattern.webp');
-  background-repeat: repeat; background-size: 220px 220px; opacity: .05 !important;
+.mia-scope .mia-qd-pattern {
+  position: absolute; inset: 0; pointer-events: none;
+  background: url('/minbar/assets/patterns/aqsa-white-pattern.webp') repeat; background-size: 300px 300px;
 }
-.mia-scope .mia-q-rule {
-  position: absolute; inset-block: 0; inset-inline-start: 0; width: 6px;
-  background: linear-gradient(180deg, var(--gold), rgba(211,154,39,.25)); pointer-events: none;
-}
-.mia-scope .mia-q-card > * { position: relative; z-index: 1; }
+.mia-scope .mia-qd > *:not(.mia-qd-pattern) { position: relative; z-index: 1; }
 
-.mia-scope .mia-q-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 16px; }
-.mia-scope .mia-q-title { display: inline-flex; align-items: center; gap: 9px; font-weight: 900; font-size: 15px; color: var(--deep); }
-.mia-scope .mia-q-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--red); box-shadow: 0 0 0 4px rgba(169,52,40,.14); }
-.mia-scope .mia-q-steps { display: inline-flex; gap: 6px; flex-wrap: wrap; }
-.mia-scope .mia-q-steps > span {
-  display: inline-flex; align-items: center; gap: 7px;
-  padding: 5px 11px 5px 6px; border-radius: 999px;
-  background: var(--sand); color: var(--muted); font-size: 11.5px; font-weight: 800;
+/* ── The choices ──────────────────────────────────────────────────────── */
+.mia-scope .mia-qd-main { display: grid; align-content: start; gap: 18px; padding: 24px 26px 26px; min-width: 0; }
+.mia-scope .mia-qd-title {
+  margin: 0; display: inline-flex; align-items: center; gap: 10px;
+  font-size: 16px; font-weight: 900; color: var(--deep); letter-spacing: -.01em;
 }
-.mia-scope .mia-q-steps i, .mia-scope .mia-q-label i {
-  display: inline-grid; place-items: center; width: 20px; height: 20px; border-radius: 50%;
-  background: var(--deep); color: #fff; font-style: normal; font-size: 11px; font-weight: 900;
-}
-.mia-scope .mia-q-label i { width: 22px; height: 22px; background: var(--gold); color: var(--deep); }
+.mia-scope .mia-qd-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--red); box-shadow: 0 0 0 4px rgba(169,52,40,.14); }
+.mia-scope .mia-qd-field { display: grid; gap: 9px; min-width: 0; }
+.mia-scope .mia-qd-legend { font-size: 12.5px; font-weight: 900; color: var(--muted); letter-spacing: .01em; }
 
-.mia-scope .mia-q-grid {
-  display: grid; grid-template-columns: minmax(0,1.2fr) minmax(0,1fr) minmax(250px,.8fr);
-  gap: 22px 28px; align-items: start;
+/* Amounts — the first and largest decision. */
+.mia-scope .mia-qd-amounts { display: grid; grid-template-columns: repeat(5, minmax(0,1fr)); gap: 8px; }
+.mia-scope .mia-qd-amt {
+  position: relative; display: inline-flex; align-items: center; justify-content: center;
+  flex-direction: column; gap: 1px;
+  min-height: 56px; padding: 0 6px; border-radius: 12px; cursor: pointer;
+  border: 1.5px solid var(--border); background: #fff; color: var(--deep);
+  font-family: inherit; font-size: 15px; font-weight: 900; white-space: nowrap;
+  transition: border-color .15s ease, background .15s ease, color .15s ease, transform .15s ease;
 }
-.mia-scope .mia-q-col { display: grid; gap: 10px; align-content: start; min-width: 0; }
-.mia-scope .mia-q-col--cta { border-inline-start: 1px solid var(--border); padding-inline-start: 28px; align-self: stretch; }
-.mia-scope .mia-q-label { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 900; color: var(--deep); }
-.mia-scope .mia-q-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
-.mia-scope .mia-q-row--amounts { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 8px; margin-top: 6px; }
-.mia-scope .mia-q-row--amounts .mia-q-amt { min-width: 0 !important; padding: 0 8px !important; }
-.mia-scope .mia-q-card .mia-q-custom { width: 100%; justify-content: space-between; }
-.mia-scope .mia-q-card .mia-q-custom input { width: 100%; }
+.mia-scope .mia-qd-amt:hover { border-color: var(--gold); transform: translateY(-1px); }
+.mia-scope .mia-qd-amt[data-active="true"] {
+  background: var(--deep); border-color: var(--deep); color: #fff;
+  box-shadow: 0 8px 18px -8px rgba(16,33,43,.6);
+}
+.mia-scope .mia-qd-amt--other { font-size: 13px; font-weight: 800; }
+.mia-scope .mia-qd-tag {
+  font-size: 9.5px; font-weight: 900; font-style: normal; line-height: 1.4;
+  letter-spacing: .02em; color: var(--gold-2); white-space: nowrap; max-width: 100%; overflow: hidden; text-overflow: ellipsis;
+}
+.mia-scope .mia-qd-amt[data-active="true"] .mia-qd-tag { color: var(--gold); }
+.mia-scope .mia-qd-custom {
+  display: flex; align-items: center; gap: 10px; min-height: 50px; padding: 0 14px;
+  border: 1.5px solid var(--deep); border-radius: 12px; background: #fff;
+}
+.mia-scope .mia-qd-custom input {
+  flex: 1 1 auto; min-width: 0; border: 0; outline: 0; background: transparent;
+  font: inherit; font-size: 16px; font-weight: 900; color: var(--deep);
+}
+.mia-scope .mia-qd-cur { font-size: 12px; font-weight: 900; color: var(--muted); }
 
-/* Destination project picker — a real <select> styled as a chip with a caret. */
-.mia-scope .mia-q-select { position: relative; display: inline-flex; min-width: 0; }
-.mia-scope .mia-q-select select {
+/* Destination — one native control: the intentions, then every project. */
+.mia-scope .mia-qd-select { position: relative; display: block; }
+.mia-scope .mia-qd-select select {
   appearance: none; -webkit-appearance: none;
-  min-height: 40px; max-width: 240px; padding: 0 34px 0 14px;
-  border-radius: 999px; border: 1px dashed rgba(211,154,39,.7); background: #fff;
-  color: var(--deep); font-family: inherit; font-weight: 800; font-size: 13.5px; cursor: pointer;
-  text-overflow: ellipsis; white-space: nowrap; overflow: hidden;
+  width: 100%; min-height: 50px; padding-inline: 14px 40px;
+  border: 1.5px solid var(--border); border-radius: 12px; background: #fff;
+  font-family: inherit; font-size: 14.5px; font-weight: 800; color: var(--deep); cursor: pointer;
 }
-[dir="ltr"] .mia-scope .mia-q-select select { padding: 0 14px 0 34px; }
-.mia-scope .mia-q-select select[data-selected="true"] { border-style: solid; border-color: var(--deep); background: var(--deep); color: #fff; }
-.mia-scope .mia-q-select::after {
-  content: ""; position: absolute; top: 50%; inset-inline-end: 14px; width: 8px; height: 8px;
-  border-inline-end: 2px solid currentColor; border-bottom: 2px solid currentColor;
-  transform: translateY(-70%) rotate(45deg); pointer-events: none; color: var(--muted);
-}
-.mia-scope .mia-q-select:has(select[data-selected="true"])::after { color: #fff; }
-
-/* Amounts: the suggested one carries a small gold tag above the chip. */
-.mia-scope .mia-q-amt { overflow: visible !important; }
-.mia-scope .mia-q-tag {
-  position: absolute; top: -9px; inset-inline-start: 50%; transform: translateX(-50%);
-  padding: 2px 8px; border-radius: 999px;
-  background: var(--gold); color: var(--deep); font-size: 9.5px; font-weight: 900; white-space: nowrap;
-  box-shadow: 0 2px 6px rgba(16,33,43,.14);
-}
-[dir="rtl"] .mia-scope .mia-q-tag { transform: translateX(50%); }
-.mia-scope .mia-q-custom {
-  display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding: 0 12px;
-  border-radius: 999px; border: 1px dashed rgba(211,154,39,.7); background: #fff; color: var(--deep);
-}
-.mia-scope .mia-q-custom[data-active="true"] { border-style: solid; border-color: var(--deep); }
-.mia-scope .mia-q-custom input { width: 8ch; border: 0; outline: 0; background: transparent; font: inherit; font-weight: 800; font-size: 13.5px; color: inherit; }
-.mia-scope .mia-q-custom > span { font-size: 11px; font-weight: 900; color: var(--muted); }
-
-.mia-scope .mia-q-summary { display: grid; gap: 3px; margin-top: 4px; padding-top: 12px; border-top: 1px dashed var(--border); }
-.mia-scope .mia-q-total { display: inline-flex; align-items: baseline; gap: 8px; font-size: 13px; font-weight: 800; color: var(--muted); }
-.mia-scope .mia-q-total b { font-size: 22px; color: var(--deep); font-weight: 900; letter-spacing: -.01em; }
-.mia-scope .mia-q-freq { color: var(--muted); font-size: 12.5px; font-weight: 800; }
-.mia-scope .mia-q-dest { font-size: 12.5px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-
-/* The button says exactly what it charges. */
-.mia-scope .mia-q-cta {
-  display: inline-flex; align-items: center; justify-content: center; gap: 12px;
-  width: 100%; border: 0; border-radius: 12px; cursor: pointer; font-family: inherit;
-  background: linear-gradient(180deg, #B63A2D, var(--red)); color: #fff; font-weight: 900;
-  box-shadow: 0 14px 30px -8px rgba(169,52,40,.55), inset 0 1px 0 rgba(255,255,255,.14);
-  transition: transform .18s cubic-bezier(.22,.61,.36,1), box-shadow .18s ease, filter .18s ease;
-}
-.mia-scope .mia-q-cta[data-size="lg"] { min-height: 58px; font-size: 16px; padding: 0 20px; }
-.mia-scope .mia-q-cta[data-size="md"] { min-height: 50px; font-size: 15px; padding: 0 18px; }
-.mia-scope .mia-q-cta b { padding: 4px 10px; border-radius: 999px; background: rgba(255,255,255,.16); font-size: .95em; }
-.mia-scope .mia-q-cta:hover { transform: translateY(-1px); filter: brightness(1.05); box-shadow: 0 18px 36px -10px rgba(169,52,40,.6); }
-.mia-scope .mia-q-cta:disabled { opacity: .55; cursor: not-allowed; transform: none; }
-.mia-scope .mia-q-trust { display: inline-flex; align-items: center; flex-wrap: wrap; gap: 6px 7px; font-size: 11.5px; font-weight: 700; color: var(--muted); line-height: 1.5; }
-.mia-scope .mia-q-trust svg { color: var(--green); flex: 0 0 auto; }
-.mia-scope .mia-q-trust > span { white-space: nowrap; }
-/* In the card's CTA column the two assurances stack as two clean lines
-   beside the lock instead of wrapping mid-phrase with a stray dot. */
-.mia-scope .mia-q-col--cta .mia-q-trust { display: grid; grid-template-columns: auto minmax(0,1fr); column-gap: 7px; row-gap: 1px; align-items: center; }
-.mia-scope .mia-q-col--cta .mia-q-trust .mia-q-trust-dot { display: none; }
-.mia-scope .mia-q-col--cta .mia-q-trust > span { grid-column: 2; white-space: normal; }
-.mia-scope .mia-qm-scrim { display: none; }
-
-/* Slim bar: fixed under the header, only while the card is above the fold. */
-.mia-scope .mia-qsticky {
-  position: fixed; top: 0; inset-inline: 0; z-index: 90;
-  transform: translateY(-110%); opacity: 0; pointer-events: none;
-  transition: transform .32s cubic-bezier(.22,.61,.36,1), opacity .25s ease;
-}
-.mia-scope .mia-qsticky[data-stuck="true"] { transform: none; opacity: 1; pointer-events: auto; }
-.mia-scope .mia-qsticky-inner {
-  display: flex; align-items: center; gap: 16px;
-  max-width: 1180px; margin: 0 auto; padding: 10px 18px;
-  background: rgba(255,253,248,.92); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
-  border: 1px solid rgba(211,154,39,.45); border-top: 0; border-radius: 0 0 16px 16px;
-  box-shadow: 0 18px 40px -16px rgba(16,33,43,.3);
-}
-.mia-scope .mia-qsticky-summary { display: inline-flex; align-items: baseline; gap: 8px; min-width: 0; flex: 1 1 auto; font-size: 13px; font-weight: 800; color: var(--muted); }
-.mia-scope .mia-qsticky-summary > span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--deep); }
-.mia-scope .mia-qsticky-summary b { font-size: 19px; color: var(--deep); font-weight: 900; }
-.mia-scope .mia-qsticky-edit { border: 0; background: none; color: var(--red); font: inherit; font-weight: 800; font-size: 13px; cursor: pointer; white-space: nowrap; text-decoration: underline; text-underline-offset: 3px; }
-.mia-scope .mia-qsticky .mia-q-cta { width: auto; }
-
-@media (max-width: 1180px) {
-  .mia-scope .mia-q-grid { grid-template-columns: minmax(0,1fr) minmax(0,1fr); }
-  .mia-scope .mia-q-col--cta { grid-column: 1 / -1; border-inline-start: 0; padding-inline-start: 0; border-top: 1px solid var(--border); padding-top: 16px; display: grid; grid-template-columns: auto minmax(0,1fr) auto; align-items: center; gap: 16px; }
-  .mia-scope .mia-q-col--cta .mia-q-cta { width: auto; min-width: 260px; }
+.mia-scope .mia-qd-select select:focus-visible { outline: 2px solid var(--gold); outline-offset: 1px; }
+.mia-scope .mia-qd-select > svg {
+  position: absolute; top: 50%; inset-inline-end: 14px; transform: translateY(-50%);
+  color: var(--muted); pointer-events: none;
 }
 
-/* Phone: the card is a bottom sheet (rules live with the 960px block above);
-   these refine what is inside it. The slim bar is desktop-only. */
-@media (max-width: 960px) {
-  .mia-scope .mia-qsticky { display: none !important; }
-  .mia-scope .mia-qm-bar { padding: 12px 0 4px !important; gap: 10px !important; }
-  .mia-scope .mia-qm-summary {
-    flex: 1 1 auto; min-width: 0; display: grid; gap: 1px; text-align: start;
-    border: 0; background: none; padding: 0; font: inherit; color: var(--muted); cursor: pointer;
+/* Frequency — one setting with four states, on a single track. */
+.mia-scope .mia-qd-seg {
+  display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 4px;
+  padding: 4px; border-radius: 12px; background: var(--sand); border: 1px solid var(--border);
+}
+.mia-scope .mia-qd-seg > button {
+  min-height: 42px; padding: 0 6px; border: 0; border-radius: 9px; cursor: pointer;
+  background: transparent; color: var(--muted); font-family: inherit; font-size: 13px; font-weight: 800;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  transition: background .15s ease, color .15s ease, box-shadow .15s ease;
+}
+.mia-scope .mia-qd-seg > button:hover { color: var(--deep); }
+.mia-scope .mia-qd-seg > button[data-active="true"] {
+  background: #fff; color: var(--deep); font-weight: 900;
+  box-shadow: 0 2px 6px rgba(16,33,43,.12), inset 0 0 0 1px rgba(211,154,39,.5);
+}
+
+/* ── What it adds up to ───────────────────────────────────────────────── */
+.mia-scope .mia-qd-aside {
+  display: grid; align-content: center; gap: 4px;
+  padding: 24px 26px 26px; min-width: 0;
+  background: linear-gradient(180deg, #FFFDF8, #FAF4E9);
+  border-inline-start: 1px solid rgba(211,154,39,.35);
+}
+.mia-scope .mia-qd-sum-label { font-size: 12px; font-weight: 900; color: var(--muted); }
+.mia-scope .mia-qd-sum {
+  font-size: clamp(32px, 3.4vw, 42px); line-height: 1.1; font-weight: 900; color: var(--deep);
+  letter-spacing: -.02em; font-variant-numeric: tabular-nums;
+}
+.mia-scope .mia-qd-sum-meta {
+  margin: 2px 0 14px; display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap;
+  font-size: 13px; font-weight: 800; color: var(--muted); min-width: 0;
+}
+.mia-scope .mia-qd-sum-dest { color: var(--gold-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
+.mia-scope .mia-qd-cta {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 100%; min-height: 56px; padding: 0 18px; border: 0; border-radius: 12px; cursor: pointer;
+  font-family: inherit; font-size: 16.5px; font-weight: 900; color: #fff;
+  background: linear-gradient(180deg, #B63A2D, var(--red));
+  box-shadow: 0 14px 30px -10px rgba(169,52,40,.6), inset 0 1px 0 rgba(255,255,255,.16);
+  transition: transform .16s cubic-bezier(.22,.61,.36,1), filter .16s ease, box-shadow .16s ease;
+}
+.mia-scope .mia-qd-cta:hover { transform: translateY(-1px); filter: brightness(1.06); }
+.mia-scope .mia-qd-cta:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+.mia-scope .mia-qd-trust {
+  margin: 10px 0 0; display: grid; grid-template-columns: auto minmax(0,1fr); column-gap: 7px; row-gap: 1px;
+  align-items: center; font-size: 11.5px; font-weight: 700; color: var(--muted); line-height: 1.55;
+}
+.mia-scope .mia-qd-trust svg { color: var(--green); }
+.mia-scope .mia-qd-trust > span { grid-column: 2; }
+
+@media (prefers-reduced-motion: reduce) {
+  .mia-scope .mia-qd-amt, .mia-scope .mia-qd-cta { transition: none; }
+}
+
+/* One column: the panel becomes the card's last block, never an overlay. */
+@media (max-width: 900px) {
+  .mia-scope .mia-qd-sec { padding: 26px 16px 6px; }
+  .mia-scope .mia-qd { grid-template-columns: minmax(0,1fr); border-radius: 18px; }
+  .mia-scope .mia-qd-main { padding: 20px 18px 18px; gap: 16px; }
+  .mia-scope .mia-qd-aside {
+    padding: 18px; border-inline-start: 0; border-top: 1px solid rgba(211,154,39,.35);
+    grid-template-columns: minmax(0,1fr) auto; align-items: center; column-gap: 18px;
   }
-  .mia-scope .mia-qm-summary > span:first-child { font-size: 11px; font-weight: 800; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .mia-scope .mia-qm-summary b { font-size: 18px; line-height: 1.15; color: var(--deep); font-weight: 900; }
-  .mia-scope .mia-qm-summary .mia-q-freq { font-size: 11px; }
-  .mia-scope .mia-qm-bar .mia-q-cta { flex: 0 0 auto; min-width: 150px; }
-  .mia-scope .mia-qm-body { gap: 18px !important; padding: 8px 2px 18px !important; }
-  .mia-scope .mia-qm-body .mia-q-select, .mia-scope .mia-qm-body .mia-q-select select { width: 100%; max-width: none; border-radius: 12px; min-height: 46px; }
-  .mia-scope .mia-q-row--amounts { display: grid !important; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 8px !important; margin-top: 8px; }
-  .mia-scope .mia-q-row--amounts .mia-q-amt { min-width: 0 !important; padding: 0 6px !important; }
-  .mia-scope .mia-qm-body .mia-q-custom { width: 100%; border-radius: 12px; min-height: 46px; justify-content: space-between; }
-  .mia-scope .mia-qm-body .mia-q-custom input { width: 100%; }
+  .mia-scope .mia-qd-sum-label { grid-column: 1; }
+  .mia-scope .mia-qd-sum { grid-column: 1; font-size: 34px; }
+  .mia-scope .mia-qd-sum-meta { grid-column: 1; margin-bottom: 0; }
+  .mia-scope .mia-qd-cta { grid-column: 2; grid-row: 1 / span 3; width: auto; min-width: 220px; }
+  .mia-scope .mia-qd-trust { grid-column: 1 / -1; margin-top: 12px; }
 }
-@media (max-width: 560px) {
-  .mia-scope .mia-q-row--amounts { grid-template-columns: repeat(2, minmax(0,1fr)); }
-  .mia-scope .mia-qm-bar .mia-q-cta { min-width: 132px; padding: 0 12px; font-size: 14px; }
-  .mia-scope .mia-q-cta b { padding: 3px 8px; }
+
+@media (max-width: 620px) {
+  .mia-scope .mia-qd-amounts { grid-template-columns: repeat(2, minmax(0,1fr)); }
+  .mia-scope .mia-qd-amt--other { grid-column: 1 / -1; }
+  .mia-scope .mia-qd-seg { grid-template-columns: repeat(2, minmax(0,1fr)); }
+  .mia-scope .mia-qd-aside { grid-template-columns: minmax(0,1fr); }
+  .mia-scope .mia-qd-sum { font-size: 32px; }
+  .mia-scope .mia-qd-sum-meta { margin-bottom: 12px; }
+  .mia-scope .mia-qd-cta { grid-column: 1; grid-row: auto; width: 100%; min-width: 0; }
 }
 
 /* ─────────────────────────────────────────────────────────────────────────────
