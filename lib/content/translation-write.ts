@@ -51,6 +51,23 @@ export function localeList(v: unknown): string[] {
   return [...out];
 }
 
+/**
+ * A YouTube video id from either the bare eleven characters or any of the
+ * usual URL shapes. The forms extract before posting, but the API must not
+ * depend on that: a direct call or a seed handing over a URL would otherwise
+ * store it as the id, and every player on the site would embed a broken URL.
+ */
+export function youtubeId(v: unknown): string {
+  const s = str(v);
+  if (!s) return "";
+  if (/^[\w-]{11}$/.test(s)) return s;
+  const m =
+    s.match(/[?&]v=([\w-]{11})/) ||
+    s.match(/youtu\.be\/([\w-]{11})/) ||
+    s.match(/\/(?:embed|shorts|live)\/([\w-]{11})/);
+  return m ? m[1] : s;
+}
+
 /** A `DateTime?` column. An empty value means null — "no limit" — not "now". */
 export function optionalDate(v: unknown): Date | null | undefined {
   if (v === null) return null;

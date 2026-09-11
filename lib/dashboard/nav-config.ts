@@ -60,6 +60,16 @@ export const DASHBOARD_NAV_GROUPS: DashboardNavGroup[] = [
       { key: "siteContent", title: "التقارير", href: "/dashboard/reports", icon: "fileText", keywords: ["reports", "تقارير", "pdf", "annual"] },
       { key: "siteContent", title: "الكتيبات", href: "/dashboard/booklets", icon: "bookOpen", keywords: ["booklets", "كتيبات", "pdf", "library"] },
       { key: "siteContent", title: "الأسئلة الشائعة", href: "/dashboard/faqs", icon: "helpCircle", keywords: ["faq", "أسئلة", "questions", "help"] },
+
+      { key: "siteContent", title: "برامجنا المصورة", href: "/dashboard/playlists", icon: "listVideo", keywords: ["playlists", "programs", "series", "برامج", "سلاسل", "youtube"] },
+
+      { key: "siteContent", title: "دوراتنا", href: "/dashboard/courses", icon: "graduationCap", keywords: ["courses", "دورات", "training"] },
+
+      { key: "siteContent", title: "الحسابات البنكية", href: "/dashboard/bank-accounts", icon: "landmark", keywords: ["bank", "accounts", "iban", "swift", "حسابات", "بنك"] },
+
+      { key: "siteContent", title: "بانرات الطوارئ", href: "/dashboard/urgent-banners", icon: "alertTriangle", keywords: ["urgent", "banner", "emergency", "طوارئ", "بانر", "عاجل"] },
+
+      { key: "siteContent", title: "إعدادات الموقع", href: "/dashboard/site-settings", icon: "settings", keywords: ["settings", "contact", "social", "whatsapp", "إعدادات", "تواصل"] },
       { key: "ticker", title: "شريط التبرعات", href: "/dashboard/ticker", icon: "ticket", keywords: ["ticker", "marquee"] },
     ],
   },
