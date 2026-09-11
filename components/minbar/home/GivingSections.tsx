@@ -20,7 +20,7 @@ export function WaqfSection() {
   const areas = [1, 2, 3, 4, 5, 6, 7, 8].map((n) => t(`waqfArea${n}`));
 
   return (
-    <section id="waqf" style={{ position: "relative", zIndex: 1, background: "linear-gradient(to left, rgba(247,242,234,.34), rgba(247,242,234,.72))", borderTop: "1px solid var(--border)", padding: "56px 0", overflow: "hidden" }}>
+    <section id="waqf" style={{ position: "relative", zIndex: 1, background: "linear-gradient(to left, rgba(247,242,234,.34), rgba(247,242,234,.72))", borderTop: "1px solid var(--border)", padding: "48px 0", overflow: "hidden" }}>
       {/* A minaret drawn in gold line, faded toward the start edge. */}
       <svg
         viewBox="0 0 200 260"
@@ -47,7 +47,7 @@ export function WaqfSection() {
       <div style={{ maxWidth: 1240, margin: "0 auto", padding: "0 24px" }}>
         <div id="waqf-grid" style={{ position: "relative", display: "grid", gridTemplateColumns: "minmax(280px,.9fr) minmax(320px,1.1fr)", gap: 40, alignItems: "start" }}>
           <div style={{ position: "relative", display: "grid", gap: 16, justifyItems: "start", alignContent: "start" }}>
-            <h2 style={{ margin: 0, fontSize: "clamp(24px,2.5vw,34px)", lineHeight: 1.25, fontWeight: 900, letterSpacing: "-.01em" }}>{t("waqfTitle")}</h2>
+            <h2 style={{ margin: 0, fontSize: "clamp(25px,2.5vw,34px)", lineHeight: 1.2, fontWeight: 900, letterSpacing: "-.01em" }}>{t("waqfTitle")}</h2>
             <p style={{ margin: 0, color: "var(--muted)", lineHeight: 1.85, fontSize: 15, maxWidth: "58ch" }}>{t("waqfLead")}</p>
             <Button variant="gold" size="lg" href={miaPath("waqf", locale)} style={{ whiteSpace: "nowrap" }}>
               {t("waqfCtaQuds")}
@@ -92,7 +92,7 @@ export function RecurringSection() {
   const tCommon = useTranslations("common");
 
   return (
-    <section id="monthly" style={{ position: "relative", zIndex: 1, background: "linear-gradient(to left, rgba(19,44,56,.05), rgba(247,242,234,.66))", borderTop: "1px solid var(--border)", padding: "56px 0", overflow: "hidden" }}>
+    <section id="monthly" style={{ position: "relative", zIndex: 1, background: "linear-gradient(to left, rgba(19,44,56,.05), rgba(247,242,234,.66))", borderTop: "1px solid var(--border)", padding: "48px 0", overflow: "hidden" }}>
       <div
         aria-hidden="true"
         data-aqsa-pattern=""
@@ -109,7 +109,7 @@ export function RecurringSection() {
       <span aria-hidden="true" style={{ position: "absolute", insetInlineStart: 0, top: 0, bottom: 0, width: 4, background: "linear-gradient(180deg, var(--navy), rgba(19,44,56,.2))", pointerEvents: "none" }} />
       <div id="monthly-grid" style={{ position: "relative", maxWidth: 1240, margin: "0 auto", padding: "0 24px", display: "grid", gridTemplateColumns: "minmax(0,1fr) auto", gap: 32, alignItems: "center" }}>
         <div style={{ display: "grid", gap: 12, minWidth: 0 }}>
-          <h2 style={{ margin: 0, fontSize: "clamp(24px,2.5vw,34px)", lineHeight: 1.25, fontWeight: 900, letterSpacing: "-.01em" }}>{t("recurringTitle")}</h2>
+          <h2 style={{ margin: 0, fontSize: "clamp(25px,2.5vw,34px)", lineHeight: 1.2, fontWeight: 900, letterSpacing: "-.01em" }}>{t("recurringTitle")}</h2>
           <p style={{ margin: 0, color: "var(--muted)", lineHeight: 1.85, fontSize: 16, maxWidth: "58ch" }}>{t("recurringLead")}</p>
         </div>
         <Link
@@ -144,10 +144,10 @@ export function AccountSection({ signedIn }: { signedIn: boolean }) {
   const signInHref = `/auth/signin?callbackUrl=${encodeURIComponent(accountHref)}`;
 
   return (
-    <section id="account" style={{ position: "relative", zIndex: 1, background: "linear-gradient(to left, rgba(247,242,234,.50), rgba(247,242,234,.76))", padding: "56px 0", borderTop: "1px solid var(--border)", overflow: "hidden" }}>
+    <section id="account" style={{ position: "relative", zIndex: 1, background: "linear-gradient(to left, rgba(247,242,234,.50), rgba(247,242,234,.76))", padding: "48px 0", borderTop: "1px solid var(--border)", overflow: "hidden" }}>
       <div id="account-grid" style={{ position: "relative", maxWidth: 1240, margin: "0 auto", padding: "0 24px", display: "grid", gridTemplateColumns: "minmax(0,.82fr) minmax(0,1.18fr)", gap: 44, alignItems: "center" }}>
         <div style={{ display: "grid", gap: 14, justifyItems: "start" }}>
-          <h2 style={{ margin: 0, fontSize: "clamp(24px,2.4vw,34px)", lineHeight: 1.25, fontWeight: 900, letterSpacing: "-.01em" }}>{t("accountTitle")}</h2>
+          <h2 style={{ margin: 0, fontSize: "clamp(25px,2.5vw,34px)", lineHeight: 1.2, fontWeight: 900, letterSpacing: "-.01em" }}>{t("accountTitle")}</h2>
           <p style={{ margin: 0, color: "var(--muted)", lineHeight: 1.85, fontSize: 15.5, maxWidth: "46ch" }}>{t("accountLead")}</p>
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 6 }}>
             {/* A signed-in donor is sent straight to their account; the pair of

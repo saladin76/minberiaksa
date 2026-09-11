@@ -2,10 +2,10 @@
 
 import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
-import { Button } from "@/components/minbar/ds";
 import Rail from "@/components/minbar/Rail";
 import ProjectDonateCard from "@/components/minbar/ProjectDonateCard";
 import { miaPath } from "@/lib/minbar/routes";
+import ViewAllLink from "./ViewAllLink";
 import { useMinbarMoney } from "@/hooks/useMinbarMoney";
 import type { MinbarProject } from "@/lib/minbar/projects";
 
@@ -29,13 +29,11 @@ export function PathSection() {
   }));
 
   return (
-    <section id="path" style={{ position: "relative", zIndex: 1, background: "linear-gradient(to left, rgba(247,242,234,.11), rgba(247,242,234,.36))", padding: "56px 0", overflow: "hidden" }}>
+    <section id="path" style={{ position: "relative", zIndex: 1, background: "linear-gradient(to left, rgba(247,242,234,.11), rgba(247,242,234,.36))", padding: "48px 0", overflow: "hidden" }}>
       <div style={{ position: "relative", maxWidth: 1240, margin: "0 auto", padding: "0 24px" }}>
-        <div style={{ display: "flex", alignItems: "end", justifyContent: "space-between", gap: 20, flexWrap: "wrap", marginBottom: 28 }}>
-          <h2 style={{ margin: 0, fontSize: "clamp(28px,3vw,42px)", lineHeight: 1.2, fontWeight: 900, letterSpacing: "-.01em" }}>{t("howItWorksTitle")}</h2>
-          <Button variant="light" href={miaPath("reports", locale)} style={{ whiteSpace: "nowrap" }}>
-            {t("viewReports")}
-          </Button>
+        <div style={{ display: "flex", alignItems: "end", justifyContent: "space-between", gap: 20, flexWrap: "wrap", marginBottom: 22 }}>
+          <h2 style={{ margin: 0, fontSize: "clamp(25px,2.5vw,34px)", lineHeight: 1.2, fontWeight: 900, letterSpacing: "-.01em" }}>{t("howItWorksTitle")}</h2>
+          <ViewAllLink href={miaPath("reports", locale)}>{t("viewReports")}</ViewAllLink>
         </div>
         <div id="path-steps" style={{ display: "grid", gridTemplateColumns: "repeat(5,minmax(0,1fr))" }}>
           {steps.map((step, i) => (
@@ -95,13 +93,11 @@ export function ImpactSection() {
   ];
 
   return (
-    <section id="stats" style={{ position: "relative", zIndex: 1, background: "linear-gradient(to left, rgba(247,242,234,.16), rgba(247,242,234,.46))", padding: "56px 0", borderTop: "1px solid var(--border)", overflow: "hidden" }}>
+    <section id="stats" style={{ position: "relative", zIndex: 1, background: "linear-gradient(to left, rgba(247,242,234,.16), rgba(247,242,234,.46))", padding: "48px 0", borderTop: "1px solid var(--border)", overflow: "hidden" }}>
       <div style={{ position: "relative", maxWidth: 1240, margin: "0 auto", padding: "0 24px" }}>
-        <div style={{ display: "flex", alignItems: "end", justifyContent: "space-between", gap: 24, flexWrap: "wrap", marginBottom: 30 }}>
-          <h2 style={{ margin: 0, fontSize: "clamp(28px,3vw,42px)", lineHeight: 1.2, fontWeight: 900, letterSpacing: "-.01em" }}>{t("ourImpact")}</h2>
-          <Button variant="light" href={miaPath("reports", locale)} style={{ whiteSpace: "nowrap" }}>
-            {t("reportsPage")}
-          </Button>
+        <div style={{ display: "flex", alignItems: "end", justifyContent: "space-between", gap: 24, flexWrap: "wrap", marginBottom: 22 }}>
+          <h2 style={{ margin: 0, fontSize: "clamp(25px,2.5vw,34px)", lineHeight: 1.2, fontWeight: 900, letterSpacing: "-.01em" }}>{t("ourImpact")}</h2>
+          <ViewAllLink href={miaPath("reports", locale)}>{t("reportsPage")}</ViewAllLink>
         </div>
 
         <div id="impact-metrics" style={{ display: "grid", gridTemplateColumns: "repeat(3,minmax(0,1fr))", borderTop: "1px solid var(--border)" }}>
@@ -157,20 +153,23 @@ export function ImpactSection() {
  * Live from the campaigns CMS. The section is omitted entirely when there is
  * nothing to show rather than rendering an empty rail. */
 export function UrgentProjectsSection({ projects }: { projects: MinbarProject[] }) {
+  const locale = useLocale();
   const t = useTranslations("homepage");
   const tCommon = useTranslations("common");
+  const tProjects = useTranslations("projects");
 
   if (!projects.length) return null;
 
   return (
-    <section id="urgent" style={{ position: "relative", zIndex: 1, background: "linear-gradient(to left, rgba(247,242,234,.20), rgba(247,242,234,.50))", padding: "56px 0 0", overflow: "hidden" }}>
+    <section id="urgent" style={{ position: "relative", zIndex: 1, background: "linear-gradient(to left, rgba(247,242,234,.20), rgba(247,242,234,.50))", borderBottom: "1px solid var(--border)", padding: "44px 0 36px", overflow: "hidden" }}>
       <div style={{ position: "relative", maxWidth: 1240, margin: "0 auto", padding: "0 24px" }}>
         <Rail
           id="urgent-rail"
           step={348}
           prevLabel={tCommon("prev")}
           nextLabel={tCommon("next")}
-          heading={<h2 style={{ margin: 0, fontSize: "clamp(28px,3vw,42px)", lineHeight: 1.2, fontWeight: 900, letterSpacing: "-.01em" }}>{t("urgentProjects")}</h2>}
+          heading={<h2 style={{ margin: 0, fontSize: "clamp(25px,2.5vw,34px)", lineHeight: 1.2, fontWeight: 900, letterSpacing: "-.01em" }}>{t("urgentProjects")}</h2>}
+          action={<ViewAllLink href={miaPath("projects", locale)}>{tProjects("allProjects")}</ViewAllLink>}
         >
           {projects.map((project) => (
             <ProjectDonateCard key={project.slug} project={project} width={340} />
@@ -221,7 +220,7 @@ export function RegionCards({ images }: { images: { quds: string; aqsa: string; 
   ];
 
   return (
-    <section style={{ position: "relative", zIndex: 1, background: "linear-gradient(to left, rgba(247,242,234,.36), rgba(247,242,234,.64))", padding: "56px 0 0" }}>
+    <section style={{ position: "relative", zIndex: 1, background: "linear-gradient(to left, rgba(247,242,234,.36), rgba(247,242,234,.64))", padding: "48px 0 0" }}>
       <div id="regions" style={{ maxWidth: 1240, margin: "0 auto", padding: "0 24px", display: "grid", gridTemplateColumns: "repeat(3,minmax(0,1fr))", gap: 18 }}>
         {cards.map((card) => (
           <Link key={card.title} href={card.href} style={{ position: "relative", display: "block", minHeight: 260, overflow: "hidden", background: "var(--deep)" }}>

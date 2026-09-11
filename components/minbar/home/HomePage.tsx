@@ -67,6 +67,7 @@ export default function HomePage({
 
       <Hero onPlayIntro={video.open} />
       <VerseStrip />
+      <UrgentProjectsSection projects={projects} />
       <QuickDonateBar projects={projects} />
       <EventsSection />
       <ReelsSection onPlay={video.open} endorsements={content.endorsements} achievements={content.achievements} />
@@ -76,7 +77,6 @@ export default function HomePage({
       <ImpactSection />
       <TravelBanner />
       <IbadanBanner />
-      <UrgentProjectsSection projects={projects} />
       <ZakatBanner />
       <WaqfSection />
       <RecurringSection />

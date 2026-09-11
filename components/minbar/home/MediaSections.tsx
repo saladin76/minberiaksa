@@ -8,6 +8,7 @@ import { youtubeEmbed, youtubeThumb } from "@/lib/minbar/content/media";
 import { CONFERENCE_2_EMBED, CONFERENCE_3_EMBED, khatibEmbed } from "@/lib/minbar/content/catalog";
 import type { CmsCourse, CmsPlaylist, CmsVideo } from "@/lib/minbar/cms";
 import { ArrowGlyph } from "./TopSections";
+import ViewAllLink from "./ViewAllLink";
 
 /**
  * Homepage media sections — events, the endorsement and achievement reels, the
@@ -34,10 +35,10 @@ export function EventsSection() {
   ];
 
   return (
-    <section id="events" style={{ position: "relative", zIndex: 1, background: "var(--ivory)", padding: "56px 0", borderTop: "1px solid var(--border)", overflow: "hidden" }}>
+    <section id="events" style={{ position: "relative", zIndex: 1, background: "var(--ivory)", padding: "48px 0", borderTop: "1px solid var(--border)", overflow: "hidden" }}>
       <div style={{ position: "relative", maxWidth: 1240, margin: "0 auto", padding: "0 24px", display: "grid", gap: 22 }}>
         <div id="events-row" style={{ display: "flex", alignItems: "center", gap: 24 }}>
-          <h2 style={{ margin: 0, fontSize: "clamp(22px,2.2vw,30px)", lineHeight: 1.2, fontWeight: 900, letterSpacing: "-.01em", whiteSpace: "nowrap" }}>
+          <h2 style={{ margin: 0, fontSize: "clamp(25px,2.5vw,34px)", lineHeight: 1.2, fontWeight: 900, letterSpacing: "-.01em", whiteSpace: "nowrap" }}>
             {t("ourActivities")}
           </h2>
         </div>
@@ -103,13 +104,8 @@ function ReelRail({
       step={472}
       prevLabel={tCommon("prev")}
       nextLabel={tCommon("next")}
-      heading={<h2 style={{ margin: 0, fontSize: "clamp(28px,3vw,42px)", lineHeight: 1.2, fontWeight: 900, letterSpacing: "-.01em" }}>{title}</h2>}
-      action={
-        <Link href={viewAllHref} className="mia-pill-link" style={viewAllStyle}>
-          {viewAllLabel}
-          <ArrowGlyph size={14} />
-        </Link>
-      }
+      heading={<h2 style={{ margin: 0, fontSize: "clamp(25px,2.5vw,34px)", lineHeight: 1.2, fontWeight: 900, letterSpacing: "-.01em" }}>{title}</h2>}
+      action={<ViewAllLink href={viewAllHref}>{viewAllLabel}</ViewAllLink>}
     >
       {videos.map((video) => {
         const label = video.title;
@@ -203,7 +199,7 @@ export function ReelsSection({
   if (endorsements.length === 0 && achievements.length === 0) return null;
 
   return (
-    <section style={{ position: "relative", zIndex: 1, background: "linear-gradient(to left, rgba(247,242,234,.14), rgba(247,242,234,.42))", borderTop: "1px solid var(--border)", padding: "56px 0", overflow: "hidden" }}>
+    <section style={{ position: "relative", zIndex: 1, background: "linear-gradient(to left, rgba(247,242,234,.14), rgba(247,242,234,.42))", borderTop: "1px solid var(--border)", padding: "48px 0", overflow: "hidden" }}>
       <div style={{ position: "relative", maxWidth: 1240, margin: "0 auto", padding: "0 24px", display: "grid", gridTemplateColumns: "minmax(0,1fr)", gap: 46 }}>
         <ReelRail
           id="reels-a"
@@ -240,14 +236,11 @@ export function ProgramsRail({ playlists }: { playlists: CmsPlaylist[] }) {
   if (playlists.length === 0) return null;
 
   return (
-    <section id="programs" style={{ position: "relative", zIndex: 1, background: "var(--ivory)", padding: "0 0 56px" }}>
+    <section id="programs" style={{ position: "relative", zIndex: 1, background: "var(--ivory)", padding: "0 0 48px" }}>
       <div style={{ maxWidth: 1240, margin: "0 auto", padding: "0 24px", display: "grid", gap: 18 }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16 }}>
-          <h2 style={{ margin: 0, fontSize: "clamp(22px,2.2vw,30px)", lineHeight: 1.2, fontWeight: 900, letterSpacing: "-.01em" }}>{t("programsTitle")}</h2>
-          <Link href={miaPath("programs", locale)} style={inlineLink}>
-            {t("programsAll")}
-            <ArrowGlyph />
-          </Link>
+          <h2 style={{ margin: 0, fontSize: "clamp(25px,2.5vw,34px)", lineHeight: 1.2, fontWeight: 900, letterSpacing: "-.01em" }}>{t("programsTitle")}</h2>
+          <ViewAllLink href={miaPath("programs", locale)}>{t("programsAll")}</ViewAllLink>
         </div>
         <div id="programs-rail" className="mia-rail" style={railStyle}>
           {playlists.map((program) => (
@@ -292,14 +285,11 @@ export function CoursesRail({ onPlay, courses }: { onPlay: (embed: string) => vo
   if (courses.length === 0) return null;
 
   return (
-    <section id="courses" style={{ position: "relative", zIndex: 1, background: "var(--ivory)", padding: "0 0 56px" }}>
+    <section id="courses" style={{ position: "relative", zIndex: 1, background: "var(--ivory)", padding: "0 0 48px" }}>
       <div style={{ maxWidth: 1240, margin: "0 auto", padding: "0 24px", display: "grid", gap: 18 }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16 }}>
-          <h2 style={{ margin: 0, fontSize: "clamp(22px,2.2vw,30px)", lineHeight: 1.2, fontWeight: 900, letterSpacing: "-.01em" }}>{t("coursesTitle")}</h2>
-          <Link href={miaPath("courses", locale)} style={inlineLink}>
-            {t("coursesAll")}
-            <ArrowGlyph />
-          </Link>
+          <h2 style={{ margin: 0, fontSize: "clamp(25px,2.5vw,34px)", lineHeight: 1.2, fontWeight: 900, letterSpacing: "-.01em" }}>{t("coursesTitle")}</h2>
+          <ViewAllLink href={miaPath("courses", locale)}>{t("coursesAll")}</ViewAllLink>
         </div>
         <div id="courses-rail" className="mia-rail" style={railStyle}>
           {courses.map((course) => {
@@ -365,29 +355,3 @@ const railStyle: React.CSSProperties = {
   WebkitOverflowScrolling: "touch",
 };
 
-const inlineLink: React.CSSProperties = {
-  display: "inline-flex",
-  alignItems: "center",
-  gap: 8,
-  color: "var(--red)",
-  fontWeight: 800,
-  fontSize: 14,
-  whiteSpace: "nowrap",
-  textDecoration: "none",
-};
-
-const viewAllStyle: React.CSSProperties = {
-  display: "inline-flex",
-  alignItems: "center",
-  gap: 7,
-  height: 40,
-  padding: "0 16px",
-  borderRadius: 999,
-  border: "1px solid rgba(211,154,39,.55)",
-  background: "#fff",
-  color: "var(--deep)",
-  fontWeight: 800,
-  fontSize: 13,
-  whiteSpace: "nowrap",
-  transition: "all .18s ease",
-};

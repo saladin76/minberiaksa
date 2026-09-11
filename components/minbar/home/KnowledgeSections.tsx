@@ -7,6 +7,7 @@ import { miaPath } from "@/lib/minbar/routes";
 import type { MinbarArticle } from "@/lib/minbar/posts";
 import type { CmsFaq } from "@/lib/minbar/cms";
 import { ArrowGlyph } from "./TopSections";
+import ViewAllLink from "./ViewAllLink";
 
 /**
  * The knowledge end of the homepage — articles, news and the FAQ. Ported from
@@ -27,14 +28,11 @@ export function ArticlesSection({ articles }: { articles: MinbarArticle[] }) {
   if (articles.length === 0) return null;
 
   return (
-    <section id="blog" style={{ position: "relative", zIndex: 1, background: "linear-gradient(to left, rgba(247,242,234,.52), rgba(247,242,234,.78))", padding: "56px 0" }}>
+    <section id="blog" style={{ position: "relative", zIndex: 1, background: "linear-gradient(to left, rgba(247,242,234,.52), rgba(247,242,234,.78))", padding: "48px 0" }}>
       <div style={{ maxWidth: 1240, margin: "0 auto", padding: "0 24px" }}>
-        <div style={{ display: "flex", alignItems: "end", justifyContent: "space-between", gap: 16, flexWrap: "wrap", marginBottom: 30 }}>
-          <h2 style={{ margin: 0, fontSize: "clamp(28px,3vw,42px)", lineHeight: 1.2, fontWeight: 900, letterSpacing: "-.01em" }}>{t("blogTitle")}</h2>
-          <Link href={miaPath("blog", locale)} style={{ color: "var(--red)", fontWeight: 800, whiteSpace: "nowrap", display: "inline-flex", alignItems: "center", gap: 6 }}>
-            {t("allArticles")}
-            <ArrowGlyph />
-          </Link>
+        <div style={{ display: "flex", alignItems: "end", justifyContent: "space-between", gap: 16, flexWrap: "wrap", marginBottom: 22 }}>
+          <h2 style={{ margin: 0, fontSize: "clamp(25px,2.5vw,34px)", lineHeight: 1.2, fontWeight: 900, letterSpacing: "-.01em" }}>{t("blogTitle")}</h2>
+          <ViewAllLink href={miaPath("blog", locale)}>{t("allArticles")}</ViewAllLink>
         </div>
         <div id="articles-grid" style={{ display: "grid", gridTemplateColumns: "repeat(4,minmax(0,1fr))", gap: 18 }}>
           {articles.map((article) => (
@@ -99,14 +97,11 @@ export function NewsSection({ news }: { news: MinbarArticle[] }) {
   const articleHref = (a: MinbarArticle) => `${miaPath("blog", locale)}/${encodeURIComponent(a.slug)}`;
 
   return (
-    <section id="news" style={{ position: "relative", zIndex: 1, background: "linear-gradient(to left, rgba(247,242,234,.56), rgba(247,242,234,.80))", padding: "0 0 56px" }}>
+    <section id="news" style={{ position: "relative", zIndex: 1, background: "linear-gradient(to left, rgba(247,242,234,.56), rgba(247,242,234,.80))", padding: "0 0 48px" }}>
       <div style={{ maxWidth: 1240, margin: "0 auto", padding: "0 24px" }}>
-        <div style={{ display: "flex", alignItems: "end", justifyContent: "space-between", gap: 16, flexWrap: "wrap", marginBottom: 30 }}>
-          <h2 style={{ margin: 0, fontSize: "clamp(28px,3vw,42px)", lineHeight: 1.2, fontWeight: 900, letterSpacing: "-.01em" }}>{tNav("news")}</h2>
-          <Link href={miaPath("news", locale)} style={{ color: "var(--red)", fontWeight: 800, whiteSpace: "nowrap", display: "inline-flex", alignItems: "center", gap: 6 }}>
-            {t("allNews")}
-            <ArrowGlyph />
-          </Link>
+        <div style={{ display: "flex", alignItems: "end", justifyContent: "space-between", gap: 16, flexWrap: "wrap", marginBottom: 22 }}>
+          <h2 style={{ margin: 0, fontSize: "clamp(25px,2.5vw,34px)", lineHeight: 1.2, fontWeight: 900, letterSpacing: "-.01em" }}>{tNav("news")}</h2>
+          <ViewAllLink href={miaPath("news", locale)}>{t("allNews")}</ViewAllLink>
         </div>
         <div id="news-grid" style={{ display: "grid", gridTemplateColumns: rest.length ? "minmax(0,1.4fr) minmax(0,1fr)" : "minmax(0,1fr)", gap: 22, alignItems: "start" }}>
           <Link href={articleHref(lead)} style={{ position: "relative", display: "block", minHeight: 340, borderRadius: 14, overflow: "hidden", background: "var(--deep)" }}>
@@ -203,10 +198,10 @@ export function FaqSection({ faqs, whatsappNumber = "905398436050" }: { faqs: Cm
   if (faqs.length === 0) return null;
 
   return (
-    <section id="faq" style={{ position: "relative", zIndex: 1, background: "linear-gradient(to left, rgba(247,242,234,.60), rgba(247,242,234,.84))", padding: "56px 0", borderTop: "1px solid var(--border)", overflow: "hidden" }}>
+    <section id="faq" style={{ position: "relative", zIndex: 1, background: "linear-gradient(to left, rgba(247,242,234,.60), rgba(247,242,234,.84))", padding: "48px 0", borderTop: "1px solid var(--border)", overflow: "hidden" }}>
       <div id="faq-grid" style={{ position: "relative", maxWidth: 1240, margin: "0 auto", padding: "0 24px", display: "grid", gridTemplateColumns: "minmax(0,.34fr) minmax(0,1fr)", gap: 44, alignItems: "start" }}>
         <div style={{ display: "grid", gap: 18, justifyItems: "start", position: "sticky", top: 90 }}>
-          <h2 style={{ margin: 0, fontSize: "clamp(28px,3vw,42px)", lineHeight: 1.2, fontWeight: 900, letterSpacing: "-.01em" }}>{t("faqTitle")}</h2>
+          <h2 style={{ margin: 0, fontSize: "clamp(25px,2.5vw,34px)", lineHeight: 1.2, fontWeight: 900, letterSpacing: "-.01em" }}>{t("faqTitle")}</h2>
           <div id="faq-chips" style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             {["all", ...categories].map((id) => (
               <button
