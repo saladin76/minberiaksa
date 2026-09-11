@@ -75,7 +75,6 @@ export const DASHBOARD_NAV_GROUPS: DashboardNavGroup[] = [
       { key: "siteContent", title: "الكتيبات", href: "/dashboard/booklets", icon: "bookOpen", keywords: ["booklets", "كتيبات", "pdf", "library"] },
       { key: "siteContent", title: "الأسئلة الشائعة", href: "/dashboard/faqs", icon: "helpCircle", keywords: ["faq", "أسئلة", "questions", "help"] },
       { key: "siteContent", title: "الحسابات البنكية", href: "/dashboard/bank-accounts", icon: "landmark", keywords: ["bank", "accounts", "iban", "swift", "حسابات", "بنك"] },
-      { key: "siteContent", title: "إعدادات الموقع", href: "/dashboard/site-settings", icon: "settings", keywords: ["settings", "contact", "social", "whatsapp", "إعدادات", "تواصل"] },
     ],
   },
   {

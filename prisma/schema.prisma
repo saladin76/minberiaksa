@@ -2114,18 +2114,3 @@ model FaqTranslation {
   @@unique([faqId, locale])
 }
 
-/// One editable setting per key — contact details, social links, the WhatsApp
-/// number. `value` is Json so a setting can be a string, a list or an object
-/// without a schema change each time; `group` is what the dashboard renders as
-/// a section heading.
-model SiteSetting {
-  id    String  @id @default(auto()) @map("_id") @db.ObjectId
-  key   String  @unique
-  value Json
-  group String?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([group])
-}

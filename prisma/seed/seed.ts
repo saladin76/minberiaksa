@@ -59,112 +59,122 @@ const publicPath = (src?: string | null): string | undefined => {
 async function main() {
   console.log("Seeding:", seed._meta.counts, extra._meta.counts);
 
-  /* ── 1) Category (مناطق + أنواع تبرع) ───────────────────────── */
-  const categoryIdByKey = new Map<string, string>();
-  for (const c of seed.categories) {
-    const row = await prisma.category.upsert({
-      where: { name: c.name },
-      update: { slug: c.slug, order: c.order, isActive: c.isActive },
-      create: { name: c.name, slug: c.slug, order: c.order, isActive: c.isActive },
-    });
-    categoryIdByKey.set(c.externalKey, row.id);
-    for (const t of c.translations as Tr[]) {
-      await prisma.categoryTranslation.upsert({
-        where: { categoryId_locale: { categoryId: row.id, locale: t.locale } },
-        update: { name: t.name!, slug: t.slug },
-        create: { categoryId: row.id, locale: t.locale, name: t.name!, slug: t.slug },
+  /* SEED_ONLY=extra skips the site content (categories, campaigns, posts) and
+     seeds only seed-data-extra.json. The first four steps are ~7,000 upserts
+     against Atlas and take ten minutes; when they are already in place and only
+     the extra models are missing, re-walking them is where a run goes to die. */
+  const onlyExtra = process.env.SEED_ONLY === "extra";
+  if (onlyExtra) console.log("SEED_ONLY=extra — skipping categories, campaigns, post categories, posts");
+
+  if (!onlyExtra) {
+    /* ── 1) Category (مناطق + أنواع تبرع) ───────────────────────── */
+    const categoryIdByKey = new Map<string, string>();
+    for (const c of seed.categories) {
+      const row = await prisma.category.upsert({
+        where: { name: c.name },
+        update: { slug: c.slug, order: c.order, isActive: c.isActive },
+        create: { name: c.name, slug: c.slug, order: c.order, isActive: c.isActive },
       });
+      categoryIdByKey.set(c.externalKey, row.id);
+      for (const t of c.translations as Tr[]) {
+        await prisma.categoryTranslation.upsert({
+          where: { categoryId_locale: { categoryId: row.id, locale: t.locale } },
+          update: { name: t.name!, slug: t.slug },
+          create: { categoryId: row.id, locale: t.locale, name: t.name!, slug: t.slug },
+        });
+      }
     }
-  }
-  console.log(`✓ categories: ${categoryIdByKey.size}`);
+    console.log(`✓ categories: ${categoryIdByKey.size}`);
 
-  /* ── 2) Campaign (المشاريع) ─────────────────────────────────── */
-  let campaignCount = 0;
-  for (const p of seed.campaigns) {
-    const categoryIds = p.categoryKeys
-      .map((k: string) => categoryIdByKey.get(k))
-      .filter((id): id is string => Boolean(id));
+    /* ── 2) Campaign (المشاريع) ─────────────────────────────────── */
+    let campaignCount = 0;
+    for (const p of seed.campaigns) {
+      const categoryIds = p.categoryKeys
+        .map((k: string) => categoryIdByKey.get(k))
+        .filter((id): id is string => Boolean(id));
 
-    const base = {
-      title: p.title,
-      description: p.description,
-      targetAmount: p.targetAmount,
-      currentAmount: p.currentAmount,
-      baselineAmount: p.baselineAmount,
-      goalType: p.goalType,
-      fundraisingMode: p.fundraisingMode,
-      sharePriceUSD: p.sharePriceUSD ?? undefined,
-      images: (p.images as string[]).map(publicPath).filter((v): v is string => Boolean(v)),
-      videoUrl: p.videoUrl ?? undefined,
-      isActive: p.isActive,
-      isDeleted: false,
-      priority: p.priority,
-      categories: { set: categoryIds.map((id) => ({ id })) },
-    };
+      const base = {
+        title: p.title,
+        description: p.description,
+        targetAmount: p.targetAmount,
+        currentAmount: p.currentAmount,
+        baselineAmount: p.baselineAmount,
+        goalType: p.goalType,
+        fundraisingMode: p.fundraisingMode,
+        sharePriceUSD: p.sharePriceUSD ?? undefined,
+        images: (p.images as string[]).map(publicPath).filter((v): v is string => Boolean(v)),
+        videoUrl: p.videoUrl ?? undefined,
+        isActive: p.isActive,
+        isDeleted: false,
+        priority: p.priority,
+        categories: { set: categoryIds.map((id) => ({ id })) },
+      };
 
-    const row = await prisma.campaign.upsert({
-      where: { slug: p.slug },
-      update: base,
-      create: { ...base, slug: p.slug, categories: { connect: categoryIds.map((id) => ({ id })) } },
-    });
-
-    for (const t of p.translations as Tr[]) {
-      await prisma.campaignTranslation.upsert({
-        where: { campaignId_locale: { campaignId: row.id, locale: t.locale } },
-        update: { title: t.title!, description: t.description!, slug: t.slug },
-        create: { campaignId: row.id, locale: t.locale, title: t.title!, description: t.description!, slug: t.slug },
+      const row = await prisma.campaign.upsert({
+        where: { slug: p.slug },
+        update: base,
+        create: { ...base, slug: p.slug, categories: { connect: categoryIds.map((id) => ({ id })) } },
       });
-    }
-    campaignCount++;
-  }
-  console.log(`✓ campaigns: ${campaignCount}`);
 
-  /* ── 3) PostCategory (تصنيفات المدونة) ──────────────────────── */
-  const postCatIdByKey = new Map<string, string>();
-  for (const c of seed.postCategories) {
-    const row = await prisma.postCategory.upsert({
-      where: { name: c.name },
-      update: { slug: c.slug },
-      create: { name: c.name, slug: c.slug },
-    });
-    postCatIdByKey.set(c.externalKey, row.id);
-    for (const t of c.translations as Tr[]) {
-      await prisma.postCategoryTranslation.upsert({
-        where: { categoryId_locale: { categoryId: row.id, locale: t.locale } },
-        update: { name: t.name! },
-        create: { categoryId: row.id, locale: t.locale, name: t.name! },
-      });
+      for (const t of p.translations as Tr[]) {
+        await prisma.campaignTranslation.upsert({
+          where: { campaignId_locale: { campaignId: row.id, locale: t.locale } },
+          update: { title: t.title!, description: t.description!, slug: t.slug },
+          create: { campaignId: row.id, locale: t.locale, title: t.title!, description: t.description!, slug: t.slug },
+        });
+      }
+      campaignCount++;
     }
-  }
-  console.log(`✓ postCategories: ${postCatIdByKey.size}`);
+    console.log(`✓ campaigns: ${campaignCount}`);
 
-  /* ── 4) Post (المقالات) ─────────────────────────────────────── */
-  let postCount = 0;
-  for (const a of seed.posts) {
-    const categoryId = postCatIdByKey.get(a.categoryKey);
-    const base = {
-      title: a.title,
-      description: a.description,
-      content: a.content,
-      image: publicPath(a.image),
-      published: a.published,
-      categoryId,
-    };
-    const row = await prisma.post.upsert({
-      where: { slug: a.slug },
-      update: base,
-      create: { ...base, slug: a.slug },
-    });
-    for (const t of a.translations as Tr[]) {
-      await prisma.postTranslation.upsert({
-        where: { postId_locale: { postId: row.id, locale: t.locale } },
-        update: { title: t.title, description: t.description, slug: t.slug },
-        create: { postId: row.id, locale: t.locale, title: t.title, description: t.description, slug: t.slug },
+    /* ── 3) PostCategory (تصنيفات المدونة) ──────────────────────── */
+    const postCatIdByKey = new Map<string, string>();
+    for (const c of seed.postCategories) {
+      const row = await prisma.postCategory.upsert({
+        where: { name: c.name },
+        update: { slug: c.slug },
+        create: { name: c.name, slug: c.slug },
       });
+      postCatIdByKey.set(c.externalKey, row.id);
+      for (const t of c.translations as Tr[]) {
+        await prisma.postCategoryTranslation.upsert({
+          where: { categoryId_locale: { categoryId: row.id, locale: t.locale } },
+          update: { name: t.name! },
+          create: { categoryId: row.id, locale: t.locale, name: t.name! },
+        });
+      }
     }
-    postCount++;
-  }
-  console.log(`✓ posts: ${postCount}`);
+    console.log(`✓ postCategories: ${postCatIdByKey.size}`);
+
+    /* ── 4) Post (المقالات) ─────────────────────────────────────── */
+    let postCount = 0;
+    for (const a of seed.posts) {
+      const categoryId = postCatIdByKey.get(a.categoryKey);
+      const base = {
+        title: a.title,
+        description: a.description,
+        content: a.content,
+        image: publicPath(a.image),
+        published: a.published,
+        categoryId,
+      };
+      const row = await prisma.post.upsert({
+        where: { slug: a.slug },
+        update: base,
+        create: { ...base, slug: a.slug },
+      });
+      for (const t of a.translations as Tr[]) {
+        await prisma.postTranslation.upsert({
+          where: { postId_locale: { postId: row.id, locale: t.locale } },
+          update: { title: t.title, description: t.description, slug: t.slug },
+          create: { postId: row.id, locale: t.locale, title: t.title, description: t.description, slug: t.slug },
+        });
+      }
+      postCount++;
+    }
+    console.log(`✓ posts: ${postCount}`);
+
+  } // !onlyExtra
 
   /* ── 5) Story (شريط القصص) ──────────────────────────────────
    * `startsAt`/`endsAt` are carried through as they come — null means the story
@@ -347,7 +357,7 @@ async function main() {
   }
   console.log(`✓ videos: ${videoCount}`);
 
-  /* Report · Booklet · BankAccount · UrgentBanner · Faq · SiteSetting are
+  /* Report · Booklet · BankAccount · UrgentBanner · Faq are
      deliberately NOT seeded. The first two need the official PDF URLs; a
      BankAccount holds live IBANs and a placeholder there sends a donor's
      transfer nowhere; the rest are editorial and managed from the dashboard. */
