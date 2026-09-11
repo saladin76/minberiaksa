@@ -55,22 +55,27 @@ export const DASHBOARD_NAV_GROUPS: DashboardNavGroup[] = [
       // Built, API-backed, and previously unreachable. Slides and ticker both control what the
       // PUBLIC site renders, so leaving them unlinked meant no one could edit live UI.
       { key: "slides", title: "الشرائح", href: "/dashboard/slides", icon: "images", keywords: ["slides", "slider", "hero"] },
+      { key: "ticker", title: "شريط التبرعات", href: "/dashboard/ticker", icon: "ticket", keywords: ["ticker", "marquee"] },
+    ],
+  },
+  {
+    // The CMS-backed site content: everything under lib/content that the public pages read.
+    // Its own group rather than ten more rows under "الحملات والمحتوى" — that group already
+    // holds the fundraising entries, and fifteen items under one heading is a list nobody
+    // scans. All ten share the `siteContent` permission, so a staffer either sees the whole
+    // section or none of it.
+    group: "محتوى الموقع",
+    items: [
       { key: "siteContent", title: "شريط القصص", href: "/dashboard/stories", icon: "images", keywords: ["stories", "قصص", "rail", "highlights"] },
+      { key: "siteContent", title: "بانرات الطوارئ", href: "/dashboard/urgent-banners", icon: "alertTriangle", keywords: ["urgent", "banner", "emergency", "طوارئ", "بانر", "عاجل"] },
       { key: "siteContent", title: "الفيديوهات", href: "/dashboard/videos", icon: "video", keywords: ["videos", "فيديو", "achievements", "endorsements", "إنجازات", "تزكيات"] },
+      { key: "siteContent", title: "برامجنا المصورة", href: "/dashboard/playlists", icon: "listVideo", keywords: ["playlists", "programs", "series", "برامج", "سلاسل", "youtube"] },
+      { key: "siteContent", title: "دوراتنا", href: "/dashboard/courses", icon: "graduationCap", keywords: ["courses", "دورات", "training"] },
       { key: "siteContent", title: "التقارير", href: "/dashboard/reports", icon: "fileText", keywords: ["reports", "تقارير", "pdf", "annual"] },
       { key: "siteContent", title: "الكتيبات", href: "/dashboard/booklets", icon: "bookOpen", keywords: ["booklets", "كتيبات", "pdf", "library"] },
       { key: "siteContent", title: "الأسئلة الشائعة", href: "/dashboard/faqs", icon: "helpCircle", keywords: ["faq", "أسئلة", "questions", "help"] },
-
-      { key: "siteContent", title: "برامجنا المصورة", href: "/dashboard/playlists", icon: "listVideo", keywords: ["playlists", "programs", "series", "برامج", "سلاسل", "youtube"] },
-
-      { key: "siteContent", title: "دوراتنا", href: "/dashboard/courses", icon: "graduationCap", keywords: ["courses", "دورات", "training"] },
-
       { key: "siteContent", title: "الحسابات البنكية", href: "/dashboard/bank-accounts", icon: "landmark", keywords: ["bank", "accounts", "iban", "swift", "حسابات", "بنك"] },
-
-      { key: "siteContent", title: "بانرات الطوارئ", href: "/dashboard/urgent-banners", icon: "alertTriangle", keywords: ["urgent", "banner", "emergency", "طوارئ", "بانر", "عاجل"] },
-
       { key: "siteContent", title: "إعدادات الموقع", href: "/dashboard/site-settings", icon: "settings", keywords: ["settings", "contact", "social", "whatsapp", "إعدادات", "تواصل"] },
-      { key: "ticker", title: "شريط التبرعات", href: "/dashboard/ticker", icon: "ticket", keywords: ["ticker", "marquee"] },
     ],
   },
   {
@@ -170,6 +175,9 @@ export const DASHBOARD_PERMISSION_ROWS: {
   // pages are linked in the nav above, they must also be grantable.
   { key: "slides", group: "الحملات والمحتوى", title: "الشرائح" },
   { key: "ticker", group: "الحملات والمحتوى", title: "شريط التبرعات" },
+  // One key for the whole "محتوى الموقع" group. Was enforced by every /api/* content route and
+  // shown in the nav, but absent here — the same P3-2 shape: valid, checked, and ungrantable.
+  { key: "siteContent", group: "محتوى الموقع", title: "محتوى الموقع (قصص، فيديو، تقارير، أسئلة…)" },
   // Group was "التشغيل / التواصل"; التشغيل no longer exists, so these two are plain التواصل.
   { key: "templates", group: "التواصل", title: "قوالب البريد والمحفّزات" },
   // The outbound send log page is gone; `messages` now grants the inbox and the per-channel
