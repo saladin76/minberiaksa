@@ -117,6 +117,7 @@ const PATH_RULES: { prefix: string; key: DashboardPermissionKey }[] = [
   // "/dashboard → revenue" catch-all below, so the guard demanded `revenue` while the sidebar
   // entry and the API both check `siteContent` — a staffer granted the content section was
   // bounced out of each page. Same failure the /dashboard/inbox rule above exists to prevent.
+  { prefix: "/dashboard/super-categories", key: "siteContent" },
   { prefix: "/dashboard/stories", key: "siteContent" },
   { prefix: "/dashboard/videos", key: "siteContent" },
   { prefix: "/dashboard/playlists", key: "siteContent" },

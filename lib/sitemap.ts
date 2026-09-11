@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { SITE_URL, LOCALES } from "@/lib/seo";
+import { slugFor } from "@/lib/minbar/routes";
 
 /**
  * Sharded sitemap.
@@ -64,6 +65,21 @@ function expand(alternates: Record<string, string>, lastModified: Date, changeFr
   return LOCALES.map((locale) => ({ loc: alternates[locale], lastModified, changeFrequency, priority, alternates }));
 }
 
+/**
+ * A super category lives at `/{locale}/{localized projects slug}/{slug}`, so
+ * its alternates are built from the per-locale slug table rather than from one
+ * canonical path — the canonical spelling 301s to the localized one, and a
+ * sitemap that lists redirects wastes the crawl it is asking for.
+ */
+function superCategoryAlternates(slug: string): Record<string, string> {
+  const url = (locale: string) =>
+    `${SITE_URL}/${locale}/${encodeURIComponent(slugFor("projectDetail", locale))}/${encodeURIComponent(slug)}`;
+  const languages: Record<string, string> = {};
+  for (const locale of LOCALES) languages[locale] = url(locale);
+  languages["x-default"] = url("ar");
+  return languages;
+}
+
 /** Shard ids in index order. Groups with no rows contribute no shard. */
 export async function listShardIds(): Promise<string[]> {
   const ids = ["static"];
@@ -90,7 +106,23 @@ export async function listShardIds(): Promise<string[]> {
 export async function buildShard(id: string): Promise<SitemapEntry[] | null> {
   if (id === "static") {
     const now = new Date();
-    return STATIC_PATHS.flatMap((s) => expand(staticAlternates(s.path), now, s.changeFrequency, s.priority));
+    const statics = STATIC_PATHS.flatMap((s) => expand(staticAlternates(s.path), now, s.changeFrequency, s.priority));
+
+    /* Super categories are whole programme pages and there are only a handful,
+       so they ride in the static shard rather than earning one of their own. */
+    let supers: SitemapEntry[] = [];
+    try {
+      const rows = await prisma.superCategory.findMany({
+        where: { isActive: true },
+        select: { slug: true, updatedAt: true },
+        orderBy: { order: "asc" },
+      });
+      supers = rows.flatMap((row) => expand(superCategoryAlternates(row.slug), row.updatedAt, "weekly", 0.85));
+    } catch {
+      // Same reasoning as listShardIds: a database blip must not empty the shard.
+    }
+
+    return [...statics, ...supers];
   }
 
   const match = /^(campaigns|categories|posts)-(\d+)$/.exec(id);

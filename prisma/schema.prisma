@@ -7,7 +7,9 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-/* ===================== AUTH ===================== */
+/**
+ * ===================== AUTH =====================
+ */
 
 model Account {
   id                String  @id @default(auto()) @map("_id") @db.ObjectId
@@ -59,27 +61,29 @@ model OtpCode {
   @@index([email, purpose])
 }
 
-/* ===================== USER ===================== */
+/**
+ * ===================== USER =====================
+ */
 
 model User {
-  id            String   @id @default(auto()) @map("_id") @db.ObjectId
-  name          String?
-  email         String?  @unique
-  emailVerified DateTime?
-  image         String?
-  password      String?
+  id                    String    @id @default(auto()) @map("_id") @db.ObjectId
+  name                  String?
+  email                 String?   @unique
+  emailVerified         DateTime?
+  image                 String?
+  password              String?
   /// @deprecated Prefer countryName + countryCode; kept for legacy receipts / data
-  country       String?
-  countryCode   String?
-  countryName   String?
-  region        String?
-  city          String?
-  phone         String?
-  birthdate              String?
-  gender                 String?
-  profileCompletionSeen  Boolean  @default(false)
-  role          Role     @default(DONOR)
-  preferredLang String? // locale from first donation (ar, en, fr) for emails/SMS
+  country               String?
+  countryCode           String?
+  countryName           String?
+  region                String?
+  city                  String?
+  phone                 String?
+  birthdate             String?
+  gender                String?
+  profileCompletionSeen Boolean   @default(false)
+  role                  Role      @default(DONOR)
+  preferredLang         String? // locale from first donation (ar, en, fr) for emails/SMS
 
   /// Section keys for Role.STAFF — see lib/dashboard/permissions.ts; ignored for ADMIN
   dashboardPermissions String[] @default([])
@@ -87,7 +91,7 @@ model User {
   /// Microsoft Clarity user identifier — set by an admin from the user profile dialog
   /// so the session-replay/heatmap dashboard can be filtered to this donor on demand.
   /// Editable by admins only; never exposed to the donor themselves.
-  clarityId    String?
+  clarityId String?
 
   /// Donor-controlled notification preferences. Both default on; donors can
   /// opt out individually from the profile settings page. Transactional
@@ -95,42 +99,46 @@ model User {
   emailNotifications Boolean @default(true)
   smsNotifications   Boolean @default(true)
 
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  accounts     Account[]
-  sessions     Session[]
-  donations    Donation[]
+  accounts      Account[]
+  sessions      Session[]
+  donations     Donation[]
   subscriptions Subscription[]
-  comments     Comment[]
-  cartItems    CartItem[]
-  messages     Message[]
-  creditCards  CreditCard[]
+  comments      Comment[]
+  cartItems     CartItem[]
+  messages      Message[]
+  creditCards   CreditCard[]
 }
 
-/* ===================== CREDIT CARDS ===================== */
+/**
+ * ===================== CREDIT CARDS =====================
+ */
 
 model CreditCard {
-  id             String   @id @default(auto()) @map("_id") @db.ObjectId
-  userId         String   @db.ObjectId
-  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id     String @id @default(auto()) @map("_id") @db.ObjectId
+  userId String @db.ObjectId
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  cardNumber     String   // AES-256 encrypted full card number
-  cardType       String   // "visa" | "mastercard" | "amex" | "troy" | "unknown"
-  expiryDate     String   // MM/YY stored as-is
-  cvc            String   // bcrypt-hashed
+  cardNumber     String // AES-256 encrypted full card number
+  cardType       String // "visa" | "mastercard" | "amex" | "troy" | "unknown"
+  expiryDate     String // MM/YY stored as-is
+  cvc            String // bcrypt-hashed
   cardholderName String?
 
-  isDefault      Boolean  @default(false)
-  nickname       String?
+  isDefault Boolean @default(false)
+  nickname  String?
 
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([userId])
 }
 
-/* ===================== AUDIT LOG (dashboard activity) ===================== */
+/**
+ * ===================== AUDIT LOG (dashboard activity) =====================
+ */
 
 model AuditLog {
   id         String   @id @default(auto()) @map("_id") @db.ObjectId
@@ -148,32 +156,34 @@ model AuditLog {
   stream     String
 }
 
-/* ===================== CONTACT MESSAGES ===================== */
+/**
+ * ===================== CONTACT MESSAGES =====================
+ */
 
 model Message {
-  id        String   @id @default(auto()) @map("_id") @db.ObjectId
-  subject   MessageSubject? @default(GENERAL)
-  body      String   @db.String
-  locale    String   // ar, en, fr - language when sent
-  userId    String?  @db.ObjectId // optional: guest can send without account
-  guestName String?
-  guestEmail String?
+  id           String          @id @default(auto()) @map("_id") @db.ObjectId
+  subject      MessageSubject? @default(GENERAL)
+  body         String          @db.String
+  locale       String // ar, en, fr - language when sent
+  userId       String?         @db.ObjectId // optional: guest can send without account
+  guestName    String?
+  guestEmail   String?
   /// The number the sender asked to be reached on FOR THIS MESSAGE. Unlike guestName/guestEmail
   /// it is kept for signed-in senders too — a registered donor may want the reply on a different
   /// number than the one on their profile. Before this column existed the contact form smuggled
   /// it into `body` as a trailing "Phone: …" line, which the inbox still parses for old rows.
   contactPhone String?
-  createdAt DateTime @default(now())
+  createdAt    DateTime        @default(now())
 
   // Inbox triage state. All of these are null on arrival: unread and unanswered.
   /// Set the first time an admin opens the message in /dashboard/inbox.
-  readAt     DateTime?
+  readAt        DateTime?
   /// Set when an admin actually answers — or marks it answered by hand.
-  repliedAt  DateTime?
-  repliedVia MessageReplyChannel?
+  repliedAt     DateTime?
+  repliedVia    MessageReplyChannel?
   /// Who answered. Plain scalars, not a relation: the inbox only ever displays them, and a
   /// relation here would put a back-reference on User for something never queried from that side.
-  repliedById   String? @db.ObjectId
+  repliedById   String?              @db.ObjectId
   repliedByName String?
 
   user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
@@ -201,15 +211,17 @@ enum Role {
   STAFF
 }
 
-/* ===================== USER BADGES (GROUPS) ===================== */
+/**
+ * ===================== USER BADGES (GROUPS) =====================
+ */
 // Badges are computed from criteria; no direct User-Badge relation stored.
 // Criteria types: TOTAL_LAST_N_MONTHS, ANY_SPAN_N_MONTHS, MONTHLY_ACTIVE_RANGE, TOTAL_LIFETIME, DONATION_COUNT_MIN
 
 model Badge {
   id        String   @id @default(auto()) @map("_id") @db.ObjectId
-  name      String   // default name (e.g. Arabic)
+  name      String // default name (e.g. Arabic)
   color     String   @default("#3b82f6") // hex
-  criteria  Json     // { type, amountMinUSD?, amountMaxUSD?, months?, count? }
+  criteria  Json // { type, amountMinUSD?, amountMaxUSD?, months?, count? }
   order     Int      @default(0)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -218,33 +230,35 @@ model Badge {
 }
 
 model BadgeTranslation {
-  id     String @id @default(auto()) @map("_id") @db.ObjectId
+  id      String @id @default(auto()) @map("_id") @db.ObjectId
   badgeId String @db.ObjectId
-  locale String // ar, en, fr
-  name   String
+  locale  String // ar, en, fr
+  name    String
 
   badge Badge @relation(fields: [badgeId], references: [id], onDelete: Cascade)
 
   @@unique([badgeId, locale])
 }
 
-/* ===================== CATEGORY ===================== */
+/**
+ * ===================== CATEGORY =====================
+ */
 
 model Category {
-  id            String   @id @default(auto()) @map("_id") @db.ObjectId
+  id String @id @default(auto()) @map("_id") @db.ObjectId
 
   // Arabic (default)
-  name          String   @unique
-  description   String?
+  name        String  @unique
+  description String?
 
   /// URL slug for human-friendly category links (unique across categories)
-  slug          String?  @unique
+  slug String? @unique
 
-  image         String?
-  icon          String?
-  order         Int?
+  image          String?
+  icon           String?
+  order          Int?
   /// Total shown publicly = baselineAmount + settled donation items. See Campaign.currentAmount.
-  currentAmount Float    @default(0)
+  currentAmount  Float   @default(0)
   /// Offline/legacy money entered by hand; protected from donation-derived recomputes.
   baselineAmount Float   @default(0)
 
@@ -252,23 +266,23 @@ model Category {
   /// member Campaign — archiving the category archives all its campaigns,
   /// re-activating reverses it. Pre-existing categories may have this
   /// field unset; treat unset as active when filtering.
-  isActive      Boolean? @default(true)
+  isActive Boolean? @default(true)
 
   /// Inverse side of the Campaign ↔ Category many-to-many relation. Prisma+MongoDB
   /// models implicit m2m by mirroring scalar ObjectId[] arrays on each side. This
   /// is maintained by Prisma whenever campaigns are connected/disconnected.
-  campaignIds   String[]  @db.ObjectId
-  campaigns     Campaign[] @relation(fields: [campaignIds], references: [id])
+  campaignIds String[]   @db.ObjectId
+  campaigns   Campaign[] @relation(fields: [campaignIds], references: [id])
 
-  donationItems          DonationCategoryItem[]
+  donationItems             DonationCategoryItem[]
   subscriptionCategoryItems SubscriptionCategoryItem[]
-  translations           CategoryTranslation[]
+  translations              CategoryTranslation[]
 }
 
 model CategoryTranslation {
-  id         String   @id @default(auto()) @map("_id") @db.ObjectId
-  categoryId String   @db.ObjectId
-  locale     String   // en, fr, ...
+  id         String @id @default(auto()) @map("_id") @db.ObjectId
+  categoryId String @db.ObjectId
+  locale     String // en, fr, ...
 
   name        String
   description String?
@@ -276,69 +290,74 @@ model CategoryTranslation {
   /// Optional per-locale URL slug. When set, takes precedence over the base Category.slug
   /// for this locale. Uniqueness within a locale is enforced at write time by
   /// generateUniqueLocaleSlug — Prisma+MongoDB doesn't model partial unique indexes well.
-  slug        String?
+  slug String?
 
   category Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
 
   @@unique([categoryId, locale])
 }
 
-/* ===================== HERO SLIDES ===================== */
+/**
+ * ===================== HERO SLIDES =====================
+ */
 
 model Slide {
-  id          String   @id @default(auto()) @map("_id") @db.ObjectId
-  title       String   // Arabic default
-  description String?
-  image       String?
-  showButton  Boolean  @default(true)
-  buttonText  String?
-  buttonLink  String?
-  isActive    Boolean  @default(true)
-  order       Int      @default(0)
+  id           String             @id @default(auto()) @map("_id") @db.ObjectId
+  title        String // Arabic default
+  description  String?
+  image        String?
+  showButton   Boolean            @default(true)
+  buttonText   String?
+  buttonLink   String?
+  isActive     Boolean            @default(true)
+  order        Int                @default(0)
   translations SlideTranslation[]
 }
 
 model SlideTranslation {
-  id          String   @id @default(auto()) @map("_id") @db.ObjectId
-  slideId     String   @db.ObjectId
+  id          String  @id @default(auto()) @map("_id") @db.ObjectId
+  slideId     String  @db.ObjectId
   locale      String
   title       String
   description String?
   buttonText  String?
-  slide       Slide    @relation(fields: [slideId], references: [id], onDelete: Cascade)
+  slide       Slide   @relation(fields: [slideId], references: [id], onDelete: Cascade)
+
   @@unique([slideId, locale])
 }
 
-/* ===================== CAMPAIGN ===================== */
+/**
+ * ===================== CAMPAIGN =====================
+ */
 
 model Campaign {
-  id            String   @id @default(auto()) @map("_id") @db.ObjectId
+  id String @id @default(auto()) @map("_id") @db.ObjectId
 
   // Arabic (default)
-  title         String
-  description   String
+  title       String
+  description String
 
   /// URL slug for human-friendly campaign links (unique across campaigns)
-  slug          String?  @unique
+  slug String? @unique
 
-  targetAmount  Float
+  targetAmount   Float
   /// Total shown publicly = baselineAmount + settled donation items.
   /// NEVER recompute this from donations alone — that silently destroys baselineAmount.
-  currentAmount Float   @default(0)
+  currentAmount  Float    @default(0)
   /// Money raised OUTSIDE the site (cash, bank transfer, a legacy system) that an admin
   /// entered by hand. Kept separate so recomputing from donation rows can't wipe it.
-  baselineAmount Float  @default(0)
-  images        String[]
-  videoUrl      String?
-  isActive         Boolean @default(true)
+  baselineAmount Float    @default(0)
+  images         String[]
+  videoUrl       String?
+  isActive       Boolean  @default(true)
   /// Soft-delete flag. The dashboard "delete" action sets this to true and
   /// flips isActive to false; listing endpoints filter it out so the campaign
   /// disappears from public + dashboard surfaces. We keep the row (and all
   /// DonationItem / SubscriptionItem relations) so historical donation totals,
   /// receipts, and audit trails stay intact. Pre-existing rows may have the
   /// field unset entirely — treat unset as not deleted when filtering.
-  isDeleted        Boolean? @default(false)
-  priority         Int?
+  isDeleted      Boolean? @default(false)
+  priority       Int?
 
   /// { "amounts": number[], "byCurrency"?: Record<string, number[]> } — quick-pick donation amounts; omit/null uses app defaults
   suggestedDonations Json?
@@ -347,25 +366,25 @@ model Campaign {
   suggestedTeamSupport Json?
 
   /// FIXED = show goal & progress bar; OPEN = open-ended (no fixed target UI)
-  goalType              String   @default("FIXED")
+  goalType             String @default("FIXED")
   /// AMOUNT = donor enters amount; SHARES = سهوم (share price × number of shares)
-  fundraisingMode       String   @default("AMOUNT")
+  fundraisingMode      String @default("AMOUNT")
   /// Price of one share in USD when fundraisingMode is SHARES
-  sharePriceUSD         Float?
+  sharePriceUSD        Float?
   /// { "counts": number[] } — quick-pick share counts for سهوم campaigns
-  suggestedShareCounts  Json?
+  suggestedShareCounts Json?
   /// Per-locale custom names for the "share" unit on SHARES-mode campaigns.
   /// Shape: { "<locale>": { "singular": string, "plural": string } }
   /// e.g. { "ar": { "singular": "خروف", "plural": "خراف" }, "en": { "singular": "sheep", "plural": "sheep" } }
   /// When unset (or a specific locale missing), the UI falls back to the generic
   /// "share"/"shares" translation strings. Lets admins re-label the donation unit
   /// per campaign without forking the translation files.
-  shareLabels           Json?
+  shareLabels          Json?
 
   /// Implicit many-to-many — a campaign can belong to one or more categories.
   /// Prisma+MongoDB stores the relation as mirrored ObjectId[] arrays on each side.
-  categoryIds   String[]   @db.ObjectId
-  categories    Category[] @relation(fields: [categoryIds], references: [id])
+  categoryIds String[]   @db.ObjectId
+  categories  Category[] @relation(fields: [categoryIds], references: [id])
 
   /// Per-category priorities for ordering on each category page.
   /// Shape: { "<categoryId>": number } — lower number = higher priority; absent key = unprioritized.
@@ -380,56 +399,58 @@ model Campaign {
   subscriptionItems SubscriptionItem[]
   translations      CampaignTranslation[]
 
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model CampaignTranslation {
-  id          String   @id @default(auto()) @map("_id") @db.ObjectId
-  campaignId  String   @db.ObjectId
-  locale      String   // en, fr, ...
+  id         String @id @default(auto()) @map("_id") @db.ObjectId
+  campaignId String @db.ObjectId
+  locale     String // en, fr, ...
 
   title       String
   description String
 
   /// Optional locale-specific cover image. When set, replaces images[0] (cover) for this locale.
-  image       String?
+  image    String?
   /// Optional locale-specific video URL. When set, replaces the campaign-level videoUrl for this locale.
-  videoUrl    String?
+  videoUrl String?
 
   /// Optional per-locale URL slug. When set, takes precedence over the base Campaign.slug
   /// for this locale. Uniqueness within a locale is enforced at write time.
-  slug        String?
+  slug String?
 
   campaign Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
 
   @@unique([campaignId, locale])
 }
 
-/* ===================== CAMPAIGN UPDATES ===================== */
+/**
+ * ===================== CAMPAIGN UPDATES =====================
+ */
 
 model Update {
-  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  id String @id @default(auto()) @map("_id") @db.ObjectId
 
   // Arabic
   title       String
   description String
 
-  image       String?
-  videoUrl    String?
+  image    String?
+  videoUrl String?
 
-  campaignId  String   @db.ObjectId
-  campaign    Campaign @relation(fields: [campaignId], references: [id])
+  campaignId String   @db.ObjectId
+  campaign   Campaign @relation(fields: [campaignId], references: [id])
 
   translations UpdateTranslation[]
 
-  createdAt   DateTime @default(now())
+  createdAt DateTime @default(now())
 }
 
 model UpdateTranslation {
-  id        String   @id @default(auto()) @map("_id") @db.ObjectId
-  updateId  String   @db.ObjectId
-  locale    String
+  id       String @id @default(auto()) @map("_id") @db.ObjectId
+  updateId String @db.ObjectId
+  locale   String
 
   title       String
   description String
@@ -439,12 +460,14 @@ model UpdateTranslation {
   @@unique([updateId, locale])
 }
 
-/* ===================== DONATIONS ===================== */
+/**
+ * ===================== DONATIONS =====================
+ */
 
 model Referral {
   id               String   @id @default(auto()) @map("_id") @db.ObjectId
   code             String   @unique // e.g. "ahmed", "tiktok1"
-  name             String?  // optional label for dashboard
+  name             String? // optional label for dashboard
   cookieExpiryDays Int      @default(30) // 0 = unlimited (cookie lasts ~10 years)
   createdAt        DateTime @default(now())
 
@@ -453,17 +476,17 @@ model Referral {
 }
 
 model Donation {
-  id         String   @id @default(auto()) @map("_id") @db.ObjectId
-  amount     Float
-  amountUSD  Float?
-  currency   String   @default("USD")
+  id          String  @id @default(auto()) @map("_id") @db.ObjectId
+  amount      Float
+  amountUSD   Float?
+  currency    String  @default("USD")
   teamSupport Float   @default(0)
-  coverFees  Boolean  @default(false)
-  fees       Float    @default(0)
+  coverFees   Boolean @default(false)
+  fees        Float   @default(0)
   totalAmount Float
 
-  status     DonationStatus @default(PAID)
-  locale     String?
+  status DonationStatus @default(PAID)
+  locale String?
 
   // Payment provider tracking (PayFor Sanal POS)
   provider               String? // e.g. "PAYFOR"
@@ -476,12 +499,12 @@ model Donation {
   providerErrorMessage   String?
   providerRaw            Json?
 
-  donorId        String    @db.ObjectId
-  donor          User      @relation(fields: [donorId], references: [id])
+  donorId          String    @db.ObjectId
+  donor            User      @relation(fields: [donorId], references: [id])
   /// ISO 3166-1 alpha-2 snapshot from donor User.countryCode at donation time
   donorCountryCode String?
-  referralId     String?   @db.ObjectId
-  referral       Referral? @relation(fields: [referralId], references: [id])
+  referralId       String?   @db.ObjectId
+  referral         Referral? @relation(fields: [referralId], references: [id])
 
   subscriptionId String?       @db.ObjectId
   subscription   Subscription? @relation(fields: [subscriptionId], references: [id])
@@ -501,13 +524,13 @@ model Donation {
   cardDetails   CardDetails?
 
   /// UTM/ads/GA/Meta snapshot from client at checkout (JSON). Server conversions use the same donation id as event_id.
-  attribution            Json?
+  attribution                  Json?
   /// Set when Meta CAPI + GA4 MP "Donate" success events were sent for this row (idempotent).
-  conversionEventsSentAt  DateTime?
+  conversionEventsSentAt       DateTime?
   /// Set when Meta CAPI "DonateFailed" event was sent for this row (idempotent). Feeds lookalike audiences for almost-donors.
   conversionFailedEventsSentAt DateTime?
 
-  createdAt DateTime @default(now())
+  createdAt DateTime  @default(now())
   paidAt    DateTime?
 
   items         DonationItem[]
@@ -516,25 +539,25 @@ model Donation {
 }
 
 model Subscription {
-  id         String   @id @default(auto()) @map("_id") @db.ObjectId
-  status     SubscriptionStatus @default(ACTIVE)
+  id     String             @id @default(auto()) @map("_id") @db.ObjectId
+  status SubscriptionStatus @default(ACTIVE)
 
-  amount       Float
-  amountUSD    Float?
-  currency     String   @default("USD")
-  teamSupport  Float    @default(0)
-  coverFees    Boolean  @default(false)
+  amount        Float
+  amountUSD     Float?
+  currency      String        @default("USD")
+  teamSupport   Float         @default(0)
+  coverFees     Boolean       @default(false)
   paymentMethod PaymentMethod
-  cardDetails  CardDetails?
+  cardDetails   CardDetails?
 
   // PayFor recurring support (requires bank-provided token/reference transaction model)
   payforToken     String?
   payforMaskedPan String?
   payforExpiry    String? // MMYY (if bank requires it alongside token)
 
-  donorId    String   @db.ObjectId
-  donor      User     @relation(fields: [donorId], references: [id])
-  referralId String?  @db.ObjectId
+  donorId    String    @db.ObjectId
+  donor      User      @relation(fields: [donorId], references: [id])
+  referralId String?   @db.ObjectId
   referral   Referral? @relation(fields: [referralId], references: [id])
 
   nextBillingDate DateTime?
@@ -548,12 +571,12 @@ model Subscription {
 }
 
 model SubscriptionItem {
-  id             String   @id @default(auto()) @map("_id") @db.ObjectId
-  subscriptionId String   @db.ObjectId
-  campaignId     String   @db.ObjectId
+  id             String @id @default(auto()) @map("_id") @db.ObjectId
+  subscriptionId String @db.ObjectId
+  campaignId     String @db.ObjectId
 
-  amount    Float
-  amountUSD Float?
+  amount     Float
+  amountUSD  Float?
   /// When set, line item was a سهوم (shares) purchase — mirrors DonationItem.shareCount.
   /// Three creation paths (donations, stripe/intent, cart/payment) already spread this in
   /// conditionally; without the field Prisma threw PrismaClientValidationError inside the
@@ -568,9 +591,9 @@ model SubscriptionItem {
 }
 
 model SubscriptionCategoryItem {
-  id             String   @id @default(auto()) @map("_id") @db.ObjectId
-  subscriptionId String   @db.ObjectId
-  categoryId     String   @db.ObjectId
+  id             String @id @default(auto()) @map("_id") @db.ObjectId
+  subscriptionId String @db.ObjectId
+  categoryId     String @db.ObjectId
 
   amount    Float
   amountUSD Float?
@@ -583,9 +606,9 @@ model SubscriptionCategoryItem {
 }
 
 model DonationItem {
-  id         String   @id @default(auto()) @map("_id") @db.ObjectId
-  donationId String   @db.ObjectId
-  campaignId String   @db.ObjectId
+  id         String @id @default(auto()) @map("_id") @db.ObjectId
+  donationId String @db.ObjectId
+  campaignId String @db.ObjectId
 
   amount     Float
   amountUSD  Float?
@@ -600,15 +623,15 @@ model DonationItem {
 }
 
 model DonationCategoryItem {
-  id         String   @id @default(auto()) @map("_id") @db.ObjectId
-  donationId String   @db.ObjectId
-  categoryId String   @db.ObjectId
+  id         String @id @default(auto()) @map("_id") @db.ObjectId
+  donationId String @db.ObjectId
+  categoryId String @db.ObjectId
 
-  amount     Float
-  amountUSD  Float?
+  amount    Float
+  amountUSD Float?
 
   donation Donation @relation(fields: [donationId], references: [id], onDelete: Cascade)
-  category  Category @relation(fields: [categoryId], references: [id])
+  category Category @relation(fields: [categoryId], references: [id])
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -629,6 +652,7 @@ enum PaymentMethod {
   CARD
   PAYPAL
 }
+
 //asd
 type CardDetails {
   cardNumber     String
@@ -637,16 +661,18 @@ type CardDetails {
   cardholderName String
 }
 
-/* ===================== COMMENTS & CART ===================== */
+/**
+ * ===================== COMMENTS & CART =====================
+ */
 
 model Comment {
-  id         String   @id @default(auto()) @map("_id") @db.ObjectId
-  text       String
+  id   String @id @default(auto()) @map("_id") @db.ObjectId
+  text String
 
-  userId     String   @db.ObjectId
-  user       User     @relation(fields: [userId], references: [id])
+  userId String @db.ObjectId
+  user   User   @relation(fields: [userId], references: [id])
 
-  donationId String?  @db.ObjectId
+  donationId String?   @db.ObjectId
   donation   Donation? @relation(fields: [donationId], references: [id])
 
   /// Optional: a comment left on a DONATION has no single campaign (a donation can span
@@ -654,17 +680,17 @@ model Comment {
   campaignId String?   @db.ObjectId
   campaign   Campaign? @relation(fields: [campaignId], references: [id])
 
-  createdAt  DateTime @default(now())
+  createdAt DateTime @default(now())
 }
 
 model CartItem {
-  id         String   @id @default(auto()) @map("_id") @db.ObjectId
-  campaignId String   @db.ObjectId
-  userId     String   @db.ObjectId
+  id         String @id @default(auto()) @map("_id") @db.ObjectId
+  campaignId String @db.ObjectId
+  userId     String @db.ObjectId
 
   amount     Float
   amountUSD  Float?
-  currency   String   @default("USD")
+  currency   String @default("USD")
   /// Optional: number of سهوم shares for this line (display / receipt)
   shareCount Int?
 
@@ -674,30 +700,32 @@ model CartItem {
   createdAt DateTime @default(now())
 }
 
-/* ===================== POSTS ===================== */
+/**
+ * ===================== POSTS =====================
+ */
 
 model PostCategory {
-  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  id String @id @default(auto()) @map("_id") @db.ObjectId
 
   // Arabic
-  name      String   @unique
-  title     String?
+  name        String  @unique
+  title       String?
   description String?
-  image     String?
+  image       String?
 
   /// URL slug for blog category links (unique across post categories)
-  slug      String?  @unique
+  slug String? @unique
 
-  posts       Post[]
+  posts        Post[]
   translations PostCategoryTranslation[]
 
   createdAt DateTime @default(now())
 }
 
 model PostCategoryTranslation {
-  id          String   @id @default(auto()) @map("_id") @db.ObjectId
-  categoryId  String   @db.ObjectId
-  locale      String
+  id         String @id @default(auto()) @map("_id") @db.ObjectId
+  categoryId String @db.ObjectId
+  locale     String
 
   name        String
   title       String?
@@ -706,7 +734,7 @@ model PostCategoryTranslation {
 
   /// Optional per-locale URL slug. When set, takes precedence over PostCategory.slug
   /// for this locale. Uniqueness within a locale is enforced at write time.
-  slug        String?
+  slug String?
 
   category PostCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
 
@@ -714,20 +742,20 @@ model PostCategoryTranslation {
 }
 
 model Post {
-  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  id String @id @default(auto()) @map("_id") @db.ObjectId
 
   // Arabic
-  title     String?
+  title       String?
   description String?
-  content   String?
-  image     String?
+  content     String?
+  image       String?
 
   /// URL slug for blog post links (unique across posts)
-  slug      String?  @unique
+  slug String? @unique
 
   published Boolean @default(false)
 
-  categoryId String? @db.ObjectId
+  categoryId String?       @db.ObjectId
   category   PostCategory? @relation(fields: [categoryId], references: [id])
 
   /// Up to 3 related campaigns (enforced in API / UI)
@@ -740,9 +768,9 @@ model Post {
 }
 
 model PostTranslation {
-  id      String   @id @default(auto()) @map("_id") @db.ObjectId
-  postId  String   @db.ObjectId
-  locale  String
+  id     String @id @default(auto()) @map("_id") @db.ObjectId
+  postId String @db.ObjectId
+  locale String
 
   title       String?
   description String?
@@ -751,7 +779,7 @@ model PostTranslation {
 
   /// Optional per-locale URL slug. When set, takes precedence over Post.slug
   /// for this locale. Uniqueness within a locale is enforced at write time.
-  slug        String?
+  slug String?
 
   post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
 
@@ -759,37 +787,39 @@ model PostTranslation {
 }
 
 model LiveDonationTicker {
-  id        String   @id @default(auto()) @map("_id") @db.ObjectId
-  
-  isActive  Boolean  @default(true)
-  
+  id String @id @default(auto()) @map("_id") @db.ObjectId
+
+  isActive Boolean @default(true)
+
   // Donor names pool (will be randomly selected)
   donorNames String[] @default([])
-  
+
   // Campaign names by locale
   // campaignNamesAr String[] @default([])
   // campaignNamesEn String[] @default([])
   // campaignNamesFr String[] @default([])
-  
+
   // Amount ranges with probabilities
   amountRanges AmountRange[]
-  
+
   // Display timing
-  minIntervalSeconds Int @default(3)  // Minimum seconds between donations
-  maxIntervalSeconds Int @default(8)  // Maximum seconds between donations
-  
+  minIntervalSeconds Int @default(3) // Minimum seconds between donations
+  maxIntervalSeconds Int @default(8) // Maximum seconds between donations
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
 
 type AmountRange {
-  minAmount    Float
-  maxAmount    Float
-  probability  Float  // Weight for this range (e.g., 70 for high, 20 for medium, 10 for low)
-  label        String // e.g., "high", "medium", "low"
+  minAmount   Float
+  maxAmount   Float
+  probability Float // Weight for this range (e.g., 70 for high, 20 for medium, 10 for low)
+  label       String // e.g., "high", "medium", "low"
 }
 
-/* ===================== EXCHANGE RATES (USD base; hourly cron + DB reads) ===================== */
+/**
+ * ===================== EXCHANGE RATES (USD base; hourly cron + DB reads) =====================
+ */
 /// Single row: key = "usd_latest". `rates` = same shape as ExchangeRate-API `conversion_rates` (foreign per 1 USD).
 model ExchangeRateSnapshot {
   id        String   @id @default(auto()) @map("_id") @db.ObjectId
@@ -801,36 +831,38 @@ model ExchangeRateSnapshot {
   updatedAt DateTime @updatedAt
 }
 
-/* ===================== MESSAGE TEMPLATES (admin outreach) ===================== */
+/**
+ * ===================== MESSAGE TEMPLATES (admin outreach) =====================
+ */
 
 model EmailTemplate {
-  id          String   @id @default(auto()) @map("_id") @db.ObjectId
-  name        String
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  name         String
   /// Canonical Arabic subject (also the fallback when a locale variation is missing).
-  subject     String
+  subject      String
   /// Canonical Arabic TReaderDocument JSON from @usewaypoint/email-builder.
-  document    Json
+  document     Json
   /// Per-locale overrides: Record<locale, { subject?: string; document?: TReaderDocument }>.
   /// Locales not present here fall back to the canonical Arabic subject/document.
   translations Json?
-  createdById String?  @db.ObjectId
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdById  String?  @db.ObjectId
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   // ── Template Center taxonomy (all optional / defaulted for back-compat)
   /// "SYSTEM" (platform-event templates) | "CAMPAIGN" (reusable marketing). Unset = CAMPAIGN.
-  kind        String?  @default("CAMPAIGN")
+  kind      String? @default("CAMPAIGN")
   /// "DRAFT" | "READY" | "NEEDS_REVIEW" | "ARCHIVED". Unset = DRAFT.
-  status      String?  @default("DRAFT")
+  status    String? @default("DRAFT")
   /// "MARKETING" | "UTILITY" | "TRANSACTIONAL" | "AUTHENTICATION" (optional).
-  purpose     String?
+  purpose   String?
   /// Short pre-header line shown after the subject in inboxes (optional).
-  preheader   String?
+  preheader String?
   /// Optional reusable EmailLayout this template renders inside (additive — the
   /// existing @usewaypoint `document` path is unaffected when this is null).
-  layoutId    String?  @db.ObjectId
+  layoutId  String? @db.ObjectId
   /// Content-mode fields for the layout builder: Record<locale, { title?, body?, ctaText?, ctaUrl?, footerNote? }>.
-  content     Json?
+  content   Json?
 
   @@index([name])
   @@index([kind])
@@ -840,38 +872,38 @@ model EmailTemplate {
 /// Additive — does not replace the @usewaypoint document pipeline; it powers the
 /// new content-based Template Center email builder.
 model EmailLayout {
-  id                    String   @id @default(auto()) @map("_id") @db.ObjectId
-  name                  String
-  description           String?
+  id                     String   @id @default(auto()) @map("_id") @db.ObjectId
+  name                   String
+  description            String?
   /// HTML shell containing a `{{content}}` slot where the template body is injected.
-  htmlShell             String
+  htmlShell              String
   /// Token used inside htmlShell for the content slot (default "{{content}}").
-  contentSlot           String   @default("{{content}}")
-  headerHtml            String?
-  footerHtml            String?
-  ctaSection            String?
+  contentSlot            String   @default("{{content}}")
+  headerHtml             String?
+  footerHtml             String?
+  ctaSection             String?
   /// Whether an unsubscribe placeholder must be present (marketing layouts).
-  unsubscribePlaceholder Boolean @default(false)
+  unsubscribePlaceholder Boolean  @default(false)
   /// "DRAFT" | "READY" | "ARCHIVED".
-  status                String   @default("DRAFT")
-  isDefault             Boolean  @default(false)
-  createdById           String?  @db.ObjectId
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
+  status                 String   @default("DRAFT")
+  isDefault              Boolean  @default(false)
+  createdById            String?  @db.ObjectId
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
 
   @@index([status])
 }
 
 model WhatsappTemplate {
-  id          String   @id @default(auto()) @map("_id") @db.ObjectId
-  name        String
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  name         String
   /// Canonical Arabic body (also the fallback when a locale variation is missing).
-  body        String
+  body         String
   /// Per-locale overrides: Record<locale, { body?: string }>.
   translations Json?
-  createdById String?  @db.ObjectId
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdById  String?  @db.ObjectId
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   // ── Twilio / WhatsApp Content metadata (all optional for back-compat)
   /// "TWILIO" when imported from Twilio Content API, "MANUAL" otherwise.
@@ -908,11 +940,11 @@ model WhatsappTemplate {
 
   // ── Template Center taxonomy (optional / defaulted for back-compat)
   /// "SYSTEM" (platform-event) | "CAMPAIGN" (reusable marketing). Unset = CAMPAIGN.
-  kind               String?  @default("CAMPAIGN")
+  kind    String? @default("CAMPAIGN")
   /// "DRAFT" | "READY" | "NEEDS_REVIEW" | "ARCHIVED". Unset = DRAFT.
-  status             String?  @default("DRAFT")
+  status  String? @default("DRAFT")
   /// "MARKETING" | "UTILITY" | "TRANSACTIONAL" | "AUTHENTICATION" (optional).
-  purpose            String?
+  purpose String?
 
   @@index([name])
   @@index([externalTemplateId])
@@ -942,11 +974,11 @@ model SmsTemplate {
 
   // ── Template Center taxonomy, mirroring EmailTemplate / WhatsappTemplate.
   /// "SYSTEM" (platform-event) | "CAMPAIGN" (reusable marketing). Unset = CAMPAIGN.
-  kind         String?  @default("CAMPAIGN")
+  kind    String? @default("CAMPAIGN")
   /// "DRAFT" | "READY" | "NEEDS_REVIEW" | "ARCHIVED". Unset = DRAFT.
-  status       String?  @default("DRAFT")
+  status  String? @default("DRAFT")
   /// "MARKETING" | "UTILITY" | "TRANSACTIONAL" | "AUTHENTICATION" (optional).
-  purpose      String?
+  purpose String?
 
   @@index([name])
   @@index([kind])
@@ -990,61 +1022,61 @@ model MessageTrigger {
 }
 
 enum SentMessageStatus {
-  SENT       // accepted by provider
-  FAILED     // provider rejected or threw
-  SKIPPED    // recipient missing email/phone
+  SENT // accepted by provider
+  FAILED // provider rejected or threw
+  SKIPPED // recipient missing email/phone
 }
 
 enum SentMessageOrigin {
-  MANUAL     // admin clicked send from dashboard
-  TRIGGER    // auto-fired by event dispatcher
-  BACKFILL   // imported from legacy audit logs (no per-recipient detail)
+  MANUAL // admin clicked send from dashboard
+  TRIGGER // auto-fired by event dispatcher
+  BACKFILL // imported from legacy audit logs (no per-recipient detail)
 }
 
 /// Per-recipient log of every templated email or WhatsApp message that goes out.
 /// Stores the rendered subject/body and a snapshot of the variables so the
 /// dashboard history page can show exactly what was sent to each person.
 model SentMessage {
-  id                String              @id @default(auto()) @map("_id") @db.ObjectId
-  channel           MessageChannel
-  origin            SentMessageOrigin
-  status            SentMessageStatus
+  id      String            @id @default(auto()) @map("_id") @db.ObjectId
+  channel MessageChannel
+  origin  SentMessageOrigin
+  status  SentMessageStatus
 
   // Template snapshot — templateId may point to a deleted template, so we also store the name.
-  templateId        String?             @db.ObjectId
-  templateName      String
-  triggerEvent      MessageTriggerEvent? // set when origin=TRIGGER
-  locale            String
+  templateId   String?              @db.ObjectId
+  templateName String
+  triggerEvent MessageTriggerEvent? // set when origin=TRIGGER
+  locale       String
 
   // Recipient
-  recipientUserId   String?             @db.ObjectId
-  recipientEmail    String?
-  recipientPhone    String?
-  recipientName     String?
+  recipientUserId String? @db.ObjectId
+  recipientEmail  String?
+  recipientPhone  String?
+  recipientName   String?
 
   // Rendered content (HTML for email, plain text for WhatsApp)
-  renderedSubject   String?
-  renderedBody      String
+  renderedSubject String?
+  renderedBody    String
   /// Snapshot of the TemplateContext used to merge variables.
-  variables         Json?
+  variables       Json?
 
   // Result
   errorMessage      String?
   providerMessageId String?
 
   // Audit
-  actorId           String?             @db.ObjectId
-  actorName         String?
-  donationId        String?             @db.ObjectId
+  actorId    String? @db.ObjectId
+  actorName  String?
+  donationId String? @db.ObjectId
 
   // Backfill summary aggregates — only populated when origin=BACKFILL.
   /// Total recipients reported by the source audit log (manual bulk send).
-  backfillTotal     Int?
-  backfillSent      Int?
-  backfillFailed    Int?
-  backfillSkipped   Int?
+  backfillTotal   Int?
+  backfillSent    Int?
+  backfillFailed  Int?
+  backfillSkipped Int?
 
-  createdAt         DateTime            @default(now())
+  createdAt DateTime @default(now())
 
   @@index([channel, createdAt(sort: Desc)])
   @@index([templateId])
@@ -1055,19 +1087,21 @@ model SentMessage {
   @@index([createdAt(sort: Desc)])
 }
 
-/* ===================== TRACKING PIXELS (dashboard configurable) ===================== */
+/**
+ * ===================== TRACKING PIXELS (dashboard configurable) =====================
+ */
 model TrackingSettings {
-  id                      String   @id @default(auto()) @map("_id") @db.ObjectId
-  facebookPixelId         String?
-  facebookAccessToken     String?  // Meta CAPI token (never exposed to client)
-  gaMeasurementId         String?  // Google Analytics 4: G-XXXXXXXXXX
-  tiktokPixelId           String?
-  tiktokAccessToken       String?  // TikTok Events API token (never exposed to client)
-  googleAdsConversionId   String?  // AW-XXXXXXXXX (never exposed to client — used server-side for EC)
+  id                       String   @id @default(auto()) @map("_id") @db.ObjectId
+  facebookPixelId          String?
+  facebookAccessToken      String? // Meta CAPI token (never exposed to client)
+  gaMeasurementId          String? // Google Analytics 4: G-XXXXXXXXXX
+  tiktokPixelId            String?
+  tiktokAccessToken        String? // TikTok Events API token (never exposed to client)
+  googleAdsConversionId    String? // AW-XXXXXXXXX (never exposed to client — used server-side for EC)
   googleAdsConversionLabel String? // Conversion label (e.g. AbCdEfGh1234)
-  xPixelId                String?  // X (Twitter) Pixel ID
-  createdAt               DateTime @default(now())
-  updatedAt               DateTime @updatedAt
+  xPixelId                 String? // X (Twitter) Pixel ID
+  createdAt                DateTime @default(now())
+  updatedAt                DateTime @updatedAt
 }
 
 /// Single-record settings collection for site-wide defaults. Read by clients
@@ -1087,63 +1121,65 @@ model GlobalSettings {
   updatedAt            DateTime @updatedAt
 }
 
-/* ===================== MARKETING PLATFORM CONNECTIONS ===================== */
+/**
+ * ===================== MARKETING PLATFORM CONNECTIONS =====================
+ */
 /// Many-per-platform credential records used by the Platform Connections page.
 /// TrackingSettings stays as the legacy single-record default; this model is
 /// the multi-account future-proof home for ad/analytics/messaging credentials.
 model MarketingPlatformConnection {
-  id                   String   @id @default(auto()) @map("_id") @db.ObjectId
+  id                  String  @id @default(auto()) @map("_id") @db.ObjectId
   /// "ADS" | "ANALYTICS" | "MESSAGING" | "EMAIL" | "CUSTOM"
-  category             String
+  category            String
   /// "META" | "GOOGLE_ADS" | "TIKTOK" | "X" | "GA4" | "TWILIO" |
   /// "EMAIL_PROVIDER" | "WHATSAPP_PROVIDER" | "SMS_PROVIDER" | "CUSTOM"
-  platform             String
-  name                 String
-  accountId            String?
-  accountName          String?
-  businessId           String?
-  managerAccountId     String?
-  pixelId              String?
-  datasetId            String?
-  conversionId         String?
-  conversionLabel      String?
-  advertiserId         String?
-  appId                String?
-  propertyId           String?
-  streamId             String?
-  messagingServiceSid  String?
-  senderId             String?
-  whatsappSender       String?
-  smsSender            String?
-  emailSender          String?
+  platform            String
+  name                String
+  accountId           String?
+  accountName         String?
+  businessId          String?
+  managerAccountId    String?
+  pixelId             String?
+  datasetId           String?
+  conversionId        String?
+  conversionLabel     String?
+  advertiserId        String?
+  appId               String?
+  propertyId          String?
+  streamId            String?
+  messagingServiceSid String?
+  senderId            String?
+  whatsappSender      String?
+  smsSender           String?
+  emailSender         String?
 
   /// "ACTIVE" | "DISABLED" | "MISSING_CONFIG" | "AUTH_ERROR" | "PERMISSION_ERROR" | "SYNC_ERROR" | "NOT_IMPLEMENTED"
-  status               String   @default("MISSING_CONFIG")
-  enabled              Boolean  @default(true)
-  defaultForPlatform   Boolean  @default(false)
-  supportedLocales     String[]
-  supportedCountries   String[]
-  defaultCurrency      String?
-  notes                String?
+  status             String   @default("MISSING_CONFIG")
+  enabled            Boolean  @default(true)
+  defaultForPlatform Boolean  @default(false)
+  supportedLocales   String[]
+  supportedCountries String[]
+  defaultCurrency    String?
+  notes              String?
   /// Snapshot of the readiness checklist at the time of last save.
   /// Shape: { completionPercent, missingRequiredFields[], missingOptionalFields[], guidance[], nextStepMessage }
-  configChecklist      Json?
+  configChecklist    Json?
 
   // ── secrets (never returned in GET responses — only masked previews)
-  accessToken          String?
-  refreshToken         String?
-  authToken            String?
-  appSecret            String?
-  clientSecret         String?
-  developerToken       String?
-  apiSecret            String?
+  accessToken    String?
+  refreshToken   String?
+  authToken      String?
+  appSecret      String?
+  clientSecret   String?
+  developerToken String?
+  apiSecret      String?
 
-  lastSyncAt           DateTime?
-  lastTestAt           DateTime?
-  lastError            String?
-  createdAt            DateTime @default(now())
-  updatedAt            DateTime @updatedAt
-  updatedBy            String?  @db.ObjectId
+  lastSyncAt DateTime?
+  lastTestAt DateTime?
+  lastError  String?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  updatedBy  String?   @db.ObjectId
 
   @@index([platform])
   @@index([category])
@@ -1151,7 +1187,9 @@ model MarketingPlatformConnection {
   @@index([status])
 }
 
-/* ===================== PLATFORM SYNC INFRASTRUCTURE ===================== */
+/**
+ * ===================== PLATFORM SYNC INFRASTRUCTURE =====================
+ */
 /// Per-attempt record of a sync triggered from the dashboard or (later) a cron.
 /// Never stores tokens / secrets — `metadata` is sanitized before write.
 model PlatformSyncRun {
@@ -1180,27 +1218,27 @@ model PlatformSyncRun {
 /// Daily campaign-level snapshot from an ad platform. One row per
 /// (connection, campaignId, date). Idempotent on that triple.
 model AdCampaignSnapshot {
-  id                       String   @id @default(auto()) @map("_id") @db.ObjectId
-  connectionId             String   @db.ObjectId
-  platform                 String
-  accountId                String?
-  date                     DateTime
-  campaignId               String
-  campaignName             String?
-  status                   String?
-  objective                String?
-  spend                    Float    @default(0)
-  impressions              Int      @default(0)
-  clicks                   Int      @default(0)
-  ctr                      Float?
-  cpc                      Float?
-  cpm                      Float?
-  reportedConversions      Float    @default(0)
-  reportedConversionValue  Float    @default(0)
-  currency                 String?
-  raw                      Json?
-  createdAt                DateTime @default(now())
-  updatedAt                DateTime @updatedAt
+  id                      String   @id @default(auto()) @map("_id") @db.ObjectId
+  connectionId            String   @db.ObjectId
+  platform                String
+  accountId               String?
+  date                    DateTime
+  campaignId              String
+  campaignName            String?
+  status                  String?
+  objective               String?
+  spend                   Float    @default(0)
+  impressions             Int      @default(0)
+  clicks                  Int      @default(0)
+  ctr                     Float?
+  cpc                     Float?
+  cpm                     Float?
+  reportedConversions     Float    @default(0)
+  reportedConversionValue Float    @default(0)
+  currency                String?
+  raw                     Json?
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
 
   @@index([connectionId, date])
   @@index([platform, date])
@@ -1209,28 +1247,28 @@ model AdCampaignSnapshot {
 
 /// Daily ad-group / ad-set / line-item snapshot.
 model AdGroupSnapshot {
-  id                       String   @id @default(auto()) @map("_id") @db.ObjectId
-  connectionId             String   @db.ObjectId
-  platform                 String
-  accountId                String?
-  date                     DateTime
-  campaignId               String?
-  campaignName             String?
-  adGroupId                String
-  adGroupName              String?
-  country                  String?
-  age                      String?
-  gender                   String?
-  placement                String?
-  spend                    Float    @default(0)
-  impressions              Int      @default(0)
-  clicks                   Int      @default(0)
-  reportedConversions      Float    @default(0)
-  reportedConversionValue  Float    @default(0)
-  currency                 String?
-  raw                      Json?
-  createdAt                DateTime @default(now())
-  updatedAt                DateTime @updatedAt
+  id                      String   @id @default(auto()) @map("_id") @db.ObjectId
+  connectionId            String   @db.ObjectId
+  platform                String
+  accountId               String?
+  date                    DateTime
+  campaignId              String?
+  campaignName            String?
+  adGroupId               String
+  adGroupName             String?
+  country                 String?
+  age                     String?
+  gender                  String?
+  placement               String?
+  spend                   Float    @default(0)
+  impressions             Int      @default(0)
+  clicks                  Int      @default(0)
+  reportedConversions     Float    @default(0)
+  reportedConversionValue Float    @default(0)
+  currency                String?
+  raw                     Json?
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
 
   @@index([connectionId, date])
   @@index([platform, date])
@@ -1239,29 +1277,29 @@ model AdGroupSnapshot {
 
 /// Daily ad-level snapshot (Meta ads, Google ad_group_ads, TikTok ads, X promoted tweets).
 model AdSnapshot {
-  id                       String   @id @default(auto()) @map("_id") @db.ObjectId
-  connectionId             String   @db.ObjectId
-  platform                 String
-  accountId                String?
-  date                     DateTime
-  campaignId               String?
-  campaignName             String?
-  adGroupId                String?
-  adGroupName              String?
-  adId                     String
-  adName                   String?
-  creativeName             String?
-  placement                String?
-  country                  String?
-  spend                    Float    @default(0)
-  impressions              Int      @default(0)
-  clicks                   Int      @default(0)
-  reportedConversions      Float    @default(0)
-  reportedConversionValue  Float    @default(0)
-  currency                 String?
-  raw                      Json?
-  createdAt                DateTime @default(now())
-  updatedAt                DateTime @updatedAt
+  id                      String   @id @default(auto()) @map("_id") @db.ObjectId
+  connectionId            String   @db.ObjectId
+  platform                String
+  accountId               String?
+  date                    DateTime
+  campaignId              String?
+  campaignName            String?
+  adGroupId               String?
+  adGroupName             String?
+  adId                    String
+  adName                  String?
+  creativeName            String?
+  placement               String?
+  country                 String?
+  spend                   Float    @default(0)
+  impressions             Int      @default(0)
+  clicks                  Int      @default(0)
+  reportedConversions     Float    @default(0)
+  reportedConversionValue Float    @default(0)
+  currency                String?
+  raw                     Json?
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
 
   @@index([connectionId, date])
   @@index([platform, date])
@@ -1304,7 +1342,9 @@ model MarketingCampaignSnapshot {
   @@index([campaignId, date])
 }
 
-/* ===================== DASHBOARD FOUNDATION FIRST SLICE ===================== */
+/**
+ * ===================== DASHBOARD FOUNDATION FIRST SLICE =====================
+ */
 
 model BrandProfile {
   id                String   @id @default(auto()) @map("_id") @db.ObjectId
@@ -1384,8 +1424,8 @@ model ArchiveCollection {
 }
 
 model ArchiveProject {
-  id                  String   @id @default(auto()) @map("_id") @db.ObjectId
-  collectionId        String?  @db.ObjectId
+  id                  String    @id @default(auto()) @map("_id") @db.ObjectId
+  collectionId        String?   @db.ObjectId
   title               String
   year                Int?
   country             String?
@@ -1396,13 +1436,13 @@ model ArchiveProject {
   implementationDate  DateTime?
   startDate           DateTime?
   endDate             DateTime?
-  status              String   @default("ACTIVE")
-  documentationStatus String   @default("NEEDS_REVIEW")
-  marketingStatus     String   @default("NOT_REVIEWED")
+  status              String    @default("ACTIVE")
+  documentationStatus String    @default("NEEDS_REVIEW")
+  marketingStatus     String    @default("NOT_REVIEWED")
   notes               String?
-  createdBy           String?  @db.ObjectId
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
+  createdBy           String?   @db.ObjectId
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
 
   @@index([collectionId])
   @@index([year])
@@ -1413,18 +1453,18 @@ model ArchiveProject {
 }
 
 model OperationTask {
-  id                String   @id @default(auto()) @map("_id") @db.ObjectId
+  id                String    @id @default(auto()) @map("_id") @db.ObjectId
   title             String
   description       String?
   taskType          String
-  status            String   @default("PENDING")
-  priority          String   @default("MEDIUM")
-  assignedTo        String?  @db.ObjectId
-  contentItemId     String?  @db.ObjectId
-  planId            String?  @db.ObjectId
-  seasonId          String?  @db.ObjectId
+  status            String    @default("PENDING")
+  priority          String    @default("MEDIUM")
+  assignedTo        String?   @db.ObjectId
+  contentItemId     String?   @db.ObjectId
+  planId            String?   @db.ObjectId
+  seasonId          String?   @db.ObjectId
   sourceType        String?
-  sourceId          String?  @db.ObjectId
+  sourceId          String?   @db.ObjectId
   dueAt             DateTime?
   startedAt         DateTime?
   reviewRequestedAt DateTime?
@@ -1434,10 +1474,10 @@ model OperationTask {
   qualityRating     Int?
   workloadScore     Int?
   resultNotes       String?
-  createdBy         String?  @db.ObjectId
-  updatedBy         String?  @db.ObjectId
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  createdBy         String?   @db.ObjectId
+  updatedBy         String?   @db.ObjectId
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
 
   @@index([status])
   @@index([taskType])
@@ -1630,21 +1670,21 @@ model CommunicationProviderEvent {
 /// campaigns/templates before real sending. Automatic language segments are computed live and are
 /// NOT stored here. Never seeded with demo data.
 model CommunicationAudienceList {
-  id          String    @id @default(auto()) @map("_id") @db.ObjectId
-  name        String
-  description String?
+  id            String   @id @default(auto()) @map("_id") @db.ObjectId
+  name          String
+  description   String?
   /// "CUSTOM" | "TEST".
-  type        String    @default("CUSTOM")
+  type          String   @default("CUSTOM")
   /// "ACTIVE" | "ARCHIVED".
-  status      String    @default("ACTIVE")
-  locale      String?
+  status        String   @default("ACTIVE")
+  locale        String?
   /// Channels this list targets: any of "WHATSAPP" | "EMAIL" | "SMS".
-  channels    String[]
-  createdBy   String?   @db.ObjectId
+  channels      String[]
+  createdBy     String?  @db.ObjectId
   createdByName String?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  metadata    Json?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  metadata      Json?
 
   @@index([type, status])
   @@index([status])
@@ -1893,8 +1933,8 @@ enum CourseKind {
 /// homepage rail — which course is pinned is the foundation's editorial call,
 /// so it belongs in data rather than in code.
 model Course {
-  id            String  @id @default(auto()) @map("_id") @db.ObjectId
-  slug          String  @unique
+  id            String     @id @default(auto()) @map("_id") @db.ObjectId
+  slug          String     @unique
   title         String
   description   String?
   kind          CourseKind @default(COURSE)
@@ -1902,12 +1942,12 @@ model Course {
   introVideoId  String?
   introVideoUrl String?
   unitsCount    Int?
-  isPinned      Boolean @default(false)
-  isExternal    Boolean @default(false)
+  isPinned      Boolean    @default(false)
+  isExternal    Boolean    @default(false)
   externalUrl   String?
-  hasDetailPage Boolean @default(false)
-  order         Int     @default(0)
-  isActive      Boolean @default(true)
+  hasDetailPage Boolean    @default(false)
+  order         Int        @default(0)
+  isActive      Boolean    @default(true)
 
   translations CourseTranslation[]
   videos       CourseVideo[]
@@ -2186,3 +2226,201 @@ model FaqTranslation {
   @@unique([faqId, locale])
 }
 
+/**
+ * ===================== SUPER CATEGORIES =====================
+ */
+
+/// What a `SuperCategoryItem` points at.
+///
+/// The referenced row is addressed by id rather than by a Prisma relation: a
+/// two-sided m-n relation per kind would mean adding a mirrored scalar array to
+/// seven existing models (MongoDB has no join table), and seven relations
+/// between the same pair of models then need explicit names on both ends. One
+/// pointer table costs one extra query per kind on read and keeps every content
+/// model untouched. Rows whose target has since been deleted are skipped by the
+/// reader rather than cascading.
+enum SuperCategoryItemKind {
+  CAMPAIGN
+  POST
+  VIDEO
+  PLAYLIST
+  COURSE
+  REPORT
+  BOOKLET
+}
+
+/// What a block renders.
+///
+/// The seven plural kinds render the super category's linked items of that kind
+/// as a grid. `TEXT` is a free block — eyebrow, heading, body and a link, which
+/// is what a press mention or an explanatory panel needs. `VIDEO` embeds one
+/// film by its YouTube id. `PLAYLIST_EPISODES` renders the episodes of the one
+/// playlist named by `refId`, which is a different thing from a grid of
+/// playlists.
+enum SuperCategoryBlockKind {
+  CAMPAIGNS
+  POSTS
+  VIDEOS
+  PLAYLISTS
+  COURSES
+  REPORTS
+  BOOKLETS
+  TEXT
+  VIDEO
+  PLAYLIST_EPISODES
+}
+
+/// A themed landing page that gathers content of every kind.
+///
+/// A `Category` groups campaigns and nothing else. A super category is the
+/// programme around them: it carries its own page — hero, verse, wordmark,
+/// accent colour, calls to action — and links campaigns, articles, videos,
+/// playlists, courses, reports and booklets, in an order an editor chooses.
+/// ʿIbādan Lanā (`/projects/ibadan-lana`) was such a page hand-written in JSX
+/// with its copy in the i18n bundle; it is now a row here.
+///
+/// The page's shape is `blocks`, so an editor can add a press panel or drop the
+/// film without a deploy. Arabic lives on this row and every other language in
+/// `SuperCategoryTranslation`, the same split every other content model uses.
+model SuperCategory {
+  id   String @id @default(auto()) @map("_id") @db.ObjectId
+  slug String @unique
+
+  // ── Hero, Arabic master copy ──
+  title    String
+  subtitle String?
+  /// The paragraph under the heading.
+  intro    String?
+
+  /// The verse the page opens with. Always shown in Arabic, whatever the
+  /// edition — `verseTranslation` is the translation of the meaning and is what
+  /// changes per locale.
+  verseArabic      String?
+  verseTranslation String?
+  verseAttribution String?
+
+  // ── Customisation ──
+  heroImage        String?
+  /// The programme's wordmark. A locale may override it in its translation row
+  /// when the lockup is script-specific.
+  logoImage        String?
+  /// Hero ground, as a CSS colour. Everything else on the page is the site palette.
+  accentColor      String?
+  /// A film embedded in the hero beside the copy.
+  heroVideoId      String?
+  /// Locales the hero film is shown in; empty means every locale. An Arabic
+  /// recording with no subtitled cut should not be played at a reader who
+  /// cannot follow it.
+  heroVideoLocales String[] @default([])
+
+  ctaPrimaryLabel   String?
+  ctaPrimaryHref    String?
+  ctaSecondaryLabel String?
+  ctaSecondaryHref  String?
+  ctaTertiaryLabel  String?
+  ctaTertiaryHref   String?
+
+  // ── Search ──
+  metaTitle       String?
+  metaDescription String?
+
+  order    Int     @default(0)
+  isActive Boolean @default(true)
+
+  blocks       SuperCategoryBlock[]
+  items        SuperCategoryItem[]
+  translations SuperCategoryTranslation[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([isActive, order])
+}
+
+model SuperCategoryTranslation {
+  id              String @id @default(auto()) @map("_id") @db.ObjectId
+  superCategoryId String @db.ObjectId
+  locale          String
+
+  title            String
+  subtitle         String?
+  intro            String?
+  verseTranslation String?
+  verseAttribution String?
+  /// Per-locale wordmark; falls back to the parent's when empty.
+  logoImage        String?
+
+  ctaPrimaryLabel   String?
+  ctaSecondaryLabel String?
+  ctaTertiaryLabel  String?
+
+  metaTitle       String?
+  metaDescription String?
+
+  superCategory SuperCategory @relation(fields: [superCategoryId], references: [id], onDelete: Cascade)
+
+  @@unique([superCategoryId, locale])
+}
+
+/// One section of a super category's page, in the order it is rendered.
+model SuperCategoryBlock {
+  id              String                 @id @default(auto()) @map("_id") @db.ObjectId
+  superCategoryId String                 @db.ObjectId
+  kind            SuperCategoryBlockKind
+
+  /// Anchor id, so a hero call to action can jump to this block.
+  anchor    String?
+  eyebrow   String?
+  title     String?
+  subtitle  String?
+  body      String?
+  linkLabel String?
+  linkUrl   String?
+  image     String?
+  /// `VIDEO` blocks only.
+  youtubeId String?
+  /// `PLAYLIST_EPISODES` blocks only — the playlist whose episodes are shown.
+  refId     String? @db.ObjectId
+  /// Caps how many linked items a grid block renders; null renders them all.
+  maxItems  Int?
+
+  order    Int     @default(0)
+  isActive Boolean @default(true)
+
+  translations  SuperCategoryBlockTranslation[]
+  superCategory SuperCategory                   @relation(fields: [superCategoryId], references: [id], onDelete: Cascade)
+
+  @@index([superCategoryId, order])
+}
+
+model SuperCategoryBlockTranslation {
+  id      String @id @default(auto()) @map("_id") @db.ObjectId
+  blockId String @db.ObjectId
+  locale  String
+
+  eyebrow   String?
+  title     String?
+  subtitle  String?
+  body      String?
+  linkLabel String?
+
+  block SuperCategoryBlock @relation(fields: [blockId], references: [id], onDelete: Cascade)
+
+  @@unique([blockId, locale])
+}
+
+/// A pointer from a super category to one row of one content model.
+model SuperCategoryItem {
+  id              String                @id @default(auto()) @map("_id") @db.ObjectId
+  superCategoryId String                @db.ObjectId
+  kind            SuperCategoryItemKind
+  /// Id of the referenced Campaign / Post / Video / VideoPlaylist / Course /
+  /// Report / Booklet.
+  refId           String                @db.ObjectId
+  order           Int                   @default(0)
+
+  superCategory SuperCategory @relation(fields: [superCategoryId], references: [id], onDelete: Cascade)
+
+  @@unique([superCategoryId, kind, refId])
+  @@index([superCategoryId, kind, order])
+}
