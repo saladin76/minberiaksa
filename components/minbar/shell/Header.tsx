@@ -486,36 +486,6 @@ export default function Header({
             ) : null}
           </Link>
 
-          {/* Dashboard — administrators only. A plain <a>: the dashboard is
-              outside the localized tree and must not be prefixed with /{locale}. */}
-          {isAdmin ? (
-            <a
-              href="/dashboard"
-              title={tNav("dashboard")}
-              aria-label={tNav("dashboard")}
-              className="mia-circle mia-circle--admin"
-              style={{
-                position: "relative",
-                flex: "0 0 auto",
-                display: "grid",
-                placeItems: "center",
-                width: 42,
-                height: 42,
-                borderRadius: "50%",
-                border: "1px solid rgba(255,255,255,.55)",
-                background: "rgba(255,255,255,.14)",
-                transition: "background .18s ease, transform .18s cubic-bezier(.22,.61,.36,1)",
-              }}
-            >
-              <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                <rect x="3.5" y="3.5" width="7" height="7" rx="1.5" />
-                <rect x="13.5" y="3.5" width="7" height="7" rx="1.5" />
-                <rect x="3.5" y="13.5" width="7" height="7" rx="1.5" />
-                <rect x="13.5" y="13.5" width="7" height="7" rx="1.5" />
-              </svg>
-            </a>
-          ) : null}
-
           {/* Account — signed-in donors go straight to their account, everyone
               else lands on sign-in and is returned here afterwards. */}
           <Link
@@ -739,6 +709,39 @@ export default function Header({
                     <span style={{ width: 6, height: 6, background: "#D39A27", transform: "rotate(45deg)" }} />
                     {tNav("home")}
                   </Link>
+
+                  {/* Administrators only. A plain <a>: the dashboard lives
+                      outside the localized tree and must not get a /{locale}
+                      prefix. Styled like the home row so it reads as a door
+                      out of the site, not as one more page in a group. */}
+                  {isAdmin ? (
+                    <a
+                      href="/dashboard"
+                      onClick={() => setMenuOpen(false)}
+                      style={{
+                        gridColumn: "1 / -1",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 10,
+                        padding: "11px 14px",
+                        borderRadius: 12,
+                        background: "#10212B",
+                        border: "1px solid rgba(211,154,39,.45)",
+                        color: "#fff",
+                        fontSize: 14,
+                        fontWeight: 900,
+                        textDecoration: "none",
+                      }}
+                    >
+                      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#D39A27" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                        <rect x="3.5" y="3.5" width="7" height="7" rx="1.5" />
+                        <rect x="13.5" y="3.5" width="7" height="7" rx="1.5" />
+                        <rect x="3.5" y="13.5" width="7" height="7" rx="1.5" />
+                        <rect x="13.5" y="13.5" width="7" height="7" rx="1.5" />
+                      </svg>
+                      {tNav("dashboard")}
+                    </a>
+                  ) : null}
 
                   {MENU_GROUPS.map((group) => (
                     <div key={group.titleKey} style={{ display: "grid", gap: 4, alignContent: "start", minWidth: 0 }}>

@@ -323,7 +323,6 @@
 .mia-head .mia-circle:hover,
 .mia-head .mia-pill:hover { background: rgba(255, 255, 255, .18); border-color: rgba(255, 255, 255, .6); transform: translateY(-2px); }
 .mia-head .mia-circle--account:hover { box-shadow: 0 0 0 5px rgba(211, 154, 39, .38); transform: translateY(-2px); }
-.mia-head .mia-circle--admin:hover { background: rgba(255, 255, 255, .26); transform: translateY(-2px); }
 
 /* Rows inside the language / currency panel. */
 .mia-head button.mia-row {
