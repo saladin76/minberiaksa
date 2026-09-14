@@ -249,6 +249,9 @@ export default function Footer({
         </div>
 
         <div style={{ position: "relative", overflow: "hidden" }}>
+          {/* The photograph is 16:9 and the band is not: it is cropped to the
+              band with object-fit, never scaled into it, so the dome keeps its
+              shape. The position keeps the skyline rather than the sky. */}
           {/* A wave cut out of the white above, so the photograph meets the
               content on a curve rather than a hard edge. Symmetric, so it does
               not need mirroring. */}
@@ -265,7 +268,7 @@ export default function Footer({
             alt={tCommon("oldCityViewAlt")}
             loading="lazy"
             decoding="async"
-            style={{ display: "block", width: "100%", height: "auto", aspectRatio: "1240/300" }}
+            style={{ display: "block", width: "100%", aspectRatio: "1240/360", objectFit: "cover", objectPosition: "center 42%" }}
           />
         </div>
 

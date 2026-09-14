@@ -6,6 +6,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { miaPath } from "@/lib/minbar/routes";
 import type { MinbarAccountSummary } from "@/lib/minbar/account";
 import { useMinbarMoney } from "@/hooks/useMinbarMoney";
+import { formatMoney } from "@/lib/minbar/money";
 import { Button } from "@/components/minbar/ds";
 
 /**
@@ -129,7 +130,7 @@ export default function AccountPage({ summary }: { summary: MinbarAccountSummary
      and the history must say the same one. */
   const chargedAmount = (amount: number, currency: string) => {
     try {
-      return new Intl.NumberFormat(locale, { style: "currency", currency, maximumFractionDigits: 0 }).format(amount);
+      return formatMoney(amount, currency, locale);
     } catch {
       return `${currency} ${formatNumber(Math.round(amount))}`;
     }

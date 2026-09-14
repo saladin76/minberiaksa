@@ -8,6 +8,7 @@ import {
 } from "@/components/ui/sheet";
 import { useRouter } from "@/i18n/routing";
 import { appendCurrencyQuery, getCurrencyCodeForLinks } from "@/lib/currency-link";
+import { formatMoney } from "@/lib/minbar/money";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ShoppingCart, Heart, Trash2 } from "lucide-react";
@@ -85,12 +86,7 @@ const CartSheet: React.FC<CartSheetProps> = ({
   };
 
   const formatAmount = (amount: number, currency: string) =>
-    new Intl.NumberFormat(locale, {
-      style: 'currency',
-      currency,
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 2,
-    }).format(amount);
+    formatMoney(amount, currency, locale, { minimumFractionDigits: 0, maximumFractionDigits: 2 });
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>

@@ -113,6 +113,8 @@ export interface HeaderProps {
   linkOverrides?: Record<string, string>;
   /** Whether a donor session exists — drives where the account icon points. */
   signedIn?: boolean;
+  /** An ADMIN session gets a direct door to the dashboard beside the account icon. */
+  isAdmin?: boolean;
 }
 
 export default function Header({
@@ -120,6 +122,7 @@ export default function Header({
   whatsappNumber = "905398436050",
   linkOverrides,
   signedIn = false,
+  isAdmin = false,
 }: HeaderProps) {
   const locale = useLocale();
   const dir = localeDirection(locale);
@@ -482,6 +485,36 @@ export default function Header({
               </span>
             ) : null}
           </Link>
+
+          {/* Dashboard — administrators only. A plain <a>: the dashboard is
+              outside the localized tree and must not be prefixed with /{locale}. */}
+          {isAdmin ? (
+            <a
+              href="/dashboard"
+              title={tNav("dashboard")}
+              aria-label={tNav("dashboard")}
+              className="mia-circle mia-circle--admin"
+              style={{
+                position: "relative",
+                flex: "0 0 auto",
+                display: "grid",
+                placeItems: "center",
+                width: 42,
+                height: 42,
+                borderRadius: "50%",
+                border: "1px solid rgba(255,255,255,.55)",
+                background: "rgba(255,255,255,.14)",
+                transition: "background .18s ease, transform .18s cubic-bezier(.22,.61,.36,1)",
+              }}
+            >
+              <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <rect x="3.5" y="3.5" width="7" height="7" rx="1.5" />
+                <rect x="13.5" y="3.5" width="7" height="7" rx="1.5" />
+                <rect x="3.5" y="13.5" width="7" height="7" rx="1.5" />
+                <rect x="13.5" y="13.5" width="7" height="7" rx="1.5" />
+              </svg>
+            </a>
+          ) : null}
 
           {/* Account — signed-in donors go straight to their account, everyone
               else lands on sign-in and is returned here afterwards. */}

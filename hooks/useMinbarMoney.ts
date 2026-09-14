@@ -3,14 +3,17 @@
 import { useCallback } from "react";
 import { useLocale } from "next-intl";
 import { useCurrency } from "@/context/CurrencyContext";
+import { currencySymbol, formatMoney } from "@/lib/minbar/money";
 
 /**
  * Formats a USD figure in the visitor's selected currency.
  *
  * Two rules from `DEVELOPER_HANDOFF §10` shape this:
- *  - the symbol, the thousands separator and the decimal mark follow
+ *  - the thousands separator, the decimal mark and the symbol's side follow
  *    `Intl.NumberFormat(locale, {style: "currency"})`, so a German visitor sees
- *    `1.234 €` and an English one `$1,234`;
+ *    `1.234 $` and an English one `$1,234`. The symbol itself is the short one
+ *    from the currency selector — `$`, never ICU's disambiguated `US$` — see
+ *    `lib/minbar/money.ts`;
  *  - **the value never changes because of the language.** Conversion is driven
  *    by the currency cookie and the daily rate feed, which are independent of
  *    locale. Switching from English to German re-formats; it does not re-price.
@@ -34,17 +37,7 @@ export function useMinbarMoney() {
       const { convertedValue, currency } = convertToCurrency(usd);
       const value = convertedValue ?? usd;
       const code = currency && currency !== "DEFAULT" ? currency : "USD";
-      try {
-        return new Intl.NumberFormat(locale, {
-          style: "currency",
-          currency: code,
-          maximumFractionDigits: 0,
-          ...options,
-        }).format(value);
-      } catch {
-        // An unknown currency code or an ICU gap must not take the page down.
-        return `${code} ${Math.round(value).toLocaleString(locale)}`;
-      }
+      return formatMoney(value, code, locale, options);
     },
     [convertToCurrency, locale]
   );
@@ -61,5 +54,9 @@ export function useMinbarMoney() {
     [locale]
   );
 
-  return { format, formatNumber, currency: getSelectedCurrency() };
+  const selected = getSelectedCurrency();
+  const code = selected && selected !== "DEFAULT" ? selected : "USD";
+
+  /** `currency` is the selector's value (may be "DEFAULT"); `symbol` is what to print beside an input. */
+  return { format, formatNumber, currency: selected, symbol: currencySymbol(code) };
 }

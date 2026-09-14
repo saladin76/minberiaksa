@@ -79,7 +79,7 @@ export default function QuickDonateBar({ projects }: { projects: MinbarProject[]
   const tHome = useTranslations("homepage");
   const tNav = useTranslations("navigation");
   const tSystem = useTranslations("system");
-  const { format, currency } = useMinbarMoney();
+  const { format, symbol } = useMinbarMoney();
 
   const [destination, setDestination] = useState<string>("where-needed");
   const [freq, setFreq] = useState<CartFreqKey>("once");
@@ -163,7 +163,7 @@ export default function QuickDonateBar({ projects }: { projects: MinbarProject[]
 
             {custom !== null ? (
               <label className="mia-qd-custom">
-                <span className="mia-qd-cur" dir="ltr">{currency}</span>
+                <span className="mia-qd-cur" dir="ltr">{symbol}</span>
                 <input
                   autoFocus
                   value={custom}

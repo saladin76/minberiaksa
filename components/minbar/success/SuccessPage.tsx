@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useLocale, useTranslations } from "next-intl";
 import { miaPath } from "@/lib/minbar/routes";
+import { formatMoney } from "@/lib/minbar/money";
 import { addToCart, type CartFreqKey } from "@/lib/minbar/cart";
 import type { MinbarDonationSummary } from "@/lib/minbar/donation";
 import { Button } from "@/components/minbar/ds";
@@ -381,7 +382,7 @@ function SummaryRow({ label, value, ltr = false }: { label: string; value: strin
  */
 function money(locale: string, amount: number, currency: string) {
   try {
-    return new Intl.NumberFormat(locale, { style: "currency", currency, maximumFractionDigits: 0 }).format(amount);
+    return formatMoney(amount, currency, locale);
   } catch {
     return `${currency} ${Math.round(amount)}`;
   }

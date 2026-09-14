@@ -102,7 +102,7 @@ export default async function Rootlayout({
             </Suspense>
             <SessionProvider>
               <PreferredLangSync />
-              <Header signedIn={!!session?.user} />
+              <Header signedIn={!!session?.user} isAdmin={session?.user?.role === "ADMIN"} />
               {/* No top padding here: the header renders its own spacer, sized
                   from its measured height, because that height changes with the
                   language, the back button and the viewport. */}
