@@ -7,6 +7,7 @@ import { verseBlock } from "@/lib/minbar/quran";
 import { listProjects } from "@/lib/minbar/projects";
 import MinbarMessages from "@/components/minbar/MinbarMessages";
 import AqsaPage from "@/components/minbar/aqsa/AqsaPage";
+import PageBanners from "@/components/minbar/banners/PageBanners";
 
 interface Props {
   params: Promise<{ locale: string }>;
@@ -51,11 +52,13 @@ export default async function Aqsa({ params }: Props) {
 
   return (
     <MinbarMessages locale={locale} namespaces={NAMESPACES}>
+        <PageBanners locale={locale} page="aqsa" slot="top" />
       <AqsaPage
         verse={verseBlock(quran, "anbiya_71", locale)}
         isra={verseBlock(quran, "isra_1", locale)}
         projects={projects}
       />
+      <PageBanners locale={locale} page="aqsa" slot="bottom" />
     </MinbarMessages>
   );
 }

@@ -5,6 +5,7 @@ import { slugFor } from "@/lib/minbar/routes";
 import MinbarMessages from "@/components/minbar/MinbarMessages";
 import ReportsPage from "@/components/minbar/reports/ReportsPage";
 import { listReports } from "@/lib/minbar/cms";
+import PageBanners from "@/components/minbar/banners/PageBanners";
 
 interface Props {
   params: Promise<{ locale: string }>;
@@ -35,7 +36,9 @@ export default async function Achievements({ params }: Props) {
 
   return (
     <MinbarMessages locale={locale} namespaces={NAMESPACES}>
+        <PageBanners locale={locale} page="reports" slot="top" />
       <ReportsPage reports={reports} />
+      <PageBanners locale={locale} page="reports" slot="bottom" />
     </MinbarMessages>
   );
 }

@@ -2172,7 +2172,20 @@ model UrgentBanner {
   ctaLabel         String?
   ctaUrl           String?
   campaignId       String?   @db.ObjectId
+  /// Price chips on the banner, USD; `amountLabels` names them in the same order.
   suggestedAmounts Int[]     @default([])
+  amountLabels     String[]  @default([])
+  /// The one-line strip above the photograph — a verse, a hadith, a slogan.
+  kicker           String?
+  ctaSecondaryLabel String?
+  ctaSecondaryUrl   String?
+  /// Where on the site it shows: `"<page>:<slot>"` pairs from
+  /// `lib/minbar/banner-placements.ts`. Empty = nowhere.
+  placements       String[]  @default([])
+  /// Look: `red` | `navy` | `gold` | `green`; copy on the `start` or `end` side.
+  tone             String    @default("red")
+  textSide         String    @default("start")
+  /// Sort order within a slot, ascending — set by drag-and-drop on the list.
   priority         Int       @default(0)
   locales          String[]  @default([])
   startsAt         DateTime?
@@ -2194,6 +2207,9 @@ model UrgentBannerTranslation {
   title          String
   description    String?
   ctaLabel       String?
+  kicker         String?
+  ctaSecondaryLabel String?
+  amountLabels   String[] @default([])
 
   urgentBanner UrgentBanner @relation(fields: [urgentBannerId], references: [id], onDelete: Cascade)
 

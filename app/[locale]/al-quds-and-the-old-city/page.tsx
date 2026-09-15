@@ -7,6 +7,7 @@ import { verseBlock } from "@/lib/minbar/quran";
 import { listProjects } from "@/lib/minbar/projects";
 import MinbarMessages from "@/components/minbar/MinbarMessages";
 import JerusalemPage from "@/components/minbar/jerusalem/JerusalemPage";
+import PageBanners from "@/components/minbar/banners/PageBanners";
 
 interface Props {
   params: Promise<{ locale: string }>;
@@ -56,7 +57,9 @@ export default async function Jerusalem({ params }: Props) {
 
   return (
     <MinbarMessages locale={locale} namespaces={NAMESPACES}>
+        <PageBanners locale={locale} page="jerusalem" slot="top" />
       <JerusalemPage verse={verse} projects={projects} />
+      <PageBanners locale={locale} page="jerusalem" slot="bottom" />
     </MinbarMessages>
   );
 }

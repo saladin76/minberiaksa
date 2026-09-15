@@ -4,65 +4,32 @@ import { prisma } from "@/lib/prisma";
 import { authOptions } from "../auth/[...nextauth]/options";
 import { requireAdminOrDashboardPermission } from "@/lib/dashboard/api-auth";
 import { queueAuditLog, auditActorFromDashboardSession } from "@/lib/audit-log";
-import { pickTranslation, translationLocaleWhere } from "@/lib/i18n/translation-fallback";
 import { writeErrorMessage } from "@/lib/dashboard/write-error-message";
 import {
   URGENT_BANNER_WITH_TRANSLATIONS_SELECT,
   buildUrgentBannerScalars,
   parseUrgentBannerTranslations,
-  urgentBannerLiveWhere,
 } from "@/lib/content/urgent-banner-write";
+import { listBanners } from "@/lib/minbar/banners";
+import type { BannerSlotKey } from "@/lib/minbar/banner-placements";
 
 /**
- * GET  /api/urgent-banners — live banners for one locale, highest priority first.
- *      The site typically shows only the first; the rest are returned so it can
- *      choose to rotate.
+ * GET  /api/urgent-banners?locale=&page=&slot= — the live banners for one slot
+ *      of one page, resolved for the locale, in drag order. This is what the
+ *      site's `<PageBanners>` reads on the server; it is public so a client
+ *      can read the same list.
  * POST /api/urgent-banners — create, dashboard only.
  */
 export async function GET(request: NextRequest) {
   try {
-    const locale = request.nextUrl.searchParams.get("locale") || "ar";
-
-    const rows = await prisma.urgentBanner.findMany({
-      where: urgentBannerLiveWhere(locale),
-      orderBy: { priority: "desc" },
-      select: {
-        id: true,
-        slug: true,
-        title: true,
-        description: true,
-        image: true,
-        ctaLabel: true,
-        ctaUrl: true,
-        campaignId: true,
-        suggestedAmounts: true,
-        priority: true,
-        endsAt: true,
-        translations: {
-          where: translationLocaleWhere(locale),
-          take: 2,
-          select: { locale: true, title: true, description: true, ctaLabel: true },
-        },
-      },
-    });
-
-    const items = rows.map((b) => {
-      const t = pickTranslation(b.translations, locale);
-      return {
-        id: b.id,
-        slug: b.slug,
-        title: t?.title ?? b.title,
-        description: t?.description || b.description || "",
-        image: b.image ?? "",
-        ctaLabel: t?.ctaLabel || b.ctaLabel || "",
-        ctaUrl: b.ctaUrl ?? "",
-        campaignId: b.campaignId ?? null,
-        suggestedAmounts: b.suggestedAmounts,
-        priority: b.priority,
-        endsAt: b.endsAt?.toISOString() ?? null,
-      };
-    });
-
+    const q = request.nextUrl.searchParams;
+    const locale = q.get("locale") || "ar";
+    const page = q.get("page") || "home";
+    const slot = (q.get("slot") || "top") as BannerSlotKey;
+    if (!["top", "middle", "bottom"].includes(slot)) {
+      return NextResponse.json({ error: "Invalid slot" }, { status: 400 });
+    }
+    const items = await listBanners(locale, page, slot);
     return NextResponse.json({ items });
   } catch (error) {
     console.error("Error fetching urgent banners:", error);
@@ -94,8 +61,12 @@ export async function POST(request: NextRequest) {
 
     const { write } = parseUrgentBannerTranslations(data.translations);
 
+    /* New banners go to the end of the order. */
+    const last = await prisma.urgentBanner.findFirst({ orderBy: { priority: "desc" }, select: { priority: true } });
+    const priority = (last?.priority ?? -1) + 1;
+
     const full = await prisma.urgentBanner.create({
-      data: { ...scalars, ...(write.length ? { translations: { create: write } } : {}) },
+      data: { ...scalars, priority, ...(write.length ? { translations: { create: write } } : {}) },
       select: URGENT_BANNER_WITH_TRANSLATIONS_SELECT,
     });
 
@@ -103,7 +74,7 @@ export async function POST(request: NextRequest) {
     queueAuditLog({
       ...actor,
       action: "URGENT_BANNER_CREATE",
-      messageAr: `${actor.actorName ?? "مسؤول"} أنشأ بانر طوارئ: ${full.title}`,
+      messageAr: `${actor.actorName ?? "مسؤول"} أنشأ بانرًا: ${full.title}`,
       entityType: "UrgentBanner",
       entityId: full.id,
     });

@@ -5,6 +5,7 @@ import { listProjects } from "@/lib/minbar/projects";
 import { slugFor } from "@/lib/minbar/routes";
 import MinbarMessages from "@/components/minbar/MinbarMessages";
 import RecurringPage from "@/components/minbar/recurring/RecurringPage";
+import PageBanners from "@/components/minbar/banners/PageBanners";
 
 interface Props {
   params: Promise<{ locale: string }>;
@@ -32,7 +33,9 @@ export default async function Recurring({ params }: Props) {
 
   return (
     <MinbarMessages locale={locale} namespaces={NAMESPACES}>
+        <PageBanners locale={locale} page="recurring" slot="top" />
       <RecurringPage projects={projects} />
+      <PageBanners locale={locale} page="recurring" slot="bottom" />
     </MinbarMessages>
   );
 }

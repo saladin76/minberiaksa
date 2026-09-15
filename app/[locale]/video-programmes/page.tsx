@@ -5,6 +5,7 @@ import { slugFor } from "@/lib/minbar/routes";
 import MinbarMessages from "@/components/minbar/MinbarMessages";
 import ProgramsPage from "@/components/minbar/videos/ProgramsPage";
 import { listPlaylists } from "@/lib/minbar/cms";
+import PageBanners from "@/components/minbar/banners/PageBanners";
 
 interface Props {
   params: Promise<{ locale: string }>;
@@ -30,7 +31,9 @@ export default async function Programs({ params }: Props) {
 
   return (
     <MinbarMessages locale={locale} namespaces={NAMESPACES}>
+        <PageBanners locale={locale} page="programs" slot="top" />
       <ProgramsPage playlists={playlists} />
+      <PageBanners locale={locale} page="programs" slot="bottom" />
     </MinbarMessages>
   );
 }

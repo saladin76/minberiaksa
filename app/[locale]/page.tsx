@@ -9,6 +9,7 @@ import { listCourses, listFaqs, listPlaylists, listVideos } from "@/lib/minbar/c
 import { readQuickDonation } from "@/lib/minbar/quick-donation-read";
 import MinbarMessages from "@/components/minbar/MinbarMessages";
 import HomePage from "@/components/minbar/home/HomePage";
+import PageBanners from "@/components/minbar/banners/PageBanners";
 
 /**
  * Namespaces this page renders, on top of the shell bundle: its own copy, the
@@ -85,6 +86,11 @@ export default async function Home({ params }: Props) {
         <HomePage
           projects={projects}
           quick={{ config: quick, projects: allProjects }}
+          banners={{
+            top: <PageBanners locale={locale} page="home" slot="top" />,
+            middle: <PageBanners locale={locale} page="home" slot="middle" />,
+            bottom: <PageBanners locale={locale} page="home" slot="bottom" />,
+          }}
           content={{ courses, playlists, endorsements, achievements, faqs, articles: articlesPage.items, news }}
           signedIn={!!session?.user}
         />

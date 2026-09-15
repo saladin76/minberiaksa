@@ -12,6 +12,7 @@ import MinbarMessages from "@/components/minbar/MinbarMessages";
 import ProjectDetail from "@/components/minbar/projects/ProjectDetail";
 import SuperCategoryPage from "@/components/minbar/projects/SuperCategoryPage";
 import { getSuperCategory } from "@/lib/minbar/super-category";
+import PageBanners from "@/components/minbar/banners/PageBanners";
 
 interface Props {
   params: Promise<{ locale: string; slug: string }>;
@@ -64,7 +65,9 @@ export default async function ProjectPage({ params }: Props) {
   if (superCategory) {
     return (
       <MinbarMessages locale={locale} namespaces={NAMESPACES}>
+        <PageBanners locale={locale} page="projectDetail" slot="top" />
         <SuperCategoryPage page={superCategory} />
+        <PageBanners locale={locale} page="projectDetail" slot="bottom" />
       </MinbarMessages>
     );
   }
@@ -95,7 +98,9 @@ export default async function ProjectPage({ params }: Props) {
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumb) }} />
       <MinbarMessages locale={locale} namespaces={NAMESPACES}>
+        <PageBanners locale={locale} page="projectDetail" slot="top" />
         <ProjectDetail project={project} updates={updates} gallery={gallery} related={related} />
+        <PageBanners locale={locale} page="projectDetail" slot="bottom" />
       </MinbarMessages>
     </>
   );

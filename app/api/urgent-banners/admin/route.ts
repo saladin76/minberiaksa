@@ -18,7 +18,7 @@ export async function GET() {
     if (denied) return denied;
 
     const rows = await prisma.urgentBanner.findMany({
-      orderBy: { priority: "desc" },
+      orderBy: [{ priority: "asc" }, { createdAt: "desc" }],
       select: {
         id: true,
         slug: true,
@@ -26,6 +26,8 @@ export async function GET() {
         image: true,
         ctaUrl: true,
         campaignId: true,
+        placements: true,
+        tone: true,
         priority: true,
         locales: true,
         startsAt: true,
@@ -52,6 +54,8 @@ export async function GET() {
       ctaUrl: b.ctaUrl ?? "",
       campaignId: b.campaignId ?? null,
       campaignTitle: b.campaignId ? (titleById.get(b.campaignId) ?? null) : null,
+      placements: b.placements,
+      tone: b.tone,
       priority: b.priority,
       locales: b.locales,
       startsAt: b.startsAt?.toISOString() ?? null,

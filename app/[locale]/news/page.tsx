@@ -5,6 +5,7 @@ import { slugFor } from "@/lib/minbar/routes";
 import { listNews } from "@/lib/minbar/posts";
 import MinbarMessages from "@/components/minbar/MinbarMessages";
 import NewsPage from "@/components/minbar/news/NewsPage";
+import PageBanners from "@/components/minbar/banners/PageBanners";
 
 interface Props {
   params: Promise<{ locale: string }>;
@@ -38,7 +39,9 @@ export default async function News({ params }: Props) {
 
   return (
     <MinbarMessages locale={locale} namespaces={NAMESPACES}>
+        <PageBanners locale={locale} page="news" slot="top" />
       <NewsPage items={items} />
+      <PageBanners locale={locale} page="news" slot="bottom" />
     </MinbarMessages>
   );
 }

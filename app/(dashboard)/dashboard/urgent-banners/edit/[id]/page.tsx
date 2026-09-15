@@ -25,22 +25,34 @@ export default function EditUrgentBannerPage({ params }: { params: Promise<{ id:
       .then((res) => {
         if (!live) return;
         const b = res.data;
+        /* The translation tabs edit strings; the label list is stored as an
+           array, so it is joined here and split again by the API. */
+        const rows = ((b.translations ?? []) as Array<Record<string, unknown>>).map((row) => ({
+          ...row,
+          amountLabels: Array.isArray(row.amountLabels) ? (row.amountLabels as string[]).join(', ') : '',
+        }));
         setInitial({
           ...emptyUrgentBanner(),
           slug: b.slug ?? '',
           title: b.title ?? '',
+          kicker: b.kicker ?? '',
           description: b.description ?? '',
           image: b.image ?? '',
           ctaLabel: b.ctaLabel ?? '',
           ctaUrl: b.ctaUrl ?? '',
+          ctaSecondaryLabel: b.ctaSecondaryLabel ?? '',
+          ctaSecondaryUrl: b.ctaSecondaryUrl ?? '',
           campaignId: b.campaignId ?? '',
           suggestedAmounts: Array.isArray(b.suggestedAmounts) ? b.suggestedAmounts.join(', ') : '',
-          priority: String(b.priority ?? 0),
+          amountLabels: Array.isArray(b.amountLabels) ? b.amountLabels.join(', ') : '',
+          placements: Array.isArray(b.placements) ? b.placements : [],
+          tone: b.tone ?? 'red',
+          textSide: b.textSide ?? 'start',
           locales: Array.isArray(b.locales) ? b.locales : [],
           startsAt: b.startsAt ?? '',
           endsAt: b.endsAt ?? '',
           isActive: b.isActive !== false,
-          translations: translationsFromRows(b.translations ?? [], BANNER_TRANSLATION_FIELDS),
+          translations: translationsFromRows(rows, BANNER_TRANSLATION_FIELDS),
         });
       })
       .catch((e) => {

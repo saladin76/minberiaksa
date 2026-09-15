@@ -7,6 +7,7 @@ import { getArticle } from "@/lib/minbar/posts";
 import MinbarMessages from "@/components/minbar/MinbarMessages";
 import ArticleDetail from "@/components/minbar/blog/ArticleDetail";
 import { ctaKeyFor } from "@/components/minbar/blog/ArticleCta";
+import PageBanners from "@/components/minbar/banners/PageBanners";
 
 interface Props {
   params: Promise<{ locale: string; postId: string }>;
@@ -69,12 +70,14 @@ export default async function Article({ params }: Props) {
 
   return (
     <MinbarMessages locale={locale} namespaces={NAMESPACES}>
+        <PageBanners locale={locale} page="article" slot="top" />
       <script
         type="application/ld+json"
         // eslint-disable-next-line react/no-danger -- JSON-LD has no other insertion point
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
       <ArticleDetail article={article} ctaKey={ctaKey} />
+      <PageBanners locale={locale} page="article" slot="bottom" />
     </MinbarMessages>
   );
 }

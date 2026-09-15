@@ -3,22 +3,20 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
-import { Plus, Pencil, Trash2, Loader2, AlertTriangle } from 'lucide-react';
+import { Plus, Pencil, Trash2, Loader2, AlertTriangle, MapPin } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { EmptyState } from '@/components/dashboard/EmptyState';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
-import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
-} from '@/components/ui/table';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { errorMessage } from '@/lib/dashboard/client-error-message';
 import { LOCALES } from '@/lib/locales';
+import { describePlacement, type BannerTone } from '@/lib/minbar/banner-placements';
+import { SortableTable, useReorder, type SortableColumn } from '../_components/SortableTable';
 
 interface BannerRow {
   id: string;
@@ -28,6 +26,8 @@ interface BannerRow {
   ctaUrl: string;
   campaignId: string | null;
   campaignTitle: string | null;
+  placements: string[];
+  tone: BannerTone;
   priority: number;
   locales: string[];
   startsAt: string | null;
@@ -43,6 +43,7 @@ function StatusBadge({ row }: { row: BannerRow }) {
   if (!row.isActive) return <Badge variant="secondary">معطّل</Badge>;
   if (row.expired) return <Badge variant="destructive">منتهٍ</Badge>;
   if (row.pending) return <Badge variant="outline">مجدول</Badge>;
+  if (!row.placements.length) return <Badge variant="outline" className="text-amber-700 border-amber-300">بلا موضع</Badge>;
   return <Badge className="bg-emerald-600 hover:bg-emerald-600">ظاهر</Badge>;
 }
 
@@ -51,9 +52,17 @@ function formatWindow(row: BannerRow): string {
   return new Date(row.endsAt).toLocaleString('ar', { dateStyle: 'short', timeStyle: 'short' });
 }
 
+const TONE_SWATCH: Record<BannerTone, string> = {
+  red: '#A93428',
+  navy: '#132C38',
+  gold: '#D39A27',
+  green: '#1F7A4D',
+};
+
 /**
- * Not drag-sortable: banners order by `priority`, a number the editor sets
- * explicitly, and there are rarely more than one or two live at a time.
+ * Drag to order. The row order here IS the order within every slot on the
+ * site — a banner higher in this list renders above one lower down wherever
+ * the two share a placement. Persisted once on drop as `priority`.
  */
 export default function UrgentBannersPage() {
   const router = useRouter();
@@ -77,6 +86,13 @@ export default function UrgentBannersPage() {
   }, []);
 
   useEffect(() => { fetchRows(); }, [fetchRows]);
+
+  const { onMove, onCommit } = useReorder(
+    rows,
+    setRows,
+    useCallback(async (payload) => { await axios.post('/api/urgent-banners/reorder', { banners: payload }); }, []),
+    useCallback((e: unknown) => { toast.error(errorMessage(e, 'تعذّر حفظ الترتيب')); fetchRows(); }, [fetchRows]),
+  );
 
   const toggleActive = async (row: BannerRow, next: boolean) => {
     setTogglingId(row.id);
@@ -105,6 +121,84 @@ export default function UrgentBannersPage() {
     }
   };
 
+  const columns: SortableColumn<BannerRow>[] = [
+    {
+      header: 'البانر',
+      cell: (r) => (
+        <div className="flex items-center gap-2">
+          {r.image ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={r.image} alt="" className="w-16 h-10 rounded object-cover border grayscale" style={{ borderColor: TONE_SWATCH[r.tone] }} />
+          ) : (
+            <div className="w-16 h-10 rounded border grid place-items-center" style={{ background: TONE_SWATCH[r.tone] }}>
+              <AlertTriangle className="w-4 h-4 text-white/80" />
+            </div>
+          )}
+          <div className="min-w-0">
+            <div className="font-semibold truncate max-w-[16rem]">{r.title}</div>
+            <div className="text-xs text-slate-500" dir="ltr">{r.slug}</div>
+          </div>
+        </div>
+      ),
+    },
+    {
+      header: 'أين يظهر',
+      cell: (r) =>
+        r.placements.length ? (
+          <div className="flex flex-wrap gap-1 max-w-[18rem]">
+            {r.placements.map((p) => (
+              <Badge key={p} variant="outline" className="text-[10px] px-1.5 py-0 font-normal gap-1">
+                <MapPin className="w-2.5 h-2.5" />
+                {describePlacement(p)}
+              </Badge>
+            ))}
+          </div>
+        ) : (
+          <span className="text-xs text-amber-700">لم يُحدَّد — لن يظهر</span>
+        ),
+    },
+    {
+      header: 'الوجهة',
+      className: 'text-xs text-slate-600 max-w-[12rem] truncate',
+      cell: (r) => r.campaignTitle ?? (r.ctaUrl ? <span dir="ltr">{r.ctaUrl}</span> : '—'),
+    },
+    { header: 'الحالة', cell: (r) => <StatusBadge row={r} /> },
+    { header: 'ينتهي', className: 'text-xs text-slate-600', cell: (r) => formatWindow(r) },
+    {
+      header: 'اللغات',
+      cell: (r) =>
+        r.locales.length === 0 ? (
+          <span className="text-xs text-slate-500">الكل</span>
+        ) : (
+          <div className="flex flex-wrap gap-1">
+            {r.locales.map((l) => (
+              <Badge key={l} variant="outline" className="text-[10px] px-1.5 py-0">
+                {LOCALES[l as keyof typeof LOCALES]?.nativeLabel ?? l}
+              </Badge>
+            ))}
+          </div>
+        ),
+    },
+    {
+      header: 'مفعّل',
+      cell: (r) => <Switch checked={r.isActive} disabled={togglingId === r.id} onCheckedChange={(v) => toggleActive(r, v)} />,
+    },
+    {
+      header: '',
+      className: 'w-24',
+      cell: (r) => (
+        <div className="flex gap-1">
+          <Button variant="ghost" size="icon" onClick={() => router.push(`/dashboard/urgent-banners/edit/${r.id}`)}>
+            <Pencil className="w-4 h-4" />
+          </Button>
+          <Button variant="ghost" size="icon" onClick={() => setDeleteTarget(r)}>
+            <Trash2 className="w-4 h-4 text-red-600" />
+          </Button>
+        </div>
+      ),
+    },
+  ];
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-24">
@@ -117,9 +211,9 @@ export default function UrgentBannersPage() {
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <h1 className="text-lg font-bold">بانرات الطوارئ</h1>
+          <h1 className="text-lg font-bold">البانرات</h1>
           <p className="text-xs text-slate-500">
-            نداءات الحملات العاجلة. الأعلى أولوية يظهر أولًا، والبانر يختفي تلقائيًا عند انتهاء مدته.
+            بانرات مثل «شدّ الرحال» تضعها على أي صفحة وموضع. اسحب الصفوف لترتيبها — الأعلى هنا يظهر أولًا حيثما اجتمع بانران في موضع واحد.
           </p>
         </div>
         <Button onClick={() => router.push('/dashboard/urgent-banners/new')}>
@@ -132,7 +226,7 @@ export default function UrgentBannersPage() {
         <EmptyState
           icon={AlertTriangle}
           title="لا توجد بانرات"
-          description="أنشئ بانرًا عند إطلاق حملة طارئة."
+          description="أنشئ بانرًا واختر الصفحات التي يظهر فيها."
           action={
             <Button onClick={() => router.push('/dashboard/urgent-banners/new')}>
               <Plus className="w-4 h-4 ml-1" />
@@ -141,76 +235,15 @@ export default function UrgentBannersPage() {
           }
         />
       ) : (
-        <Card>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>البانر</TableHead>
-                <TableHead>الوجهة</TableHead>
-                <TableHead>الحالة</TableHead>
-                <TableHead>ينتهي</TableHead>
-                <TableHead>الأولوية</TableHead>
-                <TableHead>اللغات</TableHead>
-                <TableHead>مفعّل</TableHead>
-                <TableHead className="w-24" />
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {rows.map((r) => (
-                <TableRow key={r.id} className={`${!r.isActive ? 'bg-muted/30' : ''} hover:bg-muted/50 transition-colors`}>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      {r.image ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={r.image} alt="" className="w-16 h-10 rounded object-cover border" />
-                      ) : (
-                        <div className="w-16 h-10 rounded border bg-slate-50 grid place-items-center">
-                          <AlertTriangle className="w-4 h-4 text-slate-400" />
-                        </div>
-                      )}
-                      <div>
-                        <div className="font-semibold">{r.title}</div>
-                        <div className="text-xs text-slate-500" dir="ltr">{r.slug}</div>
-                      </div>
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-xs text-slate-600 max-w-[14rem] truncate">
-                    {r.campaignTitle ?? (r.ctaUrl ? <span dir="ltr">{r.ctaUrl}</span> : '—')}
-                  </TableCell>
-                  <TableCell><StatusBadge row={r} /></TableCell>
-                  <TableCell className="text-xs text-slate-600">{formatWindow(r)}</TableCell>
-                  <TableCell className="text-xs text-slate-600" dir="ltr">{r.priority}</TableCell>
-                  <TableCell>
-                    {r.locales.length === 0 ? (
-                      <span className="text-xs text-slate-500">الكل</span>
-                    ) : (
-                      <div className="flex flex-wrap gap-1">
-                        {r.locales.map((l) => (
-                          <Badge key={l} variant="outline" className="text-[10px] px-1.5 py-0">
-                            {LOCALES[l as keyof typeof LOCALES]?.nativeLabel ?? l}
-                          </Badge>
-                        ))}
-                      </div>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <Switch checked={r.isActive} disabled={togglingId === r.id} onCheckedChange={(v) => toggleActive(r, v)} />
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex gap-1">
-                      <Button variant="ghost" size="icon" onClick={() => router.push(`/dashboard/urgent-banners/edit/${r.id}`)}>
-                        <Pencil className="w-4 h-4" />
-                      </Button>
-                      <Button variant="ghost" size="icon" onClick={() => setDeleteTarget(r)}>
-                        <Trash2 className="w-4 h-4 text-red-600" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </Card>
+        <SortableTable
+          rows={rows}
+          getId={(r) => r.id}
+          columns={columns}
+          onMove={onMove}
+          onCommit={onCommit}
+          isDimmed={(r) => !r.isActive || r.expired}
+          dragType="urgent-banner"
+        />
       )}
 
       <AlertDialog open={!!deleteTarget} onOpenChange={(o) => !o && setDeleteTarget(null)}>

@@ -6,6 +6,7 @@ import { buildPageMetadata } from "@/lib/seo";
 import { slugFor } from "@/lib/minbar/routes";
 import MinbarMessages from "@/components/minbar/MinbarMessages";
 import WaqfPage from "@/components/minbar/waqf/WaqfPage";
+import PageBanners from "@/components/minbar/banners/PageBanners";
 
 interface Props {
   params: Promise<{ locale: string }>;
@@ -50,7 +51,9 @@ export default async function Waqf({ params }: Props) {
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }} />
       <MinbarMessages locale={locale} namespaces={NAMESPACES}>
+        <PageBanners locale={locale} page="waqf" slot="top" />
         <WaqfPage donorName={session?.user?.name ?? null} />
+        <PageBanners locale={locale} page="waqf" slot="bottom" />
       </MinbarMessages>
     </>
   );

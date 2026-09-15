@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import VideoModal, { useVideoModal } from "@/components/minbar/VideoModal";
 import { IMG } from "@/lib/minbar/content/media";
 import type { MinbarProject } from "@/lib/minbar/projects";
@@ -40,12 +41,15 @@ import ZakatBanner from "@/components/minbar/banners/ZakatBanner";
 export default function HomePage({
   projects,
   quick,
+  banners,
   content,
   signedIn,
 }: {
   projects: MinbarProject[];
   /** The quick-donation card as the dashboard configured it, with every project it may list. */
   quick: { config: QuickDonationConfig; projects: MinbarProject[] };
+  /** Dashboard banners, already rendered on the server, one node per slot. */
+  banners: { top: ReactNode; middle: ReactNode; bottom: ReactNode };
   content: HomeContent;
   signedIn: boolean;
 }) {
@@ -71,6 +75,7 @@ export default function HomePage({
 
       <Hero onPlayIntro={video.open} />
       <VerseStrip />
+      {banners.top}
       <UrgentProjectsSection projects={projects} />
       <QuickDonateBar config={quick.config} projects={quick.projects} />
       <EventsSection />
@@ -79,6 +84,7 @@ export default function HomePage({
       <ProgramsRail playlists={content.playlists} />
       <CoursesRail onPlay={video.open} courses={content.courses} />
       <ImpactSection />
+      {banners.middle}
       <TravelBanner />
       <IbadanBanner />
       <ZakatBanner />
@@ -86,6 +92,7 @@ export default function HomePage({
       <RecurringSection />
       <RegionCards images={{ quds: IMG.quds, aqsa: IMG.aqsa, relief: IMG.parcels }} />
       <AccountSection signedIn={signedIn} />
+      {banners.bottom}
       <ArticlesSection articles={content.articles} />
       <NewsSection news={content.news} />
       <FaqSection faqs={content.faqs} />

@@ -4,6 +4,7 @@ import { buildPageMetadata } from "@/lib/seo";
 import { slugFor } from "@/lib/minbar/routes";
 import MinbarMessages from "@/components/minbar/MinbarMessages";
 import AboutPage from "@/components/minbar/about/AboutPage";
+import PageBanners from "@/components/minbar/banners/PageBanners";
 
 interface Props {
   params: Promise<{ locale: string }>;
@@ -33,7 +34,9 @@ export default async function About({ params }: Props) {
 
   return (
     <MinbarMessages locale={locale} namespaces={NAMESPACES}>
+        <PageBanners locale={locale} page="about" slot="top" />
       <AboutPage />
+      <PageBanners locale={locale} page="about" slot="bottom" />
     </MinbarMessages>
   );
 }

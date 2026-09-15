@@ -1543,6 +1543,98 @@ body[data-quick-dock="true"] .mia-wa-fab { bottom: calc(94px + env(safe-area-ins
   .mia-scope .mia-zakat-cta, .mia-scope .mia-zakat-cta-ghost { height: 44px !important; font-size: 14px !important; flex: 1 1 0; justify-content: center; }
 }
 
+/* ── Dashboard banners (`components/minbar/banners/SiteBanner.tsx`) ───────
+ * The Journey-to-Al-Aqsa band as a template: `--bn` is the tone, `--bn-ink`
+ * the text colour that sits on it. `data-side` mirrors the copy and the
+ * chips. Phone rules follow the `.friday-*` ones above so the two bands read
+ * as one family when they sit on the same page. */
+.mia-scope .mia-bn-sec { position: relative; z-index: 1; padding: 0 24px 56px; color: var(--deep); }
+.mia-scope .mia-bn-wrap {
+  --bn: var(--red); --bn-ink: #fff;
+  position: relative; max-width: 1240px; margin: 0 auto; border-radius: 16px; overflow: hidden;
+  background: var(--bn); box-shadow: 0 18px 44px rgba(16,33,43,.14);
+  animation: mia-in .5s cubic-bezier(.22,.61,.36,1) both;
+}
+.mia-scope .mia-bn-wrap[data-tone="navy"] { --bn: var(--navy); }
+.mia-scope .mia-bn-wrap[data-tone="gold"] { --bn: var(--gold); --bn-ink: var(--deep); }
+.mia-scope .mia-bn-wrap[data-tone="green"] { --bn: var(--green); }
+
+.mia-scope .mia-bn-kicker {
+  position: relative; z-index: 3; display: flex; align-items: center; justify-content: center; gap: 12px;
+  padding: 10px 24px; text-align: center; background: var(--ivory); border-bottom: 1px solid rgba(211,154,39,.4);
+}
+.mia-scope .mia-bn-kicker p { margin: 0; font-size: clamp(15px, 1.6vw, 19px); line-height: 1.6; font-weight: 800; color: var(--bn); }
+.mia-scope .mia-bn-wrap[data-tone="gold"] .mia-bn-kicker p { color: var(--gold-2); }
+.mia-scope .mia-bn-diamond { flex: 0 0 auto; width: 5px; height: 5px; background: var(--gold); transform: rotate(45deg); }
+
+.mia-scope .mia-bn-body { position: relative; min-height: 340px; }
+.mia-scope .mia-bn-photo { position: absolute; inset: 0; display: block; background-size: cover; background-position: center; filter: grayscale(1) contrast(1.06); }
+.mia-scope .mia-bn-pattern { position: absolute; inset: 0; opacity: .14; background: url('/minbar/assets/patterns/aqsa-white-pattern.webp') repeat; background-size: 360px 360px; }
+.mia-scope .mia-bn-shade { position: absolute; inset: 0; pointer-events: none; background: linear-gradient(to top, rgba(16,33,43,.86) 0%, rgba(16,33,43,.38) 46%, rgba(16,33,43,.06) 72%, transparent 100%); }
+.mia-scope .mia-bn-body[data-photo="false"] .mia-bn-shade { background: linear-gradient(to top, rgba(16,33,43,.55) 0%, rgba(16,33,43,.12) 60%, transparent 100%); }
+
+.mia-scope .mia-bn-chips { position: absolute; top: 18px; inset-inline-end: 18px; z-index: 3; display: flex; align-items: stretch; gap: 8px; }
+.mia-scope .mia-bn-wrap[data-side="end"] .mia-bn-chips { inset-inline-end: auto; inset-inline-start: 18px; }
+.mia-scope .mia-bn-chip {
+  display: flex; align-items: center; gap: 8px; padding: 10px 14px; border-radius: 10px;
+  background: rgba(255,255,255,.95); box-shadow: 0 14px 34px rgba(16,33,43,.3); color: var(--deep);
+}
+.mia-scope .mia-bn-chip[data-accent="true"] { background: var(--gold); }
+.mia-scope .mia-bn-chip b { font-size: 22px; font-weight: 900; line-height: 1; white-space: nowrap; }
+.mia-scope .mia-bn-chip span { max-width: 90px; font-size: 10px; font-weight: 800; line-height: 1.35; color: var(--muted); }
+.mia-scope .mia-bn-chip[data-accent="true"] span { color: var(--deep); font-weight: 900; }
+
+.mia-scope .mia-bn-content {
+  position: relative; z-index: 2; display: grid; justify-items: start; text-align: start; gap: 14px;
+  margin-inline-end: auto; max-width: 620px; min-height: 340px; padding: 34px 30px 28px 36px; align-content: end;
+}
+.mia-scope .mia-bn-wrap[data-side="end"] .mia-bn-content { margin-inline-end: 0; margin-inline-start: auto; }
+.mia-scope .mia-bn-title {
+  margin: 0; font-size: clamp(18px, 2vw, 28px); line-height: 1.5; font-weight: 900; letter-spacing: -.01em;
+  color: #fff; text-shadow: 0 2px 18px rgba(16,33,43,.55); text-wrap: balance;
+}
+.mia-scope .mia-bn-text { margin: -4px 0 0; max-width: 52ch; font-size: 14.5px; line-height: 1.7; font-weight: 700; color: rgba(255,255,255,.9); text-shadow: 0 1px 12px rgba(16,33,43,.5); }
+.mia-scope .mia-bn-ctas { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 2px; }
+.mia-scope .mia-bn-cta {
+  display: inline-flex; align-items: center; gap: 10px; height: 46px; padding: 0 24px; border-radius: 8px;
+  font-weight: 900; font-size: 14.5px; white-space: nowrap; text-decoration: none;
+  transition: transform .2s cubic-bezier(.22,.61,.36,1), filter .2s ease;
+}
+.mia-scope .mia-bn-cta:hover { transform: translateY(-2px); filter: brightness(1.06); }
+.mia-scope .mia-bn-cta--primary { background: var(--bn); color: var(--bn-ink); box-shadow: 0 10px 26px rgba(16,33,43,.35); }
+.mia-scope .mia-bn-cta--light { background: rgba(255,255,255,.94); color: var(--bn); }
+.mia-scope .mia-bn-wrap[data-tone="gold"] .mia-bn-cta--light { color: var(--gold-2); }
+/* On the dark tones a tone-coloured button sinks into the photograph; gold carries it. */
+.mia-scope .mia-bn-wrap[data-tone="navy"] .mia-bn-cta--primary { background: var(--gold); color: var(--deep); }
+
+@media (prefers-reduced-motion: reduce) {
+  .mia-scope .mia-bn-wrap { animation: none; }
+  .mia-scope .mia-bn-cta:hover { transform: none; }
+}
+
+@media (max-width: 640px) {
+  .mia-scope .mia-bn-sec { padding: 0 16px 40px; }
+  .mia-scope .mia-bn-chips { top: 10px !important; inset-inline-end: 10px !important; gap: 5px; }
+  .mia-scope .mia-bn-wrap[data-side="end"] .mia-bn-chips { inset-inline-end: auto !important; inset-inline-start: 10px; }
+  .mia-scope .mia-bn-chip { padding: 4px 8px; border-radius: 7px; gap: 5px; box-shadow: 0 6px 16px rgba(16,33,43,.25); }
+  .mia-scope .mia-bn-chip b { font-size: 18px; }
+  .mia-scope .mia-bn-chip span { font-size: 8px; line-height: 1.3; }
+  .mia-scope .mia-bn-kicker { padding: 9px 14px; gap: 0; }
+  .mia-scope .mia-bn-diamond { display: none; }
+  .mia-scope .mia-bn-kicker p { font-size: clamp(11px, 3.2vw, 13px); line-height: 1.75; text-wrap: balance; }
+  .mia-scope .mia-bn-body { min-height: 0; }
+  .mia-scope .mia-bn-content {
+    min-height: 180px; padding: 14px 14px 16px; margin-inline: 0 !important; max-width: none;
+    justify-items: center; text-align: center; gap: 10px;
+  }
+  /* The chips sit over the top of the band; the copy starts beneath them. */
+  .mia-scope .mia-bn-body[data-chips="true"] .mia-bn-content { padding-top: 62px; }
+  .mia-scope .mia-bn-title { font-size: clamp(13.5px, 3.8vw, 16px); }
+  .mia-scope .mia-bn-text { font-size: 12.5px; line-height: 1.6; }
+  .mia-scope .mia-bn-ctas { width: 100%; flex-wrap: nowrap; gap: 9px; }
+  .mia-scope .mia-bn-cta { flex: 1 1 0; min-width: 0; justify-content: center; height: 44px; padding: 0 10px; font-size: clamp(12.5px, 3.6vw, 14px); }
+}
+
 /* ─────────────────────────────────────────────────────────────────────────────
  * Projects catalogue — ported from Minbar/المشاريع.dc.html.
  * ───────────────────────────────────────────────────────────────────────────── */
