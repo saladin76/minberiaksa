@@ -796,7 +796,35 @@
   font-size: clamp(30px, 3.4vw, 52px); line-height: 1.16; font-weight: 900; color: var(--deep);
   letter-spacing: -.015em; text-wrap: balance;
 }
-.mia-scope .mia-hero-sub { color: var(--gold-2); font-size: clamp(18px, 1.9vw, 29px); font-weight: 900; line-height: 1.3; }
+.mia-scope .mia-hero-title { display: block; }
+/* The set-apart word: kept whole on one line, with a gold stroke drawn under it
+   after the copy has faded in. The stroke is an SVG path with pathLength 100,
+   so the dash animation is the same length whatever the word's width. */
+.mia-scope .mia-hero-accent { position: relative; display: inline-block; white-space: nowrap; padding: 0 .04em; }
+.mia-scope .mia-hero-accent-word { position: relative; z-index: 1; }
+.mia-scope .mia-hero-accent-stroke {
+  position: absolute; inset-inline: -.06em; bottom: -.1em; width: calc(100% + .12em); height: .26em;
+  overflow: visible; pointer-events: none;
+}
+.mia-scope .mia-hero-accent-stroke path {
+  fill: none; stroke: var(--gold); stroke-width: 7; stroke-linecap: round; opacity: .92;
+  vector-effect: non-scaling-stroke;
+  stroke-dasharray: 100; stroke-dashoffset: 100;
+  animation: mia-hero-stroke .9s cubic-bezier(.22,.61,.36,1) .55s forwards;
+}
+[dir="rtl"] .mia-scope .mia-hero-accent-stroke { transform: scaleX(-1); }
+@keyframes mia-hero-stroke { to { stroke-dashoffset: 0; } }
+
+/* Subtitle: a short gold rule with a diamond tip leads into the line — the
+   handoff's ornament, kept small enough to read as a mark, not a decoration. */
+.mia-scope .mia-hero-sub { display: flex; align-items: center; gap: 12px; color: var(--gold-2); font-size: clamp(18px, 1.9vw, 29px); font-weight: 900; line-height: 1.3; }
+.mia-scope .mia-hero-sub-mark { position: relative; flex: 0 0 auto; width: 34px; height: 2px; background: linear-gradient(90deg, var(--gold), rgba(211,154,39,.25)); border-radius: 2px; }
+[dir="rtl"] .mia-scope .mia-hero-sub-mark { background: linear-gradient(270deg, var(--gold), rgba(211,154,39,.25)); }
+.mia-scope .mia-hero-sub-mark::before {
+  content: ""; position: absolute; top: 50%; inset-inline-start: -3px; width: 8px; height: 8px;
+  background: var(--gold); transform: translateY(-50%) rotate(45deg); border-radius: 1px;
+  box-shadow: 0 0 0 3px rgba(211,154,39,.18);
+}
 .mia-scope .mia-hero-lead { margin: 0; max-width: 58ch; font-size: clamp(15px, 1.1vw, 17px); line-height: 1.85; color: var(--muted); text-wrap: pretty; }
 .mia-scope .mia-hero-actions { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; margin-top: 6px; }
 /* The two actions: a red donate button with a soft glow and an inner
@@ -938,6 +966,7 @@
 @media (prefers-reduced-motion: reduce) {
   .mia-scope .mia-hero-copy, .mia-scope .mia-hero-media { animation: none; }
   .mia-scope .mia-hero-play-ring, .mia-scope .mia-hero-eyebrow-dot { animation: none; }
+  .mia-scope .mia-hero-accent-stroke path { animation: none; stroke-dashoffset: 0; }
   .mia-scope .mia-hero-frame, .mia-scope .mia-hero-poster, .mia-scope .mia-hero-play-btn, .mia-scope .mia-story-ring { transition: none; }
 }
 
@@ -966,7 +995,8 @@
   .mia-scope .mia-hero-main { padding: 22px 0 22px; gap: 22px; }
   .mia-scope .mia-hero-copy { gap: 14px; }
   .mia-scope .mia-hero-h1 { font-size: 29px !important; line-height: 1.2 !important; gap: 4px; }
-  .mia-scope .mia-hero-sub { font-size: 18px !important; }
+  .mia-scope .mia-hero-sub { font-size: 18px !important; gap: 9px; }
+  .mia-scope .mia-hero-sub-mark { width: 24px; }
   .mia-scope .mia-hero-lead { font-size: 14.5px !important; line-height: 1.75 !important; }
   .mia-scope .mia-hero-actions { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 10px; width: 100%; margin-top: 2px; }
   .mia-scope .mia-hero-btn { padding: 0 10px !important; justify-content: center; font-size: 14.5px !important; min-height: 50px !important; }
@@ -1026,7 +1056,8 @@
 .mia-scope .mia-qd-legend { font-size: 12px; font-weight: 900; color: var(--muted); letter-spacing: .01em; line-height: 1.3; }
 
 /* Amounts — the first and largest decision. */
-.mia-scope .mia-qd-amounts { display: grid; grid-template-columns: repeat(5, minmax(0,1fr)); gap: 7px; }
+/* However many presets the dashboard set (2–6, plus "other"): one row, equal columns. */
+.mia-scope .mia-qd-amounts { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0,1fr); gap: 7px; }
 .mia-scope .mia-qd-amt {
   position: relative; display: inline-flex; align-items: center; justify-content: center;
   flex-direction: column; gap: 0; line-height: 1.15;
@@ -1056,24 +1087,61 @@
 }
 .mia-scope .mia-qd-cur { font-size: 12px; font-weight: 900; color: var(--muted); }
 
-/* Destination — one native control: the intentions, then every project. */
-.mia-scope .mia-qd-select { position: relative; display: block; }
-.mia-scope .mia-qd-select select {
-  appearance: none; -webkit-appearance: none;
-  width: 100%; min-height: 46px; padding-inline: 14px 40px;
+/* Destination — one listbox (Radix Select): the intentions, then the projects
+   under a group heading. The trigger matches the other inputs; the list is
+   portaled to <body> and carries `mia-scope` itself, so its rules sit at the
+   root here and its tokens come from that class. */
+.mia-scope .mia-sel-trigger {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  width: 100%; min-height: 46px; padding-inline: 14px 12px;
   border: 1.5px solid var(--border); border-radius: 11px; background: #fff;
   font-family: inherit; font-size: 14px; font-weight: 800; color: var(--deep); cursor: pointer;
-  text-overflow: ellipsis;
+  text-align: start; transition: border-color .15s ease, box-shadow .15s ease;
 }
-.mia-scope .mia-qd-select select:focus-visible { outline: 2px solid var(--gold); outline-offset: 1px; }
-.mia-scope .mia-qd-select > svg {
-  position: absolute; top: 50%; inset-inline-end: 14px; transform: translateY(-50%);
-  color: var(--muted); pointer-events: none;
-}
+.mia-scope .mia-sel-trigger > span:first-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mia-scope .mia-sel-trigger:hover { border-color: rgba(211,154,39,.7); }
+.mia-scope .mia-sel-trigger:focus-visible { outline: 0; border-color: var(--gold); box-shadow: 0 0 0 3px rgba(211,154,39,.22); }
+.mia-scope .mia-sel-trigger[data-state="open"] { border-color: var(--gold); box-shadow: 0 0 0 3px rgba(211,154,39,.18); }
+.mia-scope .mia-sel-icon { display: inline-flex; flex: 0 0 auto; color: var(--muted); transition: transform .18s ease; }
+.mia-scope .mia-sel-trigger[data-state="open"] .mia-sel-icon { transform: rotate(180deg); }
 
-/* Frequency — one setting with four states, on a single track. */
+.mia-sel-content {
+  z-index: 120; overflow: hidden;
+  width: var(--radix-select-trigger-width); min-width: 240px;
+  max-height: min(var(--radix-select-content-available-height), 380px);
+  background: #fff !important; color: var(--deep);
+  border: 1px solid rgba(211,154,39,.5); border-radius: 14px;
+  box-shadow: 0 24px 60px -18px rgba(16,33,43,.45), 0 2px 10px rgba(16,33,43,.08);
+  animation: mia-sel-in .16s cubic-bezier(.22,.61,.36,1);
+  transform-origin: var(--radix-select-content-transform-origin);
+}
+@keyframes mia-sel-in { from { opacity: 0; transform: translateY(-4px) scale(.98); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .mia-sel-content { animation: none; } }
+.mia-sel-viewport { padding: 6px; }
+.mia-sel-group {
+  padding: 8px 10px 4px; font-size: 11px; font-weight: 900; letter-spacing: .04em; color: var(--gold-2);
+}
+.mia-sel-item {
+  position: relative; display: flex; align-items: center; gap: 10px;
+  min-height: 40px; padding: 6px 34px 6px 12px; border-radius: 9px; cursor: pointer;
+  font-size: 14px; font-weight: 800; color: var(--deep); line-height: 1.3; outline: 0; user-select: none;
+}
+.mia-sel-content[dir="ltr"] .mia-sel-item { padding: 6px 12px 6px 34px; }
+.mia-sel-item > span:first-child { flex: 1 1 auto; min-width: 0; }
+.mia-sel-item[data-highlighted] { background: var(--sand); }
+.mia-sel-item[data-state="checked"] { color: var(--deep); }
+.mia-sel-item[data-disabled] { opacity: .5; pointer-events: none; }
+.mia-sel-meta { flex: 0 0 auto; font-size: 11px; font-weight: 800; color: var(--muted); white-space: nowrap; }
+.mia-sel-check {
+  position: absolute; inset-inline-start: 10px; top: 50%; transform: translateY(-50%);
+  display: inline-flex; width: 18px; height: 18px; border-radius: 50%;
+  align-items: center; justify-content: center; background: var(--gold); color: #fff;
+}
+.mia-sel-scroll { display: flex; justify-content: center; padding: 4px; color: var(--muted); background: #fff; }
+
+/* Frequency — one setting with up to four states, on a single track. */
 .mia-scope .mia-qd-seg {
-  display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 4px;
+  display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0,1fr); gap: 4px;
   padding: 4px; border-radius: 11px; background: var(--sand); border: 1px solid var(--border);
 }
 .mia-scope .mia-qd-seg > button {

@@ -214,6 +214,34 @@ export function StoriesRail() {
  * it reads as an object with depth rather than a flat rectangle. Entrance
  * motion is a single fade-up per column and respects reduced-motion. */
 
+/**
+ * The headline with one word set apart — Al-Quds, in whichever language —
+ * by a hand-drawn gold stroke beneath it that draws itself in on load.
+ *
+ * The word is `homepage.heroTitleAccent`, a separate key per locale, because
+ * the title is a sentence and where the city's name falls in it differs from
+ * language to language. The stroke sits under exactly that substring and the
+ * substring is kept on one line, so a wrap never cuts the stroke in half. If a
+ * locale's accent is not found in its title the title renders plain — a
+ * mismatch must never make the headline disappear.
+ */
+function AccentedTitle({ text, accent }: { text: string; accent: string }) {
+  const at = accent ? text.indexOf(accent) : -1;
+  if (at < 0) return <>{text}</>;
+  return (
+    <>
+      {text.slice(0, at)}
+      <span className="mia-hero-accent">
+        <span className="mia-hero-accent-word">{accent}</span>
+        <svg className="mia-hero-accent-stroke" viewBox="0 0 200 16" preserveAspectRatio="none" aria-hidden="true">
+          <path d="M3 11 C 38 4, 82 3, 118 8 S 176 13, 197 7" pathLength="100" />
+        </svg>
+      </span>
+      {text.slice(at + accent.length)}
+    </>
+  );
+}
+
 /** The 0:03 frame of the intro film for this edition. */
 export function heroPoster(locale: string): string {
   if (locale === "ar") return "/minbar/assets/hero/intro-ar.webp";
@@ -260,8 +288,13 @@ export function Hero({ onPlayIntro }: { onPlayIntro: (embed: string) => void }) 
           <div className="mia-hero-copy">
 
             <h1 className="mia-hero-h1">
-              <span>{t("heroTitle")}</span>
-              <span className="mia-hero-sub">{t("heroSubtitle")}</span>
+              <span className="mia-hero-title">
+                <AccentedTitle text={t("heroTitle")} accent={t("heroTitleAccent")} />
+              </span>
+              <span className="mia-hero-sub">
+                <span aria-hidden="true" className="mia-hero-sub-mark" />
+                {t("heroSubtitle")}
+              </span>
             </h1>
 
             <p className="mia-hero-lead">{t("heroLead")}</p>
