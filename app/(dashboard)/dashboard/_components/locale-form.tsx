@@ -17,7 +17,10 @@ import { LOCALES, SUPPORTED_LOCALES, type SupportedLocale } from '@/lib/locales'
  */
 
 /** Every locale an editor translates into — all but the Arabic master copy. */
-export const TRANSLATION_LOCALES = SUPPORTED_LOCALES.filter((l) => l !== 'ar') as Exclude<SupportedLocale, 'ar'>[];
+export const TRANSLATION_LOCALES = [
+  'en',
+  ...SUPPORTED_LOCALES.filter((l) => l !== 'ar' && l !== 'en'),
+] as Exclude<SupportedLocale, 'ar'>[];
 export type TranslationLocale = (typeof TRANSLATION_LOCALES)[number];
 export type FormLocale = SupportedLocale;
 

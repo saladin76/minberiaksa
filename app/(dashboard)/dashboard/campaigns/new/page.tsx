@@ -82,7 +82,7 @@ import {
   type FormLocale,
   type TranslationLocale,
 } from '../../_components/locale-form';
-import { CampaignLocaleTabContents, CampaignLocaleTabTriggers } from '../_components/CampaignLocaleTabs';
+import { CampaignLocaleTabContents, CampaignLocaleTabTriggers, CampaignTranslateBar } from '../_components/CampaignLocaleTabs';
 import type { TranslatedLocales } from '../../_components/AutoTranslateButton';
 import { isEditorContentEmpty } from '@/lib/tiptap-empty-doc';
 import {
@@ -742,6 +742,10 @@ const getTranslationStatus = () => {
                     قدم وصفاً شاملاً للمشروع وأهدافها
                   </FormDescription>
                 </FormItem>
+                <CampaignTranslateBar
+                  arabic={{ title: form.watch('title') ?? '', description: descriptionAr }}
+                  onTranslated={applyTranslations}
+                />
               </TabsContent>
 
               <CampaignLocaleTabContents

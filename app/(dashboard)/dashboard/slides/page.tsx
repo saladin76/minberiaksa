@@ -15,6 +15,7 @@ import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'react-hot-toast';
 import { errorMessage } from '@/lib/dashboard/client-error-message';
+import { DashboardLocaleSwitcher } from '../_components/DashboardLocaleSwitcher';
 import { ContentLocalizationAuditCard } from '../_components/ContentLocalizationAuditCard';
 
 interface Slide {
@@ -86,9 +87,12 @@ export default function SlidesPage() {
   const [savingOrder, setSavingOrder] = useState(false);
   const [togglingId, setTogglingId] = useState<string | null>(null);
 
-  const fetchSlides = async () => {
+  /* The language the table shows titles in — every one the site publishes. */
+  const [locale, setLocale] = useState<string>('ar');
+
+  const fetchSlides = async (lc: string = locale) => {
     try {
-      const res = await axios.get('/api/slides/admin');
+      const res = await axios.get('/api/slides/admin', { params: { locale: lc } });
       const items = res.data?.items ?? [];
       setSlides(Array.isArray(items) ? items.sort((a: Slide, b: Slide) => (a.order ?? 0) - (b.order ?? 0)) : []);
     } catch (e) {
@@ -101,7 +105,7 @@ export default function SlidesPage() {
     }
   };
 
-  useEffect(() => { fetchSlides(); }, []);
+  useEffect(() => { fetchSlides(locale); }, [locale]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // `moveRow` only reorders locally while the pointer moves; `commitOrder`
   // persists once on drop. The ref lets the drag-end callback read the final
@@ -181,6 +185,7 @@ export default function SlidesPage() {
           <p className="text-muted-foreground mt-1">إدارة شرائح العرض الرئيسية</p>
         </div>
         <div className="flex items-center gap-3">
+          <DashboardLocaleSwitcher value={locale} onChange={setLocale} className="h-10 w-[190px]" />
           {savingOrder && (
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <Loader2 className="h-4 w-4 animate-spin" />

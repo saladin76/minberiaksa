@@ -91,7 +91,7 @@ import {
   type FormLocale,
   type TranslationLocale,
 } from '../../../_components/locale-form';
-import { CampaignLocaleTabContents, CampaignLocaleTabTriggers, UpdateLocaleTabs } from '../../_components/CampaignLocaleTabs';
+import { CampaignLocaleTabContents, CampaignLocaleTabTriggers, CampaignTranslateBar, UpdateLocaleTabs } from '../../_components/CampaignLocaleTabs';
 import type { TranslatedLocales } from '../../../_components/AutoTranslateButton';
 import {
   parseSuggestedDonations,
@@ -1075,6 +1075,10 @@ export default function EditCampaignPage() {
                     className={editorClassName}
                   />
                 </FormItem>
+                <CampaignTranslateBar
+                  arabic={{ title: form.watch('title') ?? '', description: descriptionAr }}
+                  onTranslated={applyTranslations}
+                />
               </TabsContent>
 
               <CampaignLocaleTabContents

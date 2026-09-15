@@ -73,19 +73,14 @@ export function CampaignLocaleTabTriggers({
   );
 }
 
-export function CampaignLocaleTabContents({
-  form,
-  descriptions,
-  onDescription,
-  editorVersion,
-  parseEditorContent,
-  editorClassName,
-  renderMedia,
+/** The translate button as it appears on every campaign tab, exported so the
+ *  Arabic tab — where the editor actually is when the text is finished — has
+ *  it too. */
+export function CampaignTranslateBar({
   arabic,
   onTranslated,
-  requiredLocales = ['en'],
-}: Omit<CampaignLocaleTabsProps, 'done' | 'leadingTrigger'>) {
-  const translateBar = (
+}: Pick<CampaignLocaleTabsProps, 'arabic' | 'onTranslated'>) {
+  return (
     <div className="rounded-lg border border-purple-200 bg-purple-50/50 p-3">
       <AutoTranslateButton
         source={{ title: arabic.title }}
@@ -98,6 +93,21 @@ export function CampaignLocaleTabContents({
       </p>
     </div>
   );
+}
+
+export function CampaignLocaleTabContents({
+  form,
+  descriptions,
+  onDescription,
+  editorVersion,
+  parseEditorContent,
+  editorClassName,
+  renderMedia,
+  arabic,
+  onTranslated,
+  requiredLocales = ['en'],
+}: Omit<CampaignLocaleTabsProps, 'done' | 'leadingTrigger'>) {
+  const translateBar = <CampaignTranslateBar arabic={arabic} onTranslated={onTranslated} />;
 
   return (
     <>

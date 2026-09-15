@@ -6,9 +6,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { toast } from "@/hooks/use-toast"
 import { DataTable } from "../_components/data-table"
 import { getBlogColumns, type BlogRow } from "../_components/blogColumns"
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { DashboardLocaleSwitcher } from "../_components/DashboardLocaleSwitcher"
 import { useLocale } from "next-intl"
-import { Globe } from "lucide-react"
 import { ContentLocalizationAuditCard } from "../_components/ContentLocalizationAuditCard"
 
 export default function BooksManagement() {
@@ -69,21 +68,7 @@ export default function BooksManagement() {
         <CardHeader>
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <CardTitle>إدارة المقالات</CardTitle>
-            <Tabs value={activeLocale} onValueChange={setActiveLocale} className="w-auto">
-              <TabsList className="flex flex-wrap gap-1 max-w-full" dir="rtl">
-                <TabsTrigger value="ar" className="gap-1.5">
-                  <Globe className="w-3.5 h-3.5" />
-                  العربية
-                </TabsTrigger>
-                <TabsTrigger value="en">English</TabsTrigger>
-                <TabsTrigger value="fr">Français</TabsTrigger>
-                <TabsTrigger value="tr">Türkçe</TabsTrigger>
-                <TabsTrigger value="id">Bahasa</TabsTrigger>
-                <TabsTrigger value="pt">Português</TabsTrigger>
-                <TabsTrigger value="es">Español</TabsTrigger>
-                <TabsTrigger value="de">Deutsch</TabsTrigger>
-              </TabsList>
-            </Tabs>
+            <DashboardLocaleSwitcher value={activeLocale} onChange={setActiveLocale} />
           </div>
         </CardHeader>
         <CardContent>

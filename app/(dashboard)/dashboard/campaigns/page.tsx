@@ -69,6 +69,7 @@ import { ar } from 'date-fns/locale';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
 import { CampaignReorderDialog } from './_components/CampaignReorderDialog';
+import { DashboardLocaleSwitcher } from '../_components/DashboardLocaleSwitcher';
 import { ContentLocalizationAuditCard } from '../_components/ContentLocalizationAuditCard';
 import { computeCampaignProgressPercent, showCampaignProgress } from '@/lib/campaign/campaign-modes';
 
@@ -118,7 +119,9 @@ export default function CampaignsPage() {
   const [sortField, setSortField] = useState<keyof Campaign>('createdAt');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
-  const locale = useLocale() as string;
+  const uiLocale = useLocale() as string;
+  /* The language the table shows titles in — every one the site publishes. */
+  const [locale, setLocale] = useState<string>(uiLocale || 'ar');
   const [progressFilter, setProgressFilter] = useState<'all' | 'completed' | 'ongoing'>('all');
   const [page, setPage] = useState(1);
   const [itemsPerPage] = useState(10);
@@ -317,6 +320,7 @@ export default function CampaignsPage() {
           </Button>
         }
       >
+        <DashboardLocaleSwitcher value={locale} onChange={setLocale} className="h-9 w-full sm:w-[190px]" />
         <Select value={selectedCategory} onValueChange={setSelectedCategory}>
           <SelectTrigger className="h-9 w-full sm:w-[180px]"><SelectValue placeholder="جميع الحملات" /></SelectTrigger>
           <SelectContent>

@@ -44,6 +44,7 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { ReorderDialog } from './_components/ReorderDialog';
+import { DashboardLocaleSwitcher } from '../_components/DashboardLocaleSwitcher';
 import { CategoryCampaignPriorityDialog } from './_components/CategoryCampaignPriorityDialog';
 import { ContentLocalizationAuditCard } from '../_components/ContentLocalizationAuditCard';
 
@@ -61,7 +62,9 @@ interface Category {
 
 export default function CategoriesPage() {
   const router = useRouter();
-  const locale = useLocale() as string;
+  const uiLocale = useLocale() as string;
+  /* The language the table shows names in — every one the site publishes. */
+  const [locale, setLocale] = useState<string>(uiLocale || 'ar');
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [sortField, setSortField] = useState<keyof Category>('name');
@@ -325,6 +328,7 @@ export default function CategoriesPage() {
                 حذف ({selectedCategories.length})
               </Button>
             )}
+            <DashboardLocaleSwitcher value={locale} onChange={setLocale} className="h-10 w-[190px]" />
             <ReorderDialog categories={categories} onReorder={fetchCategories} />
             <Button
               variant="outline"
