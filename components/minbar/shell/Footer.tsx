@@ -151,12 +151,41 @@ export default function Footer({
         </svg>
       </a>
 
+      {/* The footer IS the photograph — the Old City, the Dome, and children
+          walking toward it hand in hand: the reason the whole site exists. It
+          used to sit below the columns as a separate band that most visitors
+          never scrolled to. Now the columns sit on its upper half behind a
+          navy gradient dense enough to read white text through, and the
+          gradient thins to nothing over the lower half, where the children and
+          the Dome are shown clear. The image is sized to cover the footer and
+          anchored to its bottom edge, so whatever the height, it is the
+          skyline and the children that survive, never the sky. */}
       <footer
         id="contact"
-        className="mia-foot"
+        className="mia-foot mia-foot--photo"
         dir={dir}
-        style={{ background: "#fff", color: "#10212B", fontFamily: "var(--font-ar)" }}
+        style={{ position: "relative", isolation: "isolate", overflow: "hidden", background: "#10212B", color: "#fff", fontFamily: "var(--font-ar)" }}
       >
+        <img
+          src={closingImage}
+          alt={tCommon("oldCityViewAlt")}
+          loading="lazy"
+          decoding="async"
+          className="mia-foot-photo"
+          style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", objectPosition: "center bottom", zIndex: -2 }}
+        />
+        <div
+          aria-hidden="true"
+          className="mia-foot-shade"
+          style={{
+            position: "absolute",
+            inset: 0,
+            zIndex: -1,
+            background:
+              "linear-gradient(180deg, rgba(16,33,43,.94) 0%, rgba(16,33,43,.90) 36%, rgba(16,33,43,.62) 58%, rgba(16,33,43,.18) 78%, rgba(16,33,43,0) 100%)",
+          }}
+        />
+
         <div
           className="cols"
           id="footcols"
@@ -171,18 +200,22 @@ export default function Footer({
           }}
         >
           <div style={{ display: "grid", gap: 14, alignContent: "start" }}>
-            <img
-              src="/minbar/assets/logo-horizontal.png"
-              alt={name}
-              style={{
-                height: 64,
-                width: 230,
-                objectFit: "contain",
-                objectPosition: dir === "rtl" ? "right center" : "left center",
-              }}
-            />
-            <p style={{ margin: 0, lineHeight: 1.8, fontSize: 14, color: "#52616B" }}>{lead}</p>
-            <p style={{ margin: 0, fontSize: 13, color: "#52616B", lineHeight: 1.8 }}>
+            {/* The wordmark is dark on transparent; it sits on a small ivory plate. */}
+            <span style={{ display: "inline-block", justifySelf: "start", padding: "6px 12px", background: "rgba(255,253,248,.96)", borderRadius: 12, boxShadow: "0 10px 30px rgba(0,0,0,.25)" }}>
+              <img
+                src="/minbar/assets/logo-horizontal.png"
+                alt={name}
+                style={{
+                  display: "block",
+                  height: 56,
+                  width: 210,
+                  objectFit: "contain",
+                  objectPosition: dir === "rtl" ? "right center" : "left center",
+                }}
+              />
+            </span>
+            <p style={{ margin: 0, lineHeight: 1.8, fontSize: 14, color: "rgba(255,255,255,.82)" }}>{lead}</p>
+            <p style={{ margin: 0, fontSize: 13, color: "rgba(255,255,255,.72)", lineHeight: 1.8 }}>
               {address}
               <br />
               {email}
@@ -208,8 +241,8 @@ export default function Footer({
                     width: 36,
                     height: 36,
                     borderRadius: 9,
-                    border: "1px solid rgba(16,33,43,.14)",
-                    color: "#10212B",
+                    border: "1px solid rgba(255,255,255,.28)",
+                    color: "#fff",
                   }}
                 >
                   <SocialIcon name={s.icon} />
@@ -248,28 +281,9 @@ export default function Footer({
           })}
         </div>
 
-        <div style={{ position: "relative", overflow: "hidden" }}>
-          {/* Shown whole, at its own proportions — the band is as tall as the
-              photograph makes it, never a crop of it. */}
-          {/* A wave cut out of the white above, so the photograph meets the
-              content on a curve rather than a hard edge. Symmetric, so it does
-              not need mirroring. */}
-          <svg
-            viewBox="0 0 1440 60"
-            preserveAspectRatio="none"
-            aria-hidden="true"
-            style={{ position: "absolute", top: -1, insetInlineStart: 0, width: "100%", height: 60, zIndex: 2 }}
-          >
-            <path d="M0 30 C 240 60 480 0 720 22 C 960 44 1200 6 1440 30 L1440 0 L0 0 Z" fill="#fff" />
-          </svg>
-          <img
-            src={closingImage}
-            alt={tCommon("oldCityViewAlt")}
-            loading="lazy"
-            decoding="async"
-            style={{ display: "block", width: "100%", height: "auto" }}
-          />
-        </div>
+        {/* The clear window: nothing here but height, so the lower half of the
+            photograph — the children, the wall, the Dome — is seen through it. */}
+        <div aria-hidden="true" className="mia-foot-window" />
 
         <div
           style={{
@@ -277,8 +291,12 @@ export default function Footer({
             alignItems: "center",
             justifyContent: "center",
             gap: 8,
+            position: "relative",
             padding: "13px 24px",
-            background: "#10212B",
+            background: "rgba(16,33,43,.72)",
+            backdropFilter: "blur(6px)",
+            WebkitBackdropFilter: "blur(6px)",
+            borderTop: "1px solid rgba(211,154,39,.35)",
             fontSize: 12.5,
             fontWeight: 700,
             color: "rgba(255,255,255,.75)",

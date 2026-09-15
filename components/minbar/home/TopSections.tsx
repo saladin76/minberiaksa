@@ -258,10 +258,6 @@ export function Hero({ onPlayIntro }: { onPlayIntro: (embed: string) => void }) 
         <div id="hero-main" className="mia-hero-main">
           {/* ── Copy ───────────────────────────────────────────────────── */}
           <div className="mia-hero-copy">
-            <span className="mia-hero-eyebrow">
-              <span aria-hidden="true" className="mia-hero-eyebrow-dot" />
-              {tCommon("orgOfficialName")}
-            </span>
 
             <h1 className="mia-hero-h1">
               <span>{t("heroTitle")}</span>
