@@ -73,6 +73,19 @@ import {
 } from 'lucide-react';
 import { useLocale } from 'next-intl';
 import {
+  TRANSLATION_LOCALES,
+  LocaleTabTrigger,
+  isTranslationLocale,
+  localeDefaults,
+  localeKey,
+  localeNativeLabel,
+  type FormLocale,
+  type TranslationLocale,
+} from '../../_components/locale-form';
+import { CampaignLocaleTabContents, CampaignLocaleTabTriggers } from '../_components/CampaignLocaleTabs';
+import type { TranslatedLocales } from '../../_components/AutoTranslateButton';
+import { isEditorContentEmpty } from '@/lib/tiptap-empty-doc';
+import {
   SuggestedDonationsSection,
   type SuggestedDonationsSectionRef,
 } from '../_components/SuggestedDonationsSection';
@@ -90,6 +103,15 @@ import {
 } from '../_components/ShareLabelsSection';
 
 // ✅ Enhanced schema with translations
+/** Fields every translation locale carries on the form, as `field_locale`. */
+const LOCALE_FIELDS = ['title', 'image', 'videoUrl'] as const;
+type LocaleField = (typeof LOCALE_FIELDS)[number];
+/** A mapped type rather than an index signature: zod keeps named keys in its inferred output and drops index signatures. */
+type LocaleShape = { [K in `${LocaleField}_${TranslationLocale}`]: z.ZodOptional<z.ZodString> };
+const LOCALE_SHAPE = Object.fromEntries(
+  TRANSLATION_LOCALES.flatMap((locale) => LOCALE_FIELDS.map((field) => [localeKey(field, locale), z.string().optional()]))
+) as LocaleShape;
+
 const formSchema = z
   .object({
   title: z.string()
@@ -109,31 +131,15 @@ const formSchema = z
   videoUrl: z.string().optional(),
   currentAmount: z.number().min(0).max(1000000).optional(),
 
-  title_en: z.string().min(1, 'English title is required'),
-  title_fr: z.string().optional(),
-  title_tr: z.string().optional(),
-  title_id: z.string().optional(),
-  title_pt: z.string().optional(),
-  title_es: z.string().optional(),
-  title_de: z.string().optional(),
-  // per-locale image override — optional. main campaign images[] is the only required media (≥1).
-  image_en: z.string().optional(),
-  image_fr: z.string().optional(),
-  image_tr: z.string().optional(),
-  image_id: z.string().optional(),
-  image_pt: z.string().optional(),
-  image_es: z.string().optional(),
-  image_de: z.string().optional(),
-  // per-locale video URL override — optional (main videoUrl is also optional).
-  videoUrl_en: z.string().optional(),
-  videoUrl_fr: z.string().optional(),
-  videoUrl_tr: z.string().optional(),
-  videoUrl_id: z.string().optional(),
-  videoUrl_pt: z.string().optional(),
-  videoUrl_es: z.string().optional(),
-  videoUrl_de: z.string().optional(),
+  /* One title / cover / video override per translation locale — generated
+     from the locale list rather than spelled out, so a new language is a
+     new tab without a schema edit. English is required; see superRefine. */
+  ...LOCALE_SHAPE,
 })
   .superRefine((data, ctx) => {
+    if (!data.title_en || !String(data.title_en).trim()) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'English title is required', path: ['title_en'] });
+    }
     if (data.goalType === 'FIXED' && (!data.targetAmount || data.targetAmount < 1)) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
@@ -164,7 +170,7 @@ export default function NewCampaignPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
-  const [activeTab, setActiveTab] = useState<'ar' | 'en' | 'fr' | 'tr' | 'id' | 'pt' | 'es' | 'de'>('ar');
+  const [activeTab, setActiveTab] = useState<FormLocale>('ar');
   const [draggedImageIndex, setDraggedImageIndex] = useState<number | null>(null);
   const [dragOverImageIndex, setDragOverImageIndex] = useState<number | null>(null);
   const [currentAmountUnlocked, setCurrentAmountUnlocked] = useState(false);
@@ -177,13 +183,12 @@ export default function NewCampaignPage() {
   const shareLabelsRef = useRef<ShareLabelsSectionRef>(null);
 
   const [descriptionAr, setDescriptionAr] = useState<string | null>(null);
-  const [descriptionEn, setDescriptionEn] = useState<string | null>(null);
-  const [descriptionFr, setDescriptionFr] = useState<string | null>(null);
-  const [descriptionTr, setDescriptionTr] = useState<string | null>(null);
-  const [descriptionId, setDescriptionId] = useState<string | null>(null);
-  const [descriptionPt, setDescriptionPt] = useState<string | null>(null);
-  const [descriptionEs, setDescriptionEs] = useState<string | null>(null);
-  const [descriptionDe, setDescriptionDe] = useState<string | null>(null);
+  /* Tiptap JSON per translation locale; Arabic stays in its own state above. */
+  const [descriptions, setDescriptions] = useState<Record<string, string | null>>({});
+  const setDescription = (locale: TranslationLocale, json: string | null) =>
+    setDescriptions((prev) => ({ ...prev, [locale]: json }));
+  /* Bumped after a bulk machine translation so the uncontrolled editors remount. */
+  const [editorVersion, setEditorVersion] = useState(0);
 
   const editorClassName = "w-full border border-stone-200 rounded-md bg-white [&_.ProseMirror]:min-h-[150px] [&_.ProseMirror]:p-4 [&_.ProseMirror]:focus:outline-none";
 
@@ -199,16 +204,7 @@ export default function NewCampaignPage() {
     return { type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text: json }] }] };
   };
 
-  const isDescEmpty = (json: string | null) => {
-    if (!json) return true;
-    try {
-      const doc = JSON.parse(json);
-      if (!doc.content || doc.content.length === 0) return true;
-      return doc.content.every((n: { type: string; content?: unknown[] }) =>
-        n.type === 'paragraph' && (!n.content || n.content.length === 0)
-      );
-    } catch { return true; }
-  };
+  const isDescEmpty = isEditorContentEmpty;
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -223,27 +219,7 @@ export default function NewCampaignPage() {
       images: [],
       videoUrl: '',
       currentAmount: 0,
-      title_en: '',
-      title_fr: '',
-      title_tr: '',
-      title_id: '',
-      title_pt: '',
-      title_es: '',
-      title_de: '',
-      image_en: '',
-      image_fr: '',
-      image_tr: '',
-      image_id: '',
-      image_pt: '',
-      image_es: '',
-      image_de: '',
-      videoUrl_en: '',
-      videoUrl_fr: '',
-      videoUrl_tr: '',
-      videoUrl_id: '',
-      videoUrl_pt: '',
-      videoUrl_es: '',
-      videoUrl_de: '',
+      ...localeDefaults(LOCALE_FIELDS),
     },
   });
 
@@ -278,7 +254,7 @@ export default function NewCampaignPage() {
       setActiveTab('ar');
       return;
     }
-    if (isDescEmpty(descriptionEn)) {
+    if (isDescEmpty(descriptions.en ?? null)) {
       toast.error('English description is required');
       setActiveTab('en');
       return;
@@ -302,76 +278,25 @@ export default function NewCampaignPage() {
           ? { currentAmount: Math.max(0, Number(values.currentAmount)) }
           : {}),
 
-        // English is always sent (required); other locales only when title + description provided.
-        // image/videoUrl per-locale are optional overrides — sent through whenever provided.
-        translations: {
-          en: {
-            title: values.title_en,
-            description: descriptionEn,
-            image: values.image_en || null,
-            videoUrl: values.videoUrl_en || null,
-          },
-          ...(values.title_fr && !isDescEmpty(descriptionFr)
-            ? {
-                fr: {
-                  title: values.title_fr,
-                  description: descriptionFr,
-                  image: values.image_fr || null,
-                  videoUrl: values.videoUrl_fr || null,
-                },
-              }
-            : {}),
-          ...(values.title_tr && !isDescEmpty(descriptionTr)
-            ? {
-                tr: {
-                  title: values.title_tr,
-                  description: descriptionTr,
-                  image: values.image_tr || null,
-                  videoUrl: values.videoUrl_tr || null,
-                },
-              }
-            : {}),
-          ...(values.title_id && !isDescEmpty(descriptionId)
-            ? {
-                id: {
-                  title: values.title_id,
-                  description: descriptionId,
-                  image: values.image_id || null,
-                  videoUrl: values.videoUrl_id || null,
-                },
-              }
-            : {}),
-          ...(values.title_pt && !isDescEmpty(descriptionPt)
-            ? {
-                pt: {
-                  title: values.title_pt,
-                  description: descriptionPt,
-                  image: values.image_pt || null,
-                  videoUrl: values.videoUrl_pt || null,
-                },
-              }
-            : {}),
-          ...(values.title_es && !isDescEmpty(descriptionEs)
-            ? {
-                es: {
-                  title: values.title_es,
-                  description: descriptionEs,
-                  image: values.image_es || null,
-                  videoUrl: values.videoUrl_es || null,
-                },
-              }
-            : {}),
-          ...(values.title_de && !isDescEmpty(descriptionDe)
-            ? {
-                de: {
-                  title: values.title_de,
-                  description: descriptionDe,
-                  image: values.image_de || null,
-                  videoUrl: values.videoUrl_de || null,
-                },
-              }
-            : {}),
-        },
+        // English is always sent (required); every other locale only when it
+        // has both a title and a description. Per-locale image/videoUrl are
+        // optional overrides — sent through whenever provided.
+        translations: Object.fromEntries(
+          TRANSLATION_LOCALES.flatMap((locale) => {
+            const title = String(values[localeKey('title', locale)] ?? '').trim();
+            const description = descriptions[locale] ?? null;
+            if (locale !== 'en' && (!title || isDescEmpty(description))) return [];
+            return [[
+              locale,
+              {
+                title,
+                description,
+                image: values[localeKey('image', locale)] || null,
+                videoUrl: values[localeKey('videoUrl', locale)] || null,
+              },
+            ]];
+          })
+        ),
         suggestedDonations:
           values.fundraisingMode === 'AMOUNT'
             ? suggestedDonationsRef.current?.getPayload()
@@ -400,17 +325,13 @@ export default function NewCampaignPage() {
   };
 
   // Per-locale single-image upload (optional override — fallback is the main Arabic cover).
-  const [uploadingLocale, setUploadingLocale] = useState<
-    null | 'en' | 'fr' | 'tr' | 'id' | 'pt' | 'es' | 'de'
-  >(null);
+  const [uploadingLocale, setUploadingLocale] = useState<null | TranslationLocale>(null);
 
-  type LocaleImageKey =
-    | 'image_en' | 'image_fr' | 'image_tr' | 'image_id' | 'image_pt' | 'image_es' | 'image_de';
-  type LocaleVideoKey =
-    | 'videoUrl_en' | 'videoUrl_fr' | 'videoUrl_tr' | 'videoUrl_id' | 'videoUrl_pt' | 'videoUrl_es' | 'videoUrl_de';
+  type LocaleImageKey = `image_${TranslationLocale}`;
+  type LocaleVideoKey = `videoUrl_${TranslationLocale}`;
 
   const handleLocaleImageUpload = async (
-    locale: 'en' | 'fr' | 'tr' | 'id' | 'pt' | 'es' | 'de',
+    locale: TranslationLocale,
     e: React.ChangeEvent<HTMLInputElement>,
   ) => {
     const file = e.target.files?.[0];
@@ -438,7 +359,7 @@ export default function NewCampaignPage() {
     }
   };
 
-  const removeLocaleImage = (locale: 'en' | 'fr' | 'tr' | 'id' | 'pt' | 'es' | 'de') => {
+  const removeLocaleImage = (locale: TranslationLocale) => {
     const key = `image_${locale}` as LocaleImageKey;
     const current = form.getValues(key);
     if (current) {
@@ -448,11 +369,16 @@ export default function NewCampaignPage() {
     form.setValue(key, '', { shouldDirty: true });
   };
 
-  const renderLocaleMedia = (
-    locale: 'en' | 'fr' | 'tr' | 'id' | 'pt' | 'es' | 'de',
-    labels: { image: string; imageHint: string; video: string; videoHint: string; optionalNote: string },
-    direction: 'ltr' | 'rtl' = 'ltr',
-  ) => {
+  const renderLocaleMedia = (locale: TranslationLocale) => {
+    const name = localeNativeLabel(locale);
+    const labels = {
+      image: `صورة الغلاف (${name}) — اختيارية`,
+      imageHint: `رفع غلاف ${name}`,
+      video: `رابط الفيديو (${name}) — اختياري`,
+      videoHint: `رابط فيديو خاص بهذه اللغة.`,
+      optionalNote: 'الصورة ورابط الفيديو هنا اختياريان — يحلّان محل الغلاف/الفيديو العربي فقط عند تعبئتهما. الصورة الرئيسية العربية (≥ 1) هي المطلوبة وحدها.',
+    };
+    const direction = 'rtl' as const;
     const imageKey = `image_${locale}` as LocaleImageKey;
     const videoKey = `videoUrl_${locale}` as LocaleVideoKey;
     const isUploading = uploadingLocale === locale;
@@ -607,15 +533,31 @@ export default function NewCampaignPage() {
 
   // ✅ Check translation completeness
 const getTranslationStatus = () => {
-    const hasEn = !!form.watch('title_en') && !isDescEmpty(descriptionEn);
-    const hasFr = !!form.watch('title_fr') && !isDescEmpty(descriptionFr);
-    const hasTr = !!form.watch('title_tr') && !isDescEmpty(descriptionTr);
-    const hasId = !!form.watch('title_id') && !isDescEmpty(descriptionId);
-    const hasPt = !!form.watch('title_pt') && !isDescEmpty(descriptionPt);
-    const hasEs = !!form.watch('title_es') && !isDescEmpty(descriptionEs);
-    const hasDe = !!form.watch('title_de') && !isDescEmpty(descriptionDe);
-    const completed = [hasEn, hasFr, hasTr, hasId, hasPt, hasEs, hasDe].filter(Boolean).length;
-    return { completed, total: 7, hasEn, hasFr, hasTr, hasId, hasPt, hasEs, hasDe };
+    const done: Record<string, boolean> = {};
+    for (const locale of TRANSLATION_LOCALES) {
+      done[locale] = !!form.watch(localeKey('title', locale)) && !isDescEmpty(descriptions[locale] ?? null);
+    }
+    const completed = Object.values(done).filter(Boolean).length;
+    return { completed, total: TRANSLATION_LOCALES.length, done, hasEn: !!done.en };
+  };
+
+  /* Machine translations land in the form (titles) and the description map;
+     only empty targets are filled unless the editor asked to replace. */
+  const applyTranslations = (translations: TranslatedLocales, overwrite: boolean) => {
+    let touchedEditors = false;
+    for (const [code, t] of Object.entries(translations)) {
+      if (!isTranslationLocale(code)) continue;
+      const locale: TranslationLocale = code;
+      const key = localeKey('title', locale);
+      if (t.fields.title && (overwrite || !String(form.getValues(key) ?? '').trim())) {
+        form.setValue(key, t.fields.title, { shouldDirty: true });
+      }
+      if (t.richFields.description && (overwrite || isDescEmpty(descriptions[locale] ?? null))) {
+        setDescriptions((prev) => ({ ...prev, [locale]: t.richFields.description }));
+        touchedEditors = true;
+      }
+    }
+    if (touchedEditors) setEditorVersion((v) => v + 1);
   };
 
   if (loading) {
@@ -641,15 +583,9 @@ const getTranslationStatus = () => {
             <span className="text-sm text-gray-600">
               الترجمات: {translationStatus.completed}/{translationStatus.total}
             </span>
-            {translationStatus.hasEn && (
-              <CheckCircle2 className="w-4 h-4 text-green-600" title="English ready" />
-            )}
-            {translationStatus.hasFr && <CheckCircle2 className="w-4 h-4 text-brand" title="French ready" />}
-            {translationStatus.hasTr && <CheckCircle2 className="w-4 h-4 text-green-600" title="Turkish ready" />}
-            {translationStatus.hasId && <CheckCircle2 className="w-4 h-4 text-green-600" title="Indonesian ready" />}
-            {translationStatus.hasPt && <CheckCircle2 className="w-4 h-4 text-green-600" title="Portuguese ready" />}
-            {translationStatus.hasEs && <CheckCircle2 className="w-4 h-4 text-green-600" title="Spanish ready" />}
-            {translationStatus.hasDe && <CheckCircle2 className="w-4 h-4 text-green-600" title="German ready" />}
+            {TRANSLATION_LOCALES.filter((l) => translationStatus.done[l]).map((l) => (
+              <span key={l} title={`${localeNativeLabel(l)} ready`}><CheckCircle2 className="w-4 h-4 text-green-600" /></span>
+            ))}
           </div>
         </div>
         <Button
@@ -672,41 +608,10 @@ const getTranslationStatus = () => {
             </div>
 
             <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)}>
-              <TabsList className="flex flex-wrap gap-1 mb-6">
-                <TabsTrigger value="ar" className="gap-2">
-                  <ReactCountryFlag countryCode="SA" svg style={{width:'1em',height:'1em',verticalAlign:'middle'}} /> العربية
-                  <span className="text-xs text-red-600">*</span>
-                </TabsTrigger>
-                <TabsTrigger value="en" className="gap-2">
-                  <ReactCountryFlag countryCode="GB" svg style={{width:'1em',height:'1em',verticalAlign:'middle'}} /> English
-                  <span className="text-xs text-red-600">*</span>
-                  {translationStatus.hasEn && <CheckCircle2 className="w-3 h-3 text-green-600" />}
-                </TabsTrigger>
-                <TabsTrigger value="fr" className="gap-2">
-                  <ReactCountryFlag countryCode="FR" svg style={{width:'1em',height:'1em',verticalAlign:'middle'}} /> Français
-                  {translationStatus.hasFr && <CheckCircle2 className="w-3 h-3 text-brand" />}
-                </TabsTrigger>
-                <TabsTrigger value="tr" className="gap-2">
-                  <ReactCountryFlag countryCode="TR" svg style={{width:'1em',height:'1em',verticalAlign:'middle'}} /> Türkçe
-                  {translationStatus.hasTr && <CheckCircle2 className="w-3 h-3 text-green-600" />}
-                </TabsTrigger>
-                <TabsTrigger value="id" className="gap-2">
-                  <ReactCountryFlag countryCode="ID" svg style={{width:'1em',height:'1em',verticalAlign:'middle'}} /> Bahasa
-                  {translationStatus.hasId && <CheckCircle2 className="w-3 h-3 text-green-600" />}
-                </TabsTrigger>
-                <TabsTrigger value="pt" className="gap-2">
-                  <ReactCountryFlag countryCode="PT" svg style={{width:'1em',height:'1em',verticalAlign:'middle'}} /> Português
-                  {translationStatus.hasPt && <CheckCircle2 className="w-3 h-3 text-green-600" />}
-                </TabsTrigger>
-                <TabsTrigger value="es" className="gap-2">
-                  <ReactCountryFlag countryCode="ES" svg style={{width:'1em',height:'1em',verticalAlign:'middle'}} /> Español
-                  {translationStatus.hasEs && <CheckCircle2 className="w-3 h-3 text-green-600" />}
-                </TabsTrigger>
-                <TabsTrigger value="de" className="gap-2">
-                  <ReactCountryFlag countryCode="DE" svg style={{width:'1em',height:'1em',verticalAlign:'middle'}} /> Deutsch
-                  {translationStatus.hasDe && <CheckCircle2 className="w-3 h-3 text-green-600" />}
-                </TabsTrigger>
-              </TabsList>
+              <CampaignLocaleTabTriggers
+                done={translationStatus.done}
+                leadingTrigger={<LocaleTabTrigger locale="ar" required />}
+              />
 
               {/* Arabic Tab */}
               <TabsContent value="ar" className="space-y-6">
@@ -830,7 +735,7 @@ const getTranslationStatus = () => {
                   <FormLabel>وصف المشروع *</FormLabel>
                   <WysiwygEditor
                     defaultValue={parseEditorContent(descriptionAr)}
-                    onDebouncedUpdate={(editor) => setDescriptionAr(JSON.stringify(editor?.getJSON()))}
+                    onUpdate={(editor) => setDescriptionAr(JSON.stringify(editor?.getJSON()))}
                     className={editorClassName}
                   />
                   <FormDescription>
@@ -839,222 +744,17 @@ const getTranslationStatus = () => {
                 </FormItem>
               </TabsContent>
 
-              {/* English Tab — required */}
-              <TabsContent value="en" className="space-y-6">
-                <Alert>
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertDescription className='mt-[5px]'>
-                    English is required. The slug is auto-generated from the English title.
-                  </AlertDescription>
-                </Alert>
-
-                <FormField
-                  control={form.control}
-                  name="title_en"
-                  render={({ field }) => (
-                    <FormItem dir='rtl'>
-                      <FormLabel>Campaign Title (English) *</FormLabel>
-                      <FormControl>
-                        <Input {...field} placeholder="Enter campaign title in English" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormItem dir='rtl'>
-                  <FormLabel>Campaign Description (English) *</FormLabel>
-                  <WysiwygEditor
-                    defaultValue={parseEditorContent(descriptionEn)}
-                    onDebouncedUpdate={(editor) => setDescriptionEn(JSON.stringify(editor?.getJSON()))}
-                    className={editorClassName}
-                  />
-                  <FormDescription>
-                    Required — comprehensive English description of the campaign and its goals.
-                  </FormDescription>
-                </FormItem>
-
-                {renderLocaleMedia(
-                  'en',
-                  {
-                    image: 'Cover image (English) — optional',
-                    imageHint: 'Upload English cover',
-                    video: 'Video URL (English) — optional',
-                    videoHint: 'Locale-specific video link.',
-                    optionalNote:
-                      'Image and video URL here are optional overrides — they fall back to the Arabic main cover/video when empty. Only the Arabic main image (≥ 1) is required.',
-                  },
-                  'ltr',
-                )}
-              </TabsContent>
-
-              {/* French Tab */}
-              <TabsContent value="fr" className="space-y-6">
-                <Alert className='flex items-center'>
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertDescription className='mt-[5px]'>
-                    Les traductions françaises sont facultatives. Si elles ne sont pas fournies, le contenu arabe sera affiché aux utilisateurs français.
-                  </AlertDescription>
-                </Alert>
-
-                <FormField
-                  control={form.control}
-                  name="title_fr"
-                  render={({ field }) => (
-                    <FormItem dir='rtl'>
-                      <FormLabel>Titre de la campagne (Français)</FormLabel>
-                      <FormControl>
-                        <Input {...field} placeholder="Entrez le titre de la campagne en français" />
-                      </FormControl>
-                      <FormDescription>
-                        Fournissez une traduction française du titre de la campagne
-                      </FormDescription>
-                    </FormItem>
-                  )}
-                />
-
-                <FormItem dir='rtl'>
-                  <FormLabel>Description de la campagne (Français)</FormLabel>
-                  <WysiwygEditor
-                    defaultValue={parseEditorContent(descriptionFr)}
-                    onDebouncedUpdate={(editor) => setDescriptionFr(JSON.stringify(editor?.getJSON()))}
-                    className={editorClassName}
-                  />
-                  <FormDescription>
-                    Fournissez une description complète en français de la campagne et de ses objectifs
-                  </FormDescription>
-                </FormItem>
-
-                {/* Helper for partial translations */}
-                {(form.watch('title_fr') || form.watch('description_fr')) &&
-                 (!form.watch('title_fr') || !form.watch('description_fr')) && (
-                  <Alert variant="destructive">
-                    <AlertCircle className="h-4 w-4" />
-                    <AlertDescription className='mt-[5px]'>
-                      Le titre et la description doivent être fournis pour que la traduction française soit enregistrée.
-                    </AlertDescription>
-                  </Alert>
-                )}
-
-                {renderLocaleMedia(
-                  'fr',
-                  {
-                    image: 'Image de couverture (Français) — facultative',
-                    imageHint: 'Téléverser la couverture',
-                    video: 'URL vidéo (Français) — facultative',
-                    videoHint: 'Lien vidéo spécifique au français.',
-                    optionalNote:
-                      "Image et URL vidéo facultatives — elles remplacent uniquement la couverture/vidéo arabe lorsqu'elles sont fournies. Seule l'image principale arabe (≥ 1) est requise.",
-                  },
-                  'ltr',
-                )}
-              </TabsContent>
-
-              <TabsContent value="tr" className="space-y-6">
-                <FormField control={form.control} name="title_tr" render={({ field }) => (
-                  <FormItem dir="rtl"><FormLabel>Kampanya Başlığı (Türkçe)</FormLabel><FormControl><Input {...field} placeholder="Türkçe kampanya başlığı" /></FormControl></FormItem>
-                )} />
-                <FormItem dir="rtl">
-                  <FormLabel>Kampanya Açıklaması</FormLabel>
-                  <WysiwygEditor defaultValue={parseEditorContent(descriptionTr)} onDebouncedUpdate={(editor) => setDescriptionTr(JSON.stringify(editor?.getJSON()))} className={editorClassName} />
-                </FormItem>
-                {renderLocaleMedia(
-                  'tr',
-                  {
-                    image: 'Kapak görseli (Türkçe) — isteğe bağlı',
-                    imageHint: 'Kapak yükle',
-                    video: 'Video URL (Türkçe) — isteğe bağlı',
-                    videoHint: 'Türkçeye özel video bağlantısı.',
-                    optionalNote:
-                      'Görsel ve video URL isteğe bağlıdır — yalnızca verildiğinde Arapça ana görsel/videonun yerine geçer. Yalnızca Arapça ana görsel (≥ 1) zorunludur.',
-                  },
-                  'ltr',
-                )}
-              </TabsContent>
-              <TabsContent value="id" className="space-y-6">
-                <FormField control={form.control} name="title_id" render={({ field }) => (
-                  <FormItem dir="rtl"><FormLabel>Judul Kampanye (Indonesia)</FormLabel><FormControl><Input {...field} placeholder="Judul kampanye dalam Bahasa Indonesia" /></FormControl></FormItem>
-                )} />
-                <FormItem dir="rtl">
-                  <FormLabel>Deskripsi Kampanye</FormLabel>
-                  <WysiwygEditor defaultValue={parseEditorContent(descriptionId)} onDebouncedUpdate={(editor) => setDescriptionId(JSON.stringify(editor?.getJSON()))} className={editorClassName} />
-                </FormItem>
-                {renderLocaleMedia(
-                  'id',
-                  {
-                    image: 'Gambar sampul (Indonesia) — opsional',
-                    imageHint: 'Unggah sampul',
-                    video: 'URL Video (Indonesia) — opsional',
-                    videoHint: 'Tautan video khusus untuk Bahasa Indonesia.',
-                    optionalNote:
-                      'Gambar dan URL video bersifat opsional — hanya menggantikan sampul/video Arab utama jika diisi. Hanya gambar utama Arab (≥ 1) yang wajib.',
-                  },
-                  'ltr',
-                )}
-              </TabsContent>
-              <TabsContent value="pt" className="space-y-6">
-                <FormField control={form.control} name="title_pt" render={({ field }) => (
-                  <FormItem dir="rtl"><FormLabel>Título da Campanha (Português)</FormLabel><FormControl><Input {...field} placeholder="Título da campanha em português" /></FormControl></FormItem>
-                )} />
-                <FormItem dir="rtl">
-                  <FormLabel>Descrição da Campanha</FormLabel>
-                  <WysiwygEditor defaultValue={parseEditorContent(descriptionPt)} onDebouncedUpdate={(editor) => setDescriptionPt(JSON.stringify(editor?.getJSON()))} className={editorClassName} />
-                </FormItem>
-                {renderLocaleMedia(
-                  'pt',
-                  {
-                    image: 'Imagem de capa (Português) — opcional',
-                    imageHint: 'Enviar capa',
-                    video: 'URL do vídeo (Português) — opcional',
-                    videoHint: 'Link de vídeo específico para o português.',
-                    optionalNote:
-                      'A imagem e a URL do vídeo são opcionais — substituem a capa/vídeo árabe principal apenas quando fornecidos. Apenas a imagem principal em árabe (≥ 1) é obrigatória.',
-                  },
-                  'ltr',
-                )}
-              </TabsContent>
-              <TabsContent value="es" className="space-y-6">
-                <FormField control={form.control} name="title_es" render={({ field }) => (
-                  <FormItem dir="rtl"><FormLabel>Título de la Campaña (Español)</FormLabel><FormControl><Input {...field} placeholder="Título de la campaña en español" /></FormControl></FormItem>
-                )} />
-                <FormItem dir="rtl">
-                  <FormLabel>Descripción de la Campaña</FormLabel>
-                  <WysiwygEditor defaultValue={parseEditorContent(descriptionEs)} onDebouncedUpdate={(editor) => setDescriptionEs(JSON.stringify(editor?.getJSON()))} className={editorClassName} />
-                </FormItem>
-                {renderLocaleMedia(
-                  'es',
-                  {
-                    image: 'Imagen de portada (Español) — opcional',
-                    imageHint: 'Subir portada',
-                    video: 'URL del video (Español) — opcional',
-                    videoHint: 'Enlace de video específico para el español.',
-                    optionalNote:
-                      'La imagen y la URL del video son opcionales — reemplazan la portada/video árabe principal solo cuando se proporcionan. Solo la imagen principal en árabe (≥ 1) es obligatoria.',
-                  },
-                  'ltr',
-                )}
-              </TabsContent>
-              <TabsContent value="de" className="space-y-6">
-                <FormField control={form.control} name="title_de" render={({ field }) => (
-                  <FormItem dir="rtl"><FormLabel>Kampagnentitel (Deutsch)</FormLabel><FormControl><Input {...field} placeholder="Kampagnentitel auf Deutsch" /></FormControl></FormItem>
-                )} />
-                <FormItem dir="rtl">
-                  <FormLabel>Kampagnenbeschreibung</FormLabel>
-                  <WysiwygEditor defaultValue={parseEditorContent(descriptionDe)} onDebouncedUpdate={(editor) => setDescriptionDe(JSON.stringify(editor?.getJSON()))} className={editorClassName} />
-                </FormItem>
-                {renderLocaleMedia(
-                  'de',
-                  {
-                    image: 'Titelbild (Deutsch) — optional',
-                    imageHint: 'Titelbild hochladen',
-                    video: 'Video-URL (Deutsch) — optional',
-                    videoHint: 'Sprachspezifischer Video-Link für Deutsch.',
-                    optionalNote:
-                      'Bild und Video-URL sind optional — sie ersetzen das arabische Hauptbild/-video nur, wenn sie angegeben sind. Nur das arabische Hauptbild (≥ 1) ist erforderlich.',
-                  },
-                  'ltr',
-                )}
-              </TabsContent>
+              <CampaignLocaleTabContents
+                form={form}
+                descriptions={descriptions}
+                onDescription={setDescription}
+                editorVersion={editorVersion}
+                parseEditorContent={parseEditorContent}
+                editorClassName={editorClassName}
+                renderMedia={renderLocaleMedia}
+                arabic={{ title: form.watch('title') ?? '', description: descriptionAr }}
+                onTranslated={applyTranslations}
+              />
             </Tabs>
           </Card>
 
@@ -1509,28 +1209,19 @@ const getTranslationStatus = () => {
           </Card>
 
           {/* ✅ Translation Summary */}
-          {(translationStatus.hasEn || translationStatus.hasFr || translationStatus.hasTr || translationStatus.hasId || translationStatus.hasPt || translationStatus.hasEs) && (
+          {translationStatus.completed > 0 && (
             <Card className="p-6 bg-brand/8 border-blue-200">
               <div className="flex items-start gap-3">
                 <Globe className="w-5 h-5 text-brand mt-0.5" />
                 <div>
                   <h3 className="font-semibold text-brand mb-2">ملخص الترجمات</h3>
-                  <div className="space-y-1 text-sm text-brand">
+                  <div className="grid gap-1 text-sm text-brand sm:grid-cols-2">
                     <p>✓ المحتوى العربي: مكتمل (مطلوب)</p>
-                    {translationStatus.hasEn && (
-                      <p>✓ الترجمة الإنجليزية: مكتملة</p>
-                    )}
-                    {translationStatus.hasFr && <p>✓ الترجمة الفرنسية: مكتملة</p>}
-                    {translationStatus.hasTr && <p>✓ الترجمة التركية: مكتملة</p>}
-                    {translationStatus.hasId && <p>✓ الترجمة الإندونيسية: مكتملة</p>}
-                    {translationStatus.hasPt && <p>✓ الترجمة البرتغالية: مكتملة</p>}
-                    {translationStatus.hasEs && <p>✓ الترجمة الإسبانية: مكتملة</p>}
-                    {!translationStatus.hasEn && <p className="text-brand">○ الترجمة الإنجليزية: غير مكتملة (اختياري)</p>}
-                    {!translationStatus.hasFr && <p className="text-brand">○ الترجمة الفرنسية: غير مكتملة (اختياري)</p>}
-                    {!translationStatus.hasTr && <p className="text-brand">○ الترجمة التركية: غير مكتملة (اختياري)</p>}
-                    {!translationStatus.hasId && <p className="text-brand">○ الترجمة الإندونيسية: غير مكتملة (اختياري)</p>}
-                    {!translationStatus.hasPt && <p className="text-brand">○ الترجمة البرتغالية: غير مكتملة (اختياري)</p>}
-                    {!translationStatus.hasEs && <p className="text-brand">○ الترجمة الإسبانية: غير مكتملة (اختياري)</p>}
+                    {TRANSLATION_LOCALES.map((l) => (
+                      <p key={l}>
+                        {translationStatus.done[l] ? '✓' : '○'} {localeNativeLabel(l)}: {translationStatus.done[l] ? 'مكتملة' : l === 'en' ? 'غير مكتملة (مطلوبة)' : 'غير مكتملة (اختياري)'}
+                      </p>
+                    ))}
                   </div>
                 </div>
               </div>

@@ -137,6 +137,8 @@ export function FaqForm({
         </div>
         <ContentTranslationTabs
           fields={FAQ_TRANSLATION_FIELDS}
+          source={{ question: values.question, answer: values.answer }}
+          itemLabel="FAQ"
           requiredField="question"
           value={values.translations}
           onChange={(next) => set('translations', next)}

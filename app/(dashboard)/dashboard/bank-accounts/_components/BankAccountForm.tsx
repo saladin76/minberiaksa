@@ -272,6 +272,8 @@ export function BankAccountForm({
         </div>
         <ContentTranslationTabs
           fields={BANK_TRANSLATION_FIELDS}
+          source={{ name: values.name, branch: values.branch, holder: values.holder }}
+          itemLabel="bank account"
           requiredField="name"
           value={values.translations}
           onChange={(next) => set('translations', next)}

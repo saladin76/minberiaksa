@@ -270,6 +270,8 @@ export function CourseForm({
         </div>
         <ContentTranslationTabs
           fields={COURSE_TRANSLATION_FIELDS}
+          source={{ title: values.title, description: values.description }}
+          itemLabel="course"
           requiredField="title"
           value={values.translations}
           onChange={(next) => set('translations', next)}

@@ -26,17 +26,20 @@ const LOCALE_LABELS: Record<string, string> = {
   pt: "البرتغالية",
   es: "الإسبانية",
   de: "الألمانية",
+  ur: "الأردية",
+  sq: "الألبانية",
+  it: "الإيطالية",
+  nl: "الهولندية",
+  sv: "السويدية",
+  no: "النرويجية",
+  da: "الدنماركية",
+  ms: "الملايوية",
+  ja: "اليابانية",
+  zh: "الصينية",
+  hi: "الهندية",
 };
 
-const LOCALE_SHORT: Record<string, string> = {
-  en: "EN",
-  fr: "FR",
-  tr: "TR",
-  id: "ID",
-  pt: "PT",
-  es: "ES",
-  de: "DE",
-};
+const LOCALE_SHORT: Record<string, string> = Object.fromEntries(Object.keys(LOCALE_LABELS).map((l) => [l, l.toUpperCase()]));
 
 const FIELD_LABELS: Record<string, string> = {
   title: "العنوان",

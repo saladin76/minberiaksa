@@ -18,6 +18,17 @@ const LOCALE_LABELS: Record<string, string> = {
   pt: "البرتغالية",
   es: "الإسبانية",
   de: "الألمانية",
+  ur: "الأردية",
+  sq: "الألبانية",
+  it: "الإيطالية",
+  nl: "الهولندية",
+  sv: "السويدية",
+  no: "النرويجية",
+  da: "الدنماركية",
+  ms: "الملايوية",
+  ja: "اليابانية",
+  zh: "الصينية",
+  hi: "الهندية",
 };
 
 const FIELD_LABELS: Record<string, string> = {

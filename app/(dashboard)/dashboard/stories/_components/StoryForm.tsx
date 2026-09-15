@@ -257,6 +257,8 @@ export function StoryForm({
         </div>
         <ContentTranslationTabs
           fields={STORY_TRANSLATION_FIELDS}
+          source={{ title: values.title }}
+          itemLabel="story"
           requiredField="title"
           value={values.translations}
           onChange={(next) => set('translations', next)}

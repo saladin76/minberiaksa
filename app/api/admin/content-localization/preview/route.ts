@@ -8,9 +8,13 @@ import {
   type ContentLocalizationSection,
 } from "@/lib/content-localization/access";
 import { prisma } from "@/lib/prisma";
+import { SUPPORTED_LOCALES as ALL_LOCALES } from "@/lib/locales";
+import { LOCALE_ENGLISH_NAMES } from "@/lib/content-localization/translate";
 
-const TRANSLATION_LOCALES = ["en", "fr", "tr", "id", "pt", "es", "de"] as const;
-const SUPPORTED_LOCALES = ["ar", ...TRANSLATION_LOCALES] as const;
+/* Every language the site publishes, from the one list — this used to be a
+   hand-kept seven while the site served nineteen. */
+const TRANSLATION_LOCALES = ALL_LOCALES.filter((l) => l !== "ar");
+const SUPPORTED_LOCALES = ALL_LOCALES;
 type Locale = (typeof SUPPORTED_LOCALES)[number];
 type TranslationLocale = (typeof TRANSLATION_LOCALES)[number];
 type ItemType = "campaign" | "category" | "post" | "postCategory" | "slide";
@@ -30,16 +34,7 @@ type PreviewRow = {
   qualityNotes?: string[];
 };
 
-const LOCALE_NAMES: Record<Locale, string> = {
-  ar: "Arabic",
-  en: "English",
-  fr: "French",
-  tr: "Turkish",
-  id: "Indonesian",
-  pt: "Portuguese",
-  es: "Spanish",
-  de: "German",
-};
+const LOCALE_NAMES: Record<string, string> = LOCALE_ENGLISH_NAMES;
 
 function parseLocale(value: unknown): Locale | null {
   return typeof value === "string" &&

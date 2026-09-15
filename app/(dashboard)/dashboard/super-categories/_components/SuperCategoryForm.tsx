@@ -346,6 +346,8 @@ export function SuperCategoryForm({
         </div>
         <ContentTranslationTabs
           fields={SUPER_CATEGORY_TRANSLATION_FIELDS}
+          source={{ title: values.title, subtitle: values.subtitle, intro: values.intro, verseAttribution: values.verseAttribution, ctaPrimaryLabel: values.ctaPrimaryLabel, ctaSecondaryLabel: values.ctaSecondaryLabel, ctaTertiaryLabel: values.ctaTertiaryLabel, metaTitle: values.metaTitle, metaDescription: values.metaDescription }}
+          itemLabel="programme page"
           requiredField="title"
           value={values.translations}
           onChange={(next) => set('translations', next)}

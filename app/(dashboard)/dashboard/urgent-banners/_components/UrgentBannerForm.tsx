@@ -279,6 +279,8 @@ export function UrgentBannerForm({
         </div>
         <ContentTranslationTabs
           fields={BANNER_TRANSLATION_FIELDS}
+          source={{ title: values.title, description: values.description, ctaLabel: values.ctaLabel }}
+          itemLabel="urgent banner"
           requiredField="title"
           value={values.translations}
           onChange={(next) => set('translations', next)}

@@ -307,6 +307,8 @@ export function VideoForm({
         </div>
         <ContentTranslationTabs
           fields={VIDEO_TRANSLATION_FIELDS}
+          source={{ title: values.title }}
+          itemLabel="video"
           requiredField="title"
           value={values.translations}
           onChange={(next) => set('translations', next)}

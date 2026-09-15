@@ -1,6 +1,7 @@
 "use client";
 
 import ReactCountryFlag from "react-country-flag";
+import { TRANSLATION_LOCALES, localeFlag, localeNativeLabel } from "../../../_components/locale-form";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CheckCircle2 } from "lucide-react";
 import BlogEditor from "@/app/[locale]/blog/_components/BlogEditor";
@@ -59,15 +60,15 @@ export default function LanguageTabs({ post, categories, campaignOptions = [], m
     return [post.id, code, t?.title || "", t?.description || "", t?.content || "", t?.image || ""].join(":");
   };
 
+  const flag = (code: string) => <ReactCountryFlag countryCode={localeFlag(code)} svg style={{ width: '1.2em', height: '1.2em' }} />;
   const localeTabs = [
-    { value: "ar", label: <><ReactCountryFlag countryCode="SA" svg style={{ width: '1.2em', height: '1.2em' }} /> العربية</>, required: true },
-    { value: "en", label: <><ReactCountryFlag countryCode="GB" svg style={{ width: '1.2em', height: '1.2em' }} /> English</>, required: true, has: hasLocale("en") },
-    { value: "fr", label: <><ReactCountryFlag countryCode="FR" svg style={{ width: '1.2em', height: '1.2em' }} /> Français</>, has: hasLocale("fr") },
-    { value: "tr", label: <><ReactCountryFlag countryCode="TR" svg style={{ width: '1.2em', height: '1.2em' }} /> Türkçe</>, has: hasLocale("tr") },
-    { value: "id", label: <><ReactCountryFlag countryCode="ID" svg style={{ width: '1.2em', height: '1.2em' }} /> Bahasa</>, has: hasLocale("id") },
-    { value: "pt", label: <><ReactCountryFlag countryCode="PT" svg style={{ width: '1.2em', height: '1.2em' }} /> Português</>, has: hasLocale("pt") },
-    { value: "es", label: <><ReactCountryFlag countryCode="ES" svg style={{ width: '1.2em', height: '1.2em' }} /> Español</>, has: hasLocale("es") },
-    { value: "de", label: <><ReactCountryFlag countryCode="DE" svg style={{ width: '1.2em', height: '1.2em' }} /> Deutsch</>, has: hasLocale("de") },
+    { value: "ar", label: <>{flag("ar")} العربية</>, required: true, has: false },
+    ...TRANSLATION_LOCALES.map((code) => ({
+      value: code,
+      label: <>{flag(code)} {localeNativeLabel(code)}</>,
+      required: code === "en",
+      has: hasLocale(code),
+    })),
   ];
 
   const tabsTree = (
@@ -94,7 +95,7 @@ export default function LanguageTabs({ post, categories, campaignOptions = [], m
         />
       </TabsContent>
 
-      {(["en", "fr", "tr", "id", "pt", "es", "de"] as const).map((loc) => (
+      {TRANSLATION_LOCALES.map((loc) => (
         <TabsContent key={loc} value={loc} className="mt-0">
           {isCreate ? (
             <BlogLocaleBufferEditor key={`buffer-${loc}`} locale={loc} />

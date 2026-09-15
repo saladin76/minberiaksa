@@ -309,6 +309,8 @@ export function DocumentForm({
         </div>
         <ContentTranslationTabs
           fields={DOCUMENT_TRANSLATION_FIELDS}
+          source={{ title: values.title, description: values.description }}
+          itemLabel="document (report or booklet)"
           requiredField="title"
           value={values.translations}
           onChange={(next) => set('translations', next)}

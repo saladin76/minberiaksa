@@ -36,6 +36,8 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import WysiwygEditor from "@/app/[locale]/blog/_components/wysiwyg/wysiwyg-editor";
+import { localeDir, type TranslationLocale } from "../../../_components/locale-form";
+import { AutoTranslateButton } from "../../../_components/AutoTranslateButton";
 import { defaultEditorContent } from "@/app/[locale]/blog/_components/wysiwyg/default-content";
 import { SmartSeoAuditCard } from "../../../_components/SmartSeoAuditCard";
 import { SaveStatusNotice, type SaveStatusState } from "../../../_components/SaveStatusNotice";
@@ -66,11 +68,15 @@ const config = {
   imageLabel: "رابط الصورة",
 };
 
-type Locale = "en" | "fr" | "tr" | "id" | "pt" | "es" | "de";
+type Locale = TranslationLocale;
 
 interface BlogLocaleEditorProps {
   post: {
     id: string;
+    /** The Arabic master copy, for the translate button. */
+    title?: string | null;
+    description?: string | null;
+    content?: string | null;
     translations?: Array<{
       locale: string;
       title?: string | null;
@@ -91,6 +97,8 @@ export default function BlogLocaleEditor({ post, locale }: BlogLocaleEditorProps
   const [uploadingImage, setUploadingImage] = useState(false);
   const [saveStatus, setSaveStatus] = useState<SaveStatusState | null>(null);
   const [content, setContent] = useState<string | null>(trans?.content ?? null);
+  /* The body editor is uncontrolled; a machine translation remounts it. */
+  const [editorKey, setEditorKey] = useState(0);
 
   const schema = schemaFor(locale);
   const form = useForm<z.infer<typeof schema>>({
@@ -210,6 +218,22 @@ export default function BlogLocaleEditor({ post, locale }: BlogLocaleEditorProps
               <CardDescription>{config.generalDescription}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
+              <div className="rounded-lg border border-purple-200 bg-purple-50/50 p-3" dir="rtl">
+                <AutoTranslateButton
+                  source={{ title: post.title ?? "", description: post.description ?? "" }}
+                  richSource={{ content: post.content ?? "" }}
+                  locales={[locale]}
+                  itemLabel="blog article"
+                  onResult={(translations, overwrite) => {
+                    const t = translations[locale];
+                    if (!t) return;
+                    if (t.fields.title && (overwrite || !String(form.getValues("title") ?? "").trim())) form.setValue("title", t.fields.title, { shouldDirty: true });
+                    if (t.fields.description && (overwrite || !String(form.getValues("description") ?? "").trim())) form.setValue("description", t.fields.description, { shouldDirty: true });
+                    if (t.richFields.content && (overwrite || !content)) { setContent(t.richFields.content); setEditorKey((k) => k + 1); }
+                  }}
+                />
+                <p className="mt-2 text-[11px] text-slate-600">تُترجم هذه اللغة وحدها من النص العربي المحفوظ للمقال، ثم احفظها بزر الحفظ أدناه.</p>
+              </div>
               <FormField
                 control={form.control}
                 name="title"
@@ -318,6 +342,7 @@ export default function BlogLocaleEditor({ post, locale }: BlogLocaleEditorProps
             </CardHeader>
             <CardContent>
               <WysiwygEditor
+                key={`body-${locale}-${editorKey}`}
                 defaultValue={(() => {
                   if (!content) return defaultEditorContent;
                   try {

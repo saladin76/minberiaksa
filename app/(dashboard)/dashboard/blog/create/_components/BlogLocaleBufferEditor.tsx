@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import axios from "axios";
 import { toast } from "react-hot-toast";
 import { Loader2, Upload, X } from "lucide-react";
@@ -17,17 +17,12 @@ import {
 import WysiwygEditor from "@/app/[locale]/blog/_components/wysiwyg/wysiwyg-editor";
 import { defaultEditorContent } from "@/app/[locale]/blog/_components/wysiwyg/default-content";
 import { useCreateTranslations, type BufferedLocale } from "./CreateTranslationsContext";
+import { localeDir, localeNativeLabel } from "../../../_components/locale-form";
+import { AutoTranslateButton } from "../../../_components/AutoTranslateButton";
 import { SmartSeoAuditCard } from "../../../_components/SmartSeoAuditCard";
 
-const localeMeta: Record<BufferedLocale, { name: string; required: boolean; dir: "ltr" | "rtl" }> = {
-  en: { name: "English", required: true, dir: "ltr" },
-  fr: { name: "Français", required: false, dir: "ltr" },
-  tr: { name: "Türkçe", required: false, dir: "ltr" },
-  id: { name: "Bahasa Indonesia", required: false, dir: "ltr" },
-  pt: { name: "Português", required: false, dir: "ltr" },
-  es: { name: "Español", required: false, dir: "ltr" },
-  de: { name: "Deutsch", required: false, dir: "ltr" },
-};
+/** English is the site's fallback language and the one translation it requires. */
+const metaFor = (locale: BufferedLocale) => ({ name: localeNativeLabel(locale), required: locale === "en", dir: localeDir(locale) });
 
 export default function BlogLocaleBufferEditor({ locale }: { locale: BufferedLocale }) {
   const ctx = useCreateTranslations();
@@ -39,7 +34,21 @@ export default function BlogLocaleBufferEditor({ locale }: { locale: BufferedLoc
   const [image, setImage] = useState(seed?.image ?? "");
   const [uploading, setUploading] = useState(false);
 
-  const meta = localeMeta[locale];
+  const meta = metaFor(locale);
+  /* A bulk fill from the Arabic tab lands in the context; re-seed the local
+     state from it and remount the body editor, which is uncontrolled. */
+  const [editorKey, setEditorKey] = useState(0);
+  const seenVersion = useRef(ctx?.version ?? 0);
+  useEffect(() => {
+    if (!ctx || ctx.version === seenVersion.current) return;
+    seenVersion.current = ctx.version;
+    const next = ctx.translations[locale];
+    if (!next) return;
+    setTitle(next.title);
+    setDescription(next.description);
+    setContent(next.content);
+    setEditorKey((k) => k + 1);
+  }, [ctx, locale]);
 
   useEffect(() => {
     ctx?.updateLocale(locale, { title, description, content, image });
@@ -83,6 +92,24 @@ export default function BlogLocaleBufferEditor({ locale }: { locale: BufferedLoc
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          {ctx ? (
+            <div className="rounded-lg border border-purple-200 bg-purple-50/50 p-3" dir="rtl">
+              <AutoTranslateButton
+                source={{ title: ctx.arabic.title, description: ctx.arabic.description }}
+                richSource={{ content: ctx.arabic.content ?? "" }}
+                locales={[locale]}
+                itemLabel="blog article"
+                onResult={(translations, overwrite) => {
+                  const t = translations[locale];
+                  if (!t) return;
+                  if (t.fields.title && (overwrite || !title.trim())) setTitle(t.fields.title);
+                  if (t.fields.description && (overwrite || !description.trim())) setDescription(t.fields.description);
+                  if (t.richFields.content && (overwrite || !content)) { setContent(t.richFields.content); setEditorKey((k) => k + 1); }
+                }}
+              />
+              <p className="mt-2 text-[11px] text-slate-600">تُترجم هذه اللغة وحدها من مسودة التبويب العربي.</p>
+            </div>
+          ) : null}
           <div className="space-y-2">
             <label className="text-sm font-medium leading-none">
               Title{meta.required ? " *" : ""}
@@ -177,6 +204,7 @@ export default function BlogLocaleBufferEditor({ locale }: { locale: BufferedLoc
         </CardHeader>
         <CardContent>
           <WysiwygEditor
+            key={`buffer-body-${locale}-${editorKey}`}
             defaultValue={(() => {
               if (!content) return defaultEditorContent;
               try {

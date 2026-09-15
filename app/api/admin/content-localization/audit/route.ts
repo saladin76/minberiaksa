@@ -8,8 +8,9 @@ import {
   type ContentLocalizationSection,
 } from "@/lib/content-localization/access";
 import { prisma } from "@/lib/prisma";
+import { SUPPORTED_LOCALES } from "@/lib/locales";
 
-const TARGET_LOCALES = ["en", "fr", "tr", "id", "pt", "es", "de"] as const;
+const TARGET_LOCALES = SUPPORTED_LOCALES.filter((l) => l !== "ar");
 type Locale = (typeof TARGET_LOCALES)[number];
 
 type TranslationStatus = {

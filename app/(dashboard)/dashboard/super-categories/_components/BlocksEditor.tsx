@@ -258,6 +258,8 @@ export function BlocksEditor({
               <div className="pt-2">
                 <ContentTranslationTabs
                   fields={BLOCK_TRANSLATION_FIELDS}
+                  source={{ eyebrow: row.eyebrow, title: row.title, subtitle: row.subtitle, body: row.body, linkLabel: row.linkLabel }}
+                  itemLabel="page section"
                   requiredField="title"
                   value={row.translations}
                   onChange={(next) => set(index, { translations: next })}

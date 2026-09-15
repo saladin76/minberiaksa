@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "@/i18n/routing";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -43,6 +43,7 @@ import {
 import WysiwygEditor from "./wysiwyg/wysiwyg-editor";
 import { defaultEditorContent } from "./wysiwyg/default-content";
 import { useCreateTranslations } from "@/app/(dashboard)/dashboard/blog/create/_components/CreateTranslationsContext";
+import { AutoTranslateButton } from "@/app/(dashboard)/dashboard/_components/AutoTranslateButton";
 import { SmartSeoAuditCard } from "@/app/(dashboard)/dashboard/_components/SmartSeoAuditCard";
 import {
   Select,
@@ -142,6 +143,13 @@ const BlogEditor = ({ post, categories, campaignOptions = [], redirectAfterCreat
   const watchedTitle = form.watch("title");
   const watchedDescription = form.watch("description");
   const watchedImage = form.watch("image");
+
+  /* In create mode the language tabs translate from this draft before anything
+     exists on the server, so it is published to the shared buffer as typed. */
+  useEffect(() => {
+    if (!isCreate || !createTranslationsCtx) return;
+    createTranslationsCtx.setArabic({ title: watchedTitle || "", description: watchedDescription || "", content: contentAR });
+  }, [isCreate, createTranslationsCtx, watchedTitle, watchedDescription, contentAR]);
 
   const onSubmit = async (data) => {
     setShowLoadingAlert(true);
@@ -352,6 +360,18 @@ const BlogEditor = ({ post, categories, campaignOptions = [], redirectAfterCreat
               />
             </CardContent>
           </Card>
+
+          {isCreate && createTranslationsCtx ? (
+            <div className="w-full rounded-lg border border-purple-200 bg-purple-50/50 p-3" dir="rtl">
+              <AutoTranslateButton
+                source={{ title: watchedTitle || "", description: watchedDescription || "" }}
+                richSource={{ content: contentAR || "" }}
+                itemLabel="blog article"
+                onResult={(translations, overwrite) => createTranslationsCtx.fillLocales(translations, overwrite)}
+              />
+              <p className="mt-2 text-[11px] text-slate-600">تملأ كل تبويبات اللغات من هذه المسودة؛ تُحفظ معًا عند الضغط على «إنشاء».</p>
+            </div>
+          ) : null}
 
           <div className="inline-flex items-center justify-start gap-x-3">
             <Button type="submit" className="flex !bg-gray-900 px-10 !text-white hover:!bg-gray-800" disabled={isSaving}>{isCreate ? "إنشاء" : protectedEditorConfig.submit}</Button>

@@ -208,6 +208,8 @@ export function PlaylistForm({
         </div>
         <ContentTranslationTabs
           fields={PLAYLIST_TRANSLATION_FIELDS}
+          source={{ title: values.title, description: values.description }}
+          itemLabel="video playlist"
           requiredField="title"
           value={values.translations}
           onChange={(next) => set('translations', next)}

@@ -288,6 +288,8 @@ export function StorySlidesEditor({
               {openTranslations[i] ? (
                 <ContentTranslationTabs
                   fields={SLIDE_TRANSLATION_FIELDS}
+                  source={{ caption: row.caption, ctaLabel: row.ctaLabel }}
+                  itemLabel="story slide"
                   requiredField="caption"
                   value={row.translations}
                   onChange={(next) => update(i, { translations: next })}

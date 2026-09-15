@@ -4,6 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { LOCALES, SUPPORTED_LOCALES, type SupportedLocale } from '@/lib/locales';
+import { AutoTranslateButton, mergeTranslations } from './AutoTranslateButton';
 
 /**
  * Locale tabs for the site-content forms.
@@ -69,18 +70,40 @@ export function ContentTranslationTabs({
   value,
   onChange,
   requiredField,
+  source,
+  itemLabel,
 }: {
   fields: readonly TranslationField[];
   value: TranslationMap;
   onChange: (next: TranslationMap) => void;
   /** Clearing this field drops the whole locale — the API deletes that row. */
   requiredField: string;
+  /**
+   * The Arabic master copy, by the same field names as `fields`. When given,
+   * a "translate into every language" button appears above the tabs and fills
+   * the map from it; the editor still reviews and saves.
+   */
+  source?: Record<string, string>;
+  /** What the item is, for the translator — "FAQ", "story", "course"… */
+  itemLabel?: string;
 }) {
   const set = (locale: string, field: string, next: string) => {
     onChange({ ...value, [locale]: { ...(value[locale] ?? {}), [field]: next } });
   };
 
   return (
+    <>
+    {source ? (
+      <div className="pb-1">
+        <AutoTranslateButton
+          source={source}
+          itemLabel={itemLabel}
+          onResult={(translations, overwrite) =>
+            onChange(mergeTranslations(value, translations, overwrite, fields.map((f) => f.name)))
+          }
+        />
+      </div>
+    ) : null}
     <Tabs defaultValue={OTHER_LOCALES[0]} dir="rtl">
       <TabsList className="flex flex-wrap h-auto gap-1">
         {OTHER_LOCALES.map((locale) => {
@@ -131,5 +154,6 @@ export function ContentTranslationTabs({
         </TabsContent>
       ))}
     </Tabs>
+    </>
   );
 }

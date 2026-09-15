@@ -1,6 +1,5 @@
 'use client';
 
-import ReactCountryFlag from 'react-country-flag';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
@@ -22,28 +21,35 @@ import {
   FormDescription,
 } from '@/components/ui/form';
 import { ArrowLeft, Loader2, Upload, X } from 'lucide-react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { LocaleFormTabs, collectLocaleTranslations, type LocaleFormField } from '../../_components/LocaleFormTabs';
+import { TRANSLATION_LOCALES, localeDefaults, localeKey, type TranslationLocale } from '../../_components/locale-form';
 import { CategoryIconPicker } from '../_components/CategoryIconPicker';
+
+const LOCALE_FIELDS: readonly LocaleFormField[] = [
+  { name: 'name', label: 'اسم الحملة', maxLength: 50, requiredIn: ['en'] },
+  { name: 'description', label: 'الوصف', multiline: true, maxLength: 500 },
+];
+const LOCALE_FIELD_NAMES = ['name', 'description'] as const;
+type LocaleShape = { [K in `${(typeof LOCALE_FIELD_NAMES)[number]}_${TranslationLocale}`]: z.ZodOptional<z.ZodString> };
+const LOCALE_SHAPE = Object.fromEntries(
+  TRANSLATION_LOCALES.flatMap((locale) => [
+    [localeKey('name', locale), z.string().max(50).optional()],
+    [localeKey('description', locale), z.string().max(500).optional()],
+  ])
+) as LocaleShape;
 
 const formSchema = z.object({
   name: z.string().min(1, 'اسم الحملة مطلوب').max(50, 'اسم الحملة طويل جداً'),
   description: z.string().max(500, 'الوصف طويل جداً').optional(),
   image: z.string().optional(),
   icon: z.string().optional(),
-  name_en: z.string().min(1, 'English name is required').max(50, 'English name is too long'),
-  description_en: z.string().max(500).optional(),
-  name_fr: z.string().max(50).optional(),
-  description_fr: z.string().max(500).optional(),
-  name_tr: z.string().max(50).optional(),
-  description_tr: z.string().max(500).optional(),
-  name_id: z.string().max(50).optional(),
-  description_id: z.string().max(500).optional(),
-  name_pt: z.string().max(50).optional(),
-  description_pt: z.string().max(500).optional(),
-  name_es: z.string().max(50).optional(),
-  description_es: z.string().max(500).optional(),
-  name_de: z.string().max(50).optional(),
-  description_de: z.string().max(500).optional(),
+  /* name/description per translation locale, generated from the locale list;
+     English is required — see superRefine. */
+  ...LOCALE_SHAPE,
+}).superRefine((data, ctx) => {
+  if (!data.name_en || !String(data.name_en).trim()) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'English name is required', path: ['name_en'] });
+  }
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -60,20 +66,7 @@ export default function NewCategoryPage() {
       description: '',
       image: '',
       icon: '',
-      name_en: '',
-      description_en: '',
-      name_fr: '',
-      description_fr: '',
-      name_tr: '',
-      description_tr: '',
-      name_id: '',
-      description_id: '',
-      name_pt: '',
-      description_pt: '',
-      name_es: '',
-      description_es: '',
-      name_de: '',
-      description_de: '',
+      ...localeDefaults(LOCALE_FIELD_NAMES),
     },
   });
 
@@ -85,15 +78,7 @@ export default function NewCategoryPage() {
         description: values.description,
         image: values.image,
         icon: values.icon,
-        translations: {
-          en: { name: values.name_en ?? '', description: values.description_en ?? '' },
-          fr: { name: values.name_fr ?? '', description: values.description_fr ?? '' },
-          tr: { name: values.name_tr ?? '', description: values.description_tr ?? '' },
-          id: { name: values.name_id ?? '', description: values.description_id ?? '' },
-          pt: { name: values.name_pt ?? '', description: values.description_pt ?? '' },
-          es: { name: values.name_es ?? '', description: values.description_es ?? '' },
-          de: { name: values.name_de ?? '', description: values.description_de ?? '' },
-        },
+        translations: collectLocaleTranslations(values, LOCALE_FIELDS),
       });
       toast.success('تم إنشاء الحملة بنجاح');
       router.push('/dashboard/categories');
@@ -161,35 +146,11 @@ export default function NewCategoryPage() {
 
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-          <Tabs defaultValue="ar" className="w-full">
-            <TabsList className="flex flex-wrap gap-1 mb-4" dir="rtl">
-              <TabsTrigger value="ar" className="gap-2">
-                <ReactCountryFlag countryCode="SA" svg style={{width:'1em',height:'1em',verticalAlign:'middle'}} /> العربية
-              </TabsTrigger>
-              <TabsTrigger value="en" className="gap-2">
-                <ReactCountryFlag countryCode="GB" svg style={{width:'1em',height:'1em',verticalAlign:'middle'}} /> English
-                <span className="text-xs text-red-600">*</span>
-              </TabsTrigger>
-              <TabsTrigger value="fr" className="gap-2">
-                <ReactCountryFlag countryCode="FR" svg style={{width:'1em',height:'1em',verticalAlign:'middle'}} /> Français
-              </TabsTrigger>
-              <TabsTrigger value="tr" className="gap-2">
-                <ReactCountryFlag countryCode="TR" svg style={{width:'1em',height:'1em',verticalAlign:'middle'}} /> Türkçe
-              </TabsTrigger>
-              <TabsTrigger value="id" className="gap-2">
-                <ReactCountryFlag countryCode="ID" svg style={{width:'1em',height:'1em',verticalAlign:'middle'}} /> Bahasa
-              </TabsTrigger>
-              <TabsTrigger value="pt" className="gap-2">
-                <ReactCountryFlag countryCode="PT" svg style={{width:'1em',height:'1em',verticalAlign:'middle'}} /> Português
-              </TabsTrigger>
-              <TabsTrigger value="es" className="gap-2">
-                <ReactCountryFlag countryCode="ES" svg style={{width:'1em',height:'1em',verticalAlign:'middle'}} /> Español
-              </TabsTrigger>
-              <TabsTrigger value="de" className="gap-2">
-                <ReactCountryFlag countryCode="DE" svg style={{width:'1em',height:'1em',verticalAlign:'middle'}} /> Deutsch
-              </TabsTrigger>
-            </TabsList>
-            <TabsContent value="ar" className="mt-0">
+          <LocaleFormTabs
+            form={form}
+            fields={LOCALE_FIELDS}
+            itemLabel="campaign category"
+            arabic={
               <Card className="p-6">
                 <div className="grid gap-6">
                   <FormField control={form.control} name="name" render={({ field }) => (
@@ -200,92 +161,8 @@ export default function NewCategoryPage() {
                   )} />
                 </div>
               </Card>
-            </TabsContent>
-            <TabsContent value="en" className="mt-0">
-              <Card className="p-6">
-                <div className="grid gap-6">
-                  <FormField control={form.control} name="name_en" render={({ field }) => (
-                    <FormItem><FormLabel>Category name (English) *</FormLabel><FormControl><Input {...field} placeholder="Category name" /></FormControl><FormMessage /></FormItem>
-                  )} />
-                  <FormField control={form.control} name="description_en" render={({ field }) => (
-                    <FormItem><FormLabel>Description</FormLabel><FormControl><Textarea placeholder="Description..." className="resize-y" {...field} /></FormControl><FormMessage /></FormItem>
-                  )} />
-                </div>
-              </Card>
-            </TabsContent>
-            <TabsContent value="fr" className="mt-0">
-              <Card className="p-6">
-                <div className="grid gap-6">
-                  <FormField control={form.control} name="name_fr" render={({ field }) => (
-                    <FormItem><FormLabel>Nom de la catégorie (français)</FormLabel><FormControl><Input {...field} placeholder="Nom de la catégorie" /></FormControl><FormMessage /></FormItem>
-                  )} />
-                  <FormField control={form.control} name="description_fr" render={({ field }) => (
-                    <FormItem><FormLabel>Description</FormLabel><FormControl><Textarea placeholder="Description..." className="resize-y" {...field} /></FormControl><FormMessage /></FormItem>
-                  )} />
-                </div>
-              </Card>
-            </TabsContent>
-            <TabsContent value="tr" className="mt-0">
-              <Card className="p-6">
-                <div className="grid gap-6">
-                  <FormField control={form.control} name="name_tr" render={({ field }) => (
-                    <FormItem><FormLabel>Kategori adı (Türkçe)</FormLabel><FormControl><Input {...field} placeholder="Kategori adı" /></FormControl><FormMessage /></FormItem>
-                  )} />
-                  <FormField control={form.control} name="description_tr" render={({ field }) => (
-                    <FormItem><FormLabel>Açıklama</FormLabel><FormControl><Textarea placeholder="Açıklama..." className="resize-y" {...field} /></FormControl><FormMessage /></FormItem>
-                  )} />
-                </div>
-              </Card>
-            </TabsContent>
-            <TabsContent value="id" className="mt-0">
-              <Card className="p-6">
-                <div className="grid gap-6">
-                  <FormField control={form.control} name="name_id" render={({ field }) => (
-                    <FormItem><FormLabel>Nama kategori (Indonesia)</FormLabel><FormControl><Input {...field} placeholder="Nama kategori" /></FormControl><FormMessage /></FormItem>
-                  )} />
-                  <FormField control={form.control} name="description_id" render={({ field }) => (
-                    <FormItem><FormLabel>Deskripsi</FormLabel><FormControl><Textarea placeholder="Deskripsi..." className="resize-y" {...field} /></FormControl><FormMessage /></FormItem>
-                  )} />
-                </div>
-              </Card>
-            </TabsContent>
-            <TabsContent value="pt" className="mt-0">
-              <Card className="p-6">
-                <div className="grid gap-6">
-                  <FormField control={form.control} name="name_pt" render={({ field }) => (
-                    <FormItem><FormLabel>Nome da categoria (Português)</FormLabel><FormControl><Input {...field} placeholder="Nome da categoria" /></FormControl><FormMessage /></FormItem>
-                  )} />
-                  <FormField control={form.control} name="description_pt" render={({ field }) => (
-                    <FormItem><FormLabel>Descrição</FormLabel><FormControl><Textarea placeholder="Descrição..." className="resize-y" {...field} /></FormControl><FormMessage /></FormItem>
-                  )} />
-                </div>
-              </Card>
-            </TabsContent>
-            <TabsContent value="es" className="mt-0">
-              <Card className="p-6">
-                <div className="grid gap-6">
-                  <FormField control={form.control} name="name_es" render={({ field }) => (
-                    <FormItem><FormLabel>Nombre de categoría (Español)</FormLabel><FormControl><Input {...field} placeholder="Nombre de la categoría" /></FormControl><FormMessage /></FormItem>
-                  )} />
-                  <FormField control={form.control} name="description_es" render={({ field }) => (
-                    <FormItem><FormLabel>Descripción</FormLabel><FormControl><Textarea placeholder="Descripción..." className="resize-y" {...field} /></FormControl><FormMessage /></FormItem>
-                  )} />
-                </div>
-              </Card>
-            </TabsContent>
-            <TabsContent value="de" className="mt-0">
-              <Card className="p-6">
-                <div className="grid gap-6">
-                  <FormField control={form.control} name="name_de" render={({ field }) => (
-                    <FormItem><FormLabel>Kategoriename (Deutsch)</FormLabel><FormControl><Input {...field} placeholder="Kategoriename" /></FormControl><FormMessage /></FormItem>
-                  )} />
-                  <FormField control={form.control} name="description_de" render={({ field }) => (
-                    <FormItem><FormLabel>Beschreibung</FormLabel><FormControl><Textarea placeholder="Beschreibung..." className="resize-y" {...field} /></FormControl><FormMessage /></FormItem>
-                  )} />
-                </div>
-              </Card>
-            </TabsContent>
-          </Tabs>
+            }
+          />
 
           <Card className="p-6">
             <div className="grid gap-6">
