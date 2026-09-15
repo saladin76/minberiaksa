@@ -998,13 +998,13 @@
  * The dock (further down): never under the header, never shown while the card
  * itself is on screen, never on the first paint. See QuickDonateBar.tsx.
  * ───────────────────────────────────────────────────────────────────────────── */
-.mia-scope .mia-qd-sec { position: relative; z-index: 1; padding: 34px 24px 8px; scroll-margin-top: 96px; }
+.mia-scope .mia-qd-sec { position: relative; z-index: 1; padding: 30px 24px 8px; scroll-margin-top: 112px; }
 
 .mia-scope .mia-qd {
   position: relative; overflow: hidden;
   max-width: 1180px; margin: 0 auto;
-  display: grid; grid-template-columns: minmax(0,1fr) minmax(290px, .48fr);
-  background: #fff; border: 1px solid rgba(211,154,39,.42); border-radius: 20px;
+  display: grid; grid-template-columns: minmax(0,1fr) minmax(280px, .42fr);
+  background: #fff; border: 1px solid rgba(211,154,39,.42); border-radius: 18px;
   box-shadow: 0 26px 60px -30px rgba(16,33,43,.4), 0 2px 8px rgba(16,33,43,.05);
 }
 .mia-scope .mia-qd-pattern {
@@ -1014,21 +1014,23 @@
 .mia-scope .mia-qd > *:not(.mia-qd-pattern) { position: relative; z-index: 1; }
 
 /* ── The choices ──────────────────────────────────────────────────────── */
-.mia-scope .mia-qd-main { display: grid; align-content: start; gap: 18px; padding: 24px 26px 26px; min-width: 0; }
+.mia-scope .mia-qd-main { display: grid; align-content: start; gap: 14px; padding: 20px 22px 22px; min-width: 0; }
+/* The title row and the panel's "total" label share one height, so the two
+   columns start on the same line. The global phone h2 rule is !important. */
 .mia-scope .mia-qd-title {
-  margin: 0; display: inline-flex; align-items: center; gap: 10px;
-  font-size: 16px; font-weight: 900; color: var(--deep); letter-spacing: -.01em;
+  margin: 0; min-height: 28px; display: inline-flex; align-items: center; gap: 10px;
+  font-size: 17px !important; font-weight: 900; color: var(--deep); letter-spacing: -.01em; line-height: 1.2;
 }
 .mia-scope .mia-qd-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--red); box-shadow: 0 0 0 4px rgba(169,52,40,.14); }
-.mia-scope .mia-qd-field { display: grid; gap: 9px; min-width: 0; }
-.mia-scope .mia-qd-legend { font-size: 12.5px; font-weight: 900; color: var(--muted); letter-spacing: .01em; }
+.mia-scope .mia-qd-field { display: grid; gap: 7px; min-width: 0; }
+.mia-scope .mia-qd-legend { font-size: 12px; font-weight: 900; color: var(--muted); letter-spacing: .01em; line-height: 1.3; }
 
 /* Amounts — the first and largest decision. */
-.mia-scope .mia-qd-amounts { display: grid; grid-template-columns: repeat(5, minmax(0,1fr)); gap: 8px; }
+.mia-scope .mia-qd-amounts { display: grid; grid-template-columns: repeat(5, minmax(0,1fr)); gap: 7px; }
 .mia-scope .mia-qd-amt {
   position: relative; display: inline-flex; align-items: center; justify-content: center;
-  flex-direction: column; gap: 1px;
-  min-height: 56px; padding: 0 6px; border-radius: 12px; cursor: pointer;
+  flex-direction: column; gap: 0; line-height: 1.15;
+  min-height: 50px; padding: 0 4px; border-radius: 11px; cursor: pointer;
   border: 1.5px solid var(--border); background: #fff; color: var(--deep);
   font-family: inherit; font-size: 15px; font-weight: 900; white-space: nowrap;
   transition: border-color .15s ease, background .15s ease, color .15s ease, transform .15s ease;
@@ -1040,13 +1042,13 @@
 }
 .mia-scope .mia-qd-amt--other { font-size: 13px; font-weight: 800; }
 .mia-scope .mia-qd-tag {
-  font-size: 9.5px; font-weight: 900; font-style: normal; line-height: 1.4;
+  font-size: 9.5px; font-weight: 900; font-style: normal; line-height: 1.3;
   letter-spacing: .02em; color: var(--gold-2); white-space: nowrap; max-width: 100%; overflow: hidden; text-overflow: ellipsis;
 }
 .mia-scope .mia-qd-amt[data-active="true"] .mia-qd-tag { color: var(--gold); }
 .mia-scope .mia-qd-custom {
-  display: flex; align-items: center; gap: 10px; min-height: 50px; padding: 0 14px;
-  border: 1.5px solid var(--deep); border-radius: 12px; background: #fff;
+  display: flex; align-items: center; gap: 10px; min-height: 46px; padding: 0 14px;
+  border: 1.5px solid var(--deep); border-radius: 11px; background: #fff;
 }
 .mia-scope .mia-qd-custom input {
   flex: 1 1 auto; min-width: 0; border: 0; outline: 0; background: transparent;
@@ -1058,9 +1060,10 @@
 .mia-scope .mia-qd-select { position: relative; display: block; }
 .mia-scope .mia-qd-select select {
   appearance: none; -webkit-appearance: none;
-  width: 100%; min-height: 50px; padding-inline: 14px 40px;
-  border: 1.5px solid var(--border); border-radius: 12px; background: #fff;
-  font-family: inherit; font-size: 14.5px; font-weight: 800; color: var(--deep); cursor: pointer;
+  width: 100%; min-height: 46px; padding-inline: 14px 40px;
+  border: 1.5px solid var(--border); border-radius: 11px; background: #fff;
+  font-family: inherit; font-size: 14px; font-weight: 800; color: var(--deep); cursor: pointer;
+  text-overflow: ellipsis;
 }
 .mia-scope .mia-qd-select select:focus-visible { outline: 2px solid var(--gold); outline-offset: 1px; }
 .mia-scope .mia-qd-select > svg {
@@ -1071,11 +1074,11 @@
 /* Frequency — one setting with four states, on a single track. */
 .mia-scope .mia-qd-seg {
   display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 4px;
-  padding: 4px; border-radius: 12px; background: var(--sand); border: 1px solid var(--border);
+  padding: 4px; border-radius: 11px; background: var(--sand); border: 1px solid var(--border);
 }
 .mia-scope .mia-qd-seg > button {
-  min-height: 42px; padding: 0 6px; border: 0; border-radius: 9px; cursor: pointer;
-  background: transparent; color: var(--muted); font-family: inherit; font-size: 13px; font-weight: 800;
+  min-height: 38px; padding: 0 6px; border: 0; border-radius: 8px; cursor: pointer;
+  background: transparent; color: var(--muted); font-family: inherit; font-size: 12.5px; font-weight: 800;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   transition: background .15s ease, color .15s ease, box-shadow .15s ease;
 }
@@ -1086,26 +1089,29 @@
 }
 
 /* ── What it adds up to ───────────────────────────────────────────────── */
+/* A receipt: the total at the top, level with the card's title; the button
+   and the trust line anchored at the bottom. */
 .mia-scope .mia-qd-aside {
-  display: grid; align-content: center; gap: 4px;
-  padding: 24px 26px 26px; min-width: 0;
+  display: flex; flex-direction: column; gap: 4px;
+  padding: 20px 22px 22px; min-width: 0;
   background: linear-gradient(180deg, #FFFDF8, #FAF4E9);
   border-inline-start: 1px solid rgba(211,154,39,.35);
 }
-.mia-scope .mia-qd-sum-label { font-size: 12px; font-weight: 900; color: var(--muted); }
+.mia-scope .mia-qd-sum-label { min-height: 28px; display: flex; align-items: center; font-size: 12px; font-weight: 900; color: var(--muted); }
 .mia-scope .mia-qd-sum {
-  font-size: clamp(32px, 3.4vw, 42px); line-height: 1.1; font-weight: 900; color: var(--deep);
+  font-size: clamp(30px, 3vw, 38px); line-height: 1.1; font-weight: 900; color: var(--deep);
   letter-spacing: -.02em; font-variant-numeric: tabular-nums;
 }
 .mia-scope .mia-qd-sum-meta {
-  margin: 2px 0 14px; display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap;
+  margin: 2px 0 16px; display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap;
   font-size: 13px; font-weight: 800; color: var(--muted); min-width: 0;
 }
 .mia-scope .mia-qd-sum-dest { color: var(--gold-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
 .mia-scope .mia-qd-cta {
+  margin-top: auto;
   display: inline-flex; align-items: center; justify-content: center;
-  width: 100%; min-height: 56px; padding: 0 18px; border: 0; border-radius: 12px; cursor: pointer;
-  font-family: inherit; font-size: 16.5px; font-weight: 900; color: #fff;
+  width: 100%; min-height: 52px; padding: 0 18px; border: 0; border-radius: 11px; cursor: pointer;
+  font-family: inherit; font-size: 16px; font-weight: 900; color: #fff;
   background: linear-gradient(180deg, #B63A2D, var(--red));
   box-shadow: 0 14px 30px -10px rgba(169,52,40,.6), inset 0 1px 0 rgba(255,255,255,.16);
   transition: transform .16s cubic-bezier(.22,.61,.36,1), filter .16s ease, box-shadow .16s ease;
@@ -1113,8 +1119,8 @@
 .mia-scope .mia-qd-cta:hover { transform: translateY(-1px); filter: brightness(1.06); }
 .mia-scope .mia-qd-cta:disabled { opacity: .5; cursor: not-allowed; transform: none; }
 .mia-scope .mia-qd-trust {
-  margin: 10px 0 0; display: grid; grid-template-columns: auto minmax(0,1fr); column-gap: 7px; row-gap: 1px;
-  align-items: center; font-size: 11.5px; font-weight: 700; color: var(--muted); line-height: 1.55;
+  margin: 8px 0 0; display: grid; grid-template-columns: auto minmax(0,1fr); column-gap: 7px; row-gap: 0;
+  align-items: center; font-size: 11.5px; font-weight: 700; color: var(--muted); line-height: 1.5;
 }
 .mia-scope .mia-qd-trust svg { color: var(--green); }
 .mia-scope .mia-qd-trust > span { grid-column: 2; }
@@ -1123,30 +1129,34 @@
   .mia-scope .mia-qd-amt, .mia-scope .mia-qd-cta { transition: none; }
 }
 
-/* One column: the panel becomes the card's last block, never an overlay. */
+/* One column: the panel becomes the card's last block — one row, the total
+   and its meta on the start side, the button on the end side. */
 @media (max-width: 900px) {
-  .mia-scope .mia-qd-sec { padding: 26px 16px 6px; }
-  .mia-scope .mia-qd { grid-template-columns: minmax(0,1fr); border-radius: 18px; }
-  .mia-scope .mia-qd-main { padding: 20px 18px 18px; gap: 16px; }
+  .mia-scope .mia-qd-sec { padding: 22px 16px 6px; }
+  .mia-scope .mia-qd { grid-template-columns: minmax(0,1fr); border-radius: 16px; }
+  .mia-scope .mia-qd-main { padding: 18px 16px 16px; gap: 14px; }
   .mia-scope .mia-qd-aside {
-    padding: 18px; border-inline-start: 0; border-top: 1px solid rgba(211,154,39,.35);
-    grid-template-columns: minmax(0,1fr) auto; align-items: center; column-gap: 18px;
+    display: grid; grid-template-columns: minmax(0,1fr) auto; align-items: center; column-gap: 16px; row-gap: 0;
+    padding: 14px 16px 14px; border-inline-start: 0; border-top: 1px solid rgba(211,154,39,.35);
   }
-  .mia-scope .mia-qd-sum-label { grid-column: 1; }
-  .mia-scope .mia-qd-sum { grid-column: 1; font-size: 34px; }
-  .mia-scope .mia-qd-sum-meta { grid-column: 1; margin-bottom: 0; }
-  .mia-scope .mia-qd-cta { grid-column: 2; grid-row: 1 / span 3; width: auto; min-width: 220px; }
-  .mia-scope .mia-qd-trust { grid-column: 1 / -1; margin-top: 12px; }
+  .mia-scope .mia-qd-sum-label { grid-column: 1; min-height: 0; font-size: 11.5px; }
+  .mia-scope .mia-qd-sum { grid-column: 1; font-size: 30px; }
+  .mia-scope .mia-qd-sum-meta { grid-column: 1; margin: 2px 0 0; flex-wrap: nowrap; font-size: 12.5px; }
+  .mia-scope .mia-qd-cta { grid-column: 2; grid-row: 1 / span 3; margin: 0; width: auto; min-width: 200px; min-height: 50px; }
+  .mia-scope .mia-qd-trust { grid-column: 1 / -1; margin-top: 10px; }
 }
 
+/* Phones: every choice on one row — four presets, then "other"; four
+   frequencies on one track. Sizes step down so the labels keep their room. */
 @media (max-width: 620px) {
-  .mia-scope .mia-qd-amounts { grid-template-columns: repeat(2, minmax(0,1fr)); }
-  .mia-scope .mia-qd-amt--other { grid-column: 1 / -1; }
-  .mia-scope .mia-qd-seg { grid-template-columns: repeat(2, minmax(0,1fr)); }
-  .mia-scope .mia-qd-aside { grid-template-columns: minmax(0,1fr); }
-  .mia-scope .mia-qd-sum { font-size: 32px; }
-  .mia-scope .mia-qd-sum-meta { margin-bottom: 12px; }
-  .mia-scope .mia-qd-cta { grid-column: 1; grid-row: auto; width: 100%; min-width: 0; }
+  .mia-scope .mia-qd-amounts { grid-template-columns: repeat(4, minmax(0,1fr)); gap: 6px; }
+  .mia-scope .mia-qd-amt { min-height: 48px; padding: 0 2px; font-size: 14px; }
+  .mia-scope .mia-qd-amt--other { grid-column: 1 / -1; min-height: 40px; font-size: 12.5px; }
+  .mia-scope .mia-qd-tag { font-size: 9px; }
+  .mia-scope .mia-qd-seg { gap: 3px; padding: 3px; }
+  .mia-scope .mia-qd-seg > button { min-height: 36px; padding: 0 3px; font-size: 11.5px; }
+  .mia-scope .mia-qd-sum { font-size: 28px; }
+  .mia-scope .mia-qd-cta { min-width: 0; padding: 0 18px; min-height: 48px; font-size: 15px; }
 }
 
 /* ── The dock ─────────────────────────────────────────────────────────────
@@ -1173,10 +1183,10 @@
 .mia-scope .mia-qdock-bar {
   width: min(1180px, 100%);
   display: flex; align-items: center; gap: 14px;
-  min-height: 68px; padding: 8px 8px 8px 18px;
+  min-height: 62px; padding: 6px 6px 6px 16px;
   background: rgba(255,255,255,.96);
   -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
-  border: 1px solid rgba(211,154,39,.55); border-radius: 18px;
+  border: 1px solid rgba(211,154,39,.55); border-radius: 16px;
   box-shadow: 0 24px 60px -18px rgba(16,33,43,.5), 0 2px 10px rgba(16,33,43,.08);
 }
 .mia-scope .mia-qdock-title {
@@ -1187,11 +1197,11 @@
 
 /* The presets, compact: one track, the active one raised. */
 .mia-scope .mia-qdock-amts {
-  flex: 0 0 auto; display: grid; grid-auto-flow: column; grid-auto-columns: 72px; gap: 4px;
-  padding: 4px; border-radius: 12px; background: var(--sand); border: 1px solid var(--border);
+  flex: 0 0 auto; display: grid; grid-auto-flow: column; grid-auto-columns: 68px; gap: 3px;
+  padding: 3px; border-radius: 11px; background: var(--sand); border: 1px solid var(--border);
 }
 .mia-scope .mia-qdock-amts > button {
-  min-height: 40px; padding: 0 6px; border: 0; border-radius: 9px; cursor: pointer;
+  min-height: 38px; padding: 0 6px; border: 0; border-radius: 8px; cursor: pointer;
   background: transparent; color: var(--muted); font-family: inherit; font-size: 13.5px; font-weight: 800;
   white-space: nowrap; transition: background .15s ease, color .15s ease, box-shadow .15s ease;
 }
@@ -1210,7 +1220,7 @@
 }
 .mia-scope .mia-qdock-sum:hover { background: rgba(211,154,39,.1); }
 .mia-scope .mia-qdock-sum > b {
-  font-size: 22px; font-weight: 900; line-height: 1; letter-spacing: -.02em; font-variant-numeric: tabular-nums; white-space: nowrap;
+  font-size: 21px; font-weight: 900; line-height: 1; letter-spacing: -.02em; font-variant-numeric: tabular-nums; white-space: nowrap;
 }
 .mia-scope .mia-qdock-meta {
   display: flex; align-items: baseline; gap: 6px; min-width: 0;
@@ -1222,8 +1232,8 @@
 
 .mia-scope .mia-qdock-cta {
   flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: center;
-  min-height: 52px; padding: 0 26px; border: 0; border-radius: 12px; cursor: pointer;
-  font-family: inherit; font-size: 15.5px; font-weight: 900; color: #fff; white-space: nowrap;
+  min-height: 48px; padding: 0 24px; border: 0; border-radius: 11px; cursor: pointer;
+  font-family: inherit; font-size: 15px; font-weight: 900; color: #fff; white-space: nowrap;
   background: linear-gradient(180deg, #B63A2D, var(--red));
   box-shadow: 0 12px 26px -10px rgba(169,52,40,.65), inset 0 1px 0 rgba(255,255,255,.16);
   transition: transform .16s cubic-bezier(.22,.61,.36,1), filter .16s ease;
@@ -1239,7 +1249,7 @@
 .mia-scope .mia-qdock-x:hover { background: var(--sand); color: var(--deep); }
 
 /* The WhatsApp button climbs above the bar while the dock is shown. */
-body[data-quick-dock="true"] .mia-wa-fab { bottom: calc(100px + env(safe-area-inset-bottom, 0px)) !important; }
+body[data-quick-dock="true"] .mia-wa-fab { bottom: calc(94px + env(safe-area-inset-bottom, 0px)) !important; }
 .mia-wa-fab { transition: transform .2s cubic-bezier(.22,.61,.36,1), box-shadow .2s ease, bottom .3s cubic-bezier(.22,.61,.36,1); }
 
 @media (max-width: 1120px) { .mia-scope .mia-qdock-title { display: none; } }
@@ -1268,7 +1278,7 @@ body[data-quick-dock="true"] .mia-wa-fab { bottom: calc(100px + env(safe-area-in
 
   .mia-scope .mia-qdock-bar {
     width: 100%; gap: 8px; min-height: 0;
-    padding: 10px 10px calc(10px + env(safe-area-inset-bottom, 0px)) 14px;
+    padding: 9px 8px calc(9px + env(safe-area-inset-bottom, 0px)) 12px;
     border-radius: 0; border-inline: 0; border-bottom: 0;
     box-shadow: 0 -12px 40px -14px rgba(16,33,43,.45);
   }
@@ -1283,12 +1293,12 @@ body[data-quick-dock="true"] .mia-wa-fab { bottom: calc(100px + env(safe-area-in
   .mia-scope .mia-qdock-sum > b { grid-area: total; font-size: 20px; }
   .mia-scope .mia-qdock-meta { grid-area: meta; font-size: 12px; }
   .mia-scope .mia-qdock-chev { grid-area: chev; }
-  .mia-scope .mia-qdock-cta { min-height: 48px; padding: 0 20px; font-size: 15px; }
+  .mia-scope .mia-qdock-cta { min-height: 46px; padding: 0 18px; font-size: 14.5px; }
   .mia-scope .mia-qdock-x { width: 32px; height: 32px; }
 
   /* The page holds still under the open sheet. */
   body[data-quick-open="true"] { overflow: hidden; }
-  body[data-quick-dock="true"] .mia-wa-fab { bottom: calc(86px + env(safe-area-inset-bottom, 0px)) !important; }
+  body[data-quick-dock="true"] .mia-wa-fab { bottom: calc(82px + env(safe-area-inset-bottom, 0px)) !important; }
   body[data-quick-open="true"] .mia-wa-fab { opacity: 0; pointer-events: none; }
 }
 
