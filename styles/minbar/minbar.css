@@ -1217,7 +1217,10 @@
 /* Phones: every choice on one row — four presets, then "other"; four
    frequencies on one track. Sizes step down so the labels keep their room. */
 @media (max-width: 620px) {
-  .mia-scope .mia-qd-amounts { grid-template-columns: repeat(4, minmax(0,1fr)); gap: 6px; }
+  /* The presets fill one row (`--n` of them); five or six wrap to two rows of
+     three. "Other" always takes a row of its own beneath. */
+  .mia-scope .mia-qd-amounts { grid-auto-flow: row; grid-template-columns: repeat(var(--n, 4), minmax(0,1fr)); gap: 6px; }
+  .mia-scope .mia-qd-amounts[data-count="5"], .mia-scope .mia-qd-amounts[data-count="6"] { grid-template-columns: repeat(3, minmax(0,1fr)); }
   .mia-scope .mia-qd-amt { min-height: 48px; padding: 0 2px; font-size: 14px; }
   .mia-scope .mia-qd-amt--other { grid-column: 1 / -1; min-height: 40px; font-size: 12.5px; }
   .mia-scope .mia-qd-tag { font-size: 9px; }

@@ -3,14 +3,25 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
+import * as SelectPrimitive from "@radix-ui/react-select";
+import { LOCALES } from "@/lib/locales";
 import { miaPath } from "@/lib/minbar/routes";
 import { addToCart, type CartFreqKey } from "@/lib/minbar/cart";
+import { formatMoney } from "@/lib/minbar/money";
 import { useMinbarMoney } from "@/hooks/useMinbarMoney";
 import type { MinbarProject } from "@/lib/minbar/projects";
+import {
+  quickTitleFor,
+  resolveQuickAmounts,
+  type QuickDonationConfig,
+  type QuickGenericDestination,
+} from "@/lib/minbar/quick-donation";
 
 /**
  * The quick-donation card under the urgent projects, and the dock that follows
- * it once it is out of sight.
+ * it once it is out of sight. Everything it shows is set from the dashboard
+ * (`/dashboard/quick-donation`) and arrives as `config`; see
+ * `lib/minbar/quick-donation.ts` for the shape and the defaults.
  *
  * The card is a form with three inputs and a receipt, in the shape every
  * checkout already uses: the choices on one side, what they add up to on the
@@ -21,13 +32,21 @@ import type { MinbarProject } from "@/lib/minbar/projects";
  *                                             |  [ تبرّع الآن ]
  *
  *   · Amount first and largest. It is the decision a donor actually arrives
- *     with; the middle preset is marked as suggested and selected, so the card
- *     is answerable with one press.
- *   · The destination is ONE native select — the generic intentions first,
- *     then every project under a group.
+ *     with; the preset the dashboard marks as suggested is tagged and
+ *     selected, so the card is answerable with one press.
+ *   · The destination is ONE select — the generic intentions first, then the
+ *     projects the dashboard allows under a group heading. It is a real
+ *     listbox (Radix), keyboard-navigable, typeahead, mirrored for RTL, with
+ *     the chosen row ticked — not the browser's native popup.
  *   · The frequency is one segmented control, so it reads as one setting with
- *     four states.
+ *     up to four states.
  *   · The panel restates the whole decision in words before the button.
+ *
+ * Money. Presets are USD and shown converted to the visitor's currency, the
+ * way every figure on the site is — UNLESS the dashboard gave that currency
+ * its own presets, in which case those are shown as they are and go to the
+ * cart in that currency. The free field is always in the visitor's currency:
+ * the symbol beside it is what they see, so that is what they give.
  *
  * The dock. Two earlier attempts at keeping the donation within reach were
  * removed for good reasons: a 68px strip pinned under the header covered the
@@ -41,9 +60,9 @@ import type { MinbarProject } from "@/lib/minbar/projects";
  *     card itself is not on screen — so it is never a second copy of what is
  *     already visible, and never a nag on arrival. It slides away the moment
  *     the card scrolls back into view.
- *   · On a desktop it is one bar: the four presets, the running summary and
- *     the button. A donor can change the amount and give without scrolling
- *     back; anything else ("edit") scrolls them to the card.
+ *   · On a desktop it is one bar: the presets, the running summary and the
+ *     button. A donor can change the amount and give without scrolling back;
+ *     anything else ("edit") scrolls them to the card.
  *   · On a phone the bar is the total and the button. The button gives
  *     directly — the bar already shows the amount, frequency and destination,
  *     so there is nothing hidden behind the press. Tapping the summary opens
@@ -51,7 +70,8 @@ import type { MinbarProject } from "@/lib/minbar/projects";
  *     change something.
  *   · There is no close button. It is small, it sits where nothing else of
  *     the page's own does, and it leaves by itself whenever the card is in
- *     view — so it stays within reach for the whole visit.
+ *     view — so it stays within reach for the whole visit. The dashboard can
+ *     turn it off per device.
  *
  * The card and the dock are one state: a preset chosen in the dock is the
  * preset the card shows, and vice versa.
@@ -65,42 +85,71 @@ import type { MinbarProject } from "@/lib/minbar/projects";
  * as "add to basket" on a project card.
  */
 
-const FREQUENCIES: ReadonlyArray<{ id: CartFreqKey; key: string }> = [
-  { id: "once", key: "oneTime" },
-  { id: "daily", key: "daily" },
-  { id: "friday", key: "everyFriday" },
-  { id: "monthly", key: "monthly" },
-];
+const FREQ_KEY: Record<CartFreqKey, string> = {
+  once: "oneTime",
+  daily: "daily",
+  friday: "everyFriday",
+  monthly: "monthly",
+};
 
-const AMOUNTS = [100, 300, 500, 700];
-/** Index into AMOUNTS that is tagged "suggested" and selected by default. */
-const SUGGESTED = 1;
-
-/** The generic destinations that are not a single project. */
-const GENERIC_DESTINATIONS = [
-  { id: "where-needed", ns: "common", key: "whereNeedGreatest" },
-  { id: "zakat", ns: "navigation", key: "zakat" },
-  { id: "waqf", ns: "navigation", key: "waqf" },
-  { id: "gaza-relief", ns: "homepage", key: "gazaReliefGroup" },
-] as const;
+/** The generic destinations: their i18n namespace and key. */
+const GENERIC: Record<QuickGenericDestination, { ns: "common" | "navigation" | "homepage"; key: string }> = {
+  "where-needed": { ns: "common", key: "whereNeedGreatest" },
+  zakat: { ns: "navigation", key: "zakat" },
+  waqf: { ns: "navigation", key: "waqf" },
+  "gaza-relief": { ns: "homepage", key: "gazaReliefGroup" },
+};
 
 /** The dock waits until the landing has been scrolled past. */
 const DOCK_AFTER_PX = 320;
 /** Below this the dock is the phone bar + sheet; above it, the desktop bar. */
 const PHONE_QUERY = "(max-width: 900px)";
 
-export default function QuickDonateBar({ projects }: { projects: MinbarProject[] }) {
+export default function QuickDonateBar({ config, projects }: { config: QuickDonationConfig; projects: MinbarProject[] }) {
   const locale = useLocale();
   const router = useRouter();
   const t = useTranslations("common");
   const tHome = useTranslations("homepage");
   const tNav = useTranslations("navigation");
   const tSystem = useTranslations("system");
-  const { format, symbol } = useMinbarMoney();
+  const { format, currency: selectedCurrency, symbol } = useMinbarMoney();
+  const dir = (LOCALES as Record<string, { direction?: "rtl" | "ltr" }>)[locale]?.direction ?? "rtl";
 
-  const [destination, setDestination] = useState<string>("where-needed");
-  const [freq, setFreq] = useState<CartFreqKey>("once");
-  const [amount, setAmount] = useState<number>(AMOUNTS[SUGGESTED]);
+  /* ── What the dashboard allows ─────────────────────────────────────── */
+
+  /** The visitor's currency code, for the free field and any preset override. */
+  const visitorCode = selectedCurrency && selectedCurrency !== "DEFAULT" ? selectedCurrency : "USD";
+  const presets = resolveQuickAmounts(config, visitorCode);
+  const suggested = Math.min(config.suggestedIndex, presets.amounts.length - 1);
+
+  const shownProjects = useMemo(() => {
+    if (config.projectsMode === "none") return [];
+    if (config.projectsMode === "all") return projects;
+    const allow = new Set(config.projectIds);
+    return projects.filter((p) => allow.has(p.id));
+  }, [config.projectsMode, config.projectIds, projects]);
+
+  const label = (g: QuickGenericDestination) => {
+    const { ns, key } = GENERIC[g];
+    return ns === "common" ? t(key) : ns === "navigation" ? tNav(key) : tHome(key);
+  };
+
+  /** The default destination as an option value: a generic id or a project slug. */
+  const initialDestination = useMemo(() => {
+    const d = config.defaultDestination;
+    if (d && (config.genericDestinations as string[]).includes(d)) return d;
+    const byId = d ? shownProjects.find((p) => p.id === d) : undefined;
+    if (byId) return byId.slug;
+    return config.genericDestinations[0] ?? shownProjects[0]?.slug ?? "";
+  }, [config.defaultDestination, config.genericDestinations, shownProjects]);
+
+  const title = quickTitleFor(config, locale) ?? tHome("quickDonateTitle");
+
+  /* ── State ──────────────────────────────────────────────────────────── */
+
+  const [destination, setDestination] = useState<string>(initialDestination);
+  const [freq, setFreq] = useState<CartFreqKey>(config.defaultFrequency);
+  const [amount, setAmount] = useState<number>(presets.amounts[suggested]);
   /** null = a preset is selected; a string = the free field is in use. */
   const [custom, setCustom] = useState<string | null>(null);
 
@@ -108,22 +157,30 @@ export default function QuickDonateBar({ projects }: { projects: MinbarProject[]
   const [docked, setDocked] = useState(false);
   /** The phone sheet is expanded above the bar. */
   const [open, setOpen] = useState(false);
+  /** Phone-width viewport, for the per-device dock switches. */
+  const [phone, setPhone] = useState(false);
 
   const cardRef = useRef<HTMLElement | null>(null);
 
-  const label = (ns: string, key: string) =>
-    ns === "common" ? t(key) : ns === "navigation" ? tNav(key) : tHome(key);
-
-  const isGeneric = GENERIC_DESTINATIONS.some((d) => d.id === destination);
-  const destinationLabel = useMemo(() => {
-    const g = GENERIC_DESTINATIONS.find((d) => d.id === destination);
-    if (g) return label(g.ns, g.key);
-    return projects.find((p) => p.slug === destination)?.title ?? "";
+  /* If the visitor changes currency to one with its own presets, the chosen
+     preset may no longer exist; fall back to the suggested one. */
+  useEffect(() => {
+    if (custom === null && !presets.amounts.includes(amount)) setAmount(presets.amounts[suggested]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [destination, projects, locale]);
+  }, [presets.currency]);
 
+  const isGeneric = (config.genericDestinations as string[]).includes(destination);
+  const destinationLabel = useMemo(() => {
+    if (isGeneric) return label(destination as QuickGenericDestination);
+    return shownProjects.find((p) => p.slug === destination)?.title ?? "";
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [destination, shownProjects, locale]);
+
+  /* The total and the currency it is in — see "Money" above. */
   const total = custom !== null ? Number(custom || 0) : amount;
-  const freqLabel = t(FREQUENCIES.find((f) => f.id === freq)?.key ?? "oneTime");
+  const totalCurrency = custom !== null ? visitorCode : presets.currency;
+  const showMoney = (value: number, code: string) => (code === "USD" ? format(value) : formatMoney(value, code, locale));
+  const freqLabel = t(FREQ_KEY[freq]);
   const canGive = total > 0;
 
   /* ── Dock visibility ──────────────────────────────────────────────────
@@ -139,10 +196,15 @@ export default function QuickDonateBar({ projects }: { projects: MinbarProject[]
     const io = new IntersectionObserver(([entry]) => { cardVisible = entry.isIntersecting; update(); }, { threshold: 0.12 });
     io.observe(el);
     window.addEventListener("scroll", update, { passive: true });
-    return () => { io.disconnect(); window.removeEventListener("scroll", update); };
+
+    const mq = window.matchMedia(PHONE_QUERY);
+    const onMq = () => setPhone(mq.matches);
+    onMq();
+    mq.addEventListener("change", onMq);
+    return () => { io.disconnect(); window.removeEventListener("scroll", update); mq.removeEventListener("change", onMq); };
   }, []);
 
-  const show = docked;
+  const show = docked && (phone ? config.dockMobile : config.dockDesktop);
 
   /* The sheet closes itself when the dock goes away, on Escape, and when the
      viewport grows past phone width (where the sheet has no meaning). */
@@ -150,12 +212,10 @@ export default function QuickDonateBar({ projects }: { projects: MinbarProject[]
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setOpen(false); };
-    const mq = window.matchMedia(PHONE_QUERY);
-    const onMq = () => { if (!mq.matches) setOpen(false); };
     window.addEventListener("keydown", onKey);
-    mq.addEventListener("change", onMq);
-    return () => { window.removeEventListener("keydown", onKey); mq.removeEventListener("change", onMq); };
+    return () => window.removeEventListener("keydown", onKey);
   }, [open]);
+  useEffect(() => { if (!phone) setOpen(false); }, [phone]);
 
   /* Mirrored onto <body>: the WhatsApp button steps up while the dock is
      shown, and the page stops scrolling under the open sheet. */
@@ -177,14 +237,72 @@ export default function QuickDonateBar({ projects }: { projects: MinbarProject[]
             typeKey: "project",
             freqKey: freq,
             amount: total,
-            currency: "USD",
+            currency: totalCurrency,
           }
-        : { projectId: destination, typeKey: "project", freqKey: freq, amount: total, currency: "USD" }
+        : { projectId: destination, typeKey: "project", freqKey: freq, amount: total, currency: totalCurrency }
     );
     router.push(miaPath("cart", locale));
   };
 
-  /* ── The three inputs, rendered by the card and again by the phone sheet.
+  if (!config.enabled) return null;
+
+  /* ── The destination select ───────────────────────────────────────────
+     Radix in a portal, so the list is never clipped by the card or the sheet.
+     The content carries `mia-scope` so the site's tokens and fonts reach it
+     outside the page's own tree. */
+  const destinationSelect = (id: string) => (
+    <SelectPrimitive.Root value={destination} onValueChange={setDestination} dir={dir}>
+      <SelectPrimitive.Trigger id={`${id}-destination`} className="mia-sel-trigger" aria-label={tHome("projectSelectLabel")}>
+        <SelectPrimitive.Value>{destinationLabel}</SelectPrimitive.Value>
+        <SelectPrimitive.Icon className="mia-sel-icon">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="m6 9 6 6 6-6" />
+          </svg>
+        </SelectPrimitive.Icon>
+      </SelectPrimitive.Trigger>
+      <SelectPrimitive.Portal>
+        <SelectPrimitive.Content className="mia-scope mia-sel-content" dir={dir} position="popper" sideOffset={6} collisionPadding={12}>
+          <SelectPrimitive.ScrollUpButton className="mia-sel-scroll" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="m6 15 6-6 6 6" /></svg>
+          </SelectPrimitive.ScrollUpButton>
+          <SelectPrimitive.Viewport className="mia-sel-viewport">
+            {config.genericDestinations.length ? (
+              <SelectPrimitive.Group>
+                <SelectPrimitive.Label className="mia-sel-group">{tHome("projectSelectLabel")}</SelectPrimitive.Label>
+                {config.genericDestinations.map((g) => (
+                  <SelectPrimitive.Item key={g} value={g} className="mia-sel-item">
+                    <SelectPrimitive.ItemText>{label(g)}</SelectPrimitive.ItemText>
+                    <SelectPrimitive.ItemIndicator className="mia-sel-check">
+                      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="m5 12 5 5L20 7" /></svg>
+                    </SelectPrimitive.ItemIndicator>
+                  </SelectPrimitive.Item>
+                ))}
+              </SelectPrimitive.Group>
+            ) : null}
+            {shownProjects.length ? (
+              <SelectPrimitive.Group>
+                <SelectPrimitive.Label className="mia-sel-group">{tNav("projects")}</SelectPrimitive.Label>
+                {shownProjects.map((p) => (
+                  <SelectPrimitive.Item key={p.slug} value={p.slug} className="mia-sel-item">
+                    <SelectPrimitive.ItemText>{p.title}</SelectPrimitive.ItemText>
+                    {p.regionLabel ? <span className="mia-sel-meta" aria-hidden="true">{p.regionLabel}</span> : null}
+                    <SelectPrimitive.ItemIndicator className="mia-sel-check">
+                      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="m5 12 5 5L20 7" /></svg>
+                    </SelectPrimitive.ItemIndicator>
+                  </SelectPrimitive.Item>
+                ))}
+              </SelectPrimitive.Group>
+            ) : null}
+          </SelectPrimitive.Viewport>
+          <SelectPrimitive.ScrollDownButton className="mia-sel-scroll" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6" /></svg>
+          </SelectPrimitive.ScrollDownButton>
+        </SelectPrimitive.Content>
+      </SelectPrimitive.Portal>
+    </SelectPrimitive.Root>
+  );
+
+  /* ── The inputs, rendered by the card and again by the phone sheet.
      `id` keeps the label/aria ids unique between the two copies; `live` is the
      copy the visitor is looking at, the only one that takes focus. */
   const fields = (id: string, live: boolean) => (
@@ -192,8 +310,14 @@ export default function QuickDonateBar({ projects }: { projects: MinbarProject[]
       {/* 1 — amount, the decision the donor arrives with */}
       <div className="mia-qd-field">
         <span className="mia-qd-legend" id={`${id}-amount`}>{t("amount")}</span>
-        <div className="mia-qd-amounts" role="group" aria-labelledby={`${id}-amount`}>
-          {AMOUNTS.map((value, i) => {
+        <div
+          className="mia-qd-amounts"
+          role="group"
+          aria-labelledby={`${id}-amount`}
+          data-count={presets.amounts.length}
+          style={{ "--n": presets.amounts.length } as React.CSSProperties}
+        >
+          {presets.amounts.map((value, i) => {
             const active = custom === null && amount === value;
             return (
               <button
@@ -204,20 +328,22 @@ export default function QuickDonateBar({ projects }: { projects: MinbarProject[]
                 aria-pressed={active}
                 onClick={() => { setAmount(value); setCustom(null); }}
               >
-                <span dir="ltr" style={{ unicodeBidi: "isolate" }}>{format(value)}</span>
-                {i === SUGGESTED ? <i className="mia-qd-tag">{t("suggestedAmount")}</i> : null}
+                <span dir="ltr" style={{ unicodeBidi: "isolate" }}>{showMoney(value, presets.currency)}</span>
+                {i === suggested ? <i className="mia-qd-tag">{t("suggestedAmount")}</i> : null}
               </button>
             );
           })}
-          <button
-            type="button"
-            className="mia-qd-amt mia-qd-amt--other"
-            data-active={custom !== null ? "true" : "false"}
-            aria-pressed={custom !== null}
-            onClick={() => setCustom(custom === null ? "" : null)}
-          >
-            {tSystem("otherAmount")}
-          </button>
+          {config.allowCustomAmount ? (
+            <button
+              type="button"
+              className="mia-qd-amt mia-qd-amt--other"
+              data-active={custom !== null ? "true" : "false"}
+              aria-pressed={custom !== null}
+              onClick={() => setCustom(custom === null ? "" : null)}
+            >
+              {tSystem("otherAmount")}
+            </button>
+          ) : null}
         </div>
 
         {custom !== null ? (
@@ -236,47 +362,35 @@ export default function QuickDonateBar({ projects }: { projects: MinbarProject[]
       </div>
 
       {/* 2 — where it goes: one control, generic intentions then projects */}
-      <div className="mia-qd-field">
-        <label className="mia-qd-legend" htmlFor={`${id}-destination`}>{tHome("projectSelectLabel")}</label>
-        <div className="mia-qd-select">
-          <select id={`${id}-destination`} value={destination} onChange={(e) => setDestination(e.target.value)}>
-            {GENERIC_DESTINATIONS.map((d) => (
-              <option key={d.id} value={d.id}>{label(d.ns, d.key)}</option>
-            ))}
-            {projects.length ? (
-              <optgroup label={tNav("projects")}>
-                {projects.map((p) => (
-                  <option key={p.slug} value={p.slug}>{p.title}</option>
-                ))}
-              </optgroup>
-            ) : null}
-          </select>
-          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-            <path d="m6 9 6 6 6-6" />
-          </svg>
+      {config.genericDestinations.length + shownProjects.length > 1 ? (
+        <div className="mia-qd-field">
+          <label className="mia-qd-legend" htmlFor={`${id}-destination`}>{tHome("projectSelectLabel")}</label>
+          {destinationSelect(id)}
         </div>
-      </div>
+      ) : null}
 
-      {/* 3 — how often: one setting, four states */}
-      <div className="mia-qd-field">
-        <span className="mia-qd-legend" id={`${id}-freq`}>{t("frequency")}</span>
-        <div className="mia-qd-seg" role="group" aria-labelledby={`${id}-freq`}>
-          {FREQUENCIES.map((f) => {
-            const active = freq === f.id;
-            return (
-              <button
-                key={f.id}
-                type="button"
-                data-active={active ? "true" : "false"}
-                aria-pressed={active}
-                onClick={() => setFreq(f.id)}
-              >
-                {t(f.key)}
-              </button>
-            );
-          })}
+      {/* 3 — how often: one setting, up to four states */}
+      {config.frequencies.length > 1 ? (
+        <div className="mia-qd-field">
+          <span className="mia-qd-legend" id={`${id}-freq`}>{t("frequency")}</span>
+          <div className="mia-qd-seg" role="group" aria-labelledby={`${id}-freq`} data-count={config.frequencies.length}>
+            {config.frequencies.map((f) => {
+              const active = freq === f;
+              return (
+                <button
+                  key={f}
+                  type="button"
+                  data-active={active ? "true" : "false"}
+                  aria-pressed={active}
+                  onClick={() => setFreq(f)}
+                >
+                  {t(FREQ_KEY[f])}
+                </button>
+              );
+            })}
+          </div>
         </div>
-      </div>
+      ) : null}
     </>
   );
 
@@ -290,6 +404,8 @@ export default function QuickDonateBar({ projects }: { projects: MinbarProject[]
     </p>
   );
 
+  const totalText = showMoney(total || 0, totalCurrency);
+
   return (
     <>
       <section id="quick" ref={cardRef} className="mia-qd-sec">
@@ -300,7 +416,7 @@ export default function QuickDonateBar({ projects }: { projects: MinbarProject[]
           <div className="mia-qd-main">
             <h2 className="mia-qd-title">
               <span aria-hidden="true" className="mia-qd-dot" />
-              {tHome("quickDonateTitle")}
+              {title}
             </h2>
             {fields("qd", !open)}
           </div>
@@ -308,11 +424,10 @@ export default function QuickDonateBar({ projects }: { projects: MinbarProject[]
           {/* ── What it adds up to ──────────────────────────────────────── */}
           <aside className="mia-qd-aside">
             <span className="mia-qd-sum-label">{t("total")}</span>
-            <b className="mia-qd-sum" style={{ unicodeBidi: "isolate" }}>{format(total || 0)}</b>
+            <b className="mia-qd-sum" style={{ unicodeBidi: "isolate" }}>{totalText}</b>
             <p className="mia-qd-sum-meta">
               <span>{freqLabel}</span>
-              <span aria-hidden="true">·</span>
-              <span className="mia-qd-sum-dest">{destinationLabel}</span>
+              {destinationLabel ? <><span aria-hidden="true">·</span><span className="mia-qd-sum-dest">{destinationLabel}</span></> : null}
             </p>
 
             <button type="button" className="mia-qd-cta" onClick={submit} disabled={!canGive}>
@@ -336,7 +451,7 @@ export default function QuickDonateBar({ projects }: { projects: MinbarProject[]
         {open ? <div className="mia-qdock-scrim" onClick={() => setOpen(false)} aria-hidden="true" /> : null}
 
         {/* Phone only: the full form as a sheet above the bar. */}
-        <div className="mia-qdock-sheet" id="qdock-sheet" role="region" aria-label={tHome("quickDonateTitle")}>
+        <div className="mia-qdock-sheet" id="qdock-sheet" role="region" aria-label={title}>
           <span aria-hidden="true" className="mia-qdock-handle" />
           {fields("qdock", open)}
           {trust}
@@ -345,12 +460,12 @@ export default function QuickDonateBar({ projects }: { projects: MinbarProject[]
         <div className="mia-qdock-bar">
           <span className="mia-qdock-title">
             <span aria-hidden="true" className="mia-qd-dot" />
-            {tHome("quickDonateTitle")}
+            {title}
           </span>
 
           {/* Desktop only: the presets inline, so the amount can change here. */}
           <div className="mia-qdock-amts" role="group" aria-label={t("amount")}>
-            {AMOUNTS.map((value) => {
+            {presets.amounts.map((value) => {
               const active = custom === null && amount === value;
               return (
                 <button
@@ -360,7 +475,7 @@ export default function QuickDonateBar({ projects }: { projects: MinbarProject[]
                   aria-pressed={active}
                   onClick={() => { setAmount(value); setCustom(null); }}
                 >
-                  <span dir="ltr" style={{ unicodeBidi: "isolate" }}>{format(value)}</span>
+                  <span dir="ltr" style={{ unicodeBidi: "isolate" }}>{showMoney(value, presets.currency)}</span>
                 </button>
               );
             })}
@@ -371,15 +486,14 @@ export default function QuickDonateBar({ projects }: { projects: MinbarProject[]
           <button
             type="button"
             className="mia-qdock-sum"
-            onClick={() => (window.matchMedia(PHONE_QUERY).matches ? setOpen((v) => !v) : scrollToCard())}
+            onClick={() => (phone ? setOpen((v) => !v) : scrollToCard())}
             aria-expanded={open}
             aria-controls="qdock-sheet"
           >
-            <b style={{ unicodeBidi: "isolate" }}>{format(total || 0)}</b>
+            <b style={{ unicodeBidi: "isolate" }}>{totalText}</b>
             <span className="mia-qdock-meta">
               <span>{freqLabel}</span>
-              <span aria-hidden="true">·</span>
-              <span className="mia-qdock-dest">{destinationLabel}</span>
+              {destinationLabel ? <><span aria-hidden="true">·</span><span className="mia-qdock-dest">{destinationLabel}</span></> : null}
             </span>
             <span className="mia-qdock-edit">{t("editAmount")}</span>
             <svg className="mia-qdock-chev" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">

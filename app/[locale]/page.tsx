@@ -6,6 +6,7 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 import { listProjects } from "@/lib/minbar/projects";
 import { listArticles, listNews } from "@/lib/minbar/posts";
 import { listCourses, listFaqs, listPlaylists, listVideos } from "@/lib/minbar/cms";
+import { readQuickDonation } from "@/lib/minbar/quick-donation-read";
 import MinbarMessages from "@/components/minbar/MinbarMessages";
 import HomePage from "@/components/minbar/home/HomePage";
 
@@ -46,8 +47,12 @@ export default async function Home({ params }: Props) {
   // Every section's content is read here, in parallel, so the whole homepage is
   // in the first HTML response rather than filled in by client fetches — the
   // rails show a leading slice; each full set lives on its own page.
-  const [projects, session, courses, playlists, endorsements, achievements, faqs, articlesPage, news] = await Promise.all([
+  // The urgent rail shows a leading slice of projects; the quick-donation
+  // select lists whatever the dashboard allows, which may be every project.
+  const [projects, allProjects, quick, session, courses, playlists, endorsements, achievements, faqs, articlesPage, news] = await Promise.all([
     listProjects(locale, 12),
+    listProjects(locale),
+    readQuickDonation(),
     getServerSession(authOptions),
     listCourses(locale),
     listPlaylists(locale),
@@ -79,6 +84,7 @@ export default async function Home({ params }: Props) {
       <MinbarMessages locale={locale} namespaces={NAMESPACES}>
         <HomePage
           projects={projects}
+          quick={{ config: quick, projects: allProjects }}
           content={{ courses, playlists, endorsements, achievements, faqs, articles: articlesPage.items, news }}
           signedIn={!!session?.user}
         />

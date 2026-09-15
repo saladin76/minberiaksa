@@ -5,6 +5,7 @@ import { IMG } from "@/lib/minbar/content/media";
 import type { MinbarProject } from "@/lib/minbar/projects";
 import type { MinbarArticle } from "@/lib/minbar/posts";
 import type { CmsCourse, CmsFaq, CmsPlaylist, CmsVideo } from "@/lib/minbar/cms";
+import type { QuickDonationConfig } from "@/lib/minbar/quick-donation";
 
 /** Everything the homepage shows that an editor publishes, read by the page. */
 export interface HomeContent {
@@ -38,10 +39,13 @@ import ZakatBanner from "@/components/minbar/banners/ZakatBanner";
  */
 export default function HomePage({
   projects,
+  quick,
   content,
   signedIn,
 }: {
   projects: MinbarProject[];
+  /** The quick-donation card as the dashboard configured it, with every project it may list. */
+  quick: { config: QuickDonationConfig; projects: MinbarProject[] };
   content: HomeContent;
   signedIn: boolean;
 }) {
@@ -68,7 +72,7 @@ export default function HomePage({
       <Hero onPlayIntro={video.open} />
       <VerseStrip />
       <UrgentProjectsSection projects={projects} />
-      <QuickDonateBar projects={projects} />
+      <QuickDonateBar config={quick.config} projects={quick.projects} />
       <EventsSection />
       <ReelsSection onPlay={video.open} endorsements={content.endorsements} achievements={content.achievements} />
       <PathSection />

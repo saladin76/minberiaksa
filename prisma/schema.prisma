@@ -1111,6 +1111,10 @@ model GlobalSettings {
   id                   String   @id @default(auto()) @map("_id") @db.ObjectId
   /// { "amounts": number[], "byCurrency"?: Record<string, number[]> } — global default team-support amounts; per-campaign override on Campaign.suggestedTeamSupport wins
   suggestedTeamSupport Json?
+  /// The homepage quick-donation card and its dock: presets (with per-currency
+  /// overrides), frequencies, destinations, title. Shape and defaults in
+  /// `lib/minbar/quick-donation.ts`; null means "the defaults".
+  quickDonation        Json?
   /// Master switch for the PayFor (Ziraat Katılım) 3D Secure gateway. When false,
   /// every donation is forced through the main gateway regardless of currency.
   payforEnabled        Boolean  @default(true)

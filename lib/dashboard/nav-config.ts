@@ -65,6 +65,7 @@ export const DASHBOARD_NAV_GROUPS: DashboardNavGroup[] = [
       { key: "siteContent", title: "الأقسام الكبرى", href: "/dashboard/super-categories", icon: "layers", keywords: ["super", "category", "programme", "landing", "أقسام", "برنامج", "عبادا لنا"] },
       { key: "siteContent", title: "شريط القصص", href: "/dashboard/stories", icon: "images", keywords: ["stories", "قصص", "rail", "highlights"] },
       { key: "siteContent", title: "بانرات الطوارئ", href: "/dashboard/urgent-banners", icon: "alertTriangle", keywords: ["urgent", "banner", "emergency", "طوارئ", "بانر", "عاجل"] },
+      { key: "siteContent", title: "التبرع السريع", href: "/dashboard/quick-donation", icon: "heartHandshake", keywords: ["quick", "donation", "donate", "amounts", "presets", "سريع", "مبالغ", "مقترحة", "dock"] },
       { key: "siteContent", title: "الفيديوهات", href: "/dashboard/videos", icon: "video", keywords: ["videos", "فيديو", "achievements", "endorsements", "إنجازات", "تزكيات"] },
       { key: "siteContent", title: "برامجنا المصورة", href: "/dashboard/playlists", icon: "listVideo", keywords: ["playlists", "programs", "series", "برامج", "سلاسل", "youtube"] },
       { key: "siteContent", title: "دوراتنا", href: "/dashboard/courses", icon: "graduationCap", keywords: ["courses", "دورات", "training"] },
