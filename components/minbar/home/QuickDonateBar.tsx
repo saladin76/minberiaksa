@@ -308,7 +308,7 @@ export default function QuickDonateBar({ projects }: { projects: MinbarProject[]
           {/* ── What it adds up to ──────────────────────────────────────── */}
           <aside className="mia-qd-aside">
             <span className="mia-qd-sum-label">{t("total")}</span>
-            <b className="mia-qd-sum" dir="ltr" style={{ unicodeBidi: "isolate" }}>{format(total || 0)}</b>
+            <b className="mia-qd-sum" style={{ unicodeBidi: "isolate" }}>{format(total || 0)}</b>
             <p className="mia-qd-sum-meta">
               <span>{freqLabel}</span>
               <span aria-hidden="true">·</span>
@@ -375,7 +375,7 @@ export default function QuickDonateBar({ projects }: { projects: MinbarProject[]
             aria-expanded={open}
             aria-controls="qdock-sheet"
           >
-            <b dir="ltr" style={{ unicodeBidi: "isolate" }}>{format(total || 0)}</b>
+            <b style={{ unicodeBidi: "isolate" }}>{format(total || 0)}</b>
             <span className="mia-qdock-meta">
               <span>{freqLabel}</span>
               <span aria-hidden="true">·</span>
