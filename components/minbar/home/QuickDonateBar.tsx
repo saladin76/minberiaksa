@@ -49,8 +49,9 @@ import type { MinbarProject } from "@/lib/minbar/projects";
  *     so there is nothing hidden behind the press. Tapping the summary opens
  *     the full form as a sheet above the bar for the donor who wants to
  *     change something.
- *   · A close button hides it for the rest of the session. A visitor who has
- *     said no once is not asked again.
+ *   · There is no close button. It is small, it sits where nothing else of
+ *     the page's own does, and it leaves by itself whenever the card is in
+ *     view — so it stays within reach for the whole visit.
  *
  * The card and the dock are one state: a preset chosen in the dock is the
  * preset the card shows, and vice versa.
@@ -83,8 +84,6 @@ const GENERIC_DESTINATIONS = [
   { id: "gaza-relief", ns: "homepage", key: "gazaReliefGroup" },
 ] as const;
 
-/** Session flag: the visitor closed the dock, so it stays closed on this visit. */
-const DISMISS_KEY = "mia_qd_dock_off";
 /** The dock waits until the landing has been scrolled past. */
 const DOCK_AFTER_PX = 320;
 /** Below this the dock is the phone bar + sheet; above it, the desktop bar. */
@@ -109,7 +108,6 @@ export default function QuickDonateBar({ projects }: { projects: MinbarProject[]
   const [docked, setDocked] = useState(false);
   /** The phone sheet is expanded above the bar. */
   const [open, setOpen] = useState(false);
-  const [dismissed, setDismissed] = useState(false);
 
   const cardRef = useRef<HTMLElement | null>(null);
 
@@ -133,7 +131,6 @@ export default function QuickDonateBar({ projects }: { projects: MinbarProject[]
      the landing. Both are checked together, so scrolling back to the card
      hides the dock and scrolling to the top hides it too. */
   useEffect(() => {
-    try { if (window.sessionStorage.getItem(DISMISS_KEY)) setDismissed(true); } catch { /* private mode */ }
     const el = cardRef.current;
     if (!el || typeof IntersectionObserver === "undefined") return;
 
@@ -145,7 +142,7 @@ export default function QuickDonateBar({ projects }: { projects: MinbarProject[]
     return () => { io.disconnect(); window.removeEventListener("scroll", update); };
   }, []);
 
-  const show = docked && !dismissed;
+  const show = docked;
 
   /* The sheet closes itself when the dock goes away, on Escape, and when the
      viewport grows past phone width (where the sheet has no meaning). */
@@ -168,11 +165,6 @@ export default function QuickDonateBar({ projects }: { projects: MinbarProject[]
     if (open) b.setAttribute("data-quick-open", "true"); else b.removeAttribute("data-quick-open");
     return () => { b.removeAttribute("data-quick-dock"); b.removeAttribute("data-quick-open"); };
   }, [show, open]);
-
-  const dismiss = () => {
-    setDismissed(true);
-    try { window.sessionStorage.setItem(DISMISS_KEY, "1"); } catch { /* private mode */ }
-  };
 
   const scrollToCard = () => cardRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
 
@@ -397,12 +389,6 @@ export default function QuickDonateBar({ projects }: { projects: MinbarProject[]
 
           <button type="button" className="mia-qdock-cta" onClick={submit} disabled={!canGive}>
             {t("donateNow")}
-          </button>
-
-          <button type="button" className="mia-qdock-x" onClick={dismiss} aria-label={t("close")}>
-            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" aria-hidden="true">
-              <path d="M6 6l12 12M18 6 6 18" />
-            </svg>
           </button>
         </div>
       </div>

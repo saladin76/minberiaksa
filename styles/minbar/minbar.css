@@ -1165,7 +1165,7 @@
  * button (70), beneath the video overlay (300) and the story viewer (1000).
  *
  * Desktop: one floating bar the width of the card —
- *   ● title | 100 300 500 700 | US$300 · monthly · where needed  [تعديل] | [Donate] | ×
+ *   ● title | 100 300 500 700 | US$300 · monthly · where needed  [تعديل] | [Donate]
  * Phone: a full-width bar — total + meta on the start side, the button on the
  *   end side — and, when `data-open`, the full form as a sheet above it. */
 .mia-scope .mia-qdock {
@@ -1241,13 +1241,6 @@
 .mia-scope .mia-qdock-cta:hover { transform: translateY(-1px); filter: brightness(1.06); }
 .mia-scope .mia-qdock-cta:disabled { opacity: .5; cursor: not-allowed; transform: none; }
 
-.mia-scope .mia-qdock-x {
-  flex: 0 0 auto; display: grid; place-items: center; width: 36px; height: 36px;
-  border: 0; border-radius: 999px; background: transparent; color: var(--muted); cursor: pointer;
-  transition: background .15s ease, color .15s ease;
-}
-.mia-scope .mia-qdock-x:hover { background: var(--sand); color: var(--deep); }
-
 /* The WhatsApp button climbs above the bar while the dock is shown. */
 body[data-quick-dock="true"] .mia-wa-fab { bottom: calc(94px + env(safe-area-inset-bottom, 0px)) !important; }
 .mia-wa-fab { transition: transform .2s cubic-bezier(.22,.61,.36,1), box-shadow .2s ease, bottom .3s cubic-bezier(.22,.61,.36,1); }
@@ -1294,7 +1287,6 @@ body[data-quick-dock="true"] .mia-wa-fab { bottom: calc(94px + env(safe-area-ins
   .mia-scope .mia-qdock-meta { grid-area: meta; font-size: 12px; }
   .mia-scope .mia-qdock-chev { grid-area: chev; }
   .mia-scope .mia-qdock-cta { min-height: 46px; padding: 0 18px; font-size: 14.5px; }
-  .mia-scope .mia-qdock-x { width: 32px; height: 32px; }
 
   /* The page holds still under the open sheet. */
   body[data-quick-open="true"] { overflow: hidden; }
