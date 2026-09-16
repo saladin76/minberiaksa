@@ -21,7 +21,8 @@ import type { MinbarProject } from "./projects";
  *
  * The rule the handoff states and this honours: the browser's cart is display
  * state and is never the basis for a charge. What is posted is a list of
- * campaign **ids** and amounts; the server prices them.
+ * campaign **ids** and amounts — and, for a row that gives to a category as a
+ * whole, category ids and amounts; the server prices them.
  *
  * One deliberate simplification against the reference: the bank form is always
  * submitted into the current tab (`_self`) rather than a popup. The reference
@@ -66,6 +67,12 @@ export interface GatewayForm {
   fields: Record<string, string>;
 }
 
+/** The two kinds of line the order API takes. */
+export interface OrderLines {
+  items: Array<{ campaignId: string; amount: number }>;
+  categoryItems: Array<{ categoryId: string; amount: number }>;
+}
+
 /**
  * Cart items as the order API wants them.
  *
@@ -73,19 +80,24 @@ export interface GatewayForm {
  * mapping uses the project list the checkout page was already given, so no
  * extra request is needed and an item whose project has since been unpublished
  * simply drops out rather than failing the whole order.
+ *
+ * A row that gives to a category already carries the category's id, so it
+ * passes through as a category line; the API checks that the category exists.
  */
 export function toOrderItems(
   items: readonly MinbarCartItem[],
   projects: readonly MinbarProject[]
-): Array<{ campaignId: string; amount: number }> {
+): OrderLines {
   const bySlug = new Map(projects.map((project) => [project.slug, project.id]));
+  const lines: OrderLines = { items: [], categoryItems: [] };
 
-  return items
-    .map((item) => {
-      const campaignId = item.projectId ? bySlug.get(item.projectId) : undefined;
-      return campaignId ? { campaignId, amount: item.amount } : null;
-    })
-    .filter((row): row is { campaignId: string; amount: number } => row !== null);
+  for (const item of items) {
+    const campaignId = item.projectId ? bySlug.get(item.projectId) : undefined;
+    if (campaignId) lines.items.push({ campaignId, amount: item.amount });
+    else if (item.categoryId) lines.categoryItems.push({ categoryId: item.categoryId, amount: item.amount });
+  }
+
+  return lines;
 }
 
 /**
@@ -105,14 +117,15 @@ export function orderType(items: readonly MinbarCartItem[]): "ONE_TIME" | "MONTH
  * say what went wrong rather than failing silently.
  */
 export async function createDonation(input: CreateDonationInput): Promise<CreatedDonation> {
-  const items = toOrderItems(input.items, input.projects);
-  if (items.length === 0) throw new Error("cart-empty");
+  const { items, categoryItems } = toOrderItems(input.items, input.projects);
+  if (items.length === 0 && categoryItems.length === 0) throw new Error("cart-empty");
 
   const response = await fetch("/api/cart/payment", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       items,
+      ...(categoryItems.length ? { categoryItems } : {}),
       currency: input.currency,
       type: orderType(input.items),
       paymentMethod: input.method,

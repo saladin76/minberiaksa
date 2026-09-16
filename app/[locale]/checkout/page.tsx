@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 import { listProjects } from "@/lib/minbar/projects";
+import { listCategoryTitles } from "@/lib/minbar/category-page";
 import { banksFor } from "@/lib/minbar/banks";
 import MinbarMessages from "@/components/minbar/MinbarMessages";
 import CheckoutPage from "@/components/minbar/checkout/CheckoutPage";
@@ -30,7 +31,12 @@ export const metadata: Metadata = {
  */
 export default async function Checkout({ params }: Props) {
   const { locale } = await params;
-  const [projects, session, banks] = await Promise.all([listProjects(locale), getServerSession(authOptions), banksFor(locale)]);
+  const [projects, categories, session, banks] = await Promise.all([
+    listProjects(locale),
+    listCategoryTitles(locale),
+    getServerSession(authOptions),
+    banksFor(locale),
+  ]);
 
   const user = session?.user as
     | { name?: string | null; email?: string | null; phone?: string | null }
@@ -50,7 +56,7 @@ export default async function Checkout({ params }: Props) {
 
   return (
     <MinbarMessages locale={locale} namespaces={NAMESPACES}>
-      <CheckoutPage projects={projects} banks={banks} donor={donor} />
+      <CheckoutPage projects={projects} categories={categories} banks={banks} donor={donor} />
     </MinbarMessages>
   );
 }

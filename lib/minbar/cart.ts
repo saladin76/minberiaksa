@@ -38,6 +38,12 @@ export interface MinbarCartItem {
   /** Project slug from the projects source. Absent for non-project intentions. */
   projectId?: string;
   /**
+   * Category **id** (never a slug — category slugs differ per locale) when the
+   * row gives to a category as a whole rather than to one of its campaigns.
+   * The order carries it as a category item.
+   */
+  categoryId?: string;
+  /**
    * i18n key for a generic destination that is not a project — e.g.
    * `whereNeedGreatest`, `zakatToPalestine`, `generalBankTransfer`.
    */
@@ -120,6 +126,7 @@ export function migrateItem(
 ): MinbarCartItem {
   const item: MinbarCartItem = {
     projectId: typeof raw.projectId === "string" ? raw.projectId : undefined,
+    categoryId: typeof raw.categoryId === "string" ? raw.categoryId : undefined,
     titleKey: typeof raw.titleKey === "string" ? raw.titleKey : undefined,
     typeKey: (raw.typeKey as CartTypeKey) || LEGACY_TYPES[String(raw.type ?? "")] || undefined,
     freqKey: (raw.freqKey as CartFreqKey) || LEGACY_FREQS[String(raw.frequency ?? "")] || "once",
@@ -130,7 +137,7 @@ export function migrateItem(
     _autoMonthly: raw._autoMonthly === true || undefined,
   };
 
-  if (!item.projectId && !item.titleKey && item.title && resolveTitle) {
+  if (!item.projectId && !item.categoryId && !item.titleKey && item.title && resolveTitle) {
     const resolved = resolveTitle(item.title);
     if (resolved) item.projectId = resolved;
   }

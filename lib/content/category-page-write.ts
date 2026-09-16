@@ -15,7 +15,7 @@ import { optionalInt, optionalStr, str } from "./translation-write";
  * is exactly what the editor last saw.
  */
 
-/** Icons the explanatory cards may use; anything else falls back to `alert`. */
+/** The explanatory cards' original drawn glyphs, still stored by older cards. */
 export const CATEGORY_CARD_ICON_KEYS = [
   "alert",
   "home",
@@ -26,11 +26,19 @@ export const CATEGORY_CARD_ICON_KEYS = [
   "water",
   "users",
 ] as const;
-export type CategoryCardIcon = (typeof CATEGORY_CARD_ICON_KEYS)[number];
+export type CategoryCardIcon = string;
 
+/**
+ * A card's icon: one of the eight above, or any value a category's own icon
+ * takes — a Lucide name, `custom:Mosque`, `flag:PS` — as `CategoryIconPicker`
+ * writes them. The renderer resolves the name and falls back on its own for
+ * anything it does not know, so only the shape is checked here. Empty means
+ * the first drawn glyph, which is what the cards have always defaulted to.
+ */
 export function cardIcon(v: unknown): CategoryCardIcon {
   const s = str(v);
-  return (CATEGORY_CARD_ICON_KEYS as readonly string[]).includes(s) ? (s as CategoryCardIcon) : "alert";
+  if ((CATEGORY_CARD_ICON_KEYS as readonly string[]).includes(s)) return s;
+  return /^[A-Za-z0-9][A-Za-z0-9:_\- ]{0,63}$/.test(s) ? s : "alert";
 }
 
 const OBJECT_ID = /^[0-9a-fA-F]{24}$/;
@@ -56,6 +64,27 @@ function amounts(raw: unknown): number[] {
     if (n !== undefined && n > 0 && !out.includes(n)) out.push(n);
   }
   return out.slice(0, 12);
+}
+
+const MAX_CURRENCY_OVERRIDES = 20;
+
+/**
+ * `{ EUR: [50, 100], ... }` — the per-currency exceptions. USD is the base list
+ * and is dropped here rather than kept as a duplicate of `suggestedAmounts`;
+ * a currency whose list comes out empty is dropped too, so an exception row
+ * the editor added and never filled in does not blank that currency's chips.
+ */
+export function amountsByCurrency(raw: unknown): Record<string, number[]> {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return {};
+  const out: Record<string, number[]> = {};
+  for (const [k, v] of Object.entries(raw as Record<string, unknown>)) {
+    const code = str(k).toUpperCase();
+    if (!/^[A-Z]{3}$/.test(code) || code === "USD") continue;
+    const list = amounts(v);
+    if (list.length) out[code] = list;
+    if (Object.keys(out).length >= MAX_CURRENCY_OVERRIDES) break;
+  }
+  return out;
 }
 
 /** The page's own scalars. Only keys the request carried are returned, so a
@@ -87,7 +116,12 @@ export function buildCategoryPagePatch(body: Record<string, unknown>) {
   int("statGoalValue");
 
   if (body.suggestedAmounts !== undefined) patch.suggestedAmounts = amounts(body.suggestedAmounts);
+  if (body.suggestedByCurrency !== undefined) {
+    const by = amountsByCurrency(body.suggestedByCurrency);
+    patch.suggestedByCurrency = Object.keys(by).length ? by : null;
+  }
   if (body.achievementVideoIds !== undefined) patch.achievementVideoIds = objectIds(body.achievementVideoIds);
+  if (body.donateToCategory !== undefined) patch.donateToCategory = body.donateToCategory === true;
   if (body.donateCampaignId !== undefined) {
     const id = str(body.donateCampaignId);
     patch.donateCampaignId = OBJECT_ID.test(id) ? id : null;
@@ -226,6 +260,8 @@ export const CATEGORY_PAGE_SELECT = {
   donateTitle: true,
   donateNote: true,
   suggestedAmounts: true,
+  suggestedByCurrency: true,
+  donateToCategory: true,
   donateCampaignId: true,
   achievementsTitle: true,
   achievementVideoIds: true,

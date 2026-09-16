@@ -11,6 +11,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { errorMessage } from '@/lib/dashboard/client-error-message';
+import { SUPPORTED_CURRENCY_OPTIONS } from '@/lib/supported-currencies';
 import { ImageUploadField } from '../../_components/ImageUploadField';
 import {
   ContentTranslationTabs,
@@ -19,6 +20,10 @@ import {
   type TranslationMap,
 } from '../../_components/ContentTranslationTabs';
 import { ContentPicker, type ContentOption } from '../../super-categories/_components/ContentPicker';
+import { CategoryIconPicker } from './CategoryIconPicker';
+import { iconLabel } from './category-icon-catalog';
+import { parseCategoryIcon } from '@/components/CategoryIcon';
+import { CategoryCardIcon, isLegacyCardIcon } from '@/components/minbar/categories/CategoryCardIcon';
 
 /**
  * The landing page a category owns, as the dashboard edits it.
@@ -43,7 +48,7 @@ export const CATEGORY_CARD_TRANSLATION_FIELDS: readonly TranslationField[] = [
   { name: 'body', label: 'النص', multiline: true },
 ];
 
-/** Mirrors `CATEGORY_CARD_ICON_KEYS` on the write side. */
+/** The cards' original eight drawn glyphs — mirrors `CATEGORY_CARD_ICON_KEYS` on the write side. */
 export const CARD_ICON_LABELS: Record<string, string> = {
   alert: 'تنبيه / خطر',
   home: 'منزل',
@@ -54,6 +59,20 @@ export const CARD_ICON_LABELS: Record<string, string> = {
   water: 'ماء',
   users: 'أسرة / مجتمع',
 };
+
+/** What to call a card's icon — a drawn glyph, a catalogue icon, or a flag. */
+function cardIconLabel(icon: string): string {
+  if (CARD_ICON_LABELS[icon]) return CARD_ICON_LABELS[icon];
+  const parsed = parseCategoryIcon(icon);
+  if (parsed.kind === 'flag') {
+    try {
+      return `علم ${new Intl.DisplayNames(['ar'], { type: 'region' }).of(parsed.countryCode) ?? parsed.countryCode}`;
+    } catch {
+      return `علم ${parsed.countryCode}`;
+    }
+  }
+  return iconLabel(parsed.name);
+}
 
 export interface CategoryValueRow {
   label: string;
@@ -67,13 +86,29 @@ export interface CategoryCardRow {
   translations: TranslationMap;
 }
 
+/** One per-currency exception to the USD amounts, as the editor types it. */
+export interface CurrencyAmountsRow {
+  id: string;
+  currency: string;
+  amountsStr: string;
+}
+
+/**
+ * The donation box's target, as the select holds it:
+ *   ''          → automatic — the first campaign by priority
+ *   'category'  → the category itself (the order carries a category item)
+ *   <ObjectId>  → that campaign
+ */
+export const DONATE_TO_CATEGORY = 'category';
+
 export interface CategoryPageValues {
   heroImage: string;
   heroVideoUrl: string;
   statDoneValue: string;
   statGoalValue: string;
   suggestedAmounts: string;
-  donateCampaignId: string;
+  suggestedByCurrency: CurrencyAmountsRow[];
+  donateTarget: string;
   achievementVideoIds: string[];
   values: CategoryValueRow[];
   infoCards: CategoryCardRow[];
@@ -86,10 +121,42 @@ export function emptyCategoryPage(): CategoryPageValues {
     statDoneValue: '',
     statGoalValue: '',
     suggestedAmounts: '',
-    donateCampaignId: '',
+    suggestedByCurrency: [],
+    donateTarget: '',
     achievementVideoIds: [],
     values: [],
     infoCards: [],
+  };
+}
+
+export function currencyAmountsRow(currency = 'EUR', amountsStr = ''): CurrencyAmountsRow {
+  return { id: `${Date.now()}-${Math.random().toString(36).slice(2)}`, currency, amountsStr };
+}
+
+/** `{ EUR: [50, 100] }` → editor rows, in the stored order. */
+export function currencyRowsFrom(raw: unknown): CurrencyAmountsRow[] {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return [];
+  return Object.entries(raw as Record<string, unknown>)
+    .filter(([, list]) => Array.isArray(list))
+    .map(([currency, list]) => currencyAmountsRow(currency, (list as unknown[]).join(', ')));
+}
+
+/** Editor rows → `{ EUR: [50, 100] }`; a row with no currency or no amounts is dropped. */
+export function currencyRowsToMap(rows: CurrencyAmountsRow[]): Record<string, number[]> {
+  const out: Record<string, number[]> = {};
+  for (const row of rows) {
+    const code = row.currency.trim().toUpperCase();
+    const list = parseAmountList(row.amountsStr);
+    if (code && list.length) out[code] = list;
+  }
+  return out;
+}
+
+/** What the API is sent for the box's target — see `DONATE_TO_CATEGORY`. */
+export function donateTargetPayload(target: string): { donateToCategory: boolean; donateCampaignId: string | null } {
+  return {
+    donateToCategory: target === DONATE_TO_CATEGORY,
+    donateCampaignId: target && target !== DONATE_TO_CATEGORY ? target : null,
   };
 }
 
@@ -145,6 +212,9 @@ export function CategoryPageSection({
   const setCardRow = (index: number, patch: Partial<CategoryCardRow>) =>
     set('infoCards', values.infoCards.map((row, i) => (i === index ? { ...row, ...patch } : row)));
 
+  const setCurrencyRow = (id: string, patch: Partial<Pick<CurrencyAmountsRow, 'currency' | 'amountsStr'>>) =>
+    set('suggestedByCurrency', values.suggestedByCurrency.map((row) => (row.id === id ? { ...row, ...patch } : row)));
+
   const move = <T,>(list: T[], index: number, delta: number): T[] => {
     const target = index + delta;
     if (target < 0 || target >= list.length) return list;
@@ -199,19 +269,20 @@ export function CategoryPageSection({
         <div>
           <h2 className="text-sm font-bold">صندوق التبرع</h2>
           <p className="text-xs text-slate-500">
-            التبرع يُسجَّل دائمًا على مشروع، لا على الحملة — لذلك يوجّه الصندوق تبرعه إلى مشروع واحد من مشاريع هذه الحملة.
-            إن تُرك فارغًا يختار الموقع أول مشروع بحسب الأولوية.
+            يوجّه الصندوق تبرعه إمّا إلى الحملة نفسها — فيُسجَّل التبرع عليها مباشرة — أو إلى مشروع واحد من مشاريعها.
+            «تلقائي» يختار أول مشروع بحسب الأولوية.
           </p>
         </div>
         <div className="grid gap-4 md:grid-cols-2">
           <div className="space-y-1.5">
-            <span className="text-xs font-semibold text-slate-600">المشروع الذي يذهب إليه التبرع</span>
+            <span className="text-xs font-semibold text-slate-600">وجهة التبرع</span>
             <Select
-              value={values.donateCampaignId || 'auto'}
-              onValueChange={(v) => set('donateCampaignId', v === 'auto' ? '' : v)}
+              value={values.donateTarget || 'auto'}
+              onValueChange={(v) => set('donateTarget', v === 'auto' ? '' : v)}
             >
               <SelectTrigger><SelectValue placeholder="تلقائي" /></SelectTrigger>
               <SelectContent>
+                <SelectItem value={DONATE_TO_CATEGORY}>الحملة نفسها — لا مشروعًا بعينه</SelectItem>
                 <SelectItem value="auto">تلقائي — أول مشروع بحسب الأولوية</SelectItem>
                 {campaignOptions.map((c) => (
                   <SelectItem key={c.id} value={c.id}>{c.title}</SelectItem>
@@ -220,10 +291,59 @@ export function CategoryPageSection({
             </Select>
           </div>
           <label className="space-y-1.5">
-            <span className="text-xs font-semibold text-slate-600">المبالغ المقترحة (بالدولار)</span>
+            <span className="text-xs font-semibold text-slate-600">المبالغ المقترحة (جميع العملات)</span>
             <Input dir="ltr" placeholder="100, 200, 300, 500, 700" value={values.suggestedAmounts} onChange={(e) => set('suggestedAmounts', e.target.value)} />
-            <span className="block text-[11px] text-slate-500">افصل بينها بفاصلة. اتركها فارغة لاستخدام مبالغ الموقع الافتراضية.</span>
+            <span className="block text-[11px] text-slate-500">
+              بالدولار، مفصولة بفاصلة؛ تُعرض محوَّلة إلى عملة الزائر ما لم تُضف استثناءً أدناه. اتركها فارغة لاستخدام مبالغ الموقع الافتراضية.
+            </span>
           </label>
+        </div>
+
+        {/* Per-currency exceptions — the same rows as the campaign form's
+            suggested donations, so an editor who knows one knows the other. */}
+        <div className="space-y-2">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <span className="text-xs font-semibold text-slate-600">استثناءات حسب العملة (اختياري)</span>
+            <Button type="button" variant="outline" size="sm" onClick={() => set('suggestedByCurrency', [...values.suggestedByCurrency, currencyAmountsRow()])}>
+              <Plus className="ml-1 h-4 w-4" />
+              إضافة عملة
+            </Button>
+          </div>
+          {values.suggestedByCurrency.length === 0 ? (
+            <p className="text-[11px] text-slate-500">بدون استثناءات، تُطبّق المبالغ أعلاه على كل العملات.</p>
+          ) : (
+            <div className="space-y-3">
+              {values.suggestedByCurrency.map((row) => (
+                <div key={row.id} className="flex flex-col gap-2 rounded-lg border p-3 sm:flex-row sm:items-end">
+                  <div className="min-w-[140px] flex-1 space-y-1">
+                    <span className="text-[11px] text-slate-500">العملة</span>
+                    <Select value={row.currency} onValueChange={(v) => setCurrencyRow(row.id, { currency: v })}>
+                      <SelectTrigger dir="ltr"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {SUPPORTED_CURRENCY_OPTIONS.filter((c) => c.code !== 'USD').map((c) => (
+                          <SelectItem key={c.code} value={c.code}>{c.code} — {c.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <label className="flex-[2] space-y-1">
+                    <span className="text-[11px] text-slate-500">المبالغ لهذه العملة (كما تُعرض، بلا تحويل)</span>
+                    <Input dir="ltr" className="font-mono" placeholder="مثال: 50, 100, 200" value={row.amountsStr} onChange={(e) => setCurrencyRow(row.id, { amountsStr: e.target.value })} />
+                  </label>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="shrink-0"
+                    onClick={() => set('suggestedByCurrency', values.suggestedByCurrency.filter((r) => r.id !== row.id))}
+                    aria-label="حذف الصف"
+                  >
+                    <Trash2 className="h-4 w-4 text-red-600" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </Card>
 
@@ -288,16 +408,12 @@ export function CategoryPageSection({
           <div key={index} className="space-y-3 rounded-lg border p-3">
             <div className="flex flex-wrap items-center gap-2">
               <Badge variant="outline">{index + 1}</Badge>
-              <div className="min-w-[160px]">
-                <Select value={row.icon} onValueChange={(v) => setCardRow(index, { icon: v })}>
-                  <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {Object.entries(CARD_ICON_LABELS).map(([value, label]) => (
-                      <SelectItem key={value} value={value}>{label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+              <span className="inline-flex items-center gap-2 rounded-md border bg-white px-2 py-1 text-xs text-slate-700">
+                <span className="grid h-7 w-7 place-items-center rounded-md bg-amber-50 text-amber-600">
+                  <CategoryCardIcon name={row.icon} className="h-4 w-4" />
+                </span>
+                {cardIconLabel(row.icon)}
+              </span>
               <Button type="button" variant="ghost" size="icon" className="h-7 w-7" onClick={() => set('infoCards', move(values.infoCards, index, -1))} aria-label="أعلى">
                 <ChevronUp className="h-4 w-4" />
               </Button>
@@ -310,6 +426,33 @@ export function CategoryPageSection({
             </div>
             <Input className="h-8 text-xs" placeholder="لماذا هذه الحملة؟" value={row.title} onChange={(e) => setCardRow(index, { title: e.target.value })} />
             <Textarea rows={3} className="text-xs" placeholder="نص البطاقة…" value={row.body} onChange={(e) => setCardRow(index, { body: e.target.value })} />
+            {/* The same picker as the category's own icon, so a card can carry
+                any of its icons or a flag. The first eight drawn glyphs stay
+                available above for the cards that already use them. */}
+            <details className="rounded border bg-slate-50/60 p-2">
+              <summary className="cursor-pointer text-[11px] font-bold text-slate-600">تغيير الأيقونة</summary>
+              <div className="space-y-2 pt-2">
+                <div className="flex flex-wrap gap-1.5">
+                  {Object.entries(CARD_ICON_LABELS).map(([value, label]) => (
+                    <button
+                      key={value}
+                      type="button"
+                      title={label}
+                      onClick={() => setCardRow(index, { icon: value })}
+                      className={`grid h-8 w-8 place-items-center rounded-md border transition-colors ${
+                        row.icon === value ? 'border-amber-500 bg-amber-50 text-amber-600' : 'border-slate-200 text-slate-500 hover:border-amber-400'
+                      }`}
+                    >
+                      <CategoryCardIcon name={value} className="h-4 w-4" />
+                    </button>
+                  ))}
+                </div>
+                <CategoryIconPicker
+                  value={isLegacyCardIcon(row.icon) ? '' : row.icon}
+                  onChange={(v) => setCardRow(index, { icon: v || 'alert' })}
+                />
+              </div>
+            </details>
             <details className="rounded border bg-slate-50/60 p-2">
               <summary className="cursor-pointer text-[11px] font-bold text-slate-600">ترجمات هذه البطاقة</summary>
               <div className="pt-2">

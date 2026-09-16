@@ -304,16 +304,21 @@ model Category {
 
   /// The donation box at the foot of the page.
   ///
-  /// A donation is always made TO A CAMPAIGN: the cart stores campaign slugs and
-  /// the order pipeline resolves them (lib/minbar/checkout.ts, toOrderItems), so a
-  /// row that named only a category would be dropped at checkout. The box therefore
-  /// donates to one campaign of this category — the one named here, or the highest
-  /// priority campaign in it when this is unset.
+  /// The box gives either to the category itself — the order then carries a
+  /// `DonationCategoryItem`, which the cart, `/api/cart/payment` and every
+  /// gateway callback accept — or to one campaign of the category: the one
+  /// named here, or the highest priority campaign in it when neither is set.
+  /// `donateToCategory` wins over `donateCampaignId` should both be set.
+  donateToCategory Boolean @default(false)
   donateCampaignId String? @db.ObjectId
   donateTitle      String?
   donateNote       String?
   /// Quick amounts in USD. Empty falls back to the site's defaults.
   suggestedAmounts Int[]   @default([])
+  /// Per-currency exceptions — `{ EUR: [50, 100], ... }` — the same contract as
+  /// `Campaign.suggestedDonations.byCurrency`: a visitor in that currency sees
+  /// these as they are, and they go to the cart in that currency.
+  suggestedByCurrency Json?
 
   /// "Achievements in video" — ids of `Video` rows (type ACHIEVEMENT) shown in
   /// the rail at the end of the page, in this order. Pointers rather than a

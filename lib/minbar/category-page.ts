@@ -4,6 +4,7 @@ import { whereByIdOrAnyLocaleSlug } from "@/lib/slug";
 import { listProjectsInCategory, type MinbarProject } from "./projects";
 import { listVideos, type CmsVideo } from "./cms";
 import { youtubeId as parseYoutubeId } from "@/lib/content/translation-write";
+import { amountsByCurrency } from "@/lib/content/category-page-write";
 
 /**
  * Server-side reader for a category's own landing page.
@@ -48,15 +49,21 @@ export interface CategoryPageContent {
   projectsTitle: string;
   donateTitle: string;
   donateNote: string;
+  /** Quick amounts in USD. */
   suggestedAmounts: number[];
+  /** Quick amounts per currency code, replacing `suggestedAmounts` for a visitor in that currency. */
+  suggestedByCurrency: Record<string, number[]>;
   /**
-   * The campaign the donation box gives to. A donation is always made to a
-   * campaign — the cart stores campaign slugs and the order pipeline resolves
-   * them — so the box targets the editor's chosen campaign, or the highest
-   * priority one in the category. Null when the category has no campaign at
-   * all, in which case the box is not rendered.
+   * What the donation box gives to: the category itself (the order carries a
+   * category item, keyed by id because category slugs differ per locale), or
+   * one campaign — the editor's choice, else the highest priority one in the
+   * category. Null when the box targets a campaign and the category has none,
+   * in which case the box is not rendered.
    */
-  donateTarget: { id: string; slug: string; title: string } | null;
+  donateTarget:
+    | { kind: "category"; id: string; title: string }
+    | { kind: "campaign"; id: string; slug: string; title: string }
+    | null;
   achievementsTitle: string;
   values: CategoryPageValue[];
   cards: CategoryPageCard[];
@@ -82,6 +89,8 @@ const PAGE_SELECT = {
   donateTitle: true,
   donateNote: true,
   suggestedAmounts: true,
+  suggestedByCurrency: true,
+  donateToCategory: true,
   donateCampaignId: true,
   achievementsTitle: true,
   achievementVideoIds: true,
@@ -183,13 +192,20 @@ export async function getCategoryPage(
     .map((id) => achievementsById.get(id))
     .filter((v): v is CmsVideo => Boolean(v));
 
+  const name = t?.name || row.name;
+
   /* `projects` is already ordered priority-first, so the fallback target is
      simply its head. An explicit choice that has since been archived falls back
      the same way rather than leaving the box pointing at nothing. */
-  const donateTarget =
+  const donateCampaign =
     (row.donateCampaignId ? projects.find((p) => p.id === row.donateCampaignId) : undefined) ??
     projects[0] ??
     null;
+  const donateTarget: CategoryPageContent["donateTarget"] = row.donateToCategory
+    ? { kind: "category", id: row.id, title: name }
+    : donateCampaign
+      ? { kind: "campaign", id: donateCampaign.id, slug: donateCampaign.slug, title: donateCampaign.title }
+      : null;
 
   const done = row.statDoneValue ?? 0;
   const goal = row.statGoalValue ?? 0;
@@ -197,7 +213,7 @@ export async function getCategoryPage(
   return {
     id: row.id,
     slug: t?.slug || row.slug || row.id,
-    name: t?.name || row.name,
+    name,
     description: t?.description || row.description || "",
     image: row.image ?? "",
     heroImage: row.heroImage || row.image || "",
@@ -215,16 +231,42 @@ export async function getCategoryPage(
           }
         : null,
     projectsTitle: t?.projectsTitle || row.projectsTitle || "",
-    donateTarget: donateTarget
-      ? { id: donateTarget.id, slug: donateTarget.slug, title: donateTarget.title }
-      : null,
+    donateTarget,
     donateTitle: t?.donateTitle || row.donateTitle || "",
     donateNote: t?.donateNote || row.donateNote || "",
     suggestedAmounts: row.suggestedAmounts ?? [],
+    suggestedByCurrency: amountsByCurrency(row.suggestedByCurrency),
     achievementsTitle: t?.achievementsTitle || row.achievementsTitle || "",
     values,
     cards,
     projects,
     achievements,
   };
+}
+
+/** A category the cart can name: its id and its title in the visitor's locale. */
+export interface MinbarCategoryTitle {
+  id: string;
+  title: string;
+}
+
+/**
+ * Every active category's title, for the cart and checkout pages.
+ *
+ * A cart row that gives to a category stores the category's **id** — its slugs
+ * differ per locale — and these pages resolve the title live, the way they
+ * resolve a project slug through the project list. Archived categories are
+ * still listed: the title of a row already in someone's basket should not go
+ * blank because the category was archived after it was added; the order API
+ * is what refuses it.
+ */
+export async function listCategoryTitles(locale: string): Promise<MinbarCategoryTitle[]> {
+  const rows = await prisma.category.findMany({
+    select: {
+      id: true,
+      name: true,
+      translations: { where: translationLocaleWhere(locale), select: { locale: true, name: true } },
+    },
+  });
+  return rows.map((row) => ({ id: row.id, title: pickTranslation(row.translations, locale)?.name || row.name }));
 }

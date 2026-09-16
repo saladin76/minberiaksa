@@ -23,6 +23,7 @@ import { fetchGlobalSettings } from "@/lib/global-settings-client";
 import { useReferralCode } from "@/hooks/useReferralCode";
 import { resolveGateway, type MainGateway } from "@/lib/payment-gateway";
 import type { MinbarProject } from "@/lib/minbar/projects";
+import type { MinbarCategoryTitle } from "@/lib/minbar/category-page";
 import CardPreview from "./CardPreview";
 
 /**
@@ -52,11 +53,12 @@ type PaymentMethod = "card" | "paypal" | "bank";
 
 export interface CheckoutPageProps {
   projects: MinbarProject[];
+  categories: MinbarCategoryTitle[];
   banks: readonly MinbarBank[];
   donor: { firstName: string; lastName: string; email: string; phone: string } | null;
 }
 
-export default function CheckoutPage({ projects, banks, donor }: CheckoutPageProps) {
+export default function CheckoutPage({ projects, categories, banks, donor }: CheckoutPageProps) {
   const locale = useLocale();
   const t = useTranslations("cart");
   const tCommon = useTranslations("common");
@@ -122,10 +124,15 @@ export default function CheckoutPage({ projects, banks, donor }: CheckoutPagePro
   }, []);
 
   const titleBySlug = useMemo(() => new Map(projects.map((p) => [p.slug, p.title])), [projects]);
+  const categoryTitleById = useMemo(() => new Map(categories.map((c) => [c.id, c.title])), [categories]);
 
   const resolveTitle = (item: MinbarCartItem): string => {
     if (item.projectId) {
       const fromCms = titleBySlug.get(item.projectId);
+      if (fromCms) return fromCms;
+    }
+    if (item.categoryId) {
+      const fromCms = categoryTitleById.get(item.categoryId);
       if (fromCms) return fromCms;
     }
     if (item.titleKey) {

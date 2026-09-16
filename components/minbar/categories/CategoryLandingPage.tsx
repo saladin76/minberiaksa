@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, type CSSProperties } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { localeDirection } from "@/lib/locales";
 import { miaPath } from "@/lib/minbar/routes";
 import { youtubeEmbed, youtubeThumb } from "@/lib/minbar/content/media";
 import { addToCart, type CartFreqKey } from "@/lib/minbar/cart";
+import { formatMoney } from "@/lib/minbar/money";
 import { useMinbarMoney } from "@/hooks/useMinbarMoney";
 import { useMinbarCountUp } from "@/hooks/useMinbarReveal";
 import ProjectDonateCard from "@/components/minbar/ProjectDonateCard";
@@ -14,6 +15,7 @@ import { NoProjects } from "@/components/minbar/states/ContentStates";
 import Rail from "@/components/minbar/Rail";
 import { ArrowGlyph } from "@/components/minbar/home/TopSections";
 import type { CategoryPageContent } from "@/lib/minbar/category-page";
+import { CategoryCardIcon } from "./CategoryCardIcon";
 
 /**
  * A category's landing page — ported from
@@ -40,61 +42,13 @@ const FREQUENCIES: ReadonlyArray<{ id: CartFreqKey; key: string }> = [
   { id: "monthly", key: "monthly" },
 ];
 
-/** The drawn icons the explanatory cards choose from — no icon font. */
-export const CATEGORY_CARD_ICONS: Record<string, React.ReactNode> = {
-  alert: (
-    <>
-      <path d="M12 9v4M12 17h.01" />
-      <path d="M10.3 3.9 2.5 18a1.6 1.6 0 0 0 1.4 2.4h16.2a1.6 1.6 0 0 0 1.4-2.4L13.7 3.9a1.6 1.6 0 0 0-2.8 0Z" />
-    </>
-  ),
-  home: (
-    <>
-      <path d="M3 11.5 12 4l9 7.5" />
-      <path d="M5 10v10h14V10" />
-      <path d="M9 20v-6h6v6" />
-    </>
-  ),
-  heart: <path d="M12 21s-7.5-4.7-7.5-10A4.5 4.5 0 0 1 12 8a4.5 4.5 0 0 1 7.5 3c0 5.3-7.5 10-7.5 10Z" />,
-  hands: (
-    <>
-      <path d="M7 11V5.5a1.5 1.5 0 0 1 3 0V11" />
-      <path d="M10 10V4.5a1.5 1.5 0 0 1 3 0V10" />
-      <path d="M13 10.5V6a1.5 1.5 0 0 1 3 0v7" />
-      <path d="M16 12v-1a1.5 1.5 0 0 1 3 0v4a6 6 0 0 1-6 6h-1a7 7 0 0 1-7-7v-2a1.5 1.5 0 0 1 3 0" />
-    </>
-  ),
-  book: (
-    <>
-      <path d="M4 5.5A1.5 1.5 0 0 1 5.5 4H11v16H5.5A1.5 1.5 0 0 1 4 18.5Z" />
-      <path d="M20 5.5A1.5 1.5 0 0 0 18.5 4H13v16h5.5a1.5 1.5 0 0 0 1.5-1.5Z" />
-    </>
-  ),
-  shield: (
-    <>
-      <path d="M12 3 5 6v6c0 4.2 2.9 7.8 7 9 4.1-1.2 7-4.8 7-9V6Z" />
-      <path d="m9 12 2 2 4-4" />
-    </>
-  ),
-  water: <path d="M12 3s6 6.4 6 10.2A6 6 0 0 1 6 13.2C6 9.4 12 3 12 3Z" />,
-  users: (
-    <>
-      <circle cx="9" cy="8" r="3.2" />
-      <path d="M3.5 20a5.5 5.5 0 0 1 11 0" />
-      <path d="M16 5.2a3.2 3.2 0 0 1 0 5.9M17 14.4a5.5 5.5 0 0 1 3.5 5.1" />
-    </>
-  ),
-};
-
 function CardIcon({ name }: { name: string }) {
   return (
     <span
       aria-hidden="true"
       style={{ display: "grid", placeItems: "center", width: 38, height: 38, borderRadius: 9, background: "#fff", color: "var(--gold)" }}
     >
-      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-        {CATEGORY_CARD_ICONS[name] ?? CATEGORY_CARD_ICONS.alert}
-      </svg>
+      <CategoryCardIcon name={name} className="h-[18px] w-[18px]" />
     </span>
   );
 }
@@ -119,25 +73,47 @@ export default function CategoryLandingPage({ page }: { page: CategoryPageConten
   const t = useTranslations("common");
   const tHome = useTranslations("homepage");
   const tCampaigns = useTranslations("CampaignsPage");
-  const { format } = useMinbarMoney();
+  const { format, currency: selectedCurrency } = useMinbarMoney();
   const video = useVideoModal();
 
-  const amounts = page.suggestedAmounts.length ? page.suggestedAmounts : DEFAULT_AMOUNTS;
-  const [picked, setPicked] = useState(amounts[Math.min(2, amounts.length - 1)]);
+  /* Money, the same contract as the homepage's quick-donation card: the chips
+     are USD, shown converted to the visitor's currency — UNLESS the dashboard
+     gave that currency its own list, in which case those are shown as they are
+     and go to the cart in that currency. The free field is always in the
+     visitor's currency: the symbol beside the total is what they see, so that
+     is what they give. */
+  const visitorCode = selectedCurrency && selectedCurrency !== "DEFAULT" ? selectedCurrency : "USD";
+  const override = visitorCode !== "USD" ? page.suggestedByCurrency[visitorCode] : undefined;
+  const amounts = override?.length ? override : page.suggestedAmounts.length ? page.suggestedAmounts : DEFAULT_AMOUNTS;
+  const chipCurrency = override?.length ? visitorCode : "USD";
+  const suggested = amounts[Math.min(2, amounts.length - 1)];
+
+  const [picked, setPicked] = useState(suggested);
   const [custom, setCustom] = useState("");
   const [freq, setFreq] = useState<CartFreqKey>("once");
   const [added, setAdded] = useState(false);
 
-  const total = custom ? Number(custom) : picked;
+  /* Switching to a currency with its own list can orphan the chosen chip. */
+  useEffect(() => {
+    if (!custom && !amounts.includes(picked)) setPicked(suggested);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chipCurrency]);
 
-  /* Only identifiers reach the cart — a campaign slug, a numeric amount and an
-     ISO currency — because the cart resolves titles live from the active
-     locale. The campaign is the category's donate target: an order is always
-     placed against a campaign, so a row naming only the category would be
-     dropped when the order is built (`lib/minbar/checkout.ts`). */
+  const total = custom ? Number(custom) : picked;
+  const totalCurrency = custom ? visitorCode : chipCurrency;
+  const showMoney = (value: number, code: string) => (code === "USD" ? format(value) : formatMoney(value, code, locale));
+
+  /* Only identifiers reach the cart — a campaign slug or a category id, a
+     numeric amount and an ISO currency — because the cart resolves titles live
+     from the active locale. A category row carries the category's id (its
+     slugs differ per locale) and becomes a category line of the order. */
   const addCategoryDonation = () => {
     if (!(total > 0) || !page.donateTarget) return;
-    addToCart({ projectId: page.donateTarget.slug, typeKey: "project", freqKey: freq, amount: total, currency: "USD" });
+    const target =
+      page.donateTarget.kind === "category"
+        ? { categoryId: page.donateTarget.id }
+        : { projectId: page.donateTarget.slug };
+    addToCart({ ...target, typeKey: "project", freqKey: freq, amount: total, currency: totalCurrency });
     setAdded(true);
     window.setTimeout(() => setAdded(false), 1800);
   };
@@ -345,7 +321,7 @@ export default function CategoryLandingPage({ page }: { page: CategoryPageConten
               <div id="cat-amounts" style={{ display: "grid", gridTemplateColumns: "repeat(5,minmax(0,1fr))", gap: 8 }}>
                 {amounts.map((value) => (
                   <button key={value} type="button" onClick={() => { setPicked(value); setCustom(""); }} aria-pressed={picked === value && !custom} style={pill(picked === value && !custom)}>
-                    <span dir="ltr" style={{ unicodeBidi: "isolate" }}>{format(value)}</span>
+                    <span dir="ltr" style={{ unicodeBidi: "isolate" }}>{showMoney(value, chipCurrency)}</span>
                   </button>
                 ))}
                 <input
@@ -373,7 +349,7 @@ export default function CategoryLandingPage({ page }: { page: CategoryPageConten
             <div style={{ height: 1, background: "var(--border)" }} />
 
             <div id="cat-donate-actions" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 14, flexWrap: "wrap" }}>
-              <b dir="ltr" style={{ fontSize: 22, color: "var(--deep)", unicodeBidi: "isolate", whiteSpace: "nowrap" }}>{format(total || 0)}</b>
+              <b dir="ltr" style={{ fontSize: 22, color: "var(--deep)", unicodeBidi: "isolate", whiteSpace: "nowrap" }}>{showMoney(total || 0, totalCurrency)}</b>
               <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                 <button
                   type="button"

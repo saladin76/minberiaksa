@@ -9,6 +9,7 @@ import { useMinbarCart } from "@/hooks/useMinbarCart";
 import { useMinbarMoney } from "@/hooks/useMinbarMoney";
 import type { MinbarCartItem } from "@/lib/minbar/cart";
 import type { MinbarProject } from "@/lib/minbar/projects";
+import type { MinbarCategoryTitle } from "@/lib/minbar/category-page";
 
 /**
  * Giving basket — ported from `Minbar/السلة.dc.html`.
@@ -56,7 +57,7 @@ const TYPE_LABEL: Record<string, string> = {
   extra: "typeExtra",
 };
 
-export default function CartPage({ projects }: { projects: MinbarProject[] }) {
+export default function CartPage({ projects, categories }: { projects: MinbarProject[]; categories: MinbarCategoryTitle[] }) {
   const locale = useLocale();
   const t = useTranslations("cart");
   const tCommon = useTranslations("common");
@@ -73,17 +74,24 @@ export default function CartPage({ projects }: { projects: MinbarProject[] }) {
     () => new Map(projects.map((p) => [p.slug, p.title])),
     [projects]
   );
+  /** Category id → its title in the active locale. */
+  const categoryTitleById = useMemo(() => new Map(categories.map((c) => [c.id, c.title])), [categories]);
 
   /**
    * Resolve a row's display title, live, in this order:
-   *   projectId → the CMS title for this locale
-   *   titleKey  → the translated interface label (generic destinations)
-   *   title     → the stored legacy string
+   *   projectId  → the CMS title for this locale
+   *   categoryId → the category's name for this locale
+   *   titleKey   → the translated interface label (generic destinations)
+   *   title      → the stored legacy string
    * The last step is what keeps an unresolved v1 row visible instead of blank.
    */
   const resolveTitle = (item: MinbarCartItem): string => {
     if (item.projectId) {
       const fromCms = titleBySlug.get(item.projectId);
+      if (fromCms) return fromCms;
+    }
+    if (item.categoryId) {
+      const fromCms = categoryTitleById.get(item.categoryId);
       if (fromCms) return fromCms;
     }
     if (item.titleKey) {

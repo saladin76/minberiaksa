@@ -100,7 +100,8 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
     const {
-      items,
+      items: itemsIn,
+      categoryItems: categoryItemsIn,
       currency,
       teamSupport = 0,
       coverFees = false,
@@ -112,12 +113,31 @@ export async function POST(request: NextRequest) {
       guest,
     } = body;
 
+    type CartItemIn = {
+      campaignId: string;
+      amount: number;
+      amountUSD?: number;
+      shareCount?: number;
+    };
+    type CategoryItemIn = { categoryId: string; amount: number };
+
+    /* A line gives either to a campaign or to a category as a whole (a
+       category page's donation box may target the category itself). The two
+       lists are independent; an order needs at least one line of either kind. */
+    const items: CartItemIn[] = Array.isArray(itemsIn) ? itemsIn : [];
+    const categoryItems: CategoryItemIn[] = Array.isArray(categoryItemsIn) ? categoryItemsIn : [];
+
     // Validate required fields
-    if (!items?.length || !currency || !paymentMethod) {
+    if ((!items.length && !categoryItems.length) || !currency || !paymentMethod) {
       return NextResponse.json(
         { error: "Items, currency, and payment method are required" },
         { status: 400 }
       );
+    }
+    const lineOk = (line: { amount: unknown }) =>
+      typeof line?.amount === "number" && Number.isFinite(line.amount) && line.amount > 0;
+    if (!items.every(lineOk) || !categoryItems.every(lineOk)) {
+      return NextResponse.json({ error: "Every line needs a positive amount" }, { status: 400 });
     }
 
     // Resolve donor
@@ -160,7 +180,7 @@ export async function POST(request: NextRequest) {
     // Card payments are handled via PayFor 3D Secure redirect flow (we do not store PAN/CVV).
 
     // Calculate totals
-    const totalAmount = (items as { amount: number }[]).reduce(
+    const totalAmount = [...items, ...categoryItems].reduce(
       (sum: number, item: { amount: number }) => sum + item.amount,
       0
     );
@@ -179,31 +199,34 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    type CartItemIn = {
-      campaignId: string;
-      amount: number;
-      amountUSD?: number;
-      shareCount?: number;
-    };
-
     let itemsResolved: Array<{
       campaignId: string;
       amount: number;
       amountUSD: number;
       shareCount?: number;
     }>;
+    let categoryItemsResolved: Array<{ categoryId: string; amount: number; amountUSD: number }>;
 
     try {
-      itemsResolved = await Promise.all(
-        (items as CartItemIn[]).map(async (item) => ({
-          campaignId: item.campaignId,
-          amount: item.amount,
-          amountUSD: await convertAmountInCurrencyToUsd(item.amount, currencyNorm),
-          ...(item.shareCount != null && item.shareCount > 0
-            ? { shareCount: Math.floor(item.shareCount) }
-            : {}),
-        }))
-      );
+      [itemsResolved, categoryItemsResolved] = await Promise.all([
+        Promise.all(
+          items.map(async (item) => ({
+            campaignId: item.campaignId,
+            amount: item.amount,
+            amountUSD: await convertAmountInCurrencyToUsd(item.amount, currencyNorm),
+            ...(item.shareCount != null && item.shareCount > 0
+              ? { shareCount: Math.floor(item.shareCount) }
+              : {}),
+          }))
+        ),
+        Promise.all(
+          categoryItems.map(async (item) => ({
+            categoryId: item.categoryId,
+            amount: item.amount,
+            amountUSD: await convertAmountInCurrencyToUsd(item.amount, currencyNorm),
+          }))
+        ),
+      ]);
     } catch (e) {
       console.error("[cart/payment] convert lines to USD:", e);
       return NextResponse.json(
@@ -213,24 +236,72 @@ export async function POST(request: NextRequest) {
     }
 
     // Verify all campaigns exist and are active
-    const campaignIds = (items as { campaignId: string }[]).map((item) => item.campaignId);
-    const campaigns = await prisma.campaign.findMany({
-      where: { id: { in: campaignIds } },
-    });
+    if (items.length) {
+      const campaignIds = items.map((item) => item.campaignId);
+      const campaigns = await prisma.campaign.findMany({
+        where: { id: { in: campaignIds } },
+      });
 
-    if (campaigns.length !== items.length) {
-      return NextResponse.json(
-        { error: "One or more campaigns not found" },
-        { status: 404 }
-      );
+      if (campaigns.length !== items.length) {
+        return NextResponse.json(
+          { error: "One or more campaigns not found" },
+          { status: 404 }
+        );
+      }
+
+      if (campaigns.some((campaign) => !campaign.isActive)) {
+        return NextResponse.json(
+          { error: "One or more campaigns are not active" },
+          { status: 400 }
+        );
+      }
     }
 
-    if (campaigns.some((campaign) => !campaign.isActive)) {
-      return NextResponse.json(
-        { error: "One or more campaigns are not active" },
-        { status: 400 }
-      );
+    // Verify all categories exist and are not archived (unset isActive is active)
+    if (categoryItems.length) {
+      const categoryIds = categoryItems.map((item) => item.categoryId);
+      if (categoryIds.some((id) => !/^[0-9a-fA-F]{24}$/.test(String(id)))) {
+        return NextResponse.json({ error: "One or more categories not found" }, { status: 404 });
+      }
+      const categories = await prisma.category.findMany({
+        where: { id: { in: categoryIds } },
+        select: { id: true, isActive: true },
+      });
+
+      if (categories.length !== categoryItems.length) {
+        return NextResponse.json({ error: "One or more categories not found" }, { status: 404 });
+      }
+
+      if (categories.some((category) => category.isActive === false)) {
+        return NextResponse.json({ error: "One or more categories are not active" }, { status: 400 });
+      }
     }
+
+    /* The nested writes for both kinds of line, shared by the three creates
+       below; a kind with no lines is left out of the write altogether. */
+    const campaignLines = itemsResolved.length
+      ? {
+          items: {
+            create: itemsResolved.map((item) => ({
+              campaignId: item.campaignId,
+              amount: item.amount,
+              amountUSD: item.amountUSD,
+              ...(item.shareCount != null && item.shareCount > 0 ? { shareCount: item.shareCount } : {}),
+            })),
+          },
+        }
+      : {};
+    const categoryLines = categoryItemsResolved.length
+      ? {
+          categoryItems: {
+            create: categoryItemsResolved.map((item) => ({
+              categoryId: item.categoryId,
+              amount: item.amount,
+              amountUSD: item.amountUSD,
+            })),
+          },
+        }
+      : {};
 
     const referralId = await resolveReferralId(referralCode);
 
@@ -259,16 +330,8 @@ export async function POST(request: NextRequest) {
             referralId: referralId ?? undefined,
             nextBillingDate: nextBilling,
             lastBillingDate: new Date(),
-            items: {
-              create: itemsResolved.map((item) => ({
-                campaignId: item.campaignId,
-                amount: item.amount,
-                amountUSD: item.amountUSD,
-                ...(item.shareCount != null && item.shareCount > 0
-                  ? { shareCount: item.shareCount }
-                  : {}),
-              })),
-            },
+            ...campaignLines,
+            ...categoryLines,
           },
         });
 
@@ -289,20 +352,13 @@ export async function POST(request: NextRequest) {
             subscriptionId: sub.id,
             paymentMethod,
             cardDetails: null,
-            items: {
-              create: itemsResolved.map((item) => ({
-                campaignId: item.campaignId,
-                amount: item.amount,
-                amountUSD: item.amountUSD,
-                ...(item.shareCount != null && item.shareCount > 0
-                  ? { shareCount: item.shareCount }
-                  : {}),
-              })),
-            },
+            ...campaignLines,
+            ...categoryLines,
           },
           include: {
             donor: { select: { name: true, email: true } },
             items: { include: { campaign: { select: { title: true } } } },
+            categoryItems: { include: { category: { select: { name: true } } } },
           },
         });
 
@@ -360,20 +416,13 @@ export async function POST(request: NextRequest) {
           referralId: referralId ?? undefined,
           paymentMethod,
           cardDetails: null,
-          items: {
-            create: itemsResolved.map((item) => ({
-              campaignId: item.campaignId,
-              amount: item.amount,
-              amountUSD: item.amountUSD,
-              ...(item.shareCount != null && item.shareCount > 0
-                ? { shareCount: item.shareCount }
-                : {}),
-            })),
-          },
+          ...campaignLines,
+          ...categoryLines,
         },
         include: {
           donor: { select: { name: true, email: true } },
           items: { include: { campaign: { select: { title: true } } } },
+          categoryItems: { include: { category: { select: { name: true } } } },
         },
       });
 
