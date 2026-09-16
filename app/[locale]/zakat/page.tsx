@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
 import { buildPageMetadata } from "@/lib/seo";
 import { slugFor } from "@/lib/minbar/routes";
+import { getCategoryPageByTemplate } from "@/lib/minbar/category-page";
 import MinbarMessages from "@/components/minbar/MinbarMessages";
 import ZakatPage from "@/components/minbar/zakat/ZakatPage";
 import PageBanners from "@/components/minbar/banners/PageBanners";
@@ -11,7 +12,10 @@ interface Props {
 }
 
 /** The page's own namespaces, on top of the shell bundle. */
-const NAMESPACES = ["zakat", "homepage", "quran"] as const;
+const NAMESPACES = ["zakat", "homepage", "quran", "CampaignsPage"] as const;
+
+/** Campaign figures change on donation, not per request. */
+export const revalidate = 60;
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale } = await params;
@@ -32,7 +36,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
  */
 export default async function Zakat({ params }: Props) {
   const { locale } = await params;
-  const t = await getTranslations({ locale, namespace: "zakat" });
+  const [t, category] = await Promise.all([
+    getTranslations({ locale, namespace: "zakat" }),
+    /* The zakat category, when the dashboard has bound one to this page: its
+       campaigns, amounts, figures, cards and achievements join the page. */
+    getCategoryPageByTemplate("zakat", locale),
+  ]);
 
   const faqIds = ["hawl", "metal", "salary", "jewelry", "early", "channels"] as const;
   const faqSchema = {
@@ -50,7 +59,7 @@ export default async function Zakat({ params }: Props) {
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }} />
       <MinbarMessages locale={locale} namespaces={NAMESPACES}>
         <PageBanners locale={locale} page="zakat" slot="top" />
-        <ZakatPage />
+        <ZakatPage category={category} />
         <PageBanners locale={locale} page="zakat" slot="bottom" />
       </MinbarMessages>
     </>

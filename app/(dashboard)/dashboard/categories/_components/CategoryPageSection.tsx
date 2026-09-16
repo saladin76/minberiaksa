@@ -102,6 +102,8 @@ export interface CurrencyAmountsRow {
 export const DONATE_TO_CATEGORY = 'category';
 
 export interface CategoryPageValues {
+  /** "" for the category's own page, else the site page it is published as. */
+  pageTemplate: string;
   heroImage: string;
   heroVideoUrl: string;
   statDoneValue: string;
@@ -116,6 +118,7 @@ export interface CategoryPageValues {
 
 export function emptyCategoryPage(): CategoryPageValues {
   return {
+    pageTemplate: '',
     heroImage: '',
     heroVideoUrl: '',
     statDoneValue: '',
@@ -233,6 +236,26 @@ export function CategoryPageSection({
             تُنشر كل حملة كصفحة مشروع كاملة. النصوص المترجمة (المقدمة، عناوين الأقسام، وصف الأرقام) في تبويبات
             اللغات بالأعلى؛ هنا بنية الصفحة. كل جزء اختياري — الحملة بلا أي منها تظهر بواجهتها ومشاريعها.
           </p>
+        </div>
+
+        {/* A category may be published as one of the site's own pages instead
+            of the generic landing page; everything below still applies — the
+            page folds it in where it belongs. */}
+        <div className="space-y-1.5">
+          <span className="text-xs font-semibold text-slate-600">الصفحة التي تُنشر بها الحملة</span>
+          <Select value={values.pageTemplate || 'own'} onValueChange={(v) => set('pageTemplate', v === 'own' ? '' : v)}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="own">صفحة الحملة التلقائية</SelectItem>
+              <SelectItem value="aqsa">صفحة المسجد الأقصى الثابتة</SelectItem>
+              <SelectItem value="zakat">صفحة الزكاة الثابتة</SelectItem>
+            </SelectContent>
+          </Select>
+          <span className="block text-[11px] text-slate-500">
+            {values.pageTemplate
+              ? 'رابط الحملة يحوّل إلى هذه الصفحة، وتظهر فيها مشاريعها كلها وكل ما تضبطه هنا: الأرقام والقيم وصندوق التبرع والبطاقات والإنجازات، كلٌّ في مكانه. صورة الواجهة ومقدمتها وزرّها تحل محل صورة الصفحة ومقدمتها.'
+              : 'الافتراضي: صفحة مستقلة بالشكل الموحّد. اختر صفحة ثابتة لتُدمج الحملة فيها بدل ذلك.'}
+          </span>
         </div>
 
         <div className="grid gap-4 md:grid-cols-2">

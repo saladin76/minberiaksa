@@ -110,6 +110,7 @@ export default function EditCategoryPage() {
            own translations, which the editors below edit in place. */
         setPage({
           ...emptyCategoryPage(),
+          pageTemplate: category.pageTemplate ?? '',
           heroImage: category.heroImage ?? '',
           heroVideoUrl: category.heroVideoUrl ?? '',
           statDoneValue: category.statDoneValue == null ? '' : String(category.statDoneValue),
@@ -180,6 +181,7 @@ export default function EditCategoryPage() {
         image: values.image,
         icon: values.icon,
         order: values.order,
+        pageTemplate: page.pageTemplate || null,
         heroImage: page.heroImage,
         heroVideoUrl: page.heroVideoUrl,
         statDoneValue: page.statDoneValue === '' ? null : Number(page.statDoneValue),

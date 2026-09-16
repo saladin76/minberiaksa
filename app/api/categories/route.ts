@@ -4,6 +4,8 @@ import {
   buildCategoryPagePatch,
   categoryChildrenWrite,
   categoryPageTranslation,
+  pageTemplate,
+  releasePageTemplateFromOthers,
 } from "@/lib/content/category-page-write";
 import { getServerSession } from 'next-auth';
 import { authOptions } from "../auth/[...nextauth]/options";
@@ -194,6 +196,9 @@ export async function POST(request: NextRequest) {
           ...categoryChildrenWrite(data),
         }
       });
+
+      /* A site page carries one category at most. */
+      await releasePageTemplateFromOthers(tx, created.id, pageTemplate(data.pageTemplate));
 
       // Sequential creates so the per-locale slug uniqueness check observes prior writes.
       for (const t of translationData) {

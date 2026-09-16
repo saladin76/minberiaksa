@@ -47,6 +47,16 @@ const VIDEO_REGION_TO_CATEGORY: Record<string, string> = {
   regionAqsa: "region-al-aqsa",
 };
 
+/**
+ * Categories published as one of the site's own pages rather than as a
+ * landing page of their own — the mosque and zakat had pages before categories
+ * did, and those pages fold the category in. `Category.pageTemplate`.
+ */
+const PAGE_TEMPLATES: Record<string, "aqsa" | "zakat"> = {
+  "region-al-aqsa": "aqsa",
+  "type-zakat": "zakat",
+};
+
 async function main() {
   const categories = await prisma.category.findMany({
     select: {
@@ -63,6 +73,7 @@ async function main() {
       suggestedAmounts: true,
       achievementVideoIds: true,
       campaignIds: true,
+      pageTemplate: true,
     },
     orderBy: { order: "asc" },
   });
@@ -120,6 +131,7 @@ async function main() {
         FORCE || category.achievementVideoIds.length === 0
           ? videosByCategory.get(category.slug ?? "") ?? category.achievementVideoIds
           : category.achievementVideoIds,
+      pageTemplate: keep(category.pageTemplate, PAGE_TEMPLATES[category.slug ?? ""] ?? null, emptyText),
     };
 
     if (DRY) {

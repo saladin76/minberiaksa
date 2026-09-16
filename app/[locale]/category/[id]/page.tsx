@@ -12,6 +12,8 @@ import {
 } from "@/lib/seo";
 import type { Locale } from "@/lib/seo";
 import { getCategoryPage } from "@/lib/minbar/category-page";
+import { pageTemplate, type CategoryPageTemplate } from "@/lib/content/category-page-write";
+import { miaPath, type MinbarRoute } from "@/lib/minbar/routes";
 import MinbarMessages from "@/components/minbar/MinbarMessages";
 import CategoryLandingPage from "@/components/minbar/categories/CategoryLandingPage";
 import PageBanners from "@/components/minbar/banners/PageBanners";
@@ -25,6 +27,9 @@ const NAMESPACES = ["CampaignsPage", "homepage", "projects", "cart"] as const;
 
 /** Campaign figures change on donation, not per request. */
 export const revalidate = 60;
+
+/** Where each bound category is published. */
+const TEMPLATE_ROUTES: Record<CategoryPageTemplate, MinbarRoute> = { aqsa: "aqsa", zakat: "zakat" };
 
 async function fetchCategoryForSeo(idOrSlug: string) {
   return prisma.category.findFirst({
@@ -132,17 +137,24 @@ export default async function CategoryPage({ params }: Props) {
 
   // Redirect to the canonical per-locale slug when the URL doesn't match —
   // e.g. after a language switch keeps the previous locale's slug, or when
-  // the URL uses the ObjectId.
+  // the URL uses the ObjectId. A category bound to one of the site's own
+  // pages (the mosque, zakat) is published there instead, so it goes there.
   try {
     const category = await prisma.category.findFirst({
       where: whereByIdOrAnyLocaleSlug(id),
       select: {
         id: true,
         slug: true,
+        pageTemplate: true,
         translations: { select: { locale: true, slug: true } },
       },
     });
     if (category) {
+      const template = pageTemplate(category.pageTemplate);
+      /* Localised slugs are Arabic in Arabic, and a `Location` header must be
+         ASCII, so the path is encoded segment by segment. */
+      if (template) redirect(encodeURI(miaPath(TEMPLATE_ROUTES[template], locale)));
+
       const canonical = pickLocaleSlug(category.slug, category.translations, locale) ?? category.id;
       if (id !== canonical && (isObjectId(id) || id !== category.id)) {
         redirect(`/${locale}/category/${encodeURIComponent(canonical)}`);

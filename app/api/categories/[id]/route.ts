@@ -5,6 +5,8 @@ import {
   buildCategoryPagePatch,
   categoryChildrenWrite,
   categoryPageTranslation,
+  pageTemplate,
+  releasePageTemplateFromOthers,
 } from "@/lib/content/category-page-write";
 import { getServerSession } from 'next-auth';
 import { authOptions } from "../../auth/[...nextauth]/options";
@@ -155,6 +157,9 @@ export async function PUT(
         ...categoryChildrenWrite(body),
       }
     });
+
+    /* A site page carries one category at most. */
+    await releasePageTemplateFromOthers(prisma, id, pageTemplate(body.pageTemplate));
 
     if (translations && typeof translations === 'object') {
       for (const [locale, t] of Object.entries(translations)) {

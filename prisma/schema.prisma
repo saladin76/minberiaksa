@@ -282,6 +282,13 @@ model Category {
   /// hidden when its fields are empty, so a category with nothing but a name
   /// still renders — as the hero and its campaigns.
   ///
+  /// Binds the category to one of the site's own pages instead of the generic
+  /// landing page: "aqsa" (the mosque) or "zakat". `/category/{slug}` then
+  /// redirects there, and that page folds the category's editable parts —
+  /// figures, values, campaigns, donation box, cards, achievements — into
+  /// itself. Null publishes the category as its own page.
+  pageTemplate String?
+
   /// `image` stays the card photograph used in listings; `heroImage` is the
   /// wide one behind the page's own hero, which is a different crop.
   heroImage    String?

@@ -103,6 +103,7 @@ export default function NewCategoryPage() {
         description: values.description,
         image: values.image,
         icon: values.icon,
+        pageTemplate: page.pageTemplate || null,
         heroImage: page.heroImage,
         heroVideoUrl: page.heroVideoUrl,
         statDoneValue: page.statDoneValue === '' ? null : Number(page.statDoneValue),

@@ -1,15 +1,19 @@
 "use client";
 
-import { useState, type CSSProperties, type ReactElement } from "react";
+import { useEffect, useState, type CSSProperties, type ReactElement } from "react";
 import { useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import { Button } from "@/components/minbar/ds";
 import { miaPath } from "@/lib/minbar/routes";
-import { addToCart } from "@/lib/minbar/cart";
+import { addToCart, type MinbarCartItem } from "@/lib/minbar/cart";
+import { formatMoney } from "@/lib/minbar/money";
+import { youtubeEmbed } from "@/lib/minbar/content/media";
 import { useMinbarMoney } from "@/hooks/useMinbarMoney";
 import TravelBanner from "@/components/minbar/banners/TravelBanner";
 import IbadanBanner from "@/components/minbar/banners/IbadanBanner";
 import { ArrowGlyph } from "@/components/minbar/home/TopSections";
+import { CategoryProgramme } from "@/components/minbar/categories/CategorySections";
+import type { CategoryPageContent } from "@/lib/minbar/category-page";
 
 /**
  * Zakat landing page — ported from `Minbar/الزكاة.dc.html`.
@@ -140,24 +144,51 @@ const ZAKAT_RATE = 0.025;
 export interface ZakatPageProps {
   videoUrl1?: string;
   videoUrl2?: string;
+  /**
+   * The zakat category, when the dashboard has bound one to this page. Its
+   * amounts drive the hero's quick chips, its film takes the first video slot,
+   * its hero picture and lead join the hero, and the campaigns section below
+   * the eight categories carries its figures, values, all its campaigns, its
+   * donation box, cards and achievements. A gift from the hero then goes where
+   * the category's donation box points — the category itself or a campaign —
+   * instead of to the generic zakat intention.
+   */
+  category?: CategoryPageContent | null;
 }
 
 export default function ZakatPage({
   videoUrl1 = "https://www.youtube.com/embed/kBXI352bX-g",
   videoUrl2 = "https://www.youtube.com/embed/4b5FMrMn0MM",
+  category = null,
 }: ZakatPageProps) {
   const locale = useLocale();
   const router = useRouter();
   const t = useTranslations("zakat");
   const tCommon = useTranslations("common");
-  const { format } = useMinbarMoney();
+  const tCampaigns = useTranslations("CampaignsPage");
+  const { format, currency: selectedCurrency } = useMinbarMoney();
 
-  const [amount, setAmount] = useState(QUICK_AMOUNTS[0]);
+  /* The hero's chips: the category's amounts when one is bound, under the
+     same currency contract as its donation box — USD converted for display,
+     unless the visitor's currency has a list of its own. */
+  const visitorCode = selectedCurrency && selectedCurrency !== "DEFAULT" ? selectedCurrency : "USD";
+  const override = category && visitorCode !== "USD" ? category.suggestedByCurrency[visitorCode] : undefined;
+  const quickAmounts = override?.length ? override : category?.suggestedAmounts.length ? category.suggestedAmounts : QUICK_AMOUNTS;
+  const chipCurrency = override?.length ? visitorCode : "USD";
+  const showMoney = (value: number, code: string) => (code === "USD" ? format(value) : formatMoney(value, code, locale));
+
+  const [amount, setAmount] = useState(quickAmounts[0]);
   const [heroCustom, setHeroCustom] = useState("");
   const [added, setAdded] = useState(false);
   const [calcOpen, setCalcOpen] = useState(false);
   const [values, setValues] = useState<Record<string, string>>({});
   const [openFaq, setOpenFaq] = useState(-1);
+
+  /* Switching to a currency with its own list can orphan the chosen chip. */
+  useEffect(() => {
+    if (!heroCustom && !quickAmounts.includes(amount)) setAmount(quickAmounts[0]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chipCurrency]);
 
   const num = (x: string | undefined) => {
     const v = Number.parseFloat(String(x ?? "").replace(/[^0-9.]/g, ""));
@@ -166,20 +197,32 @@ export default function ZakatPage({
   const base = Math.max(0, num(values.cash) + num(values.gold) + num(values.trade) - num(values.debts));
   const due = base * ZAKAT_RATE;
   const heroAmount = heroCustom ? num(heroCustom) : amount;
+  const heroCurrency = heroCustom ? visitorCode : chipCurrency;
 
-  /** Every add from this page is zakat — that is what keeps it ring-fenced. */
-  const addZakat = (value: number) =>
-    addToCart({ titleKey: "zakatToPalestine", typeKey: "zakat", freqKey: "once", amount: value, currency: "USD" });
+  /**
+   * Every add from this page is zakat — that is what keeps it ring-fenced.
+   * With a bound category the gift goes where its donation box points; with
+   * none it is the generic zakat intention, as before.
+   */
+  const addZakat = (value: number, currency = "USD") => {
+    const target: Partial<MinbarCartItem> =
+      category?.donateTarget?.kind === "category"
+        ? { categoryId: category.donateTarget.id }
+        : category?.donateTarget?.kind === "campaign"
+          ? { projectId: category.donateTarget.slug }
+          : { titleKey: "zakatToPalestine" };
+    addToCart({ ...target, typeKey: "zakat", freqKey: "once", amount: value, currency });
+  };
 
   const onDonateNow = () => {
     if (!(heroAmount > 0)) return;
-    addZakat(heroAmount);
+    addZakat(heroAmount, heroCurrency);
     router.push(miaPath("cart", locale));
   };
 
   const onAddToCart = () => {
     if (!(heroAmount > 0)) return;
-    addZakat(heroAmount);
+    addZakat(heroAmount, heroCurrency);
     setAdded(true);
     window.setTimeout(() => setAdded(false), 1800);
   };
@@ -204,9 +247,12 @@ export default function ZakatPage({
         <div id="zk-hero-grid" style={{ position: "relative", maxWidth: 1240, margin: "0 auto", padding: "54px 24px 56px", display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(0,.55fr)", gap: 30, alignItems: "center" }}>
           <div style={{ display: "grid", gap: 18, justifyItems: "start", maxWidth: 640 }}>
             <h1 style={{ margin: 0, fontSize: "clamp(30px,3.6vw,50px)", lineHeight: 1.3, fontWeight: 900 }}>{t("heroTitle")}</h1>
+            {category?.heroLead ? (
+              <p style={{ margin: 0, maxWidth: "58ch", color: "var(--muted)", fontSize: 16.5, lineHeight: 1.95 }}>{category.heroLead}</p>
+            ) : null}
 
             <div id="zk-amounts" style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
-              {QUICK_AMOUNTS.map((value) => (
+              {quickAmounts.map((value) => (
                 <button
                   key={value}
                   type="button"
@@ -219,7 +265,7 @@ export default function ZakatPage({
                   style={{ height: 46, padding: "0 22px", cursor: "pointer", fontFamily: "inherit", fontSize: 15, fontWeight: 800, borderRadius: 8, border: "1px solid var(--border)", background: "#fff", color: "var(--muted)", transition: "all .18s ease" }}
                 >
                   <span dir="ltr" style={{ unicodeBidi: "isolate" }}>
-                    {format(value)}
+                    {showMoney(value, chipCurrency)}
                   </span>
                 </button>
               ))}
@@ -281,8 +327,14 @@ export default function ZakatPage({
             </div>
           </div>
 
-          <span style={{ display: "block", maxWidth: 380, justifySelf: "end" }}>
-            <img src="/minbar/assets/zakat-hero-coins.png" alt={t("heroTitle")} style={{ display: "block", width: "100%", height: "auto" }} />
+          <span style={{ display: "block", maxWidth: 380, justifySelf: "end", width: "100%" }}>
+            {category?.heroImage ? (
+              /* The category's own hero photograph takes the coins' place, in
+                 the same slot: a photograph rather than a cut-out, so framed. */
+              <img src={category.heroImage} alt={category.name} style={{ display: "block", width: "100%", aspectRatio: "4 / 3", objectFit: "cover", borderRadius: 18, boxShadow: "0 18px 50px rgba(16,33,43,.14)" }} />
+            ) : (
+              <img src="/minbar/assets/zakat-hero-coins.png" alt={t("heroTitle")} style={{ display: "block", width: "100%", height: "auto" }} />
+            )}
           </span>
         </div>
       </section>
@@ -476,6 +528,23 @@ export default function ZakatPage({
         </div>
       </section>
 
+      {/* ── The category's campaigns ─────────────────────────────────────── */}
+      {category ? (
+        <section id="zakat-campaigns" style={{ position: "relative", background: "var(--sand)", padding: "62px 0", borderBottom: "1px solid var(--border)", overflow: "hidden" }}>
+          <div aria-hidden="true" data-aqsa-pattern="" style={pattern(520)} />
+          <div style={{ position: "relative", maxWidth: 1240, margin: "0 auto", padding: "0 24px", display: "grid", gap: 26 }}>
+            <div style={{ display: "grid", gap: 8 }}>
+              <h2 style={{ margin: 0, fontSize: "clamp(26px,2.8vw,38px)", lineHeight: 1.2, fontWeight: 900 }}>{category.projectsTitle || tCampaigns("campaigns")}</h2>
+              {category.description ? (
+                <p style={{ margin: 0, maxWidth: "70ch", color: "var(--muted)", fontSize: 16, lineHeight: 1.9 }}>{category.description}</p>
+              ) : null}
+            </div>
+            {/* Every gift here is filed as zakat, the way the hero's are. */}
+            <CategoryProgramme page={category} typeKey="zakat" film={false} />
+          </div>
+        </section>
+      ) : null}
+
       {/* ── Expediting zakat, and the two testimonies ────────────────────── */}
       <section id="taajil" style={{ background: "#fff", padding: "62px 0", borderBottom: "1px solid var(--border)" }}>
         <div style={{ maxWidth: 1240, margin: "0 auto", padding: "0 24px" }}>
@@ -511,7 +580,9 @@ export default function ZakatPage({
       {/* ── Videos ───────────────────────────────────────────────────────── */}
       <section style={{ background: "#fff", padding: "62px 0", borderBottom: "1px solid var(--border)" }}>
         <div id="zk-videos" style={{ maxWidth: 1240, margin: "0 auto", padding: "0 24px", display: "grid", gridTemplateColumns: "repeat(2,minmax(0,1fr))", gap: 24 }}>
-          {[videoUrl1, videoUrl2].map((url) => (
+          {/* The category's film, when it has one, takes the first slot; the
+              programme section above does not repeat it. */}
+          {[category?.heroVideoId ? youtubeEmbed(category.heroVideoId) : videoUrl1, videoUrl2].map((url) => (
             <div key={url} style={{ position: "relative", width: "100%", aspectRatio: "16/9", borderRadius: 14, overflow: "hidden", boxShadow: "0 18px 50px rgba(16,33,43,.14)" }}>
               <iframe
                 src={url}

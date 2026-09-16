@@ -4,7 +4,7 @@ import { whereByIdOrAnyLocaleSlug } from "@/lib/slug";
 import { listProjectsInCategory, type MinbarProject } from "./projects";
 import { listVideos, type CmsVideo } from "./cms";
 import { youtubeId as parseYoutubeId } from "@/lib/content/translation-write";
-import { amountsByCurrency } from "@/lib/content/category-page-write";
+import { amountsByCurrency, type CategoryPageTemplate } from "@/lib/content/category-page-write";
 
 /**
  * Server-side reader for a category's own landing page.
@@ -36,6 +36,8 @@ export interface CategoryPageCard {
 export interface CategoryPageContent {
   id: string;
   slug: string;
+  /** The site page this category is published as, or null for its own. */
+  pageTemplate: CategoryPageTemplate | null;
   name: string;
   description: string;
   image: string;
@@ -74,6 +76,7 @@ export interface CategoryPageContent {
 const PAGE_SELECT = {
   id: true,
   slug: true,
+  pageTemplate: true,
   name: true,
   description: true,
   image: true,
@@ -105,14 +108,29 @@ const PAGE_SELECT = {
 } as const;
 
 /** One category's whole page, or `null` when the slug names nothing. */
-export async function getCategoryPage(
-  idOrSlug: string,
-  locale: string
-): Promise<CategoryPageContent | null> {
+export async function getCategoryPage(idOrSlug: string, locale: string): Promise<CategoryPageContent | null> {
   /* `whereByIdOrAnyLocaleSlug` only matches on `id` when the key actually looks
      like an ObjectId, so an unknown slug misses rather than throwing. */
+  return readCategoryPage(whereByIdOrAnyLocaleSlug(idOrSlug), locale);
+}
+
+/**
+ * The category bound to one of the site's own pages, or `null` when none is.
+ * An archived category is skipped, so archiving it takes its campaigns off the
+ * page rather than leaving them there.
+ */
+export async function getCategoryPageByTemplate(
+  template: CategoryPageTemplate,
+  locale: string
+): Promise<CategoryPageContent | null> {
+  return readCategoryPage({ pageTemplate: template, NOT: { isActive: false } }, locale);
+}
+
+type CategoryWhere = NonNullable<Parameters<typeof prisma.category.findFirst>[0]>["where"];
+
+async function readCategoryPage(where: CategoryWhere, locale: string): Promise<CategoryPageContent | null> {
   const row = await prisma.category.findFirst({
-    where: whereByIdOrAnyLocaleSlug(idOrSlug),
+    where,
     select: {
       ...PAGE_SELECT,
       translations: {
@@ -213,6 +231,7 @@ export async function getCategoryPage(
   return {
     id: row.id,
     slug: t?.slug || row.slug || row.id,
+    pageTemplate: (row.pageTemplate as CategoryPageTemplate | null) ?? null,
     name,
     description: t?.description || row.description || "",
     image: row.image ?? "",

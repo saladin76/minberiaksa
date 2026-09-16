@@ -5,6 +5,7 @@ import { messagesFor } from "@/i18n/locale-messages";
 import { slugFor } from "@/lib/minbar/routes";
 import { verseBlock } from "@/lib/minbar/quran";
 import { listProjects } from "@/lib/minbar/projects";
+import { getCategoryPageByTemplate } from "@/lib/minbar/category-page";
 import MinbarMessages from "@/components/minbar/MinbarMessages";
 import AqsaPage from "@/components/minbar/aqsa/AqsaPage";
 import PageBanners from "@/components/minbar/banners/PageBanners";
@@ -19,10 +20,14 @@ const NAMESPACES = ["aqsa", "homepage", "quran"] as const;
 /** Project figures change on donation, not per request. */
 export const revalidate = 60;
 
-/** Categories the design draws this page's project grid from. */
-const REGIONS = ["al-aqsa", "al-quds"];
+/**
+ * Categories the design draws this page's project grid from, when no category
+ * is bound to the page (`Category.pageTemplate = "aqsa"`). A bound category
+ * supplies its own campaigns — all of them — and its editable parts.
+ */
+const REGIONS = ["region-al-aqsa", "region-al-quds", "al-aqsa", "al-quds"];
 
-/** How many project cards the "our role" grid shows. */
+/** How many project cards the "our role" grid shows without a bound category. */
 const PROJECT_LIMIT = 8;
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -45,8 +50,13 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function Aqsa({ params }: Props) {
   const { locale } = await params;
 
-  const all = await listProjects(locale);
-  const projects = all.filter((project) => project.region && REGIONS.includes(project.region)).slice(0, PROJECT_LIMIT);
+  /* The mosque's category, when the dashboard has bound one to this page. Its
+     campaigns replace the region filter below, and its figures, values,
+     donation box, cards and achievements join the page's own copy. */
+  const category = await getCategoryPageByTemplate("aqsa", locale);
+  const projects = category
+    ? category.projects
+    : (await listProjects(locale)).filter((project) => project.region && REGIONS.includes(project.region)).slice(0, PROJECT_LIMIT);
 
   const quran = messagesFor(locale).quran as Parameters<typeof verseBlock>[0];
 
@@ -57,6 +67,7 @@ export default async function Aqsa({ params }: Props) {
         verse={verseBlock(quran, "anbiya_71", locale)}
         isra={verseBlock(quran, "isra_1", locale)}
         projects={projects}
+        category={category}
       />
       <PageBanners locale={locale} page="aqsa" slot="bottom" />
     </MinbarMessages>

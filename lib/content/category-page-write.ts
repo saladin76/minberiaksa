@@ -41,6 +41,15 @@ export function cardIcon(v: unknown): CategoryCardIcon {
   return /^[A-Za-z0-9][A-Za-z0-9:_\- ]{0,63}$/.test(s) ? s : "alert";
 }
 
+/** The site pages a category may be published as, instead of its own. */
+export const CATEGORY_PAGE_TEMPLATES = ["aqsa", "zakat"] as const;
+export type CategoryPageTemplate = (typeof CATEGORY_PAGE_TEMPLATES)[number];
+
+export function pageTemplate(v: unknown): CategoryPageTemplate | null {
+  const s = str(v);
+  return (CATEGORY_PAGE_TEMPLATES as readonly string[]).includes(s) ? (s as CategoryPageTemplate) : null;
+}
+
 const OBJECT_ID = /^[0-9a-fA-F]{24}$/;
 
 /** Ids that are not ObjectIds are dropped: Prisma rejects the whole write on a
@@ -114,6 +123,8 @@ export function buildCategoryPagePatch(body: Record<string, unknown>) {
   }
   int("statDoneValue");
   int("statGoalValue");
+
+  if (body.pageTemplate !== undefined) patch.pageTemplate = pageTemplate(body.pageTemplate);
 
   if (body.suggestedAmounts !== undefined) patch.suggestedAmounts = amounts(body.suggestedAmounts);
   if (body.suggestedByCurrency !== undefined) {
@@ -248,6 +259,7 @@ export function categoryChildrenWrite(body: Record<string, unknown>) {
 
 /** Everything the edit form needs back, on top of the category's own fields. */
 export const CATEGORY_PAGE_SELECT = {
+  pageTemplate: true,
   heroImage: true,
   heroVideoUrl: true,
   heroLead: true,
@@ -281,3 +293,20 @@ export const CATEGORY_PAGE_SELECT = {
     },
   },
 } as const;
+
+/**
+ * A site page carries one category at most. Called after a category is saved
+ * with a template: any other category still bound to that page lets go of it,
+ * so the page never has to choose between two.
+ */
+export async function releasePageTemplateFromOthers(
+  db: { category: { updateMany: (args: { where: Record<string, unknown>; data: Record<string, unknown> }) => Promise<unknown> } },
+  categoryId: string,
+  template: CategoryPageTemplate | null
+): Promise<void> {
+  if (!template) return;
+  await db.category.updateMany({
+    where: { pageTemplate: template, id: { not: categoryId } },
+    data: { pageTemplate: null },
+  });
+}

@@ -10,6 +10,9 @@ import ProjectDonateCard from "@/components/minbar/ProjectDonateCard";
 import ZakatBanner from "@/components/minbar/banners/ZakatBanner";
 import TravelBanner from "@/components/minbar/banners/TravelBanner";
 import IbadanBanner from "@/components/minbar/banners/IbadanBanner";
+import { NoProjects } from "@/components/minbar/states/ContentStates";
+import { CategoryProgramme } from "@/components/minbar/categories/CategorySections";
+import type { CategoryPageContent } from "@/lib/minbar/category-page";
 import AqsaPlan from "./AqsaPlan";
 
 /**
@@ -119,9 +122,16 @@ export interface AqsaPageProps {
   /** Al-Isra 1 — the verse that is itself the first of the mosque's virtues. */
   isra: VerseBlock;
   projects: MinbarProject[];
+  /**
+   * The mosque's category, when the dashboard has bound one to this page. Its
+   * editable parts land where they belong: the hero picture and lead, the
+   * hero button's label, and — in "our work" — its film, figures, values, all
+   * its campaigns, its donation box, its explanatory cards and achievements.
+   */
+  category?: CategoryPageContent | null;
 }
 
-export default function AqsaPage({ verse, isra, projects }: AqsaPageProps) {
+export default function AqsaPage({ verse, isra, projects, category = null }: AqsaPageProps) {
   const locale = useLocale();
   const t = useTranslations("aqsa");
   const tCommon = useTranslations("common");
@@ -154,7 +164,7 @@ export default function AqsaPage({ verse, isra, projects }: AqsaPageProps) {
       <section style={{ position: "relative", background: "#A8660C", overflow: "hidden" }}>
         {/* eslint-disable-next-line @next/next/no-img-element -- sets the section height; not a fixed-size image */}
         <img
-          src="/minbar/assets/aqsa-hero-3d.png"
+          src={category?.heroImage || "/minbar/assets/aqsa-hero-3d.png"}
           alt={t("heroAlt")}
           style={{ display: "block", width: "100%", height: "clamp(360px, 46vw, 640px)", objectFit: "cover", objectPosition: "50% 22%" }}
         />
@@ -166,10 +176,10 @@ export default function AqsaPage({ verse, isra, projects }: AqsaPageProps) {
               </h1>
               <div aria-hidden="true" style={{ width: 90, height: 2, background: "#fff", opacity: 0.8 }} />
               <p style={{ margin: 0, fontSize: "clamp(13px,1.2vw,17px)", lineHeight: 1.8, color: "rgba(255,255,255,.94)", textShadow: "0 2px 16px rgba(70,40,4,.45)" }}>
-                {t("heroLead")}
+                {category?.heroLead || t("heroLead")}
               </p>
               <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 4 }}>
-                <Button variant="primary" href="#role" style={{ whiteSpace: "nowrap" }}>{t("supportAqsaProjects")}</Button>
+                <Button variant="primary" href="#role" style={{ whiteSpace: "nowrap" }}>{category?.ctaLabel || t("supportAqsaProjects")}</Button>
                 {/* A scrim behind the outline button: it sits over a bright
                     photograph, where a plain white hairline disappears. */}
                 <Button
@@ -484,14 +494,28 @@ export default function AqsaPage({ verse, isra, projects }: AqsaPageProps) {
         <div style={SECTION}>
           <div style={{ display: "flex", alignItems: "end", justifyContent: "space-between", gap: 20, flexWrap: "wrap", marginBottom: 26 }}>
             <div>
-              <h2 style={{ ...H2, margin: "0 0 10px" }}>{t("ourRole")}</h2>
-              <p style={{ margin: 0, maxWidth: "70ch", color: "var(--muted)", fontSize: 16, lineHeight: 1.9 }}>{t("ourRoleLead")}</p>
+              <h2 style={{ ...H2, margin: "0 0 10px" }}>{category?.projectsTitle || t("ourRole")}</h2>
+              <p style={{ margin: 0, maxWidth: "70ch", color: "var(--muted)", fontSize: 16, lineHeight: 1.9 }}>{category?.description || t("ourRoleLead")}</p>
             </div>
             <Button variant="light" href={miaPath("projects", locale)} style={{ whiteSpace: "nowrap" }}>
               {t("allQudsProjects")}
             </Button>
           </div>
-          {projects.length ? (
+          {category ? (
+            /* The bound category's whole programme, with its campaigns laid out
+               the way this page lays out its cards. */
+            <CategoryProgramme page={category}>
+              {projects.length ? (
+                <div className="qd-work" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))", gap: 20 }}>
+                  {projects.map((project) => (
+                    <ProjectDonateCard key={project.id} project={project} tag={category.name} />
+                  ))}
+                </div>
+              ) : (
+                <NoProjects />
+              )}
+            </CategoryProgramme>
+          ) : projects.length ? (
             <div className="qd-work" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))", gap: 20 }}>
               {projects.map((project) => (
                 <ProjectDonateCard key={project.id} project={project} />
