@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type CSSProperties, type FormEvent } from "react";
+import { useEffect, useState, type CSSProperties, type FormEvent } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import { localeDirection } from "@/lib/locales";
@@ -21,8 +21,12 @@ import type { MinbarProject } from "@/lib/minbar/projects";
  *  - Submitting adds the selection to the shared giving basket and then always
  *    routes to the cart. There is deliberately no direct path from here to
  *    checkout, so the donor sees their basket and can add to it.
- *  - The pill is draggable by its handle; a drag is distinguished from a click
- *    by a 4px threshold, so dragging never toggles the panel open.
+ *  - The pill is fixed in the bottom inline-end corner, opposite the WhatsApp
+ *    button, and opens upward from there. It used to be draggable from a point
+ *    38% down the side, which put it over the content of every page, moved it
+ *    to wherever a visitor happened to let go, and remembered nothing — so the
+ *    next page put it back over the content again. A donation button belongs in
+ *    the one place a visitor already looks for it.
  */
 
 const FREQ_IDS: readonly CartFreqKey[] = ["once", "daily", "friday", "monthly"];
@@ -56,7 +60,6 @@ export default function QuickDonate({ amounts = DEFAULT_AMOUNTS }: QuickDonatePr
   const [amount, setAmount] = useState<number>(amounts[0]);
   const [custom, setCustom] = useState("");
 
-  const fabRef = useRef<HTMLDivElement>(null);
 
   const generalLabel = t("whereNeedGreatest");
 
@@ -78,41 +81,6 @@ export default function QuickDonate({ amounts = DEFAULT_AMOUNTS }: QuickDonatePr
       cancelled = true;
     };
   }, [open, groups.length, locale]);
-
-  /* Drag by the handle. Position is written as physical left/top because it is a
-     pointer coordinate, not a layout decision — there is nothing to mirror. */
-  useEffect(() => {
-    const handle = fabRef.current?.querySelector<HTMLElement>(".qf-handle");
-    const fab = fabRef.current;
-    if (!handle || !fab) return;
-
-    const onPointerDown = (event: PointerEvent) => {
-      const rect = fab.getBoundingClientRect();
-      const offsetX = event.clientX - rect.left;
-      const offsetY = event.clientY - rect.top;
-      let moved = false;
-
-      const move = (ev: PointerEvent) => {
-        if (Math.abs(ev.clientX - event.clientX) + Math.abs(ev.clientY - event.clientY) < 4) return;
-        moved = true;
-        fab.style.left = `${Math.max(8, Math.min(window.innerWidth - rect.width - 8, ev.clientX - offsetX))}px`;
-        fab.style.top = `${Math.max(8, Math.min(window.innerHeight - 60, ev.clientY - offsetY))}px`;
-        fab.style.insetInlineEnd = "auto";
-      };
-      const up = (ev: PointerEvent) => {
-        document.removeEventListener("pointermove", move);
-        document.removeEventListener("pointerup", up);
-        // Only suppress the click when the pointer actually travelled, so a
-        // plain tap still toggles the panel.
-        if (moved) ev.preventDefault();
-      };
-      document.addEventListener("pointermove", move);
-      document.addEventListener("pointerup", up);
-    };
-
-    handle.addEventListener("pointerdown", onPointerDown);
-    return () => handle.removeEventListener("pointerdown", onPointerDown);
-  }, []);
 
   const rowStyle = (isSelected: boolean): CSSProperties => ({
     width: "100%",
@@ -191,17 +159,24 @@ export default function QuickDonate({ amounts = DEFAULT_AMOUNTS }: QuickDonatePr
 
   return (
     <div
-      ref={fabRef}
       id="quick-fab"
       className="quickfab"
       data-qopen={open ? "true" : "false"}
       dir={dir}
       style={{
         position: "fixed",
-        insetInlineEnd: "max(10px,2.5vw)",
-        top: "38%",
+        /* The bottom inline-end corner. The WhatsApp button holds the opposite
+           one (`insetInlineStart: 22`), so the two never meet, and neither sits
+           over the page's own content. */
+        insetInlineEnd: "max(14px,2.5vw)",
+        bottom: "max(16px, env(safe-area-inset-bottom))",
         zIndex: 75,
         maxWidth: "94vw",
+        /* Column-reverse so the panel opens upward from a button that is already
+           at the bottom of the screen. */
+        display: "flex",
+        flexDirection: "column-reverse",
+        alignItems: "flex-end",
         fontFamily: "var(--font-ar)",
       }}
     >
@@ -209,40 +184,47 @@ export default function QuickDonate({ amounts = DEFAULT_AMOUNTS }: QuickDonatePr
         type="button"
         className="qf-handle"
         aria-expanded={open}
+        aria-label={t("quickDonate")}
         onClick={() => setOpen((v) => !v)}
         style={{
           display: "inline-flex",
           alignItems: "center",
           gap: 9,
-          height: 46,
-          padding: "0 18px",
+          height: 50,
+          padding: "0 20px",
           border: 0,
           borderRadius: 999,
-          background: "#A93428",
+          background: "linear-gradient(135deg, #C2453A, #8E2A20)",
           color: "#fff",
           fontFamily: "inherit",
           fontWeight: 900,
-          fontSize: 14,
-          cursor: "grab",
-          boxShadow: "0 12px 26px rgba(169,52,40,.32)",
+          fontSize: 14.5,
+          cursor: "pointer",
+          boxShadow: "0 14px 30px rgba(169,52,40,.38), inset 0 0 0 1px rgba(255,255,255,.16)",
           whiteSpace: "nowrap",
           maxWidth: "100%",
           boxSizing: "border-box",
         }}
       >
+        {/* The bolt turns into a close mark, so the one control says what it
+            will do next rather than what it did. */}
         <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-          <path d="M13 2 3 14h7l-1 8 10-12h-7l1-8Z" />
+          {open ? <path d="M6 6l12 12M18 6 6 18" /> : <path d="M13 2 3 14h7l-1 8 10-12h-7l1-8Z" />}
         </svg>
-        {t("quickDonate")}
+        <span className="qf-label">{t("quickDonate")}</span>
       </button>
 
       {open ? (
         <form
           onSubmit={onSubmit}
           style={{
-            marginTop: 10,
+            marginBottom: 10,
             width: "min(288px,92vw)",
             boxSizing: "border-box",
+            /* It opens upward from the foot of the screen, so on a short
+               viewport it scrolls rather than running off the top. */
+            maxHeight: "min(72vh, 620px)",
+            overflowY: "auto",
             padding: 16,
             background: "#fff",
             border: "1px solid rgba(211,154,39,.5)",

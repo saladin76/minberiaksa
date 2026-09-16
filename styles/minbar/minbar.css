@@ -505,8 +505,39 @@
   transition: inset-inline-end .3s cubic-bezier(.22, .61, .36, 1), top .3s cubic-bezier(.22, .61, .36, 1);
   animation: qf-in .4s cubic-bezier(.22, .61, .36, 1) both;
 }
-.quickfab > .qf-handle { transition: transform .18s cubic-bezier(.22, .61, .36, 1), filter .18s ease; }
-.quickfab > .qf-handle:hover { transform: translateY(-1px); filter: brightness(1.06); }
+.quickfab > .qf-handle {
+  position: relative;
+  transition: transform .18s cubic-bezier(.22, .61, .36, 1), filter .18s ease, box-shadow .18s ease;
+}
+.quickfab > .qf-handle:hover { transform: translateY(-2px); filter: brightness(1.07); box-shadow: 0 18px 38px rgba(169, 52, 40, .46), inset 0 0 0 1px rgba(255, 255, 255, .22); }
+.quickfab > .qf-handle:active { transform: translateY(0); }
+.quickfab > .qf-handle:focus-visible { outline: 3px solid var(--gold); outline-offset: 3px; }
+
+/* A slow halo, so a button parked in the corner is still noticed once. It stops
+   while the panel is open — at that point it has already been found. */
+.quickfab[data-qopen="false"] > .qf-handle::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+  pointer-events: none;
+  animation: mia-qf-halo 3.2s ease-in-out infinite;
+}
+@keyframes mia-qf-halo {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(169, 52, 40, .38); }
+  55% { box-shadow: 0 0 0 10px rgba(169, 52, 40, 0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .quickfab > .qf-handle { transition: none; }
+  .quickfab[data-qopen="false"] > .qf-handle::after { animation: none; }
+}
+
+/* On a phone the label would crowd the corner it shares with the basket bar, so
+   the pill becomes its icon. The accessible name stays on the button. */
+@media (max-width: 560px) {
+  .quickfab > .qf-handle { height: 54px; width: 54px; padding: 0; justify-content: center; gap: 0; }
+  .quickfab > .qf-handle .qf-label { display: none; }
+}
 .quickfab > form {
   max-height: calc(64vh - 60px);
   overflow-y: auto;
