@@ -117,7 +117,7 @@ const H2 = { margin: 0, fontSize: "clamp(26px,2.8vw,38px)", lineHeight: 1.25, fo
 const DIAMOND: React.CSSProperties = { flex: "0 0 auto", width: 6, height: 6, background: "var(--gold)", transform: "rotate(45deg)" };
 
 export interface AqsaPageProps {
-  /** Al-Anbiya 71, above the page. */
+  /** Al-Isra 1, above the page. */
   verse: VerseBlock;
   /** Al-Isra 1 — the verse that is itself the first of the mosque's virtues. */
   isra: VerseBlock;

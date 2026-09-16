@@ -43,9 +43,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 /**
  * The blessed Al-Aqsa Mosque — ported from `Minbar/المسجد الأقصى.dc.html`.
  *
- * Both verses resolve on the server so they are in the HTML rather than
- * appearing after hydration: Al-Anbiya 71 above the page, and Al-Isra 1, which
- * is itself the first of the mosque's stated virtues.
+ * The verse resolves on the server so it is in the HTML rather than appearing
+ * after hydration. Al-Isra 1 opens the page and is also the first of the
+ * mosque's stated virtues, so the same block is passed twice.
  */
 export default async function Aqsa({ params }: Props) {
   const { locale } = await params;
@@ -64,7 +64,7 @@ export default async function Aqsa({ params }: Props) {
     <MinbarMessages locale={locale} namespaces={NAMESPACES}>
         <PageBanners locale={locale} page="aqsa" slot="top" />
       <AqsaPage
-        verse={verseBlock(quran, "anbiya_71", locale)}
+        verse={verseBlock(quran, "isra_1", locale)}
         isra={verseBlock(quran, "isra_1", locale)}
         projects={projects}
         category={category}
