@@ -22,14 +22,36 @@ import {
 } from '@/components/ui/form';
 import { ArrowLeft, Loader2, Upload, X } from 'lucide-react';
 import { LocaleFormTabs, collectLocaleTranslations, type LocaleFormField } from '../../_components/LocaleFormTabs';
+import {
+  CategoryPageSection,
+  emptyCategoryPage,
+  emptyCategoryValue,
+  emptyCategoryCard,
+  parseAmountList,
+  CATEGORY_VALUE_TRANSLATION_FIELDS,
+  CATEGORY_CARD_TRANSLATION_FIELDS,
+  type CategoryPageValues,
+} from '../_components/CategoryPageSection';
+import { translationsFromRows } from '../../_components/ContentTranslationTabs';
+import type { ContentOption } from '../../super-categories/_components/ContentPicker';
 import { TRANSLATION_LOCALES, localeDefaults, localeKey, type TranslationLocale } from '../../_components/locale-form';
 import { CategoryIconPicker } from '../_components/CategoryIconPicker';
 
 const LOCALE_FIELDS: readonly LocaleFormField[] = [
   { name: 'name', label: 'اسم الحملة', maxLength: 50, requiredIn: ['en'] },
   { name: 'description', label: 'الوصف', multiline: true, maxLength: 500 },
+  /* The landing page's own copy. Translated like the rest, so the auto-translate
+     button fills the whole page in one press. */
+  { name: 'heroLead', label: 'مقدمة الصفحة', multiline: true },
+  { name: 'ctaLabel', label: 'زر الواجهة' },
+  { name: 'statDoneLabel', label: 'وصف الرقم المُنجز' },
+  { name: 'statGoalLabel', label: 'وصف رقم الهدف' },
+  { name: 'projectsTitle', label: 'عنوان قسم المشاريع' },
+  { name: 'donateTitle', label: 'عنوان صندوق التبرع' },
+  { name: 'donateNote', label: 'ملاحظة صندوق التبرع' },
+  { name: 'achievementsTitle', label: 'عنوان قسم الإنجازات' },
 ];
-const LOCALE_FIELD_NAMES = ['name', 'description'] as const;
+const LOCALE_FIELD_NAMES = ['name', 'description', 'heroLead', 'ctaLabel', 'statDoneLabel', 'statGoalLabel', 'projectsTitle', 'donateTitle', 'donateNote', 'achievementsTitle'] as const;
 type LocaleShape = { [K in `${(typeof LOCALE_FIELD_NAMES)[number]}_${TranslationLocale}`]: z.ZodOptional<z.ZodString> };
 const LOCALE_SHAPE = Object.fromEntries(
   TRANSLATION_LOCALES.flatMap((locale) => [
@@ -58,6 +80,7 @@ export default function NewCategoryPage() {
   const router = useRouter();
   const [saving, setSaving] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [page, setPage] = useState<CategoryPageValues>(emptyCategoryPage());
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -78,6 +101,15 @@ export default function NewCategoryPage() {
         description: values.description,
         image: values.image,
         icon: values.icon,
+        heroImage: page.heroImage,
+        heroVideoUrl: page.heroVideoUrl,
+        statDoneValue: page.statDoneValue === '' ? null : Number(page.statDoneValue),
+        statGoalValue: page.statGoalValue === '' ? null : Number(page.statGoalValue),
+        suggestedAmounts: parseAmountList(page.suggestedAmounts),
+        donateCampaignId: page.donateCampaignId || null,
+        achievementVideoIds: page.achievementVideoIds,
+        values: page.values.filter((v) => v.label.trim()),
+        infoCards: page.infoCards.filter((c) => c.title.trim()),
         translations: collectLocaleTranslations(values, LOCALE_FIELDS),
       });
       toast.success('تم إنشاء الحملة بنجاح');
@@ -163,6 +195,10 @@ export default function NewCategoryPage() {
               </Card>
             }
           />
+
+          {/* A new category has no campaigns yet, so the donation box's target
+              is chosen after the first one is filed under it. */}
+          <CategoryPageSection values={page} onChange={setPage} campaignOptions={[]} />
 
           <Card className="p-6">
             <div className="grid gap-6">

@@ -1,5 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from "@/lib/prisma";
+import {
+  CATEGORY_PAGE_SELECT,
+  buildCategoryPagePatch,
+  categoryChildrenWrite,
+  categoryPageTranslation,
+} from "@/lib/content/category-page-write";
 import { getServerSession } from 'next-auth';
 import { authOptions } from "../../auth/[...nextauth]/options";
 import { requireAdminOrDashboardPermission } from "@/lib/dashboard/api-auth";
@@ -32,6 +38,7 @@ export async function GET(
       // selects which translation is returned, not which slugs are addressable.
       where: whereByIdOrAnyLocaleSlug(id),
       select: {
+        ...CATEGORY_PAGE_SELECT,
         id: true,
         slug: true,
         name: true,
@@ -41,7 +48,7 @@ export async function GET(
         order: true,
         isActive: true,
         translations: allTranslations
-          ? { select: { locale: true, name: true, description: true, slug: true } }
+          ? { select: { locale: true, name: true, description: true, slug: true, heroLead: true, ctaLabel: true, statDoneLabel: true, statGoalLabel: true, projectsTitle: true, donateTitle: true, donateNote: true, achievementsTitle: true } }
           : {
               where: translationLocaleWhere(locale),
               take: 2,
@@ -141,6 +148,11 @@ export async function PUT(
         icon: icon || '',
         order: order ?? 0,
         ...(nextSlug !== undefined ? { slug: nextSlug } : {}),
+        /* The landing page this category owns. Only keys the request actually
+           carried are touched, so a caller that knows nothing about the page —
+           the archive toggle, a bulk tool — leaves it exactly as it was. */
+        ...buildCategoryPagePatch(body),
+        ...categoryChildrenWrite(body),
       }
     });
 
@@ -179,12 +191,15 @@ export async function PUT(
           });
         }
 
+        const pageCopy = categoryPageTranslation(tt);
+
         await prisma.categoryTranslation.upsert({
           where: { categoryId_locale: { categoryId: id, locale } as any },
           update: {
             name: translatedName,
             description: translatedDescription,
             slug: localeSlug,
+            ...pageCopy,
           },
           create: {
             categoryId: id,
@@ -192,6 +207,7 @@ export async function PUT(
             name: translatedName,
             description: translatedDescription,
             slug: localeSlug,
+            ...pageCopy,
           },
         });
       }

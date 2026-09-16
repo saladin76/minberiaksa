@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { prisma } from "@/lib/prisma";
 import { authOptions } from "../../auth/[...nextauth]/options";
-import { requireAdminOrDashboardPermission } from "@/lib/dashboard/api-auth";
+import { sessionHasDashboardPermission } from "@/lib/dashboard/permissions";
 
 /**
  * GET /api/super-categories/content-options — everything a super category can
@@ -17,8 +17,12 @@ import { requireAdminOrDashboardPermission } from "@/lib/dashboard/api-auth";
 export async function GET() {
   try {
     const session = await getServerSession(authOptions);
-    const denied = requireAdminOrDashboardPermission(session, "siteContent");
-    if (denied) return denied;
+    /* The category form reads this list too, for its achievements picker and its
+       donation target, and category staff hold "categories" rather than
+       "siteContent". Either grants a read of what is already visible on the site. */
+    if (!sessionHasDashboardPermission(session, "siteContent") && !sessionHasDashboardPermission(session, "categories")) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
 
     const [campaigns, posts, videos, playlists, courses, reports, booklets] = await Promise.all([
       prisma.campaign.findMany({

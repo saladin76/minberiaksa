@@ -1,7 +1,6 @@
 import React from "react";
 import { Metadata } from "next";
-import { redirect } from "next/navigation";
-import MainPage from "./_components/MainPage";
+import { notFound, redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { isObjectId, pickLocaleSlug, whereByIdOrAnyLocaleSlug } from "@/lib/slug";
 import { pickTranslation } from "@/lib/i18n/translation-fallback";
@@ -12,10 +11,20 @@ import {
   buildLocalizedAlternates,
 } from "@/lib/seo";
 import type { Locale } from "@/lib/seo";
+import { getCategoryPage } from "@/lib/minbar/category-page";
+import MinbarMessages from "@/components/minbar/MinbarMessages";
+import CategoryLandingPage from "@/components/minbar/categories/CategoryLandingPage";
+import PageBanners from "@/components/minbar/banners/PageBanners";
 
 interface Props {
   params: Promise<{ id: string; locale: string }>;
 }
+
+/** The page's own namespaces, on top of the shell bundle. */
+const NAMESPACES = ["CampaignsPage", "homepage", "projects", "cart"] as const;
+
+/** Campaign figures change on donation, not per request. */
+export const revalidate = 60;
 
 async function fetchCategoryForSeo(idOrSlug: string) {
   return prisma.category.findFirst({
@@ -26,8 +35,10 @@ async function fetchCategoryForSeo(idOrSlug: string) {
       name: true,
       description: true,
       image: true,
+      heroImage: true,
+      heroLead: true,
       translations: {
-        select: { locale: true, name: true, description: true, slug: true },
+        select: { locale: true, name: true, description: true, slug: true, heroLead: true },
       },
     },
   });
@@ -58,9 +69,14 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   const t = pickTranslation(category.translations, locale);
   const name = t?.name || category.name;
-  const description =
-    (t?.description || category.description || seo.campaigns.description).slice(0, 200);
-  const image = category.image || `${SITE_URL}/og-image.jpg`;
+  const description = (
+    t?.heroLead ||
+    category.heroLead ||
+    t?.description ||
+    category.description ||
+    seo.campaigns.description
+  ).slice(0, 200);
+  const image = category.heroImage || category.image || `${SITE_URL}/og-image.jpg`;
 
   let alternates: { canonical: string; languages?: Record<string, string> };
   try {
@@ -102,6 +118,15 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
+/**
+ * A category's own landing page — the layout of
+ * `Minbar/مشروع ترميم منازل القدس.dc.html`, rendered from the database.
+ *
+ * Read on the server, like every other indexable page on this site: the copy,
+ * the figures and the campaign cards all have to be in the first response
+ * (`PRODUCTION_SEO_CONTRACT.md`). This replaced a client-side list that fetched
+ * the category and its campaigns after hydration.
+ */
 export default async function CategoryPage({ params }: Props) {
   const { id, locale } = await params;
 
@@ -128,5 +153,14 @@ export default async function CategoryPage({ params }: Props) {
     console.error("Failed to resolve canonical category slug", err);
   }
 
-  return <MainPage id={id} locale={locale} />;
+  const page = await getCategoryPage(decodeURIComponent(id), locale);
+  if (!page) notFound();
+
+  return (
+    <MinbarMessages locale={locale} namespaces={NAMESPACES}>
+      <PageBanners locale={locale} page="projects" slot="top" />
+      <CategoryLandingPage page={page} />
+      <PageBanners locale={locale} page="projects" slot="bottom" />
+    </MinbarMessages>
+  );
 }

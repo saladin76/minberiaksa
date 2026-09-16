@@ -194,7 +194,9 @@ export default function CategoryLandingPage({ page }: { page: CategoryPageConten
         >
           <div
             className="cat-hero-box"
-            style={{ display: "grid", gap: 18, justifyItems: "start", padding: "26px 28px", background: "rgba(16,33,43,.55)", borderRadius: 14, backdropFilter: "blur(2px)" }}
+            /* Without a film beside it the box would stretch the full width and the
+               lead would run to 120 characters; it is sized to its content instead. */
+            style={{ display: "grid", gap: 18, justifyItems: "start", justifySelf: "start", maxWidth: page.heroVideoId ? "none" : "min(100%, 720px)", padding: "26px 28px", background: "rgba(16,33,43,.55)", borderRadius: 14, backdropFilter: "blur(2px)" }}
           >
             <h1 style={{ margin: 0, fontSize: "clamp(30px,3.6vw,50px)", lineHeight: 1.3, fontWeight: 900, color: "#fff" }}>{page.name}</h1>
             {page.heroLead ? (

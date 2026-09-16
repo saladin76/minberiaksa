@@ -1,5 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from "@/lib/prisma";
+import {
+  buildCategoryPagePatch,
+  categoryChildrenWrite,
+  categoryPageTranslation,
+} from "@/lib/content/category-page-write";
 import { getServerSession } from 'next-auth';
 import { authOptions } from "../auth/[...nextauth]/options";
 import { requireAdminOrDashboardPermission } from "@/lib/dashboard/api-auth";
@@ -147,6 +152,7 @@ export async function POST(request: NextRequest) {
       name: string;
       description?: string;
       requestedSlug: string | null;
+      page: Record<string, string | null>;
     }[] = [];
     if (translations && typeof translations === 'object') {
       for (const [locale, t] of Object.entries(translations)) {
@@ -158,6 +164,7 @@ export async function POST(request: NextRequest) {
               name: tt.name,
               description: tt.description || '',
               requestedSlug: normalizeUserSlug(tt.slug),
+              page: categoryPageTranslation(tt),
             });
           }
         }
@@ -181,6 +188,10 @@ export async function POST(request: NextRequest) {
           image: image || '',
           icon: icon || '',
           order: order ?? 0,
+          /* The landing page, when the form sent one. A category created
+             without it renders as its hero and its campaigns. */
+          ...buildCategoryPagePatch(data),
+          ...categoryChildrenWrite(data),
         }
       });
 
@@ -198,6 +209,7 @@ export async function POST(request: NextRequest) {
             name: t.name,
             description: t.description || '',
             slug: localeSlug,
+            ...t.page,
           },
         });
       }
