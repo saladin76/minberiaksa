@@ -328,13 +328,9 @@ export default function ZakatPage({
           </div>
 
           <span style={{ display: "block", maxWidth: 380, justifySelf: "end", width: "100%" }}>
-            {category?.heroImage ? (
-              /* The category's own hero photograph takes the coins' place, in
-                 the same slot: a photograph rather than a cut-out, so framed. */
-              <img src={category.heroImage} alt={category.name} style={{ display: "block", width: "100%", aspectRatio: "4 / 3", objectFit: "cover", borderRadius: 18, boxShadow: "0 18px 50px rgba(16,33,43,.14)" }} />
-            ) : (
-              <img src="/minbar/assets/zakat-hero-coins.png" alt={t("heroTitle")} style={{ display: "block", width: "100%", height: "auto" }} />
-            )}
+            {/* The category's hero picture takes the coins' slot, shown the same
+                way — the seed gives the bound category the coins themselves. */}
+            <img src={category?.heroImage || "/minbar/assets/zakat-hero-coins.png"} alt={t("heroTitle")} style={{ display: "block", width: "100%", height: "auto" }} />
           </span>
         </div>
       </section>

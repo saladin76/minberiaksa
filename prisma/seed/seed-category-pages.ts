@@ -26,6 +26,8 @@
  *   npx tsx prisma/seed/seed-category-pages.ts [--force] [--dry]
  */
 import { PrismaClient } from "@prisma/client";
+import { SUPPORTED_LOCALES } from "../../lib/locales";
+import { messagesFor } from "../../i18n/locale-messages";
 
 const prisma = new PrismaClient();
 
@@ -56,6 +58,109 @@ const PAGE_TEMPLATES: Record<string, "aqsa" | "zakat"> = {
   "region-al-aqsa": "aqsa",
   "type-zakat": "zakat",
 };
+
+/**
+ * What a bound category says and shows, taken from the page it is published
+ * as. Those pages were written and reviewed before categories could publish
+ * themselves — their hero pictures, their lead, their headings and their quick
+ * amounts are the right ones — so the category carries that copy, in every
+ * locale, rather than the derived placeholders the loop above gives the rest.
+ * Always applied, `--force` or not: the page's copy is the source of truth.
+ */
+type StaticPageCopy = {
+  heroImage: string;
+  suggestedAmounts?: number[];
+  /** Keys in the page's message namespace; `null` clears the field. */
+  copy: (m: Record<string, string>) => {
+    heroLead: string | null;
+    ctaLabel: string | null;
+    projectsTitle: string | null;
+    description: string | null;
+    donateTitle: string | null;
+    donateNote: string | null;
+  };
+};
+
+const STATIC_PAGE_COPY: Record<"aqsa" | "zakat", { namespace: string; nameKey: string } & StaticPageCopy> = {
+  aqsa: {
+    namespace: "aqsa",
+    /* `navigation.aqsa` — the page's name in the header, for locales where the
+       category has no translation row yet. */
+    nameKey: "aqsa",
+    heroImage: "/minbar/assets/aqsa-hero-3d.png",
+    copy: (m) => ({
+      heroLead: m.heroLead ?? null,
+      ctaLabel: m.supportAqsaProjects ?? null,
+      projectsTitle: m.ourRole ?? null,
+      description: m.ourRoleLead ?? null,
+      donateTitle: m.ctaTitle ?? null,
+      donateNote: m.ctaText ?? null,
+    }),
+  },
+  zakat: {
+    namespace: "zakat",
+    nameKey: "zakat",
+    heroImage: "/minbar/assets/zakat-hero-coins.png",
+    /* The hero's own quick amounts, as the page had them. */
+    suggestedAmounts: [1000, 2000, 3000, 5000],
+    copy: (m) => ({
+      /* The zakat hero carries no lead and no scroll button of its own. */
+      heroLead: null,
+      ctaLabel: null,
+      projectsTitle: m.heroTitle ?? null,
+      description: m.whyText ?? null,
+      donateTitle: m.ctaTitle ?? null,
+      donateNote: m.ctaText ?? null,
+    }),
+  },
+};
+
+async function seedBoundCategories() {
+  const bound = await prisma.category.findMany({
+    where: { pageTemplate: { in: Object.keys(STATIC_PAGE_COPY) } },
+    select: { id: true, slug: true, pageTemplate: true, translations: { select: { locale: true } } },
+  });
+  if (!bound.length) return;
+
+  console.log("\nbound to a site page — copy from that page's bundle:");
+  for (const category of bound) {
+    const spec = STATIC_PAGE_COPY[category.pageTemplate as "aqsa" | "zakat"];
+    const have = new Set(category.translations.map((t) => t.locale));
+    const missing: string[] = [];
+    const created: string[] = [];
+
+    for (const locale of SUPPORTED_LOCALES) {
+      const ns = messagesFor(locale)[spec.namespace];
+      const copy = spec.copy((ns && typeof ns === "object" ? ns : {}) as Record<string, string>);
+      if (DRY) continue;
+      if (locale === "ar") {
+        await prisma.category.update({
+          where: { id: category.id },
+          data: { ...copy, heroImage: spec.heroImage, ...(spec.suggestedAmounts ? { suggestedAmounts: spec.suggestedAmounts } : {}) },
+        });
+      } else if (have.has(locale)) {
+        await prisma.categoryTranslation.updateMany({ where: { categoryId: category.id, locale }, data: copy });
+      } else {
+        /* No translation row for this locale yet. The page is named in the
+           header in every locale, so the row is created with that name; the
+           locale's slug is left for the slug backfill, as for any new row. */
+        const nav = messagesFor(locale).navigation as Record<string, string> | undefined;
+        const name = nav?.[spec.nameKey];
+        if (!name) {
+          missing.push(locale);
+          continue;
+        }
+        await prisma.categoryTranslation.create({ data: { categoryId: category.id, locale, name, ...copy } });
+        created.push(locale);
+      }
+    }
+    console.log(
+      `  ${DRY ? "·" : "✓"} ${category.slug} ← ${spec.namespace} bundle, hero ${spec.heroImage}` +
+        (created.length ? ` (new translation rows: ${created.join(", ")})` : "") +
+        (missing.length ? ` (no name for: ${missing.join(", ")})` : "")
+    );
+  }
+}
 
 async function main() {
   const categories = await prisma.category.findMany({
@@ -146,6 +251,8 @@ async function main() {
         `${data.achievementVideoIds.length} achievement video(s)`
     );
   }
+
+  await seedBoundCategories();
 
   console.log(`\n${DRY ? "would update" : "updated"} ${DRY ? categories.length : touched} categories`);
   if (withoutHero.length) {
