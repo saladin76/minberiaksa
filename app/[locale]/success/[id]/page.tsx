@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getDonationSummary } from "@/lib/minbar/donation";
+import { messagesFor } from "@/i18n/locale-messages";
+import { verseBlock } from "@/lib/minbar/quran";
 import MinbarMessages from "@/components/minbar/MinbarMessages";
 import SuccessPage from "@/components/minbar/success/SuccessPage";
 
@@ -9,7 +11,7 @@ interface Props {
 }
 
 /** The page's own namespaces, on top of the shell bundle. */
-const NAMESPACES = ["cart", "certificates"] as const;
+const NAMESPACES = ["cart", "certificates", "quran"] as const;
 
 /**
  * Never indexed: this page belongs to one donation and is reachable by its id.
@@ -37,9 +39,12 @@ export default async function Success({ params }: Props) {
   const donation = await getDonationSummary(id, locale);
   if (!donation) notFound();
 
+  /* Al-Baqarah 261, resolved on the server so it is in the HTML. */
+  const quran = messagesFor(locale).quran as Parameters<typeof verseBlock>[0];
+
   return (
     <MinbarMessages locale={locale} namespaces={NAMESPACES}>
-      <SuccessPage donation={donation} />
+      <SuccessPage donation={donation} verse={verseBlock(quran, "baqarah_261", locale)} />
     </MinbarMessages>
   );
 }

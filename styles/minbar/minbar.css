@@ -2514,6 +2514,12 @@ body[data-quick-dock="true"] .mia-wa-fab { bottom: calc(94px + env(safe-area-ins
   .mia-scope .succ-mark { animation: none; }
 }
 
+/* The success hero: gold ring on navy; the pattern wash fades toward the copy. */
+.mia-scope .succ-hero .succ-mark { animation: succ-pop .6s cubic-bezier(.22,.61,.36,1) both, succ-ring 1.8s ease-out .6s 2; }
+@media (max-width: 560px) {
+  .mia-scope .succ-hero > div { padding: 40px 18px 34px !important; gap: 14px !important; }
+  .mia-scope .succ-hero figure { padding: 14px 16px !important; }
+}
 .mia-scope .succ-page input { font-family: inherit; }
 .mia-scope .succ-page input:focus {
   outline: none;

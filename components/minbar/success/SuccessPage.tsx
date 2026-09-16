@@ -10,12 +10,17 @@ import { addToCart, type CartFreqKey } from "@/lib/minbar/cart";
 import type { MinbarDonationSummary } from "@/lib/minbar/donation";
 import { Button } from "@/components/minbar/ds";
 import ThanksCertificate from "@/components/minbar/certificates/ThanksCertificate";
+import Confetti from "./Confetti";
+import type { VerseBlock } from "@/lib/minbar/quran";
 
 /**
  * Donation received — ported from `Minbar/نجاح التبرع.dc.html`.
  *
- * Three things in order: the confirmation and what was given, the documents to
- * keep, and an invitation to make the gift recurring.
+ * Four things in order: the confirmation — with the verse on spending in the
+ * way of Allah, and confetti, once — then what was given, line by line, with
+ * the team support and fees shown separately so the total is the total the
+ * card was charged; then the documents to keep; then an invitation to make
+ * the gift recurring.
  *
  * Two departures from the handoff, both because this one has a server behind it:
  *
@@ -47,7 +52,7 @@ const DownloadIcon = (
   </svg>
 );
 
-export default function SuccessPage({ donation }: { donation: MinbarDonationSummary }) {
+export default function SuccessPage({ donation, verse }: { donation: MinbarDonationSummary; verse: VerseBlock }) {
   const locale = useLocale();
   const router = useRouter();
   const t = useTranslations("system");
@@ -75,6 +80,7 @@ export default function SuccessPage({ donation }: { donation: MinbarDonationSumm
     });
   }, [session?.user?.id, donation.id]);
 
+  const [copied, setCopied] = useState(false);
   const [certOpen, setCertOpen] = useState(false);
   const [certName, setCertName] = useState(donation.donorName ?? "");
 
@@ -86,6 +92,37 @@ export default function SuccessPage({ donation }: { donation: MinbarDonationSumm
 
   const projectTitle = donation.titles.length ? donation.titles.join("، ") : tCart("typeProject");
   const amountText = money(locale, donation.amount, donation.currency);
+
+  const dateText = (() => {
+    try {
+      return new Intl.DateTimeFormat(locale, { dateStyle: "long", timeStyle: "short" }).format(new Date(donation.date));
+    } catch {
+      return donation.date.slice(0, 10);
+    }
+  })();
+  const methodText = donation.paymentMethod === "PAYPAL" ? t("successPaypal") : donation.paymentMethod === "CARD" ? tCart("card") : "";
+  /* First name only: a greeting is warmer with it and the surname adds nothing. */
+  const firstName = (donation.donorName ?? "").trim().split(/\s+/)[0] ?? "";
+
+  /* The whole breakdown is shown only when there is something beyond the gift
+     itself; a plain gift reads as one line and one total. */
+  const hasExtras = donation.teamSupport > 0 || donation.fees > 0;
+
+  const share = async () => {
+    const url = window.location.origin + miaPath("projects", locale);
+    const text = t("successShareText");
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: tCommon("orgOfficialName"), text, url });
+        return;
+      }
+      await navigator.clipboard.writeText(`${text}\n${url}`);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1800);
+    } catch {
+      /* Dismissed share sheet or a clipboard that refused — nothing to report. */
+    }
+  };
 
   const chosenAmount =
     amountMode === "same" ? donation.amount : picked ?? (Number(custom) > 0 ? Number(custom) : null);
@@ -139,27 +176,97 @@ export default function SuccessPage({ donation }: { donation: MinbarDonationSumm
 
   return (
     <div className="succ-page">
-      <section style={{ padding: "52px 0" }}>
-        <div style={{ maxWidth: 640, margin: "0 auto", padding: "0 24px", display: "grid", justifyItems: "center", gap: 20, textAlign: "center" }}>
-          <span className="succ-mark" aria-hidden="true" style={{ display: "grid", placeItems: "center", width: 74, height: 74, borderRadius: "50%", background: "rgba(31,122,77,.12)", color: "var(--green)" }}>
-            <svg viewBox="0 0 24 24" width="38" height="38" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+      <Confetti />
+
+      {/* ── The confirmation ──────────────────────────────────────────── */}
+      <section className="succ-hero" style={{ position: "relative", overflow: "hidden", background: "linear-gradient(180deg, #10212B 0%, #132C38 100%)", color: "#fff" }}>
+        <div aria-hidden="true" data-aqsa-pattern="" style={{ position: "absolute", inset: 0, backgroundImage: "url('/minbar/assets/patterns/aqsa-white-pattern.webp')", backgroundRepeat: "repeat", backgroundSize: "420px 420px", opacity: 0.07, pointerEvents: "none" }} />
+        <div aria-hidden="true" style={{ position: "absolute", inset: 0, background: "radial-gradient(ellipse 60% 70% at 50% 0%, rgba(211,154,39,.28), transparent 70%)", pointerEvents: "none" }} />
+        <span aria-hidden="true" style={{ position: "absolute", bottom: 0, insetInline: 0, height: 1, background: "linear-gradient(90deg, transparent, rgba(211,154,39,.7), transparent)" }} />
+
+        <div style={{ position: "relative", maxWidth: 720, margin: "0 auto", padding: "56px 24px 48px", display: "grid", justifyItems: "center", gap: 18, textAlign: "center" }}>
+          <span className="succ-mark" aria-hidden="true" style={{ display: "grid", placeItems: "center", width: 84, height: 84, borderRadius: "50%", background: "linear-gradient(135deg, #F1C766, #D39A27)", color: "#10212B", boxShadow: "0 18px 44px rgba(211,154,39,.35), 0 0 0 10px rgba(211,154,39,.12)" }}>
+            <svg viewBox="0 0 24 24" width="42" height="42" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
               <path d="M20 6 9 17l-5-5" />
             </svg>
           </span>
 
-          <h1 className="succ-in succ-in-1" style={{ margin: 0, fontSize: "clamp(26px,3vw,36px)", fontWeight: 900 }}>
-            {t("donationSuccess")}
-          </h1>
-          <p className="succ-in succ-in-2" style={{ margin: 0, fontSize: 16, lineHeight: 1.9, color: "var(--muted)" }}>
+          <div className="succ-in succ-in-1" style={{ display: "grid", gap: 6 }}>
+            <span style={{ fontSize: 13, fontWeight: 900, letterSpacing: ".06em", color: "#F1C766" }}>{t("paymentSuccess")}</span>
+            <h1 style={{ margin: 0, fontSize: "clamp(28px,3.4vw,42px)", lineHeight: 1.25, fontWeight: 900, color: "#fff" }}>
+              {firstName ? t("successThanksName", { name: firstName }) : t("successThanks")}
+            </h1>
+            <p style={{ margin: 0, fontSize: 16.5, lineHeight: 1.9, color: "rgba(255,255,255,.82)" }}>{t("successAccepted")}</p>
+          </div>
+
+          {/* Al-Baqarah 261 — the verse on spending in the way of Allah. Always
+              in Arabic and the Qur'anic face; the meaning follows in the
+              visitor's language outside Arabic sessions. */}
+          <figure className="succ-in succ-in-2" style={{ margin: 0, maxWidth: 640, display: "grid", gap: 10, padding: "18px 22px", background: "rgba(255,255,255,.06)", border: "1px solid rgba(211,154,39,.35)", borderRadius: 14 }}>
+            <blockquote dir="rtl" style={{ margin: 0, fontFamily: "var(--font-quran)", fontSize: "clamp(18px,2.1vw,24px)", lineHeight: 1.95, color: "#FFE8B0", fontWeight: 700, textWrap: "balance" }}>
+              {verse.arabic}
+            </blockquote>
+            {verse.translation ? (
+              <p style={{ margin: 0, fontSize: 13.5, lineHeight: 1.8, color: "rgba(255,255,255,.78)", textWrap: "pretty" }}>{verse.translation}</p>
+            ) : null}
+            <figcaption dir="rtl" style={{ fontSize: 11.5, fontWeight: 900, color: "#D39A27", unicodeBidi: "isolate" }}>{verse.label}</figcaption>
+          </figure>
+
+          <p className="succ-in succ-in-3" style={{ margin: 0, display: "grid", gap: 2, fontSize: 14.5, lineHeight: 1.8, color: "rgba(255,255,255,.86)" }}>
+            <span style={{ fontWeight: 800 }}>{t("successHadith")}</span>
+            <span style={{ fontSize: 11.5, color: "rgba(255,255,255,.58)" }}>{t("successHadithSource")}</span>
+          </p>
+        </div>
+      </section>
+
+      <section style={{ padding: "36px 0 52px" }}>
+        <div style={{ maxWidth: 640, margin: "0 auto", padding: "0 24px", display: "grid", justifyItems: "center", gap: 20, textAlign: "center" }}>
+          <p className="succ-in succ-in-3" style={{ margin: 0, fontSize: 15, lineHeight: 1.9, color: "var(--muted)" }}>
             {t("successLead")}
           </p>
 
-          <div className="succ-in succ-in-3" style={{ width: "100%", display: "grid", gap: 10, padding: 22, background: "#fff", border: "1px solid var(--border)", borderRadius: 14, textAlign: "start" }}>
-            <SummaryRow label={tCart("typeProject")} value={projectTitle} />
-            <SummaryRow label={tCommon("amount")} value={amountText} ltr />
-            <SummaryRow label={t("receiptNo")} value={donation.receiptNo} ltr />
+          {/* ── What was given, line by line ───────────────────────────── */}
+          <div className="succ-in succ-in-3" style={{ width: "100%", display: "grid", gap: 14, padding: 22, background: "#fff", border: "1px solid var(--border)", borderRadius: 14, textAlign: "start", boxShadow: "0 12px 34px rgba(16,33,43,.06)" }}>
+            <b style={{ fontSize: 15, fontWeight: 900 }}>{t("successDetails")}</b>
+
+            <ul style={{ listStyle: "none", margin: 0, padding: 0, display: "grid", gap: 8 }}>
+              {(donation.lines.length ? donation.lines : [{ title: tCart("typeProject"), amount: donation.donationAmount, image: null, shares: null }]).map((line, i) => (
+                <li key={i} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 12px", background: "var(--sand)", borderRadius: 10 }}>
+                  <span aria-hidden="true" style={{ flex: "0 0 auto", width: 44, height: 44, borderRadius: 9, background: line.image ? `url('${line.image}') center/cover` : "rgba(211,154,39,.16)", display: "grid", placeItems: "center", color: "var(--gold)" }}>
+                    {line.image ? null : (
+                      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 21s-7.5-4.7-7.5-10A4.5 4.5 0 0 1 12 8a4.5 4.5 0 0 1 7.5 3c0 5.3-7.5 10-7.5 10Z" /></svg>
+                    )}
+                  </span>
+                  <span style={{ minWidth: 0, flex: "1 1 auto", display: "grid", gap: 2 }}>
+                    <b style={{ fontSize: 14, lineHeight: 1.45, fontWeight: 800 }}>{line.title}</b>
+                    {line.shares ? <span style={{ fontSize: 12, color: "var(--muted)" }}>{t("successShares", { count: line.shares })}</span> : null}
+                  </span>
+                  <b dir="ltr" style={{ flex: "0 0 auto", unicodeBidi: "isolate", fontSize: 15, fontWeight: 900, color: "var(--deep)" }}>{money(locale, line.amount, donation.currency)}</b>
+                </li>
+              ))}
+            </ul>
+
+            {hasExtras ? (
+              <div style={{ display: "grid", gap: 6, paddingTop: 12, borderTop: "1px dashed var(--border)" }}>
+                <SummaryRow label={t("successGift")} value={money(locale, donation.donationAmount, donation.currency)} ltr />
+                {donation.teamSupport > 0 ? <SummaryRow label={t("successTeam")} value={money(locale, donation.teamSupport, donation.currency)} ltr /> : null}
+                {donation.fees > 0 ? <SummaryRow label={t("successFees")} value={money(locale, donation.fees, donation.currency)} ltr /> : null}
+              </div>
+            ) : null}
+
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 12, paddingTop: 12, borderTop: "2px solid var(--deep)" }}>
+              <b style={{ fontSize: 15, fontWeight: 900 }}>{t("successPaid")}</b>
+              <b dir="ltr" style={{ unicodeBidi: "isolate", fontSize: 24, fontWeight: 900, color: "var(--deep)" }}>{amountText}</b>
+            </div>
+
+            <div style={{ display: "grid", gap: 6, paddingTop: 12, borderTop: "1px solid var(--border)", fontSize: 13 }}>
+              <SummaryRow label={t("receiptNo")} value={donation.receiptNo} ltr />
+              <SummaryRow label={t("successDate")} value={dateText} />
+              {methodText ? <SummaryRow label={tCart("paymentMethod")} value={methodText} /> : null}
+            </div>
           </div>
 
+          {/* ── The documents, and sharing the good ────────────────────── */}
           <div className="succ-in succ-in-4" style={{ width: "100%", display: "flex", gap: 10, flexWrap: "wrap", justifyContent: "center" }}>
             <a
               href={`/api/donations/${donation.id}/receipt?locale=${encodeURIComponent(locale)}`}
@@ -181,6 +288,16 @@ export default function SuccessPage({ donation }: { donation: MinbarDonationSumm
             >
               {DownloadIcon}
               {t("downloadThankYouCert")}
+            </button>
+
+            <button
+              type="button"
+              onClick={share}
+              className="succ-link"
+              style={{ display: "inline-flex", alignItems: "center", gap: 9, height: 46, padding: "0 20px", borderRadius: 8, border: "1px solid var(--border)", background: "#fff", fontFamily: "inherit", fontWeight: 800, fontSize: 14, color: copied ? "var(--green)" : "var(--deep)", cursor: "pointer" }}
+            >
+              <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="18" cy="5" r="2.6" /><circle cx="6" cy="12" r="2.6" /><circle cx="18" cy="19" r="2.6" /><path d="M8.8 13.4l6.4 3.9M15.2 6.7l-6.4 3.9" /></svg>
+              {copied ? t("successCopied") : t("successShare")}
             </button>
           </div>
 

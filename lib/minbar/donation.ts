@@ -24,6 +24,17 @@ export interface MinbarDonationSummary {
   date: string;
   /** Campaign titles this donation was split across, already translated. */
   titles: string[];
+  /**
+   * Every line the donation was split across — campaigns and categories —
+   * each with what it received, in the charged currency. This is what the
+   * receipt itemises, and the success page has to say the same thing.
+   */
+  lines: Array<{ title: string; amount: number; image: string | null; shares: number | null }>;
+  /** The gift itself, before the optional team support and the fees. */
+  donationAmount: number;
+  teamSupport: number;
+  fees: number;
+  paymentMethod: "CARD" | "PAYPAL" | null;
   /** The donor's name as recorded, for pre-filling the certificate. */
   donorName: string | null;
   /** `true` when the donation was charged against a recurring plan. */
@@ -52,21 +63,44 @@ export async function getDonationSummary(
       where: { id, status: "PAID" },
       select: {
         id: true,
+        amount: true,
         totalAmount: true,
+        teamSupport: true,
+        fees: true,
         currency: true,
+        paymentMethod: true,
         createdAt: true,
         paidAt: true,
         subscriptionId: true,
         donor: { select: { name: true } },
         items: {
           select: {
+            amount: true,
+            shareCount: true,
             campaign: {
               select: {
                 title: true,
+                images: true,
                 translations: {
                   where: translationLocaleWhere(locale),
                   take: 2,
                   select: { locale: true, title: true },
+                },
+              },
+            },
+          },
+        },
+        categoryItems: {
+          select: {
+            amount: true,
+            category: {
+              select: {
+                name: true,
+                image: true,
+                translations: {
+                  where: translationLocaleWhere(locale),
+                  take: 2,
+                  select: { locale: true, name: true },
                 },
               },
             },
@@ -77,18 +111,33 @@ export async function getDonationSummary(
 
     if (!row) return null;
 
+    const campaignLines = row.items.map((item) => {
+      const t = pickTranslation(item.campaign.translations, locale);
+      return {
+        title: t?.title || item.campaign.title,
+        amount: item.amount,
+        image: item.campaign.images?.[0] ?? null,
+        shares: item.shareCount ?? null,
+      };
+    });
+    const categoryLines = row.categoryItems.map((item) => {
+      const t = pickTranslation(item.category.translations, locale);
+      return { title: t?.name || item.category.name, amount: item.amount, image: item.category.image ?? null, shares: null };
+    });
+    const lines = [...campaignLines, ...categoryLines].filter((line) => line.title);
+
     return {
       id: row.id,
       receiptNo: row.id,
       amount: row.totalAmount,
       currency: row.currency,
       date: (row.paidAt ?? row.createdAt).toISOString(),
-      titles: row.items
-        .map((item) => {
-          const t = pickTranslation(item.campaign.translations, locale);
-          return t?.title || item.campaign.title;
-        })
-        .filter(Boolean),
+      titles: lines.map((line) => line.title),
+      lines,
+      donationAmount: row.amount,
+      teamSupport: row.teamSupport,
+      fees: row.fees,
+      paymentMethod: row.paymentMethod ?? null,
       donorName: row.donor?.name ?? null,
       recurring: Boolean(row.subscriptionId),
       paid: true,
