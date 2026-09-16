@@ -274,9 +274,112 @@ model Category {
   campaignIds String[]   @db.ObjectId
   campaigns   Campaign[] @relation(fields: [campaignIds], references: [id])
 
+  /// ── The category's own landing page ──
+  /// Every category is published as a project page in the shape of
+  /// `Minbar/مشروع ترميم منازل القدس.dc.html`: a hero with a film, a figures
+  /// band, the values it stands on, its campaigns as donate cards, a donation
+  /// box, three explanatory cards and its achievements in video. Each part is
+  /// hidden when its fields are empty, so a category with nothing but a name
+  /// still renders — as the hero and its campaigns.
+  ///
+  /// `image` stays the card photograph used in listings; `heroImage` is the
+  /// wide one behind the page's own hero, which is a different crop.
+  heroImage    String?
+  /// A YouTube URL or bare id; the hero shows the film beside the copy.
+  heroVideoUrl String?
+  /// The paragraph under the page's heading.
+  heroLead     String?
+  /// Label of the hero's button; it scrolls to the campaigns.
+  ctaLabel     String?
+
+  /// The figures band: "45 homes restored" of "100 homes targeted". The bar
+  /// under them is done/goal, and the whole band is skipped when goal is unset.
+  statDoneValue Int?
+  statDoneLabel String?
+  statGoalValue Int?
+  statGoalLabel String?
+
+  /// Heading above the campaign grid.
+  projectsTitle String?
+
+  /// The donation box at the foot of the page.
+  ///
+  /// A donation is always made TO A CAMPAIGN: the cart stores campaign slugs and
+  /// the order pipeline resolves them (lib/minbar/checkout.ts, toOrderItems), so a
+  /// row that named only a category would be dropped at checkout. The box therefore
+  /// donates to one campaign of this category — the one named here, or the highest
+  /// priority campaign in it when this is unset.
+  donateCampaignId String? @db.ObjectId
+  donateTitle      String?
+  donateNote       String?
+  /// Quick amounts in USD. Empty falls back to the site's defaults.
+  suggestedAmounts Int[]   @default([])
+
+  /// "Achievements in video" — ids of `Video` rows (type ACHIEVEMENT) shown in
+  /// the rail at the end of the page, in this order. Pointers rather than a
+  /// relation: a video belongs to the library, not to one category, and a row
+  /// that is later deleted or unpublished simply stops appearing.
+  achievementsTitle   String?
+  achievementVideoIds String[] @db.ObjectId
+
+  values    CategoryValue[]
+  infoCards CategoryInfoCard[]
+
   donationItems             DonationCategoryItem[]
   subscriptionCategoryItems SubscriptionCategoryItem[]
   translations              CategoryTranslation[]
+}
+
+/// One cell of the "what this category stands on" strip — a short phrase.
+model CategoryValue {
+  id         String @id @default(auto()) @map("_id") @db.ObjectId
+  categoryId String @db.ObjectId
+  label      String
+  order      Int    @default(0)
+
+  category     Category                   @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  translations CategoryValueTranslation[]
+
+  @@index([categoryId, order])
+}
+
+model CategoryValueTranslation {
+  id      String @id @default(auto()) @map("_id") @db.ObjectId
+  valueId String @db.ObjectId
+  locale  String
+  label   String
+
+  value CategoryValue @relation(fields: [valueId], references: [id], onDelete: Cascade)
+
+  @@unique([valueId, locale])
+}
+
+/// One of the explanatory cards — "why", "what we do", "the impact".
+model CategoryInfoCard {
+  id         String @id @default(auto()) @map("_id") @db.ObjectId
+  categoryId String @db.ObjectId
+  /// Which of the drawn icons to show; see `CATEGORY_CARD_ICONS`.
+  icon       String @default("alert")
+  title      String
+  body       String
+  order      Int    @default(0)
+
+  category     Category                      @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  translations CategoryInfoCardTranslation[]
+
+  @@index([categoryId, order])
+}
+
+model CategoryInfoCardTranslation {
+  id     String @id @default(auto()) @map("_id") @db.ObjectId
+  cardId String @db.ObjectId
+  locale String
+  title  String
+  body   String
+
+  card CategoryInfoCard @relation(fields: [cardId], references: [id], onDelete: Cascade)
+
+  @@unique([cardId, locale])
 }
 
 model CategoryTranslation {
@@ -286,6 +389,17 @@ model CategoryTranslation {
 
   name        String
   description String?
+
+  /// The landing page's own copy in this language. Every one is optional and
+  /// falls back to the Arabic on the parent row.
+  heroLead          String?
+  ctaLabel          String?
+  statDoneLabel     String?
+  statGoalLabel     String?
+  projectsTitle     String?
+  donateTitle       String?
+  donateNote        String?
+  achievementsTitle String?
 
   /// Optional per-locale URL slug. When set, takes precedence over the base Category.slug
   /// for this locale. Uniqueness within a locale is enforced at write time by
@@ -2164,33 +2278,33 @@ model BankAccountTranslation {
 /// A banner also outlives the campaign it points at — it stays on the record
 /// after that campaign is archived.
 model UrgentBanner {
-  id               String    @id @default(auto()) @map("_id") @db.ObjectId
-  slug             String    @unique
-  title            String
-  description      String?
-  image            String?
-  ctaLabel         String?
-  ctaUrl           String?
-  campaignId       String?   @db.ObjectId
+  id                String    @id @default(auto()) @map("_id") @db.ObjectId
+  slug              String    @unique
+  title             String
+  description       String?
+  image             String?
+  ctaLabel          String?
+  ctaUrl            String?
+  campaignId        String?   @db.ObjectId
   /// Price chips on the banner, USD; `amountLabels` names them in the same order.
-  suggestedAmounts Int[]     @default([])
-  amountLabels     String[]  @default([])
+  suggestedAmounts  Int[]     @default([])
+  amountLabels      String[]  @default([])
   /// The one-line strip above the photograph — a verse, a hadith, a slogan.
-  kicker           String?
+  kicker            String?
   ctaSecondaryLabel String?
   ctaSecondaryUrl   String?
   /// Where on the site it shows: `"<page>:<slot>"` pairs from
   /// `lib/minbar/banner-placements.ts`. Empty = nowhere.
-  placements       String[]  @default([])
+  placements        String[]  @default([])
   /// Look: `red` | `navy` | `gold` | `green`; copy on the `start` or `end` side.
-  tone             String    @default("red")
-  textSide         String    @default("start")
+  tone              String    @default("red")
+  textSide          String    @default("start")
   /// Sort order within a slot, ascending — set by drag-and-drop on the list.
-  priority         Int       @default(0)
-  locales          String[]  @default([])
-  startsAt         DateTime?
-  endsAt           DateTime?
-  isActive         Boolean   @default(true)
+  priority          Int       @default(0)
+  locales           String[]  @default([])
+  startsAt          DateTime?
+  endsAt            DateTime?
+  isActive          Boolean   @default(true)
 
   translations UrgentBannerTranslation[]
 
@@ -2201,15 +2315,15 @@ model UrgentBanner {
 }
 
 model UrgentBannerTranslation {
-  id             String  @id @default(auto()) @map("_id") @db.ObjectId
-  urgentBannerId String  @db.ObjectId
-  locale         String
-  title          String
-  description    String?
-  ctaLabel       String?
-  kicker         String?
+  id                String   @id @default(auto()) @map("_id") @db.ObjectId
+  urgentBannerId    String   @db.ObjectId
+  locale            String
+  title             String
+  description       String?
+  ctaLabel          String?
+  kicker            String?
   ctaSecondaryLabel String?
-  amountLabels   String[] @default([])
+  amountLabels      String[] @default([])
 
   urgentBanner UrgentBanner @relation(fields: [urgentBannerId], references: [id], onDelete: Cascade)
 

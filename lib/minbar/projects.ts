@@ -148,6 +148,28 @@ export async function listProjects(locale: string, limit?: number): Promise<Minb
 }
 
 /**
+ * Every published project filed under one category, in the same order.
+ *
+ * Filtered on `categoryIds` rather than on `MinbarProject.region`: region is
+ * only the FIRST category's slug, so a campaign in both a place and a type
+ * would be invisible on one of the two pages.
+ */
+export async function listProjectsInCategory(
+  categoryId: string,
+  locale: string,
+  limit?: number
+): Promise<MinbarProject[]> {
+  const rows = (await prisma.campaign.findMany({
+    where: { AND: [{ isActive: true }, NOT_SOFT_DELETED, { categoryIds: { has: categoryId } }] },
+    select: selectFor(locale),
+    orderBy: [{ priority: "asc" }, { createdAt: "desc" }],
+    ...(limit ? { take: limit } : {}),
+  })) as unknown as CampaignRow[];
+
+  return rows.map((row) => toProject(row, locale));
+}
+
+/**
  * One project by its slug in this locale.
  *
  * Looks in the per-locale translation slugs as well as the base slug, because
