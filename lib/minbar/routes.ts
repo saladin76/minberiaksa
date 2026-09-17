@@ -7,14 +7,15 @@
  * rather than a sweep across 55 pages — the same "one dictionary + overrides"
  * rule `Header.dc.html` states for `linkOverrides`.
  *
- * `PRODUCTION_SEO_CONTRACT.md` requires `/{locale}/{localized-slug}` with an
- * independent slug per language. `SLUGS` below holds the canonical (English)
- * slug for every page and `LOCALIZED_SLUGS` holds the per-locale overrides.
- * Locales with no override fall back to the canonical slug, which is a valid
- * intermediate state — it is a live URL under the right locale prefix, so
- * canonical/hreflang stay correct; only the localised wording is outstanding.
- * Adding a translated slug later is an entry here plus a `slugHistory` row and
- * a 301, per the contract's Slug History section.
+ * Every page lives at `/{locale}/{slug}` with ONE slug for every locale —
+ * `/en/checkout`, `/ar/checkout`, `/tr/checkout`. The site once gave Arabic
+ * its own spellings (`/ar/بيانات-الدفع`); that made a URL mean something in
+ * one locale and nothing in the next, so switching language on such a page
+ * landed on a 404, and the hreflang links pointed at URLs that did not exist.
+ * One slug per page keeps every locale's URL for a page derivable from any
+ * other's, which is what the language switch and hreflang both rely on. The
+ * old Arabic spellings live on in `LEGACY_SLUGS` and 301 to the canonical URL,
+ * so nothing already indexed or shared goes dark.
  */
 
 import type { SupportedLocale } from "@/lib/locales";
@@ -119,11 +120,13 @@ export const SLUGS: Record<MinbarRoute, string> = {
 };
 
 /**
- * Per-locale slug overrides. Arabic is filled in because it is the source
- * language and `x-default` points at it; the remaining locales inherit the
- * canonical slug until their localisation pass lands.
+ * Slugs a page USED to have, per the locale that had them. Nothing links to
+ * them any more; the middleware 301s a request for one — under ANY locale
+ * prefix, because the language switch swaps only the prefix — to the page's
+ * canonical slug. Keep an entry for as long as its URL might still be indexed
+ * or in someone's hands; removing one turns that URL into a 404.
  */
-export const LOCALIZED_SLUGS: Partial<Record<SupportedLocale, Partial<Record<MinbarRoute, string>>>> = {
+export const LEGACY_SLUGS: Partial<Record<SupportedLocale, Partial<Record<MinbarRoute, string>>>> = {
   ar: {
     projects: "المشاريع",
     projectDetail: "المشاريع",
@@ -175,9 +178,14 @@ export const NOINDEX_ROUTES: ReadonlySet<MinbarRoute> = new Set<MinbarRoute>([
   "maintenance",
 ]);
 
-/** Slug for a page in a given locale, falling back to the canonical slug. */
+/**
+ * Slug for a page — the same in every locale. `locale` is still accepted so
+ * the call sites keep reading as "this page, in this locale", which is what
+ * they mean, and so nothing has to change if a locale ever needs its own.
+ */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function slugFor(route: MinbarRoute, locale: string): string {
-  return LOCALIZED_SLUGS[locale as SupportedLocale]?.[route] ?? SLUGS[route];
+  return SLUGS[route];
 }
 
 /**

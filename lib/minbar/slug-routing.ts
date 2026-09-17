@@ -1,75 +1,58 @@
-import { LOCALIZED_SLUGS, SLUGS, type MinbarRoute } from "./routes";
+import { LEGACY_SLUGS, SLUGS, type MinbarRoute } from "./routes";
 
 /**
- * Localized-slug routing for the Minbar pages.
+ * Redirects for the slugs the Minbar pages used to have.
  *
- * `PRODUCTION_SEO_CONTRACT.md` requires `/{locale}/{localized-slug}` with an
- * independent slug per language, but the App Router's file tree can only carry
- * one path per page. So the pages live at their canonical (English) slugs and
- * the middleware rewrites a localized URL onto them:
+ * Every page now has one slug in every locale (`routes.ts`), so the file tree
+ * IS the URL and nothing needs rewriting. What remains is the past: Arabic
+ * once had its own spellings — `/ar/المشاريع`, `/ar/بيانات-الدفع` — and those
+ * URLs are indexed and shared. A request for one is 301'd to the canonical
+ * slug, so the ranking and the links carry over instead of dying.
  *
- *     /ar/المشاريع   →  rewrite  →  /ar/projects      (URL stays Arabic)
- *     /ar/projects   →  301      →  /ar/المشاريع      (one canonical URL)
+ * The match is locale-independent on purpose. The language switch keeps the
+ * visitor on the same page by swapping only the locale prefix, so a visitor on
+ * `/ar/بيانات-الدفع` who chose English arrived at `/en/بيانات-الدفع` — which
+ * was a 404 when the Arabic spelling was only known under `/ar`. Any locale
+ * prefix in front of a known legacy slug now redirects to that locale's
+ * canonical URL:
  *
- * The redirect in the second direction matters as much as the rewrite: without
- * it both spellings would serve the same page and split its ranking, which is
- * the duplicate-content case the contract's Slug History section is about.
- *
- * Rewrites are computed from the same `LOCALIZED_SLUGS` table the links are
- * built from, so a slug can never be linked but unroutable.
+ *     /ar/بيانات-الدفع    →  301  →  /ar/checkout
+ *     /en/بيانات-الدفع    →  301  →  /en/checkout
+ *     /ar/المشاريع/x       →  301  →  /ar/projects/x
  *
  * Two kinds of slug are handled, and the distinction matters:
  *
  *  - **Whole-path slugs**, where every segment is fixed — the Zangi course
- *    lives at `courses/nur-ad-din-zengi` and its Arabic spelling replaces both
- *    segments. These are matched first, and in full.
+ *    lived at `دوراتنا/دورة-نور-الدين-زنكي`, replacing both segments. These
+ *    are matched first, and in full.
  *  - **Head slugs**, where only the first segment is fixed and what follows is
- *    dynamic — a project slug, an article slug. Only the head is mapped and the
- *    rest passes through untouched.
+ *    dynamic — a project slug, an article slug. Only the head is mapped and
+ *    the rest passes through untouched.
  *
- * Matching whole paths first is what keeps `/ar/دوراتنا/دورة-نور-الدين-زنكي`
- * from being half-translated into `/ar/courses/دورة-نور-الدين-زنكي`, which is
- * not a route.
+ * Matching whole paths first keeps `/ar/دوراتنا/دورة-نور-الدين-زنكي` from
+ * being half-translated into `/ar/courses/دورة-نور-الدين-زنكي`, a non-route.
  */
 
-/** locale → localized whole path → canonical whole path. */
-const PATH_REWRITES: Record<string, Record<string, string>> = {};
-/** locale → canonical whole path → localized whole path. */
-const PATH_REDIRECTS: Record<string, Record<string, string>> = {};
-/** locale → localized first segment → canonical first segment. */
-const HEAD_REWRITES: Record<string, Record<string, string>> = {};
-/** locale → canonical first segment → localized first segment. */
-const HEAD_REDIRECTS: Record<string, Record<string, string>> = {};
+/** Legacy whole path → canonical whole path, whichever locale had it. */
+const PATH_REDIRECTS: Record<string, string> = {};
+/** Legacy first segment → canonical first segment. */
+const HEAD_REDIRECTS: Record<string, string> = {};
 
-for (const [locale, overrides] of Object.entries(LOCALIZED_SLUGS)) {
+for (const overrides of Object.values(LEGACY_SLUGS)) {
   if (!overrides) continue;
-  const pathToCanonical: Record<string, string> = {};
-  const pathToLocalized: Record<string, string> = {};
-  const headToCanonical: Record<string, string> = {};
-  const headToLocalized: Record<string, string> = {};
-
-  for (const [route, localized] of Object.entries(overrides)) {
+  for (const [route, legacy] of Object.entries(overrides)) {
     const canonical = SLUGS[route as MinbarRoute];
-    if (!canonical || !localized || canonical === localized) continue;
+    if (!canonical || !legacy || canonical === legacy) continue;
 
-    if (canonical.includes("/") || localized.includes("/")) {
+    if (canonical.includes("/") || legacy.includes("/")) {
       /* A slug with a fixed second segment. Both spellings are mapped whole. */
-      pathToCanonical[localized] = canonical;
-      if (!pathToLocalized[canonical]) pathToLocalized[canonical] = localized;
+      if (!PATH_REDIRECTS[legacy]) PATH_REDIRECTS[legacy] = canonical;
       continue;
     }
-
-    if (localized === canonical) continue;
-    headToCanonical[localized] = canonical;
-    // Several routes share a canonical head (`projects` and `projectDetail`);
-    // the first wins, and they map to the same localized head anyway.
-    if (!headToLocalized[canonical]) headToLocalized[canonical] = localized;
+    // Several routes share a head (`projects` and `projectDetail`); they map to
+    // the same canonical head anyway, so the first wins.
+    if (!HEAD_REDIRECTS[legacy]) HEAD_REDIRECTS[legacy] = canonical;
   }
-
-  PATH_REWRITES[locale] = pathToCanonical;
-  PATH_REDIRECTS[locale] = pathToLocalized;
-  HEAD_REWRITES[locale] = headToCanonical;
-  HEAD_REDIRECTS[locale] = headToLocalized;
 }
 
 /** Split `/xx/a/b/c` into its locale and the segments after it. */
@@ -79,45 +62,34 @@ function parts(pathname: string): { locale: string; segments: string[] } | null 
   return { locale, segments };
 }
 
+function decode(segment: string): string {
+  try {
+    return decodeURIComponent(segment);
+  } catch {
+    return segment;
+  }
+}
+
 /**
- * Canonical pathname for a request, or `null` when the URL is already canonical.
- * Returns the path to rewrite to — the browser URL is unchanged.
+ * Canonical pathname for a request that used a legacy slug, or `null` when
+ * there is nothing to redirect. Returns the path to 301 to; segments after the
+ * matched slug pass through as they came.
  */
-export function rewriteLocalizedPath(pathname: string): string | null {
+export function redirectLegacyPath(pathname: string): string | null {
   const split = parts(pathname);
   if (!split) return null;
   const { locale, segments } = split;
-  const decoded = segments.map((segment) => decodeURIComponent(segment));
+  const decoded = segments.map(decode);
 
   /* Longest whole-path match first, so a two-segment slug wins over its own
      first segment. */
   for (let length = Math.min(decoded.length, 3); length >= 2; length -= 1) {
     const candidate = decoded.slice(0, length).join("/");
-    const canonical = PATH_REWRITES[locale]?.[candidate];
-    if (canonical) return `/${[locale, canonical, ...decoded.slice(length)].join("/")}`;
+    const canonical = PATH_REDIRECTS[candidate];
+    if (canonical) return `/${[locale, canonical, ...segments.slice(length)].join("/")}`;
   }
 
-  const canonicalHead = HEAD_REWRITES[locale]?.[decoded[0]];
+  const canonicalHead = HEAD_REDIRECTS[decoded[0]];
   if (!canonicalHead) return null;
   return `/${[locale, canonicalHead, ...segments.slice(1)].join("/")}`;
-}
-
-/**
- * Localized pathname for a request that used the canonical slug, or `null` when
- * there is nothing to redirect to. Returns the path to 301 to.
- */
-export function redirectToLocalizedPath(pathname: string): string | null {
-  const split = parts(pathname);
-  if (!split) return null;
-  const { locale, segments } = split;
-
-  for (let length = Math.min(segments.length, 3); length >= 2; length -= 1) {
-    const candidate = segments.slice(0, length).join("/");
-    const localized = PATH_REDIRECTS[locale]?.[candidate];
-    if (localized) return `/${[locale, localized, ...segments.slice(length)].join("/")}`;
-  }
-
-  const localizedHead = HEAD_REDIRECTS[locale]?.[segments[0]];
-  if (!localizedHead) return null;
-  return `/${[locale, localizedHead, ...segments.slice(1)].join("/")}`;
 }

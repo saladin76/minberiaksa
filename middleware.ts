@@ -7,10 +7,7 @@ import {
 import { currencyForCountry } from '@/lib/geo/country-to-currency';
 import { localeForCountry } from '@/lib/geo/country-to-locale';
 import { SUPPORTED_LOCALES, DEFAULT_LOCALE } from '@/lib/locales';
-import {
-  redirectToLocalizedPath,
-  rewriteLocalizedPath,
-} from '@/lib/minbar/slug-routing';
+import { redirectLegacyPath } from '@/lib/minbar/slug-routing';
 
 // Single source of truth (enabled/public locales) — see `lib/locales.ts`.
 const LOCALES = SUPPORTED_LOCALES;
@@ -52,21 +49,14 @@ export default function middleware(req: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // Localized slugs (`PRODUCTION_SEO_CONTRACT.md`): the pages live at their
-  // canonical slugs in the file tree, so a localized URL is rewritten onto one
-  // and the canonical spelling is redirected to the localized URL. Doing the
-  // redirect first means only one of the two ever serves a 200.
-  const localized = redirectToLocalizedPath(pathname);
-  if (localized) {
+  // Every page has one slug in every locale. The Arabic spellings the site
+  // used to have are still indexed and shared, so a request for one — under
+  // any locale prefix — is 301'd to the canonical URL (`lib/minbar/slug-routing`).
+  const legacy = redirectLegacyPath(pathname);
+  if (legacy) {
     const url = req.nextUrl.clone();
-    url.pathname = localized;
+    url.pathname = legacy;
     return NextResponse.redirect(url, 301);
-  }
-  const canonical = rewriteLocalizedPath(pathname);
-  if (canonical) {
-    const url = req.nextUrl.clone();
-    url.pathname = canonical;
-    return NextResponse.rewrite(url);
   }
 
   // The 404 boundary renders outside the `[locale]` segment, so it has no

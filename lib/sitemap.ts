@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { SITE_URL, LOCALES } from "@/lib/seo";
-import { slugFor } from "@/lib/minbar/routes";
+import { NOINDEX_ROUTES, SLUGS, slugFor, type MinbarRoute } from "@/lib/minbar/routes";
 
 /**
  * Sharded sitemap.
@@ -29,13 +29,46 @@ export type SitemapEntry = {
   alternates: Record<string, string>;
 };
 
-const STATIC_PATHS = [
-  { path: "", changeFrequency: "daily", priority: 1.0 },
+/**
+ * How often each of the site's own pages changes, and how much it matters.
+ * The list of pages itself comes from the route map, so a page added there
+ * enters the sitemap without a second edit here; anything not named below
+ * gets the default. Detail heads (`projectDetail`, `article`, …) share a slug
+ * with their list page and are skipped, as are the per-donor pages.
+ */
+const ROUTE_WEIGHTS: Partial<Record<MinbarRoute, { changeFrequency: string; priority: number }>> = {
+  home: { changeFrequency: "daily", priority: 1.0 },
+  projects: { changeFrequency: "daily", priority: 0.9 },
+  zakat: { changeFrequency: "weekly", priority: 0.9 },
+  waqf: { changeFrequency: "weekly", priority: 0.85 },
+  aqsa: { changeFrequency: "weekly", priority: 0.85 },
+  jerusalem: { changeFrequency: "weekly", priority: 0.8 },
+  recurring: { changeFrequency: "weekly", priority: 0.8 },
+  zakatCalculator: { changeFrequency: "monthly", priority: 0.75 },
+  reports: { changeFrequency: "weekly", priority: 0.75 },
+  news: { changeFrequency: "daily", priority: 0.75 },
+  blog: { changeFrequency: "weekly", priority: 0.8 },
+  bankAccounts: { changeFrequency: "monthly", priority: 0.75 },
+  about: { changeFrequency: "monthly", priority: 0.7 },
+  contact: { changeFrequency: "monthly", priority: 0.6 },
+  terms: { changeFrequency: "yearly", priority: 0.3 },
+  privacy: { changeFrequency: "yearly", priority: 0.3 },
+  donationPolicy: { changeFrequency: "yearly", priority: 0.3 },
+  cookies: { changeFrequency: "yearly", priority: 0.2 },
+  accessibility: { changeFrequency: "yearly", priority: 0.2 },
+};
+const DEFAULT_WEIGHT = { changeFrequency: "monthly", priority: 0.6 };
+
+/** Routes whose slug is only the head of a dynamic path, listed by their own shard. */
+const DETAIL_HEADS: ReadonlySet<MinbarRoute> = new Set<MinbarRoute>(["projectDetail", "reportDetail", "article"]);
+
+const STATIC_PATHS: Array<{ path: string; changeFrequency: string; priority: number }> = [
+  ...(Object.keys(SLUGS) as MinbarRoute[])
+    .filter((route) => !NOINDEX_ROUTES.has(route) && !DETAIL_HEADS.has(route))
+    .map((route) => ({ path: SLUGS[route] ? `/${SLUGS[route]}` : "", ...(ROUTE_WEIGHTS[route] ?? DEFAULT_WEIGHT) })),
+  /* Pages from before the Minbar design that still serve and still rank. */
   { path: "/campaigns", changeFrequency: "daily", priority: 0.9 },
-  { path: "/about-us", changeFrequency: "monthly", priority: 0.7 },
-  { path: "/contact-us", changeFrequency: "monthly", priority: 0.6 },
   { path: "/bank-transfer", changeFrequency: "monthly", priority: 0.75 },
-  { path: "/blog", changeFrequency: "weekly", priority: 0.8 },
 ];
 
 type Translation = { locale: string; slug: string | null };
@@ -65,12 +98,7 @@ function expand(alternates: Record<string, string>, lastModified: Date, changeFr
   return LOCALES.map((locale) => ({ loc: alternates[locale], lastModified, changeFrequency, priority, alternates }));
 }
 
-/**
- * A super category lives at `/{locale}/{localized projects slug}/{slug}`, so
- * its alternates are built from the per-locale slug table rather than from one
- * canonical path — the canonical spelling 301s to the localized one, and a
- * sitemap that lists redirects wastes the crawl it is asking for.
- */
+/** A super category lives at `/{locale}/{projects slug}/{slug}`. */
 function superCategoryAlternates(slug: string): Record<string, string> {
   const url = (locale: string) =>
     `${SITE_URL}/${locale}/${encodeURIComponent(slugFor("projectDetail", locale))}/${encodeURIComponent(slug)}`;
@@ -86,7 +114,7 @@ export async function listShardIds(): Promise<string[]> {
   try {
     const [campaigns, categories, posts] = await Promise.all([
       prisma.campaign.count({ where: { isActive: true } }),
-      prisma.category.count(),
+      prisma.category.count({ where: { pageTemplate: null } }),
       prisma.post.count({ where: { published: true } }),
     ]);
     const push = (name: string, total: number) => {
@@ -122,7 +150,10 @@ export async function buildShard(id: string): Promise<SitemapEntry[] | null> {
       // Same reasoning as listShardIds: a database blip must not empty the shard.
     }
 
-    return [...statics, ...supers];
+    /* A programme the route map names (`ibadanProject`) is also a super
+       category row; one listing per URL. */
+    const seen = new Set<string>();
+    return [...supers, ...statics].filter((entry) => !seen.has(entry.loc) && seen.add(entry.loc));
   }
 
   const match = /^(campaigns|categories|posts)-(\d+)$/.exec(id);
@@ -142,7 +173,10 @@ export async function buildShard(id: string): Promise<SitemapEntry[] | null> {
   }
 
   if (group === "categories") {
+    /* A category bound to one of the site's own pages 301s there, and that
+       page is already in the static shard. */
     const rows = await prisma.category.findMany({
+      where: { pageTemplate: null },
       select: { id: true, slug: true, translations: { select: { locale: true, slug: true } } },
       orderBy: { id: "asc" },
       skip,
