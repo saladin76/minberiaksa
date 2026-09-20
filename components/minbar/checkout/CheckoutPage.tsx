@@ -24,7 +24,10 @@ import { useReferralCode } from "@/hooks/useReferralCode";
 import { resolveGateway, type MainGateway } from "@/lib/payment-gateway";
 import type { MinbarProject } from "@/lib/minbar/projects";
 import type { MinbarCategoryTitle } from "@/lib/minbar/category-page";
-import CardPreview from "./CardPreview";
+import Cards, { type Focused } from "react-credit-cards-2";
+import "react-credit-cards-2/dist/es/styles-compiled.css";
+import { PhoneInput } from "react-international-phone";
+import "react-international-phone/style.css";
 
 /**
  * Donor details and payment — ported from `Minbar/بيانات الدفع.dc.html`.
@@ -57,9 +60,11 @@ export interface CheckoutPageProps {
   categories: MinbarCategoryTitle[];
   banks: readonly MinbarBank[];
   donor: { firstName: string; lastName: string; email: string; phone: string } | null;
+  /** ISO 3166-1 alpha-2, lower case — the phone field's starting flag. */
+  defaultCountry: string;
 }
 
-export default function CheckoutPage({ projects, categories, banks, donor }: CheckoutPageProps) {
+export default function CheckoutPage({ projects, categories, banks, donor, defaultCountry }: CheckoutPageProps) {
   const locale = useLocale();
   const t = useTranslations("cart");
   const tCommon = useTranslations("common");
@@ -82,7 +87,8 @@ export default function CheckoutPage({ projects, categories, banks, donor }: Che
   const [cardExpiry, setCardExpiry] = useState("");
   const [cardCvc, setCardCvc] = useState("");
   const [cardName, setCardName] = useState("");
-  const [cvcFocused, setCvcFocused] = useState(false);
+  /* Which card field has focus — the card preview highlights it and flips for the CVC. */
+  const [cardFocus, setCardFocus] = useState<Focused | undefined>(undefined);
 
   const router = useRouter();
   const { data: session } = useSession();
@@ -245,6 +251,12 @@ export default function CheckoutPage({ projects, categories, banks, donor }: Che
 
     const methodForServer: CheckoutMethod =
       method === "bank" ? "BANK_TRANSFER" : method === "paypal" ? "PAYPAL" : "CARD";
+
+    /* A signed-in donor's number goes on their account, so the next checkout
+       starts with it filled in. Best effort: the order does not wait on it. */
+    if (signedIn && phone.trim() && phone.trim() !== donor?.phone) {
+      void fetch("/api/users/me/phone", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ phone: phone.trim() }) }).catch(() => undefined);
+    }
 
     let donationId: string | null = null;
     try {
@@ -480,7 +492,21 @@ export default function CheckoutPage({ projects, categories, banks, donor }: Che
                   <span style={{ ...labelStyle, display: "inline-flex", alignItems: "center", gap: 5 }}>
                     {t("phone")} <b aria-hidden="true" style={{ color: "var(--red)" }}>*</b>
                   </span>
-                  <input type="tel" required dir="ltr" value={phone} onChange={(e) => setPhone(e.target.value)} autoComplete="tel" className="pay-field" style={{ ...fieldStyle, unicodeBidi: "isolate" }} />
+                  {/* Country picker with every flag; the default flag is the
+                      account's country, else where the visit came from. The
+                      value is E.164, so it is usable as stored. */}
+                  <div className="phone-input-wrapper pay-phone" dir="ltr">
+                    <PhoneInput
+                      defaultCountry={defaultCountry}
+                      value={phone}
+                      onChange={(value) => setPhone(value)}
+                      forceDialCode
+                      inputProps={{ required: true, autoComplete: "tel", name: "phone" }}
+                      className="pay-phone-field"
+                      inputClassName="pay-phone-input"
+                      countrySelectorStyleProps={{ buttonClassName: "pay-phone-country", dropdownStyleProps: { className: "pay-phone-dropdown" } }}
+                    />
+                  </div>
                 </label>
               </div>
 
@@ -640,13 +666,26 @@ export default function CheckoutPage({ projects, categories, banks, donor }: Che
 
               {method === "card" && needsOwnCardForm ? (
                 <div style={{ display: "grid", gap: 14 }}>
-                  <CardPreview number={cardNumber} name={cardName || `${firstName} ${lastName}`.trim()} expiry={cardExpiry} cvc={cardCvc} flipped={cvcFocused} />
+                  {/* The live card, filling in as the donor types and flipping
+                      for the CVC; the brand is detected from the number. Latin-
+                      script data: always LTR. */}
+                  <div className="pay-card-preview" dir="ltr" style={{ display: "flex", justifyContent: "center" }}>
+                    <Cards
+                      number={cardNumber}
+                      expiry={cardExpiry.replace("/", "")}
+                      cvc={cardCvc}
+                      name={cardName || `${firstName} ${lastName}`.trim()}
+                      focused={cardFocus}
+                      placeholders={{ name: t("cardHolder") }}
+                    />
+                  </div>
                   <div id="card-fields" style={{ display: "grid", gridTemplateColumns: "repeat(2,minmax(0,1fr))", gap: 14 }}>
                     <label style={{ display: "grid", gap: 6, gridColumn: "1 / -1" }}>
                       <span style={{ fontSize: 12, fontWeight: 800, color: "var(--muted)" }}>{t("cardNumber")}</span>
                       <input
                         value={cardNumber}
                         onChange={(e) => setCardNumber(e.target.value.replace(/[^0-9]/g, "").slice(0, 19))}
+                        onFocus={() => setCardFocus("number")}
                         inputMode="numeric"
                         autoComplete="cc-number"
                         dir="ltr"
@@ -663,6 +702,7 @@ export default function CheckoutPage({ projects, categories, banks, donor }: Che
                           const digits = e.target.value.replace(/[^0-9]/g, "").slice(0, 4);
                           setCardExpiry(digits.length > 2 ? `${digits.slice(0, 2)}/${digits.slice(2)}` : digits);
                         }}
+                        onFocus={() => setCardFocus("expiry")}
                         inputMode="numeric"
                         autoComplete="cc-exp"
                         dir="ltr"
@@ -676,8 +716,8 @@ export default function CheckoutPage({ projects, categories, banks, donor }: Che
                       <input
                         value={cardCvc}
                         onChange={(e) => setCardCvc(e.target.value.replace(/[^0-9]/g, "").slice(0, 4))}
-                        onFocus={() => setCvcFocused(true)}
-                        onBlur={() => setCvcFocused(false)}
+                        onFocus={() => setCardFocus("cvc")}
+                        onBlur={() => setCardFocus(undefined)}
                         inputMode="numeric"
                         autoComplete="cc-csc"
                         dir="ltr"
@@ -688,7 +728,7 @@ export default function CheckoutPage({ projects, categories, banks, donor }: Che
                     </label>
                     <label style={{ display: "grid", gap: 6, gridColumn: "1 / -1" }}>
                       <span style={{ fontSize: 12, fontWeight: 800, color: "var(--muted)" }}>{t("cardHolder")}</span>
-                      <input value={cardName} onChange={(e) => setCardName(e.target.value)} autoComplete="cc-name" aria-label={t("cardHolder")} style={cardFieldStyle} />
+                      <input value={cardName} onChange={(e) => setCardName(e.target.value)} onFocus={() => setCardFocus("name")} autoComplete="cc-name" aria-label={t("cardHolder")} style={cardFieldStyle} />
                     </label>
                   </div>
                 </div>

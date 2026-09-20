@@ -1661,6 +1661,29 @@
  * ───────────────────────────────────────────────────────────────────────────── */
 
 .mia-scope .pay-field:focus { outline: 0; border-color: var(--gold); background: #fff; }
+
+/* Phone field (react-international-phone) dressed as a `.pay-field`: one
+   48px pill, the flag button and the number sharing a border, gold on focus.
+   Always LTR — a dial code and number are Latin data. */
+.mia-scope .pay-phone .pay-phone-field { display: flex; width: 100%; height: 48px; border: 1.5px solid var(--border); border-radius: 10px; background: var(--ivory); overflow: visible; transition: border-color .18s ease, background .18s ease; }
+.mia-scope .pay-phone .pay-phone-field:focus-within { border-color: var(--gold); background: #fff; }
+.mia-scope .pay-phone .react-international-phone-country-selector { position: relative; display: flex; }
+.mia-scope .pay-phone .pay-phone-country { height: 100%; padding: 0 10px 0 12px; border: 0; border-inline-end: 1px solid var(--border); border-radius: 10px 0 0 10px; background: transparent; }
+.mia-scope .pay-phone .pay-phone-country:hover { background: rgba(211,154,39,.1); }
+.mia-scope .pay-phone .react-international-phone-flag-emoji { width: 24px; height: 24px; }
+.mia-scope .pay-phone .pay-phone-input { flex: 1 1 auto; min-width: 0; height: 100%; border: 0; border-radius: 0 10px 10px 0; padding: 0 14px; background: transparent; font-family: inherit; font-size: 15px; font-weight: 700; color: var(--deep); }
+.mia-scope .pay-phone .pay-phone-input:focus { outline: 0; }
+.mia-scope .pay-phone .pay-phone-dropdown { top: 100%; bottom: auto !important; margin-top: 6px; margin-bottom: 0; left: 0 !important; right: auto !important; max-height: 280px; border: 1px solid var(--border); border-radius: 12px; box-shadow: 0 18px 44px rgba(16,33,43,.16); font-family: inherit; z-index: 30; }
+.mia-scope .pay-phone .react-international-phone-country-selector-dropdown__list-item { height: 40px; padding: 0 12px; font-size: 14px; }
+.mia-scope .pay-phone .react-international-phone-country-selector-dropdown__list-item--selected,
+.mia-scope .pay-phone .react-international-phone-country-selector-dropdown__list-item--focused { background: rgba(211,154,39,.14); }
+.mia-scope .pay-phone .react-international-phone-country-selector-dropdown__list-item-dial-code { color: var(--muted); }
+
+/* Card preview (react-credit-cards-2): scaled to the form's width on phones. */
+.mia-scope .pay-card-preview .rccs { margin: 0 auto; }
+@media (max-width: 420px) {
+  .mia-scope .pay-card-preview .rccs, .mia-scope .pay-card-preview .rccs__card { width: 260px; height: 164px; }
+}
 .mia-scope .pay-social-btn:hover { border-color: rgba(16,33,43,.4); box-shadow: 0 4px 14px rgba(16,33,43,.08); transform: translateY(-1px); }
 .mia-scope .pay-social-btn--fb:hover { filter: brightness(1.08); box-shadow: 0 4px 14px rgba(24,119,242,.3); }
 .mia-scope .pay-method:hover { border-color: var(--gold); }

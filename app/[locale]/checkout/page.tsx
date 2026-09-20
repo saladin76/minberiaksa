@@ -1,5 +1,9 @@
 import type { Metadata } from "next";
+import { headers } from "next/headers";
+import { NextRequest } from "next/server";
 import { getServerSession } from "next-auth";
+import { prisma } from "@/lib/prisma";
+import { resolveGeoFromRequest } from "@/lib/geo/country-from-request";
 import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 import { listProjects } from "@/lib/minbar/projects";
 import { listCategoryTitles } from "@/lib/minbar/category-page";
@@ -21,6 +25,22 @@ const NAMESPACES = ["cart", "validation", "certificates"] as const;
 export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
+export const dynamic = "force-dynamic";
+
+/**
+ * The visitor's country from the request (edge headers, else an IP lookup):
+ * it picks the phone field's default flag. Built as a NextRequest because the
+ * geo resolver reads request headers; the URL itself is irrelevant to it.
+ */
+async function visitorCountry(): Promise<string | null> {
+  try {
+    const h = await headers();
+    const geo = await resolveGeoFromRequest(new NextRequest("http://localhost/checkout", { headers: h }));
+    return geo?.countryCode ?? null;
+  } catch {
+    return null;
+  }
+}
 
 /**
  * Donor details and payment — ported from `Minbar/بيانات الدفع.dc.html`.
@@ -31,16 +51,23 @@ export const metadata: Metadata = {
  */
 export default async function Checkout({ params }: Props) {
   const { locale } = await params;
-  const [projects, categories, session, banks] = await Promise.all([
+  const [projects, categories, session, banks, ipCountry] = await Promise.all([
     listProjects(locale),
     listCategoryTitles(locale),
     getServerSession(authOptions),
     banksFor(locale),
+    visitorCountry(),
   ]);
 
   const user = session?.user as
-    | { name?: string | null; email?: string | null; phone?: string | null }
+    | { id?: string; name?: string | null; email?: string | null; phone?: string | null }
     | undefined;
+
+  /* The session's phone can be stale (set at sign-up, updated since); the
+     account row is what the checkout stored last time, so it wins. */
+  const account = user?.id
+    ? await prisma.user.findUnique({ where: { id: user.id }, select: { phone: true, countryCode: true } }).catch(() => null)
+    : null;
 
   // `name` is a single field on the session; split on the first space so the
   // two inputs start populated rather than one holding the whole name.
@@ -50,13 +77,15 @@ export default async function Checkout({ params }: Props) {
         firstName,
         lastName: restName.join(" "),
         email: user.email ?? "",
-        phone: user.phone ?? "",
+        phone: account?.phone ?? user.phone ?? "",
       }
     : null;
+  /* Flag order: the account's country, else where the request came from. */
+  const defaultCountry = (account?.countryCode ?? ipCountry ?? "TR").toLowerCase();
 
   return (
     <MinbarMessages locale={locale} namespaces={NAMESPACES}>
-      <CheckoutPage projects={projects} categories={categories} banks={banks} donor={donor} />
+      <CheckoutPage projects={projects} categories={categories} banks={banks} donor={donor} defaultCountry={defaultCountry} />
     </MinbarMessages>
   );
 }
