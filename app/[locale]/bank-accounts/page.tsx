@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
 import { buildPageMetadata } from "@/lib/seo";
-import { banksFor } from "@/lib/minbar/banks";
+import { banksFor } from "@/lib/minbar/banks-server";
 import { slugFor } from "@/lib/minbar/routes";
 import MinbarMessages from "@/components/minbar/MinbarMessages";
 import BankAccountsPage from "@/components/minbar/banks/BankAccountsPage";

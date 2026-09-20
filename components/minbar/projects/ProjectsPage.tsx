@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { localeDirection } from "@/lib/locales";
 import type { MinbarProject } from "@/lib/minbar/projects";
@@ -16,7 +16,12 @@ import ProjectsHero, { type ProjectSlide } from "./ProjectsHero";
  * Projects catalogue — ported from `Minbar/المشاريع.dc.html`.
  *
  * A hero carousel, a row of category filter chips, and a responsive grid of the
- * site's project card with "load more" paging.
+ * site's project card that grows as the reader scrolls: a sentinel below the
+ * grid appends the next page when it comes within a screen of the viewport,
+ * so the catalogue reads as one continuous list. A "load more" button stays
+ * under the grid for whoever the observer does not reach — a keyboard user
+ * tabbing past the cards, a browser without IntersectionObserver — and is the
+ * accessible name of what the scroll is doing.
  *
  * Filters compare category **ids**, never displayed labels: comparing labels
  * detaches the filter from its state the moment the labels are translated (the
@@ -105,6 +110,23 @@ export default function ProjectsPage({ projects, slides }: ProjectsPageProps) {
 
   const visible = filtered.slice(0, limit);
   const remaining = Math.max(0, filtered.length - limit);
+  const hasMore = remaining > 0;
+
+  /* The next page arrives when the sentinel is a viewport away, before the
+     reader reaches the end — the gap they would have scrolled into is already
+     filled. The observer is rebuilt when the sentinel unmounts (nothing left)
+     and remounts (a filter change resets the limit). */
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el || typeof IntersectionObserver === "undefined") return;
+    const io = new IntersectionObserver(
+      ([entry]) => { if (entry.isIntersecting) setLimit((n) => n + PAGE_SIZE); },
+      { rootMargin: "0px 0px 100% 0px" }
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, [hasMore, category]);
 
   return (
     <div style={{ position: "relative" }}>
@@ -193,7 +215,7 @@ export default function ProjectsPage({ projects, slides }: ProjectsPageProps) {
           )}
 
           {remaining > 0 ? (
-            <div style={{ display: "flex", justifyContent: "center", paddingTop: 26 }}>
+            <div ref={sentinelRef} style={{ display: "flex", justifyContent: "center", paddingTop: 26 }} aria-live="polite">
               <button
                 type="button"
                 onClick={() => setLimit((n) => n + PAGE_SIZE)}

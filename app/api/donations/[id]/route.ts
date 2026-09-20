@@ -12,76 +12,14 @@ import {
   auditActorFromSiteSession,
   auditStreamForRole,
 } from '@/lib/audit-log';
-import Stripe from 'stripe';
-import { dispatchDonationPaid } from "@/lib/events/dispatch";
+import { reconcileStripeDonation } from "@/lib/donations/reconcile-stripe-donation";
 import {
   recomputeCampaignCurrentAmount as sharedRecomputeCampaign,
   recomputeCategoryCurrentAmount as sharedRecomputeCategory,
 } from "@/lib/campaign/current-amount";
 
-const stripe = process.env.STRIPE_SECRET_KEY
-  ? new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: '2026-03-25.dahlia' })
-  : null;
-
-/**
- * Self-heal donations whose webhook never landed: if Stripe already has the
- * PaymentIntent marked succeeded, set paidAt and increment campaign/category
- * totals. Idempotent — a paidAt guard inside the transaction prevents double
- * increments if the webhook arrives between the Stripe lookup and the update.
- */
-async function reconcileStripeDonation(donationId: string) {
-  if (!stripe) return;
-  const row = await prisma.donation.findUnique({
-    where: { id: donationId },
-    select: { provider: true, providerOrderId: true, paidAt: true },
-  });
-  if (!row || row.paidAt || row.provider !== 'STRIPE' || !row.providerOrderId) return;
-  if (!row.providerOrderId.startsWith('pi_')) return;
-
-  let intent: Stripe.PaymentIntent;
-  try {
-    intent = await stripe.paymentIntents.retrieve(row.providerOrderId);
-  } catch (err) {
-    console.error('[donation reconcile] Stripe retrieve failed:', err);
-    return;
-  }
-  if (intent.status !== 'succeeded') return;
-
-  try {
-    await prisma.$transaction(async (tx) => {
-      const fresh = await tx.donation.findUnique({
-        where: { id: donationId },
-        include: { items: true, categoryItems: true },
-      });
-      if (!fresh || fresh.paidAt) return;
-
-      await tx.donation.update({
-        where: { id: donationId },
-        data: {
-          status: 'PAID',
-          paidAt: new Date(),
-          providerAuthCode: intent.id,
-          providerTxnResult: 'Success',
-        },
-      });
-      for (const item of fresh.items) {
-        await tx.campaign.update({
-          where: { id: item.campaignId },
-          data: { currentAmount: { increment: item.amountUSD ?? item.amount } },
-        });
-      }
-      for (const item of fresh.categoryItems) {
-        await tx.category.update({
-          where: { id: item.categoryId },
-          data: { currentAmount: { increment: item.amountUSD ?? item.amount } },
-        });
-      }
-    });
-    void dispatchDonationPaid(donationId);
-  } catch (err) {
-    console.error('[donation reconcile] Finalize failed:', err);
-  }
-}
+/* `reconcileStripeDonation` moved to lib/donations/reconcile-stripe-donation.ts
+   so the success page can run the same self-heal before issuing documents. */
 
 // GET /api/donations/[id] - Get donation (transaction) by ID; include type/status from subscription when applicable
 export async function GET(

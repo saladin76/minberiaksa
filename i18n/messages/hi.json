@@ -737,7 +737,12 @@
     "inNameOf": "के नाम पर",
     "certWord": "प्रमाणपत्र",
     "shareUnitTitle": "वक़्फ़ हिस्सा",
-    "meterUnitTitle": "वक़्फ़ मीटर"
+    "meterUnitTitle": "वक़्फ़ मीटर",
+    "rcpVerifyLabel": "सत्यापन कोड",
+    "rcpCopyOf": "प्रति",
+    "waqfPreviewNumberNote": "पूर्वावलोकन संख्या — आधिकारिक संख्या भुगतान की पुष्टि के बाद सर्वर द्वारा जारी की जाती है",
+    "printDocument": "प्रिंट करें",
+    "landscapeVersion": "स्वीकृत संस्करण (लैंडस्केप)"
   },
   "common": {
     "donate": "दान करें",

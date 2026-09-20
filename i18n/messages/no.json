@@ -737,7 +737,12 @@
     "inNameOf": "I Navnet Til",
     "certWord": "Sertifikat",
     "shareUnitTitle": "Waqf-andel",
-    "meterUnitTitle": "Waqf-meter"
+    "meterUnitTitle": "Waqf-meter",
+    "rcpVerifyLabel": "Verifiseringskode",
+    "rcpCopyOf": "Eksemplar",
+    "waqfPreviewNumberNote": "Forhåndsvisningsnummer — det offisielle nummeret utstedes av serveren etter at betalingen er bekreftet",
+    "printDocument": "Skriv ut",
+    "landscapeVersion": "Godkjent versjon (liggende)"
   },
   "common": {
     "donate": "Gi en Gave",

@@ -1769,7 +1769,12 @@
     "inNameOf": "Atas Nama",
     "certWord": "Sertifikat",
     "shareUnitTitle": "Saham Wakaf",
-    "meterUnitTitle": "Meter Wakaf"
+    "meterUnitTitle": "Meter Wakaf",
+    "rcpVerifyLabel": "Kode verifikasi",
+    "rcpCopyOf": "Salinan",
+    "waqfPreviewNumberNote": "Nomor pratinjau — nomor resmi diterbitkan server setelah pembayaran dikonfirmasi",
+    "printDocument": "Cetak",
+    "landscapeVersion": "Versi resmi (lanskap)"
   },
   "common": {
     "donate": "Donasi Sekarang",

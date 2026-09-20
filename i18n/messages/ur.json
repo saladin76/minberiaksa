@@ -737,7 +737,12 @@
     "inNameOf": "بنام",
     "certWord": "سرٹیفکیٹ",
     "shareUnitTitle": "وقف حصہ",
-    "meterUnitTitle": "وقف میٹر"
+    "meterUnitTitle": "وقف میٹر",
+    "rcpVerifyLabel": "تصدیقی کوڈ",
+    "rcpCopyOf": "نقل",
+    "waqfPreviewNumberNote": "پیش نمائش نمبر — سرکاری نمبر ادائیگی کی تصدیق کے بعد سرور جاری کرتا ہے",
+    "printDocument": "پرنٹ کریں",
+    "landscapeVersion": "منظور شدہ نسخہ (افقی)"
   },
   "common": {
     "donate": "ابھی عطیہ دیں",

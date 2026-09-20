@@ -1769,7 +1769,12 @@
     "inNameOf": "Im Namen Von",
     "certWord": "Zertifikat",
     "shareUnitTitle": "Waqf-Anteil",
-    "meterUnitTitle": "Waqf-Meter"
+    "meterUnitTitle": "Waqf-Meter",
+    "rcpVerifyLabel": "Prüfcode",
+    "rcpCopyOf": "Ausfertigung",
+    "waqfPreviewNumberNote": "Vorschaunummer — die offizielle Nummer vergibt der Server nach Zahlungsbestätigung",
+    "printDocument": "Drucken",
+    "landscapeVersion": "Genehmigte Version (Querformat)"
   },
   "common": {
     "donate": "Jetzt Spenden",

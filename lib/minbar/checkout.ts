@@ -79,10 +79,15 @@ export interface GatewayForm {
   fields: Record<string, string>;
 }
 
-/** The two kinds of line the order API takes. */
+/** The three kinds of line the order API takes. */
 export interface OrderLines {
   items: Array<{ campaignId: string; amount: number }>;
   categoryItems: Array<{ categoryId: string; amount: number }>;
+  /**
+   * Waqf rows carry no amount: the server prices them from the fixed unit
+   * price, so a basket edited by hand cannot buy a metre for a dollar.
+   */
+  waqfItems: Array<{ unit: "share" | "meter"; count: number; donorName: string; onBehalf: string }>;
 }
 
 /**
@@ -101,12 +106,20 @@ export function toOrderItems(
   projects: readonly MinbarProject[]
 ): OrderLines {
   const bySlug = new Map(projects.map((project) => [project.slug, project.id]));
-  const lines: OrderLines = { items: [], categoryItems: [] };
+  const lines: OrderLines = { items: [], categoryItems: [], waqfItems: [] };
 
   for (const item of items) {
     const campaignId = item.projectId ? bySlug.get(item.projectId) : undefined;
     if (campaignId) lines.items.push({ campaignId, amount: item.amount });
     else if (item.categoryId) lines.categoryItems.push({ categoryId: item.categoryId, amount: item.amount });
+    else if (item.waqf) {
+      lines.waqfItems.push({
+        unit: item.waqf.unit,
+        count: item.waqf.count,
+        donorName: item.waqf.donorName.trim(),
+        onBehalf: item.waqf.onBehalf.trim(),
+      });
+    }
   }
 
   return lines;
@@ -129,8 +142,8 @@ export function orderType(items: readonly MinbarCartItem[]): "ONE_TIME" | "MONTH
  * say what went wrong rather than failing silently.
  */
 export async function createDonation(input: CreateDonationInput): Promise<CreatedDonation> {
-  const { items, categoryItems } = toOrderItems(input.items, input.projects);
-  if (items.length === 0 && categoryItems.length === 0) throw new Error("cart-empty");
+  const { items, categoryItems, waqfItems } = toOrderItems(input.items, input.projects);
+  if (items.length === 0 && categoryItems.length === 0 && waqfItems.length === 0) throw new Error("cart-empty");
 
   const response = await fetch("/api/cart/payment", {
     method: "POST",
@@ -138,6 +151,7 @@ export async function createDonation(input: CreateDonationInput): Promise<Create
     body: JSON.stringify({
       items,
       ...(categoryItems.length ? { categoryItems } : {}),
+      ...(waqfItems.length ? { waqfItems } : {}),
       currency: input.currency,
       type: orderType(input.items),
       paymentMethod: input.method,

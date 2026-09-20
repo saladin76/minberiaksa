@@ -737,7 +737,12 @@
     "inNameOf": "I Navnet På",
     "certWord": "Certifikat",
     "shareUnitTitle": "Waqf-andel",
-    "meterUnitTitle": "Waqf-meter"
+    "meterUnitTitle": "Waqf-meter",
+    "rcpVerifyLabel": "Verifikationskode",
+    "rcpCopyOf": "Eksemplar",
+    "waqfPreviewNumberNote": "Eksempelnummer — det officielle nummer udstedes af serveren, når betalingen er bekræftet",
+    "printDocument": "Udskriv",
+    "landscapeVersion": "Godkendt version (liggende)"
   },
   "common": {
     "donate": "Donér",

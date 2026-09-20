@@ -737,7 +737,12 @@
     "inNameOf": "Në Emër të",
     "certWord": "Certifikatë",
     "shareUnitTitle": "Aksioni i vakëfit",
-    "meterUnitTitle": "Metri i vakëfit"
+    "meterUnitTitle": "Metri i vakëfit",
+    "rcpVerifyLabel": "Kodi i verifikimit",
+    "rcpCopyOf": "Kopja",
+    "waqfPreviewNumberNote": "Numër paraparjeje — numri zyrtar lëshohet nga serveri pas konfirmimit të pagesës",
+    "printDocument": "Printo",
+    "landscapeVersion": "Versioni i miratuar (horizontal)"
   },
   "common": {
     "donate": "Dhuro Tani",

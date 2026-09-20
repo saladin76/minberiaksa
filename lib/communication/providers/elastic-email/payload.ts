@@ -32,6 +32,14 @@ export function buildElasticEmailPayload(input: ElasticEmailInput, sender: { ema
   };
   if (input.replyTo) content.ReplyTo = input.replyTo;
   if (input.toName) content.To = [formatSenderIdentity(input.to, input.toName)];
+  // v4 takes attachments inline as base64 (`BinaryContent`); nothing is uploaded first.
+  if (input.attachments?.length) {
+    content.Attachments = input.attachments.map((file) => ({
+      BinaryContent: file.content,
+      Name: file.filename,
+      ContentType: file.contentType,
+    }));
+  }
 
   return {
     Recipients: { To: [input.to] },

@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="design-tokens.css">
+<link rel="stylesheet" href="locale-fonts.css">
+<script>window.MIA_NS = ["certificates"];</script>
+<script src="./i18n.js"></script>
+<style>
+  :root { --deep:#10212B; --navy:#132C38; --gold:#D39A27; --gold-2:#B8811C; --red:#A93428; --green:#1F7A4D; --ivory:#FFFDF8; --sand:#F7F2EA; --muted:#52616B; --line:#C9C0B0; --line-2:#E3DBCC; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #E9E3D8; font-family: Cairo, system-ui, sans-serif; color: var(--deep); direction: rtl; }
+  a { color: var(--gold-2); }
+  a:hover { color: var(--red); }
+  .rcp-cell { padding: 9px 12px; border-inline-start: 1px solid var(--line-2); }
+  .rcp-cell:first-child { border-inline-start: 0; }
+  .rcp-trow:nth-child(odd) { background: rgba(247,242,234,.5); }
+  @media print {
+    html, body { margin: 0; padding: 0; background: #fff; }
+    body.rcp-standalone * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+    body.rcp-standalone .rcp-wrap { padding: 0 !important; min-height: 0 !important; }
+    body.rcp-standalone .rcp-sheet { width: 194mm !important; max-width: none !important; margin: 0 !important; box-shadow: none !important; break-inside: avoid; page-break-inside: avoid; }
+    .no-print { display: none !important; }
+  }
+  /* الاستجابة بحسب عرض الورقة نفسها (container query) لا عرض الشاشة،
+     لأن الإيصال يُضمَّن أيضًا كمعاينة داخل صفحات أخرى بعرض ضيّق. */
+  @container rcp (max-width: 640px) {
+    .rcp-head { grid-template-columns: minmax(0,1fr) !important; }
+    .rcp-head > .rcp-idbox { min-width: 0 !important; }
+    .rcp-band { grid-template-columns: minmax(0,1fr) !important; }
+    .rcp-band > * { border-inline-start: 0 !important; border-top: 1px solid var(--line-2); }
+    .rcp-band > *:first-child { border-top: 0 !important; }
+    .rcp-idbox { text-align: start !important; }
+    .rcp-sign { grid-template-columns: minmax(0,1fr) !important; gap: 34px !important; }
+    .rcp-foot { grid-template-columns: minmax(0,1fr) !important; }
+    .rcp-thead, .rcp-trow { grid-template-columns: 28px minmax(0,1fr) 92px !important; }
+    .rcp-kind { display: none !important; }
+  }
+</style>
+</helmet>
+<!-- [BACKEND-INTEGRATION] الإيصال يُصدَر خلفيًا برقم رسمي بعد تأكيد الدفع، وبنسختين: لغة المتبرع + التركية (المعتمدة قانونيًا).
+     البيانات هنا props — القالب جاهز للحقن. -->
+
+<div class="rcp-wrap" dir="{{ certDir }}" style="min-height: 100vh; padding: 26px 16px 46px;">
+
+  <div class="rcp-sheet" style="position: relative; width: 100%; max-width: 810px; margin: 0 auto; background: #FFFEFB; border: 1px solid var(--line); box-shadow: 0 22px 58px rgba(16,33,43,.16); container-type: inline-size; container-name: rcp; overflow: hidden;">
+
+    <img src="assets/aqsa-dome-line.png" alt="" aria-hidden="true" style="position: absolute; inset-inline-end: -2%; bottom: 12%; width: 38%; height: auto; opacity: .045; pointer-events: none;">
+
+    <div class="rcp-head" style="display: grid; grid-template-columns: minmax(0,1fr) auto; align-items: stretch; border-bottom: 2px solid var(--deep);">
+      <div style="display: grid; gap: 6px; padding: 20px 22px 16px; min-width: 0;">
+        <img src="assets/logo-horizontal.png" alt="مؤسسة منبر الأقصى الدولية" style="width: 176px; max-width: 44vw; height: auto;">
+        <span dir="ltr" style="unicode-bidi: isolate; text-align: right; font-size: 11.5px; font-weight: 800; color: var(--deep);">{{ orgLegalName }}</span>
+        <span dir="ltr" style="unicode-bidi: isolate; text-align: right; font-size: 10.5px; line-height: 1.55; color: var(--muted);">{{ orgAddress }}</span>
+        <span style="font-size: 10.5px; color: var(--muted);">{{ taxLabel }}: <b dir="ltr" style="unicode-bidi: isolate; font-weight: 800;">{{ taxNo }}</b> · <span dir="ltr" style="unicode-bidi: isolate;">{{ orgContact }}</span></span>
+      </div>
+      <div class="rcp-idbox" style="display: grid; align-content: center; gap: 5px; min-width: 210px; padding: 18px 22px; text-align: end; background: var(--deep); color: #fff;">
+        <span style="font-size: 15.5px; font-weight: 900; letter-spacing: -.01em;">{{ docTitle }}</span>
+        <span dir="ltr" style="unicode-bidi: isolate; text-align: left; font-size: 10px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: rgba(255,255,255,.66);">{{ docTitleLatin }}</span>
+        <span style="height: 1px; background: rgba(211,154,39,.5); margin: 5px 0;"></span>
+        <span style="font-size: 9.5px; font-weight: 700; color: rgba(255,255,255,.7);">{{ receiptNoLabel }}</span>
+        <b dir="ltr" style="unicode-bidi: isolate; text-align: left; font-size: 19px; font-weight: 900; color: var(--gold);">{{ receiptNo }}</b>
+      </div>
+    </div>
+
+    <div class="rcp-band" style="display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); border-bottom: 1px solid var(--line);">
+      <div class="rcp-cell" style="display: grid; gap: 3px;">
+        <span style="font-size: 9.5px; font-weight: 800; color: var(--muted);">{{ dateLabel }}</span>
+        <b dir="ltr" style="unicode-bidi: isolate; text-align: right; font-size: 13.5px; font-weight: 800;">{{ issueDate }}</b>
+      </div>
+      <div class="rcp-cell" style="display: grid; gap: 3px;">
+        <span style="font-size: 9.5px; font-weight: 800; color: var(--muted);">{{ methodLabel }}</span>
+        <b style="font-size: 13.5px; font-weight: 800;">{{ payMethod }}</b>
+      </div>
+      <div class="rcp-cell" style="display: grid; gap: 3px;">
+        <span style="font-size: 9.5px; font-weight: 800; color: var(--muted);">{{ statusLabel }}</span>
+        <span style="justify-self: start; display: inline-flex; align-items: center; gap: 6px; font-size: 13.5px; font-weight: 900; color: var(--green);">
+          <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12.5 9.5 18 20 7"></path></svg>
+          {{ payStatus }}
+        </span>
+      </div>
+    </div>
+
+    <div class="rcp-band" style="display: grid; grid-template-columns: 1.4fr 1fr; border-bottom: 2px solid var(--deep);">
+      <div class="rcp-cell" style="display: grid; gap: 3px; padding: 12px;">
+        <span style="font-size: 9.5px; font-weight: 800; color: var(--muted);">{{ donorLabel }}</span>
+        <b style="font-size: clamp(14px,2.1vw,17px); font-weight: 900; overflow-wrap: anywhere;">{{ donorName }}</b>
+      </div>
+      <div class="rcp-cell" style="display: grid; gap: 3px; padding: 12px;">
+        <span style="font-size: 9.5px; font-weight: 800; color: var(--muted);">{{ donorRefLabel }}</span>
+        <b dir="ltr" style="unicode-bidi: isolate; text-align: right; font-size: 13px; font-weight: 800; color: var(--muted); overflow-wrap: anywhere;">{{ donorContact }}</b>
+      </div>
+    </div>
+
+    <sc-if value="{{ hasLines }}" hint-placeholder-val="{{ true }}">
+      <div class="rcp-thead" style="display: grid; grid-template-columns: 34px minmax(0,1fr) 116px 132px; padding: 0; background: var(--sand); border-bottom: 1px solid var(--line);">
+        <span class="rcp-cell" style="padding: 8px 6px; text-align: center; font-size: 9.5px; font-weight: 900; color: var(--muted);">#</span>
+        <span class="rcp-cell" style="padding: 8px 12px; font-size: 9.5px; font-weight: 900; color: var(--muted);">{{ colItem }}</span>
+        <span class="rcp-cell rcp-kind" style="padding: 8px 12px; font-size: 9.5px; font-weight: 900; color: var(--muted);">{{ colType }}</span>
+        <span class="rcp-cell" style="padding: 8px 12px; text-align: end; font-size: 9.5px; font-weight: 900; color: var(--muted);">{{ colAmount }}</span>
+      </div>
+      <sc-for list="{{ lines }}" as="ln" hint-placeholder-count="2">
+        <div class="rcp-trow" style="display: grid; grid-template-columns: 34px minmax(0,1fr) 116px 132px; border-bottom: 1px solid var(--line-2);">
+          <span class="rcp-cell" style="padding: 11px 6px; text-align: center; font-size: 11.5px; font-weight: 800; color: var(--muted);">{{ ln.no }}</span>
+          <span class="rcp-cell" style="padding: 11px 12px; font-size: 13px; font-weight: 700; overflow-wrap: anywhere;">{{ ln.title }}</span>
+          <span class="rcp-cell rcp-kind" style="padding: 11px 12px; font-size: 11.5px; font-weight: 800; color: var(--muted);">{{ ln.kind }}</span>
+          <b class="rcp-cell" dir="ltr" style="unicode-bidi: isolate; padding: 11px 12px; text-align: end; font-size: 13.5px; font-weight: 900; white-space: nowrap;">{{ ln.amount }}</b>
+        </div>
+      </sc-for>
+    </sc-if>
+    <sc-if value="{{ noLines }}" hint-placeholder-val="{{ false }}">
+      <div style="display: grid; justify-items: center; gap: 6px; padding: 30px 22px; border-bottom: 1px solid var(--line); background: rgba(247,242,234,.5); text-align: center;">
+        <span style="font-size: 12.5px; font-weight: 800; color: var(--muted);">{{ emptyTitle }}</span>
+        <span style="max-width: 100%; font-size: 11px; color: var(--muted); text-wrap: pretty;">{{ emptyHint }}</span>
+      </div>
+    </sc-if>
+
+    <div style="display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 14px; padding: 14px 22px; border-bottom: 1px solid var(--line); background: rgba(211,154,39,.07);">
+      <div style="display: grid; gap: 3px;">
+        <b style="font-size: 14.5px; font-weight: 900;">{{ totalLabel }}</b>
+        <sc-if value="{{ amountInWords }}" hint-placeholder-val="{{ true }}">
+          <span style="font-size: 11px; font-weight: 700; color: var(--muted);">{{ wordsLabel }} {{ amountInWords }}</span>
+        </sc-if>
+      </div>
+      <b dir="ltr" style="unicode-bidi: isolate; font-size: clamp(21px,3.3vw,29px); font-weight: 900; color: var(--red); white-space: nowrap;">{{ totalAmount }}</b>
+    </div>
+
+    <div class="rcp-sign" style="display: grid; grid-template-columns: 1fr 1fr; align-items: end; gap: 20px; padding: 22px 22px 22px;">
+      <div style="display: grid; grid-template-rows: auto auto auto; gap: 7px; justify-items: center;">
+        <img src="assets/waqf-director-stamp.png" alt="الختم الرسمي وتوقيع مدير المؤسسة" style="display: block; width: 168px; max-width: 66%; height: auto; margin-bottom: -14px; pointer-events: none;">
+        <span style="width: 86%; border-bottom: 1px solid var(--line);"></span>
+        <span style="font-size: 11.5px; font-weight: 800;">{{ signatureLabel }}</span>
+      </div>
+      <div style="display: grid; grid-template-rows: auto auto auto; gap: 7px; justify-items: center; align-content: end;">
+        <span style="font-size: 11px; font-weight: 700; color: var(--muted);">{{ accountantLabel }}</span>
+        <span style="width: 86%; border-bottom: 1px solid var(--line);"></span>
+        <span style="font-size: 11.5px; font-weight: 800; color: var(--muted);">{{ orgName }}</span>
+      </div>
+    </div>
+
+    <div class="rcp-foot" style="display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 14px; padding: 13px 22px; border-top: 1px solid var(--line); background: var(--sand);">
+      <p style="margin: 0; font-size: 10.5px; line-height: 1.85; color: var(--muted);">{{ legalNote }}</p>
+      <span style="justify-self: end; display: grid; gap: 2px; text-align: end; white-space: nowrap;">
+        <span style="font-size: 9px; font-weight: 800; color: var(--muted);">{{ verifyLabel }}</span>
+        <b dir="ltr" style="unicode-bidi: isolate; font-size: 11px; font-weight: 800; letter-spacing: .04em; color: var(--deep);">{{ verifyCode }}</b>
+      </span>
+    </div>
+
+    <div style="display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 12px; padding: 9px 22px; border-top: 1px solid var(--line-2);">
+      <span dir="ltr" style="unicode-bidi: isolate; text-align: right; font-size: 9.5px; font-weight: 700; color: var(--muted);">{{ pairNote }}</span>
+      <span dir="ltr" style="unicode-bidi: isolate; font-size: 9.5px; font-weight: 800; color: var(--muted); white-space: nowrap;">{{ copyOf }}</span>
+    </div>
+    <div aria-hidden="true" style="height: 4px; background: linear-gradient(to left, var(--gold), var(--red));"></div>
+  </div>
+
+  <div class="no-print" style="display: flex; justify-content: center; gap: 12px; flex-wrap: wrap; padding-top: 24px;">
+    <button onClick="{{ print }}" style="display: inline-flex; align-items: center; gap: 9px; height: 48px; padding: 0 26px; border: 0; border-radius: 8px; background: var(--gold); color: var(--deep); font-family: inherit; font-size: 14px; font-weight: 900; cursor: pointer; white-space: nowrap; transition: filter .18s ease;" style-hover="filter: brightness(1.06);">
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9V3h12v6M6 18H4v-6h16v6h-2M8 14h8v7H8z"></path></svg>
+      {{ tSavePdf }}
+    </button>
+    <a href="نجاح التبرع.dc.html" style="display: inline-flex; align-items: center; gap: 9px; height: 48px; padding: 0 24px; border-radius: 8px; border: 1px solid var(--line); background: #fff; font-size: 14px; font-weight: 800; color: var(--deep); text-decoration: none;" style-hover="border-color: var(--gold);">{{ tBack }}</a>
+  </div>
+
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:870,&quot;height&quot;:1120},&quot;receiptNo&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;—&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;التوثيق&quot;},&quot;issueDate&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;—&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;التوثيق&quot;},&quot;payMethod&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;—&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;التوثيق&quot;},&quot;payStatus&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;مدفوع&quot;,&quot;قيد التحقق&quot;,&quot;مسترد&quot;],&quot;default&quot;:&quot;مدفوع&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;التوثيق&quot;},&quot;verifyCode&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;—&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;التوثيق&quot;},&quot;copyOf&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;1 / 2&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;التوثيق&quot;},&quot;donorName&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;—&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;بيانات المتبرع&quot;},&quot;donorContact&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;—&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;بيانات المتبرع&quot;},&quot;lines&quot;:{&quot;editor&quot;:null,&quot;default&quot;:[],&quot;tsType&quot;:&quot;{title:string,kind:string,amount:string}[]&quot;,&quot;section&quot;:&quot;البنود&quot;},&quot;totalAmount&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;—&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;البنود&quot;},&quot;amountInWords&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;البنود&quot;},&quot;orgLegalName&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;Uluslararası Minberi Aksa Derneği&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;بيانات المؤسسة&quot;},&quot;taxNo&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;8900363807&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;بيانات المؤسسة&quot;},&quot;orgAddress&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;بيانات المؤسسة&quot;},&quot;orgContact&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;info@minberiaksa.org&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;بيانات المؤسسة&quot;},&quot;docTitle&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;إيصال تبرع&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;النصوص&quot;},&quot;docTitleLatin&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;Bağış Makbuzu / Donation Receipt&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;النصوص&quot;},&quot;legalNote&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;النصوص&quot;},&quot;pairNote&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;Bu makbuz Türkçe nüshası ile birlikte geçerlidir.&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;النصوص&quot;},&quot;signatureLabel&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;مدير المؤسسة&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;النصوص&quot;},&quot;accountantLabel&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;المحاسب المسؤول&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;النصوص&quot;}}">
+/*
+ * إيصال التبرع (Donation Receipt / Bağış Makbuzu)
+ * ------------------------------------------------
+ * ما هو: المستند المحاسبي الرسمي الذي يُصدَر للمتبرع بعد تأكيد الدفع. يختلف عن
+ * «شهادة الشكر» (مستند معنوي) و«شهادة الوقف» (مستند وقفي) — هذا هو الإيصال.
+ *
+ * لماذا هذا التخطيط: بُني على شكل المستند المحاسبي الرسمي لا بطاقة ويب —
+ * رأس مؤسسي ببيانات السجل، صندوق رقم إيصال داكن بارز، صفوف حقول محدَّدة
+ * بحدود، جدول بنود مرقَّم بأعمدة ثابتة، صف إجمالي، ثم شريط توقيع/ختم
+ * وشريط قانوني برمز تحقق. كل الحدود مرئية لأن المستند يُطبَع ويُؤرشَف.
+ *
+ * منطق العمل وربط الداشبورد:
+ *   - receiptNo: رقم متسلسل بلا تكرار يُولَّد على الخادم لحظة تأكيد الدفع.
+ *     لا يُولَّد في العميل، ولا يُستهلك رقم قبل نجاح العملية.
+ *   - issueDate: تاريخ الخادم لا تاريخ جهاز المتبرع.
+ *   - payStatus: من بوابة الدفع. التحويل البنكي يبقى «قيد التحقق» حتى يعتمد
+ *     المحاسب الحوالة، فيتحول إلى «مدفوع» ويُعاد إصدار الإيصال بنفس الرقم.
+ *   - عند خلو lines لا يُعرض جدول فارغ: يظهر بدلًا منه سطر حالة صريح، ولا
+ *     تُولَّد بنود افتراضية إطلاقًا.
+ *   - الاستجابة تعتمد container query على عرض الورقة، فتصحّ أيضًا حين يُضمَّن
+ *     الإيصال كمعاينة مصغّرة داخل صفحة أخرى. على العرض الضيّق يُخفى عمود
+ *     «النوع» (متاح في السجل) لإبقاء المبلغ والبند ظاهرين.
+ *   - lines: بنود السلة الفعلية؛ kind = نوع التبرع (مشروع/زكاة/وقف/دوري)
+ *     لأن لكل نوع معالجة محاسبية وسياسة صرف مختلفة. الترقيم تلقائي.
+ *   - totalAmount: يُحسب على الخادم بعملة العملية الواحدة — لا جمع بين عملات.
+ *   - amountInWords: المبلغ كتابةً، مطلب محاسبي في كثير من الجهات.
+ *   - verifyCode: رمز تحقق يربط النسخة المطبوعة بالسجل في قاعدة البيانات
+ *     (يمكن ربطه لاحقًا بصفحة تحقق عامة أو QR).
+ *   - البيانات القانونية (orgLegalName/taxNo/orgAddress/orgContact) تُقرأ من
+ *     إعدادات المؤسسة مرة واحدة وتنتشر على كل المستندات، وتُطبَع بالحروف
+ *     اللاتينية كما في السجل الرسمي التركي.
+ *   - الطباعة: A4 عمودي بعرض 194مم. تُطبَّق قواعد الطباعة فقط عندما يكون
+ *     الإيصال محتوى الصفحة نفسها لا معاينة مضمّنة — نفس منطق الشهادات.
+ *   - كل النصوص والتسميات props: لا نص افتراضي مكتوب في العرض.
+ *
+ * ── الإصدار المزدوج اللغة (إلزامي — مؤسسة مسجّلة في تركيا) ──────────────────
+ * كل تبرع يُنتج **نسختين** من الإيصال بنفس receiptNo ونفس verifyCode:
+ *     1) نسخة بلغة المتبرع (اللغة النشطة في الموقع)
+ *     2) نسخة تركية (tr) — النسخة المعتمدة قانونيًا للجهات التركية
+ * فإن كانت لغة المتبرع تركية أصلًا فنسخة واحدة تكفي.
+ *
+ * أمثلة: عربي + تركي · إنجليزي + تركي · فرنسي + تركي … وهكذا لبقية اللغات.
+ *
+ * التنفيذ المطلوب من المبرمج:
+ *   - الخادم يُصيِّر هذا المكوّن مرتين (locale = userLocale، ثم locale = "tr")
+ *     ويدمج المخرجين في ملف PDF واحد: صفحة 1 لغة المتبرع، صفحة 2 التركية.
+ *   - receiptNo وverifyCode وقيم المبالغ والتواريخ **متطابقة** في النسختين —
+ *     هما إيصال واحد بنسختين لغويتين، لا إيصالان.
+ *   - يُترجَم فقط ما هو props نصية (التسميات، أسماء البنود، النوع، legalNote،
+ *     المبلغ كتابةً). البيانات القانونية للمؤسسة تبقى بالحروف اللاتينية كما في
+ *     السجل الرسمي في كل اللغات، ولا تُترجَم.
+ *   - dir يُضبط تلقائيًا: rtl للعربية والأوردية، ltr لبقية اللغات (منها التركية).
+ *   - pairNote سطر أسفل الإيصال يوضح أن النسخة صالحة مع مقابلها التركي،
+ *     وcopyOf يبيّن ترقيم النسخة (1 / 2). في حال المتبرع التركي: pairNote فارغ
+ *     وcopyOf = "1 / 1".
+ *   - نفس المنطق يُطبَّق على شهادة الشكر وشهادات الوقف عند إطلاق بقية اللغات.
+ *
+ * ملاحظة على الشكل: لا شعارات تسويقية ولا عبارات وجدانية على هذا المستند —
+ * الإيصال أداة محاسبية. الشعار المعنوي مكانه شهادة الشكر لا الإيصال.
+ */
+class Component extends DCLogic {
+  componentDidMount() {
+    this._onLang = () => this.forceUpdate();
+    window.addEventListener("mia:langchange", this._onLang);
+    if (window.MIA_I18N && window.MIA_I18N.load) window.MIA_I18N.load().then(() => this.forceUpdate());
+    if (typeof document === "undefined") return;
+    if (document.querySelector(".waqf-canvas, #cert-canvas, .rcp-canvas")) return;
+    document.body.classList.add("rcp-standalone");
+    if (!document.getElementById("rcp-page-size")) {
+      const st = document.createElement("style");
+      st.id = "rcp-page-size";
+      st.textContent = "@media print{@page{size:A4 portrait;margin:8mm}}";
+      document.head.appendChild(st);
+    }
+  }
+  /* التسميات الثابتة من حزمة certificates؛ بيانات العملية props من الخادم. */
+  tr(key, arFallback) {
+    const g = window.MIA_I18N;
+    return (g && g.t("certificates", key)) || arFallback;
+  }
+  /* الاتجاه من اللغة النشطة — rtl للعربية والأوردية فقط (body ثابت rtl فيُتجاوز هنا). */
+  certDir() {
+    let l = "ar";
+    try { l = localStorage.getItem("mia.lang") || "ar"; } catch (e) {}
+    return (l === "ar" || l === "ur") ? "rtl" : "ltr";
+  }
+  renderVals() {
+    const p = this.props || {};
+    const lines = Array.isArray(p.lines) ? p.lines : [];
+    return {
+      certDir: this.certDir(),
+      docTitle: p.docTitle || this.tr("rcpDocTitle", "إيصال تبرع"),
+      docTitleLatin: p.docTitleLatin || "Bağış Makbuzu / Donation Receipt",
+      orgLegalName: p.orgLegalName || "Uluslararası Minber-i Aksâ Derneği",
+      taxLabel: p.taxLabel || this.tr("rcpTaxLabel", "الرقم الضريبي"),
+      taxNo: p.taxNo || "8900363807",
+      orgAddress: p.orgAddress || "Haseki Sultan Mah. Turgut Özal Millet Cad. No:55 Daire:4 Fatih/İstanbul",
+      orgContact: p.orgContact || "info@minberiaksa.org",
+      receiptNoLabel: p.receiptNoLabel || this.tr("rcpNoLabel", "رقم الإيصال"),
+      receiptNo: p.receiptNo || "—",
+      dateLabel: p.dateLabel || this.tr("rcpDateLabel", "تاريخ الإصدار"),
+      issueDate: p.issueDate || "—",
+      methodLabel: p.methodLabel || this.tr("rcpMethodLabel", "طريقة الدفع"),
+      payMethod: p.payMethod || "—",
+      statusLabel: p.statusLabel || this.tr("rcpStatusLabel", "حالة العملية"),
+      payStatus: (p.payStatus === "مدفوع" || !p.payStatus) ? this.tr("rcpStatusPaid", "مدفوع") : p.payStatus,
+      donorLabel: p.donorLabel || this.tr("rcpDonorLabel", "المتبرع"),
+      donorName: p.donorName || "—",
+      donorRefLabel: p.donorRefLabel || this.tr("rcpDonorRefLabel", "بيانات التواصل / المرجع"),
+      donorContact: p.donorContact || "—",
+      hasLines: lines.length > 0,
+      noLines: lines.length === 0,
+      emptyTitle: p.emptyTitle || this.tr("rcpEmptyTitle", "لا توجد بنود في هذا الإيصال"),
+      emptyHint: p.emptyHint || this.tr("rcpEmptyHint", "تُدرَج بنود التبرع تلقائيًا من السلة عند تأكيد الدفع."),
+      colItem: p.colItem || this.tr("rcpColItem", "البند"),
+      colType: p.colType || this.tr("rcpColType", "النوع"),
+      colAmount: p.colAmount || this.tr("rcpColAmount", "المبلغ"),
+      lines: lines.map((l, i) => ({
+        no: i + 1,
+        title: l.title || "—",
+        kind: l.kind || this.tr("rcpKindDonation", "تبرع"),
+        amount: l.amount || "—",
+      })),
+      totalLabel: p.totalLabel || this.tr("rcpTotalLabel", "الإجمالي المدفوع"),
+      totalAmount: p.totalAmount || "—",
+      wordsLabel: p.wordsLabel || this.tr("rcpWordsLabel", "فقط"),
+      amountInWords: p.amountInWords || "",
+      signatureLabel: p.signatureLabel || this.tr("directorLabel", "مدير المؤسسة"),
+      accountantLabel: p.accountantLabel || this.tr("rcpAccountantLabel", "المحاسب المسؤول"),
+      orgName: p.orgName || this.tr("orgName", "مؤسسة منبر الأقصى الدولية"),
+      pairNote: p.pairNote || "Bu makbuz Türkçe nüshası ile birlikte geçerlidir.",
+      copyOf: p.copyOf || "1 / 2",
+      verifyLabel: p.verifyLabel || "رمز التحقق",
+      verifyCode: p.verifyCode || "—",
+      legalNote: p.legalNote || this.tr("rcpLegalNote", "إيصال صادر إلكترونيًا من مؤسسة منبر الأقصى الدولية، ويُعد وثيقة رسمية لإثبات التبرع. تُصرف المبالغ في البنود المحددة أعلاه وفق السياسات المعتمدة للمؤسسة، ولا تُرد بعد التنفيذ."),
+      tSavePdf: this.tr("savePdfReceipt", "حفظ الإيصال PDF"),
+      tBack: this.tr("back", "رجوع"),
+      print: () => window.print(),
+    };
+  }
+}
+
+</script>
+</body>
+</html>

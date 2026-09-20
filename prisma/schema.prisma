@@ -665,6 +665,12 @@ model Donation {
   /// Set only when `paymentMethod` is BANK_TRANSFER: the receipt the donor
   /// uploaded and where the finance review stands. See `BankTransferClaim`.
   bankTransferClaim BankTransferClaim?
+  /// Waqf lines (share / metre) — priced by the server from the fixed unit
+  /// price, never from the basket. Each one is issued its own waqf certificate.
+  waqfItems         DonationWaqfItem[]
+  /// The documents issued for this donation once payment was confirmed.
+  certificates      Certificate[]
+  receipt           DonationReceipt?
 }
 
 model Subscription {
@@ -764,6 +770,111 @@ model DonationCategoryItem {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+/**
+ * ===================== CERTIFICATES & RECEIPTS =====================
+ *
+ * `handoff-certificates/DONATION_LOGIC_SPEC.md §2`: every document a donor
+ * downloads is a permanent record keyed to its donation, issued by the server
+ * only after payment is confirmed. Reloading, re-printing or re-running the
+ * job never mints a second serial — the unique constraints below are the
+ * database's half of that promise.
+ */
+
+enum WaqfUnit {
+  SHARE
+  METER
+}
+
+/// A waqf share or metre bought in one order. Kept apart from `DonationItem`
+/// because it targets no campaign: the price is a fixed unit price, and the
+/// two names on it are what the certificate prints.
+model DonationWaqfItem {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  donationId String   @db.ObjectId
+  unit       WaqfUnit
+  count      Int
+  /// Unit price in USD at the time of the order ($100 share / $1,500 metre).
+  unitPrice  Float
+  /// Line total in the donation's currency, and in USD.
+  amount     Float
+  amountUSD  Float?
+  /// The endower's name as it goes on the certificate.
+  donorName  String
+  /// Whom the waqf is made on behalf of ("وقد أوقفها عن").
+  onBehalf   String
+
+  donation    Donation     @relation(fields: [donationId], references: [id], onDelete: Cascade)
+  certificate Certificate?
+
+  createdAt DateTime @default(now())
+}
+
+enum CertificateType {
+  THANKS
+  SHARE
+  METER
+}
+
+model Certificate {
+  id            String          @id @default(auto()) @map("_id") @db.ObjectId
+  /// Unique serial, e.g. `MIA-THX-2026-000123` or `MIA-WQF-S-076544`.
+  serial        String          @unique
+  /// The number printed on the face: the waqf certificates carry the bare
+  /// per-unit sequence (metres from 9876, shares from 76543), the thank-you
+  /// certificate its yearly counter.
+  number        Int
+  type          CertificateType
+  donationId    String          @db.ObjectId
+  donorId       String          @db.ObjectId
+  /// Set on a waqf certificate: the line it was issued for. One certificate
+  /// per line, enforced by the unique index.
+  waqfItemId    String?         @unique @db.ObjectId
+  count         Int
+  amount        Float
+  currency      String
+  /// The name printed on the certificate. The donor may edit it on the success
+  /// page; the edit is stored here so every later download and the emailed
+  /// copy say the same thing.
+  donorName     String
+  /// Waqf: whom the endowment is made on behalf of. Thanks: unused.
+  dedicatedTo   String?
+  issuedAt      DateTime        @default(now())
+  /// The locale the donation was made in — the document renders in it.
+  locale        String
+
+  donation Donation          @relation(fields: [donationId], references: [id], onDelete: Cascade)
+  waqfItem DonationWaqfItem? @relation(fields: [waqfItemId], references: [id])
+
+  /// One thank-you certificate per donation; waqf certificates are keyed by
+  /// their line through `waqfItemId` above.
+  @@unique([donationId, type, waqfItemId])
+  @@index([donorId])
+}
+
+/// The official receipt number for a confirmed donation. The donation id is
+/// the internal reference; this is the number the accounting document shows
+/// and the finance team files by.
+model DonationReceipt {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  receiptNo  String   @unique
+  number     Int
+  donationId String   @unique @db.ObjectId
+  /// Short code printed on the receipt that ties the paper copy to this row.
+  verifyCode String   @unique
+  issuedAt   DateTime @default(now())
+  locale     String
+
+  donation Donation @relation(fields: [donationId], references: [id], onDelete: Cascade)
+}
+
+/// Atomic counters behind the serials. One row per sequence key
+/// (`waqf-share`, `waqf-meter`, `thanks-2026`, `receipt-2026`); `value` is the
+/// last number handed out.
+model DocumentSequence {
+  id    String @id @map("_id")
+  value Int
 }
 
 enum SubscriptionStatus {
@@ -1331,6 +1442,10 @@ model GlobalSettings {
   /// overrides), frequencies, destinations, title. Shape and defaults in
   /// `lib/minbar/quick-donation.ts`; null means "the defaults".
   quickDonation        Json?
+  /// Dashboard overrides for the certificate / receipt wording, per template and
+  /// per locale: `{ thanks: { ar: { title, body, … } }, waqf: {…}, receipt: {…} }`.
+  /// Shape and defaults in `lib/certificates/copy.ts`; null means "the i18n text".
+  certificateCopy      Json?
   /// Master switch for the PayFor (Ziraat Katılım) 3D Secure gateway. When false,
   /// every donation is forced through the main gateway regardless of currency.
   payforEnabled        Boolean  @default(true)

@@ -737,7 +737,12 @@
     "inNameOf": "Op Naam Van",
     "certWord": "Certificaat",
     "shareUnitTitle": "Waqf-aandeel",
-    "meterUnitTitle": "Waqf-meter"
+    "meterUnitTitle": "Waqf-meter",
+    "rcpVerifyLabel": "Verificatiecode",
+    "rcpCopyOf": "Exemplaar",
+    "waqfPreviewNumberNote": "Voorbeeldnummer — het officiële nummer wordt door de server uitgegeven na bevestiging van de betaling",
+    "printDocument": "Afdrukken",
+    "landscapeVersion": "Goedgekeurde versie (liggend)"
   },
   "common": {
     "donate": "Doneer nu",

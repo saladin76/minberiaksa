@@ -737,7 +737,12 @@
     "inNameOf": "以此名义",
     "certWord": "证书",
     "shareUnitTitle": "瓦克夫份额",
-    "meterUnitTitle": "瓦克夫米"
+    "meterUnitTitle": "瓦克夫米",
+    "rcpVerifyLabel": "验证码",
+    "rcpCopyOf": "副本",
+    "waqfPreviewNumberNote": "预览编号 — 正式编号将在付款确认后由服务器签发",
+    "printDocument": "打印",
+    "landscapeVersion": "正式版本（横向）"
   },
   "common": {
     "donate": "捐赠",

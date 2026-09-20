@@ -60,6 +60,8 @@ export type PreparedSendInput = {
   subject?: string | null;
   html?: string | null;
   text?: string | null;
+  /** Email only: files to attach (base64 content). */
+  attachments?: Array<{ filename: string; content: string; contentType: string }>;
 };
 
 export type PreparedSendResult =
@@ -93,6 +95,7 @@ export async function sendPreparedDelivery(input: PreparedSendInput, runtime?: C
       html: input.html ?? "",
       text: input.text,
       senderEmail: input.sender?.senderEmail,
+      attachments: input.attachments,
     }, bundle.elasticEmail);
     if (!res.ok) return { ok: false, provider: EMAIL_PROVIDER_ID, reason: res.reason, detail: res.detail };
     return { ok: true, provider: res.providerId, providerMessageId: res.providerMessageId, internalAccepted: res.internalAccepted };

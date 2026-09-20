@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="design-tokens.css">
+<link rel="stylesheet" href="locale-fonts.css">
+<script>window.MIA_NS = ["certificates"];</script>
+<script src="./i18n.js"></script>
+<style>
+  :root { --deep:#10212B; --navy:#132C38; --gold:#D39A27; --gold-2:#B8811C; --red:#A93428; --ivory:#FFFDF8; --sand:#F7F2EA; --muted:#52616B; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--sand); font-family: Cairo, system-ui, sans-serif; color: var(--deep); direction: rtl; }
+  a { color: var(--gold-2); }
+  a:hover { color: var(--red); }
+  @media print {
+    html, body { background: #fff; margin: 0; padding: 0; height: auto; }
+    .no-print { display: none !important; }
+    .cert-wrap { padding: 0 !important; min-height: 0 !important; }
+    .cert-sheet { box-shadow: none !important; margin: 0 !important; width: 296mm !important; height: 209mm !important; min-height: 0 !important; max-width: none !important; aspect-ratio: auto !important; break-inside: avoid; page-break-inside: avoid; overflow: hidden; }
+    * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+    /* في الطباعة تُوزَّع الصفوف الأربعة على كامل الورقة بدل تكدّسها في الأعلى */
+    .cert-body { grid-template-rows: auto auto 1fr auto !important; }
+    .cert-main { align-content: center !important; }
+    @page { size: A4 landscape; margin: 0; }
+  }
+</style>
+</helmet>
+
+<div class="cert-wrap" style="min-height: 100vh; padding: 28px 20px 44px;">
+
+  <dc-import name="شهادة الشكر لوحة" donor-name="{{ donorName }}" title="{{ title }}" verse="{{ verse }}" body="{{ body }}" dua-verse="{{ duaVerse }}" dua-text="{{ duaText }}" motto="{{ motto }}" hint-size="100%,750px"></dc-import>
+
+  <div class="no-print" style="display: flex; justify-content: center; gap: 12px; flex-wrap: wrap; padding-top: 26px;">
+    <button onClick="{{ print }}" style="display: inline-flex; align-items: center; gap: 9px; height: 48px; padding: 0 26px; border: 0; border-radius: 8px; background: var(--gold); color: var(--deep); font-family: inherit; font-size: 14px; font-weight: 900; cursor: pointer; white-space: nowrap; transition: filter .18s ease;" style-hover="filter: brightness(1.06);">
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9V3h12v6M6 18H4v-6h16v6h-2M8 14h8v7H8z"></path></svg>
+      {{ tSavePdf }}
+    </button>
+    <a href="شهادة الشكر - احتياطي بالطول.dc.html" style="display: inline-flex; align-items: center; gap: 9px; height: 48px; padding: 0 24px; border-radius: 8px; border: 1px solid rgba(16,33,43,.16); background: #fff; font-size: 14px; font-weight: 800; color: var(--deep); text-decoration: none;" style-hover="border-color: var(--gold);">{{ tPortrait }}</a>
+  </div>
+
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1120,&quot;height&quot;:820},&quot;donorName&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;بيانات المتبرع&quot;},&quot;title&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;شكر وتقدير&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;النصوص&quot;},&quot;verse&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;النصوص&quot;},&quot;body&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;النصوص&quot;},&quot;duaVerse&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;النصوص&quot;},&quot;duaText&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;النصوص&quot;},&quot;motto&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;لنكن للقدس منبرًا&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;النصوص&quot;}}">
+/*
+ * شهادة الشكر — النسخة العرضية (Landscape A4) — النسخة الأساسية المعتمدة
+ * ------------------------------------------------------------------------
+ * حالة الاعتماد: أساسية (Primary). هذه هي الشهادة التي تُصدَر للمتبرع افتراضيًا
+ * وتُرسل بالبريد بعد نجاح التبرع. النسخة الطولية «شهادة الشكر.dc.html» بديلة
+ * تظهر داخل لوحة التحكم فقط كخيار للمشرف.
+ * جميع نصوص النسختين قابلة للتعديل من لوحة التحكم بشكل مستقل.
+ * ---------------------------------------------
+ * نفس محتوى «شهادة الشكر.dc.html» و props نفسها، لكن بتخطيط عرضي
+ * (A4 landscape) يناسب البرواز الأفقي على المكتب أو الجدار.
+ *
+ * منطق العمل وربط الداشبورد:
+ *   - جميع الحقول props تُحقن من الخادم بعد نجاح التبرع، مطابقة للنسخة الطولية،
+ *     فيمكن للداشبورد إصدار الاتجاهين من نفس البيانات دون ازدواج محتوى.
+ *   - إعداد الاتجاه المفضّل (طولي/عرضي) يُخزَّن كخيار في إعدادات الشهادات.
+ *   - الطباعة: A4 عرضي بلا هوامش، مع هامش أمان 2مم لمنع الانقسام لصفحتين.
+ *     يلزم تفعيل "Background graphics" في نافذة الطباعة لظهور الزخرفة.
+ */
+class Component extends DCLogic {
+  /* النصوص من حزمة certificates — اللوحة المضمّنة تترجم fallbacks نفسها،
+     وهذه الصفحة تمرّر props فقط عندما يحقنها الخادم. */
+  tr(key, arFallback) {
+    const g = window.MIA_I18N;
+    return (g && g.t("certificates", key)) || arFallback;
+  }
+  componentDidMount() {
+    this._onLang = () => this.forceUpdate();
+    window.addEventListener("mia:langchange", this._onLang);
+    if (window.MIA_I18N && window.MIA_I18N.load) window.MIA_I18N.load().then(() => this.forceUpdate());
+  }
+  componentWillUnmount() { window.removeEventListener("mia:langchange", this._onLang); }
+  renderVals() {
+    const p = this.props || {};
+    return {
+      verse: p.verse || "",
+      title: p.title || "",
+      donorName: p.donorName || "",
+      body: p.body || "",
+      duaVerse: p.duaVerse || "",
+      duaText: p.duaText || "",
+      motto: p.motto || "",
+      tSavePdf: this.tr("savePdfCert", "حفظ الشهادة PDF"),
+      tPortrait: this.tr("portraitVersion", "النسخة الطولية"),
+      print: () => window.print(),
+    };
+  }
+}
+
+</script>
+</body>
+</html>

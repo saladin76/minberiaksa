@@ -104,6 +104,8 @@ export async function sendAutomaticEmailMessage(
     renderedBody: string;
     /** Resolved sender identity: enabled EMAIL sender email → ELASTIC_EMAIL_SENDER_EMAIL. */
     senderEmail: string | null;
+    /** PDFs generated for this event (the confirmation email's certificate and receipt). */
+    attachments?: Array<{ filename: string; content: string; contentType: string }>;
   }
 ): Promise<AutomaticResult> {
   const base = {
@@ -141,6 +143,7 @@ export async function sendAutomaticEmailMessage(
     to: input.recipientEmail,
     subject: input.renderedSubject,
     html: input.renderedBody,
+    attachments: input.attachments,
   });
 
   if (!res.ok) {

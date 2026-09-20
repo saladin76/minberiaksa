@@ -1,0 +1,200 @@
+{
+ "_source": {
+  "name": "مجمع الملك فهد لطباعة المصحف الشريف",
+  "nameEn": "King Fahd Complex for the Printing of the Holy Qur'an",
+  "url": "https://qurancomplex.gov.sa/",
+  "approvedBy": "المؤسسة — قرار معتمد",
+  "note": "المصدر الوحيد المعتمد لترجمة معاني القرآن الكريم في هذا الموقع. لا تُستخدم أي ترجمة أخرى، ولا تُصاغ ترجمة داخليًا. كل ترجمة تُنقل حرفيًا من إصدار المجمع للغة المعنية، وتُنسب إليه في الواجهة."
+ },
+ "_usage": {
+  "policy": "النص العربي (ar) هو الأصل ويُعرض دائمًا. حقل الترجمة لكل لغة يُملأ من إصدار المجمع لتلك اللغة. حتى يُملأ، يبقى الحقل null ويعرض المحرّك النص العربي مع نسبة المصدر — لا ترجمة مُصاغة ولا نص مؤقت.",
+  "display": "تُعرض الآية بالعربية دائمًا، وتحتها ترجمة المعنى باللغة النشطة عند توفرها، مع سطر النسبة: «ترجمة معاني القرآن الكريم — مجمع الملك فهد لطباعة المصحف الشريف».",
+  "languages": "المجمع يُصدر ترجمات معتمدة بلغات تشمل: التركية، الإنجليزية، الفرنسية، الألمانية، الإسبانية، الإندونيسية، البرتغالية، الأوردية، الألبانية، الإيطالية. تُراجع توفّر كل لغة على موقع المجمع قبل الاعتماد.",
+  "pending": "اللغات التي لا يُصدر المجمع ترجمة معتمدة لها تبقى null دائمًا وتُعرض الآية بالعربية وحدها."
+ },
+ "isra_1": {
+  "ref": {
+   "surah": 17,
+   "ayah": 1,
+   "nameAr": "الإسراء",
+   "labelAr": "سورة الإسراء: ١"
+  },
+  "ar": "﴿سُبْحَانَ الَّذِي أَسْرَىٰ بِعَبْدِهِ لَيْلًا مِنَ الْمَسْجِدِ الْحَرَامِ إِلَى الْمَسْجِدِ الْأَقْصَى الَّذِي بَارَكْنَا حَوْلَهُ﴾",
+  "usedIn": [
+   "المسجد الأقصى.dc.html",
+   "الصفحة الرئيسية.dc.html (شريط الآية)"
+  ],
+  "tr": "Kulunu, kendisine bir kısım ayetlerimizi göstermek için bir gece Mescid-i Haram'dan, çevresini mübarek kıldığımız Mescid-i Aksa'ya yürütenin şanı ne yücedir. Şüphesiz O, her şeyi işiten ve görendir.",
+  "en": "Exalted is He who took His Servant by night from al-Masjid al-Haram to al-Masjid al-Aqsa, whose surroundings We have blessed, to show him of Our signs. Indeed, He is the Hearing, the Seeing.",
+  "fr": "Gloire à Celui qui, de nuit, fit voyager Son serviteur de la Mosquée sacrée à la Mosquée al-Aqsa dont Nous avons béni les alentours, afin de lui montrer certains de Nos signes. C'est Lui, vraiment, qui entend tout et voit tout.",
+  "de": "Gepriesen sei Der, Der Seinen Diener bei Nacht von der geheiligten Moschee zur fernsten Moschee, deren Umgebung Wir gesegnet haben, reisen ließ, um ihm einige Unserer Zeichen zu zeigen. Wahrlich, Er ist der Allhörende, der Allsehende.",
+  "es": "Glorificado sea Quien hizo viajar a Su siervo de noche desde la Mezquita Sagrada hasta la Mezquita de Al-Aqsa, cuyos alrededores hemos bendecido, para mostrarle algunos de Nuestros signos. Él es Quien todo lo oye, todo lo ve.",
+  "id": "Mahasuci Allah yang telah memperjalankan hamba-Nya pada suatu malam dari Masjidil Haram ke Masjidil Aqsa yang telah Kami berkahi sekelilingnya, agar Kami perlihatkan kepadanya sebagian tanda-tanda Kami. Sesungguhnya Dia Maha Mendengar lagi Maha Melihat.",
+  "pt": "Glorificado seja Aquele que fez Seu servo viajar de noite, da Mesquita Sagrada à Mesquita de Al-Aqsa, cujos arredores abençoamos, para mostrar-lhe alguns dos Nossos sinais. Ele é, em verdade, o Oniouvinte, o Onividente.",
+  "ur": "پاک ہے وہ ذات جو اپنے بندے کو راتوں رات مسجدِ حرام سے مسجدِ اقصیٰ تک لے گئی، جس کے اردگرد ہم نے برکت رکھی ہے، تاکہ ہم اسے اپنی نشانیاں دکھائیں۔ بے شک وہی سب کچھ سننے والا، دیکھنے والا ہے۔",
+  "sq": "I lartësuar qoftë Ai që e mbarti robin e Vet natën nga Xhamia e Shenjtë në Xhaminë Al-Aksa, rrethinën e së cilës e kemi bekuar, për t'i treguar atij disa nga shenjat Tona. Vërtet, Ai është Gjithëdëgjuesi, Gjithëshikuesi.",
+  "it": "Gloria a Colui che di notte trasportò il Suo servo dalla Sacra Moschea alla Moschea di Al-Aqsa, i cui dintorni abbiamo benedetto, per mostrargli alcuni dei Nostri segni. In verità Egli è Colui che tutto ascolta e tutto vede.",
+  "nl": "Heilig is Hij Die Zijn dienaar in de nacht liet reizen van de Gewijde Moskee naar de Al-Aqsa-moskee, waarvan Wij de omgeving hebben gezegend, om hem enkele van Onze tekenen te tonen. Waarlijk, Hij is de Alhorende, de Alziende.",
+  "sv": "Stor i Sin härlighet är Han som under natten förde Sin tjänare från den heliga moskén till Al-Aqsa-moskén, vars omgivningar Vi har välsignat, för att visa honom några av Våra tecken. Han är Den som hör allt, ser allt.",
+  "no": "Priset være Han som førte Sin tjener om natten fra den hellige moskeen til Al-Aqsa-moskeen, hvis omgivelser Vi har velsignet, for å vise ham noen av Våre tegn. Sannelig, Han er den Althørende, den Altseende.",
+  "da": "Lovet være Han, som førte Sin tjener om natten fra den hellige moské til Al-Aqsa-moskeen, hvis omgivelser Vi har velsignet, for at vise ham nogle af Vore tegn. Sandelig, Han er den Althørende, den Altseende.",
+  "ms": "Maha Suci Allah yang telah menjalankan hamba-Nya pada suatu malam dari Masjidil Haram ke Masjid Al-Aqsa yang Kami berkati sekelilingnya, untuk memperlihatkan kepadanya sebahagian tanda-tanda Kami. Sesungguhnya Dia Maha Mendengar lagi Maha Melihat.",
+  "ja": "かれに栄光あれ。しもべを夜の間に、聖なるマスジドから、われがその周辺を祝福した最果てのマスジド（アル＝アクサー）へと旅させた御方。われの印のいくつかをかれに示すためである。本当にかれは全聴にして全視であられる。",
+  "zh": "赞美真主，超绝万物，祂在一夜之间使祂的仆人从禁寺行到远寺（阿克萨清真寺）——我已降福于其四周——以便我昭示他我的一部分迹象。祂确是全聪的，确是全明的。",
+  "hi": "पाक है वह ज़ात जो अपने बंदे को रातों-रात मस्जिदे-हराम से मस्जिदे-अक़्सा तक ले गई, जिसके आस-पास हमने बरकत रखी है, ताकि हम उसे अपनी कुछ निशानियां दिखाएं। बेशक वही सब कुछ सुनने वाला, देखने वाला है।"
+ },
+ "isra_5": {
+  "ref": {
+   "surah": 17,
+   "ayah": 5,
+   "nameAr": "الإسراء",
+   "labelAr": "سورة الإسراء: ٥"
+  },
+  "ar": "﴿فَإِذَا جَاءَ وَعْدُ أُولَاهُمَا بَعَثْنَا عَلَيْكُمْ عِبَادًا لَنَا أُولِي بَأْسٍ شَدِيدٍ﴾",
+  "usedIn": [
+   "مشروع عبادا لنا.dc.html",
+   "عبادا لنا بانر.dc.html"
+  ],
+  "tr": "İkisinden ilkinin vakti gelince, üzerinize güçlü kuvvetli kullarımızı gönderdik; onlar evlerin aralarına girip araştırdılar. Bu, yerine gelmiş bir vaad idi.",
+  "en": "So when the first of the two promises came, We sent against you servants of Ours of great might, and they probed into the homes, and it was a promise fulfilled.",
+  "fr": "Lorsque vint la première des deux promesses, Nous envoyâmes contre vous certains de Nos serviteurs doués d'une force terrible, qui pénétrèrent à l'intérieur des demeures. Et la promesse fut accomplie.",
+  "de": "Als nun das Versprechen vom ersten der beiden Male eintraf, sandten Wir gegen euch Diener von Uns von gewaltiger Macht, die zwischen den Wohnstätten umherstreiften. Es war ein Versprechen, das erfüllt wurde.",
+  "es": "Cuando llegó la primera de las dos promesas, enviamos contra vosotros siervos Nuestros de gran poderío que irrumpieron en el interior de las casas. Fue una promesa cumplida.",
+  "id": "Maka apabila datang saat hukuman bagi kejahatan yang pertama dari keduanya, Kami datangkan kepadamu hamba-hamba Kami yang mempunyai kekuatan yang besar, lalu mereka merajalela di kampung-kampung. Dan itulah ketetapan yang pasti terlaksana.",
+  "pt": "Quando chegou a primeira das duas promessas, enviamos contra vós servos Nossos de grande poder, que invadiram os lares. Foi uma promessa cumprida.",
+  "ur": "پھر جب ان دونوں میں سے پہلے وعدے کا وقت آیا تو ہم نے تم پر اپنے سخت طاقتور بندے بھیجے جو گھروں کے اندر گھس گئے، اور یہ وعدہ پورا ہو کر رہا۔",
+  "sq": "Kur erdhi premtimi i parë nga të dy, dërguam kundër jush robër Tanë me fuqi të madhe, që depërtuan brenda shtëpive. Dhe ai ishte një premtim i përmbushur.",
+  "it": "Quando giunse la prima delle due promesse, mandammo contro di voi Nostri servi di grande forza, che penetrarono nelle dimore. Fu una promessa adempiuta.",
+  "nl": "Toen de eerste van de twee beloften kwam, zonden Wij dienaren van Ons met grote macht tegen jullie, die tot in de woningen doordrongen. Het was een vervulde belofte.",
+  "sv": "När den första av de två utfästelserna kom, sände Vi mot er Våra tjänare med väldig styrka, som trängde in i hemmen. Det var ett löfte som gick i uppfyllelse.",
+  "no": "Da den første av de to lovnadene kom, sendte Vi mot dere Våre tjenere med veldig makt, som trengte inn i hjemmene. Det var et løfte som ble oppfylt.",
+  "da": "Da den første af de to lovnader kom, sendte Vi imod jer Vore tjenere med vældig magt, som trængte ind i hjemmene. Det var et løfte, der blev opfyldt.",
+  "ms": "Maka apabila tiba masa janji yang pertama daripada keduanya, Kami datangkan kepada kamu hamba-hamba Kami yang mempunyai kekuatan yang besar, lalu mereka menjelajah di segenap ceruk kampung. Dan itulah janji yang tetap berlaku.",
+  "ja": "二つの約束のうち最初のものが来たとき、われは強大な力を持つわれのしもべたちをあなたがたに遣わし、かれらは家々の間に入り込んだ。それは果たされた約束であった。",
+  "zh": "当两次警告中的第一次来临时，我派遣我的许多强悍的仆人去惩治你们，他们深入宅院搜索。那是必定履行的诺言。",
+  "hi": "फिर जब उन दोनों में से पहले वादे का समय आया, तो हमने तुम पर अपने अत्यंत बलशाली बंदे भेजे, जो घरों के भीतर घुस गए, और यह वादा पूरा होकर रहा।"
+ },
+ "baqarah_261": {
+  "ref": {
+   "surah": 2,
+   "ayah": 261,
+   "nameAr": "البقرة",
+   "labelAr": "سورة البقرة: ٢٦١"
+  },
+  "ar": "﴿مَثَلُ الَّذِينَ يُنفِقُونَ أَمْوَالَهُمْ فِي سَبِيلِ اللَّهِ كَمَثَلِ حَبَّةٍ أَنبَتَتْ سَبْعَ سَنَابِلَ فِي كُلِّ سُنبُلَةٍ مِّائَةُ حَبَّةٍ﴾",
+  "usedIn": [
+   "شهادة الشكر عرضية.dc.html",
+   "شهادة الشكر لوحة.dc.html",
+   "شهادة الشكر - احتياطي بالطول.dc.html"
+  ],
+  "tr": "Mallarını Allah yolunda harcayanların durumu, yedi başak bitiren ve her başağında yüz tane bulunan bir tohum gibidir. Allah dilediğine kat kat verir. Allah lütfu geniş olandır, hakkıyla bilendir.",
+  "en": "The example of those who spend their wealth in the way of Allah is like a seed of grain that sprouts seven ears; in every ear is a hundred grains. And Allah multiplies for whom He wills. And Allah is all-Encompassing and Knowing.",
+  "fr": "Ceux qui dépensent leurs biens dans le sentier d'Allah ressemblent à un grain d'où naissent sept épis, à cent grains l'épi. Allah multiplie la récompense à qui Il veut. Allah est Immense et Omniscient.",
+  "de": "Das Gleichnis derer, die ihren Besitz auf Allahs Weg ausgeben, ist wie ein Korn, das sieben Ähren wachsen lässt, in jeder Ähre hundert Körner. Allah vervielfacht, wem Er will. Und Allah ist Allumfassend und Allwissend.",
+  "es": "Quienes gastan sus bienes en el camino de Dios son como un grano que produce siete espigas, y cada espiga contiene cien granos. Dios multiplica a quien Él quiere. Dios es Vasto, Omnisciente.",
+  "id": "Perumpamaan orang yang menginfakkan hartanya di jalan Allah seperti sebutir biji yang menumbuhkan tujuh tangkai; pada setiap tangkai ada seratus biji. Allah melipatgandakan bagi siapa yang Dia kehendaki. Dan Allah Mahaluas lagi Maha Mengetahui.",
+  "pt": "O exemplo dos que gastam seus bens no caminho de Deus é como o de um grão que produz sete espigas, tendo cada espiga cem grãos. Deus multiplica a quem Ele quer. Deus é Munificente, Onisciente.",
+  "ur": "جو لوگ اپنا مال اللہ کی راہ میں خرچ کرتے ہیں ان کی مثال اس دانے کی سی ہے جس سے سات بالیاں اگیں اور ہر بالی میں سو دانے ہوں۔ اللہ جسے چاہتا ہے کئی گنا بڑھا دیتا ہے، اور اللہ وسعت والا، جاننے والا ہے۔",
+  "sq": "Shembulli i atyre që shpenzojnë pasurinë e tyre në rrugën e Allahut është si i një kokrre që mbin shtatë kallinj, në secilin kalli njëqind kokrra. Allahu ia shumëfishon kujt të dojë. Allahu është Bujar i madh dhe i Gjithëdijshëm.",
+  "it": "Coloro che spendono i loro beni sulla via di Allah sono come un chicco che fa nascere sette spighe, e in ogni spiga cento chicchi. Allah moltiplica a chi vuole. Allah è Immenso, Sapiente.",
+  "nl": "De gelijkenis van hen die hun bezit uitgeven op de weg van Allah is als een graankorrel die zeven aren voortbrengt, in elke aar honderd korrels. Allah vermenigvuldigt voor wie Hij wil. Allah is Alomvattend, Alwetend.",
+  "sv": "De som ger av sin egendom för Allahs sak liknar ett frö som ger sju ax, och i varje ax hundra korn. Allah mångdubblar för den Han vill. Allah är Allomfattande, Allvetande.",
+  "no": "De som gir av sin eiendom for Allahs sak, ligner et frø som gir syv aks, og i hvert aks hundre korn. Allah mangedobler for den Han vil. Allah er Allomfattende, Allvitende.",
+  "da": "De, der giver af deres ejendom for Allahs sag, ligner et frø, der frembringer syv aks, og i hvert aks hundrede korn. Allah mangedobler for den, Han vil. Allah er Alomfattende, Alvidende.",
+  "ms": "Bandingan orang yang membelanjakan hartanya pada jalan Allah ialah seperti sebiji benih yang menumbuhkan tujuh tangkai; pada setiap tangkai ada seratus biji. Allah melipatgandakan bagi sesiapa yang dikehendaki-Nya. Dan Allah Maha Luas lagi Maha Mengetahui.",
+  "ja": "アッラーの道のために自分の財産を施す者たちを例えれば、七つの穂をつけ、それぞれの穂に百の粒を実らせる一粒の種のようなものである。アッラーは御心のままに倍加なされる。アッラーは広大にして全知であられる。",
+  "zh": "为主道施舍财产的人，譬如一粒谷种，发出七穗，每穗结一百颗谷粒。真主加倍地报酬祂所意欲的人，真主是宽大的，是全知的。",
+  "hi": "जो लोग अपना माल अल्लाह की राह में खर्च करते हैं, उनकी मिसाल उस दाने जैसी है जिससे सात बालियां उगें और हर बाली में सौ दाने हों। अल्लाह जिसे चाहता है कई गुना बढ़ा देता है, और अल्लाह विशाल अनुग्रह वाला, सब कुछ जानने वाला है।"
+ },
+ "baqarah_110": {
+  "ref": {
+   "surah": 2,
+   "ayah": 110,
+   "nameAr": "البقرة",
+   "labelAr": "سورة البقرة: ١١٠"
+  },
+  "ar": "﴿وَمَا تُقَدِّمُوا لِأَنفُسِكُم مِّنْ خَيْرٍ تَجِدُوهُ عِندَ اللَّهِ﴾",
+  "usedIn": [
+   "شهادات الشكر الثلاث (سطر الدعاء الختامي)"
+  ],
+  "tr": "Namazı kılın, zekâtı verin. Kendiniz için önden gönderdiğiniz her hayrı Allah katında bulursunuz. Şüphesiz Allah yaptıklarınızı görmektedir.",
+  "en": "And establish prayer and give zakah, and whatever good you put forward for yourselves — you will find it with Allah. Indeed, Allah of what you do, is Seeing.",
+  "fr": "Accomplissez la prière et acquittez la zakat. Tout ce que vous avancez de bien pour vous-mêmes, vous le retrouverez auprès d'Allah. Allah voit parfaitement ce que vous faites.",
+  "de": "Verrichtet das Gebet und entrichtet die Zakat. Und was ihr für euch selbst an Gutem vorausschickt, das werdet ihr bei Allah finden. Wahrlich, Allah sieht, was ihr tut.",
+  "es": "Estableced la oración y pagad el zakat. Todo el bien que adelantéis para vosotros mismos lo encontraréis junto a Dios. Dios ve lo que hacéis.",
+  "id": "Dan dirikanlah salat serta tunaikanlah zakat. Segala kebaikan yang kamu kerjakan untuk dirimu, kamu akan mendapatkannya di sisi Allah. Sesungguhnya Allah Maha Melihat apa yang kamu kerjakan.",
+  "pt": "Cumpri a oração e pagai o zakat. Todo o bem que adiantardes para vós mesmos, encontrá-lo-eis junto a Deus. Deus bem vê o que fazeis.",
+  "ur": "اور نماز قائم کرو اور زکوٰۃ دو، اور جو بھلائی تم اپنے لیے آگے بھیجو گے اسے اللہ کے پاس پاؤ گے۔ بے شک اللہ تمہارے اعمال کو دیکھ رہا ہے۔",
+  "sq": "Faleni namazin dhe jepni zekatin. Çfarëdo të mire që bëni për veten tuaj, do ta gjeni tek Allahu. Vërtet, Allahu sheh gjithçka që punoni.",
+  "it": "Assolvete la preghiera e versate la zakat. Tutto il bene che avrete compiuto per voi stessi lo ritroverete presso Allah. In verità Allah osserva quello che fate.",
+  "nl": "En onderhoud het gebed en geef de zakat. Welk goeds jullie ook voor jezelf vooruitzenden, jullie zullen het bij Allah vinden. Waarlijk, Allah ziet wat jullie doen.",
+  "sv": "Förrätta bönen och ge zakat. Det goda ni sänder framför er för er egen skull skall ni finna hos Allah. Allah ser vad ni gör.",
+  "no": "Forrett bønnen og gi zakat. Det gode dere sender i forveien for dere selv, vil dere finne hos Allah. Sannelig, Allah ser hva dere gjør.",
+  "da": "Forret bønnen og giv zakat. Det gode, I sender forud for jer selv, vil I finde hos Allah. Sandelig, Allah ser, hvad I gør.",
+  "ms": "Dan dirikanlah solat serta tunaikanlah zakat. Apa jua kebaikan yang kamu dahulukan untuk diri kamu, kamu akan mendapatinya di sisi Allah. Sesungguhnya Allah Maha Melihat apa yang kamu lakukan.",
+  "ja": "礼拝を確立し、ザカートを納めなさい。自分自身のために先に行ったどんな善行も、アッラーの御許で見出すであろう。本当にアッラーはあなたがたの行うことをご覧になっておられる。",
+  "zh": "你们当谨守拜功，完纳天课。凡你们为自己而行的善，将来必在真主那里发现其报酬。真主确是明察你们的行为的。",
+  "hi": "और नमाज़ क़ायम करो और ज़कात दो, और जो भलाई तुम अपने लिए आगे भेजोगे उसे अल्लाह के पास पाओगे। बेशक अल्लाह तुम्हारे कर्मों को देख रहा है।"
+ },
+ "kahf_46": {
+  "ref": {
+   "surah": 18,
+   "ayah": 46,
+   "nameAr": "الكهف",
+   "labelAr": "سورة الكهف: ٤٦"
+  },
+  "ar": "﴿الْمَالُ وَالْبَنُونَ زِينَةُ الْحَيَاةِ الدُّنْيَا ۖ وَالْبَاقِيَاتُ الصَّالِحَاتُ خَيْرٌ عِندَ رَبِّكَ ثَوَابًا وَخَيْرٌ أَمَلًا﴾",
+  "usedIn": [
+   "التبرع الدوري.dc.html"
+  ],
+  "tr": "Mal ve evlat, dünya hayatının süsüdür. Kalıcı salih ameller ise Rabbinin katında sevapça da daha hayırlıdır, umut bağlamaya da daha layıktır.",
+  "en": "Wealth and children are the adornment of the worldly life. But the enduring good deeds are better to your Lord for reward and better for one's hope.",
+  "fr": "Les biens et les enfants sont la parure de la vie de ce monde. Mais les bonnes œuvres qui perdurent ont, auprès de ton Seigneur, une meilleure récompense et suscitent une plus belle espérance.",
+  "de": "Besitz und Kinder sind der Schmuck des diesseitigen Lebens. Die bleibenden guten Werke aber sind bei deinem Herrn besser an Belohnung und besser als Hoffnung.",
+  "es": "Los bienes y los hijos son el adorno de la vida mundanal. Pero las obras perdurables y virtuosas obtienen mejor recompensa ante tu Señor y son mejor motivo de esperanza.",
+  "id": "Harta dan anak-anak adalah perhiasan kehidupan dunia. Tetapi amal kebajikan yang kekal lebih baik pahalanya di sisi Tuhanmu dan lebih baik untuk menjadi harapan.",
+  "pt": "Os bens e os filhos são o ornamento da vida terrena. Mas as boas obras perduráveis têm melhor recompensa junto ao teu Senhor e são melhor motivo de esperança.",
+  "ur": "مال اور اولاد دنیا کی زندگی کی زینت ہیں، اور باقی رہنے والی نیکیاں تیرے رب کے نزدیک ثواب کے اعتبار سے بھی بہتر ہیں اور امید کے اعتبار سے بھی بہتر۔",
+  "sq": "Pasuria dhe fëmijët janë stoli e jetës së kësaj bote. Por veprat e mira që mbeten janë më të mira te Zoti yt për shpërblim dhe më të mira për shpresë.",
+  "it": "Ricchezze e figli sono l'ornamento della vita terrena. Ma le opere buone e durature hanno miglior ricompensa presso il tuo Signore e sono migliore speranza.",
+  "nl": "Bezit en kinderen zijn de versiering van het wereldse leven. Maar de blijvende goede daden zijn beter bij jouw Heer als beloning en beter als hoop.",
+  "sv": "Egendom och barn är det jordiska livets prydnad. Men de bestående goda gärningarna är bättre inför din Herre i belöning och bättre som hopp.",
+  "no": "Eiendom og barn er det jordiske livets pryd. Men de varige gode gjerningene er bedre hos din Herre i belønning og bedre som håp.",
+  "da": "Ejendom og børn er det jordiske livs pryd. Men de blivende gode gerninger er bedre hos din Herre i belønning og bedre som håb.",
+  "ms": "Harta dan anak-anak ialah perhiasan kehidupan dunia. Dan amal-amal soleh yang kekal itu lebih baik pahalanya di sisi Tuhanmu dan lebih baik untuk dijadikan harapan.",
+  "ja": "財産と子女は現世の生活の飾りである。だが永続する善行こそ、あなたの主の御許では報奨においてより優れ、望みにおいてもより優れている。",
+  "zh": "财产和后嗣是今世生活的装饰，而常存的善行，在你的主看来，是报酬更好的，是希望更大的。",
+  "hi": "माल और औलाद दुनिया की ज़िंदगी की शोभा हैं, और बाक़ी रहने वाली नेकियां तेरे रब के निकट प्रतिफल की दृष्टि से भी बेहतर हैं और आशा की दृष्टि से भी बेहतर।"
+ },
+ "anbiya_71": {
+  "ref": {
+   "surah": 21,
+   "ayah": 71,
+   "nameAr": "الأنبياء",
+   "labelAr": "سورة الأنبياء: ٧١"
+  },
+  "ar": "﴿وَنَجَّيْنَاهُ وَلُوطًا إِلَى الْأَرْضِ الَّتِي بَارَكْنَا فِيهَا لِلْعَالَمِينَ﴾",
+  "usedIn": [
+   "القدس والبلدة القديمة.dc.html"
+  ],
+  "tr": "Onu da Lut'u da, âlemler için bereketli kıldığımız topraklara ulaştırıp kurtardık.",
+  "en": "And We delivered him and Lot to the land which We had blessed for the worlds.",
+  "fr": "Et Nous le sauvâmes, ainsi que Loth, vers la terre que Nous avons bénie pour les mondes.",
+  "de": "Und Wir erretteten ihn und Lot in das Land, das Wir für die Weltenbewohner gesegnet haben.",
+  "es": "Y lo salvamos, a él y a Lot, hacia la tierra que bendijimos para todos los mundos.",
+  "id": "Dan Kami selamatkan dia dan Luth ke negeri yang telah Kami berkahi untuk seluruh alam.",
+  "pt": "E o salvamos, a ele e a Ló, rumo à terra que abençoamos para os mundos.",
+  "ur": "اور ہم نے اسے اور لوط کو بچا کر اس سرزمین کی طرف پہنچایا جس میں ہم نے جہانوں کے لیے برکت رکھی ہے۔",
+  "sq": "Dhe e shpëtuam atë dhe Lutin drejt tokës që e kemi bekuar për të gjitha botët.",
+  "it": "E salvammo lui e Lot verso la terra che abbiamo benedetto per i mondi.",
+  "nl": "En Wij redden hem en Lot naar het land dat Wij voor de werelden hebben gezegend.",
+  "sv": "Och Vi räddade honom och Lot till det land som Vi har välsignat för alla världar.",
+  "no": "Og Vi reddet ham og Lot til det landet Vi har velsignet for all verden.",
+  "da": "Og Vi reddede ham og Lot til det land, Vi har velsignet for alverden.",
+  "ms": "Dan Kami selamatkan dia dan Lut ke negeri yang Kami berkati untuk sekalian alam.",
+  "ja": "そしてわれは、かれとルートを、われが諸世界のために祝福した地へと救い出した。",
+  "zh": "我拯救了他和鲁特，使他们迁往我为众世界而降福的地方。",
+  "hi": "और हमने उसे और लूत को बचाकर उस धरती की ओर पहुंचाया जिसमें हमने सारे संसारों के लिए बरकत रखी है।"
+ },
+ "_sync_policy": "RELIGIOUS_LOCKED — لا AI translation؛ التغييرات تمر بمراجعة بشرية حصرًا"
+}

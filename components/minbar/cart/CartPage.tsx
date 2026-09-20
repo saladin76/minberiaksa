@@ -62,6 +62,7 @@ export default function CartPage({ projects, categories }: { projects: MinbarPro
   const t = useTranslations("cart");
   const tCommon = useTranslations("common");
   const tProjects = useTranslations("projects");
+  const tCert = useTranslations("certificates");
   const { format } = useMinbarMoney();
   const { items, replace, remove, hydrated } = useMinbarCart();
 
@@ -93,6 +94,12 @@ export default function CartPage({ projects, categories }: { projects: MinbarPro
     if (item.categoryId) {
       const fromCms = categoryTitleById.get(item.categoryId);
       if (fromCms) return fromCms;
+    }
+    /* A waqf row names its unit, count and endower — the same line the
+       certificate will carry — resolved live in the reader's language. */
+    if (item.waqf) {
+      const unit = item.waqf.unit === "meter" ? tCert("meterUnitTitle") : tCert("shareUnitTitle");
+      return `${unit} × ${item.waqf.count}${item.waqf.donorName ? ` — ${tCert("inNameOf")} ${item.waqf.donorName}` : ""}`;
     }
     if (item.titleKey) {
       if (t.has(item.titleKey)) return t(item.titleKey);

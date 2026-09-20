@@ -9,8 +9,9 @@ import { formatMoney } from "@/lib/minbar/money";
 import { addToCart, type CartFreqKey } from "@/lib/minbar/cart";
 import type { MinbarDonationSummary } from "@/lib/minbar/donation";
 import { Button } from "@/components/minbar/ds";
-import ThanksCertificate from "@/components/minbar/certificates/ThanksCertificate";
+import type { SuccessDocuments } from "@/lib/certificates/documents";
 import Confetti from "./Confetti";
+import DocumentsPanel from "./DocumentsPanel";
 import type { VerseBlock } from "@/lib/minbar/quran";
 
 /**
@@ -22,11 +23,12 @@ import type { VerseBlock } from "@/lib/minbar/quran";
  * card was charged; then the documents to keep; then an invitation to make
  * the gift recurring.
  *
- * Two departures from the handoff, both because this one has a server behind it:
+ * The documents — receipt, thank-you certificate, a waqf certificate per waqf
+ * line — are the download surface of `CERTIFICATES_DOWNLOADS_HANDOFF §5`,
+ * in `DocumentsPanel`: live previews of the real sheets, downloads of the
+ * server's PDFs of the records issued at confirmation.
  *
- *  - The receipt is the real PDF from `/api/donations/{id}/receipt`, not a
- *    rendered preview. It is the document a donor files, and it must be the
- *    same one the foundation's records hold.
+ * One departure from the handoff, because this one has a server behind it:
  *
  *  - The handoff's recurring step ends in "confirm", implying a plan starts
  *    there. A recurring plan needs a payment method, which this page has not
@@ -46,13 +48,7 @@ const FREQUENCIES: ReadonlyArray<{ key: Exclude<CartFreqKey, "once">; labelKey: 
 /** The quick-pick amounts, in USD, carried from the handoff. */
 const SUGGESTED = [50, 100, 200, 500];
 
-const DownloadIcon = (
-  <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-    <path d="M12 3v12m0 0 4-4m-4 4-4-4M4 21h16" />
-  </svg>
-);
-
-export default function SuccessPage({ donation, verse }: { donation: MinbarDonationSummary; verse: VerseBlock }) {
+export default function SuccessPage({ donation, verse, documents }: { donation: MinbarDonationSummary; verse: VerseBlock; documents: SuccessDocuments | null }) {
   const locale = useLocale();
   const router = useRouter();
   const t = useTranslations("system");
@@ -81,8 +77,6 @@ export default function SuccessPage({ donation, verse }: { donation: MinbarDonat
   }, [session?.user?.id, donation.id]);
 
   const [copied, setCopied] = useState(false);
-  const [certOpen, setCertOpen] = useState(false);
-  const [certName, setCertName] = useState(donation.donorName ?? "");
 
   const [freq, setFreq] = useState<Exclude<CartFreqKey, "once"> | null>(null);
   const [amountMode, setAmountMode] = useState<"same" | "other" | null>(null);
@@ -260,73 +254,32 @@ export default function SuccessPage({ donation, verse }: { donation: MinbarDonat
             </div>
 
             <div style={{ display: "grid", gap: 6, paddingTop: 12, borderTop: "1px solid var(--border)", fontSize: 13 }}>
-              <SummaryRow label={t("receiptNo")} value={donation.receiptNo} ltr />
+              {/* The official number once issued; until the webhook lands, the
+                  handoff's "being issued". The internal id is never shown as a
+                  receipt number. */}
+              <SummaryRow label={t("receiptNo")} value={documents?.receiptNo ?? t("issuing")} ltr={Boolean(documents?.receiptNo)} />
               <SummaryRow label={t("successDate")} value={dateText} />
               {methodText ? <SummaryRow label={tCart("paymentMethod")} value={methodText} /> : null}
             </div>
           </div>
 
           {/* ── The documents, and sharing the good ────────────────────── */}
-          <div className="succ-in succ-in-4" style={{ width: "100%", display: "flex", gap: 10, flexWrap: "wrap", justifyContent: "center" }}>
-            <a
-              href={`/api/donations/${donation.id}/receipt?locale=${encodeURIComponent(locale)}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="succ-link"
-              style={{ display: "inline-flex", alignItems: "center", gap: 9, height: 46, padding: "0 20px", borderRadius: 8, border: "1px solid var(--border)", background: "#fff", fontFamily: "inherit", fontWeight: 800, fontSize: 14, color: "var(--deep)" }}
-            >
-              {DownloadIcon}
-              {t("downloadReceipt")}
-            </a>
-
-            <button
-              type="button"
-              onClick={() => setCertOpen((open) => !open)}
-              aria-expanded={certOpen}
-              className="succ-link2"
-              style={{ display: "inline-flex", alignItems: "center", gap: 9, height: 46, padding: "0 20px", borderRadius: 8, border: "1px solid rgba(211,154,39,.55)", background: "rgba(211,154,39,.1)", fontFamily: "inherit", fontWeight: 800, fontSize: 14, color: "var(--deep)", cursor: "pointer" }}
-            >
-              {DownloadIcon}
-              {t("downloadThankYouCert")}
-            </button>
-
-            <button
-              type="button"
-              onClick={share}
-              className="succ-link"
-              style={{ display: "inline-flex", alignItems: "center", gap: 9, height: 46, padding: "0 20px", borderRadius: 8, border: "1px solid var(--border)", background: "#fff", fontFamily: "inherit", fontWeight: 800, fontSize: 14, color: copied ? "var(--green)" : "var(--deep)", cursor: "pointer" }}
-            >
-              <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="18" cy="5" r="2.6" /><circle cx="6" cy="12" r="2.6" /><circle cx="18" cy="19" r="2.6" /><path d="M8.8 13.4l6.4 3.9M15.2 6.7l-6.4 3.9" /></svg>
-              {copied ? t("successCopied") : t("successShare")}
-            </button>
-          </div>
-
-          {certOpen ? (
-            <div style={{ width: "100%", display: "grid", gap: 16, padding: 22, background: "#fff", border: "1px solid var(--border)", borderRadius: 14, textAlign: "start" }}>
-              <label style={{ display: "grid", gap: 7 }}>
-                <b style={{ fontSize: 13, fontWeight: 800 }}>{t("certNameLabel")}</b>
-                <input
-                  value={certName}
-                  onChange={(event) => setCertName(event.target.value)}
-                  placeholder={t("writeYourName")}
-                  style={{ height: 46, padding: "0 14px", borderRadius: 8, border: "1px solid var(--border)", background: "#fff", fontFamily: "inherit", fontSize: 14, color: "var(--deep)" }}
-                />
-              </label>
-              {/* The plaque sizes itself from its own width, so the preview and
-                  the printed sheet are the same component at two widths. */}
-              <div className="succ-cert">
-                <ThanksCertificate donorName={certName.trim()} />
-              </div>
+          <DocumentsPanel
+            documents={documents}
+            donationId={donation.id}
+            donorName={donation.donorName ?? ""}
+            extraButtons={
               <button
                 type="button"
-                onClick={() => window.print()}
-                style={{ justifySelf: "center", display: "inline-flex", alignItems: "center", gap: 9, height: 46, padding: "0 24px", borderRadius: 8, border: 0, background: "var(--gold)", color: "#10212B", fontFamily: "inherit", fontWeight: 900, fontSize: 14, cursor: "pointer" }}
+                onClick={share}
+                className="succ-link"
+                style={{ display: "inline-flex", alignItems: "center", gap: 9, height: 46, padding: "0 20px", borderRadius: 8, border: "1px solid var(--border)", background: "#fff", fontFamily: "inherit", fontWeight: 800, fontSize: 14, color: copied ? "var(--green)" : "var(--deep)", cursor: "pointer" }}
               >
-                {DownloadIcon}
-                {tCommon("thankYouCertificate")}
+                <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="18" cy="5" r="2.6" /><circle cx="6" cy="12" r="2.6" /><circle cx="18" cy="19" r="2.6" /><path d="M8.8 13.4l6.4 3.9M15.2 6.7l-6.4 3.9" /></svg>
+                {copied ? t("successCopied") : t("successShare")}
               </button>
-            </div>
-          ) : null}
+            }
+          />
 
           {donation.recurring ? (
             <div style={{ position: "relative", width: "100%", display: "flex", alignItems: "center", gap: 14, padding: "20px 24px", background: "var(--deep)", borderRadius: 12, textAlign: "start" }}>

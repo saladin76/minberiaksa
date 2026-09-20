@@ -20,6 +20,8 @@ import { resolveGuestDonor } from "@/lib/users/resolve-guest-donor";
 import { createBankTransferClaim } from "@/lib/donations/bank-transfer-claims";
 import { BANK_TRANSFER_PROVIDER } from "@/lib/donations/bank-transfer-shared";
 import { listBankAccounts } from "@/lib/minbar/cms";
+import { getUsdBaseRatesForServer } from "@/lib/exchange/rates-service";
+import { WAQF_MAX_COUNT, WAQF_UNIT_PRICE_USD, isWaqfUnitKey } from "@/lib/minbar/waqf";
 
 const PAYMENT_METHODS = new Set(["CARD", "PAYPAL", "BANK_TRANSFER"]);
 
@@ -107,6 +109,7 @@ export async function POST(request: NextRequest) {
     const {
       items: itemsIn,
       categoryItems: categoryItemsIn,
+      waqfItems: waqfItemsIn,
       currency,
       teamSupport = 0,
       coverFees = false,
@@ -130,15 +133,31 @@ export async function POST(request: NextRequest) {
       shareCount?: number;
     };
     type CategoryItemIn = { categoryId: string; amount: number };
+    type WaqfItemIn = { unit: "share" | "meter"; count: number; donorName: string; onBehalf: string };
 
-    /* A line gives either to a campaign or to a category as a whole (a
-       category page's donation box may target the category itself). The two
-       lists are independent; an order needs at least one line of either kind. */
+    /* A line gives either to a campaign, to a category as a whole (a category
+       page's donation box may target the category itself), or buys waqf units.
+       The lists are independent; an order needs at least one line of any kind. */
     const items: CartItemIn[] = Array.isArray(itemsIn) ? itemsIn : [];
     const categoryItems: CategoryItemIn[] = Array.isArray(categoryItemsIn) ? categoryItemsIn : [];
+    const waqfItemsRaw: unknown[] = Array.isArray(waqfItemsIn) ? waqfItemsIn : [];
+
+    /* Waqf lines arrive without a price: the unit price is the server's, and
+       both names are required because both go on the certificate. */
+    const waqfItems: WaqfItemIn[] = [];
+    for (const raw of waqfItemsRaw) {
+      const line = raw && typeof raw === "object" ? (raw as Record<string, unknown>) : null;
+      const count = line && typeof line.count === "number" && Number.isInteger(line.count) ? line.count : NaN;
+      const donorName = line && typeof line.donorName === "string" ? line.donorName.trim().slice(0, 120) : "";
+      const onBehalf = line && typeof line.onBehalf === "string" ? line.onBehalf.trim().slice(0, 120) : "";
+      if (!line || !isWaqfUnitKey(line.unit) || !(count >= 1 && count <= WAQF_MAX_COUNT) || !donorName || !onBehalf) {
+        return NextResponse.json({ error: "Every waqf line needs a unit, a count and both names" }, { status: 400 });
+      }
+      waqfItems.push({ unit: line.unit, count, donorName, onBehalf });
+    }
 
     // Validate required fields
-    if ((!items.length && !categoryItems.length) || !currency || !paymentMethod) {
+    if ((!items.length && !categoryItems.length && !waqfItems.length) || !currency || !paymentMethod) {
       return NextResponse.json(
         { error: "Items, currency, and payment method are required" },
         { status: 400 }
@@ -199,8 +218,35 @@ export async function POST(request: NextRequest) {
 
     // Card payments are handled via PayFor 3D Secure redirect flow (we do not store PAN/CVV).
 
+    /* Waqf lines priced in the order's currency from the USD unit price. The
+       rate is the same USD-base table the rest of the site converts with. */
+    const currencyForWaqf = normalizeDonationCurrencyCode(currency);
+    let waqfResolved: Array<WaqfItemIn & { unitPrice: number; amount: number; amountUSD: number }> = [];
+    if (waqfItems.length) {
+      let usdRate = 1;
+      if (currencyForWaqf !== "USD") {
+        try {
+          const rates = await getUsdBaseRatesForServer();
+          const rate = rates[currencyForWaqf];
+          if (!(typeof rate === "number" && rate > 0)) throw new Error(`no rate for ${currencyForWaqf}`);
+          usdRate = rate;
+        } catch (e) {
+          console.error("[cart/payment] waqf pricing rate:", e);
+          return NextResponse.json(
+            { error: "Exchange rate unavailable. Please try again in a moment." },
+            { status: 503 }
+          );
+        }
+      }
+      waqfResolved = waqfItems.map((line) => {
+        const unitPrice = WAQF_UNIT_PRICE_USD[line.unit];
+        const amountUSD = unitPrice * line.count;
+        return { ...line, unitPrice, amountUSD, amount: Math.round(amountUSD * usdRate * 100) / 100 };
+      });
+    }
+
     // Calculate totals
-    const totalAmount = [...items, ...categoryItems].reduce(
+    const totalAmount = [...items, ...categoryItems, ...waqfResolved].reduce(
       (sum: number, item: { amount: number }) => sum + item.amount,
       0
     );
@@ -323,6 +369,24 @@ export async function POST(request: NextRequest) {
         }
       : {};
 
+    /* Waqf lines on the donation only: they are what the certificates are
+       issued for. A recurring waqf plan's later charges are plain donations. */
+    const waqfLines = waqfResolved.length
+      ? {
+          waqfItems: {
+            create: waqfResolved.map((line) => ({
+              unit: line.unit === "meter" ? ("METER" as const) : ("SHARE" as const),
+              count: line.count,
+              unitPrice: line.unitPrice,
+              amount: line.amount,
+              amountUSD: line.amountUSD,
+              donorName: line.donorName,
+              onBehalf: line.onBehalf,
+            })),
+          },
+        }
+      : {};
+
     const referralId = await resolveReferralId(referralCode);
 
     const validLocale =
@@ -374,6 +438,7 @@ export async function POST(request: NextRequest) {
             cardDetails: null,
             ...campaignLines,
             ...categoryLines,
+            ...waqfLines,
           },
           include: {
             donor: { select: { name: true, email: true } },
@@ -453,6 +518,7 @@ export async function POST(request: NextRequest) {
             : {}),
           ...campaignLines,
           ...categoryLines,
+          ...waqfLines,
         },
         include: {
           donor: { select: { name: true, email: true } },

@@ -1771,7 +1771,12 @@
     "inNameOf": "In the Name Of",
     "certWord": "Certificate",
     "shareUnitTitle": "Endowment Share",
-    "meterUnitTitle": "Endowment Meter"
+    "meterUnitTitle": "Endowment Meter",
+    "rcpVerifyLabel": "Verification code",
+    "rcpCopyOf": "Copy",
+    "waqfPreviewNumberNote": "Preview number — the official number is issued by the server after payment is confirmed",
+    "printDocument": "Print",
+    "landscapeVersion": "Approved version (landscape)"
   },
   "common": {
     "donate": "Donate Now",

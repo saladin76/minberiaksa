@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="design-tokens.css">
+<link rel="stylesheet" href="locale-fonts.css">
+<script>window.MIA_NS = ["certificates"];</script>
+<script src="./i18n.js"></script>
+</helmet>
+
+<div class="cert-sheet" dir="{{ certDir }}" style="position: relative; width: 100%; max-width: 1060px; margin: 0 auto; aspect-ratio: 1.414/1; container-type: inline-size; background: #FFFEFB; box-shadow: 0 26px 70px rgba(16,33,43,.18); overflow: hidden; font-family: Cairo, system-ui, sans-serif; color: #10212B;">
+
+  <div aria-hidden="true" style="position: absolute; inset: 0; background:
+    radial-gradient(circle at 50% 40%, rgba(255,255,255,.9) 0 38%, rgba(247,242,234,.55) 100%),
+    repeating-conic-gradient(from 45deg at 0 0, rgba(211,154,39,.13) 0deg 90deg, transparent 90deg 180deg) 0 0/30px 30px,
+    radial-gradient(circle at 0 0, transparent 68%, rgba(211,154,39,.16) 69% 71%, transparent 72%) 0 0/30px 30px,
+    radial-gradient(circle at 100% 100%, transparent 68%, rgba(211,154,39,.16) 69% 71%, transparent 72%) 0 0/30px 30px,
+    repeating-linear-gradient(45deg, rgba(211,154,39,.07) 0 1px, transparent 1px 15px),
+    repeating-linear-gradient(-45deg, rgba(211,154,39,.07) 0 1px, transparent 1px 15px);"></div>
+  <img src="assets/aqsa-dome-line.png" alt="" aria-hidden="true" style="position: absolute; inset-inline: 26%; bottom: 5%; width: 48%; height: auto; opacity: .09; pointer-events: none;">
+
+  <div aria-hidden="true" style="position: absolute; inset: 2.4%; border: 2.5px solid #D39A27;"></div>
+  <div aria-hidden="true" style="position: absolute; inset: 3.6%; border: 1px solid rgba(211,154,39,.55);"></div>
+  <div aria-hidden="true" style="position: absolute; inset: 4.8%; border: 1px dashed rgba(211,154,39,.5);"></div>
+
+  <div aria-hidden="true" style="position: absolute; top: 2.4%; inset-inline-start: 2.4%; width: 92px; height: 92px; border-top: 6px solid #D39A27; border-inline-start: 6px solid #D39A27;"></div>
+  <div aria-hidden="true" style="position: absolute; top: 2.4%; inset-inline-end: 2.4%; width: 92px; height: 92px; border-top: 6px solid #D39A27; border-inline-end: 6px solid #D39A27;"></div>
+  <div aria-hidden="true" style="position: absolute; bottom: 2.4%; inset-inline-start: 2.4%; width: 92px; height: 92px; border-bottom: 6px solid #D39A27; border-inline-start: 6px solid #D39A27;"></div>
+  <div aria-hidden="true" style="position: absolute; bottom: 2.4%; inset-inline-end: 2.4%; width: 92px; height: 92px; border-bottom: 6px solid #D39A27; border-inline-end: 6px solid #D39A27;"></div>
+
+  <div class="cert-body" style="position: relative; height: 100%; padding: 3.2% 9% 2.4%; display: grid; grid-template-rows: auto auto 1fr auto; text-align: center; box-sizing: border-box;">
+
+    <div style="display: grid; justify-items: center; gap: 10px;">
+      <img src="assets/logo-horizontal.png" alt="مؤسسة منبر الأقصى الدولية" style="width: 20%; max-width: 190px; height: auto;">
+      <span style="margin-top: 14px; font-family: Amiri, serif; font-size: clamp(11px,1.5cqw,20px); color: #10212B; letter-spacing: .02em;">بسم الله الرحمن الرحيم</span>
+      <p style="margin: 0; width: 100%; font-family: Amiri, serif; font-size: clamp(12px,1.78cqw,25px); font-weight: 700; line-height: 1.9; color: #7C2318; white-space: nowrap;">{{ verse }}</p>
+    </div>
+
+    <div style="display: grid; justify-items: center; gap: 6px; padding: 1.6% 0;">
+      <h1 style="margin: 0; font-family: Amiri, serif; font-size: clamp(34px,5.4cqw,74px); font-weight: 700; letter-spacing: .04em; color: #A93428; line-height: 1.35; white-space: nowrap;">{{ title }}</h1>
+    </div>
+
+    <div class="cert-main" style="display: grid; align-content: center; justify-items: center; gap: 16px;">
+      <div style="display: grid; justify-items: center; gap: 6px; width: 100%;">
+        <span style="font-size: clamp(11px,1.5cqw,20px); font-weight: 700; color: #52616B; white-space: nowrap;">{{ nameLabel }}</span>
+        <span style="display: grid; place-items: center; width: 100%; min-height: 44px; padding: 4px 6px; font-size: clamp(18px,2.95cqw,40px); font-weight: 800; color: #10212B; white-space: nowrap;">{{ donorName }}</span>
+      </div>
+
+      <p style="margin: 0; width: 82%; font-size: clamp(11px,1.44cqw,19px); line-height: 2.05; color: #132C38;">{{ body }}</p>
+
+      <p style="margin: 6px 0 0; width: 100%; font-family: Amiri, serif; font-size: clamp(13px,2cqw,28px); font-weight: 700; line-height: 1.8; color: #7C2318; white-space: nowrap;">{{ duaVerse }}</p>
+      <p style="margin: 0; width: 82%; font-size: clamp(12px,1.62cqw,21px); line-height: 2.05; color: #132C38;">{{ duaText }}</p>
+    </div>
+
+    <div style="display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; padding-bottom: 2.2%; align-self: end;">
+      <img src="assets/cert-seal-alpha.png" alt="ختم المؤسسة" style="width: clamp(66px,7.4cqw,112px); height: auto;">
+      <div style="display: grid; justify-items: end; gap: 6px; text-align: end;">
+        <span style="font-family: Amiri, serif; font-size: clamp(13px,1.6cqw,23px); font-weight: 700; color: #B8811C; white-space: nowrap;">{{ motto }}</span>
+        <span style="font-size: clamp(10px,1.2cqw,16px); font-weight: 700; color: #132C38; white-space: nowrap;">{{ orgName }}</span>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1060,&quot;height&quot;:750},&quot;donorName&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;بيانات المتبرع&quot;},&quot;title&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;شكر وتقدير&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;النصوص&quot;},&quot;verse&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;النصوص&quot;},&quot;body&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;النصوص&quot;},&quot;duaVerse&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;النصوص&quot;},&quot;duaText&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;النصوص&quot;},&quot;motto&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;لنكن للقدس منبرًا&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;النصوص&quot;}}">
+/*
+ * لوحة شهادة الشكر (Certificate Sheet) — مكوّن ورقة الشهادة فقط
+ * --------------------------------------------------------------
+ * هذا المكوّن يحتوي ورقة الشهادة وحدها: بلا أزرار، وبلا أي تنسيق يمسّ
+ * صفحة المضيف (لا body ولا @page) — لذلك يمكن تضمينه بأمان داخل أي صفحة.
+ *
+ * من يستخدمه:
+ *   - «شهادة الشكر عرضية.dc.html» — الصفحة المستقلة المعتمدة للطباعة (تضيف
+ *     أزرار الطباعة وقواعد @page الخاصة بها فوق هذا المكوّن).
+ *   - «نجاح التبرع.dc.html» — معاينة حيّة للشهادة داخل صفحة نجاح التبرع.
+ *
+ * ربط الداشبورد: كل النصوص props (verse/title/body/duaVerse/duaText/motto…)
+ * وتُحقن من الخادم بعد نجاح التبرع؛ donorName يأتي من اسم المتبرع في بيانات
+ * الدفع ويمكن للمتبرع تعديله قبل التحميل — لا نصوص افتراضية مقفلة في الكود.
+ */
+class Component extends DCLogic {
+  /* النصوص الثابتة تُترجَم من حزمة certificates؛ الآيتان تبقيان بالعربية دائمًا
+     (قاعدة i18n/quran.json — النص القرآني أصل لا يُترجَم داخل الشهادة). */
+  tr(key, arFallback) {
+    const g = window.MIA_I18N;
+    return (g && g.t("certificates", key)) || arFallback;
+  }
+  /* الاتجاه من اللغة النشطة — rtl للعربية والأوردية فقط. */
+  certDir() {
+    let l = "ar";
+    try { l = localStorage.getItem("mia.lang") || "ar"; } catch (e) {}
+    return (l === "ar" || l === "ur") ? "rtl" : "ltr";
+  }
+  componentDidMount() {
+    this._onLang = () => this.forceUpdate();
+    window.addEventListener("mia:langchange", this._onLang);
+    if (window.MIA_I18N && window.MIA_I18N.load) window.MIA_I18N.load().then(() => this.forceUpdate());
+  }
+  componentWillUnmount() { window.removeEventListener("mia:langchange", this._onLang); }
+  renderVals() {
+    const p = this.props || {};
+    return {
+      certDir: this.certDir(),
+      verse: p.verse || "﴿مَثَلُ الَّذِينَ يُنفِقُونَ أَمْوَالَهُمْ فِي سَبِيلِ اللَّهِ كَمَثَلِ حَبَّةٍ أَنبَتَتْ سَبْعَ سَنَابِلَ فِي كُلِّ سُنبُلَةٍ مِّائَةُ حَبَّةٍ﴾",
+      title: p.title || this.tr("thanksTitle", "شكر وتقدير"),
+      nameLabel: p.nameLabel || this.tr("nameLabel", "تُمنَح هذه الشهادة تقديرًا لـ"),
+      donorName: p.donorName || "",
+      body: p.body || this.tr("thanksBody", "تتشرّف مؤسسة منبر الأقصى الدولية بأن تُسجّل لكم هذا الشكر والتقدير على ما بذلتموه ابتغاءَ وجه الله تعالى، نصرةً لأهل القدس وفلسطين، ودعمًا لصمودهم في مشاريع موثّقة ومتابَعة. أثبتنا اسمكم في سجلّ الساعين إلى إسناد الرباط حول المسجد الأقصى المبارك، ونسأل الله أن يتقبّله بقبولٍ حسن، وأن يجعله ذخرًا لكم في ميزانِ حسناتكم."),
+      duaVerse: p.duaVerse || "﴿وَمَا تُقَدِّمُوا لِأَنفُسِكُم مِّنْ خَيْرٍ تَجِدُوهُ عِندَ اللَّهِ﴾",
+      duaText: p.duaText || this.tr("duaText", "بارك الله لكم فيما أعطيتم، وجمعنا وإياكم في باحات المسجد الأقصى محرَّرًا."),
+      motto: p.motto || this.tr("motto", "لنكن للقدس منبرًا"),
+      orgName: p.orgName || this.tr("orgName", "مؤسسة منبر الأقصى الدولية"),
+    };
+  }
+}
+
+</script>
+</body>
+</html>

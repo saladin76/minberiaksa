@@ -737,7 +737,12 @@
     "inNameOf": "名義",
     "certWord": "証明書",
     "shareUnitTitle": "ワクフ持分",
-    "meterUnitTitle": "ワクフ・メートル"
+    "meterUnitTitle": "ワクフ・メートル",
+    "rcpVerifyLabel": "確認コード",
+    "rcpCopyOf": "写し",
+    "waqfPreviewNumberNote": "プレビュー番号 — 正式な番号は支払い確認後にサーバーが発行します",
+    "printDocument": "印刷",
+    "landscapeVersion": "承認版（横向き）"
   },
   "common": {
     "donate": "寄付する",

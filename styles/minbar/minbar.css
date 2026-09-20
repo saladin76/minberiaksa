@@ -1779,6 +1779,22 @@
   /* The certificate preview follows the picker rather than sitting beside it. */
   .mia-scope #waqf-cert-preview { justify-self: start !important; margin-bottom: 34px; }
 }
+/* Phone: the certificate sits behind a button (`#waqf-cert-toggle`) and shows
+   only when opened — laid out fluidly so nothing is clipped: the height comes
+   from the content, the inner frame is static (Minbar/الأوقاف.dc.html). */
+@media (max-width: 640px) {
+  .mia-scope #waqf-cert-toggle { display: inline-flex !important; height: 42px !important; font-size: 13px !important; }
+  .mia-scope #waqf-cert-preview, .mia-scope #waqf-cert-preview-note { display: none; }
+  .mia-scope #waqf-cert-preview[data-open="1"] { display: block; max-width: 100% !important; aspect-ratio: auto !important; padding: 12px; border-width: 5px !important; margin-bottom: 0 !important; }
+  .mia-scope #waqf-cert-preview-note[data-open="1"] { display: block; }
+  .mia-scope #waqf-cert-preview > div { position: static !important; inset: auto !important; padding: 14px 12px 12px !important; gap: 9px !important; }
+  .mia-scope #waqf-cert-preview img[src*="cert-title"] { height: 46px !important; }
+  .mia-scope #waqf-cert-preview img[src*="cert-tughra"] { height: 32px !important; }
+  .mia-scope #waqf-cert-preview img[src*="cert-seal"] { height: 44px !important; width: 44px !important; }
+  .mia-scope #waqf-cert-preview b[style*="font-size: 19px"] { font-size: 16px !important; padding: 6px 0 4px !important; }
+  .mia-scope #waqf-cert-preview p { font-size: 11px !important; }
+  .mia-scope #waqf-cert-preview div[style*="text-align: justify"] { font-size: 9px !important; line-height: 1.7 !important; }
+}
 @media (max-width: 560px) {
   .mia-scope #wq-aid, .mia-scope #wq-goals, .mia-scope #wq-parts,
   .mia-scope #wq-detail, .mia-scope #wq-facts { grid-template-columns: minmax(0,1fr) !important; }
@@ -2409,12 +2425,11 @@
   .mia-scope .succ-freq > button { flex: 1 1 100% !important; }
 }
 
-/* Printing the certificate prints the plaque alone, at full width. */
-@media print {
-  .mia-scope .succ-page > section > div > *:not(:has(.succ-cert)) { display: none !important; }
-  .mia-scope .succ-cert { width: 100%; }
-  .mia-scope .succ-cert ~ * { display: none !important; }
-  .mia-scope .cert-sheet { box-shadow: none !important; max-width: none !important; }
+/* A waqf certificate button: maroon, the certificate's own colour. */
+.mia-scope .succ-link-waqf:hover { background: #A93428 !important; color: #fff !important; }
+@media (max-width: 480px) {
+  .mia-scope #succ-downloads { flex-direction: column; align-items: stretch; }
+  .mia-scope #succ-downloads > * { width: 100%; justify-content: center; }
 }
 
 /* ─────────────────────────────────────────────────────────────────────────────

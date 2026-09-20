@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="design-tokens.css">
+<link rel="stylesheet" href="locale-fonts.css">
+<script>window.MIA_NS = ["certificates"];</script>
+<script src="./i18n.js"></script>
+<style>
+  /* الطباعة: وجه واحد لكل صفحة A4 عمودي (طباعة على الوجهين duplex).
+     ربط الداشبورد: لا إعدادات هنا — القياسات ثابتة لضمان تطابق الوجهين. */
+  /* الطباعة: الوجهان جنبًا إلى جنب على ورقة A4 عرضية واحدة.
+     ربط الداشبورد: لا إعدادات هنا — القياسات ثابتة لضمان تطابق الوجهين ودقة الطباعة. */
+  /* قواعد الطباعة مقصورة على الصفحة المستقلة للشهادة (body.waqf-standalone)،
+     فلا تتسرّب إلى أي صفحة تضمّن الشهادة كمعاينة عبر dc-import. */
+  @media print {
+    body.waqf-standalone { margin: 0; padding: 0; background: #fff; }
+    body.waqf-standalone * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+    body.waqf-standalone .waqf-pair {
+      width: 289mm !important; height: 202mm !important;
+      grid-template-columns: 1fr 1fr !important;
+      max-width: none !important; aspect-ratio: auto !important;
+      margin: 0 !important; padding: 0 !important; box-shadow: none !important;
+      break-inside: avoid; page-break-inside: avoid; overflow: hidden;
+    }
+    body.waqf-standalone .waqf-pair { align-items: center !important; }
+    body.waqf-standalone .waqf-pair > .waqf-sheet { grid-column: 1 !important; grid-row: 1 !important; }
+    body.waqf-standalone .waqf-pair > .waqf-back { grid-column: 2 !important; grid-row: 1 !important; }
+    .no-print { display: none !important; }
+  }
+  /* حجم الورقة يُعلَن فقط في الصفحة المستقلة — يُضاف بـ JS عند التحميل
+     (componentDidMount) لأن @page لا يقبل انتقاءً بالمحدِّدات. */
+  /* على الشاشات الضيقة: تُفكَّك الورقة العرضية إلى عمود واحد، وتحتفظ لوحة
+     الشهادة بنسبة أبعاد إطارها الرسمي 845/1178 حتى لا تتمدد الزخرفة. */
+  @media screen and (max-width: 760px) {
+    .waqf-pair { grid-template-columns: minmax(0,1fr) !important; aspect-ratio: auto !important; gap: 26px !important; padding: 16px !important; }
+    .waqf-pair > .waqf-sheet { grid-column: 1 !important; grid-row: 1 !important; }
+    .waqf-pair > .waqf-back { grid-column: 1 !important; grid-row: 2 !important; }
+  }
+  /* ترتيب اللوحتين كالأصل: الشهادة يسارًا والتعريف يمينًا.
+     الحاوية LTR لتثبيت الترتيب البصري، وكل لوحة تبقى RTL لنصوصها. */
+  .waqf-pair { direction: ltr; }
+  .waqf-pair > .waqf-sheet { grid-column: 1; aspect-ratio: 845/1178; height: auto; }
+  .waqf-pair > .waqf-back { grid-column: 2; }
+</style>
+</helmet>
+<!-- [BACKEND-INTEGRATION] Serial يولده الخادم حصرًا بعد تأكيد الدفع (DONATION_LOGIC_SPEC §2) — إعادة التحميل لا تنتج Serial جديدًا.
+     [DESIGN-CONTRACT] نصوص EN/TR حرفية من الشهادات الرسمية المعتمدة — لا تُعاد صياغتها. -->
+
+<div class="waqf-pair" style="position: relative; display: grid; grid-template-columns: 1fr 1fr; align-items: center; gap: 3%; width: 100%; max-width: 1200px; margin: 0 auto; padding: 1.6%; box-sizing: border-box; background: #fff;">
+<div class="waqf-sheet" dir="{{ certDir }}" style="position: relative; width: 100%; container-type: inline-size; box-sizing: border-box; background: #fff url('assets/waqf-cert-frame-blank.png') center/100% 100% no-repeat;">
+
+  <div style="position: absolute; inset: 7.13% 9.11%; display: grid; grid-template-rows: auto auto auto 1fr auto; padding: 3.4% 4.6% 2.4%; box-sizing: border-box; text-align: center;">
+
+    <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 8px;">
+      <span style="display: grid; gap: 4px; justify-items: center;">
+        <span style="font-family: Cairo, sans-serif; font-size: clamp(8px,1.5cqw,13px); font-weight: 700; color: #10212B; white-space: nowrap;">{{ tCertNoLabel }}</span>
+        <span style="min-width: 13cqw; min-height: 4.2cqw; padding: 0 6px; border: 1px solid #b08b3f; display: grid; place-items: center; font-family: Cairo, sans-serif; font-weight: 800; font-size: clamp(9px,1.6cqw,14px); color: #10212B;">{{ certNo }}</span>
+      </span>
+      <span style="display: grid; gap: 4px; justify-items: center;">
+        <span style="font-family: Cairo, sans-serif; font-size: clamp(8px,1.5cqw,13px); font-weight: 700; color: #10212B; white-space: nowrap;">{{ countLabel }}</span>
+        <span style="min-width: 13cqw; min-height: 4.2cqw; padding: 0 6px; border: 1px solid #b08b3f; display: grid; place-items: center; font-family: Cairo, sans-serif; font-weight: 800; font-size: clamp(9px,1.7cqw,15px); color: #10212B;">{{ count }}</span>
+      </span>
+    </div>
+
+    <div style="display: grid; justify-items: center; margin-top: -6.5cqw;">
+      <img src="assets/waqf-tughra-official.png" alt="بسم الله الرحمن الرحيم" style="width: 24cqw; max-width: 200px; height: auto;">
+    </div>
+
+    <div style="display: grid; justify-items: center; gap: 1.2cqw; padding-top: 2.4cqw;">
+      <!-- العربية: اللوغوتايب الرسمي المقصوص (خط عربي مرسوم). بقية اللغات: عنوان نصي
+           مترجم بنفس تراتبية النموذج الرسمي الإنجليزي (eyebrow "Certificate" + عنوان
+           كبير) بدل عرض الرسم العربي في لغة لا يقرأها المتبرع. -->
+      <sc-if value="{{ showArabicTitleImg }}" hint-placeholder-val="{{ true }}">
+        <sc-if value="{{ isShareUnit }}" hint-placeholder-val="{{ true }}">
+          <img src="assets/cert-title-share-tight.png" alt="شهادة سهم وقفي" style="display: block; width: auto; height: 13.4cqw; max-height: 108px; object-fit: contain;">
+        </sc-if>
+        <sc-if value="{{ isMeterUnit }}" hint-placeholder-val="{{ false }}">
+          <img src="assets/cert-title-meter-tight.png" alt="شهادة متر وقفي" style="display: block; width: auto; height: 13.4cqw; max-height: 108px; object-fit: contain;">
+        </sc-if>
+      </sc-if>
+      <sc-if value="{{ !showArabicTitleImg }}" hint-placeholder-val="{{ false }}">
+        <span style="display: grid; justify-items: center; gap: .3cqw;">
+          <span style="font-family: Georgia, 'Times New Roman', serif; font-style: italic; font-weight: 700; font-size: clamp(9px,1.7cqw,15px); color: #A0522D;">{{ tCertWord }}</span>
+          <span style="font-family: Georgia, 'Times New Roman', serif; font-weight: 700; font-size: clamp(15px,3.2cqw,27px); line-height: 1.15; color: {{ titleColor }};">{{ tUnitTitle }}</span>
+        </span>
+      </sc-if>
+      <p style="margin: 2.6cqw 0 0; font-family: Cairo, sans-serif; font-size: clamp(10px,2.05cqw,18px); font-weight: 800; color: #10212B; white-space: nowrap;">{{ tCertifiesThat }}</p>
+    </div>
+
+    <div style="display: grid; align-content: start; gap: 3cqw; padding-top: 3.2cqw; text-align: start;">
+      <span style="display: block; width: 100%; border-bottom: 1px solid #b9b0a0; min-height: 3.4cqw; font-family: Cairo, sans-serif; font-size: clamp(10px,2cqw,18px); font-weight: 800; color: #10212B; text-align: center;">{{ donorName }}</span>
+
+      <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 2cqw; font-family: Cairo, sans-serif; font-size: clamp(8px,1.65cqw,14px); font-weight: 700; color: #10212B;">
+        <span style="white-space: nowrap;">{{ endowedLine }} (<b>{{ count }}</b>)</span>
+        <span style="display: flex; align-items: baseline; gap: 4px; flex: 1;">
+          <span style="white-space: nowrap;">{{ tValueLabel }}</span>
+          <b dir="ltr" style="unicode-bidi: isolate; flex: 1; border-bottom: 1px solid #b9b0a0; text-align: center;">{{ total }}</b>
+        </span>
+      </div>
+
+      <div style="display: flex; align-items: baseline; gap: 6px; font-family: Cairo, sans-serif; font-size: clamp(8px,1.65cqw,14px); font-weight: 700; color: #10212B;">
+        <span style="white-space: nowrap;">{{ tOnBehalfLabel }}</span>
+        <span style="flex: 1; border-bottom: 1px solid #b9b0a0; text-align: center; font-weight: 800;">{{ onBehalf }}</span>
+      </div>
+
+      <p style="margin: 1.6cqw 0 0; font-family: Amiri, serif; font-size: clamp(8px,1.72cqw,15px); font-weight: 400; line-height: 2.3; color: #1a1a1a; text-align: center;">{{ legalText }}</p>
+    </div>
+
+    <div style="display: grid; grid-template-columns: 1fr auto 1fr; align-items: end; gap: 2cqw;">
+      <div style="display: grid; gap: 1.4cqw; justify-items: center;">
+        <span style="font-family: Cairo, sans-serif; font-size: clamp(8px,1.55cqw,13px); font-weight: 700; color: #10212B;">{{ certDate }}</span>
+        <span style="width: 80%; border-bottom: 1px solid #b9b0a0;"></span>
+        <span style="font-family: Cairo, sans-serif; font-size: clamp(8px,1.55cqw,13px); font-weight: 700; color: #10212B;">{{ tDateLabel }}</span>
+      </div>
+      <img src="assets/waqf-cert-seal-full.png" alt="ختم المؤسسة" style="width: 17cqw; max-width: 150px; height: auto; justify-self: center;">
+      <div style="position: relative; display: grid; gap: 1.4cqw; justify-items: center;">
+        <img src="assets/waqf-director-stamp.png" alt="ختم وتوقيع مدير المؤسسة" style="position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%); width: 30cqw; max-width: 210px; height: auto; margin-bottom: -1.6cqw; pointer-events: none;">
+        <span style="font-family: Cairo, sans-serif; font-size: clamp(8px,1.55cqw,13px); font-weight: 700; color: #10212B;">{{ tDirectorLabel }}</span>
+        <span style="width: 80%; border-bottom: 1px solid #b9b0a0;"></span>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="waqf-back" dir="{{ certDir }}" style="position: relative; width: 100%; aspect-ratio: 845/1178; container-type: inline-size; box-sizing: border-box; display: grid; align-content: center; justify-items: center; gap: 5.4cqw; padding: 5% 7%; text-align: center;">
+
+  <img src="assets/waqf-logo-full-hq.png" alt="مؤسسة منبر الأقصى الدولية — Minber-i Aksâ Derneği" style="display: block; width: 66cqw; max-width: 440px; height: auto; margin-bottom: 1cqw;">
+
+  <img src="assets/waqf-divider-rule-hq.png" alt="" aria-hidden="true" style="display: block; width: 80cqw; max-width: 480px; height: auto;">
+
+  <p style="margin: 0; width: 92%; font-family: Cairo, sans-serif; font-size: clamp(10px,2.9cqw,20px); font-weight: 700; line-height: 2.05; color: #10212B;">{{ aboutText }}</p>
+
+  <img src="assets/waqf-divider-rule-hq.png" alt="" aria-hidden="true" style="display: block; width: 80cqw; max-width: 480px; height: auto; transform: scaleY(-1);">
+
+</div>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:700,&quot;height&quot;:1960},&quot;unit&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;share&quot;,&quot;meter&quot;],&quot;default&quot;:&quot;share&quot;,&quot;tsType&quot;:&quot;\&quot;share\&quot;|\&quot;meter\&quot;&quot;,&quot;section&quot;:&quot;نوع الوحدة&quot;},&quot;donorName&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;بيانات الواقف&quot;},&quot;onBehalf&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;بيانات الواقف&quot;},&quot;count&quot;:{&quot;editor&quot;:&quot;int&quot;,&quot;default&quot;:1,&quot;min&quot;:1,&quot;tsType&quot;:&quot;number&quot;,&quot;section&quot;:&quot;بيانات الوقف&quot;},&quot;total&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;بيانات الوقف&quot;},&quot;certNo&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;التوثيق&quot;},&quot;certDate&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;التوثيق&quot;},&quot;legalText&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;النصوص&quot;},&quot;aboutText&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;النصوص&quot;}}">
+/*
+ * لوحة شهادة الوقف (Waqf Certificate Sheet) — مطابقة للشهادة الرسمية المعتمدة
+ * ----------------------------------------------------------------------------
+ * إعادة بناء دقيقة لشهادة «سهم وقفي» / «متر وقفي» الرسمية:
+ *   - الإطار: صورة الإطار الرسمي نفسه (guilloche ذهبي) مستخرجة من ملف الشهادة
+ *     المعتمد إلى assets/waqf-cert-frame-blank.png — لا إطار مرسوم بـCSS تقريبي.
+ *   - الطغراء: assets/waqf-tughra-official.png — مقتطعة مباشرة من شهادة «سهم
+ *     وقفي» الرسمية، ومضبوطة على حبرها العنابي الأصلي ‎rgb(136,64,48)‎ المقيس
+ *     من نطاق الطغراء في الملف الأصلي (assets/waqf-cert-share.png).
+ *   - عنوان الشهادة: اللوغوتايب الرسمي (cert-title-share-tight / cert-title-meter-tight)
+ *     مقصوص على حدود الحروف بهامش متساوٍ من الجهات الأربع، فيتوسّط فعليًا على
+ *     محور الورقة ويقيس الارتفاع حجم الخط الحقيقي لا الفراغ حوله،
+ *     بخلفية شفافة، ويُقاس بالارتفاع (لا العرض) ليظهر بنفس الحجم في الشهادتين
+ *     رغم اختلاف نسبة أبعاد كل لوغوتايب.
+ *     ملاحظة هوية: «سهم وقفي» أخضر مزرق (‎rgb 0,96,96‎) و«متر وقفي» عنابي
+ *     (‎rgb 176,64,48‎) — هذا هو الاعتماد الرسمي في الشهادتين الأصليتين، فلا
+ *     يُوحَّد اللونان.
+ *   - كل أصول الطباعة (العنوان/الطغراء/الفاصل/لوغو الظهر) مُعدّة بدقة عالية
+ *     (لاحقة -hq) لتفادي التنقيط عند الطباعة على A4.
+ *   - الختم: assets/waqf-cert-seal.png مقتطع من الأصل.
+ * الأبعاد والهوامش نسبية (cqw) لعرض الورقة، فتتناسق على أي حجم وعند الطباعة.
+ *
+ * ربط الداشبورد:
+ *   - unit: "share" (سهم) أو "meter" (متر) — يحدّد صورة العنوان وصيغة الجمع والتسمية.
+ *   - count / total / donorName / onBehalf من بند السلة الوقفي وبيانات الدفع.
+ *   - certNo يُولَّد من الخادم بتسلسل بلا تكرار (الأمتار من 9876، الأسهم من 76543)،
+ *     وcertDate تاريخ الإصدار الفعلي من الخادم لا من العميل.
+ *   - legalText نص الإقرار الشرعي، قابل للتعديل من لوحة التحكم بعد مراجعة شرعية.
+ *
+ * التخطيط (ورقة واحدة):
+ *   الشهادة والتعريف بالمؤسسة على ورقة A4 عرضية واحدة (لا وجهين ولا ورقتين):
+ *   يمين = لوحة الشهادة بإطارها الرسمي، يسار = لوغو المؤسسة عالي الدقة
+ *   (assets/waqf-logo-full-hq.png) بين فاصلين زخرفيّين ونص التعريف (aboutText).
+ *   القياسات نسبية (cqw داخل حاويتين) فتتناسق على أي عرض وعند الطباعة.
+ */
+class Component extends DCLogic {
+  /* النصوص الثابتة تُترجَم من حزمة certificates؛ العربية fallback دائمًا. */
+  tr(key, arFallback) {
+    const g = window.MIA_I18N;
+    return (g && g.t("certificates", key)) || arFallback;
+  }
+  /* اتجاه اللوحة يُشتق من اللغة النشطة (rtl للعربية والأوردية فقط)؛
+     .waqf-pair يبقى ltr لتثبيت ترتيب اللوحتين. */
+  certDir() {
+    return (this.locale() === "ar" || this.locale() === "ur") ? "rtl" : "ltr";
+  }
+  locale() {
+    try { return localStorage.getItem("mia.lang") || "ar"; } catch (e) { return "ar"; }
+  }
+
+  /* تُعلَّم الصفحة كـ«مستقلة» فقط إذا كانت الشهادة هي محتوى الصفحة نفسها،
+     لا معاينة مضمّنة داخل صفحة أخرى (نجاح التبرع/حساب المتبرع). وقتها فقط
+     تُطبَّق قواعد الطباعة العرضية ويُعلَن @page ديناميكيًا. */
+  componentDidMount() {
+    this._onLang = () => this.forceUpdate();
+    window.addEventListener("mia:langchange", this._onLang);
+    if (window.MIA_I18N && window.MIA_I18N.load) window.MIA_I18N.load().then(() => this.forceUpdate());
+    if (typeof document === "undefined") return;
+    const embedded = !!document.querySelector(".waqf-canvas, #cert-canvas");
+    if (embedded) return;
+    document.body.classList.add("waqf-standalone");
+    if (!document.getElementById("waqf-page-size")) {
+      const st = document.createElement("style");
+      st.id = "waqf-page-size";
+      st.textContent = "@media print{@page{size:A4 landscape;margin:4mm}}";
+      document.head.appendChild(st);
+    }
+  }
+  renderVals() {
+    const p = this.props || {};
+    const unit = p.unit === "meter" ? "meter" : "share";
+    return {
+      certDir: this.certDir(),
+      isShareUnit: unit === "share",
+      isMeterUnit: unit !== "share",
+      /* الرسم العربي (تصميم رسمي) يبقى للعربية فقط؛ بقية اللغات عنوان نصي مترجم */
+      showArabicTitleImg: (this.locale ? this.locale() : "ar") === "ar",
+      tCertWord: this.tr("certWord", "Certificate"),
+      tUnitTitle: unit === "share" ? this.tr("shareUnitTitle", "Endowment Share") : this.tr("meterUnitTitle", "Endowment Meter"),
+      titleColor: unit === "share" ? "rgb(0,96,96)" : "rgb(176,64,48)",
+      endowedLine: unit === "share" ? this.tr("endowedShares", "قد أوقف أسهمًا وقفية عدد") : this.tr("endowedMeters", "قد أوقف أمتارًا وقفية عدد"),
+      countLabel: unit === "share" ? this.tr("countShares", "عدد الأسهم") : this.tr("countMeters", "عدد الأمتار"),
+      tCertNoLabel: this.tr("certNoLabel", "رقم الشهادة"),
+      tCertifiesThat: this.tr("certifiesThat", "تشهد مؤسسة منبر الأقصى الدولية أن"),
+      tValueLabel: this.tr("valueLabel", "بقيمة:"),
+      tOnBehalfLabel: this.tr("onBehalfLabel", "وقد أوقفها عن:"),
+      tDateLabel: this.tr("dateLabel", "التاريخ"),
+      tDirectorLabel: this.tr("directorLabel", "مدير المؤسسة"),
+      count: p.count != null ? p.count : "",
+      total: p.total || "",
+      certNo: p.certNo || "",
+      certDate: p.certDate || "",
+      donorName: p.donorName || "",
+      onBehalf: p.onBehalf || "",
+      aboutText: p.aboutText || this.tr("aboutFoundation", "مؤسسة دولية تعنى بالعلماء والخطباء، مقرها إسطنبول/ تركيا، تسعى إلى جمع العلماء والخطباء من كافة دول العالم من أجل التوعية بقضية بيت المقدس والمسجد الأقصى من خلال المنابر المختلفة."),
+      legalText: p.legalText || this.tr("waqfLegalText", "وقفًا صحيحًا شرعيًا لا يوهب ولا يورث، غير قابل للاسترجاع. وبذلك يكون الوقف قد خرجت ملكيته من ملك الواقف وصارت وقفًا لله تعالى لخدمة القدس والمسجد الأقصى بما يحقق مصلحة الوقف وتنميته والمحافظة على استمراريته لينفق من عائده على المشروعات التي تسهم في دعم صمود أهل القدس وفي رعاية المسجد الأقصى وعمارته."),
+    };
+  }
+}
+
+</script>
+</body>
+</html>

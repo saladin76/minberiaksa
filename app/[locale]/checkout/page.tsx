@@ -3,7 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 import { listProjects } from "@/lib/minbar/projects";
 import { listCategoryTitles } from "@/lib/minbar/category-page";
-import { banksFor } from "@/lib/minbar/banks";
+import { banksFor } from "@/lib/minbar/banks-server";
 import MinbarMessages from "@/components/minbar/MinbarMessages";
 import CheckoutPage from "@/components/minbar/checkout/CheckoutPage";
 
@@ -12,7 +12,7 @@ interface Props {
 }
 
 /** The page's own namespaces, on top of the shell bundle. */
-const NAMESPACES = ["cart", "validation"] as const;
+const NAMESPACES = ["cart", "validation", "certificates"] as const;
 
 /**
  * Payment details are per-donor and must never be indexed

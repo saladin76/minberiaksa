@@ -1771,7 +1771,12 @@
     "inNameOf": "Adına",
     "certWord": "Sertifika",
     "shareUnitTitle": "Vakıf Hissesi",
-    "meterUnitTitle": "Vakıf Metresi"
+    "meterUnitTitle": "Vakıf Metresi",
+    "rcpVerifyLabel": "Doğrulama kodu",
+    "rcpCopyOf": "Nüsha",
+    "waqfPreviewNumberNote": "Önizleme numarası — resmî numara ödeme onaylandıktan sonra sunucu tarafından verilir",
+    "printDocument": "Yazdır",
+    "landscapeVersion": "Onaylı sürüm (yatay)"
   },
   "common": {
     "donate": "Bağış Yap",

@@ -66,6 +66,7 @@ export default function CheckoutPage({ projects, categories, banks, donor }: Che
   const tProjects = useTranslations("projects");
   const tValidation = useTranslations("validation");
   const tSystem = useTranslations("system");
+  const tCert = useTranslations("certificates");
   const { format } = useMinbarMoney();
   const { items, hydrated } = useMinbarCart();
 
@@ -135,6 +136,10 @@ export default function CheckoutPage({ projects, categories, banks, donor }: Che
     if (item.categoryId) {
       const fromCms = categoryTitleById.get(item.categoryId);
       if (fromCms) return fromCms;
+    }
+    if (item.waqf) {
+      const unit = item.waqf.unit === "meter" ? tCert("meterUnitTitle") : tCert("shareUnitTitle");
+      return `${unit} × ${item.waqf.count}${item.waqf.donorName ? ` — ${tCert("inNameOf")} ${item.waqf.donorName}` : ""}`;
     }
     if (item.titleKey) {
       if (t.has(item.titleKey)) return t(item.titleKey);

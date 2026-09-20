@@ -737,7 +737,12 @@
     "inNameOf": "Atas Nama",
     "certWord": "Sijil",
     "shareUnitTitle": "Saham Wakaf",
-    "meterUnitTitle": "Meter Wakaf"
+    "meterUnitTitle": "Meter Wakaf",
+    "rcpVerifyLabel": "Kod pengesahan",
+    "rcpCopyOf": "Salinan",
+    "waqfPreviewNumberNote": "Nombor pratonton — nombor rasmi dikeluarkan oleh pelayan selepas pembayaran disahkan",
+    "printDocument": "Cetak",
+    "landscapeVersion": "Versi diluluskan (landskap)"
   },
   "common": {
     "donate": "Sumbang",

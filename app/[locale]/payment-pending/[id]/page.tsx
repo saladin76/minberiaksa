@@ -5,7 +5,7 @@ import { getTranslations } from "next-intl/server";
 import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 import { isObjectId } from "@/lib/slug";
 import { miaPath } from "@/lib/minbar/routes";
-import { banksFor } from "@/lib/minbar/banks";
+import { banksFor } from "@/lib/minbar/banks-server";
 import { donorMayAccessClaim, findClaimByDonation } from "@/lib/donations/bank-transfer-claims";
 import { serializeClaimForDonor } from "@/lib/donations/bank-transfer-serializers";
 import MinbarMessages from "@/components/minbar/MinbarMessages";

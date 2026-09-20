@@ -1,4 +1,5 @@
 import type { ElasticEmailRuntimeConfig } from "../elastic-email/client";
+import type { EmailAttachmentInput } from "../elastic-email/types";
 import { sendElasticEmail, isElasticEmailConfigured } from "../elastic-email/client";
 import { ELASTIC_EMAIL_REASONS } from "../elastic-email/errors";
 
@@ -27,7 +28,10 @@ export type EmailSendInput = {
   senderEmail?: string | null;
   replyTo?: string | null;
   channelName?: string | null;
+  attachments?: EmailAttachmentInput[];
 };
+
+export type { EmailAttachmentInput };
 
 export type EmailSendResult =
   | { ok: true; providerId: typeof EMAIL_PROVIDER_ID; providerMessageId: string | null; internalAccepted: boolean }
@@ -43,6 +47,7 @@ export async function sendEmailMessage(input: EmailSendInput, runtime?: ElasticE
     senderEmail: input.senderEmail,
     replyTo: input.replyTo,
     channelName: input.channelName,
+    attachments: input.attachments,
   }, runtime);
   if (!res.ok) return { ok: false, reason: res.reason, detail: res.detail };
   return { ok: true, providerId: EMAIL_PROVIDER_ID, providerMessageId: res.providerMessageId, internalAccepted: res.internalAccepted };

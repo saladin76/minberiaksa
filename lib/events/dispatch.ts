@@ -14,6 +14,9 @@ import { listSenders } from "@/lib/communication/sender-service";
 import { getActiveCommunicationRuntimeBundle } from "@/lib/communication/runtime-config";
 import type { CommunicationPurposeId } from "@/lib/communication/communication-runtime-types";
 import type { SupportedLocale } from "@/lib/locales";
+import { donationAttachments, type EmailAttachment } from "@/lib/certificates/generate";
+import { ensureDonationDocuments } from "@/lib/certificates/issue";
+import { getServerBaseUrl } from "@/lib/server-base-url";
 
 export type MessageTriggerEvent = "DONATION_PAID" | "DONATION_FAILED" | "FIRST_DONATION" | "USER_REGISTERED" | "SUBSCRIPTION_CREATED" | "SUBSCRIPTION_PAYMENT" | "SUBSCRIPTION_CANCELLED" | "DONATION_LAPSED";
 export interface EventDispatchInput { userId?: string; donationId?: string }
@@ -51,7 +54,7 @@ export type TriggerSendOutcome = { channel: "EMAIL" | "WHATSAPP"; outcome: Autom
 export async function sendTriggerMessage(
   trigger: { channel: string; templateId: string },
   ctx: TemplateContext,
-  opts: { event: MessageTriggerEvent; locale: SupportedLocale; config: TriggerSendConfig; donationId?: string | null; purpose?: CommunicationPurposeId }
+  opts: { event: MessageTriggerEvent; locale: SupportedLocale; config: TriggerSendConfig; donationId?: string | null; purpose?: CommunicationPurposeId; attachments?: EmailAttachment[] }
 ): Promise<TriggerSendOutcome | null> {
   const { event, locale, config } = opts;
   const variables = ctx as unknown as Record<string, unknown>;
@@ -63,7 +66,7 @@ export async function sendTriggerMessage(
     const variant = resolveEmailVariant(tpl, locale);
     const html = await renderEmailHtml(variant.document as TReaderDocument, ctx);
     const subject = renderEmailSubject(variant.subject, ctx);
-    const response = await sendAutomaticEmailMessage({ triggerEvent: event, templateId: tpl.id, templateName: tpl.name, locale, recipientUserId: ctx.user.id, recipientName: ctx.user.name || null, recipientEmail: ctx.user.email ?? null, renderedSubject: subject, renderedBody: html, senderEmail: config.emailIdentity, variables, donationId, purpose: opts.purpose });
+    const response = await sendAutomaticEmailMessage({ triggerEvent: event, templateId: tpl.id, templateName: tpl.name, locale, recipientUserId: ctx.user.id, recipientName: ctx.user.name || null, recipientEmail: ctx.user.email ?? null, renderedSubject: subject, renderedBody: html, senderEmail: config.emailIdentity, variables, donationId, purpose: opts.purpose, attachments: opts.attachments });
     return { channel: "EMAIL", outcome: response.outcome, reason: response.reason };
   }
 
@@ -93,10 +96,19 @@ export async function dispatchEvent(event: MessageTriggerEvent, input: EventDisp
     }
     const locale = pickLocale({ recipientLang: ctx.user.preferredLang });
     const config = await resolveTriggerSendConfig();
+    /* CERTIFICATES_DOWNLOADS_HANDOFF §7: the confirmation email carries the
+       real PDFs — thank-you certificate, receipt, any waqf certificate — not
+       just links. Generated once here and attached to every EMAIL trigger of
+       the event. A rendering failure is logged and the email still goes out
+       with its links; the documents stay downloadable from the success page. */
+    let attachments: EmailAttachment[] | undefined;
+    if (event === "DONATION_PAID" && input.donationId && triggers.some((trigger) => trigger.channel === "EMAIL")) {
+      attachments = await donationPaidAttachments(input.donationId);
+    }
 
     for (const trigger of triggers) {
       try {
-        const sent = await sendTriggerMessage(trigger, ctx, { event, locale, config, donationId: input.donationId ?? null });
+        const sent = await sendTriggerMessage(trigger, ctx, { event, locale, config, donationId: input.donationId ?? null, attachments });
         if (!sent) continue;
         if (sent.outcome === "SENT") {
           if (sent.channel === "EMAIL") result.emailsSent += 1;
@@ -133,7 +145,27 @@ export async function dispatchEvent(event: MessageTriggerEvent, input: EventDisp
   return result;
 }
 
+/** The PDFs for a confirmed donation, or nothing if they cannot be produced right now. */
+async function donationPaidAttachments(donationId: string): Promise<EmailAttachment[] | undefined> {
+  try {
+    const docs = await ensureDonationDocuments(donationId);
+    if (!docs) return undefined;
+    return await donationAttachments(docs, await getServerBaseUrl());
+  } catch (error) {
+    console.error("dispatchEvent DONATION_PAID attachments failed", { donationId, error: error instanceof Error ? error.message : String(error) });
+    return undefined;
+  }
+}
+
 export async function dispatchDonationPaid(donationId: string): Promise<void> {
+  /* Serials are minted here, at confirmation, before anything is sent —
+     `DONATION_LOGIC_SPEC §2`. Idempotent: a replayed webhook finds the same
+     records. A failure is logged and never blocks the notifications. */
+  try {
+    await ensureDonationDocuments(donationId);
+  } catch (error) {
+    console.error("dispatchDonationPaid issue documents failed", { donationId, error: error instanceof Error ? error.message : String(error) });
+  }
   await dispatchEvent("DONATION_PAID", { donationId });
   try {
     const capi = await sendDonationServerConversions(donationId);

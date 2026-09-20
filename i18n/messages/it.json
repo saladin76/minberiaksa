@@ -737,7 +737,12 @@
     "inNameOf": "A Nome di",
     "certWord": "Certificato",
     "shareUnitTitle": "Quota waqf",
-    "meterUnitTitle": "Metro waqf"
+    "meterUnitTitle": "Metro waqf",
+    "rcpVerifyLabel": "Codice di verifica",
+    "rcpCopyOf": "Copia",
+    "waqfPreviewNumberNote": "Numero di anteprima — il numero ufficiale viene emesso dal server dopo la conferma del pagamento",
+    "printDocument": "Stampa",
+    "landscapeVersion": "Versione approvata (orizzontale)"
   },
   "common": {
     "donate": "Dona Ora",

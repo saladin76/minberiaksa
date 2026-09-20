@@ -34,6 +34,21 @@ export type CartTypeKey = "project" | "zakat" | "waqf" | "recurring" | "extra";
  */
 export type CartFreqKey = "once" | "daily" | "friday" | "monthly";
 
+/**
+ * What a waqf row carries besides its amount: the unit, how many, and the
+ * two names the certificate prints. The certificate NUMBER is deliberately not
+ * here — `DONATION_LOGIC_SPEC §2` has the server mint it after payment, and a
+ * number kept in the basket would be one a donor could quote before paying.
+ */
+export interface CartWaqfDetails {
+  unit: "share" | "meter";
+  count: number;
+  /** The endower's name, as it should appear on the certificate. */
+  donorName: string;
+  /** Whom the waqf is endowed on behalf of. */
+  onBehalf: string;
+}
+
 export interface MinbarCartItem {
   /** Project slug from the projects source. Absent for non-project intentions. */
   projectId?: string;
@@ -63,6 +78,8 @@ export interface MinbarCartItem {
   title?: string;
   /** Set when the "make it monthly" toggle converted this item, so it can be undone. */
   _autoMonthly?: boolean;
+  /** Present on a waqf row (`typeKey: "waqf"`): the certificate's details. */
+  waqf?: CartWaqfDetails;
 }
 
 export const CART_ITEMS_KEY = "mia_cart_items";
@@ -108,6 +125,21 @@ function parseAmount(value: unknown): number {
   return 0;
 }
 
+/** The waqf details of a stored row, or nothing if they are not all there. */
+function parseWaqf(value: unknown): CartWaqfDetails | undefined {
+  if (!value || typeof value !== "object") return undefined;
+  const raw = value as Record<string, unknown>;
+  const unit = raw.unit === "meter" ? "meter" : raw.unit === "share" ? "share" : null;
+  const count = typeof raw.count === "number" && Number.isInteger(raw.count) && raw.count > 0 ? raw.count : null;
+  if (!unit || !count) return undefined;
+  return {
+    unit,
+    count,
+    donorName: typeof raw.donorName === "string" ? raw.donorName : "",
+    onBehalf: typeof raw.onBehalf === "string" ? raw.onBehalf : "",
+  };
+}
+
 /**
  * Bring one stored row up to schema v2.
  *
@@ -135,6 +167,7 @@ export function migrateItem(
     upsellId: typeof raw.upsellId === "string" ? raw.upsellId : undefined,
     title: typeof raw.title === "string" ? raw.title : undefined,
     _autoMonthly: raw._autoMonthly === true || undefined,
+    waqf: parseWaqf(raw.waqf),
   };
 
   if (!item.projectId && !item.categoryId && !item.titleKey && item.title && resolveTitle) {

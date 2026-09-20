@@ -1771,7 +1771,12 @@
     "inNameOf": "باسم",
     "certWord": "شهادة",
     "shareUnitTitle": "سهم وقفي",
-    "meterUnitTitle": "متر وقفي"
+    "meterUnitTitle": "متر وقفي",
+    "rcpVerifyLabel": "رمز التحقق",
+    "rcpCopyOf": "نسخة",
+    "waqfPreviewNumberNote": "رقم المعاينة — الرقم الرسمي يصدره الخادم بعد تأكيد الدفع",
+    "printDocument": "طباعة",
+    "landscapeVersion": "النسخة المعتمدة (عرضية)"
   },
   "common": {
     "donate": "تبرّع الآن",

@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="_ds/design-system-d0075d3b-6dd5-4297-b7a4-b3aad2b56a47/tokens/fonts.css">
+<link rel="stylesheet" href="_ds/design-system-d0075d3b-6dd5-4297-b7a4-b3aad2b56a47/tokens/colors.css">
+<link rel="stylesheet" href="_ds/design-system-d0075d3b-6dd5-4297-b7a4-b3aad2b56a47/tokens/typography.css">
+<link rel="stylesheet" href="_ds/design-system-d0075d3b-6dd5-4297-b7a4-b3aad2b56a47/tokens/spacing.css">
+<link rel="stylesheet" href="_ds/design-system-d0075d3b-6dd5-4297-b7a4-b3aad2b56a47/tokens/base.css">
+<link rel="stylesheet" href="_ds/design-system-d0075d3b-6dd5-4297-b7a4-b3aad2b56a47/styles.css">
+<script src="_ds/design-system-d0075d3b-6dd5-4297-b7a4-b3aad2b56a47/_ds_bundle.js"></script>
+<link rel="stylesheet" href="design-tokens.css">
+<link rel="stylesheet" href="locale-fonts.css">
+<script>window.MIA_NS = ["cart","waqf","system","common"];</script>
+<style>
+  :root {
+    --deep: #10212B; --gold: #D39A27; --red: #A93428; --green: #1F7A4D;
+    --ivory: #FFFDF8; --sand: #F7F2EA; --muted: #52616B; --border: rgba(16,33,43,.12);
+  }
+  html { overflow-x: hidden; } body { margin: 0; background: var(--ivory); }
+  a { color: var(--deep); text-decoration: none; }
+  a:hover { color: var(--red); }
+  header::before { opacity: .06 !important; }
+  [style*="aqsa-white-pattern.webp"] { opacity: .035 !important; }
+  img[src*="aqsa-dome-line"] { opacity: .05 !important; }
+  @keyframes succ-in { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+  @keyframes succ-pop { 0% { opacity: 0; transform: scale(.4); } 60% { opacity: 1; transform: scale(1.08); } 100% { transform: scale(1); } }
+  @keyframes succ-ring { 0% { box-shadow: 0 0 0 0 rgba(31,122,77,.28); } 100% { box-shadow: 0 0 0 14px rgba(31,122,77,0); } }
+  .succ-link, .succ-link2 { transition: transform .2s cubic-bezier(.22,.61,.36,1), background .2s ease, color .2s ease; }
+  .succ-link:hover, .succ-link2:hover { transform: translateY(-2px); }
+  /* معاينة الشهادة: عرض الحاوية ومقياس التصغير يجب أن يتطابقا دائمًا
+     (1060 × المقياس = العرض)، وإلا فاض المحتوى وقُطع.
+     نفس القاعدة لشهادة الوقف: 1200 × .5 = 600px. تُصيَّر بمقاسها الطبيعي ثم
+     تُصغَّر بـ transform، لأن خطوطها تُقاس بـ cqw بحدود px دنيا فلا تصغر بالعرض.
+     العرض ثابت (لا 100%) لأن المقياس ثابت؛ أي عرض مرن يقطع المحتوى. */
+  /* وصل الدفع: نفس قاعدة تطابق (العرض = 870 × المقياس) */
+  @media (max-width: 700px) {
+    #receipt-canvas { width: 330px !important; }
+    #receipt-canvas > .receipt-scale { transform: scale(.3793) !important; }
+  }
+  /* توحيد مع معاينة صفحة الأوقاف والنموذج الرسمي: اللوحة الأمامية العمودية وحدها
+     (845/1178) — تُخفى اللوحة الخلفية ويصير الزوج عمودًا واحدًا، فالارتفاع الطبيعي
+     ~1660px بعرض 1200. العرض = 1200 × المقياس دائمًا. */
+  .waqf-scale .waqf-pair { grid-template-columns: minmax(0,1fr) !important; aspect-ratio: auto !important; }
+  .waqf-scale .waqf-back { display: none !important; }
+  @media (max-width: 700px) {
+    .waqf-canvas { width: 320px !important; aspect-ratio: 1200/1660 !important; }
+    .waqf-canvas .waqf-scale { transform: scale(.2667) !important; }
+  }
+  @media (max-width: 780px) {
+    #cert-canvas { width: 440px !important; }
+    #cert-canvas > .cert-scale { transform: scale(.415) !important; }
+  }
+  @media (max-width: 520px) {
+    #cert-canvas { width: 320px !important; }
+    #cert-canvas > .cert-scale { transform: scale(.302) !important; }
+  }
+  /* هاتف: تباعد أضيق، أيقونة وعناوين أصغر، بطاقة الملخص مشدودة، الأزرار عمود كامل العرض */
+  @media (max-width: 560px) {
+    section[style*="padding: 52px 0"] { padding: 30px 0 40px !important; }
+    section[style*="padding: 52px 0"] > div { padding: 0 16px !important; gap: 14px !important; }
+    span[style*="width: 74px"] { width: 58px !important; height: 58px !important; }
+    h1[style*="clamp(26px"] { font-size: 22px !important; }
+    section p[style*="font-size: 16px"] { font-size: 13.5px !important; line-height: 1.85 !important; }
+    div[style*="padding: 22px;"][style*="border-radius: 14px"] { padding: 15px 14px !important; gap: 8px !important; }
+    div[style*="padding: 22px 24px"] { padding: 16px 14px !important; gap: 13px !important; }
+  }
+  @media (max-width: 480px) {
+    #succ-actions, #succ-downloads { flex-direction: column; align-items: stretch; }
+    #succ-actions > *, #succ-downloads > * { width: 100%; justify-content: center; }
+    /* الدوريات تبقى صفًا واحدًا متساوي الأعمدة على الهاتف أيضًا */
+    #succ-freq-row button { font-size: 12.5px !important; height: 44px !important; }
+  }
+</style>
+
+<style id="aqsa-pattern-mask-v1">
+  [dir="rtl"] [style*="aqsa-white-pattern.webp"], [dir="rtl"] img[src*="aqsa-dome-line"] {
+    -webkit-mask-image: linear-gradient(to left, transparent 0%, rgba(0,0,0,.55) 55%, #000 100%);
+    mask-image: linear-gradient(to left, transparent 0%, rgba(0,0,0,.55) 55%, #000 100%);
+  }
+  [dir="ltr"] [style*="aqsa-white-pattern.webp"], [dir="ltr"] img[src*="aqsa-dome-line"] {
+    -webkit-mask-image: linear-gradient(to right, transparent 0%, rgba(0,0,0,.55) 55%, #000 100%);
+    mask-image: linear-gradient(to right, transparent 0%, rgba(0,0,0,.55) 55%, #000 100%);
+  }
+</style>
+</helmet>
+
+<div dir="{{ pageDir }}" style="position: relative; font-family: Cairo, Almarai, Tajawal, system-ui, sans-serif; background: var(--ivory); color: var(--deep);">
+
+  <div aria-hidden="true" style="position: fixed; inset: 0; background-image: url('public/assets/patterns/aqsa-white-pattern.webp'); background-repeat: repeat; background-size: 620px 620px; opacity: .085; -webkit-mask-image: linear-gradient(to left, rgba(0,0,0,.05), rgba(0,0,0,1)); mask-image: linear-gradient(to left, rgba(0,0,0,.05), rgba(0,0,0,1)); pointer-events: none; z-index: 0;"></div>
+  <img src="assets/aqsa-dome-line.png" alt="" aria-hidden="true" style="position: fixed; left: 50%; top: 74%; transform: translate(-50%,-50%); width: 62vw; max-width: 900px; height: auto; opacity: .1; pointer-events: none; z-index: 0;">
+
+  <dc-import name="Header" active="" hint-size="100%,106px"></dc-import>
+
+  <section style="padding: 52px 0;">
+    <div style="max-width: 640px; margin: 0 auto; padding: 0 24px; display: grid; justify-items: center; gap: 20px; text-align: center;">
+      <span style="display: grid; place-items: center; width: 74px; height: 74px; border-radius: 50%; background: rgba(31,122,77,.12); color: var(--green); animation: succ-pop .55s cubic-bezier(.22,.61,.36,1) both, succ-ring 1.8s ease-out .5s 2;">
+        <svg viewBox="0 0 24 24" width="38" height="38" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"></path></svg>
+      </span>
+      <h1 style="margin: 0; font-size: clamp(26px,3vw,36px); font-weight: 900; animation: succ-in .5s cubic-bezier(.22,.61,.36,1) both .1s;">{{ heading }}</h1>
+      <p style="margin: 0; font-size: 16px; line-height: 1.9; color: var(--muted); animation: succ-in .5s cubic-bezier(.22,.61,.36,1) both .16s;">{{ subtitle }}</p>
+
+      <div style="width: 100%; display: grid; gap: 10px; padding: 22px; background: #fff; border: 1px solid var(--border); border-radius: 14px; text-align: start; animation: succ-in .5s cubic-bezier(.22,.61,.36,1) both .22s;">
+        <span style="display: flex; justify-content: space-between; font-size: 14px;"><span style="color: var(--muted);">{{ tProject }}</span><b>{{ projectTitle }}</b></span>
+        <span style="display: flex; justify-content: space-between; font-size: 14px;"><span style="color: var(--muted);">{{ tAmount }}</span><b dir="ltr" style="unicode-bidi: isolate;">${{ amount }}</b></span>
+        <span style="display: flex; justify-content: space-between; font-size: 14px;"><span style="color: var(--muted);">{{ tReceiptNo }}</span><b dir="ltr" style="unicode-bidi: isolate;">{{ receiptNo }}</b></span>
+      </div>
+
+      <div id="succ-downloads" style="width: 100%; display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; animation: succ-in .5s cubic-bezier(.22,.61,.36,1) both .28s;">
+        <button onClick="{{ openReceipt }}" class="succ-link" style="display: inline-flex; align-items: center; gap: 9px; height: 46px; padding: 0 20px; border-radius: 8px; border: 1px solid var(--border); background: #fff; font-family: inherit; font-weight: 800; font-size: 14px; color: var(--deep); cursor: pointer;" style-hover="border-color: var(--gold);">
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m0 0 4-4m-4 4-4-4M4 21h16"></path></svg>
+          {{ tDownloadReceipt }}
+        </button>
+
+        <button onClick="{{ openCert }}" class="succ-link2" style="display: inline-flex; align-items: center; gap: 9px; height: 46px; padding: 0 20px; border-radius: 8px; border: 1px solid rgba(211,154,39,.55); background: rgba(211,154,39,.1); font-family: inherit; font-weight: 800; font-size: 14px; color: var(--deep); cursor: pointer;" style-hover="background: var(--gold); color: #fff;">
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m0 0 4-4m-4 4-4-4M4 21h16"></path></svg>
+          {{ tThankYouCert }}
+        </button>
+        <sc-for list="{{ waqfCerts }}" as="wc" hint-placeholder-count="1">
+          <button onClick="{{ wc.toggle }}" class="succ-link2" style="display: inline-flex; align-items: center; gap: 9px; height: 46px; padding: 0 20px; border-radius: 8px; border: 1px solid rgba(169,52,40,.5); background: rgba(169,52,40,.08); font-family: inherit; font-weight: 800; font-size: 14px; color: var(--deep); cursor: pointer;" style-hover="background: #A93428; color: #fff;">
+            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m0 0 4-4m-4 4-4-4M4 21h16"></path></svg>
+            {{ wc.btnLabel }}
+          </button>
+        </sc-for>
+      </div>
+
+      <!-- معاينة وصل الدفع: نفس نمط لوحتي الشهادتين — dc-import مُصغَّر + زر تحميل -->
+      <sc-if value="{{ receiptOpen }}" hint-placeholder-val="{{ false }}">
+        <div style="width: 100%; display: grid; gap: 16px; padding: 22px; background: #fff; border: 1px solid var(--border); border-radius: 14px; text-align: start;">
+          <div id="receipt-canvas" style="position: relative; justify-self: center; width: 520px; max-width: 100%; aspect-ratio: 870/1120; border-radius: 8px; overflow: hidden; border: 1px solid var(--border);">
+            <div class="receipt-scale" style="position: absolute; top: 0; left: 0; width: 870px; height: 1120px; transform: scale(.5977); transform-origin: top left;">
+              <dc-import name="إيصال التبرع" receipt-no="{{ receiptNo }}" hint-size="870px,1120px"></dc-import>
+            </div>
+          </div>
+          <a href="{{ receiptHref }}" style="justify-self: center; display: inline-flex; align-items: center; gap: 9px; height: 46px; padding: 0 24px; border-radius: 8px; background: var(--deep); color: #fff; font-weight: 900; font-size: 14px;">
+            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m0 0 4-4m-4 4-4-4M4 21h16"></path></svg>
+            {{ tDownloadReceipt }}
+          </a>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ certOpen }}" hint-placeholder-val="{{ false }}">
+        <div style="width: 100%; display: grid; gap: 16px; padding: 22px; background: #fff; border: 1px solid var(--border); border-radius: 14px; text-align: start;">
+          <label style="display: grid; gap: 7px;">
+            <b style="font-size: 13px; font-weight: 800;">{{ tCertNameLabel }}</b>
+            <input value="{{ certName }}" onInput="{{ onCertName }}" placeholder="{{ tWriteYourName }}" style="height: 46px; padding: 0 14px; border-radius: 8px; border: 1px solid var(--border); background: #fff; font-family: inherit; font-size: 14px; color: var(--deep);">
+          </label>
+          <div style="display: flex; flex-wrap: wrap; justify-content: center; align-items: flex-start; gap: 20px;">
+            <div id="cert-canvas" style="position: relative; flex: 0 0 auto; width: 620px; aspect-ratio: 1.414/1; border-radius: 8px; overflow: hidden;">
+              <div class="cert-scale" style="position: absolute; top: 0; left: 0; width: 1060px; height: 750px; transform: scale(.585); transform-origin: top left;">
+                <dc-import name="شهادة الشكر لوحة" donor-name="{{ certName }}" hint-size="1060px,750px"></dc-import>
+              </div>
+            </div>
+          </div>
+          <a href="{{ certificateHref }}" style="justify-self: center; display: inline-flex; align-items: center; gap: 9px; height: 46px; padding: 0 24px; border-radius: 8px; background: var(--gold); color: #10212B; font-weight: 900; font-size: 14px;">
+            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m0 0 4-4m-4 4-4-4M4 21h16"></path></svg>
+            {{ tDownloadCert }}
+          </a>
+        </div>
+      </sc-if>
+
+      <sc-for list="{{ waqfCerts }}" as="wc" hint-placeholder-count="0">
+        <sc-if value="{{ wc.open }}" hint-placeholder-val="{{ false }}">
+          <div style="width: 100%; display: grid; gap: 16px; padding: 22px; background: #fff; border: 1px solid var(--border); border-radius: 14px; text-align: start;">
+            <label style="display: grid; gap: 7px;">
+              <b style="font-size: 13px; font-weight: 800;">{{ tWaqfNameLabel }}</b>
+              <input value="{{ wc.name }}" onInput="{{ wc.onName }}" placeholder="{{ tWriteYourName }}" style="height: 46px; padding: 0 14px; border-radius: 8px; border: 1px solid var(--border); background: #fff; font-family: inherit; font-size: 14px; color: var(--deep);">
+            </label>
+            <div class="waqf-canvas" style="position: relative; justify-self: center; width: 420px; max-width: 100%; aspect-ratio: 1200/1660; border-radius: 8px; overflow: hidden;">
+              <div class="waqf-scale" style="position: absolute; top: 0; left: 0; width: 1200px; height: 1660px; transform: scale(.35); transform-origin: top left;">
+                <dc-import name="شهادة الاوقاف" unit="{{ wc.unit }}" donor-name="{{ wc.name }}" on-behalf="{{ wc.onBehalf }}" count="{{ wc.count }}" total="{{ wc.total }}" cert-no="{{ wc.certNo }}" cert-date="{{ wc.certDate }}" hint-size="1200px,838px"></dc-import>
+              </div>
+            </div>
+            <a href="{{ wc.href }}" style="justify-self: center; display: inline-flex; align-items: center; gap: 9px; height: 46px; padding: 0 24px; border-radius: 8px; background: #A93428; color: #fff; font-weight: 900; font-size: 14px;">
+              <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m0 0 4-4m-4 4-4-4M4 21h16"></path></svg>
+              {{ wc.downloadLabel }}
+            </a>
+          </div>
+        </sc-if>
+      </sc-for>
+
+      <sc-if value="{{ recurringDone }}" hint-placeholder-val="{{ false }}">
+        <div style="position: relative; width: 100%; display: flex; align-items: center; gap: 14px; padding: 20px 24px; background: var(--deep); border-radius: 12px; text-align: start;">
+          <span style="flex: 0 0 auto; width: 44px; height: 44px; border-radius: 50%; background: rgba(31,122,77,.22); color: var(--green); display: grid; place-items: center;">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"></path></svg>
+          </span>
+          <div style="display: grid; gap: 2px;">
+            <b style="font-size: 15.5px; font-weight: 900; color: #fff;">{{ tRecurringActivated }} ({{ recurringFreqLabel }})</b>
+            <span style="color: rgba(255,255,255,.72); font-size: 13.5px;">{{ tRecurringManageNote }}</span>
+          </div>
+        </div>
+      </sc-if>
+      <sc-if value="{{ showReviewStep }}" hint-placeholder-val="{{ false }}">
+        <div style="width: 100%; display: grid; gap: 16px; padding: 22px 24px; background: #fff; border: 1px solid var(--border); border-radius: 12px; text-align: start;">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span style="flex: 0 0 auto; width: 22px; height: 22px; border-radius: 50%; background: var(--gold); color: var(--deep); display: grid; place-items: center; font-size: 12px; font-weight: 900;">٣</span>
+            <b style="font-size: 15px; font-weight: 900;">{{ tReviewBeforeConfirm }}</b>
+          </div>
+          <div style="display: grid; gap: 8px; padding: 16px; background: var(--sand); border-radius: 10px;">
+            <span style="display: flex; justify-content: space-between; font-size: 14px;"><span style="color: var(--muted);">{{ tFrequency }}</span><b>{{ pickedFreqLabel }}</b></span>
+            <span style="display: flex; justify-content: space-between; font-size: 14px;"><span style="color: var(--muted);">{{ tAmount }}</span><b dir="ltr" style="unicode-bidi: isolate;">${{ pickedAmount }}</b></span>
+            <span style="display: flex; justify-content: space-between; font-size: 14px;"><span style="color: var(--muted);">{{ tProject }}</span><b>{{ projectTitle }}</b></span>
+          </div>
+          <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+            <button onClick="{{ confirmRecurring }}" style="flex: 1 1 160px; height: 50px; border: 0; border-radius: 8px; background: var(--gold); color: var(--deep); font-weight: 900; font-size: 15px; cursor: pointer; font-family: inherit;" style-hover="filter: brightness(1.08);">{{ tConfirmRecurring }}</button>
+            <button onClick="{{ cancelReview }}" style="flex: 0 0 auto; height: 50px; padding: 0 20px; border: 1px solid var(--border); border-radius: 8px; background: none; color: var(--muted); font-weight: 800; font-size: 14px; cursor: pointer; font-family: inherit;">{{ tGoBack }}</button>
+          </div>
+        </div>
+      </sc-if>
+      <sc-if value="{{ !recurringDone && !showReviewStep }}" hint-placeholder-val="{{ true }}">
+        <div style="width: 100%; display: grid; gap: 18px; padding: 22px 24px; background: #fff; border: 1px solid var(--border); border-radius: 12px; text-align: start;">
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <span style="flex: 0 0 auto; width: 40px; height: 40px; border-radius: 50%; background: rgba(211,154,39,.14); color: var(--gold); display: grid; place-items: center;">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-3-6.7"></path><path d="M21 3v6h-6"></path></svg>
+            </span>
+            <div style="display: grid; gap: 1px;">
+              <b style="font-size: 15px; font-weight: 900;">{{ tMakeImpactLast }}</b>
+              <span style="font-size: 13px; color: var(--muted);">{{ tMakeImpactLastNote }}</span>
+            </div>
+          </div>
+
+          <div style="display: grid; gap: 8px;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span style="{{ step1BadgeStyle }}">١</span>
+              <span style="font-size: 13px; font-weight: 800; color: var(--deep);">{{ tChooseFrequency }}</span>
+              <sc-if value="{{ freq }}" hint-placeholder-val="{{ false }}">
+                <button onClick="{{ backToStep1 }}" style="margin-inline-start: auto; border: 0; background: none; color: var(--gold); font-weight: 800; font-size: 12.5px; cursor: pointer; font-family: inherit;">{{ tChange }}</button>
+              </sc-if>
+            </div>
+            <sc-if value="{{ !freq }}" hint-placeholder-val="{{ true }}">
+              <div style="display: flex; align-items: stretch; gap: 8px;" id="succ-freq-row">
+                <sc-for list="{{ freqs }}" as="fq" hint-placeholder-count="3">
+                  <button onClick="{{ fq.select }}" style="{{ fq.style }}">{{ fq.label }}</button>
+                </sc-for>
+              </div>
+            </sc-if>
+            <sc-if value="{{ freq }}" hint-placeholder-val="{{ false }}">
+              <span style="display: inline-flex; align-items: center; gap: 8px; width: fit-content; padding: 8px 16px; border-radius: 999px; background: rgba(211,154,39,.14); border: 1px solid rgba(211,154,39,.4); color: var(--deep); font-weight: 800; font-size: 13.5px;">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"></path></svg>
+                {{ pickedFreqLabel }}
+              </span>
+            </sc-if>
+          </div>
+
+          <sc-if value="{{ freq }}" hint-placeholder-val="{{ false }}">
+            <div style="display: grid; gap: 8px;">
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <span style="{{ step2BadgeStyle }}">٢</span>
+                <span style="font-size: 13px; font-weight: 800; color: var(--deep);">{{ tChooseAmountStep }}</span>
+              </div>
+              <div style="display: flex; gap: 8px;">
+                <button onClick="{{ chooseSameAmount }}" style="{{ sameAmountBtnStyle }}">{{ tSameAmount }}</button>
+                <button onClick="{{ chooseOtherAmount }}" style="{{ otherAmountBtnStyle }}">{{ tOtherAmount }}</button>
+              </div>
+              <sc-if value="{{ showAmounts }}" hint-placeholder-val="{{ false }}">
+                <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                  <sc-for list="{{ suggestedAmounts }}" as="am" hint-placeholder-count="4">
+                    <button onClick="{{ am.select }}" style="{{ am.style }}">${{ am.value }}</button>
+                  </sc-for>
+                  <input value="{{ customAmount }}" onChange="{{ onCustomAmount }}" inputMode="decimal" placeholder="{{ tFreeAmount }}" style="height: 44px; padding: 0 14px; border-radius: 8px; border: 1px solid var(--border); font-family: inherit; font-size: 14px; width: 110px;">
+                </div>
+              </sc-if>
+            </div>
+
+            <button onClick="{{ proceedToReview }}" disabled="{{ !canProceed }}" style="{{ proceedBtnStyle }}">{{ tProceedToReview }}</button>
+          </sc-if>
+        </div>
+      </sc-if>
+
+      <div id="succ-actions" style="display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; margin-top: 8px;">
+        <x-import component-from-global-scope="DesignSystem_d0075d.Button" variant="primary" href="المشاريع.dc.html" dc-props="{{ nowrapProp }}" hint-size="180px,48px">{{ tBrowseMore }}</x-import>
+        <x-import component-from-global-scope="DesignSystem_d0075d.Button" variant="light" href="الصفحة الرئيسية.dc.html" dc-props="{{ nowrapProp }}" hint-size="150px,48px">{{ tBackHome }}</x-import>
+      </div>
+    </div>
+  </section>
+
+  <dc-import name="Footer" hint-size="100%,540px"></dc-import>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1360,&quot;height&quot;:700},&quot;heading&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;تقبّل الله منكم صالح الأعمال وجعله في ميزان حسناتكم&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;نصوص الحالة&quot;},&quot;subtitle&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;تم استلام تبرعك بنجاح، وسيصلك إيصال رسمي على بريدك الإلكتروني. سيُنشر تحديث تنفيذ المشروع على صفحته عند اعتماده.&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;نصوص الحالة&quot;},&quot;donorName&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;بيانات التبرع&quot;},&quot;projectTitle&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;—&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;بيانات التبرع&quot;},&quot;amount&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;—&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;بيانات التبرع&quot;},&quot;receiptNo&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;قيد الإصدار&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;بيانات التبرع&quot;},&quot;receiptHref&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;#&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;روابط التحميل&quot;},&quot;certificateHref&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;#&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;روابط التحميل&quot;},&quot;waqfUnit&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;&quot;,&quot;share&quot;,&quot;meter&quot;],&quot;default&quot;:&quot;&quot;,&quot;tsType&quot;:&quot;\&quot;\&quot;|\&quot;share\&quot;|\&quot;meter\&quot;&quot;,&quot;section&quot;:&quot;شهادة الوقف&quot;},&quot;waqfCount&quot;:{&quot;editor&quot;:&quot;int&quot;,&quot;default&quot;:1,&quot;min&quot;:1,&quot;tsType&quot;:&quot;number&quot;,&quot;section&quot;:&quot;شهادة الوقف&quot;},&quot;waqfTotal&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;شهادة الوقف&quot;},&quot;waqfOnBehalf&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;شهادة الوقف&quot;},&quot;waqfCertNo&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;شهادة الوقف&quot;},&quot;waqfCertDate&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;شهادة الوقف&quot;}}">
+/*
+ * نجاح التبرع (Success)
+ * -----------------------
+ * تظهر فقط بعد تأكيد فعلي (Webhook ناجح) من بوابة الدفع لطلب حقيقي — لا تُفتح
+ * مباشرة بلا تحقق من حالة الطلب.
+ * ربط الداشبورد/الباك-إند:
+ *   - بطاقة الملخص (المشروع/المبلغ/رقم الإيصال) تُملأ من بيانات الطلب الفعلي وليس
+ *     نصًا ثابتًا؛ "قيد الإصدار" تتحول لرقم إيصال حقيقي فور توليده من نظام الفوترة.
+ *   - "{{ tDownloadReceipt }}" يُنتج PDF رسمي من الباك-إند برقم الإيصال ومطابقًا لسياسات
+ *     محاسبية معتمدة؛ "تحميل شهادة التبرع" مستند شكر منفصل (اسم المتبرع + المشروع +
+ *     المبلغ + الشعار الرسمي) — كلاهما يحتاج توليد ملفات من الخادم، لا رابط وهمي.
+ *   - "اجعله تبرعًا دوريًا": يُنفَّذ الآن مباشرة من نفس الصفحة (بلا تنقّل) — عند اختيار
+ *     الدورية يجب أن يُرسَل طلب للباك-إند لإنشاء اشتراك فعلي في بوابة الدفع بنفس
+ *     المشروع/المبلغ، لا مجرد تغيير حالة عرض محلية كما في هذا المثال.
+ *
+ * حالات العرض (state machine بسيطة، حصريّة):
+ *   idle (!recurringDone && !showReviewStep) → showReviewStep (بعد "متابعة") →
+ *   recurringDone (بعد "تأكيد التبرع الدوري"). العرض الثلاثة متنافية دائمًا؛
+ *   showReviewStep = showReview && !recurringDone تحديدًا لمنع تراكب مربّع
+ *     المراجعة فوق شارة "تم تفعيل التبرع الدوري" حتى لو تأخر إعادة الرسم.
+ *
+ * نصوص وبيانات الطلب (heading/subtitle/projectTitle/amount/receiptNo/
+ * receiptHref/certificateHref) كلها props قابلة للتعديل من الداشبورد — لا نصوص
+ * أو أرقام افتراضية ثابتة في الكود؛ المبلغ المقترح "نفس المبلغ" في خطوة التبرع
+ * الدوري يقرأ amount نفسه، لا رقمًا مكررًا منفصلاً.
+ * الحركة: أيقونة النجاح تنبثق بارتداد خفيف (succ-pop) وتصدر حلقتين من نبض حلقي
+ * أخضر (succ-ring) لتأكيد النجاح بصريًا، بقية العناصر (العنوان، البطاقة، أزرار
+ * التحميل) تدخل بتلاشي/صعود متدرّج الزمن (succ-in)، وأزرار التحميل ترتفع بلطف
+ * عند المرور. على الهاتف (٤٨٠px وأقل): أزرار التحميل والإجراءات السفلية تتكدّس
+ * عموديًا بعرض كامل، وأزرار اختيار الدورية تتكدّس بدل الصف الأفقي.
+ *
+ * ربط لوحة تحكم المتبرع (Dashboard):
+ *   - سجل هذا التبرع (مشروع/مبلغ/تاريخ/رقم إيصال) يجب أن يظهر في "سجل تبرعاتي"
+ *     بحساب المتبرع فور نجاح الدفع، لا فقط في هذه الصفحة العابرة.
+ *   - أي اشتراك دوري يُفعَّل من هنا يجب أن يظهر في "إدارة الاشتراكات" بالحساب
+ *     (تعديل المبلغ/الدورية أو الإلغاء) — لا مسار آخر لإدارته حاليًا في الواجهة.
+ *   - رقم الإيصال ("قيد الإصدار") وروابط PDF يُغذّيان أيضًا من نفس مصدر بيانات
+ *     لوحة التحكم حتى لا يتعارض ما يظهر هنا مع سجل حساب المستخدم.
+ */
+class Component extends DCLogic {
+  /* مصدر واحد للغة — التخزين مباشرة؛ النصوص والاتجاه يُشتقّان منه معًا. */
+  locale() {
+    try { return localStorage.getItem("mia.lang") || "ar"; } catch (e) { return "ar"; }
+  }
+  pageDirection() { const l = this.locale(); return (l === "ar" || l === "ur") ? "rtl" : "ltr"; }
+  tr(ns, key, ar) { const g = window.MIA_I18N; return (g && g.t(ns, key)) || ar; }
+
+  componentDidMount() {
+    /* عند تبديل اللغة تُجلب حزم الصفحة قبل إعادة الرسم — فلا يظهر fallback عربي مؤقت */
+    this._onLang = () => {
+      if (window.MIA_I18N && window.MIA_I18N.ensure) window.MIA_I18N.ensure(["cart", "waqf", "system", "common"]).then(() => this.forceUpdate());
+      this.forceUpdate();
+    };
+    window.addEventListener("mia:langchange", this._onLang);
+    // انتظار غير مشروط: load() فردية وتُعيد نفس الوعد، فلا يُفقد إشعار الاكتمال.
+    if (window.MIA_I18N && window.MIA_I18N.load) {
+      window.MIA_I18N.load().then(() => this.forceUpdate());
+    }
+  }
+  componentWillUnmount() {
+    window.removeEventListener("mia:langchange", this._onLang);
+  }
+
+  static SUGGESTED = [50, 100, 200, 500];
+
+  state = {
+    recurringDone: false, recurringFreqLabel: "", showReview: false,
+    freq: null, amountMode: null, customAmount: "", pickedAmount: null,
+  };
+
+  /*
+   * شهادة الوقف: تُصدَر فقط إذا كانت السلة المدفوعة تحتوي بندًا وقفيًا
+   * (سهم 100$ أو متر 1500$)، وبنوع الوحدة التي تبرّع بها المتبرع فعلًا.
+   * المصدر: props.waqfUnit إن مرّرها الخادم، وإلا يُقرأ البند الوقفي من
+   * localStorage("mia_cart_items") — نفس المفتاح والشكل الذي تكتبه
+   * «الأوقاف.dc.html» وتقرأه «السلة.dc.html».
+   * شكل البند الحقيقي:
+   *   { type: "وقف", amount: "$100", currency: "USD", frequency: "تبرع لمرة",
+   *     title: "السهم الوقفي × 1 — باسم … — وقد أوقفها عن: … — شهادة رقم 76550" }
+   * فتُستخرج الوحدة والعدد و«أوقفها عن» ورقم الشهادة من نص title، ورقم
+   * الشهادة يُعاد استخدامه كما هو (مولَّد مسبقًا عبر consumeCertSeq من
+   * mia_waqf_seq_meter / mia_waqf_seq_share) ولا يُولَّد رقم ثانٍ.
+   * تُقرأ كل البنود الوقفية (لا بندًا واحدًا): يمكن للمتبرع شراء سهم ومتر في
+   * السلة نفسها، فتُصدَر شهادة مستقلة لكل بند برقمه الخاص حتى لا يضيع رقم
+   * مُستهلَك دون شهادة.
+   * ولا تظهر الشهادة لأي مسار آخر (زكاة / إغاثة / تبرع دوري).
+   */
+  readWaqfFromCart() {
+    try {
+      const raw = localStorage.getItem("mia_cart_items");
+      if (!raw) return null;
+      const items = JSON.parse(raw);
+      if (!Array.isArray(items)) return null;
+      const waqfItems = items.filter((x) => x && (x.type === "وقف" || /الوقفي/.test(x.title || "")));
+      return waqfItems.map((it) => {
+        const t = String(it.title || "");
+        const unit = /المتر الوقفي/.test(t) ? "meter" : "share";
+        const mCount = t.match(/×\s*(\d+)/);
+        const mBehalf = t.match(/وقد أوقفها عن:\s*([^—]+)/);
+        const mCert = t.match(/شهادة رقم\s*(\d+)/);
+        const mName = t.match(/باسم\s*([^—]+)/);
+        const amt = String(it.amount || "").replace(/[^\d.]/g, "");
+        const count = mCount ? Number(mCount[1]) || 1 : 1;
+        return {
+          unit,
+          count,
+          total: (amt || String(count * (unit === "meter" ? 1500 : 100))) + " دولار أمريكي",
+          onBehalf: mBehalf ? mBehalf[1].trim() : "",
+          certNo: mCert ? mCert[1] : "",
+          donorName: mName ? mName[1].trim() : "",
+        };
+      });
+    } catch (e) { return []; }
+  }
+  renderVals() {
+    const s = this.state;
+    const p = this.props || {};
+    const waqfList = p.waqfUnit
+      ? [{ unit: p.waqfUnit, count: p.waqfCount != null ? p.waqfCount : 1, total: p.waqfTotal || "", onBehalf: p.waqfOnBehalf || "", certNo: p.waqfCertNo || "", donorName: p.donorName || "" }]
+      : this.readWaqfFromCart();
+    const openMap = this.state.waqfOpenMap || {};
+    const nameMap = this.state.waqfNameMap || {};
+    // اسم الواقف في شهادة الوقف: ما كتبه المتبرع في صفحة الأوقاف (المخزَّن في
+    // بند السلة) وإلا اسمه المُدخَل في بيانات الدفع.
+    const waqfCerts = (waqfList || []).map((w, i) => {
+      const key = w.certNo || String(i);
+      const isMeter = w.unit === "meter";
+      return {
+        unit: w.unit, count: w.count, total: w.total, onBehalf: w.onBehalf,
+        certNo: w.certNo, certDate: p.waqfCertDate || new Date().toLocaleDateString("ar-EG"),
+        name: nameMap[key] != null ? nameMap[key] : (w.donorName || p.donorName || ""),
+        onName: (e) => this.setState({ waqfNameMap: Object.assign({}, this.state.waqfNameMap, { [key]: e.target.value }) }),
+        open: !!openMap[key],
+        toggle: () => this.setState({ waqfOpenMap: Object.assign({}, this.state.waqfOpenMap, { [key]: !((this.state.waqfOpenMap || {})[key]) }) }),
+        btnLabel: isMeter ? this.tr("cart", "meterCertName", "شهادة المتر الوقفي") : this.tr("cart", "shareCertName", "شهادة السهم الوقفي"),
+        downloadLabel: isMeter ? this.tr("cart", "downloadMeterCert", "تحميل شهادة المتر الوقفي") : this.tr("cart", "downloadShareCert", "تحميل شهادة السهم الوقفي"),
+        /* "#" = غير مضبوط من الداشبورد — نحيل لقالب الشهادة الرسمي للمعاينة/الطباعة */
+        href: (p.waqfCertHref && p.waqfCertHref !== "#") ? p.waqfCertHref : "شهادة الاوقاف.dc.html",
+      };
+    });
+    const originalAmount = p.amount ?? 100;
+    const btnBase = { flex: "1 1 0", height: 48, border: 0, borderInlineStart: "1px solid var(--border)", background: "none", color: "var(--deep)", fontWeight: 800, fontSize: "14px", cursor: "pointer", fontFamily: "inherit" };
+    const pillBase = { height: 44, padding: "0 16px", borderRadius: 8, border: "1px solid var(--border)", background: "#fff", color: "var(--deep)", fontWeight: 800, fontSize: "13.5px", cursor: "pointer", fontFamily: "inherit" };
+    const badgeBase = { flex: "0 0 auto", width: 22, height: 22, borderRadius: "50%", display: "grid", placeItems: "center", fontSize: "12px", fontWeight: 900 };
+    const canProceed = !!(s.amountMode === "same" || (s.amountMode === "other" && s.customAmount));
+    return {
+      pageDir: this.pageDirection(),
+      tThankCert: this.tr("common", "thankYouCertificate", "شهادة الشكر"),
+      tProject: this.tr("cart", "typeProject", "المشروع"),
+      tDownloadReceipt: this.tr("system", "downloadReceipt", "تحميل إيصال التبرع"),
+      tThankYouCert: this.tr("system", "thankYouCertTitle", "شهادة الشكر"),
+      tDownloadCert: this.tr("system", "downloadThankYouCert", "تحميل شهادة الشكر"),
+      tRecurringActivated: this.tr("system", "recurringActivated", "تم تفعيل التبرع الدوري"),
+      tRecurringManageNote: this.tr("system", "recurringManageNote", "سيُخصم نفس المبلغ تلقائيًا حسب الدورية المختارة. يمكنك إدارته من حسابك."),
+      tConfirmRecurring: this.tr("system", "confirmRecurring", "تأكيد التبرع الدوري"),
+      tGoBack: this.tr("system", "goBack", "رجوع"),
+      tChange: this.tr("system", "changeChoice", "تغيير"),
+      tFreeAmount: this.tr("common", "freeAmount", "مبلغ مخصص"),
+      tSameAmount: this.tr("system", "sameAmount", "نفس المبلغ ({amount})").replace(/\{amount\}/gi, "$" + (p.amount ?? "")),
+      tAmount: this.tr("common", "amount", "المبلغ"),
+      tReceiptNo: this.tr("system", "receiptNo", "رقم الإيصال"),
+      tFrequency: this.tr("system", "frequencyLabel", "الدورية"),
+      tCertNameLabel: this.tr("system", "certNameLabel", "الاسم كما تريده على الشهادة"),
+      tWaqfNameLabel: this.tr("system", "waqfNameLabel", "اسم الواقف كما يظهر في الشهادة"),
+      tWriteYourName: this.tr("system", "writeYourName", "اكتب اسمك"),
+      tReviewBeforeConfirm: this.tr("system", "reviewBeforeConfirm", "مراجعة قبل التأكيد"),
+      tMakeImpactLast: this.tr("system", "makeImpactLast", "اجعل أثرك مستمرًا"),
+      tMakeImpactLastNote: this.tr("system", "makeImpactLastNote", "حوّل هذا التبرع إلى عطاء دوري يُسحب تلقائيًا"),
+      tChooseFrequency: this.tr("system", "chooseFrequency", "اختر دورية السحب"),
+      tChooseAmountStep: this.tr("system", "chooseAmountStep", "اختر المبلغ"),
+      tOtherAmount: this.tr("system", "otherAmount", "مبلغ آخر"),
+      tProceedToReview: this.tr("system", "proceedToReview", "متابعة — مراجعة قبل التأكيد"),
+      tBrowseMore: this.tr("system", "browseMoreProjects", "تصفّح مشاريع أخرى"),
+      tBackHome: this.tr("system", "backHomeCta", "العودة إلى الرئيسية"),
+      nowrapProp: { style: { whiteSpace: "nowrap" } },
+      /* الـprop يفوز فقط إذا عُدّل فعلًا — المطابق للافتراضي العربي يُتجاهل لصالح الترجمة */
+      heading: (p.heading && p.heading !== "تقبّل الله منكم صالح الأعمال وجعله في ميزان حسناتكم") ? p.heading : this.tr("system", "donationSuccess", "تقبّل الله منكم صالح الأعمال وجعله في ميزان حسناتكم"),
+      subtitle: (p.subtitle && !/^تم است?لام تبرعك/.test(p.subtitle)) ? p.subtitle : this.tr("system", "successLead", "تم استلام تبرعك بنجاح، وسيصلك إيصال رسمي على بريدك الإلكتروني. سيُنشر تحديث تنفيذ المشروع على صفحته عند اعتماده."),
+      projectTitle: p.projectTitle || "—",
+      amount: originalAmount,
+      receiptNo: (p.receiptNo && p.receiptNo !== "قيد الإصدار") ? p.receiptNo : this.tr("system", "issuing", "قيد الإصدار"),
+      /* "#" تعني غير مضبوط من الداشبورد — نستخدم قالب الإيصال للمعاينة */
+      receiptHref: (p.receiptHref && p.receiptHref !== "#") ? p.receiptHref : "إيصال التبرع.dc.html",
+      // شهادة الشكر معتمدة تصميميًا (النسخة العرضية = Primary) وثابتة في كل تبرع.
+      // ربط الداشبورد: certificateHref يجب أن يشير لمسار توليد PDF من الخادم؛
+      // القيمة الافتراضية هنا هي قالب الشهادة نفسه للمعاينة أثناء التصميم.
+      certificateHref: (p.certificateHref && p.certificateHref !== "#") ? p.certificateHref : "شهادة الشكر عرضية.dc.html",
+      // شهادة الشكر: معاينة حيّة للشهادة المعتمدة (النسخة العرضية) عبر dc-import،
+      // لا صورة قالب. certName يبدأ من اسم المتبرع المُدخَل في بيانات الدفع (props.donorName)
+      // ويمكن للمتبرع تعديله من هذه الصفحة قبل التحميل — التعديل ينعكس فورًا على المعاينة.
+      // ربط الداشبورد: donorName يُمرَّر من صفحة الدفع (الاسم الأول + الأخير كما أدخلهما
+      // المتبرع) فيملأ الخانة تلقائيًا؛ وcertificateHref يشير لمسار توليد PDF من الخادم
+      // يستقبل (donorName النهائي بعد التعديل, amount, receiptNo) ويصيّر نفس قالب الشهادة.
+      // إيصال الدفع وشهادة الشكر ثابتان في كل تبرع؛ شهادة الوقف زر إضافي
+      // مستقل يظهر فقط إذا كان في السلة بند وقفي (سهم/متر).
+      // ربط الداشبورد: waqfCertHref مسار توليد PDF لشهادة الوقف من الخادم،
+      // يستقبل (unit, count, total, donorName, onBehalf, certNo, certDate)
+      // ويصيّر نفس قالب «شهادة الاوقاف» — منفصل عن certificateHref.
+      // شهادة الوقف: تظهر بزرّها المستقل فقط إذا كان التبرع في مسار الأوقاف
+      // (سهم/متر). كل بياناتها تُقرأ من البند الوقفي في mia_cart_items، ورقم
+      // الشهادة يُعاد استخدامه من نفس البند (لا يُولَّد رقم ثانٍ)؛ وتاريخ
+      // الإصدار من الخادم أو تاريخ تأكيد الدفع.
+      hasWaqf: waqfCerts.length > 0,
+
+      // شهادة الوقف لها لوحتها وزرّها واسمها المستقل عن شهادة الشكر: الأولى
+      // تُصدَر لكل تبرع، والثانية إضافية تظهر فقط لبند وقفي في السلة.
+      waqfCerts,
+
+      receiptOpen: s.receiptOpen,
+      openReceipt: () => this.setState({ receiptOpen: !s.receiptOpen }),
+      certOpen: s.certOpen,
+      certName: s.certName != null ? s.certName : (p.donorName || ""),
+      openCert: () => this.setState({ certOpen: !s.certOpen }),
+      onCertName: (e) => this.setState({ certName: e.target.value }),
+      recurringDone: s.recurringDone,
+      /* الحالة تخزن المعرّف الخام (Enum) — التسمية تُشتق عند العرض */
+      recurringFreqLabel: ({ daily: this.tr("common", "daily", "يوميًا"), friday: this.tr("common", "everyFriday", "كل جمعة"), monthly: this.tr("common", "monthly", "شهريًا") })[s.recurringFreqLabel] || s.recurringFreqLabel,
+      showReview: s.showReview,
+      showReviewStep: s.showReview && !s.recurringDone,
+      freq: s.freq,
+      /* التسمية المعروضة تُشتق من المعرّف — لا تُخزَّن مترجمة */
+      pickedFreqLabel: ({ daily: this.tr("common", "daily", "يوميًا"), friday: this.tr("common", "everyFriday", "كل جمعة"), monthly: this.tr("common", "monthly", "شهريًا") })[s.freq] || s.freq,
+      pickedAmount: s.pickedAmount,
+      customAmount: s.customAmount,
+      showAmounts: s.amountMode === "other",
+      canProceed,
+      step1BadgeStyle: { ...badgeBase, background: "var(--gold)", color: "var(--deep)" },
+      step2BadgeStyle: { ...badgeBase, background: "var(--gold)", color: "var(--deep)" },
+      proceedBtnStyle: {
+        height: 50, border: 0, borderRadius: 8, fontWeight: 900, fontSize: "15px", fontFamily: "inherit",
+        cursor: canProceed ? "pointer" : "not-allowed",
+        background: canProceed ? "var(--gold)" : "var(--border)",
+        color: canProceed ? "var(--deep)" : "var(--muted)",
+      },
+      backToStep1: () => this.setState({ freq: null, amountMode: null, customAmount: "" }),
+      /* المعرّف الثابت (daily/friday/monthly) هوية الحالة — Canonical Enum؛ التسمية ترجمة للعرض فقط */
+      /* رقاقات متساوية بأيقونة صح عند الاختيار — تحديد ذهبي بنمط رقاقات الموقع */
+      freqs: [["daily", "daily", "يوميًا"], ["friday", "everyFriday", "كل جمعة"], ["monthly", "monthly", "شهريًا"]].map(([id, key, ar]) => ({
+        label: this.tr("common", key, ar),
+        on: s.freq === id ? "1" : "",
+        style: {
+          flex: "1 1 0", minWidth: 0, height: 46, borderRadius: 10, cursor: "pointer", fontFamily: "inherit",
+          fontWeight: 800, fontSize: "13.5px", whiteSpace: "nowrap", transition: "all .18s ease",
+          border: s.freq === id ? "1px solid var(--gold)" : "1px solid var(--border)",
+          background: s.freq === id ? "rgba(211,154,39,.14)" : "#fff",
+          color: s.freq === id ? "var(--deep)" : "var(--muted)",
+          boxShadow: s.freq === id ? "0 0 0 3px rgba(211,154,39,.15)" : "none",
+        },
+        select: () => this.setState({ freq: id }),
+      })),
+      sameAmountBtnStyle: {
+        flex: "1 1 0", height: 44, borderRadius: 8, cursor: "pointer", fontFamily: "inherit", fontWeight: 800, fontSize: "13.5px",
+        border: s.amountMode === "same" ? "1px solid var(--gold)" : "1px solid var(--border)",
+        background: s.amountMode === "same" ? "rgba(211,154,39,.14)" : "#fff", color: "var(--deep)",
+      },
+      otherAmountBtnStyle: {
+        flex: "1 1 0", height: 44, borderRadius: 8, cursor: "pointer", fontFamily: "inherit", fontWeight: 800, fontSize: "13.5px",
+        border: s.amountMode === "other" ? "1px solid var(--gold)" : "1px solid var(--border)",
+        background: s.amountMode === "other" ? "rgba(211,154,39,.14)" : "#fff", color: "var(--deep)",
+      },
+      suggestedAmounts: Component.SUGGESTED.map((value) => ({
+        value,
+        style: { ...pillBase, border: s.customAmount == value ? "1px solid var(--gold)" : "1px solid var(--border)", background: s.customAmount == value ? "rgba(211,154,39,.14)" : "#fff" },
+        select: () => this.setState({ customAmount: String(value) }),
+      })),
+      onCustomAmount: (e) => this.setState({ customAmount: e.target.value }),
+      chooseSameAmount: () => this.setState({ amountMode: "same" }),
+      chooseOtherAmount: () => this.setState({ amountMode: "other" }),
+      proceedToReview: () => {
+        if (!s.freq || !canProceed) return;
+        const amount = s.amountMode === "other" && s.customAmount ? s.customAmount : originalAmount;
+        this.setState({ showReview: true, pickedAmount: amount });
+      },
+      cancelReview: () => this.setState({ showReview: false }),
+      /* [BACKEND-INTEGRATION] MOCK / FRONTEND ONLY: التأكيد هنا عرضي — إنشاء الخطة الفعلي
+         (status: active) يتم Backend-side بعد Payment Authorization (انظر DONATION_LOGIC_SPEC). */
+      confirmRecurring: () => this.setState({ recurringDone: true, showReview: false, recurringFreqLabel: s.freq }),
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -1771,7 +1771,12 @@
     "inNameOf": "Au Nom de",
     "certWord": "Certificat",
     "shareUnitTitle": "Part de waqf",
-    "meterUnitTitle": "Mètre de waqf"
+    "meterUnitTitle": "Mètre de waqf",
+    "rcpVerifyLabel": "Code de vérification",
+    "rcpCopyOf": "Exemplaire",
+    "waqfPreviewNumberNote": "Numéro d'aperçu — le numéro officiel est émis par le serveur après confirmation du paiement",
+    "printDocument": "Imprimer",
+    "landscapeVersion": "Version approuvée (paysage)"
   },
   "common": {
     "donate": "Faire un Don",

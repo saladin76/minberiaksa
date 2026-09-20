@@ -6,6 +6,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { Button } from "@/components/minbar/ds";
 import { miaPath } from "@/lib/minbar/routes";
 import { addToCart } from "@/lib/minbar/cart";
+import { WAQF_MAX_COUNT, WAQF_UNIT_PRICE_USD } from "@/lib/minbar/waqf";
 import { useMinbarMoney } from "@/hooks/useMinbarMoney";
 import ZakatBanner from "@/components/minbar/banners/ZakatBanner";
 import TravelBanner from "@/components/minbar/banners/TravelBanner";
@@ -31,8 +32,8 @@ import WaqfCertificatePreview from "./WaqfCertificatePreview";
  * certificate's legal text are reviewed translated content.
  */
 
-const SHARE_PRICE = 100;
-const METER_PRICE = 1500;
+const SHARE_PRICE = WAQF_UNIT_PRICE_USD.share;
+const METER_PRICE = WAQF_UNIT_PRICE_USD.meter;
 
 type WaqfUnit = "share" | "meter";
 
@@ -97,6 +98,7 @@ export default function WaqfPage({ donorName }: WaqfPageProps) {
   const tHome = useTranslations("homepage");
   const tZakat = useTranslations("zakat");
   const tValidation = useTranslations("validation");
+  const tCert = useTranslations("certificates");
   const { format, formatNumber } = useMinbarMoney();
 
   const [unit, setUnit] = useState<WaqfUnit>("share");
@@ -107,6 +109,9 @@ export default function WaqfPage({ donorName }: WaqfPageProps) {
   const [added, setAdded] = useState(false);
   const [error, setError] = useState(false);
   const [openFaq, setOpenFaq] = useState(-1);
+  /* On a phone the certificate sits behind a button (`#waqf-cert-toggle`);
+     on wider screens it is always beside the picker. */
+  const [certPreviewOpen, setCertPreviewOpen] = useState(false);
 
   const unitPrice = unit === "meter" ? METER_PRICE : SHARE_PRICE;
   const total = unitPrice * count;
@@ -118,12 +123,17 @@ export default function WaqfPage({ donorName }: WaqfPageProps) {
     return ok;
   };
 
+  /* The row carries the unit, the count and both names; the server prices it
+     again from the unit price and mints the certificate number after payment.
+     The stored title is only the fallback label the basket shows. */
   const buildItem = () => ({
     titleKey: unit === "meter" ? "unitMeter" : "unitShare",
+    title: `${unit === "meter" ? t("unitMeter") : t("unitShare")} × ${count} — ${tCert("inNameOf")} ${name.trim()}`,
     typeKey: "waqf" as const,
     freqKey: monthly ? ("monthly" as const) : ("once" as const),
     amount: total,
     currency: "USD",
+    waqf: { unit, count, donorName: name.trim(), onBehalf: onBehalf.trim() },
   });
 
   const onAdd = () => {
@@ -218,7 +228,7 @@ export default function WaqfPage({ donorName }: WaqfPageProps) {
                   <b style={{ minWidth: 34, display: "grid", placeItems: "center", textAlign: "center", fontSize: 15.5, fontWeight: 900, borderInline: "1px solid var(--border)", fontVariantNumeric: "tabular-nums", padding: "0 4px" }}>
                     {formatNumber(count)}
                   </b>
-                  <button type="button" onClick={() => setCount((c) => c + 1)} aria-label="+" className="wq-step" style={stepBtn}>
+                  <button type="button" onClick={() => setCount((c) => Math.min(WAQF_MAX_COUNT, c + 1))} aria-label="+" className="wq-step" style={stepBtn}>
                     +
                   </button>
                 </span>
@@ -342,7 +352,21 @@ export default function WaqfPage({ donorName }: WaqfPageProps) {
               </button>
             </div>
 
-            <WaqfCertificatePreview unit={unit} count={count} total={format(total)} name={name} onBehalf={onBehalf} />
+            <button
+              id="waqf-cert-toggle"
+              type="button"
+              onClick={() => setCertPreviewOpen((open) => !open)}
+              aria-expanded={certPreviewOpen}
+              aria-controls="waqf-cert-preview"
+              style={{ display: "none", alignItems: "center", justifyContent: "center", gap: 9, width: "100%", height: 48, border: "1px solid var(--gold)", borderRadius: 10, background: "#fff", color: "var(--deep)", fontFamily: "inherit", fontSize: 14, fontWeight: 900, cursor: "pointer" }}
+            >
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="var(--gold)" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <rect x="4" y="3" width="16" height="18" rx="2" />
+                <path d="M8 8h8M8 12h8M8 16h5" />
+              </svg>
+              {certPreviewOpen ? t("hideCertPreview") : t("showCertPreview")}
+            </button>
+            <WaqfCertificatePreview unit={unit} count={count} total={format(total)} name={name} onBehalf={onBehalf} open={certPreviewOpen} />
           </div>
         </div>
       </section>

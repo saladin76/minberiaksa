@@ -1769,7 +1769,12 @@
     "inNameOf": "Em Nome de",
     "certWord": "Certificado",
     "shareUnitTitle": "Quota de waqf",
-    "meterUnitTitle": "Metro de waqf"
+    "meterUnitTitle": "Metro de waqf",
+    "rcpVerifyLabel": "Código de verificação",
+    "rcpCopyOf": "Via",
+    "waqfPreviewNumberNote": "Número de pré-visualização — o número oficial é emitido pelo servidor após a confirmação do pagamento",
+    "printDocument": "Imprimir",
+    "landscapeVersion": "Versão aprovada (paisagem)"
   },
   "common": {
     "donate": "Doar Agora",

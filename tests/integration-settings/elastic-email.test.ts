@@ -66,6 +66,26 @@ test("transactional payload matches the Elastic Email v4 contract", () => {
   assert.equal(payload.Options.TrackOpens, true);
 });
 
+test("payload carries PDF attachments inline as base64 (v4 `Attachments`)", () => {
+  const payload = buildElasticEmailPayload(
+    {
+      to: "donor@example.org",
+      subject: "s",
+      html: "<p>x</p>",
+      attachments: [{ filename: "شهادة الشكر.pdf", content: "JVBERi0=", contentType: "application/pdf" }],
+    },
+    { email: "from@b.org", name: "" }
+  ) as { Content: { Attachments?: Array<{ BinaryContent: string; Name: string; ContentType: string }> } };
+  assert.deepEqual(payload.Content.Attachments, [{ BinaryContent: "JVBERi0=", Name: "شهادة الشكر.pdf", ContentType: "application/pdf" }]);
+});
+
+test("payload has no Attachments key when nothing is attached", () => {
+  const payload = buildElasticEmailPayload({ to: "a@b.org", subject: "s", html: "<p>x</p>", attachments: [] }, { email: "from@b.org", name: "" }) as {
+    Content: Record<string, unknown>;
+  };
+  assert.equal("Attachments" in payload.Content, false);
+});
+
 test("payload omits the plain-text part when none is rendered", () => {
   const payload = buildElasticEmailPayload({ to: "a@b.org", subject: "s", html: "<p>x</p>" }, { email: "from@b.org", name: "" }) as {
     Content: { From: string; Body: unknown[] };
