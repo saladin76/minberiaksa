@@ -734,6 +734,26 @@ export async function PATCH(
       for (const categoryId of touchedCategoryIds) {
         await recomputeCategoryCurrentAmount(tx, categoryId);
       }
+
+      // A bank-transfer donation carries a receipt claim that the finance page
+      // reads. An admin settling or failing the donation from this generic
+      // dialog must leave the claim telling the same story, or the receipt
+      // would still sit in the review queue after the money was counted.
+      if (existing.provider === 'BANK_TRANSFER') {
+        const reviewer = auditActorFromDashboardSession(session);
+        const claim = await tx.bankTransferClaim.findUnique({ where: { donationId: id }, select: { id: true, status: true } });
+        if (claim && nextStatus === 'PAID' && nextPaidAt !== null && claim.status !== 'CONFIRMED') {
+          await tx.bankTransferClaim.update({
+            where: { id: claim.id },
+            data: { status: 'CONFIRMED', reviewedAt: new Date(), reviewedById: reviewer.actorId, reviewedByName: reviewer.actorName ?? null, rejectionReason: null },
+          });
+        } else if (claim && nextStatus === 'FAILED' && claim.status !== 'REJECTED') {
+          await tx.bankTransferClaim.update({
+            where: { id: claim.id },
+            data: { status: 'REJECTED', reviewedAt: new Date(), reviewedById: reviewer.actorId, reviewedByName: reviewer.actorName ?? null, rejectionReason: 'تعذّر مطابقة التحويل مع الحساب البنكي' },
+          });
+        }
+      }
     });
 
     const actor = auditActorFromDashboardSession(session);

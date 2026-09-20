@@ -89,8 +89,11 @@ function providerLabel(d: { provider: string | null; paymentMethod: string | nul
         ? "PayFor (Ziraat)"
         : d.provider === "ALBARAKA"
           ? "Albaraka Türk"
-          : d.provider ?? "—";
-  const m = d.paymentMethod === "CARD" ? "Card" : d.paymentMethod === "PAYPAL" ? "PayPal" : d.paymentMethod ?? "";
+          : d.provider === "BANK_TRANSFER"
+            ? "تحويل بنكي"
+            : d.provider ?? "—";
+  /* A bank transfer names itself once; "تحويل بنكي · BANK_TRANSFER" says nothing twice. */
+  const m = d.paymentMethod === "CARD" ? "Card" : d.paymentMethod === "PAYPAL" ? "PayPal" : d.paymentMethod === "BANK_TRANSFER" ? "" : d.paymentMethod ?? "";
   return m ? `${p} · ${m}` : p;
 }
 

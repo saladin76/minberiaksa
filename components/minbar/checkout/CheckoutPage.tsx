@@ -41,9 +41,10 @@ import CardPreview from "./CardPreview";
  *    never reach this origin.
  *  - PayPal opens a checkout session created by the backend. No donation exists
  *    until PayPal confirms.
- *  - bank transfer creates nothing at all: the donor copies an IBAN, transfers
- *    outside the site, and uploads a receipt. A finance officer moves it to
- *    Confirmed (`DONATION_LOGIC_SPEC §3`), and only then is a certificate issued.
+ *  - bank transfer creates the order and nothing to pay: the donor copies an
+ *    IBAN, transfers outside the site, and uploads a receipt on the next page.
+ *    A finance officer moves it to Confirmed (`DONATION_LOGIC_SPEC §3`), and
+ *    only then is it counted or a certificate issued.
  *
  * `[AUTH-INTEGRATION]`: the Google and Facebook buttons sign the donor in and
  * pre-fill their name and email.
@@ -173,6 +174,24 @@ export default function CheckoutPage({ projects, categories, banks, donor }: Che
   const needsOwnCardForm = !bankCollectsCard && !cardRailUnavailable;
   const selectedBank = banks.find((b) => b.id === bankId) ?? banks[0];
 
+  /* A transfer is one act by the donor; nothing can be charged again next
+     month. A recurring basket therefore has no bank option, and if the donor
+     had it selected before the basket changed, the choice falls back to card. */
+  const bankAvailable = orderTypeForCart === "ONE_TIME" && banks.length > 0;
+  useEffect(() => {
+    if (method === "bank" && !bankAvailable && hydrated) setMethod("card");
+  }, [method, bankAvailable, hydrated]);
+
+  /* Which IBAN the donor will send to. Defaults to the one in the currency
+     they are browsing in, since that is the amount they were quoted. */
+  const [bankCurrency, setBankCurrency] = useState<string | null>(null);
+  const bankCurrencies = selectedBank?.currencies ?? [];
+  const chosenBankCurrency =
+    bankCurrencies.find((c) => c.code === bankCurrency)?.code ??
+    bankCurrencies.find((c) => c.code === currency)?.code ??
+    bankCurrencies[0]?.code ??
+    null;
+
   const copy = async (key: string, value: string) => {
     try {
       await navigator.clipboard.writeText(value);
@@ -231,6 +250,10 @@ export default function CheckoutPage({ projects, categories, banks, donor }: Che
         locale,
         method: methodForServer,
         referralCode: readReferralCode(),
+        bank:
+          method === "bank" && selectedBank
+            ? { slug: selectedBank.id, currency: chosenBankCurrency ?? currency }
+            : null,
         guest: signedIn
           ? null
           : { firstName: firstName.trim(), lastName: lastName.trim(), email: email.trim(), phone: phone.trim() },
@@ -239,9 +262,11 @@ export default function CheckoutPage({ projects, categories, banks, donor }: Che
 
       if (method === "bank") {
         /* Nothing is charged. The basket is cleared because the order exists,
-           and the donor is told it is awaiting a finance officer's match. */
+           and the donor goes to the page where they upload the receipt and
+           follow the finance review. Guests are let in by the token. */
         clearCart();
-        router.push(miaPath("paymentPending", locale));
+        const pending = miaPath("paymentPending", locale, donation.id);
+        router.push(donation.bankTransferToken ? `${pending}?t=${donation.bankTransferToken}` : pending);
         return;
       }
 
@@ -485,7 +510,7 @@ export default function CheckoutPage({ projects, categories, banks, donor }: Che
               </h2>
 
               <div id="pay-methods" style={{ display: "flex", gap: 10 }}>
-                {methods.map((m) => (
+                {methods.filter((m) => m.id !== "bank" || bankAvailable).map((m) => (
                   <button
                     key={m.id}
                     type="button"
@@ -528,17 +553,40 @@ export default function CheckoutPage({ projects, categories, banks, donor }: Che
                     </span>
                   </div>
 
+                  {bankCurrencies.length > 1 ? (
+                    <div role="radiogroup" aria-label={t("acceptedCurrencies")} style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                      {bankCurrencies.map((c) => {
+                        const active = c.code === chosenBankCurrency;
+                        return (
+                          <button
+                            key={c.code}
+                            type="button"
+                            role="radio"
+                            aria-checked={active}
+                            onClick={() => setBankCurrency(c.code)}
+                            style={{ height: 30, padding: "0 12px", borderRadius: 999, border: `1px solid ${active ? "var(--gold)" : "var(--border)"}`, background: active ? "#fff" : "transparent", color: active ? "var(--deep)" : "var(--muted)", fontFamily: "inherit", fontSize: 12.5, fontWeight: 800, cursor: "pointer", transition: "all .18s ease" }}
+                          >
+                            {c.code}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  ) : null}
+
                   {[
-                    { key: `${selectedBank.id}:holder`, label: t("accountName"), value: selectedBank.holder, latin: false },
-                    { key: `${selectedBank.id}:swift`, label: "SWIFT / BIC", value: selectedBank.swift, latin: true },
+                    { key: `${selectedBank.id}:holder`, label: t("accountName"), value: selectedBank.holder, latin: false, dim: false },
+                    { key: `${selectedBank.id}:swift`, label: "SWIFT / BIC", value: selectedBank.swift, latin: true, dim: false },
                     ...selectedBank.currencies.map((c) => ({
                       key: `${selectedBank.id}:iban:${c.code}`,
                       label: `IBAN · ${c.code}`,
                       value: formatIban(c.iban),
                       latin: true,
+                      /* The IBANs the donor did not pick stay visible but step
+                         back, so the one to copy is unmistakable. */
+                      dim: bankCurrencies.length > 1 && c.code !== chosenBankCurrency,
                     })),
                   ].map((row) => (
-                    <span key={row.key} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, padding: "10px 12px", background: "#fff", border: "1px solid var(--border)", borderRadius: 8 }}>
+                    <span key={row.key} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, padding: "10px 12px", background: "#fff", border: `1px solid ${row.dim ? "var(--border)" : row.key.includes(":iban:") ? "var(--gold)" : "var(--border)"}`, borderRadius: 8, opacity: row.dim ? 0.55 : 1, transition: "opacity .18s ease, border-color .18s ease" }}>
                       <span style={{ display: "grid", gap: 2, minWidth: 0 }}>
                         <span style={{ fontSize: 11, fontWeight: 800, color: "var(--muted)" }}>{row.label}</span>
                         {/* An identifier is the one place break-all is allowed. */}
@@ -567,7 +615,13 @@ export default function CheckoutPage({ projects, categories, banks, donor }: Che
                     </span>
                   ))}
 
-                  <span style={{ fontSize: 12, color: "var(--muted)", lineHeight: 1.7 }}>{t("bankTransferNote")}</span>
+                  <span style={{ display: "flex", alignItems: "flex-start", gap: 7, fontSize: 12.5, color: "var(--deep)", lineHeight: 1.7 }}>
+                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="var(--gold)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ flex: "0 0 auto", marginTop: 3 }}>
+                      <path d="M12 16V8M8 12l4-4 4 4" />
+                      <path d="M4 20h16" />
+                    </svg>
+                    <span>{t("bankTransferUploadNote")}</span>
+                  </span>
                 </div>
               ) : null}
 
@@ -660,7 +714,7 @@ export default function CheckoutPage({ projects, categories, banks, donor }: Che
                 className="mia-card-cta"
                 style={{ width: "100%", height: 52, border: 0, borderRadius: 8, background: "var(--red)", color: "#fff", fontFamily: "inherit", fontWeight: 900, fontSize: 16, cursor: "pointer", boxShadow: "var(--shadow-cta)", transition: "filter .18s ease" }}
               >
-                {method === "bank" ? t("ctaBankSent") : t("ctaComplete")}
+                {method === "bank" ? t("ctaBankContinue") : t("ctaComplete")}
               </button>
             )}
 

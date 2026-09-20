@@ -80,7 +80,7 @@ export default function ProgramsPage({ playlists }: { playlists: CmsPlaylist[] }
                     href={episode.url || youtubeWatch(episode.youtubeId)}
                     className="prg-ep"
                     aria-label={episode.title || series.title}
-                    style={{ display: "block", overflow: "hidden", borderRadius: 8 }}
+                    style={{ display: "grid", gap: 8, overflow: "hidden", borderRadius: 8, color: "inherit", textDecoration: "none" }}
                     onClick={(event) => {
                       if (event.metaKey || event.ctrlKey || event.shiftKey || event.button !== 0) return;
                       event.preventDefault();
@@ -101,6 +101,13 @@ export default function ProgramsPage({ playlists }: { playlists: CmsPlaylist[] }
                         </span>
                       </span>
                     </span>
+                    {/* The episode's own title — the dashboard's when one was
+                        typed, else the one YouTube publishes for the video. */}
+                    {episode.title ? (
+                      <b className="prg-ep-title" style={{ display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden", fontSize: 14, lineHeight: 1.55, fontWeight: 800 }}>
+                        {episode.title}
+                      </b>
+                    ) : null}
                   </a>
                 ))}
               </div>

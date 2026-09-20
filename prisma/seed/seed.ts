@@ -389,10 +389,11 @@ async function main() {
   }
   console.log(`✓ videos: ${videoCount}`);
 
-  /* Report · Booklet · BankAccount · UrgentBanner · Faq are
+  /* Report · Booklet · BankAccount · Faq are
      deliberately NOT seeded. The first two need the official PDF URLs; a
      BankAccount holds live IBANs and a placeholder there sends a donor's
-     transfer nowhere; the rest are editorial and managed from the dashboard. */
+     transfer nowhere; the rest are editorial and managed from the dashboard.
+     The two shared bands are seeded separately by `seed-banners.ts`. */
 }
 
 main()

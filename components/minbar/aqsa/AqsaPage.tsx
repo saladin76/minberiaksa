@@ -8,8 +8,6 @@ import type { VerseBlock } from "@/lib/minbar/quran";
 import { Button } from "@/components/minbar/ds";
 import ProjectDonateCard from "@/components/minbar/ProjectDonateCard";
 import ZakatBanner from "@/components/minbar/banners/ZakatBanner";
-import TravelBanner from "@/components/minbar/banners/TravelBanner";
-import IbadanBanner from "@/components/minbar/banners/IbadanBanner";
 import { NoProjects } from "@/components/minbar/states/ContentStates";
 import { CategoryProgramme } from "@/components/minbar/categories/CategorySections";
 import type { CategoryPageContent } from "@/lib/minbar/category-page";
@@ -545,8 +543,6 @@ export default function AqsaPage({ verse, isra, projects, category = null }: Aqs
       </section>
 
       <ZakatBanner />
-      <TravelBanner />
-      <IbadanBanner />
     </div>
   );
 }

@@ -104,9 +104,10 @@ const FIELD = {
 export default function AccountPage({ summary }: { summary: MinbarAccountSummary }) {
   const locale = useLocale();
   const t = useTranslations("account");
+  const tTransfer = useTranslations("transferReceipt");
   const { format, formatNumber } = useMinbarMoney();
 
-  const { profile, donations, totalDonatedUSD, donationCount, activeSubscriptions } = summary;
+  const { profile, donations, pendingTransfers, totalDonatedUSD, donationCount, activeSubscriptions } = summary;
 
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -229,6 +230,57 @@ export default function AccountPage({ summary }: { summary: MinbarAccountSummary
 
         <div className="acc-body" style={{ ...SECTION, display: "grid", gridTemplateColumns: "minmax(0,1.2fr) minmax(0,.8fr)", gap: 30, alignItems: "start" }}>
           <div style={{ display: "grid", gap: 14 }}>
+            {/* Bank transfers the finance team has not confirmed yet. Shown
+                above the history, apart from it and never in the totals: the
+                donor should see where each one stands and what it needs of
+                them — a receipt, another receipt, or nothing but patience. */}
+            {pendingTransfers.length > 0 ? (
+              <div style={{ display: "grid", gap: 10, marginBottom: 10 }}>
+                <div>
+                  <h2 style={{ margin: 0, fontSize: 19, fontWeight: 900 }}>{tTransfer("accountSectionTitle")}</h2>
+                  <p style={{ margin: "4px 0 0", fontSize: 13, color: "var(--muted)", lineHeight: 1.7 }}>{tTransfer("accountSectionLead")}</p>
+                </div>
+                {pendingTransfers.map((transfer) => {
+                  const tone =
+                    transfer.status === "REJECTED"
+                      ? { color: "var(--red)", background: "rgba(169,52,40,.1)" }
+                      : transfer.status === "UNDER_REVIEW"
+                        ? { color: "var(--green)", background: "rgba(31,122,77,.1)" }
+                        : { color: "var(--gold)", background: "rgba(211,154,39,.16)" };
+                  const label =
+                    transfer.status === "REJECTED"
+                      ? tTransfer("statusRejected")
+                      : transfer.status === "UNDER_REVIEW"
+                        ? tTransfer("statusReview")
+                        : tTransfer("statusAwaiting");
+                  return (
+                    <div key={transfer.donationId} className="acc-row acc-card acc-in" style={{ display: "flex", alignItems: "center", gap: 16, padding: "16px 18px", background: "#fff", border: `1px solid ${transfer.status === "REJECTED" ? "rgba(169,52,40,.35)" : "rgba(211,154,39,.4)"}`, borderRadius: 10 }}>
+                      <span style={{ flex: "1 1 auto", minWidth: 0 }}>
+                        <b style={{ display: "block", fontSize: 15 }}>
+                          {transfer.titles.length ? transfer.titles.join("، ") : t("dearDonor")}
+                        </b>
+                        <span style={{ display: "flex", alignItems: "center", gap: 6, color: "var(--muted)", fontSize: 12.5, marginTop: 2, flexWrap: "wrap" }}>
+                          <time dateTime={transfer.createdAt}>{dateFormat.format(new Date(transfer.createdAt))}</time>
+                          <span aria-hidden="true" style={{ width: 3, height: 3, borderRadius: "50%", background: "var(--muted)" }} />
+                          <span style={{ display: "inline-flex", padding: "2px 8px", borderRadius: 999, background: tone.background, color: tone.color, fontWeight: 800 }}>{label}</span>
+                        </span>
+                      </span>
+                      <b dir="ltr" style={{ unicodeBidi: "isolate", whiteSpace: "nowrap", color: "var(--muted)" }}>
+                        {chargedAmount(transfer.amount, transfer.currency)}
+                      </b>
+                      <Link
+                        href={miaPath("paymentPending", locale, transfer.donationId)}
+                        className="acc-receipt"
+                        style={{ display: "inline-flex", alignItems: "center", gap: 6, height: 32, padding: "0 12px", borderRadius: 8, border: `1px solid ${transfer.canUpload ? "var(--red)" : "var(--border)"}`, background: transfer.canUpload ? "var(--red)" : "#fff", fontSize: 12.5, fontWeight: 800, color: transfer.canUpload ? "#fff" : "var(--deep)", whiteSpace: "nowrap", transition: "all .18s ease" }}
+                      >
+                        {transfer.canUpload ? tTransfer("accountAction") : tTransfer("accountFollow")}
+                      </Link>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : null}
+
             <h2 style={{ margin: 0, fontSize: 19, fontWeight: 900 }}>{t("donationHistory")}</h2>
             <div style={{ display: "grid", gap: 10 }}>
               {donations.map((donation) => (

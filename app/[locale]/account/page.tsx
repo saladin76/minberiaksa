@@ -12,7 +12,7 @@ interface Props {
 }
 
 /** The page's own namespaces, on top of the shell bundle. */
-const NAMESPACES = ["account"] as const;
+const NAMESPACES = ["account", "transferReceipt"] as const;
 
 /**
  * Never indexed: this page exists only for the donor signed in to it, and

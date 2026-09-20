@@ -53,12 +53,24 @@ export interface CreateDonationInput {
   guest: CheckoutDonor | null;
   /** Referral code from the visit, if the campaign-link layer captured one. */
   referralCode?: string | null;
+  /**
+   * Bank transfer only: the published account the donor was shown and the
+   * currency of the IBAN they picked, so the finance review knows where to
+   * look for the money.
+   */
+  bank?: { slug: string; currency: string } | null;
 }
 
 export interface CreatedDonation {
   id: string;
   /** Set when the cart contained a recurring item and a plan was created. */
   subscriptionId: string | null;
+  /**
+   * Bank transfer only: the secret that lets a guest reach the receipt upload
+   * page. Appended to the redirect as `?t=`; a signed-in owner is let in by
+   * their session regardless.
+   */
+  bankTransferToken: string | null;
 }
 
 /** Everything a bank's 3-D Secure page needs, as the initiate route returns it. */
@@ -131,6 +143,9 @@ export async function createDonation(input: CreateDonationInput): Promise<Create
       paymentMethod: input.method,
       locale: input.locale,
       ...(input.referralCode ? { referralCode: input.referralCode } : {}),
+      ...(input.method === "BANK_TRANSFER" && input.bank
+        ? { bankSlug: input.bank.slug, bankCurrency: input.bank.currency }
+        : {}),
       ...(input.guest
         ? {
             guest: {
@@ -145,14 +160,23 @@ export async function createDonation(input: CreateDonationInput): Promise<Create
   });
 
   const payload = (await response.json().catch(() => null)) as
-    | { donation?: { id: string }; subscription?: { id: string }; error?: string }
+    | {
+        donation?: { id: string };
+        subscription?: { id: string };
+        bankTransfer?: { accessToken: string };
+        error?: string;
+      }
     | null;
 
   if (!response.ok || !payload?.donation?.id) {
     throw new Error(payload?.error || "order-failed");
   }
 
-  return { id: payload.donation.id, subscriptionId: payload.subscription?.id ?? null };
+  return {
+    id: payload.donation.id,
+    subscriptionId: payload.subscription?.id ?? null,
+    bankTransferToken: payload.bankTransfer?.accessToken ?? null,
+  };
 }
 
 /**

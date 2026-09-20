@@ -20,7 +20,7 @@ export type DashboardNavItem = {
 };
 
 /** Counters the sidebar knows how to fetch. */
-export type DashboardNavBadgeKey = "inboxUnread";
+export type DashboardNavBadgeKey = "inboxUnread" | "transferReceiptsPending";
 
 export type DashboardNavGroup = { group: string; items: DashboardNavItem[] };
 
@@ -42,7 +42,11 @@ export const DASHBOARD_NAV_GROUPS: DashboardNavGroup[] = [
     items: [
       { key: "revenue", title: "اللوحة الرئيسية", href: "/dashboard", icon: "layoutDashboard", keywords: ["home", "overview", "الرئيسية"] },
       { key: "monthly", title: "التبرعات الشهرية", href: "/dashboard/monthly", icon: "repeat", keywords: ["monthly", "subscriptions", "اشتراكات"] },
-      { key: "bankTransfers", title: "التحويلات البنكية", href: "/dashboard/bank-transfers", icon: "landmark", keywords: ["bank", "transfers", "حوالات"] },
+      { key: "bankTransfers", title: "التحويلات البنكية", href: "/dashboard/bank-transfers", icon: "landmark", keywords: ["bank", "transfers", "حوالات", "statement", "كشف"] },
+      // Receipts donors upload after choosing bank transfer at checkout, waiting on a finance
+      // decision. A different queue from the statement importer above: that one starts from the
+      // bank's file, this one from the donor's photo. Same permission — both are the finance desk.
+      { key: "bankTransfers", title: "إيصالات التحويل", href: "/dashboard/transfer-receipts", icon: "receipt", keywords: ["receipts", "transfer", "إيصال", "إيصالات", "تحويل", "مراجعة", "review", "pending"], badge: "transferReceiptsPending" },
       { key: "donors", title: "المتبرعون", href: "/dashboard/users/donors", icon: "users", keywords: ["donors", "users", "متبرعين"] },
     ],
   },
@@ -161,7 +165,8 @@ export const DASHBOARD_PERMISSION_ROWS: {
 }[] = [
   { key: "revenue", group: "الرئيسية", title: "اللوحة الرئيسية" },
   { key: "monthly", group: "الرئيسية", title: "التبرعات الشهرية" },
-  { key: "bankTransfers", group: "الرئيسية", title: "التحويلات البنكية" },
+  // One grant for the whole finance desk: the statement importer and the donor-receipt queue.
+  { key: "bankTransfers", group: "الرئيسية", title: "التحويلات البنكية وإيصالات التحويل" },
   { key: "donors", group: "الرئيسية", title: "المتبرعون" },
   { key: "campaigns", group: "محتوى الموقع", title: "المشاريع" },
   { key: "categories", group: "محتوى الموقع", title: "الحملات والدول" },

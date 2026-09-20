@@ -2092,13 +2092,27 @@ export default function DashboardPage() {
                                 )}
                               </button>
                             ) : d.provider === "BANK_TRANSFER" ? (
-                              <span
-                                className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-semibold bg-brand/10 text-brand"
-                                title="تبرع عبر تحويل بنكي — مستورد من كشف الحساب"
-                              >
-                                <Landmark className="w-3 h-3" />
-                                تحويل بنكي
-                              </span>
+                              /* Two origins share the provider: a line imported from
+                                 the bank's statement, or a receipt a donor uploaded at
+                                 checkout. Only the latter has a review to open. */
+                              d.paymentMethod === "BANK_TRANSFER" ? (
+                                <Link
+                                  href={`/dashboard/transfer-receipts?claim=${d.id}`}
+                                  className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-semibold bg-brand/10 text-brand hover:bg-brand/20 transition-colors"
+                                  title={d.paidAt ? "تحويل بنكي مؤكد — فتح الإيصال" : "تحويل بنكي بانتظار مطابقة الإيصال — فتح المراجعة"}
+                                >
+                                  <Landmark className="w-3 h-3" />
+                                  تحويل بنكي
+                                </Link>
+                              ) : (
+                                <span
+                                  className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-semibold bg-brand/10 text-brand"
+                                  title="تبرع عبر تحويل بنكي — مستورد من كشف الحساب"
+                                >
+                                  <Landmark className="w-3 h-3" />
+                                  تحويل بنكي
+                                </span>
+                              )
                             ) : (
                               <span className="text-slate-400 text-xs">—</span>
                             )}

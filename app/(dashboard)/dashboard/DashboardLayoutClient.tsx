@@ -29,6 +29,7 @@ import {
 } from "@/lib/dashboard/nav-config";
 import { buildBreadcrumbs } from "@/lib/dashboard/breadcrumbs";
 import { INBOX_UNREAD_EVENT } from "@/lib/messages/inbox-status";
+import { TRANSFER_RECEIPTS_PENDING_EVENT } from "@/lib/donations/transfer-receipts-badge";
 import { DashboardSidebar } from "./_shell/DashboardSidebar";
 import { DashboardTopbar } from "./_shell/DashboardTopbar";
 import { CommandPalette } from "./_shell/CommandPalette";
@@ -171,6 +172,47 @@ function DashboardContent({
       window.removeEventListener(INBOX_UNREAD_EVENT, onLocalChange);
     };
   }, [wantsInboxBadge]);
+
+  /**
+   * Same shape for the finance queue: bank-transfer receipts waiting on a decision. The review
+   * page pushes the number down as it confirms or rejects, so the badge never lags a click.
+   */
+  const wantsReceiptsBadge = badgeKeys.includes('transferReceiptsPending');
+  useEffect(() => {
+    if (!wantsReceiptsBadge) return;
+    let cancelled = false;
+    const setPending = (n: number) =>
+      setNavCounts((prev) => (prev.transferReceiptsPending === n ? prev : { ...prev, transferReceiptsPending: n }));
+
+    const run = async () => {
+      try {
+        const res = await fetch('/api/admin/transfer-receipts/pending-count', { cache: 'no-store' });
+        if (!res.ok) { if (!cancelled) setPending(0); return; }
+        const data = await res.json();
+        if (!cancelled) setPending(data?.ok === false ? 0 : Number(data?.count ?? 0));
+      } catch {
+        if (!cancelled) setPending(0);
+      }
+    };
+
+    run();
+    const timer = setInterval(run, 60000);
+    const onLocalChange = (e: Event) => {
+      const detail = (e as CustomEvent<{ delta?: number; count?: number }>).detail;
+      if (typeof detail?.count === 'number') { setPending(Math.max(0, detail.count)); return; }
+      if (typeof detail?.delta !== 'number' || !Number.isFinite(detail.delta)) return;
+      setNavCounts((prev) => ({
+        ...prev,
+        transferReceiptsPending: Math.max(0, (prev.transferReceiptsPending ?? 0) + detail.delta!),
+      }));
+    };
+    window.addEventListener(TRANSFER_RECEIPTS_PENDING_EVENT, onLocalChange);
+    return () => {
+      cancelled = true;
+      clearInterval(timer);
+      window.removeEventListener(TRANSFER_RECEIPTS_PENDING_EVENT, onLocalChange);
+    };
+  }, [wantsReceiptsBadge]);
 
   const closeSidebar = useCallback(() => setIsSidebarOpen(false), []);
   const openSearch = useCallback(() => { setIsSidebarOpen(false); setIsSearchOpen(true); }, []);

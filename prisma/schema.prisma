@@ -662,6 +662,9 @@ model Donation {
   items         DonationItem[]
   categoryItems DonationCategoryItem[]
   comments      Comment[]
+  /// Set only when `paymentMethod` is BANK_TRANSFER: the receipt the donor
+  /// uploaded and where the finance review stands. See `BankTransferClaim`.
+  bankTransferClaim BankTransferClaim?
 }
 
 model Subscription {
@@ -777,6 +780,93 @@ enum DonationStatus {
 enum PaymentMethod {
   CARD
   PAYPAL
+  /// The donor transfers outside the site and uploads a receipt; a finance
+  /// officer confirms it from the dashboard. Such a donation is created as
+  /// `PAID` with `paidAt` unset (the site's "قيد التأكيد" convention) and is
+  /// stamped — and counted — only on confirmation.
+  BANK_TRANSFER
+}
+
+/**
+ * ===================== BANK TRANSFER RECEIPTS =====================
+ */
+
+/// `DONATION_LOGIC_SPEC §3`: Awaiting receipt → Receipt uploaded / Under
+/// review → Confirmed | Rejected. Only a finance officer moves a claim past
+/// UNDER_REVIEW, and only from the dashboard.
+enum BankTransferClaimStatus {
+  /// The order exists; the donor has not sent a receipt yet.
+  AWAITING_RECEIPT
+  /// A receipt is in; the finance team has to match it against the account.
+  UNDER_REVIEW
+  /// Money matched. The donation's `paidAt` is stamped at the same moment.
+  CONFIRMED
+  /// Not matched. The donor is told why and may upload again (see
+  /// `BANK_TRANSFER_MAX_SUBMISSIONS`); the donation is FAILED meanwhile.
+  REJECTED
+}
+
+/// One uploaded receipt — a photo, screenshot or PDF of the transfer notice.
+/// Kept as a list so a rejected submission stays visible beside the one that
+/// replaced it: the reviewer sees what was sent before and why it was refused.
+type BankTransferReceiptFile {
+  url          String
+  publicId     String
+  /// Cloudinary resource type the file was stored under — "image" or "raw".
+  resourceType String
+  mimeType     String
+  bytes        Int
+  fileName     String
+  uploadedAt   DateTime
+  /// 1-based: which submission this file belongs to.
+  submission   Int
+}
+
+model BankTransferClaim {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  donationId String   @unique @db.ObjectId
+  donation   Donation @relation(fields: [donationId], references: [id], onDelete: Cascade)
+
+  status BankTransferClaimStatus @default(AWAITING_RECEIPT)
+
+  /// Random secret that lets a guest — who has no session to prove the order
+  /// is theirs — reach the upload page from the redirect and from the emails.
+  /// A signed-in donor who owns the donation needs no token.
+  accessToken String @unique
+
+  /// Which published account the donor said they used, snapshotted so the
+  /// review still reads correctly if the account is later edited or removed.
+  bankSlug     String?
+  bankName     String?
+  /// ISO 4217 of the IBAN they picked on that account.
+  bankCurrency String?
+
+  /// What the donor typed beside the receipt. All optional — the file is the
+  /// evidence; these help the reviewer find the line on the statement.
+  senderName        String?
+  transferDate      DateTime?
+  transferReference String?
+  donorNote         String?
+
+  receipts BankTransferReceiptFile[]
+  /// How many times a receipt has been submitted (first upload = 1).
+  submissionCount    Int       @default(0)
+  receiptSubmittedAt DateTime?
+
+  /// The review. `reviewedBy*` are plain scalars, not a relation, for the same
+  /// reason `Message.repliedBy*` are: only ever displayed.
+  reviewedAt      DateTime?
+  reviewedById    String?   @db.ObjectId
+  reviewedByName  String?
+  /// Shown to the donor on rejection (and in the rejection email).
+  rejectionReason String?
+  /// Internal only — never shown to the donor.
+  adminNote       String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status, createdAt])
 }
 
 //asd

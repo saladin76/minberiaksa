@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useState, type CSSProperties, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import { localeDirection } from "@/lib/locales";
 import { miaPath } from "@/lib/minbar/routes";
 import { addToCart, type CartFreqKey } from "@/lib/minbar/cart";
 import type { MinbarProject } from "@/lib/minbar/projects";
+import { qfAmountStyle, qfFreqStyle, qfRowStyle } from "./quick-donate-styles";
 
 /**
  * Quick donation widget — ported from `Minbar/التبرع السريع.dc.html`.
@@ -82,55 +83,9 @@ export default function QuickDonate({ amounts = DEFAULT_AMOUNTS }: QuickDonatePr
     };
   }, [open, groups.length, locale]);
 
-  const rowStyle = (isSelected: boolean): CSSProperties => ({
-    width: "100%",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    padding: "9px 12px",
-    background: isSelected ? "#FDF3DD" : "transparent",
-    border: 0,
-    borderTop: "1px solid rgba(16,33,43,.06)",
-    fontFamily: "inherit",
-    fontSize: 12.5,
-    fontWeight: isSelected ? 900 : 700,
-    color: isSelected ? "#10212B" : "#52616B",
-    cursor: "pointer",
-  });
-
-  const freqStyle = (checked: boolean): CSSProperties => ({
-    height: 36,
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    padding: "0 6px",
-    borderRadius: 999,
-    border: `1px solid ${checked ? "#D39A27" : "rgba(16,33,43,.12)"}`,
-    background: checked ? "#D39A27" : "#fff",
-    color: checked ? "#fff" : "#10212B",
-    fontSize: 12,
-    fontWeight: checked ? 900 : 800,
-    whiteSpace: "nowrap",
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    cursor: "pointer",
-  });
-
-  const amtStyle = (featured: boolean): CSSProperties => ({
-    minWidth: 0,
-    height: 36,
-    padding: "0 2px",
-    borderRadius: 999,
-    border: `1px solid ${featured ? "#10212B" : "rgba(16,33,43,.12)"}`,
-    background: featured ? "#10212B" : "#fff",
-    fontFamily: "inherit",
-    fontSize: 12,
-    fontWeight: featured ? 900 : 800,
-    color: featured ? "#fff" : "#10212B",
-    cursor: "pointer",
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-  });
+  const rowStyle = qfRowStyle;
+  const freqStyle = qfFreqStyle;
+  const amtStyle = qfAmountStyle;
 
   const onSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();

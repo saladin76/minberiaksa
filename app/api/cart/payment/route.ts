@@ -17,6 +17,11 @@ import {
   normalizeDonorCountryCode,
 } from "@/lib/donations/donor-country-code";
 import { resolveGuestDonor } from "@/lib/users/resolve-guest-donor";
+import { createBankTransferClaim } from "@/lib/donations/bank-transfer-claims";
+import { BANK_TRANSFER_PROVIDER } from "@/lib/donations/bank-transfer-shared";
+import { listBankAccounts } from "@/lib/minbar/cms";
+
+const PAYMENT_METHODS = new Set(["CARD", "PAYPAL", "BANK_TRANSFER"]);
 
 export async function GET(request: NextRequest) {
   try {
@@ -111,6 +116,11 @@ export async function POST(request: NextRequest) {
       referralCode,
       locale: donationLocale,
       guest,
+      /* Bank transfer only: which published account the donor was shown, and
+         the currency of the IBAN they picked. Snapshotted onto the claim so
+         the finance review knows where to look. */
+      bankSlug,
+      bankCurrency,
     } = body;
 
     type CartItemIn = {
@@ -133,6 +143,16 @@ export async function POST(request: NextRequest) {
         { error: "Items, currency, and payment method are required" },
         { status: 400 }
       );
+    }
+    if (!PAYMENT_METHODS.has(String(paymentMethod))) {
+      return NextResponse.json({ error: "Unsupported payment method" }, { status: 400 });
+    }
+    const isBankTransfer = paymentMethod === "BANK_TRANSFER";
+    /* A transfer is a one-off act by the donor; nothing can be charged again
+       next month. The checkout hides the option for a recurring basket, and
+       this is the server's half of that rule. */
+    if (isBankTransfer && type === "MONTHLY") {
+      return NextResponse.json({ error: "Bank transfer cannot be used for a recurring donation" }, { status: 400 });
     }
     const lineOk = (line: { amount: unknown }) =>
       typeof line?.amount === "number" && Number.isFinite(line.amount) && line.amount > 0;
@@ -399,6 +419,15 @@ export async function POST(request: NextRequest) {
       });
     }
 
+    /* The bank account the donor was shown, resolved server-side so the name
+       on the claim is the published one and not whatever the browser sent. */
+    let bankSnapshot: { slug: string; name: string } | null = null;
+    if (isBankTransfer && typeof bankSlug === "string" && bankSlug.trim()) {
+      const accounts = await listBankAccounts(validLocale ?? "ar").catch(() => []);
+      const match = accounts.find((account) => account.slug === bankSlug.trim());
+      if (match) bankSnapshot = { slug: match.slug, name: match.name };
+    }
+
     const donation = await prisma.$transaction(async (tx) => {
       const d = await tx.donation.create({
         data: {
@@ -409,6 +438,9 @@ export async function POST(request: NextRequest) {
           currency,
           fees: coverFees ? fees : 0,
           totalAmount: finalTotalAmount,
+          /* PAID with no paidAt is the site's "قيد التأكيد" state. A card
+             order is stamped by the gateway's webhook; a bank transfer by a
+             finance officer from the dashboard. Neither counts anywhere before. */
           status: "PAID",
           locale: validLocale ?? undefined,
           donorCountryCode: donorCountrySnapshot,
@@ -416,6 +448,9 @@ export async function POST(request: NextRequest) {
           referralId: referralId ?? undefined,
           paymentMethod,
           cardDetails: null,
+          ...(isBankTransfer
+            ? { provider: BANK_TRANSFER_PROVIDER, providerTxnResult: "Pending" }
+            : {}),
           ...campaignLines,
           ...categoryLines,
         },
@@ -439,25 +474,40 @@ export async function POST(request: NextRequest) {
         }
       }
 
-      return d;
+      const claim = isBankTransfer
+        ? await createBankTransferClaim(tx, {
+            donationId: d.id,
+            bankSlug: bankSnapshot?.slug ?? null,
+            bankName: bankSnapshot?.name ?? null,
+            bankCurrency: typeof bankCurrency === "string" ? bankCurrency : null,
+          })
+        : null;
+
+      return { ...d, claim };
     }, { timeout: 15000 });
 
+    const { claim, ...donationRow } = donation;
     const actorRole = session?.user?.role ?? "DONOR";
     await writeAuditLog({
       actorId: donorId,
       actorName: donorName,
       actorRole,
-      action: "DONATION_ONE_TIME_CHECKOUT_START",
-      messageAr: `${donorName ?? "متبرع"} بدأ عملية دفع تبرعًا لمرة واحدة عبر السلة (≈ ${donationTotalUsd.toFixed(0)} USD)`,
+      action: isBankTransfer ? "DONATION_BANK_TRANSFER_CHECKOUT_START" : "DONATION_ONE_TIME_CHECKOUT_START",
+      messageAr: isBankTransfer
+        ? `${donorName ?? "متبرع"} سجّل تبرعًا بالتحويل البنكي عبر السلة (≈ ${donationTotalUsd.toFixed(0)} USD) — بانتظار الإيصال`
+        : `${donorName ?? "متبرع"} بدأ عملية دفع تبرعًا لمرة واحدة عبر السلة (≈ ${donationTotalUsd.toFixed(0)} USD)`,
       entityType: "Donation",
-      entityId: donation.id,
-      metadata: { amountUSD: donationTotalUsd, via: "cart_payment", status: "PENDING", provider: "PAYFOR" },
+      entityId: donationRow.id,
+      metadata: { amountUSD: donationTotalUsd, via: "cart_payment", status: "PENDING", provider: isBankTransfer ? BANK_TRANSFER_PROVIDER : "PAYFOR" },
       stream: auditStreamForRole(actorRole),
     });
 
     return NextResponse.json({
       success: true,
-      donation,
+      donation: donationRow,
+      /* The guest's key to the upload page; a signed-in owner does not need
+         it but is handed it all the same, which keeps the redirect uniform. */
+      ...(claim ? { bankTransfer: { accessToken: claim.accessToken } } : {}),
     });
   } catch (error) {
     console.error("Error creating donation:", error);

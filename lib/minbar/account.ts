@@ -1,7 +1,9 @@
 import "server-only";
 
 import { prisma } from "@/lib/prisma";
+import type { BankTransferClaimStatus, Prisma } from "@prisma/client";
 import { pickTranslation, translationLocaleWhere } from "@/lib/i18n/translation-fallback";
+import { claimAcceptsReceipt } from "@/lib/donations/bank-transfer-shared";
 
 /**
  * The donor account's data.
@@ -11,11 +13,20 @@ import { pickTranslation, translationLocaleWhere } from "@/lib/i18n/translation-
  * reads the signed-in donor's own rows: their profile, their donations, and
  * their recurring plans.
  *
- * Only `PAID` donations are counted and listed. A pending bank transfer is not
- * a donation yet — `DONATION_LOGIC_SPEC §3` is explicit that a transfer becomes
+ * Only settled donations are counted and listed — `PAID` with `paidAt` set,
+ * or charged against a recurring plan. A pending bank transfer is not a
+ * donation yet — `DONATION_LOGIC_SPEC §3` is explicit that a transfer becomes
  * real only once a finance officer matches the money received — and totalling
- * unconfirmed rows would tell a donor they gave more than they have.
+ * unconfirmed rows would tell a donor they gave more than they have. Those
+ * transfers are listed separately, with their status and the way to act on
+ * them, so the donor can see them without them being counted.
  */
+
+/** Settled: what the history, the totals and the count agree on. */
+const SETTLED: Prisma.DonationWhereInput = {
+  status: "PAID",
+  OR: [{ paidAt: { not: null } }, { subscriptionId: { not: null } }],
+};
 
 export interface MinbarDonorProfile {
   id: string;
@@ -43,9 +54,24 @@ export interface MinbarDonationRow {
   recurring: boolean;
 }
 
+/** A bank transfer that has not been confirmed yet — shown, not counted. */
+export interface MinbarPendingTransfer {
+  donationId: string;
+  status: BankTransferClaimStatus;
+  /** ISO timestamp the order was placed. */
+  createdAt: string;
+  amount: number;
+  currency: string;
+  titles: string[];
+  /** Whether the donor can upload (or re-upload) a receipt right now. */
+  canUpload: boolean;
+}
+
 export interface MinbarAccountSummary {
   profile: MinbarDonorProfile;
   donations: MinbarDonationRow[];
+  /** Bank transfers still awaiting a receipt or the finance review. */
+  pendingTransfers: MinbarPendingTransfer[];
   /** Lifetime total in USD, across confirmed donations only. */
   totalDonatedUSD: number;
   donationCount: number;
@@ -67,7 +93,7 @@ export async function getAccountSummary(
   locale: string
 ): Promise<MinbarAccountSummary | null> {
   try {
-    const [user, rows, aggregate, activeSubscriptions] = await Promise.all([
+    const [user, rows, aggregate, activeSubscriptions, pendingClaims] = await Promise.all([
       prisma.user.findUnique({
         where: { id: userId },
         select: {
@@ -84,7 +110,7 @@ export async function getAccountSummary(
         },
       }),
       prisma.donation.findMany({
-        where: { donorId: userId, status: "PAID" },
+        where: { donorId: userId, ...SETTLED },
         orderBy: { createdAt: "desc" },
         take: HISTORY_LIMIT,
         select: {
@@ -111,11 +137,48 @@ export async function getAccountSummary(
         },
       }),
       prisma.donation.aggregate({
-        where: { donorId: userId, status: "PAID" },
+        where: { donorId: userId, ...SETTLED },
         _sum: { amountUSD: true },
         _count: { _all: true },
       }),
       prisma.subscription.count({ where: { donorId: userId, status: "ACTIVE" } }),
+      prisma.bankTransferClaim.findMany({
+        where: { status: { not: "CONFIRMED" }, donation: { donorId: userId } },
+        orderBy: { createdAt: "desc" },
+        take: HISTORY_LIMIT,
+        select: {
+          donationId: true,
+          status: true,
+          submissionCount: true,
+          createdAt: true,
+          donation: {
+            select: {
+              totalAmount: true,
+              currency: true,
+              items: {
+                select: {
+                  campaign: {
+                    select: {
+                      title: true,
+                      translations: { where: translationLocaleWhere(locale), take: 2, select: { locale: true, title: true } },
+                    },
+                  },
+                },
+              },
+              categoryItems: {
+                select: {
+                  category: {
+                    select: {
+                      name: true,
+                      translations: { where: translationLocaleWhere(locale), take: 2, select: { locale: true, name: true } },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      }),
     ]);
 
     if (!user) return null;
@@ -139,6 +202,19 @@ export async function getAccountSummary(
       recurring: Boolean(row.subscriptionId),
     }));
 
+    const pendingTransfers: MinbarPendingTransfer[] = pendingClaims.map((claim) => ({
+      donationId: claim.donationId,
+      status: claim.status,
+      createdAt: claim.createdAt.toISOString(),
+      amount: claim.donation.totalAmount,
+      currency: claim.donation.currency,
+      titles: [
+        ...claim.donation.items.map((item) => pickTranslation(item.campaign.translations, locale)?.title || item.campaign.title),
+        ...claim.donation.categoryItems.map((item) => pickTranslation(item.category.translations, locale)?.name || item.category.name),
+      ].filter(Boolean),
+      canUpload: claimAcceptsReceipt(claim),
+    }));
+
     return {
       profile: {
         id: user.id,
@@ -150,6 +226,7 @@ export async function getAccountSummary(
         memberSince: user.createdAt.toISOString(),
       },
       donations,
+      pendingTransfers,
       totalDonatedUSD: aggregate._sum.amountUSD ?? 0,
       donationCount: aggregate._count._all,
       activeSubscriptions,

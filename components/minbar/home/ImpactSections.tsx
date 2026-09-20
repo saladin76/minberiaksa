@@ -223,13 +223,16 @@ export function RegionCards({ images }: { images: { quds: string; aqsa: string; 
     <section style={{ position: "relative", zIndex: 1, background: "linear-gradient(to left, rgba(247,242,234,.36), rgba(247,242,234,.64))", padding: "48px 0 0" }}>
       <div id="regions" style={{ maxWidth: 1240, margin: "0 auto", padding: "0 24px", display: "grid", gridTemplateColumns: "repeat(3,minmax(0,1fr))", gap: 18 }}>
         {cards.map((card) => (
-          <Link key={card.title} href={card.href} style={{ position: "relative", display: "block", minHeight: 260, overflow: "hidden", background: "var(--deep)" }}>
+          /* The card is a column the full height of the row: title and copy at
+             the top, the button pinned to the foot — so the three buttons sit
+             on one line however long each card's copy runs. */
+          <Link key={card.title} href={card.href} style={{ position: "relative", display: "flex", flexDirection: "column", minHeight: 260, overflow: "hidden", background: "var(--deep)", borderRadius: 14, boxShadow: "0 12px 28px rgba(16,33,43,.12)" }}>
             <span role="img" aria-label={card.title} style={{ position: "absolute", inset: 0, display: "block", backgroundImage: `url('${card.image}')`, backgroundSize: "cover", backgroundPosition: "center" }} />
             <span style={{ position: "absolute", inset: 0, background: card.overlay }} />
-            <span style={{ position: "relative", display: "grid", gap: 12, justifyItems: "start", padding: 32 }}>
+            <span style={{ position: "relative", flex: "1 1 auto", display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 12, padding: 32 }}>
               <b style={{ color: "#fff", fontSize: "clamp(24px,2.4vw,32px)", fontWeight: 900, lineHeight: 1.25 }}>{card.title}</b>
               <span style={{ color: "rgba(255,255,255,.82)", fontSize: 15, lineHeight: 1.8, maxWidth: "44ch" }}>{card.text}</span>
-              <span style={{ display: "inline-flex", alignItems: "center", gap: 10, height: 46, padding: "0 20px", background: card.ctaBackground, color: card.ctaColor, fontWeight: 800, fontSize: 15, borderRadius: 8 }}>
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 10, height: 46, padding: "0 20px", marginTop: "auto", background: card.ctaBackground, color: card.ctaColor, fontWeight: 800, fontSize: 15, borderRadius: 8 }}>
                 {card.cta}
                 <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="mia-arrow-next">
                   <path d="M14 6l-6 6 6 6" />

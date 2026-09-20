@@ -4,7 +4,7 @@ import {
   Landmark, LayoutDashboard, LayoutTemplate, Lightbulb, Link2, ListChecks, Mail,
   Megaphone, MessageCircle, MessageSquare, PenLine, Plug, Radar, Repeat, ScrollText, Send,
   Server, Settings, Target, Ticket, TrendingUp, UserCog, Users, Webhook,
-  Video, ListVideo, GraduationCap, FileText, BookOpen, HelpCircle, AlertTriangle, Layers,
+  Video, ListVideo, GraduationCap, FileText, BookOpen, HelpCircle, AlertTriangle, Layers, Receipt,
   type LucideIcon,
 } from "lucide-react";
 
@@ -60,6 +60,7 @@ export const NAV_ICONS = {
   bookOpen: BookOpen,
   helpCircle: HelpCircle,
   alertTriangle: AlertTriangle,
+  receipt: Receipt,
 } satisfies Record<string, LucideIcon>;
 
 export type NavIconName = keyof typeof NAV_ICONS;

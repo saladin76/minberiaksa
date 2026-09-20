@@ -1,3 +1,4 @@
+import { fillYoutubeTitles } from "@/lib/youtube/oembed";
 import { prisma } from "@/lib/prisma";
 import { pickTranslation, translationLocaleWhere } from "@/lib/i18n/translation-fallback";
 import { videoLiveWhere, type VideoTypeValue } from "@/lib/content/video-write";
@@ -94,7 +95,7 @@ export async function listPlaylists(locale: string): Promise<CmsPlaylist[]> {
       videos: { where: { isActive: true }, orderBy: { order: "asc" }, select: { youtubeId: true, url: true, thumbnail: true, title: true, durationSeconds: true } },
     },
   });
-  return rows
+  const playlists = rows
     .map((p) => {
       const t = pickTranslation(p.translations, locale);
       return {
@@ -110,6 +111,10 @@ export async function listPlaylists(locale: string): Promise<CmsPlaylist[]> {
     })
     /* A programme with no episode has no poster frame and nothing to open. */
     .filter((p) => p.episodes.length > 0);
+
+  /* An episode pasted in without a title gets the one YouTube publishes for
+     it, so every frame in a rail has a caption. Dashboard titles are kept. */
+  return Promise.all(playlists.map(async (p) => ({ ...p, episodes: await fillYoutubeTitles(p.episodes) })));
 }
 
 /* ── Videos ──────────────────────────────────────────────────────────────── */

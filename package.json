@@ -21,6 +21,7 @@
     "content:audit": "node scripts/audit-content-localization.mjs",
     "content:audit:strict": "node scripts/audit-content-localization.mjs --strict",
     "backfill:slugs": "tsx prisma/backfill-slugs.ts",
+    "seed:banners": "tsx prisma/seed/seed-banners.ts",
     "backfill:donation-countries": "tsx scripts/backfill-donation-donor-country.ts",
     "backfill:monthly-paid": "tsx scripts/backfill-stripe-monthly-paid.ts",
     "exchange-rates:refresh": "tsx scripts/refresh-exchange-rates.ts",

@@ -1262,139 +1262,10 @@
 }
 
 /* ── The dock ─────────────────────────────────────────────────────────────
- * Fixed to the bottom edge of the viewport. Off screen (translated below the
- * edge and inert) until `data-on`; then it slides up. Above the WhatsApp
- * button (70), beneath the video overlay (300) and the story viewer (1000).
- *
- * Desktop: one floating bar the width of the card —
- *   ● title | 100 300 500 700 | US$300 · monthly · where needed  [تعديل] | [Donate]
- * Phone: a full-width bar — total + meta on the start side, the button on the
- *   end side — and, when `data-open`, the full form as a sheet above it. */
-.mia-scope .mia-qdock {
-  position: fixed; inset-inline: 0; bottom: 0; z-index: 80;
-  display: flex; flex-direction: column; align-items: center;
-  padding: 0 24px calc(16px + env(safe-area-inset-bottom, 0px));
-  pointer-events: none; opacity: 0;
-  transform: translateY(calc(100% + 24px));
-  transition: transform .34s cubic-bezier(.22,.61,.36,1), opacity .22s ease;
-}
-.mia-scope .mia-qdock[data-on="true"] { transform: none; opacity: 1; pointer-events: auto; }
-.mia-scope .mia-qdock-scrim { display: none; }
-.mia-scope .mia-qdock-sheet { display: none; }
-
-.mia-scope .mia-qdock-bar {
-  width: min(1180px, 100%);
-  display: flex; align-items: center; gap: 14px;
-  min-height: 62px; padding: 6px 6px 6px 16px;
-  background: rgba(255,255,255,.96);
-  -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
-  border: 1px solid rgba(211,154,39,.55); border-radius: 16px;
-  box-shadow: 0 24px 60px -18px rgba(16,33,43,.5), 0 2px 10px rgba(16,33,43,.08);
-}
-.mia-scope .mia-qdock-title {
-  flex: 0 0 auto; display: inline-flex; align-items: center; gap: 10px;
-  font-size: 14px; font-weight: 900; color: var(--deep); white-space: nowrap;
-  padding-inline-end: 14px; border-inline-end: 1px solid rgba(211,154,39,.35);
-}
-
-/* The presets, compact: one track, the active one raised. */
-.mia-scope .mia-qdock-amts {
-  flex: 0 0 auto; display: grid; grid-auto-flow: column; grid-auto-columns: 68px; gap: 3px;
-  padding: 3px; border-radius: 11px; background: var(--sand); border: 1px solid var(--border);
-}
-.mia-scope .mia-qdock-amts > button {
-  min-height: 38px; padding: 0 6px; border: 0; border-radius: 8px; cursor: pointer;
-  background: transparent; color: var(--muted); font-family: inherit; font-size: 13.5px; font-weight: 800;
-  white-space: nowrap; transition: background .15s ease, color .15s ease, box-shadow .15s ease;
-}
-.mia-scope .mia-qdock-amts > button:hover { color: var(--deep); }
-.mia-scope .mia-qdock-amts > button[data-active="true"] {
-  background: var(--deep); color: #fff; font-weight: 900;
-  box-shadow: 0 6px 14px -6px rgba(16,33,43,.6);
-}
-
-/* The summary is a button: it edits (desktop) or expands (phone). */
-.mia-scope .mia-qdock-sum {
-  flex: 1 1 auto; min-width: 0; display: grid; grid-template-columns: auto minmax(0,1fr) auto; align-items: center; column-gap: 12px;
-  padding: 4px 10px; border: 0; border-radius: 12px; background: transparent; cursor: pointer;
-  font-family: inherit; color: var(--deep); text-align: start;
-  transition: background .15s ease;
-}
-.mia-scope .mia-qdock-sum:hover { background: rgba(211,154,39,.1); }
-.mia-scope .mia-qdock-sum > b {
-  font-size: 21px; font-weight: 900; line-height: 1; letter-spacing: -.02em; font-variant-numeric: tabular-nums; white-space: nowrap;
-}
-.mia-scope .mia-qdock-meta {
-  display: flex; align-items: baseline; gap: 6px; min-width: 0;
-  font-size: 13px; font-weight: 800; color: var(--muted); white-space: nowrap;
-}
-.mia-scope .mia-qdock-dest { color: var(--gold-2); overflow: hidden; text-overflow: ellipsis; min-width: 0; }
-.mia-scope .mia-qdock-edit { font-size: 12.5px; font-weight: 900; color: var(--gold-2); text-decoration: underline; text-underline-offset: 3px; white-space: nowrap; }
-.mia-scope .mia-qdock-chev { display: none; color: var(--muted); transition: transform .2s ease; }
-
-.mia-scope .mia-qdock-cta {
-  flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: center;
-  min-height: 48px; padding: 0 24px; border: 0; border-radius: 11px; cursor: pointer;
-  font-family: inherit; font-size: 15px; font-weight: 900; color: #fff; white-space: nowrap;
-  background: linear-gradient(180deg, #B63A2D, var(--red));
-  box-shadow: 0 12px 26px -10px rgba(169,52,40,.65), inset 0 1px 0 rgba(255,255,255,.16);
-  transition: transform .16s cubic-bezier(.22,.61,.36,1), filter .16s ease;
-}
-.mia-scope .mia-qdock-cta:hover { transform: translateY(-1px); filter: brightness(1.06); }
-.mia-scope .mia-qdock-cta:disabled { opacity: .5; cursor: not-allowed; transform: none; }
-
-/* The WhatsApp button climbs above the bar while the dock is shown. */
-body[data-quick-dock="true"] .mia-wa-fab { bottom: calc(94px + env(safe-area-inset-bottom, 0px)) !important; }
-.mia-wa-fab { transition: transform .2s cubic-bezier(.22,.61,.36,1), box-shadow .2s ease, bottom .3s cubic-bezier(.22,.61,.36,1); }
-
-@media (max-width: 1120px) { .mia-scope .mia-qdock-title { display: none; } }
-
-@media (prefers-reduced-motion: reduce) {
-  .mia-scope .mia-qdock, .mia-scope .mia-qdock-cta, .mia-scope .mia-qdock-chev { transition: none; }
-}
-
-/* Phone: a full-width bar at the bottom, and the sheet above it when open. */
-@media (max-width: 900px) {
-  .mia-scope .mia-qdock { padding: 0; align-items: stretch; }
-  .mia-scope .mia-qdock-scrim {
-    display: block; position: fixed; inset: 0; z-index: 0;
-    background: rgba(16,33,43,.48);
-  }
-  .mia-scope .mia-qdock-sheet, .mia-scope .mia-qdock-bar { position: relative; z-index: 1; }
-  .mia-scope .mia-qdock-sheet {
-    display: none; gap: 16px; width: 100%; max-height: min(74vh, 640px); overflow-y: auto; overscroll-behavior: contain;
-    padding: 6px 16px 14px; background: #fff;
-    border: 1px solid rgba(211,154,39,.45); border-bottom: 0; border-radius: 22px 22px 0 0;
-    box-shadow: 0 -20px 50px -20px rgba(16,33,43,.45);
-  }
-  .mia-scope .mia-qdock[data-open="true"] .mia-qdock-sheet { display: grid; }
-  .mia-scope .mia-qdock-handle { justify-self: center; width: 40px; height: 4px; border-radius: 999px; background: var(--border); }
-  .mia-scope .mia-qdock-sheet .mia-qd-trust { margin-top: -4px; }
-
-  .mia-scope .mia-qdock-bar {
-    width: 100%; gap: 8px; min-height: 0;
-    padding: 9px 8px calc(9px + env(safe-area-inset-bottom, 0px)) 12px;
-    border-radius: 0; border-inline: 0; border-bottom: 0;
-    box-shadow: 0 -12px 40px -14px rgba(16,33,43,.45);
-  }
-  .mia-scope .mia-qdock[data-open="true"] .mia-qdock-bar { border-top-color: var(--border); box-shadow: none; }
-  .mia-scope .mia-qdock-title, .mia-scope .mia-qdock-amts, .mia-scope .mia-qdock-edit { display: none; }
-  .mia-scope .mia-qdock-chev { display: block; }
-  .mia-scope .mia-qdock[data-open="true"] .mia-qdock-chev { transform: rotate(180deg); }
-  .mia-scope .mia-qdock-sum {
-    grid-template-columns: minmax(0,1fr) auto; grid-template-areas: "total chev" "meta chev";
-    column-gap: 8px; row-gap: 2px; padding: 2px 4px;
-  }
-  .mia-scope .mia-qdock-sum > b { grid-area: total; font-size: 20px; }
-  .mia-scope .mia-qdock-meta { grid-area: meta; font-size: 12px; }
-  .mia-scope .mia-qdock-chev { grid-area: chev; }
-  .mia-scope .mia-qdock-cta { min-height: 46px; padding: 0 18px; font-size: 14.5px; }
-
-  /* The page holds still under the open sheet. */
-  body[data-quick-open="true"] { overflow: hidden; }
-  body[data-quick-dock="true"] .mia-wa-fab { bottom: calc(82px + env(safe-area-inset-bottom, 0px)) !important; }
-  body[data-quick-open="true"] .mia-wa-fab { opacity: 0; pointer-events: none; }
-}
+   The homepage no longer floats a bottom bar. Once the quick-donation card
+   scrolls out of view it is followed by the same red pill every inner page
+   carries (`.quickfab`, styled above), opening the same compact panel — so a
+   visitor meets one quick-donate control on the whole site, not two. */
 
 /* ─────────────────────────────────────────────────────────────────────────────
  * Homepage on a phone: everything slides.
@@ -1810,6 +1681,8 @@ body[data-quick-dock="true"] .mia-wa-fab { bottom: calc(94px + env(safe-area-ins
   .mia-scope #pay-methods { flex-wrap: wrap; }
   .mia-scope #pay-methods > * { flex: 1 1 calc(50% - 5px) !important; }
   .mia-scope #card-fields { grid-template-columns: minmax(0,1fr) !important; }
+  /* The receipt upload form on the transfer status page shares this grid. */
+  .mia-scope .tr-fields { grid-template-columns: minmax(0,1fr) !important; }
 }
 
 /* ─────────────────────────────────────────────────────────────────────────────

@@ -40,6 +40,7 @@ const RECEIPT_LABELS = {
     paymentMethod: 'Payment Method',
     card: 'Card',
     paypal: 'PayPal',
+    bankTransfer: 'Bank transfer',
     status: 'Status',
     active: 'Active',
     paused: 'Paused',
@@ -77,6 +78,7 @@ const RECEIPT_LABELS = {
     paymentMethod: 'طريقة الدفع',
     card: 'بطاقة',
     paypal: 'باي بال',
+    bankTransfer: 'تحويل بنكي',
     status: 'الحالة',
     active: 'نشط',
     paused: 'متوقف مؤقتاً',
@@ -114,6 +116,7 @@ const RECEIPT_LABELS = {
     paymentMethod: 'Mode de paiement',
     card: 'Carte',
     paypal: 'PayPal',
+    bankTransfer: 'Virement bancaire',
     status: 'Statut',
     active: 'Actif',
     paused: 'En pause',
@@ -258,6 +261,13 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       }
     }
 
+    // A bank transfer is a donation only once a finance officer has matched the
+    // money (DONATION_LOGIC_SPEC §3). Issuing an official receipt before that
+    // would document a payment that has not happened.
+    if (donationRow.provider === 'BANK_TRANSFER' && (donationRow.status !== 'PAID' || donationRow.paidAt == null)) {
+      return NextResponse.json({ error: 'Transfer not confirmed yet' }, { status: 409 });
+    }
+
     const sub = donationRow.subscription;
     const donation = {
       ...donationRow,
@@ -367,7 +377,10 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(10);
     const typeLabel = donation.type === 'MONTHLY' ? L.monthly : L.oneTime;
-    const paymentLabel = donation.paymentMethod === 'PAYPAL' ? L.paypal : L.card;
+    const paymentLabel =
+      donation.paymentMethod === 'PAYPAL' ? L.paypal
+      : donation.paymentMethod === 'BANK_TRANSFER' || donation.provider === 'BANK_TRANSFER' ? L.bankTransfer
+      : L.card;
     addText(`${L.type}: ${typeLabel}  |  ${L.paymentMethod}: ${paymentLabel}`, margin, y);
     y += 7;
     if (donation.type === 'MONTHLY') {

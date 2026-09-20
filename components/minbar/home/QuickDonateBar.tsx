@@ -16,6 +16,7 @@ import {
   type QuickDonationConfig,
   type QuickGenericDestination,
 } from "@/lib/minbar/quick-donation";
+import QuickDonateFab, { type FabDestination } from "./QuickDonateFab";
 
 /**
  * The quick-donation card under the urgent projects, and the dock that follows
@@ -48,32 +49,21 @@ import {
  * cart in that currency. The free field is always in the visitor's currency:
  * the symbol beside it is what they see, so that is what they give.
  *
- * The dock. Two earlier attempts at keeping the donation within reach were
- * removed for good reasons: a 68px strip pinned under the header covered the
- * navigation and took a slice of every screen from the first paint, and a
- * bottom sheet whose first press only expanded it added a step to giving.
- * This dock keeps the reach and drops the cost:
+ * The pill. Once the card is out of sight the same red quick-donate pill every
+ * inner page carries takes over (`QuickDonateFab`, the handoff's
+ * `التبرع السريع.dc.html`): a third of the way down the end edge on a desktop,
+ * the bottom corner on a phone, opening the compact panel — destination,
+ * frequency, amount, free field, one button. Earlier a bottom bar did this
+ * job; the site then had two floating quick-donate controls that looked
+ * nothing alike, and the bar covered the foot of every screen. The pill is
+ * small, sits where a visitor already looks for it on every other page, and:
  *
- *   · It lives at the BOTTOM edge, where nothing else of the page's own sits,
- *     never under the header.
- *   · It appears only after the visitor has scrolled past the landing AND the
- *     card itself is not on screen — so it is never a second copy of what is
- *     already visible, and never a nag on arrival. It slides away the moment
- *     the card scrolls back into view.
- *   · On a desktop it is one bar: the presets, the running summary and the
- *     button. A donor can change the amount and give without scrolling back;
- *     anything else ("edit") scrolls them to the card.
- *   · On a phone the bar is the total and the button. The button gives
- *     directly — the bar already shows the amount, frequency and destination,
- *     so there is nothing hidden behind the press. Tapping the summary opens
- *     the full form as a sheet above the bar for the donor who wants to
- *     change something.
- *   · There is no close button. It is small, it sits where nothing else of
- *     the page's own does, and it leaves by itself whenever the card is in
- *     view — so it stays within reach for the whole visit. The dashboard can
- *     turn it off per device.
+ *   · appears only after the visitor has scrolled past the landing AND the
+ *     card itself is not on screen — never a second copy of what is already
+ *     visible, never a nag on arrival — and leaves the moment the card
+ *     scrolls back into view. The dashboard can turn it off per device.
  *
- * The card and the dock are one state: a preset chosen in the dock is the
+ * The card and the pill are one state: a preset chosen in the panel is the
  * preset the card shows, and vice versa.
  *
  * Everything held here is an identifier, never a displayed string: the
@@ -100,9 +90,9 @@ const GENERIC: Record<QuickGenericDestination, { ns: "common" | "navigation" | "
   "gaza-relief": { ns: "homepage", key: "gazaReliefGroup" },
 };
 
-/** The dock waits until the landing has been scrolled past. */
+/** The pill waits until the landing has been scrolled past. */
 const DOCK_AFTER_PX = 320;
-/** Below this the dock is the phone bar + sheet; above it, the desktop bar. */
+/** Below this the dashboard's "phone" switch applies; above it, the "desktop" one. */
 const PHONE_QUERY = "(max-width: 900px)";
 
 export default function QuickDonateBar({ config, projects }: { config: QuickDonationConfig; projects: MinbarProject[] }) {
@@ -155,9 +145,7 @@ export default function QuickDonateBar({ config, projects }: { config: QuickDona
 
   /** The card is off screen and the page has been scrolled past the landing. */
   const [docked, setDocked] = useState(false);
-  /** The phone sheet is expanded above the bar. */
-  const [open, setOpen] = useState(false);
-  /** Phone-width viewport, for the per-device dock switches. */
+  /** Phone-width viewport, for the per-device pill switches. */
   const [phone, setPhone] = useState(false);
 
   const cardRef = useRef<HTMLElement | null>(null);
@@ -176,6 +164,14 @@ export default function QuickDonateBar({ config, projects }: { config: QuickDona
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [destination, shownProjects, locale]);
 
+  /* The same options the card's select offers, flattened for the pill's
+     unfolding list: intentions first, then projects under their region. */
+  const fabDestinations = useMemo<FabDestination[]>(() => [
+    ...config.genericDestinations.map((g) => ({ value: g, label: label(g) })),
+    ...shownProjects.map((p) => ({ value: p.slug, label: p.title, group: p.regionLabel || tNav("projects") })),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  ], [config.genericDestinations, shownProjects, locale]);
+
   /* The total and the currency it is in — see "Money" above. */
   const total = custom !== null ? Number(custom || 0) : amount;
   const totalCurrency = custom !== null ? visitorCode : presets.currency;
@@ -183,10 +179,10 @@ export default function QuickDonateBar({ config, projects }: { config: QuickDona
   const freqLabel = t(FREQ_KEY[freq]);
   const canGive = total > 0;
 
-  /* ── Dock visibility ──────────────────────────────────────────────────
+  /* ── Pill visibility ──────────────────────────────────────────────────
      Shown when the card is not in the viewport and the page is scrolled past
      the landing. Both are checked together, so scrolling back to the card
-     hides the dock and scrolling to the top hides it too. */
+     hides the pill and scrolling to the top hides it too. */
   useEffect(() => {
     const el = cardRef.current;
     if (!el || typeof IntersectionObserver === "undefined") return;
@@ -205,28 +201,6 @@ export default function QuickDonateBar({ config, projects }: { config: QuickDona
   }, []);
 
   const show = docked && (phone ? config.dockMobile : config.dockDesktop);
-
-  /* The sheet closes itself when the dock goes away, on Escape, and when the
-     viewport grows past phone width (where the sheet has no meaning). */
-  useEffect(() => { if (!show) setOpen(false); }, [show]);
-  useEffect(() => {
-    if (!open) return;
-    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setOpen(false); };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [open]);
-  useEffect(() => { if (!phone) setOpen(false); }, [phone]);
-
-  /* Mirrored onto <body>: the WhatsApp button steps up while the dock is
-     shown, and the page stops scrolling under the open sheet. */
-  useEffect(() => {
-    const b = document.body;
-    if (show) b.setAttribute("data-quick-dock", "true"); else b.removeAttribute("data-quick-dock");
-    if (open) b.setAttribute("data-quick-open", "true"); else b.removeAttribute("data-quick-open");
-    return () => { b.removeAttribute("data-quick-dock"); b.removeAttribute("data-quick-open"); };
-  }, [show, open]);
-
-  const scrollToCard = () => cardRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
 
   const submit = () => {
     if (!canGive) return;
@@ -418,7 +392,7 @@ export default function QuickDonateBar({ config, projects }: { config: QuickDona
               <span aria-hidden="true" className="mia-qd-dot" />
               {title}
             </h2>
-            {fields("qd", !open)}
+            {fields("qd", true)}
           </div>
 
           {/* ── What it adds up to ──────────────────────────────────────── */}
@@ -439,73 +413,37 @@ export default function QuickDonateBar({ config, projects }: { config: QuickDona
         </div>
       </section>
 
-      {/* ── The dock: the card's summary, within reach once the card is not. */}
-      <div
-        className="mia-qdock"
-        data-on={show ? "true" : "false"}
-        data-open={open ? "true" : "false"}
-        aria-hidden={!show}
-        // Nothing inside is reachable by keyboard while it is off screen.
-        inert={!show}
-      >
-        {open ? <div className="mia-qdock-scrim" onClick={() => setOpen(false)} aria-hidden="true" /> : null}
-
-        {/* Phone only: the full form as a sheet above the bar. */}
-        <div className="mia-qdock-sheet" id="qdock-sheet" role="region" aria-label={title}>
-          <span aria-hidden="true" className="mia-qdock-handle" />
-          {fields("qdock", open)}
-          {trust}
-        </div>
-
-        <div className="mia-qdock-bar">
-          <span className="mia-qdock-title">
-            <span aria-hidden="true" className="mia-qd-dot" />
-            {title}
-          </span>
-
-          {/* Desktop only: the presets inline, so the amount can change here. */}
-          <div className="mia-qdock-amts" role="group" aria-label={t("amount")}>
-            {presets.amounts.map((value) => {
-              const active = custom === null && amount === value;
-              return (
-                <button
-                  key={value}
-                  type="button"
-                  data-active={active ? "true" : "false"}
-                  aria-pressed={active}
-                  onClick={() => { setAmount(value); setCustom(null); }}
-                >
-                  <span dir="ltr" style={{ unicodeBidi: "isolate" }}>{showMoney(value, presets.currency)}</span>
-                </button>
-              );
-            })}
-          </div>
-
-          {/* The summary: on a phone it opens the sheet; on a desktop it scrolls
-              to the card, which is where the destination and frequency live. */}
-          <button
-            type="button"
-            className="mia-qdock-sum"
-            onClick={() => (phone ? setOpen((v) => !v) : scrollToCard())}
-            aria-expanded={open}
-            aria-controls="qdock-sheet"
-          >
-            <b style={{ unicodeBidi: "isolate" }}>{totalText}</b>
-            <span className="mia-qdock-meta">
-              <span>{freqLabel}</span>
-              {destinationLabel ? <><span aria-hidden="true">·</span><span className="mia-qdock-dest">{destinationLabel}</span></> : null}
-            </span>
-            <span className="mia-qdock-edit">{t("editAmount")}</span>
-            <svg className="mia-qdock-chev" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <path d="m6 15 6-6 6 6" />
-            </svg>
-          </button>
-
-          <button type="button" className="mia-qdock-cta" onClick={submit} disabled={!canGive}>
-            {t("donateNow")}
-          </button>
-        </div>
-      </div>
+      {/* ── The pill: the card's controls, within reach once the card is not. */}
+      {show ? (
+        <QuickDonateFab
+          dir={dir}
+          labels={{
+            pill: t("quickDonate"),
+            destination: tHome("projectSelectLabel"),
+            frequency: t("frequency"),
+            amount: t("amount"),
+            customAmount: t("customAmount"),
+            submit: t("donateNow"),
+            freq: { once: t(FREQ_KEY.once), daily: t(FREQ_KEY.daily), friday: t(FREQ_KEY.friday), monthly: t(FREQ_KEY.monthly) },
+          }}
+          destinations={fabDestinations}
+          destination={destination}
+          onDestination={setDestination}
+          frequencies={config.frequencies}
+          freq={freq}
+          onFreq={setFreq}
+          amounts={presets.amounts.map((value) => ({ value, text: showMoney(value, presets.currency) }))}
+          amountCurrency={presets.currency}
+          amount={amount}
+          custom={custom}
+          onAmount={(value) => { setAmount(value); setCustom(null); }}
+          onCustom={(value) => setCustom(value === "" && custom === null ? null : value)}
+          allowCustom={config.allowCustomAmount}
+          customSymbol={symbol}
+          canGive={canGive}
+          onSubmit={submit}
+        />
+      ) : null}
     </>
   );
 }

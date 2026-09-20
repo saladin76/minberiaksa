@@ -98,6 +98,7 @@ const PATH_RULES: { prefix: string; key: DashboardPermissionKey }[] = [
   { prefix: "/dashboard/link-generator", key: "referrals" },
   { prefix: "/dashboard/referrals", key: "referrals" },
   { prefix: "/dashboard/bank-transfers", key: "bankTransfers" },
+  { prefix: "/dashboard/transfer-receipts", key: "bankTransfers" },
   { prefix: "/dashboard/users/donors", key: "donors" },
   { prefix: "/dashboard/users/team", key: "team" },
   { prefix: "/dashboard/logs", key: "logs" },

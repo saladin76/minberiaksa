@@ -86,6 +86,10 @@ export async function reconcileUnconfirmedDonations(options: ReconcileOptions = 
   const rows = await prisma.donation.findMany({
     where: {
       status: "PAID",
+      // A bank transfer waits on a finance officer, not on Stripe, and has no
+      // clock: it stays "قيد التأكيد" until someone confirms or rejects it from
+      // the dashboard. Ageing it out here would mark real, slow money abandoned.
+      NOT: { provider: "BANK_TRANSFER" },
       AND: [
         { OR: [{ paidAt: null }, { paidAt: { isSet: false } }] },
         { OR: [{ subscriptionId: null }, { subscriptionId: { isSet: false } }] },

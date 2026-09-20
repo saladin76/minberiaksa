@@ -34,7 +34,7 @@ export interface MinbarDonationSummary {
   donationAmount: number;
   teamSupport: number;
   fees: number;
-  paymentMethod: "CARD" | "PAYPAL" | null;
+  paymentMethod: "CARD" | "PAYPAL" | "BANK_TRANSFER" | null;
   /** The donor's name as recorded, for pre-filling the certificate. */
   donorName: string | null;
   /** `true` when the donation was charged against a recurring plan. */
@@ -60,7 +60,17 @@ export async function getDonationSummary(
 
   try {
     const row = await prisma.donation.findFirst({
-      where: { id, status: "PAID" },
+      /* A card order is shown here the moment the gateway returns, before the
+         webhook stamps `paidAt`; a bank transfer has no gateway and is only a
+         donation once a finance officer stamps it. Until then its own status
+         page is the right screen, not this one. */
+      where: {
+        id,
+        status: "PAID",
+        /* Prisma+MongoDB: `null` matches only explicit nulls; a row written
+           without the field needs the `isSet` arm too. */
+        NOT: { AND: [{ provider: "BANK_TRANSFER" }, { OR: [{ paidAt: null }, { paidAt: { isSet: false } }] }] },
+      },
       select: {
         id: true,
         amount: true,
