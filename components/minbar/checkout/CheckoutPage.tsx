@@ -676,7 +676,7 @@ export default function CheckoutPage({ projects, categories, banks, donor, defau
                       cvc={cardCvc}
                       name={cardName || `${firstName} ${lastName}`.trim()}
                       focused={cardFocus}
-                      placeholders={{ name: t("cardHolder") }}
+                      placeholders={{ name: "" }}
                     />
                   </div>
                   <div id="card-fields" style={{ display: "grid", gridTemplateColumns: "repeat(2,minmax(0,1fr))", gap: 14 }}>
