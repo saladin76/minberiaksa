@@ -18,7 +18,7 @@
  * so nothing already indexed or shared goes dark.
  */
 
-import type { SupportedLocale } from "@/lib/locales";
+import type { SupportedLocale } from "../locales";
 
 /** Every routable page in the handoff. Keys mirror the i18n navigation keys. */
 export type MinbarRoute =

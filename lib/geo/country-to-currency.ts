@@ -5,7 +5,7 @@
 // The output is always a code from `SUPPORTED_CURRENCY_OPTIONS`. Countries
 // whose national currency is not in our supported set fall back to USD.
 
-import { SUPPORTED_CURRENCY_CODES } from "@/lib/supported-currencies";
+import { SUPPORTED_CURRENCY_CODES } from "../supported-currencies";
 
 // Eurozone members — countries that officially use the Euro.
 const EUROZONE = new Set<string>([

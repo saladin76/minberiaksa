@@ -6,7 +6,7 @@
 // Unknown / ambiguous countries return `null` so the caller can fall back to
 // the site's `defaultLocale`.
 
-import { SUPPORTED_LOCALES, type SupportedLocale } from "@/lib/locales";
+import { SUPPORTED_LOCALES, type SupportedLocale } from "../locales";
 
 const SUPPORTED = new Set<string>(SUPPORTED_LOCALES);
 

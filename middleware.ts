@@ -3,11 +3,11 @@ import { NextResponse, type NextRequest } from 'next/server';
 import {
   ALLOWED_URL_CURRENCIES,
   normalizeCurrencyParamToCookie,
-} from '@/lib/currency-link';
-import { currencyForCountry } from '@/lib/geo/country-to-currency';
-import { localeForCountry } from '@/lib/geo/country-to-locale';
-import { SUPPORTED_LOCALES, DEFAULT_LOCALE } from '@/lib/locales';
-import { redirectLegacyPath } from '@/lib/minbar/slug-routing';
+} from './lib/currency-link';
+import { currencyForCountry } from './lib/geo/country-to-currency';
+import { localeForCountry } from './lib/geo/country-to-locale';
+import { SUPPORTED_LOCALES, DEFAULT_LOCALE } from './lib/locales';
+import { redirectLegacyPath } from './lib/minbar/slug-routing';
 
 // Single source of truth (enabled/public locales) — see `lib/locales.ts`.
 const LOCALES = SUPPORTED_LOCALES;

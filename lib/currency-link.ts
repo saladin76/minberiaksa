@@ -1,4 +1,4 @@
-import { SUPPORTED_CURRENCY_OPTIONS } from "@/lib/supported-currencies";
+import { SUPPORTED_CURRENCY_OPTIONS } from "./supported-currencies";
 
 /** Stable list for dashboards / link builders (DEFAULT first, then same order as `CurrencySelector`). */
 export const URL_CURRENCY_CODES_ORDERED = [
