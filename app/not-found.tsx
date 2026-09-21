@@ -28,7 +28,7 @@ import { NotFoundIcon } from "@/components/minbar/states/StatusIcons";
 export default async function RootNotFound() {
   let locale = DEFAULT_LOCALE;
   try {
-    /* `middleware.ts` writes this onto the request from the URL, so it is
+    /* `proxy.ts` writes this onto the request from the URL, so it is
        right on the very first visit, before any response cookie exists. */
     const value = (await cookies()).get("NEXT_LOCALE")?.value;
     if (value && isValidLocale(value)) locale = value;

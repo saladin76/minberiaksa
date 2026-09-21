@@ -22,7 +22,7 @@ import { NotFoundIcon } from "@/components/minbar/states/StatusIcons";
  * nor a working `getLocale()` — next-intl's server APIs throw "Couldn't find
  * next-intl config file" here, which used to replace this screen with a bare
  * framework fallback. So the locale comes from the `NEXT_LOCALE` cookie, which
- * `middleware.ts` writes onto the request from the URL, and the copy is read
+ * `proxy.ts` writes onto the request from the URL, and the copy is read
  * straight from the message catalog.
  */
 

@@ -30,10 +30,14 @@ function countryFromHeaders(req: NextRequest): string | null {
   return null;
 }
 
+// Next 16 `proxy` (the former `middleware`). It runs on the Node.js runtime, not the
+// Edge runtime — the Edge deployment on Vercel failed at invocation with
+// MIDDLEWARE_INVOCATION_FAILED while the same code passes under `next start`.
+//
 // Runs before SSR so the page renders with `currency` already in cookies —
 // otherwise scripts/pixels would fire with the default (USD) before the
 // client-side `?currency=` sync catches up.
-export default function middleware(req: NextRequest) {
+export default function proxy(req: NextRequest) {
   const pathname = req.nextUrl.pathname;
 
   // Locale-less URL (e.g. a share link generated with auto-locale): pick a
