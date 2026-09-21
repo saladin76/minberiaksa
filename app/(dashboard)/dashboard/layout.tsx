@@ -5,6 +5,12 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 import DashboardLayoutClient from "./DashboardLayoutClient";
 import ar from "../../../i18n/messages/ar.json";
 
+// The whole dashboard is behind `getServerSession` and can never be served statically.
+// Saying so explicitly makes `next build` skip the prerender attempt for every page
+// under it; on Vercel that attempt reached /dashboard/ads and died with a null React
+// dispatcher (`Cannot read properties of null (reading 'useContext')`).
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title: "لوحة التحكم",
   description: "إدارة المشاريع والتبرعات والمستخدمين",
