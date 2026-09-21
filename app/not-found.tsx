@@ -23,6 +23,8 @@ import { NotFoundIcon } from "@/components/minbar/states/StatusIcons";
  * next-intl's server APIs, which throw outside the locale segment.
  */
 
+//asdasd
+
 export default async function RootNotFound() {
   let locale = DEFAULT_LOCALE;
   try {
