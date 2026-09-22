@@ -85,3 +85,63 @@ This prevents title-only drafts from appearing publicly.
 Arabic remains the canonical body. Existing translated titles/descriptions are
 imported. A translation body is only written when `translations[].content`
 actually contains one; otherwise the Arabic body remains the fallback.
+
+
+## Multilingual SEO and indexing contract
+
+Each blog post now stores explicit SEO fields on both the Arabic `Post` row and
+each `PostTranslation`:
+
+- `metaTitle`
+- `metaDescription`
+- `seoKeywords` (editorial/search-planning phrases; not relied on as a Google
+  meta-keywords ranking signal)
+- `imageAlt`
+
+The importer fills missing SEO fields from the localized title/description and
+creates stable per-locale slugs.
+
+A locale is **indexable only when it has its own translated article body**.
+Arabic is the canonical source language. A locale that only has a translated
+title/description may still display the Arabic fallback to a visitor, but the
+page receives `noindex,follow` and is omitted from the blog sitemap/hreflang
+set. This prevents Arabic fallback bodies from being exposed to search engines
+as nineteen duplicate localized pages.
+
+When a translated body is added in the dashboard, that locale automatically
+becomes eligible for its own canonical URL, hreflang entry, sitemap URL,
+localized Open Graph metadata, Article JSON-LD language and localized image alt
+text on the next render.
+
+## Editorial and cover audit
+
+The 258-post seed is treated as a content package, not just database rows.
+Before importing:
+
+- every published post must have a non-empty body;
+- every local cover path must exist under `public/`;
+- post/category slugs and translation locales must be unique;
+- body-missing drafts fail publication preflight;
+- covers should be selected for the article topic, not only reused by sequence;
+- the public renderer and dashboard editor accept the same HTML, Markdown and
+  TipTap JSON content safely.
+
+The 2026-09-22 editorial pass completed the previously empty bodies, corrected
+known cover mismatches, added SEO metadata/alt text, and reduced high-similarity
+template content before release.
+
+## Release sequence
+
+Use this order for production:
+
+```bash
+npm run blog:seed:dry
+npm run blog:seed
+```
+
+Do not put the database import in Vercel's build command. Preview builds and
+production builds may point at different environments, and a build must never
+mutate editorial collections implicitly.
+
+Use `blog:seed:replace` only for an intentional full replacement after a
+backup/review. Normal releases should use the idempotent upsert command.
