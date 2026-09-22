@@ -1,12 +1,8 @@
 /**
- * prisma/seed/seed-posts.ts — bulk blog import from seed-posts.json.
+ * Bulk blog import from seed-posts.json.
  *
- * Default mode is safe/idempotent UPSERT. Use --replace only when you
- * intentionally want MongoDB's blog collections to mirror the seed exactly.
- *
- * The seed carries both HTML and Markdown for Arabic bodies. The live article
- * renderer currently understands Markdown/plain text, so this importer stores
- * contentMarkdown when present and falls back to content only when needed.
+ * Default mode is safe/idempotent UPSERT. Use --replace only when MongoDB
+ * should intentionally mirror the seed exactly.
  *
  * Commands:
  *   npx tsx prisma/seed/seed-posts.ts --dry
@@ -21,6 +17,13 @@ const prisma = new PrismaClient();
 const DRY = process.argv.includes("--dry");
 const REPLACE = process.argv.includes("--replace");
 
+type SeedSeo = {
+  metaTitle?: string | null;
+  metaDescription?: string | null;
+  keyword?: string | null;
+  keywords?: string[] | null;
+};
+
 type Tr = {
   locale: string;
   name?: string | null;
@@ -28,7 +31,9 @@ type Tr = {
   description?: string | null;
   content?: string | null;
   image?: string | null;
+  imageAlt?: string | null;
   slug?: string | null;
+  seo?: SeedSeo | null;
 };
 
 type SeedCategory = {
@@ -48,28 +53,17 @@ type SeedPost = {
   contentMarkdown?: string | null;
   image?: string | null;
   coverImage?: string | null;
+  imageAlt?: string | null;
   contentStatus?: string | null;
   published: boolean;
   categoryName: string;
   campaignIds: string[];
   translations: Tr[];
-  seo?: {
-    metaTitle?: string | null;
-    metaDescription?: string | null;
-    keyword?: string | null;
-  } | null;
+  seo?: SeedSeo | null;
 };
 
 type SeedFile = {
-  _meta?: {
-    counts?: {
-      categories?: number;
-      posts?: number;
-      postTranslations?: number;
-      readyToPublish?: number;
-      bodyMissing?: number;
-    };
-  };
+  _meta?: Record<string, unknown>;
   categories: SeedCategory[];
   posts: SeedPost[];
 };
@@ -81,24 +75,17 @@ const seed = JSON.parse(
 const publicPath = (src?: string | null): string | undefined => {
   if (!src) return undefined;
   if (/^(?:https?:)?\/\//i.test(src)) return src;
-
   const rooted = src.startsWith("/") ? src : "/" + src.replace(/^\.\//, "");
   const webp = rooted.replace(/\.(?:jpe?g|png)$/i, ".webp");
-
-  if (
-    webp !== rooted &&
-    fs.existsSync(path.join("public", webp.slice(1)))
-  ) {
+  if (webp !== rooted && fs.existsSync(path.join("public", webp.slice(1)))) {
     return webp;
   }
-
   return rooted;
 };
 
 const articleBody = (post: SeedPost): string | undefined => {
   const markdown = post.contentMarkdown?.trim();
   if (markdown) return markdown;
-
   const raw = post.content?.trim();
   return raw || undefined;
 };
@@ -111,15 +98,67 @@ const localAssetExists = (src?: string): boolean => {
   return fs.existsSync(path.join("public", src.replace(/^\//, "")));
 };
 
+const smartTrim = (value: string, max: number): string => {
+  const clean = value.replace(/\s+/g, " ").trim();
+  if (clean.length <= max) return clean;
+  const slice = clean.slice(0, max + 1);
+  const lastSpace = slice.lastIndexOf(" ");
+  return (lastSpace > max * 0.65 ? slice.slice(0, lastSpace) : slice.slice(0, max)).trim();
+};
+
+const keywordPhrase = (title?: string | null): string | undefined => {
+  if (!title) return undefined;
+  const head = title.split(/[?:؟|—–]/)[0].replace(/^\d+[.)-]?\s*/, "").trim();
+  return smartTrim(head, 70) || undefined;
+};
+
+const normalizeKeywords = (
+  seo: SeedSeo | null | undefined,
+  title?: string | null
+): string[] => {
+  const values = [
+    ...(seo?.keywords ?? []),
+    seo?.keyword ?? undefined,
+    keywordPhrase(title),
+  ].filter((v): v is string => Boolean(v?.trim()));
+  return Array.from(new Set(values.map((v) => v.trim()))).slice(0, 8);
+};
+
+const seoFields = (
+  title: string | null | undefined,
+  description: string | null | undefined,
+  seo?: SeedSeo | null,
+  imageAlt?: string | null
+) => ({
+  metaTitle: smartTrim(seo?.metaTitle || title || "", 68) || undefined,
+  metaDescription:
+    smartTrim(seo?.metaDescription || description || "", 160) || undefined,
+  seoKeywords: normalizeKeywords(seo, title),
+  imageAlt: smartTrim(imageAlt || title || "", 140) || undefined,
+});
+
+const slugifyUnicode = (value?: string | null): string =>
+  (value || "")
+    .normalize("NFKC")
+    .toLowerCase()
+    .replace(/[’'"]/g, "")
+    .replace(/[^\p{L}\p{N}]+/gu, "-")
+    .replace(/^-+|-+$/g, "")
+    .replace(/-{2,}/g, "-")
+    .slice(0, 120);
+
+const translationSlug = (post: SeedPost, t: Tr): string =>
+  slugifyUnicode(t.slug) ||
+  slugifyUnicode(t.title) ||
+  slugifyUnicode(`${post.slug}-${t.locale}`);
+
 function assertUnique(values: string[], label: string) {
   const seen = new Set<string>();
   const duplicates = new Set<string>();
-
   for (const value of values) {
     if (seen.has(value)) duplicates.add(value);
     seen.add(value);
   }
-
   if (duplicates.size) {
     throw new Error(
       `${label}: duplicate values: ${Array.from(duplicates).join(", ")}`
@@ -134,16 +173,18 @@ function validateSeed() {
 
   const categoryNames = new Set(seed.categories.map((c) => c.name));
   const errors: string[] = [];
+  const slugsByLocale = new Map<string, string[]>();
 
   for (const category of seed.categories) {
     if (!category.name.trim()) errors.push("category with empty name");
     if (!category.slug.trim()) errors.push(`category "${category.name}" has empty slug`);
-
-    const locales = category.translations.map((t) => t.locale);
     try {
-      assertUnique(locales, `category "${category.name}" translations`);
-    } catch (err) {
-      errors.push((err as Error).message);
+      assertUnique(
+        category.translations.map((t) => t.locale),
+        `category "${category.name}" translations`
+      );
+    } catch (error) {
+      errors.push((error as Error).message);
     }
   }
 
@@ -166,16 +207,30 @@ function validateSeed() {
       errors.push(`${post.slug}: cover not found in public/: ${cover}`);
     }
     if (post.published && !shouldPublish) {
-      errors.push(
-        `${post.slug}: marked published but body is missing/BODY_MISSING`
-      );
+      errors.push(`${post.slug}: marked published but body is missing/BODY_MISSING`);
     }
 
-    const locales = post.translations.map((t) => t.locale);
     try {
-      assertUnique(locales, `post "${post.slug}" translations`);
-    } catch (err) {
-      errors.push((err as Error).message);
+      assertUnique(
+        post.translations.map((t) => t.locale),
+        `post "${post.slug}" translations`
+      );
+    } catch (error) {
+      errors.push((error as Error).message);
+    }
+
+    for (const t of post.translations) {
+      const list = slugsByLocale.get(t.locale) ?? [];
+      list.push(translationSlug(post, t));
+      slugsByLocale.set(t.locale, list);
+    }
+  }
+
+  for (const [locale, slugs] of slugsByLocale) {
+    try {
+      assertUnique(slugs, `post translations for locale ${locale}`);
+    } catch (error) {
+      errors.push((error as Error).message);
     }
   }
 
@@ -195,7 +250,6 @@ async function main() {
       p.contentStatus !== "BODY_MISSING" &&
       Boolean(articleBody(p))
   ).length;
-  const bodyMissing = seed.posts.length - ready;
   const translations = seed.posts.reduce(
     (sum, p) => sum + p.translations.length,
     0
@@ -205,7 +259,7 @@ async function main() {
     `seed-posts: ${seed.categories.length} categories, ${seed.posts.length} posts, ${translations} translations`
   );
   console.log(
-    `ready: ${ready}, body-missing/unpublished: ${bodyMissing}, mode: ${DRY ? "dry" : REPLACE ? "replace" : "upsert"}`
+    `ready: ${ready}, unpublished: ${seed.posts.length - ready}, mode: ${DRY ? "dry" : REPLACE ? "replace" : "upsert"}`
   );
 
   if (DRY) {
@@ -226,14 +280,7 @@ async function main() {
         where: { ctaKind: "POST" },
       }),
     };
-
     console.log("existing before replace:", before);
-    if (before.storyCtas) {
-      console.log(
-        `note: ${before.storyCtas} story slide(s) point at a post; verify/re-link them after replacement.`
-      );
-    }
-
     await prisma.superCategoryItem.deleteMany({ where: { kind: "POST" } });
     await prisma.postTranslation.deleteMany({});
     await prisma.post.deleteMany({});
@@ -261,17 +308,11 @@ async function main() {
         slug: c.slug,
       },
     });
-
     categoryIdByName.set(c.name, row.id);
 
     for (const t of c.translations) {
       await prisma.postCategoryTranslation.upsert({
-        where: {
-          categoryId_locale: {
-            categoryId: row.id,
-            locale: t.locale,
-          },
-        },
+        where: { categoryId_locale: { categoryId: row.id, locale: t.locale } },
         update: {
           name: t.name ?? c.name,
           title: t.title ?? undefined,
@@ -301,9 +342,7 @@ async function main() {
   for (const p of seed.posts) {
     const categoryId = categoryIdByName.get(p.categoryName);
     if (!categoryId) {
-      throw new Error(
-        `post ${p.slug}: unknown category "${p.categoryName}"`
-      );
+      throw new Error(`post ${p.slug}: unknown category "${p.categoryName}"`);
     }
 
     const body = articleBody(p);
@@ -317,6 +356,7 @@ async function main() {
       description: p.description || undefined,
       content: body,
       image: coverPath(p),
+      ...seoFields(p.title, p.description, p.seo, p.imageAlt),
       published,
       categoryId,
       campaignIds: p.campaignIds ?? [],
@@ -325,26 +365,27 @@ async function main() {
     const row = await prisma.post.upsert({
       where: { slug: p.slug },
       update: base,
-      create: {
-        ...base,
-        slug: p.slug,
-      },
+      create: { ...base, slug: p.slug },
     });
 
     for (const t of p.translations) {
+      const localizedSeo = seoFields(
+        t.title || p.title,
+        t.description || p.description,
+        t.seo,
+        t.imageAlt || p.imageAlt
+      );
+      const localizedSlug = translationSlug(p, t);
+
       await prisma.postTranslation.upsert({
-        where: {
-          postId_locale: {
-            postId: row.id,
-            locale: t.locale,
-          },
-        },
+        where: { postId_locale: { postId: row.id, locale: t.locale } },
         update: {
           title: t.title ?? undefined,
           description: t.description ?? undefined,
           content: t.content ?? undefined,
           image: publicPath(t.image),
-          slug: t.slug ?? undefined,
+          slug: localizedSlug,
+          ...localizedSeo,
         },
         create: {
           postId: row.id,
@@ -353,7 +394,8 @@ async function main() {
           description: t.description ?? undefined,
           content: t.content ?? undefined,
           image: publicPath(t.image),
-          slug: t.slug ?? undefined,
+          slug: localizedSlug,
+          ...localizedSeo,
         },
       });
       translationCount++;
