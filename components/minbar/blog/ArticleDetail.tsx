@@ -6,6 +6,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { miaPath } from "@/lib/minbar/routes";
 import { localeDirection } from "@/lib/locales";
 import type { MinbarArticleDetail } from "@/lib/minbar/posts";
+import { contentToBlocks } from "@/lib/blog/rich-text";
 import ArticleCta from "./ArticleCta";
 import ZakatBanner from "@/components/minbar/banners/ZakatBanner";
 import TravelBanner from "@/components/minbar/banners/TravelBanner";
@@ -31,101 +32,13 @@ export interface ArticleDetailProps {
   ctaKey: string;
 }
 
-interface Block {
-  kind: "h2" | "p" | "li";
-  text: string;
-}
-
-const HEADING_MAX_LENGTH = 80;
-
-function decodeHtml(value: string): string {
-  if (typeof document === "undefined") {
-    return value
-      .replace(/&nbsp;/g, " ")
-      .replace(/&amp;/g, "&")
-      .replace(/&lt;/g, "<")
-      .replace(/&gt;/g, ">")
-      .replace(/&quot;/g, '"')
-      .replace(/&#39;/g, "'");
-  }
-
-  const el = document.createElement("textarea");
-  el.innerHTML = value;
-  return el.value;
-}
-
-function stripTags(value: string): string {
-  return decodeHtml(
-    value
-      .replace(/<br\s*\/?>/gi, "\n")
-      .replace(/<[^>]+>/g, "")
-  )
-    .replace(/\u00a0/g, " ")
-    .replace(/[ \t]+\n/g, "\n")
-    .trim();
-}
-
-function htmlToBlocks(content: string): Block[] {
-  const blocks: Block[] = [];
-  const blockPattern = /<(h[1-3]|p|li)\b[^>]*>([\s\S]*?)<\/\1>/gi;
-
-  for (const match of content.matchAll(blockPattern)) {
-    const tag = match[1].toLowerCase();
-    const text = stripTags(match[2]);
-    if (!text) continue;
-
-    blocks.push({
-      kind: tag.startsWith("h") ? "h2" : tag === "li" ? "li" : "p",
-      text,
-    });
-  }
-
-  // If the HTML did not contain known semantic blocks, keep readable text
-  // rather than rendering an empty article.
-  if (!blocks.length) {
-    const fallback = stripTags(content);
-    if (fallback) blocks.push({ kind: "p", text: fallback });
-  }
-
-  return blocks;
-}
-
-function textToBlocks(content: string): Block[] {
-  return content
-    .split(/\n\s*\n/)
-    .map((chunk) => chunk.trim())
-    .filter(Boolean)
-    .map<Block>((chunk) => {
-      const heading = chunk.match(/^#{1,3}\s+(.*)$/);
-      if (heading) return { kind: "h2", text: heading[1].trim() };
-
-      const bullet = chunk.match(/^[-*]\s+(.*)$/s);
-      if (bullet) return { kind: "li", text: bullet[1].trim() };
-
-      const isSingleLine = !chunk.includes("\n");
-      const looksLikeHeading =
-        isSingleLine &&
-        chunk.length <= HEADING_MAX_LENGTH &&
-        !/[.!?،؟:]$/.test(chunk);
-
-      return { kind: looksLikeHeading ? "h2" : "p", text: chunk };
-    });
-}
-
-function toBlocks(content: string): Block[] {
-  if (!content.trim()) return [];
-
-  const looksLikeHtml = /<(?:h[1-3]|p|ul|ol|li)\b/i.test(content);
-  return looksLikeHtml ? htmlToBlocks(content) : textToBlocks(content);
-}
-
 export default function ArticleDetail({ article, ctaKey }: ArticleDetailProps) {
   const locale = useLocale();
   const dir = localeDirection(locale);
   const t = useTranslations("blog");
 
-  const blocks = useMemo(() => toBlocks(article.content), [article.content]);
-  const body: Block[] = blocks.length
+  const blocks = useMemo(() => contentToBlocks(article.content), [article.content]);
+  const body = blocks.length
     ? blocks
     : article.excerpt
       ? [{ kind: "p", text: article.excerpt }]
@@ -280,7 +193,7 @@ export default function ArticleDetail({ article, ctaKey }: ArticleDetailProps) {
               {/* eslint-disable-next-line @next/next/no-img-element -- covers are arbitrary CMS URLs, not a known-host set */}
               <img
                 src={article.cover}
-                alt=""
+                alt={article.imageAlt || article.title}
                 style={{
                   position: "absolute",
                   inset: 0,

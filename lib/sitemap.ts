@@ -85,17 +85,40 @@ function staticAlternates(path: string): Record<string, string> {
   return languages;
 }
 
-function entityAlternates(basePath: string, baseSlug: string | null | undefined, translations: Translation[], fallback: string): Record<string, string> {
-  const url = (loc: string) => `${SITE_URL}/${loc}${basePath}/${encodeURIComponent(pickSlugFor(loc, baseSlug, translations, fallback))}`;
+function entityAlternates(
+  basePath: string,
+  baseSlug: string | null | undefined,
+  translations: Translation[],
+  fallback: string,
+  availableLocales: readonly string[] = LOCALES
+): Record<string, string> {
+  const url = (loc: string) =>
+    `${SITE_URL}/${loc}${basePath}/${encodeURIComponent(
+      pickSlugFor(loc, baseSlug, translations, fallback)
+    )}`;
   const languages: Record<string, string> = {};
-  for (const locale of LOCALES) languages[locale] = url(locale);
+  for (const locale of LOCALES) {
+    if (availableLocales.includes(locale)) languages[locale] = url(locale);
+  }
   languages["x-default"] = url("ar");
   return languages;
 }
 
 /** Expand one entity into its per-locale URL entries, all sharing one alternates map. */
-function expand(alternates: Record<string, string>, lastModified: Date, changeFrequency: string, priority: number): SitemapEntry[] {
-  return LOCALES.map((locale) => ({ loc: alternates[locale], lastModified, changeFrequency, priority, alternates }));
+function expand(
+  alternates: Record<string, string>,
+  lastModified: Date,
+  changeFrequency: string,
+  priority: number,
+  locales: readonly string[] = LOCALES
+): SitemapEntry[] {
+  return LOCALES.filter((locale) => locales.includes(locale)).map((locale) => ({
+    loc: alternates[locale],
+    lastModified,
+    changeFrequency,
+    priority,
+    alternates,
+  }));
 }
 
 /** A super category lives at `/{locale}/{projects slug}/{slug}`. */
@@ -188,12 +211,34 @@ export async function buildShard(id: string): Promise<SitemapEntry[] | null> {
 
   const rows = await prisma.post.findMany({
     where: { published: true },
-    select: { id: true, slug: true, updatedAt: true, translations: { select: { locale: true, slug: true } } },
+    select: {
+      id: true,
+      slug: true,
+      updatedAt: true,
+      translations: { select: { locale: true, slug: true, content: true } },
+    },
     orderBy: { updatedAt: "desc" },
     skip,
     take: SHARD_SIZE,
   });
-  return rows.flatMap((p) => expand(entityAlternates("/blog", p.slug, p.translations, p.id), p.updatedAt, "monthly", 0.65));
+  return rows.flatMap((p) => {
+    const availableLocales = Array.from(
+      new Set([
+        "ar",
+        ...p.translations
+          .filter((translation) => Boolean(translation.content?.trim()))
+          .map((translation) => translation.locale),
+      ])
+    );
+    const alternates = entityAlternates(
+      "/blog",
+      p.slug,
+      p.translations,
+      p.id,
+      availableLocales
+    );
+    return expand(alternates, p.updatedAt, "monthly", 0.65, availableLocales);
+  });
 }
 
 const xmlEscape = (value: string): string =>
