@@ -46,7 +46,7 @@ export default function HomePage({
   signedIn,
 }: {
   projects: MinbarProject[];
-  /** The quick-donation card as the dashboard configured it, with every project it may list. */
+  /** The quick-donation bar as the dashboard configured it, with every project it may list. */
   quick: { config: QuickDonationConfig; projects: MinbarProject[] };
   /** Dashboard banners, already rendered on the server, one node per slot. */
   banners: { top: ReactNode; middle: ReactNode; bottom: ReactNode };
@@ -74,10 +74,11 @@ export default function HomePage({
       />
 
       <Hero onPlayIntro={video.open} />
+      {/* Sticky under the header from here on — the design places it right under the hero. */}
+      <QuickDonateBar config={quick.config} projects={quick.projects} />
       <VerseStrip />
       {banners.top}
       <UrgentProjectsSection projects={projects} />
-      <QuickDonateBar config={quick.config} projects={quick.projects} />
       <EventsSection />
       <ReelsSection onPlay={video.open} endorsements={content.endorsements} achievements={content.achievements} />
       <PathSection />

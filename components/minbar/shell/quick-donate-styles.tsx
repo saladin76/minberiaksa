@@ -3,10 +3,9 @@ import type { CSSProperties } from "react";
 /**
  * The look of the quick-donation panel — `Minbar/التبرع السريع.dc.html`.
  *
- * Shared by the pill every inner page carries (`shell/QuickDonate`) and the
- * one that follows the homepage card once it scrolls away
- * (`home/QuickDonateFab`), so the two are one design rather than two
- * imitations of it: a row in the project list, a frequency pill and an amount
+ * Used by the pill every inner page carries (`shell/QuickDonate`). The
+ * homepage has its own sticky bar (`home/QuickDonateBar`) and no pill. Here
+ * a row in the project list, a frequency pill and an amount
  * pill look the same wherever the panel opens.
  */
 

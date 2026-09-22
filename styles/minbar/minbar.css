@@ -1049,74 +1049,156 @@
 }
 
 /* ─────────────────────────────────────────────────────────────────────────────
- * Quick donation — one card in the flow of the page, and a dock at the bottom
- * edge that carries its summary once the card has scrolled out of sight.
+ * Quick donation — the sticky bar under the hero, from
+ * `Minbar/الصفحة الرئيسية.dc.html` (#quick).
  *
- * The card: the choices sit on one side and what they add up to on the other,
- * the way a checkout does. Below 900px the two columns become one and the
- * panel is simply the last block in the card.
+ * Desktop: one 68px row that stays put under the header as the page scrolls —
+ * destination · frequency · amount (+ a free field) · total · the red button
+ * flush with the bar's end edge. Gold rail and gem marks on the start edge,
+ * the Aqsa pattern washed across it.
  *
- * The dock (further down): never under the header, never shown while the card
- * itself is on screen, never on the first paint. See QuickDonateBar.tsx.
+ * Phone (≤960px): the same choices as a bottom sheet fixed to the viewport,
+ * collapsed to one row (chevron · label + total · button) until the chevron
+ * opens it. The page gets bottom padding so the sheet never covers the footer.
+ * See QuickDonateBar.tsx.
  * ───────────────────────────────────────────────────────────────────────────── */
-.mia-scope .mia-qd-sec { position: relative; z-index: 1; padding: 30px 24px 8px; scroll-margin-top: 112px; }
+.mia-scope .mia-qb-sec { position: sticky; top: 116px; z-index: 50; padding: 14px 0 4px; scroll-margin-top: 120px; }
+.mia-scope .mia-qb-wrap { max-width: 1180px; margin: 0 auto; padding: 0 24px; }
 
-.mia-scope .mia-qd {
-  position: relative; overflow: hidden;
-  max-width: 1180px; margin: 0 auto;
-  display: grid; grid-template-columns: minmax(0,1fr) minmax(280px, .42fr);
-  background: #fff; border: 1px solid rgba(211,154,39,.42); border-radius: 18px;
-  box-shadow: 0 26px 60px -30px rgba(16,33,43,.4), 0 2px 8px rgba(16,33,43,.05);
+/* ── The bar ─────────────────────────────────────────────────────────── */
+.mia-scope .mia-qb-desk {
+  position: relative; display: flex; align-items: center; gap: 16px;
+  height: 68px; padding-inline-start: 20px; overflow: hidden;
+  background: #fff; border: 1px solid rgba(211,154,39,.5); border-radius: 12px;
+  box-shadow: 0 18px 50px rgba(16,33,43,.12);
 }
-.mia-scope .mia-qd-pattern {
-  position: absolute; inset: 0; pointer-events: none;
-  background: url('/minbar/assets/patterns/aqsa-white-pattern.webp') repeat; background-size: 300px 300px;
+.mia-scope .mia-qb-desk > * { position: relative; z-index: 1; }
+.mia-scope .mia-qb-pattern {
+  position: absolute; inset: 0; z-index: 0 !important; pointer-events: none;
+  background: url('/minbar/assets/patterns/aqsa-white-pattern.webp') repeat; background-size: 200px 200px;
+  opacity: .07 !important;
+  -webkit-mask-image: linear-gradient(to left, rgba(0,0,0,.05), rgba(0,0,0,1) 55%, rgba(0,0,0,.35));
+  mask-image: linear-gradient(to left, rgba(0,0,0,.05), rgba(0,0,0,1) 55%, rgba(0,0,0,.35));
 }
-.mia-scope .mia-qd > *:not(.mia-qd-pattern) { position: relative; z-index: 1; }
+.mia-scope .mia-qb-rail {
+  position: absolute; inset-block: 0; inset-inline-start: 0; width: 6px; pointer-events: none;
+  background: linear-gradient(180deg, var(--gold), rgba(211,154,39,.25));
+}
+.mia-scope .mia-qb-gems { position: absolute; inset-inline-start: 18px; display: inline-flex; gap: 4px; pointer-events: none; }
+.mia-scope .mia-qb-gems--top { top: 10px; }
+.mia-scope .mia-qb-gems--bottom { bottom: 10px; }
+.mia-scope .mia-qb-gems > i { display: block; width: 4px; height: 4px; background: rgba(211,154,39,.7); transform: rotate(45deg); }
+.mia-scope .mia-qb-gems > i + i { width: 3px; height: 3px; background: rgba(211,154,39,.4); }
 
-/* ── The choices ──────────────────────────────────────────────────────── */
-.mia-scope .mia-qd-main { display: grid; align-content: start; gap: 14px; padding: 20px 22px 22px; min-width: 0; }
-/* The title row and the panel's "total" label share one height, so the two
-   columns start on the same line. The global phone h2 rule is !important. */
-.mia-scope .mia-qd-title {
-  margin: 0; min-height: 28px; display: inline-flex; align-items: center; gap: 10px;
-  font-size: 17px !important; font-weight: 900; color: var(--deep); letter-spacing: -.01em; line-height: 1.2;
-}
-.mia-scope .mia-qd-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--red); box-shadow: 0 0 0 4px rgba(169,52,40,.14); }
-.mia-scope .mia-qd-field { display: grid; gap: 7px; min-width: 0; }
-.mia-scope .mia-qd-legend { font-size: 12px; font-weight: 900; color: var(--muted); letter-spacing: .01em; line-height: 1.3; }
+.mia-scope .mia-qb-div { flex: 0 0 auto; width: 1px; height: 30px; background: var(--border); }
+.mia-scope .mia-qb-chips { flex: 0 0 auto; display: flex; align-items: center; gap: 8px; }
 
-/* Amounts — the first and largest decision. */
-/* However many presets the dashboard set (2–6, plus "other"): one row, equal columns. */
-.mia-scope .mia-qd-amounts { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0,1fr); gap: 7px; }
-.mia-scope .mia-qd-amt {
-  position: relative; display: inline-flex; align-items: center; justify-content: center;
-  flex-direction: column; gap: 0; line-height: 1.15;
-  min-height: 50px; padding: 0 4px; border-radius: 11px; cursor: pointer;
-  border: 1.5px solid var(--border); background: #fff; color: var(--deep);
-  font-family: inherit; font-size: 15px; font-weight: 900; white-space: nowrap;
-  transition: border-color .15s ease, background .15s ease, color .15s ease, transform .15s ease;
+/* The destination: the shared Radix trigger, as a pill the height of the chips' row. */
+.mia-scope .mia-qb-desk .mia-sel-trigger {
+  flex: 0 1 148px; width: auto; min-width: 96px; min-height: 40px; height: 40px;
+  padding-inline: 12px 10px; border-width: 1px; border-radius: 999px; font-size: 13px;
 }
-.mia-scope .mia-qd-amt:hover { border-color: var(--gold); transform: translateY(-1px); }
-.mia-scope .mia-qd-amt[data-active="true"] {
-  background: var(--deep); border-color: var(--deep); color: #fff;
-  box-shadow: 0 8px 18px -8px rgba(16,33,43,.6);
+
+/* Chips: frequency lights gold, amount lights deep — the design's two accents. */
+.mia-scope .mia-qb-chip {
+  height: 34px; padding: 0 12px; border-radius: 999px; cursor: pointer;
+  border: 1px solid var(--border); background: #fff; color: var(--muted);
+  font-family: inherit; font-size: 13px; font-weight: 800; white-space: nowrap; transition: all .14s ease;
 }
-.mia-scope .mia-qd-amt--other { font-size: 13px; font-weight: 800; }
-.mia-scope .mia-qd-tag {
-  font-size: 9.5px; font-weight: 900; font-style: normal; line-height: 1.3;
-  letter-spacing: .02em; color: var(--gold-2); white-space: nowrap; max-width: 100%; overflow: hidden; text-overflow: ellipsis;
+.mia-scope .mia-qb-chip:hover { border-color: rgba(211,154,39,.7); color: var(--deep); }
+.mia-scope .mia-qb-chip[data-chip="freq"] { background: var(--gold); border-color: var(--gold); color: var(--deep); font-weight: 900; box-shadow: 0 4px 12px rgba(2,34,34,.18); }
+.mia-scope .mia-qb-chip[data-chip="amt"] { background: var(--deep); border-color: var(--deep); color: #fff; font-weight: 900; box-shadow: 0 4px 12px rgba(2,34,34,.18); }
+.mia-scope .mia-qb-chip > span { unicode-bidi: isolate; }
+
+/* The free field: a chip-shaped input; its border deepens once it holds a value. */
+.mia-scope .mia-qb-free {
+  display: inline-flex; align-items: center; gap: 5px; flex: 0 1 auto;
+  height: 34px; padding: 0 10px; box-sizing: border-box; border-radius: 999px;
+  border: 1px solid var(--border); background: #fff; color: var(--deep);
+  font-family: inherit; font-size: 13px; font-weight: 800; transition: border-color .14s ease;
 }
-.mia-scope .mia-qd-amt[data-active="true"] .mia-qd-tag { color: var(--gold); }
-.mia-scope .mia-qd-custom {
-  display: flex; align-items: center; gap: 10px; min-height: 46px; padding: 0 14px;
-  border: 1.5px solid var(--deep); border-radius: 11px; background: #fff;
+.mia-scope .mia-qb-free[data-active="true"] { border-color: var(--deep); }
+.mia-scope .mia-qb-free:focus-within { border-color: var(--gold); box-shadow: 0 0 0 3px rgba(211,154,39,.18); }
+.mia-scope .mia-qb-free > small { font-size: 11px; font-weight: 900; color: var(--muted); }
+.mia-scope .mia-qb-free > input {
+  width: 10ch; min-width: 8ch; border: 0; outline: 0; background: transparent;
+  font: inherit; font-weight: 800; color: var(--deep);
 }
-.mia-scope .mia-qd-custom input {
-  flex: 1 1 auto; min-width: 0; border: 0; outline: 0; background: transparent;
-  font: inherit; font-size: 16px; font-weight: 900; color: var(--deep);
+.mia-scope .mia-qb-free > input::placeholder { color: var(--muted); font-weight: 700; }
+
+/* The end: total, then the button filling the bar's height and its end corners. */
+.mia-scope .mia-qb-end { flex: 0 0 auto; margin-inline-start: auto; display: flex; align-items: center; gap: 18px; height: 100%; }
+.mia-scope .mia-qb-total { font-size: 19px; font-weight: 900; color: var(--deep); unicode-bidi: isolate; white-space: nowrap; padding-inline-end: 2px; }
+.mia-scope .mia-qb-cta {
+  display: inline-flex; align-items: center; justify-content: center;
+  height: 68px; padding-inline: 30px 26px; border: 0; border-radius: 0; cursor: pointer;
+  background: var(--red); color: #fff; font-family: inherit; font-size: 16px; font-weight: 900; white-space: nowrap;
+  transition: filter .18s ease;
 }
-.mia-scope .mia-qd-cur { font-size: 12px; font-weight: 900; color: var(--muted); }
+.mia-scope .mia-qb-cta:hover { filter: brightness(1.08); }
+.mia-scope .mia-qb-cta:disabled { opacity: .55; cursor: not-allowed; filter: none; }
+
+/* The sheet exists only on a phone. */
+.mia-scope .mia-qb-sheet { display: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .mia-scope .mia-qb-chip, .mia-scope .mia-qb-cta, .mia-scope .mia-qb-toggle svg { transition: none; }
+}
+
+/* Between the bar and the phone sheet the row is tight: smaller gaps and chips. */
+@media (max-width: 1180px) {
+  .mia-scope .mia-qb-desk { gap: 10px; padding-inline-start: 16px; }
+  .mia-scope .mia-qb-chip { padding: 0 10px; font-size: 12.5px; }
+  .mia-scope .mia-qb-end { gap: 12px; }
+  .mia-scope .mia-qb-total { font-size: 17px; }
+  .mia-scope .mia-qb-cta { padding-inline: 20px 18px; font-size: 15px; }
+}
+
+/* ── The phone sheet ─────────────────────────────────────────────────── */
+@media (max-width: 960px) {
+  .mia-scope .mia-qb-sec { position: fixed; inset-inline: 0; bottom: 0; top: auto; margin: 0; padding: 0; z-index: 95; scroll-margin-top: 0; }
+  .mia-scope .mia-qb-wrap { padding: 0; max-width: none; }
+  .mia-scope .mia-qb-desk { display: none; }
+  .mia-scope .mia-qb-sheet {
+    display: block; background: #fff; border: 1px solid rgba(211,154,39,.5); border-bottom: 0;
+    border-radius: 16px 16px 0 0; box-shadow: 0 -16px 44px rgba(16,33,43,.24);
+    padding: 0 14px calc(10px + env(safe-area-inset-bottom, 0px));
+  }
+  /* Room for the sheet above the footer. */
+  .mia-scope:has(.mia-qb-sec) { padding-bottom: 96px; }
+
+  .mia-scope .mia-qb-sec[data-open="false"] .mia-qb-body { display: none; }
+  .mia-scope .mia-qb-body { display: grid; gap: 16px; padding: 6px 2px 16px; max-height: 62vh; overflow-y: auto; border-bottom: 1px solid var(--border); }
+  .mia-scope .mia-qb-handle { display: block; width: 42px; height: 4px; margin: 10px auto 2px; border-radius: 999px; background: rgba(16,33,43,.16); }
+  .mia-scope .mia-qb-group { display: grid; gap: 7px; }
+  .mia-scope .mia-qb-group > b { font-size: 12px; font-weight: 900; color: var(--muted); }
+  .mia-scope .mia-qb-sheet .mia-sel-trigger { min-height: 46px; border-radius: 10px; border-width: 1px; font-size: 14px; }
+  .mia-scope .mia-qb-sheet .mia-qb-chips { flex-wrap: wrap; }
+  .mia-scope .mia-qb-sheet .mia-qb-chip { height: 40px; padding: 0 15px; font-size: 13.5px; }
+  .mia-scope .mia-qb-sheet .mia-qb-free { height: 40px; padding: 0 12px; font-size: 13.5px; border-style: dashed; border-color: rgba(211,154,39,.65); }
+  .mia-scope .mia-qb-sheet .mia-qb-free[data-active="true"] { border-style: solid; border-color: var(--deep); }
+  .mia-scope .mia-qb-sheet .mia-qb-free > input { width: 10ch; }
+
+  .mia-scope .mia-qb-bar { display: flex; align-items: center; gap: 12px; padding: 12px 0 2px; }
+  .mia-scope .mia-qb-toggle {
+    display: inline-flex; align-items: center; justify-content: center; flex: 0 0 46px; width: 46px; height: 46px; padding: 0;
+    border-radius: 10px; border: 1px solid var(--border); background: var(--sand); color: var(--deep); cursor: pointer;
+  }
+  .mia-scope .mia-qb-toggle svg { transition: transform .22s ease; }
+  .mia-scope .mia-qb-sec[data-open="true"] .mia-qb-toggle svg { transform: rotate(180deg); }
+  .mia-scope .mia-qb-sum { display: grid; gap: 1px; min-width: 0; }
+  .mia-scope .mia-qb-sum > span { font-size: 11px; font-weight: 800; color: var(--muted); white-space: nowrap; }
+  .mia-scope .mia-qb-sum > b { font-size: 19px; line-height: 1.2; font-weight: 900; color: var(--deep); unicode-bidi: isolate; white-space: nowrap; }
+  .mia-scope .mia-qb-sheet .mia-qb-cta {
+    flex: 1 1 auto; min-width: 0; height: 50px; padding: 0 12px; border-radius: 10px; font-size: 15px;
+    box-shadow: 0 10px 24px rgba(169,52,40,.32);
+  }
+}
+@media (max-width: 560px) {
+  .mia-scope .mia-qb-sheet { padding-inline: 10px; }
+  .mia-scope .mia-qb-toggle { flex-basis: 40px; width: 40px; height: 40px; }
+  .mia-scope:has(.mia-qb-sec) { padding-bottom: 84px; }
+}
 
 /* Destination — one listbox (Radix Select): the intentions, then the projects
    under a group heading. The trigger matches the other inputs; the list is
@@ -1170,102 +1252,6 @@
 }
 .mia-sel-scroll { display: flex; justify-content: center; padding: 4px; color: var(--muted); background: #fff; }
 
-/* Frequency — one setting with up to four states, on a single track. */
-.mia-scope .mia-qd-seg {
-  display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0,1fr); gap: 4px;
-  padding: 4px; border-radius: 11px; background: var(--sand); border: 1px solid var(--border);
-}
-.mia-scope .mia-qd-seg > button {
-  min-height: 38px; padding: 0 6px; border: 0; border-radius: 8px; cursor: pointer;
-  background: transparent; color: var(--muted); font-family: inherit; font-size: 12.5px; font-weight: 800;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  transition: background .15s ease, color .15s ease, box-shadow .15s ease;
-}
-.mia-scope .mia-qd-seg > button:hover { color: var(--deep); }
-.mia-scope .mia-qd-seg > button[data-active="true"] {
-  background: #fff; color: var(--deep); font-weight: 900;
-  box-shadow: 0 2px 6px rgba(16,33,43,.12), inset 0 0 0 1px rgba(211,154,39,.5);
-}
-
-/* ── What it adds up to ───────────────────────────────────────────────── */
-/* A receipt: the total at the top, level with the card's title; the button
-   and the trust line anchored at the bottom. */
-.mia-scope .mia-qd-aside {
-  display: flex; flex-direction: column; gap: 4px;
-  padding: 20px 22px 22px; min-width: 0;
-  background: linear-gradient(180deg, #FFFDF8, #FAF4E9);
-  border-inline-start: 1px solid rgba(211,154,39,.35);
-}
-.mia-scope .mia-qd-sum-label { min-height: 28px; display: flex; align-items: center; font-size: 12px; font-weight: 900; color: var(--muted); }
-.mia-scope .mia-qd-sum {
-  font-size: clamp(30px, 3vw, 38px); line-height: 1.1; font-weight: 900; color: var(--deep);
-  letter-spacing: -.02em; font-variant-numeric: tabular-nums;
-}
-.mia-scope .mia-qd-sum-meta {
-  margin: 2px 0 16px; display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap;
-  font-size: 13px; font-weight: 800; color: var(--muted); min-width: 0;
-}
-.mia-scope .mia-qd-sum-dest { color: var(--gold-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
-.mia-scope .mia-qd-cta {
-  margin-top: auto;
-  display: inline-flex; align-items: center; justify-content: center;
-  width: 100%; min-height: 52px; padding: 0 18px; border: 0; border-radius: 11px; cursor: pointer;
-  font-family: inherit; font-size: 16px; font-weight: 900; color: #fff;
-  background: linear-gradient(180deg, #B63A2D, var(--red));
-  box-shadow: 0 14px 30px -10px rgba(169,52,40,.6), inset 0 1px 0 rgba(255,255,255,.16);
-  transition: transform .16s cubic-bezier(.22,.61,.36,1), filter .16s ease, box-shadow .16s ease;
-}
-.mia-scope .mia-qd-cta:hover { transform: translateY(-1px); filter: brightness(1.06); }
-.mia-scope .mia-qd-cta:disabled { opacity: .5; cursor: not-allowed; transform: none; }
-.mia-scope .mia-qd-trust {
-  margin: 8px 0 0; display: grid; grid-template-columns: auto minmax(0,1fr); column-gap: 7px; row-gap: 0;
-  align-items: center; font-size: 11.5px; font-weight: 700; color: var(--muted); line-height: 1.5;
-}
-.mia-scope .mia-qd-trust svg { color: var(--green); }
-.mia-scope .mia-qd-trust > span { grid-column: 2; }
-
-@media (prefers-reduced-motion: reduce) {
-  .mia-scope .mia-qd-amt, .mia-scope .mia-qd-cta { transition: none; }
-}
-
-/* One column: the panel becomes the card's last block — one row, the total
-   and its meta on the start side, the button on the end side. */
-@media (max-width: 900px) {
-  .mia-scope .mia-qd-sec { padding: 22px 16px 6px; }
-  .mia-scope .mia-qd { grid-template-columns: minmax(0,1fr); border-radius: 16px; }
-  .mia-scope .mia-qd-main { padding: 18px 16px 16px; gap: 14px; }
-  .mia-scope .mia-qd-aside {
-    display: grid; grid-template-columns: minmax(0,1fr) auto; align-items: center; column-gap: 16px; row-gap: 0;
-    padding: 14px 16px 14px; border-inline-start: 0; border-top: 1px solid rgba(211,154,39,.35);
-  }
-  .mia-scope .mia-qd-sum-label { grid-column: 1; min-height: 0; font-size: 11.5px; }
-  .mia-scope .mia-qd-sum { grid-column: 1; font-size: 30px; }
-  .mia-scope .mia-qd-sum-meta { grid-column: 1; margin: 2px 0 0; flex-wrap: nowrap; font-size: 12.5px; }
-  .mia-scope .mia-qd-cta { grid-column: 2; grid-row: 1 / span 3; margin: 0; width: auto; min-width: 200px; min-height: 50px; }
-  .mia-scope .mia-qd-trust { grid-column: 1 / -1; margin-top: 10px; }
-}
-
-/* Phones: every choice on one row — four presets, then "other"; four
-   frequencies on one track. Sizes step down so the labels keep their room. */
-@media (max-width: 620px) {
-  /* The presets fill one row (`--n` of them); five or six wrap to two rows of
-     three. "Other" always takes a row of its own beneath. */
-  .mia-scope .mia-qd-amounts { grid-auto-flow: row; grid-template-columns: repeat(var(--n, 4), minmax(0,1fr)); gap: 6px; }
-  .mia-scope .mia-qd-amounts[data-count="5"], .mia-scope .mia-qd-amounts[data-count="6"] { grid-template-columns: repeat(3, minmax(0,1fr)); }
-  .mia-scope .mia-qd-amt { min-height: 48px; padding: 0 2px; font-size: 14px; }
-  .mia-scope .mia-qd-amt--other { grid-column: 1 / -1; min-height: 40px; font-size: 12.5px; }
-  .mia-scope .mia-qd-tag { font-size: 9px; }
-  .mia-scope .mia-qd-seg { gap: 3px; padding: 3px; }
-  .mia-scope .mia-qd-seg > button { min-height: 36px; padding: 0 3px; font-size: 11.5px; }
-  .mia-scope .mia-qd-sum { font-size: 28px; }
-  .mia-scope .mia-qd-cta { min-width: 0; padding: 0 18px; min-height: 48px; font-size: 15px; }
-}
-
-/* ── The dock ─────────────────────────────────────────────────────────────
-   The homepage no longer floats a bottom bar. Once the quick-donation card
-   scrolls out of view it is followed by the same red pill every inner page
-   carries (`.quickfab`, styled above), opening the same compact panel — so a
-   visitor meets one quick-donate control on the whole site, not two. */
 
 /* ─────────────────────────────────────────────────────────────────────────────
  * Homepage on a phone: everything slides.
