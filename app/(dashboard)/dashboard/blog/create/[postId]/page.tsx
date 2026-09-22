@@ -12,6 +12,10 @@ type TranslationRow = {
   description?: string | null;
   content?: string | null;
   image?: string | null;
+  metaTitle?: string | null;
+  metaDescription?: string | null;
+  seoKeywords?: string[];
+  imageAlt?: string | null;
 };
 
 function getTranslations(post: PostWithRelations): TranslationRow[] {
@@ -45,6 +49,10 @@ export default async function PostEditorPage({
     description: post.description ?? null,
     content: post.content ?? null,
     image: post.image ?? null,
+    metaTitle: (post as { metaTitle?: string | null }).metaTitle ?? null,
+    metaDescription: (post as { metaDescription?: string | null }).metaDescription ?? null,
+    seoKeywords: (post as { seoKeywords?: string[] }).seoKeywords ?? [],
+    imageAlt: (post as { imageAlt?: string | null }).imageAlt ?? null,
     published: post.published,
     categoryId: post.categoryId ?? null,
     category_id: post.categoryId ?? undefined,
@@ -72,6 +80,10 @@ export default async function PostEditorPage({
       description: translation.description ?? null,
       content: translation.content ?? null,
       image: translation.image ?? null,
+      metaTitle: translation.metaTitle ?? null,
+      metaDescription: translation.metaDescription ?? null,
+      seoKeywords: translation.seoKeywords ?? [],
+      imageAlt: translation.imageAlt ?? null,
     })),
   };
 

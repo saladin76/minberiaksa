@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { buildPageMetadata } from "@/lib/seo";
+import { buildLocalizedAlternates, buildPageMetadata, SITE_URL } from "@/lib/seo";
 import { messagesFor } from "@/i18n/locale-messages";
 import { slugFor } from "@/lib/minbar/routes";
 import { getArticle } from "@/lib/minbar/posts";
@@ -24,9 +24,6 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const article = await getArticle(decodeURIComponent(postId), locale);
 
   if (!article) {
-    /* Read straight from the catalog rather than through `getTranslations`:
-       this branch runs on the way to a 404, where Next has already left the
-       `[locale]` segment and next-intl's server APIs throw. */
     const system = (messagesFor(locale).system ?? {}) as Record<string, string>;
     return {
       title: system.notFoundTitleFull,
@@ -34,12 +31,29 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     };
   }
 
+  const alternates = buildLocalizedAlternates({
+    basePath: "/blog",
+    baseSlug: article.baseSlug,
+    translations: article.localizations.map(({ locale: loc, slug }) => ({
+      locale: loc,
+      slug,
+    })),
+    fallback: article.id,
+    currentLocale: locale,
+    availableLocales: article.availableLocales,
+  });
+
   return buildPageMetadata(locale, {
-    title: article.title,
-    description: article.excerpt.slice(0, 165),
-    path: `/${slugFor("blog", locale)}/${encodeURIComponent(article.slug)}`,
+    title: article.seoTitle || article.title,
+    description: (article.seoDescription || article.excerpt).slice(0, 165),
+    path: `/blog/${encodeURIComponent(article.slug)}`,
     image: article.cover ?? undefined,
+    keywords: article.seoKeywords,
     type: "article",
+    alternates,
+    robots: article.isLocalized
+      ? { index: true, follow: true }
+      : { index: false, follow: true },
   });
 }
 
@@ -61,9 +75,13 @@ export default async function Article({ params }: Props) {
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "Article",
-    headline: article.title,
+    headline: article.seoTitle || article.title,
+    description: article.seoDescription || article.excerpt,
+    inLanguage: locale,
     datePublished: article.createdAt,
-    ...(article.cover ? { image: article.cover } : {}),
+    dateModified: article.updatedAt,
+    mainEntityOfPage: `${SITE_URL}/${locale}/blog/${encodeURIComponent(article.slug)}`,
+    ...(article.cover ? { image: [article.cover] } : {}),
     author: { "@type": "Organization", name: "Minbar Al Aqsa" },
     publisher: { "@type": "NGO", name: "Minbar Al Aqsa" },
   };

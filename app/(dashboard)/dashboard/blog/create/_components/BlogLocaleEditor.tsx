@@ -41,6 +41,7 @@ import { AutoTranslateButton } from "../../../_components/AutoTranslateButton";
 import { defaultEditorContent } from "@/app/[locale]/blog/_components/wysiwyg/default-content";
 import { SmartSeoAuditCard } from "../../../_components/SmartSeoAuditCard";
 import { SaveStatusNotice, type SaveStatusState } from "../../../_components/SaveStatusNotice";
+import { contentToTiptapDocument, hasMeaningfulContent } from "@/lib/blog/rich-text";
 
 const schemaFor = (locale: string) =>
   locale === "en"
@@ -48,11 +49,19 @@ const schemaFor = (locale: string) =>
         title: z.string().min(1, "English title is required"),
         description: z.string().min(1, "English description is required"),
         image: z.string().optional(),
+        metaTitle: z.string().optional(),
+        metaDescription: z.string().optional(),
+        seoKeywords: z.string().optional(),
+        imageAlt: z.string().optional(),
       })
     : z.object({
         title: z.string().optional(),
         description: z.string().optional(),
         image: z.string().optional(),
+        metaTitle: z.string().optional(),
+        metaDescription: z.string().optional(),
+        seoKeywords: z.string().optional(),
+        imageAlt: z.string().optional(),
       });
 
 const config = {
@@ -83,6 +92,10 @@ interface BlogLocaleEditorProps {
       description?: string | null;
       content?: string | null;
       image?: string | null;
+      metaTitle?: string | null;
+      metaDescription?: string | null;
+      seoKeywords?: string[];
+      imageAlt?: string | null;
     }>;
   };
   locale: Locale;
@@ -107,6 +120,10 @@ export default function BlogLocaleEditor({ post, locale }: BlogLocaleEditorProps
       title: trans?.title ?? "",
       description: trans?.description ?? "",
       image: trans?.image ?? "",
+      metaTitle: trans?.metaTitle ?? trans?.title ?? "",
+      metaDescription: trans?.metaDescription ?? trans?.description ?? "",
+      seoKeywords: trans?.seoKeywords?.join(", ") ?? "",
+      imageAlt: trans?.imageAlt ?? trans?.title ?? "",
     },
     mode: "onChange",
   });
@@ -141,19 +158,7 @@ export default function BlogLocaleEditor({ post, locale }: BlogLocaleEditorProps
     form.setValue("image", "");
   };
 
-  const isContentEmpty = (json: string | null) => {
-    if (!json) return true;
-    try {
-      const doc = JSON.parse(json);
-      if (!doc?.content?.length) return true;
-      return doc.content.every(
-        (n: { type: string; content?: unknown[] }) =>
-          n.type === "paragraph" && (!n.content || n.content.length === 0)
-      );
-    } catch {
-      return true;
-    }
-  };
+  const isContentEmpty = (value: string | null) => !hasMeaningfulContent(value);
 
   const onSubmit = async (data: z.infer<typeof schema>) => {
     if (locale === "en" && isContentEmpty(content)) {
@@ -173,6 +178,10 @@ export default function BlogLocaleEditor({ post, locale }: BlogLocaleEditorProps
             description: data.description || undefined,
             content: content || undefined,
             image: data.image || undefined,
+            metaTitle: data.metaTitle || data.title || undefined,
+            metaDescription: data.metaDescription || data.description || undefined,
+            seoKeywords: (data.seoKeywords || "").split(",").map((v) => v.trim()).filter(Boolean),
+            imageAlt: data.imageAlt || data.title || undefined,
           },
         },
       });
@@ -260,6 +269,34 @@ export default function BlogLocaleEditor({ post, locale }: BlogLocaleEditorProps
                   </FormItem>
                 )}
               />
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <FormField control={form.control} name="metaTitle" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>SEO title</FormLabel>
+                    <FormControl><Input {...field} placeholder="Localized search title" /></FormControl>
+                  </FormItem>
+                )} />
+                <FormField control={form.control} name="imageAlt" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Cover alt text</FormLabel>
+                    <FormControl><Input {...field} placeholder="Accessible image description" /></FormControl>
+                  </FormItem>
+                )} />
+              </div>
+              <FormField control={form.control} name="metaDescription" render={({ field }) => (
+                <FormItem>
+                  <FormLabel>SEO description</FormLabel>
+                  <FormControl><Textarea {...field} rows={3} placeholder="Localized search snippet" /></FormControl>
+                </FormItem>
+              )} />
+              <FormField control={form.control} name="seoKeywords" render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Search phrases</FormLabel>
+                  <FormControl><Input {...field} placeholder="Comma-separated localized search phrases" /></FormControl>
+                </FormItem>
+              )} />
+
               <FormField
                 control={form.control}
                 name="image"
@@ -345,11 +382,7 @@ export default function BlogLocaleEditor({ post, locale }: BlogLocaleEditorProps
                 key={`body-${locale}-${editorKey}`}
                 defaultValue={(() => {
                   if (!content) return defaultEditorContent;
-                  try {
-                    return JSON.parse(content);
-                  } catch {
-                    return defaultEditorContent;
-                  }
+                  return contentToTiptapDocument(content);
                 })()}
                 onDebouncedUpdate={(editor) => {
                   setContent(JSON.stringify(editor?.getJSON()));
