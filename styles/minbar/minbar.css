@@ -1062,7 +1062,11 @@
  * opens it. The page gets bottom padding so the sheet never covers the footer.
  * See QuickDonateBar.tsx.
  * ───────────────────────────────────────────────────────────────────────────── */
-.mia-scope .mia-qb-sec { position: sticky; top: 116px; z-index: 50; padding: 14px 0 4px; scroll-margin-top: 120px; }
+/* Sticky to the BOTTOM of the viewport: the bar rides the bottom edge while the
+   visitor scrolls the hero, then settles into the flow once its own place in
+   the page reaches it. Equal breathing room above and below (20px) so it reads
+   as one centred element rather than an appendage of the header. */
+.mia-scope .mia-qb-sec { position: sticky; bottom: 20px; z-index: 50; padding: 20px 0; scroll-margin-top: 120px; }
 .mia-scope .mia-qb-wrap { max-width: 1180px; margin: 0 auto; padding: 0 24px; }
 
 /* ── The bar ─────────────────────────────────────────────────────────── */
@@ -1156,7 +1160,7 @@
 
 /* ── The phone sheet ─────────────────────────────────────────────────── */
 @media (max-width: 960px) {
-  .mia-scope .mia-qb-sec { position: fixed; inset-inline: 0; bottom: 0; top: auto; margin: 0; padding: 0; z-index: 95; scroll-margin-top: 0; }
+  .mia-scope .mia-qb-sec { position: fixed; inset-inline: 0; bottom: 0; margin: 0; padding: 0; z-index: 95; scroll-margin-top: 0; }
   .mia-scope .mia-qb-wrap { padding: 0; max-width: none; }
   .mia-scope .mia-qb-desk { display: none; }
   .mia-scope .mia-qb-sheet {
