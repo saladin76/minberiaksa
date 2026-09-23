@@ -328,8 +328,10 @@ export function buildLocalizedAlternates(args: {
   fallback: string;
   /** Locale of the page we're rendering — drives `canonical` */
   currentLocale: string;
+  /** Emit hreflang only for locales with genuinely equivalent localized content. */
+  availableLocales?: string[];
 }): { canonical: string; languages: Record<string, string> } {
-  const { basePath, baseSlug, translations, fallback, currentLocale } = args;
+  const { basePath, baseSlug, translations, fallback, currentLocale, availableLocales } = args;
   const slugFor = (loc: string): string => {
     const t = translations?.find((tt) => tt.locale === loc && tt.slug);
     return t?.slug || baseSlug || fallback;
@@ -337,10 +339,16 @@ export function buildLocalizedAlternates(args: {
   const url = (loc: string): string =>
     `${SITE_URL}/${loc}${basePath}/${encodeURIComponent(slugFor(loc))}`;
 
+  const allowed = availableLocales?.length
+    ? LOCALES.filter((locale) => availableLocales.includes(locale))
+    : LOCALES;
   const languages: Record<string, string> = {};
-  for (const locale of LOCALES) languages[locale] = url(locale);
+  for (const locale of allowed) languages[locale] = url(locale);
   languages["x-default"] = url("ar");
-  return { canonical: url(currentLocale), languages };
+  const canonicalLocale = allowed.includes(currentLocale as Locale)
+    ? currentLocale
+    : "ar";
+  return { canonical: url(canonicalLocale), languages };
 }
 
 /** Build full per-page metadata (layout/page generateMetadata helper) */
@@ -353,17 +361,20 @@ export function buildPageMetadata(
     image?: string;
     keywords?: string[];
     type?: "website" | "article";
+    alternates?: { canonical: string; languages: Record<string, string> };
+    robots?: Metadata["robots"];
   }
 ): Metadata {
   const seo = LOCALE_SEO[locale as Locale] ?? LOCALE_SEO.en;
   const image = overrides.image ?? OG_IMAGE;
-  const alternates = buildHreflang(overrides.path, locale);
+  const alternates = overrides.alternates ?? buildHreflang(overrides.path, locale);
 
   return {
     title: overrides.title,
     description: overrides.description,
     keywords: overrides.keywords ?? seo.keywords,
     alternates,
+    ...(overrides.robots ? { robots: overrides.robots } : {}),
     openGraph: {
       title: overrides.title,
       description: overrides.description,

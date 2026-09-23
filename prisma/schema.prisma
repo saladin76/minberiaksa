@@ -1077,6 +1077,12 @@ model Post {
   content     String?
   image       String?
 
+  // Search metadata for the canonical Arabic article.
+  metaTitle       String?
+  metaDescription String?
+  seoKeywords     String[] @default([])
+  imageAlt        String?
+
   /// URL slug for blog post links (unique across posts)
   slug String? @unique
 
@@ -1103,6 +1109,12 @@ model PostTranslation {
   description String?
   content     String?
   image       String?
+
+  // Locale-specific search metadata.
+  metaTitle       String?
+  metaDescription String?
+  seoKeywords     String[] @default([])
+  imageAlt        String?
 
   /// Optional per-locale URL slug. When set, takes precedence over Post.slug
   /// for this locale. Uniqueness within a locale is enforced at write time.

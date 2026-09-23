@@ -66,11 +66,16 @@ import {
   CommandList,
 } from "@/components/ui/command";
 import { cn } from "@/lib/utils";
+import { contentToTiptapDocument } from "@/lib/blog/rich-text";
 
 const postEditFormSchema = z.object({
   title: z.string().min(1, "Title is required"),
   description: z.string().optional(),
   image: z.string().optional(),
+  metaTitle: z.string().optional(),
+  metaDescription: z.string().optional(),
+  seoKeywords: z.string().optional(),
+  imageAlt: z.string().optional(),
   categoryId: z.string().optional(),
   campaignIds: z.tuple([z.string().optional(), z.string().optional(), z.string().optional()]),
 });
@@ -130,6 +135,10 @@ const BlogEditor = ({ post, categories, campaignOptions = [], redirectAfterCreat
     title: post?.titleAR || post?.title || "",
     description: post?.descriptionAR || post?.description || "",
     image: post?.imageAR || post?.image || "",
+    metaTitle: post?.metaTitle || post?.titleAR || post?.title || "",
+    metaDescription: post?.metaDescription || post?.descriptionAR || post?.description || "",
+    seoKeywords: Array.isArray(post?.seoKeywords) ? post.seoKeywords.join(", ") : "",
+    imageAlt: post?.imageAlt || post?.titleAR || post?.title || "",
     categoryId: post?.category_id || post?.categoryId || "",
     campaignIds: padCampaignIds(),
   };
@@ -185,6 +194,10 @@ const BlogEditor = ({ post, categories, campaignOptions = [], redirectAfterCreat
         description: data.description || "",
         content: contentAR || "",
         image: data.image || "",
+        metaTitle: data.metaTitle || data.title,
+        metaDescription: data.metaDescription || data.description || "",
+        seoKeywords: (data.seoKeywords || "").split(",").map((v) => v.trim()).filter(Boolean),
+        imageAlt: data.imageAlt || data.title,
         categoryId: data.categoryId || null,
         campaignIds,
       };
@@ -339,6 +352,42 @@ const BlogEditor = ({ post, categories, campaignOptions = [], redirectAfterCreat
             </CardContent>
           </Card>
 
+
+          <Card>
+            <CardHeader dir="rtl">
+              <CardTitle>SEO المقال</CardTitle>
+              <CardDescription>بيانات البحث الخاصة بهذه اللغة. اجعلها طبيعية، محددة، ومتطابقة مع نية المقال.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <FormField control={form.control} name="metaTitle" render={({ field }) => (
+                <FormItem dir="rtl">
+                  <FormLabel>عنوان محركات البحث</FormLabel>
+                  <FormControl><Input {...field} placeholder="عنوان بحث واضح ومحدد" /></FormControl>
+                  <FormDescription>يفضل أن يكون بين 45 و65 حرفًا دون حشو الكلمات المفتاحية.</FormDescription>
+                </FormItem>
+              )} />
+              <FormField control={form.control} name="metaDescription" render={({ field }) => (
+                <FormItem dir="rtl">
+                  <FormLabel>وصف محركات البحث</FormLabel>
+                  <FormControl><Textarea {...field} rows={3} placeholder="ملخص دقيق ومقنع للمقال" /></FormControl>
+                </FormItem>
+              )} />
+              <FormField control={form.control} name="seoKeywords" render={({ field }) => (
+                <FormItem dir="rtl">
+                  <FormLabel>عبارات البحث</FormLabel>
+                  <FormControl><Input {...field} placeholder="مثال: زكاة المال، حساب الزكاة، مصارف الزكاة" /></FormControl>
+                  <FormDescription>عبارات داخلية للمراجعة والتخطيط وليست meta keywords تقليدية.</FormDescription>
+                </FormItem>
+              )} />
+              <FormField control={form.control} name="imageAlt" render={({ field }) => (
+                <FormItem dir="rtl">
+                  <FormLabel>النص البديل للغلاف</FormLabel>
+                  <FormControl><Input {...field} placeholder="وصف مختصر ودقيق للصورة" /></FormControl>
+                </FormItem>
+              )} />
+            </CardContent>
+          </Card>
+
           <SmartSeoAuditCard
             key="blog-seo-ar"
             type="blog"
@@ -354,7 +403,9 @@ const BlogEditor = ({ post, categories, campaignOptions = [], redirectAfterCreat
               <WysiwygEditor
                 defaultValue={(() => {
                   if (!contentAR) return defaultEditorContent;
-                  try { return typeof contentAR === "string" ? JSON.parse(contentAR) : contentAR; } catch { return defaultEditorContent; }
+                  return contentToTiptapDocument(
+                    typeof contentAR === "string" ? contentAR : JSON.stringify(contentAR)
+                  );
                 })()}
                 onDebouncedUpdate={(editor) => setContentAR(JSON.stringify(editor?.getJSON()))}
               />

@@ -36,6 +36,10 @@ export async function GET(request: NextRequest) {
         description: true,
         content: true,
         image: true,
+        metaTitle: true,
+        metaDescription: true,
+        seoKeywords: true,
+        imageAlt: true,
         published: true,
         createdAt: true,
         updatedAt: true,
@@ -47,7 +51,7 @@ export async function GET(request: NextRequest) {
             translations: { where: translationLocaleWhere(locale), take: 2, select: { locale: true, name: true, slug: true } }
           }
         },
-        translations: { where: translationLocaleWhere(locale), take: 2, select: { locale: true, title: true, description: true, content: true, image: true, slug: true } },
+        translations: { where: translationLocaleWhere(locale), take: 2, select: { locale: true, title: true, description: true, content: true, image: true, slug: true, metaTitle: true, metaDescription: true, seoKeywords: true, imageAlt: true } },
         campaignIds: true,
       }
     });
@@ -108,6 +112,10 @@ export async function GET(request: NextRequest) {
         description: tP?.description || p.description,
         content: tP?.content || p.content,
         image: tP?.image || p.image,
+        metaTitle: tP?.metaTitle || p.metaTitle,
+        metaDescription: tP?.metaDescription || p.metaDescription,
+        seoKeywords: tP?.seoKeywords?.length ? tP.seoKeywords : p.seoKeywords,
+        imageAlt: tP?.imageAlt || p.imageAlt || tP?.title || p.title,
         published: p.published,
         category: p.category
           ? {
@@ -140,7 +148,7 @@ export async function POST(request: NextRequest) {
     if (denied) return denied;
 
     const data = await request.json();
-    const { title, description, content, image, published, categoryId, campaignIds, campaignId, translations } = data;
+    const { title, description, content, image, metaTitle, metaDescription, seoKeywords, imageAlt, published, categoryId, campaignIds, campaignId, translations } = data;
     const resolvedCampaignIds = sanitizeCampaignIds(
       campaignIds !== undefined ? campaignIds : campaignId != null ? [campaignId] : []
     );
@@ -164,6 +172,10 @@ export async function POST(request: NextRequest) {
       description?: string;
       content?: string;
       image?: string;
+      metaTitle?: string;
+      metaDescription?: string;
+      seoKeywords?: string[];
+      imageAlt?: string;
       requestedSlug: string | null;
     }[] = [];
     if (translations && typeof translations === 'object') {
@@ -176,6 +188,10 @@ export async function POST(request: NextRequest) {
             description: tt.description,
             content: tt.content,
             image: tt.image,
+            metaTitle: tt.metaTitle,
+            metaDescription: tt.metaDescription,
+            seoKeywords: Array.isArray(tt.seoKeywords) ? tt.seoKeywords : [],
+            imageAlt: tt.imageAlt,
             requestedSlug: normalizeUserSlug(tt.slug),
           });
         }
@@ -197,6 +213,10 @@ export async function POST(request: NextRequest) {
           description: description || "",
           content: content || "",
           image: image || "",
+          metaTitle: metaTitle || title || "",
+          metaDescription: metaDescription || description || "",
+          seoKeywords: Array.isArray(seoKeywords) ? seoKeywords : [],
+          imageAlt: imageAlt || title || "",
           slug,
           published: !!published,
           categoryId: categoryId || null,
@@ -219,6 +239,10 @@ export async function POST(request: NextRequest) {
             description: t.description || '',
             content: t.content || '',
             image: t.image || '',
+            metaTitle: t.metaTitle || t.title || '',
+            metaDescription: t.metaDescription || t.description || '',
+            seoKeywords: t.seoKeywords || [],
+            imageAlt: t.imageAlt || t.title || '',
             slug: localeSlug,
           },
         });
@@ -239,7 +263,7 @@ export async function POST(request: NextRequest) {
         published: true,
         categoryId: true,
         campaignIds: true,
-        translations: { select: { locale: true, title: true, description: true, content: true, image: true, slug: true } },
+        translations: { select: { locale: true, title: true, description: true, content: true, image: true, slug: true, metaTitle: true, metaDescription: true, seoKeywords: true, imageAlt: true } },
       },
     });
 

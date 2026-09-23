@@ -26,7 +26,10 @@
     "backfill:monthly-paid": "tsx scripts/backfill-stripe-monthly-paid.ts",
     "exchange-rates:refresh": "tsx scripts/refresh-exchange-rates.ts",
     "cleanup:orphan-donation-items": "tsx scripts/cleanup-orphan-donation-items.ts",
-    "migrate:integration-settings": "prisma generate --schema prisma/integration-settings.schema.prisma && tsx prisma/mongodb-migrations/20260714-integration-settings.ts"
+    "migrate:integration-settings": "prisma generate --schema prisma/integration-settings.schema.prisma && tsx prisma/mongodb-migrations/20260714-integration-settings.ts",
+    "blog:seed:dry": "tsx prisma/seed/seed-posts.ts --dry",
+    "blog:seed": "tsx prisma/seed/seed-posts.ts",
+    "blog:seed:replace": "tsx prisma/seed/seed-posts.ts --replace"
   },
   "prisma": {
     "seed": "tsx prisma/seed/seed.ts"

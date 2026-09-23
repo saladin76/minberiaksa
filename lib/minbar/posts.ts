@@ -34,10 +34,19 @@ export interface MinbarArticle {
 }
 
 export interface MinbarArticleDetail extends MinbarArticle {
-  /** Raw article body from the CMS. Rendered as blocks by the detail page. */
+  /** Raw article body from the CMS. Rendered as safe blocks by the detail page. */
   content: string;
-  /** Ids of the campaigns the editor attached to this article. */
   campaignIds: string[];
+  baseSlug: string | null;
+  updatedAt: string;
+  seoTitle: string;
+  seoDescription: string;
+  seoKeywords: string[];
+  imageAlt: string;
+  /** Arabic is canonical; other locales are indexable only with their own body. */
+  isLocalized: boolean;
+  availableLocales: string[];
+  localizations: Array<{ locale: string; slug: string | null; hasContent: boolean }>;
 }
 
 export interface MinbarPostCategory {
@@ -165,18 +174,112 @@ export async function listArticles({
 /** One article by locale slug, base slug, or id. `null` when unpublished. */
 export async function getArticle(slugOrId: string, locale: string): Promise<MinbarArticleDetail | null> {
   try {
-    const row = (await prisma.post.findFirst({
+    const row = await prisma.post.findFirst({
       where: { published: true, ...whereByIdOrAnyLocaleSlug(slugOrId) },
-      select: { ...CARD_SELECT(locale), content: true, campaignIds: true },
-    })) as (CardRow & { content: string | null; campaignIds: string[] }) | null;
+      select: {
+        id: true,
+        slug: true,
+        title: true,
+        description: true,
+        content: true,
+        image: true,
+        metaTitle: true,
+        metaDescription: true,
+        seoKeywords: true,
+        imageAlt: true,
+        createdAt: true,
+        updatedAt: true,
+        category: {
+          select: {
+            id: true,
+            slug: true,
+            name: true,
+            translations: {
+              where: translationLocaleWhere(locale),
+              take: 2,
+              select: { locale: true, name: true, slug: true },
+            },
+          },
+        },
+        campaignIds: true,
+        translations: {
+          select: {
+            locale: true,
+            title: true,
+            description: true,
+            content: true,
+            image: true,
+            slug: true,
+            metaTitle: true,
+            metaDescription: true,
+            seoKeywords: true,
+            imageAlt: true,
+          },
+        },
+      },
+    });
 
     if (!row) return null;
 
-    const t = pickTranslation(row.translations, locale) as { content?: string | null } | undefined;
+    const localized = pickTranslation(row.translations, locale);
+    const baseCard: CardRow = {
+      id: row.id,
+      slug: row.slug,
+      title: row.title,
+      description: row.description,
+      image: row.image,
+      createdAt: row.createdAt,
+      category: row.category,
+      translations: row.translations,
+    };
+    const article = toArticle(baseCard, locale);
+
+    const localizedBody = localized?.content?.trim() || "";
+    const isLocalized = locale === "ar" || Boolean(localizedBody);
+    const availableLocales = Array.from(
+      new Set([
+        "ar",
+        ...row.translations
+          .filter((translation) => Boolean(translation.content?.trim()))
+          .map((translation) => translation.locale),
+      ])
+    );
+
     return {
-      ...toArticle(row, locale),
-      content: t?.content || row.content || "",
+      ...article,
+      content: localizedBody || row.content || "",
       campaignIds: row.campaignIds ?? [],
+      baseSlug: row.slug ?? null,
+      updatedAt: row.updatedAt.toISOString(),
+      seoTitle:
+        localized?.metaTitle ||
+        localized?.title ||
+        row.metaTitle ||
+        row.title ||
+        "",
+      seoDescription:
+        localized?.metaDescription ||
+        localized?.description ||
+        row.metaDescription ||
+        row.description ||
+        "",
+      seoKeywords:
+        localized?.seoKeywords?.length
+          ? localized.seoKeywords
+          : row.seoKeywords ?? [],
+      imageAlt:
+        localized?.imageAlt ||
+        localized?.title ||
+        row.imageAlt ||
+        row.title ||
+        "",
+      isLocalized,
+      availableLocales,
+      localizations: row.translations.map((translation) => ({
+        locale: translation.locale,
+        slug: translation.slug,
+        hasContent: Boolean(translation.content?.trim()),
+      })),
     };
   } catch (err) {
     console.error("getArticle failed:", err);

@@ -48,6 +48,10 @@ export async function GET(
         description: true,
         content: true,
         image: true,
+        metaTitle: true,
+        metaDescription: true,
+        seoKeywords: true,
+        imageAlt: true,
         published: true,
         createdAt: true,
         updatedAt: true,
@@ -74,6 +78,10 @@ export async function GET(
             image: true,
             locale: true,
             slug: true,
+            metaTitle: true,
+            metaDescription: true,
+            seoKeywords: true,
+            imageAlt: true,
           },
         },
       },
@@ -183,6 +191,10 @@ export async function GET(
       description: tPost?.description || post.description,
       content: tPost?.content || post.content,
       image: tPost?.image || post.image,
+      metaTitle: tPost?.metaTitle || post.metaTitle,
+      metaDescription: tPost?.metaDescription || post.metaDescription,
+      seoKeywords: tPost?.seoKeywords?.length ? tPost.seoKeywords : post.seoKeywords,
+      imageAlt: tPost?.imageAlt || post.imageAlt || tPost?.title || post.title,
       published: post.published,
       category: post.category
         ? {
@@ -251,6 +263,12 @@ export async function PATCH(
     if (body.description !== undefined) updateData.description = body.description;
     if (body.content !== undefined) updateData.content = body.content;
     if (body.image !== undefined) updateData.image = body.image;
+    if (body.metaTitle !== undefined) updateData.metaTitle = body.metaTitle;
+    if (body.metaDescription !== undefined) updateData.metaDescription = body.metaDescription;
+    if (body.seoKeywords !== undefined) {
+      updateData.seoKeywords = Array.isArray(body.seoKeywords) ? body.seoKeywords : [];
+    }
+    if (body.imageAlt !== undefined) updateData.imageAlt = body.imageAlt;
     if (body.published !== undefined) updateData.published = body.published;
     if (body.categoryId !== undefined) updateData.categoryId = body.categoryId;
     if (body.campaignIds !== undefined) {
@@ -304,6 +322,10 @@ export async function PATCH(
         if (data.description !== undefined) td.description = data.description;
         if (data.content !== undefined) td.content = data.content;
         if (data.image !== undefined) td.image = data.image;
+        if (data.metaTitle !== undefined) td.metaTitle = data.metaTitle;
+        if (data.metaDescription !== undefined) td.metaDescription = data.metaDescription;
+        if (data.seoKeywords !== undefined) td.seoKeywords = Array.isArray(data.seoKeywords) ? data.seoKeywords : [];
+        if (data.imageAlt !== undefined) td.imageAlt = data.imageAlt;
 
         // Per-locale slug. Explicit empty/null clears; non-empty is normalized + deduped.
         // If caller doesn't pass `slug` and there isn't one yet, auto-generate from the
@@ -357,7 +379,7 @@ export async function PATCH(
         published: true,
         categoryId: true,
         campaignIds: true,
-        translations: { select: { locale: true, title: true, description: true, content: true, image: true, slug: true } },
+        translations: { select: { locale: true, title: true, description: true, content: true, image: true, slug: true, metaTitle: true, metaDescription: true, seoKeywords: true, imageAlt: true } },
       },
     });
 
