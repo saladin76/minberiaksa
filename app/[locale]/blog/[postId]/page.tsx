@@ -6,7 +6,7 @@ import { slugFor } from "@/lib/minbar/routes";
 import { getArticle } from "@/lib/minbar/posts";
 import MinbarMessages from "@/components/minbar/MinbarMessages";
 import ArticleDetail from "@/components/minbar/blog/ArticleDetail";
-import { ctaKeyFor } from "@/components/minbar/blog/ArticleCta";
+import { ctaKeyFor } from "@/lib/minbar/blog-cta";
 import PageBanners from "@/components/minbar/banners/PageBanners";
 
 interface Props {

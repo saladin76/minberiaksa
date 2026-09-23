@@ -22,8 +22,8 @@ import {
  * dashboard (`/dashboard/quick-donation`) and arrives as `config`; see
  * `lib/minbar/quick-donation.ts` for the shape and the defaults.
  *
- * Desktop: one row, sticky to the bottom of the viewport, so the choice rides
- * with the visitor through the hero and settles into place further down:
+ * Desktop: one row, fixed to the bottom of the viewport for the whole page, so
+ * the choice stays one click away however far the visitor reads:
  *
  *   [ destination ▾ ] | تبرع لمرة  يوميًا  كل جمعة  شهريًا | $100 $300 $500 $700 [مبلغ مخصص] … US$300 [ تبرّع الآن ]
  *

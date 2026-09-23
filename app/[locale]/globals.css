@@ -321,6 +321,48 @@ input[type="checkbox"]:checked::before {
   left: auto !important;
 }
 
+/* ── Phone input: mobile responsiveness ──────────────────────────────────
+   The library ships a fixed 300px dropdown and a 13px input, both of which
+   overflow / trigger iOS focus-zoom on small screens. Keep the field inside
+   its container and the dropdown inside the viewport. */
+.phone-input-wrapper,
+.phone-input-wrapper .react-international-phone-input-container {
+  width: 100%;
+  max-width: 100%;
+}
+.phone-input-wrapper .react-international-phone-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  width: 100%;
+}
+.phone-input-wrapper .react-international-phone-country-selector,
+.phone-input-wrapper .react-international-phone-country-selector-button {
+  flex: 0 0 auto;
+}
+.phone-input-wrapper .react-international-phone-country-selector-dropdown {
+  width: max(240px, 100%);
+  max-width: calc(100vw - 32px);
+  max-height: min(50vh, 240px);
+  box-sizing: border-box;
+  overscroll-behavior: contain;
+}
+
+@media (max-width: 640px) {
+  /* 16px keeps iOS Safari from zooming the page on focus. */
+  .phone-input-wrapper .react-international-phone-input {
+    font-size: 16px;
+  }
+  .phone-input-wrapper .react-international-phone-country-selector-button {
+    min-height: 44px; /* comfortable touch target */
+  }
+  .phone-input-wrapper .react-international-phone-country-selector-dropdown__list-item {
+    min-height: 40px;
+  }
+  .phone-input-wrapper .react-international-phone-country-selector-dropdown__list-item-country-name {
+    font-size: 14px;
+  }
+}
+
 /* Floating CartReminder entrance */
 @keyframes cart-reminder-in {
   0%   { transform: translateY(16px) scale(0.9); opacity: 0; }

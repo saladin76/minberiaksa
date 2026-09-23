@@ -70,6 +70,27 @@ const marketingRedirects = [
   ["/dashboard/platform-connections/logs", "/dashboard/platform-connections/health"],
 ] as const;
 
+/* توحيد تصنيفات المدونة (29 → 16): حزم المقالات 179–258 جاءت بتصنيفات canonical
+   مختلفة عن تصنيفات الـ178 الأصلية، فتراكمت أزواج تعني الشيء ذاته («التعليم» و«التعليم
+   والطفولة»، «رمضان» و«رمضان والمواسم»، …). دُمجت في scripts/merge-blog-categories.ts،
+   والـslugs المحذوفة تُعاد توجيهًا دائمًا إلى وجهتها كي لا تسقط صفحة تصنيف مفهرسة في 404.
+   «المياه-والصحة» كان خليط مياه وطب فقُسِّم على تصنيفين؛ فيذهب إلى وجهة الأغلبية. */
+const blogCategoryRedirects = [
+  ["المياه-والصحة", "المياه-والصرف-الصحي"],
+  ["ذو-الحجة-والأضاحي", "الحج-والأضاحي"],
+  ["الثقة-والشفافية-والعمل-المؤسسي", "الثقة-والشفافية"],
+  ["القرآن-والعبادات", "إيمانيات-وتزكية"],
+  ["رمضان", "رمضان-والمواسم"],
+  ["إيمانيات-وأسرة", "إيمانيات-وتزكية"],
+  ["التعليم", "التعليم-والطفولة"],
+  ["سبل-العيش-والاستدامة", "سبل-العيش-والبيئة"],
+  ["غزة-والإغاثة-والطوارئ", "الإغاثة-والطوارئ"],
+  ["التمكين-وسبل-العيش", "سبل-العيش-والبيئة"],
+  ["الأمن-الغذائي-وسبل-العيش", "سبل-العيش-والبيئة"],
+  ["البيئة-والمناخ", "سبل-العيش-والبيئة"],
+  ["الأيتام-وحماية-الطفل", "الأيتام-والتكافل"],
+] as const;
+
 const nextConfig: NextConfig = {
   experimental: {
     optimizePackageImports: ["lucide-react", "framer-motion", "motion", "@radix-ui/react-icons", "date-fns", "react-use"],
@@ -123,6 +144,11 @@ const nextConfig: NextConfig = {
   async redirects() {
     return [
       ...marketingRedirects.map(([source, destination]) => ({ source, destination, permanent: false })),
+      ...blogCategoryRedirects.map(([from, to]) => ({
+        source: `/:locale/blog/category/${from}`,
+        destination: `/:locale/blog/category/${to}`,
+        permanent: true,
+      })),
       { source: "/page/biz-kimiz", destination: "/tr/about-us", permanent: true },
       { source: "/page/saglik", destination: "/tr", permanent: true },
       { source: "/page/yardim", destination: "/tr/contact-us", permanent: true },

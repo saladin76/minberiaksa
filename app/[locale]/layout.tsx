@@ -16,6 +16,7 @@ import SessionProvider from "@/components/providers/SessionProvider";
 import { ConfettiProvider } from "../../components/providers/confetti-provider";
 import PreferredLangSync from "@/components/PreferredLangSync";
 import SyncHtmlDir from "@/components/SyncHtmlDir";
+import ScrollToTop from "@/components/minbar/ScrollToTop";
 import { MarketingRuntime } from "@/components/MarketingRuntime";
 import { CurrencyProvider } from "@/context/CurrencyContext";
 import { Analytics } from "@vercel/analytics/react";
@@ -102,6 +103,7 @@ export default async function Rootlayout({
             </Suspense>
             <SessionProvider>
               <PreferredLangSync />
+              <ScrollToTop />
               <Header signedIn={!!session?.user} isAdmin={session?.user?.role === "ADMIN"} />
               {/* No top padding here: the header renders its own spacer, sized
                   from its measured height, because that height changes with the

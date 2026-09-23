@@ -1,0 +1,36 @@
+{
+  "_note": "خريطة توحيد تصنيفات المدونة 29 → 16. mergeWhole: كل مقالات التصنيف تنتقل إلى الوجهة ثم يُحذف التصنيف. movePosts: مقالات بعينها (تصنيف مصدره مختلط، دمجه كتلةً يضع المقالة تحت عنوان خاطئ).",
+  "mergeWhole": {
+    "الثقة والشفافية والعمل المؤسسي": "الثقة والشفافية",
+    "سبل العيش والاستدامة": "سبل العيش والبيئة",
+    "التمكين وسبل العيش": "سبل العيش والبيئة",
+    "الأمن الغذائي وسبل العيش": "سبل العيش والبيئة",
+    "البيئة والمناخ": "سبل العيش والبيئة",
+    "غزة والإغاثة والطوارئ": "الإغاثة والطوارئ",
+    "ذو الحجة والأضاحي": "الحج والأضاحي",
+    "رمضان": "رمضان والمواسم",
+    "التعليم": "التعليم والطفولة",
+    "الأيتام وحماية الطفل": "الأيتام والتكافل",
+    "إيمانيات وأسرة": "إيمانيات وتزكية",
+    "القرآن والعبادات": "إيمانيات وتزكية"
+  },
+  "splitCategories": ["المياه والصحة"],
+  "movePosts": {
+    "cataracts-restoring-sight-and-life": "الصحة والإغاثة الطبية",
+    "child-malnutrition-in-humanitarian-crises": "الصحة والإغاثة الطبية",
+    "mobile-clinics-in-gaza": "الصحة والإغاثة الطبية",
+    "medicine-shortages-in-humanitarian-crises": "الصحة والإغاثة الطبية",
+    "prosthetics-and-rehabilitation-in-gaza": "الصحة والإغاثة الطبية",
+    "mental-health-support-during-crises": "الصحة والإغاثة الطبية",
+    "emergency-medical-supplies-humanitarian-response": "الصحة والإغاثة الطبية",
+    "water-sadaqah-jariyah-lasting-impact": "المياه والصرف الصحي",
+    "water-crisis-in-displacement-camps": "المياه والصرف الصحي",
+    "water-sanitation-hygiene-in-camps": "المياه والصرف الصحي",
+    "water-charity-quran-sunnah-impact": "المياه والصرف الصحي",
+    "water-access-impact-on-women-families": "المياه والصرف الصحي",
+    "224-protecting-water-sources-contamination": "المياه والصرف الصحي",
+    "225-waste-management-displacement-camps": "المياه والصرف الصحي",
+    "226-hygiene-kits-emergencies": "المياه والصرف الصحي",
+    "223-solar-energy-humanitarian-facilities": "الإغاثة والطوارئ"
+  }
+}

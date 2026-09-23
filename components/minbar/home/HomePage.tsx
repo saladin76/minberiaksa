@@ -78,7 +78,6 @@ export default function HomePage({
       <QuickDonateBar config={quick.config} projects={quick.projects} />
       <VerseStrip />
       {banners.top}
-      <UrgentProjectsSection projects={projects} />
       <EventsSection />
       <ReelsSection onPlay={video.open} endorsements={content.endorsements} achievements={content.achievements} />
       <PathSection />
@@ -88,6 +87,7 @@ export default function HomePage({
       {banners.middle}
       <TravelBanner />
       <IbadanBanner />
+      <UrgentProjectsSection projects={projects} />
       <ZakatBanner />
       <WaqfSection />
       <RecurringSection />

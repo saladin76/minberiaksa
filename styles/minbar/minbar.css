@@ -1057,17 +1057,28 @@
  * flush with the bar's end edge. Gold rail and gem marks on the start edge,
  * the Aqsa pattern washed across it.
  *
- * Phone (≤960px): the same choices as a bottom sheet fixed to the viewport,
+ * Phone (≤960px): the same choices as a bottom sheet flush with the viewport,
  * collapsed to one row (chevron · label + total · button) until the chevron
  * opens it. The page gets bottom padding so the sheet never covers the footer.
  * See QuickDonateBar.tsx.
  * ───────────────────────────────────────────────────────────────────────────── */
-/* Sticky to the BOTTOM of the viewport: the bar rides the bottom edge while the
-   visitor scrolls the hero, then settles into the flow once its own place in
-   the page reaches it. Equal breathing room above and below (20px) so it reads
-   as one centred element rather than an appendage of the header. */
-.mia-scope .mia-qb-sec { position: sticky; bottom: 20px; z-index: 50; padding: 20px 0; scroll-margin-top: 120px; }
-.mia-scope .mia-qb-wrap { max-width: 1180px; margin: 0 auto; padding: 0 24px; }
+/* Pinned to the BOTTOM of the viewport for the whole page, not just the hero:
+   the choice stays one click away however far the visitor reads. `sticky` was
+   the earlier behaviour and it let go the moment the bar reached its own place
+   in the flow — scroll past the hero and it was gone. `fixed` keeps it.
+
+   Being out of flow, it no longer reserves its own space, so the page carries
+   bottom padding (bar 68px + 20px above and below) and the footer clears it.
+
+   The section spans the full width to centre the bar in the viewport, which
+   would otherwise lay a transparent strip over the page and swallow clicks
+   either side of it — hence pointer-events off on the strip, back on the bar. */
+.mia-scope .mia-qb-sec {
+  position: fixed; inset-inline: 0; bottom: 20px; z-index: 95;
+  padding: 0; scroll-margin-top: 120px; pointer-events: none;
+}
+.mia-scope .mia-qb-wrap { max-width: 1180px; margin: 0 auto; padding: 0 24px; pointer-events: auto; }
+.mia-scope:has(.mia-qb-sec) { padding-bottom: 108px; }
 
 /* ── The bar ─────────────────────────────────────────────────────────── */
 .mia-scope .mia-qb-desk {
@@ -1668,6 +1679,16 @@
 .mia-scope .pay-phone .react-international-phone-country-selector-dropdown__list-item--selected,
 .mia-scope .pay-phone .react-international-phone-country-selector-dropdown__list-item--focused { background: rgba(211,154,39,.14); }
 .mia-scope .pay-phone .react-international-phone-country-selector-dropdown__list-item-dial-code { color: var(--muted); }
+/* Phone field on phones: 16px input (no iOS focus-zoom), taller touch targets
+   and a dropdown that never runs past the viewport edge. */
+@media (max-width: 640px) {
+  .mia-scope .pay-phone .pay-phone-input { font-size: 16px; padding: 0 10px; }
+  .mia-scope .pay-phone .pay-phone-country { padding: 0 6px 0 8px; }
+  .mia-scope .pay-phone .react-international-phone-flag-emoji { width: 22px; height: 22px; }
+  .mia-scope .pay-phone .pay-phone-dropdown { max-height: min(50vh, 240px); }
+  .mia-scope .pay-phone .react-international-phone-country-selector-dropdown__list-item { height: 42px; }
+}
+
 
 /* Card preview (react-credit-cards-2): scaled to the form's width on phones. */
 .mia-scope .pay-card-preview .rccs { margin: 0 auto; }
