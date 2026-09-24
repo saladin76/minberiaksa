@@ -5,22 +5,22 @@ import axios from "axios";
 import { toast } from "react-hot-toast";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, Plus, Save, Trash2 } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Check, ChevronsUpDown, Loader2, Plus, Save, Trash2 } from "lucide-react";
+import { cn } from "@/lib/utils";
 import {
   DEFAULT_SUGGESTED_TEAM_SUPPORT_AMOUNTS,
-  parseAmountsInput,
   parseSuggestedTeamSupport,
   type SuggestedTeamSupportConfig,
 } from "@/lib/campaign/suggested-team-support";
 import {
-  CART_UPSELL_MAX_AMOUNTS,
   CART_UPSELL_MAX_ITEMS,
   DEFAULT_CART_UPSELL_AMOUNTS,
   parseCartUpsell,
+  type CartUpsellItem,
 } from "@/lib/minbar/cart-upsell";
 import {
   SuggestedTeamSupportSection,
@@ -34,7 +34,8 @@ import {
  *  - "Support the team": the switch that shows or hides the step, and the
  *    quick-pick amounts it offers (with per-currency exceptions).
  *  - "وسِّع أثر عطاءك": the campaigns suggested under the rows, each with its
- *    own quick-pick amounts. Empty falls back to the site's generic suggestions.
+ *    own quick-pick amounts and per-currency exceptions. Empty falls back to
+ *    the site's generic suggestions.
  *
  * Both live on `GlobalSettings`.
  */
@@ -71,10 +72,71 @@ function useCampaignOptions() {
   return { options, loading };
 }
 
-type UpsellRow = { key: string; campaignId: string; amountsStr: string };
+/** A searchable campaign picker: typing filters the list by title. */
+function CampaignPicker({
+  value,
+  options,
+  taken,
+  loading,
+  onChange,
+}: {
+  value: string;
+  options: CampaignOption[];
+  /** Ids already used by other rows — hidden so a campaign is listed once. */
+  taken: Set<string>;
+  loading: boolean;
+  onChange: (id: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const selected = options.find((c) => c.id === value);
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button type="button" variant="outline" role="combobox" aria-expanded={open} className="w-full justify-between mt-1 font-normal">
+          <span className="truncate">
+            {selected ? `${selected.title}${selected.isActive ? "" : " (غير نشط)"}` : loading ? "جاري تحميل المشاريع..." : "اختر مشروعًا"}
+          </span>
+          <ChevronsUpDown className="ms-2 h-4 w-4 shrink-0 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
+        <Command>
+          <CommandInput placeholder="ابحث عن مشروع..." />
+          <CommandList>
+            <CommandEmpty>لا يوجد مشروع بهذا الاسم</CommandEmpty>
+            <CommandGroup>
+              {options
+                .filter((c) => c.id === value || !taken.has(c.id))
+                .map((c) => (
+                  <CommandItem
+                    key={c.id}
+                    value={`${c.title} ${c.id}`}
+                    onSelect={() => {
+                      onChange(c.id);
+                      setOpen(false);
+                    }}
+                  >
+                    <Check className={cn("me-2 h-4 w-4", value === c.id ? "opacity-100" : "opacity-0")} />
+                    <span className="truncate">{c.title}</span>
+                    {c.isActive ? null : <span className="ms-auto text-xs text-muted-foreground">غير نشط</span>}
+                  </CommandItem>
+                ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  );
+}
 
-function makeRow(campaignId = "", amountsStr = DEFAULT_CART_UPSELL_AMOUNTS.join(", ")): UpsellRow {
-  return { key: `${Date.now()}-${Math.random().toString(36).slice(2)}`, campaignId, amountsStr };
+type UpsellRow = { key: string; campaignId: string; seed: SuggestedTeamSupportConfig };
+
+function makeRow(item?: CartUpsellItem): UpsellRow {
+  return {
+    key: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+    campaignId: item?.campaignId ?? "",
+    seed: item ? { amounts: item.amounts, byCurrency: item.byCurrency } : { amounts: [...DEFAULT_CART_UPSELL_AMOUNTS], byCurrency: {} },
+  };
 }
 
 export default function CartSettingsPage() {
@@ -84,6 +146,8 @@ export default function CartSettingsPage() {
   const [seed, setSeed] = useState<SuggestedTeamSupportConfig | undefined>(undefined);
   const [upsell, setUpsell] = useState<UpsellRow[]>([]);
   const sectionRef = useRef<SuggestedTeamSupportSectionRef>(null);
+  /* One amounts section per suggestion row, read on save. */
+  const rowRefs = useRef(new Map<string, SuggestedTeamSupportSectionRef | null>());
   const { options: campaigns, loading: campaignsLoading } = useCampaignOptions();
   const campaignTitle = useMemo(() => new Map(campaigns.map((c) => [c.id, c.title])), [campaigns]);
 
@@ -96,7 +160,7 @@ export default function CartSettingsPage() {
         if (cancelled) return;
         setSeed(parseSuggestedTeamSupport(res.data?.suggestedTeamSupport));
         setEnabled(res.data?.teamSupportEnabled !== false);
-        setUpsell(parseCartUpsell(res.data?.cartUpsell).items.map((i) => makeRow(i.campaignId, i.amounts.join(", "))));
+        setUpsell(parseCartUpsell(res.data?.cartUpsell).items.map((item) => makeRow(item)));
       })
       .catch(() => {
         if (cancelled) return;
@@ -110,25 +174,28 @@ export default function CartSettingsPage() {
     };
   }, []);
 
-  const updateRow = (key: string, patch: Partial<Pick<UpsellRow, "campaignId" | "amountsStr">>) =>
-    setUpsell((rows) => rows.map((r) => (r.key === key ? { ...r, ...patch } : r)));
-  const removeRow = (key: string) => setUpsell((rows) => rows.filter((r) => r.key !== key));
+  const setRowCampaign = (key: string, campaignId: string) =>
+    setUpsell((rows) => rows.map((r) => (r.key === key ? { ...r, campaignId } : r)));
+  const removeRow = (key: string) => {
+    rowRefs.current.delete(key);
+    setUpsell((rows) => rows.filter((r) => r.key !== key));
+  };
   const addRow = () => setUpsell((rows) => (rows.length >= CART_UPSELL_MAX_ITEMS ? rows : [...rows, makeRow()]));
 
   const handleSave = async () => {
     if (!sectionRef.current) return;
-    const items = [];
+    const items: Array<{ campaignId: string; amounts: number[]; byCurrency: Record<string, number[]> }> = [];
     for (const row of upsell) {
       if (!row.campaignId) {
         toast.error("اختر مشروعًا لكل اقتراح أو احذف الصف الفارغ");
         return;
       }
-      const amounts = parseAmountsInput(row.amountsStr).slice(0, CART_UPSELL_MAX_AMOUNTS);
-      if (!amounts.length) {
+      const payload = rowRefs.current.get(row.key)?.getPayload();
+      if (!payload || !payload.amounts.length) {
         toast.error(`أدخل مبلغًا واحدًا على الأقل لمشروع «${campaignTitle.get(row.campaignId) ?? ""}»`);
         return;
       }
-      items.push({ campaignId: row.campaignId, amounts });
+      items.push({ campaignId: row.campaignId, amounts: payload.amounts, byCurrency: payload.byCurrency });
     }
     setSaving(true);
     try {
@@ -214,40 +281,35 @@ export default function CartSettingsPage() {
             {upsell.length === 0 ? (
               <p className="text-sm text-muted-foreground">لا مشاريع مختارة — تُعرض الاقتراحات العامة.</p>
             ) : (
-              <div className="space-y-3">
-                {upsell.map((row) => (
-                  <div key={row.key} className="flex flex-col sm:flex-row gap-2 sm:items-end border rounded-lg p-3">
-                    <div className="flex-[2] min-w-[200px]">
-                      <Label className="text-xs text-muted-foreground">المشروع</Label>
-                      <Select value={row.campaignId} onValueChange={(v) => updateRow(row.key, { campaignId: v })}>
-                        <SelectTrigger className="mt-1">
-                          <SelectValue placeholder={campaignsLoading ? "جاري تحميل المشاريع..." : "اختر مشروعًا"} />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {campaigns
-                            .filter((c) => c.id === row.campaignId || !chosen.has(c.id))
-                            .map((c) => (
-                              <SelectItem key={c.id} value={c.id}>
-                                {c.title}
-                                {c.isActive ? "" : " (غير نشط)"}
-                              </SelectItem>
-                            ))}
-                        </SelectContent>
-                      </Select>
+              <div className="space-y-4">
+                {upsell.map((row, index) => (
+                  <div key={row.key} className="space-y-4 border rounded-lg p-4">
+                    <div className="flex gap-2 items-end">
+                      <div className="flex-1 min-w-0">
+                        <Label className="text-xs text-muted-foreground">المشروع {index + 1}</Label>
+                        <CampaignPicker
+                          value={row.campaignId}
+                          options={campaigns}
+                          taken={chosen}
+                          loading={campaignsLoading}
+                          onChange={(id) => setRowCampaign(row.key, id)}
+                        />
+                      </div>
+                      <Button type="button" variant="ghost" size="icon" className="shrink-0 text-destructive" onClick={() => removeRow(row.key)} aria-label="حذف المشروع">
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
                     </div>
-                    <div className="flex-[2]">
-                      <Label className="text-xs text-muted-foreground">المبالغ المقترحة</Label>
-                      <Input
-                        className="mt-1 font-mono text-left"
-                        dir="ltr"
-                        value={row.amountsStr}
-                        onChange={(e) => updateRow(row.key, { amountsStr: e.target.value })}
-                        placeholder={DEFAULT_CART_UPSELL_AMOUNTS.join(", ")}
-                      />
-                    </div>
-                    <Button type="button" variant="ghost" size="icon" className="shrink-0 text-destructive" onClick={() => removeRow(row.key)} aria-label="حذف الصف">
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
+                    <SuggestedTeamSupportSection
+                      ref={(instance) => {
+                        rowRefs.current.set(row.key, instance);
+                      }}
+                      initialConfig={row.seed}
+                      label="المبالغ المقترحة (جميع العملات)"
+                      helpText="أرقام مفصولة بفاصلة أو مسافة. تُستخدم لكل العملات ما لم تُضف استثناءً أدناه."
+                      defaultPlaceholder={DEFAULT_CART_UPSELL_AMOUNTS.join(", ")}
+                      exceptionsLabel="استثناءات حسب العملة (اختياري)"
+                      exceptionsEmptyHint="بدون استثناءات، تُطبّق القيم أعلاه على جميع العملات."
+                    />
                   </div>
                 ))}
               </div>

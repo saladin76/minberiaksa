@@ -18,6 +18,7 @@ import {
 } from "@/lib/minbar/cart";
 import { fetchGlobalSettings, getCachedGlobalSettings, type GlobalSettings } from "@/lib/global-settings-client";
 import { resolveFinalTeamSupportAmounts } from "@/lib/campaign/suggested-team-support";
+import { resolveUpsellAmounts } from "@/lib/minbar/cart-upsell";
 import type { MinbarProject } from "@/lib/minbar/projects";
 import type { MinbarCategoryTitle } from "@/lib/minbar/category-page";
 
@@ -118,10 +119,10 @@ export default function CartPage({ projects, categories }: { projects: MinbarPro
       (settings?.cartUpsell.items ?? [])
         .map((item) => {
           const project = projectById.get(item.campaignId);
-          return project ? { project, amounts: item.amounts } : null;
+          return project ? { project, amounts: resolveUpsellAmounts(item, currency) } : null;
         })
         .filter((row): row is { project: MinbarProject; amounts: number[] } => row !== null),
-    [settings, projectById]
+    [settings, projectById, currency]
   );
   const teamSupportEnabled = settings?.teamSupportEnabled !== false;
   const teamAmounts = useMemo(

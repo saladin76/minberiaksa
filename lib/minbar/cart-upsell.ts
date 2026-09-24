@@ -11,8 +11,10 @@
 
 export interface CartUpsellItem {
   campaignId: string;
-  /** Quick-pick amounts in the donor's active currency. */
+  /** Quick-pick amounts, used for every currency without an exception below. */
   amounts: number[];
+  /** Per-currency exceptions, ISO code → amounts (same shape as team support). */
+  byCurrency: Record<string, number[]>;
 }
 
 export interface CartUpsellConfig {
@@ -35,6 +37,24 @@ function amountsOf(raw: unknown): number[] {
   return out;
 }
 
+function byCurrencyOf(raw: unknown): Record<string, number[]> {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return {};
+  const out: Record<string, number[]> = {};
+  for (const [code, list] of Object.entries(raw as Record<string, unknown>)) {
+    const key = code.trim().toUpperCase();
+    const amounts = amountsOf(list);
+    if (key && amounts.length) out[key] = amounts.slice(0, CART_UPSELL_MAX_AMOUNTS);
+  }
+  return out;
+}
+
+/** The amounts to offer for a campaign in the donor's currency. */
+export function resolveUpsellAmounts(item: CartUpsellItem, currency: string): number[] {
+  const code = String(currency || "").trim().toUpperCase();
+  const exception = code ? item.byCurrency[code] : undefined;
+  return exception?.length ? exception : item.amounts;
+}
+
 /** Coerce stored / API JSON into a config; anything malformed is dropped. */
 export function parseCartUpsell(raw: unknown): CartUpsellConfig {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) return { items: [] };
@@ -47,7 +67,11 @@ export function parseCartUpsell(raw: unknown): CartUpsellConfig {
     const campaignId = typeof o.campaignId === "string" ? o.campaignId.trim() : "";
     if (!OBJECT_ID.test(campaignId) || items.some((i) => i.campaignId === campaignId)) continue;
     const amounts = amountsOf(o.amounts);
-    items.push({ campaignId, amounts: amounts.length ? amounts : [...DEFAULT_CART_UPSELL_AMOUNTS] });
+    items.push({
+      campaignId,
+      amounts: amounts.length ? amounts : [...DEFAULT_CART_UPSELL_AMOUNTS],
+      byCurrency: byCurrencyOf(o.byCurrency),
+    });
     if (items.length >= CART_UPSELL_MAX_ITEMS) break;
   }
   return { items };
@@ -70,7 +94,9 @@ export function validateCartUpsellBody(body: unknown): CartUpsellConfig {
     const amounts = amountsOf(o.amounts);
     if (!amounts.length) throw new Error("Every suggestion needs at least one amount");
     if (amounts.length > CART_UPSELL_MAX_AMOUNTS) throw new Error(`At most ${CART_UPSELL_MAX_AMOUNTS} amounts per campaign`);
-    items.push({ campaignId, amounts });
+    const byCurrency = byCurrencyOf(o.byCurrency);
+    if (Object.keys(byCurrency).length > 20) throw new Error("At most 20 currency exceptions per campaign");
+    items.push({ campaignId, amounts, byCurrency });
   }
   return { items };
 }
