@@ -82,8 +82,48 @@ export async function sendTriggerMessage(
   return null;
 }
 
+/** Donation-scoped events that must reach the donor once per donation, however many times
+ * the payment is confirmed (replayed webhook, reconciliation job, gateway callback retry). */
+const ONCE_PER_DONATION: ReadonlySet<MessageTriggerEvent> = new Set([
+  "DONATION_PAID",
+  "FIRST_DONATION",
+  "DONATION_FAILED",
+  "SUBSCRIPTION_CREATED",
+  "SUBSCRIPTION_PAYMENT",
+]);
+
+export function dispatchClaimKey(event: MessageTriggerEvent, donationId: string): string {
+  return `${event}:${donationId}`;
+}
+
+/**
+ * Atomically claim (event, donation). Returns false when it was already claimed.
+ *
+ * The key is the document `_id`, so MongoDB's built-in `_id` uniqueness makes the
+ * claim race-safe with no index or schema change. On any other database error it
+ * fails open (returns true): a duplicate thank-you is better than a lost receipt.
+ */
+async function claimDispatch(event: MessageTriggerEvent, donationId: string): Promise<boolean> {
+  const isDuplicate = (value: unknown) => /E11000|duplicate key/i.test(String(value));
+  try {
+    const res = (await prisma.$runCommandRaw({
+      insert: "EventDispatchClaim",
+      documents: [{ _id: dispatchClaimKey(event, donationId), event, donationId, createdAt: { $date: new Date().toISOString() } }],
+    })) as { n?: number; writeErrors?: Array<{ code?: number; errmsg?: string }> };
+    if (res.writeErrors?.some((e) => e.code === 11000 || isDuplicate(e.errmsg))) return false;
+    return true;
+  } catch (error) {
+    if (isDuplicate(error instanceof Error ? error.message : error)) return false;
+    console.error("claimDispatch failed; dispatching anyway", { event, donationId, error: error instanceof Error ? error.message : String(error) });
+    return true;
+  }
+}
+
 export async function dispatchEvent(event: MessageTriggerEvent, input: EventDispatchInput): Promise<DispatchResult> {
   const result: DispatchResult = { triggers: 0, emailsSent: 0, whatsappSent: 0, errors: 0 };
+  if (input.donationId && ONCE_PER_DONATION.has(event) && !(await claimDispatch(event, input.donationId))) {
+    return result;
+  }
   if (input.donationId && (event === "DONATION_PAID" || event === "DONATION_FAILED" || event === "FIRST_DONATION")) void notifyDonationEvent(event, input.donationId);
   try {
     const triggers = await prisma.messageTrigger.findMany({ where: { event, enabled: true } });

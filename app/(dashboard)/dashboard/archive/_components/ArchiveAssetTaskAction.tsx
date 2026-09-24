@@ -54,6 +54,9 @@ export function ArchiveAssetTaskAction({ assetId, fileName }: Props) {
             just no page left to view it on, so the success confirmation below stands alone. */}
       </div>
       <p className="mt-2 text-xs font-semibold text-slate-500">تُستخدم المهمة لتنظيم مراجعة أو تجهيز المادة داخل الفريق.</p>
+      <p className="mt-1 text-xs font-semibold text-amber-700">
+        تجريبي: تُحفظ المهمة كسجل فقط، ولا تُسند لموظف ولا توجد حاليًا صفحة لعرض المهام.
+      </p>
       {feedback ? (
         <p className={`mt-2 rounded-md border px-3 py-2 text-xs font-semibold ${feedback.tone === "success" ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-rose-200 bg-rose-50 text-rose-700"}`}>
           {feedback.message}

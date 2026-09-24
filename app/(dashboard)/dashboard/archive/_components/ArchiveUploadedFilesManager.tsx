@@ -165,7 +165,14 @@ export function ArchiveUploadedFilesManager({ category, title, description }: Pr
       setFeedback({ tone: "error", message: result?.error || result?.message || "تعذر تحليل الملف" });
       return;
     }
-    setFeedback({ tone: "success", message: "تم تحليل الملف" });
+    // Say which kind of analysis ran: without an AI key it is a local guess from the file name.
+    const aiUsed = result?.analysis?.confidence === "ai_assisted";
+    setFeedback({
+      tone: "success",
+      message: aiUsed
+        ? "تم التحليل بالذكاء الاصطناعي (من بيانات الملف فقط، لا من محتواه) — راجع الاقتراح قبل استخدامه"
+        : "اقتراح أولي من اسم الملف وبياناته فقط — لم يُستخدم الذكاء الاصطناعي",
+    });
     await loadFiles();
   }
 

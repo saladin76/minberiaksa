@@ -1,9 +1,11 @@
 import "server-only";
 
-import { NextResponse } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/options";
+import { prisma } from "@/lib/prisma";
 import { userHasDashboardPermission } from "@/lib/dashboard/permissions";
+import { DONATION_TOKEN_PARAM, donationTokenMatches } from "@/lib/donations/access-token";
 import { getServerBaseUrl } from "@/lib/server-base-url";
 import { messagesFor } from "@/i18n/locale-messages";
 import { DonationNotConfirmedError, DonationNotFoundError, issueDonationDocuments, type IssuedDocuments } from "./issue";
@@ -16,24 +18,35 @@ import { PdfRendererUnavailableError } from "./pdf";
  */
 
 /**
- * Whether the current requester may read documents belonging to `donorId`.
+ * Whether the current requester may read documents belonging to donation
+ * `donationId`, given the token presented on the request (`?t=`).
  *
- * A signed-in user must own the donation or hold the revenue permission.
- * A request with no session is allowed through: a guest donor has no account,
- * and — as the receipt endpoint has always worked — the unguessable donation
- * id is their token. The ids are 24-hex ObjectIds and never listed publicly.
+ * A signed-in owner, or a holder of the revenue permission, is let in by
+ * their session. Anyone else — a guest donor, or a signed-in user who does not
+ * own it — needs the donation's access token. The donation id alone opens
+ * nothing: it is an identifier that ends up in history, referrers and
+ * forwarded mail, not a secret (`DEPLOYED_VS_DESIGN_AUDIT.md` § P1.2).
  */
-export async function authorizeDonationAccess(donorId: string): Promise<NextResponse | null> {
-  const access = await donationAccess(donorId);
+export async function authorizeDonationAccess(donationId: string, request: NextRequest): Promise<NextResponse | null> {
+  const access = await donationAccess(donationId, request.nextUrl.searchParams.get(DONATION_TOKEN_PARAM));
   return access.allowed ? null : NextResponse.json({ error: "Forbidden" }, { status: 403 });
 }
 
 /** The same rule, for the print pages: allowed or not, and whether the viewer is staff. */
-export async function donationAccess(donorId: string): Promise<{ allowed: boolean; admin: boolean }> {
+export async function donationAccess(
+  donationId: string,
+  presentedToken: string | null | undefined
+): Promise<{ allowed: boolean; admin: boolean }> {
+  const donation = await prisma.donation.findUnique({
+    where: { id: donationId },
+    select: { donorId: true, accessToken: true },
+  });
+  if (!donation) return { allowed: false, admin: false };
+
   const session = await getServerSession(authOptions);
-  if (!session?.user) return { allowed: true, admin: false };
-  const admin = userHasDashboardPermission(session.user, "revenue");
-  return { allowed: admin || session.user.id === donorId, admin };
+  const admin = Boolean(session?.user && userHasDashboardPermission(session.user, "revenue"));
+  if (admin || (session?.user && session.user.id === donation.donorId)) return { allowed: true, admin };
+  return { allowed: donationTokenMatches(donation.accessToken, presentedToken), admin: false };
 }
 
 /** Issue-or-fetch the donation's documents, or the HTTP error explaining why not. */

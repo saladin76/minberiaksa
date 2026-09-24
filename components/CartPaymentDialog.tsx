@@ -42,6 +42,7 @@ import { useRouter } from "@/i18n/routing";
 import { appendCurrencyQuery, getCurrencyCodeForLinks } from "@/lib/currency-link";
 import { shouldSkipPopup } from "@/lib/in-app-browser";
 import { resolveGateway } from "@/lib/payment-gateway";
+import { withDonationToken } from "@/lib/donations/access-token-link";
 import { useTranslations, useLocale } from "next-intl";
 import { useSession } from "next-auth/react";
 import { PhoneInput } from "react-international-phone";
@@ -533,6 +534,9 @@ const CartPaymentDialog = ({
 
         let targetDonationId: string;
         let clientSecret: string;
+        /* The guest's key to the success page (`?t=`); null on the fallback
+           path, where a signed-in session opens it instead. */
+        let targetToken: string | null = null;
 
         // Re-use fallback intent if PayFor previously failed
         if (fallbackClientSecret && fallbackDonationId) {
@@ -542,6 +546,7 @@ const CartPaymentDialog = ({
           const res = await axios.post("/api/cart/payment", basePayload);
           if (!res.data?.success) { onClose(); return; }
           targetDonationId = res.data.donation.id as string;
+          targetToken = (res.data.donation.accessToken as string | null | undefined) ?? null;
 
           const intentRes = await axios.post("/api/stripe/charge", { donationId: targetDonationId, locale });
           if (intentRes.data.error) {
@@ -575,7 +580,7 @@ const CartPaymentDialog = ({
 
         clearItems(); confetti.onOpen();
         router.push(
-          appendCurrencyQuery(`/success/${targetDonationId}`, getCurrencyCodeForLinks())
+          appendCurrencyQuery(withDonationToken(`/success/${targetDonationId}`, targetToken), getCurrencyCodeForLinks())
         );
         return;
       }
@@ -588,6 +593,7 @@ const CartPaymentDialog = ({
         const res = await axios.post("/api/cart/payment", basePayload);
         if (!res.data?.success) { onClose(); return; }
         const donationId = res.data.donation.id as string;
+        const donationToken = (res.data.donation.accessToken as string | null | undefined) ?? null;
         const newPan = cardDetails.cardNumber.replace(/\s/g, "");
 
         // Save new card fire-and-forget
@@ -712,7 +718,7 @@ const CartPaymentDialog = ({
               if (payforPopupRef.current && !payforPopupRef.current.closed) payforPopupRef.current.close();
               clearItems(); confetti.onOpen();
               router.push(
-                appendCurrencyQuery(`/success/${donationId}`, getCurrencyCodeForLinks())
+                appendCurrencyQuery(withDonationToken(`/success/${donationId}`, donationToken), getCurrencyCodeForLinks())
               );
               return;
             }
@@ -731,7 +737,10 @@ const CartPaymentDialog = ({
         isRedirecting = true; setRedirecting(true);
         clearItems(); confetti.onOpen();
         router.push(
-          appendCurrencyQuery(`/success/${res.data.donation.id}`, getCurrencyCodeForLinks())
+          appendCurrencyQuery(
+            withDonationToken(`/success/${res.data.donation.id}`, (res.data.donation.accessToken as string | null | undefined) ?? null),
+            getCurrencyCodeForLinks()
+          )
         );
       } else {
         onClose();

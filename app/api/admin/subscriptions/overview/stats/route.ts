@@ -20,9 +20,8 @@ function getDateRange(period: string, startParam?: string | null, endParam?: str
     ({ startDate, endDate } = istanbulDateKeysToUtcRange(startParam, endParam));
   } else if (period === "all") {
     endDate = new Date();
-    startDate = new Date(endDate);
-    startDate.setFullYear(startDate.getFullYear() - 10);
-    startDate.setUTCHours(0, 0, 0, 0);
+    // "All time" means every record. It used to be "the last 10 years".
+    startDate = new Date(0);
     endDate.setUTCHours(23, 59, 59, 999);
   } else {
     endDate = endParam ? new Date(endParam + "T23:59:59.999Z") : new Date();

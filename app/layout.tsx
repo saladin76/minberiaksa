@@ -5,6 +5,7 @@ import DeferredGTM from "@/components/DeferredGTM";
 import MicrosoftClarity from "@/components/MicrosoftClarity";
 import EngagementInstrumentation from "@/components/EngagementInstrumentation";
 import { Analytics } from "@vercel/analytics/next";
+import { LOCALES, LOCALE_SEO, isProductionDeployment } from "@/lib/seo";
 import "./[locale]/globals.css";
 
 const poppins = Poppins({
@@ -139,17 +140,23 @@ export const metadata: Metadata = {
     images: [OG_IMAGE],
   },
 
-  robots: {
-    index: true,
-    follow: true,
-    googleBot: {
-      index: true,
-      follow: true,
-      "max-image-preview": "large",
-      "max-snippet": -1,
-      "max-video-preview": -1,
-    },
-  },
+  /* Indexable on production only. A preview deployment carries production
+     canonicals, which does not by itself stop its own URL being indexed —
+     so it says noindex here, in `app/robots.ts`, and in the X-Robots-Tag
+     header from `next.config.ts` (`DEPLOYED_VS_DESIGN_AUDIT.md` § P1.1). */
+  robots: isProductionDeployment()
+    ? {
+        index: true,
+        follow: true,
+        googleBot: {
+          index: true,
+          follow: true,
+          "max-image-preview": "large",
+          "max-snippet": -1,
+          "max-video-preview": -1,
+        },
+      }
+    : { index: false, follow: false, googleBot: { index: false, follow: false } },
 
   category: "charity",
 };
@@ -205,10 +212,12 @@ const websiteSchema = {
   "@type": "WebSite",
   "@id": `${SITE}/#website`,
   url: SITE,
-  name: "Minberiaksa | منبر الأقصي",
-  description:
-    "Donate for Syrian medical aid, zakat, sadaqah, and orphan sponsorship. تبرع لعمليات طبية عاجلة وإغاثة إنسانية في سوريا.",
-  inLanguage: ["ar", "en", "fr", "tr", "id", "pt", "es", "de"],
+  name: LOCALE_SEO.ar.siteName,
+  /* The site's one description, from the same generated source as every
+     page's metadata — this block once carried its own copy, written for the
+     retired programme, and outlived the rest of it. */
+  description: LOCALE_SEO.ar.description,
+  inLanguage: [...LOCALES],
   publisher: { "@id": `${SITE}/#organization` },
   potentialAction: {
     "@type": "SearchAction",

@@ -21,6 +21,8 @@ export interface DeleteDonationRow {
   totalAmount: number;
   currency: string;
   status: string;
+  /** When known and set, the donation was paid and the server will refuse deletion. */
+  paidAt?: string | Date | null;
   donor?: { name?: string | null; email?: string | null } | null;
 }
 
@@ -38,10 +40,12 @@ interface Props {
 export function DeleteDonationDialog({ row, onClose, onDeleted }: Props) {
   const [typed, setTyped] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [immutable, setImmutable] = useState(Boolean(row.paidAt));
 
   useEffect(() => {
     setTyped("");
-  }, [row.id]);
+    setImmutable(Boolean(row.paidAt));
+  }, [row.id, row.paidAt]);
 
   // Stringify the amount the same way the row renders it — strip trailing zeros
   // so 100 matches "100" not "100.00". User can also type the full numeric.
@@ -57,14 +61,43 @@ export function DeleteDonationDialog({ row, onClose, onDeleted }: Props) {
       onDeleted();
       onClose();
     } catch (err) {
-      console.error("[Donation Delete] failed:", err);
-      toast.error("فشل في حذف التبرع");
+      if (axios.isAxiosError(err) && err.response?.status === 409) {
+        setImmutable(true);
+        toast.error("لا يمكن حذف تبرع مدفوع. استخدم التعديل لتصحيحه.");
+      } else {
+        console.error("[Donation Delete] failed:", err);
+        toast.error("فشل في حذف التبرع");
+      }
     } finally {
       setSubmitting(false);
     }
   };
 
   const donor = row.donor?.name?.trim() || row.donor?.email || "—";
+
+  if (immutable) {
+    return (
+      <AlertDialog open onOpenChange={(open) => (!open ? onClose() : null)}>
+        <AlertDialogContent className="max-w-md" dir="rtl">
+          <AlertDialogHeader className="text-right sm:text-right">
+            <div className="mx-auto mb-1 flex h-12 w-12 items-center justify-center rounded-full bg-amber-100 text-amber-600">
+              <AlertTriangle className="h-6 w-6" />
+            </div>
+            <AlertDialogTitle className="text-slate-900">لا يمكن حذف هذا التبرع</AlertDialogTitle>
+            <AlertDialogDescription className="text-slate-600 leading-relaxed">
+              هذا تبرع مدفوع ومسجّل ماليًا، وقد يكون صدر له إيصال أو شهادة. السجلات
+              المالية لا تُحذف. لتصحيح المبلغ أو الحالة أو المشروع استخدم «تعديل».
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <Button type="button" variant="outline" onClick={onClose}>
+              إغلاق
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    );
+  }
 
   return (
     <AlertDialog open onOpenChange={(open) => (!open && !submitting ? onClose() : null)}>
@@ -77,8 +110,8 @@ export function DeleteDonationDialog({ row, onClose, onDeleted }: Props) {
             تأكيد حذف التبرع
           </AlertDialogTitle>
           <AlertDialogDescription className="text-slate-600 leading-relaxed">
-            هذا الإجراء لا يمكن التراجع عنه. سيتم حذف هذا التبرع نهائيًا وخصم
-            قيمته من إجماليات المشاريع والحملات إن كان مُساهمًا فيها.
+            هذا الإجراء لا يمكن التراجع عنه. يُسمح بحذف التبرعات غير المدفوعة فقط
+            (محاولات دفع متروكة أو فاشلة). التبرعات المدفوعة لا تُحذف.
           </AlertDialogDescription>
         </AlertDialogHeader>
 

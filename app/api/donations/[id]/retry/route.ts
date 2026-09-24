@@ -7,6 +7,7 @@ import {
   auditActorFromSiteSession,
   auditStreamForRole,
 } from "@/lib/audit-log";
+import { mintDonationAccessToken } from "@/lib/donations/access-token";
 
 /**
  * POST /api/donations/[id]/retry
@@ -85,6 +86,7 @@ export async function POST(
 
     const clone = await prisma.donation.create({
       data: {
+        accessToken: mintDonationAccessToken(),
         amount: source.amount,
         amountUSD: source.amountUSD ?? undefined,
         currency: source.currency,

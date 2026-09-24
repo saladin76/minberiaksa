@@ -2124,5 +2124,18 @@
     "track4Text": "Administrative and technical work done from anywhere in the world.",
     "track5Title": "Foundation Representative in Your Country",
     "track5Text": "Representing the foundation officially in your country and following up its activities and donors there."
+  },
+  "Recurring": {
+    "nextChargeOn": "Prossimo addebito: {date}",
+    "firstChargeOn": "Primo addebito: {date}",
+    "firstChargeToday": "Addebitato ora, poi {cadence}",
+    "planScheduledTitle": "La tua donazione ricorrente è impostata",
+    "planScheduledLead": "La tua carta è salvata e non è ancora stato addebitato nulla. Il primo addebito sarà il {date}.",
+    "planActiveLead": "Lo stesso importo verrà addebitato {cadence}. Prossimo addebito: {date}.",
+    "cadenceDaily": "ogni giorno",
+    "cadenceFriday": "ogni venerdì",
+    "cadenceMonthly": "ogni mese",
+    "stripeNotReady": "Il modulo di pagamento è ancora in caricamento: riprova tra un istante.",
+    "subscriptionPaymentFailed": "Addebito non riuscito — aggiorna la tua carta"
   }
 }

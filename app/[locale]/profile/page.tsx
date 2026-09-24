@@ -81,6 +81,8 @@ interface DonationForProfile {
   paidAt?: string | null;
   status: string | null;
   subscriptionId?: string | null;
+  /** DAILY | FRIDAY | MONTHLY on a plan; null on a one-time gift. */
+  frequency?: string | null;
   nextBillingDate?: string | null;
   createdAt: string;
   subscriptionStartedAt?: string;
@@ -158,6 +160,10 @@ function donationReceiptAllowed(d: Pick<DonationForProfile, "paymentStatus">) {
 
 const ProfilePage = () => {
   const t = useTranslations("Profile");
+  /* The plan's cadence label — the same `common.freq*` strings the cart uses. */
+  const tCommon = useTranslations("common");
+  /* A plan the scheduler could not charge needs its own words, not "cancelled". */
+  const tRecurring = useTranslations("Recurring");
   const { data: session } = useSession();
   const locale = useLocale();
   const isRtl = locale === "ar";
@@ -671,6 +677,7 @@ const ProfilePage = () => {
     const statusLabel = (d: DonationForProfile) => {
       if (d.status === "ACTIVE") return t("subscriptions.active");
       if (d.status === "PAUSED") return t("subscriptions.paused");
+      if (d.status === "PAYMENT_FAILED") return tRecurring("subscriptionPaymentFailed");
       return t("subscriptions.cancelled");
     };
 
@@ -968,6 +975,13 @@ const ProfilePage = () => {
                                 donation.subscriptionStartedAt ?? donation.createdAt
                               ).toLocaleDateString(locale === "ar" ? "ar-EG" : undefined)}
                             </span>
+                          </span>
+                          <span className="text-gray-800 font-medium">
+                            {donation.frequency === "DAILY"
+                              ? tCommon("freqDaily")
+                              : donation.frequency === "FRIDAY"
+                                ? tCommon("freqFriday")
+                                : tCommon("freqMonthly")}
                           </span>
                           <span>
                             {t("donations.nextBillingDate")}:{" "}

@@ -3225,5 +3225,18 @@
     "statusConfirmed": "مؤكد",
     "accountAction": "رفع الإيصال",
     "accountFollow": "متابعة"
+  },
+  "Recurring": {
+    "nextChargeOn": "الخصم القادم: {date}",
+    "firstChargeOn": "أول خصم: {date}",
+    "firstChargeToday": "يُخصم المبلغ الآن، ثم {cadence}",
+    "planScheduledTitle": "تم إعداد تبرعك الدوري",
+    "planScheduledLead": "حُفظت بطاقتك ولم يُخصم أي مبلغ بعد. أول خصم يوم {date}.",
+    "planActiveLead": "سيُخصم نفس المبلغ {cadence}. الخصم القادم: {date}.",
+    "cadenceDaily": "كل يوم",
+    "cadenceFriday": "كل جمعة",
+    "cadenceMonthly": "كل شهر",
+    "stripeNotReady": "نموذج الدفع لم يكتمل تحميله بعد — حاول مرة أخرى بعد لحظات.",
+    "subscriptionPaymentFailed": "تعذّر الخصم — يرجى تحديث بيانات البطاقة"
   }
 }

@@ -55,14 +55,20 @@ export function ArchiveDriveLinkActions({ linkId }: Props) {
   return (
     <div className="rounded-lg border bg-white p-3">
       <div className="flex flex-wrap items-center gap-2">
-        <Button type="button" size="sm" variant="outline" disabled={Boolean(running)} onClick={() => runAction("test")} className="gap-2 font-bold">
+        {/* The test endpoint only parses the Drive folder/file id; it does not call Google. */}
+        <Button type="button" size="sm" variant="outline" disabled={Boolean(running)} onClick={() => runAction("test")} className="gap-2 font-bold" title="يتحقق من صيغة الرابط ومعرّف المجلد فقط — لا يتصل بـ Google Drive">
           {isTesting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Radar className="h-4 w-4" />}
-          فحص الرابط
+          فحص صيغة الرابط
         </Button>
-        <Button type="button" size="sm" variant="outline" disabled={Boolean(running)} onClick={() => runAction("sync")} className="gap-2 font-bold">
+        {/* The sync endpoint is a no-op ("Sync skipped safely", externalCall: false). Disabled
+            until a real Drive integration exists, so nobody believes files were refreshed. */}
+        <Button type="button" size="sm" variant="outline" disabled className="gap-2 font-bold" title="المزامنة مع Google Drive غير متصلة بعد">
           {isSyncing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
           تحديث المواد
         </Button>
+        <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[11px] font-bold text-amber-700">
+          تجريبي — غير متصل بـ Google Drive
+        </span>
       </div>
 
       {feedback ? (

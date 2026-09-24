@@ -1,6 +1,8 @@
-import { NextResponse } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { donationAccess } from "@/lib/certificates/http";
+import { DONATION_TOKEN_PARAM } from "@/lib/donations/access-token";
 import { metaDonationEventId } from "@/lib/tracking/canonical";
 import { buildMetaUserData } from "@/lib/tracking/meta-capi";
 
@@ -110,12 +112,20 @@ function buildBrowserAdvancedMatching(row: DonationTrackingRow) {
 }
 
 export async function GET(
-  _req: Request,
+  req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
   if (!id) {
     return NextResponse.json<TrackingResponseFail>({ ok: false, reason: "missing donation id" }, { status: 400 });
+  }
+
+  /* The payload carries hashed donor identity for advanced matching, so it is
+     read under the same rule as the receipt: session owner / revenue user, or
+     the donation's access token the success page was opened with. */
+  const access = await donationAccess(id, req.nextUrl.searchParams.get(DONATION_TOKEN_PARAM));
+  if (!access.allowed) {
+    return NextResponse.json<TrackingResponseFail>({ ok: false, reason: "forbidden" }, { status: 403 });
   }
 
   const row = await prisma.donation.findUnique({

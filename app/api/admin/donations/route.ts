@@ -13,6 +13,7 @@ import {
   writeAuditLog,
   auditActorFromDashboardSession,
 } from "@/lib/audit-log";
+import { mintDonationAccessToken } from "@/lib/donations/access-token";
 
 interface CampaignLineInput {
   campaignId: string;
@@ -316,6 +317,7 @@ export async function POST(request: NextRequest) {
         paymentMethod,
         provider: body.provider?.trim() || "MANUAL",
         comment: body.notes?.trim() || undefined,
+        accessToken: mintDonationAccessToken(),
         donor: { connect: { id: donorId } },
         ...(campaignLines.length > 0 && {
           items: { create: campaignLines },

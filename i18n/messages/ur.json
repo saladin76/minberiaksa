@@ -2124,5 +2124,18 @@
     "track4Text": "Administrative and technical work done from anywhere in the world.",
     "track5Title": "Foundation Representative in Your Country",
     "track5Text": "Representing the foundation officially in your country and following up its activities and donors there."
+  },
+  "Recurring": {
+    "nextChargeOn": "اگلی کٹوتی: {date}",
+    "firstChargeOn": "پہلی کٹوتی: {date}",
+    "firstChargeToday": "ابھی کٹوتی ہوگی، پھر {cadence}",
+    "planScheduledTitle": "آپ کا باقاعدہ عطیہ ترتیب دے دیا گیا",
+    "planScheduledLead": "آپ کا کارڈ محفوظ ہو گیا اور ابھی کوئی رقم نہیں کاٹی گئی۔ پہلی کٹوتی {date} کو ہوگی۔",
+    "planActiveLead": "یہی رقم {cadence} کاٹی جائے گی۔ اگلی کٹوتی: {date}۔",
+    "cadenceDaily": "ہر روز",
+    "cadenceFriday": "ہر جمعہ",
+    "cadenceMonthly": "ہر ماہ",
+    "stripeNotReady": "ادائیگی کا فارم ابھی لوڈ ہو رہا ہے — براہِ کرم تھوڑی دیر بعد دوبارہ کوشش کریں۔",
+    "subscriptionPaymentFailed": "کٹوتی ناکام — براہِ کرم اپنے کارڈ کی معلومات اپ ڈیٹ کریں"
   }
 }

@@ -135,6 +135,21 @@ const nextConfig: NextConfig = {
   reactStrictMode: true,
   serverExternalPackages: ["@usewaypoint/email-builder"],
   compiler: { removeConsole: process.env.NODE_ENV === "production" ? { exclude: ["error", "warn"] } : false },
+  /* Preview and development deployments carry production canonicals and
+     hreflang, which does not stop a crawler indexing the preview URL itself.
+     Off production, every response says so in a header — one place, not a
+     per-page flag (`DEPLOYED_VS_DESIGN_AUDIT.md` § P1.1). `app/robots.ts`
+     and the root layout's metadata say the same for the crawlers that read
+     those instead. */
+  async headers() {
+    if (process.env.VERCEL_ENV === "production") return [];
+    return [
+      {
+        source: "/:path*",
+        headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow" }],
+      },
+    ];
+  },
   async rewrites() {
     return [
       { source: "/api/admin/subscriptions/chart", destination: "/api/admin/subscriptions/overview/chart" },

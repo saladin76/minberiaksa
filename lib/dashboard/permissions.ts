@@ -126,7 +126,8 @@ const PATH_RULES: { prefix: string; key: DashboardPermissionKey }[] = [
   { prefix: "/dashboard/reports", key: "siteContent" },
   { prefix: "/dashboard/booklets", key: "siteContent" },
   { prefix: "/dashboard/faqs", key: "siteContent" },
-  { prefix: "/dashboard/bank-accounts", key: "siteContent" },
+  // A live payment destination (IBAN/SWIFT), not content — see the `bankAccounts` key above.
+  { prefix: "/dashboard/bank-accounts", key: "bankAccounts" },
   { prefix: "/dashboard/urgent-banners", key: "siteContent" },
   { prefix: "/dashboard/quick-donation", key: "siteContent" },
   { prefix: "/dashboard/certificates", key: "siteContent" },

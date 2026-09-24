@@ -70,6 +70,8 @@ export const LEGACY_NAMESPACES = [
   "CampaignsPage", "Campaign", "SignInDialog", "SharePopup", "DonationDialog",
   "DonationSuccess", "CartSheet", "LiveDonationsTicker", "Profile",
   "MessageSubjects", "CompleteProfile",
+  // The donor's account page names a plan's cadence and its failed state.
+  "Recurring",
 ] as const;
 
 /** Narrow a locale's catalog to the given namespaces. Unknown names are skipped. */

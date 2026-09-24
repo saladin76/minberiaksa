@@ -145,11 +145,13 @@ interface DonationRow {
 
 interface SubscriptionRow {
   id: string;
-  status: "ACTIVE" | "PAUSED" | "CANCELLED";
+  status: "ACTIVE" | "PAUSED" | "CANCELLED" | "PAYMENT_FAILED";
   amount: number;
   amountUSD: number | null;
   currency: string;
   createdAt: string;
+  /** DAILY | FRIDAY | MONTHLY — absent on rows from before the field existed (monthly). */
+  frequency?: "DAILY" | "FRIDAY" | "MONTHLY" | null;
   nextBillingDate: string | null;
   lastBillingDate: string | null;
   donor: { id: string; name: string | null; email: string | null };
@@ -158,7 +160,9 @@ interface SubscriptionRow {
   referral: { id: string; code: string } | null;
 }
 
-type SubscriptionStatusFilter = "ACTIVE" | "PAUSED" | "CANCELLED" | "all";
+const FREQUENCY_LABEL_AR: Record<string, string> = { DAILY: "يومي", FRIDAY: "كل جمعة", MONTHLY: "شهري" };
+
+type SubscriptionStatusFilter = "ACTIVE" | "PAUSED" | "CANCELLED" | "PAYMENT_FAILED" | "all";
 
 interface DashboardStats {
   totalCampaigns: number;
@@ -352,6 +356,22 @@ export default function MonthlySubscriptionsDashboardPage() {
   const [subsSortBy, setSubsSortBy] = useState<"date" | "amount">("date");
   const [subsSortOrder, setSubsSortOrder] = useState<"asc" | "desc">("desc");
   const [subsStatusUpdatingId, setSubsStatusUpdatingId] = useState<string | null>(null);
+  const [providerChecks, setProviderChecks] = useState<
+    Record<string, { loading: boolean; result?: { rail: string; providerStatus: string | null; providerPaused: boolean | null; inSync: boolean; error?: string } }>
+  >({});
+  const checkProviderState = useCallback(async (subscriptionId: string) => {
+    setProviderChecks((prev) => ({ ...prev, [subscriptionId]: { loading: true } }));
+    try {
+      const res = await axios.get(`/api/admin/subscriptions/${subscriptionId}/provider-state`);
+      setProviderChecks((prev) => ({ ...prev, [subscriptionId]: { loading: false, result: res.data } }));
+    } catch (e) {
+      const msg = axios.isAxiosError(e) ? (e.response?.data as { error?: string })?.error || e.message : "خطأ";
+      setProviderChecks((prev) => ({
+        ...prev,
+        [subscriptionId]: { loading: false, result: { rail: "STRIPE", providerStatus: null, providerPaused: null, inSync: false, error: msg } },
+      }));
+    }
+  }, []);
 
   // Fetch categories and campaigns
   useEffect(() => {
@@ -672,8 +692,18 @@ export default function MonthlySubscriptionsDashboardPage() {
       if (newStatus === previousStatus) return;
       setSubsStatusUpdatingId(subscriptionId);
       try {
-        await axios.patch(`/api/admin/subscriptions/${subscriptionId}`, { status: newStatus });
-        toast.success("تم تحديث حالة الاشتراك");
+        const res = await axios.patch(`/api/admin/subscriptions/${subscriptionId}`, { status: newStatus });
+        const rail = (res.data as { provider?: { rail?: string } })?.provider?.rail;
+        setProviderChecks((prev) => {
+          const next = { ...prev };
+          delete next[subscriptionId];
+          return next;
+        });
+        toast.success(
+          rail === "STRIPE"
+            ? "تم تحديث حالة الاشتراك وتأكيدها في Stripe"
+            : "تم تحديث حالة الاشتراك"
+        );
         setSubsPage(1);
         await fetchSubscriptions(1, false);
       } catch (e: unknown) {
@@ -2280,6 +2310,7 @@ export default function MonthlySubscriptionsDashboardPage() {
                       <th className="text-right py-3 px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">الحالة</th>
                       <th className="text-right py-3 px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500 max-w-[160px]">المشروع / الفئة</th>
                       <th className="text-right py-3 px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">الإحالة</th>
+                      <th className="text-right py-3 px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500 whitespace-nowrap">الدورية</th>
                       <th className="text-right py-3 px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500 whitespace-nowrap">آخر دفعة</th>
                       <th className="text-right py-3 px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500 whitespace-nowrap">الدفعة القادمة</th>
                       <th className="text-right py-3 px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500 whitespace-nowrap">بدء الاشتراك</th>
@@ -2345,12 +2376,18 @@ export default function MonthlySubscriptionsDashboardPage() {
                                     "h-7 text-[11px] w-full border-gray-200 bg-white/90 py-0",
                                     s.status === "ACTIVE" && "text-brand border-brand/20",
                                     s.status === "PAUSED" && "text-brand-orange border-brand-orange/20",
-                                    s.status === "CANCELLED" && "text-slate-700 border-slate-200"
+                                    s.status === "CANCELLED" && "text-slate-700 border-slate-200",
+                                    s.status === "PAYMENT_FAILED" && "text-red-700 border-red-200"
                                   )}
                                 >
                                   <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent dir="rtl">
+                                  {/* Set by the scheduler when the retry ladder is exhausted;
+                                      an admin moves it back to نشطة once the card is fixed. */}
+                                  <SelectItem value="PAYMENT_FAILED" className="text-xs" disabled>
+                                    تعذّر الخصم
+                                  </SelectItem>
                                   <SelectItem value="ACTIVE" className="text-xs">
                                     نشطة
                                   </SelectItem>
@@ -2364,6 +2401,29 @@ export default function MonthlySubscriptionsDashboardPage() {
                               </Select>
                               {subsStatusUpdatingId === s.id && (
                                 <Loader2 className="w-4 h-4 shrink-0 animate-spin text-brand" />
+                              )}
+                            </div>
+                            {/* Local status vs the payment provider's — a mismatch is shown, never hidden. */}
+                            <div className="mt-1 text-[10px] leading-4">
+                              {providerChecks[s.id]?.loading ? (
+                                <span className="text-slate-400">جاري التحقق…</span>
+                              ) : providerChecks[s.id]?.result ? (
+                                (() => {
+                                  const r = providerChecks[s.id]!.result!;
+                                  if (r.error) return <span className="font-bold text-red-700">تعذّر التحقق: {r.error}</span>;
+                                  if (r.rail !== "STRIPE") return <span className="text-slate-500">{r.rail === "ALBARAKA" ? "جدولة داخلية (البركة)" : "لا يوجد اشتراك لدى مزوّد"}</span>;
+                                  return r.inSync ? (
+                                    <span className="text-emerald-700">Stripe: {r.providerStatus}{r.providerPaused ? " (موقوف)" : ""} ✓</span>
+                                  ) : (
+                                    <span className="font-bold text-red-700">
+                                      SYNC ERROR — Stripe: {r.providerStatus}{r.providerPaused ? " (موقوف)" : ""}
+                                    </span>
+                                  );
+                                })()
+                              ) : (
+                                <button type="button" className="text-brand underline-offset-2 hover:underline" onClick={() => void checkProviderState(s.id)}>
+                                  تحقق من المزوّد
+                                </button>
                               )}
                             </div>
                           </td>
@@ -2387,6 +2447,9 @@ export default function MonthlySubscriptionsDashboardPage() {
                             ) : (
                               <span className="text-slate-400">—</span>
                             )}
+                          </td>
+                          <td className="py-2.5 px-3 text-slate-600 align-top whitespace-nowrap">
+                            {FREQUENCY_LABEL_AR[s.frequency ?? "MONTHLY"] ?? "شهري"}
                           </td>
                           <td className="py-2.5 px-3 text-slate-600 align-top whitespace-nowrap">
                             {s.lastBillingDate

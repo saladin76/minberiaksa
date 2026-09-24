@@ -2121,5 +2121,18 @@
     "track4Text": "Administrative and technical work done from anywhere in the world.",
     "track5Title": "Foundation Representative in Your Country",
     "track5Text": "Representing the foundation officially in your country and following up its activities and donors there."
+  },
+  "Recurring": {
+    "nextChargeOn": "次回の決済：{date}",
+    "firstChargeOn": "初回の決済：{date}",
+    "firstChargeToday": "今すぐ決済され、その後{cadence}",
+    "planScheduledTitle": "継続寄付の設定が完了しました",
+    "planScheduledLead": "カードは保存され、まだ決済は行われていません。初回の決済は{date}です。",
+    "planActiveLead": "同じ金額が{cadence}決済されます。次回の決済：{date}。",
+    "cadenceDaily": "毎日",
+    "cadenceFriday": "毎週金曜日",
+    "cadenceMonthly": "毎月",
+    "stripeNotReady": "決済フォームを読み込んでいます。しばらくしてからもう一度お試しください。",
+    "subscriptionPaymentFailed": "決済に失敗しました — カード情報を更新してください"
   }
 }

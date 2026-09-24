@@ -88,13 +88,25 @@ export default function PaymentGatewaysPage() {
       ? String(e.response.data.error)
       : fallback;
 
+  /** Explicit confirmation for a change to where donors' money goes. Returns the
+   * reason (possibly empty), or null when the admin cancels. */
+  const confirmPaymentChange = (what: string): string | null =>
+    window.prompt(
+      `تنبيه: أنت على وشك تغيير مسار الدفع الفعلي لجميع التبرعات الجديدة.\n\n${what}\n\nاكتب سبب التغيير (اختياري) ثم اضغط «موافق» للتأكيد، أو «إلغاء» للتراجع.`,
+      ""
+    );
+
   const handleSelectGateway = async (next: MainGateway) => {
     if (next === mainGateway || savingGateway) return;
+    const nextName = MAIN_GATEWAY_CARDS.find((g) => g.value === next)?.name ?? next;
+    const currentName = MAIN_GATEWAY_CARDS.find((g) => g.value === mainGateway)?.name ?? mainGateway;
+    const reason = confirmPaymentChange(`البوابة الرئيسية: ${currentName} ← ${nextName}`);
+    if (reason === null) return;
     const prev = mainGateway;
     setMainGateway(next);
     setSavingGateway(true);
     try {
-      await axios.put("/api/global-settings", { mainGateway: next });
+      await axios.put("/api/global-settings", { mainGateway: next, reason });
       toast.success(
         next === "ALBARAKA"
           ? "أصبحت Albaraka هي البوابة الرئيسية"
@@ -109,11 +121,17 @@ export default function PaymentGatewaysPage() {
   };
 
   const handleTogglePayfor = async (next: boolean) => {
+    const reason = confirmPaymentChange(
+      next
+        ? "تفعيل PayFor: ستمر تبرعات الليرة التركية لمرة واحدة عبر PayFor."
+        : "إيقاف PayFor: ستمر تبرعات الليرة التركية عبر البوابة الرئيسية."
+    );
+    if (reason === null) return;
     const prev = payforEnabled;
     setPayforEnabled(next);
     setSavingPayfor(true);
     try {
-      await axios.put("/api/global-settings", { payforEnabled: next });
+      await axios.put("/api/global-settings", { payforEnabled: next, reason });
       toast.success(
         next
           ? "تم تفعيل بوابة PayFor"

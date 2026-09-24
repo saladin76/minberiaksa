@@ -10,6 +10,7 @@ import {
   normalizeDonationCurrencyCode,
 } from "@/lib/exchange/convert-amount-in-currency-to-usd";
 import { getDonorCountryCodeForSnapshot } from "@/lib/donations/donor-country-code";
+import { mintDonationAccessToken } from "@/lib/donations/access-token";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: "2026-03-25.dahlia",
@@ -211,6 +212,7 @@ export async function POST(req: NextRequest) {
 
           const d = await tx.donation.create({
             data: {
+              accessToken: mintDonationAccessToken(),
               amount: totalAmount,
               amountUSD: donationTotalUsd,
               teamSupport,
@@ -344,6 +346,7 @@ export async function POST(req: NextRequest) {
       async (tx) => {
         const d = await tx.donation.create({
           data: {
+            accessToken: mintDonationAccessToken(),
             amount: totalAmount,
             amountUSD: donationTotalUsd,
             teamSupport,

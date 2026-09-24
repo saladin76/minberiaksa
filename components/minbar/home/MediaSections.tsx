@@ -110,7 +110,13 @@ function ReelRail({
       {videos.map((video) => {
         const label = video.title;
         const image = video.thumbnail || (video.youtubeId ? youtubeThumb(video.youtubeId) : null);
-        const playable = Boolean(video.youtubeId);
+        /* A YouTube id plays in the in-site player. A row with only a URL (a
+           film hosted elsewhere) still has something to watch: it opens that
+           URL in a new tab rather than showing a card with no "Watch" at all
+           (`DEPLOYED_VS_DESIGN_AUDIT.md` § P2.4). */
+        const embeddable = Boolean(video.youtubeId);
+        const external = !embeddable && Boolean(video.url);
+        const playable = embeddable || external;
         const tag = video.regionKey ? (t.has(video.regionKey) ? t(video.regionKey) : video.regionKey) : "";
 
         const content = (
@@ -160,7 +166,7 @@ function ReelRail({
           padding: 0,
         };
 
-        return playable ? (
+        return embeddable ? (
           <button
             key={video.id}
             type="button"
@@ -170,6 +176,10 @@ function ReelRail({
           >
             {content}
           </button>
+        ) : external ? (
+          <a key={video.id} href={video.url} target="_blank" rel="noopener noreferrer" className="mia-reel" style={{ ...cardStyle, textDecoration: "none" }}>
+            {content}
+          </a>
         ) : (
           <div key={video.id} className="mia-reel" style={cardStyle}>
             {content}
@@ -244,9 +254,15 @@ export function ProgramsRail({ playlists }: { playlists: CmsPlaylist[] }) {
         </div>
         <div id="programs-rail" className="mia-rail" style={railStyle}>
           {playlists.map((program) => (
+            /* Each programme opens its own YouTube playlist — in a new tab,
+               since it leaves the site — and falls back to the programmes
+               page only when the CMS row has no playlist URL. Every card used
+               to land on the same generic page (`DEPLOYED_VS_DESIGN_AUDIT.md`
+               § P2.3). */
             <Link
               key={program.id}
-              href={miaPath("programs", locale)}
+              href={program.youtubePlaylistUrl || miaPath("programs", locale)}
+              {...(program.youtubePlaylistUrl ? { target: "_blank", rel: "noopener noreferrer" } : {})}
               style={{ flex: "0 0 285px", scrollSnapAlign: "start", display: "grid", gap: 10, textDecoration: "none", color: "var(--deep)" }}
             >
               <span style={{ position: "relative", display: "block", width: "100%", aspectRatio: "16/9", borderRadius: 10, overflow: "hidden", background: "var(--sand)", boxShadow: "0 12px 30px rgba(16,33,43,.12)" }}>
@@ -267,6 +283,11 @@ export function ProgramsRail({ playlists }: { playlists: CmsPlaylist[] }) {
                 </span>
               </span>
               <b style={{ fontSize: 15, fontWeight: 900, lineHeight: 1.5 }}>{program.title}</b>
+              {program.description ? (
+                <span style={{ fontSize: 13, lineHeight: 1.7, color: "var(--muted)", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
+                  {program.description}
+                </span>
+              ) : null}
             </Link>
           ))}
         </div>

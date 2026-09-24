@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState, type CSSProperties, type Drag
 import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
 import { miaPath } from "@/lib/minbar/routes";
+import { withDonationToken } from "@/lib/donations/access-token-link";
 import { formatMoney } from "@/lib/minbar/money";
 import { formatIban, type MinbarBank } from "@/lib/minbar/banks";
 import type { DonorClaimView } from "@/lib/donations/bank-transfer-serializers";
@@ -208,10 +209,10 @@ export default function TransferReceiptPage({ claim: initial, bank, token, donor
             {state === "confirmed" ? (
               <div className="pay-card" style={cardBox}>
                 <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-                  <Button variant="primary" href={`/api/donations/${claim.donationId}/receipt?locale=${encodeURIComponent(locale)}`} target="_blank" rel="noopener noreferrer" style={{ whiteSpace: "nowrap" }}>
+                  <Button variant="primary" href={withDonationToken(`/api/donations/${claim.donationId}/receipt?locale=${encodeURIComponent(locale)}`, claim.donationAccessToken)} target="_blank" rel="noopener noreferrer" style={{ whiteSpace: "nowrap" }}>
                     {t("downloadReceipt")}
                   </Button>
-                  <Button variant="light" href={`${miaPath("donationSuccess", locale)}/${claim.donationId}`} style={{ whiteSpace: "nowrap" }}>{t("viewDonation")}</Button>
+                  <Button variant="light" href={withDonationToken(`${miaPath("donationSuccess", locale)}/${claim.donationId}`, claim.donationAccessToken)} style={{ whiteSpace: "nowrap" }}>{t("viewDonation")}</Button>
                   <Button variant="ghost" href={miaPath("account", locale)} style={{ whiteSpace: "nowrap" }}>{t("goToAccount")}</Button>
                 </div>
               </div>

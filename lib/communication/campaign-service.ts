@@ -174,6 +174,47 @@ const TRANSITIONS: Record<CampaignAction, { from: CampaignStatusId[]; to: Campai
   CANCEL: { from: ["DRAFT", "REVIEW", "APPROVED", "SCHEDULED"], to: "CANCELLED" },
 };
 
+/**
+ * Four-eyes rule for large sends: the person who created a campaign may not
+ * also approve it when it would reach at least
+ * `COMMUNICATION_FOUR_EYES_MIN_RECIPIENTS` eligible recipients (default 500).
+ * Set it to 0 to turn the rule off. Smaller campaigns keep the one-person
+ * confirm flow the dashboard was built around.
+ *
+ * The creator is read from the campaign's own creation audit entry, which the
+ * dashboard cannot edit. If the creator is unknown the rule cannot be applied
+ * and approval proceeds as before.
+ */
+export function fourEyesMinRecipients(raw: string | undefined = process.env.COMMUNICATION_FOUR_EYES_MIN_RECIPIENTS): number {
+  if (raw === undefined || raw.trim() === "") return 500;
+  const n = Number(raw);
+  return Number.isFinite(n) && n >= 0 ? Math.floor(n) : 500;
+}
+
+async function separationOfDutiesRefusal(id: string, actor: Actor): Promise<string | null> {
+  const threshold = fourEyesMinRecipients();
+  if (threshold === 0 || !actor?.actorId) return null;
+  const created = await prisma.auditLog
+    .findFirst({
+      where: { entityType: "CommunicationCampaign", entityId: id, action: "communication.campaign.create" },
+      orderBy: { createdAt: "asc" },
+      select: { actorId: true },
+    })
+    .catch(() => null);
+  if (!created?.actorId || created.actorId !== actor.actorId) return null;
+
+  const campaign = await prisma.communicationCampaign.findUnique({
+    where: { id },
+    select: { channel: true, audienceSegmentKey: true },
+  });
+  if (!campaign || !isCommunicationChannel(campaign.channel)) return null;
+  const { getRecipientBreakdown } = await import("./campaign-recipient-service");
+  const breakdown = await getRecipientBreakdown(campaign.channel, { locale: campaign.audienceSegmentKey });
+  const eligible = breakdown.totals.eligible;
+  if (eligible < threshold) return null;
+  return `هذه الحملة تصل إلى ${eligible} مستلم (الحد ${threshold}). يجب أن يعتمدها عضو آخر في الفريق غير منشئها.`;
+}
+
 export async function transitionCampaign(
   id: string,
   action: CampaignAction,
@@ -189,6 +230,10 @@ export async function transitionCampaign(
       return { ok: false, status: 409, error: `Cannot ${action} from ${current.status}.` };
     }
     const actor = opts?.actor;
+    if (action === "APPROVE") {
+      const refusal = await separationOfDutiesRefusal(id, actor ?? null);
+      if (refusal) return { ok: false, status: 403, error: refusal };
+    }
     const row = await prisma.communicationCampaign.update({
       where: { id },
       data: {

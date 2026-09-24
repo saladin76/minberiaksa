@@ -12,7 +12,7 @@ const MAX_REORDER_ITEMS = 300;
 export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    const denied = requireAdminOrDashboardPermission(session, "siteContent");
+    const denied = requireAdminOrDashboardPermission(session, "bankAccounts");
     if (denied) return denied;
 
     const { bankAccounts } = await req.json();

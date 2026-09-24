@@ -97,6 +97,7 @@ export async function GET(request: NextRequest) {
           amountUSD: true,
           currency: true,
           createdAt: true,
+          frequency: true,
           nextBillingDate: true,
           lastBillingDate: true,
           donor: {
@@ -122,6 +123,7 @@ export async function GET(request: NextRequest) {
       amountUSD: s.amountUSD,
       currency: s.currency,
       createdAt: s.createdAt,
+      frequency: s.frequency,
       nextBillingDate: s.nextBillingDate,
       lastBillingDate: s.lastBillingDate,
       donor: s.donor,

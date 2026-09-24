@@ -260,6 +260,19 @@ export async function PUT(request: NextRequest) {
       metadata: {
         changedFields: update.changedFields,
         secretFieldsChanged: update.secretFieldsChanged,
+        // Before/after for the non-secret fields (pixel ids, tag ids, event names), so a
+        // wrong pixel can be traced and reverted. Secrets are never written to the log.
+        plainChanges: Object.fromEntries(
+          update.changedFields
+            .filter((f) => (PLAIN_FIELDS as readonly string[]).includes(f))
+            .map((f) => [
+              f,
+              {
+                before: (existing as Record<string, unknown> | null)?.[f] ?? null,
+                after: (saved as Record<string, unknown> | null)?.[f] ?? null,
+              },
+            ])
+        ),
       },
     });
 

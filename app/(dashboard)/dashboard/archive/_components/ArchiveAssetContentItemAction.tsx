@@ -56,6 +56,9 @@ export function ArchiveAssetContentItemAction({ assetId, fileName, disabled = fa
             التشغيل. Creation still works; the feedback line below is now the whole result. */}
       </div>
       {disabled && disabledReason ? <p className="mt-2 text-xs font-semibold text-slate-500">{disabledReason}</p> : null}
+      <p className="mt-2 text-xs font-semibold text-amber-700">
+        تجريبي: يُحفظ عنصر المحتوى كمقترح فقط، ولا يُنشر ولا توجد حاليًا صفحة لإدارته.
+      </p>
       {feedback ? (
         <p className={`mt-2 rounded-md border px-3 py-2 text-xs font-semibold ${feedback.tone === "success" ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-rose-200 bg-rose-50 text-rose-700"}`}>
           {feedback.message}

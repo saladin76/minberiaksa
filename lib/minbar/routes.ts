@@ -179,6 +179,68 @@ export const NOINDEX_ROUTES: ReadonlySet<MinbarRoute> = new Set<MinbarRoute>([
 ]);
 
 /**
+ * Pages that carry the floating quick-donation pill (`QuickDonate`).
+ *
+ * A central allowlist, not a growing blacklist (`DEPLOYED_VS_DESIGN_AUDIT.md`
+ * § P2.1). The approved design gives the homepage its own quick-donation card
+ * and removes the pill from the pages that already hold a donation module —
+ * projects, zakat, waqf, recurring — and from the blog; the transactional
+ * surfaces (cart, checkout, payment states, documents, account) never had it.
+ * What is left is the reading pages, where a visitor moved to give has no
+ * donation control in reach.
+ */
+export const QUICK_DONATE_ROUTES: ReadonlySet<MinbarRoute> = new Set<MinbarRoute>([
+  "aqsa",
+  "jerusalem",
+  "reports",
+  "reportDetail",
+  "news",
+  "programs",
+  "achievementVideos",
+  "endorsementVideos",
+  "publications",
+  "courses",
+  "zenkiCourse",
+  "about",
+  "contact",
+  "volunteer",
+  "partner",
+]);
+
+/**
+ * The page a pathname belongs to, or `null` for one outside the map (a
+ * dashboard or API path, a category page, a 404). The longest matching slug
+ * wins, so `/projects/x` is `projectDetail` and `/projects` is `projects`.
+ * Locale slugs are tried for the pathname's own locale before the canonical
+ * ones — a locale may give a page its own slug (`slugFor`).
+ */
+export function routeForPathname(pathname: string): MinbarRoute | null {
+  const match = /^\/([a-z]{2})(?:\/(.*))?$/.exec(pathname.replace(/\/+$/, "") || "/");
+  if (!match) return null;
+  const locale = match[1];
+  const rest = match[2] ?? "";
+  if (rest === "") return "home";
+
+  /* A list page and its detail page share a slug; the child segment decides. */
+  const DETAIL_OF: Partial<Record<MinbarRoute, MinbarRoute>> = { projects: "projectDetail", blog: "article", reports: "reportDetail" };
+  const DETAIL_ROUTES = new Set<MinbarRoute>(Object.values(DETAIL_OF) as MinbarRoute[]);
+
+  let best: { route: MinbarRoute; length: number } | null = null;
+  for (const route of Object.keys(SLUGS) as MinbarRoute[]) {
+    if (DETAIL_ROUTES.has(route)) continue;
+    for (const slug of new Set([SLUGS[route], slugFor(route, locale)])) {
+      if (!slug) continue;
+      const exact = rest === slug;
+      const child = rest.startsWith(`${slug}/`);
+      if (!exact && !child) continue;
+      const resolved = child && DETAIL_OF[route] ? DETAIL_OF[route]! : route;
+      if (!best || slug.length > best.length) best = { route: resolved, length: slug.length };
+    }
+  }
+  return best?.route ?? null;
+}
+
+/**
  * Slug for a page — the same in every locale. `locale` is still accepted so
  * the call sites keep reading as "this page, in this locale", which is what
  * they mean, and so nothing has to change if a locale ever needs its own.

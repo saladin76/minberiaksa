@@ -26,6 +26,8 @@ export interface DonorReceiptFile {
 
 export interface DonorClaimView {
   donationId: string;
+  /** The guest's `?t=` for the donation's success page and receipt. */
+  donationAccessToken: string | null;
   status: BankTransferClaimStatus;
   amount: number;
   currency: string;
@@ -75,6 +77,9 @@ function receiptFile(file: ClaimWithDonation["receipts"][number]): DonorReceiptF
 export function serializeClaimForDonor(claim: ClaimWithDonation, locale: string): DonorClaimView {
   return {
     donationId: claim.donationId,
+    /* The guest's key to the success page and receipt once the transfer is
+       confirmed; the claim's own token only opens this upload page. */
+    donationAccessToken: claim.donation.accessToken ?? null,
     status: claim.status,
     amount: claim.donation.totalAmount,
     currency: claim.donation.currency,

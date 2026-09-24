@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import dynamic from "next/dynamic";
 import Image from "next/image";
 import { Link, usePathname, useRouter } from "@/i18n/routing";
-import { appendCurrencyQuery, getCurrencyCodeForLinks } from "@/lib/currency-link";
+import { appendCurrencyQuery, currencyCodeForUrl, getCurrencyCodeForLinks } from "@/lib/currency-link";
 import { useSearchParams } from "next/navigation";
 import { getCurrencySymbol } from "@/hooks/useCampaignValue";
 import { formatNumber } from "@/hooks/formatNumber";
@@ -13,10 +13,14 @@ import { useTranslations } from "next-intl";
 
 const DonationDialog = dynamic(() => import("@/components/DonationDialog"), { ssr: false });
 import CategoryIcon from "@/components/CategoryIcon";
-import { Heart, ShoppingCart, Zap } from "lucide-react";
-import type { SuggestedDonationsConfig } from "@/lib/campaign/suggested-donations";
+import { Share2, ShoppingCart, Zap } from "lucide-react";
+import {
+  parseSuggestedDonations,
+  resolveSuggestedAmountsForCurrency,
+  type SuggestedDonationsConfig,
+} from "@/lib/campaign/suggested-donations";
 import type { SuggestedTeamSupportConfig } from "@/lib/campaign/suggested-team-support";
-import { resolveSharePlural, type ShareLabelsConfig } from "@/lib/campaign/share-labels";
+import type { ShareLabelsConfig } from "@/lib/campaign/share-labels";
 import { useLocale } from "next-intl";
 
 const RESUME_KEY = "campaignDonateResume";
@@ -73,8 +77,13 @@ interface CampaignCardProps {
   listView?: boolean;
 }
 
+/* Four is what the card has room for beside the custom-amount field; the
+   dashboard may configure more, which belong in the dialog, not here. */
+const CARD_AMOUNT_CHIPS = 4;
+
 export function CampaignCard({ campaign, className, onClick, isFeatured = false, listView = false }: CampaignCardProps) {
   const t = useTranslations("CampaignsPage");
+  const tCommon = useTranslations("common");
   const locale = useLocale();
   const { convertToCurrency } = useCurrency();
   const pathname = usePathname();
@@ -84,6 +93,16 @@ export function CampaignCard({ campaign, className, onClick, isFeatured = false,
   const [donationDialogMounted, setDonationDialogMounted] = useState(false);
   const [donationContext, setDonationContext] = useState<DonationDialogCampaignContext | null>(null);
   const [addToCartMode, setAddToCartMode] = useState(false);
+  const [picked, setPicked] = useState<number | null>(null);
+  const [custom, setCustom] = useState("");
+  const [pendingAmount, setPendingAmount] = useState<number | undefined>(undefined);
+  /* The currency helpers read document.cookie, so they answer "USD" on the
+     server and the visitor's real currency in the browser. The amount chips put
+     currency text on every card — where before it only appeared on the few with
+     a fixed goal — which turned that latent disagreement into a hydration
+     mismatch. Render the server's answer through the hydration pass, then swap. */
+  const [currencyReady, setCurrencyReady] = useState(false);
+  useEffect(() => setCurrencyReady(true), []);
 
   const snapshotDonationContext = (): DonationDialogCampaignContext => ({
     goalType: campaign.goalType,
@@ -102,6 +121,25 @@ export function CampaignCard({ campaign, className, onClick, isFeatured = false,
   const isOpenGoal = String(campaign.goalType ?? "").toLowerCase() === "open";
   const hasTargetAmount = Number(campaign.targetAmount) > 0;
   const hideBottomStats = isOpenGoal && !hasTargetAmount;
+
+  /* Quick amounts are for plain money campaigns only. A share campaign counts
+     sheep or meals, and team support has its own step; handing either an
+     `initialDonationAmount` makes the dialog skip straight past the step that
+     asks the real question. Those cards keep the buttons and drop the chips. */
+  /* `suggestedTeamSupport` ships as {amounts: [], byCurrency: {}} on every
+     campaign, so its presence means nothing — only a configured amount does. */
+  const takesPlainAmount =
+    String(campaign.fundraisingMode ?? "").toUpperCase() !== "SHARES" &&
+    !campaign.suggestedTeamSupport?.amounts?.length;
+  const chipAmounts = takesPlainAmount
+    ? resolveSuggestedAmountsForCurrency(
+        parseSuggestedDonations(campaign.suggestedDonations),
+        currencyReady ? getCurrencyCodeForLinks() : currencyCodeForUrl(undefined)
+      ).slice(0, CARD_AMOUNT_CHIPS)
+    : [];
+  /* Same reason as `chipAmounts`: the symbol is cookie-derived. */
+  const chipSymbol = currencyReady ? symbol : "$";
+  const chosenAmount = custom ? Number(custom) : picked;
 
   useEffect(() => {
     if (searchParams.get("openCampaignDonation") !== "1") return;
@@ -136,22 +174,36 @@ export function CampaignCard({ campaign, className, onClick, isFeatured = false,
     router,
   ]);
 
-  const handleDonateClick = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setAddToCartMode(false);
+  const openDialog = (forCart: boolean) => {
+    setAddToCartMode(forCart);
+    setPendingAmount(chosenAmount && chosenAmount > 0 ? chosenAmount : undefined);
     setDonationContext(snapshotDonationContext());
     setDonationDialogMounted(true);
     setDonationOpen(true);
   };
 
+  const handleDonateClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    openDialog(false);
+  };
+
   const handleAddToCartClick = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    setAddToCartMode(true);
-    setDonationContext(snapshotDonationContext());
-    setDonationDialogMounted(true);
-    setDonationOpen(true);
+    openDialog(true);
+  };
+
+  const handleShareClick = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const url = `${window.location.origin}/${locale}${detailHref}`;
+    if (navigator.share) {
+      // A cancelled share rejects; that is a user action, not an error.
+      await navigator.share({ title: campaign.title, url }).catch(() => {});
+    } else if (navigator.clipboard) {
+      await navigator.clipboard.writeText(url).catch(() => {});
+    }
   };
 
   const storeDonationResume = () => {
@@ -200,120 +252,144 @@ export function CampaignCard({ campaign, className, onClick, isFeatured = false,
         </div>
       )}
 
-      {/* ── Card view (always on sm+, always when not listView) ── */}
+      {/* ── Card view (always on sm+, always when not listView) ──
+          The urgent-projects card, in campaign clothing: one field photograph
+          filling the card under a dark scrim, everything else stacked over its
+          lower half. See components/minbar/ProjectDonateCard.tsx — the two are
+          meant to read as the same object across the site. */}
       <div
-        className={`${listView && !isFeatured ? "hidden sm:flex" : "flex"} project-card group/card relative bg-white shape-card overflow-hidden shadow-soft hover:shadow-lift transition-all duration-300 flex-col ${isFeatured ? "ring-1 ring-gold/40" : ""} ${className ?? ""}`}
+        className={`${listView && !isFeatured ? "hidden sm:flex" : "flex"} project-card group/card relative overflow-hidden rounded-2xl bg-deep shadow-soft transition-all duration-300 hover:shadow-lift flex-col ${isFeatured ? "min-h-[30rem] ring-1 ring-gold/40" : "min-h-[26.875rem]"} ${className ?? ""}`}
+        /* Not Tailwind's `border-border`: that compiles to hsl(var(--border)),
+           and inside .mia-scope --border is an rgba() — the wrap makes it
+           invalid and the border vanishes. */
+        style={{ border: "1px solid var(--border)" }}
       >
-        {/* Image with title + gold-mark overlaid */}
-        <Link href={detailHref} prefetch={true} onClick={onClick} className="relative flex-1 block">
-          <div className="relative w-full overflow-hidden h-full min-h-[12rem] sm:min-h-[14rem]">
-            <Image
-              src={isFeatured ? buildImgSrc(rawImgSrc, 960, 720) : imgSrc}
-              alt={campaign.title}
-              fill
-              sizes={isFeatured ? "(max-width: 640px) 90vw, 50vw" : "(max-width: 640px) 70vw, (max-width: 1024px) 300px, 25vw"}
-              className="object-cover group-hover/card:scale-105 transition-transform duration-700 ease-out"
-              draggable={false}
-              priority={isFeatured}
-              quality={70}
-            />
+        <Image
+          src={isFeatured ? buildImgSrc(rawImgSrc, 960, 720) : imgSrc}
+          alt={campaign.title}
+          fill
+          sizes={isFeatured ? "(max-width: 640px) 90vw, 50vw" : "(max-width: 640px) 70vw, (max-width: 1024px) 300px, 25vw"}
+          className="object-cover transition-transform duration-700 ease-out group-hover/card:scale-105"
+          draggable={false}
+          priority={isFeatured}
+          quality={70}
+        />
+        <span
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0"
+          style={{
+            background:
+              "linear-gradient(0deg, rgba(16,33,43,.96) 26%, rgba(16,33,43,.72) 52%, rgba(16,33,43,.18) 82%)",
+          }}
+        />
 
-            {/* Bottom gradient scrim (design: image-overlay) */}
-            <div className="image-overlay absolute inset-x-0 bottom-0 h-2/3" />
-
-            {/* Featured badge — top end */}
-            {isFeatured && (
-              <div className="absolute top-5 end-5">
-                <span className="shape-chip inline-flex items-center gap-1.5 bg-burgundy text-white text-[11px] font-black px-3 py-1.5 shadow-soft">
-                  <Zap className="w-3 h-3 fill-white" />
-                  {t("featuredBadge")}
-                </span>
-              </div>
-            )}
-
-            {/* Category label — top start (design places a small white label here) */}
-            {campaign.category?.name && (
-              <span className="absolute top-5 start-5 inline-flex items-center gap-1.5 text-xs font-bold text-white drop-shadow">
-                <CategoryIcon name={campaign.category.icon} className="w-3.5 h-3.5 flex-shrink-0" />
-                <span className="truncate max-w-[8rem]">{campaign.category.name}</span>
-              </span>
-            )}
-
-            {/* gold-mark + title — overlaid at bottom */}
-            <div className={`absolute bottom-0 inset-x-0 ${isFeatured ? "px-5 pb-5" : "px-4 pb-4"}`}>
-              <div className="gold-mark-sm mb-2" />
-              <h3 className={`text-white font-extrabold leading-tight drop-shadow-sm ${isFeatured ? "text-xl lg:text-2xl line-clamp-2" : "text-base sm:text-lg line-clamp-2"}`}>
-                {campaign.title}
-              </h3>
-            </div>
+        {/* Featured badge — top end */}
+        {isFeatured && (
+          <div className="absolute top-3.5 end-3.5 z-10">
+            <span className="shape-chip inline-flex items-center gap-1.5 bg-burgundy px-3 py-1.5 text-[11px] font-black text-white shadow-soft">
+              <Zap className="h-3 w-3 fill-white" />
+              {t("featuredBadge")}
+            </span>
           </div>
-        </Link>
+        )}
 
-        {/* Body — progress + actions */}
-        <div className="space-y-3 p-3.5 sm:p-4">
+        {/* Category chip — top start */}
+        {campaign.category?.name && (
+          <span className="absolute top-3.5 start-3.5 z-10 inline-flex items-center gap-1.5 rounded-full bg-deep/70 px-2.5 py-1 text-[11px] font-black text-white">
+            <CategoryIcon name={campaign.category.icon} className="h-3.5 w-3.5 flex-shrink-0" />
+            <span className="max-w-[8rem] truncate">{campaign.category.name}</span>
+          </span>
+        )}
+
+        {/* Everything else rides the bottom of the photo */}
+        <div className="relative mt-auto grid gap-3 p-[18px]">
+          <Link href={detailHref} prefetch={true} onClick={onClick} className="block text-white">
+            <h3 className={`font-extrabold leading-snug text-white drop-shadow-sm line-clamp-2 ${isFeatured ? "text-xl lg:text-2xl" : "text-[19px]"}`}>
+              {campaign.title}
+            </h3>
+          </Link>
+
           {campaign.showProgress !== false && !hideBottomStats ? (
-            <div className="space-y-2">
-              <div className="flex items-end justify-between gap-2">
-                <div className="min-w-0">
-                  <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400">{t("raised") || "جُمع"}</p>
-                  <p className="text-deep font-black leading-none mt-0.5 whitespace-nowrap tabular-nums">{symbol}{formatNumber(raised)}</p>
-                </div>
-                <div className="text-end min-w-0">
-                  <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400">{t("goal") || "الهدف"}</p>
-                  <p className="text-gray-500 font-semibold leading-none mt-0.5 whitespace-nowrap tabular-nums">{symbol}{formatNumber(target)}</p>
-                </div>
-              </div>
-              <div className="w-full bg-gray-100 rounded-full h-1.5">
-                <div
-                  className="bg-gradient-to-r from-burgundy to-gold rounded-full h-1.5 transition-all duration-500"
+            <div className="grid gap-[7px]">
+              {/* burgundy/gold are the same hex as --red/--gold, which is what
+                  the project card's gradient uses. */}
+              <span className="block h-1 rounded-full bg-white/20">
+                <span
+                  className="block h-full rounded-full bg-gradient-to-l from-burgundy to-gold transition-all duration-500"
                   style={{ width: `${progress}%` }}
                 />
-              </div>
+              </span>
+              <span className="flex justify-between text-[12.5px] text-white/70">
+                <b dir="ltr" className="tabular-nums text-white [unicode-bidi:isolate]">{symbol}{formatNumber(raised)}</b>
+                <span dir="ltr" className="tabular-nums [unicode-bidi:isolate]">{t("goal") || "الهدف"} {symbol}{formatNumber(target)}</span>
+              </span>
             </div>
-          ) : (
-            /* No fixed goal (open goal / shares) — branded "ongoing support" panel
-               so the body is never visually empty between the image and the buttons. */
-            // <div className="flex items-center justify-between gap-3 shape-chip border border-gray-100 bg-offwhite px-3.5 py-2.5">
-            //   <div className="min-w-0 max-sm:flex max-sm:justify-between max-sm:items-center max-sm:w-full">
-            //     <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400">{t("raised") || "جُمع"}</p>
-            //     <p className="text-deep font-black leading-none mt-1 text-lg whitespace-nowrap tabular-nums">{symbol}{formatNumber(raised)}</p>
-            //   </div>
-            //   {/* Shares / open-goal label — hidden on small screens to keep cards compact */}
-            //   <span className="hidden sm:inline-flex items-center gap-1.5 whitespace-nowrap rounded-full bg-burgundy/[0.07] px-3 py-1.5 text-[11px] font-bold text-burgundy">
-            //     <Heart className="w-3.5 h-3.5 fill-burgundy/30" />
-            //     {campaign.fundraisingMode === "SHARES"
-            //       ? resolveSharePlural(campaign.shareLabels ?? null, locale) ?? t("sharesCampaignLabel")
-            //       : t("openGoalLabel")}
-            //   </span>
-            // </div>
-            <></>
+          ) : null}
+
+          {chipAmounts.length > 0 && (
+            <div className="flex flex-wrap gap-[7px]">
+              {chipAmounts.map((value) => {
+                const active = picked === value && !custom;
+                return (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setPicked(value);
+                      setCustom("");
+                    }}
+                    className={`h-[34px] cursor-pointer whitespace-nowrap rounded-full border px-[13px] text-[13px] font-extrabold text-white transition-all duration-150 ${active ? "border-gold bg-gold" : "border-white/30 bg-white/10"}`}
+                  >
+                    <span dir="ltr" className="[unicode-bidi:isolate]">{chipSymbol}{formatNumber(value)}</span>
+                  </button>
+                );
+              })}
+              <input
+                value={custom}
+                onChange={(e) => {
+                  setCustom(e.target.value.replace(/[^0-9]/g, ""));
+                  setPicked(null);
+                }}
+                onClick={(e) => e.stopPropagation()}
+                inputMode="decimal"
+                placeholder={tCommon("freeAmount")}
+                aria-label={tCommon("freeAmount")}
+                /* Grows into whatever the chips leave, which on a card this
+                   narrow is usually a line of its own — squared off rather than
+                   a ragged stub, and wide enough for the longer translations. */
+                className={`h-[34px] min-w-[9ch] flex-[1_1_9ch] rounded-full border bg-white/10 px-3 text-[13px] font-extrabold text-white placeholder:text-white/60 focus:outline-none ${custom ? "border-gold" : "border-white/30"}`}
+              />
+            </div>
           )}
 
-          {/* Action row — Detail + Donate, with cart secondary (design: Detay / Bağış Yap).
-              The Detail link is hidden on mobile (the card image already links to the
-              detail page) so Donate can expand and fill the freed space. */}
-          <div className="flex items-center gap-2 pt-0.5">
-            <Link
-              href={detailHref}
-              onClick={onClick}
-              className="hidden sm:inline-flex shape-button border border-gray-200 px-3.5 py-2 text-[13px] font-semibold text-navy hover:bg-offwhite transition-colors whitespace-nowrap"
-            >
-              {t("details") || "Detay"}
-            </Link>
-            <button
-              onClick={handleAddToCartClick}
-              aria-label={t("addToCart") || "Add to cart"}
-              title={t("addToCart") || "Add to cart"}
-              className="shape-button border border-gray-200 p-2 text-navy hover:bg-offwhite transition-colors flex-shrink-0 sm:ms-auto"
-            >
-              <ShoppingCart className="w-4 h-4" />
-            </button>
+          {/* Donate fills the row; basket and share are the same 42px pair the
+              project cards use, so the action row matches site-wide. */}
+          <div className="flex items-center gap-2">
             <button
               onClick={handleDonateClick}
-              className="shape-button inline-flex items-center justify-center gap-1.5 bg-burgundy hover:bg-burgundyDark px-4 py-2 text-[13px] font-semibold text-white transition-colors group/btn flex-1 sm:flex-none whitespace-nowrap"
+              className="inline-flex h-[42px] flex-1 items-center justify-center rounded-full bg-burgundy text-sm font-black text-white transition-colors hover:bg-burgundyDark"
             >
-              <Heart className="w-3.5 h-3.5 fill-white/30 group-hover/btn:fill-white/60 transition-all flex-shrink-0" />
-              {t("donateNow") || "تبرع الآن"}
+              {tCommon("donateNow")}
+            </button>
+            <button
+              onClick={handleAddToCartClick}
+              data-icon-action=""
+              aria-label={tCommon("addToCart")}
+              title={tCommon("addToCart")}
+              className="grid h-[42px] w-[42px] flex-shrink-0 place-items-center rounded-full border border-white/30 bg-white/10 text-white transition-all duration-150"
+            >
+              <ShoppingCart className="h-[18px] w-[18px]" />
+            </button>
+            <button
+              onClick={handleShareClick}
+              data-icon-action=""
+              aria-label={tCommon("share")}
+              title={tCommon("share")}
+              className="grid h-[42px] w-[42px] flex-shrink-0 place-items-center rounded-full border border-white/30 bg-white/10 text-white transition-all duration-150"
+            >
+              <Share2 className="h-[17px] w-[17px]" />
             </button>
           </div>
         </div>
@@ -326,8 +402,10 @@ export function CampaignCard({ campaign, className, onClick, isFeatured = false,
           setDonationOpen(false);
           setDonationContext(null);
           setAddToCartMode(false);
+          setPendingAmount(undefined);
         }}
         oneTimeOnly={addToCartMode}
+        initialDonationAmount={pendingAmount}
         campaignId={campaign.id}
         campaignTitle={campaign.title}
         campaignImage={rawImgSrc}

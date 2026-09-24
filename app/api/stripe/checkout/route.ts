@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 import { prisma } from "@/lib/prisma";
+import { withDonationToken } from "@/lib/donations/access-token";
 import Stripe from "stripe";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
@@ -66,7 +67,7 @@ export async function POST(req: NextRequest) {
 
     const isMonthly = Boolean(donation.subscriptionId);
 
-    const successUrl = `${origin}/${locale}/success/${donationId}?session_id={CHECKOUT_SESSION_ID}`;
+    const successUrl = withDonationToken(`${origin}/${locale}/success/${donationId}?session_id={CHECKOUT_SESSION_ID}`, donation.accessToken);
     const cancelUrl = `${origin}/${locale}/campaigns?payment=cancelled&donationId=${encodeURIComponent(donationId)}`;
 
     const metadata: Record<string, string> = {

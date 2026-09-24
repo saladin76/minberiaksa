@@ -3155,5 +3155,18 @@
     "track4Text": "Administrative and technical work done from anywhere in the world.",
     "track5Title": "Foundation Representative in Your Country",
     "track5Text": "Representing the foundation officially in your country and following up its activities and donors there."
+  },
+  "Recurring": {
+    "nextChargeOn": "Penarikan berikutnya: {date}",
+    "firstChargeOn": "Penarikan pertama: {date}",
+    "firstChargeToday": "Ditarik sekarang, lalu {cadence}",
+    "planScheduledTitle": "Donasi rutin Anda telah diatur",
+    "planScheduledLead": "Kartu Anda tersimpan dan belum ada penarikan. Penarikan pertama pada {date}.",
+    "planActiveLead": "Jumlah yang sama akan ditarik {cadence}. Penarikan berikutnya: {date}.",
+    "cadenceDaily": "setiap hari",
+    "cadenceFriday": "setiap Jumat",
+    "cadenceMonthly": "setiap bulan",
+    "stripeNotReady": "Formulir pembayaran masih dimuat — silakan coba lagi sebentar lagi.",
+    "subscriptionPaymentFailed": "Penarikan gagal — perbarui kartu Anda"
   }
 }

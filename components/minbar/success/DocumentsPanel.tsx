@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import type { SuccessDocuments } from "@/lib/certificates/documents";
 import ThanksCertificate from "@/components/minbar/certificates/ThanksCertificate";
 import WaqfCertificateSheet from "@/components/minbar/certificates/WaqfCertificateSheet";
+import { withDonationToken } from "@/lib/donations/access-token-link";
 import ReceiptSheet from "@/components/minbar/certificates/ReceiptSheet";
 import ScaledSheet from "@/components/minbar/certificates/ScaledSheet";
 
@@ -86,11 +87,14 @@ const input: React.CSSProperties = {
 export default function DocumentsPanel({
   documents,
   donationId,
+  accessToken,
   donorName,
   extraButtons,
 }: {
   documents: SuccessDocuments | null;
   donationId: string;
+  /** The guest's `?t=`; every document link carries it. Null for a signed-in owner. */
+  accessToken: string | null;
   /** From checkout — pre-fills the certificate name. */
   donorName: string;
   /** The share button, rendered in the same row. */
@@ -110,13 +114,16 @@ export default function DocumentsPanel({
   const waqfKey = (index: number) => waqf[index].certificateId || String(index);
   const waqfName = (index: number) => waqfNames[waqfKey(index)] ?? waqf[index].donorName;
 
-  const receiptHref = `/api/receipts/${donationId}`;
-  const certificateHref = `/api/certificates/thanks/${donationId}${certName.trim() ? `?name=${encodeURIComponent(certName.trim())}` : ""}`;
+  const receiptHref = withDonationToken(`/api/receipts/${donationId}`, accessToken);
+  const certificateHref = withDonationToken(
+    `/api/certificates/thanks/${donationId}${certName.trim() ? `?name=${encodeURIComponent(certName.trim())}` : ""}`,
+    accessToken
+  );
   const waqfHref = (index: number) => {
     const doc = waqf[index];
     if (!doc.certificateId) return null;
     const name = waqfName(index).trim();
-    return `/api/certificates/waqf/${doc.certificateId}${name ? `?name=${encodeURIComponent(name)}` : ""}`;
+    return withDonationToken(`/api/certificates/waqf/${doc.certificateId}${name ? `?name=${encodeURIComponent(name)}` : ""}`, accessToken);
   };
 
   return (

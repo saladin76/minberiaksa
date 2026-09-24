@@ -3156,5 +3156,18 @@
     "track4Text": "Administrative and technical work done from anywhere in the world.",
     "track5Title": "Foundation Representative in Your Country",
     "track5Text": "Representing the foundation officially in your country and following up its activities and donors there."
+  },
+  "Recurring": {
+    "nextChargeOn": "Nächste Abbuchung: {date}",
+    "firstChargeOn": "Erste Abbuchung: {date}",
+    "firstChargeToday": "Jetzt abgebucht, danach {cadence}",
+    "planScheduledTitle": "Ihre regelmäßige Spende ist eingerichtet",
+    "planScheduledLead": "Ihre Karte ist gespeichert; es wurde noch nichts abgebucht. Die erste Abbuchung erfolgt am {date}.",
+    "planActiveLead": "Derselbe Betrag wird {cadence} abgebucht. Nächste Abbuchung: {date}.",
+    "cadenceDaily": "täglich",
+    "cadenceFriday": "jeden Freitag",
+    "cadenceMonthly": "monatlich",
+    "stripeNotReady": "Das Zahlungsformular lädt noch — bitte versuchen Sie es gleich noch einmal.",
+    "subscriptionPaymentFailed": "Abbuchung fehlgeschlagen — bitte Kartendaten aktualisieren"
   }
 }

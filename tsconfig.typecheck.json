@@ -1,0 +1,9 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "incremental": false
+  },
+  "include": ["types/typecheck/next-env.d.ts", "next.config.ts", "**/*.ts", "**/*.tsx"],
+  "exclude": ["node_modules", ".next", ".integration-test-build", "gozbebekleri", "next-env.d.ts"]
+}

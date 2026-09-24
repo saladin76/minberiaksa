@@ -2121,5 +2121,18 @@
     "track4Text": "Administrative and technical work done from anywhere in the world.",
     "track5Title": "Foundation Representative in Your Country",
     "track5Text": "Representing the foundation officially in your country and following up its activities and donors there."
+  },
+  "Recurring": {
+    "nextChargeOn": "Caj seterusnya: {date}",
+    "firstChargeOn": "Caj pertama: {date}",
+    "firstChargeToday": "Dicaj sekarang, kemudian {cadence}",
+    "planScheduledTitle": "Derma berkala anda telah disediakan",
+    "planScheduledLead": "Kad anda telah disimpan dan belum ada caj dibuat. Caj pertama pada {date}.",
+    "planActiveLead": "Jumlah yang sama akan dicaj {cadence}. Caj seterusnya: {date}.",
+    "cadenceDaily": "setiap hari",
+    "cadenceFriday": "setiap Jumaat",
+    "cadenceMonthly": "setiap bulan",
+    "stripeNotReady": "Borang pembayaran masih dimuatkan — sila cuba lagi sebentar.",
+    "subscriptionPaymentFailed": "Caj gagal — kemas kini kad anda"
   }
 }

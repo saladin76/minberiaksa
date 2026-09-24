@@ -4,14 +4,29 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 import { prisma } from "@/lib/prisma";
 import { requireAdminOrDashboardPermission } from "@/lib/dashboard/api-auth";
 import { auditActorFromDashboardSession, writeAuditLog } from "@/lib/audit-log";
-import { createDonationFromBankTransfer } from "@/lib/donations/bank-transfer-donation";
+import {
+  createDonationFromBankTransfer,
+  type BankTransferDonationFailure,
+} from "@/lib/donations/bank-transfer-donation";
+import { isValidLocale } from "@/lib/locales";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const COLLECTION = "BankTransferTransaction";
 const ALLOWED_STATUSES = new Set(["PENDING_REVIEW", "APPROVED", "IGNORED", "DELETED"]);
-const ALLOWED_LOCALES = new Set(["ar", "tr", "en", "fr", "de", "es", "pt", "id"]);
+/** Why an approval was refused, in the reviewer's language. */
+const APPROVAL_FAILURE_AR: Record<BankTransferDonationFailure, string> = {
+  DATABASE_UNAVAILABLE: "قاعدة البيانات غير متاحة",
+  MISSING_HASH: "العملية بلا معرّف فريد",
+  INVALID_AMOUNT: "قيمة العملية غير صالحة",
+  DONOR_NOT_FOUND: "المتبرع المختار غير موجود",
+  DONOR_CONTACT_NOT_FOUND: "لا يوجد متبرع بهذا البريد أو الهاتف",
+  DONOR_CONTACT_AMBIGUOUS: "أكثر من متبرع بهذا البريد أو الهاتف — حدّد المتبرع يدويًا",
+  CAMPAIGN_NOT_FOUND: "المشروع المختار غير موجود أو محذوف",
+  DONOR_CREATE_FAILED: "تعذّر إنشاء سجل المتبرع",
+  DONATION_CREATE_FAILED: "تعذّر إنشاء التبرع",
+};
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -46,7 +61,13 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     if (finalProject) $set.finalProject = finalProject;
 
     const donorLocale = cleanString(body.donorLocale);
-    if (donorLocale && ALLOWED_LOCALES.has(donorLocale)) $set.donorLocale = donorLocale;
+    if (donorLocale && isValidLocale(donorLocale)) $set.donorLocale = donorLocale;
+
+    // Explicit links chosen by the reviewer. Stored on the transaction so a
+    // "save" before "approve" keeps them.
+    if ("campaignId" in body) $set.campaignId = cleanString(body.campaignId);
+    if ("donorContact" in body) $set.donorContact = cleanString(body.donorContact);
+    if ("donorUserId" in body) $set.donorUserIdChoice = cleanString(body.donorUserId);
 
     const status = cleanString(body.status);
     if (status) {
@@ -84,14 +105,22 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
           reference: pick(doc.reference),
           bankId: pick(doc.bankId),
           bankIban: pick(doc.bankIban),
+          campaignId: "campaignId" in $set ? ($set.campaignId as string | null) : pick(doc.campaignId),
+          donorContact: "donorContact" in $set ? ($set.donorContact as string | null) : pick(doc.donorContact),
+          donorUserId: "donorUserIdChoice" in $set ? ($set.donorUserIdChoice as string | null) : pick(doc.donorUserIdChoice),
         });
-        if (result.ok) {
-          donationId = result.donationId;
-          $set.donationId = result.donationId;
-          $set.donorUserId = result.donorId;
-          $set.convertedToDonation = true;
-          $set.convertedAt = now;
+        if (!result.ok) {
+          // Do not mark the transfer approved when no donation exists behind it.
+          return NextResponse.json(
+            { error: APPROVAL_FAILURE_AR[result.reason], code: result.reason },
+            { status: 422 }
+          );
         }
+        donationId = result.donationId;
+        $set.donationId = result.donationId;
+        $set.donorUserId = result.donorId;
+        $set.convertedToDonation = true;
+        $set.convertedAt = now;
       } else if (doc && typeof doc.donationId === "string") {
         donationId = doc.donationId;
       }
@@ -109,7 +138,14 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       messageAr: status === "DELETED" ? `${actor.actorName ?? "مسؤول"} حذف عملية تحويل بنكي نهائيًا` : `${actor.actorName ?? "مسؤول"} راجع عملية تحويل بنكي`,
       entityType: "BankTransferTransaction",
       entityId: id,
-      metadata: { status: $set.status, donorLocale: $set.donorLocale, finalProject: $set.finalProject, donationId },
+      metadata: {
+        status: $set.status,
+        donorLocale: $set.donorLocale,
+        finalProject: $set.finalProject,
+        campaignId: $set.campaignId,
+        donorUserId: $set.donorUserId,
+        donationId,
+      },
     });
 
     return NextResponse.json({ ok: true, donationId });

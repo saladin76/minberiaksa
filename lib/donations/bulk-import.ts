@@ -2,6 +2,7 @@ import "server-only";
 import crypto from "crypto";
 import * as XLSX from "xlsx";
 import { countryNameToCode } from "@/lib/geo/country-name-to-code";
+import { SUPPORTED_LOCALES, type SupportedLocale } from "@/lib/locales";
 
 /**
  * Bulk donation import — parse an admin-uploaded Excel/CSV export (Turkish headers like the PayFor
@@ -18,8 +19,9 @@ export const IMPORT_ORDER_PREFIX = "BULK:";
 
 export const IMPORT_CURRENCIES = ["USD", "TRY", "EUR"] as const;
 export type ImportCurrency = (typeof IMPORT_CURRENCIES)[number];
-export const IMPORT_LOCALES = ["ar", "tr", "en", "fr", "de", "es", "pt", "id"] as const;
-export type ImportLocale = (typeof IMPORT_LOCALES)[number];
+/** Every site language, from the single locale source (was a local list of 8). */
+export const IMPORT_LOCALES = SUPPORTED_LOCALES;
+export type ImportLocale = SupportedLocale;
 
 export type ParsedDonationRow = {
   rowNumber: number;

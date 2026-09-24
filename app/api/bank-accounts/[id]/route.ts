@@ -19,7 +19,7 @@ export async function GET(
   try {
     const { id } = await params;
     const session = await getServerSession(authOptions);
-    const denied = requireAdminOrDashboardPermission(session, "siteContent");
+    const denied = requireAdminOrDashboardPermission(session, "bankAccounts");
     if (denied) return denied;
 
     const account = await prisma.bankAccount.findUnique({
@@ -42,7 +42,7 @@ export async function PUT(
   try {
     const { id } = await params;
     const session = await getServerSession(authOptions);
-    const denied = requireAdminOrDashboardPermission(session, "siteContent");
+    const denied = requireAdminOrDashboardPermission(session, "bankAccounts");
     if (denied) return denied;
 
     const body = (await request.json()) as Record<string, unknown>;
@@ -63,6 +63,14 @@ export async function PUT(
         { status: 400 }
       );
     }
+
+    // Snapshot for the audit trail: an IBAN change must be traceable to who,
+    // when, and from what to what.
+    const before = await prisma.bankAccount.findUnique({
+      where: { id },
+      select: BANK_ACCOUNT_WITH_CHILDREN_SELECT,
+    });
+    if (!before) return NextResponse.json({ error: "Bank account not found" }, { status: 404 });
 
     const full = await prisma.bankAccount.update({
       where: { id },
@@ -100,6 +108,7 @@ export async function PUT(
       messageAr: `${actor.actorName ?? "مسؤول"} حدّث حسابًا بنكيًا: ${full.name}`,
       entityType: "BankAccount",
       entityId: full.id,
+      metadata: { before, after: full },
     });
 
     return NextResponse.json(full);
@@ -119,12 +128,12 @@ export async function DELETE(
   try {
     const { id } = await params;
     const session = await getServerSession(authOptions);
-    const denied = requireAdminOrDashboardPermission(session, "siteContent");
+    const denied = requireAdminOrDashboardPermission(session, "bankAccounts");
     if (denied) return denied;
 
     const existing = await prisma.bankAccount.findUnique({
       where: { id },
-      select: { id: true, name: true },
+      select: BANK_ACCOUNT_WITH_CHILDREN_SELECT,
     });
     if (!existing) return NextResponse.json({ error: "Bank account not found" }, { status: 404 });
 
@@ -138,6 +147,7 @@ export async function DELETE(
       messageAr: `${actor.actorName ?? "مسؤول"} حذف حسابًا بنكيًا: ${existing.name}`,
       entityType: "BankAccount",
       entityId: existing.id,
+      metadata: { before: existing },
     });
 
     return NextResponse.json({ ok: true });

@@ -2121,5 +2121,18 @@
     "track4Text": "Administrative and technical work done from anywhere in the world.",
     "track5Title": "Foundation Representative in Your Country",
     "track5Text": "Representing the foundation officially in your country and following up its activities and donors there."
+  },
+  "Recurring": {
+    "nextChargeOn": "अगली कटौती: {date}",
+    "firstChargeOn": "पहली कटौती: {date}",
+    "firstChargeToday": "अभी कटौती होगी, फिर {cadence}",
+    "planScheduledTitle": "आपका नियमित दान सेट हो गया है",
+    "planScheduledLead": "आपका कार्ड सहेज लिया गया है और अभी कोई राशि नहीं काटी गई है। पहली कटौती {date} को होगी।",
+    "planActiveLead": "यही राशि {cadence} काटी जाएगी। अगली कटौती: {date}।",
+    "cadenceDaily": "हर दिन",
+    "cadenceFriday": "हर शुक्रवार",
+    "cadenceMonthly": "हर महीने",
+    "stripeNotReady": "भुगतान फ़ॉर्म अभी लोड हो रहा है — कृपया कुछ क्षण बाद पुनः प्रयास करें।",
+    "subscriptionPaymentFailed": "कटौती विफल — कृपया अपना कार्ड अपडेट करें"
   }
 }

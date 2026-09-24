@@ -10,6 +10,7 @@ import {
 import { Prisma } from "@prisma/client";
 import { isMainGateway, parseMainGateway } from "@/lib/payment-gateway";
 import { albarakaConfig, isAlbarakaConfigured } from "@/lib/albaraka";
+import { auditActorFromDashboardSession, writeAuditLog } from "@/lib/audit-log";
 
 /** Fetch the single GlobalSettings record, creating an empty one on first read. */
 async function getOrCreateSettings() {
@@ -132,6 +133,36 @@ export async function PUT(request: NextRequest) {
       data: updateData,
       select: { suggestedTeamSupport: true, payforEnabled: true, mainGateway: true },
     });
+
+    // Gateway settings decide where every new donation's money goes, so each
+    // change is recorded with who, when, what it was, what it became and why.
+    const beforeGateway = parseMainGateway(existing.mainGateway);
+    const afterGateway = parseMainGateway(saved.mainGateway);
+    const beforePayfor = existing.payforEnabled ?? true;
+    const afterPayfor = saved.payforEnabled ?? true;
+    if (session && (beforeGateway !== afterGateway || beforePayfor !== afterPayfor)) {
+      const actor = auditActorFromDashboardSession(session);
+      const reason = typeof body.reason === "string" ? body.reason.trim().slice(0, 500) || null : null;
+      const parts: string[] = [];
+      if (beforeGateway !== afterGateway) parts.push(`البوابة الرئيسية من ${beforeGateway} إلى ${afterGateway}`);
+      if (beforePayfor !== afterPayfor) parts.push(`PayFor ${afterPayfor ? "مفعّل" : "معطّل"} (كان ${beforePayfor ? "مفعّلًا" : "معطّلًا"})`);
+      await writeAuditLog({
+        ...actor,
+        stream: "TEAM",
+        action: "PAYMENT_GATEWAY_UPDATE",
+        messageAr: `${actor.actorName ?? "مسؤول"} غيّر إعدادات الدفع: ${parts.join("، ")}${reason ? ` — السبب: ${reason}` : ""}`,
+        messageEn: `${actor.actorName ?? "Admin"} changed payment settings: gateway ${beforeGateway} → ${afterGateway}, PayFor ${beforePayfor} → ${afterPayfor}`,
+        entityType: "GlobalSettings",
+        entityId: existing.id,
+        metadata: {
+          oldGateway: beforeGateway,
+          newGateway: afterGateway,
+          oldPayforEnabled: beforePayfor,
+          newPayforEnabled: afterPayfor,
+          reason,
+        },
+      });
+    }
 
     return NextResponse.json({
       suggestedTeamSupport: parseSuggestedTeamSupport(saved.suggestedTeamSupport),

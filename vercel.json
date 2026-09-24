@@ -23,6 +23,10 @@
     {
       "path": "/api/cron/reconcile-donations",
       "schedule": "30 3 * * *"
+    },
+    {
+      "path": "/api/cron/recurring-charges",
+      "schedule": "*/15 * * * *"
     }
   ],
   "installCommand": "npm ci"

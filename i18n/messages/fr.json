@@ -3227,5 +3227,18 @@
     "statusConfirmed": "Confirmé",
     "accountAction": "Envoyer le reçu",
     "accountFollow": "Suivre"
+  },
+  "Recurring": {
+    "nextChargeOn": "Prochain prélèvement : {date}",
+    "firstChargeOn": "Premier prélèvement : {date}",
+    "firstChargeToday": "Prélevé maintenant, puis {cadence}",
+    "planScheduledTitle": "Votre don régulier est configuré",
+    "planScheduledLead": "Votre carte est enregistrée et rien n'a encore été prélevé. Le premier prélèvement aura lieu le {date}.",
+    "planActiveLead": "Le même montant sera prélevé {cadence}. Prochain prélèvement : {date}.",
+    "cadenceDaily": "chaque jour",
+    "cadenceFriday": "chaque vendredi",
+    "cadenceMonthly": "chaque mois",
+    "stripeNotReady": "Le formulaire de paiement se charge encore — veuillez réessayer dans un instant.",
+    "subscriptionPaymentFailed": "Prélèvement échoué — veuillez mettre à jour votre carte"
   }
 }

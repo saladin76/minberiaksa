@@ -15,6 +15,8 @@ import {
 } from "@/lib/albaraka";
 import { sendDonationFailedConversions } from "@/lib/tracking/donation-conversion-server";
 import { dispatchDonationPaid, dispatchEvent } from "@/lib/events/dispatch";
+import { nextChargeAt, normalizeTimezone, type RecurringFrequency } from "@/lib/donations/recurring-schedule";
+import { withDonationToken } from "@/lib/donations/access-token";
 
 /**
  * POST /api/albaraka/3d/callback
@@ -118,6 +120,17 @@ export async function POST(req: NextRequest) {
         // donors-who-tried; the browser pixel fires the matching DonateFailed hit
         // with the same `${donationId}_failed` event id for dedup.
         void sendDonationFailedConversions(donationId);
+
+        /* A plan whose first instalment failed was never activated: close it
+           rather than leave an ACTIVE plan with no successful charge for the
+           scheduler to keep billing. A plan that has settled before keeps its
+           status — this callback is only ever its first charge. */
+        if (donation.subscriptionId) {
+          await prisma.subscription.updateMany({
+            where: { id: donation.subscriptionId, lastBillingDate: null },
+            data: { status: "CANCELLED", lastChargeError: reason.slice(0, 300) },
+          });
+        }
       }
     } catch (e) {
       console.error("[Albaraka CALLBACK] failure bookkeeping error:", e);
@@ -135,7 +148,7 @@ export async function POST(req: NextRequest) {
 
     // Idempotency: a duplicate callback for an already-captured donation is a no-op.
     if (donation.paidAt !== null) {
-      return redirect(new URL(`/${locale}/success/${donationId}`, origin));
+      return redirect(new URL(withDonationToken(`/${locale}/success/${donationId}`, donation.accessToken), origin));
     }
 
     // ── 1. MAC verification ──────────────────────────────────────────────────
@@ -275,13 +288,38 @@ export async function POST(req: NextRequest) {
           data: { currentAmount: { increment: item.amountUSD ?? item.amount } },
         });
       }
+
+      /* This was a plan's first instalment: the plan is live from here, and
+         its next charge is computed from this settlement in its own zone. The
+         scheduler (`lib/donations/albaraka-recurring.ts`) takes over. */
+      if (fresh.subscriptionId) {
+        const plan = await tx.subscription.findUnique({
+          where: { id: fresh.subscriptionId },
+          select: { id: true, frequency: true, timezone: true, paymentCardId: true },
+        });
+        if (plan) {
+          const paidAt = new Date();
+          await tx.subscription.update({
+            where: { id: plan.id },
+            data: {
+              status: "ACTIVE",
+              provider: "ALBARAKA",
+              lastBillingDate: paidAt,
+              nextBillingDate: nextChargeAt(plan.frequency as RecurringFrequency, paidAt, normalizeTimezone(plan.timezone)),
+              chargeAttempts: 0,
+              lastChargeError: null,
+            },
+          });
+        }
+      }
       return true;
     });
 
     if (!settled) return redirect(failUrl);
 
     void dispatchDonationPaid(donationId);
-    return redirect(new URL(`/${locale}/success/${donationId}`, origin));
+    if (donation.subscriptionId) void dispatchEvent("SUBSCRIPTION_CREATED", { donationId });
+    return redirect(new URL(withDonationToken(`/${locale}/success/${donationId}`, donation.accessToken), origin));
   } catch (e) {
     console.error("Albaraka callback error:", e);
     return await fail(e instanceof Error ? e.message : "Albaraka callback error");

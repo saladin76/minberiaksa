@@ -36,7 +36,7 @@ export function ArchiveAssetUseInContent({ assetId, fileName }: Props) {
   // Was a link to /dashboard/operations/content, removed with التشغيل. The content item is still
   // created by the same API; there is no page left to open, so this confirms and stops there.
   if (done) {
-    return <span className="text-xs font-bold text-emerald-700">تم إنشاء عنصر المحتوى</span>;
+    return <span className="text-xs font-bold text-emerald-700">حُفظ كمقترح محتوى (تجريبي — لا يُنشر تلقائيًا)</span>;
   }
 
   return (
@@ -45,6 +45,7 @@ export function ArchiveAssetUseInContent({ assetId, fileName }: Props) {
         type="button"
         onClick={run}
         disabled={saving}
+        title="تجريبي: يُحفظ كمقترح محتوى فقط ولا يُنشر"
         className="inline-flex h-8 items-center gap-1.5 rounded-md border border-brand/30 bg-brand/5 px-3 text-xs font-bold text-brand transition hover:bg-brand/10 disabled:opacity-60"
       >
         {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Layers3 className="h-3.5 w-3.5" />}

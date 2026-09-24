@@ -133,7 +133,13 @@ export function SuccessFinalConversionTracker() {
       for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt += 1) {
         if (cancelled) return;
         try {
-          const res = await fetch(`/api/donations/${encodeURIComponent(id)}/tracking`, { cache: "no-store" });
+          /* The guest's access token rides on the success URL (`?t=`); the
+             tracking route reads it under the same rule as the receipt. */
+          const token = new URLSearchParams(window.location.search).get("t");
+          const res = await fetch(
+            `/api/donations/${encodeURIComponent(id)}/tracking${token ? `?t=${encodeURIComponent(token)}` : ""}`,
+            { cache: "no-store" }
+          );
           const data = await res.json().catch(() => null);
           if (data?.ok === true) {
             payload = data;

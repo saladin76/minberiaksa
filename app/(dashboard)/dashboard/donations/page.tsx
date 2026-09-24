@@ -131,8 +131,12 @@ export default function DonationsPage() {
       setDonations(donations.filter(donation => donation.id !== id));
       toast.success('Donation deleted successfully');
     } catch (error) {
-      console.error('Error deleting donation:', error);
-      toast.error('Failed to delete donation');
+      if (axios.isAxiosError(error) && error.response?.status === 409) {
+        toast.error('Paid donations cannot be deleted. Edit it instead.');
+      } else {
+        console.error('Error deleting donation:', error);
+        toast.error('Failed to delete donation');
+      }
     } finally {
       setDeleteLoading(false);
     }
@@ -143,10 +147,19 @@ export default function DonationsPage() {
 
     setDeleteLoading(true);
     try {
-      await Promise.all(selectedDonations.map(id => axios.delete(`/api/donations/${id}`)));
-      setDonations(donations.filter(donation => !selectedDonations.includes(donation.id)));
+      // Paid donations are refused by the API (409), so delete one by one and
+      // keep only what the server actually removed.
+      const results = await Promise.allSettled(
+        selectedDonations.map(id => axios.delete(`/api/donations/${id}`).then(() => id))
+      );
+      const deleted = results
+        .filter((r): r is PromiseFulfilledResult<string> => r.status === 'fulfilled')
+        .map(r => r.value);
+      const refused = results.length - deleted.length;
+      setDonations(donations.filter(donation => !deleted.includes(donation.id)));
       setSelectedDonations([]);
-      toast.success('Donations deleted successfully');
+      if (refused === 0) toast.success('Donations deleted successfully');
+      else toast.error(`${deleted.length} deleted, ${refused} kept (paid donations cannot be deleted)`);
     } catch (error) {
       console.error('Error deleting donations:', error);
       toast.error('Failed to delete donations');

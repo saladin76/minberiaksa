@@ -176,6 +176,8 @@ export default function PixelsSettingsPage() {
   }
 
   async function save() {
+    // Pixel/tag ids and API tokens drive live conversion tracking for every donation.
+    if (!window.confirm("سيؤثر هذا الحفظ على تتبع التحويلات الفعلي لكل التبرعات الجديدة (معرّفات البكسل والمفاتيح). هل تريد المتابعة؟")) return;
     setSaving(true);
     try {
       const payload: Record<string, unknown> = { ...settings };

@@ -3227,5 +3227,18 @@
     "statusConfirmed": "Onaylandı",
     "accountAction": "Dekontu yükle",
     "accountFollow": "Takip et"
+  },
+  "Recurring": {
+    "nextChargeOn": "Sonraki çekim: {date}",
+    "firstChargeOn": "İlk çekim: {date}",
+    "firstChargeToday": "Şimdi çekilir, sonra {cadence}",
+    "planScheduledTitle": "Düzenli bağışınız ayarlandı",
+    "planScheduledLead": "Kartınız kaydedildi, henüz bir çekim yapılmadı. İlk çekim {date} tarihinde.",
+    "planActiveLead": "Aynı tutar {cadence} çekilecek. Sonraki çekim: {date}.",
+    "cadenceDaily": "her gün",
+    "cadenceFriday": "her cuma",
+    "cadenceMonthly": "her ay",
+    "stripeNotReady": "Ödeme formu hâlâ yükleniyor — lütfen birazdan tekrar deneyin.",
+    "subscriptionPaymentFailed": "Çekim başarısız — lütfen kart bilgilerinizi güncelleyin"
   }
 }

@@ -10,10 +10,21 @@ import { sendDonationFailedConversions } from "@/lib/tracking/donation-conversio
 import { dispatchDonationPaid, dispatchEvent } from "@/lib/events/dispatch";
 import { donationFieldEmpty } from "@/lib/donations/mongo-null";
 import { normalizeDonationCurrencyCode } from "@/lib/exchange/convert-amount-in-currency-to-usd";
+import { nextChargeAt, normalizeTimezone, type RecurringFrequency } from "@/lib/donations/recurring-schedule";
+import { mintDonationAccessToken } from "@/lib/donations/access-token";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: "2026-03-25.dahlia",
 });
+
+/**
+ * Our plan for a Stripe subscription id. Plans created by `/api/stripe/charge`
+ * carry it in `stripeSubscriptionId`; older ones (and, for compatibility, new
+ * ones too) in `payforToken`. Either matches.
+ */
+function subscriptionByStripeId(stripeSubscriptionId: string) {
+  return { OR: [{ stripeSubscriptionId }, { payforToken: stripeSubscriptionId }] };
+}
 
 // Stripe removed `invoice.subscription` in API 2024-09-30. The subscription ID
 // now lives under `invoice.parent.subscription_details.subscription`. Read the
@@ -101,7 +112,8 @@ export async function POST(req: NextRequest) {
               await tx.subscription.update({
                 where: { id: subscriptionDbId },
                 data: {
-                  // Reuse payforToken field to store Stripe subscription ID
+                  stripeSubscriptionId: session.subscription as string,
+                  // Older lookup path; kept in step with stripeSubscriptionId.
                   payforToken: session.subscription as string,
                 },
               });
@@ -120,9 +132,8 @@ export async function POST(req: NextRequest) {
         const stripeSubscriptionId = getStripeSubscriptionIdFromInvoice(invoice);
         if (!stripeSubscriptionId) break;
 
-        // Find our DB subscription by Stripe subscription ID (stored in payforToken)
         const dbSubscription = await prisma.subscription.findFirst({
-          where: { payforToken: stripeSubscriptionId },
+          where: subscriptionByStripeId(stripeSubscriptionId),
           include: { items: true, categoryItems: true },
         });
         if (!dbSubscription) break;
@@ -152,22 +163,15 @@ export async function POST(req: NextRequest) {
         const billingReason = ((invoice as any).billing_reason as string | null) ?? null;
         const isSignupInvoice = billingReason === "subscription_create";
 
-        // nextBillingDate = one month after this invoice was paid. Stripe owns the
-        // actual billing cadence (donors can't pick a day); we just mirror it so
-        // the admin UI and cron filters have a usable value. Clamp to the target
-        // month's last day to handle edge cases like the 31st.
-        const nextBillingDate = new Date(Date.UTC(
-          paidAt.getUTCFullYear(),
-          paidAt.getUTCMonth() + 1,
-          1,
-        ));
-        const lastDay = new Date(Date.UTC(
-          nextBillingDate.getUTCFullYear(),
-          nextBillingDate.getUTCMonth() + 1,
-          0,
-        )).getUTCDate();
-        nextBillingDate.setUTCDate(Math.min(paidAt.getUTCDate(), lastDay));
-        nextBillingDate.setUTCHours(0, 0, 0, 0);
+        // nextBillingDate mirrors Stripe's cadence for the admin UI and the
+        // donor's account: one day, one Friday or one month after this invoice
+        // was paid, resolved in the plan's own timezone (a shorter month charges
+        // on its last day). Stripe owns the actual billing; this is the mirror.
+        const nextBillingDate = nextChargeAt(
+          dbSubscription.frequency as RecurringFrequency,
+          paidAt,
+          normalizeTimezone(dbSubscription.timezone)
+        );
 
         const fees = (dbSubscription.amount + dbSubscription.teamSupport) * 0.03;
         const finalTotal =
@@ -198,6 +202,17 @@ export async function POST(req: NextRequest) {
           // `{ paidAt: null }` does not match an absent field on MongoDB. That mismatch is what
           // made this handler miss the row it had already created and insert a duplicate
           // donation for an invoice it had just recorded — see lib/donations/mongo-null.ts.
+          //
+          // A Friday plan is anchored to its first Friday with nothing charged at sign-up, so
+          // Stripe's first real invoice for it is a `subscription_cycle`, not a
+          // `subscription_create`. It is still the plan's first settlement, and the checkout
+          // row is still waiting for it — so the fallback also fires when nothing under this
+          // plan has ever settled.
+          const settledBefore = await tx.donation.findFirst({
+            where: { subscriptionId: dbSubscription.id, paidAt: { not: null } },
+            select: { id: true },
+          });
+          const isFirstSettlement = isSignupInvoice || !settledBefore;
           const existingPending =
             (await tx.donation.findFirst({
               where: {
@@ -207,7 +222,7 @@ export async function POST(req: NextRequest) {
                 ],
               },
             })) ??
-            (isSignupInvoice
+            (isFirstSettlement
               ? await tx.donation.findFirst({
                   where: {
                     AND: [
@@ -237,6 +252,7 @@ export async function POST(req: NextRequest) {
             // Recurring invoice: create a new PAID donation record
             await tx.donation.create({
               data: {
+                accessToken: mintDonationAccessToken(),
                 amount: dbSubscription.amount,
                 // NEVER fall back to the raw local amount: that writes e.g. a ₺-denominated
                 // number into the USD column, inflating revenue ~34x. If the subscription is
@@ -339,7 +355,7 @@ export async function POST(req: NextRequest) {
         if (!stripeSubscriptionId) break;
 
         const dbSubscription = await prisma.subscription.findFirst({
-          where: { payforToken: stripeSubscriptionId },
+          where: subscriptionByStripeId(stripeSubscriptionId),
         });
         if (!dbSubscription) break;
 
@@ -361,6 +377,7 @@ export async function POST(req: NextRequest) {
 
         const failedRecurring = await prisma.donation.create({
           data: {
+            accessToken: mintDonationAccessToken(),
             amount: dbSubscription.amount,
             // NEVER fall back to the raw local amount: that writes e.g. a ₺-denominated
                 // number into the USD column, inflating revenue ~34x. If the subscription is
@@ -514,11 +531,37 @@ export async function POST(req: NextRequest) {
         break;
       }
 
+      case "customer.subscription.updated": {
+        // Reconciles pause/resume, whether it was done from the dashboard
+        // (which calls Stripe first) or directly in the Stripe dashboard.
+        // Cancellation arrives as customer.subscription.deleted below.
+        const stripeSub = event.data.object as Stripe.Subscription;
+        if (stripeSub.status === "canceled") break;
+        const dbSubscription = await prisma.subscription.findFirst({
+          where: subscriptionByStripeId(stripeSub.id),
+          select: { id: true, status: true },
+        });
+        if (!dbSubscription || dbSubscription.status === "CANCELLED") break;
+        const pausedAtStripe = Boolean(stripeSub.pause_collection);
+        if (pausedAtStripe && dbSubscription.status === "ACTIVE") {
+          await prisma.subscription.update({
+            where: { id: dbSubscription.id },
+            data: { status: "PAUSED" },
+          });
+        } else if (!pausedAtStripe && dbSubscription.status === "PAUSED" && stripeSub.status === "active") {
+          await prisma.subscription.update({
+            where: { id: dbSubscription.id },
+            data: { status: "ACTIVE" },
+          });
+        }
+        break;
+      }
+
       case "customer.subscription.deleted": {
         // Stripe subscription cancelled
         const stripeSub = event.data.object as Stripe.Subscription;
         const dbSubscription = await prisma.subscription.findFirst({
-          where: { payforToken: stripeSub.id },
+          where: subscriptionByStripeId(stripeSub.id),
         });
         if (dbSubscription) {
           await prisma.subscription.update({

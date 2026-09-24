@@ -13,6 +13,13 @@ import {
   auditStreamForRole,
 } from '@/lib/audit-log';
 import { reconcileStripeDonation } from "@/lib/donations/reconcile-stripe-donation";
+import { DONATION_TOKEN_PARAM, donationTokenMatches } from "@/lib/donations/access-token";
+import {
+  applyPlanStatusAtProvider,
+  ProviderSyncError,
+  type PlanStatus,
+  type ProviderResult,
+} from "@/lib/donations/subscription-provider-control";
 import {
   recomputeCampaignCurrentAmount as sharedRecomputeCampaign,
   recomputeCategoryCurrentAmount as sharedRecomputeCategory,
@@ -62,6 +69,7 @@ export async function GET(
         subscription: {
           select: {
             status: true,
+            frequency: true,
             nextBillingDate: true,
             lastBillingDate: true,
           },
@@ -102,15 +110,19 @@ export async function GET(
       );
     }
 
-    // Guest donations have no session — the unguessable donation id acts as
-    // the access token (same posture as Stripe checkout session IDs). For
-    // authenticated users, still require ownership or revenue-dashboard
-    // permission to prevent cross-account snooping.
-    if (session) {
-      const canViewAllDonations =
-        userHasDashboardPermission(session.user, 'revenue') ||
-        userHasDashboardPermission(session.user, 'donationsEdit');
-      if (!canViewAllDonations && session.user.id !== donation.donorId) {
+    // A signed-in owner or a dashboard user is let in by their session. Anyone
+    // else — a guest, or a signed-in non-owner — needs the donation's access
+    // token (`?t=`): the id alone is an identifier, not a secret, and this
+    // response carries the donor's name, contact details and amount
+    // (`DEPLOYED_VS_DESIGN_AUDIT.md` § P1.2).
+    const canViewAllDonations =
+      Boolean(session) &&
+      (userHasDashboardPermission(session!.user, 'revenue') ||
+        userHasDashboardPermission(session!.user, 'donationsEdit'));
+    const isOwner = Boolean(session) && session!.user.id === donation.donorId;
+    if (!canViewAllDonations && !isOwner) {
+      const presented = request.nextUrl.searchParams.get(DONATION_TOKEN_PARAM);
+      if (!donationTokenMatches(donation.accessToken, presented)) {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
       }
     }
@@ -125,6 +137,8 @@ export async function GET(
       paymentMethod: donation.paymentMethod ?? 'CARD',
       paymentStatus: donation.status,
       subscriptionStatus: sub?.status ?? null,
+      /** DAILY | FRIDAY | MONTHLY on a plan; null on a one-time gift. */
+      frequency: sub?.frequency ?? null,
       nextBillingDate: sub?.nextBillingDate ?? null,
       lastBillingDate: sub?.lastBillingDate ?? null,
     };
@@ -163,7 +177,15 @@ export async function PUT(
       include: {
         items: true,
         subscription: {
-          select: { id: true, status: true, nextBillingDate: true, lastBillingDate: true },
+          select: {
+            id: true,
+            status: true,
+            nextBillingDate: true,
+            lastBillingDate: true,
+            provider: true,
+            stripeSubscriptionId: true,
+            payforToken: true,
+          },
         },
       },
     });
@@ -210,7 +232,7 @@ export async function PUT(
         omit: { cardDetails: true },
         include: {
           donor: { select: { name: true, email: true, image: true } },
-          subscription: { select: { status: true, nextBillingDate: true, lastBillingDate: true } },
+          subscription: { select: { status: true, frequency: true, nextBillingDate: true, lastBillingDate: true } },
           items: { include: { campaign: { select: { title: true, images: true, translations: { select: { locale: true, title: true } } } } } },
           categoryItems: { include: { category: { select: { name: true, image: true, translations: { select: { locale: true, name: true } } } } } },
         },
@@ -240,6 +262,30 @@ export async function PUT(
       );
     }
 
+    if (sub.status === 'CANCELLED' && updates.status && updates.status !== 'CANCELLED') {
+      return NextResponse.json(
+        { error: 'A cancelled plan cannot be reactivated. Start a new plan instead.' },
+        { status: 409 }
+      );
+    }
+
+    // Change the plan at the payment provider first; only a confirmed change
+    // is written locally. See lib/donations/subscription-provider-control.ts.
+    let providerResult: ProviderResult | null = null;
+    if (updates.status) {
+      try {
+        providerResult = await applyPlanStatusAtProvider(sub, updates.status as PlanStatus);
+      } catch (err) {
+        if (err instanceof ProviderSyncError) {
+          return NextResponse.json(
+            { error: err.message, code: err.code, providerConfirmed: false },
+            { status: err.httpStatus }
+          );
+        }
+        throw err;
+      }
+    }
+
     await prisma.subscription.update({
       where: { id: currentDonation.subscriptionId },
       data: updates,
@@ -259,7 +305,13 @@ export async function PUT(
       entityId: currentDonation.subscriptionId!,
       metadata: {
         donationId: id,
-        ...(updates.status !== undefined && { status: updates.status }),
+        ...(updates.status !== undefined && {
+          before: sub.status,
+          status: updates.status,
+          rail: providerResult?.rail,
+          providerStatus: providerResult?.providerStatus,
+          providerPaused: providerResult?.providerPaused,
+        }),
       },
       stream: subStream,
     });
@@ -361,6 +413,21 @@ export async function DELETE(
       return NextResponse.json(
         { error: 'Donation not found' },
         { status: 404 }
+      );
+    }
+
+    /* Financial records are append-only. A donation with `paidAt` is money that
+       was received: it may carry a receipt, a certificate, a provider charge and
+       campaign revenue. It is corrected through PATCH (status/amount/items, with
+       audit), never erased. Only never-paid rows (abandoned checkouts, FAILED
+       charges, unconfirmed transfers) may be removed. */
+    if (donation.paidAt !== null) {
+      return NextResponse.json(
+        {
+          error: 'FINANCIAL_RECORD_IMMUTABLE',
+          message: 'A paid donation cannot be deleted. Correct it with an edit instead.',
+        },
+        { status: 409 }
       );
     }
 

@@ -6,12 +6,15 @@ import {
   resolveStatementColumns,
   type ResolvedColumns,
 } from "./statement-columns";
+// Relative, not "@/": the integration-test build compiles this file without path aliases.
+import { SUPPORTED_LOCALES, type SupportedLocale } from "../locales";
 
 export const BANK_TRANSFER_CURRENCIES = ["USD", "TRY", "EUR"] as const;
-export const BANK_TRANSFER_DONOR_LOCALES = ["ar", "tr", "en", "fr", "de", "es", "pt", "id"] as const;
+/** Every site language — one source, so it cannot drift to a subset again. */
+export const BANK_TRANSFER_DONOR_LOCALES = SUPPORTED_LOCALES;
 
 export type BankTransferCurrency = (typeof BANK_TRANSFER_CURRENCIES)[number];
-export type BankTransferDonorLocale = (typeof BANK_TRANSFER_DONOR_LOCALES)[number];
+export type BankTransferDonorLocale = SupportedLocale;
 
 export type ParsedBankTransferRow = {
   rowNumber: number;

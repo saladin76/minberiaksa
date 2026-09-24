@@ -14,7 +14,7 @@ import { requireAdminOrDashboardPermission } from "@/lib/dashboard/api-auth";
 export async function GET() {
   try {
     const session = await getServerSession(authOptions);
-    const denied = requireAdminOrDashboardPermission(session, "siteContent");
+    const denied = requireAdminOrDashboardPermission(session, "bankAccounts");
     if (denied) return denied;
 
     const rows = await prisma.bankAccount.findMany({

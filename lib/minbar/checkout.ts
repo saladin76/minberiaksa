@@ -1,5 +1,6 @@
 import type { MinbarCartItem } from "./cart";
 import type { MinbarProject } from "./projects";
+import { orderTypeForItems, type OrderType } from "@/lib/donations/recurring-schedule";
 
 /**
  * The Minbar checkout's payment driver.
@@ -63,6 +64,11 @@ export interface CreateDonationInput {
 
 export interface CreatedDonation {
   id: string;
+  /**
+   * The guest's key to the success page and documents, carried as `?t=`.
+   * A signed-in donor is let in by their session and it is harmless to them.
+   */
+  accessToken: string | null;
   /** Set when the cart contained a recurring item and a plan was created. */
   subscriptionId: string | null;
   /**
@@ -126,13 +132,30 @@ export function toOrderItems(
 }
 
 /**
- * Whether the cart is a recurring plan.
+ * The one type the order carries: `ONE_TIME`, or the cadence of the plan.
  *
  * The order API takes one type for the whole order, so a cart holding any
- * recurring row is a subscription. The cart page does not let the two be mixed.
+ * recurring row is a plan at that row's cadence; the cart page does not let
+ * cadences mix. This used to return `MONTHLY` for every recurring row, so a
+ * donor who chose "daily" or "every Friday" was billed monthly — the contract
+ * mismatch in `DEPLOYED_VS_DESIGN_AUDIT.md` § P0.2. The mapping now lives in
+ * `lib/donations/recurring-schedule.ts` and is pinned by its tests.
  */
-export function orderType(items: readonly MinbarCartItem[]): "ONE_TIME" | "MONTHLY" {
-  return items.some((item) => item.freqKey !== "once") ? "MONTHLY" : "ONE_TIME";
+export function orderType(items: readonly MinbarCartItem[]): OrderType {
+  return orderTypeForItems(items);
+}
+
+/**
+ * The browser's IANA zone, for the plan's Friday / month-day resolution. The
+ * server validates it and falls back to UTC; it is never used for the charge
+ * itself, only to say which day "Friday" is for this donor.
+ */
+export function browserTimezone(): string {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+  } catch {
+    return "UTC";
+  }
 }
 
 /**
@@ -154,6 +177,7 @@ export async function createDonation(input: CreateDonationInput): Promise<Create
       ...(waqfItems.length ? { waqfItems } : {}),
       currency: input.currency,
       type: orderType(input.items),
+      timezone: browserTimezone(),
       paymentMethod: input.method,
       locale: input.locale,
       ...(input.referralCode ? { referralCode: input.referralCode } : {}),
@@ -175,7 +199,7 @@ export async function createDonation(input: CreateDonationInput): Promise<Create
 
   const payload = (await response.json().catch(() => null)) as
     | {
-        donation?: { id: string };
+        donation?: { id: string; accessToken?: string | null };
         subscription?: { id: string };
         bankTransfer?: { accessToken: string };
         error?: string;
@@ -188,6 +212,7 @@ export async function createDonation(input: CreateDonationInput): Promise<Create
 
   return {
     id: payload.donation.id,
+    accessToken: payload.donation.accessToken ?? null,
     subscriptionId: payload.subscription?.id ?? null,
     bankTransferToken: payload.bankTransfer?.accessToken ?? null,
   };
@@ -270,8 +295,16 @@ export async function markDonationFailed(donationId: string, reason: string): Pr
   }
 }
 
-/** Confirm a Stripe donation through the site's own charge route. */
-export async function chargeWithStripe(donationId: string, locale: string): Promise<{ clientSecret?: string }> {
+/**
+ * Ask the site's own charge route for the Stripe PaymentIntent secret.
+ *
+ * The route creates a PaymentIntent for a one-time gift and a real monthly
+ * Stripe Subscription for a monthly plan (its first invoice's intent is what
+ * comes back); the browser then confirms with `stripe.js`, so card data goes
+ * from the donor to Stripe and never through this origin. Daily and Friday
+ * plans never reach Stripe — they run on Albaraka.
+ */
+export async function chargeWithStripe(donationId: string, locale: string): Promise<{ clientSecret: string }> {
   const response = await fetch("/api/stripe/charge", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -282,6 +315,6 @@ export async function chargeWithStripe(donationId: string, locale: string): Prom
     | { clientSecret?: string; error?: string }
     | null;
 
-  if (!response.ok) throw new Error(payload?.error || "stripe-failed");
-  return { clientSecret: payload?.clientSecret };
+  if (!response.ok || !payload?.clientSecret) throw new Error(payload?.error || "stripe-failed");
+  return { clientSecret: payload.clientSecret };
 }

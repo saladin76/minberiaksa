@@ -76,7 +76,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    const denied = requireAdminOrDashboardPermission(session, "siteContent");
+    const denied = requireAdminOrDashboardPermission(session, "bankAccounts");
     if (denied) return denied;
 
     const data = await request.json();
@@ -119,6 +119,7 @@ export async function POST(request: NextRequest) {
       messageAr: `${actor.actorName ?? "مسؤول"} أضاف حسابًا بنكيًا: ${full.name} (${currencies.map((c) => c.code).join("، ")})`,
       entityType: "BankAccount",
       entityId: full.id,
+      metadata: { after: full },
     });
 
     return NextResponse.json(full, { status: 201 });

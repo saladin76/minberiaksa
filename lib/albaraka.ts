@@ -343,3 +343,153 @@ export function albarakaMdStatusMessage(mdStatus: string): string {
   };
   return table[mdStatus] ?? `Unknown 3D status (${mdStatus || "empty"})`;
 }
+
+// ── Recurring (merchant-initiated) charges ───────────────────────────────────
+//
+// A recurring plan's first instalment is an ordinary 3D payment at checkout. Every
+// later one is charged by the site's scheduler (`lib/donations/albaraka-recurring.ts`)
+// through the bank's direct /Sale — the "Standart Satış" of the document — with the
+// card the donor authorised, flagged `IsRecurring` / `IsMailOrder` so the bank treats
+// it as a merchant-initiated transaction on a stored credential.
+//
+// Two things the document states, and this depends on:
+//   - Non-3D sales need a Non-3D (mail-order) terminal, which the bank provisions
+//     separately from the 3D one; its numbers go in ALBARAKA_RECURRING_TERMINAL_NO /
+//     ALBARAKA_RECURRING_POSNET_ID (falling back to the 3D terminal's).
+//   - The field table marks Cvc2 as required for a standard sale, and CVCs are never
+//     stored here. Recurring transactions are sent without it, as merchant-initiated
+//     transactions are; the bank must have enabled that on the terminal. Until it
+//     has, ALBARAKA_RECURRING_ENABLED stays unset and no scheduler charge is made.
+
+export type AlbarakaRecurringConfig = AlbarakaConfig & {
+  /** Master switch: nothing is charged by the scheduler while this is off. */
+  enabled: boolean;
+};
+
+export function albarakaRecurringConfig(): AlbarakaRecurringConfig {
+  const base = albarakaConfig();
+  return {
+    ...base,
+    terminalNo: process.env.ALBARAKA_RECURRING_TERMINAL_NO ?? base.terminalNo,
+    posnetId: process.env.ALBARAKA_RECURRING_POSNET_ID ?? base.posnetId,
+    enabled: process.env.ALBARAKA_RECURRING_ENABLED === "1",
+  };
+}
+
+export function isAlbarakaRecurringEnabled(cfg: AlbarakaRecurringConfig = albarakaRecurringConfig()): boolean {
+  return cfg.enabled && isAlbarakaConfigured(cfg);
+}
+
+/**
+ * Non-3D orders are exactly 24 characters. The scheduler derives them from the plan
+ * and the cycle it is charging (`albarakaRecurringOrderId`), so a re-run for the same
+ * cycle produces the same id and the bank's own "ORDERID DAHA ONCE KULLANILMIS"
+ * refusal becomes a second line of defence against a double charge.
+ */
+export function albarakaRecurringOrderId(subscriptionId: string, cycleIso: string, attempt: number): string {
+  return crypto
+    .createHash("sha256")
+    .update(`${subscriptionId}:${cycleIso}:${attempt}`, "utf8")
+    .digest("hex")
+    .slice(0, 24)
+    .toUpperCase();
+}
+
+/**
+ * Saved cards keep their expiry as "MM/YY"; the bank wants "YYMM" ("2612" =
+ * December 2026). Empty when the stored value is not a four-digit date.
+ */
+export function albarakaExpiryFromStored(stored: string): string {
+  const digits = String(stored || "").replace(/\D/g, "");
+  if (digits.length !== 4) return "";
+  return `${digits.slice(2, 4)}${digits.slice(0, 2)}`;
+}
+
+/**
+ * A card is usable through the last day of its expiry month. Checked before a
+ * scheduled charge so an expired card fails the plan with a clear reason
+ * instead of a bank decline — and, per `DONATION_LOGIC_SPEC` § 1.3, is the
+ * hook for the "update your card" notice a week ahead.
+ */
+export function isStoredCardExpired(stored: string, now: Date = new Date()): boolean {
+  const digits = String(stored || "").replace(/\D/g, "");
+  if (digits.length !== 4) return true;
+  const month = Number(digits.slice(0, 2));
+  const year = 2000 + Number(digits.slice(2, 4));
+  if (!(month >= 1 && month <= 12)) return true;
+  // First instant of the month after expiry, in UTC — the card is dead from then.
+  const firstInvalid = Date.UTC(year, month, 1);
+  return now.getTime() >= firstInvalid;
+}
+
+/** MACParams the document lists for a standard (non-3D) sale. */
+export const ALBARAKA_NON_SECURE_MAC_PARAMS = "MerchantNo:TerminalNo:CardNo:Cvc2:ExpireDate:Amount";
+
+/**
+ * MAC for a standard /Sale — same construction as the 3D payment MAC (plain SHA256
+ * over the values concatenated without separators, key appended), over the six
+ * parameters the document's MACParams names for it. An absent Cvc2 takes part as
+ * an empty string, the way absent fields do in every other MAC of this API.
+ */
+export function albarakaNonSecureSaleMac(
+  params: { merchantNo: string; terminalNo: string; cardNo: string; cvc2: string; expireDate: string; amount: number },
+  encKey: string
+): string {
+  return sha256Base64(
+    params.merchantNo + params.terminalNo + params.cardNo + params.cvc2 + params.expireDate + String(params.amount) + encKey
+  );
+}
+
+/**
+ * The /Sale body for one scheduled charge. Pure, so the tests can pin the shape
+ * without a bank: the card is a stored credential, so it carries no Cvc2, and the
+ * transaction is declared recurring and mail-order (the bank's own terms for a
+ * merchant-initiated charge without the cardholder present).
+ */
+export function buildAlbarakaRecurringSale(
+  input: {
+    orderId: string;
+    amount: number;
+    currencyCode: AlbarakaCurrencyCode;
+    card: { number: string; expireDate: string; holderName: string };
+  },
+  cfg: AlbarakaRecurringConfig
+): Record<string, unknown> {
+  const mac = albarakaNonSecureSaleMac(
+    {
+      merchantNo: cfg.merchantNo,
+      terminalNo: cfg.terminalNo,
+      cardNo: input.card.number,
+      cvc2: "",
+      expireDate: input.card.expireDate,
+      amount: input.amount,
+    },
+    cfg.encKey
+  );
+  return {
+    ApiType: "JSON",
+    ApiVersion: "V100",
+    MerchantNo: cfg.merchantNo,
+    TerminalNo: cfg.terminalNo,
+    PaymentInstrumentType: "CARD",
+    IsEncrypted: "N",
+    IsTDSecureMerchant: "N",
+    IsMailOrder: "Y",
+    IsRecurring: "Y",
+    CardInformationData: {
+      CardHolderName: input.card.holderName,
+      CardNo: input.card.number,
+      Cvc2: "",
+      ExpireDate: input.card.expireDate,
+    },
+    ThreeDSecureData: null,
+    MAC: mac,
+    MACParams: ALBARAKA_NON_SECURE_MAC_PARAMS,
+    Amount: String(input.amount),
+    CurrencyCode: input.currencyCode,
+    PointAmount: 0,
+    OrderId: input.orderId,
+    InstallmentCount: "0",
+    InstallmentType: "N",
+  };
+}

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { withDonationToken } from "@/lib/donations/access-token";
 // Donate (success) CAPI now fires server-side from `dispatchDonationPaid`
 // the moment the donation flips to PAID — that's the only path that
 // reliably catches donors whose browser never returns from 3DS (mobile
@@ -148,12 +149,12 @@ export async function POST(req: NextRequest) {
         });
       }
 
-      return { ok: true as const };
+      return { ok: true as const, accessToken: donation.accessToken };
     });
 
     if (result.ok) {
       void dispatchDonationPaid(donationId);
-      return NextResponse.redirect(new URL(`/${locale}/success/${donationId}`, origin));
+      return NextResponse.redirect(new URL(withDonationToken(`/${locale}/success/${donationId}`, result.accessToken), origin));
     }
     if (result.reason === "failed") {
       void dispatchEvent("DONATION_FAILED", { donationId });

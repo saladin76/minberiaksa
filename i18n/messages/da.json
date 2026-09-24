@@ -2121,5 +2121,18 @@
     "track4Text": "Administrative and technical work done from anywhere in the world.",
     "track5Title": "Foundation Representative in Your Country",
     "track5Text": "Representing the foundation officially in your country and following up its activities and donors there."
+  },
+  "Recurring": {
+    "nextChargeOn": "Næste trækning: {date}",
+    "firstChargeOn": "Første trækning: {date}",
+    "firstChargeToday": "Trækkes nu, derefter {cadence}",
+    "planScheduledTitle": "Din faste gave er sat op",
+    "planScheduledLead": "Dit kort er gemt, og der er endnu ikke trukket noget. Første trækning sker {date}.",
+    "planActiveLead": "Samme beløb trækkes {cadence}. Næste trækning: {date}.",
+    "cadenceDaily": "hver dag",
+    "cadenceFriday": "hver fredag",
+    "cadenceMonthly": "hver måned",
+    "stripeNotReady": "Betalingsformularen indlæses stadig — prøv igen om et øjeblik.",
+    "subscriptionPaymentFailed": "Trækningen mislykkedes — opdater dit kort"
   }
 }

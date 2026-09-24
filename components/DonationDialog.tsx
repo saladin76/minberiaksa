@@ -1,5 +1,6 @@
 import { Elements } from "@stripe/react-stripe-js";
 import { getStripePromise } from "@/lib/stripe-client";
+import { withDonationToken } from "@/lib/donations/access-token-link";
 import {
   StripePaymentStep,
   type StripePaymentHandle,
@@ -2135,6 +2136,9 @@ const DonationDialog = ({
 
         let targetDonationId: string;
         let clientSecret: string;
+        /* The guest's key to the success page (`?t=`); null on the fallback
+           path, where a signed-in session opens it instead. */
+        let targetToken: string | null = null;
 
         // Re-use fallback intent if PayFor previously failed
         if (fallbackClientSecret && fallbackDonationId) {
@@ -2147,6 +2151,7 @@ const DonationDialog = ({
             return;
           }
           targetDonationId = response.data.donation.id as string;
+          targetToken = (response.data.donation.accessToken as string | null | undefined) ?? null;
 
           const endpoint =
             donationType === "MONTHLY"
@@ -2199,7 +2204,7 @@ const DonationDialog = ({
 
         router.push(
           appendCurrencyQuery(
-            `/success/${targetDonationId}`,
+            withDonationToken(`/success/${targetDonationId}`, targetToken),
             getCurrencyCodeForLinks(),
           ),
         );
@@ -2214,6 +2219,7 @@ const DonationDialog = ({
 
       if (response.data.success) {
         const donationId = response.data.donation.id as string;
+        const donationToken = (response.data.donation.accessToken as string | null | undefined) ?? null;
 
         if (paymentMethod === "CARD" && useBank3D) {
           const newPan = cardDetails.cardNumber.replace(/\s/g, "");
@@ -2402,7 +2408,7 @@ const DonationDialog = ({
         setRedirecting(true);
         router.push(
           appendCurrencyQuery(
-            `/success/${donationId}`,
+            withDonationToken(`/success/${donationId}`, donationToken),
             getCurrencyCodeForLinks(),
           ),
         );

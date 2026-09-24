@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { isValidLocale } from "@/lib/locales";
 import { getServerSession } from "next-auth";
@@ -22,6 +23,18 @@ import { BANK_TRANSFER_PROVIDER } from "@/lib/donations/bank-transfer-shared";
 import { listBankAccounts } from "@/lib/minbar/cms";
 import { getUsdBaseRatesForServer } from "@/lib/exchange/rates-service";
 import { WAQF_MAX_COUNT, WAQF_UNIT_PRICE_USD, isWaqfUnitKey } from "@/lib/minbar/waqf";
+import {
+  consentSnapshotFor,
+  frequencyOfOrderType,
+  isOrderType,
+  nextChargeAt,
+  normalizeTimezone,
+  railForFrequency,
+  scheduleRuleFor,
+} from "@/lib/donations/recurring-schedule";
+import { parseMainGateway } from "@/lib/payment-gateway";
+import { isAlbarakaConfigured, isAlbarakaRecurringEnabled } from "@/lib/albaraka";
+import { mintDonationAccessToken } from "@/lib/donations/access-token";
 
 const PAYMENT_METHODS = new Set(["CARD", "PAYPAL", "BANK_TRANSFER"]);
 
@@ -114,6 +127,9 @@ export async function POST(request: NextRequest) {
       teamSupport = 0,
       coverFees = false,
       type = "ONE_TIME",
+      /* The donor's IANA zone, so "Friday" and "the 15th" are their Friday
+         and their 15th. Validated below; UTC when absent or invalid. */
+      timezone: timezoneIn,
       paymentMethod,
       cardDetails = null,
       referralCode,
@@ -166,11 +182,20 @@ export async function POST(request: NextRequest) {
     if (!PAYMENT_METHODS.has(String(paymentMethod))) {
       return NextResponse.json({ error: "Unsupported payment method" }, { status: 400 });
     }
+    /* One type for the whole order: `ONE_TIME`, or the plan's cadence —
+       `DAILY | FRIDAY | MONTHLY`, exactly as the donor chose it. Anything else
+       is refused rather than coerced; the old code turned every recurring
+       choice into MONTHLY (`DEPLOYED_VS_DESIGN_AUDIT.md` § P0.2). */
+    if (!isOrderType(type)) {
+      return NextResponse.json({ error: "Unsupported donation type" }, { status: 400 });
+    }
+    const frequency = frequencyOfOrderType(type);
+    const timezone = normalizeTimezone(timezoneIn);
     const isBankTransfer = paymentMethod === "BANK_TRANSFER";
     /* A transfer is a one-off act by the donor; nothing can be charged again
-       next month. The checkout hides the option for a recurring basket, and
-       this is the server's half of that rule. */
-    if (isBankTransfer && type === "MONTHLY") {
+       tomorrow, on Friday or next month. The checkout hides the option for a
+       recurring basket, and this is the server's half of that rule. */
+    if (isBankTransfer && frequency) {
       return NextResponse.json({ error: "Bank transfer cannot be used for a recurring donation" }, { status: 400 });
     }
     const lineOk = (line: { amount: unknown }) =>
@@ -394,10 +419,38 @@ export async function POST(request: NextRequest) {
         ? String(donationLocale).toLowerCase()
         : null;
 
-    if (type === "MONTHLY") {
-      const nextBilling = new Date();
-      nextBilling.setUTCMonth(nextBilling.getUTCMonth() + 1);
-      nextBilling.setUTCHours(0, 0, 0, 0);
+    if (frequency) {
+      /* The rail follows the cadence: Stripe keeps one-time + monthly, so a
+         monthly plan runs on the main gateway; daily and Friday plans are
+         Albaraka's (`railForFrequency`). A plan Albaraka would bill needs the
+         scheduler switched on — refusing here is what stops a donor being
+         promised a cadence nothing will ever charge. */
+      const settings = await prisma.globalSettings.findFirst({
+        orderBy: { createdAt: "asc" },
+        select: { mainGateway: true },
+      });
+      const rail = railForFrequency(frequency, parseMainGateway(settings?.mainGateway));
+      if (rail === "ALBARAKA" && !(isAlbarakaConfigured() && isAlbarakaRecurringEnabled())) {
+        return NextResponse.json(
+          { error: "Recurring donations at this frequency are not available at the moment" },
+          { status: 400 }
+        );
+      }
+
+      /* The plan's own clock. `nextBillingDate` is the server's estimate until
+         the first paid instalment replaces it; `consentSnapshot` is what the
+         donor saw and agreed to, and is never rewritten. */
+      const now = new Date();
+      const nextBilling = nextChargeAt(frequency, now, timezone);
+      const consent = consentSnapshotFor({
+        frequency,
+        amount: finalTotalAmount,
+        currency,
+        timezone,
+        rail,
+        locale: validLocale,
+        now,
+      });
 
       const result = await prisma.$transaction(async (tx) => {
         const sub = await tx.subscription.create({
@@ -412,8 +465,17 @@ export async function POST(request: NextRequest) {
             cardDetails: paymentMethod === "CARD" ? cardDetails : null,
             donorId: donorId,
             referralId: referralId ?? undefined,
+            frequency,
+            timezone,
+            provider: rail,
+            /* Plain data, but Prisma's `InputJsonValue` does not accept a
+               named interface without the cast. */
+            scheduleRule: scheduleRuleFor(frequency, now, timezone) as unknown as Prisma.InputJsonValue,
+            consentSnapshot: consent as unknown as Prisma.InputJsonValue,
             nextBillingDate: nextBilling,
-            lastBillingDate: new Date(),
+            /* Stamped when the first instalment actually settles — by the
+               Stripe webhook or the Albaraka callback — never optimistically. */
+            lastBillingDate: null,
             ...campaignLines,
             ...categoryLines,
           },
@@ -421,6 +483,7 @@ export async function POST(request: NextRequest) {
 
         const donation = await tx.donation.create({
           data: {
+            accessToken: mintDonationAccessToken(),
             amount: totalAmount,
             amountUSD: donationTotalUsd,
             teamSupport,
@@ -469,11 +532,11 @@ export async function POST(request: NextRequest) {
         actorId: donorId,
         actorName: donorName,
         actorRole,
-        action: "DONATION_MONTHLY_CHECKOUT_START",
-        messageAr: `${donorName ?? "متبرع"} بدأ عملية دفع اشتراكًا شهريًا عبر السلة (≈ ${donationTotalUsd.toFixed(0)} USD لكل دورة)`,
+        action: "DONATION_RECURRING_CHECKOUT_START",
+        messageAr: `${donorName ?? "متبرع"} بدأ عملية دفع تبرعًا ${frequency === "DAILY" ? "يوميًا" : frequency === "FRIDAY" ? "كل جمعة" : "شهريًا"} عبر السلة (≈ ${donationTotalUsd.toFixed(0)} USD لكل دورة)`,
         entityType: "Donation",
         entityId: d.id,
-        metadata: { amountUSD: donationTotalUsd, via: "cart_payment", status: "PENDING", provider: "PAYFOR" },
+        metadata: { amountUSD: donationTotalUsd, via: "cart_payment", status: "PENDING", provider: "STRIPE", frequency, timezone, nextChargeAt: consent.nextChargeAt },
         stream: auditStreamForRole(actorRole),
       });
 
@@ -496,6 +559,7 @@ export async function POST(request: NextRequest) {
     const donation = await prisma.$transaction(async (tx) => {
       const d = await tx.donation.create({
         data: {
+          accessToken: mintDonationAccessToken(),
           amount: totalAmount,
           amountUSD: donationTotalUsd,
           teamSupport,

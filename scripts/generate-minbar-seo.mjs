@@ -1,15 +1,24 @@
 #!/usr/bin/env node
 /**
- * Emit per-locale SEO copy for the locales the Minbar handoff added, derived
- * from its own translated bundles rather than machine-translating here.
+ * Emit per-locale SEO copy for every public locale, derived from the Minbar
+ * handoff's own translated bundles rather than machine-translating here.
  *
  * Source : Minbar/i18n/<lang>/{homepage,about,contact,blog,projects,common,navigation}.json
  * Target : lib/seo-minbar.generated.ts
  *
+ * This is the ONE source of institutional SEO for all 19 locales. It used to
+ * cover only the 11 locales the handoff promoted, with the original 8 keeping
+ * hand-written entries in `lib/seo.ts` — entries written for the organisation's
+ * earlier Syria programme ("Syrian medical aid", "موثوق منذ 2011 … السوريين").
+ * Those leaked into every page through `buildPageMetadata()`'s keyword fallback.
+ * The handoff bundles carry the current Al-Quds / Al-Aqsa / Gaza copy for all
+ * 19 languages, so every locale now comes from here and the split is gone
+ * (`DEPLOYED_VS_DESIGN_AUDIT.md` § P0.3). `tests/integration-settings/
+ * seo-legacy-contamination.test.ts` fails the build if the old terms return.
+ *
  * `lib/seo.ts` types `LOCALE_SEO` as `Record<Locale, LocaleSEO>` deliberately —
- * enabling a public locale is a compile error until its SEO content exists. This
- * generator fills that in for the 11 locales promoted with the handoff, so the
- * guard keeps working instead of being weakened to a Partial.
+ * enabling a public locale is a compile error until its SEO content exists.
+ * Adding a locale means adding it to LOCALES/OG below and re-running.
  *
  * Re-run after `scripts/sync-minbar-messages.mjs`:  node scripts/generate-minbar-seo.mjs
  */
@@ -19,14 +28,26 @@ import { join } from "node:path";
 const SRC = "Minbar/i18n";
 const OUT = "lib/seo-minbar.generated.ts";
 
-/** The locales this file is responsible for — the ones `lib/seo.ts` lacked. */
-const LOCALES = ["ur", "sq", "it", "nl", "sv", "no", "da", "ms", "ja", "zh", "hi"];
+/** Every public locale, in the order of `lib/locales.ts`. */
+const LOCALES = [
+  "ar", "tr", "en", "fr", "de", "es", "id", "pt",
+  "ur", "sq", "it", "nl", "sv", "no", "da", "ms", "ja", "zh", "hi",
+];
 
 /** OpenGraph locale tags for the same set. */
 const OG = {
+  ar: "ar_SA", tr: "tr_TR", en: "en_US", fr: "fr_FR", de: "de_DE", es: "es_ES",
+  id: "id_ID", pt: "pt_BR",
   ur: "ur_PK", sq: "sq_AL", it: "it_IT", nl: "nl_NL", sv: "sv_SE",
   no: "nb_NO", da: "da_DK", ms: "ms_MY", ja: "ja_JP", zh: "zh_CN", hi: "hi_IN",
 };
+
+/**
+ * Terms from the retired Syria programme. A bundle that still carries one is
+ * refused outright rather than emitted — the point of a single source is that
+ * the contamination cannot come back through it.
+ */
+const LEGACY_TERMS = [/syria/i, /syrian/i, /سوريا/, /سوري/, /سورية/, /suriye/i, /siria/i, /syrien/i, /síria/i, /syrie/i];
 
 if (!existsSync(SRC)) {
   console.error(`[minbar-seo] source not found: ${SRC} — nothing to generate.`);
@@ -65,6 +86,7 @@ const clip = (s, max) => {
 };
 
 const entries = {};
+const contaminated = [];
 
 for (const locale of LOCALES) {
   const home = ns(locale, "homepage");
@@ -102,7 +124,9 @@ for (const locale of LOCALES) {
     },
     about: {
       title: clip(`${pick(nav, "about")} | ${siteName}`, 70),
-      description: clip(describe(pick(about, "lead", "intro", "missionLead"), heroLead), 165),
+      /* `about.mission` is the one-sentence mission statement — the truest
+         description of the About page the bundle has. */
+      description: clip(describe(pick(about, "lead", "intro", "missionLead", "mission"), heroLead), 165),
     },
     contact: {
       title: clip(`${pick(nav, "contact")} | ${siteName}`, 70),
@@ -113,6 +137,16 @@ for (const locale of LOCALES) {
       description: clip(describe(pick(blog, "lead", "intro"), heroLead), 165),
     },
   };
+
+  const flat = JSON.stringify(entries[locale]);
+  for (const term of LEGACY_TERMS) {
+    if (term.test(flat)) contaminated.push(`${locale}: ${term}`);
+  }
+}
+
+if (contaminated.length) {
+  console.error(`[minbar-seo] refusing to write — legacy Syria terms in source bundles:\n  ${contaminated.join("\n  ")}`);
+  process.exit(1);
 }
 
 const banner = `/**
@@ -120,8 +154,8 @@ const banner = `/**
  * Produced by \`scripts/generate-minbar-seo.mjs\` from the Minbar handoff's
  * per-language i18n bundles. Re-run that script instead of editing this.
  *
- * Covers the ${LOCALES.length} locales promoted to public with the Minbar design port;
- * the original 8 keep their hand-written entries in \`lib/seo.ts\`.
+ * The single source of institutional SEO for all ${LOCALES.length} public locales.
+ * \`lib/seo.ts\` re-exports it as \`LOCALE_SEO\` / \`OG_LOCALE_MAP\`.
  */
 `;
 

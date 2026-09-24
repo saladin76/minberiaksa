@@ -3156,5 +3156,18 @@
     "track4Text": "Administrative and technical work done from anywhere in the world.",
     "track5Title": "Foundation Representative in Your Country",
     "track5Text": "Representing the foundation officially in your country and following up its activities and donors there."
+  },
+  "Recurring": {
+    "nextChargeOn": "Próximo cargo: {date}",
+    "firstChargeOn": "Primer cargo: {date}",
+    "firstChargeToday": "Se cobra ahora y luego {cadence}",
+    "planScheduledTitle": "Tu donación periódica está configurada",
+    "planScheduledLead": "Tu tarjeta está guardada y aún no se ha cobrado nada. El primer cargo será el {date}.",
+    "planActiveLead": "Se cobrará el mismo importe {cadence}. Próximo cargo: {date}.",
+    "cadenceDaily": "cada día",
+    "cadenceFriday": "cada viernes",
+    "cadenceMonthly": "cada mes",
+    "stripeNotReady": "El formulario de pago aún se está cargando; inténtalo de nuevo en un momento.",
+    "subscriptionPaymentFailed": "Cobro fallido — actualiza tu tarjeta"
   }
 }

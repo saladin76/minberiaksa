@@ -22,9 +22,8 @@ function getDateRange(period: string, startParam?: string | null, endParam?: str
     ({ startDate, endDate } = istanbulDateKeysToUtcRange(startParam, endParam));
   } else if (period === 'all') {
     endDate = new Date();
-    startDate = new Date(endDate);
-    startDate.setFullYear(startDate.getFullYear() - 10);
-    startDate.setUTCHours(0, 0, 0, 0);
+    // "All time" means every record. It used to be "the last 10 years".
+    startDate = new Date(0);
     endDate.setUTCHours(23, 59, 59, 999);
   } else {
     endDate = endParam ? new Date(endParam + 'T23:59:59.999Z') : new Date();
@@ -367,12 +366,28 @@ export async function GET(request: NextRequest) {
     const campaignDonationsCount = campaignDonationsSum._count?.id ?? 0;
     const categoryDonationsCount = categoryDonationsSum._count?.id ?? 0;
 
-    const donationsForSupportFees = await prisma.donation.findMany({
-      where: paidWhere,
-      select: { amountUSD: true, amount: true, currency: true, totalAmount: true, teamSupport: true, fees: true },
-      take: 100000,
-    });
-    const toUSD = (
+    // Read in fixed-size pages keyed on id instead of one `take: 100000` query: memory
+    // stays flat as the ledger grows, and nothing past row 100,000 is silently dropped
+    // (which "All time" would otherwise hit first).
+    const SUPPORT_FEES_PAGE = 5000;
+    const supportFeesTotals = { teamSupport: 0, fees: 0 };
+    let supportFeesCursor: string | undefined;
+    for (;;) {
+      const page = await prisma.donation.findMany({
+        where: paidWhere,
+        select: { id: true, amountUSD: true, amount: true, currency: true, totalAmount: true, teamSupport: true, fees: true },
+        orderBy: { id: "asc" },
+        take: SUPPORT_FEES_PAGE,
+        ...(supportFeesCursor ? { cursor: { id: supportFeesCursor }, skip: 1 } : {}),
+      });
+      if (page.length === 0) break;
+      const part = toUSD(page);
+      supportFeesTotals.teamSupport += part.teamSupport;
+      supportFeesTotals.fees += part.fees;
+      if (page.length < SUPPORT_FEES_PAGE) break;
+      supportFeesCursor = page[page.length - 1].id;
+    }
+    function toUSD(
       rows: {
         amountUSD: number | null;
         amount: number;
@@ -381,8 +396,8 @@ export async function GET(request: NextRequest) {
         teamSupport?: number | null;
         fees?: number | null;
       }[]
-    ) =>
-      rows.reduce(
+    ) {
+      return rows.reduce(
         (acc, r) => {
           const usd = donationRowUsdApprox(r);
           // `|| 1` was a divide-by-zero guard that silently changed the MEANING of the sum:
@@ -400,7 +415,8 @@ export async function GET(request: NextRequest) {
         },
         { teamSupport: 0, fees: 0 }
       );
-    const { teamSupport: teamSupportTotal, fees: feesTotal } = toUSD(donationsForSupportFees);
+    }
+    const { teamSupport: teamSupportTotal, fees: feesTotal } = supportFeesTotals;
 
     const recentDonationsList = Array.isArray(recentDonations) ? recentDonations : [];
     const recentDonationsFormatted = recentDonationsList.map((d) => ({

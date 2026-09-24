@@ -22,7 +22,8 @@ import {
   convertAmountInCurrencyToUsd,
   getUsdBaseRatesForServer,
 } from "@/lib/exchange/rates-service";
-import { decryptCard } from "@/lib/card-crypto";
+import { decryptCard, detectCardType, encryptCard, hashCvc } from "@/lib/card-crypto";
+import { isAlbarakaRecurringEnabled } from "@/lib/albaraka";
 
 /**
  * POST /api/albaraka/3d/initiate
@@ -92,28 +93,41 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Server-side belt matching the PayFor kill-switch: the dialogs already gate the
-    // UI on the selected main gateway, but a client could still call this directly.
-    const settings = await prisma.globalSettings.findFirst({
-      orderBy: { createdAt: "asc" },
-      select: { mainGateway: true },
-    });
-    if (parseMainGateway(settings?.mainGateway) !== "ALBARAKA") {
-      return NextResponse.json(
-        { error: "Albaraka is not the selected main gateway." },
-        { status: 403 }
-      );
-    }
-
     const body = (await req.json()) as Partial<InitiateBody>;
     const donationId = String(body.donationId || "").trim();
     if (!donationId) {
       return NextResponse.json({ error: "donationId is required" }, { status: 400 });
     }
 
-    const donation = await prisma.donation.findUnique({ where: { id: donationId } });
+    const donation = await prisma.donation.findUnique({
+      where: { id: donationId },
+      include: { subscription: { select: { id: true, frequency: true, provider: true, paymentCardId: true } } },
+    });
     if (!donation) {
       return NextResponse.json({ error: "Donation not found" }, { status: 404 });
+    }
+
+    // Server-side belt matching the PayFor kill-switch: the dialogs already gate the
+    // UI on the selected main gateway, but a client could still call this directly.
+    // A plan is the exception: daily and Friday plans are Albaraka's whatever the
+    // main gateway is (`railForFrequency`), provided the scheduler is switched on.
+    const settings = await prisma.globalSettings.findFirst({
+      orderBy: { createdAt: "asc" },
+      select: { mainGateway: true },
+    });
+    const plan = donation.subscription;
+    if (plan) {
+      if (plan.provider !== "ALBARAKA" || !isAlbarakaRecurringEnabled()) {
+        return NextResponse.json(
+          { error: "This recurring plan is not billed by Albaraka." },
+          { status: 403 }
+        );
+      }
+    } else if (parseMainGateway(settings?.mainGateway) !== "ALBARAKA") {
+      return NextResponse.json(
+        { error: "Albaraka is not the selected main gateway." },
+        { status: 403 }
+      );
     }
     // Authenticated users: verify ownership. Guests have no session — trust the donationId.
     if (session?.user?.id && donation.donorId !== session.user.id) {
@@ -180,7 +194,14 @@ export async function POST(req: NextRequest) {
     let cvv = "";
     let cardHolderName = "";
 
-    if (!cfg.useOOS) {
+    /* A plan's card has to pass through here to be stored for the scheduler,
+       so the bank's hosted page is never used for one — the checkout collects
+       the card itself for a recurring basket, and the form goes out with
+       UseOOS=0 whatever the deployment switch says. */
+    const collectCard = !cfg.useOOS || Boolean(plan);
+    const useOOS = cfg.useOOS && !plan;
+
+    if (collectCard) {
       const savedCardId = body.savedCardId?.trim();
       if (savedCardId) {
         if (!session?.user?.id) {
@@ -247,7 +268,7 @@ export async function POST(req: NextRequest) {
       KOICode: "",
       // The browser decides popup vs. same-tab itself; the bank never opens one for us.
       OpenNewWindow: "0",
-      UseOOS: cfg.useOOS ? "1" : "0",
+      UseOOS: useOOS ? "1" : "0",
       TxnState: "INITIAL",
       VftCode: "",
       gsmNo: "",
@@ -255,6 +276,32 @@ export async function POST(req: NextRequest) {
     };
 
     const macNew = albarakaFormMac(fields, cfg.encKey);
+
+    /* A plan: keep the card the donor is authorising, so the scheduler can
+       charge the later instalments. Stored the way the account's saved cards
+       are — PAN encrypted at rest, CVC only as a hash that is never sent
+       anywhere — and linked to the plan before the bank is asked for
+       anything, so a plan can never be activated without a card to bill. A
+       retry of the same checkout reuses the card already linked. */
+    if (plan && !plan.paymentCardId) {
+      const card = await prisma.creditCard.create({
+        data: {
+          userId: donation.donorId,
+          cardNumber: encryptCard(cardNo),
+          cardType: detectCardType(cardNo),
+          // Stored MM/YY like the rest; the bank's YYMM is derived on each charge.
+          expiryDate: `${expiredDate.slice(2, 4)}/${expiredDate.slice(0, 2)}`,
+          cvc: await hashCvc(cvv),
+          cardholderName: cardHolderName || null,
+          nickname: "recurring",
+        },
+        select: { id: true },
+      });
+      await prisma.subscription.update({
+        where: { id: plan.id },
+        data: { paymentCardId: card.id, provider: "ALBARAKA" },
+      });
+    }
 
     await prisma.donation.update({
       where: { id: donation.id },
@@ -272,7 +319,7 @@ export async function POST(req: NextRequest) {
             amount,
             currencyCode,
             transactionType,
-            useOOS: cfg.useOOS,
+            useOOS,
             createdAt: new Date().toISOString(),
           },
         } as Prisma.InputJsonValue,
@@ -289,7 +336,8 @@ export async function POST(req: NextRequest) {
       orderId,
       amount,
       currencyCode,
-      useOOS: cfg.useOOS,
+      useOOS,
+      plan: plan?.id ?? null,
       merchantReturnURL,
     });
 

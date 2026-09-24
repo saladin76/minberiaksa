@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import axios from "axios";
+import { useSession } from "next-auth/react";
 import { Award, ExternalLink, Loader2, RefreshCw, Save } from "lucide-react";
 import { PageHeader } from "@/components/dashboard/PageHeader";
 import { Button } from "@/components/ui/button";
@@ -47,6 +48,9 @@ const TEMPLATES: ReadonlyArray<{ id: CertificateTemplateId; title: string; hint:
 type Defaults = Record<string, Record<string, Record<string, string>>>;
 
 export default function CertificateCopyPage() {
+  // The legal identity block is admin-only on the server too (PUT /api/certificates/copy).
+  const { data: session } = useSession();
+  const isAdmin = session?.user?.role === "ADMIN";
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -154,7 +158,10 @@ export default function CertificateCopyPage() {
         <Card>
           <CardHeader>
             <CardTitle className="text-base">بيانات المؤسسة الرسمية</CardTitle>
-            <CardDescription>تُطبع بالحروف اللاتينية كما في السجل التركي، في كل اللغات — لا تُترجم.</CardDescription>
+            <CardDescription>
+              تُطبع بالحروف اللاتينية كما في السجل التركي، في كل اللغات — لا تُترجم.
+              {!isAdmin && " هذه بيانات إيصال مالي رسمي ولا يعدّلها إلا المدير."}
+            </CardDescription>
           </CardHeader>
           <CardContent className="grid gap-3 md:grid-cols-2">
             {(
@@ -167,7 +174,7 @@ export default function CertificateCopyPage() {
             ).map(([key, label]) => (
               <div key={key} className="space-y-1">
                 <Label>{label}</Label>
-                <Input dir="ltr" value={org[key]} onChange={(e) => setOrg(key, e.target.value)} placeholder={RECEIPT_ORG_DEFAULTS[key]} />
+                <Input dir="ltr" value={org[key]} disabled={!isAdmin} onChange={(e) => setOrg(key, e.target.value)} placeholder={RECEIPT_ORG_DEFAULTS[key]} />
               </div>
             ))}
           </CardContent>

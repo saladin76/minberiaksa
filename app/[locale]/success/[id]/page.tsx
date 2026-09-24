@@ -6,15 +6,18 @@ import { verseBlock } from "@/lib/minbar/quran";
 import { ensureDonationDocuments } from "@/lib/certificates/issue";
 import { successDocumentsFor } from "@/lib/certificates/documents";
 import { reconcileStripeDonation } from "@/lib/donations/reconcile-stripe-donation";
+import { donationAccess } from "@/lib/certificates/http";
 import MinbarMessages from "@/components/minbar/MinbarMessages";
 import SuccessPage from "@/components/minbar/success/SuccessPage";
 
 interface Props {
   params: Promise<{ locale: string; id: string }>;
+  /** `t` — the guest's access token the gateway redirect / checkout appended. */
+  searchParams: Promise<{ t?: string }>;
 }
 
 /** The page's own namespaces, on top of the shell bundle. */
-const NAMESPACES = ["cart", "certificates", "quran"] as const;
+const NAMESPACES = ["cart", "certificates", "quran", "Recurring"] as const;
 
 /**
  * Never indexed: this page belongs to one donation and is reachable by its id.
@@ -44,11 +47,19 @@ export const dynamic = "force-dynamic";
  * A Stripe donor usually arrives before the webhook; the reconcile call
  * confirms with Stripe directly so the certificate is not a page-refresh away.
  */
-export default async function Success({ params }: Props) {
+export default async function Success({ params, searchParams }: Props) {
   const { locale, id } = await params;
+  const { t: token } = await searchParams;
   await reconcileStripeDonation(id).catch(() => undefined);
   const donation = await getDonationSummary(id, locale);
   if (!donation) notFound();
+
+  /* The id is not the key to this page: a signed-in owner or revenue user is
+     let in by their session, everyone else by the `?t=` token the checkout or
+     the gateway redirect appended (`DEPLOYED_VS_DESIGN_AUDIT.md` § P1.2). A
+     404, not a 403 — the page must not confirm that the id exists. */
+  const access = await donationAccess(id, token);
+  if (!access.allowed) notFound();
 
   const issued = await ensureDonationDocuments(id).catch((error) => {
     console.error("[success] issuing documents failed:", error);
@@ -61,7 +72,7 @@ export default async function Success({ params }: Props) {
 
   return (
     <MinbarMessages locale={locale} namespaces={NAMESPACES}>
-      <SuccessPage donation={donation} verse={verseBlock(quran, "baqarah_261", locale)} documents={documents} />
+      <SuccessPage donation={donation} verse={verseBlock(quran, "baqarah_261", locale)} documents={documents} accessToken={token ?? null} />
     </MinbarMessages>
   );
 }

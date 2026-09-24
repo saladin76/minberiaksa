@@ -3,12 +3,15 @@ import { notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { findWaqfCertificate, waqfDocumentFor } from "@/lib/certificates/documents";
 import { donationAccess } from "@/lib/certificates/http";
+import { withDonationToken } from "@/lib/donations/access-token";
 import { miaPath } from "@/lib/minbar/routes";
 import WaqfCertificateSheet from "@/components/minbar/certificates/WaqfCertificateSheet";
 import DocumentPage from "@/components/minbar/certificates/DocumentPage";
 
 interface Props {
   params: Promise<{ locale: string; certificateId: string }>;
+  /** `t` — the guest's access token, carried on from the success page. */
+  searchParams: Promise<{ t?: string }>;
 }
 
 export const metadata: Metadata = { robots: { index: false, follow: false } };
@@ -34,12 +37,13 @@ const PRINT_CSS = `
  * server issued after payment; there is no preview state here — a
  * certificate that does not exist is a 404.
  */
-export default async function WaqfCertificatePage({ params }: Props) {
+export default async function WaqfCertificatePage({ params, searchParams }: Props) {
   const { locale, certificateId } = await params;
+  const { t: token } = await searchParams;
 
   const cert = await findWaqfCertificate(certificateId);
   if (!cert) notFound();
-  const access = await donationAccess(cert.donation.donorId);
+  const access = await donationAccess(cert.donationId, token);
   if (!access.allowed) notFound();
 
   const doc = await waqfDocumentFor(cert);
@@ -49,9 +53,9 @@ export default async function WaqfCertificatePage({ params }: Props) {
     <DocumentPage
       printCss={PRINT_CSS}
       actions={[
-        { label: t("savePdfCert"), href: `/api/certificates/waqf/${cert.id}`, primary: true, download: true },
+        { label: t("savePdfCert"), href: withDonationToken(`/api/certificates/waqf/${cert.id}`, token), primary: true, download: true },
         { label: t("printDocument"), kind: "print" },
-        { label: t("back"), href: `${miaPath("donationSuccess", locale)}/${cert.donationId}` },
+        { label: t("back"), href: withDonationToken(`${miaPath("donationSuccess", locale)}/${cert.donationId}`, token) },
       ]}
     >
       <WaqfCertificateSheet

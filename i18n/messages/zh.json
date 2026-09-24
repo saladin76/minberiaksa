@@ -2121,5 +2121,18 @@
     "track4Text": "Administrative and technical work done from anywhere in the world.",
     "track5Title": "Foundation Representative in Your Country",
     "track5Text": "Representing the foundation officially in your country and following up its activities and donors there."
+  },
+  "Recurring": {
+    "nextChargeOn": "下次扣款：{date}",
+    "firstChargeOn": "首次扣款：{date}",
+    "firstChargeToday": "现在扣款，之后{cadence}",
+    "planScheduledTitle": "您的定期捐赠已设置完成",
+    "planScheduledLead": "您的银行卡已保存，尚未扣款。首次扣款日期为 {date}。",
+    "planActiveLead": "将{cadence}扣除相同金额。下次扣款：{date}。",
+    "cadenceDaily": "每天",
+    "cadenceFriday": "每周五",
+    "cadenceMonthly": "每月",
+    "stripeNotReady": "支付表单仍在加载中，请稍后重试。",
+    "subscriptionPaymentFailed": "扣款失败 — 请更新您的银行卡"
   }
 }

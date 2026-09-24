@@ -2124,5 +2124,18 @@
     "track4Text": "Administrative and technical work done from anywhere in the world.",
     "track5Title": "Foundation Representative in Your Country",
     "track5Text": "Representing the foundation officially in your country and following up its activities and donors there."
+  },
+  "Recurring": {
+    "nextChargeOn": "Pagesa e radhës: {date}",
+    "firstChargeOn": "Pagesa e parë: {date}",
+    "firstChargeToday": "Tërhiqet tani, pastaj {cadence}",
+    "planScheduledTitle": "Dhurimi juaj i rregullt është konfiguruar",
+    "planScheduledLead": "Karta juaj është ruajtur dhe asgjë nuk është tërhequr ende. Pagesa e parë bëhet më {date}.",
+    "planActiveLead": "E njëjta shumë do të tërhiqet {cadence}. Pagesa e radhës: {date}.",
+    "cadenceDaily": "çdo ditë",
+    "cadenceFriday": "çdo të premte",
+    "cadenceMonthly": "çdo muaj",
+    "stripeNotReady": "Formulari i pagesës është ende duke u ngarkuar — provoni sërish pas pak.",
+    "subscriptionPaymentFailed": "Pagesa dështoi — përditësoni kartën tuaj"
   }
 }

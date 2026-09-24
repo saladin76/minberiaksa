@@ -1,23 +1,30 @@
 "use client";
 
-import { useEffect, useMemo, useState, type CSSProperties, type FormEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { signIn, useSession } from "next-auth/react";
 import { useLocale, useTranslations } from "next-intl";
+import { Elements } from "@stripe/react-stripe-js";
+import { getStripePromise } from "@/lib/stripe-client";
+import { StripePaymentStep, type StripePaymentHandle } from "@/components/StripePaymentStep";
 import { miaPath } from "@/lib/minbar/routes";
 import { useMinbarCart } from "@/hooks/useMinbarCart";
 import { useMinbarMoney } from "@/hooks/useMinbarMoney";
 import type { MinbarCartItem } from "@/lib/minbar/cart";
 import { formatIban, type MinbarBank } from "@/lib/minbar/banks";
 import {
+  browserTimezone,
   chargeWithStripe,
   createDonation,
   initiateBankPayment,
   markDonationFailed,
+  orderType,
   submitGatewayForm,
   type CheckoutMethod,
 } from "@/lib/minbar/checkout";
+import { frequencyOfOrderType, nextChargeAt } from "@/lib/donations/recurring-schedule";
+import { withDonationToken } from "@/lib/donations/access-token-link";
 import { clearCart } from "@/lib/minbar/cart";
 import { fetchGlobalSettings } from "@/lib/global-settings-client";
 import { useReferralCode } from "@/hooks/useReferralCode";
@@ -90,6 +97,15 @@ export default function CheckoutPage({ projects, categories, banks, donor, defau
   /* Which card field has focus — the card preview highlights it and flips for the CVC. */
   const [cardFocus, setCardFocus] = useState<Focused | undefined>(undefined);
 
+  /* Stripe's own card fields, when Stripe is the rail. The card never touches
+     this origin: the step confirms the intent in the browser, and the handle
+     is what the submit calls. `stripeReady` gates the button the way the raw
+     fields gate the bank rails. */
+  const stripeRef = useRef<StripePaymentHandle>(null);
+  const [stripeReady, setStripeReady] = useState(false);
+  const onStripeReady = useCallback((ready: boolean) => setStripeReady(ready), []);
+  const tRecurring = useTranslations("Recurring");
+
   const router = useRouter();
   const { data: session } = useSession();
   const { currency } = useMinbarMoney();
@@ -155,8 +171,30 @@ export default function CheckoutPage({ projects, categories, banks, donor, defau
   };
 
   const total = items.reduce((sum, item) => sum + item.amount, 0);
-  /* One type for the whole order; the cart page does not let the two mix. */
-  const orderTypeForCart = items.some((item) => item.freqKey !== "once") ? "MONTHLY" : "ONE_TIME";
+  /* One type for the whole order — `ONE_TIME`, or the plan's cadence; the
+     cart page does not let cadences mix. The same function builds the order,
+     so what is previewed here is what is sent. */
+  const orderTypeForCart = orderType(items);
+  const planFrequency = frequencyOfOrderType(orderTypeForCart);
+
+  /* When the plan will charge — shown before the donor confirms, computed
+     the way the server computes it, in the browser's zone. Set in an effect:
+     the date depends on "now", which the server render cannot share. */
+  const [nextChargeText, setNextChargeText] = useState<string | null>(null);
+  useEffect(() => {
+    if (!planFrequency) {
+      setNextChargeText(null);
+      return;
+    }
+    const tz = browserTimezone();
+    try {
+      setNextChargeText(
+        new Intl.DateTimeFormat(locale, { dateStyle: "full", timeZone: tz }).format(nextChargeAt(planFrequency, new Date(), tz))
+      );
+    } catch {
+      setNextChargeText(nextChargeAt(planFrequency, new Date(), tz).toISOString().slice(0, 10));
+    }
+  }, [planFrequency, locale]);
 
   /* The rail this basket will run on, resolved the same way the server resolves
      it, so the card step can render what that rail actually needs. Before the
@@ -172,8 +210,12 @@ export default function CheckoutPage({ projects, categories, banks, donor, defau
   /* Albaraka in Ortak Ödeme Sayfası mode collects the card on the bank's own
      page. Asking for it here too would make the donor type it twice, and the
      copy we'd send is discarded — so the card fields are replaced by a line
-     saying where the card is entered. */
-  const bankCollectsCard = gateway === "ALBARAKA" && gatewayConfig?.albarakaUseOOS === true;
+     saying where the card is entered.
+
+     Not for a plan: the scheduler charges the card the donor authorised, so it
+     has to pass through this origin to be stored. A recurring basket always
+     collects the card here, whatever the OOS switch says. */
+  const bankCollectsCard = gateway === "ALBARAKA" && gatewayConfig?.albarakaUseOOS === true && !planFrequency;
 
   /* Albaraka signs everything with ALBARAKA_ENC_KEY. Without it the initiate
      route refuses, and the donor would only find out after an order had been
@@ -240,7 +282,12 @@ export default function CheckoutPage({ projects, categories, banks, donor, defau
         setError(tSystem("techErrorLead"));
         return;
       }
-      if (needsOwnCardForm && (!cardNumber.trim() || !cardExpiry.trim() || !cardCvc.trim())) {
+      if (gateway === "STRIPE") {
+        if (!stripeReady || !stripeRef.current) {
+          setError(tRecurring("stripeNotReady"));
+          return;
+        }
+      } else if (needsOwnCardForm && (!cardNumber.trim() || !cardExpiry.trim() || !cardCvc.trim())) {
         setError(tValidation("required"));
         return;
       }
@@ -288,9 +335,22 @@ export default function CheckoutPage({ projects, categories, banks, donor, defau
       }
 
       if (gateway === "STRIPE") {
-        await chargeWithStripe(donation.id, locale);
+        /* The route returns the secret; the browser confirms it with the card
+           it collected, so the number never reaches this origin. Until this
+           step existed the intent was created and never confirmed: nothing
+           was charged, and the donor was sent to "success" regardless. */
+        const charge = await chargeWithStripe(donation.id, locale);
+        const handle = stripeRef.current;
+        if (!handle) throw new Error("stripe-not-ready");
+        const result = await handle.confirmPayment(charge.clientSecret);
+        if (result.error) {
+          await markDonationFailed(donation.id, result.error.message ?? "stripe_confirm_failed");
+          setError(result.error.message ?? tSystem("techErrorLead"));
+          setSubmitting(false);
+          return;
+        }
         clearCart();
-        router.push(`${miaPath("donationSuccess", locale)}/${donation.id}`);
+        router.push(withDonationToken(`${miaPath("donationSuccess", locale)}/${donation.id}`, donation.accessToken));
         return;
       }
 
@@ -664,7 +724,17 @@ export default function CheckoutPage({ projects, categories, banks, donor, defau
                 </div>
               ) : null}
 
-              {method === "card" && needsOwnCardForm ? (
+              {method === "card" && needsOwnCardForm && gateway === "STRIPE" ? (
+                /* Stripe's hosted card fields. The number, expiry and CVC are
+                   iframes owned by Stripe; this page sees only "complete". */
+                <div className="pay-stripe" style={{ display: "grid", gap: 12, padding: "16px 14px", background: "#fff", border: "1px solid var(--border)", borderRadius: 12 }}>
+                  <Elements stripe={getStripePromise()}>
+                    <StripePaymentStep ref={stripeRef} onReadyChange={onStripeReady} labelClass="block text-[12px] font-extrabold text-[var(--muted)] mb-1" />
+                  </Elements>
+                </div>
+              ) : null}
+
+              {method === "card" && needsOwnCardForm && gateway !== "STRIPE" ? (
                 <div style={{ display: "grid", gap: 14 }}>
                   {/* The live card, filling in as the donor types and flipping
                       for the CVC; the brand is detected from the number. Latin-
@@ -810,6 +880,17 @@ export default function CheckoutPage({ projects, categories, banks, donor, defau
                     {format(total)}
                   </b>
                 </span>
+                {/* What the plan will do, before the donor confirms: this
+                    payment is the first instalment, then the same amount at
+                    the cadence — the same next date the consent snapshot
+                    records. */}
+                {planFrequency && nextChargeText ? (
+                  <span style={{ display: "grid", gap: 2, fontSize: 12.5, lineHeight: 1.7, color: "var(--deep)", padding: "10px 12px", background: "#fff", border: "1px solid rgba(211,154,39,.4)", borderRadius: 8 }}>
+                    <b>{tCommon(planFrequency === "DAILY" ? "freqDaily" : planFrequency === "FRIDAY" ? "freqFriday" : "freqMonthly")}</b>
+                    <span>{tRecurring("firstChargeToday", { cadence: tRecurring(planFrequency === "DAILY" ? "cadenceDaily" : planFrequency === "FRIDAY" ? "cadenceFriday" : "cadenceMonthly") })}</span>
+                    <span style={{ color: "var(--muted)" }}>{tRecurring("nextChargeOn", { date: nextChargeText })}</span>
+                  </span>
+                ) : null}
               </>
             ) : (
               <p style={{ margin: 0, padding: "10px 0", color: "var(--muted)", fontSize: 14, lineHeight: 1.8 }}>

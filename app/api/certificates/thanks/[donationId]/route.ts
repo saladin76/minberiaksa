@@ -30,7 +30,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     const docs = await documentsOrError(donationId);
     if (isErrorResponse(docs)) return docs;
 
-    const denied = await authorizeDonationAccess(docs.thanks.donorId);
+    const denied = await authorizeDonationAccess(docs.donationId, request);
     if (denied) return denied;
 
     const edited = request.nextUrl.searchParams.get("name")?.trim().slice(0, 120);

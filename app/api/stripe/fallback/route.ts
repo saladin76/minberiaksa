@@ -4,6 +4,7 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 import { prisma } from "@/lib/prisma";
 import Stripe from "stripe";
 import { getDonorCountryCodeForSnapshot } from "@/lib/donations/donor-country-code";
+import { mintDonationAccessToken } from "@/lib/donations/access-token";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: "2026-03-25.dahlia",
@@ -64,6 +65,7 @@ export async function POST(req: NextRequest) {
         undefined;
       const newDonation = await prisma.donation.create({
         data: {
+          accessToken: mintDonationAccessToken(),
           amount: donation.amount,
           amountUSD: donation.amountUSD ?? donation.amount,
           teamSupport: donation.teamSupport,

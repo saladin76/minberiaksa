@@ -4,7 +4,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import { localeDirection } from "@/lib/locales";
-import { miaPath } from "@/lib/minbar/routes";
+import { miaPath, QUICK_DONATE_ROUTES, routeForPathname } from "@/lib/minbar/routes";
 import { addToCart, type CartFreqKey } from "@/lib/minbar/cart";
 import type { MinbarProject } from "@/lib/minbar/projects";
 import { qfAmountStyle, qfFreqStyle, qfRowStyle } from "./quick-donate-styles";
@@ -107,10 +107,13 @@ export default function QuickDonate({ amounts = DEFAULT_AMOUNTS }: QuickDonatePr
     router.push(miaPath("cart", locale));
   };
 
-  /* The homepage carries its own quick-donation card under the hero; a second
-     widget floating beside it would compete with it and cover the hero's film
-     card. Every other page keeps the pill. */
-  if (/^\/[a-z]{2}(?:-[A-Za-z]{2})?\/?$/.test(pathname ?? "")) return null;
+  /* Only the pages in `QUICK_DONATE_ROUTES` carry the pill: the homepage has
+     its own quick-donation card, the pages with a donation module of their own
+     (projects, zakat, waqf, recurring) and the blog do without it, and the
+     transactional surfaces never had it. An allowlist, so a new page is silent
+     until someone decides it should not be (`DEPLOYED_VS_DESIGN_AUDIT.md` § P2.1). */
+  const route = routeForPathname(pathname ?? "");
+  if (!route || !QUICK_DONATE_ROUTES.has(route)) return null;
 
   return (
     <div

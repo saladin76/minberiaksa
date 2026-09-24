@@ -25,7 +25,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     let cert = await findWaqfCertificate(certificateId);
     if (!cert) return NextResponse.json({ error: "Certificate not found" }, { status: 404 });
 
-    const denied = await authorizeDonationAccess(cert.donation.donorId);
+    const denied = await authorizeDonationAccess(cert.donationId, request);
     if (denied) return denied;
 
     const edited = request.nextUrl.searchParams.get("name")?.trim().slice(0, 120);

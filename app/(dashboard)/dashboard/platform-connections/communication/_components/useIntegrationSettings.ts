@@ -141,6 +141,8 @@ export function useIntegrationSettings(initialProviders: IntegrationUiSnapshot[]
   async function activateCandidate() {
     const candidateVersion = snapshot.candidate.version;
     if (!candidateVersion) return;
+    // Activation switches live sending (email/WhatsApp/SMS) to the new settings at once.
+    if (!window.confirm("سيتم تفعيل الإعدادات الجديدة فورًا، وستُرسل كل الرسائل القادمة عبرها. هل تريد المتابعة؟")) return;
     setBusy("activate");
     try {
       const body = await json(await fetch(`/api/admin/integration-settings/${active}/activate-candidate`, {

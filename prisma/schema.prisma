@@ -133,6 +133,9 @@ model CreditCard {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  /// Albaraka plans billed against this card by the scheduler.
+  subscriptions Subscription[]
+
   @@index([userId])
 }
 
@@ -614,6 +617,15 @@ model Donation {
   status DonationStatus @default(PAID)
   locale String?
 
+  /// The guest's key to this donation's success page, receipt and
+  /// certificates: 24 random bytes minted when the row is created and carried
+  /// as `?t=` on every link handed to a guest. A signed-in owner or a revenue
+  /// user is let in by their session and never needs it. Rows from before the
+  /// field existed have none, so a guest can no longer open them by id alone
+  /// — the id is an identifier, not a secret (`DEPLOYED_VS_DESIGN_AUDIT.md`
+  /// § P1.2). Same model as `BankTransferClaim.accessToken`.
+  accessToken String?
+
   // Payment provider tracking (PayFor Sanal POS)
   provider               String? // e.g. "PAYFOR"
   providerOrderId        String? // PayFor OrderId (we use donation id by default)
@@ -690,11 +702,49 @@ model Subscription {
   payforMaskedPan String?
   payforExpiry    String? // MMYY (if bank requires it alongside token)
 
+  /// The cadence the donor consented to. Stripe bills on it — every day, every
+  /// week anchored to Friday, or every month — and `nextBillingDate` mirrors it
+  /// for the dashboards. Rows created before this field existed are monthly,
+  /// which is the only cadence that was ever actually billed.
+  /// See lib/donations/recurring-schedule.ts.
+  frequency RecurringFrequency @default(MONTHLY)
+  /// IANA zone captured at sign-up (`Europe/Istanbul`), never a fixed offset:
+  /// "Friday" and "the 15th" are resolved in it, so daylight saving is absorbed.
+  timezone  String?
+  /// The rule as structure, never prose (`DONATION_LOGIC_SPEC` § Recurring Time
+  /// Contract): `{kind:"daily"}` | `{kind:"weekday",weekday:5,hour:9}` |
+  /// `{kind:"monthDay",day:15}`.
+  scheduleRule Json?
+  /// What the donor was shown and agreed to at checkout — frequency, amount,
+  /// currency, the next-charge date on screen, locale and time. Written once.
+  consentSnapshot Json?
+  /// Stripe subscription id. Historically kept in `payforToken` (see the
+  /// disabled monthly-billing cron for how that went); both are written and
+  /// every lookup accepts either.
+  stripeSubscriptionId String?
+
+  /// Which rail bills this plan. `STRIPE` = a Stripe Subscription (monthly
+  /// only — Stripe keeps its one-time + monthly scope); `ALBARAKA` = the
+  /// site's own scheduler charging the stored card through Albaraka's direct
+  /// /Sale as a recurring (merchant-initiated) transaction, at any cadence.
+  /// Null on rows from before rails existed: they are Stripe monthly.
+  provider String?
+  /// The card the Albaraka scheduler charges — the `CreditCard` row stored at
+  /// the plan's first 3D payment. Null on Stripe plans (Stripe holds the card).
+  paymentCardId String?     @db.ObjectId
+  paymentCard   CreditCard? @relation(fields: [paymentCardId], references: [id])
+  /// Consecutive failed scheduler charges since the last success. Drives the
+  /// retry ladder (`RECURRING_RETRY_HOURS`); reset on every paid cycle.
+  chargeAttempts  Int     @default(0)
+  lastChargeError String?
+
   donorId    String    @db.ObjectId
   donor      User      @relation(fields: [donorId], references: [id])
   referralId String?   @db.ObjectId
   referral   Referral? @relation(fields: [referralId], references: [id])
 
+  /// The next charge, computed by the server in the plan's timezone. Stripe
+  /// owns the real cadence; this is refreshed from each paid invoice.
   nextBillingDate DateTime?
   lastBillingDate DateTime?
 
@@ -881,6 +931,18 @@ enum SubscriptionStatus {
   ACTIVE
   PAUSED
   CANCELLED
+  /// The scheduler exhausted its retry ladder on an Albaraka plan. Set by the
+  /// system only; an admin (or a donor updating the card) returns it to ACTIVE.
+  PAYMENT_FAILED
+}
+
+/// How often a recurring plan is charged. One-to-one with the cart's
+/// `freqKey` (`daily` / `friday` / `monthly`); `once` is not a frequency but
+/// the absence of a plan. The checkout's `type` carries the same three values.
+enum RecurringFrequency {
+  DAILY
+  FRIDAY
+  MONTHLY
 }
 
 enum DonationStatus {

@@ -26,6 +26,10 @@ import {
  *     field back to its i18n text.
  */
 
+function sortedEntries(o: object): [string, unknown][] {
+  return Object.entries(o).sort(([a], [b]) => a.localeCompare(b));
+}
+
 async function getOrCreateSettings() {
   const existing = await prisma.globalSettings.findFirst({ orderBy: { createdAt: "asc" } });
   if (existing) return existing;
@@ -71,6 +75,19 @@ export async function PUT(request: NextRequest) {
 
     const overrides: CertificateCopyOverrides = sanitizeCopyOverrides(body.overrides ?? body);
     const existing = await getOrCreateSettings();
+
+    // The certificate wording is site content. The receipt's legal identity —
+    // legal name, tax number, registered address — is printed on an official
+    // financial document, so only an admin may change it.
+    const orgBefore = sanitizeCopyOverrides(existing.certificateCopy ?? null).receiptOrg ?? {};
+    const orgAfter = overrides.receiptOrg ?? {};
+    const orgChanged = JSON.stringify(sortedEntries(orgBefore)) !== JSON.stringify(sortedEntries(orgAfter));
+    if (orgChanged && session?.user?.role !== "ADMIN") {
+      return NextResponse.json(
+        { error: "بيانات الإيصال الرسمية (الاسم القانوني، الرقم الضريبي، العنوان) لا يعدّلها إلا المدير." },
+        { status: 403 }
+      );
+    }
     const saved = await prisma.globalSettings.update({
       where: { id: existing.id },
       data: { certificateCopy: overrides as unknown as Prisma.InputJsonValue },
@@ -85,6 +102,19 @@ export async function PUT(request: NextRequest) {
       entityType: "GlobalSettings",
       entityId: existing.id,
     });
+    if (orgChanged) {
+      queueAuditLog({
+        ...actor,
+        action: "RECEIPT_LEGAL_IDENTITY_UPDATE",
+        messageAr: `${actor.actorName ?? "مسؤول"} عدّل بيانات الإيصال الرسمية (الاسم القانوني/الرقم الضريبي/العنوان)`,
+        entityType: "GlobalSettings",
+        entityId: existing.id,
+        metadata: {
+          before: { ...RECEIPT_ORG_DEFAULTS, ...orgBefore },
+          after: { ...RECEIPT_ORG_DEFAULTS, ...orgAfter },
+        },
+      });
+    }
 
     return NextResponse.json({ overrides: sanitizeCopyOverrides(saved.certificateCopy), updatedAt: saved.updatedAt });
   } catch (e) {

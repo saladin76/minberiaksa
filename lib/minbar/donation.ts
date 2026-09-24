@@ -40,8 +40,17 @@ export interface MinbarDonationSummary {
   donorName: string | null;
   /** `true` when the donation was charged against a recurring plan. */
   recurring: boolean;
+  /** The plan's cadence — `DAILY | FRIDAY | MONTHLY` — or `null` on a one-time gift. */
+  frequency: "DAILY" | "FRIDAY" | "MONTHLY" | null;
+  /** ISO — when the plan charges next; the first instalment was this donation. */
+  nextChargeAt: string | null;
   /** Confirmed. A pending transfer is not shown as a completed donation. */
   paid: boolean;
+  /**
+   * The guest's access token. The success page checks the `?t=` it was opened
+   * with against this, and threads it onto the document links.
+   */
+  accessToken: string | null;
 }
 
 /**
@@ -83,6 +92,8 @@ export async function getDonationSummary(
         createdAt: true,
         paidAt: true,
         subscriptionId: true,
+        accessToken: true,
+        subscription: { select: { frequency: true, timezone: true, nextBillingDate: true, lastBillingDate: true } },
         donor: { select: { name: true } },
         items: {
           select: {
@@ -162,7 +173,10 @@ export async function getDonationSummary(
       paymentMethod: row.paymentMethod ?? null,
       donorName: row.donor?.name ?? null,
       recurring: Boolean(row.subscriptionId),
+      frequency: row.subscription?.frequency ?? null,
+      nextChargeAt: row.subscription?.nextBillingDate?.toISOString() ?? null,
       paid: true,
+      accessToken: row.accessToken ?? null,
     };
   } catch (err) {
     console.error("getDonationSummary failed:", err);

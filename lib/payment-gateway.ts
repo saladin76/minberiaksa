@@ -14,6 +14,8 @@
  * Albaraka EPOS integration doesn't offer. Those stay on Stripe regardless.
  */
 
+import { railForFrequency } from "@/lib/donations/recurring-schedule";
+
 /** Gateway an admin can nominate as the main one in the dashboard. */
 export type MainGateway = "STRIPE" | "ALBARAKA";
 
@@ -36,8 +38,12 @@ export type GatewayResolutionInput = {
   payforEnabled: boolean;
   /** ISO currency the donor is giving in, e.g. "TRY". */
   currency: string;
-  /** Monthly donations create a subscription and can only run on Stripe. */
-  donationType?: "ONE_TIME" | "MONTHLY" | null;
+  /**
+   * Recurring donations — daily, every Friday or monthly — create a
+   * subscription and can only run on Stripe. `ONE_TIME` is the only value
+   * that reaches a bank rail.
+   */
+  donationType?: "ONE_TIME" | "DAILY" | "FRIDAY" | "MONTHLY" | null;
   /**
    * Set once a gateway has already failed and the donor was handed a Stripe
    * PaymentIntent to retry with — that forces Stripe for the rest of the attempt.
@@ -53,9 +59,13 @@ export function resolveGateway({
   forceStripe = false,
 }: GatewayResolutionInput): ResolvedGateway {
   if (forceStripe) return "STRIPE";
-  // Subscriptions are Stripe-only: neither PayFor nor Albaraka gives us a
-  // reusable credential to bill on the next cycle.
-  if (donationType === "MONTHLY") return "STRIPE";
+  // A plan's rail follows its cadence (`railForFrequency`): Stripe keeps its
+  // one-time + monthly scope, so a monthly plan runs on the main gateway as a
+  // Stripe Subscription or an Albaraka scheduled plan; daily and Friday plans
+  // are Albaraka's, since Stripe is not used for those cadences here.
+  if (donationType && donationType !== "ONE_TIME") {
+    return railForFrequency(donationType, mainGateway);
+  }
   // PayFor's case is unchanged from before Albaraka existed: an explicitly
   // one-time TRY donation, with the admin switch on.
   if (

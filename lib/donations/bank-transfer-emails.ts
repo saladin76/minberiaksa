@@ -2,6 +2,7 @@ import "server-only";
 
 import { sendArchivedEmail } from "@/lib/communication/system-email";
 import { miaPath } from "@/lib/minbar/routes";
+import { withDonationToken } from "@/lib/donations/access-token";
 import { isValidLocale } from "@/lib/locales";
 import type { ClaimWithDonation } from "./bank-transfer-claims";
 import { claimStatusPath, safeMoney, BANK_TRANSFER_MAX_SUBMISSIONS } from "./bank-transfer-shared";
@@ -180,8 +181,10 @@ export async function sendBankTransferEmail(event: BankTransferEmailEvent, claim
       html = layout(lang, c.received.title, [escapeHtml(c.received.body), facts], { label: c.received.cta, href: statusUrl }, null, c.signature);
     } else if (event === "CONFIRMED") {
       subject = c.confirmed.subject;
-      const successUrl = `${opts.origin}${miaPath("donationSuccess", pageLocale)}/${claim.donationId}`;
-      const receiptUrl = `${opts.origin}/api/donations/${claim.donationId}/receipt?locale=${encodeURIComponent(pageLocale)}`;
+      /* The guest's token rides on both links: without it the success page
+         and the receipt are closed to anyone holding only the id. */
+      const successUrl = withDonationToken(`${opts.origin}${miaPath("donationSuccess", pageLocale)}/${claim.donationId}`, claim.donation.accessToken);
+      const receiptUrl = withDonationToken(`${opts.origin}/api/donations/${claim.donationId}/receipt?locale=${encodeURIComponent(pageLocale)}`, claim.donation.accessToken);
       html = layout(lang, c.confirmed.title, [escapeHtml(c.confirmed.body), facts], { label: c.confirmed.cta, href: successUrl }, { label: c.confirmed.receipt, href: receiptUrl }, c.signature);
     } else {
       subject = c.rejected.subject;

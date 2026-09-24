@@ -4,6 +4,7 @@ import { getTranslations } from "next-intl/server";
 import { ensureDonationDocuments } from "@/lib/certificates/issue";
 import { thanksDocumentFor } from "@/lib/certificates/documents";
 import { donationAccess } from "@/lib/certificates/http";
+import { withDonationToken } from "@/lib/donations/access-token";
 import { miaPath } from "@/lib/minbar/routes";
 import ThanksCertificate from "@/components/minbar/certificates/ThanksCertificate";
 import ThanksCertificatePortrait from "@/components/minbar/certificates/ThanksCertificatePortrait";
@@ -11,7 +12,8 @@ import DocumentPage from "@/components/minbar/certificates/DocumentPage";
 
 interface Props {
   params: Promise<{ locale: string; donationId: string }>;
-  searchParams: Promise<{ layout?: string }>;
+  /** `layout` — the staff-only portrait sheet; `t` — the guest's access token. */
+  searchParams: Promise<{ layout?: string; t?: string }>;
 }
 
 /** Per-donor, reachable by id: never indexed (`PRODUCTION_SEO_CONTRACT.md`). */
@@ -42,11 +44,11 @@ const PORTRAIT_PRINT_CSS = `
  */
 export default async function ThanksCertificatePage({ params, searchParams }: Props) {
   const { locale, donationId } = await params;
-  const { layout } = await searchParams;
+  const { layout, t: token } = await searchParams;
 
   const docs = await ensureDonationDocuments(donationId);
   if (!docs) notFound();
-  const access = await donationAccess(docs.thanks.donorId);
+  const access = await donationAccess(docs.donationId, token);
   if (!access.allowed) notFound();
 
   const doc = await thanksDocumentFor(docs);
@@ -54,7 +56,7 @@ export default async function ThanksCertificatePage({ params, searchParams }: Pr
   const t = await getTranslations({ locale: doc.locale, namespace: "certificates" });
 
   const props = { donorName: doc.donorName, copy: doc.copy, verse: doc.verse, duaVerse: doc.duaVerse, dir: doc.dir };
-  const pdfHref = `/api/certificates/thanks/${docs.donationId}${portrait ? "?layout=portrait" : ""}`;
+  const pdfHref = withDonationToken(`/api/certificates/thanks/${docs.donationId}${portrait ? "?layout=portrait" : ""}`, token);
 
   return (
     <DocumentPage
@@ -65,7 +67,7 @@ export default async function ThanksCertificatePage({ params, searchParams }: Pr
         ...(access.admin
           ? [{ label: portrait ? t("landscapeVersion") : t("portraitVersion"), href: `${miaPath("thanksCertificate", locale, docs.donationId)}${portrait ? "" : "?layout=portrait"}` }]
           : []),
-        { label: t("back"), href: `${miaPath("donationSuccess", locale)}/${docs.donationId}` },
+        { label: t("back"), href: withDonationToken(`${miaPath("donationSuccess", locale)}/${docs.donationId}`, token) },
       ]}
     >
       {portrait ? <ThanksCertificatePortrait {...props} /> : <ThanksCertificate {...props} />}

@@ -3227,5 +3227,18 @@
     "statusConfirmed": "Confirmed",
     "accountAction": "Upload the receipt",
     "accountFollow": "Follow up"
+  },
+  "Recurring": {
+    "nextChargeOn": "Next charge: {date}",
+    "firstChargeOn": "First charge: {date}",
+    "firstChargeToday": "Charged now, then {cadence}",
+    "planScheduledTitle": "Your recurring gift is set up",
+    "planScheduledLead": "Your card is saved and nothing has been charged yet. The first charge is on {date}.",
+    "planActiveLead": "The same amount will be charged {cadence}. Next charge: {date}.",
+    "cadenceDaily": "every day",
+    "cadenceFriday": "every Friday",
+    "cadenceMonthly": "every month",
+    "stripeNotReady": "The payment form is still loading — please try again in a moment.",
+    "subscriptionPaymentFailed": "Payment failed — please update your card"
   }
 }

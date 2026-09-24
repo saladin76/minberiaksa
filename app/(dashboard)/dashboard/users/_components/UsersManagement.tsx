@@ -79,6 +79,8 @@ export default function UsersManagement({ scope }: { scope: Scope }) {
   const { data: session } = useSession();
   const isFullAdmin = session?.user?.role === "ADMIN";
   const canOpenRevenue = userHasDashboardPermission(session?.user, "revenue");
+  const canSendEmail = userHasDashboardPermission(session?.user, "templates");
+  const canOpenCommunication = userHasDashboardPermission(session?.user, "messages");
   const { convertToCurrency } = useCurrency();
   const [users, setUsers] = useState<UserRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -459,22 +461,28 @@ export default function UsersManagement({ scope }: { scope: Scope }) {
                       إلغاء التحديد
                     </Button>
                   )}
-                  <Button
-                    size="sm"
-                    onClick={() => setSendDialog({ open: true, channel: "email" })}
-                    disabled={total === 0}
-                    className="gap-2 bg-brand hover:bg-brand/90"
-                  >
-                    <Mail className="w-4 h-4" /> إرسال بريد
-                  </Button>
-                  <Button
-                    size="sm"
-                    onClick={() => setSendDialog({ open: true, channel: "whatsapp" })}
-                    disabled={total === 0}
-                    className="gap-2 bg-[#25D366] hover:bg-[#25D366]/90 text-white"
-                  >
-                    <MessageCircle className="w-4 h-4" /> إرسال واتساب
-                  </Button>
+                  {/* Shown only when the send API would accept it (`templates`). */}
+                  {canSendEmail && (
+                    <Button
+                      size="sm"
+                      onClick={() => setSendDialog({ open: true, channel: "email" })}
+                      disabled={total === 0}
+                      className="gap-2 bg-brand hover:bg-brand/90"
+                    >
+                      <Mail className="w-4 h-4" /> إرسال بريد
+                    </Button>
+                  )}
+                  {/* WhatsApp is sent from the Communication Center (approved Meta templates);
+                      the old dialog here could not send, so this goes there directly. */}
+                  {canOpenCommunication && (
+                    <Button
+                      size="sm"
+                      onClick={() => router.push("/dashboard/communication/whatsapp")}
+                      className="gap-2 bg-[#25D366] hover:bg-[#25D366]/90 text-white"
+                    >
+                      <MessageCircle className="w-4 h-4" /> واتساب من مركز التواصل
+                    </Button>
+                  )}
                 </div>
               </div>
             )}

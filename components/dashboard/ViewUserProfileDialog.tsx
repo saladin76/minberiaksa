@@ -44,6 +44,7 @@ import ReactCountryFlag from "react-country-flag";
 import { useCurrency } from "@/context/CurrencyContext";
 import { cn } from "@/lib/utils";
 import { ACTION_PERMISSION_ROWS, DASHBOARD_PERMISSION_ROWS } from "@/lib/dashboard/nav-config";
+import { userHasDashboardPermission } from "@/lib/dashboard/permissions";
 import type { UserProfileCardData } from "@/lib/dashboard/user-profile-card";
 import { resolveUserCountry } from "@/lib/dashboard/resolve-user-country";
 import {
@@ -326,6 +327,10 @@ export function ViewUserProfileDialog({
   const { convertToCurrency } = useCurrency();
   const { data: session } = useSession();
   const viewerIsAdmin = session?.user?.role === "ADMIN";
+  // Match the send buttons to what the APIs accept: email needs `templates`;
+  // WhatsApp is sent from the Communication Center, which needs `messages`.
+  const canSendEmail = userHasDashboardPermission(session?.user, "templates");
+  const canOpenCommunication = userHasDashboardPermission(session?.user, "messages");
   const [sendDialog, setSendDialog] = React.useState<{
     open: boolean;
     channel: "email" | "whatsapp";
@@ -651,24 +656,28 @@ export function ViewUserProfileDialog({
               </div>
 
               <div className="flex items-center gap-2">
-                <Button
-                  size="sm"
-                  onClick={() => setSendDialog({ open: true, channel: "whatsapp" })}
-                  disabled={!user.phone}
-                  title={!user.phone ? "لا يوجد رقم هاتف" : undefined}
-                  className="h-8 gap-1.5 bg-[#25D366] hover:bg-[#25D366]/90 text-white"
-                >
-                  <MessageCircle className="w-3.5 h-3.5" /> واتساب
-                </Button>
-                <Button
-                  size="sm"
-                  onClick={() => setSendDialog({ open: true, channel: "email" })}
-                  disabled={!user.email}
-                  title={!user.email ? "لا يوجد بريد إلكتروني" : undefined}
-                  className="h-8 gap-1.5 bg-brand hover:bg-brand/90"
-                >
-                  <Mail className="w-3.5 h-3.5" /> بريد
-                </Button>
+                {canOpenCommunication && (
+                  <Button
+                    size="sm"
+                    asChild
+                    className="h-8 gap-1.5 bg-[#25D366] hover:bg-[#25D366]/90 text-white"
+                  >
+                    <a href="/dashboard/communication/whatsapp" title="الإرسال عبر واتساب يتم من مركز التواصل بقوالب Meta المعتمدة">
+                      <MessageCircle className="w-3.5 h-3.5" /> واتساب
+                    </a>
+                  </Button>
+                )}
+                {canSendEmail && (
+                  <Button
+                    size="sm"
+                    onClick={() => setSendDialog({ open: true, channel: "email" })}
+                    disabled={!user.email}
+                    title={!user.email ? "لا يوجد بريد إلكتروني" : undefined}
+                    className="h-8 gap-1.5 bg-brand hover:bg-brand/90"
+                  >
+                    <Mail className="w-3.5 h-3.5" /> بريد
+                  </Button>
+                )}
               </div>
             </div>
           </>

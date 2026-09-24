@@ -8,16 +8,13 @@ import {
   writeAuditLog,
   auditActorFromDashboardSession,
 } from "@/lib/audit-log";
-
-/** Returns the next billing date: one month from today, clamped to the target month's last day. */
-function nextBillingInOneMonth(): Date {
-  const d = new Date();
-  const next = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 1));
-  const lastDay = new Date(Date.UTC(next.getUTCFullYear(), next.getUTCMonth() + 1, 0)).getUTCDate();
-  next.setUTCDate(Math.min(d.getUTCDate(), lastDay));
-  next.setUTCHours(0, 0, 0, 0);
-  return next;
-}
+import { nextChargeAt, normalizeTimezone, type RecurringFrequency } from "@/lib/donations/recurring-schedule";
+import {
+  applyPlanStatusAtProvider,
+  ProviderSyncError,
+  type PlanStatus,
+  type ProviderResult,
+} from "@/lib/donations/subscription-provider-control";
 
 /** PATCH /api/admin/subscriptions/[id] — set status (ACTIVE | PAUSED | CANCELLED); dashboard monthly permission */
 export async function PATCH(
@@ -46,7 +43,15 @@ export async function PATCH(
 
     const sub = await prisma.subscription.findUnique({
       where: { id },
-      select: { id: true, status: true },
+      select: {
+        id: true,
+        status: true,
+        frequency: true,
+        timezone: true,
+        provider: true,
+        stripeSubscriptionId: true,
+        payforToken: true,
+      },
     });
 
     if (!sub) {
@@ -54,14 +59,37 @@ export async function PATCH(
     }
 
     const nextStatus = status as SubscriptionStatus;
+
+    if (sub.status === "CANCELLED" && nextStatus !== "CANCELLED") {
+      return NextResponse.json(
+        { error: "A cancelled plan cannot be reactivated. The donor must start a new plan." },
+        { status: 409 }
+      );
+    }
+
+    // The provider first. If Stripe refuses, nothing local changes and the
+    // dashboard shows the failure instead of a status that is not true.
+    let provider: ProviderResult;
+    try {
+      provider = await applyPlanStatusAtProvider(sub, nextStatus as PlanStatus);
+    } catch (err) {
+      if (err instanceof ProviderSyncError) {
+        return NextResponse.json(
+          { error: err.message, code: err.code, providerConfirmed: false },
+          { status: err.httpStatus }
+        );
+      }
+      throw err;
+    }
     const data: {
       status: SubscriptionStatus;
       nextBillingDate?: Date;
     } = { status: nextStatus };
 
     if (nextStatus === "ACTIVE" && sub.status !== "ACTIVE") {
-      // Stripe owns the real cadence; seed nextBillingDate so list filters work.
-      data.nextBillingDate = nextBillingInOneMonth();
+      // Stripe owns the real cadence; seed nextBillingDate at the plan's own
+      // frequency and zone so list filters work until the next paid invoice.
+      data.nextBillingDate = nextChargeAt(sub.frequency as RecurringFrequency, new Date(), normalizeTimezone(sub.timezone));
     }
 
     await prisma.subscription.update({
@@ -73,11 +101,18 @@ export async function PATCH(
     await writeAuditLog({
       ...actor,
       action: "SUBSCRIPTION_UPDATE",
-      messageAr: `${actor.actorName ?? "مسؤول"} غيّر حالة الاشتراك إلى ${nextStatus}`,
-      messageEn: `${actor.actorName ?? "Admin"} set subscription status to ${nextStatus}`,
+      messageAr: `${actor.actorName ?? "مسؤول"} غيّر حالة الاشتراك من ${sub.status} إلى ${nextStatus} (${provider.rail === "STRIPE" ? `تأكيد Stripe: ${provider.providerStatus}${provider.providerPaused ? "، متوقف مؤقتًا" : ""}` : provider.rail === "ALBARAKA" ? "جدولة البركة داخلية" : "لا يوجد اشتراك لدى مزوّد الدفع"})`,
+      messageEn: `${actor.actorName ?? "Admin"} set subscription status ${sub.status} → ${nextStatus} (provider: ${provider.rail}${provider.providerStatus ? `, Stripe status ${provider.providerStatus}` : ""})`,
       entityType: "Subscription",
       entityId: id,
-      metadata: { status: nextStatus },
+      metadata: {
+        before: sub.status,
+        after: nextStatus,
+        rail: provider.rail,
+        stripeSubscriptionId: provider.stripeSubscriptionId,
+        providerStatus: provider.providerStatus,
+        providerPaused: provider.providerPaused,
+      },
       stream: "TEAM",
     });
 
@@ -90,6 +125,7 @@ export async function PATCH(
         amountUSD: true,
         currency: true,
         createdAt: true,
+        frequency: true,
         nextBillingDate: true,
         lastBillingDate: true,
         donor: { select: { id: true, name: true, email: true } },
@@ -109,9 +145,16 @@ export async function PATCH(
       amountUSD: row.amountUSD,
       currency: row.currency,
       createdAt: row.createdAt,
+      frequency: row.frequency,
       nextBillingDate: row.nextBillingDate,
       lastBillingDate: row.lastBillingDate,
       donor: row.donor,
+      provider: {
+        rail: provider.rail,
+        confirmed: true,
+        status: provider.providerStatus ?? null,
+        paused: provider.providerPaused ?? null,
+      },
       campaigns: row.items.map((i) => ({ id: i.campaign.id, title: i.campaign.title })),
       categories: row.categoryItems.map((c) => ({
         id: c.category.id,

@@ -77,7 +77,7 @@ export const DASHBOARD_NAV_GROUPS: DashboardNavGroup[] = [
       { key: "siteContent", title: "التقارير", href: "/dashboard/reports", icon: "fileText", keywords: ["reports", "تقارير", "pdf", "annual"] },
       { key: "siteContent", title: "الكتيبات", href: "/dashboard/booklets", icon: "bookOpen", keywords: ["booklets", "كتيبات", "pdf", "library"] },
       { key: "siteContent", title: "الأسئلة الشائعة", href: "/dashboard/faqs", icon: "helpCircle", keywords: ["faq", "أسئلة", "questions", "help"] },
-      { key: "siteContent", title: "الحسابات البنكية", href: "/dashboard/bank-accounts", icon: "landmark", keywords: ["bank", "accounts", "iban", "swift", "حسابات", "بنك"] },
+      { key: "bankAccounts", title: "الحسابات البنكية", href: "/dashboard/bank-accounts", icon: "landmark", keywords: ["bank", "accounts", "iban", "swift", "حسابات", "بنك"] },
     ],
   },
   {
@@ -140,8 +140,20 @@ export const DASHBOARD_NAV_GROUPS: DashboardNavGroup[] = [
   },
 ];
 
-export const DASHBOARD_NAV_HREFS_ORDERED: string[] =
-  DASHBOARD_NAV_GROUPS.flatMap((g) => g.items.map((i) => i.href));
+/**
+ * Pages that exist and are permission-guarded but are deliberately not in the
+ * sidebar. They are only used as a last-resort landing page, so a staffer
+ * whose sole grant is one of these keys lands somewhere real instead of being
+ * bounced out of the dashboard. `ads` → the legacy ads analytics page.
+ */
+export const DASHBOARD_UNLISTED_LANDINGS: { href: string; key: DashboardPermissionKey }[] = [
+  { href: "/dashboard/ads", key: "ads" },
+];
+
+export const DASHBOARD_NAV_HREFS_ORDERED: string[] = [
+  ...DASHBOARD_NAV_GROUPS.flatMap((g) => g.items.map((i) => i.href)),
+  ...DASHBOARD_UNLISTED_LANDINGS.map((l) => l.href),
+];
 
 export function dashboardHrefToPermissionKey(
   href: string,
@@ -150,7 +162,7 @@ export function dashboardHrefToPermissionKey(
     const found = g.items.find((i) => i.href === href);
     if (found) return found.key;
   }
-  return null;
+  return DASHBOARD_UNLISTED_LANDINGS.find((l) => l.href === href)?.key ?? null;
 }
 
 export function resolveActiveDashboardHref(pathname: string, hrefs: readonly string[]): string | null {
@@ -168,6 +180,8 @@ export const DASHBOARD_PERMISSION_ROWS: {
   { key: "monthly", group: "الرئيسية", title: "التبرعات الشهرية" },
   // One grant for the whole finance desk: the statement importer and the donor-receipt queue.
   { key: "bankTransfers", group: "الرئيسية", title: "التحويلات البنكية وإيصالات التحويل" },
+  // Separate from siteContent: these rows are where donors send money (IBAN/SWIFT).
+  { key: "bankAccounts", group: "الرئيسية", title: "الحسابات البنكية (IBAN) — صلاحية مالية حساسة" },
   { key: "donors", group: "الرئيسية", title: "المتبرعون" },
   { key: "campaigns", group: "محتوى الموقع", title: "المشاريع" },
   { key: "categories", group: "محتوى الموقع", title: "الحملات والدول" },
@@ -191,12 +205,14 @@ export const DASHBOARD_PERMISSION_ROWS: {
   // recommendations pages were removed. The key stays grantable because the route guard still
   // maps the /dashboard/marketing prefix to it, so revoking it here would silently strand any
   // staffer whose only grant is `ads`.
-  { key: "ads", group: "التسويق", title: "عرض صفحات التسويق" },
+  { key: "ads", group: "التسويق", title: "(قديم) صفحة تحليل الإعلانات /dashboard/ads — ليست في القائمة؛ للإسناد والتتبع استخدم الصلاحيتين التاليتين" },
   { key: "referrals", group: "التسويق", title: "إدارة الروابط والإسناد" },
   { key: "pixels", group: "التسويق", title: "عرض التتبع والتحويلات" },
   { key: "platformConnections", group: "ربط المنصات والإرسال", title: "ربط المنصات والإرسال" },
   { key: "team", group: "الإدارة", title: "الفريق" },
-  { key: "generalSettings", group: "الإدارة", title: "الإعدادات" },
+  // Today this key controls only the payment-gateway page (main gateway, PayFor):
+  // where every new donation's money goes. Labelled so it is granted knowingly.
+  { key: "generalSettings", group: "الإدارة", title: "إعدادات بوابات الدفع — صلاحية مالية حساسة" },
   { key: "logs", group: "الإدارة", title: "السجلات المتقدمة" },
 ];
 
@@ -214,5 +230,23 @@ export const ACTION_PERMISSION_ROWS: {
     key: "donationsEdit",
     title: "تعديل وإدارة التبرعات",
     description: "السماح بإدارة بيانات التبرعات من الجداول مع تحديث إجماليات المشاريع والحملات تلقائيًا.",
+  },
+  // The three integration levels are enforced by lib/integration-settings/{auth,api-contracts}.ts
+  // but could not be granted from here, so in practice only an admin could test or change a
+  // provider. Each level includes the ones below it (see integrationPermissionRank).
+  {
+    key: "platformConnectionsTest",
+    title: "ربط المنصات: اختبار الاتصال",
+    description: "عرض المنصات وتشغيل اختبار الاتصال بمزوّد (بريد، واتساب، SMS…). لا يسمح بتغيير الإعدادات.",
+  },
+  {
+    key: "platformConnectionsManage",
+    title: "ربط المنصات: حفظ وتفعيل الإعدادات",
+    description: "حفظ مفاتيح وإعدادات مزوّد وتفعيل الإعداد الجديد أو تجاهله. يشمل الاختبار. صلاحية حساسة.",
+  },
+  {
+    key: "platformConnectionsAdmin",
+    title: "ربط المنصات: حذف وإدارة كاملة",
+    description: "حذف إعدادات مزوّد وعرض حالته الكاملة. يشمل الحفظ والاختبار. صلاحية حساسة جدًا.",
   },
 ];

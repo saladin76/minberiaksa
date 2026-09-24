@@ -48,15 +48,41 @@ const FREQUENCIES: ReadonlyArray<{ key: Exclude<CartFreqKey, "once">; labelKey: 
 /** The quick-pick amounts, in USD, carried from the handoff. */
 const SUGGESTED = [50, 100, 200, 500];
 
-export default function SuccessPage({ donation, verse, documents }: { donation: MinbarDonationSummary; verse: VerseBlock; documents: SuccessDocuments | null }) {
+/** `Recurring.*` key naming a plan's cadence in a sentence ("every Friday"). */
+const cadenceKey = (frequency: "DAILY" | "FRIDAY" | "MONTHLY") =>
+  frequency === "DAILY" ? "cadenceDaily" : frequency === "FRIDAY" ? "cadenceFriday" : "cadenceMonthly";
+
+export default function SuccessPage({
+  donation,
+  verse,
+  documents,
+  accessToken,
+}: {
+  donation: MinbarDonationSummary;
+  verse: VerseBlock;
+  documents: SuccessDocuments | null;
+  /** The `?t=` this page was opened with; threaded onto the document links for a guest. */
+  accessToken: string | null;
+}) {
   const locale = useLocale();
   const router = useRouter();
   const t = useTranslations("system");
   const tCommon = useTranslations("common");
   const tCart = useTranslations("cart");
+  const tRecurring = useTranslations("Recurring");
 
   const { data: session } = useSession();
   const linked = useRef(false);
+
+  /* The plan's next (or first) charge, in the visitor's language. */
+  const nextChargeText = (() => {
+    if (!donation.nextChargeAt) return null;
+    try {
+      return new Intl.DateTimeFormat(locale, { dateStyle: "full" }).format(new Date(donation.nextChargeAt));
+    } catch {
+      return donation.nextChargeAt.slice(0, 10);
+    }
+  })();
 
   /* A donor who gave as a guest and then signed in still owns this donation.
      Claiming it here attaches it — and every other donation under the same
@@ -267,6 +293,7 @@ export default function SuccessPage({ donation, verse, documents }: { donation: 
           <DocumentsPanel
             documents={documents}
             donationId={donation.id}
+            accessToken={accessToken}
             donorName={donation.donorName ?? ""}
             extraButtons={
               <button
@@ -289,8 +316,14 @@ export default function SuccessPage({ donation, verse, documents }: { donation: 
                 </svg>
               </span>
               <div style={{ display: "grid", gap: 2 }}>
+                {/* This donation was the plan's first instalment; what the
+                    donor needs now is the cadence and the next date. */}
                 <b style={{ fontSize: 15.5, fontWeight: 900, color: "#fff" }}>{t("recurringActivated")}</b>
-                <span style={{ color: "rgba(255,255,255,.72)", fontSize: 13.5 }}>{t("recurringManageNote")}</span>
+                <span style={{ color: "rgba(255,255,255,.72)", fontSize: 13.5 }}>
+                  {donation.frequency && nextChargeText
+                    ? tRecurring("planActiveLead", { cadence: tRecurring(cadenceKey(donation.frequency)), date: nextChargeText })
+                    : t("recurringManageNote")}
+                </span>
               </div>
             </div>
           ) : reviewing ? (

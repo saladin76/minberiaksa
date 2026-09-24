@@ -9,6 +9,7 @@ import { getBlogColumns, type BlogRow } from "../_components/blogColumns"
 import { DashboardLocaleSwitcher } from "../_components/DashboardLocaleSwitcher"
 import { useLocale } from "next-intl"
 import { ContentLocalizationAuditCard } from "../_components/ContentLocalizationAuditCard"
+import { BlogHealthCard } from "./_components/BlogHealthCard"
 
 export default function BooksManagement() {
   const locale = useLocale() as string
@@ -62,6 +63,7 @@ export default function BooksManagement() {
 
   return (
     <div className="space-y-4 sm:space-y-6">
+      <BlogHealthCard />
       <ContentLocalizationAuditCard section="blog" />
 
       <Card className="p-8">

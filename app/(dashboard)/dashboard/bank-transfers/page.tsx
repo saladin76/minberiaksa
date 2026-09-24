@@ -11,9 +11,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { LOCALE_OPTIONS } from "@/lib/locales";
 
 type Currency = "USD" | "TRY" | "EUR" | string;
-type DonorLocale = "ar" | "tr" | "en" | "fr" | "de" | "es" | "pt" | "id" | string;
+type DonorLocale = string;
 type TransactionStatus = "PENDING_REVIEW" | "APPROVED" | "IMPORTED" | "IGNORED" | "DELETED" | string;
 type BankStats = { operationCount: number; totals: Record<string, number>; localeTotals: Record<string, Record<string, number>> };
 type Bank = { id: string | null; code: string | null; nameAr: string; nameEn: string | null; nameTr: string | null; accountName: string | null; ibanLast4: string | null; currency: Currency; isActive: boolean; displayOrder: number; stats?: BankStats };
@@ -27,20 +28,27 @@ function amountColumnLabel(info: AmountColumnInfo | undefined) {
   if (info.source === "detected") return { text: "عمود المبلغ: مُستنتَج من البيانات", tone: "warn" as const };
   return { text: `عمود المبلغ: ${info.header ?? "—"}`, tone: "good" as const };
 }
-type ImportedTransaction = { id: string | null; bankId: string | null; bankIban: string | null; transactionDate: string | null; donorName: string | null; description: string; amount: number | null; currency: string; donorLocale: string; transferMethod: string; suggestedProject: string; finalProject?: string | null; confidence: string; reference: string | null; status: TransactionStatus; reviewedByName?: string | null; approvedAt?: string | null; ignoredAt?: string | null; createdAt: string | null };
+type ImportedTransaction = { id: string | null; bankId: string | null; bankIban: string | null; transactionDate: string | null; donorName: string | null; description: string; amount: number | null; currency: string; donorLocale: string; transferMethod: string; suggestedProject: string; finalProject?: string | null; campaignId?: string | null; donorContact?: string | null; donationId?: string | null; confidence: string; reference: string | null; status: TransactionStatus; reviewedByName?: string | null; approvedAt?: string | null; ignoredAt?: string | null; createdAt: string | null };
 type FormState = { nameAr: string; nameEn: string; nameTr: string; accountName: string; ibanLast4: string; currency: Currency };
-type EditState = { donorName: string; donorLocale: DonorLocale; finalProject: string };
+/** campaignId "" = general donation (no project total changes). donorContact = exact email/phone of an existing donor. */
+type EditState = { donorName: string; donorLocale: DonorLocale; finalProject: string; campaignId: string; donorContact: string };
+type CampaignOption = { id: string; title: string };
+const GENERAL_DONATION = "__general__";
 type Filters = { q: string; status: string; bankId: string; currency: string; donorLocale: string; dateFrom: string; dateTo: string; amountMin: string; amountMax: string; sortBy: string; sortDir: string; limit: string };
 
 const emptyForm: FormState = { nameAr: "", nameEn: "", nameTr: "", accountName: "", ibanLast4: "", currency: "USD" };
 const defaultFilters: Filters = { q: "", status: "all", bankId: "all", currency: "all", donorLocale: "all", dateFrom: "", dateTo: "", amountMin: "", amountMax: "", sortBy: "createdAt", sortDir: "desc", limit: "50" };
 const currencyLabels: Record<string, string> = { USD: "دولار USD", TRY: "ليرة تركية TRY", EUR: "يورو EUR" };
-const localeLabels: Record<string, string> = { ar: "عربي", tr: "تركي", en: "إنجليزي", fr: "فرنسي", de: "ألماني", es: "إسباني", pt: "برتغالي", id: "إندونيسي" };
+// All site languages, from the single locale source — this used to be a local
+// list of 8, so donors in the other 11 languages could not be recorded.
+const localeLabels: Record<string, string> = Object.fromEntries(LOCALE_OPTIONS.map((o) => [o.code, o.label]));
 
 function money(n?: number | null, c?: string) { return `${(n ?? 0).toLocaleString(undefined, { maximumFractionDigits: 2 })} ${c ?? ""}`; }
 function statusLabel(status: TransactionStatus) { if (status === "APPROVED" || status === "IMPORTED") return "معتمد"; if (status === "IGNORED") return "مستبعد"; if (status === "DELETED") return "محذوف"; return "تحتاج مراجعة"; }
 function statusClass(status: TransactionStatus) { if (status === "APPROVED" || status === "IMPORTED") return "border-emerald-200 bg-emerald-50 text-emerald-700"; if (status === "IGNORED" || status === "DELETED") return "border-slate-200 bg-slate-50 text-slate-600"; return "border-amber-200 bg-amber-50 text-amber-700"; }
 function previewRowKey(row: PreviewRow) { return row.transactionHash ?? `${row.rowNumber}-${row.description}`; }
+function editFor(tx: ImportedTransaction): EditState { return { donorName: tx.donorName ?? "", donorLocale: tx.donorLocale || "ar", finalProject: tx.finalProject || tx.suggestedProject || "تبرع عام", campaignId: tx.campaignId ?? "", donorContact: tx.donorContact ?? "" }; }
+function apiError(e: unknown, fallback: string) { return axios.isAxiosError(e) && typeof e.response?.data?.error === "string" ? e.response.data.error : fallback; }
 
 export default function BankTransfersPage() {
   const [banks, setBanks] = useState<Bank[]>([]);
@@ -65,6 +73,7 @@ export default function BankTransfersPage() {
   const [preview, setPreview] = useState<PreviewResponse | null>(null);
   const [excludedPreviewHashes, setExcludedPreviewHashes] = useState<Set<string>>(() => new Set());
   const [edits, setEdits] = useState<Record<string, EditState>>({});
+  const [campaigns, setCampaigns] = useState<CampaignOption[]>([]);
   const [filters, setFilters] = useState<Filters>(defaultFilters);
 
   const activeBanks = useMemo(() => banks.filter((b) => b.isActive), [banks]);
@@ -78,6 +87,14 @@ export default function BankTransfersPage() {
   const currentQuery = useMemo(() => buildQuery(filters, page), [filters, page]);
 
   useEffect(() => { void loadInitial(); }, []);
+  useEffect(() => {
+    axios.get(`/api/campaigns?limit=500&includeInactive=true`)
+      .then((res) => {
+        const items = (res.data?.items ?? []) as Array<{ id: string; title?: string | null }>;
+        setCampaigns(items.filter((c) => c.id).map((c) => ({ id: c.id, title: c.title || c.id })));
+      })
+      .catch(() => setCampaigns([]));
+  }, []);
   useEffect(() => { if (!selectedBankId && activeBanks[0]?.id) { setSelectedBankId(activeBanks[0].id); setStatementCurrency(activeBanks[0].currency); } }, [activeBanks, selectedBankId]);
   useEffect(() => { setSelectedIds((prev) => new Set([...prev].filter((id) => visibleIds.includes(id)))); }, [transactions.length]);
 
@@ -91,7 +108,7 @@ export default function BankTransfersPage() {
     return params.toString();
   }
 
-  function initEdits(rows: ImportedTransaction[]) { const next: Record<string, EditState> = {}; rows.forEach((tx) => { if (!tx.id) return; next[tx.id] = { donorName: tx.donorName ?? "", donorLocale: tx.donorLocale || "ar", finalProject: tx.finalProject || tx.suggestedProject || "تبرع عام" }; }); setEdits(next); }
+  function initEdits(rows: ImportedTransaction[]) { const next: Record<string, EditState> = {}; rows.forEach((tx) => { if (!tx.id) return; next[tx.id] = editFor(tx); }); setEdits(next); }
   async function loadInitial() { setLoading(true); try { const banksRes = await axios.get<{ banks: Bank[]; supportedCurrencies: Currency[] }>("/api/admin/bank-transfers/banks"); setBanks(banksRes.data.banks ?? []); setSupportedCurrencies(banksRes.data.supportedCurrencies ?? ["USD", "TRY", "EUR"]); await loadTransactions(defaultFilters, 1); } catch { toast.error("فشل تحميل بيانات التحويلات البنكية"); } finally { setLoading(false); } }
   async function loadTransactions(nextFilters = filters, nextPage = page) { setTransactionsLoading(true); try { const query = buildQuery(nextFilters, nextPage); const txRes = await axios.get<{ transactions: ImportedTransaction[]; page: number; totalPages: number; total: number }>(`/api/admin/bank-transfers/transactions?${query}`); const rows = txRes.data.transactions ?? []; setTransactions(rows); setPage(txRes.data.page ?? nextPage); setTotalPages(txRes.data.totalPages ?? 1); setTotal(txRes.data.total ?? rows.length); initEdits(rows); } catch { toast.error("فشل تحميل العمليات البنكية"); } finally { setTransactionsLoading(false); } }
   async function refreshBanksOnly() { try { const res = await axios.get<{ banks: Bank[]; supportedCurrencies: Currency[] }>("/api/admin/bank-transfers/banks"); setBanks(res.data.banks ?? []); setSupportedCurrencies(res.data.supportedCurrencies ?? supportedCurrencies); } catch {} }
@@ -104,8 +121,50 @@ export default function BankTransfersPage() {
   function setEdit(id: string, patch: Partial<EditState>) { setEdits((prev) => ({ ...prev, [id]: { ...prev[id], ...patch } })); }
   function toggleSelected(id: string) { setSelectedIds((prev) => { const next = new Set(prev); if (next.has(id)) next.delete(id); else next.add(id); return next; }); }
   function toggleSelectAll() { setSelectedIds((prev) => { const next = new Set(prev); if (allVisibleSelected) visibleIds.forEach((id) => next.delete(id)); else visibleIds.forEach((id) => next.add(id)); return next; }); }
-  async function reviewTransaction(tx: ImportedTransaction, status: "APPROVED" | "IGNORED" | "PENDING_REVIEW") { if (!tx.id) return; const edit = edits[tx.id] ?? { donorName: tx.donorName ?? "", donorLocale: tx.donorLocale || "ar", finalProject: tx.finalProject || tx.suggestedProject || "تبرع عام" }; setReviewingId(tx.id); try { await axios.patch(`/api/admin/bank-transfers/transactions/${tx.id}`, { ...edit, status }); const updated = { ...tx, ...edit, status, finalProject: edit.finalProject }; setTransactions((prev) => prev.map((item) => item.id === tx.id ? updated : item)); toast.success(status === "APPROVED" ? "تم اعتماد العملية" : status === "IGNORED" ? "تم استبعاد العملية" : "تم حفظ التعديل"); if (status === "APPROVED") void refreshBanksOnly(); } catch { toast.error("فشل تحديث العملية"); } finally { setReviewingId(null); } }
-  async function bulkReview(status: "APPROVED" | "IGNORED" | "PENDING_REVIEW") { const ids = [...selectedIds]; if (!ids.length) return; setBulkBusy(true); try { await Promise.all(ids.map((id) => axios.patch(`/api/admin/bank-transfers/transactions/${id}`, { status }))); setTransactions((prev) => prev.map((tx) => tx.id && selectedIds.has(tx.id) ? { ...tx, status } : tx)); setSelectedIds(new Set()); toast.success(status === "APPROVED" ? "تم اعتماد العمليات المحددة" : status === "IGNORED" ? "تم استبعاد العمليات المحددة" : "تم حفظ المحدد للمراجعة"); void refreshBanksOnly(); } catch { toast.error("فشل تنفيذ الإجراء الجماعي"); } finally { setBulkBusy(false); } }
+  async function reviewTransaction(tx: ImportedTransaction, status: "APPROVED" | "IGNORED" | "PENDING_REVIEW") {
+    if (!tx.id) return;
+    const edit = edits[tx.id] ?? editFor(tx);
+    setReviewingId(tx.id);
+    try {
+      const res = await axios.patch<{ ok: boolean; donationId: string | null }>(`/api/admin/bank-transfers/transactions/${tx.id}`, { ...edit, campaignId: edit.campaignId || null, donorContact: edit.donorContact || null, status });
+      const updated = { ...tx, ...edit, status, finalProject: edit.finalProject, donationId: res.data.donationId ?? tx.donationId ?? null };
+      setTransactions((prev) => prev.map((item) => item.id === tx.id ? updated : item));
+      toast.success(status === "APPROVED" ? (edit.campaignId ? "تم اعتماد العملية وإضافتها لإجمالي المشروع" : "تم اعتماد العملية كتبرع عام") : status === "IGNORED" ? "تم استبعاد العملية" : "تم حفظ التعديل");
+      if (status === "APPROVED") void refreshBanksOnly();
+    } catch (e) {
+      toast.error(apiError(e, "فشل تحديث العملية"));
+    } finally {
+      setReviewingId(null);
+    }
+  }
+  async function bulkReview(status: "APPROVED" | "IGNORED" | "PENDING_REVIEW") {
+    const ids = [...selectedIds];
+    if (!ids.length) return;
+    setBulkBusy(true);
+    try {
+      // Each row carries its own reviewer choices (project, donor contact) so bulk approval
+      // does not silently drop them; each result is reported, not all-or-nothing.
+      const byId = new Map(transactions.filter((tx) => tx.id).map((tx) => [tx.id as string, tx]));
+      const results = await Promise.allSettled(ids.map((id) => {
+        const tx = byId.get(id);
+        const edit = edits[id] ?? (tx ? editFor(tx) : undefined);
+        const payload = edit ? { ...edit, campaignId: edit.campaignId || null, donorContact: edit.donorContact || null, status } : { status };
+        return axios.patch(`/api/admin/bank-transfers/transactions/${id}`, payload).then(() => id);
+      }));
+      const done = new Set(results.filter((r): r is PromiseFulfilledResult<string> => r.status === "fulfilled").map((r) => r.value));
+      const failed = results.length - done.size;
+      setTransactions((prev) => prev.map((tx) => tx.id && done.has(tx.id) ? { ...tx, status } : tx));
+      setSelectedIds(new Set(ids.filter((id) => !done.has(id))));
+      if (failed === 0) toast.success(status === "APPROVED" ? "تم اعتماد العمليات المحددة" : status === "IGNORED" ? "تم استبعاد العمليات المحددة" : "تم حفظ المحدد للمراجعة");
+      else {
+        const firstError = results.find((r): r is PromiseRejectedResult => r.status === "rejected");
+        toast.error(`تم تنفيذ ${done.size} وتعذّر ${failed}${firstError ? ` — ${apiError(firstError.reason, "")}` : ""}. العمليات التي تعذّرت بقيت محددة.`);
+      }
+      void refreshBanksOnly();
+    } finally {
+      setBulkBusy(false);
+    }
+  }
   async function deleteTransaction(tx: ImportedTransaction) { if (!tx.id) return; if (!window.confirm(`تأكيد حذف عملية ${tx.donorName || "بدون اسم"} بقيمة ${money(tx.amount, tx.currency)}؟`)) return; setReviewingId(tx.id); try { await axios.delete(`/api/admin/bank-transfers/transactions/${tx.id}`); setTransactions((prev) => prev.filter((item) => item.id !== tx.id)); toast.success("تم حذف العملية"); void refreshBanksOnly(); } catch { toast.error("فشل حذف العملية"); } finally { setReviewingId(null); } }
   function applyFilters() { setPage(1); void loadTransactions(filters, 1); }
   function resetFilters() { setFilters(defaultFilters); setPage(1); void loadTransactions(defaultFilters, 1); }
@@ -504,6 +563,15 @@ export default function BankTransfersPage() {
                     <td className="px-3 py-3 whitespace-nowrap text-slate-600">{tx.transactionDate || "—"}</td>
                     <td className="min-w-44 px-3 py-3">
                       <Input className="h-9 text-xs" value={edit?.donorName ?? ""} onChange={(e) => tx.id && setEdit(tx.id, { donorName: e.target.value })} />
+                      <Input
+                        className="mt-1 h-8 text-[11px]"
+                        dir="ltr"
+                        placeholder="بريد أو هاتف متبرع موجود (اختياري)"
+                        title="يُربط التحويل بمتبرع موجود فقط عند تطابق البريد أو الهاتف تمامًا. بدونه يُنشأ متبرع جديد — لا يتم الدمج بالاسم."
+                        value={edit?.donorContact ?? ""}
+                        disabled={Boolean(tx.donationId)}
+                        onChange={(e) => tx.id && setEdit(tx.id, { donorContact: e.target.value })}
+                      />
                     </td>
                     <td className="px-3 py-3 whitespace-nowrap text-slate-600">{tx.bankId || "—"}</td>
                     <td className="px-3 py-3 font-mono tabular-nums whitespace-nowrap font-semibold text-slate-900">{money(tx.amount, tx.currency)}</td>
@@ -516,8 +584,20 @@ export default function BankTransfersPage() {
                       </Select>
                     </td>
                     <td className="min-w-56 px-3 py-3">
+                      <Select
+                        value={edit?.campaignId || GENERAL_DONATION}
+                        disabled={Boolean(tx.donationId)}
+                        onValueChange={(v) => tx.id && setEdit(tx.id, { campaignId: v === GENERAL_DONATION ? "" : v })}
+                      >
+                        <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value={GENERAL_DONATION}>تبرع عام (بدون مشروع)</SelectItem>
+                          {campaigns.map((c) => <SelectItem key={c.id} value={c.id}>{c.title}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
                       <Input
-                        className="h-9 text-xs"
+                        className="mt-1 h-8 text-[11px]"
+                        placeholder="ملاحظة (للمرجع فقط)"
                         value={edit?.finalProject ?? tx.finalProject ?? tx.suggestedProject ?? ""}
                         onChange={(e) => tx.id && setEdit(tx.id, { finalProject: e.target.value })}
                       />

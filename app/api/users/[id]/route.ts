@@ -48,6 +48,7 @@ export async function GET(
               select: {
                 id: true,
                 status: true,
+                frequency: true,
                 nextBillingDate: true,
               },
             },
@@ -86,6 +87,8 @@ export async function GET(
         /** Donation charge status (PAID / FAILED) — unchanged for revenue totals */
         paymentStatus: d.status,
         status: type === 'MONTHLY' ? (sub?.status ?? null) : d.status,
+        /** The plan's cadence — DAILY | FRIDAY | MONTHLY. `type` stays "MONTHLY" for every plan: it means "recurring" to every consumer. */
+        frequency: type === 'MONTHLY' ? (sub?.frequency ?? 'MONTHLY') : null,
         nextBillingDate: type === 'MONTHLY' ? (sub?.nextBillingDate ?? null) : null,
       };
     };
@@ -444,7 +447,20 @@ export async function PUT(
   }
 }
 
-// DELETE /api/users/[id] - Delete user (admin only)
+/** Placeholder identity written over a deleted account. `.invalid` is a reserved
+ * TLD, so nothing is ever delivered to it, and the id keeps `email` unique. */
+const DELETED_DONOR_NAME = 'متبرع محذوف';
+function deletedEmailFor(id: string) {
+  return `deleted+${id}@deleted.invalid`;
+}
+
+// DELETE /api/users/[id] - Close an account (admin only).
+//
+// Financial records are append-only, so this never deletes the user row or
+// anything that hangs off it financially. Donations, subscriptions, receipts
+// and certificates keep pointing at the same donorId. What goes is the person:
+// their personal data is overwritten, sign-in is made impossible, and saved
+// cards, OAuth links, sessions and cart are removed.
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -455,9 +471,13 @@ export async function DELETE(
     const adminDenied = requireAdminSession(session);
     if (adminDenied) return adminDenied;
 
+    if (session!.user.id === id) {
+      return NextResponse.json({ error: 'You cannot delete your own account' }, { status: 400 });
+    }
+
     const user = await prisma.user.findUnique({
       where: { id },
-      select: { id: true, name: true, email: true },
+      select: { id: true, name: true, email: true, role: true },
     });
 
     if (!user) {
@@ -467,10 +487,49 @@ export async function DELETE(
       );
     }
 
+    // A live plan would keep charging a card whose owner no longer has an
+    // account to manage it. Cancel it first (the monthly dashboard cancels at
+    // the provider), then close the account.
+    const livePlans = await prisma.subscription.count({
+      where: { donorId: id, status: { in: ['ACTIVE', 'PAUSED'] } },
+    });
+    if (livePlans > 0) {
+      return NextResponse.json(
+        {
+          error: 'ACTIVE_SUBSCRIPTIONS',
+          message: `This donor has ${livePlans} active or paused recurring plan(s). Cancel them before deleting the account.`,
+        },
+        { status: 409 }
+      );
+    }
+
+    const donationCount = await prisma.donation.count({ where: { donorId: id } });
+
     await prisma.$transaction(async (tx) => {
-      await tx.donation.deleteMany({ where: { donorId: id } });
-      await tx.subscription.deleteMany({ where: { donorId: id } });
-      await tx.user.delete({ where: { id } });
+      await tx.account.deleteMany({ where: { userId: id } });
+      await tx.session.deleteMany({ where: { userId: id } });
+      await tx.cartItem.deleteMany({ where: { userId: id } });
+      await tx.creditCard.deleteMany({ where: { userId: id } });
+      await tx.user.update({
+        where: { id },
+        data: {
+          name: DELETED_DONOR_NAME,
+          email: deletedEmailFor(id),
+          emailVerified: null,
+          image: null,
+          password: null,
+          phone: null,
+          birthdate: null,
+          gender: null,
+          city: null,
+          region: null,
+          clarityId: null,
+          role: 'DONOR',
+          dashboardPermissions: [],
+          emailNotifications: false,
+          smsNotifications: false,
+        },
+      });
     });
 
     const actor = session!.user;
@@ -479,14 +538,18 @@ export async function DELETE(
       actorName: actor.name,
       actorRole: actor.role ?? 'ADMIN',
       action: 'USER_DELETE',
-      messageAr: `${actor.name ?? 'مدير'} حذف المستخدم ${user.name ?? user.email ?? id}`,
-      messageEn: `${actor.name ?? 'Admin'} deleted user ${user.email}`,
+      messageAr: `${actor.name ?? 'مدير'} حذف حساب المستخدم ${user.name ?? user.email ?? id} (أُخفيت بياناته الشخصية وبقيت سجلاته المالية: ${donationCount} تبرع)`,
+      messageEn: `${actor.name ?? 'Admin'} closed and anonymized user ${user.email ?? id}; ${donationCount} donation record(s) kept`,
       entityType: 'User',
       entityId: id,
+      metadata: { previousRole: user.role, donationsKept: donationCount },
     });
 
     return NextResponse.json(
-      { message: 'User, donations and subscriptions deleted successfully' },
+      {
+        message: 'Account closed. Personal data removed; donation and subscription records kept.',
+        donationsKept: donationCount,
+      },
       { status: 200 }
     );
   } catch (error) {

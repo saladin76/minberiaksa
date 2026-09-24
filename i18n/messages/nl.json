@@ -2124,5 +2124,18 @@
     "track4Text": "Administrative and technical work done from anywhere in the world.",
     "track5Title": "Foundation Representative in Your Country",
     "track5Text": "Representing the foundation officially in your country and following up its activities and donors there."
+  },
+  "Recurring": {
+    "nextChargeOn": "Volgende afschrijving: {date}",
+    "firstChargeOn": "Eerste afschrijving: {date}",
+    "firstChargeToday": "Nu afgeschreven, daarna {cadence}",
+    "planScheduledTitle": "Uw periodieke gift is ingesteld",
+    "planScheduledLead": "Uw kaart is opgeslagen en er is nog niets afgeschreven. De eerste afschrijving is op {date}.",
+    "planActiveLead": "Hetzelfde bedrag wordt {cadence} afgeschreven. Volgende afschrijving: {date}.",
+    "cadenceDaily": "elke dag",
+    "cadenceFriday": "elke vrijdag",
+    "cadenceMonthly": "elke maand",
+    "stripeNotReady": "Het betaalformulier wordt nog geladen — probeer het zo opnieuw.",
+    "subscriptionPaymentFailed": "Afschrijving mislukt — werk uw kaart bij"
   }
 }

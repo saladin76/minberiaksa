@@ -196,14 +196,14 @@ export default function ProjectDonateCard({ project, width, tag }: ProjectDonate
             inputMode="decimal"
             placeholder={t("freeAmount")}
             aria-label={t("freeAmount")}
-            /* No fixed width: sized to "Free amount" it clipped the translated
-               label (Montant libre / Freier Betrag). It follows the content with
-               a floor in ch instead. */
+            /* Takes the whole rest of the row. Capped at 14ch it left a ragged
+               gap after the last chip on wide cards; growing into that space
+               squares the row off and gives the translated labels (Montant
+               libre / Freier Betrag) room they were being clipped for. The
+               9ch floor keeps it usable when it wraps to a line of its own. */
             style={{
-              flex: "0 1 auto",
-              width: "11ch",
+              flex: "1 1 9ch",
               minWidth: "9ch",
-              maxWidth: "14ch",
               height: 34,
               padding: "0 12px",
               borderRadius: 999,

@@ -59,7 +59,11 @@ export function useMinbarReveal<T extends HTMLElement = HTMLDivElement>(threshol
  */
 export function useMinbarCountUp(target: number, durationMs = 1400) {
   const { ref, shown } = useMinbarReveal<HTMLElement>(0.4);
-  const [value, setValue] = useState(0);
+  /* The real figure from the first render. The server HTML, a crawler, a
+     reader whose observer never fires, or one arriving before hydration all
+     see the reported total, never a `0+` (`DEPLOYED_VS_DESIGN_AUDIT.md`
+     § P1.3). The count-up is layered on top once the element is in view. */
+  const [value, setValue] = useState(target);
 
   useEffect(() => {
     if (!shown) return;

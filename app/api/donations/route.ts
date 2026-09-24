@@ -19,6 +19,7 @@ import { sanitizeDonationAttribution } from "@/lib/attribution/sanitize";
 import { inferLocaleFromRequest } from "@/lib/preferred-lang";
 import { resolveGuestDonor } from "@/lib/users/resolve-guest-donor";
 import { istanbulDateKeysToUtcRange } from "@/lib/admin/istanbul-calendar";
+import { mintDonationAccessToken } from "@/lib/donations/access-token";
 
 // GET /api/donations - Get all donations (admin) or user's donations
 export async function GET(request: NextRequest) {
@@ -459,6 +460,7 @@ export async function POST(request: NextRequest) {
 
         const donation = await tx.donation.create({
           data: {
+            accessToken: mintDonationAccessToken(),
             amount: totalAmount,
             amountUSD: donationTotalUsd,
             teamSupport,
@@ -545,6 +547,7 @@ export async function POST(request: NextRequest) {
     const donation = await prisma.$transaction(async (tx) => {
       const d = await tx.donation.create({
         data: {
+          accessToken: mintDonationAccessToken(),
           amount: totalAmount,
           amountUSD: donationTotalUsd,
           teamSupport,
