@@ -10,6 +10,7 @@ import TravelBanner from "@/components/minbar/banners/TravelBanner";
 import IbadanBanner from "@/components/minbar/banners/IbadanBanner";
 import { ArrowGlyph } from "@/components/minbar/home/TopSections";
 import DonationPanel from "./DonationPanel";
+import ConciergeEntry from "@/components/minbar/concierge/ConciergeEntry";
 
 /**
  * Project detail — ported from `Minbar/تفاصيل مشروع.dc.html`.
@@ -114,6 +115,7 @@ export default function ProjectDetail({ project, updates, gallery, related }: Pr
           </div>
 
           <DonationPanel project={project} />
+          <ConciergeEntry intent="current_page" />
         </div>
       </section>
 
@@ -140,7 +142,7 @@ export default function ProjectDetail({ project, updates, gallery, related }: Pr
                 <p style={{ margin: 0, fontSize: 16.5, lineHeight: 2, color: "var(--muted)" }}>{project.text}</p>
                 {/* Two standing paragraphs the handoff shows on every project:
                     how the work is executed, and how it is verified. */}
-                <p style={{ margin: 0, fontSize: 16.5, lineHeight: 2, color: "var(--muted)" }}>{t("execParagraph")}</p>
+                <p style={{ margin: 0, fontSize: 16.5, lineHeight: 2, color: "var(--muted)" }}>{t("execParagraph", { region: project.regionLabel ?? tCommon("regionGeneral") })}</p>
                 <p style={{ margin: 0, fontSize: 16.5, lineHeight: 2, color: "var(--muted)" }}>{t("verifyParagraph")}</p>
               </div>
             ) : null}

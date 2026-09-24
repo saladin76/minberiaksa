@@ -11,6 +11,33 @@ datasource db {
  * ===================== AUTTHH =====================
  */
 
+/// One step of a visitor's journey through the donation concierge
+/// (`lib/ai/concierge`). Written by the concierge API, never by the browser
+/// directly with free-form data; `sessionId` is the browser-minted concierge
+/// session so the steps of one visit line up, and `donationId` is filled by
+/// the order API when a basket that went through the concierge is checked out.
+/// The funnel questions ("opened → interacted → recommended → selected →
+/// added → checkout → paid") are all counts over this collection.
+model AiConciergeEvent {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  sessionId  String
+  event      String
+  locale     String
+  route      String?
+  intent     String?
+  campaignId String?  @db.ObjectId
+  categoryId String?  @db.ObjectId
+  amountUSD  Float?
+  frequency  String?
+  /// Whether the reply came from the model or the deterministic fallback.
+  mode       String?
+  donationId String?  @db.ObjectId
+  createdAt  DateTime @default(now())
+
+  @@index([sessionId, createdAt])
+  @@index([event, createdAt])
+}
+
 model Account {
   id                String  @id @default(auto()) @map("_id") @db.ObjectId
   userId            String  @db.ObjectId

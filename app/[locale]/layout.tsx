@@ -6,6 +6,7 @@ import { getServerSession } from "next-auth";
 import Header from "@/components/minbar/shell/Header";
 import MinbarFooter from "@/components/minbar/shell/Footer";
 import QuickDonate from "@/components/minbar/shell/QuickDonate";
+import ConciergeLauncher from "@/components/minbar/concierge/ConciergeLauncher";
 import CartReminder from "@/components/CartReminder";
 import { CurrencyFromUrlSync } from "@/components/CurrencyFromUrlSync";
 import IntlProviderClient from "./IntlProviderClient";
@@ -114,6 +115,7 @@ export default async function Rootlayout({
                   for the sake of a single sentence. */}
               <MinbarFooter tagline={tagline} />
               <QuickDonate />
+              <ConciergeLauncher />
               <CartReminder />
               <ConfettiProvider />
               <Toaster position="top-center" />

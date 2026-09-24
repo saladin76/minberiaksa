@@ -1,6 +1,7 @@
 import type { MinbarCartItem } from "./cart";
 import type { MinbarProject } from "./projects";
 import { orderTypeForItems, type OrderType } from "@/lib/donations/recurring-schedule";
+import { readConciergeAssisted } from "@/lib/ai/concierge/client";
 
 /**
  * The Minbar checkout's payment driver.
@@ -202,6 +203,11 @@ export function browserTimezone(): string {
  * Throws with the server's message when the order is rejected, so the form can
  * say what went wrong rather than failing silently.
  */
+function conciergeMarker(): { sessionId: string; intent: string | null; campaignId: string | null } | null {
+  const assist = readConciergeAssisted();
+  return assist ? { sessionId: assist.sessionId, intent: assist.intent, campaignId: assist.campaignId } : null;
+}
+
 export async function createDonation(input: CreateDonationInput): Promise<CreatedDonation> {
   const { items, categoryItems, waqfItems } = toOrderItems(input.items, input.projects);
   if (items.length === 0 && categoryItems.length === 0 && waqfItems.length === 0) throw new Error("cart-empty");
@@ -218,6 +224,8 @@ export async function createDonation(input: CreateDonationInput): Promise<Create
       timezone: browserTimezone(),
       teamSupport: input.teamSupport > 0 ? input.teamSupport : 0,
       teamSupportRecurring: input.teamSupportRecurring,
+      /* Analytics only: marks an order whose basket went through the concierge. */
+      ...(conciergeMarker() ? { concierge: conciergeMarker() } : {}),
       paymentMethod: input.method,
       locale: input.locale,
       ...(input.referralCode ? { referralCode: input.referralCode } : {}),

@@ -36,6 +36,23 @@ import { parseMainGateway } from "@/lib/payment-gateway";
 import { isAlbarakaConfigured, isAlbarakaRecurringEnabled } from "@/lib/albaraka";
 import { mintDonationAccessToken } from "@/lib/donations/access-token";
 import { giftLineData, parseGiftOrder, type GiftOrderInput } from "@/lib/donations/gift-order";
+import { recordConciergeEvents } from "@/lib/ai/concierge/events";
+
+/**
+ * Analytics-only marker sent by the checkout when the basket went through the
+ * donation concierge (`lib/ai/concierge/client.ts`). Stored under
+ * `Donation.attribution.ai_concierge` so paid orders can be counted per
+ * concierge session; it never changes what is charged.
+ */
+function parseConciergeMarker(raw: unknown): { sessionId: string; intent: string | null; campaignId: string | null } | null {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
+  const o = raw as Record<string, unknown>;
+  const sessionId = typeof o.sessionId === "string" && /^[A-Za-z0-9_-]{8,64}$/.test(o.sessionId) ? o.sessionId : null;
+  if (!sessionId) return null;
+  const intent = typeof o.intent === "string" ? o.intent.slice(0, 40) : null;
+  const campaignId = typeof o.campaignId === "string" && /^[0-9a-fA-F]{24}$/.test(o.campaignId) ? o.campaignId : null;
+  return { sessionId, intent, campaignId };
+}
 
 const PAYMENT_METHODS = new Set(["CARD", "PAYPAL", "BANK_TRANSFER"]);
 
@@ -144,7 +161,12 @@ export async function POST(request: NextRequest) {
          the finance review knows where to look. */
       bankSlug,
       bankCurrency,
+      concierge: conciergeIn,
     } = body;
+    const concierge = parseConciergeMarker(conciergeIn);
+    const conciergeAttribution = concierge
+      ? ({ ai_concierge: { ...concierge, source: "ai_concierge", at: new Date().toISOString() } } as Prisma.InputJsonValue)
+      : undefined;
 
     type CartItemIn = {
       campaignId: string;
@@ -548,6 +570,7 @@ export async function POST(request: NextRequest) {
             subscriptionId: sub.id,
             paymentMethod,
             cardDetails: null,
+            ...(conciergeAttribution ? { attribution: conciergeAttribution } : {}),
             ...campaignLines,
             ...categoryLines,
             ...waqfLines,
@@ -576,6 +599,7 @@ export async function POST(request: NextRequest) {
       }, { timeout: 15000 });
 
       const d = result.donation;
+      if (concierge) void recordConciergeEvents([{ sessionId: concierge.sessionId, event: "order_created", locale: validLocale ?? "ar", intent: concierge.intent, campaignId: concierge.campaignId, amountUSD: donationTotalUsd, frequency: frequency.toLowerCase(), donationId: d.id }]);
       const actorRole = session?.user?.role ?? "DONOR";
       await writeAuditLog({
         actorId: donorId,
@@ -629,6 +653,7 @@ export async function POST(request: NextRequest) {
           ...(isBankTransfer
             ? { provider: BANK_TRANSFER_PROVIDER, providerTxnResult: "Pending" }
             : {}),
+          ...(conciergeAttribution ? { attribution: conciergeAttribution } : {}),
           ...campaignLines,
           ...categoryLines,
           ...waqfLines,
@@ -666,6 +691,7 @@ export async function POST(request: NextRequest) {
     }, { timeout: 15000 });
 
     const { claim, ...donationRow } = donation;
+    if (concierge) void recordConciergeEvents([{ sessionId: concierge.sessionId, event: "order_created", locale: validLocale ?? "ar", intent: concierge.intent, campaignId: concierge.campaignId, amountUSD: donationTotalUsd, frequency: "once", donationId: donationRow.id }]);
     const actorRole = session?.user?.role ?? "DONOR";
     await writeAuditLog({
       actorId: donorId,

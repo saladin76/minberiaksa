@@ -56,7 +56,10 @@ export function messagesFor(locale: string): MessageObject {
  * page put ~129KB of JSON in each document; the shell is ~14KB and a page adds
  * only what it actually renders.
  */
-export const SHELL_NAMESPACES = ["common", "navigation", "system", "validation", "projects"] as const;
+/* `Concierge` rides in the shell: the donation concierge's launcher is mounted
+   by the layout and its page-level entry points sit inside pages' own
+   providers, which replace rather than extend the layout's messages. */
+export const SHELL_NAMESPACES = ["common", "navigation", "system", "validation", "projects", "Concierge"] as const;
 
 /**
  * Legacy namespaces belonging to the pre-Minbar public pages. They stay in the

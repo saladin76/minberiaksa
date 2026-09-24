@@ -60,6 +60,9 @@
     "lib/seo-minbar.generated.ts",
     "lib/donations/recurring-schedule.ts",
     "lib/donations/gift-order.ts",
+    "lib/ai/concierge/intent.ts",
+    "lib/ai/concierge/recommend.ts",
+    "lib/ai/concierge/schema.ts",
     "lib/donations/subscription-provider-rules.ts",
     "lib/content-localization/access.ts",
     "tests/integration-settings/**/*.ts"
