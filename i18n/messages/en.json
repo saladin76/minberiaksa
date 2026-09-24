@@ -3252,7 +3252,8 @@
     "chosenRecurring": "Team support: {amount} per instalment",
     "giftedTo": "Gifted to {name}",
     "billWithPlan": "With every instalment",
-    "billOnce": "Once only"
+    "billOnce": "Once only",
+    "chooseFirst": "Choose a team-support amount or “No thanks” to continue"
   },
   "Gift": {
     "emailSubject": "A gift in your name: a donation to {project}",

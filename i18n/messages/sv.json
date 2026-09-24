@@ -2149,7 +2149,8 @@
     "chosenRecurring": "Teamstöd: {amount} per dragning",
     "giftedTo": "Gåva till {name}",
     "billWithPlan": "Vid varje dragning",
-    "billOnce": "Bara en gång"
+    "billOnce": "Bara en gång",
+    "chooseFirst": "Välj ett belopp för teamet eller ”Nej tack” för att fortsätta"
   },
   "Gift": {
     "emailSubject": "En gåva i ditt namn: en donation till {project}",

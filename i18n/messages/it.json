@@ -2149,7 +2149,8 @@
     "chosenRecurring": "Sostegno al team: {amount} per rata",
     "giftedTo": "Regalo per {name}",
     "billWithPlan": "Con ogni rata",
-    "billOnce": "Solo una volta"
+    "billOnce": "Solo una volta",
+    "chooseFirst": "Scegli un importo di sostegno al team o “No, grazie” per continuare"
   },
   "Gift": {
     "emailSubject": "Un regalo a tuo nome: una donazione per {project}",

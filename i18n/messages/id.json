@@ -3180,7 +3180,8 @@
     "chosenRecurring": "Dukungan tim: {amount} setiap penarikan",
     "giftedTo": "Hadiah untuk {name}",
     "billWithPlan": "Setiap penarikan",
-    "billOnce": "Sekali saja"
+    "billOnce": "Sekali saja",
+    "chooseFirst": "Pilih jumlah dukungan tim atau “Tidak, terima kasih” untuk melanjutkan"
   },
   "Gift": {
     "emailSubject": "Hadiah atas nama Anda: donasi untuk {project}",

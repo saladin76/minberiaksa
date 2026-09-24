@@ -2146,7 +2146,8 @@
     "chosenRecurring": "Sokongan pasukan: {amount} setiap caj",
     "giftedTo": "Hadiah untuk {name}",
     "billWithPlan": "Setiap caj",
-    "billOnce": "Sekali sahaja"
+    "billOnce": "Sekali sahaja",
+    "chooseFirst": "Pilih jumlah sokongan pasukan atau “Tidak, terima kasih” untuk meneruskan"
   },
   "Gift": {
     "emailSubject": "Hadiah atas nama anda: derma untuk {project}",

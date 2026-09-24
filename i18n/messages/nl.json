@@ -2149,7 +2149,8 @@
     "chosenRecurring": "Teamsteun: {amount} per afschrijving",
     "giftedTo": "Geschenk voor {name}",
     "billWithPlan": "Bij elke afschrijving",
-    "billOnce": "Eenmalig"
+    "billOnce": "Eenmalig",
+    "chooseFirst": "Kies een bedrag voor het team of “Nee, bedankt” om verder te gaan"
   },
   "Gift": {
     "emailSubject": "Een geschenk op uw naam: een gift voor {project}",

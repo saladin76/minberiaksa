@@ -3181,7 +3181,8 @@
     "chosenRecurring": "Team-Unterstützung: {amount} je Abbuchung",
     "giftedTo": "Geschenk für {name}",
     "billWithPlan": "Mit jeder Abbuchung",
-    "billOnce": "Nur einmal"
+    "billOnce": "Nur einmal",
+    "chooseFirst": "Wählen Sie einen Betrag für das Team oder „Nein danke“, um fortzufahren"
   },
   "Gift": {
     "emailSubject": "Ein Geschenk in Ihrem Namen: eine Spende für {project}",

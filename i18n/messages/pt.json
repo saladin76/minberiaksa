@@ -3181,7 +3181,8 @@
     "chosenRecurring": "Apoio à equipa: {amount} por prestação",
     "giftedTo": "Oferecido a {name}",
     "billWithPlan": "Com cada prestação",
-    "billOnce": "Apenas uma vez"
+    "billOnce": "Apenas uma vez",
+    "chooseFirst": "Escolha um valor de apoio à equipa ou «Não, obrigado» para continuar"
   },
   "Gift": {
     "emailSubject": "Um presente em seu nome: uma doação para {project}",

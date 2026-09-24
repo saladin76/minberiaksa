@@ -2149,7 +2149,8 @@
     "chosenRecurring": "Mbështetje për ekipin: {amount} për këst",
     "giftedTo": "Dhuratë për {name}",
     "billWithPlan": "Me çdo këst",
-    "billOnce": "Vetëm një herë"
+    "billOnce": "Vetëm një herë",
+    "chooseFirst": "Zgjidhni një shumë për ekipin ose “Jo, faleminderit” për të vazhduar"
   },
   "Gift": {
     "emailSubject": "Një dhuratë në emrin tuaj: një dhurim për {project}",

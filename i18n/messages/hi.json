@@ -2146,7 +2146,8 @@
     "chosenRecurring": "टीम समर्थन: हर कटौती पर {amount}",
     "giftedTo": "{name} को उपहार",
     "billWithPlan": "हर कटौती के साथ",
-    "billOnce": "केवल एक बार"
+    "billOnce": "केवल एक बार",
+    "chooseFirst": "जारी रखने के लिए टीम समर्थन राशि या “नहीं, धन्यवाद” चुनें"
   },
   "Gift": {
     "emailSubject": "आपके नाम पर एक उपहार: {project} के लिए दान",

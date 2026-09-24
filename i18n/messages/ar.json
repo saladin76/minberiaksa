@@ -3250,7 +3250,8 @@
     "chosenRecurring": "دعم الفريق: {amount} مع كل دورة",
     "giftedTo": "مُهدى إلى {name}",
     "billWithPlan": "مع كل دورة",
-    "billOnce": "مرة واحدة فقط"
+    "billOnce": "مرة واحدة فقط",
+    "chooseFirst": "اختر مبلغًا لدعم الفريق أو «لا شكرًا» للمتابعة"
   },
   "Gift": {
     "emailSubject": "هدية باسمك: تبرع لمشروع {project}",

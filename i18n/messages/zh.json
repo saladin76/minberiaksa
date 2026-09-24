@@ -2146,7 +2146,8 @@
     "chosenRecurring": "团队支持：每期 {amount}",
     "giftedTo": "赠予 {name}",
     "billWithPlan": "随每期一起",
-    "billOnce": "仅一次"
+    "billOnce": "仅一次",
+    "chooseFirst": "请选择团队支持金额或“不用了，谢谢”以继续"
   },
   "Gift": {
     "emailSubject": "以您的名义捐赠：{project}",

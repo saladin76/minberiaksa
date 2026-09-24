@@ -3252,7 +3252,8 @@
     "chosenRecurring": "Ekip desteği: her çekimde {amount}",
     "giftedTo": "{name} adına hediye",
     "billWithPlan": "Her çekimle birlikte",
-    "billOnce": "Yalnızca bir kez"
+    "billOnce": "Yalnızca bir kez",
+    "chooseFirst": "Devam etmek için bir ekip desteği tutarı ya da “Hayır, teşekkürler” seçin"
   },
   "Gift": {
     "emailSubject": "Adınıza bir hediye: {project} projesine bağış",

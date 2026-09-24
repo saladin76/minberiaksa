@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, type CSSProperties } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
 import { Button } from "@/components/minbar/ds";
@@ -9,7 +9,8 @@ import { useMinbarCart } from "@/hooks/useMinbarCart";
 import { useMinbarMoney } from "@/hooks/useMinbarMoney";
 import {
   cartHasRecurring,
-  readTeamSupport,
+  clearTeamSupport,
+  readTeamSupportChoice,
   readTeamSupportRecurring,
   teamSupportIsRecurring,
   writeTeamSupport,
@@ -90,7 +91,10 @@ export default function CartPage({ projects, categories }: { projects: MinbarPro
      and the quick-pick amounts come from the global settings; until they
      arrive the step is not drawn rather than drawn with placeholder amounts. */
   const [settings, setSettings] = useState<GlobalSettings | null>(() => getCachedGlobalSettings());
-  const [teamSupport, setTeamSupport] = useState(0);
+  /* `null` until the donor answers — an amount or "no thanks". The checkout
+     button waits for that answer; nothing is pre-selected on their behalf. */
+  const [teamSupport, setTeamSupport] = useState<number | null>(null);
+  const teamAmount = teamSupport ?? 0;
   const [customTeam, setCustomTeam] = useState("");
   /* Recurring basket: with every instalment (default) or once. */
   const [teamRecurringChoice, setTeamRecurringChoice] = useState<boolean | null>(null);
@@ -99,7 +103,9 @@ export default function CartPage({ projects, categories }: { projects: MinbarPro
     fetchGlobalSettings().then((s) => {
       if (live && s) setSettings(s);
     });
-    setTeamSupport(readTeamSupport());
+    const choice = readTeamSupportChoice();
+    setTeamSupport(choice);
+    if (choice !== null && choice > 0) setCustomTeam(String(choice));
     setTeamRecurringChoice(readTeamSupportRecurring());
     return () => {
       live = false;
@@ -136,7 +142,30 @@ export default function CartPage({ projects, categories }: { projects: MinbarPro
     if (!teamAmounts.includes(value)) setCustomTeam(value > 0 ? String(value) : "");
     else setCustomTeam("");
   };
+  /* The step is on and the donor has not answered: checkout waits. */
+  const teamSupportPending = settings !== null && teamSupportEnabled && teamSupport === null;
+  const [teamNudge, setTeamNudge] = useState(false);
+  const nudgeTeamSupport = () => {
+    document.getElementById("cart-team-support")?.scrollIntoView({ behavior: "smooth", block: "center" });
+    setTeamNudge(true);
+    window.setTimeout(() => setTeamNudge(false), 1600);
+  };
   const recurringBasket = cartHasRecurring(items);
+
+  /* A row added from the cross-sell block: scroll it into view and let it
+     glow for a moment, so the donor sees where it went. */
+  const [addedIndex, setAddedIndex] = useState<number | null>(null);
+  const addedTimer = useRef<number | null>(null);
+  const announceAdded = (index: number) => {
+    setAddedIndex(index);
+    if (addedTimer.current) window.clearTimeout(addedTimer.current);
+    addedTimer.current = window.setTimeout(() => setAddedIndex(null), 2600);
+  };
+  useEffect(() => {
+    if (addedIndex === null) return;
+    const row = document.getElementById(`cart-row-${addedIndex}`);
+    row?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [addedIndex]);
   const teamRecurring = teamSupportIsRecurring(items, teamRecurringChoice);
 
   /** Project slug → its title in the active locale. */
@@ -201,11 +230,11 @@ export default function CartPage({ projects, categories }: { projects: MinbarPro
       byCurrency.set(item.currency, (byCurrency.get(item.currency) ?? 0) + item.amount);
     }
     /* Team support is quoted in the active currency, so it joins that total. */
-    if (teamSupportEnabled && teamSupport > 0) {
-      byCurrency.set(currency, (byCurrency.get(currency) ?? 0) + teamSupport);
+    if (teamSupportEnabled && teamAmount > 0) {
+      byCurrency.set(currency, (byCurrency.get(currency) ?? 0) + teamAmount);
     }
     return [...byCurrency.entries()];
-  }, [items, teamSupport, teamSupportEnabled, currency]);
+  }, [items, teamAmount, teamSupportEnabled, currency]);
 
   const recurringOn = items.some((x) => x._autoMonthly);
 
@@ -246,6 +275,7 @@ export default function CartPage({ projects, categories }: { projects: MinbarPro
       ...items,
       { titleKey: key, typeKey: "extra", freqKey: "once", amount, currency: "USD", upsellId: id },
     ]);
+    announceAdded(items.length);
   };
 
   /* A configured campaign becomes an ordinary project row, in the active
@@ -256,6 +286,7 @@ export default function CartPage({ projects, categories }: { projects: MinbarPro
       ...items,
       { projectId: project.slug, typeKey: "project", freqKey: "once", amount, currency, upsellId: project.id },
     ]);
+    announceAdded(items.length);
   };
 
   type UpsellRow = { id: string; label: string; amounts: readonly number[]; add: (amount: number) => void };
@@ -358,9 +389,18 @@ export default function CartPage({ projects, categories }: { projects: MinbarPro
                   const isEditing = editing === index;
                   const isMonthly = item.freqKey === "monthly";
                   return (
-                    <div key={`${item.projectId ?? item.titleKey ?? item.title}-${index}`} className="cart-row">
-                      <b className="c-title" style={{ gridColumn: 1, minWidth: 0, fontSize: 15.5, overflowWrap: "anywhere" }}>
+                    <div
+                      key={`${item.projectId ?? item.titleKey ?? item.title}-${index}`}
+                      id={`cart-row-${index}`}
+                      className={`cart-row${addedIndex === index ? " is-added" : ""}`}
+                    >
+                      <b className="c-title" style={{ gridColumn: 1, minWidth: 0, fontSize: 15.5, overflowWrap: "anywhere", display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                         {resolveTitle(item)}
+                        {addedIndex === index ? (
+                          <span className="cart-added-badge" role="status">
+                            {tCommon("added")}
+                          </span>
+                        ) : null}
                       </b>
                       <span className="c-meta" style={{ gridColumn: 1, gridRow: 2, display: "flex", alignItems: "center", gap: 8, minWidth: 0, overflowWrap: "anywhere", fontSize: 12, color: "var(--muted)", fontWeight: 700 }}>
                         {metaLine(item)}
@@ -546,13 +586,13 @@ export default function CartPage({ projects, categories }: { projects: MinbarPro
                     </span>
                   </span>
                 ))}
-                {teamSupportEnabled && teamSupport > 0 ? (
+                {teamSupportEnabled && teamAmount > 0 ? (
                   <span style={{ display: "flex", justifyContent: "space-between", gap: 10, fontSize: 13.5, color: "var(--muted)", minWidth: 0 }}>
                     <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                      {teamRecurring ? tTeam("chosenRecurring", { amount: format(teamSupport) }) : tTeam("chosen", { amount: format(teamSupport) })}
+                      {teamRecurring ? tTeam("chosenRecurring", { amount: format(teamAmount) }) : tTeam("chosen", { amount: format(teamAmount) })}
                     </span>
                     <span dir="ltr" style={{ unicodeBidi: "isolate", flex: "0 0 auto", fontWeight: 800, color: "var(--deep)" }}>
-                      {format(teamSupport)}
+                      {format(teamAmount)}
                     </span>
                   </span>
                 ) : null}
@@ -619,7 +659,11 @@ export default function CartPage({ projects, categories }: { projects: MinbarPro
                   recurring row it rides along with every instalment; with a
                   one-time basket it is charged once. Hidden by the admin switch. */}
               {settings && teamSupportEnabled ? (
-                <div id="cart-team-support" style={{ display: "grid", gap: 10, padding: "16px 18px", borderRadius: 12, background: "#fff", border: "1px solid rgba(211,154,39,.45)" }}>
+                <div
+                  id="cart-team-support"
+                  className={teamNudge ? "cart-team-nudge" : undefined}
+                  style={{ display: "grid", gap: 10, padding: "16px 18px", borderRadius: 12, background: "#fff", border: `1px solid ${teamSupportPending ? "var(--gold)" : "rgba(211,154,39,.45)"}` }}
+                >
                   <b style={{ fontSize: 15, fontWeight: 900, color: "var(--deep)" }}>{tTeam("title")}</b>
                   <span style={{ fontSize: 12.5, color: "var(--muted)", lineHeight: 1.7 }}>{tTeam("lead")}</span>
                   <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
@@ -648,19 +692,25 @@ export default function CartPage({ projects, categories }: { projects: MinbarPro
                         const next = e.target.value.replace(/[^0-9.]/g, "");
                         setCustomTeam(next);
                         const n = Number(next);
-                        writeTeamSupport(n > 0 ? n : 0);
-                        setTeamSupport(n > 0 ? n : 0);
+                        if (n > 0) {
+                          writeTeamSupport(n);
+                          setTeamSupport(n);
+                        } else {
+                          /* An emptied field is no answer — the question stands. */
+                          clearTeamSupport();
+                          setTeamSupport(null);
+                        }
                       }}
                       inputMode="decimal"
                       dir="ltr"
                       placeholder={tTeam("customAmount")}
                       aria-label={tTeam("customAmount")}
-                      style={{ flex: "0 1 auto", width: "11ch", minWidth: "8ch", height: 34, padding: "0 10px", borderRadius: 999, border: `1px dashed ${teamSupport > 0 && !teamAmounts.includes(teamSupport) ? "var(--green)" : "rgba(211,154,39,.65)"}`, background: "#fff", fontFamily: "inherit", fontSize: 13, fontWeight: 800, color: "var(--deep)", boxSizing: "border-box" }}
+                      style={{ flex: "0 1 auto", width: "11ch", minWidth: "8ch", height: 34, padding: "0 10px", borderRadius: 999, border: `1px dashed ${teamAmount > 0 && !teamAmounts.includes(teamAmount) ? "var(--green)" : "rgba(211,154,39,.65)"}`, background: "#fff", fontFamily: "inherit", fontSize: 13, fontWeight: 800, color: "var(--deep)", boxSizing: "border-box" }}
                     />
                   </div>
                   {/* A recurring basket lets the donor decide whether the
                       support rides along with each instalment or is paid once. */}
-                  {recurringBasket && teamSupport > 0 ? (
+                  {recurringBasket && teamAmount > 0 ? (
                     <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
                       <button type="button" onClick={() => chooseTeamRecurring(true)} aria-pressed={teamRecurring} style={teamPill(teamRecurring)}>
                         {tTeam("billWithPlan")}
@@ -676,9 +726,26 @@ export default function CartPage({ projects, categories }: { projects: MinbarPro
                 </div>
               ) : null}
 
-              <Button variant="primary" href={miaPath("checkout", locale)} full style={{ whiteSpace: "nowrap", height: 52 }}>
-                {t("checkout")}
-              </Button>
+              {teamSupportPending ? (
+                <>
+                  <Button
+                    variant="primary"
+                    full
+                    title={tTeam("chooseFirst")}
+                    onClick={nudgeTeamSupport}
+                    style={{ whiteSpace: "nowrap", height: 52, opacity: 0.55, boxShadow: "none", cursor: "not-allowed" }}
+                  >
+                    {t("checkout")}
+                  </Button>
+                  <span role="status" style={{ marginTop: -8, textAlign: "center", fontSize: 12.5, fontWeight: 800, color: "var(--red)", lineHeight: 1.6 }}>
+                    {tTeam("chooseFirst")}
+                  </span>
+                </>
+              ) : (
+                <Button variant="primary" href={miaPath("checkout", locale)} full style={{ whiteSpace: "nowrap", height: 52 }}>
+                  {t("checkout")}
+                </Button>
+              )}
               <Link href={miaPath("projects", locale)} className="cart-add-another" style={{ textAlign: "center", fontSize: 13, fontWeight: 800, color: "var(--muted)", transition: "color .15s ease" }}>
                 {t("addAnother")}
               </Link>

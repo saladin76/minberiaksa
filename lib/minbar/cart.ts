@@ -297,7 +297,7 @@ export function toDonationContract(item: MinbarCartItem): {
  */
 export function clearCart(): void {
   writeCart([]);
-  writeTeamSupport(0);
+  clearTeamSupport();
   writeTeamSupportRecurring(null);
 }
 
@@ -323,13 +323,41 @@ export function readTeamSupport(): number {
   }
 }
 
+/**
+ * The donor's explicit choice: an amount, `0` for "no thanks", or `null` when
+ * they have not answered yet. The basket will not let them continue to
+ * checkout until this is not null.
+ */
+export function readTeamSupportChoice(): number | null {
+  if (!isBrowser()) return null;
+  try {
+    const raw = window.localStorage.getItem(CART_TEAM_SUPPORT_KEY);
+    if (raw === null) return null;
+    const n = Number(raw);
+    return Number.isFinite(n) && n >= 0 ? n : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Record the choice; `0` is stored, not removed — "no thanks" is an answer. */
 export function writeTeamSupport(amount: number): void {
   if (!isBrowser()) return;
   try {
-    if (amount > 0) window.localStorage.setItem(CART_TEAM_SUPPORT_KEY, String(amount));
-    else window.localStorage.removeItem(CART_TEAM_SUPPORT_KEY);
+    window.localStorage.setItem(CART_TEAM_SUPPORT_KEY, String(amount > 0 ? amount : 0));
   } catch {
     /* Private mode; the in-memory choice still applies to this page view. */
+  }
+  window.dispatchEvent(new CustomEvent(CART_UPDATED_EVENT));
+}
+
+/** Forget the choice (the question is asked again next time). */
+export function clearTeamSupport(): void {
+  if (!isBrowser()) return;
+  try {
+    window.localStorage.removeItem(CART_TEAM_SUPPORT_KEY);
+  } catch {
+    /* Private mode. */
   }
   window.dispatchEvent(new CustomEvent(CART_UPDATED_EVENT));
 }

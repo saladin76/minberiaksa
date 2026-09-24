@@ -3252,7 +3252,8 @@
     "chosenRecurring": "Soutien à l'équipe : {amount} par échéance",
     "giftedTo": "Offert à {name}",
     "billWithPlan": "À chaque échéance",
-    "billOnce": "Une seule fois"
+    "billOnce": "Une seule fois",
+    "chooseFirst": "Choisissez un montant de soutien à l'équipe ou « Non merci » pour continuer"
   },
   "Gift": {
     "emailSubject": "Un cadeau en votre nom : un don pour {project}",

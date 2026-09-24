@@ -2149,7 +2149,8 @@
     "chosenRecurring": "ٹیم کی مدد: ہر کٹوتی پر {amount}",
     "giftedTo": "{name} کے نام تحفہ",
     "billWithPlan": "ہر کٹوتی کے ساتھ",
-    "billOnce": "صرف ایک بار"
+    "billOnce": "صرف ایک بار",
+    "chooseFirst": "جاری رکھنے کے لیے ٹیم کی مدد کی رقم یا «نہیں، شکریہ» منتخب کریں"
   },
   "Gift": {
     "emailSubject": "آپ کے نام ایک تحفہ: {project} کے لیے عطیہ",
