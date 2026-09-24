@@ -247,7 +247,7 @@ const DonationDialog = ({
 
   // Trimmed flow for higher conversion: cover-fees folded into teamSupport,
   // sign-in step removed entirely (guests skip auth, authed users keep going).
-  // The team-support step follows the admin switch at /dashboard/team-support;
+  // The team-support step follows the admin switch at /dashboard/cart-settings;
   // off, it is skipped and nothing is added to the order.
   const teamSupportStep: DonationStep[] =
     globalSettings && !globalSettings.teamSupportEnabled ? [] : [{ title: t("teamSupport"), subtitle: t("teamSupportDesc") }];

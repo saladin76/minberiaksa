@@ -3179,7 +3179,9 @@
     "oneTimeNote": "Cobrado uma única vez com este pedido.",
     "chosen": "Apoio à equipa: {amount}",
     "chosenRecurring": "Apoio à equipa: {amount} por prestação",
-    "giftedTo": "Oferecido a {name}"
+    "giftedTo": "Oferecido a {name}",
+    "billWithPlan": "Com cada prestação",
+    "billOnce": "Apenas uma vez"
   },
   "Gift": {
     "emailSubject": "Um presente em seu nome: uma doação para {project}",

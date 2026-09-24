@@ -2147,7 +2147,9 @@
     "oneTimeNote": "Wordt eenmalig bij deze bestelling afgeschreven.",
     "chosen": "Teamsteun: {amount}",
     "chosenRecurring": "Teamsteun: {amount} per afschrijving",
-    "giftedTo": "Geschenk voor {name}"
+    "giftedTo": "Geschenk voor {name}",
+    "billWithPlan": "Bij elke afschrijving",
+    "billOnce": "Eenmalig"
   },
   "Gift": {
     "emailSubject": "Een geschenk op uw naam: een gift voor {project}",

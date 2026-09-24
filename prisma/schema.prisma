@@ -1535,6 +1535,10 @@ model GlobalSettings {
   /// Master switch for the basket's "support the team" step. Off, the step is
   /// not shown and the order API ignores any amount sent.
   teamSupportEnabled   Boolean  @default(true)
+  /// The basket's cross-sell block: `{ items: [{ campaignId, amounts }] }`.
+  /// Shape in `lib/minbar/cart-upsell.ts`; null or empty means the block's
+  /// built-in generic suggestions.
+  cartUpsell           Json?
   /// The homepage quick-donation card and its dock: presets (with per-currency
   /// overrides), frequencies, destinations, title. Shape and defaults in
   /// `lib/minbar/quick-donation.ts`; null means "the defaults".

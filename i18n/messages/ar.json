@@ -3248,7 +3248,9 @@
     "oneTimeNote": "يُخصم مرة واحدة مع هذا الطلب.",
     "chosen": "دعم الفريق: {amount}",
     "chosenRecurring": "دعم الفريق: {amount} مع كل دورة",
-    "giftedTo": "مُهدى إلى {name}"
+    "giftedTo": "مُهدى إلى {name}",
+    "billWithPlan": "مع كل دورة",
+    "billOnce": "مرة واحدة فقط"
   },
   "Gift": {
     "emailSubject": "هدية باسمك: تبرع لمشروع {project}",

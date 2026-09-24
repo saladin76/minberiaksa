@@ -2147,7 +2147,9 @@
     "oneTimeNote": "Addebitato una sola volta con questo ordine.",
     "chosen": "Sostegno al team: {amount}",
     "chosenRecurring": "Sostegno al team: {amount} per rata",
-    "giftedTo": "Regalo per {name}"
+    "giftedTo": "Regalo per {name}",
+    "billWithPlan": "Con ogni rata",
+    "billOnce": "Solo una volta"
   },
   "Gift": {
     "emailSubject": "Un regalo a tuo nome: una donazione per {project}",

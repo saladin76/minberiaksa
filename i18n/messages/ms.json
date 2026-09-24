@@ -2144,7 +2144,9 @@
     "oneTimeNote": "Dicaj sekali bersama pesanan ini.",
     "chosen": "Sokongan pasukan: {amount}",
     "chosenRecurring": "Sokongan pasukan: {amount} setiap caj",
-    "giftedTo": "Hadiah untuk {name}"
+    "giftedTo": "Hadiah untuk {name}",
+    "billWithPlan": "Setiap caj",
+    "billOnce": "Sekali sahaja"
   },
   "Gift": {
     "emailSubject": "Hadiah atas nama anda: derma untuk {project}",

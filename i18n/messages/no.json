@@ -2144,7 +2144,9 @@
     "oneTimeNote": "Trekkes én gang med denne bestillingen.",
     "chosen": "Teamstøtte: {amount}",
     "chosenRecurring": "Teamstøtte: {amount} per trekk",
-    "giftedTo": "Gave til {name}"
+    "giftedTo": "Gave til {name}",
+    "billWithPlan": "Ved hvert trekk",
+    "billOnce": "Bare én gang"
   },
   "Gift": {
     "emailSubject": "En gave i ditt navn: en donasjon til {project}",

@@ -12,11 +12,14 @@ import {
   type SuggestedTeamSupportConfig,
 } from "./campaign/suggested-team-support";
 import { parseMainGateway, type MainGateway } from "./payment-gateway";
+import { parseCartUpsell, type CartUpsellConfig } from "./minbar/cart-upsell";
 
 export type GlobalSettings = {
   suggestedTeamSupport: SuggestedTeamSupportConfig;
   /** The basket's "support the team" step. Default true. */
   teamSupportEnabled: boolean;
+  /** The basket's cross-sell campaigns; empty means the built-in suggestions. */
+  cartUpsell: CartUpsellConfig;
   /** Master switch for the PayFor gateway. Default true. */
   payforEnabled: boolean;
   /** Gateway handling every case PayFor doesn't take. Default "STRIPE". */
@@ -61,6 +64,7 @@ export async function fetchGlobalSettings(
         | {
             suggestedTeamSupport?: unknown;
             teamSupportEnabled?: unknown;
+            cartUpsell?: unknown;
             payforEnabled?: unknown;
             mainGateway?: unknown;
             albarakaUseOOS?: unknown;
@@ -70,6 +74,7 @@ export async function fetchGlobalSettings(
       const parsed: GlobalSettings = {
         suggestedTeamSupport: parseSuggestedTeamSupport(data?.suggestedTeamSupport),
         teamSupportEnabled: data?.teamSupportEnabled !== false,
+        cartUpsell: parseCartUpsell(data?.cartUpsell),
         // Treat anything that isn't an explicit `false` as enabled. This keeps
         // the donation flow working before the first record is persisted and
         // when the API response shape is incomplete for any reason.

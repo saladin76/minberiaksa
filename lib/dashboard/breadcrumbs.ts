@@ -28,7 +28,7 @@ const SEGMENT_LABELS: Record<string, string> = {
   senders: "المرسِلون",
   "provider-events": "أحداث المزودين",
   "delivery-logs": "سجلات التسليم",
-  "team-support": "دعم الفريق",
+  "cart-settings": "إعدادات السلة",
   donations: "التبرعات",
   users: "المستخدمون",
   donors: "المتبرعون",

@@ -133,6 +133,15 @@ export async function POST(req: NextRequest) {
       metadata: { donationId, subscriptionDbId: plan.id },
     });
 
+    /* What every month carries is the plan's amount, not the first payment's:
+       the donor may have chosen to give the team support once only, in which
+       case it is on the donation but not on the plan. The difference goes on
+       the first invoice as a one-off line. */
+    const planFees = (plan.amount + plan.teamSupport) * 0.03;
+    const planTotal = plan.amount + plan.teamSupport + (plan.coverFees ? planFees : 0);
+    const recurringInSmallestUnit = Math.round(planTotal * 100);
+    const onceInSmallestUnit = amountInSmallestUnit - recurringInSmallestUnit;
+
     const subscription = await stripe.subscriptions.create({
       customer: customerId,
       items: [
@@ -140,11 +149,14 @@ export async function POST(req: NextRequest) {
           price_data: {
             currency,
             product: product.id,
-            unit_amount: amountInSmallestUnit,
+            unit_amount: recurringInSmallestUnit > 0 ? recurringInSmallestUnit : amountInSmallestUnit,
             recurring: { interval: "month" },
           },
         },
       ],
+      ...(onceInSmallestUnit > 0 && recurringInSmallestUnit > 0
+        ? { add_invoice_items: [{ price_data: { currency, product: product.id, unit_amount: onceInSmallestUnit } }] }
+        : {}),
       payment_behavior: "default_incomplete",
       payment_settings: { save_default_payment_method: "on_subscription" },
       expand: ["latest_invoice.payment_intent"],

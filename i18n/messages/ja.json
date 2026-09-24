@@ -2144,7 +2144,9 @@
     "oneTimeNote": "この注文と一緒に一度だけ決済されます。",
     "chosen": "チーム支援：{amount}",
     "chosenRecurring": "チーム支援：毎回 {amount}",
-    "giftedTo": "{name} さんへの贈り物"
+    "giftedTo": "{name} さんへの贈り物",
+    "billWithPlan": "毎回の決済と一緒に",
+    "billOnce": "1回のみ"
   },
   "Gift": {
     "emailSubject": "あなたの名前で贈られた寄付：{project}",

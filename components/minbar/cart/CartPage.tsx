@@ -7,7 +7,15 @@ import { Button } from "@/components/minbar/ds";
 import { miaPath } from "@/lib/minbar/routes";
 import { useMinbarCart } from "@/hooks/useMinbarCart";
 import { useMinbarMoney } from "@/hooks/useMinbarMoney";
-import { cartHasRecurring, readTeamSupport, writeTeamSupport, type MinbarCartItem } from "@/lib/minbar/cart";
+import {
+  cartHasRecurring,
+  readTeamSupport,
+  readTeamSupportRecurring,
+  teamSupportIsRecurring,
+  writeTeamSupport,
+  writeTeamSupportRecurring,
+  type MinbarCartItem,
+} from "@/lib/minbar/cart";
 import { fetchGlobalSettings, getCachedGlobalSettings, type GlobalSettings } from "@/lib/global-settings-client";
 import { resolveFinalTeamSupportAmounts } from "@/lib/campaign/suggested-team-support";
 import type { MinbarProject } from "@/lib/minbar/projects";
@@ -34,7 +42,10 @@ import type { MinbarCategoryTitle } from "@/lib/minbar/category-page";
  * That is an approved decision; the table is not to be reinstated on mobile.
  */
 
-/** Cross-sell rows, from `Component.DEFAULT_SUGGESTIONS`. */
+/**
+ * Cross-sell rows, from `Component.DEFAULT_SUGGESTIONS` — the fallback when
+ * the dashboard (`/dashboard/cart-settings`) has not chosen campaigns.
+ */
 const SUGGESTIONS = [
   { id: "field-team", key: "upsell_field_team", amounts: [50, 75, 100] },
   { id: "waqf-share-quds", key: "upsell_waqf_share_quds", amounts: [50, 75, 100] },
@@ -80,16 +91,38 @@ export default function CartPage({ projects, categories }: { projects: MinbarPro
   const [settings, setSettings] = useState<GlobalSettings | null>(() => getCachedGlobalSettings());
   const [teamSupport, setTeamSupport] = useState(0);
   const [customTeam, setCustomTeam] = useState("");
+  /* Recurring basket: with every instalment (default) or once. */
+  const [teamRecurringChoice, setTeamRecurringChoice] = useState<boolean | null>(null);
   useEffect(() => {
     let live = true;
     fetchGlobalSettings().then((s) => {
       if (live && s) setSettings(s);
     });
     setTeamSupport(readTeamSupport());
+    setTeamRecurringChoice(readTeamSupportRecurring());
     return () => {
       live = false;
     };
   }, []);
+  const chooseTeamRecurring = (value: boolean) => {
+    writeTeamSupportRecurring(value);
+    setTeamRecurringChoice(value);
+  };
+
+  /* The cross-sell rows: the dashboard's chosen campaigns, resolved against
+     the published project list (a campaign no longer published drops out),
+     else the handoff's generic suggestions. */
+  const projectById = useMemo(() => new Map(projects.map((p) => [p.id, p])), [projects]);
+  const upsellProjects = useMemo(
+    () =>
+      (settings?.cartUpsell.items ?? [])
+        .map((item) => {
+          const project = projectById.get(item.campaignId);
+          return project ? { project, amounts: item.amounts } : null;
+        })
+        .filter((row): row is { project: MinbarProject; amounts: number[] } => row !== null),
+    [settings, projectById]
+  );
   const teamSupportEnabled = settings?.teamSupportEnabled !== false;
   const teamAmounts = useMemo(
     () => resolveFinalTeamSupportAmounts(currency, null, settings?.suggestedTeamSupport ?? null),
@@ -103,6 +136,7 @@ export default function CartPage({ projects, categories }: { projects: MinbarPro
     else setCustomTeam("");
   };
   const recurringBasket = cartHasRecurring(items);
+  const teamRecurring = teamSupportIsRecurring(items, teamRecurringChoice);
 
   /** Project slug → its title in the active locale. */
   const titleBySlug = useMemo(
@@ -212,6 +246,26 @@ export default function CartPage({ projects, categories }: { projects: MinbarPro
       { titleKey: key, typeKey: "extra", freqKey: "once", amount, currency: "USD", upsellId: id },
     ]);
   };
+
+  /* A configured campaign becomes an ordinary project row, in the active
+     currency, so checkout sends it as a campaign line like any other. */
+  const addProjectSuggestion = (project: MinbarProject, amount: number) => {
+    if (!(amount > 0)) return;
+    replace([
+      ...items,
+      { projectId: project.slug, typeKey: "project", freqKey: "once", amount, currency, upsellId: project.id },
+    ]);
+  };
+
+  type UpsellRow = { id: string; label: string; amounts: readonly number[]; add: (amount: number) => void };
+  const upsellRows: UpsellRow[] = upsellProjects.length
+    ? upsellProjects.map(({ project, amounts }) => ({
+        id: project.id,
+        label: project.title,
+        amounts,
+        add: (amount: number) => addProjectSuggestion(project, amount),
+      }))
+    : SUGGESTIONS.map((s) => ({ id: s.id, label: t(s.key), amounts: s.amounts, add: (amount: number) => addSuggestion(s.id, s.key, amount) }));
 
   const steps = [
     { n: 1, label: t("stepCart"), href: miaPath("cart", locale), current: true },
@@ -424,7 +478,7 @@ export default function CartPage({ projects, categories }: { projects: MinbarPro
                 </b>
 
                 <div id="upsell-rail" style={{ position: "relative", display: "grid", gridTemplateColumns: "minmax(0,1fr)", gap: 10 }}>
-                  {SUGGESTIONS.map((suggestion) => (
+                  {upsellRows.map((suggestion) => (
                     <div
                       key={suggestion.id}
                       className="upsell-card"
@@ -432,14 +486,14 @@ export default function CartPage({ projects, categories }: { projects: MinbarPro
                     >
                       <b style={{ flex: "1 1 100%", minWidth: 0, display: "inline-flex", alignItems: "flex-start", gap: 9, fontSize: 14, fontWeight: 900, lineHeight: 1.65, color: "var(--deep)", overflowWrap: "anywhere" }}>
                         <span aria-hidden="true" style={{ flex: "0 0 auto", width: 5, height: 5, background: "var(--gold)", transform: "rotate(45deg)", marginTop: 8 }} />
-                        {t(suggestion.key)}
+                        {suggestion.label}
                       </b>
                       <div style={{ display: "flex", flexWrap: "nowrap", alignItems: "center", gap: 7, minWidth: 0, flex: "0 1 auto" }}>
                         {suggestion.amounts.map((value) => (
                           <button
                             key={value}
                             type="button"
-                            onClick={() => addSuggestion(suggestion.id, suggestion.key, value)}
+                            onClick={() => suggestion.add(value)}
                             className="upsell-amt"
                             style={{ display: "inline-flex", alignItems: "center", gap: 4, height: 34, padding: "0 12px", borderRadius: 999, border: "1px solid var(--border)", background: "#fff", color: "var(--deep)", fontFamily: "inherit", fontSize: 13, fontWeight: 800, cursor: "pointer", whiteSpace: "nowrap", transition: "all .18s ease" }}
                           >
@@ -459,7 +513,7 @@ export default function CartPage({ projects, categories }: { projects: MinbarPro
                         <button
                           type="button"
                           onClick={() => {
-                            addSuggestion(suggestion.id, suggestion.key, Number(customUpsell[suggestion.id]));
+                            suggestion.add(Number(customUpsell[suggestion.id]));
                             setCustomUpsell((c) => ({ ...c, [suggestion.id]: "" }));
                           }}
                           aria-label={tCommon("add")}
@@ -494,7 +548,7 @@ export default function CartPage({ projects, categories }: { projects: MinbarPro
                 {teamSupportEnabled && teamSupport > 0 ? (
                   <span style={{ display: "flex", justifyContent: "space-between", gap: 10, fontSize: 13.5, color: "var(--muted)", minWidth: 0 }}>
                     <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                      {recurringBasket ? tTeam("chosenRecurring", { amount: format(teamSupport) }) : tTeam("chosen", { amount: format(teamSupport) })}
+                      {teamRecurring ? tTeam("chosenRecurring", { amount: format(teamSupport) }) : tTeam("chosen", { amount: format(teamSupport) })}
                     </span>
                     <span dir="ltr" style={{ unicodeBidi: "isolate", flex: "0 0 auto", fontWeight: 800, color: "var(--deep)" }}>
                       {format(teamSupport)}
@@ -603,8 +657,20 @@ export default function CartPage({ projects, categories }: { projects: MinbarPro
                       style={{ flex: "0 1 auto", width: "11ch", minWidth: "8ch", height: 34, padding: "0 10px", borderRadius: 999, border: `1px dashed ${teamSupport > 0 && !teamAmounts.includes(teamSupport) ? "var(--green)" : "rgba(211,154,39,.65)"}`, background: "#fff", fontFamily: "inherit", fontSize: 13, fontWeight: 800, color: "var(--deep)", boxSizing: "border-box" }}
                     />
                   </div>
-                  <span style={{ fontSize: 12, fontWeight: 700, color: recurringBasket ? "var(--green)" : "var(--muted)", lineHeight: 1.6 }}>
-                    {recurringBasket ? tTeam("recurringNote") : tTeam("oneTimeNote")}
+                  {/* A recurring basket lets the donor decide whether the
+                      support rides along with each instalment or is paid once. */}
+                  {recurringBasket && teamSupport > 0 ? (
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
+                      <button type="button" onClick={() => chooseTeamRecurring(true)} aria-pressed={teamRecurring} style={teamPill(teamRecurring)}>
+                        {tTeam("billWithPlan")}
+                      </button>
+                      <button type="button" onClick={() => chooseTeamRecurring(false)} aria-pressed={!teamRecurring} style={teamPill(!teamRecurring)}>
+                        {tTeam("billOnce")}
+                      </button>
+                    </div>
+                  ) : null}
+                  <span style={{ fontSize: 12, fontWeight: 700, color: teamRecurring ? "var(--green)" : "var(--muted)", lineHeight: 1.6 }}>
+                    {teamRecurring ? tTeam("recurringNote") : tTeam("oneTimeNote")}
                   </span>
                 </div>
               ) : null}

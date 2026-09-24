@@ -11,6 +11,7 @@ import { Prisma } from "@prisma/client";
 import { isMainGateway, parseMainGateway } from "@/lib/payment-gateway";
 import { albarakaConfig, isAlbarakaConfigured } from "@/lib/albaraka";
 import { auditActorFromDashboardSession, writeAuditLog } from "@/lib/audit-log";
+import { parseCartUpsell, validateCartUpsellBody } from "@/lib/minbar/cart-upsell";
 
 /** Fetch the single GlobalSettings record, creating an empty one on first read. */
 async function getOrCreateSettings() {
@@ -26,13 +27,15 @@ export async function GET() {
   try {
     const settings = await prisma.globalSettings.findFirst({
       orderBy: { createdAt: "asc" },
-      select: { suggestedTeamSupport: true, teamSupportEnabled: true, payforEnabled: true, mainGateway: true },
+      select: { suggestedTeamSupport: true, teamSupportEnabled: true, cartUpsell: true, payforEnabled: true, mainGateway: true },
     });
     const albaraka = albarakaConfig();
     return NextResponse.json({
       suggestedTeamSupport: parseSuggestedTeamSupport(settings?.suggestedTeamSupport),
       // The basket's "support the team" step; default on before any record exists.
       teamSupportEnabled: settings?.teamSupportEnabled ?? true,
+      // The basket's cross-sell campaigns; empty means the built-in suggestions.
+      cartUpsell: parseCartUpsell(settings?.cartUpsell),
       // Default true — first read before any record exists must still let
       // PayFor remain available for TRY donors.
       payforEnabled: settings?.payforEnabled ?? true,
@@ -77,7 +80,7 @@ export async function PUT(request: NextRequest) {
         return NextResponse.json({ error: "teamSupportEnabled must be a boolean" }, { status: 400 });
       }
     }
-    if (body.suggestedTeamSupport !== undefined) {
+    if (body.suggestedTeamSupport !== undefined || body.cartUpsell !== undefined) {
       const denied = requireAdminOrDashboardPermission(session, "campaigns");
       if (denied) return denied;
     }
@@ -105,6 +108,15 @@ export async function PUT(request: NextRequest) {
       } catch (e) {
         const msg = e instanceof Error ? e.message : "Invalid suggestedTeamSupport";
         return NextResponse.json({ error: msg }, { status: 400 });
+      }
+    }
+
+    if (body.cartUpsell !== undefined) {
+      try {
+        updateData.cartUpsell =
+          body.cartUpsell === null ? null : (validateCartUpsellBody(body.cartUpsell) as unknown as Prisma.InputJsonValue);
+      } catch (e) {
+        return NextResponse.json({ error: e instanceof Error ? e.message : "Invalid cartUpsell" }, { status: 400 });
       }
     }
 
@@ -144,7 +156,7 @@ export async function PUT(request: NextRequest) {
     const saved = await prisma.globalSettings.update({
       where: { id: existing.id },
       data: updateData,
-      select: { suggestedTeamSupport: true, teamSupportEnabled: true, payforEnabled: true, mainGateway: true },
+      select: { suggestedTeamSupport: true, teamSupportEnabled: true, cartUpsell: true, payforEnabled: true, mainGateway: true },
     });
 
     // Gateway settings decide where every new donation's money goes, so each
@@ -180,6 +192,7 @@ export async function PUT(request: NextRequest) {
     return NextResponse.json({
       suggestedTeamSupport: parseSuggestedTeamSupport(saved.suggestedTeamSupport),
       teamSupportEnabled: saved.teamSupportEnabled,
+      cartUpsell: parseCartUpsell(saved.cartUpsell),
       payforEnabled: saved.payforEnabled,
       mainGateway: parseMainGateway(saved.mainGateway),
     });

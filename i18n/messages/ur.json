@@ -2147,7 +2147,9 @@
     "oneTimeNote": "اس آرڈر کے ساتھ ایک بار لی جاتی ہے۔",
     "chosen": "ٹیم کی مدد: {amount}",
     "chosenRecurring": "ٹیم کی مدد: ہر کٹوتی پر {amount}",
-    "giftedTo": "{name} کے نام تحفہ"
+    "giftedTo": "{name} کے نام تحفہ",
+    "billWithPlan": "ہر کٹوتی کے ساتھ",
+    "billOnce": "صرف ایک بار"
   },
   "Gift": {
     "emailSubject": "آپ کے نام ایک تحفہ: {project} کے لیے عطیہ",

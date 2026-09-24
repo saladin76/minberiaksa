@@ -3178,7 +3178,9 @@
     "oneTimeNote": "Ditarik sekali bersama pesanan ini.",
     "chosen": "Dukungan tim: {amount}",
     "chosenRecurring": "Dukungan tim: {amount} setiap penarikan",
-    "giftedTo": "Hadiah untuk {name}"
+    "giftedTo": "Hadiah untuk {name}",
+    "billWithPlan": "Setiap penarikan",
+    "billOnce": "Sekali saja"
   },
   "Gift": {
     "emailSubject": "Hadiah atas nama Anda: donasi untuk {project}",

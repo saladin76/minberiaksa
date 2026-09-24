@@ -2144,7 +2144,9 @@
     "oneTimeNote": "इस ऑर्डर के साथ एक बार ली जाती है।",
     "chosen": "टीम समर्थन: {amount}",
     "chosenRecurring": "टीम समर्थन: हर कटौती पर {amount}",
-    "giftedTo": "{name} को उपहार"
+    "giftedTo": "{name} को उपहार",
+    "billWithPlan": "हर कटौती के साथ",
+    "billOnce": "केवल एक बार"
   },
   "Gift": {
     "emailSubject": "आपके नाम पर एक उपहार: {project} के लिए दान",

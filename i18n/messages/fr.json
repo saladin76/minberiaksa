@@ -3250,7 +3250,9 @@
     "oneTimeNote": "Prélevé une seule fois avec cette commande.",
     "chosen": "Soutien à l'équipe : {amount}",
     "chosenRecurring": "Soutien à l'équipe : {amount} par échéance",
-    "giftedTo": "Offert à {name}"
+    "giftedTo": "Offert à {name}",
+    "billWithPlan": "À chaque échéance",
+    "billOnce": "Une seule fois"
   },
   "Gift": {
     "emailSubject": "Un cadeau en votre nom : un don pour {project}",

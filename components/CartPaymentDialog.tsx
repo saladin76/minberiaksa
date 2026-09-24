@@ -115,7 +115,7 @@ const CartPaymentDialog = ({
 
   // Trimmed flow for higher conversion: cover-fees folded into teamSupport,
   // sign-in step removed (guests skip auth, authed users keep going).
-  // The team-support step follows the admin switch at /dashboard/team-support;
+  // The team-support step follows the admin switch at /dashboard/cart-settings;
   // off, it is skipped and nothing is added to the order.
   const STEPS = [
     ...(globalSettings && !globalSettings.teamSupportEnabled ? [] : [{ title: t("teamSupport"), subtitle: t("teamSupportDesc") }]),

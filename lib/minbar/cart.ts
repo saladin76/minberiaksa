@@ -298,6 +298,7 @@ export function toDonationContract(item: MinbarCartItem): {
 export function clearCart(): void {
   writeCart([]);
   writeTeamSupport(0);
+  writeTeamSupportRecurring(null);
 }
 
 // ── Team support ─────────────────────────────────────────────────────────────
@@ -336,4 +337,39 @@ export function writeTeamSupport(amount: number): void {
 /** Whether any row is a plan — which makes the team support recurring too. */
 export function cartHasRecurring(items: readonly MinbarCartItem[]): boolean {
   return items.some((item) => item.freqKey !== "once");
+}
+
+/**
+ * Whether the team support rides along with every instalment of a recurring
+ * basket, or is charged once. `null` means the donor has not chosen — the
+ * default is "with the plan" when the basket has a recurring row. Only
+ * meaningful for a recurring basket; a one-time basket charges once.
+ */
+export const CART_TEAM_SUPPORT_RECURRING_KEY = "mia_cart_team_support_recurring";
+
+export function readTeamSupportRecurring(): boolean | null {
+  if (!isBrowser()) return null;
+  try {
+    const v = window.localStorage.getItem(CART_TEAM_SUPPORT_RECURRING_KEY);
+    return v === "1" ? true : v === "0" ? false : null;
+  } catch {
+    return null;
+  }
+}
+
+export function writeTeamSupportRecurring(value: boolean | null): void {
+  if (!isBrowser()) return;
+  try {
+    if (value === null) window.localStorage.removeItem(CART_TEAM_SUPPORT_RECURRING_KEY);
+    else window.localStorage.setItem(CART_TEAM_SUPPORT_RECURRING_KEY, value ? "1" : "0");
+  } catch {
+    /* Private mode; the in-memory choice still applies to this page view. */
+  }
+  window.dispatchEvent(new CustomEvent(CART_UPDATED_EVENT));
+}
+
+/** The effective choice: the donor's, else "with the plan" for a recurring basket. */
+export function teamSupportIsRecurring(items: readonly MinbarCartItem[], choice: boolean | null): boolean {
+  if (!cartHasRecurring(items)) return false;
+  return choice ?? true;
 }

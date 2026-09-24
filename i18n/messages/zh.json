@@ -2144,7 +2144,9 @@
     "oneTimeNote": "随本次订单一次性扣款。",
     "chosen": "团队支持：{amount}",
     "chosenRecurring": "团队支持：每期 {amount}",
-    "giftedTo": "赠予 {name}"
+    "giftedTo": "赠予 {name}",
+    "billWithPlan": "随每期一起",
+    "billOnce": "仅一次"
   },
   "Gift": {
     "emailSubject": "以您的名义捐赠：{project}",

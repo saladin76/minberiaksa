@@ -126,6 +126,9 @@ export async function POST(request: NextRequest) {
       waqfItems: waqfItemsIn,
       currency,
       teamSupport: teamSupportIn = 0,
+      /* Recurring basket: false charges the team support once, with the
+         first payment, instead of with every instalment (the default). */
+      teamSupportRecurring: teamSupportRecurringIn = true,
       coverFees = false,
       type = "ONE_TIME",
       /* The donor's IANA zone, so "Friday" and "the 15th" are their Friday
@@ -229,6 +232,9 @@ export async function POST(request: NextRequest) {
       teamSupportAllowed && typeof teamSupportIn === "number" && Number.isFinite(teamSupportIn) && teamSupportIn > 0
         ? Math.round(teamSupportIn * 100) / 100
         : 0;
+    /* What each later instalment carries. The first payment (the donation
+       created below) always includes the full amount. */
+    const planTeamSupport = teamSupportRecurringIn === false ? 0 : teamSupport;
 
     // Resolve donor
     let donorId: string;
@@ -502,7 +508,7 @@ export async function POST(request: NextRequest) {
             amount: totalAmount,
             amountUSD: donationTotalUsd,
             currency,
-            teamSupport,
+            teamSupport: planTeamSupport,
             coverFees,
             paymentMethod,
             cardDetails: paymentMethod === "CARD" ? cardDetails : null,

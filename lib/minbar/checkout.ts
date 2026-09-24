@@ -56,6 +56,11 @@ export interface CreateDonationInput {
    * instalment, otherwise once.
    */
   teamSupport: number;
+  /**
+   * Recurring basket only: true charges the team support with every
+   * instalment (the default), false charges it once with the first payment.
+   */
+  teamSupportRecurring: boolean;
   /** Present when the donor is not signed in. */
   guest: CheckoutDonor | null;
   /** Referral code from the visit, if the campaign-link layer captured one. */
@@ -212,6 +217,7 @@ export async function createDonation(input: CreateDonationInput): Promise<Create
       type: orderType(input.items),
       timezone: browserTimezone(),
       teamSupport: input.teamSupport > 0 ? input.teamSupport : 0,
+      teamSupportRecurring: input.teamSupportRecurring,
       paymentMethod: input.method,
       locale: input.locale,
       ...(input.referralCode ? { referralCode: input.referralCode } : {}),

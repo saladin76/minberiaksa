@@ -3250,7 +3250,9 @@
     "oneTimeNote": "Charged once with this order.",
     "chosen": "Team support: {amount}",
     "chosenRecurring": "Team support: {amount} per instalment",
-    "giftedTo": "Gifted to {name}"
+    "giftedTo": "Gifted to {name}",
+    "billWithPlan": "With every instalment",
+    "billOnce": "Once only"
   },
   "Gift": {
     "emailSubject": "A gift in your name: a donation to {project}",

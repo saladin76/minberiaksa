@@ -3179,7 +3179,9 @@
     "oneTimeNote": "Wird einmalig mit dieser Bestellung erhoben.",
     "chosen": "Team-Unterstützung: {amount}",
     "chosenRecurring": "Team-Unterstützung: {amount} je Abbuchung",
-    "giftedTo": "Geschenk für {name}"
+    "giftedTo": "Geschenk für {name}",
+    "billWithPlan": "Mit jeder Abbuchung",
+    "billOnce": "Nur einmal"
   },
   "Gift": {
     "emailSubject": "Ein Geschenk in Ihrem Namen: eine Spende für {project}",

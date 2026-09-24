@@ -25,7 +25,7 @@ import {
 } from "@/lib/minbar/checkout";
 import { frequencyOfOrderType, nextChargeAt } from "@/lib/donations/recurring-schedule";
 import { withDonationToken } from "@/lib/donations/access-token-link";
-import { cartHasRecurring, clearCart, readTeamSupport } from "@/lib/minbar/cart";
+import { clearCart, readTeamSupport, readTeamSupportRecurring, teamSupportIsRecurring } from "@/lib/minbar/cart";
 import { fetchGlobalSettings } from "@/lib/global-settings-client";
 import { useReferralCode } from "@/hooks/useReferralCode";
 import { resolveGateway, type MainGateway } from "@/lib/payment-gateway";
@@ -112,9 +112,12 @@ export default function CheckoutPage({ projects, categories, banks, donor, defau
      switched the step off, so the summary matches what will be charged. */
   const [teamSupport, setTeamSupport] = useState(0);
   const [teamSupportEnabled, setTeamSupportEnabled] = useState(true);
+  const [teamRecurringChoice, setTeamRecurringChoice] = useState<boolean | null>(null);
   useEffect(() => {
     setTeamSupport(readTeamSupport());
+    setTeamRecurringChoice(readTeamSupportRecurring());
   }, []);
+  const teamRecurring = teamSupportIsRecurring(items, teamRecurringChoice);
 
   const router = useRouter();
   const { data: session } = useSession();
@@ -326,6 +329,7 @@ export default function CheckoutPage({ projects, categories, banks, donor, defau
         locale,
         method: methodForServer,
         teamSupport: teamSupportCharged,
+        teamSupportRecurring: teamRecurring,
         referralCode: readReferralCode(),
         bank:
           method === "bank" && selectedBank
@@ -895,8 +899,8 @@ export default function CheckoutPage({ projects, categories, banks, donor, defau
                     <span style={{ display: "flex", justifyContent: "space-between", gap: 10, fontSize: 14 }}>
                       <span style={{ color: "var(--muted)", minWidth: 0, display: "grid", gap: 2 }}>
                         <span>{tTeam("title")}</span>
-                        <span style={{ fontSize: 12, fontWeight: 700, color: cartHasRecurring(items) ? "var(--green)" : "var(--muted)" }}>
-                          {cartHasRecurring(items) ? tTeam("recurringNote") : tTeam("oneTimeNote")}
+                        <span style={{ fontSize: 12, fontWeight: 700, color: teamRecurring ? "var(--green)" : "var(--muted)" }}>
+                          {teamRecurring ? tTeam("recurringNote") : tTeam("oneTimeNote")}
                         </span>
                       </span>
                       <b dir="ltr" style={{ flex: "0 0 auto", unicodeBidi: "isolate" }}>

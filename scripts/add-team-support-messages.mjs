@@ -443,11 +443,35 @@ const GIFT = {
   },
 };
 
+/* Recurring basket: the donor picks whether the team support rides along
+   with every instalment (default) or is charged once with the first payment. */
+const TEAM_SUPPORT_BILLING = {
+  ar: { billWithPlan: "مع كل دورة", billOnce: "مرة واحدة فقط" },
+  en: { billWithPlan: "With every instalment", billOnce: "Once only" },
+  tr: { billWithPlan: "Her çekimle birlikte", billOnce: "Yalnızca bir kez" },
+  fr: { billWithPlan: "À chaque échéance", billOnce: "Une seule fois" },
+  de: { billWithPlan: "Mit jeder Abbuchung", billOnce: "Nur einmal" },
+  es: { billWithPlan: "Con cada cuota", billOnce: "Solo una vez" },
+  id: { billWithPlan: "Setiap penarikan", billOnce: "Sekali saja" },
+  pt: { billWithPlan: "Com cada prestação", billOnce: "Apenas uma vez" },
+  ur: { billWithPlan: "ہر کٹوتی کے ساتھ", billOnce: "صرف ایک بار" },
+  sq: { billWithPlan: "Me çdo këst", billOnce: "Vetëm një herë" },
+  it: { billWithPlan: "Con ogni rata", billOnce: "Solo una volta" },
+  nl: { billWithPlan: "Bij elke afschrijving", billOnce: "Eenmalig" },
+  sv: { billWithPlan: "Vid varje dragning", billOnce: "Bara en gång" },
+  no: { billWithPlan: "Ved hvert trekk", billOnce: "Bare én gang" },
+  da: { billWithPlan: "Ved hver trækning", billOnce: "Kun én gang" },
+  ms: { billWithPlan: "Setiap caj", billOnce: "Sekali sahaja" },
+  ja: { billWithPlan: "毎回の決済と一緒に", billOnce: "1回のみ" },
+  zh: { billWithPlan: "随每期一起", billOnce: "仅一次" },
+  hi: { billWithPlan: "हर कटौती के साथ", billOnce: "केवल एक बार" },
+};
+
 let written = 0;
 for (const locale of Object.keys(TEAM_SUPPORT)) {
   const file = `i18n/messages/${locale}.json`;
   const json = JSON.parse(readFileSync(file, "utf8"));
-  json.TeamSupport = TEAM_SUPPORT[locale];
+  json.TeamSupport = { ...TEAM_SUPPORT[locale], ...TEAM_SUPPORT_BILLING[locale] };
   json.Gift = GIFT[locale];
   writeFileSync(file, `${JSON.stringify(json, null, 2)}\n`, "utf8");
   written += 1;

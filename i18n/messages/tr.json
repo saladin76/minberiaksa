@@ -3250,7 +3250,9 @@
     "oneTimeNote": "Bu siparişle birlikte bir kez alınır.",
     "chosen": "Ekip desteği: {amount}",
     "chosenRecurring": "Ekip desteği: her çekimde {amount}",
-    "giftedTo": "{name} adına hediye"
+    "giftedTo": "{name} adına hediye",
+    "billWithPlan": "Her çekimle birlikte",
+    "billOnce": "Yalnızca bir kez"
   },
   "Gift": {
     "emailSubject": "Adınıza bir hediye: {project} projesine bağış",

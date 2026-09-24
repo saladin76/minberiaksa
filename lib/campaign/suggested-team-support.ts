@@ -4,7 +4,7 @@
  * Stored as JSON: { amounts: number[], byCurrency?: Record<string, number[]> }.
  *
  * One layer: the global defaults (per currency) on GlobalSettings, managed at
- * `/dashboard/team-support`. Team support belongs to the whole order, so the
+ * `/dashboard/cart-settings`. Team support belongs to the whole order, so the
  * old per-campaign override (`Campaign.suggestedTeamSupport`) is no longer
  * read — the column is kept for old rows only.
  *
