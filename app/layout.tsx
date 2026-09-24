@@ -1,26 +1,13 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import { Amiri, Cairo, Montserrat, Poppins, Tajawal } from "next/font/google";
 import DeferredGTM from "@/components/DeferredGTM";
 import MicrosoftClarity from "@/components/MicrosoftClarity";
 import EngagementInstrumentation from "@/components/EngagementInstrumentation";
 import { Analytics } from "@vercel/analytics/next";
 import { LOCALES, LOCALE_SEO, isProductionDeployment } from "@/lib/seo";
 import "./[locale]/globals.css";
+import "@/styles/self-hosted-fonts.css";
 
-const poppins = Poppins({
-  weight: ["400", "500", "600", "700"],
-  subsets: ["latin"],
-  variable: "--font-poppins",
-  display: "swap",
-});
-
-const tajawal = Tajawal({
-  weight: ["400", "500", "700"],
-  subsets: ["arabic"],
-  variable: "--font-arabic",
-  display: "swap",
-});
 
 /**
  * Minbar identity type. The brand leans heavy — headings and CTAs are 800–900 —
@@ -32,27 +19,21 @@ const tajawal = Tajawal({
  * renders in Arabic script regardless of the page language.
  * Non-Latin locales (ja/zh/hi) load their own faces in
  * `styles/minbar/locale-fonts.css`, on demand.
+ *
+ * The files are self-hosted (`public/fonts/`, declared in
+ * `styles/self-hosted-fonts.css`, refreshed by `scripts/vendor-google-fonts.mjs`)
+ * rather than loaded through `next/font/google`: that helper downloads every
+ * face at build time, and one failed download under Turbopack fails the whole
+ * production build. The `site-fonts` class below sets the same CSS variables
+ * the `next/font` objects used to, so Tailwind's `font-*` families are unchanged.
  */
-const cairo = Cairo({
-  weight: ["400", "600", "700", "800", "900"],
-  subsets: ["arabic", "latin"],
-  variable: "--font-cairo",
-  display: "swap",
-});
-
-const montserrat = Montserrat({
-  weight: ["400", "500", "600", "700", "800", "900"],
-  subsets: ["latin", "latin-ext"],
-  variable: "--font-montserrat",
-  display: "swap",
-});
-
-const amiri = Amiri({
-  weight: ["400", "700"],
-  subsets: ["arabic"],
-  variable: "--font-amiri",
-  display: "swap",
-});
+const SITE_FONT_VARIABLES: React.CSSProperties = {
+  ["--font-cairo" as string]: "'Cairo'",
+  ["--font-montserrat" as string]: "'Montserrat'",
+  ["--font-amiri" as string]: "'Amiri'",
+  ["--font-poppins" as string]: "'Poppins'",
+  ["--font-arabic" as string]: "'Tajawal'",
+};
 
 const SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://www.minberiaksa.org";
 const OG_IMAGE = `/logometaminber.avif`;
@@ -317,9 +298,7 @@ export default function RootLayout({
 
         <script src="https://t.contentsquare.net/uxa/e81365186c19c.js" async />
       </head>
-      <body
-        className={`${poppins.variable} ${tajawal.variable} ${cairo.variable} ${montserrat.variable} ${amiri.variable} font-arabic antialiased`}
-      >
+      <body className="font-arabic antialiased" style={SITE_FONT_VARIABLES}>
         <noscript>
           <iframe
             src="https://www.googletagmanager.com/ns.html?id=GTM-MMNBQQWB"
