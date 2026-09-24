@@ -50,6 +50,12 @@ export interface CreateDonationInput {
   currency: string;
   locale: string;
   method: CheckoutMethod;
+  /**
+   * The "support the team" amount chosen in the basket (USD), 0 for none.
+   * Belongs to the whole order: with a recurring row it is charged with every
+   * instalment, otherwise once.
+   */
+  teamSupport: number;
   /** Present when the donor is not signed in. */
   guest: CheckoutDonor | null;
   /** Referral code from the visit, if the campaign-link layer captured one. */
@@ -86,8 +92,18 @@ export interface GatewayForm {
 }
 
 /** The three kinds of line the order API takes. */
+/** A gift, as the order API takes it on a campaign line. */
+export interface OrderGift {
+  recipientName: string;
+  recipientPhone: string | null;
+  recipientEmail: string | null;
+  message: string | null;
+  channels: Array<"EMAIL" | "WHATSAPP">;
+  showAmount: boolean;
+}
+
 export interface OrderLines {
-  items: Array<{ campaignId: string; amount: number }>;
+  items: Array<{ campaignId: string; amount: number; gift?: OrderGift }>;
   categoryItems: Array<{ categoryId: string; amount: number }>;
   /**
    * Waqf rows carry no amount: the server prices them from the fixed unit
@@ -116,7 +132,24 @@ export function toOrderItems(
 
   for (const item of items) {
     const campaignId = item.projectId ? bySlug.get(item.projectId) : undefined;
-    if (campaignId) lines.items.push({ campaignId, amount: item.amount });
+    if (campaignId) {
+      lines.items.push({
+        campaignId,
+        amount: item.amount,
+        ...(item.gift
+          ? {
+              gift: {
+                recipientName: item.gift.recipientName,
+                recipientPhone: item.gift.recipientPhone || null,
+                recipientEmail: item.gift.recipientEmail || null,
+                message: item.gift.message || null,
+                channels: item.gift.channels.map((c) => (c === "email" ? ("EMAIL" as const) : ("WHATSAPP" as const))),
+                showAmount: item.gift.showAmount,
+              },
+            }
+          : {}),
+      });
+    }
     else if (item.categoryId) lines.categoryItems.push({ categoryId: item.categoryId, amount: item.amount });
     else if (item.waqf) {
       lines.waqfItems.push({
@@ -178,6 +211,7 @@ export async function createDonation(input: CreateDonationInput): Promise<Create
       currency: input.currency,
       type: orderType(input.items),
       timezone: browserTimezone(),
+      teamSupport: input.teamSupport > 0 ? input.teamSupport : 0,
       paymentMethod: input.method,
       locale: input.locale,
       ...(input.referralCode ? { referralCode: input.referralCode } : {}),

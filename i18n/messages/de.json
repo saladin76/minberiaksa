@@ -3169,5 +3169,27 @@
     "cadenceMonthly": "monatlich",
     "stripeNotReady": "Das Zahlungsformular lädt noch — bitte versuchen Sie es gleich noch einmal.",
     "subscriptionPaymentFailed": "Abbuchung fehlgeschlagen — bitte Kartendaten aktualisieren"
+  },
+  "TeamSupport": {
+    "title": "Das Team unterstützen",
+    "lead": "Ihre Spende kommt vollständig beim Projekt an. Ein kleiner Zusatzbetrag deckt das Team, das sie umsetzt.",
+    "noThanks": "Nein danke",
+    "customAmount": "Anderer Betrag",
+    "recurringNote": "Wird mit jeder Abbuchung Ihrer regelmäßigen Spende erhoben.",
+    "oneTimeNote": "Wird einmalig mit dieser Bestellung erhoben.",
+    "chosen": "Team-Unterstützung: {amount}",
+    "chosenRecurring": "Team-Unterstützung: {amount} je Abbuchung",
+    "giftedTo": "Geschenk für {name}"
+  },
+  "Gift": {
+    "emailSubject": "Ein Geschenk in Ihrem Namen: eine Spende für {project}",
+    "emailTitle": "{recipientName}, Sie haben ein Geschenk",
+    "emailBody": "{donorName} hat in Ihrem Namen über Minbar Al-Aqsa für „{project}“ gespendet.",
+    "emailAmount": "Spendenbetrag: {amount}.",
+    "emailAttachment": "Ihre Dankesurkunde auf Ihren Namen ist beigefügt.",
+    "emailCta": "Zum Projekt",
+    "whatsappBody": "{recipientName}, {donorName} hat in Ihrem Namen über Minbar Al-Aqsa für „{project}“ gespendet.",
+    "whatsappAmount": "Spendenbetrag: {amount}.",
+    "anonymousDonor": "Ein Wohltäter"
   }
 }

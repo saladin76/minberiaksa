@@ -97,6 +97,11 @@ export default function DonationPanel({ project }: { project: MinbarProject }) {
     width: "100%",
   };
 
+  /* The dedication rides on the row itself: the basket shows "gift to X",
+     the order carries it on the line, and the recipient is told once the
+     donation is confirmed. Only a complete dedication (a name, and contact
+     details for every chosen channel) is attached — a half-filled one is
+     dropped rather than sent to nobody. */
   const buildItem = () => ({
     projectId: project.slug,
     title: project.title,
@@ -104,6 +109,18 @@ export default function DonationPanel({ project }: { project: MinbarProject }) {
     freqKey: freq,
     amount,
     currency: "USD",
+    ...(giftReady
+      ? {
+          gift: {
+            recipientName: giftName.trim(),
+            recipientPhone: channels.whatsapp ? giftPhone.trim() : "",
+            recipientEmail: channels.email ? giftEmail.trim() : "",
+            message: giftNote.trim(),
+            channels: [...(channels.whatsapp ? ["whatsapp" as const] : []), ...(channels.email ? ["email" as const] : [])],
+            showAmount,
+          },
+        }
+      : {}),
   });
 
   const onDonate = () => {

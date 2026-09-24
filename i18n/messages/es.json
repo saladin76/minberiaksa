@@ -3169,5 +3169,27 @@
     "cadenceMonthly": "cada mes",
     "stripeNotReady": "El formulario de pago aún se está cargando; inténtalo de nuevo en un momento.",
     "subscriptionPaymentFailed": "Cobro fallido — actualiza tu tarjeta"
+  },
+  "TeamSupport": {
+    "title": "Apoya al equipo",
+    "lead": "Tu donación llega íntegra al proyecto. Un pequeño extra cubre al equipo que la hace llegar.",
+    "noThanks": "No, gracias",
+    "customAmount": "Otro importe",
+    "recurringNote": "Se cobra con cada cuota de tu donación periódica.",
+    "oneTimeNote": "Se cobra una sola vez con este pedido.",
+    "chosen": "Apoyo al equipo: {amount}",
+    "chosenRecurring": "Apoyo al equipo: {amount} por cuota",
+    "giftedTo": "Regalo para {name}"
+  },
+  "Gift": {
+    "emailSubject": "Un regalo en tu nombre: una donación a {project}",
+    "emailTitle": "{recipientName}, tienes un regalo",
+    "emailBody": "{donorName} ha donado en tu nombre al proyecto «{project}» a través de Minbar Al-Aqsa.",
+    "emailAmount": "Importe de la donación: {amount}.",
+    "emailAttachment": "Adjuntamos tu certificado de agradecimiento, emitido a tu nombre.",
+    "emailCta": "Ver el proyecto",
+    "whatsappBody": "{recipientName}, {donorName} ha donado en tu nombre al proyecto «{project}» a través de Minbar Al-Aqsa.",
+    "whatsappAmount": "Importe de la donación: {amount}.",
+    "anonymousDonor": "Un benefactor"
   }
 }

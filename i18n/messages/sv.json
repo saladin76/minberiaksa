@@ -2137,5 +2137,27 @@
     "cadenceMonthly": "varje månad",
     "stripeNotReady": "Betalningsformuläret laddas fortfarande — försök igen om en stund.",
     "subscriptionPaymentFailed": "Dragningen misslyckades — uppdatera ditt kort"
+  },
+  "TeamSupport": {
+    "title": "Stöd teamet",
+    "lead": "Din gåva når projektet i sin helhet. Ett litet tillägg täcker teamet som genomför det.",
+    "noThanks": "Nej tack",
+    "customAmount": "Annat belopp",
+    "recurringNote": "Dras med varje dragning av din återkommande gåva.",
+    "oneTimeNote": "Dras en gång med denna beställning.",
+    "chosen": "Teamstöd: {amount}",
+    "chosenRecurring": "Teamstöd: {amount} per dragning",
+    "giftedTo": "Gåva till {name}"
+  },
+  "Gift": {
+    "emailSubject": "En gåva i ditt namn: en donation till {project}",
+    "emailTitle": "{recipientName}, du har fått en gåva",
+    "emailBody": "{donorName} har skänkt i ditt namn till ”{project}” via Minbar Al-Aqsa.",
+    "emailAmount": "Gåvobelopp: {amount}.",
+    "emailAttachment": "Ditt tackcertifikat, utfärdat i ditt namn, är bifogat.",
+    "emailCta": "Se projektet",
+    "whatsappBody": "{recipientName}, {donorName} har skänkt i ditt namn till ”{project}” via Minbar Al-Aqsa.",
+    "whatsappAmount": "Gåvobelopp: {amount}.",
+    "anonymousDonor": "En välgörare"
   }
 }

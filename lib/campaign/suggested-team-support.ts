@@ -1,13 +1,14 @@
 /**
- * Team-support quick-pick amounts (shown in DonationDialog & CartPaymentDialog).
+ * Team-support quick-pick amounts, shown once per basket (the cart page's
+ * "support the team" step) and in the legacy dialogs.
  * Stored as JSON: { amounts: number[], byCurrency?: Record<string, number[]> }.
  *
- * Two layers:
- *   1. Global defaults (per currency) live on GlobalSettings.
- *   2. Per-campaign override on Campaign.suggestedTeamSupport. If null/empty,
- *      the global defaults apply.
+ * One layer: the global defaults (per currency) on GlobalSettings, managed at
+ * `/dashboard/team-support`. Team support belongs to the whole order, so the
+ * old per-campaign override (`Campaign.suggestedTeamSupport`) is no longer
+ * read — the column is kept for old rows only.
  *
- * The "No thanks" option is rendered by the dialog itself and is NOT part of
+ * The "No thanks" option is rendered by the UI itself and is NOT part of
  * the stored amounts list.
  */
 
@@ -86,18 +87,15 @@ export function resolveTeamSupportAmountsForCurrency(
 }
 
 /**
- * Resolve the final amounts shown to the donor, walking the override chain:
- * campaign override → global default → hardcoded default.
+ * Resolve the final amounts shown to the donor: global default → hardcoded
+ * default. The second argument was the per-campaign override; team support
+ * is per basket now, so it is accepted for old call sites and ignored.
  */
 export function resolveFinalTeamSupportAmounts(
   currencyCode: string,
-  campaignOverride?: SuggestedTeamSupportConfig | null,
+  _campaignOverride?: SuggestedTeamSupportConfig | null,
   globalDefault?: SuggestedTeamSupportConfig | null
 ): number[] {
-  if (campaignOverride) {
-    const fromCampaign = resolveTeamSupportAmountsForCurrency(campaignOverride, currencyCode);
-    if (fromCampaign.length) return fromCampaign;
-  }
   if (globalDefault) {
     const fromGlobal = resolveTeamSupportAmountsForCurrency(globalDefault, currencyCode);
     if (fromGlobal.length) return fromGlobal;

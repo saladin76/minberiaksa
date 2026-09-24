@@ -15,6 +15,8 @@ import { parseMainGateway, type MainGateway } from "./payment-gateway";
 
 export type GlobalSettings = {
   suggestedTeamSupport: SuggestedTeamSupportConfig;
+  /** The basket's "support the team" step. Default true. */
+  teamSupportEnabled: boolean;
   /** Master switch for the PayFor gateway. Default true. */
   payforEnabled: boolean;
   /** Gateway handling every case PayFor doesn't take. Default "STRIPE". */
@@ -58,6 +60,7 @@ export async function fetchGlobalSettings(
       const data = (await res.json().catch(() => null)) as
         | {
             suggestedTeamSupport?: unknown;
+            teamSupportEnabled?: unknown;
             payforEnabled?: unknown;
             mainGateway?: unknown;
             albarakaUseOOS?: unknown;
@@ -66,6 +69,7 @@ export async function fetchGlobalSettings(
         | null;
       const parsed: GlobalSettings = {
         suggestedTeamSupport: parseSuggestedTeamSupport(data?.suggestedTeamSupport),
+        teamSupportEnabled: data?.teamSupportEnabled !== false,
         // Treat anything that isn't an explicit `false` as enabled. This keeps
         // the donation flow working before the first record is persisted and
         // when the API response shape is incomplete for any reason.

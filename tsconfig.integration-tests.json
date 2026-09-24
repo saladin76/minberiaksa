@@ -59,6 +59,7 @@
     "lib/minbar/routes.ts",
     "lib/seo-minbar.generated.ts",
     "lib/donations/recurring-schedule.ts",
+    "lib/donations/gift-order.ts",
     "lib/donations/subscription-provider-rules.ts",
     "lib/content-localization/access.ts",
     "tests/integration-settings/**/*.ts"

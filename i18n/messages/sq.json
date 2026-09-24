@@ -2137,5 +2137,27 @@
     "cadenceMonthly": "çdo muaj",
     "stripeNotReady": "Formulari i pagesës është ende duke u ngarkuar — provoni sërish pas pak.",
     "subscriptionPaymentFailed": "Pagesa dështoi — përditësoni kartën tuaj"
+  },
+  "TeamSupport": {
+    "title": "Mbështetni ekipin",
+    "lead": "Dhurimi juaj arrin i plotë te projekti. Një shtesë e vogël mbulon ekipin që e realizon.",
+    "noThanks": "Jo, faleminderit",
+    "customAmount": "Shumë tjetër",
+    "recurringNote": "Tërhiqet me çdo këst të dhurimit tuaj të rregullt.",
+    "oneTimeNote": "Tërhiqet një herë me këtë porosi.",
+    "chosen": "Mbështetje për ekipin: {amount}",
+    "chosenRecurring": "Mbështetje për ekipin: {amount} për këst",
+    "giftedTo": "Dhuratë për {name}"
+  },
+  "Gift": {
+    "emailSubject": "Një dhuratë në emrin tuaj: një dhurim për {project}",
+    "emailTitle": "{recipientName}, keni një dhuratë",
+    "emailBody": "{donorName} dhuroi në emrin tuaj për projektin “{project}” përmes Minbar Al-Aqsa.",
+    "emailAmount": "Shuma e dhurimit: {amount}.",
+    "emailAttachment": "Certifikata e falënderimit, e lëshuar në emrin tuaj, është bashkëngjitur.",
+    "emailCta": "Shihni projektin",
+    "whatsappBody": "{recipientName}, {donorName} dhuroi në emrin tuaj për projektin “{project}” përmes Minbar Al-Aqsa.",
+    "whatsappAmount": "Shuma e dhurimit: {amount}.",
+    "anonymousDonor": "Një bamirës"
   }
 }

@@ -207,6 +207,14 @@ export async function dispatchDonationPaid(donationId: string): Promise<void> {
     console.error("dispatchDonationPaid issue documents failed", { donationId, error: error instanceof Error ? error.message : String(error) });
   }
   await dispatchEvent("DONATION_PAID", { donationId });
+  /* Gifted lines: tell the recipient, with a certificate in their name.
+     Per-line idempotent; a failure is logged and the rest still runs. */
+  try {
+    const { deliverDonationGifts } = await import("@/lib/donations/gift-delivery");
+    await deliverDonationGifts(donationId);
+  } catch (error) {
+    console.error("dispatchDonationPaid gift delivery failed", { donationId, error: error instanceof Error ? error.message : String(error) });
+  }
   try {
     const capi = await sendDonationServerConversions(donationId);
     if (!capi.ok && !capi.skipped) console.error("dispatchDonationPaid CAPI returned not-ok", { donationId, reason: capi.reason ?? capi.error ?? null });

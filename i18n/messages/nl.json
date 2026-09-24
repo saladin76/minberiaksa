@@ -2137,5 +2137,27 @@
     "cadenceMonthly": "elke maand",
     "stripeNotReady": "Het betaalformulier wordt nog geladen — probeer het zo opnieuw.",
     "subscriptionPaymentFailed": "Afschrijving mislukt — werk uw kaart bij"
+  },
+  "TeamSupport": {
+    "title": "Steun het team",
+    "lead": "Uw gift komt volledig bij het project terecht. Een kleine extra dekt het team dat het uitvoert.",
+    "noThanks": "Nee, bedankt",
+    "customAmount": "Ander bedrag",
+    "recurringNote": "Wordt bij elke afschrijving van uw periodieke gift afgeschreven.",
+    "oneTimeNote": "Wordt eenmalig bij deze bestelling afgeschreven.",
+    "chosen": "Teamsteun: {amount}",
+    "chosenRecurring": "Teamsteun: {amount} per afschrijving",
+    "giftedTo": "Geschenk voor {name}"
+  },
+  "Gift": {
+    "emailSubject": "Een geschenk op uw naam: een gift voor {project}",
+    "emailTitle": "{recipientName}, u heeft een geschenk",
+    "emailBody": "{donorName} heeft op uw naam gedoneerd aan “{project}” via Minbar Al-Aqsa.",
+    "emailAmount": "Bedrag van de gift: {amount}.",
+    "emailAttachment": "Uw dankcertificaat, op uw naam, is bijgevoegd.",
+    "emailCta": "Bekijk het project",
+    "whatsappBody": "{recipientName}, {donorName} heeft op uw naam gedoneerd aan “{project}” via Minbar Al-Aqsa.",
+    "whatsappAmount": "Bedrag van de gift: {amount}.",
+    "anonymousDonor": "Een weldoener"
   }
 }

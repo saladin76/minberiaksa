@@ -2134,5 +2134,27 @@
     "cadenceMonthly": "setiap bulan",
     "stripeNotReady": "Borang pembayaran masih dimuatkan — sila cuba lagi sebentar.",
     "subscriptionPaymentFailed": "Caj gagal — kemas kini kad anda"
+  },
+  "TeamSupport": {
+    "title": "Sokong pasukan",
+    "lead": "Derma anda sampai sepenuhnya ke projek. Tambahan kecil menampung pasukan yang menyampaikannya.",
+    "noThanks": "Tidak, terima kasih",
+    "customAmount": "Jumlah lain",
+    "recurringNote": "Dicaj bersama setiap caj derma berkala anda.",
+    "oneTimeNote": "Dicaj sekali bersama pesanan ini.",
+    "chosen": "Sokongan pasukan: {amount}",
+    "chosenRecurring": "Sokongan pasukan: {amount} setiap caj",
+    "giftedTo": "Hadiah untuk {name}"
+  },
+  "Gift": {
+    "emailSubject": "Hadiah atas nama anda: derma untuk {project}",
+    "emailTitle": "{recipientName}, anda menerima hadiah",
+    "emailBody": "{donorName} menderma atas nama anda untuk projek “{project}” melalui Minbar Al-Aqsa.",
+    "emailAmount": "Jumlah derma: {amount}.",
+    "emailAttachment": "Sijil penghargaan atas nama anda dilampirkan.",
+    "emailCta": "Lihat projek",
+    "whatsappBody": "{recipientName}, {donorName} menderma atas nama anda untuk projek “{project}” melalui Minbar Al-Aqsa.",
+    "whatsappAmount": "Jumlah derma: {amount}.",
+    "anonymousDonor": "Seorang dermawan"
   }
 }

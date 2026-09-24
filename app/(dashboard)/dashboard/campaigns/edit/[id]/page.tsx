@@ -107,14 +107,6 @@ import {
   type SuggestedDonationsSectionRef,
 } from '../../_components/SuggestedDonationsSection';
 import {
-  SuggestedTeamSupportSection,
-  type SuggestedTeamSupportSectionRef,
-} from '../../_components/SuggestedTeamSupportSection';
-import {
-  parseSuggestedTeamSupport,
-  type SuggestedTeamSupportConfig,
-} from '@/lib/campaign/suggested-team-support';
-import {
   SuggestedShareCountsSection,
   type SuggestedShareCountsSectionRef,
 } from '../../_components/SuggestedShareCountsSection';
@@ -268,15 +260,11 @@ export default function EditCampaignPage() {
   const [suggestedSeed, setSuggestedSeed] = useState<
     SuggestedDonationsConfig | undefined
   >(undefined);
-  const [teamSupportSeed, setTeamSupportSeed] = useState<
-    SuggestedTeamSupportConfig | undefined
-  >(undefined);
   const [shareCountsSeed, setShareCountsSeed] = useState<
     SuggestedShareCountsConfig | undefined
   >(undefined);
   const [shareLabelsSeed, setShareLabelsSeed] = useState<ShareLabelsConfig | null | undefined>(undefined);
   const suggestedDonationsRef = useRef<SuggestedDonationsSectionRef>(null);
-  const suggestedTeamSupportRef = useRef<SuggestedTeamSupportSectionRef>(null);
   const suggestedShareCountsRef = useRef<SuggestedShareCountsSectionRef>(null);
   const shareLabelsRef = useRef<ShareLabelsSectionRef>(null);
 
@@ -356,7 +344,6 @@ export default function EditCampaignPage() {
         const campaign = campaignRes.data;
         setCategories(categoriesRes.data.items);
         setSuggestedSeed(parseSuggestedDonations(campaign.suggestedDonations));
-        setTeamSupportSeed(parseSuggestedTeamSupport(campaign.suggestedTeamSupport));
         setShareCountsSeed(parseSuggestedShareCounts(campaign.suggestedShareCounts));
         setShareLabelsSeed(parseShareLabels(campaign.shareLabels));
 
@@ -480,7 +467,6 @@ export default function EditCampaignPage() {
           values.fundraisingMode === 'AMOUNT'
             ? suggestedDonationsRef.current?.getPayload()
             : null,
-        suggestedTeamSupport: suggestedTeamSupportRef.current?.getPayload() ?? null,
         suggestedShareCounts:
           values.fundraisingMode === 'SHARES'
             ? suggestedShareCountsRef.current?.getPayload()
@@ -1392,20 +1378,6 @@ export default function EditCampaignPage() {
                   />
                 </div>
               )}
-            {!loading && teamSupportSeed !== undefined && (
-              <div className="mt-6">
-                <SuggestedTeamSupportSection
-                  ref={suggestedTeamSupportRef}
-                  key={`${params?.id}-team-support`}
-                  initialConfig={teamSupportSeed}
-                  label="استثناءات قيم دعم الفريق (اختياري)"
-                  helpText="اتركها فارغة لاستخدام القيم الافتراضية العامة. أرقام مفصولة بفاصلة أو مسافة، مثل: 5, 10, 25, 50, 100"
-                  defaultPlaceholder="فارغ — يستخدم القيم الافتراضية العامة"
-                  exceptionsLabel="استثناءات حسب العملة (اختياري)"
-                  exceptionsEmptyHint="بدون استثناءات، تُطبّق القيم أعلاه (أو الافتراضي العام) على جميع العملات."
-                />
-              </div>
-            )}
           </Card>
 
           {/* Images */}

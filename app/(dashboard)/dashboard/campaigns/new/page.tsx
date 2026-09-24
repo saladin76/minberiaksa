@@ -90,10 +90,6 @@ import {
   type SuggestedDonationsSectionRef,
 } from '../_components/SuggestedDonationsSection';
 import {
-  SuggestedTeamSupportSection,
-  type SuggestedTeamSupportSectionRef,
-} from '../_components/SuggestedTeamSupportSection';
-import {
   SuggestedShareCountsSection,
   type SuggestedShareCountsSectionRef,
 } from '../_components/SuggestedShareCountsSection';
@@ -178,7 +174,6 @@ export default function NewCampaignPage() {
   const [unlockConfirmText, setUnlockConfirmText] = useState('');
   const CURRENT_AMOUNT_UNLOCK_PHRASE = 'أؤكد تعديل المبلغ';
   const suggestedDonationsRef = useRef<SuggestedDonationsSectionRef>(null);
-  const suggestedTeamSupportRef = useRef<SuggestedTeamSupportSectionRef>(null);
   const suggestedShareCountsRef = useRef<SuggestedShareCountsSectionRef>(null);
   const shareLabelsRef = useRef<ShareLabelsSectionRef>(null);
 
@@ -301,8 +296,6 @@ export default function NewCampaignPage() {
           values.fundraisingMode === 'AMOUNT'
             ? suggestedDonationsRef.current?.getPayload()
             : undefined,
-        suggestedTeamSupport:
-          suggestedTeamSupportRef.current?.getPayload() ?? undefined,
         suggestedShareCounts:
           values.fundraisingMode === 'SHARES'
             ? suggestedShareCountsRef.current?.getPayload()
@@ -1040,16 +1033,6 @@ const getTranslationStatus = () => {
                 <SuggestedDonationsSection ref={suggestedDonationsRef} />
               </div>
             )}
-            <div className="mt-6">
-              <SuggestedTeamSupportSection
-                ref={suggestedTeamSupportRef}
-                label="استثناءات قيم دعم الفريق (اختياري)"
-                helpText="اتركها فارغة لاستخدام القيم الافتراضية العامة. أرقام مفصولة بفاصلة أو مسافة، مثل: 5, 10, 25, 50, 100"
-                defaultPlaceholder="فارغ — يستخدم القيم الافتراضية العامة"
-                exceptionsLabel="استثناءات حسب العملة (اختياري)"
-                exceptionsEmptyHint="بدون استثناءات، تُطبّق القيم أعلاه (أو الافتراضي العام) على جميع العملات."
-              />
-            </div>
           </Card>
 
           {/* Images */}

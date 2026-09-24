@@ -3240,5 +3240,27 @@
     "cadenceMonthly": "every month",
     "stripeNotReady": "The payment form is still loading — please try again in a moment.",
     "subscriptionPaymentFailed": "Payment failed — please update your card"
+  },
+  "TeamSupport": {
+    "title": "Support the team",
+    "lead": "Your donation reaches the project in full. A small extra covers the team that delivers it.",
+    "noThanks": "No thanks",
+    "customAmount": "Other amount",
+    "recurringNote": "Charged with every instalment of your recurring donation.",
+    "oneTimeNote": "Charged once with this order.",
+    "chosen": "Team support: {amount}",
+    "chosenRecurring": "Team support: {amount} per instalment",
+    "giftedTo": "Gifted to {name}"
+  },
+  "Gift": {
+    "emailSubject": "A gift in your name: a donation to {project}",
+    "emailTitle": "{recipientName}, you have a gift",
+    "emailBody": "{donorName} donated in your name to “{project}” through Minbar Al-Aqsa.",
+    "emailAmount": "Donation amount: {amount}.",
+    "emailAttachment": "Your thank-you certificate, issued in your name, is attached.",
+    "emailCta": "See the project",
+    "whatsappBody": "{recipientName}, {donorName} donated in your name to “{project}” through Minbar Al-Aqsa.",
+    "whatsappAmount": "Donation amount: {amount}.",
+    "anonymousDonor": "A well-wisher"
   }
 }

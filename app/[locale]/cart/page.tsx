@@ -10,7 +10,7 @@ interface Props {
 }
 
 /** The page's own namespaces, on top of the shell bundle. */
-const NAMESPACES = ["cart", "certificates"] as const;
+const NAMESPACES = ["cart", "certificates", "TeamSupport"] as const;
 
 /**
  * The cart is per-donor and must never be indexed

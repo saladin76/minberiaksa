@@ -2137,5 +2137,27 @@
     "cadenceMonthly": "ہر ماہ",
     "stripeNotReady": "ادائیگی کا فارم ابھی لوڈ ہو رہا ہے — براہِ کرم تھوڑی دیر بعد دوبارہ کوشش کریں۔",
     "subscriptionPaymentFailed": "کٹوتی ناکام — براہِ کرم اپنے کارڈ کی معلومات اپ ڈیٹ کریں"
+  },
+  "TeamSupport": {
+    "title": "ٹیم کی مدد کریں",
+    "lead": "آپ کا عطیہ مکمل طور پر منصوبے تک پہنچتا ہے۔ ایک چھوٹی سی اضافی رقم اسے پہنچانے والی ٹیم کے اخراجات پورے کرتی ہے۔",
+    "noThanks": "نہیں، شکریہ",
+    "customAmount": "دوسری رقم",
+    "recurringNote": "آپ کے باقاعدہ عطیے کی ہر کٹوتی کے ساتھ لی جاتی ہے۔",
+    "oneTimeNote": "اس آرڈر کے ساتھ ایک بار لی جاتی ہے۔",
+    "chosen": "ٹیم کی مدد: {amount}",
+    "chosenRecurring": "ٹیم کی مدد: ہر کٹوتی پر {amount}",
+    "giftedTo": "{name} کے نام تحفہ"
+  },
+  "Gift": {
+    "emailSubject": "آپ کے نام ایک تحفہ: {project} کے لیے عطیہ",
+    "emailTitle": "{recipientName}، آپ کے لیے ایک تحفہ ہے",
+    "emailBody": "{donorName} نے منبر الاقصیٰ کے ذریعے «{project}» منصوبے میں آپ کے نام عطیہ دیا۔",
+    "emailAmount": "عطیے کی رقم: {amount}۔",
+    "emailAttachment": "آپ کے نام جاری کردہ شکریہ سرٹیفکیٹ منسلک ہے۔",
+    "emailCta": "منصوبہ دیکھیں",
+    "whatsappBody": "{recipientName}، {donorName} نے منبر الاقصیٰ کے ذریعے «{project}» منصوبے میں آپ کے نام عطیہ دیا۔",
+    "whatsappAmount": "عطیے کی رقم: {amount}۔",
+    "anonymousDonor": "ایک محسن"
   }
 }

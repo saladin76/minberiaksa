@@ -26,11 +26,13 @@ export async function GET() {
   try {
     const settings = await prisma.globalSettings.findFirst({
       orderBy: { createdAt: "asc" },
-      select: { suggestedTeamSupport: true, payforEnabled: true, mainGateway: true },
+      select: { suggestedTeamSupport: true, teamSupportEnabled: true, payforEnabled: true, mainGateway: true },
     });
     const albaraka = albarakaConfig();
     return NextResponse.json({
       suggestedTeamSupport: parseSuggestedTeamSupport(settings?.suggestedTeamSupport),
+      // The basket's "support the team" step; default on before any record exists.
+      teamSupportEnabled: settings?.teamSupportEnabled ?? true,
       // Default true — first read before any record exists must still let
       // PayFor remain available for TRY donors.
       payforEnabled: settings?.payforEnabled ?? true,
@@ -68,6 +70,13 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
     }
 
+    if (body.teamSupportEnabled !== undefined) {
+      const denied = requireAdminOrDashboardPermission(session, "campaigns");
+      if (denied) return denied;
+      if (typeof body.teamSupportEnabled !== "boolean") {
+        return NextResponse.json({ error: "teamSupportEnabled must be a boolean" }, { status: 400 });
+      }
+    }
     if (body.suggestedTeamSupport !== undefined) {
       const denied = requireAdminOrDashboardPermission(session, "campaigns");
       if (denied) return denied;
@@ -78,11 +87,15 @@ export async function PUT(request: NextRequest) {
     }
 
     const updateData: Prisma.GlobalSettingsUpdateInput = {};
+    if (typeof body.teamSupportEnabled === "boolean") {
+      updateData.teamSupportEnabled = body.teamSupportEnabled;
+    }
 
     if (body.suggestedTeamSupport !== undefined) {
       try {
         if (body.suggestedTeamSupport === null) {
-          updateData.suggestedTeamSupport = Prisma.JsonNull;
+          /* MongoDB: an optional Json column is cleared with a plain null. */
+          updateData.suggestedTeamSupport = null;
         } else {
           const v = validateSuggestedTeamSupportBody(body.suggestedTeamSupport);
           if (v) {
@@ -131,7 +144,7 @@ export async function PUT(request: NextRequest) {
     const saved = await prisma.globalSettings.update({
       where: { id: existing.id },
       data: updateData,
-      select: { suggestedTeamSupport: true, payforEnabled: true, mainGateway: true },
+      select: { suggestedTeamSupport: true, teamSupportEnabled: true, payforEnabled: true, mainGateway: true },
     });
 
     // Gateway settings decide where every new donation's money goes, so each
@@ -166,6 +179,7 @@ export async function PUT(request: NextRequest) {
 
     return NextResponse.json({
       suggestedTeamSupport: parseSuggestedTeamSupport(saved.suggestedTeamSupport),
+      teamSupportEnabled: saved.teamSupportEnabled,
       payforEnabled: saved.payforEnabled,
       mainGateway: parseMainGateway(saved.mainGateway),
     });

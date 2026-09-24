@@ -49,6 +49,24 @@ export interface CartWaqfDetails {
   onBehalf: string;
 }
 
+/**
+ * A gift: the row is given in someone else's name. The thank-you certificate
+ * is issued to `recipientName`, and once the donation is confirmed the
+ * recipient is told on the chosen channels — a WhatsApp number, an email, or
+ * both — with the donor's note. Collected on the project page
+ * (`DonationPanel`), shown on the basket row, sent with the order as part of
+ * the line, and stored on `DonationItem`.
+ */
+export interface CartGiftDetails {
+  recipientName: string;
+  recipientPhone: string;
+  recipientEmail: string;
+  message: string;
+  channels: Array<"whatsapp" | "email">;
+  /** Whether the message to the recipient mentions the amount. */
+  showAmount: boolean;
+}
+
 export interface MinbarCartItem {
   /** Project slug from the projects source. Absent for non-project intentions. */
   projectId?: string;
@@ -80,6 +98,8 @@ export interface MinbarCartItem {
   _autoMonthly?: boolean;
   /** Present on a waqf row (`typeKey: "waqf"`): the certificate's details. */
   waqf?: CartWaqfDetails;
+  /** Present when the row is given in someone else's name. */
+  gift?: CartGiftDetails;
 }
 
 export const CART_ITEMS_KEY = "mia_cart_items";
@@ -140,6 +160,25 @@ function parseWaqf(value: unknown): CartWaqfDetails | undefined {
   };
 }
 
+/** The gift details of a stored row, or nothing without a recipient name. */
+function parseGift(value: unknown): CartGiftDetails | undefined {
+  if (!value || typeof value !== "object") return undefined;
+  const raw = value as Record<string, unknown>;
+  const recipientName = typeof raw.recipientName === "string" ? raw.recipientName.trim() : "";
+  if (!recipientName) return undefined;
+  const channels = Array.isArray(raw.channels)
+    ? (raw.channels.filter((c): c is "whatsapp" | "email" => c === "whatsapp" || c === "email"))
+    : [];
+  return {
+    recipientName,
+    recipientPhone: typeof raw.recipientPhone === "string" ? raw.recipientPhone.trim() : "",
+    recipientEmail: typeof raw.recipientEmail === "string" ? raw.recipientEmail.trim() : "",
+    message: typeof raw.message === "string" ? raw.message : "",
+    channels,
+    showAmount: raw.showAmount !== false,
+  };
+}
+
 /**
  * Bring one stored row up to schema v2.
  *
@@ -168,6 +207,7 @@ export function migrateItem(
     title: typeof raw.title === "string" ? raw.title : undefined,
     _autoMonthly: raw._autoMonthly === true || undefined,
     waqf: parseWaqf(raw.waqf),
+    gift: parseGift(raw.gift),
   };
 
   if (!item.projectId && !item.categoryId && !item.titleKey && item.title && resolveTitle) {
@@ -257,4 +297,43 @@ export function toDonationContract(item: MinbarCartItem): {
  */
 export function clearCart(): void {
   writeCart([]);
+  writeTeamSupport(0);
+}
+
+// ── Team support ─────────────────────────────────────────────────────────────
+//
+// "Support the team" belongs to the whole order, not to a campaign: it is
+// asked once, in the basket before checkout, and sent with the order. When
+// the basket holds a recurring row the amount is charged with every
+// instalment (it is part of the plan); when every row is one-time it is
+// charged once. Stored beside the cart so a reload keeps the choice, cleared
+// with it.
+
+export const CART_TEAM_SUPPORT_KEY = "mia_cart_team_support";
+
+/** The team-support amount chosen in the basket (in the active currency), or 0. */
+export function readTeamSupport(): number {
+  if (!isBrowser()) return 0;
+  try {
+    const n = Number(window.localStorage.getItem(CART_TEAM_SUPPORT_KEY) ?? "0");
+    return Number.isFinite(n) && n > 0 ? n : 0;
+  } catch {
+    return 0;
+  }
+}
+
+export function writeTeamSupport(amount: number): void {
+  if (!isBrowser()) return;
+  try {
+    if (amount > 0) window.localStorage.setItem(CART_TEAM_SUPPORT_KEY, String(amount));
+    else window.localStorage.removeItem(CART_TEAM_SUPPORT_KEY);
+  } catch {
+    /* Private mode; the in-memory choice still applies to this page view. */
+  }
+  window.dispatchEvent(new CustomEvent(CART_UPDATED_EVENT));
+}
+
+/** Whether any row is a plan — which makes the team support recurring too. */
+export function cartHasRecurring(items: readonly MinbarCartItem[]): boolean {
+  return items.some((item) => item.freqKey !== "once");
 }

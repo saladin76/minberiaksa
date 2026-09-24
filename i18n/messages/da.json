@@ -2134,5 +2134,27 @@
     "cadenceMonthly": "hver måned",
     "stripeNotReady": "Betalingsformularen indlæses stadig — prøv igen om et øjeblik.",
     "subscriptionPaymentFailed": "Trækningen mislykkedes — opdater dit kort"
+  },
+  "TeamSupport": {
+    "title": "Støt teamet",
+    "lead": "Din gave når projektet fuldt ud. Et lille tillæg dækker teamet, der gennemfører det.",
+    "noThanks": "Nej tak",
+    "customAmount": "Andet beløb",
+    "recurringNote": "Trækkes med hver trækning af din faste gave.",
+    "oneTimeNote": "Trækkes én gang med denne bestilling.",
+    "chosen": "Teamstøtte: {amount}",
+    "chosenRecurring": "Teamstøtte: {amount} pr. trækning",
+    "giftedTo": "Gave til {name}"
+  },
+  "Gift": {
+    "emailSubject": "En gave i dit navn: en donation til {project}",
+    "emailTitle": "{recipientName}, du har fået en gave",
+    "emailBody": "{donorName} har doneret i dit navn til »{project}« via Minbar Al-Aqsa.",
+    "emailAmount": "Gavebeløb: {amount}.",
+    "emailAttachment": "Dit takkecertifikat, udstedt i dit navn, er vedhæftet.",
+    "emailCta": "Se projektet",
+    "whatsappBody": "{recipientName}, {donorName} har doneret i dit navn til »{project}« via Minbar Al-Aqsa.",
+    "whatsappAmount": "Gavebeløb: {amount}.",
+    "anonymousDonor": "En velgører"
   }
 }

@@ -800,6 +800,23 @@ model DonationItem {
   /// When set, line item was a سهوم (shares) purchase
   shareCount Int?
 
+  /// A gift: this line was given in someone else's name. The thank-you
+  /// certificate is issued to `giftRecipientName` and, once the donation is
+  /// confirmed, sent to the recipient on the channels chosen at checkout
+  /// (`lib/donations/gift-delivery.ts`). Null on an ordinary line.
+  giftRecipientName  String?
+  giftRecipientEmail String?
+  /// E.164, for WhatsApp.
+  giftRecipientPhone String?
+  /// The donor's note to the recipient, carried in the message.
+  giftMessage        String?
+  /// "EMAIL" | "WHATSAPP" — the channels the recipient is told on.
+  giftChannels       String[] @default([])
+  /// Whether the message to the recipient mentions the amount.
+  giftShowAmount     Boolean  @default(true)
+  /// Set when the recipient was told; a replayed webhook does not tell them twice.
+  giftDeliveredAt    DateTime?
+
   donation Donation @relation(fields: [donationId], references: [id], onDelete: Cascade)
   campaign Campaign @relation(fields: [campaignId], references: [id])
 
@@ -1510,8 +1527,14 @@ model TrackingSettings {
 /// writable only from the admin dashboard.
 model GlobalSettings {
   id                   String   @id @default(auto()) @map("_id") @db.ObjectId
-  /// { "amounts": number[], "byCurrency"?: Record<string, number[]> } — global default team-support amounts; per-campaign override on Campaign.suggestedTeamSupport wins
+  /// { "amounts": number[], "byCurrency"?: Record<string, number[]> } — the
+  /// team-support quick-pick amounts shown in the basket. Team support belongs
+  /// to the whole order, not to a campaign, so this is the only source
+  /// (`Campaign.suggestedTeamSupport` is no longer read).
   suggestedTeamSupport Json?
+  /// Master switch for the basket's "support the team" step. Off, the step is
+  /// not shown and the order API ignores any amount sent.
+  teamSupportEnabled   Boolean  @default(true)
   /// The homepage quick-donation card and its dock: presets (with per-currency
   /// overrides), frequencies, destinations, title. Shape and defaults in
   /// `lib/minbar/quick-donation.ts`; null means "the defaults".

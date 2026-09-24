@@ -2134,5 +2134,27 @@
     "cadenceMonthly": "每月",
     "stripeNotReady": "支付表单仍在加载中，请稍后重试。",
     "subscriptionPaymentFailed": "扣款失败 — 请更新您的银行卡"
+  },
+  "TeamSupport": {
+    "title": "支持团队",
+    "lead": "您的捐款将全额用于项目。一小笔额外费用用于支持执行团队。",
+    "noThanks": "不用了，谢谢",
+    "customAmount": "其他金额",
+    "recurringNote": "随您的定期捐赠每期一起扣款。",
+    "oneTimeNote": "随本次订单一次性扣款。",
+    "chosen": "团队支持：{amount}",
+    "chosenRecurring": "团队支持：每期 {amount}",
+    "giftedTo": "赠予 {name}"
+  },
+  "Gift": {
+    "emailSubject": "以您的名义捐赠：{project}",
+    "emailTitle": "{recipientName}，您收到一份礼物",
+    "emailBody": "{donorName} 通过阿克萨讲坛以您的名义向“{project}”项目捐款。",
+    "emailAmount": "捐款金额：{amount}。",
+    "emailAttachment": "以您的名义签发的感谢证书见附件。",
+    "emailCta": "查看项目",
+    "whatsappBody": "{recipientName}，{donorName} 通过阿克萨讲坛以您的名义向“{project}”项目捐款。",
+    "whatsappAmount": "捐款金额：{amount}。",
+    "anonymousDonor": "一位善心人士"
   }
 }

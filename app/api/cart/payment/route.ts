@@ -35,6 +35,7 @@ import {
 import { parseMainGateway } from "@/lib/payment-gateway";
 import { isAlbarakaConfigured, isAlbarakaRecurringEnabled } from "@/lib/albaraka";
 import { mintDonationAccessToken } from "@/lib/donations/access-token";
+import { giftLineData, parseGiftOrder, type GiftOrderInput } from "@/lib/donations/gift-order";
 
 const PAYMENT_METHODS = new Set(["CARD", "PAYPAL", "BANK_TRANSFER"]);
 
@@ -124,7 +125,7 @@ export async function POST(request: NextRequest) {
       categoryItems: categoryItemsIn,
       waqfItems: waqfItemsIn,
       currency,
-      teamSupport = 0,
+      teamSupport: teamSupportIn = 0,
       coverFees = false,
       type = "ONE_TIME",
       /* The donor's IANA zone, so "Friday" and "the 15th" are their Friday
@@ -147,6 +148,8 @@ export async function POST(request: NextRequest) {
       amount: number;
       amountUSD?: number;
       shareCount?: number;
+      /** Given in someone else's name; validated into `giftsByIndex` below. */
+      gift?: unknown;
     };
     type CategoryItemIn = { categoryId: string; amount: number };
     type WaqfItemIn = { unit: "share" | "meter"; count: number; donorName: string; onBehalf: string };
@@ -203,6 +206,29 @@ export async function POST(request: NextRequest) {
     if (!items.every(lineOk) || !categoryItems.every(lineOk)) {
       return NextResponse.json({ error: "Every line needs a positive amount" }, { status: 400 });
     }
+
+    /* A campaign line may be a gift: the recipient is named and, per channel
+       chosen, reachable. Refused as a whole rather than silently dropped —
+       the donor was promised the recipient would be told. */
+    const giftsByIndex: Array<GiftOrderInput | null> = [];
+    for (const item of items) {
+      const parsed = parseGiftOrder(item.gift);
+      if (!parsed.ok) return NextResponse.json({ error: parsed.error }, { status: 400 });
+      giftsByIndex.push(parsed.gift);
+    }
+
+    /* "Support the team" belongs to the order, asked once in the basket. The
+       amount is the browser's choice but the switch is the admin's: with the
+       step turned off nothing is added whatever the request says. */
+    const teamSupportSettings = await prisma.globalSettings.findFirst({
+      orderBy: { createdAt: "asc" },
+      select: { teamSupportEnabled: true },
+    });
+    const teamSupportAllowed = teamSupportSettings?.teamSupportEnabled !== false;
+    const teamSupport =
+      teamSupportAllowed && typeof teamSupportIn === "number" && Number.isFinite(teamSupportIn) && teamSupportIn > 0
+        ? Math.round(teamSupportIn * 100) / 100
+        : 0;
 
     // Resolve donor
     let donorId: string;
@@ -295,19 +321,21 @@ export async function POST(request: NextRequest) {
       amount: number;
       amountUSD: number;
       shareCount?: number;
+      gift: GiftOrderInput | null;
     }>;
     let categoryItemsResolved: Array<{ categoryId: string; amount: number; amountUSD: number }>;
 
     try {
       [itemsResolved, categoryItemsResolved] = await Promise.all([
         Promise.all(
-          items.map(async (item) => ({
+          items.map(async (item, index) => ({
             campaignId: item.campaignId,
             amount: item.amount,
             amountUSD: await convertAmountInCurrencyToUsd(item.amount, currencyNorm),
             ...(item.shareCount != null && item.shareCount > 0
               ? { shareCount: Math.floor(item.shareCount) }
               : {}),
+            gift: giftsByIndex[index] ?? null,
           }))
         ),
         Promise.all(
@@ -371,6 +399,21 @@ export async function POST(request: NextRequest) {
     /* The nested writes for both kinds of line, shared by the three creates
        below; a kind with no lines is left out of the write altogether. */
     const campaignLines = itemsResolved.length
+      ? {
+          items: {
+            create: itemsResolved.map((item) => ({
+              campaignId: item.campaignId,
+              amount: item.amount,
+              amountUSD: item.amountUSD,
+              ...(item.shareCount != null && item.shareCount > 0 ? { shareCount: item.shareCount } : {}),
+              ...giftLineData(item.gift),
+            })),
+          },
+        }
+      : {};
+    /* The plan's copy of the lines carries no gift: the recipient is told
+       once, off the first (paid) donation, and later instalments are plain. */
+    const planCampaignLines = itemsResolved.length
       ? {
           items: {
             create: itemsResolved.map((item) => ({
@@ -476,7 +519,7 @@ export async function POST(request: NextRequest) {
             /* Stamped when the first instalment actually settles — by the
                Stripe webhook or the Albaraka callback — never optimistically. */
             lastBillingDate: null,
-            ...campaignLines,
+            ...planCampaignLines,
             ...categoryLines,
           },
         });

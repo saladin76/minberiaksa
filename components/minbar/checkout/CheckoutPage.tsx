@@ -25,7 +25,7 @@ import {
 } from "@/lib/minbar/checkout";
 import { frequencyOfOrderType, nextChargeAt } from "@/lib/donations/recurring-schedule";
 import { withDonationToken } from "@/lib/donations/access-token-link";
-import { clearCart } from "@/lib/minbar/cart";
+import { cartHasRecurring, clearCart, readTeamSupport } from "@/lib/minbar/cart";
 import { fetchGlobalSettings } from "@/lib/global-settings-client";
 import { useReferralCode } from "@/hooks/useReferralCode";
 import { resolveGateway, type MainGateway } from "@/lib/payment-gateway";
@@ -105,6 +105,16 @@ export default function CheckoutPage({ projects, categories, banks, donor, defau
   const [stripeReady, setStripeReady] = useState(false);
   const onStripeReady = useCallback((ready: boolean) => setStripeReady(ready), []);
   const tRecurring = useTranslations("Recurring");
+  const tTeam = useTranslations("TeamSupport");
+
+  /* The "support the team" amount chosen in the basket. Read after mount:
+     storage is not known to the server render. Zeroed when the admin has
+     switched the step off, so the summary matches what will be charged. */
+  const [teamSupport, setTeamSupport] = useState(0);
+  const [teamSupportEnabled, setTeamSupportEnabled] = useState(true);
+  useEffect(() => {
+    setTeamSupport(readTeamSupport());
+  }, []);
 
   const router = useRouter();
   const { data: session } = useSession();
@@ -132,6 +142,7 @@ export default function CheckoutPage({ projects, categories, banks, donor, defau
     fetchGlobalSettings()
       .then((settings) => {
         if (!live || !settings) return;
+        setTeamSupportEnabled(settings.teamSupportEnabled);
         setGatewayConfig({
           mainGateway: settings.mainGateway,
           payforEnabled: settings.payforEnabled,
@@ -170,7 +181,8 @@ export default function CheckoutPage({ projects, categories, banks, donor, defau
     return item.title ?? "";
   };
 
-  const total = items.reduce((sum, item) => sum + item.amount, 0);
+  const teamSupportCharged = teamSupportEnabled && teamSupport > 0 ? teamSupport : 0;
+  const total = items.reduce((sum, item) => sum + item.amount, 0) + teamSupportCharged;
   /* One type for the whole order — `ONE_TIME`, or the plan's cadence; the
      cart page does not let cadences mix. The same function builds the order,
      so what is previewed here is what is sent. */
@@ -313,6 +325,7 @@ export default function CheckoutPage({ projects, categories, banks, donor, defau
         currency,
         locale,
         method: methodForServer,
+        teamSupport: teamSupportCharged,
         referralCode: readReferralCode(),
         bank:
           method === "bank" && selectedBank
@@ -867,12 +880,30 @@ export default function CheckoutPage({ projects, categories, banks, donor, defau
                 <div style={{ display: "grid", gap: 10, paddingBottom: 14, borderBottom: "1px solid rgba(211,154,39,.3)" }}>
                   {items.map((item, index) => (
                     <span key={index} style={{ display: "flex", justifyContent: "space-between", gap: 10, fontSize: 14 }}>
-                      <span style={{ color: "var(--muted)", minWidth: 0 }}>{resolveTitle(item)}</span>
+                      <span style={{ color: "var(--muted)", minWidth: 0, display: "grid", gap: 2 }}>
+                        <span>{resolveTitle(item)}</span>
+                        {item.gift?.recipientName ? (
+                          <span style={{ fontSize: 12, fontWeight: 700, color: "var(--gold)" }}>{tTeam("giftedTo", { name: item.gift.recipientName })}</span>
+                        ) : null}
+                      </span>
                       <b dir="ltr" style={{ flex: "0 0 auto", unicodeBidi: "isolate" }}>
                         {format(item.amount)}
                       </b>
                     </span>
                   ))}
+                  {teamSupportCharged > 0 ? (
+                    <span style={{ display: "flex", justifyContent: "space-between", gap: 10, fontSize: 14 }}>
+                      <span style={{ color: "var(--muted)", minWidth: 0, display: "grid", gap: 2 }}>
+                        <span>{tTeam("title")}</span>
+                        <span style={{ fontSize: 12, fontWeight: 700, color: cartHasRecurring(items) ? "var(--green)" : "var(--muted)" }}>
+                          {cartHasRecurring(items) ? tTeam("recurringNote") : tTeam("oneTimeNote")}
+                        </span>
+                      </span>
+                      <b dir="ltr" style={{ flex: "0 0 auto", unicodeBidi: "isolate" }}>
+                        {format(teamSupportCharged)}
+                      </b>
+                    </span>
+                  ) : null}
                 </div>
                 <span style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", fontSize: 16, fontWeight: 900 }}>
                   {t("total")}

@@ -1,13 +1,15 @@
 "use client";
 
-import { useMemo, useState, type CSSProperties } from "react";
+import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
 import { Button } from "@/components/minbar/ds";
 import { miaPath } from "@/lib/minbar/routes";
 import { useMinbarCart } from "@/hooks/useMinbarCart";
 import { useMinbarMoney } from "@/hooks/useMinbarMoney";
-import type { MinbarCartItem } from "@/lib/minbar/cart";
+import { cartHasRecurring, readTeamSupport, writeTeamSupport, type MinbarCartItem } from "@/lib/minbar/cart";
+import { fetchGlobalSettings, getCachedGlobalSettings, type GlobalSettings } from "@/lib/global-settings-client";
+import { resolveFinalTeamSupportAmounts } from "@/lib/campaign/suggested-team-support";
 import type { MinbarProject } from "@/lib/minbar/projects";
 import type { MinbarCategoryTitle } from "@/lib/minbar/category-page";
 
@@ -63,12 +65,44 @@ export default function CartPage({ projects, categories }: { projects: MinbarPro
   const tCommon = useTranslations("common");
   const tProjects = useTranslations("projects");
   const tCert = useTranslations("certificates");
-  const { format } = useMinbarMoney();
+  const tTeam = useTranslations("TeamSupport");
+  const { format, currency } = useMinbarMoney();
   const { items, replace, remove, hydrated } = useMinbarCart();
 
   const [editing, setEditing] = useState<number | null>(null);
   const [draft, setDraft] = useState("");
   const [customUpsell, setCustomUpsell] = useState<Record<string, string>>({});
+
+  /* "Support the team" — asked once here, for the whole basket, and sent
+     with the order (`lib/minbar/cart.ts` § Team support). The admin switch
+     and the quick-pick amounts come from the global settings; until they
+     arrive the step is not drawn rather than drawn with placeholder amounts. */
+  const [settings, setSettings] = useState<GlobalSettings | null>(() => getCachedGlobalSettings());
+  const [teamSupport, setTeamSupport] = useState(0);
+  const [customTeam, setCustomTeam] = useState("");
+  useEffect(() => {
+    let live = true;
+    fetchGlobalSettings().then((s) => {
+      if (live && s) setSettings(s);
+    });
+    setTeamSupport(readTeamSupport());
+    return () => {
+      live = false;
+    };
+  }, []);
+  const teamSupportEnabled = settings?.teamSupportEnabled !== false;
+  const teamAmounts = useMemo(
+    () => resolveFinalTeamSupportAmounts(currency, null, settings?.suggestedTeamSupport ?? null),
+    [currency, settings]
+  );
+  const chooseTeamSupport = (amount: number) => {
+    const value = Number.isFinite(amount) && amount > 0 ? amount : 0;
+    writeTeamSupport(value);
+    setTeamSupport(value);
+    if (!teamAmounts.includes(value)) setCustomTeam(value > 0 ? String(value) : "");
+    else setCustomTeam("");
+  };
+  const recurringBasket = cartHasRecurring(items);
 
   /** Project slug → its title in the active locale. */
   const titleBySlug = useMemo(
@@ -114,6 +148,9 @@ export default function CartPage({ projects, categories }: { projects: MinbarPro
         ? t(TYPE_LABEL[item.typeKey])
         : "",
       FREQ_LABEL[item.freqKey] && t.has(FREQ_LABEL[item.freqKey]) ? t(FREQ_LABEL[item.freqKey]) : "",
+      /* A gifted row says whom it is for — the recipient is told once the
+         payment settles, with a certificate in their name. */
+      item.gift?.recipientName ? tTeam("giftedTo", { name: item.gift.recipientName }) : "",
     ]
       .filter(Boolean)
       .join(" · ");
@@ -128,8 +165,12 @@ export default function CartPage({ projects, categories }: { projects: MinbarPro
     for (const item of items) {
       byCurrency.set(item.currency, (byCurrency.get(item.currency) ?? 0) + item.amount);
     }
+    /* Team support is quoted in the active currency, so it joins that total. */
+    if (teamSupportEnabled && teamSupport > 0) {
+      byCurrency.set(currency, (byCurrency.get(currency) ?? 0) + teamSupport);
+    }
     return [...byCurrency.entries()];
-  }, [items]);
+  }, [items, teamSupport, teamSupportEnabled, currency]);
 
   const recurringOn = items.some((x) => x._autoMonthly);
 
@@ -450,11 +491,21 @@ export default function CartPage({ projects, categories }: { projects: MinbarPro
                     </span>
                   </span>
                 ))}
+                {teamSupportEnabled && teamSupport > 0 ? (
+                  <span style={{ display: "flex", justifyContent: "space-between", gap: 10, fontSize: 13.5, color: "var(--muted)", minWidth: 0 }}>
+                    <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {recurringBasket ? tTeam("chosenRecurring", { amount: format(teamSupport) }) : tTeam("chosen", { amount: format(teamSupport) })}
+                    </span>
+                    <span dir="ltr" style={{ unicodeBidi: "isolate", flex: "0 0 auto", fontWeight: 800, color: "var(--deep)" }}>
+                      {format(teamSupport)}
+                    </span>
+                  </span>
+                ) : null}
               </div>
 
-              {totals.map(([currency, total]) => (
-                <span key={currency} style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", fontSize: 15, fontWeight: 800, color: "var(--deep)" }}>
-                  {t("totalForCurrency", { currency })}
+              {totals.map(([totalCurrency, total]) => (
+                <span key={totalCurrency} style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", fontSize: 15, fontWeight: 800, color: "var(--deep)" }}>
+                  {t("totalForCurrency", { currency: totalCurrency })}
                   <span dir="ltr" style={{ unicodeBidi: "isolate", fontSize: 24, fontWeight: 900 }}>
                     {format(total)}
                   </span>
@@ -509,6 +560,55 @@ export default function CartPage({ projects, categories }: { projects: MinbarPro
                 </span>
               </button>
 
+              {/* Support the team — once per basket, before checkout. With a
+                  recurring row it rides along with every instalment; with a
+                  one-time basket it is charged once. Hidden by the admin switch. */}
+              {settings && teamSupportEnabled ? (
+                <div id="cart-team-support" style={{ display: "grid", gap: 10, padding: "16px 18px", borderRadius: 12, background: "#fff", border: "1px solid rgba(211,154,39,.45)" }}>
+                  <b style={{ fontSize: 15, fontWeight: 900, color: "var(--deep)" }}>{tTeam("title")}</b>
+                  <span style={{ fontSize: 12.5, color: "var(--muted)", lineHeight: 1.7 }}>{tTeam("lead")}</span>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
+                    <button
+                      type="button"
+                      onClick={() => chooseTeamSupport(0)}
+                      aria-pressed={teamSupport === 0}
+                      style={teamPill(teamSupport === 0)}
+                    >
+                      {tTeam("noThanks")}
+                    </button>
+                    {teamAmounts.map((value) => (
+                      <button
+                        key={value}
+                        type="button"
+                        onClick={() => chooseTeamSupport(value)}
+                        aria-pressed={teamSupport === value}
+                        style={teamPill(teamSupport === value)}
+                      >
+                        <span dir="ltr" style={{ unicodeBidi: "isolate" }}>{format(value)}</span>
+                      </button>
+                    ))}
+                    <input
+                      value={customTeam}
+                      onChange={(e) => {
+                        const next = e.target.value.replace(/[^0-9.]/g, "");
+                        setCustomTeam(next);
+                        const n = Number(next);
+                        writeTeamSupport(n > 0 ? n : 0);
+                        setTeamSupport(n > 0 ? n : 0);
+                      }}
+                      inputMode="decimal"
+                      dir="ltr"
+                      placeholder={tTeam("customAmount")}
+                      aria-label={tTeam("customAmount")}
+                      style={{ flex: "0 1 auto", width: "11ch", minWidth: "8ch", height: 34, padding: "0 10px", borderRadius: 999, border: `1px dashed ${teamSupport > 0 && !teamAmounts.includes(teamSupport) ? "var(--green)" : "rgba(211,154,39,.65)"}`, background: "#fff", fontFamily: "inherit", fontSize: 13, fontWeight: 800, color: "var(--deep)", boxSizing: "border-box" }}
+                    />
+                  </div>
+                  <span style={{ fontSize: 12, fontWeight: 700, color: recurringBasket ? "var(--green)" : "var(--muted)", lineHeight: 1.6 }}>
+                    {recurringBasket ? tTeam("recurringNote") : tTeam("oneTimeNote")}
+                  </span>
+                </div>
+              ) : null}
+
               <Button variant="primary" href={miaPath("checkout", locale)} full style={{ whiteSpace: "nowrap", height: 52 }}>
                 {t("checkout")}
               </Button>
@@ -538,6 +638,23 @@ export default function CartPage({ projects, categories }: { projects: MinbarPro
     </div>
   );
 }
+
+const teamPill = (on: boolean): CSSProperties => ({
+  display: "inline-flex",
+  alignItems: "center",
+  height: 34,
+  padding: "0 13px",
+  borderRadius: 999,
+  border: `1px solid ${on ? "var(--green)" : "var(--border)"}`,
+  background: on ? "rgba(31,122,77,.1)" : "#fff",
+  color: on ? "var(--green)" : "var(--deep)",
+  fontFamily: "inherit",
+  fontSize: 13,
+  fontWeight: 800,
+  cursor: "pointer",
+  whiteSpace: "nowrap",
+  transition: "all .18s ease",
+});
 
 const iconBtn = (color: string, background: string): CSSProperties => ({
   width: 32,

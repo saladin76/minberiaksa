@@ -3238,5 +3238,27 @@
     "cadenceMonthly": "كل شهر",
     "stripeNotReady": "نموذج الدفع لم يكتمل تحميله بعد — حاول مرة أخرى بعد لحظات.",
     "subscriptionPaymentFailed": "تعذّر الخصم — يرجى تحديث بيانات البطاقة"
+  },
+  "TeamSupport": {
+    "title": "ادعم فريق العمل",
+    "lead": "تبرعك يصل كاملًا إلى المشروع. مبلغ صغير إضافي يغطي تكاليف الفريق الذي يوصله.",
+    "noThanks": "لا شكرًا",
+    "customAmount": "مبلغ آخر",
+    "recurringNote": "يُخصم مع كل دورة من تبرعك الدوري.",
+    "oneTimeNote": "يُخصم مرة واحدة مع هذا الطلب.",
+    "chosen": "دعم الفريق: {amount}",
+    "chosenRecurring": "دعم الفريق: {amount} مع كل دورة",
+    "giftedTo": "مُهدى إلى {name}"
+  },
+  "Gift": {
+    "emailSubject": "هدية باسمك: تبرع لمشروع {project}",
+    "emailTitle": "{recipientName}، لديك هدية",
+    "emailBody": "تبرّع {donorName} باسمك لمشروع «{project}» عبر منبر الأقصى.",
+    "emailAmount": "قيمة التبرع: {amount}.",
+    "emailAttachment": "تجد شهادة الشكر باسمك مرفقة بهذه الرسالة.",
+    "emailCta": "تعرّف على المشروع",
+    "whatsappBody": "{recipientName}، تبرّع {donorName} باسمك لمشروع «{project}» عبر منبر الأقصى.",
+    "whatsappAmount": "قيمة التبرع: {amount}.",
+    "anonymousDonor": "أحد المحسنين"
   }
 }

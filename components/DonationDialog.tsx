@@ -247,10 +247,14 @@ const DonationDialog = ({
 
   // Trimmed flow for higher conversion: cover-fees folded into teamSupport,
   // sign-in step removed entirely (guests skip auth, authed users keep going).
+  // The team-support step follows the admin switch at /dashboard/team-support;
+  // off, it is skipped and nothing is added to the order.
+  const teamSupportStep: DonationStep[] =
+    globalSettings && !globalSettings.teamSupportEnabled ? [] : [{ title: t("teamSupport"), subtitle: t("teamSupportDesc") }];
   const DONATION_STEPS: Record<DonationType, DonationStep[]> = {
     ONE_TIME: [
       { title: t("donationAmount"), subtitle: t("donationAmountDesc") },
-      { title: t("teamSupport"), subtitle: t("teamSupportDesc") },
+      ...teamSupportStep,
       { title: t("confirmation"), subtitle: t("confirmationDesc") },
       { title: t("paymentInfo"), subtitle: t("paymentInfoDesc") },
     ],
@@ -259,7 +263,7 @@ const DonationDialog = ({
         title: t("monthlyDonationAmount"),
         subtitle: t("monthlyDonationAmountDesc"),
       },
-      { title: t("teamSupport"), subtitle: t("teamSupportDesc") },
+      ...teamSupportStep,
       { title: t("confirmation"), subtitle: t("confirmationDesc") },
       { title: t("paymentInfo"), subtitle: t("paymentInfoDesc") },
     ],

@@ -3240,5 +3240,27 @@
     "cadenceMonthly": "her ay",
     "stripeNotReady": "Ödeme formu hâlâ yükleniyor — lütfen birazdan tekrar deneyin.",
     "subscriptionPaymentFailed": "Çekim başarısız — lütfen kart bilgilerinizi güncelleyin"
+  },
+  "TeamSupport": {
+    "title": "Ekibi destekleyin",
+    "lead": "Bağışınız projeye eksiksiz ulaşır. Küçük bir ek tutar, onu ulaştıran ekibin giderlerini karşılar.",
+    "noThanks": "Hayır, teşekkürler",
+    "customAmount": "Başka tutar",
+    "recurringNote": "Düzenli bağışınızın her çekimiyle birlikte alınır.",
+    "oneTimeNote": "Bu siparişle birlikte bir kez alınır.",
+    "chosen": "Ekip desteği: {amount}",
+    "chosenRecurring": "Ekip desteği: her çekimde {amount}",
+    "giftedTo": "{name} adına hediye"
+  },
+  "Gift": {
+    "emailSubject": "Adınıza bir hediye: {project} projesine bağış",
+    "emailTitle": "{recipientName}, size bir hediye var",
+    "emailBody": "{donorName}, Minber-i Aksa aracılığıyla “{project}” projesine sizin adınıza bağış yaptı.",
+    "emailAmount": "Bağış tutarı: {amount}.",
+    "emailAttachment": "Adınıza düzenlenen teşekkür belgesi ektedir.",
+    "emailCta": "Projeyi görün",
+    "whatsappBody": "{recipientName}, {donorName} Minber-i Aksa aracılığıyla “{project}” projesine sizin adınıza bağış yaptı.",
+    "whatsappAmount": "Bağış tutarı: {amount}.",
+    "anonymousDonor": "Bir hayırsever"
   }
 }

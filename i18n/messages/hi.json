@@ -2134,5 +2134,27 @@
     "cadenceMonthly": "हर महीने",
     "stripeNotReady": "भुगतान फ़ॉर्म अभी लोड हो रहा है — कृपया कुछ क्षण बाद पुनः प्रयास करें।",
     "subscriptionPaymentFailed": "कटौती विफल — कृपया अपना कार्ड अपडेट करें"
+  },
+  "TeamSupport": {
+    "title": "टीम का समर्थन करें",
+    "lead": "आपका दान पूरा का पूरा परियोजना तक पहुँचता है। एक छोटी अतिरिक्त राशि उसे पहुँचाने वाली टीम का खर्च उठाती है।",
+    "noThanks": "नहीं, धन्यवाद",
+    "customAmount": "अन्य राशि",
+    "recurringNote": "आपके नियमित दान की हर कटौती के साथ ली जाती है।",
+    "oneTimeNote": "इस ऑर्डर के साथ एक बार ली जाती है।",
+    "chosen": "टीम समर्थन: {amount}",
+    "chosenRecurring": "टीम समर्थन: हर कटौती पर {amount}",
+    "giftedTo": "{name} को उपहार"
+  },
+  "Gift": {
+    "emailSubject": "आपके नाम पर एक उपहार: {project} के लिए दान",
+    "emailTitle": "{recipientName}, आपके लिए एक उपहार है",
+    "emailBody": "{donorName} ने मिंबर अल-अक़्सा के माध्यम से “{project}” परियोजना में आपके नाम पर दान किया।",
+    "emailAmount": "दान राशि: {amount}।",
+    "emailAttachment": "आपके नाम पर जारी धन्यवाद प्रमाणपत्र संलग्न है।",
+    "emailCta": "परियोजना देखें",
+    "whatsappBody": "{recipientName}, {donorName} ने मिंबर अल-अक़्सा के माध्यम से “{project}” परियोजना में आपके नाम पर दान किया।",
+    "whatsappAmount": "दान राशि: {amount}।",
+    "anonymousDonor": "एक दानदाता"
   }
 }

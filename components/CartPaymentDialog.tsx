@@ -109,17 +109,19 @@ const CartPaymentDialog = ({
     <span className={btnRow}>{t("confirmDonation")}<ChevronRight className="h-4 w-4 shrink-0" aria-hidden /></span>
   );
 
-  // Trimmed flow for higher conversion: cover-fees folded into teamSupport,
-  // sign-in step removed (guests skip auth, authed users keep going).
-  const STEPS = [
-    { title: t("teamSupport"),    subtitle: t("teamSupportDesc") },
-    { title: t("confirmation"),   subtitle: t("confirmationDesc") },
-    { title: t("paymentInfo"),    subtitle: t("paymentInfoDesc") },
-  ];
-
   const [globalSettings, setGlobalSettings] = useState<GlobalSettings | null>(
     () => getCachedGlobalSettings()
   );
+
+  // Trimmed flow for higher conversion: cover-fees folded into teamSupport,
+  // sign-in step removed (guests skip auth, authed users keep going).
+  // The team-support step follows the admin switch at /dashboard/team-support;
+  // off, it is skipped and nothing is added to the order.
+  const STEPS = [
+    ...(globalSettings && !globalSettings.teamSupportEnabled ? [] : [{ title: t("teamSupport"), subtitle: t("teamSupportDesc") }]),
+    { title: t("confirmation"),   subtitle: t("confirmationDesc") },
+    { title: t("paymentInfo"),    subtitle: t("paymentInfoDesc") },
+  ];
   const globalTeamSupport: SuggestedTeamSupportConfig | null =
     globalSettings?.suggestedTeamSupport ?? null;
   const payforEnabled = globalSettings ? globalSettings.payforEnabled : true;

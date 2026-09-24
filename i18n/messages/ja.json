@@ -2134,5 +2134,27 @@
     "cadenceMonthly": "毎月",
     "stripeNotReady": "決済フォームを読み込んでいます。しばらくしてからもう一度お試しください。",
     "subscriptionPaymentFailed": "決済に失敗しました — カード情報を更新してください"
+  },
+  "TeamSupport": {
+    "title": "チームを支援する",
+    "lead": "ご寄付は全額プロジェクトに届きます。少額の上乗せで、届けるチームの費用を賄えます。",
+    "noThanks": "結構です",
+    "customAmount": "その他の金額",
+    "recurringNote": "継続寄付の決済ごとに合わせて決済されます。",
+    "oneTimeNote": "この注文と一緒に一度だけ決済されます。",
+    "chosen": "チーム支援：{amount}",
+    "chosenRecurring": "チーム支援：毎回 {amount}",
+    "giftedTo": "{name} さんへの贈り物"
+  },
+  "Gift": {
+    "emailSubject": "あなたの名前で贈られた寄付：{project}",
+    "emailTitle": "{recipientName} さん、贈り物が届いています",
+    "emailBody": "{donorName} さんが、ミンバル・アル＝アクサを通じて「{project}」にあなたの名前で寄付をされました。",
+    "emailAmount": "寄付額：{amount}",
+    "emailAttachment": "あなたの名前で発行された感謝状を添付しています。",
+    "emailCta": "プロジェクトを見る",
+    "whatsappBody": "{recipientName} さん、{donorName} さんがミンバル・アル＝アクサを通じて「{project}」にあなたの名前で寄付をされました。",
+    "whatsappAmount": "寄付額：{amount}",
+    "anonymousDonor": "篤志家"
   }
 }
