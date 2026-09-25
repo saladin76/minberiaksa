@@ -100,6 +100,22 @@ function chips(s: Strings): ConciergeAction[] {
   ];
 }
 
+/** How many turns a stated amount keeps presetting the configurator. */
+const AMOUNT_MEMORY_TURNS = 4;
+
+/**
+ * The amount the visitor stated, while it is still fresh. An amount from an
+ * earlier part of the conversation must not follow them into every later
+ * recommendation — "$100" said once is a hint for the next step, not a
+ * budget for the visit.
+ */
+function freshAmount(state: ConversationState): number | null {
+  if (!state.amountUSD) return null;
+  const turns = state.turns ?? 0;
+  const stated = state.amountTurn ?? turns;
+  return turns - stated <= AMOUNT_MEMORY_TURNS ? state.amountUSD : null;
+}
+
 interface Ctx {
   req: ConciergeRequest;
   locale: string;
@@ -119,7 +135,7 @@ function recommendationBlock(ctx: Ctx, intent: ConciergeIntent, reasons?: Record
   } else {
     picked = rankCampaigns(
       ctx.catalog.campaigns,
-      { intent, region: ctx.state.region ?? null, amountUSD: ctx.state.amountUSD ?? null, text: null, excludeIds: exclude, currentCampaignId: ctx.current?.id ?? null },
+      { intent, region: ctx.state.region ?? null, amountUSD: freshAmount(ctx.state), text: null, excludeIds: exclude, currentCampaignId: ctx.current?.id ?? null },
       3
     ).map((r) => r.campaign);
   }
@@ -128,7 +144,7 @@ function recommendationBlock(ctx: Ctx, intent: ConciergeIntent, reasons?: Record
 }
 
 function configurationBlock(ctx: Ctx, campaign: CatalogCampaign | null, category: CatalogCategory | null, typeKey: "project" | "zakat", genericTitleKey: string | null): ConciergeBlock {
-  const preset = ctx.state.amountUSD ?? null;
+  const preset = freshAmount(ctx.state);
   return {
     type: "donation_configuration",
     campaign: campaign ? toCard(campaign, null) : null,
@@ -274,7 +290,7 @@ const INTENT_MESSAGE_KEY: Partial<Record<ConciergeIntent, string>> = {
   question: "s_intent_explore",
 };
 
-function recommendFlow(ctx: Ctx, intent: ConciergeIntent, message?: string, reasons?: Record<string, string>, ids?: string[]): ConciergeResponse {
+function recommendFlow(ctx: Ctx, intent: ConciergeIntent, message?: string, reasons?: Record<string, string>, ids?: string[], mentionBudget = false): ConciergeResponse {
   const effective = intent === "unknown" || intent === "question" ? "explore" : intent;
   const { block, shown } = recommendationBlock(ctx, effective, reasons, ids);
   const blocks: ConciergeBlock[] = [];
@@ -284,7 +300,8 @@ function recommendFlow(ctx: Ctx, intent: ConciergeIntent, message?: string, reas
   } else {
     blocks.push(block);
   }
-  const budget = ctx.state.amountUSD ? `${fill(ctx.s.s_budget, { amount: fmtUsd(ctx.locale, ctx.state.amountUSD) })} ` : "";
+  /* The budget is echoed only in the turn it was said, never on later ones. */
+  const budget = mentionBudget && ctx.state.amountUSD ? `${fill(ctx.s.s_budget, { amount: fmtUsd(ctx.locale, ctx.state.amountUSD) })} ` : "";
   const text = message ?? `${budget}${ctx.s[INTENT_MESSAGE_KEY[effective] ?? "s_intent_explore"] ?? ""}`;
   const actions: ConciergeAction[] = [
     { type: "show_more", label: ctx.s.a_more ?? "" },
@@ -334,7 +351,7 @@ function selectCategoryFlow(ctx: Ctx, categoryId: string): ConciergeResponse {
   }
   /* A category that does not take donations itself: its projects instead. */
   const inCategory = ctx.catalog.campaigns.filter((c) => c.categoryIds.includes(category.id));
-  const picked = rankCampaigns(inCategory, { intent: ctx.state.intent ?? null, region: null, amountUSD: ctx.state.amountUSD ?? null, text: null }, 3).map((r) => r.campaign);
+  const picked = rankCampaigns(inCategory, { intent: ctx.state.intent ?? null, region: null, amountUSD: freshAmount(ctx.state), text: null }, 3).map((r) => r.campaign);
   return respond(ctx, {
     message: fill(ctx.s.s_in_category, { category: category.title }),
     blocks: [{ type: "campaign_recommendations", campaigns: picked.map((c) => toCard(c, templateWhy(ctx.s, ctx.locale, c, ctx.state.intent ?? null))) }],
@@ -382,7 +399,10 @@ async function toUsd(amount: number, currency: string | null, fallbackCurrency: 
 async function messageFlow(ctx: Ctx, text: string): Promise<ConciergeResponse> {
   const parsed = parseMessage(text);
   const next: Partial<ConversationState> = {};
-  if (parsed.amount) next.amountUSD = await toUsd(parsed.amount, parsed.currency, ctx.req.currency);
+  if (parsed.amount) {
+    next.amountUSD = await toUsd(parsed.amount, parsed.currency, ctx.req.currency);
+    next.amountTurn = (ctx.state.turns ?? 0) + 1;
+  }
   if (parsed.frequency) next.frequency = parsed.frequency;
   if (parsed.region) next.region = parsed.region;
   if (parsed.giftRecipientName) next.giftRecipientName = parsed.giftRecipientName;
@@ -411,7 +431,7 @@ async function messageFlow(ctx: Ctx, text: string): Promise<ConciergeResponse> {
   const poolIntent = intent ?? ctx.state.intent ?? null;
   const candidates = rankCampaigns(
     ctx.catalog.campaigns,
-    { intent: poolIntent, region: ctx.state.region ?? null, amountUSD: ctx.state.amountUSD ?? null, text, currentCampaignId: ctx.current?.id ?? null },
+    { intent: poolIntent, region: ctx.state.region ?? null, amountUSD: freshAmount(ctx.state), text, currentCampaignId: ctx.current?.id ?? null },
     8
   ).map((r) => r.campaign);
 
@@ -424,7 +444,7 @@ async function messageFlow(ctx: Ctx, text: string): Promise<ConciergeResponse> {
     categories: ctx.catalog.categories.filter((c) => c.kind === "type"),
     parsed: {
       intent: poolIntent,
-      amount: ctx.state.amountUSD ?? null,
+      amount: freshAmount(ctx.state),
       currency: "USD",
       frequency: ctx.state.frequency ?? null,
       region: ctx.state.region ?? null,
@@ -440,7 +460,11 @@ async function messageFlow(ctx: Ctx, text: string): Promise<ConciergeResponse> {
 
   if (verdict) {
     intent = intent ?? verdict.intent;
-    if (!ctx.state.amountUSD && verdict.amount) ctx.state.amountUSD = await toUsd(verdict.amount, verdict.currency, ctx.req.currency);
+    if (!parsed.amount && verdict.amount) {
+      ctx.state.amountUSD = await toUsd(verdict.amount, verdict.currency, ctx.req.currency);
+      ctx.state.amountTurn = (ctx.state.turns ?? 0) + 1;
+    }
+    const budgetStated = Boolean(parsed.amount || verdict.amount);
     if (!ctx.state.frequency && verdict.frequency) ctx.state.frequency = verdict.frequency;
     if (!ctx.state.giftRecipientName && verdict.giftRecipientName) ctx.state.giftRecipientName = verdict.giftRecipientName;
     /* The one regular-giving mention is spent on the first model reply that
@@ -504,7 +528,7 @@ async function messageFlow(ctx: Ctx, text: string): Promise<ConciergeResponse> {
       return withHuman(respond(ctx, { message: lead, blocks: [], actions, mode: "llm", intent: effective, state: { intent: effective } }));
     }
     const reasons = Object.fromEntries(verdict.reasons.filter((r) => allowed.has(r.id)).map((r) => [r.id, r.reason]));
-    return withHuman(recommendFlow(ctx, effective, lead || undefined, reasons, ids.length ? ids : undefined));
+    return withHuman(recommendFlow(ctx, effective, lead || undefined, reasons, ids.length ? ids : undefined, budgetStated));
   }
 
   /* Model off or unusable: the deterministic reading answers. */
@@ -513,7 +537,7 @@ async function messageFlow(ctx: Ctx, text: string): Promise<ConciergeResponse> {
   if (intent === "waqf") return waqfFlow(ctx);
   if (intent === "current_page") return currentPageFlow(ctx);
   const effective: ConciergeIntent = intent ?? ctx.state.intent ?? "explore";
-  const res = recommendFlow(ctx, effective);
+  const res = recommendFlow(ctx, effective, undefined, undefined, undefined, Boolean(parsed.amount));
   if (!intent && !ctx.state.intent) {
     /* Nothing recognisable and no model to read it: the nearest projects,
        and the team for whatever the visitor actually needed. */
@@ -547,7 +571,15 @@ export async function runConcierge(req: ConciergeRequest, opts: { userId?: strin
         if (req.step.intent === "zakat") return zakatFlow(ctx);
         if (req.step.intent === "waqf") return waqfFlow(ctx);
         if (req.step.intent === "current_page") return currentPageFlow(ctx);
-        return recommendFlow({ ...ctx, state: { ...ctx.state, intent: req.step.intent } }, req.step.intent);
+        /* A chip is a fresh direction: what was said for the previous one —
+           amount, cadence, place, dedication, chosen project — is let go. */
+        return recommendFlow(
+          {
+            ...ctx,
+            state: { ...ctx.state, intent: req.step.intent, amountUSD: null, amountTurn: null, frequency: null, region: null, giftRecipientName: null, selectedCampaignId: null, shownCampaignIds: [] },
+          },
+          req.step.intent
+        );
       case "select_campaign":
         return selectCampaignFlow(ctx, req.step.campaignId);
       case "select_category":

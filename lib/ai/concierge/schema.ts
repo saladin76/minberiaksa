@@ -44,6 +44,8 @@ export type PageContext = z.infer<typeof pageContextSchema>;
 export const conversationStateSchema = z.object({
   intent: z.enum(CONCIERGE_INTENTS).nullable().optional(),
   amountUSD: z.number().positive().max(1_000_000).nullable().optional(),
+  /** The turn the amount was stated on; it stops steering the reply a few turns later. */
+  amountTurn: z.number().int().min(0).max(50).nullable().optional(),
   frequency: z.enum(FREQUENCIES).nullable().optional(),
   region: z.string().max(60).nullable().optional(),
   selectedCampaignId: z.string().regex(/^[0-9a-fA-F]{24}$/).nullable().optional(),
