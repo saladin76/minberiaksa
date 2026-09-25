@@ -289,80 +289,81 @@ export default function QuickDonateBar({ config, projects }: { config: QuickDona
   );
 
   return (
-    <section id="quick" className="mia-qb-sec" data-open={open ? "true" : "false"}>
-      <div className="mia-qb-wrap">
-        {/* ── Desktop: one row ─────────────────────────────────────────── */}
-        <div className="mia-qb-desk">
-          <div aria-hidden="true" data-aqsa-pattern="" className="mia-qb-pattern" />
-          <span aria-hidden="true" className="mia-qb-rail" />
-          <span aria-hidden="true" className="mia-qb-gems mia-qb-gems--top"><i /><i /></span>
-          <span aria-hidden="true" className="mia-qb-gems mia-qb-gems--bottom"><i /><i /></span>
+    // <section id="quick" className="mia-qb-sec" data-open={open ? "true" : "false"}>
+    //   <div className="mia-qb-wrap">
+    //     {/* ── Desktop: one row ─────────────────────────────────────────── */}
+    //     <div className="mia-qb-desk">
+    //       <div aria-hidden="true" data-aqsa-pattern="" className="mia-qb-pattern" />
+    //       <span aria-hidden="true" className="mia-qb-rail" />
+    //       <span aria-hidden="true" className="mia-qb-gems mia-qb-gems--top"><i /><i /></span>
+    //       <span aria-hidden="true" className="mia-qb-gems mia-qb-gems--bottom"><i /><i /></span>
 
-          {hasDestinations ? (
-            <>
-              {destinationSelect("qb")}
-              <span aria-hidden="true" className="mia-qb-div" />
-            </>
-          ) : null}
-          {hasFrequencies ? (
-            <>
-              {frequencyChips("qb")}
-              <span aria-hidden="true" className="mia-qb-div" />
-            </>
-          ) : null}
-          {amountChips("qb")}
+    //       {hasDestinations ? (
+    //         <>
+    //           {destinationSelect("qb")}
+    //           <span aria-hidden="true" className="mia-qb-div" />
+    //         </>
+    //       ) : null}
+    //       {hasFrequencies ? (
+    //         <>
+    //           {frequencyChips("qb")}
+    //           <span aria-hidden="true" className="mia-qb-div" />
+    //         </>
+    //       ) : null}
+    //       {amountChips("qb")}
 
-          <div className="mia-qb-end">
-            <span aria-hidden="true" className="mia-qb-div" />
-            <b className="mia-qb-total" dir="ltr">{totalText}</b>
-            <button type="button" className="mia-qb-cta" onClick={submit} disabled={!canGive}>
-              {t("donateNow")}
-            </button>
-          </div>
-        </div>
+    //       <div className="mia-qb-end">
+    //         <span aria-hidden="true" className="mia-qb-div" />
+    //         <b className="mia-qb-total" dir="ltr">{totalText}</b>
+    //         <button type="button" className="mia-qb-cta" onClick={submit} disabled={!canGive}>
+    //           {t("donateNow")}
+    //         </button>
+    //       </div>
+    //     </div>
 
-        {/* ── Phone: a bottom sheet, collapsed to its last row ─────────── */}
-        <div className="mia-qb-sheet">
-          <div className="mia-qb-body" id="qbm-body">
-            <span aria-hidden="true" className="mia-qb-handle" />
-            {hasDestinations ? (
-              <div className="mia-qb-group">
-                <b>{tHome("projectSelectLabel")}</b>
-                {destinationSelect("qbm")}
-              </div>
-            ) : null}
-            {hasFrequencies ? (
-              <div className="mia-qb-group">
-                <b>{t("frequency")}</b>
-                {frequencyChips("qbm")}
-              </div>
-            ) : null}
-            <div className="mia-qb-group">
-              <b>{t("amount")}</b>
-              {amountChips("qbm")}
-            </div>
-          </div>
-          <div className="mia-qb-bar">
-            <button
-              type="button"
-              className="mia-qb-toggle"
-              aria-label={t("quickDonate")}
-              aria-expanded={open}
-              aria-controls="qbm-body"
-              onClick={() => setOpen((v) => !v)}
-            >
-              <Chevron />
-            </button>
-            <span className="mia-qb-sum">
-              <span>{t("quickDonate")}</span>
-              <b dir="ltr">{totalText}</b>
-            </span>
-            <button type="button" className="mia-qb-cta" onClick={submit} disabled={open && !canGive}>
-              {t("donateNow")}
-            </button>
-          </div>
-        </div>
-      </div>
-    </section>
+    //     {/* ── Phone: a bottom sheet, collapsed to its last row ─────────── */}
+    //     <div className="mia-qb-sheet">
+    //       <div className="mia-qb-body" id="qbm-body">
+    //         <span aria-hidden="true" className="mia-qb-handle" />
+    //         {hasDestinations ? (
+    //           <div className="mia-qb-group">
+    //             <b>{tHome("projectSelectLabel")}</b>
+    //             {destinationSelect("qbm")}
+    //           </div>
+    //         ) : null}
+    //         {hasFrequencies ? (
+    //           <div className="mia-qb-group">
+    //             <b>{t("frequency")}</b>
+    //             {frequencyChips("qbm")}
+    //           </div>
+    //         ) : null}
+    //         <div className="mia-qb-group">
+    //           <b>{t("amount")}</b>
+    //           {amountChips("qbm")}
+    //         </div>
+    //       </div>
+    //       <div className="mia-qb-bar">
+    //         <button
+    //           type="button"
+    //           className="mia-qb-toggle"
+    //           aria-label={t("quickDonate")}
+    //           aria-expanded={open}
+    //           aria-controls="qbm-body"
+    //           onClick={() => setOpen((v) => !v)}
+    //         >
+    //           <Chevron />
+    //         </button>
+    //         <span className="mia-qb-sum">
+    //           <span>{t("quickDonate")}</span>
+    //           <b dir="ltr">{totalText}</b>
+    //         </span>
+    //         <button type="button" className="mia-qb-cta" onClick={submit} disabled={open && !canGive}>
+    //           {t("donateNow")}
+    //         </button>
+    //       </div>
+    //     </div>
+    //   </div>
+    // </section>
+    <></>
   );
 }
