@@ -62,8 +62,23 @@ export default function ConciergeLauncher() {
     return () => window.removeEventListener("keydown", onKey);
   }, [open, close]);
 
+  /* Sit above the quick-donate pill only when it is actually on the page:
+     the pill's routes are an allowlist, but the component itself may render
+     nothing, and the launcher must not float over an empty corner. */
+  const [pillPresent, setPillPresent] = useState(false);
+  useEffect(() => {
+    if (!route || !QUICK_DONATE_ROUTES.has(route)) {
+      setPillPresent(false);
+      return;
+    }
+    const check = () => setPillPresent(Boolean(document.querySelector("#quick-fab .qf-handle")));
+    check();
+    const timer = window.setTimeout(check, 600);
+    return () => window.clearTimeout(timer);
+  }, [route]);
+
   if (!route || HIDDEN_ROUTES.has(route)) return null;
-  const abovePill = QUICK_DONATE_ROUTES.has(route);
+  const abovePill = pillPresent;
 
   const onSubmit = (e: FormEvent) => {
     e.preventDefault();
