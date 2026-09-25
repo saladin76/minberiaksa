@@ -74,12 +74,12 @@ const RELIEF_WORDS = /إغاث|طوارئ|عاجل|غذاء|طعام|سلة|سل
  * thoughtful person would suggest a students' project to a student.
  */
 const THEMES: Array<{ trigger: RegExp; campaign: RegExp; weight: number }> = [
-  { trigger: /ذاكر|مذاكر|امتحان|اختبار|ثانوي|جامع|دراس|مدرس|طالب|تعليم|شهادة|قرآن|قران|تحفيظ|thanaw|study|studies|exam|school|student|college|universit|homework|educat|qur.?an|tahfiz|sınav|okul|öğrenci|üniversite|ders|eğitim|kur.?an|hıfz|examen|étud|école|éducation|prüfung|schule|bildung|studi|estudi|escuela|educación|ujian|sekolah|kuliah|pendidikan|امتحان|پڑھائی|طالب|تعلیم/i, campaign: /تعليم|تعليمي|طلاب|طالب|مدرس|مدارس|دورات|دورة|تحفيظ|قرآن|كراسي|علم|جامع|منح|education|student|school|quran|scholar|course|learning|eğitim|öğrenci|okul|kur'an|éducation|étudiant|école|bildung|schüler|educación|estudiante|pendidikan|pelajar|sekolah/i, weight: 9 },
-  { trigger: /مريض|مرض|علاج|مستشف|دكتور|طبيب|صح[ةه]|ألم|الم|تعب|sick|ill|hospital|doctor|health|surgery|medic|hasta|hastane|doktor|sağlık|malade|hôpital|santé|krank|arzt|enfermo|hospital|salud|sakit|rumah\s*sakit|بیمار|علاج/i, campaign: /طبي|صحي|صحة|علاج|مستشف|دواء|أدوية|عيادة|إسعاف|medical|health|clinic|medicine|hospital|treatment|tıbbi|sağlık|ilaç|médic|santé|hôpital|medizin|gesundheit|médico|salud|medis|kesehatan|obat/i, weight: 9 },
-  { trigger: /جوع|جعان|أكل|طعام|غذاء|فقر|فقير|محتاج|ضيق|دين|ديون|قرض|فلوس|مصاريف|hungry|food|poor|poverty|broke|debt|loan|bills|rent|aç|yoksul|borç|kira|faim|pauvre|dette|hunger|arm|schulden|hambre|pobre|deuda|lapar|miskin|hutang|بھوک|غریب|قرض/i, campaign: /غذائ|طعام|وجبات|وجبة|سلال|سلة|خبز|إفطار|كفالة|أسر|عائلات|فقراء|food|meal|bread|basket|parcel|famil|relief|gıda|yemek|ekmek|aile|nourriture|repas|famille|lebensmittel|mahlzeit|familie|alimento|comida|familia|makanan|keluarga/i, weight: 8 },
-  { trigger: /زواج|عرس|خطوب|عريس|عروس|زوج|أطفال|اطفال|طفل|ابني|بنتي|ولادي|عيال|يتيم|أيتام|ايتام|اليتامى|marriage|wedding|married|baby|child|kids|orphan|my\s*son|my\s*daughter|evlilik|düğün|çocuk|yetim|mariage|enfant|orphelin|hochzeit|kind|waise|boda|hijo|niño|huérfano|pernikahan|anak|yatim|شادی|بچ|یتیم/i, campaign: /أيتام|يتيم|أطفال|طفل|أسر|عائلات|كفالة|orphan|child|famil|yetim|çocuk|aile|orphelin|enfant|famille|waise|kind|familie|huérfano|niño|familia|yatim|anak|keluarga/i, weight: 8 },
-  { trigger: /شغل|وظيف|عمل|عاطل|بطالة|مشروعي|تجار|رزق|job|work|unemploy|business|career|salary|iş|işsiz|maaş|emploi|travail|chômage|arbeit|arbeitslos|trabajo|desemple|kerja|pengangguran|نوکری|روزگار/i, campaign: /تمكين|مشاريع\s*صغيرة|مشروع\s*صغير|حرف|تدريب|كفالة|أسر|livelihood|income|small\s*business|training|skills|geçim|meslek|eğitim|formation|revenu|ausbildung|einkommen|formación|ingreso|pelatihan|usaha/i, weight: 7 },
-  { trigger: /ميت|توفي|توفى|وفاة|مات|فقدت|رحمه|رحمها|قبر|عزاء|died|passed\s*away|death|late\s*(father|mother)|deceased|grave|vefat|öldü|merhum|décéd|décès|verstorben|gestorben|fallec|murió|meninggal|almarhum|فوت|مرحوم/i, campaign: /وقف|صدقة\s*جارية|بئر|آبار|مسجد|مصحف|قرآن|type-waqf|jariyah|well|water|mosque|quran|vakıf|kuyu|cami|puits|mosquée|brunnen|moschee|pozo|mezquita|wakaf|sumur|masjid/i, weight: 9 },
+  { trigger: /ذاكر|مذاكر|امتحان|اختبار|ثانوي|جامع|دراس|مدرس|طالب|تعليم|شهادة|قرآن|قران|تحفيظ|thanaw|study|studies|exam|school|student|college|universit|homework|educat|qur.?an|tahfiz|sınav|okul|öğrenci|üniversite|ders|eğitim|kur.?an|hıfz|examen|étud|école|éducation|prüfung|schule|bildung|studi|estudi|escuela|educación|ujian|sekolah|kuliah|pendidikan|امتحان|پڑھائی|طالب|تعلیم/iu, campaign: /تعليم|تعليمي|طلاب|طالب|مدرس|مدارس|دورات|دورة|تحفيظ|قرآن|كراسي|علم|جامع|منح|education|student|school|quran|scholar|course|learning|eğitim|öğrenci|okul|kur'an|éducation|étudiant|école|bildung|schüler|educación|estudiante|pendidikan|pelajar|sekolah/i, weight: 9 },
+  { trigger: /مريض|مرض|علاج|مستشف|دكتور|طبيب|(?<!\p{L})(?:صحه|صحة|ألم|الم|تعب)(?!\p{L})|sick|ill|hospital|doctor|health|surgery|medic|hasta|hastane|doktor|sağlık|malade|hôpital|santé|krank|arzt|enfermo|hospital|salud|sakit|rumah\s*sakit|بیمار|علاج/iu, campaign: /طبي|صحي|صحة|علاج|مستشف|دواء|أدوية|عيادة|إسعاف|medical|health|clinic|medicine|hospital|treatment|tıbbi|sağlık|ilaç|médic|santé|hôpital|medizin|gesundheit|médico|salud|medis|kesehatan|obat/i, weight: 9 },
+  { trigger: /جوع|جعان|(?<!\p{L})(?:أكل|اكل|دين|ديون|قرض|ضيق)(?!\p{L})|طعام|غذاء|فقر|فقير|محتاج|فلوس|مصاريف|hungry|food|poor|poverty|broke|debt|loan|bills|rent|aç|yoksul|borç|kira|faim|pauvre|dette|hunger|arm|schulden|hambre|pobre|deuda|lapar|miskin|hutang|بھوک|غریب|قرض/iu, campaign: /غذائ|طعام|وجبات|وجبة|سلال|سلة|خبز|إفطار|كفالة|أسر|عائلات|فقراء|food|meal|bread|basket|parcel|famil|relief|gıda|yemek|ekmek|aile|nourriture|repas|famille|lebensmittel|mahlzeit|familie|alimento|comida|familia|makanan|keluarga/i, weight: 8 },
+  { trigger: /زواج|عرس|خطوب|عريس|عروس|(?<!\p{L})(?:زوج|زوجي|زوجتي)(?!\p{L})|أطفال|اطفال|طفل|ابني|بنتي|ولادي|عيال|يتيم|أيتام|ايتام|اليتامى|marriage|wedding|married|baby|child|kids|orphan|my\s*son|my\s*daughter|evlilik|düğün|çocuk|yetim|mariage|enfant|orphelin|hochzeit|kind|waise|boda|hijo|niño|huérfano|pernikahan|anak|yatim|شادی|بچ|یتیم/iu, campaign: /أيتام|يتيم|أطفال|طفل|أسر|عائلات|كفالة|orphan|child|famil|yetim|çocuk|aile|orphelin|enfant|famille|waise|kind|familie|huérfano|niño|familia|yatim|anak|keluarga/i, weight: 8 },
+  { trigger: /شغل|وظيف|(?<!\p{L})(?:عمل|شغلانه|شغلانة)(?!\p{L})|عاطل|بطالة|مشروعي|تجار|رزق|job|work|unemploy|business|career|salary|iş|işsiz|maaş|emploi|travail|chômage|arbeit|arbeitslos|trabajo|desemple|kerja|pengangguran|نوکری|روزگار/iu, campaign: /تمكين|مشاريع\s*صغيرة|مشروع\s*صغير|حرف|تدريب|كفالة|أسر|livelihood|income|small\s*business|training|skills|geçim|meslek|eğitim|formation|revenu|ausbildung|einkommen|formación|ingreso|pelatihan|usaha/i, weight: 7 },
+  { trigger: /(?<!\p{L})(?:ميت|مات|قبر|عزاء)(?!\p{L})|توفي|توفى|وفاة|فقدت|رحمه|رحمها|died|passed\s*away|death|late\s*(father|mother)|deceased|grave|vefat|öldü|merhum|décéd|décès|verstorben|gestorben|fallec|murió|meninggal|almarhum|فوت|مرحوم/iu, campaign: /وقف|صدقة\s*جارية|بئر|آبار|مسجد|مصحف|قرآن|type-waqf|jariyah|well|water|mosque|quran|vakıf|kuyu|cami|puits|mosquée|brunnen|moschee|pozo|mezquita|wakaf|sumur|masjid/i, weight: 9 },
 ];
 
 /* A theme met in the title is what the project is; met only in the summary
@@ -92,7 +92,7 @@ function themeScore(c: CatalogCampaign, text: string | null): number {
   for (const t of THEMES) {
     if (!t.trigger.test(text)) continue;
     if (t.campaign.test(c.title)) score += t.weight;
-    else if (t.campaign.test(rest)) score += Math.ceil(t.weight / 2);
+    else if (t.campaign.test(rest)) score += Math.floor(t.weight / 3);
   }
   return score;
 }
@@ -152,7 +152,7 @@ function hits(hay: string, text: string): number {
    that it comes up. Capped so a long message cannot outweigh a theme. */
 function textScore(c: CatalogCampaign, text: string | null): number {
   if (!text) return 0;
-  return Math.min(hits(c.title, text), 3) * 4 + Math.min(hits(c.summary, text), 2) * 2;
+  return Math.min(hits(c.title, text), 3) * 4 + Math.min(hits(c.summary, text), 2);
 }
 
 export function scoreCampaign(c: CatalogCampaign, input: RankInput): number {
@@ -237,6 +237,48 @@ export function matchTopic(campaigns: readonly CatalogCampaign[], categories: re
     .filter((c) => c.score > 0)
     .sort((a, b) => b.score - a.score || b.category.projectCount - a.category.projectCount);
   return { campaigns: scored, categories: cats };
+}
+
+
+export type TopicResolution =
+  | { kind: "campaigns"; ids: string[] }
+  | { kind: "category"; id: string }
+  /** named: the visitor wrote the areas' names, so the choice is theirs to make. */
+  | { kind: "categories"; ids: string[]; named: boolean };
+
+/**
+ * The one answer the words call for. An area named in the text is the
+ * width of the wish ("Gaza or Syria" → choose; "orphans" → all of it), unless
+ * the rest of the words single out projects inside it ("university students
+ * in Gaza" → those projects). Without a named area, the projects the words
+ * reach; failing that, the areas that hold projects on the theme.
+ */
+export function resolveTopic(campaigns: readonly CatalogCampaign[], categories: readonly CatalogCategory[], text: string): TopicResolution | null {
+  const topic = matchTopic(campaigns, categories, text);
+  const named = topic.categories.filter((c) => hits(c.category.title, text) > 0);
+  if (named.length) {
+    /* What is left once the areas' own names are taken out of the wish. */
+    const areaWords = new Set(named.flatMap((c) => tokens(c.category.title)));
+    const rest = tokens(text).filter((w) => !areaWords.has(w)).join(" ");
+    const inNamed = (c: CatalogCampaign) => named.some((n) => c.categoryIds.includes(n.category.id));
+    const specific = rest
+      ? campaigns
+          .map((c) => ({ c, score: topicScore(c, rest) }))
+          .filter((x) => x.score >= 4)
+          .sort((a, b) => b.score - a.score || (a.c.priority ?? 999) - (b.c.priority ?? 999))
+      : [];
+    const inside = specific.filter((x) => inNamed(x.c));
+    const chosen = inside.length ? inside : specific;
+    if (chosen.length) return { kind: "campaigns", ids: chosen.slice(0, 6).map((x) => x.c.id) };
+    if (named.length === 1) return { kind: "category", id: named[0].category.id };
+    return { kind: "categories", ids: named.slice(0, 4).map((c) => c.category.id), named: true };
+  }
+  const strong = topic.campaigns.filter((x) => x.score >= 4);
+  if (strong.length) return { kind: "campaigns", ids: strong.slice(0, 6).map((x) => x.campaign.id) };
+  const areas = topic.categories.filter((c) => c.strong);
+  if (areas.length === 1) return { kind: "category", id: areas[0].category.id };
+  if (areas.length > 1) return { kind: "categories", ids: areas.slice(0, 4).map((c) => c.category.id), named: false };
+  return null;
 }
 
 /** Categories worth offering for an intent, best first. */

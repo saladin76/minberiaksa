@@ -10,7 +10,7 @@ import { SUPPORTED_CURRENCY_CODES } from "@/lib/supported-currencies";
 import { askModel } from "./llm";
 import { loadKnowledge } from "./knowledge";
 import { loadDonorContext, type DonorContext } from "./donor";
-import { matchTopic, pickCrossSell, rankCampaigns, rankCategories, type CatalogCampaign, type CatalogCategory } from "./recommend";
+import { resolveTopic, pickCrossSell, rankCampaigns, rankCategories, type CatalogCampaign, type CatalogCategory } from "./recommend";
 import {
   FREQUENCIES,
   type CampaignCard,
@@ -694,11 +694,15 @@ async function messageFlow(ctx: Ctx, text: string): Promise<ConciergeResponse> {
   /* What the words themselves point at — matching projects, one area in
      full, or a choice among areas — read from the catalog alone. A wish
      with a topic is never "bare", whatever else it says. */
-  const topic = matchTopic(ctx.catalog.campaigns, ctx.catalog.categories, text);
-  /* A title word or a theme (≥ 4); summary-only mentions are not a match. */
-  const strongCampaigns = topic.campaigns.filter((s) => s.score >= 4).map((s) => s.campaign.id);
-  const strongCategories = topic.categories.filter((c) => c.strong).map((c) => c.category.id);
-  const hasTopic = strongCampaigns.length > 0 || strongCategories.length > 0;
+  const topic = resolveTopic(ctx.catalog.campaigns, ctx.catalog.categories, text);
+  const strongCampaigns = topic?.kind === "campaigns" ? topic.ids : [];
+  const hasTopic = topic !== null;
+  const topical = (lead?: string, reasons?: Record<string, string>): ConciergeResponse | null => {
+    if (!topic) return null;
+    const tctx = { ...ctx, state: { ...ctx.state, intent: intent ?? ctx.state.intent ?? "explore" } };
+    if (topic.kind === "campaigns") return topicFlow(tctx, lead, topic.ids, [], reasons);
+    return topicFlow(tctx, lead, [], topic.kind === "category" ? [topic.id] : topic.ids);
+  };
   if ((!intent || intent === "explore" || intent === "recurring") && !ctx.state.region && !ctx.state.selectedCampaignId && wantsToDonate(text) && !parsed.region && !hasTopic && bareWish(text)) {
     return categoryFlow(intent === "recurring" ? { ...ctx, state: { ...ctx.state, intent: "recurring" } } : ctx);
   }
@@ -858,9 +862,13 @@ async function messageFlow(ctx: Ctx, text: string): Promise<ConciergeResponse> {
       const catIds = slugs.map((slug) => ctx.catalog.categories.find((c) => c.slug === slug)?.id).filter((id): id is string => Boolean(id));
       const res = catIds.length
         ? topicFlow({ ...ctx, state: { ...ctx.state, intent: effective } }, lead || undefined, [], catIds)
-        : strongCampaigns.length
-          ? topicFlow({ ...ctx, state: { ...ctx.state, intent: effective } }, lead || undefined, strongCampaigns, [], reasons)
-          : null;
+        : topical(lead || undefined, reasons);
+      if (res) return withHuman(res);
+    }
+    /* The visitor named two or more areas ("Gaza or Syria"): the choice is
+       theirs, whatever projects the model picked from one of them. */
+    if (topic?.kind === "categories" && topic.named) {
+      const res = topical(lead || undefined);
       if (res) return withHuman(res);
     }
     /* Several projects fit: all of them, not a cut at three. */
@@ -887,12 +895,8 @@ async function messageFlow(ctx: Ctx, text: string): Promise<ConciergeResponse> {
   if (intent === "waqf") return waqfFlow(ctx);
   if (intent === "current_page") return currentPageFlow(ctx);
   const effective: ConciergeIntent = intent ?? ctx.state.intent ?? "explore";
-  const topical = strongCampaigns.length
-    ? topicFlow({ ...ctx, state: { ...ctx.state, intent: effective } }, undefined, strongCampaigns, [])
-    : strongCategories.length
-      ? topicFlow({ ...ctx, state: { ...ctx.state, intent: effective } }, undefined, [], strongCategories.slice(0, 4))
-      : null;
-  if (topical) return topical;
+  const topicalRes = topical();
+  if (topicalRes) return topicalRes;
   const res = recommendFlow(ctx, effective, undefined, undefined, undefined, Boolean(parsed.amount));
   if (!intent && !ctx.state.intent) {
     /* Nothing recognisable and no model to read it: the nearest projects,

@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { matchTopic, pickCrossSell, rankCampaigns, rankCategories, type CatalogCampaign, type CatalogCategory } from "../../lib/ai/concierge/recommend";
+import { matchTopic, resolveTopic, pickCrossSell, rankCampaigns, rankCategories, type CatalogCampaign, type CatalogCategory } from "../../lib/ai/concierge/recommend";
 import { llmVerdictSchema, conciergeRequestSchema } from "../../lib/ai/concierge/schema";
 
 /**
@@ -99,6 +99,12 @@ test("a wish is matched at its own width: projects, one area, or several areas",
   const student = matchTopic(catalog, cats, "أنا طالب وعايز اتبرع لحاجة زي التعليم");
   assert.equal(student.categories[0].category.id, "c-edu");
   assert.deepEqual(matchTopic(catalog, cats, "hello").campaigns, []);
+  /* The one answer: named areas set the width unless the rest singles out projects. */
+  assert.deepEqual(resolveTopic(catalog, cats, "عايز اتبرع لغزة أو الأيتام"), { kind: "categories", ids: ["c-orph", "c-gaza"], named: true });
+  assert.deepEqual(resolveTopic(catalog, cats, "عايز اتبرع للأيتام"), { kind: "category", id: "c-orph" });
+  assert.deepEqual(resolveTopic(catalog, cats, "عايز اتبرع لكسوة الأيتام"), { kind: "campaigns", ids: ["o2"] });
+  assert.deepEqual(resolveTopic(catalog, cats, "بئر ماء"), { kind: "campaigns", ids: ["w1"] });
+  assert.equal(resolveTopic(catalog, cats, "عايز اتبرع"), null);
 });
 
 test("categories: intent types first, then by project count", () => {
