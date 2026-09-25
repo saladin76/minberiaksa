@@ -2288,6 +2288,23 @@
     "s_support_intro_general": "Dat spijt me. Ik heb uw bericht aan het team opgesteld uit wat u vertelde; controleer of bewerk het en verstuur, en zij antwoorden snel per e-mail.",
     "sp_draft_hint": "Dit heb ik begrepen — pas aan als u wilt en verstuur",
     "s_ask_where_plan": "Mooi — {amount} {frequency}. Waar moet het naartoe? Kies een gebied en ik toon de projecten, met die waarde als standaard:",
-    "s_ask_where_amount": "Mooi — {amount}. Waar moet het naartoe? Kies een gebied en ik toon de projecten:"
+    "s_ask_where_amount": "Mooi — {amount}. Waar moet het naartoe? Kies een gebied en ik toon de projecten:",
+    "cmd_confirm_language": "Sitetaal wijzigen naar {language}?",
+    "cmd_confirm_currency": "Weergavevaluta wijzigen naar {currency}?",
+    "cmd_confirm_profile": "Uw gegevens bijwerken: {summary}?",
+    "cmd_confirm_plan": "Uw plan wijzigen ({plan}) — {changes}?",
+    "cmd_done": "Gedaan.",
+    "cmd_error": "De wijziging kon nu niet worden doorgevoerd.",
+    "cmd_signin": "Om gegevens of plannen te wijzigen, meldt u zich eerst aan; ik regel het dan hier.",
+    "cmd_no_plan": "U heeft geen actief periodiek plan. Wilt u er een starten?",
+    "cmd_which_plan": "U heeft meerdere plannen — welke?",
+    "cmd_field_name": "Naam",
+    "cmd_field_phone": "Telefoon",
+    "cmd_field_email": "E-mail",
+    "cmd_field_amount": "Bedrag",
+    "cmd_field_frequency": "Frequentie",
+    "cmd_field_status": "Status",
+    "a_confirm": "Bevestigen",
+    "a_cancel": "Annuleren"
   }
 }

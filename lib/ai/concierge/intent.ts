@@ -168,6 +168,77 @@ export function wantsToDonate(text: string): boolean {
   return /أتبرع|اتبرع|تبرع|أتصدق|اتصدق|صدق[ةه]|donat|give\b|giving|contribut|bağış|don(ner|\b)|spende|donar|donaci|donasi|derma|sedekah|عطیہ|寄付|捐|दान/i.test(text);
 }
 
+/* ── Commands: things the visitor asks the assistant to change ─────────── */
+
+const LANGUAGE_WORDS: Array<[RegExp, string]> = [
+  [/عربي|العربية|arabic|arapça|arabe|arabisch|árabe|العربي/i, "ar"],
+  [/انجليزي|إنجليزي|الانجليزية|الإنجليزية|english|ingilizce|anglais|englisch|inglés|ingles|inggris|انگریزی/i, "en"],
+  [/تركي|التركية|turkish|türkçe|turc|türkisch|turco|turki|ترکی/i, "tr"],
+  [/فرنسي|الفرنسية|french|français|francais|fransızca|französisch|francés|frances|prancis/i, "fr"],
+  [/ألماني|الماني|الألمانية|german|deutsch|almanca|allemand|alemán|jerman/i, "de"],
+  [/إسباني|اسباني|الإسبانية|spanish|español|espanol|ispanyolca|espagnol|spanisch/i, "es"],
+  [/إندونيسي|اندونيسي|الإندونيسية|indonesian|bahasa\s*indonesia|endonezce|indonésien/i, "id"],
+  [/برتغالي|البرتغالية|portuguese|português|portugues|portekizce|portugais/i, "pt"],
+  [/أردو|اردو|الأردية|urdu|urduca/i, "ur"],
+  [/ألباني|الباني|الألبانية|albanian|shqip|arnavutça|albanais/i, "sq"],
+  [/إيطالي|ايطالي|الإيطالية|italian|italiano|italyanca|italien/i, "it"],
+  [/هولندي|الهولندية|dutch|nederlands|hollandaca|néerlandais/i, "nl"],
+  [/سويدي|السويدية|swedish|svenska|isveççe|suédois/i, "sv"],
+  [/نرويجي|النرويجية|norwegian|norsk|norveççe|norvégien/i, "no"],
+  [/دنماركي|الدنماركية|danish|dansk|danca|danois/i, "da"],
+  [/ماليزي|الماليزية|malay\b|bahasa\s*melayu|malayca|malais/i, "ms"],
+  [/ياباني|اليابانية|japanese|日本語|japonca|japonais/i, "ja"],
+  [/صيني|الصينية|chinese|中文|çince|chinois/i, "zh"],
+  [/هندي|الهندية|hindi|हिन्दी|hintçe/i, "hi"],
+];
+
+const CURRENCY_NAMES: Array<[RegExp, string]> = [
+  [/\busd\b|dollar|dolar|دولار|ドル|美元|डॉलर/i, "USD"],
+  [/\beur\b|euro|يورو|avro|ユーロ|欧元|यूरो/i, "EUR"],
+  [/\bgbp\b|pound|sterling|جنيه\s*(استرليني|إسترليني)|باوند|sterlin|livre/i, "GBP"],
+  [/\bcad\b|canadian/i, "CAD"],
+  [/\baud\b|australian/i, "AUD"],
+  [/\btry\b|\btl\b|lira|ليرة|ليره|لير/i, "TRY"],
+  [/\bsar\b|ريال\s*سعودي|riyal\s*saud|saudi/i, "SAR"],
+  [/\baed\b|درهم\s*إماراتي|درهم\s*اماراتي|dirham\s*(uae|emirati)|إماراتي|emirati|dirham/i, "AED"],
+  [/\bkwd\b|دينار\s*كويتي|kuwait/i, "KWD"],
+  [/\bqar\b|ريال\s*قطري|qatar/i, "QAR"],
+  [/\bbhd\b|دينار\s*بحريني|bahrain/i, "BHD"],
+  [/\bomr\b|ريال\s*عماني|oman/i, "OMR"],
+  [/\bjod\b|دينار\s*أردني|دينار\s*اردني|jordan/i, "JOD"],
+  [/\bmad\b|درهم\s*مغربي|morocc/i, "MAD"],
+];
+
+const CHANGE_WORDS = /غير|غيّر|حول|حوّل|بدل|بدّل|اجعل|خلي|خليها|عايز.*(يكون|تكون)|عدل|عدّل|switch|change|set|make|use|turn|değiştir|yap|kullan|change|mets|passe|ändere|stell|cambia|pon|ubah|ganti|بدلو|تبدیل/i;
+const LANGUAGE_CONTEXT = /لغ[ةه]|language|dil\b|langue|sprache|idioma|bahasa|زبان|言語|语言|भाषा|بالعربي|بالانجليزي|بالإنجليزي|بالتركي|in\s+(english|arabic|turkish|french|german|spanish)/i;
+/* "the site", when a language is named with it, means the site language. */
+const SITE_CONTEXT = /الموقع|\bsite\b|website|siteyi|sitesi|\bseite\b|\bsitio\b|\bsitus\b/i;
+const CURRENCY_CONTEXT =/عمل[ةه]|currency|para\s*birimi|devise|währung|moneda|mata\s*uang|کرنسی|通貨|货币|मुद्रा|بالدولار|باليورو|بالليرة|بالريال|بالجنيه|بالدرهم|بالدينار/i;
+
+export interface ParsedCommand {
+  kind: "set_language" | "set_currency";
+  locale?: string;
+  currency?: string;
+}
+
+/**
+ * Language and currency switches are read here so they work with the model
+ * off: "غير اللغة للإنجليزية", "switch to euros", "para birimini TL yap".
+ * Profile and plan changes carry free text and are left to the model.
+ */
+export function parseCommand(text: string): ParsedCommand | null {
+  const wantsChange = CHANGE_WORDS.test(text);
+  /* Currency first: "switch the site currency to Turkish lira" names a language too. */
+  if (CURRENCY_CONTEXT.test(text) && (wantsChange || /بال(دولار|يورو|ليرة|ريال|جنيه|درهم|دينار)/i.test(text))) {
+    for (const [re, currency] of CURRENCY_NAMES) if (re.test(text)) return { kind: "set_currency", currency };
+  }
+  const languageContext = LANGUAGE_CONTEXT.test(text) || (wantsChange && SITE_CONTEXT.test(text));
+  if (languageContext && (wantsChange || /بال(عربي|انجليزي|إنجليزي|تركي)|in\s+(english|arabic|turkish|french)/i.test(text))) {
+    for (const [re, locale] of LANGUAGE_WORDS) if (re.test(text)) return { kind: "set_language", locale };
+  }
+  return null;
+}
+
 /** Whether the message points at "this" project — only meaningful on a project page. */
 export function mentionsCurrentPage(text: string): boolean {
   return /\b(this|these|bu|ce|cette|dieses|este|esta|ini)\b|(^|\s)(ده|دي|هذا|هذه|هاد|هاي)(\s|$|[؟?!,.،])|یہ/i.test(text);

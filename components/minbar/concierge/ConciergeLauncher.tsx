@@ -176,10 +176,13 @@ export default function ConciergeLauncher() {
           ))}
           {loading ? (
             <div className="cg-turn cg-turn-assistant">
-              <p className="cg-bubble cg-bubble-thinking" aria-live="polite">
-                <span className="cg-dot" /><span className="cg-dot" /><span className="cg-dot" />
+              <div className="cg-thinking" aria-live="polite">
+                <span className="cg-thinking-orb" aria-hidden="true">
+                  <ConciergeGlyph />
+                </span>
+                <span className="cg-thinking-line" aria-hidden="true" />
                 <span className="cg-sr">{t("thinking")}</span>
-              </p>
+              </div>
             </div>
           ) : null}
         </div>

@@ -3389,6 +3389,23 @@
     "s_support_intro_general": "يؤسفني ذلك. كتبتُ رسالتك للفريق مما فهمته منك؛ راجعها أو عدّلها ثم أرسلها، وسيردّون عليك على بريدك قريبًا.",
     "sp_draft_hint": "هذا ما فهمته منك — عدّله إن شئت ثم أرسله",
     "s_ask_where_plan": "جميل — {amount} {frequency}. أين تحب أن يذهب؟ اختر مجالًا وسأعرض لك مشاريعه، وسأجعل هذه القيمة الافتراضية:",
-    "s_ask_where_amount": "جميل — {amount}. أين تحب أن يذهب؟ اختر مجالًا وسأعرض لك مشاريعه:"
+    "s_ask_where_amount": "جميل — {amount}. أين تحب أن يذهب؟ اختر مجالًا وسأعرض لك مشاريعه:",
+    "cmd_confirm_language": "أغيّر لغة الموقع إلى {language}؟",
+    "cmd_confirm_currency": "أغيّر عملة العرض إلى {currency}؟",
+    "cmd_confirm_profile": "أحدّث بياناتك: {summary}؟",
+    "cmd_confirm_plan": "أعدّل خطتك ({plan}) — {changes}؟",
+    "cmd_done": "تم التغيير.",
+    "cmd_error": "تعذّر إجراء التغيير الآن.",
+    "cmd_signin": "لتعديل بياناتك أو خططك، سجّل الدخول أولًا وسأنفّذ لك ذلك من هنا.",
+    "cmd_no_plan": "لا توجد لديك خطة دورية نشطة الآن. هل تحب أن تبدأ واحدة؟",
+    "cmd_which_plan": "لديك أكثر من خطة — أي خطة تقصد؟",
+    "cmd_field_name": "الاسم",
+    "cmd_field_phone": "الهاتف",
+    "cmd_field_email": "البريد",
+    "cmd_field_amount": "المبلغ",
+    "cmd_field_frequency": "التكرار",
+    "cmd_field_status": "الحالة",
+    "a_confirm": "تأكيد",
+    "a_cancel": "إلغاء"
   }
 }

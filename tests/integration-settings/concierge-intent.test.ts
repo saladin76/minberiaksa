@@ -1,6 +1,20 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { parseAmount, parseFrequency, parseGiftName, parseIntent, parseMessage, parseRegion, needsRuling, wantsToDonate } from "../../lib/ai/concierge/intent";
+import { parseAmount, parseCommand, parseFrequency, parseGiftName, parseIntent, parseMessage, parseRegion, needsRuling, wantsToDonate } from "../../lib/ai/concierge/intent";
+
+test("language and currency switches are read without the model", () => {
+  assert.deepEqual(parseCommand("غير لغة الموقع للإنجليزية"), { kind: "set_language", locale: "en" });
+  assert.deepEqual(parseCommand("خلي الموقع بالتركي"), { kind: "set_language", locale: "tr" });
+  assert.deepEqual(parseCommand("switch the language to Arabic"), { kind: "set_language", locale: "ar" });
+  assert.deepEqual(parseCommand("حول العملة لليورو"), { kind: "set_currency", currency: "EUR" });
+  assert.deepEqual(parseCommand("change currency to Turkish lira"), { kind: "set_currency", currency: "TRY" });
+  assert.deepEqual(parseCommand("para birimini dolar yap"), { kind: "set_currency", currency: "USD" });
+  assert.deepEqual(parseCommand("please switch the site to Turkish"), { kind: "set_language", locale: "tr" });
+  assert.deepEqual(parseCommand("mets le site en arabe"), { kind: "set_language", locale: "ar" });
+  assert.deepEqual(parseCommand("change the site currency to Turkish lira"), { kind: "set_currency", currency: "TRY" });
+  assert.equal(parseCommand("I love the English language"), null, "a mention is not a request");
+  assert.equal(parseCommand("عايز اتبرع 100 دولار"), null, "an amount in dollars is not a currency switch");
+});
 
 test("a bare wish to give is recognised so the areas can be offered", () => {
   assert.equal(wantsToDonate("عايز اتبرع"), true);

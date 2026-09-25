@@ -90,7 +90,7 @@ test("categories: intent types first, then by project count", () => {
 
 test("malformed model output is rejected", () => {
   assert.equal(llmVerdictSchema.safeParse({ intent: "zakat" }).success, false);
-  const base = { mode: "recommend", answer: "", route: null, needsHuman: false, supportSubject: null, ticketDraft: "", ticketAboutDonation: false, donationId: null, suggestion: { kind: "none", campaignId: null, text: "" }, amount: null, currency: null, frequency: null, region: null, giftRecipientName: null, recommendedIds: [], reasons: [], message: "", needsRuling: false };
+  const base = { mode: "recommend", answer: "", route: null, needsHuman: false, supportSubject: null, ticketDraft: "", ticketAboutDonation: false, command: { kind: "none", locale: null, currency: null, name: null, phone: null, email: null, planId: null, planAmount: null, planFrequency: null, planStatus: null }, donationId: null, suggestion: { kind: "none", campaignId: null, text: "" }, amount: null, currency: null, frequency: null, region: null, giftRecipientName: null, recommendedIds: [], reasons: [], message: "", needsRuling: false };
   assert.equal(llmVerdictSchema.safeParse({ ...base, intent: "buy_stuff" }).success, false);
   assert.equal(llmVerdictSchema.safeParse({ ...base, intent: "relief", mode: "chat" }).success, false, "unknown mode");
   assert.equal(llmVerdictSchema.safeParse({ ...base, intent: "relief", route: "/admin" }).success, false, "route must be a known page");

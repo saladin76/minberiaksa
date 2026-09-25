@@ -3320,6 +3320,23 @@
     "s_support_intro_general": "Lamento. Redigi a sua mensagem para a equipa a partir do que me disse; reveja ou edite e envie, e responderão em breve por e-mail.",
     "sp_draft_hint": "Foi isto que entendi — edite se quiser e envie",
     "s_ask_where_plan": "Ótimo — {amount} {frequency}. Para onde quer que vá? Escolha uma área e mostro-lhe os projetos, com esse valor predefinido:",
-    "s_ask_where_amount": "Ótimo — {amount}. Para onde quer que vá? Escolha uma área e mostro-lhe os projetos:"
+    "s_ask_where_amount": "Ótimo — {amount}. Para onde quer que vá? Escolha uma área e mostro-lhe os projetos:",
+    "cmd_confirm_language": "Mudar o idioma do site para {language}?",
+    "cmd_confirm_currency": "Mudar a moeda exibida para {currency}?",
+    "cmd_confirm_profile": "Atualizar os seus dados: {summary}?",
+    "cmd_confirm_plan": "Alterar o seu plano ({plan}) — {changes}?",
+    "cmd_done": "Feito.",
+    "cmd_error": "Não foi possível fazer a alteração agora.",
+    "cmd_signin": "Para alterar os seus dados ou planos, inicie sessão primeiro e eu trato disso aqui.",
+    "cmd_no_plan": "Não tem um plano regular ativo. Quer começar um?",
+    "cmd_which_plan": "Tem mais do que um plano — qual?",
+    "cmd_field_name": "Nome",
+    "cmd_field_phone": "Telefone",
+    "cmd_field_email": "E-mail",
+    "cmd_field_amount": "Valor",
+    "cmd_field_frequency": "Frequência",
+    "cmd_field_status": "Estado",
+    "a_confirm": "Confirmar",
+    "a_cancel": "Cancelar"
   }
 }

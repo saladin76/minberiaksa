@@ -2285,6 +2285,23 @@
     "s_support_intro_general": "申し訳ありません。お話から、チームへのメッセージを下書きしました。確認または編集して送信してください。近日中にメールでお返事します。",
     "sp_draft_hint": "私の理解はこちらです — 必要なら編集して送信してください",
     "s_ask_where_plan": "ありがとうございます — {frequency}{amount}ですね。寄付先はどちらにしますか？分野を選ぶとプロジェクトをご案内し、この値を初期設定にします：",
-    "s_ask_where_amount": "ありがとうございます — {amount}ですね。寄付先はどちらにしますか？分野を選ぶとプロジェクトをご案内します："
+    "s_ask_where_amount": "ありがとうございます — {amount}ですね。寄付先はどちらにしますか？分野を選ぶとプロジェクトをご案内します：",
+    "cmd_confirm_language": "サイトの言語を{language}に切り替えますか？",
+    "cmd_confirm_currency": "表示通貨を{currency}に切り替えますか？",
+    "cmd_confirm_profile": "情報を更新しますか：{summary}？",
+    "cmd_confirm_plan": "プラン（{plan}）を変更しますか — {changes}？",
+    "cmd_done": "完了しました。",
+    "cmd_error": "現在変更できませんでした。",
+    "cmd_signin": "情報やプランを変更するには、先にログインしてください。ここから対応します。",
+    "cmd_no_plan": "有効な定期プランはありません。開始しますか？",
+    "cmd_which_plan": "複数のプランがあります — どれですか？",
+    "cmd_field_name": "名前",
+    "cmd_field_phone": "電話",
+    "cmd_field_email": "メール",
+    "cmd_field_amount": "金額",
+    "cmd_field_frequency": "頻度",
+    "cmd_field_status": "状態",
+    "a_confirm": "確認",
+    "a_cancel": "キャンセル"
   }
 }

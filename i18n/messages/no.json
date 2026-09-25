@@ -2285,6 +2285,23 @@
     "s_support_intro_general": "Jeg beklager. Jeg har skrevet meldingen din til teamet ut fra det du fortalte; se over eller endre, og send – de svarer snart på e-post.",
     "sp_draft_hint": "Slik forsto jeg det – endre om du vil, og send",
     "s_ask_where_plan": "Flott — {amount} {frequency}. Hvor skal det gå? Velg et område, så viser jeg prosjektene med den verdien som standard:",
-    "s_ask_where_amount": "Flott — {amount}. Hvor skal det gå? Velg et område, så viser jeg prosjektene:"
+    "s_ask_where_amount": "Flott — {amount}. Hvor skal det gå? Velg et område, så viser jeg prosjektene:",
+    "cmd_confirm_language": "Bytte nettstedets språk til {language}?",
+    "cmd_confirm_currency": "Bytte visningsvaluta til {currency}?",
+    "cmd_confirm_profile": "Oppdatere opplysningene dine: {summary}?",
+    "cmd_confirm_plan": "Endre planen din ({plan}) — {changes}?",
+    "cmd_done": "Gjort.",
+    "cmd_error": "Endringen kunne ikke gjøres nå.",
+    "cmd_signin": "Logg inn først for å endre opplysninger eller planer, så gjør jeg det herfra.",
+    "cmd_no_plan": "Du har ingen aktiv fast plan. Vil du starte en?",
+    "cmd_which_plan": "Du har flere planer – hvilken?",
+    "cmd_field_name": "Navn",
+    "cmd_field_phone": "Telefon",
+    "cmd_field_email": "E-post",
+    "cmd_field_amount": "Beløp",
+    "cmd_field_frequency": "Hyppighet",
+    "cmd_field_status": "Status",
+    "a_confirm": "Bekreft",
+    "a_cancel": "Avbryt"
   }
 }

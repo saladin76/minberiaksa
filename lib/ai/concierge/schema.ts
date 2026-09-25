@@ -162,6 +162,28 @@ export const blockSchema = z.discriminatedUnion("type", [
     /** The message to the team, drafted from what the visitor said; editable before sending. */
     draft: z.string(),
   }),
+  /**
+   * Something the visitor asked the assistant to change for them — the site
+   * language or currency, their profile, or one of their plans. Shown as a
+   * confirmation card; the browser performs it only after the visitor's OK,
+   * through the same endpoints the account page and header use.
+   */
+  z.object({
+    type: z.literal("command"),
+    command: z.discriminatedUnion("kind", [
+      z.object({ kind: z.literal("set_language"), locale: z.string(), label: z.string() }),
+      z.object({ kind: z.literal("set_currency"), currency: z.string() }),
+      z.object({ kind: z.literal("update_profile"), userId: z.string(), fields: z.object({ name: z.string().optional(), phone: z.string().optional(), email: z.string().optional() }) }),
+      z.object({
+        kind: z.literal("update_plan"),
+        planId: z.string(),
+        planLabel: z.string(),
+        changes: z.object({ amount: z.number().positive().optional(), frequency: z.enum(["DAILY", "FRIDAY", "MONTHLY"]).optional(), status: z.enum(["ACTIVE", "PAUSED", "CANCELLED"]).optional() }),
+      }),
+    ]),
+    /** The confirmation question, in the visitor's language. */
+    text: z.string(),
+  }),
   /** One concrete next step after an answer, with an OK button — never a dead end. */
   z.object({
     type: z.literal("suggestion"),
@@ -264,6 +286,27 @@ export const llmVerdictSchema = z.object({
   ticketDraft: z.string().max(1200),
   /** With supportSubject: whether the problem concerns a specific donation (payment, receipt, refund) rather than something else. */
   ticketAboutDonation: z.boolean(),
+  /**
+   * An explicit request to change something: the site language or currency
+   * (anyone), or — signed in — their profile or one of their plans. kind
+   * "none" otherwise. Values are what the visitor asked for; the server
+   * validates them and the visitor confirms before anything changes.
+   */
+  command: z.object({
+    kind: z.enum(["none", "set_language", "set_currency", "update_profile", "update_plan"]),
+    /** ISO locale code for set_language. */
+    locale: z.string().nullable(),
+    /** ISO 4217 for set_currency. */
+    currency: z.string().nullable(),
+    name: z.string().nullable(),
+    phone: z.string().nullable(),
+    email: z.string().nullable(),
+    /** A plan id from DONOR, or null for "their plan" when they have one. */
+    planId: z.string().nullable(),
+    planAmount: z.number().nullable(),
+    planFrequency: z.enum(["DAILY", "FRIDAY", "MONTHLY"]).nullable(),
+    planStatus: z.enum(["ACTIVE", "PAUSED", "CANCELLED"]).nullable(),
+  }),
   /** With route receipt / thanksCertificate / paymentPending: one of the donor's own donation ids from DONOR, else null. */
   donationId: z.string().nullable(),
   /**
@@ -307,6 +350,23 @@ export const LLM_VERDICT_JSON_SCHEMA = {
     supportSubject: { type: ["string", "null"], enum: ["COMPLAINT", "DONATION_ISSUE", "CAMPAIGN_SUPPORT", "PARTNERSHIP", "VOLUNTEERING", "GENERAL", null] },
     ticketDraft: { type: "string" },
     ticketAboutDonation: { type: "boolean" },
+    command: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        kind: { type: "string", enum: ["none", "set_language", "set_currency", "update_profile", "update_plan"] },
+        locale: { type: ["string", "null"] },
+        currency: { type: ["string", "null"] },
+        name: { type: ["string", "null"] },
+        phone: { type: ["string", "null"] },
+        email: { type: ["string", "null"] },
+        planId: { type: ["string", "null"] },
+        planAmount: { type: ["number", "null"] },
+        planFrequency: { type: ["string", "null"], enum: ["DAILY", "FRIDAY", "MONTHLY", null] },
+        planStatus: { type: ["string", "null"], enum: ["ACTIVE", "PAUSED", "CANCELLED", null] },
+      },
+      required: ["kind", "locale", "currency", "name", "phone", "email", "planId", "planAmount", "planFrequency", "planStatus"],
+    },
     donationId: { type: ["string", "null"] },
     suggestion: {
       type: "object",
@@ -328,5 +388,5 @@ export const LLM_VERDICT_JSON_SCHEMA = {
     message: { type: "string" },
     needsRuling: { type: "boolean" },
   },
-  required: ["mode", "answer", "route", "needsHuman", "supportSubject", "ticketDraft", "ticketAboutDonation", "donationId", "suggestion", "intent", "amount", "currency", "frequency", "region", "giftRecipientName", "recommendedIds", "reasons", "message", "needsRuling"],
+  required: ["mode", "answer", "route", "needsHuman", "supportSubject", "ticketDraft", "ticketAboutDonation", "command", "donationId", "suggestion", "intent", "amount", "currency", "frequency", "region", "giftRecipientName", "recommendedIds", "reasons", "message", "needsRuling"],
 } as const;

@@ -4,7 +4,9 @@ import { messagesFor } from "@/i18n/locale-messages";
 import { convertAmountInCurrencyToUsd, normalizeDonationCurrencyCode } from "@/lib/exchange/convert-amount-in-currency-to-usd";
 import { DEFAULT_SUGGESTED_DONATION_AMOUNTS } from "@/lib/campaign/suggested-donations";
 import { loadCatalog, type ConciergeCatalog } from "./catalog";
-import { mentionsCurrentPage, parseMessage, wantsToDonate } from "./intent";
+import { mentionsCurrentPage, parseCommand, parseMessage, wantsToDonate } from "./intent";
+import { LOCALES, isValidLocale } from "@/lib/locales";
+import { SUPPORTED_CURRENCY_CODES } from "@/lib/supported-currencies";
 import { askModel } from "./llm";
 import { loadKnowledge } from "./knowledge";
 import { loadDonorContext, type DonorContext } from "./donor";
@@ -335,6 +337,76 @@ function supportFlow(
   });
 }
 
+type CommandInput = {
+  kind: "set_language" | "set_currency" | "update_profile" | "update_plan";
+  locale?: string | null;
+  currency?: string | null;
+  name?: string | null;
+  phone?: string | null;
+  email?: string | null;
+  planId?: string | null;
+  planAmount?: number | null;
+  planFrequency?: "DAILY" | "FRIDAY" | "MONTHLY" | null;
+  planStatus?: "ACTIVE" | "PAUSED" | "CANCELLED" | null;
+};
+
+/**
+ * Turn a change the visitor asked for into a confirmation card, or into a
+ * plain answer when it cannot be done (not signed in, no such plan, a
+ * cadence the plan's gateway does not allow). The browser performs the
+ * change only after the OK.
+ */
+function commandFlow(ctx: Ctx, cmd: CommandInput, lead?: string): ConciergeResponse | null {
+  const s = ctx.s;
+  const say = (message: string, actions: ConciergeAction[] = []): ConciergeResponse =>
+    respond(ctx, { message, blocks: [], actions, mode: lead ? "llm" : "deterministic", intent: "question" });
+  const card = (command: Extract<ConciergeBlock, { type: "command" }>["command"], text: string): ConciergeResponse =>
+    respond(ctx, { message: lead ?? text, blocks: [{ type: "command", command, text }], actions: [], mode: lead ? "llm" : "deterministic", intent: "question" });
+
+  if (cmd.kind === "set_language") {
+    const locale = cmd.locale && isValidLocale(cmd.locale) ? cmd.locale : null;
+    if (!locale) return null;
+    const label = LOCALES[locale].nativeLabel;
+    return card({ kind: "set_language", locale, label }, fill(s.cmd_confirm_language, { language: label }));
+  }
+  if (cmd.kind === "set_currency") {
+    const currency = cmd.currency && SUPPORTED_CURRENCY_CODES.includes(cmd.currency.toUpperCase()) ? cmd.currency.toUpperCase() : null;
+    if (!currency) return null;
+    return card({ kind: "set_currency", currency }, fill(s.cmd_confirm_currency, { currency }));
+  }
+  if (!ctx.donor) return say(s.cmd_signin ?? "", [{ type: "navigate", label: s.a_account ?? "", route: "account" }]);
+
+  if (cmd.kind === "update_profile") {
+    const fields: { name?: string; phone?: string; email?: string } = {};
+    if (cmd.name?.trim()) fields.name = cmd.name.trim().slice(0, 120);
+    if (cmd.phone?.trim()) fields.phone = cmd.phone.replace(/[^\d+]/g, "").slice(0, 20);
+    if (cmd.email?.trim() && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cmd.email.trim())) fields.email = cmd.email.trim().toLowerCase();
+    if (!Object.keys(fields).length) return null;
+    const summary = [fields.name && `${s.cmd_field_name}: ${fields.name}`, fields.phone && `${s.cmd_field_phone}: ${fields.phone}`, fields.email && `${s.cmd_field_email}: ${fields.email}`].filter(Boolean).join(" · ");
+    return card({ kind: "update_profile", userId: ctx.donor.userId, fields }, fill(s.cmd_confirm_profile, { summary }));
+  }
+
+  /* update_plan */
+  const live = ctx.donor.plans.filter((p) => p.status !== "CANCELLED");
+  const plan = (cmd.planId && live.find((p) => p.id === cmd.planId)) || (live.length === 1 ? live[0] : null);
+  if (!plan) {
+    if (!live.length) return say(s.cmd_no_plan ?? "", [{ type: "intent", label: s.c_recurring ?? "", intent: "recurring" }]);
+    return { ...accountFlow(ctx, s.cmd_which_plan), intent: "account" };
+  }
+  const changes: { amount?: number; frequency?: "DAILY" | "FRIDAY" | "MONTHLY"; status?: "ACTIVE" | "PAUSED" | "CANCELLED" } = {};
+  if (cmd.planAmount && cmd.planAmount > 0 && Math.abs(cmd.planAmount - plan.amount) > 0.004) changes.amount = Math.round(cmd.planAmount * 100) / 100;
+  if (cmd.planFrequency && cmd.planFrequency !== plan.frequency) changes.frequency = cmd.planFrequency;
+  if (cmd.planStatus && cmd.planStatus !== plan.status) changes.status = cmd.planStatus;
+  if (!Object.keys(changes).length) return null;
+  const planLabel = `${plan.amount} ${plan.currency} · ${s[`f_${plan.frequency.toLowerCase()}`] ?? plan.frequency}${plan.items[0] ? ` · ${plan.items[0]}` : ""}`;
+  const parts = [
+    changes.amount !== undefined && `${s.cmd_field_amount}: ${changes.amount} ${plan.currency}`,
+    changes.frequency && `${s.cmd_field_frequency}: ${s[`f_${changes.frequency.toLowerCase()}`] ?? changes.frequency}`,
+    changes.status && `${s.cmd_field_status}: ${s[`ps_${changes.status}`] ?? changes.status}`,
+  ].filter(Boolean).join(" · ");
+  return card({ kind: "update_plan", planId: plan.id, planLabel, changes }, fill(s.cmd_confirm_plan, { plan: planLabel, changes: parts }));
+}
+
 /** The donor's own giving, or the way to it when they are not signed in. */
 function accountFlow(ctx: Ctx, message?: string): ConciergeResponse {
   if (!ctx.donor) {
@@ -552,6 +624,13 @@ async function messageFlow(ctx: Ctx, text: string): Promise<ConciergeResponse> {
 
   /* "I want to donate" with nothing to go on: ask where, with the areas as
      cards. A place, cause, dedication or "this project" already answers it. */
+  /* Language and currency switches need no model. */
+  const quickCommand = parseCommand(text);
+  if (quickCommand) {
+    const res = commandFlow(ctx, quickCommand);
+    if (res) return res;
+  }
+
   /* A plan with no destination ("500 over 5 months", "every Friday") is the
      same question: where? The amount and cadence ride along into the cards. */
   if ((!intent || intent === "explore" || intent === "recurring") && !ctx.state.region && !ctx.state.selectedCampaignId && wantsToDonate(text) && !parsed.region) {
@@ -620,6 +699,12 @@ async function messageFlow(ctx: Ctx, text: string): Promise<ConciergeResponse> {
       }
     }
     const answer = verdict.answer.trim();
+
+    /* Something to change for them: a confirmation card under the reply. */
+    if (verdict.command.kind !== "none") {
+      const res = commandFlow(ctx, { ...verdict.command, kind: verdict.command.kind }, answer || undefined);
+      if (res) return res;
+    }
 
     /* A problem for the team: the model's customised reply, then the ticket
        form with the donation it named already selected. Checked before the

@@ -3320,6 +3320,23 @@
     "s_support_intro_general": "Das tut mir leid. Ich habe Ihre Nachricht ans Team aus Ihren Angaben vorformuliert; prüfen oder ändern Sie sie und senden Sie ab – das Team antwortet bald per E-Mail.",
     "sp_draft_hint": "So habe ich es verstanden – bei Bedarf anpassen, dann senden",
     "s_ask_where_plan": "Wunderbar — {amount} {frequency}. Wohin soll es gehen? Wählen Sie einen Bereich, ich zeige die Projekte, mit diesem Wert als Vorgabe:",
-    "s_ask_where_amount": "Wunderbar — {amount}. Wohin soll es gehen? Wählen Sie einen Bereich, ich zeige die Projekte:"
+    "s_ask_where_amount": "Wunderbar — {amount}. Wohin soll es gehen? Wählen Sie einen Bereich, ich zeige die Projekte:",
+    "cmd_confirm_language": "Sprache der Website auf {language} umstellen?",
+    "cmd_confirm_currency": "Anzeigewährung auf {currency} umstellen?",
+    "cmd_confirm_profile": "Ihre Daten aktualisieren: {summary}?",
+    "cmd_confirm_plan": "Ihren Plan ändern ({plan}) — {changes}?",
+    "cmd_done": "Erledigt.",
+    "cmd_error": "Die Änderung war gerade nicht möglich.",
+    "cmd_signin": "Um Daten oder Pläne zu ändern, melden Sie sich bitte zuerst an; ich erledige es dann von hier.",
+    "cmd_no_plan": "Sie haben derzeit keinen aktiven regelmäßigen Plan. Möchten Sie einen starten?",
+    "cmd_which_plan": "Sie haben mehrere Pläne – welchen meinen Sie?",
+    "cmd_field_name": "Name",
+    "cmd_field_phone": "Telefon",
+    "cmd_field_email": "E-Mail",
+    "cmd_field_amount": "Betrag",
+    "cmd_field_frequency": "Häufigkeit",
+    "cmd_field_status": "Status",
+    "a_confirm": "Bestätigen",
+    "a_cancel": "Abbrechen"
   }
 }

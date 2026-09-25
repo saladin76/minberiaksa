@@ -2288,6 +2288,23 @@
     "s_support_intro_general": "Më vjen keq. E hartova mesazhin tuaj për ekipin nga ajo që më thatë; rishikojeni ose ndryshojeni, pastaj dërgojeni, dhe do t'ju përgjigjen së shpejti me email.",
     "sp_draft_hint": "Kështu e kuptova — ndryshojeni nëse doni, pastaj dërgojeni",
     "s_ask_where_plan": "Shkëlqyeshëm — {amount} {frequency}. Ku dëshironi të shkojë? Zgjidhni një fushë dhe ju tregoj projektet, me këtë vlerë si parazgjedhje:",
-    "s_ask_where_amount": "Shkëlqyeshëm — {amount}. Ku dëshironi të shkojë? Zgjidhni një fushë dhe ju tregoj projektet:"
+    "s_ask_where_amount": "Shkëlqyeshëm — {amount}. Ku dëshironi të shkojë? Zgjidhni një fushë dhe ju tregoj projektet:",
+    "cmd_confirm_language": "Ta ndryshoj gjuhën e faqes në {language}?",
+    "cmd_confirm_currency": "Ta ndryshoj monedhën e shfaqjes në {currency}?",
+    "cmd_confirm_profile": "T'i përditësoj të dhënat: {summary}?",
+    "cmd_confirm_plan": "Ta ndryshoj planin ({plan}) — {changes}?",
+    "cmd_done": "U bë.",
+    "cmd_error": "Ndryshimi nuk u bë dot tani.",
+    "cmd_signin": "Për të ndryshuar të dhënat ose planet, hyni së pari dhe e bëj nga këtu.",
+    "cmd_no_plan": "Nuk keni plan të rregullt aktiv. Dëshironi të filloni një?",
+    "cmd_which_plan": "Keni më shumë se një plan — cilin?",
+    "cmd_field_name": "Emri",
+    "cmd_field_phone": "Telefoni",
+    "cmd_field_email": "Email",
+    "cmd_field_amount": "Shuma",
+    "cmd_field_frequency": "Shpeshtësia",
+    "cmd_field_status": "Statusi",
+    "a_confirm": "Konfirmo",
+    "a_cancel": "Anulo"
   }
 }

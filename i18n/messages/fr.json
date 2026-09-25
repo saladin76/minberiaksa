@@ -3391,6 +3391,23 @@
     "s_support_intro_general": "Je suis désolé. J'ai rédigé votre message à l'équipe d'après ce que vous m'avez dit ; relisez-le ou modifiez-le, puis envoyez-le, et l'équipe vous répondra par e-mail rapidement.",
     "sp_draft_hint": "Voici ce que j'ai compris — modifiez si vous voulez, puis envoyez",
     "s_ask_where_plan": "Très bien — {amount} {frequency}. Où souhaitez-vous que cela aille ? Choisissez un domaine et je vous montre ses projets, avec cette valeur par défaut :",
-    "s_ask_where_amount": "Très bien — {amount}. Où souhaitez-vous que cela aille ? Choisissez un domaine et je vous montre ses projets :"
+    "s_ask_where_amount": "Très bien — {amount}. Où souhaitez-vous que cela aille ? Choisissez un domaine et je vous montre ses projets :",
+    "cmd_confirm_language": "Passer la langue du site en {language} ?",
+    "cmd_confirm_currency": "Passer la devise d'affichage en {currency} ?",
+    "cmd_confirm_profile": "Mettre à jour vos informations : {summary} ?",
+    "cmd_confirm_plan": "Modifier votre plan ({plan}) — {changes} ?",
+    "cmd_done": "C'est fait.",
+    "cmd_error": "La modification n'a pas pu être faite pour le moment.",
+    "cmd_signin": "Pour modifier vos informations ou vos plans, connectez-vous d'abord et je m'en occupe ici.",
+    "cmd_no_plan": "Vous n'avez pas de plan régulier actif. Souhaitez-vous en commencer un ?",
+    "cmd_which_plan": "Vous avez plusieurs plans — lequel ?",
+    "cmd_field_name": "Nom",
+    "cmd_field_phone": "Téléphone",
+    "cmd_field_email": "E-mail",
+    "cmd_field_amount": "Montant",
+    "cmd_field_frequency": "Fréquence",
+    "cmd_field_status": "Statut",
+    "a_confirm": "Confirmer",
+    "a_cancel": "Annuler"
   }
 }

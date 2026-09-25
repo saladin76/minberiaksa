@@ -2,8 +2,12 @@
 
 import { useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
+import { usePathname, useRouter } from "next/navigation";
+import Cookies from "js-cookie";
 import { useMinbarMoney } from "@/hooks/useMinbarMoney";
 import { getConciergeSessionId, reportConciergeEvents } from "@/lib/ai/concierge/client";
+import { CURRENCY_COOKIE_UPDATED_EVENT } from "@/components/CurrencyFromUrlSync";
+import { SUPPORTED_LOCALES } from "@/lib/locales";
 import type { CampaignCard, ConciergeAction, ConciergeBlock } from "@/lib/ai/concierge/schema";
 import type { CartFreqKey, CartGiftDetails } from "@/lib/minbar/cart";
 import type { AddInput, WaqfAddInput } from "./useConcierge";
@@ -55,7 +59,87 @@ export function Block(props: BlockProps) {
       return <Suggestion block={block} onAction={props.onAction} busy={props.busy} />;
     case "support_ticket":
       return <SupportTicket block={block} onAction={props.onAction} />;
+    case "command":
+      return <CommandCard block={block} />;
   }
+}
+
+/**
+ * A change the visitor asked for, shown before it happens. Confirming runs
+ * it through the same paths the header and the account page use: the
+ * locale segment of the URL, the currency cookie, the user endpoint, the
+ * donor's plan endpoint. Nothing changes on "cancel".
+ */
+function CommandCard({ block }: { block: Extract<ConciergeBlock, { type: "command" }> }) {
+  const t = useTranslations("Concierge");
+  const locale = useLocale();
+  const router = useRouter();
+  const pathname = usePathname() ?? "";
+  const [status, setStatus] = useState<"idle" | "working" | "done" | "error" | "cancelled">("idle");
+  const [error, setError] = useState<string | null>(null);
+  const cmd = block.command;
+
+  const run = async () => {
+    if (status !== "idle") return;
+    setStatus("working");
+    try {
+      if (cmd.kind === "set_language") {
+        const rest = pathname.replace(new RegExp(`^/(${SUPPORTED_LOCALES.join("|")})(?=/|$)`), "");
+        void fetch("/api/users/me/preferred-lang", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ locale: cmd.locale }) }).catch(() => undefined);
+        setStatus("done");
+        router.push(`/${cmd.locale}${rest || ""}`);
+        return;
+      }
+      if (cmd.kind === "set_currency") {
+        Cookies.set("currency", cmd.currency, { expires: 365 });
+        window.dispatchEvent(new CustomEvent(CURRENCY_COOKIE_UPDATED_EVENT, { detail: { code: cmd.currency } }));
+        setStatus("done");
+        return;
+      }
+      if (cmd.kind === "update_profile") {
+        const res = await fetch(`/api/users/${cmd.userId}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(cmd.fields) });
+        if (!res.ok) throw new Error((await res.json().catch(() => null))?.error ?? String(res.status));
+        setStatus("done");
+        return;
+      }
+      const res = await fetch(`/api/users/me/subscriptions/${cmd.planId}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(cmd.changes) });
+      if (!res.ok) throw new Error((await res.json().catch(() => null))?.error ?? String(res.status));
+      setStatus("done");
+      reportConciergeEvents(locale, [{ event: "recurring_selected", intent: "account", frequency: cmd.changes.frequency?.toLowerCase() ?? null }]);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : null);
+      setStatus("error");
+    }
+  };
+
+  if (status === "cancelled") return null;
+  if (status === "done") {
+    return (
+      <div className="cg-confirm" role="status">
+        <span className="cg-confirm-check" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M20 6 9 17l-5-5" />
+          </svg>
+        </span>
+        <div>
+          <b>{t("cmd_done")}</b>
+          <span>{block.text}</span>
+        </div>
+      </div>
+    );
+  }
+  return (
+    <div className="cg-suggest">
+      <div className="cg-suggest-body">
+        <p className="cg-suggest-text">{block.text}</p>
+        {status === "error" ? <p className="cg-notice cg-notice-warning">{t("cmd_error")}{error ? ` (${error})` : ""}</p> : null}
+        <div className="cg-suggest-actions">
+          <button type="button" className="cg-btn cg-btn-primary" disabled={status === "working"} onClick={run}>{t("a_confirm")}</button>
+          <button type="button" className="cg-link" disabled={status === "working"} onClick={() => setStatus("cancelled")}>{t("a_cancel")}</button>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 /**

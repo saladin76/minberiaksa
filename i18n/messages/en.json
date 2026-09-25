@@ -3391,6 +3391,23 @@
     "s_support_intro_general": "I'm sorry about that. I've drafted your message to the team from what you told me; review or edit it, then send, and they will reply to you by email soon.",
     "sp_draft_hint": "This is what I understood — edit it if you like, then send",
     "s_ask_where_plan": "Wonderful — {amount} {frequency}. Where would you like it to go? Pick an area and I'll show you its projects, with that set as the default:",
-    "s_ask_where_amount": "Wonderful — {amount}. Where would you like it to go? Pick an area and I'll show you its projects:"
+    "s_ask_where_amount": "Wonderful — {amount}. Where would you like it to go? Pick an area and I'll show you its projects:",
+    "cmd_confirm_language": "Switch the site language to {language}?",
+    "cmd_confirm_currency": "Switch the display currency to {currency}?",
+    "cmd_confirm_profile": "Update your details: {summary}?",
+    "cmd_confirm_plan": "Change your plan ({plan}) — {changes}?",
+    "cmd_done": "Done.",
+    "cmd_error": "The change couldn't be made right now.",
+    "cmd_signin": "To change your details or plans, please sign in first and I'll do it from here.",
+    "cmd_no_plan": "You have no active regular plan right now. Would you like to start one?",
+    "cmd_which_plan": "You have more than one plan — which one do you mean?",
+    "cmd_field_name": "Name",
+    "cmd_field_phone": "Phone",
+    "cmd_field_email": "Email",
+    "cmd_field_amount": "Amount",
+    "cmd_field_frequency": "Frequency",
+    "cmd_field_status": "Status",
+    "a_confirm": "Confirm",
+    "a_cancel": "Cancel"
   }
 }

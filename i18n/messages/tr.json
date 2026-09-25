@@ -3391,6 +3391,23 @@
     "s_support_intro_general": "Bunun için üzgünüm. Anlattıklarınızdan ekibe mesajınızı hazırladım; gözden geçirip düzenleyin ve gönderin, e-postanıza kısa sürede yanıt verirler.",
     "sp_draft_hint": "Anladığım bu — isterseniz düzenleyin, sonra gönderin",
     "s_ask_where_plan": "Harika — {frequency} {amount}. Nereye gitmesini istersiniz? Bir alan seçin, projelerini göstereyim; bu değer varsayılan olacak:",
-    "s_ask_where_amount": "Harika — {amount}. Nereye gitmesini istersiniz? Bir alan seçin, projelerini göstereyim:"
+    "s_ask_where_amount": "Harika — {amount}. Nereye gitmesini istersiniz? Bir alan seçin, projelerini göstereyim:",
+    "cmd_confirm_language": "Site dilini {language} yapayım mı?",
+    "cmd_confirm_currency": "Görüntüleme para birimini {currency} yapayım mı?",
+    "cmd_confirm_profile": "Bilgilerinizi güncelleyeyim mi: {summary}?",
+    "cmd_confirm_plan": "Planınızı değiştireyim mi ({plan}) — {changes}?",
+    "cmd_done": "Tamamlandı.",
+    "cmd_error": "Değişiklik şu anda yapılamadı.",
+    "cmd_signin": "Bilgilerinizi veya planlarınızı değiştirmek için önce giriş yapın; buradan hallederim.",
+    "cmd_no_plan": "Şu anda aktif bir düzenli planınız yok. Bir tane başlatmak ister misiniz?",
+    "cmd_which_plan": "Birden fazla planınız var — hangisini kastediyorsunuz?",
+    "cmd_field_name": "Ad",
+    "cmd_field_phone": "Telefon",
+    "cmd_field_email": "E-posta",
+    "cmd_field_amount": "Tutar",
+    "cmd_field_frequency": "Sıklık",
+    "cmd_field_status": "Durum",
+    "a_confirm": "Onayla",
+    "a_cancel": "İptal"
   }
 }

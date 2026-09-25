@@ -3319,6 +3319,23 @@
     "s_support_intro_general": "Maaf atas hal itu. Saya sudah menyusun pesan Anda untuk tim dari apa yang Anda ceritakan; periksa atau ubah, lalu kirim, dan mereka akan membalas lewat email segera.",
     "sp_draft_hint": "Ini yang saya pahami — ubah jika perlu, lalu kirim",
     "s_ask_where_plan": "Bagus — {amount} {frequency}. Ke mana ingin disalurkan? Pilih bidang dan saya tampilkan proyeknya, dengan nilai itu sebagai bawaan:",
-    "s_ask_where_amount": "Bagus — {amount}. Ke mana ingin disalurkan? Pilih bidang dan saya tampilkan proyeknya:"
+    "s_ask_where_amount": "Bagus — {amount}. Ke mana ingin disalurkan? Pilih bidang dan saya tampilkan proyeknya:",
+    "cmd_confirm_language": "Ubah bahasa situs ke {language}?",
+    "cmd_confirm_currency": "Ubah mata uang tampilan ke {currency}?",
+    "cmd_confirm_profile": "Perbarui data Anda: {summary}?",
+    "cmd_confirm_plan": "Ubah paket Anda ({plan}) — {changes}?",
+    "cmd_done": "Selesai.",
+    "cmd_error": "Perubahan tidak dapat dilakukan saat ini.",
+    "cmd_signin": "Untuk mengubah data atau paket, masuk dulu dan saya lakukan dari sini.",
+    "cmd_no_plan": "Anda belum punya paket rutin aktif. Ingin memulainya?",
+    "cmd_which_plan": "Anda punya lebih dari satu paket — yang mana?",
+    "cmd_field_name": "Nama",
+    "cmd_field_phone": "Telepon",
+    "cmd_field_email": "Email",
+    "cmd_field_amount": "Jumlah",
+    "cmd_field_frequency": "Frekuensi",
+    "cmd_field_status": "Status",
+    "a_confirm": "Konfirmasi",
+    "a_cancel": "Batal"
   }
 }

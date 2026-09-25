@@ -2288,6 +2288,23 @@
     "s_support_intro_general": "Mi dispiace. Ho preparato il tuo messaggio al team da quanto mi hai detto; controllalo o modificalo, poi invialo, e ti risponderanno presto via email.",
     "sp_draft_hint": "Ecco cosa ho capito — modifica se vuoi, poi invia",
     "s_ask_where_plan": "Ottimo — {amount} {frequency}. Dove vuoi che vada? Scegli un ambito e ti mostro i progetti, con questo valore preimpostato:",
-    "s_ask_where_amount": "Ottimo — {amount}. Dove vuoi che vada? Scegli un ambito e ti mostro i progetti:"
+    "s_ask_where_amount": "Ottimo — {amount}. Dove vuoi che vada? Scegli un ambito e ti mostro i progetti:",
+    "cmd_confirm_language": "Cambio la lingua del sito in {language}?",
+    "cmd_confirm_currency": "Cambio la valuta mostrata in {currency}?",
+    "cmd_confirm_profile": "Aggiorno i tuoi dati: {summary}?",
+    "cmd_confirm_plan": "Modifico il tuo piano ({plan}) — {changes}?",
+    "cmd_done": "Fatto.",
+    "cmd_error": "La modifica non è possibile al momento.",
+    "cmd_signin": "Per modificare dati o piani, accedi prima e lo faccio da qui.",
+    "cmd_no_plan": "Non hai un piano regolare attivo. Vuoi iniziarne uno?",
+    "cmd_which_plan": "Hai più di un piano — quale?",
+    "cmd_field_name": "Nome",
+    "cmd_field_phone": "Telefono",
+    "cmd_field_email": "Email",
+    "cmd_field_amount": "Importo",
+    "cmd_field_frequency": "Frequenza",
+    "cmd_field_status": "Stato",
+    "a_confirm": "Conferma",
+    "a_cancel": "Annulla"
   }
 }

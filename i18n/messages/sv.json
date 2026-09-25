@@ -2288,6 +2288,23 @@
     "s_support_intro_general": "Jag beklagar. Jag har skrivit ditt meddelande till teamet utifrån vad du berättade; granska eller ändra och skicka, så svarar de snart via e-post.",
     "sp_draft_hint": "Så här uppfattade jag det — ändra om du vill och skicka",
     "s_ask_where_plan": "Fint — {amount} {frequency}. Vart ska det gå? Välj ett område så visar jag projekten, med det värdet förvalt:",
-    "s_ask_where_amount": "Fint — {amount}. Vart ska det gå? Välj ett område så visar jag projekten:"
+    "s_ask_where_amount": "Fint — {amount}. Vart ska det gå? Välj ett område så visar jag projekten:",
+    "cmd_confirm_language": "Byta webbplatsens språk till {language}?",
+    "cmd_confirm_currency": "Byta visningsvaluta till {currency}?",
+    "cmd_confirm_profile": "Uppdatera dina uppgifter: {summary}?",
+    "cmd_confirm_plan": "Ändra din plan ({plan}) — {changes}?",
+    "cmd_done": "Klart.",
+    "cmd_error": "Ändringen kunde inte göras just nu.",
+    "cmd_signin": "Logga in först för att ändra uppgifter eller planer, så gör jag det härifrån.",
+    "cmd_no_plan": "Du har ingen aktiv återkommande plan. Vill du starta en?",
+    "cmd_which_plan": "Du har flera planer – vilken?",
+    "cmd_field_name": "Namn",
+    "cmd_field_phone": "Telefon",
+    "cmd_field_email": "E-post",
+    "cmd_field_amount": "Belopp",
+    "cmd_field_frequency": "Frekvens",
+    "cmd_field_status": "Status",
+    "a_confirm": "Bekräfta",
+    "a_cancel": "Avbryt"
   }
 }

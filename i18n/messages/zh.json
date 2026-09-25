@@ -2285,6 +2285,23 @@
     "s_support_intro_general": "很抱歉。我已根据您所说的内容为您起草了给团队的消息；请查看或修改后发送，他们会尽快通过邮件回复您。",
     "sp_draft_hint": "这是我理解的内容 — 如需修改请编辑，然后发送",
     "s_ask_where_plan": "好的 — {frequency}{amount}。您希望用于哪个领域？选择一个，我会展示其中的项目，并将此设为默认值：",
-    "s_ask_where_amount": "好的 — {amount}。您希望用于哪个领域？选择一个，我会展示其中的项目："
+    "s_ask_where_amount": "好的 — {amount}。您希望用于哪个领域？选择一个，我会展示其中的项目：",
+    "cmd_confirm_language": "将网站语言切换为{language}？",
+    "cmd_confirm_currency": "将显示货币切换为{currency}？",
+    "cmd_confirm_profile": "更新您的信息：{summary}？",
+    "cmd_confirm_plan": "修改您的计划（{plan}）— {changes}？",
+    "cmd_done": "已完成。",
+    "cmd_error": "目前无法进行更改。",
+    "cmd_signin": "要修改信息或计划，请先登录，我会在这里为您处理。",
+    "cmd_no_plan": "您目前没有有效的定期计划。要开始一个吗？",
+    "cmd_which_plan": "您有多个计划 — 指哪一个？",
+    "cmd_field_name": "姓名",
+    "cmd_field_phone": "电话",
+    "cmd_field_email": "邮箱",
+    "cmd_field_amount": "金额",
+    "cmd_field_frequency": "频率",
+    "cmd_field_status": "状态",
+    "a_confirm": "确认",
+    "a_cancel": "取消"
   }
 }
