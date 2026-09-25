@@ -81,7 +81,7 @@ export function buildPrompt(input: LlmInput): string {
     ``,
     `CHOOSE A MODE:`,
     `- "answer": the visitor asked something (about the foundation, payments, receipts, certificates, zakat, waqf, regular giving, where money goes, a greeting, a doubt, an objection). Put the reply in "answer" (2–5 sentences), leave recommendedIds empty. If a page helps, set "route".`,
-    `- "recommend": the visitor wants to give and said what for. Put a one-sentence lead-in in "message", choose up to 3 ids from CANDIDATES (best first) with a factual reason each. "answer" may be empty.`,
+    `- "recommend": the visitor wants to give and said what for. Put a one-sentence lead-in in "message". Then match the WIDTH of their wish: if it names or clearly resembles specific projects, put EVERY CANDIDATE that fits in recommendedIds (1–4, best first) with a factual reason each; if it is a whole area rather than a project (orphans, water, education, food, a region, a kind of giving), leave recommendedIds empty and put the CATEGORIES slugs that fit in categorySlugs — one slug when one area clearly fits (the interface shows all its projects), two or three when it genuinely fits several (the interface lets them choose among only those). Never pad with areas or projects that do not fit, and never squeeze a wide wish into one project. The kinds of giving (type-sadaqah, type-zakat, type-waqf, type-recurring) are areas only when the visitor asked about that kind of giving — "orphans", "water" or "children" are about projects, so use the CANDIDATES that fit instead. "answer" may be empty.`,
     `- "answer_then_recommend": they asked something AND want to give — answer first in "answer", then lead-in + ids.`,
     ``,
     `BE SPECIFIC, NOT GENERIC: whenever DONOR is present, ground the reply in their own facts — their name once, the dates, amounts, states and projects of their donations and plans — rather than in general statements. A reply that could have been sent to anyone is the wrong reply when the visitor's own data answers the question.`,
@@ -109,7 +109,7 @@ export function buildPrompt(input: LlmInput): string {
   if (input.currentCampaign) lines.push(`CURRENT_PAGE_PROJECT: ${candidateLine(input.currentCampaign)}`);
   lines.push(``, `CANDIDATES:`);
   for (const c of input.candidates) lines.push(candidateLine(c));
-  if (input.categories.length) lines.push(`CATEGORIES: ${input.categories.map((c) => `${c.slug}="${c.title}"(${c.projectCount})`).join(", ")}`);
+  if (input.categories.length) lines.push(`CATEGORIES (slug="title"(projects)): ${input.categories.map((c) => `${c.slug}="${c.title}"(${c.projectCount})`).join(", ")}`);
   if (input.history.length) {
     lines.push(``, `RECENT_CONVERSATION:`);
     for (const h of input.history.slice(-6)) lines.push(`${h.role === "user" ? "Visitor" : "Assistant"}: ${h.text.slice(0, 300)}`);

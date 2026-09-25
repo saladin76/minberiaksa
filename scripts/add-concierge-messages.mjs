@@ -1575,6 +1575,29 @@ const SUPPORT2 = {
   hi: { s_support_intro_general: "इसके लिए खेद है। आपकी बात से मैंने टीम के लिए आपका संदेश तैयार कर दिया है; देख लें या संपादित करें और भेज दें, वे जल्द ईमेल पर जवाब देंगे।", sp_draft_hint: "मैंने यह समझा — चाहें तो संपादित करें, फिर भेजें" },
 };
 
+/* A wish matched at its own width: the projects it names, all of one area, or a choice among areas. */
+const TOPIC = {
+  ar: { s_topic_campaign: "وجدت المشروع الذي يناسب طلبك:", s_topic_campaigns: "هذه المشاريع تناسب ما تبحث عنه:", s_topic_category: "هذه كل مشاريع «{category}» — اختر ما يناسبك:", s_topic_choose: "طلبك يناسب أكثر من مجال — أيها تقصد؟" },
+  en: { s_topic_campaign: "I found the project that matches what you want:", s_topic_campaigns: "These projects match what you're looking for:", s_topic_category: "Here is everything in “{category}” — pick what suits you:", s_topic_choose: "Your wish fits more than one area — which do you mean?" },
+  tr: { s_topic_campaign: "İstediğinize uyan projeyi buldum:", s_topic_campaigns: "Bu projeler aradığınıza uyuyor:", s_topic_category: "“{category}” alanındaki tüm projeler — size uyanı seçin:", s_topic_choose: "İsteğiniz birden fazla alana uyuyor — hangisini kastediyorsunuz?" },
+  fr: { s_topic_campaign: "J'ai trouvé le projet qui correspond à votre souhait :", s_topic_campaigns: "Ces projets correspondent à ce que vous cherchez :", s_topic_category: "Voici tous les projets « {category} » — choisissez celui qui vous convient :", s_topic_choose: "Votre souhait correspond à plusieurs domaines — lequel ?" },
+  de: { s_topic_campaign: "Ich habe das passende Projekt gefunden:", s_topic_campaigns: "Diese Projekte passen zu dem, was Sie suchen:", s_topic_category: "Alle Projekte in „{category}“ – wählen Sie, was passt:", s_topic_choose: "Ihr Wunsch passt zu mehreren Bereichen – welchen meinen Sie?" },
+  es: { s_topic_campaign: "Encontré el proyecto que se ajusta a lo que quieres:", s_topic_campaigns: "Estos proyectos se ajustan a lo que buscas:", s_topic_category: "Todos los proyectos de «{category}» — elige el que te convenga:", s_topic_choose: "Tu deseo encaja en más de un área — ¿cuál quieres?" },
+  id: { s_topic_campaign: "Saya menemukan proyek yang sesuai keinginan Anda:", s_topic_campaigns: "Proyek-proyek ini sesuai dengan yang Anda cari:", s_topic_category: "Semua proyek di “{category}” — pilih yang cocok:", s_topic_choose: "Keinginan Anda cocok dengan lebih dari satu bidang — yang mana?" },
+  pt: { s_topic_campaign: "Encontrei o projeto que corresponde ao que quer:", s_topic_campaigns: "Estes projetos correspondem ao que procura:", s_topic_category: "Todos os projetos de «{category}» — escolha o que preferir:", s_topic_choose: "O seu desejo encaixa em mais de uma área — qual?" },
+  ur: { s_topic_campaign: "آپ کی خواہش سے میل کھاتا منصوبہ مل گیا:", s_topic_campaigns: "یہ منصوبے آپ کی تلاش سے میل کھاتے ہیں:", s_topic_category: "«{category}» کے تمام منصوبے — جو مناسب ہو چنیں:", s_topic_choose: "آپ کی خواہش ایک سے زیادہ شعبوں سے ملتی ہے — کون سا؟" },
+  sq: { s_topic_campaign: "Gjeta projektin që i përshtatet dëshirës suaj:", s_topic_campaigns: "Këto projekte përputhen me atë që kërkoni:", s_topic_category: "Të gjitha projektet në “{category}” — zgjidhni atë që ju përshtatet:", s_topic_choose: "Dëshira juaj përputhet me më shumë se një fushë — cilën?" },
+  it: { s_topic_campaign: "Ho trovato il progetto che corrisponde al tuo desiderio:", s_topic_campaigns: "Questi progetti corrispondono a ciò che cerchi:", s_topic_category: "Tutti i progetti di «{category}» — scegli quello adatto:", s_topic_choose: "Il tuo desiderio rientra in più aree — quale?" },
+  nl: { s_topic_campaign: "Ik heb het project gevonden dat bij uw wens past:", s_topic_campaigns: "Deze projecten passen bij wat u zoekt:", s_topic_category: "Alle projecten in “{category}” — kies wat u past:", s_topic_choose: "Uw wens past bij meerdere gebieden — welk bedoelt u?" },
+  sv: { s_topic_campaign: "Jag hittade projektet som passar din önskan:", s_topic_campaigns: "De här projekten passar det du söker:", s_topic_category: "Alla projekt i ”{category}” – välj det som passar:", s_topic_choose: "Din önskan passar flera områden – vilket menar du?" },
+  no: { s_topic_campaign: "Jeg fant prosjektet som passer ønsket ditt:", s_topic_campaigns: "Disse prosjektene passer det du leter etter:", s_topic_category: "Alle prosjekter i «{category}» – velg det som passer:", s_topic_choose: "Ønsket ditt passer flere områder – hvilket mener du?" },
+  da: { s_topic_campaign: "Jeg fandt projektet, der passer til dit ønske:", s_topic_campaigns: "Disse projekter passer til det, du leder efter:", s_topic_category: "Alle projekter i “{category}” – vælg det, der passer:", s_topic_choose: "Dit ønske passer til flere områder – hvilket mener du?" },
+  ms: { s_topic_campaign: "Saya jumpa projek yang sepadan dengan hasrat anda:", s_topic_campaigns: "Projek-projek ini sepadan dengan apa yang anda cari:", s_topic_category: "Semua projek dalam “{category}” — pilih yang sesuai:", s_topic_choose: "Hasrat anda sepadan dengan lebih daripada satu bidang — yang mana?" },
+  ja: { s_topic_campaign: "ご希望に合うプロジェクトが見つかりました：", s_topic_campaigns: "お探しの内容に合うプロジェクトです：", s_topic_category: "「{category}」のすべてのプロジェクトです。お選びください：", s_topic_choose: "ご希望は複数の分野に当てはまります。どちらですか？" },
+  zh: { s_topic_campaign: "我找到了符合您心愿的项目：", s_topic_campaigns: "这些项目符合您要找的：", s_topic_category: "“{category}”的所有项目，请选择：", s_topic_choose: "您的心愿符合多个领域，您指的是哪个？" },
+  hi: { s_topic_campaign: "आपकी इच्छा से मेल खाता प्रोजेक्ट मिल गया:", s_topic_campaigns: "ये प्रोजेक्ट आपकी खोज से मेल खाते हैं:", s_topic_category: "“{category}” के सभी प्रोजेक्ट — जो ठीक लगे चुनें:", s_topic_choose: "आपकी इच्छा एक से अधिक क्षेत्रों से मेल खाती है — कौन सा?" },
+};
+
 /* Changes the visitor asks for: the confirmation card and its outcomes. */
 const COMMANDS = {
   ar: { cmd_confirm_language: "أغيّر لغة الموقع إلى {language}؟", cmd_confirm_currency: "أغيّر عملة العرض إلى {currency}؟", cmd_confirm_profile: "أحدّث بياناتك: {summary}؟", cmd_confirm_plan: "أعدّل خطتك ({plan}) — {changes}؟", cmd_done: "تم التغيير.", cmd_error: "تعذّر إجراء التغيير الآن.", cmd_signin: "لتعديل بياناتك أو خططك، سجّل الدخول أولًا وسأنفّذ لك ذلك من هنا.", cmd_no_plan: "لا توجد لديك خطة دورية نشطة الآن. هل تحب أن تبدأ واحدة؟", cmd_which_plan: "لديك أكثر من خطة — أي خطة تقصد؟", cmd_field_name: "الاسم", cmd_field_phone: "الهاتف", cmd_field_email: "البريد", cmd_field_amount: "المبلغ", cmd_field_frequency: "التكرار", cmd_field_status: "الحالة", a_confirm: "تأكيد", a_cancel: "إلغاء" },
@@ -1625,7 +1648,7 @@ let written = 0;
 for (const [locale, block] of Object.entries(M)) {
   const file = `i18n/messages/${locale}.json`;
   const json = JSON.parse(readFileSync(file, "utf8"));
-  json.Concierge = { ...block, ...ACCOUNT[locale], ...FLOW[locale], ...SUPPORT[locale], ...SUPPORT2[locale], ...PLAN[locale], ...COMMANDS[locale] };
+  json.Concierge = { ...block, ...ACCOUNT[locale], ...FLOW[locale], ...SUPPORT[locale], ...SUPPORT2[locale], ...PLAN[locale], ...TOPIC[locale], ...COMMANDS[locale] };
   writeFileSync(file, `${JSON.stringify(json, null, 2)}\n`, "utf8");
   written += 1;
 }

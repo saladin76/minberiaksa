@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { pickCrossSell, rankCampaigns, rankCategories, type CatalogCampaign, type CatalogCategory } from "../../lib/ai/concierge/recommend";
+import { matchTopic, pickCrossSell, rankCampaigns, rankCategories, type CatalogCampaign, type CatalogCategory } from "../../lib/ai/concierge/recommend";
 import { llmVerdictSchema, conciergeRequestSchema } from "../../lib/ai/concierge/schema";
 
 /**
@@ -78,6 +78,29 @@ test("cross-sell: admin list first, never something already in the basket", () =
   assert.equal(sameRegion?.id, "b2");
 });
 
+test("a wish is matched at its own width: projects, one area, or several areas", () => {
+  const cats: CatalogCategory[] = [
+    { id: "c-orph", slug: "type-orphans", title: "كفالة الأيتام", kind: "type", projectCount: 2, canDonateDirectly: false },
+    { id: "c-edu", slug: "type-education", title: "التعليم", kind: "type", projectCount: 1, canDonateDirectly: false },
+    { id: "c-gaza", slug: "region-gaza", title: "غزة", kind: "region", projectCount: 3, canDonateDirectly: false },
+  ];
+  const catalog = [
+    campaign({ id: "o1", title: "كفالة يتيم في غزة", categoryIds: ["c-orph", "c-gaza"] }),
+    campaign({ id: "o2", title: "كسوة الأيتام", categoryIds: ["c-orph"] }),
+    campaign({ id: "e1", title: "منح دراسية للطلاب", summary: "دعم تعليم الطلاب", categoryIds: ["c-edu"] }),
+    campaign({ id: "w1", title: "بئر ماء", categoryIds: ["c-gaza"] }),
+  ];
+  const orphans = matchTopic(catalog, cats, "عايز اتبرع للأيتام");
+  assert.equal(orphans.categories[0].category.id, "c-orph", "the area named in the wish comes first");
+  assert.ok(orphans.categories[0].strong);
+  assert.ok(!orphans.categories.some((c) => c.category.id === "c-edu"), "an unrelated area is not offered");
+  const well = matchTopic(catalog, cats, "the بئر ماء project");
+  assert.equal(well.campaigns[0].campaign.id, "w1", "a named project is found");
+  const student = matchTopic(catalog, cats, "أنا طالب وعايز اتبرع لحاجة زي التعليم");
+  assert.equal(student.categories[0].category.id, "c-edu");
+  assert.deepEqual(matchTopic(catalog, cats, "hello").campaigns, []);
+});
+
 test("categories: intent types first, then by project count", () => {
   const cats: CatalogCategory[] = [
     { id: "1", slug: "region-gaza", title: "غزة", kind: "region", projectCount: 4, canDonateDirectly: false },
@@ -90,7 +113,7 @@ test("categories: intent types first, then by project count", () => {
 
 test("malformed model output is rejected", () => {
   assert.equal(llmVerdictSchema.safeParse({ intent: "zakat" }).success, false);
-  const base = { mode: "recommend", answer: "", route: null, needsHuman: false, supportSubject: null, ticketDraft: "", ticketAboutDonation: false, command: { kind: "none", locale: null, currency: null, name: null, phone: null, email: null, planId: null, planAmount: null, planFrequency: null, planStatus: null }, donationId: null, suggestion: { kind: "none", campaignId: null, text: "" }, amount: null, currency: null, frequency: null, region: null, giftRecipientName: null, recommendedIds: [], reasons: [], message: "", needsRuling: false };
+  const base = { mode: "recommend", answer: "", route: null, needsHuman: false, supportSubject: null, ticketDraft: "", ticketAboutDonation: false, command: { kind: "none", locale: null, currency: null, name: null, phone: null, email: null, planId: null, planAmount: null, planFrequency: null, planStatus: null }, donationId: null, suggestion: { kind: "none", campaignId: null, text: "" }, amount: null, currency: null, frequency: null, region: null, giftRecipientName: null, recommendedIds: [], categorySlugs: [], reasons: [], message: "", needsRuling: false };
   assert.equal(llmVerdictSchema.safeParse({ ...base, intent: "buy_stuff" }).success, false);
   assert.equal(llmVerdictSchema.safeParse({ ...base, intent: "relief", mode: "chat" }).success, false, "unknown mode");
   assert.equal(llmVerdictSchema.safeParse({ ...base, intent: "relief", route: "/admin" }).success, false, "route must be a known page");

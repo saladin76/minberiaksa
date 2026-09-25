@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { parseAmount, parseCommand, parseFrequency, parseGiftName, parseIntent, parseMessage, parseRegion, needsRuling, wantsToDonate } from "../../lib/ai/concierge/intent";
+import { bareWish, parseAmount, parseCommand, parseFrequency, parseGiftName, parseIntent, parseMessage, parseRegion, needsRuling, wantsToDonate } from "../../lib/ai/concierge/intent";
 
 test("language and currency switches are read without the model", () => {
   assert.deepEqual(parseCommand("غير لغة الموقع للإنجليزية"), { kind: "set_language", locale: "en" });
@@ -17,6 +17,11 @@ test("language and currency switches are read without the model", () => {
 });
 
 test("a bare wish to give is recognised so the areas can be offered", () => {
+  assert.equal(bareWish("عايز اتبرع"), true);
+  assert.equal(bareWish("I want to donate $50 monthly"), true);
+  assert.equal(bareWish("معايا 500 دولار عايز اتبرع بيهم على 5 شهور"), true);
+  assert.equal(bareWish("عايز اتبرع للأيتام"), false);
+  assert.equal(bareWish("I want to donate to something like education"), false);
   assert.equal(wantsToDonate("عايز اتبرع"), true);
   assert.equal(wantsToDonate("I want to donate"), true);
   assert.equal(wantsToDonate("bağış yapmak istiyorum"), true);

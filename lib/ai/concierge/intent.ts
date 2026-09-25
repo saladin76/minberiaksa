@@ -168,6 +168,22 @@ export function wantsToDonate(text: string): boolean {
   return /أتبرع|اتبرع|تبرع|أتصدق|اتصدق|صدق[ةه]|donat|give\b|giving|contribut|bağış|don(ner|\b)|spende|donar|donaci|donasi|derma|sedekah|عطیہ|寄付|捐|दान/i.test(text);
 }
 
+const WISH_WORDS = /^(?:معايا|معي|معايه|عندي|بيهم|بيها|بيه|بها|به|هم|كده|كدا|دلوقتي|الان|الآن|now|today|عايز|عاوز|عايزه|اريد|أريد|ابغى|أبغى|ابي|ودي|نفسي|حابب|احب|أحب|اتبرع|أتبرع|تبرع|بتبرع|للتبرع|التبرع|اتصدق|أتصدق|بصدقة|صدقة|حاجة|حاجه|شي|شيء|زي|مثل|في|على|من|عن|ب|لـ|بس|لو|سمحت|ممكن|ان|أن|اني|إني|انا|أنا|i|i'd|id|im|want|wanna|would|like|to|donate|donation|give|make|do|a|an|the|some|something|please|can|could|you|help|me|my|money|بفلوس|فلوس|مبلغ|dollars?|usd|\$|euros?|eur|tl|lira|ليرة|دولار|يورو|ريال|جنيه|دينار|درهم|monthly|weekly|daily|month|months|week|weeks|day|days|every|over|friday|شهر|شهور|اشهر|أشهر|شهريا|شهرياً|اسبوع|أسبوع|اسبوعيا|جمعة|كل|يوم|يوميا|bağış|bağışlamak|yapmak|istiyorum|isterim|bir|için|ay|hafta|her|cuma|gün|je|veux|voudrais|faire|un|une|don|donner|par|mois|semaine|chaque)$/i;
+
+/**
+ * A wish to give that names nothing — no cause, place, project, thing.
+ * "عايز اتبرع", "I want to donate $50 monthly", "bağış yapmak istiyorum" are
+ * bare; "عايز اتبرع للأيتام" is not, whatever the catalog holds for it.
+ */
+export function bareWish(text: string): boolean {
+  const words = text
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}\s'$]/gu, " ")
+    .split(/\s+/)
+    .filter(Boolean);
+  return words.every((w) => /^\$?[\d.,]+\$?$/.test(w) || WISH_WORDS.test(w) || WISH_WORDS.test(w.replace(/^(?:و|ف)/, "")));
+}
+
 /* ── Commands: things the visitor asks the assistant to change ─────────── */
 
 const LANGUAGE_WORDS: Array<[RegExp, string]> = [

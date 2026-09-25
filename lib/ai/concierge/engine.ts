@@ -4,13 +4,13 @@ import { messagesFor } from "@/i18n/locale-messages";
 import { convertAmountInCurrencyToUsd, normalizeDonationCurrencyCode } from "@/lib/exchange/convert-amount-in-currency-to-usd";
 import { DEFAULT_SUGGESTED_DONATION_AMOUNTS } from "@/lib/campaign/suggested-donations";
 import { loadCatalog, type ConciergeCatalog } from "./catalog";
-import { mentionsCurrentPage, parseCommand, parseMessage, wantsToDonate } from "./intent";
+import { bareWish, mentionsCurrentPage, parseCommand, parseMessage, wantsToDonate } from "./intent";
 import { LOCALES, isValidLocale } from "@/lib/locales";
 import { SUPPORTED_CURRENCY_CODES } from "@/lib/supported-currencies";
 import { askModel } from "./llm";
 import { loadKnowledge } from "./knowledge";
 import { loadDonorContext, type DonorContext } from "./donor";
-import { pickCrossSell, rankCampaigns, rankCategories, type CatalogCampaign, type CatalogCategory } from "./recommend";
+import { matchTopic, pickCrossSell, rankCampaigns, rankCategories, type CatalogCampaign, type CatalogCategory } from "./recommend";
 import {
   FREQUENCIES,
   type CampaignCard,
@@ -496,7 +496,9 @@ function recommendFlow(ctx: Ctx, intent: ConciergeIntent, message?: string, reas
   }
   /* The budget is echoed only in the turn it was said, never on later ones. */
   const budget = mentionBudget && ctx.state.amountUSD ? `${fill(ctx.s.s_budget, { amount: fmtUsd(ctx.locale, ctx.state.amountUSD) })} ` : "";
-  const text = message ?? `${budget}${ctx.s[INTENT_MESSAGE_KEY[effective] ?? "s_intent_explore"] ?? ""}`;
+  /* Projects the model picked for the visitor's words are introduced as such, not as "our featured projects". */
+  const picked = ids?.length ? (ids.length === 1 ? ctx.s.s_topic_campaign : ctx.s.s_topic_campaigns) : null;
+  const text = message ?? `${budget}${picked ?? ctx.s[INTENT_MESSAGE_KEY[effective] ?? "s_intent_explore"] ?? ""}`;
   const actions: ConciergeAction[] = [
     { type: "show_more", label: ctx.s.a_more ?? "" },
     { type: "navigate", label: ctx.s.a_projects ?? "", route: "projects" },
@@ -510,6 +512,62 @@ function recommendFlow(ctx: Ctx, intent: ConciergeIntent, message?: string, reas
     intent: effective,
     state: { intent: effective, shownCampaignIds: [...(ctx.state.shownCampaignIds ?? []), ...shown].slice(-30) },
   });
+}
+
+/**
+ * A wish that points at real things on the site, answered at its own
+ * width: the projects that match it when it names projects; everything in
+ * an area when it names one area; a choice among the areas when it fits
+ * several. Nothing is forced into a single lane.
+ */
+function topicFlow(ctx: Ctx, lead: string | undefined, campaignIds: readonly string[], categoryIds: readonly string[], reasons?: Record<string, string>): ConciergeResponse | null {
+  const intent: ConciergeIntent = ctx.state.intent && ctx.state.intent !== "question" && ctx.state.intent !== "unknown" ? ctx.state.intent : "explore";
+  const shownState = (ids: string[]) => ({ intent, shownCampaignIds: [...(ctx.state.shownCampaignIds ?? []), ...ids].slice(-30) });
+  const cardsFor = (list: CatalogCampaign[]) => list.map((c) => toCard(c, reasons?.[c.id] ?? templateWhy(ctx.s, ctx.locale, c, intent)));
+  const browse: ConciergeAction = { type: "navigate", label: ctx.s.a_projects ?? "", route: "projects" };
+
+  const picked = campaignIds.map((id) => ctx.catalog.campaigns.find((c) => c.id === id)).filter((c): c is CatalogCampaign => Boolean(c)).slice(0, 6);
+  if (picked.length) {
+    return respond(ctx, {
+      message: lead ?? (picked.length === 1 ? ctx.s.s_topic_campaign ?? "" : ctx.s.s_topic_campaigns ?? ""),
+      blocks: [{ type: "campaign_recommendations", campaigns: cardsFor(picked) }],
+      actions: [{ type: "show_more", label: ctx.s.a_more ?? "" }, browse],
+      mode: lead ? "llm" : "deterministic",
+      intent,
+      state: shownState(picked.map((c) => c.id)),
+    });
+  }
+
+  const cats = categoryIds.map((id) => ctx.catalog.categories.find((c) => c.id === id)).filter((c): c is CatalogCategory => Boolean(c)).slice(0, 4);
+  if (cats.length === 1) {
+    const category = cats[0];
+    if (category.slug === "type-zakat" || category.slug === "type-waqf" || category.canDonateDirectly) {
+      const res = selectCategoryFlow(ctx, category.id);
+      return lead ? { ...res, message: lead, mode: "llm" } : res;
+    }
+    const inCategory = ctx.catalog.campaigns.filter((c) => c.categoryIds.includes(category.id));
+    const all = rankCampaigns(inCategory, { intent: ctx.state.intent ?? null, region: null, amountUSD: freshAmount(ctx.state), text: null }, 8).map((r) => r.campaign);
+    if (!all.length) return null;
+    return respond(ctx, {
+      message: lead ?? fill(ctx.s.s_topic_category, { category: category.title }),
+      blocks: [{ type: "campaign_recommendations", campaigns: cardsFor(all) }],
+      actions: [browse],
+      mode: lead ? "llm" : "deterministic",
+      intent,
+      state: shownState(all.map((c) => c.id)),
+    });
+  }
+  if (cats.length > 1) {
+    return respond(ctx, {
+      message: lead ?? ctx.s.s_topic_choose ?? "",
+      blocks: [{ type: "category_options", categories: cats.map(toCategoryCard) }],
+      actions: [browse],
+      mode: lead ? "llm" : "deterministic",
+      intent,
+      state: { intent },
+    });
+  }
+  return null;
 }
 
 function selectCampaignFlow(ctx: Ctx, campaignId: string): ConciergeResponse {
@@ -633,7 +691,15 @@ async function messageFlow(ctx: Ctx, text: string): Promise<ConciergeResponse> {
 
   /* A plan with no destination ("500 over 5 months", "every Friday") is the
      same question: where? The amount and cadence ride along into the cards. */
-  if ((!intent || intent === "explore" || intent === "recurring") && !ctx.state.region && !ctx.state.selectedCampaignId && wantsToDonate(text) && !parsed.region) {
+  /* What the words themselves point at — matching projects, one area in
+     full, or a choice among areas — read from the catalog alone. A wish
+     with a topic is never "bare", whatever else it says. */
+  const topic = matchTopic(ctx.catalog.campaigns, ctx.catalog.categories, text);
+  /* A title word or a theme (≥ 4); summary-only mentions are not a match. */
+  const strongCampaigns = topic.campaigns.filter((s) => s.score >= 4).map((s) => s.campaign.id);
+  const strongCategories = topic.categories.filter((c) => c.strong).map((c) => c.category.id);
+  const hasTopic = strongCampaigns.length > 0 || strongCategories.length > 0;
+  if ((!intent || intent === "explore" || intent === "recurring") && !ctx.state.region && !ctx.state.selectedCampaignId && wantsToDonate(text) && !parsed.region && !hasTopic && bareWish(text)) {
     return categoryFlow(intent === "recurring" ? { ...ctx, state: { ...ctx.state, intent: "recurring" } } : ctx);
   }
 
@@ -650,7 +716,7 @@ async function messageFlow(ctx: Ctx, text: string): Promise<ConciergeResponse> {
     message: text,
     history: ctx.req.history ?? [],
     candidates,
-    categories: ctx.catalog.categories.filter((c) => c.kind === "type"),
+    categories: ctx.catalog.categories.filter((c) => c.projectCount > 0 || c.canDonateDirectly),
     parsed: {
       intent: poolIntent,
       amount: freshAmount(ctx.state),
@@ -779,6 +845,29 @@ async function messageFlow(ctx: Ctx, text: string): Promise<ConciergeResponse> {
     const allowed = new Set(candidates.map((c) => c.id));
     const ids = verdict.recommendedIds.filter((id) => allowed.has(id));
     const effective: ConciergeIntent = intent ?? "explore";
+    const reasons = Object.fromEntries(verdict.reasons.filter((r) => allowed.has(r.id)).map((r) => [r.id, r.reason]));
+    /* The wish was an area, not a project: everything in it, or the choice
+       among the areas the model matched — only those it named, checked
+       against the catalog. */
+    if (ids.length === 0 && verdict.categorySlugs.length) {
+      /* A kind of giving (sadaqah, zakat, waqf, regular) is not an area
+         "about" orphans or water: when the words themselves reach real
+         projects, those win over generic types the model reached for. */
+      const generic = new Set(["type-sadaqah", "type-zakat", "type-waqf", "type-recurring"]);
+      const slugs = strongCampaigns.length ? verdict.categorySlugs.filter((slug) => !generic.has(slug)) : verdict.categorySlugs;
+      const catIds = slugs.map((slug) => ctx.catalog.categories.find((c) => c.slug === slug)?.id).filter((id): id is string => Boolean(id));
+      const res = catIds.length
+        ? topicFlow({ ...ctx, state: { ...ctx.state, intent: effective } }, lead || undefined, [], catIds)
+        : strongCampaigns.length
+          ? topicFlow({ ...ctx, state: { ...ctx.state, intent: effective } }, lead || undefined, strongCampaigns, [], reasons)
+          : null;
+      if (res) return withHuman(res);
+    }
+    /* Several projects fit: all of them, not a cut at three. */
+    if (ids.length > 3) {
+      const res = topicFlow({ ...ctx, state: { ...ctx.state, intent: effective } }, lead || undefined, ids, [], reasons);
+      if (res) return withHuman(res);
+    }
     if (ids.length === 0 && lead) {
       /* The model asked a clarifying question. For a cause the visitor did
          name, the deterministic candidates go under the question so there is
@@ -788,7 +877,6 @@ async function messageFlow(ctx: Ctx, text: string): Promise<ConciergeResponse> {
       const actions = [...(routeAction ? [routeAction] : []), ...chips(ctx.s)];
       return withHuman(respond(ctx, { message: lead, blocks: [], actions, mode: "llm", intent: effective, state: { intent: effective } }));
     }
-    const reasons = Object.fromEntries(verdict.reasons.filter((r) => allowed.has(r.id)).map((r) => [r.id, r.reason]));
     return withHuman(recommendFlow(ctx, effective, lead || undefined, reasons, ids.length ? ids : undefined, budgetStated));
   }
 
@@ -799,6 +887,12 @@ async function messageFlow(ctx: Ctx, text: string): Promise<ConciergeResponse> {
   if (intent === "waqf") return waqfFlow(ctx);
   if (intent === "current_page") return currentPageFlow(ctx);
   const effective: ConciergeIntent = intent ?? ctx.state.intent ?? "explore";
+  const topical = strongCampaigns.length
+    ? topicFlow({ ...ctx, state: { ...ctx.state, intent: effective } }, undefined, strongCampaigns, [])
+    : strongCategories.length
+      ? topicFlow({ ...ctx, state: { ...ctx.state, intent: effective } }, undefined, [], strongCategories.slice(0, 4))
+      : null;
+  if (topical) return topical;
   const res = recommendFlow(ctx, effective, undefined, undefined, undefined, Boolean(parsed.amount));
   if (!intent && !ctx.state.intent) {
     /* Nothing recognisable and no model to read it: the nearest projects,

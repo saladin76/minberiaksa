@@ -142,7 +142,7 @@ export const actionSchema = z.discriminatedUnion("type", [
 export type ConciergeAction = z.infer<typeof actionSchema>;
 
 export const blockSchema = z.discriminatedUnion("type", [
-  z.object({ type: z.literal("campaign_recommendations"), campaigns: z.array(campaignCardSchema).max(4) }),
+  z.object({ type: z.literal("campaign_recommendations"), campaigns: z.array(campaignCardSchema).max(8) }),
   z.object({ type: z.literal("category_options"), categories: z.array(categoryCardSchema).max(12) }),
   /**
    * A message to the team, composed in the panel: the donor picks which
@@ -328,6 +328,12 @@ export const llmVerdictSchema = z.object({
   giftRecipientName: z.string().max(120).nullable(),
   /** Subset of the candidate ids the server offered; anything else is dropped. */
   recommendedIds: z.array(z.string()).max(4),
+  /**
+   * When the wish is a whole area rather than one project ("orphans",
+   * "water", "education", a region): the CATEGORIES slugs that fit, best
+   * first — one means "show everything there", several mean "let them pick".
+   */
+  categorySlugs: z.array(z.string()).max(3),
   /** One factual reason per recommended id, in the visitor's language. (An
       array, not a map: strict JSON schemas take no free-form object keys.) */
   reasons: z.array(z.object({ id: z.string(), reason: z.string().max(220) })).max(4),
@@ -381,6 +387,7 @@ export const LLM_VERDICT_JSON_SCHEMA = {
     region: { type: ["string", "null"] },
     giftRecipientName: { type: ["string", "null"] },
     recommendedIds: { type: "array", items: { type: "string" } },
+    categorySlugs: { type: "array", items: { type: "string" } },
     reasons: {
       type: "array",
       items: { type: "object", additionalProperties: false, properties: { id: { type: "string" }, reason: { type: "string" } }, required: ["id", "reason"] },
@@ -388,5 +395,5 @@ export const LLM_VERDICT_JSON_SCHEMA = {
     message: { type: "string" },
     needsRuling: { type: "boolean" },
   },
-  required: ["mode", "answer", "route", "needsHuman", "supportSubject", "ticketDraft", "ticketAboutDonation", "command", "donationId", "suggestion", "intent", "amount", "currency", "frequency", "region", "giftRecipientName", "recommendedIds", "reasons", "message", "needsRuling"],
+  required: ["mode", "answer", "route", "needsHuman", "supportSubject", "ticketDraft", "ticketAboutDonation", "command", "donationId", "suggestion", "intent", "amount", "currency", "frequency", "region", "giftRecipientName", "recommendedIds", "categorySlugs", "reasons", "message", "needsRuling"],
 } as const;
