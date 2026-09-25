@@ -2261,6 +2261,14 @@
     "ps_PAYMENT_FAILED": "Caj gagal",
     "n_next_charge": "Caj seterusnya {date}",
     "n_pending_transfer": "Anda ada pindahan bank yang belum selesai.",
-    "n_plan_failed": "Caj pelan berkala anda gagal; kemas kini kad dari akaun anda."
+    "n_plan_failed": "Caj pelan berkala anda gagal; kemas kini kad dari akaun anda.",
+    "s_ask_where": "Bagus. Ke mana anda mahu derma anda disalurkan? Pilih bidang dan saya tunjukkan projeknya:",
+    "s_suggest_campaign": "Mahu menyokong “{title}” sekarang?",
+    "s_suggest_recurring": "Mahu jadikan derma anda berkala supaya kesannya berterusan?",
+    "s_suggest_zakat": "Mahu kira dan tunaikan zakat di sini?",
+    "s_suggest_waqf": "Mahu menyumbang satu saham wakaf atas nama anda?",
+    "s_suggest_category": "Mahu saya tunjukkan bidang yang boleh anda derma?",
+    "a_ok": "Baik",
+    "a_no": "Tidak, terima kasih"
   }
 }

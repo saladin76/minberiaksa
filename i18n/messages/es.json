@@ -3296,6 +3296,14 @@
     "ps_PAYMENT_FAILED": "Cobro fallido",
     "n_next_charge": "Próximo cobro {date}",
     "n_pending_transfer": "Tienes una transferencia bancaria sin completar.",
-    "n_plan_failed": "Un cobro de tu plan periódico falló; puedes actualizar la tarjeta desde tu cuenta."
+    "n_plan_failed": "Un cobro de tu plan periódico falló; puedes actualizar la tarjeta desde tu cuenta.",
+    "s_ask_where": "Estupendo. ¿Adónde quieres que vaya tu donación? Elige un área y te muestro sus proyectos:",
+    "s_suggest_campaign": "¿Quieres apoyar «{title}» ahora?",
+    "s_suggest_recurring": "¿Quieres hacer tu donación periódica para que su efecto continúe?",
+    "s_suggest_zakat": "¿Quieres calcular y entregar tu zakat aquí?",
+    "s_suggest_waqf": "¿Quieres aportar una participación de waqf a tu nombre?",
+    "s_suggest_category": "¿Te muestro las áreas a las que puedes donar?",
+    "a_ok": "De acuerdo",
+    "a_no": "No, gracias"
   }
 }

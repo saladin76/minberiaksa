@@ -141,7 +141,14 @@ export type ConciergeAction = z.infer<typeof actionSchema>;
 
 export const blockSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("campaign_recommendations"), campaigns: z.array(campaignCardSchema).max(4) }),
-  z.object({ type: z.literal("category_options"), categories: z.array(categoryCardSchema).max(6) }),
+  z.object({ type: z.literal("category_options"), categories: z.array(categoryCardSchema).max(12) }),
+  /** One concrete next step after an answer, with an OK button — never a dead end. */
+  z.object({
+    type: z.literal("suggestion"),
+    text: z.string(),
+    campaign: campaignCardSchema.nullable(),
+    accept: actionSchema,
+  }),
   z.object({
     type: z.literal("donation_configuration"),
     campaign: campaignCardSchema.nullable(),
@@ -229,6 +236,16 @@ export const llmVerdictSchema = z.object({
   needsHuman: z.boolean(),
   /** With route receipt / thanksCertificate / paymentPending: one of the donor's own donation ids from DONOR, else null. */
   donationId: z.string().nullable(),
+  /**
+   * The one next step offered after an "answer": a project from CANDIDATES,
+   * regular giving, zakat, waqf, or choosing a category. Phrased as a short
+   * question in the visitor's language; the UI adds the OK button.
+   */
+  suggestion: z.object({
+    kind: z.enum(["campaign", "recurring", "zakat", "waqf", "category", "none"]),
+    campaignId: z.string().nullable(),
+    text: z.string().max(240),
+  }),
   intent: z.enum(CONCIERGE_INTENTS),
   amount: z.number().positive().max(1_000_000).nullable(),
   /** ISO 4217 the visitor named, if any. */
@@ -258,6 +275,12 @@ export const LLM_VERDICT_JSON_SCHEMA = {
     route: { type: ["string", "null"], enum: [...VERDICT_ROUTES, null] },
     needsHuman: { type: "boolean" },
     donationId: { type: ["string", "null"] },
+    suggestion: {
+      type: "object",
+      additionalProperties: false,
+      properties: { kind: { type: "string", enum: ["campaign", "recurring", "zakat", "waqf", "category", "none"] }, campaignId: { type: ["string", "null"] }, text: { type: "string" } },
+      required: ["kind", "campaignId", "text"],
+    },
     intent: { type: "string", enum: [...CONCIERGE_INTENTS] },
     amount: { type: ["number", "null"] },
     currency: { type: ["string", "null"] },
@@ -272,5 +295,5 @@ export const LLM_VERDICT_JSON_SCHEMA = {
     message: { type: "string" },
     needsRuling: { type: "boolean" },
   },
-  required: ["mode", "answer", "route", "needsHuman", "donationId", "intent", "amount", "currency", "frequency", "region", "giftRecipientName", "recommendedIds", "reasons", "message", "needsRuling"],
+  required: ["mode", "answer", "route", "needsHuman", "donationId", "suggestion", "intent", "amount", "currency", "frequency", "region", "giftRecipientName", "recommendedIds", "reasons", "message", "needsRuling"],
 } as const;

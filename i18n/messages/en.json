@@ -3367,6 +3367,14 @@
     "ps_PAYMENT_FAILED": "Payment failed",
     "n_next_charge": "Next charge {date}",
     "n_pending_transfer": "You have a bank transfer that is not complete yet.",
-    "n_plan_failed": "A charge on your regular plan failed; you can update the card from your account."
+    "n_plan_failed": "A charge on your regular plan failed; you can update the card from your account.",
+    "s_ask_where": "Wonderful. Where would you like your gift to go? Pick an area and I'll show you its projects:",
+    "s_suggest_campaign": "Would you like to support “{title}” now?",
+    "s_suggest_recurring": "Would you like to make your giving regular so its impact continues?",
+    "s_suggest_zakat": "Would you like to calculate and give your zakat here?",
+    "s_suggest_waqf": "Would you like to contribute a waqf share in your name?",
+    "s_suggest_category": "Shall I show you the areas you can give to?",
+    "a_ok": "OK",
+    "a_no": "No, thanks"
   }
 }

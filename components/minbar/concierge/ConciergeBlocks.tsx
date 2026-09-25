@@ -50,7 +50,45 @@ export function Block(props: BlockProps) {
       return <p className={`cg-notice cg-notice-${block.tone}`}>{block.text}</p>;
     case "donor_summary":
       return <DonorSummary block={block} onAction={props.onAction} />;
+    case "suggestion":
+      return <Suggestion block={block} onAction={props.onAction} busy={props.busy} />;
   }
+}
+
+/** One next step with OK / no thanks; declining simply folds it away. */
+function Suggestion({ block, onAction, busy }: { block: Extract<ConciergeBlock, { type: "suggestion" }>; onAction: BlockProps["onAction"]; busy: boolean }) {
+  const t = useTranslations("Concierge");
+  const [dismissed, setDismissed] = useState(false);
+  const [accepted, setAccepted] = useState(false);
+  if (dismissed) return null;
+  return (
+    <div className="cg-suggest">
+      {block.campaign?.image ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={block.campaign.image} alt="" className="cg-config-img" loading="lazy" />
+      ) : null}
+      <div className="cg-suggest-body">
+        <p className="cg-suggest-text">{block.text}</p>
+        {block.campaign ? <span className="cg-card-meta">{block.campaign.title}{block.campaign.regionLabel ? ` · ${block.campaign.regionLabel}` : ""}</span> : null}
+        <div className="cg-suggest-actions">
+          <button
+            type="button"
+            className="cg-btn cg-btn-primary"
+            disabled={busy || accepted}
+            onClick={() => {
+              setAccepted(true);
+              onAction(block.accept, block.accept.label);
+            }}
+          >
+            {t("a_ok")}
+          </button>
+          <button type="button" className="cg-link" disabled={accepted} onClick={() => setDismissed(true)}>
+            {t("a_no")}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 const FREQ_PLAN_KEYS: Record<"DAILY" | "FRIDAY" | "MONTHLY", string> = { DAILY: "freqDaily", FRIDAY: "freqFriday", MONTHLY: "freqMonthly" };

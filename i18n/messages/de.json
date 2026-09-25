@@ -3296,6 +3296,14 @@
     "ps_PAYMENT_FAILED": "Abbuchung fehlgeschlagen",
     "n_next_charge": "Nächste Abbuchung {date}",
     "n_pending_transfer": "Sie haben eine noch nicht abgeschlossene Überweisung.",
-    "n_plan_failed": "Eine Abbuchung Ihres Plans ist fehlgeschlagen; Sie können die Karte in Ihrem Konto aktualisieren."
+    "n_plan_failed": "Eine Abbuchung Ihres Plans ist fehlgeschlagen; Sie können die Karte in Ihrem Konto aktualisieren.",
+    "s_ask_where": "Wunderbar. Wohin soll Ihre Spende gehen? Wählen Sie einen Bereich, ich zeige Ihnen die Projekte:",
+    "s_suggest_campaign": "Möchten Sie „{title}“ jetzt unterstützen?",
+    "s_suggest_recurring": "Möchten Sie regelmäßig spenden, damit die Wirkung anhält?",
+    "s_suggest_zakat": "Möchten Sie Ihre Zakat hier berechnen und entrichten?",
+    "s_suggest_waqf": "Möchten Sie einen Waqf-Anteil auf Ihren Namen beitragen?",
+    "s_suggest_category": "Soll ich Ihnen die Bereiche zeigen, für die Sie spenden können?",
+    "a_ok": "Okay",
+    "a_no": "Nein, danke"
   }
 }

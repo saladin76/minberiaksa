@@ -2261,6 +2261,14 @@
     "ps_PAYMENT_FAILED": "Trækning mislykkedes",
     "n_next_charge": "Næste trækning {date}",
     "n_pending_transfer": "Du har en bankoverførsel, der ikke er færdig.",
-    "n_plan_failed": "En trækning på din plan mislykkedes; du kan opdatere kortet fra din konto."
+    "n_plan_failed": "En trækning på din plan mislykkedes; du kan opdatere kortet fra din konto.",
+    "s_ask_where": "Fint. Hvor skal din gave gå hen? Vælg et område, så viser jeg projekterne:",
+    "s_suggest_campaign": "Vil du støtte »{title}« nu?",
+    "s_suggest_recurring": "Vil du give regelmæssigt, så effekten fortsætter?",
+    "s_suggest_zakat": "Vil du beregne og give din zakat her?",
+    "s_suggest_waqf": "Vil du bidrage med en waqf-andel i dit navn?",
+    "s_suggest_category": "Skal jeg vise områderne, du kan give til?",
+    "a_ok": "Okay",
+    "a_no": "Nej tak"
   }
 }

@@ -3367,6 +3367,14 @@
     "ps_PAYMENT_FAILED": "Prélèvement échoué",
     "n_next_charge": "Prochain prélèvement le {date}",
     "n_pending_transfer": "Vous avez un virement bancaire non finalisé.",
-    "n_plan_failed": "Un prélèvement de votre plan a échoué ; vous pouvez mettre à jour la carte depuis votre compte."
+    "n_plan_failed": "Un prélèvement de votre plan a échoué ; vous pouvez mettre à jour la carte depuis votre compte.",
+    "s_ask_where": "Très bien. Où souhaitez-vous que votre don aille ? Choisissez un domaine et je vous montre ses projets :",
+    "s_suggest_campaign": "Souhaitez-vous soutenir « {title} » maintenant ?",
+    "s_suggest_recurring": "Souhaitez-vous rendre votre don régulier pour que son effet dure ?",
+    "s_suggest_zakat": "Souhaitez-vous calculer et verser votre zakat ici ?",
+    "s_suggest_waqf": "Souhaitez-vous contribuer une part de waqf à votre nom ?",
+    "s_suggest_category": "Voulez-vous voir les domaines auxquels vous pouvez donner ?",
+    "a_ok": "D'accord",
+    "a_no": "Non, merci"
   }
 }

@@ -3295,6 +3295,14 @@
     "ps_PAYMENT_FAILED": "Penarikan gagal",
     "n_next_charge": "Penarikan berikutnya {date}",
     "n_pending_transfer": "Anda punya transfer bank yang belum selesai.",
-    "n_plan_failed": "Penarikan paket rutin Anda gagal; perbarui kartu dari akun Anda."
+    "n_plan_failed": "Penarikan paket rutin Anda gagal; perbarui kartu dari akun Anda.",
+    "s_ask_where": "Bagus. Ke mana Anda ingin donasi Anda disalurkan? Pilih bidang dan saya tampilkan proyeknya:",
+    "s_suggest_campaign": "Ingin mendukung “{title}” sekarang?",
+    "s_suggest_recurring": "Ingin menjadikan donasi Anda rutin agar dampaknya berlanjut?",
+    "s_suggest_zakat": "Ingin menghitung dan menunaikan zakat di sini?",
+    "s_suggest_waqf": "Ingin berkontribusi satu saham wakaf atas nama Anda?",
+    "s_suggest_category": "Mau saya tampilkan bidang yang bisa Anda donasikan?",
+    "a_ok": "Baik",
+    "a_no": "Tidak, terima kasih"
   }
 }

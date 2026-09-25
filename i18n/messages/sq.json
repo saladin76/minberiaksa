@@ -2264,6 +2264,14 @@
     "ps_PAYMENT_FAILED": "Pagesa dështoi",
     "n_next_charge": "Pagesa e radhës {date}",
     "n_pending_transfer": "Ke një transfertë bankare të papërfunduar.",
-    "n_plan_failed": "Një pagesë e planit tënd dështoi; mund ta përditësosh kartën nga llogaria."
+    "n_plan_failed": "Një pagesë e planit tënd dështoi; mund ta përditësosh kartën nga llogaria.",
+    "s_ask_where": "Shkëlqyeshëm. Ku dëshironi të shkojë dhurimi juaj? Zgjidhni një fushë dhe ju tregoj projektet e saj:",
+    "s_suggest_campaign": "Dëshironi të mbështesni “{title}” tani?",
+    "s_suggest_recurring": "Dëshironi ta bëni dhurimin të rregullt që ndikimi të vazhdojë?",
+    "s_suggest_zakat": "Dëshironi ta llogaritni dhe ta jepni zekatin këtu?",
+    "s_suggest_waqf": "Dëshironi të kontribuoni një aksion vakëfi në emrin tuaj?",
+    "s_suggest_category": "T'ju tregoj fushat ku mund të dhuroni?",
+    "a_ok": "Në rregull",
+    "a_no": "Jo, faleminderit"
   }
 }

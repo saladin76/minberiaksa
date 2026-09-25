@@ -2264,6 +2264,14 @@
     "ps_PAYMENT_FAILED": "Dragning misslyckades",
     "n_next_charge": "Nästa dragning {date}",
     "n_pending_transfer": "Du har en banköverföring som inte är klar.",
-    "n_plan_failed": "En dragning på din plan misslyckades; du kan uppdatera kortet i ditt konto."
+    "n_plan_failed": "En dragning på din plan misslyckades; du kan uppdatera kortet i ditt konto.",
+    "s_ask_where": "Fint. Vart vill du att din gåva ska gå? Välj ett område så visar jag dess projekt:",
+    "s_suggest_campaign": "Vill du stödja ”{title}” nu?",
+    "s_suggest_recurring": "Vill du ge regelbundet så att effekten fortsätter?",
+    "s_suggest_zakat": "Vill du räkna ut och ge din zakat här?",
+    "s_suggest_waqf": "Vill du bidra med en waqf-andel i ditt namn?",
+    "s_suggest_category": "Ska jag visa områdena du kan ge till?",
+    "a_ok": "Okej",
+    "a_no": "Nej tack"
   }
 }

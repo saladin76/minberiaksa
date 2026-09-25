@@ -4,7 +4,7 @@ import { messagesFor } from "@/i18n/locale-messages";
 import { convertAmountInCurrencyToUsd, normalizeDonationCurrencyCode } from "@/lib/exchange/convert-amount-in-currency-to-usd";
 import { DEFAULT_SUGGESTED_DONATION_AMOUNTS } from "@/lib/campaign/suggested-donations";
 import { loadCatalog, type ConciergeCatalog } from "./catalog";
-import { mentionsCurrentPage, parseMessage } from "./intent";
+import { mentionsCurrentPage, parseMessage, wantsToDonate } from "./intent";
 import { askModel } from "./llm";
 import { loadKnowledge } from "./knowledge";
 import { loadDonorContext, type DonorContext } from "./donor";
@@ -215,6 +215,55 @@ function donorActions(ctx: Ctx, text: string, existing: ConciergeAction[]): Conc
   return out;
 }
 
+/**
+ * "Where would you like it to go?" — the areas of the site as cards, for a
+ * visitor who wants to give but has not said what for. Choosing one lists
+ * its projects (`selectCategoryFlow`).
+ */
+function categoryFlow(ctx: Ctx, message?: string): ConciergeResponse {
+  const usable = ctx.catalog.categories.filter((c) => c.projectCount > 0 || c.canDonateDirectly);
+  const types = usable.filter((c) => c.kind === "type").sort((a, b) => b.projectCount - a.projectCount);
+  const regions = usable.filter((c) => c.kind === "region").sort((a, b) => b.projectCount - a.projectCount);
+  const cards = [...types.slice(0, 4), ...regions.slice(0, 8)].slice(0, 12).map(toCategoryCard);
+  return respond(ctx, {
+    message: message ?? ctx.s.s_ask_where ?? "",
+    blocks: [{ type: "category_options", categories: cards }],
+    actions: [{ type: "navigate", label: ctx.s.a_projects ?? "", route: "projects" }],
+    mode: message ? "llm" : "deterministic",
+    intent: "explore",
+    state: { intent: "explore" },
+  });
+}
+
+type SuggestionKind = "campaign" | "recurring" | "zakat" | "waqf" | "category" | "none";
+
+/**
+ * The one next step under a plain answer, with its OK action. The text is
+ * the model's when it gave one, else the template; the target is always a
+ * real thing on the site — a catalog campaign or one of the guided flows.
+ */
+function suggestionBlock(ctx: Ctx, kind: SuggestionKind, campaignId: string | null, text: string | null, candidates: readonly CatalogCampaign[]): ConciergeBlock | null {
+  if (kind === "none") return null;
+  if (kind === "campaign") {
+    const campaign = (campaignId && candidates.find((c) => c.id === campaignId)) || candidates[0] || null;
+    if (!campaign) return null;
+    return { type: "suggestion", text: text || fill(ctx.s.s_suggest_campaign, { title: campaign.title }), campaign: toCard(campaign, null), accept: { type: "select_campaign", label: ctx.s.a_ok ?? "OK", campaignId: campaign.id } };
+  }
+  const intent: ConciergeIntent = kind === "recurring" ? "recurring" : kind === "zakat" ? "zakat" : kind === "waqf" ? "waqf" : "explore";
+  const template = kind === "recurring" ? ctx.s.s_suggest_recurring : kind === "zakat" ? ctx.s.s_suggest_zakat : kind === "waqf" ? ctx.s.s_suggest_waqf : ctx.s.s_suggest_category;
+  return { type: "suggestion", text: text || template || "", campaign: null, accept: { type: "intent", label: ctx.s.a_ok ?? "OK", intent } };
+}
+
+/** The suggestion that fits an intent when the model gave none. */
+function fallbackSuggestion(ctx: Ctx, intent: ConciergeIntent | null, candidates: readonly CatalogCampaign[]): ConciergeBlock | null {
+  if (intent === "zakat") return suggestionBlock(ctx, "zakat", null, null, candidates);
+  if (intent === "waqf") return suggestionBlock(ctx, "waqf", null, null, candidates);
+  if (intent === "recurring") return suggestionBlock(ctx, "recurring", null, null, candidates);
+  if (intent === "account") return suggestionBlock(ctx, ctx.donor && ctx.donor.plans.length === 0 ? "recurring" : "campaign", null, null, candidates);
+  if (candidates.length && (intent === "sadaqah_jariyah" || intent === "relief" || intent === "gift" || intent === "most_needed" || ctx.state.region)) return suggestionBlock(ctx, "campaign", null, null, candidates);
+  return suggestionBlock(ctx, "category", null, null, candidates);
+}
+
 /** The donor's own giving, or the way to it when they are not signed in. */
 function accountFlow(ctx: Ctx, message?: string): ConciergeResponse {
   if (!ctx.donor) {
@@ -242,6 +291,8 @@ function accountFlow(ctx: Ctx, message?: string): ConciergeResponse {
       ];
   const actions: ConciergeAction[] = [{ type: "navigate", label: ctx.s.a_account ?? "", route: "account" }];
   if (empty) actions.push(...chips(ctx.s).slice(0, 3));
+  const next = fallbackSuggestion(ctx, "account", rankCampaigns(ctx.catalog.campaigns, { intent: null, region: null, amountUSD: null, text: null }, 1).map((r) => r.campaign));
+  if (next) blocks.push(next);
   return respond(ctx, { message: message ?? (empty ? ctx.s.s_account_empty : ctx.s.s_account) ?? "", blocks, actions, mode: "deterministic", intent: "account", state: { intent: "account" } });
 }
 
@@ -428,6 +479,12 @@ async function messageFlow(ctx: Ctx, text: string): Promise<ConciergeResponse> {
     return selectCampaignFlow(ctx, ctx.state.selectedCampaignId);
   }
 
+  /* "I want to donate" with nothing to go on: ask where, with the areas as
+     cards. A place, cause, dedication or "this project" already answers it. */
+  if ((!intent || intent === "explore") && !ctx.state.region && !ctx.state.selectedCampaignId && wantsToDonate(text) && !parsed.region) {
+    return categoryFlow(ctx);
+  }
+
   const poolIntent = intent ?? ctx.state.intent ?? null;
   const candidates = rankCampaigns(
     ctx.catalog.campaigns,
@@ -506,7 +563,31 @@ async function messageFlow(ctx: Ctx, text: string): Promise<ConciergeResponse> {
       if (verdict.needsHuman) actions.push(contact);
       if (!routeAction || routeAction.route !== "projects") actions.push({ type: "navigate", label: ctx.s.a_projects ?? "", route: "projects" });
       const effective: ConciergeIntent = intent ?? "question";
-      return respond(ctx, { message: answer || verdict.message, blocks: [], actions, mode: "llm", intent: effective, state: { intent: effective === "question" ? ctx.state.intent : effective } });
+      /* Never a dead end: one next step, the model's if it fits a real
+         candidate, else the one that fits the intent. */
+      /* A generic "shall I show you the areas?" is overridden when the
+         message itself named something closer: a place → that place's top
+         project; waqf, zakat or regular giving → that flow. */
+      let kind: SuggestionKind = verdict.suggestion.kind;
+      let kindCampaignId: string | null = verdict.suggestion.campaignId;
+      let kindText: string | null = verdict.suggestion.text.trim() || null;
+      if (kind === "campaign" && !candidates.some((c) => c.id === kindCampaignId)) kind = "category";
+      if (kind === "category" || (kind === "none" && !verdict.needsHuman)) {
+        const topic = intent ?? parsed.intent ?? null;
+        const place = parsed.region ?? ctx.state.region ?? null;
+        if (topic === "waqf" || topic === "zakat" || topic === "recurring") { kind = topic; kindCampaignId = null; kindText = null; }
+        else if (place && candidates.some((c) => c.regionSlug === `region-${place}` || c.categorySlugs.includes(`region-${place}`))) { kind = "campaign"; kindCampaignId = candidates.find((c) => c.regionSlug === `region-${place}` || c.categorySlugs.includes(`region-${place}`))?.id ?? null; kindText = null; }
+        else if (kind === "none") kind = "category";
+      }
+      const suggested = verdict.needsHuman && kind === "none" ? null : suggestionBlock(ctx, kind, kindCampaignId, kindText, candidates) ?? fallbackSuggestion(ctx, intent ?? ctx.state.intent ?? null, candidates);
+      const blocks: ConciergeBlock[] = [];
+      if (intent === "account" && ctx.donor) {
+        /* Their own numbers under an account answer, so the reply is checkable. */
+        const summary = accountFlow(ctx).blocks.find((b) => b.type === "donor_summary");
+        if (summary) blocks.push(summary);
+      }
+      if (suggested) blocks.push(suggested);
+      return respond(ctx, { message: answer || verdict.message, blocks, actions, mode: "llm", intent: effective, state: { intent: effective === "question" ? ctx.state.intent : effective } });
     }
 
     const lead = [answer, verdict.message.trim()].filter(Boolean).join("\n\n");
@@ -571,6 +652,7 @@ export async function runConcierge(req: ConciergeRequest, opts: { userId?: strin
         if (req.step.intent === "zakat") return zakatFlow(ctx);
         if (req.step.intent === "waqf") return waqfFlow(ctx);
         if (req.step.intent === "current_page") return currentPageFlow(ctx);
+        if (req.step.intent === "explore") return categoryFlow({ ...ctx, state: { ...ctx.state, amountUSD: null, amountTurn: null, frequency: null, region: null, giftRecipientName: null, selectedCampaignId: null, shownCampaignIds: [] } });
         /* A chip is a fresh direction: what was said for the previous one —
            amount, cadence, place, dedication, chosen project — is let go. */
         return recommendFlow(

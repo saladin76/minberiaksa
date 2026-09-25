@@ -2261,6 +2261,14 @@
     "ps_PAYMENT_FAILED": "扣款失败",
     "n_next_charge": "下次扣款 {date}",
     "n_pending_transfer": "您有一笔尚未完成的银行转账。",
-    "n_plan_failed": "您的定期计划扣款失败，可在账户中更新银行卡。"
+    "n_plan_failed": "您的定期计划扣款失败，可在账户中更新银行卡。",
+    "s_ask_where": "好的。您希望捐款用于哪个领域？选择一个，我会展示其中的项目：",
+    "s_suggest_campaign": "现在支持“{title}”吗？",
+    "s_suggest_recurring": "要把捐赠设为定期，让影响持续吗？",
+    "s_suggest_zakat": "要在这里计算并缴纳天课吗？",
+    "s_suggest_waqf": "要以您的名义认捐一份瓦克夫吗？",
+    "s_suggest_category": "要我展示可以捐赠的领域吗？",
+    "a_ok": "好的",
+    "a_no": "不用了，谢谢"
   }
 }

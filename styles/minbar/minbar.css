@@ -1817,6 +1817,11 @@
 .mia-scope .cg-entry-text span { font-size: 12px; color: var(--muted); line-height: 1.5; }
 .mia-scope .cg-entry-compact { margin-top: 0; padding: 10px 12px; }
 
+.mia-scope .cg-suggest { display: flex; align-items: flex-start; gap: 12px; padding: 12px 14px; border-radius: 12px; background: var(--sand); border: 1px dashed rgba(211,154,39,.6); }
+.mia-scope .cg-suggest-body { display: grid; gap: 6px; min-width: 0; flex: 1 1 auto; }
+.mia-scope .cg-suggest-text { margin: 0; font-size: 13.5px; font-weight: 800; line-height: 1.6; color: var(--deep); }
+.mia-scope .cg-suggest-actions { display: flex; align-items: center; gap: 12px; margin-top: 2px; }
+
 .mia-scope .cg-donor-totals { display: grid; gap: 2px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
 .mia-scope .cg-donor-totals b { font-size: 22px; font-weight: 900; color: var(--deep); }
 .mia-scope .cg-donor-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; padding: 8px 0; border-bottom: 1px solid rgba(16,33,43,.06); }

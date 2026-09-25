@@ -2264,6 +2264,14 @@
     "ps_PAYMENT_FAILED": "Addebito non riuscito",
     "n_next_charge": "Prossimo addebito {date}",
     "n_pending_transfer": "Hai un bonifico non ancora completato.",
-    "n_plan_failed": "Un addebito del tuo piano non è riuscito; puoi aggiornare la carta dal tuo account."
+    "n_plan_failed": "Un addebito del tuo piano non è riuscito; puoi aggiornare la carta dal tuo account.",
+    "s_ask_where": "Ottimo. Dove vuoi che vada la tua donazione? Scegli un ambito e ti mostro i suoi progetti:",
+    "s_suggest_campaign": "Vuoi sostenere “{title}” adesso?",
+    "s_suggest_recurring": "Vuoi rendere la tua donazione regolare perché l'effetto continui?",
+    "s_suggest_zakat": "Vuoi calcolare e versare la tua zakat qui?",
+    "s_suggest_waqf": "Vuoi contribuire con una quota di waqf a tuo nome?",
+    "s_suggest_category": "Ti mostro gli ambiti a cui puoi donare?",
+    "a_ok": "Va bene",
+    "a_no": "No, grazie"
   }
 }

@@ -2261,6 +2261,14 @@
     "ps_PAYMENT_FAILED": "Trekk mislyktes",
     "n_next_charge": "Neste trekk {date}",
     "n_pending_transfer": "Du har en bankoverføring som ikke er fullført.",
-    "n_plan_failed": "Et trekk på planen din mislyktes; du kan oppdatere kortet fra kontoen din."
+    "n_plan_failed": "Et trekk på planen din mislyktes; du kan oppdatere kortet fra kontoen din.",
+    "s_ask_where": "Flott. Hvor vil du at gaven din skal gå? Velg et område, så viser jeg prosjektene:",
+    "s_suggest_campaign": "Vil du støtte «{title}» nå?",
+    "s_suggest_recurring": "Vil du gi regelmessig slik at effekten fortsetter?",
+    "s_suggest_zakat": "Vil du regne ut og gi zakat her?",
+    "s_suggest_waqf": "Vil du bidra med en waqf-andel i ditt navn?",
+    "s_suggest_category": "Skal jeg vise områdene du kan gi til?",
+    "a_ok": "Greit",
+    "a_no": "Nei takk"
   }
 }

@@ -2261,6 +2261,14 @@
     "ps_PAYMENT_FAILED": "決済失敗",
     "n_next_charge": "次回の決済 {date}",
     "n_pending_transfer": "未完了の銀行振込があります。",
-    "n_plan_failed": "定期プランの決済に失敗しました。アカウントからカードを更新できます。"
+    "n_plan_failed": "定期プランの決済に失敗しました。アカウントからカードを更新できます。",
+    "s_ask_where": "ありがとうございます。寄付先はどちらにしますか？分野を選ぶと、そのプロジェクトをご案内します：",
+    "s_suggest_campaign": "今「{title}」を支援しますか？",
+    "s_suggest_recurring": "効果が続くよう、定期的な寄付にしますか？",
+    "s_suggest_zakat": "ここでザカートを計算して納めますか？",
+    "s_suggest_waqf": "あなたの名前でワクフ1口に参加しますか？",
+    "s_suggest_category": "寄付できる分野をご案内しましょうか？",
+    "a_ok": "はい",
+    "a_no": "いいえ、結構です"
   }
 }

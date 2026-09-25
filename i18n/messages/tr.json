@@ -3367,6 +3367,14 @@
     "ps_PAYMENT_FAILED": "Çekim başarısız",
     "n_next_charge": "Sonraki çekim {date}",
     "n_pending_transfer": "Henüz tamamlanmamış bir banka havaleniz var.",
-    "n_plan_failed": "Düzenli planınızda bir çekim başarısız oldu; kartınızı hesabınızdan güncelleyebilirsiniz."
+    "n_plan_failed": "Düzenli planınızda bir çekim başarısız oldu; kartınızı hesabınızdan güncelleyebilirsiniz.",
+    "s_ask_where": "Harika. Bağışınızın nereye gitmesini istersiniz? Bir alan seçin, projelerini göstereyim:",
+    "s_suggest_campaign": "“{title}” projesini şimdi desteklemek ister misiniz?",
+    "s_suggest_recurring": "Etkisi sürsün diye bağışınızı düzenli hale getirmek ister misiniz?",
+    "s_suggest_zakat": "Zekâtınızı burada hesaplayıp vermek ister misiniz?",
+    "s_suggest_waqf": "Adınıza bir vakıf hissesiyle katkıda bulunmak ister misiniz?",
+    "s_suggest_category": "Bağış yapabileceğiniz alanları göstereyim mi?",
+    "a_ok": "Tamam",
+    "a_no": "Hayır, teşekkürler"
   }
 }

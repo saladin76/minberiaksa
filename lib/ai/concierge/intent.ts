@@ -160,6 +160,11 @@ export function parseGiftName(text: string): string | null {
   return name.length >= 2 ? name.slice(0, 80) : null;
 }
 
+/** "I want to donate" with no cause, place or type named — the visitor needs to be asked where. */
+export function wantsToDonate(text: string): boolean {
+  return /أتبرع|اتبرع|تبرع|أتصدق|اتصدق|صدق[ةه]|donat|give\b|giving|contribut|bağış|don(ner|\b)|spende|donar|donaci|donasi|derma|sedekah|عطیہ|寄付|捐|दान/i.test(text);
+}
+
 /** Whether the message points at "this" project — only meaningful on a project page. */
 export function mentionsCurrentPage(text: string): boolean {
   return /\b(this|these|bu|ce|cette|dieses|este|esta|ini)\b|(^|\s)(ده|دي|هذا|هذه|هاد|هاي)(\s|$|[؟?!,.،])|یہ/i.test(text);
