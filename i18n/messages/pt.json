@@ -3304,6 +3304,18 @@
     "s_suggest_waqf": "Quer contribuir com uma quota de waqf em seu nome?",
     "s_suggest_category": "Quer que lhe mostre as áreas para as quais pode doar?",
     "a_ok": "Está bem",
-    "a_no": "Não, obrigado"
+    "a_no": "Não, obrigado",
+    "s_support_intro": "Lamento, {name}. A sua última doação foi de {amount} em {date}, estado: {state}. Diga-me a que doação se refere e o que aconteceu; envio à equipa, que responderá em breve por e-mail.",
+    "s_support_intro_guest": "Lamento. Diga-me a que doação se refere (data e valor) e o que aconteceu, deixe o seu nome e e-mail; envio à equipa, que responderá em breve.",
+    "sp_title": "Enviar à equipa",
+    "sp_which": "A que doação se refere?",
+    "sp_none": "Não é sobre uma doação específica",
+    "sp_reason": "Em resumo, o que aconteceu?",
+    "sp_name": "O seu nome",
+    "sp_email": "O seu e-mail",
+    "sp_phone": "Número de WhatsApp (opcional)",
+    "sp_send": "Enviar à equipa",
+    "sp_sent": "A sua mensagem foi enviada à equipa; responderão em breve por e-mail.",
+    "sp_error": "Não foi possível enviar agora. Pode contactar-nos pela página de contacto."
   }
 }

@@ -3375,6 +3375,18 @@
     "s_suggest_waqf": "Souhaitez-vous contribuer une part de waqf à votre nom ?",
     "s_suggest_category": "Voulez-vous voir les domaines auxquels vous pouvez donner ?",
     "a_ok": "D'accord",
-    "a_no": "Non, merci"
+    "a_no": "Non, merci",
+    "s_support_intro": "Je suis désolé, {name}. Votre dernier don était de {amount} le {date}, état : {state}. Dites-moi de quel don il s'agit et ce qui s'est passé ; je le transmets à l'équipe, qui vous répondra par e-mail rapidement.",
+    "s_support_intro_guest": "Je suis désolé. Dites-moi de quel don il s'agit (date et montant) et ce qui s'est passé, laissez votre nom et votre e-mail ; je le transmets à l'équipe, qui vous répondra rapidement.",
+    "sp_title": "Envoyer à l'équipe",
+    "sp_which": "De quel don s'agit-il ?",
+    "sp_none": "Aucun don en particulier",
+    "sp_reason": "En bref, que s'est-il passé ?",
+    "sp_name": "Votre nom",
+    "sp_email": "Votre e-mail",
+    "sp_phone": "Numéro WhatsApp (facultatif)",
+    "sp_send": "Envoyer à l'équipe",
+    "sp_sent": "Votre message a été envoyé à l'équipe ; elle vous répondra par e-mail rapidement.",
+    "sp_error": "Envoi impossible pour le moment. Vous pouvez nous joindre via la page de contact."
   }
 }

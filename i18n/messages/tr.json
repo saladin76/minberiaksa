@@ -3375,6 +3375,18 @@
     "s_suggest_waqf": "Adınıza bir vakıf hissesiyle katkıda bulunmak ister misiniz?",
     "s_suggest_category": "Bağış yapabileceğiniz alanları göstereyim mi?",
     "a_ok": "Tamam",
-    "a_no": "Hayır, teşekkürler"
+    "a_no": "Hayır, teşekkürler",
+    "s_support_intro": "Bunun için üzgünüm {name}. Son bağışınız {date} tarihinde {amount} tutarında ve durumu: {state}. Hangi bağışı kastettiğinizi ve ne olduğunu söyleyin; ekibe iletirim, e-postanıza kısa sürede yanıt verirler.",
+    "s_support_intro_guest": "Bunun için üzgünüm. Hangi bağışı kastettiğinizi (tarih ve tutar) ve ne olduğunu yazın, adınızı ve e-postanızı bırakın; ekibe iletirim, kısa sürede yanıt verirler.",
+    "sp_title": "Ekibe gönder",
+    "sp_which": "Hangi bağışla ilgili?",
+    "sp_none": "Belirli bir bağışla ilgili değil",
+    "sp_reason": "Kısaca ne oldu?",
+    "sp_name": "Adınız",
+    "sp_email": "E-postanız",
+    "sp_phone": "WhatsApp numarası (isteğe bağlı)",
+    "sp_send": "Ekibe gönder",
+    "sp_sent": "Mesajınız ekibe iletildi; kısa sürede e-posta ile yanıt verecekler.",
+    "sp_error": "Şu anda gönderilemedi. İletişim sayfasından bize ulaşabilirsiniz."
   }
 }

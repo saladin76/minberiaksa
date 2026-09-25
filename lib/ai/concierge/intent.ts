@@ -91,7 +91,9 @@ export function parseFrequency(text: string): ConciergeFrequency | null {
 }
 
 const INTENT_WORDS: Array<[RegExp, ConciergeIntent]> = [
-  /* The donor's own giving comes first: "my zakat receipt" is about the receipt. */
+  /* A problem comes before everything: "refund my zakat donation" is a refund. */
+  [/استرداد|استرد|أسترد|استرجاع|استرجع|أسترجع|ارجاع|إرجاع|رجّع|رجع\s*(لي|فلوسي|الفلوس|المبلغ)|فلوسي|عايز\s*فلوسي|خصم\s*مرتين|اتخصم\s*مرتين|مرتين|شكوى|شكوي|مشكل[ةه]|غلط|خطأ|لم\s*يصل|ما\s*وصل|موصلش|ماوصلش|refund|money\s*back|charged\s*twice|double\s*charg|complain|complaint|problem|issue\s*with|didn'?t\s*(receive|get|arrive)|not\s*received|wrong\s*amount|mistake|iade|para(mı|yı)\s*geri|iki\s*kez|şikayet|sorun|hata|rembours|plainte|problème|erreur|rückerstatt|beschwerde|problem|fehler|reembolso|queja|problema|pengembalian|keluhan|masalah|رقم\s*واپس|شکایت|مسئلہ/i, "support"],
+  /* The donor's own giving comes next: "my zakat receipt" is about the receipt. */
   [/تبرعي|تبرعاتي|تبرعى|اشتراكي|خطتي|إيصالي|ايصالي|إيصال\s*التبرع|شهادتي|شهادة\s*الشكر|الخصم\s*(القادم|الجاي)|حسابي|وصل\s*تبرعي|وصلت\s*فلوسي|my\s*(donation|donations|gift|plan|subscription|receipt|certificate|account|payment|contribution)s?|next\s*(charge|payment|billing)|did\s*(my|the)\s*(donation|payment)|bağışım|bağışlarım|planım|makbuz|sertifikam|hesabım|ma\s*donation|mes\s*dons|mon\s*reçu|mon\s*compte|meine\s*spende|mein\s*konto|mi\s*donación|mis\s*donaciones|mi\s*cuenta|donasi\s*saya|akun\s*saya|میرا\s*عطیہ|میری\s*رسید|میرا\s*اکاؤنٹ/i, "account"],
   [/زكا[ةه]|zak[aâ]t|zek[aâ]t|zakah|zakaat|زکو?[ةۃہ]/i, "zakat"],
   [/وقف|waqf|vakıf|vakif|wakaf|endow/i, "waqf"],

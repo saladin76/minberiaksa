@@ -2269,6 +2269,18 @@
     "s_suggest_waqf": "Vil du bidrage med en waqf-andel i dit navn?",
     "s_suggest_category": "Skal jeg vise områderne, du kan give til?",
     "a_ok": "Okay",
-    "a_no": "Nej tak"
+    "a_no": "Nej tak",
+    "s_support_intro": "Det beklager jeg, {name}. Din seneste gave var {amount} den {date}, status: {state}. Fortæl mig, hvilken gave du mener, og hvad der skete; jeg sender det til teamet, som snart svarer på e-mail.",
+    "s_support_intro_guest": "Det beklager jeg. Fortæl mig, hvilken gave du mener (dato og beløb), og hvad der skete, og efterlad navn og e-mail; jeg sender det til teamet, som snart svarer.",
+    "sp_title": "Send til teamet",
+    "sp_which": "Hvilken gave drejer det sig om?",
+    "sp_none": "Ingen bestemt gave",
+    "sp_reason": "Kort: hvad skete der?",
+    "sp_name": "Dit navn",
+    "sp_email": "Din e-mail",
+    "sp_phone": "WhatsApp-nummer (valgfrit)",
+    "sp_send": "Send til teamet",
+    "sp_sent": "Din besked er sendt til teamet; de svarer snart på e-mail.",
+    "sp_error": "Kunne ikke sendes lige nu. Du kan nå os via kontaktsiden."
   }
 }

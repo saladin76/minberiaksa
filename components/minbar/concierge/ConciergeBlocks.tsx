@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { useMinbarMoney } from "@/hooks/useMinbarMoney";
+import { getConciergeSessionId, reportConciergeEvents } from "@/lib/ai/concierge/client";
 import type { CampaignCard, ConciergeAction, ConciergeBlock } from "@/lib/ai/concierge/schema";
 import type { CartFreqKey, CartGiftDetails } from "@/lib/minbar/cart";
 import type { AddInput, WaqfAddInput } from "./useConcierge";
@@ -52,7 +53,123 @@ export function Block(props: BlockProps) {
       return <DonorSummary block={block} onAction={props.onAction} />;
     case "suggestion":
       return <Suggestion block={block} onAction={props.onAction} busy={props.busy} />;
+    case "support_ticket":
+      return <SupportTicket block={block} onAction={props.onAction} />;
   }
+}
+
+/**
+ * The message to the team, composed in the panel. Signed-in donors pick the
+ * donation it is about; visitors also leave a name and an email. Posts to
+ * the support endpoint, which files it into the inbox tagged as coming from
+ * the assistant.
+ */
+function SupportTicket({ block, onAction }: { block: Extract<ConciergeBlock, { type: "support_ticket" }>; onAction: BlockProps["onAction"] }) {
+  const t = useTranslations("Concierge");
+  const locale = useLocale();
+  const [donationId, setDonationId] = useState<string>(block.presetDonationId ?? "");
+  const [reason, setReason] = useState("");
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
+  const money = (amount: number, currency: string) => {
+    try {
+      return new Intl.NumberFormat(undefined, { style: "currency", currency, maximumFractionDigits: 0 }).format(amount);
+    } catch {
+      return `${amount} ${currency}`;
+    }
+  };
+  const ready = reason.trim().length >= 3 && (block.signedIn || (name.trim().length > 0 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())));
+
+  const submit = async () => {
+    if (!ready || status === "sending") return;
+    setStatus("sending");
+    try {
+      const transcript = Array.from(document.querySelectorAll<HTMLElement>(".cg-turn"))
+        .slice(-6)
+        .map((el) => ({ role: (el.classList.contains("cg-turn-user") ? "user" : "assistant") as "user" | "assistant", text: (el.querySelector(".cg-bubble")?.textContent ?? "").slice(0, 600) }))
+        .filter((x) => x.text);
+      const res = await fetch("/api/ai/donation-concierge/support", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sessionId: getConciergeSessionId(),
+          locale,
+          subject: block.subject,
+          donationId: donationId || null,
+          reason: reason.trim(),
+          ...(block.signedIn ? {} : { guestName: name.trim(), guestEmail: email.trim() }),
+          ...(phone.trim() ? { guestPhone: phone.trim() } : {}),
+          transcript,
+        }),
+      });
+      if (!res.ok) throw new Error(String(res.status));
+      setStatus("sent");
+      reportConciergeEvents(locale, [{ event: "support_ticket_sent", intent: "support" }]);
+    } catch {
+      setStatus("error");
+    }
+  };
+
+  if (status === "sent") {
+    return (
+      <div className="cg-confirm" role="status">
+        <span className="cg-confirm-check" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M20 6 9 17l-5-5" />
+          </svg>
+        </span>
+        <div>
+          <b>{t("sp_title")}</b>
+          <span>{t("sp_sent")}</span>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="cg-config cg-support">
+      <b className="cg-card-title">{t("sp_title")}</b>
+      {block.donations.length ? (
+        <>
+          <span className="cg-label">{t("sp_which")}</span>
+          <div className="cg-support-list">
+            {block.donations.map((d) => (
+              <label key={d.id} className="cg-support-row" data-on={donationId === d.id ? "1" : ""}>
+                <input type="radio" name="cg-support-donation" checked={donationId === d.id} onChange={() => setDonationId(d.id)} />
+                <span>
+                  <b><span dir="ltr">{money(d.amount, d.currency)}</span> · <span dir="ltr">{d.date}</span></b>
+                  <span>{d.items.join("، ")} · {t(`st_${d.state}`)}</span>
+                </span>
+              </label>
+            ))}
+            <label className="cg-support-row" data-on={donationId === "" ? "1" : ""}>
+              <input type="radio" name="cg-support-donation" checked={donationId === ""} onChange={() => setDonationId("")} />
+              <span><b>{t("sp_none")}</b></span>
+            </label>
+          </div>
+        </>
+      ) : null}
+      <textarea value={reason} onChange={(e) => setReason(e.target.value)} placeholder={t("sp_reason")} aria-label={t("sp_reason")} className="cg-input cg-textarea" rows={3} maxLength={2000} disabled={status === "sending"} />
+      {!block.signedIn ? (
+        <div className="cg-gift">
+          <input value={name} onChange={(e) => setName(e.target.value)} placeholder={t("sp_name")} aria-label={t("sp_name")} className="cg-input" disabled={status === "sending"} />
+          <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder={t("sp_email")} aria-label={t("sp_email")} className="cg-input" inputMode="email" dir="ltr" disabled={status === "sending"} />
+        </div>
+      ) : null}
+      <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder={t("sp_phone")} aria-label={t("sp_phone")} className="cg-input" inputMode="tel" dir="ltr" disabled={status === "sending"} />
+      {status === "error" ? (
+        <p className="cg-notice cg-notice-warning">
+          {t("sp_error")}{" "}
+          <button type="button" className="cg-link" onClick={() => onAction({ type: "navigate", label: t("a_contact"), route: "contact" })}>{t("a_contact")}</button>
+        </p>
+      ) : null}
+      <button type="button" className="cg-btn cg-btn-primary cg-btn-full" disabled={!ready || status === "sending"} onClick={submit}>
+        {t("sp_send")}
+      </button>
+    </div>
+  );
 }
 
 /** One next step with OK / no thanks; declining simply folds it away. */

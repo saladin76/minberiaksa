@@ -3375,6 +3375,18 @@
     "s_suggest_waqf": "Would you like to contribute a waqf share in your name?",
     "s_suggest_category": "Shall I show you the areas you can give to?",
     "a_ok": "OK",
-    "a_no": "No, thanks"
+    "a_no": "No, thanks",
+    "s_support_intro": "I'm sorry about that, {name}. Your latest donation was {amount} on {date} and its state is: {state}. Tell me which donation you mean and what happened, and I'll send it to the team to reply to you by email soon.",
+    "s_support_intro_guest": "I'm sorry about that. Tell me which donation you mean (its date and amount) and what happened, leave your name and email, and I'll send it to the team to reply soon.",
+    "sp_title": "Send this to the team",
+    "sp_which": "Which donation is it about?",
+    "sp_none": "Not about a specific donation",
+    "sp_reason": "Briefly, what happened?",
+    "sp_name": "Your name",
+    "sp_email": "Your email",
+    "sp_phone": "WhatsApp number (optional)",
+    "sp_send": "Send to the team",
+    "sp_sent": "Your message has been sent to the team; they will reply to you by email soon.",
+    "sp_error": "It couldn't be sent right now. You can reach us from the contact page."
   }
 }

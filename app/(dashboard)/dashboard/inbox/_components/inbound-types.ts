@@ -10,6 +10,10 @@ export interface InboundMessage {
   userId: string | null;
   guestName: string | null;
   guestEmail: string | null;
+  /** "AI_CHAT" when the donation concierge filed it; null for the contact form. */
+  source?: string | null;
+  /** The donation the sender picked in the concierge, if any. */
+  donationId?: string | null;
   createdAt: string;
 
   /** Triage state — see lib/messages/inbox-status.ts. Null means "not yet". */

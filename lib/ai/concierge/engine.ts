@@ -264,6 +264,47 @@ function fallbackSuggestion(ctx: Ctx, intent: ConciergeIntent | null, candidates
   return suggestionBlock(ctx, "category", null, null, candidates);
 }
 
+type SupportSubject = "COMPLAINT" | "DONATION_ISSUE" | "CAMPAIGN_SUPPORT" | "PARTNERSHIP" | "VOLUNTEERING" | "GENERAL";
+
+/** The ticket form: the donor's recent donations to pick from, and a subject. */
+function supportBlock(ctx: Ctx, subject: SupportSubject, presetDonationId: string | null): ConciergeBlock {
+  return {
+    type: "support_ticket",
+    subject,
+    signedIn: Boolean(ctx.donor),
+    donations: (ctx.donor?.recent ?? []).map((d) => ({ id: d.id, date: d.date, amount: d.amount, currency: d.currency, state: d.state, items: d.items })),
+    presetDonationId: presetDonationId && ctx.donor?.donationIds.includes(presetDonationId) ? presetDonationId : null,
+  };
+}
+
+/**
+ * A problem the team must handle. The reply is about *their* giving when
+ * they are signed in — which donation, what state it is in — and the form
+ * under it files the message to the inbox; the contact page stays as the
+ * other door.
+ */
+function supportFlow(ctx: Ctx, message?: string, subject: SupportSubject = "COMPLAINT", presetDonationId: string | null = null): ConciergeResponse {
+  const d = ctx.donor;
+  let text = message;
+  if (!text) {
+    if (d && d.recent.length) {
+      const latest = d.recent[0];
+      const state = ctx.s[`st_${latest.state}`] ?? latest.state;
+      text = fill(ctx.s.s_support_intro, { name: d.firstName, amount: `${latest.amount} ${latest.currency}`, date: latest.date, state });
+    } else {
+      text = ctx.s.s_support_intro_guest ?? "";
+    }
+  }
+  return respond(ctx, {
+    message: text,
+    blocks: [supportBlock(ctx, subject, presetDonationId)],
+    actions: [{ type: "navigate", label: ctx.s.a_contact ?? "", route: "contact" }],
+    mode: message ? "llm" : "deterministic",
+    intent: "support",
+    state: { intent: "support" },
+  });
+}
+
 /** The donor's own giving, or the way to it when they are not signed in. */
 function accountFlow(ctx: Ctx, message?: string): ConciergeResponse {
   if (!ctx.donor) {
@@ -545,8 +586,19 @@ async function messageFlow(ctx: Ctx, text: string): Promise<ConciergeResponse> {
         routeAction = { type: "navigate", label: knowledge.routeLabels[verdict.route], route: verdict.route, track: verdict.route === "zakatCalculator" ? "zakat_started" : verdict.route === "waqf" ? "waqf_started" : undefined };
       }
     }
-    if (intent === "account" && !ctx.donor) return accountFlow(ctx, verdict.answer.trim() || undefined);
     const answer = verdict.answer.trim();
+
+    /* A problem for the team: the model's customised reply, then the ticket
+       form with the donation it named already selected. Checked before the
+       account sign-in answer, so a visitor's refund request gets the form
+       too. No cross-sell here. */
+    if (verdict.supportSubject || intent === "support" || parsed.intent === "support" || (verdict.needsHuman && intent === "account")) {
+      const subject: SupportSubject = verdict.supportSubject ?? (intent === "account" ? "DONATION_ISSUE" : "COMPLAINT");
+      const res = supportFlow(ctx, answer || undefined, subject, ownDonation);
+      const extra = intent === "account" || parsed.intent === "account" ? donorActions(ctx, text, res.actions) : [];
+      return { ...res, actions: [...extra, ...res.actions] };
+    }
+    if (intent === "account" && !ctx.donor) return accountFlow(ctx, answer || undefined);
 
     if (verdict.needsRuling) {
       const base = zakatFlow(ctx, answer || ctx.s.s_ruling);
@@ -613,6 +665,7 @@ async function messageFlow(ctx: Ctx, text: string): Promise<ConciergeResponse> {
   }
 
   /* Model off or unusable: the deterministic reading answers. */
+  if (intent === "support") return supportFlow(ctx);
   if (intent === "account") return accountFlow(ctx);
   if (intent === "zakat") return zakatFlow(ctx);
   if (intent === "waqf") return waqfFlow(ctx);
@@ -648,6 +701,7 @@ export async function runConcierge(req: ConciergeRequest, opts: { userId?: strin
       case "open":
         return welcome(ctx);
       case "intent":
+        if (req.step.intent === "support") return supportFlow(ctx);
         if (req.step.intent === "account") return accountFlow(ctx);
         if (req.step.intent === "zakat") return zakatFlow(ctx);
         if (req.step.intent === "waqf") return waqfFlow(ctx);

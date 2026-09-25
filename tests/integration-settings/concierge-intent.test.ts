@@ -46,6 +46,10 @@ test("intents", () => {
   assert.equal(parseIntent("Zekâtımı vermek istiyorum"), "zakat");
   assert.equal(parseIntent("مش عارف أتبرع فين"), "explore");
   assert.equal(parseIntent("hello"), null);
+  /* A problem beats everything else in the sentence. */
+  assert.equal(parseIntent("عايز فلوسي ترجع من تبرع الزكاة"), "support");
+  assert.equal(parseIntent("I was charged twice for my donation"), "support");
+  assert.equal(parseIntent("Bağışım için iade istiyorum"), "support");
   /* The donor's own giving beats the cause words inside the sentence. */
   assert.equal(parseIntent("فين إيصال تبرعي للزكاة؟"), "account");
   assert.equal(parseIntent("did my donation go through?"), "account");

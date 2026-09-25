@@ -203,6 +203,11 @@ model Message {
   /// number than the one on their profile. Before this column existed the contact form smuggled
   /// it into `body` as a trailing "Phone: …" line, which the inbox still parses for old rows.
   contactPhone String?
+  /// Where the message came from: null for the contact form, "AI_CHAT" when the
+  /// donation concierge filed it on the visitor's behalf (the inbox tags these).
+  source       String?
+  /// The donation the message is about, when the sender picked one in the concierge.
+  donationId   String?         @db.ObjectId
   createdAt    DateTime        @default(now())
 
   // Inbox triage state. All of these are null on arrival: unread and unanswered.

@@ -2269,6 +2269,18 @@
     "s_suggest_waqf": "Mahu menyumbang satu saham wakaf atas nama anda?",
     "s_suggest_category": "Mahu saya tunjukkan bidang yang boleh anda derma?",
     "a_ok": "Baik",
-    "a_no": "Tidak, terima kasih"
+    "a_no": "Tidak, terima kasih",
+    "s_support_intro": "Maaf tentang itu, {name}. Derma terakhir anda {amount} pada {date}, status: {state}. Beritahu derma mana yang anda maksudkan dan apa yang berlaku; saya hantar kepada pasukan, mereka akan membalas ke e-mel anda tidak lama lagi.",
+    "s_support_intro_guest": "Maaf tentang itu. Beritahu derma mana yang anda maksudkan (tarikh dan jumlah) dan apa yang berlaku, tinggalkan nama dan e-mel; saya hantar kepada pasukan, mereka akan membalas tidak lama lagi.",
+    "sp_title": "Hantar kepada pasukan",
+    "sp_which": "Tentang derma yang mana?",
+    "sp_none": "Bukan tentang derma tertentu",
+    "sp_reason": "Ringkasnya, apa yang berlaku?",
+    "sp_name": "Nama anda",
+    "sp_email": "E-mel anda",
+    "sp_phone": "Nombor WhatsApp (pilihan)",
+    "sp_send": "Hantar kepada pasukan",
+    "sp_sent": "Mesej anda telah dihantar kepada pasukan; mereka akan membalas melalui e-mel tidak lama lagi.",
+    "sp_error": "Tidak dapat dihantar sekarang. Anda boleh hubungi kami dari halaman hubungi."
   }
 }

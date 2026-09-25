@@ -23,6 +23,8 @@ export const CONCIERGE_INTENTS = [
   "current_page",
   /** The signed-in donor's own donations, plans, receipts and certificates. */
   "account",
+  /** A problem: refund, double charge, missing receipt, complaint — the team is brought in. */
+  "support",
   "question",
   "unknown",
 ] as const;
@@ -142,6 +144,20 @@ export type ConciergeAction = z.infer<typeof actionSchema>;
 export const blockSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("campaign_recommendations"), campaigns: z.array(campaignCardSchema).max(4) }),
   z.object({ type: z.literal("category_options"), categories: z.array(categoryCardSchema).max(12) }),
+  /**
+   * A message to the team, composed in the panel: the donor picks which
+   * donation it is about (if any), writes what happened, and — as a visitor —
+   * how to be reached. Sent through `/api/ai/donation-concierge/support`.
+   */
+  z.object({
+    type: z.literal("support_ticket"),
+    subject: z.enum(["COMPLAINT", "DONATION_ISSUE", "CAMPAIGN_SUPPORT", "PARTNERSHIP", "VOLUNTEERING", "GENERAL"]),
+    signedIn: z.boolean(),
+    donations: z
+      .array(z.object({ id: z.string(), date: z.string(), amount: z.number(), currency: z.string(), state: z.string(), items: z.array(z.string()) }))
+      .max(8),
+    presetDonationId: z.string().nullable(),
+  }),
   /** One concrete next step after an answer, with an OK button — never a dead end. */
   z.object({
     type: z.literal("suggestion"),
@@ -234,6 +250,12 @@ export const llmVerdictSchema = z.object({
   route: z.enum(VERDICT_ROUTES).nullable(),
   /** True when the visitor needs a person: a complaint, a payment problem, a question the knowledge does not cover. */
   needsHuman: z.boolean(),
+  /**
+   * When the visitor has a problem the team must handle (refund, double
+   * charge, missing receipt, complaint, partnership…): the inbox subject to
+   * file it under. The panel then offers the ticket form. Null otherwise.
+   */
+  supportSubject: z.enum(["COMPLAINT", "DONATION_ISSUE", "CAMPAIGN_SUPPORT", "PARTNERSHIP", "VOLUNTEERING", "GENERAL"]).nullable(),
   /** With route receipt / thanksCertificate / paymentPending: one of the donor's own donation ids from DONOR, else null. */
   donationId: z.string().nullable(),
   /**
@@ -274,6 +296,7 @@ export const LLM_VERDICT_JSON_SCHEMA = {
     answer: { type: "string" },
     route: { type: ["string", "null"], enum: [...VERDICT_ROUTES, null] },
     needsHuman: { type: "boolean" },
+    supportSubject: { type: ["string", "null"], enum: ["COMPLAINT", "DONATION_ISSUE", "CAMPAIGN_SUPPORT", "PARTNERSHIP", "VOLUNTEERING", "GENERAL", null] },
     donationId: { type: ["string", "null"] },
     suggestion: {
       type: "object",
@@ -295,5 +318,5 @@ export const LLM_VERDICT_JSON_SCHEMA = {
     message: { type: "string" },
     needsRuling: { type: "boolean" },
   },
-  required: ["mode", "answer", "route", "needsHuman", "donationId", "suggestion", "intent", "amount", "currency", "frequency", "region", "giftRecipientName", "recommendedIds", "reasons", "message", "needsRuling"],
+  required: ["mode", "answer", "route", "needsHuman", "supportSubject", "donationId", "suggestion", "intent", "amount", "currency", "frequency", "region", "giftRecipientName", "recommendedIds", "reasons", "message", "needsRuling"],
 } as const;

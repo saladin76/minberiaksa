@@ -120,6 +120,11 @@ export function InboundMessageCard({
           <span className="inline-flex max-w-full items-center truncate rounded-full bg-brand-50 px-2 py-0.5 text-[10px] font-medium text-brand-700">
             {subjectLabel(message.subject, locale)}
           </span>
+          {message.source === "AI_CHAT" && (
+            <span className="inline-flex shrink-0 items-center rounded-full border border-violet-200 bg-violet-50 px-2 py-0.5 text-[10px] font-medium text-violet-700" title="أُرسلت من محادثة مساعد العطاء">
+              مع محادثة الذكاء الاصطناعي
+            </span>
+          )}
           {/* A reachable number is a reason to open this one first — it means a reply can go out
               on WhatsApp rather than into an inbox that may never be checked. */}
           {message.phone && (

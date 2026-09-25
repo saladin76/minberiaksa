@@ -2272,6 +2272,18 @@
     "s_suggest_waqf": "Vuoi contribuire con una quota di waqf a tuo nome?",
     "s_suggest_category": "Ti mostro gli ambiti a cui puoi donare?",
     "a_ok": "Va bene",
-    "a_no": "No, grazie"
+    "a_no": "No, grazie",
+    "s_support_intro": "Mi dispiace, {name}. La tua ultima donazione è stata di {amount} il {date}, stato: {state}. Dimmi a quale donazione ti riferisci e cosa è successo; lo inoltro al team, che ti risponderà presto via email.",
+    "s_support_intro_guest": "Mi dispiace. Dimmi a quale donazione ti riferisci (data e importo) e cosa è successo, lascia nome ed email; lo inoltro al team, che risponderà presto.",
+    "sp_title": "Invia al team",
+    "sp_which": "A quale donazione si riferisce?",
+    "sp_none": "Non riguarda una donazione specifica",
+    "sp_reason": "In breve, cosa è successo?",
+    "sp_name": "Il tuo nome",
+    "sp_email": "La tua email",
+    "sp_phone": "Numero WhatsApp (facoltativo)",
+    "sp_send": "Invia al team",
+    "sp_sent": "Il tuo messaggio è stato inviato al team; ti risponderanno presto via email.",
+    "sp_error": "Impossibile inviare ora. Puoi contattarci dalla pagina contatti."
   }
 }

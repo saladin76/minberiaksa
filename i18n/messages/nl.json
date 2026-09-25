@@ -2272,6 +2272,18 @@
     "s_suggest_waqf": "Wilt u een waqf-aandeel op uw naam bijdragen?",
     "s_suggest_category": "Zal ik de gebieden tonen waaraan u kunt geven?",
     "a_ok": "Oké",
-    "a_no": "Nee, bedankt"
+    "a_no": "Nee, bedankt",
+    "s_support_intro": "Dat spijt me, {name}. Uw laatste gift was {amount} op {date}, status: {state}. Vertel me welke gift u bedoelt en wat er gebeurde; ik stuur het naar het team, dat u snel per e-mail antwoordt.",
+    "s_support_intro_guest": "Dat spijt me. Vertel me welke gift u bedoelt (datum en bedrag) en wat er gebeurde, laat uw naam en e-mail achter; ik stuur het naar het team, dat snel antwoordt.",
+    "sp_title": "Naar het team sturen",
+    "sp_which": "Over welke gift gaat het?",
+    "sp_none": "Niet over een specifieke gift",
+    "sp_reason": "Kort: wat is er gebeurd?",
+    "sp_name": "Uw naam",
+    "sp_email": "Uw e-mail",
+    "sp_phone": "WhatsApp-nummer (optioneel)",
+    "sp_send": "Naar het team sturen",
+    "sp_sent": "Uw bericht is naar het team gestuurd; zij antwoorden u snel per e-mail.",
+    "sp_error": "Versturen lukt nu niet. U kunt ons bereiken via de contactpagina."
   }
 }

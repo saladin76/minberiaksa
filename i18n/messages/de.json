@@ -3304,6 +3304,18 @@
     "s_suggest_waqf": "Möchten Sie einen Waqf-Anteil auf Ihren Namen beitragen?",
     "s_suggest_category": "Soll ich Ihnen die Bereiche zeigen, für die Sie spenden können?",
     "a_ok": "Okay",
-    "a_no": "Nein, danke"
+    "a_no": "Nein, danke",
+    "s_support_intro": "Das tut mir leid, {name}. Ihre letzte Spende war {amount} am {date}, Status: {state}. Sagen Sie mir, welche Spende Sie meinen und was passiert ist; ich leite es ans Team weiter, das Ihnen bald per E-Mail antwortet.",
+    "s_support_intro_guest": "Das tut mir leid. Sagen Sie mir, welche Spende Sie meinen (Datum und Betrag) und was passiert ist, und hinterlassen Sie Name und E-Mail; ich leite es ans Team weiter, das bald antwortet.",
+    "sp_title": "An das Team senden",
+    "sp_which": "Um welche Spende geht es?",
+    "sp_none": "Keine bestimmte Spende",
+    "sp_reason": "Kurz: Was ist passiert?",
+    "sp_name": "Ihr Name",
+    "sp_email": "Ihre E-Mail",
+    "sp_phone": "WhatsApp-Nummer (optional)",
+    "sp_send": "An das Team senden",
+    "sp_sent": "Ihre Nachricht wurde ans Team gesendet; es antwortet Ihnen bald per E-Mail.",
+    "sp_error": "Senden derzeit nicht möglich. Sie erreichen uns über die Kontaktseite."
   }
 }

@@ -29,6 +29,8 @@ export const CONCIERGE_EVENTS = [
   "model_fallback",
   /* Written by the order API when a concierge-marked basket becomes an order. */
   "order_created",
+  /* A message to the team was filed from the panel (support endpoint). */
+  "support_ticket_sent",
 ] as const;
 export type ConciergeEventName = (typeof CONCIERGE_EVENTS)[number];
 

@@ -2272,6 +2272,18 @@
     "s_suggest_waqf": "Dëshironi të kontribuoni një aksion vakëfi në emrin tuaj?",
     "s_suggest_category": "T'ju tregoj fushat ku mund të dhuroni?",
     "a_ok": "Në rregull",
-    "a_no": "Jo, faleminderit"
+    "a_no": "Jo, faleminderit",
+    "s_support_intro": "Më vjen keq, {name}. Dhurimi juaj i fundit ishte {amount} më {date}, gjendja: {state}. Më thoni për cilin dhurim bëhet fjalë dhe çfarë ndodhi; ia dërgoj ekipit, që do t'ju përgjigjet së shpejti me email.",
+    "s_support_intro_guest": "Më vjen keq. Më thoni për cilin dhurim bëhet fjalë (data dhe shuma) dhe çfarë ndodhi, lini emrin dhe email-in; ia dërgoj ekipit, që do të përgjigjet së shpejti.",
+    "sp_title": "Dërgo te ekipi",
+    "sp_which": "Për cilin dhurim bëhet fjalë?",
+    "sp_none": "Jo për një dhurim të caktuar",
+    "sp_reason": "Shkurt, çfarë ndodhi?",
+    "sp_name": "Emri juaj",
+    "sp_email": "Email-i juaj",
+    "sp_phone": "Numri WhatsApp (opsional)",
+    "sp_send": "Dërgo te ekipi",
+    "sp_sent": "Mesazhi juaj iu dërgua ekipit; do t'ju përgjigjen së shpejti me email.",
+    "sp_error": "Nuk u dërgua dot tani. Mund të na kontaktoni nga faqja e kontaktit."
   }
 }
