@@ -1817,6 +1817,11 @@
 .mia-scope .cg-entry-text span { font-size: 12px; color: var(--muted); line-height: 1.5; }
 .mia-scope .cg-entry-compact { margin-top: 0; padding: 10px 12px; }
 
+/* The homepage quick-donate bar is fixed to the bottom edge above the sheet;
+   it disappears entirely while the concierge is open (flag set by the launcher). */
+html.cg-open .mia-scope .mia-qb-sec { display: none; }
+html.cg-open .mia-scope:has(.mia-qb-sec) { padding-bottom: 0; }
+
 @media (prefers-reduced-motion: reduce) {
   .mia-scope .cg-launcher, .mia-scope .cg-sheet, .mia-scope .cg-backdrop, .mia-scope .cg-confirm, .mia-scope .cg-dot { animation: none; transition: none; }
 }

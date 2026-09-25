@@ -46,6 +46,13 @@ export default function ConciergeLauncher() {
     if (el) el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
   }, [turns, loading, open]);
 
+  /* While the sheet is open the homepage's fixed quick-donate bar, which sits
+     above it in z-order, is hidden through this flag (see minbar.css). */
+  useEffect(() => {
+    document.documentElement.classList.toggle("cg-open", open);
+    return () => document.documentElement.classList.remove("cg-open");
+  }, [open]);
+
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
