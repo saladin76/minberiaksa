@@ -2284,6 +2284,8 @@
     "sp_phone": "Numero WhatsApp (facoltativo)",
     "sp_send": "Invia al team",
     "sp_sent": "Il tuo messaggio è stato inviato al team; ti risponderanno presto via email.",
-    "sp_error": "Impossibile inviare ora. Puoi contattarci dalla pagina contatti."
+    "sp_error": "Impossibile inviare ora. Puoi contattarci dalla pagina contatti.",
+    "s_ask_where_plan": "Ottimo — {amount} {frequency}. Dove vuoi che vada? Scegli un ambito e ti mostro i progetti, con questo valore preimpostato:",
+    "s_ask_where_amount": "Ottimo — {amount}. Dove vuoi che vada? Scegli un ambito e ti mostro i progetti:"
   }
 }

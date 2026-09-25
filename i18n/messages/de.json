@@ -3316,6 +3316,8 @@
     "sp_phone": "WhatsApp-Nummer (optional)",
     "sp_send": "An das Team senden",
     "sp_sent": "Ihre Nachricht wurde ans Team gesendet; es antwortet Ihnen bald per E-Mail.",
-    "sp_error": "Senden derzeit nicht möglich. Sie erreichen uns über die Kontaktseite."
+    "sp_error": "Senden derzeit nicht möglich. Sie erreichen uns über die Kontaktseite.",
+    "s_ask_where_plan": "Wunderbar — {amount} {frequency}. Wohin soll es gehen? Wählen Sie einen Bereich, ich zeige die Projekte, mit diesem Wert als Vorgabe:",
+    "s_ask_where_amount": "Wunderbar — {amount}. Wohin soll es gehen? Wählen Sie einen Bereich, ich zeige die Projekte:"
   }
 }

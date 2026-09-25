@@ -2281,6 +2281,8 @@
     "sp_phone": "WhatsApp-nummer (valgfritt)",
     "sp_send": "Send til teamet",
     "sp_sent": "Meldingen din er sendt til teamet; de svarer snart på e-post.",
-    "sp_error": "Kunne ikke sende nå. Du når oss via kontaktsiden."
+    "sp_error": "Kunne ikke sende nå. Du når oss via kontaktsiden.",
+    "s_ask_where_plan": "Flott — {amount} {frequency}. Hvor skal det gå? Velg et område, så viser jeg prosjektene med den verdien som standard:",
+    "s_ask_where_amount": "Flott — {amount}. Hvor skal det gå? Velg et område, så viser jeg prosjektene:"
   }
 }

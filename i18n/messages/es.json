@@ -3316,6 +3316,8 @@
     "sp_phone": "Número de WhatsApp (opcional)",
     "sp_send": "Enviar al equipo",
     "sp_sent": "Tu mensaje se envió al equipo; te responderán pronto por correo.",
-    "sp_error": "No se pudo enviar ahora. Puedes escribirnos desde la página de contacto."
+    "sp_error": "No se pudo enviar ahora. Puedes escribirnos desde la página de contacto.",
+    "s_ask_where_plan": "Estupendo — {amount} {frequency}. ¿Adónde quieres que vaya? Elige un área y te muestro sus proyectos, con ese valor por defecto:",
+    "s_ask_where_amount": "Estupendo — {amount}. ¿Adónde quieres que vaya? Elige un área y te muestro sus proyectos:"
   }
 }

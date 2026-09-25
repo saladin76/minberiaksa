@@ -78,9 +78,10 @@ export function parseAmount(text: string): { amount: number | null; currency: st
 }
 
 const FREQ_WORDS: Array<[RegExp, ConciergeFrequency]> = [
-  [/كل\s*جمع[ةه]|يوم\s*الجمع[ةه]|جمع[ةه]|friday|cuma|vendredi|freitag|viernes|jumat|jumaat|جمعہ/i, "friday"],
+  /* "Weekly" is served by the Friday plan — the site's weekly cadence. */
+  [/كل\s*جمع[ةه]|يوم\s*الجمع[ةه]|جمع[ةه]|كل\s*أسبوع|كل\s*اسبوع|أسبوعي|اسبوعي|أسبوعيًا|اسبوعيا|friday|weekly|every\s*week|each\s*week|per\s*week|a\s*week|cuma|haftalık|her\s*hafta|vendredi|hebdo|chaque\s*semaine|freitag|wöchentlich|jede\s*woche|viernes|semanal|cada\s*semana|jumat|jumaat|mingguan|setiap\s*minggu|جمعہ|ہفتہ\s*وار|ہر\s*ہفتے/i, "friday"],
   [/كل\s*يوم|يومي|daily|every\s*day|each\s*day|her\s*gün|günlük|quotidien|chaque\s*jour|täglich|diario|setiap\s*hari|روزانہ/i, "daily"],
-  [/كل\s*شهر|شهري|شهريا|شهريًا|monthly|every\s*month|each\s*month|aylık|her\s*ay|mensuel|chaque\s*mois|monatlich|mensual|bulanan|ماہانہ/i, "monthly"],
+  [/كل\s*شهر|شهري|شهريا|شهريًا|بالشهر|في\s*الشهر|monthly|every\s*month|each\s*month|per\s*month|a\s*month|aylık|her\s*ay|ayda|mensuel|chaque\s*mois|par\s*mois|monatlich|pro\s*monat|mensual|al\s*mes|bulanan|per\s*bulan|ماہانہ|ہر\s*مہینے/i, "monthly"],
   [/مر[ةه]\s*واحد[ةه]|لمر[ةه]|one[-\s]?time|once\b|tek\s*sefer|bir\s*kez|une\s*fois|einmal|una\s*vez|sekali|ایک\s*بار/i, "once"],
 ];
 
@@ -172,9 +173,48 @@ export function mentionsCurrentPage(text: string): boolean {
   return /\b(this|these|bu|ce|cette|dieses|este|esta|ini)\b|(^|\s)(ده|دي|هذا|هذه|هاد|هاي)(\s|$|[؟?!,.،])|یہ/i.test(text);
 }
 
+/**
+ * "500 over 5 months" / "على 6 شهور" / "6 ay boyunca": a total spread over a
+ * span becomes a per-instalment amount at the span's cadence — months →
+ * monthly, weeks → every Friday, days → daily. Null when no span is named.
+ */
+export function parseSpread(text: string): { periods: number; frequency: ConciergeFrequency } | null {
+  const t = normalizeDigits(text);
+  const m = t.match(
+    /(?:over|for|across|during|within|in|خلال|على|علي|لمدة|لمدّة|مدة|مدّة|طول|boyunca|süresince|sur|pendant|durant|en|über|innerhalb|für|durante|en|selama|dalam|کے\s*دوران|میں)?\s*(\d{1,3})\s*(months?|mos?\b|شهر|شهور|أشهر|اشهر|شهرين|ay\b|aylık|mois|monat|monate|mes|meses|bulan|مہینے|مہینوں|weeks?|wks?\b|أسبوع|أسابيع|اسبوع|اسابيع|أسبوعين|اسبوعين|hafta|semaines?|wochen?|semanas?|minggu|ہفتے|ہفتوں|days?|يوم|أيام|ايام|gün|jours?|tage?|días?|dias?|hari|دن|دنوں)/i
+  );
+  if (!m) {
+    /* Dual forms carry their own number. */
+    if (/شهرين/.test(t)) return { periods: 2, frequency: "monthly" };
+    if (/أسبوعين|اسبوعين/.test(t)) return { periods: 2, frequency: "friday" };
+    return null;
+  }
+  const periods = Number(m[1]);
+  if (!(periods >= 2 && periods <= 120)) return null;
+  const unit = m[2].toLowerCase();
+  if (/^(month|mo|شهر|شهور|أشهر|اشهر|ay|aylık|mois|monat|mes|bulan|مہین)/.test(unit)) return { periods, frequency: "monthly" };
+  if (/^(week|wk|أسبوع|اسبوع|أسابيع|اسابيع|hafta|semaine|woche|semana|minggu|ہفت)/.test(unit)) return { periods, frequency: "friday" };
+  if (/^(day|يوم|أيام|ايام|gün|jour|tag|día|dia|hari|دن)/.test(unit)) return { periods, frequency: "daily" };
+  return null;
+}
+
 export function parseMessage(text: string): ParsedIntent {
-  const { amount, currency } = parseAmount(text);
-  const frequency = parseFrequency(text);
+  const parsedAmount = parseAmount(text);
+  let amount = parsedAmount.amount;
+  const { currency } = parsedAmount;
+  let frequency = parseFrequency(text);
+  /* A total over a span: the instalment is total ÷ periods, at the span's
+     cadence. The span's number itself must not be read as the amount. */
+  const spread = parseSpread(text);
+  if (spread && amount !== null) {
+    if (amount === spread.periods) {
+      /* The only number in the text was the span ("donate over 5 months"). */
+      amount = null;
+    } else {
+      amount = Math.round((amount / spread.periods) * 100) / 100;
+    }
+    frequency = frequency && frequency !== "once" ? frequency : spread.frequency;
+  }
   const intent = parseIntent(text);
   return {
     intent,

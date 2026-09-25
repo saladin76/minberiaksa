@@ -3387,6 +3387,8 @@
     "sp_phone": "Numéro WhatsApp (facultatif)",
     "sp_send": "Envoyer à l'équipe",
     "sp_sent": "Votre message a été envoyé à l'équipe ; elle vous répondra par e-mail rapidement.",
-    "sp_error": "Envoi impossible pour le moment. Vous pouvez nous joindre via la page de contact."
+    "sp_error": "Envoi impossible pour le moment. Vous pouvez nous joindre via la page de contact.",
+    "s_ask_where_plan": "Très bien — {amount} {frequency}. Où souhaitez-vous que cela aille ? Choisissez un domaine et je vous montre ses projets, avec cette valeur par défaut :",
+    "s_ask_where_amount": "Très bien — {amount}. Où souhaitez-vous que cela aille ? Choisissez un domaine et je vous montre ses projets :"
   }
 }

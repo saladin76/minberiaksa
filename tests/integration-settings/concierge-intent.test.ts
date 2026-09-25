@@ -73,6 +73,27 @@ test("gift names and rulings", () => {
   assert.equal(needsRuling("عايز أطلع زكاة مالي"), false);
 });
 
+test("a total over a span becomes an instalment at the span's cadence", () => {
+  let p = parseMessage("معايا 500 دولار عايز اتبرع بيهم على 5 شهور");
+  assert.equal(p.amount, 100);
+  assert.equal(p.frequency, "monthly");
+  p = parseMessage("I have $500 and want to give it over 5 months");
+  assert.equal(p.amount, 100);
+  assert.equal(p.frequency, "monthly");
+  p = parseMessage("200 dollars weekly");
+  assert.equal(p.amount, 200);
+  assert.equal(p.frequency, "friday");
+  p = parseMessage("1200 TL 6 ay boyunca");
+  assert.equal(p.amount, 200);
+  assert.equal(p.frequency, "monthly");
+  p = parseMessage("عايز أتبرع شهرين");
+  assert.equal(p.amount, null, "the span alone is not an amount");
+  assert.equal(p.frequency, "monthly");
+  p = parseMessage("عايز اتبرع");
+  assert.equal(p.amount, null);
+  assert.equal(p.frequency, null);
+});
+
 test("parseMessage combines the pieces", () => {
   const p = parseMessage("عايز أتبرع بـ500 دولار للمشروع ده كل شهر");
   assert.equal(p.amount, 500);

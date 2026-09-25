@@ -3315,6 +3315,8 @@
     "sp_phone": "Nomor WhatsApp (opsional)",
     "sp_send": "Kirim ke tim",
     "sp_sent": "Pesan Anda telah dikirim ke tim; mereka akan membalas lewat email segera.",
-    "sp_error": "Tidak dapat dikirim saat ini. Anda bisa menghubungi kami dari halaman kontak."
+    "sp_error": "Tidak dapat dikirim saat ini. Anda bisa menghubungi kami dari halaman kontak.",
+    "s_ask_where_plan": "Bagus — {amount} {frequency}. Ke mana ingin disalurkan? Pilih bidang dan saya tampilkan proyeknya, dengan nilai itu sebagai bawaan:",
+    "s_ask_where_amount": "Bagus — {amount}. Ke mana ingin disalurkan? Pilih bidang dan saya tampilkan proyeknya:"
   }
 }

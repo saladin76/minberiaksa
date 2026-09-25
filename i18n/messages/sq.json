@@ -2284,6 +2284,8 @@
     "sp_phone": "Numri WhatsApp (opsional)",
     "sp_send": "Dërgo te ekipi",
     "sp_sent": "Mesazhi juaj iu dërgua ekipit; do t'ju përgjigjen së shpejti me email.",
-    "sp_error": "Nuk u dërgua dot tani. Mund të na kontaktoni nga faqja e kontaktit."
+    "sp_error": "Nuk u dërgua dot tani. Mund të na kontaktoni nga faqja e kontaktit.",
+    "s_ask_where_plan": "Shkëlqyeshëm — {amount} {frequency}. Ku dëshironi të shkojë? Zgjidhni një fushë dhe ju tregoj projektet, me këtë vlerë si parazgjedhje:",
+    "s_ask_where_amount": "Shkëlqyeshëm — {amount}. Ku dëshironi të shkojë? Zgjidhni një fushë dhe ju tregoj projektet:"
   }
 }

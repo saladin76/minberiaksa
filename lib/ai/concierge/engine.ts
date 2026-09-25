@@ -225,13 +225,22 @@ function categoryFlow(ctx: Ctx, message?: string): ConciergeResponse {
   const types = usable.filter((c) => c.kind === "type").sort((a, b) => b.projectCount - a.projectCount);
   const regions = usable.filter((c) => c.kind === "region").sort((a, b) => b.projectCount - a.projectCount);
   const cards = [...types.slice(0, 4), ...regions.slice(0, 8)].slice(0, 12).map(toCategoryCard);
+  /* A stated plan is acknowledged in the question, so the visitor knows it
+     will be the default when they reach a project. */
+  const amount = freshAmount(ctx.state);
+  const planned =
+    amount && ctx.state.frequency && ctx.state.frequency !== "once"
+      ? fill(ctx.s.s_ask_where_plan, { amount: fmtUsd(ctx.locale, amount), frequency: ctx.s[`f_${ctx.state.frequency}`] ?? ctx.state.frequency })
+      : amount
+        ? fill(ctx.s.s_ask_where_amount, { amount: fmtUsd(ctx.locale, amount) })
+        : null;
   return respond(ctx, {
-    message: message ?? ctx.s.s_ask_where ?? "",
+    message: message ?? planned ?? ctx.s.s_ask_where ?? "",
     blocks: [{ type: "category_options", categories: cards }],
     actions: [{ type: "navigate", label: ctx.s.a_projects ?? "", route: "projects" }],
     mode: message ? "llm" : "deterministic",
-    intent: "explore",
-    state: { intent: "explore" },
+    intent: ctx.state.intent === "recurring" ? "recurring" : "explore",
+    state: { intent: ctx.state.intent === "recurring" ? "recurring" : "explore" },
   });
 }
 
@@ -522,8 +531,10 @@ async function messageFlow(ctx: Ctx, text: string): Promise<ConciergeResponse> {
 
   /* "I want to donate" with nothing to go on: ask where, with the areas as
      cards. A place, cause, dedication or "this project" already answers it. */
-  if ((!intent || intent === "explore") && !ctx.state.region && !ctx.state.selectedCampaignId && wantsToDonate(text) && !parsed.region) {
-    return categoryFlow(ctx);
+  /* A plan with no destination ("500 over 5 months", "every Friday") is the
+     same question: where? The amount and cadence ride along into the cards. */
+  if ((!intent || intent === "explore" || intent === "recurring") && !ctx.state.region && !ctx.state.selectedCampaignId && wantsToDonate(text) && !parsed.region) {
+    return categoryFlow(intent === "recurring" ? { ...ctx, state: { ...ctx.state, intent: "recurring" } } : ctx);
   }
 
   const poolIntent = intent ?? ctx.state.intent ?? null;

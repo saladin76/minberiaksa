@@ -3316,6 +3316,8 @@
     "sp_phone": "Número de WhatsApp (opcional)",
     "sp_send": "Enviar à equipa",
     "sp_sent": "A sua mensagem foi enviada à equipa; responderão em breve por e-mail.",
-    "sp_error": "Não foi possível enviar agora. Pode contactar-nos pela página de contacto."
+    "sp_error": "Não foi possível enviar agora. Pode contactar-nos pela página de contacto.",
+    "s_ask_where_plan": "Ótimo — {amount} {frequency}. Para onde quer que vá? Escolha uma área e mostro-lhe os projetos, com esse valor predefinido:",
+    "s_ask_where_amount": "Ótimo — {amount}. Para onde quer que vá? Escolha uma área e mostro-lhe os projetos:"
   }
 }

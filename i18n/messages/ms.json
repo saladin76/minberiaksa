@@ -2281,6 +2281,8 @@
     "sp_phone": "Nombor WhatsApp (pilihan)",
     "sp_send": "Hantar kepada pasukan",
     "sp_sent": "Mesej anda telah dihantar kepada pasukan; mereka akan membalas melalui e-mel tidak lama lagi.",
-    "sp_error": "Tidak dapat dihantar sekarang. Anda boleh hubungi kami dari halaman hubungi."
+    "sp_error": "Tidak dapat dihantar sekarang. Anda boleh hubungi kami dari halaman hubungi.",
+    "s_ask_where_plan": "Bagus — {amount} {frequency}. Ke mana mahu disalurkan? Pilih bidang dan saya tunjukkan projeknya, dengan nilai itu sebagai lalai:",
+    "s_ask_where_amount": "Bagus — {amount}. Ke mana mahu disalurkan? Pilih bidang dan saya tunjukkan projeknya:"
   }
 }

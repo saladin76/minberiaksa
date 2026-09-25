@@ -1552,11 +1552,34 @@ const SUPPORT = {
   hi: { s_support_intro: "इसके लिए खेद है, {name}। आपका पिछला दान {date} को {amount} था, स्थिति: {state}। बताइए किस दान की बात है और क्या हुआ; मैं टीम को भेज दूँगा, वे जल्द ईमेल पर जवाब देंगे।", s_support_intro_guest: "इसके लिए खेद है। बताइए किस दान की बात है (तारीख और राशि) और क्या हुआ, अपना नाम और ईमेल छोड़ें; मैं टीम को भेज दूँगा, वे जल्द जवाब देंगे।", sp_title: "टीम को भेजें", sp_which: "किस दान के बारे में?", sp_none: "किसी खास दान के बारे में नहीं", sp_reason: "संक्षेप में, क्या हुआ?", sp_name: "आपका नाम", sp_email: "आपका ईमेल", sp_phone: "व्हाट्सऐप नंबर (वैकल्पिक)", sp_send: "टीम को भेजें", sp_sent: "आपका संदेश टीम को भेज दिया गया; वे जल्द ईमेल पर जवाब देंगे।", sp_error: "अभी नहीं भेजा जा सका। आप संपर्क पृष्ठ से हमसे संपर्क कर सकते हैं।" },
 };
 
+/* "Where?" when the visitor already said how much, or how much and how often. */
+const PLAN = {
+  ar: { s_ask_where_plan: "جميل — {amount} {frequency}. أين تحب أن يذهب؟ اختر مجالًا وسأعرض لك مشاريعه، وسأجعل هذه القيمة الافتراضية:", s_ask_where_amount: "جميل — {amount}. أين تحب أن يذهب؟ اختر مجالًا وسأعرض لك مشاريعه:" },
+  en: { s_ask_where_plan: "Wonderful — {amount} {frequency}. Where would you like it to go? Pick an area and I'll show you its projects, with that set as the default:", s_ask_where_amount: "Wonderful — {amount}. Where would you like it to go? Pick an area and I'll show you its projects:" },
+  tr: { s_ask_where_plan: "Harika — {frequency} {amount}. Nereye gitmesini istersiniz? Bir alan seçin, projelerini göstereyim; bu değer varsayılan olacak:", s_ask_where_amount: "Harika — {amount}. Nereye gitmesini istersiniz? Bir alan seçin, projelerini göstereyim:" },
+  fr: { s_ask_where_plan: "Très bien — {amount} {frequency}. Où souhaitez-vous que cela aille ? Choisissez un domaine et je vous montre ses projets, avec cette valeur par défaut :", s_ask_where_amount: "Très bien — {amount}. Où souhaitez-vous que cela aille ? Choisissez un domaine et je vous montre ses projets :" },
+  de: { s_ask_where_plan: "Wunderbar — {amount} {frequency}. Wohin soll es gehen? Wählen Sie einen Bereich, ich zeige die Projekte, mit diesem Wert als Vorgabe:", s_ask_where_amount: "Wunderbar — {amount}. Wohin soll es gehen? Wählen Sie einen Bereich, ich zeige die Projekte:" },
+  es: { s_ask_where_plan: "Estupendo — {amount} {frequency}. ¿Adónde quieres que vaya? Elige un área y te muestro sus proyectos, con ese valor por defecto:", s_ask_where_amount: "Estupendo — {amount}. ¿Adónde quieres que vaya? Elige un área y te muestro sus proyectos:" },
+  id: { s_ask_where_plan: "Bagus — {amount} {frequency}. Ke mana ingin disalurkan? Pilih bidang dan saya tampilkan proyeknya, dengan nilai itu sebagai bawaan:", s_ask_where_amount: "Bagus — {amount}. Ke mana ingin disalurkan? Pilih bidang dan saya tampilkan proyeknya:" },
+  pt: { s_ask_where_plan: "Ótimo — {amount} {frequency}. Para onde quer que vá? Escolha uma área e mostro-lhe os projetos, com esse valor predefinido:", s_ask_where_amount: "Ótimo — {amount}. Para onde quer que vá? Escolha uma área e mostro-lhe os projetos:" },
+  ur: { s_ask_where_plan: "بہت خوب — {amount} {frequency}۔ یہ کہاں جائے؟ ایک شعبہ چنیں، میں اس کے منصوبے دکھاتا ہوں اور یہی قدر طے شدہ ہوگی:", s_ask_where_amount: "بہت خوب — {amount}۔ یہ کہاں جائے؟ ایک شعبہ چنیں، میں اس کے منصوبے دکھاتا ہوں:" },
+  sq: { s_ask_where_plan: "Shkëlqyeshëm — {amount} {frequency}. Ku dëshironi të shkojë? Zgjidhni një fushë dhe ju tregoj projektet, me këtë vlerë si parazgjedhje:", s_ask_where_amount: "Shkëlqyeshëm — {amount}. Ku dëshironi të shkojë? Zgjidhni një fushë dhe ju tregoj projektet:" },
+  it: { s_ask_where_plan: "Ottimo — {amount} {frequency}. Dove vuoi che vada? Scegli un ambito e ti mostro i progetti, con questo valore preimpostato:", s_ask_where_amount: "Ottimo — {amount}. Dove vuoi che vada? Scegli un ambito e ti mostro i progetti:" },
+  nl: { s_ask_where_plan: "Mooi — {amount} {frequency}. Waar moet het naartoe? Kies een gebied en ik toon de projecten, met die waarde als standaard:", s_ask_where_amount: "Mooi — {amount}. Waar moet het naartoe? Kies een gebied en ik toon de projecten:" },
+  sv: { s_ask_where_plan: "Fint — {amount} {frequency}. Vart ska det gå? Välj ett område så visar jag projekten, med det värdet förvalt:", s_ask_where_amount: "Fint — {amount}. Vart ska det gå? Välj ett område så visar jag projekten:" },
+  no: { s_ask_where_plan: "Flott — {amount} {frequency}. Hvor skal det gå? Velg et område, så viser jeg prosjektene med den verdien som standard:", s_ask_where_amount: "Flott — {amount}. Hvor skal det gå? Velg et område, så viser jeg prosjektene:" },
+  da: { s_ask_where_plan: "Fint — {amount} {frequency}. Hvor skal det gå hen? Vælg et område, så viser jeg projekterne med den værdi som standard:", s_ask_where_amount: "Fint — {amount}. Hvor skal det gå hen? Vælg et område, så viser jeg projekterne:" },
+  ms: { s_ask_where_plan: "Bagus — {amount} {frequency}. Ke mana mahu disalurkan? Pilih bidang dan saya tunjukkan projeknya, dengan nilai itu sebagai lalai:", s_ask_where_amount: "Bagus — {amount}. Ke mana mahu disalurkan? Pilih bidang dan saya tunjukkan projeknya:" },
+  ja: { s_ask_where_plan: "ありがとうございます — {frequency}{amount}ですね。寄付先はどちらにしますか？分野を選ぶとプロジェクトをご案内し、この値を初期設定にします：", s_ask_where_amount: "ありがとうございます — {amount}ですね。寄付先はどちらにしますか？分野を選ぶとプロジェクトをご案内します：" },
+  zh: { s_ask_where_plan: "好的 — {frequency}{amount}。您希望用于哪个领域？选择一个，我会展示其中的项目，并将此设为默认值：", s_ask_where_amount: "好的 — {amount}。您希望用于哪个领域？选择一个，我会展示其中的项目：" },
+  hi: { s_ask_where_plan: "बहुत अच्छा — {amount} {frequency}। यह कहाँ जाए? एक क्षेत्र चुनें, मैं उसकी परियोजनाएँ दिखाऊँगा और यही मान डिफ़ॉल्ट रहेगा:", s_ask_where_amount: "बहुत अच्छा — {amount}। यह कहाँ जाए? एक क्षेत्र चुनें, मैं उसकी परियोजनाएँ दिखाऊँगा:" },
+};
+
 let written = 0;
 for (const [locale, block] of Object.entries(M)) {
   const file = `i18n/messages/${locale}.json`;
   const json = JSON.parse(readFileSync(file, "utf8"));
-  json.Concierge = { ...block, ...ACCOUNT[locale], ...FLOW[locale], ...SUPPORT[locale] };
+  json.Concierge = { ...block, ...ACCOUNT[locale], ...FLOW[locale], ...SUPPORT[locale], ...PLAN[locale] };
   writeFileSync(file, `${JSON.stringify(json, null, 2)}\n`, "utf8");
   written += 1;
 }

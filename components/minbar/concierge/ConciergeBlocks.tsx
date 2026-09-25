@@ -327,21 +327,25 @@ function Configurator({ block, onAdd, onAction, busy }: { block: Extract<Concier
   const t = useTranslations("Concierge");
   const tCommon = useTranslations("common");
   const { format } = useMinbarMoney();
-  const [amount, setAmount] = useState<number>(block.presetAmountUSD ?? block.suggestedAmountsUSD[0]);
+  /* Nothing is chosen for the visitor: what they said is the default, and
+     what they did not say has to be picked before adding. A single offered
+     cadence (zakat) needs no choice. */
+  const [amount, setAmount] = useState<number | null>(block.presetAmountUSD ?? null);
   const [custom, setCustom] = useState(block.presetAmountUSD && !block.suggestedAmountsUSD.includes(block.presetAmountUSD) ? String(block.presetAmountUSD) : "");
-  const [freq, setFreq] = useState<CartFreqKey>(block.presetFrequency ?? "once");
+  const [freq, setFreq] = useState<CartFreqKey | null>(block.presetFrequency ?? (block.frequencies.length === 1 ? block.frequencies[0] : null));
   const [gift, setGift] = useState(Boolean(block.giftRecipientName));
   const [giftName, setGiftName] = useState(block.giftRecipientName ?? "");
   const [giftEmail, setGiftEmail] = useState("");
   const [giftPhone, setGiftPhone] = useState("");
   const [done, setDone] = useState(false);
 
-  const value = Number(custom) > 0 ? Number(custom) : amount;
+  const value = Number(custom) > 0 ? Number(custom) : amount ?? 0;
   const giftReady = !gift || giftName.trim().length > 0;
   const title = block.campaign?.title ?? block.category?.title ?? (block.genericTitleKey ? tCommon(block.genericTitleKey) : "");
+  const canAdd = value > 0 && freq !== null && giftReady && !done;
 
   const submit = () => {
-    if (!(value > 0) || !giftReady || done) return;
+    if (!canAdd || freq === null) return;
     const giftDetails: CartGiftDetails | null = gift
       ? {
           recipientName: giftName.trim(),
@@ -429,9 +433,10 @@ function Configurator({ block, onAdd, onAction, busy }: { block: Extract<Concier
         </div>
       ) : null}
 
-      <button type="button" className="cg-btn cg-btn-primary cg-btn-full" disabled={busy || done || !(value > 0) || !giftReady} onClick={submit}>
-        {t("addToBasket")} · <span dir="ltr">{format(value)}</span>
-        {freq !== "once" ? <span className="cg-btn-sub">{t("perInstalment")}</span> : null}
+      <button type="button" className="cg-btn cg-btn-primary cg-btn-full" disabled={busy || !canAdd} onClick={submit}>
+        {t("addToBasket")}
+        {value > 0 ? <> · <span dir="ltr">{format(value)}</span></> : null}
+        {freq && freq !== "once" ? <span className="cg-btn-sub">{t("perInstalment")}</span> : null}
       </button>
     </div>
   );
