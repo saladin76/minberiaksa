@@ -2282,6 +2282,8 @@
     "sp_send": "Hantar kepada pasukan",
     "sp_sent": "Mesej anda telah dihantar kepada pasukan; mereka akan membalas melalui e-mel tidak lama lagi.",
     "sp_error": "Tidak dapat dihantar sekarang. Anda boleh hubungi kami dari halaman hubungi.",
+    "s_support_intro_general": "Maaf tentang itu. Saya telah sediakan mesej anda kepada pasukan daripada apa yang anda ceritakan; semak atau ubah, kemudian hantar, dan mereka akan membalas melalui e-mel tidak lama lagi.",
+    "sp_draft_hint": "Ini yang saya faham — ubah jika mahu, kemudian hantar",
     "s_ask_where_plan": "Bagus — {amount} {frequency}. Ke mana mahu disalurkan? Pilih bidang dan saya tunjukkan projeknya, dengan nilai itu sebagai lalai:",
     "s_ask_where_amount": "Bagus — {amount}. Ke mana mahu disalurkan? Pilih bidang dan saya tunjukkan projeknya:"
   }

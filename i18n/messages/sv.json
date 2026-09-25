@@ -2285,6 +2285,8 @@
     "sp_send": "Skicka till teamet",
     "sp_sent": "Ditt meddelande har skickats till teamet; de svarar snart via e-post.",
     "sp_error": "Det gick inte att skicka just nu. Du når oss via kontaktsidan.",
+    "s_support_intro_general": "Jag beklagar. Jag har skrivit ditt meddelande till teamet utifrån vad du berättade; granska eller ändra och skicka, så svarar de snart via e-post.",
+    "sp_draft_hint": "Så här uppfattade jag det — ändra om du vill och skicka",
     "s_ask_where_plan": "Fint — {amount} {frequency}. Vart ska det gå? Välj ett område så visar jag projekten, med det värdet förvalt:",
     "s_ask_where_amount": "Fint — {amount}. Vart ska det gå? Välj ett område så visar jag projekten:"
   }

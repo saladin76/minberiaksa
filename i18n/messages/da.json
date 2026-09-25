@@ -2282,6 +2282,8 @@
     "sp_send": "Send til teamet",
     "sp_sent": "Din besked er sendt til teamet; de svarer snart på e-mail.",
     "sp_error": "Kunne ikke sendes lige nu. Du kan nå os via kontaktsiden.",
+    "s_support_intro_general": "Det beklager jeg. Jeg har skrevet din besked til teamet ud fra det, du fortalte; tjek eller ret den, og send – de svarer snart på e-mail.",
+    "sp_draft_hint": "Sådan forstod jeg det – ret hvis du vil, og send",
     "s_ask_where_plan": "Fint — {amount} {frequency}. Hvor skal det gå hen? Vælg et område, så viser jeg projekterne med den værdi som standard:",
     "s_ask_where_amount": "Fint — {amount}. Hvor skal det gå hen? Vælg et område, så viser jeg projekterne:"
   }

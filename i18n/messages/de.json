@@ -3317,6 +3317,8 @@
     "sp_send": "An das Team senden",
     "sp_sent": "Ihre Nachricht wurde ans Team gesendet; es antwortet Ihnen bald per E-Mail.",
     "sp_error": "Senden derzeit nicht möglich. Sie erreichen uns über die Kontaktseite.",
+    "s_support_intro_general": "Das tut mir leid. Ich habe Ihre Nachricht ans Team aus Ihren Angaben vorformuliert; prüfen oder ändern Sie sie und senden Sie ab – das Team antwortet bald per E-Mail.",
+    "sp_draft_hint": "So habe ich es verstanden – bei Bedarf anpassen, dann senden",
     "s_ask_where_plan": "Wunderbar — {amount} {frequency}. Wohin soll es gehen? Wählen Sie einen Bereich, ich zeige die Projekte, mit diesem Wert als Vorgabe:",
     "s_ask_where_amount": "Wunderbar — {amount}. Wohin soll es gehen? Wählen Sie einen Bereich, ich zeige die Projekte:"
   }

@@ -40,10 +40,16 @@ export default function ConciergeLauncher() {
   const [draft, setDraft] = useState("");
   const threadRef = useRef<HTMLDivElement>(null);
 
+  /* Bring the visitor's latest message to the top of the thread, so the
+     reply unfolds beneath it and is read from its first line — not from
+     the bottom of a long answer. Before any message, the top of the panel. */
   useEffect(() => {
     if (!open) return;
     const el = threadRef.current;
-    if (el) el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
+    if (!el) return;
+    const users = el.querySelectorAll<HTMLElement>(".cg-turn-user");
+    const last = users[users.length - 1];
+    el.scrollTo({ top: last ? Math.max(0, last.offsetTop - el.offsetTop - 8) : 0, behavior: "smooth" });
   }, [turns, loading, open]);
 
   /* While the sheet is open the homepage's fixed quick-donate bar, which sits

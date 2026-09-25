@@ -3388,6 +3388,8 @@
     "sp_send": "Ekibe gönder",
     "sp_sent": "Mesajınız ekibe iletildi; kısa sürede e-posta ile yanıt verecekler.",
     "sp_error": "Şu anda gönderilemedi. İletişim sayfasından bize ulaşabilirsiniz.",
+    "s_support_intro_general": "Bunun için üzgünüm. Anlattıklarınızdan ekibe mesajınızı hazırladım; gözden geçirip düzenleyin ve gönderin, e-postanıza kısa sürede yanıt verirler.",
+    "sp_draft_hint": "Anladığım bu — isterseniz düzenleyin, sonra gönderin",
     "s_ask_where_plan": "Harika — {frequency} {amount}. Nereye gitmesini istersiniz? Bir alan seçin, projelerini göstereyim; bu değer varsayılan olacak:",
     "s_ask_where_amount": "Harika — {amount}. Nereye gitmesini istersiniz? Bir alan seçin, projelerini göstereyim:"
   }

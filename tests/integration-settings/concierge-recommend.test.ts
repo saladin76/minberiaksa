@@ -55,6 +55,16 @@ test("a budget below the share price pushes a share project down", () => {
   assert.equal(ids[0], "a1");
 });
 
+test("a visitor's own situation reaches the project that fits it", () => {
+  const withEducation = [...CATALOG, campaign({ id: "e5", title: "رعاية تعليم طلاب القدس", summary: "دعم الطلاب ومصاريف الدراسة", categorySlugs: ["region-al-quds", "type-sadaqah"], regionSlug: "region-al-quds", priority: 30 })];
+  const student = rankCampaigns(withEducation, { intent: null, region: null, amountUSD: null, text: "أنا في ثانوية عامة مش عارف اذاكر" }, 1);
+  assert.equal(student[0].campaign.id, "e5");
+  const english = rankCampaigns(withEducation, { intent: null, region: null, amountUSD: null, text: "my exams are next week and I'm stressed" }, 1);
+  assert.equal(english[0].campaign.id, "e5");
+  const loss = rankCampaigns(withEducation, { intent: null, region: null, amountUSD: null, text: "والدي توفي الأسبوع الماضي" }, 1);
+  assert.ok(["a1", "c3"].includes(loss[0].campaign.id), "a loss points at lasting-charity projects");
+});
+
 test("exclusions honoured and empty matches fall back to the admin order", () => {
   const ids = rankCampaigns(CATALOG, { intent: null, region: null, amountUSD: null, text: null, excludeIds: ["b2"] }, 2).map((r) => r.campaign.id);
   assert.ok(!ids.includes("b2"));
@@ -80,7 +90,7 @@ test("categories: intent types first, then by project count", () => {
 
 test("malformed model output is rejected", () => {
   assert.equal(llmVerdictSchema.safeParse({ intent: "zakat" }).success, false);
-  const base = { mode: "recommend", answer: "", route: null, needsHuman: false, supportSubject: null, donationId: null, suggestion: { kind: "none", campaignId: null, text: "" }, amount: null, currency: null, frequency: null, region: null, giftRecipientName: null, recommendedIds: [], reasons: [], message: "", needsRuling: false };
+  const base = { mode: "recommend", answer: "", route: null, needsHuman: false, supportSubject: null, ticketDraft: "", ticketAboutDonation: false, donationId: null, suggestion: { kind: "none", campaignId: null, text: "" }, amount: null, currency: null, frequency: null, region: null, giftRecipientName: null, recommendedIds: [], reasons: [], message: "", needsRuling: false };
   assert.equal(llmVerdictSchema.safeParse({ ...base, intent: "buy_stuff" }).success, false);
   assert.equal(llmVerdictSchema.safeParse({ ...base, intent: "relief", mode: "chat" }).success, false, "unknown mode");
   assert.equal(llmVerdictSchema.safeParse({ ...base, intent: "relief", route: "/admin" }).success, false, "route must be a known page");

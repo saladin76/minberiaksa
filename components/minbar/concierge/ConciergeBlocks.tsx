@@ -68,7 +68,8 @@ function SupportTicket({ block, onAction }: { block: Extract<ConciergeBlock, { t
   const t = useTranslations("Concierge");
   const locale = useLocale();
   const [donationId, setDonationId] = useState<string>(block.presetDonationId ?? "");
-  const [reason, setReason] = useState("");
+  /* The assistant's draft of what the visitor said; theirs to edit or send as is. */
+  const [reason, setReason] = useState(block.draft ?? "");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
@@ -131,7 +132,7 @@ function SupportTicket({ block, onAction }: { block: Extract<ConciergeBlock, { t
   return (
     <div className="cg-config cg-support">
       <b className="cg-card-title">{t("sp_title")}</b>
-      {block.donations.length ? (
+      {block.aboutDonation && block.donations.length ? (
         <>
           <span className="cg-label">{t("sp_which")}</span>
           <div className="cg-support-list">
@@ -151,7 +152,8 @@ function SupportTicket({ block, onAction }: { block: Extract<ConciergeBlock, { t
           </div>
         </>
       ) : null}
-      <textarea value={reason} onChange={(e) => setReason(e.target.value)} placeholder={t("sp_reason")} aria-label={t("sp_reason")} className="cg-input cg-textarea" rows={3} maxLength={2000} disabled={status === "sending"} />
+      <span className="cg-label">{block.draft ? t("sp_draft_hint") : t("sp_reason")}</span>
+      <textarea value={reason} onChange={(e) => setReason(e.target.value)} placeholder={t("sp_reason")} aria-label={t("sp_reason")} className="cg-input cg-textarea" rows={block.draft ? 4 : 3} maxLength={2000} disabled={status === "sending"} />
       {!block.signedIn ? (
         <div className="cg-gift">
           <input value={name} onChange={(e) => setName(e.target.value)} placeholder={t("sp_name")} aria-label={t("sp_name")} className="cg-input" disabled={status === "sending"} />

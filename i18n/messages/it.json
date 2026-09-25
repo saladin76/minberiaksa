@@ -2285,6 +2285,8 @@
     "sp_send": "Invia al team",
     "sp_sent": "Il tuo messaggio è stato inviato al team; ti risponderanno presto via email.",
     "sp_error": "Impossibile inviare ora. Puoi contattarci dalla pagina contatti.",
+    "s_support_intro_general": "Mi dispiace. Ho preparato il tuo messaggio al team da quanto mi hai detto; controllalo o modificalo, poi invialo, e ti risponderanno presto via email.",
+    "sp_draft_hint": "Ecco cosa ho capito — modifica se vuoi, poi invia",
     "s_ask_where_plan": "Ottimo — {amount} {frequency}. Dove vuoi che vada? Scegli un ambito e ti mostro i progetti, con questo valore preimpostato:",
     "s_ask_where_amount": "Ottimo — {amount}. Dove vuoi che vada? Scegli un ambito e ti mostro i progetti:"
   }

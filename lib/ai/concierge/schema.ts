@@ -157,6 +157,10 @@ export const blockSchema = z.discriminatedUnion("type", [
       .array(z.object({ id: z.string(), date: z.string(), amount: z.number(), currency: z.string(), state: z.string(), items: z.array(z.string()) }))
       .max(8),
     presetDonationId: z.string().nullable(),
+    /** Whether the problem concerns a donation — only then is the donation list shown. */
+    aboutDonation: z.boolean(),
+    /** The message to the team, drafted from what the visitor said; editable before sending. */
+    draft: z.string(),
   }),
   /** One concrete next step after an answer, with an OK button — never a dead end. */
   z.object({
@@ -256,6 +260,10 @@ export const llmVerdictSchema = z.object({
    * file it under. The panel then offers the ticket form. Null otherwise.
    */
   supportSubject: z.enum(["COMPLAINT", "DONATION_ISSUE", "CAMPAIGN_SUPPORT", "PARTNERSHIP", "VOLUNTEERING", "GENERAL"]).nullable(),
+  /** With supportSubject: the message to the team in the visitor's own words (first person, 1–3 sentences), else "". */
+  ticketDraft: z.string().max(1200),
+  /** With supportSubject: whether the problem concerns a specific donation (payment, receipt, refund) rather than something else. */
+  ticketAboutDonation: z.boolean(),
   /** With route receipt / thanksCertificate / paymentPending: one of the donor's own donation ids from DONOR, else null. */
   donationId: z.string().nullable(),
   /**
@@ -297,6 +305,8 @@ export const LLM_VERDICT_JSON_SCHEMA = {
     route: { type: ["string", "null"], enum: [...VERDICT_ROUTES, null] },
     needsHuman: { type: "boolean" },
     supportSubject: { type: ["string", "null"], enum: ["COMPLAINT", "DONATION_ISSUE", "CAMPAIGN_SUPPORT", "PARTNERSHIP", "VOLUNTEERING", "GENERAL", null] },
+    ticketDraft: { type: "string" },
+    ticketAboutDonation: { type: "boolean" },
     donationId: { type: ["string", "null"] },
     suggestion: {
       type: "object",
@@ -318,5 +328,5 @@ export const LLM_VERDICT_JSON_SCHEMA = {
     message: { type: "string" },
     needsRuling: { type: "boolean" },
   },
-  required: ["mode", "answer", "route", "needsHuman", "supportSubject", "donationId", "suggestion", "intent", "amount", "currency", "frequency", "region", "giftRecipientName", "recommendedIds", "reasons", "message", "needsRuling"],
+  required: ["mode", "answer", "route", "needsHuman", "supportSubject", "ticketDraft", "ticketAboutDonation", "donationId", "suggestion", "intent", "amount", "currency", "frequency", "region", "giftRecipientName", "recommendedIds", "reasons", "message", "needsRuling"],
 } as const;

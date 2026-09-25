@@ -3388,6 +3388,8 @@
     "sp_send": "Envoyer à l'équipe",
     "sp_sent": "Votre message a été envoyé à l'équipe ; elle vous répondra par e-mail rapidement.",
     "sp_error": "Envoi impossible pour le moment. Vous pouvez nous joindre via la page de contact.",
+    "s_support_intro_general": "Je suis désolé. J'ai rédigé votre message à l'équipe d'après ce que vous m'avez dit ; relisez-le ou modifiez-le, puis envoyez-le, et l'équipe vous répondra par e-mail rapidement.",
+    "sp_draft_hint": "Voici ce que j'ai compris — modifiez si vous voulez, puis envoyez",
     "s_ask_where_plan": "Très bien — {amount} {frequency}. Où souhaitez-vous que cela aille ? Choisissez un domaine et je vous montre ses projets, avec cette valeur par défaut :",
     "s_ask_where_amount": "Très bien — {amount}. Où souhaitez-vous que cela aille ? Choisissez un domaine et je vous montre ses projets :"
   }

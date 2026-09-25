@@ -3388,6 +3388,8 @@
     "sp_send": "Send to the team",
     "sp_sent": "Your message has been sent to the team; they will reply to you by email soon.",
     "sp_error": "It couldn't be sent right now. You can reach us from the contact page.",
+    "s_support_intro_general": "I'm sorry about that. I've drafted your message to the team from what you told me; review or edit it, then send, and they will reply to you by email soon.",
+    "sp_draft_hint": "This is what I understood — edit it if you like, then send",
     "s_ask_where_plan": "Wonderful — {amount} {frequency}. Where would you like it to go? Pick an area and I'll show you its projects, with that set as the default:",
     "s_ask_where_amount": "Wonderful — {amount}. Where would you like it to go? Pick an area and I'll show you its projects:"
   }

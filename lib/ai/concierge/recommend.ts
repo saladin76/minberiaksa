@@ -67,6 +67,29 @@ const JARIYAH_WORDS = /بئر|آبار|مسجد|مدرسة|مدارس|تعليم
 /** Words that mark relief work. */
 const RELIEF_WORDS = /إغاث|طوارئ|عاجل|غذاء|طعام|سلة|سلال|خيام|خيمة|دواء|طبي|شتاء|نازح|لاجئ|relief|emergency|urgent|food|meal|basket|tent|medical|winter|refugee|displaced|acil|gıda|yemek|çadır|tıbbi|kış|mülteci|secours|urgence|nourriture|tente|hiver|nothilfe|lebensmittel|zelt|winter|emergencia|alimento|tienda|invierno|darurat|makanan|tenda|pengungsi/i;
 
+/**
+ * What a visitor's own situation points to. "I'm in high school and can't
+ * study" shares no word with an education project's title, so the themes
+ * bridge the visitor's words to the projects that fit them — the way a
+ * thoughtful person would suggest a students' project to a student.
+ */
+const THEMES: Array<{ trigger: RegExp; campaign: RegExp; weight: number }> = [
+  { trigger: /ذاكر|مذاكر|امتحان|اختبار|ثانوي|جامع|دراس|مدرس|طالب|تعليم|شهادة|thanaw|study|studies|exam|school|student|college|universit|homework|sınav|okul|öğrenci|üniversite|ders|examen|étud|école|prüfung|schule|studi|estudi|escuela|ujian|sekolah|kuliah|امتحان|پڑھائی|طالب/i, campaign: /تعليم|تعليمي|طلاب|طالب|مدرس|مدارس|دورات|دورة|تحفيظ|قرآن|كراسي|علم|جامع|منح|education|student|school|quran|scholar|course|learning|eğitim|öğrenci|okul|kur'an|éducation|étudiant|école|bildung|schüler|educación|estudiante|pendidikan|pelajar|sekolah/i, weight: 9 },
+  { trigger: /مريض|مرض|علاج|مستشف|دكتور|طبيب|صح[ةه]|ألم|الم|تعب|sick|ill|hospital|doctor|health|surgery|medic|hasta|hastane|doktor|sağlık|malade|hôpital|santé|krank|arzt|enfermo|hospital|salud|sakit|rumah\s*sakit|بیمار|علاج/i, campaign: /طبي|صحي|صحة|علاج|مستشف|دواء|أدوية|عيادة|إسعاف|medical|health|clinic|medicine|hospital|treatment|tıbbi|sağlık|ilaç|médic|santé|hôpital|medizin|gesundheit|médico|salud|medis|kesehatan|obat/i, weight: 9 },
+  { trigger: /جوع|جعان|أكل|طعام|غذاء|فقر|فقير|محتاج|ضيق|دين|ديون|قرض|فلوس|مصاريف|hungry|food|poor|poverty|broke|debt|loan|bills|rent|aç|yoksul|borç|kira|faim|pauvre|dette|hunger|arm|schulden|hambre|pobre|deuda|lapar|miskin|hutang|بھوک|غریب|قرض/i, campaign: /غذائ|طعام|وجبات|وجبة|سلال|سلة|خبز|إفطار|كفالة|أسر|عائلات|فقراء|food|meal|bread|basket|parcel|famil|relief|gıda|yemek|ekmek|aile|nourriture|repas|famille|lebensmittel|mahlzeit|familie|alimento|comida|familia|makanan|keluarga/i, weight: 8 },
+  { trigger: /زواج|عرس|خطوب|عريس|عروس|زوج|أطفال|طفل|ابني|بنتي|ولادي|عيال|marriage|wedding|married|baby|child|kids|my\s*son|my\s*daughter|evlilik|düğün|çocuk|mariage|enfant|hochzeit|kind|boda|hijo|niño|pernikahan|anak|شادی|بچ/i, campaign: /أيتام|يتيم|أطفال|طفل|أسر|عائلات|كفالة|orphan|child|famil|yetim|çocuk|aile|orphelin|enfant|famille|waise|kind|familie|huérfano|niño|familia|yatim|anak|keluarga/i, weight: 8 },
+  { trigger: /شغل|وظيف|عمل|عاطل|بطالة|مشروعي|تجار|رزق|job|work|unemploy|business|career|salary|iş|işsiz|maaş|emploi|travail|chômage|arbeit|arbeitslos|trabajo|desemple|kerja|pengangguran|نوکری|روزگار/i, campaign: /تمكين|مشاريع\s*صغيرة|مشروع\s*صغير|حرف|تدريب|كفالة|أسر|livelihood|income|small\s*business|training|skills|geçim|meslek|eğitim|formation|revenu|ausbildung|einkommen|formación|ingreso|pelatihan|usaha/i, weight: 7 },
+  { trigger: /ميت|توفي|توفى|وفاة|مات|فقدت|رحمه|رحمها|قبر|عزاء|died|passed\s*away|death|late\s*(father|mother)|deceased|grave|vefat|öldü|merhum|décéd|décès|verstorben|gestorben|fallec|murió|meninggal|almarhum|فوت|مرحوم/i, campaign: /وقف|صدقة\s*جارية|بئر|آبار|مسجد|مصحف|قرآن|type-waqf|jariyah|well|water|mosque|quran|vakıf|kuyu|cami|puits|mosquée|brunnen|moschee|pozo|mezquita|wakaf|sumur|masjid/i, weight: 9 },
+];
+
+function themeScore(c: CatalogCampaign, text: string | null): number {
+  if (!text) return 0;
+  const hay = `${c.title} ${c.summary} ${c.categorySlugs.join(" ")}`;
+  let score = 0;
+  for (const t of THEMES) if (t.trigger.test(text) && t.campaign.test(hay)) score += t.weight;
+  return score;
+}
+
 function tokens(text: string): string[] {
   return text
     .toLowerCase()
@@ -96,6 +119,7 @@ export function scoreCampaign(c: CatalogCampaign, input: RankInput): number {
   else if (input.region && c.categorySlugs.includes(`region-${input.region}`)) score += 18;
   if (input.intent === "zakat" && c.categorySlugs.includes("type-zakat")) score += 4;
   score += textScore(c, input.text);
+  score += themeScore(c, input.text);
   /* A share-based project fits a stated budget when the budget buys at least one share. */
   if (input.amountUSD && c.supportsShares && c.sharePriceUSD) {
     if (input.amountUSD >= c.sharePriceUSD) score += 1;

@@ -2285,6 +2285,8 @@
     "sp_send": "Naar het team sturen",
     "sp_sent": "Uw bericht is naar het team gestuurd; zij antwoorden u snel per e-mail.",
     "sp_error": "Versturen lukt nu niet. U kunt ons bereiken via de contactpagina.",
+    "s_support_intro_general": "Dat spijt me. Ik heb uw bericht aan het team opgesteld uit wat u vertelde; controleer of bewerk het en verstuur, en zij antwoorden snel per e-mail.",
+    "sp_draft_hint": "Dit heb ik begrepen — pas aan als u wilt en verstuur",
     "s_ask_where_plan": "Mooi — {amount} {frequency}. Waar moet het naartoe? Kies een gebied en ik toon de projecten, met die waarde als standaard:",
     "s_ask_where_amount": "Mooi — {amount}. Waar moet het naartoe? Kies een gebied en ik toon de projecten:"
   }

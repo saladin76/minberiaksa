@@ -1552,6 +1552,29 @@ const SUPPORT = {
   hi: { s_support_intro: "इसके लिए खेद है, {name}। आपका पिछला दान {date} को {amount} था, स्थिति: {state}। बताइए किस दान की बात है और क्या हुआ; मैं टीम को भेज दूँगा, वे जल्द ईमेल पर जवाब देंगे।", s_support_intro_guest: "इसके लिए खेद है। बताइए किस दान की बात है (तारीख और राशि) और क्या हुआ, अपना नाम और ईमेल छोड़ें; मैं टीम को भेज दूँगा, वे जल्द जवाब देंगे।", sp_title: "टीम को भेजें", sp_which: "किस दान के बारे में?", sp_none: "किसी खास दान के बारे में नहीं", sp_reason: "संक्षेप में, क्या हुआ?", sp_name: "आपका नाम", sp_email: "आपका ईमेल", sp_phone: "व्हाट्सऐप नंबर (वैकल्पिक)", sp_send: "टीम को भेजें", sp_sent: "आपका संदेश टीम को भेज दिया गया; वे जल्द ईमेल पर जवाब देंगे।", sp_error: "अभी नहीं भेजा जा सका। आप संपर्क पृष्ठ से हमसे संपर्क कर सकते हैं।" },
 };
 
+/* Support form: a problem not about a donation, and the drafted-message hint. */
+const SUPPORT2 = {
+  ar: { s_support_intro_general: "يؤسفني ذلك. كتبتُ رسالتك للفريق مما فهمته منك؛ راجعها أو عدّلها ثم أرسلها، وسيردّون عليك على بريدك قريبًا.", sp_draft_hint: "هذا ما فهمته منك — عدّله إن شئت ثم أرسله" },
+  en: { s_support_intro_general: "I'm sorry about that. I've drafted your message to the team from what you told me; review or edit it, then send, and they will reply to you by email soon.", sp_draft_hint: "This is what I understood — edit it if you like, then send" },
+  tr: { s_support_intro_general: "Bunun için üzgünüm. Anlattıklarınızdan ekibe mesajınızı hazırladım; gözden geçirip düzenleyin ve gönderin, e-postanıza kısa sürede yanıt verirler.", sp_draft_hint: "Anladığım bu — isterseniz düzenleyin, sonra gönderin" },
+  fr: { s_support_intro_general: "Je suis désolé. J'ai rédigé votre message à l'équipe d'après ce que vous m'avez dit ; relisez-le ou modifiez-le, puis envoyez-le, et l'équipe vous répondra par e-mail rapidement.", sp_draft_hint: "Voici ce que j'ai compris — modifiez si vous voulez, puis envoyez" },
+  de: { s_support_intro_general: "Das tut mir leid. Ich habe Ihre Nachricht ans Team aus Ihren Angaben vorformuliert; prüfen oder ändern Sie sie und senden Sie ab – das Team antwortet bald per E-Mail.", sp_draft_hint: "So habe ich es verstanden – bei Bedarf anpassen, dann senden" },
+  es: { s_support_intro_general: "Lo siento. He redactado tu mensaje al equipo con lo que me contaste; revísalo o edítalo y envíalo, y te responderán pronto por correo.", sp_draft_hint: "Esto es lo que entendí — edítalo si quieres y envíalo" },
+  id: { s_support_intro_general: "Maaf atas hal itu. Saya sudah menyusun pesan Anda untuk tim dari apa yang Anda ceritakan; periksa atau ubah, lalu kirim, dan mereka akan membalas lewat email segera.", sp_draft_hint: "Ini yang saya pahami — ubah jika perlu, lalu kirim" },
+  pt: { s_support_intro_general: "Lamento. Redigi a sua mensagem para a equipa a partir do que me disse; reveja ou edite e envie, e responderão em breve por e-mail.", sp_draft_hint: "Foi isto que entendi — edite se quiser e envie" },
+  ur: { s_support_intro_general: "اس پر افسوس ہے۔ آپ کی بات سے میں نے ٹیم کے لیے آپ کا پیغام تیار کر دیا ہے؛ دیکھ لیں یا ترمیم کریں اور بھیج دیں، وہ جلد ای میل پر جواب دیں گے۔", sp_draft_hint: "میں نے یہ سمجھا — چاہیں تو ترمیم کریں، پھر بھیجیں" },
+  sq: { s_support_intro_general: "Më vjen keq. E hartova mesazhin tuaj për ekipin nga ajo që më thatë; rishikojeni ose ndryshojeni, pastaj dërgojeni, dhe do t'ju përgjigjen së shpejti me email.", sp_draft_hint: "Kështu e kuptova — ndryshojeni nëse doni, pastaj dërgojeni" },
+  it: { s_support_intro_general: "Mi dispiace. Ho preparato il tuo messaggio al team da quanto mi hai detto; controllalo o modificalo, poi invialo, e ti risponderanno presto via email.", sp_draft_hint: "Ecco cosa ho capito — modifica se vuoi, poi invia" },
+  nl: { s_support_intro_general: "Dat spijt me. Ik heb uw bericht aan het team opgesteld uit wat u vertelde; controleer of bewerk het en verstuur, en zij antwoorden snel per e-mail.", sp_draft_hint: "Dit heb ik begrepen — pas aan als u wilt en verstuur" },
+  sv: { s_support_intro_general: "Jag beklagar. Jag har skrivit ditt meddelande till teamet utifrån vad du berättade; granska eller ändra och skicka, så svarar de snart via e-post.", sp_draft_hint: "Så här uppfattade jag det — ändra om du vill och skicka" },
+  no: { s_support_intro_general: "Jeg beklager. Jeg har skrevet meldingen din til teamet ut fra det du fortalte; se over eller endre, og send – de svarer snart på e-post.", sp_draft_hint: "Slik forsto jeg det – endre om du vil, og send" },
+  da: { s_support_intro_general: "Det beklager jeg. Jeg har skrevet din besked til teamet ud fra det, du fortalte; tjek eller ret den, og send – de svarer snart på e-mail.", sp_draft_hint: "Sådan forstod jeg det – ret hvis du vil, og send" },
+  ms: { s_support_intro_general: "Maaf tentang itu. Saya telah sediakan mesej anda kepada pasukan daripada apa yang anda ceritakan; semak atau ubah, kemudian hantar, dan mereka akan membalas melalui e-mel tidak lama lagi.", sp_draft_hint: "Ini yang saya faham — ubah jika mahu, kemudian hantar" },
+  ja: { s_support_intro_general: "申し訳ありません。お話から、チームへのメッセージを下書きしました。確認または編集して送信してください。近日中にメールでお返事します。", sp_draft_hint: "私の理解はこちらです — 必要なら編集して送信してください" },
+  zh: { s_support_intro_general: "很抱歉。我已根据您所说的内容为您起草了给团队的消息；请查看或修改后发送，他们会尽快通过邮件回复您。", sp_draft_hint: "这是我理解的内容 — 如需修改请编辑，然后发送" },
+  hi: { s_support_intro_general: "इसके लिए खेद है। आपकी बात से मैंने टीम के लिए आपका संदेश तैयार कर दिया है; देख लें या संपादित करें और भेज दें, वे जल्द ईमेल पर जवाब देंगे।", sp_draft_hint: "मैंने यह समझा — चाहें तो संपादित करें, फिर भेजें" },
+};
+
 /* "Where?" when the visitor already said how much, or how much and how often. */
 const PLAN = {
   ar: { s_ask_where_plan: "جميل — {amount} {frequency}. أين تحب أن يذهب؟ اختر مجالًا وسأعرض لك مشاريعه، وسأجعل هذه القيمة الافتراضية:", s_ask_where_amount: "جميل — {amount}. أين تحب أن يذهب؟ اختر مجالًا وسأعرض لك مشاريعه:" },
@@ -1579,7 +1602,7 @@ let written = 0;
 for (const [locale, block] of Object.entries(M)) {
   const file = `i18n/messages/${locale}.json`;
   const json = JSON.parse(readFileSync(file, "utf8"));
-  json.Concierge = { ...block, ...ACCOUNT[locale], ...FLOW[locale], ...SUPPORT[locale], ...PLAN[locale] };
+  json.Concierge = { ...block, ...ACCOUNT[locale], ...FLOW[locale], ...SUPPORT[locale], ...SUPPORT2[locale], ...PLAN[locale] };
   writeFileSync(file, `${JSON.stringify(json, null, 2)}\n`, "utf8");
   written += 1;
 }

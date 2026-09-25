@@ -3317,6 +3317,8 @@
     "sp_send": "Enviar al equipo",
     "sp_sent": "Tu mensaje se envió al equipo; te responderán pronto por correo.",
     "sp_error": "No se pudo enviar ahora. Puedes escribirnos desde la página de contacto.",
+    "s_support_intro_general": "Lo siento. He redactado tu mensaje al equipo con lo que me contaste; revísalo o edítalo y envíalo, y te responderán pronto por correo.",
+    "sp_draft_hint": "Esto es lo que entendí — edítalo si quieres y envíalo",
     "s_ask_where_plan": "Estupendo — {amount} {frequency}. ¿Adónde quieres que vaya? Elige un área y te muestro sus proyectos, con ese valor por defecto:",
     "s_ask_where_amount": "Estupendo — {amount}. ¿Adónde quieres que vaya? Elige un área y te muestro sus proyectos:"
   }

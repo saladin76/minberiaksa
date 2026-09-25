@@ -256,7 +256,10 @@ function suggestionBlock(ctx: Ctx, kind: SuggestionKind, campaignId: string | nu
   if (kind === "campaign") {
     const campaign = (campaignId && candidates.find((c) => c.id === campaignId)) || candidates[0] || null;
     if (!campaign) return null;
-    return { type: "suggestion", text: text || fill(ctx.s.s_suggest_campaign, { title: campaign.title }), campaign: toCard(campaign, null), accept: { type: "select_campaign", label: ctx.s.a_ok ?? "OK", campaignId: campaign.id } };
+    /* The wording must name the project the OK button opens; a model line
+       about a different project than the id it chose falls back to the template. */
+    const wording = text && text.includes(campaign.title) ? text : fill(ctx.s.s_suggest_campaign, { title: campaign.title });
+    return { type: "suggestion", text: wording, campaign: toCard(campaign, null), accept: { type: "select_campaign", label: ctx.s.a_ok ?? "OK", campaignId: campaign.id } };
   }
   const intent: ConciergeIntent = kind === "recurring" ? "recurring" : kind === "zakat" ? "zakat" : kind === "waqf" ? "waqf" : "explore";
   const template = kind === "recurring" ? ctx.s.s_suggest_recurring : kind === "zakat" ? ctx.s.s_suggest_zakat : kind === "waqf" ? ctx.s.s_suggest_waqf : ctx.s.s_suggest_category;
@@ -275,14 +278,23 @@ function fallbackSuggestion(ctx: Ctx, intent: ConciergeIntent | null, candidates
 
 type SupportSubject = "COMPLAINT" | "DONATION_ISSUE" | "CAMPAIGN_SUPPORT" | "PARTNERSHIP" | "VOLUNTEERING" | "GENERAL";
 
-/** The ticket form: the donor's recent donations to pick from, and a subject. */
-function supportBlock(ctx: Ctx, subject: SupportSubject, presetDonationId: string | null): ConciergeBlock {
+const DONATION_WORDS = /تبرع|تبرعي|تبرعات|دفع|خصم|فلوس|مبلغ|إيصال|ايصال|بطاق|تحويل|donat|payment|paid|charg|receipt|card|transfer|money|refund|bağış|ödeme|makbuz|kart|havale|iade|don\b|paiement|reçu|rembours|spende|zahlung|quittung|donación|pago|recibo|reembolso|donasi|pembayaran|kuitansi|عطیہ|ادائیگی|رسید/i;
+
+/**
+ * The ticket form. The donation list is offered only when the problem is
+ * about a donation; a partnership or a general complaint gets the plain
+ * form. The draft is what the assistant understood, in the visitor's
+ * words, ready to send or edit.
+ */
+function supportBlock(ctx: Ctx, subject: SupportSubject, presetDonationId: string | null, aboutDonation: boolean, draft: string): ConciergeBlock {
   return {
     type: "support_ticket",
     subject,
     signedIn: Boolean(ctx.donor),
-    donations: (ctx.donor?.recent ?? []).map((d) => ({ id: d.id, date: d.date, amount: d.amount, currency: d.currency, state: d.state, items: d.items })),
-    presetDonationId: presetDonationId && ctx.donor?.donationIds.includes(presetDonationId) ? presetDonationId : null,
+    donations: aboutDonation ? (ctx.donor?.recent ?? []).map((d) => ({ id: d.id, date: d.date, amount: d.amount, currency: d.currency, state: d.state, items: d.items })) : [],
+    presetDonationId: aboutDonation && presetDonationId && ctx.donor?.donationIds.includes(presetDonationId) ? presetDonationId : null,
+    aboutDonation,
+    draft: draft.trim().slice(0, 1200),
   };
 }
 
@@ -292,11 +304,19 @@ function supportBlock(ctx: Ctx, subject: SupportSubject, presetDonationId: strin
  * under it files the message to the inbox; the contact page stays as the
  * other door.
  */
-function supportFlow(ctx: Ctx, message?: string, subject: SupportSubject = "COMPLAINT", presetDonationId: string | null = null): ConciergeResponse {
+function supportFlow(
+  ctx: Ctx,
+  message?: string,
+  subject: SupportSubject = "COMPLAINT",
+  presetDonationId: string | null = null,
+  ticket: { aboutDonation: boolean; draft: string } = { aboutDonation: true, draft: "" }
+): ConciergeResponse {
   const d = ctx.donor;
   let text = message;
   if (!text) {
-    if (d && d.recent.length) {
+    if (!ticket.aboutDonation) {
+      text = ctx.s.s_support_intro_general ?? "";
+    } else if (d && d.recent.length) {
       const latest = d.recent[0];
       const state = ctx.s[`st_${latest.state}`] ?? latest.state;
       text = fill(ctx.s.s_support_intro, { name: d.firstName, amount: `${latest.amount} ${latest.currency}`, date: latest.date, state });
@@ -306,7 +326,7 @@ function supportFlow(ctx: Ctx, message?: string, subject: SupportSubject = "COMP
   }
   return respond(ctx, {
     message: text,
-    blocks: [supportBlock(ctx, subject, presetDonationId)],
+    blocks: [supportBlock(ctx, subject, presetDonationId, ticket.aboutDonation, ticket.draft)],
     actions: [{ type: "navigate", label: ctx.s.a_contact ?? "", route: "contact" }],
     mode: message ? "llm" : "deterministic",
     intent: "support",
@@ -566,6 +586,7 @@ async function messageFlow(ctx: Ctx, text: string): Promise<ConciergeResponse> {
     donor: ctx.donor,
   });
   const verdict = outcome.verdict;
+  if (!verdict && outcome.reason !== "disabled") console.warn("[concierge] model fallback", outcome.reason);
 
   if (verdict) {
     intent = intent ?? verdict.intent;
@@ -603,9 +624,12 @@ async function messageFlow(ctx: Ctx, text: string): Promise<ConciergeResponse> {
        form with the donation it named already selected. Checked before the
        account sign-in answer, so a visitor's refund request gets the form
        too. No cross-sell here. */
-    if (verdict.supportSubject || intent === "support" || parsed.intent === "support" || (verdict.needsHuman && intent === "account")) {
+    /* The model alone cannot open a ticket: it must name a subject, or the
+       visitor's own words must be a problem. Sympathy is not a complaint. */
+    if (verdict.supportSubject || parsed.intent === "support" || (verdict.needsHuman && intent === "account")) {
       const subject: SupportSubject = verdict.supportSubject ?? (intent === "account" ? "DONATION_ISSUE" : "COMPLAINT");
-      const res = supportFlow(ctx, answer || undefined, subject, ownDonation);
+      const aboutDonation = verdict.supportSubject ? verdict.ticketAboutDonation || subject === "DONATION_ISSUE" : DONATION_WORDS.test(text);
+      const res = supportFlow(ctx, answer || undefined, subject, ownDonation, { aboutDonation, draft: verdict.ticketDraft.trim() || text });
       const extra = intent === "account" || parsed.intent === "account" ? donorActions(ctx, text, res.actions) : [];
       return { ...res, actions: [...extra, ...res.actions] };
     }
@@ -620,11 +644,13 @@ async function messageFlow(ctx: Ctx, text: string): Promise<ConciergeResponse> {
        a doubt. One page to open if the model named one, the team if it could
        not answer, and a way into the projects so the door stays open. */
     if (verdict.mode === "answer" || (!verdict.recommendedIds.length && answer && intent !== "zakat" && intent !== "waqf")) {
+      /* Only what fits this reply: a page the model named, the donor's own
+         documents, the team when needed. No standing "browse projects" —
+         the suggestion below is the tailored next step. */
       const actions: ConciergeAction[] = [];
       if (routeAction) actions.push(routeAction);
       if (intent === "account" || parsed.intent === "account") actions.push(...donorActions(ctx, text, actions));
       if (verdict.needsHuman) actions.push(contact);
-      if (!routeAction || routeAction.route !== "projects") actions.push({ type: "navigate", label: ctx.s.a_projects ?? "", route: "projects" });
       const effective: ConciergeIntent = intent ?? "question";
       /* Never a dead end: one next step, the model's if it fits a real
          candidate, else the one that fits the intent. */
@@ -643,6 +669,11 @@ async function messageFlow(ctx: Ctx, text: string): Promise<ConciergeResponse> {
         else if (kind === "none") kind = "category";
       }
       const suggested = verdict.needsHuman && kind === "none" ? null : suggestionBlock(ctx, kind, kindCampaignId, kindText, candidates) ?? fallbackSuggestion(ctx, intent ?? ctx.state.intent ?? null, candidates);
+      /* A "browse projects" link is redundant under a specific project suggestion. */
+      if (suggested?.type === "suggestion" && suggested.campaign) {
+        const i = actions.findIndex((a) => a.type === "navigate" && a.route === "projects");
+        if (i !== -1) actions.splice(i, 1);
+      }
       const blocks: ConciergeBlock[] = [];
       if (intent === "account" && ctx.donor) {
         /* Their own numbers under an account answer, so the reply is checkable. */
@@ -676,7 +707,7 @@ async function messageFlow(ctx: Ctx, text: string): Promise<ConciergeResponse> {
   }
 
   /* Model off or unusable: the deterministic reading answers. */
-  if (intent === "support") return supportFlow(ctx);
+  if (intent === "support") return supportFlow(ctx, undefined, DONATION_WORDS.test(text) ? "DONATION_ISSUE" : "COMPLAINT", null, { aboutDonation: DONATION_WORDS.test(text), draft: text });
   if (intent === "account") return accountFlow(ctx);
   if (intent === "zakat") return zakatFlow(ctx);
   if (intent === "waqf") return waqfFlow(ctx);
@@ -687,7 +718,6 @@ async function messageFlow(ctx: Ctx, text: string): Promise<ConciergeResponse> {
     /* Nothing recognisable and no model to read it: the nearest projects,
        and the team for whatever the visitor actually needed. */
     res.message = `${ctx.s.s_no_results ?? ""} ${res.message}`.trim();
-    res.actions = [{ type: "navigate", label: ctx.s.a_contact ?? "", route: "contact" }, ...res.actions];
   }
   return res;
 }

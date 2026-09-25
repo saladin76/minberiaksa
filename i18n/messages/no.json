@@ -2282,6 +2282,8 @@
     "sp_send": "Send til teamet",
     "sp_sent": "Meldingen din er sendt til teamet; de svarer snart på e-post.",
     "sp_error": "Kunne ikke sende nå. Du når oss via kontaktsiden.",
+    "s_support_intro_general": "Jeg beklager. Jeg har skrevet meldingen din til teamet ut fra det du fortalte; se over eller endre, og send – de svarer snart på e-post.",
+    "sp_draft_hint": "Slik forsto jeg det – endre om du vil, og send",
     "s_ask_where_plan": "Flott — {amount} {frequency}. Hvor skal det gå? Velg et område, så viser jeg prosjektene med den verdien som standard:",
     "s_ask_where_amount": "Flott — {amount}. Hvor skal det gå? Velg et område, så viser jeg prosjektene:"
   }
