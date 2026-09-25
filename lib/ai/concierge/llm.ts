@@ -5,6 +5,7 @@ import { LOCALES, isValidLocale } from "@/lib/locales";
 import { LLM_VERDICT_JSON_SCHEMA, llmVerdictSchema, type LlmVerdict } from "./schema";
 import type { CatalogCampaign, CatalogCategory } from "./recommend";
 import type { KnowledgePack } from "./knowledge";
+import type { DonorContext } from "./donor";
 
 /**
  * The single model call the concierge makes, and only for free text: read the
@@ -34,6 +35,23 @@ export interface LlmInput {
   currentCampaign: CatalogCampaign | null;
   waqf: Array<{ unit: string; priceUSD: number }>;
   knowledge: KnowledgePack;
+  /** The signed-in donor's own giving, or null for a visitor. */
+  donor: DonorContext | null;
+}
+
+function donorLines(d: DonorContext): string[] {
+  const out = [
+    `Signed in as ${d.firstName || "a donor"} (member since ${d.memberSince}). Confirmed donations: ${d.totals.donations}, total about $${Math.round(d.totals.paidUSD)}.`,
+  ];
+  if (d.plans.length) {
+    out.push(`Regular plans:`);
+    for (const p of d.plans) out.push(`- plan ${p.id}: ${p.frequency.toLowerCase()} ${p.amount} ${p.currency}, status ${p.status}${p.nextBillingDate ? `, next charge ${p.nextBillingDate}` : ""}${p.lastBillingDate ? `, last charge ${p.lastBillingDate}` : ""}, for: ${p.items.join(", ") || "general"}`);
+  }
+  if (d.recent.length) {
+    out.push(`Recent donations (newest first):`);
+    for (const r of d.recent) out.push(`- donation ${r.id} on ${r.date}: ${r.amount} ${r.currency}, state=${r.state}${r.method ? `, method=${r.method}` : ""}${r.recurring ? ", part of a regular plan" : ""}, for: ${r.items.join(", ") || "general"}${r.documentsReady ? " (receipt and certificate available)" : ""}`);
+  }
+  return out;
 }
 
 function languageName(locale: string): string {
@@ -70,6 +88,7 @@ export function buildPrompt(input: LlmInput): string {
     ``,
     `CONVERSION, WITHOUT PRESSURE: your goal is that the visitor gives with confidence today. Remove doubts with facts (receipts, certificates, field follow-up, secure payment). When someone plans a one-time gift and RECURRING_NUDGED is false, add ONE calm sentence about regular giving (daily, every Friday, or monthly) as an option that keeps the impact going — never repeat it once RECURRING_NUDGED is true, never insist, never guilt-trip. Prefer concrete next steps over questions; ask at most one question and only when you truly cannot proceed. Do not ask for anything already in PARSED.`,
     `NEEDS_HUMAN: set needsHuman=true for complaints, payment or receipt problems, refund requests, partnership/media/press/volunteering enquiries, or anything you cannot answer from the knowledge. Still give the best short answer you can.`,
+    `THE DONOR'S OWN GIVING: if DONOR is present the visitor IS signed in — never tell them to sign in or log in. You may answer questions about their donations, plans, receipts and certificates strictly from DONOR — states mean: paid = confirmed and documents ready; pending_confirmation = card payment not yet confirmed by the gateway; awaiting_receipt = bank transfer, the donor has not uploaded the receipt; under_review = receipt received, finance is matching it; rejected = the transfer could not be matched (they may upload again); failed = the payment did not go through. For "where is my receipt / certificate" you MUST set route=receipt (or thanksCertificate) and donationId to the id of the matching paid donation from DONOR, and say it is one tap away; for an unfinished bank transfer set route=paymentPending with its donationId; for plans, changes or cancellations set route=account. Use their first name naturally, once. If DONOR is absent and they ask about their own donation, say the details are on the Account page after signing in and that every confirmed donation is also emailed with its receipt; set route=account and intent=account. Never state amounts or dates that are not in DONOR.`,
     `INTENTS: zakat questions about HOW to give → intent=zakat. Waqf → intent=waqf. Gifts in someone's name → intent=gift and fill giftRecipientName. Regular giving → intent=recurring and fill frequency. "amount" is the number as the visitor said it and "currency" the ISO code they implied; leave null if unknown. Never convert currencies.`,
   );
   lines.push(``, `ORGANISATION:`, ...k.organisation.map((s) => `- ${s}`));
@@ -78,6 +97,8 @@ export function buildPrompt(input: LlmInput): string {
     lines.push(``, `FAQ (published by the foundation):`);
     for (const f of k.faqs) lines.push(`Q: ${f.q}\nA: ${f.a}`);
   }
+  if (input.donor) lines.push(``, `DONOR:`, ...donorLines(input.donor));
+  else lines.push(``, `DONOR: not signed in`);
   lines.push(``, `PARSED: ${JSON.stringify(input.parsed)}`, `RECURRING_NUDGED: ${input.parsed.recurringNudged}`, `CURRENT_PAGE: ${input.parsed.route ?? "unknown"}`);
   if (input.currentCampaign) lines.push(`CURRENT_PAGE_PROJECT: ${candidateLine(input.currentCampaign)}`);
   lines.push(``, `CANDIDATES:`);

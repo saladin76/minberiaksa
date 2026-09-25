@@ -43,8 +43,16 @@ function clip(text: string, max: number): string {
 }
 
 /** Pages the model may point to, with the site's own navigation labels. */
-export const SUGGESTABLE_ROUTES = ["projects", "zakat", "zakatCalculator", "waqf", "recurring", "about", "contact", "reports", "bankAccounts", "account", "volunteer", "partner", "blog"] as const;
+export const SUGGESTABLE_ROUTES = ["projects", "zakat", "zakatCalculator", "waqf", "recurring", "about", "contact", "reports", "bankAccounts", "account", "volunteer", "partner", "blog", "receipt", "thanksCertificate", "paymentPending"] as const;
 export type SuggestableRoute = (typeof SUGGESTABLE_ROUTES)[number];
+
+/** Routes whose label lives in the Concierge namespace rather than navigation. */
+const ROUTE_CONCIERGE_KEY: Partial<Record<SuggestableRoute, string>> = {
+  zakatCalculator: "a_calc",
+  receipt: "a_receipt",
+  thanksCertificate: "a_certificate",
+  paymentPending: "a_payment_pending",
+};
 
 const ROUTE_NAV_KEY: Record<SuggestableRoute, string> = {
   projects: "projects",
@@ -60,6 +68,9 @@ const ROUTE_NAV_KEY: Record<SuggestableRoute, string> = {
   volunteer: "volunteer",
   partner: "partner",
   blog: "blog",
+  receipt: "",
+  thanksCertificate: "",
+  paymentPending: "",
 };
 
 export async function loadKnowledge(locale: string): Promise<KnowledgePack> {
@@ -108,9 +119,9 @@ export async function loadKnowledge(locale: string): Promise<KnowledgePack> {
 
   const routeLabels: Record<string, string> = {};
   for (const route of SUGGESTABLE_ROUTES) {
-    const label = str(nav, ROUTE_NAV_KEY[route]) || (route === "zakatCalculator" ? str(common, "zakatCalculator") : "");
-    if (route === "zakatCalculator" && str(concierge, "a_calc")) routeLabels[route] = str(concierge, "a_calc");
-    else if (label) routeLabels[route] = label;
+    const own = ROUTE_CONCIERGE_KEY[route];
+    const label = (own && str(concierge, own)) || (ROUTE_NAV_KEY[route] && str(nav, ROUTE_NAV_KEY[route])) || (route === "zakatCalculator" ? str(common, "zakatCalculator") : "");
+    if (label) routeLabels[route] = label;
   }
 
   const pack: KnowledgePack = { locale, organisation, giving, faqs, routeLabels, loadedAt: Date.now() };

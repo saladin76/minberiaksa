@@ -116,301 +116,302 @@ export default function QuickDonate({ amounts = DEFAULT_AMOUNTS }: QuickDonatePr
   if (!route || !QUICK_DONATE_ROUTES.has(route)) return null;
 
   return (
-    <div
-      id="quick-fab"
-      className="quickfab"
-      data-qopen={open ? "true" : "false"}
-      dir={dir}
-      style={{
-        position: "fixed",
-        /* The bottom inline-end corner. The WhatsApp button holds the opposite
-           one (`insetInlineStart: 22`), so the two never meet, and neither sits
-           over the page's own content. */
-        insetInlineEnd: "max(14px,2.5vw)",
-        bottom: "max(16px, env(safe-area-inset-bottom))",
-        zIndex: 75,
-        maxWidth: "94vw",
-        /* Column-reverse so the panel opens upward from a button that is already
-           at the bottom of the screen. */
-        display: "flex",
-        flexDirection: "column-reverse",
-        alignItems: "flex-end",
-        fontFamily: "var(--font-ar)",
-      }}
-    >
-      <button
-        type="button"
-        className="qf-handle"
-        aria-expanded={open}
-        aria-label={t("quickDonate")}
-        onClick={() => setOpen((v) => !v)}
-        style={{
-          display: "inline-flex",
-          alignItems: "center",
-          gap: 9,
-          height: 50,
-          padding: "0 20px",
-          border: 0,
-          borderRadius: 999,
-          background: "linear-gradient(135deg, #C2453A, #8E2A20)",
-          color: "#fff",
-          fontFamily: "inherit",
-          fontWeight: 900,
-          fontSize: 14.5,
-          cursor: "pointer",
-          boxShadow: "0 14px 30px rgba(169,52,40,.38), inset 0 0 0 1px rgba(255,255,255,.16)",
-          whiteSpace: "nowrap",
-          maxWidth: "100%",
-          boxSizing: "border-box",
-        }}
-      >
-        {/* The bolt turns into a close mark, so the one control says what it
-            will do next rather than what it did. */}
-        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-          {open ? <path d="M6 6l12 12M18 6 6 18" /> : <path d="M13 2 3 14h7l-1 8 10-12h-7l1-8Z" />}
-        </svg>
-        <span className="qf-label">{t("quickDonate")}</span>
-      </button>
+    // <div
+    //   id="quick-fab"
+    //   className="quickfab"
+    //   data-qopen={open ? "true" : "false"}
+    //   dir={dir}
+    //   style={{
+    //     position: "fixed",
+    //     /* The bottom inline-end corner. The WhatsApp button holds the opposite
+    //        one (`insetInlineStart: 22`), so the two never meet, and neither sits
+    //        over the page's own content. */
+    //     insetInlineEnd: "max(14px,2.5vw)",
+    //     bottom: "max(16px, env(safe-area-inset-bottom))",
+    //     zIndex: 75,
+    //     maxWidth: "94vw",
+    //     /* Column-reverse so the panel opens upward from a button that is already
+    //        at the bottom of the screen. */
+    //     display: "flex",
+    //     flexDirection: "column-reverse",
+    //     alignItems: "flex-end",
+    //     fontFamily: "var(--font-ar)",
+    //   }}
+    // >
+    //   <button
+    //     type="button"
+    //     className="qf-handle"
+    //     aria-expanded={open}
+    //     aria-label={t("quickDonate")}
+    //     onClick={() => setOpen((v) => !v)}
+    //     style={{
+    //       display: "inline-flex",
+    //       alignItems: "center",
+    //       gap: 9,
+    //       height: 50,
+    //       padding: "0 20px",
+    //       border: 0,
+    //       borderRadius: 999,
+    //       background: "linear-gradient(135deg, #C2453A, #8E2A20)",
+    //       color: "#fff",
+    //       fontFamily: "inherit",
+    //       fontWeight: 900,
+    //       fontSize: 14.5,
+    //       cursor: "pointer",
+    //       boxShadow: "0 14px 30px rgba(169,52,40,.38), inset 0 0 0 1px rgba(255,255,255,.16)",
+    //       whiteSpace: "nowrap",
+    //       maxWidth: "100%",
+    //       boxSizing: "border-box",
+    //     }}
+    //   >
+    //     {/* The bolt turns into a close mark, so the one control says what it
+    //         will do next rather than what it did. */}
+    //     <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    //       {open ? <path d="M6 6l12 12M18 6 6 18" /> : <path d="M13 2 3 14h7l-1 8 10-12h-7l1-8Z" />}
+    //     </svg>
+    //     <span className="qf-label">{t("quickDonate")}</span>
+    //   </button>
 
-      {open ? (
-        <form
-          onSubmit={onSubmit}
-          style={{
-            marginBottom: 10,
-            width: "min(288px,92vw)",
-            boxSizing: "border-box",
-            /* It opens upward from the foot of the screen, so on a short
-               viewport it scrolls rather than running off the top. */
-            maxHeight: "min(72vh, 620px)",
-            overflowY: "auto",
-            padding: 16,
-            background: "#fff",
-            border: "1px solid rgba(211,154,39,.5)",
-            borderRadius: 14,
-            boxShadow: "0 22px 48px rgba(16,33,43,.18)",
-            display: "grid",
-            gap: 12,
-            overflow: "hidden",
-          }}
-        >
-          {/* Destination picker */}
-          <div>
-            <button
-              type="button"
-              onClick={() => setPickerOpen((v) => !v)}
-              aria-expanded={pickerOpen}
-              style={{
-                width: "100%",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                height: 40,
-                border: "1px solid rgba(16,33,43,.12)",
-                borderRadius: 10,
-                padding: "0 12px",
-                fontFamily: "inherit",
-                fontSize: 13.5,
-                fontWeight: 800,
-                color: "#10212B",
-                background: "#fff",
-                cursor: "pointer",
-              }}
-            >
-              <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                {selected?.label ?? generalLabel}
-              </span>
-              <span aria-hidden="true" style={{ display: "inline-flex", color: "#D39A27" }}>
-                <ChevronIcon open={pickerOpen} />
-              </span>
-            </button>
+    //   {open ? (
+    //     <form
+    //       onSubmit={onSubmit}
+    //       style={{
+    //         marginBottom: 10,
+    //         width: "min(288px,92vw)",
+    //         boxSizing: "border-box",
+    //         /* It opens upward from the foot of the screen, so on a short
+    //            viewport it scrolls rather than running off the top. */
+    //         maxHeight: "min(72vh, 620px)",
+    //         overflowY: "auto",
+    //         padding: 16,
+    //         background: "#fff",
+    //         border: "1px solid rgba(211,154,39,.5)",
+    //         borderRadius: 14,
+    //         boxShadow: "0 22px 48px rgba(16,33,43,.18)",
+    //         display: "grid",
+    //         gap: 12,
+    //         overflow: "hidden",
+    //       }}
+    //     >
+    //       {/* Destination picker */}
+    //       <div>
+    //         <button
+    //           type="button"
+    //           onClick={() => setPickerOpen((v) => !v)}
+    //           aria-expanded={pickerOpen}
+    //           style={{
+    //             width: "100%",
+    //             display: "flex",
+    //             alignItems: "center",
+    //             justifyContent: "space-between",
+    //             height: 40,
+    //             border: "1px solid rgba(16,33,43,.12)",
+    //             borderRadius: 10,
+    //             padding: "0 12px",
+    //             fontFamily: "inherit",
+    //             fontSize: 13.5,
+    //             fontWeight: 800,
+    //             color: "#10212B",
+    //             background: "#fff",
+    //             cursor: "pointer",
+    //           }}
+    //         >
+    //           <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+    //             {selected?.label ?? generalLabel}
+    //           </span>
+    //           <span aria-hidden="true" style={{ display: "inline-flex", color: "#D39A27" }}>
+    //             <ChevronIcon open={pickerOpen} />
+    //           </span>
+    //         </button>
 
-            {pickerOpen ? (
-              <div
-                style={{
-                  marginTop: 6,
-                  maxHeight: 260,
-                  overflowY: "auto",
-                  border: "1px solid rgba(16,33,43,.12)",
-                  borderRadius: 10,
-                  background: "#fff",
-                }}
-              >
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSelected(null);
-                    setPickerOpen(false);
-                  }}
-                  style={rowStyle(!selected)}
-                >
-                  <span>{generalLabel}</span>
-                  {!selected ? <CheckIcon /> : null}
-                </button>
+    //         {pickerOpen ? (
+    //           <div
+    //             style={{
+    //               marginTop: 6,
+    //               maxHeight: 260,
+    //               overflowY: "auto",
+    //               border: "1px solid rgba(16,33,43,.12)",
+    //               borderRadius: 10,
+    //               background: "#fff",
+    //             }}
+    //           >
+    //             <button
+    //               type="button"
+    //               onClick={() => {
+    //                 setSelected(null);
+    //                 setPickerOpen(false);
+    //               }}
+    //               style={rowStyle(!selected)}
+    //             >
+    //               <span>{generalLabel}</span>
+    //               {!selected ? <CheckIcon /> : null}
+    //             </button>
 
-                {groups.map((group) => {
-                  const regionOpen = openRegions[group.region] === true;
-                  return (
-                    <div key={group.region}>
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setOpenRegions((prev) => ({ ...prev, [group.region]: !prev[group.region] }))
-                        }
-                        style={{
-                          width: "100%",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "space-between",
-                          padding: "8px 12px",
-                          background: "#F7F2EA",
-                          border: 0,
-                          borderTop: "1px solid rgba(16,33,43,.08)",
-                          fontFamily: "inherit",
-                          fontSize: 11.5,
-                          fontWeight: 900,
-                          color: "#52616B",
-                          letterSpacing: ".04em",
-                          cursor: "pointer",
-                        }}
-                      >
-                        <span>{group.label}</span>
-                        <span aria-hidden="true" style={{ display: "inline-flex", color: "#D39A27" }}>
-                          <ChevronIcon open={regionOpen} size={13} />
-                        </span>
-                      </button>
-                      {regionOpen
-                        ? group.items.map((project) => {
-                            const isSelected = selected?.slug === project.slug;
-                            return (
-                              <button
-                                key={project.slug}
-                                type="button"
-                                onClick={() => {
-                                  setSelected({ slug: project.slug, label: project.title });
-                                  setPickerOpen(false);
-                                }}
-                                style={rowStyle(isSelected)}
-                              >
-                                <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                                  {project.title}
-                                </span>
-                                {isSelected ? <CheckIcon /> : null}
-                              </button>
-                            );
-                          })
-                        : null}
-                    </div>
-                  );
-                })}
-              </div>
-            ) : null}
-          </div>
+    //             {groups.map((group) => {
+    //               const regionOpen = openRegions[group.region] === true;
+    //               return (
+    //                 <div key={group.region}>
+    //                   <button
+    //                     type="button"
+    //                     onClick={() =>
+    //                       setOpenRegions((prev) => ({ ...prev, [group.region]: !prev[group.region] }))
+    //                     }
+    //                     style={{
+    //                       width: "100%",
+    //                       display: "flex",
+    //                       alignItems: "center",
+    //                       justifyContent: "space-between",
+    //                       padding: "8px 12px",
+    //                       background: "#F7F2EA",
+    //                       border: 0,
+    //                       borderTop: "1px solid rgba(16,33,43,.08)",
+    //                       fontFamily: "inherit",
+    //                       fontSize: 11.5,
+    //                       fontWeight: 900,
+    //                       color: "#52616B",
+    //                       letterSpacing: ".04em",
+    //                       cursor: "pointer",
+    //                     }}
+    //                   >
+    //                     <span>{group.label}</span>
+    //                     <span aria-hidden="true" style={{ display: "inline-flex", color: "#D39A27" }}>
+    //                       <ChevronIcon open={regionOpen} size={13} />
+    //                     </span>
+    //                   </button>
+    //                   {regionOpen
+    //                     ? group.items.map((project) => {
+    //                         const isSelected = selected?.slug === project.slug;
+    //                         return (
+    //                           <button
+    //                             key={project.slug}
+    //                             type="button"
+    //                             onClick={() => {
+    //                               setSelected({ slug: project.slug, label: project.title });
+    //                               setPickerOpen(false);
+    //                             }}
+    //                             style={rowStyle(isSelected)}
+    //                           >
+    //                             <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+    //                               {project.title}
+    //                             </span>
+    //                             {isSelected ? <CheckIcon /> : null}
+    //                           </button>
+    //                         );
+    //                       })
+    //                     : null}
+    //                 </div>
+    //               );
+    //             })}
+    //           </div>
+    //         ) : null}
+    //       </div>
 
-          {/* Frequency */}
-          <fieldset style={{ display: "grid", gap: 6, border: 0, padding: 0, margin: 0 }}>
-            <legend style={{ fontSize: 11, fontWeight: 900, color: "#52616B", letterSpacing: ".06em", padding: 0 }}>
-              {t("frequency")}
-            </legend>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0,1fr))", gap: 6, marginTop: 8, minWidth: 0 }}>
-              {FREQ_IDS.map((id, i) => (
-                <label key={id} style={{ display: "block", minWidth: 0 }}>
-                  <input
-                    type="radio"
-                    name="freq"
-                    value={id}
-                    checked={freq === id}
-                    onChange={() => setFreq(id)}
-                    style={{ position: "absolute", opacity: 0, pointerEvents: "none" }}
-                  />
-                  <span style={freqStyle(freq === id)}>{t(FREQ_LABEL_KEYS[i])}</span>
-                </label>
-              ))}
-            </div>
-          </fieldset>
+    //       {/* Frequency */}
+    //       <fieldset style={{ display: "grid", gap: 6, border: 0, padding: 0, margin: 0 }}>
+    //         <legend style={{ fontSize: 11, fontWeight: 900, color: "#52616B", letterSpacing: ".06em", padding: 0 }}>
+    //           {t("frequency")}
+    //         </legend>
+    //         <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0,1fr))", gap: 6, marginTop: 8, minWidth: 0 }}>
+    //           {FREQ_IDS.map((id, i) => (
+    //             <label key={id} style={{ display: "block", minWidth: 0 }}>
+    //               <input
+    //                 type="radio"
+    //                 name="freq"
+    //                 value={id}
+    //                 checked={freq === id}
+    //                 onChange={() => setFreq(id)}
+    //                 style={{ position: "absolute", opacity: 0, pointerEvents: "none" }}
+    //               />
+    //               <span style={freqStyle(freq === id)}>{t(FREQ_LABEL_KEYS[i])}</span>
+    //             </label>
+    //           ))}
+    //         </div>
+    //       </fieldset>
 
-          {/* Amount */}
-          <fieldset style={{ display: "grid", gap: 6, border: 0, padding: 0, margin: 0 }}>
-            <legend style={{ fontSize: 11, fontWeight: 900, color: "#52616B", letterSpacing: ".06em", padding: 0 }}>
-              {t("amount")} · <span dir="ltr" style={{ unicodeBidi: "isolate" }}>USD</span>
-            </legend>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(0,1fr))", gap: 5, marginTop: 8, minWidth: 0 }}>
-              {amounts.map((value) => (
-                <button
-                  key={value}
-                  type="button"
-                  className="qf-amt"
-                  onClick={() => {
-                    setAmount(value);
-                    setCustom("");
-                  }}
-                  style={amtStyle(amount === value && !custom)}
-                >
-                  <span dir="ltr" style={{ unicodeBidi: "isolate" }}>${value}</span>
-                </button>
-              ))}
-            </div>
-            <input
-              name="custom"
-              inputMode="decimal"
-              value={custom}
-              onChange={(e) => setCustom(e.target.value)}
-              placeholder={t("customAmount")}
-              aria-label={t("customAmount")}
-              style={{
-                width: "100%",
-                height: 40,
-                marginTop: 6,
-                padding: "0 13px",
-                borderRadius: 10,
-                border: "1px solid rgba(16,33,43,.12)",
-                background: "#fff",
-                fontFamily: "inherit",
-                fontSize: 13.5,
-                fontWeight: 800,
-                color: "#10212B",
-                boxSizing: "border-box",
-              }}
-            />
-          </fieldset>
+    //       {/* Amount */}
+    //       <fieldset style={{ display: "grid", gap: 6, border: 0, padding: 0, margin: 0 }}>
+    //         <legend style={{ fontSize: 11, fontWeight: 900, color: "#52616B", letterSpacing: ".06em", padding: 0 }}>
+    //           {t("amount")} · <span dir="ltr" style={{ unicodeBidi: "isolate" }}>USD</span>
+    //         </legend>
+    //         <div style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(0,1fr))", gap: 5, marginTop: 8, minWidth: 0 }}>
+    //           {amounts.map((value) => (
+    //             <button
+    //               key={value}
+    //               type="button"
+    //               className="qf-amt"
+    //               onClick={() => {
+    //                 setAmount(value);
+    //                 setCustom("");
+    //               }}
+    //               style={amtStyle(amount === value && !custom)}
+    //             >
+    //               <span dir="ltr" style={{ unicodeBidi: "isolate" }}>${value}</span>
+    //             </button>
+    //           ))}
+    //         </div>
+    //         <input
+    //           name="custom"
+    //           inputMode="decimal"
+    //           value={custom}
+    //           onChange={(e) => setCustom(e.target.value)}
+    //           placeholder={t("customAmount")}
+    //           aria-label={t("customAmount")}
+    //           style={{
+    //             width: "100%",
+    //             height: 40,
+    //             marginTop: 6,
+    //             padding: "0 13px",
+    //             borderRadius: 10,
+    //             border: "1px solid rgba(16,33,43,.12)",
+    //             background: "#fff",
+    //             fontFamily: "inherit",
+    //             fontSize: 13.5,
+    //             fontWeight: 800,
+    //             color: "#10212B",
+    //             boxSizing: "border-box",
+    //           }}
+    //         />
+    //       </fieldset>
 
-          <button
-            type="submit"
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 8,
-              height: 44,
-              border: 0,
-              borderRadius: 999,
-              background: "#A93428",
-              color: "#fff",
-              fontFamily: "inherit",
-              fontWeight: 900,
-              fontSize: 15,
-              cursor: "pointer",
-            }}
-          >
-            {t("donate")}
-            <svg
-              viewBox="0 0 24 24"
-              width="15"
-              height="15"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2.4"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              aria-hidden="true"
-              // "Continue" points at the end edge, so it mirrors with direction.
-              style={{ transform: dir === "ltr" ? "scaleX(-1)" : undefined }}
-            >
-              <path d="M14 6l-6 6 6 6" />
-            </svg>
-          </button>
-        </form>
-      ) : null}
-    </div>
+    //       <button
+    //         type="submit"
+    //         style={{
+    //           display: "flex",
+    //           alignItems: "center",
+    //           justifyContent: "center",
+    //           gap: 8,
+    //           height: 44,
+    //           border: 0,
+    //           borderRadius: 999,
+    //           background: "#A93428",
+    //           color: "#fff",
+    //           fontFamily: "inherit",
+    //           fontWeight: 900,
+    //           fontSize: 15,
+    //           cursor: "pointer",
+    //         }}
+    //       >
+    //         {t("donate")}
+    //         <svg
+    //           viewBox="0 0 24 24"
+    //           width="15"
+    //           height="15"
+    //           fill="none"
+    //           stroke="currentColor"
+    //           strokeWidth="2.4"
+    //           strokeLinecap="round"
+    //           strokeLinejoin="round"
+    //           aria-hidden="true"
+    //           // "Continue" points at the end edge, so it mirrors with direction.
+    //           style={{ transform: dir === "ltr" ? "scaleX(-1)" : undefined }}
+    //         >
+    //           <path d="M14 6l-6 6 6 6" />
+    //         </svg>
+    //       </button>
+    //     </form>
+    //   ) : null}
+    // </div>
+    <></>
   );
 }
 

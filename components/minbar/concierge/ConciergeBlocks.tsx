@@ -48,7 +48,78 @@ export function Block(props: BlockProps) {
       return <CrossSell campaign={block.campaign} amounts={block.suggestedAmountsUSD} onAdd={props.onAdd} onAction={props.onAction} busy={props.busy} />;
     case "notice":
       return <p className={`cg-notice cg-notice-${block.tone}`}>{block.text}</p>;
+    case "donor_summary":
+      return <DonorSummary block={block} onAction={props.onAction} />;
   }
+}
+
+const FREQ_PLAN_KEYS: Record<"DAILY" | "FRIDAY" | "MONTHLY", string> = { DAILY: "freqDaily", FRIDAY: "freqFriday", MONTHLY: "freqMonthly" };
+
+function DonorSummary({ block, onAction }: { block: Extract<ConciergeBlock, { type: "donor_summary" }>; onAction: BlockProps["onAction"] }) {
+  const t = useTranslations("Concierge");
+  const tCommon = useTranslations("common");
+  const { format, formatNumber } = useMinbarMoney();
+  const money = (amount: number, currency: string) => {
+    try {
+      return new Intl.NumberFormat(undefined, { style: "currency", currency, maximumFractionDigits: 0 }).format(amount);
+    } catch {
+      return `${amount} ${currency}`;
+    }
+  };
+  return (
+    <div className="cg-config cg-donor">
+      <div className="cg-donor-totals">
+        <span className="cg-label">{t("d_total")}</span>
+        <b dir="ltr">{format(block.totals.paidUSD)}</b>
+        <span className="cg-hint">{t("d_donations", { count: formatNumber(block.totals.donations) })}</span>
+      </div>
+      {block.plans.length ? (
+        <>
+          <span className="cg-label">{t("d_plans")}</span>
+          {block.plans.map((p) => (
+            <div key={p.id} className="cg-donor-row">
+              <div>
+                <b>
+                  <span dir="ltr">{money(p.amount, p.currency)}</span> · {tCommon(FREQ_PLAN_KEYS[p.frequency])}
+                </b>
+                <span>{p.items.join("، ") || tCommon("whereNeedGreatest")}</span>
+                <span className={`cg-state cg-state-${p.status === "ACTIVE" ? "ok" : "warn"}`}>
+                  {t(`ps_${p.status}`)}
+                  {p.nextBillingDate && p.status === "ACTIVE" ? ` · ${t("n_next_charge", { date: p.nextBillingDate })}` : ""}
+                </span>
+              </div>
+            </div>
+          ))}
+        </>
+      ) : null}
+      {block.donations.length ? (
+        <>
+          <span className="cg-label">{t("d_recent")}</span>
+          {block.donations.map((d) => (
+            <div key={d.id} className="cg-donor-row">
+              <div>
+                <b>
+                  <span dir="ltr">{money(d.amount, d.currency)}</span> · <span dir="ltr">{d.date}</span>
+                </b>
+                <span>{d.items.join("، ") || tCommon("whereNeedGreatest")}</span>
+                <span className={`cg-state cg-state-${d.state === "paid" ? "ok" : d.state === "failed" || d.state === "rejected" ? "bad" : "warn"}`}>{t(`st_${d.state}`)}</span>
+              </div>
+              <div className="cg-donor-actions">
+                {d.documentsReady ? (
+                  <>
+                    <button type="button" className="cg-link" onClick={() => onAction({ type: "navigate", label: t("a_receipt"), route: "receipt", extra: [d.id] })}>{t("a_receipt")}</button>
+                    <button type="button" className="cg-link" onClick={() => onAction({ type: "navigate", label: t("a_certificate"), route: "thanksCertificate", extra: [d.id] })}>{t("a_certificate")}</button>
+                  </>
+                ) : d.state === "awaiting_receipt" || d.state === "under_review" || d.state === "rejected" ? (
+                  <button type="button" className="cg-link" onClick={() => onAction({ type: "navigate", label: t("a_payment_pending"), route: "paymentPending", extra: [d.id] })}>{t("a_payment_pending")}</button>
+                ) : null}
+              </div>
+            </div>
+          ))}
+        </>
+      ) : null}
+    </div>
+  );
 }
 
 function CampaignRow({ campaign, onAction, busy }: { campaign: CampaignCard; onAction: BlockProps["onAction"]; busy: boolean }) {

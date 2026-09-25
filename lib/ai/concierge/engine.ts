@@ -7,6 +7,7 @@ import { loadCatalog, type ConciergeCatalog } from "./catalog";
 import { mentionsCurrentPage, parseMessage } from "./intent";
 import { askModel } from "./llm";
 import { loadKnowledge } from "./knowledge";
+import { loadDonorContext, type DonorContext } from "./donor";
 import { pickCrossSell, rankCampaigns, rankCategories, type CatalogCampaign, type CatalogCategory } from "./recommend";
 import {
   FREQUENCIES,
@@ -106,6 +107,8 @@ interface Ctx {
   catalog: ConciergeCatalog;
   state: ConversationState;
   current: CatalogCampaign | null;
+  /** The signed-in donor, from the server session only. */
+  donor: DonorContext | null;
 }
 
 function recommendationBlock(ctx: Ctx, intent: ConciergeIntent, reasons?: Record<string, string>, ids?: string[]): { block: ConciergeBlock; shown: string[] } {
@@ -155,7 +158,75 @@ function respond(ctx: Ctx, partial: Omit<ConciergeResponse, "state"> & { state?:
 function welcome(ctx: Ctx): ConciergeResponse {
   const actions = chips(ctx.s);
   if (ctx.current) actions.unshift({ type: "intent", label: ctx.s.a_this_project ?? "", intent: "current_page" });
-  return respond(ctx, { message: ctx.s.s_welcome ?? "", blocks: [], actions, mode: "deterministic", intent: "unknown" });
+  const blocks: ConciergeBlock[] = [];
+  let message = ctx.s.s_welcome ?? "";
+  if (ctx.donor) {
+    message = ctx.donor.firstName ? fill(ctx.s.s_welcome_signed, { name: ctx.donor.firstName }) : ctx.s.s_welcome ?? "";
+    actions.push({ type: "intent", label: ctx.s.c_account ?? "", intent: "account" });
+    /* Something of theirs needs attention: say so first, quietly. */
+    const pending = ctx.donor.recent.find((d) => d.state === "awaiting_receipt" || d.state === "under_review" || d.state === "rejected");
+    if (pending) {
+      blocks.push({ type: "notice", tone: "warning", text: ctx.s.n_pending_transfer ?? "" });
+      actions.unshift({ type: "navigate", label: ctx.s.a_payment_pending ?? "", route: "paymentPending", extra: [pending.id] });
+    }
+    if (ctx.donor.plans.some((p) => p.status === "PAYMENT_FAILED")) {
+      blocks.push({ type: "notice", tone: "warning", text: ctx.s.n_plan_failed ?? "" });
+      actions.unshift({ type: "navigate", label: ctx.s.a_account ?? "", route: "account" });
+    }
+  }
+  return respond(ctx, { message, blocks, actions, mode: "deterministic", intent: "unknown" });
+}
+
+const DOC_WORDS = /إيصال|ايصال|شهاد|receipt|certificate|makbuz|sertifika|belge|reçu|certificat|quittung|urkunde|recibo|certificado|kuitansi|sertifikat|resit|sijil|رسید|سرٹیفکیٹ|領収|感謝状|收据|证书|रसीद|प्रमाणपत्र/i;
+
+/**
+ * Deterministic links to a signed-in donor's own documents, added under any
+ * account reply so the receipt or certificate is one tap away whatever the
+ * model wrote: the latest paid donation's documents when the message asks
+ * for them, and the unfinished bank transfer whenever there is one.
+ */
+function donorActions(ctx: Ctx, text: string, existing: ConciergeAction[]): ConciergeAction[] {
+  if (!ctx.donor) return [];
+  const out: ConciergeAction[] = [];
+  const has = (route: string) => existing.some((a) => a.type === "navigate" && a.route === route);
+  const paid = ctx.donor.recent.find((d) => d.documentsReady);
+  if (paid && DOC_WORDS.test(text)) {
+    if (!has("receipt")) out.push({ type: "navigate", label: ctx.s.a_receipt ?? "", route: "receipt", extra: [paid.id] });
+    if (!has("thanksCertificate")) out.push({ type: "navigate", label: ctx.s.a_certificate ?? "", route: "thanksCertificate", extra: [paid.id] });
+  }
+  const pending = ctx.donor.recent.find((d) => d.state === "awaiting_receipt" || d.state === "under_review" || d.state === "rejected");
+  if (pending && !has("paymentPending")) out.push({ type: "navigate", label: ctx.s.a_payment_pending ?? "", route: "paymentPending", extra: [pending.id] });
+  return out;
+}
+
+/** The donor's own giving, or the way to it when they are not signed in. */
+function accountFlow(ctx: Ctx, message?: string): ConciergeResponse {
+  if (!ctx.donor) {
+    return respond(ctx, {
+      message: message ?? ctx.s.s_account_signin ?? "",
+      blocks: [],
+      actions: [{ type: "navigate", label: ctx.s.a_account ?? "", route: "account" }, { type: "navigate", label: ctx.s.a_contact ?? "", route: "contact" }],
+      mode: "deterministic",
+      intent: "account",
+      state: { intent: "account" },
+    });
+  }
+  const d = ctx.donor;
+  const empty = d.totals.donations === 0 && d.recent.length === 0 && d.plans.length === 0;
+  const blocks: ConciergeBlock[] = empty
+    ? []
+    : [
+        {
+          type: "donor_summary",
+          firstName: d.firstName,
+          totals: d.totals,
+          donations: d.recent.map((r) => ({ id: r.id, date: r.date, amount: r.amount, currency: r.currency, state: r.state, items: r.items, recurring: r.recurring, documentsReady: r.documentsReady })),
+          plans: d.plans.map((p) => ({ id: p.id, frequency: p.frequency, amount: p.amount, currency: p.currency, status: p.status, nextBillingDate: p.nextBillingDate, items: p.items })),
+        },
+      ];
+  const actions: ConciergeAction[] = [{ type: "navigate", label: ctx.s.a_account ?? "", route: "account" }];
+  if (empty) actions.push(...chips(ctx.s).slice(0, 3));
+  return respond(ctx, { message: message ?? (empty ? ctx.s.s_account_empty : ctx.s.s_account) ?? "", blocks, actions, mode: "deterministic", intent: "account", state: { intent: "account" } });
 }
 
 function zakatFlow(ctx: Ctx, message?: string): ConciergeResponse {
@@ -363,6 +434,7 @@ async function messageFlow(ctx: Ctx, text: string): Promise<ConciergeResponse> {
     currentCampaign: ctx.current,
     waqf: ctx.catalog.waqf,
     knowledge,
+    donor: ctx.donor,
   });
   const verdict = outcome.verdict;
 
@@ -376,10 +448,23 @@ async function messageFlow(ctx: Ctx, text: string): Promise<ConciergeResponse> {
     if (!ctx.state.recurringNudged && verdict.mode !== "answer" && intent !== "recurring" && intent !== "zakat") ctx.state.recurringNudged = true;
 
     const contact: ConciergeAction = { type: "navigate", label: ctx.s.a_contact ?? "", route: "contact" };
-    const routeAction: ConciergeAction | null =
-      verdict.route && verdict.route !== "contact" && knowledge.routeLabels[verdict.route]
-        ? { type: "navigate", label: knowledge.routeLabels[verdict.route], route: verdict.route, track: verdict.route === "zakatCalculator" ? "zakat_started" : verdict.route === "waqf" ? "waqf_started" : undefined }
-        : null;
+    /* A document route needs one of the donor's own donation ids — anything
+       else the model puts there is ignored and the account page offered. */
+    const documentRoutes = new Set(["receipt", "thanksCertificate", "paymentPending"]);
+    const ownDonation = verdict.donationId && ctx.donor?.donationIds.includes(verdict.donationId) ? verdict.donationId : null;
+    let routeAction: ConciergeAction | null = null;
+    if (verdict.route && verdict.route !== "contact" && knowledge.routeLabels[verdict.route]) {
+      if (documentRoutes.has(verdict.route)) {
+        routeAction = ownDonation
+          ? { type: "navigate", label: knowledge.routeLabels[verdict.route], route: verdict.route, extra: [ownDonation] }
+          : ctx.donor
+            ? { type: "navigate", label: knowledge.routeLabels.account ?? "", route: "account" }
+            : null;
+      } else {
+        routeAction = { type: "navigate", label: knowledge.routeLabels[verdict.route], route: verdict.route, track: verdict.route === "zakatCalculator" ? "zakat_started" : verdict.route === "waqf" ? "waqf_started" : undefined };
+      }
+    }
+    if (intent === "account" && !ctx.donor) return accountFlow(ctx, verdict.answer.trim() || undefined);
     const answer = verdict.answer.trim();
 
     if (verdict.needsRuling) {
@@ -393,6 +478,7 @@ async function messageFlow(ctx: Ctx, text: string): Promise<ConciergeResponse> {
     if (verdict.mode === "answer" || (!verdict.recommendedIds.length && answer && intent !== "zakat" && intent !== "waqf")) {
       const actions: ConciergeAction[] = [];
       if (routeAction) actions.push(routeAction);
+      if (intent === "account" || parsed.intent === "account") actions.push(...donorActions(ctx, text, actions));
       if (verdict.needsHuman) actions.push(contact);
       if (!routeAction || routeAction.route !== "projects") actions.push({ type: "navigate", label: ctx.s.a_projects ?? "", route: "projects" });
       const effective: ConciergeIntent = intent ?? "question";
@@ -422,6 +508,7 @@ async function messageFlow(ctx: Ctx, text: string): Promise<ConciergeResponse> {
   }
 
   /* Model off or unusable: the deterministic reading answers. */
+  if (intent === "account") return accountFlow(ctx);
   if (intent === "zakat") return zakatFlow(ctx);
   if (intent === "waqf") return waqfFlow(ctx);
   if (intent === "current_page") return currentPageFlow(ctx);
@@ -438,18 +525,25 @@ async function messageFlow(ctx: Ctx, text: string): Promise<ConciergeResponse> {
 
 /* ── Entry ───────────────────────────────────────────────────────────────── */
 
-export async function runConcierge(req: ConciergeRequest): Promise<ConciergeResponse> {
+export async function runConcierge(req: ConciergeRequest, opts: { userId?: string | null } = {}): Promise<ConciergeResponse> {
   const locale = req.locale;
-  const catalog = await loadCatalog(locale);
+  const [catalog, donor] = await Promise.all([
+    loadCatalog(locale),
+    opts.userId ? loadDonorContext(opts.userId, locale).catch((error) => {
+      console.error("[concierge] donor context failed", error instanceof Error ? error.message : error);
+      return null;
+    }) : Promise.resolve(null),
+  ]);
   const s = stringsFor(locale);
   const current = req.page?.projectSlug ? catalog.campaigns.find((c) => c.slug === req.page?.projectSlug || c.id === req.page?.projectSlug) ?? null : null;
-  const ctx: Ctx = { req, locale, s, catalog, state: { ...(req.state ?? {}) }, current };
+  const ctx: Ctx = { req, locale, s, catalog, state: { ...(req.state ?? {}) }, current, donor };
 
   if (req.step) {
     switch (req.step.kind) {
       case "open":
         return welcome(ctx);
       case "intent":
+        if (req.step.intent === "account") return accountFlow(ctx);
         if (req.step.intent === "zakat") return zakatFlow(ctx);
         if (req.step.intent === "waqf") return waqfFlow(ctx);
         if (req.step.intent === "current_page") return currentPageFlow(ctx);

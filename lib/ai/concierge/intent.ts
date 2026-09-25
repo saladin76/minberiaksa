@@ -91,6 +91,8 @@ export function parseFrequency(text: string): ConciergeFrequency | null {
 }
 
 const INTENT_WORDS: Array<[RegExp, ConciergeIntent]> = [
+  /* The donor's own giving comes first: "my zakat receipt" is about the receipt. */
+  [/تبرعي|تبرعاتي|تبرعى|اشتراكي|خطتي|إيصالي|ايصالي|إيصال\s*التبرع|شهادتي|شهادة\s*الشكر|الخصم\s*(القادم|الجاي)|حسابي|وصل\s*تبرعي|وصلت\s*فلوسي|my\s*(donation|donations|gift|plan|subscription|receipt|certificate|account|payment|contribution)s?|next\s*(charge|payment|billing)|did\s*(my|the)\s*(donation|payment)|bağışım|bağışlarım|planım|makbuz|sertifikam|hesabım|ma\s*donation|mes\s*dons|mon\s*reçu|mon\s*compte|meine\s*spende|mein\s*konto|mi\s*donación|mis\s*donaciones|mi\s*cuenta|donasi\s*saya|akun\s*saya|میرا\s*عطیہ|میری\s*رسید|میرا\s*اکاؤنٹ/i, "account"],
   [/زكا[ةه]|zak[aâ]t|zek[aâ]t|zakah|zakaat|زکو?[ةۃہ]/i, "zakat"],
   [/وقف|waqf|vakıf|vakif|wakaf|endow/i, "waqf"],
   [/صدق[ةه]\s*جاري[ةه]|جاري[ةه]|أثر\s*مستمر|اثر\s*مستمر|مستمر|sadaqah?\s*jariy|jariyah|sadaka[-\s]?i?\s*cariye|ongoing|lasting|continuous|perpetual|sürekli|durable|dauerhaft|continuo|jariyah|صدقہ\s*جاریہ/i, "sadaqah_jariyah"],

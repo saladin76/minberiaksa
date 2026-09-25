@@ -21,6 +21,8 @@ export const CONCIERGE_INTENTS = [
   "explore",
   "most_needed",
   "current_page",
+  /** The signed-in donor's own donations, plans, receipts and certificates. */
+  "account",
   "question",
   "unknown",
 ] as const;
@@ -160,6 +162,38 @@ export const blockSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("cart_confirmation"), title: z.string(), amountUSD: z.number(), frequency: z.enum(FREQUENCIES) }),
   z.object({ type: z.literal("cross_sell"), campaign: campaignCardSchema, suggestedAmountsUSD: z.array(z.number()).min(1) }),
   z.object({ type: z.literal("notice"), tone: z.enum(["info", "warning"]), text: z.string() }),
+  z.object({
+    type: z.literal("donor_summary"),
+    firstName: z.string(),
+    totals: z.object({ donations: z.number(), paidUSD: z.number() }),
+    donations: z
+      .array(
+        z.object({
+          id: z.string(),
+          date: z.string(),
+          amount: z.number(),
+          currency: z.string(),
+          state: z.enum(["paid", "pending_confirmation", "awaiting_receipt", "under_review", "rejected", "failed"]),
+          items: z.array(z.string()),
+          recurring: z.boolean(),
+          documentsReady: z.boolean(),
+        })
+      )
+      .max(8),
+    plans: z
+      .array(
+        z.object({
+          id: z.string(),
+          frequency: z.enum(["DAILY", "FRIDAY", "MONTHLY"]),
+          amount: z.number(),
+          currency: z.string(),
+          status: z.enum(["ACTIVE", "PAUSED", "CANCELLED", "PAYMENT_FAILED"]),
+          nextBillingDate: z.string().nullable(),
+          items: z.array(z.string()),
+        })
+      )
+      .max(6),
+  }),
 ]);
 export type ConciergeBlock = z.infer<typeof blockSchema>;
 
@@ -177,7 +211,7 @@ export type ConciergeResponse = z.infer<typeof conciergeResponseSchema>;
 /* ── The one shape the model may answer in ─────────────────────────────── */
 
 export const VERDICT_MODES = ["answer", "recommend", "answer_then_recommend"] as const;
-export const VERDICT_ROUTES = ["projects", "zakat", "zakatCalculator", "waqf", "recurring", "about", "contact", "reports", "bankAccounts", "account", "volunteer", "partner", "blog"] as const;
+export const VERDICT_ROUTES = ["projects", "zakat", "zakatCalculator", "waqf", "recurring", "about", "contact", "reports", "bankAccounts", "account", "volunteer", "partner", "blog", "receipt", "thanksCertificate", "paymentPending"] as const;
 
 export const llmVerdictSchema = z.object({
   /**
@@ -191,6 +225,8 @@ export const llmVerdictSchema = z.object({
   route: z.enum(VERDICT_ROUTES).nullable(),
   /** True when the visitor needs a person: a complaint, a payment problem, a question the knowledge does not cover. */
   needsHuman: z.boolean(),
+  /** With route receipt / thanksCertificate / paymentPending: one of the donor's own donation ids from DONOR, else null. */
+  donationId: z.string().nullable(),
   intent: z.enum(CONCIERGE_INTENTS),
   amount: z.number().positive().max(1_000_000).nullable(),
   /** ISO 4217 the visitor named, if any. */
@@ -219,6 +255,7 @@ export const LLM_VERDICT_JSON_SCHEMA = {
     answer: { type: "string" },
     route: { type: ["string", "null"], enum: [...VERDICT_ROUTES, null] },
     needsHuman: { type: "boolean" },
+    donationId: { type: ["string", "null"] },
     intent: { type: "string", enum: [...CONCIERGE_INTENTS] },
     amount: { type: ["number", "null"] },
     currency: { type: ["string", "null"] },
@@ -233,5 +270,5 @@ export const LLM_VERDICT_JSON_SCHEMA = {
     message: { type: "string" },
     needsRuling: { type: "boolean" },
   },
-  required: ["mode", "answer", "route", "needsHuman", "intent", "amount", "currency", "frequency", "region", "giftRecipientName", "recommendedIds", "reasons", "message", "needsRuling"],
+  required: ["mode", "answer", "route", "needsHuman", "donationId", "intent", "amount", "currency", "frequency", "region", "giftRecipientName", "recommendedIds", "reasons", "message", "needsRuling"],
 } as const;

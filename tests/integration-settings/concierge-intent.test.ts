@@ -38,6 +38,11 @@ test("intents", () => {
   assert.equal(parseIntent("Zekâtımı vermek istiyorum"), "zakat");
   assert.equal(parseIntent("مش عارف أتبرع فين"), "explore");
   assert.equal(parseIntent("hello"), null);
+  /* The donor's own giving beats the cause words inside the sentence. */
+  assert.equal(parseIntent("فين إيصال تبرعي للزكاة؟"), "account");
+  assert.equal(parseIntent("did my donation go through?"), "account");
+  assert.equal(parseIntent("when is my next charge"), "account");
+  assert.equal(parseIntent("bağışım ulaştı mı"), "account");
 });
 
 test("regions map to the site's category slugs", () => {

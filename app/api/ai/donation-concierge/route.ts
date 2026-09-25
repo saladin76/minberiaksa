@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 import { isValidLocale, DEFAULT_LOCALE } from "@/lib/locales";
 import { conciergeRequestSchema, conciergeResponseSchema } from "@/lib/ai/concierge/schema";
 import { runConcierge } from "@/lib/ai/concierge/engine";
@@ -94,7 +96,11 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const result = await runConcierge(req);
+    /* The donor's identity comes from the session cookie alone; the body
+       cannot name a user. A visitor gets the same assistant without DONOR. */
+    const session = await getServerSession(authOptions).catch(() => null);
+    const userId = typeof session?.user?.id === "string" ? session.user.id : null;
+    const result = await runConcierge(req, { userId });
     const valid = conciergeResponseSchema.safeParse(result);
     if (!valid.success) {
       console.error("[concierge] response failed validation", valid.error.flatten());
