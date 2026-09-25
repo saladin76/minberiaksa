@@ -4,22 +4,24 @@ import { getOpenAiProviderStatus } from "@/lib/ai/core/openai-provider";
 import { LOCALES, isValidLocale } from "@/lib/locales";
 import { LLM_VERDICT_JSON_SCHEMA, llmVerdictSchema, type LlmVerdict } from "./schema";
 import type { CatalogCampaign, CatalogCategory } from "./recommend";
+import type { KnowledgePack } from "./knowledge";
 
 /**
  * The single model call the concierge makes, and only for free text: read the
- * visitor's message, pick from the candidates the server already chose, and
- * phrase the reply in their language. Uses the same provider switches as the
- * dashboard assistants (`lib/ai/core/openai-provider.ts`): without
- * `OPENAI_API_KEY` and `AI_CORE_ENABLE_EXTERNAL_CALLS=true` it returns null
- * and the deterministic path answers.
+ * visitor's message, answer it from the site's own knowledge when it is a
+ * question, pick from the candidates the server already chose when it is a
+ * wish to give, and phrase everything in their language. Uses the same
+ * provider switches as the dashboard assistants (`lib/ai/core/openai-provider.ts`):
+ * without `OPENAI_API_KEY` and `AI_CORE_ENABLE_EXTERNAL_CALLS=true` it returns
+ * null and the deterministic path answers.
  *
  * The reply is forced into `LLM_VERDICT_JSON_SCHEMA` by the Responses API and
  * then re-validated with zod; ids outside the candidate list are dropped by
  * the caller. The model is never given prices to compute, donor details, or
- * anything from the database beyond the compact candidate lines below.
+ * anything from the database beyond the compact lines below.
  */
 
-const TIMEOUT_MS = 12_000;
+const TIMEOUT_MS = 14_000;
 
 export interface LlmInput {
   locale: string;
@@ -28,9 +30,10 @@ export interface LlmInput {
   candidates: CatalogCampaign[];
   categories: CatalogCategory[];
   /** What deterministic parsing already found; the model may only fill gaps. */
-  parsed: { intent: string | null; amount: number | null; currency: string | null; frequency: string | null; region: string | null };
+  parsed: { intent: string | null; amount: number | null; currency: string | null; frequency: string | null; region: string | null; recurringNudged: boolean; route: string | null };
   currentCampaign: CatalogCampaign | null;
   waqf: Array<{ unit: string; priceUSD: number }>;
+  knowledge: KnowledgePack;
 }
 
 function languageName(locale: string): string {
@@ -52,29 +55,39 @@ function candidateLine(c: CatalogCampaign): string {
 
 export function buildPrompt(input: LlmInput): string {
   const lang = languageName(input.locale);
+  const k = input.knowledge;
   const lines: string[] = [];
   lines.push(
-    `You are the donation concierge of Minbar Al-Aqsa (منبر الأقصى), a Turkish public-benefit charity working in Palestine, Syria, Sudan, Africa and the Balkans.`,
-    `Task: read the visitor's message, decide their intent, and choose which of the CANDIDATE projects to recommend. Reply ONLY with the JSON object described by the schema.`,
-    `Rules:`,
-    `- Write "message" and every "reasons" entry in ${lang}. Calm, respectful, concise (1–2 sentences), no emojis, never say you are an AI.`,
-    `- Recommend at most 3 ids, only from CANDIDATES, best first. Do not invent projects, numbers, urgency, percentages or impact figures. If the candidates do not fit, return an empty list and ask ONE short clarifying question in "message".`,
-    `- Each reason must be factual and based only on the candidate line (region, tags, summary, share price) and the visitor's stated wish.`,
-    `- Do not ask for anything the visitor already stated (PARSED). Do not ask about budget if amount is known.`,
-    `- Never give a religious ruling (fatwa). If the message asks whether something is permissible, what counts for zakat, etc., set needsRuling=true and say the assistant cannot rule on that and the organisation can be contacted.`,
-    `- Zakat questions about HOW to give: intent=zakat. Waqf: intent=waqf (units: ${input.waqf.map((w) => `${w.unit} $${w.priceUSD}`).join(", ")}). Gifts in someone's name: intent=gift and fill giftRecipientName. Regular giving (daily/friday/monthly): intent=recurring and fill frequency.`,
-    `- "amount" is the visitor's number as they said it and "currency" the ISO code they implied; leave null if unknown. Never convert currencies.`,
+    `You are the giving concierge of Minbar Al-Aqsa (منبر الأقصى), a Turkish public-benefit foundation based in Istanbul working for Al-Quds, Gaza, Syria, Sudan, Africa and the Balkans. You help visitors decide how to give and answer their questions about the foundation and how donating works here.`,
+    `Reply ONLY with the JSON object described by the schema. Write "answer", "message" and every "reasons" entry in ${lang}. Tone: calm, warm, respectful, concise, like a trusted member of the team. No emojis, never say you are an AI or a model, never invent.`,
+    ``,
+    `CHOOSE A MODE:`,
+    `- "answer": the visitor asked something (about the foundation, payments, receipts, certificates, zakat, waqf, regular giving, where money goes, a greeting, a doubt, an objection). Put the reply in "answer" (2–5 sentences), leave recommendedIds empty. If a page helps, set "route".`,
+    `- "recommend": the visitor wants to give and said what for. Put a one-sentence lead-in in "message", choose up to 3 ids from CANDIDATES (best first) with a factual reason each. "answer" may be empty.`,
+    `- "answer_then_recommend": they asked something AND want to give — answer first in "answer", then lead-in + ids.`,
+    ``,
+    `GROUNDING: answer only from ORGANISATION, HOW_GIVING_WORKS, FAQ and CANDIDATES below. If the answer is not there, say honestly that you do not have that information and set needsHuman=true so they can reach the team (the contact page). Never invent numbers, percentages, urgency, dates, bank details, impact figures, or policies. Never give a religious ruling (fatwa): for "is it permissible / does it count / what is the ruling", set needsRuling=true and say the team can help through the contact page.`,
+    ``,
+    `CONVERSION, WITHOUT PRESSURE: your goal is that the visitor gives with confidence today. Remove doubts with facts (receipts, certificates, field follow-up, secure payment). When someone plans a one-time gift and RECURRING_NUDGED is false, add ONE calm sentence about regular giving (daily, every Friday, or monthly) as an option that keeps the impact going — never repeat it once RECURRING_NUDGED is true, never insist, never guilt-trip. Prefer concrete next steps over questions; ask at most one question and only when you truly cannot proceed. Do not ask for anything already in PARSED.`,
+    `NEEDS_HUMAN: set needsHuman=true for complaints, payment or receipt problems, refund requests, partnership/media/press/volunteering enquiries, or anything you cannot answer from the knowledge. Still give the best short answer you can.`,
+    `INTENTS: zakat questions about HOW to give → intent=zakat. Waqf → intent=waqf. Gifts in someone's name → intent=gift and fill giftRecipientName. Regular giving → intent=recurring and fill frequency. "amount" is the number as the visitor said it and "currency" the ISO code they implied; leave null if unknown. Never convert currencies.`,
   );
-  lines.push(`PARSED: ${JSON.stringify(input.parsed)}`);
+  lines.push(``, `ORGANISATION:`, ...k.organisation.map((s) => `- ${s}`));
+  lines.push(``, `HOW_GIVING_WORKS:`, ...k.giving.map((s) => `- ${s}`), `- Waqf units on offer: ${input.waqf.map((w) => `${w.unit} $${w.priceUSD}`).join(", ")}.`);
+  if (k.faqs.length) {
+    lines.push(``, `FAQ (published by the foundation):`);
+    for (const f of k.faqs) lines.push(`Q: ${f.q}\nA: ${f.a}`);
+  }
+  lines.push(``, `PARSED: ${JSON.stringify(input.parsed)}`, `RECURRING_NUDGED: ${input.parsed.recurringNudged}`, `CURRENT_PAGE: ${input.parsed.route ?? "unknown"}`);
   if (input.currentCampaign) lines.push(`CURRENT_PAGE_PROJECT: ${candidateLine(input.currentCampaign)}`);
-  lines.push(`CANDIDATES:`);
+  lines.push(``, `CANDIDATES:`);
   for (const c of input.candidates) lines.push(candidateLine(c));
   if (input.categories.length) lines.push(`CATEGORIES: ${input.categories.map((c) => `${c.slug}="${c.title}"(${c.projectCount})`).join(", ")}`);
   if (input.history.length) {
-    lines.push(`RECENT_CONVERSATION:`);
+    lines.push(``, `RECENT_CONVERSATION:`);
     for (const h of input.history.slice(-6)) lines.push(`${h.role === "user" ? "Visitor" : "Assistant"}: ${h.text.slice(0, 300)}`);
   }
-  lines.push(`VISITOR_MESSAGE: ${input.message.slice(0, 600)}`);
+  lines.push(``, `VISITOR_MESSAGE: ${input.message.slice(0, 600)}`);
   return lines.join("\n");
 }
 
@@ -97,8 +110,8 @@ export async function askModel(input: LlmInput): Promise<LlmOutcome> {
       body: JSON.stringify({
         model: status.model,
         input: buildPrompt(input),
-        max_output_tokens: 600,
-        temperature: 0.3,
+        max_output_tokens: 900,
+        temperature: 0.4,
         text: { format: { type: "json_schema", name: "concierge_verdict", strict: true, schema: LLM_VERDICT_JSON_SCHEMA } },
       }),
       signal: controller.signal,

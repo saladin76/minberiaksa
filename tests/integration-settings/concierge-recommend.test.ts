@@ -80,9 +80,12 @@ test("categories: intent types first, then by project count", () => {
 
 test("malformed model output is rejected", () => {
   assert.equal(llmVerdictSchema.safeParse({ intent: "zakat" }).success, false);
-  assert.equal(llmVerdictSchema.safeParse({ intent: "buy_stuff", amount: null, currency: null, frequency: null, region: null, giftRecipientName: null, recommendedIds: [], reasons: [], message: "", needsRuling: false }).success, false);
-  assert.equal(llmVerdictSchema.safeParse({ intent: "relief", amount: 100, currency: "USD", frequency: null, region: null, giftRecipientName: null, recommendedIds: ["b2"], reasons: { b2: "x" }, message: "hi", needsRuling: false }).success, false, "a map of reasons is the old shape");
-  const ok = llmVerdictSchema.safeParse({ intent: "relief", amount: 100, currency: "USD", frequency: null, region: "gaza", giftRecipientName: null, recommendedIds: ["b2"], reasons: [{ id: "b2", reason: "x" }], message: "hi", needsRuling: false });
+  const base = { mode: "recommend", answer: "", route: null, needsHuman: false, amount: null, currency: null, frequency: null, region: null, giftRecipientName: null, recommendedIds: [], reasons: [], message: "", needsRuling: false };
+  assert.equal(llmVerdictSchema.safeParse({ ...base, intent: "buy_stuff" }).success, false);
+  assert.equal(llmVerdictSchema.safeParse({ ...base, intent: "relief", mode: "chat" }).success, false, "unknown mode");
+  assert.equal(llmVerdictSchema.safeParse({ ...base, intent: "relief", route: "/admin" }).success, false, "route must be a known page");
+  assert.equal(llmVerdictSchema.safeParse({ ...base, intent: "relief", recommendedIds: ["b2"], reasons: { b2: "x" } }).success, false, "a map of reasons is the old shape");
+  const ok = llmVerdictSchema.safeParse({ ...base, intent: "relief", mode: "answer_then_recommend", answer: "Yes.", route: "reports", amount: 100, currency: "USD", region: "gaza", recommendedIds: ["b2"], reasons: [{ id: "b2", reason: "x" }], message: "hi" });
   assert.equal(ok.success, true);
 });
 

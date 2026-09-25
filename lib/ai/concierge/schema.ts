@@ -48,6 +48,8 @@ export const conversationStateSchema = z.object({
   giftRecipientName: z.string().max(120).nullable().optional(),
   /** Campaign ids already shown, so "show me another" does not repeat them. */
   shownCampaignIds: z.array(z.string().regex(/^[0-9a-fA-F]{24}$/)).max(30).optional(),
+  /** Set once regular giving has been mentioned, so it is never repeated. */
+  recurringNudged: z.boolean().optional(),
   /** Campaign ids currently in the basket, so cross-sell never repeats one. */
   cartCampaignIds: z.array(z.string().regex(/^[0-9a-fA-F]{24}$/)).max(50).optional(),
   turns: z.number().int().min(0).max(50).optional(),
@@ -174,7 +176,21 @@ export type ConciergeResponse = z.infer<typeof conciergeResponseSchema>;
 
 /* ── The one shape the model may answer in ─────────────────────────────── */
 
+export const VERDICT_MODES = ["answer", "recommend", "answer_then_recommend"] as const;
+export const VERDICT_ROUTES = ["projects", "zakat", "zakatCalculator", "waqf", "recurring", "about", "contact", "reports", "bankAccounts", "account", "volunteer", "partner", "blog"] as const;
+
 export const llmVerdictSchema = z.object({
+  /**
+   * answer: just talk (a question about the site, a greeting, an objection).
+   * recommend: show projects. answer_then_recommend: a short answer, then projects.
+   */
+  mode: z.enum(VERDICT_MODES),
+  /** The conversational reply, in the visitor's language. Empty for pure recommend. */
+  answer: z.string().max(1200),
+  /** A page worth opening after the answer, or null. */
+  route: z.enum(VERDICT_ROUTES).nullable(),
+  /** True when the visitor needs a person: a complaint, a payment problem, a question the knowledge does not cover. */
+  needsHuman: z.boolean(),
   intent: z.enum(CONCIERGE_INTENTS),
   amount: z.number().positive().max(1_000_000).nullable(),
   /** ISO 4217 the visitor named, if any. */
@@ -199,6 +215,10 @@ export const LLM_VERDICT_JSON_SCHEMA = {
   type: "object",
   additionalProperties: false,
   properties: {
+    mode: { type: "string", enum: [...VERDICT_MODES] },
+    answer: { type: "string" },
+    route: { type: ["string", "null"], enum: [...VERDICT_ROUTES, null] },
+    needsHuman: { type: "boolean" },
     intent: { type: "string", enum: [...CONCIERGE_INTENTS] },
     amount: { type: ["number", "null"] },
     currency: { type: ["string", "null"] },
@@ -213,5 +233,5 @@ export const LLM_VERDICT_JSON_SCHEMA = {
     message: { type: "string" },
     needsRuling: { type: "boolean" },
   },
-  required: ["intent", "amount", "currency", "frequency", "region", "giftRecipientName", "recommendedIds", "reasons", "message", "needsRuling"],
+  required: ["mode", "answer", "route", "needsHuman", "intent", "amount", "currency", "frequency", "region", "giftRecipientName", "recommendedIds", "reasons", "message", "needsRuling"],
 } as const;

@@ -6,6 +6,7 @@ import { DEFAULT_SUGGESTED_DONATION_AMOUNTS } from "@/lib/campaign/suggested-don
 import { loadCatalog, type ConciergeCatalog } from "./catalog";
 import { mentionsCurrentPage, parseMessage } from "./intent";
 import { askModel } from "./llm";
+import { loadKnowledge } from "./knowledge";
 import { pickCrossSell, rankCampaigns, rankCategories, type CatalogCampaign, type CatalogCategory } from "./recommend";
 import {
   FREQUENCIES,
@@ -343,15 +344,25 @@ async function messageFlow(ctx: Ctx, text: string): Promise<ConciergeResponse> {
     8
   ).map((r) => r.campaign);
 
+  const knowledge = await loadKnowledge(ctx.locale);
   const outcome = await askModel({
     locale: ctx.locale,
     message: text,
     history: ctx.req.history ?? [],
     candidates,
     categories: ctx.catalog.categories.filter((c) => c.kind === "type"),
-    parsed: { intent: poolIntent, amount: ctx.state.amountUSD ?? null, currency: "USD", frequency: ctx.state.frequency ?? null, region: ctx.state.region ?? null },
+    parsed: {
+      intent: poolIntent,
+      amount: ctx.state.amountUSD ?? null,
+      currency: "USD",
+      frequency: ctx.state.frequency ?? null,
+      region: ctx.state.region ?? null,
+      recurringNudged: ctx.state.recurringNudged === true,
+      route: ctx.req.page?.route ?? null,
+    },
     currentCampaign: ctx.current,
     waqf: ctx.catalog.waqf,
+    knowledge,
   });
   const verdict = outcome.verdict;
 
@@ -360,26 +371,54 @@ async function messageFlow(ctx: Ctx, text: string): Promise<ConciergeResponse> {
     if (!ctx.state.amountUSD && verdict.amount) ctx.state.amountUSD = await toUsd(verdict.amount, verdict.currency, ctx.req.currency);
     if (!ctx.state.frequency && verdict.frequency) ctx.state.frequency = verdict.frequency;
     if (!ctx.state.giftRecipientName && verdict.giftRecipientName) ctx.state.giftRecipientName = verdict.giftRecipientName;
+    /* The one regular-giving mention is spent on the first model reply that
+       could have carried it; the prompt never repeats it after this. */
+    if (!ctx.state.recurringNudged && verdict.mode !== "answer" && intent !== "recurring" && intent !== "zakat") ctx.state.recurringNudged = true;
+
+    const contact: ConciergeAction = { type: "navigate", label: ctx.s.a_contact ?? "", route: "contact" };
+    const routeAction: ConciergeAction | null =
+      verdict.route && verdict.route !== "contact" && knowledge.routeLabels[verdict.route]
+        ? { type: "navigate", label: knowledge.routeLabels[verdict.route], route: verdict.route, track: verdict.route === "zakatCalculator" ? "zakat_started" : verdict.route === "waqf" ? "waqf_started" : undefined }
+        : null;
+    const answer = verdict.answer.trim();
+
     if (verdict.needsRuling) {
-      const base = zakatFlow(ctx, ctx.s.s_ruling);
-      return { ...base, actions: [{ type: "navigate", label: ctx.s.a_contact ?? "", route: "contact" }, ...base.actions], intent: "question", mode: "llm" };
+      const base = zakatFlow(ctx, answer || ctx.s.s_ruling);
+      return { ...base, actions: [contact, ...base.actions], intent: "question", mode: "llm" };
     }
-    if (intent === "zakat") return { ...zakatFlow(ctx, verdict.message || undefined), mode: "llm" };
-    if (intent === "waqf") return { ...waqfFlow(ctx, verdict.message || undefined), mode: "llm" };
-    if (intent === "current_page" && ctx.current) return { ...currentPageFlow(ctx), message: verdict.message || ctx.s.s_current || "", mode: "llm" };
+
+    /* Just talk: a question answered from the site's knowledge, a greeting,
+       a doubt. One page to open if the model named one, the team if it could
+       not answer, and a way into the projects so the door stays open. */
+    if (verdict.mode === "answer" || (!verdict.recommendedIds.length && answer && intent !== "zakat" && intent !== "waqf")) {
+      const actions: ConciergeAction[] = [];
+      if (routeAction) actions.push(routeAction);
+      if (verdict.needsHuman) actions.push(contact);
+      if (!routeAction || routeAction.route !== "projects") actions.push({ type: "navigate", label: ctx.s.a_projects ?? "", route: "projects" });
+      const effective: ConciergeIntent = intent ?? "question";
+      return respond(ctx, { message: answer || verdict.message, blocks: [], actions, mode: "llm", intent: effective, state: { intent: effective === "question" ? ctx.state.intent : effective } });
+    }
+
+    const lead = [answer, verdict.message.trim()].filter(Boolean).join("\n\n");
+    const withHuman = (res: ConciergeResponse): ConciergeResponse => (verdict.needsHuman ? { ...res, actions: [contact, ...res.actions] } : res);
+
+    if (intent === "zakat") return withHuman({ ...zakatFlow(ctx, lead || undefined), mode: "llm" });
+    if (intent === "waqf") return withHuman({ ...waqfFlow(ctx, lead || undefined), mode: "llm" });
+    if (intent === "current_page" && ctx.current) return withHuman({ ...currentPageFlow(ctx), message: lead || ctx.s.s_current || "", mode: "llm" });
     const allowed = new Set(candidates.map((c) => c.id));
     const ids = verdict.recommendedIds.filter((id) => allowed.has(id));
     const effective: ConciergeIntent = intent ?? "explore";
-    if (ids.length === 0 && verdict.message) {
+    if (ids.length === 0 && lead) {
       /* The model asked a clarifying question. For a cause the visitor did
          name, the deterministic candidates go under the question so there is
          still something to act on; otherwise the quick-intent chips do. */
       const recommendable: ConciergeIntent[] = ["sadaqah_jariyah", "relief", "recurring", "gift", "most_needed"];
-      if (recommendable.includes(effective)) return recommendFlow(ctx, effective, verdict.message);
-      return respond(ctx, { message: verdict.message, blocks: [], actions: chips(ctx.s), mode: "llm", intent: effective, state: { intent: effective } });
+      if (recommendable.includes(effective)) return withHuman(recommendFlow(ctx, effective, lead));
+      const actions = [...(routeAction ? [routeAction] : []), ...chips(ctx.s)];
+      return withHuman(respond(ctx, { message: lead, blocks: [], actions, mode: "llm", intent: effective, state: { intent: effective } }));
     }
     const reasons = Object.fromEntries(verdict.reasons.filter((r) => allowed.has(r.id)).map((r) => [r.id, r.reason]));
-    return recommendFlow(ctx, effective, verdict.message || undefined, reasons, ids.length ? ids : undefined);
+    return withHuman(recommendFlow(ctx, effective, lead || undefined, reasons, ids.length ? ids : undefined));
   }
 
   /* Model off or unusable: the deterministic reading answers. */
@@ -388,7 +427,12 @@ async function messageFlow(ctx: Ctx, text: string): Promise<ConciergeResponse> {
   if (intent === "current_page") return currentPageFlow(ctx);
   const effective: ConciergeIntent = intent ?? ctx.state.intent ?? "explore";
   const res = recommendFlow(ctx, effective);
-  if (!intent && !ctx.state.intent) res.message = `${ctx.s.s_no_results ?? ""} ${res.message}`.trim();
+  if (!intent && !ctx.state.intent) {
+    /* Nothing recognisable and no model to read it: the nearest projects,
+       and the team for whatever the visitor actually needed. */
+    res.message = `${ctx.s.s_no_results ?? ""} ${res.message}`.trim();
+    res.actions = [{ type: "navigate", label: ctx.s.a_contact ?? "", route: "contact" }, ...res.actions];
+  }
   return res;
 }
 
