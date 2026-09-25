@@ -100,8 +100,9 @@ function chips(s: Strings): ConciergeAction[] {
   ];
 }
 
-/** How many turns a stated amount keeps presetting the configurator. */
-const AMOUNT_MEMORY_TURNS = 4;
+/** How many turns a stated amount keeps presetting the configurator — long
+    enough to browse areas, "show me another" a few times and then pick. */
+const AMOUNT_MEMORY_TURNS = 8;
 
 /**
  * The amount the visitor stated, while it is still fresh. An amount from an
