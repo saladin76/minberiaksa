@@ -44,7 +44,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   return buildPageMetadata(locale, {
     title: article.seoTitle || article.title,
-    description: (article.seoDescription || article.excerpt).slice(0, 165),
+    description: (article.seoDescription || article.excerpt),
     path: `/blog/${encodeURIComponent(article.slug)}`,
     image: article.cover ?? undefined,
     keywords: article.seoKeywords,

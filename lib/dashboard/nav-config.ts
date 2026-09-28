@@ -41,7 +41,7 @@ export const DASHBOARD_NAV_GROUPS: DashboardNavGroup[] = [
     group: "الرئيسية",
     items: [
       { key: "revenue", title: "اللوحة الرئيسية", href: "/dashboard", icon: "layoutDashboard", keywords: ["home", "overview", "الرئيسية"] },
-      { key: "monthly", title: "التبرعات الشهرية", href: "/dashboard/monthly", icon: "repeat", keywords: ["monthly", "subscriptions", "اشتراكات"] },
+      { key: "monthly", title: "التبرعات المتكررة", href: "/dashboard/monthly", icon: "repeat", keywords: ["monthly", "recurring", "daily", "weekly", "subscriptions", "اشتراكات", "شهري", "يومي", "جمعة"] },
       { key: "bankTransfers", title: "التحويلات البنكية", href: "/dashboard/bank-transfers", icon: "landmark", keywords: ["bank", "transfers", "حوالات", "statement", "كشف"] },
       // Receipts donors upload after choosing bank transfer at checkout, waiting on a finance
       // decision. A different queue from the statement importer above: that one starts from the
@@ -99,6 +99,8 @@ export const DASHBOARD_NAV_GROUPS: DashboardNavGroup[] = [
       { key: "messages", title: "الحملات التسويقية", href: "/dashboard/communication/campaigns", icon: "megaphone", keywords: ["campaigns", "marketing", "حملات", "تسويق", "broadcast", "bulk"] },
       { key: "messages", title: "البريد الإلكتروني", href: "/dashboard/communication/email", icon: "mail", keywords: ["email", "بريد", "elastic"] },
       { key: "messages", title: "واتساب", href: "/dashboard/communication/whatsapp", icon: "messageCircle", keywords: ["whatsapp", "واتساب", "meta"] },
+      // Replies were counted by the sidebar badge long before there was a screen to open.
+      { key: "messages", title: "محادثات واتساب", href: "/dashboard/communication/inbox", icon: "messageCircle", keywords: ["inbox", "replies", "صندوق", "ردود", "محادثات", "conversations"] },
       { key: "messages", title: "الرسائل النصية", href: "/dashboard/communication/sms", icon: "messageSquare", keywords: ["sms", "نصية", "netgsm", "brevo"] },
       { key: "templates", title: "قوالب البريد والمحفّزات", href: "/dashboard/templates", icon: "mail", keywords: ["email", "triggers", "محفزات"] },
       // Was the second tab of /dashboard/messages, behind a page that defaults to the outbound
@@ -108,6 +110,17 @@ export const DASHBOARD_NAV_GROUPS: DashboardNavGroup[] = [
       // The flat outbound send log (/dashboard/messages) is gone. Per-channel delivery detail lives
       // in البريد الإلكتروني / واتساب / الرسائل النصية above.
       { key: "messages", title: "الرسائل الواردة", href: "/dashboard/inbox", icon: "inbox", keywords: ["inbox", "inbound", "contact", "واردة", "زوار", "تواصل"], badge: "inboxUnread" },
+    ],
+  },
+  {
+    // The donation concierge on the public site: how it performs, what visitors ask it, what
+    // the AI concludes from those conversations, and its switches. One grant for the group.
+    group: "مساعد العطاء (AI)",
+    items: [
+      { key: "aiConcierge", title: "أداء المساعد", href: "/dashboard/ai-concierge", icon: "sparkles", keywords: ["ai", "concierge", "assistant", "chat", "مساعد", "العطاء", "ذكاء", "analytics"] },
+      { key: "aiConcierge", title: "محادثات المساعد", href: "/dashboard/ai-concierge/conversations", icon: "messagesSquare", keywords: ["ai", "chats", "conversations", "transcripts", "محادثات", "دردشة"] },
+      { key: "aiConcierge", title: "استنتاجات الذكاء الاصطناعي", href: "/dashboard/ai-concierge/insights", icon: "lightbulb", keywords: ["ai", "insights", "summary", "تلخيص", "استنتاج", "تحليل"] },
+      { key: "aiConcierge", title: "إعدادات المساعد", href: "/dashboard/ai-concierge/settings", icon: "bot", keywords: ["ai", "settings", "concierge", "إعدادات", "مساعد"] },
     ],
   },
   {
@@ -180,7 +193,7 @@ export const DASHBOARD_PERMISSION_ROWS: {
   title: string;
 }[] = [
   { key: "revenue", group: "الرئيسية", title: "اللوحة الرئيسية" },
-  { key: "monthly", group: "الرئيسية", title: "التبرعات الشهرية" },
+  { key: "monthly", group: "الرئيسية", title: "التبرعات المتكررة" },
   // One grant for the whole finance desk: the statement importer and the donor-receipt queue.
   { key: "bankTransfers", group: "الرئيسية", title: "التحويلات البنكية وإيصالات التحويل" },
   // Separate from siteContent: these rows are where donors send money (IBAN/SWIFT).
@@ -211,7 +224,13 @@ export const DASHBOARD_PERMISSION_ROWS: {
   { key: "ads", group: "التسويق", title: "(قديم) صفحة تحليل الإعلانات /dashboard/ads — ليست في القائمة؛ للإسناد والتتبع استخدم الصلاحيتين التاليتين" },
   { key: "referrals", group: "التسويق", title: "إدارة الروابط والإسناد" },
   { key: "pixels", group: "التسويق", title: "عرض التتبع والتحويلات" },
+  { key: "aiConcierge", group: "مساعد العطاء (AI)", title: "مساعد العطاء: الأداء والمحادثات والاستنتاجات والإعدادات" },
   { key: "platformConnections", group: "ربط المنصات والإرسال", title: "ربط المنصات والإرسال" },
+  // Same P3-2 shape as the five above: `/dashboard/archive` is guarded by this key in
+  // PATH_RULES and every archive API asks for it, but it was in no grant screen — so the archive
+  // was admin-only in practice, and granting the المستندات action below could never take effect
+  // because its holder could not reach the archive at all.
+  { key: "archive", group: "الإدارة", title: "الأرشيف (ملفات التسويق والمجموعات)" },
   { key: "team", group: "الإدارة", title: "الفريق" },
   // Today this key controls only the payment-gateway page (main gateway, PayFor):
   // where every new donation's money goes. Labelled so it is granted knowingly.
@@ -251,5 +270,16 @@ export const ACTION_PERMISSION_ROWS: {
     key: "platformConnectionsAdmin",
     title: "ربط المنصات: حذف وإدارة كاملة",
     description: "حذف إعدادات مزوّد وعرض حالته الكاملة. يشمل الحفظ والاختبار. صلاحية حساسة جدًا.",
+  },
+  // Enforced by app/api/admin/archive/_auth.ts on every DOCUMENTS listing, but it appeared in no
+  // grant screen and — unlike archiveUpload/Delete/Analyze — is not derived from "archive", so
+  // nobody but an admin could hold it: a member of staff given the archive returned an
+  // unexplained 403 the moment they opened المستندات. It stays a separate grant rather than
+  // riding on "archive" because the two hold different things: marketing files on one side,
+  // contracts and licences on the other.
+  {
+    key: "archiveDocuments",
+    title: "الأرشيف: المستندات الرسمية",
+    description: "الوصول إلى ملفات المستندات (العقود، التراخيص، الملفات الرسمية) داخل الأرشيف. تُمنح مع صلاحية «الأرشيف»، ولا تُشتق منها لأن محتواها أكثر حساسية من ملفات التسويق.",
   },
 ];

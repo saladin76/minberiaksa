@@ -108,6 +108,7 @@
     "i18n": "^0.15.1",
     "install": "^0.13.0",
     "jspdf": "^2.5.2",
+    "libphonenumber-js": "^1.12.38",
     "lucide-react": "^0.474.0",
     "motion": "^12.26.2",
     "next": "^16.1.6",

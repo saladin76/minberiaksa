@@ -2166,6 +2166,8 @@
   "Concierge": {
     "title": "Më ndihmo të zgjedh si të jap",
     "launcher": "Asistenti i dhurimit",
+    "teaserTitle": "Nuk e dini ku të dhuroni? ✨",
+    "teaserBody": "Më tregoni çfarë keni në zemër dhe ju gjej projektin e duhur brenda një minute.",
     "s_welcome": "Ju ndihmoj të gjeni mënyrën më të mirë për të dhuruar, brenda një minute.",
     "placeholder": "Shkruani çfarë keni në mendje… p.sh. kam 500 $ dhe dua ndikim të qëndrueshëm",
     "send": "Dërgo",

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/options";
@@ -7,9 +8,23 @@ import {
   eachIstanbulDateKey,
   formatIstanbulDateKey,
   getIstanbulDateRange,
-} from "@/lib/admin/istanbul-calendar";
+  resolveChartStartKey,
+} from '@/lib/admin/istanbul-calendar';
+import {
+  donationFrequencyWhere,
+  loadSubscriptionFrequencies,
+  parseFrequencyParam,
+} from "@/lib/dashboard/recurring-frequency-filter";
 
-/** GET /api/admin/subscriptions/overview/chart — time series for donations linked to subscriptions only */
+/**
+ * GET /api/admin/subscriptions/overview/chart — time series for donations linked to recurring
+ * plans only. `?frequency=DAILY|FRIDAY|MONTHLY` narrows to one cadence; every point also
+ * carries the split by cadence (`amountDaily` / `amountFriday` / `amountMonthlyPlan`) so the
+ * chart can stack them.
+ *
+ * `amountMonthly` / `countMonthly` keep their historical name but mean "all recurring charges"
+ * — they predate daily and Friday plans, when every recurring charge was monthly.
+ */
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
@@ -24,6 +39,7 @@ export async function GET(request: NextRequest) {
     const startParam = searchParams.get("start");
     const endParam = searchParams.get("end");
     const referralIdParam = searchParams.get("referralId");
+    const frequency = parseFrequencyParam(searchParams.get("frequency"));
 
     if (referralIdParam) {
       const ref = await prisma.referral.findUnique({ where: { id: referralIdParam }, select: { id: true } });
@@ -32,26 +48,16 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    const { startDate, endDate, startDateKey, endDateKey } = getIstanbulDateRange(period, startParam, endParam);
+    const { startDate, endDate, startDateKey, endDateKey, isAllTime } = getIstanbulDateRange(period, startParam, endParam);
 
     // Bucket by `paidAt` so a subscription renewal settled at 00:30 Istanbul
     // lands in the new day's bar, not the prior evening's.
     // status=PAID alone includes abandoned checkouts that never settled; require paidAt too.
-    const whereClause: {
-      subscriptionId: { not: null };
-      paidAt: { gte: Date; lte: Date };
-      status: "PAID";
-      referralId?: string;
-      donorId?: string;
-      items?: { some: { campaignId: string } };
-      OR?: Array<
-        | { items: { some: { campaign: { categoryIds: { has: string } } } } }
-        | { categoryItems: { some: { categoryId: string } } }
-      >;
-    } = {
+    const whereClause: Prisma.DonationWhereInput = {
       subscriptionId: { not: null },
       paidAt: { gte: startDate, lte: endDate },
       status: "PAID",
+      ...donationFrequencyWhere(frequency),
     };
 
     if (referralIdParam) {
@@ -82,71 +88,96 @@ export async function GET(request: NextRequest) {
         amountUSD: true,
         totalAmount: true,
         amount: true,
-        items: { select: { amount: true, amountUSD: true } },
-        categoryItems: { select: { amount: true, amountUSD: true } },
       },
     });
 
+    const frequencyOf = await loadSubscriptionFrequencies(
+      prisma,
+      donations.map((d) => d.subscriptionId).filter((id): id is string => Boolean(id))
+    );
+
     type Bucket = {
-      amountOneTime: number;
-      countOneTime: number;
       amountMonthly: number;
       countMonthly: number;
+      amountDaily: number;
+      countDaily: number;
+      amountFriday: number;
+      countFriday: number;
+      amountMonthlyPlan: number;
+      countMonthlyPlan: number;
       teamSupport: number;
       fees: number;
     };
+    const emptyBucket = (): Bucket => ({
+      amountMonthly: 0,
+      countMonthly: 0,
+      amountDaily: 0,
+      countDaily: 0,
+      amountFriday: 0,
+      countFriday: 0,
+      amountMonthlyPlan: 0,
+      countMonthlyPlan: 0,
+      teamSupport: 0,
+      fees: 0,
+    });
     const byDate = new Map<string, Bucket>();
 
     for (const d of donations) {
       // WHERE clause guarantees paidAt is not null here.
       const dateStr = formatIstanbulDateKey((d.paidAt ?? d.createdAt) as Date);
-      const bucket = byDate.get(dateStr) ?? {
-        amountOneTime: 0,
-        countOneTime: 0,
-        amountMonthly: 0,
-        countMonthly: 0,
-        teamSupport: 0,
-        fees: 0,
-      };
+      const bucket = byDate.get(dateStr) ?? emptyBucket();
       const amount = Number(d.amountUSD ?? d.totalAmount ?? d.amount ?? 0);
       bucket.amountMonthly += amount;
       bucket.countMonthly += 1;
+      const f = frequencyOf(d.subscriptionId);
+      if (f === "DAILY") {
+        bucket.amountDaily += amount;
+        bucket.countDaily += 1;
+      } else if (f === "FRIDAY") {
+        bucket.amountFriday += amount;
+        bucket.countFriday += 1;
+      } else {
+        bucket.amountMonthlyPlan += amount;
+        bucket.countMonthlyPlan += 1;
+      }
       bucket.teamSupport += Number(d.teamSupport ?? 0);
       bucket.fees += Number(d.fees ?? 0);
       byDate.set(dateStr, bucket);
     }
 
-    const filledChartData: {
-      date: string;
-      amountUSD: number;
-      count: number;
-      amountOneTime: number;
-      countOneTime: number;
-      amountMonthly: number;
-      countMonthly: number;
-      teamSupport: number;
-      fees: number;
-    }[] = [];
+    const round = (n: number) => Number(n.toFixed(2));
+    const filledChartData: Array<
+      {
+        date: string;
+        amountUSD: number;
+        count: number;
+        amountOneTime: number;
+        countOneTime: number;
+      } & Bucket
+    > = [];
 
-    for (const dateStr of eachIstanbulDateKey(startDateKey, endDateKey)) {
-      const b = byDate.get(dateStr);
-      const amountOneTime = 0;
-      const amountMonthly = b ? Number(Number(b.amountMonthly).toFixed(2)) : 0;
-      const countOneTime = 0;
-      const countMonthly = b?.countMonthly ?? 0;
-      const teamSupport = b ? Number(Number(b.teamSupport).toFixed(2)) : 0;
-      const fees = b ? Number(Number(b.fees).toFixed(2)) : 0;
+    /* All-time queries from the epoch, so the axis starts at the first day with data rather than
+       at 1970 — see `resolveChartStartKey`. Bounded periods are unchanged. */
+    const axisStartKey = resolveChartStartKey(isAllTime, startDateKey, endDateKey, byDate.keys());
 
+    for (const dateStr of eachIstanbulDateKey(axisStartKey, endDateKey)) {
+      const b = byDate.get(dateStr) ?? emptyBucket();
       filledChartData.push({
         date: dateStr,
-        amountUSD: Number((amountOneTime + amountMonthly).toFixed(2)),
-        count: countOneTime + countMonthly,
-        amountOneTime,
-        countOneTime,
-        amountMonthly,
-        countMonthly,
-        teamSupport,
-        fees,
+        amountUSD: round(b.amountMonthly),
+        count: b.countMonthly,
+        amountOneTime: 0,
+        countOneTime: 0,
+        amountMonthly: round(b.amountMonthly),
+        countMonthly: b.countMonthly,
+        amountDaily: round(b.amountDaily),
+        countDaily: b.countDaily,
+        amountFriday: round(b.amountFriday),
+        countFriday: b.countFriday,
+        amountMonthlyPlan: round(b.amountMonthlyPlan),
+        countMonthlyPlan: b.countMonthlyPlan,
+        teamSupport: round(b.teamSupport),
+        fees: round(b.fees),
       });
     }
 

@@ -1,6 +1,6 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { getActiveMetaWebhookConfig, type ActiveRuntimeConfig, type MetaWhatsappRuntimeValues } from "../../runtime-config";
-import type { NormalizedWebhookEvent } from "./types";
+import type { InboundMediaDescriptor, NormalizedWebhookEvent } from "./types";
 
 export type MetaWebhookRuntimeConfig = ActiveRuntimeConfig<Pick<MetaWhatsappRuntimeValues, "appSecret" | "verifyToken">>;
 
@@ -53,6 +53,65 @@ function firstErrorMessage(errors: unknown): string | null {
   return null;
 }
 
+const MEDIA_TYPES = new Set(["image", "video", "audio", "document", "sticker"]);
+
+function str(value: unknown): string | null {
+  return typeof value === "string" && value.trim() ? value.trim() : null;
+}
+
+/** Meta nests the descriptor under a key named after the type: `{ type: "image", image: {…} }`. */
+function mediaDescriptor(type: string | null, message: Record<string, unknown>): InboundMediaDescriptor | null {
+  if (!type || !MEDIA_TYPES.has(type)) return null;
+  const node = message[type];
+  if (!node || typeof node !== "object") return { kind: type, mediaId: null, mimeType: null, filename: null, caption: null };
+  const row = node as Record<string, unknown>;
+  return {
+    kind: type,
+    mediaId: str(row.id),
+    mimeType: str(row.mime_type),
+    filename: str(row.filename),
+    caption: str(row.caption),
+    ...(type === "audio" && row.voice === true ? { voice: true } : {}),
+  };
+}
+
+function buttonReply(message: Record<string, unknown>): { id: string | null; title: string | null } | null {
+  /* A template quick-reply arrives as `button`; a list or reply-button as `interactive`. */
+  const button = message.button as Record<string, unknown> | undefined;
+  if (button && typeof button === "object") return { id: str(button.payload), title: str(button.text) };
+  const interactive = message.interactive as Record<string, unknown> | undefined;
+  if (interactive && typeof interactive === "object") {
+    const reply = (interactive.button_reply ?? interactive.list_reply) as Record<string, unknown> | undefined;
+    if (reply && typeof reply === "object") return { id: str(reply.id), title: str(reply.title) };
+  }
+  return null;
+}
+
+function contextMessageId(message: Record<string, unknown>): string | null {
+  const context = message.context as Record<string, unknown> | undefined;
+  return context && typeof context === "object" ? str(context.id) : null;
+}
+
+/** Whatever the donor actually said, whichever shape it arrived in. */
+function inboundText(
+  type: string | null,
+  message: Record<string, unknown>,
+  media: InboundMediaDescriptor | null,
+  button: { id: string | null; title: string | null } | null,
+): string | null {
+  if (type === "text") return str((message.text as { body?: unknown })?.body);
+  if (media?.caption) return media.caption;
+  if (button?.title) return button.title;
+  if (type === "reaction") return str((message.reaction as { emoji?: unknown })?.emoji);
+  if (type === "location") {
+    const loc = message.location as Record<string, unknown> | undefined;
+    const name = str(loc?.name) ?? str(loc?.address);
+    return name ?? (loc ? `${loc.latitude}, ${loc.longitude}` : null);
+  }
+  if (type === "contacts") return str((Array.isArray(message.contacts) ? (message.contacts[0] as { name?: { formatted_name?: unknown } })?.name?.formatted_name : null));
+  return null;
+}
+
 export function parseWebhookPayload(payload: unknown): NormalizedWebhookEvent[] {
   const out: NormalizedWebhookEvent[] = [];
   const root = payload as { object?: unknown; entry?: unknown[] } | null;
@@ -89,17 +148,24 @@ export function parseWebhookPayload(payload: unknown): NormalizedWebhookEvent[] 
         const wamid = typeof message.id === "string" ? message.id : null;
         if (!wamid) continue;
         const type = typeof message.type === "string" ? message.type : null;
-        const text = type === "text" ? (message.text as { body?: unknown })?.body : undefined;
+        const media = mediaDescriptor(type, message);
+        /* A media caption, a button title and a reaction emoji are all things the donor said. Each
+           becomes the message's text so the inbox shows something rather than an empty bubble. */
+        const button = buttonReply(message);
+        const text = inboundText(type, message, media, button);
         out.push({
           kind: "inbound",
           providerMessageId: wamid,
           from: typeof message.from === "string" ? message.from : null,
           profileName,
           phoneNumberId,
-          text: typeof text === "string" ? text.slice(0, 4000) : null,
+          text: text ? text.slice(0, 4000) : null,
           messageType: type,
           timestamp: toNumber(message.timestamp),
           idempotencyKey: `wa:inbound:${wamid}`,
+          media,
+          replyToMessageId: contextMessageId(message),
+          buttonReply: button,
         });
       }
     }

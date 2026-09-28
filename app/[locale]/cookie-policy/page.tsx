@@ -23,7 +23,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const t = await getTranslations({ locale, namespace: "legal" });
   return buildPageMetadata(locale, {
     title: t("cookiesTitle"),
-    description: t("cwWhatP").slice(0, 165),
+    description: t("cwWhatP"),
     path: `/${slugFor("cookies", locale)}`,
   });
 }

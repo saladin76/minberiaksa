@@ -96,6 +96,8 @@ export const conciergeRequestSchema = z
     history: z.array(historyTurnSchema).max(8).optional(),
     message: z.string().trim().min(1).max(600).optional(),
     step: stepSchema.optional(),
+    /** The chip or card label the visitor tapped for a step — transcript only, never read by the engine. */
+    label: z.string().trim().max(200).optional(),
   })
   .refine((v) => Boolean(v.message) || Boolean(v.step), { message: "message or step required" });
 export type ConciergeRequest = z.infer<typeof conciergeRequestSchema>;

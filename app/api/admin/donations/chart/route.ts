@@ -8,6 +8,7 @@ import {
   eachIstanbulDateKey,
   formatIstanbulDateKey,
   getIstanbulDateRange,
+  resolveChartStartKey,
 } from '@/lib/admin/istanbul-calendar';
 
 function mergeLocaleFilter(where: Record<string, unknown>, locale: string | null): Record<string, unknown> {
@@ -45,7 +46,7 @@ export async function GET(request: NextRequest) {
     const locale = searchParams.get('locale')?.trim() ?? null;
     const country = searchParams.get('country')?.trim() ?? null;
 
-    const { startDate, endDate, startDateKey, endDateKey } = getIstanbulDateRange(period, startParam, endParam);
+    const { startDate, endDate, startDateKey, endDateKey, isAllTime } = getIstanbulDateRange(period, startParam, endParam);
 
     // Bucket PAID donations by `paidAt` (the moment money actually landed) and
     // FAILED donations by `createdAt` (they never have a paidAt). This way a
@@ -184,7 +185,11 @@ export async function GET(request: NextRequest) {
       fees: number;
     }[] = [];
 
-    for (const dateStr of eachIstanbulDateKey(startDateKey, endDateKey)) {
+    /* All-time queries from the epoch, so the axis starts at the first day with data rather than
+       at 1970 — see `resolveChartStartKey`. Bounded periods are unchanged. */
+    const axisStartKey = resolveChartStartKey(isAllTime, startDateKey, endDateKey, byDate.keys());
+
+    for (const dateStr of eachIstanbulDateKey(axisStartKey, endDateKey)) {
       const b = byDate.get(dateStr);
       const amountOneTime = b ? Number(Number(b.amountOneTime).toFixed(2)) : 0;
       const amountMonthly = b ? Number(Number(b.amountMonthly).toFixed(2)) : 0;

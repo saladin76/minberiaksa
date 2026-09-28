@@ -1,7 +1,7 @@
 import type { MinbarCartItem } from "./cart";
 import type { MinbarProject } from "./projects";
 import { orderTypeForItems, type OrderType } from "@/lib/donations/recurring-schedule";
-import { readConciergeAssisted } from "@/lib/ai/concierge/client";
+import { readConciergeAssisted, readConciergeTouched } from "@/lib/ai/concierge/client";
 
 /**
  * The Minbar checkout's payment driver.
@@ -226,6 +226,8 @@ export async function createDonation(input: CreateDonationInput): Promise<Create
       teamSupportRecurring: input.teamSupportRecurring,
       /* Analytics only: marks an order whose basket went through the concierge. */
       ...(conciergeMarker() ? { concierge: conciergeMarker() } : {}),
+      /* Analytics only: this browser talked to the concierge before (indirect influence). */
+      ...(readConciergeTouched() ? { conciergeTouch: readConciergeTouched() } : {}),
       paymentMethod: input.method,
       locale: input.locale,
       ...(input.referralCode ? { referralCode: input.referralCode } : {}),

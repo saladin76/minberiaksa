@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { ensureConversionEventIndexes } from "@/lib/tracking/conversion-event-indexes";
+import { rawCommand } from "@/lib/prisma-raw-command";
 
 export type ConversionPlatform = "META" | "GA4" | "GOOGLE_ADS" | "TIKTOK" | "X" | "VERCEL";
 export type ConversionChannel = "server" | "browser";
@@ -51,7 +52,7 @@ export async function recordConversionEvent(input: RecordConversionEventInput): 
     addDefined(setDoc, "response", input.response);
     addDefined(setDoc, "sentAt", sentAt ?? undefined);
 
-    await prisma.$runCommandRaw({
+    await prisma.$runCommandRaw(rawCommand({
       update: "ConversionEvent",
       updates: [{
         q: { platform: input.platform, eventId: input.eventId, channel: input.channel },
@@ -62,7 +63,7 @@ export async function recordConversionEvent(input: RecordConversionEventInput): 
         },
         upsert: true,
       }],
-    });
+    }));
   } catch (error) {
     console.error("[conversion-event-log] failed", error);
   }

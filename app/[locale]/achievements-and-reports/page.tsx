@@ -19,7 +19,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const t = await getTranslations({ locale, namespace: "achievements" });
   return buildPageMetadata(locale, {
     title: t("reports.title"),
-    description: t("hero.lead").slice(0, 165),
+    description: t("hero.lead"),
     path: `/${slugFor("reports", locale)}`,
   });
 }

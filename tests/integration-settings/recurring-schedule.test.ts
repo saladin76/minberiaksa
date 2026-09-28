@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   DEFAULT_RETRY_HOURS,
   FRIDAY_CHARGE_HOUR,
+  chargesPerMonth,
   consentSnapshotFor,
   frequencyOfOrderType,
   isOrderType,
@@ -55,6 +56,15 @@ test("rail: Stripe keeps one-time + monthly; daily and Friday plans are Albaraka
   // Monthly follows the main gateway.
   assert.equal(railForFrequency("MONTHLY", "STRIPE"), "STRIPE");
   assert.equal(railForFrequency("MONTHLY", "ALBARAKA"), "ALBARAKA");
+});
+
+test("monthly equivalent: daily ≈30.44 charges, Friday ≈4.35, monthly exactly 1", () => {
+  assert.equal(chargesPerMonth("MONTHLY"), 1);
+  assert.ok(Math.abs(chargesPerMonth("DAILY") - 30.4375) < 1e-9);
+  assert.ok(Math.abs(chargesPerMonth("FRIDAY") - 365.25 / 7 / 12) < 1e-9);
+  // A year of each cadence is the charges a year actually holds.
+  assert.ok(Math.abs(chargesPerMonth("DAILY") * 12 - 365.25) < 1e-9);
+  assert.ok(Math.abs(chargesPerMonth("FRIDAY") * 12 - 52.178571) < 1e-5);
 });
 
 test("timezones are validated, never trusted from the browser", () => {

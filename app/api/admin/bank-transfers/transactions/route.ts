@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 import { prisma } from "@/lib/prisma";
 import { requireAdminOrDashboardPermission } from "@/lib/dashboard/api-auth";
+import { rawCommand } from "@/lib/prisma-raw-command";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -125,8 +126,8 @@ export async function GET(request: NextRequest) {
     const filter = buildFilter(url);
 
     const [result, countResult] = await Promise.all([
-      prisma.$runCommandRaw({ find: COLLECTION, filter, sort: { [sortBy]: sortDir, createdAt: -1 }, skip, limit }),
-      prisma.$runCommandRaw({ count: COLLECTION, query: filter }),
+      prisma.$runCommandRaw(rawCommand({ find: COLLECTION, filter, sort: { [sortBy]: sortDir, createdAt: -1 }, skip, limit })),
+      prisma.$runCommandRaw(rawCommand({ count: COLLECTION, query: filter })),
     ]);
 
     const rows = isRecord(result) && isRecord(result.cursor) && Array.isArray(result.cursor.firstBatch)

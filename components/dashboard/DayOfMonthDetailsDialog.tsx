@@ -18,12 +18,17 @@ export interface DayOfMonthDetailFilters {
   campaignId?: string;
   userId?: string;
   referralId?: string;
+  /** Recurring cadence (DAILY | FRIDAY | MONTHLY) or "all". */
+  frequency?: string;
 }
+
+type PlanStatus = "ACTIVE" | "PAUSED" | "CANCELLED" | "PAYMENT_FAILED";
 
 interface DetailRow {
   id: string;
   subscriptionId: string | null;
-  status: "ACTIVE" | "PAUSED" | "CANCELLED" | null;
+  status: PlanStatus | null;
+  frequency?: "DAILY" | "FRIDAY" | "MONTHLY" | null;
   amount: number;
   amountUSD: number | null;
   currency: string;
@@ -46,16 +51,24 @@ type Props = {
   onClose: () => void;
 };
 
-const STATUS_LABEL: Record<"ACTIVE" | "PAUSED" | "CANCELLED", string> = {
+const STATUS_LABEL: Record<PlanStatus, string> = {
   ACTIVE: "نشط",
   PAUSED: "موقوف",
   CANCELLED: "ملغى",
+  PAYMENT_FAILED: "تعذّر الخصم",
 };
 
-const STATUS_CLASS: Record<"ACTIVE" | "PAUSED" | "CANCELLED", string> = {
+const STATUS_CLASS: Record<PlanStatus, string> = {
   ACTIVE: "bg-green-100 text-green-700",
   PAUSED: "bg-amber-100 text-amber-700",
   CANCELLED: "bg-slate-100 text-slate-600",
+  PAYMENT_FAILED: "bg-red-100 text-red-700",
+};
+
+const FREQUENCY_LABEL: Record<"DAILY" | "FRIDAY" | "MONTHLY", string> = {
+  DAILY: "يومي",
+  FRIDAY: "كل جمعة",
+  MONTHLY: "شهري",
 };
 
 /**
@@ -106,6 +119,7 @@ export function DayOfMonthDetailsDialog({ day, mode, filters, formatMoney, onClo
     if (filters?.campaignId && filters.campaignId !== "all") params.set("campaignId", filters.campaignId);
     if (filters?.userId && filters.userId !== "all") params.set("userId", filters.userId);
     if (filters?.referralId) params.set("referralId", filters.referralId);
+    if (filters?.frequency && filters.frequency !== "all") params.set("frequency", filters.frequency);
 
     fetch(`/api/admin/subscriptions/overview/day-of-month/details?${params}`)
       .then(async (res) => {
@@ -128,7 +142,7 @@ export function DayOfMonthDetailsDialog({ day, mode, filters, formatMoney, onClo
     return () => {
       cancelled = true;
     };
-  }, [day, mode, filters?.categoryId, filters?.campaignId, filters?.userId, filters?.referralId]);
+  }, [day, mode, filters?.categoryId, filters?.campaignId, filters?.userId, filters?.referralId, filters?.frequency]);
 
   const isCollected = mode === "collected";
 
@@ -220,6 +234,9 @@ export function DayOfMonthDetailsDialog({ day, mode, filters, formatMoney, onClo
                         <span className="block text-[10px] text-slate-500 tabular-nums">
                           ≈ {formatMoney(r.amountUSD)}
                         </span>
+                      ) : null}
+                      {r.frequency ? (
+                        <span className="block text-[10px] text-slate-500">{FREQUENCY_LABEL[r.frequency]}</span>
                       ) : null}
                     </td>
                     <td className="py-2.5 px-3">

@@ -23,7 +23,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const t = await getTranslations({ locale, namespace: "legal" });
   return buildPageMetadata(locale, {
     title: t("a11yTitle"),
-    description: t("a11yCommitP").slice(0, 165),
+    description: t("a11yCommitP"),
     path: `/${slugFor("accessibility", locale)}`,
   });
 }

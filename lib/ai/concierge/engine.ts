@@ -10,6 +10,8 @@ import { SUPPORTED_CURRENCY_CODES } from "@/lib/supported-currencies";
 import { askModel } from "./llm";
 import { loadKnowledge } from "./knowledge";
 import { loadDonorContext, type DonorContext } from "./donor";
+import { loadConciergeSettings } from "./settings";
+import type { ConciergeSettings } from "./settings-shape";
 import { resolveTopic, pickCrossSell, rankCampaigns, rankCategories, type CatalogCampaign, type CatalogCategory } from "./recommend";
 import {
   FREQUENCIES,
@@ -128,6 +130,20 @@ interface Ctx {
   current: CatalogCampaign | null;
   /** The signed-in donor, from the server session only. */
   donor: DonorContext | null;
+  settings: ConciergeSettings;
+  /** Filled as the turn is answered; shared by every copy of this ctx. */
+  meta: ConciergeTurnMeta;
+}
+
+/**
+ * What the dashboard wants to know about a turn beyond the response itself:
+ * whether the model judged it beyond its knowledge, and why the model did not
+ * answer when it did not. Never sent to the visitor.
+ */
+export interface ConciergeTurnMeta {
+  needsHuman?: boolean;
+  needsRuling?: boolean;
+  modelReason?: string;
 }
 
 function recommendationBlock(ctx: Ctx, intent: ConciergeIntent, reasons?: Record<string, string>, ids?: string[]): { block: ConciergeBlock; shown: string[] } {
@@ -661,6 +677,7 @@ async function messageFlow(ctx: Ctx, text: string): Promise<ConciergeResponse> {
   ctx = { ...ctx, state: { ...ctx.state, ...next } };
 
   if (parsed.needsRuling) {
+    ctx.meta.needsRuling = true;
     const base = parsed.intent === "zakat" || ctx.state.intent === "zakat" ? zakatFlow(ctx, ctx.s.s_ruling) : respond(ctx, { message: ctx.s.s_ruling ?? "", blocks: [], actions: [], mode: "deterministic", intent: "question" });
     return { ...base, actions: [{ type: "navigate", label: ctx.s.a_contact ?? "", route: "contact" }, ...base.actions], intent: "question" };
   }
@@ -715,7 +732,8 @@ async function messageFlow(ctx: Ctx, text: string): Promise<ConciergeResponse> {
   ).map((r) => r.campaign);
 
   const knowledge = await loadKnowledge(ctx.locale);
-  const outcome = await askModel({
+  const outcome = !ctx.settings.llmEnabled ? { verdict: null, reason: "disabled" as const } : await askModel({
+    teamNotes: ctx.settings.teamNotes,
     locale: ctx.locale,
     message: text,
     history: ctx.req.history ?? [],
@@ -737,6 +755,11 @@ async function messageFlow(ctx: Ctx, text: string): Promise<ConciergeResponse> {
   });
   const verdict = outcome.verdict;
   if (!verdict && outcome.reason !== "disabled") console.warn("[concierge] model fallback", outcome.reason);
+  ctx.meta.modelReason = outcome.reason;
+  if (verdict) {
+    ctx.meta.needsHuman = verdict.needsHuman || Boolean(verdict.supportSubject);
+    ctx.meta.needsRuling = verdict.needsRuling;
+  }
 
   if (verdict) {
     intent = intent ?? verdict.intent;
@@ -908,10 +931,11 @@ async function messageFlow(ctx: Ctx, text: string): Promise<ConciergeResponse> {
 
 /* ── Entry ───────────────────────────────────────────────────────────────── */
 
-export async function runConcierge(req: ConciergeRequest, opts: { userId?: string | null } = {}): Promise<ConciergeResponse> {
+export async function runConcierge(req: ConciergeRequest, opts: { userId?: string | null; meta?: ConciergeTurnMeta } = {}): Promise<ConciergeResponse> {
   const locale = req.locale;
-  const [catalog, donor] = await Promise.all([
+  const [catalog, settings, donor] = await Promise.all([
     loadCatalog(locale),
+    loadConciergeSettings(),
     opts.userId ? loadDonorContext(opts.userId, locale).catch((error) => {
       console.error("[concierge] donor context failed", error instanceof Error ? error.message : error);
       return null;
@@ -919,7 +943,7 @@ export async function runConcierge(req: ConciergeRequest, opts: { userId?: strin
   ]);
   const s = stringsFor(locale);
   const current = req.page?.projectSlug ? catalog.campaigns.find((c) => c.slug === req.page?.projectSlug || c.id === req.page?.projectSlug) ?? null : null;
-  const ctx: Ctx = { req, locale, s, catalog, state: { ...(req.state ?? {}) }, current, donor };
+  const ctx: Ctx = { req, locale, s, catalog, state: { ...(req.state ?? {}) }, current, donor, settings, meta: opts.meta ?? {} };
 
   if (req.step) {
     switch (req.step.kind) {

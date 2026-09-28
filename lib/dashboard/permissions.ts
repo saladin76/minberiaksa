@@ -18,6 +18,10 @@ export const DASHBOARD_PERMISSION_KEYS = [
   // editing a video title. Distinct from "bankTransfers", which only reads the
   // incoming transfer list.
   "bankAccounts",
+  // The donation concierge (مساعد العطاء): its analytics, the visitors' conversations,
+  // the AI insights and its settings. Conversations are what visitors typed, so reading
+  // them is its own grant rather than riding on `ads` like the old funnel endpoint.
+  "aiConcierge",
   "generalSettings", "platformConnectionsTest", "platformConnectionsManage",
   "platformConnectionsAdmin", "archiveUpload", "archiveDelete", "archiveAnalyze",
   "archiveDocuments", "donationsEdit", "reportsExport",
@@ -134,6 +138,7 @@ const PATH_RULES: { prefix: string; key: DashboardPermissionKey }[] = [
   { prefix: "/dashboard/pixels", key: "pixels" },
   { prefix: "/dashboard/donations", key: "revenue" },
   { prefix: "/dashboard/general", key: "generalSettings" },
+  { prefix: "/dashboard/ai-concierge", key: "aiConcierge" },
   { prefix: "/dashboard", key: "revenue" },
 ];
 export function pathToDashboardPermission(pathname: string): DashboardPermissionKey | null {

@@ -3198,6 +3198,8 @@
   "Concierge": {
     "title": "Hilf mir, meine Spende zu wählen",
     "launcher": "Spendenassistent",
+    "teaserTitle": "Unsicher, wo Sie spenden sollen? ✨",
+    "teaserBody": "Sagen Sie mir, was Ihnen am Herzen liegt – ich finde in einer Minute das passende Projekt.",
     "s_welcome": "Ich helfe Ihnen, in etwa einer Minute den besten Weg zu spenden zu finden.",
     "placeholder": "Was haben Sie vor? z. B. Ich habe 500 $ und möchte nachhaltig helfen",
     "send": "Senden",

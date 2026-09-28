@@ -13,6 +13,7 @@ import {
   MIN_COOLDOWN_DAYS,
   MIN_LAPSE_DAYS,
 } from "@/lib/events/catalog";
+import { preflightTrigger } from "@/lib/communication/trigger-preflight";
 
 const EVENT_VALUES = [
   "DONATION_PAID",
@@ -72,7 +73,10 @@ export async function GET() {
     orderBy: [{ event: "asc" }, { createdAt: "desc" }],
   });
   const triggers = await enrichTriggers(rows);
-  return NextResponse.json({ triggers });
+  /* Readiness travels with the row so an enabled-but-unsendable trigger — one whose template lost its
+     Meta approval after it was switched on — is visible in the list rather than only in the log. */
+  const preflights = await Promise.all(triggers.map((t) => preflightTrigger({ channel: t.channel, templateId: t.templateId }).catch(() => null)));
+  return NextResponse.json({ triggers: triggers.map((t, i) => ({ ...t, preflight: preflights[i] })) });
 }
 
 export async function POST(request: NextRequest) {
@@ -103,6 +107,16 @@ export async function POST(request: NextRequest) {
       : await prisma.whatsappTemplate.findUnique({ where: { id: templateId }, select: { id: true } });
   if (!exists) {
     return NextResponse.json({ error: "Template not found for channel" }, { status: 400 });
+  }
+
+  /* Enabled means it will fire on the next donation. A trigger that cannot send must not be switched
+     on silently — it would skip every recipient and look healthy doing it. Creating it disabled is
+     always allowed, so the operator can fix the template and enable it after. */
+  if (enabled ?? true) {
+    const preflight = await preflightTrigger({ channel, templateId });
+    if (!preflight.ok) {
+      return NextResponse.json({ error: "TRIGGER_NOT_READY", preflight }, { status: 409 });
+    }
   }
 
   const actor = auditActorFromDashboardSession(session!);

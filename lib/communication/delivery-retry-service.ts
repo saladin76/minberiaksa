@@ -1,8 +1,9 @@
 import { prisma } from "@/lib/prisma";
 import { createDeliveryRecord, markDeliveryStatus } from "./delivery-log-service";
 import { sendPreparedDelivery } from "./provider-router";
-import { resolveTriggerSendConfig, type TriggerSendConfig } from "@/lib/events/dispatch";
+import { resolveTriggerSendConfig, resolveTriggerSender, type TriggerSendConfig } from "@/lib/events/dispatch";
 import { resolveMetaTemplateMapping } from "./automatic-message-dispatcher";
+import { buildMetaComponents } from "./providers/meta-whatsapp/parameters";
 import { resolveSmsProvider } from "./providers/sms/client";
 import {
   RETRYABLE_STATUSES,
@@ -46,6 +47,8 @@ export type RetryOutcomeCode =
   | "CONSENT_BLOCKED"
   | "META_TEMPLATE_REQUIRED"
   | "NO_SENDER_IDENTITY"
+  | "TEMPLATE_PARAMETER_MISSING"
+  | "TEMPLATE_HEADER_MEDIA_MISSING"
   | "ARCHIVE_FAILED"
   | "PROVIDER_REJECTED";
 
@@ -73,6 +76,8 @@ const MESSAGES: Record<RetryOutcomeCode, string> = {
   CONSENT_BLOCKED: "المستلم غير موافق على التواصل",
   META_TEMPLATE_REQUIRED: "يتطلّب قالبًا معتمدًا من Meta",
   NO_SENDER_IDENTITY: "لا توجد هوية مُرسِل مُفعّلة",
+  TEMPLATE_PARAMETER_MISSING: "القالب يطلب متغيّرًا لا توجد له قيمة محفوظة",
+  TEMPLATE_HEADER_MEDIA_MISSING: "القالب يطلب صورة أو ملفًا في الترويسة ولا يوجد",
   ARCHIVE_FAILED: "تعذّر تسجيل المحاولة",
   PROVIDER_REJECTED: "رفضها المزوّد",
 };
@@ -155,14 +160,45 @@ async function resolveRecipient(row: DeliveryRow): Promise<string | null> {
   return (row.channel === "EMAIL" ? user.email : user.phone) || null;
 }
 
-/** Re-check the stored template against Meta's *current* approval state. */
-async function resolveMetaTemplate(row: DeliveryRow): Promise<{ name: string; language: string } | null> {
+/**
+ * The parameter values the original send used, read back out of the delivery's variable snapshot.
+ *
+ * Variable keys are dotted paths into the template context (`user.name`, `donation.amount`), and a
+ * trigger's snapshot is nested one level under `snapshot`. Both roots are tried, and each value is
+ * stored under its name and its position so the component builder can find it either way.
+ */
+function storedTemplateValues(variables: unknown, names: string[]): Record<string, string> {
+  const roots: unknown[] = [];
+  if (variables && typeof variables === "object") {
+    roots.push((variables as { snapshot?: unknown }).snapshot, variables);
+  }
+  const out: Record<string, string> = {};
+  names.forEach((name, index) => {
+    for (const root of roots) {
+      const value = readPath(root, name);
+      if (value == null || value === "") continue;
+      out[name] = String(value);
+      out[String(index + 1)] = String(value);
+      break;
+    }
+  });
+  return out;
+}
+
+function readPath(root: unknown, path: string): unknown {
+  let node: unknown = root;
+  for (const key of path.split(".")) {
+    if (!node || typeof node !== "object") return undefined;
+    node = (node as Record<string, unknown>)[key];
+  }
+  return typeof node === "string" || typeof node === "number" ? node : undefined;
+}
+
+/** Re-check the stored template against Meta's *current* approval state, per language. */
+async function resolveMetaTemplate(row: DeliveryRow) {
   if (!row.templateId) return null;
   const tpl = await prisma.whatsappTemplate
-    .findUnique({
-      where: { id: row.templateId },
-      select: { provider: true, approvalStatus: true, language: true, externalTemplateId: true, name: true },
-    })
+    .findUnique({ where: { id: row.templateId }, select: { id: true, provider: true, name: true, variables: true } })
     .catch(() => null);
   if (!tpl) return null;
   return resolveMetaTemplateMapping(tpl, row.locale || "ar");
@@ -210,11 +246,15 @@ export async function retryDelivery(
 
   if (channel === "EMAIL") {
     if (!row.renderedBody) return result(deliveryId, "NO_RENDERED_BODY", base);
-    if (!config.emailIdentity) return result(deliveryId, "NO_SENDER_IDENTITY", base);
+    /* Routed now, against this recipient's locale — a retry must go out from the sender the
+       original send would use today, not from whichever identity happened to be listed first. */
+    const routed = resolveTriggerSender(config, "EMAIL", { locale: row.locale, purpose: row.purpose as never });
+    if (!routed.ok) return result(deliveryId, "NO_SENDER_IDENTITY", { ...base, detail: routed.reason });
     provider = "ELASTIC_EMAIL";
+    senderId = routed.sender.id;
     payload = {
       channel: "EMAIL",
-      sender: { senderEmail: config.emailIdentity },
+      sender: { senderEmail: routed.sender.senderEmail },
       to: recipient,
       subject: row.renderedSubject ?? "",
       html: row.renderedBody,
@@ -224,15 +264,26 @@ export async function retryDelivery(
     // Meta refuses business-initiated free text, so the stored body is not a fallback here: without
     // a currently-approved template there is no legal payload to send at all.
     if (!meta) return result(deliveryId, "META_TEMPLATE_REQUIRED", base);
-    if (!config.whatsappSender?.phoneNumberId) return result(deliveryId, "NO_SENDER_IDENTITY", base);
+    const routed = resolveTriggerSender(config, "WHATSAPP", { locale: row.locale, purpose: row.purpose as never });
+    if (!routed.ok) return result(deliveryId, "NO_SENDER_IDENTITY", { ...base, detail: routed.reason });
+    if (!routed.sender.phoneNumberId) return result(deliveryId, "NO_SENDER_IDENTITY", base);
+    /* The stored variable snapshot is what the original send rendered from, so the retry carries the
+       same parameters rather than re-deriving them from a donor record that may have moved on. */
+    const built = buildMetaComponents({
+      componentsSchema: meta.componentsSchema,
+      values: storedTemplateValues(row.variables, meta.positionalNames),
+      positionalNames: meta.positionalNames,
+    });
+    if (!built.ok) return result(deliveryId, built.reason as RetryOutcomeCode, { ...base, detail: built.detail });
     provider = "META_WHATSAPP";
-    senderId = config.whatsappSender.id;
+    senderId = routed.sender.id;
     payload = {
       channel: "WHATSAPP",
-      sender: { provider: "META_WHATSAPP", phoneNumberId: config.whatsappSender.phoneNumberId },
+      sender: { provider: "META_WHATSAPP", phoneNumberId: routed.sender.phoneNumberId },
       to: recipient,
       templateName: meta.name,
       languageCode: meta.language,
+      components: built.components,
     };
   } else if (channel === "SMS") {
     if (!row.renderedBody) return result(deliveryId, "NO_RENDERED_BODY", base);

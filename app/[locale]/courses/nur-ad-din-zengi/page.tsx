@@ -17,7 +17,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const t = await getTranslations({ locale, namespace: "zenki" });
   return buildPageMetadata(locale, {
     title: t("heroTitle"),
-    description: t("heroLead").slice(0, 165),
+    description: t("heroLead"),
     path: `/${slugFor("zenkiCourse", locale)}`,
   });
 }

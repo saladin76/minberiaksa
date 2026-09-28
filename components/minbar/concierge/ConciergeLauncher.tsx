@@ -6,6 +6,29 @@ import { localeDirection } from "@/lib/locales";
 import { QUICK_DONATE_ROUTES, type MinbarRoute } from "@/lib/minbar/routes";
 import { Block } from "./ConciergeBlocks";
 import { useConcierge } from "./useConcierge";
+import { useConciergeConfig } from "./useConciergeConfig";
+
+/* Remembered so the pulse stops once the visitor has found the assistant, and the
+   teaser bubble is offered at most once per visit. */
+const SEEN_KEY = "mia_concierge_seen";
+const TEASER_KEY = "mia_concierge_teaser_done";
+const TEASER_VISIBLE_MS = 14_000;
+
+function readFlag(storage: "local" | "session", key: string): boolean {
+  try {
+    return (storage === "local" ? window.localStorage : window.sessionStorage).getItem(key) === "1";
+  } catch {
+    return false;
+  }
+}
+
+function writeFlag(storage: "local" | "session", key: string): void {
+  try {
+    (storage === "local" ? window.localStorage : window.sessionStorage).setItem(key, "1");
+  } catch {
+    /* Private mode: the bubble may show again; harmless. */
+  }
+}
 
 /**
  * The donation concierge's entry point and panel.
@@ -38,6 +61,25 @@ export default function ConciergeLauncher() {
   const t = useTranslations("Concierge");
   const { open, loading, turns, route, openPanel, close, restart, send, act, addDonation, addWaqf } = useConcierge();
   const [draft, setDraft] = useState("");
+  const { config } = useConciergeConfig();
+  /* null until read on the client, so the server render never guesses. */
+  const [seen, setSeen] = useState<boolean | null>(null);
+  const [teaserOpen, setTeaserOpen] = useState(false);
+
+  useEffect(() => {
+    setSeen(readFlag("local", SEEN_KEY));
+  }, []);
+
+  /* Opening the panel once is enough: the pulse and the teaser retire. */
+  useEffect(() => {
+    if (!open) return;
+    setTeaserOpen(false);
+    writeFlag("session", TEASER_KEY);
+    if (!readFlag("local", SEEN_KEY)) {
+      writeFlag("local", SEEN_KEY);
+      setSeen(true);
+    }
+  }, [open]);
   const threadRef = useRef<HTMLDivElement>(null);
 
   /* Bring the visitor's latest message to the top of the thread, so the
@@ -83,8 +125,29 @@ export default function ConciergeLauncher() {
     return () => window.clearTimeout(timer);
   }, [route]);
 
-  if (!route || HIDDEN_ROUTES.has(route)) return null;
+  /* The teaser: a short invitation beside the launcher, once per visit, after
+     the delay set in the dashboard; it leaves by itself after a while. */
+  const hiddenHere = !route || HIDDEN_ROUTES.has(route);
+  useEffect(() => {
+    if (hiddenHere || open || !config.enabled || !config.teaser || readFlag("session", TEASER_KEY)) return;
+    const show = window.setTimeout(() => setTeaserOpen(true), Math.max(0, config.teaserDelaySeconds) * 1000);
+    return () => window.clearTimeout(show);
+  }, [hiddenHere, open, config.enabled, config.teaser, config.teaserDelaySeconds]);
+  useEffect(() => {
+    if (!teaserOpen) return;
+    const hide = window.setTimeout(() => {
+      setTeaserOpen(false);
+      writeFlag("session", TEASER_KEY);
+    }, TEASER_VISIBLE_MS);
+    return () => window.clearTimeout(hide);
+  }, [teaserOpen]);
+
+  if (hiddenHere || !config.enabled) return null;
   const abovePill = pillPresent;
+  const dismissTeaser = () => {
+    setTeaserOpen(false);
+    writeFlag("session", TEASER_KEY);
+  };
 
   const onSubmit = (e: FormEvent) => {
     e.preventDefault();
@@ -96,19 +159,30 @@ export default function ConciergeLauncher() {
   return (
     <>
       {!open ? (
-        <button
-          type="button"
-          className="cg-launcher"
-          data-above-pill={abovePill ? "1" : "0"}
-          dir={dir}
-          aria-haspopup="dialog"
-          onClick={() => openPanel()}
-        >
-          <span className="cg-launcher-icon" aria-hidden="true">
-            <ConciergeGlyph />
+        <div className="cg-launch-wrap" data-above-pill={abovePill ? "1" : "0"} dir={dir}>
+          {teaserOpen ? (
+            <div className="cg-teaser" role="status">
+              <button type="button" className="cg-teaser-body" onClick={() => openPanel()}>
+                <b>{t("teaserTitle")}</b>
+                <span>{t("teaserBody")}</span>
+              </button>
+              <button type="button" className="cg-teaser-x" onClick={dismissTeaser} aria-label={t("close")}>
+                <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" aria-hidden="true">
+                  <path d="M18 6 6 18M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+          ) : null}
+          <span className="cg-halo" data-pulse={config.pulse && seen === false ? "1" : "0"}>
+          <button type="button" className="cg-launcher" aria-haspopup="dialog" onClick={() => openPanel()}>
+            <span className="cg-launcher-icon" aria-hidden="true">
+              <SparkGlyph />
+            </span>
+            <span className="cg-launcher-label">{t("launcher")}</span>
+            <span className="cg-launcher-badge" aria-hidden="true">AI</span>
+          </button>
           </span>
-          <span className="cg-launcher-label">{t("launcher")}</span>
-        </button>
+        </div>
       ) : null}
 
       {open ? (
@@ -205,6 +279,16 @@ export default function ConciergeLauncher() {
         </form>
       </section>
     </>
+  );
+}
+
+/** Four-point sparkles: the launcher's "try me" mark. */
+function SparkGlyph() {
+  return (
+    <svg viewBox="0 0 24 24" width="19" height="19" fill="currentColor" aria-hidden="true">
+      <path d="M10 2.5c.4 3.9 2.1 6.1 6.5 6.9-4.4.8-6.1 3-6.5 6.9-.4-3.9-2.1-6.1-6.5-6.9 4.4-.8 6.1-3 6.5-6.9Z" />
+      <path d="M18.2 13.2c.2 2 1.1 3.1 3.3 3.5-2.2.4-3.1 1.5-3.3 3.5-.2-2-1.1-3.1-3.3-3.5 2.2-.4 3.1-1.5 3.3-3.5Z" opacity=".85" />
+    </svg>
   );
 }
 

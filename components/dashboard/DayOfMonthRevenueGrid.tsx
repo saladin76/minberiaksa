@@ -18,6 +18,9 @@ export type DayOfMonthPoint = {
 
 type Mode = "collected" | "expected";
 
+/** Active daily / Friday plans the expected view cannot place on a day of the month. */
+export type UnplacedPlans = { frequency: "DAILY" | "FRIDAY"; count: number; amountUSD: number };
+
 type Props = {
   collected: DayOfMonthPoint[];
   expected: DayOfMonthPoint[];
@@ -28,6 +31,7 @@ type Props = {
    * rows it lists are the same population the cells were computed from.
    */
   filters?: DayOfMonthDetailFilters;
+  unplaced?: UnplacedPlans[];
 };
 
 /**
@@ -55,7 +59,8 @@ function rampStep(amount: number, max: number): number {
   return 5;
 }
 
-export function DayOfMonthRevenueGrid({ collected, expected, loading, formatMoney, filters }: Props) {
+export function DayOfMonthRevenueGrid({ collected, expected, loading, formatMoney, filters, unplaced = [] }: Props) {
+  const unplacedWithPlans = unplaced.filter((u) => u.count > 0);
   const [mode, setMode] = useState<Mode>("expected");
   /** Which day's drill-down is open, if any. */
   const [openDay, setOpenDay] = useState<number | null>(null);
@@ -101,7 +106,7 @@ export function DayOfMonthRevenueGrid({ collected, expected, loading, formatMone
             <p className="text-xs text-slate-500">
               {mode === "collected"
                 ? "إجمالي ما تم تحصيله فعليًا في كل يوم من الشهر، مجمّعًا عبر كل الشهور"
-                : "ما تجدّده الاشتراكات النشطة في كل يوم من الشهر (دورة شهرية واحدة)"}
+                : "ما تجدّده الاشتراكات الشهرية النشطة في كل يوم من الشهر (دورة شهرية واحدة)"}
             </p>
           </div>
         </div>
@@ -128,7 +133,7 @@ export function DayOfMonthRevenueGrid({ collected, expected, loading, formatMone
             ))}
           </div>
           <div className="text-end">
-            <p className="text-[11px] text-slate-500">{mode === "collected" ? "إجمالي المحصّل" : "الإجمالي المتوقع شهريًا"}</p>
+            <p className="text-[11px] text-slate-500">{mode === "collected" ? "إجمالي المحصّل" : "المتوقع شهريًا (الاشتراكات الشهرية)"}</p>
             <p className="text-xl font-bold tabular-nums text-slate-900">{formatMoney(stats.total)}</p>
           </div>
         
@@ -136,6 +141,20 @@ export function DayOfMonthRevenueGrid({ collected, expected, loading, formatMone
       </header>
 
       <div className="p-4">
+        {/* Daily plans bill on every day and Friday plans on a different date each month, so
+            neither has a day of the month — say how much sits outside the grid instead of
+            letting the expected total read as the whole recurring book. */}
+        {mode === "expected" && unplacedWithPlans.length > 0 && (
+          <div className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-1 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-[11px] text-slate-600">
+            <span className="font-semibold text-slate-700">غير مشمول في الشبكة:</span>
+            {unplacedWithPlans.map((u) => (
+              <span key={u.frequency} className="tabular-nums">
+                {u.frequency === "DAILY" ? "يومي" : "كل جمعة"}: {u.count} اشتراك ·{" "}
+                {formatMoney(u.amountUSD)} {u.frequency === "DAILY" ? "كل يوم" : "كل جمعة"}
+              </span>
+            ))}
+          </div>
+        )}
         <div className="grid grid-cols-4 gap-2 sm:grid-cols-6 lg:grid-cols-8">
           {data.map((d) => {
             const amount = d.amountUSD ?? 0;
@@ -209,8 +228,8 @@ export function DayOfMonthRevenueGrid({ collected, expected, loading, formatMone
             <Info className="h-3.5 w-3.5 shrink-0" />
             <span>
               {mode === "collected"
-                ? "الاشتراك يتجدّد في نفس اليوم من كل شهر، فهذه هي أيام دخول المال فعليًا."
-                : "محسوب من تاريخ التجديد القادم للاشتراكات النشطة."}{" "}
+                ? "أيام دخول المال فعليًا من كل الاشتراكات المتكررة، مجمّعة عبر الشهور."
+                : "محسوب من تاريخ التجديد القادم للاشتراكات الشهرية النشطة."}{" "}
               <b className="font-semibold text-slate-600">اضغط أي يوم لعرض تفاصيله.</b>
             </span>
           </p>

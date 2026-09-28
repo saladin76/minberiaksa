@@ -49,7 +49,10 @@ export async function POST(req: NextRequest) {
         items: { include: { campaign: { select: { title: true } } } },
         categoryItems: { include: { category: { select: { name: true } } } },
         subscription: {
-          select: { id: true, frequency: true, timezone: true, stripeSubscriptionId: true, payforToken: true },
+          /* amount/teamSupport/coverFees are what the recurring price is computed from a few dozen
+              lines below; leaving them out of the select made them `undefined` at runtime, so
+              `planFees` was NaN and every monthly Stripe plan was priced from a NaN total. */
+          select: { id: true, frequency: true, timezone: true, stripeSubscriptionId: true, payforToken: true, amount: true, teamSupport: true, coverFees: true },
         },
         donor: { select: { id: true, email: true, name: true } },
       },

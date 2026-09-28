@@ -47,7 +47,7 @@ const DraggableCategory = ({ category, index, moveCategory }: DraggableCategoryP
 
   return (
     <div
-      ref={(node) => drag(drop(node))}
+      ref={(node) => { drag(drop(node)); }}
       className={`flex items-center gap-3 p-3 bg-white border rounded-lg mb-2 ${
         isDragging ? 'opacity-50' : ''
       }`}

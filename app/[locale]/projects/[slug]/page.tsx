@@ -31,7 +31,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (superCategory) {
     return buildPageMetadata(locale, {
       title: superCategory.metaTitle || superCategory.title,
-      description: (superCategory.metaDescription || superCategory.intro || superCategory.subtitle).slice(0, 165),
+      description: (superCategory.metaDescription || superCategory.intro || superCategory.subtitle),
       path: `/${slugFor("projectDetail", locale)}/${superCategory.slug}`,
       image: superCategory.heroImage || undefined,
     });
@@ -44,7 +44,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   return buildPageMetadata(locale, {
     title: project.title,
-    description: project.text.slice(0, 165),
+    description: project.text,
     path: `/${slugFor("projectDetail", locale)}/${project.slug}`,
     image: project.image ?? undefined,
     type: "article",

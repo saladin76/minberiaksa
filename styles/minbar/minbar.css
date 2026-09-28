@@ -1664,35 +1664,146 @@
  * side panel on wider screens. Same tokens as the rest of the site; no chat-app
  * bubbles, no robot.
  * ───────────────────────────────────────────────────────────────────────────── */
-.mia-scope .cg-launcher {
+/* The launcher is the concierge's front door, so it is built to be noticed:
+   a gold-ringed pill with a gold sparkle disc and an "AI" tag, a slow light
+   sweep across it, a pulse ring until the visitor first opens it, and — once
+   per visit — a teaser bubble inviting them in. All motion stops under
+   prefers-reduced-motion. */
+.mia-scope .cg-launch-wrap {
   position: fixed;
   inset-inline-end: max(14px, 2.5vw);
   bottom: max(16px, env(safe-area-inset-bottom));
   z-index: 74;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+  pointer-events: none;
+}
+.mia-scope .cg-launch-wrap > * { pointer-events: auto; }
+.mia-scope .cg-launch-wrap[data-above-pill="1"] { bottom: calc(max(16px, env(safe-area-inset-bottom)) + 62px); }
+.mia-scope .cg-launcher {
+  position: relative;
+  isolation: isolate;
   display: inline-flex;
   align-items: center;
-  gap: 9px;
-  height: 46px;
-  padding: 0 16px 0 12px;
-  border: 1px solid rgba(211,154,39,.55);
+  gap: 10px;
+  height: 52px;
+  padding-block: 0;
+  padding-inline: 7px 12px;
+  border: 1.5px solid rgba(232,185,74,.85);
   border-radius: 999px;
-  background: linear-gradient(135deg, #132C38, #10212B);
+  background: linear-gradient(135deg, #1B3A4A 0%, #10212B 70%);
   color: #fff;
   font-family: inherit;
   font-weight: 900;
-  font-size: 13.5px;
+  font-size: 15px;
+  letter-spacing: .1px;
   cursor: pointer;
-  box-shadow: 0 14px 30px rgba(16,33,43,.32), inset 0 0 0 1px rgba(255,255,255,.08);
+  overflow: hidden;
+  box-shadow: 0 16px 34px rgba(16,33,43,.38), 0 0 0 4px rgba(211,154,39,.16), inset 0 0 0 1px rgba(255,255,255,.08);
   white-space: nowrap;
-  animation: qf-in .4s cubic-bezier(.22,.61,.36,1) both;
+  animation: qf-in .4s cubic-bezier(.22,.61,.36,1) both, cg-float 5s ease-in-out 1.2s infinite;
   transition: transform .18s ease, box-shadow .18s ease;
 }
-.mia-scope .cg-launcher[data-above-pill="1"] { bottom: calc(max(16px, env(safe-area-inset-bottom)) + 62px); }
-.mia-scope .cg-launcher:hover { transform: translateY(-2px); box-shadow: 0 18px 38px rgba(16,33,43,.4); }
+/* A slow light sweep across the pill. */
+.mia-scope .cg-launcher::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(110deg, transparent 30%, rgba(255,215,130,.28) 48%, transparent 66%);
+  transform: translateX(-120%);
+  animation: cg-sweep 4.8s ease-in-out 1.5s infinite;
+}
+.mia-scope .cg-launcher:hover { transform: translateY(-3px) scale(1.02); box-shadow: 0 20px 42px rgba(16,33,43,.45), 0 0 0 6px rgba(211,154,39,.22); }
 .mia-scope .cg-launcher:focus-visible { outline: 3px solid var(--gold); outline-offset: 3px; }
-.mia-scope .cg-launcher-icon { display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; background: rgba(211,154,39,.2); color: var(--gold); }
+.mia-scope .cg-launcher-icon {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #F2C866, #D39A27);
+  color: #10212B;
+  box-shadow: 0 4px 12px rgba(211,154,39,.5), inset 0 1px 0 rgba(255,255,255,.5);
+}
+.mia-scope .cg-launcher-icon svg { animation: cg-twinkle 2.6s ease-in-out infinite; }
+.mia-scope .cg-launcher-badge {
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: var(--gold);
+  color: #10212B;
+  font-size: 10px;
+  font-weight: 900;
+  line-height: 1.3;
+  letter-spacing: .4px;
+}
+/* Pulse rings until the assistant has been opened once. */
+.mia-scope .cg-halo { position: relative; display: inline-flex; border-radius: 999px; }
+.mia-scope .cg-halo[data-pulse="1"]::before,
+.mia-scope .cg-halo[data-pulse="1"]::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  border: 2px solid rgba(232,185,74,.85);
+  pointer-events: none;
+  animation: cg-ring 2.4s cubic-bezier(.2,.6,.3,1) infinite;
+}
+.mia-scope .cg-halo[data-pulse="1"]::after { animation-delay: 1.2s; }
+
+/* Teaser bubble, pointing at the launcher. */
+.mia-scope .cg-teaser {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  max-width: min(290px, calc(100vw - 32px));
+  border-radius: 18px;
+  border-end-end-radius: 6px;
+  background: #fff;
+  color: var(--ink);
+  box-shadow: 0 18px 40px rgba(16,33,43,.22), 0 0 0 1px rgba(211,154,39,.35);
+  animation: cg-teaser-in .45s cubic-bezier(.22,.61,.36,1) both;
+}
+.mia-scope .cg-teaser-body {
+  display: grid;
+  gap: 3px;
+  padding-block: 12px;
+  padding-inline: 14px 6px;
+  border: 0;
+  background: none;
+  color: inherit;
+  font-family: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+.mia-scope .cg-teaser-body b { font-size: 14px; font-weight: 900; color: #10212B; }
+.mia-scope .cg-teaser-body span { font-size: 12.5px; line-height: 1.55; color: #3d5360; }
+.mia-scope .cg-teaser-x {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  margin: 6px;
+  border: 0;
+  border-radius: 50%;
+  background: #f1f4f6;
+  color: #5b6f7b;
+  cursor: pointer;
+}
+.mia-scope .cg-teaser-x:hover { background: #e4e9ed; color: #10212B; }
+
+@keyframes cg-ring { 0% { transform: scale(1); opacity: .9; } 100% { transform: scale(1.18, 1.55); opacity: 0; } }
+@keyframes cg-sweep { 0%, 55% { transform: translateX(-120%); } 85%, 100% { transform: translateX(120%); } }
+@keyframes cg-float { 0%, 100% { translate: 0 0; } 50% { translate: 0 -3px; } }
+@keyframes cg-twinkle { 0%, 100% { transform: scale(1) rotate(0); } 50% { transform: scale(1.12) rotate(8deg); } }
+@keyframes cg-teaser-in { from { opacity: 0; transform: translateY(8px) scale(.96); } to { opacity: 1; transform: none; } }
+
 @media (max-width: 760px) {
-  .mia-scope .cg-launcher { height: 44px; padding: 0 14px 0 10px; font-size: 13px; }
+  .mia-scope .cg-launcher { height: 48px; font-size: 14px; gap: 8px; }
+  .mia-scope .cg-launcher-icon { width: 34px; height: 34px; }
 }
 
 .mia-scope .cg-backdrop { position: fixed; inset: 0; z-index: 90; background: rgba(16,33,43,.42); backdrop-filter: blur(2px); animation: cg-fade .2s ease both; }
@@ -1853,6 +1964,7 @@ html.cg-open .mia-scope .mia-qb-sec { display: none; }
 html.cg-open .mia-scope:has(.mia-qb-sec) { padding-bottom: 0; }
 
 @media (prefers-reduced-motion: reduce) {
+  .mia-scope .cg-halo::before, .mia-scope .cg-halo::after, .mia-scope .cg-launcher::after, .mia-scope .cg-launcher-icon svg, .mia-scope .cg-teaser,
   .mia-scope .cg-launcher, .mia-scope .cg-sheet, .mia-scope .cg-backdrop, .mia-scope .cg-confirm, .mia-scope .cg-thinking-orb, .mia-scope .cg-thinking-orb::before, .mia-scope .cg-thinking-line { animation: none; transition: none; }
 }
 

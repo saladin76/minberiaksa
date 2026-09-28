@@ -6,7 +6,7 @@ import { generateThanksPdf } from "@/lib/certificates/generate";
 import { ensureDonationDocuments } from "@/lib/certificates/issue";
 import { sendEmailMessage } from "@/lib/communication/providers/email/client";
 import { getMetaConfig, graphFetch } from "@/lib/communication/providers/meta-whatsapp/client";
-import { resolveTriggerSendConfig } from "@/lib/events/dispatch";
+import { resolveTriggerSendConfig, resolveTriggerSender } from "@/lib/events/dispatch";
 import { getServerBaseUrl } from "@/lib/server-base-url";
 import { miaPath } from "@/lib/minbar/routes";
 import { writeAuditLog } from "@/lib/audit-log";
@@ -105,6 +105,10 @@ export async function deliverDonationGifts(donationId: string): Promise<GiftDeli
   const locale = docs.locale;
   const m = giftMessages(locale);
   const [base, sendConfig] = await Promise.all([getServerBaseUrl(), resolveTriggerSendConfig()]);
+  /* A gift goes out in the recipient's language, so it routes on that locale like any other send —
+     through the one resolver every outbound path shares. */
+  const giftEmailSender = resolveTriggerSender(sendConfig, "EMAIL", { locale, purpose: "TRANSACTIONAL" });
+  const giftWhatsappSender = resolveTriggerSender(sendConfig, "WHATSAPP", { locale, purpose: "TRANSACTIONAL" });
   const donorName = (donation.donor?.name ?? "").trim() || (m.anonymousDonor ?? "");
 
   for (const line of lines) {
@@ -128,7 +132,7 @@ export async function deliverDonationGifts(donationId: string): Promise<GiftDeli
           to: line.giftRecipientEmail,
           subject: fill(m.emailSubject, vars),
           html: giftEmailHtml(m, vars, line.giftShowAmount, line.giftMessage, projectUrl),
-          senderEmail: sendConfig.emailIdentity,
+          senderEmail: giftEmailSender.ok ? giftEmailSender.sender.senderEmail : null,
           attachments: [{ filename: pdf.filename, content: pdf.pdf.toString("base64"), contentType: "application/pdf" }],
         });
         if (sent.ok) {
@@ -153,7 +157,7 @@ export async function deliverDonationGifts(donationId: string): Promise<GiftDeli
       ]
         .filter(Boolean)
         .join("\n\n");
-      const sent = await sendGiftWhatsapp(line.giftRecipientPhone, body, sendConfig.whatsappSender?.phoneNumberId ?? null);
+      const sent = await sendGiftWhatsapp(line.giftRecipientPhone, body, giftWhatsappSender.ok ? giftWhatsappSender.sender.phoneNumberId : null);
       if (sent.ok) {
         result.whatsappSent += 1;
         reached = true;

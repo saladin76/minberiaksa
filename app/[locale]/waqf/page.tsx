@@ -20,7 +20,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const t = await getTranslations({ locale, namespace: "waqf" });
   return buildPageMetadata(locale, {
     title: t("qudsWaqfProjects"),
-    description: t("meterIntro").slice(0, 165),
+    description: t("meterIntro"),
     path: `/${slugFor("waqf", locale)}`,
   });
 }

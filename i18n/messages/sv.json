@@ -2166,6 +2166,8 @@
   "Concierge": {
     "title": "Hjälp mig välja hur jag ger",
     "launcher": "Gåvoassistent",
+    "teaserTitle": "Osäker på var du ska ge? ✨",
+    "teaserBody": "Berätta vad som ligger dig varmt om hjärtat så hittar jag rätt projekt på en minut.",
     "s_welcome": "Jag hjälper dig hitta bästa sättet att ge, på en minut.",
     "placeholder": "Berätta vad du har i åtanke… t.ex. jag har 500 $ och vill ha bestående effekt",
     "send": "Skicka",

@@ -1,6 +1,11 @@
 import { Prisma } from "@prisma/client";
 import { PAID_CONTRIBUTING_FILTER } from "@/lib/dashboard/donation-usd-revenue";
 import { formatIstanbulDateKey } from "@/lib/admin/istanbul-calendar";
+import {
+  donationFrequencyWhere,
+  subscriptionFrequencyWhere,
+  type FrequencyFilter,
+} from "@/lib/dashboard/recurring-frequency-filter";
 
 /**
  * Shared filter/bucketing rules for the «الوارد حسب يوم الشهر» grid and its
@@ -18,6 +23,8 @@ export interface DayOfMonthFilterInput {
   campaignId?: string | null;
   userId?: string | null;
   referralId?: string | null;
+  /** Plan cadence; null/absent = every cadence. */
+  frequency?: FrequencyFilter;
 }
 
 const isSet = (v: string | null | undefined): v is string => Boolean(v && v !== "all");
@@ -26,7 +33,7 @@ export function buildDayOfMonthFilters(input: DayOfMonthFilterInput): {
   donationWhere: Prisma.DonationWhereInput;
   subscriptionWhere: Prisma.SubscriptionWhereInput;
 } {
-  const { categoryId, campaignId, userId, referralId } = input;
+  const { categoryId, campaignId, userId, referralId, frequency = null } = input;
   const byCampaign = isSet(campaignId);
   const byCategory = !byCampaign && isSet(categoryId);
 
@@ -37,6 +44,7 @@ export function buildDayOfMonthFilters(input: DayOfMonthFilterInput): {
     // Not null implicitly — a null paidAt cannot satisfy a range, and settlement is what
     // makes a row real money. Same rule the chart and the KPI cards use.
     paidAt: { not: null },
+    ...donationFrequencyWhere(frequency),
   };
   if (isSet(referralId)) donationWhere.referralId = referralId;
   if (isSet(userId)) donationWhere.donorId = userId;
@@ -54,22 +62,44 @@ export function buildDayOfMonthFilters(input: DayOfMonthFilterInput): {
   // (declined card) stays ACTIVE but has never produced money — 18 of them, worth $217/mo.
   // The MRR card already requires at least one settled charge; match it, or this view and
   // that card disagree by exactly those phantom subscriptions.
-  const subscriptionWhere: Prisma.SubscriptionWhereInput = {
+  const subscriptionWhere = activePlanScopeWhere(input);
+
+  // A day of the month is only a plan's billing day when the plan is monthly: a daily plan
+  // bills on every day and a Friday plan's date moves every month. So the expected view is
+  // monthly plans only — and empty when the page is narrowed to another cadence.
+  if (frequency && frequency !== "MONTHLY") {
+    subscriptionWhere.id = { in: [] };
+  } else {
+    Object.assign(subscriptionWhere, subscriptionFrequencyWhere("MONTHLY"));
+  }
+
+  return { donationWhere, subscriptionWhere };
+}
+
+/**
+ * Earning plans (ACTIVE with at least one settled charge) inside the page's scope, any cadence.
+ * The expected grid narrows this to monthly plans; the route also uses it to report the daily
+ * and Friday plans that grid cannot place on a day of the month.
+ */
+export function activePlanScopeWhere(input: DayOfMonthFilterInput): Prisma.SubscriptionWhereInput {
+  const { categoryId, campaignId, userId, referralId } = input;
+  const byCampaign = isSet(campaignId);
+  const byCategory = !byCampaign && isSet(categoryId);
+  const where: Prisma.SubscriptionWhereInput = {
     status: "ACTIVE",
     donations: { some: PAID_CONTRIBUTING_FILTER },
   };
-  if (isSet(referralId)) subscriptionWhere.referralId = referralId;
-  if (isSet(userId)) subscriptionWhere.donorId = userId;
+  if (isSet(referralId)) where.referralId = referralId;
+  if (isSet(userId)) where.donorId = userId;
   if (byCampaign) {
-    subscriptionWhere.items = { some: { campaignId: campaignId as string } };
+    where.items = { some: { campaignId: campaignId as string } };
   } else if (byCategory) {
-    subscriptionWhere.OR = [
+    where.OR = [
       { items: { some: { campaign: { categoryIds: { has: categoryId as string } } } } },
       { categoryItems: { some: { categoryId: categoryId as string } } },
     ];
   }
-
-  return { donationWhere, subscriptionWhere };
+  return where;
 }
 
 /** Day-of-month (1..31) in the Istanbul calendar, or null if unusable. */

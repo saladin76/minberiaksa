@@ -3269,6 +3269,8 @@
   "Concierge": {
     "title": "Aidez-moi à choisir comment donner",
     "launcher": "Assistant de don",
+    "teaserTitle": "Vous hésitez où donner ? ✨",
+    "teaserBody": "Dites-moi ce qui vous tient à cœur, je vous trouve le bon projet en une minute.",
     "s_welcome": "Je vous aide à trouver la meilleure façon de donner, en une minute.",
     "placeholder": "Dites-moi ce que vous souhaitez… ex. j'ai 500 $ et je veux un impact durable",
     "send": "Envoyer",

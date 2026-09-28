@@ -6,6 +6,7 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 import { requireAdminOrDashboardPermission } from "@/lib/dashboard/api-auth";
 import { prisma } from "@/lib/prisma";
 import { auditActorFromDashboardSession, writeAuditLog } from "@/lib/audit-log";
+import { deleteOrArchiveWhatsappTemplate, rejectDisallowedTemplateEdit } from "@/lib/communication/whatsapp-template-guard";
 
 const updateSchema = z.object({
   name: z.string().min(1).max(120).optional(),
@@ -53,6 +54,10 @@ export async function PATCH(
     );
   }
 
+  /* Meta owns the approval fields, and owns the body of anything it has approved. */
+  const rejection = await rejectDisallowedTemplateEdit(id, parsed.data as Record<string, unknown>);
+  if (rejection) return NextResponse.json({ error: rejection.error, fields: rejection.fields }, { status: rejection.status });
+
   const data: Prisma.WhatsappTemplateUpdateInput = {};
   if (parsed.data.name != null) data.name = parsed.data.name;
   if (parsed.data.body != null) data.body = parsed.data.body;
@@ -85,15 +90,21 @@ export async function DELETE(
   if (denied) return denied;
   const { id } = await params;
 
-  const deleted = await prisma.whatsappTemplate.delete({ where: { id } });
+  /* A template a trigger, campaign or delivery still points at is archived, not destroyed: deleting
+     it left the trigger resolving to nothing and firing silently forever. */
+  const outcome = await deleteOrArchiveWhatsappTemplate(id);
+  if (!outcome) return NextResponse.json({ error: "Not found" }, { status: 404 });
   const actor = auditActorFromDashboardSession(session!);
   await writeAuditLog({
     ...actor,
-    action: "WHATSAPP_TEMPLATE_DELETE",
-    messageAr: `حذف قالب واتساب: ${deleted.name}`,
+    action: outcome.action === "DELETED" ? "WHATSAPP_TEMPLATE_DELETE" : "WHATSAPP_TEMPLATE_ARCHIVE",
+    messageAr: outcome.action === "DELETED"
+      ? `حذف قالب واتساب: ${outcome.name}`
+      : `أرشفة قالب واتساب مستخدَم: ${outcome.name} — ${outcome.references.total} مرجعًا`,
     entityType: "WhatsappTemplate",
-    entityId: deleted.id,
+    entityId: id,
+    metadata: outcome.action === "ARCHIVED" ? { references: outcome.references } : undefined,
     stream: "TEAM",
   });
-  return NextResponse.json({ ok: true });
+  return NextResponse.json({ ok: true, action: outcome.action, ...(outcome.action === "ARCHIVED" ? { references: outcome.references } : {}) });
 }

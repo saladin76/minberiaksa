@@ -3269,6 +3269,8 @@
   "Concierge": {
     "title": "Nasıl bağış yapacağımı seçmeme yardım et",
     "launcher": "Bağış asistanı",
+    "teaserTitle": "Nereye bağış yapacağınızdan emin değil misiniz? ✨",
+    "teaserBody": "Bana ne istediğinizi söyleyin, bir dakikada size en uygun projeyi bulayım.",
     "s_welcome": "Bir dakika içinde size en uygun bağış yolunu bulmanıza yardım ederim.",
     "placeholder": "Ne düşündüğünüzü yazın… örn. 500 dolarım var, kalıcı bir hayır istiyorum",
     "send": "Gönder",

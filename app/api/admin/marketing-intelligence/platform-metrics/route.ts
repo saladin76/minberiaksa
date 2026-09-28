@@ -4,6 +4,7 @@ import { createHash } from "crypto";
 import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 import { requireAdminOrDashboardPermission } from "@/lib/dashboard/api-auth";
 import { prisma } from "@/lib/prisma";
+import { rawCommand } from "@/lib/prisma-raw-command";
 
 export const dynamic = "force-dynamic";
 
@@ -56,7 +57,7 @@ function metricKey(row: JsonMap) {
 }
 
 async function ensureIndexes() {
-  await prisma.$runCommandRaw({
+  await prisma.$runCommandRaw(rawCommand({
     createIndexes: "MarketingPlatformDailyMetric",
     indexes: [
       { key: { date: -1, platform: 1 }, name: "date_platform" },
@@ -65,7 +66,7 @@ async function ensureIndexes() {
       { key: { adId: 1, date: -1 }, name: "ad_date" },
       { key: { metricKey: 1 }, name: "metricKey_unique", unique: true },
     ],
-  }).catch(() => null);
+  })).catch(() => null);
 }
 
 function normalizeMetric(input: JsonMap) {
@@ -133,12 +134,12 @@ export async function GET(request: NextRequest) {
     if (dateTo) (filter.date as JsonMap).$lte = dateTo;
   }
 
-  const result = await prisma.$runCommandRaw({
+  const result = await prisma.$runCommandRaw(rawCommand({
     find: "MarketingPlatformDailyMetric",
     filter,
     sort: { date: -1, updatedAt: -1 },
     limit,
-  }) as JsonMap;
+  })) as JsonMap;
   const rows = typeof result.cursor === "object" && result.cursor && Array.isArray((result.cursor as JsonMap).firstBatch) ? (result.cursor as JsonMap).firstBatch : [];
 
   const summary = rows.reduce((acc, row) => {
@@ -174,6 +175,6 @@ export async function POST(request: NextRequest) {
     upsert: true,
   }));
 
-  const result = await prisma.$runCommandRaw({ update: "MarketingPlatformDailyMetric", updates }) as JsonMap;
+  const result = await prisma.$runCommandRaw(rawCommand({ update: "MarketingPlatformDailyMetric", updates })) as JsonMap;
   return NextResponse.json({ ok: true, count: normalized.length, result });
 }

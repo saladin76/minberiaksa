@@ -18,7 +18,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const t = await getTranslations({ locale, namespace: "homepage" });
   return buildPageMetadata(locale, {
     title: t("achVideosPageTitle"),
-    description: t("achVideosPageLead").slice(0, 165),
+    description: t("achVideosPageLead"),
     path: `/${slugFor("achievementVideos", locale)}`,
   });
 }

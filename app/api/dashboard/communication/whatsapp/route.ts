@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { requireAdminOrDashboardPermission } from "@/lib/dashboard/api-auth";
 import { getActiveMetaWhatsappRuntimeConfig } from "@/lib/communication/runtime-config";
 import { RETRYABLE_STATUSES } from "@/lib/communication/communication-runtime-types";
+import { resolveVariantForLocale } from "@/lib/communication/whatsapp-template-sync";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -101,7 +102,12 @@ export async function GET(request: NextRequest) {
       }),
       // Template readiness is the usual reason this channel is silent — see the note above.
       prisma.whatsappTemplate.findMany({
-        select: { id: true, name: true, approvalStatus: true, category: true, language: true, externalTemplateId: true, updatedAt: true },
+        select: {
+          id: true, name: true, category: true, updatedAt: true,
+          /* Meta's own answer, per language — the single readiness contract. The local
+             `approvalStatus`/`externalTemplateId` fields are deliberately not read here. */
+          variants: { select: { languageCode: true, locale: true, approvalStatus: true, providerTemplateName: true, componentsSchema: true, rejectionReason: true, lastSyncedAt: true } },
+        },
         orderBy: { updatedAt: "desc" },
       }),
       getActiveMetaWhatsappRuntimeConfig(),
@@ -135,22 +141,33 @@ export async function GET(request: NextRequest) {
       buckets.set(key, bucket);
     }
 
-    // A template can only carry a business-initiated send once Meta has approved it AND we hold
-    // its external id. Anything else is a draft as far as sending is concerned, however complete
-    // it looks in our own editor.
+    /* Readiness comes from `resolveVariantForLocale` — the same function the campaign builder, the
+       trigger preflight and the runtime sender all call. It used to be computed here from the local
+       row's hand-set `approvalStatus` and `externalTemplateId`, which is how this page could report
+       a template READY while every send of it failed with META_TEMPLATE_REQUIRED. Two functions
+       cannot agree; one cannot disagree with itself. */
     const templateRows = templates.map((t) => {
-      const approval = (t.approvalStatus ?? "").toUpperCase();
-      const registered = Boolean(t.externalTemplateId);
-      const ready = registered && approval === "APPROVED";
+      const canonical = resolveVariantForLocale(t.variants, "ar");
+      const approvedLanguages = t.variants.filter((v) => v.approvalStatus === "APPROVED").map((v) => v.languageCode);
+      const lastSyncedAt = t.variants.reduce<Date | null>((latest, v) => (!latest || v.lastSyncedAt > latest ? v.lastSyncedAt : latest), null);
       return {
         id: t.id,
         name: t.name,
-        approvalStatus: t.approvalStatus,
+        approvalStatus: canonical.approvalStatus,
         category: t.category,
-        language: t.language,
-        registered,
-        ready,
-        state: ready ? "READY" : registered ? (approval || "PENDING") : "NOT_REGISTERED",
+        language: canonical.languageCode,
+        /* "Registered" now means Meta has told us about it, not that somebody typed an id. */
+        registered: t.variants.length > 0,
+        ready: canonical.ready,
+        approvedLanguages,
+        approvedLocales: [...new Set(t.variants.filter((v) => v.approvalStatus === "APPROVED" && v.locale).map((v) => v.locale as string))],
+        rejectionReason: canonical.rejectionReason,
+        lastSyncedAt: lastSyncedAt ? lastSyncedAt.toISOString() : null,
+        state: canonical.ready
+          ? "READY"
+          : t.variants.length === 0
+            ? "NOT_REGISTERED"
+            : canonical.approvalStatus ?? "PENDING",
         updatedAt: t.updatedAt.toISOString(),
       };
     });

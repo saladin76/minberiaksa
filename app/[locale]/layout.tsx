@@ -1,3 +1,4 @@
+import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { LOCALE_SEO, OG_LOCALE_MAP, OG_IMAGE, SITE_URL, buildHreflang } from "@/lib/seo";
 import type { Locale } from "@/lib/seo";
@@ -28,7 +29,24 @@ import "@/styles/minbar/locale-fonts.css";
 
 // Valid public locales derive from the single source of truth (enabled set).
 const VALID_LOCALES = SUPPORTED_LOCALES;
-const DEFAULT_LOCALE = "ar";
+
+/**
+ * A first path segment that is not a locale is NOT a page in Arabic.
+ *
+ * This segment used to fall back to `ar` silently, so every stray root request —
+ * `/favicon.ico`, `/apple-touch-icon.png`, a mistyped path, a crawler probing
+ * `/wp-admin` — rendered the Arabic homepage with `locale = "favicon.ico"`
+ * threaded through it. Anything that then handed that string to `Intl` threw
+ * `RangeError: Incorrect locale information provided`, which is how a missing
+ * favicon became a 500 in production rather than a 404.
+ *
+ * A real `app/favicon.ico` now answers that particular request, but the rule is
+ * the fix: an unknown locale is a 404, and `notFound()` says so.
+ */
+function assertLocale(rawLocale: string): Locale {
+  if (!VALID_LOCALES.includes(rawLocale as (typeof VALID_LOCALES)[number])) notFound();
+  return rawLocale as Locale;
+}
 
 export async function generateMetadata({
   params,
@@ -36,7 +54,7 @@ export async function generateMetadata({
   params: Promise<{ locale: string }>;
 }): Promise<Metadata> {
   const { locale: rawLocale } = await params;
-  const locale = (VALID_LOCALES.includes(rawLocale as (typeof VALID_LOCALES)[number]) ? rawLocale : DEFAULT_LOCALE) as Locale;
+  const locale = assertLocale(rawLocale);
   const seo = LOCALE_SEO[locale];
   const alternates = buildHreflang("/", locale);
 
@@ -72,9 +90,7 @@ export default async function Rootlayout({
   params: Promise<{ locale: string }>;
 }) {
   const { locale: rawLocale } = await params;
-  const locale = VALID_LOCALES.includes(rawLocale as (typeof VALID_LOCALES)[number])
-    ? rawLocale
-    : DEFAULT_LOCALE;
+  const locale = assertLocale(rawLocale);
   // Only the shell needs messages at this level: the header, footer and
   // quick-donation widget. Each ported page adds its own namespaces through
   // , per PERFORMANCE_BUDGET.md. The legacy namespaces stay
@@ -91,7 +107,7 @@ export default async function Rootlayout({
   const session = await getServerSession(authOptions);
 
   return (
-    <IntlProviderClient locale={locale || "ar"} messages={messages}>
+    <IntlProviderClient locale={locale} messages={messages}>
       <SyncHtmlDir locale={locale} />
       <MarketingRuntime>
         {/* `mia-scope` is what confines the Minbar design tokens to the public

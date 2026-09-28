@@ -24,10 +24,22 @@ import ExcelJS from "exceljs";
 
 export type ExportFormat = "xlsx" | "csv";
 
+/** Plan cadence as stored on `Subscription.frequency`. */
+export type ExportRecurringFrequency = "DAILY" | "FRIDAY" | "MONTHLY";
+
+const FREQUENCY_LABEL_AR: Record<ExportRecurringFrequency, string> = {
+  DAILY: "يومي",
+  FRIDAY: "كل جمعة",
+  MONTHLY: "شهري",
+};
+
 export interface DonationExportRow {
   id: string;
   status: string;
+  /** MONTHLY = charged against any recurring plan (the name predates daily / Friday plans). */
   type: "ONE_TIME" | "MONTHLY";
+  /** The plan's cadence, when the exporter knows it. */
+  frequency?: ExportRecurringFrequency | null;
   createdAt: Date;
   paidAt: Date | null;
   donor: {
@@ -60,7 +72,10 @@ export interface DonationExportRow {
 
 export interface SubscriptionExportRow {
   id: string;
-  status: "ACTIVE" | "PAUSED" | "CANCELLED";
+  status: "ACTIVE" | "PAUSED" | "CANCELLED" | "PAYMENT_FAILED";
+  frequency?: ExportRecurringFrequency | null;
+  /** Per-charge USD amount on a monthly scale (daily ×30.44, Friday ×4.35). */
+  monthlyEquivalentUSD?: number | null;
   donor: { id: string | null; name: string | null; email: string | null; phone: string | null; countryCode: string | null };
   amount: number;
   amountUSD: number | null;
@@ -129,7 +144,12 @@ interface ColSpec<T> {
 const DONATION_COLUMNS: ColSpec<DonationExportRow>[] = [
   { key: "id", header: "رقم العملية", width: 26, value: (r) => r.id },
   { key: "status", header: "الحالة", width: 10, align: "center", value: (r) => r.status },
-  { key: "type", header: "النوع", width: 12, align: "center", value: (r) => (r.type === "MONTHLY" ? "شهري" : "لمرة واحدة") },
+  { key: "type", header: "النوع", width: 12, align: "center", value: (r) =>
+    r.type !== "MONTHLY"
+      ? "لمرة واحدة"
+      : r.frequency
+        ? `متكرر — ${FREQUENCY_LABEL_AR[r.frequency]}`
+        : "متكرر" },
   { key: "createdAt", header: "تاريخ الإنشاء", width: 19, numFmt: "yyyy-mm-dd hh:mm", value: (r) => r.createdAt },
   { key: "paidAt", header: "تاريخ الدفع", width: 19, numFmt: "yyyy-mm-dd hh:mm", value: (r) => r.paidAt },
   { key: "donorName", header: "اسم المتبرع", width: 24, value: (r) => r.donor.name ?? "" },
@@ -158,7 +178,8 @@ const DONATION_COLUMNS: ColSpec<DonationExportRow>[] = [
 
 const SUBSCRIPTION_COLUMNS: ColSpec<SubscriptionExportRow>[] = [
   { key: "id", header: "رقم الاشتراك", width: 26, value: (r) => r.id },
-  { key: "status", header: "الحالة", width: 12, align: "center", value: (r) => r.status === "ACTIVE" ? "نشط" : r.status === "PAUSED" ? "متوقف" : "ملغي" },
+  { key: "status", header: "الحالة", width: 12, align: "center", value: (r) => r.status === "ACTIVE" ? "نشط" : r.status === "PAUSED" ? "متوقف" : r.status === "PAYMENT_FAILED" ? "تعذّر الخصم" : "ملغي" },
+  { key: "frequency", header: "الدورية", width: 12, align: "center", value: (r) => FREQUENCY_LABEL_AR[r.frequency ?? "MONTHLY"] },
   { key: "donorName", header: "اسم المتبرع", width: 24, value: (r) => r.donor.name ?? "" },
   { key: "donorEmail", header: "بريد المتبرع", width: 28, value: (r) => r.donor.email ?? "" },
   { key: "donorPhone", header: "هاتف المتبرع", width: 18, value: (r) => r.donor.phone ?? "" },
@@ -167,6 +188,7 @@ const SUBSCRIPTION_COLUMNS: ColSpec<SubscriptionExportRow>[] = [
   { key: "amount", header: "قيمة الدورة", width: 14, align: "right", numFmt: "#,##0.00", value: (r) => r.amount },
   { key: "teamSupport", header: "دعم الفريق", width: 14, align: "right", numFmt: "#,##0.00", value: (r) => r.teamSupport },
   { key: "amountUSD", header: "بالدولار (USD)", width: 14, align: "right", numFmt: "#,##0.00", value: (r) => r.amountUSD },
+  { key: "monthlyEquivalentUSD", header: "المكافئ الشهري (USD)", width: 18, align: "right", numFmt: "#,##0.00", value: (r) => r.monthlyEquivalentUSD ?? null },
   { key: "totalChargesCount", header: "عدد الدفعات الناجحة", width: 18, align: "center", numFmt: "#,##0", value: (r) => r.totalChargesCount },
   { key: "totalChargesAmount", header: "إجمالي الدفعات (محلي)", width: 18, align: "right", numFmt: "#,##0.00", value: (r) => r.totalChargesAmount },
   { key: "totalChargesAmountUSD", header: "إجمالي الدفعات (USD)", width: 18, align: "right", numFmt: "#,##0.00", value: (r) => r.totalChargesAmountUSD },
@@ -570,7 +592,7 @@ function addCoverSheet(
     ["العمليات الناجحة", agg.paidCount],
     ["العمليات الفاشلة", agg.failedCount],
     ["لمرة واحدة", agg.oneTimeCount],
-    ["شهري", agg.monthlyCount],
+    ["متكرر", agg.monthlyCount],
     ["متبرعين فريدين", agg.uniqueDonors],
     ["إجمالي التبرعات (USD)", fmtMoney(agg.totalAmountUSD), "$"],
     ["إجمالي دعم الفريق (USD)", fmtMoney(agg.totalTeamSupportUSD), "$"],
@@ -964,7 +986,7 @@ function buildCsv(input: DonationExportInput): Buffer {
     ["العمليات الناجحة", agg.paidCount],
     ["العمليات الفاشلة", agg.failedCount],
     ["لمرة واحدة", agg.oneTimeCount],
-    ["شهري", agg.monthlyCount],
+    ["متكرر", agg.monthlyCount],
     ["متبرعين فريدين", agg.uniqueDonors],
     ["إجمالي التبرعات (USD)", fmtMoney(agg.totalAmountUSD)],
     ["إجمالي دعم الفريق (USD)", fmtMoney(agg.totalTeamSupportUSD)],
@@ -1049,6 +1071,7 @@ function asciiSlugFor(title: string): string {
   const map: Record<string, string> = {
     "تقرير التبرعات": "donations-report",
     "تقرير الاشتراكات الشهرية": "monthly-subscriptions-report",
+    "تقرير التبرعات المتكررة": "recurring-donations-report",
     "تقرير الإحالة": "referral-report",
   };
   if (map[title]) return map[title];

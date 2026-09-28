@@ -93,6 +93,17 @@ export function frequencyLabelKey(frequency: RecurringFrequency): "freqDaily" | 
 }
 
 /**
+ * Average charges per month for a cadence — a Julian year (365.25 days) split
+ * into twelve, so a daily plan is ≈30.44 charges and a Friday plan ≈4.35.
+ * Dashboards multiply a plan's per-charge amount by this to put every cadence
+ * on the one monthly scale MRR is quoted in; summing raw amounts would count a
+ * $1/day plan as $1 a month.
+ */
+export function chargesPerMonth(frequency: RecurringFrequency): number {
+  return frequency === "DAILY" ? 365.25 / 12 : frequency === "FRIDAY" ? 365.25 / 7 / 12 : 1;
+}
+
+/**
  * Which rail bills a plan of this cadence.
  *
  * Stripe is kept to what it always did here — one-time and monthly. Daily

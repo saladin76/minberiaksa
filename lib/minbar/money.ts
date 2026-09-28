@@ -49,7 +49,11 @@ export function formatMoney(
       .map((part) => (part.type === "currency" && own ? own : part.value))
       .join("");
   } catch {
-    // An unknown currency code or an ICU gap must not take the page down.
-    return `${currencySymbol(code)} ${Math.round(value).toLocaleString(locale)}`;
+    // An unknown currency code or an ICU gap must not take the page down. The fallback formats in
+    // `en-US` rather than `locale`, because `locale` is exactly what may be wrong: a non-locale
+    // string reaching here threw `RangeError: Incorrect locale information provided` from INSIDE the
+    // catch, so the guard became the crash. A digit group separator in the wrong language is a far
+    // smaller problem than a 500.
+    return `${currencySymbol(code)} ${Math.round(value).toLocaleString("en-US")}`;
   }
 }

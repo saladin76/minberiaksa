@@ -2166,6 +2166,8 @@
   "Concierge": {
     "title": "Help me kiezen hoe ik geef",
     "launcher": "Donatie-assistent",
+    "teaserTitle": "Weet u niet waar u moet geven? ✨",
+    "teaserBody": "Vertel me wat u belangrijk vindt, dan vind ik binnen een minuut het juiste project.",
     "s_welcome": "Ik help u binnen een minuut de beste manier om te geven te vinden.",
     "placeholder": "Vertel wat u in gedachten heeft… bv. ik heb $500 en wil blijvende impact",
     "send": "Verstuur",

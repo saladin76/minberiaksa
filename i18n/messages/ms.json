@@ -2163,6 +2163,8 @@
   "Concierge": {
     "title": "Bantu saya pilih cara menderma",
     "launcher": "Pembantu derma",
+    "teaserTitle": "Tidak pasti hendak menderma di mana? ✨",
+    "teaserBody": "Beritahu saya hasrat anda, saya carikan projek yang sesuai dalam seminit.",
     "s_welcome": "Saya bantu anda mencari cara terbaik untuk menderma dalam seminit.",
     "placeholder": "Tulis apa yang anda fikirkan… cth. saya ada $500 dan mahu sedekah jariah",
     "send": "Hantar",

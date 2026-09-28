@@ -18,7 +18,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const t = await getTranslations({ locale, namespace: "cart" });
   return buildPageMetadata(locale, {
     title: t("bankPageTitle"),
-    description: t("bankPageLead").slice(0, 165),
+    description: t("bankPageLead"),
     path: `/${slugFor("bankAccounts", locale)}`,
   });
 }

@@ -4,6 +4,7 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 import { requireAdminOrDashboardPermission } from "@/lib/dashboard/api-auth";
 import { prisma } from "@/lib/prisma";
 import { PAID_DONATION_FILTER, donationRowUsdApprox } from "@/lib/dashboard/donation-usd-revenue";
+import { rawCommand } from "@/lib/prisma-raw-command";
 
 export const dynamic = "force-dynamic";
 
@@ -64,12 +65,12 @@ async function platformMetrics(days: number, platform?: string | null): Promise<
   from.setDate(to.getDate() - days + 1);
   const filter: JsonMap = { date: { $gte: dateKey(from), $lte: dateKey(to) } };
   if (platform && platform !== "ALL") filter.platform = platform.toUpperCase();
-  const result = await prisma.$runCommandRaw({
+  const result = await prisma.$runCommandRaw(rawCommand({
     find: "MarketingPlatformDailyMetric",
     filter,
     sort: { date: -1, spend: -1 },
     limit: 1000,
-  }) as JsonMap;
+  })) as JsonMap;
   const rows = isMap(result.cursor) && Array.isArray(result.cursor.firstBatch) ? result.cursor.firstBatch.filter(isMap) : [];
   return rows as MetricRow[];
 }

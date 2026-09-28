@@ -12,6 +12,16 @@ import {
 } from "@/lib/dashboard/donation-usd-revenue";
 import { istanbulDateKeysToUtcRange } from "@/lib/admin/istanbul-calendar";
 import { donationWhereAll } from "@/lib/donations/mongo-null";
+import {
+  RECURRING_FREQUENCIES,
+  donationFrequencyWhere,
+  emptyFrequencyRecord,
+  loadSubscriptionFrequencies,
+  monthlyEquivalent,
+  parseFrequencyParam,
+  subscriptionFrequencyWhere,
+  type FrequencyFilter,
+} from "@/lib/dashboard/recurring-frequency-filter";
 
 function getDateRange(period: string, startParam?: string | null, endParam?: string | null) {
   let endDate: Date;
@@ -40,11 +50,13 @@ function buildDonationChargeBase(
   endDate: Date,
   categoryId: string | null,
   campaignId: string | null,
-  referralId: string | null
+  referralId: string | null,
+  frequency: FrequencyFilter
 ): Prisma.DonationWhereInput {
   const base: Prisma.DonationWhereInput = {
     subscriptionId: { not: null },
     createdAt: { gte: startDate, lte: endDate },
+    ...donationFrequencyWhere(frequency),
   };
   if (referralId) base.referralId = referralId;
   if (campaignId && campaignId !== "all") {
@@ -76,11 +88,13 @@ function buildDonationSettledBase(
   endDate: Date,
   categoryId: string | null,
   campaignId: string | null,
-  referralId: string | null
+  referralId: string | null,
+  frequency: FrequencyFilter
 ): Prisma.DonationWhereInput {
   const base: Prisma.DonationWhereInput = {
     subscriptionId: { not: null },
     paidAt: { gte: startDate, lte: endDate },
+    ...donationFrequencyWhere(frequency),
   };
   if (referralId) base.referralId = referralId;
   if (campaignId && campaignId !== "all") {
@@ -97,9 +111,10 @@ function buildDonationSettledBase(
 function buildDonationChargeAllTimeBase(
   categoryId: string | null,
   campaignId: string | null,
-  referralId: string | null
+  referralId: string | null,
+  frequency: FrequencyFilter
 ): Prisma.DonationWhereInput {
-  const base: Prisma.DonationWhereInput = { subscriptionId: { not: null } };
+  const base: Prisma.DonationWhereInput = { subscriptionId: { not: null }, ...donationFrequencyWhere(frequency) };
   if (referralId) base.referralId = referralId;
   if (campaignId && campaignId !== "all") {
     base.items = { some: { campaignId } };
@@ -113,6 +128,18 @@ function buildDonationChargeAllTimeBase(
 }
 
 function buildSubscriptionWhere(
+  categoryId: string | null,
+  campaignId: string | null,
+  referralId: string | null,
+  frequency: FrequencyFilter
+): Prisma.SubscriptionWhereInput {
+  const where = buildSubscriptionScopeWhere(categoryId, campaignId, referralId);
+  if (!frequency) return where;
+  // AND, not spread: the scope may own a top-level OR (category) and so may the cadence.
+  return { AND: [where, subscriptionFrequencyWhere(frequency)] };
+}
+
+function buildSubscriptionScopeWhere(
   categoryId: string | null,
   campaignId: string | null,
   referralId: string | null
@@ -138,7 +165,8 @@ function buildDonationItemWhereSub(
   endDate: Date,
   categoryId: string | null,
   campaignId: string | null,
-  referralId: string | null
+  referralId: string | null,
+  frequency: FrequencyFilter
 ): Prisma.DonationItemWhereInput {
   // Composed with donationWhereAll: assigning `donation.OR` for the category filter used to
   // OVERWRITE the `OR` that the paid filter contributes, silently stripping the paid guard
@@ -148,6 +176,7 @@ function buildDonationItemWhereSub(
   const scoped: Prisma.DonationWhereInput = {
     subscriptionId: { not: null },
     paidAt: { gte: startDate, lte: endDate },
+    ...donationFrequencyWhere(frequency),
   };
   if (referralId) scoped.referralId = referralId;
 
@@ -179,12 +208,14 @@ function buildDonationCategoryItemWhereSub(
   startDate: Date,
   endDate: Date,
   categoryId: string | null,
-  referralId: string | null
+  referralId: string | null,
+  frequency: FrequencyFilter
 ): Prisma.DonationCategoryItemWhereInput {
   // Same inverse-collision fix, and the same paidAt/strict windowing, as buildDonationItemWhereSub.
   const scoped: Prisma.DonationWhereInput = {
     subscriptionId: { not: null },
     paidAt: { gte: startDate, lte: endDate },
+    ...donationFrequencyWhere(frequency),
   };
   if (referralId) scoped.referralId = referralId;
 
@@ -200,7 +231,65 @@ function buildDonationCategoryItemWhereSub(
   return { donation: donationWhereAll(scoped, PAID_CONTRIBUTING_FILTER) };
 }
 
-/** GET /api/admin/subscriptions/overview/stats — monthly subscriptions + donations from subscriptions */
+type CadenceTotal = { count: number; amountUSD: number; monthlyUSD: number };
+
+/**
+ * Plans matching `where`, split by cadence. `amountUSD` is the per-charge sum as stored;
+ * `monthlyUSD` puts it on a monthly scale (× charges per month) so cadences can be added.
+ * One aggregate per cadence rather than a groupBy: legacy plans have no `frequency` field,
+ * and the cadence filter is what folds them into MONTHLY.
+ */
+async function planTotalsByFrequency(
+  where: Prisma.SubscriptionWhereInput
+): Promise<{ total: CadenceTotal; byFrequency: Record<(typeof RECURRING_FREQUENCIES)[number], CadenceTotal> }> {
+  const results = await Promise.all(
+    RECURRING_FREQUENCIES.map((f) =>
+      prisma.subscription.aggregate({
+        where: { AND: [where, subscriptionFrequencyWhere(f)] },
+        _sum: { amountUSD: true },
+        _count: { id: true },
+      })
+    )
+  );
+  const byFrequency = emptyFrequencyRecord<CadenceTotal>(() => ({ count: 0, amountUSD: 0, monthlyUSD: 0 }));
+  const total: CadenceTotal = { count: 0, amountUSD: 0, monthlyUSD: 0 };
+  RECURRING_FREQUENCIES.forEach((f, i) => {
+    const amountUSD = results[i]._sum?.amountUSD ?? 0;
+    const row = { count: results[i]._count?.id ?? 0, amountUSD, monthlyUSD: monthlyEquivalent(amountUSD, f) };
+    byFrequency[f] = row;
+    total.count += row.count;
+    total.amountUSD += row.amountUSD;
+    total.monthlyUSD += row.monthlyUSD;
+  });
+  return { total, byFrequency };
+}
+
+/** Settled charges matching `where`, split by the cadence of the plan that produced them. */
+async function paidTotalsByFrequency(where: Prisma.DonationWhereInput) {
+  const out = emptyFrequencyRecord(() => ({ count: 0, amountUSD: 0 }));
+  await Promise.all(
+    RECURRING_FREQUENCIES.map(async (f) => {
+      const scoped = donationWhereAll(where, donationFrequencyWhere(f));
+      const agg = await prisma.donation.aggregate({ where: scoped, _sum: { amountUSD: true }, _count: { id: true } });
+      const count = agg._count?.id ?? 0;
+      let amountUSD = agg._sum?.amountUSD ?? 0;
+      // Same fallback the headline total uses for rows written before amountUSD was stored.
+      if (amountUSD === 0 && count > 0) amountUSD = await donationUsdSumFallback(scoped);
+      out[f] = { count, amountUSD };
+    })
+  );
+  return out;
+}
+
+/**
+ * GET /api/admin/subscriptions/overview/stats — recurring plans (daily / every Friday / monthly)
+ * and the charges they produced. `?frequency=DAILY|FRIDAY|MONTHLY` narrows everything to one
+ * cadence; without it every cadence is included and `byFrequency` splits the totals.
+ *
+ * Plan amounts are per charge, so every plan-level money figure (MRR and the status split) is
+ * reported as a MONTHLY EQUIVALENT — amount × charges per month — or a $1/day plan would count
+ * as $1 a month next to a $30/month one.
+ */
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
@@ -214,6 +303,7 @@ export async function GET(request: NextRequest) {
     const categoryId = searchParams.get("categoryId");
     const campaignId = searchParams.get("campaignId");
     const referralIdParam = searchParams.get("referralId");
+    const frequency = parseFrequencyParam(searchParams.get("frequency"));
 
     let referralId: string | null = null;
     if (referralIdParam) {
@@ -228,7 +318,7 @@ export async function GET(request: NextRequest) {
     }
 
     const { startDate, endDate } = getDateRange(period, startParam, endParam);
-    const subBase = buildSubscriptionWhere(categoryId, campaignId, referralId);
+    const subBase = buildSubscriptionWhere(categoryId, campaignId, referralId, frequency);
     // ACTIVE subscription without any settled charge isn't really earning revenue —
     // exclude it from MRR / "التبرعات الشهرية الناشطة" so a failed-only sub doesn't inflate the totals.
     const activeMonthlyWhere: Prisma.SubscriptionWhereInput = {
@@ -236,13 +326,13 @@ export async function GET(request: NextRequest) {
       status: "ACTIVE",
       donations: { some: PAID_CONTRIBUTING_FILTER },
     };
-    const donationChargeBase = buildDonationChargeBase(startDate, endDate, categoryId, campaignId, referralId);
+    const donationChargeBase = buildDonationChargeBase(startDate, endDate, categoryId, campaignId, referralId, frequency);
 
     // Revenue and paid counts window on `paidAt` and require settlement, so every money figure on
     // this page is computed the same way the chart computes it. Windowing these on `createdAt`
     // (with the lenient filter, whose `paidAt` arm is vacuous once `subscriptionId` is required)
     // counted abandoned checkouts as income and made the cards disagree with the chart.
-    const donationSettledBase = buildDonationSettledBase(startDate, endDate, categoryId, campaignId, referralId);
+    const donationSettledBase = buildDonationSettledBase(startDate, endDate, categoryId, campaignId, referralId, frequency);
     // donationWhereAll, not spread — the base carries a category `OR` that would
     // otherwise be overwritten by the paid filter's own `OR`.
     const donationPaidWhere = donationWhereAll(donationSettledBase, PAID_CONTRIBUTING_FILTER);
@@ -250,7 +340,7 @@ export async function GET(request: NextRequest) {
     // Failures stay windowed on `createdAt`: a failed charge never settles, so it has no
     // `paidAt` to bucket by, and windowing it on one would silently report zero failures.
     const donationFailedWhere = donationWhereAll(donationChargeBase, { status: "FAILED" as const });
-    const donationAllTimeBase = buildDonationChargeAllTimeBase(categoryId, campaignId, referralId);
+    const donationAllTimeBase = buildDonationChargeAllTimeBase(categoryId, campaignId, referralId, frequency);
     // Strict here too — "all-time revenue" must mean money that actually settled, otherwise the
     // all-time card drifts from the sum of the periods that make it up.
     const donationPaidAllTime = donationWhereAll(donationAllTimeBase, PAID_CONTRIBUTING_FILTER);
@@ -261,7 +351,8 @@ export async function GET(request: NextRequest) {
       monthEnd,
       categoryId,
       campaignId,
-      referralId
+      referralId,
+      frequency
     );
     // PAID_CONTRIBUTING_FILTER (status=PAID *and* paidAt set), not the lenient
     // PAID_DONATION_FILTER — the card must agree with the chart on what counts as revenue.
@@ -281,12 +372,11 @@ export async function GET(request: NextRequest) {
       campaignDonationsSum,
       categoryDonationsSum,
       recentDonations,
-      activeSubscriptionCount,
-      pausedSubscriptionCount,
-      cancelledSubscriptionCount,
-      monthlyRecurringRevenueResult,
-      pausedAmountResult,
-      cancelledAmountResult,
+      activePlans,
+      pausedPlans,
+      cancelledPlans,
+      paymentFailedPlans,
+      paidByFrequency,
       newSubscriptionsInPeriod,
       totalSubscriptionsMatching,
     ] = await Promise.all([
@@ -315,12 +405,12 @@ export async function GET(request: NextRequest) {
       prisma.donationItem.aggregate({
         _sum: { amountUSD: true, amount: true },
         _count: { id: true },
-        where: buildDonationItemWhereSub(startDate, endDate, categoryId, campaignId, referralId),
+        where: buildDonationItemWhereSub(startDate, endDate, categoryId, campaignId, referralId, frequency),
       }),
       prisma.donationCategoryItem.aggregate({
         _sum: { amountUSD: true, amount: true },
         _count: { id: true },
-        where: buildDonationCategoryItemWhereSub(startDate, endDate, categoryId, referralId),
+        where: buildDonationCategoryItemWhereSub(startDate, endDate, categoryId, referralId, frequency),
       }),
       prisma.donation.findMany({
         take: 10,
@@ -340,21 +430,11 @@ export async function GET(request: NextRequest) {
           categoryItems: { select: { category: { select: { name: true } } } },
         },
       }),
-      prisma.subscription.count({ where: activeMonthlyWhere }),
-      prisma.subscription.count({ where: { ...subBase, status: "PAUSED" } }),
-      prisma.subscription.count({ where: { ...subBase, status: "CANCELLED" } }),
-      prisma.subscription.aggregate({
-        _sum: { amountUSD: true },
-        where: activeMonthlyWhere,
-      }),
-      prisma.subscription.aggregate({
-        _sum: { amountUSD: true },
-        where: { ...subBase, status: "PAUSED" },
-      }),
-      prisma.subscription.aggregate({
-        _sum: { amountUSD: true },
-        where: { ...subBase, status: "CANCELLED" },
-      }),
+      planTotalsByFrequency(activeMonthlyWhere),
+      planTotalsByFrequency({ ...subBase, status: "PAUSED" }),
+      planTotalsByFrequency({ ...subBase, status: "CANCELLED" }),
+      planTotalsByFrequency({ ...subBase, status: "PAYMENT_FAILED" }),
+      paidTotalsByFrequency(donationPaidWhere),
       prisma.subscription.count({
         where: { ...subBase, createdAt: { gte: startDate, lte: endDate } },
       }),
@@ -379,11 +459,42 @@ export async function GET(request: NextRequest) {
         allTimeRevenue = await donationUsdSumFallback(donationPaidAllTime);
       }
     }
-    const monthlyRecurringRevenue = monthlyRecurringRevenueResult._sum?.amountUSD ?? 0;
+    // Every plan-level money figure below is a monthly equivalent (see planTotalsByFrequency).
+    const activeSubscriptionCount = activePlans.total.count;
+    const pausedSubscriptionCount = pausedPlans.total.count;
+    const cancelledSubscriptionCount = cancelledPlans.total.count;
+    const paymentFailedSubscriptionCount = paymentFailedPlans.total.count;
+    const monthlyRecurringRevenue = activePlans.total.monthlyUSD;
     const activeMonthlyAmountUSD = monthlyRecurringRevenue;
-    const pausedSubscriptionAmountUSD = pausedAmountResult._sum?.amountUSD ?? 0;
-    const cancelledSubscriptionAmountUSD = cancelledAmountResult._sum?.amountUSD ?? 0;
+    const pausedSubscriptionAmountUSD = pausedPlans.total.monthlyUSD;
+    const cancelledSubscriptionAmountUSD = cancelledPlans.total.monthlyUSD;
+    const paymentFailedSubscriptionAmountUSD = paymentFailedPlans.total.monthlyUSD;
     const monthlyStoppedAmountUSD = pausedSubscriptionAmountUSD + cancelledSubscriptionAmountUSD;
+
+    const byFrequency = emptyFrequencyRecord(() => ({
+      activeCount: 0,
+      /** Sum of per-charge amounts of active plans (USD). */
+      activeAmountPerChargeUSD: 0,
+      /** The same plans as a monthly equivalent — this cadence's share of MRR. */
+      activeMonthlyUSD: 0,
+      pausedCount: 0,
+      cancelledCount: 0,
+      paymentFailedCount: 0,
+      /** Settled charges in the selected period. */
+      paidCount: 0,
+      paidAmountUSD: 0,
+    }));
+    for (const f of RECURRING_FREQUENCIES) {
+      const row = byFrequency[f];
+      row.activeCount = activePlans.byFrequency[f].count;
+      row.activeAmountPerChargeUSD = activePlans.byFrequency[f].amountUSD;
+      row.activeMonthlyUSD = activePlans.byFrequency[f].monthlyUSD;
+      row.pausedCount = pausedPlans.byFrequency[f].count;
+      row.cancelledCount = cancelledPlans.byFrequency[f].count;
+      row.paymentFailedCount = paymentFailedPlans.byFrequency[f].count;
+      row.paidCount = paidByFrequency[f].count;
+      row.paidAmountUSD = paidByFrequency[f].amountUSD;
+    }
 
     const campaignDonationsTotal =
       campaignDonationsSum._sum?.amountUSD ?? campaignDonationsSum._sum?.amount ?? 0;
@@ -424,12 +535,17 @@ export async function GET(request: NextRequest) {
     const { teamSupport: teamSupportTotal, fees: feesTotal } = toUSD(donationsForSupportFees);
 
     const recentDonationsList = Array.isArray(recentDonations) ? recentDonations : [];
+    const frequencyOf = await loadSubscriptionFrequencies(
+      prisma,
+      recentDonationsList.map((d) => d.subscriptionId).filter((id): id is string => Boolean(id))
+    );
     const recentDonationsFormatted = recentDonationsList.map((d) => ({
       id: d.id,
       amount: d.totalAmount ?? d.amount ?? 0,
       currency: d.currency ?? "USD",
       donorName: d.donor?.name ?? "—",
       type: "MONTHLY" as const,
+      frequency: frequencyOf(d.subscriptionId),
       status: d.status,
       campaignTitle: d.items?.[0]?.campaign?.title ?? null,
       categoryName: d.categoryItems?.[0]?.category?.name ?? null,
@@ -465,6 +581,8 @@ export async function GET(request: NextRequest) {
       monthlyStoppedAmountUSD,
       pausedSubscriptionAmountUSD,
       cancelledSubscriptionAmountUSD,
+      paymentFailedSubscriptionAmountUSD,
+      paymentFailedSubscriptionCount,
       activeMonthlyCount: activeSubscriptionCount,
       pausedSubscriptionCount,
       cancelledSubscriptionCount,
@@ -482,6 +600,8 @@ export async function GET(request: NextRequest) {
       teamSupportTotal,
       feesTotal,
       recentDonations: recentDonationsFormatted,
+      frequency: frequency ?? "all",
+      byFrequency,
     });
   } catch (error) {
     console.error("Error fetching subscription stats:", error);

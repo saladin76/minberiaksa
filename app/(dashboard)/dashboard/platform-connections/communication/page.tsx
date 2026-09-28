@@ -10,6 +10,7 @@ import { resolveCommunicationConnectionsPageAccess } from "@/lib/integration-set
 import { withActiveTestState } from "@/lib/integration-settings/safe-snapshot";
 import { getSchedulerStatus } from "@/lib/communication/scheduler-status";
 import { IntegrationSettingsManager } from "./_components/IntegrationSettingsManager";
+import { SenderRoutingManager } from "./_components/SenderRoutingManager";
 
 export const metadata = { title: "مزودو التواصل والإرسال | ربط المنصات والإرسال" };
 export const dynamic = "force-dynamic";
@@ -47,6 +48,10 @@ export default async function CommunicationConnectionsPage() {
         subtitle="إدارة بيانات واتساب والإيميل والرسائل القصيرة من مكان واحد، مع فصل فحص التكوين العامل عن اختبار التغييرات قبل اعتمادها."
       />
       <IntegrationSettingsManager initialProviders={initialProviders} permissions={permissions} scheduler={scheduler} />
+      {/* Senders and routing sit with the providers because they are the same question one level up:
+          the provider says HOW a message leaves, the sender says which of our numbers it leaves from.
+          Kept behind the manage permission — repointing a sender changes what donors see. */}
+      {permissions.canManage && <SenderRoutingManager />}
     </main>
   );
 }

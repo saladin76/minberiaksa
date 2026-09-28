@@ -16,6 +16,7 @@ import {
   parseAgeParam,
   parseGenderParam,
 } from "@/lib/dashboard/user-demographics";
+import { AUDIENCE_SELECTION_MAX } from "@/lib/communication/audience-limits";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -41,7 +42,9 @@ export const dynamic = "force-dynamic";
  */
 
 const PAGE_SIZE_MAX = 100;
-const SELECT_ALL_CEILING = 5000;
+/** Shared with the list route and the member writer, so the picker cannot offer an
+ *  unsaveable selection. See lib/communication/audience-limits.ts. */
+const SELECT_ALL_CEILING = AUDIENCE_SELECTION_MAX;
 
 const donorSelect = {
   id: true,

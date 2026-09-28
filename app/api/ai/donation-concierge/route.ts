@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse, after } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 import { isValidLocale, DEFAULT_LOCALE } from "@/lib/locales";
@@ -6,6 +6,9 @@ import { conciergeRequestSchema, conciergeResponseSchema } from "@/lib/ai/concie
 import { runConcierge } from "@/lib/ai/concierge/engine";
 import { recordConciergeEvents, type ConciergeEventInput, type ConciergeEventName } from "@/lib/ai/concierge/events";
 import { clientKey, hit } from "@/lib/ai/concierge/rate-limit";
+import { recordConciergeTurn } from "@/lib/ai/concierge/transcripts";
+import { loadConciergeSettings } from "@/lib/ai/concierge/settings";
+import type { ConciergeTurnMeta } from "@/lib/ai/concierge/engine";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -100,13 +103,19 @@ export async function POST(request: NextRequest) {
        cannot name a user. A visitor gets the same assistant without DONOR. */
     const session = await getServerSession(authOptions).catch(() => null);
     const userId = typeof session?.user?.id === "string" ? session.user.id : null;
-    const result = await runConcierge(req, { userId });
+    const meta: ConciergeTurnMeta = {};
+    const result = await runConcierge(req, { userId, meta });
     const valid = conciergeResponseSchema.safeParse(result);
     if (!valid.success) {
       console.error("[concierge] response failed validation", valid.error.flatten());
       return noStore({ error: "Assistant unavailable" }, { status: 502 });
     }
     void recordConciergeEvents(stepEvents(req, valid.data, req.page?.route ?? null));
+    /* After the response, so the transcript never delays the reply. */
+    after(async () => {
+      const settings = await loadConciergeSettings();
+      if (settings.storeTranscripts) await recordConciergeTurn({ req, res: valid.data, meta, userId });
+    });
     return noStore(valid.data);
   } catch (error) {
     console.error("[concierge] engine failed", error instanceof Error ? error.message : error);

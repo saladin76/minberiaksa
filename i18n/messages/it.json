@@ -2166,6 +2166,8 @@
   "Concierge": {
     "title": "Aiutami a scegliere come donare",
     "launcher": "Assistente donazioni",
+    "teaserTitle": "Non sai dove donare? ✨",
+    "teaserBody": "Dimmi cosa ti sta a cuore e trovo il progetto giusto per te in un minuto.",
     "s_welcome": "Ti aiuto a trovare il modo migliore di donare in un minuto.",
     "placeholder": "Dimmi cosa hai in mente… es. ho 500 $ e voglio un impatto duraturo",
     "send": "Invia",

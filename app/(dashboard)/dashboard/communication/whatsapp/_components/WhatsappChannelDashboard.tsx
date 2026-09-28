@@ -48,6 +48,11 @@ export type WhatsappRow = {
 type TemplateRow = {
   id: string; name: string; approvalStatus: string | null; category: string | null;
   language: string | null; registered: boolean; ready: boolean; state: string; updatedAt: string;
+  /** Meta's answer per language — the readiness contract, not a local guess. */
+  approvedLanguages: string[];
+  approvedLocales: string[];
+  rejectionReason: string | null;
+  lastSyncedAt: string | null;
 };
 
 type Payload = {
@@ -107,8 +112,37 @@ export function buildStages(row: StageSource): JourneyStage[] {
  * Meta-approved template — and failing either produces the same symptom: nothing sends, silently.
  * Showing both side by side turns "why is this empty?" into a two-second read.
  */
-function ReadinessCard({ provider, templates }: { provider: Payload["provider"]; templates: Payload["templates"] }) {
+function ReadinessCard({ provider, templates, onSynced }: { provider: Payload["provider"]; templates: Payload["templates"]; onSynced: () => void }) {
   const canSend = provider.configured && templates.ready > 0;
+  const [syncing, setSyncing] = useState(false);
+  const [syncNote, setSyncNote] = useState<string | null>(null);
+  /* The oldest sync across templates: readiness is only as current as the least recently synced row,
+     and "never synced" is the single most common reason a template reads NOT_REGISTERED. */
+  const lastSyncedAt = templates.rows.reduce<string | null>(
+    (oldest, row) => (row.lastSyncedAt && (!oldest || row.lastSyncedAt < oldest) ? row.lastSyncedAt : oldest),
+    null,
+  );
+
+  const sync = async () => {
+    setSyncing(true);
+    setSyncNote(null);
+    try {
+      const res = await fetch("/api/dashboard/communication/whatsapp/templates/sync", { method: "POST" });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok || !body.ok) {
+        setSyncNote(`تعذّرت المزامنة: ${body.error ?? "خطأ غير معروف"}`);
+        return;
+      }
+      const s = body.summary as { variantsUpserted: number; matchedTemplates: number; unmatchedNames: string[] };
+      setSyncNote(
+        `${s.variantsUpserted} نسخة لغوية عبر ${s.matchedTemplates} قالبًا` +
+        (s.unmatchedNames.length ? ` · ${s.unmatchedNames.length} قالبًا لدى Meta بلا مقابل محلي` : ""),
+      );
+      onSynced();
+    } finally {
+      setSyncing(false);
+    }
+  };
 
   return (
     <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
@@ -150,13 +184,41 @@ function ReadinessCard({ provider, templates }: { provider: Payload["provider"];
         </div>
       </div>
 
+      <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-slate-100 pt-3">
+        <button
+          type="button"
+          onClick={() => void sync()}
+          disabled={syncing || !provider.configured}
+          className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-40"
+        >
+          <RefreshCw className={cn("h-3.5 w-3.5", syncing && "animate-spin")} />
+          مزامنة القوالب من Meta
+        </button>
+        <span className="text-[10px] text-slate-400">
+          {lastSyncedAt ? `آخر مزامنة ${fmtDateTime(lastSyncedAt)?.date ?? ""}` : "لم تُزامَن القوالب بعد — الجاهزية تُقرأ من Meta."}
+        </span>
+      </div>
+      {syncNote && <p className="mt-1 text-[11px] font-medium text-slate-600">{syncNote}</p>}
+
       {templates.rows.length > 0 && (
         <div className="mt-3 space-y-1.5 border-t border-slate-100 pt-3">
           {templates.rows.map((t) => {
             const style = TEMPLATE_STATE_STYLE[t.state] ?? TEMPLATE_STATE_STYLE.PENDING;
             return (
-              <div key={t.id} className="flex items-center justify-between gap-2">
-                <span className="truncate text-[11px] font-medium text-slate-700">{t.name}</span>
+              <div key={t.id} className="flex items-start justify-between gap-2">
+                <span className="min-w-0">
+                  <span className="block truncate text-[11px] font-medium text-slate-700">{t.name}</span>
+                  {/* Which languages can actually go out — the thing a per-template boolean hid. A
+                      campaign in a language with no approved variant is skipped, so this is the list
+                      the campaign builder is constrained by. */}
+                  <span className="block text-[10px] text-slate-400">
+                    {t.approvedLanguages.length
+                      ? `لغات معتمدة: ${t.approvedLanguages.join(", ")}`
+                      : t.rejectionReason
+                        ? `سبب الرفض: ${t.rejectionReason}`
+                        : "لا لغة معتمدة"}
+                  </span>
+                </span>
                 <span className={cn("shrink-0 rounded-md border px-1.5 py-0.5 text-[10px] font-semibold", style.className)}>
                   {style.label}
                 </span>
@@ -356,7 +418,7 @@ export function WhatsappChannelDashboard() {
           </section>
 
           <div className="space-y-4">
-            {data && <ReadinessCard provider={data.provider} templates={data.templates} />}
+            {data && <ReadinessCard provider={data.provider} templates={data.templates} onSynced={() => void load()} />}
             {summary && !neverSent && <FunnelCard steps={funnelSteps} trackingLive={trackingLive} />}
           </div>
         </div>

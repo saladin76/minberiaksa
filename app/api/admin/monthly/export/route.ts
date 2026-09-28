@@ -1,15 +1,16 @@
 /**
  * GET /api/admin/monthly/export
  *
- * XLSX (default) or CSV export covering monthly subscriptions AND the recurring
- * donations they have generated. Two sheets + the standard cover summary:
- *   • التبرعات — every charge against a monthly subscription (filtered)
- *   • الاشتراكات — subscription roster (active/paused/cancelled) with charge totals
+ * XLSX (default) or CSV export covering recurring plans (daily / every Friday / monthly)
+ * AND the charges they have generated. Two sheets + the standard cover summary:
+ *   • التبرعات — every charge against a recurring plan (filtered)
+ *   • الاشتراكات — plan roster (active/paused/cancelled/payment failed) with charge totals,
+ *     cadence and monthly-equivalent amount
  *
- * Filters mirror the monthly dashboard:
+ * Filters mirror the recurring dashboard (/dashboard/monthly):
  *   format, start, end, categoryId, campaignId, userId, status (donation),
- *   subStatus (subscription: ACTIVE|PAUSED|CANCELLED|all), locale, country,
- *   sortBy, sortOrder.
+ *   subStatus (subscription: ACTIVE|PAUSED|CANCELLED|PAYMENT_FAILED|all),
+ *   frequency (DAILY|FRIDAY|MONTHLY|all), locale, country, sortBy, sortOrder.
  */
 
 import { NextRequest, NextResponse } from "next/server";
@@ -27,6 +28,15 @@ import {
   type ExportFormat,
 } from "@/lib/dashboard/donation-export";
 import { istanbulDateKeysToUtcRange } from "@/lib/admin/istanbul-calendar";
+import {
+  donationFrequencyWhere,
+  loadSubscriptionFrequencies,
+  monthlyEquivalent,
+  parseFrequencyParam,
+  subscriptionFrequencyWhere,
+} from "@/lib/dashboard/recurring-frequency-filter";
+
+const FREQUENCY_LABEL_AR = { DAILY: "يومي", FRIDAY: "كل جمعة", MONTHLY: "شهري" } as const;
 
 export async function GET(request: NextRequest) {
   try {
@@ -49,6 +59,7 @@ export async function GET(request: NextRequest) {
     const subStatusRaw = (sp.get("subStatus") || "all").toUpperCase();
     const locale = sp.get("locale")?.trim() ?? null;
     const country = sp.get("country")?.trim() ?? null;
+    const frequency = parseFrequencyParam(sp.get("frequency"));
     const limit = Math.min(parseInt(sp.get("limit") || "20000", 10) || 20000, 50000);
 
     const dateFilter: { gte?: Date; lte?: Date } = {};
@@ -62,9 +73,10 @@ export async function GET(request: NextRequest) {
       dateFilter.lte = istanbulDateKeysToUtcRange(endParam, endParam).endDate;
     }
 
-    // ── Donation filter (monthly only) ────────────────────────────────────────
+    // ── Donation filter (recurring only) ──────────────────────────────────────
     const donationWhere: Prisma.DonationWhereInput = {
       subscriptionId: { not: null },
+      ...donationFrequencyWhere(frequency),
       ...(campaignId && campaignId !== "all" && { items: { some: { campaignId } } }),
       ...(userId && userId !== "all" && { donorId: userId }),
       ...(Object.keys(dateFilter).length > 0 && { createdAt: dateFilter }),
@@ -106,9 +118,14 @@ export async function GET(request: NextRequest) {
     if (
       subStatusRaw === "ACTIVE" ||
       subStatusRaw === "PAUSED" ||
-      subStatusRaw === "CANCELLED"
+      subStatusRaw === "CANCELLED" ||
+      subStatusRaw === "PAYMENT_FAILED"
     ) {
       subWhere.status = subStatusRaw;
+    }
+    if (frequency) {
+      // AND — the category branch below owns `subWhere.OR`.
+      subWhere.AND = [subscriptionFrequencyWhere(frequency)];
     }
     if (categoryId && categoryId !== "all") {
       subWhere.OR = [
@@ -162,12 +179,24 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    const exportDonations: DonationExportRow[] = donationRows.map(toDonationRow);
+    const frequencyOf = await loadSubscriptionFrequencies(prisma, [
+      ...subIds,
+      ...donationRows.map((d) => d.subscriptionId).filter((id): id is string => Boolean(id)),
+    ]);
+
+    const exportDonations: DonationExportRow[] = donationRows.map((d) => ({
+      ...toDonationRow(d),
+      frequency: d.subscriptionId ? frequencyOf(d.subscriptionId) : null,
+    }));
     const exportSubscriptions: SubscriptionExportRow[] = subRows.map((s) => {
       const charges = chargesBySub.get(s.id);
+      const planFrequency = frequencyOf(s.id);
       return {
         id: s.id,
         status: s.status,
+        frequency: planFrequency,
+        monthlyEquivalentUSD:
+          s.amountUSD != null ? Number(monthlyEquivalent(s.amountUSD, planFrequency).toFixed(2)) : null,
         donor: {
           id: s.donor?.id ?? null,
           name: s.donor?.name ?? null,
@@ -202,6 +231,7 @@ export async function GET(request: NextRequest) {
     if (userId && userId !== "all") filters.push({ label: "المتبرع", value: userId });
     if (status && status !== "all") filters.push({ label: "حالة التبرع", value: status });
     if (subStatusRaw && subStatusRaw !== "ALL") filters.push({ label: "حالة الاشتراك", value: subStatusRaw });
+    filters.push({ label: "الدورية", value: frequency ? FREQUENCY_LABEL_AR[frequency] : "كل الدوريات" });
     if (locale && locale !== "all") filters.push({ label: "اللغة", value: locale });
     if (country && country !== "all") filters.push({ label: "الدولة", value: country });
     filters.push({ label: "عدد التبرعات", value: String(donationRows.length) });
@@ -209,7 +239,7 @@ export async function GET(request: NextRequest) {
 
     const out = await buildDonationExport({
       format,
-      title: "تقرير الاشتراكات الشهرية",
+      title: "تقرير التبرعات المتكررة",
       subtitle: startParam || endParam
         ? `الفترة: ${startParam ?? "—"} → ${endParam ?? "—"}`
         : "الفترة: كل الوقت",
@@ -227,7 +257,7 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (e) {
-    console.error("export monthly:", e);
+    console.error("export recurring:", e);
     return NextResponse.json({ error: "Export failed" }, { status: 500 });
   }
 }

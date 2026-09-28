@@ -1,5 +1,5 @@
 import { getCampaign } from "./campaign-service";
-import { loadCampaignRecipients, type CampaignRecipient } from "./campaign-recipient-service";
+import { countCampaignAudience, loadCampaignRecipients, type CampaignRecipient } from "./campaign-recipient-service";
 import { evaluateCoverageGate } from "./campaign-approval-service";
 import { listSenders } from "./sender-service";
 import { getActiveCommunicationRuntimeBundle } from "./runtime-config";
@@ -11,7 +11,10 @@ export type SendPlan = {
   campaignId: string;
   channel: string | null;
   status: string | null;
+  /** Contacts in THIS batch (recipients + skipped). Bounded by `batchSize`. */
   total: number;
+  /** Contacts in the whole audience, across every batch — what a send confirmation should show. */
+  audienceTotal: number;
   eligible: number;
   skipped: number;
   reasons: Record<string, number>;
@@ -20,17 +23,27 @@ export type SendPlan = {
   senderReady: boolean;
   willSend: boolean;
   blocked?: string;
+  /** True when this page stopped short of the audience's end — another page follows. */
   truncated: boolean;
+  /** Where the next page starts; carried in the campaign's send progress between runs. */
+  nextCursor: string | null;
+  /** True when this page reached the end of the audience. */
+  exhausted: boolean;
   recipients: CampaignRecipient[];
   skippedList: { userId: string; locale: string; reason: string }[];
 };
 
-export async function planCampaignSend(campaignId: string, opts: { batchSize?: number } = {}): Promise<SendPlan> {
+/**
+ * The plan for ONE batch. `cursor` continues a send that has already walked part of its audience;
+ * the executor owns the cursor and persists it on the campaign between runs, so nothing here has to
+ * know how many batches came before.
+ */
+export async function planCampaignSend(campaignId: string, opts: { batchSize?: number; cursor?: string | null } = {}): Promise<SendPlan> {
   const batchSize = Math.min(opts.batchSize ?? 200, 1000);
   const empty: SendPlan = {
-    campaignId, channel: null, status: null, total: 0, eligible: 0, skipped: 0, reasons: {},
+    campaignId, channel: null, status: null, total: 0, audienceTotal: 0, eligible: 0, skipped: 0, reasons: {},
     coverage: { ok: false, undecided: [] }, providerReady: false, senderReady: false, willSend: false,
-    truncated: false, recipients: [], skippedList: [],
+    truncated: false, nextCursor: opts.cursor ?? null, exhausted: true, recipients: [], skippedList: [],
   };
   const campaign = await getCampaign(campaignId);
   if (!campaign) return { ...empty, blocked: "NOT_FOUND" };
@@ -42,15 +55,23 @@ export async function planCampaignSend(campaignId: string, opts: { batchSize?: n
   const gate = await evaluateCoverageGate(campaignId);
   const coverage = { ok: gate.ok, undecided: gate.undecided };
   if (!gate.ok) return { ...empty, coverage, blocked: "LANGUAGE_COVERAGE_INCOMPLETE" };
-  const { recipients, skipped, truncated } = await loadCampaignRecipients(channel, campaign.audienceSegmentKey, { limit: batchSize });
+  const [{ recipients, skipped, truncated, nextCursor, exhausted }, audienceTotal] = await Promise.all([
+    loadCampaignRecipients(channel, campaign.audienceSegmentKey, { limit: batchSize, cursor: opts.cursor ?? null }),
+    countCampaignAudience(campaign.audienceSegmentKey),
+  ]);
   const reasons: Record<string, number> = {};
   for (const item of skipped) reasons[item.reason] = (reasons[item.reason] ?? 0) + 1;
   const partial: SendPlan = {
-    ...empty, channel, coverage, truncated,
+    ...empty, channel, coverage, truncated, nextCursor, exhausted, audienceTotal,
     total: recipients.length + skipped.length, eligible: recipients.length, skipped: skipped.length,
     reasons, recipients, skippedList: skipped,
   };
-  if (!recipients.length) return { ...partial, blocked: "NO_ELIGIBLE_RECIPIENTS" };
+  /* An empty page mid-walk is not a blocked campaign: the whole slice was ineligible and the next
+     page may not be. Only an empty FIRST page with nothing left to read means there is no audience. */
+  if (!recipients.length) {
+    if (!exhausted) return { ...partial, providerReady: true, senderReady: true, willSend: false };
+    return { ...partial, blocked: opts.cursor ? "AUDIENCE_EXHAUSTED" : "NO_ELIGIBLE_RECIPIENTS" };
+  }
 
   const runtime = await getActiveCommunicationRuntimeBundle();
   if (channel === "SMS") {

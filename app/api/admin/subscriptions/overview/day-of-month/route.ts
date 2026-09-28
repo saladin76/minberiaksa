@@ -5,9 +5,14 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 import { requireAdminOrDashboardPermission } from "@/lib/dashboard/api-auth";
 import { formatIstanbulDateKey } from "@/lib/admin/istanbul-calendar";
 import {
+  activePlanScopeWhere,
   buildDayOfMonthFilters,
   subscriptionBillingDay,
 } from "@/lib/dashboard/day-of-month-filters";
+import {
+  parseFrequencyParam,
+  subscriptionFrequencyWhere,
+} from "@/lib/dashboard/recurring-frequency-filter";
 
 /**
  * GET /api/admin/subscriptions/overview/day-of-month
@@ -20,6 +25,10 @@ import {
  *   - collected: what has actually settled on that day-of-month, summed over all months
  *   - expected:  what active subscriptions are scheduled to bill on that day-of-month
  * Both are returned so the UI can toggle without a second round trip.
+ *
+ * `?frequency=` narrows the collected view to one cadence. The expected view is MONTHLY plans
+ * only (a daily plan bills every day, a Friday plan on a different date each month), and
+ * `unplaced` reports the active daily / Friday plans it therefore leaves out.
  */
 export async function GET(request: NextRequest) {
   try {
@@ -32,6 +41,7 @@ export async function GET(request: NextRequest) {
     const campaignId = searchParams.get("campaignId");
     const userId = searchParams.get("userId");
     const referralId = searchParams.get("referralId");
+    const frequency = parseFrequencyParam(searchParams.get("frequency"));
 
     // Shared with the per-day drill-down so the list behind a cell always matches
     // the number printed on it. See lib/dashboard/day-of-month-filters.ts.
@@ -40,9 +50,14 @@ export async function GET(request: NextRequest) {
       campaignId,
       userId,
       referralId,
+      frequency,
     });
 
-    const [donations, subscriptions] = await Promise.all([
+    // Active daily / Friday plans in the same scope — shown beside the grid, not in it.
+    const planScope = activePlanScopeWhere({ categoryId, campaignId, userId, referralId });
+    const unplacedFrequencies = (["DAILY", "FRIDAY"] as const).filter((f) => !frequency || frequency === f);
+
+    const [donations, subscriptions, ...unplacedAggs] = await Promise.all([
       prisma.donation.findMany({
         where: donationWhere,
         select: { paidAt: true, amountUSD: true, totalAmount: true, amount: true },
@@ -51,7 +66,20 @@ export async function GET(request: NextRequest) {
         where: subscriptionWhere,
         select: { nextBillingDate: true, lastBillingDate: true, createdAt: true, amountUSD: true, amount: true },
       }),
+      ...unplacedFrequencies.map((f) =>
+        prisma.subscription.aggregate({
+          where: { AND: [planScope, subscriptionFrequencyWhere(f)] },
+          _sum: { amountUSD: true },
+          _count: { id: true },
+        })
+      ),
     ]);
+    const unplaced = unplacedFrequencies.map((f, i) => ({
+      frequency: f,
+      count: unplacedAggs[i]._count?.id ?? 0,
+      /** Per-charge sum (USD) of those plans. */
+      amountUSD: Number((unplacedAggs[i]._sum?.amountUSD ?? 0).toFixed(2)),
+    }));
 
     const collected = Array.from({ length: 31 }, (_, i) => ({
       day: i + 1,
@@ -97,6 +125,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       collected,
       expected,
+      unplaced,
       totals: {
         collectedUSD: Number(collected.reduce((s, d) => s + d.amountUSD, 0).toFixed(2)),
         collectedCount: collected.reduce((s, d) => s + d.count, 0),

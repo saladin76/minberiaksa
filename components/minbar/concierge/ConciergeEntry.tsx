@@ -2,6 +2,7 @@
 
 import { useTranslations } from "next-intl";
 import { openConcierge } from "@/lib/ai/concierge/client";
+import { useConciergeConfig } from "./useConciergeConfig";
 
 /**
  * Contextual entry to the concierge — a quiet card under a page's own
@@ -10,6 +11,9 @@ import { openConcierge } from "@/lib/ai/concierge/client";
  */
 export default function ConciergeEntry({ intent = "current_page", compact = false }: { intent?: "current_page" | "explore"; compact?: boolean }) {
   const t = useTranslations("Concierge");
+  const { config } = useConciergeConfig();
+  /* Switched off from the dashboard: no entry anywhere on the site. */
+  if (!config.enabled) return null;
   return (
     <button type="button" className={`cg-entry${compact ? " cg-entry-compact" : ""}`} onClick={() => openConcierge({ intent })}>
       <span className="cg-entry-icon" aria-hidden="true">

@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { sendDonationServerConversions } from "@/lib/tracking/donation-conversion-server";
+import { rawCommand } from "@/lib/prisma-raw-command";
 
 type JsonMap = Record<string, unknown>;
 
@@ -35,7 +36,7 @@ function nextCheckDate(attempts: number) {
 }
 
 async function ensureIndexes() {
-  await prisma.$runCommandRaw({
+  await prisma.$runCommandRaw(rawCommand({
     createIndexes: "MarketingConversionVerification",
     indexes: [
       { key: { donationId: 1, platform: 1 }, name: "donation_platform", unique: true },
@@ -43,7 +44,7 @@ async function ensureIndexes() {
       { key: { campaignId: 1, adsetId: 1, adId: 1 }, name: "campaign_ad_keys" },
       { key: { createdAt: -1 }, name: "createdAt_desc" },
     ],
-  }).catch(() => null);
+  })).catch(() => null);
 }
 
 async function latestPlatformCredit(platform: string, campaignId: string, adsetId: string, adId: string) {
@@ -53,12 +54,12 @@ async function latestPlatformCredit(platform: string, campaignId: string, adsetI
   if (campaignId) or.push({ campaignId });
   if (or.length === 0) return { credited: false, revenue: 0, conversions: 0, matchedBy: "none" };
 
-  const result = await prisma.$runCommandRaw({
+  const result = await prisma.$runCommandRaw(rawCommand({
     find: "MarketingPlatformDailyMetric",
     filter: { platform, $or: or },
     sort: { date: -1, updatedAt: -1, createdAt: -1 },
     limit: 30,
-  }).catch(() => null) as JsonMap | null;
+  })).catch(() => null) as JsonMap | null;
 
   const rows = isMap(result?.cursor) && Array.isArray(result.cursor.firstBatch) ? result.cursor.firstBatch.filter(isMap) : [];
   let revenue = 0;
@@ -111,22 +112,22 @@ export async function enqueueDonationConversionVerification(donationId: string, 
     updatedAt: new Date(),
   };
 
-  await prisma.$runCommandRaw({
+  await prisma.$runCommandRaw(rawCommand({
     update: "MarketingConversionVerification",
     updates: [{ q: { donationId, platform }, u: { $setOnInsert: document, $set: { updatedAt: new Date() } }, upsert: true }],
-  });
+  }));
   return { ok: true, queued: true, donationId, platform, eventId };
 }
 
 export async function processConversionVerificationQueue(limit = 20) {
   await ensureIndexes();
   const now = new Date();
-  const result = await prisma.$runCommandRaw({
+  const result = await prisma.$runCommandRaw(rawCommand({
     find: "MarketingConversionVerification",
     filter: { status: { $in: ["PENDING", "RETRYING"] }, nextCheckAt: { $lte: now } },
     sort: { nextCheckAt: 1, createdAt: 1 },
     limit,
-  }).catch(() => null) as JsonMap | null;
+  })).catch(() => null) as JsonMap | null;
   const rows = isMap(result?.cursor) && Array.isArray(result.cursor.firstBatch) ? result.cursor.firstBatch.filter(isMap) : [];
   const processed: JsonMap[] = [];
 
@@ -141,26 +142,26 @@ export async function processConversionVerificationQueue(limit = 20) {
 
     const credit = await latestPlatformCredit(platform, campaignId, adsetId, adId);
     if (credit.credited) {
-      await prisma.$runCommandRaw({ update: "MarketingConversionVerification", updates: [{ q: { donationId, platform }, u: { $set: { status: "CONFIRMED", confirmedAt: new Date(), lastCheck: credit, updatedAt: new Date() } } }] });
+      await prisma.$runCommandRaw(rawCommand({ update: "MarketingConversionVerification", updates: [{ q: { donationId, platform }, u: { $set: { status: "CONFIRMED", confirmedAt: new Date(), lastCheck: credit, updatedAt: new Date() } } }] }));
       processed.push({ donationId, platform, status: "CONFIRMED", credit });
       continue;
     }
 
     if (attempts >= maxAttempts) {
-      await prisma.$runCommandRaw({ update: "MarketingConversionVerification", updates: [{ q: { donationId, platform }, u: { $set: { status: "EXHAUSTED", lastCheck: credit, updatedAt: new Date() } } }] });
+      await prisma.$runCommandRaw(rawCommand({ update: "MarketingConversionVerification", updates: [{ q: { donationId, platform }, u: { $set: { status: "EXHAUSTED", lastCheck: credit, updatedAt: new Date() } } }] }));
       processed.push({ donationId, platform, status: "EXHAUSTED", credit });
       continue;
     }
 
     const retry = platform === "META" ? await sendDonationServerConversions(donationId, { force: true }) : { ok: false, skipped: true, reason: "platform retry not implemented" };
     const nextAttempts = attempts + 1;
-    await prisma.$runCommandRaw({
+    await prisma.$runCommandRaw(rawCommand({
       update: "MarketingConversionVerification",
       updates: [{
         q: { donationId, platform },
         u: { $set: { status: "RETRYING", attempts: nextAttempts, lastCheck: credit, lastRetry: retry, nextCheckAt: nextCheckDate(nextAttempts), updatedAt: new Date() } },
       }],
-    });
+    }));
     processed.push({ donationId, platform, status: "RETRYING", retry, credit, attempts: nextAttempts });
   }
 
@@ -169,7 +170,7 @@ export async function processConversionVerificationQueue(limit = 20) {
 
 export async function listConversionVerifications(limit = 100) {
   await ensureIndexes();
-  const result = await prisma.$runCommandRaw({ find: "MarketingConversionVerification", filter: {}, sort: { updatedAt: -1, createdAt: -1 }, limit }).catch(() => null) as JsonMap | null;
+  const result = await prisma.$runCommandRaw(rawCommand({ find: "MarketingConversionVerification", filter: {}, sort: { updatedAt: -1, createdAt: -1 }, limit })).catch(() => null) as JsonMap | null;
   const rows = isMap(result?.cursor) && Array.isArray(result.cursor.firstBatch) ? result.cursor.firstBatch.filter(isMap) : [];
   return { ok: true, rows };
 }

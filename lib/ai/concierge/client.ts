@@ -69,6 +69,44 @@ export function readConciergeAssisted(): ConciergeAssist | null {
   }
 }
 
+/**
+ * "This browser talked to the concierge" — kept in localStorage (not the
+ * tab's sessionStorage) with the time of the last exchange, so a donation made
+ * later, even on another visit, can be counted as indirectly influenced. The
+ * dashboard applies its own attribution window to `at`.
+ */
+const TOUCH_KEY = "mia_concierge_touch";
+const TOUCH_MAX_AGE_MS = 90 * 24 * 60 * 60 * 1000;
+
+export interface ConciergeTouch {
+  sessionId: string;
+  at: number;
+}
+
+export function markConciergeTouched(): void {
+  if (!isBrowser()) return;
+  try {
+    const value: ConciergeTouch = { sessionId: getConciergeSessionId(), at: Date.now() };
+    window.localStorage.setItem(TOUCH_KEY, JSON.stringify(value));
+  } catch {
+    /* Private mode; attribution is best effort. */
+  }
+}
+
+export function readConciergeTouched(): ConciergeTouch | null {
+  if (!isBrowser()) return null;
+  try {
+    const raw = window.localStorage.getItem(TOUCH_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as Partial<ConciergeTouch>;
+    if (typeof parsed.sessionId !== "string" || typeof parsed.at !== "number") return null;
+    if (Date.now() - parsed.at > TOUCH_MAX_AGE_MS) return null;
+    return { sessionId: parsed.sessionId, at: parsed.at };
+  } catch {
+    return null;
+  }
+}
+
 export function clearConciergeAssisted(): void {
   if (!isBrowser()) return;
   try {

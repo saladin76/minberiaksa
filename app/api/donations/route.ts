@@ -20,6 +20,11 @@ import { inferLocaleFromRequest } from "@/lib/preferred-lang";
 import { resolveGuestDonor } from "@/lib/users/resolve-guest-donor";
 import { istanbulDateKeysToUtcRange } from "@/lib/admin/istanbul-calendar";
 import { mintDonationAccessToken } from "@/lib/donations/access-token";
+import {
+  donationFrequencyWhere,
+  loadSubscriptionFrequencies,
+  parseFrequencyParam,
+} from "@/lib/dashboard/recurring-frequency-filter";
 
 // GET /api/donations - Get all donations (admin) or user's donations
 export async function GET(request: NextRequest) {
@@ -65,6 +70,9 @@ export async function GET(request: NextRequest) {
     const statusFilter = isAdmin ? searchParams.get("status") : null;
     const localeFilter = isAdmin ? searchParams.get("locale")?.trim() : null;
     const countryFilter = isAdmin ? searchParams.get("country")?.trim() : null;
+    // Recurring cadence of the plan behind the charge (DAILY | FRIDAY | MONTHLY) — implies
+    // subscription-only, since a one-time gift has no plan.
+    const frequencyFilter = isAdmin ? parseFrequencyParam(searchParams.get("frequency")) : null;
 
     const baseWhere: Record<string, unknown> = {
       ...(campaignId && { items: { some: { campaignId } } }),
@@ -121,7 +129,11 @@ export async function GET(request: NextRequest) {
         ? { OR: [{ subscriptionId: null }, { subscriptionId: { isSet: false } }] }
         : null;
 
-    const extraFilters = [searchWhere, localeWhere, countryWhere, donationTypeWhere].filter((w) => w != null);
+    const frequencyWhere = donationFrequencyWhere(frequencyFilter);
+
+    const extraFilters = [searchWhere, localeWhere, countryWhere, donationTypeWhere, frequencyWhere].filter(
+      (w) => w != null
+    );
     const where: Record<string, unknown> =
       extraFilters.length > 0 ? { AND: [baseWhere, ...extraFilters] } : baseWhere;
 
@@ -175,9 +187,14 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    // `type` stays MONTHLY for every plan charge (older screens key off it); `frequency` is the
+    // plan's real cadence.
+    const frequencyOf = await loadSubscriptionFrequencies(prisma, pageSubscriptionIds);
+
     const formattedDonations = donations.map((donation) => ({
       ...donation,
       type: donation.subscriptionId ? ("MONTHLY" as const) : ("ONE_TIME" as const),
+      frequency: donation.subscriptionId ? frequencyOf(donation.subscriptionId) : null,
       subscriptionCycle: donation.subscriptionId ? cycleById.get(donation.id) ?? null : null,
       isRecurringCharge: donation.subscriptionId
         ? donation.billingReason

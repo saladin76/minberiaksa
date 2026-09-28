@@ -104,11 +104,22 @@ export function istanbulDateKeysToUtcRange(startKey: string, endKey: string) {
   };
 }
 
-function addIstanbulCalendarYears(dateKey: string, years: number) {
-  const { year, month, day } = parseDateKey(dateKey);
-  return formatUtcDateKey(new Date(Date.UTC(year + years, month - 1, day)));
-}
+/** The earliest date this system can hold — "all time" starts here, not a rolling window. */
+export const EPOCH_DATE_KEY = "1970-01-01";
 
+/**
+ * The window a dashboard filter asks for.
+ *
+ * `period === "all"` means ALL of it. It used to mean "the last ten years", which was invisible
+ * until the totals disagreed: a stats card counting from `Date(0)` and a chart counting from
+ * ten-years-ago described the same filter with different numbers, and any donation older than the
+ * window simply vanished from the chart while still being in the total. One contract now: all-time
+ * starts at the epoch for every consumer.
+ *
+ * Charts need the second half of that contract — see `resolveChartStartKey`. Filling a bar per day
+ * from 1970 would be twenty thousand empty buckets, so a chart starts its axis at the first day it
+ * actually has data for, while its query still reaches back to the epoch.
+ */
 export function getIstanbulDateRange(
   period: string,
   startParam?: string | null,
@@ -116,23 +127,45 @@ export function getIstanbulDateRange(
   now: Date = new Date()
 ) {
   const endDateKey = endParam || formatIstanbulDateKey(now);
+  const isAllTime = period === "all" && !(startParam && endParam);
   let startDateKey: string;
 
   if (startParam && endParam) {
     startDateKey = startParam;
-  } else if (period === "all") {
-    startDateKey = addIstanbulCalendarYears(endDateKey, -10);
+  } else if (isAllTime) {
+    startDateKey = EPOCH_DATE_KEY;
   } else {
     const days = period === "day" ? 1 : period === "week" ? 7 : 30;
     startDateKey = startParam || addIstanbulCalendarDays(endDateKey, -days);
   }
 
   return {
-    startDate: istanbulDateTimeToUtc(startDateKey),
+    startDate: isAllTime ? new Date(0) : istanbulDateTimeToUtc(startDateKey),
     endDate: new Date(istanbulDateTimeToUtc(addIstanbulCalendarDays(endDateKey, 1)).getTime() - 1),
     startDateKey,
     endDateKey,
+    isAllTime,
   };
+}
+
+/**
+ * Where a chart's axis should begin.
+ *
+ * For a bounded period it is the period's own start. For all-time it is the earliest day the query
+ * actually returned — so the totals stay complete (the query ran from the epoch) while the axis
+ * stays the length of the real history instead of fifty-odd years of empty bars. With no data at
+ * all, the axis collapses to the end day rather than to 1970.
+ */
+export function resolveChartStartKey(
+  isAllTime: boolean,
+  startDateKey: string,
+  endDateKey: string,
+  presentDateKeys: Iterable<string>
+): string {
+  if (!isAllTime) return startDateKey;
+  let earliest: string | null = null;
+  for (const key of presentDateKeys) if (!earliest || key < earliest) earliest = key;
+  return earliest && earliest <= endDateKey ? earliest : endDateKey;
 }
 
 export function eachIstanbulDateKey(startDateKey: string, endDateKey: string) {

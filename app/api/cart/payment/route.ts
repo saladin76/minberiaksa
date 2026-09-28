@@ -54,6 +54,20 @@ function parseConciergeMarker(raw: unknown): { sessionId: string; intent: string
   return { sessionId, intent, campaignId };
 }
 
+/**
+ * Analytics-only: the browser had talked to the concierge (`markConciergeTouched`)
+ * before this order, whether or not this basket came from it. Stored under
+ * `Donation.attribution.ai_concierge_touch`; the dashboard counts it as an
+ * indirect donation when `at` falls inside its attribution window.
+ */
+function parseConciergeTouch(raw: unknown): { sessionId: string; at: string } | null {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
+  const o = raw as Record<string, unknown>;
+  const sessionId = typeof o.sessionId === "string" && /^[A-Za-z0-9_-]{8,64}$/.test(o.sessionId) ? o.sessionId : null;
+  const at = typeof o.at === "number" && Number.isFinite(o.at) && o.at > 0 && o.at <= Date.now() + 60_000 ? new Date(o.at) : null;
+  return sessionId && at ? { sessionId, at: at.toISOString() } : null;
+}
+
 const PAYMENT_METHODS = new Set(["CARD", "PAYPAL", "BANK_TRANSFER"]);
 
 export async function GET(request: NextRequest) {
@@ -162,10 +176,15 @@ export async function POST(request: NextRequest) {
       bankSlug,
       bankCurrency,
       concierge: conciergeIn,
+      conciergeTouch: conciergeTouchIn,
     } = body;
     const concierge = parseConciergeMarker(conciergeIn);
-    const conciergeAttribution = concierge
-      ? ({ ai_concierge: { ...concierge, source: "ai_concierge", at: new Date().toISOString() } } as Prisma.InputJsonValue)
+    const conciergeTouch = parseConciergeTouch(conciergeTouchIn);
+    const conciergeAttribution = concierge || conciergeTouch
+      ? ({
+          ...(concierge ? { ai_concierge: { ...concierge, source: "ai_concierge", at: new Date().toISOString() } } : {}),
+          ...(conciergeTouch ? { ai_concierge_touch: conciergeTouch } : {}),
+        } as Prisma.InputJsonValue)
       : undefined;
 
     type CartItemIn = {

@@ -26,7 +26,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const t = await getTranslations({ locale, namespace: "legal" });
   return buildPageMetadata(locale, {
     title: t("privacyTitle"),
-    description: t("privCollectP").slice(0, 165),
+    description: t("privCollectP"),
     path: `/${slugFor("privacy", locale)}`,
   });
 }

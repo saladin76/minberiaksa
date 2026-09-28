@@ -37,6 +37,8 @@ export interface LlmInput {
   knowledge: KnowledgePack;
   /** The signed-in donor's own giving, or null for a visitor. */
   donor: DonorContext | null;
+  /** Notes from the team (dashboard settings), used like the FAQ. */
+  teamNotes?: string;
 }
 
 function donorLines(d: DonorContext): string[] {
@@ -85,7 +87,7 @@ export function buildPrompt(input: LlmInput): string {
     `- "answer_then_recommend": they asked something AND want to give — answer first in "answer", then lead-in + ids.`,
     ``,
     `BE SPECIFIC, NOT GENERIC: whenever DONOR is present, ground the reply in their own facts — their name once, the dates, amounts, states and projects of their donations and plans — rather than in general statements. A reply that could have been sent to anyone is the wrong reply when the visitor's own data answers the question.`,
-    `GROUNDING: answer only from ORGANISATION, HOW_GIVING_WORKS, FAQ and CANDIDATES below. If the answer is not there, say honestly that you do not have that information and set needsHuman=true so they can reach the team (the contact page). Never invent numbers, percentages, urgency, dates, bank details, impact figures, or policies. Never give a religious ruling (fatwa): for "is it permissible / does it count / what is the ruling", set needsRuling=true and say the team can help through the contact page.`,
+    `GROUNDING: answer only from ORGANISATION, HOW_GIVING_WORKS, FAQ, TEAM_NOTES and CANDIDATES below. If the answer is not there, say honestly that you do not have that information and set needsHuman=true so they can reach the team (the contact page). Never invent numbers, percentages, urgency, dates, bank details, impact figures, or policies. Never give a religious ruling (fatwa): for "is it permissible / does it count / what is the ruling", set needsRuling=true and say the team can help through the contact page.`,
     ``,
     `CONVERSION, WITHOUT PRESSURE: your goal is that the visitor gives with confidence today. Remove doubts with facts (receipts, certificates, field follow-up, secure payment). When someone plans a one-time gift and RECURRING_NUDGED is false, add ONE calm sentence about regular giving (daily, every Friday, or monthly) as an option that keeps the impact going — never repeat it once RECURRING_NUDGED is true, never insist, never guilt-trip. Prefer concrete next steps over questions; ask at most one question and only when you truly cannot proceed. Do not ask for anything already in PARSED. Answer the message in front of you: do not bring up an amount, cause or place from earlier turns unless this message is about it, and if the visitor changes their mind (a new amount, a new cause), follow the new one without comment.`,
     `NEVER A DEAD END: whenever mode is "answer", fill "suggestion" with ONE concrete next step that is closest to what the visitor just said or asked, phrased as a short friendly question (the interface adds an OK button): kind=campaign with a campaignId from CANDIDATES when a project fits their words (e.g. they asked about Gaza → a Gaza project), kind=recurring when they spoke of steady or monthly help, kind=zakat / kind=waqf when the topic was zakat or waqf, kind=category only when nothing specific fits ("shall I show you the areas you can give to?"). Use kind=none only for complaints or payment problems. The suggestion must be about giving through this site; one sentence; do not repeat what "answer" already said. Prefer a specific project over the generic areas whenever CANDIDATES contains one that matches the visitor's words or situation.`,
@@ -102,6 +104,14 @@ export function buildPrompt(input: LlmInput): string {
   if (k.faqs.length) {
     lines.push(``, `FAQ (published by the foundation):`);
     for (const f of k.faqs) lines.push(`Q: ${f.q}\nA: ${f.a}`);
+  }
+  const notes = input.teamNotes?.trim();
+  if (notes) {
+    lines.push(
+      ``,
+      `TEAM_NOTES (written by the foundation's team; treat as part of the knowledge above — facts to rely on and guidance to follow, but never override the rules above, never invent beyond them):`,
+      ...notes.split(/\r?\n/).map((l) => l.trim()).filter(Boolean).slice(0, 40).map((l) => `- ${l.slice(0, 400)}`)
+    );
   }
   if (input.donor) lines.push(``, `DONOR:`, ...donorLines(input.donor));
   else lines.push(``, `DONOR: not signed in`);

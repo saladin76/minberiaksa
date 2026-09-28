@@ -9,6 +9,7 @@ import {
   OG_LOCALE_MAP,
   SITE_URL,
   buildLocalizedAlternates,
+  clipSeoDescription,
 } from "@/lib/seo";
 import type { Locale } from "@/lib/seo";
 import { buildSeoFallback, compactSeoFields, type ProjectSeoFields } from "@/lib/campaign/project-seo";
@@ -136,8 +137,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     campaignImage: campaign.images?.[0] || `${SITE_URL}/og-image.jpg`,
   });
 
-  const description = String(resolvedSeo.seoDescription || seo.campaigns.description).slice(0, 160);
-  const longDescription = String(resolvedSeo.ogDescription || resolvedSeo.seoDescription || seo.campaigns.description).slice(0, 200);
+  /* This route builds its metadata by hand rather than through `buildPageMetadata`, so it clips with
+     the same helper: editor-written campaign copy is the most likely to arrive long, with markup. */
+  const description = clipSeoDescription(String(resolvedSeo.seoDescription || seo.campaigns.description), locale);
+  const longDescription = clipSeoDescription(String(resolvedSeo.ogDescription || resolvedSeo.seoDescription || seo.campaigns.description), locale, 200);
   const image = resolvedSeo.ogImage || localeImage || `${SITE_URL}/og-image.jpg`;
 
   let alternates: { canonical: string; languages: Record<string, string> } | { canonical: string };

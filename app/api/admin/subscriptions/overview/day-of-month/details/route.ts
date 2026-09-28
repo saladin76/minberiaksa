@@ -8,6 +8,10 @@ import {
   donationSettlementDay,
   subscriptionBillingDay,
 } from "@/lib/dashboard/day-of-month-filters";
+import {
+  loadSubscriptionFrequencies,
+  parseFrequencyParam,
+} from "@/lib/dashboard/recurring-frequency-filter";
 
 /**
  * GET /api/admin/subscriptions/overview/day-of-month/details?day=17&mode=collected
@@ -43,6 +47,7 @@ export async function GET(request: NextRequest) {
       campaignId: sp.get("campaignId"),
       userId: sp.get("userId"),
       referralId: sp.get("referralId"),
+      frequency: parseFrequencyParam(sp.get("frequency")),
     });
 
     if (mode === "expected") {
@@ -70,6 +75,8 @@ export async function GET(request: NextRequest) {
         .map((s) => ({
           id: s.id,
           subscriptionId: s.id,
+          // The expected view is monthly plans only (see buildDayOfMonthFilters).
+          frequency: "MONTHLY" as const,
           status: s.status,
           amount: s.amount,
           amountUSD: s.amountUSD,
@@ -115,11 +122,16 @@ export async function GET(request: NextRequest) {
       orderBy: { paidAt: "desc" },
     });
 
-    const rows = donations
-      .filter((d) => donationSettlementDay(d) === day)
+    const dayDonations = donations.filter((d) => donationSettlementDay(d) === day);
+    const frequencyOf = await loadSubscriptionFrequencies(
+      prisma,
+      dayDonations.map((d) => d.subscriptionId).filter((id): id is string => Boolean(id))
+    );
+    const rows = dayDonations
       .map((d) => ({
         id: d.id,
         subscriptionId: d.subscriptionId,
+        frequency: frequencyOf(d.subscriptionId),
         status: d.subscription?.status ?? null,
         // The donation's own money is the truth for a collected row — the
         // subscription's current amount may have been edited since this charge.

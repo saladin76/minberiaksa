@@ -38,6 +38,76 @@ model AiConciergeEvent {
   @@index([event, createdAt])
 }
 
+/// One turn of a concierge conversation, as the dashboard shows it. `kind`
+/// is "message" for free text the visitor typed and "step" for a chip or card
+/// they tapped (the text is then the label they saw).
+type AiConciergeTurn {
+  role        String
+  kind        String   @default("message")
+  text        String
+  at          DateTime
+  intent      String?
+  /// "llm" | "deterministic" — assistant turns only.
+  mode        String?
+  /// Block types the assistant rendered (campaign_recommendations, …).
+  blocks      String[]
+  /// Campaigns the assistant showed or the visitor picked on this turn.
+  campaignIds String[]
+  needsHuman  Boolean?
+}
+
+/// The transcript of one concierge session (`AiConciergeEvent.sessionId`),
+/// written by the concierge API after every answered turn so the team can read
+/// what visitors asked (`/dashboard/ai-concierge/conversations`). Only what the
+/// visitor typed and what the assistant said — no card numbers, no prices the
+/// public pages do not show. Stops being written when transcripts are switched
+/// off in the concierge settings.
+model AiConciergeConversation {
+  id               String            @id @default(auto()) @map("_id") @db.ObjectId
+  sessionId        String            @unique
+  locale           String
+  /// Signed-in donor, from the session cookie only.
+  userId           String?           @db.ObjectId
+  /// Where the panel was first opened (route name and path).
+  firstRoute       String?
+  firstPath        String?
+  turns            AiConciergeTurn[]
+  turnCount        Int               @default(0)
+  userMessageCount Int               @default(0)
+  intents          String[]
+  campaignIds      String[]
+  /// A turn the model flagged as beyond its knowledge, or a support request.
+  needsHuman       Boolean           @default(false)
+  fallbackCount    Int               @default(0)
+  startedAt        DateTime          @default(now())
+  lastMessageAt    DateTime          @default(now())
+
+  @@index([lastMessageAt])
+  @@index([userId, lastMessageAt])
+}
+
+/// A saved AI reading of many conversations (`/dashboard/ai-concierge/insights`):
+/// the filters it was run with, how many conversations it read, and the
+/// structured conclusion (summary, missing campaigns, frequent questions,
+/// issues, recommendations). Kept so past readings can be compared.
+model AiConciergeInsight {
+  id                String   @id @default(auto()) @map("_id") @db.ObjectId
+  createdById       String?  @db.ObjectId
+  createdByName     String?
+  from              DateTime
+  to                DateTime
+  filters           Json?
+  conversationCount Int
+  messageCount      Int
+  /// "llm" when the model wrote it, "basic" for the counting-only reading.
+  mode              String
+  model             String?
+  result            Json
+  createdAt         DateTime @default(now())
+
+  @@index([createdAt])
+}
+
 model Account {
   id                String  @id @default(auto()) @map("_id") @db.ObjectId
   userId            String  @db.ObjectId
@@ -1396,10 +1466,69 @@ model WhatsappTemplate {
   /// "MARKETING" | "UTILITY" | "TRANSACTIONAL" | "AUTHENTICATION" (optional).
   purpose String?
 
+  /// Provider truth, one row per language. See WhatsappTemplateVariant.
+  variants WhatsappTemplateVariant[]
+
   @@index([name])
   @@index([externalTemplateId])
   @@index([provider])
   @@index([kind])
+}
+
+/// One provider's record of one language of one template.
+///
+/// Meta approves a template *per language*: the Arabic and the English of the same template are
+/// separate submissions with separate review outcomes, separate rejection reasons and separate
+/// component schemas. `WhatsappTemplate` could not express that — it carries one `language`, one
+/// `approvalStatus` and one `externalTemplateId` for the whole record — so a template whose Arabic
+/// was approved and whose French was still pending read as a single approved template, and a
+/// French send failed at Meta with the dashboard still showing "ready".
+///
+/// So provider truth lives here, one row per (template, provider, language), and it is written
+/// only by the sync in `lib/communication/whatsapp-template-sync.ts`. The parent row keeps the
+/// editorial side — what the team calls the template and the copy they drafted. Nothing in this
+/// model is hand-edited: a field here is what the provider last said, which is what makes it
+/// trustworthy enough to gate a send on.
+model WhatsappTemplateVariant {
+  id         String @id @default(auto()) @map("_id") @db.ObjectId
+  templateId String @db.ObjectId
+  /// "META_WHATSAPP". Present so a second provider can be synced alongside rather than over.
+  provider   String
+
+  /// The name Meta knows this template by — what `sendTemplateMessage` must send, which is not
+  /// necessarily what the team calls it locally.
+  providerTemplateName String
+  /// Meta's own id for the language variant, when the listing exposes one.
+  providerTemplateId   String?
+  /// Meta's language tag for this variant, e.g. "ar", "en_US". Sent verbatim as `language.code`.
+  languageCode         String
+  /// The site locale this variant serves, derived from languageCode at sync time.
+  locale               String?
+
+  /// "APPROVED" | "PENDING" | "REJECTED" | "PAUSED" | "DISABLED" | "UNKNOWN", upper-cased from Meta.
+  approvalStatus  String
+  /// Meta's category: MARKETING | UTILITY | AUTHENTICATION.
+  category        String?
+  /// Why Meta rejected it, when it did.
+  rejectionReason String?
+  /// Quality rating Meta reports for the variant (GREEN / YELLOW / RED), when present.
+  qualityRating   String?
+
+  /// The variant's components exactly as Meta describes them, which is what the parameter builder
+  /// reads to know how many BODY parameters exist, whether the HEADER takes one and what type, and
+  /// which buttons are dynamic. Shape: Array<{ type, format?, text?, buttons?, example? }>.
+  componentsSchema Json?
+
+  lastSyncedAt DateTime
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  template WhatsappTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+
+  /// One row per language per provider per template — the sync upserts on this.
+  @@unique([templateId, provider, languageCode])
+  @@index([provider, approvalStatus])
+  @@index([providerTemplateName])
 }
 
 /// Plain-text templates for the SMS channel.
@@ -1585,6 +1714,10 @@ model GlobalSettings {
   /// Main card gateway: "STRIPE" or "ALBARAKA". Handles every case PayFor doesn't
   /// take, except monthly subscriptions which always run on Stripe.
   mainGateway          String   @default("STRIPE")
+  /// The donation concierge's switches and team notes: launcher on/off, the
+  /// teaser bubble, model on/off, transcripts, attribution window, notes the
+  /// model may use. Shape and defaults in `lib/ai/concierge/settings.ts`.
+  aiConcierge          Json?
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
 }

@@ -5,6 +5,7 @@ import { requireAdminOrDashboardPermission } from "@/lib/dashboard/api-auth";
 import { prisma } from "@/lib/prisma";
 import { PAID_DONATION_FILTER } from "@/lib/dashboard/donation-usd-revenue";
 import { safeCountValue } from "@/lib/dashboard/safe-count";
+import { rawCommand } from "@/lib/prisma-raw-command";
 
 export const dynamic = "force-dynamic";
 
@@ -30,18 +31,18 @@ function num(value: unknown) {
 }
 
 async function collectionCount(collection: string, filter: JsonMap = {}) {
-  const result = await prisma.$runCommandRaw({ count: collection, query: filter }).catch(() => null) as JsonMap | null;
+  const result = await prisma.$runCommandRaw(rawCommand({ count: collection, query: filter })).catch(() => null) as JsonMap | null;
   return num(result?.n);
 }
 
 async function latestRows(collection: string, limit = 5) {
-  const result = await prisma.$runCommandRaw({ find: collection, filter: {}, sort: { createdAt: -1, updatedAt: -1 }, limit }).catch(() => null) as JsonMap | null;
+  const result = await prisma.$runCommandRaw(rawCommand({ find: collection, filter: {}, sort: { createdAt: -1, updatedAt: -1 }, limit })).catch(() => null) as JsonMap | null;
   if (!isMap(result?.cursor) || !Array.isArray(result.cursor.firstBatch)) return [];
   return result.cursor.firstBatch.filter(isMap);
 }
 
 async function trackingSettings() {
-  const result = await prisma.$runCommandRaw({ find: "TrackingSettings", limit: 1, sort: { createdAt: 1 } }).catch(() => null) as JsonMap | null;
+  const result = await prisma.$runCommandRaw(rawCommand({ find: "TrackingSettings", limit: 1, sort: { createdAt: 1 } })).catch(() => null) as JsonMap | null;
   const rows = isMap(result?.cursor) && Array.isArray(result.cursor.firstBatch) ? result.cursor.firstBatch : [];
   return isMap(rows[0]) ? rows[0] : null;
 }

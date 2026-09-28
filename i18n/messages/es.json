@@ -3198,6 +3198,8 @@
   "Concierge": {
     "title": "Ayúdame a elegir cómo donar",
     "launcher": "Asistente de donación",
+    "teaserTitle": "¿No sabes dónde donar? ✨",
+    "teaserBody": "Cuéntame qué te importa y te encuentro el proyecto ideal en un minuto.",
     "s_welcome": "Te ayudo a encontrar la mejor forma de donar en un minuto.",
     "placeholder": "Cuéntame qué tienes en mente… p. ej. tengo 500 $ y quiero un impacto duradero",
     "send": "Enviar",

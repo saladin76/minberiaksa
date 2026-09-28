@@ -42,9 +42,14 @@ const BLOCKED_LABELS: Record<string, string> = {
   NO_AUDIENCE: "لم يُحدَّد جمهور لهذه الحملة.",
   NO_RECIPIENTS: "لا يوجد مستلم مؤهَّل في هذا الجمهور.",
   NOT_CONFIGURED: "لا يوجد مزوّد مُعدّ لهذه القناة.",
+  NO_ELIGIBLE_RECIPIENTS: "لا يوجد مستلم مؤهَّل في هذا الجمهور.",
+  ALREADY_RUNNING: "الحملة قيد الإرسال الآن — انتظر انتهاء الدفعة الجارية.",
+  ALREADY_COMPLETE: "اكتمل إرسال هذه الحملة.",
+  NOT_RESUMABLE: "لا توجد دفعة متوقفة لمتابعتها.",
 };
 
-type SendPlan = { total: number; blocked?: string | null };
+/** `audienceTotal` is the whole audience; `total` is only the first batch. */
+type SendPlan = { total: number; audienceTotal?: number; blocked?: string | null };
 
 export function CampaignRowActions({
   campaign,
@@ -117,7 +122,11 @@ export function CampaignRowActions({
         toast.error(json?.error || "تعذّر الإرسال");
       } else {
         const s = json.summary;
-        toast.success(`أُرسلت ${s.sent} · تُخطّيت ${s.skipped} · فشلت ${s.failed}`);
+        toast.success(
+          s.hasMore
+            ? `الدفعة الأولى: أُرسلت ${s.sent} · تُخطّيت ${s.skipped} · فشلت ${s.failed} — تتواصل بقية الدفعات تلقائيًا`
+            : `أُرسلت ${s.sent} · تُخطّيت ${s.skipped} · فشلت ${s.failed}`,
+        );
       }
       onChanged();
     } catch (e) {
@@ -170,8 +179,16 @@ export function CampaignRowActions({
             <AlertDialogTitle>إرسال «{campaign.name}»؟</AlertDialogTitle>
             <AlertDialogDescription>
               سيتم الإرسال عبر {channelMeta(campaign.channel).label} إلى{" "}
-              <b className="font-semibold text-slate-900">{(plan?.total ?? 0).toLocaleString("en-US")}</b> مستلمًا.
+              <b className="font-semibold text-slate-900">{(plan?.audienceTotal ?? plan?.total ?? 0).toLocaleString("en-US")}</b> مستلمًا.
               لا يمكن التراجع بعد الإرسال.
+              {(plan?.audienceTotal ?? 0) > (plan?.total ?? 0) ? (
+                /* A large audience is sent in batches over several scheduler runs, so the operator is
+                   told the send continues in the background instead of reading the first batch's
+                   numbers as the final result. */
+                <span className="mt-2 block text-[11px] text-slate-500">
+                  سيُرسَل على دفعات، وتتابع المهمة المجدولة الإرسال حتى اكتمال الجمهور.
+                </span>
+              ) : null}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
-import { getTranslations } from "next-intl/server";
-import { buildPageMetadata } from "@/lib/seo";
+import { LOCALE_SEO, buildPageMetadata, type Locale } from "@/lib/seo";
 import { slugFor } from "@/lib/minbar/routes";
 import { listArticles, listPostCategories } from "@/lib/minbar/posts";
 import MinbarMessages from "@/components/minbar/MinbarMessages";
@@ -19,11 +18,13 @@ export const revalidate = 60;
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale } = await params;
-  const t = await getTranslations({ locale, namespace: "common" });
-  const tSeo = await getTranslations({ locale, namespace: "about" });
+  /* The blog's own SEO copy, per locale. This used to borrow the ABOUT page's hero subtitle, so every
+     language's blog listing was described to search engines as the organisation rather than as its
+     articles. `LOCALE_SEO[locale].blog` is the generated source that exists for exactly this. */
+  const seo = LOCALE_SEO[locale as Locale] ?? LOCALE_SEO.en;
   return buildPageMetadata(locale, {
-    title: t("blogTitle"),
-    description: tSeo("heroSubtitle").slice(0, 165),
+    title: seo.blog.title,
+    description: seo.blog.description,
     path: `/${slugFor("blog", locale)}`,
   });
 }

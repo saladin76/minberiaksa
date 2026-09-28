@@ -10,8 +10,7 @@ import { notifyDonationEvent } from "@/lib/telegram/notify";
 import { sendDonationServerConversions } from "@/lib/tracking/donation-conversion-server";
 import { upsertProfileForUser } from "@/lib/communication/donor-communication-profile-service";
 import { sendAutomaticEmailMessage, sendAutomaticWhatsappMessage, resolveMetaTemplateMapping, type AutomaticOutcome } from "@/lib/communication/automatic-message-dispatcher";
-import { listSenders } from "@/lib/communication/sender-service";
-import { getActiveCommunicationRuntimeBundle } from "@/lib/communication/runtime-config";
+import { loadSenderRoutingSnapshot, resolveSenderFromSnapshot, type SenderResolution, type SenderRoutingSnapshot } from "@/lib/communication/sender-resolution";
 import type { CommunicationPurposeId } from "@/lib/communication/communication-runtime-types";
 import type { SupportedLocale } from "@/lib/locales";
 import { donationAttachments, type EmailAttachment } from "@/lib/certificates/generate";
@@ -22,27 +21,42 @@ export type MessageTriggerEvent = "DONATION_PAID" | "DONATION_FAILED" | "FIRST_D
 export interface EventDispatchInput { userId?: string; donationId?: string }
 interface DispatchResult { triggers: number; emailsSent: number; whatsappSent: number; errors: number }
 
-/** Resolved sender identities shared by every send in one dispatch/batch run. */
+/**
+ * The sender tables and routing rules for one dispatch/batch run.
+ *
+ * This used to be a single resolved identity, picked before any recipient was known: the first
+ * enabled WhatsApp sender with a phone number, and the first enabled email sender. Every donor in a
+ * batch therefore got the same number regardless of their locale or country, while a campaign to
+ * those same donors routed properly — so one donor could hold two WhatsApp threads with the
+ * organisation, one per code path. The snapshot is read once, as before, but the DECISION is now
+ * made per recipient by `lib/communication/sender-resolution.ts`, the one resolver every outbound
+ * path shares.
+ */
 export interface TriggerSendConfig {
-  emailIdentity: string | null;
-  whatsappSender: { id: string | null; phoneNumberId: string | null } | null;
+  email: SenderRoutingSnapshot;
+  whatsapp: SenderRoutingSnapshot;
 }
 
-/**
- * Resolve the email/WhatsApp sender identities once. Batch senders (the DONATION_LAPSED cron)
- * resolve this a single time and reuse it across hundreds of recipients.
- */
+/** Read the sender tables once. Batch senders reuse this across hundreds of recipients. */
 export async function resolveTriggerSendConfig(): Promise<TriggerSendConfig> {
-  const [senders, runtime] = await Promise.all([listSenders().catch(() => []), getActiveCommunicationRuntimeBundle()]);
-  const emailSenderRow = senders.find((sender) => sender.channel === "EMAIL" && sender.enabled)?.senderEmail ?? null;
-  const emailIdentity = emailSenderRow || (runtime.elasticEmail.configured ? runtime.elasticEmail.values.senderEmail : null);
-  const metaSenderRow = senders.find((sender) => sender.channel === "WHATSAPP" && sender.enabled && sender.phoneNumberId);
-  const whatsappSender = metaSenderRow
-    ? { id: metaSenderRow.id, phoneNumberId: metaSenderRow.phoneNumberId }
-    : runtime.meta.configured
-      ? { id: null, phoneNumberId: runtime.meta.values.defaultPhoneNumberId }
-      : null;
-  return { emailIdentity, whatsappSender };
+  const [email, whatsapp] = await Promise.all([
+    loadSenderRoutingSnapshot("EMAIL"),
+    loadSenderRoutingSnapshot("WHATSAPP"),
+  ]);
+  return { email, whatsapp };
+}
+
+/** The per-recipient decision: the recipient's locale and country, and this message's purpose. */
+export function resolveTriggerSender(
+  config: TriggerSendConfig,
+  channel: "EMAIL" | "WHATSAPP",
+  request: { locale?: string | null; country?: string | null; purpose?: CommunicationPurposeId },
+): SenderResolution {
+  return resolveSenderFromSnapshot(channel === "EMAIL" ? config.email : config.whatsapp, {
+    locale: request.locale ?? null,
+    country: request.country ?? null,
+    purpose: request.purpose ?? "TRANSACTIONAL",
+  });
 }
 
 export type TriggerSendOutcome = { channel: "EMAIL" | "WHATSAPP"; outcome: AutomaticOutcome; reason?: string };
@@ -66,7 +80,10 @@ export async function sendTriggerMessage(
     const variant = resolveEmailVariant(tpl, locale);
     const html = await renderEmailHtml(variant.document as TReaderDocument, ctx);
     const subject = renderEmailSubject(variant.subject, ctx);
-    const response = await sendAutomaticEmailMessage({ triggerEvent: event, templateId: tpl.id, templateName: tpl.name, locale, recipientUserId: ctx.user.id, recipientName: ctx.user.name || null, recipientEmail: ctx.user.email ?? null, renderedSubject: subject, renderedBody: html, senderEmail: config.emailIdentity, variables, donationId, purpose: opts.purpose, attachments: opts.attachments });
+    const routed = resolveTriggerSender(config, "EMAIL", { locale, purpose: opts.purpose });
+    /* A routing refusal is the answer, not a prompt to fall back to the default identity. */
+    if (!routed.ok) return { channel: "EMAIL", outcome: "SKIPPED", reason: routed.reason };
+    const response = await sendAutomaticEmailMessage({ triggerEvent: event, templateId: tpl.id, templateName: tpl.name, locale, recipientUserId: ctx.user.id, recipientName: ctx.user.name || null, recipientEmail: ctx.user.email ?? null, renderedSubject: subject, renderedBody: html, senderEmail: routed.sender.senderEmail, variables, donationId, purpose: opts.purpose, attachments: opts.attachments });
     return { channel: "EMAIL", outcome: response.outcome, reason: response.reason };
   }
 
@@ -75,7 +92,19 @@ export async function sendTriggerMessage(
     if (!tpl) return null;
     const variant = resolveWhatsappBody(tpl, locale);
     const body = mergeText(variant.body, ctx);
-    const response = await sendAutomaticWhatsappMessage({ triggerEvent: event, templateId: tpl.id, templateName: tpl.name, locale, recipientUserId: ctx.user.id, recipientName: ctx.user.name || null, recipientPhone: ctx.user.phone ?? null, renderedBody: body, metaTemplate: resolveMetaTemplateMapping(tpl, locale), sender: config.whatsappSender, variables, donationId, purpose: opts.purpose });
+    const routed = resolveTriggerSender(config, "WHATSAPP", { locale, purpose: opts.purpose });
+    if (!routed.ok) return { channel: "WHATSAPP", outcome: "SKIPPED", reason: routed.reason };
+    const metaTemplate = await resolveMetaTemplateMapping(tpl, locale);
+    /* Meta's placeholders are positional, and the local template's variable catalog says which
+       token each position carries. Each one is rendered against this recipient's context through
+       the same merge the body uses, so the parameters and the body cannot disagree. */
+    const templateValues: Record<string, string> = {};
+    (metaTemplate?.positionalNames ?? []).forEach((name, index) => {
+      const value = mergeText(`{{${name}}}`, ctx);
+      templateValues[name] = value;
+      templateValues[String(index + 1)] = value;
+    });
+    const response = await sendAutomaticWhatsappMessage({ triggerEvent: event, templateId: tpl.id, templateName: tpl.name, locale, recipientUserId: ctx.user.id, recipientName: ctx.user.name || null, recipientPhone: ctx.user.phone ?? null, renderedBody: body, metaTemplate, templateValues, sender: { id: routed.sender.id, phoneNumberId: routed.sender.phoneNumberId }, variables, donationId, purpose: opts.purpose });
     return { channel: "WHATSAPP", outcome: response.outcome, reason: response.reason };
   }
 

@@ -169,7 +169,11 @@ export async function sendAutomaticWhatsappMessage(
     recipientPhone: string | null;
     renderedBody: string;
     /** Meta-approved template mapping, or null when the stored template can't be sent through Meta. */
-    metaTemplate: { name: string; language: string } | null;
+    metaTemplate: MetaTemplateMapping | null;
+    /** Values for the template's placeholders, keyed by variable name and/or position. */
+    templateValues?: Record<string, string | null | undefined>;
+    /** Asset URL for a template whose Meta header is IMAGE/VIDEO/DOCUMENT. */
+    headerMediaUrl?: string | null;
     /** Resolved Meta sender (must have a phoneNumberId to actually send). */
     sender: { id?: string | null; phoneNumberId: string | null } | null;
   }
@@ -217,12 +221,30 @@ export async function sendAutomaticWhatsappMessage(
     return { outcome: "SKIPPED", reason: "META_SENDER_MISSING_PHONE_NUMBER_ID" };
   }
 
+  /* Meta counts parameters against the schema it approved, so the components are built from that
+     schema rather than from the local body text. A template asking for a value we cannot supply is
+     skipped here instead of being sent and rejected with `#132000`. */
+  const { buildMetaComponents } = await import("./providers/meta-whatsapp/parameters");
+  const built = buildMetaComponents({
+    componentsSchema: input.metaTemplate.componentsSchema,
+    values: input.templateValues ?? {},
+    positionalNames: input.metaTemplate.positionalNames,
+    headerMediaUrl: input.headerMediaUrl ?? null,
+  });
+  if (!built.ok) {
+    await markDeliveryStatus(id, "SKIPPED", { errorMessage: built.reason });
+    await mirrorSentMessage("WHATSAPP", input, "SKIPPED", { recipientPhone: input.recipientPhone, renderedBody: input.renderedBody, errorMessage: `${built.reason}: ${built.detail}` });
+    return { outcome: "SKIPPED", reason: built.reason };
+  }
+
   const res = await sendPreparedDelivery({
     channel: "WHATSAPP",
     sender: { provider: "META_WHATSAPP", phoneNumberId: input.sender.phoneNumberId },
     to: input.recipientPhone,
     templateName: input.metaTemplate.name,
+    /* The variant's OWN language, never the recipient's locale. */
     languageCode: input.metaTemplate.language,
+    components: built.components,
   });
 
   if (!res.ok) {
@@ -294,21 +316,58 @@ export async function sendAutomaticSmsMessage(
   return { outcome: "SENT", providerMessageId: res.providerMessageId };
 }
 
+export type MetaTemplateMapping = {
+  name: string;
+  /** `{{1}}`, `{{2}}` … in order, from the local template's variable catalog. */
+  positionalNames: string[];
+  /** The language code of the variant actually chosen — NOT the recipient's locale. */
+  language: string;
+  /** Meta's own component schema for that variant, for building parameters. */
+  componentsSchema: unknown;
+  /** The locale the chosen variant serves, when it maps to one of ours. */
+  resolvedLocale: string | null;
+};
+
 /**
- * Resolve a Meta-approved template mapping from a stored WhatsappTemplate. Returns null unless the
- * template is genuinely a Meta template (provider META/META_WHATSAPP, approved, with a name+language).
- * Twilio-imported and MANUAL free-text templates return null → automatic WhatsApp is SKIPPED.
+ * Resolve the Meta template mapping for one recipient locale — from what Meta said, per language.
+ *
+ * Two things were wrong before. The template's approval was read off the local row
+ * (`provider`/`approvalStatus`/`externalTemplateId` typed in by hand), so the platform believed
+ * its own bookkeeping instead of the provider: a template Meta had rejected, or never received, was
+ * "approved" here until a send failed. And the language sent to Meta was `tpl.language ?? locale`
+ * — the recipient's locale. A French donor with only an Arabic variant approved therefore got a
+ * request for `fr`, which Meta rejects outright (`#132001`); the message was lost even though a
+ * perfectly good Arabic variant existed. The language now comes from the variant that was chosen,
+ * which is the only language that variant can be sent in.
+ *
+ * Returns null when nothing is sendable — a free-text MANUAL template, a Twilio import, a template
+ * whose variants Meta has not approved, or one the sync has never seen. Automatic WhatsApp is then
+ * SKIPPED, which is the honest outcome: Meta refuses business-initiated free text, so there is no
+ * legal payload to fall back to.
  */
-export function resolveMetaTemplateMapping(
-  tpl: { provider?: string | null; approvalStatus?: string | null; language?: string | null; externalTemplateId?: string | null; name?: string | null },
+export async function resolveMetaTemplateMapping(
+  tpl: { id?: string | null; provider?: string | null; name?: string | null; variables?: unknown },
   locale: string
-): { name: string; language: string } | null {
+): Promise<MetaTemplateMapping | null> {
   const provider = (tpl.provider ?? "").toUpperCase();
-  const approved = (tpl.approvalStatus ?? "").toLowerCase() === "approved";
   if (provider !== "META" && provider !== "META_WHATSAPP") return null;
-  if (!approved) return null;
-  // A Meta template is identified by its registered name; prefer the explicit external id, else name.
-  const name = (tpl.externalTemplateId ?? tpl.name ?? "").trim();
-  if (!name) return null;
-  return { name, language: (tpl.language ?? locale).trim() || locale };
+  if (!tpl.id) return null;
+  const { getTemplateReadiness } = await import("./whatsapp-template-sync");
+  const readiness = await getTemplateReadiness(tpl.id, locale);
+  if (!readiness.ready || !readiness.providerTemplateName || !readiness.languageCode) return null;
+  return {
+    name: readiness.providerTemplateName,
+    positionalNames: positionalVariableNames(tpl.variables),
+    language: readiness.languageCode,
+    componentsSchema: readiness.componentsSchema,
+    resolvedLocale: readiness.locale,
+  };
+}
+
+/** The local `variables` catalog is `Array<{ key, … }>`, already in placeholder order. */
+function positionalVariableNames(variables: unknown): string[] {
+  if (!Array.isArray(variables)) return [];
+  return variables
+    .map((entry) => (entry && typeof entry === "object" ? String((entry as { key?: unknown }).key ?? "") : ""))
+    .filter((key) => key.length > 0);
 }

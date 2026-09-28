@@ -15,6 +15,11 @@ const PROGRESS_RANK: Partial<Record<string, number>> = {
   OPENED: 4,
   READ: 4,
   CLICKED: 5,
+  /* A reply is the furthest a conversation can get: the recipient read the message and answered it.
+     It had no rank at all, so `shouldApplyDeliveryStatus` scored it 0 and refused it against every
+     state — the WhatsApp webhook's REPLIED marking could never have been applied through this
+     guard. */
+  REPLIED: 6,
 };
 
 const TERMINAL: readonly DeliveryStatusId[] = ["FAILED", "BOUNCED", "UNSUBSCRIBED"];

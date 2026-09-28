@@ -60,7 +60,11 @@ import {
   donationDisplayTotalLocal,
 } from "@/lib/dashboard/format-dashboard-money";
 import { formatIstanbulCalendarMonthLong } from "@/lib/admin/current-calendar-month-utc";
-import { DayOfMonthRevenueGrid, type DayOfMonthPoint } from "@/components/dashboard/DayOfMonthRevenueGrid";
+import {
+  DayOfMonthRevenueGrid,
+  type DayOfMonthPoint,
+  type UnplacedPlans,
+} from "@/components/dashboard/DayOfMonthRevenueGrid";
 import { StatsMetricCard } from "@/components/dashboard/StatsMetricCard";
 import { getDashboardChartPeriodLabelAr } from "@/lib/dashboard/chart-period-label-ar";
 import { getPeriodDateKeys } from "@/lib/dashboard/period-date-range";
@@ -88,8 +92,16 @@ interface ChartDataPoint {
   count: number;
   amountOneTime: number;
   countOneTime: number;
+  /** All recurring charges (historical name — predates daily / Friday plans). */
   amountMonthly: number;
   countMonthly: number;
+  amountDaily?: number;
+  countDaily?: number;
+  amountFriday?: number;
+  countFriday?: number;
+  /** Charges from monthly plans only. */
+  amountMonthlyPlan?: number;
+  countMonthlyPlan?: number;
   teamSupport: number;
   fees: number;
 }
@@ -122,6 +134,8 @@ interface DonationRow {
   teamSupport: number;
   fees: number;
   type: string;
+  /** Cadence of the plan behind the charge. */
+  frequency?: RecurringFrequency | null;
   /** true when this row is an automatic renewal rather than the signup charge */
   isRecurringCharge?: boolean;
   /** 1-based position within its subscription (1 = signup charge) */
@@ -148,10 +162,12 @@ interface SubscriptionRow {
   status: "ACTIVE" | "PAUSED" | "CANCELLED" | "PAYMENT_FAILED";
   amount: number;
   amountUSD: number | null;
+  /** Per-charge USD on a monthly scale (daily ×30.44, Friday ×4.35). */
+  monthlyEquivalentUSD?: number | null;
   currency: string;
   createdAt: string;
-  /** DAILY | FRIDAY | MONTHLY — absent on rows from before the field existed (monthly). */
-  frequency?: "DAILY" | "FRIDAY" | "MONTHLY" | null;
+  /** DAILY | FRIDAY | MONTHLY — legacy plans come back as MONTHLY. */
+  frequency?: RecurringFrequency | null;
   nextBillingDate: string | null;
   lastBillingDate: string | null;
   donor: { id: string; name: string | null; email: string | null };
@@ -160,7 +176,48 @@ interface SubscriptionRow {
   referral: { id: string; code: string } | null;
 }
 
+type RecurringFrequency = "DAILY" | "FRIDAY" | "MONTHLY";
+type FrequencyFilter = "all" | RecurringFrequency;
+
+const FREQUENCIES: RecurringFrequency[] = ["DAILY", "FRIDAY", "MONTHLY"];
 const FREQUENCY_LABEL_AR: Record<string, string> = { DAILY: "يومي", FRIDAY: "كل جمعة", MONTHLY: "شهري" };
+/** One hue per cadence, reused by the cards, the stacked chart and the table badges. */
+const FREQUENCY_COLOR: Record<RecurringFrequency, string> = {
+  DAILY: "#2c8b5d",
+  FRIDAY: "#d39a27",
+  MONTHLY: "#234a60",
+};
+const FREQUENCY_BADGE_CLASS: Record<RecurringFrequency, string> = {
+  DAILY: "bg-emerald-50 text-emerald-700 border-emerald-200",
+  FRIDAY: "bg-amber-50 text-amber-800 border-amber-200",
+  MONTHLY: "bg-sky-50 text-sky-800 border-sky-200",
+};
+/** How the frequency splits the per-charge amount into a monthly figure — shown in notes. */
+const FREQUENCY_SCALE_NOTE: Record<RecurringFrequency, string> = {
+  DAILY: "× ٣٠٫٤ دفعة شهريًا",
+  FRIDAY: "× ٤٫٣٥ دفعة شهريًا",
+  MONTHLY: "دفعة واحدة شهريًا",
+};
+
+function FrequencyBadge({ frequency }: { frequency?: RecurringFrequency | null }) {
+  const f = frequency ?? "MONTHLY";
+  return (
+    <span className={cn("inline-block rounded-full border px-1.5 py-px text-[10px] font-semibold", FREQUENCY_BADGE_CLASS[f])}>
+      {FREQUENCY_LABEL_AR[f]}
+    </span>
+  );
+}
+
+type FrequencyBreakdownRow = {
+  activeCount: number;
+  activeAmountPerChargeUSD: number;
+  activeMonthlyUSD: number;
+  pausedCount: number;
+  cancelledCount: number;
+  paymentFailedCount: number;
+  paidCount: number;
+  paidAmountUSD: number;
+};
 
 type SubscriptionStatusFilter = "ACTIVE" | "PAUSED" | "CANCELLED" | "PAYMENT_FAILED" | "all";
 
@@ -189,6 +246,9 @@ interface DashboardStats {
   cancelledSubscriptionCount?: number;
   pausedSubscriptionAmountUSD?: number;
   cancelledSubscriptionAmountUSD?: number;
+  paymentFailedSubscriptionCount?: number;
+  paymentFailedSubscriptionAmountUSD?: number;
+  byFrequency?: Record<RecurringFrequency, FrequencyBreakdownRow>;
   campaignDonationsTotal: number;
   categoryDonationsTotal: number;
   campaignDonationsCount?: number;
@@ -265,6 +325,8 @@ export default function MonthlySubscriptionsDashboardPage() {
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [selectedCampaign, setSelectedCampaign] = useState<string>("all");
   const [selectedUserId, setSelectedUserId] = useState<string>("all");
+  /** Plan cadence — narrows every card, chart and table on the page. */
+  const [frequencyFilter, setFrequencyFilter] = useState<FrequencyFilter>("all");
 
   // Sync user filter from URL (e.g. from users page "تحليل تبرعات")
   useEffect(() => {
@@ -286,9 +348,14 @@ export default function MonthlySubscriptionsDashboardPage() {
   }, [searchParams]);
 
   const [chartData, setChartData] = useState<ChartDataPoint[]>([]);
-  const [dayOfMonth, setDayOfMonth] = useState<{ collected: DayOfMonthPoint[]; expected: DayOfMonthPoint[] }>({
+  const [dayOfMonth, setDayOfMonth] = useState<{
+    collected: DayOfMonthPoint[];
+    expected: DayOfMonthPoint[];
+    unplaced: UnplacedPlans[];
+  }>({
     collected: [],
     expected: [],
+    unplaced: [],
   });
   const [dayOfMonthLoading, setDayOfMonthLoading] = useState(true);
   const [chartLoading, setChartLoading] = useState(true);
@@ -300,7 +367,7 @@ export default function MonthlySubscriptionsDashboardPage() {
   const [donationsSortBy, setDonationsSortBy] = useState<"date" | "amount">("date");
   const [donationsSortOrder, setDonationsSortOrder] = useState<"asc" | "desc">("desc");
   const [donationsStatusFilter, setDonationsStatusFilter] = useState<"all" | "PAID" | "FAILED">("all");
-  /** Applied donor search (name or email) for أحدث الدفعات الشهرية — server-side. */
+  /** Applied donor search (name or email) for أحدث الدفعات المتكررة — server-side. */
   const [donationsSearch, setDonationsSearch] = useState("");
   /** Applied donor search (name or email) for قائمة الاشتراكات — server-side, independent of the table above. */
   const [subsSearch, setSubsSearch] = useState("");
@@ -478,16 +545,17 @@ export default function MonthlySubscriptionsDashboardPage() {
       if (selectedCategory !== "all") params.append("categoryId", selectedCategory);
       if (selectedCampaign !== "all") params.append("campaignId", selectedCampaign);
       if (effectiveUserId !== "all") params.append("userId", effectiveUserId);
+      if (frequencyFilter !== "all") params.set("frequency", frequencyFilter);
       const response = await axios.get(`/api/admin/subscriptions/overview/chart?${params}`);
       setChartData(Array.isArray(response.data) ? response.data : []);
     } catch (error) {
       console.error("Error fetching chart data:", error);
-      toast.error("فشل في تحميل بيانات التبرعات الشهرية");
+      toast.error("فشل في تحميل بيانات التبرعات المتكررة");
       setChartData([]);
     } finally {
       setChartLoading(false);
     }
-  }, [selectedCategory, selectedCampaign, selectedUserId, searchParams, chartPeriod, dateFrom, dateTo]);
+  }, [selectedCategory, selectedCampaign, selectedUserId, searchParams, chartPeriod, dateFrom, dateTo, frequencyFilter]);
 
   useEffect(() => {
     fetchChartData();
@@ -510,17 +578,19 @@ export default function MonthlySubscriptionsDashboardPage() {
       if (selectedCategory !== "all") params.append("categoryId", selectedCategory);
       if (selectedCampaign !== "all") params.append("campaignId", selectedCampaign);
       if (effectiveUserId !== "all") params.append("userId", effectiveUserId);
+      if (frequencyFilter !== "all") params.set("frequency", frequencyFilter);
       const response = await axios.get(`/api/admin/subscriptions/overview/day-of-month?${params}`);
       setDayOfMonth({
         collected: Array.isArray(response.data?.collected) ? response.data.collected : [],
         expected: Array.isArray(response.data?.expected) ? response.data.expected : [],
+        unplaced: Array.isArray(response.data?.unplaced) ? response.data.unplaced : [],
       });
     } catch {
-      setDayOfMonth({ collected: [], expected: [] });
+      setDayOfMonth({ collected: [], expected: [], unplaced: [] });
     } finally {
       setDayOfMonthLoading(false);
     }
-  }, [selectedCategory, selectedCampaign, selectedUserId, searchParams]);
+  }, [selectedCategory, selectedCampaign, selectedUserId, searchParams, frequencyFilter]);
 
   useEffect(() => {
     fetchDayOfMonth();
@@ -540,8 +610,9 @@ export default function MonthlySubscriptionsDashboardPage() {
       categoryId: selectedCategory,
       campaignId: selectedCampaign,
       userId: effectiveUserId,
+      frequency: frequencyFilter,
     };
-  }, [selectedCategory, selectedCampaign, selectedUserId, searchParams]);
+  }, [selectedCategory, selectedCampaign, selectedUserId, searchParams, frequencyFilter]);
 
   // Stats — affected by فترة (period + dateFrom/dateTo) and category/campaign filters
   const fetchStats = useCallback(async () => {
@@ -555,6 +626,7 @@ export default function MonthlySubscriptionsDashboardPage() {
       }
       if (selectedCategory !== "all") params.set("categoryId", selectedCategory);
       if (selectedCampaign !== "all") params.set("campaignId", selectedCampaign);
+      if (frequencyFilter !== "all") params.set("frequency", frequencyFilter);
       const response = await fetch(`/api/admin/subscriptions/overview/stats?${params}`);
       const data = await response.json();
       if (!response.ok) {
@@ -569,7 +641,7 @@ export default function MonthlySubscriptionsDashboardPage() {
     } finally {
       setLoading(false);
     }
-  }, [chartPeriod, dateFrom, dateTo, selectedCategory, selectedCampaign]);
+  }, [chartPeriod, dateFrom, dateTo, selectedCategory, selectedCampaign, frequencyFilter]);
 
   useEffect(() => {
     fetchStats();
@@ -592,13 +664,14 @@ export default function MonthlySubscriptionsDashboardPage() {
         if (start) params.set("start", start);
         if (end) params.set("end", end);
         params.set("subscriptionOnly", "1");
+        if (frequencyFilter !== "all") params.set("frequency", frequencyFilter);
         if (donationsStatusFilter !== "all") params.set("status", donationsStatusFilter);
         if (donationCountryFilter !== "all") params.set("country", donationCountryFilter);
         if (donationsSearch) params.set("search", donationsSearch);
         const res = await fetch(`/api/donations?${params}`);
         const data = await res.json();
         if (!res.ok) {
-          toast.error(data?.error || "فشل في تحميل الدفعات الشهرية");
+          toast.error(data?.error || "فشل في تحميل الدفعات المتكررة");
           return;
         }
         const list = Array.isArray(data.donations) ? data.donations : [];
@@ -606,7 +679,7 @@ export default function MonthlySubscriptionsDashboardPage() {
         setDonationsTotal(data.pagination?.total ?? 0);
       } catch (error) {
         console.error("Error fetching donations:", error);
-        toast.error("فشل في تحميل الدفعات الشهرية");
+        toast.error("فشل في تحميل الدفعات المتكررة");
       } finally {
         setDonationsLoading(false);
         setDonationsFetchedOnce(true);
@@ -624,6 +697,7 @@ export default function MonthlySubscriptionsDashboardPage() {
       donationsStatusFilter,
       donationCountryFilter,
       donationsSearch,
+      frequencyFilter,
     ]
   );
 
@@ -632,7 +706,7 @@ export default function MonthlySubscriptionsDashboardPage() {
     if (loading) return;
     setDonationsPage(1);
     fetchDonations(1, false);
-  }, [loading, selectedCategory, selectedCampaign, selectedUserId, chartPeriod, dateFrom, dateTo, donationsSortBy, donationsSortOrder, donationsStatusFilter, donationCountryFilter, donationsSearch, fetchDonations]);
+  }, [loading, selectedCategory, selectedCampaign, selectedUserId, chartPeriod, dateFrom, dateTo, donationsSortBy, donationsSortOrder, donationsStatusFilter, donationCountryFilter, donationsSearch, frequencyFilter, fetchDonations]);
 
   const fetchSubscriptions = useCallback(
     async (page: number, append: boolean) => {
@@ -655,6 +729,7 @@ export default function MonthlySubscriptionsDashboardPage() {
         if (selectedCampaign !== "all") params.set("campaignId", selectedCampaign);
         if (effectiveUserId !== "all") params.set("userId", effectiveUserId);
         if (subsSearch) params.set("search", subsSearch);
+        if (frequencyFilter !== "all") params.set("frequency", frequencyFilter);
         const res = await fetch(`/api/admin/subscriptions?${params}`);
         const data = await res.json();
         if (!res.ok) {
@@ -680,6 +755,7 @@ export default function MonthlySubscriptionsDashboardPage() {
       subsSortBy,
       subsSortOrder,
       subsSearch,
+      frequencyFilter,
     ]
   );
 
@@ -732,6 +808,7 @@ export default function MonthlySubscriptionsDashboardPage() {
     subsSortBy,
     subsSortOrder,
     subsSearch,
+    frequencyFilter,
     fetchSubscriptions,
   ]);
 
@@ -764,9 +841,10 @@ export default function MonthlySubscriptionsDashboardPage() {
       fetchSubscriptions(1, false),
       fetchStats(),
       fetchChartData(),
+      fetchDayOfMonth(),
       fetchCountries(),
     ]);
-  }, [fetchDonations, fetchSubscriptions, fetchStats, fetchChartData, fetchCountries]);
+  }, [fetchDonations, fetchSubscriptions, fetchStats, fetchChartData, fetchDayOfMonth, fetchCountries]);
   const donationActions = useDonationActions({
     enabled: canEditDonations,
     onChange: refreshAfterDonationMutation,
@@ -821,18 +899,33 @@ export default function MonthlySubscriptionsDashboardPage() {
       count: stats?.cancelledSubscriptionCount ?? 0,
       color: "#6e818b",
     },
+    {
+      name: "تعذّر الخصم",
+      value: stats?.paymentFailedSubscriptionAmountUSD ?? 0,
+      count: stats?.paymentFailedSubscriptionCount ?? 0,
+      color: "#b04a2c",
+    },
   ].filter((d) => d.value > 0 || d.count > 0);
+
+  // Cadence split of active plans — money is the monthly equivalent so the slices add up to MRR.
+  const frequencySplitData = FREQUENCIES.map((f) => ({
+    name: FREQUENCY_LABEL_AR[f],
+    value: stats?.byFrequency?.[f]?.activeMonthlyUSD ?? 0,
+    count: stats?.byFrequency?.[f]?.activeCount ?? 0,
+    color: FREQUENCY_COLOR[f],
+  })).filter((d) => d.value > 0 || d.count > 0);
+  const frequencyLabelSuffix = frequencyFilter === "all" ? "" : ` — ${FREQUENCY_LABEL_AR[frequencyFilter]}`;
 
   return (
     <div className="min-h-0" dir="rtl">
       <div className="space-y-6 sm:space-y-8 p-0 sm:p-4 md:p-6 lg:p-8 max-w-[1600px] mx-auto">
         <PageHeader
-          title="التبرعات الشهرية والاشتراكات"
+          title="التبرعات المتكررة والاشتراكات"
           icon={Repeat}
           description={
             searchParams.get("userId") ? (
               <>
-                عرض دفعات شهرية للمستخدم:{" "}
+                عرض الدفعات المتكررة للمستخدم:{" "}
                 <span className="font-medium text-slate-900 whitespace-normal break-words">
                   {users.find((u) => u.id === searchParams.get("userId"))?.name ||
                     users.find((u) => u.id === searchParams.get("userId"))?.email ||
@@ -840,10 +933,39 @@ export default function MonthlySubscriptionsDashboardPage() {
                 </span>
               </>
             ) : (
-              "إيرادات الاشتراكات، دفعات التجديد، والحالة (نشط / موقوف / ملغى)"
+              "كل التبرعات المتكررة — اليومية، وكل جمعة، والشهرية: الإيرادات، دفعات التجديد، والحالة"
             )
           }
         />
+
+        {/* Cadence switch — narrows every figure, chart and table below to one kind of plan. */}
+        <div className="flex flex-wrap items-center gap-2" dir="rtl">
+          <span className="text-xs font-semibold text-slate-500">الدورية:</span>
+          <div className="inline-flex rounded-lg border border-slate-200 bg-white p-0.5 shadow-sm" role="tablist">
+            {(["all", ...FREQUENCIES] as FrequencyFilter[]).map((f) => (
+              <button
+                key={f}
+                type="button"
+                role="tab"
+                aria-selected={frequencyFilter === f}
+                onClick={() => setFrequencyFilter(f)}
+                className={cn(
+                  "inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-semibold transition-colors",
+                  frequencyFilter === f ? "bg-brand text-white shadow-sm" : "text-slate-600 hover:bg-slate-50"
+                )}
+              >
+                {f !== "all" && (
+                  <span
+                    className="h-2 w-2 rounded-full"
+                    style={{ backgroundColor: frequencyFilter === f ? "#fff" : FREQUENCY_COLOR[f] }}
+                    aria-hidden="true"
+                  />
+                )}
+                {f === "all" ? "الكل" : FREQUENCY_LABEL_AR[f]}
+              </button>
+            ))}
+          </div>
+        </div>
 
         {/* Executive hero band — mirrors /dashboard. This page opened with 17 equal-weight KPI
             tiles spread across three tabs and no headline figure at all, so there was nothing
@@ -852,22 +974,91 @@ export default function MonthlySubscriptionsDashboardPage() {
           <div className="grid gap-4 lg:grid-cols-2">
             <MetricSummaryBand
               icon={Repeat}
-              eyebrow="الإيراد الشهري المتكرر (MRR)"
+              eyebrow={`الإيراد الشهري المتكرر (MRR)${frequencyLabelSuffix}`}
               badge="شهريًا"
-              value={formatMoney(Math.round(stats?.monthlyRecurringRevenue) ?? 0)}
-              note="مجموع قيم الاشتراكات النشطة شهريًا."
+              value={formatMoney(Math.round(stats?.monthlyRecurringRevenue ?? 0))}
+              note="المكافئ الشهري للاشتراكات النشطة: اليومي × ٣٠٫٤، وكل جمعة × ٤٫٣٥، والشهري كما هو."
             />
             {/* ARR is MRR×12 — a projection of the current book, not money collected. The note
                 says so, because a figure this size sitting beside real revenue invites being
                 read as cash in hand. */}
             <MetricSummaryBand
               icon={TrendingUp}
-              eyebrow="الإيراد السنوي المتكرر (ARR)"
+              eyebrow={`الإيراد السنوي المتكرر (ARR)${frequencyLabelSuffix}`}
               badge="سنويًا"
               value={formatMoney(Math.round((stats?.monthlyRecurringRevenue ?? 0) * 12))}
               note="توقّع سنوي = الإيراد الشهري المتكرر × ١٢، بافتراض استمرار الاشتراكات النشطة الحالية. ليس مبلغًا محصّلًا."
             />
           </div>
+        )}
+
+        {/* Per-cadence cards. Each is a filter shortcut too — clicking one narrows the page. */}
+        {!searchParams.get("userId") && stats?.byFrequency && (
+          <section className="grid gap-3 sm:grid-cols-3" dir="rtl">
+            {FREQUENCIES.map((f) => {
+              const row = stats.byFrequency![f];
+              const mrr = stats.byFrequency
+                ? FREQUENCIES.reduce((s, k) => s + (stats.byFrequency![k]?.activeMonthlyUSD ?? 0), 0)
+                : 0;
+              const share = mrr > 0 ? Math.round(((row?.activeMonthlyUSD ?? 0) / mrr) * 100) : 0;
+              const selected = frequencyFilter === f;
+              const dimmed = frequencyFilter !== "all" && !selected;
+              return (
+                <button
+                  key={f}
+                  type="button"
+                  onClick={() => setFrequencyFilter(selected ? "all" : f)}
+                  aria-pressed={selected}
+                  className={cn(
+                    "rounded-2xl border bg-white p-4 text-right shadow-[0_1px_2px_rgba(16,24,40,0.04)] transition-all hover:-translate-y-0.5 hover:shadow-md",
+                    selected ? "border-brand ring-2 ring-brand/20" : "border-slate-200",
+                    dimmed && "opacity-60"
+                  )}
+                >
+                  <div className="mb-3 flex items-center justify-between gap-2">
+                    <span className="flex items-center gap-2 text-sm font-semibold text-slate-900">
+                      <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: FREQUENCY_COLOR[f] }} aria-hidden="true" />
+                      {f === "DAILY" ? "التبرعات اليومية" : f === "FRIDAY" ? "تبرعات كل جمعة" : "التبرعات الشهرية"}
+                    </span>
+                    <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-semibold tabular-nums text-slate-600">
+                      {row?.activeCount ?? 0} نشط
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-500">المكافئ الشهري</p>
+                  <p className="text-xl font-bold tabular-nums text-slate-900">
+                    {formatMoney(Math.round(row?.activeMonthlyUSD ?? 0))}
+                  </p>
+                  {frequencyFilter === "all" && (
+                    <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-slate-100" aria-hidden="true">
+                      <div className="h-full rounded-full" style={{ width: `${share}%`, backgroundColor: FREQUENCY_COLOR[f] }} />
+                    </div>
+                  )}
+                  <div className="mt-3 grid grid-cols-2 gap-2 text-[11px] text-slate-500">
+                    <div>
+                      <p>قيمة الدفعات</p>
+                      <p className="font-semibold tabular-nums text-slate-800">
+                        {formatMoney(row?.activeAmountPerChargeUSD ?? 0, undefined, undefined, true)}
+                        <span className="font-normal text-slate-400"> {FREQUENCY_SCALE_NOTE[f]}</span>
+                      </p>
+                    </div>
+                    <div>
+                      <p>محصّل ({chartFilterPeriodLabelAr})</p>
+                      <p className="font-semibold tabular-nums text-slate-800">
+                        {formatMoney(row?.paidAmountUSD ?? 0, undefined, undefined, true)}
+                        <span className="font-normal text-slate-400"> · {row?.paidCount ?? 0} دفعة</span>
+                      </p>
+                    </div>
+                  </div>
+                  {((row?.pausedCount ?? 0) + (row?.cancelledCount ?? 0) + (row?.paymentFailedCount ?? 0)) > 0 && (
+                    <p className="mt-2 text-[11px] text-slate-400">
+                      موقوف {row?.pausedCount ?? 0} · ملغى {row?.cancelledCount ?? 0}
+                      {(row?.paymentFailedCount ?? 0) > 0 ? ` · تعذّر الخصم ${row?.paymentFailedCount}` : ""}
+                    </p>
+                  )}
+                </button>
+              );
+            })}
+          </section>
         )}
 
         {/* المؤشرات — تختفي عند عرض تبرعات مستخدم معين عبر الرابط */}
@@ -948,7 +1139,7 @@ export default function MonthlySubscriptionsDashboardPage() {
                   icon={Repeat}
                   accent="emerald"
                   format="money"
-                  subtitle="اشتراكات نشطة — مبالغ مخططة"
+                  subtitle="اشتراكات نشطة — المكافئ الشهري لكل الدوريات"
                 />
                 <StatsMetricCard
                   compact
@@ -1004,7 +1195,7 @@ export default function MonthlySubscriptionsDashboardPage() {
                 />
                 <StatsMetricCard
                   compact
-                  title={`دفعات شهرية (${chartFilterPeriodLabelAr})`}
+                  title={`دفعات متكررة (${chartFilterPeriodLabelAr})`}
                   value={stats?.totalDonations ?? 0}
                   icon={Receipt}
                   accent="violet"
@@ -1048,6 +1239,7 @@ export default function MonthlySubscriptionsDashboardPage() {
                   icon={Repeat}
                   accent="emerald"
                   format="money"
+                  subtitle="مكافئ شهري"
                 />
                 <StatsMetricCard
                   compact
@@ -1056,7 +1248,15 @@ export default function MonthlySubscriptionsDashboardPage() {
                   icon={Repeat}
                   accent="indigo"
                   format="money"
-                  subtitle={`موقوف: ${stats?.pausedSubscriptionCount ?? 0} · ملغى: ${stats?.cancelledSubscriptionCount ?? 0}`}
+                  subtitle={`مكافئ شهري · موقوف: ${stats?.pausedSubscriptionCount ?? 0} · ملغى: ${stats?.cancelledSubscriptionCount ?? 0}`}
+                />
+                <StatsMetricCard
+                  compact
+                  title="تعذّر الخصم (عدد)"
+                  value={stats?.paymentFailedSubscriptionCount ?? 0}
+                  icon={Receipt}
+                  accent="orange"
+                  subtitle="استنفدت محاولات الخصم التلقائي — تحتاج تحديث البطاقة"
                 />
               </>
             )}
@@ -1118,15 +1318,11 @@ export default function MonthlySubscriptionsDashboardPage() {
                                   day: "numeric",
                                 })
                               }
-                              formatter={(value: number, name: string) => {
-                                if (name === "amountMonthly") return [formatMoney(Number(value), undefined, undefined, true), "دفعات اشتراك"];
-                                return [formatMoney(Number(value), undefined, undefined, true), name];
-                              }}
+                              formatter={(value: number, name: string) => [formatMoney(Number(value), undefined, undefined, true), name]}
                               content={({ active, payload, label }) => {
                                 if (!active || !payload?.length) return null;
                                 const point = chartData.find((d) => d.date === label);
-                                const isAmount = (key: string) =>
-                                  key === "amountMonthly" || key === "مبلغ شهري" || key === "دفعات اشتراك";
+                                const isAmount = (key: string) => key.startsWith("amount");
                                 return (
                                   <div className="rounded-lg border border-border bg-card px-3 py-2 shadow-sm">
                                     <p className="text-sm font-medium text-slate-700 mb-1.5">
@@ -1156,13 +1352,18 @@ export default function MonthlySubscriptionsDashboardPage() {
                               }}
                             />
                             <Legend />
-                            <Bar
-                              dataKey="amountMonthly"
-                              fill="#234a60"
-                              radius={[4, 4, 0, 0]}
-                              maxBarSize={36}
-                              name="دفعات اشتراك"
-                            />
+                            {/* One stack per cadence; filtered to one cadence it is a single bar. */}
+                            {FREQUENCIES.filter((f) => frequencyFilter === "all" || frequencyFilter === f).map((f, i, shown) => (
+                              <Bar
+                                key={f}
+                                stackId="cadence"
+                                dataKey={f === "DAILY" ? "amountDaily" : f === "FRIDAY" ? "amountFriday" : "amountMonthlyPlan"}
+                                fill={FREQUENCY_COLOR[f]}
+                                radius={i === shown.length - 1 ? [4, 4, 0, 0] : [0, 0, 0, 0]}
+                                maxBarSize={36}
+                                name={FREQUENCY_LABEL_AR[f]}
+                              />
+                            ))}
                           </BarChart>
                         </ResponsiveContainer>
                       ) : (
@@ -1427,8 +1628,14 @@ export default function MonthlySubscriptionsDashboardPage() {
                 </TabsContent>
 
                 <TabsContent value="split" className="mt-0" dir="rtl">
-                  <Tabs defaultValue="subscription-status" className="w-full" dir="rtl">
+                  <Tabs defaultValue="frequency" className="w-full" dir="rtl">
                     <TabsList className="bg-slate-100 p-1 rounded-lg mb-4 inline-flex flex-row-reverse">
+                      <TabsTrigger
+                        value="frequency"
+                        className="data-[state=active]:bg-card data-[state=active]:shadow-sm text-sm"
+                      >
+                        حسب الدورية
+                      </TabsTrigger>
                       <TabsTrigger
                         value="campaign-category"
                         className="data-[state=active]:bg-card data-[state=active]:shadow-sm text-sm"
@@ -1442,6 +1649,43 @@ export default function MonthlySubscriptionsDashboardPage() {
                         حالة الاشتراك
                       </TabsTrigger>
                     </TabsList>
+                    <TabsContent value="frequency" className="mt-0" dir="rtl">
+                      <div className="h-[340px] w-full flex items-center justify-center">
+                        {frequencySplitData.length > 0 ? (
+                          <ResponsiveContainer width="100%" height="100%">
+                            <PieChart>
+                              <Pie
+                                data={frequencySplitData}
+                                cx="50%"
+                                cy="50%"
+                                innerRadius={70}
+                                outerRadius={110}
+                                paddingAngle={2}
+                                dataKey="value"
+                                nameKey="name"
+                                label={false}
+                              >
+                                {frequencySplitData.map((entry) => (
+                                  <Cell key={entry.name} fill={entry.color} />
+                                ))}
+                              </Pie>
+                              <Tooltip
+                                formatter={(value: number, _name: string, props: { payload?: { count?: number } }) => {
+                                  const count = props?.payload?.count ?? 0;
+                                  return [
+                                    `${formatMoney(Number(value), undefined, undefined, true)} شهريًا — ${count} اشتراك نشط`,
+                                    "المكافئ الشهري / العدد",
+                                  ];
+                                }}
+                              />
+                              <Legend content={DashboardPieLegendByValue} />
+                            </PieChart>
+                          </ResponsiveContainer>
+                        ) : (
+                          <p className="text-slate-500">لا توجد بيانات</p>
+                        )}
+                      </div>
+                    </TabsContent>
                     <TabsContent value="campaign-category" className="mt-0">
                       <div className="h-[340px] w-full flex items-center justify-center">
                         {revenueSplitData.length > 0 ? (
@@ -1531,7 +1775,7 @@ export default function MonthlySubscriptionsDashboardPage() {
                     className="data-[state=active]:bg-card data-[state=active]:shadow-sm gap-2"
                   >
                     <BarChart3 className="w-4 h-4" />
-                    الدفعات الشهرية عبر الزمن
+                    الدفعات المتكررة عبر الزمن
                   </TabsTrigger>
                 </TabsList>
               </Tabs>
@@ -1820,17 +2064,17 @@ export default function MonthlySubscriptionsDashboardPage() {
 
         </Card>
 
-        {/* الدفعات الشهرية */}
+        {/* الدفعات المتكررة */}
         <section className="space-y-4">
           <h2 className="text-xs font-semibold text-slate-500 uppercase tracking-wider text-right">
-            الدفعات الشهرية
+            الدفعات المتكررة{frequencyLabelSuffix}
           </h2>
           <Card className="border-border shadow-sm">
             <CardHeader className="border-b border-slate-100 py-4">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 flex-row-reverse">
                 <div className="text-right space-y-1">
                   <CardTitle className="text-base font-semibold text-slate-900">
-                    أحدث الدفعات الشهرية
+                    أحدث الدفعات المتكررة
                   </CardTitle>
                 </div>
                 <div className="flex flex-col sm:flex-row gap-2 sm:items-center shrink-0">
@@ -1951,6 +2195,11 @@ export default function MonthlySubscriptionsDashboardPage() {
                             </span>
                           </td>
                           <td className="py-2.5 px-3 whitespace-nowrap">
+                            {d.type === "MONTHLY" && (
+                              <div className="mb-1">
+                                <FrequencyBadge frequency={d.frequency} />
+                              </div>
+                            )}
                             {d.type === "MONTHLY" ? (
                               d.isRecurringCharge ? (
                                 <span
@@ -2165,6 +2414,7 @@ export default function MonthlySubscriptionsDashboardPage() {
           loading={dayOfMonthLoading}
           formatMoney={formatMoney}
           filters={dayOfMonthFilters}
+          unplaced={dayOfMonth.unplaced}
         />
 
         {/* الاشتراكات — الجدول السفلي */}
@@ -2273,6 +2523,9 @@ export default function MonthlySubscriptionsDashboardPage() {
                         <SelectItem value="CANCELLED" className="text-xs">
                           ملغاة
                         </SelectItem>
+                        <SelectItem value="PAYMENT_FAILED" className="text-xs">
+                          تعذّر الخصم
+                        </SelectItem>
                         <SelectItem value="all" className="text-xs">
                           الكل
                         </SelectItem>
@@ -2306,7 +2559,7 @@ export default function MonthlySubscriptionsDashboardPage() {
                   <thead>
                     <tr className="border-b border-slate-200 bg-slate-50/90 ">
                       <th className="text-right py-3 px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">المشترك</th>
-                      <th className="text-right py-3 px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500 whitespace-nowrap">المبلغ الشهري</th>
+                      <th className="text-right py-3 px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500 whitespace-nowrap">مبلغ الدفعة</th>
                       <th className="text-right py-3 px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">الحالة</th>
                       <th className="text-right py-3 px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500 max-w-[160px]">المشروع / الفئة</th>
                       <th className="text-right py-3 px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">الإحالة</th>
@@ -2319,19 +2572,19 @@ export default function MonthlySubscriptionsDashboardPage() {
                   <tbody>
                     {subsLoading && subsRows.length === 0 ? (
                       <tr>
-                        <td colSpan={8} className="py-14 text-center">
+                        <td colSpan={9} className="py-14 text-center">
                           <Loader2 className="w-8 h-8 animate-spin mx-auto text-brand" />
                         </td>
                       </tr>
                     ) : !subsFetchedOnce ? (
                       <tr>
-                        <td colSpan={8} className="py-14 text-center text-slate-500">
+                        <td colSpan={9} className="py-14 text-center text-slate-500">
                           جاري التحميل...
                         </td>
                       </tr>
                     ) : subsRows.length === 0 ? (
                       <tr>
-                        <td colSpan={8} className="py-14 text-center text-slate-500">
+                        <td colSpan={9} className="py-14 text-center text-slate-500">
                           لا توجد اشتراكات تطابق التصفية
                         </td>
                       </tr>
@@ -2353,10 +2606,16 @@ export default function MonthlySubscriptionsDashboardPage() {
                               )}
                             </button>
                           </td>
-                          <td className="py-2.5 px-3 font-semibold text-slate-800 align-top" dir="ltr">
+                          <td className="py-2.5 px-3 font-semibold text-slate-800 align-top" dir="rtl">
                             <span dir="ltr">
                               {formatMoney(s.amount, s.currency, s.amountUSD ?? undefined)}
                             </span>
+                            {/* Daily / Friday plans also show what they add up to in a month. */}
+                            {s.frequency && s.frequency !== "MONTHLY" && s.monthlyEquivalentUSD != null && (
+                              <span className="block text-[10px] font-normal text-slate-500">
+                                ≈ <span dir="ltr">{formatMoney(s.monthlyEquivalentUSD, undefined, undefined, true)}</span> شهريًا
+                              </span>
+                            )}
                           </td>
                           <td className="py-2.5 px-3 align-top min-w-[118px]">
                             <div className="flex items-center justify-end flex-row-reverse gap-1">
@@ -2449,7 +2708,7 @@ export default function MonthlySubscriptionsDashboardPage() {
                             )}
                           </td>
                           <td className="py-2.5 px-3 text-slate-600 align-top whitespace-nowrap">
-                            {FREQUENCY_LABEL_AR[s.frequency ?? "MONTHLY"] ?? "شهري"}
+                            <FrequencyBadge frequency={s.frequency} />
                           </td>
                           <td className="py-2.5 px-3 text-slate-600 align-top whitespace-nowrap">
                             {s.lastBillingDate
@@ -2519,8 +2778,8 @@ export default function MonthlySubscriptionsDashboardPage() {
         open={exportOpen}
         onOpenChange={setExportOpen}
         endpoint="/api/admin/monthly/export"
-        title="تصدير تقرير الاشتراكات الشهرية"
-        description="يشمل التقرير الاشتراكات والدفعات الشهرية مع ملخص كامل وتفصيل لكل حملة من الأعلى إلى الأدنى."
+        title="تصدير تقرير التبرعات المتكررة"
+        description="يشمل التقرير الاشتراكات المتكررة (يومي، كل جمعة، شهري) ودفعاتها مع ملخص كامل وتفصيل لكل حملة من الأعلى إلى الأدنى."
         defaults={(() => {
           const { start, end } = getDonationsDateRange(chartPeriod, dateFrom, dateTo);
           return {
@@ -2534,6 +2793,7 @@ export default function MonthlySubscriptionsDashboardPage() {
             campaignId: selectedCampaign,
             status: donationsStatusFilter,
             subStatus: subStatusFilter === "all" ? "all" : subStatusFilter,
+            frequency: frequencyFilter,
             country: donationCountryFilter,
             sortBy: donationsSortBy,
             sortOrder: donationsSortOrder,
@@ -2561,6 +2821,7 @@ export default function MonthlySubscriptionsDashboardPage() {
           campaign: true,
           status: true,
           subStatus: true,
+          frequency: true,
           locale: true,
           country: true,
           sort: true,

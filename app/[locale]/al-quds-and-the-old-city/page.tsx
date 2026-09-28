@@ -30,7 +30,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const t = await getTranslations({ locale, namespace: "jerusalem" });
   return buildPageMetadata(locale, {
     title: t("pageTitle"),
-    description: t("seoDescription").slice(0, 165),
+    description: t("seoDescription"),
     path: `/${slugFor("jerusalem", locale)}`,
   });
 }

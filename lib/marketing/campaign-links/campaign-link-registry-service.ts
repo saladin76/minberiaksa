@@ -1,6 +1,7 @@
 import { createHash } from "crypto";
 import { prisma } from "@/lib/prisma";
 import { isKnownLocale } from "@/lib/locales";
+import { rawCommand } from "@/lib/prisma-raw-command";
 
 export type JsonMap = Record<string, unknown>;
 export type CampaignLinkStatus = "ACTIVE" | "ARCHIVED" | "DELETED";
@@ -227,7 +228,7 @@ function mapCampaignLink(doc: MongoDoc): CampaignLinkRecord {
 }
 
 export async function ensureCampaignLinkIndexes() {
-  await prisma.$runCommandRaw({ createIndexes: "MarketingCampaignLink", indexes: [
+  await prisma.$runCommandRaw(rawCommand({ createIndexes: "MarketingCampaignLink", indexes: [
     { key: { createdAt: -1 }, name: "createdAt_desc" },
     { key: { platform: 1, createdAt: -1 }, name: "platform_createdAt" },
     { key: { platform: 1, status: 1, updatedAt: -1 }, name: "platform_status_updatedAt" },
@@ -236,7 +237,7 @@ export async function ensureCampaignLinkIndexes() {
     { key: { adId: 1 }, name: "adId" },
     { key: { utmCampaign: 1 }, name: "utmCampaign" },
     { key: { urlHash: 1 }, name: "urlHash_unique", unique: true },
-  ] }).catch(() => null);
+  ] })).catch(() => null);
 }
 
 export async function createOrUpdateCampaignLink(input: CampaignLinkInput): Promise<CampaignLinkRecord> {
@@ -244,7 +245,7 @@ export async function createOrUpdateCampaignLink(input: CampaignLinkInput): Prom
   const now = new Date();
   const payload = cleanInput(input);
 
-  const result = await prisma.$runCommandRaw({
+  const result = await prisma.$runCommandRaw(rawCommand({
     findAndModify: "MarketingCampaignLink",
     query: { $or: [{ urlHash: payload.urlHash }, { url: payload.url }] },
     update: {
@@ -254,7 +255,7 @@ export async function createOrUpdateCampaignLink(input: CampaignLinkInput): Prom
     },
     upsert: true,
     new: true,
-  }) as MongoDoc;
+  })) as MongoDoc;
 
   const value = isMap(result.value) ? result.value : {};
   return mapCampaignLink(value);
@@ -265,12 +266,12 @@ export async function listCampaignLinks(args: { limit?: number; platform?: strin
   const filter: JsonMap = campaignLinkStatusFilter(args.status ?? "ACTIVE");
   if (args.platform) filter.platform = normalizePlatform(args.platform);
 
-  const result = await prisma.$runCommandRaw({
+  const result = await prisma.$runCommandRaw(rawCommand({
     find: "MarketingCampaignLink",
     filter,
     sort: { updatedAt: -1, createdAt: -1 },
     limit: args.limit ?? 100,
-  }) as MongoDoc;
+  })) as MongoDoc;
 
   const rows = isMap(result.cursor) && Array.isArray(result.cursor.firstBatch) ? result.cursor.firstBatch : [];
   return rows.filter(isMap).map(mapCampaignLink);

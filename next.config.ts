@@ -129,7 +129,9 @@ const nextConfig: NextConfig = {
       { protocol: "https", hostname: "division.iium.edu.my" },
     ],
   },
-  eslint: { ignoreDuringBuilds: true },
+  /* `eslint: { ignoreDuringBuilds }` used to live here. Next 16 removed the built-in lint step
+     entirely — the key is not even part of `NextConfig` any more, so it silenced nothing and was
+     itself a type error. Linting is a CI gate of its own now (`npm run lint`, .github/workflows). */
   typescript: { ignoreBuildErrors: true },
   devIndicators: { position: "bottom-right" },
   reactStrictMode: true,

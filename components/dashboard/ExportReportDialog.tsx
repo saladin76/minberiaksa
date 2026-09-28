@@ -74,7 +74,8 @@ export interface ExportReportDialogProps {
     campaign?: boolean;
     status?: boolean;
     type?: boolean;          // ONE_TIME / MONTHLY / all
-    subStatus?: boolean;     // ACTIVE / PAUSED / CANCELLED (monthly page)
+    subStatus?: boolean;     // ACTIVE / PAUSED / CANCELLED / PAYMENT_FAILED (recurring page)
+    frequency?: boolean;     // DAILY / FRIDAY / MONTHLY (recurring page)
     locale?: boolean;
     country?: boolean;
     subscriptionOnly?: boolean;
@@ -92,7 +93,9 @@ export interface ExportFormState {
   campaignId: string;
   status: "all" | "PAID" | "FAILED";
   type: "all" | "ONE_TIME" | "MONTHLY";
-  subStatus: "all" | "ACTIVE" | "PAUSED" | "CANCELLED";
+  subStatus: "all" | "ACTIVE" | "PAUSED" | "CANCELLED" | "PAYMENT_FAILED";
+  /** Recurring plan cadence. */
+  frequency: "all" | "DAILY" | "FRIDAY" | "MONTHLY";
   locale: string;
   country: string;
   subscriptionOnly: boolean;
@@ -111,6 +114,7 @@ export const EXPORT_DEFAULTS: ExportFormState = {
   status: "all",
   type: "all",
   subStatus: "all",
+  frequency: "all",
   locale: "all",
   country: "all",
   subscriptionOnly: false,
@@ -150,6 +154,7 @@ function buildQuery(endpoint: string, state: ExportFormState, fields: ExportRepo
     params.set("donationType", state.type);
   }
   if (fields.subStatus && state.subStatus !== "all") params.set("subStatus", state.subStatus);
+  if (fields.frequency && state.frequency !== "all") params.set("frequency", state.frequency);
   if (fields.locale && state.locale !== "all") params.set("locale", state.locale);
   if (fields.country && state.country !== "all") params.set("country", state.country);
   if (fields.subscriptionOnly && state.subscriptionOnly) params.set("subscriptionOnly", "true");
@@ -405,6 +410,26 @@ export function ExportReportDialog(props: ExportReportDialogProps) {
                   <SelectItem value="ACTIVE">نشط</SelectItem>
                   <SelectItem value="PAUSED">متوقف</SelectItem>
                   <SelectItem value="CANCELLED">ملغي</SelectItem>
+                  <SelectItem value="PAYMENT_FAILED">تعذّر الخصم</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
+          {/* Recurring cadence */}
+          {enabledFields.frequency && (
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium text-slate-600">الدورية</Label>
+              <Select
+                value={state.frequency}
+                onValueChange={(v) => setField("frequency", v as ExportFormState["frequency"])}
+              >
+                <SelectTrigger className="text-right"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">كل الدوريات</SelectItem>
+                  <SelectItem value="DAILY">يومي</SelectItem>
+                  <SelectItem value="FRIDAY">كل جمعة</SelectItem>
+                  <SelectItem value="MONTHLY">شهري</SelectItem>
                 </SelectContent>
               </Select>
             </div>

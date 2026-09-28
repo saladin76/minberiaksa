@@ -1,5 +1,6 @@
 import { HandHeart, HeartPulse, Stethoscope, Syringe, Baby, Hospital, LifeBuoy } from "lucide-react";
 import CountUp from "react-countup";
+import type { LucideIcon } from "lucide-react";
 
 const stats = [
   { value: 125000, label: "مستشفيات", icon: Hospital },
@@ -10,7 +11,7 @@ const stats = [
   { value: 8900, label: "عمليات جراحية", icon: HandHeart },
 ];
 
-const StatCard = ({ icon: Icon, label, value }) => (
+const StatCard = ({ icon: Icon, label, value }: { icon: LucideIcon; label: string; value: number }) => (
   <div className="flex flex-col items-center text-white text-center">
     <Icon className="w-10 h-10 mb-2" />
     <span className="text-3xl font-bold text-green-400">

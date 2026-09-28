@@ -3269,6 +3269,8 @@
   "Concierge": {
     "title": "Help me choose how to give",
     "launcher": "Giving assistant",
+    "teaserTitle": "Not sure where to give? ✨",
+    "teaserBody": "Tell me what's on your heart and I'll find the right project for you in a minute.",
     "s_welcome": "I'll help you find the best way to give, in about a minute.",
     "placeholder": "Tell me what you have in mind… e.g. I have $500 and want lasting impact",
     "send": "Send",

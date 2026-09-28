@@ -5,6 +5,7 @@ import { requireAdminOrDashboardPermission } from "@/lib/dashboard/api-auth";
 import { prisma } from "@/lib/prisma";
 import { syncDonationConversion } from "@/lib/tracking/donation-conversion-server";
 import { metaDonationEventId } from "@/lib/tracking/canonical";
+import { rawCommand } from "@/lib/prisma-raw-command";
 
 export const dynamic = "force-dynamic";
 
@@ -33,15 +34,15 @@ function platform(attribution: unknown) {
 }
 
 async function ensureIndexes() {
-  await prisma.$runCommandRaw({ createIndexes: "MarketingAttributionVerification", indexes: [
+  await prisma.$runCommandRaw(rawCommand({ createIndexes: "MarketingAttributionVerification", indexes: [
     { key: { donationId: 1, platform: 1 }, name: "donation_platform_unique", unique: true },
     { key: { status: 1, nextCheckAt: 1 }, name: "status_nextCheckAt" },
     { key: { updatedAt: -1 }, name: "updatedAt_desc" },
-  ] }).catch(() => null);
+  ] })).catch(() => null);
 }
 
 async function getConversionEvents(donationId: string, eventId: string) {
-  const result = await prisma.$runCommandRaw({ find: "ConversionEvent", filter: { $or: [{ donationId }, { donationId: oidFilter(donationId) }, { eventId }] }, sort: { updatedAt: -1 }, limit: 50 }) as JsonMap;
+  const result = await prisma.$runCommandRaw(rawCommand({ find: "ConversionEvent", filter: { $or: [{ donationId }, { donationId: oidFilter(donationId) }, { eventId }] }, sort: { updatedAt: -1 }, limit: 50 })) as JsonMap;
   return isMap(result.cursor) && Array.isArray(result.cursor.firstBatch) ? result.cursor.firstBatch.filter(isMap) : [];
 }
 
@@ -52,7 +53,7 @@ async function hasPlatformCredit(row: { platform: string; campaignId: string; ad
   const or: JsonMap[] = [];
   if (row.campaignId) or.push({ campaignId: row.campaignId }, { campaignName: row.campaignId });
   if (row.adId) or.push({ adId: row.adId });
-  const result = await prisma.$runCommandRaw({ find: "MarketingPlatformDailyMetric", filter: { platform: row.platform, date: { $gte: date }, ...(or.length ? { $or: or } : {}) }, sort: { date: -1, updatedAt: -1 }, limit: 20 }).catch(() => null) as JsonMap | null;
+  const result = await prisma.$runCommandRaw(rawCommand({ find: "MarketingPlatformDailyMetric", filter: { platform: row.platform, date: { $gte: date }, ...(or.length ? { $or: or } : {}) }, sort: { date: -1, updatedAt: -1 }, limit: 20 })).catch(() => null) as JsonMap | null;
   const rows = isMap(result?.cursor) && Array.isArray(result.cursor.firstBatch) ? result.cursor.firstBatch.filter(isMap) : [];
   return rows.some((m) => num(m.conversions) > 0 || num(m.revenue) > 0);
 }
@@ -60,7 +61,7 @@ async function hasPlatformCredit(row: { platform: string; campaignId: string; ad
 async function upsertVerification(input: { donationId: string; platform: string; eventId: string; value: number; currency: string; paidAt: Date | null; campaignId: string; adId: string; attribution: unknown; }) {
   const now = new Date();
   const nextCheckAt = new Date(now.getTime() + 2 * 60 * 60 * 1000);
-  await prisma.$runCommandRaw({ update: "MarketingAttributionVerification", updates: [{ q: { donationId: input.donationId, platform: input.platform }, u: { $set: { ...input, updatedAt: now }, $setOnInsert: { createdAt: now, status: "PENDING", attempts: 0, nextCheckAt, history: [] } }, upsert: true }] });
+  await prisma.$runCommandRaw(rawCommand({ update: "MarketingAttributionVerification", updates: [{ q: { donationId: input.donationId, platform: input.platform }, u: { $set: { ...input, updatedAt: now }, $setOnInsert: { createdAt: now, status: "PENDING", attempts: 0, nextCheckAt, history: [] } }, upsert: true }] }));
 }
 
 async function seedRecent() {
@@ -74,12 +75,12 @@ async function seedRecent() {
 }
 
 async function listRows(limit = 100) {
-  const result = await prisma.$runCommandRaw({ find: "MarketingAttributionVerification", filter: {}, sort: { updatedAt: -1 }, limit }) as JsonMap;
+  const result = await prisma.$runCommandRaw(rawCommand({ find: "MarketingAttributionVerification", filter: {}, sort: { updatedAt: -1 }, limit })) as JsonMap;
   return isMap(result.cursor) && Array.isArray(result.cursor.firstBatch) ? result.cursor.firstBatch.filter(isMap) : [];
 }
 
 async function updateVerification(donationId: string, platform: string, update: JsonMap) {
-  await prisma.$runCommandRaw({ update: "MarketingAttributionVerification", updates: [{ q: { donationId, platform }, u: { $set: { ...update, updatedAt: new Date() }, $push: { history: { at: new Date(), ...update } } } }] });
+  await prisma.$runCommandRaw(rawCommand({ update: "MarketingAttributionVerification", updates: [{ q: { donationId, platform }, u: { $set: { ...update, updatedAt: new Date() }, $push: { history: { at: new Date(), ...update } } } }] }));
 }
 
 async function processOne(row: JsonMap, retry: boolean) {

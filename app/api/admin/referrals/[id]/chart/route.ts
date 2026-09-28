@@ -9,7 +9,8 @@ import {
   eachIstanbulDateKey,
   formatIstanbulDateKey,
   getIstanbulDateRange,
-} from "@/lib/admin/istanbul-calendar";
+  resolveChartStartKey,
+} from '@/lib/admin/istanbul-calendar';
 
 /** GET /api/admin/referrals/[id]/chart - Chart data for donations (transactions) attributed to this referral */
 export async function GET(
@@ -37,7 +38,7 @@ export async function GET(
     const campaignId = searchParams.get("campaignId");
     const country = searchParams.get("country")?.trim() ?? null;
 
-    const { startDate, endDate, startDateKey, endDateKey } = getIstanbulDateRange(period, startParam, endParam);
+    const { startDate, endDate, startDateKey, endDateKey, isAllTime } = getIstanbulDateRange(period, startParam, endParam);
     // Bucket by `paidAt` so a donation that settled at 00:30 Istanbul lands in
     // the new day's bar, even if its checkout row was created the prior evening.
     // status=PAID alone includes abandoned checkouts that never settled; require paidAt too.
@@ -132,7 +133,11 @@ export async function GET(
       teamSupport: number;
       fees: number;
     }[] = [];
-    for (const dateStr of eachIstanbulDateKey(startDateKey, endDateKey)) {
+    /* All-time queries from the epoch, so the axis starts at the first day with data rather than
+       at 1970 — see `resolveChartStartKey`. Bounded periods are unchanged. */
+    const axisStartKey = resolveChartStartKey(isAllTime, startDateKey, endDateKey, byDate.keys());
+
+    for (const dateStr of eachIstanbulDateKey(axisStartKey, endDateKey)) {
       const b = byDate.get(dateStr);
       const amountOneTime = b ? Number(Number(b.amountOneTime).toFixed(2)) : 0;
       const amountMonthly = b ? Number(Number(b.amountMonthly).toFixed(2)) : 0;

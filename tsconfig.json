@@ -1,6 +1,8 @@
 {
   "compilerOptions": {
-    "target": "ES2017",
+    /* ES2018 is the floor for the regex `s` (dotAll) flag, already used in the test suite; every
+        runtime this ships to — Node 20+ on Vercel, the browsers Next 16 targets — is far past it. */
+    "target": "ES2022",
     "lib": [
       "dom",
       "dom.iterable",
@@ -36,6 +38,36 @@
     ".next/dev/types/**/*.ts"
 , "next.config.ts"  ],
   "exclude": [
-    "node_modules"
+    "node_modules",
+    // /tmp is git-ignored scratch (patch scripts, screenshots, half-finished component copies kept
+    // for reference). It referenced modules that no longer exist, so it contributed type errors that
+    // no amount of fixing the app could clear — and it must not be able to fail a production build.
+    "tmp",
+    // Unreferenced leftovers whose dependencies are not installed, so they cannot compile or run in
+    // any configuration. Nothing imports them, so excluding them costs nothing and keeps the gate
+    // honest; they are deletion candidates, not code to fix.
+    //   ui/toast.tsx + ui/toaster.tsx — shadcn's toast, needs @radix-ui/react-toast. The app renders
+    //     react-hot-toast's <Toaster/> instead; hooks/use-toast.ts documents that migration.
+    //   ui/calendar.tsx  — needs react-day-picker.
+    //   ui/slider.tsx    — needs @radix-ui/react-slider.
+    //   lib/blog/pages/* — an unimported barrel of English UI strings; 3 of 4 import "@/types",
+    //     which does not exist.
+    "components/ui/toast.tsx",
+    "components/ui/toaster.tsx",
+    "components/ui/calendar.tsx",
+    "components/ui/slider.tsx",
+    "lib/blog/pages",
+    // A dead blog editor. `wysiwyg/BlogEditorAR.jsx` is imported by nothing, and these five forms are
+    // imported only by it. They address a Post shape that no longer exists — `descriptionAR/EN/FR`,
+    // `imageAR/EN`, `category_id`, an inline `translations` field — from before translations moved to
+    // their own table, and they reference components (`FileUpload`, `confirm-modal`) and types
+    // (`Chapter`, `Attachment`) that were removed with it. The live editor is
+    // `blog/_components/BlogEditor.jsx` + `wysiwyg/wysiwyg-editor`. Deletion candidates.
+    "app/[locale]/blog/_components/_components",
+    "app/[locale]/blog/_components/wysiwyg/BlogEditorAR.jsx",
+    // The pre-redesign homepage. `HomePageContent` is imported by nothing, and the rest of this
+    // directory is imported only by it (or by each other). The live homepage is
+    // `components/minbar/home/HomePage.tsx`. Deletion candidates.
+    "app/[locale]/_components/homepage"
   ]
 }

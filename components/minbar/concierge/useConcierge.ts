@@ -8,7 +8,7 @@ import { miaPath, routeForPathname, type MinbarRoute } from "@/lib/minbar/routes
 import { addToCart, readCart, type CartFreqKey, type CartGiftDetails } from "@/lib/minbar/cart";
 import { useMinbarMoney } from "@/hooks/useMinbarMoney";
 import type { ConciergeAction, ConciergeIntent, ConciergeResponse, ConciergeStep, ConversationState, PageContext } from "@/lib/ai/concierge/schema";
-import { getConciergeSessionId, markConciergeAssisted, reportConciergeEvents, type ClientConciergeEvent } from "@/lib/ai/concierge/client";
+import { getConciergeSessionId, markConciergeAssisted, markConciergeTouched, reportConciergeEvents, type ClientConciergeEvent } from "@/lib/ai/concierge/client";
 
 /**
  * Client state machine for the concierge. Talks to
@@ -95,6 +95,8 @@ export function useConcierge() {
       const controller = new AbortController();
       abort.current = controller;
       if (echo) setTurns((t) => [...t, { id: nextId(), role: "user", text: echo, blocks: [], actions: [] }]);
+      /* Anything beyond the greeting is a real exchange (see markConciergeTouched). */
+      if (input.message || (input.step && input.step.kind !== "open")) markConciergeTouched();
       setLoading(true);
       try {
         const history = turns.slice(-6).map((t) => ({ role: t.role, text: t.text.slice(0, 1200) }));
@@ -111,6 +113,7 @@ export function useConcierge() {
             history,
             ...(input.message ? { message: input.message } : {}),
             ...(input.step ? { step: input.step } : {}),
+            ...(input.step && echo ? { label: echo.slice(0, 200) } : {}),
           }),
         });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);

@@ -5,6 +5,18 @@ import { getServerBaseUrl } from "@/lib/server-base-url";
 import { SITE_URL } from "@/lib/seo";
 
 
+/**
+ * The category shape this page reads off /api/post-categories/[id]. It used to be a bare `Category`
+ * with no declaration anywhere — a leftover of a deleted global types module — so the response was
+ * untyped and the two `category.title` reads below were unchecked.
+ */
+interface Category {
+  id: string;
+  title: string;
+  description: string;
+  image?: string;
+}
+
 interface CategoryProps {
   params: {
     locale: string;

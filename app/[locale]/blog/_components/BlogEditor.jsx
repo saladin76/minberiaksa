@@ -109,6 +109,20 @@ const protectedPostConfig = {
   pleaseWait: "برجاء الانتظار ...",
 };
 
+/**
+ * This file is JavaScript, so TypeScript infers its prop types from the defaults — and `= []`
+ * infers as `never[]`, which made every caller passing a real list a type error at the boundary.
+ * The JSDoc below is the boundary's declared contract; it costs nothing at runtime.
+ *
+ * @param {{
+ *   post?: any,
+ *   categories?: any[],
+ *   campaignOptions?: { label: string, value: string }[],
+ *   redirectAfterCreate?: string,
+ *   isCreate?: boolean,
+ *   userId?: string,
+ * }} props
+ */
 const BlogEditor = ({ post, categories, campaignOptions = [], redirectAfterCreate, isCreate: isCreateProp }) => {
   const router = useRouter();
   const isCreate = isCreateProp || !post?.id || post.id === "new";

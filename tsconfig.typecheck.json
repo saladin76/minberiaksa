@@ -5,5 +5,10 @@
     "incremental": false
   },
   "include": ["types/typecheck/next-env.d.ts", "next.config.ts", "**/*.ts", "**/*.tsx"],
-  "exclude": ["node_modules", ".next", ".integration-test-build", "gozbebekleri", "next-env.d.ts"]
+  "exclude": ["node_modules", ".next", ".integration-test-build", "gozbebekleri", "next-env.d.ts", "tmp", "e2e",
+    "components/ui/toast.tsx", "components/ui/toaster.tsx", "components/ui/calendar.tsx",
+    "components/ui/slider.tsx", "lib/blog/pages",
+    "app/[locale]/blog/_components/_components",
+    "app/[locale]/blog/_components/wysiwyg/BlogEditorAR.jsx",
+    "app/[locale]/_components/homepage"]
 }

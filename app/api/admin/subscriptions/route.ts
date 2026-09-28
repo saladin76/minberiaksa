@@ -4,8 +4,14 @@ import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 import { requireAdminOrDashboardPermission } from "@/lib/dashboard/api-auth";
+import {
+  loadSubscriptionFrequencies,
+  monthlyEquivalent,
+  parseFrequencyParam,
+  subscriptionFrequencyWhere,
+} from "@/lib/dashboard/recurring-frequency-filter";
 
-/** GET /api/admin/subscriptions — paginated list for dashboard (status, category, campaign, user) */
+/** GET /api/admin/subscriptions — paginated list for dashboard (status, cadence, category, campaign, user) */
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
@@ -19,6 +25,7 @@ export async function GET(request: NextRequest) {
     const userId = sp.get("userId");
     const search = sp.get("search")?.trim();
     const referralIdParam = sp.get("referralId");
+    const frequency = parseFrequencyParam(sp.get("frequency"));
     const page = Math.max(1, parseInt(sp.get("page") || "1", 10) || 1);
     const limit = Math.min(Math.max(1, parseInt(sp.get("limit") || "10", 10) || 10), 100);
     const sortBy = sp.get("sortBy") === "amount" ? "amount" : "date";
@@ -38,7 +45,12 @@ export async function GET(request: NextRequest) {
     }
 
     if (statusParam !== "ALL") {
-      if (statusParam === "ACTIVE" || statusParam === "PAUSED" || statusParam === "CANCELLED") {
+      if (
+        statusParam === "ACTIVE" ||
+        statusParam === "PAUSED" ||
+        statusParam === "CANCELLED" ||
+        statusParam === "PAYMENT_FAILED"
+      ) {
         where.status = statusParam;
       }
     }
@@ -76,6 +88,13 @@ export async function GET(request: NextRequest) {
       ];
     }
 
+    // Cadence goes through AND for the same reason as the search: the category branch may own
+    // `where.OR`, and the MONTHLY filter (which also matches legacy field-less plans) is a NOT.
+    if (frequency) {
+      const existingAnd = Array.isArray(where.AND) ? where.AND : where.AND ? [where.AND] : [];
+      where.AND = [...existingAnd, subscriptionFrequencyWhere(frequency)];
+    }
+
     const skip = (page - 1) * limit;
 
     const orderBy: Prisma.SubscriptionOrderByWithRelationInput =
@@ -97,7 +116,6 @@ export async function GET(request: NextRequest) {
           amountUSD: true,
           currency: true,
           createdAt: true,
-          frequency: true,
           nextBillingDate: true,
           lastBillingDate: true,
           donor: {
@@ -116,21 +134,34 @@ export async function GET(request: NextRequest) {
       }),
     ]);
 
-    const subscriptions = rows.map((s) => ({
-      id: s.id,
-      status: s.status,
-      amount: s.amount,
-      amountUSD: s.amountUSD,
-      currency: s.currency,
-      createdAt: s.createdAt,
-      frequency: s.frequency,
-      nextBillingDate: s.nextBillingDate,
-      lastBillingDate: s.lastBillingDate,
-      donor: s.donor,
-      referral: s.referral ? { id: s.referral.id, code: s.referral.code } : null,
-      campaigns: s.items.map((i) => ({ id: i.campaign.id, title: i.campaign.title })),
-      categories: s.categoryItems.map((c) => ({ id: c.category.id, name: c.category.name })),
-    }));
+    // Read through the legacy-safe lookup rather than selecting `frequency`: plans from before
+    // the field existed have none, and they are monthly.
+    const frequencyOf = await loadSubscriptionFrequencies(
+      prisma,
+      rows.map((s) => s.id)
+    );
+
+    const subscriptions = rows.map((s) => {
+      const frequency = frequencyOf(s.id);
+      return {
+        id: s.id,
+        status: s.status,
+        amount: s.amount,
+        amountUSD: s.amountUSD,
+        /** The plan's per-charge USD amount on a monthly scale (daily ×30.44, Friday ×4.35). */
+        monthlyEquivalentUSD:
+          s.amountUSD != null ? Number(monthlyEquivalent(s.amountUSD, frequency).toFixed(2)) : null,
+        currency: s.currency,
+        createdAt: s.createdAt,
+        frequency,
+        nextBillingDate: s.nextBillingDate,
+        lastBillingDate: s.lastBillingDate,
+        donor: s.donor,
+        referral: s.referral ? { id: s.referral.id, code: s.referral.code } : null,
+        campaigns: s.items.map((i) => ({ id: i.campaign.id, title: i.campaign.title })),
+        categories: s.categoryItems.map((c) => ({ id: c.category.id, name: c.category.name })),
+      };
+    });
 
     return NextResponse.json({
       subscriptions,

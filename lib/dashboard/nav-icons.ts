@@ -5,6 +5,7 @@ import {
   Megaphone, MessageCircle, MessageSquare, PenLine, Plug, Radar, Repeat, ScrollText, Send,
   Server, Settings, Target, Ticket, TrendingUp, UserCog, Users, Webhook,
   Video, ListVideo, GraduationCap, FileText, BookOpen, HelpCircle, AlertTriangle, Layers, Receipt, ShoppingCart,
+  Sparkles, MessagesSquare, Bot,
   type LucideIcon,
 } from "lucide-react";
 
@@ -62,6 +63,9 @@ export const NAV_ICONS = {
   helpCircle: HelpCircle,
   alertTriangle: AlertTriangle,
   receipt: Receipt,
+  sparkles: Sparkles,
+  messagesSquare: MessagesSquare,
+  bot: Bot,
 } satisfies Record<string, LucideIcon>;
 
 export type NavIconName = keyof typeof NAV_ICONS;

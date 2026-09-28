@@ -3197,6 +3197,8 @@
   "Concierge": {
     "title": "Bantu saya memilih cara berdonasi",
     "launcher": "Asisten donasi",
+    "teaserTitle": "Bingung mau berdonasi ke mana? ✨",
+    "teaserBody": "Ceritakan niat Anda, saya carikan proyek yang paling sesuai dalam satu menit.",
     "s_welcome": "Saya bantu Anda menemukan cara berdonasi terbaik dalam semenit.",
     "placeholder": "Tulis keinginan Anda… mis. saya punya $500 dan ingin amal jariyah",
     "send": "Kirim",

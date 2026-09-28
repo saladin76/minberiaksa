@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 import { requireAdminOrDashboardPermission } from "@/lib/dashboard/api-auth";
 import { prisma } from "@/lib/prisma";
+import { rawCommand } from "@/lib/prisma-raw-command";
 
 export const dynamic = "force-dynamic";
 
@@ -34,7 +35,7 @@ function present(row: Record<string, unknown> | null, key: string): boolean {
 }
 
 async function getSettings(): Promise<Record<string, unknown> | null> {
-  const result = await prisma.$runCommandRaw({ find: SETTINGS_COLLECTION, limit: 1, sort: { createdAt: 1 } });
+  const result = await prisma.$runCommandRaw(rawCommand({ find: SETTINGS_COLLECTION, limit: 1, sort: { createdAt: 1 } }));
   const batch = isRecord(result) && isRecord(result.cursor) && Array.isArray(result.cursor.firstBatch) ? result.cursor.firstBatch : [];
   return (batch[0] as Record<string, unknown> | undefined) ?? null;
 }
@@ -42,13 +43,13 @@ async function getSettings(): Promise<Record<string, unknown> | null> {
 async function latestEvent(platform: EventPlatform, channel?: "browser" | "server") {
   const query: Record<string, unknown> = { platform };
   if (channel) query.channel = channel;
-  const result = await prisma.$runCommandRaw({
+  const result = await prisma.$runCommandRaw(rawCommand({
     find: EVENTS_COLLECTION,
     filter: query,
     sort: { updatedAt: -1, createdAt: -1 },
     limit: 1,
     projection: { request: 0, response: 0 },
-  });
+  }));
   const batch = isRecord(result) && isRecord(result.cursor) && Array.isArray(result.cursor.firstBatch) ? result.cursor.firstBatch : [];
   return (batch[0] as Record<string, unknown> | undefined) ?? null;
 }

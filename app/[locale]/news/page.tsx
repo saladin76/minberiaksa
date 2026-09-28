@@ -22,7 +22,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const t = await getTranslations({ locale, namespace: "common" });
   return buildPageMetadata(locale, {
     title: t("newsTitle"),
-    description: t("newsLead").slice(0, 165),
+    description: t("newsLead"),
     path: `/${slugFor("news", locale)}`,
   });
 }

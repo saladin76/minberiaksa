@@ -2,7 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { SUPPORTED_LOCALES, LOCALES, DEFAULT_LOCALE, isValidLocale, type SupportedLocale } from "@/lib/locales";
 import type { CommunicationChannelId } from "./communication-runtime-types";
 import { donorChannelEligibility } from "./audience-service";
-import { parseListKey, loadListMembers, memberEligibleForChannel, type ResolvedListMember } from "./audience-list-service";
+import { parseListKey, loadListMembers, loadListMembersPage, memberEligibleForChannel, type ResolvedListMember } from "./audience-list-service";
 import { safeCountValue } from "@/lib/dashboard/safe-count";
 
 /**
@@ -138,46 +138,90 @@ export type CampaignRecipient = {
 export type RecipientLoadResult = {
   recipients: CampaignRecipient[];
   skipped: { userId: string; locale: string; reason: string }[];
+  /** True when this page did not reach the end of the audience — another page follows. */
   truncated: boolean;
+  /** Pass back as `cursor` to continue after this page. Null when there is nothing to continue from. */
+  nextCursor: string | null;
+  /** True when the audience has been walked to its end and no further page exists. */
+  exhausted: boolean;
 };
 
 /**
- * Load the individual eligible recipients for a campaign send (bounded batch). Applies channel
- * eligibility per donor (prefers DonorCommunicationProfile, falls back to User notification flags).
- * Ineligible donors are returned in `skipped` with a reason — the executor archives those as SKIPPED.
+ * How many contacts the audience holds in total, regardless of batching.
+ *
+ * The plan describes one batch, so its `total` is at most `batchSize` — showing that as "this many
+ * will receive it" told an operator 200 when the audience was 3,000. This is the number the send
+ * confirmation needs. It counts membership, not eligibility: consent is re-checked per batch at send
+ * time and cannot be known here without reading every row.
+ */
+export async function countCampaignAudience(audienceSegmentKey: string | null): Promise<number> {
+  if (!process.env.DATABASE_URL) return 0;
+  const listId = parseListKey(audienceSegmentKey);
+  if (listId) {
+    return prisma.communicationAudienceMember
+      .count({ where: { listId, status: "ACTIVE", contactType: "DONOR" } })
+      .catch(() => 0);
+  }
+  const targetLocales: SupportedLocale[] = audienceSegmentKey && isValidLocale(audienceSegmentKey) ? [audienceSegmentKey] : [...SUPPORTED_LOCALES];
+  return prisma.user.count({ where: { role: "DONOR", preferredLang: { in: targetLocales } } }).catch(() => 0);
+}
+
+/**
+ * Load one page of eligible recipients for a campaign send. Applies channel eligibility per donor
+ * (prefers DonorCommunicationProfile, falls back to User notification flags). Ineligible donors are
+ * returned in `skipped` with a reason — the executor archives those as SKIPPED.
+ *
+ * Paging is by cursor, not offset, and it is the send pipeline's guarantee of completeness: the
+ * executor walks page after page until `exhausted`, so an audience larger than one batch finishes
+ * instead of stopping after the first slice. An offset would also have drifted — donors are created
+ * and their consent changes while a large send is in flight — whereas the cursor (an ascending id)
+ * describes a position that stays valid between runs.
+ *
+ * The cursor is the last row *scanned*, not the last row sent: a page whose rows were all ineligible
+ * still advances, or the send would loop on the same ineligible slice forever.
  */
 export async function loadCampaignRecipients(
   channel: CommunicationChannelId,
   audienceSegmentKey: string | null,
-  opts: { limit?: number } = {}
+  opts: { limit?: number; cursor?: string | null } = {}
 ): Promise<RecipientLoadResult> {
   const limit = Math.min(opts.limit ?? 500, 1000);
+  const cursor = opts.cursor ?? null;
 
   // Custom / test list audience — send to the list's DONOR members (test contacts are NOT sent via the
   // campaign executor; they are reserved for the dedicated test-send tooling).
   const listId = parseListKey(audienceSegmentKey);
   if (listId) {
-    const resolved = await resolveListMembersWithEligibility(channel, listId);
+    const { members, nextCursor, exhausted } = await loadListMembersPage(listId, { limit, cursorId: cursor });
+    const donorIds = members.filter((m) => m.contactType === "DONOR" && m.userId).map((m) => m.userId!) as string[];
+    const profiles = donorIds.length
+      ? await prisma.donorCommunicationProfile.findMany({ where: { userId: { in: donorIds } }, select: { userId: true, whatsappOptIn: true, emailOptIn: true, smsOptIn: true, doNotContact: true } }).catch(() => [])
+      : [];
+    const pMap = new Map(profiles.map((p) => [p.userId, p]));
     const recipients: CampaignRecipient[] = [];
     const skipped: { userId: string; locale: string; reason: string }[] = [];
-    for (const { m, eligible } of resolved) {
+    for (const m of members) {
       if (m.contactType !== "DONOR" || !m.userId) continue;
-      if (recipients.length >= limit) break;
-      if (eligible) recipients.push({ userId: m.userId, name: m.name, email: m.email, phone: m.phone, locale: m.locale, country: m.country });
-      else skipped.push({ userId: m.userId, locale: m.locale, reason: "NOT_ELIGIBLE" });
+      if (memberEligibleForChannel(m, channel, pMap.get(m.userId) ?? null)) {
+        recipients.push({ userId: m.userId, name: m.name, email: m.email, phone: m.phone, locale: m.locale, country: m.country });
+      } else {
+        skipped.push({ userId: m.userId, locale: m.locale, reason: "NOT_ELIGIBLE" });
+      }
     }
-    return { recipients, skipped, truncated: false };
+    return { recipients, skipped, truncated: !exhausted, nextCursor, exhausted };
   }
 
   const targetLocales: SupportedLocale[] = audienceSegmentKey && isValidLocale(audienceSegmentKey) ? [audienceSegmentKey] : [...SUPPORTED_LOCALES];
 
   const users = await prisma.user.findMany({
-    where: { role: "DONOR", preferredLang: { in: targetLocales } },
+    where: { role: "DONOR", preferredLang: { in: targetLocales }, ...(cursor ? { id: { gt: cursor } } : {}) },
     select: { id: true, name: true, email: true, phone: true, preferredLang: true, countryCode: true, emailNotifications: true, smsNotifications: true },
-    take: limit + 1,
+    orderBy: { id: "asc" },
+    take: limit,
   });
-  const truncated = users.length > limit;
-  const page = users.slice(0, limit);
+  const exhausted = users.length < limit;
+  const page = users;
+  const nextCursor = page.length ? page[page.length - 1].id : cursor;
 
   const profiles = await prisma.donorCommunicationProfile
     .findMany({ where: { userId: { in: page.map((u) => u.id) } }, select: { userId: true, whatsappOptIn: true, emailOptIn: true, smsOptIn: true, doNotContact: true } })
@@ -202,5 +246,5 @@ export async function loadCampaignRecipients(
     }
   }
 
-  return { recipients, skipped, truncated };
+  return { recipients, skipped, truncated: !exhausted, nextCursor, exhausted };
 }

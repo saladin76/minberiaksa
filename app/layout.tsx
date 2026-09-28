@@ -4,7 +4,7 @@ import DeferredGTM from "@/components/DeferredGTM";
 import MicrosoftClarity from "@/components/MicrosoftClarity";
 import EngagementInstrumentation from "@/components/EngagementInstrumentation";
 import { Analytics } from "@vercel/analytics/next";
-import { LOCALES, LOCALE_SEO, isProductionDeployment } from "@/lib/seo";
+import { LOCALES, LOCALE_SEO, OG_IMAGE, OG_LOCALE_MAP, SITE_NAME, SITE_URL, buildHreflang, isProductionDeployment } from "@/lib/seo";
 import "./[locale]/globals.css";
 import "@/styles/self-hosted-fonts.css";
 
@@ -35,89 +35,67 @@ const SITE_FONT_VARIABLES: React.CSSProperties = {
   ["--font-arabic" as string]: "'Tajawal'",
 };
 
-const SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://www.minberiaksa.org";
-const OG_IMAGE = `/logometaminber.avif`;
+const SITE = SITE_URL;
 
+/**
+ * The root layout is deliberately thin on identity.
+ *
+ * It used to carry a second, independent SEO and identity stack: its own title,
+ * description, keywords, OpenGraph, Twitter card, hreflang (8 locales, not 19),
+ * plus Organization, WebSite, FAQPage and BreadcrumbList schemas. That copy
+ * described a Turkish public-benefit association founded in 1961 working in
+ * healthcare and earthquake relief, with an FAQ about Haydarpaşa Numune
+ * Hospital — a different organisation's story, inherited with the codebase.
+ * It shipped on every page, including the 19 locale pages whose own metadata
+ * says what `Minbar/POSITIONING.md` says: an international foundation for
+ * Al-Quds and Al-Aqsa. Two identities, one of them wrong, and the Organization
+ * node even shared an `@id` with the homepage's — so a crawler had to pick.
+ *
+ * Now there is one source. Everything identity-shaped here derives from
+ * `LOCALE_SEO` / `SUPPORTED_LOCALES`, and the structured data lives where
+ * `Minbar/PRODUCTION_SEO_CONTRACT.md` § Structured Data puts it: Organization
+ * and WebSite on the homepage, BreadcrumbList on inner pages, FAQPage only
+ * where questions are actually rendered. What is left below is what genuinely
+ * belongs to every route in the app — fonts, analytics, the indexing policy,
+ * and a fallback title for the routes that sit outside `[locale]`.
+ */
 export const metadata: Metadata = {
   metadataBase: new URL(SITE),
 
+  /* The fallback for routes outside `[locale]` (the dashboard, error pages).
+     Locale pages override all of this from the same generated source. */
   title: {
-    default: "مؤسسة منبر الأقصى الدولية | زكاة، تبرع، صدقة، إغاثة إنسانية",
-    template: "%s | مؤسسة منبر الأقصى الدولية",
+    default: LOCALE_SEO.ar.title,
+    template: LOCALE_SEO.ar.titleTemplate,
   },
+  description: LOCALE_SEO.ar.description,
 
-  description:
-    "مؤسسة منبر الأقصى الدولية الدولية للتضامن: جمعية تركية عاملة للنفع العام تأسست عام 1961، تعمل في الصحة والإغاثة العاجلة والاستجابة للكوارث والمساعدات التعليمية. تبرع، زكاة، صدقة جارية. Minberiaksa International Solidarity Association — a Turkish public-benefit association founded in 1961, working in healthcare, emergency relief, disaster response and educational aid.",
+  authors: [{ name: SITE_NAME, url: SITE }],
+  creator: SITE_NAME,
+  publisher: SITE_NAME,
 
-  keywords: [
-    "منبر الأقصي", "مؤسسة منبر الأقصى الدولية", "جمعية عاملة للنفع العام", "جمعية خيرية تركية",
-    "تبرع", "زكاة المال", "صدقة جارية", "تبرع اونلاين", "زكاة اونلاين",
-    "إغاثة عاجلة", "إغاثة الكوارث", "مساعدات تعليمية", "مساعدات طبية",
-    "تبرع للزلزال", "ترميم المنازل", "مشاريع إنسانية", "حملات تبرع", "تبرع رمضان",
-    "Minberiaksa", "Minberiaksa Association", "Turkish charity", "public benefit association",
-    "donate online", "zakat donation online", "sadaqah online", "charity donation",
-    "emergency relief", "disaster relief donation", "education aid", "medical aid",
-    "earthquake relief donation", "home rebuilding charity", "humanitarian projects",
-    "Minberiaksa Derneği", "Minberiaksa Uluslararası Yardımlaşma Derneği",
-    "kamu yararına dernek", "bağış yap", "zekat bağışı", "sadaka online",
-    "acil yardım", "afet yardımı", "eğitim yardımı", "sağlık yardımı",
-    "deprem bağışı", "hayır derneği bağış", "online zekat ver", "Ramazan bağışı",
-    "association caritative turque", "faire un don", "zakat en ligne", "sadaqa en ligne",
-    "aide d'urgence", "aide aux catastrophes", "aide à l'éducation",
-    "türkischer Hilfsverein", "jetzt spenden", "Zakat online", "Nothilfe spenden",
-    "Katastrophenhilfe", "Bildungshilfe",
-    "asociación benéfica turca", "donar en línea", "zakat en línea",
-    "ayuda de emergencia", "ayuda educativa",
-    "associação de caridade turca", "doar online", "zakat online",
-    "ajuda de emergência", "apoio à educação",
-    "amal Turki terpercaya", "donasi online", "zakat online", "sedekah online",
-    "bantuan darurat", "bantuan bencana", "bantuan pendidikan",
-  ],
+  /* `app/favicon.ico` is the icon now — a real file, which is also what stops a
+     browser's automatic `/favicon.ico` request from falling through to the
+     `[locale]` segment. `icons` is left unset so Next uses it. */
 
-  authors: [{ name: "Minberiaksa Derneği", url: SITE }],
-  creator: "Minberiaksa",
-  publisher: "Minberiaksa",
-
-  // Browser tab + the icon Google shows beside a search result. Declared here
-  // as well as in the locale and dashboard layouts so routes that sit under
-  // neither of those still get an icon instead of falling back to nothing —
-  // there is no `favicon.ico` or `app/icon.*` file in this project.
-  icons: { icon: "/logometaminber.avif" },
-
-  alternates: {
-    canonical: `${SITE}/ar`,
-    languages: {
-      ar: `${SITE}/ar`,
-      en: `${SITE}/en`,
-      fr: `${SITE}/fr`,
-      tr: `${SITE}/tr`,
-      id: `${SITE}/id`,
-      pt: `${SITE}/pt`,
-      es: `${SITE}/es`,
-      de: `${SITE}/de`,
-      "x-default": `${SITE}/ar`,
-    },
-  },
+  /* All 19 locales, from the same helper every page uses — this list was eight. */
+  alternates: buildHreflang("/", "ar"),
 
   openGraph: {
     type: "website",
     url: SITE,
-    siteName: "Minberiaksa | منبر الأقصي",
-    title: "مؤسسة منبر الأقصى الدولية | زكاة، تبرع، صدقة، إغاثة إنسانية",
-    description:
-      "جمعية عاملة للنفع العام منذ 1961 — الصحة، الإغاثة العاجلة، الاستجابة للكوارث، والتعليم. تبرع، زكاة، صدقة جارية. A Turkish public-benefit association serving since 1961 in healthcare, emergency relief, disaster response and education.",
-    images: [{ url: OG_IMAGE, width: 1200, height: 630, alt: "Minberiaksa – منبر الأقصي" }],
-    locale: "ar_SA",
-    alternateLocale: ["en_US", "fr_FR", "tr_TR", "id_ID", "pt_BR", "es_ES", "de_DE"],
+    siteName: LOCALE_SEO.ar.siteName,
+    title: LOCALE_SEO.ar.title,
+    description: LOCALE_SEO.ar.description,
+    images: [{ url: OG_IMAGE, width: 1200, height: 630, alt: LOCALE_SEO.ar.siteName }],
+    locale: OG_LOCALE_MAP.ar,
+    alternateLocale: LOCALES.filter((l) => l !== "ar").map((l) => OG_LOCALE_MAP[l]),
   },
 
   twitter: {
     card: "summary_large_image",
-    site: "@minberiaksan",
-    creator: "@minberiaksan",
-    title: "Minberiaksa | منبر الأقصي – جمعية عاملة للنفع العام منذ 1961",
-    description:
-      "الصحة، الإغاثة العاجلة، الاستجابة للكوارث، والتعليم — زكاة، صدقة، تبرع. Healthcare, emergency relief, disaster response and education since 1961.",
+    title: LOCALE_SEO.ar.title,
+    description: LOCALE_SEO.ar.description,
     images: [OG_IMAGE],
   },
 
@@ -142,141 +120,6 @@ export const metadata: Metadata = {
   category: "charity",
 };
 
-const organizationSchema = {
-  "@context": "https://schema.org",
-  "@type": ["Organization", "NGO"],
-  "@id": `${SITE}/#organization`,
-  name: "Minberiaksa",
-  alternateName: ["منبر الأقصي", "Minberiaksa Derneği", "منبر الأقصي"],
-  url: SITE,
-  logo: {
-    "@type": "ImageObject",
-    url: "/logometaminber.avif",
-    width: 374,
-    height: 206,
-  },
-  image: OG_IMAGE,
-  description:
-    "Minberiaksa International Solidarity Association is a Turkish public-benefit association founded in 1961, working in healthcare, emergency relief, disaster response and educational aid.",
-  foundingDate: "1961-11-09",
-  areaServed: ["Turkey", "Global"],
-  knowsLanguage: ["ar", "en", "fr", "tr", "id", "pt", "es", "de"],
-  contactPoint: [
-    {
-      "@type": "ContactPoint",
-      telephone: "+90-530-651-65-49",
-      email: "info@minberiaksa.org",
-      contactType: "customer service",
-      availableLanguage: ["Turkish", "Arabic", "English"],
-    },
-  ],
-  email: "info@minberiaksa.org",
-  telephone: "+90-530-651-65-49",
-  sameAs: [
-    "https://www.facebook.com/minberiaksa",
-    "https://www.instagram.com/minberiaksa61/",
-    "https://twitter.com/minberiaksan",
-    "https://wa.me/905306516549",
-  ],
-  address: {
-    "@type": "PostalAddress",
-    streetAddress: "Bağlar, Mimar Sinan Cd. No:38",
-    addressLocality: "Bağcılar",
-    addressRegion: "İstanbul",
-    postalCode: "34209",
-    addressCountry: "TR",
-  },
-};
-
-const websiteSchema = {
-  "@context": "https://schema.org",
-  "@type": "WebSite",
-  "@id": `${SITE}/#website`,
-  url: SITE,
-  name: LOCALE_SEO.ar.siteName,
-  /* The site's one description, from the same generated source as every
-     page's metadata — this block once carried its own copy, written for the
-     retired programme, and outlived the rest of it. */
-  description: LOCALE_SEO.ar.description,
-  inLanguage: [...LOCALES],
-  publisher: { "@id": `${SITE}/#organization` },
-  potentialAction: {
-    "@type": "SearchAction",
-    target: {
-      "@type": "EntryPoint",
-      urlTemplate: `${SITE}/ar/campaigns?search={search_term_string}`,
-    },
-    "query-input": "required name=search_term_string",
-  },
-};
-
-const faqSchema = {
-  "@context": "https://schema.org",
-  "@type": "FAQPage",
-  mainEntity: [
-    {
-      "@type": "Question",
-      name: "كيف يمكنني التبرع لمؤسسة منبر الأقصى الدولية؟",
-      acceptedAnswer: {
-        "@type": "Answer",
-        text: "يمكنك التبرع مباشرة عبر موقعنا الإلكتروني باختيار المشروع المناسب وإتمام الدفع بأمان عبر بطاقتك الائتمانية، أو عبر التحويل البنكي إلى أحد حساباتنا المعلنة في صفحة الحسابات البنكية. جميع التبرعات موثقة وتصل إلى المستفيدين.",
-      },
-    },
-    {
-      "@type": "Question",
-      name: "هل يمكنني دفع زكاتي عبر منصة منبر الأقصي؟",
-      acceptedAnswer: {
-        "@type": "Answer",
-        text: "نعم، نقبل زكاة المال وزكاة الفطر، وتُوزَّع على المستحقين وفق الشروط الشرعية المعتمدة. يمكنك تخصيص تبرعك للزكاة عند إتمام عملية الدفع.",
-      },
-    },
-    {
-      "@type": "Question",
-      name: "When was Minberiaksa founded?",
-      acceptedAnswer: {
-        "@type": "Answer",
-        text: "Minberiaksa International Solidarity Association was opened on 9 November 1961 by a group of doctors and nurses. It began its work in healthcare, most notably helping to develop the facilities of Haydarpaşa Numune Hospital and covering examination and medicine costs for patients of limited means.",
-      },
-    },
-    {
-      "@type": "Question",
-      name: "Is Minberiaksa an officially recognised association?",
-      acceptedAnswer: {
-        "@type": "Answer",
-        text: "Yes. Minberiaksa was granted the status of an “Association Working for the Public Benefit” by Council of Ministers Decision No. 6/2090, dated 10 August 1963, and is registered in Türkiye.",
-      },
-    },
-    {
-      "@type": "Question",
-      name: "Minberiaksa derneğine nasıl bağış yapabilirim?",
-      acceptedAnswer: {
-        "@type": "Answer",
-        text: "Web sitemizden dilediğiniz projeyi seçerek güvenli ödeme altyapımız üzerinden kredi kartıyla bağış yapabilir veya banka hesaplarımız sayfasındaki IBAN'lara havale/EFT gönderebilirsiniz. Tüm bağışlar belgelenmekte ve doğrudan ihtiyaç sahiplerine ulaştırılmaktadır.",
-      },
-    },
-    {
-      "@type": "Question",
-      name: "Minberiaksa hangi alanlarda faaliyet gösteriyor?",
-      acceptedAnswer: {
-        "@type": "Answer",
-        text: "Derneğimiz kuruluşundan bu yana sağlık alanında çalışmaktadır. 2023 yılındaki kongremizde alınan yönetim ve tüzük değişikliği ile faaliyet alanımız doğal afetler, acil yardım ve eğitim yardımlarını da kapsayacak şekilde genişletilmiştir.",
-      },
-    },
-  ],
-};
-
-const breadcrumbSchema = {
-  "@context": "https://schema.org",
-  "@type": "BreadcrumbList",
-  itemListElement: [
-    { "@type": "ListItem", position: 1, name: "الرئيسية", item: `${SITE}/ar` },
-    { "@type": "ListItem", position: 2, name: "الحملات", item: `${SITE}/ar/campaigns` },
-    { "@type": "ListItem", position: 3, name: "المدونة", item: `${SITE}/ar/blog` },
-    { "@type": "ListItem", position: 4, name: "من نحن", item: `${SITE}/ar/about-us` },
-    { "@type": "ListItem", position: 5, name: "تواصل معنا", item: `${SITE}/ar/contact-us` },
-  ],
-};
-
 export default function RootLayout({
   children,
 }: {
@@ -289,8 +132,6 @@ export default function RootLayout({
         <meta name="geo.placename" content="İstanbul" />
         <meta name="classification" content="charity, humanitarian, nonprofit" />
         <meta name="rating" content="general" />
-        <meta name="revisit-after" content="3 days" />
-        <meta name="language" content="Arabic" />
 
         <link rel="preconnect" href="https://res.cloudinary.com" />
         <link rel="dns-prefetch" href="https://i.ibb.co" />
@@ -307,22 +148,6 @@ export default function RootLayout({
             style={{ display: "none", visibility: "hidden" }}
           />
         </noscript>
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationSchema) }}
-        />
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteSchema) }}
-        />
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
-        />
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
-        />
         {children}
         <MicrosoftClarity />
         <Suspense fallback={null}>
