@@ -6,6 +6,11 @@ export type ConversionAuditStage =
   | "track_conversion_allowed"
   | "meta_capi_attempt"
   | "meta_capi_result"
+  /* A retry is written as its own stage so the audit trail distinguishes the first send from a
+     later one. `donation-conversion-server.ts` has always written these two; they were simply
+     missing from the union, so the distinction it records was an uncaught type error. */
+  | "meta_capi_retry_attempt"
+  | "meta_capi_retry_result"
   | "ga4_purchase_attempt";
 
 export async function writeConversionAudit(input: {

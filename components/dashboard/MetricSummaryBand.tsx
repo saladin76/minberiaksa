@@ -38,6 +38,14 @@ const TREND_CLASS: Record<NonNullable<SummaryStat["trend"]>, string> = {
   flat: "text-slate-400",
 };
 
+/** Each secondary figure gets its own hue so the row scans as four things, not one grey strip. */
+const STAT_TONES = [
+  "bg-violet-100 text-violet-600",
+  "bg-emerald-100 text-emerald-600",
+  "bg-orange-100 text-orange-600",
+  "bg-sky-100 text-sky-600",
+] as const;
+
 /**
  * The headline band for an analytics page — one row, roughly 80px tall.
  *
@@ -74,18 +82,18 @@ export function MetricSummaryBand({
       {/* Decorative only — pointer-events-none so it can never eat a click. */}
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(110%_140%_at_100%_0%,rgba(2,94,184,0.07),transparent_55%)]"
+        className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(90%_140%_at_100%_0%,rgba(2,94,184,0.16),transparent_60%),radial-gradient(60%_120%_at_0%_100%,rgba(250,93,23,0.10),transparent_60%)]"
       />
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-px bg-gradient-to-l from-transparent via-brand/35 to-transparent"
+        className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-1 bg-gradient-to-l from-brand via-sky-400 to-[#FA5D17]"
       />
 
       <div className="flex flex-wrap items-center gap-x-8 gap-y-4 px-5 py-4">
         {/* Headline: label row over figure row. */}
         <div className="flex min-w-0 items-center gap-3">
           {Icon && (
-            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-brand text-white shadow-[0_4px_12px_-4px_rgba(2,94,184,0.6)]">
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-sky-500 to-brand text-white shadow-[0_6px_16px_-4px_rgba(2,94,184,0.7)]">
               <Icon className="h-5 w-5" />
             </span>
           )}
@@ -109,15 +117,20 @@ export function MetricSummaryBand({
         {/* Secondary figures — hairline-separated, same two-line rhythm as the headline. */}
         {stats && stats.length > 0 && (
           <div className="ms-auto flex flex-wrap items-center gap-y-3">
-            {stats.map((stat) => {
+            {stats.map((stat, i) => {
               const StatIcon = stat.icon;
+              const tone = STAT_TONES[i % STAT_TONES.length];
               return (
                 <div
                   key={stat.label}
                   className="border-s border-slate-200 px-5 first:border-s-0 first:ps-0 last:pe-0"
                 >
                   <div className="flex items-center gap-1.5">
-                    {StatIcon && <StatIcon className="h-3.5 w-3.5 shrink-0 text-brand/70" />}
+                    {StatIcon && (
+                      <span className={cn("flex h-5 w-5 shrink-0 items-center justify-center rounded-md", tone)}>
+                        <StatIcon className="h-3 w-3" />
+                      </span>
+                    )}
                     <p className="whitespace-nowrap text-[11px] font-medium text-slate-500">
                       {stat.label}
                     </p>

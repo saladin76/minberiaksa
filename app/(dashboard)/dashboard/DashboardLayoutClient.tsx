@@ -220,7 +220,7 @@ function DashboardContent({
   if (status === 'loading') return <LoadingSkeleton />;
 
   return (
-    <div className="min-h-screen flex bg-slate-50" dir={dir}>
+    <div className="dash-vivid min-h-screen flex bg-slate-50" dir={dir}>
       <DashboardAutoEnhancements />
       <ProjectEditorSectionsEnhancer />
       <ProjectLocaleSlugEditor />
@@ -289,6 +289,13 @@ export default function DashboardLayoutClient({
   messages: Record<string, string | Record<string, string>>;
   locale?: string;
 }) {
+  // Saturated accent ramps (see tailwind.config.ts). Set on <body> as well as the shell so
+  // dialogs, popovers and toasts — portalled outside the shell — use the same palette.
+  useEffect(() => {
+    document.body.classList.add('dash-vivid');
+    return () => document.body.classList.remove('dash-vivid');
+  }, []);
+
   return (
     <NextIntlClientProvider messages={messages} locale={locale}>
       <CurrencyProvider>

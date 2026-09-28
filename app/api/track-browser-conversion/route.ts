@@ -1,7 +1,23 @@
 import { NextRequest, NextResponse } from "next/server";
-import { recordConversionEvent } from "@/lib/tracking/conversion-event-log";
+import { recordConversionEvent, type ConversionChannel, type ConversionPlatform } from "@/lib/tracking/conversion-event-log";
 
 export const dynamic = "force-dynamic";
+
+/**
+ * This endpoint is called from the browser, so its body is attacker-controlled: `platform` and
+ * `channel` were passed straight through to a typed column with `|| "META"` as the only check, which
+ * accepted any string at all. Anything unrecognised is now recorded under the safe default rather
+ * than written as a platform the rest of the system cannot interpret.
+ */
+const PLATFORMS: readonly ConversionPlatform[] = ["META", "GA4", "GOOGLE_ADS", "TIKTOK", "X", "VERCEL"];
+
+function platformFrom(value: unknown): ConversionPlatform {
+  return PLATFORMS.includes(value as ConversionPlatform) ? (value as ConversionPlatform) : "META";
+}
+
+function channelFrom(value: unknown): ConversionChannel {
+  return value === "server" ? "server" : "browser";
+}
 
 function statusFrom(value: unknown) {
   if (value === "SENT" || value === "SKIPPED" || value === "FAILED") return value;
@@ -32,8 +48,8 @@ export async function POST(request: NextRequest) {
     donationId,
     eventId,
     eventName: body?.eventName || "Donate",
-    platform: body?.platform || "META",
-    channel: body?.channel || "browser",
+    platform: platformFrom(body?.platform),
+    channel: channelFrom(body?.channel),
     status: statusFrom(body?.status),
     value: typeof body?.value === "number" ? body.value : undefined,
     currency: body?.currency,

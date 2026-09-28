@@ -4,7 +4,7 @@ import { createHash } from "crypto";
 import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 import { requireAdminOrDashboardPermission } from "@/lib/dashboard/api-auth";
 import { prisma } from "@/lib/prisma";
-import { rawCommand } from "@/lib/prisma-raw-command";
+import { firstBatch, rawCommand } from "@/lib/prisma-raw-command";
 
 export const dynamic = "force-dynamic";
 
@@ -139,10 +139,11 @@ export async function GET(request: NextRequest) {
     filter,
     sort: { date: -1, updatedAt: -1 },
     limit,
-  })) as JsonMap;
-  const rows = typeof result.cursor === "object" && result.cursor && Array.isArray((result.cursor as JsonMap).firstBatch) ? (result.cursor as JsonMap).firstBatch : [];
+  }));
+  const rows = firstBatch(result);
 
-  const summary = rows.reduce((acc, row) => {
+type MetricSummary = { spend: number; impressions: number; clicks: number; conversions: number; revenue: number };
+  const summary = rows.reduce<MetricSummary>((acc, row) => {
     if (typeof row === "object" && row) {
       const r = row as JsonMap;
       acc.spend += readNumber(r.spend);
@@ -164,12 +165,12 @@ export async function POST(request: NextRequest) {
 
   await ensureIndexes();
   const body = await request.json().catch(() => ({}));
-  const rows = Array.isArray((body as JsonMap).rows) ? (body as JsonMap).rows : [body];
-  const normalized = rows.filter((row): row is JsonMap => typeof row === "object" && row !== null && !Array.isArray(row)).map(normalizeMetric);
+const submitted: unknown[] = Array.isArray((body as JsonMap).rows) ? ((body as JsonMap).rows as unknown[]) : [body];
+  const normalized = submitted.filter((row): row is JsonMap => typeof row === "object" && row !== null && !Array.isArray(row)).map(normalizeMetric);
   if (normalized.length === 0) return NextResponse.json({ ok: false, error: "missing rows" }, { status: 400 });
 
   const now = new Date();
-  const updates = normalized.map((document) => ({
+  const updates = normalized.map((document: JsonMap) => ({
     q: { metricKey: document.metricKey },
     u: { $set: document, $setOnInsert: { createdAt: now } },
     upsert: true,

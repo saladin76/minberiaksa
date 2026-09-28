@@ -720,13 +720,13 @@ export default function DashboardPage() {
       name: "مشاريع",
       value: stats?.campaignDonationsTotal ?? 0,
       count: stats?.campaignDonationsCount ?? 0,
-      color: "#295a75",
+      color: "#025EB8",
     },
     {
       name: "فئات",
       value: stats?.categoryDonationsTotal ?? 0,
       count: stats?.categoryDonationsCount ?? 0,
-      color: "#6e818b",
+      color: "#FA5D17",
     },
   ].filter((d) => d.value > 0 || d.count > 0);
 
@@ -735,13 +735,13 @@ export default function DashboardPage() {
       name: "مرة واحدة",
       value: oneTimeTotal,
       count: stats?.oneTimeCount ?? 0,
-      color: "#35708f",
+      color: "#025EB8",
     },
     {
       name: "شهرية",
       value: monthlyTotal,
       count: stats?.monthlyCount ?? 0,
-      color: "#234a60",
+      color: "#7C3AED",
     },
   ].filter((d) => d.value > 0 || d.count > 0);
 
@@ -750,13 +750,13 @@ export default function DashboardPage() {
       name: "مدفوعة",
       value: stats?.totalAmount ?? 0,
       count: stats?.paidCount ?? 0,
-      color: "#2c8b5d",
+      color: "#10B981",
     },
     {
       name: "فاشلة",
       value: stats?.failedTotalAmount ?? 0,
       count: stats?.failedCount ?? 0,
-      color: "#bc4b3b",
+      color: "#F43F5E",
     },
   ].filter((d) => d.value > 0 || d.count > 0);
 
@@ -984,7 +984,7 @@ export default function DashboardPage() {
                   title="مرة واحدة (عدد)"
                   value={stats?.oneTimeAllCount ?? 0}
                   icon={Receipt}
-                  accent="slate"
+                  accent="blue"
                   subtitle={`ناجح: ${stats?.oneTimeCount ?? 0}`}
                 />
                 <StatsMetricCard
@@ -992,7 +992,7 @@ export default function DashboardPage() {
                   title="شهرية (عدد)"
                   value={stats?.monthlyAllCount ?? 0}
                   icon={Repeat}
-                  accent="slate"
+                  accent="violet"
                   subtitle={`ناجح: ${stats?.monthlyCount ?? 0}`}
                 />
                 <StatsMetricCard
@@ -1069,7 +1069,7 @@ export default function DashboardPage() {
                             <Tooltip
                               contentStyle={{
                                 backgroundColor: "#fff",
-                                border: "1px solid #dde4e8",
+                                border: "1px solid #E2E8F0",
                                 borderRadius: "8px",
                                 boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)",
                               }}
@@ -1122,14 +1122,14 @@ export default function DashboardPage() {
                             <Legend />
                             <Bar
                               dataKey="amountOneTime"
-                              fill="#35708f"
+                              fill="#025EB8"
                               radius={[4, 4, 0, 0]}
                               maxBarSize={32}
                               name="مبلغ مرة واحدة"
                             />
                             <Bar
                               dataKey="amountMonthly"
-                              fill="#234a60"
+                              fill="#7C3AED"
                               radius={[4, 4, 0, 0]}
                               maxBarSize={32}
                               name="مبلغ شهري"
@@ -1137,7 +1137,7 @@ export default function DashboardPage() {
                             {showFailed && (
                               <Bar
                                 dataKey="amountFailed"
-                                fill="#bc4b3b"
+                                fill="#F43F5E"
                                 radius={[4, 4, 0, 0]}
                                 maxBarSize={32}
                                 name="مبلغ فاشل"
@@ -1181,7 +1181,7 @@ export default function DashboardPage() {
                             <Tooltip
                               contentStyle={{
                                 backgroundColor: "#fff",
-                                border: "1px solid #dde4e8",
+                                border: "1px solid #E2E8F0",
                                 borderRadius: "8px",
                                 boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)",
                               }}
@@ -1204,7 +1204,7 @@ export default function DashboardPage() {
                             <Bar
                               yAxisId="amount"
                               dataKey={chartMetric}
-                              fill={chartMetric === "teamSupport" ? "#d39a27" : "#b04a2c"}
+                              fill={chartMetric === "teamSupport" ? "#F59E0B" : "#F97316"}
                               radius={[4, 4, 0, 0]}
                               maxBarSize={36}
                               name={chartMetric === "teamSupport" ? "دعم الفريق" : "الرسوم"}
@@ -1213,7 +1213,7 @@ export default function DashboardPage() {
                               yAxisId="count"
                               type="monotone"
                               dataKey="count"
-                              stroke="#1a6340"
+                              stroke="#10B981"
                               strokeWidth={2}
                               dot={false}
                               name="عدد التبرعات"
@@ -1255,7 +1255,7 @@ export default function DashboardPage() {
                           <Tooltip
                             contentStyle={{
                               backgroundColor: "#fff",
-                              border: "1px solid #dde4e8",
+                              border: "1px solid #E2E8F0",
                               borderRadius: "8px",
                               boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)",
                             }}
@@ -1282,10 +1282,10 @@ export default function DashboardPage() {
                             dataKey={chartMetric === "amount" ? "amountUSD" : chartMetric}
                             stroke={
                               chartMetric === "amount"
-                                ? "#295a75"
+                                ? "#025EB8"
                                 : chartMetric === "teamSupport"
-                                  ? "#d39a27"
-                                  : "#b04a2c"
+                                  ? "#F59E0B"
+                                  : "#F97316"
                             }
                             strokeWidth={2}
                             dot={false}
@@ -1301,7 +1301,7 @@ export default function DashboardPage() {
                             yAxisId="count"
                             type="monotone"
                             dataKey="count"
-                            stroke="#1a6340"
+                            stroke="#10B981"
                             strokeWidth={2}
                             dot={false}
                             name="عدد التبرعات"
@@ -1342,7 +1342,7 @@ export default function DashboardPage() {
                           <Tooltip
                             contentStyle={{
                               backgroundColor: "#fff",
-                              border: "1px solid #dde4e8",
+                              border: "1px solid #E2E8F0",
                               borderRadius: "8px",
                               boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)",
                             }}
@@ -1369,17 +1369,17 @@ export default function DashboardPage() {
                             dataKey={chartMetric === "amount" ? "amountUSD" : chartMetric}
                             stroke={
                               chartMetric === "amount"
-                                ? "#295a75"
+                                ? "#025EB8"
                                 : chartMetric === "teamSupport"
-                                  ? "#d39a27"
-                                  : "#b04a2c"
+                                  ? "#F59E0B"
+                                  : "#F97316"
                             }
                             fill={
                               chartMetric === "amount"
-                                ? "#83b2c9"
+                                ? "#60A5FA"
                                 : chartMetric === "teamSupport"
-                                  ? "#ecc977"
-                                  : "#e8a783"
+                                  ? "#FCD34D"
+                                  : "#FDBA74"
                             }
                             fillOpacity={0.4}
                             strokeWidth={2}
@@ -1395,7 +1395,7 @@ export default function DashboardPage() {
                             yAxisId="count"
                             type="monotone"
                             dataKey="count"
-                            stroke="#1a6340"
+                            stroke="#10B981"
                             strokeWidth={2}
                             dot={false}
                             name="عدد التبرعات"
@@ -1569,7 +1569,7 @@ export default function DashboardPage() {
                           : "bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100"
                       )}
                     >
-                      <span className="w-2.5 h-2.5 rounded-full inline-block" style={{ backgroundColor: showFailed ? "#bc4b3b" : "#96a6af" }} />
+                      <span className="w-2.5 h-2.5 rounded-full inline-block" style={{ backgroundColor: showFailed ? "#F43F5E" : "#94A3B8" }} />
                       {showFailed ? "إخفاء الفاشلة" : "إظهار الفاشلة"}
                     </button>
                   )}

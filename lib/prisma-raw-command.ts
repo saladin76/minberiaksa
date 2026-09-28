@@ -23,3 +23,20 @@ import type { Prisma } from "@prisma/client";
 export function rawCommand(command: Record<string, unknown>): Prisma.InputJsonObject {
   return command as unknown as Prisma.InputJsonObject;
 }
+
+/**
+ * The documents from a raw `find` or `aggregate` reply.
+ *
+ * Mongo nests them at `cursor.firstBatch`, and Prisma types the whole reply as opaque JSON — so every
+ * caller reached in through a pair of casts and still ended up with a value TypeScript would not let
+ * it iterate. This narrows once. A reply with no batch returns an empty list, which is what a `find`
+ * matching nothing looks like, and non-document entries are dropped rather than trusted.
+ */
+export function firstBatch(reply: unknown): Record<string, unknown>[] {
+  const cursor = (reply as { cursor?: unknown } | null)?.cursor;
+  const batch = (cursor as { firstBatch?: unknown } | null)?.firstBatch;
+  if (!Array.isArray(batch)) return [];
+  return batch.filter(
+    (row): row is Record<string, unknown> => typeof row === "object" && row !== null && !Array.isArray(row),
+  );
+}

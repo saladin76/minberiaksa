@@ -52,6 +52,9 @@ interface Campaign {
     title: string;
     description: string;
     image: string | null;
+    /* /api/campaigns/[id] selects this; the interface omitted it, so the three reads below were
+       unchecked even though the video thumbnail and modal depend on it. */
+    videoUrl?: string | null;
     createdAt: string;
   }>;
 }
@@ -68,6 +71,8 @@ interface Comment {
   user: {
     name: string;
     image: string;
+    /* /api/campaigns/[id]/comments selects this; it is what the delete control is gated on. */
+    email?: string | null;
   };
 }
 
@@ -533,7 +538,8 @@ const MainPage = ({ id, locale }: {id:string; locale?: string}) => {
                           )}
                         </p>
                         <div
-                          ref={(el) => (updateRefs.current[update.id] = el)}
+                          /* Braced: an assignment expression here would be read as a cleanup function. */
+                          ref={(el) => { updateRefs.current[update.id] = el; }}
                           className={`relative ${
                             !isUpdateExpanded[update.id]
                               ? "max-h-[150px] overflow-hidden"
