@@ -9,6 +9,7 @@ const HEADER_CLASS = "dashboard-project-section-toggle";
 
 type LocaleLink = {
   locale: string;
+  label?: string | null;
   slug?: string | null;
   path?: string | null;
   url?: string | null;
@@ -142,7 +143,7 @@ function createLocaleLinksSection(projectId: string) {
 
         const label = document.createElement("div");
         label.className = "text-sm font-semibold text-slate-800";
-        label.textContent = LANGUAGE_LABELS[link.locale] || link.locale;
+        label.textContent = LANGUAGE_LABELS[link.locale] || link.label || link.locale;
 
         const input = document.createElement("input");
         input.type = "text";

@@ -23,6 +23,7 @@ const LANGUAGE_LABELS: Record<string, string> = {
 
 type LocaleLink = {
   locale: string;
+  label?: string | null;
   slug?: string | null;
   url?: string | null;
 };
@@ -97,7 +98,7 @@ function renderSlugEditor(projectId: string, links: LocaleLink[], target: HTMLEl
   root.className = "mt-5 rounded-2xl border border-blue-100 bg-blue-50/40 p-4";
 
   const rows = links.map((link) => {
-    const label = LANGUAGE_LABELS[link.locale] || link.locale;
+    const label = LANGUAGE_LABELS[link.locale] || link.label || link.locale;
     const slug = link.slug || "";
     return `
       <div class="grid gap-2 rounded-xl border border-slate-200 bg-white p-3 md:grid-cols-[120px_1fr_auto] md:items-end">
