@@ -1836,6 +1836,10 @@
 
 .mia-scope .cg-head { display: flex; align-items: center; gap: 10px; padding: 14px 16px; background: var(--deep); color: #fff; }
 .mia-scope .cg-head-icon { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; background: rgba(211,154,39,.2); color: var(--gold); flex: 0 0 auto; }
+/* The foundation's mark: original colours on light surfaces, flattened to
+   white on dark ones so it matches the surface instead of sitting on it. */
+.mia-scope .cg-logo { display: block; width: 22px; height: 22px; object-fit: contain; }
+.mia-scope .cg-logo-on-dark { filter: brightness(0) invert(1); }
 .mia-scope .cg-head-text { display: grid; gap: 2px; min-width: 0; flex: 1 1 auto; }
 .mia-scope .cg-head-text b { font-size: 14.5px; font-weight: 900; }
 .mia-scope .cg-head-text span { font-size: 11.5px; color: rgba(255,255,255,.7); line-height: 1.5; }

@@ -192,7 +192,7 @@ export default function ConciergeLauncher() {
       <section className="cg-sheet" data-open={open ? "1" : "0"} dir={dir} role="dialog" aria-modal="true" aria-label={t("title")} aria-hidden={!open}>
         <header className="cg-head">
           <span className="cg-head-icon" aria-hidden="true">
-            <ConciergeGlyph />
+            <ConciergeLogo onDark />
           </span>
           <div className="cg-head-text">
             <b>{t("title")}</b>
@@ -252,7 +252,7 @@ export default function ConciergeLauncher() {
             <div className="cg-turn cg-turn-assistant">
               <div className="cg-thinking" aria-live="polite">
                 <span className="cg-thinking-orb" aria-hidden="true">
-                  <ConciergeGlyph />
+                  <ConciergeLogo onDark />
                 </span>
                 <span className="cg-thinking-line" aria-hidden="true" />
                 <span className="cg-sr">{t("thinking")}</span>
@@ -292,14 +292,13 @@ function SparkGlyph() {
   );
 }
 
-/** Two open hands under a small crescent  giving, not a robot. */
-function ConciergeGlyph() {
+/**
+ * The foundation's mark as the assistant's face. Original colours on a light
+ * surface; on a dark one (`onDark`) it is turned white so it reads against it.
+ */
+function ConciergeLogo({ onDark = false }: { onDark?: boolean }) {
   return (
-    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M12 3.5a4.2 4.2 0 1 0 3.2 6.9 3.3 3.3 0 1 1-3.2-6.9Z" />
-      <path d="M3 14.5c2.2-1.2 3.6-1.1 5.2.2l2.4 1.9c.9.7.8 1.9-.3 2.2l-2.1.6" />
-      <path d="M21 14.5c-2.2-1.2-3.6-1.1-5.2.2l-2.4 1.9c-.9.7-.8 1.9.3 2.2l2.1.6" />
-      <path d="M8 21h8" />
-    </svg>
+    // eslint-disable-next-line @next/next/no-img-element
+    <img src="/logometaminber.avif" alt="" width={22} height={22} className={`cg-logo${onDark ? " cg-logo-on-dark" : ""}`} aria-hidden="true" />
   );
 }

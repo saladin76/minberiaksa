@@ -64,6 +64,16 @@ export function validateReceiptFile(file: { type?: string; size?: number; name?:
   return null;
 }
 
+/** The file extension (with the dot) a receipt of this type should carry. */
+export function receiptExtension(mime: string, fileName?: string): string {
+  const type = mime.toLowerCase();
+  if (type === "application/pdf") return ".pdf";
+  const fromName = (fileName ?? "").toLowerCase().match(/\.([a-z0-9]{2,5})$/)?.[1];
+  if (fromName) return `.${fromName}`;
+  const fromMime = type.split("/")[1]?.replace("jpeg", "jpg");
+  return fromMime ? `.${fromMime}` : "";
+}
+
 export function isReceiptImage(mime: string): boolean {
   return (ALLOWED_RECEIPT_IMAGE_MIME as readonly string[]).includes(mime.toLowerCase());
 }

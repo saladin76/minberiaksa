@@ -210,7 +210,12 @@ export function serializeClaimForAdmin(claim: ClaimWithDonation): AdminClaimView
     transferDate: claim.transferDate?.toISOString() ?? null,
     transferReference: claim.transferReference,
     donorNote: claim.donorNote,
-    receipts: claim.receipts.map(receiptFile),
+    /* Cloudinary serves raw files (PDFs) as a forced download with no usable
+       type, so the dashboard views them through its own route instead. */
+    receipts: claim.receipts.map((file, i) => {
+      const view = receiptFile(file);
+      return view.isImage ? view : { ...view, url: `/api/admin/transfer-receipts/${claim.id}/file/${i}` };
+    }),
     submissionCount: claim.submissionCount,
     maxSubmissions: BANK_TRANSFER_MAX_SUBMISSIONS,
     receiptSubmittedAt: claim.receiptSubmittedAt?.toISOString() ?? null,

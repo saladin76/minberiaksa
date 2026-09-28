@@ -8,7 +8,7 @@ import { prisma } from "@/lib/prisma";
 import { writeAuditLog } from "@/lib/audit-log";
 import { dispatchDonationPaid } from "@/lib/events/dispatch";
 import { tgNotify, htmlEscape } from "@/lib/telegram/client";
-import { isReceiptImage } from "@/lib/uploads/receipt-file-rules";
+import { isReceiptImage, receiptExtension } from "@/lib/uploads/receipt-file-rules";
 import { sendBankTransferEmail } from "./bank-transfer-emails";
 import { BANK_TRANSFER_MAX_SUBMISSIONS, BANK_TRANSFER_PROVIDER, BANK_TRANSFER_REJECTED_MARKER, safeMoney } from "./bank-transfer-shared";
 
@@ -137,15 +137,17 @@ export type SubmitReceiptResult =
 
 function uploadToCloudinary(buffer: Buffer, mimeType: string, fileName: string): Promise<UploadApiResponse> {
   const isImage = isReceiptImage(mimeType);
-  /* Strip the extension from the public id: Cloudinary appends its own for raw
-     resources, and `receipt.pdf.pdf` is what you get otherwise. */
+  /* An image's public id takes no extension (Cloudinary adds the format to its
+     URL). A raw file's public id IS its URL, so the extension must be in it
+     without one a PDF downloads as a nameless blob that browsers will not open. */
   const base = (fileName || "receipt").replace(/\.[^.]+$/, "").replace(/[^\p{L}\p{N}_-]+/gu, "-").slice(0, 60) || "receipt";
+  const ext = isImage ? "" : receiptExtension(mimeType, fileName);
   return new Promise((resolve, reject) => {
     const stream = cloudinary.uploader.upload_stream(
       {
         folder: CLOUDINARY_FOLDER,
         resource_type: isImage ? "image" : "raw",
-        public_id: `${Date.now()}-${base}`,
+        public_id: `${Date.now()}-${base}${ext}`,
       },
       (error, result) => {
         if (error) return reject(error);
