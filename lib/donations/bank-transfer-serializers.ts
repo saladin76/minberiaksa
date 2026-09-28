@@ -90,7 +90,12 @@ export function serializeClaimForDonor(claim: ClaimWithDonation, locale: string)
     senderName: claim.senderName,
     transferDate: claim.transferDate?.toISOString() ?? null,
     transferReference: claim.transferReference,
-    receipts: claim.receipts.map(receiptFile),
+    /* PDFs through the donor's own route (see `receiptFileResponse`); the
+       page adds its `?t=` token for a guest. */
+    receipts: claim.receipts.map((file, i) => {
+      const view = receiptFile(file);
+      return view.isImage ? view : { ...view, url: `/api/bank-transfer/${claim.donationId}/receipt/file/${i}` };
+    }),
     submissionCount: claim.submissionCount,
     maxSubmissions: BANK_TRANSFER_MAX_SUBMISSIONS,
     canUpload: claimAcceptsReceipt(claim),

@@ -223,7 +223,7 @@ export default function TransferReceiptPage({ claim: initial, bank, token, donor
                 <b style={{ fontSize: 14 }}>{t("submittedFiles")}</b>
                 <div style={{ display: "grid", gap: 8 }}>
                   {[...claim.receipts].reverse().map((file) => (
-                    <a key={`${file.submission}-${file.uploadedAt}`} href={file.url} target="_blank" rel="noopener noreferrer" style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 12px", border: "1px solid var(--border)", borderRadius: 10, background: "var(--ivory)", color: "inherit", textDecoration: "none" }}>
+                    <a key={`${file.submission}-${file.uploadedAt}`} href={file.isImage ? file.url : `${file.url}${query}`} target="_blank" rel="noopener noreferrer" style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 12px", border: "1px solid var(--border)", borderRadius: 10, background: "var(--ivory)", color: "inherit", textDecoration: "none" }}>
                       <FileThumb url={file.url} isImage={file.isImage} name={file.fileName} />
                       <span style={{ display: "grid", gap: 2, minWidth: 0, flex: "1 1 auto" }}>
                         <b dir="ltr" style={{ fontSize: 13.5, unicodeBidi: "isolate", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", textAlign: "start" }}>{file.fileName}</b>
