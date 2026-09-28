@@ -31,7 +31,7 @@ export async function GET(request: NextRequest) {
       {
         status: 200,
         headers: {
-          // Short cache even on miss — IP→country lookups don't change second
+          // Short cache even on miss  IP→country lookups don't change second
           // to second and we don't want to retry through the failure path on
           // every page transition.
           "Cache-Control": "public, max-age=300, s-maxage=300",

@@ -2,7 +2,7 @@
  * Detect the advertising source / tracking quality of a donation from data
  * already captured on the donation row: utm fields, click ids, fbp/fbc, and
  * the two conversion-sent timestamps written by the Meta CAPI / GA4 MP
- * pipeline. This is pure — runs identically on server and client — and is
+ * pipeline. This is pure  runs identically on server and client  and is
  * the foundation for the Ads Intelligence dashboard before any external API
  * integration is wired up.
  */
@@ -51,7 +51,7 @@ export interface DetectSourceInput {
   attribution: Record<string, unknown> | null | undefined;
   conversionEventsSentAt: Date | string | null | undefined;
   conversionFailedEventsSentAt: Date | string | null | undefined;
-  /** PAID / FAILED — failures with click-ids still get a status but never "verified". */
+  /** PAID / FAILED  failures with click-ids still get a status but never "verified". */
   status: string | null | undefined;
 }
 
@@ -167,12 +167,12 @@ export function detectDonationSource(input: DetectSourceInput): DonationSourceRe
     confidence += 30;
     reasons.push(`utm_source = ${utmSource}`);
   }
-  // Click-id is the strongest single signal — it's what the platform reconciles on.
+  // Click-id is the strongest single signal  it's what the platform reconciles on.
   if (hasPlatformClickId) {
     confidence += 35;
     reasons.push("click id موجود");
   } else if (platform !== "other-paid") {
-    reasons.push("click id ناقص — لن تطابق منصة الإعلان");
+    reasons.push("click id ناقص  لن تطابق منصة الإعلان");
   }
   // Meta-specific: pixel cookies are required for browser↔CAPI dedup.
   if (platform === "meta") {
@@ -180,7 +180,7 @@ export function detectDonationSource(input: DetectSourceInput): DonationSourceRe
       confidence += 10;
       reasons.push("fbp و fbc موجودان");
     } else {
-      reasons.push("fbp/fbc ناقصان — match quality منخفضة");
+      reasons.push("fbp/fbc ناقصان  match quality منخفضة");
     }
   }
   // Server-side conversion event firing.
@@ -199,10 +199,10 @@ export function detectDonationSource(input: DetectSourceInput): DonationSourceRe
   // Status tier.
   let status: DonationSourceStatus;
   if (!isPaidStatus) {
-    // FAILED donation that was at least linked to an ad — useful for waste analysis,
+    // FAILED donation that was at least linked to an ad  useful for waste analysis,
     // never "verified" since money never settled.
     status = "tracking-error";
-    reasons.push("التبرع فشل — لا إيراد");
+    reasons.push("التبرع فشل  لا إيراد");
   } else if (
     hasPlatformClickId &&
     (conversionSent || platform === "other-paid") &&

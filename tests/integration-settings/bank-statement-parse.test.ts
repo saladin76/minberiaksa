@@ -8,13 +8,13 @@ import { parseBankStatementFile } from "../../lib/bank-transfers/statement-parse
  * End-to-end coverage for the التحويلات البنكية importer: builds real .xlsx
  * buffers and asserts on the amounts that come out.
  *
- * The regression these guard is the one reported from the dashboard — donation
+ * The regression these guard is the one reported from the dashboard  donation
  * figures imported wrong. Two defects combined to cause it:
  *   1. The header row was located by "first row whose text mentions tarih/
  *      amount/…", so a preamble line like "Rapor Tarihi: 01.02.2026" was taken
  *      as the header and no column resolved at all.
  *   2. With no amount column, the parser took the first number anywhere in the
- *      row — which is the reference number, not the money.
+ *      row  which is the reference number, not the money.
  * Together they imported "20250114887" as a donation.
  */
 
@@ -31,7 +31,7 @@ function shape(rows: { amount: number | null; direction: string }[]) {
   return rows.map((r) => `${r.amount} ${r.direction}`);
 }
 
-describe("parseBankStatementFile — amount extraction", () => {
+describe("parseBankStatementFile  amount extraction", () => {
   test("preamble rows do not hijack the header, and «Tutar» wins over «Bakiye Tutarı»", async () => {
     const parsed = await parseBankStatementFile({
       ...BASE,
@@ -84,7 +84,7 @@ describe("parseBankStatementFile — amount extraction", () => {
     assert.deepEqual(shape(parsed.rows), ["300 CREDIT", "12.5 DEBIT"]);
   });
 
-  test("headerless sheet — detection finds the money column, not the reference", async () => {
+  test("headerless sheet  detection finds the money column, not the reference", async () => {
     const parsed = await parseBankStatementFile({
       ...BASE,
       buffer: sheet([

@@ -5,10 +5,10 @@ import { countryNameToCode } from "@/lib/geo/country-name-to-code";
 import { SUPPORTED_LOCALES, type SupportedLocale } from "@/lib/locales";
 
 /**
- * Bulk donation import — parse an admin-uploaded Excel/CSV export (Turkish headers like the PayFor
+ * Bulk donation import  parse an admin-uploaded Excel/CSV export (Turkish headers like the PayFor
  * sales sheet) into normalized donation rows that map onto the Prisma `Donation` + `User` schema.
  *
- * This module ONLY parses/normalizes/validates — it never writes to the DB and never sends anything.
+ * This module ONLY parses/normalizes/validates  it never writes to the DB and never sends anything.
  * The commit route creates donors (deduped by email) + donations. Imported donations are historical
  * records: they are marked `provider="IMPORT"` and never trigger dispatch / CAPI / receipts.
  */
@@ -202,8 +202,8 @@ export function parseDonationImportBuffer(buffer: Buffer): ParsedDonationSheet {
   if (headerRowIndex < 0) {
     return { fileHash, totalRows: 0, rows: [], headerMap: {}, warnings: ["تعذّر التعرّف على صف العناوين. تأكد من وجود أعمدة مثل EPOSTA و TOPLAM."] };
   }
-  if (map.email === undefined) warnings.push("لا يوجد عمود بريد إلكتروني (EPOSTA) — الصفوف بدون بريد ستُستبعد.");
-  if (map.amountUSD === undefined) warnings.push("لا يوجد عمود USD HALİ — سيُحتسب المبلغ بالدولار من المبلغ الأصلي إن أمكن.");
+  if (map.email === undefined) warnings.push("لا يوجد عمود بريد إلكتروني (EPOSTA)  الصفوف بدون بريد ستُستبعد.");
+  if (map.amountUSD === undefined) warnings.push("لا يوجد عمود USD HALİ  سيُحتسب المبلغ بالدولار من المبلغ الأصلي إن أمكن.");
 
   const rows: ParsedDonationRow[] = [];
 
@@ -230,7 +230,7 @@ export function parseDonationImportBuffer(buffer: Buffer): ParsedDonationSheet {
     else if (!isEmail(email)) issues.push("بريد إلكتروني غير صالح");
     if (amount === null || amount <= 0) issues.push("مبلغ غير صالح");
 
-    // Reference tag for the created donation (providerOrderId). Repeats are ALLOWED — every row is
+    // Reference tag for the created donation (providerOrderId). Repeats are ALLOWED  every row is
     // imported, so this is made unique per row (row number suffix) rather than used to skip anything.
     const dedupBasis = keyId || `${email}|${amountUSD ?? amount ?? ""}|${createdAtISO ?? ""}|${cell(row, map.basket)}`;
     const dedupKey = `${keyId ?? `hash:${sha256(dedupBasis).slice(0, 16)}`}#${r + 1}`;

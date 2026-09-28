@@ -1,6 +1,6 @@
 /**
  * USD-base exchange rates: persisted in MongoDB, refreshed from ExchangeRate-API on a schedule.
- * All server conversions read from DB (with short in-memory TTL) — not the external API per request.
+ * All server conversions read from DB (with short in-memory TTL)  not the external API per request.
  */
 
 import { prisma } from "@/lib/prisma";

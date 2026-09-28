@@ -21,7 +21,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: false, error: "signature verification not configured" }, { status: 401 });
   }
   /* 200 means "stored". Meta retries a non-2xx for up to 24 hours, which is exactly the behaviour we
-     want when the archive write failed — and exactly what a blanket 200 threw away: a delivery
+     want when the archive write failed  and exactly what a blanket 200 threw away: a delivery
      receipt or a donor's reply lost to a transient database error was never sent again. A malformed
      body is still acknowledged, because a retry of something unparseable would only repeat. */
   let payload: unknown;

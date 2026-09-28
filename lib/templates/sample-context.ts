@@ -5,7 +5,7 @@ import { VARIABLE_CATALOG } from "./variables";
  *
  * Template editors need to show what a message will look like once merged, but must never reach
  * for a real donor to do it. Deriving the sample from `VARIABLE_CATALOG` means a newly added
- * variable gets a sensible preview value for free — and, more importantly, that every editor
+ * variable gets a sensible preview value for free  and, more importantly, that every editor
  * previews against the *same* values, so two channels can be compared side by side.
  *
  * Extracted from the WhatsApp editor when SMS needed the same thing; it is preview-only data and

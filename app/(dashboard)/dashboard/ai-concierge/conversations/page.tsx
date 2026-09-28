@@ -5,7 +5,7 @@ import { MessagesSquare } from "lucide-react";
 import { ConciergeShell } from "../_components/ConciergeShell";
 import { ConversationsView } from "../_components/ConversationsView";
 
-/** مساعد العطاء — every conversation visitors had with the concierge. */
+/** مساعد العطاء  every conversation visitors had with the concierge. */
 export default function AiConciergeConversationsPage() {
   return (
     <ConciergeShell

@@ -13,13 +13,13 @@ import { useMinbarCartCount } from "@/hooks/useMinbarCart";
 import { useMinbarLabel } from "@/hooks/useMinbarLabel";
 
 /**
- * Site header — ported from `Minbar/Header.dc.html`.
+ * Site header  ported from `Minbar/Header.dc.html`.
  *
  * Carries the main navigation, the language picker (19 languages; ar and ur are
  * RTL), the currency picker (14 currencies), the cart icon and the account icon.
  *
  * Notes carried over from the handoff:
- *  - Every icon is drawn SVG matched to its function — no icon font, no emoji.
+ *  - Every icon is drawn SVG matched to its function  no icon font, no emoji.
  *    "All pages" is a 2×2 apps grid rather than a hamburger because it opens a
  *    page index, not a side nav.
  *  - Presence of a language in the picker does not mean its content is
@@ -28,7 +28,7 @@ import { useMinbarLabel } from "@/hooks/useMinbarLabel";
  *    `mia:basket-updated`, plus the standard `storage` event so a second tab
  *    stays in step.
  *  - The spacer below the fixed header is measured from its real height with a
- *    ResizeObserver, never a fixed number — the header grows and shrinks with
+ *    ResizeObserver, never a fixed number  the header grows and shrinks with
  *    the language, the back button and the viewport, and any constant either
  *    overshoots or covers the top of the content.
  *
@@ -111,7 +111,7 @@ export interface HeaderProps {
    * `{ zakat: "/ar/zakat-new" }`. Anything absent keeps its default route.
    */
   linkOverrides?: Record<string, string>;
-  /** Whether a donor session exists — drives where the account icon points. */
+  /** Whether a donor session exists  drives where the account icon points. */
   signedIn?: boolean;
   /** An ADMIN session gets a direct door to the dashboard beside the account icon. */
   isAdmin?: boolean;
@@ -191,7 +191,7 @@ export default function Header({
   }, []);
 
   /* The back button appears only once the visitor has actually moved between
-     two pages — not on the first page of a session, and not on a reload of the
+     two pages  not on the first page of a session, and not on a reload of the
      same page. */
   useEffect(() => {
     try {
@@ -204,7 +204,7 @@ export default function Header({
     }
   }, [pathname]);
 
-  /* Close the popovers on outside click and on Escape — both panels are large
+  /* Close the popovers on outside click and on Escape  both panels are large
      and overlay the page, so there has to be a way out that is not the toggle. */
   useEffect(() => {
     if (!localeOpen && !menuOpen) return;
@@ -228,7 +228,7 @@ export default function Header({
     };
   }, [localeOpen, menuOpen]);
 
-  /* Changing language keeps the visitor on the same page — a hard requirement
+  /* Changing language keeps the visitor on the same page  a hard requirement
      in DEVELOPER_HANDOFF §11, and the reason this swaps the locale segment
      rather than pushing the homepage. */
   const selectLocale = (code: string) => {
@@ -389,7 +389,7 @@ export default function Header({
             ) : null}
           </Link>
 
-          {/* Account — signed-in donors go straight to their account, everyone
+          {/* Account  signed-in donors go straight to their account, everyone
               else lands on sign-in and is returned here afterwards. */}
           <Link
             href={signedIn ? miaPath("account", locale) : `/auth/signin?callbackUrl=${encodeURIComponent(miaPath("account", locale))}`}

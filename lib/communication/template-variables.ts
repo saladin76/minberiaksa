@@ -3,7 +3,7 @@ export type TemplateVariable = {
   label: string;
   /**
    * Safe, clearly-marked placeholder used ONLY for internal preview rendering. This is deliberately
-   * NOT a real/fake donor name, amount, id, or URL — it is a bracketed label so previews never show
+   * NOT a real/fake donor name, amount, id, or URL  it is a bracketed label so previews never show
    * fabricated data. The Template Center UI does not display these to the user.
    */
   sample: string;

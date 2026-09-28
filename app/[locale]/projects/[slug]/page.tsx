@@ -25,7 +25,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale, slug } = await params;
   const key = decodeURIComponent(slug);
 
-  /* A super category owns this slug ahead of any campaign — the programme
+  /* A super category owns this slug ahead of any campaign  the programme
      pages live under /projects/<slug> and are rows, not files. */
   const superCategory = await getSuperCategory(key, locale);
   if (superCategory) {
@@ -38,7 +38,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   }
 
   const project = await getProject(key, locale);
-  // An unpublished or missing project must not produce indexable metadata —
+  // An unpublished or missing project must not produce indexable metadata 
   // `PRODUCTION_SEO_CONTRACT.md` requires a real 404, not a soft one.
   if (!project) return { title: "", robots: { index: false, follow: false } };
 
@@ -52,7 +52,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 /**
- * Project detail — ported from `Minbar/تفاصيل مشروع.dc.html`.
+ * Project detail  ported from `Minbar/تفاصيل مشروع.dc.html`.
  *
  * Everything is read on the server: this page is indexable, and its copy,
  * figures and breadcrumb all have to be in the first response.

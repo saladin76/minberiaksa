@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
  * Shared loading skeletons.
  *
  * `components/ui/skeleton.tsx` shipped with the shadcn install and had zero imports across
- * the whole dashboard — every page instead hand-wrote its own `animate-pulse` divs, using a
+ * the whole dashboard  every page instead hand-wrote its own `animate-pulse` divs, using a
  * different grey (`bg-muted` here, `bg-slate-200` there) and a different block layout. These
  * wrappers give one shape per content type so loading states stop looking like five
  * different products.
@@ -84,7 +84,7 @@ export function PageHeaderSkeleton({ className }: { className?: string }) {
   );
 }
 
-/** Whole-page fallback — header + stats + filters + table. Used by route `loading.tsx`. */
+/** Whole-page fallback  header + stats + filters + table. Used by route `loading.tsx`. */
 export function PageSkeleton({
   stats = 4, rows = 8, columns = 5,
 }: { stats?: number; rows?: number; columns?: number }) {

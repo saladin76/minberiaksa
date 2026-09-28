@@ -6,7 +6,7 @@ import { requireAdminOrDashboardPermission } from "@/lib/dashboard/api-auth";
 import { isVideoType } from "@/lib/content/video-write";
 
 /**
- * GET /api/videos/admin — the dashboard listing.
+ * GET /api/videos/admin  the dashboard listing.
  *
  * Unlike the public `/api/videos` this returns inactive rows and ignores
  * `localeFilter`, so it sits behind the same permission gate as the rest of the

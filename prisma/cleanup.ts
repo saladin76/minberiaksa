@@ -5,7 +5,7 @@
 //      related child rows on those campaigns).
 //   2. Set isActive=false on every campaign in the "غزه" category.
 //
-// Safe to run repeatedly — every step queries by name and no-ops when there's
+// Safe to run repeatedly  every step queries by name and no-ops when there's
 // nothing to do.
 //
 // Run with:  npx tsx prisma/cleanup.ts
@@ -29,7 +29,7 @@ async function main() {
   });
 
   if (!syria) {
-    console.log(`ℹ️  Category "${TARGET_DELETE}" not found — nothing to delete`);
+    console.log(`ℹ️  Category "${TARGET_DELETE}" not found  nothing to delete`);
   } else {
     const campaignsToDelete = await prisma.campaign.findMany({
       where: { categoryIds: { has: syria.id } },
@@ -40,7 +40,7 @@ async function main() {
     if (campaignIds.length > 0) {
       // Walk down the foreign-key tree from the deepest children up. For
       // dummy/seeded campaigns most of these tables are empty, so each call
-      // typically deletes 0 rows — but being explicit keeps us safe if real
+      // typically deletes 0 rows  but being explicit keeps us safe if real
       // data was attached through the dashboard before cleanup.
 
       // Updates have their own translations
@@ -71,14 +71,14 @@ async function main() {
       await prisma.comment.deleteMany({
         where: { campaignId: { in: campaignIds } },
       });
-      // CampaignTranslation has onDelete: Cascade — auto-removed below.
+      // CampaignTranslation has onDelete: Cascade  auto-removed below.
 
       await prisma.campaign.deleteMany({
         where: { id: { in: campaignIds } },
       });
     }
 
-    // CategoryTranslation has onDelete: Cascade — auto-removed when the
+    // CategoryTranslation has onDelete: Cascade  auto-removed when the
     // parent category goes away.
     await prisma.category.delete({ where: { id: syria.id } });
 
@@ -97,7 +97,7 @@ async function main() {
 
   if (!gaza) {
     console.log(
-      `ℹ️  Category "${TARGET_DEACTIVATE}" not found — nothing to deactivate`
+      `ℹ️  Category "${TARGET_DEACTIVATE}" not found  nothing to deactivate`
     );
   } else {
     const result = await prisma.campaign.updateMany({

@@ -79,7 +79,7 @@ export const RETRYABLE_STATUSES = ["FAILED", "SKIPPED"] as const satisfies reado
 
 /**
  * Terminal failures that must NOT be retried. A bounce is the receiving server stating the address
- * is undeliverable — re-sending does not fix the address, it only accrues bounce rate, which is the
+ * is undeliverable  re-sending does not fix the address, it only accrues bounce rate, which is the
  * fastest way to get a sending domain throttled or blocklisted.
  */
 export const NON_RETRYABLE_TERMINAL = ["BOUNCED"] as const satisfies readonly DeliveryStatusId[];

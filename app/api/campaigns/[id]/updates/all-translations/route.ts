@@ -46,7 +46,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       },
     });
 
-    // Was `Cache-Control: public, s-maxage=60` — on an authenticated admin response that lets
+    // Was `Cache-Control: public, s-maxage=60`  on an authenticated admin response that lets
     // a shared CDN store per-admin content and potentially serve it to another requester.
     // Must be private/no-store now that the route is session-guarded.
     return NextResponse.json(updates, {

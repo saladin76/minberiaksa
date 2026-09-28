@@ -10,7 +10,7 @@ import type { TranslatedLocales } from "../../../_components/AutoTranslateButton
  *
  * It also carries the Arabic draft (`arabic`), published by the Arabic editor
  * as it is typed, so a language tab can ask for a machine translation of it
- * before anything exists on the server — and `fillLocales` lets the Arabic
+ * before anything exists on the server  and `fillLocales` lets the Arabic
  * tab fill every language in one go. `version` ticks on each bulk fill so the
  * per-locale editors, which hold their own local state, know to re-seed.
  */

@@ -44,7 +44,7 @@ function getDateRange(period: string, startParam?: string | null, endParam?: str
   return { startDate, endDate };
 }
 
-/** Subscription-linked donation charges in range (any status — for counts & table) */
+/** Subscription-linked donation charges in range (any status  for counts & table) */
 function buildDonationChargeBase(
   startDate: Date,
   endDate: Date,
@@ -75,7 +75,7 @@ function buildDonationChargeBase(
  *
  * Revenue is recognised when the money actually settled, which is the rule the overview
  * chart already follows. The month card used `createdAt` + `PAID_DONATION_FILTER`, and that
- * filter's `paidAt` arm is vacuous here — it reads `paidAt != null OR subscriptionId != null`
+ * filter's `paidAt` arm is vacuous here  it reads `paidAt != null OR subscriptionId != null`
  * while the base already requires `subscriptionId != null`, so nothing constrained settlement
  * at all. An abandoned checkout (row written optimistically at status=PAID, never settled)
  * therefore counted as revenue in the card but not in the chart, and the two disagreed.
@@ -282,12 +282,12 @@ async function paidTotalsByFrequency(where: Prisma.DonationWhereInput) {
 }
 
 /**
- * GET /api/admin/subscriptions/overview/stats — recurring plans (daily / every Friday / monthly)
+ * GET /api/admin/subscriptions/overview/stats  recurring plans (daily / every Friday / monthly)
  * and the charges they produced. `?frequency=DAILY|FRIDAY|MONTHLY` narrows everything to one
  * cadence; without it every cadence is included and `byFrequency` splits the totals.
  *
  * Plan amounts are per charge, so every plan-level money figure (MRR and the status split) is
- * reported as a MONTHLY EQUIVALENT — amount × charges per month — or a $1/day plan would count
+ * reported as a MONTHLY EQUIVALENT  amount × charges per month  or a $1/day plan would count
  * as $1 a month next to a $30/month one.
  */
 export async function GET(request: NextRequest) {
@@ -319,7 +319,7 @@ export async function GET(request: NextRequest) {
 
     const { startDate, endDate } = getDateRange(period, startParam, endParam);
     const subBase = buildSubscriptionWhere(categoryId, campaignId, referralId, frequency);
-    // ACTIVE subscription without any settled charge isn't really earning revenue —
+    // ACTIVE subscription without any settled charge isn't really earning revenue 
     // exclude it from MRR / "التبرعات الشهرية الناشطة" so a failed-only sub doesn't inflate the totals.
     const activeMonthlyWhere: Prisma.SubscriptionWhereInput = {
       ...subBase,
@@ -333,7 +333,7 @@ export async function GET(request: NextRequest) {
     // (with the lenient filter, whose `paidAt` arm is vacuous once `subscriptionId` is required)
     // counted abandoned checkouts as income and made the cards disagree with the chart.
     const donationSettledBase = buildDonationSettledBase(startDate, endDate, categoryId, campaignId, referralId, frequency);
-    // donationWhereAll, not spread — the base carries a category `OR` that would
+    // donationWhereAll, not spread  the base carries a category `OR` that would
     // otherwise be overwritten by the paid filter's own `OR`.
     const donationPaidWhere = donationWhereAll(donationSettledBase, PAID_CONTRIBUTING_FILTER);
 
@@ -341,7 +341,7 @@ export async function GET(request: NextRequest) {
     // `paidAt` to bucket by, and windowing it on one would silently report zero failures.
     const donationFailedWhere = donationWhereAll(donationChargeBase, { status: "FAILED" as const });
     const donationAllTimeBase = buildDonationChargeAllTimeBase(categoryId, campaignId, referralId, frequency);
-    // Strict here too — "all-time revenue" must mean money that actually settled, otherwise the
+    // Strict here too  "all-time revenue" must mean money that actually settled, otherwise the
     // all-time card drifts from the sum of the periods that make it up.
     const donationPaidAllTime = donationWhereAll(donationAllTimeBase, PAID_CONTRIBUTING_FILTER);
 
@@ -355,7 +355,7 @@ export async function GET(request: NextRequest) {
       frequency
     );
     // PAID_CONTRIBUTING_FILTER (status=PAID *and* paidAt set), not the lenient
-    // PAID_DONATION_FILTER — the card must agree with the chart on what counts as revenue.
+    // PAID_DONATION_FILTER  the card must agree with the chart on what counts as revenue.
     const thisMonthPaid = donationWhereAll(thisMonthBase, PAID_CONTRIBUTING_FILTER);
 
     const [
@@ -475,7 +475,7 @@ export async function GET(request: NextRequest) {
       activeCount: 0,
       /** Sum of per-charge amounts of active plans (USD). */
       activeAmountPerChargeUSD: 0,
-      /** The same plans as a monthly equivalent — this cadence's share of MRR. */
+      /** The same plans as a monthly equivalent  this cadence's share of MRR. */
       activeMonthlyUSD: 0,
       pausedCount: 0,
       cancelledCount: 0,
@@ -521,7 +521,7 @@ export async function GET(request: NextRequest) {
       rows.reduce(
         (acc, r) => {
           const usd = donationRowUsdApprox(r);
-          // See app/api/admin/stats/route.ts — `|| 1` made an unproratable row contribute
+          // See app/api/admin/stats/route.ts  `|| 1` made an unproratable row contribute
           // `usd * teamSupport` instead of its share. Skip such rows entirely.
           const total = Number(r.totalAmount) || 0;
           if (total > 0) {
@@ -554,7 +554,7 @@ export async function GET(request: NextRequest) {
 
     const failedTotalAmount = failedTotalResult._sum?.amountUSD ?? 0;
 
-    /** All successful subscription charges ever — ignores category/campaign/referral filters */
+    /** All successful subscription charges ever  ignores category/campaign/referral filters */
     const globalSubPaidWhere = { subscriptionId: { not: null }, ...PAID_CONTRIBUTING_FILTER };
     let paidRevenueAllTimeUnfiltered =
       (await prisma.donation.aggregate({ _sum: { amountUSD: true }, where: globalSubPaidWhere }))._sum

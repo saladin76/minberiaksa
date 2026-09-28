@@ -1,4 +1,4 @@
-// Slug utilities — generates URL-safe slugs (preserves Arabic letters),
+// Slug utilities  generates URL-safe slugs (preserves Arabic letters),
 // detects MongoDB ObjectIds, and ensures uniqueness across a model.
 import type { PrismaClient } from "@prisma/client";
 
@@ -66,7 +66,7 @@ export async function generateUniqueSlug(
     if (!existing) return value;
     suffix += 1;
     if (suffix > 1000) {
-      // Pathological collision — fall back to a unique-by-time suffix
+      // Pathological collision  fall back to a unique-by-time suffix
       return `${candidate}-${Date.now().toString(36)}`;
     }
   }
@@ -103,7 +103,7 @@ export function whereByIdOrLocaleSlug(
 /**
  * Like `whereByIdOrLocaleSlug` but matches a translation slug from ANY locale.
  * Use this when resolving a URL whose slug may belong to a different locale than
- * the page is rendering — e.g. after a language switch keeps the previous
+ * the page is rendering  e.g. after a language switch keeps the previous
  * locale's slug. Pair with `pickLocaleSlug` to compute the canonical slug for
  * the current locale and redirect when they differ.
  */
@@ -146,7 +146,7 @@ export function pickLocaleSlug(
   if (translations && translations.length) {
     const exact = translations.find((t) => t.locale === locale && nonEmpty(t.slug));
     if (exact && nonEmpty(exact.slug)) return exact.slug as string;
-    // English fallback for non-AR locales only (never for `ar` — see above).
+    // English fallback for non-AR locales only (never for `ar`  see above).
     if (locale !== "en") {
       const en = translations.find((t) => t.locale === "en" && nonEmpty(t.slug));
       if (en && nonEmpty(en.slug)) return en.slug as string;
@@ -189,7 +189,7 @@ export async function generateUniqueLocaleSlug(
   options: {
     locale: string;
     fallbackPrefix?: string;
-    /** Exclude this translation row when checking — used during updates. */
+    /** Exclude this translation row when checking  used during updates. */
     currentTranslationId?: string;
   }
 ): Promise<string> {

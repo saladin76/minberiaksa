@@ -109,7 +109,7 @@ export function InsightsView() {
     const { settings } = await r.json();
     const teamNotes = [settings.teamNotes?.trim(), text.trim()].filter(Boolean).join("\n").slice(0, 2000);
     const s = await fetch("/api/admin/ai/concierge/settings", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ settings: { ...settings, teamNotes } }) }).catch(() => null);
-    if (s?.ok) toast.success("أُضيفت إلى ملاحظات الفريق — راجعها واملأ أي [فراغ] من صفحة الإعدادات");
+    if (s?.ok) toast.success("أُضيفت إلى ملاحظات الفريق  راجعها واملأ أي [فراغ] من صفحة الإعدادات");
     else toast.error("تعذّر الحفظ");
   };
 
@@ -142,7 +142,7 @@ export function InsightsView() {
             </Button>
             {provider && (
               <p className={cn("rounded-lg px-2.5 py-2 text-[11.5px] leading-5", provider.ready ? "bg-emerald-50 text-emerald-800" : "bg-amber-50 text-amber-800")}>
-                {provider.ready ? `النموذج جاهز (${provider.model})` : `النموذج غير مفعّل — سيُعرض تحليل إحصائي فقط. ${provider.reason}`}
+                {provider.ready ? `النموذج جاهز (${provider.model})` : `النموذج غير مفعّل  سيُعرض تحليل إحصائي فقط. ${provider.reason}`}
               </p>
             )}
           </div>
@@ -180,7 +180,7 @@ export function InsightsView() {
             <Loader2 className="h-7 w-7 animate-spin text-brand" />
           </div>
         )}
-        {!loadingOne && !res && <EmptyState icon={Lightbulb} title="اختر فترة واضغط «لخّص واستنتج»" description="سيقرأ الذكاء الاصطناعي ما كتبه الزوار ويستخرج: المشاريع التي يطلبونها ولا نملكها، الأسئلة المتكررة، المشاكل، وما يمنعهم من التبرع — مع توصيات عملية." />}
+        {!loadingOne && !res && <EmptyState icon={Lightbulb} title="اختر فترة واضغط «لخّص واستنتج»" description="سيقرأ الذكاء الاصطناعي ما كتبه الزوار ويستخرج: المشاريع التي يطلبونها ولا نملكها، الأسئلة المتكررة، المشاكل، وما يمنعهم من التبرع  مع توصيات عملية." />}
         {!loadingOne && res && selected && (
           <>
             <section className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_1px_2px_rgba(16,24,40,0.04),0_8px_24px_-18px_rgba(2,94,184,0.35)]">
@@ -313,7 +313,7 @@ export function InsightsView() {
             {res.teamNotesSuggestion.trim() && (
               <SectionCard
                 title="ملاحظات مقترحة للمساعد"
-                description="أضفها إلى «ملاحظات الفريق» ليجيب المساعد عن هذه الفجوات — راجعها واملأ أي [فراغ] أولًا"
+                description="أضفها إلى «ملاحظات الفريق» ليجيب المساعد عن هذه الفجوات  راجعها واملأ أي [فراغ] أولًا"
                 icon={ClipboardPlus}
                 actions={
                   <Button size="sm" variant="outline" onClick={() => addToTeamNotes(res.teamNotesSuggestion)} className="gap-1.5">

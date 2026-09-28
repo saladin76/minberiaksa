@@ -22,7 +22,7 @@ type PreviewRow = { rowNumber: number; transactionDate: string | null; descripti
 type AmountColumnInfo = { source: "header:tutar" | "header:credit" | "header:amount" | "detected" | "none"; header: string | null };
 type PreviewResponse = { fileName: string; bankId: string | null; currency: Currency; donorLocale: DonorLocale; parser: "spreadsheet" | "pdf"; fileHash: string; bankIban: string | null; rowCount: number; rows: PreviewRow[]; amountColumn?: AmountColumnInfo; warning: string | null };
 
-/** Where the importer read the money from — shown so a wrong column is caught before committing. */
+/** Where the importer read the money from  shown so a wrong column is caught before committing. */
 function amountColumnLabel(info: AmountColumnInfo | undefined) {
   if (!info || info.source === "none") return { text: "لم يُحدَّد عمود المبلغ", tone: "bad" as const };
   if (info.source === "detected") return { text: "عمود المبلغ: مُستنتَج من البيانات", tone: "warn" as const };
@@ -39,7 +39,7 @@ type Filters = { q: string; status: string; bankId: string; currency: string; do
 const emptyForm: FormState = { nameAr: "", nameEn: "", nameTr: "", accountName: "", ibanLast4: "", currency: "USD" };
 const defaultFilters: Filters = { q: "", status: "all", bankId: "all", currency: "all", donorLocale: "all", dateFrom: "", dateTo: "", amountMin: "", amountMax: "", sortBy: "createdAt", sortDir: "desc", limit: "50" };
 const currencyLabels: Record<string, string> = { USD: "دولار USD", TRY: "ليرة تركية TRY", EUR: "يورو EUR" };
-// All site languages, from the single locale source — this used to be a local
+// All site languages, from the single locale source  this used to be a local
 // list of 8, so donors in the other 11 languages could not be recorded.
 const localeLabels: Record<string, string> = Object.fromEntries(LOCALE_OPTIONS.map((o) => [o.code, o.label]));
 
@@ -158,7 +158,7 @@ export default function BankTransfersPage() {
       if (failed === 0) toast.success(status === "APPROVED" ? "تم اعتماد العمليات المحددة" : status === "IGNORED" ? "تم استبعاد العمليات المحددة" : "تم حفظ المحدد للمراجعة");
       else {
         const firstError = results.find((r): r is PromiseRejectedResult => r.status === "rejected");
-        toast.error(`تم تنفيذ ${done.size} وتعذّر ${failed}${firstError ? ` — ${apiError(firstError.reason, "")}` : ""}. العمليات التي تعذّرت بقيت محددة.`);
+        toast.error(`تم تنفيذ ${done.size} وتعذّر ${failed}${firstError ? `  ${apiError(firstError.reason, "")}` : ""}. العمليات التي تعذّرت بقيت محددة.`);
       }
       void refreshBanksOnly();
     } finally {
@@ -407,7 +407,7 @@ export default function BankTransfersPage() {
         )}
       </section>
 
-      {/* ── Step 4: the review queue — the page's primary working surface ───────── */}
+      {/* ── Step 4: the review queue  the page's primary working surface ───────── */}
       <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
         <header className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-4 py-3.5">
           <div className="flex items-center gap-2.5">
@@ -525,7 +525,7 @@ export default function BankTransfersPage() {
           </div>
         </div>
 
-        {/* Bulk bar only exists when a selection exists — no dead controls on screen. */}
+        {/* Bulk bar only exists when a selection exists  no dead controls on screen. */}
         {selectedIds.size > 0 && (
           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-brand-200 bg-brand-50 px-4 py-2.5">
             <span className="text-[13px] font-medium text-brand-800">تم تحديد {selectedIds.size} عملية</span>
@@ -567,7 +567,7 @@ export default function BankTransfersPage() {
                         className="mt-1 h-8 text-[11px]"
                         dir="ltr"
                         placeholder="بريد أو هاتف متبرع موجود (اختياري)"
-                        title="يُربط التحويل بمتبرع موجود فقط عند تطابق البريد أو الهاتف تمامًا. بدونه يُنشأ متبرع جديد — لا يتم الدمج بالاسم."
+                        title="يُربط التحويل بمتبرع موجود فقط عند تطابق البريد أو الهاتف تمامًا. بدونه يُنشأ متبرع جديد  لا يتم الدمج بالاسم."
                         value={edit?.donorContact ?? ""}
                         disabled={Boolean(tx.donationId)}
                         onChange={(e) => tx.id && setEdit(tx.id, { donorContact: e.target.value })}
@@ -651,7 +651,7 @@ export default function BankTransfersPage() {
         </div>
       </section>
 
-      {/* ── Bank administration — collapsed by default ───────────────────────────
+      {/* ── Bank administration  collapsed by default ───────────────────────────
           Adding a bank happens rarely; it previously held a third of the page permanently. */}
       <details className="group overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
         <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3.5">

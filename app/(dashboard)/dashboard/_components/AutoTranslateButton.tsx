@@ -18,7 +18,7 @@ import { SUPPORTED_LOCALES } from '@/lib/locales';
  * saved by the button: the editor still reviews the tabs and presses the
  * form's own save, so a machine translation never reaches the site unseen.
  *
- * By default only empty fields are filled — an editor's own wording in one
+ * By default only empty fields are filled  an editor's own wording in one
  * language is not thrown away because they asked for the other seventeen.
  * The checkbox opts into replacing everything.
  */
@@ -38,7 +38,7 @@ export function AutoTranslateButton({
   source: Record<string, string>;
   /** Arabic Tiptap JSON documents, by field name. */
   richSource?: Record<string, string>;
-  /** Shown to the model — "campaign", "FAQ", "story slide"… */
+  /** Shown to the model  "campaign", "FAQ", "story slide"… */
   itemLabel?: string;
   /** Target locales; every non-Arabic locale when omitted. */
   locales?: readonly string[];
@@ -71,7 +71,7 @@ export function AutoTranslateButton({
       onResult(translations, overwrite);
       const done = Object.keys(translations).length;
       const failed = Object.keys(errors).length;
-      if (done) toast.success(`تمت ترجمة ${done} لغة${failed ? ` — تعذّرت ${failed}` : ''}. راجع النصوص ثم احفظ.`);
+      if (done) toast.success(`تمت ترجمة ${done} لغة${failed ? `  تعذّرت ${failed}` : ''}. راجع النصوص ثم احفظ.`);
       else toast.error(errorMessage(null, 'لم تُنتج الترجمة أي نص'));
     } catch (e) {
       toast.error(errorMessage(e, 'تعذّرت الترجمة التلقائية'));

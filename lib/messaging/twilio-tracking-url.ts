@@ -16,7 +16,7 @@ export interface TrackedUrlInput {
   campaignSlug?: string | null;
   templateName?: string | null;
   templateId?: string | null;
-  /** Twilio Campaign ID — when a SentMessage is part of a bulk send. */
+  /** Twilio Campaign ID  when a SentMessage is part of a bulk send. */
   twilioCampaignId?: string | null;
   /** Variant / A-B test key. */
   messageVariant?: string | null;
@@ -24,7 +24,7 @@ export interface TrackedUrlInput {
   audienceSegment?: string | null;
   language?: string | null;
   targetCountry?: string | null;
-  /** Multiple buttons in one template — index/label/position. */
+  /** Multiple buttons in one template  index/label/position. */
   buttonId?: string | null;
   buttonLabel?: string | null;
   linkPosition?: number | null;
@@ -37,7 +37,7 @@ export function buildTwilioTrackedUrl(input: TrackedUrlInput): string {
   try {
     url = new URL(input.baseUrl);
   } catch {
-    // Not a fully-qualified URL — append as a query string fragment.
+    // Not a fully-qualified URL  append as a query string fragment.
     const sep = input.baseUrl.includes("?") ? "&" : "?";
     return `${input.baseUrl}${sep}${queryStringFromInput(input)}`;
   }

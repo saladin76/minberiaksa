@@ -20,13 +20,13 @@ function isAction(value: unknown): value is Action {
 }
 
 /**
- * PATCH /api/admin/messages/[id] — move one message through the inbox triage states.
+ * PATCH /api/admin/messages/[id]  move one message through the inbox triage states.
  *
  * `read` is fired automatically when the dialog opens, so it is written idempotently: re-opening
  * a message must not keep pushing `readAt` forward, or "opened 3 days ago" would always read as
  * "just now". `replied` likewise stamps the first answer and keeps it.
  *
- * Marking replied implies read — an answered message that still counted as unread would sit in
+ * Marking replied implies read  an answered message that still counted as unread would sit in
  * the sidebar badge forever.
  */
 export async function PATCH(
@@ -39,7 +39,7 @@ export async function PATCH(
     const denied = requireAdminOrDashboardPermission(session, "messages");
     if (denied) return denied;
     // The guard already 401s on a missing session, but it returns a response rather than
-    // narrowing the type — this makes that guarantee visible to the compiler.
+    // narrowing the type  this makes that guarantee visible to the compiler.
     if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const payload = await request.json().catch(() => null);
@@ -94,7 +94,7 @@ export async function PATCH(
 
     await prisma.message.update({ where: { id }, data });
 
-    // Only the reply transitions are worth an audit entry — `read` fires on every open and
+    // Only the reply transitions are worth an audit entry  `read` fires on every open and
     // would drown the log.
     if (action === "replied" && !existing.repliedAt) {
       const actor = auditActorFromSiteSession(session);

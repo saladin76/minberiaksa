@@ -9,8 +9,8 @@ import {
  *
  * The picker used to show raw English component names ("HandHeart", "TreePine"),
  * which is unreadable for the people who actually run the dashboard. Each icon
- * now carries an Arabic label and sits under the sector it belongs to — the same
- * three the organisation splits its projects across — so an admin looking for
+ * now carries an Arabic label and sits under the sector it belongs to  the same
+ * three the organisation splits its projects across  so an admin looking for
  * "بئر ماء" finds it where they'd expect rather than scanning a wall of glyphs.
  *
  * `keywords` widens search beyond the label: an admin may type the English name,
@@ -172,7 +172,7 @@ export const ICON_CATALOG: IconCatalogEntry[] = ENTRIES.map((entry) => ({
 }));
 
 /**
- * Any registered icon the list above forgot still has to be pickable — otherwise
+ * Any registered icon the list above forgot still has to be pickable  otherwise
  * adding one to the registry would silently hide it from the dashboard.
  */
 const CATALOGUED = new Set(ICON_CATALOG.map((entry) => entry.name));

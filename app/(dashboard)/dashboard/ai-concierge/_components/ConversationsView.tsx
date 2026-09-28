@@ -194,7 +194,7 @@ export function ConversationsView() {
                       )}
                     </span>
                   </div>
-                  <p className="mt-1.5 line-clamp-1 text-[14px] font-medium text-slate-900">{it.preview ?? <span className="text-slate-400">لم يكتب الزائر رسالة — تنقّل بالأزرار فقط</span>}</p>
+                  <p className="mt-1.5 line-clamp-1 text-[14px] font-medium text-slate-900">{it.preview ?? <span className="text-slate-400">لم يكتب الزائر رسالة  تنقّل بالأزرار فقط</span>}</p>
                   {it.lastReply && <p className="mt-0.5 line-clamp-1 text-[12.5px] text-slate-500">المساعد: {it.lastReply}</p>}
                   <div className="mt-2 flex flex-wrap items-center gap-1.5">
                     {it.intents.map((i) => (

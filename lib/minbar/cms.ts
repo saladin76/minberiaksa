@@ -11,8 +11,8 @@ import { videoLiveWhere, type VideoTypeValue } from "@/lib/content/video-write";
  * that replaced the hand-written catalogue (`lib/minbar/content/catalog.ts`,
  * `lib/minbar/banks.ts`, the FAQ and report tables): courses, programmes,
  * videos, FAQs, bank accounts, reports and booklets. Every reader takes the
- * visitor's locale and returns text already resolved — Arabic from the row,
- * anything else from the translation with English as the fallback — so a
+ * visitor's locale and returns text already resolved  Arabic from the row,
+ * anything else from the translation with English as the fallback  so a
  * component never sees a translation table.
  *
  * Pages call these on the server and pass the result down. That is what keeps
@@ -134,8 +134,8 @@ export interface CmsVideo {
 }
 
 /**
- * Videos visible to this locale. `localeFilter` is an allow-list on the row —
- * the Turkish endorsements are the reason it exists — and `videoLiveWhere`
+ * Videos visible to this locale. `localeFilter` is an allow-list on the row 
+ * the Turkish endorsements are the reason it exists  and `videoLiveWhere`
  * applies it, so a French visitor never receives a Turkish-only testimonial.
  */
 export async function listVideos(locale: string, type?: VideoTypeValue): Promise<CmsVideo[]> {
@@ -199,7 +199,7 @@ export interface CmsBankAccount {
   currencies: Array<{ code: string; accountNo: string; extNo: string; iban: string }>;
 }
 
-/** Accounts published to this locale — `locales` is an allow-list, empty = all. */
+/** Accounts published to this locale  `locales` is an allow-list, empty = all. */
 export async function listBankAccounts(locale: string): Promise<CmsBankAccount[]> {
   const rows = await prisma.bankAccount.findMany({
     where: { isActive: true, OR: [{ locales: { isEmpty: true } }, { locales: { has: locale } }] },

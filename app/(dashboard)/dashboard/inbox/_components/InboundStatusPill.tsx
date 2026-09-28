@@ -34,7 +34,7 @@ export function InboundStatusPill({
 }: {
   message: InboundMessage;
   className?: string;
-  /** Appends "عبر واتساب" / "بالبريد" — worth the width in the dialog, too much on a card. */
+  /** Appends "عبر واتساب" / "بالبريد"  worth the width in the dialog, too much on a card. */
   showChannel?: boolean;
 }) {
   const status = inboxStatusOf(message);

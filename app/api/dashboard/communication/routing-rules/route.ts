@@ -14,7 +14,7 @@ import { COMMUNICATION_CHANNELS, COMMUNICATION_PURPOSES, type CommunicationChann
  *
  * The rules were configurable only in the database, so their effect could not be checked before a
  * campaign went out to thousands of people. `POST /preview` answers it against the live snapshot,
- * through the same resolver the sender itself uses — so the preview cannot disagree with the send.
+ * through the same resolver the sender itself uses  so the preview cannot disagree with the send.
  */
 
 const ruleSchema = z.object({

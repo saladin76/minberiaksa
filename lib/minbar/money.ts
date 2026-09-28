@@ -4,7 +4,7 @@ import { SUPPORTED_CURRENCY_OPTIONS } from "@/lib/supported-currencies";
  * One currency formatter for the public site.
  *
  * `Intl.NumberFormat(locale, { style: "currency" })` gets the separators, the
- * decimal mark and the symbol's side right for every locale — but its choice
+ * decimal mark and the symbol's side right for every locale  but its choice
  * of symbol is CLDR's, and CLDR disambiguates: an Arabic or French visitor is
  * shown `US$` / `$US` for dollars and `UK£` / `£GB` for pounds, and a Turkish
  * riyal comes out as the bare code. On a donation button that reads as a
@@ -13,7 +13,7 @@ import { SUPPORTED_CURRENCY_OPTIONS } from "@/lib/supported-currencies";
  *
  * So the number is formatted by ICU and only the symbol is swapped: the
  * `currency` part of `formatToParts` is replaced with the symbol from
- * `lib/supported-currencies.ts` — the same table the currency selector shows —
+ * `lib/supported-currencies.ts`  the same table the currency selector shows 
  * and ICU's narrow symbol is the fallback for anything not in that table. The
  * placement, spacing and digits stay exactly as ICU laid them out for the
  * locale.
@@ -23,7 +23,7 @@ const SYMBOLS: Record<string, string> = Object.fromEntries(
   SUPPORTED_CURRENCY_OPTIONS.map((c) => [c.code, c.symbol])
 );
 
-/** The short symbol for a code — `$`, `€`, `₺`, `ر.س` — or the code itself. */
+/** The short symbol for a code  `$`, `€`, `₺`, `ر.س`  or the code itself. */
 export function currencySymbol(code: string): string {
   return SYMBOLS[code.toUpperCase()] ?? code;
 }

@@ -13,7 +13,7 @@ interface Props {
 const NAMESPACES = ["system"] as const;
 
 /**
- * Bank transfer awaiting confirmation — ported from
+ * Bank transfer awaiting confirmation  ported from
  * `Minbar/الدفع قيد التأكيد.dc.html`.
  *
  * A transfer sits here until a finance officer matches the money actually

@@ -14,7 +14,7 @@ import { cn } from "@/lib/utils";
  *
  * The dialog is three screens in one because a send is irreversible: state plainly what is about to
  * happen, show it happening, then account for every message afterwards. The final report is the
- * point — a spinner that just disappears leaves an operator with no idea whether twenty donors were
+ * point  a spinner that just disappears leaves an operator with no idea whether twenty donors were
  * emailed or none were, and no way to find out.
  */
 
@@ -126,7 +126,7 @@ export function RetryDialog({ open, channel, ids, days, onOpenChange, onFinished
       }
 
       // NDJSON: one JSON object per line. The tail of a chunk is usually a partial line, so it is
-      // carried over rather than parsed — dropping it would silently lose whole results.
+      // carried over rather than parsed  dropping it would silently lose whole results.
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
       let buffer = "";
@@ -275,7 +275,7 @@ function ConfirmStep({
           سيُعاد إرسال هذه الرسالة بنفس المحتوى المحفوظ، إلى العنوان المسجّل للمستلم الآن.
         </p>
         <p className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-[11px] leading-5 text-slate-500">
-          تُنشأ محاولة جديدة مستقلة — لا يُعدَّل سجل المحاولة الفاشلة، حتى تبقى إحصاءات الفشل السابقة كما هي.
+          تُنشأ محاولة جديدة مستقلة  لا يُعدَّل سجل المحاولة الفاشلة، حتى تبقى إحصاءات الفشل السابقة كما هي.
         </p>
       </div>
     );
@@ -305,7 +305,7 @@ function ConfirmStep({
         {capped && (
           <p className="mt-1.5 text-[11px] leading-5 text-slate-500">
             من أصل {preflight.eligible.toLocaleString("en-US")} رسالة قابلة لإعادة الإرسال خلال آخر {days} يومًا.
-            تُرسل على دفعات من {preflight.cap} — كرّر العملية لإكمال الباقي.
+            تُرسل على دفعات من {preflight.cap}  كرّر العملية لإكمال الباقي.
           </p>
         )}
       </div>
@@ -424,7 +424,7 @@ function ReportStep({
         <div className="rounded-xl border border-rose-200 bg-rose-50 p-3.5 text-xs leading-5 text-rose-900">
           <b className="block">توقّفت العملية قبل اكتمالها</b>
           {error}
-          {results.length > 0 && " — النتائج أدناه تخصّ ما تمّ فعلًا قبل التوقّف."}
+          {results.length > 0 && "  النتائج أدناه تخصّ ما تمّ فعلًا قبل التوقّف."}
         </div>
       )}
 
@@ -439,7 +439,7 @@ function ReportStep({
             {sent > 0 ? `أُرسلت ${sent.toLocaleString("en-US")} رسالة بنجاح` : "لم تُرسل أي رسالة"}
           </p>
           <p className="text-[11px] text-slate-500">
-            {failed > 0 ? `${failed.toLocaleString("en-US")} لم تُرسل — التفصيل بالأسفل.` : "اكتملت كل الرسائل دون مشاكل."}
+            {failed > 0 ? `${failed.toLocaleString("en-US")} لم تُرسل  التفصيل بالأسفل.` : "اكتملت كل الرسائل دون مشاكل."}
           </p>
         </div>
       </div>

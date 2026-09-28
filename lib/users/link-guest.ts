@@ -2,7 +2,7 @@ import { prisma } from "@/lib/prisma";
 
 /**
  * A "guest" user is one that was created by the donation flow purely to attach
- * a donation to — no password, no OAuth account linked, no session ever
+ * a donation to  no password, no OAuth account linked, no session ever
  * established. Merging is only safe against this kind of record.
  */
 async function isGuestUser(userId: string): Promise<boolean> {
@@ -26,7 +26,7 @@ export type LinkGuestResult =
  * we don't lose the phone / country / name the donor provided as a guest.
  *
  * Guarded: refuses to merge anything that already has a password or a linked
- * OAuth account — that would let a caller hijack a real user's donations.
+ * OAuth account  that would let a caller hijack a real user's donations.
  */
 export async function linkGuestUserToTarget(
   guestUserId: string,
@@ -64,7 +64,7 @@ export async function linkGuestUserToTarget(
     return { ok: false, reason: "GUEST_NOT_ELIGIBLE" };
   }
 
-  // Backfill: only set fields on the target that are currently missing — never
+  // Backfill: only set fields on the target that are currently missing  never
   // overwrite something the authenticated user has already filled in.
   const backfill: Record<string, unknown> = {};
   if (!target.phone && guest.phone) backfill.phone = guest.phone;

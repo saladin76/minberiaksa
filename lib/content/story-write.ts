@@ -5,7 +5,7 @@
  * every read that follows a write, full scalars for create, and a patch for
  * update so an omitted field means "leave it alone" rather than "reset it".
  *
- * Slides are the part that is different. They are not edited one at a time —
+ * Slides are the part that is different. They are not edited one at a time 
  * the form posts the whole list and the route replaces it (`deleteMany` then
  * `create` inside the parent's nested write), so a save is one atomic
  * operation and the stored list is exactly what the editor last saw.
@@ -63,7 +63,7 @@ export function parseStoryTranslations(translations: unknown) {
 /**
  * How long a new story runs when the editor does not say.
  *
- * A story rail is a daily format, so 24 hours is the sensible default — but it
+ * A story rail is a daily format, so 24 hours is the sensible default  but it
  * cannot be a Prisma default, which must be static. The dashboard's "unlimited"
  * option posts `endsAt: null` explicitly and reaches `optionalDate` as null,
  * which is why "absent" and "explicitly empty" are kept distinct all the way
@@ -146,7 +146,7 @@ export interface StorySlideInput {
 /**
  * Slide translations do not fit `parseTranslations`, whose model is "one
  * required field decides presence". A slide may carry only a caption, or only
- * a button label, and either alone is worth translating — so a locale counts
+ * a button label, and either alone is worth translating  so a locale counts
  * as present when EITHER field has text.
  */
 function parseSlideTranslations(raw: unknown): StorySlideTranslationInput[] {
@@ -178,7 +178,7 @@ function parseCta(v: Record<string, unknown>): { ctaKind?: StoryCtaKindValue; ct
 
 /**
  * Slides as posted by the form. Rows without media are dropped rather than
- * rejected — an empty trailing row is what an editor leaves behind after
+ * rejected  an empty trailing row is what an editor leaves behind after
  * clicking "add" once too often, not a mistake worth failing the save over.
  * Order is the array position, not whatever the row claims.
  */

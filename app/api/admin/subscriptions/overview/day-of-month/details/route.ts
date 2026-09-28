@@ -133,7 +133,7 @@ export async function GET(request: NextRequest) {
         subscriptionId: d.subscriptionId,
         frequency: frequencyOf(d.subscriptionId),
         status: d.subscription?.status ?? null,
-        // The donation's own money is the truth for a collected row — the
+        // The donation's own money is the truth for a collected row  the
         // subscription's current amount may have been edited since this charge.
         amount: d.totalAmount ?? d.amount,
         amountUSD: d.amountUSD,

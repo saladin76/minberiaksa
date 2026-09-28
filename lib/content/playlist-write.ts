@@ -3,8 +3,8 @@
  *
  * Follows `lib/content/story-write.ts` for the parent row. The episodes are
  * different: they are not edited one at a time. The form posts the whole list,
- * and the route replaces it — `deleteMany` then `create` inside the parent's
- * nested write — so a save is one atomic operation and the stored list is
+ * and the route replaces it  `deleteMany` then `create` inside the parent's
+ * nested write  so a save is one atomic operation and the stored list is
  * exactly what the editor last saw. This is also how the seed writes them,
  * which keeps the two paths from disagreeing about order.
  */

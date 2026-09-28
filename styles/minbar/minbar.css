@@ -1,13 +1,13 @@
 /* ─────────────────────────────────────────────────────────────────────────────
- * Minbar Al-Aqsa — design tokens & base.
+ * Minbar Al-Aqsa  design tokens & base.
  * Ported from Minbar/design-tokens.css, Minbar/_ds/<ds>/tokens/*.css and
  * Minbar/locale-fonts.css.
  *
  * SCOPING RULE: every custom property and every element rule lives under
  * `.mia-scope`, never `:root`. The dashboard shares `app/layout.tsx`, so this
  * stylesheet is global to the whole app, and the design-system token files
- * define `--radius` / `--r` — which Tailwind's `borderRadius.lg` already
- * consumes — so putting them on `:root` would silently reshape every dashboard
+ * define `--radius` / `--r`  which Tailwind's `borderRadius.lg` already
+ * consumes  so putting them on `:root` would silently reshape every dashboard
  * card. `.mia-scope` is applied to the public-site wrapper in
  * `app/[locale]/layout.tsx` only.
  *
@@ -15,24 +15,24 @@
  * defaults (--deep #022222 / --red #b34732 / --gold #c98a2b); `design-tokens.css`
  * is the authoritative override the 55 pages were locked against
  * (#10212B / #A93428 / #D39A27). Only the locked values are written here, which
- * is what the static site resolves to — it links `design-tokens.css` after
+ * is what the static site resolves to  it links `design-tokens.css` after
  * `styles.css`.
  * ───────────────────────────────────────────────────────────────────────────── */
 
 .mia-scope {
   /* ── Brand core ───────────────────────────────────────────────────────────── */
-  --deep: #10212B;          /* Trust Navy — headings, body text, dark surfaces */
-  --navy: #132C38;          /* Deep Navy — limited dark surfaces */
-  --gold: #D39A27;          /* Aqsa Gold — waqf, hairlines, figures */
-  --gold-2: #B8811C;        /* Shaded gold — gold text on white */
-  --red: #A93428;           /* Minber Red — donate CTA + urgent states only */
-  --red-2: #7C2318;         /* Shaded red — header gradients and bars */
-  --green: #1F7A4D;         /* Zakat Green — the zakat rail only */
-  --ivory: #FFFDF8;         /* Light Ivory — page background */
-  --sand: #F7F2EA;          /* Soft Sand — quiet section separation */
+  --deep: #10212B;          /* Trust Navy  headings, body text, dark surfaces */
+  --navy: #132C38;          /* Deep Navy  limited dark surfaces */
+  --gold: #D39A27;          /* Aqsa Gold  waqf, hairlines, figures */
+  --gold-2: #B8811C;        /* Shaded gold  gold text on white */
+  --red: #A93428;           /* Minber Red  donate CTA + urgent states only */
+  --red-2: #7C2318;         /* Shaded red  header gradients and bars */
+  --green: #1F7A4D;         /* Zakat Green  the zakat rail only */
+  --ivory: #FFFDF8;         /* Light Ivory  page background */
+  --sand: #F7F2EA;          /* Soft Sand  quiet section separation */
   --white: #ffffff;
   --ink: #10212B;
-  --muted: #52616B;         /* Muted text — secondary copy */
+  --muted: #52616B;         /* Muted text  secondary copy */
   --gray: #666666;
   --gray-2: #888888;
   --border: rgba(16, 33, 43, .12);
@@ -74,14 +74,14 @@
   --fs-xs: 13px;
   --fs-xxs: 12px;
 
-  /* Weights — the brand leans heavy: 800–900 for headings and CTAs */
+  /* Weights  the brand leans heavy: 800–900 for headings and CTAs */
   --fw-regular: 400; --fw-medium: 500; --fw-semibold: 600;
   --fw-bold: 700; --fw-heavy: 800; --fw-black: 900;
 
   /* Line heights */
   --lh-tight: .98; --lh-snug: 1.08; --lh-body: 1.6;
 
-  /* Eyebrow treatment — a signature of the brand */
+  /* Eyebrow treatment  a signature of the brand */
   --eyebrow-weight: 900;
   --eyebrow-transform: uppercase;
   --eyebrow-color: var(--gold);
@@ -164,7 +164,7 @@
 /* Content container */
 .mia-scope .container { width: min(var(--container), calc(100% - 32px)); margin-inline: auto; }
 
-/* A subtle branded page wash — ivory→sand with a faint gold glow. */
+/* A subtle branded page wash  ivory→sand with a faint gold glow. */
 .mia-scope .brand-wash {
   background:
     linear-gradient(180deg, rgba(255, 253, 248, .96), rgba(247, 242, 234, .55)),
@@ -176,23 +176,23 @@
  * permitted `break-all` exception is identifiers (IBAN / account number),
  * applied locally on those elements. */
 .mia-scope h1, .mia-scope h2, .mia-scope h3 { overflow-wrap: normal; word-break: normal; }
-/* No word-internal breaking in Arabic/Urdu — letter joining is inviolable. */
+/* No word-internal breaking in Arabic/Urdu  letter joining is inviolable. */
 .mia-scope[dir="rtl"] h1,
 .mia-scope[dir="rtl"] h2,
 .mia-scope[dir="rtl"] h3,
 .mia-scope[dir="rtl"] p,
 .mia-scope[dir="rtl"] a,
 .mia-scope[dir="rtl"] button { word-break: normal; overflow-wrap: normal; }
-/* CJK: kinsoku behaviour — no punctuation at line start, no arbitrary break. */
+/* CJK: kinsoku behaviour  no punctuation at line start, no arbitrary break. */
 :root[lang="ja"] .mia-scope, :root[lang="zh"] .mia-scope { line-break: strict; word-break: normal; }
 /* German/Dutch: compounds wrap at the word, never mid-letter; `hyphens: auto` is
  * the linguistically correct fallback (not `break-all`). */
 :root[lang="de"] .mia-scope, :root[lang="nl"] .mia-scope { hyphens: auto; -webkit-hyphens: auto; overflow-wrap: break-word; }
 .mia-scope a[href], .mia-scope button { min-width: 0; }
 
-/* ── Project cards — unified mobile sizing (all pages, all languages) ─────────
+/* ── Project cards  unified mobile sizing (all pages, all languages) ─────────
  * Targets the shared card structure: the amount row (gap: 7px) plus the action
- * row (42px). Logical properties only — correct under both RTL and LTR. */
+ * row (42px). Logical properties only  correct under both RTL and LTR. */
 @media (max-width: 760px) {
   .mia-scope div[style*="gap: 7px"]:has(> button[data-pick]),
   .mia-scope div[style*="gap: 7px"]:has(> button[data-chip]),
@@ -254,7 +254,7 @@
 }
 
 /* ─────────────────────────────────────────────────────────────────────────────
- * Header — ported from the <style> block in Minbar/Header.dc.html.
+ * Header  ported from the <style> block in Minbar/Header.dc.html.
  * The gradient and the two ornament layers are direction-aware: the source is
  * written RTL-first with `to left`, which means "toward the end edge". CSS
  * gradients do not flip with `dir`, so each direction gets its own rule.
@@ -407,7 +407,7 @@
 
 @media (max-width: 460px) { .mia-head .mia-util-phone { display: none; } }
 
-/* Under 480px the fixed elements summed past 390px. Nothing is removed —
+/* Under 480px the fixed elements summed past 390px. Nothing is removed 
  * the label, the gaps and the circles just tighten. */
 @media (max-width: 480px) {
   .mia-head .mia-locale-label { display: none; }
@@ -419,7 +419,7 @@
 }
 
 /* ─────────────────────────────────────────────────────────────────────────────
- * Footer — ported from the <style> blocks in Minbar/Footer.dc.html.
+ * Footer  ported from the <style> blocks in Minbar/Footer.dc.html.
  * ───────────────────────────────────────────────────────────────────────────── */
 
 .mia-foot .cols a { color: rgba(255,255,255,.86); text-decoration: none; font-size: 13.5px; font-weight: 700; transition: color .18s ease, transform .18s cubic-bezier(.22, .61, .36, 1); }
@@ -429,7 +429,7 @@
 
 /* The photograph behind the footer: the columns read through the dense top of
    the gradient; the window below them is where the picture is shown clear.
-   Its height is the picture's lower half at this width — enough for the
+   Its height is the picture's lower half at this width  enough for the
    children and the Dome, not so much that the page ends in a poster. */
 .mia-foot .mia-foot-window { height: clamp(220px, 26vw, 380px); }
 .mia-foot .social-ic:hover { border-color: #D39A27 !important; background: rgba(211, 154, 39, .22) !important; }
@@ -460,7 +460,7 @@
 .mia-foot .fcol-links { display: grid; gap: 11px; align-content: start; }
 
 /* The identity column sits at the far end on wide screens but stays first in
- * the stack on phones — it is authored first for that reason and reordered
+ * the stack on phones  it is authored first for that reason and reordered
  * visually here. */
 @media (min-width: 1081px) {
   .mia-foot div.cols#footcols { grid-template-columns: repeat(4, minmax(0, .78fr)) minmax(0, 1.3fr) !important; }
@@ -498,7 +498,7 @@
 }
 
 /* ─────────────────────────────────────────────────────────────────────────────
- * Quick donation FAB — ported from Minbar/التبرع السريع.dc.html.
+ * Quick donation FAB  ported from Minbar/التبرع السريع.dc.html.
  * ───────────────────────────────────────────────────────────────────────────── */
 
 .quickfab {
@@ -514,7 +514,7 @@
 .quickfab > .qf-handle:focus-visible { outline: 3px solid var(--gold); outline-offset: 3px; }
 
 /* A slow halo, so a button parked in the corner is still noticed once. It stops
-   while the panel is open — at that point it has already been found. */
+   while the panel is open  at that point it has already been found. */
 .quickfab[data-qopen="false"] > .qf-handle::after {
   content: "";
   position: absolute;
@@ -590,7 +590,7 @@
 .mia-scope .mia-card-cta:hover { filter: brightness(1.08); }
 .mia-video-close:hover { background: var(--gold); color: #10212B; }
 
-/* Section card hover — shared by the events, article and news cards. */
+/* Section card hover  shared by the events, article and news cards. */
 .mia-scope .mia-lift { transition: transform .22s cubic-bezier(.22,.61,.36,1), box-shadow .22s ease, border-color .22s ease; }
 .mia-scope .mia-lift:hover { transform: translateY(-4px); box-shadow: 0 24px 58px rgba(16,33,43,.14); border-color: rgba(211,154,39,.55); }
 @media (prefers-reduced-motion: reduce) { .mia-scope .mia-lift:hover { transform: none; } }
@@ -631,7 +631,7 @@
 }
 
 /* ─────────────────────────────────────────────────────────────────────────────
- * Homepage — ported from the <style> blocks in
+ * Homepage  ported from the <style> blocks in
  * Minbar/الصفحة الرئيسية.dc.html. Selectors are scoped and keyed to the
  * component structure rather than to inline-style substrings, so a style edit
  * in a component cannot silently detach a rule.
@@ -640,7 +640,7 @@
 .mia-scope a:hover { color: var(--red); }
 .mia-scope .mia-qtoggle { display: none; }
 
-/* Ornament system: a faint base, with a few sections carrying it more visibly —
+/* Ornament system: a faint base, with a few sections carrying it more visibly 
  * deliberately not the same density everywhere. */
 .mia-scope [data-aqsa-pattern] { opacity: .035 !important; }
 .mia-scope #aqsa [data-aqsa-pattern] { opacity: .055 !important; }
@@ -664,7 +664,7 @@
   .mia-scope #articles-grid,
   .mia-scope #account-features { grid-template-columns: repeat(2, minmax(0,1fr)) !important; }
 
-  /* Impact figures: one per row on a phone — three compressed columns collided. */
+  /* Impact figures: one per row on a phone  three compressed columns collided. */
   .mia-scope #impact-metrics { grid-template-columns: minmax(0,1fr) !important; }
   .mia-scope #impact-metrics > div { border-inline-end: 0 !important; border-top: 1px solid var(--border) !important; padding: 22px 0 !important; }
   .mia-scope #impact-metrics > div:first-child { border-top: 0 !important; }
@@ -697,7 +697,7 @@
   /* Phone density: smaller type, tighter rhythm. */
   .mia-scope section[id]:not(#aqsa):not(#quick),
   .mia-scope section:not(#aqsa):not(#quick):not([id]) { padding-top: 22px !important; padding-bottom: 22px !important; }
-  /* Rail arrows disappear — the swipe is the natural gesture here. */
+  /* Rail arrows disappear  the swipe is the natural gesture here. */
   .mia-scope .mia-rail-btn { display: none !important; }
   .mia-scope h1 { font-size: 26px !important; line-height: 1.35 !important; }
   .mia-scope h2 { font-size: 21px !important; line-height: 1.3 !important; }
@@ -716,7 +716,7 @@
 }
 
 /* ─────────────────────────────────────────────────────────────────────────────
- * Landing — one section in three rows: the story strip, the headline beside
+ * Landing  one section in three rows: the story strip, the headline beside
  * the intro film, and the proof band. Ivory ground with gold glows toward the
  * film, the film's own 0:03 frame as poster inside a gradient hairline frame
  * with an offset outline, a pulsing play control, and one fade-up per column.
@@ -730,7 +730,7 @@
 .mia-scope .mia-hero-wrap { position: relative; width: 100%; max-width: 1240px; margin: 0 auto; padding: 0 24px; }
 
 /* Two soft glows, weighted toward the film side (the inline-end in RTL, the
-   inline-start in LTR — so they are placed with logical offsets). */
+   inline-start in LTR  so they are placed with logical offsets). */
 .mia-scope .mia-hero-glow {
   position: absolute; inset: 0; pointer-events: none;
   background:
@@ -749,7 +749,7 @@
   opacity: .06 !important; pointer-events: none; user-select: none;
 }
 
-/* Row 1 — the story strip. */
+/* Row 1  the story strip. */
 .mia-scope .mia-stories {
   position: relative; display: flex; align-items: center; gap: 12px;
   padding: 14px 0 10px; border-bottom: 1px solid rgba(211,154,39,.28);
@@ -801,7 +801,7 @@
 [dir="ltr"] .mia-scope .mia-stories-arrow[data-dir="next"] svg { transform: none; }
 [dir="ltr"] .mia-scope .mia-stories-arrow[data-dir="prev"] svg { transform: scaleX(-1); }
 
-/* Row 2 — headline and film. */
+/* Row 2  headline and film. */
 .mia-scope .mia-hero-main {
   display: grid; grid-template-columns: minmax(0, 1.12fr) minmax(320px, .88fr);
   gap: 36px; align-items: center; padding: 30px 0 26px;
@@ -846,7 +846,7 @@
 [dir="rtl"] .mia-scope .mia-hero-accent-stroke { transform: scaleX(-1); }
 @keyframes mia-hero-stroke { to { stroke-dashoffset: 0; } }
 
-/* Subtitle: a short gold rule with a diamond tip leads into the line — the
+/* Subtitle: a short gold rule with a diamond tip leads into the line  the
    handoff's ornament, kept small enough to read as a mark, not a decoration. */
 .mia-scope .mia-hero-sub { display: flex; align-items: center; gap: 12px; color: var(--gold-2); font-size: clamp(18px, 1.9vw, 29px); font-weight: 900; line-height: 1.3; }
 .mia-scope .mia-hero-sub-mark { position: relative; flex: 0 0 auto; width: 34px; height: 2px; background: linear-gradient(90deg, var(--gold), rgba(211,154,39,.25)); border-radius: 2px; }
@@ -880,7 +880,7 @@
 .mia-scope .mia-hero-btn:hover { transform: translateY(-2px); filter: brightness(1.03); }
 .mia-scope .mia-hero-btn:active { transform: translateY(0); }
 
-/* Row 3 — the proof band. */
+/* Row 3  the proof band. */
 .mia-scope .mia-hero-proof {
   display: flex; align-items: center; gap: 28px; flex-wrap: wrap;
   padding: 16px 0 22px; border-top: 1px solid rgba(211,154,39,.28);
@@ -1049,10 +1049,10 @@
 }
 
 /* ─────────────────────────────────────────────────────────────────────────────
- * Quick donation — the sticky bar under the hero, from
+ * Quick donation  the sticky bar under the hero, from
  * `Minbar/الصفحة الرئيسية.dc.html` (#quick).
  *
- * Desktop: one 68px row that stays put under the header as the page scrolls —
+ * Desktop: one 68px row that stays put under the header as the page scrolls 
  * destination · frequency · amount (+ a free field) · total · the red button
  * flush with the bar's end edge. Gold rail and gem marks on the start edge,
  * the Aqsa pattern washed across it.
@@ -1065,14 +1065,14 @@
 /* Pinned to the BOTTOM of the viewport for the whole page, not just the hero:
    the choice stays one click away however far the visitor reads. `sticky` was
    the earlier behaviour and it let go the moment the bar reached its own place
-   in the flow — scroll past the hero and it was gone. `fixed` keeps it.
+   in the flow  scroll past the hero and it was gone. `fixed` keeps it.
 
    Being out of flow, it no longer reserves its own space, so the page carries
    bottom padding (bar 68px + 20px above and below) and the footer clears it.
 
    The section spans the full width to centre the bar in the viewport, which
    would otherwise lay a transparent strip over the page and swallow clicks
-   either side of it — hence pointer-events off on the strip, back on the bar. */
+   either side of it  hence pointer-events off on the strip, back on the bar. */
 .mia-scope .mia-qb-sec {
   position: fixed; inset-inline: 0; bottom: 20px; z-index: 95;
   padding: 0; scroll-margin-top: 120px; pointer-events: none;
@@ -1114,7 +1114,7 @@
   padding-inline: 12px 10px; border-width: 1px; border-radius: 999px; font-size: 13px;
 }
 
-/* Chips: frequency lights gold, amount lights deep — the design's two accents. */
+/* Chips: frequency lights gold, amount lights deep  the design's two accents. */
 .mia-scope .mia-qb-chip {
   height: 34px; padding: 0 12px; border-radius: 999px; cursor: pointer;
   border: 1px solid var(--border); background: #fff; color: var(--muted);
@@ -1215,7 +1215,7 @@
   .mia-scope:has(.mia-qb-sec) { padding-bottom: 84px; }
 }
 
-/* Destination — one listbox (Radix Select): the intentions, then the projects
+/* Destination  one listbox (Radix Select): the intentions, then the projects
    under a group heading. The trigger matches the other inputs; the list is
    portaled to <body> and carries `mia-scope` itself, so its rules sit at the
    root here and its tokens come from that class. */
@@ -1390,7 +1390,7 @@
 }
 
 /* ─────────────────────────────────────────────────────────────────────────────
- * Shared banners — Journey to Al-Aqsa, 'Ibādan Lanā, and the zakat band.
+ * Shared banners  Journey to Al-Aqsa, 'Ibādan Lanā, and the zakat band.
  * Ported from Minbar/شد الرحال.dc.html, عبادا لنا بانر.dc.html and بنر الزكاة.dc.html.
  * ───────────────────────────────────────────────────────────────────────────── */
 
@@ -1420,7 +1420,7 @@
   .mia-scope #friday-quote > span[aria-hidden] { display: none !important; }
   .mia-scope #friday-quote p { font-size: clamp(11px,3.2vw,13px) !important; white-space: normal !important; line-height: 1.75 !important; text-wrap: balance; }
 
-  /* The band follows its content — no empty red space below the photograph. */
+  /* The band follows its content  no empty red space below the photograph. */
   .mia-scope .friday-body, .mia-scope .ibadan-body { min-height: 0 !important; }
   .mia-scope .friday-content, .mia-scope .ibadan-content {
     min-height: 180px !important;
@@ -1539,7 +1539,7 @@
 }
 
 /* ─────────────────────────────────────────────────────────────────────────────
- * Projects catalogue — ported from Minbar/المشاريع.dc.html.
+ * Projects catalogue  ported from Minbar/المشاريع.dc.html.
  * ───────────────────────────────────────────────────────────────────────────── */
 
 .mia-scope .proj-cat:hover { border-color: var(--gold); color: var(--deep); }
@@ -1569,7 +1569,7 @@
 }
 
 /* ─────────────────────────────────────────────────────────────────────────────
- * Project detail — ported from Minbar/تفاصيل مشروع.dc.html.
+ * Project detail  ported from Minbar/تفاصيل مشروع.dc.html.
  * ───────────────────────────────────────────────────────────────────────────── */
 
 .mia-scope .pd-tab[data-tab="1"] { color: var(--deep) !important; border-bottom-color: var(--red) !important; }
@@ -1580,7 +1580,7 @@
 
 @media (max-width: 980px) {
   .mia-scope #pd-top, .mia-scope #pd-body { grid-template-columns: minmax(0,1fr) !important; }
-  /* The donation panel stops being sticky once it is the full width — a
+  /* The donation panel stops being sticky once it is the full width  a
      full-width sticky block would cover the article as you scroll. */
   .mia-scope #pd-aside { position: static !important; }
   .mia-scope #pd-related { grid-template-columns: repeat(2, minmax(0,1fr)) !important; }
@@ -1591,7 +1591,7 @@
 }
 
 /* ─────────────────────────────────────────────────────────────────────────────
- * Giving basket — ported from Minbar/السلة.dc.html.
+ * Giving basket  ported from Minbar/السلة.dc.html.
  * ───────────────────────────────────────────────────────────────────────────── */
 
 .mia-scope .cart-row {
@@ -1659,15 +1659,15 @@
 }
 
 /* ─────────────────────────────────────────────────────────────────────────────
- * Donation concierge — components/minbar/concierge/*
+ * Donation concierge  components/minbar/concierge/*
  * A pill above the quick-donation FAB opens a sheet: bottom sheet on phones,
  * side panel on wider screens. Same tokens as the rest of the site; no chat-app
  * bubbles, no robot.
  * ───────────────────────────────────────────────────────────────────────────── */
 /* The launcher is the concierge's front door, so it is built to be noticed:
    a gold-ringed pill with a gold sparkle disc and an "AI" tag, a slow light
-   sweep across it, a pulse ring until the visitor first opens it, and — once
-   per visit — a teaser bubble inviting them in. All motion stops under
+   sweep across it, a pulse ring until the visitor first opens it, and  once
+   per visit  a teaser bubble inviting them in. All motion stops under
    prefers-reduced-motion. */
 .mia-scope .cg-launch-wrap {
   position: fixed;
@@ -1848,7 +1848,7 @@
 .mia-scope .cg-bubble { margin: 0; max-width: 92%; padding: 10px 14px; border-radius: 14px; font-size: 14px; line-height: 1.75; color: var(--deep); background: #fff; border: 1px solid var(--border); white-space: pre-line; }
 .mia-scope .cg-turn-user .cg-bubble { background: var(--deep); color: #fff; border-color: var(--deep); }
 /* Thinking: no bubble. The assistant's glyph breathes inside a soft gold
-   halo, and a thin line beside it shimmers — quiet, and clearly "working". */
+   halo, and a thin line beside it shimmers  quiet, and clearly "working". */
 .mia-scope .cg-thinking { display: inline-flex; align-items: center; gap: 12px; padding: 4px 2px; }
 .mia-scope .cg-thinking-orb { position: relative; display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; background: var(--deep); color: var(--gold); animation: cg-breathe 1.8s ease-in-out infinite; }
 .mia-scope .cg-thinking-orb::before { content: ""; position: absolute; inset: -4px; border-radius: 50%; border: 1.5px solid rgba(211,154,39,.55); animation: cg-halo 1.8s ease-out infinite; }
@@ -1982,13 +1982,13 @@ html.cg-open .mia-scope:has(.mia-qb-sec) { padding-bottom: 0; }
 
 @media (max-width: 900px) {
   .mia-scope #cart-grid { grid-template-columns: minmax(0,1fr) !important; }
-  /* A full-width summary must not stay pinned — it would cover the basket. */
+  /* A full-width summary must not stay pinned  it would cover the basket. */
   .mia-scope #cart-summary { position: static !important; }
 }
 
 @media (max-width: 960px) {
   /* Three clear lines on a phone: the full title (wrapping if it must), then
-     the type and frequency, then the controls — amount at the start edge and
+     the type and frequency, then the controls  amount at the start edge and
      delete at the opposite one. Flex, not grid, so the title fills the row
      edge to edge. */
   .mia-scope .cart-row {
@@ -2019,14 +2019,14 @@ html.cg-open .mia-scope:has(.mia-qb-sec) { padding-bottom: 0; }
 }
 
 /* ─────────────────────────────────────────────────────────────────────────────
- * Checkout — ported from Minbar/بيانات الدفع.dc.html.
+ * Checkout  ported from Minbar/بيانات الدفع.dc.html.
  * ───────────────────────────────────────────────────────────────────────────── */
 
 .mia-scope .pay-field:focus { outline: 0; border-color: var(--gold); background: #fff; }
 
 /* Phone field (react-international-phone) dressed as a `.pay-field`: one
    48px pill, the flag button and the number sharing a border, gold on focus.
-   Always LTR — a dial code and number are Latin data. */
+   Always LTR  a dial code and number are Latin data. */
 .mia-scope .pay-phone .pay-phone-field { display: flex; width: 100%; height: 48px; border: 1.5px solid var(--border); border-radius: 10px; background: var(--ivory); overflow: visible; transition: border-color .18s ease, background .18s ease; }
 .mia-scope .pay-phone .pay-phone-field:focus-within { border-color: var(--gold); background: #fff; }
 .mia-scope .pay-phone .react-international-phone-country-selector { position: relative; display: flex; }
@@ -2081,7 +2081,7 @@ html.cg-open .mia-scope:has(.mia-qb-sec) { padding-bottom: 0; }
 }
 
 /* ─────────────────────────────────────────────────────────────────────────────
- * Zakat calculator — ported from Minbar/حاسبة الزكاة.dc.html.
+ * Zakat calculator  ported from Minbar/حاسبة الزكاة.dc.html.
  * ───────────────────────────────────────────────────────────────────────────── */
 
 .mia-scope .zk-card:hover { box-shadow: 0 10px 26px rgba(16,33,43,.08); }
@@ -2103,7 +2103,7 @@ html.cg-open .mia-scope:has(.mia-qb-sec) { padding-bottom: 0; }
 }
 
 /* ─────────────────────────────────────────────────────────────────────────────
- * Zakat landing — ported from Minbar/الزكاة.dc.html.
+ * Zakat landing  ported from Minbar/الزكاة.dc.html.
  * ───────────────────────────────────────────────────────────────────────────── */
 
 .mia-scope .zk-amt:hover { border-color: var(--gold); }
@@ -2142,7 +2142,7 @@ html.cg-open .mia-scope:has(.mia-qb-sec) { padding-bottom: 0; }
 }
 
 /* ─────────────────────────────────────────────────────────────────────────────
- * Al-Quds Waqf — ported from Minbar/الأوقاف.dc.html.
+ * Al-Quds Waqf  ported from Minbar/الأوقاف.dc.html.
  * ───────────────────────────────────────────────────────────────────────────── */
 
 .mia-scope .wq-step:hover { background: rgba(211,154,39,.14); color: var(--gold); }
@@ -2175,7 +2175,7 @@ html.cg-open .mia-scope:has(.mia-qb-sec) { padding-bottom: 0; }
   .mia-scope #waqf-cert-preview { justify-self: start !important; margin-bottom: 34px; }
 }
 /* Phone: the certificate sits behind a button (`#waqf-cert-toggle`) and shows
-   only when opened — laid out fluidly so nothing is clipped: the height comes
+   only when opened  laid out fluidly so nothing is clipped: the height comes
    from the content, the inner frame is static (Minbar/الأوقاف.dc.html). */
 @media (max-width: 640px) {
   .mia-scope #waqf-cert-toggle { display: inline-flex !important; height: 42px !important; font-size: 13px !important; }
@@ -2196,7 +2196,7 @@ html.cg-open .mia-scope:has(.mia-qb-sec) { padding-bottom: 0; }
 }
 
 /* ─────────────────────────────────────────────────────────────────────────────
- * Recurring giving — ported from Minbar/التبرع الدوري.dc.html.
+ * Recurring giving  ported from Minbar/التبرع الدوري.dc.html.
  * ───────────────────────────────────────────────────────────────────────────── */
 
 .mia-scope .rc-video:hover { transform: translateY(-3px); box-shadow: 0 26px 56px rgba(16,33,43,.2); }
@@ -2224,7 +2224,7 @@ html.cg-open .mia-scope:has(.mia-qb-sec) { padding-bottom: 0; }
 }
 
 /* ─────────────────────────────────────────────────────────────────────────────
- * Bank accounts — ported from Minbar/الحسابات البنكية.dc.html.
+ * Bank accounts  ported from Minbar/الحسابات البنكية.dc.html.
  * ───────────────────────────────────────────────────────────────────────────── */
 
 .mia-scope .bk-copy:hover { border-color: var(--gold); background: var(--sand); color: var(--gold); }
@@ -2237,7 +2237,7 @@ html.cg-open .mia-scope:has(.mia-qb-sec) { padding-bottom: 0; }
 }
 
 /* ─────────────────────────────────────────────────────────────────────────────
- * Status screens — ported from the seven single-purpose state pages.
+ * Status screens  ported from the seven single-purpose state pages.
  * ───────────────────────────────────────────────────────────────────────────── */
 
 .mia-scope .mia-status-glyph--animate {
@@ -2248,7 +2248,7 @@ html.cg-open .mia-scope:has(.mia-qb-sec) { padding-bottom: 0; }
 }
 
 /* ─────────────────────────────────────────────────────────────────────────────
- * Legal pages — ported from the five policy pages in the handoff.
+ * Legal pages  ported from the five policy pages in the handoff.
  * ───────────────────────────────────────────────────────────────────────────── */
 
 .mia-scope .legal-toc { display: flex; }
@@ -2265,7 +2265,7 @@ html.cg-open .mia-scope:has(.mia-qb-sec) { padding-bottom: 0; }
 }
 
 /* ─────────────────────────────────────────────────────────────────────────────
- * About us — ported from `Minbar/من نحن.dc.html`.
+ * About us  ported from `Minbar/من نحن.dc.html`.
  * ───────────────────────────────────────────────────────────────────────────── */
 
 @keyframes ab-in { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
@@ -2303,7 +2303,7 @@ html.cg-open .mia-scope:has(.mia-qb-sec) { padding-bottom: 0; }
 }
 
 /* ─────────────────────────────────────────────────────────────────────────────
- * Contact us — ported from `Minbar/تواصل معنا.dc.html`. The form styling here
+ * Contact us  ported from `Minbar/تواصل معنا.dc.html`. The form styling here
  * also serves the partnership form, which the handoff draws the same way.
  * ───────────────────────────────────────────────────────────────────────────── */
 
@@ -2352,7 +2352,7 @@ html.cg-open .mia-scope:has(.mia-qb-sec) { padding-bottom: 0; }
 }
 
 /* ─────────────────────────────────────────────────────────────────────────────
- * Become a partner — ported from `Minbar/كن شريكا.dc.html`.
+ * Become a partner  ported from `Minbar/كن شريكا.dc.html`.
  * ───────────────────────────────────────────────────────────────────────────── */
 
 @keyframes pt-in { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
@@ -2432,7 +2432,7 @@ html.cg-open .mia-scope:has(.mia-qb-sec) { padding-bottom: 0; }
 }
 
 /* ─────────────────────────────────────────────────────────────────────────────
- * Volunteer with us — ported from `Minbar/تطوع معنا.dc.html`.
+ * Volunteer with us  ported from `Minbar/تطوع معنا.dc.html`.
  * ───────────────────────────────────────────────────────────────────────────── */
 
 @keyframes vl-in { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
@@ -2478,7 +2478,7 @@ html.cg-open .mia-scope:has(.mia-qb-sec) { padding-bottom: 0; }
 }
 
 /* ─────────────────────────────────────────────────────────────────────────────
- * Blog and article — ported from `Minbar/المدونة.dc.html` and
+ * Blog and article  ported from `Minbar/المدونة.dc.html` and
  * `Minbar/تفاصيل المقال.dc.html`.
  * ───────────────────────────────────────────────────────────────────────────── */
 
@@ -2567,7 +2567,7 @@ html.cg-open .mia-scope:has(.mia-qb-sec) { padding-bottom: 0; }
 }
 
 /* ─────────────────────────────────────────────────────────────────────────────
- * Achievements and reports — ported from
+ * Achievements and reports  ported from
  * `Minbar/إنجازات وتقارير المؤسسة.dc.html`. The site's one dark page.
  * ───────────────────────────────────────────────────────────────────────────── */
 
@@ -2688,7 +2688,7 @@ html.cg-open .mia-scope:has(.mia-qb-sec) { padding-bottom: 0; }
 }
 
 /* ─────────────────────────────────────────────────────────────────────────────
- * The newsroom — ported from `Minbar/الأخبار.dc.html`.
+ * The newsroom  ported from `Minbar/الأخبار.dc.html`.
  * ───────────────────────────────────────────────────────────────────────────── */
 
 @keyframes news-in { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
@@ -2712,7 +2712,7 @@ html.cg-open .mia-scope:has(.mia-qb-sec) { padding-bottom: 0; }
 }
 
 /* ─────────────────────────────────────────────────────────────────────────────
- * The donor account — ported from `Minbar/حساب المتبرع.dc.html`.
+ * The donor account  ported from `Minbar/حساب المتبرع.dc.html`.
  * ───────────────────────────────────────────────────────────────────────────── */
 
 @keyframes acc-in { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
@@ -2757,7 +2757,7 @@ html.cg-open .mia-scope:has(.mia-qb-sec) { padding-bottom: 0; }
 }
 
 /* ─────────────────────────────────────────────────────────────────────────────
- * Certificates — the woven gold ground shared by the thank-you plaque,
+ * Certificates  the woven gold ground shared by the thank-you plaque,
  * ported from `Minbar/شهادة الشكر لوحة.dc.html`.
  * ───────────────────────────────────────────────────────────────────────────── */
 
@@ -2775,7 +2775,7 @@ html.cg-open .mia-scope:has(.mia-qb-sec) { padding-bottom: 0; }
 }
 
 /* ─────────────────────────────────────────────────────────────────────────────
- * Donation received — ported from `Minbar/نجاح التبرع.dc.html`.
+ * Donation received  ported from `Minbar/نجاح التبرع.dc.html`.
  * ───────────────────────────────────────────────────────────────────────────── */
 
 @keyframes succ-in { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
@@ -2828,7 +2828,7 @@ html.cg-open .mia-scope:has(.mia-qb-sec) { padding-bottom: 0; }
 }
 
 /* ─────────────────────────────────────────────────────────────────────────────
- * Video index pages — ported from `Minbar/إنجازاتنا بالفيديو.dc.html` and
+ * Video index pages  ported from `Minbar/إنجازاتنا بالفيديو.dc.html` and
  * `Minbar/تزكياتنا بالفيديو.dc.html`.
  * ───────────────────────────────────────────────────────────────────────────── */
 
@@ -2860,7 +2860,7 @@ html.cg-open .mia-scope:has(.mia-qb-sec) { padding-bottom: 0; }
 @media (max-width: 620px) { .mia-scope .vg-grid { grid-template-columns: minmax(0, 1fr) !important; } }
 
 /* ─────────────────────────────────────────────────────────────────────────────
- * Video programmes and courses — ported from `Minbar/برامجنا المصورة.dc.html`
+ * Video programmes and courses  ported from `Minbar/برامجنا المصورة.dc.html`
  * and `Minbar/دوراتنا.dc.html`.
  * ───────────────────────────────────────────────────────────────────────────── */
 
@@ -2907,7 +2907,7 @@ html.cg-open .mia-scope:has(.mia-qb-sec) { padding-bottom: 0; }
 }
 
 /* ─────────────────────────────────────────────────────────────────────────────
- * Publications — ported from `Minbar/كتيبات المؤسسة.dc.html`.
+ * Publications  ported from `Minbar/كتيبات المؤسسة.dc.html`.
  * ───────────────────────────────────────────────────────────────────────────── */
 
 @keyframes book-in { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
@@ -2930,7 +2930,7 @@ html.cg-open .mia-scope:has(.mia-qb-sec) { padding-bottom: 0; }
 @media (max-width: 520px) { .mia-scope .bk-grid { grid-template-columns: minmax(0, 1fr) !important; } }
 
 /* ─────────────────────────────────────────────────────────────────────────────
- * Al-Quds and the Old City — ported from
+ * Al-Quds and the Old City  ported from
  * `Minbar/القدس والبلدة القديمة.dc.html`.
  * ───────────────────────────────────────────────────────────────────────────── */
 
@@ -2973,7 +2973,7 @@ html.cg-open .mia-scope:has(.mia-qb-sec) { padding-bottom: 0; }
 }
 
 /* ─────────────────────────────────────────────────────────────────────────────
- * The blessed Al-Aqsa Mosque — ported from `Minbar/المسجد الأقصى.dc.html`.
+ * The blessed Al-Aqsa Mosque  ported from `Minbar/المسجد الأقصى.dc.html`.
  * It shares the Al-Quds page's pattern, two-column and grid rules above.
  * ───────────────────────────────────────────────────────────────────────────── */
 
@@ -2997,7 +2997,7 @@ html.cg-open .mia-scope:has(.mia-qb-sec) { padding-bottom: 0; }
 }
 
 /* ─────────────────────────────────────────────────────────────────────────────
- * In-page content states — ported from the five state components in the
+ * In-page content states  ported from the five state components in the
  * handoff: no reports, no projects, no results, loading, and load failed.
  * These replace one region of a page, never the whole page.
  * ───────────────────────────────────────────────────────────────────────────── */
@@ -3028,7 +3028,7 @@ html.cg-open .mia-scope:has(.mia-qb-sec) { padding-bottom: 0; }
 }
 
 /* ─────────────────────────────────────────────────────────────────────────────
- * Restoring the homes of Al-Quds — ported from
+ * Restoring the homes of Al-Quds  ported from
  * `Minbar/مشروع ترميم منازل القدس.dc.html`.
  * ───────────────────────────────────────────────────────────────────────────── */
 
@@ -3063,7 +3063,7 @@ html.cg-open .mia-scope:has(.mia-qb-sec) { padding-bottom: 0; }
 }
 
 /* ─────────────────────────────────────────────────────────────────────────────
- * The ʿIbādan Lanā project — ported from `Minbar/مشروع عبادا لنا.dc.html`.
+ * The ʿIbādan Lanā project  ported from `Minbar/مشروع عبادا لنا.dc.html`.
  * ───────────────────────────────────────────────────────────────────────────── */
 
 .mia-scope .ib-ghost:hover { background: rgba(255, 255, 255, .12); color: #fff; }
@@ -3081,7 +3081,7 @@ html.cg-open .mia-scope:has(.mia-qb-sec) { padding-bottom: 0; }
 }
 
 /* ─────────────────────────────────────────────────────────────────────────────
- * The Nur ad-Din Zangi course — ported from
+ * The Nur ad-Din Zangi course  ported from
  * `Minbar/دورة نور الدين زنكي.dc.html`.
  * ───────────────────────────────────────────────────────────────────────────── */
 

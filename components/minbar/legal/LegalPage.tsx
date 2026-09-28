@@ -4,7 +4,7 @@ import type { ReactElement } from "react";
 import { useTranslations } from "next-intl";
 
 /**
- * The shared layout of the five legal pages — terms, privacy, donation policy,
+ * The shared layout of the five legal pages  terms, privacy, donation policy,
  * cookies, and the accessibility statement. Ported from
  * `Minbar/الشروط والأحكام.dc.html` and its four siblings, which share one
  * structure: a sticky table of contents beside a stack of icon-led sections.

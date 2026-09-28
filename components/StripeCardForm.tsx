@@ -31,7 +31,7 @@ const ElementWrapper = ({ children }: { children: React.ReactNode }) => (
 interface Props {
   holderName: string;
   onHolderNameChange: (name: string) => void;
-  /** Called whenever stripe/elements instances change — parent stores them to confirm payment */
+  /** Called whenever stripe/elements instances change  parent stores them to confirm payment */
   onReady: (stripe: Stripe | null, elements: StripeElements | null) => void;
   /** Called whenever the combined completion state of all 3 card fields changes */
   onComplete?: (complete: boolean) => void;

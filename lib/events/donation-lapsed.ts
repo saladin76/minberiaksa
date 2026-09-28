@@ -14,20 +14,20 @@ import {
 } from "./catalog";
 
 /**
- * DONATION_LAPSED — the "donate again" re-engagement reminder.
+ * DONATION_LAPSED  the "donate again" re-engagement reminder.
  *
  * Unlike every other MessageTrigger event this one is NOT fired by a webhook: nothing happens in the
  * system when a donor goes quiet. It is evaluated on a schedule (daily, via
  * /api/cron/donation-reminders) by scanning every donor's most recent PAID donation and reminding the
- * ones whose last gift is older than the trigger's `lapseDays` (default 30 — "last donated last
+ * ones whose last gift is older than the trigger's `lapseDays` (default 30  "last donated last
  * month").
  *
  * Safety rules, in order:
- *   1. The trigger must exist and be `enabled` — the dashboard checkbox is the on/off switch.
+ *   1. The trigger must exist and be `enabled`  the dashboard checkbox is the on/off switch.
  *   2. Donors with an active recurring subscription are never reminded (they are already giving).
  *   3. Marketing consent is enforced with the same `donorChannelEligibility` rules campaigns use
  *      (doNotContact / emailOptIn / emailNotifications / whatsappOptIn).
- *   4. A donor is reminded at most once per `cooldownDays`, and never twice for the same lapse —
+ *   4. A donor is reminded at most once per `cooldownDays`, and never twice for the same lapse 
  *      idempotency is read from CommunicationDelivery (the archive source of truth), so a re-run of
  *      the cron on the same day cannot double-send.
  *   5. Each run is bounded by `maxPerRun` so a first run over a large donor base cannot time out or
@@ -38,7 +38,7 @@ export const DEFAULT_MAX_PER_RUN = 200;
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
-/** Delivery statuses that mean "this donor was already reminded" — everything except dead ends. */
+/** Delivery statuses that mean "this donor was already reminded"  everything except dead ends. */
 const REMINDER_COUNTED_STATUSES = ["DRAFT", "QUEUED", "RENDERED", "SENT_TO_PROVIDER", "SENT", "DELIVERED", "READ", "OPENED", "CLICKED", "REPLIED", "UNSUBSCRIBED"];
 
 export type LapsedTriggerSummary = {
@@ -92,7 +92,7 @@ type DonorRow = {
 
 /**
  * Most recent PAID donation per donor. Uses `createdAt` (not `paidAt`) because legacy PAID rows
- * can have a null `paidAt` — the same rule `loadContext` uses for `{{totals.lastAt}}`.
+ * can have a null `paidAt`  the same rule `loadContext` uses for `{{totals.lastAt}}`.
  */
 async function loadLastPaidDonationByDonor(): Promise<Map<string, { at: Date; donationId: string }>> {
   const grouped = await prisma.donation.groupBy({
@@ -139,7 +139,7 @@ export async function runDonationLapsedReminders(
   summary.donorsScanned = lastByDonor.size;
   if (!lastByDonor.size) return summary;
 
-  // Donors with a live recurring subscription are already giving — never nag them.
+  // Donors with a live recurring subscription are already giving  never nag them.
   const activeSubscribers = new Set(
     (await prisma.subscription.findMany({ where: { status: "ACTIVE" }, select: { donorId: true } }).catch(() => [])).map((s) => s.donorId)
   );
@@ -166,7 +166,7 @@ export async function runDonationLapsedReminders(
     row.candidates = candidateIds.length;
     if (!candidateIds.length) continue;
 
-    // Only the head of the list can be reached within this run's budget — checking the whole donor
+    // Only the head of the list can be reached within this run's budget  checking the whole donor
     // base would grow the `$in` without bound. The headroom keeps the run from stalling when most of
     // the head has already been reminded.
     const checkIds = candidateIds.slice(0, budget * 10 + 100);
@@ -186,7 +186,7 @@ export async function runDonationLapsedReminders(
     }).catch(() => []);
 
     // The query is already bounded by cooldownCutoff, so anything it returns is a reminder inside the
-    // cooldown window — that donor is out. Once the cooldown lapses they become a candidate again
+    // cooldown window  that donor is out. Once the cooldown lapses they become a candidate again
     // (and if they donated in the meantime they simply stop being lapsed).
     const remindedRecently = new Set(priorDeliveries.map((d) => d.recipientUserId).filter(Boolean) as string[]);
 
@@ -225,7 +225,7 @@ export async function runDonationLapsedReminders(
       const donor = donorById.get(donorId);
       if (!donor) { row.skipped += 1; summary.skipped += 1; bump(row.reasons, "DONOR_NOT_FOUND"); continue; }
 
-      // Re-engagement is marketing, not a receipt — consent is mandatory.
+      // Re-engagement is marketing, not a receipt  consent is mandatory.
       const eligibility = donorChannelEligibility(
         { email: donor.email, phone: donor.phone, emailNotifications: donor.emailNotifications, smsNotifications: donor.smsNotifications },
         channel,
@@ -250,8 +250,8 @@ export async function runDonationLapsedReminders(
       }
 
       try {
-        // Context is loaded from the last donation so the template can use {{donation.*}} —
-        // "your last gift of $X on <date>" — alongside {{user.*}} and {{totals.*}}.
+        // Context is loaded from the last donation so the template can use {{donation.*}} 
+        // "your last gift of $X on <date>"  alongside {{user.*}} and {{totals.*}}.
         const ctx = await loadContextForDonation(donationId);
         if (!ctx) { row.skipped += 1; summary.skipped += 1; bump(row.reasons, "NO_CONTEXT"); continue; }
         const locale = pickLocale({ recipientLang: ctx.user.preferredLang });
@@ -273,11 +273,11 @@ export async function runDonationLapsedReminders(
     actorRole: opts.actorRole ?? "SYSTEM",
     action: dryRun ? "DONATION_LAPSED_REMINDERS_PREVIEW" : "DONATION_LAPSED_REMINDERS_RUN",
     messageAr: dryRun
-      ? `معاينة تذكير التبرّع — ${summary.sent} مرشّح للإرسال، ${summary.skipped} تخطّي`
-      : `تذكير التبرّع مجددًا — ${summary.sent} أُرسل، ${summary.skipped} تخطّي${summary.failed ? `، ${summary.failed} فشل` : ""}`,
+      ? `معاينة تذكير التبرّع  ${summary.sent} مرشّح للإرسال، ${summary.skipped} تخطّي`
+      : `تذكير التبرّع مجددًا  ${summary.sent} أُرسل، ${summary.skipped} تخطّي${summary.failed ? `، ${summary.failed} فشل` : ""}`,
     messageEn: dryRun
-      ? `Donation reminder preview — ${summary.sent} would send, ${summary.skipped} skipped`
-      : `Donation reminders — sent ${summary.sent}, skipped ${summary.skipped}, failed ${summary.failed}`,
+      ? `Donation reminder preview  ${summary.sent} would send, ${summary.skipped} skipped`
+      : `Donation reminders  sent ${summary.sent}, skipped ${summary.skipped}, failed ${summary.failed}`,
     entityType: "MessageTrigger",
     metadata: { ...summary, externalCall: !dryRun && summary.sent > 0 },
     stream: "TEAM",

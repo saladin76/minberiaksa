@@ -65,7 +65,7 @@ async function readStoredEntries(kind: MessagingKind): Promise<StoredMessagingEn
 
 function mergeItems<T extends { id: string }>(fallback: T[], entries: StoredMessagingEntry[]): T[] {
   const deletedIds = new Set(entries.filter((entry) => entry.deleted).map((entry) => entry.id));
-  const saved = entries.filter((entry) => !entry.deleted).map((entry) => entry.item as T);
+  const saved = entries.filter((entry) => !entry.deleted).map((entry) => entry.item as unknown as T);
   const savedIds = new Set(saved.map((item) => item.id));
   const untouched = fallback.filter((item) => !deletedIds.has(item.id) && !savedIds.has(item.id));
   return [...saved, ...untouched];

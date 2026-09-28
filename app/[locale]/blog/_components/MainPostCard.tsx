@@ -2,8 +2,8 @@ import Image from "next/image";
 import { Link } from "@/i18n/routing";
 
 /**
- * The fields this card actually renders. `Post` was an undeclared global — a leftover of a deleted
- * types module — so every read below was unchecked, including the `slug` that the link still casts
+ * The fields this card actually renders. `Post` was an undeclared global  a leftover of a deleted
+ * types module  so every read below was unchecked, including the `slug` that the link still casts
  * through `any` to reach.
  */
 interface PostLike {

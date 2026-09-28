@@ -26,7 +26,7 @@ import { channelMeta, isPreSend, type CampaignRow } from "./campaign-ui";
  *
  * These used to live on `/dashboard/communication/campaigns/[id]`, which was the
  * only place a campaign could be confirmed, sent or cancelled. That page is gone
- * — clicking a campaign now opens its channel report — so the actions moved here
+ *  clicking a campaign now opens its channel report  so the actions moved here
  * rather than disappearing with it.
  *
  * The send confirmation keeps naming the real recipient count and the channel:
@@ -37,13 +37,13 @@ import { channelMeta, isPreSend, type CampaignRow } from "./campaign-ui";
  */
 
 const BLOCKED_LABELS: Record<string, string> = {
-  NOT_APPROVED: "الحملة غير معتمدة — اعتمدها أولًا.",
+  NOT_APPROVED: "الحملة غير معتمدة  اعتمدها أولًا.",
   NO_TEMPLATE: "لم يُختَر قالب لهذه الحملة.",
   NO_AUDIENCE: "لم يُحدَّد جمهور لهذه الحملة.",
   NO_RECIPIENTS: "لا يوجد مستلم مؤهَّل في هذا الجمهور.",
   NOT_CONFIGURED: "لا يوجد مزوّد مُعدّ لهذه القناة.",
   NO_ELIGIBLE_RECIPIENTS: "لا يوجد مستلم مؤهَّل في هذا الجمهور.",
-  ALREADY_RUNNING: "الحملة قيد الإرسال الآن — انتظر انتهاء الدفعة الجارية.",
+  ALREADY_RUNNING: "الحملة قيد الإرسال الآن  انتظر انتهاء الدفعة الجارية.",
   ALREADY_COMPLETE: "اكتمل إرسال هذه الحملة.",
   NOT_RESUMABLE: "لا توجد دفعة متوقفة لمتابعتها.",
 };
@@ -77,7 +77,7 @@ export function CampaignRowActions({
       });
       const json = await res.json();
       if (!res.ok || !json.ok) throw new Error(json?.error || "تعذّر تحديث الحالة");
-      toast.success(action === "CONFIRM" ? "تم تأكيد الحملة — يمكنك إرسالها الآن" : "تم تحديث الحالة");
+      toast.success(action === "CONFIRM" ? "تم تأكيد الحملة  يمكنك إرسالها الآن" : "تم تحديث الحالة");
       onChanged();
     } catch (e) {
       toast.error((e as Error).message);
@@ -86,7 +86,7 @@ export function CampaignRowActions({
     }
   };
 
-  /** Resolve the recipient count first — the dialog is worthless without it. */
+  /** Resolve the recipient count first  the dialog is worthless without it. */
   const openSend = async () => {
     setBusy(true);
     try {
@@ -124,7 +124,7 @@ export function CampaignRowActions({
         const s = json.summary;
         toast.success(
           s.hasMore
-            ? `الدفعة الأولى: أُرسلت ${s.sent} · تُخطّيت ${s.skipped} · فشلت ${s.failed} — تتواصل بقية الدفعات تلقائيًا`
+            ? `الدفعة الأولى: أُرسلت ${s.sent} · تُخطّيت ${s.skipped} · فشلت ${s.failed}  تتواصل بقية الدفعات تلقائيًا`
             : `أُرسلت ${s.sent} · تُخطّيت ${s.skipped} · فشلت ${s.failed}`,
         );
       }

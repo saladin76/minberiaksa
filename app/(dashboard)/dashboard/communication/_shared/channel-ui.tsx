@@ -7,8 +7,8 @@ import { cn } from "@/lib/utils";
 /**
  * Visual language shared by the البريد / واتساب / SMS channel pages.
  *
- * Each channel has its own lifecycle vocabulary — email is opened, WhatsApp is read, SMS is
- * merely delivered — but the *shape* of the question is identical: how far along the ladder did
+ * Each channel has its own lifecycle vocabulary  email is opened, WhatsApp is read, SMS is
+ * merely delivered  but the *shape* of the question is identical: how far along the ladder did
  * this message get, and is a missing rung a "no" or an "unknown"? Keeping that judgement in one
  * place is what stops three pages from quietly answering it three different ways.
  */
@@ -18,7 +18,7 @@ export type JourneyStage = {
   label: string;
   at: string | null;
   icon: LucideIcon;
-  /** Stages known from our own records, not the provider's — never rendered as "unknown". */
+  /** Stages known from our own records, not the provider's  never rendered as "unknown". */
   local?: boolean;
 };
 
@@ -74,13 +74,13 @@ const STAGE_TONES = [
  * The furthest point a message reached, as one badge.
  *
  * This replaced a strip of four pips. The pips showed every rung at once, which meant the reader
- * had to decode four shapes to answer the only question they actually had — what happened to this
+ * had to decode four shapes to answer the only question they actually had  what happened to this
  * message? A single "قُرئ ✓✓" says it directly, and the full ladder with timestamps is still one
  * hover (or one معاينة click) away.
  *
  * The one nuance kept from the pips: when the provider has never reported an event, the badge is
  * dashed. Rendering a confident "أُرسل" in that state would let "we aren't receiving tracking"
- * masquerade as "it was sent and nothing further happened" — opposite meanings, same pixels.
+ * masquerade as "it was sent and nothing further happened"  opposite meanings, same pixels.
  */
 export function DeliveryStatusPill({
   stages,
@@ -161,7 +161,7 @@ export const ORIGIN_LABELS: Record<string, string> = {
 };
 
 /**
- * The recipient cell — a button into the donor profile card whenever we know who they are.
+ * The recipient cell  a button into the donor profile card whenever we know who they are.
  *
  * Matches سجل الرسائل: same drawer, same affordance. Rows without a `recipientUserId` render as
  * plain text rather than a dead button, so a control that looks pressable always is.
@@ -212,7 +212,7 @@ export type FunnelStep = {
   value: number;
   pct: number;
   tone: string;
-  /** Known without provider feedback — shown even when tracking is dark. */
+  /** Known without provider feedback  shown even when tracking is dark. */
   always?: boolean;
 };
 
@@ -280,7 +280,7 @@ export function TrackingBanner({ children }: { children: React.ReactNode }) {
  * Whether a row may be re-sent.
  *
  * Kept here rather than in each table so the button's presence and the server's decision are read
- * from the same rule — a row offering a retry the API then refuses is worse than no button at all.
+ * from the same rule  a row offering a retry the API then refuses is worse than no button at all.
  * BOUNCED is intentionally absent: re-sending to an address that bounced only accrues bounce rate.
  */
 export function isRetryable(row: { status: string; retriedAt?: string | null }): boolean {

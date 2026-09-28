@@ -9,10 +9,10 @@ import TravelBanner from "@/components/minbar/banners/TravelBanner";
 import IbadanBanner from "@/components/minbar/banners/IbadanBanner";
 
 /**
- * Volunteer with us — ported from `Minbar/تطوع معنا.dc.html`.
+ * Volunteer with us  ported from `Minbar/تطوع معنا.dc.html`.
  *
  * TRANSLATION GAP: this is the only page in the handoff written in hard-coded
- * Arabic — `Minbar/i18n/<lang>/` ships no `volunteer.json` in any of the 19
+ * Arabic  `Minbar/i18n/<lang>/` ships no `volunteer.json` in any of the 19
  * languages. Every string that had a reviewed key elsewhere uses it (name,
  * email, phone, "Volunteering Field", the received line, send / sending / send
  * another); the rest live in a new `volunteer` namespace whose non-Arabic
@@ -123,7 +123,7 @@ export default function VolunteerPage() {
     setError("");
     try {
       /* The inbox has a phone column but none for country or volunteering
-         track, and both are answers the applicant actually gave — so they lead
+         track, and both are answers the applicant actually gave  so they lead
          the message body rather than being dropped on the way to the team. */
       const lines = [
         `${tCommon("volunteerField")}: ${chosenTitle}`,

@@ -61,7 +61,7 @@ interface DonationDetails {
   }>;
 }
 
-/** Icon picker per error key — visual cue that matches the explanation. */
+/** Icon picker per error key  visual cue that matches the explanation. */
 const ERROR_ICONS: Record<PaymentErrorKey, typeof AlertCircle> = {
   insufficientFunds: WalletCards,
   cardDeclined: CreditCard,
@@ -162,7 +162,7 @@ export default function DonationFailedPage() {
     if (!donation || retrying) return;
     setRetrying(true);
 
-    // Monthly subscriptions can't be cloned — send the donor back to the
+    // Monthly subscriptions can't be cloned  send the donor back to the
     // campaign page where the regular dialog handles the subscribe flow.
     if (isMonthly) {
       const firstCampaignId = donation.items?.[0]?.campaign ? null : null;
@@ -178,7 +178,7 @@ export default function DonationFailedPage() {
 
       // Pick the next-step URL by provider. STRIPE → checkout session URL.
       // The 3D Secure rails (PAYFOR, ALBARAKA) start from a signed form that needs
-      // card details, so there's nothing to redirect to — bounce those donors back
+      // card details, so there's nothing to redirect to  bounce those donors back
       // to the campaign dialog. Default to Stripe for everything else.
       const provider = (donation.provider ?? "STRIPE").toUpperCase();
       if (provider === "PAYFOR" || provider === "ALBARAKA") {
@@ -187,7 +187,7 @@ export default function DonationFailedPage() {
         return;
       }
 
-      // Stripe path — create a new Checkout Session and redirect.
+      // Stripe path  create a new Checkout Session and redirect.
       const checkout = await axios.post("/api/stripe/checkout", {
         donationId: newId,
         locale,
@@ -270,7 +270,7 @@ export default function DonationFailedPage() {
               </div>
             </div>
 
-            {/* What to do — actionable steps */}
+            {/* What to do  actionable steps */}
             <div className="mt-5 sm:mt-6 ps-0 sm:ps-16">
               <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wide mb-3 flex items-center gap-2">
                 <CheckCircle2 className="w-4 h-4 text-emerald-600" />
@@ -297,7 +297,7 @@ export default function DonationFailedPage() {
               </ul>
             </div>
 
-            {/* Raw provider message — hidden by default to avoid scaring donors */}
+            {/* Raw provider message  hidden by default to avoid scaring donors */}
             {donation?.providerErrorMessage && (
               <details className="mt-5 sm:mt-6 ps-0 sm:ps-16 group">
                 <summary className="text-xs font-medium text-gray-500 hover:text-gray-700 cursor-pointer select-none inline-flex items-center gap-1.5">

@@ -6,7 +6,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 /**
- * GET /api/ai/donation-concierge/config — the launcher's switches (shown or
+ * GET /api/ai/donation-concierge/config  the launcher's switches (shown or
  * not, teaser bubble, pulse). Public and tiny; nothing else from the concierge
  * settings (team notes, transcripts, attribution) leaves the server.
  */

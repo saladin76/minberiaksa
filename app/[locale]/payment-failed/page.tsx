@@ -13,7 +13,7 @@ interface Props {
 const NAMESPACES = ["system", "cart"] as const;
 
 /**
- * Payment failed — ported from `Minbar/فشل الدفع.dc.html`.
+ * Payment failed  ported from `Minbar/فشل الدفع.dc.html`.
  *
  * The two exits are deliberate: try the payment again, or reach a human. A
  * failed card is most often a bank-side decline the donor can resolve, so

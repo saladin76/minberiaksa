@@ -27,7 +27,7 @@ export default async function DashboardLayout({
 
   // Root gate for the whole dashboard tree. `proxy.ts` deliberately excludes /dashboard
   // from its matcher, and only 2 of ~30 sections (archive, operations) had their own layout
-  // guard — so the other 28 rendered server-side for an unauthenticated visitor. The API
+  // guard  so the other 28 rendered server-side for an unauthenticated visitor. The API
   // routes are guarded, so this was defence-in-depth rather than a data leak, but an
   // anonymous visitor could still render the dashboard shell.
   //

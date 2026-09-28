@@ -105,7 +105,7 @@ export async function deliverDonationGifts(donationId: string): Promise<GiftDeli
   const locale = docs.locale;
   const m = giftMessages(locale);
   const [base, sendConfig] = await Promise.all([getServerBaseUrl(), resolveTriggerSendConfig()]);
-  /* A gift goes out in the recipient's language, so it routes on that locale like any other send —
+  /* A gift goes out in the recipient's language, so it routes on that locale like any other send 
      through the one resolver every outbound path shares. */
   const giftEmailSender = resolveTriggerSender(sendConfig, "EMAIL", { locale, purpose: "TRANSACTIONAL" });
   const giftWhatsappSender = resolveTriggerSender(sendConfig, "WHATSAPP", { locale, purpose: "TRANSACTIONAL" });
@@ -183,7 +183,7 @@ export async function deliverDonationGifts(donationId: string): Promise<GiftDeli
     await writeAuditLog({
       actorRole: "SYSTEM",
       action: "GIFT_DELIVERY",
-      messageAr: `إبلاغ المُهدى إليهم بتبرع مُهدى — ${parts.join("، ")}`,
+      messageAr: `إبلاغ المُهدى إليهم بتبرع مُهدى  ${parts.join("، ")}`,
       entityType: "Donation",
       entityId: donationId,
       metadata: { donationId, ...result },

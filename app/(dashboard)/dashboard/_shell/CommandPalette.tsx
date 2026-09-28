@@ -22,7 +22,7 @@ type Props = {
 /**
  * ⌘K / Ctrl+K navigation. The sidebar carries 40 permission-filtered destinations across 7
  * collapsible groups with no search of any kind, so reaching a page meant expanding groups
- * and scanning. Only pages the user can actually see are listed — `navigation` is already
+ * and scanning. Only pages the user can actually see are listed  `navigation` is already
  * permission-filtered upstream.
  */
 export function CommandPalette({ open, onOpenChange, navigation, dir }: Props) {

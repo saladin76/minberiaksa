@@ -7,7 +7,7 @@ import { requireAdminOrDashboardPermission } from "@/lib/dashboard/api-auth";
 export const dynamic = "force-dynamic";
 
 /**
- * GET /api/admin/blog/health — what the production database actually holds.
+ * GET /api/admin/blog/health  what the production database actually holds.
  *
  * A committed seed or import script is not proof the live database changed.
  * After any bulk blog operation this is the number to check: counts come from

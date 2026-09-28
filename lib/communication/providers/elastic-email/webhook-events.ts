@@ -48,7 +48,7 @@ const STATUS_BY_EVENT: Record<string, DeliveryStatusId> = {
   failed: "FAILED",
   // A spam complaint is NOT a failure: the message was delivered and then the
   // recipient pressed "report spam". Filing it under FAILED both overstated the
-  // failure count and, worse, produced no consent consequence — so the same
+  // failure count and, worse, produced no consent consequence  so the same
   // donor stayed in every future audience and kept being mailed, which is what
   // damages sender reputation. It is an opt-out, and the strongest kind.
   abusereport: "UNSUBSCRIBED",
@@ -58,7 +58,7 @@ const STATUS_BY_EVENT: Record<string, DeliveryStatusId> = {
   complaint: "UNSUBSCRIBED",
   complained: "UNSUBSCRIBED",
   suppressed: "FAILED",
-  // The pull feed (`GET /v4/events`) spells this one "Suppress", not "Suppressed" — and it is the
+  // The pull feed (`GET /v4/events`) spells this one "Suppress", not "Suppressed"  and it is the
   // event that says "we accepted your message and then refused to deliver it", i.e. exactly the
   // outcome a SENT delivery row is wrong about. Dropping it left those rows reading as successful.
   suppress: "FAILED",
@@ -69,7 +69,7 @@ const STATUS_BY_EVENT: Record<string, DeliveryStatusId> = {
 /**
  * Only events that prove the address is permanently unusable suppress it.
  *
- * A soft bounce (mailbox full, greylisted, temporary DNS) must not — muting a
+ * A soft bounce (mailbox full, greylisted, temporary DNS) must not  muting a
  * donor over a full inbox loses a real recipient permanently. Elastic Email's
  * single "Bounce/Error" checkbox delivers both kinds, so the distinction is made
  * here, on the event name, and an ambiguous plain "bounce" is treated as soft.

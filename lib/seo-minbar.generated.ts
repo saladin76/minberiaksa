@@ -1,5 +1,5 @@
 /**
- * GENERATED FILE — do not edit by hand.
+ * GENERATED FILE  do not edit by hand.
  * Produced by `scripts/generate-minbar-seo.mjs` from the Minbar handoff's
  * per-language i18n bundles. Re-run that script instead of editing this.
  *

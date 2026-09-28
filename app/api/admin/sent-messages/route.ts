@@ -56,7 +56,7 @@ export async function GET(request: NextRequest) {
         orderBy: { createdAt: "desc" },
         skip,
         take: limit,
-        // Skip the heavy renderedBody/variables fields — the row preview
+        // Skip the heavy renderedBody/variables fields  the row preview
         // dialog fetches them lazily via the by-id endpoint.
         select: {
           id: true,

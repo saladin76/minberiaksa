@@ -45,7 +45,7 @@ type Props<T extends string> = {
  *
  * Rebuilt rather than restyled. The previous control was a single `<Select>` listing every
  * period, so choosing a range meant opening a menu to discover the options, and the date
- * inputs only materialised *after* you found and picked "custom" — the range controls were
+ * inputs only materialised *after* you found and picked "custom"  the range controls were
  * invisible until you already knew they existed.
  *
  * This exposes the periods as a segmented control (all options visible, one click to switch),
@@ -69,7 +69,7 @@ export function DashboardFilterBar<T extends string>({
       aria-label="تصفية البيانات"
     >
       <div className="flex flex-wrap items-center gap-3">
-        {/* Segmented period control — every option visible at once. */}
+        {/* Segmented period control  every option visible at once. */}
         <div
           role="group"
           aria-label="الفترة الزمنية"

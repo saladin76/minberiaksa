@@ -20,12 +20,12 @@ import {
 } from "@/lib/content/super-category-write";
 
 /**
- * Server-side reader for super categories — the themed landing pages that
+ * Server-side reader for super categories  the themed landing pages that
  * gather content of every kind (`prisma/schema.prisma`, `model SuperCategory`).
  *
  * Sibling of `lib/minbar/cms.ts`. Text arrives already resolved for the
- * visitor's locale — Arabic from the row, anything else from the translation
- * with English as the fallback — so the page component never sees a translation
+ * visitor's locale  Arabic from the row, anything else from the translation
+ * with English as the fallback  so the page component never sees a translation
  * table.
  *
  * Linked content is resolved through the existing public readers rather than by
@@ -126,7 +126,7 @@ const PAGE_SELECT = {
   },
 } as const;
 
-/** Every published super category slug — for the sitemap and static params. */
+/** Every published super category slug  for the sitemap and static params. */
 export async function listSuperCategorySlugs(): Promise<string[]> {
   const rows = await prisma.superCategory.findMany({
     where: { isActive: true },
@@ -172,7 +172,7 @@ export async function getSuperCategory(
 
   const t = pickTranslation(row.translations, locale);
 
-  /* Which kinds this page actually links. Only those are fetched — a page of
+  /* Which kinds this page actually links. Only those are fetched  a page of
      campaigns must not pay for the course and booklet queries. */
   const linked = new Map<SuperCategoryItemKindValue, string[]>();
   for (const item of row.items) {

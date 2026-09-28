@@ -1,4 +1,4 @@
-# Netgsm — Turkey SMS Integration
+# Netgsm  Turkey SMS Integration
 
 Netgsm sends SMS to **Turkish numbers only**. Server-only: usercode/password read inside the adapter,
 never surfaced. No Twilio fallback; non-Turkish numbers are rejected here (they route to Brevo).
@@ -33,7 +33,7 @@ The SMS router (`providers/sms/client.ts`) sends TR → Netgsm, everything else 
 
 ## Status limitations
 - Delivery-status callbacks (DLR) are **not implemented**. Netgsm status is available via a separate
-  polling endpoint (`NETGSM_STATUS_ENDPOINT`) — a delivery stays SENT unless manually reconciled.
+  polling endpoint (`NETGSM_STATUS_ENDPOINT`)  a delivery stays SENT unless manually reconciled.
 - Exact response format / error codes vary by account type → **must be confirmed with live QA**.
 
 ## Live QA checklist (needs a real Turkish test number)

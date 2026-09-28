@@ -45,7 +45,7 @@
     #receipt-canvas > .receipt-scale { transform: scale(.3793) !important; }
   }
   /* توحيد مع معاينة صفحة الأوقاف والنموذج الرسمي: اللوحة الأمامية العمودية وحدها
-     (845/1178) — تُخفى اللوحة الخلفية ويصير الزوج عمودًا واحدًا، فالارتفاع الطبيعي
+     (845/1178)  تُخفى اللوحة الخلفية ويصير الزوج عمودًا واحدًا، فالارتفاع الطبيعي
      ~1660px بعرض 1200. العرض = 1200 × المقياس دائمًا. */
   .waqf-scale .waqf-pair { grid-template-columns: minmax(0,1fr) !important; aspect-ratio: auto !important; }
   .waqf-scale .waqf-back { display: none !important; }
@@ -130,7 +130,7 @@
         </sc-for>
       </div>
 
-      <!-- معاينة وصل الدفع: نفس نمط لوحتي الشهادتين — dc-import مُصغَّر + زر تحميل -->
+      <!-- معاينة وصل الدفع: نفس نمط لوحتي الشهادتين  dc-import مُصغَّر + زر تحميل -->
       <sc-if value="{{ receiptOpen }}" hint-placeholder-val="{{ false }}">
         <div style="width: 100%; display: grid; gap: 16px; padding: 22px; background: #fff; border: 1px solid var(--border); border-radius: 14px; text-align: start;">
           <div id="receipt-canvas" style="position: relative; justify-self: center; width: 520px; max-width: 100%; aspect-ratio: 870/1120; border-radius: 8px; overflow: hidden; border: 1px solid var(--border);">
@@ -287,15 +287,15 @@
 /*
  * نجاح التبرع (Success)
  * -----------------------
- * تظهر فقط بعد تأكيد فعلي (Webhook ناجح) من بوابة الدفع لطلب حقيقي — لا تُفتح
+ * تظهر فقط بعد تأكيد فعلي (Webhook ناجح) من بوابة الدفع لطلب حقيقي  لا تُفتح
  * مباشرة بلا تحقق من حالة الطلب.
  * ربط الداشبورد/الباك-إند:
  *   - بطاقة الملخص (المشروع/المبلغ/رقم الإيصال) تُملأ من بيانات الطلب الفعلي وليس
  *     نصًا ثابتًا؛ "قيد الإصدار" تتحول لرقم إيصال حقيقي فور توليده من نظام الفوترة.
  *   - "{{ tDownloadReceipt }}" يُنتج PDF رسمي من الباك-إند برقم الإيصال ومطابقًا لسياسات
  *     محاسبية معتمدة؛ "تحميل شهادة التبرع" مستند شكر منفصل (اسم المتبرع + المشروع +
- *     المبلغ + الشعار الرسمي) — كلاهما يحتاج توليد ملفات من الخادم، لا رابط وهمي.
- *   - "اجعله تبرعًا دوريًا": يُنفَّذ الآن مباشرة من نفس الصفحة (بلا تنقّل) — عند اختيار
+ *     المبلغ + الشعار الرسمي)  كلاهما يحتاج توليد ملفات من الخادم، لا رابط وهمي.
+ *   - "اجعله تبرعًا دوريًا": يُنفَّذ الآن مباشرة من نفس الصفحة (بلا تنقّل)  عند اختيار
  *     الدورية يجب أن يُرسَل طلب للباك-إند لإنشاء اشتراك فعلي في بوابة الدفع بنفس
  *     المشروع/المبلغ، لا مجرد تغيير حالة عرض محلية كما في هذا المثال.
  *
@@ -306,7 +306,7 @@
  *     المراجعة فوق شارة "تم تفعيل التبرع الدوري" حتى لو تأخر إعادة الرسم.
  *
  * نصوص وبيانات الطلب (heading/subtitle/projectTitle/amount/receiptNo/
- * receiptHref/certificateHref) كلها props قابلة للتعديل من الداشبورد — لا نصوص
+ * receiptHref/certificateHref) كلها props قابلة للتعديل من الداشبورد  لا نصوص
  * أو أرقام افتراضية ثابتة في الكود؛ المبلغ المقترح "نفس المبلغ" في خطوة التبرع
  * الدوري يقرأ amount نفسه، لا رقمًا مكررًا منفصلاً.
  * الحركة: أيقونة النجاح تنبثق بارتداد خفيف (succ-pop) وتصدر حلقتين من نبض حلقي
@@ -319,12 +319,12 @@
  *   - سجل هذا التبرع (مشروع/مبلغ/تاريخ/رقم إيصال) يجب أن يظهر في "سجل تبرعاتي"
  *     بحساب المتبرع فور نجاح الدفع، لا فقط في هذه الصفحة العابرة.
  *   - أي اشتراك دوري يُفعَّل من هنا يجب أن يظهر في "إدارة الاشتراكات" بالحساب
- *     (تعديل المبلغ/الدورية أو الإلغاء) — لا مسار آخر لإدارته حاليًا في الواجهة.
+ *     (تعديل المبلغ/الدورية أو الإلغاء)  لا مسار آخر لإدارته حاليًا في الواجهة.
  *   - رقم الإيصال ("قيد الإصدار") وروابط PDF يُغذّيان أيضًا من نفس مصدر بيانات
  *     لوحة التحكم حتى لا يتعارض ما يظهر هنا مع سجل حساب المستخدم.
  */
 class Component extends DCLogic {
-  /* مصدر واحد للغة — التخزين مباشرة؛ النصوص والاتجاه يُشتقّان منه معًا. */
+  /* مصدر واحد للغة  التخزين مباشرة؛ النصوص والاتجاه يُشتقّان منه معًا. */
   locale() {
     try { return localStorage.getItem("mia.lang") || "ar"; } catch (e) { return "ar"; }
   }
@@ -332,7 +332,7 @@ class Component extends DCLogic {
   tr(ns, key, ar) { const g = window.MIA_I18N; return (g && g.t(ns, key)) || ar; }
 
   componentDidMount() {
-    /* عند تبديل اللغة تُجلب حزم الصفحة قبل إعادة الرسم — فلا يظهر fallback عربي مؤقت */
+    /* عند تبديل اللغة تُجلب حزم الصفحة قبل إعادة الرسم  فلا يظهر fallback عربي مؤقت */
     this._onLang = () => {
       if (window.MIA_I18N && window.MIA_I18N.ensure) window.MIA_I18N.ensure(["cart", "waqf", "system", "common"]).then(() => this.forceUpdate());
       this.forceUpdate();
@@ -358,11 +358,11 @@ class Component extends DCLogic {
    * شهادة الوقف: تُصدَر فقط إذا كانت السلة المدفوعة تحتوي بندًا وقفيًا
    * (سهم 100$ أو متر 1500$)، وبنوع الوحدة التي تبرّع بها المتبرع فعلًا.
    * المصدر: props.waqfUnit إن مرّرها الخادم، وإلا يُقرأ البند الوقفي من
-   * localStorage("mia_cart_items") — نفس المفتاح والشكل الذي تكتبه
+   * localStorage("mia_cart_items")  نفس المفتاح والشكل الذي تكتبه
    * «الأوقاف.dc.html» وتقرأه «السلة.dc.html».
    * شكل البند الحقيقي:
    *   { type: "وقف", amount: "$100", currency: "USD", frequency: "تبرع لمرة",
-   *     title: "السهم الوقفي × 1 — باسم … — وقد أوقفها عن: … — شهادة رقم 76550" }
+   *     title: "السهم الوقفي × 1  باسم …  وقد أوقفها عن: …  شهادة رقم 76550" }
    * فتُستخرج الوحدة والعدد و«أوقفها عن» ورقم الشهادة من نص title، ورقم
    * الشهادة يُعاد استخدامه كما هو (مولَّد مسبقًا عبر consumeCertSeq من
    * mia_waqf_seq_meter / mia_waqf_seq_share) ولا يُولَّد رقم ثانٍ.
@@ -420,7 +420,7 @@ class Component extends DCLogic {
         toggle: () => this.setState({ waqfOpenMap: Object.assign({}, this.state.waqfOpenMap, { [key]: !((this.state.waqfOpenMap || {})[key]) }) }),
         btnLabel: isMeter ? this.tr("cart", "meterCertName", "شهادة المتر الوقفي") : this.tr("cart", "shareCertName", "شهادة السهم الوقفي"),
         downloadLabel: isMeter ? this.tr("cart", "downloadMeterCert", "تحميل شهادة المتر الوقفي") : this.tr("cart", "downloadShareCert", "تحميل شهادة السهم الوقفي"),
-        /* "#" = غير مضبوط من الداشبورد — نحيل لقالب الشهادة الرسمي للمعاينة/الطباعة */
+        /* "#" = غير مضبوط من الداشبورد  نحيل لقالب الشهادة الرسمي للمعاينة/الطباعة */
         href: (p.waqfCertHref && p.waqfCertHref !== "#") ? p.waqfCertHref : "شهادة الاوقاف.dc.html",
       };
     });
@@ -455,17 +455,17 @@ class Component extends DCLogic {
       tChooseFrequency: this.tr("system", "chooseFrequency", "اختر دورية السحب"),
       tChooseAmountStep: this.tr("system", "chooseAmountStep", "اختر المبلغ"),
       tOtherAmount: this.tr("system", "otherAmount", "مبلغ آخر"),
-      tProceedToReview: this.tr("system", "proceedToReview", "متابعة — مراجعة قبل التأكيد"),
+      tProceedToReview: this.tr("system", "proceedToReview", "متابعة  مراجعة قبل التأكيد"),
       tBrowseMore: this.tr("system", "browseMoreProjects", "تصفّح مشاريع أخرى"),
       tBackHome: this.tr("system", "backHomeCta", "العودة إلى الرئيسية"),
       nowrapProp: { style: { whiteSpace: "nowrap" } },
-      /* الـprop يفوز فقط إذا عُدّل فعلًا — المطابق للافتراضي العربي يُتجاهل لصالح الترجمة */
+      /* الـprop يفوز فقط إذا عُدّل فعلًا  المطابق للافتراضي العربي يُتجاهل لصالح الترجمة */
       heading: (p.heading && p.heading !== "تقبّل الله منكم صالح الأعمال وجعله في ميزان حسناتكم") ? p.heading : this.tr("system", "donationSuccess", "تقبّل الله منكم صالح الأعمال وجعله في ميزان حسناتكم"),
       subtitle: (p.subtitle && !/^تم است?لام تبرعك/.test(p.subtitle)) ? p.subtitle : this.tr("system", "successLead", "تم استلام تبرعك بنجاح، وسيصلك إيصال رسمي على بريدك الإلكتروني. سيُنشر تحديث تنفيذ المشروع على صفحته عند اعتماده."),
       projectTitle: p.projectTitle || "—",
       amount: originalAmount,
       receiptNo: (p.receiptNo && p.receiptNo !== "قيد الإصدار") ? p.receiptNo : this.tr("system", "issuing", "قيد الإصدار"),
-      /* "#" تعني غير مضبوط من الداشبورد — نستخدم قالب الإيصال للمعاينة */
+      /* "#" تعني غير مضبوط من الداشبورد  نستخدم قالب الإيصال للمعاينة */
       receiptHref: (p.receiptHref && p.receiptHref !== "#") ? p.receiptHref : "إيصال التبرع.dc.html",
       // شهادة الشكر معتمدة تصميميًا (النسخة العرضية = Primary) وثابتة في كل تبرع.
       // ربط الداشبورد: certificateHref يجب أن يشير لمسار توليد PDF من الخادم؛
@@ -473,7 +473,7 @@ class Component extends DCLogic {
       certificateHref: (p.certificateHref && p.certificateHref !== "#") ? p.certificateHref : "شهادة الشكر عرضية.dc.html",
       // شهادة الشكر: معاينة حيّة للشهادة المعتمدة (النسخة العرضية) عبر dc-import،
       // لا صورة قالب. certName يبدأ من اسم المتبرع المُدخَل في بيانات الدفع (props.donorName)
-      // ويمكن للمتبرع تعديله من هذه الصفحة قبل التحميل — التعديل ينعكس فورًا على المعاينة.
+      // ويمكن للمتبرع تعديله من هذه الصفحة قبل التحميل  التعديل ينعكس فورًا على المعاينة.
       // ربط الداشبورد: donorName يُمرَّر من صفحة الدفع (الاسم الأول + الأخير كما أدخلهما
       // المتبرع) فيملأ الخانة تلقائيًا؛ وcertificateHref يشير لمسار توليد PDF من الخادم
       // يستقبل (donorName النهائي بعد التعديل, amount, receiptNo) ويصيّر نفس قالب الشهادة.
@@ -481,7 +481,7 @@ class Component extends DCLogic {
       // مستقل يظهر فقط إذا كان في السلة بند وقفي (سهم/متر).
       // ربط الداشبورد: waqfCertHref مسار توليد PDF لشهادة الوقف من الخادم،
       // يستقبل (unit, count, total, donorName, onBehalf, certNo, certDate)
-      // ويصيّر نفس قالب «شهادة الاوقاف» — منفصل عن certificateHref.
+      // ويصيّر نفس قالب «شهادة الاوقاف»  منفصل عن certificateHref.
       // شهادة الوقف: تظهر بزرّها المستقل فقط إذا كان التبرع في مسار الأوقاف
       // (سهم/متر). كل بياناتها تُقرأ من البند الوقفي في mia_cart_items، ورقم
       // الشهادة يُعاد استخدامه من نفس البند (لا يُولَّد رقم ثانٍ)؛ وتاريخ
@@ -499,12 +499,12 @@ class Component extends DCLogic {
       openCert: () => this.setState({ certOpen: !s.certOpen }),
       onCertName: (e) => this.setState({ certName: e.target.value }),
       recurringDone: s.recurringDone,
-      /* الحالة تخزن المعرّف الخام (Enum) — التسمية تُشتق عند العرض */
+      /* الحالة تخزن المعرّف الخام (Enum)  التسمية تُشتق عند العرض */
       recurringFreqLabel: ({ daily: this.tr("common", "daily", "يوميًا"), friday: this.tr("common", "everyFriday", "كل جمعة"), monthly: this.tr("common", "monthly", "شهريًا") })[s.recurringFreqLabel] || s.recurringFreqLabel,
       showReview: s.showReview,
       showReviewStep: s.showReview && !s.recurringDone,
       freq: s.freq,
-      /* التسمية المعروضة تُشتق من المعرّف — لا تُخزَّن مترجمة */
+      /* التسمية المعروضة تُشتق من المعرّف  لا تُخزَّن مترجمة */
       pickedFreqLabel: ({ daily: this.tr("common", "daily", "يوميًا"), friday: this.tr("common", "everyFriday", "كل جمعة"), monthly: this.tr("common", "monthly", "شهريًا") })[s.freq] || s.freq,
       pickedAmount: s.pickedAmount,
       customAmount: s.customAmount,
@@ -519,8 +519,8 @@ class Component extends DCLogic {
         color: canProceed ? "var(--deep)" : "var(--muted)",
       },
       backToStep1: () => this.setState({ freq: null, amountMode: null, customAmount: "" }),
-      /* المعرّف الثابت (daily/friday/monthly) هوية الحالة — Canonical Enum؛ التسمية ترجمة للعرض فقط */
-      /* رقاقات متساوية بأيقونة صح عند الاختيار — تحديد ذهبي بنمط رقاقات الموقع */
+      /* المعرّف الثابت (daily/friday/monthly) هوية الحالة  Canonical Enum؛ التسمية ترجمة للعرض فقط */
+      /* رقاقات متساوية بأيقونة صح عند الاختيار  تحديد ذهبي بنمط رقاقات الموقع */
       freqs: [["daily", "daily", "يوميًا"], ["friday", "everyFriday", "كل جمعة"], ["monthly", "monthly", "شهريًا"]].map(([id, key, ar]) => ({
         label: this.tr("common", key, ar),
         on: s.freq === id ? "1" : "",
@@ -558,7 +558,7 @@ class Component extends DCLogic {
         this.setState({ showReview: true, pickedAmount: amount });
       },
       cancelReview: () => this.setState({ showReview: false }),
-      /* [BACKEND-INTEGRATION] MOCK / FRONTEND ONLY: التأكيد هنا عرضي — إنشاء الخطة الفعلي
+      /* [BACKEND-INTEGRATION] MOCK / FRONTEND ONLY: التأكيد هنا عرضي  إنشاء الخطة الفعلي
          (status: active) يتم Backend-side بعد Payment Authorization (انظر DONATION_LOGIC_SPEC). */
       confirmRecurring: () => this.setState({ recurringDone: true, showReview: false, recurringFreqLabel: s.freq }),
     };

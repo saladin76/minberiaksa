@@ -13,7 +13,7 @@ export type ElasticEmailInput = {
   channelName?: string | null;
   trackOpens?: boolean;
   trackClicks?: boolean;
-  /** Files to attach — the confirmation email's PDFs. Base64 content. */
+  /** Files to attach  the confirmation email's PDFs. Base64 content. */
   attachments?: EmailAttachmentInput[];
 };
 

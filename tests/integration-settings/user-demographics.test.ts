@@ -38,7 +38,7 @@ describe("normalizeGender", () => {
 
 describe("parseGenderParam", () => {
   test("'all' and empty mean no filter, not 'undisclosed'", () => {
-    // normalizeGender("all") would return "undisclosed" — this is the whole
+    // normalizeGender("all") would return "undisclosed"  this is the whole
     // reason the param parser is separate.
     assert.equal(parseGenderParam("all"), null);
     assert.equal(parseGenderParam(""), null);

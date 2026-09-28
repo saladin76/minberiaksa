@@ -1,7 +1,7 @@
 import { SUPPORTED_LOCALES, isValidLocale, type SupportedLocale } from "@/lib/locales";
 
 /**
- * Machine translation for the dashboard forms — Arabic master copy in, one
+ * Machine translation for the dashboard forms  Arabic master copy in, one
  * translation per requested locale out.
  *
  * Grew out of `app/api/admin/content-localization/preview/route.ts`, which
@@ -53,7 +53,7 @@ export interface TranslateInput {
   fields: Record<string, string>;
   /** Tiptap JSON documents (stringified), Arabic. */
   richFields?: Record<string, string>;
-  /** Shown to the model so it knows the register — "campaign", "FAQ", … */
+  /** Shown to the model so it knows the register  "campaign", "FAQ", … */
   itemLabel?: string;
   /** The language the source is written in. Arabic unless said otherwise. */
   sourceLocale?: string;

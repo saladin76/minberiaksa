@@ -10,7 +10,7 @@ interface CacheEntry {
   ts: number;
 }
 
-// Module-level singleton — only one fetch in-flight regardless of how many components mount
+// Module-level singleton  only one fetch in-flight regardless of how many components mount
 let pendingFetch: Promise<string> | null = null;
 
 function readCache(): string | null {
@@ -47,7 +47,7 @@ async function fetchCountryCode(fallback: string): Promise<string> {
 /**
  * Returns the user's ISO 3166-1 alpha-2 country code (lowercase) detected from IP.
  * Result is cached in localStorage for 24 h. Falls back to `fallback` (default "tr").
- * Safe to call from multiple components — only one HTTP request is made per session.
+ * Safe to call from multiple components  only one HTTP request is made per session.
  */
 export function useIpCountry(fallback = "tr"): string {
   const [country, setCountry] = useState<string>(fallback);

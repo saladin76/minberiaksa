@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
     // Master kill-switch: if the admin disabled PayFor in GlobalSettings,
     // every TRY donation must go through Stripe. Refuse to initiate a 3D
     // Secure session regardless of what the client requested. The dialogs
-    // already gate the UI on the same flag — this is the server-side belt.
+    // already gate the UI on the same flag  this is the server-side belt.
     const settings = await prisma.globalSettings.findFirst({
       orderBy: { createdAt: "asc" },
       select: { payforEnabled: true },
@@ -62,7 +62,7 @@ export async function POST(req: NextRequest) {
     if (!donation) {
       return NextResponse.json({ error: "Donation not found" }, { status: 404 });
     }
-    // Authenticated users: verify ownership. Guests have no session — trust the donationId.
+    // Authenticated users: verify ownership. Guests have no session  trust the donationId.
     if (session?.user?.id && donation.donorId !== session.user.id) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
@@ -111,7 +111,7 @@ export async function POST(req: NextRequest) {
 
     // Hash = base64(SHA1(MbrId + OrderId + PurchAmount + OkUrl + FailUrl + TxnType + InstallmentCount + Rnd + MerchantPass))
     // Docs formula confirmed; MerchantID and UserCode are NOT part of the hash for this bank.
-    // The concatenation lives only inside payForHash — it ends with MerchantPass and
+    // The concatenation lives only inside payForHash  it ends with MerchantPass and
     // must not exist as a local that something could later log.
     const hash = payForHash({
       mbrId,
@@ -126,7 +126,7 @@ export async function POST(req: NextRequest) {
     });
 
     /* `hashInput` ends with MerchantPass, so logging it would print the 3D password
-       in full on every attempt — and defeat the masking two lines above. The hash
+       in full on every attempt  and defeat the masking two lines above. The hash
        itself is safe to log and is what the bank asks for when diagnosing a
        rejection; the inputs to it are all logged individually here anyway. */
     console.log("[PayFor INITIATE] Hash debug:", {
@@ -235,7 +235,7 @@ export async function POST(req: NextRequest) {
 
     /* On the saved-card path `formFields` carries a decrypted PAN, so the whole
        object can never be spread into a log. Only the non-card fields are named
-       explicitly — a future field is then absent from the log rather than silently
+       explicitly  a future field is then absent from the log rather than silently
        exposed by it. */
     console.log("[PayFor INITIATE] Sending fields to bank:", {
       MbrId: formFields.MbrId,

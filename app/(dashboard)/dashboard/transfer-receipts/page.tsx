@@ -6,11 +6,11 @@ import { PageHeader } from "@/components/dashboard/PageHeader";
 import { TransferReceiptsView } from "./_components/TransferReceiptsView";
 
 /**
- * إيصالات التحويل — the finance desk's queue for bank-transfer donations.
+ * إيصالات التحويل  the finance desk's queue for bank-transfer donations.
  *
  * A donor who picks "تحويل بنكي" at checkout transfers outside the site and
- * uploads the receipt; the order sits as "قيد التأكيد" — visible, counted
- * nowhere — until someone here matches it against the bank account and
+ * uploads the receipt; the order sits as "قيد التأكيد"  visible, counted
+ * nowhere  until someone here matches it against the bank account and
  * confirms it (`DONATION_LOGIC_SPEC §3`). Confirming settles the donation the
  * way a gateway webhook would: it lands in revenue, in the campaign totals, in
  * the donor's profile, and the official receipt goes out.

@@ -92,7 +92,7 @@ interface ChartDataPoint {
   count: number;
   amountOneTime: number;
   countOneTime: number;
-  /** All recurring charges (historical name — predates daily / Friday plans). */
+  /** All recurring charges (historical name  predates daily / Friday plans). */
   amountMonthly: number;
   countMonthly: number;
   amountDaily?: number;
@@ -166,7 +166,7 @@ interface SubscriptionRow {
   monthlyEquivalentUSD?: number | null;
   currency: string;
   createdAt: string;
-  /** DAILY | FRIDAY | MONTHLY — legacy plans come back as MONTHLY. */
+  /** DAILY | FRIDAY | MONTHLY  legacy plans come back as MONTHLY. */
   frequency?: RecurringFrequency | null;
   nextBillingDate: string | null;
   lastBillingDate: string | null;
@@ -192,7 +192,7 @@ const FREQUENCY_BADGE_CLASS: Record<RecurringFrequency, string> = {
   FRIDAY: "bg-amber-50 text-amber-800 border-amber-200",
   MONTHLY: "bg-sky-50 text-sky-800 border-sky-200",
 };
-/** How the frequency splits the per-charge amount into a monthly figure — shown in notes. */
+/** How the frequency splits the per-charge amount into a monthly figure  shown in notes. */
 const FREQUENCY_SCALE_NOTE: Record<RecurringFrequency, string> = {
   DAILY: "× ٣٠٫٤ دفعة شهريًا",
   FRIDAY: "× ٤٫٣٥ دفعة شهريًا",
@@ -228,7 +228,7 @@ interface DashboardStats {
   totalUsers: number;
   totalAmount: number;
   allTimeRevenue?: number;
-  /** All PAID subscription charges (USD) ever — ignores category/campaign/referral filters */
+  /** All PAID subscription charges (USD) ever  ignores category/campaign/referral filters */
   paidRevenueAllTimeUnfiltered?: number;
   oneTimeCount: number;
   monthlyCount: number;
@@ -287,7 +287,7 @@ const PERIOD_LABELS: Record<ChartPeriod, string> = {
   custom: "مخصص",
 };
 
-// See lib/dashboard/chart-theme.ts — this block was duplicated verbatim from page.tsx.
+// See lib/dashboard/chart-theme.ts  this block was duplicated verbatim from page.tsx.
 const CHART_COLORS = {
   primary: CHART_THEME.primary,
   primaryLight: CHART_THEME.primaryLight,
@@ -325,7 +325,7 @@ export default function MonthlySubscriptionsDashboardPage() {
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [selectedCampaign, setSelectedCampaign] = useState<string>("all");
   const [selectedUserId, setSelectedUserId] = useState<string>("all");
-  /** Plan cadence — narrows every card, chart and table on the page. */
+  /** Plan cadence  narrows every card, chart and table on the page. */
   const [frequencyFilter, setFrequencyFilter] = useState<FrequencyFilter>("all");
 
   // Sync user filter from URL (e.g. from users page "تحليل تبرعات")
@@ -367,9 +367,9 @@ export default function MonthlySubscriptionsDashboardPage() {
   const [donationsSortBy, setDonationsSortBy] = useState<"date" | "amount">("date");
   const [donationsSortOrder, setDonationsSortOrder] = useState<"asc" | "desc">("desc");
   const [donationsStatusFilter, setDonationsStatusFilter] = useState<"all" | "PAID" | "FAILED">("all");
-  /** Applied donor search (name or email) for أحدث الدفعات المتكررة — server-side. */
+  /** Applied donor search (name or email) for أحدث الدفعات المتكررة  server-side. */
   const [donationsSearch, setDonationsSearch] = useState("");
-  /** Applied donor search (name or email) for قائمة الاشتراكات — server-side, independent of the table above. */
+  /** Applied donor search (name or email) for قائمة الاشتراكات  server-side, independent of the table above. */
   const [subsSearch, setSubsSearch] = useState("");
   const [donationCountryFilter, setDonationCountryFilter] = useState<string>("all");
   const [countryOptions, setCountryOptions] = useState<{ code: string; count: number }[]>([]);
@@ -409,7 +409,7 @@ export default function MonthlySubscriptionsDashboardPage() {
     [chartPeriod, dateFrom, dateTo]
   );
 
-  // Export dialog state — opens a popup with every filter from this page plus
+  // Export dialog state  opens a popup with every filter from this page plus
   // a CSV/Excel toggle. Defaults are seeded from the live page filters so the
   // export reflects what the user is currently looking at.
   const [exportOpen, setExportOpen] = useState(false);
@@ -529,7 +529,7 @@ export default function MonthlySubscriptionsDashboardPage() {
     };
   }, [usersSearchCommitted, selectedUserId]);
 
-  // Chart data (filters + period + from/to + user — user from state or URL when coming via link)
+  // Chart data (filters + period + from/to + user  user from state or URL when coming via link)
   const fetchChartData = useCallback(async () => {
     const userIdFromUrl = searchParams.get("userId");
     const effectiveUserId = selectedUserId !== "all" ? selectedUserId : (userIdFromUrl && userIdFromUrl !== "all" ? userIdFromUrl : "all");
@@ -614,7 +614,7 @@ export default function MonthlySubscriptionsDashboardPage() {
     };
   }, [selectedCategory, selectedCampaign, selectedUserId, searchParams, frequencyFilter]);
 
-  // Stats — affected by فترة (period + dateFrom/dateTo) and category/campaign filters
+  // Stats  affected by فترة (period + dateFrom/dateTo) and category/campaign filters
   const fetchStats = useCallback(async () => {
     try {
       const params = new URLSearchParams();
@@ -647,7 +647,7 @@ export default function MonthlySubscriptionsDashboardPage() {
     fetchStats();
   }, [fetchStats]);
 
-  // Donations list — uses تصفية النتائج + chart time span (period + from/to) + sort
+  // Donations list  uses تصفية النتائج + chart time span (period + from/to) + sort
   const fetchDonations = useCallback(
     async (page: number, append: boolean) => {
       setDonationsLoading(true);
@@ -907,14 +907,14 @@ export default function MonthlySubscriptionsDashboardPage() {
     },
   ].filter((d) => d.value > 0 || d.count > 0);
 
-  // Cadence split of active plans — money is the monthly equivalent so the slices add up to MRR.
+  // Cadence split of active plans  money is the monthly equivalent so the slices add up to MRR.
   const frequencySplitData = FREQUENCIES.map((f) => ({
     name: FREQUENCY_LABEL_AR[f],
     value: stats?.byFrequency?.[f]?.activeMonthlyUSD ?? 0,
     count: stats?.byFrequency?.[f]?.activeCount ?? 0,
     color: FREQUENCY_COLOR[f],
   })).filter((d) => d.value > 0 || d.count > 0);
-  const frequencyLabelSuffix = frequencyFilter === "all" ? "" : ` — ${FREQUENCY_LABEL_AR[frequencyFilter]}`;
+  const frequencyLabelSuffix = frequencyFilter === "all" ? "" : `  ${FREQUENCY_LABEL_AR[frequencyFilter]}`;
 
   return (
     <div className="min-h-0" dir="rtl">
@@ -933,12 +933,12 @@ export default function MonthlySubscriptionsDashboardPage() {
                 </span>
               </>
             ) : (
-              "كل التبرعات المتكررة — اليومية، وكل جمعة، والشهرية: الإيرادات، دفعات التجديد، والحالة"
+              "كل التبرعات المتكررة  اليومية، وكل جمعة، والشهرية: الإيرادات، دفعات التجديد، والحالة"
             )
           }
         />
 
-        {/* Cadence switch — narrows every figure, chart and table below to one kind of plan. */}
+        {/* Cadence switch  narrows every figure, chart and table below to one kind of plan. */}
         <div className="flex flex-wrap items-center gap-2" dir="rtl">
           <span className="text-xs font-semibold text-slate-500">الدورية:</span>
           <div className="inline-flex rounded-lg border border-slate-200 bg-white p-0.5 shadow-sm" role="tablist">
@@ -967,7 +967,7 @@ export default function MonthlySubscriptionsDashboardPage() {
           </div>
         </div>
 
-        {/* Executive hero band — mirrors /dashboard. This page opened with 17 equal-weight KPI
+        {/* Executive hero band  mirrors /dashboard. This page opened with 17 equal-weight KPI
             tiles spread across three tabs and no headline figure at all, so there was nothing
             to anchor on. MRR is the number this page exists to report. */}
         {!searchParams.get("userId") && (
@@ -979,7 +979,7 @@ export default function MonthlySubscriptionsDashboardPage() {
               value={formatMoney(Math.round(stats?.monthlyRecurringRevenue ?? 0))}
               note="المكافئ الشهري للاشتراكات النشطة: اليومي × ٣٠٫٤، وكل جمعة × ٤٫٣٥، والشهري كما هو."
             />
-            {/* ARR is MRR×12 — a projection of the current book, not money collected. The note
+            {/* ARR is MRR×12  a projection of the current book, not money collected. The note
                 says so, because a figure this size sitting beside real revenue invites being
                 read as cash in hand. */}
             <MetricSummaryBand
@@ -992,7 +992,7 @@ export default function MonthlySubscriptionsDashboardPage() {
           </div>
         )}
 
-        {/* Per-cadence cards. Each is a filter shortcut too — clicking one narrows the page. */}
+        {/* Per-cadence cards. Each is a filter shortcut too  clicking one narrows the page. */}
         {!searchParams.get("userId") && stats?.byFrequency && (
           <section className="grid gap-3 sm:grid-cols-3" dir="rtl">
             {FREQUENCIES.map((f) => {
@@ -1061,7 +1061,7 @@ export default function MonthlySubscriptionsDashboardPage() {
           </section>
         )}
 
-        {/* المؤشرات — تختفي عند عرض تبرعات مستخدم معين عبر الرابط */}
+        {/* المؤشرات  تختفي عند عرض تبرعات مستخدم معين عبر الرابط */}
         {!searchParams.get("userId") && (
         <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_1px_2px_rgba(16,24,40,0.04)] sm:p-5">
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
@@ -1121,7 +1121,7 @@ export default function MonthlySubscriptionsDashboardPage() {
                   icon={DollarSign}
                   accent="emerald"
                   format="money"
-                  subtitle="دفعات الاشتراك المدفوعة فقط — حسب الفترة والتصفية أعلاه"
+                  subtitle="دفعات الاشتراك المدفوعة فقط  حسب الفترة والتصفية أعلاه"
                 />
                 <StatsMetricCard
                   compact
@@ -1130,7 +1130,7 @@ export default function MonthlySubscriptionsDashboardPage() {
                   icon={DollarSign}
                   accent="emerald"
                   format="money"
-                  subtitle="كل دفعات الاشتراك الناجحة — دون تصفية الفئة أو المشروع أو الفترة"
+                  subtitle="كل دفعات الاشتراك الناجحة  دون تصفية الفئة أو المشروع أو الفترة"
                 />
                 <StatsMetricCard
                   compact
@@ -1139,7 +1139,7 @@ export default function MonthlySubscriptionsDashboardPage() {
                   icon={Repeat}
                   accent="emerald"
                   format="money"
-                  subtitle="اشتراكات نشطة — المكافئ الشهري لكل الدوريات"
+                  subtitle="اشتراكات نشطة  المكافئ الشهري لكل الدوريات"
                 />
                 <StatsMetricCard
                   compact
@@ -1256,7 +1256,7 @@ export default function MonthlySubscriptionsDashboardPage() {
                   value={stats?.paymentFailedSubscriptionCount ?? 0}
                   icon={Receipt}
                   accent="orange"
-                  subtitle="استنفدت محاولات الخصم التلقائي — تحتاج تحديث البطاقة"
+                  subtitle="استنفدت محاولات الخصم التلقائي  تحتاج تحديث البطاقة"
                 />
               </>
             )}
@@ -1673,7 +1673,7 @@ export default function MonthlySubscriptionsDashboardPage() {
                                 formatter={(value: number, _name: string, props: { payload?: { count?: number } }) => {
                                   const count = props?.payload?.count ?? 0;
                                   return [
-                                    `${formatMoney(Number(value), undefined, undefined, true)} شهريًا — ${count} اشتراك نشط`,
+                                    `${formatMoney(Number(value), undefined, undefined, true)} شهريًا  ${count} اشتراك نشط`,
                                     "المكافئ الشهري / العدد",
                                   ];
                                 }}
@@ -1710,7 +1710,7 @@ export default function MonthlySubscriptionsDashboardPage() {
                                 formatter={(value: number, _name: string, props: { payload?: { count?: number } }) => {
                                   const count = props?.payload?.count ?? 0;
                                   return [
-                                    `${formatMoney(Number(value), undefined, undefined, true)} — عدد: ${count}`,
+                                    `${formatMoney(Number(value), undefined, undefined, true)}  عدد: ${count}`,
                                     "المبلغ / العدد",
                                   ];
                                 }}
@@ -1747,7 +1747,7 @@ export default function MonthlySubscriptionsDashboardPage() {
                                 formatter={(value: number, _name: string, props: { payload?: { count?: number } }) => {
                                   const count = props?.payload?.count ?? 0;
                                   return [
-                                    `${formatMoney(Number(value), undefined, undefined, true)} — عدد: ${count}`,
+                                    `${formatMoney(Number(value), undefined, undefined, true)}  عدد: ${count}`,
                                     "المبلغ / العدد",
                                   ];
                                 }}
@@ -1783,7 +1783,7 @@ export default function MonthlySubscriptionsDashboardPage() {
           </Card>
         </section>
 
-                {/* تصفية النتائج — تؤثر على الرسم وجدول التبرعات (فترة، فئة، مشروع، مستخدم، نوع الرسم) */}
+                {/* تصفية النتائج  تؤثر على الرسم وجدول التبرعات (فترة، فئة، مشروع، مستخدم، نوع الرسم) */}
                 <Card className="border-border shadow-sm">
           <CardHeader className="py-4">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between flex-row-reverse">
@@ -1803,7 +1803,7 @@ export default function MonthlySubscriptionsDashboardPage() {
 
 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
 
-    {/* Period — مع من/إلى/مسح تحته عند مخصص */}
+    {/* Period  مع من/إلى/مسح تحته عند مخصص */}
     <div className="space-y-2 text-right">
       <label className="text-[11px] font-semibold text-slate-600">
         الفترة
@@ -1914,7 +1914,7 @@ export default function MonthlySubscriptionsDashboardPage() {
     </Select>
   </div>
 
-  {/* User — hidden when viewing a specific user via link (?userId=...) */}
+  {/* User  hidden when viewing a specific user via link (?userId=...) */}
   {!searchParams.get("userId") && (
     <div className="space-y-1 text-right">
       <label className="text-[11px] font-semibold text-slate-600">
@@ -2204,7 +2204,7 @@ export default function MonthlySubscriptionsDashboardPage() {
                               d.isRecurringCharge ? (
                                 <span
                                   className="inline-flex items-center gap-1 px-1.5 py-px rounded-full text-[11px] font-medium bg-brand/10 text-brand"
-                                  title="خصم تلقائي متكرر — تم دون أي إجراء من المتبرع"
+                                  title="خصم تلقائي متكرر  تم دون أي إجراء من المتبرع"
                                 >
                                   <RefreshCw className="w-3 h-3" />
                                   تجديد تلقائي
@@ -2236,7 +2236,7 @@ export default function MonthlySubscriptionsDashboardPage() {
                             ) : (
                               <span
                                 className={cn("inline-block px-1.5 py-px rounded-full text-[11px] font-medium", d.status === "PAID" && (d.paidAt || d.type === "MONTHLY") ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700")}
-                                title={d.status === "PAID" && !d.paidAt && d.type !== "MONTHLY" ? "تم بدء الدفع ولم يؤكده مزود الدفع بعد — لا يُحتسب في الإيرادات" : undefined}
+                                title={d.status === "PAID" && !d.paidAt && d.type !== "MONTHLY" ? "تم بدء الدفع ولم يؤكده مزود الدفع بعد  لا يُحتسب في الإيرادات" : undefined}
                               >
                                 {d.status === "PAID" ? ((d.paidAt || d.type === "MONTHLY") ? "ناجح" : "قيد التأكيد") : "معلق"}
                               </span>
@@ -2417,7 +2417,7 @@ export default function MonthlySubscriptionsDashboardPage() {
           unplaced={dayOfMonth.unplaced}
         />
 
-        {/* الاشتراكات — الجدول السفلي */}
+        {/* الاشتراكات  الجدول السفلي */}
         <section className="space-y-4">
           <h2 className="text-xs font-semibold text-slate-500 uppercase tracking-wider text-right">
             الاشتراكات
@@ -2662,7 +2662,7 @@ export default function MonthlySubscriptionsDashboardPage() {
                                 <Loader2 className="w-4 h-4 shrink-0 animate-spin text-brand" />
                               )}
                             </div>
-                            {/* Local status vs the payment provider's — a mismatch is shown, never hidden. */}
+                            {/* Local status vs the payment provider's  a mismatch is shown, never hidden. */}
                             <div className="mt-1 text-[10px] leading-4">
                               {providerChecks[s.id]?.loading ? (
                                 <span className="text-slate-400">جاري التحقق…</span>
@@ -2675,7 +2675,7 @@ export default function MonthlySubscriptionsDashboardPage() {
                                     <span className="text-emerald-700">Stripe: {r.providerStatus}{r.providerPaused ? " (موقوف)" : ""} ✓</span>
                                   ) : (
                                     <span className="font-bold text-red-700">
-                                      SYNC ERROR — Stripe: {r.providerStatus}{r.providerPaused ? " (موقوف)" : ""}
+                                      SYNC ERROR  Stripe: {r.providerStatus}{r.providerPaused ? " (موقوف)" : ""}
                                     </span>
                                   );
                                 })()

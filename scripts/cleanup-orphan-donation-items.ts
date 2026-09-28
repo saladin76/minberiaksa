@@ -1,6 +1,6 @@
 // Find (and optionally delete) DonationItem / DonationCategoryItem rows whose parent
 // Donation no longer exists. MongoDB doesn't enforce FK integrity, so orphans can appear
-// after manual deletes or interrupted cascades — and any query that includes the required
+// after manual deletes or interrupted cascades  and any query that includes the required
 // `donation` relation will throw `PrismaClientUnknownRequestError`.
 //
 // Usage:

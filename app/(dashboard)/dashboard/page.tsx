@@ -164,9 +164,9 @@ interface DashboardStats {
   totalUsers: number;
   totalAmount: number;
   allTimeRevenue?: number;
-  /** Sum of all PAID donations (USD) — ignores period / category / campaign filters */
+  /** Sum of all PAID donations (USD)  ignores period / category / campaign filters */
   paidRevenueAllTimeUnfiltered?: number;
-  /** All-time companions to the above — safe to show beside a figure labelled "كل الوقت". */
+  /** All-time companions to the above  safe to show beside a figure labelled "كل الوقت". */
   paidCountAllTimeUnfiltered?: number;
   activeMonthlyCountUnfiltered?: number;
   monthlyRecurringRevenueUnfiltered?: number;
@@ -239,7 +239,7 @@ function getDonationsDateRange(
   dateFrom: string,
   dateTo: string
 ): { start: string | null; end: string | null } {
-  // Calendar-aware semantics live in the shared helper — keep the in-file
+  // Calendar-aware semantics live in the shared helper  keep the in-file
   // adapter so existing callers don't have to thread the period type.
   return getPeriodDateKeys(period, dateFrom, dateTo);
 }
@@ -338,7 +338,7 @@ export default function DashboardPage() {
   const [donationsSortOrder, setDonationsSortOrder] = useState<"asc" | "desc">("desc");
   const [showFailed, setShowFailed] = useState(false);
   const [donationsStatusFilter, setDonationsStatusFilter] = useState<"all" | "PAID" | "FAILED">("all");
-  /** Applied donor search (name or email) for the أحدث التبرعات table — server-side, not a page filter. */
+  /** Applied donor search (name or email) for the أحدث التبرعات table  server-side, not a page filter. */
   const [donationsSearch, setDonationsSearch] = useState("");
   const [donationsTypeFilter, setDonationsTypeFilter] = useState<"all" | "ONE_TIME" | "MONTHLY">("all");
   const [donationLocaleFilter, setDonationLocaleFilter] = useState<
@@ -473,7 +473,7 @@ export default function DashboardPage() {
     };
   }, [usersSearchCommitted, selectedUserId]);
 
-  // Chart data (filters + period + from/to + user — user from state or URL when coming via link)
+  // Chart data (filters + period + from/to + user  user from state or URL when coming via link)
   const fetchChartData = useCallback(async () => {
     const userIdFromUrl = searchParams.get("userId");
     const effectiveUserId = selectedUserId !== "all" ? selectedUserId : (userIdFromUrl && userIdFromUrl !== "all" ? userIdFromUrl : "all");
@@ -483,7 +483,7 @@ export default function DashboardPage() {
       params.set("period", chartPeriod);
       // Compute the explicit Istanbul date range for every preset (not just
       // custom) so the chart endpoint uses the same calendar semantics as the
-      // donations table — اليوم = today only, أمس = yesterday, شهر = first of
+      // donations table  اليوم = today only, أمس = yesterday, شهر = first of
       // the month → today, سنة = Jan 1 → today.
       const { start, end } = getDonationsDateRange(chartPeriod, dateFrom, dateTo);
       if (start && end) {
@@ -511,7 +511,7 @@ export default function DashboardPage() {
     fetchChartData();
   }, [fetchChartData]);
 
-  // Stats — affected by فترة (period + dateFrom/dateTo) and category/campaign filters
+  // Stats  affected by فترة (period + dateFrom/dateTo) and category/campaign filters
   const fetchStats = useCallback(async () => {
     try {
       const params = new URLSearchParams();
@@ -545,7 +545,7 @@ export default function DashboardPage() {
     fetchStats();
   }, [fetchStats]);
 
-  // Donations list — uses تصفية النتائج + chart time span (period + from/to) + sort
+  // Donations list  uses تصفية النتائج + chart time span (period + from/to) + sort
   const fetchDonations = useCallback(
     async (page: number, append: boolean) => {
       setDonationsLoading(true);
@@ -786,7 +786,7 @@ export default function DashboardPage() {
 
 
         {/* Summary band. Establishes which number matters before the filtered KPI grid, but
-            stays on the neutral surface the rest of the shell uses — a coloured slab here
+            stays on the neutral surface the rest of the shell uses  a coloured slab here
             fights the content instead of framing it. */}
         {!searchParams.get("userId") && (
           <MetricSummaryBand
@@ -829,7 +829,7 @@ export default function DashboardPage() {
         )}
 
 
-        {/* المؤشرات — تختفي عند عرض تبرعات مستخدم معين عبر الرابط */}
+        {/* المؤشرات  تختفي عند عرض تبرعات مستخدم معين عبر الرابط */}
         {!searchParams.get("userId") && (
         <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_1px_2px_rgba(16,24,40,0.04)] sm:p-5">
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
@@ -889,7 +889,7 @@ export default function DashboardPage() {
                   icon={DollarSign}
                   accent="emerald"
                   format="money"
-                  subtitle="مجموع التبرعات المدفوعة فقط — حسب الفترة والتصفية أعلاه"
+                  subtitle="مجموع التبرعات المدفوعة فقط  حسب الفترة والتصفية أعلاه"
                 />
                 <StatsMetricCard
                   compact
@@ -907,7 +907,7 @@ export default function DashboardPage() {
                   icon={Repeat}
                   accent="emerald"
                   format="money"
-                  subtitle="اشتراكات نشطة — مبالغ مخططة"
+                  subtitle="اشتراكات نشطة  مبالغ مخططة"
                 />
                 <StatsMetricCard
                   compact
@@ -1452,7 +1452,7 @@ export default function DashboardPage() {
                                 formatter={(value: number, _name: string, props: { payload?: { count?: number } }) => {
                                   const count = props?.payload?.count ?? 0;
                                   return [
-                                    `${formatMoney(Number(value), undefined, undefined, true)} — عدد: ${count}`,
+                                    `${formatMoney(Number(value), undefined, undefined, true)}  عدد: ${count}`,
                                     "المبلغ / العدد",
                                   ];
                                 }}
@@ -1489,7 +1489,7 @@ export default function DashboardPage() {
                                 formatter={(value: number, _name: string, props: { payload?: { count?: number } }) => {
                                   const count = props?.payload?.count ?? 0;
                                   return [
-                                    `${formatMoney(Number(value), undefined, undefined, true)} — عدد: ${count}`,
+                                    `${formatMoney(Number(value), undefined, undefined, true)}  عدد: ${count}`,
                                     "المبلغ / العدد",
                                   ];
                                 }}
@@ -1526,7 +1526,7 @@ export default function DashboardPage() {
                                 formatter={(value: number, _name: string, props: { payload?: { value?: number; count?: number } }) => {
                                   const amount = props?.payload?.value ?? 0;
                                   return [
-                                    `عدد: ${value}${amount > 0 ? ` — ${formatMoney(Number(amount), undefined, undefined, true)}` : ""}`,
+                                    `عدد: ${value}${amount > 0 ? `  ${formatMoney(Number(amount), undefined, undefined, true)}` : ""}`,
                                     "التبرعات",
                                   ];
                                 }}
@@ -1716,7 +1716,7 @@ export default function DashboardPage() {
     </Select>
   </div>
 
-  {/* User — hidden when viewing a specific user via link (?userId=...) */}
+  {/* User  hidden when viewing a specific user via link (?userId=...) */}
   {!searchParams.get("userId") && (
     <div className="space-y-1 text-right">
       <label className="text-[11px] font-semibold text-slate-600">
@@ -2058,7 +2058,7 @@ export default function DashboardPage() {
                                     ? "bg-green-100 text-green-700"
                                     : "bg-amber-100 text-amber-700"
                                 )}
-                                title={d.status === "PAID" && !d.paidAt && d.type !== "MONTHLY" ? "تم بدء الدفع ولم يؤكده مزود الدفع بعد — لا يُحتسب في الإيرادات" : undefined}
+                                title={d.status === "PAID" && !d.paidAt && d.type !== "MONTHLY" ? "تم بدء الدفع ولم يؤكده مزود الدفع بعد  لا يُحتسب في الإيرادات" : undefined}
                               >
                                 {d.status === "PAID"
                                   ? (d.paidAt || d.type === "MONTHLY")
@@ -2099,7 +2099,7 @@ export default function DashboardPage() {
                                 <Link
                                   href={`/dashboard/transfer-receipts?claim=${d.id}`}
                                   className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-semibold bg-brand/10 text-brand hover:bg-brand/20 transition-colors"
-                                  title={d.paidAt ? "تحويل بنكي مؤكد — فتح الإيصال" : "تحويل بنكي بانتظار مطابقة الإيصال — فتح المراجعة"}
+                                  title={d.paidAt ? "تحويل بنكي مؤكد  فتح الإيصال" : "تحويل بنكي بانتظار مطابقة الإيصال  فتح المراجعة"}
                                 >
                                   <Landmark className="w-3 h-3" />
                                   تحويل بنكي
@@ -2107,7 +2107,7 @@ export default function DashboardPage() {
                               ) : (
                                 <span
                                   className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-semibold bg-brand/10 text-brand"
-                                  title="تبرع عبر تحويل بنكي — مستورد من كشف الحساب"
+                                  title="تبرع عبر تحويل بنكي  مستورد من كشف الحساب"
                                 >
                                   <Landmark className="w-3 h-3" />
                                   تحويل بنكي
@@ -2137,7 +2137,7 @@ export default function DashboardPage() {
                               title={
                                 d.type === "MONTHLY"
                                   ? d.isRecurringCharge
-                                    ? "خصم تلقائي متكرر — تم دون أي إجراء من المتبرع"
+                                    ? "خصم تلقائي متكرر  تم دون أي إجراء من المتبرع"
                                     : "أول دفعة عند إنشاء الاشتراك"
                                   : undefined
                               }
@@ -2145,7 +2145,7 @@ export default function DashboardPage() {
                               {d.type === "MONTHLY"
                                 ? d.isRecurringCharge
                                   ? `تجديد تلقائي${d.subscriptionCycle ? ` #${d.subscriptionCycle}` : ""}`
-                                  : "شهري — أول دفعة"
+                                  : "شهري  أول دفعة"
                                 : "مرة واحدة"}
                             </span>
                           </td>

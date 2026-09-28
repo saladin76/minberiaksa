@@ -16,9 +16,9 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 120;
 
 /**
- * GET  /api/admin/ai/concierge/insights — past AI readings (newest first) and
+ * GET  /api/admin/ai/concierge/insights  past AI readings (newest first) and
  *      whether the model is available.
- * POST /api/admin/ai/concierge/insights — run a new reading:
+ * POST /api/admin/ai/concierge/insights  run a new reading:
  *      { days? | from?, to?, filters? } → the saved insight.
  */
 export async function GET() {

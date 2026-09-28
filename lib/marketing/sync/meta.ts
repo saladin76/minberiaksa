@@ -115,7 +115,7 @@ export const syncMeta: SyncClient = async ({ connection, dateFrom, dateTo }): Pr
   const missing: string[] = [];
   if (!connection.accountId) missing.push("accountId");
   if (!connection.accessToken) missing.push("accessToken");
-  if (missing.length > 0) return missingConfigResult(missing, "ناقص بيانات Meta — أكمل Ad Account ID و Access Token.");
+  if (missing.length > 0) return missingConfigResult(missing, "ناقص بيانات Meta  أكمل Ad Account ID و Access Token.");
   try {
     const account = cleanAccountId(connection.accountId!);
     const token = connection.accessToken!;

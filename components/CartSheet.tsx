@@ -193,7 +193,7 @@ const CartSheet: React.FC<CartSheetProps> = ({
                           </span>
                         </div>
 
-                        {/* Delete — always visible */}
+                        {/* Delete  always visible */}
                         <div className="flex-shrink-0">
                           {loadingItemId === item.id ? (
                             <div className="p-1.5">

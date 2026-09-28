@@ -61,7 +61,7 @@ const TONE_SWATCH: Record<BannerTone, string> = {
 
 /**
  * Drag to order. The row order here IS the order within every slot on the
- * site — a banner higher in this list renders above one lower down wherever
+ * site  a banner higher in this list renders above one lower down wherever
  * the two share a placement. Persisted once on drop as `priority`.
  */
 export default function UrgentBannersPage() {
@@ -154,7 +154,7 @@ export default function UrgentBannersPage() {
             ))}
           </div>
         ) : (
-          <span className="text-xs text-amber-700">لم يُحدَّد — لن يظهر</span>
+          <span className="text-xs text-amber-700">لم يُحدَّد  لن يظهر</span>
         ),
     },
     {
@@ -213,7 +213,7 @@ export default function UrgentBannersPage() {
         <div>
           <h1 className="text-lg font-bold">البانرات</h1>
           <p className="text-xs text-slate-500">
-            بانرات مثل «شدّ الرحال» تضعها على أي صفحة وموضع. اسحب الصفوف لترتيبها — الأعلى هنا يظهر أولًا حيثما اجتمع بانران في موضع واحد.
+            بانرات مثل «شدّ الرحال» تضعها على أي صفحة وموضع. اسحب الصفوف لترتيبها  الأعلى هنا يظهر أولًا حيثما اجتمع بانران في موضع واحد.
           </p>
         </div>
         <Button onClick={() => router.push('/dashboard/urgent-banners/new')}>

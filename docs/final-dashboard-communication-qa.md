@@ -1,10 +1,10 @@
-# Final Dashboard & Communication — QA Report
+# Final Dashboard & Communication  QA Report
 
 **Date:** 2026-07-07
 **Scope:** Final audit/QA of the Dashboard Communication Center and adjacent systems.
 **Method:** Automated checks were **actually executed** (build, locale audit, i18n audit, typecheck).
 Flows and security were verified by **code inspection of the real logic paths** plus a green build.
-**No live provider credentials were exercised in this environment** — anything requiring live Meta /
+**No live provider credentials were exercised in this environment**  anything requiring live Meta /
 SendGrid / a running DB session is marked **NEEDS LIVE QA** and is *not* claimed as production-verified.
 
 > Honesty note: This document does **not** claim production-ready. Route smoke tests are
@@ -13,23 +13,23 @@ SendGrid / a running DB session is marked **NEEDS LIVE QA** and is *not* claimed
 
 ---
 
-## 1. Build & Automated Checks — RESULTS
+## 1. Build & Automated Checks  RESULTS
 
 | Check | Command | Result |
 |---|---|---|
-| Production build | `npm run build` (`prisma generate && next build`) | ✅ **PASS** — `✓ Compiled successfully in 41s`, `✓ Generating static pages (191/191)`, exit 0 |
-| Prisma generate | part of `build` | ✅ PASS (runs before `next build`). **Schema not changed** in this package — no migration needed |
-| Locale audit | `npm run locale:audit` | ✅ **PASS** — `✓ no locale drift detected` (ar, en, fr, tr, id, pt, es, de) |
-| i18n message audit | `node scripts/audit-i18n-messages.mjs` | ✅ **PASS** — 862 keys, **0 missing / 0 empty** across all 8 locales |
+| Production build | `npm run build` (`prisma generate && next build`) | ✅ **PASS**  `✓ Compiled successfully in 41s`, `✓ Generating static pages (191/191)`, exit 0 |
+| Prisma generate | part of `build` | ✅ PASS (runs before `next build`). **Schema not changed** in this package  no migration needed |
+| Locale audit | `npm run locale:audit` | ✅ **PASS**  `✓ no locale drift detected` (ar, en, fr, tr, id, pt, es, de) |
+| i18n message audit | `node scripts/audit-i18n-messages.mjs` | ✅ **PASS**  862 keys, **0 missing / 0 empty** across all 8 locales |
 | Typecheck | `npx tsc --noEmit` | ⚠️ 342 **pre-existing baseline** errors project-wide (legacy `[locale]` public site, blog, legacy `dashboard/campaigns`). **0 errors in the communication scope** (`operations/communication`, `lib/communication`, `api/webhooks/meta`). Build tolerates baseline via `TSC_COMPILE_ON_ERROR=true` |
-| Lint | `npm run lint` (`next lint`) | ⚠️ **N/A** — `next lint` was removed in Next 16 and errors out (`Invalid project directory … /lint`). `tsc --noEmit` was used as the static-analysis gate instead |
+| Lint | `npm run lint` (`next lint`) | ⚠️ **N/A**  `next lint` was removed in Next 16 and errors out (`Invalid project directory … /lint`). `tsc --noEmit` was used as the static-analysis gate instead |
 
 **Communication package is type-clean.** The baseline `tsc` errors are entirely outside this package's
 files and are not introduced by this work.
 
 ---
 
-## 2. Route Smoke Test — RESULTS
+## 2. Route Smoke Test  RESULTS
 
 Method: file existence + inclusion in the successful production build (191/191 pages generated).
 Not driven live in a browser session.
@@ -58,7 +58,7 @@ against a seeded campaign.
 
 ---
 
-## 3. Campaign Flow QA (WhatsApp) — code-verified
+## 3. Campaign Flow QA (WhatsApp)  code-verified
 
 | Step | Expected | Result |
 |---|---|---|
@@ -77,7 +77,7 @@ against a seeded campaign.
 
 ---
 
-## 4. Email Campaign QA — code-verified
+## 4. Email Campaign QA  code-verified
 
 | Step | Expected | Result |
 |---|---|---|
@@ -91,7 +91,7 @@ against a seeded campaign.
 
 ---
 
-## 5. WhatsApp Provider QA — code-verified
+## 5. WhatsApp Provider QA  code-verified
 
 | Item | Expected | Result |
 |---|---|---|
@@ -106,18 +106,18 @@ against a seeded campaign.
 
 ---
 
-## 6. SMS QA (disabled) — code-verified
+## 6. SMS QA (disabled)  code-verified
 
 | Item | Expected | Result |
 |---|---|---|
 | Campaign creation | disabled/blocked | ✅ create UI: `<option value="SMS" disabled>رسائل SMS (قريبًا)</option>`; approve disabled for SMS |
 | Send blocked | `SMS_SEND_NOT_IMPLEMENTED`, no SENT | ✅ provider-router returns `SMS_SEND_NOT_IMPLEMENTED` → executor terminal → **SKIPPED** |
 | No SENT | never | ✅ |
-| If implemented | test one only | N/A — not implemented (intentional) |
+| If implemented | test one only | N/A  not implemented (intentional) |
 
 ---
 
-## 7. Inbox QA — code-verified
+## 7. Inbox QA  code-verified
 
 | Item | Expected | Result |
 |---|---|---|
@@ -129,7 +129,7 @@ against a seeded campaign.
 
 ---
 
-## 8. Reports QA — code-verified
+## 8. Reports QA  code-verified
 
 | Item | Expected | Result |
 |---|---|---|
@@ -139,7 +139,7 @@ against a seeded campaign.
 
 ---
 
-## 9. UX QA — code-verified
+## 9. UX QA  code-verified
 
 | Item | Result |
 |---|---|
@@ -154,7 +154,7 @@ against a seeded campaign.
 
 ---
 
-## 10. Security QA — code-verified
+## 10. Security QA  code-verified
 
 | Item | Expected | Result |
 |---|---|---|
@@ -205,7 +205,7 @@ Open items before this can be called production-verified:
    sender that has a real `phoneNumberId`.
 2. **Live SendGrid not tested.** One safe test email path is code-verified; needs a real key to
    confirm acceptance/`internalAccepted`. → **NEEDS LIVE QA**.
-3. **Live inbound + Inbox** — a real inbound WhatsApp message surfacing as a conversation and a real
+3. **Live inbound + Inbox**  a real inbound WhatsApp message surfacing as a conversation and a real
    status webhook updating a delivery are unverified in this environment. → **NEEDS LIVE QA**.
 4. **Route smoke tests were build/code-verified, not click-tested** against a seeded DB session; the
    `campaigns/[id]` dynamic page in particular needs a real campaign id. → **NEEDS LIVE QA**.

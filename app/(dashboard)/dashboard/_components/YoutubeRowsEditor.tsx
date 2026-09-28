@@ -6,12 +6,12 @@ import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 
 /**
- * Inline editor for a list of YouTube videos owned by a parent — playlist
+ * Inline editor for a list of YouTube videos owned by a parent  playlist
  * episodes and course videos.
  *
  * The list is form state, not a separate resource: the parent form posts it
  * whole and the API replaces it. So there is no per-row save, and reordering
- * is plain up/down rather than drag — a course has a handful of videos, and
+ * is plain up/down rather than drag  a course has a handful of videos, and
  * two buttons are more predictable than a drag inside a scrolling form.
  *
  * Pasting a full YouTube URL into the id field extracts the id; typing the

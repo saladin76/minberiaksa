@@ -92,7 +92,7 @@ export default function AdsManagementPage() {
           <div>
             <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">إدارة الإعلانات</h1>
             <p className="text-xs text-slate-500 mt-0.5">
-              مركز التحليلات الإعلاني — يربط كل تبرع بالحملة والمنصة والإعلان الذي جلبه، ويقيس سلامة التتبع وفروقات الإسناد.
+              مركز التحليلات الإعلاني  يربط كل تبرع بالحملة والمنصة والإعلان الذي جلبه، ويقيس سلامة التتبع وفروقات الإسناد.
             </p>
           </div>
         </div>

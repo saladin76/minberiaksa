@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 type Props = {
   /** The search term currently APPLIED to the list (not the draft in the box). */
   value: string;
-  /** Fired only when the user actually commits — Enter, the icon, blur, or clear. */
+  /** Fired only when the user actually commits  Enter, the icon, blur, or clear. */
   onCommit: (next: string) => void;
   /** Shows a spinner in place of the magnifier while the list refetches. */
   loading?: boolean;
@@ -24,7 +24,7 @@ type Props = {
  * so each keystroke would be a round-trip that also has to reset paging. The
  * surrounding filter UI already uses the same Enter-or-click idiom.
  *
- * Blur also commits, so a term typed and then clicked away from still applies —
+ * Blur also commits, so a term typed and then clicked away from still applies 
  * the usual "I typed it but nothing happened" trap. The icon buttons suppress
  * mousedown so clicking them can't fire a blur-commit and a click-commit as two
  * separate fetches.

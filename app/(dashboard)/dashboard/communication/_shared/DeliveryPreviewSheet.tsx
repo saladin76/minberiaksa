@@ -14,10 +14,10 @@ import { cn } from "@/lib/utils";
 import { fmtFull, type StageBuilder } from "./channel-ui";
 
 /**
- * The معاينة sheet — one delivery, opened from a row on either channel page.
+ * The معاينة sheet  one delivery, opened from a row on either channel page.
  *
  * It answers the two questions a row can only hint at: what did the recipient actually receive, and
- * how far did it get? The rendered content and the lifecycle live in the same panel deliberately —
+ * how far did it get? The rendered content and the lifecycle live in the same panel deliberately 
  * they are read together ("it failed… showing what?"), and splitting them across two dialogs would
  * make the row's click target ambiguous.
  *
@@ -104,7 +104,7 @@ const PURPOSE_LABELS: Record<string, string> = {
 
 type Props = {
   id: string | null;
-  /** Channel-specific lifecycle rungs — the same builder the table row uses. */
+  /** Channel-specific lifecycle rungs  the same builder the table row uses. */
   stagesFor: StageBuilder;
   trackingLive: boolean;
   onOpenChange: (open: boolean) => void;
@@ -228,7 +228,7 @@ export function DeliveryPreviewSheet({ id, stagesFor, trackingLive, onOpenChange
                   </div>
                 )}
                 {!row.recipientName && !row.recipientEmail && !row.recipientPhone && (
-                  <span className="text-slate-400">لا يوجد عنوان مسجّل — لهذا لم تُرسل.</span>
+                  <span className="text-slate-400">لا يوجد عنوان مسجّل  لهذا لم تُرسل.</span>
                 )}
               </div>
             </div>
@@ -251,7 +251,7 @@ export function DeliveryPreviewSheet({ id, stagesFor, trackingLive, onOpenChange
             )}
 
             {/* Retry state. A row that failed and was later re-sent successfully still *reads* as a
-                failure without this — the record of what happened next lives on a different row. */}
+                failure without this  the record of what happened next lives on a different row. */}
             {data.retry ? (
               <div className="rounded-xl border border-slate-200 bg-white p-4 text-sm">
                 <div className="mb-1 flex items-center gap-2 font-semibold text-slate-800">
@@ -261,7 +261,7 @@ export function DeliveryPreviewSheet({ id, stagesFor, trackingLive, onOpenChange
                 <p className="text-xs text-slate-600">
                   {data.retry.status === "SENT" || data.retry.status === "DELIVERED"
                     ? `نجحت المحاولة الجديدة في ${fmtFull(data.retry.sentAt ?? data.retry.createdAt)}.`
-                    : `المحاولة الجديدة انتهت بحالة ${data.retry.status}${data.retry.errorMessage ? ` — ${data.retry.errorMessage}` : ""}.`}
+                    : `المحاولة الجديدة انتهت بحالة ${data.retry.status}${data.retry.errorMessage ? `  ${data.retry.errorMessage}` : ""}.`}
                 </p>
               </div>
             ) : data.retryable && onRetry ? (

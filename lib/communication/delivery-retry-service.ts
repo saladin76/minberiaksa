@@ -18,7 +18,7 @@ import {
  * Re-sending a delivery that never made it out.
  *
  * The backlog this exists for is real: messages skipped during an era when no email provider was
- * configured, and failures from a provider outage. Those are genuinely re-sendable — the reason they
+ * configured, and failures from a provider outage. Those are genuinely re-sendable  the reason they
  * failed is fixed. But the same button pointed at the wrong row double-charges a donor's inbox, so
  * every guard below exists to answer one question: *would sending this again be correct?*
  *
@@ -28,10 +28,10 @@ import {
  *     rewriting it in place would silently restate historical failure-rate figures, and the roadmap's
  *     first rule is that we never quietly recompute recorded numbers.
  *  2. `retriedAt` is stamped on the original only once the provider ACCEPTS the retry. A retry that
- *     fails leaves the original re-tryable — but a successful one can never be sent twice.
+ *     fails leaves the original re-tryable  but a successful one can never be sent twice.
  *  3. Nothing is re-sent from the stored snapshot alone. Consent, the recipient address and (for
  *     WhatsApp) the template approval are all re-checked against today's state, because all three
- *     can have changed since the row was written — that change is usually the whole reason a retry
+ *     can have changed since the row was written  that change is usually the whole reason a retry
  *     is being attempted.
  */
 
@@ -69,7 +69,7 @@ const MESSAGES: Record<RetryOutcomeCode, string> = {
   SENT: "أُرسلت بنجاح",
   NOT_FOUND: "لم يُعثر على الرسالة",
   NOT_RETRYABLE_STATUS: "الرسالة ليست في حالة تسمح بإعادة الإرسال",
-  NOT_RETRYABLE_BOUNCED: "العنوان مرتدّ — إعادة الإرسال إليه تضرّ بسمعة النطاق",
+  NOT_RETRYABLE_BOUNCED: "العنوان مرتدّ  إعادة الإرسال إليه تضرّ بسمعة النطاق",
   ALREADY_RETRIED: "أُعيد إرسالها من قبل",
   NO_RECIPIENT: "لا يوجد عنوان للمستلم",
   NO_RENDERED_BODY: "لا توجد نسخة محفوظة من محتوى الرسالة",
@@ -119,8 +119,8 @@ const SELECT = {
  * `contactChannelEligibility` treats a missing preference row as ineligible, which is right for a
  * marketing campaign choosing whom to approach. It is wrong here: most donors have no profile row at
  * all, and a transactional receipt they were always entitled to would be blocked for everyone. So
- * transactional retries are gated on an explicit `doNotContact` only, while marketing retries — the
- * ones that genuinely require permission — still demand a recorded opt-in on that channel.
+ * transactional retries are gated on an explicit `doNotContact` only, while marketing retries  the
+ * ones that genuinely require permission  still demand a recorded opt-in on that channel.
  */
 async function consentBlockReason(
   userId: string | null,
@@ -143,7 +143,7 @@ async function consentBlockReason(
 }
 
 /**
- * The address to send to now — not necessarily the one on the row.
+ * The address to send to now  not necessarily the one on the row.
  *
  * A delivery skipped with NO_RECIPIENT_EMAIL stored a null address. If that donor has since added
  * one, re-reading the user record is precisely what makes the retry worth attempting; falling back
@@ -246,7 +246,7 @@ export async function retryDelivery(
 
   if (channel === "EMAIL") {
     if (!row.renderedBody) return result(deliveryId, "NO_RENDERED_BODY", base);
-    /* Routed now, against this recipient's locale — a retry must go out from the sender the
+    /* Routed now, against this recipient's locale  a retry must go out from the sender the
        original send would use today, not from whichever identity happened to be listed first. */
     const routed = resolveTriggerSender(config, "EMAIL", { locale: row.locale, purpose: row.purpose as never });
     if (!routed.ok) return result(deliveryId, "NO_SENDER_IDENTITY", { ...base, detail: routed.reason });
@@ -290,7 +290,7 @@ export async function retryDelivery(
     // No sender-identity gate here, unlike the other two: the SMS "from" is part of each provider's
     // own config (Netgsm header / Brevo sender), not a CommunicationSender row. Which carrier gets
     // the message is decided from the destination number, so it is resolved per recipient rather
-    // than once for the batch — and re-resolved now, since a route unconfigured at the original
+    // than once for the batch  and re-resolved now, since a route unconfigured at the original
     // send may have been set up since.
     const route = await resolveSmsProvider(null, recipient);
     provider = route.provider;
@@ -302,12 +302,12 @@ export async function retryDelivery(
   /**
    * Claim the original before calling the provider, not after.
    *
-   * Two admins on the same row — or one impatient double-click — would otherwise both read
+   * Two admins on the same row  or one impatient double-click  would otherwise both read
    * `retriedAt: null`, both send, and the donor gets the message twice. `updateMany` with the null
    * guard in the WHERE clause makes the claim atomic: exactly one caller sees count === 1.
    *
    * The Mongo connector distinguishes an explicit null from an absent field, and every row written
-   * before this feature has the field absent — so the guard must accept both or it would match
+   * before this feature has the field absent  so the guard must accept both or it would match
    * nothing and every retry would look like a lost race.
    */
   const claim = await prisma.communicationDelivery.updateMany({
@@ -362,15 +362,15 @@ export async function retryDelivery(
     res = await sendPreparedDelivery(payload);
   } catch (error) {
     const detail = (error as Error).message;
-    await markDeliveryStatus(newId, "FAILED", { errorMessage: `SEND_THREW — ${detail}` });
+    await markDeliveryStatus(newId, "FAILED", { errorMessage: `SEND_THREW  ${detail}` });
     await releaseClaim();
     return result(deliveryId, "PROVIDER_REJECTED", { ...base, detail, newDeliveryId: newId });
   }
 
   if (!res.ok) {
-    const detail = res.detail ? `${res.reason} — ${res.detail}` : res.reason;
+    const detail = res.detail ? `${res.reason}  ${res.detail}` : res.reason;
     await markDeliveryStatus(newId, "FAILED", { errorMessage: detail });
-    // The message did not go out, so the original is not "retried" — releasing the claim lets an
+    // The message did not go out, so the original is not "retried"  releasing the claim lets an
     // admin try again once whatever the provider objected to has been fixed.
     await releaseClaim();
     return result(deliveryId, "PROVIDER_REJECTED", { ...base, detail, newDeliveryId: newId });
@@ -454,7 +454,7 @@ export async function retryPreflight(filter: RetryCandidateFilter): Promise<Retr
 
   const counts = new Map<string, number>();
   for (const row of eligibleRows) {
-    const reason = (row.errorMessage || "غير محدّد").split(" — ")[0];
+    const reason = (row.errorMessage || "غير محدّد").split("  ")[0];
     counts.set(reason, (counts.get(reason) ?? 0) + 1);
   }
 

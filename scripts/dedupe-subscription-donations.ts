@@ -1,5 +1,5 @@
 /**
- * Merge duplicate subscription donation rows — two Donation records for ONE Stripe invoice.
+ * Merge duplicate subscription donation rows  two Donation records for ONE Stripe invoice.
  *
  * Cause (fixed in app/api/stripe/webhook/route.ts): the handler looked for the pending
  * checkout row with `{ paidAt: null }`, which on MongoDB does not match a row where the
@@ -12,7 +12,7 @@
  *   - Copy settlement fields (paidAt, billingReason, provider*) from whichever sibling actually
  *     settled, so the kept row reflects the real charge.
  *   - DELETE the surviving siblings together with their DonationItem / DonationCategoryItem
- *     children (the relations do not cascade — that is how the 19 orphaned items already exist).
+ *     children (the relations do not cascade  that is how the 19 orphaned items already exist).
  *
  * Campaign/category `currentAmount` is deliberately NOT adjusted: the webhook increments once
  * per invoice regardless of which row it wrote, and exactly one row per group remains settled
@@ -67,10 +67,10 @@ async function main() {
     const settled = group.find((r) => r.paidAt != null);
 
     // Safety: exactly one row in the group may be settled, otherwise the invoice was
-    // counted twice and currentAmount would need adjusting — refuse rather than guess.
+    // counted twice and currentAmount would need adjusting  refuse rather than guess.
     const settledCount = group.filter((r) => r.paidAt != null).length;
     if (settledCount > 1) {
-      console.log(`SKIP ${key} — ${settledCount} settled rows in one group, needs manual review`);
+      console.log(`SKIP ${key}  ${settledCount} settled rows in one group, needs manual review`);
       continue;
     }
 
@@ -100,7 +100,7 @@ async function main() {
         merged += 1;
       }
       for (const d of drop) {
-        // Children do not cascade — remove them explicitly so we don't create orphans.
+        // Children do not cascade  remove them explicitly so we don't create orphans.
         await tx.donationItem.deleteMany({ where: { donationId: d.id } });
         await tx.donationCategoryItem.deleteMany({ where: { donationId: d.id } });
         await tx.donation.delete({ where: { id: d.id } });

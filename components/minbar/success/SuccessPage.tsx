@@ -15,16 +15,16 @@ import DocumentsPanel from "./DocumentsPanel";
 import type { VerseBlock } from "@/lib/minbar/quran";
 
 /**
- * Donation received — ported from `Minbar/نجاح التبرع.dc.html`.
+ * Donation received  ported from `Minbar/نجاح التبرع.dc.html`.
  *
- * Four things in order: the confirmation — with the verse on spending in the
- * way of Allah, and confetti, once — then what was given, line by line, with
+ * Four things in order: the confirmation  with the verse on spending in the
+ * way of Allah, and confetti, once  then what was given, line by line, with
  * the team support and fees shown separately so the total is the total the
  * card was charged; then the documents to keep; then an invitation to make
  * the gift recurring.
  *
- * The documents — receipt, thank-you certificate, a waqf certificate per waqf
- * line — are the download surface of `CERTIFICATES_DOWNLOADS_HANDOFF §5`,
+ * The documents  receipt, thank-you certificate, a waqf certificate per waqf
+ * line  are the download surface of `CERTIFICATES_DOWNLOADS_HANDOFF §5`,
  * in `DocumentsPanel`: live previews of the real sheets, downloads of the
  * server's PDFs of the records issued at confirmation.
  *
@@ -32,7 +32,7 @@ import type { VerseBlock } from "@/lib/minbar/quran";
  *
  *  - The handoff's recurring step ends in "confirm", implying a plan starts
  *    there. A recurring plan needs a payment method, which this page has not
- *    collected — so the choice is added to the basket and the donor is taken to
+ *    collected  so the choice is added to the basket and the donor is taken to
  *    checkout, which is how every other recurring plan on this site begins.
  *    Telling someone a plan is active when nothing was authorised would be a
  *    promise the site cannot keep.
@@ -85,8 +85,8 @@ export default function SuccessPage({
   })();
 
   /* A donor who gave as a guest and then signed in still owns this donation.
-     Claiming it here attaches it — and every other donation under the same
-     anonymous record — to their account, so it appears in their history and
+     Claiming it here attaches it  and every other donation under the same
+     anonymous record  to their account, so it appears in their history and
      their receipts are theirs. The route refuses to merge anything already
      claimed by a real account, so this is safe to fire once on arrival. */
   useEffect(() => {
@@ -140,7 +140,7 @@ export default function SuccessPage({
       setCopied(true);
       window.setTimeout(() => setCopied(false), 1800);
     } catch {
-      /* Dismissed share sheet or a clipboard that refused — nothing to report. */
+      /* Dismissed share sheet or a clipboard that refused  nothing to report. */
     }
   };
 
@@ -219,7 +219,7 @@ export default function SuccessPage({
             <p style={{ margin: 0, fontSize: 16.5, lineHeight: 1.9, color: "rgba(255,255,255,.82)" }}>{t("successAccepted")}</p>
           </div>
 
-          {/* Al-Baqarah 261 — the verse on spending in the way of Allah. Always
+          {/* Al-Baqarah 261  the verse on spending in the way of Allah. Always
               in Arabic and the Qur'anic face; the meaning follows in the
               visitor's language outside Arabic sessions. */}
           <figure className="succ-in succ-in-2" style={{ margin: 0, maxWidth: 640, display: "grid", gap: 10, padding: "18px 22px", background: "rgba(255,255,255,.06)", border: "1px solid rgba(211,154,39,.35)", borderRadius: 14 }}>
@@ -479,7 +479,7 @@ function SummaryRow({ label, value, ltr = false }: { label: string; value: strin
 }
 
 /**
- * The amount as charged, in the currency it was charged in — never converted
+ * The amount as charged, in the currency it was charged in  never converted
  * into today's selected currency. The receipt says one number, and this page
  * has to say the same one.
  */

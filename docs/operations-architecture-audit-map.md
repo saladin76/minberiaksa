@@ -82,7 +82,7 @@ Content & Operations
 
 ## Recommended transition plan
 
-### Phase 1 — Navigation only
+### Phase 1  Navigation only
 
 Expose existing Operations routes clearly:
 
@@ -94,7 +94,7 @@ No route changes.
 No data changes.
 No deletions.
 
-### Phase 2 — Extract shared data/types
+### Phase 2  Extract shared data/types
 
 Move duplicated/fallback Operations types and mock data out of page files into:
 
@@ -106,7 +106,7 @@ lib/operations/service.ts
 
 This keeps UI pages lightweight and prepares the code for Prisma-backed data later.
 
-### Phase 3 — Split UX gradually
+### Phase 3  Split UX gradually
 
 Once data is centralized, split the current combined content board into focused pages:
 

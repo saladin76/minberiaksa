@@ -1,6 +1,6 @@
 // Detect social-app in-app browsers (Facebook/Instagram/TikTok/etc. WebViews).
 // Donation flow uses a 3D Secure popup + cross-domain redirect chain that
-// these WebViews handle poorly — window.open is blocked, cookies are often
+// these WebViews handle poorly  window.open is blocked, cookies are often
 // stripped on the return trip, and users get stuck on the bank page.
 
 export type InAppBrowserInfo = {
@@ -10,7 +10,7 @@ export type InAppBrowserInfo = {
 };
 
 const APP_PATTERNS: Array<{ name: string; re: RegExp }> = [
-  // Facebook native app — FBAN (iOS/Android), FBAV (App version)
+  // Facebook native app  FBAN (iOS/Android), FBAV (App version)
   { name: "facebook", re: /FBAN|FBAV|FB_IAB/i },
   { name: "instagram", re: /Instagram/i },
   { name: "tiktok", re: /musical_ly|tiktok|bytedancewebview/i },
@@ -23,7 +23,7 @@ const APP_PATTERNS: Array<{ name: string; re: RegExp }> = [
   { name: "telegram", re: /Telegram/i },
   // Generic iOS WebView (no Safari, has AppleWebKit): apps that embed WKWebView
   // without identifying themselves still hit this. False positives on hybrid
-  // PWAs are acceptable — the banner is non-blocking.
+  // PWAs are acceptable  the banner is non-blocking.
 ];
 
 export function detectInAppBrowser(userAgent?: string): InAppBrowserInfo {

@@ -36,7 +36,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 /**
- * Al-Quds and the Old City — ported from
+ * Al-Quds and the Old City  ported from
  * `Minbar/القدس والبلدة القديمة.dc.html`.
  *
  * The project grid is the live catalogue filtered to the two categories the
@@ -50,7 +50,7 @@ export default async function Jerusalem({ params }: Props) {
   const all = await listProjects(locale);
   const projects = all.filter((project) => project.region && REGIONS.includes(project.region)).slice(0, PROJECT_LIMIT);
 
-  /* Al-Anbiya 71 — "the land We had blessed for the worlds". Resolved on the
+  /* Al-Anbiya 71  "the land We had blessed for the worlds". Resolved on the
      server so the verse is in the HTML rather than appearing after hydration. */
   const quran = messagesFor(locale).quran as Parameters<typeof verseBlock>[0];
   const verse = verseBlock(quran, "anbiya_71", locale);

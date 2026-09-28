@@ -73,8 +73,8 @@ const FREQUENCY_LABEL: Record<"DAILY" | "FRIDAY" | "MONTHLY", string> = {
 
 /**
  * Date over time, matching the cell in the أحدث الدفعات الشهرية table so the two read
- * the same. Both parts are rendered in Europe/Istanbul — the timezone every other figure
- * on this page is bucketed by — and they share one locale so the digits don't switch
+ * the same. Both parts are rendered in Europe/Istanbul  the timezone every other figure
+ * on this page is bucketed by  and they share one locale so the digits don't switch
  * numeral systems halfway down the cell.
  */
 function formatDateTime(value: string | null): { date: string; time: string } | null {

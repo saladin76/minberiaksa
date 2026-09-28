@@ -16,7 +16,7 @@ import { CategoryProgramme } from "@/components/minbar/categories/CategorySectio
 import type { CategoryPageContent } from "@/lib/minbar/category-page";
 
 /**
- * Zakat landing page — ported from `Minbar/الزكاة.dc.html`.
+ * Zakat landing page  ported from `Minbar/الزكاة.dc.html`.
  *
  * A quick-give hero, a collapsible four-field estimator, the case for directing
  * zakat to Palestine, the eight categories of recipients, two scholars'
@@ -150,7 +150,7 @@ export interface ZakatPageProps {
    * its hero picture and lead join the hero, and the campaigns section below
    * the eight categories carries its figures, values, all its campaigns, its
    * donation box, cards and achievements. A gift from the hero then goes where
-   * the category's donation box points — the category itself or a campaign —
+   * the category's donation box points  the category itself or a campaign 
    * instead of to the generic zakat intention.
    */
   category?: CategoryPageContent | null;
@@ -169,7 +169,7 @@ export default function ZakatPage({
   const { format, currency: selectedCurrency } = useMinbarMoney();
 
   /* The hero's chips: the category's amounts when one is bound, under the
-     same currency contract as its donation box — USD converted for display,
+     same currency contract as its donation box  USD converted for display,
      unless the visitor's currency has a list of its own. */
   const visitorCode = selectedCurrency && selectedCurrency !== "DEFAULT" ? selectedCurrency : "USD";
   const override = category && visitorCode !== "USD" ? category.suggestedByCurrency[visitorCode] : undefined;
@@ -200,7 +200,7 @@ export default function ZakatPage({
   const heroCurrency = heroCustom ? visitorCode : chipCurrency;
 
   /**
-   * Every add from this page is zakat — that is what keeps it ring-fenced.
+   * Every add from this page is zakat  that is what keeps it ring-fenced.
    * With a bound category the gift goes where its donation box points; with
    * none it is the generic zakat intention, as before.
    */
@@ -329,7 +329,7 @@ export default function ZakatPage({
 
           <span style={{ display: "block", maxWidth: 380, justifySelf: "end", width: "100%" }}>
             {/* The category's hero picture takes the coins' slot, shown the same
-                way — the seed gives the bound category the coins themselves. */}
+                way  the seed gives the bound category the coins themselves. */}
             <img src={category?.heroImage || "/minbar/assets/zakat-hero-coins.png"} alt={t("heroTitle")} style={{ display: "block", width: "100%", height: "auto" }} />
           </span>
         </div>
@@ -500,7 +500,7 @@ export default function ZakatPage({
             <span dir="rtl" lang="ar" style={{ unicodeBidi: "isolate", fontWeight: 800, color: "var(--deep)", fontFamily: "var(--font-quran)" }}>
               ﴿إِنَّمَا الصَّدَقَاتُ لِلْفُقَرَاءِ وَالْمَسَاكِينِ وَالْعَامِلِينَ عَلَيْهَا وَالْمُؤَلَّفَةِ قُلُوبُهُمْ وَفِي الرِّقَابِ وَالْغَارِمِينَ وَفِي سَبِيلِ اللَّهِ وَابْنِ السَّبِيلِ﴾
             </span>{" "}
-            — {t("masarifAyahRef")}.
+             {t("masarifAyahRef")}.
           </p>
 
           <div id="masarif-grid" style={{ display: "grid", gridTemplateColumns: "repeat(4,minmax(0,1fr))", gap: "22px 16px" }}>

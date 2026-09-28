@@ -13,7 +13,7 @@ import { NOT_SOFT_DELETED } from "@/lib/campaign/soft-delete-filter";
 // is set, ordered ascending by that priority.
 //
 // The per-category ordering lives in `Campaign.categoryPriorities` as a JSON
-// map keyed by categoryId — a campaign can have a different rank in each of
+// map keyed by categoryId  a campaign can have a different rank in each of
 // the categories it belongs to.
 export async function GET(
   _req: NextRequest,
@@ -65,7 +65,7 @@ export async function GET(
 //
 // Clears the per-category priority for every campaign currently ranked in
 // this category, then sets it for the provided list. Each campaign keeps any
-// rankings it has in OTHER categories untouched — we only touch this
+// rankings it has in OTHER categories untouched  we only touch this
 // category's key inside the JSON map.
 export async function POST(
   req: NextRequest,
@@ -118,7 +118,7 @@ export async function POST(
       })
       .filter((x): x is ReturnType<typeof prisma.campaign.update> => x !== null);
 
-    // 2. Apply the new rankings — merge into each campaign's existing map.
+    // 2. Apply the new rankings  merge into each campaign's existing map.
     // Resolve each campaign's current map first (reads aren't part of the txn),
     // then build the update operations to fold into the single $transaction
     // alongside the clears.

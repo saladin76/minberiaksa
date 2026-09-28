@@ -5,7 +5,7 @@ import { authOptions } from "../../auth/[...nextauth]/options";
 import { requireAdminOrDashboardPermission } from "@/lib/dashboard/api-auth";
 
 /**
- * GET /api/faqs/admin — the dashboard listing.
+ * GET /api/faqs/admin  the dashboard listing.
  *
  * Unlike the public route this returns inactive rows and every page scope, so
  * it sits behind the same permission gate as the rest of the dashboard.

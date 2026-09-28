@@ -235,7 +235,7 @@ export async function GET(
     filters.push({ label: "عدد الاشتراكات", value: String(subRows.length) });
 
     const subtitle = referral.name
-      ? `الإحالة: ${referral.code} — ${referral.name}`
+      ? `الإحالة: ${referral.code}  ${referral.name}`
       : `الإحالة: ${referral.code}`;
 
     const out = await buildDonationExport({

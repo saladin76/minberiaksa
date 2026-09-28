@@ -3,8 +3,8 @@
  *
  * Why this exists: `providerErrorMessage` is whatever the gateway returned, and
  * Stripe localises decline messages to the DONOR's checkout language. Sampling
- * 221 real failed rows turned up the same three declines in four languages —
- * English, French, German and Arabic — so the admin channel was reading like a
+ * 221 real failed rows turned up the same three declines in four languages 
+ * English, French, German and Arabic  so the admin channel was reading like a
  * phrasebook. The admins read Arabic; the donor's locale is irrelevant to them.
  *
  * Two independent signals, because neither covers everything:
@@ -14,7 +14,7 @@
  * So: try the code first, then pattern-match the message across languages.
  *
  * Deliberately conservative. Codes whose meaning isn't publicly documented
- * (PayFor's V034 / MR15 / MR05) are NOT guessed — they fall through to the
+ * (PayFor's V034 / MR15 / MR05) are NOT guessed  they fall through to the
  * unknown branch, which prints the code verbatim so an admin can look it up.
  * Inventing a plausible Arabic reason for an unknown code would be worse than
  * saying "unknown": it would be wrong and unfalsifiable at a glance.
@@ -37,7 +37,7 @@ type Reason =
 const ARABIC: Record<Reason, string> = {
   INSUFFICIENT_FUNDS: "رصيد البطاقة غير كافٍ",
   CARD_DECLINED: "تم رفض البطاقة من البنك المُصدِر",
-  CONTACT_ISSUER: "تم رفض البطاقة — يحتاج المتبرع للتواصل مع البنك المُصدِر",
+  CONTACT_ISSUER: "تم رفض البطاقة  يحتاج المتبرع للتواصل مع البنك المُصدِر",
   CARD_NOT_SUPPORTED: "البطاقة لا تدعم هذا النوع من العمليات",
   TOO_MANY_ATTEMPTS: "تم الرفض بسبب محاولات متكررة خلال وقت قصير",
   AUTH_FAILED: "تعذّر التحقق من وسيلة الدفع (3D Secure)",
@@ -73,7 +73,7 @@ const STRIPE_CODES: Record<string, Reason> = {
 
 /**
  * PayFor / Ziraat / Albaraka ISO-8583 response codes. Only the universally standardised
- * ones are mapped — the bank's proprietary `V…` / `MR…` codes are intentionally absent.
+ * ones are mapped  the bank's proprietary `V…` / `MR…` codes are intentionally absent.
  */
 const PAYFOR_CODES: Record<string, Reason> = {
   "01": "CONTACT_ISSUER",
@@ -93,7 +93,7 @@ const PAYFOR_CODES: Record<string, Reason> = {
 };
 
 /**
- * Multilingual message fingerprints, most specific FIRST — "contact your issuer"
+ * Multilingual message fingerprints, most specific FIRST  "contact your issuer"
  * and "too many attempts" are both also "declined", so a generic decline test
  * must not run before them.
  */
@@ -145,7 +145,7 @@ const TEXT_PATTERNS: Array<{ reason: Reason; needles: string[] }> = [
     needles: ["صعوبات في الاتصال", "difficulties connecting", "issues connecting", "connexion", "verbindung"],
   },
   {
-    // Most generic — must stay last so "declined because …" hits its specific reason first.
+    // Most generic  must stay last so "declined because …" hits its specific reason first.
     reason: "CARD_DECLINED",
     needles: [
       "declined", "refus", "تم رفض", "abgelehnt", "reddedil", "geweiger",
@@ -171,7 +171,7 @@ function normalize(text: string): string {
     .normalize("NFD")
     .replace(/[̀-ͯ]/g, "") // combining Latin accents
     .replace(/[ً-ْٰ]/g, "") // Arabic diacritics
-    .replace(/[ıİ]/g, "i") // Turkish dotless i — NFD does not decompose it
+    .replace(/[ıİ]/g, "i") // Turkish dotless i  NFD does not decompose it
     .replace(/[øØ]/g, "o")
     .replace(/[åÅ]/g, "a")
     .replace(/[æÆ]/g, "ae")
@@ -212,7 +212,7 @@ export function describeFailureInArabic(d: FailureSource): string {
   const rawCode = d.providerProcReturnCode?.trim() || "";
   const stripeCode = stripeCodeFrom(d.providerRaw) ?? "";
 
-  // 1. Stable codes win — they're language-independent.
+  // 1. Stable codes win  they're language-independent.
   const byStripe = stripeCode ? STRIPE_CODES[stripeCode.toLowerCase()] : undefined;
   if (byStripe) return ARABIC[byStripe];
 
@@ -229,9 +229,9 @@ export function describeFailureInArabic(d: FailureSource): string {
   }
 
   // 3. Unclassified. Say so honestly and hand over whatever detail exists so the
-  //    admin can still act — an unmapped PayFor code is the common case here.
+  //    admin can still act  an unmapped PayFor code is the common case here.
   const detail = [rawCode, stripeCode].filter(Boolean).join(" · ");
   if (detail) return `سبب غير معروف (رمز البنك: ${detail})`;
-  if (msg && !NO_INFO_MESSAGES.some((re) => re.test(msg))) return `سبب غير معروف — ${msg}`;
+  if (msg && !NO_INFO_MESSAGES.some((re) => re.test(msg))) return `سبب غير معروف  ${msg}`;
   return "فشلت عملية الدفع دون سبب محدد من البنك";
 }

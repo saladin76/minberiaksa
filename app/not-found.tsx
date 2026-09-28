@@ -9,12 +9,12 @@ import StatusScreen from "@/components/minbar/states/StatusScreen";
 import { NotFoundIcon } from "@/components/minbar/states/StatusIcons";
 
 /**
- * The root 404 — ported from `Minbar/صفحة غير موجودة.dc.html`.
+ * The root 404  ported from `Minbar/صفحة غير موجودة.dc.html`.
  *
  * Next uses two different boundaries for a missing page: a `notFound()` call
  * inside `[locale]` renders `app/[locale]/not-found.tsx`, but an address that
  * matches **no route at all** never enters that segment and lands here. Without
- * this file those URLs got the framework's bare built-in 404 — the wrong design
+ * this file those URLs got the framework's bare built-in 404  the wrong design
  * on the page a lost visitor is most likely to meet.
  *
  * It carries its own stylesheet imports and `mia-scope` wrapper because

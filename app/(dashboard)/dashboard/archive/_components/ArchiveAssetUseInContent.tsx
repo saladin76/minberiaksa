@@ -9,7 +9,7 @@ type Props = { assetId: string; fileName: string };
 
 /**
  * Compact "use in content" action for the archive daily-work list. Reuses the existing, already
- * supported create-content-item endpoint — it does not add any new backend behavior.
+ * supported create-content-item endpoint  it does not add any new backend behavior.
  */
 export function ArchiveAssetUseInContent({ assetId, fileName }: Props) {
   const router = useRouter();
@@ -36,7 +36,7 @@ export function ArchiveAssetUseInContent({ assetId, fileName }: Props) {
   // Was a link to /dashboard/operations/content, removed with التشغيل. The content item is still
   // created by the same API; there is no page left to open, so this confirms and stops there.
   if (done) {
-    return <span className="text-xs font-bold text-emerald-700">حُفظ كمقترح محتوى (تجريبي — لا يُنشر تلقائيًا)</span>;
+    return <span className="text-xs font-bold text-emerald-700">حُفظ كمقترح محتوى (تجريبي  لا يُنشر تلقائيًا)</span>;
   }
 
   return (

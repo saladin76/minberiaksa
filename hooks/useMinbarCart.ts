@@ -56,7 +56,7 @@ export function useMinbarCart() {
 }
 
 /**
- * Item count only — for the header badge, which does not need to deserialise
+ * Item count only  for the header badge, which does not need to deserialise
  * the whole cart on every update.
  */
 export function useMinbarCartCount(): number {

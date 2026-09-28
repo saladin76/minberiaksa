@@ -7,7 +7,7 @@
  * created, was deleted, or was never linked. This script starts from Stripe instead, so
  * nothing can hide from it.
  *
- * IMPORTANT — scope. The Stripe account also contains a PREVIOUS donation platform's
+ * IMPORTANT  scope. The Stripe account also contains a PREVIOUS donation platform's
  * history: ~12.3k charges total, ~6.8k of them with no metadata and metadata keys like
  * "Donation Post ID" / "Sequential ID" (a WordPress-era plugin), going back to 2024-09-18.
  * This app's own data starts 2026-04-22. Importing all of that would invent thousands of
@@ -17,13 +17,13 @@
  *   - described by Stripe as "Subscription creation"/"Subscription update" (this app's
  *     recurring flow), and
  *   - payable to a donor whose email already resolves to a User in this database.
- * Bare one-time charges are reported as a count and left alone — see NOTE at the end.
+ * Bare one-time charges are reported as a count and left alone  see NOTE at the end.
  *
  * Two outcomes per charge:
- *   LINK   — a donation for that donor/amount/currency already exists within ±2 days but
+ *   LINK    a donation for that donor/amount/currency already exists within ±2 days but
  *            has no `providerOrderId`. It is not missing, just unlinked; stamp the charge
  *            id on it so it reconciles cleanly from now on. No money changes.
- *   CREATE — no such donation exists. Create it, mirroring what the webhook would have
+ *   CREATE  no such donation exists. Create it, mirroring what the webhook would have
  *            written, and copy items from the donor's matching Subscription so campaign
  *            attribution is real rather than invented. Campaign/category currentAmount is
  *            incremented only when items were actually copied.
@@ -40,7 +40,7 @@ import { getDonorCountryCodeForSnapshot } from "@/lib/donations/donor-country-co
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: "2026-03-25.dahlia" });
 const COMMIT = process.argv.includes("--commit");
-/** First donation in this database — anything older belongs to the previous platform. */
+/** First donation in this database  anything older belongs to the previous platform. */
 const APP_START = Math.floor(Date.parse("2026-04-22T00:00:00Z") / 1000);
 const NEAR_DAYS = 2;
 
@@ -100,7 +100,7 @@ async function main() {
           });
         }
       }
-      continue; // already present either way — never create a second row
+      continue; // already present either way  never create a second row
     }
 
     // Truly missing. Attribute it to the donor's matching subscription so the money lands
@@ -119,11 +119,11 @@ async function main() {
     if (!sub) { skippedNoSubscription.push(row); continue; }
     row.subId = sub.id;
     // Only an exact amount+currency match is trustworthy enough to inherit campaign
-    // attribution. On a fallback we still record the transaction — the user needs every
-    // charge visible in the tables — but we do NOT copy items or touch campaign
+    // attribution. On a fallback we still record the transaction  the user needs every
+    // charge visible in the tables  but we do NOT copy items or touch campaign
     // currentAmount, because guessing the campaign is worse than leaving it unattributed.
     const exact = sub.amount === amount && sub.currency === currency;
-    row.note = exact ? "exact-match — attributed" : "fallback — recorded WITHOUT campaign attribution";
+    row.note = exact ? "exact-match  attributed" : "fallback  recorded WITHOUT campaign attribution";
 
     const fees = (sub.amount + sub.teamSupport) * 0.03;
     const finalTotal = amount + sub.teamSupport + (sub.coverFees ? fees : 0);
@@ -188,7 +188,7 @@ async function main() {
     return [...m.entries()].sort().map(([k, v]) => `${v.toFixed(2)} ${k}`).join(", ") || "-";
   };
 
-  console.log(`\n=== ${COMMIT ? "COMMITTED" : "DRY RUN (no writes — pass --commit to apply)"} ===`);
+  console.log(`\n=== ${COMMIT ? "COMMITTED" : "DRY RUN (no writes  pass --commit to apply)"} ===`);
   console.log(JSON.stringify({
     appEraChargesScanned: succeeded.length,
     unmatchedByProviderOrderId: unmatched.length,
@@ -204,7 +204,7 @@ async function main() {
   }, null, 2));
 
   if (linked.length) {
-    console.log(`\nLINKED (already in DB, stamped with the Stripe charge id — no money changed):`);
+    console.log(`\nLINKED (already in DB, stamped with the Stripe charge id  no money changed):`);
     for (const r of linked) console.log(`   ${r.chargeId} ${r.date} ${r.amount} ${r.currency} ${r.email} ${r.note}`);
   }
   if (createdRows.length) {
@@ -212,7 +212,7 @@ async function main() {
     for (const r of createdRows) console.log(`   ${r.chargeId} ${r.date} ${r.amount} ${r.currency} ${r.email} sub=${r.subId} (${r.note})`);
   }
   if (skippedNoSubscription.length) {
-    console.log(`\nSKIPPED — donor exists but has no subscription to attribute to (needs a manual decision):`);
+    console.log(`\nSKIPPED  donor exists but has no subscription to attribute to (needs a manual decision):`);
     for (const r of skippedNoSubscription) console.log(`   ${r.chargeId} ${r.date} ${r.amount} ${r.currency} ${r.email}`);
   }
   console.log(

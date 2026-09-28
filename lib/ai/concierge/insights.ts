@@ -7,7 +7,7 @@ import type { ConciergeRange } from "./analytics";
 import { conversationWhere, donationsBySession, needsDonationLookup, type ConversationFilters } from "./conversations";
 
 /**
- * "Read all these conversations and tell us what to improve" — the insights
+ * "Read all these conversations and tell us what to improve"  the insights
  * page's engine. Gathers the filtered transcripts into a compact corpus, adds
  * the live campaign catalog (so "people ask for X and we have no X" can be
  * judged), and asks the model for a structured conclusion in Arabic.
@@ -106,12 +106,12 @@ function buildInsightPrompt(corpus: string, catalogLines: string[], meta: { from
     `Write EVERYTHING in Modern Standard Arabic, concise and concrete. Reply only with the JSON object of the schema.`,
     ``,
     `Period: ${meta.from} → ${meta.to}. Conversations in the filter: ${meta.total}; transcripts below: ${meta.sent}.`,
-    `Transcript format: "#n [locale intents outcome flags]" then lines — "V:" is the visitor (V(step) = a button they tapped, V(added) = added a donation to the basket), "A:" is the assistant (truncated). donated:direct = the basket went through the assistant; donated:indirect = they gave later; flag:needs-human = the assistant could not fully answer; fallback = the AI model did not answer and the rule-based path did.`,
+    `Transcript format: "#n [locale intents outcome flags]" then lines  "V:" is the visitor (V(step) = a button they tapped, V(added) = added a donation to the basket), "A:" is the assistant (truncated). donated:direct = the basket went through the assistant; donated:indirect = they gave later; flag:needs-human = the assistant could not fully answer; fallback = the AI model did not answer and the rule-based path did.`,
     ``,
     `What to produce:`,
-    `- summary: 4–7 sentences for the management — what visitors come for, how well the assistant serves them, the biggest opportunity.`,
+    `- summary: 4–7 sentences for the management  what visitors come for, how well the assistant serves them, the biggest opportunity.`,
     `- highlights: 3–6 short headline findings.`,
-    `- missingCampaigns: causes, places or project types visitors ASK FOR that are NOT in the CATALOG below (or exist but are hard to find). mentions = how many conversations; evidence = one short real quote (translate to Arabic if needed); suggestion = what campaign or page to add. Only real gaps — never list something the catalog already covers well.`,
+    `- missingCampaigns: causes, places or project types visitors ASK FOR that are NOT in the CATALOG below (or exist but are hard to find). mentions = how many conversations; evidence = one short real quote (translate to Arabic if needed); suggestion = what campaign or page to add. Only real gaps  never list something the catalog already covers well.`,
     `- frequentQuestions: the most repeated questions (up to 10), whether the assistant answered them (yes/partly/no), and a suggested answer the team could publish as an FAQ.`,
     `- issues: problems and complaints (payment failures, receipts, refunds, bugs, confusion, trust concerns), with severity and 1–2 short example quotes each.`,
     `- conversionBlockers: why interested visitors did not give (from no-donation conversations).`,

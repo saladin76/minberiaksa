@@ -11,7 +11,7 @@ import crypto from "crypto";
  * minted a separate high-entropy token at creation (`lib/prisma.ts` adds it
  * to every `donation.create`), every link handed to a guest carries it as
  * `?t=`, and the document endpoints compare it in constant time. A signed-in
- * owner, or a revenue user, is let in by their session and never needs it —
+ * owner, or a revenue user, is let in by their session and never needs it 
  * the same model the bank-transfer receipt page already used.
  */
 

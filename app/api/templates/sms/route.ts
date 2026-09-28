@@ -8,7 +8,7 @@ import { prisma } from "@/lib/prisma";
 import { auditActorFromDashboardSession, writeAuditLog } from "@/lib/audit-log";
 
 /**
- * SMS templates — plain text, per-locale, billed by the segment.
+ * SMS templates  plain text, per-locale, billed by the segment.
  *
  * The 1600-character ceiling is deliberate rather than arbitrary: it is roughly ten UCS-2 segments,
  * far past anything worth sending, and exists only to stop a paste accident becoming a very

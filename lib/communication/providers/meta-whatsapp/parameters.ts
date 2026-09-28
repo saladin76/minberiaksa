@@ -3,8 +3,8 @@
  *
  * `sendTemplateMessage` has always accepted a `components` array; nothing ever built one. So a
  * template whose Meta body reads "مرحبًا {{1}}" was sent with no parameters at all, and Meta
- * rejected the message (`#132000`, parameter count mismatch) or — for a template with no
- * placeholders — happened to work, which is why static templates looked fine and the problem stayed
+ * rejected the message (`#132000`, parameter count mismatch) or  for a template with no
+ * placeholders  happened to work, which is why static templates looked fine and the problem stayed
  * invisible until a real campaign used a variable.
  *
  * The schema Meta returns for the variant is the authority here, not the local body text: it says
@@ -72,10 +72,10 @@ function textParameter(value: unknown): MetaParameter {
  *
  * `values` is keyed by placeholder position as a string ("1", "2"), by scoped position
  * ("header.1", "body.1", "button.0"), and/or by variable name. Meta numbers placeholders PER
- * COMPONENT — a header's `{{1}}` is not a body's `{{1}}` — so a scoped key wins when present and
+ * COMPONENT  a header's `{{1}}` is not a body's `{{1}}`  so a scoped key wins when present and
  * the flat position is the fallback for the common template where they mean the same value.
  *
- * Returns `ok: true` with an empty array for a template that takes no parameters — that is a valid
+ * Returns `ok: true` with an empty array for a template that takes no parameters  that is a valid
  * send, not a failure. It fails only when the schema asks for something the caller cannot supply,
  * because sending that to Meta produces a rejected message and a delivery row that lies.
  */
@@ -91,7 +91,7 @@ export function buildMetaComponents(input: {
   const schema = asArray(input.componentsSchema) as SchemaComponent[];
   if (!schema.length) {
     /* No schema synced yet. An empty component list is right for a static template and wrong for a
-       parameterised one, and we cannot tell which — so say so rather than send a guess. */
+       parameterised one, and we cannot tell which  so say so rather than send a guess. */
     return { ok: true, components: [], used: [] };
   }
 
@@ -130,7 +130,7 @@ export function buildMetaComponents(input: {
         components.push({ type: "header", parameters });
         continue;
       }
-      /* A media header always takes exactly one parameter — the asset. */
+      /* A media header always takes exactly one parameter  the asset. */
       if (!input.headerMediaUrl) {
         return { ok: false, reason: "TEMPLATE_HEADER_MEDIA_MISSING", detail: `header format ${format}` };
       }
@@ -180,7 +180,7 @@ export function buildMetaComponents(input: {
   return { ok: true, components, used };
 }
 
-/** True when the synced schema declares any parameter at all — used to decide if values are needed. */
+/** True when the synced schema declares any parameter at all  used to decide if values are needed. */
 export function schemaTakesParameters(componentsSchema: unknown): boolean {
   for (const component of asArray(componentsSchema) as SchemaComponent[]) {
     const type = String(component.type ?? "").toUpperCase();

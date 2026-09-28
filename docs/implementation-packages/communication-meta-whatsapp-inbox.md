@@ -1,4 +1,4 @@
-# Package — Meta WhatsApp Cloud API adapter, webhooks & Inbox
+# Package  Meta WhatsApp Cloud API adapter, webhooks & Inbox
 
 Status: **done.** Real sending stays config-gated (disabled with no credentials). No fake SENT.
 Date: 2026-07-05
@@ -14,15 +14,15 @@ From the official Meta WhatsApp Business Platform / Cloud API + Graph API webhoo
 - **Payload:** `object=whatsapp_business_account` → `entry[].changes[].value` with `metadata`, `contacts`,
   `messages` (inbound), `statuses` (sent/delivered/read/failed). Subscribed field: `messages`.
 
-## Provider files added — `lib/communication/providers/meta-whatsapp/`
-- `types.ts` — config, send/health, normalized webhook event types.
-- `errors.ts` — safe reason codes + `scrubSecrets` (strips Bearer/EA tokens) + `mapGraphError`.
-- `client.ts` — `getMetaConfig` (env, server-only), `isMetaConfigured`, `graphFetch` (adds Bearer,
-  maps errors, never leaks token), `healthCheck` (per phoneNumberId — multi-number aware).
-- `messages.ts` — `sendTemplateMessage` → real Cloud API call, returns `wamid` as providerMessageId; safe reason on failure.
-- `templates.ts` — `listApprovedTemplates` (read WABA `message_templates`).
-- `webhooks.ts` — `verifyWebhookChallenge`, `verifyWebhookSignature` (timing-safe HMAC), `parseWebhookPayload`
-  (normalizes statuses + inbound, builds idempotency keys, sanitizes — no raw payload/secrets).
+## Provider files added  `lib/communication/providers/meta-whatsapp/`
+- `types.ts`  config, send/health, normalized webhook event types.
+- `errors.ts`  safe reason codes + `scrubSecrets` (strips Bearer/EA tokens) + `mapGraphError`.
+- `client.ts`  `getMetaConfig` (env, server-only), `isMetaConfigured`, `graphFetch` (adds Bearer,
+  maps errors, never leaks token), `healthCheck` (per phoneNumberId  multi-number aware).
+- `messages.ts`  `sendTemplateMessage` → real Cloud API call, returns `wamid` as providerMessageId; safe reason on failure.
+- `templates.ts`  `listApprovedTemplates` (read WABA `message_templates`).
+- `webhooks.ts`  `verifyWebhookChallenge`, `verifyWebhookSignature` (timing-safe HMAC), `parseWebhookPayload`
+  (normalizes statuses + inbound, builds idempotency keys, sanitizes  no raw payload/secrets).
 
 ## ProviderRouter
 `resolveProviderForSend(channel, sender?)` now handles WhatsApp via the adapter:
@@ -32,10 +32,10 @@ From the official Meta WhatsApp Business Platform / Cloud API + Graph API webhoo
 
 ## Webhook route added
 `/api/webhooks/meta/whatsapp` (public, nodejs):
-- **GET** — verification handshake (verify token → echo challenge, else 403).
-- **POST** — reads the **raw body**, validates `X-Hub-Signature-256` (401 on mismatch; accepted-but-flagged
+- **GET**  verification handshake (verify token → echo challenge, else 403).
+- **POST**  reads the **raw body**, validates `X-Hub-Signature-256` (401 on mismatch; accepted-but-flagged
   when no app secret in dev), parses + processes, always 200 on genuine payloads (never throws unsafe errors).
-- `webhook-service.processWhatsappEvents` — inserts an **idempotent** `CommunicationProviderEvent` per event
+- `webhook-service.processWhatsappEvents`  inserts an **idempotent** `CommunicationProviderEvent` per event
   (unique `idempotencyKey`; duplicates ignored), and on a status match updates the `CommunicationDelivery`.
 
 ## Status mapping
@@ -62,7 +62,7 @@ Server-only; access token/app secret never sent to the client, logged, or thrown
 `idempotencyKey`. Webhook validated by verify token + HMAC signature.
 
 ## Build result
-- `npx tsc --noEmit` — new files add **0 errors**. `npx next build` — green (see final response).
+- `npx tsc --noEmit`  new files add **0 errors**. `npx next build`  green (see final response).
 - No payment/tracking/Twilio/SendGrid changes; legacy messaging untouched.
 
 ## Remaining next package

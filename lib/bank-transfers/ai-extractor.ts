@@ -10,7 +10,7 @@ import type { ParsedBankTransferRow } from "./statement-parser";
  * - Optional + fail-safe: if OpenAI isn't configured (`OPENAI_API_KEY` + `AI_CORE_ENABLE_EXTERNAL_CALLS
  *   =true`) or the call fails/times out, this returns null and the caller falls back to the existing
  *   heuristic enhancer. Nothing breaks.
- * - AI only refines the donor NAME + purpose text. It never sets amounts, dates, or direction — those
+ * - AI only refines the donor NAME + purpose text. It never sets amounts, dates, or direction  those
  *   stay deterministic from the parsed numeric columns, so no figure can be hallucinated.
  */
 

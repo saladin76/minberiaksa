@@ -8,7 +8,7 @@ import { addToCart } from "@/lib/minbar/cart";
 import { formatIban, type MinbarBank } from "@/lib/minbar/banks";
 
 /**
- * Bank accounts — ported from `Minbar/الحسابات البنكية.dc.html`.
+ * Bank accounts  ported from `Minbar/الحسابات البنكية.dc.html`.
  *
  * The transfer path in full (`DONATION_LOGIC_SPEC §3`):
  *   Awaiting receipt → Receipt uploaded → Under review → Confirmed | Rejected
@@ -19,7 +19,7 @@ import { formatIban, type MinbarBank } from "@/lib/minbar/banks";
  * officer confirms the money actually arrived.
  *
  * `[DASHBOARD-INTEGRATION]`: accounts differ per language and region and are
- * managed from the dashboard — see `lib/minbar/banks.ts` for that seam.
+ * managed from the dashboard  see `lib/minbar/banks.ts` for that seam.
  *
  * Every identifier (IBAN, SWIFT, account number) renders `dir="ltr"` and
  * isolated. These are also the one place the design permits `word-break:

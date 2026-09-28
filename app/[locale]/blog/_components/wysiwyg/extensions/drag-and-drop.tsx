@@ -1,4 +1,5 @@
 import { Extension } from "@tiptap/core";
+import { DOMSerializer } from "@tiptap/pm/model";
 import { NodeSelection, Plugin } from "@tiptap/pm/state";
 import { EditorView } from "@tiptap/pm/view";
 
@@ -68,10 +69,12 @@ function DragHandle(options: DragHandleOptions) {
 
     const slice = view.state.selection.content();
     
-    // Replace the __serializeForClipboard usage with direct DOM manipulation
+    // Serialized through the schema's DOMSerializer  the supported replacement for ProseMirror's
+    // internal __serializeForClipboard. `Fragment.toDOM` does not exist, so the previous line threw
+    // as soon as anything was dragged.
     const tempDiv = document.createElement('div');
-    const fragment = slice.content.toDOM();
-    tempDiv.appendChild(fragment);
+    const serializer = DOMSerializer.fromSchema(view.state.schema);
+    tempDiv.appendChild(serializer.serializeFragment(slice.content));
     
     const text = slice.content.textBetween(0, slice.content.size, '\n');
 

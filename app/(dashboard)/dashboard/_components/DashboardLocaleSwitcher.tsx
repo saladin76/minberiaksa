@@ -7,7 +7,7 @@ import { SUPPORTED_LOCALES } from '@/lib/locales';
 import { localeFlag, localeNativeLabel } from './locale-form';
 
 /**
- * "Show this list in …" — the language a dashboard listing displays its
+ * "Show this list in …"  the language a dashboard listing displays its
  * titles in. A select rather than a tab strip: nineteen tabs do not fit a
  * card header, and the choice is made once, not toggled while scanning.
  */

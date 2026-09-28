@@ -49,7 +49,7 @@ function DraggableSlideRow({
     type: SLIDE_ROW,
     item: { index },
     // `hover` fires on every row the pointer crosses, so persisting there sent
-    // one full transaction + audit write per tick — dragging across five rows
+    // one full transaction + audit write per tick  dragging across five rows
     // meant five overlapping saves whose responses could land out of order.
     // The reorder is now written once, when the drag actually ends.
     end: () => commitOrder(),
@@ -88,7 +88,7 @@ export default function SlidesPage() {
   const [savingOrder, setSavingOrder] = useState(false);
   const [togglingId, setTogglingId] = useState<string | null>(null);
 
-  /* The language the table shows titles in — every one the site publishes. */
+  /* The language the table shows titles in  every one the site publishes. */
   const [locale, setLocale] = useState<string>('ar');
 
   const fetchSlides = async (lc: string = locale) => {
@@ -98,7 +98,7 @@ export default function SlidesPage() {
       setSlides(Array.isArray(items) ? items.sort((a: Slide, b: Slide) => (a.order ?? 0) - (b.order ?? 0)) : []);
     } catch (e) {
       // Was a bare console.error, so a failed load looked identical to "no
-      // slides yet" — the empty state rendered and nothing said why.
+      // slides yet"  the empty state rendered and nothing said why.
       console.error(e);
       toast.error(errorMessage(e, 'تعذّر تحميل الشرائح'));
     } finally {

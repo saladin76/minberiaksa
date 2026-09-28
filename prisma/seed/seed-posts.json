@@ -32,27 +32,27 @@
     "notes": [
       "العربية هي المصدر (حقول Post/PostCategory المباشرة). الترجمات في translations[].",
       "PostTranslation.content = null لكل اللغات: متن المقال محتوى تحريري لم يُترجم بعد (مرحلة منفصلة). العنوان والوصف مترجمان.",
-      "categoryName نصّي — استبدله بـ categoryId بعد upsert التصنيفات (اربط عبر PostCategory.name).",
-      "seo كائن إضافي خارج مخططك (metaTitle/metaDescription/keyword) — احذفه أو أضف حقولًا له.",
-      "image = مسار عام داخل public/ في المستودع (/assets/... .webp) — محلول مسبقًا ومتحقَّق منه.",
-      "المتن مُهيكل: 1328 عنوانًا فرعيًا و2202 فقرة عبر 258 مقالة — لا نص خام.",
-      "30 مقالة بلا متن في المصدر: published=false + contentStatus=BODY_MISSING — تُكتب متونها من الداشبورد ثم تُنشر."
+      "categoryName نصّي  استبدله بـ categoryId بعد upsert التصنيفات (اربط عبر PostCategory.name).",
+      "seo كائن إضافي خارج مخططك (metaTitle/metaDescription/keyword)  احذفه أو أضف حقولًا له.",
+      "image = مسار عام داخل public/ في المستودع (/assets/... .webp)  محلول مسبقًا ومتحقَّق منه.",
+      "المتن مُهيكل: 1328 عنوانًا فرعيًا و2202 فقرة عبر 258 مقالة  لا نص خام.",
+      "30 مقالة بلا متن في المصدر: published=false + contentStatus=BODY_MISSING  تُكتب متونها من الداشبورد ثم تُنشر."
     ],
     "imagesResolved": {
       "resolvedAt": "2026-09-22T08:18:14.614Z",
-      "source": "saladin76/minberiaksa@e667305030ec — public/assets (218 .webp confirmed: 63 root + 155 blog/)",
+      "source": "saladin76/minberiaksa@e667305030ec  public/assets (218 .webp confirmed: 63 root + 155 blog/)",
       "mapping": "assets/blog/<name>.jpg -> /assets/blog/<name>.webp ; assets/<name>.jpg -> /assets/<name>.webp",
       "counts": {
         "blogDir": 195,
         "rootDir": 63,
         "unmatched": 0
       },
-      "note": "المسارات صارت عامة جاهزة للبذر مباشرة — لا Cloudinary ولا رفع صور. لا حاجة لمطابقة أسماء."
+      "note": "المسارات صارت عامة جاهزة للبذر مباشرة  لا Cloudinary ولا رفع صور. لا حاجة لمطابقة أسماء."
     },
     "contentFormat": {
-      "content": "HTML نظيف (<h2> للعناوين الفرعية · <p> للفقرات) — جاهز للعرض في صفحة المقال مباشرة",
-      "contentMarkdown": "نفس المتن بصيغة Markdown (## للعناوين) — احتياطي إن فضّل المحرر Markdown",
-      "coverImage": "مرادف لـ image — نفس المسار العام يخدم غلاف الكرت والمقال الداخلي",
+      "content": "HTML نظيف (<h2> للعناوين الفرعية · <p> للفقرات)  جاهز للعرض في صفحة المقال مباشرة",
+      "contentMarkdown": "نفس المتن بصيغة Markdown (## للعناوين)  احتياطي إن فضّل المحرر Markdown",
+      "coverImage": "مرادف لـ image  نفس المسار العام يخدم غلاف الكرت والمقال الداخلي",
       "totals": {
         "h2": 1328,
         "paragraphs": 2202
@@ -60,7 +60,7 @@
     },
     "bodyMissing": {
       "count": 30,
-      "handling": "published = false و contentStatus = \"BODY_MISSING\" — لها عنوان وملخص وغلاف وتصنيف وترجمات، لكن متنها لم يُكتب في المصدر. لم يُختلق لها نص.",
+      "handling": "published = false و contentStatus = \"BODY_MISSING\"  لها عنوان وملخص وغلاف وتصنيف وترجمات، لكن متنها لم يُكتب في المصدر. لم يُختلق لها نص.",
       "slugs": [
         "islamic-will-and-sadaqah-jariyah-planning",
         "women-girls-needs-in-displacement-camps",
@@ -2600,7 +2600,7 @@
         {
           "locale": "de",
           "title": "Muharram, ein neuer Anfang: Der Beginn des Hidschra-Jahres als Tür zur fortdauernden Spende",
-          "description": "Ein praktischer Leitfaden, um Muharram und das neue Hidschra-Jahr mit Gottesdienst und fortdauernder Wohltätigkeit zu beginnen — Gutes, das über den Moment des Gebens hinaus besteht.",
+          "description": "Ein praktischer Leitfaden, um Muharram und das neue Hidschra-Jahr mit Gottesdienst und fortdauernder Wohltätigkeit zu beginnen  Gutes, das über den Moment des Gebens hinaus besteht.",
           "content": null,
           "image": null,
           "slug": null
@@ -2632,7 +2632,7 @@
         {
           "locale": "ur",
           "title": "محرم، ایک نیا آغاز: ہجری سال کے آغاز کو صدقہ جاریہ کا دروازہ بنائیں",
-          "description": "محرم اور نئے ہجری سال کو عبادت اور صدقہ جاریہ سے شروع کرنے کی عملی رہنمائی — ایسی نیکی جو دینے کے لمحے سے آگے باقی رہے۔",
+          "description": "محرم اور نئے ہجری سال کو عبادت اور صدقہ جاریہ سے شروع کرنے کی عملی رہنمائی  ایسی نیکی جو دینے کے لمحے سے آگے باقی رہے۔",
           "content": null,
           "image": null,
           "slug": null
@@ -2656,7 +2656,7 @@
         {
           "locale": "nl",
           "title": "Muharram, een nieuw begin: het begin van het hidjrajaar als deur naar doorlopende liefdadigheid",
-          "description": "Praktische gids om Muharram en het nieuwe hidjrajaar te beginnen met aanbidding en doorlopende liefdadigheid — goeds dat het moment van geven overleeft.",
+          "description": "Praktische gids om Muharram en het nieuwe hidjrajaar te beginnen met aanbidding en doorlopende liefdadigheid  goeds dat het moment van geven overleeft.",
           "content": null,
           "image": null,
           "slug": null
@@ -2664,7 +2664,7 @@
         {
           "locale": "sv",
           "title": "Muharram, en ny början: gör hijri-årets start till en dörr för bestående välgörenhet",
-          "description": "Praktisk guide för att välkomna Muharram och det nya hijri-året med tillbedjan och bestående välgörenhet — gott som varar bortom givandets stund.",
+          "description": "Praktisk guide för att välkomna Muharram och det nya hijri-året med tillbedjan och bestående välgörenhet  gott som varar bortom givandets stund.",
           "content": null,
           "image": null,
           "slug": null
@@ -2672,7 +2672,7 @@
         {
           "locale": "no",
           "title": "Muharram, en ny begynnelse: gjør hijri-årets start til en dør for varig veldedighet",
-          "description": "Praktisk guide for å ønske Muharram og det nye hijri-året velkommen med tilbedelse og varig veldedighet — godt som varer utover givertidspunktet.",
+          "description": "Praktisk guide for å ønske Muharram og det nye hijri-året velkommen med tilbedelse og varig veldedighet  godt som varer utover givertidspunktet.",
           "content": null,
           "image": null,
           "slug": null
@@ -2680,7 +2680,7 @@
         {
           "locale": "da",
           "title": "Muharram, en ny begyndelse: gør hijri-årets start til en dør for varig velgørenhed",
-          "description": "Praktisk guide til at byde Muharram og det nye hijri-år velkommen med tilbedelse og varig velgørenhed — godt der varer ud over givertidspunktet.",
+          "description": "Praktisk guide til at byde Muharram og det nye hijri-år velkommen med tilbedelse og varig velgørenhed  godt der varer ud over givertidspunktet.",
           "content": null,
           "image": null,
           "slug": null
@@ -2712,7 +2712,7 @@
         {
           "locale": "hi",
           "title": "मुहर्रम, एक नई शुरुआत: हिजरी वर्ष के आरंभ को सदक़ा-ए-जारिया का द्वार बनाएं",
-          "description": "इबादत और निरंतर दान के साथ मुहर्रम और नए हिजरी वर्ष का स्वागत करने की व्यावहारिक मार्गदर्शिका — ऐसी नेकी जो देने के क्षण से आगे बनी रहे।",
+          "description": "इबादत और निरंतर दान के साथ मुहर्रम और नए हिजरी वर्ष का स्वागत करने की व्यावहारिक मार्गदर्शिका  ऐसी नेकी जो देने के क्षण से आगे बनी रहे।",
           "content": null,
           "image": null,
           "slug": null
@@ -2765,7 +2765,7 @@
         {
           "locale": "de",
           "title": "Die Tore des Paradieses und gute Taten: ein Vermächtnis über das eigene Leben hinaus",
-          "description": "Ein Glaubensartikel, der die Vielfalt der Tore des Guten mit bleibendem Nutzen verbindet — durch Gebet, Spende, Fürsorge für Bedürftige und den Dienst an Al-Quds und Palästina.",
+          "description": "Ein Glaubensartikel, der die Vielfalt der Tore des Guten mit bleibendem Nutzen verbindet  durch Gebet, Spende, Fürsorge für Bedürftige und den Dienst an Al-Quds und Palästina.",
           "content": null,
           "image": null,
           "slug": null
@@ -2821,7 +2821,7 @@
         {
           "locale": "nl",
           "title": "De poorten van het Paradijs en goede daden: een erfenis die uw leven overstijgt",
-          "description": "Een geloofsartikel dat de verscheidenheid aan poorten van het goede verbindt met blijvend nut — via gebed, liefdadigheid, zorg voor behoeftigen en dienst aan Al-Quds en Palestina.",
+          "description": "Een geloofsartikel dat de verscheidenheid aan poorten van het goede verbindt met blijvend nut  via gebed, liefdadigheid, zorg voor behoeftigen en dienst aan Al-Quds en Palestina.",
           "content": null,
           "image": null,
           "slug": null
@@ -2930,7 +2930,7 @@
         {
           "locale": "de",
           "title": "Schaban: der Monat der Vorbereitung auf den Ramadan, in dem die Taten zu Allah erhoben werden",
-          "description": "Erfahren Sie die Bedeutung des Schaban und wie Sie sich mit einem ausgewogenen Plan aus Gottesdienst und Geben auf den Ramadan vorbereiten — fern saisonaler Impulsivität.",
+          "description": "Erfahren Sie die Bedeutung des Schaban und wie Sie sich mit einem ausgewogenen Plan aus Gottesdienst und Geben auf den Ramadan vorbereiten  fern saisonaler Impulsivität.",
           "content": null,
           "image": null,
           "slug": null
@@ -3714,7 +3714,7 @@
         {
           "locale": "tr",
           "title": "Bir çocuğa kefaletten geleceği inşaya: sürdürülebilir bakım yetimler için nasıl fark yaratır?",
-          "description": "Yetim desteğinde gıda, eğitim, koruma ve güçlendirmeyi birleştiren bütüncül bir bakış — kısa vadeli maddi yardımla yetinmek yerine.",
+          "description": "Yetim desteğinde gıda, eğitim, koruma ve güçlendirmeyi birleştiren bütüncül bir bakış  kısa vadeli maddi yardımla yetinmek yerine.",
           "content": null,
           "image": null,
           "slug": null
@@ -3944,7 +3944,7 @@
         {
           "locale": "en",
           "title": "Relief or sustainable development? Why communities need both",
-          "description": "Explaining the difference between urgent relief, development and Waqf — and how a foundation and donor can build a path that starts with survival and ends with stability.",
+          "description": "Explaining the difference between urgent relief, development and Waqf  and how a foundation and donor can build a path that starts with survival and ends with stability.",
           "content": null,
           "image": null,
           "slug": null
@@ -4018,7 +4018,7 @@
         {
           "locale": "en",
           "title": "How to make the most of the ten days of Dhul-Hijjah if you are not performing Hajj",
-          "description": "A practical guide for non-pilgrims to seize the ten days with fasting, remembrance, Qur'an, charity and qurbani — without exaggerating unverified virtues.",
+          "description": "A practical guide for non-pilgrims to seize the ten days with fasting, remembrance, Qur'an, charity and qurbani  without exaggerating unverified virtues.",
           "content": null,
           "image": null,
           "slug": null
@@ -4129,7 +4129,7 @@
         {
           "locale": "en",
           "title": "The Day of Arafah: a day of supplication, repentance and giving",
-          "description": "How non-pilgrims can seize the Day of Arafah with fasting, supplication, remembrance and charity — with a practical plan to protect the day from distraction.",
+          "description": "How non-pilgrims can seize the Day of Arafah with fasting, supplication, remembrance and charity  with a practical plan to protect the day from distraction.",
           "content": null,
           "image": null,
           "slug": null
@@ -4277,7 +4277,7 @@
         {
           "locale": "en",
           "title": "Istikharah prayer: seeking good, then moving forward with your decision",
-          "description": "A practical guide to istikharah: its meaning, timing, the supplication, and what to do afterwards — away from common misconceptions.",
+          "description": "A practical guide to istikharah: its meaning, timing, the supplication, and what to do afterwards  away from common misconceptions.",
           "content": null,
           "image": null,
           "slug": null
@@ -4351,7 +4351,7 @@
         {
           "locale": "en",
           "title": "Ramadan in three phases: keeping your spiritual energy to the end",
-          "description": "A practical plan for managing Ramadan from the beginning to the last ten nights, without early burnout or slack — distributing worship and giving wisely.",
+          "description": "A practical plan for managing Ramadan from the beginning to the last ten nights, without early burnout or slack  distributing worship and giving wisely.",
           "content": null,
           "image": null,
           "slug": null
@@ -4388,7 +4388,7 @@
         {
           "locale": "en",
           "title": "Laylat al-Qadr: a night better than a thousand months",
-          "description": "The virtue of Laylat al-Qadr and how to prepare for the last ten nights with supplication, prayer and charity — without chasing unconfirmed signs.",
+          "description": "The virtue of Laylat al-Qadr and how to prepare for the last ten nights with supplication, prayer and charity  without chasing unconfirmed signs.",
           "content": null,
           "image": null,
           "slug": null
@@ -4454,7 +4454,7 @@
         {
           "locale": "tr",
           "title": "Dijital dikkat dağınıklığı çağında ibadet: kalp huzurunu geri kazanmak",
-          "description": "Telefon ve sosyal medya dağınıklığını azaltmak; namazda, Kur'an'da ve duada odaklanmayı yeniden kazanmak için pratik adımlar — özellikle manevi mevsimlerde.",
+          "description": "Telefon ve sosyal medya dağınıklığını azaltmak; namazda, Kur'an'da ve duada odaklanmayı yeniden kazanmak için pratik adımlar  özellikle manevi mevsimlerde.",
           "content": null,
           "image": null,
           "slug": null
@@ -4736,7 +4736,7 @@
       "slug": "minberi-aksa-from-relief-to-sustainable-impact",
       "title": "منبر الأقصى الدولية: من الاستجابة العاجلة إلى الأثر المستدام",
       "description": "تعرف إلى منطق عمل منبر الأقصى الدولية الذي يجمع دعم القدس والمسجد الأقصى والإغاثة في غزة بالمشاريع الوقفية والتعليمية طويلة الأثر.",
-      "content": "<p>العمل لفلسطين لا يُختزل في نوع واحد من المشاريع. هناك لحظات تحتاج استجابة عاجلة كالماء والغذاء، وهناك احتياجات تعمل على زمن أطول كالتعليم والوقف. هذه الثنائية تفسر تنوع مجالات منبر الأقصى الدولية.</p>\n<h2>القدس في قلب الرسالة</h2>\n<p>تحتل القدس والمسجد الأقصى موقعًا مركزيًا من اسم المؤسسة إلى مشروعاتها الوقفية والتعليمية، إلى جانب الزكاة ومشاريع الترميم العاجلة وغزة.</p>\n<h2>لماذا لا يكفي مسار واحد؟</h2>\n<p>الإغاثة تنقذ اليوم لكنها لا تبني مصدر دخل مستمر. والوقف يبني موردًا طويل الأثر لكنه لا يحل احتياج اللحظة. لذلك يبقى الفصل بين صناديق الإغاثة والوقف ضروريًا.</p>\n<h2>رسالة تجمع المسارين</h2>\n<p>العمل يقوم على الاستجابة للحاجة عندما تكون عاجلة، وبناء القدرة عندما يكون الزمن متاحًا للاستدامة — معيار يظهر في اختيار المشاريع والتقارير وتجربة المتبرع.</p>",
+      "content": "<p>العمل لفلسطين لا يُختزل في نوع واحد من المشاريع. هناك لحظات تحتاج استجابة عاجلة كالماء والغذاء، وهناك احتياجات تعمل على زمن أطول كالتعليم والوقف. هذه الثنائية تفسر تنوع مجالات منبر الأقصى الدولية.</p>\n<h2>القدس في قلب الرسالة</h2>\n<p>تحتل القدس والمسجد الأقصى موقعًا مركزيًا من اسم المؤسسة إلى مشروعاتها الوقفية والتعليمية، إلى جانب الزكاة ومشاريع الترميم العاجلة وغزة.</p>\n<h2>لماذا لا يكفي مسار واحد؟</h2>\n<p>الإغاثة تنقذ اليوم لكنها لا تبني مصدر دخل مستمر. والوقف يبني موردًا طويل الأثر لكنه لا يحل احتياج اللحظة. لذلك يبقى الفصل بين صناديق الإغاثة والوقف ضروريًا.</p>\n<h2>رسالة تجمع المسارين</h2>\n<p>العمل يقوم على الاستجابة للحاجة عندما تكون عاجلة، وبناء القدرة عندما يكون الزمن متاحًا للاستدامة  معيار يظهر في اختيار المشاريع والتقارير وتجربة المتبرع.</p>",
       "image": "/assets/blog-cover-39-relief-to-impact.webp",
       "published": true,
       "categoryName": "الثقة والشفافية",
@@ -4764,7 +4764,7 @@
           "slug": null
         }
       ],
-      "contentMarkdown": "العمل لفلسطين لا يُختزل في نوع واحد من المشاريع. هناك لحظات تحتاج استجابة عاجلة كالماء والغذاء، وهناك احتياجات تعمل على زمن أطول كالتعليم والوقف. هذه الثنائية تفسر تنوع مجالات منبر الأقصى الدولية.\n\n## القدس في قلب الرسالة\n\nتحتل القدس والمسجد الأقصى موقعًا مركزيًا من اسم المؤسسة إلى مشروعاتها الوقفية والتعليمية، إلى جانب الزكاة ومشاريع الترميم العاجلة وغزة.\n\n## لماذا لا يكفي مسار واحد؟\n\nالإغاثة تنقذ اليوم لكنها لا تبني مصدر دخل مستمر. والوقف يبني موردًا طويل الأثر لكنه لا يحل احتياج اللحظة. لذلك يبقى الفصل بين صناديق الإغاثة والوقف ضروريًا.\n\n## رسالة تجمع المسارين\n\nالعمل يقوم على الاستجابة للحاجة عندما تكون عاجلة، وبناء القدرة عندما يكون الزمن متاحًا للاستدامة — معيار يظهر في اختيار المشاريع والتقارير وتجربة المتبرع.",
+      "contentMarkdown": "العمل لفلسطين لا يُختزل في نوع واحد من المشاريع. هناك لحظات تحتاج استجابة عاجلة كالماء والغذاء، وهناك احتياجات تعمل على زمن أطول كالتعليم والوقف. هذه الثنائية تفسر تنوع مجالات منبر الأقصى الدولية.\n\n## القدس في قلب الرسالة\n\nتحتل القدس والمسجد الأقصى موقعًا مركزيًا من اسم المؤسسة إلى مشروعاتها الوقفية والتعليمية، إلى جانب الزكاة ومشاريع الترميم العاجلة وغزة.\n\n## لماذا لا يكفي مسار واحد؟\n\nالإغاثة تنقذ اليوم لكنها لا تبني مصدر دخل مستمر. والوقف يبني موردًا طويل الأثر لكنه لا يحل احتياج اللحظة. لذلك يبقى الفصل بين صناديق الإغاثة والوقف ضروريًا.\n\n## رسالة تجمع المسارين\n\nالعمل يقوم على الاستجابة للحاجة عندما تكون عاجلة، وبناء القدرة عندما يكون الزمن متاحًا للاستدامة  معيار يظهر في اختيار المشاريع والتقارير وتجربة المتبرع.",
       "coverImage": "/assets/blog-cover-39-relief-to-impact.webp",
       "contentStatus": "READY",
       "imageAlt": "منبر الأقصى الدولية: من الاستجابة العاجلة إلى الأثر المستدام"
@@ -4869,7 +4869,7 @@
         {
           "locale": "en",
           "title": "The best forms of ongoing charity: choosing what suits you",
-          "description": "A comparison of the best-known forms of ongoing charity — water, education, Waqf and beneficial facilities — to help you choose a sustainable, trusted project.",
+          "description": "A comparison of the best-known forms of ongoing charity  water, education, Waqf and beneficial facilities  to help you choose a sustainable, trusted project.",
           "content": null,
           "image": null,
           "slug": null
@@ -4943,7 +4943,7 @@
         {
           "locale": "en",
           "title": "Authentic hadiths on charity in Ramadan and their practical meanings",
-          "description": "A selection of authentic texts on generosity and charity in Ramadan, with practical applications for giving — away from widespread unverified narrations.",
+          "description": "A selection of authentic texts on generosity and charity in Ramadan, with practical applications for giving  away from widespread unverified narrations.",
           "content": null,
           "image": null,
           "slug": null
@@ -5032,7 +5032,7 @@
       "slug": "what-is-waqf-simple-guide",
       "title": "ما هو الوقف؟ دليل مبسط لفهم العطاء المستدام",
       "description": "شرح مبسط لمعنى الوقف والفرق بينه وبين الصدقة العادية وكيف تعمل النماذج الوقفية الحديثة وما الذي يجب على المتبرع معرفته.",
-      "content": "<p>الوقف يعني حبس أصل أو تخصيص مال بحيث يبقى الأصل، بينما تُوجّه منفعته إلى غرض خيري — بدل أن يُنفق مرة واحدة يصبح مصدرًا متكررًا للنفع.</p>\n<h2>الفرق عن الصدقة والزكاة</h2>\n<p>الصدقة أوسع وقد تنتهي منفعتها سريعًا. الزكاة فريضة لها شروط ومصارف محددة. الوقف تبرع تطوعي مصمم للاستمرار.</p>\n<h2>هل يجب أن أكون ثريًا؟</h2>\n<p>لا؛ النماذج الجماعية تتيح المشاركة بمبالغ مختلفة في صندوق وقفي، ما يجعل الفكرة متاحة لعدد أكبر من الناس، كما في مشاريع القدس الوقفية لدى منبر الأقصى.</p>\n<h2>ماذا تسأل قبل التبرع؟</h2>\n<p>ما الأصل؟ كيف يُدار؟ ما المخاطر؟ كيف يُصرف العائد؟ وما التقارير المتاحة؟</p>",
+      "content": "<p>الوقف يعني حبس أصل أو تخصيص مال بحيث يبقى الأصل، بينما تُوجّه منفعته إلى غرض خيري  بدل أن يُنفق مرة واحدة يصبح مصدرًا متكررًا للنفع.</p>\n<h2>الفرق عن الصدقة والزكاة</h2>\n<p>الصدقة أوسع وقد تنتهي منفعتها سريعًا. الزكاة فريضة لها شروط ومصارف محددة. الوقف تبرع تطوعي مصمم للاستمرار.</p>\n<h2>هل يجب أن أكون ثريًا؟</h2>\n<p>لا؛ النماذج الجماعية تتيح المشاركة بمبالغ مختلفة في صندوق وقفي، ما يجعل الفكرة متاحة لعدد أكبر من الناس، كما في مشاريع القدس الوقفية لدى منبر الأقصى.</p>\n<h2>ماذا تسأل قبل التبرع؟</h2>\n<p>ما الأصل؟ كيف يُدار؟ ما المخاطر؟ كيف يُصرف العائد؟ وما التقارير المتاحة؟</p>",
       "image": "/assets/blog-cover-47-what-is-waqf.webp",
       "published": true,
       "categoryName": "الأوقاف والصدقة الجارية",
@@ -5060,7 +5060,7 @@
           "slug": null
         }
       ],
-      "contentMarkdown": "الوقف يعني حبس أصل أو تخصيص مال بحيث يبقى الأصل، بينما تُوجّه منفعته إلى غرض خيري — بدل أن يُنفق مرة واحدة يصبح مصدرًا متكررًا للنفع.\n\n## الفرق عن الصدقة والزكاة\n\nالصدقة أوسع وقد تنتهي منفعتها سريعًا. الزكاة فريضة لها شروط ومصارف محددة. الوقف تبرع تطوعي مصمم للاستمرار.\n\n## هل يجب أن أكون ثريًا؟\n\nلا؛ النماذج الجماعية تتيح المشاركة بمبالغ مختلفة في صندوق وقفي، ما يجعل الفكرة متاحة لعدد أكبر من الناس، كما في مشاريع القدس الوقفية لدى منبر الأقصى.\n\n## ماذا تسأل قبل التبرع؟\n\nما الأصل؟ كيف يُدار؟ ما المخاطر؟ كيف يُصرف العائد؟ وما التقارير المتاحة؟",
+      "contentMarkdown": "الوقف يعني حبس أصل أو تخصيص مال بحيث يبقى الأصل، بينما تُوجّه منفعته إلى غرض خيري  بدل أن يُنفق مرة واحدة يصبح مصدرًا متكررًا للنفع.\n\n## الفرق عن الصدقة والزكاة\n\nالصدقة أوسع وقد تنتهي منفعتها سريعًا. الزكاة فريضة لها شروط ومصارف محددة. الوقف تبرع تطوعي مصمم للاستمرار.\n\n## هل يجب أن أكون ثريًا؟\n\nلا؛ النماذج الجماعية تتيح المشاركة بمبالغ مختلفة في صندوق وقفي، ما يجعل الفكرة متاحة لعدد أكبر من الناس، كما في مشاريع القدس الوقفية لدى منبر الأقصى.\n\n## ماذا تسأل قبل التبرع؟\n\nما الأصل؟ كيف يُدار؟ ما المخاطر؟ كيف يُصرف العائد؟ وما التقارير المتاحة؟",
       "coverImage": "/assets/blog-cover-47-what-is-waqf.webp",
       "contentStatus": "READY",
       "imageAlt": "ما هو الوقف؟ دليل مبسط لفهم العطاء المستدام"
@@ -5069,7 +5069,7 @@
       "slug": "invalidators-of-fasting-guide",
       "title": "مبطلات الصيام: دليل مختصر لما يفسد الصوم وما لا يفسده",
       "description": "ملخص توعوي لأشهر مبطلات الصيام وبعض المسائل التي يكثر السؤال عنها مع التنبيه إلى الرجوع لأهل العلم في الحالات التفصيلية.",
-      "content": "<p>مع دخول رمضان تكثر الأسئلة عن مبطلات الصيام. هذا إطار عام لا يغني عن سؤال عالم موثوق في المسائل الطبية أو الفقهية الدقيقة.</p>\n<h2>الأكل والشرب والجماع</h2>\n<p>الأكل أو الشرب عمدًا يفسد الصوم؛ أما الناسي فصومه صحيح كما ثبت في الحديث. الجماع نهارًا يفسد الصوم وله أحكام تفصيلية في القضاء والكفارة.</p>\n<h2>الحيض والعلاج الطبي</h2>\n<p>يبطل الصوم ببدء الحيض أو النفاس. وبعض الإجراءات الطبية لا تفطر بينما تفطر أخرى؛ لا تؤخر علاجًا ضروريًا بسبب مقال — اسأل طبيبك وعالمًا مؤهلًا.</p>\n<h2>لا تجعل الشك وسواسًا</h2>\n<p>النزف البسيط أو استعمال السواك له أحكام معروفة. تعلم الأساسيات قبل رمضان بدل البحث المتوتر أثناء الصيام.</p>",
+      "content": "<p>مع دخول رمضان تكثر الأسئلة عن مبطلات الصيام. هذا إطار عام لا يغني عن سؤال عالم موثوق في المسائل الطبية أو الفقهية الدقيقة.</p>\n<h2>الأكل والشرب والجماع</h2>\n<p>الأكل أو الشرب عمدًا يفسد الصوم؛ أما الناسي فصومه صحيح كما ثبت في الحديث. الجماع نهارًا يفسد الصوم وله أحكام تفصيلية في القضاء والكفارة.</p>\n<h2>الحيض والعلاج الطبي</h2>\n<p>يبطل الصوم ببدء الحيض أو النفاس. وبعض الإجراءات الطبية لا تفطر بينما تفطر أخرى؛ لا تؤخر علاجًا ضروريًا بسبب مقال  اسأل طبيبك وعالمًا مؤهلًا.</p>\n<h2>لا تجعل الشك وسواسًا</h2>\n<p>النزف البسيط أو استعمال السواك له أحكام معروفة. تعلم الأساسيات قبل رمضان بدل البحث المتوتر أثناء الصيام.</p>",
       "image": "/assets/blog-cover-48-fasting-invalidators.webp",
       "published": true,
       "categoryName": "رمضان والمواسم",
@@ -5097,7 +5097,7 @@
           "slug": null
         }
       ],
-      "contentMarkdown": "مع دخول رمضان تكثر الأسئلة عن مبطلات الصيام. هذا إطار عام لا يغني عن سؤال عالم موثوق في المسائل الطبية أو الفقهية الدقيقة.\n\n## الأكل والشرب والجماع\n\nالأكل أو الشرب عمدًا يفسد الصوم؛ أما الناسي فصومه صحيح كما ثبت في الحديث. الجماع نهارًا يفسد الصوم وله أحكام تفصيلية في القضاء والكفارة.\n\n## الحيض والعلاج الطبي\n\nيبطل الصوم ببدء الحيض أو النفاس. وبعض الإجراءات الطبية لا تفطر بينما تفطر أخرى؛ لا تؤخر علاجًا ضروريًا بسبب مقال — اسأل طبيبك وعالمًا مؤهلًا.\n\n## لا تجعل الشك وسواسًا\n\nالنزف البسيط أو استعمال السواك له أحكام معروفة. تعلم الأساسيات قبل رمضان بدل البحث المتوتر أثناء الصيام.",
+      "contentMarkdown": "مع دخول رمضان تكثر الأسئلة عن مبطلات الصيام. هذا إطار عام لا يغني عن سؤال عالم موثوق في المسائل الطبية أو الفقهية الدقيقة.\n\n## الأكل والشرب والجماع\n\nالأكل أو الشرب عمدًا يفسد الصوم؛ أما الناسي فصومه صحيح كما ثبت في الحديث. الجماع نهارًا يفسد الصوم وله أحكام تفصيلية في القضاء والكفارة.\n\n## الحيض والعلاج الطبي\n\nيبطل الصوم ببدء الحيض أو النفاس. وبعض الإجراءات الطبية لا تفطر بينما تفطر أخرى؛ لا تؤخر علاجًا ضروريًا بسبب مقال  اسأل طبيبك وعالمًا مؤهلًا.\n\n## لا تجعل الشك وسواسًا\n\nالنزف البسيط أو استعمال السواك له أحكام معروفة. تعلم الأساسيات قبل رمضان بدل البحث المتوتر أثناء الصيام.",
       "coverImage": "/assets/blog-cover-48-fasting-invalidators.webp",
       "contentStatus": "READY",
       "imageAlt": "مبطلات الصيام: دليل مختصر لما يفسد الصوم وما لا يفسده"
@@ -5128,7 +5128,7 @@
         {
           "locale": "en",
           "title": "The pillars and conditions of Waqf: what makes a Waqf valid and sustainable",
-          "description": "Learn the essential elements of Waqf — the founder, the asset, the beneficiary and the formula — and why modern Waqf also needs governance, law and professional management.",
+          "description": "Learn the essential elements of Waqf  the founder, the asset, the beneficiary and the formula  and why modern Waqf also needs governance, law and professional management.",
           "content": null,
           "image": null,
           "slug": null
@@ -5239,7 +5239,7 @@
         {
           "locale": "en",
           "title": "Zakat, Sadaqah and Waqf: the differences, and when to choose each",
-          "description": "A clear comparison of Zakat, Sadaqah and Waqf — ruling, beneficiary, flexibility and sustainability — to help you direct your wealth correctly.",
+          "description": "A clear comparison of Zakat, Sadaqah and Waqf  ruling, beneficiary, flexibility and sustainability  to help you direct your wealth correctly.",
           "content": null,
           "image": null,
           "slug": null
@@ -5305,7 +5305,7 @@
         {
           "locale": "tr",
           "title": "Tarihi değiştiren vakıflar: İslam medeniyetinden örnekler",
-          "description": "İslam medeniyetindeki vakıf örnekleri arasında bir yolculuk; sudan ve camilerden okullara ve hastanelere — bugün onlardan ne öğrenebiliriz?",
+          "description": "İslam medeniyetindeki vakıf örnekleri arasında bir yolculuk; sudan ve camilerden okullara ve hastanelere  bugün onlardan ne öğrenebiliriz?",
           "content": null,
           "image": null,
           "slug": null
@@ -5313,7 +5313,7 @@
         {
           "locale": "en",
           "title": "Endowments that changed history: models from Islamic civilisation",
-          "description": "A journey through Waqf models in Islamic civilisation — from water and mosques to schools and hospitals — and what we can learn from them today.",
+          "description": "A journey through Waqf models in Islamic civilisation  from water and mosques to schools and hospitals  and what we can learn from them today.",
           "content": null,
           "image": null,
           "slug": null
@@ -5379,7 +5379,7 @@
         {
           "locale": "tr",
           "title": "Sadakanın fazileti hakkında sahih hadisler ve hayatımızdaki anlamları",
-          "description": "Sadakaya dair meşhur sahih metinler; ihlas, süreklilik ve merhamet anlamlarının pratik şerhiyle — abartılı maddi vaatlerden uzak.",
+          "description": "Sadakaya dair meşhur sahih metinler; ihlas, süreklilik ve merhamet anlamlarının pratik şerhiyle  abartılı maddi vaatlerden uzak.",
           "content": null,
           "image": null,
           "slug": null
@@ -5387,7 +5387,7 @@
         {
           "locale": "en",
           "title": "Authentic hadiths on the virtue of charity and their meanings in our lives",
-          "description": "Well-known authentic texts about charity, with practical explanation of sincerity, constancy and mercy — away from exaggerated material promises.",
+          "description": "Well-known authentic texts about charity, with practical explanation of sincerity, constancy and mercy  away from exaggerated material promises.",
           "content": null,
           "image": null,
           "slug": null
@@ -5513,7 +5513,7 @@
       "slug": "why-sadaqah-jariyah-is-different",
       "title": "لماذا تتميز الصدقة الجارية عن الصدقة المؤقتة؟",
       "description": "مقارنة هادئة بين الصدقة الجارية والمساعدة المباشرة توضح متى يكون الاستمرار مهمًا ومتى تكون الإغاثة العاجلة أولى.",
-      "content": "<p>المساعدة المباشرة تسد حاجة فورية وتنتهي غالبًا باستهلاكها. الصدقة الجارية تُصمّم لتبقى وتكرر نفعها لفترة أطول.</p>\n<h2>متى تختار كل نوع؟</h2>\n<p>إذا كانت الحاجة طارئة — جوع، مرض، نزوح — فالمساعدة المباشرة أولى. وإذا أردت أثرًا يمتد لسنوات، فالصدقة الجارية أنسب.</p>\n<h2>لا تفاضل أحدهما مطلقًا</h2>\n<p>أفضل ممارسة هي الجمع بين الاثنين بحسب القدرة، لا تفضيل نوع على آخر بشكل مطلق.</p>",
+      "content": "<p>المساعدة المباشرة تسد حاجة فورية وتنتهي غالبًا باستهلاكها. الصدقة الجارية تُصمّم لتبقى وتكرر نفعها لفترة أطول.</p>\n<h2>متى تختار كل نوع؟</h2>\n<p>إذا كانت الحاجة طارئة  جوع، مرض، نزوح  فالمساعدة المباشرة أولى. وإذا أردت أثرًا يمتد لسنوات، فالصدقة الجارية أنسب.</p>\n<h2>لا تفاضل أحدهما مطلقًا</h2>\n<p>أفضل ممارسة هي الجمع بين الاثنين بحسب القدرة، لا تفضيل نوع على آخر بشكل مطلق.</p>",
       "image": "/assets/blog-cover-60-jariyah-vs-temporary.webp",
       "published": true,
       "categoryName": "الأوقاف والصدقة الجارية",
@@ -5541,7 +5541,7 @@
           "slug": null
         }
       ],
-      "contentMarkdown": "المساعدة المباشرة تسد حاجة فورية وتنتهي غالبًا باستهلاكها. الصدقة الجارية تُصمّم لتبقى وتكرر نفعها لفترة أطول.\n\n## متى تختار كل نوع؟\n\nإذا كانت الحاجة طارئة — جوع، مرض، نزوح — فالمساعدة المباشرة أولى. وإذا أردت أثرًا يمتد لسنوات، فالصدقة الجارية أنسب.\n\n## لا تفاضل أحدهما مطلقًا\n\nأفضل ممارسة هي الجمع بين الاثنين بحسب القدرة، لا تفضيل نوع على آخر بشكل مطلق.",
+      "contentMarkdown": "المساعدة المباشرة تسد حاجة فورية وتنتهي غالبًا باستهلاكها. الصدقة الجارية تُصمّم لتبقى وتكرر نفعها لفترة أطول.\n\n## متى تختار كل نوع؟\n\nإذا كانت الحاجة طارئة  جوع، مرض، نزوح  فالمساعدة المباشرة أولى. وإذا أردت أثرًا يمتد لسنوات، فالصدقة الجارية أنسب.\n\n## لا تفاضل أحدهما مطلقًا\n\nأفضل ممارسة هي الجمع بين الاثنين بحسب القدرة، لا تفضيل نوع على آخر بشكل مطلق.",
       "coverImage": "/assets/blog-cover-60-jariyah-vs-temporary.webp",
       "contentStatus": "READY",
       "imageAlt": "لماذا تتميز الصدقة الجارية عن الصدقة المؤقتة؟"
@@ -5572,7 +5572,7 @@
         {
           "locale": "en",
           "title": "The best times for charity: tying giving to seasons of good without confining it to them",
-          "description": "When is charity most urgent? Ramadan, the ten days of Dhul-Hijjah and emergencies — and why regular giving matters all year round.",
+          "description": "When is charity most urgent? Ramadan, the ten days of Dhul-Hijjah and emergencies  and why regular giving matters all year round.",
           "content": null,
           "image": null,
           "slug": null
@@ -5601,7 +5601,7 @@
         {
           "locale": "tr",
           "title": "İslam tarihinde vakıf: Rume kuyusundan modern kurumlara",
-          "description": "Vakıf, İslam toplumundaki erken örneklerden eğitim, sağlık ve suyu finanse eden kurumlara nasıl evrildi — bugünün vakıfları için bunun anlamı ne?",
+          "description": "Vakıf, İslam toplumundaki erken örneklerden eğitim, sağlık ve suyu finanse eden kurumlara nasıl evrildi  bugünün vakıfları için bunun anlamı ne?",
           "content": null,
           "image": null,
           "slug": null
@@ -5609,7 +5609,7 @@
         {
           "locale": "en",
           "title": "Waqf in Islamic history: from the well of Ruma to modern institutions",
-          "description": "How Waqf evolved from early models in Muslim society into institutions funding education, health and water — and what that means for endowments today.",
+          "description": "How Waqf evolved from early models in Muslim society into institutions funding education, health and water  and what that means for endowments today.",
           "content": null,
           "image": null,
           "slug": null
@@ -6460,7 +6460,7 @@
         {
           "locale": "en",
           "title": "Emergency medical supplies: from needs list to the patient's bedside",
-          "description": "The journey of emergency medical supply — from identifying field needs to actually reaching the patient's bedside in crisis areas.",
+          "description": "The journey of emergency medical supply  from identifying field needs to actually reaching the patient's bedside in crisis areas.",
           "content": null,
           "image": null,
           "slug": null
@@ -6830,7 +6830,7 @@
         {
           "locale": "en",
           "title": "Summer in displacement camps: needs that differ from winter but are no less harsh",
-          "description": "Summer brings displaced families different needs — water, cooling, hygiene and disease prevention.",
+          "description": "Summer brings displaced families different needs  water, cooling, hygiene and disease prevention.",
           "content": null,
           "image": null,
           "slug": null
@@ -7044,7 +7044,7 @@
         {
           "locale": "tr",
           "title": "Perde arkasındaki profesyonel insani çalışma: bağışçının görmediği",
-          "description": "Değerlendirme, tedarik, lojistik, belgeleme ve denetim — yardımı güvenilir kılan görünmeyen çark.",
+          "description": "Değerlendirme, tedarik, lojistik, belgeleme ve denetim  yardımı güvenilir kılan görünmeyen çark.",
           "content": null,
           "image": null,
           "slug": null
@@ -7052,7 +7052,7 @@
         {
           "locale": "en",
           "title": "Professional humanitarian work behind the scenes: what donors don't see",
-          "description": "Assessment, procurement, logistics, documentation and auditing — the unseen machinery that makes aid trustworthy.",
+          "description": "Assessment, procurement, logistics, documentation and auditing  the unseen machinery that makes aid trustworthy.",
           "content": null,
           "image": null,
           "slug": null
@@ -7163,7 +7163,7 @@
         {
           "locale": "en",
           "title": "Friendship and kinship in Islam: relationships that need presence, not mere courtesies",
-          "description": "On friendship, family ties and visiting etiquette in Islam — keeping relationships alive through honesty, boundaries and mercy without pretence.",
+          "description": "On friendship, family ties and visiting etiquette in Islam  keeping relationships alive through honesty, boundaries and mercy without pretence.",
           "content": null,
           "image": null,
           "slug": null
@@ -7274,7 +7274,7 @@
         {
           "locale": "en",
           "title": "Eid for children and orphans: creating joy that preserves dignity",
-          "description": "How to design Eid clothing and gift programmes for children and orphans with dignity — from size and gift selection to privacy and family involvement.",
+          "description": "How to design Eid clothing and gift programmes for children and orphans with dignity  from size and gift selection to privacy and family involvement.",
           "content": null,
           "image": null,
           "slug": null
@@ -7644,7 +7644,7 @@
         {
           "locale": "en",
           "title": "Providing water in the Qur'an and Sunnah: worship tied to life's most basic right",
-          "description": "On the status of water and giving drink in Islamic texts, and how a donation becomes safe water with operation and maintenance — not just a temporary tank.",
+          "description": "On the status of water and giving drink in Islamic texts, and how a donation becomes safe water with operation and maintenance  not just a temporary tank.",
           "content": null,
           "image": null,
           "slug": null
@@ -7829,7 +7829,7 @@
         {
           "locale": "en",
           "title": "A beginner's guide to Hajj: from preparation to completing the rites",
-          "description": "A simple guide to the Hajj journey — from preparation and ihram to Arafah, Muzdalifah, Mina and tawaf — with practical reminders before travel.",
+          "description": "A simple guide to the Hajj journey  from preparation and ihram to Arafah, Muzdalifah, Mina and tawaf  with practical reminders before travel.",
           "content": null,
           "image": null,
           "slug": null
@@ -7857,7 +7857,7 @@
       "translations": [
         {
           "locale": "tr",
-          "title": "Haccın üç türü: temettü, kıran ve ifrad — sade anlatım",
+          "title": "Haccın üç türü: temettü, kıran ve ifrad  sade anlatım",
           "description": "Haccın üç türünü tanıyın: temettü, kıran ve ifrad; her birini ayıran nedir ve hacı bunu ihramdan önce neden belirlemeli?",
           "content": null,
           "image": null,
@@ -7866,7 +7866,7 @@
         {
           "locale": "en",
           "title": "The three types of Hajj: tamattu', qiran and ifrad, made simple",
-          "description": "Learn the three types of Hajj — tamattu', qiran and ifrad — what distinguishes each, and why a pilgrim must decide before ihram.",
+          "description": "Learn the three types of Hajj  tamattu', qiran and ifrad  what distinguishes each, and why a pilgrim must decide before ihram.",
           "content": null,
           "image": null,
           "slug": null
@@ -7969,7 +7969,7 @@
         {
           "locale": "tr",
           "title": "Hacda yaygın hatalar: kaygının yüke dönüşmesini önlemek",
-          "description": "Hacda görülen pratik hatalar: yetersiz hazırlık, izdiham, yorgunluk, güvenilmez bilgiye dayanmak — ve bunlarla sükûnetle başa çıkmanın yolu.",
+          "description": "Hacda görülen pratik hatalar: yetersiz hazırlık, izdiham, yorgunluk, güvenilmez bilgiye dayanmak  ve bunlarla sükûnetle başa çıkmanın yolu.",
           "content": null,
           "image": null,
           "slug": null
@@ -7977,7 +7977,7 @@
         {
           "locale": "en",
           "title": "Common mistakes in Hajj: keeping anxiety from becoming a burden",
-          "description": "Common practical mistakes in Hajj — poor preparation, crowds, exhaustion, unreliable information — and how to handle them calmly.",
+          "description": "Common practical mistakes in Hajj  poor preparation, crowds, exhaustion, unreliable information  and how to handle them calmly.",
           "content": null,
           "image": null,
           "slug": null
@@ -8014,7 +8014,7 @@
         {
           "locale": "en",
           "title": "Hajj for the elderly, the ill, pregnant and nursing women: health planning before the rites",
-          "description": "A general health guide for preparing for Hajj with old age, chronic illness, pregnancy or nursing — and when to consult a doctor and a scholar.",
+          "description": "A general health guide for preparing for Hajj with old age, chronic illness, pregnancy or nursing  and when to consult a doctor and a scholar.",
           "content": null,
           "image": null,
           "slug": null
@@ -8384,7 +8384,7 @@
         {
           "locale": "en",
           "title": "The virtue of Ramadan and the pillars of fasting: meaning before details",
-          "description": "A simple guide linking the virtue of Ramadan to the meaning, pillars and purposes of fasting — instead of treating the month as a list of separate tasks.",
+          "description": "A simple guide linking the virtue of Ramadan to the meaning, pillars and purposes of fasting  instead of treating the month as a list of separate tasks.",
           "content": null,
           "image": null,
           "slug": null
@@ -8421,7 +8421,7 @@
         {
           "locale": "en",
           "title": "The Prophet's ﷺ practices in Ramadan: following his way without turning the month into an exhausting list",
-          "description": "How to follow the Prophet's ﷺ guidance in Ramadan — fasting, night prayer, Qur'an and generosity — while verifying widely shared narrations.",
+          "description": "How to follow the Prophet's ﷺ guidance in Ramadan  fasting, night prayer, Qur'an and generosity  while verifying widely shared narrations.",
           "content": null,
           "image": null,
           "slug": null
@@ -8532,7 +8532,7 @@
         {
           "locale": "en",
           "title": "Fasting while travelling or ill: using the concession consciously",
-          "description": "An awareness guide on fasting in travel and illness — combining medical advice with scholarly reference, without issuing blanket rulings for individual cases.",
+          "description": "An awareness guide on fasting in travel and illness  combining medical advice with scholarly reference, without issuing blanket rulings for individual cases.",
           "content": null,
           "image": null,
           "slug": null
@@ -8569,7 +8569,7 @@
         {
           "locale": "en",
           "title": "Pregnancy and breastfeeding in Ramadan: questions to discuss before deciding to fast",
-          "description": "A general health and religious article for pregnant and nursing women before Ramadan: fluids, nutrition, symptoms, breastfeeding — and when to consult a doctor and a scholar.",
+          "description": "A general health and religious article for pregnant and nursing women before Ramadan: fluids, nutrition, symptoms, breastfeeding  and when to consult a doctor and a scholar.",
           "content": null,
           "image": null,
           "slug": null
@@ -8680,7 +8680,7 @@
         {
           "locale": "en",
           "title": "Suhoor and nutrition in Ramadan: keeping your energy without excess",
-          "description": "General dietary guidance for a more balanced suhoor and iftar: fluids, protein, fibre, avoiding excess — and when medical advice is needed.",
+          "description": "General dietary guidance for a more balanced suhoor and iftar: fluids, protein, fibre, avoiding excess  and when medical advice is needed.",
           "content": null,
           "image": null,
           "slug": null
@@ -8717,7 +8717,7 @@
         {
           "locale": "en",
           "title": "Sleep, focus and sluggishness in Ramadan: a more realistic daily plan",
-          "description": "How to reduce sluggishness and sleep disruption in Ramadan: practical guidance for organising sleep, work, food and naps — without exaggerated medical promises.",
+          "description": "How to reduce sluggishness and sleep disruption in Ramadan: practical guidance for organising sleep, work, food and naps  without exaggerated medical promises.",
           "content": null,
           "image": null,
           "slug": null
@@ -8791,7 +8791,7 @@
         {
           "locale": "en",
           "title": "Ramadan with children: planting meaning before demanding achievement",
-          "description": "Practical parenting ideas for Ramadan with children: gradual fasting, prayer, Qur'an, giving and activities — without pressure or comparison.",
+          "description": "Practical parenting ideas for Ramadan with children: gradual fasting, prayer, Qur'an, giving and activities  without pressure or comparison.",
           "content": null,
           "image": null,
           "slug": null
@@ -8939,7 +8939,7 @@
         {
           "locale": "en",
           "title": "Smoking and Ramadan: making the month the start of a real quitting plan",
-          "description": "Using the hours of abstinence in Ramadan to build a smoking-cessation plan with medical and behavioural support — instead of intensive relapse after iftar.",
+          "description": "Using the hours of abstinence in Ramadan to build a smoking-cessation plan with medical and behavioural support  instead of intensive relapse after iftar.",
           "content": null,
           "image": null,
           "slug": null
@@ -9050,7 +9050,7 @@
         {
           "locale": "en",
           "title": "The virtue of Friday in Ramadan and voluntary fasting: seasons without unverified numbers",
-          "description": "Understanding the virtue of Friday in Ramadan and voluntary fasting without circulating unverified virtues and figures — focusing on what is established and sustainable.",
+          "description": "Understanding the virtue of Friday in Ramadan and voluntary fasting without circulating unverified virtues and figures  focusing on what is established and sustainable.",
           "content": null,
           "image": null,
           "slug": null
@@ -9087,7 +9087,7 @@
         {
           "locale": "en",
           "title": "Writing spiritual goals that last through Ramadan and beyond",
-          "description": "A practical method for setting measurable spiritual goals in Ramadan that continue after the month — without perfectionism or burnout.",
+          "description": "A practical method for setting measurable spiritual goals in Ramadan that continue after the month  without perfectionism or burnout.",
           "content": null,
           "image": null,
           "slug": null
@@ -9124,7 +9124,7 @@
         {
           "locale": "en",
           "title": "The Hijri calendar: how months connect to seasons and worship without confusion",
-          "description": "A simple guide to the Hijri calendar and its relation to Ramadan, Hajj, Zakat and the seasons — and why month beginnings may differ between countries.",
+          "description": "A simple guide to the Hijri calendar and its relation to Ramadan, Hajj, Zakat and the seasons  and why month beginnings may differ between countries.",
           "content": null,
           "image": null,
           "slug": null
@@ -9235,7 +9235,7 @@
         {
           "locale": "en",
           "title": "Sleep and caffeine in Ramadan and the seasons: reducing headaches and routine swings",
-          "description": "General guidance for gradually adjusting caffeine and sleep before Ramadan — and when medical advice is needed.",
+          "description": "General guidance for gradually adjusting caffeine and sleep before Ramadan  and when medical advice is needed.",
           "content": null,
           "image": null,
           "slug": null
@@ -9420,7 +9420,7 @@
         {
           "locale": "en",
           "title": "Impact stories in charitable work: telling a person's story without exploiting their suffering",
-          "description": "A guide to the ethics of beneficiary stories: consent, privacy, verification, no exaggeration — and showing people through their strengths, not only their suffering.",
+          "description": "A guide to the ethics of beneficiary stories: consent, privacy, verification, no exaggeration  and showing people through their strengths, not only their suffering.",
           "content": null,
           "image": null,
           "slug": null
@@ -9457,7 +9457,7 @@
         {
           "locale": "en",
           "title": "Malaria and vector-borne diseases in crises: prevention starts with the environment and early treatment",
-          "description": "Awareness content on malaria and vector-borne diseases in crises: environment, prevention, diagnosis and early treatment — without self-diagnosis.",
+          "description": "Awareness content on malaria and vector-borne diseases in crises: environment, prevention, diagnosis and early treatment  without self-diagnosis.",
           "content": null,
           "image": null,
           "slug": null
@@ -9716,7 +9716,7 @@
         {
           "locale": "en",
           "title": "Prayer on time and raising children upon it: from example to habit",
-          "description": "Practical ideas for keeping up prayer and raising children upon it through example, routine and gradual steps — away from threats and comparison.",
+          "description": "Practical ideas for keeping up prayer and raising children upon it through example, routine and gradual steps  away from threats and comparison.",
           "content": null,
           "image": null,
           "slug": null
@@ -9827,7 +9827,7 @@
         {
           "locale": "en",
           "title": "Seeking knowledge in Islam: from individual worship to building a community",
-          "description": "Linking the value of seeking knowledge in Islam to supporting education today — from personal reading and learning to protecting children's right to school.",
+          "description": "Linking the value of seeking knowledge in Islam to supporting education today  from personal reading and learning to protecting children's right to school.",
           "content": null,
           "image": null,
           "slug": null
@@ -9901,7 +9901,7 @@
         {
           "locale": "en",
           "title": "Kindness to animals in Islam: a moral value shown in daily details",
-          "description": "On kindness to animals in Islam — feeding, care and prohibition of cruelty — and its connection to the ethics of slaughter and qurbani.",
+          "description": "On kindness to animals in Islam  feeding, care and prohibition of cruelty  and its connection to the ethics of slaughter and qurbani.",
           "content": null,
           "image": null,
           "slug": null
@@ -10234,7 +10234,7 @@
         {
           "locale": "en",
           "title": "Disability-inclusive humanitarian response: accessibility is not an add-on after design",
-          "description": "Why inclusion must be built into aid from the start — and what it changes in practice for people with disabilities.",
+          "description": "Why inclusion must be built into aid from the start  and what it changes in practice for people with disabilities.",
           "content": null,
           "image": null,
           "slug": null
@@ -10529,7 +10529,7 @@
         },
         {
           "locale": "en",
-          "title": "Livelihood recovery after floods: why a family needs seeds, tools and capital — not only a food parcel",
+          "title": "Livelihood recovery after floods: why a family needs seeds, tools and capital  not only a food parcel",
           "description": "Moving from relief to recovery: restoring the assets families need to earn again after floods.",
           "content": null,
           "image": null,
@@ -10566,7 +10566,7 @@
         },
         {
           "locale": "en",
-          "title": "Solar irrigation for small farms: an energy solution — or the start of a bigger water question?",
+          "title": "Solar irrigation for small farms: an energy solution  or the start of a bigger water question?",
           "description": "Solar irrigation cuts costs for small farmers, but sustainable use needs clear rules for sharing groundwater.",
           "content": null,
           "image": null,
@@ -10841,7 +10841,7 @@
       "slug": "revolving-qard-hasan-livelihoods-model",
       "title": "القرض الحسن الدوّار: كيف يمكن لرأس مال واحد أن يفتح أبواب رزق لأكثر من أسرة؟",
       "description": "بعض الأسر تملك مهارة وفكرة وسوقًا صغيرًا، لكن ينقصها رأس المال الأول لشراء ماكينة أو بضاعة أو أدوات. نموذج القرض الحسن يمكن أن يوفر تمويلًا بلا فائدة، ثم ت…",
-      "content": "<p>--- index: 204 title: \"القرض الحسن الدوّار: كيف يمكن لرأس مال واحد أن يفتح أبواب رزق لأكثر من أسرة؟\" slug: revolving-qard-hasan-livelihoods-model category: \"التمكين وسبل العيش\" status: SHARIA_REVIEW_REQUIRED image: 204-revolving-qard-hasan-livelihoods.jpg ---</p>\n<h2>لماذا يهم هذا الموضوع؟</h2>\n<p>بعض الأسر تملك مهارة وفكرة وسوقًا صغيرًا، لكن ينقصها رأس المال الأول لشراء ماكينة أو بضاعة أو أدوات. نموذج القرض الحسن يمكن أن يوفر تمويلًا بلا فائدة، ثم تعاد المبالغ المسددة — وفق تصميم البرنامج — إلى دورة تمويل مستفيدين آخرين. جاذبية النموذج تأتي من إمكانية تدوير رأس المال، لكن نجاحه ليس تلقائيًا؛ يحتاج دراسة قدرة السداد، حماية المستفيد من الضغط، وإدارة مالية وشرعية واضحة.</p>\n<h2>كيف يعمل الحل على أرض الواقع؟</h2>\n<p>يُختار المستفيد بعد تقييم المشروع والدخل والمخاطر، ثم يحدد مبلغ يناسب النشاط وجدول سداد واقعيًا. يصاحب التمويل عادة تدريب في الإدارة البسيطة والتسعير والتدفق النقدي. بعد بدء المشروع تبدأ المتابعة، ويمكن تعديل الجدول في الحالات الاستثنائية وفق سياسة معلنة. المبالغ التي تعود إلى الصندوق قد تستخدم لتمويل دورة جديدة، ما يجعل جودة التحصيل العادل والإدارة عنصرًا أساسيًا في استدامة النموذج.</p>\n<h2>ما الذي يجعل التنفيذ جيدًا؟</h2>\n<p>يجب الفصل بين هدف التمكين وهدف التحصيل. المؤسسة ليست بنكًا تجاريًا يطارد العائد، لكنها كذلك مسؤولة عن حماية أموال البرنامج وعدالته. تحتاج معايير الاختيار إلى شفافية، ويجب منع تحميل المستفيد رسومًا مبهمة أو شروطًا لا يفهمها. كما ينبغي وجود متابعة تجارية حقيقية حتى لا يُترك المقترض وحده أمام تقلبات السوق.</p>\n<h2>متى لا يكون الحل كافيًا؟</h2>\n<p>الأسرة التي لا تملك قدرة متوقعة على السداد أو تمر بحالة طارئة قد تحتاج منحة أو مساعدة مباشرة لا قرضًا. كذلك لا ينبغي تمويل نشاط بلا سوق لمجرد توفر الصندوق. وفي مناطق النزاع يمكن أن تتغير الظروف فجأة، لذلك يلزم تصميم سياسات للتعثر وإعادة الجدولة وإدارة الخسائر بدل نقل المخاطر كاملة إلى المستفيد.</p>\n<h2>من النشاط إلى الأثر</h2>\n<p>يُقاس النجاح باستمرار المشروعات، وتحسن الدخل، ونسبة السداد دون ضغط مفرط، وعدد دورات إعادة استخدام رأس المال، ونسبة المستفيدين الذين خرجوا من الاعتماد المستمر على المساعدة. وينبغي نشر طريقة حساب هذه المؤشرات بوضوح لأن تدوير المال لا يعني تلقائيًا أن كل دورة حققت أثرًا متساويًا.</p>\n<h2>أسئلة يجب طرحها قبل دعم مشروع مشابه</h2>\n<p>من يراجع الهيكل الشرعي؟ كيف تُحدد الأهلية؟ ما الرسوم إن وجدت؟ ماذا يحدث عند التعثر؟ هل توجد حماية من الإفراط في الاقتراض؟ كيف تدار الأموال المسددة؟ وما الذي يثبت أن المشروع يولد دخلًا فعليًا؟</p>\n<h2>خطوة عملية</h2>\n<p>هذا الموضوع يحتاج مراجعة شرعية وقانونية وتشغيلية قبل تحويله إلى عرض تبرع أو وصف منتج مالي. في المحتوى العام يمكن شرح الفكرة، أما تفاصيل العقود والأحكام فتُعتمد من الجهة المختصة.</p>\n<p>&gt; **ملاحظة تحريرية:** هذا المقال مادة معرفية عامة مبنية على تحليل موضوعات إنسانية وتنموية منشورة كمراجع Benchmark. لا يُعد وصفًا لمشروع منفذ من مؤسسة منبر الأقصى الدولية، ولا تُستخدم أي أرقام أو مواقع أو وعود تنفيذية إلا بعد توثيقها من فريق المؤسسة.</p>\n<h2>مراجع Benchmark داخلية</h2>\n<p>https://www.islamic-relief.me/what-we-do/livelihoods/ https://www.islamic-relief.me/wp-content/uploads/2020/03/2011-Annual-Report.pdf</p>",
+      "content": "<p>--- index: 204 title: \"القرض الحسن الدوّار: كيف يمكن لرأس مال واحد أن يفتح أبواب رزق لأكثر من أسرة؟\" slug: revolving-qard-hasan-livelihoods-model category: \"التمكين وسبل العيش\" status: SHARIA_REVIEW_REQUIRED image: 204-revolving-qard-hasan-livelihoods.jpg ---</p>\n<h2>لماذا يهم هذا الموضوع؟</h2>\n<p>بعض الأسر تملك مهارة وفكرة وسوقًا صغيرًا، لكن ينقصها رأس المال الأول لشراء ماكينة أو بضاعة أو أدوات. نموذج القرض الحسن يمكن أن يوفر تمويلًا بلا فائدة، ثم تعاد المبالغ المسددة  وفق تصميم البرنامج  إلى دورة تمويل مستفيدين آخرين. جاذبية النموذج تأتي من إمكانية تدوير رأس المال، لكن نجاحه ليس تلقائيًا؛ يحتاج دراسة قدرة السداد، حماية المستفيد من الضغط، وإدارة مالية وشرعية واضحة.</p>\n<h2>كيف يعمل الحل على أرض الواقع؟</h2>\n<p>يُختار المستفيد بعد تقييم المشروع والدخل والمخاطر، ثم يحدد مبلغ يناسب النشاط وجدول سداد واقعيًا. يصاحب التمويل عادة تدريب في الإدارة البسيطة والتسعير والتدفق النقدي. بعد بدء المشروع تبدأ المتابعة، ويمكن تعديل الجدول في الحالات الاستثنائية وفق سياسة معلنة. المبالغ التي تعود إلى الصندوق قد تستخدم لتمويل دورة جديدة، ما يجعل جودة التحصيل العادل والإدارة عنصرًا أساسيًا في استدامة النموذج.</p>\n<h2>ما الذي يجعل التنفيذ جيدًا؟</h2>\n<p>يجب الفصل بين هدف التمكين وهدف التحصيل. المؤسسة ليست بنكًا تجاريًا يطارد العائد، لكنها كذلك مسؤولة عن حماية أموال البرنامج وعدالته. تحتاج معايير الاختيار إلى شفافية، ويجب منع تحميل المستفيد رسومًا مبهمة أو شروطًا لا يفهمها. كما ينبغي وجود متابعة تجارية حقيقية حتى لا يُترك المقترض وحده أمام تقلبات السوق.</p>\n<h2>متى لا يكون الحل كافيًا؟</h2>\n<p>الأسرة التي لا تملك قدرة متوقعة على السداد أو تمر بحالة طارئة قد تحتاج منحة أو مساعدة مباشرة لا قرضًا. كذلك لا ينبغي تمويل نشاط بلا سوق لمجرد توفر الصندوق. وفي مناطق النزاع يمكن أن تتغير الظروف فجأة، لذلك يلزم تصميم سياسات للتعثر وإعادة الجدولة وإدارة الخسائر بدل نقل المخاطر كاملة إلى المستفيد.</p>\n<h2>من النشاط إلى الأثر</h2>\n<p>يُقاس النجاح باستمرار المشروعات، وتحسن الدخل، ونسبة السداد دون ضغط مفرط، وعدد دورات إعادة استخدام رأس المال، ونسبة المستفيدين الذين خرجوا من الاعتماد المستمر على المساعدة. وينبغي نشر طريقة حساب هذه المؤشرات بوضوح لأن تدوير المال لا يعني تلقائيًا أن كل دورة حققت أثرًا متساويًا.</p>\n<h2>أسئلة يجب طرحها قبل دعم مشروع مشابه</h2>\n<p>من يراجع الهيكل الشرعي؟ كيف تُحدد الأهلية؟ ما الرسوم إن وجدت؟ ماذا يحدث عند التعثر؟ هل توجد حماية من الإفراط في الاقتراض؟ كيف تدار الأموال المسددة؟ وما الذي يثبت أن المشروع يولد دخلًا فعليًا؟</p>\n<h2>خطوة عملية</h2>\n<p>هذا الموضوع يحتاج مراجعة شرعية وقانونية وتشغيلية قبل تحويله إلى عرض تبرع أو وصف منتج مالي. في المحتوى العام يمكن شرح الفكرة، أما تفاصيل العقود والأحكام فتُعتمد من الجهة المختصة.</p>\n<p>&gt; **ملاحظة تحريرية:** هذا المقال مادة معرفية عامة مبنية على تحليل موضوعات إنسانية وتنموية منشورة كمراجع Benchmark. لا يُعد وصفًا لمشروع منفذ من مؤسسة منبر الأقصى الدولية، ولا تُستخدم أي أرقام أو مواقع أو وعود تنفيذية إلا بعد توثيقها من فريق المؤسسة.</p>\n<h2>مراجع Benchmark داخلية</h2>\n<p>https://www.islamic-relief.me/what-we-do/livelihoods/ https://www.islamic-relief.me/wp-content/uploads/2020/03/2011-Annual-Report.pdf</p>",
       "image": "/assets/blog/204-revolving-qard-hasan-livelihoods.webp",
       "published": true,
       "categoryName": "سبل العيش والبيئة",
@@ -10869,7 +10869,7 @@
           "slug": null
         }
       ],
-      "contentMarkdown": "--- index: 204 title: \"القرض الحسن الدوّار: كيف يمكن لرأس مال واحد أن يفتح أبواب رزق لأكثر من أسرة؟\" slug: revolving-qard-hasan-livelihoods-model category: \"التمكين وسبل العيش\" status: SHARIA_REVIEW_REQUIRED image: 204-revolving-qard-hasan-livelihoods.jpg ---\n\n## لماذا يهم هذا الموضوع؟\n\nبعض الأسر تملك مهارة وفكرة وسوقًا صغيرًا، لكن ينقصها رأس المال الأول لشراء ماكينة أو بضاعة أو أدوات. نموذج القرض الحسن يمكن أن يوفر تمويلًا بلا فائدة، ثم تعاد المبالغ المسددة — وفق تصميم البرنامج — إلى دورة تمويل مستفيدين آخرين. جاذبية النموذج تأتي من إمكانية تدوير رأس المال، لكن نجاحه ليس تلقائيًا؛ يحتاج دراسة قدرة السداد، حماية المستفيد من الضغط، وإدارة مالية وشرعية واضحة.\n\n## كيف يعمل الحل على أرض الواقع؟\n\nيُختار المستفيد بعد تقييم المشروع والدخل والمخاطر، ثم يحدد مبلغ يناسب النشاط وجدول سداد واقعيًا. يصاحب التمويل عادة تدريب في الإدارة البسيطة والتسعير والتدفق النقدي. بعد بدء المشروع تبدأ المتابعة، ويمكن تعديل الجدول في الحالات الاستثنائية وفق سياسة معلنة. المبالغ التي تعود إلى الصندوق قد تستخدم لتمويل دورة جديدة، ما يجعل جودة التحصيل العادل والإدارة عنصرًا أساسيًا في استدامة النموذج.\n\n## ما الذي يجعل التنفيذ جيدًا؟\n\nيجب الفصل بين هدف التمكين وهدف التحصيل. المؤسسة ليست بنكًا تجاريًا يطارد العائد، لكنها كذلك مسؤولة عن حماية أموال البرنامج وعدالته. تحتاج معايير الاختيار إلى شفافية، ويجب منع تحميل المستفيد رسومًا مبهمة أو شروطًا لا يفهمها. كما ينبغي وجود متابعة تجارية حقيقية حتى لا يُترك المقترض وحده أمام تقلبات السوق.\n\n## متى لا يكون الحل كافيًا؟\n\nالأسرة التي لا تملك قدرة متوقعة على السداد أو تمر بحالة طارئة قد تحتاج منحة أو مساعدة مباشرة لا قرضًا. كذلك لا ينبغي تمويل نشاط بلا سوق لمجرد توفر الصندوق. وفي مناطق النزاع يمكن أن تتغير الظروف فجأة، لذلك يلزم تصميم سياسات للتعثر وإعادة الجدولة وإدارة الخسائر بدل نقل المخاطر كاملة إلى المستفيد.\n\n## من النشاط إلى الأثر\n\nيُقاس النجاح باستمرار المشروعات، وتحسن الدخل، ونسبة السداد دون ضغط مفرط، وعدد دورات إعادة استخدام رأس المال، ونسبة المستفيدين الذين خرجوا من الاعتماد المستمر على المساعدة. وينبغي نشر طريقة حساب هذه المؤشرات بوضوح لأن تدوير المال لا يعني تلقائيًا أن كل دورة حققت أثرًا متساويًا.\n\n## أسئلة يجب طرحها قبل دعم مشروع مشابه\n\nمن يراجع الهيكل الشرعي؟ كيف تُحدد الأهلية؟ ما الرسوم إن وجدت؟ ماذا يحدث عند التعثر؟ هل توجد حماية من الإفراط في الاقتراض؟ كيف تدار الأموال المسددة؟ وما الذي يثبت أن المشروع يولد دخلًا فعليًا؟\n\n## خطوة عملية\n\nهذا الموضوع يحتاج مراجعة شرعية وقانونية وتشغيلية قبل تحويله إلى عرض تبرع أو وصف منتج مالي. في المحتوى العام يمكن شرح الفكرة، أما تفاصيل العقود والأحكام فتُعتمد من الجهة المختصة.\n\n> **ملاحظة تحريرية:** هذا المقال مادة معرفية عامة مبنية على تحليل موضوعات إنسانية وتنموية منشورة كمراجع Benchmark. لا يُعد وصفًا لمشروع منفذ من مؤسسة منبر الأقصى الدولية، ولا تُستخدم أي أرقام أو مواقع أو وعود تنفيذية إلا بعد توثيقها من فريق المؤسسة.\n\n## مراجع Benchmark داخلية\n\nhttps://www.islamic-relief.me/what-we-do/livelihoods/ https://www.islamic-relief.me/wp-content/uploads/2020/03/2011-Annual-Report.pdf",
+      "contentMarkdown": "--- index: 204 title: \"القرض الحسن الدوّار: كيف يمكن لرأس مال واحد أن يفتح أبواب رزق لأكثر من أسرة؟\" slug: revolving-qard-hasan-livelihoods-model category: \"التمكين وسبل العيش\" status: SHARIA_REVIEW_REQUIRED image: 204-revolving-qard-hasan-livelihoods.jpg ---\n\n## لماذا يهم هذا الموضوع؟\n\nبعض الأسر تملك مهارة وفكرة وسوقًا صغيرًا، لكن ينقصها رأس المال الأول لشراء ماكينة أو بضاعة أو أدوات. نموذج القرض الحسن يمكن أن يوفر تمويلًا بلا فائدة، ثم تعاد المبالغ المسددة  وفق تصميم البرنامج  إلى دورة تمويل مستفيدين آخرين. جاذبية النموذج تأتي من إمكانية تدوير رأس المال، لكن نجاحه ليس تلقائيًا؛ يحتاج دراسة قدرة السداد، حماية المستفيد من الضغط، وإدارة مالية وشرعية واضحة.\n\n## كيف يعمل الحل على أرض الواقع؟\n\nيُختار المستفيد بعد تقييم المشروع والدخل والمخاطر، ثم يحدد مبلغ يناسب النشاط وجدول سداد واقعيًا. يصاحب التمويل عادة تدريب في الإدارة البسيطة والتسعير والتدفق النقدي. بعد بدء المشروع تبدأ المتابعة، ويمكن تعديل الجدول في الحالات الاستثنائية وفق سياسة معلنة. المبالغ التي تعود إلى الصندوق قد تستخدم لتمويل دورة جديدة، ما يجعل جودة التحصيل العادل والإدارة عنصرًا أساسيًا في استدامة النموذج.\n\n## ما الذي يجعل التنفيذ جيدًا؟\n\nيجب الفصل بين هدف التمكين وهدف التحصيل. المؤسسة ليست بنكًا تجاريًا يطارد العائد، لكنها كذلك مسؤولة عن حماية أموال البرنامج وعدالته. تحتاج معايير الاختيار إلى شفافية، ويجب منع تحميل المستفيد رسومًا مبهمة أو شروطًا لا يفهمها. كما ينبغي وجود متابعة تجارية حقيقية حتى لا يُترك المقترض وحده أمام تقلبات السوق.\n\n## متى لا يكون الحل كافيًا؟\n\nالأسرة التي لا تملك قدرة متوقعة على السداد أو تمر بحالة طارئة قد تحتاج منحة أو مساعدة مباشرة لا قرضًا. كذلك لا ينبغي تمويل نشاط بلا سوق لمجرد توفر الصندوق. وفي مناطق النزاع يمكن أن تتغير الظروف فجأة، لذلك يلزم تصميم سياسات للتعثر وإعادة الجدولة وإدارة الخسائر بدل نقل المخاطر كاملة إلى المستفيد.\n\n## من النشاط إلى الأثر\n\nيُقاس النجاح باستمرار المشروعات، وتحسن الدخل، ونسبة السداد دون ضغط مفرط، وعدد دورات إعادة استخدام رأس المال، ونسبة المستفيدين الذين خرجوا من الاعتماد المستمر على المساعدة. وينبغي نشر طريقة حساب هذه المؤشرات بوضوح لأن تدوير المال لا يعني تلقائيًا أن كل دورة حققت أثرًا متساويًا.\n\n## أسئلة يجب طرحها قبل دعم مشروع مشابه\n\nمن يراجع الهيكل الشرعي؟ كيف تُحدد الأهلية؟ ما الرسوم إن وجدت؟ ماذا يحدث عند التعثر؟ هل توجد حماية من الإفراط في الاقتراض؟ كيف تدار الأموال المسددة؟ وما الذي يثبت أن المشروع يولد دخلًا فعليًا؟\n\n## خطوة عملية\n\nهذا الموضوع يحتاج مراجعة شرعية وقانونية وتشغيلية قبل تحويله إلى عرض تبرع أو وصف منتج مالي. في المحتوى العام يمكن شرح الفكرة، أما تفاصيل العقود والأحكام فتُعتمد من الجهة المختصة.\n\n> **ملاحظة تحريرية:** هذا المقال مادة معرفية عامة مبنية على تحليل موضوعات إنسانية وتنموية منشورة كمراجع Benchmark. لا يُعد وصفًا لمشروع منفذ من مؤسسة منبر الأقصى الدولية، ولا تُستخدم أي أرقام أو مواقع أو وعود تنفيذية إلا بعد توثيقها من فريق المؤسسة.\n\n## مراجع Benchmark داخلية\n\nhttps://www.islamic-relief.me/what-we-do/livelihoods/ https://www.islamic-relief.me/wp-content/uploads/2020/03/2011-Annual-Report.pdf",
       "coverImage": "/assets/blog/204-revolving-qard-hasan-livelihoods.webp",
       "contentStatus": "READY",
       "imageAlt": "القرض الحسن الدوّار: كيف يمكن لرأس مال واحد أن يفتح أبواب رزق لأكثر من أسرة؟"
@@ -11077,7 +11077,7 @@
         {
           "locale": "tr",
           "title": "Çiftlikten pazara: Tarım projeleri neden yalnız üretim değil değer zinciri ister?",
-          "description": "Depolama, nakliye ve pazara erişim — hasadın gelire dönüşüp dönüşmeyeceğini belirleyen halkalar.",
+          "description": "Depolama, nakliye ve pazara erişim  hasadın gelire dönüşüp dönüşmeyeceğini belirleyen halkalar.",
           "content": null,
           "image": null,
           "slug": null
@@ -11085,7 +11085,7 @@
         {
           "locale": "en",
           "title": "From farm to market: why agricultural projects need a value chain, not just production",
-          "description": "Storage, transport and market access — the links that decide whether a harvest becomes income.",
+          "description": "Storage, transport and market access  the links that decide whether a harvest becomes income.",
           "content": null,
           "image": null,
           "slug": null
@@ -11137,7 +11137,7 @@
       "slug": "land-restoration-tree-planting-water-soil-income",
       "title": "استعادة الأراضي المتدهورة وزراعة الأشجار: متى يصبح التشجير مشروع حماية للماء والتربة والدخل؟",
       "description": "زراعة الأشجار تبدو نشاطًا واضحًا وسهل التصوير، لكن عدد الشتلات لا يخبرنا إن كانت الأرض ستتعافى. في المناطق المتدهورة قد تساعد الأشجار والشجيرات المحلية، مع…",
-      "content": "<p>--- index: 212 title: \"استعادة الأراضي المتدهورة وزراعة الأشجار: متى يصبح التشجير مشروع حماية للماء والتربة والدخل؟\" slug: land-restoration-tree-planting-water-soil-income category: \"البيئة والمناخ\" status: READY_AFTER_EDITORIAL_QA image: 212-land-restoration-tree-planting.jpg ---</p>\n<h2>لماذا يهم هذا الموضوع؟</h2>\n<p>زراعة الأشجار تبدو نشاطًا واضحًا وسهل التصوير، لكن عدد الشتلات لا يخبرنا إن كانت الأرض ستتعافى. في المناطق المتدهورة قد تساعد الأشجار والشجيرات المحلية، مع حواجز التربة وإدارة الرعي، على تقليل الانجراف وزيادة تسرب الماء وتوفير ظل أو ثمار أو علف. القيمة تأتي من استعادة وظيفة الأرض، لا من يوم الزراعة نفسه.</p>\n<h2>كيف يعمل الحل على أرض الواقع؟</h2>\n<p>يبدأ العمل بتشخيص سبب التدهور: رعي جائر، قطع أشجار، سيول، ملوحة، انجراف أو زراعة غير ملائمة. ثم تُختار أنواع محلية مناسبة وتُحدد كثافة الغرس ومصادر الماء وخطة الحماية. قد تستخدم خطوط كنتورية وحواجز حجرية وحفر حصاد مياه، مع اتفاق مجتمعي على الرعي والقطع والصيانة. بعض المواقع تحتاج تجددًا طبيعيًا محميًا أكثر مما تحتاج شتلات جديدة.</p>\n<h2>ما الذي يجعل التنفيذ جيدًا؟</h2>\n<p>يجب تحديد نسبة بقاء مستهدفة ومتابعتها عبر مواسم، لا الاكتفاء بعدد الشتلات المزروعة. اختيار النوع مهم لتجنب نباتات غازية أو أشجار تستهلك ماءً لا تحتمله المنطقة. كما يلزم حسم من يملك الأشجار ومن يستفيد من الثمار أو الأخشاب، لأن غموض الحقوق يقلل الحافز على الحماية.</p>\n<h2>متى لا يكون الحل كافيًا؟</h2>\n<p>التشجير لا يصلح كل أرض. الأراضي الرعوية الطبيعية قد تتضرر من فرض غطاء شجري غير مناسب، والمناطق شديدة الجفاف تحتاج حسابًا صارمًا للماء. إذا بقي سبب التدهور — كالرعي غير المنظم أو جريان السيول — فلن تنجح الشتلات مهما كان عددها.</p>\n<h2>من النشاط إلى الأثر</h2>\n<p>الأثر يقاس ببقاء النباتات، وتغير غطاء التربة، وانخفاض الانجراف، وتحسن تسرب الماء أو الإنتاجية، وظهور دخل من منتجات مناسبة إن كان ذلك هدفًا. الصور قبل/بعد مفيدة لكنها لا تغني عن قياسات موسمية.</p>\n<h2>أسئلة يجب طرحها قبل دعم مشروع مشابه</h2>\n<p>ما سبب التدهور؟ لماذا اختير هذا النوع؟ من يوفر الماء أول سنتين؟ من يحمي الموقع؟ ما معدل البقاء المتوقع؟ وهل توجد حقوق استخدام واضحة للمجتمع؟</p>\n<h2>خطوة عملية</h2>\n<p>فضّل مشروعات استعادة الأرض التي تموّل الصيانة والحماية لعدة مواسم، لا حملات الغرس التي تنتهي بعد التقاط الصورة.</p>\n<p>&gt; **ملاحظة تحريرية:** هذا المقال مادة معرفية عامة مبنية على تحليل موضوعات إنسانية وتنموية منشورة كمراجع Benchmark. لا يُعد وصفًا لمشروع منفذ من مؤسسة منبر الأقصى الدولية، ولا تُستخدم أي أرقام أو مواقع أو وعود تنفيذية إلا بعد توثيقها من فريق المؤسسة.</p>\n<h2>مراجع Benchmark داخلية</h2>\n<p>https://www.islamic-relief.me/wp-content/uploads/2020/03/Islamic-Relief-Annual-report-2016.pdf https://www.islamic-relief.me/about-us/annual-reports/</p>",
+      "content": "<p>--- index: 212 title: \"استعادة الأراضي المتدهورة وزراعة الأشجار: متى يصبح التشجير مشروع حماية للماء والتربة والدخل؟\" slug: land-restoration-tree-planting-water-soil-income category: \"البيئة والمناخ\" status: READY_AFTER_EDITORIAL_QA image: 212-land-restoration-tree-planting.jpg ---</p>\n<h2>لماذا يهم هذا الموضوع؟</h2>\n<p>زراعة الأشجار تبدو نشاطًا واضحًا وسهل التصوير، لكن عدد الشتلات لا يخبرنا إن كانت الأرض ستتعافى. في المناطق المتدهورة قد تساعد الأشجار والشجيرات المحلية، مع حواجز التربة وإدارة الرعي، على تقليل الانجراف وزيادة تسرب الماء وتوفير ظل أو ثمار أو علف. القيمة تأتي من استعادة وظيفة الأرض، لا من يوم الزراعة نفسه.</p>\n<h2>كيف يعمل الحل على أرض الواقع؟</h2>\n<p>يبدأ العمل بتشخيص سبب التدهور: رعي جائر، قطع أشجار، سيول، ملوحة، انجراف أو زراعة غير ملائمة. ثم تُختار أنواع محلية مناسبة وتُحدد كثافة الغرس ومصادر الماء وخطة الحماية. قد تستخدم خطوط كنتورية وحواجز حجرية وحفر حصاد مياه، مع اتفاق مجتمعي على الرعي والقطع والصيانة. بعض المواقع تحتاج تجددًا طبيعيًا محميًا أكثر مما تحتاج شتلات جديدة.</p>\n<h2>ما الذي يجعل التنفيذ جيدًا؟</h2>\n<p>يجب تحديد نسبة بقاء مستهدفة ومتابعتها عبر مواسم، لا الاكتفاء بعدد الشتلات المزروعة. اختيار النوع مهم لتجنب نباتات غازية أو أشجار تستهلك ماءً لا تحتمله المنطقة. كما يلزم حسم من يملك الأشجار ومن يستفيد من الثمار أو الأخشاب، لأن غموض الحقوق يقلل الحافز على الحماية.</p>\n<h2>متى لا يكون الحل كافيًا؟</h2>\n<p>التشجير لا يصلح كل أرض. الأراضي الرعوية الطبيعية قد تتضرر من فرض غطاء شجري غير مناسب، والمناطق شديدة الجفاف تحتاج حسابًا صارمًا للماء. إذا بقي سبب التدهور  كالرعي غير المنظم أو جريان السيول  فلن تنجح الشتلات مهما كان عددها.</p>\n<h2>من النشاط إلى الأثر</h2>\n<p>الأثر يقاس ببقاء النباتات، وتغير غطاء التربة، وانخفاض الانجراف، وتحسن تسرب الماء أو الإنتاجية، وظهور دخل من منتجات مناسبة إن كان ذلك هدفًا. الصور قبل/بعد مفيدة لكنها لا تغني عن قياسات موسمية.</p>\n<h2>أسئلة يجب طرحها قبل دعم مشروع مشابه</h2>\n<p>ما سبب التدهور؟ لماذا اختير هذا النوع؟ من يوفر الماء أول سنتين؟ من يحمي الموقع؟ ما معدل البقاء المتوقع؟ وهل توجد حقوق استخدام واضحة للمجتمع؟</p>\n<h2>خطوة عملية</h2>\n<p>فضّل مشروعات استعادة الأرض التي تموّل الصيانة والحماية لعدة مواسم، لا حملات الغرس التي تنتهي بعد التقاط الصورة.</p>\n<p>&gt; **ملاحظة تحريرية:** هذا المقال مادة معرفية عامة مبنية على تحليل موضوعات إنسانية وتنموية منشورة كمراجع Benchmark. لا يُعد وصفًا لمشروع منفذ من مؤسسة منبر الأقصى الدولية، ولا تُستخدم أي أرقام أو مواقع أو وعود تنفيذية إلا بعد توثيقها من فريق المؤسسة.</p>\n<h2>مراجع Benchmark داخلية</h2>\n<p>https://www.islamic-relief.me/wp-content/uploads/2020/03/Islamic-Relief-Annual-report-2016.pdf https://www.islamic-relief.me/about-us/annual-reports/</p>",
       "image": "/assets/blog/212-land-restoration-tree-planting.webp",
       "published": true,
       "categoryName": "سبل العيش والبيئة",
@@ -11165,7 +11165,7 @@
           "slug": null
         }
       ],
-      "contentMarkdown": "--- index: 212 title: \"استعادة الأراضي المتدهورة وزراعة الأشجار: متى يصبح التشجير مشروع حماية للماء والتربة والدخل؟\" slug: land-restoration-tree-planting-water-soil-income category: \"البيئة والمناخ\" status: READY_AFTER_EDITORIAL_QA image: 212-land-restoration-tree-planting.jpg ---\n\n## لماذا يهم هذا الموضوع؟\n\nزراعة الأشجار تبدو نشاطًا واضحًا وسهل التصوير، لكن عدد الشتلات لا يخبرنا إن كانت الأرض ستتعافى. في المناطق المتدهورة قد تساعد الأشجار والشجيرات المحلية، مع حواجز التربة وإدارة الرعي، على تقليل الانجراف وزيادة تسرب الماء وتوفير ظل أو ثمار أو علف. القيمة تأتي من استعادة وظيفة الأرض، لا من يوم الزراعة نفسه.\n\n## كيف يعمل الحل على أرض الواقع؟\n\nيبدأ العمل بتشخيص سبب التدهور: رعي جائر، قطع أشجار، سيول، ملوحة، انجراف أو زراعة غير ملائمة. ثم تُختار أنواع محلية مناسبة وتُحدد كثافة الغرس ومصادر الماء وخطة الحماية. قد تستخدم خطوط كنتورية وحواجز حجرية وحفر حصاد مياه، مع اتفاق مجتمعي على الرعي والقطع والصيانة. بعض المواقع تحتاج تجددًا طبيعيًا محميًا أكثر مما تحتاج شتلات جديدة.\n\n## ما الذي يجعل التنفيذ جيدًا؟\n\nيجب تحديد نسبة بقاء مستهدفة ومتابعتها عبر مواسم، لا الاكتفاء بعدد الشتلات المزروعة. اختيار النوع مهم لتجنب نباتات غازية أو أشجار تستهلك ماءً لا تحتمله المنطقة. كما يلزم حسم من يملك الأشجار ومن يستفيد من الثمار أو الأخشاب، لأن غموض الحقوق يقلل الحافز على الحماية.\n\n## متى لا يكون الحل كافيًا؟\n\nالتشجير لا يصلح كل أرض. الأراضي الرعوية الطبيعية قد تتضرر من فرض غطاء شجري غير مناسب، والمناطق شديدة الجفاف تحتاج حسابًا صارمًا للماء. إذا بقي سبب التدهور — كالرعي غير المنظم أو جريان السيول — فلن تنجح الشتلات مهما كان عددها.\n\n## من النشاط إلى الأثر\n\nالأثر يقاس ببقاء النباتات، وتغير غطاء التربة، وانخفاض الانجراف، وتحسن تسرب الماء أو الإنتاجية، وظهور دخل من منتجات مناسبة إن كان ذلك هدفًا. الصور قبل/بعد مفيدة لكنها لا تغني عن قياسات موسمية.\n\n## أسئلة يجب طرحها قبل دعم مشروع مشابه\n\nما سبب التدهور؟ لماذا اختير هذا النوع؟ من يوفر الماء أول سنتين؟ من يحمي الموقع؟ ما معدل البقاء المتوقع؟ وهل توجد حقوق استخدام واضحة للمجتمع؟\n\n## خطوة عملية\n\nفضّل مشروعات استعادة الأرض التي تموّل الصيانة والحماية لعدة مواسم، لا حملات الغرس التي تنتهي بعد التقاط الصورة.\n\n> **ملاحظة تحريرية:** هذا المقال مادة معرفية عامة مبنية على تحليل موضوعات إنسانية وتنموية منشورة كمراجع Benchmark. لا يُعد وصفًا لمشروع منفذ من مؤسسة منبر الأقصى الدولية، ولا تُستخدم أي أرقام أو مواقع أو وعود تنفيذية إلا بعد توثيقها من فريق المؤسسة.\n\n## مراجع Benchmark داخلية\n\nhttps://www.islamic-relief.me/wp-content/uploads/2020/03/Islamic-Relief-Annual-report-2016.pdf https://www.islamic-relief.me/about-us/annual-reports/",
+      "contentMarkdown": "--- index: 212 title: \"استعادة الأراضي المتدهورة وزراعة الأشجار: متى يصبح التشجير مشروع حماية للماء والتربة والدخل؟\" slug: land-restoration-tree-planting-water-soil-income category: \"البيئة والمناخ\" status: READY_AFTER_EDITORIAL_QA image: 212-land-restoration-tree-planting.jpg ---\n\n## لماذا يهم هذا الموضوع؟\n\nزراعة الأشجار تبدو نشاطًا واضحًا وسهل التصوير، لكن عدد الشتلات لا يخبرنا إن كانت الأرض ستتعافى. في المناطق المتدهورة قد تساعد الأشجار والشجيرات المحلية، مع حواجز التربة وإدارة الرعي، على تقليل الانجراف وزيادة تسرب الماء وتوفير ظل أو ثمار أو علف. القيمة تأتي من استعادة وظيفة الأرض، لا من يوم الزراعة نفسه.\n\n## كيف يعمل الحل على أرض الواقع؟\n\nيبدأ العمل بتشخيص سبب التدهور: رعي جائر، قطع أشجار، سيول، ملوحة، انجراف أو زراعة غير ملائمة. ثم تُختار أنواع محلية مناسبة وتُحدد كثافة الغرس ومصادر الماء وخطة الحماية. قد تستخدم خطوط كنتورية وحواجز حجرية وحفر حصاد مياه، مع اتفاق مجتمعي على الرعي والقطع والصيانة. بعض المواقع تحتاج تجددًا طبيعيًا محميًا أكثر مما تحتاج شتلات جديدة.\n\n## ما الذي يجعل التنفيذ جيدًا؟\n\nيجب تحديد نسبة بقاء مستهدفة ومتابعتها عبر مواسم، لا الاكتفاء بعدد الشتلات المزروعة. اختيار النوع مهم لتجنب نباتات غازية أو أشجار تستهلك ماءً لا تحتمله المنطقة. كما يلزم حسم من يملك الأشجار ومن يستفيد من الثمار أو الأخشاب، لأن غموض الحقوق يقلل الحافز على الحماية.\n\n## متى لا يكون الحل كافيًا؟\n\nالتشجير لا يصلح كل أرض. الأراضي الرعوية الطبيعية قد تتضرر من فرض غطاء شجري غير مناسب، والمناطق شديدة الجفاف تحتاج حسابًا صارمًا للماء. إذا بقي سبب التدهور  كالرعي غير المنظم أو جريان السيول  فلن تنجح الشتلات مهما كان عددها.\n\n## من النشاط إلى الأثر\n\nالأثر يقاس ببقاء النباتات، وتغير غطاء التربة، وانخفاض الانجراف، وتحسن تسرب الماء أو الإنتاجية، وظهور دخل من منتجات مناسبة إن كان ذلك هدفًا. الصور قبل/بعد مفيدة لكنها لا تغني عن قياسات موسمية.\n\n## أسئلة يجب طرحها قبل دعم مشروع مشابه\n\nما سبب التدهور؟ لماذا اختير هذا النوع؟ من يوفر الماء أول سنتين؟ من يحمي الموقع؟ ما معدل البقاء المتوقع؟ وهل توجد حقوق استخدام واضحة للمجتمع؟\n\n## خطوة عملية\n\nفضّل مشروعات استعادة الأرض التي تموّل الصيانة والحماية لعدة مواسم، لا حملات الغرس التي تنتهي بعد التقاط الصورة.\n\n> **ملاحظة تحريرية:** هذا المقال مادة معرفية عامة مبنية على تحليل موضوعات إنسانية وتنموية منشورة كمراجع Benchmark. لا يُعد وصفًا لمشروع منفذ من مؤسسة منبر الأقصى الدولية، ولا تُستخدم أي أرقام أو مواقع أو وعود تنفيذية إلا بعد توثيقها من فريق المؤسسة.\n\n## مراجع Benchmark داخلية\n\nhttps://www.islamic-relief.me/wp-content/uploads/2020/03/Islamic-Relief-Annual-report-2016.pdf https://www.islamic-relief.me/about-us/annual-reports/",
       "coverImage": "/assets/blog/212-land-restoration-tree-planting.webp",
       "contentStatus": "READY",
       "imageAlt": "استعادة الأراضي المتدهورة وزراعة الأشجار: متى يصبح التشجير مشروع حماية للماء والتربة والدخل؟"
@@ -11233,7 +11233,7 @@
         {
           "locale": "en",
           "title": "Rehabilitating health centres after disasters: what comes first before reopening the doors?",
-          "description": "The priorities — safety, water, power, staff and supplies — that decide when a clinic can serve again.",
+          "description": "The priorities  safety, water, power, staff and supplies  that decide when a clinic can serve again.",
           "content": null,
           "image": null,
           "slug": null
@@ -11410,7 +11410,7 @@
         {
           "locale": "tr",
           "title": "Çok amaçlı nakit yardımı: Nakit hazır koliden ne zaman daha iyidir?",
-          "description": "Nakdin ailelere ayni koliden daha fazla onur ve esneklik verdiği — ve vermediği — durumlar.",
+          "description": "Nakdin ailelere ayni koliden daha fazla onur ve esneklik verdiği  ve vermediği  durumlar.",
           "content": null,
           "image": null,
           "slug": null
@@ -11418,7 +11418,7 @@
         {
           "locale": "en",
           "title": "Multipurpose cash assistance: when is money better than a ready-made parcel?",
-          "description": "When cash gives families more dignity and flexibility than in-kind parcels — and when it doesn't.",
+          "description": "When cash gives families more dignity and flexibility than in-kind parcels  and when it doesn't.",
           "content": null,
           "image": null,
           "slug": null
@@ -11521,7 +11521,7 @@
         {
           "locale": "tr",
           "title": "Yardımda yerel tedarik: Pazarı sıkıştırmak yerine ne zaman destekler?",
-          "description": "Yardım malzemesini yerelden almak ekonomiyi güçlendirebilir — fiyatlara ve küçük esnafa özen gösterilirse.",
+          "description": "Yardım malzemesini yerelden almak ekonomiyi güçlendirebilir  fiyatlara ve küçük esnafa özen gösterilirse.",
           "content": null,
           "image": null,
           "slug": null
@@ -11529,7 +11529,7 @@
         {
           "locale": "en",
           "title": "Local procurement in relief: when does it support the market instead of crowding it out?",
-          "description": "Buying aid supplies locally can strengthen the economy — if done with care for prices and small traders.",
+          "description": "Buying aid supplies locally can strengthen the economy  if done with care for prices and small traders.",
           "content": null,
           "image": null,
           "slug": null
@@ -11603,7 +11603,7 @@
         {
           "locale": "en",
           "title": "Protecting water sources from contamination: from the tank to the point of use",
-          "description": "Where water actually gets contaminated — and the simple safeguards that keep it safe to the last cup.",
+          "description": "Where water actually gets contaminated  and the simple safeguards that keep it safe to the last cup.",
           "content": null,
           "image": null,
           "slug": null
@@ -11632,7 +11632,7 @@
         {
           "locale": "tr",
           "title": "Göç kamplarında atık yönetimi: Çöp neden bu kadar hızlı sağlık tehlikesine dönüşür?",
-          "description": "Kalabalık kamplarda atık günler içinde hastalığa dönüşür — düzenli toplama neyi değiştirir?",
+          "description": "Kalabalık kamplarda atık günler içinde hastalığa dönüşür  düzenli toplama neyi değiştirir?",
           "content": null,
           "image": null,
           "slug": null
@@ -11640,7 +11640,7 @@
         {
           "locale": "en",
           "title": "Waste management in displacement camps: why garbage becomes a health hazard so quickly",
-          "description": "In crowded camps, waste turns into disease within days — here is what organised collection changes.",
+          "description": "In crowded camps, waste turns into disease within days  here is what organised collection changes.",
           "content": null,
           "image": null,
           "slug": null
@@ -11787,7 +11787,7 @@
         },
         {
           "locale": "en",
-          "title": "Restoring essential services after disasters: water, health or power — which comes first?",
+          "title": "Restoring essential services after disasters: water, health or power  which comes first?",
           "description": "How responders sequence water, health and power restoration when everything is urgent at once.",
           "content": null,
           "image": null,
@@ -11891,7 +11891,7 @@
         {
           "locale": "tr",
           "title": "Barınma merkezlerinde kadın ve kızları korumak: Mahremiyet lüks değil müdahalenin parçası",
-          "description": "Ayrı tesisler, güvenli erişim ve mahremiyet — her barınağın kurması gereken koruma önlemleri.",
+          "description": "Ayrı tesisler, güvenli erişim ve mahremiyet  her barınağın kurması gereken koruma önlemleri.",
           "content": null,
           "image": null,
           "slug": null
@@ -11899,7 +11899,7 @@
         {
           "locale": "en",
           "title": "Protecting women and girls in shelters: privacy is part of the response, not a luxury",
-          "description": "Separate facilities, safe access and privacy — protection measures every shelter must build in.",
+          "description": "Separate facilities, safe access and privacy  protection measures every shelter must build in.",
           "content": null,
           "image": null,
           "slug": null
@@ -12002,7 +12002,7 @@
         {
           "locale": "tr",
           "title": "Göç ve afet sonrası kişisel belgeler: Küçük bir kâğıt neden hizmetin anahtarı olur?",
-          "description": "Kaybolan kimlik yardımı, okulu ve sağlığı engeller — belge desteğinin hakları geri kazandırması.",
+          "description": "Kaybolan kimlik yardımı, okulu ve sağlığı engeller  belge desteğinin hakları geri kazandırması.",
           "content": null,
           "image": null,
           "slug": null
@@ -12010,7 +12010,7 @@
         {
           "locale": "en",
           "title": "Personal documents after displacement and disasters: why a small paper can become the key to services",
-          "description": "Lost IDs block aid, school and healthcare — how documentation support restores access to rights.",
+          "description": "Lost IDs block aid, school and healthcare  how documentation support restores access to rights.",
           "content": null,
           "image": null,
           "slug": null
@@ -12187,7 +12187,7 @@
         {
           "locale": "tr",
           "title": "Göç sonrası okula dönüş: Kapılar açıkken bile çocuğu ne uzak tutar?",
-          "description": "Ücretler, belgeler, mesafe ve travma — göç etmiş çocuklarla açık sınıflar arasındaki gerçek engeller.",
+          "description": "Ücretler, belgeler, mesafe ve travma  göç etmiş çocuklarla açık sınıflar arasındaki gerçek engeller.",
           "content": null,
           "image": null,
           "slug": null
@@ -12195,7 +12195,7 @@
         {
           "locale": "en",
           "title": "Returning to school after displacement: what keeps a child away even when the doors open?",
-          "description": "Fees, documents, distance and trauma — the real barriers between displaced children and open classrooms.",
+          "description": "Fees, documents, distance and trauma  the real barriers between displaced children and open classrooms.",
           "content": null,
           "image": null,
           "slug": null
@@ -12298,7 +12298,7 @@
         {
           "locale": "tr",
           "title": "Krizlerde engelli çocuklar için kapsayıcı eğitim: Hakları iki kez nasıl kaybolmaz?",
-          "description": "Kriz önce engelli çocukları dışlar — kapsayıcı sınıflar yeniden geride kalmamalarını sağlar.",
+          "description": "Kriz önce engelli çocukları dışlar  kapsayıcı sınıflar yeniden geride kalmamalarını sağlar.",
           "content": null,
           "image": null,
           "slug": null
@@ -12306,7 +12306,7 @@
         {
           "locale": "en",
           "title": "Inclusive education for children with disabilities in crises: how their right is not lost twice",
-          "description": "Crisis excludes children with disabilities first — inclusive classrooms make sure they are not left behind again.",
+          "description": "Crisis excludes children with disabilities first  inclusive classrooms make sure they are not left behind again.",
           "content": null,
           "image": null,
           "slug": null
@@ -12335,7 +12335,7 @@
         {
           "locale": "tr",
           "title": "Krizlerde okul yemeği: Tek müdahalede eğitim, beslenme ve koruma",
-          "description": "Çocuğu öğrenmede, beslenmede ve korumada tutan tek öğün — okul beslenmesinin üçlü değeri.",
+          "description": "Çocuğu öğrenmede, beslenmede ve korumada tutan tek öğün  okul beslenmesinin üçlü değeri.",
           "content": null,
           "image": null,
           "slug": null
@@ -12343,7 +12343,7 @@
         {
           "locale": "en",
           "title": "The school meal in crises: education, nutrition and protection in one intervention",
-          "description": "One meal that keeps children learning, nourished and protected — the triple value of school feeding.",
+          "description": "One meal that keeps children learning, nourished and protected  the triple value of school feeding.",
           "content": null,
           "image": null,
           "slug": null
@@ -12557,7 +12557,7 @@
         {
           "locale": "tr",
           "title": "Güneş enerjili sulama: Güneş ne zaman gıda güvenliğinin parçası olur?",
-          "description": "Güneşle sulamanın maliyeti düşürüp üretimi dengelemesi — ve bunu sürdürülebilir kılan koşullar.",
+          "description": "Güneşle sulamanın maliyeti düşürüp üretimi dengelemesi  ve bunu sürdürülebilir kılan koşullar.",
           "content": null,
           "image": null,
           "slug": null
@@ -12565,7 +12565,7 @@
         {
           "locale": "en",
           "title": "Solar-powered irrigation: when does the sun become part of food security?",
-          "description": "How solar irrigation cuts costs and stabilises production — and the conditions that make it sustainable.",
+          "description": "How solar irrigation cuts costs and stabilises production  and the conditions that make it sustainable.",
           "content": null,
           "image": null,
           "slug": null
@@ -12594,7 +12594,7 @@
         {
           "locale": "tr",
           "title": "Yağmur suyu hasadı: Mevsimlik yağmuru güvenilir kaynağa çevirmek",
-          "description": "Yağmuru güvenle toplamak, depolamak ve kullanmak — yağışlı mevsim tüm yıla hizmet etsin.",
+          "description": "Yağmuru güvenle toplamak, depolamak ve kullanmak  yağışlı mevsim tüm yıla hizmet etsin.",
           "content": null,
           "image": null,
           "slug": null
@@ -12631,7 +12631,7 @@
         {
           "locale": "tr",
           "title": "Tarımda güvenli su yeniden kullanımı: Net kurallar isteyen bir fırsat",
-          "description": "Arıtılmış su ürünleri güvenle sulayabilir — ancak yalnızca net sağlık ve kalite kuralları içinde.",
+          "description": "Arıtılmış su ürünleri güvenle sulayabilir  ancak yalnızca net sağlık ve kalite kuralları içinde.",
           "content": null,
           "image": null,
           "slug": null
@@ -12639,7 +12639,7 @@
         {
           "locale": "en",
           "title": "Safe water reuse in agriculture: an opportunity that needs clear controls",
-          "description": "Treated wastewater can irrigate crops safely — but only within clear health and quality rules.",
+          "description": "Treated wastewater can irrigate crops safely  but only within clear health and quality rules.",
           "content": null,
           "image": null,
           "slug": null
@@ -12742,7 +12742,7 @@
         {
           "locale": "tr",
           "title": "Kriz sonrası hane borcu yönetimi: Yeni gelir aileyi neden tek başına kurtaramayabilir?",
-          "description": "Kriz borcu yeni geliri yutar — toparlanma programları ailelerin borcunu neden ele almalı?",
+          "description": "Kriz borcu yeni geliri yutar  toparlanma programları ailelerin borcunu neden ele almalı?",
           "content": null,
           "image": null,
           "slug": null
@@ -12750,7 +12750,7 @@
         {
           "locale": "en",
           "title": "Managing household debt after crises: why new income alone may not save a family",
-          "description": "Crisis debt swallows new income — why recovery programmes must address what families owe.",
+          "description": "Crisis debt swallows new income  why recovery programmes must address what families owe.",
           "content": null,
           "image": null,
           "slug": null

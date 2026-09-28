@@ -8,7 +8,7 @@
  * filters the user already selected on the page so the export "just works"
  * from one click, but the user can still override any field before exporting.
  *
- * Designed for finance ops — they need the per-campaign breakdown to be
+ * Designed for finance ops  they need the per-campaign breakdown to be
  * sortable in Excel and they need to keep team support separated from cause
  * funds. Both of those concerns are handled by the API + lib/donation-export.ts;
  * this dialog just collects the inputs.
@@ -53,7 +53,7 @@ export interface ExportReportDialogProps {
   onOpenChange: (open: boolean) => void;
   /** Endpoint that takes filters via query string and returns the file. */
   endpoint: string;
-  /** Dialog header — usually the page name (e.g. "تصدير تبرعات الإحالة"). */
+  /** Dialog header  usually the page name (e.g. "تصدير تبرعات الإحالة"). */
   title: string;
   /** Optional explanatory text. */
   description?: string;

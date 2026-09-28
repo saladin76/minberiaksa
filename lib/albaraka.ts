@@ -1,19 +1,19 @@
 import crypto from "crypto";
 
 /**
- * Albaraka Türk EPOS (Sanal POS) — 3D Secure integration primitives.
+ * Albaraka Türk EPOS (Sanal POS)  3D Secure integration primitives.
  *
  * Reference: "Sanal Pos 3D Secure Entegrasyon Dokümanı" (Albaraka Türk / Posnet EPOS API).
  *
  * Three distinct MAC algorithms are involved; all three are implemented here and were
  * verified byte-for-byte against the worked examples in the bank's document:
  *
- *  1. `albarakaFormMac`     — HMAC-SHA256, signs the 3DS redirect form we POST to the bank.
- *  2. `albarakaResponseMac` — HMAC-SHA256, verifies the form the bank POSTs back to us.
- *  3. `albarakaPaymentMac`  — plain SHA256, signs the /Sale call that finalises the 3D auth.
+ *  1. `albarakaFormMac`      HMAC-SHA256, signs the 3DS redirect form we POST to the bank.
+ *  2. `albarakaResponseMac`  HMAC-SHA256, verifies the form the bank POSTs back to us.
+ *  3. `albarakaPaymentMac`   plain SHA256, signs the /Sale call that finalises the 3D auth.
  *
  * For 1 and 2 the message is the ordered parameter values joined with ";", with the
- * encryption key appended after a final ";" — and that same key is also the HMAC key.
+ * encryption key appended after a final ";"  and that same key is also the HMAC key.
  * For 3 the message is the values concatenated with no separator, key appended, hashed
  * with a bare SHA256 (not HMAC).
  */
@@ -39,15 +39,15 @@ export type AlbarakaConfig = {
 /**
  * No merchant identifier is defaulted.
  *
- * They are not secrets — the same numbers are printed in the bank's merchant portal
- * under "Üye İşyeri Bilgilerim" — but a wrong one is worse than a missing one: a
+ * They are not secrets  the same numbers are printed in the bank's merchant portal
+ * under "Üye İşyeri Bilgilerim"  but a wrong one is worse than a missing one: a
  * hard-coded fallback means an unset env var silently signs live 3D forms with some
  * other merchant's numbers instead of failing. `isAlbarakaConfigured` gates on all
  * four, so an incomplete deployment refuses to initiate rather than mis-routing.
  *
  * A merchant may hold several terminals (this one holds three). Each has its own
  * TerminalNo *and* its own PosnetID, and the two must come from the same row of the
- * portal — mixing them across terminals fails MAC verification at the bank.
+ * portal  mixing them across terminals fails MAC verification at the bank.
  *
  * ALBARAKA_ENC_KEY is the shared secret behind every MAC, created from Kurumsal
  * İnternet Bankacılığı → Üye İşyeri → "Anahtar Yaratma".
@@ -71,7 +71,7 @@ export function albarakaConfig(): AlbarakaConfig {
 }
 
 /**
- * Nothing is defaulted, so readiness means all four identifiers are actually set —
+ * Nothing is defaulted, so readiness means all four identifiers are actually set 
  * and that the key is long enough to be a real one.
  *
  * The length floor matters more than it looks. "Non-empty" lets a placeholder like
@@ -94,9 +94,9 @@ export function isAlbarakaConfigured(cfg: AlbarakaConfig = albarakaConfig()): bo
 /**
  * Which currency Albaraka is asked to charge in.
  *
- *   TRY   — convert every donation to Turkish lira and charge TL.
- *   USD   — convert every donation to US dollars and charge US.
- *   DONOR — charge in the donor's own currency when the bank accepts it
+ *   TRY    convert every donation to Turkish lira and charge TL.
+ *   USD    convert every donation to US dollars and charge US.
+ *   DONOR  charge in the donor's own currency when the bank accepts it
  *           (TL/US/EU), converting everything else to TRY.
  *
  * The site takes 14 currencies but Albaraka understands only three codes, so
@@ -132,7 +132,7 @@ export function albarakaLang(locale?: string): "TR" | "EN" {
   return String(locale || "").toLowerCase() === "tr" ? "TR" : "EN";
 }
 
-/** Amounts travel in minor units — 12.34 TL is sent as 1234. */
+/** Amounts travel in minor units  12.34 TL is sent as 1234. */
 export function albarakaMinorUnits(amount: number): number {
   const n = Number(amount);
   if (!Number.isFinite(n) || n <= 0) return 0;
@@ -196,7 +196,7 @@ export type AlbarakaFormFields = Record<(typeof ALBARAKA_FORM_FIELDS)[number], s
  * Verified against the bank's worked example:
  *   1010054515195582;6700972671;67908222;ALB_TST_25111101ss22;Sale;…;INITIAL;;;;<encKey>
  *   → t+TjQCIihRDsAHzO5pVb1ibHZmZw5VMsC885KiSe14E=
- * Fields we don't send still take part as empty strings — dropping them shifts every
+ * Fields we don't send still take part as empty strings  dropping them shifts every
  * later value one separator to the left and the bank rejects the form.
  */
 export function albarakaFormMac(fields: AlbarakaFormFields, encKey: string): string {
@@ -288,7 +288,7 @@ export function isAlbarakaApproved(res: AlbarakaServiceResponse | null): boolean
 
 /**
  * POSTs a transaction to the JSON service. Every request must carry the
- * X-MERCHANT-ID / X-TERMINAL-ID / X-POSNET-ID / X-CORRELATION-ID headers — the bank's
+ * X-MERCHANT-ID / X-TERMINAL-ID / X-POSNET-ID / X-CORRELATION-ID headers  the bank's
  * support team uses the correlation id to trace a failing order.
  */
 export async function albarakaService(
@@ -334,7 +334,7 @@ export function albarakaMdStatusMessage(mdStatus: string): string {
     "1": "Verification successful",
     "2": "Cardholder or issuer not enrolled in 3D Secure",
     "3": "Card issuer not enrolled in 3D Secure",
-    "4": "Verification attempted — cardholder chose to enrol later",
+    "4": "Verification attempted  cardholder chose to enrol later",
     "5": "Verification could not be performed",
     "6": "3D Secure error",
     "7": "System error",
@@ -348,7 +348,7 @@ export function albarakaMdStatusMessage(mdStatus: string): string {
 //
 // A recurring plan's first instalment is an ordinary 3D payment at checkout. Every
 // later one is charged by the site's scheduler (`lib/donations/albaraka-recurring.ts`)
-// through the bank's direct /Sale — the "Standart Satış" of the document — with the
+// through the bank's direct /Sale  the "Standart Satış" of the document  with the
 // card the donor authorised, flagged `IsRecurring` / `IsMailOrder` so the bank treats
 // it as a merchant-initiated transaction on a stored credential.
 //
@@ -408,7 +408,7 @@ export function albarakaExpiryFromStored(stored: string): string {
 /**
  * A card is usable through the last day of its expiry month. Checked before a
  * scheduled charge so an expired card fails the plan with a clear reason
- * instead of a bank decline — and, per `DONATION_LOGIC_SPEC` § 1.3, is the
+ * instead of a bank decline  and, per `DONATION_LOGIC_SPEC` § 1.3, is the
  * hook for the "update your card" notice a week ahead.
  */
 export function isStoredCardExpired(stored: string, now: Date = new Date()): boolean {
@@ -417,7 +417,7 @@ export function isStoredCardExpired(stored: string, now: Date = new Date()): boo
   const month = Number(digits.slice(0, 2));
   const year = 2000 + Number(digits.slice(2, 4));
   if (!(month >= 1 && month <= 12)) return true;
-  // First instant of the month after expiry, in UTC — the card is dead from then.
+  // First instant of the month after expiry, in UTC  the card is dead from then.
   const firstInvalid = Date.UTC(year, month, 1);
   return now.getTime() >= firstInvalid;
 }
@@ -426,7 +426,7 @@ export function isStoredCardExpired(stored: string, now: Date = new Date()): boo
 export const ALBARAKA_NON_SECURE_MAC_PARAMS = "MerchantNo:TerminalNo:CardNo:Cvc2:ExpireDate:Amount";
 
 /**
- * MAC for a standard /Sale — same construction as the 3D payment MAC (plain SHA256
+ * MAC for a standard /Sale  same construction as the 3D payment MAC (plain SHA256
  * over the values concatenated without separators, key appended), over the six
  * parameters the document's MACParams names for it. An absent Cvc2 takes part as
  * an empty string, the way absent fields do in every other MAC of this API.

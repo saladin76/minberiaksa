@@ -79,9 +79,9 @@ export function BlockInspector({ doc, selectedId, onChange, onSelect }: Props) {
             >
               <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="h1">H1 — أكبر</SelectItem>
+                <SelectItem value="h1">H1  أكبر</SelectItem>
                 <SelectItem value="h2">H2</SelectItem>
-                <SelectItem value="h3">H3 — أصغر</SelectItem>
+                <SelectItem value="h3">H3  أصغر</SelectItem>
               </SelectContent>
             </Select>
           </Field>
@@ -126,7 +126,7 @@ export function BlockInspector({ doc, selectedId, onChange, onSelect }: Props) {
               <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="false">نص عادي</SelectItem>
-                <SelectItem value="true">Markdown — يدعم **bold** و _italic_ و [link]()</SelectItem>
+                <SelectItem value="true">Markdown  يدعم **bold** و _italic_ و [link]()</SelectItem>
               </SelectContent>
             </Select>
           </Field>
@@ -294,14 +294,14 @@ export function BlockInspector({ doc, selectedId, onChange, onSelect }: Props) {
             </Select>
           </Field>
           <NumberField
-            label="العرض (px) — اتركه 0 للتلقائي"
+            label="العرض (px)  اتركه 0 للتلقائي"
             value={Number(props.width ?? 0)}
             min={0}
             max={1200}
             onChange={(v) => update({ props: { width: v || undefined } })}
           />
           <NumberField
-            label="الارتفاع (px) — اتركه 0 للتلقائي"
+            label="الارتفاع (px)  اتركه 0 للتلقائي"
             value={Number(props.height ?? 0)}
             min={0}
             max={1200}

@@ -233,7 +233,7 @@ export async function GET(
         isActive: c.isActive,
         categoryId: primary?.id ?? id,
         categoryIds: c.categoryIds ?? [],
-        // categoryPriority surfaces only the value for THIS category page —
+        // categoryPriority surfaces only the value for THIS category page 
         // a campaign in many categories may have a different rank in each.
         categoryPriority: getCategoryPriority(c.categoryPriorities, id),
         categoryPriorities: parseCategoryPriorities(c.categoryPriorities),
@@ -258,7 +258,7 @@ export async function GET(
       };
     });
 
-    // Localized category response — surface the per-locale slug for canonical URLs
+    // Localized category response  surface the per-locale slug for canonical URLs
     const tCatPicked = pickTranslation(category.translations, locale);
     const localizedCategory = {
       id: category.id,

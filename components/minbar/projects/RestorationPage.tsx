@@ -12,7 +12,7 @@ import Rail from "@/components/minbar/Rail";
 import { NoProjects } from "@/components/minbar/states/ContentStates";
 
 /**
- * Restoring the homes of Al-Quds — ported from
+ * Restoring the homes of Al-Quds  ported from
  * `Minbar/مشروع ترميم منازل القدس.dc.html`.
  *
  * The programme page for the foundation's largest Al-Quds commitment: what it

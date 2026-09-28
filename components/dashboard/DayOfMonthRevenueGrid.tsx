@@ -12,7 +12,7 @@ export type DayOfMonthPoint = {
   day: number;
   amountUSD: number;
   count: number;
-  /** collected view only — how many distinct months contributed to this day. */
+  /** collected view only  how many distinct months contributed to this day. */
   monthsObserved?: number;
 };
 
@@ -41,12 +41,12 @@ type Props = {
  * The number is printed in every cell, so magnitude is never encoded by color alone.
  */
 const RAMP = [
-  { bg: "#F8FAFC", ink: "#CBD5E1" }, // 0 — nothing landed
+  { bg: "#F8FAFC", ink: "#CBD5E1" }, // 0  nothing landed
   { bg: "#EAF2FC", ink: "#0F172A" },
   { bg: "#CFE2F8", ink: "#0F172A" },
   { bg: "#A9C9F0", ink: "#0F172A" },
   { bg: "#6FA3E0", ink: "#0F172A" },
-  { bg: "#025EB8", ink: "#FFFFFF" }, // 5 — peak band
+  { bg: "#025EB8", ink: "#FFFFFF" }, // 5  peak band
 ];
 
 function rampStep(amount: number, max: number): number {
@@ -142,7 +142,7 @@ export function DayOfMonthRevenueGrid({ collected, expected, loading, formatMone
 
       <div className="p-4">
         {/* Daily plans bill on every day and Friday plans on a different date each month, so
-            neither has a day of the month — say how much sits outside the grid instead of
+            neither has a day of the month  say how much sits outside the grid instead of
             letting the expected total read as the whole recurring book. */}
         {mode === "expected" && unplacedWithPlans.length > 0 && (
           <div className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-1 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-[11px] text-slate-600">
@@ -167,7 +167,7 @@ export function DayOfMonthRevenueGrid({ collected, expected, loading, formatMone
               <div key={d.day} className="group relative">
                 <button
                   type="button"
-                  // Empty days have nothing to drill into — leave them inert rather than
+                  // Empty days have nothing to drill into  leave them inert rather than
                   // opening a dialog that can only say "no data".
                   disabled={amount <= 0}
                   onClick={() => setOpenDay(d.day)}

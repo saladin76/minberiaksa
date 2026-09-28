@@ -51,7 +51,7 @@ export const FIELD_HELP: Record<string, string> = {
   DEFAULT_PHONE_NUMBER_ID: "معرّف رقم الهاتف من صفحة API Setup داخل تطبيق Meta.",
   GRAPH_API_VERSION: "إصدار Graph API المستخدم، مثل v23.0.",
   API_KEY: "مفتاح API الخاص بالمزود.",
-  "ELASTIC_EMAIL.API_KEY": "من Elastic Email: Settings ثم API Keys — يحتاج صلاحية إرسال البريد.",
+  "ELASTIC_EMAIL.API_KEY": "من Elastic Email: Settings ثم API Keys  يحتاج صلاحية إرسال البريد.",
   "ELASTIC_EMAIL.SENDER_NAME": "الاسم الذي يظهر للمستلم في رسائل البريد.",
   "ELASTIC_EMAIL.SENDER_EMAIL": "بريد مرسل على نطاق موثّق (SPF/DKIM) داخل Elastic Email.",
   "ELASTIC_EMAIL.WEBHOOK_SECRET": "رمز حماية Webhook يُنشأ داخل السيرفر ويُلصق في رابط إشعارات Elastic Email.",

@@ -7,11 +7,11 @@ import { prisma } from "@/lib/prisma";
  * Why the state exists: POST /api/donations writes the Donation row optimistically, before the
  * donor has reached Stripe. The webhook is what sets `paidAt` AND increments campaign/category
  * `currentAmount`, both inside one transaction guarded by `paidAt != null`. So `paidAt == null`
- * is proof the money was never credited anywhere — not to revenue, not to a progress bar.
+ * is proof the money was never credited anywhere  not to revenue, not to a progress bar.
  *
  * That makes this population two very different things mixed together:
  *   - donors who never finished paying (the overwhelming majority), and
- *   - donors who DID pay but whose webhook never arrived — real money, silently missing.
+ *   - donors who DID pay but whose webhook never arrived  real money, silently missing.
  *
  * Stripe is the authority on which is which, so this asks Stripe about every row rather than
  * inferring from age alone. Age is used only to decide when to stop waiting on a row Stripe has
@@ -59,7 +59,7 @@ async function askStripe(providerOrderId: string | null): Promise<{ verdict: Str
     const pi = await stripe.paymentIntents.retrieve(providerOrderId);
     if (pi.status === "succeeded") return { verdict: "succeeded", paidAt: new Date(pi.created * 1000) };
     // `canceled` is terminal; the rest can still be completed by the donor in principle, but a
-    // PaymentIntent nobody has touched for days is abandoned in practice — age decides those.
+    // PaymentIntent nobody has touched for days is abandoned in practice  age decides those.
     if (pi.status === "canceled") return { verdict: "dead" };
     return { verdict: "open" };
   }
@@ -81,7 +81,7 @@ export async function reconcileUnconfirmedDonations(options: ReconcileOptions = 
   const { dryRun = false, minAgeHours = 2, staleAfterHours = 48, now = new Date() } = options;
 
   // Prisma+MongoDB: `field: null` matches only EXPLICIT nulls, never unset fields. These rows are
-  // written without paidAt/subscriptionId at all, so each needs an isSet:false arm — filtering on
+  // written without paidAt/subscriptionId at all, so each needs an isSet:false arm  filtering on
   // `null` alone silently hides most of the population.
   const rows = await prisma.donation.findMany({
     where: {
@@ -176,7 +176,7 @@ export async function reconcileUnconfirmedDonations(options: ReconcileOptions = 
       continue;
     }
 
-    // "open" means Stripe would still accept a payment on this reference — but a PaymentIntent
+    // "open" means Stripe would still accept a payment on this reference  but a PaymentIntent
     // sitting at requires_payment_method for weeks is abandoned in practice, and excluding those
     // from ageing left them pending forever. Past the stale window, anything that is not
     // confirmed-paid is treated as abandoned; only genuinely recent rows are given the benefit
@@ -189,7 +189,7 @@ export async function reconcileUnconfirmedDonations(options: ReconcileOptions = 
           data: {
             status: "FAILED",
             providerTxnResult: "Abandoned",
-            providerErrorMessage: `${ABANDONED_MARKER} — لم يكمل المتبرع عملية الدفع لدى Stripe`,
+            providerErrorMessage: `${ABANDONED_MARKER}  لم يكمل المتبرع عملية الدفع لدى Stripe`,
           },
         });
       }

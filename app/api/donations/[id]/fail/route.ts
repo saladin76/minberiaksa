@@ -8,7 +8,7 @@ import { sendDonationFailedConversions } from "@/lib/tracking/donation-conversio
  *
  * Called from the browser when a payment provider returns an inline error
  * (e.g. Stripe Elements `confirmPayment` rejects the card) so the row can't be
- * left dangling at status=PAID. Idempotent — re-marking an already-FAILED
+ * left dangling at status=PAID. Idempotent  re-marking an already-FAILED
  * donation is a no-op, and we never overwrite a donation that has already
  * been confirmed paid (paidAt is set).
  */
@@ -41,7 +41,7 @@ export async function PATCH(
       return NextResponse.json({ error: "Donation not found" }, { status: 404 });
     }
 
-    // Don't downgrade a confirmed payment — a webhook may have already marked it PAID.
+    // Don't downgrade a confirmed payment  a webhook may have already marked it PAID.
     if (donation.paidAt) {
       return NextResponse.json({ ok: true, alreadyPaid: true });
     }
@@ -59,7 +59,7 @@ export async function PATCH(
       },
     });
     void dispatchEvent("DONATION_FAILED", { donationId: id });
-    // Seed Meta with the failed attempt — browser pixel fires the matching
+    // Seed Meta with the failed attempt  browser pixel fires the matching
     // DonateFailed hit with event_id `${id}_failed` so the pair deduplicates.
     void sendDonationFailedConversions(id);
 

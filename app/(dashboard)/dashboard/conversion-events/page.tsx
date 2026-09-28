@@ -248,7 +248,7 @@ export default function ConversionEventsPage() {
         <CardDescription>
           إجمالي مطابق للفلاتر: {total}
           {rawTotal > total ? ` من أصل ${rawTotal} سجل خام بعد الدمج` : ""}
-          {source ? ` — ${sourceLabel(source)}` : ""}
+          {source ? `  ${sourceLabel(source)}` : ""}
         </CardDescription>
       </CardHeader>
       <CardContent>

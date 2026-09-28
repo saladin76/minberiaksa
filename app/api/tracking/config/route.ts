@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getPublicTrackingConfig } from "@/lib/tracking/tracking-settings";
 
-// GET /api/tracking/config — public browser config only. No access tokens or API secrets.
+// GET /api/tracking/config  public browser config only. No access tokens or API secrets.
 export async function GET() {
   try {
     const config = await getPublicTrackingConfig();

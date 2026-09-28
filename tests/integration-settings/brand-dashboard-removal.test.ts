@@ -17,7 +17,7 @@ test("brand is absent from dashboard navigation and visible permissions", () => 
 });
 
 test("active navigation resolves one longest matching route", () => {
-  // Sample routes only — this exercises the longest-prefix logic, not the routes themselves.
+  // Sample routes only  this exercises the longest-prefix logic, not the routes themselves.
   // Switched off /dashboard/operations now that it is gone, so the fixture cannot be mistaken
   // for a claim that those pages still exist.
   const hrefs = [
@@ -94,5 +94,5 @@ test("legacy assets are exposed read-only in their new home", () => {
   assert.match(assets, /LEGACY_BRAND/);
 
   // The frameworks half read the operations communication templates page, which no longer
-  // exists — readFileSync on it throws rather than failing an assertion.
+  // exists  readFileSync on it throws rather than failing an assertion.
 });

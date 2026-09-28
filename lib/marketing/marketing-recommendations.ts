@@ -1,7 +1,7 @@
 /**
  * Marketing recommendation rules. Combines site donation data with platform
  * snapshots when present. Falls back to site-only rules when no spend / no
- * snapshot data is available — never produces CPA / ROAS suggestions for
+ * snapshot data is available  never produces CPA / ROAS suggestions for
  * groups without spend.
  *
  * Distinct from `lib/ads/recommendations.ts` which only sees site-data
@@ -68,7 +68,7 @@ export function computeMarketingRecommendations(rows: ReconcileRow[]): Marketing
     const target = targetFromRow(r);
     const targetKey = target?.key ?? "global";
 
-    // ── PAID ADS rules — require platform data (spend) for spend-based ones
+    // ── PAID ADS rules  require platform data (spend) for spend-based ones
     if (r.spend != null && r.spend > 0) {
       // increase budget: strong real ROAS + healthy tracking + meaningful revenue
       if (
@@ -82,7 +82,7 @@ export function computeMarketingRecommendations(rows: ReconcileRow[]): Marketing
           kind: "increase_budget",
           severity: "positive",
           title: "زود الصرف هنا",
-          body: "إنفاق يحقق عائد قوي مع ثقة تتبع جيدة — مرشح لزيادة الميزانية.",
+          body: "إنفاق يحقق عائد قوي مع ثقة تتبع جيدة  مرشح لزيادة الميزانية.",
           target,
           metrics: [
             { label: "إنفاق", value: fmtMoney(r.spend) },
@@ -98,7 +98,7 @@ export function computeMarketingRecommendations(rows: ReconcileRow[]): Marketing
           kind: "decrease_budget",
           severity: "warning",
           title: "قلل الصرف هنا",
-          body: "إنفاق كبير بدون تبرعات تقريبًا — راجع المحتوى أو الجمهور أو أوقف الحملة.",
+          body: "إنفاق كبير بدون تبرعات تقريبًا  راجع المحتوى أو الجمهور أو أوقف الحملة.",
           target,
           metrics: [
             { label: "إنفاق", value: fmtMoney(r.spend) },
@@ -113,7 +113,7 @@ export function computeMarketingRecommendations(rows: ReconcileRow[]): Marketing
           kind: "high_spend_low_conv",
           severity: "warning",
           title: "إنفاق عالي وتحويل منخفض",
-          body: "تكلفة كل تبرع مرتفعة جدًا — افحص صفحة الهبوط، وسيلة الدفع، أو جودة الجمهور.",
+          body: "تكلفة كل تبرع مرتفعة جدًا  افحص صفحة الهبوط، وسيلة الدفع، أو جودة الجمهور.",
           target,
           metrics: [
             { label: "CPA", value: fmtMoney(r.cpa) },
@@ -134,7 +134,7 @@ export function computeMarketingRecommendations(rows: ReconcileRow[]): Marketing
         kind: "platform_under_credits",
         severity: "info",
         title: "أداء قوي لكن المنصة لا تنسبه",
-        body: "هناك تبرعات حقيقية لكن المنصة لم تسجّل أي تحويل — على الأرجح ضعف click ID أو CAPI.",
+        body: "هناك تبرعات حقيقية لكن المنصة لم تسجّل أي تحويل  على الأرجح ضعف click ID أو CAPI.",
         target,
         metrics: [
           { label: "تبرعات الموقع", value: String(r.sitePaidDonations) },
@@ -148,7 +148,7 @@ export function computeMarketingRecommendations(rows: ReconcileRow[]): Marketing
         kind: "tracking_alert",
         severity: "warning",
         title: "يحتاج فحص تتبع",
-        body: "ثقة التتبع منخفضة رغم وجود تبرعات — راجع UTMs و click IDs و CAPI.",
+        body: "ثقة التتبع منخفضة رغم وجود تبرعات  راجع UTMs و click IDs و CAPI.",
         target,
         metrics: [
           { label: "ثقة", value: fmtPct(r.trackingHealth) },
@@ -157,7 +157,7 @@ export function computeMarketingRecommendations(rows: ReconcileRow[]): Marketing
       });
     }
 
-    // promising market — country with high revenue share + healthy CPA when spend known
+    // promising market  country with high revenue share + healthy CPA when spend known
     if (
       r.country &&
       r.sitePaidDonations >= 3 &&
@@ -169,7 +169,7 @@ export function computeMarketingRecommendations(rows: ReconcileRow[]): Marketing
         kind: "promising_market",
         severity: "positive",
         title: "دولة واعدة",
-        body: "تبرعات قوية بتكلفة معقولة — فكر في زيادة الاستهداف لهذه الدولة.",
+        body: "تبرعات قوية بتكلفة معقولة  فكر في زيادة الاستهداف لهذه الدولة.",
         target,
         metrics: [
           { label: "إيراد الموقع", value: fmtMoney(r.siteRevenue) },
@@ -189,7 +189,7 @@ export function computeMarketingRecommendations(rows: ReconcileRow[]): Marketing
           kind: "messaging_low_delivery",
           severity: "warning",
           title: "معدل تسليم منخفض",
-          body: "أكثر من 20٪ من الرسائل فشلت — راجع جودة قائمة الأرقام أو أهلية القناة.",
+          body: "أكثر من 20٪ من الرسائل فشلت  راجع جودة قائمة الأرقام أو أهلية القناة.",
           target,
           metrics: [
             { label: "فشل", value: fmtPct(failureRate) },
@@ -203,7 +203,7 @@ export function computeMarketingRecommendations(rows: ReconcileRow[]): Marketing
           kind: "messaging_low_click_rate",
           severity: "warning",
           title: "معدل نقر منخفض",
-          body: "وصلت الرسالة لكن قليل من المستلمين ضغطوا الزر — جرب جملة افتتاحية أو CTA أقوى.",
+          body: "وصلت الرسالة لكن قليل من المستلمين ضغطوا الزر  جرب جملة افتتاحية أو CTA أقوى.",
           target,
           metrics: [
             { label: "نقر", value: fmtPct(clickRate) },
@@ -217,7 +217,7 @@ export function computeMarketingRecommendations(rows: ReconcileRow[]): Marketing
           kind: "messaging_clicks_no_donation",
           severity: "warning",
           title: "نقرات بدون تبرع",
-          body: "نقر مرتفع بدون تبرع واحد — افحص صفحة الهبوط أو مسار الدفع.",
+          body: "نقر مرتفع بدون تبرع واحد  افحص صفحة الهبوط أو مسار الدفع.",
           target,
           metrics: [
             { label: "نقرات", value: String(r.clicked) },
@@ -248,7 +248,7 @@ export function computeMarketingRecommendations(rows: ReconcileRow[]): Marketing
           kind: "messaging_promising_segment",
           severity: "positive",
           title: "شريحة واعدة",
-          body: "هذه الشريحة/القناة تجلب تبرعات بتكلفة منخفضة — كرر التركيز عليها.",
+          body: "هذه الشريحة/القناة تجلب تبرعات بتكلفة منخفضة  كرر التركيز عليها.",
           target,
           metrics: [
             { label: "تبرعات", value: String(r.sitePaidDonations) },

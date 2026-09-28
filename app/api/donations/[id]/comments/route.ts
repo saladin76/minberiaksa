@@ -35,7 +35,7 @@ export async function GET(
     });
 
     // Get comments with pagination
-    // `Comment` relates to the author via `user`/`userId` — not `donor`/`donorId`. The old
+    // `Comment` relates to the author via `user`/`userId`  not `donor`/`donorId`. The old
     // field names threw on every request, so donation comments never loaded or saved.
     const comments = await prisma.comment.findMany({
       where: { donationId: id },

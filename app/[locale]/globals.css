@@ -7,7 +7,7 @@
 }
 
 /* The platform's faces. `.mia-scope` sets font-family on itself, so this governs
-   the dashboard and the auth pages — everything outside the public site. */
+   the dashboard and the auth pages  everything outside the public site. */
 body {
   font-family: var(--font-cairo), Cairo, Almarai, var(--font-montserrat), Montserrat,
     'Segoe UI', system-ui, sans-serif;
@@ -30,7 +30,7 @@ body {
   display: none;
 }
 
-/* Dashboard sidebar scrollbar — thin, brand-coloured */
+/* Dashboard sidebar scrollbar  thin, brand-coloured */
 .sidebar-scroll {
   scrollbar-width: thin;
   scrollbar-color: rgba(255,255,255,0.50) transparent;
@@ -49,7 +49,7 @@ body {
   background-color: rgba(255,255,255,0.80);
 }
 
-/* Dashboard sidebar scrollbar — light variant, for the neutral (white) shell. */
+/* Dashboard sidebar scrollbar  light variant, for the neutral (white) shell. */
 .sidebar-scroll-light {
   scrollbar-width: thin;
   scrollbar-color: rgb(203 213 225) transparent;
@@ -150,7 +150,7 @@ body {
        `styles/minbar/minbar.css`, expressed in HSL because shadcn composes them
        as `hsl(var(--token))`. */
 
-    /* Ivory #FFFDF8 — the design's page ground, not a flat white. */
+    /* Ivory #FFFDF8  the design's page ground, not a flat white. */
     --background: 44 100% 99%;
     /* Trust Navy #10212B */
     --foreground: 203 46% 12%;
@@ -176,7 +176,7 @@ body {
     /* Deep navy reads on gold; white does not. */
     --secondary-foreground: 203 46% 12%;
 
-    /* Soft Sand #F7F2EA — the design's quiet surface — with Muted #52616B on it. */
+    /* Soft Sand #F7F2EA  the design's quiet surface  with Muted #52616B on it. */
     --muted: 38 41% 94%;
     --muted-foreground: 203 13% 37%;
     --accent: 38 41% 94%;
@@ -184,7 +184,7 @@ body {
     /* Minber Red #A93428 */
     --destructive: 6 61% 41%;
     --destructive-foreground: 44 100% 99%;
-    /* Minbar's hairline is rgba(16,33,43,.12) over ivory — this is its flat equivalent. */
+    /* Minbar's hairline is rgba(16,33,43,.12) over ivory  this is its flat equivalent. */
     --border: 203 17% 88%;
     --input: 203 17% 88%;
     --ring: 203 46% 12%;

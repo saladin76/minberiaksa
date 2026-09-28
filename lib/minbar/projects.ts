@@ -34,7 +34,7 @@ export interface MinbarProject {
   title: string;
   text: string;
   image: string | null;
-  /** Category slug — the handoff's regional filter key (gaza, al-quds, …). */
+  /** Category slug  the handoff's regional filter key (gaza, al-quds, …). */
   region: string | null;
   regionLabel: string | null;
   /** USD. `null` goal means an open-ended campaign: no bar, no percentage. */
@@ -195,7 +195,7 @@ export async function getProject(slug: string, locale: string): Promise<MinbarPr
  * Field updates published against a project, newest first.
  *
  * The detail page's "Updates" tab renders these as a dated timeline. An empty
- * list hides the tab rather than showing an empty one — the handoff is explicit
+ * list hides the tab rather than showing an empty one  the handoff is explicit
  * that reports appear only once approved and linked to the project.
  */
 export interface MinbarProjectUpdate {
@@ -243,8 +243,8 @@ export async function listProjectUpdates(
 /**
  * Other projects to show beneath a detail page.
  *
- * Same region first — a donor reading about Gaza food parcels is far more
- * likely to give to another Gaza project than to a random one — then anything
+ * Same region first  a donor reading about Gaza food parcels is far more
+ * likely to give to another Gaza project than to a random one  then anything
  * else to fill the row.
  */
 export async function listRelatedProjects(
@@ -280,8 +280,8 @@ export async function listProjectsByRegion(
  * The hero carousel's slides, from the CMS.
  *
  * `Minbar/المشاريع.dc.html` derives its carousel from the project list. The
- * site has a `Slide` model the dashboard already curates for exactly this — an
- * editor picks the images, the wording and where each one leads — so the
+ * site has a `Slide` model the dashboard already curates for exactly this  an
+ * editor picks the images, the wording and where each one leads  so the
  * carousel reads that instead, and falls back to the newest projects when no
  * slide is published rather than showing an empty hero.
  */

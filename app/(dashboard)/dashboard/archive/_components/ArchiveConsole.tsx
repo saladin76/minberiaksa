@@ -42,7 +42,7 @@ type CollectionBundle = {
 export function ArchiveConsole({ snapshot, selection, work = "latest", activeTab = "overview" }: Props) {
   // `activeTab` was declared in Props but never destructured, so all seven archive routes
   // (overview/collections/projects/drive-links/assets/marketing-picks/reports/ai) rendered a
-  // byte-identical console with no indication of where you were — and, because nothing
+  // byte-identical console with no indication of where you were  and, because nothing
   // rendered ARCHIVE_TABS either, no way to move between them except by typing URLs.
   //
   // Deliberately NOT filtering sections by tab: the console renders every section

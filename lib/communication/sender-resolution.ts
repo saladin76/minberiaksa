@@ -12,7 +12,7 @@ import type { CommunicationChannel, CommunicationPurpose } from "./communication
  *
  * Two problems met here. The first: a routing decision could be overruled after the fact. The
  * router already ends in its own default step, so `{ skipped }` means "these rules deliberately
- * have nobody for this recipient" — yet the campaign executor answered that by reaching for
+ * have nobody for this recipient"  yet the campaign executor answered that by reaching for
  * `runtime.meta.values.defaultPhoneNumberId` and sending anyway. A rule saying "no sender serves
  * France for marketing" then produced a French marketing message from the default number, which is
  * the precise outcome the rule existed to prevent.
@@ -20,15 +20,15 @@ import type { CommunicationChannel, CommunicationPurpose } from "./communication
  * The second: the paths disagreed. Campaigns routed by locale/country/purpose; automatic triggers
  * took `senders.find(first enabled with a phone number)`; retries and gift messages inherited the
  * trigger's choice. The same donor could therefore be messaged from two different business numbers
- * depending on which code path produced the message — and WhatsApp threads are per-number, so that
+ * depending on which code path produced the message  and WhatsApp threads are per-number, so that
  * splits one conversation in two.
  *
  * The contract now:
  *
  *  · Routing is attempted for every send, with the recipient's locale, country and the message's
- *    purpose — campaign, trigger, retry and gift alike.
+ *    purpose  campaign, trigger, retry and gift alike.
  *  · A router skip is FINAL. No environment fallback rescues it.
- *  · The environment default stands in only when sender management is not set up at all — no
+ *  · The environment default stands in only when sender management is not set up at all  no
  *    sender rows exist for the channel. That is the bootstrap case (the platform configured by
  *    environment variables before anyone has created a sender), not an override, and it is
  *    reported as `matchedBy: "runtime-default"` so it is visible in the delivery record.
@@ -50,14 +50,14 @@ export type SenderResolution =
 /**
  * Senders and rules read once and reused across a batch. A campaign sending to 3,000 recipients
  * must not re-read the sender table per message, and every recipient must be routed against the
- * same snapshot — a rule edited mid-send should not split one campaign across two policies.
+ * same snapshot  a rule edited mid-send should not split one campaign across two policies.
  */
 export type SenderRoutingSnapshot = {
   channel: CommunicationChannelId;
   senders: ReturnType<typeof toSenderConfig>[];
   rules: ReturnType<typeof toRoutingRuleConfig>[];
   raw: Map<string, Awaited<ReturnType<typeof listSenders>>[number]>;
-  /** True when the channel has no sender rows at all — the only case the env default may serve. */
+  /** True when the channel has no sender rows at all  the only case the env default may serve. */
   channelHasNoSenders: boolean;
   runtime: CommunicationRuntimeBundle;
 };
@@ -99,7 +99,7 @@ function runtimeDefault(snapshot: SenderRoutingSnapshot): ResolvedSender | null 
 /**
  * Resolve the sender for ONE recipient against a snapshot.
  *
- * `locale` and `country` are the recipient's, `purpose` the message's — the three inputs the
+ * `locale` and `country` are the recipient's, `purpose` the message's  the three inputs the
  * routing rules are written against. Passing them is what makes a campaign and a trigger to the
  * same donor land on the same number.
  */
@@ -121,7 +121,7 @@ export function resolveSenderFromSnapshot(
       locale: request.locale ?? null,
       country: request.country ?? null,
       /* The router compares the purpose as a string against rules and sender capabilities, so the
-         full four-value vocabulary passes through intact — UTILITY and AUTHENTICATION are not
+         full four-value vocabulary passes through intact  UTILITY and AUTHENTICATION are not
          flattened into TRANSACTIONAL, which would make a rule about one match the other. */
       purpose: request.purpose as unknown as CommunicationPurpose,
     },
@@ -129,7 +129,7 @@ export function resolveSenderFromSnapshot(
     snapshot.rules,
   );
 
-  /* The router looked and declined. That is the answer — see the note at the top of this file. */
+  /* The router looked and declined. That is the answer  see the note at the top of this file. */
   if ("skipped" in routed) return { ok: false, reason: routed.reason };
 
   const raw = snapshot.raw.get(routed.sender.id);

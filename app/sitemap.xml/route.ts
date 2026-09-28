@@ -1,11 +1,11 @@
 import { listShardIds, renderIndex } from "@/lib/sitemap";
 
 /**
- * /sitemap.xml — a sitemap INDEX, not the document itself.
+ * /sitemap.xml  a sitemap INDEX, not the document itself.
  *
  * It used to be the whole thing, which grew past Vercel's 19.07 MB prerender
  * ceiling (FALLBACK_BODY_TOO_LARGE). Keeping the path as the index means
- * anything already pointing here — robots.txt, Search Console — keeps working.
+ * anything already pointing here  robots.txt, Search Console  keeps working.
  */
 export const revalidate = 3600;
 

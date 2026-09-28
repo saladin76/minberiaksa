@@ -224,7 +224,7 @@ export function RegionCards({ images }: { images: { quds: string; aqsa: string; 
       <div id="regions" style={{ maxWidth: 1240, margin: "0 auto", padding: "0 24px", display: "grid", gridTemplateColumns: "repeat(3,minmax(0,1fr))", gap: 18 }}>
         {cards.map((card) => (
           /* The card is a column the full height of the row: title and copy at
-             the top, the button pinned to the foot — so the three buttons sit
+             the top, the button pinned to the foot  so the three buttons sit
              on one line however long each card's copy runs. */
           <Link key={card.title} href={card.href} style={{ position: "relative", display: "flex", flexDirection: "column", minHeight: 260, overflow: "hidden", background: "var(--deep)", borderRadius: 14, boxShadow: "0 12px 28px rgba(16,33,43,.12)" }}>
             <span role="img" aria-label={card.title} style={{ position: "absolute", inset: 0, display: "block", backgroundImage: `url('${card.image}')`, backgroundSize: "cover", backgroundPosition: "center" }} />

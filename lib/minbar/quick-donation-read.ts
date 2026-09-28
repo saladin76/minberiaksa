@@ -2,7 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { parseQuickDonation, type QuickDonationConfig } from "./quick-donation";
 
 /**
- * The quick-donation config as the homepage reads it — server only. Kept out
+ * The quick-donation config as the homepage reads it  server only. Kept out
  * of `quick-donation.ts` so the dashboard form and the card can import the
  * types and parser without pulling Prisma into a client bundle.
  *

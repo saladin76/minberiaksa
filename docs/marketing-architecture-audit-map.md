@@ -10,7 +10,7 @@ The project already has many Marketing pages and services. The next step is orga
 
 `lib/dashboard/nav-config.ts` currently exposes Marketing as one dashboard item:
 
-- `/dashboard/marketing` — نظام التسويق
+- `/dashboard/marketing`  نظام التسويق
 
 This is too small for the actual Marketing surface area that already exists in the repository.
 

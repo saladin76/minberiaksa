@@ -1,10 +1,10 @@
 {
  "_meta": {
   "namespace": "common",
-  "description": "المصطلحات والأزرار المشتركة عبر الموقع. المصدر المرجعي TRANSLATION_GLOSSARY.md — أي تعديل هنا يجب أن يطابق الـglossary.",
+  "description": "المصطلحات والأزرار المشتركة عبر الموقع. المصدر المرجعي TRANSLATION_GLOSSARY.md  أي تعديل هنا يجب أن يطابق الـglossary.",
   "sourceOfTruth": "ar",
   "fallback": "en",
-  "interpolationRule": "استخدم string كاملة مع {placeholder}. لا تُجمَّع الجمل برمجيًا — ترتيب الكلمات يختلف بين اللغات."
+  "interpolationRule": "استخدم string كاملة مع {placeholder}. لا تُجمَّع الجمل برمجيًا  ترتيب الكلمات يختلف بين اللغات."
  },
  "donate": {
   "ar": "تبرّع الآن",
@@ -511,7 +511,7 @@
   "hi": "आभार प्रमाणपत्र"
  },
  "donationSummary": {
-  "_note": "مثال على interpolation صحيح — جملة كاملة لكل لغة، لا جمع نصي.",
+  "_note": "مثال على interpolation صحيح  جملة كاملة لكل لغة، لا جمع نصي.",
   "ar": "تبرّعت بـ{amount} لمشروع {project}",
   "tr": "{project} Projesine {amount} Bağışladınız",
   "en": "You Donated {amount} to {project}",
@@ -533,7 +533,7 @@
   "hi": "सारांश: {project} हेतु {amount}"
  },
  "projectCount": {
-  "_note": "قواعد الجمع — تُستخدم مع Intl.PluralRules لكل locale. العربية لها 6 صور، الإنجليزية 2.",
+  "_note": "قواعد الجمع  تُستخدم مع Intl.PluralRules لكل locale. العربية لها 6 صور، الإنجليزية 2.",
   "ar": {
    "zero": "لا مشاريع",
    "one": "مشروع واحد",
@@ -1017,25 +1017,25 @@
   "hi": "स्लाइड {n} पर जाएँ"
  },
  "generalBankTransfer": {
-  "ar": "حيث الحاجة أشد — تحويل بنكي",
-  "tr": "İhtiyacın en fazla olduğu yere — banka havalesi",
-  "en": "Where the need is greatest — bank transfer",
-  "fr": "Là où le besoin est le plus grand — virement bancaire",
-  "de": "Wo die Not am größten ist — Banküberweisung",
-  "es": "Donde la necesidad es mayor — transferencia bancaria",
-  "id": "Di mana kebutuhan paling besar — transfer bank",
-  "pt": "Onde a necessidade é maior — transferência bancária",
-  "ur": "جہاں ضرورت سب سے زیادہ ہے — بینک ٹرانسفر",
-  "sq": "Ku nevoja është më e madhe — transfertë bankare",
-  "it": "Dove il bisogno è maggiore — bonifico bancario",
-  "nl": "Waar de nood het grootst is — bankoverschrijving",
-  "sv": "Där behovet är störst — banköverföring",
-  "no": "Der behovet er størst — bankoverføring",
-  "da": "Hvor behovet er størst — bankoverførsel",
-  "ms": "Di mana keperluan paling mendesak — pindahan bank",
-  "ja": "最も必要とされる場所へ — 銀行振込",
-  "zh": "最需要的地方 — 银行转账",
-  "hi": "जहाँ ज़रूरत सबसे अधिक — बैंक ट्रांसफ़र"
+  "ar": "حيث الحاجة أشد  تحويل بنكي",
+  "tr": "İhtiyacın en fazla olduğu yere  banka havalesi",
+  "en": "Where the need is greatest  bank transfer",
+  "fr": "Là où le besoin est le plus grand  virement bancaire",
+  "de": "Wo die Not am größten ist  Banküberweisung",
+  "es": "Donde la necesidad es mayor  transferencia bancaria",
+  "id": "Di mana kebutuhan paling besar  transfer bank",
+  "pt": "Onde a necessidade é maior  transferência bancária",
+  "ur": "جہاں ضرورت سب سے زیادہ ہے  بینک ٹرانسفر",
+  "sq": "Ku nevoja është më e madhe  transfertë bankare",
+  "it": "Dove il bisogno è maggiore  bonifico bancario",
+  "nl": "Waar de nood het grootst is  bankoverschrijving",
+  "sv": "Där behovet är störst  banköverföring",
+  "no": "Der behovet er størst  bankoverføring",
+  "da": "Hvor behovet er størst  bankoverførsel",
+  "ms": "Di mana keperluan paling mendesak  pindahan bank",
+  "ja": "最も必要とされる場所へ  銀行振込",
+  "zh": "最需要的地方  银行转账",
+  "hi": "जहाँ ज़रूरत सबसे अधिक  बैंक ट्रांसफ़र"
  },
  "add": {
   "ar": "إضافة",
@@ -2346,7 +2346,7 @@
    "translatedFromVersion": 1,
    "translatedAt": "2026-08-28T11:15:27.132Z",
    "status": "SYNCED",
-   "note": "sq unified to Dhuro (SERP evidence) — one term per language"
+   "note": "sq unified to Dhuro (SERP evidence)  one term per language"
   },
   "addToCart": {
    "sourceHash": "9c43c654",

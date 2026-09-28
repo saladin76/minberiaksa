@@ -5,8 +5,8 @@ import { pickTranslation, translationLocaleWhere } from "@/lib/i18n/translation-
 
 /**
  * What the concierge knows about a signed-in donor: their own giving, in the
- * shape the account page shows it. Loaded from the session's user id only —
- * never from anything the browser sends — and reduced to what a donor could
+ * shape the account page shows it. Loaded from the session's user id only 
+ * never from anything the browser sends  and reduced to what a donor could
  * already read on their account page. No email, phone, address, card or
  * gateway identifiers leave this module; the model sees first name, dates,
  * amounts, statuses and campaign titles.

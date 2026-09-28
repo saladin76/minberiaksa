@@ -49,7 +49,7 @@ export type NormalizedStatusEvent = {
  * A non-text inbound message, described rather than dropped.
  *
  * The parser used to read `text.body` and nothing else, so a donor who replied with a voice note,
- * a photo of a receipt or a document arrived as `text: null, messageType: "audio"` — the message
+ * a photo of a receipt or a document arrived as `text: null, messageType: "audio"`  the message
  * existed in the log with no indication that anything had been said. The id is kept because it is
  * what the Media endpoint needs to fetch the asset later; the asset itself is not downloaded here,
  * since a webhook must answer in milliseconds. No URL is stored: Meta's media URLs expire, so a

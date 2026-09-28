@@ -83,7 +83,7 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // Connectivity smoke test — fire-and-forget, don't block the response on it.
+  // Connectivity smoke test  fire-and-forget, don't block the response on it.
   void tgNotify(
     "✅ <b>تم تفعيل بوت تبرعات الجمعية</b>\nأرسل <code>/help</code> لعرض الأوامر المتاحة.",
     { silent: true }

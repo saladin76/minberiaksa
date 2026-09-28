@@ -11,11 +11,11 @@ import TravelBanner from "@/components/minbar/banners/TravelBanner";
 import IbadanBanner from "@/components/minbar/banners/IbadanBanner";
 
 /**
- * Contact us — ported from `Minbar/تواصل معنا.dc.html`.
+ * Contact us  ported from `Minbar/تواصل معنا.dc.html`.
  *
  * The handoff's `submitTicket()` is a 900ms `setTimeout` placeholder. This
  * version posts to the site's real inbox, `POST /api/messages`, which is what
- * the dashboard's Messages screen reads — so a message sent here is a message
+ * the dashboard's Messages screen reads  so a message sent here is a message
  * an admin actually receives.
  */
 

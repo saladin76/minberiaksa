@@ -3,7 +3,7 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { withDonationToken } from "@/lib/donations/access-token";
 // Donate (success) CAPI now fires server-side from `dispatchDonationPaid`
-// the moment the donation flips to PAID — that's the only path that
+// the moment the donation flips to PAID  that's the only path that
 // reliably catches donors whose browser never returns from 3DS (mobile
 // tab killed, ad-blocker, slow network, no Pixel ID configured). The
 // /success page still triggers /api/donations/:id/track-conversion as a

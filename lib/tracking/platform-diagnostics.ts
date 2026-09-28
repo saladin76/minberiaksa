@@ -1,5 +1,5 @@
 /**
- * Per-platform expectations for tracking diagnostics — the source of truth for
+ * Per-platform expectations for tracking diagnostics  the source of truth for
  * which click-ids each ad platform reconciles against, which cookies are
  * required for high-quality matching, and which dynamic macros tend to be
  * unresolved (a common cause of "{{publisher_platform}}" landing in our DB).
@@ -10,7 +10,7 @@
 import type { AdPlatform } from "@/lib/attribution/detect-source";
 
 export interface PlatformExpectations {
-  /** Click-id field names — ANY of these qualifies as a valid click-id. */
+  /** Click-id field names  ANY of these qualifies as a valid click-id. */
   clickIds: string[];
   /** Cookies / browser identifiers that improve match quality. */
   cookies: string[];

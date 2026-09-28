@@ -32,7 +32,7 @@
 
 ## المراحل المقترحة للإغلاق
 
-### M0 — Documentation and Flow
+### M0  Documentation and Flow
 
 تم تنفيذ أغلبها في PR الحالي:
 
@@ -41,7 +41,7 @@
 - إضافة operating-flow constants.
 - تحديث الصفحة الرئيسية للتسويق.
 
-### M1 — Marketing Home as Command Center
+### M1  Marketing Home as Command Center
 
 الهدف: تصبح الصفحة الرئيسية هي لوحة القيادة.
 
@@ -53,7 +53,7 @@
 - إضافة Quick links لأهم الصفحات.
 - توضيح أن Link Generator هو Campaign Builder.
 
-### M2 — Readiness and Health
+### M2  Readiness and Health
 
 الهدف: لا يضطر المستخدم للدخول لكل صفحة لمعرفة الوضع.
 
@@ -64,7 +64,7 @@
 - last sync summary من PlatformSyncRun.
 - warning عند غياب البيانات بدل أرقام صفرية مضللة.
 
-### M3 — Conversions Closure
+### M3  Conversions Closure
 
 الهدف: تثبيت ConversionEvent كمصدر حقيقة لتسليم التحويلات.
 
@@ -75,7 +75,7 @@
 - ربط Quality بمركز التسويق.
 - عدم الاعتماد على timestamp واحد داخل Donation كمصدر وحيد.
 
-### M4 — Campaign Links Closure
+### M4  Campaign Links Closure
 
 الهدف: إغلاق مسار الرابط والحملة.
 
@@ -86,7 +86,7 @@
 - إضافة وضع مبسط لاحقًا.
 - بعد Operations فقط: ربط ContentItem بالرابط.
 
-### M5 — Performance and Intelligence Closure
+### M5  Performance and Intelligence Closure
 
 الهدف: فصل الأداء عن القرار.
 
@@ -97,7 +97,7 @@
 - What to do next.
 - لا نبني intelligence كامل قبل وجود ContentItem وMarketingLearning.
 
-### M6 — AI Closure
+### M6  AI Closure
 
 الهدف: منع تكرار مفاتيح AI لاحقًا.
 
@@ -108,7 +108,7 @@
 - كل مخرجات AI تكون Draft.
 - إضافة AiOperationRun لاحقًا عند بناء Operations/Archive.
 
-### M7 — Handoff to Operations
+### M7  Handoff to Operations
 
 الهدف: تحديد الحدود بوضوح.
 

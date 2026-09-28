@@ -6,24 +6,24 @@ import { trackEngagement, clarityTag } from "@/lib/analytics";
 
 /**
  * Mounts a tiny set of always-on listeners that record real engagement
- * milestones. Renders no DOM, mutates no UI — only attaches passive listeners
+ * milestones. Renders no DOM, mutates no UI  only attaches passive listeners
  * to existing window/document targets and reports through `lib/analytics`.
  *
  * Events emitted (Clarity custom event names; same names sent to GA4 / GTM):
- *   - landing_page_view       — first observed pathname per session
- *   - page_view_change        — every subsequent client-side route change
- *   - page_became_hidden      — visibilitychange → hidden (incl. tab close)
- *   - page_visible_again      — visibilitychange → visible (after first hide)
- *   - first_scroll            — once per route, on first scroll
- *   - first_click             — once per route, on first user click
- *   - rage_click              — 3+ pointerdowns within 1 s in a 50 px radius
- *   - donation_flow_started   — emitted from the donation dialog (separate hook)
- *   - outbound_link_click     — anchor with hostname ≠ current site
+ *   - landing_page_view        first observed pathname per session
+ *   - page_view_change         every subsequent client-side route change
+ *   - page_became_hidden       visibilitychange → hidden (incl. tab close)
+ *   - page_visible_again       visibilitychange → visible (after first hide)
+ *   - first_scroll             once per route, on first scroll
+ *   - first_click              once per route, on first user click
+ *   - rage_click               3+ pointerdowns within 1 s in a 50 px radius
+ *   - donation_flow_started    emitted from the donation dialog (separate hook)
+ *   - outbound_link_click      anchor with hostname ≠ current site
  *
  * Tags set on the Clarity session (filterable, alerts):
- *   - utm_source / utm_medium / utm_campaign / utm_content / utm_term — when present
- *   - fbclid / gclid / ttclid — when present
- *   - is_paid_traffic — "1" when any of the above are present, else "0"
+ *   - utm_source / utm_medium / utm_campaign / utm_content / utm_term  when present
+ *   - fbclid / gclid / ttclid  when present
+ *   - is_paid_traffic  "1" when any of the above are present, else "0"
  *
  * All listeners are passive, swallow errors, and de-register on unmount /
  * route change as appropriate.
@@ -52,14 +52,14 @@ export default function EngagementInstrumentation() {
       }
       const isPaid = Object.keys(paidParams).length > 0;
 
-      // Clarity tags — make ad cohorts filterable in the Clarity dashboard.
+      // Clarity tags  make ad cohorts filterable in the Clarity dashboard.
       clarityTag("is_paid_traffic", isPaid ? "1" : "0");
       for (const [k, v] of Object.entries(paidParams)) clarityTag(k, v);
       if (document.referrer) {
         try {
           clarityTag("referrer_host", new URL(document.referrer).hostname);
         } catch {
-          /* malformed referrer — skip */
+          /* malformed referrer  skip */
         }
       }
 
@@ -79,7 +79,7 @@ export default function EngagementInstrumentation() {
     }
   }, []);
 
-  // ─── visibilitychange — captures the "page hidden at 00:01" pattern ───────
+  // ─── visibilitychange  captures the "page hidden at 00:01" pattern ───────
   // Mounted once for the lifetime of the SPA; emits on every transition.
   useEffect(() => {
     if (typeof document === "undefined") return;
@@ -172,7 +172,7 @@ export default function EngagementInstrumentation() {
     window.addEventListener("scroll", onScroll, { passive: true });
     document.addEventListener("pointerdown", onPointerDown, { passive: true, capture: true });
 
-    // Outbound link click delegation — captures clicks on anchors anywhere
+    // Outbound link click delegation  captures clicks on anchors anywhere
     // without modifying the DOM.
     const onClick = (e: MouseEvent) => {
       const target = e.target as Element | null;
@@ -190,7 +190,7 @@ export default function EngagementInstrumentation() {
           });
         }
       } catch {
-        /* malformed href — skip */
+        /* malformed href  skip */
       }
     };
     document.addEventListener("click", onClick, { passive: true, capture: true });

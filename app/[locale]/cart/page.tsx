@@ -21,11 +21,11 @@ export const metadata: Metadata = {
 };
 
 /**
- * Giving basket — ported from `Minbar/السلة.dc.html`.
+ * Giving basket  ported from `Minbar/السلة.dc.html`.
  *
  * The project and category lists are fetched here so the cart can resolve each row's title
  * live in the active locale. The cart contents themselves live in
- * `localStorage` and are read after hydration — the server cannot know them.
+ * `localStorage` and are read after hydration  the server cannot know them.
  */
 export default async function Cart({ params }: Props) {
   const { locale } = await params;

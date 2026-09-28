@@ -24,7 +24,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 /**
- * About us — ported from `Minbar/من نحن.dc.html`.
+ * About us  ported from `Minbar/من نحن.dc.html`.
  *
  * `homepage` rides along for the three closing banners, which the handoff
  * places at the foot of this page as it does on projects and the home page.

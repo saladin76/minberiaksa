@@ -8,7 +8,7 @@ import type { ElasticEmailInput, ElasticEmailSendResult } from "./types";
  *
  * Endpoint: POST https://api.elasticemail.com/v4/emails/transactional
  * Auth:     X-ElasticEmail-ApiKey header (never logged, never returned to a caller).
- * Response: { MessageID, TransactionID } — MessageID is stored as the providerMessageId so the
+ * Response: { MessageID, TransactionID }  MessageID is stored as the providerMessageId so the
  *           webhook can later advance the delivery to DELIVERED/OPENED/CLICKED/FAILED.
  */
 

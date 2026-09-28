@@ -20,7 +20,7 @@ import { CategoryCardIcon } from "./CategoryCardIcon";
  * The parts of a category's page, as separate pieces.
  *
  * A category is normally published as its own landing page
- * (`CategoryLandingPage`), but two of them — the mosque and zakat — already
+ * (`CategoryLandingPage`), but two of them  the mosque and zakat  already
  * had a page of their own on the site before categories learned to publish
  * themselves, and those pages say far more than a category page could. Rather
  * than throw that away, a category can be bound to one of those pages
@@ -28,8 +28,8 @@ import { CategoryCardIcon } from "./CategoryCardIcon";
  * parts into itself: the figures, the values, the campaigns, the donation box,
  * the explanatory cards and the achievements, each in the place it belongs.
  *
- * Every piece here renders only its own content — no full-bleed section, no
- * page background — so the landing page can wrap each in a band of its own
+ * Every piece here renders only its own content  no full-bleed section, no
+ * page background  so the landing page can wrap each in a band of its own
  * while a host page keeps them inside its container. `CategoryProgramme` is
  * the contained composition the host pages use.
  */
@@ -118,7 +118,7 @@ export function CategoryProjectsGrid({ page, columns = 3 }: { page: CategoryPage
 
 /**
  * Money, the same contract as the homepage's quick-donation card: the chips
- * are USD, shown converted to the visitor's currency — UNLESS the dashboard
+ * are USD, shown converted to the visitor's currency  UNLESS the dashboard
  * gave that currency its own list, in which case those are shown as they are
  * and go to the cart in that currency. The free field is always in the
  * visitor's currency: the symbol beside the total is what they see, so that
@@ -153,8 +153,8 @@ export function CategoryDonateBox({ page, typeKey = "project" }: { page: Categor
   const totalCurrency = custom ? visitorCode : chipCurrency;
   const showMoney = (value: number, code: string) => (code === "USD" ? format(value) : formatMoney(value, code, locale));
 
-  /* Only identifiers reach the cart — a campaign slug or a category id, a
-     numeric amount and an ISO currency — because the cart resolves titles live
+  /* Only identifiers reach the cart  a campaign slug or a category id, a
+     numeric amount and an ISO currency  because the cart resolves titles live
      from the active locale. A category row carries the category's id (its
      slugs differ per locale) and becomes a category line of the order. */
   const addCategoryDonation = () => {
@@ -190,7 +190,7 @@ export function CategoryDonateBox({ page, typeKey = "project" }: { page: Categor
   return (
     <div style={{ display: "grid", gap: 22 }}>
       <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
-        <b style={{ fontSize: 18 }}>{page.donateTitle || `${t("donateNow")} — ${page.name}`}</b>
+        <b style={{ fontSize: 18 }}>{page.donateTitle || `${t("donateNow")}  ${page.name}`}</b>
         <span style={{ color: "var(--muted)", fontSize: 13 }}>{page.donateNote || page.donateTarget.title}</span>
       </div>
 

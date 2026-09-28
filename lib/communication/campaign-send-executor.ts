@@ -66,7 +66,7 @@ function templateValuesFor(names: string[], ctx: unknown): Record<string, string
  * A single run cannot send to everyone: the request has a time budget and the providers have rate
  * limits, so the audience is walked in batches. What matters is that the walk *finishes*. It used to
  * not: one batch was processed, a final status was written, and a campaign with 3,000 recipients
- * reported itself SENT after 200 — the remaining 2,800 were never contacted and nothing in the
+ * reported itself SENT after 200  the remaining 2,800 were never contacted and nothing in the
  * record said so.
  *
  * So the run keeps a position. `sendProgress` on the campaign holds the cursor into the audience
@@ -84,7 +84,7 @@ function templateValuesFor(names: string[], ctx: unknown): Record<string, string
  *    what makes a killed request recoverable rather than a stuck campaign.
  *
  * Per recipient, the batch also skips anyone who already has a processed delivery for this
- * campaign+template — that is the backstop behind both of the above, and the reason a re-run is safe
+ * campaign+template  that is the backstop behind both of the above, and the reason a re-run is safe
  * even if a lease were somehow shared.
  */
 
@@ -96,7 +96,7 @@ export type ExecutionSummary = {
   truncated: boolean; reasons: Record<string, number>; blocked?: string;
   /** Batches processed by THIS run. */
   batches?: number;
-  /** True when the audience still has recipients left — the scheduler will continue. */
+  /** True when the audience still has recipients left  the scheduler will continue. */
   hasMore?: boolean;
 };
 
@@ -123,7 +123,7 @@ type SendProgress = {
 
 /**
  * How many consecutive blocked resumes before the walk is given up on. A provider outage should be
- * waited out — that is the point of resuming — but a permanently broken campaign must stop asking
+ * waited out  that is the point of resuming  but a permanently broken campaign must stop asking
  * the scheduler every ten minutes and must stop looking "in progress" to whoever is watching.
  */
 const MAX_BLOCKED_RESUMES = 3;
@@ -172,7 +172,7 @@ async function patchMetadata(campaignId: string, current: Record<string, unknown
 }
 
 async function auditBlocked(campaign: CommunicationCampaign, reason: string, actor: Actor, mode: SendMode, plan?: SendPlan) {
-  await writeAuditLog({ actorId: actor?.actorId ?? undefined, actorName: actor?.actorName ?? undefined, actorRole: actor?.actorRole ?? "ADMIN", action: "communication.campaign.send.blocked", messageAr: `تعذّر إرسال حملة «${campaign.name}» — السبب: ${reason}`, messageEn: `Campaign send blocked: ${campaign.name} — ${reason}`, entityType: "CommunicationCampaign", entityId: campaign.id, metadata: { mode, reason, summary: plan ? { total: plan.total, eligible: plan.eligible, skipped: plan.skipped, reasons: plan.reasons } : undefined, externalCall: false, autoSend: false }, stream: "TEAM" });
+  await writeAuditLog({ actorId: actor?.actorId ?? undefined, actorName: actor?.actorName ?? undefined, actorRole: actor?.actorRole ?? "ADMIN", action: "communication.campaign.send.blocked", messageAr: `تعذّر إرسال حملة «${campaign.name}»  السبب: ${reason}`, messageEn: `Campaign send blocked: ${campaign.name}  ${reason}`, entityType: "CommunicationCampaign", entityId: campaign.id, metadata: { mode, reason, summary: plan ? { total: plan.total, eligible: plan.eligible, skipped: plan.skipped, reasons: plan.reasons } : undefined, externalCall: false, autoSend: false }, stream: "TEAM" });
 }
 
 /** Tallies for one batch, added into the run's and the campaign's running totals. */
@@ -220,7 +220,7 @@ export async function executeCampaignSend(
   base.total = firstPlan.total; base.truncated = firstPlan.truncated; base.reasons = { ...firstPlan.reasons };
   if (firstPlan.blocked) {
     await auditBlocked(campaign, firstPlan.blocked, actor, mode, firstPlan);
-    /* A mid-walk campaign that cannot run is left resumable so a provider outage can be waited out —
+    /* A mid-walk campaign that cannot run is left resumable so a provider outage can be waited out 
        but not forever: after MAX_BLOCKED_RESUMES it is finalised from the tallies it did reach, so it
        stops asking the scheduler every tick and stops reading as "sending" to whoever is watching. */
     const giveUp = resuming && progress.blockedRuns + 1 >= MAX_BLOCKED_RESUMES;
@@ -321,7 +321,7 @@ export async function executeCampaignSend(
       /* WhatsApp: the name and language come from the variant Meta actually approved for this
          locale, and the parameters from the schema that variant declares. Sending the recipient's
          own locale as the language, as this did, is rejected outright whenever that language was
-         never approved — the message was lost although a good Arabic variant existed. */
+         never approved  the message was lost although a good Arabic variant existed. */
       let metaName = rendered.templateName;
       let metaLanguage: string = recipient.locale;
       let metaComponents: unknown[] | undefined;
@@ -338,7 +338,7 @@ export async function executeCampaignSend(
           positionalNames: whatsapp?.positionalNames ?? [],
         });
         if (!built.ok) {
-          await markDeliveryStatus(deliveryId, "SKIPPED", { errorMessage: `${built.reason} — ${built.detail}` });
+          await markDeliveryStatus(deliveryId, "SKIPPED", { errorMessage: `${built.reason}  ${built.detail}` });
           tally.skipped += 1; bump(tally.reasons, built.reason); continue;
         }
         metaName = readiness.providerTemplateName;
@@ -349,13 +349,13 @@ export async function executeCampaignSend(
       const result = await sendPreparedDelivery({ channel, sender, country: recipient.country, to, templateName: metaName, languageCode: metaLanguage, components: metaComponents, subject: rendered.subject, html: rendered.body }, runtime);
       if (!result.ok) {
         const terminal = result.reason.endsWith("_NOT_CONFIGURED") || result.reason.endsWith("_NOT_IMPLEMENTED") || result.reason.includes("SENDER_MISSING") || result.reason === "PROVIDER_DISABLED" || result.reason === "INTEGRATION_DECRYPTION_FAILED" || result.reason === "INTEGRATION_DATABASE_UNAVAILABLE";
-        // `detail` carries the provider's own answer — the HTTP status and the scrubbed response body
+        // `detail` carries the provider's own answer  the HTTP status and the scrubbed response body
         // (e.g. `406: {"code":"30","description":"Check the usercode-password information and API
         // access permission"}`). Dropping it left the send log showing only NETGSM_REQUEST_FAILED,
         // with the one line that explains the failure existing nowhere at all. The adapters already
         // scrub credentials out of `detail` before returning it.
         await markDeliveryStatus(deliveryId, terminal ? "SKIPPED" : "FAILED", {
-          errorMessage: result.detail ? `${result.reason} — ${result.detail}` : result.reason,
+          errorMessage: result.detail ? `${result.reason}  ${result.detail}` : result.reason,
         });
         if (terminal) tally.skipped += 1; else tally.failed += 1;
         bump(tally.reasons, result.reason); continue;
@@ -370,7 +370,7 @@ export async function executeCampaignSend(
      Batch after batch until the audience is exhausted, this run's batch budget
      is spent, or a batch turns out to be blocked. The cursor and tallies are
      written after every batch, so a request that dies mid-walk loses at most
-     the batch it was in — the next run resumes from the last cursor. */
+     the batch it was in  the next run resumes from the last cursor. */
   let plan: SendPlan | null = firstPlan;
   let batches = 0;
   let exhausted = firstPlan.exhausted;
@@ -390,7 +390,7 @@ export async function executeCampaignSend(
     for (const [key, value] of Object.entries(tally.reasons)) progress.reasons[key] = (progress.reasons[key] ?? 0) + value;
     progress.updatedAt = new Date().toISOString();
     progress.done = exhausted;
-    /* A batch that ran clears the blocked streak — the count is about consecutive failures to start. */
+    /* A batch that ran clears the blocked streak  the count is about consecutive failures to start. */
     progress.blockedRuns = 0;
     /* The lease is renewed with each batch: a long but healthy walk must not look crashed to the
        next scheduler tick while it is still working. */
@@ -412,7 +412,7 @@ export async function executeCampaignSend(
 
   const hasMore = !exhausted;
   /* The status is only final once the audience is. While recipients remain the campaign stays
-     SENDING — which is both the truth and what makes the scheduler pick it up again. */
+     SENDING  which is both the truth and what makes the scheduler pick it up again. */
   const finalStatus = hasMore ? "SENDING" : computeFinalStatus(progress.total, progress.sent, progress.skipped, progress.failed);
   base.truncated = hasMore;
   await prisma.communicationCampaign.update({
@@ -424,7 +424,7 @@ export async function executeCampaignSend(
         /* Released on every exit, including one that stops with recipients left: the lease protects a
            run that is *in flight*, and this one has finished. Holding it would stall the next
            scheduler tick (and any deliberate resume) for no reason. A crashed run is the case the
-           expiry is for — it leaves the lease behind and it goes stale on its own. */
+           expiry is for  it leaves the lease behind and it goes stale on its own. */
         sendProgress: { ...progress },
         sendLease: null,
         lastRun: { ranAt: new Date().toISOString(), mode, batches, total: progress.total, sent: progress.sent, skipped: progress.skipped, failed: progress.failed, blocked: base.blocked ?? null, reasons: progress.reasons, truncated: hasMore, hasMore },
@@ -433,7 +433,7 @@ export async function executeCampaignSend(
   }).catch(() => {});
   // The counters are derived from the delivery rows rather than incremented by this run's tallies.
   // `{ increment }` double-counted a re-run and, more importantly, froze `sentCount` at "the
-  // provider accepted it" — the number the event webhook later contradicts. Deriving keeps the
+  // provider accepted it"  the number the event webhook later contradicts. Deriving keeps the
   // header and the delivery log answering the same question, and it is what lets a later
   // Suppress/bounce pull `sentCount` back down instead of leaving the campaign claiming success.
   await recomputeCampaignCounters(campaignId).catch(() => {});
@@ -441,11 +441,11 @@ export async function executeCampaignSend(
     actorId: actor?.actorId ?? undefined, actorName: actor?.actorName ?? undefined, actorRole: actor?.actorRole ?? "ADMIN",
     action: "communication.campaign.send",
     messageAr: hasMore
-      ? `تنفيذ دفعة من حملة «${campaign.name}» — أُرسل ${base.sent}، تخطّي ${base.skipped}، فشل ${base.failed} (المتابعة مجدولة)`
-      : `اكتمل إرسال حملة «${campaign.name}» — أُرسل ${progress.sent}، تخطّي ${progress.skipped}، فشل ${progress.failed}`,
+      ? `تنفيذ دفعة من حملة «${campaign.name}»  أُرسل ${base.sent}، تخطّي ${base.skipped}، فشل ${base.failed} (المتابعة مجدولة)`
+      : `اكتمل إرسال حملة «${campaign.name}»  أُرسل ${progress.sent}، تخطّي ${progress.skipped}، فشل ${progress.failed}`,
     messageEn: hasMore
-      ? `Campaign batch executed: ${campaign.name} — sent ${base.sent}, skipped ${base.skipped}, failed ${base.failed} (will continue)`
-      : `Campaign send completed: ${campaign.name} — sent ${progress.sent}, skipped ${progress.skipped}, failed ${progress.failed}`,
+      ? `Campaign batch executed: ${campaign.name}  sent ${base.sent}, skipped ${base.skipped}, failed ${base.failed} (will continue)`
+      : `Campaign send completed: ${campaign.name}  sent ${progress.sent}, skipped ${progress.skipped}, failed ${progress.failed}`,
     entityType: "CommunicationCampaign", entityId: campaignId,
     metadata: { mode, batches, sent: base.sent, skipped: base.skipped, failed: base.failed, cumulative: { sent: progress.sent, skipped: progress.skipped, failed: progress.failed }, hasMore, truncated: hasMore, externalCall: base.sent > 0 },
     stream: "TEAM",
@@ -457,7 +457,7 @@ export async function executeCampaignSend(
 /**
  * The scheduler's tick: campaigns whose schedule has come due, and campaigns already mid-walk whose
  * last run stopped before the audience ran out. The second half is what turns a batched send into a
- * complete one — without it a 3,000-recipient campaign would sit in SENDING with 200 contacted.
+ * complete one  without it a 3,000-recipient campaign would sit in SENDING with 200 contacted.
  *
  * A campaign whose lease is still fresh is left alone; it is being worked on right now.
  */

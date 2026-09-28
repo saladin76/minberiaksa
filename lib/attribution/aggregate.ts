@@ -1,7 +1,7 @@
 /**
  * Pure aggregation helpers shared by all `/api/admin/ads/*` routes.
  * Each function takes already-fetched donation rows (with the minimum fields
- * needed) and produces dashboard-ready aggregates. No DB access here — keeps
+ * needed) and produces dashboard-ready aggregates. No DB access here  keeps
  * the routes thin and unit-testable, and lets the same logic run client-side
  * in the future if we add a "what-if" filter UI.
  *
@@ -48,7 +48,7 @@ export interface AggregateDonationInput {
   conversionFailedEventsSentAt: Date | null;
   donorId: string;
   donorCountryCode: string | null;
-  /** First donation ever (across all time) for this donor — used to flag new-donor revenue. */
+  /** First donation ever (across all time) for this donor  used to flag new-donor revenue. */
   isFirstEverDonation: boolean;
 }
 
@@ -61,7 +61,7 @@ interface SubAggregate {
 
 export interface BreakdownRow {
   key: string;
-  /** Human label — name when available, otherwise id (utm_campaign / utm_content / placement / etc.). */
+  /** Human label  name when available, otherwise id (utm_campaign / utm_content / placement / etc.). */
   label: string;
   /** Display name (e.g. utm_campaign value). Null when only a platform id is known. */
   name: string | null;
@@ -78,7 +78,7 @@ export interface BreakdownRow {
   paymentSuccessRate: number;
   /** Average confidence (0–1) across paid-ad donations in this group. */
   trackingHealthPct: number;
-  /** Same value scaled 0–100 — handy for quick `>= 75` comparisons. */
+  /** Same value scaled 0–100  handy for quick `>= 75` comparisons. */
   avgConfidence: number;
   /** Distinct donors who paid in this group. */
   uniqueDonors: number;

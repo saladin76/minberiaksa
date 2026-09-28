@@ -1,12 +1,12 @@
 # Dashboard System Status
 
-> ⚠️ **متجاوَزة جزئيًا — SUPERSEDED (2026-08-01)**
+> ⚠️ **متجاوَزة جزئيًا  SUPERSEDED (2026-08-01)**
 >
 > **المصدر الموثوق لحالة لوحة التحكم هو `docs/dashboard-completion-roadmap.md`.**
 > هذه الوثيقة حالة نظام مؤرّخة 2026-06-22 ولم تُحدَّث بعد إصلاحات جلسة 2026-07-31/08-01. أجزاء منها لم تعد صحيحة:
 >
-> - تصف **مركز التواصل** كنموذج أولي «الإرسال معطّل». الإرسال ما يزال غير مُفعَّل لعدم وجود مزوّد، لكن ثلاث `await` ناقصة كانت تجعل الواجهة تدّعي الجاهزية — أُصلحت (P1-7).
-> - تسرد مسارات `/dashboard/brand/*` و`api/admin/brand/*` — **لم تعد موجودة**.
+> - تصف **مركز التواصل** كنموذج أولي «الإرسال معطّل». الإرسال ما يزال غير مُفعَّل لعدم وجود مزوّد، لكن ثلاث `await` ناقصة كانت تجعل الواجهة تدّعي الجاهزية  أُصلحت (P1-7).
+> - تسرد مسارات `/dashboard/brand/*` و`api/admin/brand/*`  **لم تعد موجودة**.
 > - أرقام الإيرادات والمتبرعين الواردة فيها سبقت إصلاحات P0/P1/P2 (منها تضخيم عدّاد المتبرعين العام بنسبة ~51%، و`teamSupport` على الرسم بـ5.5×).
 >
 > اقرأ الخارطة أولًا؛ استخدم هذه الوثيقة للسياق المعماري لا لحالة النظام.
@@ -163,26 +163,26 @@
 
 ---
 
-## 2026-07-04 — Phase 0 audit + Locale Foundation
+## 2026-07-04  Phase 0 audit + Locale Foundation
 
-- Added `docs/dashboard-operating-system-audit.md` — full Phase 0 audit of the
+- Added `docs/dashboard-operating-system-audit.md`  full Phase 0 audit of the
   dashboard operating system (schema truth, the two messaging systems, locale
   duplication, nav, prior-plan reconciliation). No runtime change.
-- Added `docs/dashboard-operating-system.md` — target architecture + current→target
+- Added `docs/dashboard-operating-system.md`  target architecture + current→target
   route map + package roadmap (north star; supersedes nothing, references prior docs).
 - Shipped **Locale Foundation** package (`docs/implementation-packages/locale-foundation.md`):
   `lib/locales.ts` is now the single source of truth with `direction`, `nativeLabel`,
   `fallbackLocale`, `enabled` metadata; `sq/it/nl/sv` registered `enabled:false`
   (not publicly routed). Core routers (middleware, i18n routing, `[locale]/layout`
   VALID_LOCALES) and direction helpers (SyncHtmlDir, DashboardLayoutClient) now derive
-  from the catalog. **Zero public behaviour change** — the enabled set is the exact
+  from the catalog. **Zero public behaviour change**  the enabled set is the exact
   current 8 locales. No schema/payment/tracking/Twilio/SendGrid changes.
 - Reconciled duplication in-package: `lib/seo.ts` + `lib/campaign/share-labels.ts` now
   derive their locale lists from the catalog (type-enforced drift guard), and the
   `de`-missing 7-locale arrays in `cart/payment`, `donations`, `stripe/intent`, and
-  `verify-email` now use `isValidLocale` — latent bug fixed (German donors were losing
+  `verify-email` now use `isValidLocale`  latent bug fixed (German donors were losing
   `donation.locale`; payment processing untouched).
-- Added `scripts/audit-locales.mjs` (`npm run locale:audit` / `:strict`) — runtime drift
+- Added `scripts/audit-locales.mjs` (`npm run locale:audit` / `:strict`)  runtime drift
   guard for content-keyed / non-importable sources (static message map, marketing
   locales, JSON-LD, `.mjs` audit, message-file existence). Currently passing.
 - Still hand-maintained (flagged by the guard/type system): static message import map,
@@ -190,11 +190,11 @@
 
 ---
 
-## 2026-07-04 — Marketing Decision Surface (real data)
+## 2026-07-04  Marketing Decision Surface (real data)
 
 - Audited the marketing subsystem (`docs/implementation-packages/marketing-decision-surface.md`).
   Conversion/tracking truth layer is REAL (ConversionEvent ledger, Meta CAPI + GA4, status-based
-  retry) — left untouched as sensitive. Campaign-link registry + overview reconciliation are REAL.
+  retry)  left untouched as sensitive. Campaign-link registry + overview reconciliation are REAL.
 - **Insights page is now the real Marketing Overview**: surfaces platform revenue, the site-vs-platform
   revenue gap (difference), and true ROAS (site) vs platform ROAS + a revenue-match %, plus a
   gap-based recommendation. Pure additive UI over the existing `/marketing-intelligence/overview` API.
@@ -207,11 +207,11 @@
 
 ---
 
-## 2026-07-04 — Communication domain foundation (audiences + sender routing)
+## 2026-07-04  Communication domain foundation (audiences + sender routing)
 
 - Added pure/read-only Communication Center domain services (mission Package 3; no send,
   no schema, no provider calls): `lib/communication/audience-service.ts` (dynamic language×
-  channel audiences from the real donor base with lawful-safe eligibility — WhatsApp is
+  channel audiences from the real donor base with lawful-safe eligibility  WhatsApp is
   always NEEDS_REVIEW, never silently bulk-eligible), `lib/communication/sender-router.ts`
   (pure locale/country/purpose/priority/fallback routing → sender or SKIPPED reason), and
   `lib/communication/language-coverage.ts` (per-locale EXISTS/FALLBACK/MISSING coverage +
@@ -225,13 +225,13 @@
 
 ---
 
-## 2026-07-04 — Navigation aligned + Communication Center surfaced
+## 2026-07-04  Navigation aligned + Communication Center surfaced
 
 - Refactored `lib/dashboard/nav-config.ts` into architecture-aligned groups (عام / التسويق
   والنمو / المحتوى والتشغيل / الأرشيف الذكي / المستخدمون والرسائل / الهوية / الإعدادات) and
   **surfaced the Communication Center** ("مركز التواصل" → /dashboard/operations/communication),
   which was previously unreachable from the sidebar. Every key is an existing permission and
-  every href an existing route — no permission keys added, no routes removed.
+  every href an existing route  no permission keys added, no routes removed.
 - Deduped `DASHBOARD_PERMISSION_ROWS` by key so the permissions-management table shows each
   permission once (revenue/ads/referrals/campaigns were already duplicated before).
 - Access control unchanged: route→permission resolution is driven by `PATH_RULES` in
@@ -240,7 +240,7 @@
 
 ---
 
-## 2026-07-05 — Marketing Results & Recommendations on real data (no fixtures left)
+## 2026-07-05  Marketing Results & Recommendations on real data (no fixtures left)
 
 - Rebuilt `lib/marketing/results/results-service.ts` (now async, DB-backed): per-campaign
   spend/clicks from `AdCampaignSnapshot` joined with first-party site donations/revenue from
@@ -255,7 +255,7 @@
 
 ---
 
-## 2026-07-05 — Communication Center runtime foundation (data + services, no sending)
+## 2026-07-05  Communication Center runtime foundation (data + services, no sending)
 
 - Added 6 runtime Prisma models to `prisma/schema.prisma`: CommunicationSender, SenderRoutingRule,
   DonorCommunicationProfile, CommunicationCampaign, CommunicationDelivery (new archive layer),
@@ -272,7 +272,7 @@
 
 ---
 
-## 2026-07-05 — Communication senders, routing & donor profiles (UI + automation)
+## 2026-07-05  Communication senders, routing & donor profiles (UI + automation)
 
 - Pages: /communication/senders (CRUD + enable/disable + one-default-per-channel, no secret fields),
   /communication/routing (rule CRUD + live routing preview via the pure sender-router),
@@ -290,13 +290,13 @@
 
 ---
 
-## 2026-07-05 — Communication campaigns & delivery archive (send-disabled)
+## 2026-07-05  Communication campaigns & delivery archive (send-disabled)
 
 - Campaign workflow: /communication/campaigns (list+create) and /campaigns/[id] step builder
   (basics → audience eligibility breakdown → template → language coverage w/ FALLBACK/EXCLUDE
   decisions → sender routing → per-locale preview → test record → submit/approve/cancel).
   Lifecycle DRAFT→REVIEW→APPROVED→SCHEDULED; SENDING/SENT unreachable (no adapter). Schedule/send disabled.
-- Delivery archive: CommunicationDelivery written for every test/prepared recipient (never SENT —
+- Delivery archive: CommunicationDelivery written for every test/prepared recipient (never SENT 
   ProviderRouter always returns *_NOT_CONFIGURED → SKIPPED). /delivery-logs (filters + rendered
   snapshot + reason + donor/campaign links) and /provider-events (sanitized payload only). SentMessage
   untouched (legacy).
@@ -309,12 +309,12 @@
 
 ---
 
-## 2026-07-05 — Meta WhatsApp Cloud API adapter, webhooks & Inbox
+## 2026-07-05  Meta WhatsApp Cloud API adapter, webhooks & Inbox
 
 - Adapter lib/communication/providers/meta-whatsapp/ (client/types/messages/templates/webhooks/errors),
   written to official Meta docs (docs/integrations/meta-whatsapp-cloud-api.md). Server-only; tokens never
   logged/leaked (scrubSecrets, mapGraphError). Send = POST /<phoneNumberId>/messages (template) → wamid.
-- ProviderRouter: WhatsApp via adapter — NOT_CONFIGURED / SENDER_MISSING_PHONE_NUMBER_ID when unconfigured;
+- ProviderRouter: WhatsApp via adapter  NOT_CONFIGURED / SENDER_MISSING_PHONE_NUMBER_ID when unconfigured;
   never fakes SENT. Email/SMS still not-configured.
 - Webhook /api/webhooks/meta/whatsapp: GET verify (hub.challenge), POST raw-body X-Hub-Signature-256
   HMAC check; webhook-service stores idempotent CommunicationProviderEvent (unique idempotencyKey) and
@@ -328,7 +328,7 @@
 
 ---
 
-## 2026-07-05 — Communication Center final polish (Email/SMS, reactivation, reports, nav, safety)
+## 2026-07-05  Communication Center final polish (Email/SMS, reactivation, reports, nav, safety)
 
 - Email behind ProviderRouter (providers/email wraps SendGrid; EMAIL_PROVIDER_NOT_CONFIGURED /
   EMAIL_SENDER_MISSING_IDENTITY when unconfigured). SMS abstraction (providers/sms): TR→Netgsm,
@@ -340,19 +340,19 @@
 - Nav: reports/inbox surfaced in communication overview; legacy /dashboard/messages + /templates labelled
   "(قديم)" (kept, not deleted).
 - SAFETY FIX (rule #9): lib/email.ts + lib/whatsapp.ts no longer fake sent=recipients.length when creds
-  missing — now record FAILED with *_PROVIDER_NOT_CONFIGURED so triggers archive the true state.
+  missing  now record FAILED with *_PROVIDER_NOT_CONFIGURED so triggers archive the true state.
   Previews + sendVerificationEmail untouched.
 - Build green (next build exit 0), locale audit passes, 0 new type errors. Legacy Twilio/SendGrid preserved.
   Real sending remains config-gated (not production-ready without provider creds + live webhook testing).
 
 ---
 
-## 2026-07-06 — Send execution + dashboard UX finalization
+## 2026-07-06  Send execution + dashboard UX finalization
 
 - Real campaign send: `lib/communication/campaign-send-executor.ts` (executeCampaignSend + runDueCampaigns)
   with status/coverage/eligibility gates, idempotency per campaign+recipient+template, batching, counters,
   audit. `provider-router.sendPreparedDelivery` (WhatsApp template / SendGrid email / SMS not-implemented);
-  email uses `internalAccepted` (SENT with null external id, documented — no fake id). APIs:
+  email uses `internalAccepted` (SENT with null external id, documented  no fake id). APIs:
   campaigns/[id]/send ({confirm:true}, APPROVED-only), [id]/schedule, campaigns/run-due (admin/manual).
   Builder wires Send Now + Schedule gated on `sendEnabled`.
 - Webhook prod hardening: POST rejects unverifiable (missing app secret) with 401 in production; dev warns.

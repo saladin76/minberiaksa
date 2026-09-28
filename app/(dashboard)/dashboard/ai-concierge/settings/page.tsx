@@ -4,7 +4,7 @@ import { Bot } from "lucide-react";
 import { ConciergeShell } from "../_components/ConciergeShell";
 import { SettingsView } from "../_components/SettingsView";
 
-/** مساعد العطاء — switches: visibility, teaser, model, transcripts, attribution, team notes. */
+/** مساعد العطاء  switches: visibility, teaser, model, transcripts, attribution, team notes. */
 export default function AiConciergeSettingsPage() {
   return (
     <ConciergeShell

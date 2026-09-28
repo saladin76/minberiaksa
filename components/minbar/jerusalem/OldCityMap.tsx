@@ -3,7 +3,7 @@
 import { useTranslations } from "next-intl";
 
 /**
- * Plan of the Old City — ported verbatim from the inline `#quds-map-svg` of
+ * Plan of the Old City  ported verbatim from the inline `#quds-map-svg` of
  * `Minbar/القدس والبلدة القديمة.dc.html`.
  *
  * The drawing is always laid out left-to-right, whatever direction the page is

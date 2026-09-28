@@ -49,8 +49,8 @@ export async function PUT(
     const body = (await request.json()) as Record<string, unknown>;
     const patch = buildStoryScalarPatch(body);
 
-    /* `translations` absent — which is what the list page's active toggle sends
-       — must touch no translation rows at all. */
+    /* `translations` absent  which is what the list page's active toggle sends
+        must touch no translation rows at all. */
     const { write, clear } =
       body.translations === undefined
         ? { write: [], clear: [] as string[] }
@@ -58,7 +58,7 @@ export async function PUT(
     const slides = parseStorySlides(body.slides);
 
     /* Replacing the slide list with nothing would leave a ring that opens onto
-       nothing. An absent key is fine — that is the toggle path — but an
+       nothing. An absent key is fine  that is the toggle path  but an
        explicit empty list is refused. */
     if (slides !== undefined && slides.length === 0) {
       return NextResponse.json({ error: "أضف شريحة واحدة على الأقل" }, { status: 400 });
@@ -87,7 +87,7 @@ export async function PUT(
               },
             }
           : {}),
-        /* Slides are replaced wholesale — the posted list IS the list. Both
+        /* Slides are replaced wholesale  the posted list IS the list. Both
            halves run inside the one nested write, so a failure leaves the old
            slides in place rather than none. Slide translations cascade. */
         ...(slides !== undefined

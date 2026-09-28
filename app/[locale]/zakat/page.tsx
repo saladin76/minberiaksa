@@ -28,7 +28,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 /**
- * Zakat — ported from `Minbar/الزكاة.dc.html`.
+ * Zakat  ported from `Minbar/الزكاة.dc.html`.
  *
  * `PRODUCTION_SEO_CONTRACT.md` allows `FAQPage` structured data only where real
  * questions are actually displayed. They are here, so it is emitted; the answers

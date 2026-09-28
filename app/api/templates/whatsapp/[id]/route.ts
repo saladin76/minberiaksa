@@ -100,7 +100,7 @@ export async function DELETE(
     action: outcome.action === "DELETED" ? "WHATSAPP_TEMPLATE_DELETE" : "WHATSAPP_TEMPLATE_ARCHIVE",
     messageAr: outcome.action === "DELETED"
       ? `حذف قالب واتساب: ${outcome.name}`
-      : `أرشفة قالب واتساب مستخدَم: ${outcome.name} — ${outcome.references.total} مرجعًا`,
+      : `أرشفة قالب واتساب مستخدَم: ${outcome.name}  ${outcome.references.total} مرجعًا`,
     entityType: "WhatsappTemplate",
     entityId: id,
     metadata: outcome.action === "ARCHIVED" ? { references: outcome.references } : undefined,

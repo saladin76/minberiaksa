@@ -120,7 +120,7 @@ interface DonationDialogProps {
   } | null;
   /** Per-campaign custom unit names ("sheep"/"meal"/"hijab" etc.) keyed by locale. */
   shareLabels?: ShareLabelsConfig | null;
-  /** When true, user skipped sign-in — collect contact info inline */
+  /** When true, user skipped sign-in  collect contact info inline */
   guestMode?: boolean;
   /** URL used by OAuth/email verification to reopen this checkout. */
   authCallbackUrl?: string;
@@ -240,7 +240,7 @@ const DonationDialog = ({
       { label: t("noThanks"), value: 0 },
       ...amounts.map((v) => ({ label: String(v), value: v })),
     ];
-    // getCurrency() is read from a cookie at render time — refresh when the
+    // getCurrency() is read from a cookie at render time  refresh when the
     // dialog reopens (matches the suggestedDonations pattern below).
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [suggestedTeamSupport, globalTeamSupport, isOpen, t]);
@@ -283,10 +283,10 @@ const DonationDialog = ({
     cardholderName: "",
   });
   const [cardFocus, setCardFocus] = useState("");
-  // Stripe Elements — ready state tracked here, confirmation done via ref
+  // Stripe Elements  ready state tracked here, confirmation done via ref
   const [stripeReady, setStripeReady] = useState(false);
   const stripeFormRef = useRef<StripePaymentHandle | null>(null);
-  // Stable callback — prevents useEffect loop inside StripePaymentStep
+  // Stable callback  prevents useEffect loop inside StripePaymentStep
   const onStripeReadyChange = useCallback(
     (ready: boolean) => setStripeReady(ready),
     [],
@@ -310,7 +310,7 @@ const DonationDialog = ({
   const useAlbaraka = gateway === "ALBARAKA";
   /** Both 3D rails post an HTML form to the bank instead of confirming via stripe.js. */
   const useBank3D = use3D || useAlbaraka;
-  /** Card inputs we render ourselves — Albaraka's hosted page replaces them. */
+  /** Card inputs we render ourselves  Albaraka's hosted page replaces them. */
   const useOwnCardForm = use3D || (useAlbaraka && !albarakaUseOOS);
   /** Stripe Elements are mounted only when Stripe is actually charging. */
   const useStripeElements = gateway === "STRIPE";
@@ -362,7 +362,7 @@ const DonationDialog = ({
   const [hasSkippedAuth, setHasSkippedAuth] = useState(false);
   const useGuestCheckout = (guestMode || hasSkippedAuth) && !session?.user?.id;
   // While /api/users/[id] is still in flight we don't yet know which profile fields
-  // the user is missing — treat them all as present so the donate button isn't
+  // the user is missing  treat them all as present so the donate button isn't
   // pre-disabled (previous behavior locked Google-sign-in users out of payment
   // until the slow profile fetch resolved and birthdate/gender were re-entered).
   const profileLoaded = !!currentUser;
@@ -409,7 +409,7 @@ const DonationDialog = ({
       .catch(() => setCurrentUser(null));
   }, [isOpen, session?.user?.id]);
 
-  // Push user PII into tracking ref as soon as profile loads — so it's present for AddPaymentInfo
+  // Push user PII into tracking ref as soon as profile loads  so it's present for AddPaymentInfo
   useEffect(() => {
     if (!currentUser || !session?.user?.id) return;
     const nameParts = (currentUser.name ?? "").trim().split(/\s+/);
@@ -546,7 +546,7 @@ const DonationDialog = ({
     const cur = payCurrencyCode();
     const override = resolveSharePriceOverride(parsedShareCounts, cur);
     if (override == null) return sharePriceUSD;
-    // Override is the absolute price in the donor's currency — convert back to USD via cached rate.
+    // Override is the absolute price in the donor's currency  convert back to USD via cached rate.
     if (cur === "USD") return override;
     const rate = exchangeRates?.[cur];
     if (!rate || !Number.isFinite(rate) || rate <= 0) return sharePriceUSD;
@@ -717,13 +717,13 @@ const DonationDialog = ({
   };
 
   const isPhoneValid = () => {
-    // Authenticated user who already has a phone on file — nothing to validate
+    // Authenticated user who already has a phone on file  nothing to validate
     if (session?.user?.id && !needsPhone) return true;
     const p = phoneValue.trim().replace(/\s/g, "");
     return p.length >= 10;
   };
 
-  // Alias: useConvetToUSD is a plain utility (not a React hook) — alias to avoid rules-of-hooks lint errors
+  // Alias: useConvetToUSD is a plain utility (not a React hook)  alias to avoid rules-of-hooks lint errors
   const convertToUSD = useConvetToUSD;
 
   const getPaymentInfoStepIndex = (steps = getSteps()) =>
@@ -1175,7 +1175,7 @@ const DonationDialog = ({
                           ? shareCount * getSharePriceUSDEffective()
                           : convertToUSD(donationAmount, payCurrencyCode());
                       if (!session?.user?.id) {
-                        // Guest: add to Zustand only (no DB call — not authenticated).
+                        // Guest: add to Zustand only (no DB call  not authenticated).
                         // Embed the campaign's shareLabels so the cart can resolve
                         // the unit name client-side for any language.
                         addItem({
@@ -1566,7 +1566,7 @@ const DonationDialog = ({
       case t("paymentInfo"):
         return (
           <div className="space-y-6 overflow-visible">
-            {/* ── Saved cards picker — shown when user has any saved card ──
+            {/* ── Saved cards picker  shown when user has any saved card ──
                 Hidden when Albaraka's hosted page owns the card step: the donor
                 enters the card at the bank, so a stored PAN has nowhere to go. */}
             {savedCards.length > 0 && !(useAlbaraka && albarakaUseOOS) && (
@@ -1730,7 +1730,7 @@ const DonationDialog = ({
               </div>
             )}
 
-            {/* Stripe Elements — only when no saved card + Stripe is charging */}
+            {/* Stripe Elements  only when no saved card + Stripe is charging */}
             {paymentMethod === "CARD" && useStripeElements && !selectedCardId && (
               <Elements stripe={getStripePromise()}>
                 <StripePaymentStep
@@ -1740,7 +1740,7 @@ const DonationDialog = ({
               </Elements>
             )}
 
-            {/* Manual card form — shared by the PayFor and Albaraka 3D rails */}
+            {/* Manual card form  shared by the PayFor and Albaraka 3D rails */}
             {paymentMethod === "CARD" && useOwnCardForm && !selectedCardId && (
               <PayForCardForm
                 cardDetails={cardDetails}
@@ -1834,7 +1834,7 @@ const DonationDialog = ({
               </div>
             )}
 
-            {/* Inline profile completion — shown only for signed-in users who
+            {/* Inline profile completion  shown only for signed-in users who
                 are missing birthdate / gender so we don't bounce them to a
                 separate page. Only the missing fields render. */}
             {(needsBirthdate || needsGender) && (
@@ -1978,7 +1978,7 @@ const DonationDialog = ({
           try {
             await axios.put(`/api/users/${session.user.id}`, profileUpdate);
           } catch {
-            // Non-blocking — donation can still proceed; profile prompt
+            // Non-blocking  donation can still proceed; profile prompt
             // will reappear on next visit.
           }
         }
@@ -2129,7 +2129,7 @@ const DonationDialog = ({
 
       // ── Stripe Elements direct-charge path (non-3D card / monthly) ───────
       // stripeFormRef.current.confirmPayment() calls stripe.confirmCardPayment()
-      // with the CardNumberElement — card data goes browser → Stripe, never our server.
+      // with the CardNumberElement  card data goes browser → Stripe, never our server.
       if (paymentMethod === "CARD" && useStripeElements) {
         if (selectedCardId) {
           toast.error(t("useNewCard"));
@@ -2180,7 +2180,7 @@ const DonationDialog = ({
           await stripeFormRef.current.confirmPayment(clientSecret);
         if (confirmError) {
           // Mark the preemptively-created donation as FAILED so we keep an audit trail and
-          // prevent the row from incorrectly counting as PAID. Fire-and-forget — the
+          // prevent the row from incorrectly counting as PAID. Fire-and-forget  the
           // donation-failed page works even if this PATCH fails.
           axios
             .patch(`/api/donations/${targetDonationId}/fail`, {
@@ -2196,7 +2196,7 @@ const DonationDialog = ({
             donationId: targetDonationId,
           });
           // Redirect to /donation-failed so the user lands on the explanatory page
-          // with the bank-transfer fallback — toast alone disappears too quickly.
+          // with the bank-transfer fallback  toast alone disappears too quickly.
           router.push(
             appendCurrencyQuery(
               `/donation-failed?donationId=${encodeURIComponent(targetDonationId)}`,
@@ -2286,7 +2286,7 @@ const DonationDialog = ({
             form.appendChild(input);
           });
 
-          // Card fields the browser still has to add — PayFor only. Albaraka's
+          // Card fields the browser still has to add  PayFor only. Albaraka's
           // fields are already signed into `fields` server-side (or collected on
           // the bank's own page), so appending anything here would break its MAC.
           const browserCardFields: Record<string, string> = {};
@@ -2312,7 +2312,7 @@ const DonationDialog = ({
 
           // Skip the popup attempt entirely on mobile / in-app browsers (FB, IG, TikTok,
           // etc.). In those WebViews window.open often returns a truthy-but-invisible
-          // Window object — the form would silently submit to a hidden frame and the
+          // Window object  the form would silently submit to a hidden frame and the
           // user would see nothing happen. Going straight to a full-page redirect
           // (target=_self) lets the bank's 3DS page own the screen and redirect back
           // to the gateway's callback → /success on completion. Desktop keeps the popup
@@ -2379,7 +2379,7 @@ const DonationDialog = ({
                 if (payforPopupRef.current && !payforPopupRef.current.closed) {
                   payforPopupRef.current.close();
                 }
-                // Browser-side DonateFailed pixel — server CAPI fires the
+                // Browser-side DonateFailed pixel  server CAPI fires the
                 // matching hit from /api/payfor/3dpay/fail; same event_id
                 // (`${donationId}_failed`) lets Meta dedup the pair.
                 tracking?.trackPaymentFailed({
@@ -2430,7 +2430,7 @@ const DonationDialog = ({
       });
       // Land on the explanatory failure page (with bank-transfer fallback) instead of
       // a toast that disappears in 3s. We may not have a donationId yet (e.g. /api/donations
-      // itself threw) — the page handles a missing query param gracefully.
+      // itself threw)  the page handles a missing query param gracefully.
       isRedirecting = true;
       setRedirecting(true);
       router.push(

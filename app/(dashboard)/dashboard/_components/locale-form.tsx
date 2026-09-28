@@ -9,14 +9,14 @@ import { LOCALES, SUPPORTED_LOCALES, type SupportedLocale } from '@/lib/locales'
  * The per-locale plumbing the react-hook-form pages share.
  *
  * The campaign, category and slide forms declare every translated field for
- * every locale as its own form entry — `title_en`, `title_fr`, … — and until
+ * every locale as its own form entry  `title_en`, `title_fr`, …  and until
  * now they spelled those out by hand for eight locales, which is how the site
  * came to publish nineteen languages while its editors could only write
  * eight. Everything here is derived from `SUPPORTED_LOCALES`, so adding a
  * language to that list adds it to every form the same day.
  */
 
-/** Every locale an editor translates into — all but the Arabic master copy. */
+/** Every locale an editor translates into  all but the Arabic master copy. */
 export const TRANSLATION_LOCALES = [
   'en',
   ...SUPPORTED_LOCALES.filter((l) => l !== 'ar' && l !== 'en'),
@@ -48,7 +48,7 @@ export function localeDir(locale: string): 'rtl' | 'ltr' {
   return LOCALES[locale as SupportedLocale]?.direction ?? 'ltr';
 }
 
-/** `field_locale` — the key convention every one of these forms uses. */
+/** `field_locale`  the key convention every one of these forms uses. */
 export function localeKey<F extends string, L extends string>(field: F, locale: L): `${F}_${L}` {
   return `${field}_${locale}`;
 }

@@ -279,7 +279,7 @@ function setupApiFailureReporter() {
     xhr.open = function patchedOpen(this: XMLHttpRequest, m: string, u: string | URL, ...rest: any[]) {
       method = String(m || "").toUpperCase();
       url = String(u || "");
-      return originalOpen.call(this, m, u, ...rest as [boolean?, string?, string?]);
+      return (originalOpen as unknown as (...args: unknown[]) => void).call(this, m, u, ...rest);
     } as XMLHttpRequest["open"];
     xhr.addEventListener("loadend", () => {
       if (method === "POST" && url.includes("/api/campaigns") && xhr.status >= 400) {
@@ -288,7 +288,9 @@ function setupApiFailureReporter() {
       }
     });
     return xhr;
-  } as typeof XMLHttpRequest;
+    /* Two hops: a plain function is not structurally a constructor, so it is widened through
+       `unknown` before being presented as one. `as typeof XMLHttpRequest` alone was rejected. */
+  } as unknown as typeof XMLHttpRequest;
 }
 
 function setupArabicOnlyCreationFallback() {

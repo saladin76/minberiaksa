@@ -1,4 +1,4 @@
-# Marketing Insights Audit — Phase 0
+# Marketing Insights Audit  Phase 0
 
 ## الحكم العام
 

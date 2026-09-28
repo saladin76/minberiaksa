@@ -17,7 +17,7 @@ import {
 } from "@/lib/minbar/quick-donation";
 
 /**
- * The quick-donation bar under the hero — `#quick` in
+ * The quick-donation bar under the hero  `#quick` in
  * `Minbar/الصفحة الرئيسية.dc.html`. Everything it offers is set from the
  * dashboard (`/dashboard/quick-donation`) and arrives as `config`; see
  * `lib/minbar/quick-donation.ts` for the shape and the defaults.
@@ -27,23 +27,23 @@ import {
  *
  *   [ destination ▾ ] | تبرع لمرة  يوميًا  كل جمعة  شهريًا | $100 $300 $500 $700 [مبلغ مخصص] … US$300 [ تبرّع الآن ]
  *
- *   · The destination is ONE select — the generic intentions first, then the
+ *   · The destination is ONE select  the generic intentions first, then the
  *     projects the dashboard allows under a group heading. A real listbox
  *     (Radix), keyboard-navigable, mirrored for RTL, styled as a pill here.
  *   · Frequency and amount are chips. A chosen frequency lights gold, a chosen
- *     amount lights deep — the design's two accents, so the two settings read
+ *     amount lights deep  the design's two accents, so the two settings read
  *     apart at a glance. The free field sits at the end of the amounts.
  *   · The total sits before the button; the button fills the bar's height and
  *     is flush with its end edge.
  *
  * Phone (≤960px, in CSS): the same choices as a sheet fixed to the bottom of
- * the screen, collapsed to one row — chevron · «التبرع السريع» + total · button
- * — until the chevron opens it. Pressing the button while it is collapsed
+ * the screen, collapsed to one row  chevron · «التبرع السريع» + total · button
+ *  until the chevron opens it. Pressing the button while it is collapsed
  * opens it first, so nobody gives $100 to "where needed" without having seen
  * that this is what they chose.
  *
  * Money. Presets are USD and shown converted to the visitor's currency, the
- * way every figure on the site is — UNLESS the dashboard gave that currency
+ * way every figure on the site is  UNLESS the dashboard gave that currency
  * its own presets, in which case those are shown as they are and go to the
  * cart in that currency. The free field is always in the visitor's currency:
  * the symbol beside it is what they see, so that is what they give.
@@ -53,7 +53,7 @@ import {
  * `once`/`daily`/`friday`/`monthly`. Storing a label would send Arabic text to
  * the cart from a French session the moment the labels were translated.
  *
- * The donate action adds to the basket and routes to the cart — the same path
+ * The donate action adds to the basket and routes to the cart  the same path
  * as "add to basket" on a project card.
  */
 
@@ -151,7 +151,7 @@ export default function QuickDonateBar({ config, projects }: { config: QuickDona
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [destination, shownProjects, locale]);
 
-  /* The total and the currency it is in — see "Money" above. */
+  /* The total and the currency it is in  see "Money" above. */
   const total = custom ? Number(custom) : amount;
   const totalCurrency = custom ? visitorCode : presets.currency;
   const showMoney = (value: number, code: string) => (code === "USD" ? format(value) : formatMoney(value, code, locale));

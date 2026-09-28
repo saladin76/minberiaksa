@@ -5,9 +5,9 @@ import type { CmsDocument } from "@/lib/minbar/cms";
 import { localeDirection } from "@/lib/locales";
 
 /**
- * Our publications — ported from `Minbar/كتيبات المؤسسة.dc.html`.
+ * Our publications  ported from `Minbar/كتيبات المؤسسة.dc.html`.
  *
- * One card per booklet: its cover, what it is, and two ways to have it — read
+ * One card per booklet: its cover, what it is, and two ways to have it  read
  * in the browser, or downloaded.
  *
  * The handoff lists a single booklet, which is the only one that ships as an
@@ -20,7 +20,7 @@ import { localeDirection } from "@/lib/locales";
 /**
  * The published booklets.
  *
- * `title` and `author` are proper names and stay as written in every language —
+ * `title` and `author` are proper names and stay as written in every language 
  * the same rule the video catalog applies to named speakers. Everything else is
  * interface copy and resolves through the `common` namespace.
  */

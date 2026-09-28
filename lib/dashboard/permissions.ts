@@ -6,15 +6,15 @@ export const DASHBOARD_PERMISSION_KEYS = [
   "revenue", "monthly", "referrals", "bankTransfers", "donors", "team", "logs",
   "badges", "messages", "templates", "campaigns", "categories", "blog", "slides",
   // "operations" was removed with the التشغيل section. Any value still stored on a user row is
-  // simply inert — it maps to no page and grants nothing.
+  // simply inert  it maps to no page and grants nothing.
   "ticker", "pixels", "ads", "platformConnections", "archive",
   // Site content: stories, video programmes, courses, videos, reports, booklets,
   // urgent banners, FAQs and site settings. One key for the group, the way
   // "blog" already covers both posts and their categories.
   "siteContent",
   // Bank accounts are gated separately from the rest of the content. A row here
-  // is a live payment destination — publishing a wrong IBAN sends a donor's
-  // transfer to someone else — so editing them is not the same privilege as
+  // is a live payment destination  publishing a wrong IBAN sends a donor's
+  // transfer to someone else  so editing them is not the same privilege as
   // editing a video title. Distinct from "bankTransfers", which only reads the
   // incoming transfer list.
   "bankAccounts",
@@ -110,7 +110,7 @@ const PATH_RULES: { prefix: string; key: DashboardPermissionKey }[] = [
   { prefix: "/dashboard/communication", key: "messages" },
   // Without its own rule /dashboard/inbox fell through to the "/dashboard → revenue" catch-all,
   // so the route guard demanded `revenue` while the sidebar entry and the API both check
-  // `messages` — a staffer granted the inbox was bounced straight back out of it.
+  // `messages`  a staffer granted the inbox was bounced straight back out of it.
   { prefix: "/dashboard/inbox", key: "messages" },
   { prefix: "/dashboard/templates", key: "templates" },
   { prefix: "/dashboard/campaigns", key: "campaigns" },
@@ -120,7 +120,7 @@ const PATH_RULES: { prefix: string; key: DashboardPermissionKey }[] = [
   { prefix: "/dashboard/ticker", key: "ticker" },
   // The site-content pages. Without their own rules every one of them fell through to the
   // "/dashboard → revenue" catch-all below, so the guard demanded `revenue` while the sidebar
-  // entry and the API both check `siteContent` — a staffer granted the content section was
+  // entry and the API both check `siteContent`  a staffer granted the content section was
   // bounced out of each page. Same failure the /dashboard/inbox rule above exists to prevent.
   { prefix: "/dashboard/super-categories", key: "siteContent" },
   { prefix: "/dashboard/stories", key: "siteContent" },
@@ -130,7 +130,7 @@ const PATH_RULES: { prefix: string; key: DashboardPermissionKey }[] = [
   { prefix: "/dashboard/reports", key: "siteContent" },
   { prefix: "/dashboard/booklets", key: "siteContent" },
   { prefix: "/dashboard/faqs", key: "siteContent" },
-  // A live payment destination (IBAN/SWIFT), not content — see the `bankAccounts` key above.
+  // A live payment destination (IBAN/SWIFT), not content  see the `bankAccounts` key above.
   { prefix: "/dashboard/bank-accounts", key: "bankAccounts" },
   { prefix: "/dashboard/urgent-banners", key: "siteContent" },
   { prefix: "/dashboard/quick-donation", key: "siteContent" },

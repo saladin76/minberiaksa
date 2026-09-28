@@ -203,7 +203,7 @@ function SectionCard({
   );
 }
 
-/** Compact Clarity ID editor — hidden behind a footer popover so it stays out of the donor profile view. */
+/** Compact Clarity ID editor  hidden behind a footer popover so it stays out of the donor profile view. */
 function ClaritySettingsPopover({
   userId,
   initialClarityId,
@@ -250,7 +250,7 @@ function ClaritySettingsPopover({
       setCopied(true);
       window.setTimeout(() => setCopied(false), 1500);
     } catch {
-      /* clipboard rejected — silent */
+      /* clipboard rejected  silent */
     }
   };
 
@@ -259,7 +259,7 @@ function ClaritySettingsPopover({
       <div>
         <div className="text-sm font-semibold text-foreground">معرّف Microsoft Clarity</div>
         <p className="text-[11px] leading-5 text-muted-foreground mt-0.5">
-          اختياري — اربط معرّفًا لمراجعة جلسات هذا المستخدم في Clarity لاحقًا.
+          اختياري  اربط معرّفًا لمراجعة جلسات هذا المستخدم في Clarity لاحقًا.
         </p>
       </div>
 
@@ -409,7 +409,7 @@ export function ViewUserProfileDialog({
         {!loading && user && (
           <>
             <DialogTitle id="view-user-title-global" className="sr-only">
-              ملف المستخدم — {user.name ?? user.email ?? user.id}
+              ملف المستخدم  {user.name ?? user.email ?? user.id}
             </DialogTitle>
 
             {/* ── Header ─────────────────────────────────────────────────────── */}
@@ -506,12 +506,12 @@ export function ViewUserProfileDialog({
                           title="فتح في خرائط Google"
                         >
                           <span className="truncate">
-                            {[user.city, user.region].filter(Boolean).join(" — ") || "—"}
+                            {[user.city, user.region].filter(Boolean).join("  ") || "—"}
                           </span>
                           <ExternalLink className="w-3 h-3 shrink-0 opacity-70" aria-hidden />
                         </a>
                       ) : (
-                        <span>{[user.city, user.region].filter(Boolean).join(" — ") || "—"}</span>
+                        <span>{[user.city, user.region].filter(Boolean).join("  ") || "—"}</span>
                       )}
                     </InfoRow>
                   </div>
@@ -566,7 +566,7 @@ export function ViewUserProfileDialog({
                 </SectionCard>
               </div>
 
-              {/* Roles & permissions — STAFF only (admins are obvious from the header). */}
+              {/* Roles & permissions  STAFF only (admins are obvious from the header). */}
               {user.role === "STAFF" && (
                 <SectionCard title="الصلاحيات">
                   {(user.dashboardPermissions ?? []).length === 0 ? (

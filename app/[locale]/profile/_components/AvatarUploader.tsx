@@ -14,7 +14,7 @@ interface AvatarUploaderProps {
   email: string | null | undefined;
   /** Called with the new image URL (or null to clear) after a successful save. */
   onUpdated: (nextImage: string | null) => void;
-  /** Visual size — must be one of the predefined options because Tailwind's JIT
+  /** Visual size  must be one of the predefined options because Tailwind's JIT
    *  doesn't resolve interpolated class names. Default "lg". */
   size?: "md" | "lg" | "xl";
 }

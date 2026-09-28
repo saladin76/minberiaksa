@@ -453,7 +453,7 @@ export function DiagnosticsTab({ filterQs }: Props) {
         )}
         {data?.truncated && (
           <span className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-2 py-0.5">
-            عرض أحدث 500 صف — ضع فلتر فترة أضيق للحصول على القائمة كاملة
+            عرض أحدث 500 صف  ضع فلتر فترة أضيق للحصول على القائمة كاملة
           </span>
         )}
       </div>

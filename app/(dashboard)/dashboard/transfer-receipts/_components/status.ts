@@ -1,7 +1,7 @@
 import type { BankTransferClaimStatus } from "@prisma/client";
 
 /**
- * The finance queue's vocabulary — one place for the label, the tone and the
+ * The finance queue's vocabulary  one place for the label, the tone and the
  * plain-language hint of each state, so the tab, the card pill and the dialog
  * header cannot drift apart.
  */
@@ -40,7 +40,7 @@ export const CLAIM_STATUS_DOT: Record<ClaimStatus, string> = {
 export const REJECTION_PRESETS: string[] = [
   "لم يصل أي تحويل بهذا المبلغ إلى الحساب حتى الآن",
   "المبلغ في الإيصال لا يطابق مبلغ الطلب",
-  "الإيصال غير واضح أو غير مكتمل — يرجى رفع صورة أوضح أو مستند التحويل من تطبيق البنك",
+  "الإيصال غير واضح أو غير مكتمل  يرجى رفع صورة أوضح أو مستند التحويل من تطبيق البنك",
   "اسم المُرسل في الإيصال لا يمكن مطابقته مع الحساب",
   "الإيصال لا يخص حسابًا من حساباتنا البنكية",
 ];

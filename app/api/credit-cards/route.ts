@@ -4,7 +4,7 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 import { prisma } from "@/lib/prisma";
 import { encryptCard, hashCvc, detectCardType, decryptCard } from "@/lib/card-crypto";
 
-// GET /api/credit-cards — list user's saved cards (masked)
+// GET /api/credit-cards  list user's saved cards (masked)
 export async function GET() {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -35,7 +35,7 @@ export async function GET() {
   return NextResponse.json({ cards: masked });
 }
 
-// POST /api/credit-cards — save a new card
+// POST /api/credit-cards  save a new card
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

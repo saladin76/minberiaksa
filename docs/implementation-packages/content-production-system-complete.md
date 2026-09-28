@@ -1,4 +1,4 @@
-# Package 3 — Content Production System Complete
+# Package 3  Content Production System Complete
 
 This package closes the operations content production workflow.
 

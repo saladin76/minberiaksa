@@ -10,7 +10,7 @@ import { parsePhoneNumberFromString, type CountryCode } from "libphonenumber-js"
  *     body as a trailing "Phone: +90…" line (see app/[locale]/contact-us/page.tsx), so the whole
  *     existing inbox would show no phone at all unless we keep parsing that shape.
  *  2. **Whether it can be dialled.** wa.me takes an E.164 number with no "+". A local number
- *     like "0538 030 8212" has no country in it — wa.me would read the leading 0 as the country
+ *     like "0538 030 8212" has no country in it  wa.me would read the leading 0 as the country
  *     code and open a chat with nobody. Rather than guess a country and send the admin to a dead
  *     conversation, an un-normalisable number is returned as display text only, and the inbox
  *     offers "copy" instead of "reply on WhatsApp".
@@ -21,7 +21,7 @@ import { parsePhoneNumberFromString, type CountryCode } from "libphonenumber-js"
 
 /**
  * Matches the trailing "Phone: …" line the contact form used to append, plus the obvious
- * hand-typed variants. Anchored at the end of the body so it can only ever strip a trailer —
+ * hand-typed variants. Anchored at the end of the body so it can only ever strip a trailer 
  * a number mentioned mid-message stays in the text where the reader expects it.
  */
 const TRAILING_PHONE_RE =
@@ -52,7 +52,7 @@ export function toWhatsappNumber(
   const trimmed = raw.trim();
   if (!trimmed) return null;
 
-  // "0090…" is the same number as "+90…" — the international access code, not a trunk prefix.
+  // "0090…" is the same number as "+90…"  the international access code, not a trunk prefix.
   const candidate = trimmed.startsWith("00") ? `+${trimmed.slice(2)}` : trimmed;
   const country =
     typeof defaultCountry === "string" && /^[A-Za-z]{2}$/.test(defaultCountry)
@@ -74,7 +74,7 @@ export function toWhatsappNumber(
 }
 
 export type ResolvedContactPhone = {
-  /** What to show the admin — the number as the sender wrote it. */
+  /** What to show the admin  the number as the sender wrote it. */
   phone: string | null;
   /** Bare E.164 digits for wa.me, or null when no reliable link can be built. */
   whatsapp: string | null;

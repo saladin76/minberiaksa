@@ -111,7 +111,7 @@ export async function GET(
     }
 
     // A signed-in owner or a dashboard user is let in by their session. Anyone
-    // else — a guest, or a signed-in non-owner — needs the donation's access
+    // else  a guest, or a signed-in non-owner  needs the donation's access
     // token (`?t=`): the id alone is an identifier, not a secret, and this
     // response carries the donor's name, contact details and amount
     // (`DEPLOYED_VS_DESIGN_AUDIT.md` § P1.2).
@@ -349,7 +349,7 @@ export async function PUT(
 }
 
 /** A donation only contributed to campaign/category totals if it was actually
- * paid. Mirrors webhook semantics — increments happen on paidAt set. Using a
+ * paid. Mirrors webhook semantics  increments happen on paidAt set. Using a
  * blanket decrement (the legacy DELETE behavior) corrupts totals for any row
  * that was abandoned mid-checkout (status=PAID, paidAt=null).
  */
@@ -620,7 +620,7 @@ export async function PATCH(
 
     const newAmount = (newItems || newCatItems) ? newLineSum : existing.amount;
     // totalAmount = donation amount + teamSupport + fees(if coverFees). Preserve
-    // teamSupport/fees as-is — the admin is editing the donation portion only.
+    // teamSupport/fees as-is  the admin is editing the donation portion only.
     const carriedExtras = existing.teamSupport + (existing.coverFees ? existing.fees : 0);
     const newTotalAmount = (newItems || newCatItems) ? newAmount + carriedExtras : existing.totalAmount;
     const newAmountUSD = (newItems || newCatItems)

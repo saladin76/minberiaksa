@@ -154,8 +154,8 @@ test("event names map to delivery statuses regardless of casing or separators", 
 });
 
 test("a spam complaint is an opt-out, not a delivery failure", () => {
-  // It used to map to FAILED, which both inflated the failure count and — because
-  // nothing downstream reacts to FAILED — left the complainant in every future
+  // It used to map to FAILED, which both inflated the failure count and  because
+  // nothing downstream reacts to FAILED  left the complainant in every future
   // audience. The message reached them; they opted out in the harshest way.
   for (const name of ["AbuseReport", "abuse", "Spam", "SpamComplaint", "complaint"]) {
     assert.equal(mapElasticEmailEventStatus(name), "UNSUBSCRIBED", `failed for ${name}`);
@@ -193,7 +193,7 @@ test("normalized events carry their suppression reason", () => {
     events.map((e) => e.suppression),
     ["none", "unsubscribe", "complaint", "hard-bounce", "none"]
   );
-  // The recipient must survive normalization — it is the only handle the
+  // The recipient must survive normalization  it is the only handle the
   // suppression step has on the donor.
   assert.deepEqual(events.map((e) => e.recipient), ["a@b.org", "c@d.org", "e@f.org", "g@h.org", "i@j.org"]);
 });
@@ -292,7 +292,7 @@ const LIVE_EVENT_FEED = [
 test("an accepted-then-refused message normalizes to a failure, not a success", () => {
   const events = normalizeElasticEmailEvents(LIVE_EVENT_FEED);
   const suppressed = events.find((e) => e.providerMessageId === "ho3apRyH2qK9s5TBPlMkew2");
-  assert.ok(suppressed, "a Suppress event must not be dropped — it is the whole point of the sync");
+  assert.ok(suppressed, "a Suppress event must not be dropped  it is the whole point of the sync");
   assert.equal(suppressed.status, "FAILED");
   // Without the reason the operator sees a bare FAILED and still cannot act on it.
   assert.match(suppressed.errorMessage ?? "", /trust level/);
@@ -307,7 +307,7 @@ test("the pull feed keys on MsgID and maps the tracked lifecycle events", () => 
   assert.equal(byId.get("aaa"), "SENT");
   assert.equal(byId.get("bbb"), "OPENED");
   assert.equal(byId.get("ccc"), "CLICKED");
-  // "Submission" is Elastic Email accepting the payload — exactly the fact the send already
+  // "Submission" is Elastic Email accepting the payload  exactly the fact the send already
   // recorded. Treating it as a delivery state would re-assert the claim under investigation.
   assert.equal(byId.has("ddd"), false);
   assert.equal(byId.size, 5);

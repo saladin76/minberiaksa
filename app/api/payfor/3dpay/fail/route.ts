@@ -46,7 +46,7 @@ export async function POST(req: NextRequest) {
       void dispatchEvent("DONATION_FAILED", { donationId });
       // Seed Meta with the failed attempt so lookalike audiences can include
       // donors-who-tried. Browser pixel fires the matching DonateFailed hit
-      // with event_id `${donationId}_failed` — same id here for dedup.
+      // with event_id `${donationId}_failed`  same id here for dedup.
       void sendDonationFailedConversions(donationId);
     }
   } catch (e) {

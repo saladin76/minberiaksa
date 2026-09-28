@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
     const dateTo = searchParams.get("dateTo");
 
     // This page answers "who did what". Rows written by cron jobs and server
-    // pipelines carry `actorRole: "SYSTEM"` and no actor — the scheduler
+    // pipelines carry `actorRole: "SYSTEM"` and no actor  the scheduler
     // heartbeat, Meta CAPI tracing, automatic-message dispatch, webhook
     // reconciliation. They are excluded wholesale rather than by an action
     // deny-list, so a new automated writer can never leak into this view by

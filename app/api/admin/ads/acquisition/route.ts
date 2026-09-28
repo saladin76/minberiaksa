@@ -32,7 +32,7 @@ interface FirstTouchEntityRow {
   lifetimeRevenueUSD: number;
   /** Number of times those donors donated again (post-first). */
   repeatDonationCount: number;
-  /** repeatDonationCount / newDonors — how often a first-time donor came back. */
+  /** repeatDonationCount / newDonors  how often a first-time donor came back. */
   repeatDonationRate: number;
   /** Same donor base sliced to donations that happened AFTER the first donation. */
   returningRevenueUSD: number;
@@ -181,7 +181,7 @@ export async function GET(request: NextRequest) {
         b.newDonorRevenue + b.returningRevenue - (a.newDonorRevenue + a.returningRevenue)
     );
 
-    // ── First-touch by campaign + ad — including LTV/repeat-rate from lifetime donations.
+    // ── First-touch by campaign + ad  including LTV/repeat-rate from lifetime donations.
     const firstTouchByCampaign: Map<string, FirstTouchEntityRow & { _donorIds: Set<string> }> = new Map();
     const firstTouchByAd: Map<string, FirstTouchEntityRow & { _donorIds: Set<string> }> = new Map();
 
@@ -235,7 +235,7 @@ export async function GET(request: NextRequest) {
           amount: true,
         },
       });
-      // Group lifetime donations per donor — sum revenue + count.
+      // Group lifetime donations per donor  sum revenue + count.
       const donorLifetime = new Map<
         string,
         { totalUSD: number; donationCount: number; firstPaidAt: number | null }

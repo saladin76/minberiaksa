@@ -1,7 +1,7 @@
 /**
  * Server-only provider configuration readiness. Reads the official env vars for the finalized
  * Communication provider architecture and reports whether each provider is configured + which env
- * keys are missing — WITHOUT ever returning a secret value. Safe to surface to readiness UIs via an
+ * keys are missing  WITHOUT ever returning a secret value. Safe to surface to readiness UIs via an
  * operations-guarded API (only booleans + missing key NAMES + a safe label leave this module).
  *
  * Final architecture: WhatsApp = Meta, Email = Elastic Email, SMS int'l = Brevo, SMS Turkey = Netgsm,
@@ -27,7 +27,7 @@ export function getMetaWhatsappConfig(): ProviderConfigStatus {
   return { configured: missing.length === 0, missing, safeLabel: "Meta WhatsApp" };
 }
 
-/** Elastic Email transactional email (primary — and only — email provider). */
+/** Elastic Email transactional email (primary  and only  email provider). */
 export function getElasticEmailConfig(): ProviderConfigStatus {
   const required = ["ELASTIC_EMAIL_API_KEY", "ELASTIC_EMAIL_SENDER_EMAIL"];
   const missing = missingOf(required);
@@ -48,7 +48,7 @@ export function getNetgsmSmsConfig(): ProviderConfigStatus {
   return { configured: missing.length === 0, missing, safeLabel: "Netgsm SMS" };
 }
 
-/** Legacy Twilio — kept for reference only; NEVER used by an active send path. */
+/** Legacy Twilio  kept for reference only; NEVER used by an active send path. */
 export function getLegacyTwilioConfig(): ProviderConfigStatus & { legacy: true; active: false } {
   const required = ["TWILIO_ACCOUNT_SID", "TWILIO_AUTH_TOKEN"];
   const missing = missingOf(required);

@@ -2,13 +2,13 @@ import type { CSSProperties } from "react";
 import type { ReceiptCopy, ReceiptOrgData } from "@/lib/certificates/copy-defaults";
 
 /**
- * The donation receipt — `handoff-certificates/إيصال التبرع.dc.html`.
+ * The donation receipt  `handoff-certificates/إيصال التبرع.dc.html`.
  *
  * An accounting document, not a web card: registration header, the receipt
  * number in a dark box, bordered field rows, a numbered line table, the total,
  * a signature strip and a legal foot with the verification code. Every rule
  * is visible because the sheet is printed and filed. No slogans and no
- * emotional copy — the thank-you certificate is the place for those.
+ * emotional copy  the thank-you certificate is the place for those.
  *
  * Responsive to its own width (container query `rcp`), so it also works as
  * the scaled preview inside the success page.
@@ -16,7 +16,7 @@ import type { ReceiptCopy, ReceiptOrgData } from "@/lib/certificates/copy-defaul
 
 export interface ReceiptLine {
   title: string;
-  /** Donation kind: project / zakat / waqf / recurring — each is accounted differently. */
+  /** Donation kind: project / zakat / waqf / recurring  each is accounted differently. */
   kind: string;
   /** Formatted amount in the receipt's one currency. */
   amount: string;

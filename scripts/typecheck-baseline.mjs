@@ -74,12 +74,12 @@ const regressions = Object.entries(counts)
 const improved = Object.entries(baseline).filter(([key, n]) => (counts[key] ?? 0) < n).length;
 
 if (regressions.length) {
-  console.error(`typecheck-baseline: ${regressions.length} new type error group(s) — not allowed:`);
+  console.error(`typecheck-baseline: ${regressions.length} new type error group(s)  not allowed:`);
   for (const r of regressions) console.error(`  ${r.key}: ${r.now} (baseline ${r.allowed})`);
   console.error("\nFix them, or run `npx tsc -p tsconfig.typecheck.json` to see the messages.");
   process.exit(1);
 }
 console.log(
-  `typecheck-baseline: OK — ${total} error(s), none new.` +
+  `typecheck-baseline: OK  ${total} error(s), none new.` +
     (improved ? ` ${improved} group(s) improved; run with --update to lock in the lower ceiling.` : "")
 );

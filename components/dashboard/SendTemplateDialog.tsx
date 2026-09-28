@@ -115,7 +115,7 @@ export function SendTemplateDialog({ open, onOpenChange, channel, target }: Prop
 
   const send = async () => {
     // WhatsApp sending moved to the Communication Center (Meta Cloud API). The legacy send route is
-    // disabled (410), so this dialog never posts WhatsApp — it directs the user there instead.
+    // disabled (410), so this dialog never posts WhatsApp  it directs the user there instead.
     if (channel === "whatsapp") {
       toast("تم نقل إرسال واتساب إلى مركز التواصل.");
       return;
@@ -135,14 +135,14 @@ export function SendTemplateDialog({ open, onOpenChange, channel, target }: Prop
       const failedCount = Array.isArray(failed) ? failed.length : 0;
       if (sent > 0) {
         toast.success(
-          `تم الإرسال — نجح ${sent} من ${total}` +
+          `تم الإرسال  نجح ${sent} من ${total}` +
             (skipped ? `، تخطّي ${skipped}` : "") +
             (failedCount ? `، فشل ${failedCount}` : "")
         );
       } else if (skipped > 0 && failedCount === 0) {
-        toast(`لم يتم الإرسال — تخطّي ${skipped} (بيانات ناقصة)`);
+        toast(`لم يتم الإرسال  تخطّي ${skipped} (بيانات ناقصة)`);
       } else {
-        toast.error(`فشل الإرسال — ${failedCount} حالة`);
+        toast.error(`فشل الإرسال  ${failedCount} حالة`);
       }
       onOpenChange(false);
     } catch (err) {
@@ -201,7 +201,7 @@ export function SendTemplateDialog({ open, onOpenChange, channel, target }: Prop
                     templatesLoading
                       ? "جارٍ التحميل…"
                       : templates.length === 0
-                        ? "لا توجد قوالب — أنشئ قالبًا من صفحة القوالب"
+                        ? "لا توجد قوالب  أنشئ قالبًا من صفحة القوالب"
                         : "اختر قالبًا"
                   }
                 />
@@ -223,7 +223,7 @@ export function SendTemplateDialog({ open, onOpenChange, channel, target }: Prop
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value={LOCALE_AUTO}>تلقائي — حسب اللغة المفضلة لكل مستلم</SelectItem>
+                <SelectItem value={LOCALE_AUTO}>تلقائي  حسب اللغة المفضلة لكل مستلم</SelectItem>
                 {LOCALE_OPTIONS.map((loc) => (
                   <SelectItem key={loc.code} value={loc.code}>
                     {loc.label}
@@ -278,7 +278,7 @@ export function SendTemplateDialog({ open, onOpenChange, channel, target }: Prop
             </Button>
             {/* Was a link to the campaigns page under /dashboard/operations, removed with
                 التشغيل. WhatsApp still cannot be sent from this dialog, so the action is a
-                disabled control that says so — an enabled-looking button going nowhere is worse
+                disabled control that says so  an enabled-looking button going nowhere is worse
                 than an honestly disabled one. */}
             {channel === "whatsapp" ? (
               <Button disabled className="bg-brand hover:bg-brand/90">

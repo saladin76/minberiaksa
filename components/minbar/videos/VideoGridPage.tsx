@@ -7,14 +7,14 @@ import VideoModal, { useVideoModal } from "@/components/minbar/VideoModal";
 import ZakatBanner from "@/components/minbar/banners/ZakatBanner";
 
 /**
- * The two video index pages — ported from `Minbar/إنجازاتنا بالفيديو.dc.html`
+ * The two video index pages  ported from `Minbar/إنجازاتنا بالفيديو.dc.html`
  * and `Minbar/تزكياتنا بالفيديو.dc.html`, which are the same page over two
  * different sets.
  *
  * A card with a real recording is an anchor to YouTube that opens the overlay
  * player instead, so a middle-click or a copied link still works and nobody is
- * sent off the site mid-journey. A card that is only a still — a piece the
- * foundation has photographed but not yet filmed — is not a link and carries no
+ * sent off the site mid-journey. A card that is only a still  a piece the
+ * foundation has photographed but not yet filmed  is not a link and carries no
  * play affordance: offering one that plays nothing is worse than offering none.
  */
 

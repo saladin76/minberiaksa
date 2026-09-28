@@ -64,8 +64,8 @@ function SegmentMeter({ text }: { text: string }) {
           )}
           title={
             seg.encoding === "UCS2"
-              ? "النص يحتوي حروفًا خارج أبجدية GSM (العربية مثلًا) — المقطع ٧٠ حرفًا"
-              : "كل الحروف داخل أبجدية GSM — المقطع ١٦٠ حرفًا"
+              ? "النص يحتوي حروفًا خارج أبجدية GSM (العربية مثلًا)  المقطع ٧٠ حرفًا"
+              : "كل الحروف داخل أبجدية GSM  المقطع ١٦٠ حرفًا"
           }
         >
           {seg.encoding === "UCS2" ? "يونيكود (عربي)" : "لاتيني GSM"}
@@ -94,13 +94,13 @@ function SegmentMeter({ text }: { text: string }) {
         <p className="mt-1.5 flex items-start gap-1 text-[10px] leading-4 text-amber-800">
           <TriangleAlert className="mt-0.5 h-3 w-3 shrink-0" />
           <span className="min-w-0">
-            تُحتسب {seg.segments} مقاطع في الفاتورة — أي {seg.segments}× تكلفة الرسالة الواحدة.
+            تُحتسب {seg.segments} مقاطع في الفاتورة  أي {seg.segments}× تكلفة الرسالة الواحدة.
             {seg.remaining > 0 && ` احذف ${seg.remaining + 1} حرفًا للنزول مقطعًا.`}
           </span>
         </p>
       )}
       <p className="mt-1 text-[10px] leading-4 text-slate-400">
-        محسوب على النص بعد دمج البيانات التجريبية — الطول الفعلي يتغيّر حسب بيانات كل مستلم.
+        محسوب على النص بعد دمج البيانات التجريبية  الطول الفعلي يتغيّر حسب بيانات كل مستلم.
       </p>
     </div>
   );
@@ -220,7 +220,7 @@ export function SmsTemplateEditorDialog({ id, open, onOpenChange, onSaved }: Pro
       open={open}
       onOpenChange={onOpenChange}
       title={id ? "تعديل قالب الرسالة النصية" : "قالب رسالة نصية جديد"}
-      subtitle="نص فقط، بلا تنسيق — ويُحاسب بالمقطع، لذا راقب العدّاد أثناء الكتابة."
+      subtitle="نص فقط، بلا تنسيق  ويُحاسب بالمقطع، لذا راقب العدّاد أثناء الكتابة."
       icon={<MessageSquare className="h-4 w-4" />}
       accent="sms"
       size="lg"

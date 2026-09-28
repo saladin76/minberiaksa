@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import Stripe from "stripe";
 import { getDonorCountryCodeForSnapshot } from "@/lib/donations/donor-country-code";
-// Donate (success) is no longer fired from this webhook — it's owned by the
+// Donate (success) is no longer fired from this webhook  it's owned by the
 // /success page via POST /api/donations/:id/track-conversion so the browser
 // Pixel and CAPI fire as a single dedup'd pair. DonateFailed remains here
 // because failed donors typically never reach a /success-style page.
@@ -141,7 +141,7 @@ export async function POST(req: NextRequest) {
         // Idempotency: skip if we've already settled this invoice. The original
         // "checkout started" donation for the first invoice also carries this
         // `providerOrderId` (set by /api/stripe/subscribe) but with `paidAt: null`,
-        // so we MUST require `paidAt` to be set here — otherwise the webhook would
+        // so we MUST require `paidAt` to be set here  otherwise the webhook would
         // bail out without ever marking the donation paid. That was the source of
         // the long-standing "monthly donations stuck PAID/paidAt=null" bug.
         const existingForInvoice = await prisma.donation.findFirst({
@@ -158,7 +158,7 @@ export async function POST(req: NextRequest) {
 
         // Stripe's own first-vs-renewal marker. "subscription_create" is the signup
         // charge; "subscription_cycle" is an automatic renewal. Anything else
-        // (subscription_update / manual) is treated as a renewal-style charge —
+        // (subscription_update / manual) is treated as a renewal-style charge 
         // it is money taken without a fresh checkout, so it needs its own row.
         const billingReason = ((invoice as any).billing_reason as string | null) ?? null;
         const isSignupInvoice = billingReason === "subscription_create";
@@ -188,25 +188,25 @@ export async function POST(req: NextRequest) {
           // (status=PAID is the optimistic sentinel; paidAt=null means it never
           // settled). For the FIRST invoice we update that row instead of
           // creating a duplicate. Match by providerOrderId when it lines up,
-          // but fall back to the unpaid row for this subscription — different
+          // but fall back to the unpaid row for this subscription  different
           // checkout flows (PaymentElement vs Checkout Session) store different
           // ids in providerOrderId, so equality-by-invoice-id isn't reliable.
           //
           // The fallback is deliberately gated on this being the SIGNUP invoice.
           // It matches any dangling unsettled row for the subscription, so on a
           // renewal (`subscription_cycle`) it would silently swallow the new
-          // charge into a months-old row instead of creating one — the renewal
+          // charge into a months-old row instead of creating one  the renewal
           // would then be invisible in every createdAt-ranged dashboard and the
           // subscription would stay permanently one donation short.
           // `paidAt` is ABSENT (not null) on rows created by the checkout routes, and Prisma's
           // `{ paidAt: null }` does not match an absent field on MongoDB. That mismatch is what
           // made this handler miss the row it had already created and insert a duplicate
-          // donation for an invoice it had just recorded — see lib/donations/mongo-null.ts.
+          // donation for an invoice it had just recorded  see lib/donations/mongo-null.ts.
           //
           // A Friday plan is anchored to its first Friday with nothing charged at sign-up, so
           // Stripe's first real invoice for it is a `subscription_cycle`, not a
           // `subscription_create`. It is still the plan's first settlement, and the checkout
-          // row is still waiting for it — so the fallback also fires when nothing under this
+          // row is still waiting for it  so the fallback also fires when nothing under this
           // plan has ever settled.
           const settledBefore = await tx.donation.findFirst({
             where: { subscriptionId: dbSubscription.id, paidAt: { not: null } },
@@ -349,7 +349,7 @@ export async function POST(req: NextRequest) {
       }
 
       case "invoice.payment_failed": {
-        // Monthly billing failed — log a FAILED donation for audit trail.
+        // Monthly billing failed  log a FAILED donation for audit trail.
         const invoice = event.data.object as Stripe.Invoice;
         const stripeSubscriptionId = getStripeSubscriptionIdFromInvoice(invoice);
         if (!stripeSubscriptionId) break;
@@ -464,9 +464,9 @@ export async function POST(req: NextRequest) {
         // Direct PaymentIntent (Stripe Elements) declined or otherwise failed.
         // Mark the corresponding donation as FAILED so the row reflects reality
         // (donations are created with status=PAID preemptively in /api/stripe/intent).
-        // We deliberately key off paidAt — a parallel "succeeded" event must always win.
+        // We deliberately key off paidAt  a parallel "succeeded" event must always win.
         const intent = event.data.object as Stripe.PaymentIntent;
-        if ((intent as any).invoice) break; // subscription invoice — handled elsewhere
+        if ((intent as any).invoice) break; // subscription invoice  handled elsewhere
 
         const donationId = intent.metadata?.donationId;
         if (!donationId) break;
@@ -493,7 +493,7 @@ export async function POST(req: NextRequest) {
           },
         });
         void dispatchEvent("DONATION_FAILED", { donationId });
-        // Browser may have closed before /api/donations/:id/fail PATCH fired —
+        // Browser may have closed before /api/donations/:id/fail PATCH fired 
         // seed DonateFailed from here so the lookalike audience never misses a
         // failed Stripe Elements attempt.
         void sendDonationFailedConversions(donationId);
@@ -525,7 +525,7 @@ export async function POST(req: NextRequest) {
           },
         });
         void dispatchEvent("DONATION_FAILED", { donationId });
-        // Hosted Stripe Checkout expired/failed before payment — seed Meta
+        // Hosted Stripe Checkout expired/failed before payment  seed Meta
         // DonateFailed so the abandoned-checkout cohort feeds lookalikes.
         void sendDonationFailedConversions(donationId);
         break;
@@ -574,7 +574,7 @@ export async function POST(req: NextRequest) {
       }
 
       default:
-        // Unhandled event type — ignore
+        // Unhandled event type  ignore
         break;
     }
   } catch (error) {

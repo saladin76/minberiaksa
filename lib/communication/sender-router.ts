@@ -4,10 +4,10 @@ import type { CommunicationChannel, CommunicationPurpose } from "./communication
 /**
  * Pure sender routing. Given a channel + recipient locale/country + message purpose,
  * pick the best configured sender, honouring explicit routing rules first, then sender
- * capability, priority, status and health, with an explicit fallback. No DB, no I/O —
+ * capability, priority, status and health, with an explicit fallback. No DB, no I/O 
  * senders/rules are passed in so this stays testable and reusable across the app.
  *
- * If nothing matches, returns `{ skipped: true, reason }` — the caller must NOT send.
+ * If nothing matches, returns `{ skipped: true, reason }`  the caller must NOT send.
  */
 
 export type SenderStatus = "ACTIVE" | "DISABLED" | "NEEDS_ATTENTION";

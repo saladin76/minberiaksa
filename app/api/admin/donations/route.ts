@@ -62,11 +62,11 @@ async function getOrCreateUnknownDonor(): Promise<{ id: string; name: string | n
 }
 
 /**
- * POST /api/admin/donations — admin manually adds a donation (cash, bank
+ * POST /api/admin/donations  admin manually adds a donation (cash, bank
  * transfer, reconciled offline payment, etc.).
  *
  * The row is created as fully settled (status=PAID + paidAt=now) and each
- * campaign / category line item's `currentAmount` is incremented atomically —
+ * campaign / category line item's `currentAmount` is incremented atomically 
  * matching what the Stripe webhook does for a confirmed recurring charge. No
  * gateway flow involved; this is just bookkeeping for money that already moved.
  */
@@ -169,7 +169,7 @@ export async function POST(request: NextRequest) {
     })();
     if (dupCampaign) {
       return NextResponse.json(
-        { error: "Duplicate campaign line — merge into one row" },
+        { error: "Duplicate campaign line  merge into one row" },
         { status: 400 }
       );
     }
@@ -183,7 +183,7 @@ export async function POST(request: NextRequest) {
     })();
     if (dupCategory) {
       return NextResponse.json(
-        { error: "Duplicate category line — merge into one row" },
+        { error: "Duplicate category line  merge into one row" },
         { status: 400 }
       );
     }
@@ -207,7 +207,7 @@ export async function POST(request: NextRequest) {
       const trimmedEmail = donorInput.email?.trim() || null;
       const trimmedPhone = donorInput.phone?.trim() || null;
       // If admin supplied an email, reuse a matching existing row instead of
-      // erroring on the unique constraint — this is the same lenient behavior
+      // erroring on the unique constraint  this is the same lenient behavior
       // resolveGuestDonor uses on the public donation flow.
       if (trimmedEmail) {
         const existing = await prisma.user.findUnique({

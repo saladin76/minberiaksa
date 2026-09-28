@@ -12,7 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 type SeoContentType = "campaign" | "category" | "blog";
 /**
  * Every publicly routed locale. Derived from the single source of truth rather
- * than listed here, so promoting a locale cannot leave this behind — which is
+ * than listed here, so promoting a locale cannot leave this behind  which is
  * exactly what happened when the Minbar port took the site from 8 to 19.
  */
 type LocaleCode = SupportedLocale;

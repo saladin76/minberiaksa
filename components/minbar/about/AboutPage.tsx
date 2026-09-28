@@ -10,13 +10,13 @@ import TravelBanner from "@/components/minbar/banners/TravelBanner";
 import IbadanBanner from "@/components/minbar/banners/IbadanBanner";
 
 /**
- * About us — ported from `Minbar/من نحن.dc.html`.
+ * About us  ported from `Minbar/من نحن.dc.html`.
  *
  * The one page on the site that states who the foundation legally is, so the
  * licence number, address and phone come from `lib/minbar/org.ts` rather than
  * being retyped: the Footer prints the same three facts, and two copies drift.
  *
- * Content order matches the handoff exactly — mission and method side by side,
+ * Content order matches the handoff exactly  mission and method side by side,
  * then vision beside the five objectives, then the four departments, the four
  * areas of work, the legal status, and a closing call.
  */
@@ -25,7 +25,7 @@ import IbadanBanner from "@/components/minbar/banners/IbadanBanner";
 const OBJECTIVES = ["objective1", "objective2", "objective3", "objective4", "objective5"] as const;
 
 /**
- * The four departments. Each carries only the points it actually has — the
+ * The four departments. Each carries only the points it actually has  the
  * finance department has one, and padding it out to match the others would be
  * inventing work the foundation does not claim.
  */
@@ -44,7 +44,7 @@ const PILLARS: ReadonlyArray<{ title: string; text: string }> = [
   { title: "pillar4Title", text: "pillar4Text" },
 ];
 
-/** A small gold diamond — the handoff's list marker throughout this page. */
+/** A small gold diamond  the handoff's list marker throughout this page. */
 function Diamond({ size = 6, top = 8 }: { size?: number; top?: number }) {
   return (
     <span

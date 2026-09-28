@@ -8,7 +8,7 @@ import { isValidLocale, DEFAULT_LOCALE } from "@/lib/locales";
  * The first page is server-rendered by the blog route itself; this serves every
  * page after it, and every switch of category, without a full navigation.
  *
- * Read-only and published-only — `listArticles` filters on `published`.
+ * Read-only and published-only  `listArticles` filters on `published`.
  */
 export async function GET(request: NextRequest) {
   const params = request.nextUrl.searchParams;

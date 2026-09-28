@@ -104,7 +104,7 @@ export async function PUT(
               },
             }
           : {}),
-        /* Both child lists are replaced wholesale — the posted list IS the
+        /* Both child lists are replaced wholesale  the posted list IS the
            list. Every half runs inside the one nested write, so a failure
            leaves the previous page intact rather than a stripped one. */
         ...(items !== undefined
@@ -153,7 +153,7 @@ export async function DELETE(
     if (!existing) return NextResponse.json({ error: "Super category not found" }, { status: 404 });
 
     /* Translations, blocks and item pointers all cascade from the schema. The
-       content those pointers named is untouched — a super category owns the
+       content those pointers named is untouched  a super category owns the
        page, not the campaigns and articles on it. */
     await prisma.superCategory.delete({ where: { id } });
 

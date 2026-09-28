@@ -42,7 +42,7 @@ import { LocaleChips } from '../../_components/LocaleChips';
  *   │  [primary button]  [secondary button]                          │
  *   └────────────────────────────────────────────────────────────────┘
  *
- * WHERE it shows is `placements` — page × slot pairs from the catalogue; the
+ * WHERE it shows is `placements`  page × slot pairs from the catalogue; the
  * same banner may sit on several. Its order among the banners of a slot is
  * set by drag-and-drop on the list, not here.
  */
@@ -119,7 +119,7 @@ function toLocalInput(iso: string): string {
 
 type CampaignOption = { id: string; title: string };
 
-/** Every campaign, active or not — a banner may point at one being relaunched. */
+/** Every campaign, active or not  a banner may point at one being relaunched. */
 function useCampaignOptions() {
   const [options, setOptions] = useState<CampaignOption[]>([]);
   useEffect(() => {
@@ -304,7 +304,7 @@ export function UrgentBannerForm({
             >
               <SelectTrigger><SelectValue placeholder="اختر حملة" /></SelectTrigger>
               <SelectContent>
-                <SelectItem value={NO_CAMPAIGN}>— بدون حملة —</SelectItem>
+                <SelectItem value={NO_CAMPAIGN}>— بدون حملة </SelectItem>
                 {campaigns.map((c) => (
                   <SelectItem key={c.id} value={c.id}>{c.title}</SelectItem>
                 ))}

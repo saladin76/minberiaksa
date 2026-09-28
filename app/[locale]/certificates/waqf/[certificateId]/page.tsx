@@ -10,7 +10,7 @@ import DocumentPage from "@/components/minbar/certificates/DocumentPage";
 
 interface Props {
   params: Promise<{ locale: string; certificateId: string }>;
-  /** `t` — the guest's access token, carried on from the success page. */
+  /** `t`  the guest's access token, carried on from the success page. */
   searchParams: Promise<{ t?: string }>;
 }
 
@@ -34,7 +34,7 @@ const PRINT_CSS = `
 
 /**
  * One waqf certificate as its own page. The number on it is the one the
- * server issued after payment; there is no preview state here — a
+ * server issued after payment; there is no preview state here  a
  * certificate that does not exist is a 404.
  */
 export default async function WaqfCertificatePage({ params, searchParams }: Props) {

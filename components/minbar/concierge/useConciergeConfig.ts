@@ -6,7 +6,7 @@ import type { PublicConciergeConfig } from "@/lib/ai/concierge/settings-shape";
 /**
  * The launcher's switches from the dashboard (`/api/ai/donation-concierge/config`).
  * Fetched once per page load and shared by every component that asks; until it
- * arrives — or if it fails — the defaults apply, so the assistant is never
+ * arrives  or if it fails  the defaults apply, so the assistant is never
  * hidden by a slow or broken request.
  */
 

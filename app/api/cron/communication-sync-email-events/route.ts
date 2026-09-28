@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
 
   const result = await syncElasticEmailEvents({ lookbackMinutes });
   if (!result.ok) {
-    // A provider outage or an unconfigured key is not a server fault — answer 200 so the scheduler
+    // A provider outage or an unconfigured key is not a server fault  answer 200 so the scheduler
     // does not treat a known, reported condition as an incident to retry against.
     return NextResponse.json({ ok: false, reason: result.reason }, { status: 200 });
   }
@@ -37,14 +37,14 @@ export async function GET(request: NextRequest) {
     await writeAuditLog({
       actorRole: "SYSTEM",
       action: "communication.email.events.synced",
-      messageAr: `مزامنة أحداث البريد — تحديث ${result.deliveryUpdates} سجل تسليم و${result.campaignUpdates} حملة`,
-      messageEn: `Email event sync — ${result.deliveryUpdates} delivery record(s) and ${result.campaignUpdates} campaign(s) corrected`,
+      messageAr: `مزامنة أحداث البريد  تحديث ${result.deliveryUpdates} سجل تسليم و${result.campaignUpdates} حملة`,
+      messageEn: `Email event sync  ${result.deliveryUpdates} delivery record(s) and ${result.campaignUpdates} campaign(s) corrected`,
       entityType: "CommunicationDelivery",
       metadata: { ...result, externalCall: false },
       stream: "TEAM",
     }).catch(() => {});
   }
 
-  // `result` already carries `ok: true` — respreading it produced a duplicate key.
+  // `result` already carries `ok: true`  respreading it produced a duplicate key.
   return NextResponse.json(result);
 }

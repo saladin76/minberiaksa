@@ -24,7 +24,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 /**
- * Bank accounts — ported from `Minbar/الحسابات البنكية.dc.html`.
+ * Bank accounts  ported from `Minbar/الحسابات البنكية.dc.html`.
  *
  * Indexable: the handoff lists this among the public pages, and a donor
  * searching for the association's IBAN should find the association's own page

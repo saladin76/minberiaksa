@@ -2,9 +2,9 @@
 /**
  * Add the `Recurring` message namespace to every locale file.
  *
- * These strings describe what a recurring plan will do — the next charge
+ * These strings describe what a recurring plan will do  the next charge
  * date shown before the donor confirms, and the "set up, first charge on
- * Friday" state — and were introduced with the frequency contract fix
+ * Friday" state  and were introduced with the frequency contract fix
  * (`DEPLOYED_VS_DESIGN_AUDIT.md` § P0.2).
  *
  * They live in an app-level (PascalCase) namespace rather than in the Minbar
@@ -29,7 +29,7 @@ const MESSAGES = {
     cadenceDaily: "كل يوم",
     cadenceFriday: "كل جمعة",
     cadenceMonthly: "كل شهر",
-    stripeNotReady: "نموذج الدفع لم يكتمل تحميله بعد — حاول مرة أخرى بعد لحظات.",
+    stripeNotReady: "نموذج الدفع لم يكتمل تحميله بعد  حاول مرة أخرى بعد لحظات.",
   },
   en: {
     nextChargeOn: "Next charge: {date}",
@@ -41,7 +41,7 @@ const MESSAGES = {
     cadenceDaily: "every day",
     cadenceFriday: "every Friday",
     cadenceMonthly: "every month",
-    stripeNotReady: "The payment form is still loading — please try again in a moment.",
+    stripeNotReady: "The payment form is still loading  please try again in a moment.",
   },
   tr: {
     nextChargeOn: "Sonraki çekim: {date}",
@@ -53,7 +53,7 @@ const MESSAGES = {
     cadenceDaily: "her gün",
     cadenceFriday: "her cuma",
     cadenceMonthly: "her ay",
-    stripeNotReady: "Ödeme formu hâlâ yükleniyor — lütfen birazdan tekrar deneyin.",
+    stripeNotReady: "Ödeme formu hâlâ yükleniyor  lütfen birazdan tekrar deneyin.",
   },
   fr: {
     nextChargeOn: "Prochain prélèvement : {date}",
@@ -65,7 +65,7 @@ const MESSAGES = {
     cadenceDaily: "chaque jour",
     cadenceFriday: "chaque vendredi",
     cadenceMonthly: "chaque mois",
-    stripeNotReady: "Le formulaire de paiement se charge encore — veuillez réessayer dans un instant.",
+    stripeNotReady: "Le formulaire de paiement se charge encore  veuillez réessayer dans un instant.",
   },
   de: {
     nextChargeOn: "Nächste Abbuchung: {date}",
@@ -77,7 +77,7 @@ const MESSAGES = {
     cadenceDaily: "täglich",
     cadenceFriday: "jeden Freitag",
     cadenceMonthly: "monatlich",
-    stripeNotReady: "Das Zahlungsformular lädt noch — bitte versuchen Sie es gleich noch einmal.",
+    stripeNotReady: "Das Zahlungsformular lädt noch  bitte versuchen Sie es gleich noch einmal.",
   },
   es: {
     nextChargeOn: "Próximo cargo: {date}",
@@ -101,7 +101,7 @@ const MESSAGES = {
     cadenceDaily: "setiap hari",
     cadenceFriday: "setiap Jumat",
     cadenceMonthly: "setiap bulan",
-    stripeNotReady: "Formulir pembayaran masih dimuat — silakan coba lagi sebentar lagi.",
+    stripeNotReady: "Formulir pembayaran masih dimuat  silakan coba lagi sebentar lagi.",
   },
   pt: {
     nextChargeOn: "Próxima cobrança: {date}",
@@ -113,7 +113,7 @@ const MESSAGES = {
     cadenceDaily: "todos os dias",
     cadenceFriday: "todas as sextas-feiras",
     cadenceMonthly: "todos os meses",
-    stripeNotReady: "O formulário de pagamento ainda está a carregar — tente novamente dentro de instantes.",
+    stripeNotReady: "O formulário de pagamento ainda está a carregar  tente novamente dentro de instantes.",
   },
   ur: {
     nextChargeOn: "اگلی کٹوتی: {date}",
@@ -125,7 +125,7 @@ const MESSAGES = {
     cadenceDaily: "ہر روز",
     cadenceFriday: "ہر جمعہ",
     cadenceMonthly: "ہر ماہ",
-    stripeNotReady: "ادائیگی کا فارم ابھی لوڈ ہو رہا ہے — براہِ کرم تھوڑی دیر بعد دوبارہ کوشش کریں۔",
+    stripeNotReady: "ادائیگی کا فارم ابھی لوڈ ہو رہا ہے  براہِ کرم تھوڑی دیر بعد دوبارہ کوشش کریں۔",
   },
   sq: {
     nextChargeOn: "Pagesa e radhës: {date}",
@@ -137,7 +137,7 @@ const MESSAGES = {
     cadenceDaily: "çdo ditë",
     cadenceFriday: "çdo të premte",
     cadenceMonthly: "çdo muaj",
-    stripeNotReady: "Formulari i pagesës është ende duke u ngarkuar — provoni sërish pas pak.",
+    stripeNotReady: "Formulari i pagesës është ende duke u ngarkuar  provoni sërish pas pak.",
   },
   it: {
     nextChargeOn: "Prossimo addebito: {date}",
@@ -161,7 +161,7 @@ const MESSAGES = {
     cadenceDaily: "elke dag",
     cadenceFriday: "elke vrijdag",
     cadenceMonthly: "elke maand",
-    stripeNotReady: "Het betaalformulier wordt nog geladen — probeer het zo opnieuw.",
+    stripeNotReady: "Het betaalformulier wordt nog geladen  probeer het zo opnieuw.",
   },
   sv: {
     nextChargeOn: "Nästa dragning: {date}",
@@ -173,7 +173,7 @@ const MESSAGES = {
     cadenceDaily: "varje dag",
     cadenceFriday: "varje fredag",
     cadenceMonthly: "varje månad",
-    stripeNotReady: "Betalningsformuläret laddas fortfarande — försök igen om en stund.",
+    stripeNotReady: "Betalningsformuläret laddas fortfarande  försök igen om en stund.",
   },
   no: {
     nextChargeOn: "Neste trekk: {date}",
@@ -185,7 +185,7 @@ const MESSAGES = {
     cadenceDaily: "hver dag",
     cadenceFriday: "hver fredag",
     cadenceMonthly: "hver måned",
-    stripeNotReady: "Betalingsskjemaet laster fortsatt — prøv igjen om et øyeblikk.",
+    stripeNotReady: "Betalingsskjemaet laster fortsatt  prøv igjen om et øyeblikk.",
   },
   da: {
     nextChargeOn: "Næste trækning: {date}",
@@ -197,7 +197,7 @@ const MESSAGES = {
     cadenceDaily: "hver dag",
     cadenceFriday: "hver fredag",
     cadenceMonthly: "hver måned",
-    stripeNotReady: "Betalingsformularen indlæses stadig — prøv igen om et øjeblik.",
+    stripeNotReady: "Betalingsformularen indlæses stadig  prøv igen om et øjeblik.",
   },
   ms: {
     nextChargeOn: "Caj seterusnya: {date}",
@@ -209,7 +209,7 @@ const MESSAGES = {
     cadenceDaily: "setiap hari",
     cadenceFriday: "setiap Jumaat",
     cadenceMonthly: "setiap bulan",
-    stripeNotReady: "Borang pembayaran masih dimuatkan — sila cuba lagi sebentar.",
+    stripeNotReady: "Borang pembayaran masih dimuatkan  sila cuba lagi sebentar.",
   },
   ja: {
     nextChargeOn: "次回の決済：{date}",
@@ -245,35 +245,35 @@ const MESSAGES = {
     cadenceDaily: "हर दिन",
     cadenceFriday: "हर शुक्रवार",
     cadenceMonthly: "हर महीने",
-    stripeNotReady: "भुगतान फ़ॉर्म अभी लोड हो रहा है — कृपया कुछ क्षण बाद पुनः प्रयास करें।",
+    stripeNotReady: "भुगतान फ़ॉर्म अभी लोड हो रहा है  कृपया कुछ क्षण बाद पुनः प्रयास करें।",
   },
 };
 
 /**
  * The donor-facing state of a plan whose scheduler charges kept failing
- * (`SubscriptionStatus.PAYMENT_FAILED`) — shown on the account page next to
+ * (`SubscriptionStatus.PAYMENT_FAILED`)  shown on the account page next to
  * the plan, where "cancelled" would be untrue and "active" a lie.
  */
 const PAYMENT_FAILED = {
-  ar: "تعذّر الخصم — يرجى تحديث بيانات البطاقة",
-  en: "Payment failed — please update your card",
-  tr: "Çekim başarısız — lütfen kart bilgilerinizi güncelleyin",
-  fr: "Prélèvement échoué — veuillez mettre à jour votre carte",
-  de: "Abbuchung fehlgeschlagen — bitte Kartendaten aktualisieren",
-  es: "Cobro fallido — actualiza tu tarjeta",
-  id: "Penarikan gagal — perbarui kartu Anda",
-  pt: "Cobrança falhou — atualize o seu cartão",
-  ur: "کٹوتی ناکام — براہِ کرم اپنے کارڈ کی معلومات اپ ڈیٹ کریں",
-  sq: "Pagesa dështoi — përditësoni kartën tuaj",
-  it: "Addebito non riuscito — aggiorna la tua carta",
-  nl: "Afschrijving mislukt — werk uw kaart bij",
-  sv: "Dragningen misslyckades — uppdatera ditt kort",
-  no: "Trekket mislyktes — oppdater kortet ditt",
-  da: "Trækningen mislykkedes — opdater dit kort",
-  ms: "Caj gagal — kemas kini kad anda",
-  ja: "決済に失敗しました — カード情報を更新してください",
-  zh: "扣款失败 — 请更新您的银行卡",
-  hi: "कटौती विफल — कृपया अपना कार्ड अपडेट करें",
+  ar: "تعذّر الخصم  يرجى تحديث بيانات البطاقة",
+  en: "Payment failed  please update your card",
+  tr: "Çekim başarısız  lütfen kart bilgilerinizi güncelleyin",
+  fr: "Prélèvement échoué  veuillez mettre à jour votre carte",
+  de: "Abbuchung fehlgeschlagen  bitte Kartendaten aktualisieren",
+  es: "Cobro fallido  actualiza tu tarjeta",
+  id: "Penarikan gagal  perbarui kartu Anda",
+  pt: "Cobrança falhou  atualize o seu cartão",
+  ur: "کٹوتی ناکام  براہِ کرم اپنے کارڈ کی معلومات اپ ڈیٹ کریں",
+  sq: "Pagesa dështoi  përditësoni kartën tuaj",
+  it: "Addebito non riuscito  aggiorna la tua carta",
+  nl: "Afschrijving mislukt  werk uw kaart bij",
+  sv: "Dragningen misslyckades  uppdatera ditt kort",
+  no: "Trekket mislyktes  oppdater kortet ditt",
+  da: "Trækningen mislykkedes  opdater dit kort",
+  ms: "Caj gagal  kemas kini kad anda",
+  ja: "決済に失敗しました  カード情報を更新してください",
+  zh: "扣款失败  请更新您的银行卡",
+  hi: "कटौती विफल  कृपया अपना कार्ड अपडेट करें",
 };
 
 let written = 0;

@@ -316,7 +316,7 @@ test("read-only localization audit retains actionable item details", () => {
 
 // "operations content permission boundary remains unchanged" read
 // app/(dashboard)/dashboard/operations/layout.tsx, removed with التشغيل. There is no boundary
-// left to assert on — the permission key is gone too.
+// left to assert on  the permission key is gone too.
 
 test("targeted CMS security TypeScript check passes", () => {
   execFileSync(process.execPath, [

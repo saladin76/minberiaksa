@@ -2,7 +2,7 @@ import { LOCALES, isKnownLocale, type AnyLocale } from "@/lib/locales";
 
 /**
  * Language coverage for a campaign: given the locales present among recipients and the
- * locales for which an approved template variant exists, decide — per locale — whether
+ * locales for which an approved template variant exists, decide  per locale  whether
  * it is covered directly, covered by an explicit fallback, or missing. Pure, no I/O.
  *
  * A campaign must not silently send the wrong language: any `MISSING` locale that has

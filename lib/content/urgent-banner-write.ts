@@ -1,8 +1,8 @@
 /**
  * Shaping for the banner write endpoints.
  *
- * Follows `story-write.ts` closely — a banner is a story with more fields and
- * the same scheduling window — with one difference in the default: a story
+ * Follows `story-write.ts` closely  a banner is a story with more fields and
+ * the same scheduling window  with one difference in the default: a story
  * assumes 24 hours, a banner assumes nothing. An appeal runs until someone
  * decides it is over, and inventing an end date for it would silently pull a
  * live appeal down.
@@ -11,7 +11,7 @@
  * the catalogue in `lib/minbar/banner-placements.ts`), HOW it looks (`tone`,
  * `textSide`), price chips (`suggestedAmounts` + `amountLabels`, same order),
  * a kicker strip and a second button. Its order is `priority`, ascending, set
- * by drag-and-drop on the list — never typed.
+ * by drag-and-drop on the list  never typed.
  */
 
 import {
@@ -52,7 +52,7 @@ export const URGENT_BANNER_WITH_TRANSLATIONS_SELECT = {
   },
 } as const;
 
-/** A comma/newline separated list, or an array — trimmed, empties dropped. */
+/** A comma/newline separated list, or an array  trimmed, empties dropped. */
 export function labelList(v: unknown): string[] {
   const parts = Array.isArray(v) ? v : typeof v === "string" ? v.split(/[,،\n]+/) : [];
   return parts.map((x) => str(x)).filter(Boolean);
@@ -94,7 +94,7 @@ function campaignId(v: unknown): string | undefined {
 
 /**
  * Price chips. Accepts an array or a comma/space separated string and keeps
- * positive integers in the order typed — the labels beside them are
+ * positive integers in the order typed  the labels beside them are
  * positional, so the order must survive.
  */
 function amounts(v: unknown): number[] {

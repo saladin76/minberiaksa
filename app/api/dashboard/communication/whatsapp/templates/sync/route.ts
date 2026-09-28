@@ -12,7 +12,7 @@ import { syncMetaWhatsappTemplates } from "@/lib/communication/whatsapp-template
  * builder, the trigger preflight and the runtime all read `WhatsappTemplateVariant`, and this is its
  * only writer. It is an explicit operator action rather than a background job because it calls an
  * external API on the organisation's account, and because a failed sync must be visible to the person
- * who is waiting on it — `unmatchedNames` in particular, which lists templates Meta has that no local
+ * who is waiting on it  `unmatchedNames` in particular, which lists templates Meta has that no local
  * template claims.
  */
 export async function POST() {

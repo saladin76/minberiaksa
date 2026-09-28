@@ -48,7 +48,7 @@ export async function GET(request: NextRequest) {
     const limit = Math.min(parseInt(searchParams.get("limit") || "10") || 10, 100);
     const skip = (page - 1) * limit;
 
-    // Dashboard sends YYYY-MM-DD keys in the Istanbul calendar — interpret
+    // Dashboard sends YYYY-MM-DD keys in the Istanbul calendar  interpret
     // both ends as Istanbul day boundaries so the donations list agrees with
     // the chart/stats (UTC midnight was clipping 3 hours off every day).
     const dateFilter: { gte?: Date; lte?: Date } = {};
@@ -70,7 +70,7 @@ export async function GET(request: NextRequest) {
     const statusFilter = isAdmin ? searchParams.get("status") : null;
     const localeFilter = isAdmin ? searchParams.get("locale")?.trim() : null;
     const countryFilter = isAdmin ? searchParams.get("country")?.trim() : null;
-    // Recurring cadence of the plan behind the charge (DAILY | FRIDAY | MONTHLY) — implies
+    // Recurring cadence of the plan behind the charge (DAILY | FRIDAY | MONTHLY)  implies
     // subscription-only, since a one-time gift has no plan.
     const frequencyFilter = isAdmin ? parseFrequencyParam(searchParams.get("frequency")) : null;
 
@@ -93,7 +93,7 @@ export async function GET(request: NextRequest) {
 
     // Free-text donor search (name OR email), admin-only. Kept OUT of `baseWhere`
     // and AND-composed below because `baseWhere.OR` is already taken by the
-    // category filter — putting a second OR there would silently overwrite it.
+    // category filter  putting a second OR there would silently overwrite it.
     const searchWhere =
       search && isAdmin
         ? {
@@ -271,7 +271,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Resolve donorId — authenticated user or guest upsert
+    // Resolve donorId  authenticated user or guest upsert
     let donorId: string;
     let donorName: string | null = null;
     if (session?.user?.id) {

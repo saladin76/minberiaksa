@@ -8,7 +8,7 @@
  * locale in front of it. Resolving at request time means an editor picks
  * "the zakat page" once and every language edition gets its own correct URL.
  *
- * Currency needs nothing here — it lives in a cookie independent of the path,
+ * Currency needs nothing here  it lives in a cookie independent of the path,
  * so any in-app navigation keeps it (`hooks/useMinbarMoney.ts`).
  *
  * Shared by the API (server) and the dashboard form (client); it must stay
@@ -69,14 +69,14 @@ export interface StoryCta {
   value: string;
 }
 
-/** Slug lookups the resolver needs for CAMPAIGN and POST — built per request. */
+/** Slug lookups the resolver needs for CAMPAIGN and POST  built per request. */
 export interface StoryCtaLookups {
   campaignSlugById: ReadonlyMap<string, string>;
   postSlugById: ReadonlyMap<string, string>;
 }
 
 /**
- * The href for one visitor, or null when the target no longer resolves — a
+ * The href for one visitor, or null when the target no longer resolves  a
  * deleted campaign, an unknown page key. Null hides the button rather than
  * sending someone to a 404.
  */

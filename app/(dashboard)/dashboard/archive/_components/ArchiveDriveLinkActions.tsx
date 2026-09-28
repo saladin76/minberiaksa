@@ -56,7 +56,7 @@ export function ArchiveDriveLinkActions({ linkId }: Props) {
     <div className="rounded-lg border bg-white p-3">
       <div className="flex flex-wrap items-center gap-2">
         {/* The test endpoint only parses the Drive folder/file id; it does not call Google. */}
-        <Button type="button" size="sm" variant="outline" disabled={Boolean(running)} onClick={() => runAction("test")} className="gap-2 font-bold" title="يتحقق من صيغة الرابط ومعرّف المجلد فقط — لا يتصل بـ Google Drive">
+        <Button type="button" size="sm" variant="outline" disabled={Boolean(running)} onClick={() => runAction("test")} className="gap-2 font-bold" title="يتحقق من صيغة الرابط ومعرّف المجلد فقط  لا يتصل بـ Google Drive">
           {isTesting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Radar className="h-4 w-4" />}
           فحص صيغة الرابط
         </Button>
@@ -67,7 +67,7 @@ export function ArchiveDriveLinkActions({ linkId }: Props) {
           تحديث المواد
         </Button>
         <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[11px] font-bold text-amber-700">
-          تجريبي — غير متصل بـ Google Drive
+          تجريبي  غير متصل بـ Google Drive
         </span>
       </div>
 

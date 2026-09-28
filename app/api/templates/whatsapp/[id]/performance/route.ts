@@ -20,7 +20,7 @@ import type {
  * (set by the tracked-URL builder) to count donations + revenue.
  *
  * Clicks are not stored yet (no Twilio click-tracking webhook), so
- * `clicked = donations` as a conservative lower bound — replaced once the
+ * `clicked = donations` as a conservative lower bound  replaced once the
  * webhook lands.
  */
 export async function GET(
@@ -54,7 +54,7 @@ export async function GET(
     return NextResponse.json({ error: "Template not found" }, { status: 404 });
   }
 
-  // SentMessage aggregates — per template (raw counts).
+  // SentMessage aggregates  per template (raw counts).
   const grouped = await prisma.sentMessage.groupBy({
     by: ["status"],
     where: { templateId: id, channel: "WHATSAPP" },
@@ -69,7 +69,7 @@ export async function GET(
     else if (g.status === "SKIPPED") skipped = g._count._all;
   }
 
-  // Best country / language — group SentMessage by recipient country (via
+  // Best country / language  group SentMessage by recipient country (via
   // user join) if available. We do a lightweight lookup of recipientUserIds
   // and aggregate their donorCountryCode from the User table.
   const recentRecipients = await prisma.sentMessage.findMany({
@@ -105,7 +105,7 @@ export async function GET(
   const bestLanguage = mapBest(byLanguage);
 
   // Donations attributed to this template via `twilio_template_id` UTM. We
-  // match on either the internal template id OR the externalTemplateId — the
+  // match on either the internal template id OR the externalTemplateId  the
   // tracked-URL builder may use either depending on import state.
   const templateIdCandidates = [template.id, template.externalTemplateId].filter(
     (v): v is string => typeof v === "string" && v.length > 0
@@ -137,7 +137,7 @@ export async function GET(
     sent: sent + failed + skipped,
     delivered: sent,
     failed,
-    clicked: donations, // lower bound — webhook would refine
+    clicked: donations, // lower bound  webhook would refine
     donations,
     revenueUSD: Math.round(revenueUSD * 100) / 100,
   };

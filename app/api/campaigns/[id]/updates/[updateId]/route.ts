@@ -200,7 +200,7 @@ export async function DELETE(request: NextRequest, { params }: ParamsPromise) {
     const denied = requireAdminOrDashboardPermission(session, "campaigns");
     if (denied) return denied;
 
-    // ✅ STEP 2+3: Delete and read in one call — `delete` returns the row, so the
+    // ✅ STEP 2+3: Delete and read in one call  `delete` returns the row, so the
     // preceding existence check was a round trip spent on data the delete itself
     // hands back. A missing row now surfaces as P2025 and is mapped to a 404
     // below. UpdateTranslation rows cascade (onDelete: Cascade).

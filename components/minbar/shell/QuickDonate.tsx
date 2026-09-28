@@ -10,7 +10,7 @@ import type { MinbarProject } from "@/lib/minbar/projects";
 import { qfAmountStyle, qfFreqStyle, qfRowStyle } from "./quick-donate-styles";
 
 /**
- * Quick donation widget — ported from `Minbar/التبرع السريع.dc.html`.
+ * Quick donation widget  ported from `Minbar/التبرع السريع.dc.html`.
  *
  * Included on every page, so it has to be localised: leaving it Arabic would
  * hand every non-Arabic session an Arabic donation widget.
@@ -25,7 +25,7 @@ import { qfAmountStyle, qfFreqStyle, qfRowStyle } from "./quick-donate-styles";
  *  - The pill is fixed in the bottom inline-end corner, opposite the WhatsApp
  *    button, and opens upward from there. It used to be draggable from a point
  *    38% down the side, which put it over the content of every page, moved it
- *    to wherever a visitor happened to let go, and remembered nothing — so the
+ *    to wherever a visitor happened to let go, and remembered nothing  so the
  *    next page put it back over the content again. A donation button belongs in
  *    the one place a visitor already looks for it.
  */
@@ -76,7 +76,7 @@ export default function QuickDonate({ amounts = DEFAULT_AMOUNTS }: QuickDonatePr
       })
       .catch(() => {
         // The picker degrades to "where the need is greatest", which is a valid
-        // destination — a failed list must not block giving.
+        // destination  a failed list must not block giving.
       });
     return () => {
       cancelled = true;
@@ -94,7 +94,7 @@ export default function QuickDonate({ amounts = DEFAULT_AMOUNTS }: QuickDonatePr
 
     const isGeneral = !selected;
     addToCart({
-      // The stable id is stored, never the displayed string — the cart resolves
+      // The stable id is stored, never the displayed string  the cart resolves
       // the title live from the active locale.
       projectId: isGeneral ? undefined : selected.slug,
       titleKey: isGeneral ? "whereNeedGreatest" : undefined,

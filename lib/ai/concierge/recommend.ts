@@ -2,7 +2,7 @@ import type { ConciergeIntent } from "./schema";
 
 /**
  * Deterministic candidate selection. The model is handed the output of this
- * and may only pick from it — it never sees the whole catalog and never ranks
+ * and may only pick from it  it never sees the whole catalog and never ranks
  * on signals of its own. Pure and unit-tested.
  *
  * Signals are the factual fields the CMS holds: active status, the campaign's
@@ -48,7 +48,7 @@ export interface RankInput {
   /** Free text, for keyword matches against title/summary. */
   text: string | null;
   excludeIds?: readonly string[];
-  /** The campaign the visitor is looking at, if any — always a candidate. */
+  /** The campaign the visitor is looking at, if any  always a candidate. */
   currentCampaignId?: string | null;
 }
 
@@ -70,7 +70,7 @@ const RELIEF_WORDS = /إغاث|طوارئ|عاجل|غذاء|طعام|سلة|سل
 /**
  * What a visitor's own situation points to. "I'm in high school and can't
  * study" shares no word with an education project's title, so the themes
- * bridge the visitor's words to the projects that fit them — the way a
+ * bridge the visitor's words to the projects that fit them  the way a
  * thoughtful person would suggest a students' project to a student.
  */
 const THEMES: Array<{ trigger: RegExp; campaign: RegExp; weight: number }> = [
@@ -83,7 +83,7 @@ const THEMES: Array<{ trigger: RegExp; campaign: RegExp; weight: number }> = [
 ];
 
 /* A theme met in the title is what the project is; met only in the summary
-   or its categories, it is a project that touches the theme — half weight,
+   or its categories, it is a project that touches the theme  half weight,
    so "orphans" ranks the orphanage above every project that mentions families. */
 function themeScore(c: CatalogCampaign, text: string | null): number {
   if (!text) return 0;
@@ -120,7 +120,7 @@ function stem(word: string): string {
 }
 
 /* Words that say "I want to give to a project" rather than what the project
-   is about — they would otherwise match every title on the site. */
+   is about  they would otherwise match every title on the site. */
 const STOP = new Set([
   "مشروع", "مشاريع", "حمله", "حملات", "تبرع", "اتبرع", "تبرعات", "للتبرع", "عايز", "عاوز", "اريد", "ابغي", "حابب", "نفسي", "حاجه", "شيء", "مثل", "دعم", "مساعده", "اساعد", "اهل", "بعض", "زي", "علي", "الي", "هذا", "هذه",
   "project", "projects", "campaign", "campaigns", "donate", "donation", "donations", "give", "giving", "want", "would", "like", "something", "some", "thing", "help", "support", "please", "for", "the", "and", "with", "that", "this",
@@ -201,7 +201,7 @@ export function rankCampaigns(catalog: readonly CatalogCampaign[], input: RankIn
   return (positive.length ? positive : scored).slice(0, limit);
 }
 
-/** How much a campaign is about what the visitor wrote — words and themes only, no intent or place. */
+/** How much a campaign is about what the visitor wrote  words and themes only, no intent or place. */
 export function topicScore(c: CatalogCampaign, text: string): number {
   return textScore(c, text) + themeScore(c, text);
 }
@@ -214,8 +214,8 @@ export interface TopicMatch {
 }
 
 /**
- * What the visitor's words point at — one or more projects, or one or more
- * areas — so the reply can be as wide or as narrow as the wish: "orphans"
+ * What the visitor's words point at  one or more projects, or one or more
+ * areas  so the reply can be as wide or as narrow as the wish: "orphans"
  * is an area, "the well in Gaza" is a project, "children" may be several
  * areas. Used when the model is off, and as the ground truth its choices are
  * checked against.

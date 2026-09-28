@@ -13,7 +13,7 @@ interface Props {
 const NAMESPACES = ["system"] as const;
 
 /**
- * Planned maintenance — ported from `Minbar/الصيانة.dc.html`.
+ * Planned maintenance  ported from `Minbar/الصيانة.dc.html`.
  *
  * Never indexed: a status screen has no standalone meaning in search, and
  * `PRODUCTION_SEO_CONTRACT.md` lists the payment states as noindex.

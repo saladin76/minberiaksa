@@ -83,7 +83,7 @@ export default function WysiwygEditor({
     }
 
     // Preserve the current selection across a genuine external content swap
-    // when possible — but never force cursor movement just because the parent
+    // when possible  but never force cursor movement just because the parent
     // re-rendered.
     const wasFocused = editor.isFocused;
     editor.commands.setContent(defaultValue, false);

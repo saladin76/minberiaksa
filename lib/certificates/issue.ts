@@ -9,14 +9,14 @@ import { nextSequenceNumber, padSerial } from "./sequences";
  * Issuing the three documents a confirmed donation carries
  * (`CERTIFICATES_DOWNLOADS_HANDOFF.md §1`):
  *
- *   - the thank-you certificate — every confirmed donation;
- *   - the donation receipt — every confirmed donation;
- *   - a waqf certificate — one per waqf line (share or metre) in the order.
+ *   - the thank-you certificate  every confirmed donation;
+ *   - the donation receipt  every confirmed donation;
+ *   - a waqf certificate  one per waqf line (share or metre) in the order.
  *
  * `DONATION_LOGIC_SPEC §2` and its idempotency contract govern everything here:
  * nothing is issued before the payment is confirmed, a serial is minted once,
- * and running this again for the same donation — from the success page, from
- * a re-download, from a replayed webhook — returns the same records. The
+ * and running this again for the same donation  from the success page, from
+ * a re-download, from a replayed webhook  returns the same records. The
  * unique constraints on the tables catch the one race the lookups cannot.
  */
 
@@ -24,7 +24,7 @@ export type IssuedWaqfCertificate = Certificate & { waqfItem: DonationWaqfItem }
 
 export interface IssuedDocuments {
   donationId: string;
-  /** The locale the donation was made in — every document renders in it. */
+  /** The locale the donation was made in  every document renders in it. */
   locale: string;
   receipt: DonationReceipt;
   thanks: Certificate;
@@ -93,7 +93,7 @@ async function ensureReceipt(donation: { id: string; paidAt: Date | null }, loca
     });
   } catch (error) {
     /* A parallel issue won the race; its row is the receipt. The number this
-       call drew is simply never used — a gap is harmless, a duplicate is not. */
+       call drew is simply never used  a gap is harmless, a duplicate is not. */
     if (!isUniqueViolation(error)) throw error;
     const winner = await prisma.donationReceipt.findUnique({ where: { donationId: donation.id } });
     if (winner) return winner;
@@ -175,7 +175,7 @@ async function ensureWaqfCertificate(
 }
 
 /**
- * Issue — or, on every call after the first, simply return — the documents
+ * Issue  or, on every call after the first, simply return  the documents
  * for a confirmed donation.
  *
  * Throws `DonationNotFoundError` for an unknown id and
@@ -218,7 +218,7 @@ export async function issueDonationDocuments(donationId: string): Promise<Issued
 
 /**
  * The documents already issued for a donation, without issuing anything.
- * `null` when none have been — the caller decides whether to issue.
+ * `null` when none have been  the caller decides whether to issue.
  */
 export async function findDonationDocuments(donationId: string): Promise<IssuedDocuments | null> {
   if (!OBJECT_ID.test(donationId)) return null;

@@ -15,7 +15,7 @@ export default function IntlProviderClient({ locale, messages, children }: Props
   return (
     <NextIntlClientProvider
       locale={locale}
-      messages={messages}
+      messages={messages as React.ComponentProps<typeof NextIntlClientProvider>["messages"]}
       now={now}
       timeZone={timeZone}
     >

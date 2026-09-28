@@ -10,7 +10,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 /**
- * GET /api/admin/messages/unread-count — the number behind the sidebar badge.
+ * GET /api/admin/messages/unread-count  the number behind the sidebar badge.
  *
  * Split from the list endpoint on purpose: the sidebar polls this from every dashboard page, so
  * it must stay two counts and no document reads. `ok:false` is passed through rather than

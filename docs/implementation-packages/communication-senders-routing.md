@@ -1,23 +1,23 @@
-# Package — Communication Senders, Routing & Donor Profiles (UI + automation)
+# Package  Communication Senders, Routing & Donor Profiles (UI + automation)
 
 Status: **done.** No sending, no provider calls, no webhooks, no Inbox. Legacy untouched.
 Date: 2026-07-05
 
 ## Goal
 Real dashboard UI + APIs for Communication senders and routing rules, automatic
-DonorCommunicationProfile updates on paid donations, and profile-aware language audiences —
+DonorCommunicationProfile updates on paid donations, and profile-aware language audiences 
 all configuration/read only, built on Package 1's models and services.
 
 ## Pages added
-- **`/dashboard/operations/communication/senders`** — list WhatsApp/Email/SMS senders (provider,
+- **`/dashboard/operations/communication/senders`**  list WhatsApp/Email/SMS senders (provider,
   channel, display name, supported locales/countries/purposes, status, default, priority);
   create/edit; enable/disable; **set one default per channel**. No secret/token fields. Empty +
   error states + a no-send/no-secrets safety notice.
-- **`/dashboard/operations/communication/routing`** — list routing rules; create by
+- **`/dashboard/operations/communication/routing`**  list routing rules; create by
   channel/locale/country/purpose with primary + fallback sender + priority; enable/disable; and a
   **live routing preview** (input → selected sender or skip reason) that runs the pure `sender-router`
   on real senders/rules. Warns when no senders exist yet; "configuration only until provider send is enabled" notice.
-- **`/dashboard/operations/communication/preferences`** — upgraded: keeps the existing audit-backed
+- **`/dashboard/operations/communication/preferences`**  upgraded: keeps the existing audit-backed
   contact-preferences (compatibility) and adds a read-only **runtime DonorCommunicationProfile** panel
   (auto-created from paid donations: locale, channel opt-ins, WhatsApp needs-review state).
 - Communication overview + Audiences page updated to surface the new sections and the WhatsApp-eligible count.
@@ -25,8 +25,8 @@ all configuration/read only, built on Package 1's models and services.
 ## APIs added (server-side, operations-guarded, no-store)
 - `GET/POST/PATCH /api/dashboard/operations/communication/senders` (PATCH also `makeDefault`).
 - `GET/POST/PATCH /api/dashboard/operations/communication/routing` (GET returns rules + senders).
-- `POST /api/dashboard/operations/communication/routing/preview` — configuration-only routing result.
-- `GET/PATCH /api/dashboard/operations/communication/profiles` — list + consent update.
+- `POST /api/dashboard/operations/communication/routing/preview`  configuration-only routing result.
+- `GET/PATCH /api/dashboard/operations/communication/profiles`  list + consent update.
 - New `_auth` helper `requireOperationsApiSession()` so handlers can attribute audit actions.
 
 ## How donor profiles update (automation)
@@ -56,10 +56,10 @@ No payment logic changed.
   non-throwing profile sync. No payment or tracking changes.
 
 ## Validation
-- `npx tsc --noEmit` — new files add **0 errors** (pre-existing `d.type` baseline errors in dispatch.ts unchanged).
-- `npx next build` — green (see final response).
+- `npx tsc --noEmit`  new files add **0 errors** (pre-existing `d.type` baseline errors in dispatch.ts unchanged).
+- `npx next build`  green (see final response).
 
 ## Remaining next package
 Meta WhatsApp Cloud API adapter skeleton (`lib/communication/providers/meta-whatsapp/`, server-only,
-gated on `META_WHATSAPP_NOT_CONFIGURED`), sender health checks, and webhook verification — still no
+gated on `META_WHATSAPP_NOT_CONFIGURED`), sender health checks, and webhook verification  still no
 production sends. Then templates + language coverage, campaign send-with-approval + delivery archive, and Inbox.

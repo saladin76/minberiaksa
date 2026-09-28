@@ -8,7 +8,7 @@ import { loadSenderRoutingSnapshot, resolveSenderFromSnapshot } from "./sender-r
  * Can this trigger actually send? Answered before it is switched on, not at the donor's expense.
  *
  * Enabling a WhatsApp trigger used to be a single boolean write. Nothing checked that the template
- * was a Meta template, that Meta had approved any language of it, or that a WhatsApp sender existed —
+ * was a Meta template, that Meta had approved any language of it, or that a WhatsApp sender existed 
  * so a trigger could sit enabled for weeks, firing on every donation and skipping every one with
  * `META_TEMPLATE_REQUIRED_FOR_AUTOMATIC_WHATSAPP` buried in the delivery log. Donors simply never
  * received their receipts, and the dashboard showed a healthy, enabled trigger.
@@ -54,7 +54,7 @@ async function preflightEmailTrigger(templateId: string): Promise<PreflightResul
     problems.push({ code: "TEMPLATE_NOT_FOUND", messageAr: "القالب غير موجود." });
     return { ok: false, problems, approvedLocales: [], canonical: null };
   }
-  /* Email needs a usable sending identity, nothing more — no per-language approval exists. */
+  /* Email needs a usable sending identity, nothing more  no per-language approval exists. */
   const snapshot = await loadSenderRoutingSnapshot("EMAIL");
   const routed = resolveSenderFromSnapshot(snapshot, { purpose: "TRANSACTIONAL" });
   if (!routed.ok || !routed.sender.senderEmail) {
@@ -80,7 +80,7 @@ async function preflightWhatsappTrigger(templateId: string): Promise<PreflightRe
        business-initiated free text, so there is no payload this trigger could ever send. */
     problems.push({
       code: "TEMPLATE_NOT_META",
-      messageAr: "القالب ليس قالب Meta معتمدًا — واتساب لا يسمح بإرسال نص حر تلقائيًا.",
+      messageAr: "القالب ليس قالب Meta معتمدًا  واتساب لا يسمح بإرسال نص حر تلقائيًا.",
       detail: tpl.provider ?? "unset",
     });
   }
@@ -92,7 +92,7 @@ async function preflightWhatsappTrigger(templateId: string): Promise<PreflightRe
       code: "NO_APPROVED_VARIANT",
       messageAr: approvedLocales.length
         ? "لا توجد نسخة عربية معتمدة من هذا القالب لدى Meta."
-        : "لم تعتمد Meta أي لغة من هذا القالب — شغّل مزامنة القوالب ثم تحقّق من حالة الاعتماد.",
+        : "لم تعتمد Meta أي لغة من هذا القالب  شغّل مزامنة القوالب ثم تحقّق من حالة الاعتماد.",
       detail: canonicalReadiness.rejectionReason ?? canonicalReadiness.reason,
     });
   }

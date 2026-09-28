@@ -20,7 +20,7 @@ import {
 } from "../../lib/donations/recurring-schedule";
 
 /**
- * Contract tests for `DEPLOYED_VS_DESIGN_AUDIT.md` § P0.2 — the frequency a
+ * Contract tests for `DEPLOYED_VS_DESIGN_AUDIT.md` § P0.2  the frequency a
  * donor picks must be the frequency the plan is billed on, on the rail that
  * bills that cadence. These run in `npm run build`.
  */

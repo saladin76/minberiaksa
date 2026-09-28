@@ -8,7 +8,7 @@ import { isCommunicationChannel, type CommunicationChannelId, type Communication
 /**
  * Renders campaign templates per locale and creates the delivery archive records. Because no
  * provider adapter is wired yet, every prepared recipient is recorded as RENDERED (ready, not
- * sent) and — when a real send is attempted — as SKIPPED with the provider's not-configured
+ * sent) and  when a real send is attempted  as SKIPPED with the provider's not-configured
  * reason. Nothing is ever marked SENT here.
  */
 
@@ -60,7 +60,7 @@ export async function createTestDelivery(
   };
 
   // `resolveProviderForSend` is async. Without the await, `decision` was a Promise, so
-  // `decision.canSend` was `undefined` and `!undefined` is always true — every test send was
+  // `decision.canSend` was `undefined` and `!undefined` is always true  every test send was
   // recorded as SKIPPED with `reason: undefined`, even once providers were configured.
   const decision = await resolveProviderForSend(channel);
   if (!decision.canSend) {
@@ -69,7 +69,7 @@ export async function createTestDelivery(
     return { ok: true, deliveryId: skipped.data.id, status: "SKIPPED", reason: decision.reason };
   }
 
-  // (Unreachable until adapters land — kept so the safe path is explicit.)
+  // (Unreachable until adapters land  kept so the safe path is explicit.)
   const record = await createDeliveryRecord({ ...base, status: "RENDERED" });
   if (!record.ok) return record;
   return { ok: true, deliveryId: record.data.id, status: "RENDERED" };

@@ -104,7 +104,7 @@ export async function GET(
         teamSupport: 0,
         fees: 0,
       };
-      // USD-labelled series must be summed in USD — see the same fix in
+      // USD-labelled series must be summed in USD  see the same fix in
       // app/api/admin/donations/chart/route.ts.
       const amount = donationRowUsdApprox(d);
       if (d.subscriptionId == null) {
@@ -134,7 +134,7 @@ export async function GET(
       fees: number;
     }[] = [];
     /* All-time queries from the epoch, so the axis starts at the first day with data rather than
-       at 1970 — see `resolveChartStartKey`. Bounded periods are unchanged. */
+       at 1970  see `resolveChartStartKey`. Bounded periods are unchanged. */
     const axisStartKey = resolveChartStartKey(isAllTime, startDateKey, endDateKey, byDate.keys());
 
     for (const dateStr of eachIstanbulDateKey(axisStartKey, endDateKey)) {

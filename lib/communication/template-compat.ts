@@ -11,7 +11,7 @@ import type { CommunicationChannelId } from "./communication-runtime-types";
 /**
  * Compatibility layer over the EmailTemplate / WhatsappTemplate / SmsTemplate models so campaigns
  * can list templates, compute language coverage against `translations`, and render per-locale
- * previews — without a dedicated CommunicationTemplateGroup model (not overbuilt).
+ * previews  without a dedicated CommunicationTemplateGroup model (not overbuilt).
  *
  * SMS used to borrow the WhatsApp store because both are "a text body". That was wrong in practice:
  * the two are authored against opposite constraints (see the `SmsTemplate` model note), and the
@@ -41,7 +41,7 @@ function localesFromTranslations(base: SupportedLocale, translations: unknown): 
  * Branched explicitly rather than by picking a Prisma delegate into a variable: the two delegates
  * are structurally identical here but their generated types are not assignable to one another, so
  * a shared handle only typechecks behind a cast that would drop the `select` checking entirely.
- * Email is absent by design — it has a document, not a body.
+ * Email is absent by design  it has a document, not a body.
  */
 type TextTemplateSummary = { id: string; name: string; translations: unknown; kind: string | null };
 
@@ -63,7 +63,7 @@ async function findTextTemplate(
 }
 
 /**
- * Ids of templates that are SYSTEM (platform-event) templates — either flagged `kind = "SYSTEM"`
+ * Ids of templates that are SYSTEM (platform-event) templates  either flagged `kind = "SYSTEM"`
  * or referenced by a MessageTrigger. Campaign Builder must not offer these by default.
  */
 async function systemTemplateIds(): Promise<Set<string>> {
@@ -128,7 +128,7 @@ export type RenderedTemplate = {
  *  - **Send** (`ctx` supplied): merge that recipient's real data.
  *
  * Without `ctx` it previously did preview-only work for *both*, so campaigns went out with sample
- * variable values — every donor greeted by the sample name — and the email body was a literal
+ * variable values  every donor greeted by the sample name  and the email body was a literal
  * placeholder sentence rather than the template. `ctx` is what separates the two, and the email
  * branch now renders the actual builder document through the same `renderEmailHtml` the trigger
  * dispatcher uses, so a campaign email and a triggered email are produced by one code path.
@@ -161,7 +161,7 @@ export async function renderChannelTemplate(
     if (!tpl) return null;
     const variant = resolveEmailVariant(tpl, locale);
     const subjectPreview = renderTemplatePreview(variant.subject);
-    // Sample context for previews so the body is real HTML either way — an empty-looking preview
+    // Sample context for previews so the body is real HTML either way  an empty-looking preview
     // is what let the placeholder survive unnoticed.
     const renderCtx = ctx ?? SAMPLE_TEMPLATE_CONTEXT;
     const html = await renderEmailHtml(variant.document as TReaderDocument, renderCtx);

@@ -50,7 +50,7 @@ function normalizeByCurrency(raw: unknown): Record<string, number[]> {
   return out;
 }
 
-/** Coerce DB / API JSON into a normalized config (never empty amounts — use default). */
+/** Coerce DB / API JSON into a normalized config (never empty amounts  use default). */
 export function parseSuggestedDonations(raw: unknown): SuggestedDonationsConfig {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
     return {

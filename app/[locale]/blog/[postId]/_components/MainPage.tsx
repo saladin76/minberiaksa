@@ -38,7 +38,7 @@ interface BlogPostProps {
   };
 }
 
-const MainPage: React.FC<BlogPostProps> = ({ id }: { id: string }) => {
+const MainPage: React.FC<{ id: string }> = ({ id }) => {
   const locale = useLocale(); // Get the current locale (ar or en)
   const [loading, setLoading] = useState<boolean>(true);
   const [post, setPost] = useState<ExtendedPost | null>(null);

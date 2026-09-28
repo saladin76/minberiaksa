@@ -4,7 +4,7 @@
  * الحزمة 219–258 (40 مقالة) وصلت بلا مجلد صور: IMAGE_MAP.csv يسمّي الملفات
  * المطلوبة فقط. الأغلفة المؤقتة الأولى أُسندت بمطابقة آلية بالكلمات المفتاحية
  * فأخطأت في أغلبها (غلاف «تغذية الأمهات» فوق مقالة عن الديون، …). هذا السكربت
- * يطبّق الإسناد المراجَع يدويًا — نفس القيم المكتوبة في prisma/seed/seed-posts.json —
+ * يطبّق الإسناد المراجَع يدويًا  نفس القيم المكتوبة في prisma/seed/seed-posts.json 
  * على قاعدة الإنتاج مباشرة، لأن الواجهة تقرأ من الـDB لا من ملف البذرة.
  *
  * هذه أغلفة مؤقتة تبقى حتى ترفع المؤسسة الصور الأربعين المسماة في IMAGE_MAP.csv.
@@ -47,7 +47,7 @@ async function main() {
   for (const t of targets) {
     const seeded = bySlug.get(t.slug);
     if (!seeded?.image) {
-      console.warn(`#${t.index} ${t.slug} — غير موجود في ملف البذرة، تخطٍّ`);
+      console.warn(`#${t.index} ${t.slug}  غير موجود في ملف البذرة، تخطٍّ`);
       missing++;
       continue;
     }
@@ -55,7 +55,7 @@ async function main() {
 
     const post = await prisma.post.findUnique({ where: { slug: t.slug }, select: { id: true, image: true } });
     if (!post) {
-      console.warn(`#${t.index} ${t.slug} — غير موجود في قاعدة البيانات، تخطٍّ`);
+      console.warn(`#${t.index} ${t.slug}  غير موجود في قاعدة البيانات، تخطٍّ`);
       missing++;
       continue;
     }

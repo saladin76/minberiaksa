@@ -89,8 +89,8 @@ const GOOGLE_ADS_GUIDE: PlatformRequirements = {
   ],
   optional: [
     { field: "managerAccountId", labelAr: "Manager Customer ID", secret: false, guidanceAr: "Manager Customer ID مطلوب فقط إذا كان الحساب مُدار من MCC." },
-    { field: "conversionId", labelAr: "Conversion ID (AW-XXXXXXX)", secret: false, guidanceAr: "Conversion ID اختياري — مطلوب لاحقًا لربط Enhanced Conversions." },
-    { field: "conversionLabel", labelAr: "Conversion Label", secret: false, guidanceAr: "Conversion Label اختياري — مرافق لـ Conversion ID." },
+    { field: "conversionId", labelAr: "Conversion ID (AW-XXXXXXX)", secret: false, guidanceAr: "Conversion ID اختياري  مطلوب لاحقًا لربط Enhanced Conversions." },
+    { field: "conversionLabel", labelAr: "Conversion Label", secret: false, guidanceAr: "Conversion Label اختياري  مرافق لـ Conversion ID." },
   ],
   setupGuideAr: "اربط Google Ads + OAuth + Developer Token لمزامنة الحملات والإنفاق لاحقًا.",
 };
@@ -105,7 +105,7 @@ const TIKTOK_GUIDE: PlatformRequirements = {
     { field: "pixelId", labelAr: "Pixel Code", secret: false, guidanceAr: "ناقص Pixel Code. أنشئه من Events Manager في TikTok Ads." },
   ],
   optional: [
-    { field: "appId", labelAr: "App ID", secret: false, guidanceAr: "App ID اختياري — لتطبيق TikTok Marketing API عند الحاجة." },
+    { field: "appId", labelAr: "App ID", secret: false, guidanceAr: "App ID اختياري  لتطبيق TikTok Marketing API عند الحاجة." },
     { field: "appSecret", labelAr: "App Secret", secret: true, guidanceAr: "App Secret اختياري لتطبيق TikTok Marketing API عند الحاجة." },
   ],
   setupGuideAr: "اربط TikTok Ads + Pixel Code لتجهيز مزامنة الحملات وEvents API لاحقًا.",
@@ -120,11 +120,11 @@ const X_GUIDE: PlatformRequirements = {
     { field: "accessToken", labelAr: "Access Token", secret: true, guidanceAr: "قد تحتاج إلى تفعيل Ads API access من X Developer Portal للحصول على Access Token." },
   ],
   optional: [
-    { field: "pixelId", labelAr: "Pixel ID", secret: false, guidanceAr: "Pixel ID اختياري — لتفعيل التحويلات لاحقًا." },
+    { field: "pixelId", labelAr: "Pixel ID", secret: false, guidanceAr: "Pixel ID اختياري  لتفعيل التحويلات لاحقًا." },
     { field: "conversionId", labelAr: "Conversion Event ID", secret: false, guidanceAr: "Conversion Event ID اختياري لقياس التبرعات." },
-    { field: "refreshToken", labelAr: "Refresh Token", secret: true, guidanceAr: "Refresh Token اختياري — لتمديد صلاحية الـ Access Token." },
-    { field: "appId", labelAr: "App Key", secret: false, guidanceAr: "App Key اختياري — جزء من تطبيق X Developer." },
-    { field: "appSecret", labelAr: "App Secret", secret: true, guidanceAr: "App Secret اختياري — جزء من تطبيق X Developer." },
+    { field: "refreshToken", labelAr: "Refresh Token", secret: true, guidanceAr: "Refresh Token اختياري  لتمديد صلاحية الـ Access Token." },
+    { field: "appId", labelAr: "App Key", secret: false, guidanceAr: "App Key اختياري  جزء من تطبيق X Developer." },
+    { field: "appSecret", labelAr: "App Secret", secret: true, guidanceAr: "App Secret اختياري  جزء من تطبيق X Developer." },
   ],
   setupGuideAr: "تفعيل Ads API access من X Developer Portal مطلوب قبل ربط الحساب.",
 };
@@ -138,8 +138,8 @@ const GA4_GUIDE: PlatformRequirements = {
     { field: "apiSecret", labelAr: "API Secret", secret: true, guidanceAr: "ناقص API Secret. من GA4 Admin > Data Streams > Measurement Protocol API secrets." },
   ],
   optional: [
-    { field: "propertyId", labelAr: "Property ID", secret: false, guidanceAr: "Property ID اختياري — لاستعلامات Reporting API." },
-    { field: "streamId", labelAr: "Stream ID", secret: false, guidanceAr: "Stream ID اختياري — لتخصيص Data Streams." },
+    { field: "propertyId", labelAr: "Property ID", secret: false, guidanceAr: "Property ID اختياري  لاستعلامات Reporting API." },
+    { field: "streamId", labelAr: "Stream ID", secret: false, guidanceAr: "Stream ID اختياري  لتخصيص Data Streams." },
   ],
   setupGuideAr: "اربط GA4 لتجهيز Reporting API وMeasurement Protocol. أحداث التتبع المباشر تدار من قسم البكسلات والتتبع.",
 };
@@ -154,9 +154,9 @@ const TWILIO_GUIDE: PlatformRequirements = {
   ],
   optional: [
     { field: "messagingServiceSid", labelAr: "Messaging Service SID", secret: false, guidanceAr: "Messaging Service SID اختياري لكنه مفضل لإدارة الإرسال والـ callbacks." },
-    { field: "whatsappSender", labelAr: "WhatsApp Sender", secret: false, guidanceAr: "WhatsApp Sender اختياري — مثلاً whatsapp:+14155238886." },
-    { field: "smsSender", labelAr: "SMS Sender", secret: false, guidanceAr: "SMS Sender اختياري — رقم E.164 معتمد لدى Twilio." },
-    { field: "emailSender", labelAr: "Email Sender", secret: false, guidanceAr: "Email Sender اختياري — مع تكامل SendGrid عبر Twilio." },
+    { field: "whatsappSender", labelAr: "WhatsApp Sender", secret: false, guidanceAr: "WhatsApp Sender اختياري  مثلاً whatsapp:+14155238886." },
+    { field: "smsSender", labelAr: "SMS Sender", secret: false, guidanceAr: "SMS Sender اختياري  رقم E.164 معتمد لدى Twilio." },
+    { field: "emailSender", labelAr: "Email Sender", secret: false, guidanceAr: "Email Sender اختياري  مع تكامل SendGrid عبر Twilio." },
   ],
   setupGuideAr: "اربط Twilio لإدارة WhatsApp وSMS والبريد. الإرسال الفعلي الحالي لا يتأثر بهذه الإعدادات حتى تفعيل المزامنة.",
 };
@@ -187,7 +187,7 @@ const EMAIL_PROVIDER_GUIDE: PlatformRequirements = {
     { field: "emailSender", labelAr: "بريد المرسل / النطاق المعتمد", secret: false, guidanceAr: "ناقص بريد المرسل أو النطاق المعتمد." },
   ],
   optional: [
-    { field: "appSecret", labelAr: "Webhook Secret", secret: true, guidanceAr: "Webhook Secret اختياري — للتحقق من الـ events." },
+    { field: "appSecret", labelAr: "Webhook Secret", secret: true, guidanceAr: "Webhook Secret اختياري  للتحقق من الـ events." },
     { field: "senderId", labelAr: "اسم المرسل الافتراضي", secret: false, guidanceAr: "اسم المرسل الافتراضي اختياري." },
   ],
   setupGuideAr: "أضف API Key والنطاق المعتمد لإرسال البريد الإلكتروني عبر الموفر المختار لاحقًا.",
@@ -296,7 +296,7 @@ const CUSTOM_GUIDE: PlatformRequirements = {
     { field: "apiSecret", labelAr: "API Secret", secret: true, guidanceAr: "API Secret اختياري." },
     { field: "accessToken", labelAr: "Access Token", secret: true, guidanceAr: "Access Token اختياري." },
   ],
-  setupGuideAr: "موفر مخصص — أضف الحقول التي يحتاجها مزودك.",
+  setupGuideAr: "موفر مخصص  أضف الحقول التي يحتاجها مزودك.",
 };
 
 const REGISTRY: Record<PlatformKey, PlatformRequirements> = {
@@ -385,13 +385,13 @@ export function evaluateReadiness(platform: PlatformKey, row: Record<string, unk
 
   let nextStepMessage = "";
   if (missingRequired.length > 0) nextStepMessage = `أكمل ${missingRequired.length} حقل مطلوب لتفعيل الاتصال.`;
-  else if (missingOptional.length > 0) nextStepMessage = `الحقول المطلوبة مكتملة — أكمل ${missingOptional.length} حقل اختياري لتحسين القياس.`;
-  else if (status === "AUTH_ERROR") nextStepMessage = "ثمة خطأ في المصادقة — جدّد المفاتيح وأعد الاختبار.";
+  else if (missingOptional.length > 0) nextStepMessage = `الحقول المطلوبة مكتملة  أكمل ${missingOptional.length} حقل اختياري لتحسين القياس.`;
+  else if (status === "AUTH_ERROR") nextStepMessage = "ثمة خطأ في المصادقة  جدّد المفاتيح وأعد الاختبار.";
   else if (status === "PERMISSION_ERROR") nextStepMessage = "تأكد من صلاحيات الحساب لدى المنصة.";
-  else if (status === "SYNC_ERROR") nextStepMessage = "آخر مزامنة فشلت — راجع آخر خطأ.";
+  else if (status === "SYNC_ERROR") nextStepMessage = "آخر مزامنة فشلت  راجع آخر خطأ.";
   else if (status === "NOT_IMPLEMENTED") nextStepMessage = "مزامنة هذه المنصة ستُفعَّل في مرحلة لاحقة.";
-  else if (status === "DISABLED") nextStepMessage = "الاتصال موقوف — فعّله لإعادة المزامنة.";
-  else nextStepMessage = "كل شيء جاهز — يمكنك الاختبار والمزامنة عند تفعيل عميل المنصة.";
+  else if (status === "DISABLED") nextStepMessage = "الاتصال موقوف  فعّله لإعادة المزامنة.";
+  else nextStepMessage = "كل شيء جاهز  يمكنك الاختبار والمزامنة عند تفعيل عميل المنصة.";
 
   return { completionPercent, missingRequiredFields: missingRequired, missingOptionalFields: missingOptional, status, nextStepMessage, setupGuideItems: items, guidance };
 }

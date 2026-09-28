@@ -10,7 +10,7 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 });
 
 /**
- * POST /api/stripe/charge — the Stripe half of the Minbar checkout.
+ * POST /api/stripe/charge  the Stripe half of the Minbar checkout.
  *
  * The order already exists (`POST /api/cart/payment`). This returns the
  * PaymentIntent secret the browser confirms with `stripe.js`, so card data
@@ -21,13 +21,13 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
  *    `frequency: MONTHLY`) → a real Stripe Subscription billed monthly, whose
  *    first invoice's PaymentIntent is what the browser confirms.
  *
- * That is Stripe's whole scope here — one-time and monthly, as it always was.
+ * That is Stripe's whole scope here  one-time and monthly, as it always was.
  * Daily and Friday plans are billed by Albaraka (`railForFrequency`) and are
  * refused rather than mis-billed if they reach this route.
  *
  * Until this route knew about plans it created a bare PaymentIntent for every
  * order, so a monthly checkout produced a `Subscription` row with no Stripe
- * subscription behind it — nothing ever renewed (`DEPLOYED_VS_DESIGN_AUDIT.md`
+ * subscription behind it  nothing ever renewed (`DEPLOYED_VS_DESIGN_AUDIT.md`
  * § P0.2). Renewals are settled by `invoice.payment_succeeded` in
  * `app/api/stripe/webhook/route.ts`, which looks the plan up by
  * `stripeSubscriptionId` (and, for older rows, `payforToken`).
@@ -61,7 +61,7 @@ export async function POST(req: NextRequest) {
     if (!donation) {
       return NextResponse.json({ error: "Donation not found" }, { status: 404 });
     }
-    // Authenticated users: verify ownership. Guests have no session — trust the donationId.
+    // Authenticated users: verify ownership. Guests have no session  trust the donationId.
     if (session?.user?.id && donation.donorId !== session.user.id) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
@@ -129,7 +129,7 @@ export async function POST(req: NextRequest) {
     });
 
     /* Subscription `price_data` takes a product id, not inline product data
-       (that shape is Checkout-only), so the product is created first — one
+       (that shape is Checkout-only), so the product is created first  one
        per plan, named for what it funds. */
     const product = await stripe.products.create({
       name: description,
@@ -215,8 +215,8 @@ function openPaymentSecretOf(subscription: Stripe.Subscription): string | null {
 /**
  * One Stripe customer per donor, found by our user id in the customer
  * metadata so a guest who gives twice is one customer, not two. The `User`
- * model has no `stripeCustomerId` column — the intent route's write to one is
- * a silent no-op — so the search is the source of truth.
+ * model has no `stripeCustomerId` column  the intent route's write to one is
+ * a silent no-op  so the search is the source of truth.
  */
 async function stripeCustomerFor(donor: { userId: string; email: string | null; name: string | null }): Promise<string> {
   try {

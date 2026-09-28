@@ -437,7 +437,7 @@ export function OverviewTab({ filterQs }: Props) {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         <TopCard
-          title={`أفضل منصة${topPlatformLabel ? ` — ${topPlatformLabel}` : ""}`}
+          title={`أفضل منصة${topPlatformLabel ? `  ${topPlatformLabel}` : ""}`}
           row={data.topPlatform}
           icon={Trophy}
         />
@@ -463,7 +463,7 @@ export function OverviewTab({ filterQs }: Props) {
             <Sparkles className="w-4 h-4 text-violet-600" />
             <h3 className="text-sm font-semibold text-slate-700">توصيات سريعة</h3>
             <span className="text-[10px] text-slate-500 mr-auto">
-              مستندة فقط إلى بيانات الموقع — لا تحوي بيانات إنفاق من منصات
+              مستندة فقط إلى بيانات الموقع  لا تحوي بيانات إنفاق من منصات
               الإعلان
             </span>
           </div>
@@ -477,7 +477,7 @@ export function OverviewTab({ filterQs }: Props) {
         <div className="rounded-xl border border-border bg-white p-4 shadow-sm flex items-start gap-2">
           <AlertCircle className="w-4 h-4 text-slate-400 mt-0.5" />
           <p className="text-[12px] text-slate-500">
-            لا توجد توصيات تلقائية في الفترة الحالية — أضف فترة أوسع أو فعل
+            لا توجد توصيات تلقائية في الفترة الحالية  أضف فترة أوسع أو فعل
             تتبع أقوى للحصول على اقتراحات.
           </p>
         </div>

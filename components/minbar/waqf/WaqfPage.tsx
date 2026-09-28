@@ -14,17 +14,17 @@ import IbadanBanner from "@/components/minbar/banners/IbadanBanner";
 import WaqfCertificatePreview from "./WaqfCertificatePreview";
 
 /**
- * Al-Quds Waqf — ported from `Minbar/الأوقاف.dc.html`.
+ * Al-Quds Waqf  ported from `Minbar/الأوقاف.dc.html`.
  *
- * Pricing is two fixed units and nothing else — no free amount:
+ * Pricing is two fixed units and nothing else  no free amount:
  *   • a waqf **share** (سهم وقفي) = $100
- *   • a waqf **metre** (متر وقفي) = $1,500 — fifteen shares
+ *   • a waqf **metre** (متر وقفي) = $1,500  fifteen shares
  * That is a product decision in the handoff, not a UI convenience, so the
  * amount field is a counter rather than an input.
  *
  * The donor names the endower and who the waqf is made on behalf of; both go on
  * the certificate. The certificate preview updates live, but the real document
- * — and its serial — is issued server-side after payment is confirmed
+ *  and its serial  is issued server-side after payment is confirmed
  * (`DONATION_LOGIC_SPEC §2`). The number shown here is a preview, never an
  * allocated serial.
  *
@@ -128,7 +128,7 @@ export default function WaqfPage({ donorName }: WaqfPageProps) {
      The stored title is only the fallback label the basket shows. */
   const buildItem = () => ({
     titleKey: unit === "meter" ? "unitMeter" : "unitShare",
-    title: `${unit === "meter" ? t("unitMeter") : t("unitShare")} × ${count} — ${tCert("inNameOf")} ${name.trim()}`,
+    title: `${unit === "meter" ? t("unitMeter") : t("unitShare")} × ${count}  ${tCert("inNameOf")} ${name.trim()}`,
     typeKey: "waqf" as const,
     freqKey: monthly ? ("monthly" as const) : ("once" as const),
     amount: total,
@@ -220,7 +220,7 @@ export default function WaqfPage({ donorName }: WaqfPageProps) {
                 <span style={{ fontSize: 13.5, fontWeight: 800, color: "var(--muted)" }}>
                   {unit === "meter" ? t("meterCount") : t("shareCount")}
                 </span>
-                {/* A counter, not a free amount — the unit price is fixed. */}
+                {/* A counter, not a free amount  the unit price is fixed. */}
                 <span dir="ltr" style={{ display: "inline-flex", alignItems: "stretch", border: "1px solid var(--border)", borderRadius: 10, background: "#fff", overflow: "hidden" }}>
                   <button type="button" onClick={() => setCount((c) => Math.max(1, c - 1))} aria-label="−" className="wq-step" style={stepBtn}>
                     −

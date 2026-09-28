@@ -31,7 +31,7 @@ export interface LogSentMessageInput {
 }
 
 /**
- * Best-effort write into the SentMessage log. Never throws — a failure to
+ * Best-effort write into the SentMessage log. Never throws  a failure to
  * persist the audit row must not break the send pipeline that called it.
  */
 export async function logSentMessage(input: LogSentMessageInput): Promise<void> {

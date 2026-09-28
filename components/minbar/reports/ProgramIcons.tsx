@@ -1,7 +1,7 @@
 import type { ReactElement } from "react";
 
 /**
- * Glyphs for the six programmes — drawn to match what each programme does,
+ * Glyphs for the six programmes  drawn to match what each programme does,
  * carried from `progIcon()` in `Minbar/إنجازات وتقارير المؤسسة.dc.html`.
  */
 export const PROGRAM_ICONS: Record<string, ReactElement> = {

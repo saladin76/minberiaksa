@@ -312,7 +312,7 @@ export function ConnectionDrawer({
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div><Label className="text-[11px] text-slate-600 mb-1 block">اسم الاتصال <span className="text-rose-500">*</span></Label><Input value={form.name ?? ""} onChange={(e) => setField("name", e.target.value)} placeholder="مثلاً Meta — حساب فرنسا" /></div>
+              <div><Label className="text-[11px] text-slate-600 mb-1 block">اسم الاتصال <span className="text-rose-500">*</span></Label><Input value={form.name ?? ""} onChange={(e) => setField("name", e.target.value)} placeholder="مثلاً Meta  حساب فرنسا" /></div>
               <div><Label className="text-[11px] text-slate-600 mb-1 block">العملة الافتراضية</Label><Input value={form.defaultCurrency ?? ""} onChange={(e) => setField("defaultCurrency", e.target.value.toUpperCase())} placeholder="USD" /></div>
             </div>
 
@@ -343,7 +343,7 @@ export function ConnectionDrawer({
             <div className={cn("rounded-lg border p-3 flex items-start gap-2", checklist.reqMissing.length === 0 ? "border-emerald-200 bg-emerald-50 text-emerald-800" : "border-amber-200 bg-amber-50 text-amber-800")}>
               {checklist.reqMissing.length === 0 ? <CheckCircle2 className="w-4 h-4 mt-0.5" /> : <AlertCircle className="w-4 h-4 mt-0.5" />}
               <div className="text-[12px]">
-                {checklist.reqMissing.length === 0 ? "كل الحقول المطلوبة مكتملة — يمكنك الحفظ ثم الاختبار." : "أكمل الحقول المطلوبة لتفعيل الاتصال:"}
+                {checklist.reqMissing.length === 0 ? "كل الحقول المطلوبة مكتملة  يمكنك الحفظ ثم الاختبار." : "أكمل الحقول المطلوبة لتفعيل الاتصال:"}
                 {checklist.reqMissing.length > 0 ? <ul className="mt-1 space-y-0.5 list-disc pe-4">{checklist.reqMissing.map((f) => <li key={f.field} className="text-[11px]">{f.guidanceAr}</li>)}</ul> : null}
               </div>
             </div>
@@ -368,7 +368,7 @@ function FieldGroup({ title, fields, form, setField, secretPresence, clearSecret
   return <div className="rounded-lg border border-slate-200 bg-white p-3"><h4 className="text-[11px] font-semibold text-slate-700 mb-2">{title}</h4><div className="grid grid-cols-1 sm:grid-cols-2 gap-3">{fields.map((f) => {
     const key = f.field.includes("|") ? f.field.split("|")[0] : f.field;
     const value = pickFieldFromForm(form, f.field);
-    return <div key={f.field}><Label className="text-[11px] text-slate-600 mb-1 flex items-center gap-1">{f.labelAr}{required ? <span className="text-rose-500">*</span> : null}{f.secret ? <span className="text-[10px] text-slate-400 mr-auto">سري</span> : null}</Label>{f.secret ? <div className="flex items-center gap-1.5"><Input type="password" value={value} onChange={(e) => setField(key, e.target.value)} placeholder={secretPresence[key] ? "محفوظ — اتركه فارغًا للإبقاء عليه" : "أدخل السر"} />{secretPresence[key] ? <button type="button" onClick={() => setClearSecret({ ...clearSecret, [key]: !clearSecret[key] })} className={cn("h-9 px-2 rounded-lg border text-[11px]", clearSecret[key] ? "bg-rose-50 text-rose-700 border-rose-200" : "bg-white text-slate-600 border-slate-200")} title="مسح السر المحفوظ"><Trash2 className="w-3.5 h-3.5" /></button> : null}</div> : <Input value={value} onChange={(e) => setField(key, e.target.value)} placeholder={f.labelAr} />}{f.guidanceAr ? <p className="text-[10px] text-slate-500 mt-1 leading-relaxed">{f.guidanceAr}</p> : null}</div>;
+    return <div key={f.field}><Label className="text-[11px] text-slate-600 mb-1 flex items-center gap-1">{f.labelAr}{required ? <span className="text-rose-500">*</span> : null}{f.secret ? <span className="text-[10px] text-slate-400 mr-auto">سري</span> : null}</Label>{f.secret ? <div className="flex items-center gap-1.5"><Input type="password" value={value} onChange={(e) => setField(key, e.target.value)} placeholder={secretPresence[key] ? "محفوظ  اتركه فارغًا للإبقاء عليه" : "أدخل السر"} />{secretPresence[key] ? <button type="button" onClick={() => setClearSecret({ ...clearSecret, [key]: !clearSecret[key] })} className={cn("h-9 px-2 rounded-lg border text-[11px]", clearSecret[key] ? "bg-rose-50 text-rose-700 border-rose-200" : "bg-white text-slate-600 border-slate-200")} title="مسح السر المحفوظ"><Trash2 className="w-3.5 h-3.5" /></button> : null}</div> : <Input value={value} onChange={(e) => setField(key, e.target.value)} placeholder={f.labelAr} />}{f.guidanceAr ? <p className="text-[10px] text-slate-500 mt-1 leading-relaxed">{f.guidanceAr}</p> : null}</div>;
   })}</div></div>;
 }
 

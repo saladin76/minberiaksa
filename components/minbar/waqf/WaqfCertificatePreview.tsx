@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 
 /**
- * Live preview of the waqf certificate — ported from the `#waqf-cert-preview`
+ * Live preview of the waqf certificate  ported from the `#waqf-cert-preview`
  * block of `Minbar/الأوقاف.dc.html`: the official gold frame drawn in CSS with
  * the real tughra, title logotype and seal, updating as the unit, count and
  * names change. Not a flat image.
@@ -79,7 +79,7 @@ export default function WaqfCertificatePreview({
             </span>
             <span style={{ display: "grid", gap: 3, justifyItems: "center" }}>
               <span style={microLabel}>{t("certNoLabel")}</span>
-              {/* A marked placeholder — the number is the server's, after payment. */}
+              {/* A marked placeholder  the number is the server's, after payment. */}
               <span style={{ ...boxed, color: "var(--red)", minWidth: 56, fontSize: 10, letterSpacing: ".18em" }} title={t("waqfPreviewNumberNote")}>
                 •••••
               </span>
@@ -114,7 +114,7 @@ export default function WaqfCertificatePreview({
               {t("onBehalfLabel")}{" "}
               <span style={{ display: "inline-block", minWidth: 100, borderBottom: "1px dotted #9a8a63" }}>{onBehalf || " "}</span>
             </div>
-            {/* The waqf's legal wording — reviewed content, never paraphrased. */}
+            {/* The waqf's legal wording  reviewed content, never paraphrased. */}
             <div style={{ fontFamily: "var(--font-quran)", fontSize: 9.5, color: "var(--muted)", fontWeight: 600, lineHeight: 1.75, textAlign: "justify" }}>
               {t("waqfLegalText")}
             </div>

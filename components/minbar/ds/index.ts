@@ -1,5 +1,5 @@
 /**
- * Minbar Al-Aqsa design system — React port.
+ * Minbar Al-Aqsa design system  React port.
  *
  * These are one-to-one ports of the ten components in the locked handoff bundle
  * `Minbar/_ds/design-system-d0075d3b-6dd5-4297-b7a4-b3aad2b56a47/_ds_bundle.js`,

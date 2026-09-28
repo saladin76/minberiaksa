@@ -11,7 +11,7 @@ import {
   subscriptionFrequencyWhere,
 } from "@/lib/dashboard/recurring-frequency-filter";
 
-/** GET /api/admin/subscriptions — paginated list for dashboard (status, cadence, category, campaign, user) */
+/** GET /api/admin/subscriptions  paginated list for dashboard (status, cadence, category, campaign, user) */
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
@@ -69,7 +69,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Free-text donor search (name OR email). Goes through AND rather than a second
-    // top-level OR, because the category branch above may already own `where.OR` —
+    // top-level OR, because the category branch above may already own `where.OR` 
     // assigning it twice would silently drop the category filter.
     if (search) {
       const existingAnd = Array.isArray(where.AND) ? where.AND : where.AND ? [where.AND] : [];

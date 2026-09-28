@@ -22,7 +22,7 @@ interface DonationSourceBadgeProps extends DetectSourceInput {
 }
 
 /**
- * The pill shows the ad campaign name (الحملة الإعلانية / `utm_campaign`) —
+ * The pill shows the ad campaign name (الحملة الإعلانية / `utm_campaign`) 
  * that's what the team recognises when scanning the table; the platform
  * ("Meta", "Google Ads", …) is one hover away in the tooltip.
  *

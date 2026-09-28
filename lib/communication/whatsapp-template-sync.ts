@@ -11,12 +11,12 @@ import { listAllTemplates, type MetaTemplateDetail } from "./providers/meta-what
  * Before this existed, "approved" in the dashboard meant a hand-set field on the local template
  * row: somebody typed a name and a status and the platform believed it. The provider was never
  * asked. A campaign could therefore be built on a template Meta had rejected, or had never heard
- * of, and the failure only appeared as `META_TEMPLATE_REQUIRED` at send time — after the campaign
+ * of, and the failure only appeared as `META_TEMPLATE_REQUIRED` at send time  after the campaign
  * was approved and scheduled.
  *
  * What this writes is what Meta said, per language, at the moment it said it: name, status,
  * category, rejection reason, and the component schema a sender needs to build parameters. What it
- * does NOT do is invent local records — a Meta template that matches no local template is reported
+ * does NOT do is invent local records  a Meta template that matches no local template is reported
  * as unmatched rather than conjured into the content library, because the local row carries
  * editorial meaning (which trigger uses it, which campaign) that only a human can assign.
  *
@@ -128,8 +128,8 @@ export async function syncMetaWhatsappTemplates(opts: {
     actorName: opts.actor?.actorName ?? undefined,
     actorRole: opts.actor?.actorRole ?? "SYSTEM",
     action: "communication.whatsapp.templates.sync",
-    messageAr: `مزامنة قوالب واتساب من Meta — ${summary.variantsUpserted} نسخة لغوية عبر ${summary.matchedTemplates} قالبًا${summary.unmatchedNames.length ? `، ${summary.unmatchedNames.length} قالبًا لدى Meta بلا مقابل محلي` : ""}`,
-    messageEn: `WhatsApp template sync — ${summary.variantsUpserted} language variant(s) across ${summary.matchedTemplates} template(s), ${summary.unmatchedNames.length} unmatched at Meta`,
+    messageAr: `مزامنة قوالب واتساب من Meta  ${summary.variantsUpserted} نسخة لغوية عبر ${summary.matchedTemplates} قالبًا${summary.unmatchedNames.length ? `، ${summary.unmatchedNames.length} قالبًا لدى Meta بلا مقابل محلي` : ""}`,
+    messageEn: `WhatsApp template sync  ${summary.variantsUpserted} language variant(s) across ${summary.matchedTemplates} template(s), ${summary.unmatchedNames.length} unmatched at Meta`,
     entityType: "WhatsappTemplate",
     metadata: { ...summary, externalCall: true },
     stream: "TEAM",
@@ -143,9 +143,9 @@ function foldName(name: string): string {
 
 /* ── The readiness contract ─────────────────────────────────────────────────
    One answer to "can this template be sent in this language", used by the dashboard, the campaign
-   builder, the trigger builder and the runtime alike. They used to each decide for themselves —
+   builder, the trigger builder and the runtime alike. They used to each decide for themselves 
    the dashboard on `externalTemplateId && approvalStatus === "APPROVED"` from the local row, the
-   runtime by asking Meta — so the dashboard said "ready" and the send said META_TEMPLATE_REQUIRED
+   runtime by asking Meta  so the dashboard said "ready" and the send said META_TEMPLATE_REQUIRED
    about the same template. A single function cannot disagree with itself. */
 
 export type VariantReadiness = {
@@ -180,7 +180,7 @@ type VariantRow = {
  * Pick the variant that will actually be sent for a locale, and say whether it is sendable.
  *
  * The locale match is exact first (`fr` → the `fr` variant), then by base language (`fr` → `fr_FR`),
- * and only then the template's Arabic — because Arabic is this organisation's canonical language and
+ * and only then the template's Arabic  because Arabic is this organisation's canonical language and
  * the body the renderer falls back to. The chosen variant's OWN language code is what must be sent
  * to Meta; that pairing is item 11's whole point, and it is why this returns the variant rather
  * than a boolean.
@@ -214,7 +214,7 @@ export function resolveVariantForLocale(variants: VariantRow[], locale: string):
   };
 }
 
-/** The same answer, read from the database — the form every runtime caller uses. */
+/** The same answer, read from the database  the form every runtime caller uses. */
 export async function getTemplateReadiness(templateId: string, locale: string): Promise<VariantReadiness> {
   if (!process.env.DATABASE_URL) return NOT_READY;
   const variants = await prisma.whatsappTemplateVariant
@@ -226,7 +226,7 @@ export async function getTemplateReadiness(templateId: string, locale: string): 
   return resolveVariantForLocale(variants as VariantRow[], locale);
 }
 
-/** Which locales a template can actually be sent in — approved variants only. */
+/** Which locales a template can actually be sent in  approved variants only. */
 export async function approvedLocalesFor(templateId: string): Promise<string[]> {
   if (!process.env.DATABASE_URL) return [];
   const variants = await prisma.whatsappTemplateVariant

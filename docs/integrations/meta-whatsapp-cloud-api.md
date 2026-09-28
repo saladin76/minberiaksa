@@ -1,4 +1,4 @@
-# Meta WhatsApp Cloud API — Integration
+# Meta WhatsApp Cloud API  Integration
 
 Source: official Meta WhatsApp Business Platform / Cloud API documentation
 (developers.facebook.com/docs/whatsapp/cloud-api) and Graph API webhooks getting-started.
@@ -12,7 +12,7 @@ Consulted 2026-07-05. This adapter is written to those docs, not from memory.
    `whatsapp_business_management` permissions.
 5. A **webhook** configured on the app's WhatsApp product, subscribed to the `messages` field.
 
-## Required credentials (server-side only — never in the frontend)
+## Required credentials (server-side only  never in the frontend)
 | Purpose | Env var |
 |---|---|
 | WABA id | `META_WHATSAPP_BUSINESS_ACCOUNT_ID` |
@@ -51,20 +51,20 @@ sender's** `phoneNumberId`; the env `META_WHATSAPP_PHONE_NUMBER_ID` is only a fa
 `GET https://graph.facebook.com/<version>/<PHONE_NUMBER_ID>?fields=verified_name,quality_rating,display_phone_number`
 with the Bearer token. Used to report sender readiness/quality; never exposes the token.
 
-## Webhook — verification (GET)
+## Webhook  verification (GET)
 Meta sends a GET with `hub.mode` (always `subscribe`), `hub.verify_token`, and `hub.challenge`.
 The endpoint verifies `hub.verify_token` == `META_WHATSAPP_WEBHOOK_VERIFY_TOKEN` and, on match,
 responds with the raw `hub.challenge` value and HTTP 200. Otherwise 403.
 
-## Webhook — payload signature
+## Webhook  payload signature
 Notifications include `X-Hub-Signature-256: sha256=<hex>`, an **HMAC-SHA256 of the raw request body**
 keyed by the **app secret**. The receiver recomputes it (timing-safe compare) and rejects mismatches.
 If no app secret is configured the signature check is skipped and logged (dev only).
 
-## Webhook — subscribed fields
+## Webhook  subscribed fields
 Single field: **`messages`** (covers both inbound user messages and outbound message statuses).
 
-## Webhook — payload structure
+## Webhook  payload structure
 ```
 { "object": "whatsapp_business_account",
   "entry": [ { "id": "<WABA_ID>", "changes": [ { "field": "messages", "value": {
@@ -90,7 +90,7 @@ replies to a known conversation, the related delivery is marked `REPLIED`.
 
 ## Inbound message behavior
 Each inbound message is stored as a `CommunicationProviderEvent` with a **sanitized** payload
-(text body, sender wa_id, profile name, wamid, timestamp) — never the raw payload. The Inbox derives
+(text body, sender wa_id, profile name, wamid, timestamp)  never the raw payload. The Inbox derives
 conversations from these inbound events + outbound `CommunicationDelivery` rows, grouped by phone.
 Donor matching is by phone number only; ambiguous/absent matches are shown as **unresolved contact**.
 
@@ -103,7 +103,7 @@ Donor matching is by phone number only; ambiguous/absent matches are shown as **
 ## Known limitations
 - Real sending is **disabled until credentials are configured**. With no token, ProviderRouter returns
   `META_WHATSAPP_NOT_CONFIGURED`; with a sender lacking a phone id, `META_WHATSAPP_SENDER_MISSING_PHONE_NUMBER_ID`.
-  Deliveries are recorded SKIPPED/FAILED — never a fake SENT.
+  Deliveries are recorded SKIPPED/FAILED  never a fake SENT.
 - Template component parameter serialization follows the official send-message-templates guide and is
   passed through as provided; this app does not invent unsupported components.
 - 24-hour customer-service window rules, template pacing/quality limits, and pricing are enforced by

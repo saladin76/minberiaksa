@@ -51,10 +51,10 @@ export async function buildExecutiveSystemOverview(
 
   // The "مهام إنتاج محجوبة" and "مواد جاهزة للتسويق" risks both linked into /dashboard/operations,
   // removed with التشغيل. A risk card exists to be acted on, and there is no page left to act on
-  // these — the underlying counts still feed the summary figures below.
+  // these  the underlying counts still feed the summary figures below.
 
   // The "توصيات تسويق عاجلة" risk linked into /dashboard/marketing/recommendations, which was
-  // removed along with the marketing overview and performance pages — same reasoning as above:
+  // removed along with the marketing overview and performance pages  same reasoning as above:
   // a risk card with nowhere to go is not a risk card. The count still feeds the summary below.
 
   return {

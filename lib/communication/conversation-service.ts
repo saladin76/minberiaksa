@@ -5,7 +5,7 @@ import { normalizePhoneE164, phoneDigits, phoneMatchVariants } from "./phone";
 type Actor = { actorId?: string | null; actorName?: string | null; actorRole?: string | null } | null;
 
 /**
- * WhatsApp conversations, derived from the archive — outbound `CommunicationDelivery` rows and
+ * WhatsApp conversations, derived from the archive  outbound `CommunicationDelivery` rows and
  * inbound/status `CommunicationProviderEvent` rows. No dedicated conversation table.
  *
  * **A conversation is a pair of numbers, not a contact.** It used to be keyed on the contact's digits
@@ -16,8 +16,8 @@ type Actor = { actorId?: string | null; actorName?: string | null; actorRole?: s
  *
  * **The whole archive is counted, not the newest 500 rows.** Both queries used `take: 500` and grouped
  * in memory. Past ~500 messages that stops being a sample and becomes a lie: conversations older than
- * the cut simply vanished from the inbox, and the "needs reply" badge — which the dashboard and the
- * reports both read — silently undercounted. Grouping now happens in MongoDB, so every message is
+ * the cut simply vanished from the inbox, and the "needs reply" badge  which the dashboard and the
+ * reports both read  silently undercounted. Grouping now happens in MongoDB, so every message is
  * counted and only one row per conversation crosses the wire.
  *
  * Donor matching is by phone only; ambiguous or absent matches are surfaced as unresolved contacts,
@@ -40,7 +40,7 @@ export type ConversationDonor = {
 export type ConversationSender = { id: string; name: string; phone: string | null };
 
 export type ConversationSummary = {
-  /** `senderId:contactE164` — stable, and what the inbox routes on. */
+  /** `senderId:contactE164`  stable, and what the inbox routes on. */
   id: string;
   phone: string;
   donor: ConversationDonor | null;
@@ -56,7 +56,7 @@ export type ConversationSummary = {
 
 const HANDLED_ACTION = "communication.conversation.handled";
 
-/** No sender row claims this number — kept as its own bucket rather than merged into a real one. */
+/** No sender row claims this number  kept as its own bucket rather than merged into a real one. */
 const UNKNOWN_SENDER = "unknown";
 
 export function conversationId(senderId: string | null | undefined, phone: string | null | undefined): string {
@@ -83,7 +83,7 @@ type Bucket = {
 };
 
 /**
- * Real WhatsApp senders for the inbox number filter. Returns display info only — never a raw
+ * Real WhatsApp senders for the inbox number filter. Returns display info only  never a raw
  * phoneNumberId. Uses CommunicationSender data (no fake/demo numbers).
  */
 export async function listInboxSenders(): Promise<ConversationSender[]> {
@@ -116,7 +116,7 @@ async function matchDonors(phoneDigitsList: string[]): Promise<Map<string, Conve
       select: { userId: true, phone: true, email: true, preferredLocale: true, countryCode: true, totalDonations: true, lastDonationAt: true, whatsappOptIn: true, doNotContact: true },
       take: 1000,
     });
-    // Names live on the User row, not the profile — join them in.
+    // Names live on the User row, not the profile  join them in.
     const userIds = Array.from(new Set(profiles.map((p) => p.userId).filter(Boolean) as string[]));
     const users = userIds.length ? await prisma.user.findMany({ where: { id: { in: userIds } }, select: { id: true, name: true } }).catch(() => []) : [];
     const nameById = new Map(users.map((u) => [u.id, u.name]));
@@ -144,7 +144,7 @@ async function matchDonors(phoneDigitsList: string[]): Promise<Map<string, Conve
 /* ── Aggregation ───────────────────────────────────────────────────────────────
    Grouping happens in the database. The result set is one row per (business number, contact
    spelling), which is bounded by the number of real conversations rather than by the number of
-   messages — so a 100,000-message archive still returns a few hundred rows.
+   messages  so a 100,000-message archive still returns a few hundred rows.
 
    Legacy rows hold the contact number in whatever spelling the provider sent (`905…`, `+905…`,
    punctuated). Mongo cannot strip punctuation in a `$group` key without a JS expression, so the group

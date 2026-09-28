@@ -215,7 +215,7 @@ export function SyncPanel() {
         <p className="text-[12px] text-slate-500 leading-relaxed">
           المزامنة الحالية تشمل مزامنة قاعدة بيانات الرسائل المحلية مع
           MarketingCampaignSnapshot. مزامنة Meta/Google Ads/TikTok/X/GA4 تنتظر
-          عملاء API — حتى ذلك الحين تُعيد NOT_IMPLEMENTED بشكل آمن.
+          عملاء API  حتى ذلك الحين تُعيد NOT_IMPLEMENTED بشكل آمن.
         </p>
         <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
           <div>
@@ -299,7 +299,7 @@ export function SyncPanel() {
         </div>
         {snapshots.length === 0 ? (
           <div className="py-6 text-center text-sm text-slate-500">
-            لا توجد لقطات بعد — شغّل مزامنة لإنشاء أول السجلات.
+            لا توجد لقطات بعد  شغّل مزامنة لإنشاء أول السجلات.
           </div>
         ) : (
           <div className="overflow-x-auto" dir="rtl">
@@ -351,7 +351,7 @@ export function SyncPanel() {
         </div>
         {!loadingHistory && runs.length === 0 ? (
           <div className="py-6 text-center text-sm text-slate-500">
-            لا توجد محاولات سابقة — اضغط «تشغيل المزامنة» لبدء أول محاولة.
+            لا توجد محاولات سابقة  اضغط «تشغيل المزامنة» لبدء أول محاولة.
           </div>
         ) : (
           <div className="overflow-x-auto" dir="rtl">
@@ -439,7 +439,7 @@ export function SyncPanel() {
         <Info className="w-4 h-4 text-sky-600 mt-0.5 shrink-0" />
         <p className="text-[12px] text-sky-900 leading-relaxed">
           العمليات الفاشلة لا توقف بقية المزامنات. كل محاولة تُسجَّل في سجل
-          التدقيق مع الحقول غير الحساسة — لا يتم تخزين أي tokens أو
+          التدقيق مع الحقول غير الحساسة  لا يتم تخزين أي tokens أو
           authentication secrets.
         </p>
       </div>

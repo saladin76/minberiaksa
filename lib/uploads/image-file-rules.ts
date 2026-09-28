@@ -37,7 +37,7 @@ export function validateImageFile(file: { type?: string; size?: number }): strin
   }
   const size = file.size ?? 0;
   if (size > MAX_IMAGE_BYTES) {
-    return `حجم الصورة ${formatBytes(size)} — الحد الأقصى ${formatBytes(MAX_IMAGE_BYTES)}. اضغط الصورة وحاول مجددًا.`;
+    return `حجم الصورة ${formatBytes(size)}  الحد الأقصى ${formatBytes(MAX_IMAGE_BYTES)}. اضغط الصورة وحاول مجددًا.`;
   }
   if (size === 0) {
     return "الملف فارغ.";

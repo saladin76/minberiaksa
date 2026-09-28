@@ -21,7 +21,7 @@ async function readLocaleFromCookies(): Promise<SupportedLocale> {
     const c = (await cookies()).get("NEXT_LOCALE")?.value?.toLowerCase().trim();
     if (c && isValidLocale(c)) return c;
   } catch {
-    // calling cookies() outside a request scope throws — fall through to default
+    // calling cookies() outside a request scope throws  fall through to default
   }
   return DEFAULT_LOCALE;
 }
@@ -175,7 +175,7 @@ export const authOptions: NextAuthOptions = {
   callbacks: {
     async signIn({ user, account, profile }) {
       try {
-        // Credentials — authorize() already validated the user
+        // Credentials  authorize() already validated the user
         if (account?.type === "credentials") return true;
 
         if (account && profile) {
@@ -186,7 +186,7 @@ export const authOptions: NextAuthOptions = {
 
           if (existingUser) {
             // If the user exists, update their information.
-            // Backfill preferredLang from the cookie ONLY if it's still null —
+            // Backfill preferredLang from the cookie ONLY if it's still null 
             // never overwrite an explicit choice the user has already made.
             const updateData: Record<string, unknown> = {
               name: user.name!,

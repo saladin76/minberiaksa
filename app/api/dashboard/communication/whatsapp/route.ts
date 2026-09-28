@@ -18,7 +18,7 @@ export const dynamic = "force-dynamic";
  *
  *  1. The engagement ladder ends in READ (the blue ticks) and REPLIED, not opened/clicked. A read
  *     receipt is a genuine provider-confirmed event, so it is trustworthy in a way an email open
- *     pixel is not — but it is also suppressible by the recipient, so absence still is not proof.
+ *     pixel is not  but it is also suppressible by the recipient, so absence still is not proof.
  *  2. Business-initiated sends require a Meta-APPROVED template. A perfectly configured account
  *     with no approved template can send exactly nothing, and that is the single most common
  *     reason this channel sits at zero. Reporting "0 sent" without reporting *why* would make the
@@ -47,7 +47,7 @@ export async function GET(request: NextRequest) {
     const page = Math.max(1, parseInt(sp.get("page") || "1"));
     const limit = Math.min(100, Math.max(1, parseInt(sp.get("limit") || "25")));
 
-    // A campaign deep-link scopes the entire page — summary, chart and list — to that campaign,
+    // A campaign deep-link scopes the entire page  summary, chart and list  to that campaign,
     // and drops the date window while doing it. The campaign IS the range; keeping the default
     // 30 days would report zeros for any campaign sent earlier than that.
     const campaignId = sp.get("campaign")?.trim() || "";
@@ -100,18 +100,18 @@ export async function GET(request: NextRequest) {
         select: { createdAt: true, status: true, deliveredAt: true, readAt: true },
         orderBy: { createdAt: "asc" },
       }),
-      // Template readiness is the usual reason this channel is silent — see the note above.
+      // Template readiness is the usual reason this channel is silent  see the note above.
       prisma.whatsappTemplate.findMany({
         select: {
           id: true, name: true, category: true, updatedAt: true,
-          /* Meta's own answer, per language — the single readiness contract. The local
+          /* Meta's own answer, per language  the single readiness contract. The local
              `approvalStatus`/`externalTemplateId` fields are deliberately not read here. */
           variants: { select: { languageCode: true, locale: true, approvalStatus: true, providerTemplateName: true, componentsSchema: true, rejectionReason: true, lastSyncedAt: true } },
         },
         orderBy: { updatedAt: "desc" },
       }),
       getActiveMetaWhatsappRuntimeConfig(),
-      // Re-sendable backlog — see the identical note on the email route for the `isSet` arm.
+      // Re-sendable backlog  see the identical note on the email route for the `isSet` arm.
       prisma.communicationDelivery.count({
         where: {
           ...rangeWhere,
@@ -141,7 +141,7 @@ export async function GET(request: NextRequest) {
       buckets.set(key, bucket);
     }
 
-    /* Readiness comes from `resolveVariantForLocale` — the same function the campaign builder, the
+    /* Readiness comes from `resolveVariantForLocale`  the same function the campaign builder, the
        trigger preflight and the runtime sender all call. It used to be computed here from the local
        row's hand-set `approvalStatus` and `externalTemplateId`, which is how this page could report
        a template READY while every send of it failed with META_TEMPLATE_REQUIRED. Two functions

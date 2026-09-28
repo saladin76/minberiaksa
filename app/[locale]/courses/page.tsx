@@ -24,7 +24,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   });
 }
 
-/** Our courses — ported from `Minbar/دوراتنا.dc.html`. */
+/** Our courses  ported from `Minbar/دوراتنا.dc.html`. */
 export default async function Courses({ params }: Props) {
   const { locale } = await params;
   const courses = await listCourses(locale);

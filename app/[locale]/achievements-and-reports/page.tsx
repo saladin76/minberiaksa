@@ -25,7 +25,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 /**
- * Achievements and reports — ported from
+ * Achievements and reports  ported from
  * `Minbar/إنجازات وتقارير المؤسسة.dc.html`.
  *
  * `homepage` rides along for the three closing banners.

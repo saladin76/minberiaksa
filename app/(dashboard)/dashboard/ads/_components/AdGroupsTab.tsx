@@ -325,7 +325,7 @@ export function AdGroupsTab({ filterQs }: Props) {
 
         {data?.truncated && (
           <div className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-2 py-1 inline-block">
-            عرض أحدث 2000 تبرع — ضع فلتر فترة أضيق للحصول على القائمة كاملة
+            عرض أحدث 2000 تبرع  ضع فلتر فترة أضيق للحصول على القائمة كاملة
           </div>
         )}
       </div>
@@ -452,7 +452,7 @@ export function AdGroupsTab({ filterQs }: Props) {
                           <button
                             type="button"
                             onClick={() => copyToClipboard(r.utmCampaign!)}
-                            title={`${r.utmCampaign} — اضغط للنسخ`}
+                            title={`${r.utmCampaign}  اضغط للنسخ`}
                             className="text-right truncate block text-slate-700 hover:text-brand hover:underline"
                           >
                             {r.utmCampaign}
@@ -466,7 +466,7 @@ export function AdGroupsTab({ filterQs }: Props) {
                           <button
                             type="button"
                             onClick={() => copyToClipboard(r.utmTerm!)}
-                            title={`${r.utmTerm} — اضغط للنسخ`}
+                            title={`${r.utmTerm}  اضغط للنسخ`}
                             className="text-right truncate block font-medium text-slate-800 hover:text-brand hover:underline"
                           >
                             {r.utmTerm}

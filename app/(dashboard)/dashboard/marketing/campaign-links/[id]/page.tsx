@@ -349,7 +349,7 @@ export default function CampaignLinkDetailPage() {
       <Card id="performance">
         <CardHeader>
           <CardTitle>Performance</CardTitle>
-          <CardDescription>{range ? `الفترة: ${range.from} — ${range.to}` : "الفترة الحالية"}</CardDescription>
+          <CardDescription>{range ? `الفترة: ${range.from}  ${range.to}` : "الفترة الحالية"}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">

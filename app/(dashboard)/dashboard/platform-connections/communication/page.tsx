@@ -39,7 +39,7 @@ export default async function CommunicationConnectionsPage() {
   ]);
 
   return (
-    // Same gutters as the sibling health/tracking pages — this one had none, so
+    // Same gutters as the sibling health/tracking pages  this one had none, so
     // the section's three pages sat at different insets.
     <main className="space-y-4 p-4 sm:p-6" dir="rtl">
       <PageHeader
@@ -50,7 +50,7 @@ export default async function CommunicationConnectionsPage() {
       <IntegrationSettingsManager initialProviders={initialProviders} permissions={permissions} scheduler={scheduler} />
       {/* Senders and routing sit with the providers because they are the same question one level up:
           the provider says HOW a message leaves, the sender says which of our numbers it leaves from.
-          Kept behind the manage permission — repointing a sender changes what donors see. */}
+          Kept behind the manage permission  repointing a sender changes what donors see. */}
       {permissions.canManage && <SenderRoutingManager />}
     </main>
   );

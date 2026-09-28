@@ -10,12 +10,12 @@ import { amountsByCurrency, type CategoryPageTemplate } from "@/lib/content/cate
  * Server-side reader for a category's own landing page.
  *
  * Every category is published as a project page in the shape of
- * `Minbar/مشروع ترميم منازل القدس.dc.html` — hero with a film, a figures band,
+ * `Minbar/مشروع ترميم منازل القدس.dc.html`  hero with a film, a figures band,
  * the values it stands on, its campaigns as donate cards, a donation box,
  * three explanatory cards, and its achievements in video.
  *
- * Text arrives already resolved for the visitor's locale — Arabic from the row,
- * anything else from the translation with English as the fallback — so the page
+ * Text arrives already resolved for the visitor's locale  Arabic from the row,
+ * anything else from the translation with English as the fallback  so the page
  * component never sees a translation table. Sections whose fields are empty come
  * back empty and are not rendered, which is what lets a bare category still
  * publish as a hero plus its campaigns.
@@ -58,7 +58,7 @@ export interface CategoryPageContent {
   /**
    * What the donation box gives to: the category itself (the order carries a
    * category item, keyed by id because category slugs differ per locale), or
-   * one campaign — the editor's choice, else the highest priority one in the
+   * one campaign  the editor's choice, else the highest priority one in the
    * category. Null when the box targets a campaign and the category has none,
    * in which case the box is not rendered.
    */
@@ -272,8 +272,8 @@ export interface MinbarCategoryTitle {
 /**
  * Every active category's title, for the cart and checkout pages.
  *
- * A cart row that gives to a category stores the category's **id** — its slugs
- * differ per locale — and these pages resolve the title live, the way they
+ * A cart row that gives to a category stores the category's **id**  its slugs
+ * differ per locale  and these pages resolve the title live, the way they
  * resolve a project slug through the project list. Archived categories are
  * still listed: the title of a row already in someone's basket should not go
  * blank because the category was archived after it was added; the order API

@@ -3,10 +3,10 @@
  *
  * Pre-migration state: each Campaign document carries a single `categoryId`
  * (legacy 1-to-many). Post-migration the relation lives on mirrored
- * ObjectId[] arrays — `Campaign.categoryIds` and `Category.campaignIds` —
+ * ObjectId[] arrays  `Campaign.categoryIds` and `Category.campaignIds` 
  * managed by Prisma's implicit m2m.
  *
- * What this script does (idempotent — safe to re-run):
+ * What this script does (idempotent  safe to re-run):
  *   1. For each Campaign whose `categoryIds` is empty/missing, read the
  *      legacy `categoryId` directly from MongoDB and seed `categoryIds`
  *      with [categoryId].
@@ -15,7 +15,7 @@
  *      legacy categoryId so the per-category ordering survives.
  *   3. Rebuild every Category's mirror array (`campaignIds`) from the
  *      campaigns that now reference it. This is the side Prisma maintains
- *      automatically going forward — we only set it here for legacy rows.
+ *      automatically going forward  we only set it here for legacy rows.
  *
  * Run with:  npx tsx scripts/backfill-campaign-categories.ts
  */
@@ -152,7 +152,7 @@ async function main() {
       }
     }
 
-    // Merge — we never want to drop a campaign reference that Prisma already
+    // Merge  we never want to drop a campaign reference that Prisma already
     // wrote (e.g. via the dashboard after the schema landed but before the
     // backfill ran).
     const merged = new Set<string>([...existing, ...wanted]);

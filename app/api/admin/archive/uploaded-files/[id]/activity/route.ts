@@ -31,7 +31,9 @@ export async function GET(_request: Request, context: Params) {
     },
     orderBy: { createdAt: "desc" },
     take: 30,
-    select: { id: true, action: true, messageAr: true, messageEn: true, actorName: true, actorEmail: true, createdAt: true },
+    /* AuditLog has no `actorEmail` column  only `actorId` and `actorName`. Selecting it was a type
+       error and reading it below always produced undefined, so the actor fallback never ran. */
+    select: { id: true, action: true, messageAr: true, messageEn: true, actorName: true, createdAt: true },
   });
 
   return jsonNoStore({
@@ -40,7 +42,7 @@ export async function GET(_request: Request, context: Params) {
       id: row.id,
       action: row.action,
       message: row.messageAr || row.messageEn || row.action,
-      actor: row.actorName || row.actorEmail || "الفريق",
+      actor: row.actorName || "الفريق",
       createdAt: row.createdAt.toISOString(),
     })),
   });

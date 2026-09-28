@@ -16,7 +16,7 @@ import {
   type ProviderResult,
 } from "@/lib/donations/subscription-provider-control";
 
-/** PATCH /api/admin/subscriptions/[id] — set status (ACTIVE | PAUSED | CANCELLED); dashboard monthly permission */
+/** PATCH /api/admin/subscriptions/[id]  set status (ACTIVE | PAUSED | CANCELLED); dashboard monthly permission */
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }

@@ -6,7 +6,7 @@ import type { CommunicationChannel } from "./communication-types";
 import { isCommunicationChannel, type CommunicationChannelId } from "./communication-runtime-types";
 
 /**
- * RoutingRuleService — CRUD for SenderRoutingRule rows and a bridge into the pure
+ * RoutingRuleService  CRUD for SenderRoutingRule rows and a bridge into the pure
  * `SenderRoutingRuleConfig` the sender-router consumes. Server-side only, no sending.
  * Changing routing is an audited action (security rule 5).
  */

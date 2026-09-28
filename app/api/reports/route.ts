@@ -13,8 +13,8 @@ import {
 } from "@/lib/content/library-write";
 
 /**
- * GET  /api/reports — the public list of published reports, newest year first.
- * POST /api/reports — create, dashboard only.
+ * GET  /api/reports  the public list of published reports, newest year first.
+ * POST /api/reports  create, dashboard only.
  */
 export async function GET(request: NextRequest) {
   try {

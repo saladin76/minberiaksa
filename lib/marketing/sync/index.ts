@@ -3,7 +3,7 @@
  *
  * Resolves connections, fans out to the right platform client, persists the
  * returned snapshots, and writes a `PlatformSyncRun` audit row for every
- * attempt. Never throws — failed connections are recorded as `FAILED` and
+ * attempt. Never throws  failed connections are recorded as `FAILED` and
  * the loop continues so a missing-config Meta connection cannot block a
  * working Twilio sync.
  */
@@ -168,7 +168,7 @@ async function runSingleConnection(input: SingleConnectionInput): Promise<SyncJo
     actorId: triggeredBy ?? undefined,
     actorRole: "ADMIN",
     action: "MARKETING_PLATFORM_SYNC_STARTED",
-    messageAr: `بدأ مزامنة ${connection.platform} — ${connection.name}`,
+    messageAr: `بدأ مزامنة ${connection.platform}  ${connection.name}`,
     entityType: "PlatformSyncRun",
     entityId: run.id,
     metadata: redactSecretsFromMetadata({
@@ -300,15 +300,15 @@ function auditMessageAr(
 ): string {
   switch (result.status) {
     case "SUCCESS":
-      return `اكتملت مزامنة ${connection.platform} — ${connection.name} (${result.rowsFetched} سجل).`;
+      return `اكتملت مزامنة ${connection.platform}  ${connection.name} (${result.rowsFetched} سجل).`;
     case "PARTIAL_SUCCESS":
-      return `مزامنة ${connection.platform} اكتملت جزئيًا — ${connection.name}.`;
+      return `مزامنة ${connection.platform} اكتملت جزئيًا  ${connection.name}.`;
     case "MISSING_CONFIG":
-      return `مزامنة ${connection.platform} موقوفة — إعدادات ناقصة (${connection.name}).`;
+      return `مزامنة ${connection.platform} موقوفة  إعدادات ناقصة (${connection.name}).`;
     case "NOT_IMPLEMENTED":
-      return `مزامنة ${connection.platform} غير مفعّلة بعد — ${connection.name}.`;
+      return `مزامنة ${connection.platform} غير مفعّلة بعد  ${connection.name}.`;
     default:
-      return `فشلت مزامنة ${connection.platform} — ${connection.name}.`;
+      return `فشلت مزامنة ${connection.platform}  ${connection.name}.`;
   }
 }
 

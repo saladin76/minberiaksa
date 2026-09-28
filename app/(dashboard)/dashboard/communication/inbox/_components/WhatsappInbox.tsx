@@ -14,8 +14,8 @@ import { cn } from "@/lib/utils";
 /**
  * The WhatsApp inbox.
  *
- * Donors have always been able to reply — the archive recorded every one, and the sidebar badge
- * counted them — but there was no screen, so the replies went unread. Two decisions shape this one:
+ * Donors have always been able to reply  the archive recorded every one, and the sidebar badge
+ * counted them  but there was no screen, so the replies went unread. Two decisions shape this one:
  *
  * A conversation belongs to a business number, not just to a contact, so the number a thread arrived
  * on is shown on every row rather than buried in a filter. Merging a donor's threads across two
@@ -92,13 +92,13 @@ function mediaLabel(media: Media): string {
     image: "صورة", video: "مقطع مرئي", audio: "رسالة صوتية", document: "ملف", sticker: "ملصق",
   };
   const base = names[media.kind] ?? media.kind;
-  return media.filename ? `${base} — ${media.filename}` : base;
+  return media.filename ? `${base}  ${media.filename}` : base;
 }
 
 /** "٤ ساعات" left in the window, or how long ago it closed. */
 function windowText(window: ReplyWindow): string {
-  if (!window.lastInboundAt) return "لم يُرسل المتبرع أي رسالة بعد — الردّ يتطلّب قالبًا معتمدًا.";
-  if (!window.open) return `انتهت نافذة الردّ الحر (آخر رسالة من المتبرع ${fmtFull(window.lastInboundAt)}) — استخدم قالبًا معتمدًا.`;
+  if (!window.lastInboundAt) return "لم يُرسل المتبرع أي رسالة بعد  الردّ يتطلّب قالبًا معتمدًا.";
+  if (!window.open) return `انتهت نافذة الردّ الحر (آخر رسالة من المتبرع ${fmtFull(window.lastInboundAt)})  استخدم قالبًا معتمدًا.`;
   const hours = Math.floor(window.remainingMs / 3_600_000);
   const minutes = Math.floor((window.remainingMs % 3_600_000) / 60_000);
   return hours > 0 ? `يمكن الردّ بنص حر خلال ${hours} ساعة و${minutes} دقيقة.` : `يمكن الردّ بنص حر خلال ${minutes} دقيقة.`;
@@ -163,7 +163,7 @@ export function WhatsappInbox() {
 
   useEffect(() => { if (activeId) void loadDetail(activeId); }, [activeId, loadDetail]);
 
-  /* Newest message in view when a conversation opens — the reason anyone opened it. */
+  /* Newest message in view when a conversation opens  the reason anyone opened it. */
   useEffect(() => {
     const node = timelineRef.current;
     if (node) node.scrollTop = node.scrollHeight;
@@ -201,7 +201,7 @@ export function WhatsappInbox() {
         setNotice({
           tone: "error",
           text: data.error === "REPLY_WINDOW_CLOSED"
-            ? "انتهت نافذة الردّ الحر قبل الإرسال — استخدم قالبًا معتمدًا."
+            ? "انتهت نافذة الردّ الحر قبل الإرسال  استخدم قالبًا معتمدًا."
             : `تعذّر الإرسال: ${data.error ?? "خطأ غير معروف"}`,
         });
         return;

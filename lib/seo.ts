@@ -6,8 +6,8 @@ export const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://www.minber
 
 /**
  * Only the production deployment is meant to be found. Preview and
- * development deployments say noindex three ways — the `X-Robots-Tag` header
- * in `next.config.ts`, `app/robots.ts`, and the root layout's metadata — and
+ * development deployments say noindex three ways  the `X-Robots-Tag` header
+ * in `next.config.ts`, `app/robots.ts`, and the root layout's metadata  and
  * all three key off this (`DEPLOYED_VS_DESIGN_AUDIT.md` § P1.1).
  */
 export const isProductionDeployment = (): boolean => process.env.VERCEL_ENV === "production";
@@ -16,7 +16,7 @@ export const OG_IMAGE = `${SITE_URL}/og-image.jpg`;
 
 // Locales derive from the single source of truth (`lib/locales.ts`). The
 // per-locale maps below are `Record<Locale, …>`, so enabling a new public locale
-// becomes a compile error here until its SEO/OG content is filled in — that is the
+// becomes a compile error here until its SEO/OG content is filled in  that is the
 // intended drift guard for translated content.
 export const LOCALES = SUPPORTED_LOCALES;
 export type Locale = SupportedLocale;
@@ -46,7 +46,7 @@ type LocaleSEO = {
  * `seo.keywords`, those keywords reached every page that did not pass its
  * own. One source, one generator, and
  * `tests/integration-settings/seo-legacy-contamination.test.ts` failing the
- * build if the old terms return — it scans this file's text too, which is why
+ * build if the old terms return  it scans this file's text too, which is why
  * the programme is not named here (`DEPLOYED_VS_DESIGN_AUDIT.md` § P0.3).
  */
 export const LOCALE_SEO: Record<Locale, LocaleSEO> = MINBAR_LOCALE_SEO;
@@ -89,7 +89,7 @@ export function buildLocalizedAlternates(args: {
   translations?: Array<{ locale: string; slug?: string | null }> | null;
   /** Used when neither a translation slug nor base slug is set (typically the entity id) */
   fallback: string;
-  /** Locale of the page we're rendering — drives `canonical` */
+  /** Locale of the page we're rendering  drives `canonical` */
   currentLocale: string;
   /** Emit hreflang only for locales with genuinely equivalent localized content. */
   availableLocales?: string[];
@@ -180,7 +180,7 @@ export function buildPageMetadata(
   const seo = LOCALE_SEO[locale as Locale] ?? LOCALE_SEO.en;
   const image = overrides.image ?? OG_IMAGE;
   const alternates = overrides.alternates ?? buildHreflang(overrides.path, locale);
-  /* Clipped here, once, for every page that goes through this funnel — pages pass
+  /* Clipped here, once, for every page that goes through this funnel  pages pass
      their full copy and no longer each carry a hand-written `.slice(0, 165)`. */
   const description = clipSeoDescription(overrides.description, locale);
 

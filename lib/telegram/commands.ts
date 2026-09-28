@@ -38,7 +38,7 @@ async function loadStatsSnapshot(periodLabel: string, range: { start: Date | nul
   // One-time donations are stored with subscriptionId completely absent (Prisma's
   // MongoDB connector doesn't always match {subscriptionId: null} against rows
   // where the field was never written). To avoid that footgun, only filter the
-  // side that definitely matches — `subscriptionId: { not: null }` for monthly —
+  // side that definitely matches  `subscriptionId: { not: null }` for monthly 
   // and derive one-time by subtraction.
   const [paidCount, paidSum, failedCount, pendingCount, monthlyCount, topItems] =
     await Promise.all([
@@ -256,7 +256,7 @@ async function handleCampaign(ctx: CommandContext, query: string) {
       `🎯 <b>${escape(campaign.title)}</b>`,
       `<code>${campaign.id}</code>`,
       "",
-      `✅ ${sum._count.id ?? 0} تبرع ناجح — ${formatMoneyUSD(sum._sum.amountUSD ?? 0) || "$0"}`,
+      `✅ ${sum._count.id ?? 0} تبرع ناجح  ${formatMoneyUSD(sum._sum.amountUSD ?? 0) || "$0"}`,
     ].join("\n")
   );
 }
@@ -277,7 +277,7 @@ function parseCommand(
 ): ParsedCommand | null {
   // 1) Trust Telegram. When the client recognises a `/foo` it tags it as a
   //    bot_command entity, with offset/length pointing at the slash + name in
-  //    the raw text. Use that first — it's authoritative and immune to weird
+  //    the raw text. Use that first  it's authoritative and immune to weird
   //    invisible characters the user's keyboard might have injected.
   if (entities && entities.length > 0) {
     const cmdEntity = entities.find((e) => e.type === "bot_command");
@@ -295,7 +295,7 @@ function parseCommand(
     }
   }
 
-  // 2) Fallback to text parsing — strip invisible chars before checking.
+  // 2) Fallback to text parsing  strip invisible chars before checking.
   const cleaned = text.replace(INVISIBLE_CHARS_RE, "").trim();
   if (!cleaned.startsWith("/")) return null;
   const m = cleaned.match(/^\/(\w+)(?:@\w+)?(?:\s+([\s\S]+))?$/);

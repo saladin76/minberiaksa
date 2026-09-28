@@ -15,7 +15,7 @@ import type { DeliveryStatusId } from "./communication-runtime-types";
  * **A write that failed is not a write that was already done.** `recordEvent` returned `false` both
  * for a duplicate `idempotencyKey` and for any other database error, and the caller counted both as
  * "duplicate" and moved on. A Mongo blip therefore dropped a real delivery receipt for good: the
- * route answered 200, so Meta — which retries for up to 24 hours — never sent it again. The result
+ * route answered 200, so Meta  which retries for up to 24 hours  never sent it again. The result
  * is now tri-state, and a persistence failure is reported so the route can return non-2xx and let
  * Meta redeliver.
  *
@@ -25,7 +25,7 @@ import type { DeliveryStatusId } from "./communication-runtime-types";
  * already did for email and SMS.
  *
  * **A reply belongs to the thread it was sent in.** The REPLIED marking matched on
- * `recipientPhone: event.from` alone — a raw string comparison against a raw Meta wa_id, which misses
+ * `recipientPhone: event.from` alone  a raw string comparison against a raw Meta wa_id, which misses
  * `+90…` versus `90…`, and which ignored the business number entirely. With two senders configured,
  * a donor's reply on one number marked the newest outbound on the OTHER number as replied. Matching
  * is now on the business sender plus every plausible spelling of the contact's number.
@@ -59,7 +59,7 @@ async function senderIdForPhoneNumber(phoneNumberId: string | null): Promise<str
  * Insert one provider event.
  *
  * The three outcomes are genuinely different and the caller must treat them differently: INSERTED is
- * new work, DUPLICATE is work already done (safe to skip — the unique `idempotencyKey` is what makes
+ * new work, DUPLICATE is work already done (safe to skip  the unique `idempotencyKey` is what makes
  * Meta's retries harmless), and ERROR is work NOT done, which must not be acknowledged.
  */
 async function recordEvent(data: {
@@ -142,7 +142,7 @@ export async function processWhatsappEvents(events: NormalizedWebhookEvent[]): P
 
       if (delivery) {
         /* Out-of-order callbacks are normal; a late `sent` must not undo a `read`. The event itself
-           is kept either way — it is evidence — but the delivery's status does not move backwards. */
+           is kept either way  it is evidence  but the delivery's status does not move backwards. */
         if (!shouldApplyDeliveryStatus(delivery.status, event.status as DeliveryStatusId)) {
           summary.staleStatuses += 1;
           continue;
@@ -198,7 +198,7 @@ export async function processWhatsappEvents(events: NormalizedWebhookEvent[]): P
  * Scoped to the business number the reply arrived on, because a WhatsApp thread IS a pair of
  * numbers: with two senders configured, the newest outbound overall is often on the other thread
  * entirely. When the reply arrives on a number no `CommunicationSender` row claims, the scope is
- * dropped rather than the attribution — a single-sender deployment that predates sender rows still
+ * dropped rather than the attribution  a single-sender deployment that predates sender rows still
  * gets its replies matched.
  */
 async function attributeReply(from: string | null, senderId: string | null, summary: WebhookProcessSummary): Promise<void> {

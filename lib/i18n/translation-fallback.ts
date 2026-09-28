@@ -8,7 +8,7 @@ const NO_MATCH_LOCALE = '__no_translation_match__';
 
 export function translationLocaleWhere(locale: string): { locale: { in: string[] } } {
   if (!locale || locale === 'ar') {
-    // Sentinel that won't match any real locale row — keeps Prisma `select`
+    // Sentinel that won't match any real locale row  keeps Prisma `select`
     // shape consistent while returning an empty translations array.
     return { locale: { in: [NO_MATCH_LOCALE] } };
   }

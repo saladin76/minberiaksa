@@ -106,7 +106,7 @@ export function ConversationSheet({ id, onClose, onDeleted }: { id: string | nul
                   {data.donations.map((d) => (
                     <li key={d.id} className="flex flex-wrap items-center justify-between gap-2">
                       <span>
-                        <b>{d.kind === "direct" ? "مباشر" : "غير مباشر"}</b> — {VIA_LABEL[d.via] ?? d.via}
+                        <b>{d.kind === "direct" ? "مباشر" : "غير مباشر"}</b>  {VIA_LABEL[d.via] ?? d.via}
                         {d.recurring ? " · دوري" : ""}
                       </span>
                       <span className="tabular-nums">
@@ -178,7 +178,7 @@ export function ConversationSheet({ id, onClose, onDeleted }: { id: string | nul
                     <li key={i} className="flex justify-between gap-2">
                       <span>
                         {label(EVENT_LABELS, e.event)}
-                        {e.amountUSD ? ` — ${usd(e.amountUSD)}${e.frequency ? ` · ${e.frequency}` : ""}` : ""}
+                        {e.amountUSD ? `  ${usd(e.amountUSD)}${e.frequency ? ` · ${e.frequency}` : ""}` : ""}
                       </span>
                       <span className="tabular-nums text-slate-400">{dateTime(e.createdAt)}</span>
                     </li>

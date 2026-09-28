@@ -13,14 +13,14 @@ import CategoryIcon, { type CategoryIconName } from "./CategoryIcons";
 import ProjectsHero, { type ProjectSlide } from "./ProjectsHero";
 
 /**
- * Projects catalogue — ported from `Minbar/المشاريع.dc.html`.
+ * Projects catalogue  ported from `Minbar/المشاريع.dc.html`.
  *
  * A hero carousel, a row of category filter chips, and a responsive grid of the
  * site's project card that grows as the reader scrolls: a sentinel below the
  * grid appends the next page when it comes within a screen of the viewport,
  * so the catalogue reads as one continuous list. A "load more" button stays
- * under the grid for whoever the observer does not reach — a keyboard user
- * tabbing past the cards, a browser without IntersectionObserver — and is the
+ * under the grid for whoever the observer does not reach  a keyboard user
+ * tabbing past the cards, a browser without IntersectionObserver  and is the
  * accessible name of what the scroll is doing.
  *
  * Filters compare category **ids**, never displayed labels: comparing labels
@@ -36,8 +36,8 @@ const PAGE_SIZE = 6;
 
 /**
  * Icons and label sources for the categories the design ships. A category slug
- * outside this map still gets a chip — it falls back to the grid glyph and its
- * own CMS name — so adding a category in the dashboard does not require a
+ * outside this map still gets a chip  it falls back to the grid glyph and its
+ * own CMS name  so adding a category in the dashboard does not require a
  * code change.
  */
 const CATEGORY_PRESETS: Record<string, { icon: CategoryIconName; ns: string; key: string }> = {
@@ -113,7 +113,7 @@ export default function ProjectsPage({ projects, slides }: ProjectsPageProps) {
   const hasMore = remaining > 0;
 
   /* The next page arrives when the sentinel is a viewport away, before the
-     reader reaches the end — the gap they would have scrolled into is already
+     reader reaches the end  the gap they would have scrolled into is already
      filled. The observer is rebuilt when the sentinel unmounts (nothing left)
      and remounts (a filter change resets the limit). */
   const sentinelRef = useRef<HTMLDivElement | null>(null);

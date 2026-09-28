@@ -53,7 +53,7 @@ node -e "process.stdout.write(require('node:crypto').randomBytes(32).toString('b
 
 Create the key once and store a protected recovery copy outside the project. Losing it makes stored encrypted settings unrecoverable. Replacing it directly makes existing ciphertext unreadable. Future rotation requires a separate controlled decrypt-and-re-encrypt operation; changing the Vercel value is not a rotation procedure.
 
-## Phase A — before merge
+## Phase A  before merge
 
 1. Add `INTEGRATION_SETTINGS_ENCRYPTION_KEY` to Vercel Preview and Production without exposing its value.
 2. Confirm the existing `CRON_SECRET`; do not rotate or replace it during this release.
@@ -65,7 +65,7 @@ Create the key once and store a protected recovery copy outside the project. Los
 8. Confirm the Vercel Preview is READY and review the PR-wide diff against the latest `main`.
 9. Stop on every `BLOCKED`. Review every `WARNING`; an empty pre-migration collection and read-only uncertainty about transaction support are expected warnings when applicable.
 
-## Phase B — merge
+## Phase B  merge
 
 1. Confirm the PR merge base is the current `main` and `behind_by` is zero.
 2. Mark the PR Ready for Review only after all release gates pass.
@@ -74,7 +74,7 @@ Create the key once and store a protected recovery copy outside the project. Los
 5. Wait until the Production deployment is READY.
 6. Do not enter provider credentials before the migration completes and verifies successfully.
 
-## Phase C — migration
+## Phase C  migration
 
 1. Run `npm run verify:integration-settings-migration` before migration.
 2. Create a database backup or provider snapshot according to the current MongoDB hosting plan.
@@ -90,7 +90,7 @@ The migration is idempotent: it checks existing indexes and creates only missing
 
 Provider candidate activation uses an atomic MongoDB transaction. The read-only preflight checks whether the server advertises logical sessions plus replica-set or mongos topology. This is a prerequisite signal, not a data-changing transaction test. If preflight reports a transaction warning, verify in the MongoDB provider console that the Production connection targets an Atlas/replica-set or mongos deployment that supports transactions before the first live candidate activation. Do not test by changing Production data.
 
-## Phase D — enter and activate provider settings
+## Phase D  enter and activate provider settings
 
 Configure providers in this order:
 
@@ -110,7 +110,7 @@ For each provider:
 
 Pending values never affect sending or webhook verification. Provider disablement blocks new outbound sends but does not stop status webhooks for messages sent previously.
 
-## Phase E — webhooks
+## Phase E  webhooks
 
 ### Meta WhatsApp
 
@@ -128,7 +128,7 @@ Pending values never affect sending or webhook verification. Provider disablemen
 4. Add the complete generated URL in Brevo.
 5. Confirm a later real event updates an existing matching `CommunicationDelivery`; the webhook must not create a new delivery.
 
-## Phase F — limited live test
+## Phase F  limited live test
 
 Use only team-owned destinations and send in this order:
 
@@ -141,7 +141,7 @@ Use only team-owned destinations and send in this order:
 7. Confirm the webhook delivery status where supported.
 8. Do not run a bulk campaign during this phase.
 
-## Phase G — small internal campaign
+## Phase G  small internal campaign
 
 1. Use a very small internal recipient list.
 2. Confirm the runtime configuration is resolved once per batch, not once per recipient.

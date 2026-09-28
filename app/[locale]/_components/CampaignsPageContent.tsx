@@ -118,7 +118,7 @@ const CampaignsPage = ({
       const campaignsItems = campaignsRes.data.items || campaignsRes.data;
       const newCampaigns = (campaignsItems as Campaign[]).map((campaign) => {
         // Many-to-many: collect all category ids the campaign belongs to.
-        // Old API responses may only have `categoryId` / `category` — preserve
+        // Old API responses may only have `categoryId` / `category`  preserve
         // both shapes so the in-memory filter below works either way.
         const ids = Array.isArray(campaign.categoryIds) && campaign.categoryIds.length > 0
           ? campaign.categoryIds
@@ -301,7 +301,7 @@ const CampaignsPage = ({
             </p>
           </div>
 
-          {/* Info aside card — desktop only. On phones it pushed the categories bar
+          {/* Info aside card  desktop only. On phones it pushed the categories bar
               a full screen down without adding anything the hero doesn't already say. */}
           <aside className="hidden md:block shape-card border border-white/15 bg-white/10 p-8 backdrop-blur">
             <div className="gold-mark" />
@@ -328,7 +328,7 @@ const CampaignsPage = ({
 
           {/* Phones get a dropdown instead of the chip row. The row scrolled
               horizontally with no affordance, so most categories were simply never
-              discovered — a closed control that names the current filter is honest
+              discovered  a closed control that names the current filter is honest
               about there being more behind it. */}
           <div className="min-w-0 flex-1 md:hidden">
             <CategorySelect

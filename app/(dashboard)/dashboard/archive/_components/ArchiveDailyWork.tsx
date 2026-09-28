@@ -114,7 +114,7 @@ export function ArchiveDailyWork({ snapshot, work = "latest" }: { snapshot: Arch
             description="ارفع ملفًا ليظهر ضمن عمل اليوم."
             action={
               // Was "/dashboard/archive/marketing-files", which next.config.ts redirects to
-              // this same URL — one wasted hop. Points at the canonical destination now.
+              // this same URL  one wasted hop. Points at the canonical destination now.
               <Link href="/dashboard/archive/assets?category=MARKETING" className="inline-flex h-9 items-center rounded-md bg-brand px-4 text-xs font-bold text-white hover:bg-brand-dark">رفع ملف</Link>
             }
           />
@@ -137,7 +137,7 @@ export function ArchiveDailyWork({ snapshot, work = "latest" }: { snapshot: Arch
                     )}
                   </div>
 
-                  {/* Primary info — not overloaded */}
+                  {/* Primary info  not overloaded */}
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="truncate font-bold text-slate-900">{asset.fileName}</span>

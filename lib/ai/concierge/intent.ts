@@ -5,7 +5,7 @@ import type { ConciergeFrequency, ConciergeIntent } from "./schema";
  * frequency, cause and region words it contains, in the languages the site
  * speaks most (Arabic incl. Egyptian/Levantine colloquial, English, Turkish,
  * French, German, Spanish, Indonesian/Malay, Urdu). Pure, so it is unit-tested
- * and runs before — and instead of, when the model is off — any model call.
+ * and runs before  and instead of, when the model is off  any model call.
  *
  * It is a first pass, not the final word: the model may refine the intent
  * when the words are ambiguous, but numbers found here always win over the
@@ -78,7 +78,7 @@ export function parseAmount(text: string): { amount: number | null; currency: st
 }
 
 const FREQ_WORDS: Array<[RegExp, ConciergeFrequency]> = [
-  /* "Weekly" is served by the Friday plan — the site's weekly cadence. */
+  /* "Weekly" is served by the Friday plan  the site's weekly cadence. */
   [/كل\s*جمع[ةه]|يوم\s*الجمع[ةه]|جمع[ةه]|كل\s*أسبوع|كل\s*اسبوع|أسبوعي|اسبوعي|أسبوعيًا|اسبوعيا|friday|weekly|every\s*week|each\s*week|per\s*week|a\s*week|cuma|haftalık|her\s*hafta|vendredi|hebdo|chaque\s*semaine|freitag|wöchentlich|jede\s*woche|viernes|semanal|cada\s*semana|jumat|jumaat|mingguan|setiap\s*minggu|جمعہ|ہفتہ\s*وار|ہر\s*ہفتے/i, "friday"],
   [/كل\s*يوم|يومي|daily|every\s*day|each\s*day|her\s*gün|günlük|quotidien|chaque\s*jour|täglich|diario|setiap\s*hari|روزانہ/i, "daily"],
   [/كل\s*شهر|شهري|شهريا|شهريًا|بالشهر|في\s*الشهر|monthly|every\s*month|each\s*month|per\s*month|a\s*month|aylık|her\s*ay|ayda|mensuel|chaque\s*mois|par\s*mois|monatlich|pro\s*monat|mensual|al\s*mes|bulanan|per\s*bulan|ماہانہ|ہر\s*مہینے/i, "monthly"],
@@ -163,7 +163,7 @@ export function parseGiftName(text: string): string | null {
   return name.length >= 2 ? name.slice(0, 80) : null;
 }
 
-/** "I want to donate" with no cause, place or type named — the visitor needs to be asked where. */
+/** "I want to donate" with no cause, place or type named  the visitor needs to be asked where. */
 export function wantsToDonate(text: string): boolean {
   return /أتبرع|اتبرع|تبرع|أتصدق|اتصدق|صدق[ةه]|donat|give\b|giving|contribut|bağış|don(ner|\b)|spende|donar|donaci|donasi|derma|sedekah|عطیہ|寄付|捐|दान/i.test(text);
 }
@@ -171,7 +171,7 @@ export function wantsToDonate(text: string): boolean {
 const WISH_WORDS = /^(?:معايا|معي|معايه|عندي|بيهم|بيها|بيه|بها|به|هم|كده|كدا|دلوقتي|الان|الآن|now|today|عايز|عاوز|عايزه|اريد|أريد|ابغى|أبغى|ابي|ودي|نفسي|حابب|احب|أحب|اتبرع|أتبرع|تبرع|بتبرع|للتبرع|التبرع|اتصدق|أتصدق|بصدقة|صدقة|حاجة|حاجه|شي|شيء|زي|مثل|في|على|من|عن|ب|لـ|بس|لو|سمحت|ممكن|ان|أن|اني|إني|انا|أنا|i|i'd|id|im|want|wanna|would|like|to|donate|donation|give|make|do|a|an|the|some|something|please|can|could|you|help|me|my|money|بفلوس|فلوس|مبلغ|dollars?|usd|\$|euros?|eur|tl|lira|ليرة|دولار|يورو|ريال|جنيه|دينار|درهم|monthly|weekly|daily|month|months|week|weeks|day|days|every|over|friday|شهر|شهور|اشهر|أشهر|شهريا|شهرياً|اسبوع|أسبوع|اسبوعيا|جمعة|كل|يوم|يوميا|bağış|bağışlamak|yapmak|istiyorum|isterim|bir|için|ay|hafta|her|cuma|gün|je|veux|voudrais|faire|un|une|don|donner|par|mois|semaine|chaque)$/i;
 
 /**
- * A wish to give that names nothing — no cause, place, project, thing.
+ * A wish to give that names nothing  no cause, place, project, thing.
  * "عايز اتبرع", "I want to donate $50 monthly", "bağış yapmak istiyorum" are
  * bare; "عايز اتبرع للأيتام" is not, whatever the catalog holds for it.
  */
@@ -255,14 +255,14 @@ export function parseCommand(text: string): ParsedCommand | null {
   return null;
 }
 
-/** Whether the message points at "this" project — only meaningful on a project page. */
+/** Whether the message points at "this" project  only meaningful on a project page. */
 export function mentionsCurrentPage(text: string): boolean {
   return /\b(this|these|bu|ce|cette|dieses|este|esta|ini)\b|(^|\s)(ده|دي|هذا|هذه|هاد|هاي)(\s|$|[؟?!,.،])|یہ/i.test(text);
 }
 
 /**
  * "500 over 5 months" / "على 6 شهور" / "6 ay boyunca": a total spread over a
- * span becomes a per-instalment amount at the span's cadence — months →
+ * span becomes a per-instalment amount at the span's cadence  months →
  * monthly, weeks → every Friday, days → daily. Null when no span is named.
  */
 export function parseSpread(text: string): { periods: number; frequency: ConciergeFrequency } | null {

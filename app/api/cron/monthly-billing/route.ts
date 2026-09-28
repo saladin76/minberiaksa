@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 /**
- * DISABLED 2026-07-31 — this route could only cause damage.
+ * DISABLED 2026-07-31  this route could only cause damage.
  *
  * It was written for PayFor recurring billing, which was never implemented. Its guard was:
  *
@@ -10,7 +10,7 @@ import { NextResponse } from "next/server";
  * but `payforToken` is the field that stores **Stripe** subscription ids
  * (app/api/stripe/subscribe/route.ts:96-100, app/api/stripe/webhook/route.ts:102-103).
  * Since PayFor recurring does not exist, Stripe subscriptions are the ONLY rows with a
- * non-null `payforToken` — so the guard was exactly inverted. It skipped everything it was
+ * non-null `payforToken`  so the guard was exactly inverted. It skipped everything it was
  * meant to process, and processed precisely the subscriptions Stripe already bills.
  *
  * For every due Stripe subscription it then:
@@ -23,7 +23,7 @@ import { NextResponse } from "next/server";
  * so it was publicly reachable in any environment where CRON_SECRET was unset.
  *
  * Recurring billing is owned entirely by Stripe. If PayFor recurring is ever built, restore
- * this from git history and key it on a dedicated field — never on `payforToken`.
+ * this from git history and key it on a dedicated field  never on `payforToken`.
  */
 export const dynamic = "force-dynamic";
 

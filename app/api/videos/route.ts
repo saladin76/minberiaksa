@@ -15,8 +15,8 @@ import {
 } from "@/lib/content/video-write";
 
 /**
- * GET  /api/videos — the public list, narrowed to one locale and optionally one type.
- * POST /api/videos — create, dashboard only.
+ * GET  /api/videos  the public list, narrowed to one locale and optionally one type.
+ * POST /api/videos  create, dashboard only.
  */
 export async function GET(request: NextRequest) {
   try {

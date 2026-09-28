@@ -1,5 +1,5 @@
 /**
- * Google Ads (GAQL) sync client. Stub for this phase — credential preflight
+ * Google Ads (GAQL) sync client. Stub for this phase  credential preflight
  * + NOT_IMPLEMENTED. When implemented it should run GAQL queries against
  * campaign / ad_group / ad_group_ad with segments.date and standard cost /
  * impressions / clicks / conversions metrics.
@@ -17,10 +17,10 @@ export const syncGoogleAds: SyncClient = async ({ connection }) => {
   if (missing.length > 0) {
     return missingConfigResult(
       missing,
-      "ناقص بيانات Google Ads — Customer ID و Developer Token و OAuth client id/secret و Refresh Token."
+      "ناقص بيانات Google Ads  Customer ID و Developer Token و OAuth client id/secret و Refresh Token."
     );
   }
   return notImplementedResult(
-    "مزامنة Google Ads عبر GAQL ستُفعّل في المرحلة التالية — كل البيانات المطلوبة متوفرة."
+    "مزامنة Google Ads عبر GAQL ستُفعّل في المرحلة التالية  كل البيانات المطلوبة متوفرة."
   );
 };

@@ -154,7 +154,7 @@ export function ReconciliationTab({ period, dateFrom, dateTo }: Props) {
         <p className="text-[12px] text-sky-900 leading-relaxed">
           هذه الصفحة تقارن تبرعات الموقع بالتحويلات المُبلَّغة من منصات الإعلانات.
           إذا لم تتم مزامنة المنصات بعد فستظهر أعمدة المنصة كـ
-          «غير متاح» أو «لم تتم المزامنة بعد» — والميتركس المستمدة من الموقع
+          «غير متاح» أو «لم تتم المزامنة بعد»  والميتركس المستمدة من الموقع
           تظل كاملة دائمًا.
         </p>
       </div>
@@ -189,7 +189,7 @@ export function ReconciliationTab({ period, dateFrom, dateTo }: Props) {
       ) : !data || data.rows.length === 0 ? (
         <div className="rounded-xl border border-border bg-white p-8 text-center text-sm text-slate-500">
           {!data || !data.hasPlatformData
-            ? "لم تتم المزامنة بعد — اذهب إلى «ربط المنصات والحسابات» لتشغيل المزامنة."
+            ? "لم تتم المزامنة بعد  اذهب إلى «ربط المنصات والحسابات» لتشغيل المزامنة."
             : "لا توجد نتائج في الفترة المختارة."}
         </div>
       ) : (
@@ -359,7 +359,7 @@ export function ReconciliationTab({ period, dateFrom, dateTo }: Props) {
 
           {!data.hasPlatformData && !data.hasMessagingData ? (
             <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-[12px] text-amber-800">
-              لا توجد بيانات منصة محفوظة بعد — البيانات المعروضة مأخوذة من
+              لا توجد بيانات منصة محفوظة بعد  البيانات المعروضة مأخوذة من
               الموقع فقط. اذهب إلى «ربط المنصات والحسابات» وشغل المزامنة لجلب
               بيانات الإنفاق والتحويلات.
             </div>

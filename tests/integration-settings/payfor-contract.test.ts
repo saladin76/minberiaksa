@@ -50,7 +50,7 @@ test("the 3DPay hash is base64 SHA1 over the documented field order", () => {
     .digest("base64");
 
   assert.equal(payForHash(params), expected);
-  // Base64, not hex — the bank rejects a hex digest outright.
+  // Base64, not hex  the bank rejects a hex digest outright.
   assert.match(payForHash(params), /^[A-Za-z0-9+/]+={0,2}$/);
   assert.equal(Buffer.from(payForHash(params), "base64").length, 20);
 });

@@ -257,7 +257,7 @@ export function SuperCategoryForm({
         <LocaleChips
           value={values.heroVideoLocales}
           onChange={(next) => set('heroVideoLocales', next)}
-          hint="اللغات التي يظهر فيها فيديو الواجهة. اتركها فارغة ليظهر في كل اللغات — وحدّدها إذا كان التسجيل بلغة واحدة بلا ترجمة."
+          hint="اللغات التي يظهر فيها فيديو الواجهة. اتركها فارغة ليظهر في كل اللغات  وحدّدها إذا كان التسجيل بلغة واحدة بلا ترجمة."
         />
 
         <div className="grid gap-4 md:grid-cols-2">
@@ -268,7 +268,7 @@ export function SuperCategoryForm({
           ] as const).map(([labelKey, hrefKey, title]) => (
             <div key={labelKey} className="grid grid-cols-2 gap-2">
               <label className="space-y-1.5">
-                <span className="text-xs font-semibold text-slate-600">{title} — النص</span>
+                <span className="text-xs font-semibold text-slate-600">{title}  النص</span>
                 <Input value={values[labelKey]} onChange={(e) => set(labelKey, e.target.value)} />
               </label>
               <label className="space-y-1.5">
@@ -279,7 +279,7 @@ export function SuperCategoryForm({
           ))}
         </div>
         <p className="text-[11px] text-slate-500">
-          الوجهة يمكن أن تكون ارتساءً داخل الصفحة مثل <span dir="ltr">#bundle</span> — وهو مُعرّف الارتساء المكتوب في القسم — أو رابطًا كاملًا.
+          الوجهة يمكن أن تكون ارتساءً داخل الصفحة مثل <span dir="ltr">#bundle</span>  وهو مُعرّف الارتساء المكتوب في القسم  أو رابطًا كاملًا.
         </p>
       </Card>
 
@@ -290,7 +290,7 @@ export function SuperCategoryForm({
           <span className="text-xs text-slate-500">{linkedTotal} عنصر</span>
         </div>
         <p className="text-xs text-slate-500">
-          اختر المحتوى الذي يخص هذا القسم. ما يظهر منه على الصفحة — وبأي ترتيب بين الأقسام — تحدده أقسام الصفحة بالأسفل.
+          اختر المحتوى الذي يخص هذا القسم. ما يظهر منه على الصفحة  وبأي ترتيب بين الأقسام  تحدده أقسام الصفحة بالأسفل.
         </p>
         <div className="grid gap-3 md:grid-cols-2">
           {ITEM_KINDS.map(({ kind, label, hint }) => (

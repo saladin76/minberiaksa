@@ -1,14 +1,14 @@
 /**
- * Telegram bot configuration — read once from env, validated on first use.
+ * Telegram bot configuration  read once from env, validated on first use.
  *
  * Env vars:
- *   TELEGRAM_BOT_TOKEN              required — from @BotFather
- *   TELEGRAM_NOTIFICATIONS_CHAT_ID  required — group/channel id where donations are announced
- *   TELEGRAM_WEBHOOK_SECRET         required — opaque string; Telegram echoes it via
+ *   TELEGRAM_BOT_TOKEN              required  from @BotFather
+ *   TELEGRAM_NOTIFICATIONS_CHAT_ID  required  group/channel id where donations are announced
+ *   TELEGRAM_WEBHOOK_SECRET         required  opaque string; Telegram echoes it via
  *                                              X-Telegram-Bot-Api-Secret-Token so we can verify the caller
- *   TELEGRAM_ALLOWED_CHAT_IDS       optional — comma-separated extra chat ids allowed to issue commands
+ *   TELEGRAM_ALLOWED_CHAT_IDS       optional  comma-separated extra chat ids allowed to issue commands
  *                                              (the notifications chat is always allowed)
- *   TELEGRAM_NOTIFICATIONS_ENABLED  optional — set to "false" to silence outbound notifications
+ *   TELEGRAM_NOTIFICATIONS_ENABLED  optional  set to "false" to silence outbound notifications
  */
 export interface TelegramConfig {
   botToken: string;

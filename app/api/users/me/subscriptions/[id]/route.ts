@@ -13,10 +13,10 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 /**
- * PATCH /api/users/me/subscriptions/[id] — a donor changes their own plan.
+ * PATCH /api/users/me/subscriptions/[id]  a donor changes their own plan.
  *
  * What can change, and where:
- *  - status: pause, resume, cancel — at the provider first (Stripe), then
+ *  - status: pause, resume, cancel  at the provider first (Stripe), then
  *    locally, through the same helper the dashboard uses. A cancelled plan
  *    cannot be reactivated; the donor starts a new one.
  *  - amount: on Stripe the subscription item is repriced (no proration) so

@@ -215,7 +215,7 @@ export function DiagnosticsDrawer({ donationId, open, onOpenChange }: Props) {
         <SheetHeader className="text-right">
           <SheetTitle>تشخيص تبرع</SheetTitle>
           <SheetDescription>
-            تحليل كامل لمصدر هذا التبرع — مفيد لاكتشاف ثغرات التتبع.
+            تحليل كامل لمصدر هذا التبرع  مفيد لاكتشاف ثغرات التتبع.
           </SheetDescription>
         </SheetHeader>
 
@@ -331,7 +331,7 @@ export function DiagnosticsDrawer({ donationId, open, onOpenChange }: Props) {
             >
               {data.attribution.warnings.length === 0 ? (
                 <p className="text-emerald-700">
-                  لا تحذيرات — التتبع نظيف.
+                  لا تحذيرات  التتبع نظيف.
                 </p>
               ) : (
                 <ul className="space-y-1">

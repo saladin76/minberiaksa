@@ -12,7 +12,7 @@ import { replyWindowFor, sendConversationReply } from "@/lib/communication/conve
  * can take on it.
  *
  * The window is returned with the timeline rather than discovered on submit, so the compose box can
- * say up front whether a free-text answer is still possible — see
+ * say up front whether a free-text answer is still possible  see
  * `lib/communication/conversation-reply-service.ts` for why it is bounded at all.
  */
 
@@ -62,7 +62,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   if (parsed.data.action === "reply") {
     const sent = await sendConversationReply(conversationId, parsed.data.body, actor);
     if (!sent.ok) {
-      /* A closed window is the operator's answer, not a server fault — 409, with the reason so the UI
+      /* A closed window is the operator's answer, not a server fault  409, with the reason so the UI
          can point them at an approved template instead. */
       const status = sent.reason === "REPLY_WINDOW_CLOSED" ? 409 : 502;
       return NextResponse.json({ error: sent.reason, detail: sent.detail ?? null }, { status });

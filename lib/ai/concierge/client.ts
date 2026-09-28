@@ -6,7 +6,7 @@ import type { ConciergeEventName } from "./events";
  * Browser-side helpers for the concierge: the session id that ties a visit's
  * steps together, the "this basket went through the concierge" marker the
  * checkout attaches to the order, and the fire-and-forget event reporter.
- * Nothing here is authoritative — it is analytics context only.
+ * Nothing here is authoritative  it is analytics context only.
  */
 
 export const CONCIERGE_OPEN_EVENT = "mia:concierge-open";
@@ -70,7 +70,7 @@ export function readConciergeAssisted(): ConciergeAssist | null {
 }
 
 /**
- * "This browser talked to the concierge" — kept in localStorage (not the
+ * "This browser talked to the concierge"  kept in localStorage (not the
  * tab's sessionStorage) with the time of the last exchange, so a donation made
  * later, even on another visit, can be counted as indirectly influenced. The
  * dashboard applies its own attribution window to `at`.

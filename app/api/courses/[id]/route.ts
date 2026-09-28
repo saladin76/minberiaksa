@@ -76,7 +76,7 @@ export async function PUT(
               },
             }
           : {}),
-        /* Videos are replaced wholesale — the posted list IS the list. Both
+        /* Videos are replaced wholesale  the posted list IS the list. Both
            halves run inside the one nested write, so a failure leaves the old
            videos in place rather than an empty course. */
         ...(videos !== undefined

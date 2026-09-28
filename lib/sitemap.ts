@@ -7,7 +7,7 @@ import { NOINDEX_ROUTES, SLUGS, slugFor, type MinbarRoute } from "@/lib/minbar/r
  *
  * One document for this site runs to ~20 MB: 19 locales across ~420 entities is
  * roughly 8,000 <url> blocks, and each block carries a reciprocal <xhtml:link>
- * for every locale — Google requires each language version to list all the
+ * for every locale  Google requires each language version to list all the
  * others, including itself, so the cost is quadratic in locale count. Vercel
  * refuses to prerender any response over 19.07 MB (FALLBACK_BODY_TOO_LARGE),
  * which that comfortably exceeded.

@@ -1,5 +1,5 @@
 /**
- * SMS segmentation — the unit SMS is actually billed in.
+ * SMS segmentation  the unit SMS is actually billed in.
  *
  * An SMS is not charged per message but per 140-byte segment, and how many characters fit in a
  * segment depends entirely on the alphabet. Text that stays inside the GSM 03.38 alphabet packs
@@ -30,7 +30,7 @@ export type SmsSegmentation = {
   /** Billable units: GSM-7 septets (extensions count 2) or UTF-16 code units for UCS-2. */
   units: number;
   segments: number;
-  /** Characters still free in the current segment — what "one more word" actually costs. */
+  /** Characters still free in the current segment  what "one more word" actually costs. */
   remaining: number;
 };
 
@@ -65,7 +65,7 @@ export function segmentSms(text: string | null | undefined): SmsSegmentation {
   return { encoding, units, segments, remaining: Math.max(0, capacity - units) };
 }
 
-/** Aggregate segmentation across a set of message bodies — the page's cost picture. */
+/** Aggregate segmentation across a set of message bodies  the page's cost picture. */
 export function summarizeSmsSegments(bodies: Array<string | null | undefined>): {
   messages: number;
   segments: number;

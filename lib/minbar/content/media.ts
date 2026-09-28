@@ -9,7 +9,7 @@
  *
  * `forSlug` deliberately returns `null` when a project has no photograph of its
  * own. The handoff is explicit about not filling the gap with an image from a
- * different region — a Gaza photograph on an Al-Quds project misrepresents the
+ * different region  a Gaza photograph on an Al-Quds project misrepresents the
  * work.
  */
 
@@ -137,7 +137,7 @@ const BANKS: Record<string, string[]> = {
 
 /**
  * A gallery for a region. There is no genuine field-photo bank for Syria, Sudan
- * or the global qurbani programme yet — those are deliberately left without
+ * or the global qurbani programme yet  those are deliberately left without
  * images rather than borrowing Gaza's or Al-Quds'.
  */
 export function galleryFor(region: string, count = 6, width = 700): string[] {

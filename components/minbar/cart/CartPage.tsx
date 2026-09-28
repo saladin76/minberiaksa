@@ -24,7 +24,7 @@ import type { MinbarProject } from "@/lib/minbar/projects";
 import type { MinbarCategoryTitle } from "@/lib/minbar/category-page";
 
 /**
- * Giving basket — ported from `Minbar/السلة.dc.html`.
+ * Giving basket  ported from `Minbar/السلة.dc.html`.
  *
  * The governing contract (`DEVELOPER_HANDOFF` § Cart Localization):
  *
@@ -37,7 +37,7 @@ import type { MinbarCategoryTitle } from "@/lib/minbar/category-page";
  *
  * `[BACKEND-INTEGRATION]`: this is client-controlled data. The server
  * re-resolves every id and recomputes amount, currency and availability when the
- * order is created — what is shown here is display state, never the basis for a
+ * order is created  what is shown here is display state, never the basis for a
  * charge.
  *
  * `[DESIGN-CONTRACT]`: below 760px the rows become cards rather than a table.
@@ -45,7 +45,7 @@ import type { MinbarCategoryTitle } from "@/lib/minbar/category-page";
  */
 
 /**
- * Cross-sell rows, from `Component.DEFAULT_SUGGESTIONS` — the fallback when
+ * Cross-sell rows, from `Component.DEFAULT_SUGGESTIONS`  the fallback when
  * the dashboard (`/dashboard/cart-settings`) has not chosen campaigns.
  */
 const SUGGESTIONS = [
@@ -86,12 +86,12 @@ export default function CartPage({ projects, categories }: { projects: MinbarPro
   const [draft, setDraft] = useState("");
   const [customUpsell, setCustomUpsell] = useState<Record<string, string>>({});
 
-  /* "Support the team" — asked once here, for the whole basket, and sent
+  /* "Support the team"  asked once here, for the whole basket, and sent
      with the order (`lib/minbar/cart.ts` § Team support). The admin switch
      and the quick-pick amounts come from the global settings; until they
      arrive the step is not drawn rather than drawn with placeholder amounts. */
   const [settings, setSettings] = useState<GlobalSettings | null>(() => getCachedGlobalSettings());
-  /* `null` until the donor answers — an amount or "no thanks". The checkout
+  /* `null` until the donor answers  an amount or "no thanks". The checkout
      button waits for that answer; nothing is pre-selected on their behalf. */
   const [teamSupport, setTeamSupport] = useState<number | null>(null);
   const teamAmount = teamSupport ?? 0;
@@ -193,11 +193,11 @@ export default function CartPage({ projects, categories }: { projects: MinbarPro
       const fromCms = categoryTitleById.get(item.categoryId);
       if (fromCms) return fromCms;
     }
-    /* A waqf row names its unit, count and endower — the same line the
-       certificate will carry — resolved live in the reader's language. */
+    /* A waqf row names its unit, count and endower  the same line the
+       certificate will carry  resolved live in the reader's language. */
     if (item.waqf) {
       const unit = item.waqf.unit === "meter" ? tCert("meterUnitTitle") : tCert("shareUnitTitle");
-      return `${unit} × ${item.waqf.count}${item.waqf.donorName ? ` — ${tCert("inNameOf")} ${item.waqf.donorName}` : ""}`;
+      return `${unit} × ${item.waqf.count}${item.waqf.donorName ? `  ${tCert("inNameOf")} ${item.waqf.donorName}` : ""}`;
     }
     if (item.titleKey) {
       if (t.has(item.titleKey)) return t(item.titleKey);
@@ -212,7 +212,7 @@ export default function CartPage({ projects, categories }: { projects: MinbarPro
         ? t(TYPE_LABEL[item.typeKey])
         : "",
       FREQ_LABEL[item.freqKey] && t.has(FREQ_LABEL[item.freqKey]) ? t(FREQ_LABEL[item.freqKey]) : "",
-      /* A gifted row says whom it is for — the recipient is told once the
+      /* A gifted row says whom it is for  the recipient is told once the
          payment settles, with a certificate in their name. */
       item.gift?.recipientName ? tTeam("giftedTo", { name: item.gift.recipientName }) : "",
     ]
@@ -239,7 +239,7 @@ export default function CartPage({ projects, categories }: { projects: MinbarPro
   const recurringOn = items.some((x) => x._autoMonthly);
 
   /* One click converts every one-time row to monthly, and the same click undoes
-     it. Only `freqKey` changes — no rows are created, removed or reordered. */
+     it. Only `freqKey` changes  no rows are created, removed or reordered. */
   const toggleRecurring = () => {
     replace(
       items.map((item) => {
@@ -655,7 +655,7 @@ export default function CartPage({ projects, categories }: { projects: MinbarPro
                 </span>
               </button>
 
-              {/* Support the team — once per basket, before checkout. With a
+              {/* Support the team  once per basket, before checkout. With a
                   recurring row it rides along with every instalment; with a
                   one-time basket it is charged once. Hidden by the admin switch. */}
               {settings && teamSupportEnabled ? (
@@ -696,7 +696,7 @@ export default function CartPage({ projects, categories }: { projects: MinbarPro
                           writeTeamSupport(n);
                           setTeamSupport(n);
                         } else {
-                          /* An emptied field is no answer — the question stands. */
+                          /* An emptied field is no answer  the question stands. */
                           clearTeamSupport();
                           setTeamSupport(null);
                         }

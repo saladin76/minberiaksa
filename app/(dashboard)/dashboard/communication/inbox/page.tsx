@@ -7,7 +7,7 @@ import { WhatsappInbox } from "./_components/WhatsappInbox";
 export const dynamic = "force-dynamic";
 export const metadata = { title: "صندوق واتساب | التواصل" };
 
-/** Server shell: gate first, render second — same contract as the واتساب channel page. */
+/** Server shell: gate first, render second  same contract as the واتساب channel page. */
 export default async function WhatsappInboxPage() {
   const access = resolveDashboardPageAccess(await getServerSession(authOptions), "messages");
   if (!access.allowed) redirect(access.redirectTo);

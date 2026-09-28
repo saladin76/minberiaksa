@@ -35,10 +35,10 @@ import { isAlbarakaRecurringEnabled } from "@/lib/albaraka";
  *
  * Unlike PayFor, Albaraka signs the card fields into the request MAC, so the card
  * has to be known here rather than appended by the browser. Three ways to supply it:
- *   - `savedCardId` — we decrypt the stored PAN (browser still adds nothing; the CVV
+ *   - `savedCardId`  we decrypt the stored PAN (browser still adds nothing; the CVV
  *      is folded in from `card.cvv` since CVCs are never stored)
- *   - `card`        — the donor's freshly-typed card, posted over TLS to this route
- *   - neither, with ALBARAKA_USE_OOS=1 — the card fields go out empty and the bank's
+ *   - `card`         the donor's freshly-typed card, posted over TLS to this route
+ *   - neither, with ALBARAKA_USE_OOS=1  the card fields go out empty and the bank's
  *      own hosted page (Ortak Ödeme Sayfası) collects them, keeping the PAN off our
  *      servers entirely. This is the deployment we'd recommend.
  */
@@ -50,7 +50,7 @@ type InitiateBody = {
   card?: {
     /** PAN, spaces tolerated. */
     number?: string;
-    /** "MM/YY" or "MMYY" — the bank wants YYMM, we convert. */
+    /** "MM/YY" or "MMYY"  the bank wants YYMM, we convert. */
     expiry?: string;
     cvv?: string;
     holder?: string;
@@ -129,7 +129,7 @@ export async function POST(req: NextRequest) {
         { status: 403 }
       );
     }
-    // Authenticated users: verify ownership. Guests have no session — trust the donationId.
+    // Authenticated users: verify ownership. Guests have no session  trust the donationId.
     if (session?.user?.id && donation.donorId !== session.user.id) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
@@ -151,7 +151,7 @@ export async function POST(req: NextRequest) {
     /* The site takes 14 currencies and Albaraka understands three, so something
        always converts. ALBARAKA_CHARGE_CURRENCY decides what to; see
        `albarakaChargeCurrency`. Whichever branch runs, the donation row keeps its
-       own currency — this only changes what the bank is asked to charge. */
+       own currency  this only changes what the bank is asked to charge. */
     const donationCurrency = String(donation.currency || "TRY").toUpperCase();
     const policy = albarakaChargeCurrency();
 
@@ -188,14 +188,14 @@ export async function POST(req: NextRequest) {
 
     // ── Card fields ────────────────────────────────────────────────────────────
     // Empty strings when the bank's hosted page collects the card. They still take
-    // part in the MAC as empty values — the separator positions must not shift.
+    // part in the MAC as empty values  the separator positions must not shift.
     let cardNo = "";
     let expiredDate = "";
     let cvv = "";
     let cardHolderName = "";
 
     /* A plan's card has to pass through here to be stored for the scheduler,
-       so the bank's hosted page is never used for one — the checkout collects
+       so the bank's hosted page is never used for one  the checkout collects
        the card itself for a recurring basket, and the form goes out with
        UseOOS=0 whatever the deployment switch says. */
     const collectCard = !cfg.useOOS || Boolean(plan);
@@ -232,7 +232,7 @@ export async function POST(req: NextRequest) {
         }
         expiredDate = toBankExpiry(savedCard.expiryDate || "");
         cardHolderName = savedCard.cardholderName ?? "";
-        // CVCs are never stored — the donor re-types it for every saved-card charge.
+        // CVCs are never stored  the donor re-types it for every saved-card charge.
         cvv = String(body.card?.cvv || "").replace(/\D/g, "");
       } else {
         cardNo = String(body.card?.number || "").replace(/\D/g, "");
@@ -279,8 +279,8 @@ export async function POST(req: NextRequest) {
 
     /* A plan: keep the card the donor is authorising, so the scheduler can
        charge the later instalments. Stored the way the account's saved cards
-       are — PAN encrypted at rest, CVC only as a hash that is never sent
-       anywhere — and linked to the plan before the bank is asked for
+       are  PAN encrypted at rest, CVC only as a hash that is never sent
+       anywhere  and linked to the plan before the bank is asked for
        anything, so a plan can never be activated without a card to bill. A
        retry of the same checkout reuses the card already linked. */
     if (plan && !plan.paymentCardId) {

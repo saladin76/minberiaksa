@@ -15,8 +15,8 @@ import {
 
 /**
  * Per-donation feed for the "مجموعات إعلانية" tab. Returns the raw donation
- * rows in the selected period with their full attribution snapshot — utm_term
- * (search keyword), utm_campaign, country and amount — already paired with the
+ * rows in the selected period with their full attribution snapshot  utm_term
+ * (search keyword), utm_campaign, country and amount  already paired with the
  * source-detection result so the UI can render the badge inline.
  *
  * Capped at 2000 rows; tighter date filters needed beyond that.

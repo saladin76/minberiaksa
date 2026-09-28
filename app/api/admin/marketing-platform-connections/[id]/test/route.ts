@@ -22,12 +22,12 @@ interface TwilioApiSurface {
 }
 
 /**
- * Test a connection's readiness. Always non-throwing — returns one of:
- *   - status: "active"           — required fields present, lightweight check passed
- *   - status: "missing_config"   — required fields missing (guidance returned)
- *   - status: "not_implemented"  — platform-specific live check not wired yet
- *   - status: "auth_error"       — Twilio auth check rejected the credentials
- *   - status: "sync_error"       — Twilio reachable but returned an error
+ * Test a connection's readiness. Always non-throwing  returns one of:
+ *   - status: "active"            required fields present, lightweight check passed
+ *   - status: "missing_config"    required fields missing (guidance returned)
+ *   - status: "not_implemented"   platform-specific live check not wired yet
+ *   - status: "auth_error"        Twilio auth check rejected the credentials
+ *   - status: "sync_error"        Twilio reachable but returned an error
  *
  * Currently only Twilio has a live check (a fetch of the account record). All
  * other platforms return `not_implemented` when the required fields are in
@@ -89,7 +89,7 @@ export async function POST(
         return NextResponse.json({
           ok: false,
           status: "not_implemented",
-          message: "نسخة Twilio SDK لا توفر فحص الحساب — لا يمكن إجراء اختبار مباشر.",
+          message: "نسخة Twilio SDK لا توفر فحص الحساب  لا يمكن إجراء اختبار مباشر.",
         });
       }
       await accounts(row.accountId).fetch();
@@ -120,13 +120,13 @@ export async function POST(
         ok: false,
         status: isAuth ? "auth_error" : "sync_error",
         message: isAuth
-          ? "Auth Token غير صحيح — راجع TWILIO_ACCOUNT_SID و TWILIO_AUTH_TOKEN."
+          ? "Auth Token غير صحيح  راجع TWILIO_ACCOUNT_SID و TWILIO_AUTH_TOKEN."
           : `فشل الاتصال بـ Twilio: ${message.slice(0, 160)}`,
       });
     }
   }
 
-  // Other platforms: not implemented yet — readiness checks pass but no
+  // Other platforms: not implemented yet  readiness checks pass but no
   // live API call is made in this phase.
   await persistTestResult({
     id,
@@ -139,7 +139,7 @@ export async function POST(
     ok: true,
     status: "not_implemented",
     message:
-      "الاختبار المباشر لهذه المنصة سيُفعَّل لاحقًا — جميع الحقول المطلوبة مكتملة.",
+      "الاختبار المباشر لهذه المنصة سيُفعَّل لاحقًا  جميع الحقول المطلوبة مكتملة.",
     completionPercent: readiness.completionPercent,
   });
 }
@@ -171,7 +171,7 @@ async function auditTest(
   await writeAuditLog({
     ...actor,
     action: "MARKETING_PLATFORM_CONNECTION_TESTED",
-    messageAr: `اختبر اتصال منصة: ${row.name} — ${outcome}`,
+    messageAr: `اختبر اتصال منصة: ${row.name}  ${outcome}`,
     entityType: "MarketingPlatformConnection",
     entityId: row.id,
     metadata: redactSecretsFromMetadata({

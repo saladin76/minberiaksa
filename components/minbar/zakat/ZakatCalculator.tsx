@@ -8,7 +8,7 @@ import { useMinbarMoney } from "@/hooks/useMinbarMoney";
 import TravelBanner from "@/components/minbar/banners/TravelBanner";
 
 /**
- * Zakat calculator — ported from `Minbar/حاسبة الزكاة.dc.html`.
+ * Zakat calculator  ported from `Minbar/حاسبة الزكاة.dc.html`.
  *
  * The calculation, exactly as the handoff specifies:
  *   assets = cash + metals + investments + trade goods
@@ -19,8 +19,8 @@ import TravelBanner from "@/components/minbar/banners/TravelBanner";
  * Karat is weighted by purity (21/24, 18/24) rather than counted at the 24k
  * rate, which would overstate the holding.
  *
- * `[RELIGIOUS-REVIEW]`: the fiqh copy — what is and is not zakatable, and the
- * FAQ — is translated content under religious review, not text this component
+ * `[RELIGIOUS-REVIEW]`: the fiqh copy  what is and is not zakatable, and the
+ * FAQ  is translated content under religious review, not text this component
  * composes. Nothing here is a fatwa, and the page says so.
  *
  * `[BACKEND-INTEGRATION]`: the gold and silver rates are entered by the donor
@@ -121,7 +121,7 @@ export default function ZakatCalculator({ rates, guidePdfHref, whatsappNumber = 
     const silver = num(silverRate);
 
     const cash = n("cash") + n("bank") + n("savings") + n("loansOut");
-    // Karat weighted by purity — 21k is 21/24 fine, 18k is 18/24.
+    // Karat weighted by purity  21k is 21/24 fine, 18k is 18/24.
     const metals = (n("gold24") + n("gold21") * (21 / 24) + n("gold18") * (18 / 24)) * gold + n("silver") * silver;
     const invest = n("shares") + n("funds") + n("pension") + n("rentIncome");
     const trade = n("stock") + n("receivables") + n("cashBiz");
@@ -130,7 +130,7 @@ export default function ZakatCalculator({ rates, guidePdfHref, whatsappNumber = 
     const assets = cash + metals + invest + trade;
     const net = Math.max(0, assets - liabilities);
     const nisab = mode === "gold" ? gold * GOLD_GRAMS : silver * SILVER_GRAMS;
-    // Zero nisāb means no rate has been entered — not "everything is due".
+    // Zero nisāb means no rate has been entered  not "everything is due".
     const due = nisab > 0 && net >= nisab ? net * ZAKAT_RATE : 0;
 
     return { cash, metals, invest, trade, liabilities, net, nisab, due };
@@ -260,7 +260,7 @@ export default function ZakatCalculator({ rates, guidePdfHref, whatsappNumber = 
             ))}
 
             <div style={{ display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap", padding: "18px 22px", background: "var(--sand)", border: "1px solid var(--border)" }}>
-              {/* Not a fatwa — this is stated on the page, not just in a comment. */}
+              {/* Not a fatwa  this is stated on the page, not just in a comment. */}
               <span style={{ flex: "1 1 320px", minWidth: 0, color: "var(--muted)", fontSize: 14, lineHeight: 1.8 }}>{t("calcDisclaimer")}</span>
               <button
                 type="button"
@@ -392,7 +392,7 @@ export default function ZakatCalculator({ rates, guidePdfHref, whatsappNumber = 
                         {open ? "−" : "+"}
                       </span>
                     </button>
-                    {/* Height, not display — the answer opens smoothly instead of
+                    {/* Height, not display  the answer opens smoothly instead of
                         snapping into place. */}
                     <div
                       style={{

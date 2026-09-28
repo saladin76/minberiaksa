@@ -14,7 +14,7 @@ interface Category {
   posts: any[];
 }
 
-/* `CategoryProps` never existed in this file — the props are the single id below. */
+/* `CategoryProps` never existed in this file  the props are the single id below. */
 const MainPage: React.FC<{ id: string }> = ({ id }) => {
   const locale = useLocale(); // Get the current locale (ar or en)
   const [category, setCategory] = useState<Category | null>(null);

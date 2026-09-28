@@ -8,7 +8,7 @@ import { suppressEmailRecipient } from "./email-suppression";
 
 /**
  * Processes normalized Elastic Email delivery events: stores each as an idempotent
- * CommunicationProviderEvent and advances the matching CommunicationDelivery. Never throws —
+ * CommunicationProviderEvent and advances the matching CommunicationDelivery. Never throws 
  * webhooks must always answer 200 so the provider does not retry a poison payload forever.
  */
 
@@ -36,7 +36,7 @@ async function recordEvent(data: {
   try {
     // `idempotencyKey` carries `@unique` in schema.prisma, but on MongoDB that constraint only
     // exists once the index has actually been created on the database. It had not been, so P2002
-    // never fired and the 15-minute event-sync cron re-inserted every event it saw on every run —
+    // never fired and the 15-minute event-sync cron re-inserted every event it saw on every run 
     // 864 stored rows for 76 distinct events. Checking first makes the guard hold regardless of
     // index state; the P2002 catch below stays as the race backstop for when the index does exist.
     const seen = await prisma.communicationProviderEvent
@@ -105,7 +105,7 @@ export async function processElasticEmailEvents(events: NormalizedEmailEvent[]):
     summary.processed += 1;
 
     // Consent is a fact about the ADDRESS, so it is applied before the delivery
-    // lookup — an unsubscribe still has to stop future mail even when the
+    // lookup  an unsubscribe still has to stop future mail even when the
     // message it arrived on belongs to no delivery row we can find (a send from
     // before this system, or one whose providerMessageId was never stored).
     if (event.suppression !== "none") {

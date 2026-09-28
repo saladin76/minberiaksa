@@ -29,14 +29,14 @@ import { CategoryCardIcon, isLegacyCardIcon } from '@/components/minbar/categori
  * The landing page a category owns, as the dashboard edits it.
  *
  * Every category is published as a project page in the shape of
- * `Minbar/مشروع ترميم منازل القدس.dc.html`. The translated copy — the lead, the
- * figure labels, the headings — lives in the form's language tabs above this
+ * `Minbar/مشروع ترميم منازل القدس.dc.html`. The translated copy  the lead, the
+ * figure labels, the headings  lives in the form's language tabs above this
  * section, because it is per-locale; everything here is the page's structure:
  * the images, the numbers, the strip of values, the three explanatory cards,
  * the campaign the donation box gives to, and the achievement videos.
  *
- * Each part is optional. A category with none of it still publishes — as its
- * hero and its campaigns — so this section never has to be filled in to save.
+ * Each part is optional. A category with none of it still publishes  as its
+ * hero and its campaigns  so this section never has to be filled in to save.
  */
 
 export const CATEGORY_VALUE_TRANSLATION_FIELDS: readonly TranslationField[] = [
@@ -48,7 +48,7 @@ export const CATEGORY_CARD_TRANSLATION_FIELDS: readonly TranslationField[] = [
   { name: 'body', label: 'النص', multiline: true },
 ];
 
-/** The cards' original eight drawn glyphs — mirrors `CATEGORY_CARD_ICON_KEYS` on the write side. */
+/** The cards' original eight drawn glyphs  mirrors `CATEGORY_CARD_ICON_KEYS` on the write side. */
 export const CARD_ICON_LABELS: Record<string, string> = {
   alert: 'تنبيه / خطر',
   home: 'منزل',
@@ -60,7 +60,7 @@ export const CARD_ICON_LABELS: Record<string, string> = {
   users: 'أسرة / مجتمع',
 };
 
-/** What to call a card's icon — a drawn glyph, a catalogue icon, or a flag. */
+/** What to call a card's icon  a drawn glyph, a catalogue icon, or a flag. */
 function cardIconLabel(icon: string): string {
   if (CARD_ICON_LABELS[icon]) return CARD_ICON_LABELS[icon];
   const parsed = parseCategoryIcon(icon);
@@ -95,7 +95,7 @@ export interface CurrencyAmountsRow {
 
 /**
  * The donation box's target, as the select holds it:
- *   ''          → automatic — the first campaign by priority
+ *   ''          → automatic  the first campaign by priority
  *   'category'  → the category itself (the order carries a category item)
  *   <ObjectId>  → that campaign
  */
@@ -155,7 +155,7 @@ export function currencyRowsToMap(rows: CurrencyAmountsRow[]): Record<string, nu
   return out;
 }
 
-/** What the API is sent for the box's target — see `DONATE_TO_CATEGORY`. */
+/** What the API is sent for the box's target  see `DONATE_TO_CATEGORY`. */
 export function donateTargetPayload(target: string): { donateToCategory: boolean; donateCampaignId: string | null } {
   return {
     donateToCategory: target === DONATE_TO_CATEGORY,
@@ -231,15 +231,15 @@ export function CategoryPageSection({
       {/* ── Hero & figures ───────────────────────────────────────────── */}
       <Card className="space-y-4 p-6">
         <div>
-          <h2 className="text-sm font-bold">صفحة الحملة — الواجهة والأرقام</h2>
+          <h2 className="text-sm font-bold">صفحة الحملة  الواجهة والأرقام</h2>
           <p className="text-xs text-slate-500">
             تُنشر كل حملة كصفحة مشروع كاملة. النصوص المترجمة (المقدمة، عناوين الأقسام، وصف الأرقام) في تبويبات
-            اللغات بالأعلى؛ هنا بنية الصفحة. كل جزء اختياري — الحملة بلا أي منها تظهر بواجهتها ومشاريعها.
+            اللغات بالأعلى؛ هنا بنية الصفحة. كل جزء اختياري  الحملة بلا أي منها تظهر بواجهتها ومشاريعها.
           </p>
         </div>
 
         {/* A category may be published as one of the site's own pages instead
-            of the generic landing page; everything below still applies — the
+            of the generic landing page; everything below still applies  the
             page folds it in where it belongs. */}
         <div className="space-y-1.5">
           <span className="text-xs font-semibold text-slate-600">الصفحة التي تُنشر بها الحملة</span>
@@ -292,7 +292,7 @@ export function CategoryPageSection({
         <div>
           <h2 className="text-sm font-bold">صندوق التبرع</h2>
           <p className="text-xs text-slate-500">
-            يوجّه الصندوق تبرعه إمّا إلى الحملة نفسها — فيُسجَّل التبرع عليها مباشرة — أو إلى مشروع واحد من مشاريعها.
+            يوجّه الصندوق تبرعه إمّا إلى الحملة نفسها  فيُسجَّل التبرع عليها مباشرة  أو إلى مشروع واحد من مشاريعها.
             «تلقائي» يختار أول مشروع بحسب الأولوية.
           </p>
         </div>
@@ -305,8 +305,8 @@ export function CategoryPageSection({
             >
               <SelectTrigger><SelectValue placeholder="تلقائي" /></SelectTrigger>
               <SelectContent>
-                <SelectItem value={DONATE_TO_CATEGORY}>الحملة نفسها — لا مشروعًا بعينه</SelectItem>
-                <SelectItem value="auto">تلقائي — أول مشروع بحسب الأولوية</SelectItem>
+                <SelectItem value={DONATE_TO_CATEGORY}>الحملة نفسها  لا مشروعًا بعينه</SelectItem>
+                <SelectItem value="auto">تلقائي  أول مشروع بحسب الأولوية</SelectItem>
                 {campaignOptions.map((c) => (
                   <SelectItem key={c.id} value={c.id}>{c.title}</SelectItem>
                 ))}
@@ -322,7 +322,7 @@ export function CategoryPageSection({
           </label>
         </div>
 
-        {/* Per-currency exceptions — the same rows as the campaign form's
+        {/* Per-currency exceptions  the same rows as the campaign form's
             suggested donations, so an editor who knows one knows the other. */}
         <div className="space-y-2">
           <div className="flex flex-wrap items-center justify-between gap-2">
@@ -344,7 +344,7 @@ export function CategoryPageSection({
                       <SelectTrigger dir="ltr"><SelectValue /></SelectTrigger>
                       <SelectContent>
                         {SUPPORTED_CURRENCY_OPTIONS.filter((c) => c.code !== 'USD').map((c) => (
-                          <SelectItem key={c.code} value={c.code}>{c.code} — {c.name}</SelectItem>
+                          <SelectItem key={c.code} value={c.code}>{c.code}  {c.name}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
@@ -422,7 +422,7 @@ export function CategoryPageSection({
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-sm font-bold">بطاقات التعريف</h2>
-            <p className="text-xs text-slate-500">ثلاث بطاقات أسفل الصفحة — لماذا، وماذا نفعل، والأثر. لكل واحدة أيقونة مرسومة.</p>
+            <p className="text-xs text-slate-500">ثلاث بطاقات أسفل الصفحة  لماذا، وماذا نفعل، والأثر. لكل واحدة أيقونة مرسومة.</p>
           </div>
           <Badge variant="outline">{values.infoCards.length}</Badge>
         </div>
@@ -503,7 +503,7 @@ export function CategoryPageSection({
         <div>
           <h2 className="text-sm font-bold">الإنجازات بالفيديو</h2>
           <p className="text-xs text-slate-500">
-            من مكتبة الفيديوهات — نوع «الإنجازات». تظهر في شريط أسفل الصفحة بالترتيب المحدد هنا، بنفس شكل شريط الإنجازات
+            من مكتبة الفيديوهات  نوع «الإنجازات». تظهر في شريط أسفل الصفحة بالترتيب المحدد هنا، بنفس شكل شريط الإنجازات
             في الصفحة الرئيسية. فيديو يُحذف أو يُخفى يسقط من الشريط تلقائيًا.
           </p>
         </div>

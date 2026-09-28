@@ -13,8 +13,8 @@ import { mintDonationAccessToken } from "@/lib/donations/access-token";
  * POST /api/donations/[id]/retry
  *
  * Clones a failed (or stuck-unsettled) donation into a fresh row the donor
- * can complete checkout for. Cloning — rather than mutating the original
- * back to "PAID + paidAt=null" — keeps an audit trail of the failed attempt,
+ * can complete checkout for. Cloning  rather than mutating the original
+ * back to "PAID + paidAt=null"  keeps an audit trail of the failed attempt,
  * lets reporting count both the failed try and the successful retry, and
  * sidesteps the various provider integrity checks that bail on
  * already-FAILED rows.
@@ -24,7 +24,7 @@ import { mintDonationAccessToken } from "@/lib/donations/access-token";
  *   - copies every campaign item + category item line (same amounts in the
  *     same currency)
  *   - preserves teamSupport / coverFees / fees / totalAmount
- *   - lives in the optimistic "PAID + paidAt: null" sentinel state — exactly
+ *   - lives in the optimistic "PAID + paidAt: null" sentinel state  exactly
  *     the same as a brand-new POST /api/donations creates
  *   - is NEVER attached to the source donation's subscription (monthly
  *     retries go through the regular checkout dialog)
@@ -56,12 +56,12 @@ export async function POST(
     }
 
     // Only the donor (or an admin) can retry. Guests with the link are ok too
-    // — the donation id is the only secret.
+    //  the donation id is the only secret.
     if (session && session.user.id !== source.donorId && session.user.role !== "ADMIN") {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    // Refuse to retry an already-paid donation — that would charge twice.
+    // Refuse to retry an already-paid donation  that would charge twice.
     if (source.paidAt) {
       return NextResponse.json(
         { error: "This donation has already been settled.", alreadyPaid: true },
@@ -69,7 +69,7 @@ export async function POST(
       );
     }
 
-    // Monthly subscriptions can't be cleanly cloned here — the subscription
+    // Monthly subscriptions can't be cleanly cloned here  the subscription
     // itself was either created at the same time or never made, and Stripe
     // owns its lifecycle. Kick those donors back to the donation dialog
     // where the subscription path is properly wired.
@@ -94,7 +94,7 @@ export async function POST(
         coverFees: source.coverFees,
         fees: source.fees,
         totalAmount: source.totalAmount,
-        status: "PAID", // optimistic placeholder — webhook flips paidAt
+        status: "PAID", // optimistic placeholder  webhook flips paidAt
         locale: source.locale ?? undefined,
         attribution: source.attribution
           ? (source.attribution as object as object)

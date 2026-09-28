@@ -53,7 +53,7 @@ const ELIGIBILITY_META: Record<Eligibility, { label: string; tone: string; icon:
 /**
  * Pick the donors a campaign goes to.
  *
- * Carries the same columns as المتبرعون — اللغة, الموقع, الشارات — so an audience is described here
+ * Carries the same columns as المتبرعون  اللغة, الموقع, الشارات  so an audience is described here
  * the same way it is described there, and the segment someone has in mind ("Turkish donors with the
  * loyalty badge") can be expressed without leaving the wizard.
  *
@@ -229,7 +229,7 @@ export function DonorPicker({
           </SelectContent>
         </Select>
 
-        {/* Countries are ordered by donor count, not alphabetically — with 70+ present, the five
+        {/* Countries are ordered by donor count, not alphabetically  with 70+ present, the five
             that matter would otherwise be buried mid-list. */}
         <Select value={country} onValueChange={setCountry}>
           <SelectTrigger aria-label="تصفية بالموقع" className={triggerCls}>
@@ -384,7 +384,7 @@ export function DonorPicker({
                         </Avatar>
                         <div className="min-w-0">
                           <p className="truncate text-[13px] font-medium text-slate-900">{d.name ?? "بلا اسم"}</p>
-                          {/* The contact THIS channel uses — an email under an SMS campaign would
+                          {/* The contact THIS channel uses  an email under an SMS campaign would
                               misrepresent where the message actually goes. */}
                           <p className="truncate text-[11px] text-slate-500">
                             {channel === "EMAIL" ? d.email ?? "بلا بريد" : d.phone ?? "بلا رقم"}

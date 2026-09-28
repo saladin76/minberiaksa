@@ -11,11 +11,11 @@ export const maxDuration = 300;
  * The Albaraka recurring scheduler's tick (`vercel.json`, every 15 minutes).
  *
  * Charges every Albaraka plan whose `nextBillingDate` has passed and advances
- * it by the plan's cadence — see `lib/donations/albaraka-recurring.ts` for
+ * it by the plan's cadence  see `lib/donations/albaraka-recurring.ts` for
  * the money rules. Stripe plans are not touched: Stripe bills those itself.
  *
  * Authenticated like every other cron here (`Authorization: Bearer $CRON_SECRET`),
- * and — unlike the retired `/api/cron/monthly-billing` — it fails CLOSED when
+ * and  unlike the retired `/api/cron/monthly-billing`  it fails CLOSED when
  * the secret is unset. `?dryRun=1` reports what would be charged without
  * writing anything or calling the bank.
  */

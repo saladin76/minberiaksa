@@ -8,7 +8,7 @@ import { listConversations, listInboxSenders } from "@/lib/communication/convers
  * The WhatsApp inbox list.
  *
  * Donors reply to these messages. Until now the replies were only visible as a badge count on the
- * dashboard — the count was computed from the real archive, but there was no screen to open, so an
+ * dashboard  the count was computed from the real archive, but there was no screen to open, so an
  * answered question stayed answered nowhere. This returns the conversations that count produces.
  *
  * Filters mirror what an operator actually triages by: which business number, and whether it is

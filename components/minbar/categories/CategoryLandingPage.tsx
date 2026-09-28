@@ -15,7 +15,7 @@ import {
 } from "./CategorySections";
 
 /**
- * A category's landing page — ported from
+ * A category's landing page  ported from
  * `Minbar/مشروع ترميم منازل القدس.dc.html`.
  *
  * Every category is published this way: a hero with the programme's film, a
@@ -25,7 +25,7 @@ import {
  *
  * Nothing here is hard-coded: `lib/minbar/category-page.ts` resolves every
  * string for the visitor's locale, and each section is skipped when its data is
- * empty — so a category with only a name still renders as a hero and its
+ * empty  so a category with only a name still renders as a hero and its
  * campaigns rather than as a page of blank frames. The sections themselves live
  * in `CategorySections`, because a category bound to one of the site's own
  * pages (the mosque, zakat) shows the same parts inside that page instead.

@@ -82,7 +82,7 @@ export function buildVideoScalarPatch(body: Record<string, unknown>) {
 /**
  * Public visibility for one locale.
  *
- * `localeFilter` is an allow-list and empty means "every locale" — the Turkish
+ * `localeFilter` is an allow-list and empty means "every locale"  the Turkish
  * endorsements are the reason it exists, and they must not surface elsewhere.
  */
 export function videoLiveWhere(locale: string, type?: VideoTypeValue) {

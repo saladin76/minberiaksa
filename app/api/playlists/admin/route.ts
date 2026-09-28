@@ -5,7 +5,7 @@ import { authOptions } from "../../auth/[...nextauth]/options";
 import { requireAdminOrDashboardPermission } from "@/lib/dashboard/api-auth";
 
 /**
- * GET /api/playlists/admin — the dashboard listing.
+ * GET /api/playlists/admin  the dashboard listing.
  *
  * Returns inactive rows too, so it sits behind the dashboard permission.
  * Episodes come back as a count: the list only needs to say how many, and the

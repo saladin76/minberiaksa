@@ -6,7 +6,7 @@ import { isSendEnabled } from "./provider-router";
 import { safeCountValue } from "@/lib/dashboard/safe-count";
 
 /**
- * Compact data for the Communication Center home (command center). Read-only, lightweight — the four
+ * Compact data for the Communication Center home (command center). Read-only, lightweight  the four
  * action counts, provider readiness, and recent campaigns. No provider calls, no secrets.
  */
 
@@ -20,7 +20,7 @@ export type CommunicationHome = {
 };
 
 export async function getCommunicationHome(): Promise<CommunicationHome> {
-  // `isSendEnabled` is async. Unawaited, each value was a Promise — always truthy — so the
+  // `isSendEnabled` is async. Unawaited, each value was a Promise  always truthy  so the
   // Communication Center home showed every channel as "جاهز" (ready, green) even with no
   // provider configured at all.
   const [whatsappEnabled, emailEnabled, smsEnabled] = await Promise.all([

@@ -16,14 +16,14 @@ export const dynamic = "force-dynamic";
  * This is the only route in the feature that spends money and reaches real donors, so it is gated
  * three deep and each gate catches something different:
  *
- *  1. `confirm: true` in the body — a bare POST cannot send. Guards against a mis-wired button or a
+ *  1. `confirm: true` in the body  a bare POST cannot send. Guards against a mis-wired button or a
  *     retried request doing it by accident.
  *  2. The executor refuses anything not already `APPROVED`, so approval stays a separate human act
  *     performed through a different route.
  *  3. The executor itself skips recipients that already have a processed delivery for this
  *     campaign+template, so a double-click cannot double-send.
  *
- * `GET` returns the dry-run plan — how many would receive it, how many would be skipped and why —
+ * `GET` returns the dry-run plan  how many would receive it, how many would be skipped and why 
  * so the UI can show the real number before anyone commits to it.
  */
 
@@ -68,6 +68,6 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     batchSize: parsed.data.batchSize,
   });
 
-  // A blocked run is a legitimate answer, not a server fault — surface it with the reason intact.
+  // A blocked run is a legitimate answer, not a server fault  surface it with the reason intact.
   return NextResponse.json({ ok: summary.ok, summary }, { status: summary.blocked ? 409 : 200 });
 }

@@ -8,7 +8,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 /**
- * POST /api/ai/donation-concierge/events — the browser's half of the funnel:
+ * POST /api/ai/donation-concierge/events  the browser's half of the funnel:
  * the steps that happen after the assistant answered (a project page opened
  * from a card, the basket or checkout reached). Same vocabulary and the same
  * collection as the server-written steps, so the funnel is one query.

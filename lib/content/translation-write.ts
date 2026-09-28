@@ -4,7 +4,7 @@
  * Every content model in this group has the same translation story: Arabic is
  * the master copy on the parent row, and a sibling `*Translation` keyed
  * `@@unique([<parent>Id, locale])` holds the rest. `lib/slides/slide-write.ts`
- * already solved this for one model, and its reasoning applies unchanged here —
+ * already solved this for one model, and its reasoning applies unchanged here 
  * a form posts every non-Arabic locale at once, so writing them as separate
  * awaited upserts inside an interactive transaction costs ~10 round trips per
  * save and blows Prisma's 5s transaction timeout against this Atlas cluster.
@@ -20,7 +20,7 @@ export function str(v: unknown): string {
   return typeof v === "string" ? v.trim() : "";
 }
 
-/** Trimmed string, or undefined when absent — for nullable scalar columns. */
+/** Trimmed string, or undefined when absent  for nullable scalar columns. */
 export function optionalStr(v: unknown): string | undefined {
   const s = str(v);
   return s || undefined;
@@ -40,7 +40,7 @@ export function boolDefaultTrue(v: unknown): boolean {
   return v !== false;
 }
 
-/** Trimmed, de-duplicated locale codes — for `localeFilter` / `locales` arrays. */
+/** Trimmed, de-duplicated locale codes  for `localeFilter` / `locales` arrays. */
 export function localeList(v: unknown): string[] {
   if (!Array.isArray(v)) return [];
   const out = new Set<string>();
@@ -68,7 +68,7 @@ export function youtubeId(v: unknown): string {
   return m ? m[1] : s;
 }
 
-/** A `DateTime?` column. An empty value means null — "no limit" — not "now". */
+/** A `DateTime?` column. An empty value means null  "no limit"  not "now". */
 export function optionalDate(v: unknown): Date | null | undefined {
   if (v === null) return null;
   if (v === undefined) return undefined;
@@ -79,7 +79,7 @@ export function optionalDate(v: unknown): Date | null | undefined {
 }
 
 export interface ParsedTranslations<T> {
-  /** Locales carrying content — created or updated. */
+  /** Locales carrying content  created or updated. */
   write: Array<T & { locale: string }>;
   /**
    * Locales the editor explicitly blanked. These must be deleted rather than
@@ -90,7 +90,7 @@ export interface ParsedTranslations<T> {
 }
 
 /**
- * Parse `translations` — `{ [locale]: { ...fields } }` — into rows to write and
+ * Parse `translations`  `{ [locale]: { ...fields } }`  into rows to write and
  * locales to delete.
  *
  * `required` is the field that decides whether a locale has content at all; a
@@ -132,7 +132,7 @@ export function parseTranslations<K extends string>(
  *
  * A generic builder has to compose the compound-unique key by name
  * (`storyId_locale`), and a computed key widens to an index signature that
- * Prisma's generated input types reject — so it only compiles behind a cast,
+ * Prisma's generated input types reject  so it only compiles behind a cast,
  * which throws away exactly the checking that makes these writes safe. Each
  * route therefore spells its own `upsert`/`deleteMany` out with concrete field
  * names, the way `app/api/slides/[id]/route.ts` does, and keeps full type

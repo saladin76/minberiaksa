@@ -65,7 +65,7 @@ function DashboardContent({
     try {
       const stored = window.localStorage.getItem(COLLAPSE_STORAGE_KEY);
       if (stored) setCollapsedGroups({ ...DEFAULT_COLLAPSED, ...JSON.parse(stored) });
-    } catch { /* corrupt or unavailable storage — keep defaults */ }
+    } catch { /* corrupt or unavailable storage  keep defaults */ }
   }, []);
 
   const toggleGroup = useCallback((g: string) => {
@@ -263,7 +263,7 @@ function DashboardContent({
           dir={dir}
         />
 
-        {/* Content well. Pages own their own surfaces (Card, PageHeader, …) — the shell no
+        {/* Content well. Pages own their own surfaces (Card, PageHeader, …)  the shell no
             longer wraps every route in a white rounded card, which produced a box-inside-a-box
             with doubled padding on every one of the 151 routes. */}
         <div className="p-3 sm:p-4 lg:p-6 min-h-[calc(100vh-4rem)]">{children}</div>
@@ -290,7 +290,7 @@ export default function DashboardLayoutClient({
   locale?: string;
 }) {
   // Saturated accent ramps (see tailwind.config.ts). Set on <body> as well as the shell so
-  // dialogs, popovers and toasts — portalled outside the shell — use the same palette.
+  // dialogs, popovers and toasts  portalled outside the shell  use the same palette.
   useEffect(() => {
     document.body.classList.add('dash-vivid');
     return () => document.body.classList.remove('dash-vivid');
@@ -302,7 +302,7 @@ export default function DashboardLayoutClient({
         <Suspense fallback={null}><CurrencyFromUrlSync /></Suspense>
         <SessionProvider session={session}>
           {/* DashboardThemeProvider was mounted here but `useDashboardTheme` had zero consumers
-              anywhere in the app — it only wrote a `dashboard-theme-dark` key to localStorage. */}
+              anywhere in the app  it only wrote a `dashboard-theme-dark` key to localStorage. */}
           <ViewUserProfileProvider>
             <DashboardContent locale={locale}>{children}</DashboardContent>
           </ViewUserProfileProvider>

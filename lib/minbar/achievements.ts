@@ -1,10 +1,10 @@
 /**
- * The impact report's figures, programmes, milestones and published documents —
+ * The impact report's figures, programmes, milestones and published documents 
  * carried from `Minbar/إنجازات وتقارير المؤسسة.dc.html`.
  *
  * The handoff's comment on the totals is a constraint, not decoration:
- * "الأرقام الرسمية المعتمدة من ملف إنجازات المؤسسة — لا تُعدَّل إلا بأرقام رسمية أحدث"
- * — these are the foundation's approved published figures and are only ever
+ * "الأرقام الرسمية المعتمدة من ملف إنجازات المؤسسة  لا تُعدَّل إلا بأرقام رسمية أحدث"
+ *  these are the foundation's approved published figures and are only ever
  * replaced by newer approved ones. Nothing here is computed, estimated, or
  * rounded for effect.
  *

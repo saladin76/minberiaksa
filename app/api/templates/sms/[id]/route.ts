@@ -51,7 +51,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   if (parsed.data.status != null) data.status = parsed.data.status;
   if (parsed.data.purpose != null) data.purpose = parsed.data.purpose;
   if (parsed.data.translations !== undefined) {
-    // Explicit null means "drop every translation" — DbNull writes a real null rather than
+    // Explicit null means "drop every translation"  DbNull writes a real null rather than
     // leaving the previous object in place, which `undefined` would.
     data.translations =
       parsed.data.translations === null

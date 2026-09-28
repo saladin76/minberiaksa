@@ -17,7 +17,7 @@ import Link from "next/link";
  * "Forward" follows reading direction: in Arabic the next slide is on the LEFT,
  * because that is where the eye is going. Instagram flips the same way in RTL.
  *
- * The CTA is already an href for this visitor's locale — the API resolved it —
+ * The CTA is already an href for this visitor's locale  the API resolved it 
  * so the button is a plain link. Internal hrefs go through next/link, external
  * ones open in a new tab. Currency needs nothing here: it lives in a cookie.
  *
@@ -292,7 +292,7 @@ export default function StoryViewer({
         <div aria-hidden style={{ position: "absolute", inset: "0 0 auto 0", height: 140, background: "linear-gradient(rgba(0,0,0,.55), rgba(0,0,0,0))", pointerEvents: "none" }} />
         <div aria-hidden style={{ position: "absolute", inset: "auto 0 0 0", height: 220, background: "linear-gradient(rgba(0,0,0,0), rgba(0,0,0,.7))", pointerEvents: "none" }} />
 
-        {/* Progress bars — one per slide of this story. */}
+        {/* Progress bars  one per slide of this story. */}
         <div style={{ position: "absolute", top: 10, insetInline: 10, display: "flex", gap: 4 }} aria-hidden>
           {story.slides.map((s, i) => (
             <span key={s.id} style={{ flex: 1, height: 3, borderRadius: 3, background: "rgba(255,255,255,.35)", overflow: "hidden" }}>

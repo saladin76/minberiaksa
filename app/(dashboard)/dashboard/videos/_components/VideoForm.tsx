@@ -234,7 +234,7 @@ export function VideoForm({
         </div>
 
         <p className="text-xs text-slate-500">
-          أدخل معرّف يوتيوب أو رابطًا — أحدهما مطلوب على الأقل.
+          أدخل معرّف يوتيوب أو رابطًا  أحدهما مطلوب على الأقل.
         </p>
 
         <div className="space-y-1.5">
@@ -265,7 +265,7 @@ export function VideoForm({
         <div className="space-y-1.5">
           <span className="text-xs font-semibold text-slate-600">اللغات التي يظهر فيها</span>
           <p className="text-xs text-slate-500">
-            اتركها فارغة ليظهر في كل اللغات. حدّد لغات لقصره عليها — مثل التزكيات التركية.
+            اتركها فارغة ليظهر في كل اللغات. حدّد لغات لقصره عليها  مثل التزكيات التركية.
           </p>
           <div className="flex flex-wrap gap-1.5 pt-1">
             {SUPPORTED_LOCALES.map((locale) => {

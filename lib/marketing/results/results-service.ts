@@ -9,7 +9,7 @@ import type {
 } from "./results-types";
 
 /**
- * Real marketing results — per campaign, from live data:
+ * Real marketing results  per campaign, from live data:
  *   - site donations + first-party revenue come from donation attribution
  *     (`aggregateBreakdown(..., "campaign")`, the same engine the ads dashboard uses),
  *   - spend + clicks come from the ad-platform snapshots (`AdCampaignSnapshot`).
@@ -57,16 +57,16 @@ function deriveDecision(status: MarketingResultStatus): string {
 
 function deriveLearning(spend: number, revenue: number, donations: number, clicks: number): string {
   if (spend > 0 && clicks > 0 && donations === 0) {
-    return `${clicks.toLocaleString()} نقرة بلا تبرعات — الفجوة غالبًا في صفحة التبرع أو الرسالة.`;
+    return `${clicks.toLocaleString()} نقرة بلا تبرعات  الفجوة غالبًا في صفحة التبرع أو الرسالة.`;
   }
   if (spend > 0 && revenue / spend >= 4) {
-    return "تحويل بكفاءة عالية مقابل الإنفاق — مادة قابلة للتوسّع.";
+    return "تحويل بكفاءة عالية مقابل الإنفاق  مادة قابلة للتوسّع.";
   }
   if (spend === 0 && donations > 0) {
-    return `${donations.toLocaleString()} تبرع بدون إنفاق إعلاني — قناة مجانية فعّالة تستحق قالبًا متكررًا.`;
+    return `${donations.toLocaleString()} تبرع بدون إنفاق إعلاني  قناة مجانية فعّالة تستحق قالبًا متكررًا.`;
   }
   if (spend > 0 && donations > 0) {
-    return `${donations.toLocaleString()} تبرع من ${clicks.toLocaleString()} نقرة — راقب تكلفة التبرع مقابل العائد.`;
+    return `${donations.toLocaleString()} تبرع من ${clicks.toLocaleString()} نقرة  راقب تكلفة التبرع مقابل العائد.`;
   }
   return "لا توجد إشارة كافية بعد لاستخلاص تعلّم موثوق.";
 }

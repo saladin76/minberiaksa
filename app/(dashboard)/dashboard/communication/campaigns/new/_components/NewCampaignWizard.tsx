@@ -53,7 +53,7 @@ function Stepper({ step }: { step: number }) {
  * Create a campaign: channel → template → audience.
  *
  * The order is forced because each step constrains the next. The channel decides which template
- * store is even readable, and it decides what "reachable" means for a donor — so asking for an
+ * store is even readable, and it decides what "reachable" means for a donor  so asking for an
  * audience first would mean collecting a list that the channel might then invalidate wholesale.
  *
  * Nothing is written until the final step. The campaign row, the audience list, and the link
@@ -72,7 +72,7 @@ export function NewCampaignWizard() {
   const [selected, setSelected] = React.useState<Set<string>>(new Set());
   const [saving, setSaving] = React.useState(false);
 
-  // Templates load on entering step 2 — the channel is known by then and cannot change without
+  // Templates load on entering step 2  the channel is known by then and cannot change without
   // coming back, which also resets the choice below.
   React.useEffect(() => {
     if (!channel) return;
@@ -110,7 +110,7 @@ export function NewCampaignWizard() {
       const listJson = await listRes.json();
       if (!listRes.ok || !listJson.ok) throw new Error(listJson?.error || "تعذّر إنشاء قائمة الجمهور");
 
-      // 2. Then the campaign, pointed at that list. Created as DRAFT — sending is a separate,
+      // 2. Then the campaign, pointed at that list. Created as DRAFT  sending is a separate,
       //    explicitly approved act on the campaign page.
       const res = await fetch("/api/communication/campaigns", {
         method: "POST",
@@ -165,7 +165,7 @@ export function NewCampaignWizard() {
                 <span className="text-[11px] leading-5 text-slate-500">
                   {id === "EMAIL" && "موضوع ومحتوى كامل، ويدعم الفتح والنقر في التقارير."}
                   {id === "WHATSAPP" && "يتطلّب قالبًا معتمدًا من Meta وموافقة صريحة من المتبرع."}
-                  {id === "SMS" && "نص فقط، ويُحاسب بالمقطع — العربية ٧٠ حرفًا للمقطع."}
+                  {id === "SMS" && "نص فقط، ويُحاسب بالمقطع  العربية ٧٠ حرفًا للمقطع."}
                 </span>
               </button>
             );
@@ -234,7 +234,7 @@ export function NewCampaignWizard() {
             <p className="flex items-start gap-1.5 rounded-lg border border-amber-200 bg-amber-50 p-2.5 text-[11px] leading-5 text-amber-900">
               <TriangleAlert className="mt-0.5 h-3.5 w-3.5 shrink-0" />
               هذا القالب متوفّر بلغة واحدة فقط. المتبرعون بلغات أخرى سيستلمونه بالنسخة الافتراضية
-              (العربية) — أضف ترجمات للقالب إن أردت أن يصل كلٌّ بلغته.
+              (العربية)  أضف ترجمات للقالب إن أردت أن يصل كلٌّ بلغته.
             </p>
           )}
         </div>
@@ -244,7 +244,7 @@ export function NewCampaignWizard() {
         <div className="space-y-4">
           <div className="space-y-1.5">
             <label className="text-xs font-medium text-slate-600">اسم الحملة (داخلي)</label>
-            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="مثال: حملة رمضان — المتبرعون النشطون" />
+            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="مثال: حملة رمضان  المتبرعون النشطون" />
           </div>
           <DonorPicker channel={channel} selected={selected} onChange={setSelected} />
         </div>

@@ -1,5 +1,5 @@
 /**
- * Reconciliation engine — joins site donations (financial source of truth)
+ * Reconciliation engine  joins site donations (financial source of truth)
  * with platform snapshots to produce one row per group with site metrics +
  * platform metrics + difference + a structured "likely reason" code.
  *
@@ -91,7 +91,7 @@ export interface ReconcileRow {
 
 export interface ReconcileResult {
   rows: ReconcileRow[];
-  /** Convenience: true when no snapshots existed for the period — the UI hides spend cols. */
+  /** Convenience: true when no snapshots existed for the period  the UI hides spend cols. */
   hasPlatformData: boolean;
   hasMessagingData: boolean;
 }
@@ -189,7 +189,7 @@ export async function reconcile(filters: ReconcileFilters): Promise<ReconcileRes
     return { rows: [], hasPlatformData: false, hasMessagingData: false };
   }
 
-  // 1. Donations in the window — apply platform filter via attribution resolver later.
+  // 1. Donations in the window  apply platform filter via attribution resolver later.
   const donations = await prisma.donation.findMany({
     where: {
       status: "PAID",
@@ -606,8 +606,8 @@ export async function reconcile(filters: ReconcileFilters): Promise<ReconcileRes
 
 export const LIKELY_REASON_LABEL_AR: Record<ReconcileLikelyReason, string> = {
   matched: "متطابق",
-  platform_higher_likely_view_through: "المنصة أعلى — على الأرجح view-through",
-  site_higher_likely_missing_platform_attribution: "الموقع أعلى — المنصة قد لا تنسب التحويلات",
+  platform_higher_likely_view_through: "المنصة أعلى  على الأرجح view-through",
+  site_higher_likely_missing_platform_attribution: "الموقع أعلى  المنصة قد لا تنسب التحويلات",
   utm_only_no_click_id: "UTM فقط بدون click id",
   missing_capi: "CAPI ناقص",
   attribution_window_difference: "اختلاف نافذة الإسناد",

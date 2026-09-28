@@ -9,7 +9,7 @@ import { localeForCountry } from './lib/geo/country-to-locale';
 import { SUPPORTED_LOCALES, DEFAULT_LOCALE } from './lib/locales';
 import { redirectLegacyPath } from './lib/minbar/slug-routing';
 
-// Single source of truth (enabled/public locales) — see `lib/locales.ts`.
+// Single source of truth (enabled/public locales)  see `lib/locales.ts`.
 const LOCALES = SUPPORTED_LOCALES;
 const LOCALE_IN_PATH_RE = new RegExp(`^/(${SUPPORTED_LOCALES.join('|')})(/|$)`);
 
@@ -31,10 +31,10 @@ function countryFromHeaders(req: NextRequest): string | null {
 }
 
 // Next 16 `proxy` (the former `middleware`). It runs on the Node.js runtime, not the
-// Edge runtime — the Edge deployment on Vercel failed at invocation with
+// Edge runtime  the Edge deployment on Vercel failed at invocation with
 // MIDDLEWARE_INVOCATION_FAILED while the same code passes under `next start`.
 //
-// Runs before SSR so the page renders with `currency` already in cookies —
+// Runs before SSR so the page renders with `currency` already in cookies 
 // otherwise scripts/pixels would fire with the default (USD) before the
 // client-side `?currency=` sync catches up.
 export default function proxy(req: NextRequest) {
@@ -54,8 +54,8 @@ export default function proxy(req: NextRequest) {
   }
 
   // Every page has one slug in every locale. The Arabic spellings the site
-  // used to have are still indexed and shared, so a request for one — under
-  // any locale prefix — is 301'd to the canonical URL (`lib/minbar/slug-routing`).
+  // used to have are still indexed and shared, so a request for one  under
+  // any locale prefix  is 301'd to the canonical URL (`lib/minbar/slug-routing`).
   const legacy = redirectLegacyPath(pathname);
   if (legacy) {
     const url = req.nextUrl.clone();
@@ -65,8 +65,8 @@ export default function proxy(req: NextRequest) {
 
   // The 404 boundary renders outside the `[locale]` segment, so it has no
   // route params and next-intl's server APIs are unavailable there. Writing
-  // the locale onto the request cookies — the same trick this file already
-  // uses for currency — lets it read the locale on the very first request,
+  // the locale onto the request cookies  the same trick this file already
+  // uses for currency  lets it read the locale on the very first request,
   // before next-intl's own response cookie has reached the browser.
   const localeInPath = pathname.match(LOCALE_IN_PATH_RE)?.[1];
   if (localeInPath) req.cookies.set('NEXT_LOCALE', localeInPath);

@@ -6,7 +6,7 @@ import { REFERRAL_COOKIE_NAME, isValidReferralCode } from "@/lib/referral";
 /** Default cookie expiry in days when API is unavailable. */
 const DEFAULT_COOKIE_DAYS = 30;
 
-/** Max-age in seconds for "unlimited" (0 days) — ~10 years. */
+/** Max-age in seconds for "unlimited" (0 days)  ~10 years. */
 const UNLIMITED_MAX_AGE = 10 * 365 * 24 * 60 * 60;
 
 /**

@@ -11,10 +11,10 @@ import {
 } from "./communication-runtime-types";
 
 /**
- * SenderService — CRUD for CommunicationSender rows and a bridge that maps a stored sender
+ * SenderService  CRUD for CommunicationSender rows and a bridge that maps a stored sender
  * into the pure `CommunicationSenderConfig` the sender-router consumes. Server-side only.
  * No provider tokens are stored here; Meta/Twilio credentials live in the provider connection
- * / environment and are read by the (future) provider adapters — never surfaced to the client.
+ * / environment and are read by the (future) provider adapters  never surfaced to the client.
  */
 
 type Actor = { actorId?: string | null; actorName?: string | null; actorRole?: string | null } | null;

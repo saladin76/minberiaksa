@@ -13,9 +13,9 @@ import {
 } from "@/lib/content/faq-write";
 
 /**
- * GET  /api/faqs — the public list. `?page=` narrows to one page of the site;
+ * GET  /api/faqs  the public list. `?page=` narrows to one page of the site;
  *      entries with no page are general and are always included.
- * POST /api/faqs — create, dashboard only.
+ * POST /api/faqs  create, dashboard only.
  */
 export async function GET(request: NextRequest) {
   try {

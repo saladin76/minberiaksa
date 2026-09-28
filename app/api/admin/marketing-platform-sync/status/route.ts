@@ -44,7 +44,7 @@ export async function GET(request: NextRequest) {
     take: 100,
   });
 
-  // Hydrate connection names (best-effort — connections may be archived).
+  // Hydrate connection names (best-effort  connections may be archived).
   const connectionIds = Array.from(
     new Set(runs.map((r) => r.connectionId).filter((v): v is string => !!v))
   );

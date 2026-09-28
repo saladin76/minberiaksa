@@ -118,7 +118,7 @@ const formSchema = z
   fundraisingMode: z.enum(['AMOUNT', 'SHARES']),
   sharePriceUSD: z.number().min(0).max(1000000).optional(),
   // Many-to-many: at least one category required. A campaign can belong to
-  // any number of categories — each one will list the campaign on its page.
+  // any number of categories  each one will list the campaign on its page.
   categoryIds: z.array(z.string().min(1)).min(1, 'حمله واحدة على الأقل مطلوبة'),
   isActive: z.boolean(),
   images: z.array(z.string())
@@ -127,7 +127,7 @@ const formSchema = z
   videoUrl: z.string().optional(),
   currentAmount: z.number().min(0).max(1000000).optional(),
 
-  /* One title / cover / video override per translation locale — generated
+  /* One title / cover / video override per translation locale  generated
      from the locale list rather than spelled out, so a new language is a
      new tab without a schema edit. English is required; see superRefine. */
   ...LOCALE_SHAPE,
@@ -275,7 +275,7 @@ export default function NewCampaignPage() {
 
         // English is always sent (required); every other locale only when it
         // has both a title and a description. Per-locale image/videoUrl are
-        // optional overrides — sent through whenever provided.
+        // optional overrides  sent through whenever provided.
         translations: Object.fromEntries(
           TRANSLATION_LOCALES.flatMap((locale) => {
             const title = String(values[localeKey('title', locale)] ?? '').trim();
@@ -317,7 +317,7 @@ export default function NewCampaignPage() {
     }
   };
 
-  // Per-locale single-image upload (optional override — fallback is the main Arabic cover).
+  // Per-locale single-image upload (optional override  fallback is the main Arabic cover).
   const [uploadingLocale, setUploadingLocale] = useState<null | TranslationLocale>(null);
 
   type LocaleImageKey = `image_${TranslationLocale}`;
@@ -365,11 +365,11 @@ export default function NewCampaignPage() {
   const renderLocaleMedia = (locale: TranslationLocale) => {
     const name = localeNativeLabel(locale);
     const labels = {
-      image: `صورة الغلاف (${name}) — اختيارية`,
+      image: `صورة الغلاف (${name})  اختيارية`,
       imageHint: `رفع غلاف ${name}`,
-      video: `رابط الفيديو (${name}) — اختياري`,
+      video: `رابط الفيديو (${name})  اختياري`,
       videoHint: `رابط فيديو خاص بهذه اللغة.`,
-      optionalNote: 'الصورة ورابط الفيديو هنا اختياريان — يحلّان محل الغلاف/الفيديو العربي فقط عند تعبئتهما. الصورة الرئيسية العربية (≥ 1) هي المطلوبة وحدها.',
+      optionalNote: 'الصورة ورابط الفيديو هنا اختياريان  يحلّان محل الغلاف/الفيديو العربي فقط عند تعبئتهما. الصورة الرئيسية العربية (≥ 1) هي المطلوبة وحدها.',
     };
     const direction = 'rtl' as const;
     const imageKey = `image_${locale}` as LocaleImageKey;
@@ -435,7 +435,7 @@ export default function NewCampaignPage() {
                 </div>
               </FormControl>
               <FormDescription className="text-xs">
-                {labels.imageHint} — 1200×675 (16:9), JPG/PNG, ≤ 2MB.
+                {labels.imageHint}  1200×675 (16:9), JPG/PNG, ≤ 2MB.
               </FormDescription>
             </FormItem>
           )}
@@ -699,7 +699,7 @@ const getTranslationStatus = () => {
                             </div>
                           )}
                           <FormDescription className="text-xs">
-                            يمكن للمشروع أن ينتمي لأكثر من حملة — سيظهر في صفحة كل
+                            يمكن للمشروع أن ينتمي لأكثر من حملة  سيظهر في صفحة كل
                             حملة مختارة.
                           </FormDescription>
                           <FormMessage />

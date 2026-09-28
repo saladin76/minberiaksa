@@ -1,9 +1,9 @@
 /**
- * Shaping for the two document sections — reports ("التقارير") and booklets
+ * Shaping for the two document sections  reports ("التقارير") and booklets
  * ("كتيبات المؤسسة").
  *
  * They share a module because they are the same row with one difference: a
- * report carries a publication `year`. They do NOT share routes or a select —
+ * report carries a publication `year`. They do NOT share routes or a select 
  * `translation-write.ts` explains why the nested translation writes stay
  * spelled out per model with concrete field names.
  */

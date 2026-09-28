@@ -2,7 +2,7 @@ import type { CSSProperties } from "react";
 import type { ThanksCertificateProps } from "./ThanksCertificate";
 
 /**
- * The thank-you certificate, portrait — `شهادة الشكر - احتياطي بالطول.dc.html`.
+ * The thank-you certificate, portrait  `شهادة الشكر - احتياطي بالطول.dc.html`.
  *
  * The alternate layout: the landscape sheet is the one issued to donors and
  * emailed; this one is offered inside the dashboard only, for an admin who

@@ -78,6 +78,6 @@ export async function POST(request: NextRequest) {
     await logSentMessage({ channel: "EMAIL", origin: "MANUAL", status, templateId: template.id, templateName: template.name, locale, recipientUserId: ctx.user.id, recipientEmail: ctx.user.email, recipientName: ctx.user.name || null, renderedSubject: subject, renderedBody: html, variables: ctx as unknown as Prisma.InputJsonValue, errorMessage: result.ok ? null : result.reason, providerMessageId: result.ok ? result.providerMessageId : null, actorId: actor.actorId ?? null, actorName: actor.actorName ?? null });
   }
 
-  await writeAuditLog({ ...actor, action: "EMAIL_TEMPLATE_SEND", messageAr: `أرسل قالب بريد «${template.name}» — نجح ${sent} / تخطّي ${skipped} / فشل ${failed.length}`, entityType: "EmailTemplate", entityId: template.id, metadata: { target: target.kind, total: userIds.length, sent, skipped, failed: failed.length, localeOverride: parsed.data.locale ?? null }, stream: "TEAM" });
+  await writeAuditLog({ ...actor, action: "EMAIL_TEMPLATE_SEND", messageAr: `أرسل قالب بريد «${template.name}»  نجح ${sent} / تخطّي ${skipped} / فشل ${failed.length}`, entityType: "EmailTemplate", entityId: template.id, metadata: { target: target.kind, total: userIds.length, sent, skipped, failed: failed.length, localeOverride: parsed.data.locale ?? null }, stream: "TEAM" });
   return NextResponse.json({ total: userIds.length, sent, skipped, failed });
 }

@@ -26,7 +26,7 @@ type SortKey = "priority" | "createdAt" | "body";
  *
  * MongoDB orders null and missing values before real dates, so ascending `repliedAt` puts every
  * unanswered message ahead of every answered one; the `createdAt` tiebreak then orders that
- * unanswered block oldest-first — whoever has been waiting longest is at the top. Doing it in
+ * unanswered block oldest-first  whoever has been waiting longest is at the top. Doing it in
  * one query (rather than two, or a fetch-then-sort) is what keeps pagination honest.
  */
 const PRIORITY_ORDER_BY = [{ repliedAt: "asc" as const }, { createdAt: "asc" as const }];

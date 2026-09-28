@@ -8,7 +8,7 @@ import { checkPlanProviderState } from "@/lib/donations/subscription-provider-co
 export const dynamic = "force-dynamic";
 
 /**
- * GET /api/admin/subscriptions/[id]/provider-state — read-only.
+ * GET /api/admin/subscriptions/[id]/provider-state  read-only.
  *
  * Compares the plan's local status with what the payment provider says, so the
  * monthly dashboard can show a SYNC ERROR instead of trusting either side.

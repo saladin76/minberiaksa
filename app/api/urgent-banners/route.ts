@@ -14,11 +14,11 @@ import { listBanners } from "@/lib/minbar/banners";
 import type { BannerSlotKey } from "@/lib/minbar/banner-placements";
 
 /**
- * GET  /api/urgent-banners?locale=&page=&slot= — the live banners for one slot
+ * GET  /api/urgent-banners?locale=&page=&slot=  the live banners for one slot
  *      of one page, resolved for the locale, in drag order. This is what the
  *      site's `<PageBanners>` reads on the server; it is public so a client
  *      can read the same list.
- * POST /api/urgent-banners — create, dashboard only.
+ * POST /api/urgent-banners  create, dashboard only.
  */
 export async function GET(request: NextRequest) {
   try {

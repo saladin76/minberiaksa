@@ -2,7 +2,7 @@
 //
 // The schema stores `categoryIds: String[]` on Campaign (mirrored as `campaignIds`
 // on Category, managed implicitly by Prisma). Per-category ordering lives in
-// `categoryPriorities` as `{ [categoryId]: number }` — lower number = higher
+// `categoryPriorities` as `{ [categoryId]: number }`  lower number = higher
 // priority on that category's page; absent key = unprioritized for that category.
 
 import type { Prisma } from "@prisma/client";

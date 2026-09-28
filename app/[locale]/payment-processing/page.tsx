@@ -13,7 +13,7 @@ interface Props {
 const NAMESPACES = ["system"] as const;
 
 /**
- * Payment processing — ported from `Minbar/معالجة الدفع.dc.html`.
+ * Payment processing  ported from `Minbar/معالجة الدفع.dc.html`.
  *
  * Shown while the gateway settles. There is deliberately no retry button: a
  * second attempt during settlement is how a donor gets charged twice.

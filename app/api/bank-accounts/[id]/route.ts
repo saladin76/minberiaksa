@@ -55,7 +55,7 @@ export async function PUT(
     const currencies = parseBankCurrencies(body.currencies);
 
     /* Replacing the currency list with nothing would publish an account no
-       donor can pay into. An absent key is fine — that is the toggle path — but
+       donor can pay into. An absent key is fine  that is the toggle path  but
        an explicit empty list is refused. */
     if (currencies !== undefined && currencies.length === 0) {
       return NextResponse.json(

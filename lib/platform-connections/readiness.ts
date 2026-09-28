@@ -92,7 +92,7 @@ export async function getCommunicationReadiness(): Promise<CommunicationReadines
   if (hasDb()) {
     [sendersWithNumber, sendersMissingNumber, enabledEmailSenders, routingRules] = await Promise.all([
       safeCountValue("readiness.whatsappWithNumber", () => prisma.communicationSender.count({ where: { channel: "WHATSAPP", phoneNumberId: { not: null } } })),
-      // `phoneNumberId: null` alone matches only an EXPLICIT null — in MongoDB a field that
+      // `phoneNumberId: null` alone matches only an EXPLICIT null  in MongoDB a field that
       // was never written is absent, not null, so a sender created without a number would be
       // missed and "senders missing a number" would under-report. See §1.5 of
       // docs/dashboard-completion-roadmap.md. Latent today (0 WhatsApp senders exist), which

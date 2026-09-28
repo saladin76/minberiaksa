@@ -5,7 +5,7 @@ import { findWaqfCertificate } from "@/lib/certificates/documents";
 import { generateWaqfPdf } from "@/lib/certificates/generate";
 
 /**
- * GET /api/certificates/waqf/:certificateId — one waqf certificate as a PDF
+ * GET /api/certificates/waqf/:certificateId  one waqf certificate as a PDF
  * (`شهادة الاوقاف`: the certificate face and the presentation panel on one A4
  * landscape sheet).
  *

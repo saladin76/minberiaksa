@@ -5,7 +5,7 @@ import { authOptions } from "../../auth/[...nextauth]/options";
 import { requireAdminOrDashboardPermission } from "@/lib/dashboard/api-auth";
 
 /**
- * GET /api/reports/admin — the dashboard listing.
+ * GET /api/reports/admin  the dashboard listing.
  *
  * Unlike the public `/api/reports` this returns unpublished rows, so it sits
  * behind the same permission gate as the rest of the dashboard.

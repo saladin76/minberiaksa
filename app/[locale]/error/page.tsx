@@ -13,7 +13,7 @@ interface Props {
 const NAMESPACES = ["system"] as const;
 
 /**
- * Technical error — ported from `Minbar/خطأ تقني.dc.html`.
+ * Technical error  ported from `Minbar/خطأ تقني.dc.html`.
  *
  * For a fault on our side. It offers a way home and a way to reach us, and
  * says nothing about what went wrong internally.

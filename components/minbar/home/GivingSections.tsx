@@ -12,7 +12,7 @@ import { miaPath } from "@/lib/minbar/routes";
 
 /* ── Waqf ───────────────────────────────────────────────────────────────────
  * The eight areas of continuing benefit are approved interface copy translated
- * in full, not dashboard content — they name the endowment's own programmes. */
+ * in full, not dashboard content  they name the endowment's own programmes. */
 export function WaqfSection() {
   const locale = useLocale();
   const t = useTranslations("homepage");

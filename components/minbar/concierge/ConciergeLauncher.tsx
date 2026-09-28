@@ -33,8 +33,8 @@ function writeFlag(storage: "local" | "session", key: string): void {
 /**
  * The donation concierge's entry point and panel.
  *
- * A pill in the bottom inline-end corner — stacked above the quick-donation
- * pill on the pages that carry it — opens a sheet: full-height from the
+ * A pill in the bottom inline-end corner  stacked above the quick-donation
+ * pill on the pages that carry it  opens a sheet: full-height from the
  * bottom on a phone, a side panel on wider screens. It never opens by itself;
  * the project page and other CTAs open it through `openConcierge()`.
  *
@@ -83,7 +83,7 @@ export default function ConciergeLauncher() {
   const threadRef = useRef<HTMLDivElement>(null);
 
   /* Bring the visitor's latest message to the top of the thread, so the
-     reply unfolds beneath it and is read from its first line — not from
+     reply unfolds beneath it and is read from its first line  not from
      the bottom of a long answer. Before any message, the top of the panel. */
   useEffect(() => {
     if (!open) return;
@@ -292,7 +292,7 @@ function SparkGlyph() {
   );
 }
 
-/** Two open hands under a small crescent — giving, not a robot. */
+/** Two open hands under a small crescent  giving, not a robot. */
 function ConciergeGlyph() {
   return (
     <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">

@@ -2,7 +2,7 @@
  * Read-failure-aware counting.
  *
  * The dashboard was littered with `prisma.x.count({...}).catch(() => 0)`. That pattern makes a
- * database outage, a Prisma validation error, or a schema drift render as **0** — visually
+ * database outage, a Prisma validation error, or a schema drift render as **0**  visually
  * identical to a healthy, quiet system. "0 failed deliveries" and "0 campaigns awaiting
  * review" are exactly the numbers an operator trusts to mean "nothing needs me", so a broken
  * read produced false reassurance rather than an alarm.
@@ -14,7 +14,7 @@
  *      a confident "0" now can.
  *
  * Callers that genuinely only need a number can use `safeCountValue`, which preserves the old
- * `0` fallback — but still logs, so the failure is no longer silent.
+ * `0` fallback  but still logs, so the failure is no longer silent.
  */
 
 export type SafeCount =
@@ -35,7 +35,7 @@ export async function safeCount(label: string, run: () => Promise<number>): Prom
 
 /**
  * Same as `safeCount` but collapses to a plain number, matching the old `.catch(() => 0)`
- * shape. Use when the caller's response type cannot yet carry a failure flag — the failure is
+ * shape. Use when the caller's response type cannot yet carry a failure flag  the failure is
  * still logged rather than discarded.
  */
 export async function safeCountValue(label: string, run: () => Promise<number>): Promise<number> {

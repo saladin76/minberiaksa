@@ -3,14 +3,14 @@
  *
  * A placement is `"<page>:<slot>"`. The dashboard offers exactly the pairs
  * listed here and nothing else, and every pair here is mounted by a page under
- * `app/[locale]` — so an editor is never offered a slot that renders nowhere.
+ * `app/[locale]`  so an editor is never offered a slot that renders nowhere.
  * Adding a page means adding it here AND mounting `<PageBanners>` on it.
  *
  * `all` is a pseudo-page: a banner placed on `all:top` shows in the top slot
  * of every page that has one. It is resolved at read time
  * (`lib/minbar/banners.ts`), never stored expanded.
  *
- * Pure module — shared by the dashboard form, the API and the site.
+ * Pure module  shared by the dashboard form, the API and the site.
  */
 
 export type BannerSlotKey = "top" | "middle" | "bottom";
@@ -26,17 +26,17 @@ export interface BannerPage {
   slots: BannerSlot[];
 }
 
-const TOP: BannerSlot = { key: "top", label: "أعلى الصفحة — قبل المحتوى" };
-const BOTTOM: BannerSlot = { key: "bottom", label: "أسفل الصفحة — قبل التذييل" };
+const TOP: BannerSlot = { key: "top", label: "أعلى الصفحة  قبل المحتوى" };
+const BOTTOM: BannerSlot = { key: "bottom", label: "أسفل الصفحة  قبل التذييل" };
 
 export const BANNER_PAGES: readonly BannerPage[] = [
   {
     key: "home",
     label: "الصفحة الرئيسية",
     slots: [
-      { key: "top", label: "بعد الآية — قبل المشاريع العاجلة" },
-      { key: "middle", label: "وسط الصفحة — قبل شدّ الرحال" },
-      { key: "bottom", label: "أسفل الصفحة — قبل المدونة" },
+      { key: "top", label: "بعد الآية  قبل المشاريع العاجلة" },
+      { key: "middle", label: "وسط الصفحة  قبل شدّ الرحال" },
+      { key: "bottom", label: "أسفل الصفحة  قبل المدونة" },
     ],
   },
   { key: "projects", label: "المشاريع", slots: [TOP, BOTTOM] },
@@ -97,5 +97,5 @@ export function describePlacement(key: string): string {
   const p = BANNER_PAGES.find((x) => x.key === page);
   const s = p?.slots.find((x) => x.key === slot);
   if (!p || !s) return key;
-  return `${p.label} · ${s.label.split(" — ")[0]}`;
+  return `${p.label} · ${s.label.split("  ")[0]}`;
 }

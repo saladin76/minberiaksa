@@ -27,7 +27,7 @@ interface DispatchResult { triggers: number; emailsSent: number; whatsappSent: n
  * This used to be a single resolved identity, picked before any recipient was known: the first
  * enabled WhatsApp sender with a phone number, and the first enabled email sender. Every donor in a
  * batch therefore got the same number regardless of their locale or country, while a campaign to
- * those same donors routed properly — so one donor could hold two WhatsApp threads with the
+ * those same donors routed properly  so one donor could hold two WhatsApp threads with the
  * organisation, one per code path. The snapshot is read once, as before, but the DECISION is now
  * made per recipient by `lib/communication/sender-resolution.ts`, the one resolver every outbound
  * path shares.
@@ -160,13 +160,13 @@ export async function dispatchEvent(event: MessageTriggerEvent, input: EventDisp
     if (!triggers.length) return result;
     const ctx: TemplateContext | null = input.donationId ? await loadContextForDonation(input.donationId) : input.userId ? await loadContext(input.userId) : null;
     if (!ctx) {
-      await writeAuditLog({ actorRole: "SYSTEM", action: "EVENT_DISPATCH_NO_CONTEXT", messageAr: `تعذّر إرسال الرسائل التلقائية عند «${triggerEventLabelAr(event)}» — بيانات المستلم غير متاحة`, metadata: { event, ...input }, stream: "TEAM" });
+      await writeAuditLog({ actorRole: "SYSTEM", action: "EVENT_DISPATCH_NO_CONTEXT", messageAr: `تعذّر إرسال الرسائل التلقائية عند «${triggerEventLabelAr(event)}»  بيانات المستلم غير متاحة`, metadata: { event, ...input }, stream: "TEAM" });
       return result;
     }
     const locale = pickLocale({ recipientLang: ctx.user.preferredLang });
     const config = await resolveTriggerSendConfig();
     /* CERTIFICATES_DOWNLOADS_HANDOFF §7: the confirmation email carries the
-       real PDFs — thank-you certificate, receipt, any waqf certificate — not
+       real PDFs  thank-you certificate, receipt, any waqf certificate  not
        just links. Generated once here and attached to every EMAIL trigger of
        the event. A rendering failure is logged and the email still goes out
        with its links; the documents stay downloadable from the success page. */
@@ -190,7 +190,7 @@ export async function dispatchEvent(event: MessageTriggerEvent, input: EventDisp
       }
     }
     // Only record a dispatch that actually did something. A trigger that matched
-    // no recipient produced «حدث تلقائي DONATION_FAILED — 0 بريد، 0 واتساب»,
+    // no recipient produced «حدث تلقائي DONATION_FAILED  0 بريد، 0 واتساب»,
     // which says nothing and drowned the rows that do.
     const didSomething = result.emailsSent > 0 || result.whatsappSent > 0 || result.errors > 0;
     if (didSomething) {
@@ -203,7 +203,7 @@ export async function dispatchEvent(event: MessageTriggerEvent, input: EventDisp
         actorRole: "SYSTEM",
         action: "EVENT_DISPATCH",
         // The raw enum key used to leak into the message; label it instead.
-        messageAr: `رسائل تلقائية عند «${triggerEventLabelAr(event)}» — ${parts.join("، ")}`,
+        messageAr: `رسائل تلقائية عند «${triggerEventLabelAr(event)}»  ${parts.join("، ")}`,
         metadata: { event, ...input, ...result },
         stream: "TEAM",
       });
@@ -227,7 +227,7 @@ async function donationPaidAttachments(donationId: string): Promise<EmailAttachm
 }
 
 export async function dispatchDonationPaid(donationId: string): Promise<void> {
-  /* Serials are minted here, at confirmation, before anything is sent —
+  /* Serials are minted here, at confirmation, before anything is sent 
      `DONATION_LOGIC_SPEC §2`. Idempotent: a replayed webhook finds the same
      records. A failure is logged and never blocks the notifications. */
   try {

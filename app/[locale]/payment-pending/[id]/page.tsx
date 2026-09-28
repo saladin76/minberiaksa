@@ -28,7 +28,7 @@ const NAMESPACES = ["transferReceipt", "cart"] as const;
  * Reached from the checkout redirect and from every status email, so it
  * carries the whole life of the transfer rather than one moment of it. A
  * guest proves the order is theirs with the `?t=` token; a signed-in donor
- * with their session. Anyone else gets a refusal, not a 404 — the order
+ * with their session. Anyone else gets a refusal, not a 404  the order
  * exists, this link just is not theirs.
  *
  * Never indexed: per-donor, reachable by id (`PRODUCTION_SEO_CONTRACT.md`).

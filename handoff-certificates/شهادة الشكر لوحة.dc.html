@@ -75,28 +75,28 @@
 </x-dc>
 <script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1060,&quot;height&quot;:750},&quot;donorName&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;بيانات المتبرع&quot;},&quot;title&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;شكر وتقدير&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;النصوص&quot;},&quot;verse&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;النصوص&quot;},&quot;body&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;النصوص&quot;},&quot;duaVerse&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;النصوص&quot;},&quot;duaText&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;النصوص&quot;},&quot;motto&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;لنكن للقدس منبرًا&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;النصوص&quot;}}">
 /*
- * لوحة شهادة الشكر (Certificate Sheet) — مكوّن ورقة الشهادة فقط
+ * لوحة شهادة الشكر (Certificate Sheet)  مكوّن ورقة الشهادة فقط
  * --------------------------------------------------------------
  * هذا المكوّن يحتوي ورقة الشهادة وحدها: بلا أزرار، وبلا أي تنسيق يمسّ
- * صفحة المضيف (لا body ولا @page) — لذلك يمكن تضمينه بأمان داخل أي صفحة.
+ * صفحة المضيف (لا body ولا @page)  لذلك يمكن تضمينه بأمان داخل أي صفحة.
  *
  * من يستخدمه:
- *   - «شهادة الشكر عرضية.dc.html» — الصفحة المستقلة المعتمدة للطباعة (تضيف
+ *   - «شهادة الشكر عرضية.dc.html»  الصفحة المستقلة المعتمدة للطباعة (تضيف
  *     أزرار الطباعة وقواعد @page الخاصة بها فوق هذا المكوّن).
- *   - «نجاح التبرع.dc.html» — معاينة حيّة للشهادة داخل صفحة نجاح التبرع.
+ *   - «نجاح التبرع.dc.html»  معاينة حيّة للشهادة داخل صفحة نجاح التبرع.
  *
  * ربط الداشبورد: كل النصوص props (verse/title/body/duaVerse/duaText/motto…)
  * وتُحقن من الخادم بعد نجاح التبرع؛ donorName يأتي من اسم المتبرع في بيانات
- * الدفع ويمكن للمتبرع تعديله قبل التحميل — لا نصوص افتراضية مقفلة في الكود.
+ * الدفع ويمكن للمتبرع تعديله قبل التحميل  لا نصوص افتراضية مقفلة في الكود.
  */
 class Component extends DCLogic {
   /* النصوص الثابتة تُترجَم من حزمة certificates؛ الآيتان تبقيان بالعربية دائمًا
-     (قاعدة i18n/quran.json — النص القرآني أصل لا يُترجَم داخل الشهادة). */
+     (قاعدة i18n/quran.json  النص القرآني أصل لا يُترجَم داخل الشهادة). */
   tr(key, arFallback) {
     const g = window.MIA_I18N;
     return (g && g.t("certificates", key)) || arFallback;
   }
-  /* الاتجاه من اللغة النشطة — rtl للعربية والأوردية فقط. */
+  /* الاتجاه من اللغة النشطة  rtl للعربية والأوردية فقط. */
   certDir() {
     let l = "ar";
     try { l = localStorage.getItem("mia.lang") || "ar"; } catch (e) {}

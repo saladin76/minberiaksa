@@ -2,7 +2,7 @@ import type { CSSProperties } from "react";
 import type { WaqfCopy } from "@/lib/certificates/copy-defaults";
 
 /**
- * The official waqf certificate — `handoff-certificates/شهادة الاوقاف.dc.html`.
+ * The official waqf certificate  `handoff-certificates/شهادة الاوقاف.dc.html`.
  *
  * One A4 landscape sheet, two panels side by side: the certificate on its
  * official gold frame (the frame, tughra, title logotype, seal and director's
@@ -26,7 +26,7 @@ export interface WaqfCertificateSheetProps {
   total: string;
   donorName: string;
   onBehalf: string;
-  /** The issued number — or a marked preview value before payment. */
+  /** The issued number  or a marked preview value before payment. */
   certNo: string;
   certDate: string;
   copy: WaqfCopy;
@@ -79,7 +79,7 @@ export default function WaqfCertificateSheet({
   const showArabicTitle = locale === "ar";
   const endowedLine = isShare ? copy.endowedShares : copy.endowedMeters;
   const countLabel = isShare ? copy.countShares : copy.countMeters;
-  /* "سهم وقفي" is teal, "متر وقفي" maroon — the official identities of the two
+  /* "سهم وقفي" is teal, "متر وقفي" maroon  the official identities of the two
      printed certificates, never unified. */
   const titleColor = isShare ? "rgb(0,96,96)" : "rgb(176,64,48)";
 
@@ -171,7 +171,7 @@ export default function WaqfCertificateSheet({
               <span style={{ flex: 1, borderBottom: `1px solid ${RULE}`, textAlign: "center", fontWeight: 800 }}>{onBehalf}</span>
             </div>
 
-            {/* The waqf's legal wording — reviewed content, never paraphrased. */}
+            {/* The waqf's legal wording  reviewed content, never paraphrased. */}
             <p style={{ margin: "1.6cqw 0 0", fontFamily: SERIF, fontSize: "clamp(8px,1.72cqw,15px)", fontWeight: 400, lineHeight: 2.3, color: "#1a1a1a", textAlign: "center" }}>{copy.legalText}</p>
           </div>
 
@@ -200,7 +200,7 @@ export default function WaqfCertificateSheet({
           style={{ position: "relative", width: "100%", gridColumn: 2, aspectRatio: "845/1178", containerType: "inline-size", boxSizing: "border-box", display: "grid", alignContent: "center", justifyItems: "center", gap: "5.4cqw", padding: "5% 7%", textAlign: "center" }}
         >
           {/* eslint-disable-next-line @next/next/no-img-element -- the foundation's full logotype */}
-          <img src={asset("waqf-logo-full-hq.png")} alt="مؤسسة منبر الأقصى الدولية — Minber-i Aksâ Derneği" style={{ display: "block", width: "66cqw", maxWidth: 440, height: "auto", marginBottom: "1cqw" }} />
+          <img src={asset("waqf-logo-full-hq.png")} alt="مؤسسة منبر الأقصى الدولية  Minber-i Aksâ Derneği" style={{ display: "block", width: "66cqw", maxWidth: 440, height: "auto", marginBottom: "1cqw" }} />
           {/* eslint-disable-next-line @next/next/no-img-element -- decorative rule */}
           <img src={asset("waqf-divider-rule-hq.png")} alt="" aria-hidden="true" style={{ display: "block", width: "80cqw", maxWidth: 480, height: "auto" }} />
           <p style={{ margin: 0, width: "92%", fontFamily: SANS, fontSize: "clamp(10px,2.9cqw,20px)", fontWeight: 700, lineHeight: 2.05, color: INK }}>{copy.aboutText}</p>

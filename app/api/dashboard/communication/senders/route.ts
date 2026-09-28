@@ -17,7 +17,7 @@ import { getActiveCommunicationRuntimeBundle } from "@/lib/communication/runtime
  * practice every message went out from the single environment default. This is the missing half.
  *
  * Provider credentials are never returned. A sender row holds identifiers (a Meta phone number id, a
- * from-address), not secrets — those live in the integration settings — but the Meta phone number id
+ * from-address), not secrets  those live in the integration settings  but the Meta phone number id
  * is still an account-level identifier, so it is reported only as present/absent.
  */
 
@@ -76,7 +76,7 @@ export async function GET() {
     getActiveCommunicationRuntimeBundle(),
   ]);
 
-  /* The environment defaults are shown because they are what serves a channel with no sender rows —
+  /* The environment defaults are shown because they are what serves a channel with no sender rows 
      the one case the resolver still falls back to them. Presence only, never the values. */
   const environmentDefaults = {
     WHATSAPP: runtime.meta.configured && Boolean(runtime.meta.values.defaultPhoneNumberId),

@@ -110,7 +110,7 @@ const protectedPostConfig = {
 };
 
 /**
- * This file is JavaScript, so TypeScript infers its prop types from the defaults — and `= []`
+ * This file is JavaScript, so TypeScript infers its prop types from the defaults  and `= []`
  * infers as `never[]`, which made every caller passing a real list a type error at the boundary.
  * The JSDoc below is the boundary's declared contract; it costs nothing at runtime.
  *
@@ -225,7 +225,7 @@ const BlogEditor = ({ post, categories, campaignOptions = [], redirectAfterCreat
         router.push(redirectAfterCreate ? `${redirectAfterCreate}/${key}` : `/blog/${key}`);
       } else {
         response = await axios.patch(`/api/posts/${post.id}`, payload);
-        toast.success("تم تحديث المقال بنجاح — أنت ما زلت داخل صفحة التعديل", { id: toastId, duration: 9000 });
+        toast.success("تم تحديث المقال بنجاح  أنت ما زلت داخل صفحة التعديل", { id: toastId, duration: 9000 });
         router.refresh();
       }
     } catch (error) {

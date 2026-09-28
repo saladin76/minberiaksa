@@ -67,7 +67,7 @@ export function sanitizeConciergeSettings(raw: unknown): ConciergeSettings {
   };
 }
 
-/** What the public launcher needs — nothing else leaves the server. */
+/** What the public launcher needs  nothing else leaves the server. */
 export interface PublicConciergeConfig {
   enabled: boolean;
   teaser: boolean;

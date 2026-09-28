@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
+import { getServerSession, type Session } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 import { requireAdminOrDashboardPermission } from "@/lib/dashboard/api-auth";
 import type { DashboardPermissionKey } from "@/lib/dashboard/permissions";
@@ -36,6 +36,8 @@ export async function readJson(request: Request) {
   return request.json().catch(() => ({}));
 }
 
-export function dashboardUser(session: Awaited<ReturnType<typeof getServerSession>>) {
+/* `getServerSession` has an overload that resolves to `{}`, which is what this inferred  so the two
+   reads below were errors even though the shape is right. The Session type states it directly. */
+export function dashboardUser(session: Session | null) {
   return session?.user?.email || session?.user?.name || "dashboard-user";
 }

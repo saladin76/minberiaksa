@@ -22,7 +22,7 @@ async function getOrCreateSettings() {
   return prisma.globalSettings.create({ data: {} });
 }
 
-/** Public GET — exposes only the donation-flow defaults clients need. */
+/** Public GET  exposes only the donation-flow defaults clients need. */
 export async function GET() {
   try {
     const settings = await prisma.globalSettings.findFirst({
@@ -36,7 +36,7 @@ export async function GET() {
       teamSupportEnabled: settings?.teamSupportEnabled ?? true,
       // The basket's cross-sell campaigns; empty means the built-in suggestions.
       cartUpsell: parseCartUpsell(settings?.cartUpsell),
-      // Default true — first read before any record exists must still let
+      // Default true  first read before any record exists must still let
       // PayFor remain available for TRY donors.
       payforEnabled: settings?.payforEnabled ?? true,
       mainGateway: parseMainGateway(settings?.mainGateway),
@@ -56,7 +56,7 @@ export async function GET() {
 }
 
 /**
- * PUT — partial update. Each field has its own permission requirement:
+ * PUT  partial update. Each field has its own permission requirement:
  *   - suggestedTeamSupport → `campaigns` perm
  *   - payforEnabled       → `generalSettings` perm
  *   - mainGateway         → `generalSettings` perm
@@ -137,7 +137,7 @@ export async function PUT(request: NextRequest) {
           { status: 400 }
         );
       }
-      // Refuse to nominate a gateway that can't actually take a payment — without
+      // Refuse to nominate a gateway that can't actually take a payment  without
       // the encryption key every MAC we build would be rejected by the bank, and
       // donors would hit a dead checkout.
       if (body.mainGateway === "ALBARAKA" && !isAlbarakaConfigured()) {
@@ -175,7 +175,7 @@ export async function PUT(request: NextRequest) {
         ...actor,
         stream: "TEAM",
         action: "PAYMENT_GATEWAY_UPDATE",
-        messageAr: `${actor.actorName ?? "مسؤول"} غيّر إعدادات الدفع: ${parts.join("، ")}${reason ? ` — السبب: ${reason}` : ""}`,
+        messageAr: `${actor.actorName ?? "مسؤول"} غيّر إعدادات الدفع: ${parts.join("، ")}${reason ? `  السبب: ${reason}` : ""}`,
         messageEn: `${actor.actorName ?? "Admin"} changed payment settings: gateway ${beforeGateway} → ${afterGateway}, PayFor ${beforePayfor} → ${afterPayfor}`,
         entityType: "GlobalSettings",
         entityId: existing.id,

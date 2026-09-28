@@ -1,4 +1,4 @@
-/** Serialized empty TipTap doc — safe fallback when persisting campaign/blog translations. */
+/** Serialized empty TipTap doc  safe fallback when persisting campaign/blog translations. */
 export const EMPTY_TIPTAP_DOC_JSON = JSON.stringify({
   type: "doc",
   content: [{ type: "paragraph" }],
@@ -10,7 +10,7 @@ export const EMPTY_TIPTAP_DOC_JSON = JSON.stringify({
  * Descriptions reach the dashboard in two shapes: a serialized TipTap doc
  * (what the editor emits) and the older plain text / HTML rows that predate
  * the editor. The public page renders both, and the server accepts both, so
- * the forms must count both as content — a legacy string is only empty when
+ * the forms must count both as content  a legacy string is only empty when
  * it is blank. A doc is empty when no text node in the tree has a
  * non-whitespace character; that mirrors `hasMeaningfulEditorContent` in
  * `lib/campaign/admin-create-core.ts`, so the client never blocks a save the
@@ -26,7 +26,7 @@ export function isEditorContentEmpty(value: string | null | undefined): boolean 
   try {
     parsed = JSON.parse(trimmed);
   } catch {
-    // Not JSON after all — a plain description that happens to open with "{".
+    // Not JSON after all  a plain description that happens to open with "{".
     return false;
   }
 

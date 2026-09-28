@@ -13,7 +13,7 @@ import { Button } from "@/components/minbar/ds";
 import { FailIcon, PendingIcon, SuccessIcon } from "@/components/minbar/states/StatusIcons";
 
 /**
- * The donor's side of a bank transfer — `DONATION_LOGIC_SPEC §3`:
+ * The donor's side of a bank transfer  `DONATION_LOGIC_SPEC §3`:
  *
  *   Awaiting receipt → Receipt uploaded → Under review → Confirmed | Rejected
  *
@@ -23,7 +23,7 @@ import { FailIcon, PendingIcon, SuccessIcon } from "@/components/minbar/states/S
  *  - awaiting: the account to transfer to, then the upload form;
  *  - under review: what was sent, what happens next;
  *  - rejected: the finance team's reason, then the form again while attempts
- *    remain — or, once they are used up, the way to reach a human;
+ *    remain  or, once they are used up, the way to reach a human;
  *  - confirmed: the receipt and the donation page.
  *
  * Nothing here is trusted for money: the server re-checks the file, the

@@ -1,6 +1,6 @@
 /**
  * Site-data-only recommendation engine for the Ads Intelligence dashboard.
- * Rules-based and conservative — we don't have platform spend yet, so we
+ * Rules-based and conservative  we don't have platform spend yet, so we
  * never compute CPA/ROAS. Each rule produces a typed card the UI can render
  * with an Arabic title + body.
  *
@@ -27,7 +27,7 @@ export interface Recommendation {
   title: string;
   /** Short Arabic-friendly description of WHY this suggestion fires. */
   body: string;
-  /** Optional target — what entity should the operator look at? */
+  /** Optional target  what entity should the operator look at? */
   target?: {
     type: "platform" | "campaign" | "ad" | "country" | "placement";
     key: string;
@@ -60,7 +60,7 @@ export function computeRecommendations(
 ): Recommendation[] {
   const out: Recommendation[] = [];
 
-  // Rule 1 — INCREASE BUDGET: ads with strong tracking + high success rate
+  // Rule 1  INCREASE BUDGET: ads with strong tracking + high success rate
   // and meaningful revenue share. We use a relative cutoff so the rule still
   // fires on small windows.
   if (input.totalRevenueUSD > 0) {
@@ -80,7 +80,7 @@ export function computeRecommendations(
         kind: "increase_budget",
         severity: "positive",
         title: "زود الصرف هنا",
-        body: "إعلان بإيرادات عالية وثقة تتبع جيدة ومعدل دفع ناجح — مرشح لزيادة الميزانية.",
+        body: "إعلان بإيرادات عالية وثقة تتبع جيدة ومعدل دفع ناجح  مرشح لزيادة الميزانية.",
         target: {
           type: "ad",
           key: r.key,
@@ -95,7 +95,7 @@ export function computeRecommendations(
     }
   }
 
-  // Rule 2 — DECREASE BUDGET: ads with high failed-attempt ratio and almost
+  // Rule 2  DECREASE BUDGET: ads with high failed-attempt ratio and almost
   // no revenue. We require at least some volume so noise rows don't surface.
   for (const r of input.ads) {
     if (r.totalAttempts < 5) continue;
@@ -106,7 +106,7 @@ export function computeRecommendations(
       kind: "decrease_budget",
       severity: "warning",
       title: "قلل الصرف هنا",
-      body: "إعلان به محاولات فاشلة كثيرة وقليل من التبرعات الناجحة — يستهلك ميزانية بلا عائد.",
+      body: "إعلان به محاولات فاشلة كثيرة وقليل من التبرعات الناجحة  يستهلك ميزانية بلا عائد.",
       target: { type: "ad", key: r.key, label: r.label },
       metrics: [
         { label: "محاولات", value: String(r.totalAttempts) },
@@ -117,18 +117,18 @@ export function computeRecommendations(
     if (out.filter((r) => r.kind === "decrease_budget").length >= 3) break;
   }
 
-  // Rule 3 — INVESTIGATE TRACKING: campaign with many donations but
+  // Rule 3  INVESTIGATE TRACKING: campaign with many donations but
   // confidence is in the utm_only / ga4_inferred range.
   for (const r of input.campaigns) {
     if (r.paidCount < 5) continue;
-    if (r.avgConfidence === 0) continue; // organic — not a tracking failure
+    if (r.avgConfidence === 0) continue; // organic  not a tracking failure
     if (r.avgConfidence >= 70) continue;
     out.push({
       id: `inv_track_camp_${r.key}`,
       kind: "investigate_tracking",
       severity: "warning",
       title: "يحتاج فحص تتبع",
-      body: "الحملة تجلب تبرعات لكن متوسط الثقة منخفض — راجع UTMs أو click IDs أو CAPI.",
+      body: "الحملة تجلب تبرعات لكن متوسط الثقة منخفض  راجع UTMs أو click IDs أو CAPI.",
       target: { type: "campaign", key: r.key, label: r.label },
       metrics: [
         { label: "تبرعات", value: String(r.paidCount) },
@@ -138,8 +138,8 @@ export function computeRecommendations(
     if (out.filter((r) => r.kind === "investigate_tracking").length >= 3) break;
   }
 
-  // Rule 4 — PLATFORM_UNDER_CREDITS: a platform we attribute revenue to but
-  // average confidence is below 60 — meaning the platform's own dashboard
+  // Rule 4  PLATFORM_UNDER_CREDITS: a platform we attribute revenue to but
+  // average confidence is below 60  meaning the platform's own dashboard
   // will not see most of our conversions. Suggests fixing pixel/CAPI hookup.
   for (const r of input.platforms) {
     if (r.platform === "organic") continue;
@@ -159,7 +159,7 @@ export function computeRecommendations(
     });
   }
 
-  // Rule 5 — HIGH SPEND LOW CONV: many attempts (clicks reaching donation
+  // Rule 5  HIGH SPEND LOW CONV: many attempts (clicks reaching donation
   // page) but very low paid conversion. We can't see real spend yet, but
   // attempts is a decent proxy for landing-page traffic.
   for (const r of input.campaigns) {
@@ -170,7 +170,7 @@ export function computeRecommendations(
       kind: "high_spend_low_conv",
       severity: "warning",
       title: "إنفاق عالي وتحويل منخفض",
-      body: "محاولات كثيرة لكن قليل منها يتحول لتبرع مدفوع — افحص صفحة الهبوط أو وسيلة الدفع.",
+      body: "محاولات كثيرة لكن قليل منها يتحول لتبرع مدفوع  افحص صفحة الهبوط أو وسيلة الدفع.",
       target: { type: "campaign", key: r.key, label: r.label },
       metrics: [
         { label: "محاولات", value: String(r.totalAttempts) },
@@ -180,7 +180,7 @@ export function computeRecommendations(
     if (out.filter((r) => r.kind === "high_spend_low_conv").length >= 3) break;
   }
 
-  // Rule 6 — PROMISING MARKET: country with above-average revenue share and
+  // Rule 6  PROMISING MARKET: country with above-average revenue share and
   // high payment success rate. Cap to top 3.
   const countryCandidates = [...input.countries]
     .filter(
@@ -198,7 +198,7 @@ export function computeRecommendations(
       kind: "promising_market",
       severity: "positive",
       title: "دولة واعدة",
-      body: "إيرادات عالية ومعدل دفع ناجح في هذه الدولة — فكر في زيادة الاستهداف أو ترجمة محتوى مخصص.",
+      body: "إيرادات عالية ومعدل دفع ناجح في هذه الدولة  فكر في زيادة الاستهداف أو ترجمة محتوى مخصص.",
       target: { type: "country", key: r.key, label: r.label },
       metrics: [
         { label: "إيرادات", value: fmtMoney(r.revenueUSD) },
@@ -207,7 +207,7 @@ export function computeRecommendations(
       ],
     });
   }
-  // Same for placements — a good placement is a high-ROI opportunity even without country.
+  // Same for placements  a good placement is a high-ROI opportunity even without country.
   const placementCandidates = [...input.placements]
     .filter((r) => r.paidCount >= 3 && r.revenueShare >= 0.05)
     .sort((a, b) => b.revenueUSD - a.revenueUSD)
@@ -218,7 +218,7 @@ export function computeRecommendations(
       kind: "promising_market",
       severity: "positive",
       title: "موضع واعد",
-      body: "موضع يجلب تبرعات قوية — فكر في زيادة التخصيص لهذا الموضع.",
+      body: "موضع يجلب تبرعات قوية  فكر في زيادة التخصيص لهذا الموضع.",
       target: { type: "placement", key: r.key, label: r.label },
       metrics: [
         { label: "إيرادات", value: fmtMoney(r.revenueUSD) },

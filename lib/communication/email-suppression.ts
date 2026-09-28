@@ -9,7 +9,7 @@ import type { EmailSuppressionReason } from "./providers/elastic-email/webhook-e
  * delivery row for the one message that triggered it. The donor's
  * `emailNotifications` flag and their `DonorCommunicationProfile.emailOptIn`
  * were untouched, so the audience query kept selecting them and every later
- * campaign mailed someone who had explicitly opted out — the exact behaviour
+ * campaign mailed someone who had explicitly opted out  the exact behaviour
  * that gets a sending domain blocked.
  *
  * Deliberately quiet on failure: this runs inside a webhook that must answer 200
@@ -83,7 +83,7 @@ export async function suppressEmailRecipient(
         console.error("suppressEmailRecipient: profile upsert failed", error);
       });
 
-    // Attributed to the donor, not to SYSTEM — the donor is who performed this,
+    // Attributed to the donor, not to SYSTEM  the donor is who performed this,
     // and it belongs in their activity trail where the team can see it.
     await writeAuditLog({
       actorId: user.id,

@@ -12,13 +12,13 @@ import { cn } from "@/lib/utils";
  * several business numbers, but with no screen to create one, every message in practice left from the
  * single environment default. Two things this deliberately makes visible:
  *
- * The environment default is shown as what it is — the fallback for a channel with *no* senders at
+ * The environment default is shown as what it is  the fallback for a channel with *no* senders at
  * all. Once a sender exists for a channel, routing decides, and a rule that declines to serve a
  * recipient is final. An operator reading this page should be able to predict that.
  *
  * And the preview answers the only question rules exist to answer: which number would serve this
  * locale, country and purpose? It runs through the same resolver the sender uses, so it cannot
- * flatter itself — including by reporting a refusal as a refusal.
+ * flatter itself  including by reporting a refusal as a refusal.
  */
 
 const CHANNELS = ["WHATSAPP", "EMAIL", "SMS"] as const;
@@ -185,14 +185,14 @@ export function SenderRoutingManager() {
                 <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 px-4 py-2.5">
                   <h3 className="text-sm font-bold text-slate-900">{CHANNEL_LABELS[channel]}</h3>
                   {senders.length === 0 ? (
-                    /* Stated plainly, because it is the ONE case the environment default still serves —
+                    /* Stated plainly, because it is the ONE case the environment default still serves 
                        and because adding the first sender changes that behaviour. */
                     <span className={cn(
                       "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-semibold",
                       envDefault ? "border-slate-200 bg-slate-50 text-slate-600" : "border-amber-200 bg-amber-50 text-amber-700",
                     )}>
                       {envDefault ? <ShieldCheck className="w-3 h-3" /> : <TriangleAlert className="w-3 h-3" />}
-                      {envDefault ? "يُستخدم إعداد البيئة" : "لا مُرسِل ولا إعداد بيئة — القناة صامتة"}
+                      {envDefault ? "يُستخدم إعداد البيئة" : "لا مُرسِل ولا إعداد بيئة  القناة صامتة"}
                     </span>
                   ) : (
                     <span className="text-[11px] text-slate-500">{senders.length} مُرسِل</span>
@@ -282,7 +282,7 @@ export function SenderRoutingManager() {
             {showRuleForm && <RuleForm senders={data.senders} onDone={async () => { setShowRuleForm(false); await load(); }} />}
             {data.rules.length === 0 ? (
               <p className="px-4 py-4 text-xs text-slate-500">
-                لا قواعد — يُختار المُرسِل بمطابقة قدراته ثم بالمُرسِل الافتراضي للقناة.
+                لا قواعد  يُختار المُرسِل بمطابقة قدراته ثم بالمُرسِل الافتراضي للقناة.
               </p>
             ) : (
               <ul className="divide-y divide-slate-100">
@@ -566,7 +566,7 @@ function RuleForm({ senders, onDone }: { senders: Sender[]; onDone: () => Promis
   );
 }
 
-/** "Which number would serve this recipient?" — answered by the resolver the sender itself uses. */
+/** "Which number would serve this recipient?"  answered by the resolver the sender itself uses. */
 function RoutingPreview() {
   const [form, setForm] = useState({ channel: "WHATSAPP", locale: "ar", country: "", purpose: "TRANSACTIONAL" });
   const [result, setResult] = useState<Preview | null>(null);
@@ -621,12 +621,12 @@ function RoutingPreview() {
             <span className="font-semibold">
               {result.sender.displayPhoneNumber || result.sender.senderEmail || result.sender.smsSender || result.sender.provider || "—"}
             </span>
-            {" — "}{MATCHED_BY_LABELS[result.matchedBy] ?? result.matchedBy}
+            {"  "}{MATCHED_BY_LABELS[result.matchedBy] ?? result.matchedBy}
           </p>
         ) : (
           <p className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
             <TriangleAlert className="inline w-4 h-4 me-1" />
-            لن يُرسَل إلى هذا المستلم — {result.reason}. هذا قرار نهائي: لا يوجد بديل من إعداد البيئة يتجاوزه.
+            لن يُرسَل إلى هذا المستلم  {result.reason}. هذا قرار نهائي: لا يوجد بديل من إعداد البيئة يتجاوزه.
           </p>
         )
       )}

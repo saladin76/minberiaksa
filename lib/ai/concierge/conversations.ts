@@ -5,7 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { findAttributedDonations, type AttributedDonation, type ConciergeRange } from "./analytics";
 
 /**
- * Filtering concierge conversations — one definition shared by the dashboard
+ * Filtering concierge conversations  one definition shared by the dashboard
  * list and the insights run, so "the conversations I am looking at" and "the
  * conversations the AI read" are always the same set.
  */

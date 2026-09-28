@@ -2,7 +2,7 @@ import type { CSSProperties, ReactElement, ReactNode } from "react";
 import { Button } from "@/components/minbar/ds";
 
 /**
- * The shared shape of every status screen — payment failed, cancelled,
+ * The shared shape of every status screen  payment failed, cancelled,
  * processing, awaiting confirmation, technical error, maintenance, 404.
  *
  * Ported from the seven single-purpose pages in the handoff
@@ -11,7 +11,7 @@ import { Button } from "@/components/minbar/ds";
  * circular glyph, a heading, a line of explanation, an optional detail panel,
  * and at most two ways out.
  *
- * Two ways out is the ceiling on purpose — the handoff's note on the 404 page
+ * Two ways out is the ceiling on purpose  the handoff's note on the 404 page
  * is that more exits scatter the decision rather than help it.
  */
 

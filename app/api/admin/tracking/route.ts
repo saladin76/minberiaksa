@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 import { prisma } from "@/lib/prisma";
+import { rawCommand } from "@/lib/prisma-raw-command";
 import { requireAdminOrDashboardPermission } from "@/lib/dashboard/api-auth";
 import { writeAuditLog, auditActorFromDashboardSession } from "@/lib/audit-log";
 
@@ -198,7 +199,7 @@ async function persistRawSettings(update: { $set: Record<string, unknown>; $unse
         },
       ],
     };
-    await prisma.$runCommandRaw(command);
+    await prisma.$runCommandRaw(rawCommand(command));
     return getRawTrackingSettings();
   }
 

@@ -7,21 +7,20 @@ import { useCurrency } from "@/context/CurrencyContext";
 import { DASHBOARD_DISPLAY_SYMBOLS } from "@/lib/dashboard/format-dashboard-money";
 
 type Accent = "emerald" | "teal" | "amber" | "orange" | "violet" | "indigo" | "slate" | "blue" | "rose" | "sky";
-// Saturated accents: a solid gradient icon tile with a tinted glow, a full-strength rail and a
-// faint wash of the same hue across the card. The pale-50 tiles and 70%-opacity rails used
-// before made every card read as the same grey, so the accent carried no information.
+// Flat, saturated accents: a -100 icon badge with a -600 icon and a full-strength rail. The
+// pale -50 badges and 70%-opacity rails used before made every card read as the same grey.
 // Class strings stay literal so Tailwind's scanner can see them.
-const ACCENT_CLASSES: Record<Accent, { tile: string; wash: string; rail: string }> = {
-  emerald: { tile: "bg-gradient-to-br from-emerald-400 to-emerald-600 shadow-emerald-500/40", wash: "from-emerald-50", rail: "bg-emerald-500" },
-  teal: { tile: "bg-gradient-to-br from-teal-400 to-teal-600 shadow-teal-500/40", wash: "from-teal-50", rail: "bg-teal-500" },
-  amber: { tile: "bg-gradient-to-br from-amber-400 to-amber-600 shadow-amber-500/40", wash: "from-amber-50", rail: "bg-amber-500" },
-  orange: { tile: "bg-gradient-to-br from-orange-400 to-orange-600 shadow-orange-500/40", wash: "from-orange-50", rail: "bg-orange-500" },
-  violet: { tile: "bg-gradient-to-br from-violet-400 to-violet-600 shadow-violet-500/40", wash: "from-violet-50", rail: "bg-violet-500" },
-  indigo: { tile: "bg-gradient-to-br from-indigo-400 to-indigo-600 shadow-indigo-500/40", wash: "from-indigo-50", rail: "bg-indigo-500" },
-  slate: { tile: "bg-gradient-to-br from-slate-500 to-slate-700 shadow-slate-500/40", wash: "from-slate-100", rail: "bg-slate-500" },
-  blue: { tile: "bg-gradient-to-br from-blue-500 to-brand shadow-blue-500/40", wash: "from-blue-50", rail: "bg-brand" },
-  rose: { tile: "bg-gradient-to-br from-rose-400 to-rose-600 shadow-rose-500/40", wash: "from-rose-50", rail: "bg-rose-500" },
-  sky: { tile: "bg-gradient-to-br from-sky-400 to-sky-600 shadow-sky-500/40", wash: "from-sky-50", rail: "bg-sky-500" },
+const ACCENT_CLASSES: Record<Accent, { tile: string; rail: string }> = {
+  emerald: { tile: "bg-emerald-100 text-emerald-600", rail: "bg-emerald-500" },
+  teal: { tile: "bg-teal-100 text-teal-600", rail: "bg-teal-500" },
+  amber: { tile: "bg-amber-100 text-amber-600", rail: "bg-amber-500" },
+  orange: { tile: "bg-orange-100 text-orange-600", rail: "bg-orange-500" },
+  violet: { tile: "bg-violet-100 text-violet-600", rail: "bg-violet-500" },
+  indigo: { tile: "bg-indigo-100 text-indigo-600", rail: "bg-indigo-500" },
+  slate: { tile: "bg-slate-100 text-slate-600", rail: "bg-slate-400" },
+  blue: { tile: "bg-blue-100 text-blue-600", rail: "bg-blue-600" },
+  rose: { tile: "bg-rose-100 text-rose-600", rail: "bg-rose-500" },
+  sky: { tile: "bg-sky-100 text-sky-600", rail: "bg-sky-500" },
 };
 
 function formatValue(value: number, format?: "money" | "number" | "percent"): string {
@@ -73,23 +72,19 @@ export function StatsMetricCard({ title, value, icon: Icon, accent = "slate", fo
   // Now: small muted label, large tabular figure, icon as a quiet accent, and a coloured rail
   // that makes the accent scannable at a glance instead of a tiny tinted square.
   const shell = cn(
-    "group relative isolate overflow-hidden rounded-xl border border-slate-200 bg-white",
+    "group relative overflow-hidden rounded-xl border border-slate-200 bg-white",
     "shadow-[0_1px_2px_rgba(16,24,40,0.06)] transition-all duration-200",
     "hover:shadow-[0_6px_20px_rgba(16,24,40,0.10)] hover:border-slate-300 hover:-translate-y-px",
     compact ? "p-3.5" : "p-4",
     isHero && "ring-2 ring-brand/30 border-brand/40",
   );
 
-  const Wash = ({ from }: { from: string }) => (
-    <span className={cn("pointer-events-none absolute inset-0 -z-10 bg-gradient-to-b to-white to-70%", from)} aria-hidden />
-  );
   const Rail = () => (
     <span className={cn("absolute inset-y-0 start-0 w-1", colors.rail)} aria-hidden />
   );
 
   const mainCard = (
     <div className={shell}>
-      <Wash from={colors.wash} />
       <Rail />
       <div className="flex items-start justify-between gap-3 min-w-0">
         <p className={cn(
@@ -98,7 +93,7 @@ export function StatsMetricCard({ title, value, icon: Icon, accent = "slate", fo
         )}>
           {shouldShowBankTransfers ? "إجمالي الإيرادات: الموقع + الحسابات البنكية" : title}
         </p>
-        <span className={cn("shrink-0 rounded-lg p-1.5 text-white shadow-md transition-transform group-hover:scale-105", colors.tile)}>
+        <span className={cn("shrink-0 rounded-lg p-1.5", colors.tile)}>
           <Icon className={compact ? "w-4 h-4" : "w-[18px] h-[18px]"} />
         </span>
       </div>
@@ -126,11 +121,10 @@ export function StatsMetricCard({ title, value, icon: Icon, accent = "slate", fo
     <>
       {mainCard}
       <div className={shell}>
-        <Wash from={ACCENT_CLASSES.blue.wash} />
         <span className={cn("absolute inset-y-0 start-0 w-1", ACCENT_CLASSES.blue.rail)} aria-hidden />
         <div className="flex items-start justify-between gap-3 min-w-0">
           <p className="min-w-0 flex-1 text-xs font-semibold leading-snug text-slate-600">الحوالات البنكية</p>
-          <span className={cn("shrink-0 rounded-lg p-1.5 text-white shadow-md", ACCENT_CLASSES.blue.tile)}><Icon className="w-[18px] h-[18px]" /></span>
+          <span className={cn("shrink-0 rounded-lg p-1.5", ACCENT_CLASSES.blue.tile)}><Icon className="w-[18px] h-[18px]" /></span>
         </div>
         <p className="mt-2 text-2xl font-bold leading-8 tabular-nums tracking-tight text-slate-900">
           {formatSelectedCurrency(bankDisplayValue, selectedCode)}

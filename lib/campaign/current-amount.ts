@@ -14,7 +14,7 @@ import type { Prisma } from "@prisma/client";
  * baseline, editing a single unrelated donation silently reset the public total to the
  * donation-only figure and destroyed the baseline permanently.
  *
- * "Settled" is strict here — `status: PAID` AND `paidAt` set. Subscription rows that are
+ * "Settled" is strict here  `status: PAID` AND `paidAt` set. Subscription rows that are
  * still unsettled show as ناجح on dashboards (see PAID_DONATION_FILTER) but must not move
  * campaign totals until the gateway confirms, or the webhook's own increment double-counts.
  */
@@ -71,7 +71,7 @@ export async function recomputeCategoryCurrentAmount(tx: Tx, categoryId: string)
  * An admin typed a total into the campaign edit form. Honour it exactly, and record the part
  * that donations don't explain as the offline baseline so later recomputes preserve it.
  * A desired total BELOW the settled donation total yields a baseline of 0 rather than a
- * negative one — the donations are real and can't be subtracted away.
+ * negative one  the donations are real and can't be subtracted away.
  */
 export async function setCampaignDisplayTotal(
   tx: Tx,

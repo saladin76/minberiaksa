@@ -12,8 +12,8 @@ import type { MinbarRoute } from "@/lib/minbar/routes";
  *
  * The key is derived from the CMS category **slug**, which is stable across
  * languages, with the handoff's Arabic name kept as a second chance for
- * categories created before slugs were required. `iman` — the general donation
- * call — is the fallback, exactly as it is in the handoff.
+ * categories created before slugs were required. `iman`  the general donation
+ * call  is the fallback, exactly as it is in the handoff.
  */
 
 /** The eleven calls, each naming the two routes it sends the reader to. */

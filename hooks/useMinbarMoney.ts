@@ -12,14 +12,14 @@ import { currencySymbol, formatMoney } from "@/lib/minbar/money";
  *  - the thousands separator, the decimal mark and the symbol's side follow
  *    `Intl.NumberFormat(locale, {style: "currency"})`, so a German visitor sees
  *    `1.234 $` and an English one `$1,234`. The symbol itself is the short one
- *    from the currency selector — `$`, never ICU's disambiguated `US$` — see
+ *    from the currency selector  `$`, never ICU's disambiguated `US$`  see
  *    `lib/minbar/money.ts`;
  *  - **the value never changes because of the language.** Conversion is driven
  *    by the currency cookie and the daily rate feed, which are independent of
  *    locale. Switching from English to German re-formats; it does not re-price.
  *
  * Stored amounts are USD. When rates have not loaded yet the USD figure is shown
- * formatted for the locale rather than a spinner or a blank — a missing rate
+ * formatted for the locale rather than a spinner or a blank  a missing rate
  * must never make a donation amount disappear.
  */
 export function useMinbarMoney() {
@@ -42,7 +42,7 @@ export function useMinbarMoney() {
     [convertToCurrency, locale]
   );
 
-  /** Plain number formatting — counts, beneficiaries, years. */
+  /** Plain number formatting  counts, beneficiaries, years. */
   const formatNumber = useCallback(
     (value: number, options?: Intl.NumberFormatOptions) => {
       try {

@@ -5,7 +5,7 @@ import { PageHeader } from "@/components/dashboard/PageHeader";
 import { InboundMessagesView } from "./_components/InboundMessagesView";
 
 /**
- * الرسائل الواردة — visitor messages from the site's contact form.
+ * الرسائل الواردة  visitor messages from the site's contact form.
  *
  * Split out of `/dashboard/messages`, where it was the second tab behind the outbound template
  * log. The two shared nothing but the word "رسائل": this is human correspondence someone has to

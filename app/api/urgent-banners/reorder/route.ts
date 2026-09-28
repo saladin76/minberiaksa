@@ -7,7 +7,7 @@ import { queueAuditLog, auditActorFromDashboardSession } from "@/lib/audit-log";
 import { writeErrorMessage } from "@/lib/dashboard/write-error-message";
 
 /**
- * POST /api/urgent-banners/reorder — `{ banners: [{ id, order }] }` from the
+ * POST /api/urgent-banners/reorder  `{ banners: [{ id, order }] }` from the
  * drag-and-drop list. `order` becomes `priority`, the ascending sort within
  * every slot. Same contract as the courses / FAQ reorder routes.
  */

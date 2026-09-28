@@ -222,7 +222,7 @@ test("Elastic Email tester tolerates a send-scoped key that cannot list domains"
 
 // The two cases below use the responses the live Elastic Email v4 API actually returns.
 // It answers every auth problem with HTTP 400 and never 401/403, so a tester that keys off
-// the status code alone reads a healthy send-only key as a dead account — which is exactly
+// the status code alone reads a healthy send-only key as a dead account  which is exactly
 // what surfaced on /dashboard/platform-connections/communication.
 test("Elastic Email tester treats HTTP 400 'Access Denied' as a scope limit, not a dead account", async () => {
   const fakeFetch: ProviderFetch = async () => response(400, { Error: "Access Denied." });

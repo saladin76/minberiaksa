@@ -8,7 +8,7 @@ import { listConversations } from "./conversation-service";
 /**
  * Read-only Communication Center reports for management: delivery performance by channel and
  * language, top failure/skip reasons, conversations awaiting a reply, and campaigns awaiting review.
- * Everything is derived from real archive data — no fake attribution. When there is no data a section
+ * Everything is derived from real archive data  no fake attribution. When there is no data a section
  * is simply empty. Internal status/reason codes are humanized before they leave this module.
  */
 
@@ -75,7 +75,7 @@ export function sentOutCount(c: StatusCounts): number {
   return c.sent + reachedCount(c);
 }
 
-/** Turn internal status/reason codes into plain Arabic — never leak raw provider/internal terms. */
+/** Turn internal status/reason codes into plain Arabic  never leak raw provider/internal terms. */
 export function humanizeReason(raw: string | null | undefined): string {
   const r = (raw ?? "").trim();
   if (!r) return "بدون سبب مُسجّل";
@@ -93,7 +93,7 @@ export function humanizeReason(raw: string | null | undefined): string {
   if (up.includes("RATE") && up.includes("LIMIT")) return "تجاوز حد الإرسال لدى المزود";
   if (up.endsWith("_NOT_CONFIGURED")) return "إعداد المزوّد غير مكتمل";
   if (up.includes("REQUEST_FAILED") || up.includes("INVALID_RESPONSE")) return "تعذّر الوصول إلى المزوّد";
-  // Unknown provider text — surface it but trimmed, so management still sees something actionable.
+  // Unknown provider text  surface it but trimmed, so management still sees something actionable.
   return r.length > 80 ? `${r.slice(0, 77)}…` : r;
 }
 

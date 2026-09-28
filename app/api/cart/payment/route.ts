@@ -229,7 +229,7 @@ export async function POST(request: NextRequest) {
     if (!PAYMENT_METHODS.has(String(paymentMethod))) {
       return NextResponse.json({ error: "Unsupported payment method" }, { status: 400 });
     }
-    /* One type for the whole order: `ONE_TIME`, or the plan's cadence —
+    /* One type for the whole order: `ONE_TIME`, or the plan's cadence 
        `DAILY | FRIDAY | MONTHLY`, exactly as the donor chose it. Anything else
        is refused rather than coerced; the old code turned every recurring
        choice into MONTHLY (`DEPLOYED_VS_DESIGN_AUDIT.md` § P0.2). */
@@ -252,7 +252,7 @@ export async function POST(request: NextRequest) {
     }
 
     /* A campaign line may be a gift: the recipient is named and, per channel
-       chosen, reachable. Refused as a whole rather than silently dropped —
+       chosen, reachable. Refused as a whole rather than silently dropped 
        the donor was promised the recipient would be told. */
     const giftsByIndex: Array<GiftOrderInput | null> = [];
     for (const item of items) {
@@ -513,7 +513,7 @@ export async function POST(request: NextRequest) {
       /* The rail follows the cadence: Stripe keeps one-time + monthly, so a
          monthly plan runs on the main gateway; daily and Friday plans are
          Albaraka's (`railForFrequency`). A plan Albaraka would bill needs the
-         scheduler switched on — refusing here is what stops a donor being
+         scheduler switched on  refusing here is what stops a donor being
          promised a cadence nothing will ever charge. */
       const settings = await prisma.globalSettings.findFirst({
         orderBy: { createdAt: "asc" },
@@ -563,8 +563,8 @@ export async function POST(request: NextRequest) {
             scheduleRule: scheduleRuleFor(frequency, now, timezone) as unknown as Prisma.InputJsonValue,
             consentSnapshot: consent as unknown as Prisma.InputJsonValue,
             nextBillingDate: nextBilling,
-            /* Stamped when the first instalment actually settles — by the
-               Stripe webhook or the Albaraka callback — never optimistically. */
+            /* Stamped when the first instalment actually settles  by the
+               Stripe webhook or the Albaraka callback  never optimistically. */
             lastBillingDate: null,
             ...planCampaignLines,
             ...categoryLines,
@@ -718,7 +718,7 @@ export async function POST(request: NextRequest) {
       actorRole,
       action: isBankTransfer ? "DONATION_BANK_TRANSFER_CHECKOUT_START" : "DONATION_ONE_TIME_CHECKOUT_START",
       messageAr: isBankTransfer
-        ? `${donorName ?? "متبرع"} سجّل تبرعًا بالتحويل البنكي عبر السلة (≈ ${donationTotalUsd.toFixed(0)} USD) — بانتظار الإيصال`
+        ? `${donorName ?? "متبرع"} سجّل تبرعًا بالتحويل البنكي عبر السلة (≈ ${donationTotalUsd.toFixed(0)} USD)  بانتظار الإيصال`
         : `${donorName ?? "متبرع"} بدأ عملية دفع تبرعًا لمرة واحدة عبر السلة (≈ ${donationTotalUsd.toFixed(0)} USD)`,
       entityType: "Donation",
       entityId: donationRow.id,

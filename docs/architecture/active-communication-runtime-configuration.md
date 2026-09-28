@@ -59,7 +59,7 @@ Active runtime values include Access Token, App Secret, Webhook Verify Token, Bu
 
 ### Elastic Email
 
-The approved API key and default sender identity are used for every outbound email. A sender selected inside the Communication Center may override the default sender identity. Elastic Email is the only email path — there is no SendGrid and no Brevo email fallback.
+The approved API key and default sender identity are used for every outbound email. A sender selected inside the Communication Center may override the default sender identity. Elastic Email is the only email path  there is no SendGrid and no Brevo email fallback.
 
 ### Brevo SMS
 

@@ -9,7 +9,7 @@ import { DEFAULT_LOCALE, isValidLocale } from "@/lib/locales";
  * and never stores a secret. All mutating operations are audited by the caller-supplied actor.
  *
  * "Language variants" live in each row's `translations` JSON (WhatsApp: {body}, Email: {subject}) plus
- * the content-mode `content` JSON for the email layout builder — matching the existing data model.
+ * the content-mode `content` JSON for the email layout builder  matching the existing data model.
  */
 
 type Actor = { actorId?: string | null; actorName?: string | null; actorRole?: string | null };
@@ -88,7 +88,7 @@ export async function createTemplateGroup(input: CreateTemplateInput, actor: Act
       return { ok: true, data: { id: row.id } };
     }
 
-    // EMAIL — content-mode. The legacy @usewaypoint `document` path is untouched; content templates
+    // EMAIL  content-mode. The legacy @usewaypoint `document` path is untouched; content templates
     // store their fields in `content` and render inside an EmailLayout.
     const subject = (input.subject ?? "").trim();
     if (!subject) return { ok: false, status: 400, error: "عنوان الإيميل مطلوب." };
@@ -150,7 +150,7 @@ export async function duplicateTemplateGroup(id: string, actor: Actor): Promise<
           header: (src.header ?? undefined) as Prisma.InputJsonValue | undefined,
           buttons: (src.buttons ?? undefined) as Prisma.InputJsonValue | undefined,
           variables: (src.variables ?? undefined) as Prisma.InputJsonValue | undefined,
-          // Provider approval / external IDs are intentionally cleared — a copy is NOT approved.
+          // Provider approval / external IDs are intentionally cleared  a copy is NOT approved.
           externalTemplateId: null,
           approvalStatus: null,
           language: src.language ?? null,
@@ -259,7 +259,7 @@ export async function upsertVariant(
       if (!row) return { ok: false, status: 404, error: "القالب غير موجود." };
       let body = input.body ?? "";
       if (input.duplicateFrom) {
-        // Copy content from another language (no automatic translation — target stays a draft).
+        // Copy content from another language (no automatic translation  target stays a draft).
         const from = input.duplicateFrom;
         const tr = (row.translations ?? {}) as Record<string, { body?: string }>;
         body = from === DEFAULT_LOCALE ? row.body : tr[from]?.body ?? row.body;

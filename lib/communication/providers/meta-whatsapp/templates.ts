@@ -6,12 +6,12 @@ import { META_REASONS } from "./errors";
  * Reading the template catalogue out of Meta.
  *
  * Two shapes, deliberately: `listApprovedTemplates` answers "can we send this right now" with the
- * few fields a readiness check needs, and `listAllTemplates` is what the sync stores — every
+ * few fields a readiness check needs, and `listAllTemplates` is what the sync stores  every
  * language at every status, with the component schema that tells a sender how many parameters the
  * template actually takes.
  *
  * The listing is paginated. It used to ask for `limit=200` and take whatever came back, so a
- * business account with more templates than that had the remainder silently missing — which looks
+ * business account with more templates than that had the remainder silently missing  which looks
  * exactly like a template that was never created. `fetchAllPages` follows `paging.next` instead.
  */
 
@@ -57,7 +57,7 @@ async function fetchAllPages(
     const body = (result.data ?? {}) as { data?: unknown[]; paging?: { next?: unknown; cursors?: { after?: unknown } } };
     if (Array.isArray(body.data)) rows.push(...(body.data as PagedRow[]));
     /* `paging.next` is an absolute URL; `graphFetch` builds its own, so the cursor is carried
-       forward instead — same page, without re-deriving the host and version. */
+       forward instead  same page, without re-deriving the host and version. */
     const after = body.paging?.cursors?.after;
     path = body.paging?.next && typeof after === "string" && after
       ? `${firstPath}&after=${encodeURIComponent(after)}`
@@ -75,7 +75,7 @@ function readSummary(row: PagedRow): MetaTemplateSummary {
   };
 }
 
-/** Approved templates only — the cheap answer for "is this sendable". */
+/** Approved templates only  the cheap answer for "is this sendable". */
 export async function listApprovedTemplates(businessAccountId?: string | null, runtime?: MetaRuntimeConfig): Promise<ListTemplatesResult> {
   const resolved = runtime ?? await getActiveMetaWhatsappRuntimeConfig();
   if (!resolved.configured) return { ok: false, reason: metaRuntimeFailure(resolved) };
@@ -87,7 +87,7 @@ export async function listApprovedTemplates(businessAccountId?: string | null, r
 }
 
 /**
- * Every template at every status, with components — what the sync writes to the database.
+ * Every template at every status, with components  what the sync writes to the database.
  *
  * Rejected and pending variants matter as much as approved ones: they are the answer to "why did
  * this language not go out", and without them the dashboard can only say a language is missing.

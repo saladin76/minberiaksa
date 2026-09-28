@@ -2,14 +2,14 @@
  * Which gateway a given donation should be charged through.
  *
  * Three rails exist:
- *   - PAYFOR   — Ziraat Katılım 3D Secure. Unchanged, opt-out only: it keeps
+ *   - PAYFOR    Ziraat Katılım 3D Secure. Unchanged, opt-out only: it keeps
  *                exactly the case it always had (one-time TRY donations) as long
  *                as the admin leaves its switch on.
- *   - STRIPE   — the original main gateway.
- *   - ALBARAKA — Albaraka Türk EPOS 3D Secure, an alternative main gateway.
+ *   - STRIPE    the original main gateway.
+ *   - ALBARAKA  Albaraka Türk EPOS 3D Secure, an alternative main gateway.
  *
  * STRIPE and ALBARAKA are interchangeable: whichever the admin picks as the main
- * gateway handles every case the other would have handled, with one exception —
+ * gateway handles every case the other would have handled, with one exception 
  * monthly subscriptions, which need stored-credential recurring billing that the
  * Albaraka EPOS integration doesn't offer. Those stay on Stripe regardless.
  */
@@ -39,14 +39,14 @@ export type GatewayResolutionInput = {
   /** ISO currency the donor is giving in, e.g. "TRY". */
   currency: string;
   /**
-   * Recurring donations — daily, every Friday or monthly — create a
+   * Recurring donations  daily, every Friday or monthly  create a
    * subscription and can only run on Stripe. `ONE_TIME` is the only value
    * that reaches a bank rail.
    */
   donationType?: "ONE_TIME" | "DAILY" | "FRIDAY" | "MONTHLY" | null;
   /**
    * Set once a gateway has already failed and the donor was handed a Stripe
-   * PaymentIntent to retry with — that forces Stripe for the rest of the attempt.
+   * PaymentIntent to retry with  that forces Stripe for the rest of the attempt.
    */
   forceStripe?: boolean;
 };

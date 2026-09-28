@@ -49,6 +49,32 @@ import { Link, useRouter } from "@/i18n/routing";
 import { toast } from 'react-hot-toast';
 import DonationCountryFlag from '@/components/DonationCountryFlag';
 
+/**
+ * Sorts by one column, with absent values last in either direction.
+ *
+ * The comparator this replaced compared `a[sortField] > b[sortField]` directly. Several of these
+ * columns are nullable  a donation with no donor name, no completion date  and comparing `null`
+ * with `>` is always false, so those rows sorted into an arbitrary position that flipped depending on
+ * which side of the comparison they landed on. Sorting them to the end is both stable and what a
+ * reader expects from an empty cell.
+ */
+function compareBySortField(
+  a: Donation,
+  b: Donation,
+  field: keyof Donation,
+  direction: 'asc' | 'desc',
+): number {
+  const left = a[field];
+  const right = b[field];
+  const leftEmpty = left === null || left === undefined;
+  const rightEmpty = right === null || right === undefined;
+  if (leftEmpty && rightEmpty) return 0;
+  if (leftEmpty) return 1;
+  if (rightEmpty) return -1;
+  const order = left < right ? -1 : left > right ? 1 : 0;
+  return direction === 'asc' ? order : -order;
+}
+
 interface Donation {
   id: string;
   amount: number;
@@ -175,12 +201,7 @@ export default function DonationsPage() {
       );
       return matchesSearch;
     })
-    .sort((a, b) => {
-      if (sortDirection === 'asc') {
-        return a[sortField] > b[sortField] ? 1 : -1;
-      }
-      return a[sortField] < b[sortField] ? 1 : -1;
-    });
+    .sort((a, b) => compareBySortField(a, b, sortField, sortDirection));
 
   const paginatedDonations = filteredDonations.slice(
     (page - 1) * itemsPerPage,

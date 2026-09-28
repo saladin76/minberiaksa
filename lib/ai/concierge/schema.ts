@@ -1,14 +1,14 @@
 import { z } from "zod";
 
 /**
- * The donation concierge's wire contract — what the browser sends, what the
+ * The donation concierge's wire contract  what the browser sends, what the
  * server returns, and the one shape the model is allowed to answer in.
  *
  * Everything the visitor sees is one of the typed blocks below, built on the
  * server from catalog facts. The model never emits UI; it emits a small JSON
  * verdict (`LlmVerdict`) that is validated here before anything is rendered.
  * Anything that fails validation is discarded and the deterministic path
- * answers instead — a malformed model reply can never reach the screen.
+ * answers instead  a malformed model reply can never reach the screen.
  */
 
 export const CONCIERGE_INTENTS = [
@@ -23,7 +23,7 @@ export const CONCIERGE_INTENTS = [
   "current_page",
   /** The signed-in donor's own donations, plans, receipts and certificates. */
   "account",
-  /** A problem: refund, double charge, missing receipt, complaint — the team is brought in. */
+  /** A problem: refund, double charge, missing receipt, complaint  the team is brought in. */
   "support",
   "question",
   "unknown",
@@ -42,7 +42,7 @@ export const pageContextSchema = z.object({
 });
 export type PageContext = z.infer<typeof pageContextSchema>;
 
-/** What the assistant already knows about this visit — carried by the client, never trusted for prices. */
+/** What the assistant already knows about this visit  carried by the client, never trusted for prices. */
 export const conversationStateSchema = z.object({
   intent: z.enum(CONCIERGE_INTENTS).nullable().optional(),
   amountUSD: z.number().positive().max(1_000_000).nullable().optional(),
@@ -96,7 +96,7 @@ export const conciergeRequestSchema = z
     history: z.array(historyTurnSchema).max(8).optional(),
     message: z.string().trim().min(1).max(600).optional(),
     step: stepSchema.optional(),
-    /** The chip or card label the visitor tapped for a step — transcript only, never read by the engine. */
+    /** The chip or card label the visitor tapped for a step  transcript only, never read by the engine. */
     label: z.string().trim().max(200).optional(),
   })
   .refine((v) => Boolean(v.message) || Boolean(v.step), { message: "message or step required" });
@@ -148,7 +148,7 @@ export const blockSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("category_options"), categories: z.array(categoryCardSchema).max(12) }),
   /**
    * A message to the team, composed in the panel: the donor picks which
-   * donation it is about (if any), writes what happened, and — as a visitor —
+   * donation it is about (if any), writes what happened, and  as a visitor 
    * how to be reached. Sent through `/api/ai/donation-concierge/support`.
    */
   z.object({
@@ -159,13 +159,13 @@ export const blockSchema = z.discriminatedUnion("type", [
       .array(z.object({ id: z.string(), date: z.string(), amount: z.number(), currency: z.string(), state: z.string(), items: z.array(z.string()) }))
       .max(8),
     presetDonationId: z.string().nullable(),
-    /** Whether the problem concerns a donation — only then is the donation list shown. */
+    /** Whether the problem concerns a donation  only then is the donation list shown. */
     aboutDonation: z.boolean(),
     /** The message to the team, drafted from what the visitor said; editable before sending. */
     draft: z.string(),
   }),
   /**
-   * Something the visitor asked the assistant to change for them — the site
+   * Something the visitor asked the assistant to change for them  the site
    * language or currency, their profile, or one of their plans. Shown as a
    * confirmation card; the browser performs it only after the visitor's OK,
    * through the same endpoints the account page and header use.
@@ -186,7 +186,7 @@ export const blockSchema = z.discriminatedUnion("type", [
     /** The confirmation question, in the visitor's language. */
     text: z.string(),
   }),
-  /** One concrete next step after an answer, with an OK button — never a dead end. */
+  /** One concrete next step after an answer, with an OK button  never a dead end. */
   z.object({
     type: z.literal("suggestion"),
     text: z.string(),
@@ -290,7 +290,7 @@ export const llmVerdictSchema = z.object({
   ticketAboutDonation: z.boolean(),
   /**
    * An explicit request to change something: the site language or currency
-   * (anyone), or — signed in — their profile or one of their plans. kind
+   * (anyone), or  signed in  their profile or one of their plans. kind
    * "none" otherwise. Values are what the visitor asked for; the server
    * validates them and the visitor confirms before anything changes.
    */
@@ -333,7 +333,7 @@ export const llmVerdictSchema = z.object({
   /**
    * When the wish is a whole area rather than one project ("orphans",
    * "water", "education", a region): the CATEGORIES slugs that fit, best
-   * first — one means "show everything there", several mean "let them pick".
+   * first  one means "show everything there", several mean "let them pick".
    */
   categorySlugs: z.array(z.string()).max(3),
   /** One factual reason per recommended id, in the visitor's language. (An

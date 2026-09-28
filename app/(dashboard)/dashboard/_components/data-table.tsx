@@ -50,8 +50,11 @@ const dateRangeFilter: FilterFn<any> = (row, columnId, filterValue: DateRange) =
   // If no date range is provided, return true (no filtering)
   if (!from && !to) return true;
 
+  /* `getValue` is untyped by design, so the cell has to be narrowed before `new Date` will take it.
+     A row whose cell holds something else is excluded, rather than turned into an Invalid Date that
+     compares false against every bound. */
   const cellValue = row.getValue(columnId);
-  if (!cellValue) return false; // If the cell value is empty, exclude it
+  if (typeof cellValue !== "string" && typeof cellValue !== "number" && !(cellValue instanceof Date)) return false;
 
   const cellDate = new Date(cellValue);
   const fromDate = from ? new Date(from) : null;
@@ -176,7 +179,11 @@ export function DataTable<TData, TValue>({
       headers.join(","),
       ...filteredData.map(row =>
         columns.map(column => {
-          const value = row[column.accessorKey as keyof typeof row];
+          /* `accessorKey` exists only on the accessor variant of ColumnDef, so it is read through a
+             narrowed view rather than off the union. A column without one contributes an empty cell
+             instead of indexing the row with `undefined`. */
+          const accessorKey = (column as { accessorKey?: unknown }).accessorKey;
+          const value = typeof accessorKey === "string" ? row[accessorKey as keyof typeof row] : undefined;
           return typeof value === "string" || typeof value === "number" ? value : "";
         }).join(",")
       ),

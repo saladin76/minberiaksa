@@ -20,7 +20,7 @@ function formatCheck(value: string | null) {
 }
 
 /**
- * The provider strip is a selector, so each card IS the control — previously the
+ * The provider strip is a selector, so each card IS the control  previously the
  * card was inert and carried a separate «فتح الإعدادات» button, which meant the
  * obvious click target did nothing and the selected card was signalled only by a
  * ring. As a real `button` with `aria-pressed` it is keyboard-reachable and

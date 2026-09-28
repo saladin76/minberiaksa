@@ -23,7 +23,7 @@ export const GENDER_LABEL_AR: Record<NormalizedGender, string> = {
 const MALE_TOKENS = new Set(["male", "m", "man", "erkek", "ذكر", "رجل"]);
 const FEMALE_TOKENS = new Set(["female", "f", "woman", "kadin", "kadın", "أنثى", "انثى", "امرأة", "مراة"]);
 
-/** `null` when nothing usable was stored — distinct from an explicit "prefer not to say". */
+/** `null` when nothing usable was stored  distinct from an explicit "prefer not to say". */
 export function normalizeGender(value: string | null | undefined): NormalizedGender | null {
   const v = value?.trim().toLowerCase();
   if (!v) return null;
@@ -34,7 +34,7 @@ export function normalizeGender(value: string | null | undefined): NormalizedGen
 }
 
 /**
- * Parses a `gender` query param. `null` / "" / "all" mean "no filter" — which is
+ * Parses a `gender` query param. `null` / "" / "all" mean "no filter"  which is
  * why this can't just call `normalizeGender`, since that maps every unrecognised
  * string to "undisclosed" and would turn "all" into a real filter.
  */

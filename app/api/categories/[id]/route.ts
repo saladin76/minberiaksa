@@ -151,8 +151,8 @@ export async function PUT(
         order: order ?? 0,
         ...(nextSlug !== undefined ? { slug: nextSlug } : {}),
         /* The landing page this category owns. Only keys the request actually
-           carried are touched, so a caller that knows nothing about the page —
-           the archive toggle, a bulk tool — leaves it exactly as it was. */
+           carried are touched, so a caller that knows nothing about the page 
+           the archive toggle, a bulk tool  leaves it exactly as it was. */
         ...buildCategoryPagePatch(body),
         ...categoryChildrenWrite(body),
       }
@@ -257,7 +257,7 @@ export async function PUT(
 }
 
 // PATCH: admin-only; toggle the category's archive state. When isActive flips,
-// cascade the same value to every campaign in the category — archiving the
+// cascade the same value to every campaign in the category  archiving the
 // category archives every campaign, re-activating brings them all back.
 export async function PATCH(
   request: NextRequest,
@@ -290,7 +290,7 @@ export async function PATCH(
     });
 
     // Cascade to every non-deleted member campaign. updateMany on the m2m
-    // mirror is safe — categoryIds is just an ObjectId[] on the Campaign side.
+    // mirror is safe  categoryIds is just an ObjectId[] on the Campaign side.
     // Soft-deleted campaigns are skipped so re-activating a category doesn't
     // resurrect them.
     const cascade = await prisma.campaign.updateMany({

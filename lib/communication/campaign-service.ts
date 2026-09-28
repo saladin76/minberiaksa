@@ -5,10 +5,10 @@ import { isCommunicationChannel, type CommunicationChannelId, type CampaignStatu
 import { safeCountValue } from "@/lib/dashboard/safe-count";
 
 /**
- * CampaignService — CRUD + status transitions for CommunicationCampaign. This package
+ * CampaignService  CRUD + status transitions for CommunicationCampaign. This package
  * covers the workflow up to (but not including) sending: DRAFT → REVIEW → APPROVED →
  * SCHEDULED, plus CANCELLED. Campaigns never send automatically and never move to
- * SENDING/SENT here — that is a later package behind explicit human approval + a provider.
+ * SENDING/SENT here  that is a later package behind explicit human approval + a provider.
  */
 
 type Actor = { actorId?: string | null; actorName?: string | null; actorRole?: string | null } | null;
@@ -358,7 +358,7 @@ export async function archiveCampaign(id: string, actor?: Actor): Promise<Servic
   }
 }
 
-/** Cancel a SCHEDULED campaign's schedule — returns it to APPROVED and clears the time. */
+/** Cancel a SCHEDULED campaign's schedule  returns it to APPROVED and clears the time. */
 export async function cancelSchedule(id: string, actor?: Actor): Promise<ServiceResult<CommunicationCampaign>> {
   if (!process.env.DATABASE_URL) return dbUnavailable();
   try {

@@ -18,11 +18,11 @@ import {
 } from "@/lib/certificates/copy-defaults";
 
 /**
- * GET /api/certificates/copy — the dashboard's overrides of the certificate and
+ * GET /api/certificates/copy  the dashboard's overrides of the certificate and
  *     receipt wording, with the i18n defaults every field falls back to, per
  *     locale. `siteContent`: the wording is site content, not a secret, but
  *     the defaults bundle is large and only the editor needs it.
- * PUT /api/certificates/copy — replace the overrides. Empty strings clear a
+ * PUT /api/certificates/copy  replace the overrides. Empty strings clear a
  *     field back to its i18n text.
  */
 
@@ -76,8 +76,8 @@ export async function PUT(request: NextRequest) {
     const overrides: CertificateCopyOverrides = sanitizeCopyOverrides(body.overrides ?? body);
     const existing = await getOrCreateSettings();
 
-    // The certificate wording is site content. The receipt's legal identity —
-    // legal name, tax number, registered address — is printed on an official
+    // The certificate wording is site content. The receipt's legal identity 
+    // legal name, tax number, registered address  is printed on an official
     // financial document, so only an admin may change it.
     const orgBefore = sanitizeCopyOverrides(existing.certificateCopy ?? null).receiptOrg ?? {};
     const orgAfter = overrides.receiptOrg ?? {};

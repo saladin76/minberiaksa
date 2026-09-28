@@ -26,7 +26,7 @@ import { useLocale } from "next-intl";
 const RESUME_KEY = "campaignDonateResume";
 const FALLBACK_IMG = "https://i.ibb.co/N2zVsqfg/calisma-alanlarimiz-egitim-sektoru.jpg";
 
-// 4:3 crop — matches the aspect-[4/3] container used everywhere.
+// 4:3 crop  matches the aspect-[4/3] container used everywhere.
 // q_auto:eco is ~30% smaller than q_auto:good with no perceptible quality loss for thumbnails;
 // f_auto serves AVIF/WebP automatically based on the Accept header.
 function buildImgSrc(src: string, width = 640, height = 480): string {
@@ -98,8 +98,8 @@ export function CampaignCard({ campaign, className, onClick, isFeatured = false,
   const [pendingAmount, setPendingAmount] = useState<number | undefined>(undefined);
   /* The currency helpers read document.cookie, so they answer "USD" on the
      server and the visitor's real currency in the browser. The amount chips put
-     currency text on every card — where before it only appeared on the few with
-     a fixed goal — which turned that latent disagreement into a hydration
+     currency text on every card  where before it only appeared on the few with
+     a fixed goal  which turned that latent disagreement into a hydration
      mismatch. Render the server's answer through the hydration pass, then swap. */
   const [currencyReady, setCurrencyReady] = useState(false);
   useEffect(() => setCurrencyReady(true), []);
@@ -127,7 +127,7 @@ export function CampaignCard({ campaign, className, onClick, isFeatured = false,
      `initialDonationAmount` makes the dialog skip straight past the step that
      asks the real question. Those cards keep the buttons and drop the chips. */
   /* `suggestedTeamSupport` ships as {amounts: [], byCurrency: {}} on every
-     campaign, so its presence means nothing — only a configured amount does. */
+     campaign, so its presence means nothing  only a configured amount does. */
   const takesPlainAmount =
     String(campaign.fundraisingMode ?? "").toUpperCase() !== "SHARES" &&
     !campaign.suggestedTeamSupport?.amounts?.length;
@@ -255,12 +255,12 @@ export function CampaignCard({ campaign, className, onClick, isFeatured = false,
       {/* ── Card view (always on sm+, always when not listView) ──
           The urgent-projects card, in campaign clothing: one field photograph
           filling the card under a dark scrim, everything else stacked over its
-          lower half. See components/minbar/ProjectDonateCard.tsx — the two are
+          lower half. See components/minbar/ProjectDonateCard.tsx  the two are
           meant to read as the same object across the site. */}
       <div
         className={`${listView && !isFeatured ? "hidden sm:flex" : "flex"} project-card group/card relative overflow-hidden rounded-2xl bg-deep shadow-soft transition-all duration-300 hover:shadow-lift flex-col ${isFeatured ? "min-h-[30rem] ring-1 ring-gold/40" : "min-h-[26.875rem]"} ${className ?? ""}`}
         /* Not Tailwind's `border-border`: that compiles to hsl(var(--border)),
-           and inside .mia-scope --border is an rgba() — the wrap makes it
+           and inside .mia-scope --border is an rgba()  the wrap makes it
            invalid and the border vanishes. */
         style={{ border: "1px solid var(--border)" }}
       >
@@ -283,7 +283,7 @@ export function CampaignCard({ campaign, className, onClick, isFeatured = false,
           }}
         />
 
-        {/* Featured badge — top end */}
+        {/* Featured badge  top end */}
         {isFeatured && (
           <div className="absolute top-3.5 end-3.5 z-10">
             <span className="shape-chip inline-flex items-center gap-1.5 bg-burgundy px-3 py-1.5 text-[11px] font-black text-white shadow-soft">
@@ -293,7 +293,7 @@ export function CampaignCard({ campaign, className, onClick, isFeatured = false,
           </div>
         )}
 
-        {/* Category chip — top start */}
+        {/* Category chip  top start */}
         {campaign.category?.name && (
           <span className="absolute top-3.5 start-3.5 z-10 inline-flex items-center gap-1.5 rounded-full bg-deep/70 px-2.5 py-1 text-[11px] font-black text-white">
             <CategoryIcon name={campaign.category.icon} className="h-3.5 w-3.5 flex-shrink-0" />
@@ -357,7 +357,7 @@ export function CampaignCard({ campaign, className, onClick, isFeatured = false,
                 placeholder={tCommon("freeAmount")}
                 aria-label={tCommon("freeAmount")}
                 /* Grows into whatever the chips leave, which on a card this
-                   narrow is usually a line of its own — squared off rather than
+                   narrow is usually a line of its own  squared off rather than
                    a ragged stub, and wide enough for the longer translations. */
                 className={`h-[34px] min-w-[9ch] flex-[1_1_9ch] rounded-full border bg-white/10 px-3 text-[13px] font-extrabold text-white placeholder:text-white/60 focus:outline-none ${custom ? "border-gold" : "border-white/30"}`}
               />

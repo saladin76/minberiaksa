@@ -1,4 +1,4 @@
-# Package 3 — Templates & Variables
+# Package 3  Templates & Variables
 
 ## Goal
 

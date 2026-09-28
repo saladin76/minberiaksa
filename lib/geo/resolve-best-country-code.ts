@@ -23,7 +23,7 @@ export interface BestCountryCodeResult {
   code: string | null;
   source: CountryCodeSource;
   /**
-   * True when the chosen code disagrees with at least one other valid signal —
+   * True when the chosen code disagrees with at least one other valid signal 
    * useful for logging "this row's IP says TR but the phone says EG" cases so
    * admins can investigate suspect data later.
    */
@@ -42,18 +42,18 @@ function normalize(code: string | null | undefined): string | null {
  * the available signals.
  *
  * Priority (highest first):
- *   1. `phone`     — derived from the user's phone-number dial code; the
+ *   1. `phone`      derived from the user's phone-number dial code; the
  *      strongest signal because the donor types it themselves and it survives
  *      VPN / proxy / mobile-carrier IP mismatches that wreck IP geolocation.
  *      This overrides `existing` deliberately: the stored value is usually
  *      itself the result of an earlier IP detection, and Meta CAPI matching
  *      ended up shipping the wrong country for donors whose carriers proxied
  *      through a third country.
- *   2. `existing`  — already on the user record. Used when no phone is on
+ *   2. `existing`   already on the user record. Used when no phone is on
  *      file or the phone has no parseable country.
- *   3. `serverGeo` — Vercel / Cloudflare edge header, or ipapi.co server-side
+ *   3. `serverGeo`  Vercel / Cloudflare edge header, or ipapi.co server-side
  *      lookup. Reliable except for VPN / proxy / mobile carrier routing.
- *   4. `clientGeo` — browser-supplied geo (after fallback). Last resort.
+ *   4. `clientGeo`  browser-supplied geo (after fallback). Last resort.
  *
  * `conflict` is set when the chosen source disagrees with any other valid
  * signal, so callers can `console.warn` for follow-up triage without overriding

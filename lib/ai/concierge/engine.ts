@@ -28,7 +28,7 @@ import {
 /**
  * The concierge's brain: one request in, one typed response out.
  *
- * Everything that can be answered without a model is answered without one —
+ * Everything that can be answered without a model is answered without one 
  * the welcome screen, every quick-intent chip, choosing a campaign, "show me
  * another", and the post-add confirmation are all deterministic. The model is
  * consulted only for free text, and even then it only chooses among the
@@ -104,14 +104,14 @@ function chips(s: Strings): ConciergeAction[] {
   ];
 }
 
-/** How many turns a stated amount keeps presetting the configurator — long
+/** How many turns a stated amount keeps presetting the configurator  long
     enough to browse areas, "show me another" a few times and then pick. */
 const AMOUNT_MEMORY_TURNS = 8;
 
 /**
  * The amount the visitor stated, while it is still fresh. An amount from an
  * earlier part of the conversation must not follow them into every later
- * recommendation — "$100" said once is a hint for the next step, not a
+ * recommendation  "$100" said once is a hint for the next step, not a
  * budget for the visit.
  */
 function freshAmount(state: ConversationState): number | null {
@@ -235,7 +235,7 @@ function donorActions(ctx: Ctx, text: string, existing: ConciergeAction[]): Conc
 }
 
 /**
- * "Where would you like it to go?" — the areas of the site as cards, for a
+ * "Where would you like it to go?"  the areas of the site as cards, for a
  * visitor who wants to give but has not said what for. Choosing one lists
  * its projects (`selectCategoryFlow`).
  */
@@ -268,7 +268,7 @@ type SuggestionKind = "campaign" | "recurring" | "zakat" | "waqf" | "category" |
 /**
  * The one next step under a plain answer, with its OK action. The text is
  * the model's when it gave one, else the template; the target is always a
- * real thing on the site — a catalog campaign or one of the guided flows.
+ * real thing on the site  a catalog campaign or one of the guided flows.
  */
 function suggestionBlock(ctx: Ctx, kind: SuggestionKind, campaignId: string | null, text: string | null, candidates: readonly CatalogCampaign[]): ConciergeBlock | null {
   if (kind === "none") return null;
@@ -319,7 +319,7 @@ function supportBlock(ctx: Ctx, subject: SupportSubject, presetDonationId: strin
 
 /**
  * A problem the team must handle. The reply is about *their* giving when
- * they are signed in — which donation, what state it is in — and the form
+ * they are signed in  which donation, what state it is in  and the form
  * under it files the message to the inbox; the contact page stays as the
  * other door.
  */
@@ -683,7 +683,7 @@ async function messageFlow(ctx: Ctx, text: string): Promise<ConciergeResponse> {
   }
 
   let intent: ConciergeIntent | null = parsed.intent;
-  /* "this project" only means something on a project page — and there, a
+  /* "this project" only means something on a project page  and there, a
      question about "this" is answered with this project's configurator, with
      the cause the visitor named remembered for the wording and the ranking. */
   if (intent === "current_page" && !ctx.current) intent = null;
@@ -708,8 +708,8 @@ async function messageFlow(ctx: Ctx, text: string): Promise<ConciergeResponse> {
 
   /* A plan with no destination ("500 over 5 months", "every Friday") is the
      same question: where? The amount and cadence ride along into the cards. */
-  /* What the words themselves point at — matching projects, one area in
-     full, or a choice among areas — read from the catalog alone. A wish
+  /* What the words themselves point at  matching projects, one area in
+     full, or a choice among areas  read from the catalog alone. A wish
      with a topic is never "bare", whatever else it says. */
   const topic = resolveTopic(ctx.catalog.campaigns, ctx.catalog.categories, text);
   const strongCampaigns = topic?.kind === "campaigns" ? topic.ids : [];
@@ -775,7 +775,7 @@ async function messageFlow(ctx: Ctx, text: string): Promise<ConciergeResponse> {
     if (!ctx.state.recurringNudged && verdict.mode !== "answer" && intent !== "recurring" && intent !== "zakat") ctx.state.recurringNudged = true;
 
     const contact: ConciergeAction = { type: "navigate", label: ctx.s.a_contact ?? "", route: "contact" };
-    /* A document route needs one of the donor's own donation ids — anything
+    /* A document route needs one of the donor's own donation ids  anything
        else the model puts there is ignored and the account page offered. */
     const documentRoutes = new Set(["receipt", "thanksCertificate", "paymentPending"]);
     const ownDonation = verdict.donationId && ctx.donor?.donationIds.includes(verdict.donationId) ? verdict.donationId : null;
@@ -824,7 +824,7 @@ async function messageFlow(ctx: Ctx, text: string): Promise<ConciergeResponse> {
        not answer, and a way into the projects so the door stays open. */
     if (verdict.mode === "answer" || (!verdict.recommendedIds.length && answer && intent !== "zakat" && intent !== "waqf")) {
       /* Only what fits this reply: a page the model named, the donor's own
-         documents, the team when needed. No standing "browse projects" —
+         documents, the team when needed. No standing "browse projects" 
          the suggestion below is the tailored next step. */
       const actions: ConciergeAction[] = [];
       if (routeAction) actions.push(routeAction);
@@ -874,7 +874,7 @@ async function messageFlow(ctx: Ctx, text: string): Promise<ConciergeResponse> {
     const effective: ConciergeIntent = intent ?? "explore";
     const reasons = Object.fromEntries(verdict.reasons.filter((r) => allowed.has(r.id)).map((r) => [r.id, r.reason]));
     /* The wish was an area, not a project: everything in it, or the choice
-       among the areas the model matched — only those it named, checked
+       among the areas the model matched  only those it named, checked
        against the catalog. */
     if (ids.length === 0 && verdict.categorySlugs.length) {
       /* A kind of giving (sadaqah, zakat, waqf, regular) is not an area
@@ -956,8 +956,8 @@ export async function runConcierge(req: ConciergeRequest, opts: { userId?: strin
         if (req.step.intent === "waqf") return waqfFlow(ctx);
         if (req.step.intent === "current_page") return currentPageFlow(ctx);
         if (req.step.intent === "explore") return categoryFlow({ ...ctx, state: { ...ctx.state, amountUSD: null, amountTurn: null, frequency: null, region: null, giftRecipientName: null, selectedCampaignId: null, shownCampaignIds: [] } });
-        /* A chip is a fresh direction: what was said for the previous one —
-           amount, cadence, place, dedication, chosen project — is let go. */
+        /* A chip is a fresh direction: what was said for the previous one 
+           amount, cadence, place, dedication, chosen project  is let go. */
         return recommendFlow(
           {
             ...ctx,

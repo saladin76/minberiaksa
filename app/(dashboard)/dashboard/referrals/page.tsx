@@ -317,7 +317,7 @@ export default function ReferralsPage() {
         {list.length > 0 && (
           <p className="text-xs text-muted-foreground mt-3 text-right">
             الرابط: أي صفحة + <code className="bg-muted px-1.5 py-0.5 rounded text-foreground/80">?ref=الرمز</code>
-            {" — "}
+            {"  "}
             مثال: <code className="bg-muted px-1.5 py-0.5 rounded text-foreground/80 dir-ltr" >{baseUrl}{localePrefix}/?ref=ahmed</code>
           </p>
         )}

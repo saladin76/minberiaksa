@@ -23,7 +23,7 @@ export const metadata: Metadata = {
 };
 
 /**
- * The donor account — ported from `Minbar/حساب المتبرع.dc.html`.
+ * The donor account  ported from `Minbar/حساب المتبرع.dc.html`.
  *
  * Signed-out visitors are sent to sign in rather than shown an empty account:
  * there is nothing on this page that means anything without a donor behind it.

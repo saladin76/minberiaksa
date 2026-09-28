@@ -22,8 +22,8 @@ import { PdfRendererUnavailableError } from "./pdf";
  * `donationId`, given the token presented on the request (`?t=`).
  *
  * A signed-in owner, or a holder of the revenue permission, is let in by
- * their session. Anyone else — a guest donor, or a signed-in user who does not
- * own it — needs the donation's access token. The donation id alone opens
+ * their session. Anyone else  a guest donor, or a signed-in user who does not
+ * own it  needs the donation's access token. The donation id alone opens
  * nothing: it is an identifier that ends up in history, referrers and
  * forwarded mail, not a secret (`DEPLOYED_VS_DESIGN_AUDIT.md` § P1.2).
  */

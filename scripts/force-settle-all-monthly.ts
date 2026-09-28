@@ -12,7 +12,7 @@
  *
  * Whenever this script transitions a row INTO "PAID + paidAt set", it also
  * applies the per-campaign / per-category increments the webhook would have
- * applied — so totals update in lockstep. Rows that were already paid are
+ * applied  so totals update in lockstep. Rows that were already paid are
  * skipped so we don't double-count.
  *
  * Run with:  npx tsx scripts/force-settle-all-monthly.ts
@@ -109,7 +109,7 @@ async function main() {
 
   // Mongo+Prisma quirk: `paidAt: null` ONLY matches rows where the field is
   // literally `null`. Rows where the field is unset (`{ $exists: false }`) are
-  // skipped silently. We need both — use `isSet: false` to catch the unset case.
+  // skipped silently. We need both  use `isSet: false` to catch the unset case.
   const candidates = await prisma.donation.findMany({
     where: {
       subscriptionId: { not: null },
@@ -155,7 +155,7 @@ async function main() {
           continue;
         }
 
-        // Stripe says it's not paid (open/void/uncollectible/declined) — force anyway.
+        // Stripe says it's not paid (open/void/uncollectible/declined)  force anyway.
         const wasFailed = donation.status === "FAILED";
         await applyIncrementsAndSettle(donation, fallbackPaidAt, {
           providerTxnResult: "Success (force-settled)",
@@ -166,7 +166,7 @@ async function main() {
         continue;
       }
 
-      // Non-Stripe row: nothing to verify — just settle.
+      // Non-Stripe row: nothing to verify  just settle.
       const wasFailed = donation.status === "FAILED";
       await applyIncrementsAndSettle(donation, fallbackPaidAt, {
         providerTxnResult: "Success (force-settled)",

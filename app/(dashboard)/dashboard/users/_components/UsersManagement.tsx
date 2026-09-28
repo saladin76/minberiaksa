@@ -234,7 +234,7 @@ export default function UsersManagement({ scope }: { scope: Scope }) {
   const pageSubtitle =
     scope === "donors"
       ? "عرض المتبرعين، الشارات، والتبرعات (تعديل الأدوار للمدير فقط)"
-      : "المدراء وأعضاء الطاقم — المدراء يظهرون أولًا؛ لا يظهر حسابك الحالي في القائمة";
+      : "المدراء وأعضاء الطاقم  المدراء يظهرون أولًا؛ لا يظهر حسابك الحالي في القائمة";
 
   const toggleSelectUser = (id: string) => {
     setSelectedUserIds((prev) => {
@@ -810,7 +810,7 @@ export default function UsersManagement({ scope }: { scope: Scope }) {
           {selectedUser && (
             <div className="space-y-4 mt-4">
               <p className="text-sm text-muted-foreground">
-                {selectedUser.name ?? "—"} — {selectedUser.email ?? "—"}
+                {selectedUser.name ?? "—"}  {selectedUser.email ?? "—"}
               </p>
               <div className="space-y-2">
                 <label className="text-sm font-medium">الدور</label>

@@ -13,7 +13,7 @@ export type SendPlan = {
   status: string | null;
   /** Contacts in THIS batch (recipients + skipped). Bounded by `batchSize`. */
   total: number;
-  /** Contacts in the whole audience, across every batch — what a send confirmation should show. */
+  /** Contacts in the whole audience, across every batch  what a send confirmation should show. */
   audienceTotal: number;
   eligible: number;
   skipped: number;
@@ -23,7 +23,7 @@ export type SendPlan = {
   senderReady: boolean;
   willSend: boolean;
   blocked?: string;
-  /** True when this page stopped short of the audience's end — another page follows. */
+  /** True when this page stopped short of the audience's end  another page follows. */
   truncated: boolean;
   /** Where the next page starts; carried in the campaign's send progress between runs. */
   nextCursor: string | null;

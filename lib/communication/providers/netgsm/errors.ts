@@ -23,16 +23,16 @@ export function scrubNetgsm(input: string): string {
  * Netgsm success is code "00" (and returns a jobid). Other codes are errors.
  *
  * Every non-success code used to collapse into NETGSM_REJECTED, which is what the campaign wrote
- * onto the delivery row — so a wrong password and a message over the character limit produced the
+ * onto the delivery row  so a wrong password and a message over the character limit produced the
  * same, unactionable line in the send log. The codes below are the ones an operator can actually
  * do something about, so they get their own reason. See docs/integrations/netgsm-sms.md.
  *
- *   30 — usercode/password rejected, OR the account has no API access permission
- *   40 — msgheader is not one of the approved sender headers on this account
- *   20 — message text problem (over the character limit, or unsupported characters)
- *   50/51 — İYS (Turkish commercial-message registry) rejection
- *   70 — malformed request parameters
- *   80/85 — sending-rate or duplicate-send limit hit
+ *   30  usercode/password rejected, OR the account has no API access permission
+ *   40  msgheader is not one of the approved sender headers on this account
+ *   20  message text problem (over the character limit, or unsupported characters)
+ *   50/51  İYS (Turkish commercial-message registry) rejection
+ *   70  malformed request parameters
+ *   80/85  sending-rate or duplicate-send limit hit
  */
 export function mapNetgsmCode(code: string): { ok: boolean; reason: string } {
   if (code === "00") return { ok: true, reason: "" };
@@ -44,7 +44,7 @@ export function mapNetgsmCode(code: string): { ok: boolean; reason: string } {
 }
 
 /**
- * Netgsm answers a rejected send with a NON-2xx status whose body still carries the real code —
+ * Netgsm answers a rejected send with a NON-2xx status whose body still carries the real code 
  * e.g. `HTTP 406 {"code":"30","description":"Check the usercode-password information and API
  * access permission"}`. Reading only `res.ok` therefore turned every credential and header problem
  * into NETGSM_REQUEST_FAILED, which reads like a network outage and sent operators looking in the
@@ -63,7 +63,7 @@ export function readNetgsmCode(text: string): string | null {
       return null;
     }
   } catch {
-    // Not JSON at all — fall through to the plain-text form.
+    // Not JSON at all  fall through to the plain-text form.
   }
   const match = text.trim().match(/^(\d{2})\b/);
   return match ? match[1] : null;

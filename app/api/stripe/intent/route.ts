@@ -21,7 +21,7 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
  *
  * Creates a donation record (PAID) and a Stripe PaymentIntent (one-time)
  * or a Customer + Subscription (monthly), then returns the clientSecret so
- * the browser can confirm via Stripe Elements — no redirect needed.
+ * the browser can confirm via Stripe Elements  no redirect needed.
  *
  * Body: same shape as POST /api/donations
  * Response: { clientSecret, donationId }
@@ -166,7 +166,7 @@ export async function POST(req: NextRequest) {
       (await getDonorCountryCodeForSnapshot(prisma, session.user.id)) ?? undefined;
 
     // ────────────────────────────────────────────────────────
-    // MONTHLY — create subscription-linked donation + Stripe Subscription
+    // MONTHLY  create subscription-linked donation + Stripe Subscription
     // ────────────────────────────────────────────────────────
     if (type === "MONTHLY") {
       const { donation, subscriptionDbId } = await prisma.$transaction(
@@ -340,7 +340,7 @@ export async function POST(req: NextRequest) {
     }
 
     // ────────────────────────────────────────────────────────
-    // ONE-TIME — create donation + Stripe PaymentIntent
+    // ONE-TIME  create donation + Stripe PaymentIntent
     // ────────────────────────────────────────────────────────
     const donation = await prisma.$transaction(
       async (tx) => {

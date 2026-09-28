@@ -12,7 +12,7 @@ import { AutoTranslateButton, mergeTranslations } from './AutoTranslateButton';
  * The slide form declares every translated field for every locale as its own
  * react-hook-form entry (`title_en`, `description_en`, …). That was workable at
  * 8 locales; the site now publishes 19, and three translated fields would mean
- * 57 hand-written schema keys per section — which is how the slide form quietly
+ * 57 hand-written schema keys per section  which is how the slide form quietly
  * ended up covering only 8 of the 19 in the first place. Driving the tabs from
  * `SUPPORTED_LOCALES` means a new language appears in every content form the day
  * it is added to that list.
@@ -57,7 +57,7 @@ export function translationsFromRows(
   return out;
 }
 
-/** How many locales carry content — shown so gaps are visible before saving. */
+/** How many locales carry content  shown so gaps are visible before saving. */
 export function filledLocaleCount(
   translations: TranslationMap,
   requiredField: string
@@ -76,7 +76,7 @@ export function ContentTranslationTabs({
   fields: readonly TranslationField[];
   value: TranslationMap;
   onChange: (next: TranslationMap) => void;
-  /** Clearing this field drops the whole locale — the API deletes that row. */
+  /** Clearing this field drops the whole locale  the API deletes that row. */
   requiredField: string;
   /**
    * The Arabic master copy, by the same field names as `fields`. When given,
@@ -84,7 +84,7 @@ export function ContentTranslationTabs({
    * the map from it; the editor still reviews and saves.
    */
   source?: Record<string, string>;
-  /** What the item is, for the translator — "FAQ", "story", "course"… */
+  /** What the item is, for the translator  "FAQ", "story", "course"… */
   itemLabel?: string;
 }) {
   const set = (locale: string, field: string, next: string) => {

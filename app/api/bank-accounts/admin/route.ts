@@ -5,7 +5,7 @@ import { authOptions } from "../../auth/[...nextauth]/options";
 import { requireAdminOrDashboardPermission } from "@/lib/dashboard/api-auth";
 
 /**
- * GET /api/bank-accounts/admin — the dashboard listing.
+ * GET /api/bank-accounts/admin  the dashboard listing.
  *
  * Returns inactive rows and ignores the locale allow-list, so it sits behind
  * the dashboard permission. Currency codes come back for the list to show at a

@@ -15,12 +15,12 @@ const MAX_IMPORT = 5000;
 const CHUNK = 500;
 
 /**
- * Bulk donation import — COMMIT. Re-parses the uploaded file (never trusts client-sent rows), then:
+ * Bulk donation import  COMMIT. Re-parses the uploaded file (never trusts client-sent rows), then:
  *   1) resolves each donor by email (creates the User if new; back-fills only MISSING fields on existing),
- *   2) creates a Donation for EVERY valid row — repeats/re-uploads are accepted (no donation-level
+ *   2) creates a Donation for EVERY valid row  repeats/re-uploads are accepted (no donation-level
  *      dedup); donors are deduped by email so repeated donations append to the same user.
  *
- * SAFETY: imported donations are HISTORICAL records — `provider="IMPORT"`. This route does NOT call
+ * SAFETY: imported donations are HISTORICAL records  `provider="IMPORT"`. This route does NOT call
  * dispatchDonationPaid / CAPI / receipts / Telegram, so no messages are sent and no donor data is
  * deleted. Rows without a valid email or a positive amount are skipped (email is the dedup key).
  */
@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "لا توجد صفوف صالحة للاستيراد (يلزم بريد إلكتروني ومبلغ صحيح).", warnings: parsed.warnings }, { status: 400 });
   }
 
-  // Import EVERY valid row — repeats/re-uploads are accepted (no donation-level dedup). Only donors
+  // Import EVERY valid row  repeats/re-uploads are accepted (no donation-level dedup). Only donors
   // are deduped by email, so repeated donations append to the same user.
   let toImport = valid;
   const truncated = toImport.length > MAX_IMPORT;
@@ -76,7 +76,7 @@ export async function POST(request: NextRequest) {
       userByEmail.set(email, created);
       createdDonors += 1;
     } catch {
-      // Unique-email race or partial dup — re-fetch and reuse.
+      // Unique-email race or partial dup  re-fetch and reuse.
       const u = await prisma.user.findUnique({ where: { email }, select: { id: true } }).catch(() => null);
       if (u) userByEmail.set(email, u);
     }
@@ -144,8 +144,8 @@ export async function POST(request: NextRequest) {
   await writeAuditLog({
     ...actor,
     action: "DONATIONS_BULK_IMPORT",
-    messageAr: `استيراد تبرعات بالجملة — أُنشئ ${createdDonations} تبرع، ${createdDonors} متبرع جديد، تخطّي ${skippedDuplicate} مكرر`,
-    messageEn: `Bulk donation import — created ${createdDonations} donations, ${createdDonors} new donors, skipped ${skippedDuplicate} duplicates`,
+    messageAr: `استيراد تبرعات بالجملة  أُنشئ ${createdDonations} تبرع، ${createdDonors} متبرع جديد، تخطّي ${skippedDuplicate} مكرر`,
+    messageEn: `Bulk donation import  created ${createdDonations} donations, ${createdDonors} new donors, skipped ${skippedDuplicate} duplicates`,
     metadata: {
       fileHash: parsed.fileHash,
       totalRows: parsed.totalRows,

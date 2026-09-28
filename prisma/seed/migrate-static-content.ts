@@ -1,5 +1,5 @@
 /**
- * prisma/seed/migrate-static-content.ts — move the last hand-written site
+ * prisma/seed/migrate-static-content.ts  move the last hand-written site
  * content into the database.
  *
  * Until now four things the public site shows lived in code rather than in
@@ -10,7 +10,7 @@
  * dashboard becomes the only place they are edited from.
  *
  * On the bank accounts: the schema says nothing there is ever seeded, and that
- * rule is about placeholders — a made-up IBAN that reaches production sends a
+ * rule is about placeholders  a made-up IBAN that reaches production sends a
  * donor's transfer nowhere. These are not placeholders. They are the accounts
  * the site has published on its bank-transfer page since launch, copied as
  * they are, and nothing is invented.
@@ -74,7 +74,7 @@ async function main() {
       update: { name: b.name, holder: HOLDER, swift: b.swift, logo: b.logo ?? undefined, order: i, isActive: true },
       create: { slug: b.slug, name: b.name, holder: HOLDER, swift: b.swift, logo: b.logo ?? undefined, order: i, isActive: true, locales: [] },
     });
-    /* Currencies have no key of their own — replace the set, as the dashboard does.
+    /* Currencies have no key of their own  replace the set, as the dashboard does.
        "TL" in the old file was the bank's local label; ISO 4217 is TRY. */
     await prisma.bankAccountCurrency.deleteMany({ where: { bankAccountId: row.id } });
     await prisma.bankAccountCurrency.createMany({ data: b.currencies.map((c) => ({ bankAccountId: row.id, code: c.code, iban: c.iban })) });
@@ -130,7 +130,7 @@ async function main() {
     const description = msg("ar", "achievements", `report${r.n}Meta`);
     const slug = r.file.replace(/\.pdf$/, "");
     const filePath = path.join(process.cwd(), "public", "minbar", "reports", r.file);
-    if (!fs.existsSync(filePath)) console.warn(`  ${r.file}: not found under public/minbar/reports — row written anyway`);
+    if (!fs.existsSync(filePath)) console.warn(`  ${r.file}: not found under public/minbar/reports  row written anyway`);
     const base = { title, description: description || undefined, fileUrl: `/minbar/reports/${r.file}`, year: r.year ?? undefined, order: i, isPublished: true };
     const row = await prisma.report.upsert({ where: { slug }, update: base, create: { ...base, slug } });
     for (const locale of otherLocales) {
@@ -165,7 +165,7 @@ async function main() {
     for (const locale of otherLocales) {
       const d = msg(locale, "common", b.summaryKey);
       if (!d) continue;
-      /* Title stays Arabic — it is the book's name — but the summary translates. */
+      /* Title stays Arabic  it is the book's name  but the summary translates. */
       await prisma.bookletTranslation.upsert({
         where: { bookletId_locale: { bookletId: row.id, locale } },
         update: { title: b.title, description: d },

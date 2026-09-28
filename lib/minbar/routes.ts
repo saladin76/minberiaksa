@@ -4,10 +4,10 @@
  * The handoff pages link to each other by filename (`المشاريع.dc.html`), which
  * has no meaning once the design is running on a router. Every one of those
  * links resolves through this map instead, so a slug change is a single edit
- * rather than a sweep across 55 pages — the same "one dictionary + overrides"
+ * rather than a sweep across 55 pages  the same "one dictionary + overrides"
  * rule `Header.dc.html` states for `linkOverrides`.
  *
- * Every page lives at `/{locale}/{slug}` with ONE slug for every locale —
+ * Every page lives at `/{locale}/{slug}` with ONE slug for every locale 
  * `/en/checkout`, `/ar/checkout`, `/tr/checkout`. The site once gave Arabic
  * its own spellings (`/ar/بيانات-الدفع`); that made a URL mean something in
  * one locale and nothing in the next, so switching language on such a page
@@ -121,8 +121,8 @@ export const SLUGS: Record<MinbarRoute, string> = {
 
 /**
  * Slugs a page USED to have, per the locale that had them. Nothing links to
- * them any more; the middleware 301s a request for one — under ANY locale
- * prefix, because the language switch swaps only the prefix — to the page's
+ * them any more; the middleware 301s a request for one  under ANY locale
+ * prefix, because the language switch swaps only the prefix  to the page's
  * canonical slug. Keep an entry for as long as its URL might still be indexed
  * or in someone's hands; removing one turns that URL into a 404.
  */
@@ -183,8 +183,8 @@ export const NOINDEX_ROUTES: ReadonlySet<MinbarRoute> = new Set<MinbarRoute>([
  *
  * A central allowlist, not a growing blacklist (`DEPLOYED_VS_DESIGN_AUDIT.md`
  * § P2.1). The approved design gives the homepage its own quick-donation card
- * and removes the pill from the pages that already hold a donation module —
- * projects, zakat, waqf, recurring — and from the blog; the transactional
+ * and removes the pill from the pages that already hold a donation module 
+ * projects, zakat, waqf, recurring  and from the blog; the transactional
  * surfaces (cart, checkout, payment states, documents, account) never had it.
  * What is left is the reading pages, where a visitor moved to give has no
  * donation control in reach.
@@ -212,7 +212,7 @@ export const QUICK_DONATE_ROUTES: ReadonlySet<MinbarRoute> = new Set<MinbarRoute
  * dashboard or API path, a category page, a 404). The longest matching slug
  * wins, so `/projects/x` is `projectDetail` and `/projects` is `projects`.
  * Locale slugs are tried for the pathname's own locale before the canonical
- * ones — a locale may give a page its own slug (`slugFor`).
+ * ones  a locale may give a page its own slug (`slugFor`).
  */
 export function routeForPathname(pathname: string): MinbarRoute | null {
   const match = /^\/([a-z]{2})(?:\/(.*))?$/.exec(pathname.replace(/\/+$/, "") || "/");
@@ -241,7 +241,7 @@ export function routeForPathname(pathname: string): MinbarRoute | null {
 }
 
 /**
- * Slug for a page — the same in every locale. `locale` is still accepted so
+ * Slug for a page  the same in every locale. `locale` is still accepted so
  * the call sites keep reading as "this page, in this locale", which is what
  * they mean, and so nothing has to change if a locale ever needs its own.
  */
@@ -253,7 +253,7 @@ export function slugFor(route: MinbarRoute, locale: string): string {
 /**
  * Absolute in-app path for a page.
  *
- * @param extra Extra path segments appended after the page slug — a project or
+ * @param extra Extra path segments appended after the page slug  a project or
  *              article slug for the detail routes.
  */
 export function miaPath(route: MinbarRoute, locale: string, ...extra: string[]): string {

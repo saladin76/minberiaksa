@@ -26,7 +26,7 @@ import {
 /**
  * Contract tests for the Albaraka Türk EPOS MACs.
  *
- * These do not re-verify the algorithms against the bank's worked examples — those
+ * These do not re-verify the algorithms against the bank's worked examples  those
  * vectors carry a live encryption key and can't live in the repo. What they pin is
  * the shape of the contract, which is where a silent regression would land: the
  * failure mode of a reordered field list or an HMAC/SHA256 mix-up is that every

@@ -5,7 +5,7 @@ import { authOptions } from "../../auth/[...nextauth]/options";
 import { requireAdminOrDashboardPermission } from "@/lib/dashboard/api-auth";
 
 /**
- * GET /api/urgent-banners/admin — the dashboard listing.
+ * GET /api/urgent-banners/admin  the dashboard listing.
  *
  * Returns inactive, scheduled and expired rows, so it sits behind the dashboard
  * permission. The campaign title is joined so the list can name where a banner

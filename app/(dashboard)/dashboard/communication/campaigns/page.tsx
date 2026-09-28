@@ -9,7 +9,7 @@ import { CampaignsListClient } from "./_components/CampaignsListClient";
 export const dynamic = "force-dynamic";
 export const metadata = { title: "الحملات التسويقية | التواصل" };
 
-/** Server shell: gate first, render second — same contract as the three channel pages. */
+/** Server shell: gate first, render second  same contract as the three channel pages. */
 export default async function CommunicationCampaignsPage() {
   const access = resolveDashboardPageAccess(await getServerSession(authOptions), "messages");
   if (!access.allowed) redirect(access.redirectTo);
@@ -20,7 +20,7 @@ export default async function CommunicationCampaignsPage() {
         <PageHeader
           eyebrow="التواصل"
           title="الحملات التسويقية"
-          description="أرسل قالبًا واحدًا لمجموعة متبرعين تختارها — كل متبرع يستلمه بلغته المفضّلة."
+          description="أرسل قالبًا واحدًا لمجموعة متبرعين تختارها  كل متبرع يستلمه بلغته المفضّلة."
           icon={Megaphone}
         />
         <CampaignsListClient />

@@ -7,15 +7,15 @@ import type { DonorCommunicationProfile } from "@prisma/client";
 type Actor = { actorId?: string | null; actorName?: string | null; actorRole?: string | null } | null;
 
 /**
- * DonorCommunicationProfileService — the unified per-donor communication profile.
+ * DonorCommunicationProfileService  the unified per-donor communication profile.
  *
  * Compatibility, not replacement: consent is derived from the existing User fields
  * (`preferredLang`, `emailNotifications`, `smsNotifications`) plus donation signals.
  * WhatsApp has no explicit consent field on User, so `whatsappOptIn` stays false until a
- * human confirms it — donors are never silently marketing-eligible on WhatsApp.
+ * human confirms it  donors are never silently marketing-eligible on WhatsApp.
  *
  * This package provides the profile upsert only. It does NOT auto-run on paid donation
- * (that wiring into the donation flow is a later, separate step) — the donation flow is
+ * (that wiring into the donation flow is a later, separate step)  the donation flow is
  * untouched here.
  */
 
@@ -89,7 +89,7 @@ export async function upsertProfileForUser(
       // Email/SMS opt-in mirror the existing notification flags (marketing gate).
       emailOptIn: user.email ? user.emailNotifications !== false : false,
       smsOptIn: user.phone ? user.smsNotifications !== false : false,
-      // WhatsApp consent is never assumed — keep any existing explicit value, else false.
+      // WhatsApp consent is never assumed  keep any existing explicit value, else false.
       whatsappOptIn: existing?.whatsappOptIn ?? false,
       lastDonationAt: lastPaid?.paidAt ?? null,
       totalDonations: paidCount,

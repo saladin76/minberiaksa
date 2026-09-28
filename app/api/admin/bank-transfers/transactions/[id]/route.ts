@@ -23,7 +23,7 @@ const APPROVAL_FAILURE_AR: Record<BankTransferDonationFailure, string> = {
   INVALID_AMOUNT: "قيمة العملية غير صالحة",
   DONOR_NOT_FOUND: "المتبرع المختار غير موجود",
   DONOR_CONTACT_NOT_FOUND: "لا يوجد متبرع بهذا البريد أو الهاتف",
-  DONOR_CONTACT_AMBIGUOUS: "أكثر من متبرع بهذا البريد أو الهاتف — حدّد المتبرع يدويًا",
+  DONOR_CONTACT_AMBIGUOUS: "أكثر من متبرع بهذا البريد أو الهاتف  حدّد المتبرع يدويًا",
   CAMPAIGN_NOT_FOUND: "المشروع المختار غير موجود أو محذوف",
   DONOR_CREATE_FAILED: "تعذّر إنشاء سجل المتبرع",
   DONATION_CREATE_FAILED: "تعذّر إنشاء التبرع",

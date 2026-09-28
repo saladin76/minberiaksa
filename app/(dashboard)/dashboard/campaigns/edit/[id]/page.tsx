@@ -116,7 +116,7 @@ import {
 } from '../../_components/ShareLabelsSection';
 import { parseShareLabels, type ShareLabelsConfig } from '@/lib/campaign/share-labels';
 
-// ✅ Enhanced schema with translations (limits aligned with DB / real data — not stricter than Prisma)
+// ✅ Enhanced schema with translations (limits aligned with DB / real data  not stricter than Prisma)
 /** Fields every translation locale carries on the campaign form, as `field_locale`. */
 const LOCALE_FIELDS = ['title', 'image', 'videoUrl'] as const;
 type LocaleField = (typeof LOCALE_FIELDS)[number];
@@ -150,7 +150,7 @@ const formSchema = z
   videoUrl: z.string().optional(),
   currentAmount: z.coerce.number().min(0),
   /* One title / cover / video override per translation locale; English is
-     required — see superRefine. */
+     required  see superRefine. */
   ...LOCALE_SHAPE,
 })
   .superRefine((data, ctx) => {
@@ -325,7 +325,7 @@ export default function EditCampaignPage() {
       
       try {
         // `fresh=1` opts this read out of the 5-minute shared cache the public
-        // campaign page relies on — the editor must always load what was last
+        // campaign page relies on  the editor must always load what was last
         // saved, not a CDN copy from before the save.
         //
         // The translations call used to run only after these two resolved, for
@@ -431,7 +431,7 @@ export default function EditCampaignPage() {
     }
     setSaving(true);
     try {
-      // ✅ Prepare request with translations (English always sent — required)
+      // ✅ Prepare request with translations (English always sent  required)
       const willOverrideCurrentAmount =
         currentAmountUnlocked &&
         Number.isFinite(values.currentAmount) &&
@@ -452,7 +452,7 @@ export default function EditCampaignPage() {
           ? { currentAmount: Math.max(0, Number(values.currentAmount)) }
           : {}),
         /* English is always sent (required); every other locale whenever it
-           carries anything at all — a bare cover override is worth keeping. */
+           carries anything at all  a bare cover override is worth keeping. */
         translations: Object.fromEntries(
           TRANSLATION_LOCALES.flatMap((locale) => {
             const title = String(values[localeKey('title', locale)] ?? '');
@@ -498,7 +498,7 @@ export default function EditCampaignPage() {
     toast.error(firstCampaignFormErrorMessage(errors));
   };
 
-  // Per-locale single-image upload (optional override — fallback is the main Arabic cover).
+  // Per-locale single-image upload (optional override  fallback is the main Arabic cover).
   const [uploadingLocale, setUploadingLocale] = useState<null | TranslationLocale>(null);
 
   type LocaleImageKey = `image_${TranslationLocale}`;
@@ -546,11 +546,11 @@ export default function EditCampaignPage() {
   const renderLocaleMedia = (locale: TranslationLocale) => {
     const name = localeNativeLabel(locale);
     const labels = {
-      image: `صورة الغلاف (${name}) — اختيارية`,
+      image: `صورة الغلاف (${name})  اختيارية`,
       imageHint: `رفع غلاف ${name}`,
-      video: `رابط الفيديو (${name}) — اختياري`,
+      video: `رابط الفيديو (${name})  اختياري`,
       videoHint: 'رابط فيديو خاص بهذه اللغة.',
-      optionalNote: 'الصورة ورابط الفيديو هنا اختياريان — يحلّان محل الغلاف/الفيديو العربي فقط عند تعبئتهما. الصورة الرئيسية العربية (≥ 1) هي المطلوبة وحدها.',
+      optionalNote: 'الصورة ورابط الفيديو هنا اختياريان  يحلّان محل الغلاف/الفيديو العربي فقط عند تعبئتهما. الصورة الرئيسية العربية (≥ 1) هي المطلوبة وحدها.',
     };
     const direction = 'rtl' as const;
     const imageKey = `image_${locale}` as LocaleImageKey;
@@ -616,7 +616,7 @@ export default function EditCampaignPage() {
                 </div>
               </FormControl>
               <FormDescription className="text-xs">
-                {labels.imageHint} — 1200×675 (16:9), JPG/PNG, ≤ 2MB.
+                {labels.imageHint}  1200×675 (16:9), JPG/PNG, ≤ 2MB.
               </FormDescription>
             </FormItem>
           )}
@@ -1028,7 +1028,7 @@ export default function EditCampaignPage() {
                             </div>
                           )}
                           <FormDescription className="text-xs">
-                            يمكن للمشروع أن ينتمي لأكثر من حملة — سيظهر في صفحة كل
+                            يمكن للمشروع أن ينتمي لأكثر من حملة  سيظهر في صفحة كل
                             حملة مختارة.
                           </FormDescription>
                           <FormMessage />

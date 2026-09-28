@@ -46,7 +46,7 @@ interface CampaignOption {
 }
 
 interface QuickDonateProps {
-  /** Server-fetched categories — when provided we skip the client fetch + loading state,
+  /** Server-fetched categories  when provided we skip the client fetch + loading state,
    *  which means the SSR HTML already contains the final dropdown content (no CLS). */
   initialCategories?: CategoryOption[];
 }
@@ -102,7 +102,7 @@ const QuickDonate: React.FC<QuickDonateProps> = ({ initialCategories = [] }) => 
   }, []);
 
   // After sign-in redirect: restore the selection and re-open the dialog. The
-  // dialog can't open here any more — it now needs a campaign, and campaigns are
+  // dialog can't open here any more  it now needs a campaign, and campaigns are
   // fetched per category, so opening waits until that selection is back in place.
   useEffect(() => {
     if (searchParams.get("openDonation") !== "1") return;
@@ -139,7 +139,7 @@ const QuickDonate: React.FC<QuickDonateProps> = ({ initialCategories = [] }) => 
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Categories arrive as a prop from the server — only re-fetch on the client if the
+  // Categories arrive as a prop from the server  only re-fetch on the client if the
   // server failed to populate them (e.g. /api/categories was 5xx during SSR).
   useEffect(() => {
     if (initialCategories.length > 0) return;
@@ -197,7 +197,7 @@ const QuickDonate: React.FC<QuickDonateProps> = ({ initialCategories = [] }) => 
         pendingResumeCampaignRef.current = "";
         const restored = wanted ? items.find((c) => c.id === wanted) : undefined;
         setSelectedCampaignId(restored?.id ?? items[0]?.id ?? "");
-        // The saved project is gone (unpublished, or the area changed) — don't
+        // The saved project is gone (unpublished, or the area changed)  don't
         // silently reopen checkout on a different one, let them pick again.
         if (wanted && !restored) setResumeRequested(false);
 
@@ -246,7 +246,7 @@ const QuickDonate: React.FC<QuickDonateProps> = ({ initialCategories = [] }) => 
   const handleCategorySelect = (categoryId: string) => {
     setCategoryDropdownOpen(false);
     if (categoryId === selectedCategoryId) return;
-    // Deliberate change — reveal the projects inside it rather than making the
+    // Deliberate change  reveal the projects inside it rather than making the
     // visitor guess that a second choice is waiting.
     autoOpenCampaignsRef.current = true;
     setSelectedCategoryId(categoryId);
@@ -374,7 +374,7 @@ const QuickDonate: React.FC<QuickDonateProps> = ({ initialCategories = [] }) => 
             )}
           </div>
 
-          {/* Project inside the chosen area — the donation is credited here, not
+          {/* Project inside the chosen area  the donation is credited here, not
               to the area, so it has to be an explicit choice. */}
           <div ref={campaignDropdownRef} className="relative mb-4">
             <label className="mb-1.5 block text-[11px] font-bold uppercase tracking-wide text-gray-400">{t("selectProject")}</label>

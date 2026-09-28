@@ -50,7 +50,7 @@ export function ArchiveAssetTaskAction({ assetId, fileName }: Props) {
           <ClipboardList className="h-4 w-4" /> {saving ? "جاري إنشاء المهمة" : "إنشاء مهمة"}
         </Button>
         {/* The "فتح مهام الفريق" link pointed at /dashboard/operations/tasks, removed with
-            التشغيل. Creating the task still works — it is written by the same API — there is
+            التشغيل. Creating the task still works  it is written by the same API  there is
             just no page left to view it on, so the success confirmation below stands alone. */}
       </div>
       <p className="mt-2 text-xs font-semibold text-slate-500">تُستخدم المهمة لتنظيم مراجعة أو تجهيز المادة داخل الفريق.</p>

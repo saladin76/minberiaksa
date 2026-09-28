@@ -3,7 +3,7 @@ import { getRawTrackingSettings, trackingString } from "@/lib/tracking/tracking-
 
 const FB_API_VERSION = "v21.0";
 
-// POST /api/tracking/facebook-capi — server-side Conversion API (no auth; validate server-side only)
+// POST /api/tracking/facebook-capi  server-side Conversion API (no auth; validate server-side only)
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();

@@ -4,7 +4,7 @@ import { Lightbulb } from "lucide-react";
 import { ConciergeShell } from "../_components/ConciergeShell";
 import { InsightsView } from "../_components/InsightsView";
 
-/** مساعد العطاء — AI conclusions drawn from many conversations at once. */
+/** مساعد العطاء  AI conclusions drawn from many conversations at once. */
 export default function AiConciergeInsightsPage() {
   return (
     <ConciergeShell

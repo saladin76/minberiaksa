@@ -7,11 +7,11 @@ import { assetBaseUrl, authorizeDonationAccess, documentsOrError, isErrorRespons
 import { generateThanksPdf } from "@/lib/certificates/generate";
 
 /**
- * GET /api/certificates/thanks/:donationId — the thank-you certificate as a PDF
+ * GET /api/certificates/thanks/:donationId  the thank-you certificate as a PDF
  * (`شهادة الشكر عرضية`, A4 landscape).
  *
- * Reads the certificate the server issued on confirmation — issuing it first
- * if this is the first request after the webhook — and renders it in the
+ * Reads the certificate the server issued on confirmation  issuing it first
+ * if this is the first request after the webhook  and renders it in the
  * locale the donation was made in. No serial is ever computed here.
  *
  * `?name=` carries the name the donor edited on the success page. It is

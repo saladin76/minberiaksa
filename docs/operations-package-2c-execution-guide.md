@@ -1,4 +1,4 @@
-# Operations Package 2C — Prisma Activation Guide
+# Operations Package 2C  Prisma Activation Guide
 
 ## Purpose
 

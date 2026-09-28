@@ -26,7 +26,7 @@ test("a bare wish to give is recognised so the areas can be offered", () => {
   assert.equal(wantsToDonate("I want to donate"), true);
   assert.equal(wantsToDonate("bağış yapmak istiyorum"), true);
   assert.equal(wantsToDonate("hello there"), false);
-  assert.equal(parseIntent("عايز اتبرع"), null, "no cause named, so no intent — the engine asks where");
+  assert.equal(parseIntent("عايز اتبرع"), null, "no cause named, so no intent  the engine asks where");
 });
 
 /**

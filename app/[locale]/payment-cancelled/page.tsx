@@ -13,7 +13,7 @@ interface Props {
 const NAMESPACES = ["system", "cart"] as const;
 
 /**
- * Payment cancelled — ported from `Minbar/إلغاء الدفع.dc.html`.
+ * Payment cancelled  ported from `Minbar/إلغاء الدفع.dc.html`.
  *
  * The donor stepped back rather than failed, so the tone is neutral and the
  * basket is kept: returning to it is the primary exit.

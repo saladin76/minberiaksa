@@ -47,7 +47,7 @@ export async function PUT(
     const body = (await request.json()) as Record<string, unknown>;
     const patch = buildBookletScalarPatch(body);
 
-    /* `translations` absent — which is what the list page toggle sends — must
+    /* `translations` absent  which is what the list page toggle sends  must
        touch no translation rows at all. */
     const { write, clear } =
       body.translations === undefined

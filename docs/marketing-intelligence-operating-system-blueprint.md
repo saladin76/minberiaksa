@@ -349,7 +349,7 @@ unknown
 
 ## 7. تسلسل التنفيذ الصحيح
 
-### Phase 0 — Blueprint & Cleanup
+### Phase 0  Blueprint & Cleanup
 
 الحالة: بدأت بهذا الملف.
 
@@ -361,7 +361,7 @@ unknown
 - حصر ما هو موجود.
 - عدم تغيير production behavior.
 
-### Phase 1 — Campaign Builder 2.0
+### Phase 1  Campaign Builder 2.0
 
 الأولوية الأعلى لأن جودة الروابط هي جذر التتبع.
 
@@ -372,7 +372,7 @@ unknown
 - إضافة campaign mode + templates + validation.
 - عدم تغيير أي رابط موجود.
 
-### Phase 2 — Tracking Health Cockpit
+### Phase 2  Tracking Health Cockpit
 
 تبويب يقرأ من الموجود فقط:
 
@@ -384,7 +384,7 @@ unknown
 
 لا يغير التتبع.
 
-### Phase 3 — Reconciliation Core
+### Phase 3  Reconciliation Core
 
 يبني helper واحد:
 
@@ -394,7 +394,7 @@ lib/marketing/reconciliation/reconcile.ts
 
 بدون UI كبير في البداية، ثم يربط dashboard.
 
-### Phase 4 — Platform Sync UI
+### Phase 4  Platform Sync UI
 
 يبني فوق models الموجودة:
 
@@ -403,11 +403,11 @@ lib/marketing/reconciliation/reconcile.ts
 - missing config states
 - not implemented states
 
-### Phase 5 — Messaging Intelligence
+### Phase 5  Messaging Intelligence
 
 يمتد على الرسائل والقوالب الحالية.
 
-### Phase 6 — Alerts & Reports
+### Phase 6  Alerts & Reports
 
 آخر مرحلة، بعد أن تكون البيانات موحدة.
 

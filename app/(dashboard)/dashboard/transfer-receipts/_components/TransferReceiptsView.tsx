@@ -317,7 +317,7 @@ export function TransferReceiptsView() {
           icon={Receipt}
           title={
             status === "UNDER_REVIEW"
-              ? "لا شيء بانتظار المراجعة — كل الإيصالات تمت معالجتها"
+              ? "لا شيء بانتظار المراجعة  كل الإيصالات تمت معالجتها"
               : status === "AWAITING_RECEIPT"
                 ? "لا توجد طلبات بانتظار إيصال"
                 : status === "REJECTED"

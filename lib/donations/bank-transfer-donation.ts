@@ -6,11 +6,11 @@ import { recomputeCampaignCurrentAmount } from "@/lib/campaign/current-amount";
 
 /**
  * Turn an APPROVED bank-transfer transaction into a real Donation (current schema), marked so the
- * dashboards can show a "تحويل بنكي" hint. Historical record — this NEVER sends messages / CAPI /
+ * dashboards can show a "تحويل بنكي" hint. Historical record  this NEVER sends messages / CAPI /
  * receipts. Amount is stored in its original currency with a computed amountUSD so USD revenue
  * dashboards include it. Idempotent: one Donation per bank transaction hash.
  *
- * Donor: never matched by name alone — two people called «محمد أحمد» are two people. The reviewer
+ * Donor: never matched by name alone  two people called «محمد أحمد» are two people. The reviewer
  * either picks the donor (`donorUserId`), gives an exact email/phone (`donorContact`), or a new
  * donor is created for this sender. Country is left empty: the bank's location is not the donor's.
  *
@@ -98,7 +98,7 @@ export async function createDonationFromBankTransfer(input: BankTransferDonation
 
   const providerOrderId = `${BANK_ORDER_PREFIX}${input.transactionHash}`;
 
-  // Idempotency — one donation per bank transaction hash (safe on re-approval).
+  // Idempotency  one donation per bank transaction hash (safe on re-approval).
   const existing = await prisma.donation
     .findFirst({ where: { provider: BANK_TRANSFER_PROVIDER, providerOrderId }, select: { id: true, donorId: true } })
     .catch(() => null);
@@ -147,7 +147,7 @@ export async function createDonationFromBankTransfer(input: BankTransferDonation
 
   const amountUSD = await amountToUsd(input.amount, input.currency);
   const when = parseBankDate(input.transactionDate);
-  const comment = [input.project, input.note].filter(Boolean).join(" — ") || null;
+  const comment = [input.project, input.note].filter(Boolean).join("  ") || null;
 
   const created = await prisma
     .$transaction(async (tx) => {

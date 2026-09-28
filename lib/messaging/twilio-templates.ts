@@ -64,7 +64,7 @@ export interface NormalizedButton {
 }
 
 export interface NormalizedVariable {
-  /** "1", "2" or named — what Twilio uses. */
+  /** "1", "2" or named  what Twilio uses. */
   key: string;
   exampleValue: string | null;
   /** Best-effort mapping to one of our `TemplateContext` paths (e.g. `user.name`). */
@@ -84,7 +84,7 @@ export interface NormalizedTemplate {
   footerText: string | null;
   buttons: NormalizedButton[];
   variables: NormalizedVariable[];
-  /** Sanitized provider payload — credentials / tokens removed. */
+  /** Sanitized provider payload  credentials / tokens removed. */
   providerRaw: Record<string, unknown>;
 }
 
@@ -281,7 +281,7 @@ function classifyCategory(raw: Record<string, unknown>): string | null {
 }
 
 function sanitizeRaw(raw: Record<string, unknown>): Record<string, unknown> {
-  // Defensive copy — drop anything that looks like a credential.
+  // Defensive copy  drop anything that looks like a credential.
   const clone: Record<string, unknown> = {};
   for (const [k, v] of Object.entries(raw)) {
     if (/auth|secret|token|password|api[_-]?key/i.test(k)) continue;
@@ -362,7 +362,7 @@ export function normalizeTwilioContent(
 }
 
 /**
- * Fetch all Twilio Content templates for the configured account. Never throws —
+ * Fetch all Twilio Content templates for the configured account. Never throws 
  * returns a typed `SyncResult` so the dashboard can show the precise state.
  */
 export async function syncTwilioWhatsappTemplates(): Promise<SyncResult> {
@@ -371,7 +371,7 @@ export async function syncTwilioWhatsappTemplates(): Promise<SyncResult> {
     return {
       status: "missing_config",
       messageAr:
-        "TWILIO_ACCOUNT_SID و TWILIO_AUTH_TOKEN غير مُعدّان في البيئة — لا يمكن جلب القوالب الآن.",
+        "TWILIO_ACCOUNT_SID و TWILIO_AUTH_TOKEN غير مُعدّان في البيئة  لا يمكن جلب القوالب الآن.",
       templates: [],
     };
   }
@@ -379,7 +379,7 @@ export async function syncTwilioWhatsappTemplates(): Promise<SyncResult> {
   try {
     const client = twilio(creds.sid, creds.token);
     // Twilio's Node SDK exposes the Content API via `content.v1.contents`.
-    // We defend against future SDK changes — if the resource isn't there,
+    // We defend against future SDK changes  if the resource isn't there,
     // surface `not_implemented` instead of crashing.
     const contentNs = (client as unknown as {
       content?: { v1?: { contents?: { list?: (opts?: { limit?: number }) => Promise<unknown[]> } } };
@@ -388,7 +388,7 @@ export async function syncTwilioWhatsappTemplates(): Promise<SyncResult> {
       return {
         status: "not_implemented",
         messageAr:
-          "Twilio Content API غير مدعوم في نسخة SDK الحالية — قم بترقية حزمة twilio لجلب القوالب.",
+          "Twilio Content API غير مدعوم في نسخة SDK الحالية  قم بترقية حزمة twilio لجلب القوالب.",
         templates: [],
       };
     }
@@ -417,7 +417,7 @@ export async function syncTwilioWhatsappTemplates(): Promise<SyncResult> {
       return {
         status: "not_implemented",
         messageAr:
-          "نقطة Twilio Content API غير متاحة — هل تم تفعيل Content API في حساب Twilio؟",
+          "نقطة Twilio Content API غير متاحة  هل تم تفعيل Content API في حساب Twilio؟",
         templates: [],
         error: message.slice(0, 200),
       };

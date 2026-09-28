@@ -10,7 +10,7 @@ type Props = {
    * markup, not just text.
    */
   description?: ReactNode;
-  /** Small label above the title — section name, breadcrumb-ish context. */
+  /** Small label above the title  section name, breadcrumb-ish context. */
   eyebrow?: string;
   icon?: LucideIcon;
   /** Buttons, filters, export controls. */
@@ -25,7 +25,7 @@ type Props = {
  *
  * Before this existed each page hand-rolled its own: `/campaigns` used
  * `text-xl sm:text-2xl`, `/monthly` used `text-xl sm:text-2xl md:text-3xl`, and the
- * marketing section used a full-bleed blue gradient card — so no two sections agreed on
+ * marketing section used a full-bleed blue gradient card  so no two sections agreed on
  * what a page title looked like. Deliberately flat rather than a coloured slab: the shell
  * is neutral now, so the header should not compete with the content.
  */

@@ -5,8 +5,8 @@ import { optionalInt, optionalStr, str } from "./translation-write";
  *
  * The category endpoints predate the site-content group and write their own
  * scalars and translations by hand; this only covers the page fields added on
- * top — the hero, the figures, the donation box, the values strip, the
- * explanatory cards and the achievements rail — so the existing name / slug /
+ * top  the hero, the figures, the donation box, the values strip, the
+ * explanatory cards and the achievements rail  so the existing name / slug /
  * image logic is untouched.
  *
  * The two child lists are replaced wholesale on save (`deleteMany` then
@@ -30,7 +30,7 @@ export type CategoryCardIcon = string;
 
 /**
  * A card's icon: one of the eight above, or any value a category's own icon
- * takes — a Lucide name, `custom:Mosque`, `flag:PS` — as `CategoryIconPicker`
+ * takes  a Lucide name, `custom:Mosque`, `flag:PS`  as `CategoryIconPicker`
  * writes them. The renderer resolves the name and falls back on its own for
  * anything it does not know, so only the shape is checked here. Empty means
  * the first drawn glyph, which is what the cards have always defaulted to.
@@ -78,7 +78,7 @@ function amounts(raw: unknown): number[] {
 const MAX_CURRENCY_OVERRIDES = 20;
 
 /**
- * `{ EUR: [50, 100], ... }` — the per-currency exceptions. USD is the base list
+ * `{ EUR: [50, 100], ... }`  the per-currency exceptions. USD is the base list
  * and is dropped here rather than kept as a duplicate of `suggestedAmounts`;
  * a currency whose list comes out empty is dropped too, so an exception row
  * the editor added and never filled in does not blank that currency's chips.
@@ -140,7 +140,7 @@ export function buildCategoryPagePatch(body: Record<string, unknown>) {
   return patch;
 }
 
-/** The translated half of the page, per locale — merged into the row the
+/** The translated half of the page, per locale  merged into the row the
  *  category endpoints already upsert for `name` / `description`. */
 export const CATEGORY_PAGE_TRANSLATION_FIELDS = [
   "heroLead",
@@ -198,7 +198,7 @@ function childTranslations<K extends string>(
 }
 
 /**
- * The values strip. Rows without a label are dropped rather than rejected — an
+ * The values strip. Rows without a label are dropped rather than rejected  an
  * empty trailing row is what an editor leaves behind after clicking "add" once
  * too often, not a mistake worth failing the save over.
  */

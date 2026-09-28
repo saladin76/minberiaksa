@@ -4,7 +4,7 @@
  * next-intl message files.
  *
  * Source : Minbar/i18n/<lang>/<namespace>.json   (19 languages × 23 namespaces,
- *          generated from the Arabic masters by Minbar/translation-sync.js —
+ *          generated from the Arabic masters by Minbar/translation-sync.js 
  *          never hand-edited, per Minbar/CLAUDE.md)
  * Target : i18n/messages/<lang>.json
  *
@@ -27,7 +27,7 @@ const SRC = "Minbar/i18n";
 const OUT = "i18n/messages";
 
 if (!existsSync(SRC)) {
-  console.error(`[minbar-i18n] source not found: ${SRC} — nothing to sync.`);
+  console.error(`[minbar-i18n] source not found: ${SRC}  nothing to sync.`);
   process.exit(1);
 }
 
@@ -43,7 +43,7 @@ const locales = readdirSync(SRC)
 /**
  * The handoff bundles are flat maps, and 232 of their keys carry a dot
  * (`hero.title`, `cta.waqf.eyebrow`). next-intl reads `.` as the nesting
- * separator and rejects a flat key containing one outright — "INVALID_KEY:
+ * separator and rejects a flat key containing one outright  "INVALID_KEY:
  * Namespace keys can not contain the character '.'". Expanding them into real
  * objects keeps the call sites identical (`t("hero.title")` still resolves)
  * without rewriting the source bundles, which are generated and must not be
@@ -88,12 +88,12 @@ for (const locale of locales) {
   for (const ns of namespaces) {
     const file = join(SRC, locale, `${ns}.json`);
     if (!existsSync(file)) {
-      console.warn(`[minbar-i18n] missing bundle ${locale}/${ns}.json — skipped`);
+      console.warn(`[minbar-i18n] missing bundle ${locale}/${ns}.json  skipped`);
       continue;
     }
     const bundle = JSON.parse(readFileSync(file, "utf8"));
     // `_sync` is bookkeeping for translation-sync.js (sourceHash/status) and is
-    // never user-facing copy — it must not reach the client bundle.
+    // never user-facing copy  it must not reach the client bundle.
     delete bundle._sync;
     keys += Object.keys(bundle).length;
     existing[ns] = nestDottedKeys(bundle, `${locale}/${ns}`);

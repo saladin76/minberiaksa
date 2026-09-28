@@ -3,13 +3,13 @@ import { assetBaseUrl, authorizeDonationAccess, documentsOrError, isErrorRespons
 import { generateReceiptPdf } from "@/lib/certificates/generate";
 
 /**
- * GET /api/receipts/:donationId — the donation receipt as a PDF
+ * GET /api/receipts/:donationId  the donation receipt as a PDF
  * (`إيصال التبرع`, A4 portrait).
  *
  * The accounting document: the official receipt number the server issued on
  * confirmation, the lines as charged, the verification code. Two pages when
- * the donor's language is not Turkish — theirs, then the Turkish copy the
- * foundation's registration requires — with the same number on both.
+ * the donor's language is not Turkish  theirs, then the Turkish copy the
+ * foundation's registration requires  with the same number on both.
  *
  * A bank transfer has a receipt only once a finance officer has matched the
  * money; before that this answers 409, as the spec's §3 requires.

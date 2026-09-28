@@ -24,7 +24,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 /**
- * Our publications — ported from `Minbar/كتيبات المؤسسة.dc.html`.
+ * Our publications  ported from `Minbar/كتيبات المؤسسة.dc.html`.
  *
  * Every string it needs is in `common`, which the shell bundle already carries,
  * so this page adds no namespaces of its own.

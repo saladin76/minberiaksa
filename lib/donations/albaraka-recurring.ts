@@ -34,8 +34,8 @@ import { mintDonationAccessToken } from "@/lib/donations/access-token";
  *
  * A plan billed by Albaraka (`Subscription.provider = "ALBARAKA"`) paid its
  * first instalment as an ordinary 3D payment at checkout, which stored the
- * card (`paymentCardId`) and set `nextBillingDate`. From then on this job —
- * run by `/api/cron/recurring-charges` every few minutes — charges every plan
+ * card (`paymentCardId`) and set `nextBillingDate`. From then on this job 
+ * run by `/api/cron/recurring-charges` every few minutes  charges every plan
  * whose `nextBillingDate` has passed, through the bank's direct /Sale as a
  * merchant-initiated recurring transaction, and advances the date by the
  * plan's own cadence in its own timezone (`nextChargeAt`).
@@ -51,11 +51,11 @@ import { mintDonationAccessToken } from "@/lib/donations/access-token";
  *    the ledger never heard of.
  *  - Missed cycles are not back-charged. A plan that fell behind (the job was
  *    down, the card was fixed a week later) charges once and its next date is
- *    moved to the first cycle still ahead — the donor asked for "every
+ *    moved to the first cycle still ahead  the donor asked for "every
  *    Friday", not for every Friday they missed.
  *  - Declines climb the retry ladder (`RECURRING_RETRY_HOURS`, default 1h,
  *    6h, 24h); when it is exhausted the plan is PAYMENT_FAILED and the donor
- *    is told. A transport failure — no answer from the bank at all — is
+ *    is told. A transport failure  no answer from the bank at all  is
  *    treated as a decline for scheduling, but the row records "Unknown": the
  *    bank's status query is the way to be sure, and the reconciliation job
  *    is where that belongs.
@@ -91,7 +91,7 @@ type DueSubscription = Prisma.SubscriptionGetPayload<{
   };
 }>;
 
-/** What the bank is asked to charge — converted per ALBARAKA_CHARGE_CURRENCY, in minor units. */
+/** What the bank is asked to charge  converted per ALBARAKA_CHARGE_CURRENCY, in minor units. */
 async function chargeFor(totalAmount: number, currency: string): Promise<{ amount: number; currencyCode: AlbarakaCurrencyCode }> {
   const donationCurrency = String(currency || "TRY").toUpperCase();
   const policy = albarakaChargeCurrency();

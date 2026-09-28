@@ -157,7 +157,7 @@ export default function EditCategoryPage() {
     fetchCategory();
   }, [params.id, form, router]);
 
-  /* Which campaigns the donation box may point at — this category's own. */
+  /* Which campaigns the donation box may point at  this category's own. */
   useEffect(() => {
     let live = true;
     axios

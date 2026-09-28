@@ -3,7 +3,7 @@
 import { useTranslations } from "next-intl";
 
 /**
- * Plan of the blessed Al-Aqsa Mosque — ported verbatim from the inline SVG of
+ * Plan of the blessed Al-Aqsa Mosque  ported verbatim from the inline SVG of
  * `Minbar/المسجد الأقصى.dc.html`.
  *
  * The drawing is always laid out left-to-right, whatever direction the page is

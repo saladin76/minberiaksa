@@ -1,5 +1,5 @@
 /**
- * Pure rules for recurring plans and their payment provider — no Stripe SDK,
+ * Pure rules for recurring plans and their payment provider  no Stripe SDK,
  * so they can be unit-tested. The Stripe calls live in
  * subscription-provider-control.ts, which re-exports these.
  */

@@ -12,7 +12,7 @@
 //   3. Parent campaign Arabic title
 //   4. Parent campaign base slug
 //
-// Safe to re-run — only touches translation rows with no usable slug.
+// Safe to re-run  only touches translation rows with no usable slug.
 //
 // Note (MongoDB): documents may omit `slug` entirely; Prisma filters like
 // `{ slug: null }` often do NOT match omitted fields, so we scan all
@@ -33,7 +33,7 @@ const DRY_RUN = process.argv.includes("--dry-run");
  *
  * This must be decided in application code, not in a `where` clause. Prisma's
  * MongoDB connector translates `{ slug: null }` into a filter that only matches
- * documents where the field EXISTS and is null — documents that omit `slug`
+ * documents where the field EXISTS and is null  documents that omit `slug`
  * entirely are not matched. Every base-model backfill here used that filter and
  * so silently skipped exactly the rows that break the unique index:
  * `PostCategory` had three slug-less documents and `{ slug: null }` returned

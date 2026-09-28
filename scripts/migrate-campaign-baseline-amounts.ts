@@ -4,8 +4,8 @@
  *
  * Until now `currentAmount` mixed two things: money from real donation rows, and money an admin
  * typed into the edit form for donations collected outside the site. Nothing distinguished them,
- * so `recomputeCampaignCurrentAmount` — an absolute overwrite from donation rows, fired on every
- * donation DELETE and PATCH — would silently erase the offline part.
+ * so `recomputeCampaignCurrentAmount`  an absolute overwrite from donation rows, fired on every
+ * donation DELETE and PATCH  would silently erase the offline part.
  *
  *   baselineAmount = max(0, currentAmount - settled donation items)
  *
@@ -60,7 +60,7 @@ async function main() {
 
   if (!COMMIT) return;
   for (const c of changes) {
-    // currentAmount is intentionally NOT touched — the public total must not move.
+    // currentAmount is intentionally NOT touched  the public total must not move.
     await prisma.campaign.update({ where: { id: c.id }, data: { baselineAmount: c.baseline } });
   }
   console.log(`\nwrote baselineAmount on ${changes.length} campaign(s).`);

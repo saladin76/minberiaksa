@@ -15,7 +15,7 @@ import { useTranslations } from "next-intl";
  * keeps a raw key from ever reaching the user.
  *
  * The final fallback is the key itself, but only after all three namespaces
- * miss — which in a complete bundle should not happen.
+ * miss  which in a complete bundle should not happen.
  */
 export function useMinbarLabel() {
   const tNav = useTranslations("navigation");

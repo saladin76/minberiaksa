@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 
 /**
- * A sheet rendered at its natural size and scaled down to fit — the preview
+ * A sheet rendered at its natural size and scaled down to fit  the preview
  * pattern of `نجاح التبرع.dc.html` (`#cert-canvas`, `.waqf-canvas`,
  * `#receipt-canvas`).
  *

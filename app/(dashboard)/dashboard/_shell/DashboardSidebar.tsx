@@ -18,7 +18,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 
 /**
- * The unread pill. Brand blue rather than the usual notification red — this is "there is work
+ * The unread pill. Brand blue rather than the usual notification red  this is "there is work
  * here", not "something is wrong", and red beside a nav label reads as an error state.
  *
  * Capped at 99+ so a long-neglected inbox cannot widen the item and push the label into an
@@ -112,7 +112,7 @@ export function DashboardSidebar({
         </button>
       </div>
 
-      {/* Search trigger — opens the ⌘K palette */}
+      {/* Search trigger  opens the ⌘K palette */}
       <div className="px-3 pt-3 shrink-0">
         <button
           type="button"
@@ -157,7 +157,7 @@ export function DashboardSidebar({
                     const active = item.href === activeHref;
                     const count = item.badge ? badgeCounts?.[item.badge] ?? 0 : 0;
                     return (
-                      // <Link>, not <button onClick={router.push}> — restores prefetch,
+                      // <Link>, not <button onClick={router.push}>  restores prefetch,
                       // middle-click, ctrl-click and "open in new tab".
                       <Link
                         key={item.href}

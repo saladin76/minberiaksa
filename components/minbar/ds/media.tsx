@@ -6,7 +6,7 @@ import type { CSSProperties, ReactNode } from "react";
  */
 
 /* ── ReelCard ────────────────────────────────────────────────────────────────
- * Vertical 9:16 impact reel card — poster image, dark base, a play glyph and a
+ * Vertical 9:16 impact reel card  poster image, dark base, a play glyph and a
  * short caption pinned to the bottom. Used in the "Impact Reels" rail. */
 export interface ReelCardProps {
   title: ReactNode;
@@ -59,7 +59,7 @@ export function ReelCard({ title, image, href = "#", badge, playLabel, style }: 
           color: "var(--red)",
         }}
       >
-        {/* Drawn, not a glyph font or emoji — the handoff mandates real SVG icons. */}
+        {/* Drawn, not a glyph font or emoji  the handoff mandates real SVG icons. */}
         <svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor">
           <path d="M8 5.5v13l11-6.5-11-6.5Z" />
         </svg>

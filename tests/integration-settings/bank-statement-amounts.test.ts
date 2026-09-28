@@ -13,7 +13,7 @@ import {
   resolveStatementColumns,
 } from "../../lib/bank-transfers/statement-columns";
 
-describe("parseAmount — Turkish and English money formats", () => {
+describe("parseAmount  Turkish and English money formats", () => {
   const cases: [unknown, number | null][] = [
     ["1.234,56", 1234.56],   // TR: dot groups, comma decimal
     ["1,234.56", 1234.56],   // EN: comma groups, dot decimal
@@ -95,7 +95,7 @@ describe("findHeaderRow", () => {
   });
 });
 
-describe("resolveStatementColumns — the «Tutar» rule", () => {
+describe("resolveStatementColumns  the «Tutar» rule", () => {
   test("uses the Tutar column when the sheet has one", () => {
     const headers = ["Tarih", "Açıklama", "Tutar", "Bakiye"];
     const dataRows = [
@@ -153,7 +153,7 @@ describe("resolveStatementColumns — the «Tutar» rule", () => {
   });
 });
 
-describe("detectAmountColumn — no usable header", () => {
+describe("detectAmountColumn  no usable header", () => {
   test("prefers the money-shaped column over a reference number", () => {
     // col0 date, col1 reference (long digits), col2 description, col3 amount
     const dataRows = [

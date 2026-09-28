@@ -53,7 +53,7 @@ export async function submitForReview(campaignId: string, actor?: Actor): Promis
   return r.ok ? { ok: true } : { ok: false, status: r.status, error: r.error };
 }
 
-/** Approve — blocked unless language coverage is satisfied (directly or by explicit decisions). */
+/** Approve  blocked unless language coverage is satisfied (directly or by explicit decisions). */
 export async function approveCampaign(campaignId: string, actor?: Actor): Promise<ApprovalResult> {
   const gate = await evaluateCoverageGate(campaignId);
   if (!gate.ok) {

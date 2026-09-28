@@ -4,17 +4,17 @@
  * The same donor's number was being written and compared in at least three shapes:
  * `+905306516549` when a human typed it, `905306516549` in a Meta webhook (`from` carries no plus),
  * and a digits-only string in the conversation service's own bucket key. Each path picked its own
- * normalisation — digits here, exact string there — so a reply arriving from Meta did not match the
+ * normalisation  digits here, exact string there  so a reply arriving from Meta did not match the
  * outbound delivery it answered, and one contact could split into several conversations.
  *
  * Everything that ingests, stores, sends, matches or buckets a phone number goes through here:
  *
- *  · `normalizePhoneE164` — the canonical form, `+<country><national>`, or null for unusable input.
+ *  · `normalizePhoneE164`  the canonical form, `+<country><national>`, or null for unusable input.
  *    Storage and comparison both use this.
- *  · `phoneMatchVariants` — the shapes an *existing* row might already hold, so queries still find
+ *  · `phoneMatchVariants`  the shapes an *existing* row might already hold, so queries still find
  *    data written before this module existed.
- *  · `samePhone` — the comparison, for code holding two values rather than querying.
- *  · `phoneDigits` — the loose, lossy key. Legacy comparison only, never storage.
+ *  · `samePhone`  the comparison, for code holding two values rather than querying.
+ *  · `phoneDigits`  the loose, lossy key. Legacy comparison only, never storage.
  *
  * The rules are deliberately deterministic rather than delegated to a parser:
  *
@@ -26,13 +26,13 @@
  *    it is left as a stable self-consistent key instead of being guessed into the wrong country.
  *    `libphonenumber-js` has a `defaultCountry` mode for exactly this, but its two-argument form is
  *    version- and bundle-sensitive, and a wrong guess here silently reassigns a conversation to
- *    another person — worse than not resolving it.
+ *    another person  worse than not resolving it.
  *
  * Validation stays out too: this is a *matching* key. Refusing to store a number a provider is
  * already delivering to would lose the conversation, which is the opposite of the point.
  */
 
-/** Digits only. Loose, lossy, and for legacy comparison only — never for storage. */
+/** Digits only. Loose, lossy, and for legacy comparison only  never for storage. */
 export function phoneDigits(phone: string | null | undefined): string {
   return (phone ?? "").replace(/\D/g, "");
 }

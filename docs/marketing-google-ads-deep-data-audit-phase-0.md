@@ -1,4 +1,4 @@
-# Google Ads Deep Data Audit — Phase 0
+# Google Ads Deep Data Audit  Phase 0
 
 ## الحكم العام
 

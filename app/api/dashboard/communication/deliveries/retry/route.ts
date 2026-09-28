@@ -23,7 +23,7 @@ function parseRange(days: number | undefined): { from?: Date; to?: Date } {
   return { from: new Date(Date.now() - days * 86_400_000), to: new Date() };
 }
 
-/** What a bulk retry would do — read by the confirmation step before anything is sent. */
+/** What a bulk retry would do  read by the confirmation step before anything is sent. */
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
@@ -49,7 +49,7 @@ export async function GET(request: NextRequest) {
  * Execute a retry batch, streaming one NDJSON line per message.
  *
  * Streaming rather than a single JSON reply for two reasons. A batch of real provider calls can run
- * well past the point where a silent request looks hung — and worse, past an intermediary's idle
+ * well past the point where a silent request looks hung  and worse, past an intermediary's idle
  * timeout, which would abandon the response while the sends carried on regardless. Emitting a line
  * per message keeps the connection alive and lets the dialog report progress truthfully, including
  * naming the message currently in flight.
@@ -97,7 +97,7 @@ export async function POST(request: NextRequest) {
             result = await retryDelivery(ids[i], { actorId: actor?.actorId ?? null, config });
           } catch (error) {
             console.error("retryDelivery threw", ids[i], error);
-            // One bad row must not abort the batch — record it and keep going.
+            // One bad row must not abort the batch  record it and keep going.
             result = {
               deliveryId: ids[i],
               code: "PROVIDER_REJECTED",
@@ -125,8 +125,8 @@ export async function POST(request: NextRequest) {
           await writeAuditLog({
             ...actor,
             action: "COMMUNICATION_DELIVERY_RETRY",
-            messageAr: `إعادة إرسال ${results.length} رسالة (${channel}) — نجح ${sent}`,
-            messageEn: `Retried ${results.length} ${channel} deliveries — ${sent} sent`,
+            messageAr: `إعادة إرسال ${results.length} رسالة (${channel})  نجح ${sent}`,
+            messageEn: `Retried ${results.length} ${channel} deliveries  ${sent} sent`,
             entityType: "CommunicationDelivery",
             metadata: { channel, ...summary, ids },
           });

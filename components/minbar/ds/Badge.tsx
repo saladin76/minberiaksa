@@ -7,7 +7,7 @@ import type { CSSProperties, HTMLAttributes, ReactNode } from "react";
  * Ported from the design-system bundle
  * (`Minbar/_ds/<ds>/_ds_bundle.js` → `components/badges/Badge.jsx`). The tone
  * colours resolve through CSS variables, so the locked palette in
- * `styles/minbar/minbar.css` — not the design-system defaults — is what renders.
+ * `styles/minbar/minbar.css`  not the design-system defaults  is what renders.
  */
 export type BadgeTone = "gold" | "red" | "green" | "deep" | "onImage";
 

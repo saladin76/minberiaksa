@@ -158,7 +158,7 @@ export function DocumentListPage({
   const togglePublished = async (row: DocumentRow, next: boolean) => {
     setTogglingId(row.id);
     /* Only the flag is sent. Echoing the whole row back would let a stale field
-       the list is holding overwrite good data — and omitting `translations` is
+       the list is holding overwrite good data  and omitting `translations` is
        what tells the API to leave the translation rows alone. */
     try {
       await axios.put(`${copy.endpoint}/${row.id}`, { isPublished: next });

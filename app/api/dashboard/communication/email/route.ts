@@ -24,7 +24,7 @@ export const dynamic = "force-dynamic";
 
 const CHANNEL = "EMAIL";
 
-/** Terminal states — a delivery here will never progress further. */
+/** Terminal states  a delivery here will never progress further. */
 const FAILED_STATUSES = ["FAILED", "BOUNCED"] as const;
 
 type Bucket = { date: string; sent: number; delivered: number; opened: number; failed: number };
@@ -41,7 +41,7 @@ function parseRange(sp: URLSearchParams): { from: Date; to: Date; days: number }
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    // Same permission as the message log — this is the same data, presented per channel.
+    // Same permission as the message log  this is the same data, presented per channel.
     const denied = requireAdminOrDashboardPermission(session, "messages");
     if (denied) return denied;
 
@@ -53,7 +53,7 @@ export async function GET(request: NextRequest) {
     const page = Math.max(1, parseInt(sp.get("page") || "1"));
     const limit = Math.min(100, Math.max(1, parseInt(sp.get("limit") || "25")));
 
-    // A campaign deep-link scopes the entire page — summary, chart and list — to that campaign,
+    // A campaign deep-link scopes the entire page  summary, chart and list  to that campaign,
     // and drops the date window while doing it. The campaign IS the range; keeping the default
     // 30 days would report zeros for any campaign sent earlier than that.
     const campaignId = sp.get("campaign")?.trim() || "";
@@ -98,7 +98,7 @@ export async function GET(request: NextRequest) {
       prisma.communicationDelivery.count({ where: { ...rangeWhere, openedAt: { not: null } } }),
       prisma.communicationDelivery.count({ where: { ...rangeWhere, clickedAt: { not: null } } }),
       prisma.communicationDelivery.count({ where: { ...rangeWhere, status: { in: [...FAILED_STATUSES] } } }),
-      // Zero means no webhook event has EVER been stored — engagement metrics are blind, not zero.
+      // Zero means no webhook event has EVER been stored  engagement metrics are blind, not zero.
       prisma.communicationProviderEvent.count(),
       prisma.communicationDelivery.count({ where: { channel: CHANNEL } }),
       prisma.communicationDelivery.findMany({
@@ -114,12 +114,12 @@ export async function GET(request: NextRequest) {
         },
       }),
       prisma.communicationDelivery.count({ where: listWhere }),
-      // No `orderBy: { _count: … }` here: on MongoDB it comes back in the wrong order (verified —
+      // No `orderBy: { _count: … }` here: on MongoDB it comes back in the wrong order (verified 
       // it returned ascending), which combined with `take` would silently return the *least* used
       // templates. Sorted in JS below instead; the distinct-template count is tiny.
       prisma.communicationDelivery.groupBy({ by: ["templateName"], where: rangeWhere, _count: { _all: true } }),
       // Re-sendable backlog. BOUNCED is excluded (a bounce is not fixed by sending again), and rows
-      // already retried are excluded — on MongoDB `null` matches only an explicit null, so documents
+      // already retried are excluded  on MongoDB `null` matches only an explicit null, so documents
       // written before the field existed need the `isSet: false` arm or none of them would count.
       prisma.communicationDelivery.count({
         where: {
@@ -133,7 +133,7 @@ export async function GET(request: NextRequest) {
     const statusCounts: Record<string, number> = {};
     for (const row of byStatus) statusCounts[row.status] = row._count._all;
 
-    // "Accepted by the provider" — the denominator every engagement rate is measured against.
+    // "Accepted by the provider"  the denominator every engagement rate is measured against.
     // Counting against `total` would let SKIPPED rows (no email address, unsubscribed) drag the
     // open rate down for messages that were never sent to anyone.
     const sentCount =

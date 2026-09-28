@@ -53,7 +53,8 @@ export async function POST(request: NextRequest) {
     status: statusFrom(body?.status),
     value: typeof body?.value === "number" ? body.value : undefined,
     currency: body?.currency,
-    attempts: 1,
+    /* `attempts` is not part of RecordConversionEventInput  the log increments it itself with `$inc`,
+       so this was silently dropped. */
     error: body?.error || null,
     request: { source: "browser", userAgent: request.headers.get("user-agent") },
     response: body?.response ?? null,

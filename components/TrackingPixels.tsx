@@ -17,7 +17,7 @@ import {
 // ─── Vercel Analytics: which canonical events to forward ──────────────────────
 // Skip page_view (Vercel's <Analytics/> handles it), scroll_depth, and
 // user_engagement (too noisy for the custom-events dashboard). donation_complete
-// is intentionally absent — that event is server-only (Meta CAPI from the
+// is intentionally absent  that event is server-only (Meta CAPI from the
 // payment webhook) so there's no browser path that emits it.
 const VERCEL_FORWARDED_EVENTS = new Set<CanonicalEventName>([
   "view_content",
@@ -68,7 +68,7 @@ function toVercelProps(event: CanonicalEvent): Record<string, string | number | 
   return props;
 }
 
-// ─── Public config (pixel IDs only — no tokens) ───────────────────────────────
+// ─── Public config (pixel IDs only  no tokens) ───────────────────────────────
 export interface TrackingConfig {
   facebookPixelId: string | null;
   gaMeasurementId: string | null;
@@ -145,7 +145,7 @@ interface TrackPaymentFailedOptions {
   reason?: string;
   gateway?: string;
   /** Donation row id when known. Used by GA4 / Vercel as the order_id of the
-   *  failed attempt. Meta does NOT fire from the browser — the DonateFailed
+   *  failed attempt. Meta does NOT fire from the browser  the DonateFailed
    *  CAPI event is owned by `sendDonationFailedConversions` server-side, keyed
    *  by `donation.id`. See lib/tracking/donation-conversion-server.ts. */
   donationId?: string;
@@ -153,7 +153,7 @@ interface TrackPaymentFailedOptions {
 
 /** Single Meta-Pixel "Donate" fire from the /success page. The browser pixel
  *  is paired with a server CAPI fire from POST /api/donations/:id/track-conversion
- *  — Meta dedupes by the shared event_id. Don't call this from anywhere except
+ *   Meta dedupes by the shared event_id. Don't call this from anywhere except
  *  the /success page, and only after the donation is confirmed PAID in the DB
  *  AND the track-conversion endpoint returned `allowed: true`. */
 interface TrackDonateSuccessOptions {
@@ -277,7 +277,7 @@ function buildGa4Items(
 export default function TrackingPixels({ children }: { children: React.ReactNode }) {
   const configRef = useRef<TrackingConfig | null>(null);
   const [config, setConfig] = useState<TrackingConfig | null>(null);
-  // Mutable user data — updated by DonationDialog when user fills in details
+  // Mutable user data  updated by DonationDialog when user fills in details
   const userDataRef = useRef<Partial<CanonicalUser>>({});
 
   // ── Load pixel config ───────────────────────────────────────────────────────
@@ -288,7 +288,7 @@ export default function TrackingPixels({ children }: { children: React.ReactNode
   // (Lighthouse never interacts so it never sees them) while still firing well before
   // any real user can convert.
   //
-  // EXCEPTION: /success/[id] is a conversion page — we need fbq ready immediately so
+  // EXCEPTION: /success/[id] is a conversion page  we need fbq ready immediately so
   // `trackDonate` can fire the Meta "Donate" event without waiting for scroll or 6 s
   // idle. Donors often arrive there post-redirect and may close the tab quickly.
   useEffect(() => {
@@ -325,7 +325,7 @@ export default function TrackingPixels({ children }: { children: React.ReactNode
       window.removeEventListener("touchstart", load);
     };
 
-    // Fire-now path for conversion pages. The match is locale-agnostic — any
+    // Fire-now path for conversion pages. The match is locale-agnostic  any
     // pathname segment "/success/<id>" qualifies.
     const isConversionPage = /\/success\/[^/]+/.test(window.location.pathname);
     if (isConversionPage) {
@@ -489,7 +489,7 @@ export default function TrackingPixels({ children }: { children: React.ReactNode
    * Conversion pages (/success, /donation-failed) are off-limits to every
    * event except `donation_complete` (which is owned by `trackDonate` and
    * does NOT route through here). Anything else firing on these paths is
-   * either a stray dialog mount or a misfired effect — both contaminate
+   * either a stray dialog mount or a misfired effect  both contaminate
    * Meta's funnel with phantom events on the conversion landing.
    */
   const sendCanonical = useCallback(
@@ -600,7 +600,7 @@ export default function TrackingPixels({ children }: { children: React.ReactNode
             quantity:      i.quantity ?? 1,
           }));
         }
-        // User / customer info — for GTM enhanced matching and Meta CAPI via GTM
+        // User / customer info  for GTM enhanced matching and Meta CAPI via GTM
         if (u.email)            ga4.email            = u.email;
         if (u.phone)            ga4.phone            = u.phone;
         if (u.first_name)       ga4.first_name       = u.first_name;
@@ -635,7 +635,7 @@ export default function TrackingPixels({ children }: { children: React.ReactNode
       }
 
       // ── Server (CAPI + TikTok Events API) ────────────────────────────────
-      // Fire-and-forget — don't block UI
+      // Fire-and-forget  don't block UI
       fetch("/api/track", {
         method:  "POST",
         headers: { "Content-Type": "application/json" },
@@ -775,7 +775,7 @@ export default function TrackingPixels({ children }: { children: React.ReactNode
   const trackPaymentFailed = useCallback((options: TrackPaymentFailedOptions) => {
     // Browser-side payment_failed fires GA4 "exception" and Vercel Analytics
     // for funnel/diagnostics only. The Meta DonateFailed CAPI event is owned
-    // by the SERVER (see donation-conversion-server.ts) — `payment_failed` is
+    // by the SERVER (see donation-conversion-server.ts)  `payment_failed` is
     // deliberately absent from META_EVENT_MAP and listed in
     // META_CAPI_OFF_CHANNEL, so fbq does not fire here and /api/track
     // refuses to forward it.
@@ -814,12 +814,12 @@ export default function TrackingPixels({ children }: { children: React.ReactNode
   /**
    * Fire Meta Pixel "Donate" once for a confirmed-paid donation. Intentionally
    * does NOT route through `sendCanonical`:
-   *   • No /api/track mirror — CAPI Donate is owned by
+   *   • No /api/track mirror  CAPI Donate is owned by
    *     POST /api/donations/:id/track-conversion, which already fired by the
    *     time the success page calls this. /api/track would refuse the event
    *     anyway (donation_complete is in META_CAPI_OFF_CHANNEL), but skipping
    *     the round trip is cleaner.
-   *   • No TikTok / GA4 / X / Vercel fan-out — GA4 MP purchase is also fired
+   *   • No TikTok / GA4 / X / Vercel fan-out  GA4 MP purchase is also fired
    *     server-side from the same endpoint; the other platforms don't have a
    *     wired donation_complete leg yet (see project memory).
    *
@@ -890,7 +890,7 @@ export default function TrackingPixels({ children }: { children: React.ReactNode
     if (tryFire()) return;
 
     let attempts = 0;
-    const MAX_ATTEMPTS = 40; // ~6s at 150ms intervals — well past pixel init
+    const MAX_ATTEMPTS = 40; // ~6s at 150ms intervals  well past pixel init
     const timer = setInterval(() => {
       attempts += 1;
       if (tryFire() || attempts >= MAX_ATTEMPTS) {

@@ -24,7 +24,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
 
   const { id } = await params;
   if (!isObjectId(id)) return NextResponse.json({ error: "Not found" }, { status: 404 });
-  /* Either id opens the review: the claim's own, or the donation's — which is
+  /* Either id opens the review: the claim's own, or the donation's  which is
      what the donations table and the Telegram card have to hand. */
   const claim = (await findClaimById(id)) ?? (await findClaimByDonation(id));
   if (!claim) return NextResponse.json({ error: "Not found" }, { status: 404 });

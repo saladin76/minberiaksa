@@ -158,7 +158,7 @@ const MainPage = ({ id, locale: localeProp }: { id: string; locale?: string }) =
 
       {/* ── Sidebar + Grid ── */}
       <section className="max-w-7xl mx-auto px-4 lg:px-8 py-10 grid gap-8 lg:gap-10 md:grid-cols-[260px_1fr]">
-        {/* Filter sidebar — search is the only available filter for a single category */}
+        {/* Filter sidebar  search is the only available filter for a single category */}
         <aside className="h-fit md:sticky md:top-24">
           <div className="shape-card bg-white p-6 shadow-soft">
             <div className="shape-chip w-fit bg-burgundy px-6 py-3 text-sm font-extrabold text-white">

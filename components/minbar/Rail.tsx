@@ -11,7 +11,7 @@ import { localeDirection } from "@/lib/locales";
  * has to account for RTL: in a right-to-left container `scrollLeft` runs from
  * `-max` (the end) up to `0` (the start), so the same "next" gesture moves the
  * value in the opposite sign from LTR. The arrow glyphs mirror with direction
- * too — "next" points at the start edge in RTL.
+ * too  "next" points at the start edge in RTL.
  */
 export interface RailProps {
   children: ReactNode;
@@ -21,7 +21,7 @@ export interface RailProps {
   nextLabel: string;
   /** Rendered above the rail, opposite the controls. */
   heading?: ReactNode;
-  /** Rendered beside the controls — typically a "view all" link. */
+  /** Rendered beside the controls  typically a "view all" link. */
   action?: ReactNode;
   style?: CSSProperties;
   controlStyle?: "square" | "rounded";

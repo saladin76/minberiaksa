@@ -8,10 +8,10 @@ import { queueAuditLog, auditActorFromDashboardSession } from "@/lib/audit-log";
 import { parseQuickDonation, validateQuickDonationBody } from "@/lib/minbar/quick-donation";
 
 /**
- * GET /api/quick-donation — the homepage quick-donation config, parsed with
+ * GET /api/quick-donation  the homepage quick-donation config, parsed with
  *     defaults filled in. Public: nothing in it is a secret and the homepage
  *     renders it into every visitor's HTML anyway.
- * PUT /api/quick-donation — replace the whole config. `siteContent`, the same
+ * PUT /api/quick-donation  replace the whole config. `siteContent`, the same
  *     permission as the rest of the homepage's editable content.
  */
 

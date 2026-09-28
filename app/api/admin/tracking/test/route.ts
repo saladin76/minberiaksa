@@ -40,13 +40,15 @@ function missingConfig(platform: Platform, missingFields: string[], guidance: st
     ok: false,
     platform,
     status: "missing_config",
-    message: "إعدادات ناقصة — أكمل الحقول المطلوبة أولاً.",
+    message: "إعدادات ناقصة  أكمل الحقول المطلوبة أولاً.",
     missingFields,
     guidance,
   });
 }
 
-async function audit(platform: Platform, status: string, eventName: string, eventId: string, summary: Record<string, unknown>, error?: string) {
+/* `summary` is whatever the provider returned  a `MetaCapiResult`, a GA4 reply  so it is typed as
+   an object rather than an index signature it does not structurally satisfy. */
+async function audit(platform: Platform, status: string, eventName: string, eventId: string, summary: object, error?: string) {
   const session = await getServerSession(authOptions);
   if (!session) return;
   const actor = auditActorFromDashboardSession(session);
@@ -97,7 +99,9 @@ export async function POST(request: NextRequest) {
       missing.push("facebookAccessToken");
       guidance.push("أضف Access Token الخاص بـ Meta CAPI من Business Settings > System Users.");
     }
-    if (missing.length) {
+    if (missing.length || !pixelId || !accessToken) {
+      /* The `!pixelId || !accessToken` arm restates what `missing` already records  the compiler cannot
+         follow the array length back to the two values, and the pair is about to be sent to Meta. */
       await audit(p, "missing_config", eventName, eventId, { missingFields: missing });
       return missingConfig(p, missing, guidance);
     }
@@ -148,7 +152,9 @@ export async function POST(request: NextRequest) {
       missing.push("gaApiSecret");
       guidance.push("أضف API Secret من GA4 Admin > Data Streams > Measurement Protocol API secrets.");
     }
-    if (missing.length) {
+    if (missing.length || !measurementId || !apiSecret) {
+      /* Same restatement as the Meta branch: the compiler cannot follow `missing.length` back to the
+         two values, and both are about to be sent to GA4. */
       await audit(p, "missing_config", "test_tracking_event", eventId, { missingFields: missing });
       return missingConfig(p, missing, guidance);
     }
@@ -156,7 +162,7 @@ export async function POST(request: NextRequest) {
     const endpoint = bool(settings, "gaDebugMode")
       ? "https://www.google-analytics.com/debug/mp/collect"
       : "https://www.google-analytics.com/mp/collect";
-    const res = await fetch(`${endpoint}?measurement_id=${encodeURIComponent(measurementId!)}&api_secret=${encodeURIComponent(apiSecret!)}`, {
+    const res = await fetch(`${endpoint}?measurement_id=${encodeURIComponent(measurementId)}&api_secret=${encodeURIComponent(apiSecret)}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({

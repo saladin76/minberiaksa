@@ -55,7 +55,7 @@ export async function GET(request: NextRequest) {
     // boundary expressed in UTC.
     // Unsettled subscription rows (status=PAID, no `paidAt`) are NOT counted. They used to
     // be admitted here and bucketed by `createdAt`, which is why this chart reported $17.19
-    // on 2026-08-02 while /dashboard/monthly reported $1.05 for the same day — the extra
+    // on 2026-08-02 while /dashboard/monthly reported $1.05 for the same day  the extra
     // $16.14 was an abandoned checkout that never reached Stripe. Both pages now recognise
     // revenue on settlement only, so their monthly series agree.
     const dateWindowOr = [
@@ -97,7 +97,7 @@ export async function GET(request: NextRequest) {
         amountUSD: true,
         totalAmount: true,
         amount: true,
-        // Required by donationRowUsdApprox — without it a USD row with a null amountUSD
+        // Required by donationRowUsdApprox  without it a USD row with a null amountUSD
         // can't be recognised and would silently contribute 0.
         currency: true,
         status: true,
@@ -121,7 +121,7 @@ export async function GET(request: NextRequest) {
 
     for (const d of donations) {
       // status=PAID is set at creation, before the gateway confirms, so settlement
-      // (`paidAt`) is what makes a row revenue — for subscription rows too. Subscription
+      // (`paidAt`) is what makes a row revenue  for subscription rows too. Subscription
       // rows used to be exempt from this; see the dateWindowOr comment above for why
       // that exemption was wrong and what it cost.
       const isPaid = d.status === 'PAID' && d.paidAt != null;
@@ -186,7 +186,7 @@ export async function GET(request: NextRequest) {
     }[] = [];
 
     /* All-time queries from the epoch, so the axis starts at the first day with data rather than
-       at 1970 — see `resolveChartStartKey`. Bounded periods are unchanged. */
+       at 1970  see `resolveChartStartKey`. Bounded periods are unchanged. */
     const axisStartKey = resolveChartStartKey(isAllTime, startDateKey, endDateKey, byDate.keys());
 
     for (const dateStr of eachIstanbulDateKey(axisStartKey, endDateKey)) {

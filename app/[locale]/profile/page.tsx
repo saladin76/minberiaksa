@@ -160,7 +160,7 @@ function donationReceiptAllowed(d: Pick<DonationForProfile, "paymentStatus">) {
 
 const ProfilePage = () => {
   const t = useTranslations("Profile");
-  /* The plan's cadence label — the same `common.freq*` strings the cart uses. */
+  /* The plan's cadence label  the same `common.freq*` strings the cart uses. */
   const tCommon = useTranslations("common");
   /* A plan the scheduler could not charge needs its own words, not "cancelled". */
   const tRecurring = useTranslations("Recurring");
@@ -1234,7 +1234,7 @@ const ProfilePage = () => {
     <>
       <Toaster position="top-center" />
       <div className="min-h-screen bg-gray-50">
-        {/* Mobile tabs — label-first; icon only shows alongside on sm+ where there's room. */}
+        {/* Mobile tabs  label-first; icon only shows alongside on sm+ where there's room. */}
         <div className="lg:hidden sticky top-0 z-50 bg-gray-50 pt-4 pb-4 px-4 sm:px-6 shadow-sm">
           <Tabs value={activeTab} onValueChange={setActiveTab}>
             <TabsList className="w-full grid grid-cols-4 h-12 p-1 bg-[#A5243D]/10 rounded-xl">

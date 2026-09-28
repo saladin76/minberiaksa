@@ -226,7 +226,7 @@ export default function BulkDonationImportPage() {
             <p>متبرعون جدد: <b>{num(result.createdDonors)}</b></p>
             <p>مرتبطة بمتبرعين حاليين: <b>{num(result.linkedExistingDonors)}</b></p>
           </div>
-          {result.truncated ? <p className="mt-2 text-xs font-semibold text-amber-700">تم استيراد أول 5000 صف فقط في هذه الدفعة — أعد رفع الملف لاستيراد الباقي.</p> : null}
+          {result.truncated ? <p className="mt-2 text-xs font-semibold text-amber-700">تم استيراد أول 5000 صف فقط في هذه الدفعة  أعد رفع الملف لاستيراد الباقي.</p> : null}
           <div className="mt-4 flex gap-2">
             <Link href="/dashboard/users/donors" className="inline-flex h-9 items-center gap-2 rounded-md bg-brand px-4 text-sm font-bold text-white hover:bg-brand-700">عرض المتبرعين</Link>
             <button type="button" onClick={() => { onPick(null); if (inputRef.current) inputRef.current.value = ""; }} className="inline-flex h-9 items-center gap-2 rounded-md border border-slate-300 bg-white px-4 text-sm font-bold text-slate-700">استيراد ملف آخر</button>

@@ -14,7 +14,7 @@ import type { ReceiptCopy, ReceiptOrgData, ThanksCopy, WaqfCopy } from "./copy-d
 import type { IssuedDocuments, IssuedWaqfCertificate } from "./issue";
 
 /**
- * From the persisted records to the props each sheet renders — the one place
+ * From the persisted records to the props each sheet renders  the one place
  * the three documents read their data. The PDF endpoints, the print pages
  * and the success page's previews all come through here, so what a donor
  * sees on screen is what the PDF says and what the email attaches.
@@ -88,7 +88,7 @@ function certificateVerse(locale: string, id: string): CertificateVerse {
   return { arabic: block.arabic, translation: block.translation };
 }
 
-/** Numeric date with Latin digits in every locale — a number on a document, not prose. */
+/** Numeric date with Latin digits in every locale  a number on a document, not prose. */
 export function documentDate(date: Date, locale: string): string {
   try {
     return new Intl.DateTimeFormat(`${locale}-u-nu-latn`, { day: "2-digit", month: "2-digit", year: "numeric" }).format(date);
@@ -280,8 +280,8 @@ export async function receiptPagesFor(docs: IssuedDocuments): Promise<ReceiptDoc
 
 /**
  * What the success page previews: the three documents, issued when the
- * payment is confirmed. Before confirmation — a card donor usually lands
- * before the webhook — the previews render from the donation itself with no
+ * payment is confirmed. Before confirmation  a card donor usually lands
+ * before the webhook  the previews render from the donation itself with no
  * serials, and the download links wait for the records.
  */
 export interface SuccessDocuments {

@@ -26,7 +26,7 @@ export type GlobalSettings = {
   mainGateway: MainGateway;
   /**
    * True when Albaraka is set up to collect the card on its own hosted page.
-   * The checkout dialogs must then skip our card form entirely — Albaraka signs
+   * The checkout dialogs must then skip our card form entirely  Albaraka signs
    * the card fields into the request MAC, so a card we collect locally would
    * have to be posted to our server to be signed.
    */
@@ -79,7 +79,7 @@ export async function fetchGlobalSettings(
         // the donation flow working before the first record is persisted and
         // when the API response shape is incomplete for any reason.
         payforEnabled: data?.payforEnabled !== false,
-        // Anything unrecognised falls back to Stripe — the rail that always works.
+        // Anything unrecognised falls back to Stripe  the rail that always works.
         mainGateway: parseMainGateway(data?.mainGateway),
         albarakaUseOOS: data?.albarakaUseOOS === true,
         albarakaConfigured: data?.albarakaConfigured === true,

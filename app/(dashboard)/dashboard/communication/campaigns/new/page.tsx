@@ -19,7 +19,7 @@ export default async function NewCampaignPage() {
         <PageHeader
           eyebrow="الحملات التسويقية"
           title="حملة جديدة"
-          description="اختر القناة، ثم القالب، ثم المتبرعين — كل متبرع يستلم القالب بلغته المفضّلة."
+          description="اختر القناة، ثم القالب، ثم المتبرعين  كل متبرع يستلم القالب بلغته المفضّلة."
           icon={Megaphone}
         />
         <NewCampaignWizard />

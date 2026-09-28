@@ -4,7 +4,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 // Was `new PrismaClient()` guarded by a global that is only ever populated
-// outside production — so in production this module opened a second connection
+// outside production  so in production this module opened a second connection
 // pool of its own instead of reusing the shared singleton.
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
@@ -25,7 +25,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 
     // Resolve the param (id, base slug, or a per-locale translation slug) in ONE
     // query. This used to loop over 8 locales issuing a findFirst each until one
-    // matched — up to 8 sequential round trips (~4s here) to answer a question
+    // matched  up to 8 sequential round trips (~4s here) to answer a question
     // `whereByIdOrAnyLocaleSlug` settles in a single locale-agnostic clause.
     const camp = await prisma.campaign.findFirst({
       where: whereByIdOrAnyLocaleSlug(idOrSlug),

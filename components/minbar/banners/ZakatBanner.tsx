@@ -5,7 +5,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { miaPath } from "@/lib/minbar/routes";
 
 /**
- * The zakat band — ported from `Minbar/بنر الزكاة.dc.html`, a shared banner
+ * The zakat band  ported from `Minbar/بنر الزكاة.dc.html`, a shared banner
  * imported by the homepage and the zakat pages.
  *
  * The 2.5% rate is set as a numeral rather than a translated string: it is a

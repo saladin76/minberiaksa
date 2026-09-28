@@ -16,7 +16,7 @@ export const MAX_EVENTS_PER_POLL = 500;
  * in runtime-config.
  */
 export function buildElasticEmailEventsUrl(since: Date, limit = MAX_EVENTS_PER_POLL): string {
-  // The API expects a naive `YYYY-MM-DDTHH:mm:ss` timestamp in UTC — a trailing `Z` is rejected.
+  // The API expects a naive `YYYY-MM-DDTHH:mm:ss` timestamp in UTC  a trailing `Z` is rejected.
   const from = since.toISOString().slice(0, 19);
   return `${ELASTIC_EMAIL_EVENTS_ENDPOINT}?from=${encodeURIComponent(from)}&limit=${Math.min(limit, MAX_EVENTS_PER_POLL)}`;
 }

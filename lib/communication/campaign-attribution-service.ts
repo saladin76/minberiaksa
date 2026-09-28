@@ -9,7 +9,7 @@ import type { CommunicationChannelId } from "./communication-runtime-types";
  *
  * Attribution is NEVER fabricated: it is derived from the donation `attribution` UTM snapshot captured
  * at checkout. A donation is matched to a campaign only when its attribution carries the campaign's
- * UTM values. Failed donation attempts are real rows (DonationStatus = FAILED) — if none exist we show
+ * UTM values. Failed donation attempts are real rows (DonationStatus = FAILED)  if none exist we show
  * "unavailable", never a fake 0. Visits are not stored, so they are always reported as unavailable.
  */
 
@@ -64,7 +64,7 @@ export function decorateUrl(baseUrl: string, params: Record<string, string | und
     for (const [k, v] of Object.entries(params)) if (v) u.searchParams.set(k, v);
     return u.toString();
   } catch {
-    // Not a valid absolute URL — return as-is so we never invent a fake URL.
+    // Not a valid absolute URL  return as-is so we never invent a fake URL.
     return baseUrl;
   }
 }
@@ -90,7 +90,7 @@ export async function attachTrackingLink(
     url = decorateUrl(input.baseUrl.trim(), params);
     try {
       const link = await createOrUpdateCampaignLink({
-        name: `تواصل — ${source} — ${campaign.id}`,
+        name: `تواصل  ${source}  ${campaign.id}`,
         platform: source,
         channel: source,
         url,
@@ -107,7 +107,7 @@ export async function attachTrackingLink(
       linkId = (link as { id?: string; urlHash?: string })?.id ?? (link as { urlHash?: string })?.urlHash ?? null;
     } catch (error) {
       console.error("attachTrackingLink: generator create failed", error);
-      // Fall through — we still record the decorated URL association so reporting works.
+      // Fall through  we still record the decorated URL association so reporting works.
     }
   }
 

@@ -5,7 +5,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { localeDirection } from "@/lib/locales";
 
 /**
- * Projects hero carousel — ported from `Minbar/المشاريع.dc.html`.
+ * Projects hero carousel  ported from `Minbar/المشاريع.dc.html`.
  *
  * Slides cross-fade rather than slide, so there is nothing to mirror in RTL; the
  * arrows do mirror, because "next" has to point forward in the reading
@@ -38,7 +38,7 @@ export default function ProjectsHero({ slides }: { slides: ProjectSlide[] }) {
     [count]
   );
 
-  /* Arrow keys move the carousel when it has focus — a carousel that only
+  /* Arrow keys move the carousel when it has focus  a carousel that only
      responds to a swipe is unusable from a keyboard. */
   const onKeyDown = (event: React.KeyboardEvent) => {
     if (event.key === "ArrowRight") go(rtl ? -1 : 1);

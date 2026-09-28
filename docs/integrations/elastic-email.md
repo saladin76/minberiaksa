@@ -1,4 +1,4 @@
-# Elastic Email — Email Integration
+# Elastic Email  Email Integration
 
 Elastic Email is the **only** email provider. Brevo no longer sends email (SMS only), SendGrid is
 retired. Server-only: `ELASTIC_EMAIL_API_KEY` is read inside the adapter and is never returned to
@@ -41,7 +41,7 @@ Readiness helper for env-only checks: `getElasticEmailConfig()` in `lib/communic
   ```
 - Success (2xx): `MessageID` → stored as `CommunicationDelivery.providerMessageId`.
   A 2xx with no id → `internalAccepted` (a real acceptance, never a fake id).
-- Timeout 15s. Failures map to safe codes only — the API key never reaches a log or a response.
+- Timeout 15s. Failures map to safe codes only  the API key never reaches a log or a response.
 
 Callers never import the vendor adapter directly. They go through the channel facade
 `lib/communication/providers/email/client.ts` (`sendEmailMessage`, `EMAIL_PROVIDER_ID`), which is the
@@ -53,9 +53,9 @@ single place to change if email ever moves to another vendor.
 |---|---|
 | `ELASTIC_EMAIL_NOT_CONFIGURED` | API key or sender missing → delivery is SKIPPED, not FAILED |
 | `ELASTIC_EMAIL_SENDER_NOT_CONFIGURED` | no sender identity resolved |
-| `ELASTIC_EMAIL_UNAUTHORIZED` | 401/403 — key invalid or lacks scope |
+| `ELASTIC_EMAIL_UNAUTHORIZED` | 401/403  key invalid or lacks scope |
 | `ELASTIC_EMAIL_RATE_LIMITED` | 429 |
-| `ELASTIC_EMAIL_REJECTED` | other 4xx — bad payload or unverified sender |
+| `ELASTIC_EMAIL_REJECTED` | other 4xx  bad payload or unverified sender |
 | `ELASTIC_EMAIL_REQUEST_FAILED` | 5xx, timeout, or network error |
 
 ## Connection test (no message sent)
@@ -91,7 +91,7 @@ Route: `POST /api/webhooks/elastic-email?token=…` (`app/api/webhooks/elastic-e
 A 2xx from `/v4/emails/transactional` means Elastic Email **accepted** the message. The real outcome
 lands minutes later on the event feed and can be `Suppress` ("Delivery to this domain is not
 permitted on your account until the trust level of your mail increases") or `Error` ("Delivery
-failed due to account problem or spam block") — both of which mean the message was never delivered.
+failed due to account problem or spam block")  both of which mean the message was never delivered.
 
 Two things keep the dashboard honest about that:
 
@@ -106,8 +106,8 @@ Two things keep the dashboard honest about that:
    mail the provider had refused.
 
 `deliveredCount` counts only rows where arrival is *proven* (DELIVERED/READ/OPENED/CLICKED/REPLIED).
-Elastic Email never emits a `Delivered` event — its `Sent` already means "handed to the recipient's
-mail server" and is counted under `sentCount` — so an open or a click is the only positive evidence.
+Elastic Email never emits a `Delivered` event  its `Sent` already means "handed to the recipient's
+mail server" and is counted under `sentCount`  so an open or a click is the only positive evidence.
 
 Historical rows written before this existed: `scripts/reconcile-campaign-counters.ts` (dry run by
 default, `--apply` to write).

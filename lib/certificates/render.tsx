@@ -50,7 +50,7 @@ function page(lang: string, dir: "rtl" | "ltr", css: string, body: string): stri
 export type ThanksLayout = "landscape" | "portrait";
 
 /**
- * `شهادة الشكر عرضية.dc.html` — A4 landscape, no margins, the sheet fills the
+ * `شهادة الشكر عرضية.dc.html`  A4 landscape, no margins, the sheet fills the
  * page. The portrait alternate (`شهادة الشكر - احتياطي بالطول`) is A4 portrait.
  */
 export async function renderThanksHtml(doc: ThanksDocument, assetBase: string, layout: ThanksLayout = "landscape"): Promise<string> {
@@ -71,7 +71,7 @@ export async function renderThanksHtml(doc: ThanksDocument, assetBase: string, l
   return page(doc.locale, doc.dir, css, body);
 }
 
-/** `شهادة الاوقاف.dc.html` — both panels on one A4 landscape sheet, 4mm margin. */
+/** `شهادة الاوقاف.dc.html`  both panels on one A4 landscape sheet, 4mm margin. */
 export async function renderWaqfHtml(doc: WaqfDocument, assetBase: string): Promise<string> {
   const css = `
   @page { size: A4 landscape; margin: 4mm; }
@@ -97,7 +97,7 @@ export async function renderWaqfHtml(doc: WaqfDocument, assetBase: string): Prom
   return page(doc.locale, doc.dir, css, body);
 }
 
-/** `إيصال التبرع.dc.html` — A4 portrait, 8mm margin, one page per language copy. */
+/** `إيصال التبرع.dc.html`  A4 portrait, 8mm margin, one page per language copy. */
 export async function renderReceiptHtml(pages: ReceiptDocument[], assetBase: string): Promise<string> {
   const css = `
   @page { size: A4 portrait; margin: 8mm; }

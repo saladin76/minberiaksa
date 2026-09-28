@@ -5,7 +5,7 @@ import { requireAdminOrDashboardPermission } from "@/lib/dashboard/api-auth";
 import { prisma } from "@/lib/prisma";
 
 /**
- * Snapshot availability summary — for the Sync tab. One row per connection
+ * Snapshot availability summary  for the Sync tab. One row per connection
  * with counts of stored snapshots and the most recent date observed.
  */
 export async function GET() {
@@ -24,7 +24,7 @@ export async function GET() {
     },
   });
 
-  // Pull per-connection counts in parallel — small N (number of connections).
+  // Pull per-connection counts in parallel  small N (number of connections).
   const summaries = await Promise.all(
     connections.map(async (c) => {
       const [campaigns, adGroups, ads, messaging, lastCampaign, lastMessaging] = await Promise.all([

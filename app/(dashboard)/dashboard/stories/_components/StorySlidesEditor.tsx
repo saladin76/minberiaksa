@@ -20,7 +20,7 @@ import {
 } from '../../_components/ContentTranslationTabs';
 
 /**
- * The slides inside one story — what a visitor sees full-screen after tapping
+ * The slides inside one story  what a visitor sees full-screen after tapping
  * the ring. Each slide is an image (with a dwell time) or a video (runs to its
  * end), an optional caption, and an optional button.
  *
@@ -31,7 +31,7 @@ import {
  * regardless of link, so nothing here needs to know about it.
  *
  * The list is form state, posted whole; the API replaces the stored slides
- * with exactly this. Reordering is up/down rather than drag — a story has a
+ * with exactly this. Reordering is up/down rather than drag  a story has a
  * handful of slides and two buttons are more predictable inside a long form.
  */
 
@@ -80,7 +80,7 @@ type Option = { id: string; title: string };
 
 /**
  * Campaigns and posts for the target pickers. Loaded once per editor mount,
- * and only when a slide actually asks for that kind — a story of plain images
+ * and only when a slide actually asks for that kind  a story of plain images
  * should not cost two list requests.
  */
 function useTargetOptions(need: { campaigns: boolean; posts: boolean }) {
@@ -220,7 +220,7 @@ export function StorySlidesEditor({
                 <Select value={row.ctaKind || NO_CTA} onValueChange={(v) => setKind(i, v)}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value={NO_CTA}>— بدون زر —</SelectItem>
+                    <SelectItem value={NO_CTA}>— بدون زر </SelectItem>
                     {Object.entries(CTA_KIND_LABELS).map(([k, label]) => (
                       <SelectItem key={k} value={k}>{label}</SelectItem>
                     ))}

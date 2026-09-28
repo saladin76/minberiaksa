@@ -77,7 +77,7 @@ export async function PATCH(
   await writeAuditLog({
     ...actor,
     action: "MESSAGE_TRIGGER_UPDATE",
-    messageAr: `حدّث حدث تلقائي ${updated.event} — مفعّل: ${updated.enabled ? "نعم" : "لا"}`,
+    messageAr: `حدّث حدث تلقائي ${updated.event}  مفعّل: ${updated.enabled ? "نعم" : "لا"}`,
     entityType: "MessageTrigger",
     entityId: updated.id,
     stream: "TEAM",

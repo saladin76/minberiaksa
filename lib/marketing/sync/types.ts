@@ -7,7 +7,7 @@
  * entry and a `PlatformSyncRun` row without crashing the dashboard.
  *
  * Snapshots are returned in a normalized shape and persisted by the
- * dispatcher — clients don't touch Prisma directly.
+ * dispatcher  clients don't touch Prisma directly.
  */
 import type { MarketingPlatformConnection } from "@prisma/client";
 

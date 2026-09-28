@@ -4,8 +4,8 @@
  * Same shape as `playlist-write.ts`: a parent row edited as a patch, and a
  * child video list the form posts whole and the route replaces atomically.
  *
- * The three course shapes the schema describes — detail page, intro-only,
- * external — are flags on the row, so the form does not need modes; it shows
+ * The three course shapes the schema describes  detail page, intro-only,
+ * external  are flags on the row, so the form does not need modes; it shows
  * the fields and the site decides how to render the result.
  */
 
@@ -98,7 +98,7 @@ export interface CourseVideoInput {
   order: number;
 }
 
-/** See `parsePlaylistVideos` — same rules, minus the per-episode active flag. */
+/** See `parsePlaylistVideos`  same rules, minus the per-episode active flag. */
 export function parseCourseVideos(raw: unknown): CourseVideoInput[] | undefined {
   if (raw === undefined) return undefined;
   if (!Array.isArray(raw)) return [];

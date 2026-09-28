@@ -135,7 +135,7 @@ export default function PaymentGatewaysPage() {
       toast.success(
         next
           ? "تم تفعيل بوابة PayFor"
-          : "تم إيقاف PayFor — ستمر تبرعات الليرة التركية عبر البوابة الرئيسية"
+          : "تم إيقاف PayFor  ستمر تبرعات الليرة التركية عبر البوابة الرئيسية"
       );
     } catch (e) {
       setPayforEnabled(prev);
@@ -232,7 +232,7 @@ export default function PaymentGatewaysPage() {
                             <p className="text-xs text-amber-700 mt-2 flex items-start gap-1.5">
                               <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-px" />
                               <span>
-                                غير مهيّأة على الخادم — أضف مفتاح التشفير
+                                غير مهيّأة على الخادم  أضف مفتاح التشفير
                                 <code className="mx-1 font-mono">ALBARAKA_ENC_KEY</code>
                                 من شاشة «Anahtar Yaratma» في البنك.
                               </span>
@@ -274,11 +274,11 @@ export default function PaymentGatewaysPage() {
                   </div>
                   <div>
                     <h3 className="text-base font-semibold text-gray-900">
-                      PayFor — زراعت كاتيليم (3D Secure للّيرة التركية)
+                      PayFor  زراعت كاتيليم (3D Secure للّيرة التركية)
                     </h3>
                     <p className="text-sm text-muted-foreground mt-1">
                       يُستخدم تلقائيًا للتبرعات الفردية بالليرة التركية (TRY) عبر
-                      تدفّق 3D Secure — وهي نفس حالاته السابقة تمامًا. عند
+                      تدفّق 3D Secure  وهي نفس حالاته السابقة تمامًا. عند
                       الإيقاف تتحوّل هذه التبرعات إلى {mainGatewayName}.
                     </p>
                   </div>

@@ -8,7 +8,7 @@ import { redirect } from "next/navigation";
  *
  * Editing a donation is done through `EditDonationDialog`
  * (components/dashboard/donations/EditDonationDialog.tsx), opened from the donations table
- * via `useDonationActions` — that path works and is the one the UI actually uses. Nothing in
+ * via `useDonationActions`  that path works and is the one the UI actually uses. Nothing in
  * the app ever linked here.
  *
  * Kept as a redirect rather than deleted so any bookmarked URL lands somewhere useful

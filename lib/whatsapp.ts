@@ -1,11 +1,11 @@
 /**
- * LEGACY ONLY — disabled by default. Active WhatsApp sending uses Meta WhatsApp Cloud API through
+ * LEGACY ONLY  disabled by default. Active WhatsApp sending uses Meta WhatsApp Cloud API through
  * Communication Center ProviderRouter (lib/communication/provider-router.ts → providers/meta-whatsapp).
  *
  * This Twilio-backed path is retained ONLY for emergency/manual migration and is HARD-DISABLED unless
  * `WHATSAPP_LEGACY_TWILIO_ENABLED === "true"`. When disabled it initializes no Twilio client, sends
  * nothing, and returns a failed result (`TWILIO_LEGACY_DISABLED`) for every recipient so callers
- * archive SKIPPED/FAILED — never a fake success. No active Communication Center route relies on this.
+ * archive SKIPPED/FAILED  never a fake success. No active Communication Center route relies on this.
  */
 
 const LEGACY_TWILIO_ENABLED = () => process.env.WHATSAPP_LEGACY_TWILIO_ENABLED === "true";
@@ -50,7 +50,7 @@ export interface WhatsappResult {
 }
 
 /**
- * LEGACY Twilio bulk WhatsApp. Disabled by default — returns `TWILIO_LEGACY_DISABLED` for every
+ * LEGACY Twilio bulk WhatsApp. Disabled by default  returns `TWILIO_LEGACY_DISABLED` for every
  * recipient unless `WHATSAPP_LEGACY_TWILIO_ENABLED=true`. Even with the flag on this is emergency-only
  * and is not wired into any active Communication Center send path.
  */
@@ -70,7 +70,7 @@ export async function sendBulkWhatsapp(
   const client = (await getClient()) as TwilioLike | null;
   const from = getFrom();
   if (!client || !from) {
-    // Flag on but credentials missing — do NOT count as sent. Honest failure reason.
+    // Flag on but credentials missing  do NOT count as sent. Honest failure reason.
     out.failed = recipients.map((r) => ({ to: r.to, error: "WHATSAPP_PROVIDER_NOT_CONFIGURED" }));
     return out;
   }

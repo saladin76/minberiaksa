@@ -2,7 +2,7 @@ import type { CSSProperties } from "react";
 import type { ThanksCopy } from "@/lib/certificates/copy-defaults";
 
 /**
- * The thank-you certificate sheet — `handoff-certificates/شهادة الشكر لوحة.dc.html`,
+ * The thank-you certificate sheet  `handoff-certificates/شهادة الشكر لوحة.dc.html`,
  * the plaque alone: no buttons, nothing that touches the host page.
  *
  * The same component is the live preview on the success page, the standalone
@@ -92,7 +92,7 @@ export default function ThanksCertificate({ donorName, copy, verse, duaVerse, di
       {/* eslint-disable-next-line @next/next/no-img-element -- decorative sheet artwork, sized in container units */}
       <img src={asset("aqsa-dome-line.png")} alt="" aria-hidden="true" style={{ position: "absolute", insetInline: "26%", bottom: "5%", width: "48%", height: "auto", opacity: 0.09, pointerEvents: "none" }} />
 
-      {/* Three nested rules and four corner brackets — the plaque's frame. */}
+      {/* Three nested rules and four corner brackets  the plaque's frame. */}
       <div aria-hidden="true" style={{ position: "absolute", inset: "2.4%", border: `2.5px solid ${GOLD}` }} />
       <div aria-hidden="true" style={{ position: "absolute", inset: "3.6%", border: "1px solid rgba(211,154,39,.55)" }} />
       <div aria-hidden="true" style={{ position: "absolute", inset: "4.8%", border: "1px dashed rgba(211,154,39,.5)" }} />

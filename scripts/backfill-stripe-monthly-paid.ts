@@ -4,7 +4,7 @@
  * Cause: the Stripe webhook used the legacy `invoice.subscription` field, which
  * was removed in API 2024-09-30. With apiVersion "2026-03-25.dahlia" the field
  * is undefined, so the invoice.payment_succeeded handler exited before writing
- * paidAt and incrementing campaign/category totals. The webhook is now fixed —
+ * paidAt and incrementing campaign/category totals. The webhook is now fixed 
  * this script catches up the historical rows.
  *
  * For each stuck donation we look up the matching Stripe invoice. If Stripe
@@ -80,7 +80,7 @@ async function main() {
 
       // A stuck row may already have a SETTLED twin for the same invoice: while the
       // webhook was live but still carrying the `paidAt: null` Mongo bug, it failed to
-      // find the optimistic row and inserted a second donation instead — and that
+      // find the optimistic row and inserted a second donation instead  and that
       // insert already ran the campaign/category increments. Incrementing again here
       // would double-count real money, so such rows are reported and skipped rather
       // than settled. They need de-duplication, not a backfill.
@@ -90,7 +90,7 @@ async function main() {
       });
       if (settledTwin) {
         skippedDuplicate++;
-        console.log(`SKIP  ${d.id} — settled twin ${settledTwin.id} already counted this invoice (${invoice.id})`);
+        console.log(`SKIP  ${d.id}  settled twin ${settledTwin.id} already counted this invoice (${invoice.id})`);
         continue;
       }
 
@@ -166,14 +166,14 @@ async function main() {
 
   console.log("");
   console.log(
-    `Done${COMMIT ? "" : " (DRY RUN — no writes; pass --commit to apply)"}. ` +
+    `Done${COMMIT ? "" : " (DRY RUN  no writes; pass --commit to apply)"}. ` +
     `Paid: ${markedPaid}, Failed: ${markedFailed}, Pending: ${stillPending}, ` +
     `SkippedDuplicate: ${skippedDuplicate}, Errors: ${errored}`
   );
   if (skippedDuplicate > 0) {
     console.log(
       `\n${skippedDuplicate} row(s) were skipped because a settled twin already counted that invoice. ` +
-      `Those are duplicate donations, not missing money — de-duplicate them separately.`
+      `Those are duplicate donations, not missing money  de-duplicate them separately.`
     );
   }
 }

@@ -6,7 +6,7 @@
  * inside it. The forms always post all 7 non-Arabic locales, so a single save
  * was ~10 sequential round trips. Against this deployment's Atlas cluster a
  * round trip measures ~0.5s, and an interactive transaction costs ~3s in
- * ceremony alone — so a save took ~10s and regularly blew past Prisma's default
+ * ceremony alone  so a save took ~10s and regularly blew past Prisma's default
  * 5s interactive-transaction timeout, surfacing as a generic "فشل التحديث".
  *
  * The fix is to stop hand-rolling the transaction: Prisma nested writes are
@@ -40,7 +40,7 @@ export interface SlideTranslationInput {
 }
 
 export interface ParsedSlideTranslations {
-  /** Locales with a title — created or updated. */
+  /** Locales with a title  created or updated. */
   write: SlideTranslationInput[];
   /**
    * Locales the admin explicitly blanked. Previously these were skipped, so

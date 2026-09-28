@@ -54,7 +54,7 @@ async function localeBreakdown(channel: CommunicationChannelId, locale: Supporte
     ]);
     return { locale, label: LOCALES[locale].label, total, eligible: Math.max(0, eligible - dnc), needsReview: 0, missingContact: Math.max(0, total - withPhone), optedOut, doNotContact: dnc };
   }
-  // WHATSAPP — eligible only with explicit opt-in; other phone contacts need review.
+  // WHATSAPP  eligible only with explicit opt-in; other phone contacts need review.
   const eligible = await safeCountValue("recipients.whatsappEligible", () =>
     prisma.donorCommunicationProfile.count({
       where: { preferredLocale: locale, whatsappOptIn: true, doNotContact: false },
@@ -79,7 +79,7 @@ export async function getRecipientBreakdown(
   channel: CommunicationChannelId,
   opts: { locale?: string | null } = {}
 ): Promise<CampaignRecipientBreakdown> {
-  // Custom / test list audience — compute the breakdown from the list's members.
+  // Custom / test list audience  compute the breakdown from the list's members.
   const listId = parseListKey(opts.locale);
   if (listId) {
     const resolved = await resolveListMembersWithEligibility(channel, listId);
@@ -138,7 +138,7 @@ export type CampaignRecipient = {
 export type RecipientLoadResult = {
   recipients: CampaignRecipient[];
   skipped: { userId: string; locale: string; reason: string }[];
-  /** True when this page did not reach the end of the audience — another page follows. */
+  /** True when this page did not reach the end of the audience  another page follows. */
   truncated: boolean;
   /** Pass back as `cursor` to continue after this page. Null when there is nothing to continue from. */
   nextCursor: string | null;
@@ -149,7 +149,7 @@ export type RecipientLoadResult = {
 /**
  * How many contacts the audience holds in total, regardless of batching.
  *
- * The plan describes one batch, so its `total` is at most `batchSize` — showing that as "this many
+ * The plan describes one batch, so its `total` is at most `batchSize`  showing that as "this many
  * will receive it" told an operator 200 when the audience was 3,000. This is the number the send
  * confirmation needs. It counts membership, not eligibility: consent is re-checked per batch at send
  * time and cannot be known here without reading every row.
@@ -169,12 +169,12 @@ export async function countCampaignAudience(audienceSegmentKey: string | null): 
 /**
  * Load one page of eligible recipients for a campaign send. Applies channel eligibility per donor
  * (prefers DonorCommunicationProfile, falls back to User notification flags). Ineligible donors are
- * returned in `skipped` with a reason — the executor archives those as SKIPPED.
+ * returned in `skipped` with a reason  the executor archives those as SKIPPED.
  *
  * Paging is by cursor, not offset, and it is the send pipeline's guarantee of completeness: the
  * executor walks page after page until `exhausted`, so an audience larger than one batch finishes
- * instead of stopping after the first slice. An offset would also have drifted — donors are created
- * and their consent changes while a large send is in flight — whereas the cursor (an ascending id)
+ * instead of stopping after the first slice. An offset would also have drifted  donors are created
+ * and their consent changes while a large send is in flight  whereas the cursor (an ascending id)
  * describes a position that stays valid between runs.
  *
  * The cursor is the last row *scanned*, not the last row sent: a page whose rows were all ineligible
@@ -188,7 +188,7 @@ export async function loadCampaignRecipients(
   const limit = Math.min(opts.limit ?? 500, 1000);
   const cursor = opts.cursor ?? null;
 
-  // Custom / test list audience — send to the list's DONOR members (test contacts are NOT sent via the
+  // Custom / test list audience  send to the list's DONOR members (test contacts are NOT sent via the
   // campaign executor; they are reserved for the dedicated test-send tooling).
   const listId = parseListKey(audienceSegmentKey);
   if (listId) {

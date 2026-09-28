@@ -12,7 +12,7 @@ const stripe = process.env.STRIPE_SECRET_KEY
  * Self-heal a Stripe donation whose webhook has not landed: if Stripe already
  * has the PaymentIntent marked succeeded, stamp `paidAt` and increment the
  * campaign/category totals, then run the paid pipeline (documents, emails,
- * conversions). Idempotent — a `paidAt` guard inside the transaction prevents
+ * conversions). Idempotent  a `paidAt` guard inside the transaction prevents
  * a double increment if the webhook arrives between the lookup and the update.
  *
  * Extracted from `app/api/donations/[id]/route.ts` so the success page can

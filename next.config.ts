@@ -5,7 +5,7 @@ const withNextIntl = createNextIntlPlugin("./i18n/request.ts");
 
 // Every destination here must be a page that still exists. The marketing overview, أداء الحملات
 // and التوصيات pages, and the platform-connections overview, الحسابات الإعلانية, Webhooks and
-// سجلات المنصات pages, were deleted — so the routes that used to land on them now land on the
+// سجلات المنصات pages, were deleted  so the routes that used to land on them now land on the
 // surviving page that covers the same ground (attribution/tracking for marketing, tracking/health
 // for platform connections). The deleted routes themselves are redirected too, at the bottom.
 const marketingRedirects = [
@@ -97,7 +97,7 @@ const nextConfig: NextConfig = {
     optimizeCss: true,
   },
   // next-intl 3.26's plugin writes this alias to `experimental.turbo.resolveAlias`,
-  // which Next 16 no longer reads — it moved to this top-level `turbopack` key, and
+  // which Next 16 no longer reads  it moved to this top-level `turbopack` key, and
   // logs the old one as an unrecognized experimental option. Without the alias
   // `next-intl/config` never resolves, so every `getTranslations()` on the server
   // threw "Couldn't find next-intl config file". Next swallows that inside
@@ -130,16 +130,19 @@ const nextConfig: NextConfig = {
     ],
   },
   /* `eslint: { ignoreDuringBuilds }` used to live here. Next 16 removed the built-in lint step
-     entirely — the key is not even part of `NextConfig` any more, so it silenced nothing and was
+     entirely  the key is not even part of `NextConfig` any more, so it silenced nothing and was
      itself a type error. Linting is a CI gate of its own now (`npm run lint`, .github/workflows). */
-  typescript: { ignoreBuildErrors: true },
+  /* Type errors fail the build. This was `true` while the repo carried 163 of them; it now carries
+     none (see `npm run typecheck:baseline`, whose baseline file is empty), so a new error is a broken
+     build rather than a warning nobody reads. */
+  typescript: { ignoreBuildErrors: false },
   devIndicators: { position: "bottom-right" },
   reactStrictMode: true,
   serverExternalPackages: ["@usewaypoint/email-builder"],
   compiler: { removeConsole: process.env.NODE_ENV === "production" ? { exclude: ["error", "warn"] } : false },
   /* Preview and development deployments carry production canonicals and
      hreflang, which does not stop a crawler indexing the preview URL itself.
-     Off production, every response says so in a header — one place, not a
+     Off production, every response says so in a header  one place, not a
      per-page flag (`DEPLOYED_VS_DESIGN_AUDIT.md` § P1.1). `app/robots.ts`
      and the root layout's metadata say the same for the crawlers that read
      those instead. */
@@ -179,6 +182,6 @@ const nextConfig: NextConfig = {
    so Next loads it as a module and a CJS assignment is not its export. With that
    assignment the next-intl plugin never applied, `i18n/request.ts` was never
    registered, and every `getTranslations()` in a `generateMetadata()` threw
-   "Couldn't find next-intl config file" — which Next swallows, so each affected
+   "Couldn't find next-intl config file"  which Next swallows, so each affected
    page shipped with no <title> and no description at all. */
 export default withNextIntl(nextConfig);

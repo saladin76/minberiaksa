@@ -26,7 +26,7 @@ export async function GET(request: NextRequest) {
       include: {
         // `donations: { select: { amount, createdAt } }` used to be joined here,
         // which loaded EVERY settled DonationItem for EVERY campaign on every
-        // dashboard list render — and no caller ever read it (the pages use the
+        // dashboard list render  and no caller ever read it (the pages use the
         // pre-aggregated `currentAmount` column). Dropping it is the single
         // biggest win on the campaigns list; the running total is unaffected.
         categories: true, // Include all categories (m2m)

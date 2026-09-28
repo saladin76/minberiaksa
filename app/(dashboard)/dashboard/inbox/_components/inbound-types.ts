@@ -16,7 +16,7 @@ export interface InboundMessage {
   donationId?: string | null;
   createdAt: string;
 
-  /** Triage state — see lib/messages/inbox-status.ts. Null means "not yet". */
+  /** Triage state  see lib/messages/inbox-status.ts. Null means "not yet". */
   readAt: string | null;
   repliedAt: string | null;
   repliedVia: MessageReplyChannel | null;
@@ -73,7 +73,7 @@ const UNITS: [Intl.RelativeTimeFormatUnit, number][] = [
 /**
  * "منذ ٣ أيام" instead of a bare date.
  *
- * An inbox is read by recency — whether a message arrived today or in March is the first thing
+ * An inbox is read by recency  whether a message arrived today or in March is the first thing
  * you want, and a formatted date makes you compute that yourself. The absolute date is still
  * available on hover and in the dialog, so nothing is lost.
  *

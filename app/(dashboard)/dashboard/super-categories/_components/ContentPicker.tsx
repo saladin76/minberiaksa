@@ -12,8 +12,8 @@ import { Button } from '@/components/ui/button';
  *
  * Deliberately not a drag list: the pool can be four hundred campaigns, and a
  * multi-select that also drags is a worse tool than a searchable list plus
- * explicit up/down on the chosen few. Order matters — it is what the page shows
- * — so it is editable, but it is edited on the short list, not the long one.
+ * explicit up/down on the chosen few. Order matters  it is what the page shows
+ *  so it is editable, but it is edited on the short list, not the long one.
  */
 
 export interface ContentOption {

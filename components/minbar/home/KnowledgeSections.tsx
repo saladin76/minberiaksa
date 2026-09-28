@@ -10,13 +10,13 @@ import { ArrowGlyph } from "./TopSections";
 import ViewAllLink from "./ViewAllLink";
 
 /**
- * The knowledge end of the homepage — articles, news and the FAQ. Ported from
+ * The knowledge end of the homepage  articles, news and the FAQ. Ported from
  * `Minbar/الصفحة الرئيسية.dc.html`.
  *
  * Everything shown here is CMS content, read on the server by the page and
  * passed down: the articles and news are posts, the FAQ is the Faq model. The
  * hand-written lists that used to sit in this file were the design's
- * placeholders and are gone — an editor publishes, and it appears.
+ * placeholders and are gone  an editor publishes, and it appears.
  */
 
 /* ── Articles ───────────────────────────────────────────────────────────────
@@ -86,7 +86,7 @@ export function ArticlesSection({ articles }: { articles: MinbarArticle[] }) {
 /* ── News ───────────────────────────────────────────────────────────────────
  * A lead item plus up to three secondary rows: the newest posts filed under
  * the `news` category (`listNews`). With nothing filed there the section is
- * not rendered — an empty news block says less than no news block. */
+ * not rendered  an empty news block says less than no news block. */
 export function NewsSection({ news }: { news: MinbarArticle[] }) {
   const locale = useLocale();
   const t = useTranslations("homepage");
@@ -164,7 +164,7 @@ export function NewsSection({ news }: { news: MinbarArticle[] }) {
  * rows actually use. The chip label is an interface string where one exists
  * for that id (zakat, waqf, donation, reports) and the raw id otherwise, so an
  * editor can introduce a new category without a code change and still see it
- * filter correctly — comparing ids, never labels. */
+ * filter correctly  comparing ids, never labels. */
 const CATEGORY_LABEL: Record<string, { ns: "navigation" | "common"; key: string }> = {
   zakat: { ns: "navigation", key: "zakat" },
   waqf: { ns: "navigation", key: "waqf" },

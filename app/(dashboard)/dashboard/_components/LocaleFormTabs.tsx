@@ -19,7 +19,7 @@ import {
 
 /**
  * Language tabs for the react-hook-form pages whose translations are a few
- * plain fields — categories (name, description) and slides (title,
+ * plain fields  categories (name, description) and slides (title,
  * description, button text). Arabic is the first tab and is rendered by the
  * page; every other locale is generated here from `TRANSLATION_LOCALES`,
  * bound to `field_locale` entries on the same form.
@@ -32,7 +32,7 @@ export interface LocaleFormField {
   name: string;
   label: string;
   multiline?: boolean;
-  /** Only ever English, in practice — the site's fallback language. */
+  /** Only ever English, in practice  the site's fallback language. */
   requiredIn?: readonly string[];
   maxLength?: number;
 }
@@ -54,7 +54,7 @@ export function LocaleFormTabs({
   arabic: ReactNode;
   itemLabel: string;
   className?: string;
-  /** Rendered under the fields of every tab — the per-locale SEO card, say. */
+  /** Rendered under the fields of every tab  the per-locale SEO card, say. */
   extra?: (locale: string) => ReactNode;
   /** Controlled tab, for pages that track the active locale. */
   value?: string;
@@ -151,7 +151,7 @@ export function applyLocaleTranslations(
   }
 }
 
-/** `{ [locale]: { [field]: value } }` from the form — what the category and slide APIs accept. */
+/** `{ [locale]: { [field]: value } }` from the form  what the category and slide APIs accept. */
 export function collectLocaleTranslations(
   values: Record<string, unknown>,
   fields: readonly LocaleFormField[]

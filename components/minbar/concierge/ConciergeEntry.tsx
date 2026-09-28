@@ -5,7 +5,7 @@ import { openConcierge } from "@/lib/ai/concierge/client";
 import { useConciergeConfig } from "./useConciergeConfig";
 
 /**
- * Contextual entry to the concierge — a quiet card under a page's own
+ * Contextual entry to the concierge  a quiet card under a page's own
  * donation module ("is this project right for me?"). Opens the launcher's
  * panel with the intent pre-selected; nothing here calls the model.
  */

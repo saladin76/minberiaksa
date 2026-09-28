@@ -10,13 +10,13 @@ import { useMinbarLabel } from "@/hooks/useMinbarLabel";
 import SocialIcon, { type SocialIconName } from "./SocialIcon";
 
 /**
- * Site footer — ported from `Minbar/Footer.dc.html`.
+ * Site footer  ported from `Minbar/Footer.dc.html`.
  *
  * Four link columns plus the identity column, a wave-masked closing photograph
  * of the Old City, and the copyright rule. A WhatsApp FAB is pinned to the
  * start edge of the viewport.
  *
- * Direction is derived from the locale, never hard-coded — otherwise the footer
+ * Direction is derived from the locale, never hard-coded  otherwise the footer
  * stays mirrored inside an LTR page.
  *
  * Dashboard hooks from the handoff: `socialLinks` and `columns` may both be
@@ -114,7 +114,7 @@ export default function Footer({
   const social =
     socialLinks ??
     ([
-      // Platform names are Latin brand names — unchanged in every language.
+      // Platform names are Latin brand names  unchanged in every language.
       { label: "WhatsApp", href: whatsappHref, icon: "whatsapp" },
       { label: "Facebook", href: "https://www.facebook.com/minberiaksa", icon: "facebook" },
       { label: "Instagram", href: "https://www.instagram.com/minberiaksa", icon: "instagram" },
@@ -151,7 +151,7 @@ export default function Footer({
         </svg>
       </a>
 
-      {/* The footer IS the photograph — the Old City, the Dome, and children
+      {/* The footer IS the photograph  the Old City, the Dome, and children
           walking toward it hand in hand: the reason the whole site exists. It
           used to sit below the columns as a separate band that most visitors
           never scrolled to. Now the columns sit on its upper half behind a
@@ -282,7 +282,7 @@ export default function Footer({
         </div>
 
         {/* The clear window: nothing here but height, so the lower half of the
-            photograph — the children, the wall, the Dome — is seen through it. */}
+            photograph  the children, the wall, the Dome  is seen through it. */}
         <div aria-hidden="true" className="mia-foot-window" />
 
         <div
@@ -310,7 +310,7 @@ export default function Footer({
             <span dir="ltr" style={{ unicodeBidi: "isolate" }}>
               {new Date().getFullYear()}
             </span>{" "}
-            {name} — {tCommon("allRightsReserved")}
+            {name}  {tCommon("allRightsReserved")}
           </span>
         </div>
       </footer>

@@ -14,9 +14,9 @@ import {
 } from "@/lib/content/bank-account-write";
 
 /**
- * GET  /api/bank-accounts — the public list for one locale, with currencies.
+ * GET  /api/bank-accounts  the public list for one locale, with currencies.
  *      `locales` is an allow-list and empty means every locale.
- * POST /api/bank-accounts — create, dashboard only.
+ * POST /api/bank-accounts  create, dashboard only.
  */
 export async function GET(request: NextRequest) {
   try {
@@ -93,7 +93,7 @@ export async function POST(request: NextRequest) {
 
     const currencies = parseBankCurrencies(data.currencies) ?? [];
     /* An account with no usable currency row gives a donor nothing to transfer
-       to — and publishing one is exactly the failure the schema warns about. */
+       to  and publishing one is exactly the failure the schema warns about. */
     if (currencies.length === 0) {
       return NextResponse.json(
         { error: "أضف عملة واحدة على الأقل برقم حساب أو IBAN" },

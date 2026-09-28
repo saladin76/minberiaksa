@@ -1,4 +1,4 @@
-# Brevo — International SMS Integration
+# Brevo  International SMS Integration
 
 Brevo is the **international (non-Turkish) SMS** provider and nothing else. Email moved to
 [Elastic Email](./elastic-email.md); the Brevo email adapter and its `EMAIL_SENDER_*` settings were
@@ -16,7 +16,7 @@ Configure them at **ربط المنصات والإرسال → المزودون 
 | `API_KEY` | `BREVO_API_KEY` | Brevo API key | ✅ |
 | `SMS_SENDER` | `BREVO_SMS_SENDER` | SMS sender name/number | ✅ |
 | `WEBHOOK_SECRET` | `BREVO_SMS_WEBHOOK_SECRET` | `?token=` secret for the webhook | optional (server-minted) |
-| — | `BREVO_SMS_DEFAULT_TYPE` | `transactional` \| `marketing` | optional (default transactional) |
+|  | `BREVO_SMS_DEFAULT_TYPE` | `transactional` \| `marketing` | optional (default transactional) |
 
 Readiness helper for env-only checks: `getBrevoSmsConfig()` in `lib/communication/provider-env.ts`.
 
@@ -32,7 +32,7 @@ Routing is decided in `providers/sms/client.ts` → `resolveSmsProviderWithRunti
 
 ## Response → status mapping
 - SMS reasons: `BREVO_SMS_NOT_CONFIGURED`, `BREVO_SMS_REQUEST_FAILED`, `BREVO_SMS_UNAUTHORIZED`.
-- Errors are scrubbed (`scrubBrevo`) — the API key never appears in logs.
+- Errors are scrubbed (`scrubBrevo`)  the API key never appears in logs.
 
 ## Webhook
 `POST /api/webhooks/brevo/transactional?token=…`

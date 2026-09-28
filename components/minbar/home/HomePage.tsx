@@ -30,7 +30,7 @@ import ZakatBanner from "@/components/minbar/banners/ZakatBanner";
 
 /**
  * The homepage, assembled in the locked section order from
- * `Minbar/الصفحة الرئيسية.dc.html`. The order is part of the approved design —
+ * `Minbar/الصفحة الرئيسية.dc.html`. The order is part of the approved design 
  * `CLAUDE.md` forbids reordering or dropping sections.
  *
  * This is a client component because the video overlay is shared state: the
@@ -74,7 +74,7 @@ export default function HomePage({
       />
 
       <Hero onPlayIntro={video.open} />
-      {/* Sticky under the header from here on — the design places it right under the hero. */}
+      {/* Sticky under the header from here on  the design places it right under the hero. */}
       <QuickDonateBar config={quick.config} projects={quick.projects} />
       <VerseStrip />
       {banners.top}

@@ -107,8 +107,8 @@ async function processOne(row: JsonMap, retry: boolean) {
   const ageMs = paidAt ? Date.now() - paidAt.getTime() : 0;
   const canRetry = retry && rowPlatform === "META" && attempts < 3 && ageMs < 7 * 24 * 60 * 60 * 1000 && status !== "LIKELY_COUNTED";
   let retryResult: unknown = null;
-  if (canRetry) { retryResult = await syncDonationConversion(donationId, { force: true }); status = "RETRIED"; reason = `${reason} — تمت إعادة إرسال CAPI بنفس event_id`; }
-  else if (attempts >= 3 && status !== "LIKELY_COUNTED") { status = "NEEDS_REVIEW"; reason = `${reason} — وصل للحد الأقصى من المحاولات`; }
+  if (canRetry) { retryResult = await syncDonationConversion(donationId, { force: true }); status = "RETRIED"; reason = `${reason}  تمت إعادة إرسال CAPI بنفس event_id`; }
+  else if (attempts >= 3 && status !== "LIKELY_COUNTED") { status = "NEEDS_REVIEW"; reason = `${reason}  وصل للحد الأقصى من المحاولات`; }
 
   await updateVerification(donationId, rowPlatform, { status, reason, metaServerSent, metaBrowserSent, metaBrowserSkipped, platformCredit, lastCheckedAt: new Date(), nextCheckAt: status === "LIKELY_COUNTED" || status === "NEEDS_REVIEW" ? null : new Date(Date.now() + 2 * 60 * 60 * 1000), attempts: canRetry ? attempts + 1 : attempts, lastRetryResult: retryResult });
   return { ok: true, donationId, status, reason, metaServerSent, metaBrowserSent, platformCredit, retried: canRetry };

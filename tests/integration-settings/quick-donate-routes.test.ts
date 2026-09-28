@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { QUICK_DONATE_ROUTES, routeForPathname, slugFor } from "../../lib/minbar/routes";
 
 /**
- * `DEPLOYED_VS_DESIGN_AUDIT.md` § P2.1 — the floating quick-donation pill is
+ * `DEPLOYED_VS_DESIGN_AUDIT.md` § P2.1  the floating quick-donation pill is
  * mounted from a central allowlist, and the pathname → page mapping it depends
  * on has to be right for every shape of URL the site serves.
  */

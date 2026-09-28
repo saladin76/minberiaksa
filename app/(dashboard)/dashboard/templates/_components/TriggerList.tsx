@@ -136,7 +136,7 @@ export function TriggerList() {
       <div className="rounded-lg border border-border bg-blue-50/50 p-3 text-xs text-slate-700 leading-relaxed">
         <p className="font-semibold mb-1">كيف يعمل النظام؟</p>
         <p>
-          عند وقوع الحدث (مثلاً نجاح تبرّع)، يقوم النظام تلقائيًا بإرسال القالب المحدّد للمتبرع المعني — بدون أي تدخّل يدوي.
+          عند وقوع الحدث (مثلاً نجاح تبرّع)، يقوم النظام تلقائيًا بإرسال القالب المحدّد للمتبرع المعني  بدون أي تدخّل يدوي.
           استخدم متغيّرات مثل <span className="font-mono">{"{{donation.amountUSD}}"}</span> داخل القالب لتخصيص الرسالة.
         </p>
       </div>
@@ -163,7 +163,7 @@ export function TriggerList() {
             ) : triggers.length === 0 ? (
               <tr>
                 <td colSpan={6} className="py-12 text-center text-slate-500">
-                  لا توجد أحداث تلقائية بعد — اضغط «حدث جديد» للبدء
+                  لا توجد أحداث تلقائية بعد  اضغط «حدث جديد» للبدء
                 </td>
               </tr>
             ) : (
@@ -282,7 +282,7 @@ export function TriggerList() {
           </div>
           {lastRun && (
             <p className="text-[11px] text-slate-700">
-              {lastRun.dryRun ? "المعاينة" : "آخر تشغيل"}: فُحص {lastRun.donorsScanned} متبرّع —{" "}
+              {lastRun.dryRun ? "المعاينة" : "آخر تشغيل"}: فُحص {lastRun.donorsScanned} متبرّع {" "}
               {lastRun.dryRun ? "سيُرسل" : "أُرسل"} {lastRun.sent}، تخطّي {lastRun.skipped}، فشل {lastRun.failed}
               {lastRun.truncated ? " (بقيت دفعة للتشغيل التالي)" : ""}
             </p>

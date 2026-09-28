@@ -271,7 +271,7 @@ export default function ReferralAnalyticsPage() {
     [chartPeriod, dateFrom, dateTo]
   );
 
-  // Export dialog state — popup with full filter setup before download. Defaults
+  // Export dialog state  popup with full filter setup before download. Defaults
   // mirror the current page filters so the export reflects what's on screen.
   const [exportOpen, setExportOpen] = useState(false);
 
@@ -524,7 +524,7 @@ export default function ReferralAnalyticsPage() {
                   accent="emerald"
                   format="money"
                   variant="hero"
-                  subtitle="ناجح — الشهر الحالي (UTC)"
+                  subtitle="ناجح  الشهر الحالي (UTC)"
                 />
                 <StatsMetricCard
                   compact
@@ -533,7 +533,7 @@ export default function ReferralAnalyticsPage() {
                   icon={DollarSign}
                   accent="emerald"
                   format="money"
-                  subtitle="من التبرعات المدفوعة فقط — حسب الفترة والتصفية"
+                  subtitle="من التبرعات المدفوعة فقط  حسب الفترة والتصفية"
                 />
                 <StatsMetricCard
                   compact
@@ -542,7 +542,7 @@ export default function ReferralAnalyticsPage() {
                   icon={DollarSign}
                   accent="emerald"
                   format="money"
-                  subtitle="كل تبرعات الرابط الناجحة — دون تصفية الفئة أو المشروع"
+                  subtitle="كل تبرعات الرابط الناجحة  دون تصفية الفئة أو المشروع"
                 />
                 <StatsMetricCard compact title="إيرادات شهرية متكررة" value={stats.monthlyRecurringRevenue ?? 0} icon={Repeat} accent="emerald" format="money" subtitle="اشتراكات نشطة" />
                 <StatsMetricCard compact title="دعم الفريق" value={stats.teamSupportTotal ?? 0} icon={HandCoins} accent="amber" format="money" subtitle="من التبرعات الناجحة" />
@@ -686,7 +686,7 @@ export default function ReferralAnalyticsPage() {
                               <Pie data={revenueSplitData} cx="50%" cy="50%" innerRadius={70} outerRadius={110} paddingAngle={2} dataKey="value" nameKey="name" label={false}>
                                 {revenueSplitData.map((entry) => <Cell key={entry.name} fill={entry.color} />)}
                               </Pie>
-                              <Tooltip formatter={(value: number, _name: string, props: { payload?: { count?: number } }) => [`${formatMoney(Number(value), undefined, undefined, true)} — عدد: ${props?.payload?.count ?? 0}`, "المبلغ / العدد"]} />
+                              <Tooltip formatter={(value: number, _name: string, props: { payload?: { count?: number } }) => [`${formatMoney(Number(value), undefined, undefined, true)}  عدد: ${props?.payload?.count ?? 0}`, "المبلغ / العدد"]} />
                               <Legend content={DashboardPieLegendByValue} />
                             </PieChart>
                           </ResponsiveContainer>
@@ -703,7 +703,7 @@ export default function ReferralAnalyticsPage() {
                               <Pie data={typeSplitData} cx="50%" cy="50%" innerRadius={70} outerRadius={110} paddingAngle={2} dataKey="value" nameKey="name" label={false}>
                                 {typeSplitData.map((entry) => <Cell key={entry.name} fill={entry.color} />)}
                               </Pie>
-                              <Tooltip formatter={(value: number, _name: string, props: { payload?: { count?: number } }) => [`${formatMoney(Number(value), undefined, undefined, true)} — عدد: ${props?.payload?.count ?? 0}`, "المبلغ / العدد"]} />
+                              <Tooltip formatter={(value: number, _name: string, props: { payload?: { count?: number } }) => [`${formatMoney(Number(value), undefined, undefined, true)}  عدد: ${props?.payload?.count ?? 0}`, "المبلغ / العدد"]} />
                               <Legend content={DashboardPieLegendByValue} />
                             </PieChart>
                           </ResponsiveContainer>
@@ -1008,7 +1008,7 @@ export default function ReferralAnalyticsPage() {
                                     ? "bg-green-100 text-green-700"
                                     : "bg-amber-100 text-amber-700"
                                 )}
-                                title={d.status === "PAID" && !d.paidAt && d.type !== "MONTHLY" ? "تم بدء الدفع ولم يؤكده مزود الدفع بعد — لا يُحتسب في الإيرادات" : undefined}
+                                title={d.status === "PAID" && !d.paidAt && d.type !== "MONTHLY" ? "تم بدء الدفع ولم يؤكده مزود الدفع بعد  لا يُحتسب في الإيرادات" : undefined}
                               >
                                 {d.status === "PAID"
                                   ? (d.paidAt || d.type === "MONTHLY")
@@ -1113,7 +1113,7 @@ export default function ReferralAnalyticsPage() {
           open={exportOpen}
           onOpenChange={setExportOpen}
           endpoint={`/api/admin/referrals/${id}/export`}
-          title={`تصدير تقرير الإحالة${stats?.referral?.code ? ` — ${stats.referral.code}` : ""}`}
+          title={`تصدير تقرير الإحالة${stats?.referral?.code ? `  ${stats.referral.code}` : ""}`}
           description="يشمل التقرير كل التبرعات والاشتراكات المرتبطة بهذه الإحالة، مع ملخص شامل وتفصيل لكل حملة."
           defaults={(() => {
             const { start, end } = getDonationsDateRange(chartPeriod, dateFrom, dateTo);

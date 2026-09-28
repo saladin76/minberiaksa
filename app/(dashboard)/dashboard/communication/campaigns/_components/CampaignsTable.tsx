@@ -82,7 +82,7 @@ function SortHeader({
   );
 }
 
-/** A count cell. Campaigns that never went out show a dash — a column of zeros reads as broken. */
+/** A count cell. Campaigns that never went out show a dash  a column of zeros reads as broken. */
 function CountCell({ value, show, tone }: { value: number; show: boolean; tone?: string }) {
   return (
     <td className="whitespace-nowrap px-3 py-2.5 text-left align-middle tabular-nums">
@@ -136,7 +136,7 @@ export function CampaignsTable({
               const showResults = hasResults(c);
               const date = rowDate(c);
               // Straight to the campaign's report on its own channel page. The
-              // separate detail screen this used to open has been removed — it
+              // separate detail screen this used to open has been removed  it
               // showed a summary of numbers the channel page already owns, and
               // its lifecycle buttons now live in the row menu at the end.
               const href = `${ch.href}?campaign=${c.id}`;

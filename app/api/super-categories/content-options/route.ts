@@ -5,7 +5,7 @@ import { authOptions } from "../../auth/[...nextauth]/options";
 import { sessionHasDashboardPermission } from "@/lib/dashboard/permissions";
 
 /**
- * GET /api/super-categories/content-options — everything a super category can
+ * GET /api/super-categories/content-options  everything a super category can
  * link, by kind, for the dashboard picker.
  *
  * The picker stores ids, so it has to be able to show a name for each. Seven

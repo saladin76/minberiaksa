@@ -13,8 +13,8 @@ import {
 } from "@/lib/content/library-write";
 
 /**
- * GET  /api/booklets — the public list of published booklets.
- * POST /api/booklets — create, dashboard only.
+ * GET  /api/booklets  the public list of published booklets.
+ * POST /api/booklets  create, dashboard only.
  */
 export async function GET(request: NextRequest) {
   try {

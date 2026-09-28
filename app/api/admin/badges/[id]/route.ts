@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import type { Prisma } from "@prisma/client";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 import { requireAdminOrDashboardPermission } from "@/lib/dashboard/api-auth";
@@ -37,7 +38,7 @@ export async function PUT(
     const { id } = await params;
     const body = await request.json();
     const { name, color, criteria, order, translations } = body;
-    const updateData: { name?: string; color?: string; criteria?: unknown; order?: number } = {};
+    const updateData: { name?: string; color?: string; criteria?: Prisma.InputJsonValue; order?: number } = {};
     if (name !== undefined) updateData.name = name;
     if (color !== undefined) updateData.color = color;
     if (criteria !== undefined) updateData.criteria = criteria;

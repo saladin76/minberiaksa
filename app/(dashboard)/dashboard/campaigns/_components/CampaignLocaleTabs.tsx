@@ -20,7 +20,7 @@ import {
 import { AutoTranslateButton, type TranslatedLocales } from '../../_components/AutoTranslateButton';
 
 /**
- * The translation tabs of the campaign forms — one per language, driven by
+ * The translation tabs of the campaign forms  one per language, driven by
  * `TRANSLATION_LOCALES`.
  *
  * Each tab is a title field on the react-hook-form, a rich-text description
@@ -28,7 +28,7 @@ import { AutoTranslateButton, type TranslatedLocales } from '../../_components/A
  * page's own per-locale media block. The two campaign pages render this twice
  * over and used to spell out eight copies of it each by hand.
  *
- * The description editor is uncontrolled — it takes a `defaultValue` — so a
+ * The description editor is uncontrolled  it takes a `defaultValue`  so a
  * machine translation written into state would not appear on screen. The
  * `editorVersion` counter is part of each editor's key: bump it after filling
  * descriptions and every editor remounts with the new text.
@@ -54,7 +54,7 @@ export interface CampaignLocaleTabsProps {
   onTranslated: (translations: TranslatedLocales, overwrite: boolean) => void;
   /** English is the one locale the site requires. */
   requiredLocales?: readonly string[];
-  /** Rendered before the language tabs — the Arabic tab trigger. */
+  /** Rendered before the language tabs  the Arabic tab trigger. */
   leadingTrigger?: ReactNode;
 }
 
@@ -74,7 +74,7 @@ export function CampaignLocaleTabTriggers({
 }
 
 /** The translate button as it appears on every campaign tab, exported so the
- *  Arabic tab — where the editor actually is when the text is finished — has
+ *  Arabic tab  where the editor actually is when the text is finished  has
  *  it too. */
 export function CampaignTranslateBar({
   arabic,
@@ -89,7 +89,7 @@ export function CampaignTranslateBar({
         onResult={onTranslated}
       />
       <p className="mt-2 text-[11px] text-slate-600">
-        تُترجم من النص العربي إلى كل اللغات دفعة واحدة. راجع كل لغة قبل الحفظ — الحفظ يبقى بزر المشروع نفسه.
+        تُترجم من النص العربي إلى كل اللغات دفعة واحدة. راجع كل لغة قبل الحفظ  الحفظ يبقى بزر المشروع نفسه.
       </p>
     </div>
   );
@@ -122,7 +122,7 @@ export function CampaignLocaleTabContents({
               <Alert>
                 <AlertCircle className="h-4 w-4" />
                 <AlertDescription className="mt-[5px]">
-                  الإنجليزية مطلوبة — يُشتق معرّف الرابط (slug) من عنوانها.
+                  الإنجليزية مطلوبة  يُشتق معرّف الرابط (slug) من عنوانها.
                 </AlertDescription>
               </Alert>
             ) : (
@@ -162,7 +162,7 @@ export function CampaignLocaleTabContents({
                 />
               </div>
               <FormDescription>
-                {required ? 'مطلوب — وصف كامل بالإنجليزية للمشروع وأهدافه.' : 'وصف كامل للمشروع وأهدافه بهذه اللغة.'}
+                {required ? 'مطلوب  وصف كامل بالإنجليزية للمشروع وأهدافه.' : 'وصف كامل للمشروع وأهدافه بهذه اللغة.'}
               </FormDescription>
             </FormItem>
 

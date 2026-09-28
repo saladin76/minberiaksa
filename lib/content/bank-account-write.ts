@@ -7,7 +7,7 @@
  * The schema is emphatic that nothing here is ever seeded, and the same
  * caution applies to what this module accepts: it normalises whitespace and
  * case in identifiers but never invents or corrects one. An IBAN is stored as
- * typed, upper-cased with spaces removed, and validated only for shape — the
+ * typed, upper-cased with spaces removed, and validated only for shape  the
  * dashboard cannot know whether an account exists, and a checksum pass would
  * imply a confidence the code does not have.
  */
@@ -89,7 +89,7 @@ const CURRENCY_CODE = /^[A-Z]{3}$/;
 
 /**
  * Currency rows as posted. A row is kept only if it names a valid currency
- * code AND carries at least one identifier — a bare code tells a donor nothing.
+ * code AND carries at least one identifier  a bare code tells a donor nothing.
  * Duplicate codes keep the first; the same account does not hold USD twice.
  */
 export function parseBankCurrencies(raw: unknown): BankCurrencyInput[] | undefined {

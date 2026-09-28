@@ -5,7 +5,7 @@
  * `TeamSupport`: the basket's one "support the team" step (asked once per
  * order, before checkout) and the "gifted to …" line on a gifted row.
  * `Gift`: what the recipient of a gifted donation is sent once the payment
- * settles — the email and the WhatsApp text (`lib/donations/gift-delivery.ts`).
+ * settles  the email and the WhatsApp text (`lib/donations/gift-delivery.ts`).
  *
  * App-level (PascalCase) namespaces for the same reason as `Recurring`:
  * `scripts/sync-minbar-messages.mjs` rewrites every Minbar namespace from

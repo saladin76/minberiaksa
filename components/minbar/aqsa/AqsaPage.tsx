@@ -14,7 +14,7 @@ import type { CategoryPageContent } from "@/lib/minbar/category-page";
 import AqsaPlan from "./AqsaPlan";
 
 /**
- * The blessed Al-Aqsa Mosque — ported from `Minbar/المسجد الأقصى.dc.html`.
+ * The blessed Al-Aqsa Mosque  ported from `Minbar/المسجد الأقصى.dc.html`.
  *
  * The longest explanatory page on the site, and the one with a thesis: the
  * mosque is everything inside the wall, not the golden dome alone. It runs
@@ -53,7 +53,7 @@ const LEGEND: ReadonlyArray<{ label: string; swatch: React.CSSProperties }> = [
 
 /**
  * The mosque's standing. The first is the Qur'anic verse itself, which is why
- * it carries no `text` key — it is rendered from the `quran` namespace.
+ * it carries no `text` key  it is rendered from the `quran` namespace.
  */
 const VIRTUES = [1, 2, 3, 4, 5, 6].map((n) => ({
   title: `virtue${n}Title`,
@@ -117,13 +117,13 @@ const DIAMOND: React.CSSProperties = { flex: "0 0 auto", width: 6, height: 6, ba
 export interface AqsaPageProps {
   /** Al-Isra 1, above the page. */
   verse: VerseBlock;
-  /** Al-Isra 1 — the verse that is itself the first of the mosque's virtues. */
+  /** Al-Isra 1  the verse that is itself the first of the mosque's virtues. */
   isra: VerseBlock;
   projects: MinbarProject[];
   /**
    * The mosque's category, when the dashboard has bound one to this page. Its
    * editable parts land where they belong: the hero picture and lead, the
-   * hero button's label, and — in "our work" — its film, figures, values, all
+   * hero button's label, and  in "our work"  its film, figures, values, all
    * its campaigns, its donation box, its explanatory cards and achievements.
    */
   category?: CategoryPageContent | null;

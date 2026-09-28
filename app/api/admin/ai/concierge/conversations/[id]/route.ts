@@ -13,10 +13,10 @@ export const dynamic = "force-dynamic";
 const OBJECT_ID = /^[0-9a-fA-F]{24}$/;
 
 /**
- * GET /api/admin/ai/concierge/conversations/:id — one conversation in full:
+ * GET /api/admin/ai/concierge/conversations/:id  one conversation in full:
  *     the transcript, the funnel steps of its session, the campaigns it showed,
  *     the donor (when signed in) and the donations credited to it.
- * DELETE — remove the transcript (a visitor's request, a test chat). The
+ * DELETE  remove the transcript (a visitor's request, a test chat). The
  *     funnel events stay: they carry no text.
  */
 export async function GET(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {

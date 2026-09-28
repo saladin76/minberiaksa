@@ -5,7 +5,7 @@ import { authOptions } from "../../auth/[...nextauth]/options";
 import { requireAdminOrDashboardPermission } from "@/lib/dashboard/api-auth";
 
 /**
- * GET /api/courses/admin — the dashboard listing.
+ * GET /api/courses/admin  the dashboard listing.
  *
  * Returns inactive rows too, so it sits behind the dashboard permission. Videos
  * come back as a count; the edit page loads the full set.

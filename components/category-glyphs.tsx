@@ -6,8 +6,8 @@ import React from "react";
  * lucide-react is pinned at 0.474 across this project (~170 files import it, and
  * later releases rename and remove icons), so a missing icon is redrawn here
  * rather than fixed by bumping the package. Everything below therefore uses
- * Lucide's own canvas and default attributes — 24×24, `viewBox="0 0 24 24"`,
- * no fill, `currentColor` stroke at width 2, round caps and joins — so these sit
+ * Lucide's own canvas and default attributes  24×24, `viewBox="0 0 24 24"`,
+ * no fill, `currentColor` stroke at width 2, round caps and joins  so these sit
  * beside real Lucide icons without looking like a different set.
  *
  * The subjects are the ones an Islamic relief organisation needs and a general
@@ -41,7 +41,7 @@ function glyph(name: string, children: React.ReactNode): CategoryGlyph {
   return Component;
 }
 
-/** مسجد — dome, two minarets, arched door. */
+/** مسجد  dome, two minarets, arched door. */
 export const Mosque = glyph(
   "Mosque",
   <>
@@ -56,7 +56,7 @@ export const Mosque = glyph(
   </>,
 );
 
-/** مصحف — a closed book with a crescent on the cover. */
+/** مصحف  a closed book with a crescent on the cover. */
 export const Quran = glyph(
   "Quran",
   <>
@@ -66,7 +66,7 @@ export const Quran = glyph(
   </>,
 );
 
-/** سجادة صلاة — prayer rug with a mihrab arch and fringe. */
+/** سجادة صلاة  prayer rug with a mihrab arch and fringe. */
 export const PrayerRug = glyph(
   "PrayerRug",
   <>
@@ -77,7 +77,7 @@ export const PrayerRug = glyph(
   </>,
 );
 
-/** هلال — crescent and star, for Ramadan and Eid appeals. */
+/** هلال  crescent and star, for Ramadan and Eid appeals. */
 export const Crescent = glyph(
   "Crescent",
   <>
@@ -86,7 +86,7 @@ export const Crescent = glyph(
   </>,
 );
 
-/** فانوس رمضان — Ramadan lantern. */
+/** فانوس رمضان  Ramadan lantern. */
 export const Lantern = glyph(
   "Lantern",
   <>
@@ -100,7 +100,7 @@ export const Lantern = glyph(
   </>,
 );
 
-/** أضحية — sheep, for udhiyah and aqiqah campaigns. */
+/** أضحية  sheep, for udhiyah and aqiqah campaigns. */
 export const Sheep = glyph(
   "Sheep",
   <>
@@ -114,7 +114,7 @@ export const Sheep = glyph(
 );
 
 /**
- * بئر ماء — stone well with a winch beam, rope and bucket.
+ * بئر ماء  stone well with a winch beam, rope and bucket.
  * Drawn as a cylinder rather than a pitched-roof hut: with a gable on top it
  * read as a plain house at 18px, which is the size the category chips use.
  */
@@ -131,7 +131,7 @@ export const WaterWell = glyph(
   </>,
 );
 
-/** نخلة — date palm, for agricultural and sadaqah jariyah projects. */
+/** نخلة  date palm, for agricultural and sadaqah jariyah projects. */
 export const DatePalm = glyph(
   "DatePalm",
   <>
@@ -145,7 +145,7 @@ export const DatePalm = glyph(
   </>,
 );
 
-/** تمر — bowl of dates, for iftar and Ramadan food appeals. */
+/** تمر  bowl of dates, for iftar and Ramadan food appeals. */
 export const Dates = glyph(
   "Dates",
   <>
@@ -156,7 +156,7 @@ export const Dates = glyph(
   </>,
 );
 
-/** بطانية — folded blanket, for winter kits. */
+/** بطانية  folded blanket, for winter kits. */
 export const Blanket = glyph(
   "Blanket",
   <>
@@ -168,7 +168,7 @@ export const Blanket = glyph(
   </>,
 );
 
-/** كفالة يتيم — an adult and a child, hand in hand. */
+/** كفالة يتيم  an adult and a child, hand in hand. */
 export const OrphanCare = glyph(
   "OrphanCare",
   <>
@@ -180,7 +180,7 @@ export const OrphanCare = glyph(
   </>,
 );
 
-/** كرسي متحرك — wheelchair, for disability support projects. */
+/** كرسي متحرك  wheelchair, for disability support projects. */
 export const Wheelchair = glyph(
   "Wheelchair",
   <>

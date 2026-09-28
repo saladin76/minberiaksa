@@ -1,6 +1,6 @@
 "use client";
 import { cn } from "@/lib/utils";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, type Variants } from "framer-motion";
 import React, { useEffect, useState } from "react";
 
 export const ImagesSlider = ({
@@ -83,7 +83,7 @@ export const ImagesSlider = ({
     };
   }, []);
 
-  const slideVariants = {
+  const slideVariants: Variants = {
     enter: (direction: 'up' | 'down') => ({
       y: direction === 'up' ? '100%' : '-100%',
       opacity: 1,
@@ -93,7 +93,7 @@ export const ImagesSlider = ({
       opacity: 1,
       transition: {
         duration: 0.4,
-        ease: [0.25, 0.1, 0.25, 1],
+        ease: [0.25, 0.1, 0.25, 1] as const,
       },
     },
     exit: (direction: 'up' | 'down') => ({
@@ -101,7 +101,7 @@ export const ImagesSlider = ({
       opacity: 1,
       transition: {
         duration: 0.4,
-        ease: [0.25, 0.1, 0.25, 1],
+        ease: [0.25, 0.1, 0.25, 1] as const,
       },
     }),
   };

@@ -12,7 +12,7 @@ import {
  * per-day drill-down.
  *
  * These live in one place on purpose. The grid shows a number per day and the
- * drill-down lists the rows behind that number — if the two built their `where`
+ * drill-down lists the rows behind that number  if the two built their `where`
  * clauses separately, any future edit to one would silently make the list stop
  * matching the figure the user clicked, which is the exact class of bug that
  * makes a dashboard untrustworthy. One definition, two callers.
@@ -41,7 +41,7 @@ export function buildDayOfMonthFilters(input: DayOfMonthFilterInput): {
   const donationWhere: Prisma.DonationWhereInput = {
     subscriptionId: { not: null },
     status: "PAID",
-    // Not null implicitly — a null paidAt cannot satisfy a range, and settlement is what
+    // Not null implicitly  a null paidAt cannot satisfy a range, and settlement is what
     // makes a row real money. Same rule the chart and the KPI cards use.
     paidAt: { not: null },
     ...donationFrequencyWhere(frequency),
@@ -59,14 +59,14 @@ export function buildDayOfMonthFilters(input: DayOfMonthFilterInput): {
 
   // ---- expected: active subscriptions and the day they bill on ----
   // `status: ACTIVE` alone is not enough. A subscription whose only charge attempts FAILED
-  // (declined card) stays ACTIVE but has never produced money — 18 of them, worth $217/mo.
+  // (declined card) stays ACTIVE but has never produced money  18 of them, worth $217/mo.
   // The MRR card already requires at least one settled charge; match it, or this view and
   // that card disagree by exactly those phantom subscriptions.
   const subscriptionWhere = activePlanScopeWhere(input);
 
   // A day of the month is only a plan's billing day when the plan is monthly: a daily plan
   // bills on every day and a Friday plan's date moves every month. So the expected view is
-  // monthly plans only — and empty when the page is narrowed to another cadence.
+  // monthly plans only  and empty when the page is narrowed to another cadence.
   if (frequency && frequency !== "MONTHLY") {
     subscriptionWhere.id = { in: [] };
   } else {

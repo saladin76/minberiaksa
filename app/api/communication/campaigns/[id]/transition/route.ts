@@ -10,13 +10,13 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const schema = z.object({
-  // CONFIRM is a compound of SUBMIT_REVIEW + APPROVE — see below.
+  // CONFIRM is a compound of SUBMIT_REVIEW + APPROVE  see below.
   action: z.enum(["CONFIRM", "SUBMIT_REVIEW", "APPROVE", "SCHEDULE", "CANCEL"]),
   scheduledAt: z.string().datetime().nullable().optional(),
 });
 
 /**
- * Status transitions only — never sending.
+ * Status transitions only  never sending.
  *
  * The legality of each move lives in `campaign-service`'s TRANSITIONS table, not here; this route
  * exists so the UI can request one. Keeping approval separate from the send route is what makes

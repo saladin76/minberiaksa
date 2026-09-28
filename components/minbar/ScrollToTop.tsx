@@ -13,7 +13,7 @@ import { usePathname } from "next/navigation";
  * footer landed on the new page still scrolled to the footer.
  *
  * Doing it on `pathname` rather than on the click keeps it honest for every
- * entry point — cards, the header, the footer, breadcrumbs — and for the back
+ * entry point  cards, the header, the footer, breadcrumbs  and for the back
  * button, which should also land where the reader expects.
  *
  * A same-page anchor (`#urgent`) is left alone: the hash is the whole point of

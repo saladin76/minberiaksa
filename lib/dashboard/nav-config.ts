@@ -7,7 +7,7 @@ export type DashboardNavItem = {
   href: string;
   /** Rendered in the sidebar and the command palette. */
   icon: NavIconName;
-  /** Extra search terms for the command palette — English slugs, synonyms, provider names. */
+  /** Extra search terms for the command palette  English slugs, synonyms, provider names. */
   keywords?: string[];
   /**
    * Opts this item into a live count pill in the sidebar.
@@ -24,12 +24,12 @@ export type DashboardNavBadgeKey = "inboxUnread" | "transferReceiptsPending";
 
 export type DashboardNavGroup = { group: string; items: DashboardNavItem[] };
 
-// Sidebar Information Architecture — practical, permission-gated sections in a fixed order.
+// Sidebar Information Architecture  practical, permission-gated sections in a fixed order.
 // Provider setup and operational sync stay under "ربط المنصات والإرسال".
 //
 // Every item carries its OWN icon. Icons used to be looked up by `key` (the permission key)
 // in DashboardLayoutClient, which meant the six "التواصل" items and the five operations items
-// all shared one permission key and therefore rendered the identical MessageSquare glyph —
+// all shared one permission key and therefore rendered the identical MessageSquare glyph 
 // the icon column conveyed nothing. Per-item icons fix that.
 //
 // Titles are also unique across the whole sidebar now. "نظرة عامة" and "السجلات المتقدمة"
@@ -45,13 +45,13 @@ export const DASHBOARD_NAV_GROUPS: DashboardNavGroup[] = [
       { key: "bankTransfers", title: "التحويلات البنكية", href: "/dashboard/bank-transfers", icon: "landmark", keywords: ["bank", "transfers", "حوالات", "statement", "كشف"] },
       // Receipts donors upload after choosing bank transfer at checkout, waiting on a finance
       // decision. A different queue from the statement importer above: that one starts from the
-      // bank's file, this one from the donor's photo. Same permission — both are the finance desk.
+      // bank's file, this one from the donor's photo. Same permission  both are the finance desk.
       { key: "bankTransfers", title: "إيصالات التحويل", href: "/dashboard/transfer-receipts", icon: "receipt", keywords: ["receipts", "transfer", "إيصال", "إيصالات", "تحويل", "مراجعة", "review", "pending"], badge: "transferReceiptsPending" },
       { key: "donors", title: "المتبرعون", href: "/dashboard/users/donors", icon: "users", keywords: ["donors", "users", "متبرعين"] },
     ],
   },
   {
-    // Everything an editor publishes to the public site — the fundraising catalogue
+    // Everything an editor publishes to the public site  the fundraising catalogue
     // (projects, categories, blog, hero slides, ticker) and the CMS content behind the
     // homepage rails. Per-item permissions still apply; a staffer sees the rows they hold.
     group: "محتوى الموقع",
@@ -78,7 +78,7 @@ export const DASHBOARD_NAV_GROUPS: DashboardNavGroup[] = [
       { key: "siteContent", title: "الكتيبات", href: "/dashboard/booklets", icon: "bookOpen", keywords: ["booklets", "كتيبات", "pdf", "library"] },
       { key: "siteContent", title: "الأسئلة الشائعة", href: "/dashboard/faqs", icon: "helpCircle", keywords: ["faq", "أسئلة", "questions", "help"] },
       // The basket's own steps: the "support the team" switch and amounts, and the
-      // cross-sell campaigns offered under the rows — none of it per campaign.
+      // cross-sell campaigns offered under the rows  none of it per campaign.
       { key: "campaigns", title: "إعدادات السلة", href: "/dashboard/cart-settings", icon: "shoppingCart", keywords: ["cart", "basket", "السلة", "team", "support", "دعم", "الفريق", "upsell", "suggestions", "مقترحات", "amounts", "مبالغ"] },
       { key: "bankAccounts", title: "الحسابات البنكية", href: "/dashboard/bank-accounts", icon: "landmark", keywords: ["bank", "accounts", "iban", "swift", "حسابات", "بنك"] },
     ],
@@ -91,11 +91,11 @@ export const DASHBOARD_NAV_GROUPS: DashboardNavGroup[] = [
       // التواصل that is not operations: the template/trigger editor and the send log.
       // Previously unreachable (no nav entry, no inbound link) despite being fully built with
       // working APIs. Titled "قوالب البريد والمحفّزات" rather than "القوالب" to distinguish it
-      // from the communication-campaign templates directly above — it is a different page that
+      // from the communication-campaign templates directly above  it is a different page that
       // owns the email/WhatsApp templates AND the message triggers, including the
       // DONATION_LAPSED reminder.
       // Per-channel pages: each answers "what did we send on this channel, and what happened to
-      // it afterwards" — the delivery/open/click detail the flat send log cannot show.
+      // it afterwards"  the delivery/open/click detail the flat send log cannot show.
       { key: "messages", title: "الحملات التسويقية", href: "/dashboard/communication/campaigns", icon: "megaphone", keywords: ["campaigns", "marketing", "حملات", "تسويق", "broadcast", "bulk"] },
       { key: "messages", title: "البريد الإلكتروني", href: "/dashboard/communication/email", icon: "mail", keywords: ["email", "بريد", "elastic"] },
       { key: "messages", title: "واتساب", href: "/dashboard/communication/whatsapp", icon: "messageCircle", keywords: ["whatsapp", "واتساب", "meta"] },
@@ -104,7 +104,7 @@ export const DASHBOARD_NAV_GROUPS: DashboardNavGroup[] = [
       { key: "messages", title: "الرسائل النصية", href: "/dashboard/communication/sms", icon: "messageSquare", keywords: ["sms", "نصية", "netgsm", "brevo"] },
       { key: "templates", title: "قوالب البريد والمحفّزات", href: "/dashboard/templates", icon: "mail", keywords: ["email", "triggers", "محفزات"] },
       // Was the second tab of /dashboard/messages, behind a page that defaults to the outbound
-      // log — so visitor mail had no sidebar entry and no command-palette hit. It is inbound
+      // log  so visitor mail had no sidebar entry and no command-palette hit. It is inbound
       // human correspondence, not send telemetry, and belongs beside the channels, not inside them.
       { key: "badges", title: "الشارات", href: "/dashboard/badges", icon: "award", keywords: ["badges"] },
       // The flat outbound send log (/dashboard/messages) is gone. Per-channel delivery detail lives
@@ -197,19 +197,19 @@ export const DASHBOARD_PERMISSION_ROWS: {
   // One grant for the whole finance desk: the statement importer and the donor-receipt queue.
   { key: "bankTransfers", group: "الرئيسية", title: "التحويلات البنكية وإيصالات التحويل" },
   // Separate from siteContent: these rows are where donors send money (IBAN/SWIFT).
-  { key: "bankAccounts", group: "الرئيسية", title: "الحسابات البنكية (IBAN) — صلاحية مالية حساسة" },
+  { key: "bankAccounts", group: "الرئيسية", title: "الحسابات البنكية (IBAN)  صلاحية مالية حساسة" },
   { key: "donors", group: "الرئيسية", title: "المتبرعون" },
   { key: "campaigns", group: "محتوى الموقع", title: "المشاريع" },
   { key: "categories", group: "محتوى الموقع", title: "الحملات والدول" },
   { key: "blog", group: "محتوى الموقع", title: "المدونة" },
   // P3-2: these five keys were valid in DASHBOARD_PERMISSION_KEYS and enforced by the API
-  // guards, but appeared in NO grant UI — so they could never actually be granted, and a user
+  // guards, but appeared in NO grant UI  so they could never actually be granted, and a user
   // holding one saw an empty sidebar and got bounced out of the dashboard. Now that their
   // pages are linked in the nav above, they must also be grantable.
   { key: "slides", group: "محتوى الموقع", title: "الشرائح" },
   { key: "ticker", group: "محتوى الموقع", title: "شريط التبرعات" },
   // One key for the whole "محتوى الموقع" group. Was enforced by every /api/* content route and
-  // shown in the nav, but absent here — the same P3-2 shape: valid, checked, and ungrantable.
+  // shown in the nav, but absent here  the same P3-2 shape: valid, checked, and ungrantable.
   { key: "siteContent", group: "محتوى الموقع", title: "محتوى الموقع (قصص، فيديو، تقارير، أسئلة…)" },
   // Group was "التشغيل / التواصل"; التشغيل no longer exists, so these two are plain التواصل.
   { key: "templates", group: "التواصل", title: "قوالب البريد والمحفّزات" },
@@ -217,24 +217,24 @@ export const DASHBOARD_PERMISSION_ROWS: {
   // communication pages, which all check the same key.
   { key: "badges", group: "التواصل", title: "الشارات" },
   { key: "messages", group: "التواصل", title: "الرسائل الواردة والتواصل" },
-  // No sidebar item carries `ads` any more — the marketing overview, performance and
+  // No sidebar item carries `ads` any more  the marketing overview, performance and
   // recommendations pages were removed. The key stays grantable because the route guard still
   // maps the /dashboard/marketing prefix to it, so revoking it here would silently strand any
   // staffer whose only grant is `ads`.
-  { key: "ads", group: "التسويق", title: "(قديم) صفحة تحليل الإعلانات /dashboard/ads — ليست في القائمة؛ للإسناد والتتبع استخدم الصلاحيتين التاليتين" },
+  { key: "ads", group: "التسويق", title: "(قديم) صفحة تحليل الإعلانات /dashboard/ads  ليست في القائمة؛ للإسناد والتتبع استخدم الصلاحيتين التاليتين" },
   { key: "referrals", group: "التسويق", title: "إدارة الروابط والإسناد" },
   { key: "pixels", group: "التسويق", title: "عرض التتبع والتحويلات" },
   { key: "aiConcierge", group: "مساعد العطاء (AI)", title: "مساعد العطاء: الأداء والمحادثات والاستنتاجات والإعدادات" },
   { key: "platformConnections", group: "ربط المنصات والإرسال", title: "ربط المنصات والإرسال" },
   // Same P3-2 shape as the five above: `/dashboard/archive` is guarded by this key in
-  // PATH_RULES and every archive API asks for it, but it was in no grant screen — so the archive
+  // PATH_RULES and every archive API asks for it, but it was in no grant screen  so the archive
   // was admin-only in practice, and granting the المستندات action below could never take effect
   // because its holder could not reach the archive at all.
   { key: "archive", group: "الإدارة", title: "الأرشيف (ملفات التسويق والمجموعات)" },
   { key: "team", group: "الإدارة", title: "الفريق" },
   // Today this key controls only the payment-gateway page (main gateway, PayFor):
   // where every new donation's money goes. Labelled so it is granted knowingly.
-  { key: "generalSettings", group: "الإدارة", title: "إعدادات بوابات الدفع — صلاحية مالية حساسة" },
+  { key: "generalSettings", group: "الإدارة", title: "إعدادات بوابات الدفع  صلاحية مالية حساسة" },
   { key: "logs", group: "الإدارة", title: "السجلات المتقدمة" },
 ];
 
@@ -272,7 +272,7 @@ export const ACTION_PERMISSION_ROWS: {
     description: "حذف إعدادات مزوّد وعرض حالته الكاملة. يشمل الحفظ والاختبار. صلاحية حساسة جدًا.",
   },
   // Enforced by app/api/admin/archive/_auth.ts on every DOCUMENTS listing, but it appeared in no
-  // grant screen and — unlike archiveUpload/Delete/Analyze — is not derived from "archive", so
+  // grant screen and  unlike archiveUpload/Delete/Analyze  is not derived from "archive", so
   // nobody but an admin could hold it: a member of staff given the archive returned an
   // unexplained 403 the moment they opened المستندات. It stays a separate grant rather than
   // riding on "archive" because the two hold different things: marketing files on one side,

@@ -11,10 +11,10 @@ Status: **finalized backend routing.** Live provider sends require real credenti
 | SMS | international (non-TR) | **Brevo SMS** (`BREVO_SMS`) | Twilio (never used) |
 | SMS | Turkey (+90 / `TR`) | **Netgsm SMS** (`NETGSM_SMS`) | Twilio (never used) |
 
-Twilio = **LEGACY_DISABLED** — not used by any active send path, no silent fallback.
-SendGrid = **REMOVED** — `lib/email.ts` was deleted; there is no SendGrid send path and no flag that
+Twilio = **LEGACY_DISABLED**  not used by any active send path, no silent fallback.
+SendGrid = **REMOVED**  `lib/email.ts` was deleted; there is no SendGrid send path and no flag that
 re-enables one.
-Brevo Email = **REMOVED** — Brevo is SMS-only. Its email adapter and `EMAIL_SENDER_*` settings are gone.
+Brevo Email = **REMOVED**  Brevo is SMS-only. Its email adapter and `EMAIL_SENDER_*` settings are gone.
 `BREVO_EMAIL` / `SENDGRID` survive only as accepted *historical* values on delivery rows written before
 the migration, so old archive entries still validate.
 
@@ -39,7 +39,7 @@ the migration, so old archive entries still validate.
 - **SMS**: normalize recipient; `+90`/`0090`/`90…`(12 digits)/`countryCode=TR` → **Netgsm**, else **Brevo**.
   - Netgsm: `NETGSM_NOT_CONFIGURED` / `NETGSM_REQUEST_FAILED` / `NETGSM_REJECTED`. Success → jobid or accept.
   - Brevo SMS: `BREVO_SMS_NOT_CONFIGURED` / `BREVO_SMS_REQUEST_FAILED`. Success → messageId.
-- **No fallback**: if the routed provider fails, we fail safely with the reason — never Twilio, never a
+- **No fallback**: if the routed provider fails, we fail safely with the reason  never Twilio, never a
   silent cross-provider retry.
 
 ## Inbound events (webhooks)
@@ -50,7 +50,7 @@ the migration, so old archive entries still validate.
 | Brevo SMS | `/api/webhooks/brevo/transactional` | server-minted `?token=` secret, constant-time compare |
 
 All three store each event once (unique `idempotencyKey` on `CommunicationProviderEvent` for
-WhatsApp/Email) and advance the matching delivery through `shouldApplyDeliveryStatus()` —
+WhatsApp/Email) and advance the matching delivery through `shouldApplyDeliveryStatus()` 
 a forward-only ladder (`SENT → DELIVERED → OPENED/READ → CLICKED`) where terminal outcomes
 (`FAILED` / `BOUNCED` / `UNSUBSCRIBED`) always apply. Out-of-order events can never downgrade a
 delivery. Every route answers 200 for authenticated calls so a payload we cannot parse does not
@@ -59,7 +59,7 @@ trigger a provider retry storm.
 ## Safety invariants (unchanged)
 - Delivery record created **before** any provider call.
 - A delivery becomes a provider-success status (SENT/…) only with a real `providerMessageId` **or**
-  `internalAccepted` (genuine provider acceptance) — never a fake SENT.
+  `internalAccepted` (genuine provider acceptance)  never a fake SENT.
 - Missing config → SKIPPED with the exact reason; provider error → FAILED.
 - Campaigns still require approval; test/bulk require `confirm:true`. Payments/tracking untouched.
 
@@ -69,7 +69,7 @@ trigger a provider retry storm.
 ## Automatic (trigger) messages
 Automatic donation confirmation / failed-payment / subscription messages are dispatched by
 `lib/events/dispatch.ts` → `lib/communication/automatic-message-dispatcher.ts`. They use the same
-Communication Center runtime — a `CommunicationDelivery` (origin `TRIGGER`) is created **before** any
+Communication Center runtime  a `CommunicationDelivery` (origin `TRIGGER`) is created **before** any
 provider call, then advanced to SENT/SKIPPED/FAILED on the real provider outcome. A `SentMessage` row is
 written afterwards as a **secondary mirror** (best-effort, not source of truth).
 
@@ -78,7 +78,7 @@ written afterwards as a **secondary mirror** (best-effort, not source of truth).
   `WhatsappTemplate` model has no Meta-approved template-name mapping yet (existing rows are Twilio-imported
   or MANUAL free-text). Until a template is genuinely Meta-approved (`provider = META`, `approvalStatus =
   approved`, with a name + language), automatic WhatsApp is **SKIPPED** with
-  `META_TEMPLATE_REQUIRED_FOR_AUTOMATIC_WHATSAPP` — never sent via Twilio, never faked.
+  `META_TEMPLATE_REQUIRED_FOR_AUTOMATIC_WHATSAPP`  never sent via Twilio, never faked.
 - **Automatic SMS** is implemented (`sendAutomaticSmsMessage`, TR→Netgsm / intl→Brevo) but currently
   **unreachable**: Prisma `enum MessageChannel` is `EMAIL | WHATSAPP` only, so no trigger emits SMS. Adding
   an SMS trigger channel is a future schema change (intentionally not done here).

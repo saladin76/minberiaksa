@@ -58,7 +58,7 @@ export function BlogHealthCard() {
         <div>
           <CardTitle className="text-base">حالة المدونة في قاعدة البيانات الفعلية</CardTitle>
           <p className="mt-1 text-xs text-slate-500">
-            أرقام حيّة من قاعدة بيانات هذا الموقع. رفع ملف استيراد إلى المستودع لا يعني أن قاعدة الإنتاج تحدّثت — تحقق من هنا.
+            أرقام حيّة من قاعدة بيانات هذا الموقع. رفع ملف استيراد إلى المستودع لا يعني أن قاعدة الإنتاج تحدّثت  تحقق من هنا.
           </p>
         </div>
         <Button type="button" size="sm" variant="outline" onClick={() => void load()} disabled={loading} className="gap-1.5">

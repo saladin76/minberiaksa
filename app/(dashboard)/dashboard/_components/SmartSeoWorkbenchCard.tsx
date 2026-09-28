@@ -12,7 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 type SeoContentType = "campaign" | "category" | "blog";
 /**
  * Every publicly routed locale. Derived from the single source of truth rather
- * than listed here, so promoting a locale cannot leave this behind — which is
+ * than listed here, so promoting a locale cannot leave this behind  which is
  * exactly what happened when the Minbar port took the site from 8 to 19.
  */
 type LocaleCode = SupportedLocale;
@@ -22,7 +22,7 @@ type Props = { type: SeoContentType; locale?: LocaleCode; title?: string | null;
 type SeoAssistantPayload = Partial<SeoDraft> & { source?: string; type?: SeoContentType; locale?: LocaleCode; suggestedSlug?: string; improvedText?: string; sentAt?: string };
 
 /** Display names for the locales this card has authored copy for. Partial by
- * design — `fallbackDraft` falls back to Arabic for anything absent, which is
+ * design  `fallbackDraft` falls back to Arabic for anything absent, which is
  * better than shipping placeholder SEO copy in a language nobody wrote. */
 const LOCALE_NAMES: Partial<Record<LocaleCode, string>> = { ar: "العربية", en: "English", fr: "Français", tr: "Türkçe", id: "Bahasa", pt: "Português", es: "Español", de: "Deutsch" };
 const STOP = new Set(["في","من","على","إلى","الى","عن","مع","هذا","هذه","ذلك","تلك","الذي","التي","كل","كما","أو","او","ثم","أن","ان","إن","هو","هي","هم","كان","كانت","يكون","تكون","لها","له","لهم","بين","بعد","قبل","خلال","ضمن","وقد","لقد","حيث","غير","أكثر","اكثر","the","and","for","with","this","that","from","about","your","you","are","our","can","will","let","them","their","by","into","type","text","content","paragraph","doc","hardbreak","attrs","marks","https","http","www"]);
@@ -55,7 +55,7 @@ function fallbackDraft(type: SeoContentType, locale: LocaleCode, title: string, 
 export function SmartSeoWorkbenchCard({ type, locale = "ar", title, description, slug, imageCount = 0 }: Props) {
   const storageKey = `${type}:${locale}:${clean(title)}`;
   const syncStorageKey = `seo-assistant:${type}:${locale}`;
-  // Collapsed by default — the user must click to expand. Subsequent
+  // Collapsed by default  the user must click to expand. Subsequent
   // open()/close() interactions are preserved across re-renders of the same
   // (type, locale, title) key; only an explicit incoming AI package or
   // applyIncomingPackage force-opens the card again (see below).
@@ -70,7 +70,7 @@ export function SmartSeoWorkbenchCard({ type, locale = "ar", title, description,
   const [generationError, setGenerationError] = useState<string | null>(null);
   const [professionalReady, setProfessionalReady] = useState(false);
 
-  const base = useMemo(() => { const cleanTitle = clean(title); const cleanDescription = clean(description); const keywords = topKeywords(cleanTitle, cleanDescription); const wordCount = tokens(cleanDescription).length; const hasCta = /تبرع|ساهم|ادعم|اكفل|شارك|ساعد|donate|support|spenden|bağış|donar/i.test(cleanDescription); const hasImpact = /يوفر|يساهم|يساعد|يهدف|يدعم|يصل|يخفف|يحمي|يرعى|support|help|provide/i.test(cleanDescription); const slugOk = Boolean(slug && slug.length <= 70 && /^[a-z0-9\-_/]+$/i.test(slug)); const checks = [{ label: "الاسم الظاهر", points: cleanTitle.length >= 3 && cleanTitle.length <= 90 ? 18 : cleanTitle ? 10 : 0, max: 18, note: cleanTitle ? `${cleanTitle} — لا يلزم أن يكون هو عنوان SEO.` : "الاسم أو العنوان غير موجود." }, { label: "الوصف والمحتوى", points: wordCount >= (type === "blog" ? 120 : 45) ? 22 : wordCount >= 25 ? 12 : 4, max: 22, note: `عدد الكلمات التقريبي: ${wordCount}.` }, { label: "الكلمة المفتاحية", points: keywords[0] ? 15 : 0, max: 15, note: keywords[0] ? `الكلمة الأقرب: ${keywords[0]}.` : "لم نستطع استخراج كلمة مفتاحية واضحة." }, { label: "نية الباحث", points: hasCta || type === "blog" ? 13 : 6, max: 13, note: hasCta ? "توجد دعوة واضحة للتفاعل أو التبرع." : "أضف دعوة واضحة مثل: تبرع الآن، ساهم، ادعم المشروع." }, { label: "الأثر والثقة", points: hasImpact ? 14 : 5, max: 14, note: hasImpact ? "النص يوضح الأثر بشكل جيد." : "أضف جملة توضح أثر التبرع ومن يستفيد." }, { label: "الرابط والصور", points: (slugOk || !slug) && imageCount > 0 ? 10 : imageCount > 0 ? 7 : 3, max: 10, note: imageCount > 0 ? `عدد الصور: ${imageCount}.` : "الصورة مهمة في SEO والمشاركة." }, { label: "FAQ وبيانات جوجل", points: 4, max: 8, note: "يمكن تحسين الظهور بإضافة أسئلة شائعة وبيانات منظمة لاحقًا." }]; const score = Math.min(100, checks.reduce((sum, i) => sum + i.points, 0)); return { cleanTitle, cleanDescription, keywords, checks, score }; }, [title, description, slug, imageCount, type]);
+  const base = useMemo(() => { const cleanTitle = clean(title); const cleanDescription = clean(description); const keywords = topKeywords(cleanTitle, cleanDescription); const wordCount = tokens(cleanDescription).length; const hasCta = /تبرع|ساهم|ادعم|اكفل|شارك|ساعد|donate|support|spenden|bağış|donar/i.test(cleanDescription); const hasImpact = /يوفر|يساهم|يساعد|يهدف|يدعم|يصل|يخفف|يحمي|يرعى|support|help|provide/i.test(cleanDescription); const slugOk = Boolean(slug && slug.length <= 70 && /^[a-z0-9\-_/]+$/i.test(slug)); const checks = [{ label: "الاسم الظاهر", points: cleanTitle.length >= 3 && cleanTitle.length <= 90 ? 18 : cleanTitle ? 10 : 0, max: 18, note: cleanTitle ? `${cleanTitle}  لا يلزم أن يكون هو عنوان SEO.` : "الاسم أو العنوان غير موجود." }, { label: "الوصف والمحتوى", points: wordCount >= (type === "blog" ? 120 : 45) ? 22 : wordCount >= 25 ? 12 : 4, max: 22, note: `عدد الكلمات التقريبي: ${wordCount}.` }, { label: "الكلمة المفتاحية", points: keywords[0] ? 15 : 0, max: 15, note: keywords[0] ? `الكلمة الأقرب: ${keywords[0]}.` : "لم نستطع استخراج كلمة مفتاحية واضحة." }, { label: "نية الباحث", points: hasCta || type === "blog" ? 13 : 6, max: 13, note: hasCta ? "توجد دعوة واضحة للتفاعل أو التبرع." : "أضف دعوة واضحة مثل: تبرع الآن، ساهم، ادعم المشروع." }, { label: "الأثر والثقة", points: hasImpact ? 14 : 5, max: 14, note: hasImpact ? "النص يوضح الأثر بشكل جيد." : "أضف جملة توضح أثر التبرع ومن يستفيد." }, { label: "الرابط والصور", points: (slugOk || !slug) && imageCount > 0 ? 10 : imageCount > 0 ? 7 : 3, max: 10, note: imageCount > 0 ? `عدد الصور: ${imageCount}.` : "الصورة مهمة في SEO والمشاركة." }, { label: "FAQ وبيانات جوجل", points: 4, max: 8, note: "يمكن تحسين الظهور بإضافة أسئلة شائعة وبيانات منظمة لاحقًا." }]; const score = Math.min(100, checks.reduce((sum, i) => sum + i.points, 0)); return { cleanTitle, cleanDescription, keywords, checks, score }; }, [title, description, slug, imageCount, type]);
 
   const activeDraft = drafts[storageKey] || fallbackDraft(type, locale, base.cleanTitle, base.cleanDescription, base.keywords);
   const tone = scoreTone(base.score);

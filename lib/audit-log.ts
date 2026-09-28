@@ -56,7 +56,7 @@ export async function writeAuditLog(opts: WriteOpts): Promise<void> {
  * Same insert, but off the request's critical path.
  *
  * The audit row is one more round trip to Atlas, and this cluster answers in
- * ~0.5s — so `await writeAuditLog(...)` was adding half a second to every
+ * ~0.5s  so `await writeAuditLog(...)` was adding half a second to every
  * create/update/delete the dashboard performs, purely to record something the
  * user never waits on. `after()` runs it once the response has been sent.
  *

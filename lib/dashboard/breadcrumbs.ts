@@ -8,7 +8,7 @@ const ROOT_HREF = "/dashboard";
 // Arabic labels for path segments that sit BELOW a nav item and therefore have no entry in
 // DASHBOARD_NAV_GROUPS. The old breadcrumb just printed the last raw segment with dashes
 // swapped for spaces and `capitalize` applied, so an Arabic dashboard rendered
-// "لوحة التحكم › audiences" — English, out of context, with no ancestor links.
+// "لوحة التحكم › audiences"  English, out of context, with no ancestor links.
 const SEGMENT_LABELS: Record<string, string> = {
   new: "إضافة جديد",
   create: "إنشاء",
@@ -70,7 +70,7 @@ const SEGMENT_LABELS: Record<string, string> = {
   "payment-gateways": "بوابات الدفع",
 };
 
-/** Mongo ObjectId, cuid, uuid — anything that is an opaque record id rather than a route name. */
+/** Mongo ObjectId, cuid, uuid  anything that is an opaque record id rather than a route name. */
 function isRecordId(segment: string): boolean {
   return (
     /^[0-9a-f]{24}$/i.test(segment) ||

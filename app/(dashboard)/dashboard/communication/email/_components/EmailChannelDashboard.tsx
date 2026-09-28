@@ -141,11 +141,11 @@ export function EmailChannelDashboard() {
         <PageHeader
           eyebrow="التواصل"
           title="البريد الإلكتروني"
-          description="كل رسالة بريد صادرة، وما حدث لها بعد الإرسال — الوصول والفتح والنقر والفشل."
+          description="كل رسالة بريد صادرة، وما حدث لها بعد الإرسال  الوصول والفتح والنقر والفشل."
           icon={Mail}
           actions={
             <div className="flex items-center gap-2">
-              {/* Only offered when there is actually a backlog — a permanently-visible send button
+              {/* Only offered when there is actually a backlog  a permanently-visible send button
                   invites a click that would do nothing. */}
               {(data?.retryableCount ?? 0) > 0 && (
                 <button
@@ -181,7 +181,7 @@ export function EmailChannelDashboard() {
         {data && !trackingLive && (
           <TrackingBanner>
             <b>تتبّع الفتح والنقر غير مُفعّل.</b> لم يصل أي حدث من Elastic Email حتى الآن، لذلك تظهر
-            أرقام «وصل» و«فُتح» و«نُقر» فارغة — وهذا يعني «لا توجد بيانات»، وليس «لم يفتحها أحد».
+            أرقام «وصل» و«فُتح» و«نُقر» فارغة  وهذا يعني «لا توجد بيانات»، وليس «لم يفتحها أحد».
             فعّل الـwebhook في Elastic Email ليبدأ تسجيل الأحداث.
           </TrackingBanner>
         )}
@@ -199,7 +199,7 @@ export function EmailChannelDashboard() {
               { label: "نُقرت", icon: MousePointerClick, value: trackingLive ? summary.clicked.toLocaleString("en-US") : "—", hint: trackingLive ? `${summary.clickRate}%` : undefined },
               { label: "فشلت", icon: TriangleAlert, value: summary.failed.toLocaleString("en-US"), hint: `${summary.failedRate}%` },
               // Skipped messages are never handed to the provider, so they sit outside every rate
-              // above — and they currently outnumber sent mail several times over. Leaving them
+              // above  and they currently outnumber sent mail several times over. Leaving them
               // off the band would make the page report a healthy channel that is mostly silent.
               { label: "متخطّاة", icon: SlashIcon, value: summary.skipped.toLocaleString("en-US") },
             ]}

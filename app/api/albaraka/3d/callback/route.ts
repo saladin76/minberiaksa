@@ -21,7 +21,7 @@ import { withDonationToken } from "@/lib/donations/access-token";
 /**
  * POST /api/albaraka/3d/callback
  *
- * Albaraka posts the 3D verification result back here (single return URL — there is
+ * Albaraka posts the 3D verification result back here (single return URL  there is
  * no separate ok/fail pair like PayFor's). Three gates before any money moves:
  *
  *   1. MacNew must match what we recompute over the returned parameters, proving the
@@ -30,7 +30,7 @@ import { withDonationToken } from "@/lib/donations/access-token";
  *   3. MdStatus must be 1 (full 3D). The bank explicitly recommends stopping otherwise,
  *      and "half 3D" (2/3/4) would need a non-3D terminal we don't have.
  *
- * Only then do we call /Sale to actually capture — 3D verification alone is not a charge.
+ * Only then do we call /Sale to actually capture  3D verification alone is not a charge.
  */
 
 type RequestSnapshot = {
@@ -124,7 +124,7 @@ export async function POST(req: NextRequest) {
         /* A plan whose first instalment failed was never activated: close it
            rather than leave an ACTIVE plan with no successful charge for the
            scheduler to keep billing. A plan that has settled before keeps its
-           status — this callback is only ever its first charge. */
+           status  this callback is only ever its first charge. */
         if (donation.subscriptionId) {
           await prisma.subscription.updateMany({
             where: { id: donation.subscriptionId, lastBillingDate: null },
@@ -155,7 +155,7 @@ export async function POST(req: NextRequest) {
     const expectedMac = albarakaResponseMac(raw, cfg.encKey);
     const receivedMac = String(raw.MacNew ?? "");
     if (!receivedMac || !macEquals(expectedMac, receivedMac)) {
-      return await fail("3D response MAC mismatch — response could not be verified");
+      return await fail("3D response MAC mismatch  response could not be verified");
     }
 
     // ── 2. Order / amount linkage ────────────────────────────────────────────
@@ -249,7 +249,7 @@ export async function POST(req: NextRequest) {
         include: { items: true, categoryItems: true },
       });
       if (!fresh) return false;
-      // Re-check inside the transaction — two callbacks can race here.
+      // Re-check inside the transaction  two callbacks can race here.
       if (fresh.paidAt !== null) return true;
 
       await tx.donation.update({

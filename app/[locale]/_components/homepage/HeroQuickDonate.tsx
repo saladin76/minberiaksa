@@ -21,7 +21,7 @@ interface CategoryOption {
 }
 
 interface HeroQuickDonateProps {
-  /** Server-fetched categories — when provided we skip the client fetch + loading state,
+  /** Server-fetched categories  when provided we skip the client fetch + loading state,
    *  which means the SSR HTML already contains the final dropdown content (no CLS). */
   initialCategories?: CategoryOption[];
 }
@@ -107,7 +107,7 @@ const HeroQuickDonate: React.FC<HeroQuickDonateProps> = ({ initialCategories = [
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Categories arrive as a prop from the server — only re-fetch on the client if the
+  // Categories arrive as a prop from the server  only re-fetch on the client if the
   // server failed to populate them (e.g. /api/categories was 5xx during SSR).
   useEffect(() => {
     if (initialCategories.length > 0) return;
@@ -204,7 +204,7 @@ const HeroQuickDonate: React.FC<HeroQuickDonateProps> = ({ initialCategories = [
           />
         </button>
 
-        {/* Opens upward — keeps the menu over the slide image instead of pushing the page. */}
+        {/* Opens upward  keeps the menu over the slide image instead of pushing the page. */}
         {categoryDropdownOpen && !categoriesLoading && (
           <div className="absolute bottom-full z-50 mb-2 w-full overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-2xl">
             <div className="max-h-48 divide-y divide-gray-50 overflow-y-auto">

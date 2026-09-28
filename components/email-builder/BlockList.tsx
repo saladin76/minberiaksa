@@ -56,7 +56,7 @@ export function BlockList({ doc, selectedId, onChange, onSelect }: Props) {
       <div className="space-y-1.5">
         {childrenIds.length === 0 && (
           <div className="text-center text-sm text-muted-foreground p-6 border-2 border-dashed border-border rounded-lg">
-            البريد فارغ — أضف كتلة من القائمة أدناه
+            البريد فارغ  أضف كتلة من القائمة أدناه
           </div>
         )}
         {childrenIds.map((id, idx) => {

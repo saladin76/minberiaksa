@@ -6,7 +6,7 @@ import { track } from "@vercel/analytics";
 import { localeDirection } from "@/lib/locales";
 
 /**
- * Become a partner — ported from `Minbar/كن شريكا.dc.html`.
+ * Become a partner  ported from `Minbar/كن شريكا.dc.html`.
  *
  * Three partnership tracks, then a short lead form. The handoff's `submitLead()`
  * is a placeholder timer; this posts to `POST /api/messages` under the

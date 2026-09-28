@@ -1,5 +1,5 @@
 /**
- * Twilio sync — aggregates local `SentMessage` rows into per-day
+ * Twilio sync  aggregates local `SentMessage` rows into per-day
  * `MarketingCampaignSnapshot` rows so the dashboard has rollups without
  * waiting on a real Twilio analytics endpoint.
  *
@@ -27,7 +27,7 @@ function classifyChannel(
 ): SyncMessagingSnapshot["channel"] {
   if (channel === "EMAIL") return locale ? "TWILIO_EMAIL" : "EMAIL";
   // The existing Message model uses channel = EMAIL | WHATSAPP. Twilio
-  // sender is the same provider — keep that mapping.
+  // sender is the same provider  keep that mapping.
   return locale ? "TWILIO_WHATSAPP" : "WHATSAPP";
 }
 
@@ -37,7 +37,7 @@ export const syncTwilio: SyncClient = async ({ connection, dateFrom, dateTo }) =
       [!connection.accountId ? "accountId" : "", !connection.authToken ? "authToken" : ""].filter(
         (x) => x.length > 0
       ),
-      "ناقص بيانات Twilio — Account SID و Auth Token مطلوبان قبل المزامنة."
+      "ناقص بيانات Twilio  Account SID و Auth Token مطلوبان قبل المزامنة."
     );
   }
 
@@ -99,7 +99,7 @@ export const syncTwilio: SyncClient = async ({ connection, dateFrom, dateTo }) =
   }
 
   // 2) Join paid donations whose attribution.twilio_template_id matches one
-  // of our template ids — sum revenue + donation count per (templateId, day).
+  // of our template ids  sum revenue + donation count per (templateId, day).
   const templateIds = Array.from(
     new Set(
       sentRows
@@ -171,7 +171,7 @@ export const syncTwilio: SyncClient = async ({ connection, dateFrom, dateTo }) =
     rowsFetched: snapshots.length,
     message:
       snapshots.length === 0
-        ? "لا توجد رسائل في هذه الفترة — لا توجد بيانات للمزامنة."
+        ? "لا توجد رسائل في هذه الفترة  لا توجد بيانات للمزامنة."
         : `تم تجميع ${snapshots.length} لقطة رسائل من قاعدة البيانات المحلية.`,
     snapshots: { messaging: snapshots },
   };

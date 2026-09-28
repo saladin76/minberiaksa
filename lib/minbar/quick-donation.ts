@@ -5,13 +5,13 @@ import { SUPPORTED_LOCALES } from "@/lib/locales";
  * The homepage quick-donation card, as the dashboard configures it.
  *
  * Stored as one JSON document on `GlobalSettings.quickDonation`; null means
- * "the defaults below". This module is pure — no Prisma, no React — so the
+ * "the defaults below". This module is pure  no Prisma, no React  so the
  * same parse runs on the server (page render, API) and in the browser
  * (dashboard form).
  *
  * Two readers, two strictnesses:
  *   · `parseQuickDonation` is TOLERANT. Whatever is in the database, the
- *     homepage renders something sensible — an unknown frequency is dropped,
+ *     homepage renders something sensible  an unknown frequency is dropped,
  *     an empty preset list falls back to the defaults, a suggested index past
  *     the end is clamped. A bad row must never blank the donation card.
  *   · `validateQuickDonationBody` is STRICT. The dashboard's PUT is refused
@@ -52,7 +52,7 @@ export interface QuickDonationConfig {
   genericDestinations: QuickGenericDestination[];
   /** Which projects join the select under the intentions. */
   projectsMode: QuickProjectsMode;
-  /** Campaign ids (not slugs — slugs differ per locale) when `projectsMode` is "selected". */
+  /** Campaign ids (not slugs  slugs differ per locale) when `projectsMode` is "selected". */
   projectIds: string[];
   /** A generic id or a campaign id; "" = the first option shown. */
   defaultDestination: string;
@@ -220,7 +220,7 @@ export function validateQuickDonationBody(body: unknown): QuickDonationConfig {
   const listEmpty =
     (o.projectsMode === "none" && !genericDestinations.length) ||
     (o.projectsMode === "selected" && !projectIds.length && !genericDestinations.length);
-  if (listEmpty) throw new Error("قائمة الوجهات ستكون فارغة — أظهر نية واحدة أو مشروعًا واحدًا على الأقل");
+  if (listEmpty) throw new Error("قائمة الوجهات ستكون فارغة  أظهر نية واحدة أو مشروعًا واحدًا على الأقل");
 
   return parseQuickDonation({ ...o, amounts, byCurrency, frequencies, genericDestinations, projectIds });
 }

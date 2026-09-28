@@ -1,13 +1,13 @@
 /**
- * prisma/seed/migrate-super-categories.ts — move the ʿIbādan Lanā programme
+ * prisma/seed/migrate-super-categories.ts  move the ʿIbādan Lanā programme
  * page out of code and into the database as a super category.
  *
  * The page was `components/minbar/projects/IbadanPage.tsx`: a hand-written hero
  * with the verse, a project grid, the launch film, three press panels and the
  * documentary series, with every string in the `projects` namespace of the 19
  * i18n bundles and the press URLs hard-coded in the component. This copies all
- * of it — Arabic on the row, the other eighteen languages as translations,
- * read straight from `i18n/messages/*.json` — so the page is now a row an
+ * of it  Arabic on the row, the other eighteen languages as translations,
+ * read straight from `i18n/messages/*.json`  so the page is now a row an
  * editor can change.
  *
  * Nothing is invented. The verse, its translations and the translation's
@@ -49,27 +49,27 @@ const LOCALES = fs
   .filter((f) => f.endsWith(".json"))
   .map((f) => f.replace(/\.json$/, ""));
 
-/** Copied from `lib/minbar/quran.ts` — the attribution shown under a translation. */
+/** Copied from `lib/minbar/quran.ts`  the attribution shown under a translation. */
 const QURAN_ATTRIBUTION: Record<string, string> = {
-  ar: "ترجمة معاني القرآن الكريم — مجمع الملك فهد لطباعة المصحف الشريف",
-  en: "Translation of the meanings of the Qur'an — King Fahd Complex for the Printing of the Holy Qur'an",
-  tr: "Kur'an-ı Kerim meali — Kral Fahd Mushaf-ı Şerif Basım Kompleksi",
-  fr: "Traduction des sens du Noble Coran — Complexe du Roi Fahd pour l'impression du Saint Coran",
-  de: "Übersetzung der Bedeutungen des Korans — König-Fahd-Komplex für den Druck des Edlen Korans",
-  es: "Traducción de los significados del Corán — Complejo del Rey Fahd para la impresión del Sagrado Corán",
-  id: "Terjemahan makna Al-Qur'an — Kompleks Raja Fahd untuk Pencetakan Mushaf Al-Qur'an",
-  pt: "Tradução dos significados do Alcorão — Complexo do Rei Fahd para a Impressão do Alcorão Sagrado",
-  ur: "قرآن کریم کے معانی کا ترجمہ — شاہ فہد قرآن کریم پرنٹنگ کمپلیکس",
-  sq: "Përkthimi i kuptimeve të Kuranit — Kompleksi i Mbretit Fahd për Shtypjen e Kuranit Fisnik",
-  it: "Traduzione dei significati del Corano — Complesso di Re Fahd per la stampa del Nobile Corano",
-  nl: "Vertaling van de betekenissen van de Koran — Koning Fahd-complex voor het drukken van de Edele Koran",
-  sv: "Översättning av Koranens innebörd — Kung Fahd-komplexet för tryckning av den ädla Koranen",
-  no: "Oversettelse av Koranens betydninger — Kong Fahd-komplekset for trykking av den edle Koranen",
-  da: "Oversættelse af Koranens betydninger — Kong Fahd-komplekset for trykning af den ædle Koran",
-  ms: "Terjemahan makna Al-Qur'an — Kompleks Raja Fahd untuk Percetakan Mushaf Al-Qur'an",
-  ja: "クルアーンの意味の翻訳 — 聖クルアーン印刷のためのキング・ファハド・コンプレックス",
-  zh: "古兰经含义译文 — 法赫德国王古兰经印刷厂",
-  hi: "क़ुरआन के अर्थों का अनुवाद — किंग फ़हद पवित्र क़ुरआन मुद्रण परिसर",
+  ar: "ترجمة معاني القرآن الكريم  مجمع الملك فهد لطباعة المصحف الشريف",
+  en: "Translation of the meanings of the Qur'an  King Fahd Complex for the Printing of the Holy Qur'an",
+  tr: "Kur'an-ı Kerim meali  Kral Fahd Mushaf-ı Şerif Basım Kompleksi",
+  fr: "Traduction des sens du Noble Coran  Complexe du Roi Fahd pour l'impression du Saint Coran",
+  de: "Übersetzung der Bedeutungen des Korans  König-Fahd-Komplex für den Druck des Edlen Korans",
+  es: "Traducción de los significados del Corán  Complejo del Rey Fahd para la impresión del Sagrado Corán",
+  id: "Terjemahan makna Al-Qur'an  Kompleks Raja Fahd untuk Pencetakan Mushaf Al-Qur'an",
+  pt: "Tradução dos significados do Alcorão  Complexo do Rei Fahd para a Impressão do Alcorão Sagrado",
+  ur: "قرآن کریم کے معانی کا ترجمہ  شاہ فہد قرآن کریم پرنٹنگ کمپلیکس",
+  sq: "Përkthimi i kuptimeve të Kuranit  Kompleksi i Mbretit Fahd për Shtypjen e Kuranit Fisnik",
+  it: "Traduzione dei significati del Corano  Complesso di Re Fahd per la stampa del Nobile Corano",
+  nl: "Vertaling van de betekenissen van de Koran  Koning Fahd-complex voor het drukken van de Edele Koran",
+  sv: "Översättning av Koranens innebörd  Kung Fahd-komplexet för tryckning av den ädla Koranen",
+  no: "Oversettelse av Koranens betydninger  Kong Fahd-komplekset for trykking av den edle Koranen",
+  da: "Oversættelse af Koranens betydninger  Kong Fahd-komplekset for trykning af den ædle Koran",
+  ms: "Terjemahan makna Al-Qur'an  Kompleks Raja Fahd untuk Percetakan Mushaf Al-Qur'an",
+  ja: "クルアーンの意味の翻訳  聖クルアーン印刷のためのキング・ファハド・コンプレックス",
+  zh: "古兰经含义译文  法赫德国王古兰经印刷厂",
+  hi: "क़ुरआन के अर्थों का अनुवाद  किंग फ़हद पवित्र क़ुरआन मुद्रण परिसर",
 };
 
 /* Values the component carried in its own source. */
@@ -100,7 +100,7 @@ async function main() {
     select: { id: true, title: true },
   });
   if (!playlist) {
-    console.warn(`  ! no playlist with slug "${PLAYLIST_SLUG}" — the series block will be created without one`);
+    console.warn(`  ! no playlist with slug "${PLAYLIST_SLUG}"  the series block will be created without one`);
   }
 
   /* ── Parent translations ─────────────────────────────────────────────── */
@@ -197,7 +197,7 @@ async function main() {
     title: arProjects.ibadanHeroTitle ?? "مشروع «عبادًا لنا»",
     intro: arProjects.ibadanHeroIntro ?? null,
     verseArabic: verse.ar ?? null,
-    /* Arabic is the source, not a translation of itself — the component showed
+    /* Arabic is the source, not a translation of itself  the component showed
        no translation line and no attribution in an Arabic session. */
     verseTranslation: null,
     verseAttribution: null,
@@ -245,7 +245,7 @@ async function main() {
 
   console.log(`    ${translations.length} translations, ${blocks.length} blocks`);
   console.log(`    series: ${playlist ? playlist.title : "— none linked"}`);
-  console.log("    campaigns: none linked (pick them in the dashboard — the old category filter matched nothing)");
+  console.log("    campaigns: none linked (pick them in the dashboard  the old category filter matched nothing)");
 }
 
 main()

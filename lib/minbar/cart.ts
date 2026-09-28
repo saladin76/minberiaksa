@@ -1,5 +1,5 @@
 /**
- * Minbar cart — client-side storage contract.
+ * Minbar cart  client-side storage contract.
  *
  * Sources: `Minbar/DEVELOPER_HANDOFF.md` § "Cart Localization & Historical
  * Snapshot Contract", `Minbar/DONATION_LOGIC_SPEC.md`, `Minbar/README.md`.
@@ -7,8 +7,8 @@
  * The governing rule is:
  *   CART = LIVE LOCALIZED REFERENCE · CONFIRMED ORDER = IMMUTABLE SNAPSHOT
  *
- * So an item stores identifiers only — `projectId` / `titleKey` / `typeKey` /
- * `freqKey` / `currency` code — and the displayed wording is resolved at render
+ * So an item stores identifiers only  `projectId` / `titleKey` / `typeKey` /
+ * `freqKey` / `currency` code  and the displayed wording is resolved at render
  * time from the active locale. Switching language re-resolves the labels and
  * must never add, remove, reorder or edit an item.
  *
@@ -16,7 +16,7 @@
  * translated string as the item's identity, and those rows are migrated on read
  * rather than dropped.
  *
- * SECURITY: this is client-controlled data. `DEVELOPER_HANDOFF` is explicit —
+ * SECURITY: this is client-controlled data. `DEVELOPER_HANDOFF` is explicit 
  * "localStorage cart data … must never be trusted for final payment
  * calculations". The server re-resolves every id and recomputes amount,
  * currency and availability when an order is created; what is stored here is
@@ -28,7 +28,7 @@ export type CartTypeKey = "project" | "zakat" | "waqf" | "recurring" | "extra";
 
 /**
  * Frequency. These are the historical frontend values and are deliberately kept
- * — `RECURRING_DONATION_FLOW_MAP.md` requires the backend to normalise them to
+ *  `RECURRING_DONATION_FLOW_MAP.md` requires the backend to normalise them to
  * the official `donationMode`/`frequency` pair rather than reuse `freqKey` in
  * any external API.
  */
@@ -37,7 +37,7 @@ export type CartFreqKey = "once" | "daily" | "friday" | "monthly";
 /**
  * What a waqf row carries besides its amount: the unit, how many, and the
  * two names the certificate prints. The certificate NUMBER is deliberately not
- * here — `DONATION_LOGIC_SPEC §2` has the server mint it after payment, and a
+ * here  `DONATION_LOGIC_SPEC §2` has the server mint it after payment, and a
  * number kept in the basket would be one a donor could quote before paying.
  */
 export interface CartWaqfDetails {
@@ -52,8 +52,8 @@ export interface CartWaqfDetails {
 /**
  * A gift: the row is given in someone else's name. The thank-you certificate
  * is issued to `recipientName`, and once the donation is confirmed the
- * recipient is told on the chosen channels — a WhatsApp number, an email, or
- * both — with the donor's note. Collected on the project page
+ * recipient is told on the chosen channels  a WhatsApp number, an email, or
+ * both  with the donor's note. Collected on the project page
  * (`DonationPanel`), shown on the basket row, sent with the order as part of
  * the line, and stored on `DonationItem`.
  */
@@ -71,13 +71,13 @@ export interface MinbarCartItem {
   /** Project slug from the projects source. Absent for non-project intentions. */
   projectId?: string;
   /**
-   * Category **id** (never a slug — category slugs differ per locale) when the
+   * Category **id** (never a slug  category slugs differ per locale) when the
    * row gives to a category as a whole rather than to one of its campaigns.
    * The order carries it as a category item.
    */
   categoryId?: string;
   /**
-   * i18n key for a generic destination that is not a project — e.g.
+   * i18n key for a generic destination that is not a project  e.g.
    * `whereNeedGreatest`, `zakatToPalestine`, `generalBankTransfer`.
    */
   titleKey?: string;
@@ -85,13 +85,13 @@ export interface MinbarCartItem {
   freqKey: CartFreqKey;
   /** Numeric amount in `currency`. Stored as a number, never a formatted string. */
   amount: number;
-  /** ISO 4217 code — never a symbol or a translated currency name. */
+  /** ISO 4217 code  never a symbol or a translated currency name. */
   currency: string;
   /** Identifier of the upsell suggestion that produced this item, if any. */
   upsellId?: string;
   /**
    * Last-known display title. Fallback only, for legacy rows that could not be
-   * resolved to an id — never read in preference to the ids above.
+   * resolved to an id  never read in preference to the ids above.
    */
   title?: string;
   /** Set when the "make it monthly" toggle converted this item, so it can be undone. */
@@ -184,7 +184,7 @@ function parseGift(value: unknown): CartGiftDetails | undefined {
  *
  * A row whose title cannot be resolved to an id keeps its stored title and is
  * left in the cart. `DEVELOPER_HANDOFF` is explicit that an ambiguous match
- * stays a legacy fallback — "لا تخمين صامت أبدًا" — and that an unresolved item
+ * stays a legacy fallback  "لا تخمين صامت أبدًا"  and that an unresolved item
  * is never silently deleted from someone's cart.
  *
  * @param resolveTitle Maps a display title in any of the 19 locales back to a
@@ -290,7 +290,7 @@ export function toDonationContract(item: MinbarCartItem): {
 /**
  * Empty the basket.
  *
- * Called once an order exists on the server — after checkout creates the
+ * Called once an order exists on the server  after checkout creates the
  * donation, and before the donor is handed to a payment gateway. A donor
  * returning from the bank must not find the same basket sitting there ready to
  * be paid a second time.
@@ -340,7 +340,7 @@ export function readTeamSupportChoice(): number | null {
   }
 }
 
-/** Record the choice; `0` is stored, not removed — "no thanks" is an answer. */
+/** Record the choice; `0` is stored, not removed  "no thanks" is an answer. */
 export function writeTeamSupport(amount: number): void {
   if (!isBrowser()) return;
   try {
@@ -362,14 +362,14 @@ export function clearTeamSupport(): void {
   window.dispatchEvent(new CustomEvent(CART_UPDATED_EVENT));
 }
 
-/** Whether any row is a plan — which makes the team support recurring too. */
+/** Whether any row is a plan  which makes the team support recurring too. */
 export function cartHasRecurring(items: readonly MinbarCartItem[]): boolean {
   return items.some((item) => item.freqKey !== "once");
 }
 
 /**
  * Whether the team support rides along with every instalment of a recurring
- * basket, or is charged once. `null` means the donor has not chosen — the
+ * basket, or is charged once. `null` means the donor has not chosen  the
  * default is "with the plan" when the basket has a recurring row. Only
  * meaningful for a recurring basket; a one-time basket charges once.
  */

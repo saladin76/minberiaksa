@@ -11,10 +11,10 @@
  *
  * `resolvePaymentError` collapses both into a single `ResolvedPaymentError`
  * keyed by a stable `key` (e.g. `"insufficientFunds"`). The page then renders
- * `Profile.paymentErrors.<key>.{title,reason,fix}` translations — letting us
+ * `Profile.paymentErrors.<key>.{title,reason,fix}` translations  letting us
  * localize without re-running this matcher.
  *
- * IMPORTANT: the matcher must be conservative — when we can't classify the
+ * IMPORTANT: the matcher must be conservative  when we can't classify the
  * error, fall back to `"generic"` (which has a friendly catch-all). NEVER
  * misclassify (e.g. "expired card" → "wrong CVV") because the wrong fix
  * advice is worse than no advice.
@@ -38,7 +38,7 @@ export type PaymentErrorKey =
   | "generic";
 
 export interface ResolvedPaymentError {
-  /** Stable key — used to look up Profile.paymentErrors.<key>.* translations. */
+  /** Stable key  used to look up Profile.paymentErrors.<key>.* translations. */
   key: PaymentErrorKey;
   /** Severity drives the page accent color. "soft" = card-issue (likely to succeed on retry).
    *  "hard" = blocked by the bank (donor needs to act before retrying). */
@@ -57,7 +57,7 @@ export interface ResolvedPaymentError {
  * same providerProcReturnCode column, so this map covers both gateways.
  */
 const PAYFOR_CODE_MAP: Record<string, PaymentErrorKey> = {
-  "00": "generic", // success — shouldn't land here, but keep mapping safe
+  "00": "generic", // success  shouldn't land here, but keep mapping safe
   "01": "doNotHonor", // refer to card issuer
   "02": "doNotHonor",
   "03": "processingError", // invalid merchant
@@ -160,7 +160,7 @@ export interface DonationErrorInputs {
 }
 
 export function resolvePaymentError(input: DonationErrorInputs): ResolvedPaymentError {
-  // 1. Try the bank's numeric code first (PayFor / Albaraka) — most reliable signal.
+  // 1. Try the bank's numeric code first (PayFor / Albaraka)  most reliable signal.
   const rawCode = (input.providerProcReturnCode ?? "").toString().trim();
   if (rawCode && PAYFOR_CODE_MAP[rawCode]) {
     const key = PAYFOR_CODE_MAP[rawCode];

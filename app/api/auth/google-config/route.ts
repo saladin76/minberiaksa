@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 /**
  * Exposes the Google OAuth client ID to the browser so client-side Google
  * Identity Services (GSI) can initialize with it. The client ID is *not*
- * a secret — it's part of every Google OAuth URL — so this is safe to ship.
+ * a secret  it's part of every Google OAuth URL  so this is safe to ship.
  * The client *secret* never leaves the server.
  */
 export async function GET() {

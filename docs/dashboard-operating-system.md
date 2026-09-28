@@ -1,12 +1,12 @@
-# Dashboard Operating System — Target Architecture
+# Dashboard Operating System  Target Architecture
 
-> ⚠️ **متجاوَزة جزئيًا — SUPERSEDED (2026-08-01)**
+> ⚠️ **متجاوَزة جزئيًا  SUPERSEDED (2026-08-01)**
 >
 > **المصدر الموثوق لحالة لوحة التحكم هو `docs/dashboard-completion-roadmap.md`.**
 > هذه الوثيقة وثيقة معمارية مرجعية (north-star) ولم تُحدَّث بعد إصلاحات جلسة 2026-07-31/08-01. أجزاء منها لم تعد صحيحة:
 >
-> - تصف **مركز التواصل** كنموذج أولي «الإرسال معطّل». الإرسال ما يزال غير مُفعَّل لعدم وجود مزوّد، لكن ثلاث `await` ناقصة كانت تجعل الواجهة تدّعي الجاهزية — أُصلحت (P1-7).
-> - تسرد مسارات `/dashboard/brand/*` و`api/admin/brand/*` — **لم تعد موجودة**.
+> - تصف **مركز التواصل** كنموذج أولي «الإرسال معطّل». الإرسال ما يزال غير مُفعَّل لعدم وجود مزوّد، لكن ثلاث `await` ناقصة كانت تجعل الواجهة تدّعي الجاهزية  أُصلحت (P1-7).
+> - تسرد مسارات `/dashboard/brand/*` و`api/admin/brand/*`  **لم تعد موجودة**.
 > - أرقام الإيرادات والمتبرعين الواردة فيها سبقت إصلاحات P0/P1/P2 (منها تضخيم عدّاد المتبرعين العام بنسبة ~51%، و`teamSupport` على الرسم بـ5.5×).
 >
 > اقرأ الخارطة أولًا؛ استخدم هذه الوثيقة للسياق المعماري لا لحالة النظام.
@@ -19,7 +19,7 @@ dashboard is going; it does not itself change code.
 ## Principle
 Turn the existing dashboard into one clean operating system for Marketing & Growth,
 Content & Operations, Smart Archive, Brand Center, a shared Communication Center, a
-shared AI Core, and shared Provider Connections — **reusing** existing models,
+shared AI Core, and shared Provider Connections  **reusing** existing models,
 services, and routes wherever they exist, and only adding what is genuinely absent.
 
 ## Target areas → existing home (reuse-first)
@@ -56,14 +56,14 @@ audiences, templates, and campaign language-coverage checks read the catalog so 
 locale logic is hardcoded per channel. See `docs/implementation-packages/locale-foundation.md`.
 
 ## Package roadmap (safe, additive, build-green each step)
-1. ✅ **Phase 0 audit** — `docs/dashboard-operating-system-audit.md`.
-2. ✅ **Locale foundation** — catalog + future-locale registration.
-3. Communication **Templates & Variables** (send-disabled) — prior Package 3.
+1. ✅ **Phase 0 audit**  `docs/dashboard-operating-system-audit.md`.
+2. ✅ **Locale foundation**  catalog + future-locale registration.
+3. Communication **Templates & Variables** (send-disabled)  prior Package 3.
 4. Communication domain services (Consent/Audience/DeliveryLog/SenderRouter/ProviderRouter).
 5. Multi-sender WhatsApp + Meta Cloud API adapter skeleton (Twilio preserved).
 6. Templates + language-coverage warnings.
 7. Audiences + donor language segmentation on paid donation (via
-   `lib/events/dispatch.ts` — profile update only, never auto-send).
+   `lib/events/dispatch.ts`  profile update only, never auto-send).
 8. Campaign workflow + delivery archive (extend/replace `SentMessage`).
 9. Inbox + inbound webhooks. 10. Marketing integration. 11. Archive/Brand/AI polish + nav cleanup.
 

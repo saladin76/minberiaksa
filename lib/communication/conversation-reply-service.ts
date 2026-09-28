@@ -17,7 +17,7 @@ import { getActiveMetaWhatsappRuntimeConfig } from "./runtime-config";
  * checked from the archive before anything is sent, and the answer is reported plainly.
  *
  * The reply is archived as a `CommunicationDelivery` like every other outbound message, with
- * `origin: "MANUAL"` — so it appears in the timeline, counts towards the conversation, and moves
+ * `origin: "MANUAL"`  so it appears in the timeline, counts towards the conversation, and moves
  * "needs reply" off the queue by the same rule everything else uses.
  */
 
@@ -115,7 +115,7 @@ export async function sendConversationReply(
     runtime,
   );
   if (!sent.ok) {
-    await markDeliveryStatus(created.data.id, "FAILED", { errorMessage: sent.detail ? `${sent.reason} — ${sent.detail}` : sent.reason });
+    await markDeliveryStatus(created.data.id, "FAILED", { errorMessage: sent.detail ? `${sent.reason}  ${sent.detail}` : sent.reason });
     return { ok: false, reason: sent.reason, detail: sent.detail ?? null };
   }
   await markDeliveryStatus(created.data.id, "SENT", { providerMessageId: sent.providerMessageId });

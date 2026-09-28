@@ -20,7 +20,7 @@ export const revalidate = 60;
  * Homes restored and the programme's target, as the foundation publishes them.
  * Carried from `Minbar/مشروع ترميم منازل القدس.dc.html`, which prints them
  * beside the reviewed `restStatHomes` / `restStatGoal` labels. Replaced only by
- * newer published figures — the same rule the impact report's totals carry.
+ * newer published figures  the same rule the impact report's totals carry.
  */
 const HOMES_RESTORED = 45;
 const HOMES_GOAL = 100;
@@ -39,7 +39,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 /**
- * Restoring the homes of Al-Quds — ported from
+ * Restoring the homes of Al-Quds  ported from
  * `Minbar/مشروع ترميم منازل القدس.dc.html`.
  *
  * The homes open for support come from the live catalogue rather than the

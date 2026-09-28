@@ -4,17 +4,17 @@
  *
  * The 8-status taxonomy mirrors what marketing teams reason about:
  *
- *   verified       — paid platform identified, click id present, server
+ *   verified        paid platform identified, click id present, server
  *                    conversion event confirmed (CAPI/GAds/TikTok/X).
- *   strong         — paid platform + click id but server confirmation missing
+ *   strong          paid platform + click id but server confirmation missing
  *                    or partial cookies.
- *   likely_paid    — paid platform via utm/utm_medium without a native click id.
- *   ga4_inferred   — no native signals on the donation, but GA4 enrichment
+ *   likely_paid     paid platform via utm/utm_medium without a native click id.
+ *   ga4_inferred    no native signals on the donation, but GA4 enrichment
  *                    (ga_source/ga_medium) says paid.
- *   utm_only       — utm_source/utm_campaign present, weak overall signal.
- *   organic        — utm_medium of organic/social/referral or referrer hints.
- *   direct         — no utm, no click id, no referrer — typed the URL.
- *   tracking_issue — paid status with broken signals (failed donation under
+ *   utm_only        utm_source/utm_campaign present, weak overall signal.
+ *   organic         utm_medium of organic/social/referral or referrer hints.
+ *   direct          no utm, no click id, no referrer  typed the URL.
+ *   tracking_issue  paid status with broken signals (failed donation under
  *                    an ad, unresolved {{macros}}, conversion event failed).
  */
 export type AttributionStatus =
@@ -64,7 +64,7 @@ export const NON_AD_ATTRIBUTION_STATUSES: ReadonlySet<AttributionStatus> = new S
 ] as const);
 
 /**
- * Diagnostic reason codes — emitted by the attribution resolver so the UI can
+ * Diagnostic reason codes  emitted by the attribution resolver so the UI can
  * render Arabic labels consistently across endpoints. Codes are stable; the
  * Arabic label may evolve.
  */

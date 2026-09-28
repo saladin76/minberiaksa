@@ -6,21 +6,21 @@ import { useLocale, useTranslations } from "next-intl";
 import { miaPath } from "@/lib/minbar/routes";
 
 /**
- * The five in-page content states — ported from `Minbar/لا توجد تقارير.dc.html`,
+ * The five in-page content states  ported from `Minbar/لا توجد تقارير.dc.html`,
  * `لا توجد مشاريع`, `لا توجد نتائج`, `حالة تحميل المحتوى` and
  * `حالة خطأ تحميل المحتوى`.
  *
- * None of these is a page. Each replaces one region of a page — a project grid,
- * a report list, an article grid — and leaves the rest of it, including the
+ * None of these is a page. Each replaces one region of a page  a project grid,
+ * a report list, an article grid  and leaves the rest of it, including the
  * ways to give, standing. That is the distinction the handoff draws against the
  * full-page states in `StatusScreen`: a failed fetch is not a 500, and an empty
  * category is not a 404.
  *
  * The three empty states are also distinct from one another, and the handoff is
  * explicit that they must not be collapsed into one:
- *  - `NoResults` — filters or a search matched nothing that exists.
- *  - `NoProjects` — nothing is published in this category at all.
- *  - `NoReports` — nothing has been approved for publication yet.
+ *  - `NoResults`  filters or a search matched nothing that exists.
+ *  - `NoProjects`  nothing is published in this category at all.
+ *  - `NoReports`  nothing has been approved for publication yet.
  * A reader who filtered their way to an empty grid needs a reset button; a
  * reader looking at a category with nothing in it needs a way out of it.
  */
@@ -61,7 +61,7 @@ function Glyph({ children, tone = "gold", background = "var(--sand)", size = 60 
 /**
  * Nothing matched the filters or the search.
  *
- * `onReset` clears the filters in the page that owns them — it is not a link,
+ * `onReset` clears the filters in the page that owns them  it is not a link,
  * and it must never navigate: the reader is already where they want to be.
  * Omit it where there is no filter to clear, and the button is left out
  * rather than rendered as a control that does nothing.
@@ -94,7 +94,7 @@ export function NoResults({ onReset }: { onReset?: () => void }) {
   );
 }
 
-/** No project is published in this category — everything here is funded or in preparation. */
+/** No project is published in this category  everything here is funded or in preparation. */
 export function NoProjects() {
   const locale = useLocale();
   const t = useTranslations("system");
@@ -140,7 +140,7 @@ export function NoReports() {
  * Placeholder cards while a request is in flight.
  *
  * The skeleton mirrors the real card's shape so the layout does not jump when
- * the data lands — the handoff's stated reason for having one at all instead of
+ * the data lands  the handoff's stated reason for having one at all instead of
  * a spinner. `count` should match how many cards the grid expects.
  */
 export function ContentSkeleton({ count = 3 }: { count?: number }) {
@@ -161,7 +161,7 @@ export function ContentSkeleton({ count = 3 }: { count?: number }) {
 /**
  * One region failed to load.
  *
- * `onRetry` re-runs the request that failed. This replaces that region only —
+ * `onRetry` re-runs the request that failed. This replaces that region only 
  * the rest of the page, and every other way to give on it, keeps working.
  */
 export function ContentError({ onRetry }: { onRetry: () => void }) {

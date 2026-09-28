@@ -8,7 +8,7 @@ import { prisma } from "@/lib/prisma";
  * GET /api/campaigns/slug/check?locale=ar&slug=my-slug&campaignId=<id>
  *
  * Backs the «فحص» (check availability) button in the per-locale slug editor. The button has
- * always called this path, but the route did not exist — every check 404'd and the UI told
+ * always called this path, but the route did not exist  every check 404'd and the UI told
  * the admin that every slug was already taken.
  *
  * A slug is unavailable when another campaign already uses it, either as its base

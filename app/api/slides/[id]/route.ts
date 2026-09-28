@@ -60,7 +60,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       : parseSlideTranslations(body.translations);
 
     // Previously this was an interactive `$transaction` with one awaited upsert
-    // per locale — ~10 sequential round trips, which regularly exceeded Prisma's
+    // per locale  ~10 sequential round trips, which regularly exceeded Prisma's
     // default 5s transaction timeout on this cluster and surfaced as a generic
     // failure. A nested write is atomic on Prisma's side and costs one trip.
     const full = await prisma.slide.update({
@@ -132,7 +132,7 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
   } catch (error) {
     console.error('Error deleting slide:', error);
     // Already gone (e.g. a double-click, or deleted in another tab) is not a
-    // failure from the admin's point of view — the row is absent either way.
+    // failure from the admin's point of view  the row is absent either way.
     if (error && typeof error === 'object' && (error as { code?: string }).code === 'P2025') {
       return NextResponse.json({ message: 'Slide already deleted' }, { status: 200 });
     }

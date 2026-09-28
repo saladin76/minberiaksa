@@ -46,7 +46,7 @@ export interface DonorClaimView {
   receiptSubmittedAt: string | null;
   reviewedAt: string | null;
   rejectionReason: string | null;
-  /** Set once confirmed — the settled date the receipt PDF shows. */
+  /** Set once confirmed  the settled date the receipt PDF shows. */
   paidAt: string | null;
 }
 
@@ -147,7 +147,7 @@ export interface AdminClaimView {
   reviewedByName: string | null;
   rejectionReason: string | null;
   adminNote: string | null;
-  /** The donor's own status page — for support to send them. */
+  /** The donor's own status page  for support to send them. */
   donorPagePath: string;
 }
 

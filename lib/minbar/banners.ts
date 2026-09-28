@@ -4,7 +4,7 @@ import { miaPath } from "@/lib/minbar/routes";
 import { placementKey, type BannerSlotKey, type BannerTextSide, type BannerTone } from "@/lib/minbar/banner-placements";
 
 /**
- * The banners the site renders — read for one locale and one slot, resolved
+ * The banners the site renders  read for one locale and one slot, resolved
  * to plain strings so the client component only draws.
  *
  * Resolution done here, once, rather than in every mount:

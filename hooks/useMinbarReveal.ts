@@ -10,8 +10,8 @@ import { useEffect, useRef, useState } from "react";
  * entrance animations, and re-running them as the reader scrolls back up makes
  * a long report feel unstable.
  *
- * Anything that has already scrolled past — or a reader who has asked for
- * reduced motion — starts revealed, so content is never hidden behind an
+ * Anything that has already scrolled past  or a reader who has asked for
+ * reduced motion  starts revealed, so content is never hidden behind an
  * animation that will not play.
  */
 export function useMinbarReveal<T extends HTMLElement = HTMLDivElement>(threshold = 0.18) {
@@ -53,8 +53,8 @@ export function useMinbarReveal<T extends HTMLElement = HTMLDivElement>(threshol
  * A number that counts up the first time it is seen.
  *
  * The handoff animates its headline figures from zero. These are real reported
- * totals, so the value settles on exactly the number given — never an eased
- * approximation — and a reader with reduced motion sees the final figure at
+ * totals, so the value settles on exactly the number given  never an eased
+ * approximation  and a reader with reduced motion sees the final figure at
  * once rather than a number that moves under them.
  */
 export function useMinbarCountUp(target: number, durationMs = 1400) {

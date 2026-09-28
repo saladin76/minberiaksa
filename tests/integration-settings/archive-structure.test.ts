@@ -6,7 +6,7 @@ const read = (path: string) => readFileSync(path, "utf8");
 
 /**
  * Was operations-archive-structure.test.ts. Every operations assertion in it described pages that
- * no longer exist — the التشغيل nav group, the five approved operations pages, their legacy
+ * no longer exist  the التشغيل nav group, the five approved operations pages, their legacy
  * redirect targets, and the donor-reactivation masking page. Those tests could only fail, and a
  * test that pins removed behaviour is worse than no test. What remains is the archive half, which
  * is untouched by that removal.

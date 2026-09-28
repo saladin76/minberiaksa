@@ -5,13 +5,13 @@ import { LEGACY_SLUGS, SLUGS, type MinbarRoute } from "./routes";
  *
  * Every page now has one slug in every locale (`routes.ts`), so the file tree
  * IS the URL and nothing needs rewriting. What remains is the past: Arabic
- * once had its own spellings — `/ar/المشاريع`, `/ar/بيانات-الدفع` — and those
+ * once had its own spellings  `/ar/المشاريع`, `/ar/بيانات-الدفع`  and those
  * URLs are indexed and shared. A request for one is 301'd to the canonical
  * slug, so the ranking and the links carry over instead of dying.
  *
  * The match is locale-independent on purpose. The language switch keeps the
  * visitor on the same page by swapping only the locale prefix, so a visitor on
- * `/ar/بيانات-الدفع` who chose English arrived at `/en/بيانات-الدفع` — which
+ * `/ar/بيانات-الدفع` who chose English arrived at `/en/بيانات-الدفع`  which
  * was a 404 when the Arabic spelling was only known under `/ar`. Any locale
  * prefix in front of a known legacy slug now redirects to that locale's
  * canonical URL:
@@ -22,11 +22,11 @@ import { LEGACY_SLUGS, SLUGS, type MinbarRoute } from "./routes";
  *
  * Two kinds of slug are handled, and the distinction matters:
  *
- *  - **Whole-path slugs**, where every segment is fixed — the Zangi course
+ *  - **Whole-path slugs**, where every segment is fixed  the Zangi course
  *    lived at `دوراتنا/دورة-نور-الدين-زنكي`, replacing both segments. These
  *    are matched first, and in full.
  *  - **Head slugs**, where only the first segment is fixed and what follows is
- *    dynamic — a project slug, an article slug. Only the head is mapped and
+ *    dynamic  a project slug, an article slug. Only the head is mapped and
  *    the rest passes through untouched.
  *
  * Matching whole paths first keeps `/ar/دوراتنا/دورة-نور-الدين-زنكي` from

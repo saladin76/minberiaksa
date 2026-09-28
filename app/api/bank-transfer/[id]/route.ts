@@ -9,7 +9,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 /**
- * The donor's view of their bank transfer — what the status page polls after
+ * The donor's view of their bank transfer  what the status page polls after
  * an upload and what a returning visitor sees. Proof of ownership is the
  * session (owner) or the token from the redirect / emails (guest).
  */

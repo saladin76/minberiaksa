@@ -11,7 +11,7 @@ import { readConciergeAssisted, readConciergeTouched } from "@/lib/ai/concierge/
  * `components/CartPaymentDialog.tsx`, which is the reference implementation for
  * every gateway rail:
  *
- *   1. `POST /api/cart/payment` — the server re-resolves every project,
+ *   1. `POST /api/cart/payment`  the server re-resolves every project,
  *      recomputes the amount, and creates a PENDING donation.
  *   2. the gateway is chosen from the donation's currency and the admin
  *      switches (`resolveGateway`), never by the browser.
@@ -23,7 +23,7 @@ import { readConciergeAssisted, readConciergeTouched } from "@/lib/ai/concierge/
  *
  * The rule the handoff states and this honours: the browser's cart is display
  * state and is never the basis for a charge. What is posted is a list of
- * campaign **ids** and amounts — and, for a row that gives to a category as a
+ * campaign **ids** and amounts  and, for a row that gives to a category as a
  * whole, category ids and amounts; the server prices them.
  *
  * One deliberate simplification against the reference: the bank form is always
@@ -176,7 +176,7 @@ export function toOrderItems(
  * The order API takes one type for the whole order, so a cart holding any
  * recurring row is a plan at that row's cadence; the cart page does not let
  * cadences mix. This used to return `MONTHLY` for every recurring row, so a
- * donor who chose "daily" or "every Friday" was billed monthly — the contract
+ * donor who chose "daily" or "every Friday" was billed monthly  the contract
  * mismatch in `DEPLOYED_VS_DESIGN_AUDIT.md` § P0.2. The mapping now lives in
  * `lib/donations/recurring-schedule.ts` and is pinned by its tests.
  */
@@ -273,7 +273,7 @@ export async function createDonation(input: CreateDonationInput): Promise<Create
  *
  * Albaraka signs the card fields into the request MAC, so its card details go
  * to our server to be signed. PayFor leaves them out of its hash, so the
- * browser appends them below and the card number never reaches this origin —
+ * browser appends them below and the card number never reaches this origin 
  * which is the constraint the handoff states for this page.
  */
 export async function initiateBankPayment(
@@ -303,7 +303,7 @@ export async function initiateBankPayment(
 /**
  * Post the bank's form and hand the screen over to its 3-D Secure page.
  *
- * `browserFields` are the card values the gateway does not sign — PayFor only.
+ * `browserFields` are the card values the gateway does not sign  PayFor only.
  * Appending anything for Albaraka would break its MAC, so the caller passes
  * nothing there.
  */
@@ -352,7 +352,7 @@ export async function markDonationFailed(donationId: string, reason: string): Pr
  * Stripe Subscription for a monthly plan (its first invoice's intent is what
  * comes back); the browser then confirms with `stripe.js`, so card data goes
  * from the donor to Stripe and never through this origin. Daily and Friday
- * plans never reach Stripe — they run on Albaraka.
+ * plans never reach Stripe  they run on Albaraka.
  */
 export async function chargeWithStripe(donationId: string, locale: string): Promise<{ clientSecret: string }> {
   const response = await fetch("/api/stripe/charge", {

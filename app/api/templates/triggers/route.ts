@@ -31,7 +31,7 @@ const createSchema = z.object({
   channel: z.enum(["EMAIL", "WHATSAPP"]),
   templateId: z.string().min(1),
   enabled: z.boolean().optional(),
-  // DONATION_LAPSED timing — ignored for event-driven triggers.
+  // DONATION_LAPSED timing  ignored for event-driven triggers.
   lapseDays: z.number().int().min(MIN_LAPSE_DAYS).max(MAX_LAPSE_DAYS).optional(),
   cooldownDays: z.number().int().min(MIN_COOLDOWN_DAYS).max(MAX_COOLDOWN_DAYS).optional(),
 });
@@ -73,8 +73,8 @@ export async function GET() {
     orderBy: [{ event: "asc" }, { createdAt: "desc" }],
   });
   const triggers = await enrichTriggers(rows);
-  /* Readiness travels with the row so an enabled-but-unsendable trigger — one whose template lost its
-     Meta approval after it was switched on — is visible in the list rather than only in the log. */
+  /* Readiness travels with the row so an enabled-but-unsendable trigger  one whose template lost its
+     Meta approval after it was switched on  is visible in the list rather than only in the log. */
   const preflights = await Promise.all(triggers.map((t) => preflightTrigger({ channel: t.channel, templateId: t.templateId }).catch(() => null)));
   return NextResponse.json({ triggers: triggers.map((t, i) => ({ ...t, preflight: preflights[i] })) });
 }
@@ -110,7 +110,7 @@ export async function POST(request: NextRequest) {
   }
 
   /* Enabled means it will fire on the next donation. A trigger that cannot send must not be switched
-     on silently — it would skip every recipient and look healthy doing it. Creating it disabled is
+     on silently  it would skip every recipient and look healthy doing it. Creating it disabled is
      always allowed, so the operator can fix the template and enable it after. */
   if (enabled ?? true) {
     const preflight = await preflightTrigger({ channel, templateId });

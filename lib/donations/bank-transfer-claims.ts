@@ -125,7 +125,7 @@ export interface SubmitReceiptInput {
   transferDate?: Date | null;
   transferReference?: string | null;
   donorNote?: string | null;
-  /** Locale of the page the donor is on — the emails follow it. */
+  /** Locale of the page the donor is on  the emails follow it. */
   locale: string;
   /** Absolute origin for the links in the emails and the Telegram card. */
   origin: string;
@@ -226,7 +226,7 @@ export async function submitBankTransferReceipt(input: SubmitReceiptInput): Prom
     actorName: donor.name,
     actorRole: "DONOR",
     action: "BANK_TRANSFER_RECEIPT_UPLOADED",
-    messageAr: `${donor.name ?? "متبرع"} رفع إيصال تحويل بنكي (${amount})${submission > 1 ? ` — المحاولة ${submission}` : ""}`,
+    messageAr: `${donor.name ?? "متبرع"} رفع إيصال تحويل بنكي (${amount})${submission > 1 ? `  المحاولة ${submission}` : ""}`,
     entityType: "Donation",
     entityId: updated.donationId,
     metadata: { claimId: updated.id, submission, bytes: input.file.buffer.byteLength, mimeType: input.file.mimeType },
@@ -249,8 +249,8 @@ export type ReviewResult =
 
 /**
  * The money is on the statement. Settle the donation the way the gateways do
- * — `paidAt`, provider fields and the campaign / category increments in one
- * transaction, guarded on `paidAt` so a double click cannot count it twice —
+ *  `paidAt`, provider fields and the campaign / category increments in one
+ * transaction, guarded on `paidAt` so a double click cannot count it twice 
  * then run the ordinary paid pipeline.
  */
 export async function confirmBankTransferClaim(claimId: string, actor: ClaimActor, opts: { adminNote?: string | null; origin: string }): Promise<ReviewResult> {
@@ -351,7 +351,7 @@ export async function rejectBankTransferClaim(claimId: string, actor: ClaimActor
       data: {
         status: "FAILED",
         providerTxnResult: "Rejected",
-        providerErrorMessage: `${BANK_TRANSFER_REJECTED_MARKER} — ${reason}`,
+        providerErrorMessage: `${BANK_TRANSFER_REJECTED_MARKER}  ${reason}`,
       },
     });
   }, { timeout: 30_000, maxWait: 10_000 });
@@ -363,7 +363,7 @@ export async function rejectBankTransferClaim(claimId: string, actor: ClaimActor
     actorName: actor.actorName,
     actorRole: actor.actorRole,
     action: "BANK_TRANSFER_REJECTED",
-    messageAr: `${actor.actorName ?? "مسؤول"} رفض إيصال تحويل بنكي من ${updated.donation.donor.name ?? "متبرع"} (${amount}) — ${reason}`,
+    messageAr: `${actor.actorName ?? "مسؤول"} رفض إيصال تحويل بنكي من ${updated.donation.donor.name ?? "متبرع"} (${amount})  ${reason}`,
     entityType: "Donation",
     entityId: updated.donationId,
     metadata: { claimId: updated.id, reason, submissions: updated.submissionCount },

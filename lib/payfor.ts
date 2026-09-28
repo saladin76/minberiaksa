@@ -24,7 +24,7 @@ export function formatPayForPurchAmount(amount: number): string {
 /**
  * Record a bank response without discarding the request snapshot.
  *
- * `initiate` writes `payforRequest` into `providerRaw` — what we actually asked
+ * `initiate` writes `payforRequest` into `providerRaw`  what we actually asked
  * the bank to charge. Both callbacks used to overwrite the whole column with the
  * bank's POST body, which threw that away: the amount check has nothing to compare
  * against, and reconciliation loses what the donor was asked to pay.
@@ -42,7 +42,7 @@ export function mergePayForProviderRaw(
  * Strip anything card-shaped out of a bank response before it is logged.
  *
  * The 3DPay callbacks log the bank's whole POST body, which is genuinely useful
- * when the bank asks what it sent — but the body is the bank's to shape, not ours,
+ * when the bank asks what it sent  but the body is the bank's to shape, not ours,
  * and a field carrying a PAN would land in the hosting provider's log stream
  * permanently. Keys are matched by name so a field we have never seen is redacted
  * on the way in rather than after someone notices it.
@@ -56,8 +56,8 @@ export function redactPayForResponse(raw: Record<string, unknown>): Record<strin
       safe[key] = value;
       continue;
     }
-    /* Keep the last four when the bank already masked it — that is what makes a
-       log useful for matching a donor's receipt — and nothing otherwise. */
+    /* Keep the last four when the bank already masked it  that is what makes a
+       log useful for matching a donor's receipt  and nothing otherwise. */
     const text = String(value ?? "");
     safe[key] = text.length > 4 ? `***${text.slice(-4)}` : "***";
   }

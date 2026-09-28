@@ -12,7 +12,7 @@ import SuccessPage from "@/components/minbar/success/SuccessPage";
 
 interface Props {
   params: Promise<{ locale: string; id: string }>;
-  /** `t` — the guest's access token the gateway redirect / checkout appended. */
+  /** `t`  the guest's access token the gateway redirect / checkout appended. */
   searchParams: Promise<{ t?: string }>;
 }
 
@@ -30,7 +30,7 @@ export const metadata: Metadata = {
 export const dynamic = "force-dynamic";
 
 /**
- * Donation received — ported from `Minbar/نجاح التبرع.dc.html`.
+ * Donation received  ported from `Minbar/نجاح التبرع.dc.html`.
  *
  * This lives at `/success/{id}` rather than at the handoff's own slug because
  * that is the address the payment gateways redirect to on a successful 3-D
@@ -42,7 +42,7 @@ export const dynamic = "force-dynamic";
  * never do.
  *
  * The documents (`CERTIFICATES_DOWNLOADS_HANDOFF §5`) are issued here on the
- * server the first time a confirmed donation is shown — the same records the
+ * server the first time a confirmed donation is shown  the same records the
  * PDF endpoints and the email read, so a reload never mints a second serial.
  * A Stripe donor usually arrives before the webhook; the reconcile call
  * confirms with Stripe directly so the certificate is not a page-refresh away.
@@ -57,7 +57,7 @@ export default async function Success({ params, searchParams }: Props) {
   /* The id is not the key to this page: a signed-in owner or revenue user is
      let in by their session, everyone else by the `?t=` token the checkout or
      the gateway redirect appended (`DEPLOYED_VS_DESIGN_AUDIT.md` § P1.2). A
-     404, not a 403 — the page must not confirm that the id exists. */
+     404, not a 403  the page must not confirm that the id exists. */
   const access = await donationAccess(id, token);
   if (!access.allowed) notFound();
 

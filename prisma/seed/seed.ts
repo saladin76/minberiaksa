@@ -1,5 +1,5 @@
 /**
- * prisma/seed.ts — بذر بيانات موقع مؤسسة منبر الأقصى الدولية
+ * prisma/seed.ts  بذر بيانات موقع مؤسسة منبر الأقصى الدولية
  * ---------------------------------------------------------------
  * يقرأ seed-data.json (المولَّد من مصادر الموقع: projects-data.js + projects-i18n.js
  * + blog-articles-data.js + blog-i18n.js) ويكتبه في MongoDB عبر Prisma.
@@ -8,7 +8,7 @@
  *   npx prisma generate
  *   npx tsx prisma/seed.ts          # أو: npx ts-node prisma/seed.ts
  *
- * idempotent: كل شيء upsert على الـslug — إعادة التشغيل تحدّث ولا تكرّر.
+ * idempotent: كل شيء upsert على الـslug  إعادة التشغيل تحدّث ولا تكرّر.
  */
 import { PrismaClient, PlaylistKind, VideoType } from "@prisma/client";
 import seed from "./seed-data.json";
@@ -22,7 +22,7 @@ type Tr = { locale: string; name?: string; title?: string; description?: string;
 
 /** A YouTube entry under a playlist or a course.
  *  Declared rather than inferred: every course in seed-data-extra.json currently
- *  ships `videos: []`, which TypeScript narrows to `never[]` — so the fields
+ *  ships `videos: []`, which TypeScript narrows to `never[]`  so the fields
  *  would be unreachable the moment real episodes are added to the file. */
 type SeedVideoRef = {
   youtubeId: string;
@@ -37,14 +37,14 @@ type SeedVideoRef = {
 /**
  * Media that lives in `public/` is served from the site root, but the generated
  * data stores it repo-relative (`assets/blog/x.jpg`). A relative src breaks the
- * blog cards — and `next/image`, which the dashboard blog list uses, rejects it
- * outright — so give every non-absolute path its leading slash. Absolute URLs
+ * blog cards  and `next/image`, which the dashboard blog list uses, rejects it
+ * outright  so give every non-absolute path its leading slash. Absolute URLs
  * (the campaigns' Drive links) pass through untouched.
  *
  * The covers ship as WebP: re-encoding the originals cut them from 181 MB to
  * 19 MB, which is the difference between a push that times out and one that
  * doesn't. seed-data.json still names the source .jpg/.png, so prefer a .webp
- * sibling whenever one exists rather than editing the generated data — that
+ * sibling whenever one exists rather than editing the generated data  that
  * way regenerating it from the site sources can't reintroduce the heavy paths.
  */
 const publicPath = (src?: string | null): string | undefined => {
@@ -64,7 +64,7 @@ async function main() {
      against Atlas and take ten minutes; when they are already in place and only
      the extra models are missing, re-walking them is where a run goes to die. */
   const onlyExtra = process.env.SEED_ONLY === "extra";
-  if (onlyExtra) console.log("SEED_ONLY=extra — skipping categories, campaigns, post categories, posts");
+  if (onlyExtra) console.log("SEED_ONLY=extra  skipping categories, campaigns, post categories, posts");
 
   if (!onlyExtra) {
     /* ── 1) Category (مناطق + أنواع تبرع) ───────────────────────── */
@@ -177,7 +177,7 @@ async function main() {
   } // !onlyExtra
 
   /* ── 5) Story (شريط القصص) ──────────────────────────────────
-   * `startsAt`/`endsAt` are carried through as they come — null means the story
+   * `startsAt`/`endsAt` are carried through as they come  null means the story
    * runs indefinitely. The 24-hour default belongs to the dashboard's create
    * path, not here: a seed re-run must not start rewriting the windows of
    * stories an editor has already scheduled. */
@@ -207,7 +207,7 @@ async function main() {
 
     /* Slides. The data file may carry an explicit `slides` list; the legacy
        shape carries only `image` + `linkUrl`, which becomes one slide whose CTA
-       is that link — the resolver localises it per visitor. Replaced wholesale,
+       is that link  the resolver localises it per visitor. Replaced wholesale,
        like playlist episodes: no stable key of their own, so a re-run must not
        stack duplicates. */
     type SeedSlide = {
@@ -243,7 +243,7 @@ async function main() {
    * Episodes are replaced wholesale rather than upserted: they have no stable
    * key of their own, and YouTube is the source of truth for what a playlist
    * contains. deleteMany-then-createMany keeps a re-run from stacking
-   * duplicates, and is why the parent upsert comes first — the children need
+   * duplicates, and is why the parent upsert comes first  the children need
    * its id. */
   let playlistCount = 0;
   let playlistVideoCount = 0;

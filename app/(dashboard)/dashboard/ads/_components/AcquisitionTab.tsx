@@ -225,7 +225,7 @@ export function AcquisitionTab({ filterQs }: Props) {
         <Info className="w-4 h-4 text-sky-600 mt-0.5 shrink-0" />
         <p className="text-[12px] text-sky-900 leading-relaxed">
           LTV هنا = مجموع التبرعات الدائمة لكل متبرع كان first-touch له في هذه
-          الفترة. القيمة تعكس صحة المتبرع الذي جلبه هذا الإعلان حتى الآن — وليس
+          الفترة. القيمة تعكس صحة المتبرع الذي جلبه هذا الإعلان حتى الآن  وليس
           قيمة الإعلان داخل الفترة فقط.
         </p>
       </div>
@@ -234,7 +234,7 @@ export function AcquisitionTab({ filterQs }: Props) {
         <div className="px-4 py-3 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between flex-wrap gap-3">
           <div>
             <h3 className="text-sm font-semibold text-slate-700">
-              تفصيل الاكتساب — first-touch
+              تفصيل الاكتساب  first-touch
             </h3>
             <p className="text-[11px] text-slate-500 mt-0.5">
               من أين جاء كل متبرع أول مرة، وكم استمر يدفع بعدها

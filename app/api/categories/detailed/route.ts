@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import type { Prisma } from "@prisma/client";
 import { getServerSession } from 'next-auth';
 import { authOptions } from "../../auth/[...nextauth]/options";
 import { requireAdminOrDashboardPermission } from "@/lib/dashboard/api-auth";
@@ -50,7 +51,23 @@ export async function GET(request: NextRequest) {
     const nextCursor = hasMore ? page[page.length - 1]?.id : null;
 
     // If campaigns requested, batch fetch limited campaigns per category in parallel
-    let campaignsByCategory: Record<string, any[]> = {};
+    type DetailedCampaignRow = {
+      id: string;
+      slug: string | null;
+      title: string;
+      description: string;
+      images: string[];
+      targetAmount: number;
+      currentAmount: number;
+      isActive: boolean;
+      priority: number | null;
+      createdAt: Date;
+      /* A Json column in the schema, not a number array. */
+      suggestedDonations: Prisma.JsonValue;
+      translations: { locale: string; title: string; description: string }[];
+      _count: { donations: number };
+    };
+    let campaignsByCategory: Record<string, DetailedCampaignRow[]> = {};
     if (includeCampaigns && page.length > 0) {
       const campaignFetches = page.map(cat =>
         prisma.campaign.findMany({
@@ -84,7 +101,7 @@ export async function GET(request: NextRequest) {
       campaignsByCategory = resolved.reduce((acc, cur) => {
         acc[cur.id] = cur.list;
         return acc;
-      }, {} as Record<string, any[]>);
+      }, {} as Record<string, DetailedCampaignRow[]>);
     }
 
     const transformed = page.map(cat => {

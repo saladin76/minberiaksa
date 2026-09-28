@@ -1,4 +1,4 @@
-# Package — Locale Foundation (single source of truth)
+# Package  Locale Foundation (single source of truth)
 
 Status: **done.** Behaviour-neutral for the public site.
 Date: 2026-07-04
@@ -14,7 +14,7 @@ without publicly routing them (no translations yet → public routing stays on t
 enabled 8). This underpins every multilingual system that follows.
 
 ## What changed
-- **`lib/locales.ts`** — rewritten as a rich catalog:
+- **`lib/locales.ts`**  rewritten as a rich catalog:
   - `SUPPORTED_LOCALES` unchanged: `ar,en,fr,tr,id,pt,es,de` (enabled/public set, same order).
   - New `FUTURE_LOCALES = sq,it,nl,sv`, `ALL_LOCALES`, `AnyLocale`.
   - New `LOCALES: Record<AnyLocale, LocaleMeta>` where `LocaleMeta = { code, label,
@@ -23,14 +23,14 @@ enabled 8). This underpins every multilingual system that follows.
   - New helpers: `isKnownLocale`, `localeDirection`, `localeMeta`, `ALL_LOCALE_OPTIONS`.
   - `isValidLocale` keeps its historical enabled-only semantics (so `User.preferredLang`
     and public routing can never become an untranslated locale).
-- **`i18n/routing.config.ts`** — `locales` now `[...SUPPORTED_LOCALES]`, `defaultLocale` from catalog.
-- **`middleware.ts`** — `LOCALES` and the locale-in-path regex now derive from `SUPPORTED_LOCALES`.
-- **`app/[locale]/layout.tsx`** — `VALID_LOCALES` derives from `SUPPORTED_LOCALES`. The
+- **`i18n/routing.config.ts`**  `locales` now `[...SUPPORTED_LOCALES]`, `defaultLocale` from catalog.
+- **`middleware.ts`**  `LOCALES` and the locale-in-path regex now derive from `SUPPORTED_LOCALES`.
+- **`app/[locale]/layout.tsx`**  `VALID_LOCALES` derives from `SUPPORTED_LOCALES`. The
   static `rawLocaleMessages` JSON import map stays static (documented sync point).
-- **`components/SyncHtmlDir.tsx`** — `<html dir/lang>` from `localeDirection()` /
+- **`components/SyncHtmlDir.tsx`**  `<html dir/lang>` from `localeDirection()` /
   `isKnownLocale()` (also fixes the previous `de` gap in its `LANG_MAP`).
-- **`app/(dashboard)/dashboard/DashboardLayoutClient.tsx`** — `dir` from `localeDirection(locale)`.
-- **`app/(dashboard)/dashboard/_components/DashboardAutoEnhancements.tsx`** —
+- **`app/(dashboard)/dashboard/DashboardLayoutClient.tsx`**  `dir` from `localeDirection(locale)`.
+- **`app/(dashboard)/dashboard/_components/DashboardAutoEnhancements.tsx`** 
   `LocaleCode`/`supportedLocales` derive from the catalog.
 
 ## Reused (not duplicated)
@@ -52,7 +52,7 @@ Removed real duplication and fixed a latent bug class:
 - **Bug fix:** `app/api/{cart/payment,donations,stripe/intent}/route.ts` and
   `app/api/auth/verify-email/route.ts` used 7-locale arrays **missing `de`**, so German
   donors' `donation.locale` was silently dropped to `null`. All now call `isValidLocale`
-  from the catalog (adds `de`; payment processing untouched — only the stored locale string changes).
+  from the catalog (adds `de`; payment processing untouched  only the stored locale string changes).
 - **De-duplicated (pure lists → catalog):** `lib/seo.ts` `LOCALES`/`Locale` and
   `lib/campaign/share-labels.ts` `SHARE_LABEL_LOCALES`/`ShareLabelLocale` now derive from
   `SUPPORTED_LOCALES`. Their per-locale content maps (`Record<Locale,…>`) stay, so enabling
@@ -69,7 +69,7 @@ is missing an enabled locale. Currently passing. It covers:
 - `scripts/audit-i18n-messages.mjs` (`.mjs`, cannot import the TS catalog).
 - Existence of `i18n/messages/<code>.json` per enabled locale.
 
-## Still hand-maintained (out of this package — the guard/type system flags them)
+## Still hand-maintained (out of this package  the guard/type system flags them)
 - `app/[locale]/layout.tsx` static JSON import map (bundling requires static imports).
 - date-fns locale maps in `success/[id]`, `BlogPageContent`, `campaigns/edit/[id]` (need a
   real date-fns locale import, not just a code).
@@ -82,7 +82,7 @@ is missing an enabled locale. Currently passing. It covers:
 4. Reconcile the sync-point files above (SEO, share-labels, marketing-countries, date-fns, geo).
 
 ## Testing
-- `npx tsc --noEmit` — no new errors vs. baseline (12 == 12 in touched files).
+- `npx tsc --noEmit`  no new errors vs. baseline (12 == 12 in touched files).
 - `npm run build` (`prisma generate && next build`) expected green (no schema/logic change).
 - Manual: public `/ar`, `/en` … `/de` route unchanged; `/sq` `/it` `/nl` `/sv` remain
   locale-less → geo-redirected as before (not treated as valid public locales).

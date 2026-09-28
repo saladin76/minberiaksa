@@ -124,7 +124,7 @@ export async function GET(request: NextRequest) {
       const teamSupport = Number(d.teamSupport ?? 0);
       const fees = Number(d.coverFees ? d.fees ?? 0 : 0);
       const total = Number(d.totalAmount ?? 0);
-      // "amount" should be the donation portion only — split team support
+      // "amount" should be the donation portion only  split team support
       // and fees out so finance can run operating costs separately.
       const baseAmount = Number(d.amount ?? Math.max(0, total - teamSupport - fees));
       return {

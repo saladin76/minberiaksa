@@ -7,7 +7,7 @@ import { useTranslations } from "next-intl";
  * In-site YouTube player.
  *
  * The handoff plays videos in an overlay rather than sending the visitor to the
- * channel — leaving the site mid-journey is the single biggest drop-off in a
+ * channel  leaving the site mid-journey is the single biggest drop-off in a
  * donation flow. Ported from the `videoModal` block in
  * `Minbar/الصفحة الرئيسية.dc.html`.
  */

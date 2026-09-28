@@ -1,6 +1,6 @@
 /**
  * Reconcile every monthly-subscription donation stuck in
- * "status=PAID + paidAt=null" — the state the dashboard shows as "قيد التأكيد".
+ * "status=PAID + paidAt=null"  the state the dashboard shows as "قيد التأكيد".
  *
  * Why these rows exist
  * --------------------
@@ -17,35 +17,35 @@
  *     find the placeholder and created a NEW paid donation alongside it,
  *     leaving the original stranded as a phantom duplicate.
  *
- * What this script does (idempotent — safe to re-run)
+ * What this script does (idempotent  safe to re-run)
  * ---------------------------------------------------
  *  For every stuck row we pick exactly ONE resolution:
  *
- *  1. DUPLICATE FAILED — there is a sibling donation in the SAME subscription
+ *  1. DUPLICATE FAILED  there is a sibling donation in the SAME subscription
  *     that's already settled (paidAt != null) for what is clearly the same
  *     charge (same amount + currency, created within 24 h). The stuck row
  *     is the phantom from the old webhook bug. Mark it FAILED with a note;
  *     do NOT touch totals (the sibling already counted them).
  *
- *  2. STRIPE-VERIFIED SETTLE — the row is a real Stripe payment we can
+ *  2. STRIPE-VERIFIED SETTLE  the row is a real Stripe payment we can
  *     re-verify. If `providerOrderId` starts with "in_" we look up the
  *     invoice directly; if it starts with "cs_" we look up the Checkout
  *     Session and pull its invoice id. If Stripe confirms paid, set
  *     `paidAt` from the invoice's `paid_at` (or `created`) timestamp and run
  *     the campaign/category increments the webhook should have done.
  *
- *  3. STRIPE-VERIFIED FAILED — Stripe says the invoice is `void` or
+ *  3. STRIPE-VERIFIED FAILED  Stripe says the invoice is `void` or
  *     `uncollectible`. Flip donation to FAILED.
  *
- *  4. SUBSCRIPTION-BACKED SETTLE — non-Stripe row whose parent Subscription
+ *  4. SUBSCRIPTION-BACKED SETTLE  non-Stripe row whose parent Subscription
  *     has `lastBillingDate` set (evidence the charge actually fired).
  *     `paidAt = donation.createdAt` and run the increments.
  *
- *  5. ABANDONED FAILED — older than 14 days, no provider evidence, parent
+ *  5. ABANDONED FAILED  older than 14 days, no provider evidence, parent
  *     Subscription never billed. The user walked away from checkout. Mark
  *     FAILED so it stops showing as "قيد التأكيد" forever.
  *
- *  6. SKIP — recent (<14 days) row that's still legitimately pending.
+ *  6. SKIP  recent (<14 days) row that's still legitimately pending.
  *     Re-run later.
  *
  * Run with:  npx tsx scripts/backfill-subscription-donations-paidat.ts
@@ -135,7 +135,7 @@ async function markAbandonedFailed(donation: StuckDonation) {
     data: {
       status: "FAILED",
       providerErrorMessage:
-        "Abandoned checkout — never settled and no recurring billing recorded.",
+        "Abandoned checkout  never settled and no recurring billing recorded.",
       providerTxnResult: donation.providerTxnResult ?? "Failed",
     },
   });
@@ -204,7 +204,7 @@ async function tryStripeVerify(donation: StuckDonation) {
       invoiceId = orderId;
       invoice = await stripe.invoices.retrieve(orderId);
     } else if (orderId.startsWith("cs_")) {
-      // Checkout Session — pull the invoice id from the expanded session.
+      // Checkout Session  pull the invoice id from the expanded session.
       const sessionObj = await stripe.checkout.sessions.retrieve(orderId, {
         expand: ["invoice", "subscription.latest_invoice"],
       });
@@ -259,7 +259,7 @@ async function tryStripeVerify(donation: StuckDonation) {
     return { handled: true as const, action: "stripe-failed" as const };
   }
 
-  // open / draft — truly pending; leave alone.
+  // open / draft  truly pending; leave alone.
   return { handled: true as const, action: "stripe-open" as const };
 }
 
@@ -326,7 +326,7 @@ async function main() {
         continue;
       }
 
-      // 6. Recent and truly pending — re-run later.
+      // 6. Recent and truly pending  re-run later.
       counts.skipped += 1;
     } catch (err) {
       console.error(`   ✗ Failed to reconcile donation ${donation.id}:`, err);

@@ -11,7 +11,7 @@ import { prisma } from "@/lib/prisma";
 import { SUPPORTED_LOCALES as ALL_LOCALES } from "@/lib/locales";
 import { LOCALE_ENGLISH_NAMES } from "@/lib/content-localization/translate";
 
-/* Every language the site publishes, from the one list — this used to be a
+/* Every language the site publishes, from the one list  this used to be a
    hand-kept seven while the site served nineteen. */
 const TRANSLATION_LOCALES = ALL_LOCALES.filter((l) => l !== "ar");
 const SUPPORTED_LOCALES = ALL_LOCALES;
@@ -331,7 +331,7 @@ async function generateProfessionalTranslation(
 }
 
 /** The only fields an apply may ever touch. Anything else in the payload is
- *  dropped — slugs, images, ids and every unrelated model stay out of reach. */
+ *  dropped  slugs, images, ids and every unrelated model stay out of reach. */
 const APPLY_FIELDS: Record<ItemType, readonly string[]> = {
   campaign: ["title", "description"],
   category: ["name", "description"],

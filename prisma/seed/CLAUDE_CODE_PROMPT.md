@@ -1,4 +1,4 @@
-# CLAUDE_CODE_PROMPT.md — أمر جاهز لـ Claude Code
+# CLAUDE_CODE_PROMPT.md  أمر جاهز لـ Claude Code
 
 انسخ الأمر التالي كما هو داخل مشروعك (حيث `prisma/schema.prisma`):
 
@@ -7,23 +7,23 @@
 ```
 Add the following content models to prisma/schema.prisma (MongoDB provider). Follow the EXACT conventions already used in this schema: @id @default(auto()) @map("_id") @db.ObjectId, timestamps (createdAt @default(now()), updatedAt @updatedAt), a separate *Translation model per translatable model with a @@unique([<parent>Id, locale]) compound key and onDelete: Cascade, and slug @unique on the parent. Do not change or rename any existing model. (Make sure to add them to the dashboard like campaigns and blogs and all that stuff in the same sub menu and allow to create edit delete like them)
 
-1) Story — homepage story rail (scheduled, expiring)
+1) Story  homepage story rail (scheduled, expiring)
    slug @unique, title, image, linkUrl String?, order Int @default(0),
    isActive Boolean @default(true), startsAt DateTime?, endsAt DateTime? (Add 24h default and add option in dashboard to make it unlimited time dashboard)
    + StoryTranslation { locale, title }
 
-2) VideoPlaylist — "برامجنا المصورة" (YouTube playlists / series)
+2) VideoPlaylist  "برامجنا المصورة" (YouTube playlists / series)
    slug @unique, title, description String?, youtubePlaylistUrl String?,
    kind PlaylistKind @default(PROGRAM), coverImage String?, order Int @default(0), isActive Boolean @default(true)
    + PlaylistTranslation { locale, title, description }
    + relation videos PlaylistVideo[]
 
-3) PlaylistVideo — episodes inside a playlist
+3) PlaylistVideo  episodes inside a playlist
    playlistId @db.ObjectId, youtubeId, url, thumbnail String?, title String?,
    durationSeconds Int?, order Int @default(0), isActive Boolean @default(true)
    playlist VideoPlaylist @relation(fields: [playlistId], references: [id], onDelete: Cascade)
 
-4) Course — "دوراتنا"
+4) Course  "دوراتنا"
    slug @unique, title, description String?, coverImage String?,
    introVideoId String?, introVideoUrl String?, unitsCount Int?,
    isPinned Boolean @default(false), isExternal Boolean @default(false), externalUrl String?,
@@ -35,31 +35,31 @@ Add the following content models to prisma/schema.prisma (MongoDB provider). Fol
    courseId @db.ObjectId, youtubeId, url, thumbnail String?, title String?, order Int @default(0)
    course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
 
-6) Video — standalone videos ("إنجازاتنا" + "تزكياتنا")
+6) Video  standalone videos ("إنجازاتنا" + "تزكياتنا")
    slug @unique, type VideoType, title, youtubeId String?, url String?, startSeconds Int?,
    thumbnail String?, regionKey String?, localeFilter String[] @default([]),
    showOnHome Boolean @default(false), order Int @default(0), isActive Boolean @default(true)
    + VideoTranslation { locale, title }
    NOTE: localeFilter limits visibility to specific locales (Turkish endorsements are tr-only). Empty = all locales.
 
-7) Report — "التقارير" (PDF reports)
+7) Report  "التقارير" (PDF reports)
    slug @unique, title, description String?, fileUrl, coverImage String?,
    year Int?, order Int @default(0), isPublished Boolean @default(true)
    + ReportTranslation { locale, title, description }
 
-8) Booklet — "كتيبات المؤسسة"
+8) Booklet  "كتيبات المؤسسة"
    slug @unique, title, description String?, fileUrl, coverImage String?, order Int @default(0), isPublished Boolean @default(true)
    + BookletTranslation { locale, title, description }
 
-9) BankAccount + BankAccountCurrency — bank transfer donations
+9) BankAccount + BankAccountCurrency  bank transfer donations
    BankAccount: slug @unique, name, branch String?, swift String?, holder,
      logo String?, locales String[] @default([]), order Int @default(0), isActive Boolean @default(true)
    BankAccountCurrency: bankAccountId @db.ObjectId, code (ISO 4217), accountNo String?, extNo String?, iban String?
      bankAccount BankAccount @relation(..., onDelete: Cascade)
    + BankAccountTranslation { locale, name, branch, holder }
-   NOTE: each locale/country may publish different banks — hence locales[] on BankAccount.
+   NOTE: each locale/country may publish different banks  hence locales[] on BankAccount.
 
-10) UrgentBanner — urgent campaign banner with auto-expiry
+10) UrgentBanner  urgent campaign banner with auto-expiry
     slug @unique, title, description String?, image String?, ctaLabel String?, ctaUrl String?,
     campaignId String? @db.ObjectId, suggestedAmounts Int[] @default([]),
     priority Int @default(0), locales String[] @default([]),
@@ -70,7 +70,7 @@ Add the following content models to prisma/schema.prisma (MongoDB provider). Fol
     question, answer, page String?, order Int @default(0), isActive Boolean @default(true)
     + FaqTranslation { locale, question, answer }
 
-12) SiteSetting — single-row-per-key settings (contact info, socials, WhatsApp number)
+12) SiteSetting  single-row-per-key settings (contact info, socials, WhatsApp number)
     key @unique, value Json, group String?
 
 Enums:
@@ -102,6 +102,6 @@ After editing the schema:
 | النموذج | لماذا |
 |---|---|
 | `Report` · `Booklet` | تحتاج روابط ملفات PDF الرسمية |
-| `BankAccount` | **لا تُبذر أبدًا بأرقام تجريبية** — IBAN/SWIFT رسمية تُدخل من الداشبورد فقط |
+| `BankAccount` | **لا تُبذر أبدًا بأرقام تجريبية**  IBAN/SWIFT رسمية تُدخل من الداشبورد فقط |
 | `UrgentBanner` | تُنشأ عند إطلاق حملة فعلية |
 | `Faq` · `SiteSetting` | محتوى تحريري/إعدادات تُدار من الداشبورد |

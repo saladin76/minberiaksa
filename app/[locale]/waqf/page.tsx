@@ -26,7 +26,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 /**
- * Al-Quds Waqf — ported from `Minbar/الأوقاف.dc.html`.
+ * Al-Quds Waqf  ported from `Minbar/الأوقاف.dc.html`.
  *
  * A signed-in donor's name is passed through so the certificate fields offer a
  * one-tap fill rather than asking them to retype what the site already knows.

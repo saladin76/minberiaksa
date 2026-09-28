@@ -23,7 +23,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 /**
- * Volunteer with us — ported from `Minbar/تطوع معنا.dc.html`.
+ * Volunteer with us  ported from `Minbar/تطوع معنا.dc.html`.
  *
  * The form borrows its field labels from `contact` and its send button from
  * `partner` rather than duplicating strings that are already reviewed in 19

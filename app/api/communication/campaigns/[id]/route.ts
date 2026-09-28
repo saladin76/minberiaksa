@@ -24,8 +24,8 @@ const patchSchema = z.object({
  * One campaign, plus what the detail view needs to describe it without a second round trip: the
  * template's display name and the live recipient breakdown for its audience.
  *
- * The breakdown is computed on read rather than stored. Eligibility moves underneath a campaign —
- * a donor opts out, a phone number is added — so a count frozen at creation time would quietly
+ * The breakdown is computed on read rather than stored. Eligibility moves underneath a campaign 
+ * a donor opts out, a phone number is added  so a count frozen at creation time would quietly
  * describe an audience that no longer exists.
  */
 export async function GET(_: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -75,7 +75,7 @@ export async function DELETE(_: NextRequest, { params }: { params: Promise<{ id:
   if (denied) return denied;
   const { id } = await params;
 
-  // Archives rather than deletes once a campaign has any send history — the service decides which.
+  // Archives rather than deletes once a campaign has any send history  the service decides which.
   const result = await deleteDraftCampaign(id, auditActorFromDashboardSession(session!));
   if (!result.ok) return NextResponse.json({ ok: false, error: result.error }, { status: result.status });
   return NextResponse.json({ ok: true, ...result.data });

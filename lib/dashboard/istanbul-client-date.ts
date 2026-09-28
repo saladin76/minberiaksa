@@ -25,7 +25,7 @@ export function istanbulAddCalendarDaysKey(dateKey: string, days: number): strin
 /**
  * Format a YYYY-MM-DD Istanbul calendar key as a human label without timezone
  * re-interpretation. `new Date("2026-05-20").toLocaleDateString(...)` parses
- * the string as UTC midnight, then converts to the browser's local TZ — this
+ * the string as UTC midnight, then converts to the browser's local TZ  this
  * helper instead reads the calendar components directly so the label always
  * matches the bar's underlying day.
  */

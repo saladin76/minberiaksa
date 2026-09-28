@@ -31,7 +31,7 @@ const STATUS_PILL: Record<string, { label: string; className: string }> = {
   ARCHIVED: { label: "مؤرشف", className: "border-slate-200 bg-slate-100 text-slate-500" },
 };
 
-/** Locales this template actually carries a body for — the canonical Arabic plus any override. */
+/** Locales this template actually carries a body for  the canonical Arabic plus any override. */
 function localesOf(row: SmsTemplateRow): SupportedLocale[] {
   const set = new Set<SupportedLocale>([DEFAULT_LOCALE]);
   for (const [loc, v] of Object.entries(row.translations ?? {})) {
@@ -109,7 +109,7 @@ export function SmsTemplateList() {
         <Info className="mt-0.5 h-4 w-4 shrink-0" />
         <div>
           <b>الرسائل النصية تُحاسب بالمقطع، لا بالرسالة.</b> النص العربي خارج أبجدية GSM، فيصبح
-          المقطع ٧٠ حرفًا بدل ١٦٠ — رسالة من ٩٠ حرفًا عربيًا تُحتسب مقطعين. المحرّر يعرض عدد
+          المقطع ٧٠ حرفًا بدل ١٦٠  رسالة من ٩٠ حرفًا عربيًا تُحتسب مقطعين. المحرّر يعرض عدد
           المقاطع أثناء الكتابة.
         </div>
       </div>
@@ -137,7 +137,7 @@ export function SmsTemplateList() {
             ) : templates.length === 0 ? (
               <tr>
                 <td colSpan={7} className="py-12 text-center text-slate-500">
-                  لا توجد قوالب رسائل نصية بعد — اضغط «قالب جديد» للبدء
+                  لا توجد قوالب رسائل نصية بعد  اضغط «قالب جديد» للبدء
                 </td>
               </tr>
             ) : (

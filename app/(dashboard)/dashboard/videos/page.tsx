@@ -93,7 +93,7 @@ function DraggableVideoRow({
   );
 }
 
-/** Which locales a video is limited to — empty means every locale. */
+/** Which locales a video is limited to  empty means every locale. */
 function LocaleScope({ localeFilter }: { localeFilter: string[] }) {
   if (localeFilter.length === 0) {
     return <span className="text-xs text-slate-500">كل اللغات</span>;
@@ -139,7 +139,7 @@ export default function VideosPage() {
   useEffect(() => { fetchVideos(); }, [fetchVideos]);
 
   /* Reordering writes an absolute index per row, so it can only run over one
-     section at a time — dragging inside a filtered view would otherwise
+     section at a time  dragging inside a filtered view would otherwise
      renumber rows the editor cannot see. */
   const visible = useMemo(
     () => (tab === 'ALL' ? videos : videos.filter((v) => v.type === tab)),
@@ -179,7 +179,7 @@ export default function VideosPage() {
   const toggle = async (video: VideoRow, field: 'isActive' | 'showOnHome', next: boolean) => {
     setTogglingId(video.id);
     /* Only the one flag is sent. Echoing the whole row back would let a stale
-       field the list is holding overwrite good data — and omitting
+       field the list is holding overwrite good data  and omitting
        `translations` is what tells the API to leave the translation rows alone. */
     try {
       await axios.put(`/api/videos/${video.id}`, { [field]: next });

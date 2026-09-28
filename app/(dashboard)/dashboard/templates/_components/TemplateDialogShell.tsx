@@ -21,8 +21,8 @@ import { cn } from "@/lib/utils";
  *
  *  1. Horizontal overflow. `DialogContent`'s base class list is `grid w-full max-w-lg`; the editors
  *     overrode the width but inherited the `grid`. Grid items get `min-width: auto`, so the
- *     two-column body — a monospace textarea, a wall of `{{token}}` chips, a `whitespace-pre-wrap`
- *     preview — could not shrink below its content and widened the track past the dialog. Fixed at
+ *     two-column body  a monospace textarea, a wall of `{{token}}` chips, a `whitespace-pre-wrap`
+ *     preview  could not shrink below its content and widened the track past the dialog. Fixed at
  *     the root here (`flex` displaces `grid` through twMerge) and defended per-column with `min-w-0`,
  *     so the columns actually narrow instead of pushing sideways.
  *  2. The whole dialog scrolled. `max-h-[90vh] overflow-y-auto` on the content box meant the title
@@ -30,7 +30,7 @@ import { cn } from "@/lib/utils";
  *     now header / scroll-region / footer, so the two things you navigate by stay put.
  *
  * It also moves the close button. Radix pins it `right-4`, which in an RTL dialog is where the
- * Arabic title starts — the ✕ sat on top of the heading in all four. Rendering it in the header
+ * Arabic title starts  the ✕ sat on top of the heading in all four. Rendering it in the header
  * flex row puts it on the correct side by construction rather than by a hardcoded offset.
  */
 
@@ -119,7 +119,7 @@ export function TemplateDialogShell({
         hideCloseButton
         dir="rtl"
         className={cn(
-          // `flex` here is what displaces the base `grid` — see the note above.
+          // `flex` here is what displaces the base `grid`  see the note above.
           "fixed left-1/2 top-1/2 z-50 flex w-[calc(100%-2rem)] max-h-[92vh] -translate-x-1/2 -translate-y-1/2 flex-col",
           "overflow-hidden rounded-2xl border border-border bg-card p-0 shadow-2xl ring-1 ring-slate-900/5",
           SIZES[size],
@@ -251,7 +251,7 @@ export function LocaleStrip({
   );
 }
 
-/** Consistent field label — the four editors were drifting between three different sizes. */
+/** Consistent field label  the four editors were drifting between three different sizes. */
 export function FieldLabel({ children, hint }: { children: React.ReactNode; hint?: string }) {
   return (
     <label className="flex items-baseline justify-between gap-2 text-xs font-medium text-slate-600">

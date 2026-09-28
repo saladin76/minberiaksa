@@ -8,7 +8,7 @@
 /** Query key the token travels under. */
 export const DONATION_TOKEN_PARAM = "t";
 
-/** `path` with the token appended — as `?t=` or `&t=` — or unchanged when there is none. */
+/** `path` with the token appended  as `?t=` or `&t=`  or unchanged when there is none. */
 export function withDonationToken(path: string, token: string | null | undefined): string {
   if (!token) return path;
   const [base, hash = ""] = path.split("#");

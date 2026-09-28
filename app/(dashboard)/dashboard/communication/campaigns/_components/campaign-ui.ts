@@ -72,7 +72,7 @@ export const STATUS_META: Record<string, { label: string; tone: string }> = {
 export const statusMeta = (s: string) => STATUS_META[s] ?? STATUS_META.DRAFT;
 export const channelMeta = (c: string) => CHANNEL_META[c] ?? CHANNEL_META.EMAIL;
 
-/** Campaigns that have not gone out yet — the ones still safe to edit or delete. */
+/** Campaigns that have not gone out yet  the ones still safe to edit or delete. */
 export const isPreSend = (status: string) => ["DRAFT", "REVIEW", "APPROVED", "SCHEDULED"].includes(status);
 
 /**
@@ -80,13 +80,13 @@ export const isPreSend = (status: string) => ["DRAFT", "REVIEW", "APPROVED", "SC
  *
  * The field carries two different kinds of value: `list:<id>` for a hand-picked audience (what the
  * wizard creates) and a bare locale code for "every donor who reads this language" (what older
- * campaigns use). They are not the same audience and should not read the same — a campaign keyed
+ * campaigns use). They are not the same audience and should not read the same  a campaign keyed
  * `ar` reaches 840 donors here, which is nothing like a list someone assembled by hand.
  */
 export function audienceLabel(key: string | null, localeLabels: Record<string, string>): string {
   if (!key) return "بلا جمهور";
   if (key.startsWith("list:")) return "قائمة مخصّصة";
-  return `كل المتبرعين — ${localeLabels[key] ?? key}`;
+  return `كل المتبرعين  ${localeLabels[key] ?? key}`;
 }
 
 /** Campaigns with real send history worth linking through to the channel report. */

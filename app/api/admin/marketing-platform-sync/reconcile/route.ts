@@ -21,7 +21,7 @@ const VALID_GROUPBY: ReconcileGroupBy[] = [
 
 export async function GET(request: NextRequest) {
   const session = await getServerSession(authOptions);
-  // Reconcile is part of the ads dashboard story too — gate on either perm.
+  // Reconcile is part of the ads dashboard story too  gate on either perm.
   const denied =
     requireAdminOrDashboardPermission(session, "platformConnections") &&
     requireAdminOrDashboardPermission(session, "ads");

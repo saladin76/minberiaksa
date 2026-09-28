@@ -1,6 +1,6 @@
 /**
  * Safe error codes for the Brevo SMS adapter (email moved to Elastic Email). Never leak the API key
- * or any secret in messages/logs — provider bodies are reduced to a safe code + short scrubbed detail.
+ * or any secret in messages/logs  provider bodies are reduced to a safe code + short scrubbed detail.
  */
 
 export const BREVO_SMS_REASONS = {

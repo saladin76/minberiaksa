@@ -6,7 +6,7 @@ type Props = {
   title: string;
   description?: string;
   icon?: LucideIcon;
-  /** Primary CTA — the way out of the dead end. */
+  /** Primary CTA  the way out of the dead end. */
   action?: ReactNode;
   /** `inline` drops the border/background, for use inside an existing Card or table cell. */
   variant?: "card" | "inline";
@@ -16,7 +16,7 @@ type Props = {
 /**
  * Replaces the bare `<p>لا توجد بيانات</p>` that every page used as its empty state.
  * A text-only empty state leaves the user at a dead end with no indication of whether
- * something is broken, still loading, or genuinely empty — and no way forward.
+ * something is broken, still loading, or genuinely empty  and no way forward.
  */
 export function EmptyState({
   title, description, icon: Icon = Inbox, action, variant = "card", className,

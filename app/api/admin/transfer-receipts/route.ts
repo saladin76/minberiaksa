@@ -19,8 +19,8 @@ type SortKey = "priority" | "newest" | "oldest" | "amountDesc" | "amountAsc";
  * The finance queue: donor-submitted bank transfer receipts.
  *
  * `counts` come back with every page so the tabs read correctly regardless
- * of which one is open. "priority" is the working order — receipts waiting
- * on a decision first, longest-waiting at the top — and is the default.
+ * of which one is open. "priority" is the working order  receipts waiting
+ * on a decision first, longest-waiting at the top  and is the default.
  */
 export async function GET(request: NextRequest) {
   const session = await getServerSession(authOptions);
@@ -51,7 +51,7 @@ export async function GET(request: NextRequest) {
   const donationWhere: Prisma.DonationWhereInput = {};
   if (currency) donationWhere.currency = currency;
   if (q) {
-    /* A 24-hex query is an id — the donation's or the claim's — which is what
+    /* A 24-hex query is an id  the donation's or the claim's  which is what
        a Telegram card or a support thread hands over. */
     const isId = /^[0-9a-f]{24}$/i.test(q);
     where.OR = [

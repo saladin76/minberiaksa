@@ -1,13 +1,13 @@
 /**
  * Shaping for the super-category write endpoints ("الأقسام الكبرى").
  *
- * A super category is a themed landing page — hero, verse, accent colour, calls
- * to action — plus two child lists the form posts whole and the route replaces
+ * A super category is a themed landing page  hero, verse, accent colour, calls
+ * to action  plus two child lists the form posts whole and the route replaces
  * wholesale, the way `lib/content/playlist-write.ts` handles episodes:
  *
- *   · `items`  — pointers to campaigns, articles, videos, playlists, courses,
+ *   · `items`   pointers to campaigns, articles, videos, playlists, courses,
  *                reports and booklets, ordered per kind.
- *   · `blocks` — the page's sections, each with its own translations.
+ *   · `blocks`  the page's sections, each with its own translations.
  *
  * Replacing rather than diffing is what makes a save one atomic nested write.
  * The one cost is that a block's translations are re-created with it, so a
@@ -242,7 +242,7 @@ const OBJECT_ID = /^[0-9a-fA-F]{24}$/;
 
 /**
  * Linked content as posted by the form: `{ CAMPAIGN: ["id", …], … }` or a flat
- * array of `{ kind, refId }`. Ids that are not ObjectIds are dropped — Prisma
+ * array of `{ kind, refId }`. Ids that are not ObjectIds are dropped  Prisma
  * rejects the whole write on a malformed one, so a single stale id pasted into
  * the picker would otherwise make the page unsaveable. Order is the position
  * within its own kind, and a repeated id is kept once (the schema's
@@ -305,7 +305,7 @@ export interface SuperCategoryBlockInput {
 export function parseSuperCategoryBlockTranslations(translations: unknown) {
   /* A block's heading may legitimately be empty (a bare video block), so the
      required field is the one that decides whether the locale says anything at
-     all — any of the five. `parseTranslations` needs a single required field,
+     all  any of the five. `parseTranslations` needs a single required field,
      so the rows are shaped here instead and a locale with nothing in it is
      simply not created. */
   const out: Array<Record<string, string> & { locale: string }> = [];
@@ -329,7 +329,7 @@ export function parseSuperCategoryBlockTranslations(translations: unknown) {
 
 /**
  * Blocks as posted by the form. A row with an unknown kind is dropped rather
- * than rejected — the same reasoning as an empty trailing episode.
+ * than rejected  the same reasoning as an empty trailing episode.
  */
 export function parseSuperCategoryBlocks(raw: unknown): SuperCategoryBlockInput[] | undefined {
   if (raw === undefined) return undefined;

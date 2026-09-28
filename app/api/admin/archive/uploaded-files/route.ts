@@ -44,7 +44,7 @@ export async function GET(request: Request) {
 
   const files = rows
     .map((row) => toArchiveUploadedFileItem(row, references))
-    .filter((file): file is ArchiveUploadedFileItem => Boolean(file) && file.category === category);
+    .filter((file): file is ArchiveUploadedFileItem => file !== null && file.category === category);
 
   return jsonNoStore({ ok: true, files, references, storage: { blobEnabled: archiveBlobEnabled() } });
 }

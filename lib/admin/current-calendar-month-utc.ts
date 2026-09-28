@@ -4,7 +4,7 @@ import {
   istanbulDateKeysToUtcRange,
 } from "./istanbul-calendar";
 
-/** @deprecated Use `getCurrentCalendarMonthIstanbulRange` — the dashboard's
+/** @deprecated Use `getCurrentCalendarMonthIstanbulRange`  the dashboard's
  *  "شهر" filter emits Istanbul date keys, so a UTC-aligned month starts 3 hours
  *  later than the filter's start and undercounts donations. */
 export function getCurrentCalendarMonthUtcRange(now: Date = new Date()) {
@@ -48,7 +48,7 @@ const LOCALE_MAP: Record<string, string> = {
   id: "id-ID",
 };
 
-/** @deprecated Use `formatIstanbulCalendarMonthLong` — see the deprecation note
+/** @deprecated Use `formatIstanbulCalendarMonthLong`  see the deprecation note
  *  on `getCurrentCalendarMonthUtcRange`. */
 export function formatUtcCalendarMonthLong(date: Date = new Date(), locale: string) {
   const intlLocale = (LOCALE_MAP[locale] ?? locale) || "en-US";

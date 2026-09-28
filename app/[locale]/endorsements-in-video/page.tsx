@@ -24,7 +24,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 /**
- * Our endorsements in video — testimonies from scholars, public figures,
+ * Our endorsements in video  testimonies from scholars, public figures,
  * supporters and field partners. Several are recorded for the Turkish edition
  * and are listed only there.
  *

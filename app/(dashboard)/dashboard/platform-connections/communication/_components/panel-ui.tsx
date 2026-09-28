@@ -8,9 +8,9 @@ import { cn } from "@/lib/utils";
 /**
  * Shared surface primitives for مزودو التواصل والإرسال.
  *
- * The page had grown three separate visual languages for the same idea — a
+ * The page had grown three separate visual languages for the same idea  a
  * status chip in the provider card, a differently-shaped one in `ui.tsx`, and a
- * third full-width tinted box for test results — plus two byte-identical blue
+ * third full-width tinted box for test results  plus two byte-identical blue
  * webhook panels. Everything was also set in `font-black`, from card titles down
  * to helper text, so nothing looked more important than anything else.
  *
@@ -146,7 +146,7 @@ export function Banner({
 
 /* ---------------------------------- pieces --------------------------------- */
 
-/** A read-only path/URL with its copy button — was hand-rolled in three places. */
+/** A read-only path/URL with its copy button  was hand-rolled in three places. */
 export function CopyableCode({
   value,
   onCopy,

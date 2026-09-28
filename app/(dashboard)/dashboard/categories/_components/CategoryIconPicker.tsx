@@ -18,7 +18,7 @@ import {
 /**
  * ISO 3166-1 alpha-2 codes, so every country the flag CDN publishes can be
  * picked. Names are resolved with Intl.DisplayNames instead of being listed
- * here — the browser already ships the Arabic country names.
+ * here  the browser already ships the Arabic country names.
  */
 const COUNTRY_CODES = [
   "AD", "AE", "AF", "AG", "AL", "AM", "AO", "AR", "AT", "AU", "AW", "AZ",
@@ -42,7 +42,7 @@ const COUNTRY_CODES = [
   "ZM", "ZW",
 ];
 
-/** Shown first, before the full list — where the association works most. */
+/** Shown first, before the full list  where the association works most. */
 const PINNED_CODES = ["PS", "SY", "TR", "SD", "YE", "SO", "LB", "AF", "SA", "EG"];
 
 function countryNames(locale: string): Record<string, string> {
@@ -59,8 +59,8 @@ function countryNames(locale: string): Record<string, string> {
 }
 
 /**
- * Picks what goes into `category.icon`: one of the built-in icons — Lucide's or
- * one of the glyphs drawn for this organisation's own project types — or any
+ * Picks what goes into `category.icon`: one of the built-in icons  Lucide's or
+ * one of the glyphs drawn for this organisation's own project types  or any
  * country flag. Flags are stored as `flag:XX` and custom glyphs as
  * `custom:Name`; CategoryIcon also reads looser forms, so a value typed by hand
  * elsewhere still renders.

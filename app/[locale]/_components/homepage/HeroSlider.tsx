@@ -25,7 +25,7 @@ export interface SlideItem {
 interface HeroSliderProps {
   /**
    * Slides fetched server-side. When provided, the component renders the first slide
-   * synchronously into the SSR HTML — that <img> is the LCP element, so eliminating
+   * synchronously into the SSR HTML  that <img> is the LCP element, so eliminating
    * the previous on-mount /api/slides re-fetch removes a 1–2 s window where Lighthouse
    * was measuring LCP at the *swapped* image, not the SSR-painted one.
    */
@@ -59,7 +59,7 @@ const HeroSlider: React.FC<HeroSliderProps> = ({ initialSlides = [], initialFirs
 
   // Only re-fetch from /api/slides if the server didn't provide them (or if the
   // locale changed after hydration via the language switcher). When SSR didn't
-  // populate slides — fetch immediately so the user never sees a blank hero.
+  // populate slides  fetch immediately so the user never sees a blank hero.
   useEffect(() => {
     if (initialSlides.length > 0) return;
     let cancelled = false;
@@ -137,7 +137,7 @@ const HeroSlider: React.FC<HeroSliderProps> = ({ initialSlides = [], initialFirs
     <section className="hero-pattern relative overflow-x-clip text-white">
       {/* ── Faded slider images as a full-bleed texture behind the deep brand
             color. Same `current` index as the showcase card, so the background
-            and the card share one image — the picture appears to "bleed" out of
+            and the card share one image  the picture appears to "bleed" out of
             the card and wash across the whole hero. ── */}
       <div className="absolute inset-0 z-0 opacity-20" aria-hidden="true">
         {imageSlides.map((slide, index) => (
@@ -319,7 +319,7 @@ const HeroSlider: React.FC<HeroSliderProps> = ({ initialSlides = [], initialFirs
             )}
           </div>
 
-          {/* Quick-donate card — functional (real donation flow). Sits just below the
+          {/* Quick-donate card  functional (real donation flow). Sits just below the
               showcase, overlapping its bottom edge on every breakpoint so the slide's
               title/description above it stay visible and nothing gets clipped. */}
           {/* <div className="relative z-30 -mt-12 mx-3 sm:mx-6 lg:mx-4">

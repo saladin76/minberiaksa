@@ -10,7 +10,7 @@ import "@/styles/self-hosted-fonts.css";
 
 
 /**
- * Minbar identity type. The brand leans heavy — headings and CTAs are 800–900 —
+ * Minbar identity type. The brand leans heavy  headings and CTAs are 800–900 
  * so those weights are loaded rather than synthesised, which is what makes a
  * faux-bold Arabic heading look wrong.
  *
@@ -45,18 +45,18 @@ const SITE = SITE_URL;
  * plus Organization, WebSite, FAQPage and BreadcrumbList schemas. That copy
  * described a Turkish public-benefit association founded in 1961 working in
  * healthcare and earthquake relief, with an FAQ about Haydarpaşa Numune
- * Hospital — a different organisation's story, inherited with the codebase.
+ * Hospital  a different organisation's story, inherited with the codebase.
  * It shipped on every page, including the 19 locale pages whose own metadata
  * says what `Minbar/POSITIONING.md` says: an international foundation for
  * Al-Quds and Al-Aqsa. Two identities, one of them wrong, and the Organization
- * node even shared an `@id` with the homepage's — so a crawler had to pick.
+ * node even shared an `@id` with the homepage's  so a crawler had to pick.
  *
  * Now there is one source. Everything identity-shaped here derives from
  * `LOCALE_SEO` / `SUPPORTED_LOCALES`, and the structured data lives where
  * `Minbar/PRODUCTION_SEO_CONTRACT.md` § Structured Data puts it: Organization
  * and WebSite on the homepage, BreadcrumbList on inner pages, FAQPage only
  * where questions are actually rendered. What is left below is what genuinely
- * belongs to every route in the app — fonts, analytics, the indexing policy,
+ * belongs to every route in the app  fonts, analytics, the indexing policy,
  * and a fallback title for the routes that sit outside `[locale]`.
  */
 export const metadata: Metadata = {
@@ -74,11 +74,11 @@ export const metadata: Metadata = {
   creator: SITE_NAME,
   publisher: SITE_NAME,
 
-  /* `app/favicon.ico` is the icon now — a real file, which is also what stops a
+  /* `app/favicon.ico` is the icon now  a real file, which is also what stops a
      browser's automatic `/favicon.ico` request from falling through to the
      `[locale]` segment. `icons` is left unset so Next uses it. */
 
-  /* All 19 locales, from the same helper every page uses — this list was eight. */
+  /* All 19 locales, from the same helper every page uses  this list was eight. */
   alternates: buildHreflang("/", "ar"),
 
   openGraph: {
@@ -100,7 +100,7 @@ export const metadata: Metadata = {
   },
 
   /* Indexable on production only. A preview deployment carries production
-     canonicals, which does not by itself stop its own URL being indexed —
+     canonicals, which does not by itself stop its own URL being indexed 
      so it says noindex here, in `app/robots.ts`, and in the X-Robots-Tag
      header from `next.config.ts` (`DEPLOYED_VS_DESIGN_AUDIT.md` § P1.1). */
   robots: isProductionDeployment()

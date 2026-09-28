@@ -23,11 +23,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 /**
- * Zakat calculator — ported from `Minbar/حاسبة الزكاة.dc.html`.
+ * Zakat calculator  ported from `Minbar/حاسبة الزكاة.dc.html`.
  *
  * `[BACKEND-INTEGRATION]`: `DEVELOPER_HANDOFF` lists a daily gold-price API as
  * a required environment integration. Until it exists the donor enters the rate
- * per gram themselves, which is honest — the page shows no nisāb figure at all
+ * per gram themselves, which is honest  the page shows no nisāb figure at all
  * rather than one computed from a stale or invented rate.
  */
 export default async function ZakatCalculatorPage({ params }: Props) {

@@ -8,7 +8,7 @@ import { processElasticEmailEvents, type EmailWebhookSummary } from "./email-web
  * `markDeliveryStatus(deliveryId, "SENT", …)` at the end of a campaign send records one fact:
  * Elastic Email returned 2xx, i.e. it ACCEPTED the message. Whether it then delivered, deferred,
  * bounced or suppressed it is decided minutes later and reported only through the webhook. If that
- * webhook is not registered on the provider side — as it currently is not — no row is ever
+ * webhook is not registered on the provider side  as it currently is not  no row is ever
  * corrected, so the campaign screen reports أُرسل for mail nobody received. That is not a display
  * bug; it is the only information the app has.
  *
@@ -21,8 +21,8 @@ import { processElasticEmailEvents, type EmailWebhookSummary } from "./email-web
 /** How far back a poll looks. Comfortably wider than the cron interval so a skipped run self-heals. */
 export const DEFAULT_LOOKBACK_MINUTES = 180;
 /**
- * Ceiling for an explicit backfill (30 days). Anything the routine 3-hour window missed — because
- * the cron was not deployed yet, or was down longer than the window — stays wrong forever
+ * Ceiling for an explicit backfill (30 days). Anything the routine 3-hour window missed  because
+ * the cron was not deployed yet, or was down longer than the window  stays wrong forever
  * otherwise: nothing re-examines a delivery once its send call returned. One poll still returns at
  * most `MAX_EVENTS_PER_POLL` events, so a wide backfill can be truncated; the returned `received`
  * count is what tells you whether it was.

@@ -6,7 +6,7 @@ import { miaPath } from "@/lib/minbar/routes";
 import { verseBlock } from "@/lib/minbar/quran";
 
 /**
- * "'Ibādan Lanā" (عبادًا لنا) — the programme raising a Qur'anic generation to
+ * "'Ibādan Lanā" (عبادًا لنا)  the programme raising a Qur'anic generation to
  * guard Al-Quds and Al-Aqsa. Ported from `Minbar/عبادا لنا بانر.dc.html`, a
  * shared banner imported by several pages.
  *
@@ -14,7 +14,7 @@ import { verseBlock } from "@/lib/minbar/quran";
  * Arabic always, with the translation of the meaning and its edition
  * attribution beneath it outside Arabic sessions.
  *
- * The project's own wordmark is a bilingual asset — the Arabic lockup in the
+ * The project's own wordmark is a bilingual asset  the Arabic lockup in the
  * Arabic edition, the Latin one everywhere else.
  */
 export default function IbadanBanner() {

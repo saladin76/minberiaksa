@@ -11,7 +11,7 @@ import { prisma } from "@/lib/prisma";
 // or scrape a post id. Guarded with "blog", matching every sibling route in app/api/posts.
 //
 // Also switched from a locally-constructed `new PrismaClient()` to the shared `@/lib/prisma`
-// singleton — the local copy opened its own connection pool per serverless instance.
+// singleton  the local copy opened its own connection pool per serverless instance.
 export async function GET(request: NextRequest, { params }: { params: Promise<{ postId: string }> }) {
   try {
     const session = await getServerSession(authOptions);

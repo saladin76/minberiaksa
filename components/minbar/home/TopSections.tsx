@@ -15,19 +15,19 @@ import { useMinbarCountUp } from "@/hooks/useMinbarReveal";
 import { youtubeEmbed } from "@/lib/minbar/content/media";
 
 /**
- * The top of the homepage — ported from `Minbar/الصفحة الرئيسية.dc.html`:
+ * The top of the homepage  ported from `Minbar/الصفحة الرئيسية.dc.html`:
  * the landing section (with the story strip inside it) and the Qur'anic verse
  * band beneath.
  */
 
 /* ── Verse band ──────────────────────────────────────────────────────────────
- * Al-Isra 1, directly under the landing — the verse the whole site stands on.
+ * Al-Isra 1, directly under the landing  the verse the whole site stands on.
  * The Arabic is shown in every language edition; the translation of the
  * meaning and its edition attribution appear beneath it in non-Arabic
  * sessions. See `lib/minbar/quran.ts` for why.
  *
  * It wraps. The earlier strip was a single non-wrapping line with an ellipsis,
- * which on a phone cut the verse mid-clause — the one text on the page that
+ * which on a phone cut the verse mid-clause  the one text on the page that
  * must never be truncated. */
 export function VerseStrip() {
   const locale = useLocale();
@@ -61,14 +61,14 @@ export function VerseStrip() {
  * The first row of the landing section, data-driven from the CMS
  * (`/api/stories`) and opening into the full-screen viewer the way Instagram
  * does. The hand-written list below is the fallback for when no story is live
- * — it keeps the strip from vanishing on an empty database, and those entries
+ *  it keeps the strip from vanishing on an empty database, and those entries
  * stay plain links.
  *
  * Titles and captions arrive already in this locale, and every CTA arrives
  * already resolved to an href for it; the strip only renders. A story's ring
  * is gold until it has been opened once, tracked per browser.
  *
- * It used to be its own white band above the hero, centred, with 84px rings —
+ * It used to be its own white band above the hero, centred, with 84px rings 
  * a third of a screen before the headline. It is now the top row of the hero
  * itself: start-aligned, 62px rings, sharing the hero's ground, with a
  * hairline under it. */
@@ -203,7 +203,7 @@ export function StoriesRail() {
  * the link to the reports they come from.
  *
  * The intro film is a different recording per language edition, so the play
- * action resolves the id from the locale rather than subtitling one cut — and
+ * action resolves the id from the locale rather than subtitling one cut  and
  * the poster is the film's own frame at 0:03, captured per edition and served
  * from public/minbar/assets/hero/, rather than YouTube's auto-thumbnail or an
  * unrelated photograph. A poster that IS the film is the honest preview.
@@ -215,14 +215,14 @@ export function StoriesRail() {
  * motion is a single fade-up per column and respects reduced-motion. */
 
 /**
- * The headline with one word set apart — Al-Quds, in whichever language —
+ * The headline with one word set apart  Al-Quds, in whichever language 
  * by a hand-drawn gold stroke beneath it that draws itself in on load.
  *
  * The word is `homepage.heroTitleAccent`, a separate key per locale, because
  * the title is a sentence and where the city's name falls in it differs from
  * language to language. The stroke sits under exactly that substring and the
  * substring is kept on one line, so a wrap never cuts the stroke in half. If a
- * locale's accent is not found in its title the title renders plain — a
+ * locale's accent is not found in its title the title renders plain  a
  * mismatch must never make the headline disappear.
  */
 function AccentedTitle({ text, accent }: { text: string; accent: string }) {
@@ -274,7 +274,7 @@ export function Hero({ onPlayIntro }: { onPlayIntro: (embed: string) => void }) 
 
   return (
     <section id="hero" className="mia-hero">
-      {/* Background layers — all non-interactive, all beneath the content. */}
+      {/* Background layers  all non-interactive, all beneath the content. */}
       <div aria-hidden="true" className="mia-hero-glow" />
       <div aria-hidden="true" data-aqsa-pattern="" className="mia-hero-pattern" />
       {/* eslint-disable-next-line @next/next/no-img-element -- decorative asset in /public */}
@@ -290,7 +290,7 @@ export function Hero({ onPlayIntro }: { onPlayIntro: (embed: string) => void }) 
             {/* The title is the H1 on its own; the supporting line is a
                 separate element, not part of the heading. Inside one H1 the
                 two read as a single run of text to crawlers and screen
-                readers — "…المرابطينحول المسجد…" (`DEPLOYED_VS_DESIGN_AUDIT.md`
+                readers  "…المرابطينحول المسجد…" (`DEPLOYED_VS_DESIGN_AUDIT.md`
                 § P2.2). The classes are unchanged, so the layout is. */}
             <h1 className="mia-hero-h1">
               <span className="mia-hero-title">
@@ -369,7 +369,7 @@ export function Hero({ onPlayIntro }: { onPlayIntro: (embed: string) => void }) 
   );
 }
 
-/** "Continue" arrow — mirrors with reading direction. */
+/** "Continue" arrow  mirrors with reading direction. */
 export function ArrowGlyph({ size = 13 }: { size?: number }) {
   return (
     <svg

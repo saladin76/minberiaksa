@@ -10,14 +10,14 @@ import ReceiptSheet from "@/components/minbar/certificates/ReceiptSheet";
 import ScaledSheet from "@/components/minbar/certificates/ScaledSheet";
 
 /**
- * The download surface of the success page — `نجاح التبرع.dc.html`
+ * The download surface of the success page  `نجاح التبرع.dc.html`
  * (`#succ-downloads` and the three preview panels).
  *
  * Receipt and thank-you certificate are always offered; a waqf certificate
  * button appears once per waqf line the order held, each with its own number
  * and its own panel. Every preview is the live sheet component scaled down,
  * never an image, and every download is the server's PDF of the persisted
- * record — the placeholders in the handoff (`receiptHref`, `certificateHref`,
+ * record  the placeholders in the handoff (`receiptHref`, `certificateHref`,
  * `waqfCertHref`) are the real endpoints here.
  *
  * The donor may correct the name on the thank-you certificate and on each
@@ -95,7 +95,7 @@ export default function DocumentsPanel({
   donationId: string;
   /** The guest's `?t=`; every document link carries it. Null for a signed-in owner. */
   accessToken: string | null;
-  /** From checkout — pre-fills the certificate name. */
+  /** From checkout  pre-fills the certificate name. */
   donorName: string;
   /** The share button, rendered in the same row. */
   extraButtons?: ReactNode;
@@ -248,7 +248,7 @@ export default function DocumentsPanel({
               </a>
             ) : (
               <p style={{ margin: 0, textAlign: "center", fontSize: 13.5, color: "var(--muted)" }}>
-                {t("issuing")} — {tCert("certNoLabel")}
+                {t("issuing")}  {tCert("certNoLabel")}
               </p>
             )}
           </div>

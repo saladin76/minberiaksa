@@ -13,8 +13,8 @@ export const dynamic = "force-dynamic";
 /**
  * HTTP surface for CommunicationCampaign.
  *
- * The service layer under `lib/communication/` was complete — CRUD, status machine, recipient
- * planning, send executor — but had no routes and no UI, so none of it was reachable. These routes
+ * The service layer under `lib/communication/` was complete  CRUD, status machine, recipient
+ * planning, send executor  but had no routes and no UI, so none of it was reachable. These routes
  * are a thin shell over it and deliberately add no logic of their own: the status machine in
  * `campaign-service` stays the single authority on what transition is legal.
  */

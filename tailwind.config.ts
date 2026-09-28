@@ -11,8 +11,8 @@ import plugin from "tailwindcss/plugin";
  * read as one flat wash.
  *
  * Each accent class therefore resolves through a CSS variable. `:root` carries the Minbar
- * ramps, so every page keeps them by default; `.dash-vivid` — set by the dashboard shell
- * only — swaps in Tailwind's stock ramps. Opacity modifiers (`bg-blue-500/40`) keep working
+ * ramps, so every page keeps them by default; `.dash-vivid`  set by the dashboard shell
+ * only  swaps in Tailwind's stock ramps. Opacity modifiers (`bg-blue-500/40`) keep working
  * through `<alpha-value>`. Neutrals and `brand` are not part of this: they stay Minbar
  * everywhere, which is what keeps the dashboard recognisably on-brand.
  */
@@ -110,7 +110,7 @@ export default {
   		 *
   		 * `font-arabic` sits on `<body>` in `app/layout.tsx`, so it is the default
   		 * for the dashboard and the auth pages. It pointed at `--font-arabic`
-  		 * (Tajawal), which is the legacy face — Minbar's Arabic stack is Cairo, with
+  		 * (Tajawal), which is the legacy face  Minbar's Arabic stack is Cairo, with
   		 * Tajawal kept only as a fallback. The public site is unaffected either way:
   		 * `.mia-scope` sets `font-family` on itself.
   		 */
@@ -127,7 +127,7 @@ export default {
 			 *   Ivory #FFFDF8 · Sand #F7F2EA · Muted #52616B
 			 *
 			 * Why the palette moves rather than the pages: the dashboard is ~190 files
-			 * of Tailwind utilities — `text-slate-500` alone appears 416 times — while
+			 * of Tailwind utilities  `text-slate-500` alone appears 416 times  while
 			 * the public Minbar pages use inline styles under `.mia-scope` and not one
 			 * Tailwind colour utility. Retuning the ramps therefore restyles the whole
 			 * dashboard and cannot reach the public site. The same reasoning is already
@@ -152,7 +152,7 @@ export default {
 			ice: '#DDE4E8',
 			// Brand palette. Previously the brand blue was pasted as a raw `#025EB8` literal
 			// in ~750 places across ~170 dashboard files, so a palette change meant editing
-			// every one of them. The scale keys are unchanged — only the colours move, from
+			// every one of them. The scale keys are unchanged  only the colours move, from
 			// the old blue onto Minbar navy, so every existing `bg-brand-600` follows.
 			brand: {
 				DEFAULT: '#1F3F4F',
@@ -169,7 +169,7 @@ export default {
 				900: '#10212B',
 				950: '#0A161D',
 			},
-			// Deliberately NOT named `accent` — that key is already the shadcn neutral-gray
+			// Deliberately NOT named `accent`  that key is already the shadcn neutral-gray
 			// token used by every `hover:bg-accent` ghost button. Overloading it would
 			// turn every ghost hover gold.
 			'brand-orange': {
@@ -202,7 +202,7 @@ export default {
 				return { slate: neutral, gray: neutral, zinc: neutral, neutral, stone: neutral };
 			})(),
 
-			// Chromatic ramps resolve through CSS variables — Minbar by default, Tailwind's
+			// Chromatic ramps resolve through CSS variables  Minbar by default, Tailwind's
 			// stock ramps under `.dash-vivid`. See the note above `accentColors`.
 			...accentColors,
 

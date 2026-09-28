@@ -104,13 +104,13 @@ export function looksLikeMoneyText(value: unknown): boolean {
   if (!raw) return false;
   if (HAS_CURRENCY.test(raw)) return parseAmount(raw) !== null;
   const body = raw.replace(/[()\-+]/g, "").trim();
-  // "1.234,56" / "1,234.56" / "1234,56" / "1234.56" — a separator with 1–2
+  // "1.234,56" / "1,234.56" / "1234,56" / "1234.56"  a separator with 1–2
   // trailing digits, or explicit thousands grouping.
   return /^\d{1,3}(?:[.,]\d{3})+(?:[.,]\d{1,2})?$/.test(body) || /^\d+[.,]\d{1,2}$/.test(body);
 }
 
 /**
- * Reference numbers, account numbers, IBANs and card fragments — the values a
+ * Reference numbers, account numbers, IBANs and card fragments  the values a
  * naive "first number in the row" scan used to pick up as the donation amount.
  */
 export function looksLikeIdentifier(value: unknown): boolean {

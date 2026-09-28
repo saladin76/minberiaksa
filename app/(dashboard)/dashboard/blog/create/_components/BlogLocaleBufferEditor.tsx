@@ -86,7 +86,7 @@ export default function BlogLocaleBufferEditor({ locale }: { locale: BufferedLoc
     <div className="space-y-6" dir={meta.dir}>
       <Card>
         <CardHeader dir={meta.dir}>
-          <CardTitle>Translation — {meta.name}</CardTitle>
+          <CardTitle>Translation  {meta.name}</CardTitle>
           <CardDescription>
             This {meta.name} version will be saved together with the Arabic post when you click <strong>Save</strong> in the Arabic tab.
           </CardDescription>

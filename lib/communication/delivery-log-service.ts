@@ -10,11 +10,11 @@ import {
 } from "./communication-runtime-types";
 
 /**
- * DeliveryLogService — the new archive layer for the Communication Center.
+ * DeliveryLogService  the new archive layer for the Communication Center.
  *
  * Every outgoing message (manual, trigger, campaign, test, reactivation, system) gets a
  * CommunicationDelivery record created at render time, BEFORE any provider call. The record
- * is then advanced as the real provider responds. This package does not call any provider —
+ * is then advanced as the real provider responds. This package does not call any provider 
  * it only provides the safe create/update/query foundation.
  *
  * Hard rule: a delivery may only enter a provider-success status (SENT / DELIVERED / …) when
@@ -40,7 +40,7 @@ export type CreateDeliveryInput = {
   renderedBody?: string | null;
   variables?: Record<string, unknown> | null;
   createdBy?: string | null;
-  /** Initial status — defaults to RENDERED. Provider-success statuses are rejected here. */
+  /** Initial status  defaults to RENDERED. Provider-success statuses are rejected here. */
   status?: DeliveryStatusId;
 };
 
@@ -129,7 +129,7 @@ export type DeliveryStatusPatch = {
   errorMessage?: string | null;
   /**
    * Set true only when the provider accepted the send but returns no external message id
-   * (e.g. SendGrid). The delivery may then advance to SENT with a null providerMessageId — this
+   * (e.g. SendGrid). The delivery may then advance to SENT with a null providerMessageId  this
    * still reflects a real acceptance, never a fake success.
    */
   internalAccepted?: boolean;
@@ -137,7 +137,7 @@ export type DeliveryStatusPatch = {
 
 /**
  * Advance a delivery's status after a provider response. Provider-success statuses require either a
- * real `providerMessageId` or an explicit `internalAccepted` flag — otherwise the update is rejected
+ * real `providerMessageId` or an explicit `internalAccepted` flag  otherwise the update is rejected
  * (never fake SENT). Timestamps are set from the status.
  */
 export async function markDeliveryStatus(

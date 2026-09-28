@@ -30,7 +30,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 /**
- * The blog — ported from `Minbar/المدونة.dc.html`, reading the real `Post` CMS
+ * The blog  ported from `Minbar/المدونة.dc.html`, reading the real `Post` CMS
  * rather than the handoff's static `blog-articles-data.js`.
  *
  * The first page and the category chips are rendered on the server so the grid

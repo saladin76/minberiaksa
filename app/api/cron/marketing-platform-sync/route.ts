@@ -20,7 +20,7 @@ function rangeForLastDays(days: number) {
 }
 
 export async function GET(request: NextRequest) {
-  // Fails CLOSED — see lib/communication/cron-auth.ts. The previous form ran unauthenticated
+  // Fails CLOSED  see lib/communication/cron-auth.ts. The previous form ran unauthenticated
   // whenever CRON_SECRET was unset.
   if (!isCronAuthorizationValid(request.headers.get("authorization"))) {
     return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });

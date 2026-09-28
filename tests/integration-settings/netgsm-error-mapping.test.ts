@@ -10,7 +10,7 @@ import { mapNetgsmCode, readNetgsmCode, scrubNetgsm, NETGSM_REASONS } from "../.
  *             "description":"Check the usercode-password information and API access permission"}
  *
  * The adapter used to look only at `res.ok`, so that arrived on the delivery row as
- * NETGSM_REQUEST_FAILED — indistinguishable from a timeout, and pointing at the wrong cause.
+ * NETGSM_REQUEST_FAILED  indistinguishable from a timeout, and pointing at the wrong cause.
  */
 
 test("a rejected send is read from the body, not just the HTTP status", () => {

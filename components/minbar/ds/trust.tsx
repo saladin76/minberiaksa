@@ -7,7 +7,7 @@ import type { CSSProperties, ReactNode } from "react";
 
 /* ── StatMetric ──────────────────────────────────────────────────────────────
  * A single big impact stat. Large figure (deep / red / gold), small caption
- * below. Shows a clear placeholder when data is unconfirmed — the brand never
+ * below. Shows a clear placeholder when data is unconfirmed  the brand never
  * invents impact numbers, so `unverifiedLabel` renders `common.toBeVerified`. */
 export interface StatMetricProps {
   value?: ReactNode;
@@ -41,7 +41,7 @@ export function StatMetric({
 
 /* ── TrustList ───────────────────────────────────────────────────────────────
  * Proof-path list. Each row carries the brand's gold inline-start rule on a
- * sand background — used for "every intention has its own proof path", trust
+ * sand background  used for "every intention has its own proof path", trust
  * points and update timelines. */
 export interface TrustListProps {
   eyebrow?: ReactNode;

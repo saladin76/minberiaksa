@@ -111,7 +111,7 @@ function BankCard({ bank, t }: { bank: Bank; t: ReturnType<typeof useTranslation
         </div>
       </div>
 
-      {/* Swift — mobile only */}
+      {/* Swift  mobile only */}
       <div className="sm:hidden flex items-center justify-between px-6 py-3 bg-gray-50 border-b border-gray-100">
         <div>
           <p className="text-[10px] uppercase tracking-widest text-gray-400 font-semibold">Swift / BIC</p>

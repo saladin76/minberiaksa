@@ -58,7 +58,7 @@ type PreviewRow = {
   qualityNotes?: string[];
 };
 
-/** Mirrors APPLY_FIELDS on the API — anything outside this list is display-only.
+/** Mirrors APPLY_FIELDS on the API  anything outside this list is display-only.
  *  The article body (`content`) is rich text and can only be shown flattened
  *  here, so it stays read-only rather than being saved back as plain text. */
 const EDITABLE_FIELDS: Record<RowType, readonly string[]> = {
@@ -160,7 +160,7 @@ export function ContentLocalizationPreviewDialog({
         limit: 8,
       });
       adoptRows(response.data?.rows || []);
-      toast.success("تم تجهيز الاقتراحات — راجعها ثم اضغط حفظ");
+      toast.success("تم تجهيز الاقتراحات  راجعها ثم اضغط حفظ");
     } catch (error) {
       toast.error(errorMessage(error, "تعذر توليد المعاينة"));
     } finally {

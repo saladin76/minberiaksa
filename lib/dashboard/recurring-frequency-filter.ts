@@ -14,7 +14,7 @@ import {
  * was ever billed then). A plain `{ frequency: "MONTHLY" }` would silently drop
  * them. So MONTHLY is expressed as "not DAILY and not FRIDAY", which an absent
  * field satisfies, and the lookups below only ever read `frequency` on rows
- * that are known to carry DAILY or FRIDAY — never on a row that might lack it.
+ * that are known to carry DAILY or FRIDAY  never on a row that might lack it.
  */
 
 export type FrequencyFilter = RecurringFrequency | null;
@@ -47,7 +47,7 @@ export function donationFrequencyWhere(frequency: FrequencyFilter): Prisma.Donat
 /**
  * Cadence of each given plan. Only DAILY/FRIDAY rows are fetched (by an
  * equality match, so `frequency` is always present on what is read); every
- * other id — monthly or legacy — resolves to MONTHLY.
+ * other id  monthly or legacy  resolves to MONTHLY.
  */
 export async function loadSubscriptionFrequencies(
   prisma: PrismaClient,

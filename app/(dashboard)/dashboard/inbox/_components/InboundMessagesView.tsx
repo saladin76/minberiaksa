@@ -52,7 +52,7 @@ const STATUS_TABS: { value: StatusFilter; label: string; countKey: keyof InboxCo
   { value: "replied", label: INBOX_STATUS_LABELS.replied, countKey: "replied" },
 ];
 
-/** Compact select — the six filters previously used a 7-column grid that collapsed to one on phones. */
+/** Compact select  the six filters previously used a 7-column grid that collapsed to one on phones. */
 function FilterSelect({
   value,
   onValueChange,
@@ -165,7 +165,7 @@ export function InboundMessagesView() {
    * itself, the tab counts, and the sidebar badge.
    *
    * The row is *not* removed when it stops matching the active tab. Making a message vanish the
-   * instant you open it — which is what "غير مقروءة" plus auto-mark-read would do — loses your
+   * instant you open it  which is what "غير مقروءة" plus auto-mark-read would do  loses your
    * place and hides the message you were about to answer. It keeps its slot, wearing its new
    * status, until the next fetch.
    */
@@ -200,7 +200,7 @@ export function InboundMessagesView() {
     [messages],
   );
 
-  /** Opening a message is what marks it seen — no separate "mark as read" gesture to remember. */
+  /** Opening a message is what marks it seen  no separate "mark as read" gesture to remember. */
   const openMessage = React.useCallback(
     (m: InboundMessage) => {
       setSelectedId(m.id);
@@ -339,7 +339,7 @@ export function InboundMessagesView() {
           label="الترتيب"
           className="sm:basis-[13rem]"
         >
-          {/* Default. Unanswered first, longest-waiting at the top — the order you would work
+          {/* Default. Unanswered first, longest-waiting at the top  the order you would work
               the inbox in, rather than the order it happened to arrive in. */}
           <SelectItem value="priority" className="text-xs">الأولوية: الأطول انتظارًا</SelectItem>
           <SelectItem value="createdAt:desc" className="text-xs">الأحدث أولًا</SelectItem>
@@ -398,7 +398,7 @@ export function InboundMessagesView() {
             statusFilter === "replied"
               ? "لم يتم الرد على أي رسالة بعد"
               : statusFilter !== "all"
-                ? "لا شيء هنا — كل الرسائل تمت معالجتها"
+                ? "لا شيء هنا  كل الرسائل تمت معالجتها"
                 : activeFilters.length > 0
                   ? "لا توجد رسائل مطابقة"
                   : "لا توجد رسائل واردة بعد"

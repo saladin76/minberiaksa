@@ -1,7 +1,7 @@
 import type { CSSProperties } from "react";
 
 /**
- * The look of the quick-donation panel — `Minbar/التبرع السريع.dc.html`.
+ * The look of the quick-donation panel  `Minbar/التبرع السريع.dc.html`.
  *
  * Used by the pill every inner page carries (`shell/QuickDonate`). The
  * homepage has its own sticky bar (`home/QuickDonateBar`) and no pill. Here

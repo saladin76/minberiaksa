@@ -3,7 +3,7 @@ import { listProjectsByRegion } from "@/lib/minbar/projects";
 import { isValidLocale, DEFAULT_LOCALE } from "@/lib/locales";
 
 /**
- * Public project list for the Minbar design's client widgets — the quick
+ * Public project list for the Minbar design's client widgets  the quick
  * donation FAB's project picker and the projects page filters.
  *
  * The design's picker groups projects by region, so this returns them grouped

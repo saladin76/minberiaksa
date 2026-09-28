@@ -41,7 +41,7 @@ import {
  * destinations in the select, and the title per language.
  *
  * One document, one Save. The form keeps the config in the shape the API
- * stores, except for two things the admin types as text — the preset lists —
+ * stores, except for two things the admin types as text  the preset lists 
  * which are parsed on save the way the campaign form parses them.
  */
 
@@ -66,7 +66,7 @@ const rowId = () => `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
 type CampaignOption = { id: string; title: string; isActive: boolean };
 
-/** Every campaign, active or not — an admin may pre-list one about to launch. */
+/** Every campaign, active or not  an admin may pre-list one about to launch. */
 function useCampaignOptions() {
   const [options, setOptions] = useState<CampaignOption[]>([]);
   const [loading, setLoading] = useState(true);
@@ -223,7 +223,7 @@ export default function QuickDonationSettingsPage() {
     <div className="max-w-5xl mx-auto space-y-6" dir="rtl">
       <PageHeader
         title="التبرع السريع"
-        description="بطاقة التبرع السريع في الصفحة الرئيسية والشريط الذي يتبعها — المبالغ، التكرار، الوجهات، والعنوان"
+        description="بطاقة التبرع السريع في الصفحة الرئيسية والشريط الذي يتبعها  المبالغ، التكرار، الوجهات، والعنوان"
         icon={HeartHandshake}
         actions={
           <>
@@ -280,7 +280,7 @@ export default function QuickDonationSettingsPage() {
               />
               <p className="text-xs text-muted-foreground mt-1.5">
                 أرقام مفصولة بفاصلة أو مسافة · {amounts.length} من {QUICK_MAX_AMOUNTS}
-                {amounts.length < QUICK_MIN_AMOUNTS ? " — أضف المزيد" : ""}
+                {amounts.length < QUICK_MIN_AMOUNTS ? "  أضف المزيد" : ""}
               </p>
             </div>
             <div>
@@ -331,7 +331,7 @@ export default function QuickDonationSettingsPage() {
                         <SelectContent>
                           {SUPPORTED_CURRENCY_OPTIONS.filter((c) => c.code !== "USD").map((c) => (
                             <SelectItem key={c.code} value={c.code}>
-                              {c.code} — {c.name}
+                              {c.code}  {c.name}
                             </SelectItem>
                           ))}
                         </SelectContent>

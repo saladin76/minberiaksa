@@ -12,7 +12,7 @@ import IbadanBanner from "@/components/minbar/banners/IbadanBanner";
 import { NoResults, ContentError, ContentSkeleton } from "@/components/minbar/states/ContentStates";
 
 /**
- * The blog — ported from `Minbar/المدونة.dc.html`.
+ * The blog  ported from `Minbar/المدونة.dc.html`.
  *
  * A sticky category rail beside a three-up grid of article cards, with
  * incremental paging rather than one page of every article: the handoff's note
@@ -22,7 +22,7 @@ import { NoResults, ContentError, ContentSkeleton } from "@/components/minbar/st
  * CMS instead of its static `blog-articles-data.js`:
  *  - the chips are the categories that actually have published articles, so
  *    adding one in the dashboard adds a filter with no code change;
- *  - filtering compares category **ids**, never displayed names — a name is
+ *  - filtering compares category **ids**, never displayed names  a name is
  *    translated, and comparing names detaches the filter from its own state the
  *    moment the site is read in another language.
  */

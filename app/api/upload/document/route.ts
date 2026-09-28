@@ -20,7 +20,7 @@ import {
  *
  * Separate from `/api/upload` because that route pins Cloudinary to
  * `resource_type: 'image'`, which is wrong for a PDF. Sits behind the dashboard
- * permission rather than merely "signed in" — unlike a campaign photo, these
+ * permission rather than merely "signed in"  unlike a campaign photo, these
  * documents are published as the organisation's own reporting.
  */
 
@@ -66,7 +66,7 @@ export async function POST(request: Request) {
     const buffer = Buffer.from(await file.arrayBuffer());
     if (buffer.byteLength > MAX_DOCUMENT_BYTES) {
       return NextResponse.json(
-        { error: `حجم الملف ${formatBytes(buffer.byteLength)} — الحد الأقصى ${formatBytes(MAX_DOCUMENT_BYTES)}.` },
+        { error: `حجم الملف ${formatBytes(buffer.byteLength)}  الحد الأقصى ${formatBytes(MAX_DOCUMENT_BYTES)}.` },
         { status: 413 }
       );
     }

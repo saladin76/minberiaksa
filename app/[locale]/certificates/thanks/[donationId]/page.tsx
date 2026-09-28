@@ -12,7 +12,7 @@ import DocumentPage from "@/components/minbar/certificates/DocumentPage";
 
 interface Props {
   params: Promise<{ locale: string; donationId: string }>;
-  /** `layout` — the staff-only portrait sheet; `t` — the guest's access token. */
+  /** `layout`  the staff-only portrait sheet; `t`  the guest's access token. */
   searchParams: Promise<{ layout?: string; t?: string }>;
 }
 
@@ -35,12 +35,12 @@ const PORTRAIT_PRINT_CSS = `
 }`;
 
 /**
- * The thank-you certificate as its own page — `شهادة الشكر عرضية.dc.html`:
+ * The thank-you certificate as its own page  `شهادة الشكر عرضية.dc.html`:
  * the sheet, and beneath it the save-as-PDF and print buttons that never
  * print. The certificate renders in the language the donation was made in,
  * whatever the URL's locale, because it is that donor's document.
  *
- * `?layout=portrait` — the alternate tall sheet — is offered to staff only.
+ * `?layout=portrait`  the alternate tall sheet  is offered to staff only.
  */
 export default async function ThanksCertificatePage({ params, searchParams }: Props) {
   const { locale, donationId } = await params;

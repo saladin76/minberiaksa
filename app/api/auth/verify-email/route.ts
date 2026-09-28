@@ -33,7 +33,7 @@ export async function GET(req: NextRequest) {
     return errorRedirect(result.error === "EXPIRED" ? "expired" : "invalid");
   }
 
-  // Mark email as verified — capture id for the event dispatch
+  // Mark email as verified  capture id for the event dispatch
   const verifiedUser = await prisma.user.update({
     where: { email: normalizedEmail },
     data: { emailVerified: new Date() },

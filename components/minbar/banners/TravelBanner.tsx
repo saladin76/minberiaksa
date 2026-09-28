@@ -7,7 +7,7 @@ import { IMG } from "@/lib/minbar/content/media";
 import { useMinbarMoney } from "@/hooks/useMinbarMoney";
 
 /**
- * "Journey to Al-Aqsa" (شدّ الرحال) — coaches carrying worshippers to the
+ * "Journey to Al-Aqsa" (شدّ الرحال)  coaches carrying worshippers to the
  * Blessed Mosque every Friday. Ported from `Minbar/شد الرحال.dc.html`, which the
  * handoff lists as a shared banner imported by several pages.
  *

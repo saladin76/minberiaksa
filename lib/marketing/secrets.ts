@@ -6,12 +6,12 @@
  *     masked preview built by `maskSecret`.
  *   - PATCH/POST handlers must not overwrite a stored secret with an empty
  *     string. Use `applySecretField` to merge incoming values into a Prisma
- *     update payload — empty strings are ignored unless `clear_<field>` is
+ *     update payload  empty strings are ignored unless `clear_<field>` is
  *     true in the incoming body.
- *   - AuditLog entries must never include raw secrets — call
+ *   - AuditLog entries must never include raw secrets  call
  *     `redactSecretsFromMetadata` before passing metadata to `writeAuditLog`.
  *
- * No encryption is applied here — at-rest encryption can be layered later by
+ * No encryption is applied here  at-rest encryption can be layered later by
  * wrapping `applySecretField` / `maskSecret` with the actual crypto without
  * touching callers.
  */
@@ -92,7 +92,7 @@ export function applySecretField(
   if (typeof value !== "string") return;
   const trimmed = value.trim();
   if (trimmed.length === 0) return;
-  // Don't accept the masked preview as a new value — it would silently corrupt
+  // Don't accept the masked preview as a new value  it would silently corrupt
   // the stored secret. `•••` / `xxxx…yyyy` are sentinels we recognize here.
   if (/^•+$/.test(trimmed) || /^[A-Za-z0-9_-]{4}…[A-Za-z0-9_-]{4}$/.test(trimmed)) {
     return;
@@ -102,7 +102,7 @@ export function applySecretField(
 
 /**
  * Strip secret-looking keys from a metadata object before passing it to
- * AuditLog. Defensive — even though we never intentionally include secrets,
+ * AuditLog. Defensive  even though we never intentionally include secrets,
  * a single bug shouldn't leak credentials into the activity log.
  */
 export function redactSecretsFromMetadata(

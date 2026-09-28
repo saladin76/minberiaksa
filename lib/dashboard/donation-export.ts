@@ -6,7 +6,7 @@
  * summary block at the end.
  *
  * Financial separation:
- *   - "amount" column is the base donation only — what the donor pledged to
+ *   - "amount" column is the base donation only  what the donor pledged to
  *     the cause. Team support and processing fees are intentionally NOT folded
  *     in so the finance team can split operating costs from cause funds.
  *   - "teamSupport" is the donor's extra contribution to running the platform.
@@ -97,7 +97,7 @@ export interface SubscriptionExportRow {
 }
 
 export interface ExportFilterDescriptor {
-  /** Human label, Arabic — appears on the "Filters Applied" section in the workbook. */
+  /** Human label, Arabic  appears on the "Filters Applied" section in the workbook. */
   label: string;
   value: string;
 }
@@ -119,9 +119,9 @@ export interface ExportResult {
   /** Raw bytes (XLSX) or UTF-8 string-as-bytes (CSV) with BOM. */
   body: Buffer;
   contentType: string;
-  /** ASCII-only filename — safe for the legacy `filename=` part of Content-Disposition. */
+  /** ASCII-only filename  safe for the legacy `filename=` part of Content-Disposition. */
   filename: string;
-  /** Human-friendly title (may contain Arabic) — emit as RFC 5987 `filename*=UTF-8''…`. */
+  /** Human-friendly title (may contain Arabic)  emit as RFC 5987 `filename*=UTF-8''…`. */
   filenameUtf8: string;
 }
 
@@ -134,7 +134,7 @@ interface ColSpec<T> {
   width: number;
   align?: Aligned;
   /** Excel number format. Currency columns use `0.00` (so the currency symbol
-   *  lives in a sibling column — Excel can't natively format mixed currencies
+   *  lives in a sibling column  Excel can't natively format mixed currencies
    *  in one column, and we need the raw number for downstream pivots). */
   numFmt?: string;
   /** Optional cell formatter returning the value placed in the cell. */
@@ -148,7 +148,7 @@ const DONATION_COLUMNS: ColSpec<DonationExportRow>[] = [
     r.type !== "MONTHLY"
       ? "لمرة واحدة"
       : r.frequency
-        ? `متكرر — ${FREQUENCY_LABEL_AR[r.frequency]}`
+        ? `متكرر  ${FREQUENCY_LABEL_AR[r.frequency]}`
         : "متكرر" },
   { key: "createdAt", header: "تاريخ الإنشاء", width: 19, numFmt: "yyyy-mm-dd hh:mm", value: (r) => r.createdAt },
   { key: "paidAt", header: "تاريخ الدفع", width: 19, numFmt: "yyyy-mm-dd hh:mm", value: (r) => r.paidAt },
@@ -255,7 +255,7 @@ function aggregate(rows: DonationExportRow[]): Aggregates {
   // Must match PAID_DONATION_FILTER (lib/dashboard/donation-usd-revenue.ts), which the
   // on-screen cards use: settled donations only, one-time and subscription alike. Bare
   // `status === "PAID"` also counted abandoned checkouts that never settled, so the exported
-  // workbook reported more successful donations — and more money — than the dashboard it was
+  // workbook reported more successful donations  and more money  than the dashboard it was
   // exported from. Mirrors PAID_DONATION_FILTER; keep the two in step.
   const paid = rows.filter((r) => r.status === "PAID" && r.paidAt != null);
 
@@ -278,7 +278,7 @@ function aggregate(rows: DonationExportRow[]): Aggregates {
   let oneTimeCount = 0;
   let monthlyCount = 0;
 
-  // Status bucket (all rows, not just paid — admin still wants visibility on failed/etc.)
+  // Status bucket (all rows, not just paid  admin still wants visibility on failed/etc.)
   for (const r of rows) {
     const sKey = r.status || "UNKNOWN";
     const sBucket = perStatusMap.get(sKey) ?? {
@@ -337,7 +337,7 @@ function aggregate(rows: DonationExportRow[]): Aggregates {
       ...r.categories.map((c) => ({ kind: "category" as const, id: c.id, label: c.name })),
     ];
     if (allTargets.length === 0) {
-      // unattributed — bucket under "غير محدد"
+      // unattributed  bucket under "غير محدد"
       allTargets.push({ kind: "campaign", id: "_unassigned", label: "غير محدد" });
     }
     const portion = 1 / allTargets.length;
@@ -1106,7 +1106,7 @@ export async function buildDonationExport(input: DonationExportInput): Promise<E
 
 /** Build a Content-Disposition header value that is safe for HTTP transport
  *  (ASCII filename) but also surfaces the original Arabic name in browsers
- *  that follow RFC 5987 — Chrome, Firefox, Safari all do. */
+ *  that follow RFC 5987  Chrome, Firefox, Safari all do. */
 export function buildContentDisposition(result: ExportResult): string {
   const safe = result.filename.replace(/[^\w.\-]/g, "_");
   // RFC 5987: encode any character that isn't an attr-char. encodeURIComponent

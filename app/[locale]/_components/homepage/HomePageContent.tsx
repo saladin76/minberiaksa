@@ -13,7 +13,7 @@ import { useTranslations, useLocale } from "next-intl";
 import { Link } from "@/i18n/routing";
 import type { CampaignCardData } from "../CampaignCard";
 
-// LiveDonationsTicker is a non-critical floating widget — keep it client-only
+// LiveDonationsTicker is a non-critical floating widget  keep it client-only
 // and below-the-fold so it doesn't pull its chunk into the LCP critical path.
 const LiveDonationsTicker = dynamic(() => import("@/components/LiveDonationsTicker"), {
   loading: () => null,
@@ -137,7 +137,7 @@ const HomePage: React.FC<HomePageContentProps> = ({
         initialCategories={categories}
       />
 
-      {/* ── Featured Campaigns Slider — fully SSR'd from server-fetched data, so the
+      {/* ── Featured Campaigns Slider  fully SSR'd from server-fetched data, so the
               cards render in the initial HTML and there's nothing to shift in. */}
       <section className="bg-offwhite pt-14 sm:pt-20 pb-6 sm:pb-8">
         <div className="max-w-7xl mx-auto px-4">
@@ -162,7 +162,7 @@ const HomePage: React.FC<HomePageContentProps> = ({
         </div>
       </section>
 
-      {/* ── Quick Donate — also SSR'd with the categories the server already fetched. */}
+      {/* ── Quick Donate  also SSR'd with the categories the server already fetched. */}
       <section
         className="relative lg:py-10 sm:py-14 overflow-hidden bg-gray-50"
         style={{
@@ -211,11 +211,11 @@ const HomePage: React.FC<HomePageContentProps> = ({
         </div>
       </section>
 
-      {/* ── Donation Categories — full-bleed image mosaic ── */}
+      {/* ── Donation Categories  full-bleed image mosaic ── */}
       {categories.length > 0 && (() => {
         const shown = categories.slice(0, 6);
         // The lg mosaic is a 3×3 grid where the first tile takes a 2×2 block and the
-        // other five fill the remaining cells exactly — so it only tiles cleanly with a
+        // other five fill the remaining cells exactly  so it only tiles cleanly with a
         // full set of six. It also needs a picture worth blowing up: categories without
         // an image fall back to a pattern, which shouldn't be the biggest thing on the
         // section. Either condition failing drops back to an even grid.
@@ -250,7 +250,7 @@ const HomePage: React.FC<HomePageContentProps> = ({
                   const featured = isMosaic && i === 0;
                   // A flag is a filled rectangle, so blown up as a faint watermark it
                   // reads as a stray colour block rather than as decoration. Stroke
-                  // glyphs — Lucide's and our own — are fine.
+                  // glyphs  Lucide's and our own  are fine.
                   const watermark =
                     !cat.image && parseCategoryIcon(cat.icon).kind !== "flag";
                   return (
@@ -282,7 +282,7 @@ const HomePage: React.FC<HomePageContentProps> = ({
                         />
                       )}
 
-                      {/* Legibility wash — photos vary wildly in exposure, so the name sits
+                      {/* Legibility wash  photos vary wildly in exposure, so the name sits
                           on a guaranteed dark base rather than on the image itself. */}
                       <div className="absolute inset-0" style={{ backgroundImage: CATEGORY_TILE_WASH }} />
 
@@ -300,7 +300,7 @@ const HomePage: React.FC<HomePageContentProps> = ({
                       <div className="pointer-events-none absolute inset-0 shape-card ring-1 ring-inset ring-white/10 transition-colors duration-300 group-hover:ring-gold/50" />
 
                       {/* Badge only for a category that actually chose an icon. Most have
-                          none, and CategoryIcon falls back to a heart — six identical
+                          none, and CategoryIcon falls back to a heart  six identical
                           hearts across the grid is noise, not identity. */}
                       {cat.icon?.trim() && (
                         <div
@@ -350,7 +350,7 @@ const HomePage: React.FC<HomePageContentProps> = ({
         );
       })()}
 
-      {/* ── News / Blog — editorial featured + list ── */}
+      {/* ── News / Blog  editorial featured + list ── */}
       {posts.length > 0 && (() => {
         const featured = posts[0];
         const rest = posts.slice(1);
@@ -444,7 +444,7 @@ const HomePage: React.FC<HomePageContentProps> = ({
         );
       })()}
 
-      {/* ── Trust strip — reassurance cards ── */}
+      {/* ── Trust strip  reassurance cards ── */}
       <section className="bg-white pb-16 pt-6 sm:pb-24 sm:pt-10">
         <div className="max-w-7xl mx-auto px-4">
           <div className="grid gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-4">

@@ -35,7 +35,7 @@ import "react-international-phone/style.css";
 import { useIpCountry } from "@/hooks/useIpCountry";
 import { track } from "@vercel/analytics";
 
-// ── Module-level component — stable identity, no focus-loss on re-render ────
+// ── Module-level component  stable identity, no focus-loss on re-render ────
 interface AuthFieldProps {
   icon: React.ElementType;
   type?: string;
@@ -369,7 +369,7 @@ export function SignInPanel({
           {/* ── OPTIONS screen ─────────────────────────────────────────── */}
           {screen === "options" && (
             <>
-              {/* Google — same footprint as email + gradient frame */}
+              {/* Google  same footprint as email + gradient frame */}
               <div className="relative pt-2">
                 <div
                   className={`pointer-events-none absolute -top-1 z-10 flex max-w-[calc(100%-2rem)] items-center gap-1 rounded-full bg-gradient-to-r from-amber-400 via-orange-500 to-rose-500 px-2 py-1 text-[10px] font-bold leading-none text-white shadow-md ring-2 ring-white sm:text-[11px] ${
@@ -416,7 +416,7 @@ export function SignInPanel({
                 {t("signInWithEmail")}
               </button> */}
 
-              {/* Donate-as-guest — same gradient-border treatment as Google,
+              {/* Donate-as-guest  same gradient-border treatment as Google,
                   but blue-only to differentiate from the multi-color CTA */}
               {onSkip && (
                 <div className="relative pt-2">

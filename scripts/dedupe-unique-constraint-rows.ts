@@ -5,13 +5,13 @@
  * `@unique` is only enforced once the index exists on the database. Where it was
  * never created, `upsert`/`create` guarded by that field kept inserting.
  *
- *   CommunicationProviderEvent.idempotencyKey — the 15-minute event-sync cron
+ *   CommunicationProviderEvent.idempotencyKey  the 15-minute event-sync cron
  *     re-inserted every provider event it saw on every run. This is the exact
  *     failure described in `lib/communication/email-webhook-service.ts`, which
  *     added a `findFirst` pre-check as a workaround; the index makes that
  *     workaround belt-and-braces instead of load-bearing.
  *
- *   DonorCommunicationProfile.userId — two profiles for one donor.
+ *   DonorCommunicationProfile.userId  two profiles for one donor.
  *
  * Keep rules are conservative:
  *   - Provider events: keep the EARLIEST row (the original observation). All
@@ -71,7 +71,7 @@ async function dedupeDonorProfiles(): Promise<number> {
       return b.createdAt.getTime() - a.createdAt.getTime();
     });
     const [keep, ...rest] = ranked;
-    console.log(`[DonorCommunicationProfile] user ${userId}: ${group.length} rows — keeping ${keep.id}`);
+    console.log(`[DonorCommunicationProfile] user ${userId}: ${group.length} rows  keeping ${keep.id}`);
     doomed.push(...rest.map((r) => r.id));
   }
   console.log(`[DonorCommunicationProfile] ${APPLY ? "deleting" : "would delete"} ${doomed.length}`);

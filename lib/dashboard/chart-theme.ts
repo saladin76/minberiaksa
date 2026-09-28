@@ -2,7 +2,7 @@
  * Single source of truth for dashboard chart colours.
  *
  * `/dashboard` and `/monthly` each declared their own identical `CHART_COLORS` block built
- * on `#2563eb` — a generic Tailwind blue that is not the brand colour — while individual
+ * on `#2563eb`  a generic Tailwind blue that is not the brand colour  while individual
  * series inside the same files used yet more raw literals (`#22c55e`, `#eab308`, `#64748b`).
  * The result was that no two charts agreed, and none matched the brand.
  *

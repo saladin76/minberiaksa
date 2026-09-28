@@ -31,7 +31,7 @@ import SignInDialog from "@/components/SignInDialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import dynamic from "next/dynamic";
 const CartPaymentDialog = dynamic(() => import("./CartPaymentDialog"), { ssr: false });
-// framer-motion removed — replaced with CSS-only fade animations to keep ~70 KiB
+// framer-motion removed  replaced with CSS-only fade animations to keep ~70 KiB
 // of motion JS off the homepage critical path.
 import { appendCurrencyQuery, getCurrencyCodeForLinks } from "@/lib/currency-link";
 import { CURRENCY_COOKIE_UPDATED_EVENT } from "@/components/CurrencyFromUrlSync";
@@ -207,7 +207,7 @@ const Navbar = () => {
   return (
     <>
       <header className="fixed top-0 left-0 right-0 z-50">
-        {/* ── Top Utility Bar (desktop only) — slim ── */}
+        {/* ── Top Utility Bar (desktop only)  slim ── */}
         <div className="bg-deep text-offwhite text-xs hidden lg:block border-b border-gray-100">
           <div className="max-w-7xl mx-auto px-4 flex items-center justify-between h-8">
             {/* Left: social icons + phone */}
@@ -246,7 +246,7 @@ const Navbar = () => {
           </div>
         </div>
 
-        {/* ── Main Navbar — compact light ── */}
+        {/* ── Main Navbar  compact light ── */}
         <nav
           className={`bg-white/90 backdrop-blur-md border-b transition-shadow duration-300 ${
             isScrolled ? "border-gray-200 shadow-sm" : "border-gray-200"
@@ -254,11 +254,11 @@ const Navbar = () => {
         >
           <div className="max-w-7xl mx-auto px-4 flex items-center h-12 lg:h-14 gap-2">
 
-            {/* Logo — always visible */}
+            {/* Logo  always visible */}
             <Link href="/" className="flex-shrink-0 flex items-center gap-2">
               {/* Mobile: narrow square logo */}
               <Image src={LOGO_MOBILE_URL} alt="Logo" width={48} height={48} className="lg:hidden h-7 w-auto object-contain" />
-              {/* Desktop: wide logo — width must match aspect ratio to prevent blur */}
+              {/* Desktop: wide logo  width must match aspect ratio to prevent blur */}
               <Image src={LOGO_URL} alt="Logo" width={240} height={48} className="hidden lg:block h-8 w-auto object-contain" />
             </Link>
 
@@ -297,7 +297,7 @@ const Navbar = () => {
               {t("donate") || "BAĞIŞ YAP"}
             </Link>
 
-            {/* Spacer — pushes right-side items to the edge on mobile */}
+            {/* Spacer  pushes right-side items to the edge on mobile */}
             <div className="flex-1 lg:hidden" />
 
             {/* Mobile: Language + Currency */}
@@ -306,7 +306,7 @@ const Navbar = () => {
               <CurrencySelector onDark={false} />
             </div>
 
-            {/* Cart button — always visible */}
+            {/* Cart button  always visible */}
             <button
               type="button"
               onClick={openCart}

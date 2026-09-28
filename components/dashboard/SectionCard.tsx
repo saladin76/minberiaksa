@@ -8,7 +8,7 @@ type Props = {
   icon?: LucideIcon;
   actions?: ReactNode;
   children: ReactNode;
-  /** Removes the body padding — for tables that should sit flush against the card edge. */
+  /** Removes the body padding  for tables that should sit flush against the card edge. */
   flush?: boolean;
   className?: string;
   bodyClassName?: string;

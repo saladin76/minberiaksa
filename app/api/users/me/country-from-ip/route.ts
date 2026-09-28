@@ -56,7 +56,7 @@ function mergeGeo(
 
 /**
  * Fills `countryCode`, `countryName`, `region`, `city` (+ legacy `country` = countryName)
- * from the best available signal — phone-derived country first, then edge
+ * from the best available signal  phone-derived country first, then edge
  * headers / ipapi, then a client-supplied geo body. Also self-heals a stored
  * `countryCode` that disagrees with the phone (was a Meta CAPI sore spot for
  * donors whose mobile carriers proxied through a third country at signup).
@@ -97,7 +97,7 @@ export async function POST(request: NextRequest) {
     // wins over the stored value because Meta CAPI was shipping the wrong
     // country for donors whose carriers proxied through a third country at
     // signup time, leaving a wrong `countryCode` cached on the user. The phone
-    // number itself is a far stronger signal — see `resolveBestCountryCode`.
+    // number itself is a far stronger signal  see `resolveBestCountryCode`.
     const phoneOnly = resolveBestCountryCode({
       existing: existing.countryCode,
       phone: existing.phone,

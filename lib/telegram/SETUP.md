@@ -1,4 +1,4 @@
-# Telegram Bot — Setup
+# Telegram Bot  Setup
 
 Outbound donation notifications + inbound stats/lookup commands.
 
@@ -29,10 +29,10 @@ TELEGRAM_BOT_TOKEN=123456:AAH...
 TELEGRAM_NOTIFICATIONS_CHAT_ID=-1001234567890
 TELEGRAM_WEBHOOK_SECRET=replace-with-random-string
 
-# Optional — extra chat ids allowed to issue commands (the notifications chat is always allowed)
+# Optional  extra chat ids allowed to issue commands (the notifications chat is always allowed)
 # TELEGRAM_ALLOWED_CHAT_IDS=12345,67890
 
-# Optional — set to "false" to silence outbound notifications (commands still work)
+# Optional  set to "false" to silence outbound notifications (commands still work)
 # TELEGRAM_NOTIFICATIONS_ENABLED=true
 ```
 
@@ -51,8 +51,8 @@ On success you'll see a "✅ تم تفعيل بوت تبرعات الجمعية"
 
 Other admin endpoints:
 
-- `GET /api/telegram/setup` — show webhook info and current config
-- `DELETE /api/telegram/setup` — unregister the webhook
+- `GET /api/telegram/setup`  show webhook info and current config
+- `DELETE /api/telegram/setup`  unregister the webhook
 
 ## 6. Commands
 
@@ -78,7 +78,7 @@ Time stamps are in **Europe/Istanbul (TR)** to match the dashboard.
 
 Notifications fire from the existing `dispatchEvent` system in `lib/events/dispatch.ts`, which is already invoked by every payment webhook:
 
-- **Stripe** (`app/api/stripe/webhook/route.ts`) — paid + subscription invoices
+- **Stripe** (`app/api/stripe/webhook/route.ts`)  paid + subscription invoices
 - **PayFor / Ziraat** (`app/api/payfor/3dpay/ok/route.ts`, `…/fail/route.ts`)
 - **Manual fail** (`app/api/donations/[id]/fail/route.ts`)
 - **Stripe Elements confirm** (`app/api/donations/[id]/route.ts`)
@@ -92,4 +92,4 @@ A separate "🌟 أول تبرع لهذا المتبرع" banner is sent the fir
 - Bot misconfigured or unreachable → notifications silently drop; payment flow is unaffected (everything is `void` / fire-and-forget).
 - Webhook called without the secret header → returns 401, request never reaches the dispatcher.
 - Command from a non-allowlisted chat → logged + ignored.
-- LLM/NL is intentionally disabled — only the slash commands above respond.
+- LLM/NL is intentionally disabled  only the slash commands above respond.

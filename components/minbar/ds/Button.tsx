@@ -5,7 +5,7 @@ import type { CSSProperties, ElementType, MouseEvent, ReactNode } from "react";
 /**
  * Minber-i Aksa button.
  * The brand's action language: heavy weight (900), 8px radius, ~46px tall.
- * `primary` = red with a soft red glow — used for EVERY main donate CTA.
+ * `primary` = red with a soft red glow  used for EVERY main donate CTA.
  *
  * Ported from the design-system bundle
  * (`Minbar/_ds/<ds>/_ds_bundle.js` → `components/buttons/Button.jsx`).
@@ -41,7 +41,7 @@ const VARIANTS: Record<ButtonVariant, CSSProperties> = {
     border: "1px solid var(--green)",
     boxShadow: "0 12px 24px rgba(31,122,77,.20)",
   },
-  // light: white with hairline border — the standard secondary
+  // light: white with hairline border  the standard secondary
   light: { background: "#fff", color: "var(--deep)", border: "1px solid var(--border)" },
   // outline: transparent, for use ON dark/photo surfaces
   outline: { background: "transparent", color: "#fff", border: "1px solid rgba(255,255,255,.34)" },

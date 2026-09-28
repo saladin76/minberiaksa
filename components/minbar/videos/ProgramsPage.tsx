@@ -6,15 +6,15 @@ import { youtubeEmbed, youtubeThumb, youtubeWatch } from "@/lib/minbar/content/m
 import VideoModal, { useVideoModal } from "@/components/minbar/VideoModal";
 
 /**
- * Our video programmes — ported from `Minbar/برامجنا المصورة.dc.html`.
+ * Our video programmes  ported from `Minbar/برامجنا المصورة.dc.html`.
  *
  * One band per series: its name, what it is, a link to the whole playlist, and
  * its episodes as thumbnails. Both this page and the homepage rail read the
  * same playlists from the CMS, so publishing an episode in the dashboard
- * updates both — the single source the handoff specifies.
+ * updates both  the single source the handoff specifies.
  *
  * Playlists and episodes both open in the overlay player rather than sending
- * the visitor to YouTube — but every card is still a real anchor to the real
+ * the visitor to YouTube  but every card is still a real anchor to the real
  * video, so a middle-click, a copied link and a crawler all get somewhere.
  */
 
@@ -101,7 +101,7 @@ export default function ProgramsPage({ playlists }: { playlists: CmsPlaylist[] }
                         </span>
                       </span>
                     </span>
-                    {/* The episode's own title — the dashboard's when one was
+                    {/* The episode's own title  the dashboard's when one was
                         typed, else the one YouTube publishes for the video. */}
                     {episode.title ? (
                       <b className="prg-ep-title" style={{ display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden", fontSize: 14, lineHeight: 1.55, fontWeight: 800 }}>

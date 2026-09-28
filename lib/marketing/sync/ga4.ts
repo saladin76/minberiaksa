@@ -1,6 +1,6 @@
 /**
  * GA4 sync stub. Real implementation would fetch traffic + conversions
- * via the Data API. Reads only — no events sent here.
+ * via the Data API. Reads only  no events sent here.
  */
 import type { SyncClient } from "./types";
 import { missingConfigResult, notImplementedResult } from "./types";
@@ -12,7 +12,7 @@ export const syncGa4: SyncClient = async ({ connection }) => {
   if (missing.length > 0) {
     return missingConfigResult(
       missing,
-      "ناقص بيانات GA4 — Measurement ID و API Secret."
+      "ناقص بيانات GA4  Measurement ID و API Secret."
     );
   }
   return notImplementedResult(

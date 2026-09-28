@@ -34,19 +34,19 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 /**
- * Homepage — the Minbar Al-Aqsa design, ported from
+ * Homepage  the Minbar Al-Aqsa design, ported from
  * `Minbar/الصفحة الرئيسية.dc.html`.
  *
  * Projects are read here rather than fetched from the client so the urgent rail
  * and the quick-donation bar's destination list are in the first HTML response.
- * `PRODUCTION_SEO_CONTRACT.md` requires server-rendered metadata and content —
+ * `PRODUCTION_SEO_CONTRACT.md` requires server-rendered metadata and content 
  * a client-only fetch would leave the homepage's project copy out of the index.
  */
 export default async function Home({ params }: Props) {
   const { locale } = await params;
 
   // Every section's content is read here, in parallel, so the whole homepage is
-  // in the first HTML response rather than filled in by client fetches — the
+  // in the first HTML response rather than filled in by client fetches  the
   // rails show a leading slice; each full set lives on its own page.
   // The urgent rail shows a leading slice of projects; the quick-donation
   // select lists whatever the dashboard allows, which may be every project.

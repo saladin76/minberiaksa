@@ -12,7 +12,7 @@ const MAX_FILE_SIZE = 10 * 1024 * 1024;
 const SAMPLE_LIMIT = 500;
 
 /**
- * Bulk donation import — PREVIEW (dry run). Parses the uploaded Excel/CSV and returns a summary +
+ * Bulk donation import  PREVIEW (dry run). Parses the uploaded Excel/CSV and returns a summary +
  * a capped sample of normalized rows. READS ONLY: it counts new vs existing donors (by email) and
  * rows already imported (by import order id). It never writes to the database and never sends.
  */
@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
   const valid = parsed.rows.filter((r) => r.valid);
   const emails = [...new Set(valid.map((r) => r.email).filter(Boolean) as string[])];
 
-  // Donor dedup by email only. Donations are NOT deduped — every valid row (incl. repeats) imports.
+  // Donor dedup by email only. Donations are NOT deduped  every valid row (incl. repeats) imports.
   const existingUsers = process.env.DATABASE_URL
     ? await prisma.user.findMany({ where: { email: { in: emails } }, select: { email: true } }).catch(() => [])
     : [];

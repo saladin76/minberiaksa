@@ -12,9 +12,9 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 /**
- * GET /api/admin/ai/concierge/settings — the concierge's switches, the
+ * GET /api/admin/ai/concierge/settings  the concierge's switches, the
  *     defaults, the model provider's state and how much is stored.
- * PUT — replace the settings (sanitized; missing fields fall back to defaults).
+ * PUT  replace the settings (sanitized; missing fields fall back to defaults).
  */
 export async function GET() {
   const session = await getServerSession(authOptions);

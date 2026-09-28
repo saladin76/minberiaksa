@@ -144,7 +144,7 @@ export function elasticEmailDomainName(raw: string): string {
   return raw.split("(")[0].trim().toLowerCase();
 }
 
-/** Elastic Email (REST API v4) — the only email provider. Verifies the key without sending mail. */
+/** Elastic Email (REST API v4)  the only email provider. Verifies the key without sending mail. */
 export class ElasticEmailConnectionTester implements IntegrationProviderTester {
   constructor(private readonly fetchImpl: ProviderFetch = fetch) {}
 
@@ -167,7 +167,7 @@ export class ElasticEmailConnectionTester implements IntegrationProviderTester {
       });
 
       // Elastic Email v4 answers BOTH "this key is invalid" and "this key may not use
-      // this endpoint" with HTTP 400 — it never returns 401 — so the status code alone
+      // this endpoint" with HTTP 400  it never returns 401  so the status code alone
       // cannot tell them apart. Only the body can:
       //     {"Error":"APIKey Expired"}   -> key is invalid, missing, or revoked
       //     {"Error":"Access Denied."}   -> key is valid but not scoped for this endpoint
@@ -212,7 +212,7 @@ export class ElasticEmailConnectionTester implements IntegrationProviderTester {
   }
 }
 
-/** Brevo — international (non-Turkish) SMS only. Email moved to Elastic Email. */
+/** Brevo  international (non-Turkish) SMS only. Email moved to Elastic Email. */
 export class BrevoConnectionTester implements IntegrationProviderTester {
   constructor(private readonly fetchImpl: ProviderFetch = fetch) {}
 

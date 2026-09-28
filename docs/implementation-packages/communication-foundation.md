@@ -1,4 +1,4 @@
-# Package 1 — Communication Foundation
+# Package 1  Communication Foundation
 
 ## Goal
 

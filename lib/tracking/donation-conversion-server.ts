@@ -151,7 +151,7 @@ export async function sendDonationFailedConversions(donationId: string, options:
     if (!options.force) {
       // `paidAt` and `conversionFailedEventsSentAt` are ABSENT (not null) on almost every row,
       // and Prisma's `{ field: null }` does not match an absent field on MongoDB. This claim
-      // therefore matched 0 of 212 failed donations — DonateFailed has never actually fired.
+      // therefore matched 0 of 212 failed donations  DonateFailed has never actually fired.
       const claim = await prisma.donation.updateMany({
         where: {
           AND: [

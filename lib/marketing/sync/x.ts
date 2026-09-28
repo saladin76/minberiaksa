@@ -1,5 +1,5 @@
 /**
- * X (Twitter) Ads API sync client. Stub — needs Ads API access from the
+ * X (Twitter) Ads API sync client. Stub  needs Ads API access from the
  * X developer portal before live calls. Preflights credentials then
  * returns NOT_IMPLEMENTED with guidance.
  */
@@ -13,7 +13,7 @@ export const syncX: SyncClient = async ({ connection }) => {
   if (missing.length > 0) {
     return missingConfigResult(
       missing,
-      "ناقص بيانات X — Ad Account ID و Access Token. قد تحتاج إلى تفعيل Ads API من X Developer Portal."
+      "ناقص بيانات X  Ad Account ID و Access Token. قد تحتاج إلى تفعيل Ads API من X Developer Portal."
     );
   }
   return notImplementedResult(

@@ -13,7 +13,7 @@ import { InboundStatusPill, WaitingBadge } from "./InboundStatusPill";
  * One inbound message, as a card.
  *
  * Replaces a six-column table. A table implies you scan down a column to compare values, but the
- * only column anyone actually reads here is the message body — and that was the one truncated to a
+ * only column anyone actually reads here is the message body  and that was the one truncated to a
  * single line inside a 240px cell. Below `lg` the table also just became a horizontal scroll box,
  * so on a phone the body column was the part you had to drag sideways to reach.
  *
@@ -21,8 +21,8 @@ import { InboundStatusPill, WaitingBadge } from "./InboundStatusPill";
  * which matters most on touch, and it keeps a single focus stop per message instead of one row plus
  * one nested control.
  *
- * Unread cards are weighted the way an unread mail row is anywhere else — a brand rail down the
- * leading edge, a tinted header, a bolder name — so a full grid can be triaged by shape alone,
+ * Unread cards are weighted the way an unread mail row is anywhere else  a brand rail down the
+ * leading edge, a tinted header, a bolder name  so a full grid can be triaged by shape alone,
  * before reading a single word. Answered cards are deliberately quietened to the opposite end:
  * they are still there to search, but they stop competing for attention.
  */
@@ -125,7 +125,7 @@ export function InboundMessageCard({
               مع محادثة الذكاء الاصطناعي
             </span>
           )}
-          {/* A reachable number is a reason to open this one first — it means a reply can go out
+          {/* A reachable number is a reason to open this one first  it means a reply can go out
               on WhatsApp rather than into an inbox that may never be checked. */}
           {message.phone && (
             <span

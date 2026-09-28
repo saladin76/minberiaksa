@@ -11,7 +11,7 @@ import { pickTranslation, translationLocaleWhere } from "@/lib/i18n/translation-
  * dashboard appears on the blog, and one unpublished disappears.
  *
  * The category chips likewise come from `PostCategory`, not the handoff's
- * hard-coded Arabic list — a category added in the dashboard becomes a filter
+ * hard-coded Arabic list  a category added in the dashboard becomes a filter
  * without a code change, and one with no published articles never shows up as a
  * chip that returns nothing.
  */
@@ -165,7 +165,7 @@ export async function listArticles({
     };
   } catch (err) {
     /* A blog that cannot reach the database renders as an empty blog rather
-       than as a 500 — the rest of the page still offers a way to donate. */
+       than as a 500  the rest of the page still offers a way to donate. */
     console.error("listArticles failed:", err);
     return { items: [], nextCursor: null };
   }
@@ -354,7 +354,7 @@ export async function listRelatedArticles(
 const NEWS_SLUGS = ["news", "akhbar", "الأخبار", "اخبار"];
 
 /**
- * The newsroom feed — the newest published posts filed under a news category.
+ * The newsroom feed  the newest published posts filed under a news category.
  *
  * `Minbar/الأخبار.dc.html` ships four placeholder items with an em dash for a
  * date and dead `#news-1` links. The real newsroom is editorial content the

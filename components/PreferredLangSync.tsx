@@ -8,7 +8,7 @@ import { isValidLocale } from "@/lib/locales";
 /**
  * Backfills `preferredLang` once for logged-in users who don't have it set yet
  * (e.g. accounts created before this column was wired up). Sends `ifMissing:true`
- * so the server only writes when the field is currently null — explicit choices
+ * so the server only writes when the field is currently null  explicit choices
  * via the LanguageSelector are never overwritten.
  *
  * Mounted inside SessionProvider in the public locale layout. No-op for guests.

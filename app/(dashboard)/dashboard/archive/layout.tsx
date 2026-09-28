@@ -11,7 +11,7 @@ export default async function ArchiveLayout({ children }: { children: React.Reac
   if (!access.allowed) redirect(access.redirectTo);
 
   // Mounted in the layout rather than per page, so all eight live archive routes share one
-  // navigation without eight separate edits — and new archive pages inherit it for free.
+  // navigation without eight separate edits  and new archive pages inherit it for free.
   return (
     <>
       <ArchiveSubNav />

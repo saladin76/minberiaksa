@@ -50,7 +50,7 @@ export interface TemplateRecommendationInput {
   performance?: TemplatePerformance | null;
 }
 
-const BODY_TOO_LONG = 480; // chars — beyond this users start scrolling
+const BODY_TOO_LONG = 480; // chars  beyond this users start scrolling
 const OPENING_TOO_LONG = 90; // first sentence chars
 
 function firstSentence(body: string): string {
@@ -85,7 +85,7 @@ export function computeTemplateRecommendations(
       kind: "improve_first_sentence",
       severity: "info",
       title: "حسّن الجملة الافتتاحية",
-      body: "الجملة الأولى أطول من سطر — جرب 6-12 كلمة بحدّ أقصى.",
+      body: "الجملة الأولى أطول من سطر  جرب 6-12 كلمة بحدّ أقصى.",
     });
   }
 
@@ -103,7 +103,7 @@ export function computeTemplateRecommendations(
       kind: "add_cta_button",
       severity: "info",
       title: "ضع CTA تبرع واضح",
-      body: "لا يوجد زر تبرع صريح — صنف زر URL كزر تبرع لتسهيل القياس.",
+      body: "لا يوجد زر تبرع صريح  صنف زر URL كزر تبرع لتسهيل القياس.",
     });
   }
 
@@ -120,7 +120,7 @@ export function computeTemplateRecommendations(
         kind: "review_audience_quality",
         severity: "warning",
         title: "نسبة فشل عالية",
-        body: "أكثر من 20٪ من الإرسالات فشلت — راجع جودة قائمة الأرقام أو أهلية WhatsApp.",
+        body: "أكثر من 20٪ من الإرسالات فشلت  راجع جودة قائمة الأرقام أو أهلية WhatsApp.",
       });
     }
     if (deliveryRate >= 0.85 && clickRate <= 0.05 && hasButtons) {
@@ -129,7 +129,7 @@ export function computeTemplateRecommendations(
         kind: "improve_first_sentence",
         severity: "warning",
         title: "وصول جيد لكن نقر منخفض",
-        body: "الرسالة وصلت لكن قليل من المستلمين ضغطوا الزر — جرب جملة افتتاحية أقوى.",
+        body: "الرسالة وصلت لكن قليل من المستلمين ضغطوا الزر  جرب جملة افتتاحية أقوى.",
       });
     }
     if (clickRate >= 0.15 && donationRate <= 0.05) {
@@ -138,7 +138,7 @@ export function computeTemplateRecommendations(
         kind: "fix_landing_or_payment",
         severity: "warning",
         title: "نقر عالي وتبرع منخفض",
-        body: "كثيرون نقروا لكن قلة تبرّعوا — افحص صفحة الهبوط ومسار الدفع.",
+        body: "كثيرون نقروا لكن قلة تبرّعوا  افحص صفحة الهبوط ومسار الدفع.",
       });
     }
     if (input.templateType === "media" && clickRate >= 0.15) {
@@ -147,7 +147,7 @@ export function computeTemplateRecommendations(
         kind: "scale_media",
         severity: "positive",
         title: "قالب وسائط ناجح",
-        body: "نسبة النقر مرتفعة — كرّر صيغة الوسائط نفسها في حملات قادمة.",
+        body: "نسبة النقر مرتفعة  كرّر صيغة الوسائط نفسها في حملات قادمة.",
       });
     }
     if (
@@ -160,7 +160,7 @@ export function computeTemplateRecommendations(
         kind: "test_image_instead_of_video",
         severity: "info",
         title: "جرّب صورة بدل الفيديو",
-        body: "أداء الفيديو منخفض — اختبر نسخة بصورة ثابتة.",
+        body: "أداء الفيديو منخفض  اختبر نسخة بصورة ثابتة.",
       });
     }
     if (
@@ -173,12 +173,12 @@ export function computeTemplateRecommendations(
         kind: "simplify_document",
         severity: "info",
         title: "بسّط المستند",
-        body: "قالب الـ document يكلّف المستلم خطوة إضافية — جرب ملخص نصي قصير + زر URL.",
+        body: "قالب الـ document يكلّف المستلم خطوة إضافية  جرب ملخص نصي قصير + زر URL.",
       });
     }
   }
 
-  // Winning button — fires when one button drastically out-clicks the rest.
+  // Winning button  fires when one button drastically out-clicks the rest.
   // We don't have per-button clicks yet on `perf`; the rule is wired in but
   // dormant until the SentMessage schema captures `clickedButtonId`.
   return out;

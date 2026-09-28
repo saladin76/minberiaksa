@@ -1,12 +1,12 @@
 /**
- * scripts/audit-blog-production.ts — read-only.
+ * scripts/audit-blog-production.ts  read-only.
  *
  * `DEPLOYED_VS_DESIGN_AUDIT.md` § P1.4–P1.7 all trace to one question: does
  * the production database carry the blog content the repository's seed
  * carries? (`prisma/seed/seed-posts.json` has 258 posts with unique
  * descriptions, 16 consolidated categories and per-post covers; a deploy does
  * not import it.) This compares the two and prints the gaps. It writes
- * nothing — the import is `prisma/seed/seed-posts.ts`, run deliberately.
+ * nothing  the import is `prisma/seed/seed-posts.ts`, run deliberately.
  *
  *   npx tsx scripts/audit-blog-production.ts
  */

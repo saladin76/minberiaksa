@@ -2,12 +2,12 @@
  * Inbox triage vocabulary.
  *
  * A contact message is in exactly one of three states, derived from two timestamps rather than
- * stored as a status column — a column would let `status: "REPLIED"` disagree with a null
+ * stored as a status column  a column would let `status: "REPLIED"` disagree with a null
  * `repliedAt`, and the timestamps are what the UI actually shows ("رد عليها منذ ساعتين").
  *
- *   unread   readAt = null                        — nobody has opened it
- *   pending  readAt set, repliedAt = null         — opened, still owes an answer
- *   replied  repliedAt set                        — answered (or marked answered by hand)
+ *   unread   readAt = null                         nobody has opened it
+ *   pending  readAt set, repliedAt = null          opened, still owes an answer
+ *   replied  repliedAt set                         answered (or marked answered by hand)
  *
  * This module is deliberately dependency-free so the API routes, the sidebar badge poller and
  * the client cards all agree on one definition instead of each re-deriving it.
@@ -57,7 +57,7 @@ export const REPLY_CHANNEL_LABELS: Record<MessageReplyChannel, string> = {
 /**
  * Every message written before this feature existed has these fields **absent**, not null.
  * On MongoDB, Prisma's `field: null` and `field: { isSet: false }` do not cover the same
- * documents, so "never read" has to be spelled as the union of both — otherwise the entire
+ * documents, so "never read" has to be spelled as the union of both  otherwise the entire
  * existing inbox would count as already read and the badge would open at zero.
  *
  * The positive filters pair `isSet: true` with `not: null` for the same reason, so a message
@@ -87,7 +87,7 @@ export const REPLY_OVERDUE_MS = 72 * HOUR;
 export type Urgency = "none" | "due" | "overdue";
 
 /**
- * How loudly a card should ask to be answered. Answered messages never age — the clock is on
+ * How loudly a card should ask to be answered. Answered messages never age  the clock is on
  * the *reply*, not on the message, so a three-year-old thread that was handled stays quiet.
  */
 export function replyUrgency(
@@ -137,7 +137,7 @@ export function emitInboxUnreadDelta(delta: number): void {
  * ------------------------------------------------------------------ */
 
 /**
- * wa.me takes bare digits — no "+", no spaces, no dashes. The number handed in here is already
+ * wa.me takes bare digits  no "+", no spaces, no dashes. The number handed in here is already
  * E.164-normalised server-side (see `lib/messages/contact-phone.ts`); this only assembles the
  * URL so the card and the dialog cannot build it differently.
  */

@@ -4,14 +4,14 @@
  * `RECURRING_DONATION_FLOW_MAP.md` fixes the vocabulary: the cart stores a
  * `freqKey` (`once | daily | friday | monthly`), and everything outside the
  * cart speaks `donationMode` / `frequency`. Here that becomes one order type on
- * the wire — `ONE_TIME | DAILY | FRIDAY | MONTHLY` — and a `RecurringFrequency`
+ * the wire  `ONE_TIME | DAILY | FRIDAY | MONTHLY`  and a `RecurringFrequency`
  * on the plan. It used to be `ONE_TIME | MONTHLY`, with every recurring choice
  * collapsed to MONTHLY on the server while the donor was shown "daily" or
  * "every Friday" (`DEPLOYED_VS_DESIGN_AUDIT.md` § P0.2). The contract tests in
  * `tests/integration-settings/recurring-schedule.test.ts` pin the mapping.
  *
  * Two rails bill plans, and the cadence picks the rail (`railForFrequency`):
- *   - STRIPE keeps exactly its historical scope — one-time gifts and MONTHLY
+ *   - STRIPE keeps exactly its historical scope  one-time gifts and MONTHLY
  *     plans as Stripe Subscriptions. Stripe bills the cycle itself.
  *   - ALBARAKA bills DAILY and FRIDAY plans (and MONTHLY when it is the main
  *     gateway): the first instalment is a normal 3D payment at checkout, and
@@ -31,7 +31,7 @@
 
 export type RecurringFrequency = "DAILY" | "FRIDAY" | "MONTHLY";
 export type OrderType = "ONE_TIME" | RecurringFrequency;
-/** The cart's own storage key — see `lib/minbar/cart.ts`. */
+/** The cart's own storage key  see `lib/minbar/cart.ts`. */
 export type CartFreqKeyLike = "once" | "daily" | "friday" | "monthly";
 /** The rails that can bill a plan. */
 export type RecurringRail = "STRIPE" | "ALBARAKA";
@@ -93,7 +93,7 @@ export function frequencyLabelKey(frequency: RecurringFrequency): "freqDaily" | 
 }
 
 /**
- * Average charges per month for a cadence — a Julian year (365.25 days) split
+ * Average charges per month for a cadence  a Julian year (365.25 days) split
  * into twelve, so a daily plan is ≈30.44 charges and a Friday plan ≈4.35.
  * Dashboards multiply a plan's per-charge amount by this to put every cadence
  * on the one monthly scale MRR is quoted in; summing raw amounts would count a
@@ -106,7 +106,7 @@ export function chargesPerMonth(frequency: RecurringFrequency): number {
 /**
  * Which rail bills a plan of this cadence.
  *
- * Stripe is kept to what it always did here — one-time and monthly. Daily
+ * Stripe is kept to what it always did here  one-time and monthly. Daily
  * and Friday plans go to Albaraka whatever the admin's main gateway is,
  * because that is the rail whose recurring transactions the site schedules
  * itself. A monthly plan follows the main gateway.
@@ -265,7 +265,7 @@ export function nextChargeAt(frequency: RecurringFrequency, from: Date, timezone
 /**
  * Hours after a declined scheduler charge at which it is retried, in order.
  * `DONATION_LOGIC_SPEC` § 1.3 names 1h, 6h, 24h and says the count and
- * spacing are configuration, not a fixed decision — so `RECURRING_RETRY_HOURS`
+ * spacing are configuration, not a fixed decision  so `RECURRING_RETRY_HOURS`
  * ("1,6,24") overrides the default. When the ladder is exhausted the plan is
  * set to PAYMENT_FAILED and the donor is told.
  */
@@ -309,12 +309,12 @@ export interface ConsentSnapshot {
   amount: number;
   currency: string;
   timezone: string;
-  /** ISO — the next-charge date the checkout displayed. */
+  /** ISO  the next-charge date the checkout displayed. */
   nextChargeAt: string;
   /** The rail the plan was created for. */
   rail: RecurringRail;
   locale: string | null;
-  /** ISO — when the donor confirmed. */
+  /** ISO  when the donor confirmed. */
   acceptedAt: string;
 }
 

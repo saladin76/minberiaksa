@@ -68,7 +68,7 @@ export type ReviewAction =
  *
  * Two panes, because a reviewer does two things at once: reads the receipt
  * and checks it against what the order says. The receipt sits large on one
- * side — zoomable, switchable between submissions — and everything it has to
+ * side  zoomable, switchable between submissions  and everything it has to
  * match sits on the other: the donor, the amount, the account, what the donor
  * typed. The decision is the footer, and it is one click plus a confirmation
  * (confirm) or one click plus a reason (reject), never more.
@@ -232,7 +232,7 @@ export function TransferReceiptDialog({
 
           {/* What it has to match */}
           <section className="flex min-h-0 flex-col gap-4 overflow-y-auto p-5">
-            {/* Amount — the one number the receipt must show. */}
+            {/* Amount  the one number the receipt must show. */}
             <div className="rounded-xl border border-slate-200 bg-gradient-to-br from-white to-slate-50 p-4">
               <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">المبلغ المتوقع في الإيصال</p>
               <div className="mt-1 flex flex-wrap items-baseline gap-x-3 gap-y-1">
@@ -321,7 +321,7 @@ export function TransferReceiptDialog({
                     {claim.rejectionReason}
                   </div>
                 )}
-                {claim.status === "REJECTED" && <p className="text-[11.5px] text-slate-500">{remaining > 0 ? `يمكن للمتبرع رفع الإيصال ${remaining} ${remaining === 1 ? "مرة" : "مرات"} أخرى.` : "استُنفدت محاولات الرفع — المتابعة يدويًا مع المتبرع."}</p>}
+                {claim.status === "REJECTED" && <p className="text-[11.5px] text-slate-500">{remaining > 0 ? `يمكن للمتبرع رفع الإيصال ${remaining} ${remaining === 1 ? "مرة" : "مرات"} أخرى.` : "استُنفدت محاولات الرفع  المتابعة يدويًا مع المتبرع."}</p>}
                 {claim.status === "CONFIRMED" && claim.donation.paidAt && (
                   <a href={`/api/donations/${claim.donationId}/receipt?locale=ar`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-[12px] font-medium text-brand hover:underline">
                     <FileText className="h-3.5 w-3.5" />
@@ -401,7 +401,7 @@ export function TransferReceiptDialog({
                 void run({ action: "confirm", adminNote: noteDirty ? note.trim() || null : undefined });
               }}
             >
-              نعم، المبلغ وصل — تأكيد
+              نعم، المبلغ وصل  تأكيد
             </AlertDialogAction>
             <AlertDialogCancel>رجوع</AlertDialogCancel>
           </AlertDialogFooter>

@@ -210,7 +210,7 @@ export function WhatsappTemplateList() {
             ) : templates.length === 0 ? (
               <tr>
                 <td colSpan={6} className="py-12 text-center text-slate-500">
-                  لا توجد قوالب بعد — اضغط «قالب جديد» للبدء
+                  لا توجد قوالب بعد  اضغط «قالب جديد» للبدء
                 </td>
               </tr>
             ) : (

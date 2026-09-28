@@ -5,7 +5,7 @@ import { authOptions } from "../../auth/[...nextauth]/options";
 import { requireAdminOrDashboardPermission } from "@/lib/dashboard/api-auth";
 
 /**
- * GET /api/super-categories/admin — the dashboard listing.
+ * GET /api/super-categories/admin  the dashboard listing.
  *
  * Returns inactive rows too, so it sits behind the dashboard permission. The
  * linked content and the page's sections come back as counts; the edit page

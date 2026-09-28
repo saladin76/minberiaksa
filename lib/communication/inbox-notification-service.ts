@@ -1,7 +1,7 @@
 import { listConversations } from "./conversation-service";
 
 /**
- * Inbox badge count — the number of WhatsApp conversations that currently need a reply (last inbound
+ * Inbox badge count  the number of WhatsApp conversations that currently need a reply (last inbound
  * newer than last outbound and not marked handled). Derived from the real conversation archive via
  * conversation-service; never fabricated. Fails closed to 0 when the DB/session is unavailable.
  */

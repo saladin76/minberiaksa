@@ -10,7 +10,7 @@ import { formatMoney } from "@/lib/minbar/money";
 import { Button } from "@/components/minbar/ds";
 
 /**
- * The donor account — ported from `Minbar/حساب المتبرع.dc.html`.
+ * The donor account  ported from `Minbar/حساب المتبرع.dc.html`.
  *
  * The handoff renders whatever props it is handed and an em dash for the rest.
  * This is the signed-in donor's own record: their totals, their donation
@@ -203,7 +203,7 @@ export default function AccountPage({ summary }: { summary: MinbarAccountSummary
             </div>
           </div>
 
-          {/* The handoff points this at the contact page — plainly a placeholder.
+          {/* The handoff points this at the contact page  plainly a placeholder.
               It leads to the real settings screen, where a donor can also change
               their password, country and notification preferences. */}
           <Link href={`/${locale}/profile`} className="acc-settings" style={{ display: "inline-flex", alignItems: "center", gap: 7, height: 40, padding: "0 16px", borderRadius: 8, border: "1px solid rgba(211,154,39,.5)", background: "#fff", fontSize: 13.5, fontWeight: 800, color: "var(--deep)", transition: "all .18s ease" }}>
@@ -233,7 +233,7 @@ export default function AccountPage({ summary }: { summary: MinbarAccountSummary
             {/* Bank transfers the finance team has not confirmed yet. Shown
                 above the history, apart from it and never in the totals: the
                 donor should see where each one stands and what it needs of
-                them — a receipt, another receipt, or nothing but patience. */}
+                them  a receipt, another receipt, or nothing but patience. */}
             {pendingTransfers.length > 0 ? (
               <div style={{ display: "grid", gap: 10, marginBottom: 10 }}>
                 <div>

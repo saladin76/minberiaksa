@@ -153,7 +153,7 @@ export async function loadCatalog(locale: string): Promise<ConciergeCatalog> {
   return catalog;
 }
 
-/** Forget every cached locale — for tests and after a CMS write, if wired. */
+/** Forget every cached locale  for tests and after a CMS write, if wired. */
 export function clearCatalogCache(): void {
   cache.clear();
 }

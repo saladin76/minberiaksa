@@ -56,7 +56,7 @@ export default function TelegramAdminPage() {
       const data = await res.json();
       setLastResponse(data);
       if (res.ok && data.ok) {
-        toast.success("تم تسجيل الـ webhook — تحقق من مجموعة التيليجرام");
+        toast.success("تم تسجيل الـ webhook  تحقق من مجموعة التيليجرام");
         await refresh();
       } else {
         toast.error(data.error || data?.telegram?.description || "فشل تسجيل الـ webhook");
@@ -104,7 +104,7 @@ export default function TelegramAdminPage() {
               بوت التيليجرام
             </h1>
             <p className="text-muted-foreground mt-1 text-sm">
-              إدارة الإشعارات والأوامر — يرسل تنبيهاً لكل تبرع، ويجيب على استفسارات الإحصائيات داخل المجموعة.
+              إدارة الإشعارات والأوامر  يرسل تنبيهاً لكل تبرع، ويجيب على استفسارات الإحصائيات داخل المجموعة.
             </p>
           </div>
           <Button
@@ -233,7 +233,7 @@ export default function TelegramAdminPage() {
                     </div>
                     {webhook?.pending_update_count != null && webhook.pending_update_count > 0 && (
                       <div className="rounded-lg border border-amber-200 bg-amber-50 p-2 text-amber-800 text-xs">
-                        {webhook.pending_update_count} تحديث معلَّق — لم يتمكن تيليجرام من تسليمه. (قد يعني أن الـ webhook غير قابل للوصول).
+                        {webhook.pending_update_count} تحديث معلَّق  لم يتمكن تيليجرام من تسليمه. (قد يعني أن الـ webhook غير قابل للوصول).
                       </div>
                     )}
                     {lastError && (
@@ -255,7 +255,7 @@ export default function TelegramAdminPage() {
                   </div>
                 ) : (
                   <p className="text-slate-500 text-xs leading-relaxed">
-                    سيقوم تيليجرام بإرسال الرسائل إلى هذا الخادم بعد التسجيل. اضغط الزر أدناه — تأكد أن التطبيق مرفوع على عنوان HTTPS عام (تيليجرام لا يقبل localhost).
+                    سيقوم تيليجرام بإرسال الرسائل إلى هذا الخادم بعد التسجيل. اضغط الزر أدناه  تأكد أن التطبيق مرفوع على عنوان HTTPS عام (تيليجرام لا يقبل localhost).
                   </p>
                 )}
               </CardContent>

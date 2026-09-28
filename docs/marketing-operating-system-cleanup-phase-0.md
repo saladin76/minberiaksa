@@ -1,4 +1,4 @@
-# Marketing Operating System Cleanup — Phase 0
+# Marketing Operating System Cleanup  Phase 0
 
 > Production safety note: this document is planning and UX consolidation guidance only. It must not change public website UX, checkout, payment flow, live tracking behavior, campaign URLs, slugs, redirects, or existing ad links.
 

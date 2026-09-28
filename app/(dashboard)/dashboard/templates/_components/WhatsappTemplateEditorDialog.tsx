@@ -150,7 +150,7 @@ export function WhatsappTemplateEditorDialog({ id, open, onOpenChange }: Props) 
       open={open}
       onOpenChange={onOpenChange}
       title={id ? "تعديل قالب الواتساب" : "قالب واتساب جديد"}
-      subtitle="نص الرسالة ومتغيّراتها — المعاينة على اليسار تعرضه ببيانات تجريبية."
+      subtitle="نص الرسالة ومتغيّراتها  المعاينة على اليسار تعرضه ببيانات تجريبية."
       icon={<MessageCircle className="h-4 w-4" />}
       accent="whatsapp"
       size="lg"

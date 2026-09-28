@@ -80,7 +80,7 @@ export function parseSuggestedShareCounts(raw: unknown): SuggestedShareCountsCon
 
 /**
  * Resolve the display price of one share for the given currency.
- * When an override exists, returns { price, isOverride: true } — callers should
+ * When an override exists, returns { price, isOverride: true }  callers should
  * display this value as-is and convert to USD for the server via the exchange rate.
  * Otherwise returns null, meaning the caller should convert sharePriceUSD normally.
  */

@@ -8,7 +8,7 @@ import { prisma } from "@/lib/prisma";
  * `DONATION_LOGIC_SPEC §2`: a serial is minted by the server, once, after
  * payment is confirmed. The counter is a single MongoDB document per sequence
  * advanced with an atomic `$inc`, so two confirmations landing in the same
- * millisecond get two different numbers — never the same one twice.
+ * millisecond get two different numbers  never the same one twice.
  *
  * The waqf counters start where the foundation's printed books left off
  * (`شهادة الاوقاف.dc.html`: "الأمتار من 9876، الأسهم من 76543"), so the first
@@ -43,7 +43,7 @@ export async function nextSequenceNumber(key: SequenceKey): Promise<number> {
       const created = await prisma.documentSequence.create({ data: { id: key, value: firstNumber(key) } });
       return created.value;
     } catch {
-      /* Someone else created it between the read and the write — fall through
+      /* Someone else created it between the read and the write  fall through
          to the atomic increment, which is the ordinary path from here on. */
     }
   }

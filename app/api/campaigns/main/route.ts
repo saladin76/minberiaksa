@@ -33,9 +33,9 @@ export async function GET(request: NextRequest) {
     // the first category in the legacy `category` slot for old consumers.
     const campaignsWithDonationCount = await Promise.all(prioritizedCampaigns.map(async (campaign) => {
       // Counts only items whose parent donation actually settled. Without the `donation`
-      // relation filter this counted every item ever written for the campaign — including
+      // relation filter this counted every item ever written for the campaign  including
       // FAILED and abandoned-checkout rows, and 19 orphaned items whose donation was deleted
-      // — and published that inflated figure as the campaign's public donor count.
+      //  and published that inflated figure as the campaign's public donor count.
       const donationCount = await prisma.donationItem.count({
         where: {
           campaignId: campaign.id,

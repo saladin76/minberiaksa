@@ -23,7 +23,7 @@ import { CUSTOM_CATEGORY_ICONS, type CategoryGlyph } from "./category-glyphs";
 
 /**
  * Lucide icons offered for a category. Everything here must exist in the pinned
- * 0.474 release — newer names typecheck and survive `next dev` but fail the
+ * 0.474 release  newer names typecheck and survive `next dev` but fail the
  * production build. Subjects Lucide has no icon for live in `category-glyphs`.
  */
 export const CATEGORY_ICONS: Record<string, LucideIcon> = {
@@ -125,7 +125,7 @@ export function customIconValue(name: string): string {
 }
 
 /**
- * The site's own locales and the flag each one is shown with — the same pairing
+ * The site's own locales and the flag each one is shown with  the same pairing
  * the dashboard language tabs already use. Applied only to a **lowercase**
  * token, so `ar` means العربية (السعودية) while `AR` means the Argentine flag.
  */
@@ -234,7 +234,7 @@ export function parseCategoryIcon(raw?: string | null): CategoryIconValue {
   const countryCode = countryCodeFromToken(value.replace(FLAG_PREFIX, ""));
   if (countryCode) return { kind: "flag", countryCode };
 
-  // `flag:` was asked for but the code is unusable — still better than pretending
+  // `flag:` was asked for but the code is unusable  still better than pretending
   // it is an icon name.
   if (explicitFlag) return { kind: "lucide", name: "Globe" };
 
@@ -247,8 +247,8 @@ interface CategoryIconProps {
 }
 
 /**
- * Renders whatever `category.icon` holds — a Lucide icon, one of the locally
- * drawn glyphs, or a country flag — at the size the caller asks for. Lucide and
+ * Renders whatever `category.icon` holds  a Lucide icon, one of the locally
+ * drawn glyphs, or a country flag  at the size the caller asks for. Lucide and
  * custom glyphs share the same 24×24 stroke geometry, so a className that sizes
  * or colours one sizes and colours the other identically.
  * Flags come from react-country-flag, whose

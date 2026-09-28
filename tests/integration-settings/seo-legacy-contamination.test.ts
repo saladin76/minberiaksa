@@ -8,7 +8,7 @@ import { SUPPORTED_LOCALES } from "../../lib/locales";
  * Release gate for `DEPLOYED_VS_DESIGN_AUDIT.md` § P0.3.
  *
  * The organisation's institutional metadata once described its earlier Syria
- * programme, and 8 of 19 locales still shipped it — through the homepage, the
+ * programme, and 8 of 19 locales still shipped it  through the homepage, the
  * projects/about/contact/blog titles, and `buildPageMetadata()`'s keyword
  * fallback onto every other page. This runs in `npm run build` and fails it if
  * any of those terms comes back, in any language, or if a public locale loses
@@ -71,7 +71,7 @@ test("no locale carries the retired Syria-programme terms in institutional SEO",
   assert.deepEqual(offenders, [], `legacy SEO terms found:\n  ${offenders.join("\n  ")}`);
 });
 
-test("lib/seo.ts holds no hand-written locale copy — the generated file is the only source", () => {
+test("lib/seo.ts holds no hand-written locale copy  the generated file is the only source", () => {
   const source = readFileSync("lib/seo.ts", "utf8");
   for (const [label, re] of LEGACY_TERMS) {
     assert.equal(re.test(source), false, `lib/seo.ts contains ${label}`);
@@ -101,7 +101,7 @@ test("structured data and layout metadata carry no retired-programme terms", () 
 });
 
 test("the generated file describes each locale in its own script, not English fallback", () => {
-  // Locales whose copy must not be plain ASCII — a sign the bundle fell back to English.
+  // Locales whose copy must not be plain ASCII  a sign the bundle fell back to English.
   const nonLatin: Record<string, RegExp> = {
     ar: /[؀-ۿ]/,
     ur: /[؀-ۿ]/,

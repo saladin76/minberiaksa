@@ -28,7 +28,7 @@ import {
 } from "../campaigns/_components/SuggestedTeamSupportSection";
 
 /**
- * The basket's own settings — what the cart page shows around the rows the
+ * The basket's own settings  what the cart page shows around the rows the
  * donor put there, none of it per campaign:
  *
  *  - "Support the team": the switch that shows or hides the step, and the
@@ -42,7 +42,7 @@ import {
 
 type CampaignOption = { id: string; title: string; isActive: boolean };
 
-/** Every campaign, active or not — an admin may pre-list one about to launch. */
+/** Every campaign, active or not  an admin may pre-list one about to launch. */
 function useCampaignOptions() {
   const [options, setOptions] = useState<CampaignOption[]>([]);
   const [loading, setLoading] = useState(true);
@@ -82,7 +82,7 @@ function CampaignPicker({
 }: {
   value: string;
   options: CampaignOption[];
-  /** Ids already used by other rows — hidden so a campaign is listed once. */
+  /** Ids already used by other rows  hidden so a campaign is listed once. */
   taken: Set<string>;
   loading: boolean;
   onChange: (id: string) => void;
@@ -266,7 +266,7 @@ export default function CartSettingsPage() {
           <Card className="p-5 sm:p-6 space-y-4">
             <div className="flex items-start justify-between gap-3 flex-wrap">
               <div>
-                <h2 className="text-lg font-bold text-slate-900">وسِّع أثر عطاءك — المشاريع المقترحة</h2>
+                <h2 className="text-lg font-bold text-slate-900">وسِّع أثر عطاءك  المشاريع المقترحة</h2>
                 <p className="text-sm text-muted-foreground mt-1">
                   تظهر تحت تبرعات السلة مع أزرار مبالغ سريعة بعملة المتبرع. بدون مشاريع هنا تُعرض الاقتراحات
                   العامة للموقع. الحد الأقصى {CART_UPSELL_MAX_ITEMS} مشاريع.
@@ -279,7 +279,7 @@ export default function CartSettingsPage() {
             </div>
 
             {upsell.length === 0 ? (
-              <p className="text-sm text-muted-foreground">لا مشاريع مختارة — تُعرض الاقتراحات العامة.</p>
+              <p className="text-sm text-muted-foreground">لا مشاريع مختارة  تُعرض الاقتراحات العامة.</p>
             ) : (
               <div className="space-y-4">
                 {upsell.map((row, index) => (

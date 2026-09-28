@@ -13,7 +13,7 @@ import TravelBanner from "@/components/minbar/banners/TravelBanner";
 import IbadanBanner from "@/components/minbar/banners/IbadanBanner";
 
 /**
- * An article — ported from `Minbar/تفاصيل المقال.dc.html`.
+ * An article  ported from `Minbar/تفاصيل المقال.dc.html`.
  *
  * CMS content may arrive as:
  * - clean HTML (<h2>, <p>, lists)

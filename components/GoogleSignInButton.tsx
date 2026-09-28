@@ -166,7 +166,7 @@ export default function GoogleSignInButton({
 
   // Fallback path used when GSI can't load OR when the user is in an in-app
   // browser where popups are unreliable. Hands off to the legacy redirect
-  // OAuth flow — the existing in-app browser notice will catch webviews.
+  // OAuth flow  the existing in-app browser notice will catch webviews.
   const triggerFallback = () => {
     signIn("google", { callbackUrl });
   };
@@ -250,7 +250,7 @@ export default function GoogleSignInButton({
         renderInto();
         setStatus("ready");
 
-        // Re-render on container width change (responsive layouts) — but only
+        // Re-render on container width change (responsive layouts)  but only
         // when the width meaningfully changes, to avoid an infinite RO loop
         // that fires on every iframe paint.
         if (typeof ResizeObserver !== "undefined" && hostRef.current) {

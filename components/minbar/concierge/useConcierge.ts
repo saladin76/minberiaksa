@@ -13,7 +13,7 @@ import { getConciergeSessionId, markConciergeAssisted, markConciergeTouched, rep
 /**
  * Client state machine for the concierge. Talks to
  * `POST /api/ai/donation-concierge`, renders whatever typed blocks come back,
- * and performs the actions itself — adding to the basket through
+ * and performs the actions itself  adding to the basket through
  * `lib/minbar/cart.ts` exactly as the project page does, navigating through
  * `miaPath`, and reporting funnel steps through the tracking context (GA4
  * custom events) and the concierge events endpoint.

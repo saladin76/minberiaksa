@@ -33,9 +33,9 @@ const VALID_LOCALES = SUPPORTED_LOCALES;
 /**
  * A first path segment that is not a locale is NOT a page in Arabic.
  *
- * This segment used to fall back to `ar` silently, so every stray root request —
+ * This segment used to fall back to `ar` silently, so every stray root request 
  * `/favicon.ico`, `/apple-touch-icon.png`, a mistyped path, a crawler probing
- * `/wp-admin` — rendered the Arabic homepage with `locale = "favicon.ico"`
+ * `/wp-admin`  rendered the Arabic homepage with `locale = "favicon.ico"`
  * threaded through it. Anything that then handed that string to `Intl` threw
  * `RangeError: Incorrect locale information provided`, which is how a missing
  * favicon became a 500 in production rather than a 404.
@@ -100,7 +100,7 @@ export default async function Rootlayout({
     (pickNamespaces(locale, ["homepage"]).homepage as Record<string, string> | undefined)
       ?.orgDescription ?? ""
   );
-  // Direction comes from the locale catalog, not a hand-written check — Urdu is
+  // Direction comes from the locale catalog, not a hand-written check  Urdu is
   // RTL too, and the previous `locale === "ar"` test silently rendered it LTR.
   const dir = localeDirection(locale);
   // Drives where the header's account icon points (`[AUTH-INTEGRATION]`).

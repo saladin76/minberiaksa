@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    // Due schedules first, then campaigns still mid-walk — see `runDueCampaigns`.
+    // Due schedules first, then campaigns still mid-walk  see `runDueCampaigns`.
     const results = await runDueCampaigns({ actor: { actorRole: "SYSTEM" }, max: 20 });
     const totals = results.reduce(
       (acc, row) => ({ sent: acc.sent + row.sent, skipped: acc.skipped + row.skipped, failed: acc.failed + row.failed }),
@@ -25,13 +25,13 @@ export async function GET(request: NextRequest) {
     await writeAuditLog({
       actorRole: "SYSTEM",
       action: SCHEDULER_RUN_ACTION,
-      // Kept on every run — `getSchedulerStatus()` reads these rows to show
+      // Kept on every run  `getSchedulerStatus()` reads these rows to show
       // «آخر تشغيل», so silence would read as a dead cron. They are classified
       // as diagnostics instead, and stay out of the activity view.
       messageAr: results.length
-        ? `تشغيل جدولة التواصل — ${results.length} حملة (أُرسل ${totals.sent}، تخطّي ${totals.skipped}، فشل ${totals.failed}${continuing ? `، ${continuing} قيد المتابعة` : ""})`
-        : "تشغيل جدولة التواصل — لا حملات مستحقة",
-      messageEn: `Communication scheduler run — ${results.length} campaign(s), ${continuing} still sending`,
+        ? `تشغيل جدولة التواصل  ${results.length} حملة (أُرسل ${totals.sent}، تخطّي ${totals.skipped}، فشل ${totals.failed}${continuing ? `، ${continuing} قيد المتابعة` : ""})`
+        : "تشغيل جدولة التواصل  لا حملات مستحقة",
+      messageEn: `Communication scheduler run  ${results.length} campaign(s), ${continuing} still sending`,
       entityType: "CommunicationScheduler",
       metadata: { ran: results.length, continuing, ...totals, externalCall: totals.sent > 0 },
       stream: "TEAM",

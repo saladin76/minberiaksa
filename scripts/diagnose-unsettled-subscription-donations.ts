@@ -36,7 +36,7 @@ function resolveSubId(invoice: any): string | null {
 
 async function main() {
   // NB: on MongoDB, `paidAt: null` does NOT match documents where the field is
-  // unset — which is how these rows actually look. Filtering in JS is the only
+  // unset  which is how these rows actually look. Filtering in JS is the only
   // reliable way to catch both shapes. (The backfill script gets this wrong,
   // which is why it silently finds nothing to do.)
   const all = await prisma.donation.findMany({

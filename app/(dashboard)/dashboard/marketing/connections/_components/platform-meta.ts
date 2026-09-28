@@ -1,7 +1,7 @@
 /**
  * Client-side display metadata for the Connections page (icons, accent
  * colors, Arabic labels). The authoritative requirements / readiness logic
- * lives in `lib/marketing/platform-connection-requirements.ts` — this file
+ * lives in `lib/marketing/platform-connection-requirements.ts`  this file
  * only adds presentation hints.
  */
 import type { ComponentType } from "react";

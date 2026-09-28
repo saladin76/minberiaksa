@@ -29,7 +29,7 @@ import {
 import type { CmsDocument } from "@/lib/minbar/cms";
 
 /**
- * Achievements and reports — ported from
+ * Achievements and reports  ported from
  * `Minbar/إنجازات وتقارير المؤسسة.dc.html`.
  *
  * The site's one dark page, and its longest: a photographic hero, the
@@ -43,7 +43,7 @@ import type { CmsDocument } from "@/lib/minbar/cms";
  * by newer approved ones.
  *
  * The handoff drives its testimonies with Swiper. This uses the site's own
- * `Rail`, which already handles the RTL scroll arithmetic — one carousel
+ * `Rail`, which already handles the RTL scroll arithmetic  one carousel
  * behaviour across the site, and one less library on a page that already loads
  * eleven photographs.
  */
@@ -125,7 +125,7 @@ export default function ReportsPage({ reports }: { reports: CmsDocument[] }) {
           <span style={{ display: "inline-flex", alignItems: "center", gap: 8, fontSize: 12, fontWeight: 900, color: "var(--gold)", letterSpacing: ".16em" }}>
             {t("hero.eyebrow")}
           </span>
-          {/* The title carries a `<br>` in every language's translation — it is
+          {/* The title carries a `<br>` in every language's translation  it is
               the one place the report chooses where the headline breaks. */}
           <h1
             style={{ margin: 0, fontSize: "clamp(38px,6vw,90px)", lineHeight: 1.16, fontWeight: 900, color: "#fff", letterSpacing: "-.02em" }}

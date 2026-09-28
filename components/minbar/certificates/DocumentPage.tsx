@@ -3,7 +3,7 @@
 import type { ReactNode } from "react";
 
 /**
- * The standalone page around one document — the sheet, the print rules from
+ * The standalone page around one document  the sheet, the print rules from
  * its handoff file, and the `.no-print` action row beneath it (save as PDF,
  * print, back). The buttons never appear in print or in the PDF.
  *

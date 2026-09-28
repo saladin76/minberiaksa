@@ -11,15 +11,15 @@ import { useMinbarMoney } from "@/hooks/useMinbarMoney";
 import type { MinbarProject } from "@/lib/minbar/projects";
 
 /**
- * Recurring giving — ported from `Minbar/التبرع الدوري.dc.html`.
+ * Recurring giving  ported from `Minbar/التبرع الدوري.dc.html`.
  *
  * The flow the handoff specifies:
  *   Fund → Frequency → Amount → Currency → Timing → Review → Payment
  *
  * Timing is the part with real backend weight. `DONATION_LOGIC_SPEC §1.3` and
  * the Recurring Time Contract require a plan to store its **timezone**, its
- * schedule type, and its schedule rule *as structure* — `{dayOfMonth: 15}`, not
- * "the fifteenth" — with `nextChargeAt` computed on the server. A prayer-linked
+ * schedule type, and its schedule rule *as structure*  `{dayOfMonth: 15}`, not
+ * "the fifteenth"  with `nextChargeAt` computed on the server. A prayer-linked
  * charge additionally stores the location and prayer rule and is recalculated
  * each run, so daylight saving and shifting prayer times are absorbed rather
  * than baked into a stored offset.
@@ -233,7 +233,7 @@ export default function RecurringPage({ projects }: RecurringPageProps) {
         <div aria-hidden="true" data-aqsa-pattern="" style={pattern(520)} />
         <div style={{ position: "relative", maxWidth: 1240, margin: "0 auto", padding: "54px 24px 56px", display: "grid", gap: 30 }}>
           <div style={{ display: "grid", gap: 16, justifyItems: "center", textAlign: "center" }}>
-            {/* Al-Baqarah 261 — the verse on multiplied reward. Arabic always. */}
+            {/* Al-Baqarah 261  the verse on multiplied reward. Arabic always. */}
             <p style={{ margin: 0, display: "flex", alignItems: "center", gap: 14, maxWidth: "74ch", fontFamily: "var(--font-quran)", color: "var(--deep)", fontSize: "clamp(15px,1.5vw,17px)", lineHeight: 1.9 }}>
               <span aria-hidden="true" style={{ flex: "1 1 auto", height: 1, background: "rgba(211,154,39,.4)", maxWidth: 60 }} />
               <span dir="rtl">{verse.arabic}</span>
@@ -273,7 +273,7 @@ export default function RecurringPage({ projects }: RecurringPageProps) {
             </span>
 
             <div style={{ display: "grid", gap: 22, alignContent: "start", padding: 32, background: "#fff", border: "1px solid var(--border)", borderRadius: 16, boxShadow: "0 18px 44px rgba(16,33,43,.1)" }}>
-              {/* Step 1 — fund */}
+              {/* Step 1  fund */}
               <div style={{ display: "grid", gap: 9 }}>
                 <span style={stepLabel}>
                   {stepBadge(1)}
@@ -295,7 +295,7 @@ export default function RecurringPage({ projects }: RecurringPageProps) {
                 </select>
               </div>
 
-              {/* Step 2 — amount */}
+              {/* Step 2  amount */}
               <div style={{ display: "grid", gap: 9 }}>
                 <span style={stepLabel}>
                   {stepBadge(2)}
@@ -330,7 +330,7 @@ export default function RecurringPage({ projects }: RecurringPageProps) {
                 </div>
               </div>
 
-              {/* Step 3 — frequency */}
+              {/* Step 3  frequency */}
               <div style={{ display: "grid", gap: 9 }}>
                 <span style={stepLabel}>
                   {stepBadge(3)}
@@ -348,8 +348,8 @@ export default function RecurringPage({ projects }: RecurringPageProps) {
                 </div>
               </div>
 
-              {/* Schedule. Stored as structure — a day number and either a prayer
-                  key or a wall-clock time — never as a sentence. */}
+              {/* Schedule. Stored as structure  a day number and either a prayer
+                  key or a wall-clock time  never as a sentence. */}
               <div style={{ display: "grid", gap: 12, padding: 16, background: "var(--ivory)", border: "1px solid var(--border)", borderRadius: 12 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                   <span aria-hidden="true" style={{ width: 24, height: 24, borderRadius: 7, background: "var(--sand)", display: "grid", placeItems: "center", color: "var(--gold)" }}>

@@ -52,7 +52,7 @@ export async function resolveGuestDonor(
   const name = [guest.firstName, guest.lastName].filter(Boolean).join(" ").trim() || null;
   // Phone-derived country is a stronger signal than IP geo and lets us avoid
   // leaving brand-new donors with an empty `countryCode` (which then defaults
-  // to whatever Meta CAPI infers from the request IP — often wrong on mobile
+  // to whatever Meta CAPI infers from the request IP  often wrong on mobile
   // carriers and VPNs).
   const countryCode =
     guest.countryCode?.trim().toUpperCase() || countryCodeFromPhone(phone) || null;

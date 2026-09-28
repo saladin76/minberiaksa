@@ -6,7 +6,7 @@
  * One layer: the global defaults (per currency) on GlobalSettings, managed at
  * `/dashboard/cart-settings`. Team support belongs to the whole order, so the
  * old per-campaign override (`Campaign.suggestedTeamSupport`) is no longer
- * read — the column is kept for old rows only.
+ * read  the column is kept for old rows only.
  *
  * The "No thanks" option is rendered by the UI itself and is NOT part of
  * the stored amounts list.

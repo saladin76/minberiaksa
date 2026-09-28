@@ -3,7 +3,7 @@
  *
  * The dashboard forms showed a hard-coded "فشل التحديث" on every rejection, so
  * an admin could not tell a validation problem from a database timeout, and the
- * server's own Arabic explanation — which the API routes do send — was thrown
+ * server's own Arabic explanation  which the API routes do send  was thrown
  * away. This reads that message when there is one and keeps the caller's
  * fallback otherwise.
  *
@@ -23,7 +23,7 @@ export function errorMessage(error: unknown, fallback: string): string {
     }
   }
 
-  // No response at all means the request never completed — offline, blocked, or
+  // No response at all means the request never completed  offline, blocked, or
   // the serverless function timed out. That is worth saying explicitly.
   const hasResponse = !!(error as { response?: unknown })?.response;
   const code = (error as { code?: string })?.code;

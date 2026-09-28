@@ -48,7 +48,7 @@ async function loadDonation(donationId: string): Promise<FormattableDonation | n
 }
 
 /**
- * True when this donation is the donor's first — they have no OTHER successful
+ * True when this donation is the donor's first  they have no OTHER successful
  * donation. Excluding the current row by id keeps the answer correct whether
  * that row is already PAID (success card) or FAILED (a brand-new donor whose
  * first attempt bounced), and mirrors the `paidCount === 1` rule that
@@ -69,7 +69,7 @@ async function isFirstTimeDonor(donorId: string | undefined, donationId: string)
 }
 
 /**
- * Fire-and-forget notification for a donation event. Errors are swallowed —
+ * Fire-and-forget notification for a donation event. Errors are swallowed 
  * the bot must never break the payment webhook. Call as `void notifyDonationEvent(...)`.
  */
 export async function notifyDonationEvent(

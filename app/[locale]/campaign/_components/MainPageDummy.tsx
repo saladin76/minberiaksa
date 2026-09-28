@@ -474,7 +474,7 @@ const IntegratedCampaignPage = ({ id, locale: propLocale }: { id: string; locale
 
                 {/* Tab content */}
                 <div className="p-5 sm:p-7">
-                  {/* Section header — reflects the active tab */}
+                  {/* Section header  reflects the active tab */}
                   {(() => {
                     const meta = tabs.find((tb) => tb.id === activeTab);
                     if (!meta) return null;

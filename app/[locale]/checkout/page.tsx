@@ -43,7 +43,7 @@ async function visitorCountry(): Promise<string | null> {
 }
 
 /**
- * Donor details and payment — ported from `Minbar/بيانات الدفع.dc.html`.
+ * Donor details and payment  ported from `Minbar/بيانات الدفع.dc.html`.
  *
  * A signed-in donor's name, email and phone are pre-filled from their account
  * (`[AUTH-INTEGRATION]`), so they are not asked for details the site already

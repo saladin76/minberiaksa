@@ -17,7 +17,7 @@ function getDateRange(period: string, startParam?: string | null, endParam?: str
   let endDate: Date;
   let startDate: Date;
   if (startParam && endParam) {
-    // Dashboard filter emits Istanbul YYYY-MM-DD keys — interpret 00:00 as
+    // Dashboard filter emits Istanbul YYYY-MM-DD keys  interpret 00:00 as
     // Istanbul midnight so the stats match the chart bucketing.
     ({ startDate, endDate } = istanbulDateKeysToUtcRange(startParam, endParam));
   } else if (period === 'all') {
@@ -55,7 +55,7 @@ function buildDonationWhere(
   return base;
 }
 
-/** Same filters as buildDonationWhere but no date — all-time إيرادات (donation amountUSD sum) */
+/** Same filters as buildDonationWhere but no date  all-time إيرادات (donation amountUSD sum) */
 function buildDonationWhereAllTime(categoryId: string | null, campaignId: string | null) {
   const base: Record<string, unknown> = {};
   if (campaignId && campaignId !== 'all') {
@@ -166,15 +166,15 @@ export async function GET(request: NextRequest) {
     );
 
     // Revenue counts settled one-time donations plus subscription rows (PAID_DONATION_FILTER is
-    // deliberately lenient for subscriptions — see lib/dashboard/donation-usd-revenue.ts).
+    // deliberately lenient for subscriptions  see lib/dashboard/donation-usd-revenue.ts).
     //
     // These MUST be composed with donationWhereAll, not object spread. Both `donationWhere`
     // (category filter) and PAID_DONATION_FILTER carry a top-level `OR`, and spreading one over
-    // the other silently drops the category filter — which made every revenue card show
+    // the other silently drops the category filter  which made every revenue card show
     // org-wide totals next to a correctly-scoped donation count.
     const paidWhere = donationWhereAll(donationWhere, PAID_DONATION_FILTER);
     // `subscriptionId` is ABSENT on 1172 of 1218 one-time donations, and `{ subscriptionId: null }`
-    // does not match an absent field on MongoDB — it matched 41 of 1022 paid one-time donations.
+    // does not match an absent field on MongoDB  it matched 41 of 1022 paid one-time donations.
     const oneTimeWhere = donationWhereAll(paidWhere, donationFieldEmpty('subscriptionId'));
     const fromSubscriptionWhere = donationWhereAll(paidWhere, { subscriptionId: { not: null } });
     const failedWhere = donationWhereAll(donationWhere, { status: 'FAILED' as const });
@@ -199,7 +199,7 @@ export async function GET(request: NextRequest) {
         { categoryItems: { some: { categoryId } } },
       ];
     }
-    // ACTIVE subscription without any settled charge isn't really earning revenue —
+    // ACTIVE subscription without any settled charge isn't really earning revenue 
     // exclude it from MRR / "التبرعات الشهرية الناشطة" so a failed-only sub doesn't inflate the totals.
     const activeMonthlyWhere = { ...subscriptionWhere, donations: { some: PAID_DONATION_FILTER } };
 
@@ -321,7 +321,7 @@ export async function GET(request: NextRequest) {
     let oneTimeTotalAmount = oneTimeTotalResult._sum?.amountUSD ?? 0;
     let fromSubscriptionTotalAmount = fromSubscriptionTotalResult._sum?.amountUSD ?? 0;
     // Card 1 (إيرادات ناجحة للفترة) must match the way thisMonthRevenue/allTimeRevenue
-    // are computed — a single sum over paidWhere. Using oneTime + monthly split
+    // are computed  a single sum over paidWhere. Using oneTime + monthly split
     // can undercount when subscriptionId is *unset* (not explicit null) on legacy
     // Mongo rows, because Prisma's { subscriptionId: null } and { not: null } both
     // miss those. Use the unified aggregate as the source of truth.
@@ -440,7 +440,7 @@ export async function GET(request: NextRequest) {
 
     const failedTotalAmount = failedTotalResult._sum?.amountUSD ?? 0;
 
-    /** All successful charges ever — ignores period / category / campaign query filters */
+    /** All successful charges ever  ignores period / category / campaign query filters */
     const globalPaidWhere = { ...PAID_DONATION_FILTER };
     let paidRevenueAllTimeUnfiltered =
       (await prisma.donation.aggregate({ _sum: { amountUSD: true }, where: globalPaidWhere }))._sum?.amountUSD ?? 0;
@@ -454,7 +454,7 @@ export async function GET(request: NextRequest) {
     // Companions to `paidRevenueAllTimeUnfiltered`, for the headline band that states it is
     // NOT affected by the period/category/campaign filters. The filtered `paidCount`,
     // `activeMonthlyCount` and `monthlyRecurringRevenue` above cannot be shown next to that
-    // claim — on a filtered view they would quietly contradict the figure they sit beside.
+    // claim  on a filtered view they would quietly contradict the figure they sit beside.
     const globalActiveSubscriptionWhere = {
       status: 'ACTIVE' as const,
       donations: { some: PAID_DONATION_FILTER },

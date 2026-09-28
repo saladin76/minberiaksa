@@ -75,7 +75,7 @@ export async function GET(
       referralId,
       createdAt: { gte: startDate, lte: endDate },
     };
-    /** Same category/campaign filters as donationWhere, but no date — for all-time إيرادات card */
+    /** Same category/campaign filters as donationWhere, but no date  for all-time إيرادات card */
     const baseAllTimeDonationWhere: Prisma.DonationWhereInput = { referralId };
     if (campaignId && campaignId !== "all") {
       baseDonationWhere.items = { some: { campaignId } };
@@ -98,7 +98,7 @@ export async function GET(
     // (campaign/category scoping vs PAID_DONATION_FILTER) and spreading drops one silently.
     const paidDonationWhere: Prisma.DonationWhereInput = donationWhereAll(donationWhere, PAID_DONATION_FILTER);
     const failedDonationWhere: Prisma.DonationWhereInput = donationWhereAll(donationWhere, { status: "FAILED" });
-    // `{ subscriptionId: null }` misses rows where the field is absent — the majority here.
+    // `{ subscriptionId: null }` misses rows where the field is absent  the majority here.
     const oneTimeWhere = donationWhereAll(paidDonationWhere, donationFieldEmpty("subscriptionId"));
     const fromSubscriptionWhere = donationWhereAll(paidDonationWhere, { subscriptionId: { not: null } });
     // All-status splits for the "breakdown" cards ("مرة واحدة (عدد)" / "شهرية (عدد)")
@@ -114,7 +114,7 @@ export async function GET(
         { categoryItems: { some: { categoryId } } },
       ];
     }
-    // ACTIVE subscription without any settled charge isn't really earning revenue —
+    // ACTIVE subscription without any settled charge isn't really earning revenue 
     // exclude it from MRR / "التبرعات الشهرية الناشطة" so a failed-only sub doesn't inflate the totals.
     const activeMonthlyWhere: Prisma.SubscriptionWhereInput = {
       ...subscriptionWhere,
@@ -231,7 +231,7 @@ export async function GET(
 
     let oneTimeTotalAmount = oneTimeTotalResult._sum?.amountUSD ?? 0;
     let fromSubscriptionTotalAmount = fromSubscriptionTotalResult._sum?.amountUSD ?? 0;
-    // Unified paid total — must match thisMonthRevenue / allTimeRevenue.
+    // Unified paid total  must match thisMonthRevenue / allTimeRevenue.
     // The oneTime + monthly split misses rows where subscriptionId is *unset*
     // on legacy Mongo records (Prisma's null filter doesn't match unset), so
     // the hero card would report less than the actual paid revenue.
@@ -293,7 +293,7 @@ export async function GET(
       rows.reduce(
         (acc, r) => {
           const usd = donationRowUsdApprox(r);
-          // See app/api/admin/stats/route.ts — `|| 1` made an unproratable row contribute
+          // See app/api/admin/stats/route.ts  `|| 1` made an unproratable row contribute
           // `usd * teamSupport` instead of its share. Skip such rows entirely.
           const total = Number(r.totalAmount) || 0;
           if (total > 0) {
@@ -321,7 +321,7 @@ export async function GET(
 
     const failedTotalAmount = failedTotalResult._sum?.amountUSD ?? 0;
 
-    /** All-time successful revenue for this referral — ignores category/campaign filters */
+    /** All-time successful revenue for this referral  ignores category/campaign filters */
     const referralAllTimePaidWhere: Prisma.DonationWhereInput = { referralId, ...PAID_DONATION_FILTER };
     let paidRevenueAllTimeUnfiltered =
       (await prisma.donation.aggregate({ _sum: { amountUSD: true }, where: referralAllTimePaidWhere }))._sum

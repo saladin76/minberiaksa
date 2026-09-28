@@ -241,7 +241,7 @@ function LogTable({
           </p>
           {timePreset === "all" && total > 100 && (
             <p className="text-xs text-brand">
-              يُعرض آخر 100 — اختر نطاقاً زمنياً لعرض المزيد
+              يُعرض آخر 100  اختر نطاقاً زمنياً لعرض المزيد
             </p>
           )}
         </div>

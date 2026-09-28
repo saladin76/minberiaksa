@@ -13,7 +13,7 @@ import type { Browser } from "puppeteer-core";
  * Two ways to find a browser:
  *   - on Vercel / AWS Lambda, `@sparticuz/chromium` ships a build that fits
  *     the function bundle;
- *   - anywhere else, a Chrome/Edge/Chromium on the machine — set
+ *   - anywhere else, a Chrome/Edge/Chromium on the machine  set
  *     `PUPPETEER_EXECUTABLE_PATH` to pick one explicitly, otherwise the usual
  *     install locations are tried.
  *
@@ -23,7 +23,7 @@ import type { Browser } from "puppeteer-core";
 
 export interface PdfOptions {
   landscape: boolean;
-  /** Page margins in mm — the `@page` rules already set them, this is the fallback. */
+  /** Page margins in mm  the `@page` rules already set them, this is the fallback. */
   marginMm?: number;
 }
 
@@ -69,7 +69,7 @@ async function launch(): Promise<Browser> {
 
   const executablePath = LOCAL_CANDIDATES.find((candidate): candidate is string => Boolean(candidate && existsSync(candidate)));
   if (!executablePath) {
-    throw new PdfRendererUnavailableError("no Chrome/Chromium found — set PUPPETEER_EXECUTABLE_PATH");
+    throw new PdfRendererUnavailableError("no Chrome/Chromium found  set PUPPETEER_EXECUTABLE_PATH");
   }
   return puppeteer.default.launch({
     executablePath,

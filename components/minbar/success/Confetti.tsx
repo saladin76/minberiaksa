@@ -54,7 +54,7 @@ export default function Confetti({ pieces = 140, duration = 3200 }: { pieces?: n
     window.addEventListener("resize", resize);
 
     /* Two fountains from the lower corners meeting over the message, rather
-       than a rain from the top edge — it reads as a burst for this moment. */
+       than a rain from the top edge  it reads as a burst for this moment. */
     const W = window.innerWidth;
     const H = window.innerHeight;
     const items: Piece[] = Array.from({ length: pieces }, (_, i) => {

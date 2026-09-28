@@ -328,7 +328,7 @@ function lookup(path: string, scope: Record<string, unknown>): unknown {
 }
 
 function renderInScope(template: string, scope: Record<string, unknown>): string {
-  // Expand sections (loops) first — recursively, so nested loops work.
+  // Expand sections (loops) first  recursively, so nested loops work.
   const expanded = template.replace(SECTION_RE, (_, path: string, inner: string) => {
     const target = lookup(path, scope);
     if (!Array.isArray(target)) return "";

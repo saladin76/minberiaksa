@@ -11,7 +11,7 @@ import { ArrowGlyph } from "./TopSections";
 import ViewAllLink from "./ViewAllLink";
 
 /**
- * Homepage media sections — events, the endorsement and achievement reels, the
+ * Homepage media sections  events, the endorsement and achievement reels, the
  * programmes rail and the courses rail. Ported from
  * `Minbar/الصفحة الرئيسية.dc.html`.
  *
@@ -75,7 +75,7 @@ export function EventsSection() {
  * Endorsements and achievements share one card. An item with a real video opens
  * it in the in-site player; an item with only a still renders without a play
  * affordance, because a dead play button is worse than none
- * (COMPONENT_INVENTORY: "placeholder — بلا زر وهمي"). */
+ * (COMPONENT_INVENTORY: "placeholder  بلا زر وهمي"). */
 function ReelRail({
   id,
   title,
@@ -254,8 +254,8 @@ export function ProgramsRail({ playlists }: { playlists: CmsPlaylist[] }) {
         </div>
         <div id="programs-rail" className="mia-rail" style={railStyle}>
           {playlists.map((program) => (
-            /* Each programme opens its own YouTube playlist — in a new tab,
-               since it leaves the site — and falls back to the programmes
+            /* Each programme opens its own YouTube playlist  in a new tab,
+               since it leaves the site  and falls back to the programmes
                page only when the CMS row has no playlist URL. Every card used
                to land on the same generic page (`DEPLOYED_VS_DESIGN_AUDIT.md`
                § P2.3). */

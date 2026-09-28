@@ -5,7 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { countryCodeFromPhone } from "@/lib/donations/donor-country-code";
 
 /**
- * PATCH /api/users/me/phone — body `{ phone: "+90…" }`.
+ * PATCH /api/users/me/phone  body `{ phone: "+90…" }`.
  *
  * The checkout asks a signed-in donor for a phone number only until it has
  * one: whatever they type there is stored on their account, so the next

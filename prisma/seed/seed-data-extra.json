@@ -2,7 +2,7 @@
   "_meta": {
     "generatedAt": "2026-09-10T20:12:01.438Z",
     "canonicalLanguage": "ar",
-    "note": "نماذج محتوى غير موجودة في المخطط الحالي — Story · VideoPlaylist · PlaylistVideo · Course · CourseVideo · Video. البيانات من مصادر الموقع الفعلية.",
+    "note": "نماذج محتوى غير موجودة في المخطط الحالي  Story · VideoPlaylist · PlaylistVideo · Course · CourseVideo · Video. البيانات من مصادر الموقع الفعلية.",
     "counts": {
       "stories": 6,
       "playlists": 4,
@@ -345,7 +345,7 @@
     {
       "slug": "zenki",
       "title": "دورة نور الدين محمود زنكي",
-      "description": "دورة علمية في قضية بيت المقدس والمسجد الأقصى — تسع وحدات وملحق تكميلي للخطباء والدعاة",
+      "description": "دورة علمية في قضية بيت المقدس والمسجد الأقصى  تسع وحدات وملحق تكميلي للخطباء والدعاة",
       "coverImage": "https://img.youtube.com/vi/vC1A_17VBpQ/hqdefault.jpg",
       "introVideoId": "vC1A_17VBpQ",
       "introVideoUrl": "https://www.youtube.com/watch?v=vC1A_17VBpQ",
@@ -360,12 +360,12 @@
         {
           "locale": "tr",
           "title": "Nûreddin Mahmud Zengî Eğitim Programı",
-          "description": "دورة علمية في قضية بيت المقدس والمسجد الأقصى — تسع وحدات وملحق تكميلي للخطباء والدعاة"
+          "description": "دورة علمية في قضية بيت المقدس والمسجد الأقصى  تسع وحدات وملحق تكميلي للخطباء والدعاة"
         },
         {
           "locale": "en",
           "title": "The Nur ad-Din Zangi Course",
-          "description": "دورة علمية في قضية بيت المقدس والمسجد الأقصى — تسع وحدات وملحق تكميلي للخطباء والدعاة"
+          "description": "دورة علمية في قضية بيت المقدس والمسجد الأقصى  تسع وحدات وملحق تكميلي للخطباء والدعاة"
         }
       ],
       "videos": [],
@@ -417,12 +417,12 @@
       "translations": [
         {
           "locale": "tr",
-          "title": "Panel: Kudüs — Mevcut Durum ve İhtiyaçlar",
+          "title": "Panel: Kudüs  Mevcut Durum ve İhtiyaçlar",
           "description": "ندوة علمية من ندوات المؤسسة حول واقع القدس واحتياجات أهلها"
         },
         {
           "locale": "en",
-          "title": "Seminar: Al-Quds — Reality and Needs",
+          "title": "Seminar: Al-Quds  Reality and Needs",
           "description": "ندوة علمية من ندوات المؤسسة حول واقع القدس واحتياجات أهلها"
         }
       ],
@@ -693,7 +693,7 @@
     {
       "slug": "yunus-balc-o-lu-aml-ca-camii-i-mam-hatibi-endorsement-2",
       "type": "ENDORSEMENT",
-      "title": "Yunus Balcıoğlu — Çamlıca Camii İmam Hatibi",
+      "title": "Yunus Balcıoğlu  Çamlıca Camii İmam Hatibi",
       "youtubeId": "Wj00W4jIlwM",
       "url": "https://www.youtube.com/watch?v=Wj00W4jIlwM&t=39s",
       "startSeconds": 39,

@@ -203,7 +203,7 @@ async function main() {
 
   // Reconcile from STRIPE's side as well. The loop above can only see invoices belonging to a
   // subscription we already have a `payforToken` for, so a Stripe subscription whose DB row was
-  // never created (or was deleted) is invisible to it — it reports a clean "nothing missing"
+  // never created (or was deleted) is invisible to it  it reports a clean "nothing missing"
   // while real paid invoices sit unrecorded. This pass enumerates every paid invoice in the
   // account and reports the ones with no matching Donation, whatever subscription they belong to.
   const orphanInvoices: Array<{ id: string; date: string; amount: number; currency: string; billingReason: string | null; stripeSubId: string | null }> = [];
@@ -223,7 +223,7 @@ async function main() {
     });
   }
 
-  console.log(`\n=== ${COMMIT ? "COMMITTED" : "DRY RUN (no writes — pass --commit to apply)"} ===`);
+  console.log(`\n=== ${COMMIT ? "COMMITTED" : "DRY RUN (no writes  pass --commit to apply)"} ===`);
   console.log(JSON.stringify({
     subscriptionsScanned: subs.length,
     skippedNoStripeSub,

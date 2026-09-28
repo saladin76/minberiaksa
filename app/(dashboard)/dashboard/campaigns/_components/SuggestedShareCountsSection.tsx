@@ -167,7 +167,7 @@ export const SuggestedShareCountsSection = forwardRef<
                     <SelectContent>
                       {SUPPORTED_CURRENCY_OPTIONS.map((c) => (
                         <SelectItem key={c.code} value={c.code}>
-                          {c.code} — {c.name}
+                          {c.code}  {c.name}
                         </SelectItem>
                       ))}
                     </SelectContent>

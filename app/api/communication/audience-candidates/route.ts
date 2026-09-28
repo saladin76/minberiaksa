@@ -37,7 +37,7 @@ export const dynamic = "force-dynamic";
  *
  * Country, badges and language mirror the المتبرعون table so the same audience can be reasoned
  * about the same way in both places. Facets (the filter dropdowns' options) are returned from here
- * rather than fetched separately, so the whole screen needs one permission — `messages` — instead
+ * rather than fetched separately, so the whole screen needs one permission  `messages`  instead
  * of also requiring `badges` just to populate a filter.
  */
 
@@ -87,7 +87,7 @@ function ageInput(value: string | number | null | undefined): number | null {
 /**
  * Build the donor `where` for the current filters.
  *
- * Badge membership is computed, not stored — there is no User↔Badge row to join — so a badge filter
+ * Badge membership is computed, not stored  there is no User↔Badge row to join  so a badge filter
  * has to resolve to an id list first, exactly as the المتبرعون endpoint does. An empty result is
  * passed through as `id: { in: [] }` rather than dropped, otherwise "badge with no members" would
  * silently widen to "every donor".
@@ -113,7 +113,7 @@ async function buildWhere(f: FilterInput): Promise<Prisma.UserWhereInput> {
   if (gender) where.gender = { in: genderQueryValues(gender) };
 
   // `birthdate` is an ISO "YYYY-MM-DD" string and ISO dates sort
-  // lexicographically, so an age range is a plain string range — no computed
+  // lexicographically, so an age range is a plain string range  no computed
   // field needed. Donors with no birthdate fall out, which is what "aged 25-40"
   // should mean for a targeted send.
   const birthdateRange = birthdateRangeForAges(ageInput(f.minAge), ageInput(f.maxAge));

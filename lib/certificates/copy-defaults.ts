@@ -2,13 +2,13 @@
  * The wording on the three documents, and where each line comes from.
  *
  * `CERTIFICATES_DOWNLOADS_HANDOFF.md §4`: "All body copy is dashboard-editable
- * per template and per locale — store it, don't hardcode." So every line a
+ * per template and per locale  store it, don't hardcode." So every line a
  * document prints is a named field here. Its default is the i18n text (19
  * locales, `certificates` namespace) and the dashboard may override any field
  * for any locale; `lib/certificates/copy.ts` merges the two.
  *
  * Two kinds of line are deliberately NOT fields: the Qur'anic verses, which
- * come from the `quran` namespace (`RELIGIOUS_LOCKED` — no override, no
+ * come from the `quran` namespace (`RELIGIOUS_LOCKED`  no override, no
  * retranslation), and the foundation's legal registration data on the receipt
  * (`orgLegalName`, `taxNo`, `orgAddress`, `orgContact`), which the receipt
  * template says stays in Latin script exactly as the Turkish register has it,
@@ -161,7 +161,7 @@ export const RECEIPT_FIELDS: ReadonlyArray<{ name: keyof ReceiptCopy; i18nKey: s
   { name: "emptyHint", i18nKey: "rcpEmptyHint", label: "توضيح الإيصال الخالي" },
 ];
 
-/** Defaults with no i18n key — the template's own literal values. */
+/** Defaults with no i18n key  the template's own literal values. */
 export const RECEIPT_LITERAL_DEFAULTS: Pick<ReceiptCopy, "docTitleLatin" | "pairNote"> = {
   docTitleLatin: "Bağış Makbuzu / Donation Receipt",
   pairNote: "Bu makbuz Türkçe nüshası ile birlikte geçerlidir.",
@@ -212,7 +212,7 @@ export function resolveReceiptOrg(overrides?: Partial<ReceiptOrgData>): ReceiptO
   return out;
 }
 
-/** Keep only strings, only for known fields — the shape the API stores. */
+/** Keep only strings, only for known fields  the shape the API stores. */
 export function sanitizeCopyOverrides(input: unknown): CertificateCopyOverrides {
   const out: CertificateCopyOverrides = {};
   if (!input || typeof input !== "object") return out;

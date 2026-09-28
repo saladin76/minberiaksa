@@ -16,17 +16,17 @@ import { messagesFor } from "@/i18n/locale-messages";
 
 export interface MinbarDonationSummary {
   id: string;
-  /** Receipt number shown to the donor — the donation id, as the PDF uses. */
+  /** Receipt number shown to the donor  the donation id, as the PDF uses. */
   receiptNo: string;
   /** Total charged, in the currency it was charged in. */
   amount: number;
   currency: string;
-  /** ISO timestamp — paid where known, else created. */
+  /** ISO timestamp  paid where known, else created. */
   date: string;
   /** Campaign titles this donation was split across, already translated. */
   titles: string[];
   /**
-   * Every line the donation was split across — campaigns and categories —
+   * Every line the donation was split across  campaigns and categories 
    * each with what it received, in the charged currency. This is what the
    * receipt itemises, and the success page has to say the same thing.
    */
@@ -40,9 +40,9 @@ export interface MinbarDonationSummary {
   donorName: string | null;
   /** `true` when the donation was charged against a recurring plan. */
   recurring: boolean;
-  /** The plan's cadence — `DAILY | FRIDAY | MONTHLY` — or `null` on a one-time gift. */
+  /** The plan's cadence  `DAILY | FRIDAY | MONTHLY`  or `null` on a one-time gift. */
   frequency: "DAILY" | "FRIDAY" | "MONTHLY" | null;
-  /** ISO — when the plan charges next; the first instalment was this donation. */
+  /** ISO  when the plan charges next; the first instalment was this donation. */
   nextChargeAt: string | null;
   /** Confirmed. A pending transfer is not shown as a completed donation. */
   paid: boolean;
@@ -57,7 +57,7 @@ export interface MinbarDonationSummary {
  * One donation by id.
  *
  * Returns `null` for an unknown id, a malformed id, or a donation that is not
- * `PAID` — the success page must never congratulate a donor on a payment that
+ * `PAID`  the success page must never congratulate a donor on a payment that
  * has not settled. A pending bank transfer has its own screen.
  */
 export async function getDonationSummary(

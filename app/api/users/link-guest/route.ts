@@ -8,8 +8,8 @@ import { linkGuestUserToTarget } from "@/lib/users/link-guest";
  * Attach a guest-created donation (and every other guest donation under the
  * same anonymous user record) to the currently authenticated user.
  *
- * The donation id is treated as a bearer token here — exactly like
- * /api/donations/[id] does — because the only way the caller learned about
+ * The donation id is treated as a bearer token here  exactly like
+ * /api/donations/[id] does  because the only way the caller learned about
  * the id is by being the donor on the success page (or following an email
  * link sent to that donor). The linkGuestUserToTarget helper then refuses
  * to merge anything that has a password or a linked OAuth account, so the

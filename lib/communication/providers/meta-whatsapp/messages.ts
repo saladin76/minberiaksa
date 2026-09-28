@@ -8,7 +8,7 @@ import type { SendTemplateInput, SendTextInput, SendResult } from "./types";
  *
  * Meta allows a business to send free text only within 24 hours of the contact's last message; a
  * business-initiated message must be an approved template. So this is the inbox reply path and nothing
- * else — outside the window Meta rejects it with `#131047`, which is the correct outcome rather than
+ * else  outside the window Meta rejects it with `#131047`, which is the correct outcome rather than
  * something to work around. The caller checks the window first so the operator is told before typing,
  * not after sending.
  */

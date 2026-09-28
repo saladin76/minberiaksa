@@ -9,7 +9,7 @@ import { youtubeEmbed, youtubeThumb } from "@/lib/minbar/content/media";
 import VideoModal, { useVideoModal } from "@/components/minbar/VideoModal";
 
 /**
- * Our courses — ported from `Minbar/دوراتنا.dc.html`.
+ * Our courses  ported from `Minbar/دوراتنا.dc.html`.
  *
  * A course with a page of its own (the Zangi course) links to it; the rest are
  * full recordings and open in the overlay player, on a card that is still a

@@ -16,7 +16,7 @@ import {
  * detection, plus a "first-touch" summary derived from the earliest donation
  * whose attribution identifies a paid platform.
  *
- * Pure read — runs the same `detectDonationSource` the dashboard uses for the
+ * Pure read  runs the same `detectDonationSource` the dashboard uses for the
  * row badge, so the journey view stays consistent with the table.
  */
 export async function GET(

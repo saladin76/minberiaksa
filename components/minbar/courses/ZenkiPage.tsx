@@ -17,7 +17,7 @@ import ZakatBanner from "@/components/minbar/banners/ZakatBanner";
 import TravelBanner from "@/components/minbar/banners/TravelBanner";
 
 /**
- * The Nur ad-Din Zangi course — ported from
+ * The Nur ad-Din Zangi course  ported from
  * `Minbar/دورة نور الدين زنكي.dc.html`.
  *
  * The one course with a page of its own: what it is, who Nur ad-Din was, why
@@ -25,7 +25,7 @@ import TravelBanner from "@/components/minbar/banners/TravelBanner";
  * sessions with their topics, objectives and bibliography, the annex for
  * preachers, and the two ways it is run.
  *
- * Every label here is translated. The syllabus is not, deliberately — see
+ * Every label here is translated. The syllabus is not, deliberately  see
  * `lib/minbar/content/zenki.ts`. Those blocks are marked `lang="ar" dir="rtl"`
  * so they render and are announced correctly inside a page read in any other
  * language.
@@ -126,7 +126,7 @@ export default function ZenkiPage() {
                   {quote.text}
                 </span>
                 <b {...ARABIC} style={{ ...ARABIC.style, fontSize: 12, color: "var(--muted)", fontWeight: 800 }}>
-                  — {quote.by}
+                   {quote.by}
                 </b>
               </div>
             ))}

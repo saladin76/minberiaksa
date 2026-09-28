@@ -92,7 +92,7 @@ const PROVIDER_LABELS: Record<string, string> = {
 
 /**
  * SMS has the shortest ladder of the three channels: we handed it over, and the carrier confirmed
- * the handset got it. There is no open and no read — delivery is the end of what can be known.
+ * the handset got it. There is no open and no read  delivery is the end of what can be known.
  */
 export function buildStages(row: StageSource): JourneyStage[] {
   return [
@@ -104,7 +104,7 @@ export function buildStages(row: StageSource): JourneyStage[] {
 /**
  * Where SMS can and cannot reach.
  *
- * The provider is picked per recipient — Turkish numbers to Netgsm, everything else to Brevo — so
+ * The provider is picked per recipient  Turkish numbers to Netgsm, everything else to Brevo  so
  * this channel can be genuinely half-working. Reporting one "configured" flag would let "we can
  * text Turkey but nowhere else" read as a healthy channel.
  */
@@ -155,7 +155,7 @@ function RoutingCard({ routing }: { routing: Payload["routing"] }) {
                 <p className="mt-0.5 text-[11px] leading-4 text-slate-500">
                   {route.state.configured
                     ? "مُعدّ بالكامل."
-                    : `غير مكتمل${route.state.missingFields.length ? ` — ناقص: ${route.state.missingFields.join("، ")}` : ""}.`}
+                    : `غير مكتمل${route.state.missingFields.length ? `  ناقص: ${route.state.missingFields.join("، ")}` : ""}.`}
                 </p>
               </div>
             </div>
@@ -191,7 +191,7 @@ function RoutingCard({ routing }: { routing: Payload["routing"] }) {
 /**
  * What the traffic actually costs.
  *
- * SMS is billed per segment, and Arabic forces UCS-2 at 70 characters instead of 160 — so a
+ * SMS is billed per segment, and Arabic forces UCS-2 at 70 characters instead of 160  so a
  * message count under-states the bill by 2–3× on an Arabic-first platform. This card exists so
  * nobody plans an SMS campaign against the wrong number.
  */
@@ -220,7 +220,7 @@ function SegmentsCard({ segments }: { segments: Payload["segments"] }) {
             </span>
           </div>
           <p className="mt-1 text-[11px] text-slate-500">
-            بمعدّل {segments.avgSegments} مقطع لكل رسالة — والفوترة تتم بالمقطع، لا بالرسالة.
+            بمعدّل {segments.avgSegments} مقطع لكل رسالة  والفوترة تتم بالمقطع، لا بالرسالة.
           </p>
 
           <div className="mt-3 space-y-1.5 border-t border-slate-100 pt-3">
@@ -238,7 +238,7 @@ function SegmentsCard({ segments }: { segments: Payload["segments"] }) {
 
       {ucs2Share >= 50 && (
         <p className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-2 text-[10px] leading-4 text-amber-900">
-          {ucs2Share}٪ من الرسائل بالعربية — الحرف العربي خارج أبجدية GSM، فيتحوّل المقطع إلى ٧٠ حرفًا
+          {ucs2Share}٪ من الرسائل بالعربية  الحرف العربي خارج أبجدية GSM، فيتحوّل المقطع إلى ٧٠ حرفًا
           بدل ١٦٠. رسالة من ٩٠ حرفًا عربيًا تُحتسب مقطعين.
         </p>
       )}
@@ -302,7 +302,7 @@ export function SmsChannelDashboard() {
         <PageHeader
           eyebrow="التواصل"
           title="الرسائل النصية"
-          description="كل رسالة SMS صادرة، ووجهتها ومزوّدها وتكلفتها بالمقاطع — والوصول والفشل."
+          description="كل رسالة SMS صادرة، ووجهتها ومزوّدها وتكلفتها بالمقاطع  والوصول والفشل."
           icon={MessageSquare}
           actions={
             <div className="flex items-center gap-2">
@@ -311,7 +311,7 @@ export function SmsChannelDashboard() {
                   type="button"
                   onClick={() => canRetry && setRetryIds(null)}
                   disabled={loading || !canRetry}
-                  title={canRetry ? undefined : "لا يوجد مزوّد SMS مُعدّ — إعادة الإرسال ستُرفض."}
+                  title={canRetry ? undefined : "لا يوجد مزوّد SMS مُعدّ  إعادة الإرسال ستُرفض."}
                   className="inline-flex h-9 items-center gap-2 rounded-lg bg-brand px-3 text-xs font-semibold text-white transition hover:bg-brand/90 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   <Send className="h-3.5 w-3.5" />
@@ -344,7 +344,7 @@ export function SmsChannelDashboard() {
             <b>لم تُرسل أي رسالة نصية من المنصة بعد.</b>{" "}
             {!data.triggersSupported && (
               <>
-                الرسائل التلقائية (إيصالات التبرّع وغيرها) تدعم البريد وواتساب فقط — لا يمكن لأي
+                الرسائل التلقائية (إيصالات التبرّع وغيرها) تدعم البريد وواتساب فقط  لا يمكن لأي
                 مُشغِّل أن يرسل SMS. الإرسال عبر هذه القناة متاح لحملات التواصل فقط، وهي لا تملك
                 واجهة في لوحة التحكم بعد.{" "}
               </>
@@ -356,7 +356,7 @@ export function SmsChannelDashboard() {
         {data && !neverSent && !trackingLive && (
           <TrackingBanner>
             <b>تقارير التسليم غير مُفعّلة.</b> لم يصل أي إشعار تسليم من المزوّد، لذلك تظهر «وصلت»
-            فارغة — وهذا يعني «لا توجد بيانات»، وليس «لم تصل».
+            فارغة  وهذا يعني «لا توجد بيانات»، وليس «لم تصل».
           </TrackingBanner>
         )}
 
@@ -366,7 +366,7 @@ export function SmsChannelDashboard() {
             eyebrow="الرسائل النصية المرسلة"
             badge={`آخر ${days} يومًا`}
             value={summary.attempted.toLocaleString("en-US")}
-            note="عدد الرسائل التي قبلها مزوّد SMS خلال الفترة. الفوترة تتم بالمقاطع — راجع بطاقة المقاطع."
+            note="عدد الرسائل التي قبلها مزوّد SMS خلال الفترة. الفوترة تتم بالمقاطع  راجع بطاقة المقاطع."
             stats={[
               { label: "وصلت", icon: Check, value: trackingLive ? summary.delivered.toLocaleString("en-US") : "—", hint: trackingLive ? `${summary.deliveredRate}%` : undefined },
               { label: "المقاطع", icon: Layers, value: (data?.segments.segments ?? 0).toLocaleString("en-US") },
@@ -417,7 +417,7 @@ export function SmsChannelDashboard() {
           <div className="space-y-4">
             {data && <RoutingCard routing={data.routing} />}
             {data && <SegmentsCard segments={data.segments} />}
-            {/* Two rungs only — there is no open or read to chart, so the funnel stays honest
+            {/* Two rungs only  there is no open or read to chart, so the funnel stays honest
                 by being short rather than padded with metrics SMS cannot produce. */}
             {summary && !neverSent && (
               <FunnelCard

@@ -23,11 +23,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 /**
- * The Nur ad-Din Zangi course — ported from
+ * The Nur ad-Din Zangi course  ported from
  * `Minbar/دورة نور الدين زنكي.dc.html`.
  *
  * The only course with a page of its own. Its syllabus is Arabic source
- * content and is not translated — see `lib/minbar/content/zenki.ts` for why.
+ * content and is not translated  see `lib/minbar/content/zenki.ts` for why.
  */
 export default async function Zenki({ params }: Props) {
   const { locale } = await params;

@@ -17,7 +17,7 @@ import type {
   BrandReadinessAlert,
 } from "./brand-types";
 
-// Team-facing brand guide tabs (Arabic). "المؤسسات" (organizations) is intentionally NOT listed — it
+// Team-facing brand guide tabs (Arabic). "المؤسسات" (organizations) is intentionally NOT listed  it
 // was removed from the user-facing Brand Center; the /dashboard/brand/organizations route redirects.
 export const BRAND_CENTER_TABS: BrandCenterTab[] = [
   { key: "overview", title: "دليل الهوية", href: "/dashboard/brand" },
@@ -51,7 +51,7 @@ function buildDownloads(profile: BrandProfile, assets: BrandAsset[]): BrandDownl
   return [
     {
       id: `${profile.id}_profile_download`,
-      title: `${profile.name} — ملف الهوية`,
+      title: `${profile.name}  ملف الهوية`,
       type: "PROFILE",
       url: null,
       note: "ملخص الهوية جاهز؛ يُنشأ ملف التصدير/التحميل بعد اعتماد بيانات الهوية.",
@@ -72,7 +72,7 @@ function buildAlerts(repository: BrandRepositorySnapshot, profile: BrandProfile)
   const profileAssets = scoped(repository.assets, profile.id);
   const profileColors = scoped(repository.colors, profile.id);
   const profileFrameworks = scoped(repository.messageFrameworks, profile.id);
-  // Team-facing readiness notes — Arabic only. These are actionable brand-setup reminders; the UI
+  // Team-facing readiness notes  Arabic only. These are actionable brand-setup reminders; the UI
   // shows them under a collapsible "تنبيهات متقدمة" so they are never the first thing on the page.
   const alerts: BrandReadinessAlert[] = [];
 

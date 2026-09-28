@@ -24,7 +24,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 /**
- * Our achievements in video — filmed documentation from the field of the
+ * Our achievements in video  filmed documentation from the field of the
  * projects in Al-Quds, Gaza and Al-Aqsa Mosque.
  *
  * Ported from `Minbar/إنجازاتنا بالفيديو.dc.html`.

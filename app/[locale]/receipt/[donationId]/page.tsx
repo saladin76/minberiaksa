@@ -11,7 +11,7 @@ import DocumentPage from "@/components/minbar/certificates/DocumentPage";
 
 interface Props {
   params: Promise<{ locale: string; donationId: string }>;
-  /** `t` — the guest's access token, carried on from the success page. */
+  /** `t`  the guest's access token, carried on from the success page. */
   searchParams: Promise<{ t?: string }>;
 }
 
@@ -32,7 +32,7 @@ ${RECEIPT_RESPONSIVE_CSS}
 
 /**
  * The donation receipt as its own page: the donor-language copy and, beneath
- * it, the Turkish copy the foundation's registration requires — the same
+ * it, the Turkish copy the foundation's registration requires  the same
  * number and verification code on both, as they are one receipt.
  */
 export default async function ReceiptPage({ params, searchParams }: Props) {

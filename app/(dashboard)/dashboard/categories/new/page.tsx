@@ -68,7 +68,7 @@ const formSchema = z.object({
   image: z.string().optional(),
   icon: z.string().optional(),
   /* name/description per translation locale, generated from the locale list;
-     English is required — see superRefine. */
+     English is required  see superRefine. */
   ...LOCALE_SHAPE,
 }).superRefine((data, ctx) => {
   if (!data.name_en || !String(data.name_en).trim()) {

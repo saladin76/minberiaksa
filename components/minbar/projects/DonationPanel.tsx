@@ -9,7 +9,7 @@ import { useMinbarMoney } from "@/hooks/useMinbarMoney";
 import type { MinbarProject } from "@/lib/minbar/projects";
 
 /**
- * The sticky donation panel on a project page — ported from the `#pd-aside`
+ * The sticky donation panel on a project page  ported from the `#pd-aside`
  * block of `Minbar/تفاصيل مشروع.dc.html`.
  *
  * Amount, frequency, and an optional dedication ("give this in someone's name")
@@ -17,7 +17,7 @@ import type { MinbarProject } from "@/lib/minbar/projects";
  *
  * Contract notes carried over:
  *  - only identifiers reach the cart (`projectId`, `freqKey`, numeric amount,
- *    ISO currency) — the displayed title is resolved live from the locale;
+ *    ISO currency)  the displayed title is resolved live from the locale;
  *  - the certificate itself is generated server-side after payment is
  *    confirmed, never in the browser (`DONATION_LOGIC_SPEC §2`). What this panel
  *    collects is the dedication data that will go on it;
@@ -100,7 +100,7 @@ export default function DonationPanel({ project }: { project: MinbarProject }) {
   /* The dedication rides on the row itself: the basket shows "gift to X",
      the order carries it on the line, and the recipient is told once the
      donation is confirmed. Only a complete dedication (a name, and contact
-     details for every chosen channel) is attached — a half-filled one is
+     details for every chosen channel) is attached  a half-filled one is
      dropped rather than sent to nobody. */
   const buildItem = () => ({
     projectId: project.slug,
@@ -307,7 +307,7 @@ export default function DonationPanel({ project }: { project: MinbarProject }) {
                 onChange={(e) => setGiftPhone(e.target.value)}
                 type="tel"
                 inputMode="tel"
-                /* A phone number is Latin-script data — isolated so bidi cannot
+                /* A phone number is Latin-script data  isolated so bidi cannot
                    reorder its digits inside an Arabic panel. */
                 dir="ltr"
                 placeholder={tCart("recipientWhatsapp")}

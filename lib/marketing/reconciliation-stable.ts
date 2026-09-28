@@ -40,6 +40,19 @@ type Row = Bucket & {
   valueGap: number;
 };
 
+/**
+ * Which side of the reconciliation saw this bucket.
+ *
+ * Inline, the nested ternary widened to `string` and the assembled row stopped matching `Row`. Naming
+ * the return type is what keeps the four cases exhaustive and the union intact.
+ */
+function matchStatusFor(row: { siteTouched: boolean; platformTouched: boolean }): MatchStatus {
+  if (row.siteTouched && row.platformTouched) return "matched";
+  if (row.platformTouched) return "platform_only";
+  if (row.siteTouched) return "site_only";
+  return "unknown";
+}
+
 function isRecord(value: unknown): value is Attribution {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -346,7 +359,7 @@ export async function GET(request: NextRequest) {
     ...row,
     label: displayAdLabel(row.label, row.adId),
     adsetId: row.adsetName ? null : row.adsetId,
-    matchStatus: row.siteTouched && row.platformTouched ? "matched" : row.platformTouched ? "platform_only" : row.siteTouched ? "site_only" : "unknown",
+    matchStatus: matchStatusFor(row),
     actualRoas: row.platformSpend > 0 ? row.siteRevenue / row.platformSpend : null,
     platformRoas: row.platformSpend > 0 ? row.platformReportedValue / row.platformSpend : null,
     conversionGap: row.siteDonations - row.platformReportedConversions,

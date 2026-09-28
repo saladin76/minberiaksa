@@ -13,7 +13,7 @@ import DonationPanel from "./DonationPanel";
 import ConciergeEntry from "@/components/minbar/concierge/ConciergeEntry";
 
 /**
- * Project detail — ported from `Minbar/تفاصيل مشروع.dc.html`.
+ * Project detail  ported from `Minbar/تفاصيل مشروع.dc.html`.
  *
  * Breadcrumb, hero, the sticky donation panel, a tabbed body (about / field
  * updates / gallery), a project FAQ with zakat and waqf cross-links, and
@@ -21,7 +21,7 @@ import ConciergeEntry from "@/components/minbar/concierge/ConciergeEntry";
  *
  * The Updates and Gallery tabs only appear when there is something in them.
  * The handoff is firm that reports and photographs are shown once approved and
- * linked to the project — an empty tab implies content that does not exist.
+ * linked to the project  an empty tab implies content that does not exist.
  */
 
 export interface ProjectDetailProps {
@@ -71,7 +71,7 @@ export default function ProjectDetail({ project, updates, gallery, related }: Pr
         style={{ position: "fixed", left: "50%", top: "76%", transform: "translate(-50%,-50%)", width: "58vw", maxWidth: 860, height: "auto", opacity: 0.1, pointerEvents: "none", zIndex: 0 }}
       />
 
-      {/* Breadcrumb — `PRODUCTION_SEO_CONTRACT.md` asks for BreadcrumbList
+      {/* Breadcrumb  `PRODUCTION_SEO_CONTRACT.md` asks for BreadcrumbList
           structured data on detail pages; it is emitted by the route. */}
       <nav aria-label={tNav("home")} style={{ position: "relative", zIndex: 1, background: "rgba(255,255,255,.86)", borderBottom: "1px solid var(--border)" }}>
         <div style={{ maxWidth: 1240, margin: "0 auto", padding: "11px 24px", display: "flex", alignItems: "center", gap: 9, fontSize: 12.5, fontWeight: 700, color: "var(--muted)", flexWrap: "wrap" }}>
@@ -173,7 +173,7 @@ export default function ProjectDetail({ project, updates, gallery, related }: Pr
                   <span
                     key={src}
                     role="img"
-                    aria-label={`${project.title} — ${i + 1}`}
+                    aria-label={`${project.title}  ${i + 1}`}
                     style={{ display: "block", aspectRatio: "4/3", borderRadius: 10, backgroundImage: `url('${src}')`, backgroundSize: "cover", backgroundPosition: "center", border: "1px solid var(--border)" }}
                   />
                 ))}

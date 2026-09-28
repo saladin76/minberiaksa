@@ -22,7 +22,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   });
 }
 
-/** Become a partner — ported from `Minbar/كن شريكا.dc.html`. */
+/** Become a partner  ported from `Minbar/كن شريكا.dc.html`. */
 export default async function Partner({ params }: Props) {
   const { locale } = await params;
 

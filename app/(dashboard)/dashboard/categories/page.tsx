@@ -63,7 +63,7 @@ interface Category {
 export default function CategoriesPage() {
   const router = useRouter();
   const uiLocale = useLocale() as string;
-  /* The language the table shows names in — every one the site publishes. */
+  /* The language the table shows names in  every one the site publishes. */
   const [locale, setLocale] = useState<string>(uiLocale || 'ar');
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
@@ -103,7 +103,7 @@ export default function CategoriesPage() {
   const fetchCategories = async () => {
     try {
       // Request localized categories and counts only for performance.
-      // isActiveFalse=true returns archived categories too — the dashboard
+      // isActiveFalse=true returns archived categories too  the dashboard
       // needs both the active table and the archive viewer.
       const response = await axios.get('/api/categories/detailed', {
         params: {

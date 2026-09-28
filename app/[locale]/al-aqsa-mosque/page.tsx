@@ -23,7 +23,7 @@ export const revalidate = 60;
 /**
  * Categories the design draws this page's project grid from, when no category
  * is bound to the page (`Category.pageTemplate = "aqsa"`). A bound category
- * supplies its own campaigns — all of them — and its editable parts.
+ * supplies its own campaigns  all of them  and its editable parts.
  */
 const REGIONS = ["region-al-aqsa", "region-al-quds", "al-aqsa", "al-quds"];
 
@@ -41,7 +41,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 /**
- * The blessed Al-Aqsa Mosque — ported from `Minbar/المسجد الأقصى.dc.html`.
+ * The blessed Al-Aqsa Mosque  ported from `Minbar/المسجد الأقصى.dc.html`.
  *
  * The verse resolves on the server so it is in the HTML rather than appearing
  * after hydration. Al-Isra 1 opens the page and is also the first of the

@@ -18,7 +18,7 @@ import {
  * Hero/campaign image uploads.
  *
  * The upload used to be base64-encoded into a data URI before being handed to
- * Cloudinary — that buffers the whole file, inflates it by ~37%, and on a large
+ * Cloudinary  that buffers the whole file, inflates it by ~37%, and on a large
  * photo pushed the request past the platform's body/duration limits. Every such
  * failure came back as a bare "Internal error", so the admin only saw "فشل
  * الرفع" with no cause. Now the buffer is streamed straight through, the size
@@ -66,7 +66,7 @@ export async function POST(request: Request) {
     const buffer = Buffer.from(await file.arrayBuffer());
     if (buffer.byteLength > MAX_IMAGE_BYTES) {
       return NextResponse.json(
-        { error: `حجم الصورة ${formatBytes(buffer.byteLength)} — الحد الأقصى ${formatBytes(MAX_IMAGE_BYTES)}.` },
+        { error: `حجم الصورة ${formatBytes(buffer.byteLength)}  الحد الأقصى ${formatBytes(MAX_IMAGE_BYTES)}.` },
         { status: 413 }
       );
     }

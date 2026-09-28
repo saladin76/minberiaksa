@@ -11,7 +11,7 @@ import Clarity from "@microsoft/clarity";
  * Clarity used to be loaded only via GTM, and GTM is deferred 6 s or until the
  * first user interaction (DeferredGTM.tsx). Paid Meta/Facebook traffic that
  * bounces in 2–4 s never gave GTM a chance to fire, so Clarity recordings
- * either didn't exist or started literally at the moment the tab was closing —
+ * either didn't exist or started literally at the moment the tab was closing 
  * exactly what produced the "Page hidden 00:01" pattern.
  *
  * Behaviour now
@@ -21,7 +21,7 @@ import Clarity from "@microsoft/clarity";
  *   without any env setup. Override with NEXT_PUBLIC_CLARITY_ID if needed.
  * - Initializes exactly once per page load (guarded with a window-level flag),
  *   even if the component re-mounts during client navigation.
- * - Survives client-side route changes — Next renders this once at the root
+ * - Survives client-side route changes  Next renders this once at the root
  *   layout level.
  *
  * Operational note

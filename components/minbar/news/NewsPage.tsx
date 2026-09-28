@@ -11,7 +11,7 @@ import IbadanBanner from "@/components/minbar/banners/IbadanBanner";
 import { NoResults } from "@/components/minbar/states/ContentStates";
 
 /**
- * The newsroom — ported from `Minbar/الأخبار.dc.html`.
+ * The newsroom  ported from `Minbar/الأخبار.dc.html`.
  *
  * A dated, chronological list rather than the blog's category grid: news is
  * read newest-first, and the date is the point.

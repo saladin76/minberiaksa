@@ -14,7 +14,7 @@ import {
  *
  * The story, video, FAQ and document lists each carry their own copy of the
  * react-dnd row wiring. It is the same forty lines every time, and the parts
- * that differ — which columns, what a cell shows, what "dimmed" means — are
+ * that differ  which columns, what a cell shows, what "dimmed" means  are
  * exactly the parts this takes as props. The subtle bits stay in one place:
  * persisting once on drop rather than on every hover tick, and wrapping the
  * connector refs so their return value does not trip React 19's ref typing.

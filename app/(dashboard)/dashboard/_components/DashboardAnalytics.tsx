@@ -309,7 +309,7 @@ export default function DashboardPage() {
     };
   }, [usersSearchCommitted, selectedUserId]);
 
-  // Chart data (filters + period + from/to + user — user from state or URL when coming via link)
+  // Chart data (filters + period + from/to + user  user from state or URL when coming via link)
   useEffect(() => {
     const userIdFromUrl = searchParams.get("userId");
     const effectiveUserId = selectedUserId !== "all" ? selectedUserId : (userIdFromUrl && userIdFromUrl !== "all" ? userIdFromUrl : "all");
@@ -338,7 +338,7 @@ export default function DashboardPage() {
     fetchChartData();
   }, [selectedCategory, selectedCampaign, selectedUserId, searchParams, chartPeriod, dateFrom, dateTo]);
 
-  // Stats — affected by فترة (period + dateFrom/dateTo) and category/campaign filters
+  // Stats  affected by فترة (period + dateFrom/dateTo) and category/campaign filters
   useEffect(() => {
     const fetchStats = async () => {
       try {
@@ -368,7 +368,7 @@ export default function DashboardPage() {
     fetchStats();
   }, [chartPeriod, dateFrom, dateTo, selectedCategory, selectedCampaign]);
 
-  // Donations list — uses تصفية النتائج + chart time span (period + from/to) + sort
+  // Donations list  uses تصفية النتائج + chart time span (period + from/to) + sort
   const fetchDonations = useCallback(
     async (page: number, append: boolean) => {
       setDonationsLoading(true);
@@ -515,7 +515,7 @@ export default function DashboardPage() {
           </div>
         </header>
 
-        {/* المؤشرات — تختفي عند عرض تبرعات مستخدم معين عبر الرابط */}
+        {/* المؤشرات  تختفي عند عرض تبرعات مستخدم معين عبر الرابط */}
         {!searchParams.get("userId") && (
         <section className="space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-4 flex-row-reverse">
@@ -1066,7 +1066,7 @@ export default function DashboardPage() {
                                 formatter={(value: number, _name: string, props: { payload?: { count?: number } }) => {
                                   const count = props?.payload?.count ?? 0;
                                   return [
-                                    `${formatMoney(Number(value), undefined, undefined, true)} — عدد: ${count}`,
+                                    `${formatMoney(Number(value), undefined, undefined, true)}  عدد: ${count}`,
                                     "المبلغ / العدد",
                                   ];
                                 }}
@@ -1103,7 +1103,7 @@ export default function DashboardPage() {
                                 formatter={(value: number, _name: string, props: { payload?: { count?: number } }) => {
                                   const count = props?.payload?.count ?? 0;
                                   return [
-                                    `${formatMoney(Number(value), undefined, undefined, true)} — عدد: ${count}`,
+                                    `${formatMoney(Number(value), undefined, undefined, true)}  عدد: ${count}`,
                                     "المبلغ / العدد",
                                   ];
                                 }}
@@ -1139,7 +1139,7 @@ export default function DashboardPage() {
           </Card>
         </section>
 
-        {/* تصفية النتائج — تؤثر على الرسم وجدول التبرعات (فترة، فئة، مشروع، مستخدم، نوع الرسم) */}
+        {/* تصفية النتائج  تؤثر على الرسم وجدول التبرعات (فترة، فئة، مشروع، مستخدم، نوع الرسم) */}
         <Card className="border-border shadow-sm">
           <CardHeader className="py-4">
             <CardTitle className="text-sm font-semibold text-slate-700 flex items-center gap-2 justify-end">
@@ -1151,7 +1151,7 @@ export default function DashboardPage() {
 
 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4">
 
-    {/* Period — مع من/إلى/مسح تحته عند مخصص */}
+    {/* Period  مع من/إلى/مسح تحته عند مخصص */}
     <div className="space-y-2 text-right">
       <label className="text-[11px] font-medium text-slate-500">
         الفترة
@@ -1263,7 +1263,7 @@ export default function DashboardPage() {
     </Select>
   </div>
 
-  {/* User — hidden when viewing a specific user via link (?userId=...) */}
+  {/* User  hidden when viewing a specific user via link (?userId=...) */}
   {!searchParams.get("userId") && (
     <div className="space-y-1 text-right">
       <label className="text-[11px] font-medium text-slate-500">

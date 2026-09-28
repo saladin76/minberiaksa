@@ -3,12 +3,12 @@
   "name": "مجمع الملك فهد لطباعة المصحف الشريف",
   "nameEn": "King Fahd Complex for the Printing of the Holy Qur'an",
   "url": "https://qurancomplex.gov.sa/",
-  "approvedBy": "المؤسسة — قرار معتمد",
+  "approvedBy": "المؤسسة  قرار معتمد",
   "note": "المصدر الوحيد المعتمد لترجمة معاني القرآن الكريم في هذا الموقع. لا تُستخدم أي ترجمة أخرى، ولا تُصاغ ترجمة داخليًا. كل ترجمة تُنقل حرفيًا من إصدار المجمع للغة المعنية، وتُنسب إليه في الواجهة."
  },
  "_usage": {
-  "policy": "النص العربي (ar) هو الأصل ويُعرض دائمًا. حقل الترجمة لكل لغة يُملأ من إصدار المجمع لتلك اللغة. حتى يُملأ، يبقى الحقل null ويعرض المحرّك النص العربي مع نسبة المصدر — لا ترجمة مُصاغة ولا نص مؤقت.",
-  "display": "تُعرض الآية بالعربية دائمًا، وتحتها ترجمة المعنى باللغة النشطة عند توفرها، مع سطر النسبة: «ترجمة معاني القرآن الكريم — مجمع الملك فهد لطباعة المصحف الشريف».",
+  "policy": "النص العربي (ar) هو الأصل ويُعرض دائمًا. حقل الترجمة لكل لغة يُملأ من إصدار المجمع لتلك اللغة. حتى يُملأ، يبقى الحقل null ويعرض المحرّك النص العربي مع نسبة المصدر  لا ترجمة مُصاغة ولا نص مؤقت.",
+  "display": "تُعرض الآية بالعربية دائمًا، وتحتها ترجمة المعنى باللغة النشطة عند توفرها، مع سطر النسبة: «ترجمة معاني القرآن الكريم  مجمع الملك فهد لطباعة المصحف الشريف».",
   "languages": "المجمع يُصدر ترجمات معتمدة بلغات تشمل: التركية، الإنجليزية، الفرنسية، الألمانية، الإسبانية، الإندونيسية، البرتغالية، الأوردية، الألبانية، الإيطالية. تُراجع توفّر كل لغة على موقع المجمع قبل الاعتماد.",
   "pending": "اللغات التي لا يُصدر المجمع ترجمة معتمدة لها تبقى null دائمًا وتُعرض الآية بالعربية وحدها."
  },
@@ -118,7 +118,7 @@
    "شهادات الشكر الثلاث (سطر الدعاء الختامي)"
   ],
   "tr": "Namazı kılın, zekâtı verin. Kendiniz için önden gönderdiğiniz her hayrı Allah katında bulursunuz. Şüphesiz Allah yaptıklarınızı görmektedir.",
-  "en": "And establish prayer and give zakah, and whatever good you put forward for yourselves — you will find it with Allah. Indeed, Allah of what you do, is Seeing.",
+  "en": "And establish prayer and give zakah, and whatever good you put forward for yourselves  you will find it with Allah. Indeed, Allah of what you do, is Seeing.",
   "fr": "Accomplissez la prière et acquittez la zakat. Tout ce que vous avancez de bien pour vous-mêmes, vous le retrouverez auprès d'Allah. Allah voit parfaitement ce que vous faites.",
   "de": "Verrichtet das Gebet und entrichtet die Zakat. Und was ihr für euch selbst an Gutem vorausschickt, das werdet ihr bei Allah finden. Wahrlich, Allah sieht, was ihr tut.",
   "es": "Estableced la oración y pagad el zakat. Todo el bien que adelantéis para vosotros mismos lo encontraréis junto a Dios. Dios ve lo que hacéis.",
@@ -196,5 +196,5 @@
   "zh": "我拯救了他和鲁特，使他们迁往我为众世界而降福的地方。",
   "hi": "और हमने उसे और लूत को बचाकर उस धरती की ओर पहुंचाया जिसमें हमने सारे संसारों के लिए बरकत रखी है।"
  },
- "_sync_policy": "RELIGIOUS_LOCKED — لا AI translation؛ التغييرات تمر بمراجعة بشرية حصرًا"
+ "_sync_policy": "RELIGIOUS_LOCKED  لا AI translation؛ التغييرات تمر بمراجعة بشرية حصرًا"
 }

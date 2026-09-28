@@ -10,7 +10,7 @@ import {
 import { SUPPORTED_LOCALES, type SupportedLocale } from "../locales";
 
 export const BANK_TRANSFER_CURRENCIES = ["USD", "TRY", "EUR"] as const;
-/** Every site language — one source, so it cannot drift to a subset again. */
+/** Every site language  one source, so it cannot drift to a subset again. */
 export const BANK_TRANSFER_DONOR_LOCALES = SUPPORTED_LOCALES;
 
 export type BankTransferCurrency = (typeof BANK_TRANSFER_CURRENCIES)[number];
@@ -40,7 +40,7 @@ export type ParsedBankStatement = {
   warning: string | null;
   /**
    * Which column the amounts came from. Surfaced so the admin can confirm the
-   * importer read the right one before committing — a silently wrong amount
+   * importer read the right one before committing  a silently wrong amount
    * column is the failure mode that is hardest to notice after the fact.
    */
   amountColumn: { source: ResolvedColumns["amountSource"]; header: string | null };
@@ -201,7 +201,7 @@ function rowToPreview(row: unknown[], rowNumber: number, args: { currency: BankT
   }
 
   // Only when the resolved column is empty on this row do we fall back to
-  // scanning the row — and even then identifiers are excluded, so a reference
+  // scanning the row  and even then identifiers are excluded, so a reference
   // number can no longer be imported as the donation figure.
   if (amount === null) {
     const likely = pickAmountFromRow(row, cols);
@@ -282,7 +282,7 @@ async function parseSpreadsheet(
   const dataRows = (headerRowIndex >= 0 ? rows.slice(headerRowIndex + 1) : rows).slice(0, 1000);
 
   // Resolve the layout once, from the header plus the data, then apply it to
-  // every row — so all rows agree on which column the money is in.
+  // every row  so all rows agree on which column the money is in.
   const columns = resolveStatementColumns(headers, dataRows);
 
   const parsed = dataRows

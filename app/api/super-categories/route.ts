@@ -15,9 +15,9 @@ import {
 } from "@/lib/content/super-category-write";
 
 /**
- * GET  /api/super-categories — the public list, one locale. Titles only; the
+ * GET  /api/super-categories  the public list, one locale. Titles only; the
  *      page itself is read on the server by `lib/minbar/super-category.ts`.
- * POST /api/super-categories — create, dashboard only.
+ * POST /api/super-categories  create, dashboard only.
  */
 export async function GET(request: NextRequest) {
   try {

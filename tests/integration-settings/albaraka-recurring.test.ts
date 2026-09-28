@@ -49,7 +49,7 @@ test("standard-sale MAC: plain SHA256 over the MACParams values concatenated, ke
     .digest("base64");
   assert.equal(albarakaNonSecureSaleMac(params, cfg.encKey), expected);
   assert.equal(ALBARAKA_NON_SECURE_MAC_PARAMS, "MerchantNo:TerminalNo:CardNo:Cvc2:ExpireDate:Amount");
-  // An absent CVC takes part as an empty string — it must not shift the concatenation.
+  // An absent CVC takes part as an empty string  it must not shift the concatenation.
   assert.equal(albarakaNonSecureSaleMac({ ...params, cvc2: "" }, cfg.encKey), albarakaNonSecureSaleMac(params, cfg.encKey));
   assert.notEqual(albarakaNonSecureSaleMac({ ...params, amount: 17501 }, cfg.encKey), expected);
 });

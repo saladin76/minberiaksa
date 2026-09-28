@@ -47,7 +47,7 @@ const supportedLocales: LocaleCode[] = [...SUPPORTED_LOCALES];
 /**
   * A predicate rather than a plain boolean, so the two values it vouches for are narrowed to
   * strings for the caller. A request only qualifies when both are present, which is exactly what
-  * the save-status event needs — the alternative was coercing an absent method or url into the
+  * the save-status event needs  the alternative was coercing an absent method or url into the
   * event payload, where it would have reached listeners as the string "undefined".
   */
 function isDashboardSaveRequest(method?: string, url?: string): method is string {
@@ -73,7 +73,7 @@ function patchNetworkSaveEvents() {
   const originalSend = window.XMLHttpRequest.prototype.send;
 
   /* `this` inside a prototype patch is the XHR instance, but a plain function expression has no way
-     to know that — so every `this` here was an implicit `any`, and the tracked method/url were too.
+     to know that  so every `this` here was an implicit `any`, and the tracked method/url were too.
      Annotating the receiver types all of it, and a small marker interface replaces the `as any`
      casts that were standing in for the two properties this patch attaches. */
   window.XMLHttpRequest.prototype.open = function patchedOpen(this: TrackedXhr, method: string, url: string | URL, ...rest: unknown[]) {

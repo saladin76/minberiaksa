@@ -47,7 +47,7 @@ type AiConciergeTurn {
   text        String
   at          DateTime
   intent      String?
-  /// "llm" | "deterministic" — assistant turns only.
+  /// "llm" | "deterministic"  assistant turns only.
   mode        String?
   /// Block types the assistant rendered (campaign_recommendations, …).
   blocks      String[]
@@ -59,7 +59,7 @@ type AiConciergeTurn {
 /// The transcript of one concierge session (`AiConciergeEvent.sessionId`),
 /// written by the concierge API after every answered turn so the team can read
 /// what visitors asked (`/dashboard/ai-concierge/conversations`). Only what the
-/// visitor typed and what the assistant said — no card numbers, no prices the
+/// visitor typed and what the assistant said  no card numbers, no prices the
 /// public pages do not show. Stops being written when transcripts are switched
 /// off in the concierge settings.
 model AiConciergeConversation {
@@ -182,17 +182,17 @@ model User {
   role                  Role      @default(DONOR)
   preferredLang         String? // locale from first donation (ar, en, fr) for emails/SMS
 
-  /// Section keys for Role.STAFF — see lib/dashboard/permissions.ts; ignored for ADMIN
+  /// Section keys for Role.STAFF  see lib/dashboard/permissions.ts; ignored for ADMIN
   dashboardPermissions String[] @default([])
 
-  /// Microsoft Clarity user identifier — set by an admin from the user profile dialog
+  /// Microsoft Clarity user identifier  set by an admin from the user profile dialog
   /// so the session-replay/heatmap dashboard can be filtered to this donor on demand.
   /// Editable by admins only; never exposed to the donor themselves.
   clarityId String?
 
   /// Donor-controlled notification preferences. Both default on; donors can
   /// opt out individually from the profile settings page. Transactional
-  /// receipts/confirmations are out of scope — these only gate marketing/updates.
+  /// receipts/confirmations are out of scope  these only gate marketing/updates.
   emailNotifications Boolean @default(true)
   smsNotifications   Boolean @default(true)
 
@@ -252,7 +252,7 @@ model AuditLog {
   entityType String?
   entityId   String?
   metadata   Json?
-  /// TEAM: actions by ADMIN/STAFF — DONOR: actions by donors (e.g. donations, profile)
+  /// TEAM: actions by ADMIN/STAFF  DONOR: actions by donors (e.g. donations, profile)
   stream     String
 }
 
@@ -269,7 +269,7 @@ model Message {
   guestName    String?
   guestEmail   String?
   /// The number the sender asked to be reached on FOR THIS MESSAGE. Unlike guestName/guestEmail
-  /// it is kept for signed-in senders too — a registered donor may want the reply on a different
+  /// it is kept for signed-in senders too  a registered donor may want the reply on a different
   /// number than the one on their profile. Before this column existed the contact form smuggled
   /// it into `body` as a trailing "Phone: …" line, which the inbox still parses for old rows.
   contactPhone String?
@@ -283,7 +283,7 @@ model Message {
   // Inbox triage state. All of these are null on arrival: unread and unanswered.
   /// Set the first time an admin opens the message in /dashboard/inbox.
   readAt        DateTime?
-  /// Set when an admin actually answers — or marks it answered by hand.
+  /// Set when an admin actually answers  or marks it answered by hand.
   repliedAt     DateTime?
   repliedVia    MessageReplyChannel?
   /// Who answered. Plain scalars, not a relation: the inbox only ever displays them, and a
@@ -368,7 +368,7 @@ model Category {
   baselineAmount Float   @default(0)
 
   /// Archive flag. Toggling this from the dashboard cascades to every
-  /// member Campaign — archiving the category archives all its campaigns,
+  /// member Campaign  archiving the category archives all its campaigns,
   /// re-activating reverses it. Pre-existing categories may have this
   /// field unset; treat unset as active when filtering.
   isActive Boolean? @default(true)
@@ -385,12 +385,12 @@ model Category {
   /// band, the values it stands on, its campaigns as donate cards, a donation
   /// box, three explanatory cards and its achievements in video. Each part is
   /// hidden when its fields are empty, so a category with nothing but a name
-  /// still renders — as the hero and its campaigns.
+  /// still renders  as the hero and its campaigns.
   ///
   /// Binds the category to one of the site's own pages instead of the generic
   /// landing page: "aqsa" (the mosque) or "zakat". `/category/{slug}` then
-  /// redirects there, and that page folds the category's editable parts —
-  /// figures, values, campaigns, donation box, cards, achievements — into
+  /// redirects there, and that page folds the category's editable parts 
+  /// figures, values, campaigns, donation box, cards, achievements  into
   /// itself. Null publishes the category as its own page.
   pageTemplate String?
 
@@ -416,9 +416,9 @@ model Category {
 
   /// The donation box at the foot of the page.
   ///
-  /// The box gives either to the category itself — the order then carries a
+  /// The box gives either to the category itself  the order then carries a
   /// `DonationCategoryItem`, which the cart, `/api/cart/payment` and every
-  /// gateway callback accept — or to one campaign of the category: the one
+  /// gateway callback accept  or to one campaign of the category: the one
   /// named here, or the highest priority campaign in it when neither is set.
   /// `donateToCategory` wins over `donateCampaignId` should both be set.
   donateToCategory Boolean @default(false)
@@ -427,12 +427,12 @@ model Category {
   donateNote       String?
   /// Quick amounts in USD. Empty falls back to the site's defaults.
   suggestedAmounts Int[]   @default([])
-  /// Per-currency exceptions — `{ EUR: [50, 100], ... }` — the same contract as
+  /// Per-currency exceptions  `{ EUR: [50, 100], ... }`  the same contract as
   /// `Campaign.suggestedDonations.byCurrency`: a visitor in that currency sees
   /// these as they are, and they go to the cart in that currency.
   suggestedByCurrency Json?
 
-  /// "Achievements in video" — ids of `Video` rows (type ACHIEVEMENT) shown in
+  /// "Achievements in video"  ids of `Video` rows (type ACHIEVEMENT) shown in
   /// the rail at the end of the page, in this order. Pointers rather than a
   /// relation: a video belongs to the library, not to one category, and a row
   /// that is later deleted or unpublished simply stops appearing.
@@ -447,7 +447,7 @@ model Category {
   translations              CategoryTranslation[]
 }
 
-/// One cell of the "what this category stands on" strip — a short phrase.
+/// One cell of the "what this category stands on" strip  a short phrase.
 model CategoryValue {
   id         String @id @default(auto()) @map("_id") @db.ObjectId
   categoryId String @db.ObjectId
@@ -471,7 +471,7 @@ model CategoryValueTranslation {
   @@unique([valueId, locale])
 }
 
-/// One of the explanatory cards — "why", "what we do", "the impact".
+/// One of the explanatory cards  "why", "what we do", "the impact".
 model CategoryInfoCard {
   id         String @id @default(auto()) @map("_id") @db.ObjectId
   categoryId String @db.ObjectId
@@ -520,7 +520,7 @@ model CategoryTranslation {
 
   /// Optional per-locale URL slug. When set, takes precedence over the base Category.slug
   /// for this locale. Uniqueness within a locale is enforced at write time by
-  /// generateUniqueLocaleSlug — Prisma+MongoDB doesn't model partial unique indexes well.
+  /// generateUniqueLocaleSlug  Prisma+MongoDB doesn't model partial unique indexes well.
   slug String?
 
   category Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
@@ -573,7 +573,7 @@ model Campaign {
 
   targetAmount   Float
   /// Total shown publicly = baselineAmount + settled donation items.
-  /// NEVER recompute this from donations alone — that silently destroys baselineAmount.
+  /// NEVER recompute this from donations alone  that silently destroys baselineAmount.
   currentAmount  Float    @default(0)
   /// Money raised OUTSIDE the site (cash, bank transfer, a legacy system) that an admin
   /// entered by hand. Kept separate so recomputing from donation rows can't wipe it.
@@ -586,14 +586,14 @@ model Campaign {
   /// disappears from public + dashboard surfaces. We keep the row (and all
   /// DonationItem / SubscriptionItem relations) so historical donation totals,
   /// receipts, and audit trails stay intact. Pre-existing rows may have the
-  /// field unset entirely — treat unset as not deleted when filtering.
+  /// field unset entirely  treat unset as not deleted when filtering.
   isDeleted      Boolean? @default(false)
   priority       Int?
 
-  /// { "amounts": number[], "byCurrency"?: Record<string, number[]> } — quick-pick donation amounts; omit/null uses app defaults
+  /// { "amounts": number[], "byCurrency"?: Record<string, number[]> }  quick-pick donation amounts; omit/null uses app defaults
   suggestedDonations Json?
 
-  /// { "amounts": number[], "byCurrency"?: Record<string, number[]> } — per-campaign override for team-support quick-pick amounts; omit/null falls back to GlobalSettings, then hardcoded defaults
+  /// { "amounts": number[], "byCurrency"?: Record<string, number[]> }  per-campaign override for team-support quick-pick amounts; omit/null falls back to GlobalSettings, then hardcoded defaults
   suggestedTeamSupport Json?
 
   /// FIXED = show goal & progress bar; OPEN = open-ended (no fixed target UI)
@@ -602,7 +602,7 @@ model Campaign {
   fundraisingMode      String @default("AMOUNT")
   /// Price of one share in USD when fundraisingMode is SHARES
   sharePriceUSD        Float?
-  /// { "counts": number[] } — quick-pick share counts for سهوم campaigns
+  /// { "counts": number[] }  quick-pick share counts for سهوم campaigns
   suggestedShareCounts Json?
   /// Per-locale custom names for the "share" unit on SHARES-mode campaigns.
   /// Shape: { "<locale>": { "singular": string, "plural": string } }
@@ -612,13 +612,13 @@ model Campaign {
   /// per campaign without forking the translation files.
   shareLabels          Json?
 
-  /// Implicit many-to-many — a campaign can belong to one or more categories.
+  /// Implicit many-to-many  a campaign can belong to one or more categories.
   /// Prisma+MongoDB stores the relation as mirrored ObjectId[] arrays on each side.
   categoryIds String[]   @db.ObjectId
   categories  Category[] @relation(fields: [categoryIds], references: [id])
 
   /// Per-category priorities for ordering on each category page.
-  /// Shape: { "<categoryId>": number } — lower number = higher priority; absent key = unprioritized.
+  /// Shape: { "<categoryId>": number }  lower number = higher priority; absent key = unprioritized.
   /// Replaces the single `categoryPriority` field which only made sense when a
   /// campaign belonged to exactly one category.
   categoryPriorities Json?
@@ -724,7 +724,7 @@ model Donation {
   /// as `?t=` on every link handed to a guest. A signed-in owner or a revenue
   /// user is let in by their session and never needs it. Rows from before the
   /// field existed have none, so a guest can no longer open them by id alone
-  /// — the id is an identifier, not a secret (`DEPLOYED_VS_DESIGN_AUDIT.md`
+  ///  the id is an identifier, not a secret (`DEPLOYED_VS_DESIGN_AUDIT.md`
   /// § P1.2). Same model as `BankTransferClaim.accessToken`.
   accessToken String?
 
@@ -748,7 +748,7 @@ model Donation {
 
   subscriptionId String?       @db.ObjectId
   subscription   Subscription? @relation(fields: [subscriptionId], references: [id])
-  /// Stripe invoice `billing_reason` for subscription donations — the authoritative
+  /// Stripe invoice `billing_reason` for subscription donations  the authoritative
   /// "is this the signup charge or an automatic renewal?" marker.
   /// "subscription_create" = first charge, "subscription_cycle" = automatic renewal.
   /// Null on one-time donations and on legacy rows created before this was recorded.
@@ -757,7 +757,7 @@ model Donation {
   comment       String?
   /// Optional only to tolerate legacy / pre-enforcement rows that exist in
   /// MongoDB without the field set (Prisma+MongoDB doesn't error on read for
-  /// unset enums on optional fields — but it DOES error if a required enum
+  /// unset enums on optional fields  but it DOES error if a required enum
   /// is missing). Every NEW write goes through paths that always set CARD or
   /// PAYPAL, so this should only ever be null for historical donations.
   paymentMethod PaymentMethod?
@@ -779,7 +779,7 @@ model Donation {
   /// Set only when `paymentMethod` is BANK_TRANSFER: the receipt the donor
   /// uploaded and where the finance review stands. See `BankTransferClaim`.
   bankTransferClaim BankTransferClaim?
-  /// Waqf lines (share / metre) — priced by the server from the fixed unit
+  /// Waqf lines (share / metre)  priced by the server from the fixed unit
   /// price, never from the basket. Each one is issued its own waqf certificate.
   waqfItems         DonationWaqfItem[]
   /// The documents issued for this donation once payment was confirmed.
@@ -804,8 +804,8 @@ model Subscription {
   payforMaskedPan String?
   payforExpiry    String? // MMYY (if bank requires it alongside token)
 
-  /// The cadence the donor consented to. Stripe bills on it — every day, every
-  /// week anchored to Friday, or every month — and `nextBillingDate` mirrors it
+  /// The cadence the donor consented to. Stripe bills on it  every day, every
+  /// week anchored to Friday, or every month  and `nextBillingDate` mirrors it
   /// for the dashboards. Rows created before this field existed are monthly,
   /// which is the only cadence that was ever actually billed.
   /// See lib/donations/recurring-schedule.ts.
@@ -817,7 +817,7 @@ model Subscription {
   /// Contract): `{kind:"daily"}` | `{kind:"weekday",weekday:5,hour:9}` |
   /// `{kind:"monthDay",day:15}`.
   scheduleRule Json?
-  /// What the donor was shown and agreed to at checkout — frequency, amount,
+  /// What the donor was shown and agreed to at checkout  frequency, amount,
   /// currency, the next-charge date on screen, locale and time. Written once.
   consentSnapshot Json?
   /// Stripe subscription id. Historically kept in `payforToken` (see the
@@ -826,12 +826,12 @@ model Subscription {
   stripeSubscriptionId String?
 
   /// Which rail bills this plan. `STRIPE` = a Stripe Subscription (monthly
-  /// only — Stripe keeps its one-time + monthly scope); `ALBARAKA` = the
+  /// only  Stripe keeps its one-time + monthly scope); `ALBARAKA` = the
   /// site's own scheduler charging the stored card through Albaraka's direct
   /// /Sale as a recurring (merchant-initiated) transaction, at any cadence.
   /// Null on rows from before rails existed: they are Stripe monthly.
   provider String?
-  /// The card the Albaraka scheduler charges — the `CreditCard` row stored at
+  /// The card the Albaraka scheduler charges  the `CreditCard` row stored at
   /// the plan's first 3D payment. Null on Stripe plans (Stripe holds the card).
   paymentCardId String?     @db.ObjectId
   paymentCard   CreditCard? @relation(fields: [paymentCardId], references: [id])
@@ -864,10 +864,10 @@ model SubscriptionItem {
 
   amount     Float
   amountUSD  Float?
-  /// When set, line item was a سهوم (shares) purchase — mirrors DonationItem.shareCount.
+  /// When set, line item was a سهوم (shares) purchase  mirrors DonationItem.shareCount.
   /// Three creation paths (donations, stripe/intent, cart/payment) already spread this in
   /// conditionally; without the field Prisma threw PrismaClientValidationError inside the
-  /// transaction, rolling back the whole thing — no subscription AND no donation, just a 500.
+  /// transaction, rolling back the whole thing  no subscription AND no donation, just a 500.
   shareCount Int?
 
   subscription Subscription @relation(fields: [subscriptionId], references: [id])
@@ -912,7 +912,7 @@ model DonationItem {
   giftRecipientPhone String?
   /// The donor's note to the recipient, carried in the message.
   giftMessage        String?
-  /// "EMAIL" | "WHATSAPP" — the channels the recipient is told on.
+  /// "EMAIL" | "WHATSAPP"  the channels the recipient is told on.
   giftChannels       String[] @default([])
   /// Whether the message to the recipient mentions the amount.
   giftShowAmount     Boolean  @default(true)
@@ -947,7 +947,7 @@ model DonationCategoryItem {
  * `handoff-certificates/DONATION_LOGIC_SPEC.md §2`: every document a donor
  * downloads is a permanent record keyed to its donation, issued by the server
  * only after payment is confirmed. Reloading, re-printing or re-running the
- * job never mints a second serial — the unique constraints below are the
+ * job never mints a second serial  the unique constraints below are the
  * database's half of that promise.
  */
 
@@ -1010,7 +1010,7 @@ model Certificate {
   /// Waqf: whom the endowment is made on behalf of. Thanks: unused.
   dedicatedTo   String?
   issuedAt      DateTime        @default(now())
-  /// The locale the donation was made in — the document renders in it.
+  /// The locale the donation was made in  the document renders in it.
   locale        String
 
   donation Donation          @relation(fields: [donationId], references: [id], onDelete: Cascade)
@@ -1075,7 +1075,7 @@ enum PaymentMethod {
   /// The donor transfers outside the site and uploads a receipt; a finance
   /// officer confirms it from the dashboard. Such a donation is created as
   /// `PAID` with `paidAt` unset (the site's "قيد التأكيد" convention) and is
-  /// stamped — and counted — only on confirmation.
+  /// stamped  and counted  only on confirmation.
   BANK_TRANSFER
 }
 
@@ -1098,13 +1098,13 @@ enum BankTransferClaimStatus {
   REJECTED
 }
 
-/// One uploaded receipt — a photo, screenshot or PDF of the transfer notice.
+/// One uploaded receipt  a photo, screenshot or PDF of the transfer notice.
 /// Kept as a list so a rejected submission stays visible beside the one that
 /// replaced it: the reviewer sees what was sent before and why it was refused.
 type BankTransferReceiptFile {
   url          String
   publicId     String
-  /// Cloudinary resource type the file was stored under — "image" or "raw".
+  /// Cloudinary resource type the file was stored under  "image" or "raw".
   resourceType String
   mimeType     String
   bytes        Int
@@ -1121,8 +1121,8 @@ model BankTransferClaim {
 
   status BankTransferClaimStatus @default(AWAITING_RECEIPT)
 
-  /// Random secret that lets a guest — who has no session to prove the order
-  /// is theirs — reach the upload page from the redirect and from the emails.
+  /// Random secret that lets a guest  who has no session to prove the order
+  /// is theirs  reach the upload page from the redirect and from the emails.
   /// A signed-in donor who owns the donation needs no token.
   accessToken String @unique
 
@@ -1133,7 +1133,7 @@ model BankTransferClaim {
   /// ISO 4217 of the IBAN they picked on that account.
   bankCurrency String?
 
-  /// What the donor typed beside the receipt. All optional — the file is the
+  /// What the donor typed beside the receipt. All optional  the file is the
   /// evidence; these help the reviewer find the line on the statement.
   senderName        String?
   transferDate      DateTime?
@@ -1152,7 +1152,7 @@ model BankTransferClaim {
   reviewedByName  String?
   /// Shown to the donor on rejection (and in the rejection email).
   rejectionReason String?
-  /// Internal only — never shown to the donor.
+  /// Internal only  never shown to the donor.
   adminNote       String?
 
   createdAt DateTime @default(now())
@@ -1378,7 +1378,7 @@ model EmailTemplate {
   purpose   String?
   /// Short pre-header line shown after the subject in inboxes (optional).
   preheader String?
-  /// Optional reusable EmailLayout this template renders inside (additive — the
+  /// Optional reusable EmailLayout this template renders inside (additive  the
   /// existing @usewaypoint `document` path is unaffected when this is null).
   layoutId  String? @db.ObjectId
   /// Content-mode fields for the layout builder: Record<locale, { title?, body?, ctaText?, ctaUrl?, footerNote? }>.
@@ -1389,7 +1389,7 @@ model EmailTemplate {
 }
 
 /// Reusable fixed email layout (shell) that many email templates render inside.
-/// Additive — does not replace the @usewaypoint document pipeline; it powers the
+/// Additive  does not replace the @usewaypoint document pipeline; it powers the
 /// new content-based Template Center email builder.
 model EmailLayout {
   id                     String   @id @default(auto()) @map("_id") @db.ObjectId
@@ -1428,7 +1428,7 @@ model WhatsappTemplate {
   // ── Twilio / WhatsApp Content metadata (all optional for back-compat)
   /// "TWILIO" when imported from Twilio Content API, "MANUAL" otherwise.
   provider           String?
-  /// "WHATSAPP" — kept explicit for the future Marketing Intelligence module.
+  /// "WHATSAPP"  kept explicit for the future Marketing Intelligence module.
   channel            String?
   /// Twilio Content SID (HX-prefixed) or other provider id.
   externalTemplateId String?
@@ -1436,9 +1436,9 @@ model WhatsappTemplate {
   templateType       String?
   /// IETF language tag, e.g. "ar", "en".
   language           String?
-  /// WhatsApp template category — MARKETING / UTILITY / AUTHENTICATION (etc.)
+  /// WhatsApp template category  MARKETING / UTILITY / AUTHENTICATION (etc.)
   category           String?
-  /// "approved" | "pending" | "rejected" | "unknown" — Twilio whatsapp/approval state.
+  /// "approved" | "pending" | "rejected" | "unknown"  Twilio whatsapp/approval state.
   approvalStatus     String?
   /// Header descriptor when the template has a header.
   /// Shape: { type, text?, mediaUrl?, mediaSid?, mimeType?, fileName?, previewUrl?, latitude?, longitude?, address? }
@@ -1455,7 +1455,7 @@ model WhatsappTemplate {
   lastSyncStatus     String?
   /// Last error message from sync (truncated, never includes auth tokens).
   lastSyncError      String?
-  /// Sanitized provider payload — handy for debugging mapping issues.
+  /// Sanitized provider payload  handy for debugging mapping issues.
   providerRaw        Json?
 
   // ── Template Center taxonomy (optional / defaulted for back-compat)
@@ -1479,14 +1479,14 @@ model WhatsappTemplate {
 ///
 /// Meta approves a template *per language*: the Arabic and the English of the same template are
 /// separate submissions with separate review outcomes, separate rejection reasons and separate
-/// component schemas. `WhatsappTemplate` could not express that — it carries one `language`, one
-/// `approvalStatus` and one `externalTemplateId` for the whole record — so a template whose Arabic
+/// component schemas. `WhatsappTemplate` could not express that  it carries one `language`, one
+/// `approvalStatus` and one `externalTemplateId` for the whole record  so a template whose Arabic
 /// was approved and whose French was still pending read as a single approved template, and a
 /// French send failed at Meta with the dashboard still showing "ready".
 ///
 /// So provider truth lives here, one row per (template, provider, language), and it is written
 /// only by the sync in `lib/communication/whatsapp-template-sync.ts`. The parent row keeps the
-/// editorial side — what the team calls the template and the copy they drafted. Nothing in this
+/// editorial side  what the team calls the template and the copy they drafted. Nothing in this
 /// model is hand-edited: a field here is what the provider last said, which is what makes it
 /// trustworthy enough to gate a send on.
 model WhatsappTemplateVariant {
@@ -1495,7 +1495,7 @@ model WhatsappTemplateVariant {
   /// "META_WHATSAPP". Present so a second provider can be synced alongside rather than over.
   provider   String
 
-  /// The name Meta knows this template by — what `sendTemplateMessage` must send, which is not
+  /// The name Meta knows this template by  what `sendTemplateMessage` must send, which is not
   /// necessarily what the team calls it locally.
   providerTemplateName String
   /// Meta's own id for the language variant, when the listing exposes one.
@@ -1525,7 +1525,7 @@ model WhatsappTemplateVariant {
 
   template WhatsappTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
 
-  /// One row per language per provider per template — the sync upserts on this.
+  /// One row per language per provider per template  the sync upserts on this.
   @@unique([templateId, provider, languageCode])
   @@index([provider, approvalStatus])
   @@index([providerTemplateName])
@@ -1538,7 +1538,7 @@ model WhatsappTemplateVariant {
 /// authored against opposite constraints: a WhatsApp template carries a header, footer, buttons and
 /// a Meta approval lifecycle and may run to 4096 characters, while an SMS is bare text billed per
 /// 70-character segment in Arabic. One shared body forces a choice between a needlessly terse
-/// WhatsApp message and an SMS that silently costs five segments — and it also made SMS-only drafts
+/// WhatsApp message and an SMS that silently costs five segments  and it also made SMS-only drafts
 /// surface in the WhatsApp list as unapproved WhatsApp templates.
 model SmsTemplate {
   id           String   @id @default(auto()) @map("_id") @db.ObjectId
@@ -1572,7 +1572,7 @@ enum MessageTriggerEvent {
   SUBSCRIPTION_PAYMENT
   SUBSCRIPTION_CANCELLED
   /// Scheduled (not event-driven): the donor's last PAID donation is older than `lapseDays`.
-  /// Evaluated daily by /api/cron/donation-reminders — see lib/events/donation-lapsed.ts.
+  /// Evaluated daily by /api/cron/donation-reminders  see lib/events/donation-lapsed.ts.
   DONATION_LAPSED
 }
 
@@ -1588,9 +1588,9 @@ model MessageTrigger {
   /// Refers to EmailTemplate.id when channel=EMAIL, WhatsappTemplate.id when channel=WHATSAPP
   templateId   String              @db.ObjectId
   enabled      Boolean             @default(true)
-  /// DONATION_LAPSED only — days since the donor's last PAID donation before the reminder fires.
+  /// DONATION_LAPSED only  days since the donor's last PAID donation before the reminder fires.
   lapseDays    Int?
-  /// DONATION_LAPSED only — minimum days before the same donor may be reminded again.
+  /// DONATION_LAPSED only  minimum days before the same donor may be reminded again.
   cooldownDays Int?
   createdById  String?             @db.ObjectId
   createdAt    DateTime            @default(now())
@@ -1621,7 +1621,7 @@ model SentMessage {
   origin  SentMessageOrigin
   status  SentMessageStatus
 
-  // Template snapshot — templateId may point to a deleted template, so we also store the name.
+  // Template snapshot  templateId may point to a deleted template, so we also store the name.
   templateId   String?              @db.ObjectId
   templateName String
   triggerEvent MessageTriggerEvent? // set when origin=TRIGGER
@@ -1648,7 +1648,7 @@ model SentMessage {
   actorName  String?
   donationId String? @db.ObjectId
 
-  // Backfill summary aggregates — only populated when origin=BACKFILL.
+  // Backfill summary aggregates  only populated when origin=BACKFILL.
   /// Total recipients reported by the source audit log (manual bulk send).
   backfillTotal   Int?
   backfillSent    Int?
@@ -1676,7 +1676,7 @@ model TrackingSettings {
   gaMeasurementId          String? // Google Analytics 4: G-XXXXXXXXXX
   tiktokPixelId            String?
   tiktokAccessToken        String? // TikTok Events API token (never exposed to client)
-  googleAdsConversionId    String? // AW-XXXXXXXXX (never exposed to client — used server-side for EC)
+  googleAdsConversionId    String? // AW-XXXXXXXXX (never exposed to client  used server-side for EC)
   googleAdsConversionLabel String? // Conversion label (e.g. AbCdEfGh1234)
   xPixelId                 String? // X (Twitter) Pixel ID
   createdAt                DateTime @default(now())
@@ -1688,7 +1688,7 @@ model TrackingSettings {
 /// writable only from the admin dashboard.
 model GlobalSettings {
   id                   String   @id @default(auto()) @map("_id") @db.ObjectId
-  /// { "amounts": number[], "byCurrency"?: Record<string, number[]> } — the
+  /// { "amounts": number[], "byCurrency"?: Record<string, number[]> }  the
   /// team-support quick-pick amounts shown in the basket. Team support belongs
   /// to the whole order, not to a campaign, so this is the only source
   /// (`Campaign.suggestedTeamSupport` is no longer read).
@@ -1766,7 +1766,7 @@ model MarketingPlatformConnection {
   /// Shape: { completionPercent, missingRequiredFields[], missingOptionalFields[], guidance[], nextStepMessage }
   configChecklist    Json?
 
-  // ── secrets (never returned in GET responses — only masked previews)
+  // ── secrets (never returned in GET responses  only masked previews)
   accessToken    String?
   refreshToken   String?
   authToken      String?
@@ -1792,7 +1792,7 @@ model MarketingPlatformConnection {
  * ===================== PLATFORM SYNC INFRASTRUCTURE =====================
  */
 /// Per-attempt record of a sync triggered from the dashboard or (later) a cron.
-/// Never stores tokens / secrets — `metadata` is sanitized before write.
+/// Never stores tokens / secrets  `metadata` is sanitized before write.
 model PlatformSyncRun {
   id           String    @id @default(auto()) @map("_id") @db.ObjectId
   connectionId String?   @db.ObjectId
@@ -1909,7 +1909,7 @@ model AdSnapshot {
 
 /// Daily messaging-campaign snapshot. Used by Twilio campaign analytics and
 /// any future email/SMS analytics aggregation. SentMessage stays the
-/// per-recipient log — this model is for fast dashboard rollups.
+/// per-recipient log  this model is for fast dashboard rollups.
 model MarketingCampaignSnapshot {
   id              String   @id @default(auto()) @map("_id") @db.ObjectId
   connectionId    String?  @db.ObjectId
@@ -2089,7 +2089,7 @@ model OperationTask {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// COMMUNICATION CENTER RUNTIME (Package 1 — data foundation, no real sending)
+// COMMUNICATION CENTER RUNTIME (Package 1  data foundation, no real sending)
 // Channel/provider/status/purpose/origin use String fields (not Prisma enums) so
 // the lifecycle can evolve safely on MongoDB. Allowed values are documented inline.
 // New archive layer: CommunicationDelivery. Legacy SentMessage is preserved untouched.
@@ -2232,7 +2232,7 @@ model CommunicationDelivery {
   // the original: the first failure is evidence, and rewriting it would silently move the historical
   // failure-rate figures. `retriedAt` is stamped on the ORIGINAL once a retry actually reaches the
   // provider, which is what stops the same message being sent twice.
-  // Both are optional — MongoDB documents written before this existed have neither field, and a
+  // Both are optional  MongoDB documents written before this existed have neither field, and a
   // required column would make every one of them unreadable.
   retryOfDeliveryId      String?   @db.ObjectId
   retriedAt              DateTime?
@@ -2267,7 +2267,7 @@ model CommunicationProviderEvent {
   @@index([providerMessageId])
 }
 
-/// A reusable audience list — a custom manual list or a TEST list used to try
+/// A reusable audience list  a custom manual list or a TEST list used to try
 /// campaigns/templates before real sending. Automatic language segments are computed live and are
 /// NOT stored here. Never seeded with demo data.
 model CommunicationAudienceList {
@@ -2293,7 +2293,7 @@ model CommunicationAudienceList {
 
 /// One member of a CommunicationAudienceList. DONOR members reference a real User (contact data is
 /// read live from the donor). TEST_CONTACT members hold ad-hoc contact info used ONLY for test sends
-/// — they never become donors and never appear in donation reports or normal donor counts.
+///  they never become donors and never appear in donation reports or normal donor counts.
 model CommunicationAudienceMember {
   id          String   @id @default(auto()) @map("_id") @db.ObjectId
   listId      String   @db.ObjectId
@@ -2315,7 +2315,7 @@ model CommunicationAudienceMember {
 
 /// Associates a CommunicationCampaign with a real tracking link (from the existing Link Generator /
 /// MarketingCampaignLink collection) so donations can be attributed back to the campaign via the
-/// donation `attribution` UTM snapshot. Never fabricates attribution — it only records the link + the
+/// donation `attribution` UTM snapshot. Never fabricates attribution  it only records the link + the
 /// UTM values used, and reports match real donations against them.
 model CommunicationCampaignTrackingLink {
   id          String   @id @default(auto()) @map("_id") @db.ObjectId
@@ -2323,10 +2323,10 @@ model CommunicationCampaignTrackingLink {
   /// Id / urlHash of the underlying MarketingCampaignLink (raw collection), when created via the generator.
   linkId      String?
   url         String
-  /// "whatsapp" | "email" | "sms" — auto-selected from the campaign channel.
+  /// "whatsapp" | "email" | "sms"  auto-selected from the campaign channel.
   source      String
   medium      String   @default("communication")
-  /// The value used as utm_campaign (the CommunicationCampaign id) — the campaign-level match key.
+  /// The value used as utm_campaign (the CommunicationCampaign id)  the campaign-level match key.
   utmCampaign String
   locale      String?
   templateId  String?
@@ -2368,7 +2368,7 @@ enum VideoType {
 ///
 /// `startsAt`/`endsAt` are a publishing window, not decoration: a story outside
 /// its window is not returned. Both are nullable because "runs forever" has to
-/// be expressible — that is the dashboard's unlimited option, stored as
+/// be expressible  that is the dashboard's unlimited option, stored as
 /// `endsAt = null` rather than a sentinel date far in the future. The 24-hour
 /// default is applied when a story is created, not here: Prisma defaults are
 /// static, so `now() + 24h` cannot be a schema default and belongs in the
@@ -2376,7 +2376,7 @@ enum VideoType {
 ///
 /// A story is the tapped circle in the homepage rail; what it opens is its
 /// slides, shown full-screen one after another the way Instagram does. The
-/// cover `image` is only the ring — the content lives on StorySlide.
+/// cover `image` is only the ring  the content lives on StorySlide.
 model Story {
   id       String    @id @default(auto()) @map("_id") @db.ObjectId
   slug     String    @unique
@@ -2429,7 +2429,7 @@ enum StoryCtaKind {
 }
 
 /// One full-screen frame inside a story. Slides are replaced wholesale when a
-/// story is saved — the dashboard posts the list, the route swaps it — so
+/// story is saved  the dashboard posts the list, the route swaps it  so
 /// `order` is always the array position and never has gaps.
 model StorySlide {
   id              String         @id @default(auto()) @map("_id") @db.ObjectId
@@ -2464,7 +2464,7 @@ model StorySlideTranslation {
   @@unique([slideId, locale])
 }
 
-/// "برامجنا المصورة" — a YouTube playlist or series, with its episodes.
+/// "برامجنا المصورة"  a YouTube playlist or series, with its episodes.
 model VideoPlaylist {
   id                 String       @id @default(auto()) @map("_id") @db.ObjectId
   slug               String       @unique
@@ -2518,7 +2518,7 @@ model PlaylistVideo {
   @@index([playlistId, order])
 }
 
-/// Course or seminar. Stated rather than inferred from the title — the handoff
+/// Course or seminar. Stated rather than inferred from the title  the handoff
 /// tested whether the Arabic title starts with "ندوة", which stops being true
 /// the moment the title is translated.
 enum CourseKind {
@@ -2531,7 +2531,7 @@ enum CourseKind {
 /// Three shapes of course exist and the flags keep them apart: one with a full
 /// detail page (`hasDetailPage`), one that only opens its intro video, and one
 /// hosted elsewhere (`isExternal` + `externalUrl`). `isPinned` leads the
-/// homepage rail — which course is pinned is the foundation's editorial call,
+/// homepage rail  which course is pinned is the foundation's editorial call,
 /// so it belongs in data rather than in code.
 model Course {
   id            String     @id @default(auto()) @map("_id") @db.ObjectId
@@ -2585,7 +2585,7 @@ model CourseVideo {
   @@index([courseId, order])
 }
 
-/// Standalone videos — "إنجازاتنا" and "تزكياتنا".
+/// Standalone videos  "إنجازاتنا" and "تزكياتنا".
 ///
 /// `localeFilter` restricts a video to specific locales; empty means every
 /// locale. It exists because the Turkish endorsements are spoken in Turkish and
@@ -2628,7 +2628,7 @@ model VideoTranslation {
   @@unique([videoId, locale])
 }
 
-/// "التقارير" — published PDF reports.
+/// "التقارير"  published PDF reports.
 model Report {
   id          String  @id @default(auto()) @map("_id") @db.ObjectId
   slug        String  @unique
@@ -2758,7 +2758,7 @@ model BankAccountTranslation {
 ///
 /// `campaignId` is a soft reference rather than a relation: a relation needs a
 /// back-field on `Campaign`, and no existing model in this schema is modified.
-/// A banner also outlives the campaign it points at — it stays on the record
+/// A banner also outlives the campaign it points at  it stays on the record
 /// after that campaign is archived.
 model UrgentBanner {
   id                String    @id @default(auto()) @map("_id") @db.ObjectId
@@ -2772,7 +2772,7 @@ model UrgentBanner {
   /// Price chips on the banner, USD; `amountLabels` names them in the same order.
   suggestedAmounts  Int[]     @default([])
   amountLabels      String[]  @default([])
-  /// The one-line strip above the photograph — a verse, a hadith, a slogan.
+  /// The one-line strip above the photograph  a verse, a hadith, a slogan.
   kicker            String?
   ctaSecondaryLabel String?
   ctaSecondaryUrl   String?
@@ -2782,7 +2782,7 @@ model UrgentBanner {
   /// Look: `red` | `navy` | `gold` | `green`; copy on the `start` or `end` side.
   tone              String    @default("red")
   textSide          String    @default("start")
-  /// Sort order within a slot, ascending — set by drag-and-drop on the list.
+  /// Sort order within a slot, ascending  set by drag-and-drop on the list.
   priority          Int       @default(0)
   locales           String[]  @default([])
   startsAt          DateTime?
@@ -2869,7 +2869,7 @@ enum SuperCategoryItemKind {
 /// What a block renders.
 ///
 /// The seven plural kinds render the super category's linked items of that kind
-/// as a grid. `TEXT` is a free block — eyebrow, heading, body and a link, which
+/// as a grid. `TEXT` is a free block  eyebrow, heading, body and a link, which
 /// is what a press mention or an explanatory panel needs. `VIDEO` embeds one
 /// film by its YouTube id. `PLAYLIST_EPISODES` renders the episodes of the one
 /// playlist named by `refId`, which is a different thing from a grid of
@@ -2890,8 +2890,8 @@ enum SuperCategoryBlockKind {
 /// A themed landing page that gathers content of every kind.
 ///
 /// A `Category` groups campaigns and nothing else. A super category is the
-/// programme around them: it carries its own page — hero, verse, wordmark,
-/// accent colour, calls to action — and links campaigns, articles, videos,
+/// programme around them: it carries its own page  hero, verse, wordmark,
+/// accent colour, calls to action  and links campaigns, articles, videos,
 /// playlists, courses, reports and booklets, in an order an editor chooses.
 /// ʿIbādan Lanā (`/projects/ibadan-lana`) was such a page hand-written in JSX
 /// with its copy in the i18n bundle; it is now a row here.
@@ -2910,7 +2910,7 @@ model SuperCategory {
   intro    String?
 
   /// The verse the page opens with. Always shown in Arabic, whatever the
-  /// edition — `verseTranslation` is the translation of the meaning and is what
+  /// edition  `verseTranslation` is the translation of the meaning and is what
   /// changes per locale.
   verseArabic      String?
   verseTranslation String?
@@ -2996,7 +2996,7 @@ model SuperCategoryBlock {
   image     String?
   /// `VIDEO` blocks only.
   youtubeId String?
-  /// `PLAYLIST_EPISODES` blocks only — the playlist whose episodes are shown.
+  /// `PLAYLIST_EPISODES` blocks only  the playlist whose episodes are shown.
   refId     String? @db.ObjectId
   /// Caps how many linked items a grid block renders; null renders them all.
   maxItems  Int?

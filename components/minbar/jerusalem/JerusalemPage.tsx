@@ -13,7 +13,7 @@ import IbadanBanner from "@/components/minbar/banners/IbadanBanner";
 import OldCityMap from "./OldCityMap";
 
 /**
- * Al-Quds and the Old City — ported from
+ * Al-Quds and the Old City  ported from
  * `Minbar/القدس والبلدة القديمة.dc.html`.
  *
  * A long explanatory page: the city's shape, its plan, its four quarters, its
@@ -21,7 +21,7 @@ import OldCityMap from "./OldCityMap";
  * and then the foundation's own projects there.
  *
  * Every figure and every sentence is a reviewed key in the `jerusalem`
- * namespace — nothing on this page is asserted from the port.
+ * namespace  nothing on this page is asserted from the port.
  */
 
 const QUICK_FACTS = [
@@ -315,7 +315,7 @@ export default function JerusalemPage({ verse, projects }: JerusalemPageProps) {
             ))}
           </div>
           {/* The handoff prints its sources note beneath the figures, not in a
-              tooltip — a claim about a city carries where it came from. */}
+              tooltip  a claim about a city carries where it came from. */}
           <p style={{ margin: "20px 0 0", color: "var(--muted)", fontSize: 13 }}>{t("figuresNote")}</p>
         </div>
       </section>

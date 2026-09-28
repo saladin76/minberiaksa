@@ -70,7 +70,7 @@ export interface CountryPickerProps {
   onOpenChange: (open: boolean) => void;
   currentCountryCode: string | null | undefined;
   saving?: boolean;
-  /** Called when the user confirms — receives the selected (code, displayName). */
+  /** Called when the user confirms  receives the selected (code, displayName). */
   onSelect: (countryCode: string, countryName: string) => Promise<void> | void;
 }
 

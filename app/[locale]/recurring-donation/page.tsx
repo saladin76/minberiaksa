@@ -25,7 +25,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 /**
- * Recurring giving — ported from `Minbar/التبرع الدوري.dc.html`.
+ * Recurring giving  ported from `Minbar/التبرع الدوري.dc.html`.
  */
 export default async function Recurring({ params }: Props) {
   const { locale } = await params;

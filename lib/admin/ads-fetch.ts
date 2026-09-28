@@ -8,7 +8,7 @@ export interface AdsDonationsQuery {
   endParam: string | null;
   categoryId: string | null;
   campaignId: string | null;
-  /** Donor country filter — applied at fetch time. */
+  /** Donor country filter  applied at fetch time. */
   country: string | null;
 }
 
@@ -75,7 +75,7 @@ export async function fetchAdsDonations(
     },
   });
 
-  // First-ever paid donation per donor — anchors new-donor attribution.
+  // First-ever paid donation per donor  anchors new-donor attribution.
   const donorIds = Array.from(new Set(rows.map((r) => r.donorId)));
   const firstByDonor: Record<string, Date> = {};
   if (donorIds.length > 0) {

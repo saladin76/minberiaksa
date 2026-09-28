@@ -15,9 +15,9 @@ import {
 } from "@/lib/content/playlist-write";
 
 /**
- * GET  /api/playlists — the public list with active episodes, one locale.
+ * GET  /api/playlists  the public list with active episodes, one locale.
  *      `?kind=PROGRAM|SERIES` narrows it.
- * POST /api/playlists — create, dashboard only.
+ * POST /api/playlists  create, dashboard only.
  */
 export async function GET(request: NextRequest) {
   try {

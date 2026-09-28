@@ -1,4 +1,4 @@
-# Operations Package 2B — Official Content Models Plan
+# Operations Package 2B  Official Content Models Plan
 
 ## Purpose
 
@@ -207,23 +207,23 @@ Operations will later hand approved content and campaign links to Marketing, but
 
 Future packages can extend this foundation as follows:
 
-### Package 2C — Active Prisma Schema
+### Package 2C  Active Prisma Schema
 
 Add `ContentPlan` and `ContentItem` to `prisma/schema.prisma` in a controlled schema PR.
 
-### Package 3 — Operations Content Board
+### Package 3  Operations Content Board
 
 Create a dashboard UI to list plans and items.
 
-### Package 4 — Operations Calendar
+### Package 4  Operations Calendar
 
 Add calendar views for publish dates, religious seasons, and production deadlines.
 
-### Package 5 — Production Workflow
+### Package 5  Production Workflow
 
 Add tasks, assignments, review states, and approvals.
 
-### Package 6 — Marketing Handoff
+### Package 6  Marketing Handoff
 
 Connect approved content items to campaign links and ads handoff without duplicating Marketing.
 

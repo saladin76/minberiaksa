@@ -26,7 +26,7 @@ const BASE = "/dashboard/platform-connections";
 type HealthState = "VERIFIED" | "CONFIGURED" | "NEEDS_SETUP" | "FAILED" | "DISABLED";
 const HEALTH_LABEL: Record<HealthState, string> = {
   VERIFIED: "تم التحقق باختبار اتصال",
-  CONFIGURED: "مُعدّ — لم يُختبر",
+  CONFIGURED: "مُعدّ  لم يُختبر",
   NEEDS_SETUP: "يحتاج إعداد",
   FAILED: "فشل آخر اختبار",
   DISABLED: "غير مفعّل",
@@ -40,7 +40,7 @@ function providerState(snapshot: SafeIntegrationProviderSnapshotWithTests): Heal
 }
 
 function providerEvidence(state: HealthState): string {
-  if (state === "VERIFIED") return "آخر اختبار اتصال بالمزوّد نجح. هذا لا يثبت وصول الرسائل — راجع سجل الإرسال.";
+  if (state === "VERIFIED") return "آخر اختبار اتصال بالمزوّد نجح. هذا لا يثبت وصول الرسائل  راجع سجل الإرسال.";
   if (state === "CONFIGURED") return "الإعدادات موجودة فقط؛ لم يُجرَ اختبار اتصال بعد. استخدم «إعادة الفحص».";
   if (state === "FAILED") return "آخر اختبار اتصال فشل.";
   if (state === "DISABLED") return "المزوّد غير مفعّل.";

@@ -12,7 +12,7 @@ export const maxDuration = 300;
  *
  * A one-time donation row is created as `status=PAID, paidAt=null` before the donor reaches
  * Stripe; only the webhook sets `paidAt` and increments campaign `currentAmount`. If that webhook
- * is missed — a bad endpoint registration, an outage — the payment succeeds at Stripe and the
+ * is missed  a bad endpoint registration, an outage  the payment succeeds at Stripe and the
  * platform never records it. That failure is completely silent: no error anywhere, the money just
  * never appears. It went unnoticed long enough to strand five real payments.
  *
@@ -31,7 +31,7 @@ export async function GET(request: NextRequest) {
   try {
     const summary = await reconcileUnconfirmedDonations({ dryRun });
 
-    // Recovered money is the whole point of the job — make it loud rather than leaving it in a
+    // Recovered money is the whole point of the job  make it loud rather than leaving it in a
     // response body nobody reads.
     if (summary.credited.length > 0 && !dryRun) {
       await writeAuditLog({

@@ -6,8 +6,8 @@ import CategoryIcon from "@/components/CategoryIcon";
  *
  * The first cards were drawn with eight glyphs of their own (`alert`, `home`,
  * …), which is what the earliest categories still store. Since then a card may
- * carry any value a category's own icon may — a Lucide name, one of the
- * organisation's drawn glyphs (`custom:Mosque`) or a flag (`flag:PS`) — picked
+ * carry any value a category's own icon may  a Lucide name, one of the
+ * organisation's drawn glyphs (`custom:Mosque`) or a flag (`flag:PS`)  picked
  * with the same picker. Both kinds render here, so the public page and the
  * dashboard preview cannot drift.
  */

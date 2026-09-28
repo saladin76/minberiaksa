@@ -4,7 +4,7 @@
  * It used to be two: the donor picker let a user "select all" up to 5,000
  * matches, and the route that turns that selection into an audience list
  * rejected anything over 1,000. The wizard therefore offered a selection it
- * could not save — the request failed with a validation error after the user
+ * could not save  the request failed with a validation error after the user
  * had already chosen the audience, the template and the name.
  *
  * So the number lives here, and the picker's ceiling, the list route's schema,
@@ -13,7 +13,7 @@
  *
  * This is still a stored list of ids. For audiences in the tens of thousands
  * the right shape is a stored *definition* (the filter the picker used) that
- * the sender resolves at run time — a follow-up, tracked separately; until it
+ * the sender resolves at run time  a follow-up, tracked separately; until it
  * exists this constant is the honest boundary of the feature, and both the UI
  * and the API say the same thing about where it is.
  */

@@ -12,7 +12,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 /**
- * POST /api/ai/donation-concierge/support — a message to the team, filed
+ * POST /api/ai/donation-concierge/support  a message to the team, filed
  * from the concierge panel. Lands in the same `Message` collection the
  * contact form writes to, so it shows up in /dashboard/inbox with the
  * existing triage, tagged `source: "AI_CHAT"`.
@@ -72,10 +72,10 @@ export async function POST(request: NextRequest) {
     );
   }
   if (input.transcript?.length) {
-    contextLines.push("", "— Chat with the giving assistant —");
+    contextLines.push("", "— Chat with the giving assistant ");
     for (const t of input.transcript) contextLines.push(`${t.role === "user" ? "Visitor" : "Assistant"}: ${t.text.replace(/\s+/g, " ").trim()}`);
   }
-  const body = contextLines.length ? `${input.reason}\n\n— Context —\n${contextLines.join("\n")}` : input.reason;
+  const body = contextLines.length ? `${input.reason}\n\n— Context \n${contextLines.join("\n")}` : input.reason;
 
   const message = await prisma.message.create({
     data: {

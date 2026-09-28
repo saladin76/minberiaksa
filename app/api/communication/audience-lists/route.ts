@@ -39,7 +39,7 @@ export async function GET() {
  * re-checks consent at send time. Storing ids on the campaign would have meant a second recipient
  * path to keep in step with the first.
  *
- * Members are capped at `AUDIENCE_SELECTION_MAX` — the same ceiling the donor picker offers and
+ * Members are capped at `AUDIENCE_SELECTION_MAX`  the same ceiling the donor picker offers and
  * `addDonorMembers` enforces. It is one constant on purpose: the two used to disagree (5,000 in the
  * picker, 1,000 here), so a "select all" the UI accepted was rejected here after the user had
  * already chosen the audience, the template and the name.

@@ -17,10 +17,10 @@ import {
 import { resolveStoryCta, type StoryCtaLookups } from "@/lib/content/story-cta";
 
 /**
- * GET  /api/stories — the public rail: active stories inside their window,
+ * GET  /api/stories  the public rail: active stories inside their window,
  *      each with its slides, captions in the caller's locale, and every CTA
  *      already resolved to an href for that locale.
- * POST /api/stories — create, dashboard only.
+ * POST /api/stories  create, dashboard only.
  */
 export async function GET(request: NextRequest) {
   try {
@@ -105,7 +105,7 @@ export async function GET(request: NextRequest) {
             durationSeconds: sl.durationSeconds,
             caption: t?.caption || sl.caption || "",
             ctaLabel: t?.ctaLabel || sl.ctaLabel || "",
-            /* Null when the target is gone — the viewer hides the button
+            /* Null when the target is gone  the viewer hides the button
                rather than sending anyone to a 404. */
             ctaHref: resolveStoryCta(cta, locale, lookups),
           };

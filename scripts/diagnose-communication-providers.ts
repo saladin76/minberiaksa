@@ -5,7 +5,7 @@
  *   2. EMAIL campaigns report success but nothing arrives in the inbox
  *
  * Why this script exists: `executeCampaignSend` persists only `result.reason` on the
- * delivery row (campaign-send-executor.ts) and throws away `result.detail` — so the HTTP
+ * delivery row (campaign-send-executor.ts) and throws away `result.detail`  so the HTTP
  * status and provider body behind NETGSM_REQUEST_FAILED are never written down anywhere.
  * And Elastic Email answers a valid API call with 2xx the moment it ACCEPTS the message,
  * which is what the campaign records as SENT; whether it was then delivered, bounced or
@@ -22,7 +22,7 @@
 import { createRequire } from "node:module";
 
 // `runtime-config` imports "server-only", a package Next.js provides in-process and which does not
-// exist in node_modules — so importing it from a plain tsx script throws MODULE_NOT_FOUND before
+// exist in node_modules  so importing it from a plain tsx script throws MODULE_NOT_FOUND before
 // any diagnosis can run. Stub it in the CJS resolver first; it is a compile-time marker with no
 // behaviour, so a no-op module is a faithful stand-in outside the Next runtime.
 // The app modules below are therefore loaded with `await import(...)` inside main(), AFTER the
@@ -98,7 +98,7 @@ async function main() {
     console.log(`  header     : "${netgsm.values.header}"  <-- must match an APPROVED Netgsm sender header exactly`);
     const trailing = /\s$/.test(netgsm.values.usercode) || /\s$/.test(netgsm.values.password) || /\s$/.test(netgsm.values.header);
     const leading = /^\s/.test(netgsm.values.usercode) || /^\s/.test(netgsm.values.password) || /^\s/.test(netgsm.values.header);
-    if (trailing || leading) console.log("  !! WARNING: a Netgsm value has leading/trailing whitespace — Basic auth will fail.");
+    if (trailing || leading) console.log("  !! WARNING: a Netgsm value has leading/trailing whitespace  Basic auth will fail.");
   }
 
   const email = runtime.elasticEmail;
@@ -114,7 +114,7 @@ async function main() {
   }
 
   // ------------------------------------------------------------------ netgsm probes
-  head("2. NETGSM — read-only API probes (no SMS is sent)");
+  head("2. NETGSM  read-only API probes (no SMS is sent)");
   if (!netgsm.configured) {
     console.log("  skipped: Netgsm is not configured, so the campaign would fail before the HTTP call.");
   } else {
@@ -139,9 +139,9 @@ async function main() {
   }
 
   // ----------------------------------------------------------- elastic email probes
-  head("3. ELASTIC EMAIL — read-only API probes (no email is sent)");
+  head("3. ELASTIC EMAIL  read-only API probes (no email is sent)");
   // When the stored record cannot be decrypted (missing/rotated INTEGRATION_SETTINGS_ENCRYPTION_KEY)
-  // the runtime fails closed, but the env fallback key is still enough to interrogate the account —
+  // the runtime fails closed, but the env fallback key is still enough to interrogate the account 
   // and the account is exactly where the "sent but never arrived" answer lives.
   const emailKey = email.configured ? email.values.apiKey : process.env.ELASTIC_EMAIL_API_KEY?.trim();
   const senderEmail = email.configured ? email.values.senderEmail : process.env.ELASTIC_EMAIL_SENDER_EMAIL?.trim();
@@ -164,13 +164,13 @@ async function main() {
         // A domain verified for a single sender comes back as "example.org (info@example.org)".
         const match = rows.find((r) => String(r.Domain ?? r.domain ?? "").split("(")[0].trim().toLowerCase() === domain);
         if (!match) {
-          console.log(`  !! ${domain} is NOT in the account's domain list — Elastic Email still answers the`);
+          console.log(`  !! ${domain} is NOT in the account's domain list  Elastic Email still answers the`);
           console.log("     API call with 2xx (which we record as SENT) and then drops the message.");
         } else {
           for (const flag of ["Domain", "Spf", "Dkim", "MX", "DMARC", "Verify", "DefaultDomain", "TrackingStatus"]) {
             console.log(`    ${flag.padEnd(16)}${JSON.stringify(match[flag])}`);
           }
-          if (match.Verify === false) console.log("  !! Verify=false — this sender is not fully verified on the account.");
+          if (match.Verify === false) console.log("  !! Verify=false  this sender is not fully verified on the account.");
         }
       } catch {
         console.log("  (could not parse the domain list as JSON)");
@@ -186,7 +186,7 @@ async function main() {
     // The decisive probe. /v4/emails/{id}/status wants a TransactionID, but the send response gives
     // us a MessageID (which is what we store), so per-message status lookups always 400. The event
     // feed keys on MsgID and carries the provider's own sentence explaining each outcome.
-    head("3b. ELASTIC EMAIL EVENT FEED — the provider's own verdict per recipient");
+    head("3b. ELASTIC EMAIL EVENT FEED  the provider's own verdict per recipient");
     const eventsFrom = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString().slice(0, 19);
     const events = await probe(`${ELASTIC_BASE}/events?from=${encodeURIComponent(eventsFrom)}&limit=100`, headers);
     if ("error" in events || !events.ok) {
@@ -237,7 +237,7 @@ async function main() {
   }, {});
   if (Object.keys(failureCounts).length) console.log(`\n  error tally: ${JSON.stringify(failureCounts)}`);
 
-  // A SENT row that never advanced is not proof of delivery — it is proof that nothing ever came
+  // A SENT row that never advanced is not proof of delivery  it is proof that nothing ever came
   // back to contradict it. Elastic Email only reports delivery through the webhook, so if that is
   // not registered on the provider side, every accepted message stays SENT forever.
   const emailSent = deliveries.filter((d) => d.channel === "EMAIL" && d.status === "SENT");
@@ -246,7 +246,7 @@ async function main() {
     console.log(`\n  !! ${emailSent.length} EMAIL rows are SENT and NOT ONE has a deliveredAt.`);
     console.log("     SENT here means 'Elastic Email returned 2xx', nothing more. Register the webhook");
     console.log("     at /api/webhooks/elastic-email?token=… so bounces and blocks come back and correct");
-    console.log("     these rows — otherwise the dashboard reports success for mail that never landed.");
+    console.log("     these rows  otherwise the dashboard reports success for mail that never landed.");
   }
 
   // ------------------------------------------------------------------- campaign rows
@@ -261,7 +261,7 @@ async function main() {
 
   for (const c of campaigns) {
     const lastRun = (c.metadata as Record<string, unknown> | null)?.lastRun ?? null;
-    console.log(`  ${iso(c.updatedAt)} [${c.channel}] ${c.name} — status=${c.status} sent=${c.sentCount} failed=${c.failedCount}`);
+    console.log(`  ${iso(c.updatedAt)} [${c.channel}] ${c.name}  status=${c.status} sent=${c.sentCount} failed=${c.failedCount}`);
     console.log(`      lastRun: ${lastRun ? clip(JSON.stringify(lastRun), 400) : "—"}`);
   }
 

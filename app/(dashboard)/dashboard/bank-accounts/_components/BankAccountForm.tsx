@@ -189,7 +189,7 @@ export function BankAccountForm({
           <LocaleChips
             value={values.locales}
             onChange={(next) => set('locales', next)}
-            hint="اتركها فارغة ليظهر لكل المتبرعين. حدّد لغات ليظهر لهم وحدهم — فالمتبرع التركي والخليجي لا يُعطيان نفس الـIBAN."
+            hint="اتركها فارغة ليظهر لكل المتبرعين. حدّد لغات ليظهر لهم وحدهم  فالمتبرع التركي والخليجي لا يُعطيان نفس الـIBAN."
           />
         </div>
 

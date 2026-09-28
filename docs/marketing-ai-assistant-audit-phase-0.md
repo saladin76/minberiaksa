@@ -1,4 +1,4 @@
-# AI Assistant Audit — Phase 0
+# AI Assistant Audit  Phase 0
 
 ## الحكم العام
 

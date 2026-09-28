@@ -385,7 +385,7 @@ export function CreateDonationDialog({ onClose, onCreated }: Props) {
             {donorMode === "NEW" && (
               <div className="space-y-2 rounded-lg border border-slate-200 bg-white p-3">
                 <p className="text-[11px] text-slate-500">
-                  سيتم إنشاء حساب متبرع جديد. الاسم مطلوب — البريد والهاتف اختياريان.
+                  سيتم إنشاء حساب متبرع جديد. الاسم مطلوب  البريد والهاتف اختياريان.
                   إذا أدخلت بريدًا موجودًا، سيُربط التبرع بالمتبرع الحالي تلقائيًا.
                 </p>
                 <div className="space-y-1">
@@ -592,7 +592,7 @@ export function CreateDonationDialog({ onClose, onCreated }: Props) {
 
             {hasDuplicateLine && (
               <p className="text-[11px] text-rose-600">
-                يوجد سطران للمشروع/الحملة نفسها — ادمجهما في سطر واحد.
+                يوجد سطران للمشروع/الحملة نفسها  ادمجهما في سطر واحد.
               </p>
             )}
           </div>

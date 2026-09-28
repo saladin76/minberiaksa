@@ -9,14 +9,14 @@ import type { MinbarProject } from "@/lib/minbar/projects";
 import { useMinbarMoney } from "@/hooks/useMinbarMoney";
 
 /**
- * The site's project card — a full-bleed field photograph under a dark scrim,
+ * The site's project card  a full-bleed field photograph under a dark scrim,
  * with the region tag, the funding bar, quick amounts, and the donate / basket /
  * share row. Ported from `projectCards()` in
  * `Minbar/الصفحة الرئيسية.dc.html`; the same card is used on the projects,
  * Al-Quds and Al-Aqsa pages.
  *
- * Only identifiers reach the cart — `projectId` plus a numeric amount and an
- * ISO currency code — because the cart resolves titles live from the active
+ * Only identifiers reach the cart  `projectId` plus a numeric amount and an
+ * ISO currency code  because the cart resolves titles live from the active
  * locale (`DEVELOPER_HANDOFF` § Cart Localization).
  *
  * The progress bar and figures are hidden entirely when a project has no fixed

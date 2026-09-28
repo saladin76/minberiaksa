@@ -1,4 +1,4 @@
-# Package 2 — Provider Connections
+# Package 2  Provider Connections
 
 ## Goal
 

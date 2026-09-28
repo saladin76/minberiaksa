@@ -53,7 +53,7 @@ export function SettingsView() {
     if (!r?.ok || !d?.settings) return toast.error(d?.error || "تعذّر الحفظ");
     setData({ ...data, settings: d.settings });
     setForm(d.settings);
-    toast.success("حُفظت الإعدادات — تظهر في الموقع خلال دقيقة");
+    toast.success("حُفظت الإعدادات  تظهر في الموقع خلال دقيقة");
   };
 
   return (
@@ -85,13 +85,13 @@ export function SettingsView() {
       <div className="grid gap-6 lg:grid-cols-2">
         <SectionCard title="الذكاء الاصطناعي" description="النموذج الذي يكتب الردود على الرسائل الحرة" icon={Bot}>
           <div className={cn("mb-3 rounded-lg px-3 py-2.5 text-[12.5px] leading-6", data.provider.ready ? "bg-emerald-50 text-emerald-800" : "bg-amber-50 text-amber-800")}>
-            <b>{data.provider.ready ? `متصل — ${data.provider.model}` : "غير متصل"}</b>
+            <b>{data.provider.ready ? `متصل  ${data.provider.model}` : "غير متصل"}</b>
             <br />
             {data.provider.reason}
             {!data.provider.ready && <span className="block text-[11.5px] opacity-80">يُضبط من متغيرات الخادم: OPENAI_API_KEY و AI_CORE_ENABLE_EXTERNAL_CALLS=true (و AI_CORE_OPENAI_MODEL اختياريًا).</span>}
           </div>
           <div className="divide-y divide-slate-100">
-            <Toggle label="استخدام الذكاء الاصطناعي في الردود" hint="عند الإيقاف يجيب المساعد بالمسار الثابت (الأزرار والقواعد) فقط — مفيد لإيقاف التكلفة أو عند مشكلة في المزوّد." checked={form.llmEnabled} onChange={(v) => set("llmEnabled", v)} />
+            <Toggle label="استخدام الذكاء الاصطناعي في الردود" hint="عند الإيقاف يجيب المساعد بالمسار الثابت (الأزرار والقواعد) فقط  مفيد لإيقاف التكلفة أو عند مشكلة في المزوّد." checked={form.llmEnabled} onChange={(v) => set("llmEnabled", v)} />
           </div>
         </SectionCard>
 

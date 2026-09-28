@@ -11,11 +11,11 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 120;
 
 /**
- * POST /api/admin/content-localization/translate — machine-translate one
+ * POST /api/admin/content-localization/translate  machine-translate one
  * item's Arabic fields into the requested locales (all eighteen by default).
  *
  * Nothing is saved. The forms call this, put the result into their own
- * translation fields, and the editor reviews and saves as usual — so the
+ * translation fields, and the editor reviews and saves as usual  so the
  * write goes through each section's own validated endpoint and its audit
  * log, and a translation the editor did not look at never reaches the site
  * on its own.

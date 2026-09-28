@@ -37,7 +37,7 @@ import { PhoneInput } from "react-international-phone";
 import "react-international-phone/style.css";
 
 /**
- * Donor details and payment — ported from `Minbar/بيانات الدفع.dc.html`.
+ * Donor details and payment  ported from `Minbar/بيانات الدفع.dc.html`.
  *
  * Three payment paths: card, PayPal, and bank transfer.
  *
@@ -67,7 +67,7 @@ export interface CheckoutPageProps {
   categories: MinbarCategoryTitle[];
   banks: readonly MinbarBank[];
   donor: { firstName: string; lastName: string; email: string; phone: string } | null;
-  /** ISO 3166-1 alpha-2, lower case — the phone field's starting flag. */
+  /** ISO 3166-1 alpha-2, lower case  the phone field's starting flag. */
   defaultCountry: string;
 }
 
@@ -94,7 +94,7 @@ export default function CheckoutPage({ projects, categories, banks, donor, defau
   const [cardExpiry, setCardExpiry] = useState("");
   const [cardCvc, setCardCvc] = useState("");
   const [cardName, setCardName] = useState("");
-  /* Which card field has focus — the card preview highlights it and flips for the CVC. */
+  /* Which card field has focus  the card preview highlights it and flips for the CVC. */
   const [cardFocus, setCardFocus] = useState<Focused | undefined>(undefined);
 
   /* Stripe's own card fields, when Stripe is the rail. The card never touches
@@ -132,7 +132,7 @@ export default function CheckoutPage({ projects, categories, banks, donor, defau
      it follows the currency and the admin switches. Fetched once so the card
      step knows whether the bank collects the card on its own page. */
   const [gatewayConfig, setGatewayConfig] = useState<{
-    /* PayFor is never a *main* gateway an admin nominates — it is resolved per
+    /* PayFor is never a *main* gateway an admin nominates  it is resolved per
        order, from the currency and the admin switch. */
     mainGateway: MainGateway;
     payforEnabled: boolean;
@@ -175,7 +175,7 @@ export default function CheckoutPage({ projects, categories, banks, donor, defau
     }
     if (item.waqf) {
       const unit = item.waqf.unit === "meter" ? tCert("meterUnitTitle") : tCert("shareUnitTitle");
-      return `${unit} × ${item.waqf.count}${item.waqf.donorName ? ` — ${tCert("inNameOf")} ${item.waqf.donorName}` : ""}`;
+      return `${unit} × ${item.waqf.count}${item.waqf.donorName ? `  ${tCert("inNameOf")} ${item.waqf.donorName}` : ""}`;
     }
     if (item.titleKey) {
       if (t.has(item.titleKey)) return t(item.titleKey);
@@ -186,13 +186,13 @@ export default function CheckoutPage({ projects, categories, banks, donor, defau
 
   const teamSupportCharged = teamSupportEnabled && teamSupport > 0 ? teamSupport : 0;
   const total = items.reduce((sum, item) => sum + item.amount, 0) + teamSupportCharged;
-  /* One type for the whole order — `ONE_TIME`, or the plan's cadence; the
+  /* One type for the whole order  `ONE_TIME`, or the plan's cadence; the
      cart page does not let cadences mix. The same function builds the order,
      so what is previewed here is what is sent. */
   const orderTypeForCart = orderType(items);
   const planFrequency = frequencyOfOrderType(orderTypeForCart);
 
-  /* When the plan will charge — shown before the donor confirms, computed
+  /* When the plan will charge  shown before the donor confirms, computed
      the way the server computes it, in the browser's zone. Set in an effect:
      the date depends on "now", which the server render cannot share. */
   const [nextChargeText, setNextChargeText] = useState<string | null>(null);
@@ -213,7 +213,7 @@ export default function CheckoutPage({ projects, categories, banks, donor, defau
 
   /* The rail this basket will run on, resolved the same way the server resolves
      it, so the card step can render what that rail actually needs. Before the
-     settings arrive this is Stripe, which collects the card on our page — the
+     settings arrive this is Stripe, which collects the card on our page  the
      same thing the design shows, so nothing flickers. */
   const gateway = resolveGateway({
     mainGateway: gatewayConfig?.mainGateway ?? "STRIPE",
@@ -224,7 +224,7 @@ export default function CheckoutPage({ projects, categories, banks, donor, defau
 
   /* Albaraka in Ortak Ödeme Sayfası mode collects the card on the bank's own
      page. Asking for it here too would make the donor type it twice, and the
-     copy we'd send is discarded — so the card fields are replaced by a line
+     copy we'd send is discarded  so the card fields are replaced by a line
      saying where the card is entered.
 
      Not for a plan: the scheduler charges the card the donor authorised, so it
@@ -435,7 +435,7 @@ export default function CheckoutPage({ projects, categories, banks, donor, defau
     },
     {
       id: "paypal",
-      // A brand name — Latin in every language.
+      // A brand name  Latin in every language.
       label: "PayPal",
       icon: (
         <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -917,7 +917,7 @@ export default function CheckoutPage({ projects, categories, banks, donor, defau
                 </span>
                 {/* What the plan will do, before the donor confirms: this
                     payment is the first instalment, then the same amount at
-                    the cadence — the same next date the consent snapshot
+                    the cadence  the same next date the consent snapshot
                     records. */}
                 {planFrequency && nextChargeText ? (
                   <span style={{ display: "grid", gap: 2, fontSize: 12.5, lineHeight: 1.7, color: "var(--deep)", padding: "10px 12px", background: "#fff", border: "1px solid rgba(211,154,39,.4)", borderRadius: 8 }}>

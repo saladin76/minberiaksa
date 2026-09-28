@@ -53,7 +53,7 @@ export async function GET(request: NextRequest) {
       frequency,
     });
 
-    // Active daily / Friday plans in the same scope — shown beside the grid, not in it.
+    // Active daily / Friday plans in the same scope  shown beside the grid, not in it.
     const planScope = activePlanScopeWhere({ categoryId, campaignId, userId, referralId });
     const unplacedFrequencies = (["DAILY", "FRIDAY"] as const).filter((f) => !frequency || frequency === f);
 

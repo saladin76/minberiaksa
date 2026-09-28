@@ -4,7 +4,7 @@
  * that contributed to it. The scoring tiers (90+ verified, 75+ strong, etc.)
  * are defined in `tracking-event-contract.ts`.
  *
- * No DB access, no fetch — runs identically server-side in the routes and
+ * No DB access, no fetch  runs identically server-side in the routes and
  * (later) client-side for what-if filters.
  */
 import type { AdPlatform } from "@/lib/attribution/detect-source";
@@ -19,7 +19,7 @@ export interface ScoringInput {
   conversionEventsSentAt: Date | string | null | undefined;
   conversionFailedEventsSentAt: Date | string | null | undefined;
   status: string | null | undefined;
-  /** Already-detected platform — pass null to score as organic/direct only. */
+  /** Already-detected platform  pass null to score as organic/direct only. */
   platform: AdPlatform | null;
 }
 
@@ -211,7 +211,7 @@ export function scoreDonationDataQuality(input: ScoringInput): ScoringResult {
       confidence += 10;
       reasons.push(reason("fbp_fbc_present", "fbp و fbc موجودان", "info"));
     } else {
-      reasons.push(reason("fbp_fbc_missing", "fbp/fbc ناقصان — match quality منخفضة", "warning"));
+      reasons.push(reason("fbp_fbc_missing", "fbp/fbc ناقصان  match quality منخفضة", "warning"));
     }
   }
 
@@ -221,7 +221,7 @@ export function scoreDonationDataQuality(input: ScoringInput): ScoringResult {
   // It is Meta-specific in spirit (CAPI = Meta Conversions API), so the
   // missing/failed warnings only make sense for Meta-attributed donations.
   // For Google Ads / TikTok / X / other-paid we don't yet have a server
-  // conversion pipeline — absence isn't a defect of the donation. We still
+  // conversion pipeline  absence isn't a defect of the donation. We still
   // reward the platform-agnostic GA4 purchase signal when it's present.
   if (isPaidStatus) {
     if (platform === "meta") {
@@ -232,7 +232,7 @@ export function scoreDonationDataQuality(input: ScoringInput): ScoringResult {
         reasons.push(
           reason(
             "capi_donate_failed_only",
-            "CAPI أرسل DonateFailed فقط — لم يصل Donate",
+            "CAPI أرسل DonateFailed فقط  لم يصل Donate",
             "error"
           )
         );

@@ -197,7 +197,8 @@ function ensureLocaleLinksSection(projectId: string) {
   if (document.getElementById(LOCALE_LINKS_ID)) return false;
 
   const firstSection = Array.from(form.children).find(
-    (child): child is HTMLElement => child instanceof HTMLElement && isSectionCandidate(child) && child.textContent?.includes("المعلومات الأساسية"),
+    (child): child is HTMLElement =>
+      child instanceof HTMLElement && isSectionCandidate(child) && Boolean(child.textContent?.includes("المعلومات الأساسية")),
   );
 
   const section = createLocaleLinksSection(projectId);
@@ -247,7 +248,7 @@ function placeSeoAsSecondSection() {
 }
 
 /** Drops toggles left over from when every section was foldable, and re-shows
- *  whatever they had hidden — so a client that is already on the page (or a Fast
+ *  whatever they had hidden  so a client that is already on the page (or a Fast
  *  Refresh in dev) doesn't end up with a half-collapsed form. */
 function removeLegacyToggles(form: HTMLFormElement) {
   let changed = false;
@@ -262,7 +263,7 @@ function removeLegacyToggles(form: HTMLFormElement) {
   for (const section of Array.from(form.children)) {
     if (!(section instanceof HTMLElement)) continue;
     if (section.id === SEO_PORTAL_ID) continue;
-    // Only ever touch sections this enhancer itself hid — never a display:none
+    // Only ever touch sections this enhancer itself hid  never a display:none
     // that the form set for its own reasons.
     if (section.dataset.projectCollapsibleSection !== "true") continue;
     delete section.dataset.projectCollapsibleSection;

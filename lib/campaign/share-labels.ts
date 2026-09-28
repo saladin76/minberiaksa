@@ -28,7 +28,7 @@ export interface ShareLabelEntry {
 export type ShareLabelsConfig = Partial<Record<string, ShareLabelEntry>>;
 
 /**
- * Defensive parser — admin-edited JSON might be partially filled or malformed.
+ * Defensive parser  admin-edited JSON might be partially filled or malformed.
  * Returns `null` when nothing usable is present (empty strings count as
  * missing, so the caller falls back to translations).
  */

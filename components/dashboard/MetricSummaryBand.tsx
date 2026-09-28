@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 export type SummaryStat = {
   label: string;
   value: string;
-  /** Small mark beside the label — a silhouette to scan for, not decoration. */
+  /** Small mark beside the label  a silhouette to scan for, not decoration. */
   icon?: LucideIcon;
   /** Optional delta, e.g. "+12.4%". Colour is chosen from `trend`. */
   delta?: string;
@@ -24,7 +24,7 @@ type Props = {
   note?: string;
   /** Secondary figures, shown inline to the side. */
   stats?: SummaryStat[];
-  /** Badge on the eyebrow row, e.g. "كل الوقت" — states the figure's scope at a glance. */
+  /** Badge on the eyebrow row, e.g. "كل الوقت"  states the figure's scope at a glance. */
   badge?: string;
   /** Mark on the icon tile. */
   icon?: LucideIcon;
@@ -47,19 +47,18 @@ const STAT_TONES = [
 ] as const;
 
 /**
- * The headline band for an analytics page — one row, roughly 80px tall.
+ * The headline band for an analytics page  one row, roughly 80px tall.
  *
  * Everything sits on a single baseline pair: the label row and the figure row. The secondary
  * figures repeat that rhythm to the side, separated by hairlines rather than wrapped in cards,
  * because four bordered boxes cost three times the height and read as a second toolbar rather
  * than as context for the number they belong to.
  *
- * The scope note is attached to an info affordance instead of a third line of text — it is
+ * The scope note is attached to an info affordance instead of a third line of text  it is
  * clarification, not content, and a permanent line of small print pushes the page's actual
  * content below the fold. It stays reachable by pointer (title) and by screen reader (sr-only).
  *
- * The wash is decorative only. Every value is slate-900 on white, so contrast never depends on
- * where the gradient happens to land.
+ * Flat white surface; colour comes only from the icon badges.
  */
 export function MetricSummaryBand({
   eyebrow,
@@ -75,25 +74,15 @@ export function MetricSummaryBand({
     <section
       className={cn(
         "relative isolate overflow-hidden rounded-2xl border border-slate-200/90 bg-white",
-        "shadow-[0_1px_2px_rgba(16,24,40,0.04),0_8px_24px_-18px_rgba(2,94,184,0.35)]",
+        "shadow-[0_1px_2px_rgba(16,24,40,0.04)]",
         className,
       )}
     >
-      {/* Decorative only — pointer-events-none so it can never eat a click. */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(90%_140%_at_100%_0%,rgba(2,94,184,0.16),transparent_60%),radial-gradient(60%_120%_at_0%_100%,rgba(250,93,23,0.10),transparent_60%)]"
-      />
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-1 bg-gradient-to-l from-brand via-sky-400 to-[#FA5D17]"
-      />
-
       <div className="flex flex-wrap items-center gap-x-8 gap-y-4 px-5 py-4">
         {/* Headline: label row over figure row. */}
         <div className="flex min-w-0 items-center gap-3">
           {Icon && (
-            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-sky-500 to-brand text-white shadow-[0_6px_16px_-4px_rgba(2,94,184,0.7)]">
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-white">
               <Icon className="h-5 w-5" />
             </span>
           )}
@@ -103,7 +92,7 @@ export function MetricSummaryBand({
                 {eyebrow}
               </p>
               {badge && (
-                <span className="shrink-0 rounded-full border border-brand/20 bg-brand/8 px-2 py-0.5 text-[10px] font-semibold text-brand">
+                <span className="shrink-0 rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-semibold text-blue-700">
                   {badge}
                 </span>
               )}
@@ -114,7 +103,7 @@ export function MetricSummaryBand({
           </div>
         </div>
 
-        {/* Secondary figures — hairline-separated, same two-line rhythm as the headline. */}
+        {/* Secondary figures  hairline-separated, same two-line rhythm as the headline. */}
         {stats && stats.length > 0 && (
           <div className="ms-auto flex flex-wrap items-center gap-y-3">
             {stats.map((stat, i) => {

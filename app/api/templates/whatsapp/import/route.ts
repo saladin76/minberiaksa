@@ -52,7 +52,7 @@ export async function POST() {
     await writeAuditLog({
       ...actor,
       action: "TWILIO_TEMPLATE_IMPORT_FAILED",
-      messageAr: `فشل/تعذّر استيراد قوالب Twilio — ${result.status}`,
+      messageAr: `فشل/تعذّر استيراد قوالب Twilio  ${result.status}`,
       entityType: "WhatsappTemplate",
       metadata: { status: result.status, error: result.error ?? null },
       stream: "TEAM",
@@ -86,7 +86,7 @@ export async function POST() {
   await writeAuditLog({
     ...actor,
     action: "TWILIO_TEMPLATE_IMPORT_FINISHED",
-    messageAr: `استيراد قوالب Twilio انتهى — ${imported} جديد، ${updated} محدّث`,
+    messageAr: `استيراد قوالب Twilio انتهى  ${imported} جديد، ${updated} محدّث`,
     entityType: "WhatsappTemplate",
     metadata: {
       total: result.templates.length,

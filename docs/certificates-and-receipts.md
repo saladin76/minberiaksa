@@ -7,7 +7,7 @@ Implements `handoff-certificates/CERTIFICATES_DOWNLOADS_HANDOFF.md` and `DONATIO
 | Document | Issued | Template component | PDF endpoint | Page |
 |---|---|---|---|---|
 | Thank-you certificate (A4 landscape, primary) | every confirmed donation | `components/minbar/certificates/ThanksCertificate.tsx` | `GET /api/certificates/thanks/:donationId` | `/{locale}/certificates/thanks/:donationId` |
-| Thank-you certificate, portrait (admin-only alternate) | — | `ThanksCertificatePortrait.tsx` | same, `?layout=portrait` (revenue permission) | same, `?layout=portrait` |
+| Thank-you certificate, portrait (admin-only alternate) |  | `ThanksCertificatePortrait.tsx` | same, `?layout=portrait` (revenue permission) | same, `?layout=portrait` |
 | Waqf certificate (share / metre, two panels on one A4 landscape) | one per waqf line | `WaqfCertificateSheet.tsx` | `GET /api/certificates/waqf/:certificateId` | `/{locale}/certificates/waqf/:certificateId` |
 | Donation receipt (A4 portrait, donor language + Turkish copy) | every confirmed donation | `ReceiptSheet.tsx` | `GET /api/receipts/:donationId` (old `/api/donations/:id/receipt` redirects) | `/{locale}/receipt/:donationId` |
 
@@ -15,7 +15,7 @@ Implements `handoff-certificates/CERTIFICATES_DOWNLOADS_HANDOFF.md` and `DONATIO
 
 - `issueDonationDocuments(donationId)` runs from `dispatchDonationPaid` (every confirmation path: Stripe webhook, PayFor, Albaraka, bank-transfer confirm) and lazily from the success page / endpoints. Idempotent: existing records are returned; the unique indexes catch races.
 - Eligibility = `status PAID && paidAt set`. Before that: endpoints answer 409, previews render without serials.
-- Serials: `DocumentSequence` atomic counters — `thanks-<year>` → `MIA-THX-2026-000001`, `receipt-<year>` → `MIA-RCP-2026-000001`, `waqf-share` (starts 76543) / `waqf-meter` (starts 9876) → the bare number printed on the waqf face (`serial` = `MIA-WQF-S-076543`).
+- Serials: `DocumentSequence` atomic counters  `thanks-<year>` → `MIA-THX-2026-000001`, `receipt-<year>` → `MIA-RCP-2026-000001`, `waqf-share` (starts 76543) / `waqf-meter` (starts 9876) → the bare number printed on the waqf face (`serial` = `MIA-WQF-S-076543`).
 - Records: `Certificate` (serial · number · type · donationId · donorId · waqfItemId · count · amount · currency · donorName · dedicatedTo · issuedAt · locale), `DonationReceipt` (receiptNo · verifyCode), `DonationWaqfItem` (the waqf line; priced server-side from `lib/minbar/waqf.ts`).
 - The donor's edited name on the success page is sent as `?name=` and stored on the certificate, so re-downloads and the emailed copy match.
 

@@ -1,17 +1,17 @@
 /**
- * prisma/seed/seed-banners.ts — the two shared bands as dashboard banners.
+ * prisma/seed/seed-banners.ts  the two shared bands as dashboard banners.
  *
  * "Journey to Al-Aqsa" (`TravelBanner.tsx`) and "'Ibādan Lanā"
  * (`IbadanBanner.tsx`) used to be mounted as static components. This writes
  * them into `UrgentBanner` so an editor can move, retire or reword them, with
- * the copy the components drew from the message catalogue — every one of the
+ * the copy the components drew from the message catalogue  every one of the
  * 19 locales, taken from `i18n/messages/*.json` rather than retyped here, so
  * the seeded banner reads exactly as the static one did in each language.
  *
  * What the model cannot carry, and so is deliberately dropped:
- *   · the 'Ibādan wordmark tile in the photograph's corner — the corner is
+ *   · the 'Ibādan wordmark tile in the photograph's corner  the corner is
  *     the price-chip slot, and the banner has no chips;
- *   · the verse's translation as a second line under the Arabic — the kicker
+ *   · the verse's translation as a second line under the Arabic  the kicker
  *     is one line, so Arabic sessions get the verse and every other locale
  *     gets the translation of its meaning with the surah reference.
  *
@@ -42,7 +42,7 @@ const PLACEMENTS = [placementKey("aqsa", "bottom")];
 
 /** The campaign the travel banner sells, in `seed-data.json` terms. */
 const TRAVEL_CAMPAIGN_SLUG = "al-quds-friday-transport";
-/** The 'Ibādan programme page — `SLUGS.ibadanProject` in `lib/minbar/routes.ts`. */
+/** The 'Ibādan programme page  `SLUGS.ibadanProject` in `lib/minbar/routes.ts`. */
 const IBADAN_URL = "/projects/ibadan-lana";
 
 type Copy = { title: string; description: string; kicker: string; ctaLabel: string; ctaSecondaryLabel: string; amountLabels: string[] };
@@ -70,7 +70,7 @@ function ibadanCopy(locale: string): Copy {
   return {
     title: msg(locale, "homepage.ibadanHeading1"),
     description: msg(locale, "homepage.ibadanSubtitle"),
-    kicker: verse.translation ? `${verse.translation} — ${verse.label}` : verse.arabic,
+    kicker: verse.translation ? `${verse.translation}  ${verse.label}` : verse.arabic,
     ctaLabel: msg(locale, "common.donate"),
     ctaSecondaryLabel: msg(locale, "homepage.learnProject"),
     amountLabels: [],
@@ -134,7 +134,7 @@ async function upsertBanner(seed: BannerSeed) {
 
 async function main() {
   const travelCampaign = await prisma.campaign.findUnique({ where: { slug: TRAVEL_CAMPAIGN_SLUG }, select: { id: true } });
-  if (!travelCampaign) console.warn(`campaign "${TRAVEL_CAMPAIGN_SLUG}" not found — the travel banner will have no link until it is seeded`);
+  if (!travelCampaign) console.warn(`campaign "${TRAVEL_CAMPAIGN_SLUG}" not found  the travel banner will have no link until it is seeded`);
 
   await upsertBanner({
     slug: "journey-to-al-aqsa",

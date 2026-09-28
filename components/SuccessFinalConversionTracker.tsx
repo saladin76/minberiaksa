@@ -24,11 +24,10 @@ type DonateTrackingPayload = {
   paymentMethod?: string;
 };
 
-type FbqFn = (command: string, eventName: string, params?: Record<string, unknown>, options?: Record<string, unknown>) => void;
-
-declare global {
-  interface Window { fbq?: FbqFn; }
-}
+/* `Window.fbq` is declared once, in `components/TrackingPixels.tsx`, which is where the pixel is
+   installed. Re-declaring it here with a narrower signature was a conflicting global augmentation:
+   two `declare global` blocks for the same property must agree, and these did not. The calls below
+   satisfy the variadic declaration unchanged. */
 
 const MAX_ATTEMPTS = 20;
 const RETRY_MS = 750;

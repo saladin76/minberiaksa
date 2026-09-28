@@ -122,7 +122,7 @@ const Footer = () => {
   const isTr = locale === 'tr';
   const isAr = locale === 'ar';
 
-  // Built dynamically from the API — see useEffect above
+  // Built dynamically from the API  see useEffect above
 
   const quickLinks = [
     { label: isTr ? 'Hakkımızda' : isAr ? 'من نحن' : 'About Us', href: '/about-us' },

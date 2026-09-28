@@ -63,7 +63,7 @@ const ENGLISH = new Set<string>([
  * `defaultLocale`).
  *
  * Order matters when a country could plausibly map to multiple supported
- * locales — we lean toward the locale most commonly used by online consumers
+ * locales  we lean toward the locale most commonly used by online consumers
  * in that market.
  */
 export function localeForCountry(

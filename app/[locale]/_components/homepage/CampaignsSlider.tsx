@@ -14,7 +14,7 @@ interface CampaignsSliderProps {
   listView?: boolean;
   /**
    * Server-fetched campaigns. When provided, the slider renders them in the SSR HTML
-   * with no loading state — eliminating the empty→skeleton→content swap that previously
+   * with no loading state  eliminating the empty→skeleton→content swap that previously
    * caused CLS=0.92 on the homepage.
    */
   initialCampaigns?: CampaignCardData[];

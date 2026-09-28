@@ -11,7 +11,7 @@ import CategoryIcon from "@/components/CategoryIcon";
 interface SuggestedCampaignsProps {
   /** Category id (or slug) used by `/api/categories/[id]/campaigns`. */
   categoryId: string;
-  /** Campaign currently being viewed — filtered out of the result list. */
+  /** Campaign currently being viewed  filtered out of the result list. */
   currentCampaignId: string;
   /** Localized category name (used in the heading + view-all link label). */
   categoryName?: string;
@@ -19,7 +19,7 @@ interface SuggestedCampaignsProps {
   categorySlug?: string | null;
   /** Lucide icon key stored on the category (see CategoryIcon). Falls back to Heart. */
   categoryIcon?: string | null;
-  /** Override how many cards to show. Defaults to 8 — the responsive grid trims naturally. */
+  /** Override how many cards to show. Defaults to 8  the responsive grid trims naturally. */
   limit?: number;
 }
 
@@ -100,7 +100,7 @@ export default function SuggestedCampaigns({
     };
   }, [categoryId, currentCampaignId, locale, limit]);
 
-  // Hide the section entirely when there's nothing else in the category — silent is better than empty.
+  // Hide the section entirely when there's nothing else in the category  silent is better than empty.
   if (!loading && (items == null || items.length === 0)) return null;
 
   const categoryHref = `/category/${categorySlug || categoryId}`;

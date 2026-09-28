@@ -91,7 +91,7 @@ export async function loadKnowledge(locale: string): Promise<KnowledgePack> {
     str(about, "pillar1Text") && `Work: ${[1, 2, 3, 4].map((i) => str(about, `pillar${i}Text`)).filter(Boolean).join(" · ")}`,
   ].filter((s): s is string => Boolean(s)).map((s) => clip(s, 360));
 
-  /* Facts that the code guarantees; wording in English is fine — the model
+  /* Facts that the code guarantees; wording in English is fine  the model
      answers in the visitor's language and these are inputs, not output. */
   const giving = [
     "Donations go into a basket first; checkout asks for name, email and phone. No account is required (guest donations are allowed); a signed-in donor sees their donations and plans on the Account page.",

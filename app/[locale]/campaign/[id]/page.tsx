@@ -80,7 +80,7 @@ async function fetchCampaignForSeo(idOrSlug: string) {
 }
 
 const URGENCY_PREFIX: Record<string, string> = {
-  ar: "ساعد الآن — ",
+  ar: "ساعد الآن  ",
   en: "Urgent: ",
   tr: "Acil: ",
   fr: "Urgent : ",

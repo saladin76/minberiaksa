@@ -1,5 +1,5 @@
 /**
- * prisma/seed/seed-category-pages.ts — give every category the page it owns.
+ * prisma/seed/seed-category-pages.ts  give every category the page it owns.
  *
  * Each category is now published as a project page in the shape of
  * `Minbar/مشروع ترميم منازل القدس.dc.html`. This fills the parts of that page
@@ -8,7 +8,7 @@
  *   · the section headings and the hero button, built from the category's own
  *     name ("مشاريع غزة", "ساهم في غزة", …);
  *   · a hero photograph, taken from the first image of the category's first
- *     campaign — a real field photograph of that work, not a stock picture;
+ *     campaign  a real field photograph of that work, not a stock picture;
  *   · a one-line lead that states what the page is, with no claim in it;
  *   · the quick amounts the donation box offers;
  *   · the achievement videos, matched to the category by the `regionKey` the
@@ -16,7 +16,7 @@
  *
  * What it deliberately does NOT invent: the figures band (how many homes were
  * restored, of how many), the values strip, and the three explanatory cards.
- * Those are claims about the organisation's work — they belong to whoever knows
+ * Those are claims about the organisation's work  they belong to whoever knows
  * them, and the dashboard now has a field for each, with the translate button
  * beside it. A category without them simply renders without those sections.
  *
@@ -51,7 +51,7 @@ const VIDEO_REGION_TO_CATEGORY: Record<string, string> = {
 
 /**
  * Categories published as one of the site's own pages rather than as a
- * landing page of their own — the mosque and zakat had pages before categories
+ * landing page of their own  the mosque and zakat had pages before categories
  * did, and those pages fold the category in. `Category.pageTemplate`.
  */
 const PAGE_TEMPLATES: Record<string, "aqsa" | "zakat"> = {
@@ -62,8 +62,8 @@ const PAGE_TEMPLATES: Record<string, "aqsa" | "zakat"> = {
 /**
  * What a bound category says and shows, taken from the page it is published
  * as. Those pages were written and reviewed before categories could publish
- * themselves — their hero pictures, their lead, their headings and their quick
- * amounts are the right ones — so the category carries that copy, in every
+ * themselves  their hero pictures, their lead, their headings and their quick
+ * amounts are the right ones  so the category carries that copy, in every
  * locale, rather than the derived placeholders the loop above gives the rest.
  * Always applied, `--force` or not: the page's copy is the source of truth.
  */
@@ -84,7 +84,7 @@ type StaticPageCopy = {
 const STATIC_PAGE_COPY: Record<"aqsa" | "zakat", { namespace: string; nameKey: string } & StaticPageCopy> = {
   aqsa: {
     namespace: "aqsa",
-    /* `navigation.aqsa` — the page's name in the header, for locales where the
+    /* `navigation.aqsa`  the page's name in the header, for locales where the
        category has no translation row yet. */
     nameKey: "aqsa",
     heroImage: "/minbar/assets/aqsa-hero-3d.png",
@@ -122,7 +122,7 @@ async function seedBoundCategories() {
   });
   if (!bound.length) return;
 
-  console.log("\nbound to a site page — copy from that page's bundle:");
+  console.log("\nbound to a site page  copy from that page's bundle:");
   for (const category of bound) {
     const spec = STATIC_PAGE_COPY[category.pageTemplate as "aqsa" | "zakat"];
     const have = new Set(category.translations.map((t) => t.locale));
@@ -223,7 +223,7 @@ async function main() {
 
     const data = {
       heroImage: keep(category.heroImage, heroImage || null, emptyText),
-      /* States what the page is. No claim about the work — those belong to the
+      /* States what the page is. No claim about the work  those belong to the
          values and the cards, which a person writes. */
       heroLead: keep(category.heroLead, `مشاريع مؤسسة منبر الأقصى الدولية في ${name}.`, emptyText),
       ctaLabel: keep(category.ctaLabel, "تصفّح المشاريع", emptyText),
@@ -247,7 +247,7 @@ async function main() {
     await prisma.category.update({ where: { id: category.id }, data });
     touched += 1;
     console.log(
-      `  ✓ ${category.slug ?? category.id} — hero ${data.heroImage ? "set" : "none"}, ` +
+      `  ✓ ${category.slug ?? category.id}  hero ${data.heroImage ? "set" : "none"}, ` +
         `${data.achievementVideoIds.length} achievement video(s)`
     );
   }
@@ -260,7 +260,7 @@ async function main() {
     console.log("  (their campaigns carry no image; upload one in the dashboard)");
   }
   console.log(
-    "left for an editor — they are claims, not derivable data:\n" +
+    "left for an editor  they are claims, not derivable data:\n" +
       "  · the figures band (done / goal)\n" +
       "  · the values strip\n" +
       "  · the three explanatory cards (why / what we do / the impact)"

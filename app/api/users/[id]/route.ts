@@ -84,10 +84,10 @@ export async function GET(
       return {
         ...d,
         type,
-        /** Donation charge status (PAID / FAILED) — unchanged for revenue totals */
+        /** Donation charge status (PAID / FAILED)  unchanged for revenue totals */
         paymentStatus: d.status,
         status: type === 'MONTHLY' ? (sub?.status ?? null) : d.status,
-        /** The plan's cadence — DAILY | FRIDAY | MONTHLY. `type` stays "MONTHLY" for every plan: it means "recurring" to every consumer. */
+        /** The plan's cadence  DAILY | FRIDAY | MONTHLY. `type` stays "MONTHLY" for every plan: it means "recurring" to every consumer. */
         frequency: type === 'MONTHLY' ? (sub?.frequency ?? 'MONTHLY') : null,
         nextBillingDate: type === 'MONTHLY' ? (sub?.nextBillingDate ?? null) : null,
       };
@@ -138,7 +138,7 @@ export async function GET(
     );
 
     // Distinct supported campaigns. Subscription donations count even without
-    // paidAt — they're treated as ناجح across dashboards/UI.
+    // paidAt  they're treated as ناجح across dashboards/UI.
     const supportedCampaignIds = new Set<string>();
     for (const donation of user.donations) {
       if (donation.status !== 'PAID') continue;

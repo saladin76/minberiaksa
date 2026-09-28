@@ -13,7 +13,7 @@ import Button from "./Button";
  */
 
 /* ── CertificateCard ─────────────────────────────────────────────────────────
- * Certificate / receipt preview — an official, warm ivory surface with a faint
+ * Certificate / receipt preview  an official, warm ivory surface with a faint
  * 45° gold ornament wash. Carries the mark, a document label and a reference
  * note. Used in the Certificates / Proof section and the wallet. */
 export interface CertificateCardProps {
@@ -89,7 +89,7 @@ export function FundCard({ title, note, href = "#", tone = "light", style }: Fun
 /* ── ProjectCard ─────────────────────────────────────────────────────────────
  * The core campaign card: real field image, category + "Official Minber" tag,
  * short title/description, a red→gold progress bar and a raised/goal/donors
- * metric row. Figures carry a "to be verified" note until confirmed — the brand
+ * metric row. Figures carry a "to be verified" note until confirmed  the brand
  * never invents impact numbers. */
 export interface ProjectCardProps {
   image?: string;
@@ -106,7 +106,7 @@ export interface ProjectCardProps {
   official?: boolean;
   /** Localised label for the "Official Minber" tag over the image. */
   officialLabel?: ReactNode;
-  /** Localised metric captions — order is raised / goal / donors. */
+  /** Localised metric captions  order is raised / goal / donors. */
   labels: { raised: ReactNode; goal: ReactNode; donors: ReactNode; donate: ReactNode; view: ReactNode };
   /** Formats a figure in the visitor's active currency. */
   formatAmount: (value: number) => string;

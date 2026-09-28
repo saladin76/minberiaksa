@@ -15,7 +15,7 @@ import {
  * Change a user's password.
  *  - The signed-in user can only change their own password.
  *  - Requires `currentPassword` for accounts that have one (credentials auth).
- *    OAuth-only accounts (no password set) can set one without proof — that
+ *    OAuth-only accounts (no password set) can set one without proof  that
  *    transition turns them into a hybrid account they can log in with either way.
  *  - Enforces minimum length 8 and requires `newPassword !== currentPassword`.
  */

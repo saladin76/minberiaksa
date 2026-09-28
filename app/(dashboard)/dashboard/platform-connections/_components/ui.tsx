@@ -76,7 +76,7 @@ export function CardHeader({ title, description, action }: { title: ReactNode; d
   return (
     <div className="flex items-start justify-between gap-3 border-b border-slate-200 p-4">
       <div>
-        {/* Was font-black — heavier than the page's own h1, which reads as the
+        {/* Was font-black  heavier than the page's own h1, which reads as the
             card title outranking the page title. */}
         <h2 className="text-base font-semibold text-slate-900">{title}</h2>
         {description ? <p className="mt-0.5 text-xs leading-5 text-slate-500">{description}</p> : null}

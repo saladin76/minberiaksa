@@ -63,14 +63,14 @@ export async function GET(
       "ar";
 
     // ✅ STEP 1: Fetch campaign with ONLY current locale translations
-    // Accept an ObjectId, the base slug, or a translation slug from ANY locale —
+    // Accept an ObjectId, the base slug, or a translation slug from ANY locale 
     // deliberately not just `locale`'s own. A locale with no slug of its own falls
     // back to the English one (see pickLocaleSlug), so /tr/campaign/<english-slug>
     // is a canonical URL the page renders without redirecting; matching only the
     // requested locale here 404'd exactly those pages. Locale still decides which
     // translation is returned below, it just doesn't gate which slugs resolve.
     // Soft-deleted campaigns 404 here so public detail pages and the edit form
-    // can't surface them — historical donation joins go through other queries.
+    // can't surface them  historical donation joins go through other queries.
     const campaign = await prisma.campaign.findFirst({
       where: {
         AND: [
@@ -168,7 +168,7 @@ export async function GET(
     // Use the resolved Prisma id (since the URL param may have been a slug)
     const realId = campaign.id;
 
-    // Orphaned items (item whose parent Donation was deleted out-of-band — MongoDB
+    // Orphaned items (item whose parent Donation was deleted out-of-band  MongoDB
     // doesn't enforce FK integrity) make Prisma throw on the required `donation` relation.
     // Fetch item + donor in two steps so one orphan can't 500 the whole page.
     type DonationStat = { amount: number; donor: string | null } | null;
@@ -190,7 +190,7 @@ export async function GET(
 
     const [donationCount, firstDonation, lastDonation, largestDonation] =
       await Promise.all([
-        // See app/api/campaigns/main/route.ts — must join `donation` so unsettled and
+        // See app/api/campaigns/main/route.ts  must join `donation` so unsettled and
         // orphaned items don't inflate the campaign's donation count.
         prisma.donationItem.count({ where: { campaignId: realId, donation: PAID_DONATION_FILTER } }),
         pickStat({ createdAt: "asc" }),
@@ -301,7 +301,7 @@ export async function GET(
     // Return with cache headers.
     //
     // The 5-minute shared cache is right for the public campaign page, but it
-    // was also serving the dashboard edit form — so an admin who saved and
+    // was also serving the dashboard edit form  so an admin who saved and
     // reopened a campaign could be handed their own pre-edit copy and conclude
     // the save had silently failed. `?fresh=1` (sent by the dashboard) opts that
     // one caller out; the URL differs, so public traffic still hits the cache.
@@ -382,7 +382,7 @@ export async function PUT(
     if (body.isActive !== undefined) updateData.isActive = body.isActive;
     if (body.priority !== undefined) updateData.priority = body.priority;
 
-    // categoryIds / categoryId — accept either. The new client sends an array;
+    // categoryIds / categoryId  accept either. The new client sends an array;
     // older code paths (and the dashboard quick-toggle) still send a single id.
     if (body.categoryIds !== undefined || body.categoryId !== undefined) {
       const nextCategoryIds = normalizeCategoryIdsInput(body);
@@ -410,7 +410,7 @@ export async function PUT(
 
       // Prune `categoryPriorities` entries that point at categories the
       // campaign no longer belongs to, so the per-category ordering map stays
-      // in sync with the relation. (Read as part of STEP 1 — this used to be a
+      // in sync with the relation. (Read as part of STEP 1  this used to be a
       // second findUnique for the row we had already fetched, and it shadowed
       // the outer `existingCampaign` binding while doing so.)
       const currentPriorities = parseCategoryPriorities(
@@ -560,7 +560,7 @@ export async function PUT(
 
     // Read every existing translation ONCE, before the transaction opens.
     // The loop below used to issue a `findUnique` per locale inside the
-    // transaction — 7 extra sequential round trips (~3.5s here) to fetch rows a
+    // transaction  7 extra sequential round trips (~3.5s here) to fetch rows a
     // single query returns, while holding the transaction open the whole time.
     const existingTranslations = translationUpdates.length
       ? await prisma.campaignTranslation.findMany({
@@ -575,7 +575,7 @@ export async function PUT(
 
     // ✅ STEP 4: Execute update in transaction. The generous timeout stays because
     // the per-locale slug generation below genuinely has to run in order; what
-    // used to make it necessary — a findUnique per locale — has moved out.
+    // used to make it necessary  a findUnique per locale  has moved out.
     // The transaction's return value is not bound to a name: STEP 5 re-reads the
     // row with the full select the client needs.
     await prisma.$transaction(
@@ -636,7 +636,7 @@ export async function PUT(
           // slug that already belongs to this very row is a guaranteed-miss
           // query per locale; when it is unchanged there is nothing to check.
           if (slugKeyPresent && userSlug && userSlug === existingSlug) {
-            // Leave `translationData.slug` unset — the stored value stands.
+            // Leave `translationData.slug` unset  the stored value stands.
           } else if (slugKeyPresent) {
             const baseForSlug = userSlug ?? mergedTitle;
             translationData.slug = await generateUniqueLocaleSlug(
@@ -750,7 +750,7 @@ export async function PUT(
 
     return NextResponse.json(fullCampaign, {
       status: 200,
-      // A save must never be answered from, or land in, a shared cache — the GET
+      // A save must never be answered from, or land in, a shared cache  the GET
       // below advertises s-maxage=300, and without this an admin who saved and
       // reopened the campaign could be handed their pre-edit copy.
       headers: { "Cache-Control": "no-store" },
@@ -779,7 +779,7 @@ export async function PUT(
 // DELETE - Soft-delete only. We flip isDeleted=true and isActive=false so the
 // row disappears from every listing + checkout flow (existing endpoints already
 // gate on isActive), but DonationItem / SubscriptionItem rows keep referencing
-// the same campaignId — totals, receipts, and historical reports stay valid.
+// the same campaignId  totals, receipts, and historical reports stay valid.
 // CartItem rows are removed because they're transient and would otherwise let
 // a stale cart re-surface a deleted campaign at payment time.
 export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -805,7 +805,7 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
     // Both writes in one batch transaction: previously they were two separate
     // awaited round trips, so a failure on the second left the campaign flagged
     // deleted while stale carts still held it. The array form is a single
-    // batched call — atomic and half the latency of the sequential pair.
+    // batched call  atomic and half the latency of the sequential pair.
     await prisma.$transaction([
       prisma.campaign.update({
         where: { id },

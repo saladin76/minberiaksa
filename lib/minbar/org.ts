@@ -1,8 +1,8 @@
 /**
  * The foundation's own published details.
  *
- * These are facts about a real, registered organisation — a licence number, a
- * street address, a phone line someone answers — so they live in one place and
+ * These are facts about a real, registered organisation  a licence number, a
+ * street address, a phone line someone answers  so they live in one place and
  * are never retyped into a page. The Footer, the about page and the contact
  * page all read from here; if the foundation moves office, this file changes
  * and every page follows.
@@ -21,7 +21,7 @@ export const ORG = {
   whatsapp: "905398436050",
 } as const;
 
-/** `tel:` href for {@link ORG.phone} — spaces are not valid in a tel URI. */
+/** `tel:` href for {@link ORG.phone}  spaces are not valid in a tel URI. */
 export const ORG_TEL = `tel:${ORG.phone.replace(/\s/g, "")}`;
 
 /** WhatsApp deep link for {@link ORG.whatsapp}. */

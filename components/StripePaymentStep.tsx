@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * StripePaymentStep — inner component that MUST live inside <Elements>.
+ * StripePaymentStep  inner component that MUST live inside <Elements>.
  * Uses useStripe() / useElements() directly so the stripe instance is always
  * in sync with the mounted Elements context.
  *
@@ -60,7 +60,7 @@ export const StripePaymentStep = forwardRef<StripePaymentHandle, Props>(
     const [expiryDone, setExpiryDone] = useState(false);
     const [cvcDone, setCvcDone] = useState(false);
 
-    // Notify parent whenever ready state changes — onReadyChange must be stable (useCallback in parent)
+    // Notify parent whenever ready state changes  onReadyChange must be stable (useCallback in parent)
     useEffect(() => {
       const ready =
         !!stripe &&
@@ -72,7 +72,7 @@ export const StripePaymentStep = forwardRef<StripePaymentHandle, Props>(
       onReadyChange(ready);
     }, [stripe, elements, numberDone, expiryDone, cvcDone, holderName, onReadyChange]);
 
-    // Expose confirmPayment to parent — stripe/elements are always fresh from context
+    // Expose confirmPayment to parent  stripe/elements are always fresh from context
     useImperativeHandle(
       ref,
       () => ({
@@ -96,7 +96,7 @@ export const StripePaymentStep = forwardRef<StripePaymentHandle, Props>(
               },
             } as PaymentIntentResult;
           }
-          // Card data goes directly from browser to Stripe — never touches our server
+          // Card data goes directly from browser to Stripe  never touches our server
           return stripe.confirmCardPayment(clientSecret, {
             payment_method: {
               card: cardElement,

@@ -446,7 +446,7 @@ export function ConnectionsPageClient() {
         ) : filteredConnections.length === 0 ? (
           <div className="py-12 text-center text-sm text-slate-500">
             {category === "ALL"
-              ? "لا توجد اتصالات بعد — اضغط «إضافة اتصال» لإضافة أول حساب."
+              ? "لا توجد اتصالات بعد  اضغط «إضافة اتصال» لإضافة أول حساب."
               : "لا توجد حسابات لهذا التصنيف بعد."}
           </div>
         ) : (

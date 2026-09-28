@@ -103,7 +103,7 @@ export function TriggerEditorDialog({ open, onOpenChange }: Props) {
       open={open}
       onOpenChange={onOpenChange}
       title="حدث تلقائي جديد"
-      subtitle="اربط حدثًا في النظام بقالب موجود — سيُرسل تلقائيًا للمتبرع المعني عند وقوع الحدث."
+      subtitle="اربط حدثًا في النظام بقالب موجود  سيُرسل تلقائيًا للمتبرع المعني عند وقوع الحدث."
       icon={<Zap className="h-4 w-4" />}
       size="sm"
       loading={loading}
@@ -145,7 +145,7 @@ export function TriggerEditorDialog({ open, onOpenChange }: Props) {
         {isScheduled && (
           <div className="space-y-3 rounded-lg border border-amber-200 bg-amber-50/60 p-3">
             <p className="text-[11px] leading-relaxed text-amber-900">
-              هذا حدث مجدول — يُفحص يوميًا بدل أن يُطلق فورًا. يُرسل للمتبرّع الذي مضى على آخر تبرّع ناجح له المدة أدناه.
+              هذا حدث مجدول  يُفحص يوميًا بدل أن يُطلق فورًا. يُرسل للمتبرّع الذي مضى على آخر تبرّع ناجح له المدة أدناه.
             </p>
             {/* Was grid-cols-2 unconditionally, which squeezed two number inputs plus their
                 Arabic labels into a narrow dialog on phones. */}
@@ -181,7 +181,7 @@ export function TriggerEditorDialog({ open, onOpenChange }: Props) {
               <SelectValue
                 placeholder={
                   templates.length === 0
-                    ? "لا توجد قوالب — أنشئ قالبًا من تبويبة البريد/الواتساب"
+                    ? "لا توجد قوالب  أنشئ قالبًا من تبويبة البريد/الواتساب"
                     : "اختر قالبًا"
                 }
               />

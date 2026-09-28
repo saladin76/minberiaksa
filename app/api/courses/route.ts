@@ -14,8 +14,8 @@ import {
 } from "@/lib/content/course-write";
 
 /**
- * GET  /api/courses — the public list, pinned first, one locale.
- * POST /api/courses — create, dashboard only.
+ * GET  /api/courses  the public list, pinned first, one locale.
+ * POST /api/courses  create, dashboard only.
  */
 export async function GET(request: NextRequest) {
   try {

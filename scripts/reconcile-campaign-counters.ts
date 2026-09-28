@@ -3,7 +3,7 @@
  *
  * Why this exists: `executeCampaignSend` used to stamp `sentCount`/`failedCount` from what the
  * provider said during the send call. For Elastic Email that only ever means "the message was
- * ACCEPTED" — the real outcome (Suppress, Error, bounce) lands minutes later on the
+ * ACCEPTED"  the real outcome (Suppress, Error, bounce) lands minutes later on the
  * `CommunicationDelivery` rows via the webhook / event-sync cron, and nothing carried it back up.
  * Campaigns therefore kept reporting «أُرسلت N · فشلت 0» for mail Elastic Email had refused to
  * deliver. `deliveredCount` was never written by any code path at all, so «وصلت» always read 0.
@@ -20,7 +20,7 @@ import { createRequire } from "node:module";
 
 // `campaign-counter-service` pulls in modules that import "server-only", a package Next.js provides
 // in-process and which does not exist in node_modules. Stub it in the CJS resolver before the app
-// modules are loaded — it is a compile-time marker with no behaviour. The imports below are
+// modules are loaded  it is a compile-time marker with no behaviour. The imports below are
 // therefore dynamic: a static `import` is hoisted and would resolve before this line runs.
 const nodeRequire = createRequire(__filename);
 type LoaderHost = { _load(request: string, ...rest: unknown[]): unknown };
@@ -50,7 +50,7 @@ async function main() {
     },
   });
 
-  console.log(`${APPLY ? "APPLY" : "DRY RUN"} — ${campaigns.length} campaign(s)\n`);
+  console.log(`${APPLY ? "APPLY" : "DRY RUN"}  ${campaigns.length} campaign(s)\n`);
   let drifted = 0;
 
   for (const campaign of campaigns) {

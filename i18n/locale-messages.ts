@@ -24,7 +24,7 @@ import msg_hi from "./messages/hi.json";
  * The normalized message catalog for every public locale.
  *
  * Extracted from `app/[locale]/layout.tsx` so the layout and the per-page
- * message providers read the same object — otherwise two copies of a 19-locale
+ * message providers read the same object  otherwise two copies of a 19-locale
  * bundle would end up in the server graph.
  *
  * The map must stay statically imported (bundled JSON). When a locale is
@@ -37,7 +37,7 @@ const raw: LocaleMessages = {
   ms: msg_ms, ja: msg_ja, zh: msg_zh, hi: msg_hi,
 };
 
-/** Gaps are filled from English — the handoff's `code → en → ar` chain. */
+/** Gaps are filled from English  the handoff's `code → en → ar` chain. */
 export const LOCALE_MESSAGES: LocaleMessages = buildNormalizedMessages(raw, "en");
 
 export const DEFAULT_MESSAGE_LOCALE = "ar";
@@ -51,7 +51,7 @@ export function messagesFor(locale: string): MessageObject {
  * language picker, the footer, the quick-donation widget, system states and
  * form validation.
  *
- * `PERFORMANCE_BUDGET.md` sets the rule this exists to satisfy — "حزم الترجمة:
+ * `PERFORMANCE_BUDGET.md` sets the rule this exists to satisfy  "حزم الترجمة:
  * Locale الحالية × Namespaces الصفحة فقط". Sending all 23 namespaces on every
  * page put ~129KB of JSON in each document; the shell is ~14KB and a page adds
  * only what it actually renders.

@@ -187,7 +187,7 @@ export default function SuperCategoriesPage() {
             <AlertDialogTitle>حذف القسم الكبير</AlertDialogTitle>
             <AlertDialogDescription>
               سيتم حذف صفحة «{deleteTarget?.title}» بأقسامها وترجماتها نهائيًا. المشاريع والمقالات وبقية المحتوى المرتبط
-              لا تُحذف — يُحذف ارتباطها بهذه الصفحة فقط.
+              لا تُحذف  يُحذف ارتباطها بهذه الصفحة فقط.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

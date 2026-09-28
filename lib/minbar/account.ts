@@ -8,15 +8,15 @@ import { claimAcceptsReceipt } from "@/lib/donations/bank-transfer-shared";
 /**
  * The donor account's data.
  *
- * `Minbar/حساب المتبرع.dc.html` is entirely prop-driven — it renders whatever a
+ * `Minbar/حساب المتبرع.dc.html` is entirely prop-driven  it renders whatever a
  * parent hands it and shows an em dash for everything else. The real account
  * reads the signed-in donor's own rows: their profile, their donations, and
  * their recurring plans.
  *
- * Only settled donations are counted and listed — `PAID` with `paidAt` set,
+ * Only settled donations are counted and listed  `PAID` with `paidAt` set,
  * or charged against a recurring plan. A pending bank transfer is not a
- * donation yet — `DONATION_LOGIC_SPEC §3` is explicit that a transfer becomes
- * real only once a finance officer matches the money received — and totalling
+ * donation yet  `DONATION_LOGIC_SPEC §3` is explicit that a transfer becomes
+ * real only once a finance officer matches the money received  and totalling
  * unconfirmed rows would tell a donor they gave more than they have. Those
  * transfers are listed separately, with their status and the way to act on
  * them, so the donor can see them without them being counted.
@@ -43,7 +43,7 @@ export interface MinbarDonorProfile {
 
 export interface MinbarDonationRow {
   id: string;
-  /** ISO timestamp — paid date where known, else when the row was created. */
+  /** ISO timestamp  paid date where known, else when the row was created. */
   date: string;
   /** Total charged, in the currency the donor actually paid in. */
   amount: number;
@@ -54,7 +54,7 @@ export interface MinbarDonationRow {
   recurring: boolean;
 }
 
-/** A bank transfer that has not been confirmed yet — shown, not counted. */
+/** A bank transfer that has not been confirmed yet  shown, not counted. */
 export interface MinbarPendingTransfer {
   donationId: string;
   status: BankTransferClaimStatus;
@@ -84,7 +84,7 @@ const HISTORY_LIMIT = 20;
 /**
  * Everything the account page renders, for one donor.
  *
- * Returns `null` when the user no longer exists — a stale session should send
+ * Returns `null` when the user no longer exists  a stale session should send
  * the visitor to sign in again rather than render an account shell with an em
  * dash in every field.
  */
@@ -183,7 +183,7 @@ export async function getAccountSummary(
 
     if (!user) return null;
 
-    /* City, region and country as the donor filled them in — whichever parts
+    /* City, region and country as the donor filled them in  whichever parts
        exist, in that order. An empty profile yields `null`, not a stray comma. */
     const address =
       [user.city, user.region, user.countryName || user.country].filter(Boolean).join("، ") || null;

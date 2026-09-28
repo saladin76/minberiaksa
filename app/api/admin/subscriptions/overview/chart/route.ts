@@ -17,13 +17,13 @@ import {
 } from "@/lib/dashboard/recurring-frequency-filter";
 
 /**
- * GET /api/admin/subscriptions/overview/chart — time series for donations linked to recurring
+ * GET /api/admin/subscriptions/overview/chart  time series for donations linked to recurring
  * plans only. `?frequency=DAILY|FRIDAY|MONTHLY` narrows to one cadence; every point also
  * carries the split by cadence (`amountDaily` / `amountFriday` / `amountMonthlyPlan`) so the
  * chart can stack them.
  *
  * `amountMonthly` / `countMonthly` keep their historical name but mean "all recurring charges"
- * — they predate daily and Friday plans, when every recurring charge was monthly.
+ *  they predate daily and Friday plans, when every recurring charge was monthly.
  */
 export async function GET(request: NextRequest) {
   try {
@@ -157,7 +157,7 @@ export async function GET(request: NextRequest) {
     > = [];
 
     /* All-time queries from the epoch, so the axis starts at the first day with data rather than
-       at 1970 — see `resolveChartStartKey`. Bounded periods are unchanged. */
+       at 1970  see `resolveChartStartKey`. Bounded periods are unchanged. */
     const axisStartKey = resolveChartStartKey(isAllTime, startDateKey, endDateKey, byDate.keys());
 
     for (const dateStr of eachIstanbulDateKey(axisStartKey, endDateKey)) {

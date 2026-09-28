@@ -8,7 +8,7 @@ import { setDefaultSender, updateSender } from "@/lib/communication/sender-servi
 import { COMMUNICATION_PURPOSES } from "@/lib/communication/communication-runtime-types";
 import { publicSender } from "../route";
 
-/** Editing one sender. Channel and provider are not editable — that would silently repoint a thread. */
+/** Editing one sender. Channel and provider are not editable  that would silently repoint a thread. */
 const patchSchema = z.object({
   name: z.string().min(1).max(120).optional(),
   displayName: z.string().max(120).nullable().optional(),
@@ -47,7 +47,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   const { makeDefault, ...patch } = parsed.data;
 
   /* Default-setting is its own service call because it must clear the flag on the channel's other
-     senders in the same breath — two defaults would make routing non-deterministic. */
+     senders in the same breath  two defaults would make routing non-deterministic. */
   if (makeDefault) {
     const promoted = await setDefaultSender(id, actor);
     if (!promoted.ok) return NextResponse.json({ error: promoted.error }, { status: promoted.status });

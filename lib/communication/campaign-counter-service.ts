@@ -5,11 +5,11 @@ import { prisma } from "@/lib/prisma";
  * at send time.
  *
  * `executeCampaignSend` stamps `sentCount`/`failedCount` once, from what the provider answered
- * during the call — and for Elastic Email that answer only ever means "the message was ACCEPTED".
+ * during the call  and for Elastic Email that answer only ever means "the message was ACCEPTED".
  * The real outcome (Suppress, Error, bounce) arrives minutes later and is applied to the
  * `CommunicationDelivery` rows by the webhook / event-sync cron. Nothing ever carried it back up to
- * the campaign, so a campaign whose only delivery reads FAILED — "Delivery failed due to account
- * problem or spam block" — still showed «أُرسلت 1 · وصلت 0 · فشلت 0» on the campaign screen. The
+ * the campaign, so a campaign whose only delivery reads FAILED  "Delivery failed due to account
+ * problem or spam block"  still showed «أُرسلت 1 · وصلت 0 · فشلت 0» on the campaign screen. The
  * delivery log knew the truth; the campaign header contradicted it.
  *
  * `deliveredCount` was never written by any code path at all, which is why the «وصلت» tile read 0
@@ -19,8 +19,8 @@ import { prisma } from "@/lib/prisma";
 /** Provider accepted it and nothing has contradicted that yet. */
 const ACCEPTED = new Set(["SENT_TO_PROVIDER", "SENT", "DELIVERED", "READ", "OPENED", "CLICKED", "REPLIED"]);
 /**
- * Arrival is *proven*. Elastic Email never emits a `Delivered` event — its `Sent` event means
- * "handed to the recipient's mail server" and that is already folded into ACCEPTED — so an open, a
+ * Arrival is *proven*. Elastic Email never emits a `Delivered` event  its `Sent` event means
+ * "handed to the recipient's mail server" and that is already folded into ACCEPTED  so an open, a
  * read, a click or a reply is the only positive evidence a message reached a human.
  */
 const ARRIVED = new Set(["DELIVERED", "READ", "OPENED", "CLICKED", "REPLIED"]);
@@ -32,7 +32,7 @@ const FAILURES = new Set(["FAILED", "BOUNCED"]);
 /**
  * Statuses whose value is a *result* and may therefore be re-derived. DRAFT/REVIEW/APPROVED/
  * SCHEDULED describe where a human left the campaign, SENDING means a run is in flight and the
- * executor owns the field, and CANCELLED/ARCHIVED are deliberate end states — recomputing any of
+ * executor owns the field, and CANCELLED/ARCHIVED are deliberate end states  recomputing any of
  * those would overwrite an intent with an observation.
  */
 const RECOMPUTABLE_STATUS = new Set(["SENT", "SENT_WITH_ISSUES", "FAILED", "BLOCKED"]);

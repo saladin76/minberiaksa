@@ -16,7 +16,7 @@ export const ALLOWED_RECEIPT_IMAGE_MIME = ["image/jpeg", "image/png", "image/web
 export const ALLOWED_RECEIPT_DOCUMENT_MIME = ["application/pdf"] as const;
 export const ALLOWED_RECEIPT_MIME = [...ALLOWED_RECEIPT_IMAGE_MIME, ...ALLOWED_RECEIPT_DOCUMENT_MIME] as const;
 
-/** What the file picker offers — extensions as well as types, for phones that report neither reliably. */
+/** What the file picker offers  extensions as well as types, for phones that report neither reliably. */
 export const RECEIPT_ACCEPT_ATTR = "image/jpeg,image/png,image/webp,image/heic,image/heif,application/pdf,.jpg,.jpeg,.png,.webp,.heic,.heif,.pdf";
 
 export type ReceiptFileRejection = "type" | "size" | "empty";

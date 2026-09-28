@@ -6,7 +6,7 @@ import { headers } from "next/headers";
  * Derived from the incoming request first, so it is correct on every
  * deployment and on whatever port `next dev` happens to be using. The
  * `NEXT_PUBLIC_API_URL` env var is only honoured when it points somewhere the
- * server can actually reach — a `http://localhost:3000` value carried from
+ * server can actually reach  a `http://localhost:3000` value carried from
  * `.env` into a deployed environment is what produced
  * `ECONNREFUSED 127.0.0.1:3000` on the blog routes.
  */
@@ -20,7 +20,7 @@ export async function getServerBaseUrl(): Promise<string> {
       return `${proto}://${host}`;
     }
   } catch {
-    // headers() throws outside a request scope (e.g. during static generation) —
+    // headers() throws outside a request scope (e.g. during static generation) 
     // fall through to the env-based origins below.
   }
 

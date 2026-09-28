@@ -14,7 +14,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 /**
- * POST /api/ai/donation-concierge — the donor-facing concierge.
+ * POST /api/ai/donation-concierge  the donor-facing concierge.
  *
  * Public, unauthenticated, and deliberately narrow: the body is validated
  * against `conciergeRequestSchema`, the engine only ever reads the published

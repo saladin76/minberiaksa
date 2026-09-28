@@ -7,7 +7,7 @@
 
 import { SUPPORTED_CURRENCY_CODES } from "../supported-currencies";
 
-// Eurozone members — countries that officially use the Euro.
+// Eurozone members  countries that officially use the Euro.
 const EUROZONE = new Set<string>([
   "AT", "BE", "CY", "DE", "EE", "ES", "FI", "FR", "GR", "HR",
   "IE", "IT", "LT", "LU", "LV", "MT", "NL", "PT", "SI", "SK",
@@ -20,7 +20,7 @@ const DIRECT_MAP: Record<string, string> = {
   IM: "GBP", JE: "GBP", GG: "GBP", // Crown dependencies
   CA: "CAD",
   AU: "AUD",
-  NZ: "AUD", // No NZD support — closest match
+  NZ: "AUD", // No NZD support  closest match
   TR: "TRY",
   SA: "SAR",
   AE: "AED",

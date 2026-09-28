@@ -124,7 +124,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 /**
- * A category's own landing page — the layout of
+ * A category's own landing page  the layout of
  * `Minbar/مشروع ترميم منازل القدس.dc.html`, rendered from the database.
  *
  * Read on the server, like every other indexable page on this site: the copy,
@@ -135,7 +135,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function CategoryPage({ params }: Props) {
   const { id, locale } = await params;
 
-  // Redirect to the canonical per-locale slug when the URL doesn't match —
+  // Redirect to the canonical per-locale slug when the URL doesn't match 
   // e.g. after a language switch keeps the previous locale's slug, or when
   // the URL uses the ObjectId. A category bound to one of the site's own
   // pages (the mosque, zakat) is published there instead, so it goes there.

@@ -20,7 +20,7 @@ export interface DonorFilters {
  * "send to currently filtered donors" action targets the exact same set.
  *
  * Returns null `where` when filters resolve to "no matches" (e.g. badge with
- * no members) — caller should treat as empty result.
+ * no members)  caller should treat as empty result.
  */
 export async function buildDonorWhere(
   filters: DonorFilters
@@ -40,7 +40,7 @@ export async function buildDonorWhere(
   }
 
   // Kept in step with /api/users so «إرسال للنتائج المُصفّاة» reaches exactly
-  // the rows the table is showing — a send that silently ignores the gender or
+  // the rows the table is showing  a send that silently ignores the gender or
   // age filter would go to a much wider audience than the operator saw.
   const gender = parseGenderParam(filters.gender);
   if (gender) where.gender = { in: genderQueryValues(gender) };

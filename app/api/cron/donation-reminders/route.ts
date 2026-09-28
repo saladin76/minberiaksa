@@ -10,11 +10,11 @@ export const maxDuration = 300;
 /**
  * Daily evaluation of the DONATION_LAPSED trigger ("donate again" reminder).
  *
- * Does nothing at all unless an enabled DONATION_LAPSED MessageTrigger exists — the dashboard
+ * Does nothing at all unless an enabled DONATION_LAPSED MessageTrigger exists  the dashboard
  * checkbox is the on/off switch. Requires the same CRON_SECRET bearer token as the other protected
  * cron routes; Vercel Cron sends it automatically once CRON_SECRET is set on the project.
  *
- * `?dryRun=1` reports who would be reminded without contacting any provider — for verifying the
+ * `?dryRun=1` reports who would be reminded without contacting any provider  for verifying the
  * configuration before switching the trigger on.
  */
 export async function GET(request: NextRequest) {

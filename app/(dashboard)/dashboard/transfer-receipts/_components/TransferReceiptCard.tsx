@@ -9,7 +9,7 @@ import { CLAIM_STATUS_DOT, CLAIM_STATUS_LABELS, CLAIM_STATUS_PILL, money, relati
 
 /**
  * One claim in the queue. Reads in the order a reviewer needs it: who, how
- * much, what for, then the evidence — with the receipt thumbnail large enough
+ * much, what for, then the evidence  with the receipt thumbnail large enough
  * to tell a bank screenshot from a blurry photo before opening anything.
  */
 export function TransferReceiptCard({ claim, onOpen }: { claim: AdminClaimView; onOpen: () => void }) {
@@ -27,7 +27,7 @@ export function TransferReceiptCard({ claim, onOpen }: { claim: AdminClaimView; 
         claim.status === "UNDER_REVIEW" ? "border-amber-200" : "border-slate-200",
       )}
     >
-      {/* The evidence first — a receipt is a picture before it is a record. */}
+      {/* The evidence first  a receipt is a picture before it is a record. */}
       <button type="button" onClick={onOpen} className="relative block h-40 w-full overflow-hidden bg-slate-100 text-start focus:outline-none focus-visible:ring-2 focus-visible:ring-brand">
         {latest ? (
           latest.isImage ? (

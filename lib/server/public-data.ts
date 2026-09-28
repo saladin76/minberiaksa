@@ -20,8 +20,8 @@ export async function getInitialCampaignsForPage(locale: string) {
   try {
     // Match the default ordering used by /api/campaigns when sortBy is "newest":
     // global priority first (asc), then most-recent first. Mongo's ascending sort places
-    // null FIRST, so we split into two queries — prioritized first, then non-prioritized
-    // recency — and merge.
+    // null FIRST, so we split into two queries  prioritized first, then non-prioritized
+    // recency  and merge.
     const includeShape = {
       categories: {
         select: {

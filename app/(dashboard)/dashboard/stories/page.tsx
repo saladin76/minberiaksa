@@ -162,7 +162,7 @@ export default function StoriesPage() {
   const toggleActive = async (story: Story, next: boolean) => {
     setTogglingId(story.id);
     /* Only the flag is sent. Echoing the whole row back would let a stale field
-       the list is holding overwrite good data — and omitting `translations`
+       the list is holding overwrite good data  and omitting `translations`
        is what tells the API to leave the translation rows alone. */
     try {
       await axios.put(`/api/stories/${story.id}`, { isActive: next });

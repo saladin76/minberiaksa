@@ -7,7 +7,7 @@ import { auditActorFromDashboardSession } from "@/lib/audit-log";
 import { updateRoutingRule } from "@/lib/communication/routing-rule-service";
 import { COMMUNICATION_PURPOSES } from "@/lib/communication/communication-runtime-types";
 
-/** Editing one routing rule. The channel is fixed — a rule moved between channels is a new rule. */
+/** Editing one routing rule. The channel is fixed  a rule moved between channels is a new rule. */
 const patchSchema = z.object({
   locale: z.string().min(2).max(8).nullable().optional(),
   country: z.string().length(2).nullable().optional(),

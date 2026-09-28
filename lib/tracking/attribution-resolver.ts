@@ -4,11 +4,11 @@
  * ids, fbp/fbc, GA4 enrichment, conversion event timestamps, donation status)
  * and returns:
  *
- *   - platform — the inferred ad platform (Meta/Google/TikTok/X/...)
- *   - status   — one of the 8 attribution buckets (see tracking-event-contract)
- *   - confidence — 0–100 score (drives the bucket)
- *   - reasons / warnings — structured rationale for the drawer
- *   - campaign/adset/ad — surfaced identifiers + names
+ *   - platform  the inferred ad platform (Meta/Google/TikTok/X/...)
+ *   - status    one of the 8 attribution buckets (see tracking-event-contract)
+ *   - confidence  0–100 score (drives the bucket)
+ *   - reasons / warnings  structured rationale for the drawer
+ *   - campaign/adset/ad  surfaced identifiers + names
  *
  * Pure & deterministic; same inputs always produce same outputs.
  */
@@ -29,7 +29,7 @@ export interface ResolveAttributionInput {
   attribution: Record<string, unknown> | null | undefined;
   conversionEventsSentAt: Date | string | null | undefined;
   conversionFailedEventsSentAt: Date | string | null | undefined;
-  /** PAID / FAILED — failed donations under an ad still resolve to tracking_issue. */
+  /** PAID / FAILED  failed donations under an ad still resolve to tracking_issue. */
   status: string | null | undefined;
 }
 
@@ -210,7 +210,7 @@ export function resolveAttribution(input: ResolveAttributionInput): ResolvedAttr
   })();
   const conversionSent = !!input.conversionEventsSentAt;
   // `conversionFailedEventsSentAt` is set by the Meta CAPI DonateFailed
-  // pipeline only — applying it to non-Meta platforms would incorrectly
+  // pipeline only  applying it to non-Meta platforms would incorrectly
   // bucket every Google/TikTok/X donation as `tracking_issue`.
   const conversionFailedOnly =
     platform === "meta" && !!input.conversionFailedEventsSentAt && !conversionSent;

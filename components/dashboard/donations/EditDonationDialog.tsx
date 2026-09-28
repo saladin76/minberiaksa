@@ -73,7 +73,7 @@ export function EditDonationDialog({ donationId, onClose, onSaved }: Props) {
   const [statusChoice, setStatusChoice] = useState<"PAID" | "PAID_PENDING" | "FAILED">("PAID");
   const [editableItems, setEditableItems] = useState<EditableItem[]>([]);
 
-  // Picker datasets — fetched once when dialog opens.
+  // Picker datasets  fetched once when dialog opens.
   const [campaigns, setCampaigns] = useState<CampaignOption[]>([]);
   const [categories, setCategories] = useState<CategoryOption[]>([]);
 
@@ -91,7 +91,7 @@ export function EditDonationDialog({ donationId, onClose, onSaved }: Props) {
 
         const d = donRes.data as DonationDetail;
         setDonation(d);
-        // Monthly donations are surfaced as ناجح everywhere — default the
+        // Monthly donations are surfaced as ناجح everywhere  default the
         // edit dialog to "PAID" so saving stamps paidAt and contributes the
         // amount to campaign currentAmount (no قيد التأكيد middle option).
         const isMonthly = d.subscriptionId != null;
@@ -263,7 +263,7 @@ export function EditDonationDialog({ donationId, onClose, onSaved }: Props) {
 
       const status = statusChoice === "FAILED" ? "FAILED" : "PAID";
       // "PAID" (vs "PAID_PENDING") is admin's explicit confirmation that the
-      // donation actually settled — server stamps paidAt when it was null.
+      // donation actually settled  server stamps paidAt when it was null.
       const confirmPaidAt = statusChoice === "PAID";
       await axios.patch(`/api/donations/${donationId}`, {
         status,
@@ -347,10 +347,10 @@ export function EditDonationDialog({ donationId, onClose, onSaved }: Props) {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="PAID">
-                    {wasPending ? "ناجح — تأكيد الدفع الآن (PAID)" : "ناجح (PAID)"}
+                    {wasPending ? "ناجح  تأكيد الدفع الآن (PAID)" : "ناجح (PAID)"}
                   </SelectItem>
                   {wasPending && (
-                    <SelectItem value="PAID_PENDING">قيد التأكيد (PAID — بدون paidAt)</SelectItem>
+                    <SelectItem value="PAID_PENDING">قيد التأكيد (PAID  بدون paidAt)</SelectItem>
                   )}
                   <SelectItem value="FAILED">فاشل (FAILED)</SelectItem>
                 </SelectContent>
@@ -367,7 +367,7 @@ export function EditDonationDialog({ donationId, onClose, onSaved }: Props) {
               )}
               {wasPending && statusChoice === "PAID_PENDING" && (
                 <p className="text-[11px] text-amber-600 leading-relaxed">
-                  هذا التبرع لم يُسجّل بـ paidAt — لن يُضاف إلى الإجماليات حتى يُؤكد الدفع.
+                  هذا التبرع لم يُسجّل بـ paidAt  لن يُضاف إلى الإجماليات حتى يُؤكد الدفع.
                 </p>
               )}
             </div>
@@ -400,7 +400,7 @@ export function EditDonationDialog({ donationId, onClose, onSaved }: Props) {
 
               {editableItems.length === 0 ? (
                 <p className="rounded-lg border border-dashed border-slate-300 bg-slate-50 p-3 text-xs text-slate-500">
-                  لا توجد عناصر — أضف على الأقل مشروعًا أو حملة واحدة.
+                  لا توجد عناصر  أضف على الأقل مشروعًا أو حملة واحدة.
                 </p>
               ) : (
                 <div className="space-y-2">
@@ -475,7 +475,7 @@ export function EditDonationDialog({ donationId, onClose, onSaved }: Props) {
 
               {hasDuplicateLine && (
                 <p className="text-[11px] text-rose-600">
-                  يوجد سطران للمشروع/الحملة نفسها — ادمجهما في سطر واحد.
+                  يوجد سطران للمشروع/الحملة نفسها  ادمجهما في سطر واحد.
                 </p>
               )}
             </div>
@@ -499,7 +499,7 @@ export function EditDonationDialog({ donationId, onClose, onSaved }: Props) {
           </Button>
         </DialogFooter>
 
-        {/* Confirmation gate — second click pattern, since edits are destructive. */}
+        {/* Confirmation gate  second click pattern, since edits are destructive. */}
         {showConfirm && (
           <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-4">
             <div className="w-full max-w-sm rounded-xl bg-white p-5 shadow-2xl text-right" dir="rtl">

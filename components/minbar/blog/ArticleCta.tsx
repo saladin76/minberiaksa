@@ -6,7 +6,7 @@ import { miaPath } from "@/lib/minbar/routes";
 import { CTA_ROUTES } from "@/lib/minbar/blog-cta";
 
 /**
- * The dark call that closes every article — ported from the `ctaFor()` block in
+ * The dark call that closes every article  ported from the `ctaFor()` block in
  * `Minbar/تفاصيل المقال.dc.html`.
  *
  * The handoff picks one of eleven calls from the article's category, so a piece
@@ -14,7 +14,7 @@ import { CTA_ROUTES } from "@/lib/minbar/blog-cta";
  * All eleven are reviewed in `blog.cta.*` in 19 languages.
  *
  * Which of the eleven this article gets is decided by `ctaKeyFor` in
- * `lib/minbar/blog-cta.ts` — a server-safe module, because the article route
+ * `lib/minbar/blog-cta.ts`  a server-safe module, because the article route
  * makes that decision server-side.
  */
 

@@ -4,7 +4,7 @@
  *
  * Mirrors `image-file-rules.ts`, and exists for the same reason: reports and
  * booklets are PDFs, and `/api/upload` hands Cloudinary `resource_type: 'image'`
- * — a PDF posted there is either rejected or silently rasterised. Checking the
+ *  a PDF posted there is either rejected or silently rasterised. Checking the
  * same limits on both sides lets the browser refuse instantly while keeping the
  * API safe from a stale tab or a direct call.
  */
@@ -27,7 +27,7 @@ export function validateDocumentFile(file: { type?: string; size?: number }): st
   }
   const size = file.size ?? 0;
   if (size > MAX_DOCUMENT_BYTES) {
-    return `حجم الملف ${formatBytes(size)} — الحد الأقصى ${formatBytes(MAX_DOCUMENT_BYTES)}.`;
+    return `حجم الملف ${formatBytes(size)}  الحد الأقصى ${formatBytes(MAX_DOCUMENT_BYTES)}.`;
   }
   return null;
 }

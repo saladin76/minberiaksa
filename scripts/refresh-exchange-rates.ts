@@ -8,7 +8,7 @@ import { prisma } from "../lib/prisma";
 
 async function main() {
   const n = Object.keys(await refreshExchangeRatesFromApi()).length;
-  console.log(`OK — stored ${n} currency rates.`);
+  console.log(`OK  stored ${n} currency rates.`);
 }
 
 main()

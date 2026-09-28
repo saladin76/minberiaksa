@@ -1,4 +1,4 @@
-# Marketing System Audit — Phase 0
+# Marketing System Audit  Phase 0
 
 ## ملخص سريع
 

@@ -38,12 +38,14 @@ function pathSet(obj: MessageObject, path: string, value: MessageValue) {
   current[parts[parts.length - 1]] = cloneValue(value);
 }
 
-function mergeMissing(base: MessageValue, fallback: MessageValue): MessageValue {
+function mergeMissing(base: MessageValue, fallback: MessageValue | undefined): MessageValue {
   if (typeof base === "string") {
     if (!EMPTY_TEXT_RE.test(base)) return base;
     return typeof fallback === "string" ? fallback : base;
   }
-  if (base == null) return cloneValue(fallback);
+  /* No base value at all: fall back, or return null when there is no fallback either  which is what
+     a key present in neither locale looks like. */
+  if (base == null) return fallback === undefined ? base : cloneValue(fallback);
   if (Array.isArray(base)) {
     if (base.length > 0) return base.map((item, idx) => mergeMissing(item, Array.isArray(fallback) ? fallback[idx] : undefined));
     return Array.isArray(fallback) ? cloneValue(fallback) : base;
@@ -69,7 +71,7 @@ function applyCorrections(messages: MessageObject, corrections: CorrectionMap): 
 const AR_CORRECTIONS: CorrectionMap = {
   "Navbar.events": "الأنشطة والفعاليات",
   "HomePage.newsSubtitle": "آخر أخبار جمعيتنا",
-  "CampaignsSlider.sharesMode": "أسهم — {currency}{price} للسهم",
+  "CampaignsSlider.sharesMode": "أسهم  {currency}{price} للسهم",
   "QuickDonate.hadithQuote": "قال رسول الله ﷺ",
   "QuickDonate.customAmount": "أو أدخل مبلغًا مخصصًا",
   "Footer.description": "مؤسسة منبر الأقصى الدولية الدولية للتضامن جمعية عاملة للنفع العام، تقف إلى جانب المحتاجين منذ عام 1961 في مجالات الصحة والإغاثة العاجلة والاستجابة للكوارث والتعليم.",
@@ -89,7 +91,7 @@ const EN_CORRECTIONS: CorrectionMap = {
   "HomePage.featuredProjects": "Featured Projects",
   "HomePage.weHelp": "We Help",
   "HomePage.latestNews": "Latest News",
-  "CampaignsSlider.sharesMode": "Shares — {currency}{price} per share",
+  "CampaignsSlider.sharesMode": "Shares  {currency}{price} per share",
   "QuickDonate.description": "Make your giving continuous and help change the lives of people in need. Your monthly commitment increases the impact of every donation and sustains our charitable work.",
   "QuickDonate.monthlyCommitment": "Commit to a Monthly Donation",
   "Footer.description": "Minberiaksa International Solidarity Association is a public-benefit association that has stood beside people in need since 1961, working in healthcare, emergency relief, disaster response and education.",
@@ -258,7 +260,7 @@ const DE_CORRECTIONS: CorrectionMap = {
   "CampaignsSlider.remaining": "verbleibend",
   "CampaignsSlider.contributor": "Spender",
   "CampaignsSlider.openGoal": "Offenes Ziel",
-  "CampaignsSlider.sharesMode": "Anteile — {currency}{price} pro Anteil",
+  "CampaignsSlider.sharesMode": "Anteile  {currency}{price} pro Anteil",
   "CampaignsSlider.noCampaigns": "Derzeit sind keine Projekte verfügbar.",
   "CampaignsSlider.showMore": "Weitere Projekte anzeigen",
   "CampaignsSlider.loadingMore": "Wird geladen…",
@@ -285,7 +287,7 @@ const DE_CORRECTIONS: CorrectionMap = {
   "QuickDonate.stat3": "Jahre des Gebens",
   "QuickDonate.stat4": "Transparenzrate",
   "Footer.aboutUsDesc1": "Ein gemeinnützig tätiger Solidaritätsverein, im Dienst seit 1961.",
-  "Footer.description": "Der Minberiaksa Internationale Solidaritätsverein ist ein gemeinnützig tätiger Verein, der seit 1961 Menschen in Not zur Seite steht — im Gesundheitswesen, in der Nothilfe, in der Katastrophenhilfe und in der Bildung.",
+  "Footer.description": "Der Minberiaksa Internationale Solidaritätsverein ist ein gemeinnützig tätiger Verein, der seit 1961 Menschen in Not zur Seite steht  im Gesundheitswesen, in der Nothilfe, in der Katastrophenhilfe und in der Bildung.",
   "Footer.messageTitle": "Sende uns eine Nachricht",
   "Footer.messageDesc": "Hast du eine Frage oder einen Vorschlag? Kontaktiere uns, wir melden uns bald bei dir.",
   "Footer.messagePlaceholder": "Schreibe deine Nachricht hier...",

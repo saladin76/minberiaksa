@@ -26,13 +26,13 @@ import {
 } from "@/lib/certificates/copy-defaults";
 
 /**
- * The wording on the three documents — thank-you certificate, waqf
- * certificate, donation receipt — per template and per locale
+ * The wording on the three documents  thank-you certificate, waqf
+ * certificate, donation receipt  per template and per locale
  * (`CERTIFICATES_DOWNLOADS_HANDOFF §4`).
  *
  * Every field shows its i18n default as the placeholder; typing over it stores
  * an override for that locale only, and clearing the box returns the field to
- * the default. Nothing here touches the Qur'anic verses — those are locked.
+ * the default. Nothing here touches the Qur'anic verses  those are locked.
  * The foundation's registration data on the receipt is one set for every
  * language, in Latin script as the Turkish register has it.
  */
@@ -40,8 +40,8 @@ import {
 type FieldDef = { name: string; label: string; i18nKey: string | null; multiline?: boolean };
 
 const TEMPLATES: ReadonlyArray<{ id: CertificateTemplateId; title: string; hint: string; fields: readonly FieldDef[] }> = [
-  { id: "thanks", title: "شهادة الشكر", hint: "تُصدر لكل تبرع مؤكد — النسخة العرضية هي المعتمدة وتُرسل بالبريد.", fields: THANKS_FIELDS },
-  { id: "waqf", title: "شهادة الوقف", hint: "تُصدر لكل سهم/متر وقفي في الطلب. نصوص الإنجليزية والتركية معتمدة حرفيًا من الشهادات المطبوعة — لا تُعاد صياغتها.", fields: WAQF_FIELDS },
+  { id: "thanks", title: "شهادة الشكر", hint: "تُصدر لكل تبرع مؤكد  النسخة العرضية هي المعتمدة وتُرسل بالبريد.", fields: THANKS_FIELDS },
+  { id: "waqf", title: "شهادة الوقف", hint: "تُصدر لكل سهم/متر وقفي في الطلب. نصوص الإنجليزية والتركية معتمدة حرفيًا من الشهادات المطبوعة  لا تُعاد صياغتها.", fields: WAQF_FIELDS },
   { id: "receipt", title: "إيصال التبرع", hint: "المستند المحاسبي: بلا شعارات ولا عبارات وجدانية. يُصدر بلغة المتبرع وبنسخة تركية.", fields: RECEIPT_FIELDS },
 ];
 
@@ -159,7 +159,7 @@ export default function CertificateCopyPage() {
           <CardHeader>
             <CardTitle className="text-base">بيانات المؤسسة الرسمية</CardTitle>
             <CardDescription>
-              تُطبع بالحروف اللاتينية كما في السجل التركي، في كل اللغات — لا تُترجم.
+              تُطبع بالحروف اللاتينية كما في السجل التركي، في كل اللغات  لا تُترجم.
               {!isAdmin && " هذه بيانات إيصال مالي رسمي ولا يعدّلها إلا المدير."}
             </CardDescription>
           </CardHeader>
@@ -183,7 +183,7 @@ export default function CertificateCopyPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">{current.title} — حسب اللغة</CardTitle>
+          <CardTitle className="text-base">{current.title}  حسب اللغة</CardTitle>
           <CardDescription>اختر اللغة ثم عدّل الحقول. يظهر النص الافتراضي كتلميح داخل كل حقل.</CardDescription>
         </CardHeader>
         <CardContent>

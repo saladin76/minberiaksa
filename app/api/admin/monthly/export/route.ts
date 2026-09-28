@@ -3,8 +3,8 @@
  *
  * XLSX (default) or CSV export covering recurring plans (daily / every Friday / monthly)
  * AND the charges they have generated. Two sheets + the standard cover summary:
- *   • التبرعات — every charge against a recurring plan (filtered)
- *   • الاشتراكات — plan roster (active/paused/cancelled/payment failed) with charge totals,
+ *   • التبرعات  every charge against a recurring plan (filtered)
+ *   • الاشتراكات  plan roster (active/paused/cancelled/payment failed) with charge totals,
  *     cadence and monthly-equivalent amount
  *
  * Filters mirror the recurring dashboard (/dashboard/monthly):
@@ -124,7 +124,7 @@ export async function GET(request: NextRequest) {
       subWhere.status = subStatusRaw;
     }
     if (frequency) {
-      // AND — the category branch below owns `subWhere.OR`.
+      // AND  the category branch below owns `subWhere.OR`.
       subWhere.AND = [subscriptionFrequencyWhere(frequency)];
     }
     if (categoryId && categoryId !== "all") {

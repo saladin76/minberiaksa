@@ -8,7 +8,7 @@ import { AlertTriangle, RotateCw, Home } from 'lucide-react';
  * Route-level error boundary for the whole dashboard tree.
  *
  * There was no `error.tsx` anywhere under the 151 dashboard routes, so any uncaught render
- * error bubbled all the way to the app-root boundary and replaced the entire shell — the
+ * error bubbled all the way to the app-root boundary and replaced the entire shell  the
  * user lost the sidebar, the breadcrumb and their place, and the only recovery was a
  * full reload. This keeps the failure contained to the content well.
  */

@@ -24,8 +24,8 @@ import {
 /**
  * The shared editor for the two document sections, reports and booklets.
  *
- * They are the same row with one difference — a report carries a publication
- * year — so they share a form rather than duplicating it. `showYear` is the
+ * They are the same row with one difference  a report carries a publication
+ * year  so they share a form rather than duplicating it. `showYear` is the
  * only branch; everything else is labels and the endpoint.
  */
 

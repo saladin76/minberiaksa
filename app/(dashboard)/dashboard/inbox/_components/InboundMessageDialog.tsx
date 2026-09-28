@@ -37,13 +37,13 @@ export type TriageAction = "read" | "unread" | "replied" | "unreplied";
  * The full message.
  *
  * The point of opening a message is answering it, so the footer is the reply bar. It offers the
- * two channels this inbox can actually reach the sender on, and — because most replies happen
- * outside this app — a way to record that it was handled at all.
+ * two channels this inbox can actually reach the sender on, and  because most replies happen
+ * outside this app  a way to record that it was handled at all.
  *
  * Replying is a one-way trip out of the dashboard (a `mailto:` or a wa.me tab), so there is no
  * completion event to listen for. Both buttons therefore mark the message answered as they open
  * the channel, and the state is reversible from the same footer if the reply never got sent.
- * The alternative — trusting the admin to come back and tick a box — is exactly the habit that
+ * The alternative  trusting the admin to come back and tick a box  is exactly the habit that
  * leaves an inbox with no reliable "answered" signal at all.
  */
 export function InboundMessageDialog({
@@ -85,7 +85,7 @@ export function InboundMessageDialog({
 
   const sender = senderOf(message);
   const localeLabel = LOCALE_LABELS[message.locale as keyof typeof LOCALE_LABELS] ?? message.locale;
-  const replySubject = `رد على رسالتك — ${subjectLabel(message.subject, locale)}`;
+  const replySubject = `رد على رسالتك  ${subjectLabel(message.subject, locale)}`;
   const whatsappText = `مرحبًا ${sender.name ?? ""}، نتواصل معك بخصوص رسالتك «${subjectLabel(
     message.subject,
     locale,
@@ -189,7 +189,7 @@ export function InboundMessageDialog({
             <Check className="h-3.5 w-3.5 shrink-0" />
             <span className="min-w-0 flex-1 truncate">
               تم الرد {message.repliedVia ? REPLY_CHANNEL_LABELS[message.repliedVia] : ""}
-              {message.repliedByName ? ` — ${message.repliedByName}` : ""}
+              {message.repliedByName ? `  ${message.repliedByName}` : ""}
               {message.repliedAt ? ` · ${relativeTime(message.repliedAt)}` : ""}
             </span>
             <button

@@ -120,7 +120,7 @@ export default function CampaignsPage() {
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const uiLocale = useLocale() as string;
-  /* The language the table shows titles in — every one the site publishes. */
+  /* The language the table shows titles in  every one the site publishes. */
   const [locale, setLocale] = useState<string>(uiLocale || 'ar');
   const [progressFilter, setProgressFilter] = useState<'all' | 'completed' | 'ongoing'>('all');
   const [page, setPage] = useState(1);
@@ -396,7 +396,7 @@ export default function CampaignsPage() {
                       // Was dividing by campaign.targetAmount unguarded: a non-OPEN campaign
                       // with targetAmount 0 rendered "NaN%" (0/0) or "Infinity%" (n/0) and an
                       // invalid CSS width. computeCampaignProgressPercent already clamps and
-                      // returns 0 for an invalid target — the same helper the rest of the app
+                      // returns 0 for an invalid target  the same helper the rest of the app
                       // uses, so the table now agrees with every other progress display.
                       const pct = computeCampaignProgressPercent(
                         campaign.currentAmount,

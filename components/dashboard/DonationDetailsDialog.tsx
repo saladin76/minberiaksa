@@ -238,7 +238,7 @@ function AttributionView({ donation }: { donation: DonationDetailsTarget }) {
       seen.add(def.key);
     }
 
-    // Anything unknown (and not an ID) — surface with a generic icon so admins
+    // Anything unknown (and not an ID)  surface with a generic icon so admins
     // can still see new attribution fields without redeploying this dialog.
     for (const [k, v] of Object.entries(attr)) {
       if (seen.has(k) || HIDDEN_ATTRIBUTION_KEYS.has(k)) continue;
@@ -373,7 +373,7 @@ function ErrorView({ donation }: { donation: DonationDetailsTarget }) {
 const TITLES: Record<Mode, { title: string; description: string }> = {
   attribution: {
     title: "تفاصيل الإعلان",
-    description: "بيانات إسناد الحملة الإعلانية للمتبرع — مخفية المعرفات الفنية",
+    description: "بيانات إسناد الحملة الإعلانية للمتبرع  مخفية المعرفات الفنية",
   },
   payment: {
     title: "تفاصيل بوابة الدفع",

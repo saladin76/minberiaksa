@@ -1,5 +1,5 @@
 /**
- * TikTok Marketing API sync client. Stub — credential preflight then
+ * TikTok Marketing API sync client. Stub  credential preflight then
  * NOT_IMPLEMENTED until the live REST client is added.
  */
 import type { SyncClient } from "./types";
@@ -13,7 +13,7 @@ export const syncTikTok: SyncClient = async ({ connection }) => {
   if (missing.length > 0) {
     return missingConfigResult(
       missing,
-      "ناقص بيانات TikTok — Advertiser ID و Access Token و Pixel Code."
+      "ناقص بيانات TikTok  Advertiser ID و Access Token و Pixel Code."
     );
   }
   return notImplementedResult(

@@ -24,7 +24,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   });
 }
 
-/** Our video programmes — ported from `Minbar/برامجنا المصورة.dc.html`. */
+/** Our video programmes  ported from `Minbar/برامجنا المصورة.dc.html`. */
 export default async function Programs({ params }: Props) {
   const { locale } = await params;
   const playlists = await listPlaylists(locale);

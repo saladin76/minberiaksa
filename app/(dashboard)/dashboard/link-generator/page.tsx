@@ -444,7 +444,7 @@ export default function LinkGeneratorPage() {
         </CardHeader>
         <CardContent className="space-y-6 pt-5">
           <section className="space-y-3">
-            <Label className="text-base font-semibold">٠ — نوع الرابط</Label>
+            <Label className="text-base font-semibold">٠  نوع الرابط</Label>
             <div className="grid gap-3 sm:grid-cols-2">
               <button type="button" onClick={() => setLinkMode("standard")} className={cn("rounded-xl border p-4 text-right transition", linkMode === "standard" ? "border-brand bg-blue-50 text-brand" : "border-border bg-white hover:bg-muted/40")}>
                 <Link2 className="mb-2 h-5 w-5" /><div className="font-bold">رابط موقع عادي</div><p className="mt-1 text-xs text-muted-foreground">صفحة، لغة، عملة، إحالة.</p>
@@ -456,8 +456,8 @@ export default function LinkGeneratorPage() {
           </section>
 
           <section className="grid gap-4 border-t pt-5 sm:grid-cols-2">
-            <SelectField label="١ — نوع الصفحة" value={pageKind} onValueChange={(v) => { setPageKind(v as PageKind); setResourceId(""); setCampaignSearch(""); setDonationId(""); }} options={PAGE_OPTIONS.map((p) => ({ value: p.id, label: p.hint ? `${p.label} — ${p.hint}` : p.label }))} />
-            {needsResourcePick(pageKind) ? <SelectField label="٢ — المحتوى" value={resourceId} onValueChange={setResourceId} options={resourceList.map((row) => ({ value: row.id, label: entityLabel(row) }))} placeholder="اختر المحتوى" /> : null}
+            <SelectField label="١  نوع الصفحة" value={pageKind} onValueChange={(v) => { setPageKind(v as PageKind); setResourceId(""); setCampaignSearch(""); setDonationId(""); }} options={PAGE_OPTIONS.map((p) => ({ value: p.id, label: p.hint ? `${p.label}  ${p.hint}` : p.label }))} />
+            {needsResourcePick(pageKind) ? <SelectField label="٢  المحتوى" value={resourceId} onValueChange={setResourceId} options={resourceList.map((row) => ({ value: row.id, label: entityLabel(row) }))} placeholder="اختر المحتوى" /> : null}
             {pageKind === "campaigns" ? <Field label="بحث في قائمة المشاريع" value={campaignSearch} onChange={setCampaignSearch} placeholder="يضاف كـ search" /> : null}
             {pageKind === "success_donation" ? <Field label="معرف التبرع" value={donationId} onChange={setDonationId} placeholder="24 حرف" dir="ltr" /> : null}
             {pageKind === "profile" ? <SelectField label="تبويب الملف" value={profileTab} onValueChange={(v) => setProfileTab(v as typeof profileTab)} options={[{ value: "account", label: "معلوماتي" }, { value: "donations", label: "التبرعات" }, { value: "support", label: "الدعم" }]} /> : null}
@@ -468,7 +468,7 @@ export default function LinkGeneratorPage() {
             <SelectField label="العملة" value={currency} onValueChange={setCurrency} disabled={autoCurrency} options={bundle.currencies.filter((c) => c !== "DEFAULT").map((c) => ({ value: c, label: c }))} />
             <CheckRow checked={autoLocale} onChange={setAutoLocale} title="اكتشاف اللغة تلقائيًا" hint="ينشئ الرابط بدون بادئة لغة." />
             <CheckRow checked={autoCurrency} onChange={setAutoCurrency} title="اكتشاف العملة تلقائيًا" hint="ينشئ الرابط بدون currency." />
-            <SelectField label="رمز الإحالة" value={refCode} onValueChange={setRefCode} options={[{ value: "__none__", label: "بدون إحالة" }, ...referrals.map((r) => ({ value: r.code, label: r.name ? `${r.code} — ${r.name}` : r.code }))]} />
+            <SelectField label="رمز الإحالة" value={refCode} onValueChange={setRefCode} options={[{ value: "__none__", label: "بدون إحالة" }, ...referrals.map((r) => ({ value: r.code, label: r.name ? `${r.code}  ${r.name}` : r.code }))]} />
             <CheckRow checked={openCartPayment} onChange={setOpenCartPayment} title="فتح حوار دفع السلة" hint="يضيف openCartPayment=1." />
           </section>
 
@@ -476,7 +476,7 @@ export default function LinkGeneratorPage() {
             <section className="space-y-4 border-t pt-5">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
-                  <Label className="text-base font-semibold">٤ — إعدادات الحملة التسويقية</Label>
+                  <Label className="text-base font-semibold">٤  إعدادات الحملة التسويقية</Label>
                   <p className="mt-1 text-sm text-muted-foreground">هذه البيانات تحفظ مع الرابط وتساعد صفحة أداء الروابط على مطابقة التبرعات.</p>
                 </div>
                 <div className={cn("rounded-full border px-3 py-1 text-sm font-bold", healthScore >= 85 ? "border-emerald-200 bg-emerald-50 text-emerald-700" : healthScore >= 65 ? "border-blue-200 bg-blue-50 text-blue-700" : "border-amber-200 bg-amber-50 text-amber-700")}>{healthScore}% جاهزية</div>
@@ -516,7 +516,7 @@ export default function LinkGeneratorPage() {
           ) : null}
 
           <section className="space-y-3 border-t pt-5">
-            <Label className="text-base font-semibold">٥ — الرابط النهائي</Label>
+            <Label className="text-base font-semibold">٥  الرابط النهائي</Label>
             <div className="rounded-xl border bg-muted/30 p-3">
               <div dir="ltr" className="min-h-[3rem] break-all rounded-lg bg-white p-3 text-left font-mono text-sm text-slate-700">{fullUrl || "أكمل البيانات لظهور الرابط"}</div>
             </div>

@@ -10,7 +10,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const bodySchema = z.object({
-  /** Preview only — counts who would be reminded without contacting any provider. */
+  /** Preview only  counts who would be reminded without contacting any provider. */
   dryRun: z.boolean().optional(),
   max: z.number().int().min(1).max(1000).optional(),
 });

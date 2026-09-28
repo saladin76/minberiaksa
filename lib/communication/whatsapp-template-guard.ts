@@ -8,7 +8,7 @@ import { prisma } from "@/lib/prisma";
  * **Provider-owned fields are not ours to edit.** `approvalStatus`, `language`, `category`,
  * `externalTemplateId`, `templateType`, `header` and `buttons` describe what Meta (or Twilio)
  * registered and approved. They were writable from the dashboard, which meant somebody could set a
- * rejected template to "approved" and the platform would believe it — until a campaign was built on
+ * rejected template to "approved" and the platform would believe it  until a campaign was built on
  * it, scheduled, approved, and then failed at send time with `META_TEMPLATE_REQUIRED`. The provider
  * writes these through its sync (`whatsapp-template-sync.ts`) and nothing else does.
  *
@@ -18,8 +18,8 @@ import { prisma } from "@/lib/prisma";
  * frozen too, and a change means submitting a new template to Meta.
  *
  * **A referenced template is not deleted.** `prisma.whatsappTemplate.delete` left triggers pointing at
- * an id that no longer resolves — `sendTriggerMessage` returns null for a missing template, so the
- * trigger silently stopped firing with nothing anywhere saying why — and delivery history lost the
+ * an id that no longer resolves  `sendTriggerMessage` returns null for a missing template, so the
+ * trigger silently stopped firing with nothing anywhere saying why  and delivery history lost the
  * name of what was sent. A referenced template is archived instead, which removes it from every
  * picker while keeping the record intact.
  */
@@ -83,7 +83,7 @@ export async function rejectDisallowedTemplateEdit(
     return {
       ok: false,
       status: 409,
-      error: "القالب معتمد من Meta — تعديل نصه هنا لا يغيّر ما يُرسل فعليًا. أنشئ قالبًا جديدًا وأرسله للاعتماد.",
+      error: "القالب معتمد من Meta  تعديل نصه هنا لا يغيّر ما يُرسل فعليًا. أنشئ قالبًا جديدًا وأرسله للاعتماد.",
       fields: [...content],
     };
   }

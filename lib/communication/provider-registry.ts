@@ -1,11 +1,11 @@
 import type { CommunicationProviderKey, ProviderConnection } from "./communication-types";
 
 /* ============================================================================
- * OFFICIAL FINAL PROVIDER REGISTRY — SINGLE SOURCE OF TRUTH
+ * OFFICIAL FINAL PROVIDER REGISTRY  SINGLE SOURCE OF TRUTH
  *
  * Used by: ProviderRouter, settings/readiness UI, platform-connections page, provider test tools,
  * and docs. Inactive/legacy providers (Twilio, SendGrid) must NEVER be shown as normal active
- * options in user-facing UI — surface them only via legacyProviders() under a "قديم" section.
+ * options in user-facing UI  surface them only via legacyProviders() under a "قديم" section.
  *
  * FINAL ARCHITECTURE:
  *   WhatsApp → Meta WhatsApp Cloud API   (active)
@@ -40,16 +40,16 @@ export const PROVIDER_REGISTRY: OfficialProvider[] = [
   // SMS
   { key: "BREVO_SMS", channel: "SMS", labelAr: "Brevo SMS", active: true, legacy: false, scope: "INTERNATIONAL", status: "ACTIVE" },
   { key: "NETGSM_SMS", channel: "SMS", labelAr: "Netgsm SMS", active: true, legacy: false, scope: "TR", status: "ACTIVE" },
-  // Legacy (disabled — never an active send path)
+  // Legacy (disabled  never an active send path)
   { key: "TWILIO", channel: "SMS", labelAr: "Twilio", active: false, legacy: true, status: "DISABLED" },
 ];
 
-/** Active (non-legacy) providers only — the set that user-facing UI may present. */
+/** Active (non-legacy) providers only  the set that user-facing UI may present. */
 export function activeProviders(channel?: ProviderChannel): OfficialProvider[] {
   return PROVIDER_REGISTRY.filter((p) => p.active && !p.legacy && (!channel || p.channel === channel));
 }
 
-/** Legacy/disabled providers (Twilio, SendGrid) — shown only under a "قديم" section, never active. */
+/** Legacy/disabled providers (Twilio, SendGrid)  shown only under a "قديم" section, never active. */
 export function legacyProviders(): OfficialProvider[] {
   return PROVIDER_REGISTRY.filter((p) => p.legacy || !p.active);
 }

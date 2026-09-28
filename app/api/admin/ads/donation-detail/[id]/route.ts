@@ -168,7 +168,7 @@ export async function GET(
     });
 
     // Heuristic: infer per-platform event success from the existing flags.
-    // We don't yet have a dedicated ConversionEvent table — when one is added
+    // We don't yet have a dedicated ConversionEvent table  when one is added
     // by the Tracking Control Center phase, this block reads from it.
     const trackingEvents = {
       metaBrowserDonate: resolved.platform === "meta" ? null : null,
@@ -182,7 +182,7 @@ export async function GET(
       eventId: stableDonateEventId(donation.id, "success"),
     };
 
-    // Build the "Diagnosis" section — missing data + likely reason + fix.
+    // Build the "Diagnosis" section  missing data + likely reason + fix.
     const missing: string[] = [];
     const fixes: string[] = [];
     for (const w of resolved.warnings) {
@@ -204,13 +204,13 @@ export async function GET(
           fixes.push("تأكد من تحميل Meta Pixel قبل بدء الـ checkout ليكتب fbp/fbc cookies.");
           break;
         case "capi_donate_missing":
-          fixes.push("راجع webhook الدفع — لم يستدعِ Meta CAPI Donate لهذا التبرع.");
+          fixes.push("راجع webhook الدفع  لم يستدعِ Meta CAPI Donate لهذا التبرع.");
           break;
         case "capi_donate_failed_only":
-          fixes.push("CAPI أرسل DonateFailed فقط — تأكد من أن webhook النجاح يعمل.");
+          fixes.push("CAPI أرسل DonateFailed فقط  تأكد من أن webhook النجاح يعمل.");
           break;
         case "dynamic_macro_unresolved":
-          fixes.push("راجع إعدادات الحملة في المنصة — قيمة macro لم يتم استبدالها.");
+          fixes.push("راجع إعدادات الحملة في المنصة  قيمة macro لم يتم استبدالها.");
           break;
         case "missing_campaign_id":
         case "missing_ad_id":

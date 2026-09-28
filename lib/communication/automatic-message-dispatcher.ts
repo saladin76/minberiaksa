@@ -13,8 +13,8 @@ import type { CommunicationPurposeId } from "./communication-runtime-types";
  *   - WHATSAPP → Meta WhatsApp Cloud API using an APPROVED template. Never Twilio. If the stored
  *                WhatsappTemplate has no Meta-approved template mapping, the send is SKIPPED with
  *                `META_TEMPLATE_REQUIRED_FOR_AUTOMATIC_WHATSAPP` (never faked, never Twilio).
- *   - SMS      → TR (+90) → Netgsm, international → Brevo SMS. (No trigger channel emits SMS today —
- *                Prisma `enum MessageChannel` is EMAIL | WHATSAPP — so `sendAutomaticSmsMessage` is
+ *   - SMS      → TR (+90) → Netgsm, international → Brevo SMS. (No trigger channel emits SMS today 
+ *                Prisma `enum MessageChannel` is EMAIL | WHATSAPP  so `sendAutomaticSmsMessage` is
  *                provided for a future SMS trigger channel only.)
  *
  * Each helper creates a CommunicationDelivery (origin TRIGGER, status RENDERED) BEFORE any provider
@@ -60,7 +60,7 @@ function deliveryVariables(input: CommonInput): Record<string, unknown> {
   return { trigger: { event: input.triggerEvent, donationId: input.donationId ?? null }, snapshot: input.variables };
 }
 
-/** Secondary SentMessage mirror — written only AFTER the delivery status is known. Best-effort. */
+/** Secondary SentMessage mirror  written only AFTER the delivery status is known. Best-effort. */
 async function mirrorSentMessage(
   channel: "EMAIL" | "WHATSAPP",
   input: CommonInput,
@@ -151,7 +151,7 @@ export async function sendAutomaticEmailMessage(
     // Store the provider's scrubbed detail with the code. Recording the bare reason cost weeks:
     // every failed row said only "ELASTIC_EMAIL_REJECTED", so nothing on record revealed that the
     // provider was actually answering "Access Denied." The detail is already key-redacted.
-    const errorMessage = res.detail ? `${res.reason} — ${res.detail}` : res.reason;
+    const errorMessage = res.detail ? `${res.reason}  ${res.detail}` : res.reason;
     await markDeliveryStatus(id, terminal ? "SKIPPED" : "FAILED", { errorMessage });
     await mirrorSentMessage("EMAIL", input, terminal ? "SKIPPED" : "FAILED", { recipientEmail: input.recipientEmail, renderedSubject: input.renderedSubject, renderedBody: input.renderedBody, errorMessage });
     return { outcome: terminal ? "SKIPPED" : "FAILED", reason: res.reason };
@@ -200,7 +200,7 @@ export async function sendAutomaticWhatsappMessage(
     return { outcome: "SKIPPED", reason: "NO_RECIPIENT_PHONE" };
   }
 
-  // Meta does not allow arbitrary free-text outbound — an approved template mapping is required.
+  // Meta does not allow arbitrary free-text outbound  an approved template mapping is required.
   if (!input.metaTemplate) {
     const created = await createDeliveryRecord({ ...base, recipientPhone: input.recipientPhone, status: "RENDERED" });
     if (created.ok) await markDeliveryStatus(created.data.id, "SKIPPED", { errorMessage: "META_TEMPLATE_REQUIRED_FOR_AUTOMATIC_WHATSAPP" });
@@ -320,7 +320,7 @@ export type MetaTemplateMapping = {
   name: string;
   /** `{{1}}`, `{{2}}` … in order, from the local template's variable catalog. */
   positionalNames: string[];
-  /** The language code of the variant actually chosen — NOT the recipient's locale. */
+  /** The language code of the variant actually chosen  NOT the recipient's locale. */
   language: string;
   /** Meta's own component schema for that variant, for building parameters. */
   componentsSchema: unknown;
@@ -329,18 +329,18 @@ export type MetaTemplateMapping = {
 };
 
 /**
- * Resolve the Meta template mapping for one recipient locale — from what Meta said, per language.
+ * Resolve the Meta template mapping for one recipient locale  from what Meta said, per language.
  *
  * Two things were wrong before. The template's approval was read off the local row
  * (`provider`/`approvalStatus`/`externalTemplateId` typed in by hand), so the platform believed
  * its own bookkeeping instead of the provider: a template Meta had rejected, or never received, was
  * "approved" here until a send failed. And the language sent to Meta was `tpl.language ?? locale`
- * — the recipient's locale. A French donor with only an Arabic variant approved therefore got a
+ *  the recipient's locale. A French donor with only an Arabic variant approved therefore got a
  * request for `fr`, which Meta rejects outright (`#132001`); the message was lost even though a
  * perfectly good Arabic variant existed. The language now comes from the variant that was chosen,
  * which is the only language that variant can be sent in.
  *
- * Returns null when nothing is sendable — a free-text MANUAL template, a Twilio import, a template
+ * Returns null when nothing is sendable  a free-text MANUAL template, a Twilio import, a template
  * whose variants Meta has not approved, or one the sync has never seen. Automatic WhatsApp is then
  * SKIPPED, which is the honest outcome: Meta refuses business-initiated free text, so there is no
  * legal payload to fall back to.

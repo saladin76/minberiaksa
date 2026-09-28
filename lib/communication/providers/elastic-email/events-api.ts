@@ -6,7 +6,7 @@ import { buildElasticEmailEventsUrl, MAX_EVENTS_PER_POLL } from "./payload";
  * Read side of the Elastic Email v4 API: the account's own event feed.
  *
  * Elastic Email answers `POST /v4/emails/transactional` with 2xx the moment it ACCEPTS a message,
- * which is all a send can ever know — acceptance, not delivery. Delivery is reported separately,
+ * which is all a send can ever know  acceptance, not delivery. Delivery is reported separately,
  * and the app's only listener for it is the webhook at /api/webhooks/elastic-email. When that
  * webhook is not registered on the provider side, nothing ever contradicts the optimistic SENT row
  * and the dashboard reports success for mail that was suppressed or refused.
@@ -15,7 +15,7 @@ import { buildElasticEmailEventsUrl, MAX_EVENTS_PER_POLL } from "./payload";
  * what `providerMessageId` stores, so the existing normalizer and the idempotent event pipeline
  * consume it unchanged.
  *
- * Note this is NOT `/v4/emails/{id}/status` — that endpoint keys on `TransactionID` while the send
+ * Note this is NOT `/v4/emails/{id}/status`  that endpoint keys on `TransactionID` while the send
  * response gives us a `MessageID`, so per-message lookups answer 400 for every row we hold.
  */
 

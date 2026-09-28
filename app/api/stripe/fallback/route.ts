@@ -16,7 +16,7 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    // See app/api/stripe/checkout/route.ts — an unauthenticated request previously died with a
+    // See app/api/stripe/checkout/route.ts  an unauthenticated request previously died with a
     // TypeError 500 on `session.user.id` rather than a clean 401.
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -111,7 +111,7 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // Create PaymentIntent without confirming — client confirms with raw card data via stripe.js
+    // Create PaymentIntent without confirming  client confirms with raw card data via stripe.js
     const intent = await stripe.paymentIntents.create({
       amount: amountInSmallestUnit,
       currency,

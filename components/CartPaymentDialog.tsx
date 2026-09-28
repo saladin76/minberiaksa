@@ -136,7 +136,7 @@ const CartPaymentDialog = ({
       { label: t("noThanks"), value: 0 },
       ...amounts.map((v) => ({ label: String(v), value: v })),
     ];
-    // getCurrency() reads from a cookie at render time — refresh when the
+    // getCurrency() reads from a cookie at render time  refresh when the
     // dialog reopens.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [globalTeamSupport, isOpen, t]);
@@ -149,7 +149,7 @@ const CartPaymentDialog = ({
   // Manual card inputs for the bank 3D rails (PayFor / Albaraka)
   const [cardDetails, setCardDetails]     = useState<PayForCardState>({ cardNumber: "", expiryDate: "", cvv: "", cardholderName: "" });
   const [cardFocus, setCardFocus]         = useState("");
-  // Stripe Elements — ready state tracked here, confirmation done via ref
+  // Stripe Elements  ready state tracked here, confirmation done via ref
   const [stripeReady, setStripeReady]     = useState(false);
   const stripeFormRef = useRef<StripePaymentHandle | null>(null);
   const onStripeReadyChange = useCallback((ready: boolean) => setStripeReady(ready), []);
@@ -170,7 +170,7 @@ const CartPaymentDialog = ({
   const useAlbaraka = gateway === "ALBARAKA";
   /** Both 3D rails post an HTML form to the bank instead of confirming via stripe.js. */
   const useBank3D = use3D || useAlbaraka;
-  /** Card inputs we render ourselves — Albaraka's hosted page replaces them. */
+  /** Card inputs we render ourselves  Albaraka's hosted page replaces them. */
   const useOwnCardForm = use3D || (useAlbaraka && !albarakaUseOOS);
   /** Stripe Elements are mounted only when Stripe is actually charging. */
   const useStripeElements = gateway === "STRIPE";
@@ -524,7 +524,7 @@ const CartPaymentDialog = ({
 
       // ── Stripe Elements direct charge (no 3D) ─────────────────────────
       // stripeFormRef.current.confirmPayment() calls stripe.confirmCardPayment()
-      // with CardNumberElement inside the Elements context — card data goes
+      // with CardNumberElement inside the Elements context  card data goes
       // browser → Stripe directly, never touches our server.
       if (paymentMethod === "CARD" && useStripeElements) {
         if (selectedCardId) {
@@ -640,7 +640,7 @@ const CartPaymentDialog = ({
           form.appendChild(input);
         });
 
-        // Card fields the browser still has to add — PayFor only. Albaraka's fields
+        // Card fields the browser still has to add  PayFor only. Albaraka's fields
         // are already signed into `fields` server-side (or collected on the bank's
         // own page), so appending anything here would break its MAC.
         const browserCardFields: Record<string, string> = {};
@@ -664,7 +664,7 @@ const CartPaymentDialog = ({
 
         // Skip the popup attempt entirely on mobile / in-app browsers (FB, IG, TikTok,
         // etc.). In those WebViews window.open often returns a truthy-but-invisible
-        // Window object — the form would silently submit to a hidden frame and the
+        // Window object  the form would silently submit to a hidden frame and the
         // user would see nothing happen. Going straight to a full-page redirect
         // (target=_self) lets the bank's 3DS page own the screen and redirect back
         // to the gateway's callback → /success on completion.
@@ -966,7 +966,7 @@ const CartPaymentDialog = ({
           </div>
         )} */}
 
-        {/* ── Saved cards picker — shown when user has any saved card ──
+        {/* ── Saved cards picker  shown when user has any saved card ──
             Hidden when Albaraka's hosted page owns the card step: the donor
             enters the card at the bank, so a stored PAN has nowhere to go. */}
         {savedCards.length > 0 && !(useAlbaraka && albarakaUseOOS) && (
@@ -1034,14 +1034,14 @@ const CartPaymentDialog = ({
           </div>
         )}
 
-        {/* Stripe Elements — only when no saved card + Stripe is charging */}
+        {/* Stripe Elements  only when no saved card + Stripe is charging */}
         {paymentMethod === "CARD" && useStripeElements && !selectedCardId && (
           <Elements stripe={getStripePromise()}>
             <StripePaymentStep ref={stripeFormRef} onReadyChange={onStripeReadyChange} />
           </Elements>
         )}
 
-        {/* Manual card form — shared by the PayFor and Albaraka 3D rails */}
+        {/* Manual card form  shared by the PayFor and Albaraka 3D rails */}
         {paymentMethod === "CARD" && useOwnCardForm && !selectedCardId && (
           <PayForCardForm
             cardDetails={cardDetails}
@@ -1093,7 +1093,7 @@ const CartPaymentDialog = ({
           </div>
         )}
 
-        {/* Phone — guests only */}
+        {/* Phone  guests only */}
         {!session?.user?.id && (
           <div className="space-y-2 overflow-visible pt-2 border-t border-border" dir={locale === "ar" ? "rtl" : "ltr"}>
             <label className={`block text-sm font-medium text-gray-700 ${locale === "ar" ? "text-right" : "text-left"}`}>{t("contactPhone")}</label>
@@ -1151,7 +1151,7 @@ const CartPaymentDialog = ({
         <DialogTitle className="sr-only">{t("confirmation")}</DialogTitle>
         {mounted && (
           <>
-            {/* Header — deep brand gradient (matches the site hero) */}
+            {/* Header  deep brand gradient (matches the site hero) */}
             <div className="relative h-24 sm:h-28 overflow-hidden hero-pattern">
               <div className="absolute inset-0 opacity-[0.08] bg-[radial-gradient(#fff_1px,transparent_1px)] [background-size:16px_16px]" />
               <div className="absolute inset-0 flex flex-col items-center justify-center px-5 text-center sm:px-6">

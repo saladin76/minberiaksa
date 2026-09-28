@@ -13,7 +13,7 @@ import { claimStatusPath, safeMoney, BANK_TRANSFER_MAX_SUBMISSIONS } from "./ban
  *
  * Plain transactional mail through `sendArchivedEmail`, so each one is logged
  * as a delivery like every other system message. The official receipt on
- * confirmation is not built here — it is whatever the DONATION_PAID trigger
+ * confirmation is not built here  it is whatever the DONATION_PAID trigger
  * sends, the same as for a card payment; this email is the human note that
  * the transfer was matched, with the receipt PDF one click away.
  *
@@ -35,13 +35,13 @@ type Copy = {
 const COPY: Record<"ar" | "en" | "tr" | "fr", Copy> = {
   ar: {
     received: {
-      subject: "استلمنا إيصال تحويلك — قيد المراجعة",
+      subject: "استلمنا إيصال تحويلك  قيد المراجعة",
       title: "وصلنا إيصال التحويل",
       body: "شكرًا لك. استلم فريقنا المالي إيصال التحويل وسيطابقه مع الحساب البنكي خلال يوم إلى ثلاثة أيام عمل. سنراسلك فور اعتماده.",
       cta: "متابعة حالة التبرع",
     },
     confirmed: {
-      subject: "تم تأكيد تبرعك — جزاك الله خيرًا",
+      subject: "تم تأكيد تبرعك  جزاك الله خيرًا",
       title: "تم تأكيد التحويل",
       body: "طابق فريقنا المالي تحويلك مع الحساب البنكي، وأصبح تبرعك مسجّلًا رسميًا. تقبّل الله منك.",
       cta: "صفحة التبرع",
@@ -52,7 +52,7 @@ const COPY: Record<"ar" | "en" | "tr" | "fr", Copy> = {
       title: "الإيصال يحتاج إلى مراجعة",
       body: "راجع فريقنا المالي الإيصال المرفوع ولم يتمكن من مطابقته مع ما وصل إلى الحساب البنكي.",
       reason: "السبب",
-      retry: "يمكنك رفع إيصال آخر — صورة أوضح أو مستند التحويل من تطبيق البنك — من الرابط التالي.",
+      retry: "يمكنك رفع إيصال آخر  صورة أوضح أو مستند التحويل من تطبيق البنك  من الرابط التالي.",
       noRetry: "استُنفدت محاولات الرفع لهذا التبرع. تواصل معنا مباشرة ومعك الإيصال لنكمل المطابقة يدويًا.",
       cta: "رفع إيصال آخر",
     },
@@ -62,13 +62,13 @@ const COPY: Record<"ar" | "en" | "tr" | "fr", Copy> = {
   },
   en: {
     received: {
-      subject: "We received your transfer receipt — under review",
+      subject: "We received your transfer receipt  under review",
       title: "Your transfer receipt is in",
       body: "Thank you. Our finance team has received the receipt and will match it against the bank account within one to three working days. You will hear from us as soon as it is approved.",
       cta: "Track the donation",
     },
     confirmed: {
-      subject: "Your donation is confirmed — thank you",
+      subject: "Your donation is confirmed  thank you",
       title: "Transfer confirmed",
       body: "Our finance team matched your transfer against the bank account, and your donation is now officially recorded. May Allah accept it from you.",
       cta: "Donation page",
@@ -79,7 +79,7 @@ const COPY: Record<"ar" | "en" | "tr" | "fr", Copy> = {
       title: "The receipt needs another look",
       body: "Our finance team reviewed the uploaded receipt and could not match it against what reached the bank account.",
       reason: "Reason",
-      retry: "You can upload another receipt — a clearer photo, or the transfer document from your banking app — using the link below.",
+      retry: "You can upload another receipt  a clearer photo, or the transfer document from your banking app  using the link below.",
       noRetry: "The upload attempts for this donation are used up. Please contact us directly with the receipt so we can complete the match by hand.",
       cta: "Upload another receipt",
     },
@@ -89,13 +89,13 @@ const COPY: Record<"ar" | "en" | "tr" | "fr", Copy> = {
   },
   tr: {
     received: {
-      subject: "Havale dekontunuzu aldık — inceleniyor",
+      subject: "Havale dekontunuzu aldık  inceleniyor",
       title: "Dekontunuz ulaştı",
       body: "Teşekkür ederiz. Finans ekibimiz dekontu aldı ve bir ila üç iş günü içinde banka hesabıyla eşleştirecek. Onaylandığında size haber vereceğiz.",
       cta: "Bağış durumunu takip et",
     },
     confirmed: {
-      subject: "Bağışınız onaylandı — teşekkür ederiz",
+      subject: "Bağışınız onaylandı  teşekkür ederiz",
       title: "Havale onaylandı",
       body: "Finans ekibimiz havalenizi banka hesabıyla eşleştirdi; bağışınız artık resmî olarak kayıtlı. Allah kabul etsin.",
       cta: "Bağış sayfası",
@@ -106,7 +106,7 @@ const COPY: Record<"ar" | "en" | "tr" | "fr", Copy> = {
       title: "Dekontun yeniden incelenmesi gerekiyor",
       body: "Finans ekibimiz yüklenen dekontu inceledi ve banka hesabına ulaşan tutarla eşleştiremedi.",
       reason: "Sebep",
-      retry: "Aşağıdaki bağlantıdan başka bir dekont yükleyebilirsiniz — daha net bir fotoğraf veya banka uygulamasındaki havale belgesi.",
+      retry: "Aşağıdaki bağlantıdan başka bir dekont yükleyebilirsiniz  daha net bir fotoğraf veya banka uygulamasındaki havale belgesi.",
       noRetry: "Bu bağış için yükleme hakları tükendi. Eşleştirmeyi elle tamamlayabilmemiz için dekontla birlikte doğrudan bize ulaşın.",
       cta: "Başka bir dekont yükle",
     },
@@ -116,13 +116,13 @@ const COPY: Record<"ar" | "en" | "tr" | "fr", Copy> = {
   },
   fr: {
     received: {
-      subject: "Nous avons reçu votre reçu de virement — en cours d'examen",
+      subject: "Nous avons reçu votre reçu de virement  en cours d'examen",
       title: "Votre reçu de virement est arrivé",
       body: "Merci. Notre équipe financière a reçu le reçu et le rapprochera du compte bancaire sous un à trois jours ouvrés. Vous serez informé dès son approbation.",
       cta: "Suivre le don",
     },
     confirmed: {
-      subject: "Votre don est confirmé — merci",
+      subject: "Votre don est confirmé  merci",
       title: "Virement confirmé",
       body: "Notre équipe financière a rapproché votre virement du compte bancaire ; votre don est désormais officiellement enregistré. Qu'Allah l'accepte de votre part.",
       cta: "Page du don",
@@ -133,7 +133,7 @@ const COPY: Record<"ar" | "en" | "tr" | "fr", Copy> = {
       title: "Le reçu doit être réexaminé",
       body: "Notre équipe financière a examiné le reçu envoyé et n'a pas pu le rapprocher de ce qui est parvenu sur le compte bancaire.",
       reason: "Motif",
-      retry: "Vous pouvez envoyer un autre reçu — une photo plus nette ou le document de virement de votre application bancaire — via le lien ci-dessous.",
+      retry: "Vous pouvez envoyer un autre reçu  une photo plus nette ou le document de virement de votre application bancaire  via le lien ci-dessous.",
       noRetry: "Les tentatives d'envoi pour ce don sont épuisées. Contactez-nous directement avec le reçu afin que nous terminions le rapprochement manuellement.",
       cta: "Envoyer un autre reçu",
     },

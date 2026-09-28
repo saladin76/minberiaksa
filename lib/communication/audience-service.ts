@@ -4,7 +4,7 @@ import type { CommunicationChannel } from "./communication-types";
 import { safeCountValue } from "@/lib/dashboard/safe-count";
 
 /**
- * Dynamic audiences — computed live from the donor base (`User`), never a manual
+ * Dynamic audiences  computed live from the donor base (`User`), never a manual
  * per-channel list. Language comes from `User.preferredLang`; channel eligibility is
  * derived from existing fields with lawful-safe defaults:
  *   - EMAIL  : has email AND emailNotifications !== false
@@ -31,7 +31,7 @@ export type LanguageAudienceSummary = {
   smsEligible: number;
   /** Donors with an explicit WhatsApp opt-in on their communication profile. */
   whatsappEligible: number;
-  /** Phone contacts without an explicit WhatsApp opt-in — need human review before bulk send. */
+  /** Phone contacts without an explicit WhatsApp opt-in  need human review before bulk send. */
   whatsappNeedsReview: number;
 };
 
@@ -132,7 +132,7 @@ export function donorChannelEligibility(
     const optedIn = profile ? profile.smsOptIn === true : donor.smsNotifications !== false;
     return optedIn ? "ELIGIBLE" : "UNAVAILABLE";
   }
-  // WHATSAPP — eligible only with an explicit opt-in; otherwise phone contacts need review.
+  // WHATSAPP  eligible only with an explicit opt-in; otherwise phone contacts need review.
   if (profile?.whatsappOptIn) return "ELIGIBLE";
   return donor.phone ? "NEEDS_REVIEW" : "UNAVAILABLE";
 }

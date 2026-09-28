@@ -57,11 +57,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 /**
- * One article — ported from `Minbar/تفاصيل المقال.dc.html`.
+ * One article  ported from `Minbar/تفاصيل المقال.dc.html`.
  *
  * The article resolves by locale slug, base slug, or id, so links minted before
  * an editor set a per-locale slug keep working. An unpublished or unknown
- * article is a real 404 rather than an empty article shell — a soft 404 is what
+ * article is a real 404 rather than an empty article shell  a soft 404 is what
  * `PRODUCTION_SEO_CONTRACT.md` forbids.
  */
 export default async function Article({ params }: Props) {

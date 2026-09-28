@@ -5,7 +5,7 @@
  * `lib/locales.ts` is the single source of truth for locales. A handful of files
  * cannot import it (edge/`.mjs`/static-import constraints) or carry per-locale
  * CONTENT keyed by locale. This script fails when any of those sources is missing
- * an enabled locale — the exact "de was silently dropped from one array" bug class
+ * an enabled locale  the exact "de was silently dropped from one array" bug class
  * the Phase 0 audit found.
  *
  * Usage:

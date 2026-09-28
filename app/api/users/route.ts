@@ -20,7 +20,7 @@ import {
 
 type UserScope = 'donors' | 'team' | 'all';
 
-// GET /api/users — scope=donors | scope=team | omit/empty/all = every role (no role filter)
+// GET /api/users  scope=donors | scope=team | omit/empty/all = every role (no role filter)
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
@@ -108,7 +108,7 @@ export async function GET(request: NextRequest) {
     }
 
     // `birthdate` is an ISO "YYYY-MM-DD" string, and ISO dates sort
-    // lexicographically — so an age range is a plain string range. Users with no
+    // lexicographically  so an age range is a plain string range. Users with no
     // birthdate recorded drop out of the result, which is the intended meaning
     // of "donors aged 25-40".
     const birthdateRange = birthdateRangeForAges(minAge, maxAge);
@@ -307,7 +307,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST /api/users — admin only
+// POST /api/users  admin only
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);

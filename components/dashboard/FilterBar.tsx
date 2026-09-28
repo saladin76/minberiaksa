@@ -8,7 +8,7 @@ type Props = {
   searchValue?: string;
   onSearchChange?: (value: string) => void;
   searchPlaceholder?: string;
-  /** Selects, date pickers, toggles — laid out after the search box. */
+  /** Selects, date pickers, toggles  laid out after the search box. */
   children?: ReactNode;
   /** Right-aligned actions: export, refresh, bulk actions. */
   actions?: ReactNode;

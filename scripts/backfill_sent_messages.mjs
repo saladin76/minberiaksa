@@ -4,13 +4,13 @@
  * The legacy audit log only records summary counts (sent/failed/skipped), so
  * backfill rows have origin=BACKFILL, no rendered content, and a synthetic
  * templateName parsed from the messageAr field. Re-running this script is
- * safe — it deletes prior BACKFILL rows before re-inserting.
+ * safe  it deletes prior BACKFILL rows before re-inserting.
  */
 import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
-// Parse "أرسل قالب بريد «X» — نجح 1 / تخطّي 0 / فشل 0" → X
+// Parse "أرسل قالب بريد «X»  نجح 1 / تخطّي 0 / فشل 0" → X
 function parseTemplateName(messageAr) {
   if (typeof messageAr !== "string") return null;
   const m = messageAr.match(/«([^»]+)»/);

@@ -47,7 +47,7 @@ export function DeleteDonationDialog({ row, onClose, onDeleted }: Props) {
     setImmutable(Boolean(row.paidAt));
   }, [row.id, row.paidAt]);
 
-  // Stringify the amount the same way the row renders it — strip trailing zeros
+  // Stringify the amount the same way the row renders it  strip trailing zeros
   // so 100 matches "100" not "100.00". User can also type the full numeric.
   const expected = formatExpected(row.totalAmount ?? row.amount);
   const matches = normalizeNumericInput(typed) === expected;

@@ -14,9 +14,9 @@ import {
  * and the donations the concierge brought in.
  *
  * Two kinds of donation are credited to it:
- *  - direct   — the basket went through the concierge (`attribution.ai_concierge`,
+ *  - direct    the basket went through the concierge (`attribution.ai_concierge`,
  *               set when the assistant put the gift in the basket);
- *  - indirect — the donor had talked to the concierge within the attribution
+ *  - indirect  the donor had talked to the concierge within the attribution
  *               window before giving, but the basket itself came from elsewhere:
  *               the browser's touch marker (`attribution.ai_concierge_touch`), or a
  *               signed-in donor whose conversation is linked to their account.
@@ -314,9 +314,9 @@ export async function conciergeOverview(range: ConciergeRange, windowDays: numbe
     hours,
     topCampaigns,
     attributionMix: [
-      { name: "مباشر — من السلة عبر المساعد", value: sum(direct), count: direct.length },
-      { name: "غير مباشر — المتصفح نفسه", value: sum(indirect.filter((d) => d.via === "touch")), count: indirect.filter((d) => d.via === "touch").length },
-      { name: "غير مباشر — حساب المتبرع", value: sum(indirect.filter((d) => d.via === "account")), count: indirect.filter((d) => d.via === "account").length },
+      { name: "مباشر  من السلة عبر المساعد", value: sum(direct), count: direct.length },
+      { name: "غير مباشر  المتصفح نفسه", value: sum(indirect.filter((d) => d.via === "touch")), count: indirect.filter((d) => d.via === "touch").length },
+      { name: "غير مباشر  حساب المتبرع", value: sum(indirect.filter((d) => d.via === "account")), count: indirect.filter((d) => d.via === "account").length },
     ],
     recentDonations: donations.slice(0, 12).map((d) => ({ ...d, createdAt: d.createdAt.toISOString() })),
   };

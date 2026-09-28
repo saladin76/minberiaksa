@@ -1,7 +1,7 @@
 {
  "_meta": {
   "namespace": "system",
-  "description": "حالات النظام: الفراغ، التحميل، الأخطاء، الصيانة، النجاح. كل حالة يجب أن تكون مترجمة — لا fallback إنجليزي غير مقصود يظهر للمستخدم.",
+  "description": "حالات النظام: الفراغ، التحميل، الأخطاء، الصيانة، النجاح. كل حالة يجب أن تكون مترجمة  لا fallback إنجليزي غير مقصود يظهر للمستخدم.",
   "sourceOfTruth": "ar",
   "fallback": "en"
  },
@@ -888,25 +888,25 @@
   "hi": "अन्य राशि"
  },
  "proceedToReview": {
-  "ar": "متابعة — مراجعة قبل التأكيد",
-  "tr": "Devam — onaydan önce gözden geçir",
-  "en": "Continue — Review Before Confirming",
-  "fr": "Continuer — vérifier avant de confirmer",
-  "de": "Weiter — vor der Bestätigung prüfen",
-  "es": "Continuar — revisar antes de confirmar",
-  "id": "Lanjutkan — Tinjau Sebelum Konfirmasi",
-  "pt": "Continuar — revisar antes de confirmar",
-  "ur": "جاری رکھیں — تصدیق سے پہلے جائزہ",
-  "sq": "Vazhdo — Rishiko para Konfirmimit",
-  "it": "Continua — verifica prima di confermare",
-  "nl": "Doorgaan — Controleren Vóór Bevestiging",
-  "sv": "Fortsätt — Granska Före Bekräftelse",
-  "no": "Fortsett — Gjennomgå Før Bekreftelse",
-  "da": "Fortsæt — Gennemgå Før Bekræftelse",
-  "ms": "Teruskan — Semak Sebelum Pengesahan",
-  "ja": "次へ — 確認画面に進む",
-  "zh": "继续 — 确认前核对",
-  "hi": "आगे बढ़ें — पुष्टि से पहले जाँच"
+  "ar": "متابعة  مراجعة قبل التأكيد",
+  "tr": "Devam  onaydan önce gözden geçir",
+  "en": "Continue  Review Before Confirming",
+  "fr": "Continuer  vérifier avant de confirmer",
+  "de": "Weiter  vor der Bestätigung prüfen",
+  "es": "Continuar  revisar antes de confirmar",
+  "id": "Lanjutkan  Tinjau Sebelum Konfirmasi",
+  "pt": "Continuar  revisar antes de confirmar",
+  "ur": "جاری رکھیں  تصدیق سے پہلے جائزہ",
+  "sq": "Vazhdo  Rishiko para Konfirmimit",
+  "it": "Continua  verifica prima di confermare",
+  "nl": "Doorgaan  Controleren Vóór Bevestiging",
+  "sv": "Fortsätt  Granska Före Bekräftelse",
+  "no": "Fortsett  Gjennomgå Før Bekreftelse",
+  "da": "Fortsæt  Gennemgå Før Bekræftelse",
+  "ms": "Teruskan  Semak Sebelum Pengesahan",
+  "ja": "次へ  確認画面に進む",
+  "zh": "继续  确认前核对",
+  "hi": "आगे बढ़ें  पुष्टि से पहले जाँच"
  },
  "browseMoreProjects": {
   "ar": "تصفّح مشاريع أخرى",

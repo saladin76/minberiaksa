@@ -48,7 +48,7 @@ export type WhatsappRow = {
 type TemplateRow = {
   id: string; name: string; approvalStatus: string | null; category: string | null;
   language: string | null; registered: boolean; ready: boolean; state: string; updatedAt: string;
-  /** Meta's answer per language — the readiness contract, not a local guess. */
+  /** Meta's answer per language  the readiness contract, not a local guess. */
   approvedLanguages: string[];
   approvedLocales: string[];
   rejectionReason: string | null;
@@ -97,7 +97,7 @@ const TEMPLATE_STATE_STYLE: Record<string, { label: string; className: string }>
 
 export function buildStages(row: StageSource): JourneyStage[] {
   return [
-    // `sent` is our own record of handing the message over — never an "unknown".
+    // `sent` is our own record of handing the message over  never an "unknown".
     { key: "sent", label: "أُرسل", at: row.sentAt ?? row.createdAt, icon: Send, local: true },
     { key: "delivered", label: "وصل", at: row.deliveredAt, icon: Check },
     { key: "read", label: "قُرئ", at: row.readAt ?? null, icon: CheckCheck },
@@ -108,8 +108,8 @@ export function buildStages(row: StageSource): JourneyStage[] {
 /**
  * Why the channel is or is not able to send.
  *
- * WhatsApp has two independent prerequisites — a configured Meta connection and at least one
- * Meta-approved template — and failing either produces the same symptom: nothing sends, silently.
+ * WhatsApp has two independent prerequisites  a configured Meta connection and at least one
+ * Meta-approved template  and failing either produces the same symptom: nothing sends, silently.
  * Showing both side by side turns "why is this empty?" into a two-second read.
  */
 function ReadinessCard({ provider, templates, onSynced }: { provider: Payload["provider"]; templates: Payload["templates"]; onSynced: () => void }) {
@@ -166,7 +166,7 @@ function ReadinessCard({ provider, templates, onSynced }: { provider: Payload["p
             <p className="mt-0.5 text-[11px] leading-4 text-slate-500">
               {provider.configured
                 ? "مُعدّ بالكامل."
-                : `غير مكتمل${provider.missingFields.length ? ` — ناقص: ${provider.missingFields.join("، ")}` : ""}.`}
+                : `غير مكتمل${provider.missingFields.length ? `  ناقص: ${provider.missingFields.join("، ")}` : ""}.`}
             </p>
           </div>
         </div>
@@ -195,7 +195,7 @@ function ReadinessCard({ provider, templates, onSynced }: { provider: Payload["p
           مزامنة القوالب من Meta
         </button>
         <span className="text-[10px] text-slate-400">
-          {lastSyncedAt ? `آخر مزامنة ${fmtDateTime(lastSyncedAt)?.date ?? ""}` : "لم تُزامَن القوالب بعد — الجاهزية تُقرأ من Meta."}
+          {lastSyncedAt ? `آخر مزامنة ${fmtDateTime(lastSyncedAt)?.date ?? ""}` : "لم تُزامَن القوالب بعد  الجاهزية تُقرأ من Meta."}
         </span>
       </div>
       {syncNote && <p className="mt-1 text-[11px] font-medium text-slate-600">{syncNote}</p>}
@@ -208,7 +208,7 @@ function ReadinessCard({ provider, templates, onSynced }: { provider: Payload["p
               <div key={t.id} className="flex items-start justify-between gap-2">
                 <span className="min-w-0">
                   <span className="block truncate text-[11px] font-medium text-slate-700">{t.name}</span>
-                  {/* Which languages can actually go out — the thing a per-template boolean hid. A
+                  {/* Which languages can actually go out  the thing a per-template boolean hid. A
                       campaign in a language with no approved variant is skipped, so this is the list
                       the campaign builder is constrained by. */}
                   <span className="block text-[10px] text-slate-400">
@@ -301,9 +301,9 @@ export function WhatsappChannelDashboard() {
   const retryBlockedReason = !data
     ? null
     : !data.provider.configured
-      ? "اتصال Meta غير مكتمل — أكمل الإعداد أولًا."
+      ? "اتصال Meta غير مكتمل  أكمل الإعداد أولًا."
       : data.templates.ready === 0
-        ? "لا يوجد قالب معتمد من Meta — إعادة الإرسال ستُرفض."
+        ? "لا يوجد قالب معتمد من Meta  إعادة الإرسال ستُرفض."
         : null;
 
   return (
@@ -312,11 +312,11 @@ export function WhatsappChannelDashboard() {
         <PageHeader
           eyebrow="التواصل"
           title="واتساب"
-          description="كل رسالة واتساب صادرة، وما حدث لها بعد الإرسال — الوصول والقراءة والردّ والفشل."
+          description="كل رسالة واتساب صادرة، وما حدث لها بعد الإرسال  الوصول والقراءة والردّ والفشل."
           icon={MessageCircle}
           actions={
             <div className="flex items-center gap-2">
-              {/* Unlike email, a WhatsApp retry cannot succeed without an approved template — the
+              {/* Unlike email, a WhatsApp retry cannot succeed without an approved template  the
                   provider refuses free text outright. Firing a doomed batch would fill the report
                   with identical errors, so the button states the blocker instead. */}
               {(data?.retryableCount ?? 0) > 0 && (
@@ -349,7 +349,7 @@ export function WhatsappChannelDashboard() {
 
         <CampaignScopeBanner campaignId={campaignId} campaignName={campaignName} clearHref="/dashboard/communication/whatsapp" />
 
-        {/* An empty channel that has never sent is a setup story, not a performance story — say so
+        {/* An empty channel that has never sent is a setup story, not a performance story  say so
             before showing a wall of zeroes that invites the wrong conclusion. */}
         {neverSent && (
           <TrackingBanner>
@@ -357,7 +357,7 @@ export function WhatsappChannelDashboard() {
             {data?.provider.configured === false
               ? "اتصال Meta غير مكتمل."
               : data && data.templates.ready === 0
-                ? "الاتصال مُعدّ، لكن لا يوجد قالب معتمد من Meta — والرسائل التي تبدأ من المنصة تتطلّب قالبًا معتمدًا."
+                ? "الاتصال مُعدّ، لكن لا يوجد قالب معتمد من Meta  والرسائل التي تبدأ من المنصة تتطلّب قالبًا معتمدًا."
                 : "راجع جاهزية القناة بالأسفل."}
           </TrackingBanner>
         )}
@@ -458,7 +458,7 @@ export function WhatsappChannelDashboard() {
           ) : (
             <>
               <div className="overflow-x-auto">
-                {/* Explicit widths — see the note on the email table: only the message column is
+                {/* Explicit widths  see the note on the email table: only the message column is
                     greedy, so nothing pads out the space beside the action buttons. */}
                 <table className="w-full text-right text-xs">
                   <thead>

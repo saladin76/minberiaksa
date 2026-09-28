@@ -14,7 +14,7 @@ export type RouterContext = { country?: string | null; phone?: string | null };
 /**
  * A supplied sender is a routing DECISION and is used as given.
  *
- * The environment default stands in only when no sender object was supplied at all — a one-off send
+ * The environment default stands in only when no sender object was supplied at all  a one-off send
  * that never routed, such as a connection test. When a caller did route and handed us a sender, a
  * missing identity is a fault on that sender, and quietly sending from the default number instead
  * would send exactly the message the routing was asked not to send. The full account of that

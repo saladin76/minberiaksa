@@ -184,7 +184,7 @@ export function StoryForm({
           {values.image ? (
             <div className="relative w-40">
               {/* Sources include Google Drive thumbnails, which next/image would
-                  need configured hosts for — a plain img keeps any URL working. */}
+                  need configured hosts for  a plain img keeps any URL working. */}
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={values.image} alt="" className="w-40 h-40 object-cover rounded-lg border" />
               <button
