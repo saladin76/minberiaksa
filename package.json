@@ -10,6 +10,9 @@
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "lint:ci": "node scripts/lint-baseline.mjs",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:report": "playwright show-report e2e/.artifacts/report",
     "test:integration-settings": "rm -rf .integration-test-build && tsc -p tsconfig.integration-tests.json && node --test .integration-test-build/tests/integration-settings/*.test.js",
     "typecheck:communication-runtime": "tsc -p tsconfig.communication-runtime.json",
     "typecheck:integration-release": "tsc -p tsconfig.integration-release.json",
@@ -160,6 +163,7 @@
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
+    "@playwright/test": "^1.63.0",
     "@types/bcryptjs": "^2.4.6",
     "@types/fontkit": "^2.0.7",
     "@types/html-pdf-node": "^1.0.2",

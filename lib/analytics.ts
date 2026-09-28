@@ -118,7 +118,6 @@ export function trackEngagement(name: string, data?: AnyRecord): void {
   }
 
   if (process.env.NODE_ENV !== "production") {
-    // eslint-disable-next-line no-console
     console.debug("[analytics]", name, data ?? {});
   }
 }

@@ -1,7 +1,6 @@
 import { Extension } from "@tiptap/core";
 
 declare module "@tiptap/core" {
-  // eslint-disable-next-line no-unused-vars
   interface Commands<ReturnType> {
     customkeymap: {
       /**

@@ -50,13 +50,11 @@ export default function MicrosoftClarity() {
       Clarity.init(id);
       window.__clarityInitialized = true;
       if (process.env.NODE_ENV !== "production") {
-        // eslint-disable-next-line no-console
         console.debug("[clarity] initialized", id);
       }
     } catch (err) {
       // Tracking should never throw to the app.
       if (process.env.NODE_ENV !== "production") {
-        // eslint-disable-next-line no-console
         console.warn("[clarity] init failed", err);
       }
     }

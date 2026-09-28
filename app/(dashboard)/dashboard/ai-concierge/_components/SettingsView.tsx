@@ -92,6 +92,7 @@ export function SettingsView() {
           </div>
           <div className="divide-y divide-slate-100">
             <Toggle label="استخدام الذكاء الاصطناعي في الردود" hint="عند الإيقاف يجيب المساعد بالمسار الثابت (الأزرار والقواعد) فقط  مفيد لإيقاف التكلفة أو عند مشكلة في المزوّد." checked={form.llmEnabled} onChange={(v) => set("llmEnabled", v)} />
+            <Toggle label="اقتراح الخطوة التالية في المحادثة" hint="بطاقة «موافق / لا شكرًا» يضيفها المساعد تحت ردوده تقترح مشروعًا أو مسارًا. عند الإيقاف يجيب دون اقتراحات. لا يؤثر على بطاقات تأكيد الأوامر." checked={form.suggestionsEnabled} onChange={(v) => set("suggestionsEnabled", v)} />
           </div>
         </SectionCard>
 

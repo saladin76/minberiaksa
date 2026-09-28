@@ -56,3 +56,6 @@ next-env.d.ts
 # engine is a ~20MB platform-specific binary (the Windows build here) that is
 # wrong for any other machine anyway.
 /generated/
+
+# Playwright output (reports, traces, screenshots)
+e2e/.artifacts/

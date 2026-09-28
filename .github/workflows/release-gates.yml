@@ -1,0 +1,133 @@
+name: Release gates
+
+# The checks that must pass before a change can ship. Each one is a separate job so a failure names
+# itself in the PR list rather than hiding behind "build failed".
+#
+# `next build` is deliberately NOT run here. It needs the full environment (database, provider
+# credentials, blob token) and Vercel already runs it on every push; duplicating it in CI would either
+# need those secrets or give a false green. What CI owns is everything that can be judged from the
+# source alone.
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: release-gates-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # tsc over this codebase exceeds Node's default heap and dies with a V8 fatal error part-way
+  # through, which looks exactly like "no errors" to anything reading its output.
+  NODE_OPTIONS: --max-old-space-size=8192
+
+jobs:
+  typecheck:
+    name: TypeScript
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --ignore-scripts
+      # The Prisma client is generated code that the typecheck reads; without it every model access
+      # is an error.
+      - run: npx prisma generate
+      - run: npx prisma generate --schema prisma/integration-settings.schema.prisma
+      - name: Targeted typechecks
+        run: |
+          npm run typecheck:communication-runtime
+          npm run typecheck:integration-release
+      - name: Whole-repo typecheck (ratchet)
+        # The baseline file is empty, so this is now simply "no type errors at all". It stays a
+        # ratchet rather than a bare `tsc` so that a deliberately accepted error, if one is ever
+        # added back, has to be recorded rather than silently tolerated.
+        run: npm run typecheck:baseline
+
+  lint:
+    name: ESLint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npx prisma generate
+      # Fails on any critical finding, and on any increase in the ratcheted ones.
+      - run: npm run lint:ci
+
+  unit:
+    name: Integration-settings suite
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npx prisma generate
+      - run: npx prisma generate --schema prisma/integration-settings.schema.prisma
+      - run: npm run test:integration-settings
+
+  audits:
+    name: i18n and locale audits
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm run i18n:audit:strict
+      - run: npm run locale:audit:strict
+
+  e2e:
+    name: Playwright (critical journeys)
+    runs-on: ubuntu-latest
+    # The end-to-end suite needs a database and provider credentials to be meaningful. It runs when
+    # those secrets exist and is skipped, loudly, when they do not - a suite that silently passes
+    # against an empty environment is worse than no suite.
+    if: ${{ github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npx prisma generate
+      - run: npx prisma generate --schema prisma/integration-settings.schema.prisma
+      - name: Check for an end-to-end environment
+        id: env
+        run: |
+          if [ -z "${{ secrets.E2E_BASE_URL }}" ] && [ -z "${{ secrets.DATABASE_URL }}" ]; then
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::No E2E_BASE_URL or DATABASE_URL secret. The end-to-end suite did NOT run."
+          else
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          fi
+      - if: steps.env.outputs.ready == 'true'
+        run: npx playwright install --with-deps chromium
+      - if: steps.env.outputs.ready == 'true'
+        run: npm run test:e2e
+        env:
+          E2E_BASE_URL: ${{ secrets.E2E_BASE_URL }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          NEXTAUTH_URL: ${{ secrets.NEXTAUTH_URL }}
+          NEXTAUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET }}
+          E2E_STAFF_EMAIL: ${{ secrets.E2E_STAFF_EMAIL }}
+          E2E_STAFF_PASSWORD: ${{ secrets.E2E_STAFF_PASSWORD }}
+      - if: always() && steps.env.outputs.ready == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: e2e/.artifacts/
+          retention-days: 7

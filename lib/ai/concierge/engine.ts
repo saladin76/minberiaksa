@@ -271,6 +271,8 @@ type SuggestionKind = "campaign" | "recurring" | "zakat" | "waqf" | "category" |
  * real thing on the site  a catalog campaign or one of the guided flows.
  */
 function suggestionBlock(ctx: Ctx, kind: SuggestionKind, campaignId: string | null, text: string | null, candidates: readonly CatalogCampaign[]): ConciergeBlock | null {
+  /* Every suggestion passes through here, so the dashboard switch lives here too. */
+  if (!ctx.settings.suggestionsEnabled) return null;
   if (kind === "none") return null;
   if (kind === "campaign") {
     const campaign = (campaignId && candidates.find((c) => c.id === campaignId)) || candidates[0] || null;

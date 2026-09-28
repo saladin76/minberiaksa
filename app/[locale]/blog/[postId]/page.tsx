@@ -90,7 +90,7 @@ export default async function Article({ params }: Props) {
         <PageBanners locale={locale} page="article" slot="top" />
       <script
         type="application/ld+json"
-        // eslint-disable-next-line react/no-danger -- JSON-LD has no other insertion point
+        // JSON-LD has no other insertion point than dangerouslySetInnerHTML.
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
       <ArticleDetail article={article} ctaKey={ctaKey} />

@@ -289,7 +289,7 @@ const MainPage = ({ id, locale }: {id:string; locale?: string}) => {
     campaign?.updates?.forEach((update) => {
       if (updateRefs.current[update.id]) {
         const shouldShowButton =
-          updateRefs.current[update.id]?.scrollHeight! > 150;
+          (updateRefs.current[update.id]?.scrollHeight ?? 0) > 150;
         setIsUpdateExpanded((prev) => ({
           ...prev,
           [update.id]: prev[update.id] || false,
@@ -550,12 +550,12 @@ const MainPage = ({ id, locale }: {id:string; locale?: string}) => {
                             {update.description}
                           </p>
                           {!isUpdateExpanded[update.id] &&
-                            updateRefs.current[update.id]?.scrollHeight! >
+                            (updateRefs.current[update.id]?.scrollHeight ?? 0) >
                               150 && (
                               <div className="absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-[#fefefe] to-transparent" />
                             )}
                         </div>
-                        {updateRefs.current[update.id]?.scrollHeight! > 150 && (
+                        {(updateRefs.current[update.id]?.scrollHeight ?? 0) > 150 && (
                           <button
                             onClick={() =>
                               setIsUpdateExpanded((prev) => ({

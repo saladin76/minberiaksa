@@ -360,6 +360,9 @@ export default function TrackingPixels({ children }: { children: React.ReactNode
           version: string;
         }
         const n: FbqFn = function () {
+          // Verbatim from Meta's pixel snippet: the loader forwards an unknown argument list through
+          // this same function object, and a rest parameter would not preserve the shape it expects.
+          // eslint-disable-next-line prefer-rest-params -- see the two lines above
           n.callMethod ? n.callMethod(...arguments) : n.queue.push(arguments);
         } as FbqFn;
         b.fbq = n;
@@ -498,7 +501,6 @@ export default function TrackingPixels({ children }: { children: React.ReactNode
         const path = window.location.pathname;
         if (/\/(success|donation-failed)(\/|$)/.test(path)) {
           if (process.env.NODE_ENV !== "production") {
-            // eslint-disable-next-line no-console
             console.debug("[tracking] suppressed canonical event on conversion page", {
               event: partial.event,
               path,
@@ -896,7 +898,6 @@ export default function TrackingPixels({ children }: { children: React.ReactNode
       if (tryFire() || attempts >= MAX_ATTEMPTS) {
         clearInterval(timer);
         if (attempts >= MAX_ATTEMPTS && process.env.NODE_ENV !== "production") {
-          // eslint-disable-next-line no-console
           console.warn("[Donate] fbq never became ready; CAPI fire is the only signal", {
             eventId,
             hasFbq: !!window.fbq,

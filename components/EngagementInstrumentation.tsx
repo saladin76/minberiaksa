@@ -71,7 +71,6 @@ export default function EngagementInstrumentation() {
       });
 
       if (process.env.NODE_ENV !== "production" && isPaid) {
-        // eslint-disable-next-line no-console
         console.debug("[engagement] paid landing", paidParams);
       }
     } catch {

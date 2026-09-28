@@ -19,6 +19,8 @@ export interface ConciergeSettings {
   pulseEnabled: boolean;
   /** Off answers every message from the deterministic path (no model call). */
   llmEnabled: boolean;
+  /** The "next step" card (OK / no thanks) the assistant adds under its replies. */
+  suggestionsEnabled: boolean;
   /** Keep the transcript of each conversation for the dashboard. */
   storeTranscripts: boolean;
   /** Days after a chat in which a signed-in donor's donation counts as indirect. */
@@ -36,6 +38,7 @@ export const DEFAULT_CONCIERGE_SETTINGS: ConciergeSettings = {
   teaserDelaySeconds: 6,
   pulseEnabled: true,
   llmEnabled: true,
+  suggestionsEnabled: false,
   storeTranscripts: true,
   attributionWindowDays: 7,
   teamNotes: "",
@@ -61,6 +64,7 @@ export function sanitizeConciergeSettings(raw: unknown): ConciergeSettings {
     teaserDelaySeconds: int(o.teaserDelaySeconds, d.teaserDelaySeconds, 0, 120),
     pulseEnabled: bool(o.pulseEnabled, d.pulseEnabled),
     llmEnabled: bool(o.llmEnabled, d.llmEnabled),
+    suggestionsEnabled: bool(o.suggestionsEnabled, d.suggestionsEnabled),
     storeTranscripts: bool(o.storeTranscripts, d.storeTranscripts),
     attributionWindowDays: int(o.attributionWindowDays, d.attributionWindowDays, 1, 90),
     teamNotes: typeof o.teamNotes === "string" ? o.teamNotes.slice(0, TEAM_NOTES_MAX) : d.teamNotes,

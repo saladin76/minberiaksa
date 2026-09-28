@@ -303,7 +303,6 @@ export async function POST(req: NextRequest) {
         customer: customerId,
         items: [
           {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             price_data: {
               currency: stripeCurrency,
               product_data: { name: productName },

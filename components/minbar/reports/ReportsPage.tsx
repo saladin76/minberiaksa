@@ -129,7 +129,7 @@ export default function ReportsPage({ reports }: { reports: CmsDocument[] }) {
               the one place the report chooses where the headline breaks. */}
           <h1
             style={{ margin: 0, fontSize: "clamp(38px,6vw,90px)", lineHeight: 1.16, fontWeight: 900, color: "#fff", letterSpacing: "-.02em" }}
-            // eslint-disable-next-line react/no-danger -- reviewed translation copy whose only markup is a line break
+            // Reviewed translation copy whose only markup is a line break.
             dangerouslySetInnerHTML={{ __html: t.raw("hero.title") as string }}
           />
           <p style={{ margin: 0, maxWidth: "46ch", fontSize: "clamp(16px,1.5vw,20px)", lineHeight: 1.9, color: "rgba(255,255,255,.84)" }}>

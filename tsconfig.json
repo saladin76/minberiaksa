@@ -43,6 +43,8 @@
     // for reference). It referenced modules that no longer exist, so it contributed type errors that
     // no amount of fixing the app could clear  and it must not be able to fail a production build.
     "tmp",
+    // Playwright specs. Typechecked by tsconfig.typecheck.json, not built into the app.
+    "e2e",
     // Unreferenced leftovers whose dependencies are not installed, so they cannot compile or run in
     // any configuration. Nothing imports them, so excluding them costs nothing and keeps the gate
     // honest; they are deletion candidates, not code to fix.
