@@ -332,10 +332,12 @@ export const llmVerdictSchema = z.object({
   recommendedIds: z.array(z.string()).max(4),
   /**
    * When the wish is a whole area rather than one project ("orphans",
-   * "water", "education", a region): the CATEGORIES slugs that fit, best
-   * first  one means "show everything there", several mean "let them pick".
+   * "water", "education", a region, a group of places like "an Arab
+   * country"): the CATEGORIES slugs that fit, best first  one means "show
+   * everything there", several mean "let them pick". Filled in any mode, so a
+   * clarifying question still comes with the areas it names as buttons.
    */
-  categorySlugs: z.array(z.string()).max(3),
+  categorySlugs: z.array(z.string()).max(6),
   /** One factual reason per recommended id, in the visitor's language. (An
       array, not a map: strict JSON schemas take no free-form object keys.) */
   reasons: z.array(z.object({ id: z.string(), reason: z.string().max(220) })).max(4),

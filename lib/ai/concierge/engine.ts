@@ -104,6 +104,9 @@ function chips(s: Strings): ConciergeAction[] {
   ];
 }
 
+/** Intents that mean the visitor is trying to give  the only ones that earn buttons under a plain answer. */
+const GIVING_INTENTS: ReadonlySet<ConciergeIntent> = new Set(["sadaqah_jariyah", "relief", "zakat", "waqf", "recurring", "gift", "explore", "most_needed", "current_page"]);
+
 /** How many turns a stated amount keeps presetting the configurator  long
     enough to browse areas, "show me another" a few times and then pick. */
 const AMOUNT_MEMORY_TURNS = 8;
@@ -794,6 +797,15 @@ async function messageFlow(ctx: Ctx, text: string): Promise<ConciergeResponse> {
       }
     }
     const answer = verdict.answer.trim();
+    /* Is the visitor trying to give? Their own words or a giving intent say
+       so; the model's reading alone does not, so small talk it labelled
+       "explore" stays a conversation. Only then do buttons follow the reply. */
+    const giving = wantsToDonate(text) || (parsed.intent !== null && GIVING_INTENTS.has(parsed.intent)) || (verdict.intent !== "explore" && GIVING_INTENTS.has(verdict.intent));
+    /* Areas the model named, checked against the catalog. A kind of giving
+       (sadaqah, zakat, waqf, regular) is not an area "about" orphans or
+       water: when the words reach real projects, those generic types drop. */
+    const genericTypes = new Set(["type-sadaqah", "type-zakat", "type-waqf", "type-recurring"]);
+    const modelCategoryIds = verdict.categorySlugs.filter((slug) => !(strongCampaigns.length && genericTypes.has(slug))).map((slug) => ctx.catalog.categories.find((c) => c.slug === slug)?.id).filter((id): id is string => Boolean(id));
 
     /* Something to change for them: a confirmation card under the reply. */
     if (verdict.command.kind !== "none") {
@@ -821,9 +833,19 @@ async function messageFlow(ctx: Ctx, text: string): Promise<ConciergeResponse> {
       return { ...base, actions: [contact, ...base.actions], intent: "question", mode: "llm" };
     }
 
+    /* A question that names areas ("an Arab country?  Gaza, Syria or
+       Sudan?"): the areas it named become the buttons under it, whatever
+       mode the model chose. One area opens its projects. */
+    if (!verdict.recommendedIds.length && modelCategoryIds.length && intent !== "zakat" && intent !== "waqf") {
+      const lead = [answer, verdict.message.trim()].filter(Boolean).join("\n\n");
+      const res = topicFlow({ ...ctx, state: { ...ctx.state, intent: intent && GIVING_INTENTS.has(intent) ? intent : "explore" } }, lead || undefined, [], modelCategoryIds);
+      if (res) return verdict.needsHuman ? { ...res, actions: [contact, ...res.actions] } : res;
+    }
+
     /* Just talk: a question answered from the site's knowledge, a greeting,
        a doubt. One page to open if the model named one, the team if it could
-       not answer, and a way into the projects so the door stays open. */
+       not answer  and a next step only when the visitor is trying to do
+       something; a conversation gets no buttons. */
     if (verdict.mode === "answer" || (!verdict.recommendedIds.length && answer && intent !== "zakat" && intent !== "waqf")) {
       /* Only what fits this reply: a page the model named, the donor's own
          documents, the team when needed. No standing "browse projects" 
@@ -842,14 +864,23 @@ async function messageFlow(ctx: Ctx, text: string): Promise<ConciergeResponse> {
       let kindCampaignId: string | null = verdict.suggestion.campaignId;
       let kindText: string | null = verdict.suggestion.text.trim() || null;
       if (kind === "campaign" && !candidates.some((c) => c.id === kindCampaignId)) kind = "category";
-      if (kind === "category" || (kind === "none" && !verdict.needsHuman)) {
+      /* Wanting to give with no next step named: find the closest one. */
+      if (kind === "none" && giving && !verdict.needsHuman) kind = "category";
+      if (kind === "category") {
         const topic = intent ?? parsed.intent ?? null;
         const place = parsed.region ?? ctx.state.region ?? null;
         if (topic === "waqf" || topic === "zakat" || topic === "recurring") { kind = topic; kindCampaignId = null; kindText = null; }
         else if (place && candidates.some((c) => c.regionSlug === `region-${place}` || c.categorySlugs.includes(`region-${place}`))) { kind = "campaign"; kindCampaignId = candidates.find((c) => c.regionSlug === `region-${place}` || c.categorySlugs.includes(`region-${place}`))?.id ?? null; kindText = null; }
-        else if (kind === "none") kind = "category";
+        /* Giving, but to what is unknown: every area as a button under the
+           reply, rather than a card asking whether to show them. */
+        else if (giving) {
+          const res = categoryFlow(ctx, answer || verdict.message || undefined);
+          return { ...res, actions: [...actions, ...res.actions] };
+        }
+        /* Not giving: a conversation ends with the answer. */
+        else kind = "none";
       }
-      const suggested = verdict.needsHuman && kind === "none" ? null : suggestionBlock(ctx, kind, kindCampaignId, kindText, candidates) ?? fallbackSuggestion(ctx, intent ?? ctx.state.intent ?? null, candidates);
+      const suggested = kind === "none" ? null : suggestionBlock(ctx, kind, kindCampaignId, kindText, candidates) ?? fallbackSuggestion(ctx, intent ?? ctx.state.intent ?? null, candidates);
       /* A "browse projects" link is redundant under a specific project suggestion. */
       if (suggested?.type === "suggestion" && suggested.campaign) {
         const i = actions.findIndex((a) => a.type === "navigate" && a.route === "projects");
@@ -907,6 +938,8 @@ async function messageFlow(ctx: Ctx, text: string): Promise<ConciergeResponse> {
          still something to act on; otherwise the quick-intent chips do. */
       const recommendable: ConciergeIntent[] = ["sadaqah_jariyah", "relief", "recurring", "gift", "most_needed"];
       if (recommendable.includes(effective)) return withHuman(recommendFlow(ctx, effective, lead));
+      /* A wish to give with no area yet: the areas themselves are the answer choices. */
+      if (giving) return withHuman(categoryFlow(ctx, lead));
       const actions = [...(routeAction ? [routeAction] : []), ...chips(ctx.s)];
       return withHuman(respond(ctx, { message: lead, blocks: [], actions, mode: "llm", intent: effective, state: { intent: effective } }));
     }
@@ -922,6 +955,8 @@ async function messageFlow(ctx: Ctx, text: string): Promise<ConciergeResponse> {
   const effective: ConciergeIntent = intent ?? ctx.state.intent ?? "explore";
   const topicalRes = topical();
   if (topicalRes) return topicalRes;
+  /* A wish to give that names nothing on the site ("an Arab country"): the areas, to pick from. */
+  if (!intent && !ctx.state.region && wantsToDonate(text)) return categoryFlow(ctx);
   const res = recommendFlow(ctx, effective, undefined, undefined, undefined, Boolean(parsed.amount));
   if (!intent && !ctx.state.intent) {
     /* Nothing recognisable and no model to read it: the nearest projects,

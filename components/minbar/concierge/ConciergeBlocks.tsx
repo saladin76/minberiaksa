@@ -276,7 +276,7 @@ function Suggestion({ block, onAction, busy }: { block: Extract<ConciergeBlock, 
         <div className="cg-suggest-actions">
           <button
             type="button"
-            className="cg-btn cg-btn-primary"
+            className="cg-btn cg-btn-light"
             disabled={busy || accepted}
             onClick={() => {
               setAccepted(true);

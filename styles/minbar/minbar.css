@@ -1932,10 +1932,17 @@
 .mia-scope .cg-entry-text span { font-size: 12px; color: var(--muted); line-height: 1.5; }
 .mia-scope .cg-entry-compact { margin-top: 0; padding: 10px 12px; }
 
-.mia-scope .cg-suggest { display: flex; align-items: flex-start; gap: 12px; padding: 12px 14px; border-radius: 12px; background: var(--sand); border: 1px dashed rgba(211,154,39,.6); }
+/* The next step after a reply: quieter than the reply itself, so the answer
+   is read first  no fill, no bold, a light button. */
+.mia-scope .cg-suggest { display: flex; align-items: flex-start; gap: 10px; max-width: 92%; padding: 8px 12px; border-radius: 12px; background: transparent; border: 1px solid var(--border); }
 .mia-scope .cg-suggest-body { display: grid; gap: 6px; min-width: 0; flex: 1 1 auto; }
-.mia-scope .cg-suggest-text { margin: 0; font-size: 13.5px; font-weight: 800; line-height: 1.6; color: var(--deep); }
+.mia-scope .cg-suggest-text { margin: 0; font-size: 13px; font-weight: 600; line-height: 1.6; color: var(--muted); }
 .mia-scope .cg-suggest-actions { display: flex; align-items: center; gap: 12px; margin-top: 2px; }
+.mia-scope .cg-suggest .cg-btn { min-height: 32px; padding: 4px 14px; font-size: 12.5px; font-weight: 800; }
+.mia-scope .cg-suggest .cg-config-img { width: 38px; height: 38px; }
+/* Choices under a reply (areas, quick actions) sit below the text, never louder than it. */
+.mia-scope .cg-turn > .cg-chips .cg-chip, .mia-scope .cg-actions .cg-chip { font-weight: 700; }
+.mia-scope .cg-card .cg-btn-primary { box-shadow: none; }
 
 .mia-scope .cg-textarea { height: auto; min-height: 84px; padding: 10px 12px; resize: vertical; line-height: 1.6; font-weight: 600; }
 .mia-scope .cg-support-list { display: grid; gap: 6px; }
