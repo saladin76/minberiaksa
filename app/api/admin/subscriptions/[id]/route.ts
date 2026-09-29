@@ -101,7 +101,7 @@ export async function PATCH(
     await writeAuditLog({
       ...actor,
       action: "SUBSCRIPTION_UPDATE",
-      messageAr: `${actor.actorName ?? "مسؤول"} غيّر حالة الاشتراك من ${sub.status} إلى ${nextStatus} (${provider.rail === "STRIPE" ? `تأكيد Stripe: ${provider.providerStatus}${provider.providerPaused ? "، متوقف مؤقتًا" : ""}` : provider.rail === "ALBARAKA" ? "جدولة البركة داخلية" : "لا يوجد اشتراك لدى مزوّد الدفع"})`,
+      messageAr: `${actor.actorName ?? "مسؤول"} غيّر حالة الاشتراك من ${sub.status} إلى ${nextStatus} (${provider.rail === "STRIPE" ? `تأكيد Stripe: ${provider.providerStatus}${provider.providerPaused ? "، متوقف مؤقتًا" : ""}` : provider.rail === "ALBARAKA" ? "جدولة البركة داخلية" : provider.rail === "PAYPAL" ? "جدولة PayPal داخلية" : "لا يوجد اشتراك لدى مزوّد الدفع"})`,
       messageEn: `${actor.actorName ?? "Admin"} set subscription status ${sub.status} → ${nextStatus} (provider: ${provider.rail}${provider.providerStatus ? `, Stripe status ${provider.providerStatus}` : ""})`,
       entityType: "Subscription",
       entityId: id,

@@ -28,6 +28,7 @@ export function useMinbarMoney() {
     convertToCurrency: (value: number) => {
       convertedValue: number | null;
       currency: string | null;
+      exchangeRate?: number | null;
     };
     getSelectedCurrency: () => string;
   };
@@ -57,6 +58,15 @@ export function useMinbarMoney() {
   const selected = getSelectedCurrency();
   const code = selected && selected !== "DEFAULT" ? selected : "USD";
 
-  /** `currency` is the selector's value (may be "DEFAULT"); `symbol` is what to print beside an input. */
-  return { format, formatNumber, currency: selected, symbol: currencySymbol(code) };
+  /** Units of the selected currency per USD; null until the rates arrive. */
+  const rate = code === "USD" ? 1 : (convertToCurrency(1).exchangeRate ?? null);
+
+  /** Format a figure that is already in the selected currency (an admin's per-currency amount). */
+  const formatLocal = useCallback(
+    (value: number, options?: Intl.NumberFormatOptions) => formatMoney(value, code, locale, options),
+    [code, locale]
+  );
+
+  /** `currency` is the selector's value (may be "DEFAULT"); `code` the ISO code in effect; `symbol` is what to print beside an input. */
+  return { format, formatNumber, formatLocal, currency: selected, code, rate, symbol: currencySymbol(code) };
 }

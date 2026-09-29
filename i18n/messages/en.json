@@ -3415,5 +3415,26 @@
     "cmd_field_status": "Status",
     "a_confirm": "Confirm",
     "a_cancel": "Cancel"
+  },
+  "ProjectShares": {
+    "unitSingular": "share",
+    "unitPlural": "shares",
+    "count": "{count, plural, one {# share} other {# shares}}",
+    "countWithUnit": "{count} {unit}",
+    "pricePer": "{price} per {unit}",
+    "soldOfTotal": "{sold} of {total} {unit}",
+    "givenSoFar": "{count} {unit} given so far",
+    "chooseCount": "Choose the number of {unit}",
+    "customCountPh": "Other number"
+  },
+  "ProjectExtras": {
+    "video": "Project video",
+    "categories": "Categories",
+    "tabComments": "Donor messages",
+    "commentsEmpty": "No messages yet. Be the first to leave a prayer or a word of support.",
+    "commentPh": "Write a prayer or a word of support…",
+    "commentSend": "Send",
+    "commentSignIn": "Sign in to leave a message",
+    "commentFailed": "Your message could not be sent. Please try again."
   }
 }

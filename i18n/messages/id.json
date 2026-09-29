@@ -3343,5 +3343,26 @@
     "cmd_field_status": "Status",
     "a_confirm": "Konfirmasi",
     "a_cancel": "Batal"
+  },
+  "ProjectShares": {
+    "unitSingular": "saham",
+    "unitPlural": "saham",
+    "count": "{count} saham",
+    "countWithUnit": "{count} {unit}",
+    "pricePer": "{price} per {unit}",
+    "soldOfTotal": "{sold} dari {total} {unit}",
+    "givenSoFar": "{count} {unit} telah didonasikan",
+    "chooseCount": "Pilih jumlah {unit}",
+    "customCountPh": "Jumlah lain"
+  },
+  "ProjectExtras": {
+    "video": "Video proyek",
+    "categories": "Kategori",
+    "tabComments": "Pesan para donatur",
+    "commentsEmpty": "Belum ada pesan. Jadilah yang pertama meninggalkan doa atau kata dukungan.",
+    "commentPh": "Tulis doa atau kata dukungan…",
+    "commentSend": "Kirim",
+    "commentSignIn": "Masuk untuk meninggalkan pesan",
+    "commentFailed": "Pesan Anda tidak dapat dikirim. Silakan coba lagi."
   }
 }

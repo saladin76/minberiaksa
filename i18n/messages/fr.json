@@ -3415,5 +3415,26 @@
     "cmd_field_status": "Statut",
     "a_confirm": "Confirmer",
     "a_cancel": "Annuler"
+  },
+  "ProjectShares": {
+    "unitSingular": "part",
+    "unitPlural": "parts",
+    "count": "{count, plural, one {# part} other {# parts}}",
+    "countWithUnit": "{count} {unit}",
+    "pricePer": "{price} par {unit}",
+    "soldOfTotal": "{sold} sur {total} {unit}",
+    "givenSoFar": "{count} {unit} données jusqu'ici",
+    "chooseCount": "Choisissez le nombre de {unit}",
+    "customCountPh": "Autre nombre"
+  },
+  "ProjectExtras": {
+    "video": "Vidéo du projet",
+    "categories": "Catégories",
+    "tabComments": "Messages des donateurs",
+    "commentsEmpty": "Aucun message pour l'instant. Soyez le premier à laisser une prière ou un mot de soutien.",
+    "commentPh": "Écrivez une prière ou un mot de soutien…",
+    "commentSend": "Envoyer",
+    "commentSignIn": "Connectez-vous pour laisser un message",
+    "commentFailed": "Votre message n'a pas pu être envoyé. Veuillez réessayer."
   }
 }

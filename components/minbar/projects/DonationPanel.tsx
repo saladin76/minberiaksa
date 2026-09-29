@@ -6,6 +6,8 @@ import { useLocale, useTranslations } from "next-intl";
 import { miaPath } from "@/lib/minbar/routes";
 import { addToCart, type CartFreqKey } from "@/lib/minbar/cart";
 import { useMinbarMoney } from "@/hooks/useMinbarMoney";
+import { shareProgress, useShareWording } from "@/hooks/useShareWording";
+import { useProjectPricing } from "@/hooks/useProjectPricing";
 import type { MinbarProject } from "@/lib/minbar/projects";
 
 /**
@@ -24,6 +26,10 @@ import type { MinbarProject } from "@/lib/minbar/projects";
  *  - "Donate now" adds to the basket and routes to the cart, the same path as
  *    every other add-to-basket on the site, so the donor always sees their
  *    basket before paying.
+ *
+ * On a سهوم (shares) campaign the donor picks a number of shares instead of an
+ * amount; the amount is the count times the share price and the row carries
+ * the count, so the receipt says "3 shares".
  */
 
 const AMOUNTS = [25, 50, 100, 250, 500, 750, 1000, 2500];
@@ -38,17 +44,27 @@ const FREQUENCIES: ReadonlyArray<{ id: CartFreqKey; key: string }> = [
 /** Note length that fits the certificate's dedication line. */
 const NOTE_MAX = 90;
 
-export default function DonationPanel({ project }: { project: MinbarProject }) {
+export default function DonationPanel({ project, donorCount = 0 }: { project: MinbarProject; donorCount?: number }) {
   const locale = useLocale();
   const router = useRouter();
   const t = useTranslations("common");
   const tCart = useTranslations("cart");
   const tProjects = useTranslations("projects");
   const { format, formatNumber } = useMinbarMoney();
+  const shares = project.shares;
+  const { t: tShares, unitWord, countLabel } = useShareWording(shares);
 
-  const amounts = project.suggestedAmounts?.length ? project.suggestedAmounts : AMOUNTS;
+  const { chips: amountChips, sharePrice } = useProjectPricing(project, AMOUNTS);
 
-  const [picked, setPicked] = useState(amounts[0]);
+  /* On a shares campaign the chips are share counts, not amounts. An amount
+     chip's value is USD (the basket's unit); its label may be an admin's
+     figure in the visitor's own currency. Picked by position, so switching
+     currency keeps the same chip selected. */
+  const options = shares
+    ? shares.counts.map((count) => ({ value: count, label: countLabel(count, formatNumber(count)) }))
+    : amountChips.map((c) => ({ value: c.usd, label: c.label }));
+
+  const [picked, setPicked] = useState(0);
   const [custom, setCustom] = useState("");
   const [freq, setFreq] = useState<CartFreqKey>("once");
   const [giftOpen, setGiftOpen] = useState(false);
@@ -63,9 +79,13 @@ export default function DonationPanel({ project }: { project: MinbarProject }) {
   const [showAmount, setShowAmount] = useState(true);
   const [added, setAdded] = useState(false);
 
-  const amount = custom ? Number(custom) : picked;
+  const chosen = custom ? Number(custom) : options[picked]?.value ?? 0;
+  /* `chosen` is a share count on a shares campaign, an amount otherwise. */
+  const shareCount = shares && Number.isInteger(chosen) && chosen > 0 ? chosen : 0;
+  const amount = shares && sharePrice ? shareCount * sharePrice.usd : chosen;
   const hasFinancials = project.goal != null && project.goal > 0;
   const pct = hasFinancials ? Math.min((project.raised / (project.goal as number)) * 100, 100) : 0;
+  const progress = shares ? shareProgress(shares, project.raised, hasFinancials ? project.goal : null) : null;
   const giftReady = giftName.trim().length > 0 && (channels.whatsapp ? giftPhone.trim() : true) && (channels.email ? giftEmail.trim() : true);
 
   const chip = (active: boolean, height: number, radius: number): CSSProperties => ({
@@ -109,6 +129,7 @@ export default function DonationPanel({ project }: { project: MinbarProject }) {
     freqKey: freq,
     amount,
     currency: "USD",
+    ...(shareCount ? { shareCount } : {}),
     ...(giftReady
       ? {
           gift: {
@@ -171,44 +192,91 @@ export default function DonationPanel({ project }: { project: MinbarProject }) {
           <span style={{ display: "block", height: 7, borderRadius: 999, background: "rgba(169,52,40,.13)", overflow: "hidden" }}>
             <span style={{ display: "block", height: "100%", borderRadius: 999, width: `${pct}%`, background: "linear-gradient(-90deg, var(--red), var(--gold))" }} />
           </span>
-          <span style={{ display: "flex", justifyContent: "space-between", fontSize: 12, fontWeight: 800, color: "var(--muted)" }}>
+          <span style={{ display: "flex", justifyContent: "space-between", gap: 10, fontSize: 12, fontWeight: 800, color: "var(--muted)", flexWrap: "wrap" }}>
             <span>{tProjects("pctOfGoal", { pct: formatNumber(Math.round(pct)) })}</span>
+            {donorCount > 0 ? <span>{tProjects("donorsCount", { n: formatNumber(donorCount) })}</span> : null}
+            {progress?.total != null ? (
+              <span>
+                {tShares("soldOfTotal", {
+                  sold: formatNumber(progress.sold),
+                  total: formatNumber(progress.total),
+                  unit: unitWord(progress.total),
+                })}
+              </span>
+            ) : null}
           </span>
         </div>
       ) : (
         /* No fixed target: say so plainly rather than drawing a bar against a
-           number that does not exist. */
-        <span style={{ fontSize: 13, fontWeight: 800, color: "var(--muted)", lineHeight: 1.7 }}>
+           number that does not exist. A shares campaign still says how many
+           have been given. */
+        <span style={{ display: "grid", gap: 4, fontSize: 13, fontWeight: 800, color: "var(--muted)", lineHeight: 1.7 }}>
+          {progress && progress.sold > 0 ? (
+            <b style={{ fontSize: 17, fontWeight: 900, color: "var(--deep)" }}>
+              {tShares("givenSoFar", { count: formatNumber(progress.sold), unit: unitWord(progress.sold) })}
+            </b>
+          ) : null}
           {tProjects("noTargetNote")}
+          {donorCount > 0 ? <span>{tProjects("donorsCount", { n: formatNumber(donorCount) })}</span> : null}
         </span>
       )}
 
+      {shares ? (
+        <span
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 8,
+            padding: "10px 12px",
+            borderRadius: 10,
+            background: "var(--sand)",
+            border: "1px solid rgba(211,154,39,.42)",
+            fontSize: 14,
+            fontWeight: 900,
+            color: "#8a5d16",
+          }}
+        >
+          {tShares("pricePer", {
+            price: sharePrice?.label ?? format(shares.priceUSD),
+            unit: unitWord(1),
+          })}
+        </span>
+      ) : null}
+
       <div style={{ display: "grid", gap: 8 }}>
-        <span style={{ fontSize: 11.5, fontWeight: 900, letterSpacing: ".06em", color: "var(--muted)" }}>{tCart("chooseAmount")}</span>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(0,1fr))", gap: 6 }}>
-          {amounts.map((value) => (
+        <span style={{ fontSize: 11.5, fontWeight: 900, letterSpacing: ".06em", color: "var(--muted)" }}>
+          {shares ? tShares("chooseCount", { unit: unitWord(2) }) : tCart("chooseAmount")}
+        </span>
+        <div style={{ display: "grid", gridTemplateColumns: `repeat(${shares ? 3 : 4}, minmax(0,1fr))`, gap: 6 }}>
+          {options.map((option, index) => (
             <button
-              key={value}
+              key={index}
               type="button"
-              data-pick={picked === value && !custom ? "1" : ""}
+              data-pick={picked === index && !custom ? "1" : ""}
               onClick={() => {
-                setPicked(value);
+                setPicked(index);
                 setCustom("");
               }}
-              style={chip(picked === value && !custom, 40, 10)}
+              style={chip(picked === index && !custom, 40, 10)}
             >
-              <span dir="ltr" style={{ unicodeBidi: "isolate" }}>
-                {format(value)}
-              </span>
+              {shares ? (
+                option.label
+              ) : (
+                <span dir="ltr" style={{ unicodeBidi: "isolate" }}>
+                  {option.label}
+                </span>
+              )}
             </button>
           ))}
         </div>
         <input
           value={custom}
-          onChange={(e) => setCustom(e.target.value.replace(/[^0-9]/g, ""))}
-          inputMode="decimal"
-          placeholder={tCart("customAmountPh")}
-          aria-label={tCart("customAmountPh")}
+          /* Whole shares only; a count has no leading zero. */
+          onChange={(e) => setCustom(shares ? e.target.value.replace(/[^0-9]/g, "").replace(/^0+/, "").slice(0, 6) : e.target.value.replace(/[^0-9]/g, ""))}
+          inputMode={shares ? "numeric" : "decimal"}
+          placeholder={shares ? tShares("customCountPh") : tCart("customAmountPh")}
+          aria-label={shares ? tShares("customCountPh") : tCart("customAmountPh")}
           style={field}
         />
       </div>
@@ -398,8 +466,16 @@ export default function DonationPanel({ project }: { project: MinbarProject }) {
       </div>
 
       <span style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 10, paddingTop: 12, borderTop: "1px solid var(--border)" }}>
-        <span style={{ fontSize: 13, fontWeight: 800, color: "var(--muted)" }}>
+        <span style={{ display: "grid", gap: 2, fontSize: 13, fontWeight: 800, color: "var(--muted)" }}>
           {freq === "once" ? tCart("totalDonation") : tCart("perInstalment")}
+          {shares && shareCount ? (
+            <span style={{ fontSize: 11.5, fontWeight: 700 }}>
+              {countLabel(shareCount, formatNumber(shareCount))} ×{" "}
+              <span dir="ltr" style={{ unicodeBidi: "isolate" }}>
+                {sharePrice?.label ?? format(shares.priceUSD)}
+              </span>
+            </span>
+          ) : null}
         </span>
         <b dir="ltr" style={{ unicodeBidi: "isolate", fontSize: 21, fontWeight: 900, color: "var(--red)" }}>
           {format(amount)}

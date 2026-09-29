@@ -18,6 +18,11 @@
  *     every later one is charged by the site's own scheduler
  *     (`lib/donations/albaraka-recurring.ts`) at `nextChargeAt`, through the
  *     bank's direct /Sale as a recurring transaction.
+ *   - PAYPAL bills every cadence of a plan the donor paid with PayPal: the
+ *     first instalment is a PayPal checkout that also saves (vaults) the
+ *     wallet, and the same scheduler charges later ones against it
+ *     (`lib/donations/paypal-recurring.ts`). The payment method picks this
+ *     rail, not the cadence  `railForFrequency` is for card plans only.
  *
  * Time is handled per `DONATION_LOGIC_SPEC` § Recurring Time Contract: every
  * plan keeps an IANA timezone, the rule as structure, and a `nextChargeAt`
@@ -33,8 +38,10 @@ export type RecurringFrequency = "DAILY" | "FRIDAY" | "MONTHLY";
 export type OrderType = "ONE_TIME" | RecurringFrequency;
 /** The cart's own storage key  see `lib/minbar/cart.ts`. */
 export type CartFreqKeyLike = "once" | "daily" | "friday" | "monthly";
+/** The rails that can bill a card plan. */
+export type CardRail = "STRIPE" | "ALBARAKA";
 /** The rails that can bill a plan. */
-export type RecurringRail = "STRIPE" | "ALBARAKA";
+export type RecurringRail = CardRail | "PAYPAL";
 
 export const RECURRING_FREQUENCIES: readonly RecurringFrequency[] = ["DAILY", "FRIDAY", "MONTHLY"];
 export const ORDER_TYPES: readonly OrderType[] = ["ONE_TIME", ...RECURRING_FREQUENCIES];
@@ -111,7 +118,7 @@ export function chargesPerMonth(frequency: RecurringFrequency): number {
  * because that is the rail whose recurring transactions the site schedules
  * itself. A monthly plan follows the main gateway.
  */
-export function railForFrequency(frequency: RecurringFrequency, mainGateway: RecurringRail): RecurringRail {
+export function railForFrequency(frequency: RecurringFrequency, mainGateway: CardRail): CardRail {
   return frequency === "MONTHLY" ? mainGateway : "ALBARAKA";
 }
 

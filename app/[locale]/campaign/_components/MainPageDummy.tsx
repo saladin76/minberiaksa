@@ -101,10 +101,10 @@ interface Comment {
   id: string;
   text: string;
   createdAt: string;
+  userId?: string;
   user: {
     name: string;
     image: string;
-    email?: string;
   };
 }
 
@@ -631,7 +631,7 @@ const IntegratedCampaignPage = ({ id, locale: propLocale }: { id: string; locale
                                     <span className="text-sm font-semibold text-gray-900">{comment.user.name}</span>
                                     <span className="text-[11px] text-gray-400">{new Date(comment.createdAt).toLocaleDateString(locale === "ar" ? "ar-SA" : locale === "fr" ? "fr-FR" : "en-US")}</span>
                                   </div>
-                                  {session?.user?.email === comment.user.email && (
+                                  {Boolean(session?.user?.id) && session?.user?.id === comment.userId && (
                                     <div className="relative flex-shrink-0">
                                       <button onClick={() => setOpenDropdownId(openDropdownId === comment.id ? null : comment.id)}
                                         className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 opacity-0 group-hover:opacity-100 transition-all">

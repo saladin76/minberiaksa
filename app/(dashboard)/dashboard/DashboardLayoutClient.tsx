@@ -35,7 +35,6 @@ import { DashboardTopbar } from "./_shell/DashboardTopbar";
 import { CommandPalette } from "./_shell/CommandPalette";
 import { DashboardAutoEnhancements } from "./_components/DashboardAutoEnhancements";
 import { ProjectEditorSectionsEnhancer } from "./_components/ProjectEditorSectionsEnhancer";
-import { ProjectLocaleSlugEditor } from "./_components/ProjectLocaleSlugEditor";
 
 const COLLAPSE_STORAGE_KEY = 'dashboard-nav-collapsed';
 const DEFAULT_COLLAPSED: Record<string, boolean> = {
@@ -223,7 +222,6 @@ function DashboardContent({
     <div className="dash-vivid min-h-screen flex bg-slate-50" dir={dir}>
       <DashboardAutoEnhancements />
       <ProjectEditorSectionsEnhancer />
-      <ProjectLocaleSlugEditor />
 
       {isSidebarOpen && (
         <div

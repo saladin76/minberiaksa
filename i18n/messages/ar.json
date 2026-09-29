@@ -3413,5 +3413,26 @@
     "cmd_field_status": "الحالة",
     "a_confirm": "تأكيد",
     "a_cancel": "إلغاء"
+  },
+  "ProjectShares": {
+    "unitSingular": "سهم",
+    "unitPlural": "أسهم",
+    "count": "{count, plural, zero {# سهم} one {سهم واحد} two {سهمان} few {# أسهم} many {# سهمًا} other {# سهم}}",
+    "countWithUnit": "{count} {unit}",
+    "pricePer": "{price} لكل {unit}",
+    "soldOfTotal": "{sold} من {total} {unit}",
+    "givenSoFar": "تم التبرع بـ {count} {unit} حتى الآن",
+    "chooseCount": "اختر عدد {unit}",
+    "customCountPh": "عدد آخر"
+  },
+  "ProjectExtras": {
+    "video": "فيديو المشروع",
+    "categories": "التصنيفات",
+    "tabComments": "رسائل المتبرعين",
+    "commentsEmpty": "لا توجد رسائل بعد. كن أول من يترك دعاءً أو كلمة دعم.",
+    "commentPh": "اكتب دعاءً أو كلمة دعم…",
+    "commentSend": "إرسال",
+    "commentSignIn": "سجّل الدخول لترك رسالة",
+    "commentFailed": "تعذّر إرسال رسالتك. حاول مرة أخرى."
   }
 }

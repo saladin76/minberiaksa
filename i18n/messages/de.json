@@ -3344,5 +3344,26 @@
     "cmd_field_status": "Status",
     "a_confirm": "Bestätigen",
     "a_cancel": "Abbrechen"
+  },
+  "ProjectShares": {
+    "unitSingular": "Anteil",
+    "unitPlural": "Anteile",
+    "count": "{count, plural, one {# Anteil} other {# Anteile}}",
+    "countWithUnit": "{count} {unit}",
+    "pricePer": "{price} pro {unit}",
+    "soldOfTotal": "{sold} von {total} {unit}",
+    "givenSoFar": "Bisher {count} {unit} gespendet",
+    "chooseCount": "Anzahl der {unit} wählen",
+    "customCountPh": "Andere Anzahl"
+  },
+  "ProjectExtras": {
+    "video": "Projektvideo",
+    "categories": "Kategorien",
+    "tabComments": "Nachrichten der Spender",
+    "commentsEmpty": "Noch keine Nachrichten. Hinterlassen Sie als Erster ein Bittgebet oder ein Wort der Unterstützung.",
+    "commentPh": "Schreiben Sie ein Bittgebet oder ein Wort der Unterstützung…",
+    "commentSend": "Senden",
+    "commentSignIn": "Melden Sie sich an, um eine Nachricht zu hinterlassen",
+    "commentFailed": "Ihre Nachricht konnte nicht gesendet werden. Bitte versuchen Sie es erneut."
   }
 }

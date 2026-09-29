@@ -7,6 +7,8 @@ import { Button } from "@/components/minbar/ds";
 import { miaPath } from "@/lib/minbar/routes";
 import { useMinbarCart } from "@/hooks/useMinbarCart";
 import { useMinbarMoney } from "@/hooks/useMinbarMoney";
+import { useShareWording } from "@/hooks/useShareWording";
+import { sharePriceFor } from "@/hooks/useProjectPricing";
 import {
   cartHasRecurring,
   clearTeamSupport,
@@ -79,7 +81,8 @@ export default function CartPage({ projects, categories }: { projects: MinbarPro
   const tProjects = useTranslations("projects");
   const tCert = useTranslations("certificates");
   const tTeam = useTranslations("TeamSupport");
-  const { format, currency } = useMinbarMoney();
+  const { format, formatNumber, formatLocal, code, rate, currency } = useMinbarMoney();
+  const { unitWordFor, countLabelFor } = useShareWording();
   const { items, replace, remove, hydrated } = useMinbarCart();
 
   const [editing, setEditing] = useState<number | null>(null);
@@ -168,6 +171,10 @@ export default function CartPage({ projects, categories }: { projects: MinbarPro
   }, [addedIndex]);
   const teamRecurring = teamSupportIsRecurring(items, teamRecurringChoice);
 
+  /** Project slug → its shares setup, for rows given as a number of shares. */
+  const sharesBySlug = useMemo(() => new Map(projects.map((p) => [p.slug, p.shares])), [projects]);
+  const sharesOf = (item: MinbarCartItem) => (item.projectId ? sharesBySlug.get(item.projectId) ?? null : null);
+
   /** Project slug → its title in the active locale. */
   const titleBySlug = useMemo(
     () => new Map(projects.map((p) => [p.slug, p.title])),
@@ -208,6 +215,7 @@ export default function CartPage({ projects, categories }: { projects: MinbarPro
 
   const metaLine = (item: MinbarCartItem): string =>
     [
+      item.shareCount ? countLabelFor(sharesOf(item), item.shareCount, formatNumber(item.shareCount)) : "",
       item.typeKey && item.typeKey !== "extra" && TYPE_LABEL[item.typeKey] && t.has(TYPE_LABEL[item.typeKey])
         ? t(TYPE_LABEL[item.typeKey])
         : "",
@@ -264,7 +272,16 @@ export default function CartPage({ projects, categories }: { projects: MinbarPro
 
   const commitEdit = (index: number) => {
     const value = Number(draft);
-    if (value > 0) replace(items.map((item, i) => (i === index ? { ...item, amount: value } : item)));
+    /* A shares row is edited as a count and re-priced from the share price, so
+       its amount can never drift from count × price. A row whose campaign no
+       longer sells shares is edited as a plain amount and loses its count. */
+    const edited = (item: MinbarCartItem): MinbarCartItem => {
+      const shares = item.shareCount ? sharesOf(item) : null;
+      const price = sharePriceFor(shares, code, rate, format, formatLocal);
+      if (shares && price) return Number.isInteger(value) ? { ...item, shareCount: value, amount: value * price.usd } : item;
+      return { ...item, amount: value, shareCount: undefined };
+    };
+    if (value > 0) replace(items.map((item, i) => (i === index ? edited(item) : item)));
     setEditing(null);
     setDraft("");
   };
@@ -422,6 +439,11 @@ export default function CartPage({ projects, categories }: { projects: MinbarPro
                               aria-label={tCommon("editAmount")}
                               style={{ width: 96, height: 36, padding: "0 10px", border: "1px solid var(--border)", borderRadius: 8, fontFamily: "inherit", fontSize: 13.5, fontWeight: 800, color: "var(--deep)", boxSizing: "border-box", unicodeBidi: "isolate" }}
                             />
+                            {item.shareCount && sharesOf(item) ? (
+                              <span style={{ fontSize: 12.5, fontWeight: 800, color: "var(--muted)", whiteSpace: "nowrap" }}>
+                                {unitWordFor(sharesOf(item), Number(draft) || 2)}
+                              </span>
+                            ) : null}
                             <button type="button" onClick={() => commitEdit(index)} aria-label={tCommon("add")} className="cart-ok" style={iconBtn("var(--green)", "rgba(31,122,77,.08)")}>
                               <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                                 <path d="M20 6 9 17l-5-5" />
@@ -439,7 +461,7 @@ export default function CartPage({ projects, categories }: { projects: MinbarPro
                             className="cart-amt-btn"
                             onClick={() => {
                               setEditing(index);
-                              setDraft(String(item.amount));
+                              setDraft(String(item.shareCount && sharesOf(item) ? item.shareCount : item.amount));
                             }}
                             title={tCommon("editAmount")}
                             aria-label={tCommon("editAmount")}

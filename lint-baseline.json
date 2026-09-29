@@ -8,7 +8,6 @@
     "app/(dashboard)/dashboard/_components/data-table.tsx :: @typescript-eslint/no-explicit-any": 2,
     "app/(dashboard)/dashboard/_components/data-table.tsx :: @typescript-eslint/no-unused-vars": 3,
     "app/(dashboard)/dashboard/_components/data-table.tsx :: react-hooks/exhaustive-deps": 1,
-    "app/(dashboard)/dashboard/_components/ProjectLocaleSlugEditor.tsx :: @typescript-eslint/no-explicit-any": 7,
     "app/(dashboard)/dashboard/_components/SeoTextImproverCard.tsx :: @typescript-eslint/no-explicit-any": 1,
     "app/(dashboard)/dashboard/_components/SmartSeoWorkbenchCard.tsx :: @typescript-eslint/no-explicit-any": 4,
     "app/(dashboard)/dashboard/_shell/DashboardSidebar.tsx :: @next/next/no-img-element": 2,

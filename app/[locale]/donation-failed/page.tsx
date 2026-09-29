@@ -181,6 +181,19 @@ export default function DonationFailedPage() {
       // card details, so there's nothing to redirect to  bounce those donors back
       // to the campaign dialog. Default to Stripe for everything else.
       const provider = (donation.provider ?? "STRIPE").toUpperCase();
+      /* PayPal: a new PayPal order for the clone, built by the server from
+         the stored amount, and straight back to PayPal. */
+      if (provider === "PAYPAL" || res.data?.paymentMethod === "PAYPAL") {
+        const order = await axios.post("/api/paypal/orders", {
+          donationId: newId,
+          locale,
+          ...(res.data?.accessToken ? { t: res.data.accessToken } : {}),
+        });
+        const approveUrl = order.data?.approveUrl as string | undefined;
+        if (!approveUrl) throw new Error("paypal returned no url");
+        window.location.href = approveUrl;
+        return;
+      }
       if (provider === "PAYFOR" || provider === "ALBARAKA") {
         toast.success(t("retry.payforHint"));
         router.push("/campaigns");

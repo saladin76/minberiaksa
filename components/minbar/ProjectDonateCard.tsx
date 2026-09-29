@@ -7,6 +7,8 @@ import { miaPath } from "@/lib/minbar/routes";
 import { addToCart } from "@/lib/minbar/cart";
 import type { MinbarProject } from "@/lib/minbar/projects";
 import { useMinbarMoney } from "@/hooks/useMinbarMoney";
+import { shareProgress, useShareWording } from "@/hooks/useShareWording";
+import { useProjectPricing } from "@/hooks/useProjectPricing";
 
 /**
  * The site's project card  a full-bleed field photograph under a dark scrim,
@@ -21,6 +23,9 @@ import { useMinbarMoney } from "@/hooks/useMinbarMoney";
  *
  * The progress bar and figures are hidden entirely when a project has no fixed
  * goal, rather than drawn against a number that means nothing.
+ *
+ * A سهوم (shares) campaign shows its share price, and its chips are share
+ * counts: the row added to the basket is count × price and carries the count.
  */
 
 const QUICK_AMOUNTS = [100, 300, 500, 700];
@@ -36,17 +41,30 @@ export interface ProjectDonateCardProps {
 export default function ProjectDonateCard({ project, width, tag }: ProjectDonateCardProps) {
   const locale = useLocale();
   const t = useTranslations("common");
-  const { format } = useMinbarMoney();
+  const { format, formatNumber } = useMinbarMoney();
+  const shares = project.shares;
+  const { t: tShares, unitWord, countLabel } = useShareWording(shares);
 
-  const [picked, setPicked] = useState<number>(QUICK_AMOUNTS[0]);
+  const { chips: amountChips, sharePrice } = useProjectPricing(project, QUICK_AMOUNTS);
+
+  /* A shares card offers share counts; four chips fit the row like the
+     amounts do. Amount chips carry USD with a label that may be an admin's
+     figure in the visitor's currency; picked by position. */
+  const options = shares
+    ? shares.counts.slice(0, 4).map((count) => ({ value: count, label: countLabel(count, formatNumber(count)) }))
+    : amountChips.map((c) => ({ value: c.usd, label: c.label }));
+
+  const [picked, setPicked] = useState(0);
   const [custom, setCustom] = useState("");
   const [added, setAdded] = useState(false);
 
   const href = miaPath("projectDetail", locale, project.slug);
-  const amount = custom ? Number(custom) : picked;
+  const chosen = custom ? Number(custom) : options[picked]?.value ?? 0;
+  const shareCount = shares && Number.isInteger(chosen) && chosen > 0 ? chosen : 0;
+  const amount = shares && sharePrice ? shareCount * sharePrice.usd : chosen;
   const hasFinancials = project.goal != null && project.goal > 0;
   const pct = hasFinancials ? Math.min((project.raised / (project.goal as number)) * 100, 100) : 0;
-  const amounts = project.suggestedAmounts?.length ? project.suggestedAmounts : QUICK_AMOUNTS;
+  const progress = shares ? shareProgress(shares, project.raised, hasFinancials ? project.goal : null) : null;
 
   const chipStyle = (active: boolean): CSSProperties => ({
     height: 34,
@@ -72,6 +90,7 @@ export default function ProjectDonateCard({ project, width, tag }: ProjectDonate
       freqKey: "once",
       amount,
       currency: "USD",
+      ...(shareCount ? { shareCount } : {}),
     });
     setAdded(true);
     window.setTimeout(() => setAdded(false), 2400);
@@ -170,32 +189,57 @@ export default function ProjectDonateCard({ project, width, tag }: ProjectDonate
                 {t("goal")} {format(project.goal as number)}
               </span>
             </span>
+            {progress?.total != null ? (
+              <span style={{ fontSize: 12, fontWeight: 800, color: "rgba(255,255,255,.72)" }}>
+                {tShares("soldOfTotal", {
+                  sold: formatNumber(progress.sold),
+                  total: formatNumber(progress.total),
+                  unit: unitWord(progress.total),
+                })}
+              </span>
+            ) : null}
           </div>
+        ) : progress && progress.sold > 0 ? (
+          /* No target to draw a bar against, but the count given so far still
+             tells the donor the campaign is moving. */
+          <span style={{ fontSize: 12.5, fontWeight: 800, color: "rgba(255,255,255,.78)" }}>
+            {tShares("givenSoFar", { count: formatNumber(progress.sold), unit: unitWord(progress.sold) })}
+          </span>
+        ) : null}
+
+        {shares ? (
+          <span style={{ justifySelf: "start", padding: "5px 12px", borderRadius: 999, background: "rgba(211,154,39,.2)", border: "1px solid rgba(211,154,39,.55)", color: "#fff", fontSize: 12.5, fontWeight: 900 }}>
+            {tShares("pricePer", { price: sharePrice?.label ?? format(shares.priceUSD), unit: unitWord(1) })}
+          </span>
         ) : null}
 
         <div style={{ display: "flex", gap: 7, flexWrap: "wrap" }}>
-          {amounts.map((value) => (
+          {options.map((option, index) => (
             <button
-              key={value}
+              key={index}
               type="button"
-              data-amt={picked === value && !custom ? "card" : ""}
+              data-amt={picked === index && !custom ? "card" : ""}
               onClick={() => {
-                setPicked(value);
+                setPicked(index);
                 setCustom("");
               }}
-              style={chipStyle(picked === value && !custom)}
+              style={chipStyle(picked === index && !custom)}
             >
-              <span dir="ltr" style={{ unicodeBidi: "isolate" }}>
-                {format(value)}
-              </span>
+              {shares ? (
+                option.label
+              ) : (
+                <span dir="ltr" style={{ unicodeBidi: "isolate" }}>
+                  {option.label}
+                </span>
+              )}
             </button>
           ))}
           <input
             value={custom}
-            onChange={(e) => setCustom(e.target.value.replace(/[^0-9]/g, ""))}
-            inputMode="decimal"
-            placeholder={t("freeAmount")}
-            aria-label={t("freeAmount")}
+            onChange={(e) => setCustom(shares ? e.target.value.replace(/[^0-9]/g, "").replace(/^0+/, "").slice(0, 6) : e.target.value.replace(/[^0-9]/g, ""))}
+            inputMode={shares ? "numeric" : "decimal"}
+            placeholder={shares ? tShares("customCountPh") : t("freeAmount")}
+            aria-label={shares ? tShares("customCountPh") : t("freeAmount")}
             /* Takes the whole rest of the row. Capped at 14ch it left a ragged
                gap after the last chip on wide cards; growing into that space
                squares the row off and gives the translated labels (Montant

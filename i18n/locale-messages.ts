@@ -58,8 +58,10 @@ export function messagesFor(locale: string): MessageObject {
  */
 /* `Concierge` rides in the shell: the donation concierge's launcher is mounted
    by the layout and its page-level entry points sit inside pages' own
-   providers, which replace rather than extend the layout's messages. */
-export const SHELL_NAMESPACES = ["common", "navigation", "system", "validation", "projects", "Concierge"] as const;
+   providers, which replace rather than extend the layout's messages.
+   `ProjectShares` rides with `projects` for the same reason: the project card
+   that needs it is rendered on pages across the site. */
+export const SHELL_NAMESPACES = ["common", "navigation", "system", "validation", "projects", "Concierge", "ProjectShares"] as const;
 
 /**
  * Legacy namespaces belonging to the pre-Minbar public pages. They stay in the

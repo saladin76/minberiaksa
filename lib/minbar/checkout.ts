@@ -109,7 +109,7 @@ export interface OrderGift {
 }
 
 export interface OrderLines {
-  items: Array<{ campaignId: string; amount: number; gift?: OrderGift }>;
+  items: Array<{ campaignId: string; amount: number; shareCount?: number; gift?: OrderGift }>;
   categoryItems: Array<{ categoryId: string; amount: number }>;
   /**
    * Waqf rows carry no amount: the server prices them from the fixed unit
@@ -142,6 +142,7 @@ export function toOrderItems(
       lines.items.push({
         campaignId,
         amount: item.amount,
+        ...(item.shareCount ? { shareCount: item.shareCount } : {}),
         ...(item.gift
           ? {
               gift: {
@@ -266,6 +267,22 @@ export async function createDonation(input: CreateDonationInput): Promise<Create
     subscriptionId: payload.subscription?.id ?? null,
     bankTransferToken: payload.bankTransfer?.accessToken ?? null,
   };
+}
+
+/**
+ * Create the PayPal order for a donation and get the URL to send the donor
+ * to. Only the donation id (and a guest's access token) is sent: the server
+ * reads the amount and currency from the donation itself.
+ */
+export async function startPayPalPayment(donationId: string, locale: string, accessToken: string | null): Promise<string> {
+  const response = await fetch("/api/paypal/orders", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ donationId, locale, ...(accessToken ? { t: accessToken } : {}) }),
+  });
+  const payload = (await response.json().catch(() => null)) as { approveUrl?: string; error?: string } | null;
+  if (!response.ok || !payload?.approveUrl) throw new Error(payload?.error || "paypal-failed");
+  return payload.approveUrl;
 }
 
 /**

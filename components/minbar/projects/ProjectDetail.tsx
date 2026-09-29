@@ -4,12 +4,14 @@ import { useState } from "react";
 import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
 import { miaPath } from "@/lib/minbar/routes";
-import type { MinbarProject, MinbarProjectUpdate } from "@/lib/minbar/projects";
+import type { MinbarProject, MinbarProjectComment, MinbarProjectUpdate } from "@/lib/minbar/projects";
 import ZakatBanner from "@/components/minbar/banners/ZakatBanner";
 import TravelBanner from "@/components/minbar/banners/TravelBanner";
 import IbadanBanner from "@/components/minbar/banners/IbadanBanner";
 import { ArrowGlyph } from "@/components/minbar/home/TopSections";
 import DonationPanel from "./DonationPanel";
+import ProjectVideo from "./ProjectVideo";
+import ProjectComments from "./ProjectComments";
 import ConciergeEntry from "@/components/minbar/concierge/ConciergeEntry";
 
 /**
@@ -18,6 +20,10 @@ import ConciergeEntry from "@/components/minbar/concierge/ConciergeEntry";
  * Breadcrumb, hero, the sticky donation panel, a tabbed body (about / field
  * updates / gallery), a project FAQ with zakat and waqf cross-links, and
  * related projects.
+ *
+ * Every campaign field the page can show is shown: the whole formatted
+ * description, the campaign's own video and photos, each category it is filed
+ * under, how many donors it has, and donors' messages.
  *
  * The Updates and Gallery tabs only appear when there is something in them.
  * The handoff is firm that reports and photographs are shown once approved and
@@ -29,19 +35,29 @@ export interface ProjectDetailProps {
   updates: MinbarProjectUpdate[];
   gallery: string[];
   related: MinbarProject[];
+  /** Settled donations to this campaign. */
+  donorCount: number;
+  comments: MinbarProjectComment[];
 }
 
-export default function ProjectDetail({ project, updates, gallery, related }: ProjectDetailProps) {
+/** The hero shows the opening of the description; the About tab has all of it. */
+const HERO_SUMMARY_MAX = 280;
+
+export default function ProjectDetail({ project, updates, gallery, related, donorCount, comments }: ProjectDetailProps) {
   const locale = useLocale();
   const t = useTranslations("projects");
   const tCommon = useTranslations("common");
   const tNav = useTranslations("navigation");
   const tHome = useTranslations("homepage");
+  const tExtras = useTranslations("ProjectExtras");
+  const summary = project.text.length > HERO_SUMMARY_MAX ? `${project.text.slice(0, HERO_SUMMARY_MAX - 1).trimEnd()}…` : project.text;
 
   const tabs = [
     { id: "about", label: t("tabAbout"), available: true },
     { id: "updates", label: t("tabUpdates"), available: updates.length > 0 },
     { id: "gallery", label: t("tabField"), available: gallery.length > 0 },
+    /* Always offered: an empty list still invites the first message. */
+    { id: "comments", label: comments.length ? `${tExtras("tabComments")} (${comments.length})` : tExtras("tabComments"), available: true },
   ].filter((tab) => tab.available);
 
   const [tab, setTab] = useState("about");
@@ -110,11 +126,33 @@ export default function ProjectDetail({ project, updates, gallery, related }: Pr
 
             <div style={{ display: "grid", gap: 12 }}>
               <h1 style={{ margin: 0, fontSize: "clamp(27px,3vw,40px)", lineHeight: 1.32, fontWeight: 900, letterSpacing: "-.01em" }}>{project.title}</h1>
-              <p style={{ margin: 0, maxWidth: "66ch", fontSize: 16.5, lineHeight: 1.95, color: "var(--muted)" }}>{project.text}</p>
+              <p style={{ margin: 0, maxWidth: "66ch", fontSize: 16.5, lineHeight: 1.95, color: "var(--muted)" }}>{summary}</p>
+              {project.categories.length ? (
+                <nav aria-label={tExtras("categories")} style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
+                  {project.categories.map((category) => (
+                    <Link
+                      key={category.id}
+                      /* By id: the category route resolves it to the canonical, localised page. */
+                      href={`/${locale}/category/${category.id}`}
+                      style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "5px 12px", borderRadius: 999, border: "1px solid rgba(211,154,39,.5)", background: "var(--sand)", color: "#8a5d16", fontSize: 12.5, fontWeight: 900 }}
+                    >
+                      <span aria-hidden="true" style={{ width: 5, height: 5, background: "var(--gold)", transform: "rotate(45deg)" }} />
+                      {category.label}
+                    </Link>
+                  ))}
+                </nav>
+              ) : null}
             </div>
+
+            {project.videoUrl ? (
+              <div style={{ display: "grid", gap: 10 }}>
+                <b style={{ fontSize: 15.5 }}>{tExtras("video")}</b>
+                <ProjectVideo url={project.videoUrl} title={project.title} />
+              </div>
+            ) : null}
           </div>
 
-          <DonationPanel project={project} />
+          <DonationPanel project={project} donorCount={donorCount} />
           <ConciergeEntry intent="current_page" />
         </div>
       </section>
@@ -139,7 +177,20 @@ export default function ProjectDetail({ project, updates, gallery, related }: Pr
 
             {tab === "about" ? (
               <div style={{ display: "grid", gap: 20 }}>
-                <p style={{ margin: 0, fontSize: 16.5, lineHeight: 2, color: "var(--muted)" }}>{project.text}</p>
+                {/* The description as written in the dashboard's editor 
+                    headings, paragraphs and list items. */}
+                {project.body.map((block, index) =>
+                  block.kind === "h2" ? (
+                    <h2 key={index} style={{ margin: "6px 0 0", fontSize: 20, lineHeight: 1.5, fontWeight: 900 }}>{block.text}</h2>
+                  ) : block.kind === "li" ? (
+                    <p key={index} style={{ margin: 0, display: "flex", gap: 10, fontSize: 16.5, lineHeight: 2, color: "var(--muted)" }}>
+                      <span aria-hidden="true" style={{ flex: "0 0 auto", width: 6, height: 6, marginTop: 14, background: "var(--gold)", transform: "rotate(45deg)" }} />
+                      <span>{block.text}</span>
+                    </p>
+                  ) : (
+                    <p key={index} style={{ margin: 0, fontSize: 16.5, lineHeight: 2, color: "var(--muted)" }}>{block.text}</p>
+                  )
+                )}
                 {/* Two standing paragraphs the handoff shows on every project:
                     how the work is executed, and how it is verified. */}
                 <p style={{ margin: 0, fontSize: 16.5, lineHeight: 2, color: "var(--muted)" }}>{t("execParagraph", { region: project.regionLabel ?? tCommon("regionGeneral") })}</p>
@@ -166,6 +217,8 @@ export default function ProjectDetail({ project, updates, gallery, related }: Pr
                 ))}
               </div>
             ) : null}
+
+            {tab === "comments" ? <ProjectComments projectId={project.id} initial={comments} /> : null}
 
             {tab === "gallery" ? (
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(210px,1fr))", gap: 12 }}>

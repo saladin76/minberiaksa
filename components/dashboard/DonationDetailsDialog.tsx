@@ -293,7 +293,9 @@ function PaymentView({ donation }: { donation: DonationDetailsTarget }) {
         ? "PayFor (Ziraat)"
         : provider === "ALBARAKA"
           ? "Albaraka Türk"
-          : provider ?? "—";
+          : provider === "PAYPAL"
+            ? "PayPal"
+            : provider ?? "—";
 
   const methodLabel =
     method === "CARD" ? "بطاقة ائتمانية" : method === "PAYPAL" ? "PayPal" : method ?? "—";

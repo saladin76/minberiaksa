@@ -34,6 +34,7 @@ import {
 } from "@/lib/donations/recurring-schedule";
 import { parseMainGateway } from "@/lib/payment-gateway";
 import { isAlbarakaConfigured, isAlbarakaRecurringEnabled } from "@/lib/albaraka";
+import { isPayPalConfigured, isPayPalRecurringEnabled } from "@/lib/paypal";
 import { mintDonationAccessToken } from "@/lib/donations/access-token";
 import { giftLineData, parseGiftOrder, type GiftOrderInput } from "@/lib/donations/gift-order";
 import { recordConciergeEvents } from "@/lib/ai/concierge/events";
@@ -244,6 +245,15 @@ export async function POST(request: NextRequest) {
        recurring basket, and this is the server's half of that rule. */
     if (isBankTransfer && frequency) {
       return NextResponse.json({ error: "Bank transfer cannot be used for a recurring donation" }, { status: 400 });
+    }
+    /* PayPal is refused before an order exists when the server cannot take
+       it: a PENDING row the donor can never pay helps nobody. */
+    const isPayPal = paymentMethod === "PAYPAL";
+    if (isPayPal && !(frequency ? isPayPalRecurringEnabled() : isPayPalConfigured())) {
+      return NextResponse.json(
+        { error: frequency ? "Recurring donations with PayPal are not available at the moment" : "PayPal is not available at the moment" },
+        { status: 400 }
+      );
     }
     const lineOk = (line: { amount: unknown }) =>
       typeof line?.amount === "number" && Number.isFinite(line.amount) && line.amount > 0;
@@ -519,7 +529,10 @@ export async function POST(request: NextRequest) {
         orderBy: { createdAt: "asc" },
         select: { mainGateway: true },
       });
-      const rail = railForFrequency(frequency, parseMainGateway(settings?.mainGateway));
+      /* A PayPal plan is billed by PayPal at any cadence (its wallet is
+         vaulted at the first instalment); a card plan's rail follows the
+         cadence and the main gateway. */
+      const rail = isPayPal ? ("PAYPAL" as const) : railForFrequency(frequency, parseMainGateway(settings?.mainGateway));
       if (rail === "ALBARAKA" && !(isAlbarakaConfigured() && isAlbarakaRecurringEnabled())) {
         return NextResponse.json(
           { error: "Recurring donations at this frequency are not available at the moment" },
@@ -588,6 +601,7 @@ export async function POST(request: NextRequest) {
             referralId: referralId ?? undefined,
             subscriptionId: sub.id,
             paymentMethod,
+            ...(isPayPal ? { provider: "PAYPAL" } : {}),
             cardDetails: null,
             ...(conciergeAttribution ? { attribution: conciergeAttribution } : {}),
             ...campaignLines,
@@ -628,7 +642,7 @@ export async function POST(request: NextRequest) {
         messageAr: `${donorName ?? "متبرع"} بدأ عملية دفع تبرعًا ${frequency === "DAILY" ? "يوميًا" : frequency === "FRIDAY" ? "كل جمعة" : "شهريًا"} عبر السلة (≈ ${donationTotalUsd.toFixed(0)} USD لكل دورة)`,
         entityType: "Donation",
         entityId: d.id,
-        metadata: { amountUSD: donationTotalUsd, via: "cart_payment", status: "PENDING", provider: "STRIPE", frequency, timezone, nextChargeAt: consent.nextChargeAt },
+        metadata: { amountUSD: donationTotalUsd, via: "cart_payment", status: "PENDING", provider: rail, frequency, timezone, nextChargeAt: consent.nextChargeAt },
         stream: auditStreamForRole(actorRole),
       });
 
@@ -671,7 +685,9 @@ export async function POST(request: NextRequest) {
           cardDetails: null,
           ...(isBankTransfer
             ? { provider: BANK_TRANSFER_PROVIDER, providerTxnResult: "Pending" }
-            : {}),
+            : isPayPal
+              ? { provider: "PAYPAL" }
+              : {}),
           ...(conciergeAttribution ? { attribution: conciergeAttribution } : {}),
           ...campaignLines,
           ...categoryLines,
@@ -722,7 +738,7 @@ export async function POST(request: NextRequest) {
         : `${donorName ?? "متبرع"} بدأ عملية دفع تبرعًا لمرة واحدة عبر السلة (≈ ${donationTotalUsd.toFixed(0)} USD)`,
       entityType: "Donation",
       entityId: donationRow.id,
-      metadata: { amountUSD: donationTotalUsd, via: "cart_payment", status: "PENDING", provider: isBankTransfer ? BANK_TRANSFER_PROVIDER : "PAYFOR" },
+      metadata: { amountUSD: donationTotalUsd, via: "cart_payment", status: "PENDING", provider: isBankTransfer ? BANK_TRANSFER_PROVIDER : isPayPal ? "PAYPAL" : "PAYFOR" },
       stream: auditStreamForRole(actorRole),
     });
 

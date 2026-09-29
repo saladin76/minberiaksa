@@ -4,6 +4,12 @@ import { prisma } from "@/lib/prisma";
 import { NOT_SOFT_DELETED } from "@/lib/campaign/soft-delete-filter";
 import { pickTranslation, translationLocaleWhere } from "@/lib/i18n/translation-fallback";
 import { whereByIdOrAnyLocaleSlug } from "@/lib/slug";
+import { FUNDRAISING_SHARES, parseSuggestedShareCounts } from "@/lib/campaign/campaign-modes";
+import { parseShareLabels } from "@/lib/campaign/share-labels";
+import { parseSuggestedDonations } from "@/lib/campaign/suggested-donations";
+import { contentToBlocks, type ArticleBlock } from "@/lib/blog/rich-text";
+import { PAID_DONATION_FILTER } from "@/lib/dashboard/donation-usd-revenue";
+import { normalizeSeoFields, type ProjectSeoFields } from "@/lib/campaign/project-seo";
 
 /**
  * Project data for the Minbar pages.
@@ -22,6 +28,12 @@ import { whereByIdOrAnyLocaleSlug } from "@/lib/slug";
  *                 renders without a progress bar
  *   region      ← first category slug, which is how the handoff's filters group
  *   image       ← per-locale cover when set, else images[0]
+ *   images      ← the whole gallery, with the per-locale cover first
+ *   videoUrl    ← per-locale video when set, else Campaign.videoUrl
+ *   categories  ← every category the campaign is filed under, in order
+ *   shares      ← set only for a سهوم campaign (fundraisingMode SHARES with a
+ *                 positive sharePriceUSD): the donor gives whole shares and
+ *                 the amount is always count × price
  *
  * Amounts are USD as stored; the display layer converts with the visitor's
  * selected rate. `DEVELOPER_HANDOFF §10` is explicit that currency conversion is
@@ -32,7 +44,13 @@ export interface MinbarProject {
   id: string;
   slug: string;
   title: string;
+  /** The description as plain text (it is stored as Tiptap JSON, HTML or text). */
   text: string;
+  /**
+   * The description's structure  headings, paragraphs, list items. Filled
+   * by `getProject` only; lists (cards) leave it empty to keep pages light.
+   */
+  body: ArticleBlock[];
   image: string | null;
   /** Category slug  the handoff's regional filter key (gaza, al-quds, …). */
   region: string | null;
@@ -40,9 +58,39 @@ export interface MinbarProject {
   /** USD. `null` goal means an open-ended campaign: no bar, no percentage. */
   raised: number;
   goal: number | null;
+  /** Every photo of the campaign, the cover (per-locale when set) first. */
+  images: string[];
+  /** Per-locale video when set, else the campaign's own. */
+  videoUrl: string | null;
+  /** Every category the campaign is filed under. `region` is the first. */
+  categories: Array<{ id: string; slug: string | null; label: string }>;
   /** Quick-pick amounts configured per campaign, if any. */
   suggestedAmounts: number[] | null;
+  /**
+   * Quick-pick amounts per currency code, in that currency (not USD). Used
+   * in place of `suggestedAmounts` for a visitor browsing in that currency.
+   */
+  suggestedAmountsByCurrency: Record<string, number[]> | null;
   priority: number | null;
+  /**
+   * Set on a سهوم (shares) campaign: donors pick a number of shares rather
+   * than an amount. `null` for an ordinary amount campaign.
+   */
+  shares: MinbarProjectShares | null;
+}
+
+export interface MinbarProjectShares {
+  /** Price of one share, USD. */
+  priceUSD: number;
+  /** Quick-pick share counts, ascending. */
+  counts: number[];
+  /** The price of one share in a given currency, set by an admin (not USD). */
+  priceByCurrency: Record<string, number> | null;
+  /**
+   * The campaign's own name for its unit in this locale (e.g. خروف / خراف),
+   * or `null` to use the generic "share / shares" wording.
+   */
+  unit: { singular: string; plural: string } | null;
 }
 
 /** Prisma select shared by every read here, so the shape can't drift. */
@@ -53,13 +101,21 @@ function selectFor(locale: string) {
     title: true,
     description: true,
     images: true,
+    videoUrl: true,
     targetAmount: true,
     currentAmount: true,
     goalType: true,
     priority: true,
     suggestedDonations: true,
+    fundraisingMode: true,
+    sharePriceUSD: true,
+    suggestedShareCounts: true,
+    shareLabels: true,
+    categoryPriorities: true,
+    createdAt: true,
     categories: {
       select: {
+        id: true,
         slug: true,
         name: true,
         translations: { where: translationLocaleWhere(locale), select: { locale: true, name: true } },
@@ -67,7 +123,7 @@ function selectFor(locale: string) {
     },
     translations: {
       where: translationLocaleWhere(locale),
-      select: { locale: true, title: true, description: true, slug: true, image: true },
+      select: { locale: true, title: true, description: true, slug: true, image: true, videoUrl: true },
     },
   } as const;
 }
@@ -78,12 +134,20 @@ type CampaignRow = {
   title: string;
   description: string;
   images: string[];
+  videoUrl: string | null;
   targetAmount: number;
   currentAmount: number;
   goalType: string;
   priority: number | null;
   suggestedDonations: unknown;
+  fundraisingMode: string;
+  sharePriceUSD: number | null;
+  suggestedShareCounts: unknown;
+  shareLabels: unknown;
+  categoryPriorities: unknown;
+  createdAt: Date;
   categories: Array<{
+    id: string;
     slug: string | null;
     name: string;
     translations: Array<{ locale: string; name: string }>;
@@ -94,10 +158,32 @@ type CampaignRow = {
     description: string;
     slug: string | null;
     image: string | null;
+    videoUrl: string | null;
   }>;
 };
 
-function toProject(row: CampaignRow, locale: string): MinbarProject {
+/**
+ * The shares setup of a سهوم campaign, or `null`. A SHARES campaign saved
+ * without a usable price is treated as an amount campaign: there is nothing
+ * to multiply a count by.
+ */
+function sharesFor(row: CampaignRow, locale: string): MinbarProjectShares | null {
+  if (row.fundraisingMode !== FUNDRAISING_SHARES) return null;
+  const price = Number(row.sharePriceUSD);
+  if (!Number.isFinite(price) || price <= 0) return null;
+  /* Only this locale's unit name: a French page must not borrow the Arabic
+     خراف because French was left blank  the generic wording reads better. */
+  const unit = parseShareLabels(row.shareLabels)?.[locale] ?? null;
+  const shareConfig = parseSuggestedShareCounts(row.suggestedShareCounts);
+  return {
+    priceUSD: price,
+    counts: shareConfig.counts,
+    priceByCurrency: shareConfig.priceByCurrency && Object.keys(shareConfig.priceByCurrency).length ? shareConfig.priceByCurrency : null,
+    unit: unit ? { singular: unit.singular, plural: unit.plural } : null,
+  };
+}
+
+function toProject(row: CampaignRow, locale: string, detail = false): MinbarProject {
   const t = pickTranslation(row.translations, locale);
   const category = row.categories?.[0];
   const categoryT = pickTranslation(category?.translations ?? [], locale);
@@ -115,18 +201,47 @@ function toProject(row: CampaignRow, locale: string): MinbarProject {
         ) as number[])
       : null;
 
+  /* Descriptions are written in the dashboard's rich-text editor and stored
+     as Tiptap JSON (older rows: HTML or plain text). Shown raw, the page and
+     its meta description printed the JSON. */
+  const rawDescription = t?.description || row.description;
+  /* Markdown pasted into the editor arrives as paragraphs that still start
+     with "###" or "- "; read those as the heading or list item they are. */
+  const body = contentToBlocks(rawDescription).map((block): ArticleBlock => {
+    if (block.kind !== "p") return block;
+    const heading = block.text.match(/^#{1,6}\s+(.+)$/);
+    if (heading) return { kind: "h2", text: heading[1] };
+    const item = block.text.match(/^[-*•]\s+(.+)$/);
+    return item ? { kind: "li", text: item[1] } : block;
+  });
+  const text = body.length ? body.map((b) => b.text).join(" ").replace(/\s+/g, " ").trim() : rawDescription;
+
+  const byCurrency = row.suggestedDonations ? parseSuggestedDonations(row.suggestedDonations).byCurrency : {};
+  const cover = t?.image || row.images?.[0] || null;
+  const images = [...new Set([...(cover ? [cover] : []), ...(row.images ?? []).slice(t?.image ? 1 : 0)].filter(Boolean))];
+
   return {
     id: row.id,
     slug: t?.slug || row.slug || row.id,
     title: t?.title || row.title,
-    text: t?.description || row.description,
-    image: t?.image || row.images?.[0] || null,
+    text,
+    body: detail ? (body.length ? body : [{ kind: "p", text }]) : [],
+    image: cover,
+    images,
+    videoUrl: t?.videoUrl || row.videoUrl || null,
+    categories: (row.categories ?? []).map((c) => ({
+      id: c.id,
+      slug: c.slug,
+      label: pickTranslation(c.translations ?? [], locale)?.name || c.name,
+    })),
+    suggestedAmountsByCurrency: Object.keys(byCurrency).length ? byCurrency : null,
     region: category?.slug ?? null,
     regionLabel: categoryT?.name || category?.name || null,
     raised: row.currentAmount,
     goal,
     suggestedAmounts: suggested && suggested.length ? suggested : null,
     priority: row.priority,
+    shares: sharesFor(row, locale),
   };
 }
 
@@ -163,10 +278,22 @@ export async function listProjectsInCategory(
     where: { AND: [{ isActive: true }, NOT_SOFT_DELETED, { categoryIds: { has: categoryId } }] },
     select: selectFor(locale),
     orderBy: [{ priority: "asc" }, { createdAt: "desc" }],
-    ...(limit ? { take: limit } : {}),
   })) as unknown as CampaignRow[];
 
-  return rows.map((row) => toProject(row, locale));
+  /* The order an admin set for THIS category (`categoryPriorities`, from the
+     categories dashboard) comes first; campaigns without one follow in the
+     site-wide order. Sorted here because the priority lives in a JSON map. */
+  const rank = (row: CampaignRow): number => {
+    const map = row.categoryPriorities;
+    const value = map && typeof map === "object" && !Array.isArray(map) ? (map as Record<string, unknown>)[categoryId] : undefined;
+    return typeof value === "number" && Number.isFinite(value) ? value : Number.POSITIVE_INFINITY;
+  };
+  const ordered = rows
+    .map((row, index) => ({ row, index, rank: rank(row) }))
+    .sort((a, b) => (a.rank === b.rank ? a.index - b.index : a.rank - b.rank))
+    .map(({ row }) => row);
+
+  return (limit ? ordered.slice(0, limit) : ordered).map((row) => toProject(row, locale));
 }
 
 /**
@@ -188,7 +315,80 @@ export async function getProject(slug: string, locale: string): Promise<MinbarPr
     select: selectFor(locale),
   })) as unknown as CampaignRow | null;
 
-  return row ? toProject(row, locale) : null;
+  return row ? toProject(row, locale, true) : null;
+}
+
+/**
+ * The SEO fields an admin set on the campaign's SEO page (`SeoPanel`):
+ * this locale's (the campaign document for Arabic, the translation
+ * otherwise) and the campaign-level ones. They are not in the Prisma model,
+ * so they are read from the raw documents, as the legacy campaign page does.
+ */
+export async function getProjectSeo(
+  projectId: string,
+  locale: string
+): Promise<{ locale: ProjectSeoFields; campaign: ProjectSeoFields }> {
+  const firstDoc = (result: unknown) =>
+    ((result as { cursor?: { firstBatch?: unknown[] } })?.cursor?.firstBatch ?? [])[0] ?? null;
+  try {
+    const [campaignResult, translationResult] = await Promise.all([
+      prisma.$runCommandRaw({ find: "Campaign", filter: { _id: { $oid: projectId } }, limit: 1 }),
+      locale === "ar"
+        ? Promise.resolve(null)
+        : prisma.$runCommandRaw({ find: "CampaignTranslation", filter: { campaignId: { $oid: projectId }, locale }, limit: 1 }),
+    ]);
+    const campaign = normalizeSeoFields(firstDoc(campaignResult));
+    return { campaign, locale: locale === "ar" ? campaign : normalizeSeoFields(firstDoc(translationResult)) };
+  } catch (err) {
+    console.error("getProjectSeo failed:", err);
+    return { campaign: {}, locale: {} };
+  }
+}
+
+/**
+ * How many settled donations a project has received  the same count the
+ * campaign API and dashboard show (a paid donation, not a pending one).
+ */
+export async function getProjectDonorCount(projectId: string): Promise<number> {
+  try {
+    return await prisma.donationItem.count({ where: { campaignId: projectId, donation: PAID_DONATION_FILTER } });
+  } catch (err) {
+    console.error("getProjectDonorCount failed:", err);
+    return 0;
+  }
+}
+
+/**
+ * Donors' public messages on a project, newest first. Only the first name
+ * and avatar are exposed  never an email.
+ */
+export interface MinbarProjectComment {
+  id: string;
+  text: string;
+  name: string;
+  image: string | null;
+  createdAt: string;
+}
+
+export async function listProjectComments(projectId: string, take = 30): Promise<MinbarProjectComment[]> {
+  try {
+    const rows = await prisma.comment.findMany({
+      where: { campaignId: projectId },
+      select: { id: true, text: true, createdAt: true, user: { select: { name: true, image: true } } },
+      orderBy: { createdAt: "desc" },
+      take,
+    });
+    return rows.map((row) => ({
+      id: row.id,
+      text: row.text,
+      name: (row.user?.name ?? "").trim().split(/\s+/)[0] ?? "",
+      image: row.user?.image ?? null,
+      createdAt: row.createdAt.toISOString(),
+    }));
+  } catch (err) {
+    console.error("listProjectComments failed:", err);
+    return [];
+  }
 }
 
 /**

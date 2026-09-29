@@ -1,8 +1,11 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { SITE_URL, buildPageMetadata } from "@/lib/seo";
+import { SITE_URL, buildPageMetadata, clipSeoDescription } from "@/lib/seo";
 import {
   getProject,
+  getProjectDonorCount,
+  getProjectSeo,
+  listProjectComments,
   listProjectUpdates,
   listRelatedProjects,
 } from "@/lib/minbar/projects";
@@ -19,7 +22,7 @@ interface Props {
 }
 
 /** The page's own namespaces, on top of the shell bundle. */
-const NAMESPACES = ["projects", "cart", "homepage", "quran"] as const;
+const NAMESPACES = ["projects", "cart", "homepage", "quran", "ProjectExtras"] as const;
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale, slug } = await params;
@@ -42,13 +45,26 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   // `PRODUCTION_SEO_CONTRACT.md` requires a real 404, not a soft one.
   if (!project) return { title: "", robots: { index: false, follow: false } };
 
-  return buildPageMetadata(locale, {
-    title: project.title,
-    description: project.text,
+  /* What the admin set on the campaign's SEO page wins, for this language;
+     then the localised title, description and cover. A campaign-level OG
+     image is the last resort for the picture only  another language's title
+     would be wrong here. */
+  const seo = await getProjectSeo(project.id, locale);
+  const title = seo.locale.seoTitle || project.title;
+  const meta = buildPageMetadata(locale, {
+    title,
+    description: seo.locale.seoDescription || project.text,
     path: `/${slugFor("projectDetail", locale)}/${project.slug}`,
-    image: project.image ?? undefined,
+    image: seo.locale.ogImage || project.image || seo.campaign.ogImage || undefined,
     type: "article",
   });
+  const ogTitle = seo.locale.ogTitle;
+  const ogDescription = seo.locale.ogDescription ? clipSeoDescription(seo.locale.ogDescription, locale, 200) : null;
+  if (ogTitle || ogDescription) {
+    meta.openGraph = { ...meta.openGraph, ...(ogTitle ? { title: ogTitle } : {}), ...(ogDescription ? { description: ogDescription } : {}) };
+    meta.twitter = { ...meta.twitter, ...(ogTitle ? { title: ogTitle } : {}), ...(ogDescription ? { description: ogDescription } : {}) };
+  }
+  return meta;
 }
 
 /**
@@ -75,14 +91,19 @@ export default async function ProjectPage({ params }: Props) {
   const project = await getProject(key, locale);
   if (!project) notFound();
 
-  const [updates, related] = await Promise.all([
+  const [updates, related, donorCount, comments] = await Promise.all([
     listProjectUpdates(project.id, locale),
     listRelatedProjects(project, locale),
+    getProjectDonorCount(project.id),
+    listProjectComments(project.id),
   ]);
 
-  // Field photography is per-region; a region with no genuine bank returns an
-  // empty list and the Gallery tab simply does not appear.
-  const gallery = project.region ? galleryFor(project.region, 6) : [];
+  /* The campaign's own photos first (the cover is already the hero), then
+     the region's field photography to fill the tab. A campaign with neither
+     has no Gallery tab. */
+  const own = project.images.slice(1);
+  const regional = project.region ? galleryFor(project.region, 6) : [];
+  const gallery = [...new Set([...own, ...regional])].slice(0, Math.max(6, own.length));
 
   const breadcrumb = {
     "@context": "https://schema.org",
@@ -99,7 +120,7 @@ export default async function ProjectPage({ params }: Props) {
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumb) }} />
       <MinbarMessages locale={locale} namespaces={NAMESPACES}>
         <PageBanners locale={locale} page="projectDetail" slot="top" />
-        <ProjectDetail project={project} updates={updates} gallery={gallery} related={related} />
+        <ProjectDetail project={project} updates={updates} gallery={gallery} related={related} donorCount={donorCount} comments={comments} />
         <PageBanners locale={locale} page="projectDetail" slot="bottom" />
       </MinbarMessages>
     </>

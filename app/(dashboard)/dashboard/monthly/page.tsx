@@ -2670,7 +2670,7 @@ export default function MonthlySubscriptionsDashboardPage() {
                                 (() => {
                                   const r = providerChecks[s.id]!.result!;
                                   if (r.error) return <span className="font-bold text-red-700">تعذّر التحقق: {r.error}</span>;
-                                  if (r.rail !== "STRIPE") return <span className="text-slate-500">{r.rail === "ALBARAKA" ? "جدولة داخلية (البركة)" : "لا يوجد اشتراك لدى مزوّد"}</span>;
+                                  if (r.rail !== "STRIPE") return <span className="text-slate-500">{r.rail === "ALBARAKA" ? "جدولة داخلية (البركة)" : r.rail === "PAYPAL" ? "جدولة داخلية (PayPal)" : "لا يوجد اشتراك لدى مزوّد"}</span>;
                                   return r.inSync ? (
                                     <span className="text-emerald-700">Stripe: {r.providerStatus}{r.providerPaused ? " (موقوف)" : ""} ✓</span>
                                   ) : (

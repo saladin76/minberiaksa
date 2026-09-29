@@ -3344,5 +3344,26 @@
     "cmd_field_status": "Estado",
     "a_confirm": "Confirmar",
     "a_cancel": "Cancelar"
+  },
+  "ProjectShares": {
+    "unitSingular": "participación",
+    "unitPlural": "participaciones",
+    "count": "{count, plural, one {# participación} other {# participaciones}}",
+    "countWithUnit": "{count} {unit}",
+    "pricePer": "{price} por {unit}",
+    "soldOfTotal": "{sold} de {total} {unit}",
+    "givenSoFar": "{count} {unit} donadas hasta ahora",
+    "chooseCount": "Elige el número de {unit}",
+    "customCountPh": "Otro número"
+  },
+  "ProjectExtras": {
+    "video": "Vídeo del proyecto",
+    "categories": "Categorías",
+    "tabComments": "Mensajes de los donantes",
+    "commentsEmpty": "Aún no hay mensajes. Sé el primero en dejar una oración o una palabra de apoyo.",
+    "commentPh": "Escribe una oración o una palabra de apoyo…",
+    "commentSend": "Enviar",
+    "commentSignIn": "Inicia sesión para dejar un mensaje",
+    "commentFailed": "No se pudo enviar tu mensaje. Inténtalo de nuevo."
   }
 }

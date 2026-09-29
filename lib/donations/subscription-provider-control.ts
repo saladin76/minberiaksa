@@ -29,6 +29,7 @@ import {
   expectedLocalStatusFor,
   planRail,
   type PlanProviderFields,
+  type PlanRail,
   type PlanStatus,
 } from "./subscription-provider-rules";
 
@@ -36,7 +37,7 @@ export { expectedLocalStatusFor, planRail };
 export type { PlanProviderFields, PlanStatus };
 
 export interface ProviderResult {
-  rail: "STRIPE" | "ALBARAKA" | "NONE";
+  rail: PlanRail;
   stripeSubscriptionId?: string;
   /** Stripe's own status after the call, e.g. "active", "canceled". */
   providerStatus?: string;

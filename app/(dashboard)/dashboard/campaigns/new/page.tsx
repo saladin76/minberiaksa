@@ -129,13 +129,11 @@ const formSchema = z
 
   /* One title / cover / video override per translation locale  generated
      from the locale list rather than spelled out, so a new language is a
-     new tab without a schema edit. English is required; see superRefine. */
+     new tab without a schema edit. English left empty is filled from the
+     Arabic on submit (see onSubmit), so only Arabic is required here. */
   ...LOCALE_SHAPE,
 })
   .superRefine((data, ctx) => {
-    if (!data.title_en || !String(data.title_en).trim()) {
-      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'English title is required', path: ['title_en'] });
-    }
     if (data.goalType === 'FIXED' && (!data.targetAmount || data.targetAmount < 1)) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
@@ -249,11 +247,11 @@ export default function NewCampaignPage() {
       setActiveTab('ar');
       return;
     }
-    if (isDescEmpty(descriptions.en ?? null)) {
-      toast.error('English description is required');
-      setActiveTab('en');
-      return;
-    }
+    /* Every campaign carries an English row (the fallback for the other
+       languages); when the admin wrote only Arabic, the Arabic stands in until
+       someone translates it. */
+    const titleEn = String(values.title_en ?? '').trim() || values.title.trim();
+    const descriptionEn = isDescEmpty(descriptions.en ?? null) ? descriptionAr : descriptions.en ?? null;
     setSaving(true);
     try {
       // ✅ Prepare request with translations
@@ -273,13 +271,13 @@ export default function NewCampaignPage() {
           ? { currentAmount: Math.max(0, Number(values.currentAmount)) }
           : {}),
 
-        // English is always sent (required); every other locale only when it
+        // English is always sent (from the Arabic when left empty); every other locale only when it
         // has both a title and a description. Per-locale image/videoUrl are
         // optional overrides  sent through whenever provided.
         translations: Object.fromEntries(
           TRANSLATION_LOCALES.flatMap((locale) => {
-            const title = String(values[localeKey('title', locale)] ?? '').trim();
-            const description = descriptions[locale] ?? null;
+            const title = locale === 'en' ? titleEn : String(values[localeKey('title', locale)] ?? '').trim();
+            const description = locale === 'en' ? descriptionEn : descriptions[locale] ?? null;
             if (locale !== 'en' && (!title || isDescEmpty(description))) return [];
             return [[
               locale,

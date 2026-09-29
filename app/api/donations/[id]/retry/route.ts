@@ -145,6 +145,10 @@ export async function POST(
       provider: source.provider ?? null,
       paymentMethod: source.paymentMethod,
       currency: source.currency,
+      /* A PayPal retry goes straight back to PayPal, and /api/paypal/orders
+         wants the clone's key from a guest. Handed to whoever may retry the
+         source, who could open the clone's success page anyway. */
+      ...(source.paymentMethod === "PAYPAL" ? { accessToken: clone.accessToken } : {}),
     });
   } catch (err) {
     console.error("[donation retry] failed:", err);

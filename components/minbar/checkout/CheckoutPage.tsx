@@ -11,6 +11,7 @@ import { StripePaymentStep, type StripePaymentHandle } from "@/components/Stripe
 import { miaPath } from "@/lib/minbar/routes";
 import { useMinbarCart } from "@/hooks/useMinbarCart";
 import { useMinbarMoney } from "@/hooks/useMinbarMoney";
+import { useShareWording } from "@/hooks/useShareWording";
 import type { MinbarCartItem } from "@/lib/minbar/cart";
 import { formatIban, type MinbarBank } from "@/lib/minbar/banks";
 import {
@@ -20,6 +21,7 @@ import {
   initiateBankPayment,
   markDonationFailed,
   orderType,
+  startPayPalPayment,
   submitGatewayForm,
   type CheckoutMethod,
 } from "@/lib/minbar/checkout";
@@ -49,8 +51,12 @@ import "react-international-phone/style.css";
  *    preview shows. The fields are the design's; wiring them to the gateway's
  *    hosted fields is the payment integration's job, and a real card number must
  *    never reach this origin.
- *  - PayPal opens a checkout session created by the backend. No donation exists
- *    until PayPal confirms.
+ *  - PayPal: the order is created here as PENDING, the server creates a
+ *    PayPal order from the stored amount (`/api/paypal/orders`) and the donor
+ *    is redirected to PayPal. The server captures and verifies on return
+ *    (`/api/paypal/return`); nothing is paid until that capture is COMPLETED.
+ *    A recurring basket works the same way, and PayPal saves the wallet for
+ *    the later instalments.
  *  - bank transfer creates the order and nothing to pay: the donor copies an
  *    IBAN, transfers outside the site, and uploads a receipt on the next page.
  *    A finance officer moves it to Confirmed (`DONATION_LOGIC_SPEC §3`), and
@@ -79,7 +85,8 @@ export default function CheckoutPage({ projects, categories, banks, donor, defau
   const tValidation = useTranslations("validation");
   const tSystem = useTranslations("system");
   const tCert = useTranslations("certificates");
-  const { format } = useMinbarMoney();
+  const { format, formatNumber } = useMinbarMoney();
+  const { countLabelFor } = useShareWording();
   const { items, hydrated } = useMinbarCart();
 
   const [method, setMethod] = useState<PaymentMethod>("card");
@@ -162,6 +169,7 @@ export default function CheckoutPage({ projects, categories, banks, donor, defau
   }, []);
 
   const titleBySlug = useMemo(() => new Map(projects.map((p) => [p.slug, p.title])), [projects]);
+  const sharesBySlug = useMemo(() => new Map(projects.map((p) => [p.slug, p.shares])), [projects]);
   const categoryTitleById = useMemo(() => new Map(categories.map((c) => [c.id, c.title])), [categories]);
 
   const resolveTitle = (item: MinbarCartItem): string => {
@@ -348,6 +356,17 @@ export default function CheckoutPage({ projects, categories, banks, donor, defau
         clearCart();
         const pending = miaPath("paymentPending", locale, donation.id);
         router.push(donation.bankTransferToken ? `${pending}?t=${donation.bankTransferToken}` : pending);
+        return;
+      }
+
+      if (method === "paypal") {
+        /* The server builds the PayPal order from the donation row and hands
+           back PayPal's approval page. The basket is cleared first, as for
+           the bank rails: the order exists, and a donor coming back from
+           PayPal must not find it ready to be paid again. */
+        const approveUrl = await startPayPalPayment(donation.id, locale, donation.accessToken);
+        clearCart();
+        window.location.assign(approveUrl);
         return;
       }
 
@@ -886,6 +905,11 @@ export default function CheckoutPage({ projects, categories, banks, donor, defau
                     <span key={index} style={{ display: "flex", justifyContent: "space-between", gap: 10, fontSize: 14 }}>
                       <span style={{ color: "var(--muted)", minWidth: 0, display: "grid", gap: 2 }}>
                         <span>{resolveTitle(item)}</span>
+                        {item.shareCount ? (
+                          <span style={{ fontSize: 12, fontWeight: 700 }}>
+                            {countLabelFor(item.projectId ? sharesBySlug.get(item.projectId) ?? null : null, item.shareCount, formatNumber(item.shareCount))}
+                          </span>
+                        ) : null}
                         {item.gift?.recipientName ? (
                           <span style={{ fontSize: 12, fontWeight: 700, color: "var(--gold)" }}>{tTeam("giftedTo", { name: item.gift.recipientName })}</span>
                         ) : null}

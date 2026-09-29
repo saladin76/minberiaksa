@@ -739,6 +739,17 @@ model Donation {
   providerErrorMessage   String?
   providerRaw            Json?
 
+  /// PayPal Orders v2: the order created for this donation. Set when the order
+  /// is created, before the donor leaves for PayPal; the return route refuses
+  /// any other order id. See lib/paypal.ts.
+  paypalOrderId   String?
+  /// The PayPal capture id  PayPal's transaction id for the money received.
+  paypalCaptureId String?
+  /// What the gateway actually settled, as it reported it (PayPal charges the
+  /// donation currency, or USD when PayPal does not support that currency).
+  paidAmount      Float?
+  paidCurrency    String?
+
   donorId          String    @db.ObjectId
   donor            User      @relation(fields: [donorId], references: [id])
   /// ISO 3166-1 alpha-2 snapshot from donor User.countryCode at donation time
@@ -828,7 +839,8 @@ model Subscription {
   /// Which rail bills this plan. `STRIPE` = a Stripe Subscription (monthly
   /// only  Stripe keeps its one-time + monthly scope); `ALBARAKA` = the
   /// site's own scheduler charging the stored card through Albaraka's direct
-  /// /Sale as a recurring (merchant-initiated) transaction, at any cadence.
+  /// /Sale as a recurring (merchant-initiated) transaction, at any cadence;
+  /// `PAYPAL` = the same scheduler charging the donor's vaulted PayPal wallet.
   /// Null on rows from before rails existed: they are Stripe monthly.
   provider String?
   /// The card the Albaraka scheduler charges  the `CreditCard` row stored at
@@ -839,6 +851,11 @@ model Subscription {
   /// retry ladder (`RECURRING_RETRY_HOURS`); reset on every paid cycle.
   chargeAttempts  Int     @default(0)
   lastChargeError String?
+  /// `PAYPAL` plans: the PayPal wallet saved (vaulted) at the first
+  /// instalment's capture. The scheduler charges later cycles against it
+  /// (lib/donations/paypal-recurring.ts). Null on every other rail.
+  paypalVaultId    String?
+  paypalCustomerId String?
 
   donorId    String    @db.ObjectId
   donor      User      @relation(fields: [donorId], references: [id])

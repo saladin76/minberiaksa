@@ -5,7 +5,7 @@
  */
 
 export type PlanStatus = "ACTIVE" | "PAUSED" | "CANCELLED";
-export type PlanRail = "STRIPE" | "ALBARAKA" | "NONE";
+export type PlanRail = "STRIPE" | "ALBARAKA" | "PAYPAL" | "NONE";
 
 export interface PlanProviderFields {
   id: string;
@@ -17,6 +17,7 @@ export interface PlanProviderFields {
 /** Which rail bills this plan. Rows from before `provider` existed are Stripe. */
 export function planRail(plan: PlanProviderFields): PlanRail {
   if (plan.provider === "ALBARAKA") return "ALBARAKA";
+  if (plan.provider === "PAYPAL") return "PAYPAL";
   const stripeId = plan.stripeSubscriptionId ?? plan.payforToken ?? null;
   return stripeId ? "STRIPE" : "NONE";
 }

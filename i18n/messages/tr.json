@@ -3415,5 +3415,26 @@
     "cmd_field_status": "Durum",
     "a_confirm": "Onayla",
     "a_cancel": "İptal"
+  },
+  "ProjectShares": {
+    "unitSingular": "hisse",
+    "unitPlural": "hisse",
+    "count": "{count} hisse",
+    "countWithUnit": "{count} {unit}",
+    "pricePer": "{unit} başına {price}",
+    "soldOfTotal": "{total} {unit} içinden {sold}",
+    "givenSoFar": "Şu ana kadar {count} {unit} bağışlandı",
+    "chooseCount": "{unit} sayısını seçin",
+    "customCountPh": "Başka sayı"
+  },
+  "ProjectExtras": {
+    "video": "Proje videosu",
+    "categories": "Kategoriler",
+    "tabComments": "Bağışçı mesajları",
+    "commentsEmpty": "Henüz mesaj yok. Bir dua ya da destek sözü bırakan ilk kişi olun.",
+    "commentPh": "Bir dua ya da destek sözü yazın…",
+    "commentSend": "Gönder",
+    "commentSignIn": "Mesaj bırakmak için giriş yapın",
+    "commentFailed": "Mesajınız gönderilemedi. Lütfen tekrar deneyin."
   }
 }

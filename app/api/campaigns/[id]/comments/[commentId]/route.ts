@@ -101,18 +101,25 @@ export async function PATCH(request: NextRequest, { params }: ParamsPromise) {
       );
     }
 
-    const data = await request.json();
+    const data = await request.json().catch(() => ({}));
+    const text = typeof data?.text === "string" ? data.text.trim() : "";
+    if (!text || text.length > 1000) {
+      return NextResponse.json({ error: "A message of 1 to 1000 characters is required" }, { status: 400 });
+    }
     const updatedComment = await prisma.comment.update({
       where: { id: commentId },
       data: {
-        text: data.text,
+        text,
       },
-      include: {
+      select: {
+        id: true,
+        text: true,
+        createdAt: true,
+        userId: true,
         user: {
           select: {
             name: true,
             image: true,
-            email: true,
           },
         },
       },

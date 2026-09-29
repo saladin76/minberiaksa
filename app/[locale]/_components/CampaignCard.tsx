@@ -13,6 +13,7 @@ import { useTranslations } from "next-intl";
 
 const DonationDialog = dynamic(() => import("@/components/DonationDialog"), { ssr: false });
 import CategoryIcon from "@/components/CategoryIcon";
+import { LocalizedSharePrice } from "@/components/LocalizedSharePrice";
 import { Share2, ShoppingCart, Zap } from "lucide-react";
 import {
   parseSuggestedDonations,
@@ -121,6 +122,10 @@ export function CampaignCard({ campaign, className, onClick, isFeatured = false,
   const isOpenGoal = String(campaign.goalType ?? "").toLowerCase() === "open";
   const hasTargetAmount = Number(campaign.targetAmount) > 0;
   const hideBottomStats = isOpenGoal && !hasTargetAmount;
+  /* Same test as the progress block below, so the list row and the card agree
+     on whether a campaign without a target draws a bar. */
+  const showStats = campaign.showProgress !== false && !hideBottomStats;
+  const isShares = String(campaign.fundraisingMode ?? "").toUpperCase() === "SHARES" && Number(campaign.sharePriceUSD) > 0;
 
   /* Quick amounts are for plain money campaigns only. A share campaign counts
      sheep or meals, and team support has its own step; handing either an
@@ -238,9 +243,11 @@ export function CampaignCard({ campaign, className, onClick, isFeatured = false,
               <h3 className="text-[13px] font-extrabold text-deep line-clamp-2 leading-snug">{campaign.title}</h3>
             </Link>
             <div className="mt-1.5">
-              <div className="w-full bg-gray-100 rounded-full h-[3px] mb-1">
-                <div className="bg-gradient-to-r from-burgundy to-gold h-[3px] rounded-full transition-all duration-500" style={{ width: `${progress}%` }} />
-              </div>
+              {showStats ? (
+                <div className="w-full bg-gray-100 rounded-full h-[3px] mb-1">
+                  <div className="bg-gradient-to-r from-burgundy to-gold h-[3px] rounded-full transition-all duration-500" style={{ width: `${progress}%` }} />
+                </div>
+              ) : null}
               <div className="flex items-center justify-between">
                 <p className="text-[11px] font-black text-deep">{symbol}{formatNumber(raised)} <span className="font-normal text-gray-400">{t("raised") || "جُمع"}</span></p>
                 <button onClick={handleDonateClick} className="shape-chip text-[10px] font-bold text-white bg-burgundy hover:bg-burgundyDark px-2.5 py-1 transition-colors flex-shrink-0">
@@ -309,7 +316,7 @@ export function CampaignCard({ campaign, className, onClick, isFeatured = false,
             </h3>
           </Link>
 
-          {campaign.showProgress !== false && !hideBottomStats ? (
+          {showStats ? (
             <div className="grid gap-[7px]">
               {/* burgundy/gold are the same hex as --red/--gold, which is what
                   the project card's gradient uses. */}
@@ -324,6 +331,20 @@ export function CampaignCard({ campaign, className, onClick, isFeatured = false,
                 <span dir="ltr" className="tabular-nums [unicode-bidi:isolate]">{t("goal") || "الهدف"} {symbol}{formatNumber(target)}</span>
               </span>
             </div>
+          ) : null}
+
+          {/* A share campaign has no amount chips; its price per share is what
+              the donor needs to know before opening the dialog. */}
+          {isShares ? (
+            <span className="justify-self-start inline-flex items-center gap-1.5 rounded-full border border-gold/60 bg-gold/20 px-3 py-[5px] text-[12.5px] font-black text-white">
+              {t("sharesCampaignLabel")}
+              <span aria-hidden="true">·</span>
+              <LocalizedSharePrice
+                sharePriceUSD={Number(campaign.sharePriceUSD)}
+                suggestedShareCounts={campaign.suggestedShareCounts ?? null}
+                className="tabular-nums [unicode-bidi:isolate]"
+              />
+            </span>
           ) : null}
 
           {chipAmounts.length > 0 && (

@@ -100,6 +100,11 @@ export interface MinbarCartItem {
   waqf?: CartWaqfDetails;
   /** Present when the row is given in someone else's name. */
   gift?: CartGiftDetails;
+  /**
+   * Number of shares on a سهوم campaign row; `amount` is then the count times
+   * the share price. Sent with the order so the receipt says "3 shares".
+   */
+  shareCount?: number;
 }
 
 export const CART_ITEMS_KEY = "mia_cart_items";
@@ -208,6 +213,10 @@ export function migrateItem(
     _autoMonthly: raw._autoMonthly === true || undefined,
     waqf: parseWaqf(raw.waqf),
     gift: parseGift(raw.gift),
+    shareCount:
+      typeof raw.shareCount === "number" && Number.isInteger(raw.shareCount) && raw.shareCount > 0
+        ? raw.shareCount
+        : undefined,
   };
 
   if (!item.projectId && !item.categoryId && !item.titleKey && item.title && resolveTitle) {
