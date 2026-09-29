@@ -2312,5 +2312,14 @@
     "cmd_field_status": "Status",
     "a_confirm": "Bevestigen",
     "a_cancel": "Annuleren"
+  },
+  "CategoryNav": {
+    "title": "Projectcategorieën",
+    "toggle": "Projectcategorieën tonen",
+    "sectionEyebrow": "Geef per doel",
+    "sectionTitle": "Bekijk projecten per categorie",
+    "sectionLead": "Kies het doel dat u het meest aan het hart gaat en steun de projecten ervan rechtstreeks.",
+    "explore": "Ontdekken",
+    "projectsCount": "{count, plural, =0 {Nog geen projecten} one {# project} other {# projecten}}"
   }
 }

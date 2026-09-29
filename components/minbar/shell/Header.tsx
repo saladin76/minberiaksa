@@ -11,6 +11,7 @@ import { CURRENCY_COOKIE_UPDATED_EVENT } from "@/components/CurrencyFromUrlSync"
 import { miaPath, type MinbarRoute } from "@/lib/minbar/routes";
 import { useMinbarCartCount } from "@/hooks/useMinbarCart";
 import { useMinbarLabel } from "@/hooks/useMinbarLabel";
+import type { NavCategory } from "@/lib/minbar/categories";
 
 /**
  * Site header  ported from `Minbar/Header.dc.html`.
@@ -115,6 +116,12 @@ export interface HeaderProps {
   signedIn?: boolean;
   /** An ADMIN session gets a direct door to the dashboard beside the account icon. */
   isAdmin?: boolean;
+  /**
+   * Active project categories. When present, the "projects" nav item opens a
+   * dropdown of them, and the "all pages" index lists them for the widths
+   * where the nav is hidden.
+   */
+  categories?: NavCategory[];
 }
 
 export default function Header({
@@ -123,17 +130,21 @@ export default function Header({
   linkOverrides,
   signedIn = false,
   isAdmin = false,
+  categories = [],
 }: HeaderProps) {
   const locale = useLocale();
   const dir = localeDirection(locale);
   const tNav = useTranslations("navigation");
   const tCommon = useTranslations("common");
+  const tCats = useTranslations("CategoryNav");
   const label = useMinbarLabel();
   const router = useRouter();
   const pathname = usePathname();
 
   const [localeOpen, setLocaleOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [catsOpen, setCatsOpen] = useState(false);
+  const hasCats = categories.length > 0;
   const [currency, setCurrency] = useState("USD");
   const [showBack, setShowBack] = useState(false);
   const basket = useMinbarCartCount();
@@ -141,6 +152,8 @@ export default function Header({
   const headRef = useRef<HTMLElement>(null);
   const spacerRef = useRef<HTMLDivElement>(null);
   const popRef = useRef<HTMLDivElement>(null);
+  const catsTriggerRef = useRef<HTMLButtonElement>(null);
+  const catsPanelRef = useRef<HTMLDivElement>(null);
 
   const href = useCallback(
     (route: MinbarRoute, key?: string) =>
@@ -204,20 +217,32 @@ export default function Header({
     }
   }, [pathname]);
 
-  /* Close the popovers on outside click and on Escape  both panels are large
-     and overlay the page, so there has to be a way out that is not the toggle. */
+  /* A new page closes the categories panel, including via back/forward. */
   useEffect(() => {
-    if (!localeOpen && !menuOpen) return;
+    setCatsOpen(false);
+  }, [pathname]);
+
+  /* Close the popovers on outside click and on Escape  both panels are large
+     and overlay the page, so there has to be a way out that is not the toggle.
+     The categories panel lives outside `popRef` (its trigger is in the nav),
+     so it is checked on its own. */
+  useEffect(() => {
+    if (!localeOpen && !menuOpen && !catsOpen) return;
     const onPointer = (event: MouseEvent) => {
-      if (popRef.current && !popRef.current.contains(event.target as Node)) {
+      const target = event.target as Node;
+      if (popRef.current && !popRef.current.contains(target)) {
         setLocaleOpen(false);
         setMenuOpen(false);
+      }
+      if (!catsTriggerRef.current?.contains(target) && !catsPanelRef.current?.contains(target)) {
+        setCatsOpen(false);
       }
     };
     const onKey = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         setLocaleOpen(false);
         setMenuOpen(false);
+        setCatsOpen(false);
       }
     };
     document.addEventListener("mousedown", onPointer);
@@ -226,7 +251,7 @@ export default function Header({
       document.removeEventListener("mousedown", onPointer);
       document.removeEventListener("keydown", onKey);
     };
-  }, [localeOpen, menuOpen]);
+  }, [localeOpen, menuOpen, catsOpen]);
 
   /* Changing language keeps the visitor on the same page  a hard requirement
      in DEVELOPER_HANDOFF §11, and the reason this swaps the locale segment
@@ -304,22 +329,90 @@ export default function Header({
               fontSize: 13.5,
             }}
           >
-            {NAV.map(([route, key]) => (
-              <Link
-                key={key}
-                href={href(route, key)}
-                aria-current={active === route ? "page" : undefined}
-                style={{
-                  padding: "5px 0",
-                  color: "#fff",
-                  textDecoration: "none",
-                  borderBottom: `2px solid ${active === route ? "#D39A27" : "transparent"}`,
-                }}
-              >
-                {label(key)}
-              </Link>
-            ))}
+            {NAV.map(([route, key]) =>
+              route === "projects" && hasCats ? (
+                /* The projects item opens its categories rather than navigating;
+                   "all projects" is the first entry in the panel. */
+                <button
+                  key={key}
+                  ref={catsTriggerRef}
+                  type="button"
+                  onClick={() => {
+                    setCatsOpen((v) => !v);
+                    setLocaleOpen(false);
+                    setMenuOpen(false);
+                  }}
+                  aria-expanded={catsOpen}
+                  aria-controls="mia-cats-pop"
+                  title={tCats("toggle")}
+                  className="mia-nav-drop"
+                  data-open={catsOpen ? "true" : "false"}
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 5,
+                    padding: "5px 0",
+                    background: "none",
+                    border: 0,
+                    borderBottom: `2px solid ${active === route || catsOpen ? "#D39A27" : "transparent"}`,
+                    color: "#fff",
+                    font: "inherit",
+                    cursor: "pointer",
+                  }}
+                >
+                  {label(key)}
+                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#D39A27" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <path d="m6 9 6 6 6-6" />
+                  </svg>
+                </button>
+              ) : (
+                <Link
+                  key={key}
+                  href={href(route, key)}
+                  aria-current={active === route ? "page" : undefined}
+                  style={{
+                    padding: "5px 0",
+                    color: "#fff",
+                    textDecoration: "none",
+                    borderBottom: `2px solid ${active === route ? "#D39A27" : "transparent"}`,
+                  }}
+                >
+                  {label(key)}
+                </Link>
+              )
+            )}
           </nav>
+
+          {/* Categories panel. Rendered outside the nav because the nav scrolls
+              horizontally and would clip it; anchored to the main row instead. */}
+          {hasCats && catsOpen ? (
+            <div id="mia-cats-pop" ref={catsPanelRef} className="mia-cats-pop" role="region" aria-label={tCats("title")}>
+              <div className="mia-cats-pop__head">
+                <span style={{ ...popTitleStyle, color: "#8a5d16", fontSize: 12 }}>
+                  <span aria-hidden="true" style={{ width: 6, height: 6, background: "#D39A27", transform: "rotate(45deg)" }} />
+                  {tCats("title")}
+                  <span className="mia-cats-pop__count">{categories.length}</span>
+                </span>
+                <Link href={href("projects", "projects")} onClick={() => setCatsOpen(false)} className="mia-cats-pop__all">
+                  {label("allProjects")}
+                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="mia-arrow-next">
+                    <path d="M14 6l-6 6 6 6" />
+                  </svg>
+                </Link>
+              </div>
+              <div className="mia-cats-pop__grid">
+                {categories.map((c) => (
+                  <Link key={c.id} href={c.href} onClick={() => setCatsOpen(false)} className="mia-cats-item">
+                    <CategoryThumb image={c.image} size={42} />
+                    <span style={{ display: "grid", gap: 2, minWidth: 0 }}>
+                      <b className="mia-cats-item__name">{c.name}</b>
+                      <small className="mia-cats-item__count">{tCats("projectsCount", { count: c.projectCount })}</small>
+                    </span>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          ) : null}
 
           <span
             aria-hidden="true"
@@ -424,6 +517,7 @@ export default function Header({
                 onClick={() => {
                   setLocaleOpen((v) => !v);
                   setMenuOpen(false);
+                  setCatsOpen(false);
                 }}
                 title={localeA11yLabel}
                 aria-label={localeA11yLabel}
@@ -563,6 +657,7 @@ export default function Header({
                 onClick={() => {
                   setMenuOpen((v) => !v);
                   setLocaleOpen(false);
+                  setCatsOpen(false);
                 }}
                 title={tNav("menu")}
                 aria-label={tNav("menu")}
@@ -644,6 +739,36 @@ export default function Header({
                       </svg>
                       {tNav("dashboard")}
                     </a>
+                  ) : null}
+
+                  {/* Below 1180px the nav, and with it the categories dropdown,
+                      is hidden; this is where those widths reach them. */}
+                  {hasCats ? (
+                    <div style={{ gridColumn: "1 / -1", display: "grid", gap: 6, minWidth: 0 }}>
+                      <span
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 8,
+                          padding: "0 4px 6px",
+                          borderBottom: "1px solid rgba(16,33,43,.1)",
+                          fontSize: 11,
+                          fontWeight: 900,
+                          color: "#8a5d16",
+                          letterSpacing: ".06em",
+                        }}
+                      >
+                        {tCats("title")}
+                      </span>
+                      <div className="mia-menu-cats">
+                        {categories.map((c) => (
+                          <Link key={c.id} href={c.href} onClick={() => setMenuOpen(false)} className="mia-menu-link mia-menu-cat">
+                            <CategoryThumb image={c.image} size={26} />
+                            <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.name}</span>
+                          </Link>
+                        ))}
+                      </div>
+                    </div>
                   ) : null}
 
                   {MENU_GROUPS.map((group) => (
@@ -733,6 +858,36 @@ function GlobeIcon({ stroke = "#fff", size = 17 }: { stroke?: string; size?: num
       <circle cx="12" cy="12" r="9" />
       <path d="M3 12h18M12 3c2.5 2.7 2.5 15 0 18M12 3c-2.5 2.7-2.5 15 0 18" />
     </svg>
+  );
+}
+
+/**
+ * A category's picture as a small rounded tile, or the gold diamond when the
+ * category has none. The header ships on every page, so this deliberately does
+ * not pull in `CategoryIcon` and its icon set.
+ */
+function CategoryThumb({ image, size }: { image: string; size: number }) {
+  return (
+    <span
+      aria-hidden="true"
+      style={{
+        flex: `0 0 ${size}px`,
+        width: size,
+        height: size,
+        borderRadius: Math.round(size / 4),
+        overflow: "hidden",
+        display: "grid",
+        placeItems: "center",
+        background: "linear-gradient(135deg, #10212B, #1d3a4a)",
+        boxShadow: "inset 0 0 0 1px rgba(211,154,39,.35)",
+      }}
+    >
+      {image ? (
+        <img src={image} alt="" loading="lazy" decoding="async" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+      ) : (
+        <span style={{ width: size / 4, height: size / 4, background: "#D39A27", transform: "rotate(45deg)" }} />
+      )}
+    </span>
   );
 }
 

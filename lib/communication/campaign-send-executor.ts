@@ -5,6 +5,7 @@ import { getCampaign } from "./campaign-service";
 import { planCampaignSend, type SendPlan } from "./campaign-send-planner";
 import { renderChannelTemplate } from "./template-compat";
 import { loadContextsForUserIds } from "@/lib/templates/variables";
+import { loadUpdateSource, sourceUpdateOf, updateContextFor } from "./update-campaign";
 import { createDeliveryRecord, recordSkippedDelivery, markDeliveryStatus } from "./delivery-log-service";
 import { resolveProviderForSendWithRuntime, sendPreparedDelivery } from "./provider-router";
 import { EMAIL_PROVIDER_ID } from "./providers/email/client";
@@ -263,6 +264,12 @@ export async function executeCampaignSend(
      parameters each of those variants takes. Reading it per recipient would be thousands of queries
      for one answer that cannot change mid-batch. */
   const whatsapp = channel === "WHATSAPP" ? await loadWhatsappTemplateTruth(templateId) : null;
+  /* A campaign created from a campaign update carries it in metadata: read
+     once (all its translations), then handed to each recipient in their own
+     language as the {{update.*}} variables. A deleted update leaves them empty
+     and the template's update blocks are dropped rather than sent blank. */
+  const sourceUpdateMeta = sourceUpdateOf(campaign.metadata);
+  const updateSource = sourceUpdateMeta ? await loadUpdateSource(sourceUpdateMeta.updateId).catch(() => null) : null;
 
   /** One batch: archive its skips, render, route and send each eligible recipient. */
   async function runBatch(plan: SendPlan): Promise<BatchTally> {
@@ -285,7 +292,8 @@ export async function executeCampaignSend(
 
     for (const recipient of plan.recipients) {
       if (alreadyDone.has(recipient.userId)) { bump(tally.reasons, "ALREADY_PROCESSED"); continue; }
-      const recipientCtx = contexts.get(recipient.userId) ?? null;
+      const loadedCtx = contexts.get(recipient.userId) ?? null;
+      const recipientCtx = loadedCtx && updateSource ? { ...loadedCtx, update: updateContextFor(updateSource, recipient.locale, campaignId) } : loadedCtx;
       if (!recipientCtx) {
         await recordSkippedDelivery({ channel, campaignId, templateId, recipientUserId: recipient.userId, locale: recipient.locale, purpose, origin }, "CONTEXT_LOAD_FAILED");
         tally.skipped += 1; bump(tally.reasons, "CONTEXT_LOAD_FAILED"); continue;

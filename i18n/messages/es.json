@@ -3357,6 +3357,9 @@
     "customCountPh": "Otro número"
   },
   "ProjectExtras": {
+    "updateBadge": "Novedad del proyecto",
+    "readMore": "Leer más",
+    "showLess": "Mostrar menos",
     "video": "Vídeo del proyecto",
     "categories": "Categorías",
     "tabComments": "Mensajes de los donantes",
@@ -3365,5 +3368,14 @@
     "commentSend": "Enviar",
     "commentSignIn": "Inicia sesión para dejar un mensaje",
     "commentFailed": "No se pudo enviar tu mensaje. Inténtalo de nuevo."
+  },
+  "CategoryNav": {
+    "title": "Categorías de proyectos",
+    "toggle": "Mostrar categorías de proyectos",
+    "sectionEyebrow": "Dona por causa",
+    "sectionTitle": "Explora los proyectos por categoría",
+    "sectionLead": "Elige la causa más cercana a tu corazón y apoya sus proyectos directamente.",
+    "explore": "Explorar",
+    "projectsCount": "{count, plural, =0 {Aún no hay proyectos} one {# proyecto} other {# proyectos}}"
   }
 }

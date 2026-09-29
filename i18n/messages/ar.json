@@ -3426,6 +3426,9 @@
     "customCountPh": "عدد آخر"
   },
   "ProjectExtras": {
+    "updateBadge": "تحديث من المشروع",
+    "readMore": "اقرأ المزيد",
+    "showLess": "عرض أقل",
     "video": "فيديو المشروع",
     "categories": "التصنيفات",
     "tabComments": "رسائل المتبرعين",
@@ -3434,5 +3437,14 @@
     "commentSend": "إرسال",
     "commentSignIn": "سجّل الدخول لترك رسالة",
     "commentFailed": "تعذّر إرسال رسالتك. حاول مرة أخرى."
+  },
+  "CategoryNav": {
+    "title": "تصنيفات المشاريع",
+    "toggle": "عرض تصنيفات المشاريع",
+    "sectionEyebrow": "تبرّع حسب المجال",
+    "sectionTitle": "تصفّح المشاريع حسب التصنيف",
+    "sectionLead": "اختر المجال الأقرب إلى قلبك، وادعم مشاريعه مباشرة.",
+    "explore": "استكشف",
+    "projectsCount": "{count, plural, =0 {لا مشاريع بعد} one {مشروع واحد} two {مشروعان} few {# مشاريع} many {# مشروعًا} other {# مشروع}}"
   }
 }

@@ -16,6 +16,9 @@ import { readFileSync, writeFileSync } from "node:fs";
 
 const PROJECT_EXTRAS = {
   ar: {
+    updateBadge: "تحديث من المشروع",
+    readMore: "اقرأ المزيد",
+    showLess: "عرض أقل",
     video: "فيديو المشروع",
     categories: "التصنيفات",
     tabComments: "رسائل المتبرعين",
@@ -26,6 +29,9 @@ const PROJECT_EXTRAS = {
     commentFailed: "تعذّر إرسال رسالتك. حاول مرة أخرى.",
   },
   en: {
+    updateBadge: "Project update",
+    readMore: "Read more",
+    showLess: "Show less",
     video: "Project video",
     categories: "Categories",
     tabComments: "Donor messages",
@@ -36,6 +42,9 @@ const PROJECT_EXTRAS = {
     commentFailed: "Your message could not be sent. Please try again.",
   },
   tr: {
+    updateBadge: "Proje güncellemesi",
+    readMore: "Devamını oku",
+    showLess: "Daha az göster",
     video: "Proje videosu",
     categories: "Kategoriler",
     tabComments: "Bağışçı mesajları",
@@ -46,6 +55,9 @@ const PROJECT_EXTRAS = {
     commentFailed: "Mesajınız gönderilemedi. Lütfen tekrar deneyin.",
   },
   fr: {
+    updateBadge: "Actualité du projet",
+    readMore: "Lire la suite",
+    showLess: "Réduire",
     video: "Vidéo du projet",
     categories: "Catégories",
     tabComments: "Messages des donateurs",
@@ -56,6 +68,9 @@ const PROJECT_EXTRAS = {
     commentFailed: "Votre message n'a pas pu être envoyé. Veuillez réessayer.",
   },
   de: {
+    updateBadge: "Projekt-Update",
+    readMore: "Weiterlesen",
+    showLess: "Weniger anzeigen",
     video: "Projektvideo",
     categories: "Kategorien",
     tabComments: "Nachrichten der Spender",
@@ -66,6 +81,9 @@ const PROJECT_EXTRAS = {
     commentFailed: "Ihre Nachricht konnte nicht gesendet werden. Bitte versuchen Sie es erneut.",
   },
   es: {
+    updateBadge: "Novedad del proyecto",
+    readMore: "Leer más",
+    showLess: "Mostrar menos",
     video: "Vídeo del proyecto",
     categories: "Categorías",
     tabComments: "Mensajes de los donantes",
@@ -76,6 +94,9 @@ const PROJECT_EXTRAS = {
     commentFailed: "No se pudo enviar tu mensaje. Inténtalo de nuevo.",
   },
   pt: {
+    updateBadge: "Atualização do projeto",
+    readMore: "Ler mais",
+    showLess: "Mostrar menos",
     video: "Vídeo do projeto",
     categories: "Categorias",
     tabComments: "Mensagens dos doadores",
@@ -86,6 +107,9 @@ const PROJECT_EXTRAS = {
     commentFailed: "Não foi possível enviar a sua mensagem. Tente novamente.",
   },
   id: {
+    updateBadge: "Kabar proyek",
+    readMore: "Baca selengkapnya",
+    showLess: "Tampilkan lebih sedikit",
     video: "Video proyek",
     categories: "Kategori",
     tabComments: "Pesan para donatur",

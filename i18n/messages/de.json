@@ -3357,6 +3357,9 @@
     "customCountPh": "Andere Anzahl"
   },
   "ProjectExtras": {
+    "updateBadge": "Projekt-Update",
+    "readMore": "Weiterlesen",
+    "showLess": "Weniger anzeigen",
     "video": "Projektvideo",
     "categories": "Kategorien",
     "tabComments": "Nachrichten der Spender",
@@ -3365,5 +3368,14 @@
     "commentSend": "Senden",
     "commentSignIn": "Melden Sie sich an, um eine Nachricht zu hinterlassen",
     "commentFailed": "Ihre Nachricht konnte nicht gesendet werden. Bitte versuchen Sie es erneut."
+  },
+  "CategoryNav": {
+    "title": "Projektkategorien",
+    "toggle": "Projektkategorien anzeigen",
+    "sectionEyebrow": "Nach Anliegen spenden",
+    "sectionTitle": "Projekte nach Kategorie durchsuchen",
+    "sectionLead": "Wählen Sie das Anliegen, das Ihnen am meisten am Herzen liegt, und unterstützen Sie seine Projekte direkt.",
+    "explore": "Entdecken",
+    "projectsCount": "{count, plural, =0 {Noch keine Projekte} one {# Projekt} other {# Projekte}}"
   }
 }

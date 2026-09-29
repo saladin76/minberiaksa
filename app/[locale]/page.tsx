@@ -4,6 +4,7 @@ import { LOCALE_SEO, buildPageMetadata, SITE_URL } from "@/lib/seo";
 import type { Locale } from "@/lib/seo";
 import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 import { listProjects } from "@/lib/minbar/projects";
+import { listCategories } from "@/lib/minbar/categories";
 import { listArticles, listNews } from "@/lib/minbar/posts";
 import { listCourses, listFaqs, listPlaylists, listVideos } from "@/lib/minbar/cms";
 import { readQuickDonation } from "@/lib/minbar/quick-donation-read";
@@ -50,8 +51,9 @@ export default async function Home({ params }: Props) {
   // rails show a leading slice; each full set lives on its own page.
   // The urgent rail shows a leading slice of projects; the quick-donation
   // select lists whatever the dashboard allows, which may be every project.
-  const [projects, allProjects, quick, session, courses, playlists, endorsements, achievements, faqs, articlesPage, news] = await Promise.all([
+  const [projects, categories, allProjects, quick, session, courses, playlists, endorsements, achievements, faqs, articlesPage, news] = await Promise.all([
     listProjects(locale, 12),
+    listCategories(locale),
     listProjects(locale),
     readQuickDonation(),
     getServerSession(authOptions),
@@ -85,6 +87,7 @@ export default async function Home({ params }: Props) {
       <MinbarMessages locale={locale} namespaces={NAMESPACES}>
         <HomePage
           projects={projects}
+          categories={categories}
           quick={{ config: quick, projects: allProjects }}
           banners={{
             top: <PageBanners locale={locale} page="home" slot="top" />,

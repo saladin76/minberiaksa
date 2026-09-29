@@ -2309,5 +2309,14 @@
     "cmd_field_status": "Status",
     "a_confirm": "Sahkan",
     "a_cancel": "Batal"
+  },
+  "CategoryNav": {
+    "title": "Kategori projek",
+    "toggle": "Tunjukkan kategori projek",
+    "sectionEyebrow": "Menderma mengikut bidang",
+    "sectionTitle": "Semak imbas projek mengikut kategori",
+    "sectionLead": "Pilih bidang yang paling dekat di hati anda dan sokong projek-projeknya secara terus.",
+    "explore": "Teroka",
+    "projectsCount": "{count, plural, =0 {Belum ada projek} other {# projek}}"
   }
 }

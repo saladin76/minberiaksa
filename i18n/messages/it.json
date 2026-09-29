@@ -2312,5 +2312,14 @@
     "cmd_field_status": "Stato",
     "a_confirm": "Conferma",
     "a_cancel": "Annulla"
+  },
+  "CategoryNav": {
+    "title": "Categorie di progetti",
+    "toggle": "Mostra le categorie di progetti",
+    "sectionEyebrow": "Dona per causa",
+    "sectionTitle": "Sfoglia i progetti per categoria",
+    "sectionLead": "Scegli la causa più vicina al tuo cuore e sostieni direttamente i suoi progetti.",
+    "explore": "Scopri",
+    "projectsCount": "{count, plural, =0 {Ancora nessun progetto} one {# progetto} other {# progetti}}"
   }
 }

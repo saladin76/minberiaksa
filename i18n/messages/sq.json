@@ -2312,5 +2312,14 @@
     "cmd_field_status": "Statusi",
     "a_confirm": "Konfirmo",
     "a_cancel": "Anulo"
+  },
+  "CategoryNav": {
+    "title": "Kategoritë e projekteve",
+    "toggle": "Shfaq kategoritë e projekteve",
+    "sectionEyebrow": "Dhuro sipas kauzës",
+    "sectionTitle": "Shfleto projektet sipas kategorisë",
+    "sectionLead": "Zgjidh kauzën më të afërt me zemrën tënde dhe mbështet drejtpërdrejt projektet e saj.",
+    "explore": "Eksploro",
+    "projectsCount": "{count, plural, =0 {Ende pa projekte} one {# projekt} other {# projekte}}"
   }
 }

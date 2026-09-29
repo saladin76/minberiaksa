@@ -7,6 +7,7 @@ import type { MinbarProject } from "@/lib/minbar/projects";
 import type { MinbarArticle } from "@/lib/minbar/posts";
 import type { CmsCourse, CmsFaq, CmsPlaylist, CmsVideo } from "@/lib/minbar/cms";
 import type { QuickDonationConfig } from "@/lib/minbar/quick-donation";
+import type { MinbarCategory } from "@/lib/minbar/categories";
 
 /** Everything the homepage shows that an editor publishes, read by the page. */
 export interface HomeContent {
@@ -24,6 +25,7 @@ import { CoursesRail, EventsSection, ProgramsRail, ReelsSection } from "./MediaS
 import { ImpactSection, PathSection, RegionCards, UrgentProjectsSection } from "./ImpactSections";
 import { AccountSection, RecurringSection, WaqfSection } from "./GivingSections";
 import { ArticlesSection, FaqSection, NewsSection } from "./KnowledgeSections";
+import CategoriesSection from "./CategoriesSection";
 import TravelBanner from "@/components/minbar/banners/TravelBanner";
 import IbadanBanner from "@/components/minbar/banners/IbadanBanner";
 import ZakatBanner from "@/components/minbar/banners/ZakatBanner";
@@ -40,12 +42,15 @@ import ZakatBanner from "@/components/minbar/banners/ZakatBanner";
  */
 export default function HomePage({
   projects,
+  categories,
   quick,
   banners,
   content,
   signedIn,
 }: {
   projects: MinbarProject[];
+  /** Every active category, for the section under the urgent rail. */
+  categories: MinbarCategory[];
   /** The quick-donation bar as the dashboard configured it, with every project it may list. */
   quick: { config: QuickDonationConfig; projects: MinbarProject[] };
   /** Dashboard banners, already rendered on the server, one node per slot. */
@@ -88,6 +93,7 @@ export default function HomePage({
       <TravelBanner />
       <IbadanBanner />
       <UrgentProjectsSection projects={projects} />
+      <CategoriesSection categories={categories} />
       <ZakatBanner />
       <WaqfSection />
       <RecurringSection />

@@ -24,6 +24,7 @@ import { CurrencyProvider } from "@/context/CurrencyContext";
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { authOptions } from "@/app/api/auth/[...nextauth]/options";
+import { listCategories, type NavCategory } from "@/lib/minbar/categories";
 import "@/styles/minbar/minbar.css";
 import "@/styles/minbar/locale-fonts.css";
 
@@ -104,7 +105,12 @@ export default async function Rootlayout({
   // RTL too, and the previous `locale === "ar"` test silently rendered it LTR.
   const dir = localeDirection(locale);
   // Drives where the header's account icon points (`[AUTH-INTEGRATION]`).
-  const session = await getServerSession(authOptions);
+  // Categories feed the header's projects dropdown and the footer's band.
+  const [session, categories] = await Promise.all([
+    getServerSession(authOptions),
+    listCategories(locale),
+  ]);
+  const navCategories: NavCategory[] = categories.map(({ id, href, name, image, projectCount }) => ({ id, href, name, image, projectCount }));
 
   return (
     <IntlProviderClient locale={locale} messages={messages}>
@@ -121,7 +127,7 @@ export default async function Rootlayout({
             <SessionProvider>
               <PreferredLangSync />
               <ScrollToTop />
-              <Header signedIn={!!session?.user} isAdmin={session?.user?.role === "ADMIN"} />
+              <Header signedIn={!!session?.user} isAdmin={session?.user?.role === "ADMIN"} categories={navCategories} />
               {/* No top padding here: the header renders its own spacer, sized
                   from its measured height, because that height changes with the
                   language, the back button and the viewport. */}
@@ -129,7 +135,7 @@ export default async function Rootlayout({
               {/* The tagline is the footer's one string from the `homepage`
                   namespace. Passing it in keeps a 10KB bundle out of the shell
                   for the sake of a single sentence. */}
-              <MinbarFooter tagline={tagline} />
+              <MinbarFooter tagline={tagline} categories={navCategories} />
               <QuickDonate />
               <ConciergeLauncher />
               <CartReminder />

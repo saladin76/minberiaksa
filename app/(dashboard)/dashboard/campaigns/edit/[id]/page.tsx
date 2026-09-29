@@ -51,6 +51,7 @@ import {
   ArrowLeft,
   X,
   Upload,
+  Mail,
   AlertCircle,
   Plus,
   Trash2,
@@ -92,6 +93,7 @@ import {
   type TranslationLocale,
 } from '../../../_components/locale-form';
 import { CampaignLocaleTabContents, CampaignLocaleTabTriggers, CampaignTranslateBar, UpdateLocaleTabs } from '../../_components/CampaignLocaleTabs';
+import { UpdateMediaFields } from '../../_components/UpdateMediaFields';
 import type { TranslatedLocales } from '../../../_components/AutoTranslateButton';
 import {
   parseSuggestedDonations,
@@ -246,7 +248,8 @@ export default function EditCampaignPage() {
   const [isEditUpdateDialogOpen, setIsEditUpdateDialogOpen] = useState(false);
   const [selectedUpdate, setSelectedUpdate] = useState<Update | null>(null);
   const [updateLoading, setUpdateLoading] = useState(false);
-  const [uploadingUpdateImage, setUploadingUpdateImage] = useState(false);
+  const [updateMediaBusy, setUpdateMediaBusy] = useState(false);
+  const [sendUpdateAsCampaign, setSendUpdateAsCampaign] = useState(false);
   const [updateImage, setUpdateImage] = useState<string>("");
   const [activeTab, setActiveTab] = useState<FormLocale>('ar');
   const [updateActiveTab, setUpdateActiveTab] = useState<FormLocale>('ar');
@@ -705,40 +708,6 @@ export default function EditCampaignPage() {
     }
   };
 
-  const handleUpdateImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    setUploadingUpdateImage(true);
-    const formData = new FormData();
-    formData.append('file', file);
-
-    try {
-      const response = await axios.post('/api/upload', formData);
-      setUpdateImage(response.data.url);
-      toast.success('تم رفع الصورة بنجاح');
-    } catch (error) {
-      console.error('Error uploading image:', error);
-      toast.error('فشل في رفع الصورة');
-    } finally {
-      setUploadingUpdateImage(false);
-    }
-  };
-
-  const removeUpdateImage = async () => {
-    try {
-      if (updateImage) {
-        const publicId = updateImage.split('/').slice(-1)[0].split('.')[0];
-        await axios.delete(`/api/upload?publicId=${publicId}`);
-      }
-      setUpdateImage("");
-      toast.success('تم حذف الصورة بنجاح');
-    } catch (error) {
-      console.error('Error removing image:', error);
-      toast.error('فشل في حذف الصورة');
-    }
-  };
-
   const handleAddUpdate = async (data: UpdateFormValues) => {
     try {
       setUpdateLoading(true);
@@ -764,6 +733,10 @@ export default function EditCampaignPage() {
       setUpdateImage('');
       setIsUpdateDialogOpen(false);
       setUpdateActiveTab('ar');
+      if (sendUpdateAsCampaign && response.data?.id) {
+        setSendUpdateAsCampaign(false);
+        router.push(`/dashboard/communication/campaigns/new?updateId=${response.data.id}`);
+      }
       toast.success('تم إضافة التحديث بنجاح');
     } catch (error) {
       console.error('Error adding update:', error);
@@ -780,7 +753,8 @@ export default function EditCampaignPage() {
       const requestData = {
         title: data.title,
         description: data.description,
-        image: updateImage || selectedUpdate?.image,
+        /* The dialog starts from the saved photo, so an empty value is a removal. */
+        image: updateImage || null,
         videoUrl: data.videoUrl,
         translations: Object.fromEntries(
           TRANSLATION_LOCALES.map((l) => [l, { title: data[localeKey('title', l)] ?? '', description: data[localeKey('description', l)] ?? '' }])
@@ -1573,71 +1547,31 @@ export default function EditCampaignPage() {
                         <UpdateLocaleTabs form={updateForm} onTranslated={applyUpdateTranslations} />
                       </Tabs>
 
-                      {/* Image Upload Section */}
-                      <div className="space-y-4">
-                        <label className="block text-sm font-medium text-gray-700">
-                          صورة التحديث (اختياري)
-                        </label>
-                        
-                        {updateImage ? (
-                          <div className="relative">
-                            <img
-                              src={updateImage}
-                              alt="Update preview"
-                              className="h-48 w-full object-cover rounded-lg"
-                            />
-                            <button
-                              type="button"
-                              onClick={removeUpdateImage}
-                              className="absolute top-2 right-2 p-1 bg-red-600 text-white rounded-full hover:bg-red-700 transition-colors"
-                            >
-                              <X className="w-4 h-4" />
-                            </button>
-                          </div>
-                        ) : (
-                          <div className="relative">
-                            <input
-                              type="file"
-                              accept="image/*"
-                              onChange={handleUpdateImageUpload}
-                              className="hidden"
-                              id="update-image-upload"
-                              disabled={uploadingUpdateImage}
-                            />
-                            <label
-                              htmlFor="update-image-upload"
-                              className={`flex flex-col items-center justify-center h-32 w-full border-2 border-dashed rounded-lg cursor-pointer hover:border-gray-400 transition-colors ${
-                                uploadingUpdateImage ? 'opacity-50 cursor-not-allowed' : ''
-                              }`}
-                            >
-                              {uploadingUpdateImage ? (
-                                <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
-                              ) : (
-                                <>
-                                  <Upload className="w-6 h-6 text-gray-400" />
-                                  <span className="mt-2 text-sm text-gray-500">
-                                    اضغط لرفع صورة
-                                  </span>
-                                </>
-                              )}
-                            </label>
-                          </div>
-                        )}
-                      </div>
-
-                      <FormField
-                        control={updateForm.control}
-                        name="videoUrl"
-                        render={({ field }) => (
-                          <FormItem dir='rtl'>
-                            <FormLabel>رابط الفيديو (اختياري)</FormLabel>
-                            <FormControl>
-                              <Input {...field} placeholder="أدخل رابط الفيديو" />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
+                      <UpdateMediaFields
+                        idPrefix="add-update"
+                        image={updateImage}
+                        onImageChange={setUpdateImage}
+                        videoUrl={updateForm.watch('videoUrl') ?? ''}
+                        onVideoChange={(url) => updateForm.setValue('videoUrl', url, { shouldDirty: true })}
+                        onBusyChange={setUpdateMediaBusy}
                       />
+
+                      {/* The update can go straight out to the people who made it happen:
+                          after saving, the email-campaign wizard opens preset to this
+                          project's donors. */}
+                      <label className="flex items-start justify-between gap-4 rounded-lg border border-emerald-200 bg-emerald-50/60 p-3 cursor-pointer">
+                        <span className="space-y-1">
+                          <span className="flex items-center gap-2 text-sm font-semibold text-slate-900">
+                            <Mail className="w-4 h-4 text-emerald-700" />
+                            إرسال التحديث كحملة بريد للمتبرعين
+                          </span>
+                          <span className="block text-xs leading-5 text-slate-600">
+                            بعد الحفظ يُفتح معالج الحملات التسويقية مضبوطًا على كل من تبرّع لهذا المشروع: تختار القالب، وتُنشأ الحملة في «الحملات التسويقية» لتراجعها وترسلها.
+                          </span>
+                        </span>
+                        <Switch checked={sendUpdateAsCampaign} onCheckedChange={setSendUpdateAsCampaign} />
+                      </label>
+
                    
                       <div className="flex justify-end gap-3 mt-6">
                         <Button
@@ -1655,9 +1589,9 @@ export default function EditCampaignPage() {
                         <Button
                           type="submit"
                           className="gap-2"
-                          disabled={updateLoading || uploadingUpdateImage}
+                          disabled={updateLoading || updateMediaBusy}
                         >
-                          {(updateLoading || uploadingUpdateImage) && (
+                          {(updateLoading || updateMediaBusy) && (
                             <Loader2 className="w-4 h-4 animate-spin" />
                           )}
                           إضافة التحديث
@@ -1697,11 +1631,15 @@ export default function EditCampaignPage() {
                           />
                         )}
                         {update.videoUrl && (
-                          <div className="text-brand hover:underline">
-                            <a href={update.videoUrl} target="_blank" rel="noopener noreferrer">
-                              مشاهدة الفيديو
-                            </a>
-                          </div>
+                          update.videoUrl.includes('/video/upload/') ? (
+                            <video src={update.videoUrl} controls preload="metadata" className="max-w-[320px] rounded-lg bg-black" />
+                          ) : (
+                            <div className="text-brand hover:underline">
+                              <a href={update.videoUrl} target="_blank" rel="noopener noreferrer">
+                                مشاهدة الفيديو
+                              </a>
+                            </div>
+                          )
                         )}
                         <div className="flex items-center gap-2 text-sm text-gray-500">
                           <Calendar className="w-4 h-4" />
@@ -1709,6 +1647,17 @@ export default function EditCampaignPage() {
                         </div>
                       </div>
                       <div className="flex gap-2">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          title="إرسال التحديث كحملة بريد لمتبرعي المشروع"
+                          className="gap-1 text-emerald-700 hover:text-emerald-800"
+                          onClick={() => router.push(`/dashboard/communication/campaigns/new?updateId=${update.id}`)}
+                        >
+                          <Mail className="w-4 h-4" />
+                          <span className="hidden sm:inline text-xs">إرسال للمتبرعين</span>
+                        </Button>
                         <Button
                           type="button"
                           variant="ghost"
@@ -1774,71 +1723,14 @@ export default function EditCampaignPage() {
                   <UpdateLocaleTabs form={updateForm} onTranslated={applyUpdateTranslations} />
                 </Tabs>
 
-                {/* Image Section */}
-                <div className="space-y-4">
-                  <label className="block text-sm font-medium text-gray-700">
-                    صورة التحديث (اختياري)
-                  </label>
-                  
-                  {updateImage ? (
-                    <div className="relative">
-                      <img
-                        src={updateImage}
-                        alt="Update preview"
-                        className="h-48 w-full object-cover rounded-lg"
+                <UpdateMediaFields
+                        idPrefix="edit-update"
+                        image={updateImage}
+                        onImageChange={setUpdateImage}
+                        videoUrl={updateForm.watch('videoUrl') ?? ''}
+                        onVideoChange={(url) => updateForm.setValue('videoUrl', url, { shouldDirty: true })}
+                        onBusyChange={setUpdateMediaBusy}
                       />
-                      <button
-                        type="button"
-                        onClick={removeUpdateImage}
-                        className="absolute top-2 right-2 p-1 bg-red-600 text-white rounded-full hover:bg-red-700 transition-colors"
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="relative">
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={handleUpdateImageUpload}
-                        className="hidden"
-                        id="edit-update-image-upload"
-                        disabled={uploadingUpdateImage}
-                      />
-                      <label
-                        htmlFor="edit-update-image-upload"
-                        className={`flex flex-col items-center justify-center h-32 w-full border-2 border-dashed rounded-lg cursor-pointer hover:border-gray-400 transition-colors ${
-                          uploadingUpdateImage ? 'opacity-50 cursor-not-allowed' : ''
-                        }`}
-                      >
-                        {uploadingUpdateImage ? (
-                          <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
-                        ) : (
-                          <>
-                            <Upload className="w-6 h-6 text-gray-400" />
-                            <span className="mt-2 text-sm text-gray-500">
-                              اضغط لرفع صورة
-                            </span>
-                          </>
-                        )}
-                      </label>
-                    </div>
-                  )}
-                </div>
-
-                <FormField
-                  control={updateForm.control}
-                  name="videoUrl"
-                  render={({ field }) => (
-                    <FormItem dir='rtl'>
-                      <FormLabel>رابط الفيديو (اختياري)</FormLabel>
-                      <FormControl>
-                        <Input {...field} placeholder="أدخل رابط الفيديو" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
                 
                 <div className="flex justify-end gap-3 mt-6">
                   <Button
@@ -1856,9 +1748,9 @@ export default function EditCampaignPage() {
                   <Button
                     type="submit"
                     className="gap-2"
-                    disabled={updateLoading || uploadingUpdateImage}
+                    disabled={updateLoading || updateMediaBusy}
                   >
-                    {(updateLoading || uploadingUpdateImage) && (
+                    {(updateLoading || updateMediaBusy) && (
                       <Loader2 className="w-4 h-4 animate-spin" />
                     )}
                     حفظ التغييرات

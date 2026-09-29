@@ -8,6 +8,7 @@ import { miaPath, type MinbarRoute } from "@/lib/minbar/routes";
 import { ORG } from "@/lib/minbar/org";
 import { useMinbarLabel } from "@/hooks/useMinbarLabel";
 import SocialIcon, { type SocialIconName } from "./SocialIcon";
+import type { NavCategory } from "@/lib/minbar/categories";
 
 /**
  * Site footer  ported from `Minbar/Footer.dc.html`.
@@ -87,6 +88,8 @@ export interface FooterProps {
   whatsappNumber?: string;
   closingImage?: string;
   socialLinks?: ReadonlyArray<{ label: string; href: string; icon: SocialIconName }>;
+  /** Active project categories, shown as a band of links under the columns. */
+  categories?: NavCategory[];
 }
 
 export default function Footer({
@@ -98,10 +101,12 @@ export default function Footer({
   whatsappNumber = ORG.whatsapp,
   closingImage = "/minbar/assets/footer-quds.jpg",
   socialLinks,
+  categories = [],
 }: FooterProps) {
   const locale = useLocale();
   const dir = localeDirection(locale);
   const tCommon = useTranslations("common");
+  const tCats = useTranslations("CategoryNav");
   const label = useMinbarLabel();
 
   /* Mobile accordion. On desktop the CSS keeps every list open regardless. */
@@ -280,6 +285,37 @@ export default function Footer({
             );
           })}
         </div>
+
+        {/* Categories band: a wrapping row of chips on wide screens, and one
+            more accordion entry on phones  it reuses the `fcol` classes, so
+            it opens and closes exactly like the columns above it. */}
+        {categories.length ? (
+          <div className="mia-foot-cats-wrap">
+            <div
+              className="fcol mia-foot-cats"
+              data-open={openCol === COLUMNS.length ? "true" : "false"}
+            >
+              <button
+                type="button"
+                className="fcol-head"
+                onClick={() => setOpenCol(openCol === COLUMNS.length ? -1 : COLUMNS.length)}
+                aria-expanded={openCol === COLUMNS.length}
+              >
+                {tCats("title")}
+                <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="m6 9 6 6 6-6" />
+                </svg>
+              </button>
+              <div className="fcol-links mia-foot-cats-list">
+                {categories.map((c) => (
+                  <Link key={c.id} href={c.href} className="mia-foot-cat">
+                    {c.name}
+                  </Link>
+                ))}
+              </div>
+            </div>
+          </div>
+        ) : null}
 
         {/* The clear window: nothing here but height, so the lower half of the
             photograph  the children, the wall, the Dome  is seen through it. */}

@@ -2309,5 +2309,14 @@
     "cmd_field_status": "状态",
     "a_confirm": "确认",
     "a_cancel": "取消"
+  },
+  "CategoryNav": {
+    "title": "项目分类",
+    "toggle": "显示项目分类",
+    "sectionEyebrow": "按领域捐赠",
+    "sectionTitle": "按分类浏览项目",
+    "sectionLead": "选择最触动您的领域，直接支持其项目。",
+    "explore": "查看",
+    "projectsCount": "{count, plural, =0 {暂无项目} other {# 个项目}}"
   }
 }

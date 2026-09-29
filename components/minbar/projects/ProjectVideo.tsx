@@ -38,7 +38,12 @@ function playerFor(raw: string): Player {
   if (host === "facebook.com" || host === "fb.watch") {
     return { kind: "iframe", src: `https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(raw)}&show_text=false&width=720` };
   }
-  if (/\.(mp4|webm|ogg|m3u8)$/i.test(url.pathname)) return { kind: "video", src: url.toString() };
+  /* A video uploaded from the dashboard lives on Cloudinary's video pipeline;
+     served as MP4 whatever the original format was (a phone's .mov included). */
+  if (host === "res.cloudinary.com" && url.pathname.includes("/video/upload/")) {
+    return { kind: "video", src: url.toString().replace(/\.(mov|avi|mkv|m4v|3gp|wmv)$/i, ".mp4") };
+  }
+  if (/\.(mp4|webm|ogg|m3u8|m4v|mov)$/i.test(url.pathname)) return { kind: "video", src: url.toString() };
   return null;
 }
 

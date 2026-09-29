@@ -403,6 +403,8 @@ export interface MinbarProjectUpdate {
   title: string;
   text: string;
   image: string | null;
+  /** A YouTube / Vimeo / Facebook link or an uploaded video file. */
+  videoUrl: string | null;
   createdAt: string;
 }
 
@@ -417,6 +419,7 @@ export async function listProjectUpdates(
       title: true,
       description: true,
       image: true,
+      videoUrl: true,
       createdAt: true,
       translations: {
         where: translationLocaleWhere(locale),
@@ -433,6 +436,7 @@ export async function listProjectUpdates(
       title: t?.title || row.title,
       text: t?.description || row.description,
       image: row.image,
+      videoUrl: row.videoUrl ?? null,
       // Serialised here so the value crossing to the client is a plain string;
       // the page formats it for the locale.
       createdAt: row.createdAt.toISOString(),

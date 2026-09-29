@@ -2312,5 +2312,14 @@
     "cmd_field_status": "Status",
     "a_confirm": "Bekräfta",
     "a_cancel": "Avbryt"
+  },
+  "CategoryNav": {
+    "title": "Projektkategorier",
+    "toggle": "Visa projektkategorier",
+    "sectionEyebrow": "Ge efter ändamål",
+    "sectionTitle": "Bläddra bland projekt efter kategori",
+    "sectionLead": "Välj det ändamål som ligger dig närmast om hjärtat och stöd dess projekt direkt.",
+    "explore": "Utforska",
+    "projectsCount": "{count, plural, =0 {Inga projekt ännu} one {# projekt} other {# projekt}}"
   }
 }

@@ -20,6 +20,12 @@ export type CampaignInput = {
   audienceSegmentKey?: string | null;
   templateGroupId?: string | null;
   senderRoutingMode?: string;
+  /**
+   * Initial metadata. Used to link a campaign to what it announces 
+   * `{ sourceUpdate: { updateId, campaignId } }` for a campaign-update email,
+   * which the send executor reads to fill the `{{update.*}}` variables.
+   */
+  metadata?: Record<string, unknown>;
 };
 
 export type ServiceResult<T> = { ok: true; data: T } | { ok: false; status: number; error: string };
@@ -66,6 +72,7 @@ export async function createCampaign(input: CampaignInput, actor?: Actor): Promi
         templateGroupId: input.templateGroupId ?? null,
         senderRoutingMode: input.senderRoutingMode ?? "AUTO",
         status: "DRAFT",
+        ...(input.metadata ? { metadata: input.metadata as Prisma.InputJsonValue } : {}),
       },
     });
     await writeAuditLog({

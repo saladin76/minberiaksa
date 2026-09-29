@@ -2309,5 +2309,14 @@
     "cmd_field_status": "Status",
     "a_confirm": "Bekreft",
     "a_cancel": "Avbryt"
+  },
+  "CategoryNav": {
+    "title": "Prosjektkategorier",
+    "toggle": "Vis prosjektkategorier",
+    "sectionEyebrow": "Gi etter formål",
+    "sectionTitle": "Bla gjennom prosjekter etter kategori",
+    "sectionLead": "Velg formålet som ligger deg nærmest hjertet, og støtt prosjektene direkte.",
+    "explore": "Utforsk",
+    "projectsCount": "{count, plural, =0 {Ingen prosjekter ennå} one {# prosjekt} other {# prosjekter}}"
   }
 }

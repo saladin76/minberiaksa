@@ -9,6 +9,7 @@ import { prisma } from "@/lib/prisma";
 import { auditActorFromDashboardSession, writeAuditLog } from "@/lib/audit-log";
 import { resolveDonorIds } from "@/lib/users/donor-filter";
 import { loadContextsForUserIds } from "@/lib/templates/variables";
+import { SAMPLE_TEMPLATE_CONTEXT } from "@/lib/templates/sample-context";
 import { renderEmailHtml, renderEmailSubject } from "@/lib/templates/render";
 import { pickLocale, resolveEmailVariant } from "@/lib/templates/locale-resolver";
 import { logSentMessage } from "@/lib/messaging/log-sent";
@@ -56,7 +57,9 @@ export async function POST(request: NextRequest) {
   const failed: { to: string; error: string }[] = [];
 
   for (const id of userIds) {
-    const ctx = contexts.get(id);
+    const loaded = contexts.get(id);
+    /* A test send of an update template shows the sample update rather than blanks. */
+    const ctx = loaded ? { ...loaded, update: loaded.update ?? SAMPLE_TEMPLATE_CONTEXT.update } : loaded;
     if (!ctx || !ctx.user.email) {
       skipped += 1;
       if (ctx) {

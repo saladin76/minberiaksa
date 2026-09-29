@@ -3428,6 +3428,9 @@
     "customCountPh": "Başka sayı"
   },
   "ProjectExtras": {
+    "updateBadge": "Proje güncellemesi",
+    "readMore": "Devamını oku",
+    "showLess": "Daha az göster",
     "video": "Proje videosu",
     "categories": "Kategoriler",
     "tabComments": "Bağışçı mesajları",
@@ -3436,5 +3439,14 @@
     "commentSend": "Gönder",
     "commentSignIn": "Mesaj bırakmak için giriş yapın",
     "commentFailed": "Mesajınız gönderilemedi. Lütfen tekrar deneyin."
+  },
+  "CategoryNav": {
+    "title": "Proje kategorileri",
+    "toggle": "Proje kategorilerini göster",
+    "sectionEyebrow": "Alana göre bağış yapın",
+    "sectionTitle": "Projelere kategoriye göre göz atın",
+    "sectionLead": "Kalbinize en yakın alanı seçin ve projelerini doğrudan destekleyin.",
+    "explore": "Keşfet",
+    "projectsCount": "{count, plural, =0 {Henüz proje yok} other {# proje}}"
   }
 }

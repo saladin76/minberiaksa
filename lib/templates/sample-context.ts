@@ -54,6 +54,18 @@ export const SAMPLE_TEMPLATE_CONTEXT = (() => {
         ],
       },
     ],
+    update: {
+      title: get("update.title"),
+      description: get("update.description"),
+      image: get("update.image"),
+      videoUrl: get("update.videoUrl"),
+      videoThumbnail: get("update.videoThumbnail"),
+      cover: get("update.cover"),
+      date: get("update.date"),
+      campaignTitle: get("update.campaignTitle"),
+      url: get("update.url"),
+      donateUrl: get("update.donateUrl"),
+    },
     totals: {
       count: get("totals.count"),
       amountUSD: get("totals.amountUSD"),

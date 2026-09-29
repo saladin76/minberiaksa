@@ -2309,5 +2309,14 @@
     "cmd_field_status": "状態",
     "a_confirm": "確認",
     "a_cancel": "キャンセル"
+  },
+  "CategoryNav": {
+    "title": "プロジェクトのカテゴリー",
+    "toggle": "プロジェクトのカテゴリーを表示",
+    "sectionEyebrow": "分野別に寄付する",
+    "sectionTitle": "カテゴリー別にプロジェクトを見る",
+    "sectionLead": "あなたの心に最も近い分野を選び、そのプロジェクトを直接支援してください。",
+    "explore": "見る",
+    "projectsCount": "{count, plural, =0 {プロジェクトはまだありません} other {# 件のプロジェクト}}"
   }
 }

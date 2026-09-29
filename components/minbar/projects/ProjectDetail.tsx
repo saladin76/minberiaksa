@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
 import { miaPath } from "@/lib/minbar/routes";
@@ -12,6 +12,7 @@ import { ArrowGlyph } from "@/components/minbar/home/TopSections";
 import DonationPanel from "./DonationPanel";
 import ProjectVideo from "./ProjectVideo";
 import ProjectComments from "./ProjectComments";
+import ProjectUpdatePost from "./ProjectUpdatePost";
 import ConciergeEntry from "@/components/minbar/concierge/ConciergeEntry";
 
 /**
@@ -62,7 +63,16 @@ export default function ProjectDetail({ project, updates, gallery, related, dono
 
   const [tab, setTab] = useState("about");
 
-  const dateFormatter = new Intl.DateTimeFormat(locale, { year: "numeric", month: "long", day: "numeric" });
+  /* A link to #updates (the update emails use one) or #comments opens that
+     tab and brings the section into view. */
+  useEffect(() => {
+    const wanted = window.location.hash.replace("#", "");
+    if (!wanted || !tabs.some((item) => item.id === wanted)) return;
+    setTab(wanted);
+    window.requestAnimationFrame(() => document.getElementById("pd-body")?.scrollIntoView({ behavior: "smooth", block: "start" }));
+    // Once, on arrival.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <div style={{ position: "relative" }}>
@@ -199,21 +209,10 @@ export default function ProjectDetail({ project, updates, gallery, related, dono
             ) : null}
 
             {tab === "updates" ? (
-              <div style={{ display: "grid", gap: 0 }}>
+              /* Updates read as a feed of posts from the field  newest first. */
+              <div style={{ display: "grid", gap: 16 }}>
                 {updates.map((update) => (
-                  <div key={update.id} style={{ display: "grid", gridTemplateColumns: "auto minmax(0,1fr)", gap: 18, paddingBottom: 26 }}>
-                    <span style={{ display: "grid", justifyItems: "center", gap: 6 }}>
-                      <span aria-hidden="true" style={{ width: 11, height: 11, borderRadius: "50%", background: "var(--gold)", boxShadow: "0 0 0 4px rgba(211,154,39,.2)" }} />
-                      <span aria-hidden="true" style={{ width: 1, flex: "1 1 auto", minHeight: 42, background: "var(--border)" }} />
-                    </span>
-                    <span style={{ display: "grid", gap: 7, minWidth: 0 }}>
-                      <span style={{ fontSize: 12, fontWeight: 900, color: "#8a5d16" }}>
-                        {dateFormatter.format(new Date(update.createdAt))}
-                      </span>
-                      <b style={{ fontSize: 16.5, lineHeight: 1.5 }}>{update.title}</b>
-                      <span style={{ fontSize: 14.5, lineHeight: 1.9, color: "var(--muted)" }}>{update.text}</span>
-                    </span>
-                  </div>
+                  <ProjectUpdatePost key={update.id} update={update} projectTitle={project.title} />
                 ))}
               </div>
             ) : null}

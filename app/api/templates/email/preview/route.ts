@@ -9,6 +9,7 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 import { requireAdminOrDashboardPermission } from "@/lib/dashboard/api-auth";
 import { prisma } from "@/lib/prisma";
 import { loadContext, VARIABLE_CATALOG, type TemplateContext } from "@/lib/templates/variables";
+import { SAMPLE_TEMPLATE_CONTEXT } from "@/lib/templates/sample-context";
 import { renderEmailHtml, renderEmailSubject } from "@/lib/templates/render";
 import { pickLocale, resolveEmailVariant } from "@/lib/templates/locale-resolver";
 import type { TReaderDocument } from "@usewaypoint/email-builder";
@@ -118,9 +119,12 @@ export async function POST(request: NextRequest) {
   });
   if (!template) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-  const ctx =
+  const loaded =
     (parsed.data.userId ? await loadContext(parsed.data.userId) : null) ??
     buildSampleContext();
+  /* A donor has no "current update" of their own: the {{update.*}} variables
+     preview with the sample update so an update template never looks blank. */
+  const ctx: TemplateContext = { ...loaded, update: loaded.update ?? SAMPLE_TEMPLATE_CONTEXT.update };
 
   const locale = pickLocale({
     override: parsed.data.locale,

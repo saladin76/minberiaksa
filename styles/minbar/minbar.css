@@ -419,6 +419,224 @@
 }
 
 /* ─────────────────────────────────────────────────────────────────────────────
+ * Project categories  the header dropdown, its list in the "all pages" index,
+ * the footer band and the homepage section. One set of rules so the four stay
+ * visually one family.
+ * ───────────────────────────────────────────────────────────────────────────── */
+
+.mia-head .mia-nav-drop svg { transition: transform .2s ease; }
+.mia-head .mia-nav-drop[data-open="true"] svg { transform: rotate(180deg); }
+.mia-head .mia-nav-drop:focus-visible { outline: 2px solid #D39A27; outline-offset: 4px; border-radius: 2px; }
+
+/* Anchored to the main row (not the nav, which scrolls and would clip it) and
+ * centred under it. */
+.mia-head .mia-cats-pop {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  margin-inline: auto;
+  width: min(880px, calc(100% - 48px));
+  z-index: 80;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  max-height: min(560px, calc(100vh - 150px));
+  background: #fff;
+  color: #10212B;
+  border: 1px solid rgba(211, 154, 39, .5);
+  border-radius: 18px;
+  box-shadow: 0 28px 60px rgba(16, 33, 43, .22);
+  overflow: hidden;
+  animation: mia-cats-in .18s cubic-bezier(.22, .61, .36, 1);
+}
+@keyframes mia-cats-in { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+.mia-head .mia-cats-pop__head {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+  padding: 14px 18px;
+  background: linear-gradient(180deg, #FFFDF8, #F7F2EA);
+  border-bottom: 1px solid rgba(16, 33, 43, .08);
+}
+.mia-head .mia-cats-pop__count {
+  display: inline-grid; place-items: center; min-width: 22px; height: 20px; padding: 0 6px;
+  border-radius: 999px; background: #FDF3DD; color: #8a5d16; font-size: 11px; letter-spacing: 0;
+}
+.mia-head .mia-cats-pop__all {
+  display: inline-flex; align-items: center; gap: 8px; height: 36px; padding: 0 16px;
+  border-radius: 999px; background: linear-gradient(135deg, #B8422F, #7C2318); color: #fff;
+  font-size: 13px; font-weight: 900; text-decoration: none; white-space: nowrap;
+  transition: filter .15s ease, transform .15s ease;
+}
+.mia-head .mia-cats-pop__all:hover { filter: brightness(1.1); transform: translateY(-1px); }
+.mia-head .mia-cats-pop__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 6px;
+  padding: 12px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(211, 154, 39, .6) transparent;
+}
+.mia-head .mia-cats-item {
+  display: flex; align-items: center; gap: 12px; min-width: 0;
+  padding: 9px 10px; border-radius: 12px; border: 1px solid transparent;
+  color: #10212B; text-decoration: none;
+  transition: background .15s ease, border-color .15s ease;
+}
+.mia-head .mia-cats-item:hover,
+.mia-head .mia-cats-item:focus-visible { background: #F7F2EA; border-color: rgba(211, 154, 39, .45); outline: none; }
+.mia-head .mia-cats-item__name {
+  font-size: 13.5px; font-weight: 800; line-height: 1.45;
+  overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+}
+.mia-head .mia-cats-item:hover .mia-cats-item__name { color: #A93428; }
+.mia-head .mia-cats-item__count { font-size: 11.5px; font-weight: 700; color: #52616B; }
+/* The nav is hidden below 1180px, so its panel goes with it. */
+@media (max-width: 1180px) { .mia-head .mia-cats-pop { display: none; } }
+
+/* The list inside the "all pages" index: two columns, its own scroll so a long
+ * category list never pushes the other groups out of reach. */
+.mia-head .mia-menu-cats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 2px 8px;
+  max-height: 196px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-inline-end: 4px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(211, 154, 39, .6) transparent;
+}
+.mia-head .mia-menu-cat {
+  display: flex; align-items: center; gap: 9px; min-width: 0;
+  padding: 6px 8px; border-radius: 9px;
+  font-size: 13px; font-weight: 700; color: #10212B; text-decoration: none;
+}
+@media (max-width: 360px) { .mia-head .mia-menu-cats { grid-template-columns: minmax(0, 1fr); } }
+
+/* Footer band. */
+.mia-foot .mia-foot-cats-wrap { max-width: 1240px; margin: 0 auto; padding: 0 26px 30px; }
+.mia-foot .mia-foot-cats {
+  display: grid; gap: 14px; align-content: start;
+  padding-top: 24px; border-top: 1px solid rgba(211, 154, 39, .28);
+}
+.mia-foot .fcol-links.mia-foot-cats-list { display: flex; flex-wrap: wrap; gap: 8px; }
+.mia-foot a.mia-foot-cat {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 7px 14px; border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, .22); background: rgba(255, 255, 255, .06);
+  color: rgba(255, 255, 255, .88); font-size: 13px; font-weight: 700; text-decoration: none;
+  transition: all .18s ease;
+}
+.mia-foot a.mia-foot-cat::before { content: ""; width: 5px; height: 5px; background: #D39A27; transform: rotate(45deg); flex: 0 0 auto; }
+.mia-foot a.mia-foot-cat:hover { border-color: #D39A27; background: rgba(211, 154, 39, .18); color: #FFE8B0; transform: translateY(-2px); }
+@media (max-width: 720px) {
+  .mia-foot .mia-foot-cats-wrap { padding: 0 18px 24px; margin-top: -30px; }
+  .mia-foot .mia-foot-cats { padding-top: 0; border-top: 0; gap: 0; }
+  .mia-foot .fcol-links.mia-foot-cats-list { max-height: 260px; overflow-y: auto; padding: 2px 2px 16px; }
+  .mia-foot a.mia-foot-cat { padding: 8px 14px; }
+}
+
+/* Homepage section. */
+.mia-scope .mia-cat-section {
+  position: relative; z-index: 1; padding: 52px 0 48px; overflow: hidden;
+  background: linear-gradient(to left, rgba(247, 242, 234, .5), rgba(247, 242, 234, .85));
+  border-bottom: 1px solid var(--border);
+}
+.mia-scope .mia-cat-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px 24px; flex-wrap: wrap; margin-bottom: 26px; }
+.mia-scope .mia-cat-eyebrow { display: inline-flex; align-items: center; gap: 9px; color: #8a5d16; font-size: 12.5px; font-weight: 900; letter-spacing: .06em; }
+.mia-scope .mia-cat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(236px, 1fr)); gap: 16px; }
+
+.mia-scope .mia-cat-card {
+  position: relative; isolation: isolate; display: flex; min-height: 230px; overflow: hidden;
+  border-radius: 16px; background: var(--deep); color: #fff; text-decoration: none;
+  box-shadow: 0 12px 28px rgba(16, 33, 43, .12);
+  transition: transform .24s cubic-bezier(.22, .61, .36, 1), box-shadow .24s ease;
+}
+.mia-scope .mia-cat-card::after {
+  content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+  box-shadow: inset 0 0 0 1px rgba(211, 154, 39, .0); transition: box-shadow .24s ease;
+}
+.mia-scope .mia-cat-card:hover { transform: translateY(-5px); box-shadow: 0 26px 52px rgba(16, 33, 43, .22); }
+.mia-scope .mia-cat-card:hover::after,
+.mia-scope .mia-cat-card:focus-visible::after { box-shadow: inset 0 0 0 2px rgba(211, 154, 39, .85); }
+.mia-scope .mia-cat-card:focus-visible { outline: none; }
+.mia-scope .mia-cat-card__media {
+  position: absolute; inset: 0; z-index: -2;
+  background-size: cover; background-position: center;
+  transition: transform .6s cubic-bezier(.22, .61, .36, 1);
+}
+.mia-scope .mia-cat-card:hover .mia-cat-card__media { transform: scale(1.06); }
+/* No picture: the navy ground with the Aqsa pattern faint over it. */
+.mia-scope .mia-cat-card__media--pattern { background: linear-gradient(145deg, #1d3a4a, #10212B 70%); }
+.mia-scope .mia-cat-card__media--pattern::before {
+  content: ""; position: absolute; inset: 0;
+  background: url('/minbar/assets/patterns/aqsa-white-pattern.webp') center / 280px 280px repeat;
+  opacity: .14;
+}
+.mia-scope .mia-cat-card__shade {
+  position: absolute; inset: 0; z-index: -1;
+  background: linear-gradient(180deg, rgba(16, 33, 43, .18) 0%, rgba(16, 33, 43, .35) 40%, rgba(16, 33, 43, .92) 100%);
+}
+.mia-scope .mia-cat-card__body { flex: 1 1 auto; display: flex; flex-direction: column; justify-content: space-between; gap: 18px; padding: 18px; min-width: 0; }
+.mia-scope .mia-cat-card__top { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+.mia-scope .mia-cat-card__icon {
+  display: grid; place-items: center; width: 48px; height: 48px; flex: 0 0 48px; border-radius: 14px;
+  background: var(--gold); color: var(--deep); box-shadow: 0 10px 22px rgba(0, 0, 0, .25);
+  transition: transform .24s cubic-bezier(.22, .61, .36, 1);
+}
+.mia-scope .mia-cat-card:hover .mia-cat-card__icon { transform: rotate(-6deg) scale(1.05); }
+.mia-scope .mia-cat-card__icon .mia-cat-glyph { width: 24px; height: 24px; }
+.mia-scope .mia-cat-card__count {
+  display: inline-flex; align-items: center; height: 26px; padding: 0 11px; border-radius: 999px;
+  background: rgba(16, 33, 43, .55); border: 1px solid rgba(255, 255, 255, .22);
+  backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+  font-size: 12px; font-weight: 800; white-space: nowrap;
+}
+.mia-scope .mia-cat-card__foot { display: grid; gap: 6px; min-width: 0; }
+.mia-scope .mia-cat-card__name {
+  font-size: 19px; font-weight: 900; line-height: 1.35;
+  overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+}
+.mia-scope .mia-cat-card__desc {
+  font-size: 13px; line-height: 1.7; color: rgba(255, 255, 255, .78);
+  overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+}
+.mia-scope .mia-cat-card__go {
+  display: inline-flex; align-items: center; gap: 7px; margin-top: 4px;
+  color: #FFE8B0; font-size: 13px; font-weight: 800;
+}
+.mia-scope .mia-cat-card__go svg { transition: transform .2s ease; }
+.mia-scope[dir="rtl"] .mia-cat-card:hover .mia-cat-card__go svg { transform: translateX(-4px); }
+.mia-scope[dir="ltr"] .mia-cat-card:hover .mia-cat-card__go svg { transform: scaleX(-1) translateX(-4px); }
+
+@media (max-width: 760px) {
+  .mia-scope .mia-cat-section { padding: 38px 0 34px; }
+  .mia-scope .mia-cat-head { margin-bottom: 18px; }
+  .mia-scope .mia-cat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .mia-scope .mia-cat-card { min-height: 176px; border-radius: 14px; }
+  .mia-scope .mia-cat-card__body { padding: 12px; gap: 12px; }
+  .mia-scope .mia-cat-card__icon { width: 38px; height: 38px; flex-basis: 38px; border-radius: 11px; }
+  .mia-scope .mia-cat-card__icon .mia-cat-glyph { width: 20px; height: 20px; }
+  .mia-scope .mia-cat-card__count { height: 22px; padding: 0 8px; font-size: 10.5px; }
+  .mia-scope .mia-cat-card__name { font-size: 15px; }
+  .mia-scope .mia-cat-card__desc { display: none; }
+  .mia-scope .mia-cat-card__go { font-size: 12px; }
+}
+@media (max-width: 340px) {
+  .mia-scope .mia-cat-grid { grid-template-columns: minmax(0, 1fr); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .mia-head .mia-cats-pop { animation: none; }
+  .mia-scope .mia-cat-card,
+  .mia-scope .mia-cat-card__media,
+  .mia-scope .mia-cat-card__icon { transition: none; }
+  .mia-scope .mia-cat-card:hover,
+  .mia-scope .mia-cat-card:hover .mia-cat-card__media,
+  .mia-scope .mia-cat-card:hover .mia-cat-card__icon { transform: none; }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
  * Footer  ported from the <style> blocks in Minbar/Footer.dc.html.
  * ───────────────────────────────────────────────────────────────────────────── */
 
