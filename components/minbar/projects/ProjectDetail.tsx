@@ -113,11 +113,17 @@ export default function ProjectDetail({ project, updates, gallery, related, dono
         </div>
       </nav>
 
-      <section style={{ position: "relative", zIndex: 1, padding: "34px 0 40px", overflow: "hidden" }}>
-        <svg viewBox="0 0 220 220" aria-hidden="true" style={{ position: "absolute", insetInlineEnd: -40, top: -30, width: 220, height: 220, opacity: 0.06, pointerEvents: "none" }}>
-          <path d="M110 220V140a70 70 0 0 1 70-70h40" fill="none" stroke="var(--gold)" strokeWidth="2" />
-          <circle cx="180" cy="70" r="5" fill="var(--gold)" />
-        </svg>
+      {/* No `overflow: hidden` on this section: it would make the section the
+          donation panel's sticky container, so the panel's `top: 122px` would
+          count from the section's edge and push it ~90px below the image
+          beside it (and it would never stick). Only the ornament is clipped. */}
+      <section style={{ position: "relative", zIndex: 1, padding: "34px 0 40px" }}>
+        <span aria-hidden="true" style={{ position: "absolute", inset: 0, overflow: "hidden", pointerEvents: "none" }}>
+          <svg viewBox="0 0 220 220" style={{ position: "absolute", insetInlineEnd: -40, top: -30, width: 220, height: 220, opacity: 0.06 }}>
+            <path d="M110 220V140a70 70 0 0 1 70-70h40" fill="none" stroke="var(--gold)" strokeWidth="2" />
+            <circle cx="180" cy="70" r="5" fill="var(--gold)" />
+          </svg>
+        </span>
 
         <div id="pd-top" style={{ maxWidth: 1240, margin: "0 auto", padding: "0 24px", display: "grid", gridTemplateColumns: "minmax(0,1.32fr) minmax(330px,.68fr)", gap: 34, alignItems: "start" }}>
           <div style={{ display: "grid", gap: 18, minWidth: 0 }}>

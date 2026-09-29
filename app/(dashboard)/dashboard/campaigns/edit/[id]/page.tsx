@@ -1,6 +1,5 @@
 'use client';
 
-import ReactCountryFlag from 'react-country-flag';
 import { useEffect, useRef, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import axios from 'axios';
@@ -13,7 +12,6 @@ import { validateImageFile } from '@/lib/uploads/image-file-rules';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import WysiwygEditor from '@/app/[locale]/blog/_components/wysiwyg/wysiwyg-editor';
 import {
   Form,
@@ -54,9 +52,7 @@ import {
   Mail,
   AlertCircle,
   Plus,
-  Trash2,
-  Edit3,
-  Calendar,
+  Newspaper,
   Languages,
   CheckCircle2,
   Globe,
@@ -76,8 +72,6 @@ import {
 import {
   Tabs,
   TabsContent,
-  TabsList,
-  TabsTrigger,
 } from "@/components/ui/tabs";
 import { format } from 'date-fns';
 import { ar, enUS, fr } from 'date-fns/locale';
@@ -94,6 +88,7 @@ import {
 } from '../../../_components/locale-form';
 import { CampaignLocaleTabContents, CampaignLocaleTabTriggers, CampaignTranslateBar, UpdateLocaleTabs } from '../../_components/CampaignLocaleTabs';
 import { UpdateMediaFields } from '../../_components/UpdateMediaFields';
+import { UpdateCard } from '../../_components/UpdateCard';
 import type { TranslatedLocales } from '../../../_components/AutoTranslateButton';
 import {
   parseSuggestedDonations,
@@ -1526,13 +1521,24 @@ export default function EditCampaignPage() {
           {/* SEO الذكي card mounts here via DashboardAutoEnhancements portal. */}
           <div id="dashboard-project-seo-anchor" />
 
-          {/* ✅ Campaign Updates Section with Translations */}
-          <div className="space-y-4">
-            <div className="flex justify-between items-center">
-              <h2 className="text-xl font-semibold text-gray-800">إنجازات المشروع</h2>
+          {/* Project updates  the posts donors see in the project page's Updates feed. */}
+          <Card className="overflow-hidden p-0">
+            <div className="flex flex-col gap-4 border-b border-slate-100 bg-slate-50/60 p-5 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-start gap-3">
+                <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-brand/10 text-brand">
+                  <Newspaper className="h-5 w-5" />
+                </span>
+                <div className="space-y-0.5">
+                  <h2 className="flex items-center gap-2 text-lg font-semibold text-slate-900">
+                    إنجازات المشروع
+                    <span className="rounded-full bg-slate-200/70 px-2 py-0.5 text-xs font-semibold text-slate-600">{updates.length}</span>
+                  </h2>
+                  <p className="text-sm text-slate-500">منشورات من الميدان تظهر للمتبرعين في صفحة المشروع، ويمكن إرسال أيٍّ منها بالبريد لمتبرعي المشروع.</p>
+                </div>
+              </div>
               <Dialog open={isUpdateDialogOpen} onOpenChange={setIsUpdateDialogOpen}>
                 <DialogTrigger asChild>
-                  <Button type="button" className="gap-2">
+                  <Button type="button" className="shrink-0 gap-2">
                     <Plus className="w-4 h-4" />
                     إضافة تحديث
                   </Button>
@@ -1603,91 +1609,38 @@ export default function EditCampaignPage() {
               </Dialog>
             </div>
 
-            {/* Updates List */}
-            <div className="space-y-4">
-              {updates.map((update) => {
-                const hasTrans = (lc: string) => !!update.translations?.find(t => t.locale === lc)?.title;
-                const badges = TRANSLATION_LOCALES.map((lc) => ({ lc, label: lc.toUpperCase(), cls: 'bg-slate-100 text-slate-700' }));
-                const _unused = [                ];
-
-                return (
-                  <Card key={update.id} className="">
-                    <div className="flex justify-between items-start">
-                      <div className="space-y-2 flex-1">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <h3 className="font-semibold text-lg">{update.title}</h3>
-                          <div className="flex gap-1 flex-wrap">
-                            {badges.map(b => hasTrans(b.lc) && (
-                              <span key={b.lc} className={`text-xs px-2 py-0.5 rounded ${b.cls}`}>{b.label}</span>
-                            ))}
-                          </div>
-                        </div>
-                        <p className="text-gray-600">{update.description}</p>
-                        {update.image && (
-                          <img 
-                            src={update.image} 
-                            alt={update.title}
-                            className="max-w-[200px] rounded-lg"
-                          />
-                        )}
-                        {update.videoUrl && (
-                          update.videoUrl.includes('/video/upload/') ? (
-                            <video src={update.videoUrl} controls preload="metadata" className="max-w-[320px] rounded-lg bg-black" />
-                          ) : (
-                            <div className="text-brand hover:underline">
-                              <a href={update.videoUrl} target="_blank" rel="noopener noreferrer">
-                                مشاهدة الفيديو
-                              </a>
-                            </div>
-                          )
-                        )}
-                        <div className="flex items-center gap-2 text-sm text-gray-500">
-                          <Calendar className="w-4 h-4" />
-                          {format(new Date(update.createdAt), 'PPP', { locale: getDateLocale(locale) })}
-                        </div>
-                      </div>
-                      <div className="flex gap-2">
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          title="إرسال التحديث كحملة بريد لمتبرعي المشروع"
-                          className="gap-1 text-emerald-700 hover:text-emerald-800"
-                          onClick={() => router.push(`/dashboard/communication/campaigns/new?updateId=${update.id}`)}
-                        >
-                          <Mail className="w-4 h-4" />
-                          <span className="hidden sm:inline text-xs">إرسال للمتبرعين</span>
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => openEditDialog(update)}
-                        >
-                          <Edit3 className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          className="text-red-600 hover:text-red-700"
-                          onClick={() => handleDeleteUpdate(update.id)}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  </Card>
-                );
-              })}
-              
-              {updates.length === 0 && (
-                <Card className="p-8 text-center text-gray-500">
-                  <p>لا توجد إنجازات بعد. قم بإضافة تحديث لإبقاء المتبرعين على اطلاع.</p>
-                </Card>
+            {/* Updates  a grid of post cards, newest first. */}
+            <div className="p-5">
+              {updates.length ? (
+                <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                  {updates.map((update) => (
+                    <UpdateCard
+                      key={update.id}
+                      update={update}
+                      dateLabel={format(new Date(update.createdAt), 'PPP', { locale: getDateLocale(locale) })}
+                      onSend={() => router.push(`/dashboard/communication/campaigns/new?updateId=${update.id}`)}
+                      onEdit={() => openEditDialog(update)}
+                      onDelete={() => handleDeleteUpdate(update.id)}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <div className="flex flex-col items-center gap-3 rounded-xl border-2 border-dashed border-slate-200 px-6 py-10 text-center">
+                  <span className="grid h-12 w-12 place-items-center rounded-full bg-slate-100 text-slate-400">
+                    <Newspaper className="h-6 w-6" />
+                  </span>
+                  <div className="space-y-1">
+                    <p className="font-semibold text-slate-800">لا توجد إنجازات بعد</p>
+                    <p className="text-sm text-slate-500">أضف أول تحديث بصورة أو فيديو ليرى المتبرعون أثر عطائهم.</p>
+                  </div>
+                  <Button type="button" variant="outline" className="gap-2" onClick={() => setIsUpdateDialogOpen(true)}>
+                    <Plus className="w-4 h-4" />
+                    إضافة تحديث
+                  </Button>
+                </div>
               )}
             </div>
-          </div>
+          </Card>
 
           {/* Actions */}
           <div className="flex justify-end gap-4">
