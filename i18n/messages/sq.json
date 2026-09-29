@@ -2314,6 +2314,8 @@
     "a_cancel": "Anulo"
   },
   "CategoryNav": {
+    "showMore": "Shfaq më shumë ({count})",
+    "showLess": "Shfaq më pak",
     "title": "Kategoritë e projekteve",
     "toggle": "Shfaq kategoritë e projekteve",
     "sectionEyebrow": "Dhuro sipas kauzës",

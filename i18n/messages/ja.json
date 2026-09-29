@@ -2311,6 +2311,8 @@
     "a_cancel": "キャンセル"
   },
   "CategoryNav": {
+    "showMore": "もっと見る（{count}）",
+    "showLess": "閉じる",
     "title": "プロジェクトのカテゴリー",
     "toggle": "プロジェクトのカテゴリーを表示",
     "sectionEyebrow": "分野別に寄付する",

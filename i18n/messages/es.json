@@ -3370,6 +3370,8 @@
     "commentFailed": "No se pudo enviar tu mensaje. Inténtalo de nuevo."
   },
   "CategoryNav": {
+    "showMore": "Mostrar más ({count})",
+    "showLess": "Mostrar menos",
     "title": "Categorías de proyectos",
     "toggle": "Mostrar categorías de proyectos",
     "sectionEyebrow": "Dona por causa",

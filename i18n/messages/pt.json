@@ -3370,6 +3370,8 @@
     "commentFailed": "Não foi possível enviar a sua mensagem. Tente novamente."
   },
   "CategoryNav": {
+    "showMore": "Mostrar mais ({count})",
+    "showLess": "Mostrar menos",
     "title": "Categorias de projetos",
     "toggle": "Mostrar categorias de projetos",
     "sectionEyebrow": "Doe por causa",

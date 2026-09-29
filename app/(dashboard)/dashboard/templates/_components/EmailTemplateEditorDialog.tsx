@@ -146,8 +146,11 @@ export function EmailTemplateEditorDialog({ id, open, onOpenChange }: Props) {
       }
       toast.success("تم الحفظ");
       onOpenChange(false);
-    } catch {
-      toast.error("فشل الحفظ");
+    } catch (err) {
+      /* Say what the server refused rather than a bare "failed". */
+      const e = err as { response?: { data?: { error?: string; issues?: { fieldErrors?: Record<string, string[]> } } } };
+      const fields = Object.keys(e.response?.data?.issues?.fieldErrors ?? {});
+      toast.error(fields.length ? `فشل الحفظ: تحقّق من ${fields.join("، ")}` : e.response?.data?.error ? `فشل الحفظ: ${e.response.data.error}` : "فشل الحفظ");
     } finally {
       setSaving(false);
     }

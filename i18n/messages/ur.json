@@ -2314,6 +2314,8 @@
     "a_cancel": "منسوخ"
   },
   "CategoryNav": {
+    "showMore": "مزید دکھائیں ({count})",
+    "showLess": "کم دکھائیں",
     "title": "منصوبوں کی اقسام",
     "toggle": "منصوبوں کی اقسام دکھائیں",
     "sectionEyebrow": "شعبے کے لحاظ سے عطیہ کریں",

@@ -3439,6 +3439,8 @@
     "commentFailed": "تعذّر إرسال رسالتك. حاول مرة أخرى."
   },
   "CategoryNav": {
+    "showMore": "عرض المزيد ({count})",
+    "showLess": "عرض أقل",
     "title": "تصنيفات المشاريع",
     "toggle": "عرض تصنيفات المشاريع",
     "sectionEyebrow": "تبرّع حسب المجال",

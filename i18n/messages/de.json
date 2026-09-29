@@ -3370,6 +3370,8 @@
     "commentFailed": "Ihre Nachricht konnte nicht gesendet werden. Bitte versuchen Sie es erneut."
   },
   "CategoryNav": {
+    "showMore": "Mehr anzeigen ({count})",
+    "showLess": "Weniger anzeigen",
     "title": "Projektkategorien",
     "toggle": "Projektkategorien anzeigen",
     "sectionEyebrow": "Nach Anliegen spenden",

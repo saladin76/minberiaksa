@@ -545,7 +545,27 @@
 }
 .mia-scope .mia-cat-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px 24px; flex-wrap: wrap; margin-bottom: 26px; }
 .mia-scope .mia-cat-eyebrow { display: inline-flex; align-items: center; gap: 9px; color: #8a5d16; font-size: 12.5px; font-weight: 900; letter-spacing: .06em; }
-.mia-scope .mia-cat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(236px, 1fr)); gap: 16px; }
+/* Fixed column counts (4 → 2 → 1) rather than auto-fill: the section shows
+   eight cards before "show more", and eight only makes full rows in fours
+   and twos  auto-fill's three columns on a tablet left a ragged last row. */
+.mia-scope .mia-cat-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
+@media (max-width: 1024px) {
+  .mia-scope .mia-cat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+/* "Show more": a quiet pill under the grid, and the cards it reveals fade up in turn. */
+.mia-scope .mia-cat-more { display: flex; justify-content: center; margin-top: 22px; }
+.mia-scope .mia-cat-more__btn {
+  display: inline-flex; align-items: center; gap: 8px; height: 44px; padding: 0 22px;
+  border: 1px solid rgba(211, 154, 39, .55); border-radius: 999px; background: #fff;
+  color: var(--deep); font-family: inherit; font-size: 14px; font-weight: 900; cursor: pointer;
+  box-shadow: 0 6px 16px rgba(16, 33, 43, .06);
+  transition: background .18s ease, border-color .18s ease, transform .18s ease, box-shadow .18s ease;
+}
+.mia-scope .mia-cat-more__btn:hover { background: var(--sand, #F7F2EA); border-color: var(--gold); transform: translateY(-1px); box-shadow: 0 10px 22px rgba(16, 33, 43, .09); }
+.mia-scope .mia-cat-more__btn:focus-visible { outline: 2px solid var(--gold); outline-offset: 3px; }
+.mia-scope .mia-cat-card--extra { animation: mia-cat-reveal .38s cubic-bezier(.22, .61, .36, 1) both; }
+@keyframes mia-cat-reveal { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
 
 .mia-scope .mia-cat-card {
   position: relative; isolation: isolate; display: flex; min-height: 230px; overflow: hidden;
@@ -614,6 +634,8 @@
   .mia-scope .mia-cat-section { padding: 38px 0 34px; }
   .mia-scope .mia-cat-head { margin-bottom: 18px; }
   .mia-scope .mia-cat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .mia-scope .mia-cat-more { margin-top: 16px; }
+  .mia-scope .mia-cat-more__btn { width: 100%; justify-content: center; }
   .mia-scope .mia-cat-card { min-height: 176px; border-radius: 14px; }
   .mia-scope .mia-cat-card__body { padding: 12px; gap: 12px; }
   .mia-scope .mia-cat-card__icon { width: 38px; height: 38px; flex-basis: 38px; border-radius: 11px; }
@@ -631,6 +653,8 @@
   .mia-scope .mia-cat-card,
   .mia-scope .mia-cat-card__media,
   .mia-scope .mia-cat-card__icon { transition: none; }
+  .mia-scope .mia-cat-card--extra { animation: none; }
+  .mia-scope .mia-cat-more__btn { transition: none; }
   .mia-scope .mia-cat-card:hover,
   .mia-scope .mia-cat-card:hover .mia-cat-card__media,
   .mia-scope .mia-cat-card:hover .mia-cat-card__icon { transform: none; }

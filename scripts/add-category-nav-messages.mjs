@@ -15,6 +15,8 @@ import { readFileSync, writeFileSync } from "node:fs";
 
 const CATEGORY_NAV = {
   ar: {
+    showMore: "عرض المزيد ({count})",
+    showLess: "عرض أقل",
     title: "تصنيفات المشاريع",
     toggle: "عرض تصنيفات المشاريع",
     sectionEyebrow: "تبرّع حسب المجال",
@@ -25,6 +27,8 @@ const CATEGORY_NAV = {
       "{count, plural, =0 {لا مشاريع بعد} one {مشروع واحد} two {مشروعان} few {# مشاريع} many {# مشروعًا} other {# مشروع}}",
   },
   en: {
+    showMore: "Show more ({count})",
+    showLess: "Show less",
     title: "Project categories",
     toggle: "Show project categories",
     sectionEyebrow: "Give by cause",
@@ -34,6 +38,8 @@ const CATEGORY_NAV = {
     projectsCount: "{count, plural, =0 {No projects yet} one {# project} other {# projects}}",
   },
   tr: {
+    showMore: "Daha fazla göster ({count})",
+    showLess: "Daha az göster",
     title: "Proje kategorileri",
     toggle: "Proje kategorilerini göster",
     sectionEyebrow: "Alana göre bağış yapın",
@@ -43,6 +49,8 @@ const CATEGORY_NAV = {
     projectsCount: "{count, plural, =0 {Henüz proje yok} other {# proje}}",
   },
   fr: {
+    showMore: "Afficher plus ({count})",
+    showLess: "Afficher moins",
     title: "Catégories de projets",
     toggle: "Afficher les catégories de projets",
     sectionEyebrow: "Donner par cause",
@@ -52,6 +60,8 @@ const CATEGORY_NAV = {
     projectsCount: "{count, plural, =0 {Aucun projet pour l'instant} one {# projet} other {# projets}}",
   },
   de: {
+    showMore: "Mehr anzeigen ({count})",
+    showLess: "Weniger anzeigen",
     title: "Projektkategorien",
     toggle: "Projektkategorien anzeigen",
     sectionEyebrow: "Nach Anliegen spenden",
@@ -61,6 +71,8 @@ const CATEGORY_NAV = {
     projectsCount: "{count, plural, =0 {Noch keine Projekte} one {# Projekt} other {# Projekte}}",
   },
   es: {
+    showMore: "Mostrar más ({count})",
+    showLess: "Mostrar menos",
     title: "Categorías de proyectos",
     toggle: "Mostrar categorías de proyectos",
     sectionEyebrow: "Dona por causa",
@@ -70,6 +82,8 @@ const CATEGORY_NAV = {
     projectsCount: "{count, plural, =0 {Aún no hay proyectos} one {# proyecto} other {# proyectos}}",
   },
   pt: {
+    showMore: "Mostrar mais ({count})",
+    showLess: "Mostrar menos",
     title: "Categorias de projetos",
     toggle: "Mostrar categorias de projetos",
     sectionEyebrow: "Doe por causa",
@@ -79,6 +93,8 @@ const CATEGORY_NAV = {
     projectsCount: "{count, plural, =0 {Ainda sem projetos} one {# projeto} other {# projetos}}",
   },
   id: {
+    showMore: "Tampilkan lebih banyak ({count})",
+    showLess: "Tampilkan lebih sedikit",
     title: "Kategori proyek",
     toggle: "Tampilkan kategori proyek",
     sectionEyebrow: "Berdonasi per bidang",
@@ -88,6 +104,8 @@ const CATEGORY_NAV = {
     projectsCount: "{count, plural, =0 {Belum ada proyek} other {# proyek}}",
   },
   ms: {
+    showMore: "Tunjuk lagi ({count})",
+    showLess: "Tunjuk kurang",
     title: "Kategori projek",
     toggle: "Tunjukkan kategori projek",
     sectionEyebrow: "Menderma mengikut bidang",
@@ -97,6 +115,8 @@ const CATEGORY_NAV = {
     projectsCount: "{count, plural, =0 {Belum ada projek} other {# projek}}",
   },
   ur: {
+    showMore: "مزید دکھائیں ({count})",
+    showLess: "کم دکھائیں",
     title: "منصوبوں کی اقسام",
     toggle: "منصوبوں کی اقسام دکھائیں",
     sectionEyebrow: "شعبے کے لحاظ سے عطیہ کریں",
@@ -106,6 +126,8 @@ const CATEGORY_NAV = {
     projectsCount: "{count, plural, =0 {ابھی کوئی منصوبہ نہیں} one {# منصوبہ} other {# منصوبے}}",
   },
   hi: {
+    showMore: "और दिखाएँ ({count})",
+    showLess: "कम दिखाएँ",
     title: "परियोजना श्रेणियाँ",
     toggle: "परियोजना श्रेणियाँ दिखाएँ",
     sectionEyebrow: "उद्देश्य के अनुसार दान करें",
@@ -115,6 +137,8 @@ const CATEGORY_NAV = {
     projectsCount: "{count, plural, =0 {अभी कोई परियोजना नहीं} one {# परियोजना} other {# परियोजनाएँ}}",
   },
   zh: {
+    showMore: "显示更多（{count}）",
+    showLess: "收起",
     title: "项目分类",
     toggle: "显示项目分类",
     sectionEyebrow: "按领域捐赠",
@@ -124,6 +148,8 @@ const CATEGORY_NAV = {
     projectsCount: "{count, plural, =0 {暂无项目} other {# 个项目}}",
   },
   ja: {
+    showMore: "もっと見る（{count}）",
+    showLess: "閉じる",
     title: "プロジェクトのカテゴリー",
     toggle: "プロジェクトのカテゴリーを表示",
     sectionEyebrow: "分野別に寄付する",
@@ -133,6 +159,8 @@ const CATEGORY_NAV = {
     projectsCount: "{count, plural, =0 {プロジェクトはまだありません} other {# 件のプロジェクト}}",
   },
   it: {
+    showMore: "Mostra altro ({count})",
+    showLess: "Mostra meno",
     title: "Categorie di progetti",
     toggle: "Mostra le categorie di progetti",
     sectionEyebrow: "Dona per causa",
@@ -142,6 +170,8 @@ const CATEGORY_NAV = {
     projectsCount: "{count, plural, =0 {Ancora nessun progetto} one {# progetto} other {# progetti}}",
   },
   nl: {
+    showMore: "Meer tonen ({count})",
+    showLess: "Minder tonen",
     title: "Projectcategorieën",
     toggle: "Projectcategorieën tonen",
     sectionEyebrow: "Geef per doel",
@@ -151,6 +181,8 @@ const CATEGORY_NAV = {
     projectsCount: "{count, plural, =0 {Nog geen projecten} one {# project} other {# projecten}}",
   },
   sv: {
+    showMore: "Visa fler ({count})",
+    showLess: "Visa färre",
     title: "Projektkategorier",
     toggle: "Visa projektkategorier",
     sectionEyebrow: "Ge efter ändamål",
@@ -160,6 +192,8 @@ const CATEGORY_NAV = {
     projectsCount: "{count, plural, =0 {Inga projekt ännu} one {# projekt} other {# projekt}}",
   },
   no: {
+    showMore: "Vis flere ({count})",
+    showLess: "Vis færre",
     title: "Prosjektkategorier",
     toggle: "Vis prosjektkategorier",
     sectionEyebrow: "Gi etter formål",
@@ -169,6 +203,8 @@ const CATEGORY_NAV = {
     projectsCount: "{count, plural, =0 {Ingen prosjekter ennå} one {# prosjekt} other {# prosjekter}}",
   },
   da: {
+    showMore: "Vis flere ({count})",
+    showLess: "Vis færre",
     title: "Projektkategorier",
     toggle: "Vis projektkategorier",
     sectionEyebrow: "Giv efter formål",
@@ -178,6 +214,8 @@ const CATEGORY_NAV = {
     projectsCount: "{count, plural, =0 {Ingen projekter endnu} one {# projekt} other {# projekter}}",
   },
   sq: {
+    showMore: "Shfaq më shumë ({count})",
+    showLess: "Shfaq më pak",
     title: "Kategoritë e projekteve",
     toggle: "Shfaq kategoritë e projekteve",
     sectionEyebrow: "Dhuro sipas kauzës",

@@ -13,6 +13,9 @@ const createSchema = z.object({
   document: z.record(z.unknown()),
   translations: z
     .record(z.object({ subject: z.string().optional(), document: z.record(z.unknown()).optional() }))
+    /* The editor sends null for an Arabic-only template (as the update route
+       already accepts); refusing it made every new such template fail to save. */
+    .nullable()
     .optional(),
 });
 

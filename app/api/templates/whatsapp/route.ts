@@ -12,6 +12,8 @@ const createSchema = z.object({
   body: z.string().min(1).max(4096),
   translations: z
     .record(z.object({ body: z.string().optional() }))
+    /* null = Arabic only, as the editor sends it and the update route accepts. */
+    .nullable()
     .optional(),
 });
 

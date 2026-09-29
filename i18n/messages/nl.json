@@ -2314,6 +2314,8 @@
     "a_cancel": "Annuleren"
   },
   "CategoryNav": {
+    "showMore": "Meer tonen ({count})",
+    "showLess": "Minder tonen",
     "title": "Projectcategorieën",
     "toggle": "Projectcategorieën tonen",
     "sectionEyebrow": "Geef per doel",

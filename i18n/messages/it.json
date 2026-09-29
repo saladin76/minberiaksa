@@ -2314,6 +2314,8 @@
     "a_cancel": "Annulla"
   },
   "CategoryNav": {
+    "showMore": "Mostra altro ({count})",
+    "showLess": "Mostra meno",
     "title": "Categorie di progetti",
     "toggle": "Mostra le categorie di progetti",
     "sectionEyebrow": "Dona per causa",

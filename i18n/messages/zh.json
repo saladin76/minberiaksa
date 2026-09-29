@@ -2311,6 +2311,8 @@
     "a_cancel": "取消"
   },
   "CategoryNav": {
+    "showMore": "显示更多（{count}）",
+    "showLess": "收起",
     "title": "项目分类",
     "toggle": "显示项目分类",
     "sectionEyebrow": "按领域捐赠",

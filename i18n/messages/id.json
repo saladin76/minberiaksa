@@ -3369,6 +3369,8 @@
     "commentFailed": "Pesan Anda tidak dapat dikirim. Silakan coba lagi."
   },
   "CategoryNav": {
+    "showMore": "Tampilkan lebih banyak ({count})",
+    "showLess": "Tampilkan lebih sedikit",
     "title": "Kategori proyek",
     "toggle": "Tampilkan kategori proyek",
     "sectionEyebrow": "Berdonasi per bidang",

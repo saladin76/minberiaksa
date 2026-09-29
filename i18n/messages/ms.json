@@ -2311,6 +2311,8 @@
     "a_cancel": "Batal"
   },
   "CategoryNav": {
+    "showMore": "Tunjuk lagi ({count})",
+    "showLess": "Tunjuk kurang",
     "title": "Kategori projek",
     "toggle": "Tunjukkan kategori projek",
     "sectionEyebrow": "Menderma mengikut bidang",

@@ -2311,6 +2311,8 @@
     "a_cancel": "Avbryt"
   },
   "CategoryNav": {
+    "showMore": "Vis flere ({count})",
+    "showLess": "Vis færre",
     "title": "Prosjektkategorier",
     "toggle": "Vis prosjektkategorier",
     "sectionEyebrow": "Gi etter formål",

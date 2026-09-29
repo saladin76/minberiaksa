@@ -3441,6 +3441,8 @@
     "commentFailed": "Mesajınız gönderilemedi. Lütfen tekrar deneyin."
   },
   "CategoryNav": {
+    "showMore": "Daha fazla göster ({count})",
+    "showLess": "Daha az göster",
     "title": "Proje kategorileri",
     "toggle": "Proje kategorilerini göster",
     "sectionEyebrow": "Alana göre bağış yapın",

@@ -3441,6 +3441,8 @@
     "commentFailed": "Votre message n'a pas pu être envoyé. Veuillez réessayer."
   },
   "CategoryNav": {
+    "showMore": "Afficher plus ({count})",
+    "showLess": "Afficher moins",
     "title": "Catégories de projets",
     "toggle": "Afficher les catégories de projets",
     "sectionEyebrow": "Donner par cause",

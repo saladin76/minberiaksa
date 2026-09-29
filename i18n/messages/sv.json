@@ -2314,6 +2314,8 @@
     "a_cancel": "Avbryt"
   },
   "CategoryNav": {
+    "showMore": "Visa fler ({count})",
+    "showLess": "Visa färre",
     "title": "Projektkategorier",
     "toggle": "Visa projektkategorier",
     "sectionEyebrow": "Ge efter ändamål",
