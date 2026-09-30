@@ -305,7 +305,7 @@ export function Hero({ onPlayIntro }: { onPlayIntro: (embed: string) => void }) 
             <p className="mia-hero-lead">{t("heroLead")}</p>
 
             <div className="mia-hero-actions">
-              <Button variant="primary" size="lg" href="#quick" className="mia-hero-btn">
+              <Button variant="primary" size="lg" href={miaPath("projects", locale)} className="mia-hero-btn">
                 {t("heroCtaPrimary")}
                 <ArrowGlyph size={14} />
               </Button>

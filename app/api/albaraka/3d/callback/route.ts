@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
-import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import {
   ALBARAKA_PAYMENT_MAC_PARAMS,
@@ -13,9 +12,7 @@ import {
   isAlbarakaConfigured,
   type AlbarakaServiceResponse,
 } from "@/lib/albaraka";
-import { sendDonationFailedConversions } from "@/lib/tracking/donation-conversion-server";
-import { dispatchDonationPaid, dispatchEvent } from "@/lib/events/dispatch";
-import { nextChargeAt, normalizeTimezone, type RecurringFrequency } from "@/lib/donations/recurring-schedule";
+import { failAlbarakaDonation, settleAlbarakaDonation } from "@/lib/donations/albaraka-settlement";
 import { withDonationToken } from "@/lib/donations/access-token";
 
 /**
@@ -45,11 +42,6 @@ function readRequestSnapshot(raw: unknown): RequestSnapshot {
   const req = (raw as Record<string, unknown>).albarakaRequest;
   if (!req || typeof req !== "object") return {};
   return req as RequestSnapshot;
-}
-
-/** Prisma's Json input type doesn't accept a plain index signature without a nudge. */
-function asJson(value: Record<string, unknown>): Prisma.InputJsonValue {
-  return value as Prisma.InputJsonValue;
 }
 
 /** Timing-safe comparison so a mismatching MAC can't be probed byte by byte. */
@@ -94,47 +86,7 @@ export async function POST(req: NextRequest) {
 
   /** Marks the donation failed (unless already paid) and sends the donor to the failure page. */
   async function fail(reason: string, extra: Record<string, unknown> = {}) {
-    console.error("[Albaraka CALLBACK] failed:", reason, extra);
-    try {
-      const donation = await prisma.donation.findUnique({ where: { id: donationId } });
-      if (donation && donation.paidAt === null) {
-        await prisma.donation.update({
-          where: { id: donationId },
-          data: {
-            status: "FAILED",
-            provider: "ALBARAKA",
-            providerOrderId: donation.providerOrderId ?? orderId ?? null,
-            providerTxnResult: "Failed",
-            providerErrorMessage: reason,
-            providerRaw: asJson({
-              ...(typeof donation.providerRaw === "object" && donation.providerRaw
-                ? (donation.providerRaw as Record<string, unknown>)
-                : {}),
-              albarakaVerification: raw,
-              ...extra,
-            }),
-          },
-        });
-        void dispatchEvent("DONATION_FAILED", { donationId });
-        // Seed Meta with the failed attempt so lookalike audiences can include
-        // donors-who-tried; the browser pixel fires the matching DonateFailed hit
-        // with the same `${donationId}_failed` event id for dedup.
-        void sendDonationFailedConversions(donationId);
-
-        /* A plan whose first instalment failed was never activated: close it
-           rather than leave an ACTIVE plan with no successful charge for the
-           scheduler to keep billing. A plan that has settled before keeps its
-           status  this callback is only ever its first charge. */
-        if (donation.subscriptionId) {
-          await prisma.subscription.updateMany({
-            where: { id: donation.subscriptionId, lastBillingDate: null },
-            data: { status: "CANCELLED", lastChargeError: reason.slice(0, 300) },
-          });
-        }
-      }
-    } catch (e) {
-      console.error("[Albaraka CALLBACK] failure bookkeeping error:", e);
-    }
+    await failAlbarakaDonation(donationId, reason, { albarakaVerification: raw, ...extra }, orderId);
     return redirect(failUrl);
   }
 
@@ -243,82 +195,8 @@ export async function POST(req: NextRequest) {
     }
 
     // ── 5. Settle ────────────────────────────────────────────────────────────
-    const settled = await prisma.$transaction(async (tx) => {
-      const fresh = await tx.donation.findUnique({
-        where: { id: donationId },
-        include: { items: true, categoryItems: true },
-      });
-      if (!fresh) return false;
-      // Re-check inside the transaction  two callbacks can race here.
-      if (fresh.paidAt !== null) return true;
-
-      await tx.donation.update({
-        where: { id: fresh.id },
-        data: {
-          status: "PAID",
-          paidAt: new Date(),
-          provider: "ALBARAKA",
-          providerProcReturnCode: responseCode || null,
-          providerTxnResult: "Success",
-          providerAuthCode: sale.AuthCode ? String(sale.AuthCode) : null,
-          // Albaraka's ReferenceCode is what İptal/İade are later keyed on, so it
-          // lands in the same column PayFor uses for its host reference.
-          providerHostRefNum: sale.ReferenceCode ? String(sale.ReferenceCode) : null,
-          providerErrorMessage: null,
-          providerRaw: asJson({
-            ...(typeof fresh.providerRaw === "object" && fresh.providerRaw
-              ? (fresh.providerRaw as Record<string, unknown>)
-              : {}),
-            albarakaVerification: raw,
-            albarakaSale: sale as unknown as Record<string, unknown>,
-          }),
-        },
-      });
-
-      // Apply increments only on confirmed payment.
-      for (const item of fresh.items) {
-        await tx.campaign.update({
-          where: { id: item.campaignId },
-          data: { currentAmount: { increment: item.amountUSD ?? item.amount } },
-        });
-      }
-      for (const item of fresh.categoryItems) {
-        await tx.category.update({
-          where: { id: item.categoryId },
-          data: { currentAmount: { increment: item.amountUSD ?? item.amount } },
-        });
-      }
-
-      /* This was a plan's first instalment: the plan is live from here, and
-         its next charge is computed from this settlement in its own zone. The
-         scheduler (`lib/donations/albaraka-recurring.ts`) takes over. */
-      if (fresh.subscriptionId) {
-        const plan = await tx.subscription.findUnique({
-          where: { id: fresh.subscriptionId },
-          select: { id: true, frequency: true, timezone: true, paymentCardId: true },
-        });
-        if (plan) {
-          const paidAt = new Date();
-          await tx.subscription.update({
-            where: { id: plan.id },
-            data: {
-              status: "ACTIVE",
-              provider: "ALBARAKA",
-              lastBillingDate: paidAt,
-              nextBillingDate: nextChargeAt(plan.frequency as RecurringFrequency, paidAt, normalizeTimezone(plan.timezone)),
-              chargeAttempts: 0,
-              lastChargeError: null,
-            },
-          });
-        }
-      }
-      return true;
-    });
-
+    const settled = await settleAlbarakaDonation(donationId, sale, { albarakaVerification: raw });
     if (!settled) return redirect(failUrl);
-
-    void dispatchDonationPaid(donationId);
-    if (donation.subscriptionId) void dispatchEvent("SUBSCRIPTION_CREATED", { donationId });
     return redirect(new URL(withDonationToken(`/${locale}/success/${donationId}`, donation.accessToken), origin));
   } catch (e) {
     console.error("Albaraka callback error:", e);

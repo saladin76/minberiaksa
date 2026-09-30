@@ -286,37 +286,6 @@ export default function Footer({
           })}
         </div>
 
-        {/* Categories band: a wrapping row of chips on wide screens, and one
-            more accordion entry on phones  it reuses the `fcol` classes, so
-            it opens and closes exactly like the columns above it. */}
-        {categories.length ? (
-          <div className="mia-foot-cats-wrap">
-            <div
-              className="fcol mia-foot-cats"
-              data-open={openCol === COLUMNS.length ? "true" : "false"}
-            >
-              <button
-                type="button"
-                className="fcol-head"
-                onClick={() => setOpenCol(openCol === COLUMNS.length ? -1 : COLUMNS.length)}
-                aria-expanded={openCol === COLUMNS.length}
-              >
-                {tCats("title")}
-                <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                  <path d="m6 9 6 6 6-6" />
-                </svg>
-              </button>
-              <div className="fcol-links mia-foot-cats-list">
-                {categories.map((c) => (
-                  <Link key={c.id} href={c.href} className="mia-foot-cat">
-                    {c.name}
-                  </Link>
-                ))}
-              </div>
-            </div>
-          </div>
-        ) : null}
-
         {/* The clear window: nothing here but height, so the lower half of the
             photograph  the children, the wall, the Dome  is seen through it. */}
         <div aria-hidden="true" className="mia-foot-window" />

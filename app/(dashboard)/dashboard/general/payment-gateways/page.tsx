@@ -43,9 +43,9 @@ const MAIN_GATEWAY_CARDS: {
   },
   {
     value: "ALBARAKA",
-    name: "Albaraka Türk (3D Secure)",
+    name: "Albaraka Türk (2D)",
     description:
-      "بوابة بنك البركة التركي عبر تدفّق 3D Secure. تُحوَّل التبرعات إلى الليرة التركية وتُحصَّل من البنك مباشرة.",
+      "بوابة بنك البركة التركي بالدفع المباشر (2D) دون تحقق 3D Secure: تُخصم البطاقة فورًا في صفحة الدفع دون تحويل المتبرع إلى صفحة البنك.",
     icon: Landmark,
     tone: "bg-emerald-50 text-emerald-700",
   },

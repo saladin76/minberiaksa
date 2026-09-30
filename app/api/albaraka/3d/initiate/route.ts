@@ -4,18 +4,18 @@ import { Prisma } from "@prisma/client";
 import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 import { prisma } from "@/lib/prisma";
 import {
-  ALBARAKA_FORM_FIELDS,
-  albarakaConfig,
+  albaraka2DConfig,
+  albaraka2DOrderId,
   albarakaChargeCurrency,
   albarakaCurrencyCode,
-  albarakaFormMac,
-  albarakaLang,
   albarakaMinorUnits,
-  albarakaOrderId,
+  albarakaService,
+  buildAlbaraka2DSale,
+  isAlbarakaApproved,
   isAlbarakaConfigured,
   type AlbarakaCurrencyCode,
-  type AlbarakaFormFields,
 } from "@/lib/albaraka";
+import { failAlbarakaDonation, settleAlbarakaDonation } from "@/lib/donations/albaraka-settlement";
 import { parseMainGateway } from "@/lib/payment-gateway";
 import {
   convertAmountInCurrencyToTry,
@@ -28,19 +28,19 @@ import { isAlbarakaRecurringEnabled } from "@/lib/albaraka";
 /**
  * POST /api/albaraka/3d/initiate
  *
- * Builds the signed hidden-input set for Albaraka's SecureVerification page. The
- * browser turns the response into an HTML form and POSTs it to `actionUrl`, which
- * hands the donor over to the bank for 3D authentication; the bank then POSTs its
- * verdict to /api/albaraka/3d/callback.
+ * Charges an Albaraka donation in 2D (no 3D Secure): the card goes straight to
+ * the bank's /Sale and the answer settles or fails the donation here. The donor
+ * is never sent to the bank's 3D page. (The route keeps its path so every
+ * checkout keeps calling it; the 3D callback stays for sessions in flight.)
  *
- * Unlike PayFor, Albaraka signs the card fields into the request MAC, so the card
- * has to be known here rather than appended by the browser. Three ways to supply it:
- *   - `savedCardId`  we decrypt the stored PAN (browser still adds nothing; the CVV
- *      is folded in from `card.cvv` since CVCs are never stored)
+ * The response keeps the shape the checkouts already submit  `{ actionUrl,
+ * fields }`  pointing at /api/albaraka/2d/result, which sends the donor to the
+ * success or failure page by the donation's real status.
+ *
+ * The card, one of:
+ *   - `savedCardId`  the stored PAN, decrypted here, with the CVC from `card.cvv`
+ *     (CVCs are never stored)
  *   - `card`         the donor's freshly-typed card, posted over TLS to this route
- *   - neither, with ALBARAKA_USE_OOS=1  the card fields go out empty and the bank's
- *      own hosted page (Ortak Ödeme Sayfası) collects them, keeping the PAN off our
- *      servers entirely. This is the deployment we'd recommend.
  */
 
 type InitiateBody = {
@@ -84,7 +84,7 @@ function toBankExpiry(raw: string): string {
 export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    const cfg = albarakaConfig();
+    const cfg = albaraka2DConfig();
 
     if (!isAlbarakaConfigured(cfg)) {
       return NextResponse.json(
@@ -177,105 +177,67 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Invalid donation amount" }, { status: 400 });
     }
 
-    // 3D orders are exactly 20 characters, so the donation's own 24-char ObjectId
-    // can't be reused the way PayFor does it. The generated id is persisted and the
-    // callback cross-checks it.
-    const orderId = albarakaOrderId();
+    /* A 2D order is exactly 24 characters, fresh for every attempt (the bank
+       refuses an order id it has seen). */
+    const orderId = albaraka2DOrderId();
     const transactionType = "Sale";
-    const merchantReturnURL = `${origin}/api/albaraka/3d/callback?donationId=${encodeURIComponent(
-      donation.id
-    )}&locale=${encodeURIComponent(locale)}`;
+    /* Where the browser goes next: the success or failure page, by the
+       donation's real status. The access token lets a guest see their receipt. */
+    const resultUrl = `${origin}/api/albaraka/2d/result?donationId=${encodeURIComponent(donation.id)}&locale=${encodeURIComponent(
+      locale
+    )}${donation.accessToken ? `&t=${encodeURIComponent(donation.accessToken)}` : ""}`;
 
     // ── Card fields ────────────────────────────────────────────────────────────
-    // Empty strings when the bank's hosted page collects the card. They still take
-    // part in the MAC as empty values  the separator positions must not shift.
     let cardNo = "";
     let expiredDate = "";
     let cvv = "";
     let cardHolderName = "";
 
-    /* A plan's card has to pass through here to be stored for the scheduler,
-       so the bank's hosted page is never used for one  the checkout collects
-       the card itself for a recurring basket, and the form goes out with
-       UseOOS=0 whatever the deployment switch says. */
-    const collectCard = !cfg.useOOS || Boolean(plan);
-    const useOOS = cfg.useOOS && !plan;
-
-    if (collectCard) {
-      const savedCardId = body.savedCardId?.trim();
-      if (savedCardId) {
-        if (!session?.user?.id) {
-          return NextResponse.json(
-            { error: "Authentication required for saved cards" },
-            { status: 401 }
-          );
-        }
-        const savedCard = await prisma.creditCard.findUnique({
-          where: { id: savedCardId },
-          select: {
-            userId: true,
-            cardNumber: true,
-            expiryDate: true,
-            cardholderName: true,
-          },
-        });
-        if (!savedCard || savedCard.userId !== session.user.id) {
-          return NextResponse.json({ error: "Saved card not found" }, { status: 404 });
-        }
-        try {
-          cardNo = decryptCard(savedCard.cardNumber).replace(/\D/g, "");
-        } catch {
-          return NextResponse.json(
-            { error: "Failed to decrypt saved card" },
-            { status: 500 }
-          );
-        }
-        expiredDate = toBankExpiry(savedCard.expiryDate || "");
-        cardHolderName = savedCard.cardholderName ?? "";
-        // CVCs are never stored  the donor re-types it for every saved-card charge.
-        cvv = String(body.card?.cvv || "").replace(/\D/g, "");
-      } else {
-        cardNo = String(body.card?.number || "").replace(/\D/g, "");
-        expiredDate = toBankExpiry(body.card?.expiry || "");
-        cvv = String(body.card?.cvv || "").replace(/\D/g, "");
-        cardHolderName = String(body.card?.holder || "").trim();
-      }
-
-      if (!cardNo || !expiredDate || !cvv) {
+    const savedCardId = body.savedCardId?.trim();
+    if (savedCardId) {
+      if (!session?.user?.id) {
         return NextResponse.json(
-          { error: "Card number, expiry and security code are required" },
-          { status: 400 }
+          { error: "Authentication required for saved cards" },
+          { status: 401 }
         );
       }
+      const savedCard = await prisma.creditCard.findUnique({
+        where: { id: savedCardId },
+        select: {
+          userId: true,
+          cardNumber: true,
+          expiryDate: true,
+          cardholderName: true,
+        },
+      });
+      if (!savedCard || savedCard.userId !== session.user.id) {
+        return NextResponse.json({ error: "Saved card not found" }, { status: 404 });
+      }
+      try {
+        cardNo = decryptCard(savedCard.cardNumber).replace(/\D/g, "");
+      } catch {
+        return NextResponse.json(
+          { error: "Failed to decrypt saved card" },
+          { status: 500 }
+        );
+      }
+      expiredDate = toBankExpiry(savedCard.expiryDate || "");
+      cardHolderName = savedCard.cardholderName ?? "";
+      // CVCs are never stored  the donor re-types it for every saved-card charge.
+      cvv = String(body.card?.cvv || "").replace(/\D/g, "");
+    } else {
+      cardNo = String(body.card?.number || "").replace(/\D/g, "");
+      expiredDate = toBankExpiry(body.card?.expiry || "");
+      cvv = String(body.card?.cvv || "").replace(/\D/g, "");
+      cardHolderName = String(body.card?.holder || "").trim();
     }
 
-    const fields: AlbarakaFormFields = {
-      PosnetID: cfg.posnetId,
-      MerchantNo: cfg.merchantNo,
-      TerminalNo: cfg.terminalNo,
-      OrderId: orderId,
-      TransactionType: transactionType,
-      CardNo: cardNo,
-      ExpiredDate: expiredDate,
-      Cvv: cvv,
-      CardHolderName: cardHolderName,
-      Amount: String(amount),
-      InstallmentCount: "0", // 0 = peşin (single payment)
-      MerchantReturnURL: merchantReturnURL,
-      Language: albarakaLang(locale),
-      CurrencyCode: currencyCode,
-      UseJokerVadaa: cfg.useJokerVadaa ? "1" : "0",
-      KOICode: "",
-      // The browser decides popup vs. same-tab itself; the bank never opens one for us.
-      OpenNewWindow: "0",
-      UseOOS: useOOS ? "1" : "0",
-      TxnState: "INITIAL",
-      VftCode: "",
-      gsmNo: "",
-      packetCode: "",
-    };
-
-    const macNew = albarakaFormMac(fields, cfg.encKey);
+    if (!cardNo || !expiredDate || !cvv) {
+      return NextResponse.json(
+        { error: "Card number, expiry and security code are required" },
+        { status: 400 }
+      );
+    }
 
     /* A plan: keep the card the donor is authorising, so the scheduler can
        charge the later instalments. Stored the way the account's saved cards
@@ -319,29 +281,55 @@ export async function POST(req: NextRequest) {
             amount,
             currencyCode,
             transactionType,
-            useOOS,
+            mode: "2D",
             createdAt: new Date().toISOString(),
           },
         } as Prisma.InputJsonValue,
       },
     });
 
-    // MacNew is appended after the signed fields; it is not part of its own input.
-    const formFields: Record<string, string> = {};
-    for (const name of ALBARAKA_FORM_FIELDS) formFields[name] = fields[name];
-    formFields.MacNew = macNew;
+    // ── 2D sale ──────────────────────────────────────────────────────────────
+    const sale = await albarakaService(
+      "Sale",
+      buildAlbaraka2DSale(
+        {
+          orderId,
+          amount,
+          currencyCode,
+          card: { number: cardNo, expireDate: expiredDate, cvc2: cvv, holderName: cardHolderName },
+        },
+        cfg
+      ),
+      { correlationId: orderId, config: cfg }
+    );
+    const responseCode = sale.ServiceResponseData?.ResponseCode ?? "";
+    const responseDescription = sale.ServiceResponseData?.ResponseDescription ?? "";
 
-    console.log("[Albaraka INITIATE]", {
+    // The bank's answer, never the card: nothing card-bearing is logged.
+    console.log("[Albaraka 2D SALE]", {
       donationId: donation.id,
       orderId,
       amount,
       currencyCode,
-      useOOS,
       plan: plan?.id ?? null,
-      merchantReturnURL,
+      responseCode,
+      responseDescription,
+      authCode: sale.AuthCode ?? null,
+      referenceCode: sale.ReferenceCode ?? null,
     });
 
-    return NextResponse.json({ actionUrl: cfg.tdsUrl, fields: formFields });
+    if (isAlbarakaApproved(sale)) {
+      await settleAlbarakaDonation(donation.id, sale);
+    } else {
+      await failAlbarakaDonation(
+        donation.id,
+        responseDescription || `Sale declined (${responseCode || "no response code"})`,
+        { albarakaSale: sale as unknown as Record<string, unknown> },
+        orderId
+      );
+    }
+
+    return NextResponse.json({ actionUrl: resultUrl, fields: {}, paid: isAlbarakaApproved(sale) });
   } catch (error) {
     console.error("Albaraka initiate error:", error);
     return NextResponse.json({ error: "Failed to initiate payment" }, { status: 500 });

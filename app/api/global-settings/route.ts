@@ -9,7 +9,7 @@ import {
 } from "@/lib/campaign/suggested-team-support";
 import { Prisma } from "@prisma/client";
 import { isMainGateway, parseMainGateway } from "@/lib/payment-gateway";
-import { albarakaConfig, isAlbarakaConfigured } from "@/lib/albaraka";
+import { albaraka2DConfig, isAlbarakaConfigured } from "@/lib/albaraka";
 import { auditActorFromDashboardSession, writeAuditLog } from "@/lib/audit-log";
 import { parseCartUpsell, validateCartUpsellBody } from "@/lib/minbar/cart-upsell";
 
@@ -29,7 +29,7 @@ export async function GET() {
       orderBy: { createdAt: "asc" },
       select: { suggestedTeamSupport: true, teamSupportEnabled: true, cartUpsell: true, payforEnabled: true, mainGateway: true, allowAnyAmount: true },
     });
-    const albaraka = albarakaConfig();
+    const albaraka = albaraka2DConfig();
     return NextResponse.json({
       suggestedTeamSupport: parseSuggestedTeamSupport(settings?.suggestedTeamSupport),
       // The basket's "support the team" step; default on before any record exists.
@@ -45,7 +45,9 @@ export async function GET() {
       // Neither flag is a secret; the checkout dialogs need them to decide whether
       // to render our own card form (Albaraka signs the card fields into the MAC,
       // so with the bank's hosted page turned on we must not collect them).
-      albarakaUseOOS: albaraka.useOOS,
+      // Albaraka runs 2D (`albaraka2DConfig`): the checkout always collects the
+      // card itself, so the bank's hosted card page (a 3D feature) is never used.
+      albarakaUseOOS: false,
       albarakaConfigured: isAlbarakaConfigured(albaraka),
     });
   } catch (e) {

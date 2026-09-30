@@ -493,3 +493,83 @@ export function buildAlbarakaRecurringSale(
     InstallmentType: "N",
   };
 }
+
+// ── Checkout charges: 2D (non-3D) ────────────────────────────────────────────
+//
+// The checkout charges Albaraka without 3D Secure: the card is sent straight to
+// the bank's /Sale (the document's "Standart Satış") and the answer settles the
+// donation there and then  the donor is never sent to the bank's 3D page. The
+// 3D callback is kept only for a session that was already in flight.
+//
+// A non-3D sale runs on a terminal the bank has opened for it. Its numbers go in
+// ALBARAKA_2D_TERMINAL_NO / ALBARAKA_2D_POSNET_ID / ALBARAKA_2D_ENC_KEY (the key
+// is per terminal); each falls back to the recurring terminal's, then to the
+// main one's.
+
+export function albaraka2DConfig(): AlbarakaConfig {
+  const base = albarakaConfig();
+  return {
+    ...base,
+    terminalNo: process.env.ALBARAKA_2D_TERMINAL_NO || process.env.ALBARAKA_RECURRING_TERMINAL_NO || base.terminalNo,
+    posnetId: process.env.ALBARAKA_2D_POSNET_ID || process.env.ALBARAKA_RECURRING_POSNET_ID || base.posnetId,
+    encKey: process.env.ALBARAKA_2D_ENC_KEY || base.encKey,
+    // The bank's hosted card page is a 3D feature; a 2D sale always carries the card.
+    useOOS: false,
+  };
+}
+
+/** Non-3D orders are exactly 24 characters: 12 random bytes as uppercase hex. */
+export function albaraka2DOrderId(): string {
+  return crypto.randomBytes(12).toString("hex").toUpperCase();
+}
+
+/**
+ * The /Sale body for a donor-present 2D charge: the card with its CVC, neither
+ * 3D nor mail-order nor recurring. Pure, so the shape can be pinned without a bank.
+ */
+export function buildAlbaraka2DSale(
+  input: {
+    orderId: string;
+    amount: number;
+    currencyCode: AlbarakaCurrencyCode;
+    card: { number: string; expireDate: string; cvc2: string; holderName: string };
+  },
+  cfg: AlbarakaConfig
+): Record<string, unknown> {
+  const mac = albarakaNonSecureSaleMac(
+    {
+      merchantNo: cfg.merchantNo,
+      terminalNo: cfg.terminalNo,
+      cardNo: input.card.number,
+      cvc2: input.card.cvc2,
+      expireDate: input.card.expireDate,
+      amount: input.amount,
+    },
+    cfg.encKey
+  );
+  return {
+    ApiType: "JSON",
+    ApiVersion: "V100",
+    MerchantNo: cfg.merchantNo,
+    TerminalNo: cfg.terminalNo,
+    PaymentInstrumentType: "CARD",
+    IsEncrypted: "N",
+    IsTDSecureMerchant: "N",
+    IsMailOrder: "N",
+    CardInformationData: {
+      CardHolderName: input.card.holderName,
+      CardNo: input.card.number,
+      Cvc2: input.card.cvc2,
+      ExpireDate: input.card.expireDate,
+    },
+    ThreeDSecureData: null,
+    MAC: mac,
+    MACParams: ALBARAKA_NON_SECURE_MAC_PARAMS,
+    Amount: String(input.amount),
+    CurrencyCode: input.currencyCode,
+    PointAmount: 0,
+    OrderId: input.orderId,
+    InstallmentCount: "0",
+    InstallmentType: "N",
+  };
+}
