@@ -62,8 +62,9 @@ export function messagesFor(locale: string): MessageObject {
    `ProjectShares` rides with `projects` for the same reason: the project card
    that needs it is rendered on pages across the site.
    `CategoryNav` is the header's projects dropdown and the footer's categories
-   band, both on every page. */
-export const SHELL_NAMESPACES = ["common", "navigation", "system", "validation", "projects", "Concierge", "ProjectShares", "CategoryNav"] as const;
+   band, both on every page. `CardGive` is that card's frequency dialog and
+   added-to-basket toast. */
+export const SHELL_NAMESPACES = ["common", "navigation", "system", "validation", "projects", "Concierge", "ProjectShares", "CategoryNav", "CardGive"] as const;
 
 /**
  * Legacy namespaces belonging to the pre-Minbar public pages. They stay in the

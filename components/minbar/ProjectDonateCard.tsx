@@ -1,10 +1,14 @@
 "use client";
 
-import { useState, type CSSProperties } from "react";
+import { useCallback, useState, type CSSProperties } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
+import { toast } from "react-hot-toast";
 import { miaPath } from "@/lib/minbar/routes";
-import { addToCart } from "@/lib/minbar/cart";
+import { addToCart, type CartFreqKey } from "@/lib/minbar/cart";
+import { flyToCart } from "@/lib/minbar/cart-feedback";
+import GiveFrequencyDialog, { type GiveIntent } from "@/components/minbar/GiveFrequencyDialog";
 import type { MinbarProject } from "@/lib/minbar/projects";
 import { useMinbarMoney } from "@/hooks/useMinbarMoney";
 import { shareProgress, useShareWording } from "@/hooks/useShareWording";
@@ -26,6 +30,12 @@ import { useProjectPricing } from "@/hooks/useProjectPricing";
  *
  * A سهوم (shares) campaign shows its share price, and its chips are share
  * counts: the row added to the basket is count × price and carries the count.
+ *
+ * The whole card opens the campaign (a stretched link under the controls).
+ * No amount is picked up front: "donate" or "basket" without one shakes the
+ * chips and asks for it. With an amount, the donor is asked how the gift
+ * should continue (`GiveFrequencyDialog`); "donate" then goes to the basket
+ * page, and "basket" stays here with a toast and a coin flying to the header.
  */
 
 const QUICK_AMOUNTS = [100, 300, 500, 700];
@@ -40,7 +50,9 @@ export interface ProjectDonateCardProps {
 
 export default function ProjectDonateCard({ project, width, tag }: ProjectDonateCardProps) {
   const locale = useLocale();
+  const router = useRouter();
   const t = useTranslations("common");
+  const tGive = useTranslations("CardGive");
   const { format, formatNumber } = useMinbarMoney();
   const shares = project.shares;
   const { t: tShares, unitWord, countLabel } = useShareWording(shares);
@@ -54,12 +66,16 @@ export default function ProjectDonateCard({ project, width, tag }: ProjectDonate
     ? shares.counts.slice(0, 4).map((count) => ({ value: count, label: countLabel(count, formatNumber(count)) }))
     : amountChips.map((c) => ({ value: c.usd, label: c.label }));
 
-  const [picked, setPicked] = useState(0);
+  const [picked, setPicked] = useState<number | null>(null);
   const [custom, setCustom] = useState("");
   const [added, setAdded] = useState(false);
+  /* Bumped on each attempt without an amount; keys the chip row so the shake
+     replays every time. */
+  const [nudge, setNudge] = useState(0);
+  const [intent, setIntent] = useState<GiveIntent | null>(null);
 
   const href = miaPath("projectDetail", locale, project.slug);
-  const chosen = custom ? Number(custom) : options[picked]?.value ?? 0;
+  const chosen = custom ? Number(custom) : picked != null ? options[picked]?.value ?? 0 : 0;
   const shareCount = shares && Number.isInteger(chosen) && chosen > 0 ? chosen : 0;
   const amount = shares && sharePrice ? shareCount * sharePrice.usd : chosen;
   const hasFinancials = project.goal != null && project.goal > 0;
@@ -81,19 +97,63 @@ export default function ProjectDonateCard({ project, width, tag }: ProjectDonate
     color: "#fff",
   });
 
-  const onAddToBasket = () => {
-    if (!(amount > 0)) return;
+  const missingAmount = nudge > 0 && !(amount > 0);
+
+  const ask = (next: GiveIntent) => {
+    if (!(amount > 0)) {
+      setNudge((n) => n + 1);
+      return;
+    }
+    setIntent(next);
+  };
+
+  const closeDialog = useCallback(() => setIntent(null), []);
+
+  const onPickFrequency = (freq: CartFreqKey, origin: HTMLElement) => {
+    const from = origin.getBoundingClientRect();
     addToCart({
       projectId: project.slug,
       title: project.title,
       typeKey: "project",
-      freqKey: "once",
+      freqKey: freq,
       amount,
       currency: "USD",
       ...(shareCount ? { shareCount } : {}),
     });
+    const wasDonate = intent === "donate";
+    setIntent(null);
+
+    if (wasDonate) {
+      router.push(miaPath("cart", locale));
+      return;
+    }
+
+    flyToCart(from);
     setAdded(true);
     window.setTimeout(() => setAdded(false), 2400);
+    const cadence = freq === "once" ? null : t(freq === "friday" ? "everyFriday" : freq);
+    toast.custom(
+      (toastState) => (
+        <div className={`fq-toast${toastState.visible ? "" : " fq-toast--out"}`} role="status">
+          <span className="fq-toast-check" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M20 6 9 17l-5-5" />
+            </svg>
+          </span>
+          <span className="fq-toast-text">
+            <b>{tGive("toastTitle")}</b>
+            <small>
+              {project.title} · <span dir="ltr">{format(amount)}</span>
+              {cadence ? ` · ${cadence}` : ""}
+            </small>
+          </span>
+          <Link href={miaPath("cart", locale)} className="fq-toast-cta" onClick={() => toast.dismiss(toastState.id)}>
+            {tGive("toastCta")}
+          </Link>
+        </div>
+      ),
+      { duration: 5000 }
+    );
   };
 
   const onShare = async () => {
@@ -108,6 +168,7 @@ export default function ProjectDonateCard({ project, width, tag }: ProjectDonate
 
   return (
     <div
+      className="pdc-card"
       style={{
         position: "relative",
         display: "flex",
@@ -163,7 +224,11 @@ export default function ProjectDonateCard({ project, width, tag }: ProjectDonate
         </span>
       ) : null}
 
-      <div style={{ position: "relative", marginTop: "auto", display: "grid", gap: 12, padding: 18 }}>
+      {/* The whole card opens the campaign. Hidden from the keyboard and screen
+          readers: the title link below is the accessible way in. */}
+      <Link href={href} aria-hidden="true" tabIndex={-1} className="pdc-stretch" />
+
+      <div className="pdc-body" style={{ position: "relative", zIndex: 2, marginTop: "auto", display: "grid", gap: 12, padding: 18 }}>
         <Link href={href} style={{ display: "grid", gap: 7, color: "#fff" }}>
           <b style={{ fontSize: 19, lineHeight: 1.4, color: "#fff" }}>{project.title}</b>
         </Link>
@@ -213,7 +278,7 @@ export default function ProjectDonateCard({ project, width, tag }: ProjectDonate
           </span>
         ) : null}
 
-        <div style={{ display: "flex", gap: 7, flexWrap: "wrap" }}>
+        <div key={nudge} className={missingAmount ? "pdc-shake" : undefined} style={{ display: "flex", gap: 7, flexWrap: "wrap" }}>
           {options.map((option, index) => (
             <button
               key={index}
@@ -261,10 +326,16 @@ export default function ProjectDonateCard({ project, width, tag }: ProjectDonate
             }}
           />
         </div>
+        {missingAmount ? (
+          <span className="pdc-hint" role="alert">
+            {shares ? tGive("pickCountFirst") : tGive("pickAmountFirst")}
+          </span>
+        ) : null}
 
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <Link
-            href={href}
+          <button
+            type="button"
+            onClick={() => ask("donate")}
             className="mia-card-cta"
             style={{
               flex: "1 1 auto",
@@ -273,8 +344,10 @@ export default function ProjectDonateCard({ project, width, tag }: ProjectDonate
               justifyContent: "center",
               height: 42,
               borderRadius: 999,
+              border: 0,
               background: "var(--red)",
               color: "#fff",
+              cursor: "pointer",
               fontFamily: "inherit",
               fontSize: 14,
               fontWeight: 900,
@@ -282,11 +355,11 @@ export default function ProjectDonateCard({ project, width, tag }: ProjectDonate
             }}
           >
             {t("donateNow")}
-          </Link>
+          </button>
           <button
             type="button"
             data-icon-action=""
-            onClick={onAddToBasket}
+            onClick={() => ask("cart")}
             title={t("addToCart")}
             aria-label={t("addToCart")}
             style={{
@@ -343,6 +416,14 @@ export default function ProjectDonateCard({ project, width, tag }: ProjectDonate
           </button>
         </div>
       </div>
+
+      <GiveFrequencyDialog
+        intent={intent}
+        projectTitle={project.title}
+        amountLabel={format(amount)}
+        onPick={onPickFrequency}
+        onClose={closeDialog}
+      />
     </div>
   );
 }

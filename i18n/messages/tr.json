@@ -3450,5 +3450,25 @@
     "sectionLead": "Kalbinize en yakın alanı seçin ve projelerini doğrudan destekleyin.",
     "explore": "Keşfet",
     "projectsCount": "{count, plural, =0 {Henüz proje yok} other {# proje}}"
+  },
+  "CardGive": {
+    "pickAmountFirst": "Önce bağış tutarını seçin ↑",
+    "pickCountFirst": "Önce hisse sayısını seçin ↑",
+    "eyebrow": "Ecrinizin yazılmasına son bir adım",
+    "title": "Bağışınızı kesintisiz bir sadakaya dönüştürün",
+    "lead": "“<project></project>” için <amount></amount> bağışlıyorsunuz. Hayrınız nasıl devam etsin?",
+    "hadithMeaning": "“Allah'a en sevimli amel, az da olsa devamlı olanıdır.”",
+    "hadithSource": "Hadis-i Şerif · Buhârî ve Müslim",
+    "recommended": "Önerilen",
+    "monthlyDesc": "Projeyi yaşatan ve kalıcı bir etki bırakan düzenli bir bağış",
+    "fridayDesc": "Üzerine güneş doğan en hayırlı günde, ecriniz her hafta yenilenir",
+    "dailyDesc": "Her sabah bir melek dua eder: “Allah'ım, infak edene yerine yenisini ver”",
+    "perMonth": "her ay",
+    "perWeek": "her Cuma",
+    "perDay": "her gün",
+    "onceOnly": "Hayır, {amount} sadece bir kez bağışla",
+    "cancelNote": "Düzenli bağışınızı hesabınızdan dilediğiniz zaman durdurabilir veya değiştirebilirsiniz.",
+    "toastTitle": "Sepetinize eklendi ✓",
+    "toastCta": "Bağışı tamamla"
   }
 }

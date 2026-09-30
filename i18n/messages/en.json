@@ -3450,5 +3450,25 @@
     "sectionLead": "Choose the cause closest to your heart and support its projects directly.",
     "explore": "Explore",
     "projectsCount": "{count, plural, =0 {No projects yet} one {# project} other {# projects}}"
+  },
+  "CardGive": {
+    "pickAmountFirst": "Choose your amount first ↑",
+    "pickCountFirst": "Choose the number of shares first ↑",
+    "eyebrow": "One last step before your reward is written",
+    "title": "Make your gift a charity that never stops",
+    "lead": "You're giving <amount></amount> to “<project></project>”. How would you like your good to continue?",
+    "hadithMeaning": "“The most beloved deeds to Allah are those done consistently, even if small.”",
+    "hadithSource": "Hadith · Bukhari & Muslim",
+    "recommended": "Recommended",
+    "monthlyDesc": "A steady gift that keeps the project alive and builds lasting impact",
+    "fridayDesc": "On the best day the sun rises upon, your reward renews every week",
+    "dailyDesc": "Every morning an angel prays: “O Allah, give the one who spends more in return”",
+    "perMonth": "per month",
+    "perWeek": "every Friday",
+    "perDay": "per day",
+    "onceOnly": "No, give {amount} just once",
+    "cancelNote": "You can pause or change a recurring gift anytime from your account.",
+    "toastTitle": "Added to your basket ✓",
+    "toastCta": "Complete donation"
   }
 }

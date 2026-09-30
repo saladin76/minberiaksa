@@ -10,6 +10,7 @@ import { SUPPORTED_CURRENCY_OPTIONS } from "@/lib/supported-currencies";
 import { CURRENCY_COOKIE_UPDATED_EVENT } from "@/components/CurrencyFromUrlSync";
 import { miaPath, type MinbarRoute } from "@/lib/minbar/routes";
 import { useMinbarCartCount } from "@/hooks/useMinbarCart";
+import { CART_BUMP_EVENT, CART_TARGET_ATTR } from "@/lib/minbar/cart-feedback";
 import { useMinbarLabel } from "@/hooks/useMinbarLabel";
 import type { NavCategory } from "@/lib/minbar/categories";
 
@@ -148,6 +149,28 @@ export default function Header({
   const [currency, setCurrency] = useState("USD");
   const [showBack, setShowBack] = useState(false);
   const basket = useMinbarCartCount();
+  /* Something just went into the basket (`CART_BUMP_EVENT`): the icon jumps
+     and a "+1" rises. Toggled off and on again so a quick second add replays. */
+  const [cartBump, setCartBump] = useState(false);
+  useEffect(() => {
+    let timer = 0;
+    let frame = 0;
+    const onBump = () => {
+      setCartBump(false);
+      window.clearTimeout(timer);
+      window.cancelAnimationFrame(frame);
+      frame = window.requestAnimationFrame(() => {
+        setCartBump(true);
+        timer = window.setTimeout(() => setCartBump(false), 1300);
+      });
+    };
+    window.addEventListener(CART_BUMP_EVENT, onBump);
+    return () => {
+      window.removeEventListener(CART_BUMP_EVENT, onBump);
+      window.clearTimeout(timer);
+      window.cancelAnimationFrame(frame);
+    };
+  }, []);
 
   const headRef = useRef<HTMLElement>(null);
   const spacerRef = useRef<HTMLDivElement>(null);
@@ -430,7 +453,8 @@ export default function Header({
             href={miaPath("cart", locale)}
             title={tNav("cart")}
             aria-label={tNav("cart")}
-            className="mia-circle"
+            className={`mia-circle mia-cart${basket > 0 ? " mia-cart--full" : ""}${cartBump ? " mia-cart--bump" : ""}`}
+            {...{ [CART_TARGET_ATTR]: "" }}
             style={{
               position: "relative",
               flex: "0 0 auto",
@@ -459,8 +483,14 @@ export default function Header({
               <path d="m4 8 2 11h12l2-11H4Z" />
               <path d="m9 8 3-4 3 4M9 12v3M15 12v3" />
             </svg>
+            {cartBump ? (
+              <span className="mia-cart-plus" aria-hidden="true">
+                +1
+              </span>
+            ) : null}
             {basket > 0 ? (
               <span
+                className="mia-cart-badge"
                 style={{
                   position: "absolute",
                   insetInlineStart: -3,

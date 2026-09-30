@@ -3363,3 +3363,246 @@ html.cg-open .mia-scope:has(.mia-qb-sec) { padding-bottom: 0; }
   .mia-scope #zk-vocab > span { border-radius: 8px !important; padding: 11px 14px !important; font-size: 13px !important; width: 100%; box-sizing: border-box; }
   .mia-scope .zk-unit { padding: 18px 16px !important; }
 }
+
+/* ─────────────────────────────────────────────────────────────────────────────
+ * Project card giving flow  ProjectDonateCard + GiveFrequencyDialog, and the
+ * header basket's "look here" cues (lib/minbar/cart-feedback.ts).
+ * ───────────────────────────────────────────────────────────────────────────── */
+
+/* The whole card opens the campaign: a stretched link under the controls. The
+   body lets clicks through its empty space and takes them on its controls. */
+.mia-scope .pdc-card { cursor: pointer; }
+.mia-scope .pdc-card:hover { transform: translateY(-4px); box-shadow: 0 18px 40px rgba(16,33,43,.22) !important; }
+.mia-scope .pdc-stretch { position: absolute; inset: 0; z-index: 1; }
+.mia-scope .pdc-body { pointer-events: none; }
+.mia-scope .pdc-body :is(a, button, input) { pointer-events: auto; }
+.mia-scope .pdc-body input { cursor: text; }
+
+/* No amount yet: the chips shake in a wave and light up gold. */
+.mia-scope .pdc-shake > * {
+  animation: pdc-shake .55s cubic-bezier(.36,.07,.19,.97) both;
+  border-color: var(--gold) !important;
+  box-shadow: 0 0 0 3px rgba(211,154,39,.38);
+}
+.mia-scope .pdc-shake > *:nth-child(2) { animation-delay: .04s; }
+.mia-scope .pdc-shake > *:nth-child(3) { animation-delay: .08s; }
+.mia-scope .pdc-shake > *:nth-child(4) { animation-delay: .12s; }
+.mia-scope .pdc-shake > *:nth-child(5) { animation-delay: .16s; }
+@keyframes pdc-shake {
+  10%, 90% { transform: translateX(-1px); }
+  20%, 80% { transform: translateX(3px); }
+  30%, 50%, 70% { transform: translateX(-5px); }
+  40%, 60% { transform: translateX(5px); }
+}
+.mia-scope .pdc-hint {
+  display: inline-flex; align-items: center; gap: 6px; justify-self: start;
+  margin-top: -4px; padding: 4px 11px; border-radius: 999px;
+  background: rgba(211,154,39,.2); border: 1px solid rgba(211,154,39,.6);
+  color: #FBE3AE; font-size: 12.5px; font-weight: 900;
+  animation: fq-fade .25s ease;
+}
+
+/* ── Frequency dialog ─────────────────────────────────────────────────────── */
+.mia-scope .fq-backdrop {
+  position: fixed; inset: 0; z-index: 320;
+  display: grid; place-items: center; padding: 16px;
+  background: rgba(10,22,29,.72); backdrop-filter: blur(6px);
+  animation: fq-fade .2s ease;
+}
+.mia-scope .fq-panel {
+  position: relative; width: min(500px, 100%); max-height: calc(100dvh - 32px); overflow: auto;
+  border-radius: 22px; background: var(--ivory);
+  box-shadow: 0 40px 100px rgba(0,0,0,.45), 0 0 0 1px rgba(211,154,39,.35);
+  animation: fq-rise .38s cubic-bezier(.2,.9,.3,1.15);
+  cursor: default;
+}
+.mia-scope .fq-hero {
+  position: relative; overflow: hidden; isolation: isolate;
+  padding: 30px 24px 22px; text-align: center; color: #fff;
+  background: radial-gradient(120% 95% at 50% 0%, #1E3D4C 0%, var(--deep) 62%, #0B171E 100%);
+  border-bottom: 1px solid rgba(211,154,39,.45);
+}
+.mia-scope .fq-hero-pattern {
+  position: absolute; inset: -40px; z-index: -1; pointer-events: none;
+  background: url('/minbar/assets/patterns/aqsa-white-pattern.webp') repeat; background-size: 300px 300px;
+  opacity: .08; animation: fq-drift 60s linear infinite;
+}
+.mia-scope .fq-hero-glow {
+  position: absolute; z-index: -1; left: 50%; top: -210px; width: 380px; height: 380px;
+  translate: -50% 0; border-radius: 50%; pointer-events: none;
+  background: radial-gradient(circle, rgba(211,154,39,.5), rgba(211,154,39,0) 65%);
+  animation: fq-glow 4s ease-in-out infinite;
+}
+.mia-scope .fq-close {
+  position: absolute; top: 12px; inset-inline-end: 12px;
+  display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%;
+  border: 1px solid rgba(255,255,255,.3); background: rgba(255,255,255,.08); color: #fff; cursor: pointer;
+  transition: background .18s ease, transform .18s ease;
+}
+.mia-scope .fq-close:hover { background: rgba(255,255,255,.18); transform: rotate(90deg); }
+.mia-scope .fq-star { display: block; margin: 0 auto 10px; filter: drop-shadow(0 0 12px rgba(211,154,39,.55)); animation: fq-spin 24s linear infinite; }
+.mia-scope .fq-eyebrow { display: block; font-size: 12px; font-weight: 900; letter-spacing: .06em; color: var(--gold); }
+.mia-scope .fq-title { margin: 6px 0 8px; font-size: clamp(21px, 4.6vw, 26px); line-height: 1.35; font-weight: 900; color: #fff; }
+.mia-scope .fq-lead { margin: 0 auto; max-width: 38ch; font-size: 14px; line-height: 1.75; color: rgba(255,255,255,.78); }
+.mia-scope .fq-lead b { color: #fff; }
+.mia-scope .fq-amount { unicode-bidi: isolate; color: var(--gold) !important; }
+.mia-scope .fq-hadith {
+  position: relative; margin: 16px auto 0; padding: 12px 16px 10px; max-width: 400px;
+  border-radius: 14px; background: rgba(255,255,255,.06);
+  border: 1px solid rgba(211,154,39,.4);
+}
+.mia-scope .fq-hadith blockquote { margin: 0; font-family: var(--font-quran); font-size: clamp(19px, 4.4vw, 23px); line-height: 1.7; color: #F6DFA6; }
+.mia-scope .fq-hadith-meaning { margin-top: 2px; font-size: 12.5px; font-style: italic; color: rgba(255,255,255,.75); }
+.mia-scope .fq-hadith-source { margin-top: 4px; font-size: 11.5px; font-weight: 800; color: rgba(255,255,255,.55); }
+
+.mia-scope .fq-body { display: grid; gap: 10px; padding: 18px; }
+.mia-scope .fq-option {
+  position: relative; display: flex; align-items: center; gap: 12px; width: 100%;
+  padding: 13px 14px; border-radius: 16px; text-align: start;
+  border: 1px solid var(--border); background: #fff; color: var(--deep);
+  font-family: inherit; cursor: pointer;
+  animation: fq-item .4s ease both;
+  transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease;
+}
+.mia-scope .fq-option:nth-child(2) { animation-delay: .06s; }
+.mia-scope .fq-option:nth-child(3) { animation-delay: .12s; }
+.mia-scope .fq-option:hover,
+.mia-scope .fq-option:focus-visible { outline: 0; transform: translateY(-2px); border-color: var(--gold); box-shadow: 0 10px 26px rgba(211,154,39,.22); }
+.mia-scope .fq-option--featured {
+  padding-top: 18px; border: 1.5px solid var(--gold);
+  background: linear-gradient(135deg, #FFF8E8 0%, #fff 55%);
+  box-shadow: 0 8px 24px rgba(211,154,39,.18);
+}
+.mia-scope .fq-option--featured::after {
+  content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+  background: linear-gradient(105deg, transparent 35%, rgba(255,255,255,.75) 50%, transparent 65%) no-repeat;
+  background-size: 250% 100%; animation: fq-sheen 3.2s ease-in-out 1s infinite;
+}
+.mia-scope .fq-badge {
+  position: absolute; top: -10px; inset-inline-start: 14px;
+  padding: 3px 10px; border-radius: 999px; background: var(--gold); color: var(--deep);
+  font-size: 11px; font-weight: 900; box-shadow: 0 4px 10px rgba(211,154,39,.4);
+}
+.mia-scope .fq-icon {
+  flex: 0 0 auto; display: grid; place-items: center; width: 44px; height: 44px; border-radius: 12px;
+  background: var(--deep); color: var(--gold);
+}
+.mia-scope .fq-option--featured .fq-icon { background: linear-gradient(145deg, var(--gold), #B8811C); color: #fff; }
+.mia-scope .fq-text { flex: 1 1 auto; display: grid; gap: 2px; min-width: 0; }
+.mia-scope .fq-text b { font-size: 15.5px; font-weight: 900; }
+.mia-scope .fq-text small { font-size: 12.5px; line-height: 1.55; color: var(--muted); }
+.mia-scope .fq-price { flex: 0 0 auto; display: grid; justify-items: end; text-align: end; }
+.mia-scope .fq-price b { font-size: 15px; font-weight: 900; color: var(--red); unicode-bidi: isolate; }
+.mia-scope .fq-price small { font-size: 11px; font-weight: 800; color: var(--muted); }
+
+.mia-scope .fq-once {
+  width: 100%; height: 46px; border-radius: 999px;
+  border: 1px dashed rgba(16,33,43,.28); background: transparent; color: var(--deep);
+  font-family: inherit; font-size: 14px; font-weight: 800; cursor: pointer;
+  animation: fq-item .4s ease .18s both;
+  transition: background .18s ease, border-color .18s ease;
+}
+.mia-scope .fq-once:hover, .mia-scope .fq-once:focus-visible { outline: 0; background: var(--sand); border-color: var(--deep); }
+.mia-scope .fq-note { display: flex; align-items: center; justify-content: center; gap: 6px; margin: 2px 0 0; font-size: 12px; color: var(--muted); text-align: center; }
+.mia-scope .fq-note svg { flex: 0 0 auto; color: #1F7A4D; }
+
+@keyframes fq-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes fq-rise { from { opacity: 0; transform: translateY(24px) scale(.96); } to { opacity: 1; transform: none; } }
+@keyframes fq-item { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+@keyframes fq-drift { to { background-position: 300px 300px; } }
+@keyframes fq-spin { to { transform: rotate(360deg); } }
+@keyframes fq-glow { 0%, 100% { opacity: .75; } 50% { opacity: 1; } }
+@keyframes fq-sheen { 0% { background-position: 150% 0; } 60%, 100% { background-position: -100% 0; } }
+
+/* A bottom sheet on phones. */
+@media (max-width: 560px) {
+  .mia-scope .fq-backdrop { place-items: end center; padding: 0; }
+  .mia-scope .fq-panel { width: 100%; max-height: 92dvh; border-radius: 22px 22px 0 0; animation-name: fq-sheet; }
+  .mia-scope .fq-hero { padding: 24px 18px 18px; }
+  .mia-scope .fq-body { padding: 16px 14px calc(16px + env(safe-area-inset-bottom)); }
+  .mia-scope .fq-option { padding: 12px; gap: 10px; }
+  .mia-scope .fq-icon { width: 40px; height: 40px; }
+}
+@keyframes fq-sheet { from { transform: translateY(100%); } to { transform: none; } }
+
+/* ── Added-to-basket toast ────────────────────────────────────────────────── */
+.mia-scope .fq-toast {
+  /* Below the header, so the basket it points to stays in sight. */
+  margin-top: 62px;
+  display: flex; align-items: center; gap: 12px; width: min(420px, calc(100vw - 32px));
+  padding: 10px 10px 10px 12px; border-radius: 16px;
+  background: var(--deep); color: #fff;
+  border: 1px solid rgba(211,154,39,.55);
+  box-shadow: 0 18px 44px rgba(16,33,43,.35);
+  animation: fq-toast-in .45s cubic-bezier(.2,.9,.3,1.3) both;
+}
+.mia-scope .fq-toast--out { animation: fq-toast-out .3s ease forwards; }
+.mia-scope .fq-toast-check {
+  flex: 0 0 auto; display: grid; place-items: center; width: 36px; height: 36px; border-radius: 50%;
+  background: var(--gold); color: var(--deep); animation: cf-pop .5s ease .1s both;
+}
+.mia-scope .fq-toast-text { flex: 1 1 auto; display: grid; gap: 1px; min-width: 0; }
+.mia-scope .fq-toast-text b { font-size: 14px; font-weight: 900; }
+.mia-scope .fq-toast-text small { font-size: 12px; color: rgba(255,255,255,.72); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mia-scope .fq-toast-cta {
+  flex: 0 0 auto; padding: 9px 14px; border-radius: 999px;
+  background: var(--red); color: #fff; font-size: 13px; font-weight: 900; white-space: nowrap;
+  transition: filter .18s ease;
+}
+.mia-scope .fq-toast-cta:hover { filter: brightness(1.1); }
+@keyframes fq-toast-in { from { opacity: 0; transform: translateY(-16px) scale(.94); } to { opacity: 1; transform: none; } }
+@keyframes fq-toast-out { to { opacity: 0; transform: translateY(-12px) scale(.96); } }
+
+/* ── Header basket ────────────────────────────────────────────────────────── */
+/* Not empty: two gold rings keep rippling out, so the way to checkout is
+   always in view. */
+.mia-scope .mia-cart--full::before,
+.mia-scope .mia-cart--full::after {
+  content: ""; position: absolute; inset: -1px; border-radius: 50%; pointer-events: none;
+  border: 2px solid var(--gold);
+  animation: mia-cart-ring 2.6s ease-out infinite;
+}
+.mia-scope .mia-cart--full::after { animation-delay: 1.3s; }
+.mia-scope .mia-cart--full svg { animation: mia-cart-nod 2.6s ease-in-out infinite; transform-origin: 50% 80%; }
+.mia-scope .mia-cart--full .mia-cart-badge { animation: mia-cart-beat 2.6s ease-in-out infinite; }
+
+/* Just added: the icon jumps and wobbles, the circle flashes gold, the badge
+   pops and a "+1" rises. */
+.mia-scope .mia-cart--bump { animation: mia-cart-flash 1s ease-out; }
+.mia-scope .mia-cart--bump svg { animation: mia-cart-jump .9s cubic-bezier(.28,1.6,.5,1); }
+.mia-scope .mia-cart--bump .mia-cart-badge { animation: mia-cart-pop .6s cubic-bezier(.28,1.8,.5,1); }
+.mia-scope .mia-cart-plus {
+  position: absolute; top: -4px; left: 50%; translate: -50% 0; pointer-events: none;
+  padding: 1px 7px; border-radius: 999px; background: var(--red); color: #fff;
+  font-size: 11px; font-weight: 900; direction: ltr;
+  animation: mia-cart-plus 1.2s ease-out forwards;
+}
+@keyframes mia-cart-ring { 0% { transform: scale(1); opacity: .9; } 100% { transform: scale(1.75); opacity: 0; } }
+@keyframes mia-cart-nod { 0%, 70%, 100% { transform: none; } 76% { transform: rotate(-12deg); } 84% { transform: rotate(9deg); } 92% { transform: rotate(-4deg); } }
+@keyframes mia-cart-beat { 0%, 70%, 100% { transform: scale(1); } 78% { transform: scale(1.25); } }
+@keyframes mia-cart-flash {
+  0% { background: rgba(211,154,39,.95); box-shadow: 0 0 0 0 rgba(211,154,39,.7); }
+  100% { background: rgba(255,255,255,.1); box-shadow: 0 0 0 22px rgba(211,154,39,0); }
+}
+@keyframes mia-cart-jump {
+  0% { transform: none; }
+  20% { transform: translateY(-9px) scale(1.25) rotate(-14deg); }
+  40% { transform: translateY(0) scale(.95) rotate(12deg); }
+  55% { transform: rotate(-9deg); }
+  70% { transform: rotate(6deg); }
+  85% { transform: rotate(-3deg); }
+  100% { transform: none; }
+}
+@keyframes mia-cart-pop { 0% { transform: scale(.4); } 60% { transform: scale(1.5); } 100% { transform: scale(1); } }
+@keyframes mia-cart-plus { 0% { opacity: 0; transform: translateY(0) scale(.6); } 20% { opacity: 1; transform: translateY(-14px) scale(1.1); } 100% { opacity: 0; transform: translateY(-34px) scale(1); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .mia-scope .pdc-card:hover { transform: none; }
+  .mia-scope .pdc-shake > *, .mia-scope .fq-panel, .mia-scope .fq-option, .mia-scope .fq-once,
+  .mia-scope .fq-star, .mia-scope .fq-hero-pattern, .mia-scope .fq-hero-glow, .mia-scope .fq-option--featured::after,
+  .mia-scope .fq-toast, .mia-scope .fq-toast-check,
+  .mia-scope .mia-cart--full svg, .mia-scope .mia-cart--full .mia-cart-badge,
+  .mia-scope .mia-cart--bump, .mia-scope .mia-cart--bump svg, .mia-scope .mia-cart--bump .mia-cart-badge,
+  .mia-scope .mia-cart-plus { animation: none !important; }
+  .mia-scope .mia-cart--full::before, .mia-scope .mia-cart--full::after { animation: none; opacity: .6; }
+}
