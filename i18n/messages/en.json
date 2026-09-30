@@ -3469,6 +3469,11 @@
     "onceOnly": "No, give {amount} just once",
     "cancelNote": "You can pause or change a recurring gift anytime from your account.",
     "toastTitle": "Added to your basket ✓",
-    "toastCta": "Complete donation"
+    "toastCta": "Complete donation",
+    "minAmount": "The minimum donation is {amount}",
+    "belowMinRow": "Below the minimum donation ({amount})",
+    "raiseToMin": "Raise to {amount}",
+    "belowMinCheckout": "Some donations are below the minimum ({amount}). Raise them to continue.",
+    "editInCart": "Edit amounts in the basket"
   }
 }

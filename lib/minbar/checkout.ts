@@ -1,4 +1,5 @@
 import type { MinbarCartItem } from "./cart";
+import { lineLocal, type LocalAmount } from "@/lib/minbar/donation-amount";
 import type { MinbarProject } from "./projects";
 import { orderTypeForItems, type OrderType } from "@/lib/donations/recurring-schedule";
 import { readConciergeAssisted, readConciergeTouched } from "@/lib/ai/concierge/client";
@@ -109,8 +110,10 @@ export interface OrderGift {
 }
 
 export interface OrderLines {
-  items: Array<{ campaignId: string; amount: number; shareCount?: number; gift?: OrderGift }>;
-  categoryItems: Array<{ categoryId: string; amount: number }>;
+  /* `amount` is USD; `local` is the figure as the donor gave it in their
+     currency, charged exactly when the order is in that currency. */
+  items: Array<{ campaignId: string; amount: number; local?: LocalAmount; shareCount?: number; gift?: OrderGift }>;
+  categoryItems: Array<{ categoryId: string; amount: number; local?: LocalAmount }>;
   /**
    * Waqf rows carry no amount: the server prices them from the fixed unit
    * price, so a basket edited by hand cannot buy a metre for a dollar.
@@ -137,11 +140,13 @@ export function toOrderItems(
   const lines: OrderLines = { items: [], categoryItems: [], waqfItems: [] };
 
   for (const item of items) {
+    const local = lineLocal(item);
     const campaignId = item.projectId ? bySlug.get(item.projectId) : undefined;
     if (campaignId) {
       lines.items.push({
         campaignId,
         amount: item.amount,
+        ...(local ? { local } : {}),
         ...(item.shareCount ? { shareCount: item.shareCount } : {}),
         ...(item.gift
           ? {
@@ -157,7 +162,9 @@ export function toOrderItems(
           : {}),
       });
     }
-    else if (item.categoryId) lines.categoryItems.push({ categoryId: item.categoryId, amount: item.amount });
+    else if (item.categoryId) {
+      lines.categoryItems.push({ categoryId: item.categoryId, amount: item.amount, ...(local ? { local } : {}) });
+    }
     else if (item.waqf) {
       lines.waqfItems.push({
         unit: item.waqf.unit,
@@ -221,9 +228,10 @@ export async function createDonation(input: CreateDonationInput): Promise<Create
       ...(categoryItems.length ? { categoryItems } : {}),
       ...(waqfItems.length ? { waqfItems } : {}),
       currency: input.currency,
-      /* The basket stores USD; the server converts every line and the team
-         support into `currency` at its rate. Sent raw, a $1 row shown as ≈49 TL
-         was charged 1 TL. */
+      /* The basket stores USD (plus each line's exact local figure); the
+         server charges a line given in `currency` as given and converts the
+         rest and the team support at its rate. Sent raw, a $1 row shown as
+         ≈49 TL was charged 1 TL. */
       amountsIn: "USD",
       type: orderType(input.items),
       timezone: browserTimezone(),

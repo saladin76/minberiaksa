@@ -5,13 +5,13 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { signIn, useSession } from "next-auth/react";
 import { useLocale, useTranslations } from "next-intl";
-import { formatMoney } from "@/lib/minbar/money";
 import { Elements } from "@stripe/react-stripe-js";
 import { getStripePromise } from "@/lib/stripe-client";
 import { StripePaymentStep, type StripePaymentHandle } from "@/components/StripePaymentStep";
 import { miaPath } from "@/lib/minbar/routes";
 import { useMinbarCart } from "@/hooks/useMinbarCart";
 import { useMinbarMoney } from "@/hooks/useMinbarMoney";
+import { useDonationAmount, useHealLegacyRows } from "@/hooks/useDonationAmount";
 import { useShareWording } from "@/hooks/useShareWording";
 import type { MinbarCartItem } from "@/lib/minbar/cart";
 import { formatIban, type MinbarBank } from "@/lib/minbar/banks";
@@ -86,9 +86,12 @@ export default function CheckoutPage({ projects, categories, banks, donor, defau
   const tValidation = useTranslations("validation");
   const tSystem = useTranslations("system");
   const tCert = useTranslations("certificates");
-  const { format, formatNumber } = useMinbarMoney();
+  const { format, formatNumber, formatLocal } = useMinbarMoney();
+  const { formatLine, lineValue, lineTooSmall, minLabel, inLocal } = useDonationAmount();
+  const tGive = useTranslations("CardGive");
   const { countLabelFor } = useShareWording();
-  const { items, hydrated } = useMinbarCart();
+  const { items, hydrated, replace } = useMinbarCart();
+  useHealLegacyRows(items, replace, hydrated);
 
   const [method, setMethod] = useState<PaymentMethod>("card");
   const [firstName, setFirstName] = useState(donor?.firstName ?? "");
@@ -146,7 +149,6 @@ export default function CheckoutPage({ projects, categories, banks, donor, defau
     payforEnabled: boolean;
     albarakaUseOOS: boolean;
     albarakaConfigured: boolean;
-    chargeInDonorCurrency: boolean;
   } | null>(null);
 
   useEffect(() => {
@@ -160,7 +162,6 @@ export default function CheckoutPage({ projects, categories, banks, donor, defau
           payforEnabled: settings.payforEnabled,
           albarakaUseOOS: settings.albarakaUseOOS,
           albarakaConfigured: settings.albarakaConfigured,
-          chargeInDonorCurrency: settings.chargeInDonorCurrency,
         });
       })
       .catch(() => {
@@ -195,20 +196,17 @@ export default function CheckoutPage({ projects, categories, banks, donor, defau
     return item.title ?? "";
   };
 
-  /* The currency this order is charged in, and what the summary shows: the
-     donor's, or USD when the admin has switched charging in the donor's
-     currency off (a transfer always keeps the donor's). The basket's amounts
-     are USD either way; the server converts them into this currency at its
-     rate, so the summary is what the gateway takes. */
-  const chargeInUsd = gatewayConfig?.chargeInDonorCurrency === false && method !== "bank";
-  const chargeCurrency = chargeInUsd ? "USD" : currency;
-  const formatCharge = useCallback(
-    (usd: number) => (chargeInUsd ? formatMoney(usd, "USD", locale) : format(usd)),
-    [chargeInUsd, format, locale]
-  );
-
   const teamSupportCharged = teamSupportEnabled && teamSupport > 0 ? teamSupport : 0;
-  const total = items.reduce((sum, item) => sum + item.amount, 0) + teamSupportCharged;
+  /* The total as it will be charged, in the donor's currency: a line given in
+     that currency counts as given (1 TL is 1 TL), the rest and the team
+     support are converted from USD  the same rule the server charges by. */
+  const totalUsd = items.reduce((sum, item) => sum + item.amount, 0) + teamSupportCharged;
+  const totalLabel = inLocal
+    ? formatLocal(items.reduce((sum, item) => sum + lineValue(item), 0) + lineValue({ amount: teamSupportCharged }))
+    : format(totalUsd);
+  /* With the $1 floor on, a line under it cannot be paid for; the basket is
+     where it is raised. */
+  const belowMinimum = items.some(lineTooSmall);
   /* One type for the whole order  `ONE_TIME`, or the plan's cadence; the
      cart page does not let cadences mix. The same function builds the order,
      so what is previewed here is what is sent. */
@@ -241,7 +239,7 @@ export default function CheckoutPage({ projects, categories, banks, donor, defau
   const gateway = resolveGateway({
     mainGateway: gatewayConfig?.mainGateway ?? "STRIPE",
     payforEnabled: gatewayConfig?.payforEnabled ?? true,
-    currency: chargeCurrency,
+    currency,
     donationType: orderTypeForCart,
   });
 
@@ -306,6 +304,10 @@ export default function CheckoutPage({ projects, categories, banks, donor, defau
   const onSubmit = async (event: FormEvent) => {
     event.preventDefault();
     if (submitting || !items.length) return;
+    if (belowMinimum) {
+      setError(tGive("belowMinCheckout", { amount: minLabel }));
+      return;
+    }
 
     const signedIn = Boolean(session?.user);
     if (!signedIn && (!firstName.trim() || !email.trim())) {
@@ -348,7 +350,7 @@ export default function CheckoutPage({ projects, categories, banks, donor, defau
       const donation = await createDonation({
         items,
         projects,
-        currency: chargeCurrency,
+        currency,
         locale,
         method: methodForServer,
         teamSupport: teamSupportCharged,
@@ -865,7 +867,7 @@ export default function CheckoutPage({ projects, categories, banks, donor, defau
             {method === "paypal" ? (
               <button
                 type="submit"
-                disabled={submitting || !items.length}
+                disabled={submitting || !items.length || belowMinimum}
                 className="pay-paypal"
                 style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, width: "100%", height: 52, border: 0, borderRadius: 8, background: "#FFC439", color: "#10212B", fontFamily: "inherit", fontWeight: 900, fontSize: 15, cursor: "pointer", boxShadow: "0 6px 16px rgba(255,196,57,.35)", boxSizing: "border-box", transition: "filter .18s ease, transform .18s ease" }}
               >
@@ -876,7 +878,7 @@ export default function CheckoutPage({ projects, categories, banks, donor, defau
             ) : (
               <button
                 type="submit"
-                disabled={submitting || !items.length || (method === "card" && cardRailUnavailable)}
+                disabled={submitting || !items.length || belowMinimum || (method === "card" && cardRailUnavailable)}
                 className="mia-card-cta"
                 style={{ width: "100%", height: 52, border: 0, borderRadius: 8, background: "var(--red)", color: "#fff", fontFamily: "inherit", fontWeight: 900, fontSize: 16, cursor: "pointer", boxShadow: "var(--shadow-cta)", transition: "filter .18s ease" }}
               >
@@ -930,7 +932,7 @@ export default function CheckoutPage({ projects, categories, banks, donor, defau
                         ) : null}
                       </span>
                       <b dir="ltr" style={{ flex: "0 0 auto", unicodeBidi: "isolate" }}>
-                        {formatCharge(item.amount)}
+                        {formatLine(item)}
                       </b>
                     </span>
                   ))}
@@ -943,7 +945,7 @@ export default function CheckoutPage({ projects, categories, banks, donor, defau
                         </span>
                       </span>
                       <b dir="ltr" style={{ flex: "0 0 auto", unicodeBidi: "isolate" }}>
-                        {formatCharge(teamSupportCharged)}
+                        {format(teamSupportCharged)}
                       </b>
                     </span>
                   ) : null}
@@ -951,9 +953,17 @@ export default function CheckoutPage({ projects, categories, banks, donor, defau
                 <span style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", fontSize: 16, fontWeight: 900 }}>
                   {t("total")}
                   <b dir="ltr" style={{ fontSize: 22, unicodeBidi: "isolate" }}>
-                    {formatCharge(total)}
+                    {totalLabel}
                   </b>
                 </span>
+                {belowMinimum ? (
+                  <span role="alert" style={{ display: "grid", gap: 6, fontSize: 13, lineHeight: 1.7, fontWeight: 800, color: "var(--red)", padding: "10px 12px", background: "rgba(169,52,40,.06)", border: "1px solid rgba(169,52,40,.3)", borderRadius: 8 }}>
+                    {tGive("belowMinCheckout", { amount: minLabel })}
+                    <Link href={miaPath("cart", locale)} style={{ color: "var(--deep)", textDecoration: "underline" }}>
+                      {tGive("editInCart")}
+                    </Link>
+                  </span>
+                ) : null}
                 {/* What the plan will do, before the donor confirms: this
                     payment is the first instalment, then the same amount at
                     the cadence  the same next date the consent snapshot

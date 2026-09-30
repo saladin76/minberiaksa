@@ -8,6 +8,8 @@ import type { MinbarProject, MinbarProjectShares } from "@/lib/minbar/projects";
 export interface PriceChip {
   usd: number;
   label: string;
+  /** The admin's figure in the visitor's currency, when that is what this is. */
+  local?: number;
 }
 
 /**
@@ -26,7 +28,7 @@ export function useProjectPricing(project: MinbarProject, fallbackAmounts: reado
   const chips = useMemo<PriceChip[]>(() => {
     const local = project.suggestedAmountsByCurrency?.[code];
     if (local?.length && rate && rate > 0) {
-      return local.map((value) => ({ usd: value / rate, label: formatLocal(value) }));
+      return local.map((value) => ({ usd: value / rate, label: formatLocal(value), local: value }));
     }
     const usd = project.suggestedAmounts?.length ? project.suggestedAmounts : fallbackAmounts;
     return usd.map((value) => ({ usd: value, label: format(value) }));
@@ -50,6 +52,6 @@ export function sharePriceFor(
 ): PriceChip | null {
   if (!shares) return null;
   const override = shares.priceByCurrency?.[code];
-  if (override && override > 0 && rate && rate > 0) return { usd: override / rate, label: formatLocal(override) };
+  if (override && override > 0 && rate && rate > 0) return { usd: override / rate, label: formatLocal(override), local: override };
   return { usd: shares.priceUSD, label: format(shares.priceUSD) };
 }

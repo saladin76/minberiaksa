@@ -23,6 +23,7 @@ import { BANK_TRANSFER_PROVIDER } from "@/lib/donations/bank-transfer-shared";
 import { listBankAccounts } from "@/lib/minbar/cms";
 import { getUsdBaseRatesForServer } from "@/lib/exchange/rates-service";
 import { WAQF_MAX_COUNT, WAQF_UNIT_PRICE_USD, isWaqfUnitKey } from "@/lib/minbar/waqf";
+import { MIN_DONATION_USD, MIN_DONATION_USD_TOLERANCE, parseLocalAmount } from "@/lib/minbar/donation-amount";
 import {
   consentSnapshotFor,
   frequencyOfOrderType,
@@ -195,11 +196,13 @@ export async function POST(request: NextRequest) {
       campaignId: string;
       amount: number;
       amountUSD?: number;
+      /** The figure as the donor gave it, in their currency (`amountsIn: "USD"`). */
+      local?: unknown;
       shareCount?: number;
       /** Given in someone else's name; validated into `giftsByIndex` below. */
       gift?: unknown;
     };
-    type CategoryItemIn = { categoryId: string; amount: number };
+    type CategoryItemIn = { categoryId: string; amount: number; local?: unknown };
     type WaqfItemIn = { unit: "share" | "meter"; count: number; donorName: string; onBehalf: string };
 
     /* A line gives either to a campaign, to a category as a whole (a category
@@ -279,26 +282,31 @@ export async function POST(request: NextRequest) {
        step turned off nothing is added whatever the request says. */
     const teamSupportSettings = await prisma.globalSettings.findFirst({
       orderBy: { createdAt: "asc" },
-      select: { teamSupportEnabled: true, chargeInDonorCurrency: true },
+      select: { teamSupportEnabled: true, allowAnyAmount: true },
     });
     const teamSupportAllowed = teamSupportSettings?.teamSupportEnabled !== false;
 
-    /* The Minbar checkout sends its basket as it stores it, in USD
-       (`amountsIn: "USD"`), and the order is charged in the donor's currency at
-       the rate the basket was shown with  or, with the admin's switch off, in
-       USD whatever the donor browses in. The lines used to be sent as raw USD
-       figures labelled with the donor's currency, so a $1 row shown as ≈49 TL
-       was charged 1 TL. A transfer is paid by the donor into the IBAN they
-       chose, so it keeps their currency. Callers that send amounts already in
-       `currency` (no `amountsIn`) are taken as they are. */
+    /* The Minbar checkout sends its basket as it stores it (`amountsIn: "USD"`):
+       each line's USD value, plus `local`  the figure exactly as the donor
+       gave it in their currency, when they did. The order is charged in the
+       donor's currency: a line given in that currency is charged as given (so
+       1 TL is 1 TL), any other is converted from USD at the server's rate. The
+       lines used to be sent as raw USD figures labelled with the donor's
+       currency, so a $1 row shown as ≈49 TL was charged 1 TL. Callers that
+       send amounts already in `currency` (no `amountsIn`) are taken as they
+       are. */
     const amountsInUsd = amountsIn === "USD";
-    const currency: string =
-      amountsInUsd && !isBankTransfer && teamSupportSettings?.chargeInDonorCurrency === false ? "USD" : requestedCurrency;
-    let usdToCharge = 1;
+    const currency: string = requestedCurrency;
     const chargeCode = normalizeDonationCurrencyCode(currency);
-    if (amountsInUsd && chargeCode !== "USD") {
+    let usdToCharge = 1;
+    let rates: Record<string, number> = {};
+    const needsRates =
+      amountsInUsd &&
+      (chargeCode !== "USD" || [...items, ...categoryItems].some((line) => parseLocalAmount(line.local)));
+    if (needsRates) {
       try {
-        const rate = (await getUsdBaseRatesForServer())[chargeCode];
+        rates = await getUsdBaseRatesForServer();
+        const rate = chargeCode === "USD" ? 1 : rates[chargeCode];
         if (!(typeof rate === "number" && rate > 0)) throw new Error(`no rate for ${chargeCode}`);
         usdToCharge = rate;
       } catch (e) {
@@ -310,9 +318,29 @@ export async function POST(request: NextRequest) {
       }
     }
     const toCharge = (usd: number) => Math.round(usd * usdToCharge * 100) / 100;
-    if (usdToCharge !== 1) {
-      for (const item of items) item.amount = toCharge(item.amount);
-      for (const item of categoryItems) item.amount = toCharge(item.amount);
+    if (amountsInUsd) {
+      /* Off (the default), every donation line is worth at least a dollar;
+         the basket and checkout say so first, this is the server's half. */
+      const allowAnyAmount = teamSupportSettings?.allowAnyAmount === true;
+      for (const line of [...items, ...categoryItems]) {
+        /* Given in the charge currency: charged as given. Given in another one
+           (the donor switched currency since): that figure, converted. */
+        const local = parseLocalAmount(line.local);
+        const localRate = local ? rates[local.currency] : undefined;
+        line.amount =
+          local && local.currency === chargeCode
+            ? local.amount
+            : local && typeof localRate === "number" && localRate > 0
+              ? toCharge(local.amount / localRate)
+              : toCharge(line.amount);
+        const usdValue = line.amount / usdToCharge;
+        if (!allowAnyAmount && usdValue < MIN_DONATION_USD * MIN_DONATION_USD_TOLERANCE) {
+          return NextResponse.json(
+            { error: "Each donation must be at least 1 USD or its equivalent", code: "BELOW_MINIMUM" },
+            { status: 400 }
+          );
+        }
+      }
     }
 
     const teamSupport =

@@ -23,6 +23,8 @@
  * display state.
  */
 
+import { parseLocalAmount, type LocalAmount } from "@/lib/minbar/donation-amount";
+
 /** Donation kind. Drives which proof path (receipt / certificate) applies. */
 export type CartTypeKey = "project" | "zakat" | "waqf" | "recurring" | "extra";
 
@@ -87,6 +89,13 @@ export interface MinbarCartItem {
   amount: number;
   /** ISO 4217 code  never a symbol or a translated currency name. */
   currency: string;
+  /**
+   * The amount exactly as the donor gave it in their own currency (typed, or
+   * an admin's preset in that currency); `amount` is then its USD value at
+   * the page's rate. Shown and charged as this figure while the donor is in
+   * that currency, so 1 TL stays 1 TL. See `lib/minbar/donation-amount.ts`.
+   */
+  local?: LocalAmount;
   /** Identifier of the upsell suggestion that produced this item, if any. */
   upsellId?: string;
   /**
@@ -213,6 +222,7 @@ export function migrateItem(
     _autoMonthly: raw._autoMonthly === true || undefined,
     waqf: parseWaqf(raw.waqf),
     gift: parseGift(raw.gift),
+    local: parseLocalAmount(raw.local),
     shareCount:
       typeof raw.shareCount === "number" && Number.isInteger(raw.shareCount) && raw.shareCount > 0
         ? raw.shareCount

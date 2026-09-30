@@ -13,6 +13,7 @@ import type { MinbarProject } from "@/lib/minbar/projects";
 import { useMinbarMoney } from "@/hooks/useMinbarMoney";
 import { shareProgress, useShareWording } from "@/hooks/useShareWording";
 import { useProjectPricing } from "@/hooks/useProjectPricing";
+import { useDonationAmount } from "@/hooks/useDonationAmount";
 
 /**
  * The site's project card  a full-bleed field photograph under a dark scrim,
@@ -54,6 +55,7 @@ export default function ProjectDonateCard({ project, width, tag }: ProjectDonate
   const t = useTranslations("common");
   const tGive = useTranslations("CardGive");
   const { format, formatNumber } = useMinbarMoney();
+  const { fromLocal, fromChip, labelOf, tooSmall, minLabel } = useDonationAmount();
   const shares = project.shares;
   const { t: tShares, unitWord, countLabel } = useShareWording(shares);
 
@@ -77,7 +79,18 @@ export default function ProjectDonateCard({ project, width, tag }: ProjectDonate
   const href = miaPath("projectDetail", locale, project.slug);
   const chosen = custom ? Number(custom) : picked != null ? options[picked]?.value ?? 0 : 0;
   const shareCount = shares && Number.isInteger(chosen) && chosen > 0 ? chosen : 0;
-  const amount = shares && sharePrice ? shareCount * sharePrice.usd : chosen;
+  /* What the donor is giving: a typed figure is in their own currency, and an
+     admin's per-currency chip or share price is kept exactly, so 1 TL stays
+     1 TL. `amount` is its USD value, which the basket stores. */
+  const given = shares
+    ? fromChip(sharePrice, shareCount)
+    : custom
+      ? fromLocal(Number(custom))
+      : picked != null
+        ? fromChip(amountChips[picked])
+        : { usd: 0 };
+  const amount = given.usd;
+  const amountLabel = labelOf(given);
   const hasFinancials = project.goal != null && project.goal > 0;
   const pct = hasFinancials ? Math.min((project.raised / (project.goal as number)) * 100, 100) : 0;
   const progress = shares ? shareProgress(shares, project.raised, hasFinancials ? project.goal : null) : null;
@@ -97,10 +110,12 @@ export default function ProjectDonateCard({ project, width, tag }: ProjectDonate
     color: "#fff",
   });
 
-  const missingAmount = nudge > 0 && !(amount > 0);
+  /* Nothing picked, or (with the $1 floor on) less than the floor. */
+  const belowMinimum = amount > 0 && tooSmall(amount, given.local);
+  const missingAmount = nudge > 0 && (!(amount > 0) || belowMinimum);
 
   const ask = (next: GiveIntent) => {
-    if (!(amount > 0)) {
+    if (!(amount > 0) || belowMinimum) {
       setNudge((n) => n + 1);
       return;
     }
@@ -118,6 +133,7 @@ export default function ProjectDonateCard({ project, width, tag }: ProjectDonate
       freqKey: freq,
       amount,
       currency: "USD",
+      ...(given.local ? { local: given.local } : {}),
       ...(shareCount ? { shareCount } : {}),
     });
     const wasDonate = intent === "donate";
@@ -143,7 +159,7 @@ export default function ProjectDonateCard({ project, width, tag }: ProjectDonate
           <span className="fq-toast-text">
             <b>{tGive("toastTitle")}</b>
             <small>
-              {project.title} · <span dir="ltr">{format(amount)}</span>
+              {project.title} · <span dir="ltr">{amountLabel}</span>
               {cadence ? ` · ${cadence}` : ""}
             </small>
           </span>
@@ -328,7 +344,7 @@ export default function ProjectDonateCard({ project, width, tag }: ProjectDonate
         </div>
         {missingAmount ? (
           <span className="pdc-hint" role="alert">
-            {shares ? tGive("pickCountFirst") : tGive("pickAmountFirst")}
+            {belowMinimum ? tGive("minAmount", { amount: minLabel }) : shares ? tGive("pickCountFirst") : tGive("pickAmountFirst")}
           </span>
         ) : null}
 
@@ -420,7 +436,7 @@ export default function ProjectDonateCard({ project, width, tag }: ProjectDonate
       <GiveFrequencyDialog
         intent={intent}
         projectTitle={project.title}
-        amountLabel={format(amount)}
+        amountLabel={amountLabel}
         onPick={onPickFrequency}
         onClose={closeDialog}
       />

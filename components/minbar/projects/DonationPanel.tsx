@@ -8,6 +8,7 @@ import { addToCart, type CartFreqKey } from "@/lib/minbar/cart";
 import { useMinbarMoney } from "@/hooks/useMinbarMoney";
 import { shareProgress, useShareWording } from "@/hooks/useShareWording";
 import { useProjectPricing } from "@/hooks/useProjectPricing";
+import { useDonationAmount } from "@/hooks/useDonationAmount";
 import type { MinbarProject } from "@/lib/minbar/projects";
 
 /**
@@ -51,6 +52,8 @@ export default function DonationPanel({ project, donorCount = 0 }: { project: Mi
   const tCart = useTranslations("cart");
   const tProjects = useTranslations("projects");
   const { format, formatNumber } = useMinbarMoney();
+  const { fromLocal, fromChip, labelOf, tooSmall, minLabel } = useDonationAmount();
+  const tGive = useTranslations("CardGive");
   const shares = project.shares;
   const { t: tShares, unitWord, countLabel } = useShareWording(shares);
 
@@ -82,7 +85,18 @@ export default function DonationPanel({ project, donorCount = 0 }: { project: Mi
   const chosen = custom ? Number(custom) : options[picked]?.value ?? 0;
   /* `chosen` is a share count on a shares campaign, an amount otherwise. */
   const shareCount = shares && Number.isInteger(chosen) && chosen > 0 ? chosen : 0;
-  const amount = shares && sharePrice ? shareCount * sharePrice.usd : chosen;
+  /* A typed figure is in the donor's own currency and an admin's per-currency
+     chip or share price is kept exactly (1 TL stays 1 TL); `amount` is the
+     USD value the basket stores. */
+  const given = shares
+    ? fromChip(sharePrice, shareCount)
+    : custom
+      ? fromLocal(Number(custom))
+      : fromChip(amountChips[picked]);
+  const amount = given.usd;
+  /* With the $1 floor on, less than a dollar is refused here and said so. */
+  const belowMinimum = amount > 0 && tooSmall(amount, given.local);
+  const [minHint, setMinHint] = useState(false);
   const hasFinancials = project.goal != null && project.goal > 0;
   const pct = hasFinancials ? Math.min((project.raised / (project.goal as number)) * 100, 100) : 0;
   const progress = shares ? shareProgress(shares, project.raised, hasFinancials ? project.goal : null) : null;
@@ -129,6 +143,7 @@ export default function DonationPanel({ project, donorCount = 0 }: { project: Mi
     freqKey: freq,
     amount,
     currency: "USD",
+    ...(given.local ? { local: given.local } : {}),
     ...(shareCount ? { shareCount } : {}),
     ...(giftReady
       ? {
@@ -146,12 +161,14 @@ export default function DonationPanel({ project, donorCount = 0 }: { project: Mi
 
   const onDonate = () => {
     if (!(amount > 0)) return;
+    if (belowMinimum) return setMinHint(true);
     addToCart(buildItem());
     router.push(miaPath("cart", locale));
   };
 
   const onAddToBasket = () => {
     if (!(amount > 0)) return;
+    if (belowMinimum) return setMinHint(true);
     addToCart(buildItem());
     setAdded(true);
     window.setTimeout(() => setAdded(false), 2400);
@@ -478,9 +495,14 @@ export default function DonationPanel({ project, donorCount = 0 }: { project: Mi
           ) : null}
         </span>
         <b dir="ltr" style={{ unicodeBidi: "isolate", fontSize: 21, fontWeight: 900, color: "var(--red)" }}>
-          {format(amount)}
+          {labelOf(given)}
         </b>
       </span>
+      {minHint && belowMinimum ? (
+        <span role="alert" className="wq-error" style={{ marginTop: -6, fontSize: 13, fontWeight: 800, color: "var(--red)" }}>
+          {tGive("minAmount", { amount: minLabel })}
+        </span>
+      ) : null}
 
       <button
         type="button"

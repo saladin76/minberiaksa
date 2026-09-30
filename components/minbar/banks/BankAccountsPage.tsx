@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import { miaPath } from "@/lib/minbar/routes";
 import { addToCart } from "@/lib/minbar/cart";
+import { useDonationAmount } from "@/hooks/useDonationAmount";
 import { formatIban, type MinbarBank } from "@/lib/minbar/banks";
 
 /**
@@ -28,6 +29,7 @@ import { formatIban, type MinbarBank } from "@/lib/minbar/banks";
 export default function BankAccountsPage({ banks }: { banks: readonly MinbarBank[] }) {
   const locale = useLocale();
   const router = useRouter();
+  const { fromLocal } = useDonationAmount();
   const t = useTranslations("cart");
   const tCommon = useTranslations("common");
 
@@ -48,7 +50,9 @@ export default function BankAccountsPage({ banks }: { banks: readonly MinbarBank
   const onConfirm = () => {
     const value = Number(amount.replace(/[^0-9.]/g, ""));
     if (!(value > 0)) return;
-    addToCart({ titleKey: "generalBankTransfer", typeKey: "project", freqKey: "once", amount: value, currency: "USD" });
+    /* Typed in the donor's own currency, and kept exactly as typed. */
+    const given = fromLocal(value);
+    addToCart({ titleKey: "generalBankTransfer", typeKey: "project", freqKey: "once", amount: given.usd, currency: "USD", ...(given.local ? { local: given.local } : {}) });
     router.push(miaPath("cart", locale));
   };
 

@@ -8,6 +8,7 @@ import { miaPath } from "@/lib/minbar/routes";
 import { addToCart, type CartFreqKey } from "@/lib/minbar/cart";
 import { verseBlock } from "@/lib/minbar/quran";
 import { useMinbarMoney } from "@/hooks/useMinbarMoney";
+import { useDonationAmount } from "@/hooks/useDonationAmount";
 import type { MinbarProject } from "@/lib/minbar/projects";
 
 /**
@@ -156,6 +157,7 @@ export default function RecurringPage({ projects }: RecurringPageProps) {
   const tCommon = useTranslations("common");
   const tNav = useTranslations("navigation");
   const { format, formatNumber } = useMinbarMoney();
+  const { fromLocal, labelOf } = useDonationAmount();
   const messages = useMessages() as { quran?: Record<string, { ar?: string; label?: string; t?: string }> };
   const verse = verseBlock(messages.quran ?? {}, "baqarah_261", locale);
 
@@ -169,7 +171,10 @@ export default function RecurringPage({ projects }: RecurringPageProps) {
   const [monthDay, setMonthDay] = useState(1);
   const [notes, setNotes] = useState("");
 
-  const value = custom ? Number(custom) : amount;
+  /* The chips are USD; a typed figure is in the donor's own currency and is
+     kept exactly (the basket enforces the $1 floor when it is on). */
+  const given = custom ? fromLocal(Number(custom)) : { usd: amount };
+  const value = given.usd;
   const selectedProject = projects.find((p) => p.slug === projectSlug) ?? null;
 
   const onDonate = () => {
@@ -184,6 +189,7 @@ export default function RecurringPage({ projects }: RecurringPageProps) {
       freqKey: freq,
       amount: value,
       currency: "USD",
+      ...("local" in given && given.local ? { local: given.local } : {}),
     });
     router.push(miaPath("cart", locale));
   };
@@ -462,7 +468,7 @@ export default function RecurringPage({ projects }: RecurringPageProps) {
                     {t("amountPerX", { freq: tCommon(FREQUENCIES.find((f) => f.id === freq)?.labelKey ?? "freqMonthly") })}
                   </span>
                   <b dir="ltr" style={{ fontSize: 24, unicodeBidi: "isolate", color: "var(--deep)", whiteSpace: "nowrap" }}>
-                    {format(value)}
+                    {labelOf(given)}
                   </b>
                 </span>
               </div>

@@ -7,6 +7,7 @@ import { Button } from "@/components/minbar/ds";
 import { miaPath } from "@/lib/minbar/routes";
 import { useMinbarCart } from "@/hooks/useMinbarCart";
 import { useMinbarMoney } from "@/hooks/useMinbarMoney";
+import { useDonationAmount, useHealLegacyRows } from "@/hooks/useDonationAmount";
 import { useShareWording } from "@/hooks/useShareWording";
 import { sharePriceFor } from "@/hooks/useProjectPricing";
 import {
@@ -82,8 +83,13 @@ export default function CartPage({ projects, categories }: { projects: MinbarPro
   const tCert = useTranslations("certificates");
   const tTeam = useTranslations("TeamSupport");
   const { format, formatNumber, formatLocal, code, rate, currency } = useMinbarMoney();
+  const { fromLocal, tooSmall, lineTooSmall, minLocal, minLabel, lineValue, formatLine, inLocal } = useDonationAmount();
+  const tGive = useTranslations("CardGive");
+  /* The upsell row whose amount was under the $1 floor, to say so under it. */
+  const [upsellMinHint, setUpsellMinHint] = useState<string | null>(null);
   const { unitWordFor, countLabelFor } = useShareWording();
   const { items, replace, remove, hydrated } = useMinbarCart();
+  useHealLegacyRows(items, replace, hydrated);
 
   const [editing, setEditing] = useState<number | null>(null);
   const [draft, setDraft] = useState("");
@@ -128,10 +134,12 @@ export default function CartPage({ projects, categories }: { projects: MinbarPro
       (settings?.cartUpsell.items ?? [])
         .map((item) => {
           const project = projectById.get(item.campaignId);
-          return project ? { project, amounts: resolveUpsellAmounts(item, currency) } : null;
+          /* A per-currency exception is in the visitor's money; the base list is USD. */
+          const local = code !== "USD" && Boolean(item.byCurrency[code]?.length);
+          return project ? { project, amounts: resolveUpsellAmounts(item, currency), local } : null;
         })
-        .filter((row): row is { project: MinbarProject; amounts: number[] } => row !== null),
-    [settings, projectById, currency]
+        .filter((row): row is { project: MinbarProject; amounts: number[]; local: boolean } => row !== null),
+    [settings, projectById, currency, code]
   );
   const teamSupportEnabled = settings?.teamSupportEnabled !== false;
   const teamAmounts = useMemo(
@@ -228,21 +236,25 @@ export default function CartPage({ projects, categories }: { projects: MinbarPro
       .join(" · ");
 
   /**
-   * Totals are grouped by currency and never summed across them: adding a
-   * dollar figure to a euro one produces a number that means nothing, and the
-   * exchange happens at payment, not here.
+   * One total, in the visitor's currency: a line given in that currency counts
+   * as given (1 TL is 1 TL), every other line and the team support (both USD)
+   * are converted at the page's rate  the rule the order is charged by. The
+   * rows used to be grouped by their stored currency code, which put the
+   * team support in a total of its own.
    */
-  const totals = useMemo(() => {
-    const byCurrency = new Map<string, number>();
-    for (const item of items) {
-      byCurrency.set(item.currency, (byCurrency.get(item.currency) ?? 0) + item.amount);
-    }
-    /* Team support is quoted in the active currency, so it joins that total. */
-    if (teamSupportEnabled && teamAmount > 0) {
-      byCurrency.set(currency, (byCurrency.get(currency) ?? 0) + teamAmount);
-    }
-    return [...byCurrency.entries()];
-  }, [items, teamAmount, teamSupportEnabled, currency]);
+  const totalLabel = useMemo(() => {
+    const team = teamSupportEnabled && teamAmount > 0 ? teamAmount : 0;
+    if (!inLocal) return format(items.reduce((sum, item) => sum + item.amount, 0) + team);
+    return formatLocal(items.reduce((sum, item) => sum + lineValue(item), 0) + lineValue({ amount: team }));
+  }, [items, teamAmount, teamSupportEnabled, inLocal, format, formatLocal, lineValue]);
+
+  /* With the $1 floor on, a row under it holds the checkout until it is raised. */
+  const belowMinimum = items.some(lineTooSmall);
+  const raiseToMinimum = (index: number) => {
+    if (minLocal == null) return;
+    const raised = inLocal ? fromLocal(minLocal) : { usd: minLocal };
+    replace(items.map((item, i) => (i === index ? { ...item, amount: raised.usd, currency: "USD", local: "local" in raised ? raised.local : undefined, shareCount: undefined } : item)));
+  };
 
   const recurringOn = items.some((x) => x._autoMonthly);
 
@@ -279,42 +291,59 @@ export default function CartPage({ projects, categories }: { projects: MinbarPro
       const shares = item.shareCount ? sharesOf(item) : null;
       const price = sharePriceFor(shares, code, rate, format, formatLocal);
       if (shares && price) return Number.isInteger(value) ? { ...item, shareCount: value, amount: value * price.usd } : item;
-      return { ...item, amount: value, shareCount: undefined };
+      const given = fromLocal(value);
+      return { ...item, amount: given.usd, currency: "USD", local: given.local, shareCount: undefined };
     };
     if (value > 0) replace(items.map((item, i) => (i === index ? edited(item) : item)));
     setEditing(null);
     setDraft("");
   };
 
-  const addSuggestion = (id: string, key: string, amount: number) => {
+  const addSuggestion = (id: string, key: string, amount: number, local = false) => {
     if (!(amount > 0)) return;
+    const given = local ? fromLocal(amount) : { usd: amount };
+    if (tooSmall(given.usd, "local" in given ? given.local : undefined)) {
+      setUpsellMinHint(id);
+      return;
+    }
+    setUpsellMinHint(null);
     replace([
       ...items,
-      { titleKey: key, typeKey: "extra", freqKey: "once", amount, currency: "USD", upsellId: id },
+      { titleKey: key, typeKey: "extra", freqKey: "once", amount: given.usd, currency: "USD", ...("local" in given && given.local ? { local: given.local } : {}), upsellId: id },
     ]);
     announceAdded(items.length);
   };
 
   /* A configured campaign becomes an ordinary project row, in the active
      currency, so checkout sends it as a campaign line like any other. */
-  const addProjectSuggestion = (project: MinbarProject, amount: number) => {
+  /* `local`: the figure is in the visitor's currency (their exception list, or
+     typed), stored as its USD value plus the exact figure. Otherwise USD. */
+  const addProjectSuggestion = (project: MinbarProject, amount: number, local: boolean) => {
     if (!(amount > 0)) return;
+    const given = local ? fromLocal(amount) : { usd: amount };
+    if (tooSmall(given.usd, "local" in given ? given.local : undefined)) {
+      setUpsellMinHint(project.id);
+      return;
+    }
+    setUpsellMinHint(null);
     replace([
       ...items,
-      { projectId: project.slug, typeKey: "project", freqKey: "once", amount, currency, upsellId: project.id },
+      { projectId: project.slug, typeKey: "project", freqKey: "once", amount: given.usd, currency: "USD", ...("local" in given && given.local ? { local: given.local } : {}), upsellId: project.id },
     ]);
     announceAdded(items.length);
   };
 
-  type UpsellRow = { id: string; label: string; amounts: readonly number[]; add: (amount: number) => void };
+  /* `add(amount, typed)`: a typed figure is always in the visitor's currency. */
+  type UpsellRow = { id: string; label: string; amounts: readonly number[]; localAmounts: boolean; add: (amount: number, typed?: boolean) => void };
   const upsellRows: UpsellRow[] = upsellProjects.length
-    ? upsellProjects.map(({ project, amounts }) => ({
+    ? upsellProjects.map(({ project, amounts, local }) => ({
         id: project.id,
         label: project.title,
         amounts,
-        add: (amount: number) => addProjectSuggestion(project, amount),
+        localAmounts: local,
+        add: (amount: number, typed?: boolean) => addProjectSuggestion(project, amount, local || Boolean(typed)),
       }))
-    : SUGGESTIONS.map((s) => ({ id: s.id, label: t(s.key), amounts: s.amounts, add: (amount: number) => addSuggestion(s.id, s.key, amount) }));
+    : SUGGESTIONS.map((s) => ({ id: s.id, label: t(s.key), amounts: s.amounts, localAmounts: false, add: (amount: number, typed?: boolean) => addSuggestion(s.id, s.key, amount, Boolean(typed)) }));
 
   const steps = [
     { n: 1, label: t("stepCart"), href: miaPath("cart", locale), current: true },
@@ -422,6 +451,14 @@ export default function CartPage({ projects, categories }: { projects: MinbarPro
                       <span className="c-meta" style={{ gridColumn: 1, gridRow: 2, display: "flex", alignItems: "center", gap: 8, minWidth: 0, overflowWrap: "anywhere", fontSize: 12, color: "var(--muted)", fontWeight: 700 }}>
                         {metaLine(item)}
                       </span>
+                      {lineTooSmall(item) ? (
+                        <span role="alert" className="cart-min-warn" style={{ gridColumn: "1 / -1", display: "flex", alignItems: "center", flexWrap: "wrap", gap: 8, fontSize: 12.5, fontWeight: 800, color: "var(--red)" }}>
+                          {tGive("belowMinRow", { amount: minLabel })}
+                          <button type="button" onClick={() => raiseToMinimum(index)} style={{ height: 28, padding: "0 12px", borderRadius: 999, border: "1px solid var(--red)", background: "rgba(169,52,40,.06)", color: "var(--red)", fontFamily: "inherit", fontSize: 12, fontWeight: 900, cursor: "pointer" }}>
+                            {tGive("raiseToMin", { amount: minLabel })}
+                          </button>
+                        </span>
+                      ) : null}
 
                       <span className="c-ctl" style={{ gridColumn: 2, gridRow: "1 / span 2", display: "inline-flex", alignItems: "center", gap: 8 }}>
                         {isEditing ? (
@@ -461,14 +498,14 @@ export default function CartPage({ projects, categories }: { projects: MinbarPro
                             className="cart-amt-btn"
                             onClick={() => {
                               setEditing(index);
-                              setDraft(String(item.shareCount && sharesOf(item) ? item.shareCount : item.amount));
+                              setDraft(String(item.shareCount && sharesOf(item) ? item.shareCount : Math.round(lineValue(item) * 100) / 100));
                             }}
                             title={tCommon("editAmount")}
                             aria-label={tCommon("editAmount")}
                             style={{ display: "inline-flex", alignItems: "stretch", background: "#fff", border: "1px solid rgba(16,33,43,.16)", borderRadius: 10, cursor: "pointer", padding: 0, overflow: "hidden", transition: "all .18s cubic-bezier(.22,.61,.36,1)" }}
                           >
                             <span dir="ltr" style={{ unicodeBidi: "isolate", display: "inline-flex", alignItems: "center", padding: "0 14px", height: 40, fontSize: 16.5, fontWeight: 900, whiteSpace: "nowrap", color: "var(--deep)", fontVariantNumeric: "tabular-nums" }}>
-                              {format(item.amount)}
+                              {formatLine(item)}
                             </span>
                             <span aria-hidden="true" style={{ display: "grid", placeItems: "center", width: 34, background: "rgba(211,154,39,.14)", borderInlineStart: "1px solid rgba(211,154,39,.35)", color: "var(--gold)" }}>
                               <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -561,7 +598,7 @@ export default function CartPage({ projects, categories }: { projects: MinbarPro
                             style={{ display: "inline-flex", alignItems: "center", gap: 4, height: 34, padding: "0 12px", borderRadius: 999, border: "1px solid var(--border)", background: "#fff", color: "var(--deep)", fontFamily: "inherit", fontSize: 13, fontWeight: 800, cursor: "pointer", whiteSpace: "nowrap", transition: "all .18s ease" }}
                           >
                             <span aria-hidden="true" style={{ fontWeight: 900 }}>+</span>
-                            <span dir="ltr" style={{ unicodeBidi: "isolate" }}>{format(value)}</span>
+                            <span dir="ltr" style={{ unicodeBidi: "isolate" }}>{suggestion.localAmounts ? formatLocal(value) : format(value)}</span>
                           </button>
                         ))}
                         <input
@@ -576,7 +613,7 @@ export default function CartPage({ projects, categories }: { projects: MinbarPro
                         <button
                           type="button"
                           onClick={() => {
-                            suggestion.add(Number(customUpsell[suggestion.id]));
+                            suggestion.add(Number(customUpsell[suggestion.id]), true);
                             setCustomUpsell((c) => ({ ...c, [suggestion.id]: "" }));
                           }}
                           aria-label={tCommon("add")}
@@ -588,6 +625,11 @@ export default function CartPage({ projects, categories }: { projects: MinbarPro
                           </svg>
                         </button>
                       </div>
+                      {upsellMinHint === suggestion.id ? (
+                        <span role="alert" style={{ flex: "1 1 100%", fontSize: 12.5, fontWeight: 800, color: "var(--red)" }}>
+                          {tGive("minAmount", { amount: minLabel })}
+                        </span>
+                      ) : null}
                     </div>
                   ))}
                 </div>
@@ -604,7 +646,7 @@ export default function CartPage({ projects, categories }: { projects: MinbarPro
                       {resolveTitle(item)}
                     </span>
                     <span dir="ltr" style={{ unicodeBidi: "isolate", flex: "0 0 auto", fontWeight: 800, color: "var(--deep)" }}>
-                      {format(item.amount)}
+                      {formatLine(item)}
                     </span>
                   </span>
                 ))}
@@ -620,17 +662,12 @@ export default function CartPage({ projects, categories }: { projects: MinbarPro
                 ) : null}
               </div>
 
-              {totals.map(([totalCurrency, total]) => (
-                <span key={totalCurrency} style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", fontSize: 15, fontWeight: 800, color: "var(--deep)" }}>
-                  {t("totalForCurrency", { currency: totalCurrency })}
-                  <span dir="ltr" style={{ unicodeBidi: "isolate", fontSize: 24, fontWeight: 900 }}>
-                    {format(total)}
-                  </span>
+              <span style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", fontSize: 15, fontWeight: 800, color: "var(--deep)" }}>
+                {t("totalForCurrency", { currency: code })}
+                <span dir="ltr" style={{ unicodeBidi: "isolate", fontSize: 24, fontWeight: 900 }}>
+                  {totalLabel}
                 </span>
-              ))}
-              {totals.length > 1 ? (
-                <span style={{ fontSize: 12, color: "var(--muted)", lineHeight: 1.7 }}>{t("multiCurrencyNote")}</span>
-              ) : null}
+              </span>
 
               <button
                 type="button"
@@ -748,7 +785,16 @@ export default function CartPage({ projects, categories }: { projects: MinbarPro
                 </div>
               ) : null}
 
-              {teamSupportPending ? (
+              {belowMinimum ? (
+                <>
+                  <Button variant="primary" full disabled style={{ whiteSpace: "nowrap", height: 52, opacity: 0.55, boxShadow: "none", cursor: "not-allowed" }}>
+                    {t("checkout")}
+                  </Button>
+                  <span role="status" style={{ marginTop: -8, textAlign: "center", fontSize: 12.5, fontWeight: 800, color: "var(--red)", lineHeight: 1.6 }}>
+                    {tGive("belowMinCheckout", { amount: minLabel })}
+                  </span>
+                </>
+              ) : teamSupportPending ? (
                 <>
                   <Button
                     variant="primary"

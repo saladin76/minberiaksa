@@ -3469,6 +3469,11 @@
     "onceOnly": "Hayır, {amount} sadece bir kez bağışla",
     "cancelNote": "Düzenli bağışınızı hesabınızdan dilediğiniz zaman durdurabilir veya değiştirebilirsiniz.",
     "toastTitle": "Sepetinize eklendi ✓",
-    "toastCta": "Bağışı tamamla"
+    "toastCta": "Bağışı tamamla",
+    "minAmount": "En düşük bağış tutarı {amount}",
+    "belowMinRow": "En düşük bağış tutarının altında ({amount})",
+    "raiseToMin": "{amount} olarak artır",
+    "belowMinCheckout": "Bazı bağışlar en düşük tutarın ({amount}) altında. Devam etmek için artırın.",
+    "editInCart": "Tutarları sepette düzenle"
   }
 }

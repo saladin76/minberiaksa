@@ -23,7 +23,7 @@ type SettingsResponse = {
   mainGateway?: string;
   albarakaConfigured?: boolean;
   albarakaUseOOS?: boolean;
-  chargeInDonorCurrency?: boolean;
+  allowAnyAmount?: boolean;
 };
 
 const MAIN_GATEWAY_CARDS: {
@@ -59,8 +59,8 @@ export default function PaymentGatewaysPage() {
   const [mainGateway, setMainGateway] = useState<MainGateway>("STRIPE");
   const [albarakaConfigured, setAlbarakaConfigured] = useState(true);
   const [albarakaUseOOS, setAlbarakaUseOOS] = useState(false);
-  const [chargeInDonorCurrency, setChargeInDonorCurrency] = useState(true);
-  const [savingChargeCurrency, setSavingChargeCurrency] = useState(false);
+  const [allowAnyAmount, setAllowAnyAmount] = useState(false);
+  const [savingAnyAmount, setSavingAnyAmount] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -73,7 +73,7 @@ export default function PaymentGatewaysPage() {
         setMainGateway(parseMainGateway(res.data?.mainGateway));
         setAlbarakaConfigured(res.data?.albarakaConfigured !== false);
         setAlbarakaUseOOS(res.data?.albarakaUseOOS === true);
-        setChargeInDonorCurrency(res.data?.chargeInDonorCurrency !== false);
+        setAllowAnyAmount(res.data?.allowAnyAmount === true);
       })
       .catch(() => {
         if (cancelled) return;
@@ -150,24 +150,24 @@ export default function PaymentGatewaysPage() {
     }
   };
 
-  const handleToggleChargeCurrency = async (next: boolean) => {
+  const handleToggleAnyAmount = async (next: boolean) => {
     const reason = confirmPaymentChange(
       next
-        ? "التحصيل بعملة المتبرع: يُحصَّل التبرع بالعملة التي يتصفّح بها المتبرع وبالمبلغ المحوَّل المعروض له (مثلًا 1$ ← ما يعادله بالليرة)."
-        : "التحصيل بالدولار دائمًا: يُحصَّل كل تبرع بالبطاقة أو PayPal بالدولار الأمريكي مهما كانت عملة المتبرع."
+        ? "السماح بأي مبلغ: يستطيع المتبرع التبرع بأي مبلغ بعملته كما يكتبه تمامًا (مثلًا 1 ليرة أو 1 جنيه) دون حد أدنى."
+        : "حد أدنى دولار واحد: لن تقبل السلة وصفحة الدفع أي تبرع تقل قيمته عن دولار واحد (أو ما يعادله بعملة المتبرع)."
     );
     if (reason === null) return;
-    const prev = chargeInDonorCurrency;
-    setChargeInDonorCurrency(next);
-    setSavingChargeCurrency(true);
+    const prev = allowAnyAmount;
+    setAllowAnyAmount(next);
+    setSavingAnyAmount(true);
     try {
-      await axios.put("/api/global-settings", { chargeInDonorCurrency: next, reason });
-      toast.success(next ? "ستُحصَّل التبرعات بعملة المتبرع" : "ستُحصَّل التبرعات بالدولار دائمًا");
+      await axios.put("/api/global-settings", { allowAnyAmount: next, reason });
+      toast.success(next ? "أصبح بإمكان المتبرعين التبرع بأي مبلغ" : "أصبح الحد الأدنى للتبرع دولارًا واحدًا");
     } catch (e) {
-      setChargeInDonorCurrency(prev);
+      setAllowAnyAmount(prev);
       toast.error(errorMessage(e, "تعذّر حفظ الإعداد"));
     } finally {
-      setSavingChargeCurrency(false);
+      setSavingAnyAmount(false);
     }
   };
 
@@ -291,7 +291,7 @@ export default function PaymentGatewaysPage() {
           </section>
 
           <section className="space-y-3">
-            <h2 className="text-sm font-semibold text-gray-900">عملة التحصيل</h2>
+            <h2 className="text-sm font-semibold text-gray-900">مبلغ التبرع</h2>
             <Card className="p-5 sm:p-6">
               <div className="flex items-start justify-between gap-4">
                 <div className="flex items-start gap-3">
@@ -300,28 +300,28 @@ export default function PaymentGatewaysPage() {
                   </div>
                   <div>
                     <h3 className="text-base font-semibold text-gray-900">
-                      التحصيل بعملة المتبرع
+                      السماح بأي مبلغ بعملة المتبرع
                     </h3>
                     <p className="text-sm text-muted-foreground mt-1">
-                      {chargeInDonorCurrency
-                        ? "مفعّل: يُحصَّل التبرع بالعملة التي يختارها المتبرع وبالمبلغ المحوَّل الذي يراه في السلة  تبرّع بقيمة 1$ يُعرض ويُحصَّل بما يعادله بالليرة التركية."
-                        : "معطّل: يُحصَّل كل تبرع بالبطاقة أو PayPal بالدولار الأمريكي، وتعرض صفحة الدفع المبالغ بالدولار مهما كانت عملة التصفّح."}
+                      {allowAnyAmount
+                        ? "مفعّل: يتبرع المتبرع بأي مبلغ بعملته كما يكتبه تمامًا  1 ليرة تُعرض وتُحصَّل 1 ليرة، و1 جنيه يُحصَّل 1 جنيه، دون حد أدنى."
+                        : "معطّل: الحد الأدنى لكل تبرع دولار واحد أو ما يعادله بعملة المتبرع (مثلًا نحو 49 ليرة). ترفض البطاقات والسلة وصفحة الدفع أي مبلغ أقل، ويطلب الموقع من المتبرع رفعه."}
                     </p>
                     <p className="text-xs text-muted-foreground mt-2">
-                      يُحوَّل المبلغ على الخادم بسعر الصرف المحدَّث كل ساعة. التحويل
-                      البنكي يبقى دائمًا بعملة المتبرع. عند التعطيل لا تمر تبرعات
-                      الليرة عبر PayFor لأنها تصبح بالدولار.
+                      في الحالتين يُحصَّل التبرع بعملة المتبرع. يُحسب ما يعادل الدولار
+                      بسعر الصرف المحدَّث كل ساعة، ولا يسري الحد الأدنى على الأوقاف
+                      لأن سعرها ثابت.
                     </p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
-                  {savingChargeCurrency && (
+                  {savingAnyAmount && (
                     <Loader2 className="w-4 h-4 animate-spin text-gray-400" />
                   )}
                   <Switch
-                    checked={chargeInDonorCurrency}
-                    disabled={savingChargeCurrency}
-                    onCheckedChange={handleToggleChargeCurrency}
+                    checked={allowAnyAmount}
+                    disabled={savingAnyAmount}
+                    onCheckedChange={handleToggleAnyAmount}
                   />
                 </div>
               </div>

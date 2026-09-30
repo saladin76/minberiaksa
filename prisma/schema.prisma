@@ -1731,12 +1731,12 @@ model GlobalSettings {
   /// Main card gateway: "STRIPE" or "ALBARAKA". Handles every case PayFor doesn't
   /// take, except monthly subscriptions which always run on Stripe.
   mainGateway          String   @default("STRIPE")
-  /// Which currency a card / PayPal donation is charged in. On: the donor's
-  /// selected currency, at the converted amount the basket shows ($1 → ≈49 TL).
-  /// Off: always USD, whatever currency the donor browses in. Bank transfers
-  /// are not affected. Read as `!== false`: a record written before the field
-  /// existed charges in the donor's currency.
-  chargeInDonorCurrency Boolean @default(true)
+  /// Donation amounts. Off (default): every donation line is worth at least
+  /// one US dollar  the basket and checkout refuse less, and so does the
+  /// order API. On: any positive amount in the donor's own currency is taken
+  /// exactly as given (1 TL, 1 EGP). Read as `=== true`. Shape in
+  /// `lib/minbar/donation-amount.ts`.
+  allowAnyAmount       Boolean  @default(false)
   /// The donation concierge's switches and team notes: launcher on/off, the
   /// teaser bubble, model on/off, transcripts, attribution window, notes the
   /// model may use. Shape and defaults in `lib/ai/concierge/settings.ts`.
