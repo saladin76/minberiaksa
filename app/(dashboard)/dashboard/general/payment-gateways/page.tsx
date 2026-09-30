@@ -9,6 +9,7 @@ import {
   AlertTriangle,
   Check,
   CreditCard,
+  Coins,
   Landmark,
   Loader2,
   Settings,
@@ -22,6 +23,7 @@ type SettingsResponse = {
   mainGateway?: string;
   albarakaConfigured?: boolean;
   albarakaUseOOS?: boolean;
+  chargeInDonorCurrency?: boolean;
 };
 
 const MAIN_GATEWAY_CARDS: {
@@ -57,6 +59,8 @@ export default function PaymentGatewaysPage() {
   const [mainGateway, setMainGateway] = useState<MainGateway>("STRIPE");
   const [albarakaConfigured, setAlbarakaConfigured] = useState(true);
   const [albarakaUseOOS, setAlbarakaUseOOS] = useState(false);
+  const [chargeInDonorCurrency, setChargeInDonorCurrency] = useState(true);
+  const [savingChargeCurrency, setSavingChargeCurrency] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -69,6 +73,7 @@ export default function PaymentGatewaysPage() {
         setMainGateway(parseMainGateway(res.data?.mainGateway));
         setAlbarakaConfigured(res.data?.albarakaConfigured !== false);
         setAlbarakaUseOOS(res.data?.albarakaUseOOS === true);
+        setChargeInDonorCurrency(res.data?.chargeInDonorCurrency !== false);
       })
       .catch(() => {
         if (cancelled) return;
@@ -142,6 +147,27 @@ export default function PaymentGatewaysPage() {
       toast.error(errorMessage(e, "تعذّر حفظ الإعداد"));
     } finally {
       setSavingPayfor(false);
+    }
+  };
+
+  const handleToggleChargeCurrency = async (next: boolean) => {
+    const reason = confirmPaymentChange(
+      next
+        ? "التحصيل بعملة المتبرع: يُحصَّل التبرع بالعملة التي يتصفّح بها المتبرع وبالمبلغ المحوَّل المعروض له (مثلًا 1$ ← ما يعادله بالليرة)."
+        : "التحصيل بالدولار دائمًا: يُحصَّل كل تبرع بالبطاقة أو PayPal بالدولار الأمريكي مهما كانت عملة المتبرع."
+    );
+    if (reason === null) return;
+    const prev = chargeInDonorCurrency;
+    setChargeInDonorCurrency(next);
+    setSavingChargeCurrency(true);
+    try {
+      await axios.put("/api/global-settings", { chargeInDonorCurrency: next, reason });
+      toast.success(next ? "ستُحصَّل التبرعات بعملة المتبرع" : "ستُحصَّل التبرعات بالدولار دائمًا");
+    } catch (e) {
+      setChargeInDonorCurrency(prev);
+      toast.error(errorMessage(e, "تعذّر حفظ الإعداد"));
+    } finally {
+      setSavingChargeCurrency(false);
     }
   };
 
@@ -262,6 +288,44 @@ export default function PaymentGatewaysPage() {
                 );
               })}
             </div>
+          </section>
+
+          <section className="space-y-3">
+            <h2 className="text-sm font-semibold text-gray-900">عملة التحصيل</h2>
+            <Card className="p-5 sm:p-6">
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex items-start gap-3">
+                  <div className="rounded-full bg-sky-50 p-2 text-sky-700">
+                    <Coins className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-semibold text-gray-900">
+                      التحصيل بعملة المتبرع
+                    </h3>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      {chargeInDonorCurrency
+                        ? "مفعّل: يُحصَّل التبرع بالعملة التي يختارها المتبرع وبالمبلغ المحوَّل الذي يراه في السلة  تبرّع بقيمة 1$ يُعرض ويُحصَّل بما يعادله بالليرة التركية."
+                        : "معطّل: يُحصَّل كل تبرع بالبطاقة أو PayPal بالدولار الأمريكي، وتعرض صفحة الدفع المبالغ بالدولار مهما كانت عملة التصفّح."}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-2">
+                      يُحوَّل المبلغ على الخادم بسعر الصرف المحدَّث كل ساعة. التحويل
+                      البنكي يبقى دائمًا بعملة المتبرع. عند التعطيل لا تمر تبرعات
+                      الليرة عبر PayFor لأنها تصبح بالدولار.
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  {savingChargeCurrency && (
+                    <Loader2 className="w-4 h-4 animate-spin text-gray-400" />
+                  )}
+                  <Switch
+                    checked={chargeInDonorCurrency}
+                    disabled={savingChargeCurrency}
+                    onCheckedChange={handleToggleChargeCurrency}
+                  />
+                </div>
+              </div>
+            </Card>
           </section>
 
           <section className="space-y-3">

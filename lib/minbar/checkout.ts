@@ -221,6 +221,10 @@ export async function createDonation(input: CreateDonationInput): Promise<Create
       ...(categoryItems.length ? { categoryItems } : {}),
       ...(waqfItems.length ? { waqfItems } : {}),
       currency: input.currency,
+      /* The basket stores USD; the server converts every line and the team
+         support into `currency` at its rate. Sent raw, a $1 row shown as ≈49 TL
+         was charged 1 TL. */
+      amountsIn: "USD",
       type: orderType(input.items),
       timezone: browserTimezone(),
       teamSupport: input.teamSupport > 0 ? input.teamSupport : 0,

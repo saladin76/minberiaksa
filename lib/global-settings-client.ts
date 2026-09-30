@@ -33,6 +33,11 @@ export type GlobalSettings = {
   albarakaUseOOS: boolean;
   /** False when ALBARAKA_ENC_KEY is missing, i.e. the gateway can't sign anything. */
   albarakaConfigured: boolean;
+  /**
+   * Card / PayPal donations are charged in the donor's currency (true, the
+   * default) or always in USD (false). Bank transfers keep the donor's currency.
+   */
+  chargeInDonorCurrency: boolean;
 };
 
 let cached: GlobalSettings | null = null;
@@ -69,6 +74,7 @@ export async function fetchGlobalSettings(
             mainGateway?: unknown;
             albarakaUseOOS?: unknown;
             albarakaConfigured?: unknown;
+            chargeInDonorCurrency?: unknown;
           }
         | null;
       const parsed: GlobalSettings = {
@@ -83,6 +89,7 @@ export async function fetchGlobalSettings(
         mainGateway: parseMainGateway(data?.mainGateway),
         albarakaUseOOS: data?.albarakaUseOOS === true,
         albarakaConfigured: data?.albarakaConfigured === true,
+        chargeInDonorCurrency: data?.chargeInDonorCurrency !== false,
       };
       cached = parsed;
       return parsed;

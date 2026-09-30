@@ -156,7 +156,10 @@ export async function POST(request: NextRequest) {
       items: itemsIn,
       categoryItems: categoryItemsIn,
       waqfItems: waqfItemsIn,
-      currency,
+      currency: requestedCurrency,
+      /* "USD" when the line and team-support amounts are USD figures to be
+         converted into the charge currency (the Minbar checkout). */
+      amountsIn,
       teamSupport: teamSupportIn = 0,
       /* Recurring basket: false charges the team support once, with the
          first payment, instead of with every instalment (the default). */
@@ -221,7 +224,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate required fields
-    if ((!items.length && !categoryItems.length && !waqfItems.length) || !currency || !paymentMethod) {
+    if ((!items.length && !categoryItems.length && !waqfItems.length) || !requestedCurrency || !paymentMethod) {
       return NextResponse.json(
         { error: "Items, currency, and payment method are required" },
         { status: 400 }
@@ -276,12 +279,45 @@ export async function POST(request: NextRequest) {
        step turned off nothing is added whatever the request says. */
     const teamSupportSettings = await prisma.globalSettings.findFirst({
       orderBy: { createdAt: "asc" },
-      select: { teamSupportEnabled: true },
+      select: { teamSupportEnabled: true, chargeInDonorCurrency: true },
     });
     const teamSupportAllowed = teamSupportSettings?.teamSupportEnabled !== false;
+
+    /* The Minbar checkout sends its basket as it stores it, in USD
+       (`amountsIn: "USD"`), and the order is charged in the donor's currency at
+       the rate the basket was shown with  or, with the admin's switch off, in
+       USD whatever the donor browses in. The lines used to be sent as raw USD
+       figures labelled with the donor's currency, so a $1 row shown as ≈49 TL
+       was charged 1 TL. A transfer is paid by the donor into the IBAN they
+       chose, so it keeps their currency. Callers that send amounts already in
+       `currency` (no `amountsIn`) are taken as they are. */
+    const amountsInUsd = amountsIn === "USD";
+    const currency: string =
+      amountsInUsd && !isBankTransfer && teamSupportSettings?.chargeInDonorCurrency === false ? "USD" : requestedCurrency;
+    let usdToCharge = 1;
+    const chargeCode = normalizeDonationCurrencyCode(currency);
+    if (amountsInUsd && chargeCode !== "USD") {
+      try {
+        const rate = (await getUsdBaseRatesForServer())[chargeCode];
+        if (!(typeof rate === "number" && rate > 0)) throw new Error(`no rate for ${chargeCode}`);
+        usdToCharge = rate;
+      } catch (e) {
+        console.error("[cart/payment] charge currency rate:", e);
+        return NextResponse.json(
+          { error: "Exchange rate unavailable. Please try again in a moment." },
+          { status: 503 }
+        );
+      }
+    }
+    const toCharge = (usd: number) => Math.round(usd * usdToCharge * 100) / 100;
+    if (usdToCharge !== 1) {
+      for (const item of items) item.amount = toCharge(item.amount);
+      for (const item of categoryItems) item.amount = toCharge(item.amount);
+    }
+
     const teamSupport =
       teamSupportAllowed && typeof teamSupportIn === "number" && Number.isFinite(teamSupportIn) && teamSupportIn > 0
-        ? Math.round(teamSupportIn * 100) / 100
+        ? toCharge(teamSupportIn)
         : 0;
     /* What each later instalment carries. The first payment (the donation
        created below) always includes the full amount. */

@@ -27,7 +27,7 @@ export async function GET() {
   try {
     const settings = await prisma.globalSettings.findFirst({
       orderBy: { createdAt: "asc" },
-      select: { suggestedTeamSupport: true, teamSupportEnabled: true, cartUpsell: true, payforEnabled: true, mainGateway: true },
+      select: { suggestedTeamSupport: true, teamSupportEnabled: true, cartUpsell: true, payforEnabled: true, mainGateway: true, chargeInDonorCurrency: true },
     });
     const albaraka = albarakaConfig();
     return NextResponse.json({
@@ -40,6 +40,8 @@ export async function GET() {
       // PayFor remain available for TRY donors.
       payforEnabled: settings?.payforEnabled ?? true,
       mainGateway: parseMainGateway(settings?.mainGateway),
+      // Which currency the checkout charges in: the donor's, or always USD.
+      chargeInDonorCurrency: settings?.chargeInDonorCurrency !== false,
       // Neither flag is a secret; the checkout dialogs need them to decide whether
       // to render our own card form (Albaraka signs the card fields into the MAC,
       // so with the bank's hosted page turned on we must not collect them).
@@ -60,6 +62,7 @@ export async function GET() {
  *   - suggestedTeamSupport → `campaigns` perm
  *   - payforEnabled       → `generalSettings` perm
  *   - mainGateway         → `generalSettings` perm
+ *   - chargeInDonorCurrency → `generalSettings` perm
  * A single request mixing them must satisfy every matching check.
  */
 export async function PUT(request: NextRequest) {
@@ -84,7 +87,7 @@ export async function PUT(request: NextRequest) {
       const denied = requireAdminOrDashboardPermission(session, "campaigns");
       if (denied) return denied;
     }
-    if (body.payforEnabled !== undefined || body.mainGateway !== undefined) {
+    if (body.payforEnabled !== undefined || body.mainGateway !== undefined || body.chargeInDonorCurrency !== undefined) {
       const denied = requireAdminOrDashboardPermission(session, "generalSettings");
       if (denied) return denied;
     }
@@ -130,6 +133,13 @@ export async function PUT(request: NextRequest) {
       updateData.payforEnabled = body.payforEnabled;
     }
 
+    if (body.chargeInDonorCurrency !== undefined) {
+      if (typeof body.chargeInDonorCurrency !== "boolean") {
+        return NextResponse.json({ error: "chargeInDonorCurrency must be a boolean" }, { status: 400 });
+      }
+      updateData.chargeInDonorCurrency = body.chargeInDonorCurrency;
+    }
+
     if (body.mainGateway !== undefined) {
       if (!isMainGateway(body.mainGateway)) {
         return NextResponse.json(
@@ -156,7 +166,7 @@ export async function PUT(request: NextRequest) {
     const saved = await prisma.globalSettings.update({
       where: { id: existing.id },
       data: updateData,
-      select: { suggestedTeamSupport: true, teamSupportEnabled: true, cartUpsell: true, payforEnabled: true, mainGateway: true },
+      select: { suggestedTeamSupport: true, teamSupportEnabled: true, cartUpsell: true, payforEnabled: true, mainGateway: true, chargeInDonorCurrency: true },
     });
 
     // Gateway settings decide where every new donation's money goes, so each
@@ -165,18 +175,21 @@ export async function PUT(request: NextRequest) {
     const afterGateway = parseMainGateway(saved.mainGateway);
     const beforePayfor = existing.payforEnabled ?? true;
     const afterPayfor = saved.payforEnabled ?? true;
-    if (session && (beforeGateway !== afterGateway || beforePayfor !== afterPayfor)) {
+    const beforeDonorCurrency = existing.chargeInDonorCurrency !== false;
+    const afterDonorCurrency = saved.chargeInDonorCurrency !== false;
+    if (session && (beforeGateway !== afterGateway || beforePayfor !== afterPayfor || beforeDonorCurrency !== afterDonorCurrency)) {
       const actor = auditActorFromDashboardSession(session);
       const reason = typeof body.reason === "string" ? body.reason.trim().slice(0, 500) || null : null;
       const parts: string[] = [];
       if (beforeGateway !== afterGateway) parts.push(`البوابة الرئيسية من ${beforeGateway} إلى ${afterGateway}`);
       if (beforePayfor !== afterPayfor) parts.push(`PayFor ${afterPayfor ? "مفعّل" : "معطّل"} (كان ${beforePayfor ? "مفعّلًا" : "معطّلًا"})`);
+      if (beforeDonorCurrency !== afterDonorCurrency) parts.push(`عملة التحصيل: ${afterDonorCurrency ? "عملة المتبرع" : "الدولار دائمًا"}`);
       await writeAuditLog({
         ...actor,
         stream: "TEAM",
         action: "PAYMENT_GATEWAY_UPDATE",
         messageAr: `${actor.actorName ?? "مسؤول"} غيّر إعدادات الدفع: ${parts.join("، ")}${reason ? `  السبب: ${reason}` : ""}`,
-        messageEn: `${actor.actorName ?? "Admin"} changed payment settings: gateway ${beforeGateway} → ${afterGateway}, PayFor ${beforePayfor} → ${afterPayfor}`,
+        messageEn: `${actor.actorName ?? "Admin"} changed payment settings: gateway ${beforeGateway} → ${afterGateway}, PayFor ${beforePayfor} → ${afterPayfor}, charge in donor currency ${beforeDonorCurrency} → ${afterDonorCurrency}`,
         entityType: "GlobalSettings",
         entityId: existing.id,
         metadata: {
@@ -184,6 +197,8 @@ export async function PUT(request: NextRequest) {
           newGateway: afterGateway,
           oldPayforEnabled: beforePayfor,
           newPayforEnabled: afterPayfor,
+          oldChargeInDonorCurrency: beforeDonorCurrency,
+          newChargeInDonorCurrency: afterDonorCurrency,
           reason,
         },
       });
@@ -195,6 +210,7 @@ export async function PUT(request: NextRequest) {
       cartUpsell: parseCartUpsell(saved.cartUpsell),
       payforEnabled: saved.payforEnabled,
       mainGateway: parseMainGateway(saved.mainGateway),
+      chargeInDonorCurrency: saved.chargeInDonorCurrency !== false,
     });
   } catch (e) {
     console.error("Error updating global settings:", e);

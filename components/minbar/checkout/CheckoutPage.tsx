@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { signIn, useSession } from "next-auth/react";
 import { useLocale, useTranslations } from "next-intl";
+import { formatMoney } from "@/lib/minbar/money";
 import { Elements } from "@stripe/react-stripe-js";
 import { getStripePromise } from "@/lib/stripe-client";
 import { StripePaymentStep, type StripePaymentHandle } from "@/components/StripePaymentStep";
@@ -145,6 +146,7 @@ export default function CheckoutPage({ projects, categories, banks, donor, defau
     payforEnabled: boolean;
     albarakaUseOOS: boolean;
     albarakaConfigured: boolean;
+    chargeInDonorCurrency: boolean;
   } | null>(null);
 
   useEffect(() => {
@@ -158,6 +160,7 @@ export default function CheckoutPage({ projects, categories, banks, donor, defau
           payforEnabled: settings.payforEnabled,
           albarakaUseOOS: settings.albarakaUseOOS,
           albarakaConfigured: settings.albarakaConfigured,
+          chargeInDonorCurrency: settings.chargeInDonorCurrency,
         });
       })
       .catch(() => {
@@ -191,6 +194,18 @@ export default function CheckoutPage({ projects, categories, banks, donor, defau
     }
     return item.title ?? "";
   };
+
+  /* The currency this order is charged in, and what the summary shows: the
+     donor's, or USD when the admin has switched charging in the donor's
+     currency off (a transfer always keeps the donor's). The basket's amounts
+     are USD either way; the server converts them into this currency at its
+     rate, so the summary is what the gateway takes. */
+  const chargeInUsd = gatewayConfig?.chargeInDonorCurrency === false && method !== "bank";
+  const chargeCurrency = chargeInUsd ? "USD" : currency;
+  const formatCharge = useCallback(
+    (usd: number) => (chargeInUsd ? formatMoney(usd, "USD", locale) : format(usd)),
+    [chargeInUsd, format, locale]
+  );
 
   const teamSupportCharged = teamSupportEnabled && teamSupport > 0 ? teamSupport : 0;
   const total = items.reduce((sum, item) => sum + item.amount, 0) + teamSupportCharged;
@@ -226,7 +241,7 @@ export default function CheckoutPage({ projects, categories, banks, donor, defau
   const gateway = resolveGateway({
     mainGateway: gatewayConfig?.mainGateway ?? "STRIPE",
     payforEnabled: gatewayConfig?.payforEnabled ?? true,
-    currency,
+    currency: chargeCurrency,
     donationType: orderTypeForCart,
   });
 
@@ -333,7 +348,7 @@ export default function CheckoutPage({ projects, categories, banks, donor, defau
       const donation = await createDonation({
         items,
         projects,
-        currency,
+        currency: chargeCurrency,
         locale,
         method: methodForServer,
         teamSupport: teamSupportCharged,
@@ -915,7 +930,7 @@ export default function CheckoutPage({ projects, categories, banks, donor, defau
                         ) : null}
                       </span>
                       <b dir="ltr" style={{ flex: "0 0 auto", unicodeBidi: "isolate" }}>
-                        {format(item.amount)}
+                        {formatCharge(item.amount)}
                       </b>
                     </span>
                   ))}
@@ -928,7 +943,7 @@ export default function CheckoutPage({ projects, categories, banks, donor, defau
                         </span>
                       </span>
                       <b dir="ltr" style={{ flex: "0 0 auto", unicodeBidi: "isolate" }}>
-                        {format(teamSupportCharged)}
+                        {formatCharge(teamSupportCharged)}
                       </b>
                     </span>
                   ) : null}
@@ -936,7 +951,7 @@ export default function CheckoutPage({ projects, categories, banks, donor, defau
                 <span style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", fontSize: 16, fontWeight: 900 }}>
                   {t("total")}
                   <b dir="ltr" style={{ fontSize: 22, unicodeBidi: "isolate" }}>
-                    {format(total)}
+                    {formatCharge(total)}
                   </b>
                 </span>
                 {/* What the plan will do, before the donor confirms: this
