@@ -2320,5 +2320,9 @@
     "sectionLead": "あなたの心に最も近い分野を選び、そのプロジェクトを直接支援してください。",
     "explore": "見る",
     "projectsCount": "{count, plural, =0 {プロジェクトはまだありません} other {# 件のプロジェクト}}"
+  },
+  "CardGive": {
+    "otherAmount": "その他",
+    "otherCount": "その他"
   }
 }

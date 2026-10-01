@@ -26,7 +26,19 @@ export type GiveIntent = "donate" | "cart";
 /** The hadith is quoted in its original wording in every language. */
 const HADITH = "أحبُّ الأعمالِ إلى اللهِ أدومُها وإنْ قَلّ";
 
+/* One-time first, then the cadences. */
 const OPTIONS: ReadonlyArray<{ id: CartFreqKey; label: string; per: string; desc: string; icon: ReactElement }> = [
+  {
+    id: "once",
+    label: "onceTitle",
+    per: "perOnce",
+    desc: "onceDesc",
+    icon: (
+      <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10Z" />
+      </svg>
+    ),
+  },
   {
     id: "monthly",
     label: "monthlyTitle",
@@ -60,17 +72,6 @@ const OPTIONS: ReadonlyArray<{ id: CartFreqKey; label: string; per: string; desc
       <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
         <circle cx="12" cy="12" r="4" />
         <path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" />
-      </svg>
-    ),
-  },
-  {
-    id: "once",
-    label: "onceTitle",
-    per: "perOnce",
-    desc: "onceDesc",
-    icon: (
-      <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-        <path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10Z" />
       </svg>
     ),
   },

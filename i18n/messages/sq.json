@@ -2323,5 +2323,9 @@
     "sectionLead": "Zgjidh kauzën më të afërt me zemrën tënde dhe mbështet drejtpërdrejt projektet e saj.",
     "explore": "Eksploro",
     "projectsCount": "{count, plural, =0 {Ende pa projekte} one {# projekt} other {# projekte}}"
+  },
+  "CardGive": {
+    "otherAmount": "Tjetër",
+    "otherCount": "Tjetër"
   }
 }

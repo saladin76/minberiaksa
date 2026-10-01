@@ -3378,5 +3378,9 @@
     "sectionLead": "Pilih bidang yang paling dekat dengan hati Anda dan dukung proyek-proyeknya secara langsung.",
     "explore": "Jelajahi",
     "projectsCount": "{count, plural, =0 {Belum ada proyek} other {# proyek}}"
+  },
+  "CardGive": {
+    "otherAmount": "Lainnya",
+    "otherCount": "Lainnya"
   }
 }

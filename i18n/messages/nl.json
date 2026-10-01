@@ -2323,5 +2323,9 @@
     "sectionLead": "Kies het doel dat u het meest aan het hart gaat en steun de projecten ervan rechtstreeks.",
     "explore": "Ontdekken",
     "projectsCount": "{count, plural, =0 {Nog geen projecten} one {# project} other {# projecten}}"
+  },
+  "CardGive": {
+    "otherAmount": "Anders",
+    "otherCount": "Anders"
   }
 }

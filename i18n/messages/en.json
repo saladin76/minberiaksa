@@ -3480,6 +3480,8 @@
     "onceTitle": "One time",
     "onceDesc": "Your gift reaches those in need today: “a good deed is rewarded tenfold”",
     "perOnce": "once",
-    "chooseFirst": "Choose how you would like to give first"
+    "chooseFirst": "Choose how you would like to give first",
+    "otherAmount": "Other",
+    "otherCount": "Other"
   }
 }

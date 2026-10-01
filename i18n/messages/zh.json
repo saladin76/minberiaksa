@@ -2320,5 +2320,9 @@
     "sectionLead": "选择最触动您的领域，直接支持其项目。",
     "explore": "查看",
     "projectsCount": "{count, plural, =0 {暂无项目} other {# 个项目}}"
+  },
+  "CardGive": {
+    "otherAmount": "其他",
+    "otherCount": "其他"
   }
 }

@@ -2323,5 +2323,9 @@
     "sectionLead": "وہ شعبہ چنیں جو آپ کے دل کے سب سے قریب ہے اور اس کے منصوبوں کی براہِ راست مدد کریں۔",
     "explore": "دیکھیں",
     "projectsCount": "{count, plural, =0 {ابھی کوئی منصوبہ نہیں} one {# منصوبہ} other {# منصوبے}}"
+  },
+  "CardGive": {
+    "otherAmount": "دیگر",
+    "otherCount": "دیگر"
   }
 }

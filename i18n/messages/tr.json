@@ -3480,6 +3480,8 @@
     "onceTitle": "Tek seferlik",
     "onceDesc": "Bugünkü bağışınız bugün ihtiyaç sahibine ulaşır: “Bir iyiliğe on katı karşılık vardır”",
     "perOnce": "tek sefer",
-    "chooseFirst": "Önce bağış şeklinizi seçin"
+    "chooseFirst": "Önce bağış şeklinizi seçin",
+    "otherAmount": "Diğer",
+    "otherCount": "Diğer"
   }
 }

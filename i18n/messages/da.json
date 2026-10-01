@@ -2320,5 +2320,9 @@
     "sectionLead": "Vælg det formål, der ligger dit hjerte nærmest, og støt dets projekter direkte.",
     "explore": "Udforsk",
     "projectsCount": "{count, plural, =0 {Ingen projekter endnu} one {# projekt} other {# projekter}}"
+  },
+  "CardGive": {
+    "otherAmount": "Andet",
+    "otherCount": "Andet"
   }
 }

@@ -3450,5 +3450,9 @@
     "sectionLead": "Choisissez la cause la plus proche de votre cœur et soutenez directement ses projets.",
     "explore": "Découvrir",
     "projectsCount": "{count, plural, =0 {Aucun projet pour l'instant} one {# projet} other {# projets}}"
+  },
+  "CardGive": {
+    "otherAmount": "Autre",
+    "otherCount": "Autre"
   }
 }

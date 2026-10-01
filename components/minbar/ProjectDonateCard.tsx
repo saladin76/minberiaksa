@@ -314,7 +314,8 @@ export default function ProjectDonateCard({ project, width, tag }: ProjectDonate
             value={custom}
             onChange={(e) => setCustom(shares ? e.target.value.replace(/[^0-9]/g, "").replace(/^0+/, "").slice(0, 6) : e.target.value.replace(/[^0-9]/g, ""))}
             inputMode={shares ? "numeric" : "decimal"}
-            placeholder={shares ? tShares("customCountPh") : t("freeAmount")}
+            /* The card's own short word: the cell is a quarter of the row. */
+            placeholder={shares ? tGive("otherCount") : tGive("otherAmount")}
             aria-label={shares ? tShares("customCountPh") : t("freeAmount")}
             /* The fourth cell of the row, as wide as each chip. */
             className="pdc-custom"
@@ -363,8 +364,8 @@ export default function ProjectDonateCard({ project, width, tag }: ProjectDonate
               transition: "filter .18s ease",
             }}
           >
-            {amount > 0 && !belowMinimum ? (
-              /* The gift on the button once it is chosen: "تبرّع الآن (20 $)". */
+            {shares && amount > 0 && !belowMinimum ? (
+              /* A shares gift shows its total on the button: "تبرّع الآن (20 $)". */
               /* The brackets stay in the sentence's direction; only the amount is isolated. */
               <span>
                 {t("donateNow")} (<span dir="ltr" style={{ unicodeBidi: "isolate" }}>{amountLabel}</span>)

@@ -2320,5 +2320,9 @@
     "sectionLead": "Pilih bidang yang paling dekat di hati anda dan sokong projek-projeknya secara terus.",
     "explore": "Teroka",
     "projectsCount": "{count, plural, =0 {Belum ada projek} other {# projek}}"
+  },
+  "CardGive": {
+    "otherAmount": "Lain",
+    "otherCount": "Lain"
   }
 }
