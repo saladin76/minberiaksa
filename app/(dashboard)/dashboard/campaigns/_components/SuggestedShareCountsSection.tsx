@@ -19,7 +19,9 @@ import {
 } from "@/components/ui/select";
 import { Plus, Trash2 } from "lucide-react";
 import {
+  DEFAULT_CARD_SHARE_COUNTS,
   DEFAULT_SUGGESTED_SHARE_COUNTS,
+  MAX_CARD_SHARE_COUNTS,
   parseSuggestedShareCounts,
   type SuggestedShareCountsConfig,
 } from "@/lib/campaign/campaign-modes";
@@ -39,6 +41,8 @@ function makePriceRow(currency = "USD", priceStr = ""): PriceRow {
 export type SuggestedShareCountsPayload = {
   counts: number[];
   priceByCurrency: Record<string, number>;
+  /** Up to three of `counts` for the campaign card; empty = 1 / 2 / 5. */
+  cardCounts: number[];
 };
 
 export type SuggestedShareCountsSectionRef = {
@@ -57,6 +61,16 @@ export const SuggestedShareCountsSection = forwardRef<
     () => DEFAULT_SUGGESTED_SHARE_COUNTS.join(", ")
   );
   const [priceRows, setPriceRows] = useState<PriceRow[]>([]);
+  const [cardCounts, setCardCounts] = useState<number[]>([]);
+  /* The counts as typed, whole and ascending, for picking the card's three. */
+  const listed = useMemo(
+    () => [...new Set(parseAmountsInput(countsStr.replace(/،/g, ",")).map((n) => Math.floor(n)).filter((n) => n >= 1))].sort((a, b) => a - b),
+    [countsStr]
+  );
+  const toggleCard = (value: number) =>
+    setCardCounts((prev) =>
+      prev.includes(value) ? prev.filter((v) => v !== value) : prev.length >= MAX_CARD_SHARE_COUNTS ? prev : [...prev, value].sort((a, b) => a - b)
+    );
 
   const stableKey = useMemo(
     () => JSON.stringify(initialConfig ?? null),
@@ -66,6 +80,7 @@ export const SuggestedShareCountsSection = forwardRef<
   useEffect(() => {
     const p = parseSuggestedShareCounts(initialConfig);
     setCountsStr(p.counts.join(", "));
+    setCardCounts(p.cardCounts ?? []);
     const byCurrency = p.priceByCurrency ?? {};
     setPriceRows(
       Object.entries(byCurrency).map(([currency, price]) =>
@@ -89,7 +104,7 @@ export const SuggestedShareCountsSection = forwardRef<
         const n = Number(row.priceStr);
         if (Number.isFinite(n) && n > 0) priceByCurrency[code] = n;
       }
-      return { counts, priceByCurrency };
+      return { counts, priceByCurrency, cardCounts: cardCounts.filter((v) => counts.includes(v)).slice(0, MAX_CARD_SHARE_COUNTS) };
     },
   }));
 
@@ -122,8 +137,39 @@ export const SuggestedShareCountsSection = forwardRef<
           className="font-mono text-sm"
         />
         <p className="text-xs text-muted-foreground">
-          تُعرض كأزرار سريعة عند اختيار التبرع بعدد الأسهم. الافتراضي:{" "}
+          تُعرض كلها كأزرار سريعة في صفحة المشروع. الافتراضي:{" "}
           {DEFAULT_SUGGESTED_SHARE_COUNTS.join(", ")}
+        </p>
+      </div>
+
+      <div className="space-y-2 rounded-lg border border-border p-4 bg-muted/30">
+        <Label className="text-sm font-medium">الأعداد الظاهرة على بطاقة المشروع (حتى {MAX_CARD_SHARE_COUNTS})</Label>
+        <div className="flex flex-wrap gap-2" dir="ltr">
+          {listed.map((value) => {
+            const on = cardCounts.includes(value);
+            const full = !on && cardCounts.filter((v) => listed.includes(v)).length >= MAX_CARD_SHARE_COUNTS;
+            return (
+              <button
+                key={value}
+                type="button"
+                onClick={() => toggleCard(value)}
+                disabled={full}
+                aria-pressed={on}
+                className={[
+                  "h-9 min-w-12 rounded-full border px-3 font-mono text-sm transition-colors",
+                  on ? "border-emerald-500 bg-emerald-50 text-emerald-800 font-semibold" : "border-border bg-white",
+                  full ? "opacity-40 cursor-not-allowed" : "hover:border-gray-400",
+                ].join(" ")}
+              >
+                {on ? "✓ " : ""}
+                {value}
+              </button>
+            );
+          })}
+        </div>
+        <p className="text-xs text-muted-foreground">
+          اختر حتى {MAX_CARD_SHARE_COUNTS} أعداد لتظهر على البطاقة بجانب خانة العدد المخصص، وتبقى البقية في صفحة
+          المشروع. بدون اختيار تُعرض {DEFAULT_CARD_SHARE_COUNTS.join("، ")}.
         </p>
       </div>
 

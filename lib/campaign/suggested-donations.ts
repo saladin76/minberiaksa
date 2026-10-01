@@ -1,14 +1,24 @@
 /**
  * Campaign suggested quick-pick donation amounts (shown in DonationDialog).
- * Stored as JSON: { amounts: number[], byCurrency?: Record<string, number[]> }.
+ * Stored as JSON: { amounts: number[], byCurrency?: Record<string, number[]>, cardAmounts?: number[] }.
  * If a currency has no override, `amounts` applies.
+ *
+ * `cardAmounts` are the (up to three) amounts the campaign card shows, picked
+ * from `amounts`; the campaign page shows the whole list. Unset, the card shows
+ * `DEFAULT_CARD_DONATION_AMOUNTS`.
  */
 
 export const DEFAULT_SUGGESTED_DONATION_AMOUNTS = [10, 25, 50, 100, 250, 500];
 
+/** What the campaign card offers when the dashboard has picked nothing. */
+export const DEFAULT_CARD_DONATION_AMOUNTS = [100, 500, 1000];
+export const MAX_CARD_AMOUNTS = 3;
+
 export type SuggestedDonationsConfig = {
   amounts: number[];
   byCurrency: Record<string, number[]>;
+  /** The card's picks from `amounts`; empty means the defaults. */
+  cardAmounts: number[];
 };
 
 function normalizeCode(code: string): string {
@@ -50,21 +60,31 @@ function normalizeByCurrency(raw: unknown): Record<string, number[]> {
   return out;
 }
 
+/** Up to three distinct picks, in the order given, that are in `amounts`. */
+function normalizeCardPicks(raw: unknown, amounts: readonly number[]): number[] {
+  const picks = normalizeAmountsArray(raw).filter((n) => amounts.includes(n));
+  return [...new Set(picks)].slice(0, MAX_CARD_AMOUNTS);
+}
+
+/** The amounts (USD) the campaign card shows. */
+export function cardDonationAmounts(config: SuggestedDonationsConfig): number[] {
+  return config.cardAmounts.length ? config.cardAmounts : [...DEFAULT_CARD_DONATION_AMOUNTS];
+}
+
 /** Coerce DB / API JSON into a normalized config (never empty amounts  use default). */
 export function parseSuggestedDonations(raw: unknown): SuggestedDonationsConfig {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
     return {
       amounts: [...DEFAULT_SUGGESTED_DONATION_AMOUNTS],
       byCurrency: {},
+      cardAmounts: [],
     };
   }
   const o = raw as Record<string, unknown>;
-  const amounts = normalizeAmountsArray(o.amounts);
+  const parsed = normalizeAmountsArray(o.amounts);
+  const amounts = parsed.length ? parsed : [...DEFAULT_SUGGESTED_DONATION_AMOUNTS];
   const byCurrency = normalizeByCurrency(o.byCurrency);
-  return {
-    amounts: amounts.length ? amounts : [...DEFAULT_SUGGESTED_DONATION_AMOUNTS],
-    byCurrency,
-  };
+  return { amounts, byCurrency, cardAmounts: normalizeCardPicks(o.cardAmounts, amounts) };
 }
 
 /** Amounts to use for the given currency code (cookie / selector). */
@@ -109,5 +129,8 @@ export function validateSuggestedDonationsBody(body: unknown): SuggestedDonation
   if (!amounts.length) {
     amounts = [...DEFAULT_SUGGESTED_DONATION_AMOUNTS];
   }
-  return { amounts, byCurrency };
+  if (normalizeAmountsArray(o.cardAmounts).length > MAX_CARD_AMOUNTS) {
+    throw new Error(`At most ${MAX_CARD_AMOUNTS} amounts on the campaign card`);
+  }
+  return { amounts, byCurrency, cardAmounts: normalizeCardPicks(o.cardAmounts, amounts) };
 }

@@ -19,7 +19,9 @@ import {
 } from "@/components/ui/select";
 import { Plus, Trash2 } from "lucide-react";
 import {
+  DEFAULT_CARD_DONATION_AMOUNTS,
   DEFAULT_SUGGESTED_DONATION_AMOUNTS,
+  MAX_CARD_AMOUNTS,
   parseSuggestedDonations,
   parseAmountsInput,
   type SuggestedDonationsConfig,
@@ -39,6 +41,8 @@ function makeRow(currency = "USD", amountsStr = ""): Row {
 export type SuggestedDonationsPayload = {
   amounts: number[];
   byCurrency: Record<string, number[]>;
+  /** Up to three of `amounts` for the campaign card; empty = 100 / 500 / 1000. */
+  cardAmounts: number[];
 };
 
 export type SuggestedDonationsSectionRef = {
@@ -58,6 +62,13 @@ export const SuggestedDonationsSection = forwardRef<
     () => DEFAULT_SUGGESTED_DONATION_AMOUNTS.join(", ")
   );
   const [rows, setRows] = useState<Row[]>([]);
+  const [cardAmounts, setCardAmounts] = useState<number[]>([]);
+  /* The list as typed, for picking the card's three. */
+  const listed = useMemo(() => [...new Set(parseAmountsInput(amountsStr))], [amountsStr]);
+  const toggleCard = (value: number) =>
+    setCardAmounts((prev) =>
+      prev.includes(value) ? prev.filter((v) => v !== value) : prev.length >= MAX_CARD_AMOUNTS ? prev : [...prev, value]
+    );
 
   const stableKey = useMemo(
     () => JSON.stringify(initialConfig ?? null),
@@ -67,6 +78,7 @@ export const SuggestedDonationsSection = forwardRef<
   useEffect(() => {
     const p = parseSuggestedDonations(initialConfig);
     setAmountsStr(p.amounts.join(", "));
+    setCardAmounts(p.cardAmounts);
     setRows(
       Object.entries(p.byCurrency).map(([currency, amounts]) =>
         makeRow(currency, amounts.join(", "))
@@ -85,7 +97,7 @@ export const SuggestedDonationsSection = forwardRef<
         const arr = parseAmountsInput(r.amountsStr);
         if (arr.length) byCurrency[code] = arr;
       }
-      return { amounts, byCurrency };
+      return { amounts, byCurrency, cardAmounts: cardAmounts.filter((v) => amounts.includes(v)).slice(0, MAX_CARD_AMOUNTS) };
     },
   }));
 
@@ -116,7 +128,39 @@ export const SuggestedDonationsSection = forwardRef<
         />
         <p className="text-sm text-muted-foreground mt-1.5">
           أرقام مفصولة بفاصلة أو مسافة. تُستخدم لكل العملات ما لم تضف استثناءً
-          أدناه.
+          أدناه. تظهر كلها في صفحة المشروع.
+        </p>
+      </div>
+
+      <div className="space-y-2 rounded-lg border border-border p-4 bg-muted/30">
+        <Label>المبالغ الظاهرة على بطاقة المشروع (حتى {MAX_CARD_AMOUNTS})</Label>
+        <div className="flex flex-wrap gap-2" dir="ltr">
+          {listed.map((value) => {
+            const on = cardAmounts.includes(value);
+            const full = !on && cardAmounts.filter((v) => listed.includes(v)).length >= MAX_CARD_AMOUNTS;
+            return (
+              <button
+                key={value}
+                type="button"
+                onClick={() => toggleCard(value)}
+                disabled={full}
+                aria-pressed={on}
+                className={[
+                  "h-9 min-w-14 rounded-full border px-3 font-mono text-sm transition-colors",
+                  on ? "border-emerald-500 bg-emerald-50 text-emerald-800 font-semibold" : "border-border bg-white",
+                  full ? "opacity-40 cursor-not-allowed" : "hover:border-gray-400",
+                ].join(" ")}
+              >
+                {on ? "✓ " : ""}
+                {value}
+              </button>
+            );
+          })}
+        </div>
+        <p className="text-xs text-muted-foreground">
+          اختر حتى {MAX_CARD_AMOUNTS} مبالغ من القائمة أعلاه لتظهر على البطاقة بجانب خانة «مبلغ مخصص»، وتبقى
+          البقية في صفحة المشروع. بدون اختيار تُعرض {DEFAULT_CARD_DONATION_AMOUNTS.join("، ")} دولار. عند وجود
+          استثناء لعملة المتبرع تُعرض أول ثلاثة مبالغ منه.
         </p>
       </div>
 

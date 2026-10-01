@@ -4,9 +4,9 @@ import { prisma } from "@/lib/prisma";
 import { NOT_SOFT_DELETED } from "@/lib/campaign/soft-delete-filter";
 import { pickTranslation, translationLocaleWhere } from "@/lib/i18n/translation-fallback";
 import { whereByIdOrAnyLocaleSlug } from "@/lib/slug";
-import { FUNDRAISING_SHARES, parseSuggestedShareCounts } from "@/lib/campaign/campaign-modes";
+import { FUNDRAISING_SHARES, cardShareCounts, parseSuggestedShareCounts } from "@/lib/campaign/campaign-modes";
 import { parseShareLabels } from "@/lib/campaign/share-labels";
-import { parseSuggestedDonations } from "@/lib/campaign/suggested-donations";
+import { cardDonationAmounts, parseSuggestedDonations } from "@/lib/campaign/suggested-donations";
 import { contentToBlocks, type ArticleBlock } from "@/lib/blog/rich-text";
 import { PAID_DONATION_FILTER } from "@/lib/dashboard/donation-usd-revenue";
 import { normalizeSeoFields, type ProjectSeoFields } from "@/lib/campaign/project-seo";
@@ -73,6 +73,12 @@ export interface MinbarProject {
    * in place of `suggestedAmounts` for a visitor browsing in that currency.
    */
   suggestedAmountsByCurrency: Record<string, number[]> | null;
+  /**
+   * The (up to three, USD) amounts the campaign card offers: the dashboard's
+   * picks from `suggestedAmounts`, else 100 / 500 / 1000. The campaign page
+   * offers the whole list.
+   */
+  cardAmounts: number[];
   priority: number | null;
   /**
    * Set on a سهوم (shares) campaign: donors pick a number of shares rather
@@ -89,8 +95,10 @@ export interface MinbarProject {
 export interface MinbarProjectShares {
   /** Price of one share, USD. */
   priceUSD: number;
-  /** Quick-pick share counts, ascending. */
+  /** Quick-pick share counts, ascending (the campaign page). */
   counts: number[];
+  /** The (up to three) counts the campaign card offers; default 1 / 2 / 5. */
+  cardCounts: number[];
   /** The price of one share in a given currency, set by an admin (not USD). */
   priceByCurrency: Record<string, number> | null;
   /**
@@ -187,6 +195,7 @@ function sharesFor(row: CampaignRow, locale: string): MinbarProjectShares | null
   return {
     priceUSD: price,
     counts: shareConfig.counts,
+    cardCounts: cardShareCounts(shareConfig),
     priceByCurrency: shareConfig.priceByCurrency && Object.keys(shareConfig.priceByCurrency).length ? shareConfig.priceByCurrency : null,
     unit: unit ? { singular: unit.singular, plural: unit.plural } : null,
   };
@@ -225,7 +234,8 @@ function toProject(row: CampaignRow, locale: string, detail = false): MinbarProj
   });
   const text = body.length ? body.map((b) => b.text).join(" ").replace(/\s+/g, " ").trim() : rawDescription;
 
-  const byCurrency = row.suggestedDonations ? parseSuggestedDonations(row.suggestedDonations).byCurrency : {};
+  const donationConfig = parseSuggestedDonations(row.suggestedDonations);
+  const byCurrency = row.suggestedDonations ? donationConfig.byCurrency : {};
   const cover = t?.image || row.images?.[0] || null;
   const images = [...new Set([...(cover ? [cover] : []), ...(row.images ?? []).slice(t?.image ? 1 : 0)].filter(Boolean))];
 
@@ -244,6 +254,7 @@ function toProject(row: CampaignRow, locale: string, detail = false): MinbarProj
       label: pickTranslation(c.translations ?? [], locale)?.name || c.name,
     })),
     suggestedAmountsByCurrency: Object.keys(byCurrency).length ? byCurrency : null,
+    cardAmounts: cardDonationAmounts(donationConfig),
     region: category?.slug ?? null,
     regionLabel: categoryT?.name || category?.name || null,
     raised: row.currentAmount,

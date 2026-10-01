@@ -60,14 +60,16 @@ export default function ProjectDonateCard({ project, width, tag }: ProjectDonate
   const shares = project.shares;
   const { t: tShares, unitWord, countLabel } = useShareWording(shares);
 
-  const { chips: amountChips, sharePrice } = useProjectPricing(project, QUICK_AMOUNTS);
+  const { chips: amountChips, sharePrice } = useProjectPricing(project, QUICK_AMOUNTS, { card: true });
 
-  /* A shares card offers share counts; four chips fit the row like the
-     amounts do. Amount chips carry USD with a label that may be an admin's
-     figure in the visitor's currency; picked by position. */
+  /* Three chips and the free field make one even row of four. The chips are
+     the campaign's card picks (dashboard), else 100 / 500 / 1000, or for a
+     shares campaign 1 / 2 / 5 shares; the campaign page offers the whole list.
+     Amount chips carry USD with a label that may be an admin's figure in the
+     visitor's currency; picked by position. */
   const options = shares
-    ? shares.counts.slice(0, 4).map((count) => ({ value: count, label: countLabel(count, formatNumber(count)) }))
-    : amountChips.map((c) => ({ value: c.usd, label: c.label }));
+    ? shares.cardCounts.slice(0, 3).map((count) => ({ value: count, label: countLabel(count, formatNumber(count)) }))
+    : amountChips.slice(0, 3).map((c) => ({ value: c.usd, label: c.label }));
 
   const [picked, setPicked] = useState<number | null>(null);
   const [custom, setCustom] = useState("");
@@ -97,11 +99,14 @@ export default function ProjectDonateCard({ project, width, tag }: ProjectDonate
 
   const chipStyle = (active: boolean): CSSProperties => ({
     height: 34,
-    padding: "0 13px",
+    minWidth: 0,
+    padding: "0 2px",
+    overflow: "hidden",
+    textOverflow: "ellipsis",
     borderRadius: 999,
     cursor: "pointer",
     fontFamily: "inherit",
-    fontSize: 13,
+    fontSize: 12.5,
     fontWeight: 800,
     whiteSpace: "nowrap",
     transition: "all .18s ease",
@@ -242,9 +247,17 @@ export default function ProjectDonateCard({ project, width, tag }: ProjectDonate
       <Link href={href} aria-hidden="true" tabIndex={-1} className="pdc-stretch" />
 
       <div className="pdc-body" style={{ position: "relative", zIndex: 2, marginTop: "auto", display: "grid", gap: 12, padding: 18 }}>
-        <Link href={href} style={{ display: "grid", gap: 7, color: "#fff" }}>
-          <b style={{ fontSize: 19, lineHeight: 1.4, color: "#fff" }}>{project.title}</b>
-        </Link>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
+          <Link href={href} style={{ flex: "1 1 auto", minWidth: 0, color: "#fff" }}>
+            <b style={{ fontSize: 19, lineHeight: 1.4, color: "#fff" }}>{project.title}</b>
+          </Link>
+          {shares ? (
+            /* The price of one share sits beside the name it buys. */
+            <span style={{ flex: "0 0 auto", padding: "5px 11px", borderRadius: 999, background: "rgba(211,154,39,.2)", border: "1px solid rgba(211,154,39,.55)", color: "#fff", fontSize: 12, fontWeight: 900, whiteSpace: "nowrap" }}>
+              {tShares("pricePer", { price: sharePrice?.label ?? format(shares.priceUSD), unit: unitWord(1) })}
+            </span>
+          ) : null}
+        </div>
 
         {hasFinancials ? (
           <div style={{ display: "grid", gap: 7 }}>
@@ -267,15 +280,6 @@ export default function ProjectDonateCard({ project, width, tag }: ProjectDonate
                 {t("goal")} {format(project.goal as number)}
               </span>
             </span>
-            {progress?.total != null ? (
-              <span style={{ fontSize: 12, fontWeight: 800, color: "rgba(255,255,255,.72)" }}>
-                {tShares("soldOfTotal", {
-                  sold: formatNumber(progress.sold),
-                  total: formatNumber(progress.total),
-                  unit: unitWord(progress.total),
-                })}
-              </span>
-            ) : null}
           </div>
         ) : progress && progress.sold > 0 ? (
           /* No target to draw a bar against, but the count given so far still
@@ -285,13 +289,7 @@ export default function ProjectDonateCard({ project, width, tag }: ProjectDonate
           </span>
         ) : null}
 
-        {shares ? (
-          <span style={{ justifySelf: "start", padding: "5px 12px", borderRadius: 999, background: "rgba(211,154,39,.2)", border: "1px solid rgba(211,154,39,.55)", color: "#fff", fontSize: 12.5, fontWeight: 900 }}>
-            {tShares("pricePer", { price: sharePrice?.label ?? format(shares.priceUSD), unit: unitWord(1) })}
-          </span>
-        ) : null}
-
-        <div key={nudge} className={missingAmount ? "pdc-shake" : undefined} style={{ display: "flex", gap: 7, flexWrap: "wrap" }}>
+        <div key={nudge} className={`pdc-amounts${missingAmount ? " pdc-shake" : ""}`}>
           {options.map((option, index) => (
             <button
               key={index}
@@ -318,16 +316,14 @@ export default function ProjectDonateCard({ project, width, tag }: ProjectDonate
             inputMode={shares ? "numeric" : "decimal"}
             placeholder={shares ? tShares("customCountPh") : t("freeAmount")}
             aria-label={shares ? tShares("customCountPh") : t("freeAmount")}
-            /* Takes the whole rest of the row. Capped at 14ch it left a ragged
-               gap after the last chip on wide cards; growing into that space
-               squares the row off and gives the translated labels (Montant
-               libre / Freier Betrag) room they were being clipped for. The
-               9ch floor keeps it usable when it wraps to a line of its own. */
+            /* The fourth cell of the row, as wide as each chip. */
+            className="pdc-custom"
             style={{
-              flex: "1 1 9ch",
-              minWidth: "9ch",
+              minWidth: 0,
+              width: "100%",
               height: 34,
-              padding: "0 12px",
+              padding: "0 6px",
+              textAlign: "center",
               borderRadius: 999,
               boxSizing: "border-box",
               border: `1px solid ${custom ? "var(--gold)" : "rgba(255,255,255,.32)"}`,
@@ -367,7 +363,15 @@ export default function ProjectDonateCard({ project, width, tag }: ProjectDonate
               transition: "filter .18s ease",
             }}
           >
-            {t("donateNow")}
+            {amount > 0 && !belowMinimum ? (
+              /* The gift on the button once it is chosen: "تبرّع الآن (20 $)". */
+              /* The brackets stay in the sentence's direction; only the amount is isolated. */
+              <span>
+                {t("donateNow")} (<span dir="ltr" style={{ unicodeBidi: "isolate" }}>{amountLabel}</span>)
+              </span>
+            ) : (
+              t("donateNow")
+            )}
           </button>
           <button
             type="button"

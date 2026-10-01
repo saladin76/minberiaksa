@@ -3377,6 +3377,9 @@ html.cg-open .mia-scope:has(.mia-qb-sec) { padding-bottom: 0; }
 .mia-scope .pdc-body { pointer-events: none; }
 .mia-scope .pdc-body :is(a, button, input) { pointer-events: auto; }
 .mia-scope .pdc-body input { cursor: text; }
+/* Three amount chips and the free field: one even row of four. */
+.mia-scope .pdc-amounts { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+.mia-scope .pdc-custom::placeholder { color: rgba(255,255,255,.62); font-size: 11.5px; font-weight: 700; }
 
 /* No amount yet: the chips shake in a wave and light up gold. */
 .mia-scope .pdc-shake > * {

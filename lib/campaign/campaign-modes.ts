@@ -33,11 +33,27 @@ export function computeCampaignProgressPercent(
 
 export type SuggestedShareCountsConfig = {
   counts: number[];
+  /** The (up to three) counts the campaign card shows, picked from `counts`; empty means the defaults. */
+  cardCounts?: number[];
   /** Per-currency overrides for the share price, stored as the absolute price in that currency (not USD). */
   priceByCurrency?: Record<string, number>;
 };
 
 export const DEFAULT_SUGGESTED_SHARE_COUNTS = [1, 2, 3, 4, 5, 10];
+
+/** What the campaign card offers when the dashboard has picked nothing. */
+export const DEFAULT_CARD_SHARE_COUNTS = [1, 2, 5];
+export const MAX_CARD_SHARE_COUNTS = 3;
+
+/** Up to three distinct picks that are in `counts`, ascending. */
+function normalizeCardCounts(raw: unknown, counts: readonly number[]): number[] {
+  return normalizeCountsArray(raw).filter((n) => counts.includes(n)).slice(0, MAX_CARD_SHARE_COUNTS);
+}
+
+/** The share counts the campaign card shows. */
+export function cardShareCounts(config: SuggestedShareCountsConfig): number[] {
+  return config.cardCounts?.length ? config.cardCounts : [...DEFAULT_CARD_SHARE_COUNTS];
+}
 
 function normalizeCountsArray(raw: unknown): number[] {
   if (!Array.isArray(raw)) return [];
@@ -67,15 +83,13 @@ function normalizePriceByCurrency(raw: unknown): Record<string, number> {
 
 export function parseSuggestedShareCounts(raw: unknown): SuggestedShareCountsConfig {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
-    return { counts: [...DEFAULT_SUGGESTED_SHARE_COUNTS], priceByCurrency: {} };
+    return { counts: [...DEFAULT_SUGGESTED_SHARE_COUNTS], priceByCurrency: {}, cardCounts: [] };
   }
   const o = raw as Record<string, unknown>;
-  const counts = normalizeCountsArray(o.counts);
+  const parsed = normalizeCountsArray(o.counts);
+  const counts = parsed.length ? parsed : [...DEFAULT_SUGGESTED_SHARE_COUNTS];
   const priceByCurrency = normalizePriceByCurrency(o.priceByCurrency);
-  return {
-    counts: counts.length ? counts : [...DEFAULT_SUGGESTED_SHARE_COUNTS],
-    priceByCurrency,
-  };
+  return { counts, priceByCurrency, cardCounts: normalizeCardCounts(o.cardCounts, counts) };
 }
 
 /**
@@ -115,5 +129,8 @@ export function validateSuggestedShareCountsBody(
     throw new Error(`At most ${MAX_PRICE_OVERRIDES} share price overrides`);
   }
   if (!counts.length) counts = [...DEFAULT_SUGGESTED_SHARE_COUNTS];
-  return { counts, priceByCurrency };
+  if (normalizeCountsArray(o.cardCounts).length > MAX_CARD_SHARE_COUNTS) {
+    throw new Error(`At most ${MAX_CARD_SHARE_COUNTS} share counts on the campaign card`);
+  }
+  return { counts, priceByCurrency, cardCounts: normalizeCardCounts(o.cardCounts, counts) };
 }
