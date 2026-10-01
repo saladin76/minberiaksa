@@ -139,6 +139,14 @@ const nextConfig: NextConfig = {
   devIndicators: { position: "bottom-right" },
   reactStrictMode: true,
   serverExternalPackages: ["@usewaypoint/email-builder"],
+  /* `@sparticuz/chromium` unpacks its browser from `bin/*.br` at runtime, through a path the file
+     tracer cannot follow — without this the archives never reach the function and every PDF
+     (receipt, certificates, confirmation-email attachments) fails on Vercel. Every API route, not
+     just the three download routes: the confirmation email renders the same PDFs from the payment
+     webhooks, crons and dashboard actions that reach `lib/events/dispatch`. */
+  outputFileTracingIncludes: {
+    "/api/**/*": ["./node_modules/@sparticuz/chromium/bin/**"],
+  },
   compiler: { removeConsole: process.env.NODE_ENV === "production" ? { exclude: ["error", "warn"] } : false },
   /* Preview and development deployments carry production canonicals and
      hreflang, which does not stop a crawler indexing the preview URL itself.
