@@ -13,8 +13,9 @@ import type { CartFreqKey } from "@/lib/minbar/cart";
  * The four ways to give are equal cards the donor picks between (one-time looks
  * like the others, not like a way out). The campaign's recommended cadence
  * (`MinbarProject.recommendedFrequency`, monthly unless the dashboard says
- * otherwise) carries the badge and starts selected; with none recommended,
- * nothing is. The two actions at the end then donate now or add to the basket.
+ * otherwise) carries the badge, but nothing is preselected: the donor makes the
+ * choice, and the two actions at the end (donate now / add to the basket) stay
+ * disabled until they have.
  *
  * Rendered into `.mia-scope` rather than `body`: the design tokens live on that
  * element, and the cards it opens from sit in rails whose transforms would trap
@@ -100,22 +101,16 @@ export default function GiveFrequencyDialog({
   const titleId = useId();
   const listRef = useRef<HTMLDivElement>(null);
   const [host, setHost] = useState<Element | null>(null);
-  const [selected, setSelected] = useState<CartFreqKey | null>(recommended);
-  /* Bumped when an action is pressed with nothing chosen; keys the list so the
-     shake replays. */
-  const [nudge, setNudge] = useState(0);
+  const [selected, setSelected] = useState<CartFreqKey | null>(null);
 
   useEffect(() => {
     setHost(document.querySelector(".mia-scope") ?? document.body);
   }, []);
 
-  /* Each opening starts from the campaign's recommendation. */
+  /* Each opening starts with nothing chosen. */
   useEffect(() => {
-    if (open) {
-      setSelected(recommended);
-      setNudge(0);
-    }
-  }, [open, recommended]);
+    if (open) setSelected(null);
+  }, [open]);
 
   /* Escape closes and the page behind stays put, as in the other overlays. */
   useEffect(() => {
@@ -142,11 +137,7 @@ export default function GiveFrequencyDialog({
 
   const isArabic = locale.startsWith("ar");
   const confirm = (intent: GiveIntent, origin: HTMLElement) => {
-    if (!selected) {
-      setNudge((n) => n + 1);
-      return;
-    }
-    onConfirm(selected, intent, origin);
+    if (selected) onConfirm(selected, intent, origin);
   };
 
   return createPortal(
@@ -203,11 +194,10 @@ export default function GiveFrequencyDialog({
 
         <div className="fq-body">
           <div
-            key={nudge}
             ref={listRef}
             role="radiogroup"
             aria-labelledby={titleId}
-            className={`fq-options${nudge > 0 && !selected ? " fq-options--nudge" : ""}`}
+            className="fq-options"
           >
             {OPTIONS.map((option) => {
               const isRecommended = option.id === recommended;
@@ -237,17 +227,17 @@ export default function GiveFrequencyDialog({
             })}
           </div>
 
-          {nudge > 0 && !selected ? (
-            <p className="fq-choose" role="alert">
-              {t("chooseFirst")}
-            </p>
-          ) : null}
+          {/* Until a way is chosen the actions are disabled, and this says why.
+              It keeps its line afterwards so the buttons do not jump. */}
+          <p className="fq-choose" data-done={selected ? "1" : "0"} aria-hidden={selected ? true : undefined}>
+            {t("chooseFirst")}
+          </p>
 
           <div className="fq-actions">
-            <button type="button" className="fq-cta fq-cta--donate" onClick={(e) => confirm("donate", e.currentTarget)}>
+            <button type="button" className="fq-cta fq-cta--donate" disabled={!selected} onClick={(e) => confirm("donate", e.currentTarget)}>
               {tCommon("donateNow")}
             </button>
-            <button type="button" className="fq-cta fq-cta--cart" onClick={(e) => confirm("cart", e.currentTarget)}>
+            <button type="button" className="fq-cta fq-cta--cart" disabled={!selected} onClick={(e) => confirm("cart", e.currentTarget)}>
               <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                 <path d="m4 8 2 11h12l2-11H4Z" />
                 <path d="m9 8 3-4 3 4M9 12v3M15 12v3" />

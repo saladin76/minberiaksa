@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Image from "next/image";
 import { Copy, Check } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 
 interface Account {
   type: string;
@@ -22,32 +22,35 @@ interface Bank {
   logo?: string;
 }
 
-const ACCOUNT_HOLDER = "Minberiaksa Uluslararası Yardımlaşma Derneği";
+/* The accounts come from the dashboard (Dashboard → الحسابات البنكية), the
+   same list the checkout's bank transfer and /bank-accounts show  edited in
+   one place, shown everywhere. Shape of GET /api/bank-accounts?locale=… */
+type ApiBank = {
+  slug: string;
+  name: string;
+  branch: string;
+  holder: string;
+  swift: string;
+  logo: string;
+  currencies: Array<{ code: string; accountNo: string; extNo: string; iban: string }>;
+};
 
-const BANKS: Bank[] = [
-  {
-    name: "Ziraat Katılım Bankası",
-    swift: "ZKBATRIS",
-    accountName: ACCOUNT_HOLDER,
-    logo: "/ziraat-katilim.jpg",
-    accounts: [
-      { type: "TL", iban: "TR750020900001843729000001" },
-      { type: "EUR", iban: "TR210020900001843729000003" },
-      { type: "USD", iban: "TR480020900001843729000002" },
-    ],
-  },
-  {
-    name: "AlbarakaTürk Katılım Bankası",
-    swift: "BTFHTRIS",
-    accountName: ACCOUNT_HOLDER,
-    accounts: [
-      { type: "TL", iban: "TR710020300009942518000001" },
-    ],
-  },
-];
+function toBank(b: ApiBank): Bank {
+  return {
+    name: b.name,
+    swift: b.swift,
+    accountName: b.holder,
+    branch: b.branch || undefined,
+    logo: b.logo || undefined,
+    accounts: b.currencies
+      .filter((c) => c.iban)
+      .map((c) => ({ type: c.code, iban: c.iban, number: c.accountNo || undefined, ext: c.extNo || undefined })),
+  };
+}
 
 const CURRENCY_STYLE: Record<string, string> = {
   TL: "bg-red-50 text-red-600 border border-red-200",
+  TRY: "bg-red-50 text-red-600 border border-red-200",
   USD: "bg-emerald-50 text-emerald-700 border border-emerald-200",
   EUR: "bg-blue-50 text-blue-700 border border-blue-200",
 };
@@ -93,7 +96,7 @@ function BankCard({ bank, t }: { bank: Bank; t: ReturnType<typeof useTranslation
       <div className="flex items-center gap-4 px-6 py-5 border-b border-gray-100">
         {bank.logo && (
           <div className="relative w-36 h-10 flex-shrink-0">
-            <Image src={bank.logo} alt={bank.name} fill className="object-contain object-left" />
+            <Image src={bank.logo} alt={bank.name} fill unoptimized className="object-contain object-left" />
           </div>
         )}
         <div className="min-w-0 flex-1">
@@ -173,11 +176,31 @@ function BankCard({ bank, t }: { bank: Bank; t: ReturnType<typeof useTranslation
  */
 export default function BankAccountsBlock() {
   const t = useTranslations("BankTransfer");
+  const locale = useLocale();
+  const [banks, setBanks] = useState<Bank[] | null>(null);
+
+  useEffect(() => {
+    let live = true;
+    fetch(`/api/bank-accounts?locale=${encodeURIComponent(locale)}`)
+      .then((res) => (res.ok ? res.json() : { items: [] }))
+      .then((data: { items?: ApiBank[] }) => {
+        if (!live) return;
+        const items = Array.isArray(data.items) ? data.items : [];
+        setBanks(items.map(toBank).filter((bank) => bank.accounts.length > 0));
+      })
+      .catch(() => {
+        if (live) setBanks([]);
+      });
+    return () => {
+      live = false;
+    };
+  }, [locale]);
+
   return (
     <div className="max-w-4xl mx-auto px-4 py-8 space-y-4">
-      {BANKS.map((bank) => (
-        <BankCard key={bank.swift} bank={bank} t={t} />
-      ))}
+      {banks === null
+        ? [0, 1].map((i) => <div key={i} className="h-48 rounded-2xl border border-gray-200 bg-gray-50 animate-pulse" />)
+        : banks.map((bank) => <BankCard key={bank.name + bank.swift} bank={bank} t={t} />)}
       <p className="text-center text-sm text-gray-400 pt-2">
         {t("footer")}{" "}
         <a href="mailto:info@minberiaksa.org" className="text-[#A5243D] font-semibold hover:underline">

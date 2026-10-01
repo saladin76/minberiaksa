@@ -86,7 +86,7 @@ export interface MinbarProject {
    */
   shares: MinbarProjectShares | null;
   /**
-   * The cadence the card's giving dialog recommends and preselects; null when
+   * The cadence the card's giving dialog badges as recommended; null when
    * the campaign recommends none. Unset on the campaign means "monthly".
    */
   recommendedFrequency: CartFreqKey | null;

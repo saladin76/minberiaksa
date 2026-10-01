@@ -1,11 +1,12 @@
 import type { CartFreqKey } from "@/lib/minbar/cart";
 
 /**
- * Which cadence a campaign's giving dialog recommends (badge + preselected).
+ * Which cadence a campaign's giving dialog recommends (the «نوصي به» badge;
+ * nothing is preselected  the donor chooses).
  * Set per campaign on the dashboard edit page (`Campaign.recommendedFrequency`).
  *
  *   unset / unknown  → "monthly" (the default for every campaign)
- *   "none"           → nothing recommended, nothing preselected
+ *   "none"           → nothing recommended
  *   "monthly" | "friday" | "daily" | "once" → that one
  */
 

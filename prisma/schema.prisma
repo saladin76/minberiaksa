@@ -612,7 +612,7 @@ model Campaign {
   /// per campaign without forking the translation files.
   shareLabels          Json?
   /// The cadence the card's "how should this gift continue?" dialog marks as
-  /// recommended and preselects: "monthly" | "friday" | "daily" | "once", or
+  /// recommended (badge only, nothing preselected): "monthly" | "friday" | "daily" | "once", or
   /// "none" for no recommendation. Unset means "monthly". Shape and parsing in
   /// `lib/minbar/recommended-frequency.ts`.
   recommendedFrequency String?

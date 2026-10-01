@@ -29,6 +29,8 @@ interface BankRow {
   isActive: boolean;
   currencyCodes: string[];
   translationCount: number;
+  /** Missing a required field (slug, name or holder): open it to complete it. */
+  incomplete?: boolean;
 }
 
 export default function BankAccountsPage() {
@@ -46,7 +48,13 @@ export default function BankAccountsPage() {
       setRows(Array.isArray(items) ? items : []);
     } catch (e) {
       console.error(e);
-      toast.error(errorMessage(e, 'تعذّر تحميل الحسابات البنكية'));
+      /* Say why, not only that it failed: the API sends the reason in `detail`. */
+      const detail = (e as { response?: { data?: { detail?: unknown } } })?.response?.data?.detail;
+      toast.error(
+        typeof detail === 'string' && detail
+          ? `تعذّر تحميل الحسابات البنكية: ${detail}`
+          : errorMessage(e, 'تعذّر تحميل الحسابات البنكية')
+      );
     } finally {
       setLoading(false);
     }
@@ -145,7 +153,12 @@ export default function BankAccountsPage() {
                     </div>
                   )}
                   <div>
-                    <div className="font-semibold">{r.name}</div>
+                    <div className="font-semibold flex items-center gap-2">
+                      {r.name}
+                      {r.incomplete ? (
+                        <Badge variant="destructive" className="text-[10px] px-1.5 py-0">بيانات ناقصة</Badge>
+                      ) : null}
+                    </div>
                     <div className="text-xs text-slate-500">{r.holder}{r.branch ? ` · ${r.branch}` : ''}</div>
                   </div>
                 </div>

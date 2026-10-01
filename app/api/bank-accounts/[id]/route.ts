@@ -5,6 +5,7 @@ import { authOptions } from "../../auth/[...nextauth]/options";
 import { requireAdminOrDashboardPermission } from "@/lib/dashboard/api-auth";
 import { queueAuditLog, auditActorFromDashboardSession } from "@/lib/audit-log";
 import { writeErrorMessage } from "@/lib/dashboard/write-error-message";
+import { findBankAccountForAdmin } from "@/lib/content/bank-account-read";
 import {
   BANK_ACCOUNT_WITH_CHILDREN_SELECT,
   buildBankAccountScalarPatch,
@@ -22,10 +23,7 @@ export async function GET(
     const denied = requireAdminOrDashboardPermission(session, "bankAccounts");
     if (denied) return denied;
 
-    const account = await prisma.bankAccount.findUnique({
-      where: { id },
-      select: BANK_ACCOUNT_WITH_CHILDREN_SELECT,
-    });
+    const account = await findBankAccountForAdmin(id);
     if (!account) return NextResponse.json({ error: "Bank account not found" }, { status: 404 });
 
     return NextResponse.json(account);
@@ -66,10 +64,7 @@ export async function PUT(
 
     // Snapshot for the audit trail: an IBAN change must be traceable to who,
     // when, and from what to what.
-    const before = await prisma.bankAccount.findUnique({
-      where: { id },
-      select: BANK_ACCOUNT_WITH_CHILDREN_SELECT,
-    });
+    const before = await findBankAccountForAdmin(id);
     if (!before) return NextResponse.json({ error: "Bank account not found" }, { status: 404 });
 
     const full = await prisma.bankAccount.update({
@@ -131,10 +126,7 @@ export async function DELETE(
     const denied = requireAdminOrDashboardPermission(session, "bankAccounts");
     if (denied) return denied;
 
-    const existing = await prisma.bankAccount.findUnique({
-      where: { id },
-      select: BANK_ACCOUNT_WITH_CHILDREN_SELECT,
-    });
+    const existing = await findBankAccountForAdmin(id);
     if (!existing) return NextResponse.json({ error: "Bank account not found" }, { status: 404 });
 
     // Translations and currencies both cascade from the schema.
