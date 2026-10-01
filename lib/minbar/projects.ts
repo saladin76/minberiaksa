@@ -10,6 +10,8 @@ import { parseSuggestedDonations } from "@/lib/campaign/suggested-donations";
 import { contentToBlocks, type ArticleBlock } from "@/lib/blog/rich-text";
 import { PAID_DONATION_FILTER } from "@/lib/dashboard/donation-usd-revenue";
 import { normalizeSeoFields, type ProjectSeoFields } from "@/lib/campaign/project-seo";
+import { parseRecommendedFrequency } from "@/lib/minbar/recommended-frequency";
+import type { CartFreqKey } from "@/lib/minbar/cart";
 
 /**
  * Project data for the Minbar pages.
@@ -77,6 +79,11 @@ export interface MinbarProject {
    * than an amount. `null` for an ordinary amount campaign.
    */
   shares: MinbarProjectShares | null;
+  /**
+   * The cadence the card's giving dialog recommends and preselects; null when
+   * the campaign recommends none. Unset on the campaign means "monthly".
+   */
+  recommendedFrequency: CartFreqKey | null;
 }
 
 export interface MinbarProjectShares {
@@ -111,6 +118,7 @@ function selectFor(locale: string) {
     sharePriceUSD: true,
     suggestedShareCounts: true,
     shareLabels: true,
+    recommendedFrequency: true,
     categoryPriorities: true,
     createdAt: true,
     categories: {
@@ -130,6 +138,7 @@ function selectFor(locale: string) {
 
 type CampaignRow = {
   id: string;
+  recommendedFrequency: string | null;
   slug: string | null;
   title: string;
   description: string;
@@ -242,6 +251,7 @@ function toProject(row: CampaignRow, locale: string, detail = false): MinbarProj
     suggestedAmounts: suggested && suggested.length ? suggested : null,
     priority: row.priority,
     shares: sharesFor(row, locale),
+    recommendedFrequency: parseRecommendedFrequency(row.recommendedFrequency),
   };
 }
 

@@ -3466,7 +3466,6 @@
     "perMonth": "her ay",
     "perWeek": "her Cuma",
     "perDay": "her gün",
-    "onceOnly": "Hayır, {amount} sadece bir kez bağışla",
     "cancelNote": "Düzenli bağışınızı hesabınızdan dilediğiniz zaman durdurabilir veya değiştirebilirsiniz.",
     "toastTitle": "Sepetinize eklendi ✓",
     "toastCta": "Bağışı tamamla",
@@ -3474,6 +3473,13 @@
     "belowMinRow": "En düşük bağış tutarının altında ({amount})",
     "raiseToMin": "{amount} olarak artır",
     "belowMinCheckout": "Bazı bağışlar en düşük tutarın ({amount}) altında. Devam etmek için artırın.",
-    "editInCart": "Tutarları sepette düzenle"
+    "editInCart": "Tutarları sepette düzenle",
+    "monthlyTitle": "Aylık",
+    "fridayTitle": "Her Cuma",
+    "dailyTitle": "Günlük",
+    "onceTitle": "Tek seferlik",
+    "onceDesc": "Bugünkü bağışınız bugün ihtiyaç sahibine ulaşır: “Bir iyiliğe on katı karşılık vardır”",
+    "perOnce": "tek sefer",
+    "chooseFirst": "Önce bağış şeklinizi seçin"
   }
 }

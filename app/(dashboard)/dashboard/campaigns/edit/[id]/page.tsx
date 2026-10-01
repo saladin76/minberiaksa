@@ -112,6 +112,7 @@ import {
   type ShareLabelsSectionRef,
 } from '../../_components/ShareLabelsSection';
 import { parseShareLabels, type ShareLabelsConfig } from '@/lib/campaign/share-labels';
+import { isRecommendedFrequencySetting } from "@/lib/minbar/recommended-frequency";
 
 // ✅ Enhanced schema with translations (limits aligned with DB / real data  not stricter than Prisma)
 /** Fields every translation locale carries on the campaign form, as `field_locale`. */
@@ -137,6 +138,8 @@ const formSchema = z
   targetAmount: z.coerce.number().min(0).max(1000000),
   goalType: z.enum(['FIXED', 'OPEN']),
   fundraisingMode: z.enum(['AMOUNT', 'SHARES']),
+  /* The giving dialog's recommended cadence; "monthly" is the default. */
+  recommendedFrequency: z.enum(['monthly', 'friday', 'daily', 'once', 'none']),
   sharePriceUSD: z.number().min(0).max(1000000).optional(),
   // Many-to-many: the campaign can belong to multiple categories simultaneously.
   categoryIds: z.array(z.string().min(1)).min(1, 'حمله واحدة على الأقل مطلوبة'),
@@ -301,6 +304,7 @@ export default function EditCampaignPage() {
       currentAmount: 0,
       categoryIds: [],
       isActive: true,
+      recommendedFrequency: 'monthly',
       images: [],
       videoUrl: '',
       ...localeDefaults(LOCALE_FIELDS),
@@ -367,6 +371,10 @@ export default function EditCampaignPage() {
             ? campaign.categoryIds
             : (campaign.category?.id ? [campaign.category.id] : []),
           isActive: Boolean(campaign.isActive),
+          // Unset on the campaign means the default, monthly.
+          recommendedFrequency: isRecommendedFrequencySetting(campaign.recommendedFrequency)
+            ? campaign.recommendedFrequency
+            : 'monthly',
           images: imgs,
           videoUrl: campaign.videoUrl || '',
           // Legacy rows may lack EN; fall back to Arabic title so validation passes until translated.
@@ -444,6 +452,7 @@ export default function EditCampaignPage() {
           values.fundraisingMode === 'SHARES' ? values.sharePriceUSD : null,
         categoryIds: values.categoryIds,
         isActive: values.isActive,
+        recommendedFrequency: values.recommendedFrequency,
         images: values.images,
         videoUrl: values.videoUrl,
         ...(willOverrideCurrentAmount
@@ -1098,6 +1107,34 @@ export default function EditCampaignPage() {
                     </Select>
                     <FormDescription>
                       في وضع السهوم يحدد المتبرع عدد الأسهم؛ المبلغ = العدد × سعر السهم (بالدولار).
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="recommendedFrequency"
+                render={({ field }) => (
+                  <FormItem dir="rtl">
+                    <FormLabel>طريقة التبرع الموصى بها</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="طريقة التبرع الموصى بها" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="monthly">شهريًا (الافتراضي)</SelectItem>
+                        <SelectItem value="friday">كل جمعة</SelectItem>
+                        <SelectItem value="daily">يوميًا</SelectItem>
+                        <SelectItem value="once">مرة واحدة</SelectItem>
+                        <SelectItem value="none">بدون توصية</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormDescription>
+                      الخيار الذي يظهر عليه وسم «نوصي به» ويكون محددًا مسبقًا عندما يختار المتبرع طريقة تبرعه من بطاقة المشروع. «بدون توصية» لا يميّز أي خيار ولا يحدده.
                     </FormDescription>
                     <FormMessage />
                   </FormItem>

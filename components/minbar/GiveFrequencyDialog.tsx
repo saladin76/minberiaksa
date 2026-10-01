@@ -10,9 +10,11 @@ import type { CartFreqKey } from "@/lib/minbar/cart";
  * basket, so a donor who came for one gift is shown, at the moment of giving,
  * that the same amount can keep giving.
  *
- * Every choice is one tap and goes straight on; nothing is preselected, so a
- * plan is never started by a tap meant for something else. One-time stays a
- * full-width button of its own, not a buried link.
+ * The four ways to give are equal cards the donor picks between (one-time looks
+ * like the others, not like a way out). The campaign's recommended cadence
+ * (`MinbarProject.recommendedFrequency`, monthly unless the dashboard says
+ * otherwise) carries the badge and starts selected; with none recommended,
+ * nothing is. The two actions at the end then donate now or add to the basket.
  *
  * Rendered into `.mia-scope` rather than `body`: the design tokens live on that
  * element, and the cards it opens from sit in rails whose transforms would trap
@@ -24,10 +26,10 @@ export type GiveIntent = "donate" | "cart";
 /** The hadith is quoted in its original wording in every language. */
 const HADITH = "أحبُّ الأعمالِ إلى اللهِ أدومُها وإنْ قَلّ";
 
-const RECURRING: ReadonlyArray<{ id: Exclude<CartFreqKey, "once">; label: string; per: string; desc: string; icon: ReactElement }> = [
+const OPTIONS: ReadonlyArray<{ id: CartFreqKey; label: string; per: string; desc: string; icon: ReactElement }> = [
   {
     id: "monthly",
-    label: "monthly",
+    label: "monthlyTitle",
     per: "perMonth",
     desc: "monthlyDesc",
     icon: (
@@ -39,7 +41,7 @@ const RECURRING: ReadonlyArray<{ id: Exclude<CartFreqKey, "once">; label: string
   },
   {
     id: "friday",
-    label: "everyFriday",
+    label: "fridayTitle",
     per: "perWeek",
     desc: "fridayDesc",
     icon: (
@@ -51,7 +53,7 @@ const RECURRING: ReadonlyArray<{ id: Exclude<CartFreqKey, "once">; label: string
   },
   {
     id: "daily",
-    label: "daily",
+    label: "dailyTitle",
     per: "perDay",
     desc: "dailyDesc",
     icon: (
@@ -61,53 +63,90 @@ const RECURRING: ReadonlyArray<{ id: Exclude<CartFreqKey, "once">; label: string
       </svg>
     ),
   },
+  {
+    id: "once",
+    label: "onceTitle",
+    per: "perOnce",
+    desc: "onceDesc",
+    icon: (
+      <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10Z" />
+      </svg>
+    ),
+  },
 ];
 
 export default function GiveFrequencyDialog({
-  intent,
+  open,
   projectTitle,
   amountLabel,
-  onPick,
+  recommended,
+  onConfirm,
   onClose,
 }: {
-  /** Null while closed. */
-  intent: GiveIntent | null;
+  open: boolean;
   projectTitle: string;
   amountLabel: string;
-  /** `origin` is the option pressed, for the fly-to-basket animation. */
-  onPick: (freq: CartFreqKey, origin: HTMLElement) => void;
+  /** The campaign's recommended cadence: badged and preselected. Null: none. */
+  recommended: CartFreqKey | null;
+  /** `origin` is the button pressed, for the fly-to-basket animation. */
+  onConfirm: (freq: CartFreqKey, intent: GiveIntent, origin: HTMLElement) => void;
   onClose: () => void;
 }) {
   const t = useTranslations("CardGive");
   const tCommon = useTranslations("common");
   const locale = useLocale();
   const titleId = useId();
-  const firstRef = useRef<HTMLButtonElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
   const [host, setHost] = useState<Element | null>(null);
+  const [selected, setSelected] = useState<CartFreqKey | null>(recommended);
+  /* Bumped when an action is pressed with nothing chosen; keys the list so the
+     shake replays. */
+  const [nudge, setNudge] = useState(0);
 
   useEffect(() => {
     setHost(document.querySelector(".mia-scope") ?? document.body);
   }, []);
 
+  /* Each opening starts from the campaign's recommendation. */
+  useEffect(() => {
+    if (open) {
+      setSelected(recommended);
+      setNudge(0);
+    }
+  }, [open, recommended]);
+
   /* Escape closes and the page behind stays put, as in the other overlays. */
   useEffect(() => {
-    if (!intent) return;
+    if (!open) return;
     const onKey = (event: KeyboardEvent) => {
       if (event.key === "Escape") onClose();
     };
     const previous = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     document.addEventListener("keydown", onKey);
-    firstRef.current?.focus({ preventScroll: true });
+    window.requestAnimationFrame(() => {
+      const target =
+        listRef.current?.querySelector<HTMLButtonElement>('[aria-checked="true"]') ??
+        listRef.current?.querySelector<HTMLButtonElement>("button");
+      target?.focus({ preventScroll: true });
+    });
     return () => {
       document.body.style.overflow = previous;
       document.removeEventListener("keydown", onKey);
     };
-  }, [intent, onClose]);
+  }, [open, onClose]);
 
-  if (!intent || !host) return null;
+  if (!open || !host) return null;
 
   const isArabic = locale.startsWith("ar");
+  const confirm = (intent: GiveIntent, origin: HTMLElement) => {
+    if (!selected) {
+      setNudge((n) => n + 1);
+      return;
+    }
+    onConfirm(selected, intent, origin);
+  };
 
   return createPortal(
     <div className="fq-backdrop" onClick={onClose}>
@@ -162,30 +201,59 @@ export default function GiveFrequencyDialog({
         </div>
 
         <div className="fq-body">
-          {RECURRING.map((option, index) => (
-            <button
-              key={option.id}
-              ref={index === 0 ? firstRef : undefined}
-              type="button"
-              className={`fq-option${index === 0 ? " fq-option--featured" : ""}`}
-              onClick={(e) => onPick(option.id, e.currentTarget)}
-            >
-              {index === 0 ? <span className="fq-badge">{t("recommended")}</span> : null}
-              <span className="fq-icon">{option.icon}</span>
-              <span className="fq-text">
-                <b>{tCommon(option.label)}</b>
-                <small>{t(option.desc)}</small>
-              </span>
-              <span className="fq-price">
-                <b dir="ltr">{amountLabel}</b>
-                <small>{t(option.per)}</small>
-              </span>
-            </button>
-          ))}
+          <div
+            key={nudge}
+            ref={listRef}
+            role="radiogroup"
+            aria-labelledby={titleId}
+            className={`fq-options${nudge > 0 && !selected ? " fq-options--nudge" : ""}`}
+          >
+            {OPTIONS.map((option) => {
+              const isRecommended = option.id === recommended;
+              const isSelected = option.id === selected;
+              return (
+                <button
+                  key={option.id}
+                  type="button"
+                  role="radio"
+                  aria-checked={isSelected}
+                  className={`fq-option${isRecommended ? " fq-option--featured" : ""}${isSelected ? " fq-option--selected" : ""}`}
+                  onClick={() => setSelected(option.id)}
+                >
+                  {isRecommended ? <span className="fq-badge">{t("recommended")}</span> : null}
+                  <span className="fq-radio" aria-hidden="true" />
+                  <span className="fq-icon">{option.icon}</span>
+                  <span className="fq-text">
+                    <b>{t(option.label)}</b>
+                    <small>{t(option.desc)}</small>
+                  </span>
+                  <span className="fq-price">
+                    <b dir="ltr">{amountLabel}</b>
+                    <small>{t(option.per)}</small>
+                  </span>
+                </button>
+              );
+            })}
+          </div>
 
-          <button type="button" className="fq-once" onClick={(e) => onPick("once", e.currentTarget)}>
-            {t("onceOnly", { amount: amountLabel })}
-          </button>
+          {nudge > 0 && !selected ? (
+            <p className="fq-choose" role="alert">
+              {t("chooseFirst")}
+            </p>
+          ) : null}
+
+          <div className="fq-actions">
+            <button type="button" className="fq-cta fq-cta--donate" onClick={(e) => confirm("donate", e.currentTarget)}>
+              {tCommon("donateNow")}
+            </button>
+            <button type="button" className="fq-cta fq-cta--cart" onClick={(e) => confirm("cart", e.currentTarget)}>
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="m4 8 2 11h12l2-11H4Z" />
+                <path d="m9 8 3-4 3 4M9 12v3M15 12v3" />
+              </svg>
+              {tCommon("addToCart")}
+            </button>
+          </div>
 
           <p className="fq-note">
             <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">

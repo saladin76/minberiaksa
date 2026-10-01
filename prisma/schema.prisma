@@ -611,6 +611,11 @@ model Campaign {
   /// "share"/"shares" translation strings. Lets admins re-label the donation unit
   /// per campaign without forking the translation files.
   shareLabels          Json?
+  /// The cadence the card's "how should this gift continue?" dialog marks as
+  /// recommended and preselects: "monthly" | "friday" | "daily" | "once", or
+  /// "none" for no recommendation. Unset means "monthly". Shape and parsing in
+  /// `lib/minbar/recommended-frequency.ts`.
+  recommendedFrequency String?
 
   /// Implicit many-to-many  a campaign can belong to one or more categories.
   /// Prisma+MongoDB stores the relation as mirrored ObjectId[] arrays on each side.

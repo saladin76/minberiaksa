@@ -42,6 +42,7 @@ import { normalizeCategoryIdsInput, parseCategoryPriorities } from "@/lib/campai
 import { NOT_SOFT_DELETED } from "@/lib/campaign/soft-delete-filter";
 import { setCampaignDisplayTotal } from "@/lib/campaign/current-amount";
 import { PAID_DONATION_FILTER } from "@/lib/dashboard/donation-usd-revenue";
+import { RECOMMENDED_FREQUENCY_VALUES, isRecommendedFrequencySetting } from "@/lib/minbar/recommended-frequency";
 
 // This file used to build its own `new PrismaClient()` behind a global that is
 // only assigned when NODE_ENV !== "production". The comment claimed it was a
@@ -98,6 +99,7 @@ export async function GET(
         sharePriceUSD: true,
         suggestedShareCounts: true,
         shareLabels: true,
+        recommendedFrequency: true,
 
         // Requested locale + English fallback (base Arabic is on the model itself)
         translations: {
@@ -250,6 +252,8 @@ export async function GET(
       sharePriceUSD: campaign.sharePriceUSD ?? null,
       suggestedShareCounts: parseSuggestedShareCounts(campaign.suggestedShareCounts),
       shareLabels: parseShareLabels(campaign.shareLabels),
+      // Stored value as set ("none" kept); null means the default, monthly.
+      recommendedFrequency: campaign.recommendedFrequency ?? null,
       isActive: campaign.isActive,
 
       // All categories this campaign belongs to. `category` is kept as a
@@ -380,6 +384,19 @@ export async function PUT(
     if (body.images !== undefined) updateData.images = body.images;
     if (body.videoUrl !== undefined) updateData.videoUrl = body.videoUrl;
     if (body.isActive !== undefined) updateData.isActive = body.isActive;
+    /* The giving dialog's recommended cadence; null/"" resets to the default
+       (monthly). */
+    if (body.recommendedFrequency !== undefined) {
+      const value = body.recommendedFrequency;
+      if (value === null || value === "") updateData.recommendedFrequency = null;
+      else if (isRecommendedFrequencySetting(value)) updateData.recommendedFrequency = value;
+      else {
+        return NextResponse.json(
+          { error: `recommendedFrequency must be one of ${RECOMMENDED_FREQUENCY_VALUES.join(", ")}` },
+          { status: 400 }
+        );
+      }
+    }
     if (body.priority !== undefined) updateData.priority = body.priority;
 
     // categoryIds / categoryId  accept either. The new client sends an array;
@@ -722,6 +739,7 @@ export async function PUT(
         sharePriceUSD: true,
         suggestedShareCounts: true,
         shareLabels: true,
+        recommendedFrequency: true,
         translations: {
           select: {
             locale: true,
