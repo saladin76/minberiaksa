@@ -1726,6 +1726,11 @@ model GlobalSettings {
   /// overrides), frequencies, destinations, title. Shape and defaults in
   /// `lib/minbar/quick-donation.ts`; null means "the defaults".
   quickDonation        Json?
+  /// The homepage arrangement: section order and visibility, and per list
+  /// (events, reels, programmes, courses, projects, categories, posts, FAQs) which
+  /// items show and how they rank. Shape and defaults in `lib/minbar/home-layout.ts`;
+  /// null means "the homepage as designed".
+  homeLayout           Json?
   /// Dashboard overrides for the certificate / receipt wording, per template and
   /// per locale: `{ thanks: { ar: { title, body, … } }, waqf: {…}, receipt: {…} }`.
   /// Shape and defaults in `lib/certificates/copy.ts`; null means "the i18n text".
@@ -2390,6 +2395,8 @@ enum VideoType {
   ACHIEVEMENT
   ENDORSEMENT
   FIELD
+  /// فعالياتنا  conference and event recordings, picked into the homepage events section.
+  EVENT
 }
 
 /// Homepage story rail.

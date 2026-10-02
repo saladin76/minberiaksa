@@ -1820,6 +1820,46 @@
 .mia-scope .mia-share-btn:hover { border-color: var(--gold); background: var(--sand); }
 .mia-scope button[data-pick="1"] { background: var(--deep) !important; border-color: var(--deep) !important; color: #fff !important; font-weight: 900 !important; }
 
+/* Project hero carousel (ProjectHeroMedia)  only drawn with 2+ photos. */
+.mia-scope .pd-hero-media:focus-visible { outline: 3px solid var(--gold); outline-offset: 3px; }
+.mia-scope .pd-hero-track::-webkit-scrollbar { display: none; }
+.mia-scope .pd-hero-nav {
+  position: absolute; top: 50%; transform: translateY(-50%); z-index: 2;
+  width: 44px; height: 44px; display: inline-flex; align-items: center; justify-content: center;
+  border: 0; border-radius: 50%; background: rgba(255,255,255,.9); color: var(--deep);
+  box-shadow: 0 4px 14px rgba(16,33,43,.22); cursor: pointer;
+  transition: background .2s, color .2s, opacity .2s;
+}
+.mia-scope .pd-hero-nav[data-side="prev"] { inset-inline-start: 14px; }
+.mia-scope .pd-hero-nav[data-side="next"] { inset-inline-end: 14px; }
+.mia-scope .pd-hero-nav:hover { background: var(--gold); color: #fff; }
+.mia-scope .pd-hero-nav:focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
+.mia-scope .pd-hero-dot {
+  pointer-events: auto; width: 8px; height: 8px; padding: 0; border: 0; border-radius: 999px;
+  background: rgba(255,255,255,.55); cursor: pointer; transition: width .25s, background .25s;
+}
+.mia-scope .pd-hero-dot[data-on="1"] { width: 22px; background: var(--gold); }
+.mia-scope .pd-hero-dot:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+@media (hover: hover) {
+  /* Pointer users get the arrows on hover; touch users swipe and always see them. */
+  .mia-scope .pd-hero-media .pd-hero-nav { opacity: 0; }
+  .mia-scope .pd-hero-media:hover .pd-hero-nav, .mia-scope .pd-hero-nav:focus-visible { opacity: 1; }
+}
+@media (max-width: 560px) {
+  .mia-scope .pd-hero-nav { width: 34px; height: 34px; }
+  .mia-scope .pd-hero-nav[data-side="prev"] { inset-inline-start: 8px; }
+  .mia-scope .pd-hero-nav[data-side="next"] { inset-inline-end: 8px; }
+  .mia-scope .pd-hero-nav svg { width: 14px; height: 14px; }
+  .mia-scope .pd-hero-dots { bottom: 8px !important; gap: 5px !important; }
+  .mia-scope .pd-hero-dot { width: 6px; height: 6px; }
+  .mia-scope .pd-hero-dot[data-on="1"] { width: 16px; }
+  .mia-scope .pd-hero-count { top: 10px !important; inset-inline-end: 10px !important; font-size: 11px !important; padding: 3px 8px !important; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .mia-scope .pd-hero-track { scroll-behavior: auto; }
+  .mia-scope .pd-hero-dot, .mia-scope .pd-hero-nav { transition: none; }
+}
+
 @media (max-width: 980px) {
   .mia-scope #pd-top, .mia-scope #pd-body { grid-template-columns: minmax(0,1fr) !important; }
   /* The donation panel stops being sticky once it is the full width  a

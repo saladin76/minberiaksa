@@ -16,7 +16,7 @@ import {
   str,
 } from "./translation-write";
 
-export const VIDEO_TYPES = ["ACHIEVEMENT", "ENDORSEMENT", "FIELD"] as const;
+export const VIDEO_TYPES = ["ACHIEVEMENT", "ENDORSEMENT", "FIELD", "EVENT"] as const;
 export type VideoTypeValue = (typeof VIDEO_TYPES)[number];
 
 export function isVideoType(v: unknown): v is VideoTypeValue {

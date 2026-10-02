@@ -10,6 +10,7 @@ import TravelBanner from "@/components/minbar/banners/TravelBanner";
 import IbadanBanner from "@/components/minbar/banners/IbadanBanner";
 import { ArrowGlyph } from "@/components/minbar/home/TopSections";
 import DonationPanel from "./DonationPanel";
+import ProjectHeroMedia from "./ProjectHeroMedia";
 import ProjectVideo from "./ProjectVideo";
 import ProjectComments from "./ProjectComments";
 import ProjectUpdatePost from "./ProjectUpdatePost";
@@ -127,18 +128,14 @@ export default function ProjectDetail({ project, updates, gallery, related, dono
 
         <div id="pd-top" style={{ maxWidth: 1240, margin: "0 auto", padding: "0 24px", display: "grid", gridTemplateColumns: "minmax(0,1.32fr) minmax(330px,.68fr)", gap: 34, alignItems: "start" }}>
           <div style={{ display: "grid", gap: 18, minWidth: 0 }}>
-            <span style={{ position: "relative", display: "block", aspectRatio: "16/9", borderRadius: 14, overflow: "hidden", background: "var(--sand)", border: "1px solid var(--border)" }}>
-              {project.image ? (
-                <span role="img" aria-label={project.title} style={{ position: "absolute", inset: 0, display: "block", backgroundImage: `url('${project.image}')`, backgroundSize: "cover", backgroundPosition: "center" }} />
-              ) : null}
-              <span aria-hidden="true" style={{ position: "absolute", inset: 0, background: "linear-gradient(0deg, rgba(16,33,43,.6), rgba(16,33,43,0) 52%)" }} />
+            <ProjectHeroMedia images={project.images.length ? project.images : project.image ? [project.image] : []} title={project.title}>
               {project.regionLabel ? (
                 <span style={{ position: "absolute", insetInlineStart: 16, top: 16, display: "inline-flex", alignItems: "center", gap: 7, padding: "6px 13px", borderRadius: 999, background: "rgba(16,33,43,.78)", color: "#fff", fontSize: 12, fontWeight: 900 }}>
                   <span aria-hidden="true" style={{ width: 5, height: 5, background: "var(--gold)", transform: "rotate(45deg)" }} />
                   {project.regionLabel}
                 </span>
               ) : null}
-            </span>
+            </ProjectHeroMedia>
 
             <div style={{ display: "grid", gap: 12 }}>
               <h1 style={{ margin: 0, fontSize: "clamp(27px,3vw,40px)", lineHeight: 1.32, fontWeight: 900, letterSpacing: "-.01em" }}>{project.title}</h1>

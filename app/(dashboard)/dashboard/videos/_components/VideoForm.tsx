@@ -33,6 +33,7 @@ export const VIDEO_TYPE_LABELS: Record<string, string> = {
   ACHIEVEMENT: 'إنجازاتنا',
   ENDORSEMENT: 'تزكياتنا',
   FIELD: 'من الميدان',
+  EVENT: 'فعالياتنا',
 };
 
 export interface VideoFormValues {
