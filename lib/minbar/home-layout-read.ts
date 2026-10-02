@@ -1,7 +1,7 @@
 import "server-only";
 
 import { prisma } from "@/lib/prisma";
-import { listProjects, type MinbarProject } from "./projects";
+import type { MinbarProject } from "./projects";
 import { listCategories, type MinbarCategory } from "./categories";
 import { listArticles, listNews, type MinbarArticle } from "./posts";
 import { listCourses, listFaqs, listPlaylists, listVideos, type CmsCourse, type CmsFaq, type CmsPlaylist, type CmsVideo } from "./cms";
@@ -60,17 +60,18 @@ const postTime = (a: MinbarArticle) => ({ id: a.id, createdAt: Date.parse(a.crea
 
 /**
  * Every list the homepage renders, already picked and ranked by the layout.
- * `allProjects` is passed in because the page reads it anyway, for the
- * quick-donation select.
+ * The projects are passed in, as the read in flight, because the page reads
+ * them anyway for the quick-donation select.
  */
-export async function resolveHomeLists(locale: string, layout: HomeLayoutConfig, allProjects: MinbarProject[]): Promise<HomeLists> {
+export async function resolveHomeLists(locale: string, layout: HomeLayoutConfig, projectsRead: Promise<MinbarProject[]>): Promise<HomeLists> {
   const { lists } = layout;
   const postTake = (id: "articles" | "news") => {
     const cfg = lists[id];
     return listNeedsFullPool(cfg) ? POST_POOL : Math.max(cfg.limit, 1);
   };
 
-  const [categories, courses, playlists, endorsements, achievements, eventVideos, faqs, articlesPage, news] = await Promise.all([
+  const [allProjects, categories, courses, playlists, endorsements, achievements, eventVideos, faqs, articlesPage, news] = await Promise.all([
+    projectsRead,
     listCategories(locale),
     listCourses(locale),
     listPlaylists(locale),

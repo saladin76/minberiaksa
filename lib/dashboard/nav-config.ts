@@ -69,6 +69,9 @@ export const DASHBOARD_NAV_GROUPS: DashboardNavGroup[] = [
       { key: "siteContent", title: "الأقسام الكبرى", href: "/dashboard/super-categories", icon: "layers", keywords: ["super", "category", "programme", "landing", "أقسام", "برنامج", "عبادا لنا"] },
       { key: "siteContent", title: "شريط القصص", href: "/dashboard/stories", icon: "images", keywords: ["stories", "قصص", "rail", "highlights"] },
       { key: "siteContent", title: "البانرات", href: "/dashboard/urgent-banners", icon: "alertTriangle", keywords: ["urgent", "banner", "banners", "emergency", "طوارئ", "بانر", "بانرات", "عاجل", "شد الرحال", "placement"] },
+      // Arranges the homepage: section order and visibility, and which items each rail
+      // picks and how it ranks them. The items themselves are edited in the pages around it.
+      { key: "siteContent", title: "ترتيب الصفحة الرئيسية", href: "/dashboard/homepage-layout", icon: "layoutTemplate", keywords: ["homepage", "home", "layout", "order", "sections", "arrange", "الرئيسية", "ترتيب", "أقسام", "فعاليات", "تزكيات", "أولوية", "priority"] },
       { key: "siteContent", title: "التبرع السريع", href: "/dashboard/quick-donation", icon: "heartHandshake", keywords: ["quick", "donation", "donate", "amounts", "presets", "سريع", "مبالغ", "مقترحة", "dock"] },
       { key: "siteContent", title: "نصوص الشهادات", href: "/dashboard/certificates", icon: "award", keywords: ["certificate", "certificates", "receipt", "waqf", "thanks", "شهادة", "شهادات", "إيصال", "وقف", "شكر"] },
       { key: "siteContent", title: "الفيديوهات", href: "/dashboard/videos", icon: "video", keywords: ["videos", "فيديو", "achievements", "endorsements", "إنجازات", "تزكيات"] },

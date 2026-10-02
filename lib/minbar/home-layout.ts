@@ -349,6 +349,20 @@ export function applyHomeList<T>(items: T[], config: HomeListConfig, facts: (ite
 }
 
 /**
+ * One candidate as the dashboard lists it (`GET /api/home-layout/options`),
+ * in the list's dashboard order. It carries the same facts the homepage ranks
+ * by, so the dashboard previews a list with `applyHomeList` itself.
+ */
+export interface HomeListOption extends ListItemFacts {
+  title: string;
+  /** A short second line: the category, the locale restriction, the goal… */
+  subtitle?: string;
+  image?: string | null;
+}
+
+export type HomeListOptions = Record<HomeListId, HomeListOption[]>;
+
+/**
  * Whether a list needs more than its default leading slice of candidates.
  * Posts are read newest-first with a `take`; only "the newest N" can be
  * served by reading exactly N.

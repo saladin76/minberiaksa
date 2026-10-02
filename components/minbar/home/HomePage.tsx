@@ -1,24 +1,12 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { Fragment, type ReactNode } from "react";
 import VideoModal, { useVideoModal } from "@/components/minbar/VideoModal";
 import { IMG } from "@/lib/minbar/content/media";
 import type { MinbarProject } from "@/lib/minbar/projects";
-import type { MinbarArticle } from "@/lib/minbar/posts";
-import type { CmsCourse, CmsFaq, CmsPlaylist, CmsVideo } from "@/lib/minbar/cms";
 import type { QuickDonationConfig } from "@/lib/minbar/quick-donation";
-import type { MinbarCategory } from "@/lib/minbar/categories";
-
-/** Everything the homepage shows that an editor publishes, read by the page. */
-export interface HomeContent {
-  courses: CmsCourse[];
-  playlists: CmsPlaylist[];
-  endorsements: CmsVideo[];
-  achievements: CmsVideo[];
-  faqs: CmsFaq[];
-  articles: MinbarArticle[];
-  news: MinbarArticle[];
-}
+import type { HomeSectionId } from "@/lib/minbar/home-layout";
+import type { HomeLists } from "@/lib/minbar/home-layout-read";
 import { Hero, VerseStrip } from "./TopSections";
 import QuickDonateBar from "./QuickDonateBar";
 import { CoursesRail, EventsSection, ProgramsRail, ReelsSection } from "./MediaSections";
@@ -31,34 +19,60 @@ import IbadanBanner from "@/components/minbar/banners/IbadanBanner";
 import ZakatBanner from "@/components/minbar/banners/ZakatBanner";
 
 /**
- * The homepage, assembled in the locked section order from
- * `Minbar/الصفحة الرئيسية.dc.html`. The order is part of the approved design 
- * `CLAUDE.md` forbids reordering or dropping sections.
+ * The homepage, from `Minbar/الصفحة الرئيسية.dc.html`.
+ *
+ * The hero and the quick-donation bar always open the page  the bar is sticky
+ * "right under the hero" by design. Every section after them renders in the
+ * order the dashboard's homepage layout sets (`/dashboard/homepage-layout`),
+ * hidden ones left out; that layout's defaults are the approved design's order.
+ * The lists arrive already picked and ranked by the same layout.
  *
  * This is a client component because the video overlay is shared state: the
  * hero, the two reel rails and the courses rail all open into the same player,
- * so one owner has to hold it. The project data is fetched on the server and
- * passed down.
+ * so one owner has to hold it. The data is fetched on the server and passed down.
  */
 export default function HomePage({
-  projects,
-  categories,
+  sections,
+  lists,
   quick,
   banners,
-  content,
   signedIn,
 }: {
-  projects: MinbarProject[];
-  /** Every active category, for the section under the urgent rail. */
-  categories: MinbarCategory[];
+  /** The visible sections after the quick-donation bar, in display order. */
+  sections: HomeSectionId[];
+  lists: HomeLists;
   /** The quick-donation bar as the dashboard configured it, with every project it may list. */
   quick: { config: QuickDonationConfig; projects: MinbarProject[] };
   /** Dashboard banners, already rendered on the server, one node per slot. */
   banners: { top: ReactNode; middle: ReactNode; bottom: ReactNode };
-  content: HomeContent;
   signedIn: boolean;
 }) {
   const video = useVideoModal();
+
+  const render: Record<HomeSectionId, () => ReactNode> = {
+    verse: () => <VerseStrip />,
+    bannersTop: () => banners.top,
+    events: () => <EventsSection events={lists.events} />,
+    reels: () => <ReelsSection onPlay={video.open} endorsements={lists.endorsements} achievements={lists.achievements} />,
+    path: () => <PathSection />,
+    programs: () => <ProgramsRail playlists={lists.programs} />,
+    courses: () => <CoursesRail onPlay={video.open} courses={lists.courses} />,
+    impact: () => <ImpactSection />,
+    bannersMiddle: () => banners.middle,
+    travel: () => <TravelBanner />,
+    ibadan: () => <IbadanBanner />,
+    urgent: () => <UrgentProjectsSection projects={lists.projects} />,
+    categories: () => <CategoriesSection categories={lists.categories} />,
+    zakat: () => <ZakatBanner />,
+    waqf: () => <WaqfSection />,
+    recurring: () => <RecurringSection />,
+    regions: () => <RegionCards images={{ quds: IMG.quds, aqsa: IMG.aqsa, relief: IMG.parcels }} />,
+    account: () => <AccountSection signedIn={signedIn} />,
+    bannersBottom: () => banners.bottom,
+    articles: () => <ArticlesSection articles={lists.articles} />,
+    news: () => <NewsSection news={lists.news} />,
+    faqs: () => <FaqSection faqs={lists.faqs} />,
+  };
 
   return (
     <div style={{ position: "relative" }}>
@@ -81,30 +95,12 @@ export default function HomePage({
       <Hero onPlayIntro={video.open} />
       {/* Sticky under the header from here on  the design places it right under the hero. */}
       <QuickDonateBar config={quick.config} projects={quick.projects} />
-      <VerseStrip />
-      {banners.top}
-      <EventsSection />
-      <ReelsSection onPlay={video.open} endorsements={content.endorsements} achievements={content.achievements} />
-      <PathSection />
-      <ProgramsRail playlists={content.playlists} />
-      <CoursesRail onPlay={video.open} courses={content.courses} />
-      <ImpactSection />
-      {banners.middle}
-      <TravelBanner />
-      <IbadanBanner />
-      <UrgentProjectsSection projects={projects} />
-      <CategoriesSection categories={categories} />
-      <ZakatBanner />
-      <WaqfSection />
-      <RecurringSection />
-      <RegionCards images={{ quds: IMG.quds, aqsa: IMG.aqsa, relief: IMG.parcels }} />
-      <AccountSection signedIn={signedIn} />
-      {banners.bottom}
-      <ArticlesSection articles={content.articles} />
-      <NewsSection news={content.news} />
-      <FaqSection faqs={content.faqs} />
+      {sections.map((id) => (
+        <Fragment key={id}>{render[id]()}</Fragment>
+      ))}
 
       <VideoModal embed={video.embed} onClose={video.close} />
     </div>
   );
 }
+

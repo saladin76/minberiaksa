@@ -4,10 +4,8 @@ import { LOCALE_SEO, buildPageMetadata, SITE_URL } from "@/lib/seo";
 import type { Locale } from "@/lib/seo";
 import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 import { listProjects } from "@/lib/minbar/projects";
-import { listCategories } from "@/lib/minbar/categories";
-import { listArticles, listNews } from "@/lib/minbar/posts";
-import { listCourses, listFaqs, listPlaylists, listVideos } from "@/lib/minbar/cms";
 import { readQuickDonation } from "@/lib/minbar/quick-donation-read";
+import { readHomeLayout, resolveHomeLists, visibleSections } from "@/lib/minbar/home-layout-read";
 import MinbarMessages from "@/components/minbar/MinbarMessages";
 import HomePage from "@/components/minbar/home/HomePage";
 import PageBanners from "@/components/minbar/banners/PageBanners";
@@ -47,23 +45,19 @@ export default async function Home({ params }: Props) {
   const { locale } = await params;
 
   // Every section's content is read here, in parallel, so the whole homepage is
-  // in the first HTML response rather than filled in by client fetches  the
-  // rails show a leading slice; each full set lives on its own page.
-  // The urgent rail shows a leading slice of projects; the quick-donation
-  // select lists whatever the dashboard allows, which may be every project.
-  const [projects, categories, allProjects, quick, session, courses, playlists, endorsements, achievements, faqs, articlesPage, news] = await Promise.all([
-    listProjects(locale, 12),
-    listCategories(locale),
-    listProjects(locale),
+  // in the first HTML response rather than filled in by client fetches. Which
+  // sections show, in what order, and which items each list picks are the
+  // dashboard's homepage layout (`lib/minbar/home-layout.ts`); its defaults are
+  // the approved design. The quick-donation select lists whatever its own
+  // settings allow, which may be every project.
+  const projectsRead = listProjects(locale);
+  const layoutRead = readHomeLayout();
+  const [allProjects, quick, session, layout, lists] = await Promise.all([
+    projectsRead,
     readQuickDonation(),
     getServerSession(authOptions),
-    listCourses(locale),
-    listPlaylists(locale),
-    listVideos(locale, "ENDORSEMENT"),
-    listVideos(locale, "ACHIEVEMENT"),
-    listFaqs(locale),
-    listArticles({ locale, take: 4 }),
-    listNews(locale, 4),
+    layoutRead,
+    layoutRead.then((l) => resolveHomeLists(locale, l, projectsRead)),
   ]);
 
   const organisationSchema = {
@@ -86,15 +80,14 @@ export default async function Home({ params }: Props) {
       />
       <MinbarMessages locale={locale} namespaces={NAMESPACES}>
         <HomePage
-          projects={projects}
-          categories={categories}
+          sections={visibleSections(layout)}
+          lists={lists}
           quick={{ config: quick, projects: allProjects }}
           banners={{
             top: <PageBanners locale={locale} page="home" slot="top" />,
             middle: <PageBanners locale={locale} page="home" slot="middle" />,
             bottom: <PageBanners locale={locale} page="home" slot="bottom" />,
           }}
-          content={{ courses, playlists, endorsements, achievements, faqs, articles: articlesPage.items, news }}
           signedIn={!!session?.user}
         />
       </MinbarMessages>

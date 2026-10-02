@@ -134,6 +134,7 @@ const PATH_RULES: { prefix: string; key: DashboardPermissionKey }[] = [
   { prefix: "/dashboard/bank-accounts", key: "bankAccounts" },
   { prefix: "/dashboard/urgent-banners", key: "siteContent" },
   { prefix: "/dashboard/quick-donation", key: "siteContent" },
+  { prefix: "/dashboard/homepage-layout", key: "siteContent" },
   { prefix: "/dashboard/certificates", key: "siteContent" },
   { prefix: "/dashboard/pixels", key: "pixels" },
   { prefix: "/dashboard/donations", key: "revenue" },

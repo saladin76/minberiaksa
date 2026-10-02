@@ -7,6 +7,8 @@ import { miaPath } from "@/lib/minbar/routes";
 import { youtubeEmbed, youtubeThumb } from "@/lib/minbar/content/media";
 import { CONFERENCE_2_EMBED, CONFERENCE_3_EMBED, khatibEmbed } from "@/lib/minbar/content/catalog";
 import type { CmsCourse, CmsPlaylist, CmsVideo } from "@/lib/minbar/cms";
+import type { HomeEvent } from "@/lib/minbar/home-layout-read";
+import type { BuiltinEventId } from "@/lib/minbar/home-layout";
 import { ArrowGlyph } from "./TopSections";
 import ViewAllLink from "./ViewAllLink";
 
@@ -22,17 +24,22 @@ import ViewAllLink from "./ViewAllLink";
  */
 
 /* ── Events ─────────────────────────────────────────────────────────────────
- * Three embedded recordings of the foundation's conferences. The Turkish
- * edition plays the Turkish recording of the preacher's address. */
-export function EventsSection() {
+ * Embedded recordings of the foundation's conferences and events, as the
+ * homepage layout picks them: the three built-in conference recordings (the
+ * default set) and any video filed under «فعالياتنا». The Turkish edition
+ * plays the Turkish recording of the preacher's address. */
+export function EventsSection({ events }: { events: HomeEvent[] }) {
   const locale = useLocale();
   const t = useTranslations("homepage");
 
-  const cards = [
-    { src: khatibEmbed(locale), title: t("eventKhatibTitle") },
-    { src: CONFERENCE_3_EMBED, title: t("eventConf3Title") },
-    { src: CONFERENCE_2_EMBED, title: t("eventConf2Title") },
-  ];
+  if (events.length === 0) return null;
+
+  const builtin: Record<BuiltinEventId, { src: string; title: string }> = {
+    "builtin:khatib": { src: khatibEmbed(locale), title: t("eventKhatibTitle") },
+    "builtin:conf3": { src: CONFERENCE_3_EMBED, title: t("eventConf3Title") },
+    "builtin:conf2": { src: CONFERENCE_2_EMBED, title: t("eventConf2Title") },
+  };
+  const cards = events.map((event) => ({ id: event.id, ...(event.builtin ? builtin[event.builtin] : { src: event.src, title: event.title }) }));
 
   return (
     <section id="events" style={{ position: "relative", zIndex: 1, background: "var(--ivory)", padding: "48px 0", borderTop: "1px solid var(--border)", overflow: "hidden" }}>
@@ -45,7 +52,7 @@ export function EventsSection() {
         <div id="events-cards" style={{ display: "grid", gridTemplateColumns: "repeat(3,minmax(0,1fr))", gap: 20, alignItems: "stretch" }}>
           {cards.map((card) => (
             <div
-              key={card.src}
+              key={card.id}
               className="mia-lift"
               style={{ display: "grid", gridTemplateRows: "auto 1fr", background: "#fff", border: "1px solid var(--border)", borderRadius: 12, overflow: "hidden", boxShadow: "0 14px 40px rgba(16,33,43,.08)" }}
             >
@@ -190,10 +197,6 @@ function ReelRail({
   );
 }
 
-/** How many of each reel the homepage shows; the full set lives on its own page. */
-const HOME_ENDORSEMENTS = 8;
-const HOME_ACHIEVEMENTS = 5;
-
 export function ReelsSection({
   onPlay,
   endorsements,
@@ -211,26 +214,30 @@ export function ReelsSection({
   return (
     <section style={{ position: "relative", zIndex: 1, background: "linear-gradient(to left, rgba(247,242,234,.14), rgba(247,242,234,.42))", borderTop: "1px solid var(--border)", padding: "48px 0", overflow: "hidden" }}>
       <div style={{ position: "relative", maxWidth: 1240, margin: "0 auto", padding: "0 24px", display: "grid", gridTemplateColumns: "minmax(0,1fr)", gap: 46 }}>
-        <ReelRail
-          id="reels-a"
-          title={t("ourTestimonials")}
-          viewAllLabel={t("endViewAll")}
-          viewAllHref={miaPath("endorsementVideos", locale)}
-          videos={endorsements.slice(0, HOME_ENDORSEMENTS)}
-          showMeta
-          watchLabel={t("watch")}
-          onPlay={onPlay}
-        />
-        <ReelRail
-          id="reels-b"
-          title={t("ourAchievements")}
-          viewAllLabel={t("achViewAll")}
-          viewAllHref={miaPath("achievementVideos", locale)}
-          videos={achievements.slice(0, HOME_ACHIEVEMENTS)}
-          showMeta={false}
-          watchLabel={t("watchImplementation")}
-          onPlay={onPlay}
-        />
+        {endorsements.length > 0 && (
+          <ReelRail
+            id="reels-a"
+            title={t("ourTestimonials")}
+            viewAllLabel={t("endViewAll")}
+            viewAllHref={miaPath("endorsementVideos", locale)}
+            videos={endorsements}
+            showMeta
+            watchLabel={t("watch")}
+            onPlay={onPlay}
+          />
+        )}
+        {achievements.length > 0 && (
+          <ReelRail
+            id="reels-b"
+            title={t("ourAchievements")}
+            viewAllLabel={t("achViewAll")}
+            viewAllHref={miaPath("achievementVideos", locale)}
+            videos={achievements}
+            showMeta={false}
+            watchLabel={t("watchImplementation")}
+            onPlay={onPlay}
+          />
+        )}
       </div>
     </section>
   );
