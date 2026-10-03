@@ -157,17 +157,18 @@ export async function ensureMetaTemplate(
     String(row.language ?? "").toLowerCase() === input.language.toLowerCase()
   );
   if (found) {
-    const stripExamples = (value: unknown): unknown => {
-      if (Array.isArray(value)) return value.map(stripExamples);
+    const canonicalize = (value: unknown): unknown => {
+      if (Array.isArray(value)) return value.map(canonicalize);
       if (!value || typeof value !== "object") return value;
       const out: Record<string, unknown> = {};
-      for (const [key, val] of Object.entries(value as Record<string, unknown>)) {
-        if (key === "example") continue;
-        out[key] = stripExamples(val);
+      for (const [key, val] of Object.entries(value as Record<string, unknown>).sort(([a], [b]) => a.localeCompare(b))) {
+        /* Examples and provider-generated metadata are not part of the approved message structure. */
+        if (key === "example" || key === "quality_score" || key === "status") continue;
+        out[key] = canonicalize(val);
       }
       return out;
     };
-    const normalize = (value: unknown) => JSON.stringify(stripExamples(value));
+    const normalize = (value: unknown) => JSON.stringify(canonicalize(value));
     const remoteComponents = Array.isArray(found.components) ? found.components : [];
     if (
       String(found.category ?? "").toUpperCase() !== input.category ||
