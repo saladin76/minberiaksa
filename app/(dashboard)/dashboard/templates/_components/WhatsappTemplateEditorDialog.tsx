@@ -63,6 +63,8 @@ type LocaleDraft = {
 type HeaderDraft = {
   type: HeaderType;
   exampleHandle?: string | null;
+  mediaUrl?: string | null;
+  mediaPublicId?: string | null;
   fileName?: string | null;
   mimeType?: string | null;
   latitude?: number | null;
@@ -184,6 +186,8 @@ export function WhatsappTemplateEditorDialog({ id, open, onOpenChange }: Props) 
         setHeader({
           type: (template?.header?.type as HeaderType) ?? "NONE",
           exampleHandle: template?.header?.exampleHandle ?? null,
+          mediaUrl: template?.header?.mediaUrl ?? null,
+          mediaPublicId: template?.header?.mediaPublicId ?? null,
           fileName: template?.header?.fileName ?? null,
           mimeType: template?.header?.mimeType ?? null,
           latitude: template?.header?.latitude ?? null,
@@ -254,12 +258,16 @@ export function WhatsappTemplateEditorDialog({ id, open, onOpenChange }: Props) 
       form.set("file", file);
       const response = await axios.post("/api/templates/whatsapp/media-sample", form);
       const handle = response.data?.handle as string | undefined;
-      if (!handle) throw new Error("missing handle");
+      const publicUrl = response.data?.url as string | undefined;
+      const publicId = response.data?.publicId as string | undefined;
+      if (!handle || !publicUrl) throw new Error("missing media handles");
       if (mediaPreview?.startsWith("blob:")) URL.revokeObjectURL(mediaPreview);
       setMediaPreview(URL.createObjectURL(file));
       setHeader((previous) => ({
         ...previous,
         exampleHandle: handle,
+        mediaUrl: publicUrl,
+        mediaPublicId: publicId ?? null,
         fileName: file.name,
         mimeType: file.type,
       }));
@@ -562,7 +570,13 @@ export function WhatsappTemplateEditorDialog({ id, open, onOpenChange }: Props) 
                         key={option.value}
                         type="button"
                         onClick={() => {
-                          setHeader((previous) => ({ ...previous, type: option.value, ...(option.value === "NONE" ? { exampleHandle: null } : {}) }));
+                          setHeader((previous) => ({
+                            ...previous,
+                            type: option.value,
+                            ...(option.value === "NONE"
+                              ? { exampleHandle: null, mediaUrl: null, mediaPublicId: null, fileName: null, mimeType: null }
+                              : {}),
+                          }));
                           setInsertTarget(option.value === "TEXT" ? "header" : "body");
                         }}
                         className={cn(
