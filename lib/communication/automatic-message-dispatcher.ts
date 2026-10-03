@@ -175,7 +175,7 @@ export async function sendAutomaticWhatsappMessage(
     /** Asset URL for a template whose Meta header is IMAGE/VIDEO/DOCUMENT. */
     headerMediaUrl?: string | null;
     /** Resolved Meta sender (must have a phoneNumberId to actually send). */
-    sender: { id?: string | null; phoneNumberId: string | null } | null;
+    sender: { id?: string | null; phoneNumberId: string | null; businessAccountId?: string | null } | null;
   }
 ): Promise<AutomaticResult> {
   const base = {
@@ -347,13 +347,14 @@ export type MetaTemplateMapping = {
  */
 export async function resolveMetaTemplateMapping(
   tpl: { id?: string | null; provider?: string | null; name?: string | null; variables?: unknown },
-  locale: string
+  locale: string,
+  businessAccountId?: string | null,
 ): Promise<MetaTemplateMapping | null> {
   const provider = (tpl.provider ?? "").toUpperCase();
   if (provider !== "META" && provider !== "META_WHATSAPP") return null;
   if (!tpl.id) return null;
   const { getTemplateReadiness } = await import("./whatsapp-template-sync");
-  const readiness = await getTemplateReadiness(tpl.id, locale);
+  const readiness = await getTemplateReadiness(tpl.id, locale, businessAccountId);
   if (!readiness.ready || !readiness.providerTemplateName || !readiness.languageCode) return null;
   return {
     name: readiness.providerTemplateName,
