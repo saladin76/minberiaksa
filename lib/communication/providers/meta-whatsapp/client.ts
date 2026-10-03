@@ -51,6 +51,94 @@ export type MetaSenderVerification =
   | { ok: true; displayPhoneNumber: string | null; qualityRating: string | null; verifiedName: string | null }
   | { ok: false; reason: string; detail?: string };
 
+
+export type MetaBusinessPortfolioAsset = {
+  id: string;
+  name: string | null;
+  relationship: "OWNED" | "CLIENT";
+};
+
+export type MetaBusinessPortfolioAssetsResult =
+  | { ok: true; businessId: string; businessName: string | null; wabas: MetaBusinessPortfolioAsset[] }
+  | { ok: false; reason: string; detail?: string };
+
+async function graphRows(config: MetaGraphConfig, path: string): Promise<GraphOk | GraphErr> {
+  return graphFetch(config, path, { method: "GET" });
+}
+
+/**
+ * Resolve the root Business Portfolio and every WhatsApp Business Account it owns or has been
+ * granted as a client asset. This is the authoritative boundary for this installation.
+ */
+export async function listBusinessPortfolioWabas(runtime?: MetaRuntimeConfig): Promise<MetaBusinessPortfolioAssetsResult> {
+  const resolved = runtime ?? await getActiveMetaWhatsappRuntimeConfig();
+  if (!resolved.configured) return { ok: false, reason: metaRuntimeFailure(resolved) };
+  const config = resolved.values;
+  const businessId = config.businessPortfolioId?.trim();
+  if (!businessId) return { ok: false, reason: "META_BUSINESS_PORTFOLIO_NOT_CONFIGURED" };
+
+  const business = await graphRows(config, `${businessId}?fields=id,name`);
+  if (!business.ok) {
+    return { ok: false, reason: "META_BUSINESS_PORTFOLIO_UNAVAILABLE", detail: business.detail };
+  }
+  const businessRow = business.data && typeof business.data === "object"
+    ? business.data as Record<string, unknown>
+    : {};
+
+  const owned = await graphRows(config, `${businessId}/owned_whatsapp_business_accounts?fields=id,name&limit=200`);
+  if (!owned.ok) {
+    return { ok: false, reason: "META_BUSINESS_PORTFOLIO_UNAVAILABLE", detail: owned.detail };
+  }
+
+  /*
+   * Client WABAs are optional. Some portfolios have none and some tokens cannot enumerate that edge
+   * even though owned assets are valid, so a failure here must not hide otherwise healthy owned WABAs.
+   */
+  const client = await graphRows(config, `${businessId}/client_whatsapp_business_accounts?fields=id,name&limit=200`);
+  const extract = (payload: unknown, relationship: "OWNED" | "CLIENT"): MetaBusinessPortfolioAsset[] => {
+    const rows = Array.isArray((payload as { data?: unknown[] } | null)?.data)
+      ? ((payload as { data: unknown[] }).data as Array<Record<string, unknown>>)
+      : [];
+    return rows
+      .map((row) => ({
+        id: typeof row.id === "string" ? row.id : String(row.id ?? ""),
+        name: typeof row.name === "string" ? row.name : null,
+        relationship,
+      }))
+      .filter((row) => /^\d+$/.test(row.id));
+  };
+
+  const merged = new Map<string, MetaBusinessPortfolioAsset>();
+  for (const row of extract(owned.data, "OWNED")) merged.set(row.id, row);
+  if (client.ok) {
+    for (const row of extract(client.data, "CLIENT")) if (!merged.has(row.id)) merged.set(row.id, row);
+  }
+
+  return {
+    ok: true,
+    businessId,
+    businessName: typeof businessRow.name === "string" ? businessRow.name : null,
+    wabas: [...merged.values()],
+  };
+}
+
+export async function verifyWabaInBusinessPortfolio(
+  businessAccountId: string,
+  runtime?: MetaRuntimeConfig,
+): Promise<{ ok: true; asset: MetaBusinessPortfolioAsset } | { ok: false; reason: string; detail?: string }> {
+  const assets = await listBusinessPortfolioWabas(runtime);
+  if (!assets.ok) return assets;
+  const asset = assets.wabas.find((row) => row.id === businessAccountId);
+  if (!asset) {
+    return {
+      ok: false,
+      reason: "META_WABA_NOT_IN_BUSINESS_PORTFOLIO",
+      detail: `WABA ${businessAccountId} is not owned/shared by Business Portfolio ${assets.businessId}.`,
+    };
+  }
+  return { ok: true, asset };
+}
+
 /**
  * Verify that a Phone Number ID is both accessible with the active Meta connection and owned by the
  * WABA configured on the sender. This closes the gap where a syntactically valid numeric ID could be
