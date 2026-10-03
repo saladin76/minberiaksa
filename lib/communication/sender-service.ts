@@ -3,7 +3,8 @@ import { writeAuditLog } from "@/lib/audit-log";
 import type { CommunicationSender } from "@prisma/client";
 import type { CommunicationSenderConfig } from "./sender-router";
 import type { CommunicationChannel } from "./communication-types";
-import { verifySenderOwnership } from "./providers/meta-whatsapp/client";
+import { ensureWabaWebhookSubscription, verifySenderOwnership, verifyWabaInBusinessPortfolio } from "./providers/meta-whatsapp/client";
+import { reconcilePublishedTemplatesToActiveWabas } from "./meta-template-publisher";
 import {
   isCommunicationChannel,
   isCommunicationProvider,
@@ -256,6 +257,33 @@ export async function verifyWhatsappSender(id: string, actor?: Actor): Promise<S
   }
 
   const checkedAt = new Date();
+
+  const portfolio = await verifyWabaInBusinessPortfolio(sender.businessAccountId);
+  if (!portfolio.ok) {
+    const row = await prisma.communicationSender.update({
+      where: { id },
+      data: {
+        status: portfolio.reason === "META_BUSINESS_PORTFOLIO_NOT_CONFIGURED" ? "NOT_CONFIGURED" : "NEEDS_ATTENTION",
+        enabled: false,
+        lastHealthCheckAt: checkedAt,
+        lastError: [portfolio.reason, portfolio.detail].filter(Boolean).join(" · ").slice(0, 500),
+      },
+    });
+    await writeAuditLog({
+      actorId: actor?.actorId ?? undefined,
+      actorName: actor?.actorName ?? undefined,
+      actorRole: actor?.actorRole ?? "ADMIN",
+      action: "communication.sender.verify.failed",
+      messageAr: `فشل ربط WABA بحساب الأعمال الرئيسي: ${sender.name}`,
+      messageEn: `WABA is not linked to the root Business Portfolio: ${sender.name}`,
+      entityType: "CommunicationSender",
+      entityId: id,
+      metadata: { reason: portfolio.reason, externalCall: true },
+      stream: "TEAM",
+    });
+    return { ok: false, status: 422, error: row.lastError ?? portfolio.reason };
+  }
+
   const verification = await verifySenderOwnership(sender.phoneNumberId, sender.businessAccountId);
   if (!verification.ok) {
     const status = verification.reason === "META_WHATSAPP_NOT_CONFIGURED" ? "NOT_CONFIGURED" : "NEEDS_ATTENTION";
@@ -283,6 +311,32 @@ export async function verifyWhatsappSender(id: string, actor?: Actor): Promise<S
     return { ok: false, status: verification.reason === "META_WHATSAPP_NOT_CONFIGURED" ? 409 : 422, error: row.lastError ?? verification.reason };
   }
 
+  const subscription = await ensureWabaWebhookSubscription(sender.businessAccountId);
+  if (!subscription.ok) {
+    const row = await prisma.communicationSender.update({
+      where: { id },
+      data: {
+        status: "NEEDS_ATTENTION",
+        enabled: false,
+        lastHealthCheckAt: checkedAt,
+        lastError: ["WABA_WEBHOOK_SUBSCRIPTION_FAILED", subscription.reason, subscription.detail].filter(Boolean).join(" · ").slice(0, 500),
+      },
+    });
+    await writeAuditLog({
+      actorId: actor?.actorId ?? undefined,
+      actorName: actor?.actorName ?? undefined,
+      actorRole: actor?.actorRole ?? "ADMIN",
+      action: "communication.sender.verify.failed",
+      messageAr: `تم التحقق من الرقم لكن تعذر اشتراك WABA في Webhook: ${sender.name}`,
+      messageEn: `Phone verified but WABA webhook subscription failed: ${sender.name}`,
+      entityType: "CommunicationSender",
+      entityId: id,
+      metadata: { reason: subscription.reason, externalCall: true },
+      stream: "TEAM",
+    });
+    return { ok: false, status: 422, error: row.lastError ?? subscription.reason };
+  }
+
   const row = await prisma.communicationSender.update({
     where: { id },
     data: {
@@ -304,9 +358,17 @@ export async function verifyWhatsappSender(id: string, actor?: Actor): Promise<S
     messageEn: `WhatsApp sender verified with Meta: ${row.name}`,
     entityType: "CommunicationSender",
     entityId: id,
-    metadata: { qualityRating: row.qualityRating, externalCall: true },
+    metadata: { qualityRating: row.qualityRating, businessPortfolioVerified: true, wabaRelationship: portfolio.asset.relationship, webhookSubscribed: true, subscriptionAppIds: subscription.appIds, externalCall: true },
     stream: "TEAM",
   });
+
+  await reconcilePublishedTemplatesToActiveWabas(actor).catch((error) => {
+    console.error("WhatsApp template reconciliation after sender activation failed", {
+      senderId: row.id,
+      error: error instanceof Error ? error.message : String(error),
+    });
+  });
+
   return { ok: true, data: row };
 }
 

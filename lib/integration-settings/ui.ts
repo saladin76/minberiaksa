@@ -45,6 +45,8 @@ export const PROVIDER_UI_LABEL: Record<IntegrationProvider, string> = {
  */
 export const FIELD_HELP: Record<string, string> = {
   ACCESS_TOKEN: "من Meta Business Manager ضمن إعدادات WhatsApp API ورمز الوصول الدائم.",
+  APP_ID: "من Meta for Developers > Settings > Basic. مطلوب لرفع عينات الصور/الفيديو/المستندات عبر Resumable Upload API.",
+  BUSINESS_PORTFOLIO_ID: "معرّف Business Portfolio الرئيسي في Meta Business Suite. يستخدم لاكتشاف WABA المملوكة/المشاركة والتأكد أن كل مُرسِل تابع للحساب الرئيسي.",
   APP_SECRET: "من إعدادات تطبيق Meta ضمن Basic Settings. يُستخدم للتحقق من App Secret Proof وتوقيع Webhook.",
   WEBHOOK_VERIFY_TOKEN: "قيمة تختارها داخل النظام، ثم تدخل القيمة نفسها عند إعداد Webhook في Meta.",
   BUSINESS_ACCOUNT_ID: "معرّف WhatsApp Business Account الظاهر في إعدادات WhatsApp Manager.",
@@ -72,6 +74,8 @@ export const ERROR_MESSAGES_AR: Record<string, string> = {
   META_UNAUTHORIZED: "رمز الوصول غير صالح أو انتهت صلاحيته.",
   META_APP_SECRET_MISMATCH: "App Secret لا يتوافق مع Access Token.",
   META_BUSINESS_ACCOUNT_UNAVAILABLE: "تعذر الوصول إلى حساب أعمال Meta.",
+  META_BUSINESS_PORTFOLIO_UNAVAILABLE: "تعذر الوصول إلى حساب الأعمال الرئيسي في Meta. تحقق من Business Portfolio ID وصلاحية business_management.",
+  META_WABA_NOT_IN_BUSINESS_PORTFOLIO: "حساب WABA المحدد غير موجود ضمن حساب الأعمال الرئيسي أو الحسابات المشاركة معه.",
   META_PHONE_NUMBER_MISMATCH: "رقم واتساب المحدد لا يتبع حساب الأعمال.",
   META_PHONE_NUMBER_UNAVAILABLE: "تعذر الوصول إلى رقم واتساب المحدد.",
   ELASTIC_EMAIL_UNAUTHORIZED: "مفتاح Elastic Email غير صالح أو انتهت صلاحيته.",

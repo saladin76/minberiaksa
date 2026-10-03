@@ -45,13 +45,16 @@ export type WebhookProcessSummary = {
 
 type RecordOutcome = "INSERTED" | "DUPLICATE" | "ERROR";
 
-async function senderIdForPhoneNumber(phoneNumberId: string | null): Promise<string | null> {
-  if (!phoneNumberId) return null;
+async function senderIdForPhoneNumber(
+  phoneNumberId: string | null,
+): Promise<{ ok: true; senderId: string | null } | { ok: false }> {
+  if (!phoneNumberId) return { ok: true, senderId: null };
   try {
     const s = await prisma.communicationSender.findFirst({ where: { phoneNumberId }, select: { id: true } });
-    return s?.id ?? null;
-  } catch {
-    return null;
+    return { ok: true, senderId: s?.id ?? null };
+  } catch (error) {
+    console.error("sender lookup failed for WhatsApp webhook", { phoneNumberId, error });
+    return { ok: false };
   }
 }
 
@@ -112,12 +115,28 @@ export async function processWhatsappEvents(events: NormalizedWebhookEvent[]): P
   }
 
   for (const event of events) {
-    const senderId = await senderIdForPhoneNumber(event.phoneNumberId);
+    const senderLookup = await senderIdForPhoneNumber(event.phoneNumberId);
+    if (!senderLookup.ok) {
+      summary.persistenceErrors += 1;
+      continue;
+    }
+    const senderId = senderLookup.senderId;
 
     if (event.kind === "status") {
-      const delivery = await prisma.communicationDelivery
-        .findFirst({ where: { providerMessageId: event.providerMessageId }, select: { id: true, status: true } })
-        .catch(() => null);
+      let delivery: { id: string; status: string } | null = null;
+      try {
+        delivery = await prisma.communicationDelivery.findFirst({
+          where: { providerMessageId: event.providerMessageId },
+          select: { id: true, status: true },
+        });
+      } catch (error) {
+        console.error("delivery lookup failed for WhatsApp status webhook", {
+          providerMessageId: event.providerMessageId,
+          error,
+        });
+        summary.persistenceErrors += 1;
+        continue;
+      }
 
       const outcome = await recordEvent({
         deliveryId: delivery?.id ?? null,
@@ -136,9 +155,14 @@ export async function processWhatsappEvents(events: NormalizedWebhookEvent[]): P
           error: event.errorMessage,
         },
       });
-      if (outcome === "DUPLICATE") { summary.duplicates += 1; continue; }
-      if (outcome === "ERROR") { summary.persistenceErrors += 1; continue; }
-      summary.processed += 1;
+      if (outcome === "DUPLICATE") {
+        summary.duplicates += 1;
+      } else if (outcome === "ERROR") {
+        summary.persistenceErrors += 1;
+        continue;
+      } else {
+        summary.processed += 1;
+      }
 
       if (delivery) {
         /* Out-of-order callbacks are normal; a late `sent` must not undo a `read`. The event itself
@@ -152,6 +176,7 @@ export async function processWhatsappEvents(events: NormalizedWebhookEvent[]): P
           : { providerMessageId: event.providerMessageId };
         const res = await markDeliveryStatus(delivery.id, event.status, patch);
         if (res.ok) summary.deliveryUpdates += 1;
+        else summary.persistenceErrors += 1;
       }
       continue;
     }
@@ -181,12 +206,24 @@ export async function processWhatsappEvents(events: NormalizedWebhookEvent[]): P
         buttonReply: event.buttonReply ?? null,
       },
     });
-    if (outcome === "DUPLICATE") { summary.duplicates += 1; continue; }
-    if (outcome === "ERROR") { summary.persistenceErrors += 1; continue; }
-    summary.processed += 1;
-    summary.inbound += 1;
+    if (outcome === "DUPLICATE") {
+      summary.duplicates += 1;
+    } else if (outcome === "ERROR") {
+      summary.persistenceErrors += 1;
+      continue;
+    } else {
+      summary.processed += 1;
+      summary.inbound += 1;
+    }
 
-    await attributeReply(event.from, senderId, summary);
+    /*
+     * If Meta identifies a concrete business phone but we do not have a matching sender row, do not
+     * fall back to a cross-sender reply lookup. Archiving the inbound event is still useful, while
+     * attribution waits until the sender configuration is corrected.
+     */
+    if (event.phoneNumberId && !senderId) continue;
+    const attributed = await attributeReply(event.from, senderId, summary);
+    if (!attributed) summary.persistenceErrors += 1;
   }
 
   return summary;
@@ -201,12 +238,14 @@ export async function processWhatsappEvents(events: NormalizedWebhookEvent[]): P
  * dropped rather than the attribution  a single-sender deployment that predates sender rows still
  * gets its replies matched.
  */
-async function attributeReply(from: string | null, senderId: string | null, summary: WebhookProcessSummary): Promise<void> {
-  if (!from) return;
+async function attributeReply(from: string | null, senderId: string | null, summary: WebhookProcessSummary): Promise<boolean> {
+  if (!from) return true;
   const variants = phoneMatchVariants(from);
-  if (!variants.length) return;
-  const lastOutbound = await prisma.communicationDelivery
-    .findFirst({
+  if (!variants.length) return true;
+
+  let lastOutbound: { id: string; status: string; providerMessageId: string | null } | null = null;
+  try {
+    lastOutbound = await prisma.communicationDelivery.findFirst({
       where: {
         channel: "WHATSAPP",
         recipientPhone: { in: variants },
@@ -216,10 +255,18 @@ async function attributeReply(from: string | null, senderId: string | null, summ
       },
       orderBy: { createdAt: "desc" },
       select: { id: true, status: true, providerMessageId: true },
-    })
-    .catch(() => null);
-  if (!lastOutbound?.providerMessageId) return;
-  if (!shouldApplyDeliveryStatus(lastOutbound.status, "REPLIED")) return;
+    });
+  } catch (error) {
+    console.error("WhatsApp reply attribution lookup failed", { from, senderId, error });
+    return false;
+  }
+
+  if (!lastOutbound?.providerMessageId) return true;
+  if (!shouldApplyDeliveryStatus(lastOutbound.status, "REPLIED")) return true;
   const res = await markDeliveryStatus(lastOutbound.id, "REPLIED", { providerMessageId: lastOutbound.providerMessageId });
-  if (res.ok) summary.deliveryUpdates += 1;
+  if (res.ok) {
+    summary.deliveryUpdates += 1;
+    return true;
+  }
+  return false;
 }

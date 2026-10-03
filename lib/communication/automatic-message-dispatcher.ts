@@ -175,7 +175,7 @@ export async function sendAutomaticWhatsappMessage(
     /** Asset URL for a template whose Meta header is IMAGE/VIDEO/DOCUMENT. */
     headerMediaUrl?: string | null;
     /** Resolved Meta sender (must have a phoneNumberId to actually send). */
-    sender: { id?: string | null; phoneNumberId: string | null } | null;
+    sender: { id?: string | null; phoneNumberId: string | null; businessAccountId?: string | null } | null;
   }
 ): Promise<AutomaticResult> {
   const base = {
@@ -229,7 +229,10 @@ export async function sendAutomaticWhatsappMessage(
     componentsSchema: input.metaTemplate.componentsSchema,
     values: input.templateValues ?? {},
     positionalNames: input.metaTemplate.positionalNames,
-    headerMediaUrl: input.headerMediaUrl ?? null,
+    scopedNames: input.metaTemplate.scopedNames,
+    headerMediaUrl: input.headerMediaUrl ?? input.metaTemplate.headerMediaUrl ?? null,
+    headerMediaFilename: input.metaTemplate.headerMediaFilename,
+    headerLocation: input.metaTemplate.headerLocation,
   });
   if (!built.ok) {
     await markDeliveryStatus(id, "SKIPPED", { errorMessage: built.reason });
@@ -249,12 +252,24 @@ export async function sendAutomaticWhatsappMessage(
 
   if (!res.ok) {
     const terminal = isTerminalConfigReason(res.reason);
-    await markDeliveryStatus(id, terminal ? "SKIPPED" : "FAILED", { errorMessage: res.reason });
-    await mirrorSentMessage("WHATSAPP", input, terminal ? "SKIPPED" : "FAILED", { recipientPhone: input.recipientPhone, renderedBody: input.renderedBody, errorMessage: res.reason });
+    const errorMessage = res.detail ? `${res.reason}  ${res.detail}` : res.reason;
+    await markDeliveryStatus(id, terminal ? "SKIPPED" : "FAILED", { errorMessage });
+    await mirrorSentMessage("WHATSAPP", input, terminal ? "SKIPPED" : "FAILED", {
+      recipientPhone: input.recipientPhone,
+      renderedBody: input.renderedBody,
+      errorMessage,
+    });
     return { outcome: terminal ? "SKIPPED" : "FAILED", reason: res.reason };
   }
 
-  await markDeliveryStatus(id, "SENT", { providerMessageId: res.providerMessageId, internalAccepted: res.internalAccepted });
+  const persisted = await markDeliveryStatus(id, "SENT", { providerMessageId: res.providerMessageId, internalAccepted: res.internalAccepted });
+  if (!persisted.ok) {
+    console.error("Meta accepted WhatsApp trigger send but delivery status persistence failed", {
+      deliveryId: id,
+      providerMessageId: res.providerMessageId,
+      error: persisted.error,
+    });
+  }
   await mirrorSentMessage("WHATSAPP", input, "SENT", { recipientPhone: input.recipientPhone, renderedBody: input.renderedBody, providerMessageId: res.providerMessageId });
   return { outcome: "SENT", providerMessageId: res.providerMessageId };
 }
@@ -320,6 +335,11 @@ export type MetaTemplateMapping = {
   name: string;
   /** `{{1}}`, `{{2}}` … in order, from the local template's variable catalog. */
   positionalNames: string[];
+  /** Semantic name by component-scoped position (header.1, body.1, button.0.1). */
+  scopedNames: Record<string, string>;
+  headerMediaUrl: string | null;
+  headerMediaFilename: string | null;
+  headerLocation: { latitude: number; longitude: number; name?: string; address?: string } | null;
   /** The language code of the variant actually chosen  NOT the recipient's locale. */
   language: string;
   /** Meta's own component schema for that variant, for building parameters. */
@@ -346,18 +366,34 @@ export type MetaTemplateMapping = {
  * legal payload to fall back to.
  */
 export async function resolveMetaTemplateMapping(
-  tpl: { id?: string | null; provider?: string | null; name?: string | null; variables?: unknown },
-  locale: string
+  tpl: { id?: string | null; provider?: string | null; name?: string | null; variables?: unknown; header?: unknown },
+  locale: string,
+  businessAccountId?: string | null,
 ): Promise<MetaTemplateMapping | null> {
   const provider = (tpl.provider ?? "").toUpperCase();
   if (provider !== "META" && provider !== "META_WHATSAPP") return null;
   if (!tpl.id) return null;
   const { getTemplateReadiness } = await import("./whatsapp-template-sync");
-  const readiness = await getTemplateReadiness(tpl.id, locale);
+  const readiness = await getTemplateReadiness(tpl.id, locale, businessAccountId);
   if (!readiness.ready || !readiness.providerTemplateName || !readiness.languageCode) return null;
+  const binding = variableBindingInfo(tpl.variables);
+  const header = tpl.header && typeof tpl.header === "object" ? tpl.header as Record<string, unknown> : {};
+  const latitude = Number(header.latitude);
+  const longitude = Number(header.longitude);
   return {
     name: readiness.providerTemplateName,
-    positionalNames: positionalVariableNames(tpl.variables),
+    positionalNames: binding.names,
+    scopedNames: binding.scopedNames,
+    headerMediaUrl: typeof header.mediaUrl === "string" && header.mediaUrl.trim() ? header.mediaUrl.trim() : null,
+    headerMediaFilename: typeof header.fileName === "string" && header.fileName.trim() ? header.fileName.trim() : null,
+    headerLocation: Number.isFinite(latitude) && Number.isFinite(longitude)
+      ? {
+          latitude,
+          longitude,
+          ...(typeof header.name === "string" && header.name.trim() ? { name: header.name.trim() } : {}),
+          ...(typeof header.address === "string" && header.address.trim() ? { address: header.address.trim() } : {}),
+        }
+      : null,
     language: readiness.languageCode,
     componentsSchema: readiness.componentsSchema,
     resolvedLocale: readiness.locale,
@@ -365,9 +401,19 @@ export async function resolveMetaTemplateMapping(
 }
 
 /** The local `variables` catalog is `Array<{ key, … }>`, already in placeholder order. */
-function positionalVariableNames(variables: unknown): string[] {
-  if (!Array.isArray(variables)) return [];
-  return variables
-    .map((entry) => (entry && typeof entry === "object" ? String((entry as { key?: unknown }).key ?? "") : ""))
-    .filter((key) => key.length > 0);
+function variableBindingInfo(variables: unknown): { names: string[]; scopedNames: Record<string, string> } {
+  if (!Array.isArray(variables)) return { names: [], scopedNames: {} };
+  const names: string[] = [];
+  const scopedNames: Record<string, string> = {};
+  for (const entry of variables) {
+    if (!entry || typeof entry !== "object") continue;
+    const row = entry as { key?: unknown; scope?: unknown; position?: unknown };
+    const key = String(row.key ?? "");
+    if (!key) continue;
+    if (!names.includes(key)) names.push(key);
+    const scope = typeof row.scope === "string" ? row.scope : null;
+    const position = Number(row.position);
+    if (scope && Number.isFinite(position) && position > 0) scopedNames[`${scope}.${position}`] = key;
+  }
+  return { names, scopedNames };
 }

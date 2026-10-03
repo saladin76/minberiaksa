@@ -52,9 +52,11 @@ export class MetaWhatsAppConnectionTester implements IntegrationProviderTester {
   async test(input: ProviderConnectionTestInput): Promise<ProviderConnectionTestResult> {
     const token = input.values.ACCESS_TOKEN;
     const appSecret = input.values.APP_SECRET;
+    const appId = input.values.APP_ID;
+    const businessPortfolioId = input.values.BUSINESS_PORTFOLIO_ID;
     const verifyToken = input.values.WEBHOOK_VERIFY_TOKEN;
     const version = input.values.GRAPH_API_VERSION;
-    if (!token || !appSecret || !verifyToken || !version) {
+    if (!token || !appId || !appSecret || !businessPortfolioId || !verifyToken || !version) {
       return failed("بيانات Meta المركزية المطلوبة غير مكتملة.", "META_CONFIGURATION_INCOMPLETE");
     }
 
@@ -90,8 +92,39 @@ export class MetaWhatsAppConnectionTester implements IntegrationProviderTester {
         return failed("تعذر التحقق من توافق App Secret مع Access Token.", "META_APP_SECRET_MISMATCH");
       }
 
+      const app = await providerFetch(
+        this.fetchImpl,
+        `${base}/${metaPath(`${appId}?fields=id,name`, appSecretProof)}`,
+        { method: "GET", headers: bearer(token) },
+      );
+      if (!app.ok) {
+        return failed("تعذر الوصول إلى تطبيق Meta المحدد أو لا يتوافق مع بيانات الاعتماد.", "META_APP_ID_UNAVAILABLE");
+      }
+
+      const business = await providerFetch(
+        this.fetchImpl,
+        `${base}/${metaPath(`${businessPortfolioId}?fields=id,name`, appSecretProof)}`,
+        { method: "GET", headers: bearer(token) },
+      );
+      if (!business.ok) {
+        return failed("تعذر الوصول إلى حساب الأعمال الرئيسي في Meta.", "META_BUSINESS_PORTFOLIO_UNAVAILABLE");
+      }
+
+      const wabas = await providerFetch(
+        this.fetchImpl,
+        `${base}/${metaPath(`${businessPortfolioId}/owned_whatsapp_business_accounts?fields=id,name&limit=200`, appSecretProof)}`,
+        { method: "GET", headers: bearer(token) },
+      );
+      if (!wabas.ok) {
+        return failed(
+          "تم الوصول إلى Business Portfolio لكن تعذر قراءة حسابات WhatsApp Business التابعة له. تحقق من صلاحيات business_management/WhatsApp.",
+          "META_BUSINESS_PORTFOLIO_UNAVAILABLE",
+        );
+      }
+      const wabaCount = arrayFrom(wabas.body, "data").length;
+
       return connected(
-        "تم التحقق من رمز الوصول وتوافق App Secret. إعدادات WABA وأرقام الهاتف تُدار وتُفحص لكل مُرسِل واتساب على حدة. رمز Webhook Verify Token صالح محليًا وجاهز للتحقق الخارجي."
+        `تم التحقق من Access Token وApp ID وApp Secret وربط Business Portfolio الرئيسي بنجاح. تم اكتشاف ${wabaCount} حساب WABA مملوك مباشرة. أرقام الهاتف واشتراك Webhook تُفحص لكل مُرسِل قبل تفعيله.`
       );
     } catch {
       return failed("تعذر الاتصال بخدمة Meta حاليًا.", "META_REQUEST_FAILED");

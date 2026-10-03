@@ -6,15 +6,56 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 import { requireAdminOrDashboardPermission } from "@/lib/dashboard/api-auth";
 import { prisma } from "@/lib/prisma";
 import { auditActorFromDashboardSession, writeAuditLog } from "@/lib/audit-log";
+import { publishWhatsappTemplateToMeta } from "@/lib/communication/meta-template-publisher";
+
+const headerSchema = z.object({
+  type: z.enum(["NONE", "TEXT", "IMAGE", "VIDEO", "DOCUMENT", "LOCATION"]).default("NONE"),
+  text: z.string().max(60).nullable().optional(),
+  exampleHandle: z.string().max(4096).nullable().optional(),
+  mediaUrl: z.string().max(4096).nullable().optional(),
+  mediaPublicId: z.string().max(512).nullable().optional(),
+  previewUrl: z.string().max(4096).nullable().optional(),
+  fileName: z.string().max(255).nullable().optional(),
+  mimeType: z.string().max(120).nullable().optional(),
+  latitude: z.number().min(-90).max(90).nullable().optional(),
+  longitude: z.number().min(-180).max(180).nullable().optional(),
+  address: z.string().max(256).nullable().optional(),
+});
+
+const buttonSchema = z.object({
+  type: z.enum(["QUICK_REPLY", "URL", "PHONE_NUMBER"]),
+  text: z.string().min(1).max(25),
+  url: z.string().max(2048).nullable().optional(),
+  phoneNumber: z.string().max(32).nullable().optional(),
+  example: z.string().max(512).nullable().optional(),
+});
+
+const authSchema = z.object({
+  addSecurityRecommendation: z.boolean().default(true),
+  codeExpirationMinutes: z.number().int().min(1).max(90).default(10),
+  otpType: z.enum(["COPY_CODE", "ONE_TAP"]).default("COPY_CODE"),
+  buttonText: z.string().min(1).max(25).default("Copy Code"),
+  autofillText: z.string().max(25).nullable().optional(),
+  packageName: z.string().max(255).nullable().optional(),
+  signatureHash: z.string().max(255).nullable().optional(),
+}).nullable().optional();
+
+const translationSchema = z.object({
+  body: z.string().max(1024).optional(),
+  headerText: z.string().max(60).nullable().optional(),
+  footerText: z.string().max(60).nullable().optional(),
+  buttons: z.array(buttonSchema).max(10).optional(),
+});
 
 const createSchema = z.object({
   name: z.string().min(1).max(120),
-  body: z.string().min(1).max(4096),
-  translations: z
-    .record(z.object({ body: z.string().optional() }))
-    /* null = Arabic only, as the editor sends it and the update route accepts. */
-    .nullable()
-    .optional(),
+  body: z.string().min(1).max(1024),
+  translations: z.record(translationSchema).nullable().optional(),
+  metaCategory: z.enum(["UTILITY", "MARKETING", "AUTHENTICATION"]).default("UTILITY"),
+  header: headerSchema.optional(),
+  footerText: z.string().max(60).nullable().optional(),
+  buttons: z.array(buttonSchema).max(10).optional(),
+  authentication: authSchema,
 });
 
 export async function GET() {
@@ -76,6 +117,14 @@ export async function POST(request: NextRequest) {
       translations: parsed.data.translations
         ? (parsed.data.translations as Prisma.InputJsonValue)
         : undefined,
+      category: parsed.data.metaCategory,
+      purpose: parsed.data.metaCategory,
+      header: parsed.data.header ? (parsed.data.header as Prisma.InputJsonValue) : undefined,
+      footerText: parsed.data.footerText ?? null,
+      buttons: parsed.data.buttons ? (parsed.data.buttons as Prisma.InputJsonValue) : undefined,
+      authentication: parsed.data.authentication ? (parsed.data.authentication as Prisma.InputJsonValue) : undefined,
+      provider: "MANUAL",
+      channel: "WHATSAPP",
       createdById: actor.actorId,
     },
   });
@@ -87,5 +136,18 @@ export async function POST(request: NextRequest) {
     entityId: created.id,
     stream: "TEAM",
   });
-  return NextResponse.json({ template: created });
+  const publish = await publishWhatsappTemplateToMeta(created.id, actor, { category: parsed.data.metaCategory });
+  if (!publish.ok) {
+    return NextResponse.json(
+      {
+        error: "تم حفظ القالب محليًا لكن لم يكتمل إنشاؤه في Meta.",
+        saved: true,
+        template: created,
+        publish,
+      },
+      { status: 502 },
+    );
+  }
+  const fresh = await prisma.whatsappTemplate.findUnique({ where: { id: created.id } });
+  return NextResponse.json({ template: fresh ?? created, publish }, { status: 201 });
 }

@@ -75,7 +75,7 @@ export async function GET() {
   const triggers = await enrichTriggers(rows);
   /* Readiness travels with the row so an enabled-but-unsendable trigger  one whose template lost its
      Meta approval after it was switched on  is visible in the list rather than only in the log. */
-  const preflights = await Promise.all(triggers.map((t) => preflightTrigger({ channel: t.channel, templateId: t.templateId }).catch(() => null)));
+  const preflights = await Promise.all(triggers.map((t) => preflightTrigger({ channel: t.channel, templateId: t.templateId, event: t.event }).catch(() => null)));
   return NextResponse.json({ triggers: triggers.map((t, i) => ({ ...t, preflight: preflights[i] })) });
 }
 
@@ -113,7 +113,7 @@ export async function POST(request: NextRequest) {
      on silently  it would skip every recipient and look healthy doing it. Creating it disabled is
      always allowed, so the operator can fix the template and enable it after. */
   if (enabled ?? true) {
-    const preflight = await preflightTrigger({ channel, templateId });
+    const preflight = await preflightTrigger({ channel, templateId, event });
     if (!preflight.ok) {
       return NextResponse.json({ error: "TRIGGER_NOT_READY", preflight }, { status: 409 });
     }

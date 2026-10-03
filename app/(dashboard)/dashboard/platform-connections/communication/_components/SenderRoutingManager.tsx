@@ -77,6 +77,21 @@ type Payload = {
   environmentDefaults: Record<string, boolean>;
 };
 
+type MetaAssetsPayload = {
+  businessPortfolio: { id: string; name: string | null };
+  wabas: Array<{
+    id: string;
+    name: string | null;
+    relationship: "OWNED" | "CLIENT";
+    phones: Array<{
+      id: string;
+      displayPhoneNumber: string | null;
+      verifiedName: string | null;
+      qualityRating: string | null;
+    }>;
+  }>;
+};
+
 type Preview =
   | { wouldSend: true; matchedBy: string; sender: { id: string | null; displayPhoneNumber: string | null; senderEmail: string | null; smsSender: string | null; provider: string | null } }
   | { wouldSend: false; reason: string };
@@ -94,6 +109,7 @@ function senderIdentity(sender: Sender): string {
 
 export function SenderRoutingManager() {
   const [data, setData] = useState<Payload | null>(null);
+  const [metaAssets, setMetaAssets] = useState<MetaAssetsPayload | null>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<string | null>(null);
   const [notice, setNotice] = useState<{ tone: "ok" | "error"; text: string } | null>(null);
@@ -109,6 +125,14 @@ export function SenderRoutingManager() {
       const body = await res.json();
       if (!res.ok || !body.ok) throw new Error(body.error ?? "load failed");
       setData({ senders: body.senders, rules: body.rules, environmentDefaults: body.environmentDefaults });
+
+      const metaRes = await fetch("/api/dashboard/communication/meta-assets", { cache: "no-store" }).catch(() => null);
+      if (metaRes?.ok) {
+        const metaBody = await metaRes.json().catch(() => null);
+        setMetaAssets(metaBody?.ok ? { businessPortfolio: metaBody.businessPortfolio, wabas: metaBody.wabas } : null);
+      } else {
+        setMetaAssets(null);
+      }
     } catch {
       setData(null);
     } finally {
@@ -226,6 +250,7 @@ export function SenderRoutingManager() {
 
       {showSenderForm && (
         <SenderForm
+          metaAssets={metaAssets}
           onCancel={() => setShowSenderForm(false)}
           onDone={async () => { setShowSenderForm(false); await load(); }}
         />
@@ -363,6 +388,7 @@ export function SenderRoutingManager() {
                           <div className="mt-3 border-t border-slate-100 pt-3">
                             <SenderForm
                               sender={sender}
+                              metaAssets={metaAssets}
                               onCancel={() => setEditingSenderId(null)}
                               onDone={async () => { setEditingSenderId(null); await load(); }}
                             />
@@ -566,10 +592,12 @@ function LanguageMultiSelect({ value, onChange }: { value: string[]; onChange: (
 /** Create or edit a sender. Channel/provider stay immutable once the sender exists. */
 function SenderForm({
   sender,
+  metaAssets,
   onDone,
   onCancel,
 }: {
   sender?: Sender;
+  metaAssets: MetaAssetsPayload | null;
   onDone: () => Promise<void>;
   onCancel: () => void;
 }) {
@@ -588,6 +616,9 @@ function SenderForm({
   });
   const [locales, setLocales] = useState<string[]>(sender?.supportedLocales ?? []);
   const [purposes, setPurposes] = useState<string[]>(sender?.supportedPurposes ?? []);
+  const selectedWaba = metaAssets?.wabas.find((waba) => waba.id === form.businessAccountId) ?? null;
+  const selectedPhone = selectedWaba?.phones.find((phone) => phone.id === form.phoneNumberId) ?? null;
+
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -683,18 +714,96 @@ function SenderForm({
 
         {channel === "WHATSAPP" && (
           <>
-            <label className="text-xs font-semibold text-slate-600">
-              Phone Number ID في Meta
-              <input inputMode="numeric" value={form.phoneNumberId} onChange={set("phoneNumberId")} className={cn(field, "mt-1")} />
-            </label>
-            <label className="text-xs font-semibold text-slate-600">
-              الرقم كما يظهر
-              <input value={form.displayPhoneNumber} onChange={set("displayPhoneNumber")} placeholder="+90…" className={cn(field, "mt-1")} />
-            </label>
-            <label className="text-xs font-semibold text-slate-600">
-              WABA ID
-              <input inputMode="numeric" value={form.businessAccountId} onChange={set("businessAccountId")} className={cn(field, "mt-1")} />
-            </label>
+            {metaAssets ? (
+              <>
+                <div className="sm:col-span-2 lg:col-span-3 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2">
+                  <p className="text-xs font-semibold text-emerald-800">
+                    حساب الأعمال الرئيسي: {metaAssets.businessPortfolio.name || "Meta Business Portfolio"}
+                  </p>
+                  <p className="mt-0.5 text-[11px] text-emerald-700" dir="ltr">
+                    Business Portfolio ID: {metaAssets.businessPortfolio.id}
+                  </p>
+                </div>
+                <label className="text-xs font-semibold text-slate-600">
+                  حساب WhatsApp Business (WABA)
+                  <select
+                    value={form.businessAccountId}
+                    onChange={(event) => {
+                      const businessAccountId = event.target.value;
+                      const waba = metaAssets.wabas.find((item) => item.id === businessAccountId);
+                      const firstPhone = waba?.phones[0];
+                      setForm((previous) => ({
+                        ...previous,
+                        businessAccountId,
+                        phoneNumberId: firstPhone?.id ?? "",
+                        displayPhoneNumber: firstPhone?.displayPhoneNumber ?? "",
+                        displayName: previous.displayName || firstPhone?.verifiedName || "",
+                      }));
+                    }}
+                    className={cn(field, "mt-1")}
+                  >
+                    <option value="">اختر WABA من حساب الأعمال الرئيسي…</option>
+                    {metaAssets.wabas.map((waba) => (
+                      <option key={waba.id} value={waba.id}>
+                        {waba.name || waba.id} — {waba.relationship === "OWNED" ? "مملوك" : "مشارك"}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="text-xs font-semibold text-slate-600">
+                  رقم واتساب من WABA
+                  <select
+                    value={form.phoneNumberId}
+                    disabled={!selectedWaba}
+                    onChange={(event) => {
+                      const phoneNumberId = event.target.value;
+                      const phone = selectedWaba?.phones.find((item) => item.id === phoneNumberId);
+                      setForm((previous) => ({
+                        ...previous,
+                        phoneNumberId,
+                        displayPhoneNumber: phone?.displayPhoneNumber ?? "",
+                        displayName: previous.displayName || phone?.verifiedName || "",
+                      }));
+                    }}
+                    className={cn(field, "mt-1 disabled:bg-slate-100")}
+                  >
+                    <option value="">اختر الرقم…</option>
+                    {(selectedWaba?.phones ?? []).map((phone) => (
+                      <option key={phone.id} value={phone.id}>
+                        {phone.displayPhoneNumber || phone.id}{phone.verifiedName ? ` — ${phone.verifiedName}` : ""}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="text-xs font-semibold text-slate-600">
+                  الرقم كما يظهر
+                  <input value={form.displayPhoneNumber} readOnly className={cn(field, "mt-1 bg-slate-100")} />
+                </label>
+                {selectedPhone?.qualityRating && (
+                  <p className="text-[11px] text-slate-500 sm:col-span-2 lg:col-span-3">
+                    جودة الرقم في Meta: <span className="font-semibold">{selectedPhone.qualityRating}</span>
+                  </p>
+                )}
+              </>
+            ) : (
+              <>
+                <label className="text-xs font-semibold text-slate-600">
+                  Phone Number ID في Meta
+                  <input inputMode="numeric" value={form.phoneNumberId} onChange={set("phoneNumberId")} className={cn(field, "mt-1")} />
+                </label>
+                <label className="text-xs font-semibold text-slate-600">
+                  الرقم كما يظهر
+                  <input value={form.displayPhoneNumber} onChange={set("displayPhoneNumber")} placeholder="+90…" className={cn(field, "mt-1")} />
+                </label>
+                <label className="text-xs font-semibold text-slate-600">
+                  WABA ID
+                  <input inputMode="numeric" value={form.businessAccountId} onChange={set("businessAccountId")} className={cn(field, "mt-1")} />
+                </label>
+                <p className="text-[11px] text-amber-700 sm:col-span-2 lg:col-span-3">
+                  لم يتم اكتشاف أصول Meta تلقائيًا. أكمل إعداد Business Portfolio المركزي ثم أعد تحميل الصفحة.
+                </p>
+              </>
+            )}
           </>
         )}
         {channel === "EMAIL" && (
@@ -852,8 +961,11 @@ function RuleForm({
           </select>
         </label>
         <label className="text-xs font-semibold text-slate-600">
-          اللغة (فراغ = أي)
-          <input value={form.locale} onChange={(e) => setForm((f) => ({ ...f, locale: e.target.value }))} placeholder="tr" className={cn(field, "mt-1")} />
+          اللغة (بدون اختيار = أي)
+          <select value={form.locale} onChange={(e) => setForm((f) => ({ ...f, locale: e.target.value }))} className={cn(field, "mt-1")}>
+            <option value="">أي لغة</option>
+            {SUPPORTED_LANGUAGES.map(([code, label]) => <option key={code} value={code}>{label} — {code}</option>)}
+          </select>
         </label>
         <label className="text-xs font-semibold text-slate-600">
           الدولة (فراغ = أي)
@@ -938,7 +1050,10 @@ function RoutingPreview() {
         <select value={form.channel} onChange={(e) => setForm((f) => ({ ...f, channel: e.target.value }))} className={field}>
           {CHANNELS.map((c) => <option key={c} value={c}>{CHANNEL_LABELS[c]}</option>)}
         </select>
-        <input value={form.locale} onChange={(e) => setForm((f) => ({ ...f, locale: e.target.value }))} placeholder="اللغة" className={cn(field, "w-24")} />
+        <select value={form.locale} onChange={(e) => setForm((f) => ({ ...f, locale: e.target.value }))} className={cn(field, "min-w-40")}>
+          <option value="">أي لغة</option>
+          {SUPPORTED_LANGUAGES.map(([code, label]) => <option key={code} value={code}>{label} — {code}</option>)}
+        </select>
         <input value={form.country} onChange={(e) => setForm((f) => ({ ...f, country: e.target.value }))} placeholder="الدولة" className={cn(field, "w-24")} />
         <select value={form.purpose} onChange={(e) => setForm((f) => ({ ...f, purpose: e.target.value }))} className={field}>
           {PURPOSES.map((p) => <option key={p} value={p}>{PURPOSE_LABELS[p]}</option>)}

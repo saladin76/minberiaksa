@@ -37,6 +37,7 @@
     "lib/communication/cron-auth.ts",
     "lib/communication/communication-runtime-types.ts",
     "lib/communication/delivery-status-progress.ts",
+    "lib/communication/providers/meta-whatsapp/parameters.ts",
     "lib/communication/providers/elastic-email/errors.ts",
     "lib/communication/providers/elastic-email/payload.ts",
     "lib/communication/providers/elastic-email/types.ts",

@@ -28,7 +28,8 @@ export type MetaParameter =
   | { type: "text"; text: string }
   | { type: "image"; image: { link: string } }
   | { type: "video"; video: { link: string } }
-  | { type: "document"; document: { link: string; filename?: string } };
+  | { type: "document"; document: { link: string; filename?: string } }
+  | { type: "location"; location: { latitude: number; longitude: number; name?: string; address?: string } };
 
 export type BuildResult =
   | { ok: true; components: MetaComponent[]; used: string[] }
@@ -84,9 +85,13 @@ export function buildMetaComponents(input: {
   values: Record<string, string | null | undefined>;
   /** Positional names from the local template, e.g. ["donorName", "amount"] for {{1}}, {{2}}. */
   positionalNames?: string[];
+  /** Exact semantic binding per component position, e.g. header.1 -> user.name, body.1 -> donation.amount. */
+  scopedNames?: Record<string, string>;
   /** Media URL for a template whose header is IMAGE/VIDEO/DOCUMENT. */
   headerMediaUrl?: string | null;
   headerMediaFilename?: string | null;
+  /** Static location configured on the local template for a LOCATION header. */
+  headerLocation?: { latitude: number; longitude: number; name?: string; address?: string } | null;
 }): BuildResult {
   const schema = asArray(input.componentsSchema) as SchemaComponent[];
   if (!schema.length) {
@@ -103,6 +108,11 @@ export function buildMetaComponents(input: {
     for (const key of candidates) {
       const value = input.values[key];
       if (value != null && String(value).length) return { ok: true, value: String(value) };
+    }
+    const scopedName = input.scopedNames?.[`${scope}.${position}`];
+    if (scopedName) {
+      const byScopedName = input.values[scopedName];
+      if (byScopedName != null && String(byScopedName).length) return { ok: true, value: String(byScopedName) };
     }
     const name = input.positionalNames?.[position - 1];
     if (name) {
@@ -130,6 +140,26 @@ export function buildMetaComponents(input: {
         components.push({ type: "header", parameters });
         continue;
       }
+      if (format === "LOCATION") {
+        if (!input.headerLocation || !Number.isFinite(input.headerLocation.latitude) || !Number.isFinite(input.headerLocation.longitude)) {
+          return { ok: false, reason: "TEMPLATE_HEADER_LOCATION_MISSING", detail: "LOCATION header requires latitude and longitude" };
+        }
+        components.push({
+          type: "header",
+          parameters: [{
+            type: "location",
+            location: {
+              latitude: input.headerLocation.latitude,
+              longitude: input.headerLocation.longitude,
+              ...(input.headerLocation.name ? { name: input.headerLocation.name } : {}),
+              ...(input.headerLocation.address ? { address: input.headerLocation.address } : {}),
+            },
+          }],
+        });
+        used.push("header:location");
+        continue;
+      }
+
       /* A media header always takes exactly one parameter  the asset. */
       if (!input.headerMediaUrl) {
         return { ok: false, reason: "TEMPLATE_HEADER_MEDIA_MISSING", detail: `header format ${format}` };
@@ -146,7 +176,24 @@ export function buildMetaComponents(input: {
 
     if (type === "BODY") {
       const positions = placeholderOrder(String(component.text ?? ""));
-      if (!positions.length) continue;
+      const isAuthenticationBody = (component as Record<string, unknown>).add_security_recommendation !== undefined;
+      if (!positions.length && !isAuthenticationBody) continue;
+
+      if (isAuthenticationBody) {
+        const otp =
+          input.values["otp.code"] ??
+          input.values["otp"] ??
+          input.values["code"] ??
+          input.values["1"] ??
+          input.values[input.positionalNames?.[0] ?? ""];
+        if (otp == null || !String(otp).trim()) {
+          return { ok: false, reason: "AUTHENTICATION_OTP_MISSING", detail: "authentication body requires an OTP code" };
+        }
+        components.push({ type: "body", parameters: [textParameter(otp)] });
+        used.push("body:otp");
+        continue;
+      }
+
       const parameters: MetaParameter[] = [];
       for (const position of positions) {
         const got = lookup(position, "body");
@@ -160,18 +207,37 @@ export function buildMetaComponents(input: {
 
     if (type === "BUTTONS") {
       const buttons = asArray(component.buttons) as { type?: unknown; url?: unknown; text?: unknown }[];
-      buttons.forEach((button, index) => {
+      for (let index = 0; index < buttons.length; index += 1) {
+        const button = buttons[index];
         const buttonType = String(button.type ?? "").toUpperCase();
-        /* Only a URL button with a `{{1}}` suffix takes a parameter. A static URL button, a phone
-           button and a plain quick reply carry none, and sending one for them is an error. */
-        if (buttonType !== "URL") return;
+
+        if (buttonType === "OTP") {
+          const otp =
+            input.values["otp.code"] ??
+            input.values["otp"] ??
+            input.values["code"] ??
+            input.values["1"] ??
+            input.values[input.positionalNames?.[0] ?? ""];
+          if (otp == null || !String(otp).trim()) {
+            return { ok: false, reason: "AUTHENTICATION_OTP_MISSING", detail: `authentication button ${index} requires an OTP code` };
+          }
+          components.push({ type: "button", sub_type: "url", index: String(index), parameters: [textParameter(otp)] });
+          used.push(`button:${index}:otp`);
+          continue;
+        }
+
+        /* Only a URL button with a dynamic suffix takes a parameter. Missing values must fail the
+           send instead of silently dropping the parameter and letting Meta reject the message. */
+        if (buttonType !== "URL") continue;
         const positions = placeholderOrder(String(button.url ?? ""));
-        if (!positions.length) return;
+        if (!positions.length) continue;
         const got = lookup(positions[0], `button.${index}`);
-        if (!got.ok) return;
+        if (!got.ok) {
+          return { ok: false, reason: "TEMPLATE_PARAMETER_MISSING", detail: `button ${index} {{${got.key}}}` };
+        }
         components.push({ type: "button", sub_type: "url", index: String(index), parameters: [textParameter(got.value)] });
         used.push(`button:${index}`);
-      });
+      }
       continue;
     }
     /* FOOTER carries no parameters, ever. */
@@ -189,10 +255,15 @@ export function schemaTakesParameters(componentsSchema: unknown): boolean {
       if (format !== "TEXT") return true;
       if (placeholderOrder(String(component.text ?? "")).length) return true;
     }
-    if (type === "BODY" && placeholderOrder(String(component.text ?? "")).length) return true;
+    if (type === "BODY") {
+      if ((component as Record<string, unknown>).add_security_recommendation !== undefined) return true;
+      if (placeholderOrder(String(component.text ?? "")).length) return true;
+    }
     if (type === "BUTTONS") {
       for (const button of asArray(component.buttons) as { type?: unknown; url?: unknown }[]) {
-        if (String(button.type ?? "").toUpperCase() === "URL" && placeholderOrder(String(button.url ?? "")).length) return true;
+        const buttonType = String(button.type ?? "").toUpperCase();
+        if (buttonType === "OTP") return true;
+        if (buttonType === "URL" && placeholderOrder(String(button.url ?? "")).length) return true;
       }
     }
   }
