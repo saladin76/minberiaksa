@@ -54,10 +54,8 @@ export class MetaWhatsAppConnectionTester implements IntegrationProviderTester {
     const appSecret = input.values.APP_SECRET;
     const verifyToken = input.values.WEBHOOK_VERIFY_TOKEN;
     const version = input.values.GRAPH_API_VERSION;
-    const businessId = input.values.BUSINESS_ACCOUNT_ID;
-    const phoneId = input.values.DEFAULT_PHONE_NUMBER_ID;
-    if (!token || !appSecret || !verifyToken || !version || !businessId || !phoneId) {
-      return failed("بيانات Meta المطلوبة غير مكتملة.", "META_CONFIGURATION_INCOMPLETE");
+    if (!token || !appSecret || !verifyToken || !version) {
+      return failed("بيانات Meta المركزية المطلوبة غير مكتملة.", "META_CONFIGURATION_INCOMPLETE");
     }
 
     try {
@@ -68,47 +66,32 @@ export class MetaWhatsAppConnectionTester implements IntegrationProviderTester {
 
     const base = `https://graph.facebook.com/${version}`;
     try {
-      const accountWithoutProof = await providerFetch(this.fetchImpl, `${base}/${businessId}?fields=id,name`, {
+      // Validate the access token first without appsecret_proof so authentication failures are
+      // distinguishable from an App Secret mismatch. WABA/phone validation is intentionally not
+      // performed here: those identifiers belong to individual CommunicationSender rows.
+      const identity = await providerFetch(this.fetchImpl, `${base}/me?fields=id,name`, {
         method: "GET",
         headers: bearer(token),
       });
-      if (!accountWithoutProof.ok) {
+      if (!identity.ok) {
         return failed(
-          "تعذر الوصول إلى حساب أعمال Meta.",
-          accountWithoutProof.status === 401 ? "META_UNAUTHORIZED" : "META_BUSINESS_ACCOUNT_UNAVAILABLE"
+          "تعذر التحقق من رمز الوصول إلى Meta.",
+          identity.status === 401 ? "META_UNAUTHORIZED" : "META_ACCOUNT_UNAVAILABLE"
         );
       }
 
       const appSecretProof = createAppSecretProof(token, appSecret);
-      const accountWithProof = await providerFetch(
+      const identityWithProof = await providerFetch(
         this.fetchImpl,
-        `${base}/${metaPath(`${businessId}?fields=id,name`, appSecretProof)}`,
+        `${base}/${metaPath("me?fields=id,name", appSecretProof)}`,
         { method: "GET", headers: bearer(token) }
       );
-      if (!accountWithProof.ok) {
+      if (!identityWithProof.ok) {
         return failed("تعذر التحقق من توافق App Secret مع Access Token.", "META_APP_SECRET_MISMATCH");
       }
 
-      const phones = await providerFetch(
-        this.fetchImpl,
-        `${base}/${metaPath(`${businessId}/phone_numbers?fields=id,verified_name,display_phone_number`, appSecretProof)}`,
-        { method: "GET", headers: bearer(token) }
-      );
-      if (!phones.ok) return failed("تعذر قراءة أرقام واتساب المرتبطة بحساب الأعمال.", "META_PHONE_NUMBERS_UNAVAILABLE");
-      const linked = arrayFrom(phones.body, "data").some(
-        (item) => !!item && typeof item === "object" && String((item as Record<string, unknown>).id ?? "") === phoneId
-      );
-      if (!linked) return failed("رقم واتساب المحدد غير مرتبط بحساب الأعمال.", "META_PHONE_NUMBER_MISMATCH");
-
-      const phone = await providerFetch(
-        this.fetchImpl,
-        `${base}/${metaPath(`${phoneId}?fields=id,verified_name,display_phone_number,quality_rating`, appSecretProof)}`,
-        { method: "GET", headers: bearer(token) }
-      );
-      if (!phone.ok) return failed("تعذر الوصول إلى رقم واتساب المحدد.", "META_PHONE_NUMBER_UNAVAILABLE");
-
       return connected(
-        "تم التحقق من بيانات الوصول إلى Meta وتوافق App Secret وحساب واتساب ورقم الهاتف. رمز Webhook Verify Token موجود وصالح محليًا وجاهز لعملية التحقق من Webhook."
+        "تم التحقق من رمز الوصول وتوافق App Secret. إعدادات WABA وأرقام الهاتف تُدار وتُفحص لكل مُرسِل واتساب على حدة. رمز Webhook Verify Token صالح محليًا وجاهز للتحقق الخارجي."
       );
     } catch {
       return failed("تعذر الاتصال بخدمة Meta حاليًا.", "META_REQUEST_FAILED");
