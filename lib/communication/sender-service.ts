@@ -4,6 +4,7 @@ import type { CommunicationSender } from "@prisma/client";
 import type { CommunicationSenderConfig } from "./sender-router";
 import type { CommunicationChannel } from "./communication-types";
 import { ensureWabaWebhookSubscription, verifySenderOwnership, verifyWabaInBusinessPortfolio } from "./providers/meta-whatsapp/client";
+import { reconcilePublishedTemplatesToActiveWabas } from "./meta-template-publisher";
 import {
   isCommunicationChannel,
   isCommunicationProvider,
@@ -360,6 +361,14 @@ export async function verifyWhatsappSender(id: string, actor?: Actor): Promise<S
     metadata: { qualityRating: row.qualityRating, businessPortfolioVerified: true, wabaRelationship: portfolio.asset.relationship, webhookSubscribed: true, subscriptionAppIds: subscription.appIds, externalCall: true },
     stream: "TEAM",
   });
+
+  await reconcilePublishedTemplatesToActiveWabas(actor).catch((error) => {
+    console.error("WhatsApp template reconciliation after sender activation failed", {
+      senderId: row.id,
+      error: error instanceof Error ? error.message : String(error),
+    });
+  });
+
   return { ok: true, data: row };
 }
 
