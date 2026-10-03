@@ -88,6 +88,15 @@ export function ProviderFieldsPanel({
           <Banner tone={notice.kind === "success" ? "success" : "danger"} title={notice.text} />
         )}
 
+        {!isCron && encryptionBlocked && permissions.canManage && (
+          <Banner
+            tone="danger"
+            title="تعذّر تعديل الحقول السرية لأن مفتاح التشفير غير مضبوط على السيرفر."
+          >
+            أضف متغير البيئة <code dir="ltr" className="rounded bg-white px-1.5 py-0.5 font-mono text-[11px]">INTEGRATION_SETTINGS_ENCRYPTION_KEY</code> بقيمة عشوائية آمنة طولها 32 بايت، ثم أعد نشر التطبيق. الحقول غير السرية تظل قابلة للتعديل، لكن Access Token وApp Secret وWebhook Verify Token لن تُحفظ بدون هذا المفتاح حفاظًا على الأسرار.
+          </Banner>
+        )}
+
         {isCron ? (
           <CronInfrastructure scheduler={scheduler} busy={busy} canTest={permissions.canTest} onTest={onTestActive} />
         ) : (
