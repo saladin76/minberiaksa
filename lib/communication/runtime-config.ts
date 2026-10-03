@@ -87,6 +87,8 @@ export type MetaWhatsappRuntimeValues = {
   accessToken: string;
   /** Meta application id; optional for normal sends, required only by resumable template sample uploads. */
   appId: string;
+  /** Root Meta Business Portfolio that owns/shares the WABAs managed by this installation. */
+  businessPortfolioId: string;
   appSecret: string;
   verifyToken: string;
   /** Legacy environment fallback only. Empty when not configured centrally. */
@@ -99,6 +101,7 @@ export type MetaWhatsappRuntimeValues = {
 const metaValues = (v: Record<string, string>): MetaWhatsappRuntimeValues => ({
   accessToken: v.ACCESS_TOKEN,
   appId: v.APP_ID?.trim() || "",
+  businessPortfolioId: v.BUSINESS_PORTFOLIO_ID?.trim() || "",
   appSecret: v.APP_SECRET,
   verifyToken: v.WEBHOOK_VERIFY_TOKEN,
   businessAccountId: v.BUSINESS_ACCOUNT_ID?.trim() || "",
@@ -109,7 +112,7 @@ const metaValues = (v: Record<string, string>): MetaWhatsappRuntimeValues => ({
 export function getActiveMetaWhatsappRuntimeConfig(): Promise<ActiveRuntimeConfig<MetaWhatsappRuntimeValues>> {
   // App-level connection only. WABA + phone-number IDs live on CommunicationSender rows so one
   // Meta app can serve multiple WhatsApp Business Accounts and multiple real numbers.
-  return resolve("META_WHATSAPP", ["ACCESS_TOKEN", "APP_SECRET", "WEBHOOK_VERIFY_TOKEN", "GRAPH_API_VERSION"], metaValues);
+  return resolve("META_WHATSAPP", ["ACCESS_TOKEN", "BUSINESS_PORTFOLIO_ID", "APP_SECRET", "WEBHOOK_VERIFY_TOKEN", "GRAPH_API_VERSION"], metaValues);
 }
 
 export function getActiveMetaWebhookConfig(): Promise<ActiveRuntimeConfig<Pick<MetaWhatsappRuntimeValues, "appSecret" | "verifyToken">>> {
