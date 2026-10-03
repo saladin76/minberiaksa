@@ -3,6 +3,8 @@
 export type MetaGraphConfig = {
   accessToken: string;
   graphVersion: string;
+  appId?: string | null;
+  businessPortfolioId?: string | null;
   appSecret: string | null;
   verifyToken: string | null;
   /** Legacy fallback only; normal sends use a CommunicationSender phoneNumberId. */
