@@ -19,25 +19,38 @@ import { type CommunicationChannelId, type CommunicationPurposeId } from "./comm
 
 export { computeFinalStatus };
 
-/** Meta's answer for one template: every language variant, and the local placeholder order. */
+/** Meta truth for one template, partitioned by WABA so routing and approval can never disagree. */
 async function loadWhatsappTemplateTruth(templateId: string): Promise<{
-  variants: Parameters<typeof resolveVariantForLocale>[0];
+  byWaba: Map<string, Parameters<typeof resolveVariantForLocale>[0]>;
   positionalNames: string[];
 }> {
   const [variants, tpl] = await Promise.all([
-    prisma.whatsappTemplateVariant
-      .findMany({
-        where: { templateId, provider: META_PROVIDER },
-        select: { languageCode: true, locale: true, approvalStatus: true, providerTemplateName: true, componentsSchema: true, rejectionReason: true, lastSyncedAt: true },
-      })
-      .catch(() => []),
+    prisma.whatsappTemplateWabaVariant.findMany({
+      where: { templateId, provider: META_PROVIDER },
+      select: {
+        businessAccountId: true,
+        languageCode: true,
+        locale: true,
+        approvalStatus: true,
+        providerTemplateName: true,
+        componentsSchema: true,
+        rejectionReason: true,
+        lastSyncedAt: true,
+      },
+    }).catch(() => []),
     prisma.whatsappTemplate.findUnique({ where: { id: templateId }, select: { variables: true } }).catch(() => null),
   ]);
+  const byWaba = new Map<string, Parameters<typeof resolveVariantForLocale>[0]>();
+  for (const row of variants) {
+    const list = byWaba.get(row.businessAccountId) ?? [];
+    list.push(row);
+    byWaba.set(row.businessAccountId, list);
+  }
   const catalog = Array.isArray(tpl?.variables) ? (tpl!.variables as unknown[]) : [];
   const positionalNames = catalog
     .map((entry) => (entry && typeof entry === "object" ? String((entry as { key?: unknown }).key ?? "") : ""))
     .filter((key) => key.length > 0);
-  return { variants: variants as Parameters<typeof resolveVariantForLocale>[0], positionalNames };
+  return { byWaba, positionalNames };
 }
 
 /**
@@ -334,7 +347,9 @@ export async function executeCampaignSend(
       let metaLanguage: string = recipient.locale;
       let metaComponents: unknown[] | undefined;
       if (channel === "WHATSAPP") {
-        const readiness = whatsapp ? resolveVariantForLocale(whatsapp.variants, recipient.locale) : NOT_READY;
+        const readiness = whatsapp && sender?.businessAccountId
+          ? resolveVariantForLocale(whatsapp.byWaba.get(sender.businessAccountId) ?? [], recipient.locale)
+          : NOT_READY;
         if (!readiness.ready || !readiness.providerTemplateName || !readiness.languageCode) {
           const reason = readiness.reason ?? "META_TEMPLATE_REQUIRED";
           await markDeliveryStatus(deliveryId, "SKIPPED", { errorMessage: reason });
