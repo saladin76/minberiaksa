@@ -25,10 +25,17 @@ export function mapGraphError(status: number, body: unknown): { reason: string; 
   let message = "";
   let code: number | null = null;
   if (body && typeof body === "object") {
-    const err = (body as { error?: { message?: unknown; code?: unknown } }).error;
+    const err = (body as { error?: { message?: unknown; code?: unknown; error_subcode?: unknown; error_user_title?: unknown; error_user_msg?: unknown; error_data?: { details?: unknown } } }).error;
     if (err) {
       if (typeof err.message === "string") message = err.message;
       if (typeof err.code === "number") code = err.code;
+      const extras = [
+        typeof err.error_user_title === "string" ? err.error_user_title : "",
+        typeof err.error_user_msg === "string" ? err.error_user_msg : "",
+        typeof err.error_data?.details === "string" ? err.error_data.details : "",
+        typeof err.error_subcode === "number" ? `subcode ${err.error_subcode}` : "",
+      ].filter(Boolean).join(" · ");
+      if (extras) message = [extras, message].filter(Boolean).join(" · ");
     }
   }
   const reason = status === 401 || status === 403 || code === 190 ? META_REASONS.UNAUTHORIZED : META_REASONS.REQUEST_FAILED;
