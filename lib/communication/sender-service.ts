@@ -260,13 +260,16 @@ export async function verifyWhatsappSender(id: string, actor?: Actor): Promise<S
 
   const portfolio = await verifyWabaInBusinessPortfolio(sender.businessAccountId);
   if (!portfolio.ok) {
+    const humanError = portfolio.reason === "META_WABA_NOT_IN_BUSINESS_PORTFOLIO"
+      ? `حساب WABA غير متاح لرمز الوصول الحالي داخل Business Portfolio. ${portfolio.detail ?? ""}`.trim()
+      : [portfolio.reason, portfolio.detail].filter(Boolean).join(" · ");
     const row = await prisma.communicationSender.update({
       where: { id },
       data: {
         status: portfolio.reason === "META_BUSINESS_PORTFOLIO_NOT_CONFIGURED" ? "NOT_CONFIGURED" : "NEEDS_ATTENTION",
         enabled: false,
         lastHealthCheckAt: checkedAt,
-        lastError: [portfolio.reason, portfolio.detail].filter(Boolean).join(" · ").slice(0, 500),
+        lastError: humanError.slice(0, 500),
       },
     });
     await writeAuditLog({
