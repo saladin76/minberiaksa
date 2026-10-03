@@ -26,9 +26,9 @@ const senderSchema = z.object({
   provider: z.enum(COMMUNICATION_PROVIDERS),
   name: z.string().min(1).max(120),
   displayName: z.string().max(120).nullable().optional(),
-  phoneNumberId: z.string().max(64).nullable().optional(),
+  phoneNumberId: z.string().regex(/^\d+$/).max(64).nullable().optional(),
   displayPhoneNumber: z.string().max(32).nullable().optional(),
-  businessAccountId: z.string().max(64).nullable().optional(),
+  businessAccountId: z.string().regex(/^\d+$/).max(64).nullable().optional(),
   senderEmail: z.string().email().max(200).nullable().optional(),
   smsSender: z.string().max(32).nullable().optional(),
   supportedLocales: z.array(z.string().min(2).max(8)).max(32).optional(),
@@ -38,6 +38,21 @@ const senderSchema = z.object({
   isDefault: z.boolean().optional(),
   enabled: z.boolean().optional(),
   priority: z.number().int().min(0).max(999).optional(),
+}).superRefine((value, ctx) => {
+  if (value.channel === "WHATSAPP") {
+    if (value.provider !== "META_WHATSAPP") {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["provider"], message: "WhatsApp sender must use META_WHATSAPP." });
+    }
+    if (!value.phoneNumberId) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["phoneNumberId"], message: "Phone Number ID is required for WhatsApp." });
+    }
+    if (!value.businessAccountId) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["businessAccountId"], message: "WABA ID is required for WhatsApp." });
+    }
+    if (!value.displayPhoneNumber) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["displayPhoneNumber"], message: "Display phone number is required for WhatsApp." });
+    }
+  }
 });
 
 /** What the client is allowed to see about one sender. */
