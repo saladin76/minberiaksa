@@ -1,7 +1,6 @@
 import "server-only";
 
 import { prisma } from "@/lib/prisma";
-import { VARIABLE_CATALOG } from "@/lib/templates/variables";
 import { writeAuditLog } from "@/lib/audit-log";
 import { getActiveMetaWhatsappRuntimeConfig } from "./runtime-config";
 import { ensureMetaTemplate } from "./providers/meta-whatsapp/templates";
@@ -25,23 +24,7 @@ const META_LANGUAGE: Record<string, string> = {
   da: "da", ms: "ms", ja: "ja", zh: "zh_CN", hi: "hi",
 };
 
-const SCALAR_RE = /\{\{\s*([a-zA-Z0-9_.]+)\s*\}\}/g;
 const SECTION_RE = /\{\{\s*[#/]\s*([a-zA-Z0-9_.]+)\s*\}\}/;
-
-const exampleByToken = (() => {
-  const map = new Map<string, string>();
-  for (const group of VARIABLE_CATALOG) {
-    for (const entry of group.entries) {
-      map.set(entry.token.replace(/[{}]/g, "").trim(), entry.exampleValue || "example");
-    }
-  }
-  return map;
-})();
-
-function toMetaBody(body: string, variables: string[]): string {
-  const index = new Map(variables.map((key, i) => [key, i + 1]));
-  return body.replace(SCALAR_RE, (_full, key: string) => `{{${index.get(key) ?? 1}}}`);
-}
 
 function categoryFor(template: { category: string | null; purpose: string | null; kind: string | null }) {
   const explicit = String(template.category ?? template.purpose ?? "").toUpperCase();
@@ -49,19 +32,6 @@ function categoryFor(template: { category: string | null; purpose: string | null
   if (explicit === "AUTHENTICATION") return "AUTHENTICATION" as const;
   if (explicit === "UTILITY" || explicit === "TRANSACTIONAL") return "UTILITY" as const;
   return template.kind === "CAMPAIGN" ? ("MARKETING" as const) : ("UTILITY" as const);
-}
-
-function componentsFor(body: string, variables: string[], footerText?: string | null): unknown[] {
-  const metaBody = toMetaBody(body, variables);
-  const bodyComponent: Record<string, unknown> = { type: "BODY", text: metaBody };
-  if (variables.length) {
-    bodyComponent.example = {
-      body_text: [variables.map((key) => exampleByToken.get(key) ?? "example")],
-    };
-  }
-  const components: unknown[] = [bodyComponent];
-  if (footerText?.trim()) components.push({ type: "FOOTER", text: footerText.trim() });
-  return components;
 }
 
 export type MetaPublishSummary = {
