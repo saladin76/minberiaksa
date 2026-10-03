@@ -84,6 +84,8 @@ export function buildMetaComponents(input: {
   values: Record<string, string | null | undefined>;
   /** Positional names from the local template, e.g. ["donorName", "amount"] for {{1}}, {{2}}. */
   positionalNames?: string[];
+  /** Exact semantic binding per component position, e.g. header.1 -> user.name, body.1 -> donation.amount. */
+  scopedNames?: Record<string, string>;
   /** Media URL for a template whose header is IMAGE/VIDEO/DOCUMENT. */
   headerMediaUrl?: string | null;
   headerMediaFilename?: string | null;
@@ -103,6 +105,11 @@ export function buildMetaComponents(input: {
     for (const key of candidates) {
       const value = input.values[key];
       if (value != null && String(value).length) return { ok: true, value: String(value) };
+    }
+    const scopedName = input.scopedNames?.[`${scope}.${position}`];
+    if (scopedName) {
+      const byScopedName = input.values[scopedName];
+      if (byScopedName != null && String(byScopedName).length) return { ok: true, value: String(byScopedName) };
     }
     const name = input.positionalNames?.[position - 1];
     if (name) {
