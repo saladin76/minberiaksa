@@ -46,8 +46,8 @@ export const INTEGRATION_PROVIDER_DEFINITIONS: Record<IntegrationProvider, Integ
       { key: "ACCESS_TOKEN", labelAr: "رمز الوصول", envKey: "META_WHATSAPP_ACCESS_TOKEN", secret: true, required: true, validation: "ACCESS_TOKEN" },
       { key: "APP_SECRET", labelAr: "مفتاح التطبيق", envKey: "META_WHATSAPP_APP_SECRET", secret: true, required: true, validation: "APP_SECRET" },
       { key: "WEBHOOK_VERIFY_TOKEN", labelAr: "رمز التحقق من Webhook", envKey: "META_WHATSAPP_WEBHOOK_VERIFY_TOKEN", secret: true, required: true, validation: "VERIFY_TOKEN" },
-      { key: "BUSINESS_ACCOUNT_ID", labelAr: "معرّف حساب الأعمال", envKey: "META_WHATSAPP_BUSINESS_ACCOUNT_ID", secret: false, required: true, validation: "NUMERIC_ID" },
-      { key: "DEFAULT_PHONE_NUMBER_ID", labelAr: "معرّف رقم الهاتف الافتراضي", envKey: "META_WHATSAPP_PHONE_NUMBER_ID", secret: false, required: true, validation: "NUMERIC_ID" },
+      // WABA + Phone Number IDs belong to CommunicationSender rows. A single Meta app can serve
+      // several WABAs/numbers, so the provider connection stores only app-level credentials.
       { key: "GRAPH_API_VERSION", labelAr: "إصدار Graph API", envKey: "META_GRAPH_VERSION", secret: false, required: true, validation: "GRAPH_VERSION" },
     ],
   },
