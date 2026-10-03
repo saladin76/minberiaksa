@@ -49,6 +49,17 @@ export async function createRoutingRule(input: RoutingRuleInput, actor?: Actor):
   if (!isCommunicationChannel(input.channel)) return { ok: false, status: 400, error: "Invalid channel." };
   if (!input.senderId) return { ok: false, status: 400, error: "senderId is required." };
   try {
+    const primary = await prisma.communicationSender.findUnique({ where: { id: input.senderId }, select: { id: true, channel: true } });
+    if (!primary) return { ok: false, status: 400, error: "Primary sender not found." };
+    if (primary.channel !== input.channel) return { ok: false, status: 400, error: "Primary sender channel does not match the routing rule channel." };
+
+    if (input.fallbackSenderId) {
+      if (input.fallbackSenderId === input.senderId) return { ok: false, status: 400, error: "Fallback sender must be different from primary sender." };
+      const fallback = await prisma.communicationSender.findUnique({ where: { id: input.fallbackSenderId }, select: { channel: true } });
+      if (!fallback) return { ok: false, status: 400, error: "Fallback sender not found." };
+      if (fallback.channel !== input.channel) return { ok: false, status: 400, error: "Fallback sender channel does not match the routing rule channel." };
+    }
+
     const row = await prisma.senderRoutingRule.create({
       data: {
         channel: input.channel,
@@ -84,6 +95,20 @@ export async function createRoutingRule(input: RoutingRuleInput, actor?: Actor):
 export async function updateRoutingRule(id: string, patch: Partial<RoutingRuleInput>, actor?: Actor): Promise<ServiceResult<SenderRoutingRule>> {
   if (!process.env.DATABASE_URL) return dbUnavailable();
   try {
+    const current = await prisma.senderRoutingRule.findUnique({ where: { id } });
+    if (!current) return { ok: false, status: 404, error: "Routing rule not found." };
+    const channel = current.channel as CommunicationChannelId;
+    const primaryId = patch.senderId ?? current.senderId;
+    const fallbackId = patch.fallbackSenderId === undefined ? current.fallbackSenderId : patch.fallbackSenderId;
+
+    const primary = await prisma.communicationSender.findUnique({ where: { id: primaryId }, select: { channel: true } });
+    if (!primary || primary.channel !== channel) return { ok: false, status: 400, error: "Primary sender is missing or belongs to another channel." };
+    if (fallbackId) {
+      if (fallbackId === primaryId) return { ok: false, status: 400, error: "Fallback sender must be different from primary sender." };
+      const fallback = await prisma.communicationSender.findUnique({ where: { id: fallbackId }, select: { channel: true } });
+      if (!fallback || fallback.channel !== channel) return { ok: false, status: 400, error: "Fallback sender is missing or belongs to another channel." };
+    }
+
     const row = await prisma.senderRoutingRule.update({
       where: { id },
       data: {

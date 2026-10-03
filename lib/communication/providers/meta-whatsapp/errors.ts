@@ -9,6 +9,7 @@ export const META_REASONS = {
   REQUEST_FAILED: "META_WHATSAPP_REQUEST_FAILED",
   INVALID_RESPONSE: "META_WHATSAPP_INVALID_RESPONSE",
   UNAUTHORIZED: "META_WHATSAPP_UNAUTHORIZED",
+  PHONE_NOT_IN_WABA: "META_WHATSAPP_PHONE_NOT_IN_WABA",
 } as const;
 
 /** Remove anything token-shaped from a string before it is logged/stored. */

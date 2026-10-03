@@ -92,6 +92,16 @@ export function ProviderFieldsPanel({
           <CronInfrastructure scheduler={scheduler} busy={busy} canTest={permissions.canTest} onTest={onTestActive} />
         ) : (
           <>
+            {provider === "META_WHATSAPP" && (
+              <InfoPanel
+                title="إعداد مركزي لتطبيق Meta"
+                description="رمز الوصول ومفتاح التطبيق وWebhook وإصدار Graph تُحفظ هنا مرة واحدة. كل رقم واتساب حقيقي — مع WABA ID وPhone Number ID واللغات والدول والأغراض — يُدار من قسم «المُرسِلون والتوجيه» أدناه، ويمكن تعيين أحدها كمُرسِل افتراضي."
+              >
+                <p className="text-xs text-brand-800/80">
+                  لا تحتاج إلى إدخال WABA واحد أو Phone Number ID واحد في إعداد المزود؛ المنصة تدعم عدة حسابات WhatsApp Business وعدة أرقام تحت نفس تطبيق Meta.
+                </p>
+              </InfoPanel>
+            )}
             <div className="grid gap-3 lg:grid-cols-2">
               {snapshot.fields.map((field) => (
                 <div key={field.key} className="rounded-xl border border-slate-200 bg-slate-50/60 p-4">

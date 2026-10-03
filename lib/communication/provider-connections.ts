@@ -1,5 +1,6 @@
 import { communicationProviderRegistry } from "./provider-registry";
 import { getActiveCommunicationRuntimeBundle, getActiveBrevoWebhookSecret, getActiveElasticEmailWebhookSecret } from "./runtime-config";
+import { listSendersByChannel } from "./sender-service";
 import type { CommunicationProviderKey, ProviderConnection, ProviderConnectionStatus } from "./communication-types";
 
 export type ProviderRequirement = { id: string; label: string; configured: boolean; required: boolean };
@@ -21,20 +22,29 @@ function statusFromRequirements(provider: ProviderConnection, requirements: Prov
 }
 
 export async function getProviderConnectionsReadiness(): Promise<ProviderConnectionReadiness[]> {
-  const [runtime, emailWebhook, smsWebhook] = await Promise.all([
+  const [runtime, emailWebhook, smsWebhook, whatsappSenders] = await Promise.all([
     getActiveCommunicationRuntimeBundle(),
     getActiveElasticEmailWebhookSecret(),
     getActiveBrevoWebhookSecret(),
+    listSendersByChannel("WHATSAPP"),
   ]);
+  const readyWhatsappSenders = whatsappSenders.filter(
+    (sender) =>
+      sender.enabled &&
+      sender.status === "ACTIVE" &&
+      sender.provider === "META_WHATSAPP" &&
+      !!sender.phoneNumberId &&
+      !!sender.businessAccountId
+  );
   return communicationProviderRegistry.map((provider) => {
     let enabled = true;
     let requirements: ProviderRequirement[];
     if (provider.key === "META_WHATSAPP") {
       enabled = runtime.meta.enabled;
       requirements = [
-        { id: "business_account", label: "حساب WhatsApp Business", configured: runtime.meta.configured, required: true },
-        { id: "phone_number", label: "رقم واتساب للإرسال", configured: runtime.meta.configured && !!runtime.meta.values.defaultPhoneNumberId, required: true },
-        { id: "access_token", label: "صلاحية وصول آمنة", configured: runtime.meta.configured, required: true },
+        { id: "app_connection", label: "اتصال تطبيق Meta المركزي", configured: runtime.meta.configured, required: true },
+        { id: "senders", label: "رقم واتساب حقيقي واحد على الأقل", configured: readyWhatsappSenders.length > 0, required: true },
+        { id: "default_sender", label: "مُرسِل واتساب افتراضي", configured: readyWhatsappSenders.some((sender) => sender.isDefault), required: true },
         { id: "webhook_verify", label: "Webhook للتحقق واستقبال الحالات", configured: runtime.meta.configured, required: true },
       ];
     } else if (provider.key === "ELASTIC_EMAIL") {

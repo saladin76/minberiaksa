@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Loader2, Plus, RefreshCw, Route, Send, ShieldCheck, TriangleAlert, Star } from "lucide-react";
+import { Check, ChevronDown, Loader2, Pencil, Plus, RefreshCw, Route, Search, Send, ShieldCheck, Star, Trash2, TriangleAlert, X } from "lucide-react";
 import { EmptyState } from "@/components/dashboard/EmptyState";
 import { cn } from "@/lib/utils";
 
@@ -24,6 +24,13 @@ import { cn } from "@/lib/utils";
 const CHANNELS = ["WHATSAPP", "EMAIL", "SMS"] as const;
 const PURPOSES = ["TRANSACTIONAL", "MARKETING", "UTILITY", "AUTHENTICATION"] as const;
 
+const SUPPORTED_LANGUAGES = [
+  ["ar", "العربية"], ["tr", "Türkçe"], ["en", "English"], ["fr", "Français"], ["de", "Deutsch"],
+  ["es", "Español"], ["id", "Bahasa Indonesia"], ["pt", "Português"], ["ur", "اردو"], ["sq", "Shqip"],
+  ["it", "Italiano"], ["nl", "Nederlands"], ["sv", "Svenska"], ["no", "Norsk"], ["da", "Dansk"],
+  ["ms", "Bahasa Melayu"], ["ja", "日本語"], ["zh", "中文"], ["hi", "हिंदी"],
+] as const;
+
 const CHANNEL_LABELS: Record<string, string> = { WHATSAPP: "واتساب", EMAIL: "بريد", SMS: "رسائل نصية" };
 const PURPOSE_LABELS: Record<string, string> = {
   TRANSACTIONAL: "معاملات", MARKETING: "تسويق", UTILITY: "خدمي", AUTHENTICATION: "توثيق",
@@ -36,6 +43,8 @@ type Sender = {
   name: string;
   displayName: string | null;
   displayPhoneNumber: string | null;
+  phoneNumberId: string | null;
+  businessAccountId: string | null;
   hasPhoneNumberId: boolean;
   senderEmail: string | null;
   smsSender: string | null;
@@ -89,6 +98,7 @@ export function SenderRoutingManager() {
   const [busy, setBusy] = useState<string | null>(null);
   const [notice, setNotice] = useState<{ tone: "ok" | "error"; text: string } | null>(null);
   const [showSenderForm, setShowSenderForm] = useState(false);
+  const [editingSenderId, setEditingSenderId] = useState<string | null>(null);
   const [showRuleForm, setShowRuleForm] = useState(false);
 
   const load = useCallback(async () => {
@@ -118,6 +128,29 @@ export function SenderRoutingManager() {
       const body = await res.json().catch(() => ({}));
       if (!res.ok) { setNotice({ tone: "error", text: body.error ?? "تعذّر الحفظ." }); return; }
       setNotice({ tone: "ok", text: "حُفظ." });
+      await load();
+    } finally {
+      setBusy(null);
+    }
+  }, [load]);
+
+  const removeSender = useCallback(async (sender: Sender) => {
+    const confirmed = window.confirm(
+      `هل أنت متأكد من حذف المُرسِل «${sender.displayName || sender.name}»؟\n\nإذا كان مستخدمًا في قواعد التوجيه أو سجل الإرسال فسيمنع النظام الحذف حفاظًا على البيانات.`
+    );
+    if (!confirmed) return;
+
+    setBusy(sender.id);
+    setNotice(null);
+    try {
+      const res = await fetch(`/api/dashboard/communication/senders/${sender.id}`, { method: "DELETE" });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setNotice({ tone: "error", text: body.error ?? "تعذّر حذف المُرسِل." });
+        return;
+      }
+      setEditingSenderId((current) => current === sender.id ? null : current);
+      setNotice({ tone: "ok", text: "تم حذف المُرسِل." });
       await load();
     } finally {
       setBusy(null);
@@ -169,7 +202,12 @@ export function SenderRoutingManager() {
         </p>
       )}
 
-      {showSenderForm && <SenderForm onDone={async () => { setShowSenderForm(false); await load(); }} />}
+      {showSenderForm && (
+        <SenderForm
+          onCancel={() => setShowSenderForm(false)}
+          onDone={async () => { setShowSenderForm(false); await load(); }}
+        />
+      )}
 
       {loading && !data ? (
         <div className="flex items-center justify-center py-12 text-slate-400"><Loader2 className="w-5 h-5 animate-spin" /></div>
@@ -245,6 +283,48 @@ export function SenderRoutingManager() {
                             >
                               {sender.enabled ? "تعطيل" : "تفعيل"}
                             </button>
+                            {sender.channel === "WHATSAPP" && (
+                              <button
+                                type="button"
+                                disabled={busy === sender.id}
+                                onClick={() => void (async () => {
+                                  setBusy(sender.id);
+                                  setNotice(null);
+                                  try {
+                                    const res = await fetch(`/api/dashboard/communication/senders/${sender.id}/verify`, { method: "POST" });
+                                    const body = await res.json().catch(() => ({}));
+                                    if (!res.ok) {
+                                      setNotice({ tone: "error", text: body.error ?? "فشل التحقق من Meta." });
+                                      await load();
+                                      return;
+                                    }
+                                    setNotice({ tone: "ok", text: "تم التحقق من الرقم وWABA عبر Meta وتفعيل المُرسِل." });
+                                    await load();
+                                  } finally {
+                                    setBusy(null);
+                                  }
+                                })()}
+                                className="rounded-lg border border-sky-200 px-2 py-1 text-xs font-medium text-sky-700 hover:bg-sky-50 disabled:opacity-40"
+                              >
+                                تحقق من Meta
+                              </button>
+                            )}
+                            <button
+                              type="button"
+                              disabled={busy === sender.id}
+                              onClick={() => setEditingSenderId((current) => current === sender.id ? null : sender.id)}
+                              className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-40"
+                            >
+                              <Pencil className="h-3.5 w-3.5" /> تعديل
+                            </button>
+                            <button
+                              type="button"
+                              disabled={busy === sender.id}
+                              onClick={() => void removeSender(sender)}
+                              className="inline-flex items-center gap-1 rounded-lg border border-rose-200 px-2 py-1 text-xs font-medium text-rose-700 hover:bg-rose-50 disabled:opacity-40"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" /> حذف
+                            </button>
                             {!sender.isDefault && (
                               <button
                                 type="button"
@@ -257,6 +337,15 @@ export function SenderRoutingManager() {
                             )}
                           </div>
                         </div>
+                        {editingSenderId === sender.id && (
+                          <div className="mt-3 border-t border-slate-100 pt-3">
+                            <SenderForm
+                              sender={sender}
+                              onCancel={() => setEditingSenderId(null)}
+                              onDone={async () => { setEditingSenderId(null); await load(); }}
+                            />
+                          </div>
+                        )}
                       </li>
                     ))}
                   </ul>
@@ -333,14 +422,113 @@ export function SenderRoutingManager() {
   );
 }
 
-/** Creating a sender. Only the fields the chosen channel actually uses are asked for. */
-function SenderForm({ onDone }: { onDone: () => Promise<void> }) {
-  const [channel, setChannel] = useState<(typeof CHANNELS)[number]>("WHATSAPP");
+/** Compact searchable multi-select used for the 19 supported site languages. */
+function LanguageMultiSelect({ value, onChange }: { value: string[]; onChange: (next: string[]) => void }) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const normalized = query.trim().toLocaleLowerCase();
+  const options = SUPPORTED_LANGUAGES.filter(([code, label]) =>
+    !normalized || code.toLowerCase().includes(normalized) || label.toLocaleLowerCase().includes(normalized)
+  );
+  const selectedLabels = SUPPORTED_LANGUAGES.filter(([code]) => value.includes(code)).map(([, label]) => label);
+  const summary = selectedLabels.length === 0
+    ? "كل اللغات"
+    : selectedLabels.length <= 3
+      ? selectedLabels.join("، ")
+      : `${selectedLabels.slice(0, 3).join("، ")} +${selectedLabels.length - 3}`;
+
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        aria-expanded={open}
+        onClick={() => setOpen((current) => !current)}
+        className="flex h-9 w-full items-center justify-between rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-700 hover:border-slate-300"
+      >
+        <span className={value.length ? "text-slate-800" : "text-slate-500"}>{summary}</span>
+        <ChevronDown className={cn("h-4 w-4 transition-transform", open && "rotate-180")} />
+      </button>
+
+      {open && (
+        <div className="absolute z-30 mt-1 w-full min-w-[280px] rounded-xl border border-slate-200 bg-white p-2 shadow-xl">
+          <div className="flex items-center gap-2 rounded-lg border border-slate-200 px-2">
+            <Search className="h-4 w-4 text-slate-400" />
+            <input
+              autoFocus
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="ابحث عن لغة أو كود..."
+              className="h-9 min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-slate-400"
+            />
+            {query && (
+              <button type="button" onClick={() => setQuery("")} className="text-slate-400 hover:text-slate-700">
+                <X className="h-4 w-4" />
+              </button>
+            )}
+          </div>
+
+          <div className="mt-2 max-h-64 overflow-y-auto">
+            {options.map(([code, label]) => {
+              const selected = value.includes(code);
+              return (
+                <button
+                  key={code}
+                  type="button"
+                  onClick={() => onChange(selected ? value.filter((item) => item !== code) : [...value, code])}
+                  className="flex w-full items-center justify-between rounded-lg px-2.5 py-2 text-sm text-slate-700 hover:bg-slate-50"
+                >
+                  <span>{label} <span className="ms-1 text-xs text-slate-400">{code}</span></span>
+                  <span className={cn(
+                    "flex h-4 w-4 items-center justify-center rounded border",
+                    selected ? "border-brand bg-brand text-white" : "border-slate-300 bg-white"
+                  )}>
+                    {selected && <Check className="h-3 w-3" />}
+                  </span>
+                </button>
+              );
+            })}
+            {options.length === 0 && <p className="px-2 py-3 text-center text-xs text-slate-400">لا توجد نتائج.</p>}
+          </div>
+
+          <div className="mt-2 flex items-center justify-between border-t border-slate-100 pt-2">
+            <button type="button" onClick={() => onChange([])} className="text-xs font-semibold text-slate-500 hover:text-slate-800">
+              مسح الكل = كل اللغات
+            </button>
+            <button type="button" onClick={() => setOpen(false)} className="rounded-lg bg-slate-900 px-2.5 py-1 text-xs font-semibold text-white">
+              تم
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** Create or edit a sender. Channel/provider stay immutable once the sender exists. */
+function SenderForm({
+  sender,
+  onDone,
+  onCancel,
+}: {
+  sender?: Sender;
+  onDone: () => Promise<void>;
+  onCancel: () => void;
+}) {
+  const editing = Boolean(sender);
+  const [channel, setChannel] = useState<(typeof CHANNELS)[number]>((sender?.channel as (typeof CHANNELS)[number]) ?? "WHATSAPP");
   const [form, setForm] = useState({
-    name: "", displayName: "", phoneNumberId: "", displayPhoneNumber: "", businessAccountId: "",
-    senderEmail: "", smsSender: "", supportedLocales: "", supportedCountries: "", priority: "100",
+    name: sender?.name ?? "",
+    displayName: sender?.displayName ?? "",
+    phoneNumberId: sender?.phoneNumberId ?? "",
+    displayPhoneNumber: sender?.displayPhoneNumber ?? "",
+    businessAccountId: sender?.businessAccountId ?? "",
+    senderEmail: sender?.senderEmail ?? "",
+    smsSender: sender?.smsSender ?? "",
+    supportedCountries: sender?.supportedCountries.join(", ") ?? "",
+    priority: String(sender?.priority ?? 100),
   });
-  const [purposes, setPurposes] = useState<string[]>([]);
+  const [locales, setLocales] = useState<string[]>(sender?.supportedLocales ?? []);
+  const [purposes, setPurposes] = useState<string[]>(sender?.supportedPurposes ?? []);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -352,29 +540,42 @@ function SenderForm({ onDone }: { onDone: () => Promise<void> }) {
     setError(null);
     try {
       const list = (value: string) => value.split(",").map((v) => v.trim()).filter(Boolean);
-      const res = await fetch("/api/dashboard/communication/senders", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          channel,
-          provider: channel === "WHATSAPP" ? "META_WHATSAPP" : channel === "EMAIL" ? "ELASTIC_EMAIL" : "NETGSM_SMS",
-          name: form.name,
-          displayName: form.displayName || null,
-          phoneNumberId: channel === "WHATSAPP" ? form.phoneNumberId || null : null,
-          displayPhoneNumber: channel === "WHATSAPP" ? form.displayPhoneNumber || null : null,
-          businessAccountId: channel === "WHATSAPP" ? form.businessAccountId || null : null,
-          senderEmail: channel === "EMAIL" ? form.senderEmail || null : null,
-          smsSender: channel === "SMS" ? form.smsSender || null : null,
-          supportedLocales: list(form.supportedLocales),
-          supportedCountries: list(form.supportedCountries).map((c) => c.toUpperCase()),
-          supportedPurposes: purposes,
-          priority: Number(form.priority) || 100,
-          status: "ACTIVE",
-          enabled: true,
-        }),
-      });
+      const editable = {
+        name: form.name.trim(),
+        displayName: form.displayName.trim() || null,
+        phoneNumberId: channel === "WHATSAPP" ? form.phoneNumberId.trim() || null : null,
+        displayPhoneNumber: channel === "WHATSAPP" ? form.displayPhoneNumber.trim() || null : null,
+        businessAccountId: channel === "WHATSAPP" ? form.businessAccountId.trim() || null : null,
+        senderEmail: channel === "EMAIL" ? form.senderEmail.trim() || null : null,
+        smsSender: channel === "SMS" ? form.smsSender.trim() || null : null,
+        supportedLocales: locales,
+        supportedCountries: list(form.supportedCountries).map((country) => country.toUpperCase()),
+        supportedPurposes: purposes,
+        priority: Number(form.priority) || 100,
+      };
+      const payload = editing
+        ? editable
+        : {
+            ...editable,
+            channel,
+            provider: channel === "WHATSAPP" ? "META_WHATSAPP" : channel === "EMAIL" ? "ELASTIC_EMAIL" : "NETGSM_SMS",
+            status: channel === "WHATSAPP" ? "NOT_CONFIGURED" : "ACTIVE",
+            enabled: channel === "WHATSAPP" ? false : true,
+          };
+
+      const res = await fetch(
+        editing ? `/api/dashboard/communication/senders/${sender!.id}` : "/api/dashboard/communication/senders",
+        {
+          method: editing ? "PATCH" : "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(payload),
+        },
+      );
       const body = await res.json().catch(() => ({}));
-      if (!res.ok) { setError(body.error ?? "تعذّر الإنشاء."); return; }
+      if (!res.ok) {
+        setError(body.error ?? (editing ? "تعذّر حفظ التعديلات." : "تعذّر إنشاء المُرسِل."));
+        return;
+      }
       await onDone();
     } finally {
       setSaving(false);
@@ -382,13 +583,33 @@ function SenderForm({ onDone }: { onDone: () => Promise<void> }) {
   };
 
   const field = "w-full rounded-lg border border-slate-200 px-2.5 py-1.5 text-sm text-slate-800 placeholder:text-slate-400";
+  const missingWhatsappIdentity = channel === "WHATSAPP" &&
+    (!form.phoneNumberId.trim() || !form.businessAccountId.trim() || !form.displayPhoneNumber.trim());
 
   return (
-    <div className="mb-5 rounded-xl border border-brand/20 bg-brand/5 p-4">
+    <div className={cn(
+      "rounded-xl border p-4",
+      editing ? "border-slate-200 bg-slate-50/70" : "mb-5 border-brand/20 bg-brand/5"
+    )}>
+      <div className="mb-3 flex items-center justify-between gap-2">
+        <div>
+          <p className="text-sm font-bold text-slate-900">{editing ? "تعديل المُرسِل" : "إضافة مُرسِل جديد"}</p>
+          {editing && <p className="mt-0.5 text-xs text-slate-500">القناة والمزوّد ثابتان حفاظًا على سجل الرسائل والتوجيه.</p>}
+        </div>
+        <button type="button" onClick={onCancel} className="rounded-lg p-1.5 text-slate-400 hover:bg-white hover:text-slate-700" aria-label="إغلاق">
+          <X className="h-4 w-4" />
+        </button>
+      </div>
+
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         <label className="text-xs font-semibold text-slate-600">
           القناة
-          <select value={channel} onChange={(e) => setChannel(e.target.value as typeof channel)} className={cn(field, "mt-1")}>
+          <select
+            value={channel}
+            disabled={editing}
+            onChange={(e) => setChannel(e.target.value as typeof channel)}
+            className={cn(field, "mt-1 disabled:bg-slate-100 disabled:text-slate-500")}
+          >
             {CHANNELS.map((c) => <option key={c} value={c}>{CHANNEL_LABELS[c]}</option>)}
           </select>
         </label>
@@ -404,16 +625,16 @@ function SenderForm({ onDone }: { onDone: () => Promise<void> }) {
         {channel === "WHATSAPP" && (
           <>
             <label className="text-xs font-semibold text-slate-600">
-              معرّف الرقم في Meta
-              <input value={form.phoneNumberId} onChange={set("phoneNumberId")} className={cn(field, "mt-1")} />
+              Phone Number ID في Meta
+              <input inputMode="numeric" value={form.phoneNumberId} onChange={set("phoneNumberId")} className={cn(field, "mt-1")} />
             </label>
             <label className="text-xs font-semibold text-slate-600">
               الرقم كما يظهر
               <input value={form.displayPhoneNumber} onChange={set("displayPhoneNumber")} placeholder="+90…" className={cn(field, "mt-1")} />
             </label>
             <label className="text-xs font-semibold text-slate-600">
-              معرّف حساب الأعمال
-              <input value={form.businessAccountId} onChange={set("businessAccountId")} className={cn(field, "mt-1")} />
+              WABA ID
+              <input inputMode="numeric" value={form.businessAccountId} onChange={set("businessAccountId")} className={cn(field, "mt-1")} />
             </label>
           </>
         )}
@@ -430,22 +651,22 @@ function SenderForm({ onDone }: { onDone: () => Promise<void> }) {
           </label>
         )}
 
-        <label className="text-xs font-semibold text-slate-600">
-          اللغات المدعومة (فراغ = الكل)
-          <input value={form.supportedLocales} onChange={set("supportedLocales")} placeholder="ar, tr, en" className={cn(field, "mt-1")} />
-        </label>
+        <div className="text-xs font-semibold text-slate-600 sm:col-span-2 lg:col-span-2">
+          <p className="mb-1">اللغات المدعومة <span className="font-normal text-slate-400">(لا اختيار = كل اللغات)</span></p>
+          <LanguageMultiSelect value={locales} onChange={setLocales} />
+        </div>
         <label className="text-xs font-semibold text-slate-600">
           الدول المدعومة (فراغ = الكل)
           <input value={form.supportedCountries} onChange={set("supportedCountries")} placeholder="TR, SA" className={cn(field, "mt-1")} />
         </label>
         <label className="text-xs font-semibold text-slate-600">
           الأولوية (الأصغر أولًا)
-          <input value={form.priority} onChange={set("priority")} className={cn(field, "mt-1")} />
+          <input inputMode="numeric" value={form.priority} onChange={set("priority")} className={cn(field, "mt-1")} />
         </label>
       </div>
 
       <div className="mt-3">
-        <p className="text-xs font-semibold text-slate-600">الأغراض المدعومة (فراغ = الكل)</p>
+        <p className="text-xs font-semibold text-slate-600">الأغراض المدعومة (بدون اختيار = الكل)</p>
         <div className="mt-1 flex flex-wrap gap-1.5">
           {PURPOSES.map((purpose) => (
             <button
@@ -463,15 +684,30 @@ function SenderForm({ onDone }: { onDone: () => Promise<void> }) {
         </div>
       </div>
 
+      {missingWhatsappIdentity && (
+        <p className="mt-2 text-xs text-amber-700">رقم واتساب يحتاج Phone Number ID وWABA ID والرقم الظاهر قبل الحفظ.</p>
+      )}
       {error && <p className="mt-2 text-xs font-medium text-rose-700">{error}</p>}
-      <button
-        type="button"
-        disabled={saving || !form.name.trim()}
-        onClick={() => void submit()}
-        className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-brand px-3 py-1.5 text-sm font-semibold text-white disabled:opacity-40"
-      >
-        {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />} حفظ المُرسِل
-      </button>
+
+      <div className="mt-3 flex flex-wrap gap-2">
+        <button
+          type="button"
+          disabled={saving || !form.name.trim() || missingWhatsappIdentity}
+          onClick={() => void submit()}
+          className="inline-flex items-center gap-1.5 rounded-lg bg-brand px-3 py-1.5 text-sm font-semibold text-white disabled:opacity-40"
+        >
+          {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : editing ? <Check className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
+          {editing ? "حفظ التعديلات" : "حفظ المُرسِل"}
+        </button>
+        <button
+          type="button"
+          disabled={saving}
+          onClick={onCancel}
+          className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-40"
+        >
+          إلغاء
+        </button>
+      </div>
     </div>
   );
 }
