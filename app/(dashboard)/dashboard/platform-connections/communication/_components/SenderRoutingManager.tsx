@@ -283,6 +283,32 @@ export function SenderRoutingManager() {
                             >
                               {sender.enabled ? "تعطيل" : "تفعيل"}
                             </button>
+                            {sender.channel === "WHATSAPP" && (
+                              <button
+                                type="button"
+                                disabled={busy === sender.id}
+                                onClick={() => void (async () => {
+                                  setBusy(sender.id);
+                                  setNotice(null);
+                                  try {
+                                    const res = await fetch(`/api/dashboard/communication/senders/${sender.id}/verify`, { method: "POST" });
+                                    const body = await res.json().catch(() => ({}));
+                                    if (!res.ok) {
+                                      setNotice({ tone: "error", text: body.error ?? "فشل التحقق من Meta." });
+                                      await load();
+                                      return;
+                                    }
+                                    setNotice({ tone: "ok", text: "تم التحقق من الرقم وWABA عبر Meta وتفعيل المُرسِل." });
+                                    await load();
+                                  } finally {
+                                    setBusy(null);
+                                  }
+                                })()}
+                                className="rounded-lg border border-sky-200 px-2 py-1 text-xs font-medium text-sky-700 hover:bg-sky-50 disabled:opacity-40"
+                              >
+                                تحقق من Meta
+                              </button>
+                            )}
                             <button
                               type="button"
                               disabled={busy === sender.id}
@@ -533,8 +559,8 @@ function SenderForm({
             ...editable,
             channel,
             provider: channel === "WHATSAPP" ? "META_WHATSAPP" : channel === "EMAIL" ? "ELASTIC_EMAIL" : "NETGSM_SMS",
-            status: "ACTIVE",
-            enabled: true,
+            status: channel === "WHATSAPP" ? "NOT_CONFIGURED" : "ACTIVE",
+            enabled: channel === "WHATSAPP" ? false : true,
           };
 
       const res = await fetch(

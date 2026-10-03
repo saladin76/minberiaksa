@@ -50,6 +50,10 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   const actor = auditActorFromDashboardSession(session!);
   const { makeDefault, ...patch } = parsed.data;
 
+  if (current.isDefault && (patch.enabled === false || (patch.status && patch.status !== "ACTIVE"))) {
+    return NextResponse.json({ error: "لا يمكن تعطيل المُرسِل الافتراضي. عيّن مُرسِلًا افتراضيًا آخر أولًا." }, { status: 409 });
+  }
+
   if (current.channel === "WHATSAPP") {
     const phoneNumberId = Object.prototype.hasOwnProperty.call(patch, "phoneNumberId") ? patch.phoneNumberId : current.phoneNumberId;
     const businessAccountId = Object.prototype.hasOwnProperty.call(patch, "businessAccountId") ? patch.businessAccountId : current.businessAccountId;

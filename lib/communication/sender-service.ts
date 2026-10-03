@@ -3,6 +3,7 @@ import { writeAuditLog } from "@/lib/audit-log";
 import type { CommunicationSender } from "@prisma/client";
 import type { CommunicationSenderConfig } from "./sender-router";
 import type { CommunicationChannel } from "./communication-types";
+import { verifySenderOwnership } from "./providers/meta-whatsapp/client";
 import {
   isCommunicationChannel,
   isCommunicationProvider,
@@ -137,6 +138,10 @@ export async function updateSender(id: string, patch: Partial<SenderInput>, acto
       if (duplicate) return { ok: false, status: 409, error: `Phone Number ID مستخدم بالفعل في المُرسِل «${duplicate.name}».` };
     }
 
+    if (current.isDefault && (patch.enabled === false || (patch.status && patch.status !== "ACTIVE"))) {
+      return { ok: false, status: 409, error: "لا يمكن تعطيل المُرسِل الافتراضي أو تغيير حالته عن ACTIVE. عيّن مُرسِلًا افتراضيًا آخر أولًا." };
+    }
+
     const row = await prisma.communicationSender.update({
       where: { id },
       data: {
@@ -234,14 +239,94 @@ export async function deleteSender(id: string, actor?: Actor): Promise<ServiceRe
   }
 }
 
+/**
+ * Validate one stored WhatsApp sender against Meta and persist the health result. A sender only
+ * becomes routable (ACTIVE + enabled) after Meta confirms that the Phone Number ID belongs to the
+ * configured WABA under the active app credentials.
+ */
+export async function verifyWhatsappSender(id: string, actor?: Actor): Promise<ServiceResult<CommunicationSender>> {
+  if (!process.env.DATABASE_URL) return dbUnavailable();
+  const sender = await prisma.communicationSender.findUnique({ where: { id } }).catch(() => null);
+  if (!sender) return { ok: false, status: 404, error: "Sender not found." };
+  if (sender.channel !== "WHATSAPP" || sender.provider !== "META_WHATSAPP") {
+    return { ok: false, status: 400, error: "التحقق من Meta متاح لمرسلي WhatsApp فقط." };
+  }
+  if (!sender.phoneNumberId || !sender.businessAccountId) {
+    return { ok: false, status: 400, error: "Phone Number ID وWABA ID مطلوبان قبل التحقق." };
+  }
+
+  const checkedAt = new Date();
+  const verification = await verifySenderOwnership(sender.phoneNumberId, sender.businessAccountId);
+  if (!verification.ok) {
+    const status = verification.reason === "META_WHATSAPP_NOT_CONFIGURED" ? "NOT_CONFIGURED" : "NEEDS_ATTENTION";
+    const row = await prisma.communicationSender.update({
+      where: { id },
+      data: {
+        status,
+        enabled: false,
+        lastHealthCheckAt: checkedAt,
+        lastError: [verification.reason, verification.detail].filter(Boolean).join(" · ").slice(0, 500),
+      },
+    });
+    await writeAuditLog({
+      actorId: actor?.actorId ?? undefined,
+      actorName: actor?.actorName ?? undefined,
+      actorRole: actor?.actorRole ?? "ADMIN",
+      action: "communication.sender.verify.failed",
+      messageAr: `فشل التحقق من مُرسِل واتساب: ${sender.name}`,
+      messageEn: `WhatsApp sender verification failed: ${sender.name}`,
+      entityType: "CommunicationSender",
+      entityId: id,
+      metadata: { reason: verification.reason, externalCall: true },
+      stream: "TEAM",
+    });
+    return { ok: false, status: verification.reason === "META_WHATSAPP_NOT_CONFIGURED" ? 409 : 422, error: row.lastError ?? verification.reason };
+  }
+
+  const row = await prisma.communicationSender.update({
+    where: { id },
+    data: {
+      status: "ACTIVE",
+      enabled: true,
+      displayPhoneNumber: verification.displayPhoneNumber || sender.displayPhoneNumber,
+      displayName: verification.verifiedName || sender.displayName,
+      qualityRating: verification.qualityRating,
+      lastHealthCheckAt: checkedAt,
+      lastError: null,
+    },
+  });
+  await writeAuditLog({
+    actorId: actor?.actorId ?? undefined,
+    actorName: actor?.actorName ?? undefined,
+    actorRole: actor?.actorRole ?? "ADMIN",
+    action: "communication.sender.verify",
+    messageAr: `تم التحقق من مُرسِل واتساب عبر Meta: ${row.name}`,
+    messageEn: `WhatsApp sender verified with Meta: ${row.name}`,
+    entityType: "CommunicationSender",
+    entityId: id,
+    metadata: { qualityRating: row.qualityRating, externalCall: true },
+    stream: "TEAM",
+  });
+  return { ok: true, data: row };
+}
+
 /** Make one sender the default for its channel (clears the flag on the channel's other senders). */
 export async function setDefaultSender(id: string, actor?: Actor): Promise<ServiceResult<CommunicationSender>> {
   if (!process.env.DATABASE_URL) return dbUnavailable();
   try {
-    const sender = await prisma.communicationSender.findUnique({ where: { id }, select: { channel: true, name: true } });
+    const sender = await prisma.communicationSender.findUnique({ where: { id } });
     if (!sender) return { ok: false, status: 404, error: "Sender not found." };
-    await prisma.communicationSender.updateMany({ where: { channel: sender.channel, isDefault: true }, data: { isDefault: false } });
-    const row = await prisma.communicationSender.update({ where: { id }, data: { isDefault: true } });
+    if (!sender.enabled || sender.status !== "ACTIVE") {
+      return { ok: false, status: 409, error: "لا يمكن تعيين مُرسِل غير نشط كافتراضي. فعّله وتأكد من سلامة حالته أولًا." };
+    }
+    if (sender.channel === "WHATSAPP" && (!sender.phoneNumberId || !sender.businessAccountId || !sender.displayPhoneNumber)) {
+      return { ok: false, status: 409, error: "مرسل واتساب غير مكتمل: Phone Number ID وWABA ID والرقم الظاهر مطلوبة." };
+    }
+
+    const row = await prisma.$transaction(async (tx) => {
+      await tx.communicationSender.updateMany({ where: { channel: sender.channel, isDefault: true }, data: { isDefault: false } });
+      return tx.communicationSender.update({ where: { id }, data: { isDefault: true } });
+    });
     await writeAuditLog({
       actorId: actor?.actorId ?? undefined,
       actorName: actor?.actorName ?? undefined,
