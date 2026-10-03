@@ -147,6 +147,7 @@ export async function publishWhatsappTemplateToMeta(
       const language = META_LANGUAGE[locale] ?? locale;
       summary.targets += 1;
       let components: unknown[];
+      let parameterFormat: "named" | "positional" | undefined;
       try {
         if (category === "AUTHENTICATION") {
           components = buildAuthenticationMetaComponents(auth);
@@ -165,6 +166,7 @@ export async function publishWhatsappTemplateToMeta(
             buttons: variant.buttons ?? rootButtons,
           });
           components = built.components;
+          parameterFormat = built.parameterFormat;
           if (locale === "ar") canonicalBindings = built.bindings;
         }
       } catch (error) {
@@ -183,6 +185,7 @@ export async function publishWhatsappTemplateToMeta(
         language,
         category,
         components,
+        parameterFormat,
       }, runtime);
       if (!result.ok) {
         summary.failed += 1;
