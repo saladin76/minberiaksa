@@ -221,7 +221,7 @@ export function ProviderFieldsPanel({
               {permissions.canManage && <ActionButton disabled={!!busy || dirty.size === 0} loading={busy === "save"} onClick={onSave} icon={<Save className="h-4 w-4" />} label="حفظ التغييرات" variant="primary" />}
               {permissions.canTest && activeComplete && <ActionButton disabled={!!busy} loading={busy === "test-active"} onClick={onTestActive} icon={<ShieldCheck className="h-4 w-4" />} label="فحص الإعدادات الحالية" />}
               {permissions.canTest && snapshot.candidate.hasChanges && <ActionButton disabled={!!busy} loading={busy === "test-candidate"} onClick={onTestCandidate} icon={<TestTube2 className="h-4 w-4" />} label="اختبار التغييرات" />}
-              {permissions.canManage && snapshot.candidate.lastTestResult === "SUCCESS" && snapshot.candidate.version && <ActionButton disabled={!!busy} loading={busy === "activate"} onClick={onActivate} icon={<CheckCircle2 className="h-4 w-4" />} label="اعتماد الإعدادات" variant="success" />}
+              {permissions.canManage && snapshot.candidate.version && (snapshot.candidate.lastTestResult === "SUCCESS" || (lastCandidateTest?.success && lastCandidateTest.candidateVersion === snapshot.candidate.version)) && <ActionButton disabled={!!busy} loading={busy === "activate"} onClick={onActivate} icon={<CheckCircle2 className="h-4 w-4" />} label="اعتماد الإعدادات" variant="success" />}
               {permissions.canManage && snapshot.candidate.hasChanges && <ActionButton disabled={!!busy} loading={busy === "discard"} onClick={onDiscard} icon={<RotateCcw className="h-4 w-4" />} label="إلغاء التغييرات" variant="danger" />}
             </div>
           </>
