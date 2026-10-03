@@ -94,7 +94,7 @@ export async function sendTriggerMessage(
     const body = mergeText(variant.body, ctx);
     const routed = resolveTriggerSender(config, "WHATSAPP", { locale, purpose: opts.purpose });
     if (!routed.ok) return { channel: "WHATSAPP", outcome: "SKIPPED", reason: routed.reason };
-    const metaTemplate = await resolveMetaTemplateMapping(tpl, locale);
+    const metaTemplate = await resolveMetaTemplateMapping(tpl, locale, routed.sender.businessAccountId);
     /* Meta's placeholders are positional, and the local template's variable catalog says which
        token each position carries. Each one is rendered against this recipient's context through
        the same merge the body uses, so the parameters and the body cannot disagree. */
@@ -104,7 +104,7 @@ export async function sendTriggerMessage(
       templateValues[name] = value;
       templateValues[String(index + 1)] = value;
     });
-    const response = await sendAutomaticWhatsappMessage({ triggerEvent: event, templateId: tpl.id, templateName: tpl.name, locale, recipientUserId: ctx.user.id, recipientName: ctx.user.name || null, recipientPhone: ctx.user.phone ?? null, renderedBody: body, metaTemplate, templateValues, sender: { id: routed.sender.id, phoneNumberId: routed.sender.phoneNumberId }, variables, donationId, purpose: opts.purpose });
+    const response = await sendAutomaticWhatsappMessage({ triggerEvent: event, templateId: tpl.id, templateName: tpl.name, locale, recipientUserId: ctx.user.id, recipientName: ctx.user.name || null, recipientPhone: ctx.user.phone ?? null, renderedBody: body, metaTemplate, templateValues, sender: { id: routed.sender.id, phoneNumberId: routed.sender.phoneNumberId, businessAccountId: routed.sender.businessAccountId }, variables, donationId, purpose: opts.purpose });
     return { channel: "WHATSAPP", outcome: response.outcome, reason: response.reason };
   }
 
