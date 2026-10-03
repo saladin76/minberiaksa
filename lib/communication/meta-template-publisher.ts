@@ -219,7 +219,7 @@ export async function publishWhatsappTemplateToMeta(
   });
 
   if (summary.canonicalWabaId) {
-    await syncMetaWhatsappTemplates({ businessAccountId: summary.canonicalWabaId, actor }).catch(() => null);
+    await syncMetaWhatsappTemplates({ actor }).catch(() => null);
   }
 
   summary.ok = summary.failed === 0 && summary.statuses.length > 0;
