@@ -24,12 +24,14 @@ interface ApiTemplate {
   id: string;
   name: string;
   body: string;
+  category?: "UTILITY" | "MARKETING" | "AUTHENTICATION" | null;
   translations?: Partial<Record<string, { body?: string }>> | null;
 }
 
 export function WhatsappTemplateEditorDialog({ id, open, onOpenChange }: Props) {
   const [name, setName] = React.useState("");
   const [bodies, setBodies] = React.useState<BodiesState>({});
+  const [metaCategory, setMetaCategory] = React.useState<"UTILITY" | "MARKETING" | "AUTHENTICATION">("UTILITY");
   const [activeLocale, setActiveLocale] = React.useState<SupportedLocale>(DEFAULT_LOCALE);
   const [loading, setLoading] = React.useState(false);
   const [saving, setSaving] = React.useState(false);
@@ -40,6 +42,7 @@ export function WhatsappTemplateEditorDialog({ id, open, onOpenChange }: Props) 
     if (!id) {
       setName("");
       setBodies({ [DEFAULT_LOCALE]: "مرحباً {{user.name}}، شكراً لتبرّعك!" });
+      setMetaCategory("UTILITY");
       setActiveLocale(DEFAULT_LOCALE);
       return;
     }
@@ -49,6 +52,7 @@ export function WhatsappTemplateEditorDialog({ id, open, onOpenChange }: Props) 
       .then((res) => {
         const t = res.data?.template as ApiTemplate;
         setName(t?.name ?? "");
+        setMetaCategory(t?.category === "MARKETING" || t?.category === "AUTHENTICATION" ? t.category : "UTILITY");
         const next: BodiesState = { [DEFAULT_LOCALE]: t?.body ?? "" };
         if (t?.translations) {
           for (const [loc, v] of Object.entries(t.translations)) {
@@ -111,13 +115,14 @@ export function WhatsappTemplateEditorDialog({ id, open, onOpenChange }: Props) 
         name,
         body: arBody,
         translations: Object.keys(translations).length > 0 ? translations : null,
+        metaCategory,
       };
       if (id) {
         await axios.patch(`/api/templates/whatsapp/${id}`, payload);
       } else {
         await axios.post("/api/templates/whatsapp", payload);
       }
-      toast.success("تم الحفظ");
+      toast.success("تم الحفظ والإرسال إلى Meta للمراجعة");
       onOpenChange(false);
     } catch (err) {
       /* Say what the server refused rather than a bare "failed". */
@@ -153,7 +158,7 @@ export function WhatsappTemplateEditorDialog({ id, open, onOpenChange }: Props) 
       open={open}
       onOpenChange={onOpenChange}
       title={id ? "تعديل قالب الواتساب" : "قالب واتساب جديد"}
-      subtitle="نص الرسالة ومتغيّراتها  المعاينة على اليسار تعرضه ببيانات تجريبية."
+      subtitle="عند الحفظ يُنشأ القالب تلقائيًا في Meta لكل WABA نشط، وتظهر حالته بعد المراجعة."
       icon={<MessageCircle className="h-4 w-4" />}
       accent="whatsapp"
       size="lg"
@@ -173,9 +178,29 @@ export function WhatsappTemplateEditorDialog({ id, open, onOpenChange }: Props) 
       }
     >
       <div className="space-y-4">
-        <div className="space-y-1.5">
-          <FieldLabel hint="لا يظهر للمتبرّع">اسم القالب</FieldLabel>
-          <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="مثال: شكر التبرع" />
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-[1fr_220px]">
+          <div className="space-y-1.5">
+            <FieldLabel hint="يُستخدم أيضًا كاسم القالب داخل Meta">اسم القالب</FieldLabel>
+            <Input
+              value={name}
+              onChange={(e) => setName(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, "_"))}
+              placeholder="donation_success"
+              dir="ltr"
+            />
+            <p className="text-[11px] text-muted-foreground">حروف إنجليزية صغيرة وأرقام وشرطة سفلية فقط.</p>
+          </div>
+          <div className="space-y-1.5">
+            <FieldLabel hint="تُرسل إلى Meta عند الحفظ">تصنيف Meta</FieldLabel>
+            <select
+              value={metaCategory}
+              onChange={(e) => setMetaCategory(e.target.value as "UTILITY" | "MARKETING" | "AUTHENTICATION")}
+              className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+            >
+              <option value="UTILITY">Utility — معاملات وخدمة</option>
+              <option value="MARKETING">Marketing — حملات وتسويق</option>
+              <option value="AUTHENTICATION">Authentication — تحقق</option>
+            </select>
+          </div>
         </div>
 
         {/* min-w-0 on both columns keeps the monospace textarea and the preview from widening
