@@ -25,7 +25,7 @@ export type MetaComponent = {
 };
 
 export type MetaParameter =
-  | { type: "text"; text: string }
+  | { type: "text"; text: string; parameter_name?: string }
   | { type: "image"; image: { link: string } }
   | { type: "video"; video: { link: string } }
   | { type: "document"; document: { link: string; filename?: string } }
@@ -54,6 +54,27 @@ function placeholderOrder(text: string): number[] {
   return out.sort((a, b) => a - b);
 }
 
+/** Named parameters as returned by Meta, e.g. {{donation_amount}}. */
+function namedPlaceholderOrder(text: string): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const match of String(text ?? "").matchAll(/\{\{\s*([a-z][a-z0-9_]*)\s*\}\}/g)) {
+    const name = match[1];
+    if (!/^\d+$/.test(name) && !seen.has(name)) { seen.add(name); out.push(name); }
+  }
+  return out;
+}
+
+function toMetaParameterName(key: string): string {
+  const normalized = key
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9_]+/g, "_")
+    .replace(/^_+|_+$/g, "")
+    .replace(/_+/g, "_");
+  return /^[a-z]/.test(normalized) ? normalized : `p_${normalized || "value"}`;
+}
+
 function asArray(value: unknown): unknown[] {
   return Array.isArray(value) ? value : [];
 }
@@ -63,9 +84,9 @@ function asArray(value: unknown): unknown[] {
  * newline or tab in a text parameter is rejected too. Both are the caller's data, so they are
  * cleaned rather than allowed to fail the send.
  */
-function textParameter(value: unknown): MetaParameter {
+function textParameter(value: unknown, parameterName?: string): MetaParameter {
   const text = String(value ?? "").replace(/[\r\n\t]+/g, " ").trim().slice(0, 1024);
-  return { type: "text", text };
+  return { type: "text", text, ...(parameterName ? { parameter_name: parameterName } : {}) };
 }
 
 /**
@@ -122,20 +143,49 @@ export function buildMetaComponents(input: {
     return { ok: false, key: name ? `${position} (${name})` : String(position) };
   };
 
+  const lookupNamed = (parameterName: string, scope: string): { ok: true; value: string } | { ok: false; key: string } => {
+    const direct = input.values[parameterName];
+    if (direct != null && String(direct).length) return { ok: true, value: String(direct) };
+
+    for (const [scopedKey, semanticName] of Object.entries(input.scopedNames ?? {})) {
+      if (!scopedKey.startsWith(`${scope}.`)) continue;
+      if (toMetaParameterName(semanticName) !== parameterName) continue;
+      const value = input.values[semanticName];
+      if (value != null && String(value).length) return { ok: true, value: String(value) };
+    }
+    for (const semanticName of input.positionalNames ?? []) {
+      if (toMetaParameterName(semanticName) !== parameterName) continue;
+      const value = input.values[semanticName];
+      if (value != null && String(value).length) return { ok: true, value: String(value) };
+    }
+    return { ok: false, key: parameterName };
+  };
+
   for (const component of schema) {
     const type = String(component.type ?? "").toUpperCase();
 
     if (type === "HEADER") {
       const format = String(component.format ?? "TEXT").toUpperCase();
       if (format === "TEXT") {
-        const positions = placeholderOrder(String(component.text ?? ""));
-        if (!positions.length) continue;
+        const text = String(component.text ?? "");
+        const names = namedPlaceholderOrder(text);
+        const positions = placeholderOrder(text);
+        if (!positions.length && !names.length) continue;
         const parameters: MetaParameter[] = [];
-        for (const position of positions) {
-          const got = lookup(position, "header");
-          if (!got.ok) return { ok: false, reason: "TEMPLATE_PARAMETER_MISSING", detail: `header {{${got.key}}}` };
-          parameters.push(textParameter(got.value));
-          used.push(`header:${position}`);
+        if (names.length) {
+          for (const name of names) {
+            const got = lookupNamed(name, "header");
+            if (!got.ok) return { ok: false, reason: "TEMPLATE_PARAMETER_MISSING", detail: `header {{${got.key}}}` };
+            parameters.push(textParameter(got.value, name));
+            used.push(`header:${name}`);
+          }
+        } else {
+          for (const position of positions) {
+            const got = lookup(position, "header");
+            if (!got.ok) return { ok: false, reason: "TEMPLATE_PARAMETER_MISSING", detail: `header {{${got.key}}}` };
+            parameters.push(textParameter(got.value));
+            used.push(`header:${position}`);
+          }
         }
         components.push({ type: "header", parameters });
         continue;
@@ -175,9 +225,11 @@ export function buildMetaComponents(input: {
     }
 
     if (type === "BODY") {
-      const positions = placeholderOrder(String(component.text ?? ""));
+      const bodyText = String(component.text ?? "");
+      const names = namedPlaceholderOrder(bodyText);
+      const positions = placeholderOrder(bodyText);
       const isAuthenticationBody = (component as Record<string, unknown>).add_security_recommendation !== undefined;
-      if (!positions.length && !isAuthenticationBody) continue;
+      if (!positions.length && !names.length && !isAuthenticationBody) continue;
 
       if (isAuthenticationBody) {
         const otp =
@@ -195,11 +247,20 @@ export function buildMetaComponents(input: {
       }
 
       const parameters: MetaParameter[] = [];
-      for (const position of positions) {
-        const got = lookup(position, "body");
-        if (!got.ok) return { ok: false, reason: "TEMPLATE_PARAMETER_MISSING", detail: `body {{${got.key}}}` };
-        parameters.push(textParameter(got.value));
-        used.push(`body:${position}`);
+      if (names.length) {
+        for (const name of names) {
+          const got = lookupNamed(name, "body");
+          if (!got.ok) return { ok: false, reason: "TEMPLATE_PARAMETER_MISSING", detail: `body {{${got.key}}}` };
+          parameters.push(textParameter(got.value, name));
+          used.push(`body:${name}`);
+        }
+      } else {
+        for (const position of positions) {
+          const got = lookup(position, "body");
+          if (!got.ok) return { ok: false, reason: "TEMPLATE_PARAMETER_MISSING", detail: `body {{${got.key}}}` };
+          parameters.push(textParameter(got.value));
+          used.push(`body:${position}`);
+        }
       }
       components.push({ type: "body", parameters });
       continue;
@@ -229,13 +290,22 @@ export function buildMetaComponents(input: {
         /* Only a URL button with a dynamic suffix takes a parameter. Missing values must fail the
            send instead of silently dropping the parameter and letting Meta reject the message. */
         if (buttonType !== "URL") continue;
-        const positions = placeholderOrder(String(button.url ?? ""));
-        if (!positions.length) continue;
-        const got = lookup(positions[0], `button.${index}`);
-        if (!got.ok) {
-          return { ok: false, reason: "TEMPLATE_PARAMETER_MISSING", detail: `button ${index} {{${got.key}}}` };
+        const url = String(button.url ?? "");
+        const names = namedPlaceholderOrder(url);
+        const positions = placeholderOrder(url);
+        if (!positions.length && !names.length) continue;
+        if (names.length > 1 || positions.length > 1) {
+          return { ok: false, reason: "TEMPLATE_URL_PARAMETER_COUNT_INVALID", detail: `button ${index}` };
         }
-        components.push({ type: "button", sub_type: "url", index: String(index), parameters: [textParameter(got.value)] });
+        if (names.length) {
+          const got = lookupNamed(names[0], `button.${index}`);
+          if (!got.ok) return { ok: false, reason: "TEMPLATE_PARAMETER_MISSING", detail: `button ${index} {{${got.key}}}` };
+          components.push({ type: "button", sub_type: "url", index: String(index), parameters: [textParameter(got.value, names[0])] });
+        } else {
+          const got = lookup(positions[0], `button.${index}`);
+          if (!got.ok) return { ok: false, reason: "TEMPLATE_PARAMETER_MISSING", detail: `button ${index} {{${got.key}}}` };
+          components.push({ type: "button", sub_type: "url", index: String(index), parameters: [textParameter(got.value)] });
+        }
         used.push(`button:${index}`);
       }
       continue;
@@ -253,17 +323,17 @@ export function schemaTakesParameters(componentsSchema: unknown): boolean {
     if (type === "HEADER") {
       const format = String(component.format ?? "TEXT").toUpperCase();
       if (format !== "TEXT") return true;
-      if (placeholderOrder(String(component.text ?? "")).length) return true;
+      if (placeholderOrder(String(component.text ?? "")).length || namedPlaceholderOrder(String(component.text ?? "")).length) return true;
     }
     if (type === "BODY") {
       if ((component as Record<string, unknown>).add_security_recommendation !== undefined) return true;
-      if (placeholderOrder(String(component.text ?? "")).length) return true;
+      if (placeholderOrder(String(component.text ?? "")).length || namedPlaceholderOrder(String(component.text ?? "")).length) return true;
     }
     if (type === "BUTTONS") {
       for (const button of asArray(component.buttons) as { type?: unknown; url?: unknown }[]) {
         const buttonType = String(button.type ?? "").toUpperCase();
         if (buttonType === "OTP") return true;
-        if (buttonType === "URL" && placeholderOrder(String(button.url ?? "")).length) return true;
+        if (buttonType === "URL" && (placeholderOrder(String(button.url ?? "")).length || namedPlaceholderOrder(String(button.url ?? "")).length)) return true;
       }
     }
   }
