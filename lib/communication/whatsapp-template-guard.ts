@@ -7,8 +7,10 @@ import { prisma } from "@/lib/prisma";
  *
  * **Provider-owned fields are not ours to edit.** `approvalStatus`, `language`, `category`,
  * `externalTemplateId`, `templateType`, `header` and `buttons` describe what Meta (or Twilio)
- * registered and approved. They were writable from the dashboard, which meant somebody could set a
- * rejected template to "approved" and the platform would believe it  until a campaign was built on
+ * registered/provider state. The authored header/buttons/footer are local studio content until
+ * submission and are frozen with the body once submitted. Provider status/id fields remain read-only.
+ * They were writable from the dashboard, which meant somebody could set a rejected template to "approved"
+ * and the platform would believe it  until a campaign was built on
  * it, scheduled, approved, and then failed at send time with `META_TEMPLATE_REQUIRED`. The provider
  * writes these through its sync (`whatsapp-template-sync.ts`) and nothing else does.
  *
@@ -31,9 +33,6 @@ export const PROVIDER_OWNED_FIELDS = [
   "category",
   "externalTemplateId",
   "templateType",
-  "header",
-  "buttons",
-  "footerText",
   "qualityRating",
   "providerRaw",
   "lastImportedAt",
@@ -42,7 +41,7 @@ export const PROVIDER_OWNED_FIELDS = [
 ] as const;
 
 /** Content that Meta approved as a unit, and that therefore cannot be edited in place. */
-export const APPROVED_CONTENT_FIELDS = ["body", "translations", "variables"] as const;
+export const APPROVED_CONTENT_FIELDS = ["body", "translations", "variables", "header", "buttons", "footerText", "authentication"] as const;
 
 export type EditRejection = { ok: false; status: number; error: string; fields: string[] };
 
