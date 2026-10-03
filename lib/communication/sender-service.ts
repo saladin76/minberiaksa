@@ -3,7 +3,7 @@ import { writeAuditLog } from "@/lib/audit-log";
 import type { CommunicationSender } from "@prisma/client";
 import type { CommunicationSenderConfig } from "./sender-router";
 import type { CommunicationChannel } from "./communication-types";
-import { ensureWabaWebhookSubscription, verifySenderOwnership } from "./providers/meta-whatsapp/client";
+import { ensureWabaWebhookSubscription, verifySenderOwnership, verifyWabaInBusinessPortfolio } from "./providers/meta-whatsapp/client";
 import {
   isCommunicationChannel,
   isCommunicationProvider,
@@ -256,6 +256,33 @@ export async function verifyWhatsappSender(id: string, actor?: Actor): Promise<S
   }
 
   const checkedAt = new Date();
+
+  const portfolio = await verifyWabaInBusinessPortfolio(sender.businessAccountId);
+  if (!portfolio.ok) {
+    const row = await prisma.communicationSender.update({
+      where: { id },
+      data: {
+        status: portfolio.reason === "META_BUSINESS_PORTFOLIO_NOT_CONFIGURED" ? "NOT_CONFIGURED" : "NEEDS_ATTENTION",
+        enabled: false,
+        lastHealthCheckAt: checkedAt,
+        lastError: [portfolio.reason, portfolio.detail].filter(Boolean).join(" · ").slice(0, 500),
+      },
+    });
+    await writeAuditLog({
+      actorId: actor?.actorId ?? undefined,
+      actorName: actor?.actorName ?? undefined,
+      actorRole: actor?.actorRole ?? "ADMIN",
+      action: "communication.sender.verify.failed",
+      messageAr: `فشل ربط WABA بحساب الأعمال الرئيسي: ${sender.name}`,
+      messageEn: `WABA is not linked to the root Business Portfolio: ${sender.name}`,
+      entityType: "CommunicationSender",
+      entityId: id,
+      metadata: { reason: portfolio.reason, externalCall: true },
+      stream: "TEAM",
+    });
+    return { ok: false, status: 422, error: row.lastError ?? portfolio.reason };
+  }
+
   const verification = await verifySenderOwnership(sender.phoneNumberId, sender.businessAccountId);
   if (!verification.ok) {
     const status = verification.reason === "META_WHATSAPP_NOT_CONFIGURED" ? "NOT_CONFIGURED" : "NEEDS_ATTENTION";
@@ -330,7 +357,7 @@ export async function verifyWhatsappSender(id: string, actor?: Actor): Promise<S
     messageEn: `WhatsApp sender verified with Meta: ${row.name}`,
     entityType: "CommunicationSender",
     entityId: id,
-    metadata: { qualityRating: row.qualityRating, webhookSubscribed: true, subscriptionAppIds: subscription.appIds, externalCall: true },
+    metadata: { qualityRating: row.qualityRating, businessPortfolioVerified: true, wabaRelationship: portfolio.asset.relationship, webhookSubscribed: true, subscriptionAppIds: subscription.appIds, externalCall: true },
     stream: "TEAM",
   });
   return { ok: true, data: row };
