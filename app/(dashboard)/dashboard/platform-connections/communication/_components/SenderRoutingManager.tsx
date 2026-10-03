@@ -852,8 +852,11 @@ function RuleForm({
           </select>
         </label>
         <label className="text-xs font-semibold text-slate-600">
-          اللغة (فراغ = أي)
-          <input value={form.locale} onChange={(e) => setForm((f) => ({ ...f, locale: e.target.value }))} placeholder="tr" className={cn(field, "mt-1")} />
+          اللغة (بدون اختيار = أي)
+          <select value={form.locale} onChange={(e) => setForm((f) => ({ ...f, locale: e.target.value }))} className={cn(field, "mt-1")}>
+            <option value="">أي لغة</option>
+            {SUPPORTED_LANGUAGES.map(([code, label]) => <option key={code} value={code}>{label} — {code}</option>)}
+          </select>
         </label>
         <label className="text-xs font-semibold text-slate-600">
           الدولة (فراغ = أي)
@@ -938,7 +941,10 @@ function RoutingPreview() {
         <select value={form.channel} onChange={(e) => setForm((f) => ({ ...f, channel: e.target.value }))} className={field}>
           {CHANNELS.map((c) => <option key={c} value={c}>{CHANNEL_LABELS[c]}</option>)}
         </select>
-        <input value={form.locale} onChange={(e) => setForm((f) => ({ ...f, locale: e.target.value }))} placeholder="اللغة" className={cn(field, "w-24")} />
+        <select value={form.locale} onChange={(e) => setForm((f) => ({ ...f, locale: e.target.value }))} className={cn(field, "min-w-40")}>
+          <option value="">أي لغة</option>
+          {SUPPORTED_LANGUAGES.map(([code, label]) => <option key={code} value={code}>{label} — {code}</option>)}
+        </select>
         <input value={form.country} onChange={(e) => setForm((f) => ({ ...f, country: e.target.value }))} placeholder="الدولة" className={cn(field, "w-24")} />
         <select value={form.purpose} onChange={(e) => setForm((f) => ({ ...f, purpose: e.target.value }))} className={field}>
           {PURPOSES.map((p) => <option key={p} value={p}>{PURPOSE_LABELS[p]}</option>)}
