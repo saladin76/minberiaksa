@@ -144,7 +144,7 @@ export async function ensureMetaTemplate(
 
   const existing = await graphFetch(
     config,
-    `${input.businessAccountId}/message_templates?name=${name}&fields=id,name,language,status,category&limit=100`,
+    `${input.businessAccountId}/message_templates?name=${name}&fields=id,name,language,status,category,components&limit=100`,
     { method: "GET" },
   );
   if (!existing.ok) return existing;
@@ -157,6 +157,28 @@ export async function ensureMetaTemplate(
     String(row.language ?? "").toLowerCase() === input.language.toLowerCase()
   );
   if (found) {
+    const stripExamples = (value: unknown): unknown => {
+      if (Array.isArray(value)) return value.map(stripExamples);
+      if (!value || typeof value !== "object") return value;
+      const out: Record<string, unknown> = {};
+      for (const [key, val] of Object.entries(value as Record<string, unknown>)) {
+        if (key === "example") continue;
+        out[key] = stripExamples(val);
+      }
+      return out;
+    };
+    const normalize = (value: unknown) => JSON.stringify(stripExamples(value));
+    const remoteComponents = Array.isArray(found.components) ? found.components : [];
+    if (
+      String(found.category ?? "").toUpperCase() !== input.category ||
+      normalize(remoteComponents) !== normalize(input.components)
+    ) {
+      return {
+        ok: false,
+        reason: "META_TEMPLATE_CONTENT_MISMATCH",
+        detail: "A template with the same name and language already exists in Meta but its category or components differ from this draft.",
+      };
+    }
     return {
       ok: true,
       id: typeof found.id === "string" ? found.id : null,
