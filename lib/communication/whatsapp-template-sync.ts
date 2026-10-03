@@ -65,9 +65,75 @@ export async function syncMetaWhatsappTemplates(opts: {
   const summary: SyncSummary = { ok: false, fetched: 0, matchedTemplates: 0, variantsUpserted: 0, variantsRemoved: 0, unmatchedNames: [] };
   if (!process.env.DATABASE_URL) return { ...summary, reason: "DATABASE_UNAVAILABLE" };
 
-  const remote = await listAllTemplates(opts.businessAccountId ?? null);
-  if (!remote.ok) return { ...summary, reason: remote.reason, detail: remote.detail };
-  summary.fetched = remote.templates.length;
+  let remoteTemplates: MetaTemplateDetail[] = [];
+  if (opts.businessAccountId) {
+    const remote = await listAllTemplates(opts.businessAccountId);
+    if (!remote.ok) return { ...summary, reason: remote.reason, detail: remote.detail };
+    remoteTemplates = remote.templates;
+  } else {
+    /*
+     * In multi-WABA mode readiness must be true for every active account routing may select, not just
+     * the default account. Fetch every active Meta WABA and collapse equal name+language variants
+     * into one conservative status: APPROVED only when all active WABAs report APPROVED.
+     */
+    const senderRows = await prisma.communicationSender.findMany({
+      where: {
+        channel: "WHATSAPP",
+        provider: "META_WHATSAPP",
+        enabled: true,
+        status: "ACTIVE",
+        businessAccountId: { not: null },
+      },
+      select: { businessAccountId: true, isDefault: true, priority: true },
+      orderBy: [{ isDefault: "desc" }, { priority: "asc" }],
+    }).catch(() => []);
+    const wabas = [...new Set(senderRows.map((row) => row.businessAccountId?.trim()).filter(Boolean) as string[])];
+    if (!wabas.length) return { ...summary, reason: "NO_ACTIVE_WABA", detail: "No active Meta WhatsApp sender has a WABA ID." };
+
+    const catalogs: Array<{ waba: string; templates: MetaTemplateDetail[] }> = [];
+    for (const waba of wabas) {
+      const remote = await listAllTemplates(waba);
+      if (!remote.ok) return { ...summary, reason: remote.reason, detail: `${waba}: ${remote.detail ?? remote.reason}` };
+      catalogs.push({ waba, templates: remote.templates });
+    }
+
+    const byKey = new Map<string, Array<{ waba: string; row: MetaTemplateDetail }>>();
+    for (const catalog of catalogs) {
+      for (const row of catalog.templates) {
+        const key = `${foldName(row.name)}::${String(row.language).toLowerCase()}`;
+        const list = byKey.get(key) ?? [];
+        list.push({ waba: catalog.waba, row });
+        byKey.set(key, list);
+      }
+    }
+
+    const statusRank = (status: string) => {
+      const s = normalizeApprovalStatus(status);
+      if (s === "REJECTED" || s === "DISABLED") return 5;
+      if (s === "PAUSED") return 4;
+      if (s === "PENDING" || s === "IN_REVIEW") return 3;
+      if (s === "APPROVED") return 1;
+      return 2;
+    };
+
+    for (const entries of byKey.values()) {
+      const first = entries[0]?.row;
+      if (!first) continue;
+      const complete = entries.length === wabas.length;
+      const worst = entries.reduce((acc, item) => statusRank(item.row.status) > statusRank(acc.status) ? item.row : acc, first);
+      remoteTemplates.push({
+        ...first,
+        status: complete && entries.every((item) => normalizeApprovalStatus(item.row.status) === "APPROVED")
+          ? "APPROVED"
+          : complete
+            ? normalizeApprovalStatus(worst.status)
+            : "MISSING_IN_WABA",
+        rejectedReason: entries.map((item) => item.row.rejectedReason).find(Boolean)
+          ?? (!complete ? `Template/language exists in ${entries.length}/${wabas.length} active WABAs` : null),
+      });
+    }
+  }
+  summary.fetched = remoteTemplates.length;
 
   const locals = await prisma.whatsappTemplate.findMany({ select: { id: true, name: true } }).catch(() => []);
   /* Meta names are case-insensitive and lower_snake by convention; local names are whatever the
@@ -77,7 +143,7 @@ export async function syncMetaWhatsappTemplates(opts: {
 
   const byTemplate = new Map<string, MetaTemplateDetail[]>();
   const unmatched = new Set<string>();
-  for (const row of remote.templates) {
+  for (const row of remoteTemplates) {
     if (!row.name || !row.language) continue;
     const templateId = byFoldedName.get(foldName(row.name));
     if (!templateId) { unmatched.add(row.name); continue; }
