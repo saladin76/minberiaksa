@@ -230,7 +230,9 @@ export async function sendAutomaticWhatsappMessage(
     values: input.templateValues ?? {},
     positionalNames: input.metaTemplate.positionalNames,
     scopedNames: input.metaTemplate.scopedNames,
-    headerMediaUrl: input.headerMediaUrl ?? null,
+    headerMediaUrl: input.headerMediaUrl ?? input.metaTemplate.headerMediaUrl ?? null,
+    headerMediaFilename: input.metaTemplate.headerMediaFilename,
+    headerLocation: input.metaTemplate.headerLocation,
   });
   if (!built.ok) {
     await markDeliveryStatus(id, "SKIPPED", { errorMessage: built.reason });
@@ -323,6 +325,9 @@ export type MetaTemplateMapping = {
   positionalNames: string[];
   /** Semantic name by component-scoped position (header.1, body.1, button.0.1). */
   scopedNames: Record<string, string>;
+  headerMediaUrl: string | null;
+  headerMediaFilename: string | null;
+  headerLocation: { latitude: number; longitude: number; name?: string; address?: string } | null;
   /** The language code of the variant actually chosen  NOT the recipient's locale. */
   language: string;
   /** Meta's own component schema for that variant, for building parameters. */
@@ -349,7 +354,7 @@ export type MetaTemplateMapping = {
  * legal payload to fall back to.
  */
 export async function resolveMetaTemplateMapping(
-  tpl: { id?: string | null; provider?: string | null; name?: string | null; variables?: unknown },
+  tpl: { id?: string | null; provider?: string | null; name?: string | null; variables?: unknown; header?: unknown },
   locale: string,
   businessAccountId?: string | null,
 ): Promise<MetaTemplateMapping | null> {
@@ -360,10 +365,23 @@ export async function resolveMetaTemplateMapping(
   const readiness = await getTemplateReadiness(tpl.id, locale, businessAccountId);
   if (!readiness.ready || !readiness.providerTemplateName || !readiness.languageCode) return null;
   const binding = variableBindingInfo(tpl.variables);
+  const header = tpl.header && typeof tpl.header === "object" ? tpl.header as Record<string, unknown> : {};
+  const latitude = Number(header.latitude);
+  const longitude = Number(header.longitude);
   return {
     name: readiness.providerTemplateName,
     positionalNames: binding.names,
     scopedNames: binding.scopedNames,
+    headerMediaUrl: typeof header.mediaUrl === "string" && header.mediaUrl.trim() ? header.mediaUrl.trim() : null,
+    headerMediaFilename: typeof header.fileName === "string" && header.fileName.trim() ? header.fileName.trim() : null,
+    headerLocation: Number.isFinite(latitude) && Number.isFinite(longitude)
+      ? {
+          latitude,
+          longitude,
+          ...(typeof header.name === "string" && header.name.trim() ? { name: header.name.trim() } : {}),
+          ...(typeof header.address === "string" && header.address.trim() ? { address: header.address.trim() } : {}),
+        }
+      : null,
     language: readiness.languageCode,
     componentsSchema: readiness.componentsSchema,
     resolvedLocale: readiness.locale,
