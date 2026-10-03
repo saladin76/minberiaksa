@@ -114,3 +114,74 @@ export async function listAllTemplates(businessAccountId?: string | null, runtim
     }),
   };
 }
+
+
+export type CreateMetaTemplateInput = {
+  businessAccountId: string;
+  name: string;
+  language: string;
+  category: "UTILITY" | "MARKETING" | "AUTHENTICATION";
+  components: unknown[];
+};
+
+export type CreateMetaTemplateResult =
+  | { ok: true; id: string | null; status: string; category: string | null; existed: boolean }
+  | { ok: false; reason: string; detail?: string };
+
+/**
+ * Idempotently ensure one language variant exists in one WABA.
+ * Meta template creation is account-scoped, so the same local template may need to be created in
+ * more than one WABA when routing can choose numbers owned by different accounts.
+ */
+export async function ensureMetaTemplate(
+  input: CreateMetaTemplateInput,
+  runtime?: MetaRuntimeConfig,
+): Promise<CreateMetaTemplateResult> {
+  const resolved = runtime ?? await getActiveMetaWhatsappRuntimeConfig();
+  if (!resolved.configured) return { ok: false, reason: metaRuntimeFailure(resolved) };
+  const config = resolved.values;
+  const name = encodeURIComponent(input.name);
+
+  const existing = await graphFetch(
+    config,
+    `${input.businessAccountId}/message_templates?name=${name}&fields=id,name,language,status,category&limit=100`,
+    { method: "GET" },
+  );
+  if (!existing.ok) return existing;
+
+  const rows = Array.isArray((existing.data as { data?: unknown[] } | null)?.data)
+    ? ((existing.data as { data: unknown[] }).data as Array<Record<string, unknown>>)
+    : [];
+  const found = rows.find((row) =>
+    String(row.name ?? "").toLowerCase() === input.name.toLowerCase() &&
+    String(row.language ?? "").toLowerCase() === input.language.toLowerCase()
+  );
+  if (found) {
+    return {
+      ok: true,
+      id: typeof found.id === "string" ? found.id : null,
+      status: String(found.status ?? "UNKNOWN").toUpperCase(),
+      category: typeof found.category === "string" ? found.category : null,
+      existed: true,
+    };
+  }
+
+  const created = await graphFetch(config, `${input.businessAccountId}/message_templates`, {
+    method: "POST",
+    body: JSON.stringify({
+      name: input.name,
+      language: input.language,
+      category: input.category,
+      components: input.components,
+    }),
+  });
+  if (!created.ok) return created;
+  const data = (created.data ?? {}) as Record<string, unknown>;
+  return {
+    ok: true,
+    id: typeof data.id === "string" ? data.id : null,
+    status: String(data.status ?? "PENDING").toUpperCase(),
+    category: typeof data.category === "string" ? data.category : input.category,
+    existed: false,
+  };
+}
