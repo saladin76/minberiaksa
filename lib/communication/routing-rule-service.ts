@@ -142,6 +142,32 @@ export async function updateRoutingRule(id: string, patch: Partial<RoutingRuleIn
   }
 }
 
+export async function deleteRoutingRule(id: string, actor?: Actor): Promise<ServiceResult<{ id: string }>> {
+  if (!process.env.DATABASE_URL) return dbUnavailable();
+  try {
+    const current = await prisma.senderRoutingRule.findUnique({ where: { id } });
+    if (!current) return { ok: false, status: 404, error: "Routing rule not found." };
+
+    await prisma.senderRoutingRule.delete({ where: { id } });
+    await writeAuditLog({
+      actorId: actor?.actorId ?? undefined,
+      actorName: actor?.actorName ?? undefined,
+      actorRole: actor?.actorRole ?? "ADMIN",
+      action: "communication.routing-rule.delete",
+      messageAr: "تم حذف قاعدة توجيه مُرسِل",
+      messageEn: "Sender routing rule deleted",
+      entityType: "SenderRoutingRule",
+      entityId: id,
+      metadata: { channel: current.channel, senderId: current.senderId, fallbackSenderId: current.fallbackSenderId ?? null, externalCall: false },
+      stream: "TEAM",
+    });
+    return { ok: true, data: { id } };
+  } catch (error) {
+    console.error("deleteRoutingRule failed", error);
+    return { ok: false, status: 500, error: "Failed to delete routing rule." };
+  }
+}
+
 /** Map a stored routing rule into the pure config the sender-router consumes. */
 export function toRoutingRuleConfig(row: SenderRoutingRule): SenderRoutingRuleConfig {
   return {
