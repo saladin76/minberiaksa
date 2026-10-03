@@ -85,24 +85,41 @@ async function preflightWhatsappTrigger(templateId: string): Promise<PreflightRe
     });
   }
 
-  const approvedLocales = await approvedLocalesFor(templateId);
-  const canonicalReadiness = await getTemplateReadiness(templateId, "ar");
+  const snapshot = await loadSenderRoutingSnapshot("WHATSAPP");
+  const routed = resolveSenderFromSnapshot(snapshot, { locale: "ar", purpose: "TRANSACTIONAL" });
+
+  if (!routed.ok) {
+    problems.push({ code: "NO_SENDER", messageAr: "لا يوجد رقم واتساب مُفعّل يخدم هذه الرسالة.", detail: routed.reason });
+    const approvedLocales = await approvedLocalesFor(templateId);
+    const canonicalReadiness = await getTemplateReadiness(templateId, "ar");
+    return {
+      ok: false,
+      problems,
+      approvedLocales,
+      canonical: canonicalReadiness.ready && canonicalReadiness.providerTemplateName && canonicalReadiness.languageCode
+        ? { name: canonicalReadiness.providerTemplateName, language: canonicalReadiness.languageCode }
+        : null,
+    };
+  }
+
+  if (!routed.sender.phoneNumberId || !routed.sender.businessAccountId) {
+    problems.push({
+      code: "PROVIDER_NOT_CONFIGURED",
+      messageAr: "رقم واتساب المُختار غير مكتمل الربط مع Meta (Phone Number ID / WABA).",
+    });
+  }
+
+  const wabaId = routed.sender.businessAccountId ?? null;
+  const approvedLocales = await approvedLocalesFor(templateId, wabaId);
+  const canonicalReadiness = await getTemplateReadiness(templateId, "ar", wabaId);
   if (!canonicalReadiness.ready) {
     problems.push({
       code: "NO_APPROVED_VARIANT",
       messageAr: approvedLocales.length
-        ? "لا توجد نسخة عربية معتمدة من هذا القالب لدى Meta."
-        : "لم تعتمد Meta أي لغة من هذا القالب  شغّل مزامنة القوالب ثم تحقّق من حالة الاعتماد.",
+        ? "لا توجد نسخة عربية معتمدة من هذا القالب على حساب WABA الذي سيستخدمه التوجيه."
+        : "القالب غير معتمد على حساب WABA الذي سيستخدمه هذا المُرسِل؛ شغّل المزامنة وتحقق من اعتماد القالب على نفس الحساب.",
       detail: canonicalReadiness.rejectionReason ?? canonicalReadiness.reason,
     });
-  }
-
-  const snapshot = await loadSenderRoutingSnapshot("WHATSAPP");
-  const routed = resolveSenderFromSnapshot(snapshot, { locale: "ar", purpose: "TRANSACTIONAL" });
-  if (!routed.ok) {
-    problems.push({ code: "NO_SENDER", messageAr: "لا يوجد رقم واتساب مُفعّل يخدم هذه الرسالة.", detail: routed.reason });
-  } else if (!routed.sender.phoneNumberId) {
-    problems.push({ code: "PROVIDER_NOT_CONFIGURED", messageAr: "رقم واتساب المُختار بلا معرّف رقم من Meta." });
   }
 
   return {
