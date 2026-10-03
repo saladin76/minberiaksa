@@ -102,6 +102,10 @@ export async function PATCH(
   if (rejection) return NextResponse.json({ error: rejection.error, fields: rejection.fields }, { status: rejection.status });
 
   const data: Prisma.WhatsappTemplateUpdateInput = {};
+  if (metaCategory) {
+    data.category = metaCategory;
+    data.purpose = metaCategory;
+  }
   if (editable.name != null) data.name = editable.name;
   if (editable.body != null) data.body = editable.body;
   if (editable.translations !== undefined) {
