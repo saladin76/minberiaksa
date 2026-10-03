@@ -85,6 +85,8 @@ async function resolve<T extends Record<string, string>>(
 
 export type MetaWhatsappRuntimeValues = {
   accessToken: string;
+  /** Meta application id; optional for normal sends, required only by resumable template sample uploads. */
+  appId: string;
   appSecret: string;
   verifyToken: string;
   /** Legacy environment fallback only. Empty when not configured centrally. */
@@ -96,6 +98,7 @@ export type MetaWhatsappRuntimeValues = {
 
 const metaValues = (v: Record<string, string>): MetaWhatsappRuntimeValues => ({
   accessToken: v.ACCESS_TOKEN,
+  appId: v.APP_ID?.trim() || "",
   appSecret: v.APP_SECRET,
   verifyToken: v.WEBHOOK_VERIFY_TOKEN,
   businessAccountId: v.BUSINESS_ACCOUNT_ID?.trim() || "",
