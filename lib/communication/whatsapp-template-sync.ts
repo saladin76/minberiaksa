@@ -144,16 +144,20 @@ export async function syncMetaWhatsappTemplates(opts: {
       if (written) summary.variantsUpserted += 1;
     }
 
-    for (const [templateId, keptLanguages] of keptByTemplate) {
+    /* Reconcile every local template for this WABA, not only templates Meta returned. Otherwise a
+       template deleted/disabled remotely can leave a stale APPROVED row forever. */
+    for (const local of locals) {
+      const keptLanguages = keptByTemplate.get(local.id) ?? [];
       const removed = await prisma.whatsappTemplateWabaVariant.deleteMany({
         where: {
-          templateId,
+          templateId: local.id,
           provider: META_PROVIDER,
           businessAccountId: waba,
-          languageCode: { notIn: keptLanguages },
+          ...(keptLanguages.length ? { languageCode: { notIn: keptLanguages } } : {}),
         },
       }).catch(() => ({ count: 0 }));
       summary.variantsRemoved += removed.count;
+      if (keptLanguages.length) touchedTemplates.add(local.id);
     }
   }
 
