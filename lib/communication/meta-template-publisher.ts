@@ -16,7 +16,7 @@ import {
   type VariableBinding,
 } from "./meta-template-components";
 
-type Actor = { actorId?: string | null; actorName?: string | null; actorRole?: string | null };
+type Actor = { actorId?: string | null; actorName?: string | null; actorRole?: string | null } | null;
 
 const META_LANGUAGE: Record<string, string> = {
   ar: "ar", tr: "tr", en: "en_US", fr: "fr", de: "de", es: "es", id: "id",
