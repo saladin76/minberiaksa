@@ -54,7 +54,7 @@ export async function PATCH(
   const templateChanged = Boolean(parsed.data.templateId && parsed.data.templateId !== existing.templateId);
   const turningOn = parsed.data.enabled === true && !existing.enabled;
   if (willBeEnabled && (turningOn || templateChanged)) {
-    const preflight = await preflightTrigger({ channel: existing.channel, templateId: parsed.data.templateId ?? existing.templateId });
+    const preflight = await preflightTrigger({ channel: existing.channel, templateId: parsed.data.templateId ?? existing.templateId, event: existing.event });
     if (!preflight.ok) {
       return NextResponse.json({ error: "TRIGGER_NOT_READY", preflight }, { status: 409 });
     }
