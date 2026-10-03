@@ -115,9 +115,20 @@ export async function processWhatsappEvents(events: NormalizedWebhookEvent[]): P
     const senderId = await senderIdForPhoneNumber(event.phoneNumberId);
 
     if (event.kind === "status") {
-      const delivery = await prisma.communicationDelivery
-        .findFirst({ where: { providerMessageId: event.providerMessageId }, select: { id: true, status: true } })
-        .catch(() => null);
+      let delivery: { id: string; status: string } | null = null;
+      try {
+        delivery = await prisma.communicationDelivery.findFirst({
+          where: { providerMessageId: event.providerMessageId },
+          select: { id: true, status: true },
+        });
+      } catch (error) {
+        console.error("delivery lookup failed for WhatsApp status webhook", {
+          providerMessageId: event.providerMessageId,
+          error,
+        });
+        summary.persistenceErrors += 1;
+        continue;
+      }
 
       const outcome = await recordEvent({
         deliveryId: delivery?.id ?? null,
