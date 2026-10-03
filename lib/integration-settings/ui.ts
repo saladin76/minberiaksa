@@ -45,6 +45,7 @@ export const PROVIDER_UI_LABEL: Record<IntegrationProvider, string> = {
  */
 export const FIELD_HELP: Record<string, string> = {
   ACCESS_TOKEN: "من Meta Business Manager ضمن إعدادات WhatsApp API ورمز الوصول الدائم.",
+  APP_ID: "من Meta for Developers > Settings > Basic. مطلوب لرفع عينات الصور/الفيديو/المستندات عبر Resumable Upload API.",
   APP_SECRET: "من إعدادات تطبيق Meta ضمن Basic Settings. يُستخدم للتحقق من App Secret Proof وتوقيع Webhook.",
   WEBHOOK_VERIFY_TOKEN: "قيمة تختارها داخل النظام، ثم تدخل القيمة نفسها عند إعداد Webhook في Meta.",
   BUSINESS_ACCOUNT_ID: "معرّف WhatsApp Business Account الظاهر في إعدادات WhatsApp Manager.",
