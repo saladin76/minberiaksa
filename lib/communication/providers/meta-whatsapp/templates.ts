@@ -207,3 +207,76 @@ export async function ensureMetaTemplate(
     existed: false,
   };
 }
+
+
+export type UploadTemplateSampleResult =
+  | { ok: true; handle: string }
+  | { ok: false; reason: string; detail?: string };
+
+const TEMPLATE_SAMPLE_MIME_TYPES = new Set([
+  "image/jpeg",
+  "image/png",
+  "video/mp4",
+  "application/pdf",
+]);
+
+/**
+ * Upload a media sample through Meta's resumable upload API and return the header_handle used when
+ * a media-header template is submitted for review. This avoids asking an operator to manually copy
+ * opaque handles from Meta.
+ */
+export async function uploadMetaTemplateSample(
+  file: { bytes: Uint8Array; name: string; type: string },
+  runtime?: MetaRuntimeConfig,
+): Promise<UploadTemplateSampleResult> {
+  const resolved = runtime ?? await getActiveMetaWhatsappRuntimeConfig();
+  if (!resolved.configured) return { ok: false, reason: metaRuntimeFailure(resolved) };
+  if (!TEMPLATE_SAMPLE_MIME_TYPES.has(file.type)) {
+    return { ok: false, reason: "META_TEMPLATE_SAMPLE_UNSUPPORTED_TYPE", detail: file.type || "unknown type" };
+  }
+  if (!file.bytes.byteLength) return { ok: false, reason: "META_TEMPLATE_SAMPLE_EMPTY" };
+
+  const { accessToken, graphVersion } = resolved.values;
+  const qs = new URLSearchParams({
+    file_length: String(file.bytes.byteLength),
+    file_type: file.type,
+    file_name: file.name || "template-sample",
+  });
+  const sessionUrl = `https://graph.facebook.com/${graphVersion}/app/uploads?${qs.toString()}`;
+
+  let sessionResponse: Response;
+  try {
+    sessionResponse = await fetch(sessionUrl, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+  } catch {
+    return { ok: false, reason: META_REASONS.REQUEST_FAILED, detail: "upload session network error" };
+  }
+  const sessionBody = await sessionResponse.json().catch(() => null) as { id?: unknown; error?: { message?: unknown } } | null;
+  if (!sessionResponse.ok || typeof sessionBody?.id !== "string") {
+    const mapped = mapGraphError(sessionResponse.status, sessionBody);
+    return { ok: false, reason: mapped.reason, detail: mapped.detail };
+  }
+
+  let uploadResponse: Response;
+  try {
+    uploadResponse = await fetch(`https://graph.facebook.com/${graphVersion}/${sessionBody.id}`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": file.type,
+        file_offset: "0",
+      },
+      body: Buffer.from(file.bytes),
+    });
+  } catch {
+    return { ok: false, reason: META_REASONS.REQUEST_FAILED, detail: "sample upload network error" };
+  }
+  const uploadBody = await uploadResponse.json().catch(() => null) as { h?: unknown } | null;
+  if (!uploadResponse.ok || typeof uploadBody?.h !== "string" || !uploadBody.h) {
+    const mapped = mapGraphError(uploadResponse.status, uploadBody);
+    return { ok: false, reason: mapped.reason, detail: mapped.detail };
+  }
+  return { ok: true, handle: uploadBody.h };
+}
