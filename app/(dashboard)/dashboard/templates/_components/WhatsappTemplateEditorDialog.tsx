@@ -30,6 +30,7 @@ interface ApiTemplate {
 
 export function WhatsappTemplateEditorDialog({ id, open, onOpenChange }: Props) {
   const [name, setName] = React.useState("");
+  const [workingId, setWorkingId] = React.useState<string | null>(id);
   const [bodies, setBodies] = React.useState<BodiesState>({});
   const [metaCategory, setMetaCategory] = React.useState<"UTILITY" | "MARKETING" | "AUTHENTICATION">("UTILITY");
   const [activeLocale, setActiveLocale] = React.useState<SupportedLocale>(DEFAULT_LOCALE);
@@ -39,6 +40,7 @@ export function WhatsappTemplateEditorDialog({ id, open, onOpenChange }: Props) 
 
   React.useEffect(() => {
     if (!open) return;
+    setWorkingId(id);
     if (!id) {
       setName("");
       setBodies({ [DEFAULT_LOCALE]: "مرحباً {{user.name}}، شكراً لتبرّعك!" });
@@ -117,18 +119,42 @@ export function WhatsappTemplateEditorDialog({ id, open, onOpenChange }: Props) 
         translations: Object.keys(translations).length > 0 ? translations : null,
         metaCategory,
       };
-      if (id) {
-        await axios.patch(`/api/templates/whatsapp/${id}`, payload);
-      } else {
-        await axios.post("/api/templates/whatsapp", payload);
-      }
-      toast.success("تم الحفظ والإرسال إلى Meta للمراجعة");
+      const response = workingId
+        ? await axios.patch(`/api/templates/whatsapp/${workingId}`, payload)
+        : await axios.post("/api/templates/whatsapp", payload);
+      const publish = response.data?.publish as { targets?: number; created?: number; existing?: number; failed?: number } | undefined;
+      const targetText = publish?.targets ? ` (${publish.targets} نسخة عبر حسابات Meta النشطة)` : "";
+      toast.success(`تم الحفظ والإرسال إلى Meta للمراجعة${targetText}`);
       onOpenChange(false);
     } catch (err) {
       /* Say what the server refused rather than a bare "failed". */
-      const e = err as { response?: { data?: { error?: string; issues?: { fieldErrors?: Record<string, string[]> } } } };
-      const fields = Object.keys(e.response?.data?.issues?.fieldErrors ?? {});
-      toast.error(fields.length ? `فشل الحفظ: تحقّق من ${fields.join("، ")}` : e.response?.data?.error ? `فشل الحفظ: ${e.response.data.error}` : "فشل الحفظ");
+      const e = err as {
+        response?: {
+          data?: {
+            error?: string;
+            saved?: boolean;
+            template?: { id?: string };
+            publish?: { errors?: Array<{ reason?: string; detail?: string }> };
+            issues?: { fieldErrors?: Record<string, string[]> };
+          };
+        };
+      };
+      const data = e.response?.data;
+      if (data?.saved && data.template?.id) {
+        /* The local row already exists even when Meta refused one WABA/language. Keep its id so a
+           second click retries with PATCH instead of creating a duplicate local template. */
+        setWorkingId(data.template.id);
+      }
+      const fields = Object.keys(data?.issues?.fieldErrors ?? {});
+      const providerProblem = data?.publish?.errors?.[0];
+      const providerDetail = [providerProblem?.reason, providerProblem?.detail].filter(Boolean).join(" — ");
+      toast.error(
+        fields.length
+          ? `فشل الحفظ: تحقّق من ${fields.join("، ")}`
+          : data?.error
+            ? `${data.error}${providerDetail ? ` ${providerDetail}` : ""}`
+            : "فشل الحفظ",
+      );
     } finally {
       setSaving(false);
     }
