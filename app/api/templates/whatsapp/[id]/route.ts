@@ -111,7 +111,7 @@ export async function PATCH(
   if (editable.translations !== undefined) {
     data.translations =
       editable.translations === null
-        ? (Prisma.DbNull as unknown as Prisma.InputJsonValue)
+        ? (null as unknown as Prisma.InputJsonValue)
         : (editable.translations as Prisma.InputJsonValue);
   }
   if (editable.header !== undefined) data.header = editable.header as Prisma.InputJsonValue;
@@ -119,7 +119,7 @@ export async function PATCH(
   if (editable.buttons !== undefined) data.buttons = editable.buttons as Prisma.InputJsonValue;
   if (editable.authentication !== undefined) {
     data.authentication = editable.authentication === null
-      ? (Prisma.DbNull as unknown as Prisma.InputJsonValue)
+      ? (null as unknown as Prisma.InputJsonValue)
       : (editable.authentication as Prisma.InputJsonValue);
   }
 

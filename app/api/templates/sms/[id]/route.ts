@@ -51,11 +51,11 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   if (parsed.data.status != null) data.status = parsed.data.status;
   if (parsed.data.purpose != null) data.purpose = parsed.data.purpose;
   if (parsed.data.translations !== undefined) {
-    // Explicit null means "drop every translation"  DbNull writes a real null rather than
-    // leaving the previous object in place, which `undefined` would.
+    // Explicit null means "drop every translation". For MongoDB optional Json fields Prisma
+    // expects a literal null at runtime; Prisma.DbNull is a SQL-style sentinel and is rejected.
     data.translations =
       parsed.data.translations === null
-        ? (Prisma.DbNull as unknown as Prisma.InputJsonValue)
+        ? (null as unknown as Prisma.InputJsonValue)
         : (parsed.data.translations as Prisma.InputJsonValue);
   }
 

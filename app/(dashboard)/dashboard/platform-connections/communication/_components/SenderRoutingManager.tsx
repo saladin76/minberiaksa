@@ -894,7 +894,7 @@ function RuleForm({
   const editing = Boolean(rule);
   const [form, setForm] = useState({
     channel: rule?.channel ?? "WHATSAPP",
-    locale: rule?.locale ?? "",
+    locales: rule?.locale ? [rule.locale] : [] as string[],
     country: rule?.country ?? "",
     purpose: rule?.purpose ?? "",
     senderId: rule?.senderId ?? "",
@@ -909,29 +909,65 @@ function RuleForm({
     setSaving(true);
     setError(null);
     try {
-      const payload = {
-        ...(editing ? {} : { channel: form.channel }),
-        locale: form.locale.trim() || null,
+      const locales = form.locales.length ? form.locales : [null];
+      const basePayload = {
         country: form.country.trim().toUpperCase() || null,
         purpose: form.purpose || null,
         senderId: form.senderId,
         fallbackSenderId: form.fallbackSenderId || null,
         priority: Number(form.priority) || 100,
-        ...(editing ? {} : { enabled: true }),
       };
-      const res = await fetch(
-        editing ? `/api/dashboard/communication/routing-rules/${rule!.id}` : "/api/dashboard/communication/routing-rules",
-        {
-          method: editing ? "PATCH" : "POST",
+
+      if (editing) {
+        const [primaryLocale, ...extraLocales] = locales;
+        const update = await fetch(`/api/dashboard/communication/routing-rules/${rule!.id}`, {
+          method: "PATCH",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify(payload),
-        },
-      );
-      const body = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        setError(body.error ?? (editing ? "تعذّر حفظ التعديلات." : "تعذّر إنشاء القاعدة."));
-        return;
+          body: JSON.stringify({ ...basePayload, locale: primaryLocale }),
+        });
+        const updateBody = await update.json().catch(() => ({}));
+        if (!update.ok) {
+          setError(updateBody.error ?? "تعذّر حفظ التعديلات.");
+          return;
+        }
+
+        for (const locale of extraLocales) {
+          const create = await fetch("/api/dashboard/communication/routing-rules", {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({
+              ...basePayload,
+              channel: form.channel,
+              locale,
+              enabled: true,
+            }),
+          });
+          const createBody = await create.json().catch(() => ({}));
+          if (!create.ok) {
+            setError(createBody.error ?? `تم تحديث القاعدة الأساسية لكن تعذّر إنشاء قاعدة اللغة ${locale ?? "العامة"}.`);
+            return;
+          }
+        }
+      } else {
+        for (const locale of locales) {
+          const create = await fetch("/api/dashboard/communication/routing-rules", {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({
+              ...basePayload,
+              channel: form.channel,
+              locale,
+              enabled: true,
+            }),
+          });
+          const createBody = await create.json().catch(() => ({}));
+          if (!create.ok) {
+            setError(createBody.error ?? `تعذّر إنشاء قاعدة اللغة ${locale ?? "العامة"}.`);
+            return;
+          }
+        }
       }
+
       await onDone();
     } finally {
       setSaving(false);
@@ -961,11 +997,16 @@ function RuleForm({
           </select>
         </label>
         <label className="text-xs font-semibold text-slate-600">
-          اللغة (بدون اختيار = أي)
-          <select value={form.locale} onChange={(e) => setForm((f) => ({ ...f, locale: e.target.value }))} className={cn(field, "mt-1")}>
-            <option value="">أي لغة</option>
-            {SUPPORTED_LANGUAGES.map(([code, label]) => <option key={code} value={code}>{label} — {code}</option>)}
-          </select>
+          اللغات (بدون اختيار = أي لغة)
+          <div className="mt-1">
+            <LanguageMultiSelect
+              value={form.locales}
+              onChange={(locales) => setForm((f) => ({ ...f, locales }))}
+            />
+          </div>
+          <span className="mt-1 block text-[10px] font-normal text-slate-400">
+            اختيار عدة لغات ينشئ قاعدة توجيه مستقلة لكل لغة بنفس المُرسِل والشروط.
+          </span>
         </label>
         <label className="text-xs font-semibold text-slate-600">
           الدولة (فراغ = أي)

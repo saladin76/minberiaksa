@@ -120,6 +120,98 @@ const HEADER_OPTIONS: Array<{ value: HeaderType; label: string; icon: React.Reac
   { value: "LOCATION", label: "موقع", icon: <MapPin className="h-4 w-4" /> },
 ];
 
+const MEDIA_SPECS = {
+  IMAGE: {
+    maxBytes: 5 * 1024 * 1024,
+    maxLabel: "5MB",
+    accept: ["image/jpeg", "image/png"],
+    formats: "JPG / PNG",
+    recommended: "1125 × 600 px",
+    ratio: 1125 / 600,
+    ratioLabel: "1.91:1",
+    note: "ضع النص والشعار بعيدًا عن الحواف لتجنب القص داخل المحادثة.",
+  },
+  VIDEO: {
+    maxBytes: 16 * 1024 * 1024,
+    maxLabel: "16MB",
+    accept: ["video/mp4"],
+    formats: "MP4 (H.264 + AAC)",
+    recommended: "1125 × 600 px",
+    ratio: 1125 / 600,
+    ratioLabel: "1.91:1",
+    note: "يفضل فيديو أفقي قصير وواضح، مع H.264 للفيديو وAAC للصوت.",
+  },
+  DOCUMENT: {
+    maxBytes: 100 * 1024 * 1024,
+    maxLabel: "100MB",
+    accept: ["application/pdf"],
+    formats: "PDF",
+    recommended: "A4 — 210 × 297 mm",
+    ratio: null,
+    ratioLabel: "بدون نسبة أبعاد إلزامية",
+    note: "استخدم اسم ملف واضح وPDF خفيف ومقروء على الهاتف.",
+  },
+} as const;
+
+type MediaInfo = {
+  size: number;
+  width?: number;
+  height?: number;
+  ratio?: number;
+  ratioOk?: boolean;
+};
+
+function formatMegabytes(bytes: number): string {
+  return `${(bytes / (1024 * 1024)).toFixed(bytes >= 10 * 1024 * 1024 ? 1 : 2)} MB`;
+}
+
+async function inspectMediaFile(file: File, type: HeaderType): Promise<MediaInfo> {
+  if (type === "IMAGE") {
+    const url = URL.createObjectURL(file);
+    try {
+      const dimensions = await new Promise<{ width: number; height: number }>((resolve, reject) => {
+        const image = new Image();
+        image.onload = () => resolve({ width: image.naturalWidth, height: image.naturalHeight });
+        image.onerror = () => reject(new Error("IMAGE_METADATA_FAILED"));
+        image.src = url;
+      });
+      const ratio = dimensions.width / dimensions.height;
+      return {
+        size: file.size,
+        ...dimensions,
+        ratio,
+        ratioOk: Math.abs(ratio - MEDIA_SPECS.IMAGE.ratio) <= 0.08,
+      };
+    } finally {
+      URL.revokeObjectURL(url);
+    }
+  }
+
+  if (type === "VIDEO") {
+    const url = URL.createObjectURL(file);
+    try {
+      const dimensions = await new Promise<{ width: number; height: number }>((resolve, reject) => {
+        const video = document.createElement("video");
+        video.preload = "metadata";
+        video.onloadedmetadata = () => resolve({ width: video.videoWidth, height: video.videoHeight });
+        video.onerror = () => reject(new Error("VIDEO_METADATA_FAILED"));
+        video.src = url;
+      });
+      const ratio = dimensions.width && dimensions.height ? dimensions.width / dimensions.height : undefined;
+      return {
+        size: file.size,
+        ...dimensions,
+        ratio,
+        ratioOk: ratio ? Math.abs(ratio - MEDIA_SPECS.VIDEO.ratio) <= 0.08 : undefined,
+      };
+    } finally {
+      URL.revokeObjectURL(url);
+    }
+  }
+
+  return { size: file.size };
+}
+
 function cloneButtons(buttons: StudioButton[]): StudioButton[] {
   return buttons.map((button) => ({ ...button }));
 }
@@ -149,6 +241,7 @@ export function WhatsappTemplateEditorDialog({ id, open, onOpenChange }: Props) 
   const [saving, setSaving] = React.useState(false);
   const [uploadingSample, setUploadingSample] = React.useState(false);
   const [mediaPreview, setMediaPreview] = React.useState<string | null>(null);
+  const [mediaInfo, setMediaInfo] = React.useState<MediaInfo | null>(null);
   const [insertTarget, setInsertTarget] = React.useState<"body" | "header">("body");
   const bodyRef = React.useRef<HTMLTextAreaElement>(null);
   const headerRef = React.useRef<HTMLInputElement>(null);
@@ -159,6 +252,7 @@ export function WhatsappTemplateEditorDialog({ id, open, onOpenChange }: Props) 
     if (!open) return;
     setWorkingId(id);
     setMediaPreview(null);
+    setMediaInfo(null);
     if (!id) {
       setName("");
       setCategory("UTILITY");
@@ -252,26 +346,72 @@ export function WhatsappTemplateEditorDialog({ id, open, onOpenChange }: Props) 
   };
 
   const uploadSample = async (file: File) => {
+    const type = header.type;
+    if (type !== "IMAGE" && type !== "VIDEO" && type !== "DOCUMENT") return;
+
+    const spec = MEDIA_SPECS[type];
+    if (!spec.accept.includes(file.type as never)) {
+      toast.error(`الصيغة غير مدعومة. المطلوب: ${spec.formats}`);
+      return;
+    }
+    if (file.size > spec.maxBytes) {
+      toast.error(`حجم الملف ${formatMegabytes(file.size)} ويتجاوز الحد ${spec.maxLabel}`);
+      return;
+    }
+
     setUploadingSample(true);
     try {
-      const form = new FormData();
-      form.set("file", file);
-      const response = await axios.post("/api/templates/whatsapp/media-sample", form);
+      const inspected = await inspectMediaFile(file, type).catch(() => ({ size: file.size } as MediaInfo));
+      setMediaInfo(inspected);
+
+      const signature = await axios.post("/api/templates/whatsapp/media-signature", { kind: type });
+      const signed = signature.data as {
+        uploadUrl: string;
+        apiKey: string;
+        timestamp: number;
+        folder: string;
+        signature: string;
+      };
+
+      const direct = new FormData();
+      direct.set("file", file);
+      direct.set("api_key", signed.apiKey);
+      direct.set("timestamp", String(signed.timestamp));
+      direct.set("folder", signed.folder);
+      direct.set("signature", signed.signature);
+
+      const cloud = await axios.post(signed.uploadUrl, direct);
+      const publicUrl = cloud.data?.secure_url as string | undefined;
+      const publicId = cloud.data?.public_id as string | undefined;
+      if (!publicUrl || !publicId) throw new Error("Cloudinary upload did not return media identifiers");
+
+      const response = await axios.post("/api/templates/whatsapp/media-sample", {
+        url: publicUrl,
+        publicId,
+        name: file.name,
+        type: file.type,
+        size: file.size,
+      });
+
       const handle = response.data?.handle as string | undefined;
-      const publicUrl = response.data?.url as string | undefined;
-      const publicId = response.data?.publicId as string | undefined;
-      if (!handle || !publicUrl) throw new Error("missing media handles");
+      if (!handle) throw new Error("missing Meta media handle");
+
       if (mediaPreview?.startsWith("blob:")) URL.revokeObjectURL(mediaPreview);
       setMediaPreview(URL.createObjectURL(file));
       setHeader((previous) => ({
         ...previous,
         exampleHandle: handle,
         mediaUrl: publicUrl,
-        mediaPublicId: publicId ?? null,
+        mediaPublicId: publicId,
         fileName: file.name,
         mimeType: file.type,
       }));
-      toast.success("تم رفع عينة الوسائط إلى Meta بنجاح");
+
+      if (inspected.ratioOk === false) {
+        toast.success("تم الرفع، لكن نسبة الأبعاد ليست مثالية لعرض واتساب.");
+      } else {
+        toast.success("تم رفع الوسائط والتحقق منها وإرسال العينة إلى Meta.");
+      }
     } catch (error) {
       const detail = (error as { response?: { data?: { error?: string; detail?: string } } }).response?.data;
       toast.error([detail?.error, detail?.detail].filter(Boolean).join(" — ") || "فشل رفع عينة الوسائط إلى Meta");
@@ -606,26 +746,55 @@ export function WhatsappTemplateEditorDialog({ id, open, onOpenChange }: Props) 
                     </div>
                   )}
 
-                  {["IMAGE", "VIDEO", "DOCUMENT"].includes(header.type) && (
-                    <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 p-4">
-                      <label className="flex cursor-pointer items-center justify-center gap-2 text-sm text-slate-600">
-                        {uploadingSample ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-                        {header.exampleHandle ? `تم رفع العينة: ${header.fileName ?? "ملف"}` : "ارفع عينة إلى Meta"}
-                        <input
-                          type="file"
-                          className="hidden"
-                          accept={mediaAccept(header.type)}
-                          disabled={uploadingSample}
-                          onChange={(event) => {
-                            const file = event.target.files?.[0];
-                            if (file) void uploadSample(file);
-                            event.currentTarget.value = "";
-                          }}
-                        />
-                      </label>
-                      <p className="mt-1 text-center text-[10px] text-slate-400">العينة تُرفع مباشرة عبر Meta Resumable Upload وتستخدم كـ header_handle للمراجعة.</p>
-                    </div>
-                  )}
+                  {["IMAGE", "VIDEO", "DOCUMENT"].includes(header.type) && (() => {
+                    const spec = MEDIA_SPECS[header.type as "IMAGE" | "VIDEO" | "DOCUMENT"];
+                    return (
+                      <div className="space-y-3">
+                        <div className="grid grid-cols-2 gap-2 rounded-lg border border-slate-200 bg-slate-50 p-3 text-[11px] text-slate-600 md:grid-cols-4">
+                          <div><span className="block text-slate-400">الصيغة</span><strong>{spec.formats}</strong></div>
+                          <div><span className="block text-slate-400">الحد الأقصى</span><strong>{spec.maxLabel}</strong></div>
+                          <div><span className="block text-slate-400">المقاس الموصى به</span><strong>{spec.recommended}</strong></div>
+                          <div><span className="block text-slate-400">نسبة العرض</span><strong>{spec.ratioLabel}</strong></div>
+                          <p className="col-span-2 md:col-span-4 text-[10px] text-slate-400">{spec.note}</p>
+                        </div>
+
+                        <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 p-4">
+                          <label className="flex cursor-pointer items-center justify-center gap-2 text-sm text-slate-600">
+                            {uploadingSample ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                            {header.exampleHandle ? `تم رفع العينة: ${header.fileName ?? "ملف"}` : "ارفع عينة إلى Meta"}
+                            <input
+                              type="file"
+                              className="hidden"
+                              accept={mediaAccept(header.type)}
+                              disabled={uploadingSample}
+                              onChange={(event) => {
+                                const file = event.target.files?.[0];
+                                if (file) void uploadSample(file);
+                                event.currentTarget.value = "";
+                              }}
+                            />
+                          </label>
+                          <p className="mt-1 text-center text-[10px] text-slate-400">
+                            الرفع يتم مباشرة إلى التخزين ثم تُرسل العينة إلى Meta بدون المرور بحجم طلب Vercel.
+                          </p>
+                          {mediaInfo && (
+                            <div className="mt-3 flex flex-wrap justify-center gap-2 text-[10px]">
+                              <span className="rounded-full bg-white px-2 py-1 ring-1 ring-slate-200">{formatMegabytes(mediaInfo.size)}</span>
+                              {mediaInfo.width && mediaInfo.height && (
+                                <span className="rounded-full bg-white px-2 py-1 ring-1 ring-slate-200">{mediaInfo.width} × {mediaInfo.height}px</span>
+                              )}
+                              {mediaInfo.ratioOk === true && (
+                                <span className="rounded-full bg-emerald-50 px-2 py-1 text-emerald-700 ring-1 ring-emerald-200">نسبة عرض مثالية</span>
+                              )}
+                              {mediaInfo.ratioOk === false && (
+                                <span className="rounded-full bg-amber-50 px-2 py-1 text-amber-700 ring-1 ring-amber-200">قد يظهر قص — الأفضل {spec.ratioLabel}</span>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })()}
 
                   {header.type === "LOCATION" && (
                     <div className="grid grid-cols-1 gap-2 md:grid-cols-3">
@@ -755,9 +924,9 @@ function WhatsappPreview({
           {/* Blob/data URLs are local editor previews; next/image does not support them reliably. */}
           {headerType === "IMAGE" && mediaPreview && (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={mediaPreview} alt="" className="h-48 w-full object-cover" />
+            <img src={mediaPreview} alt="" className="aspect-[1.91/1] w-full object-cover" />
           )}
-          {headerType === "VIDEO" && mediaPreview && <video src={mediaPreview} controls className="h-48 w-full bg-black object-contain" />}
+          {headerType === "VIDEO" && mediaPreview && <video src={mediaPreview} controls className="aspect-[1.91/1] w-full bg-black object-contain" />}
           {headerType === "DOCUMENT" && (
             <div className="flex items-center gap-3 bg-slate-100 p-4"><FileText className="h-7 w-7 text-red-500" /><span className="truncate text-xs">{fileName ?? "document.pdf"}</span></div>
           )}

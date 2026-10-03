@@ -60,12 +60,43 @@ export async function createRoutingRule(input: RoutingRuleInput, actor?: Actor):
       if (fallback.channel !== input.channel) return { ok: false, status: 400, error: "Fallback sender channel does not match the routing rule channel." };
     }
 
+    const normalizedLocale = input.locale?.toLowerCase() ?? null;
+    const normalizedCountry = input.country?.toUpperCase() ?? null;
+    const normalizedPurpose = input.purpose ?? null;
+
+    /*
+     * Multi-language routing creates one stored rule per locale. Saving the same selection again
+     * must be idempotent; duplicate rows with identical predicates create ambiguous ties in the
+     * router. Reuse/update an exact semantic match instead of inserting another copy.
+     */
+    const existing = await prisma.senderRoutingRule.findFirst({
+      where: {
+        channel: input.channel,
+        locale: normalizedLocale,
+        country: normalizedCountry,
+        purpose: normalizedPurpose,
+        senderId: input.senderId,
+      },
+    });
+    if (existing) {
+      const row = await prisma.senderRoutingRule.update({
+        where: { id: existing.id },
+        data: {
+          fallbackSenderId: input.fallbackSenderId ?? null,
+          priority: input.priority ?? existing.priority,
+          enabled: input.enabled ?? true,
+          notes: input.notes ?? existing.notes,
+        },
+      });
+      return { ok: true, data: row };
+    }
+
     const row = await prisma.senderRoutingRule.create({
       data: {
         channel: input.channel,
-        locale: input.locale?.toLowerCase() ?? null,
-        country: input.country?.toUpperCase() ?? null,
-        purpose: input.purpose ?? null,
+        locale: normalizedLocale,
+        country: normalizedCountry,
+        purpose: normalizedPurpose,
         senderId: input.senderId,
         fallbackSenderId: input.fallbackSenderId ?? null,
         priority: input.priority ?? 100,
