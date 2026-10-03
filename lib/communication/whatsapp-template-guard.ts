@@ -81,12 +81,46 @@ export async function rejectDisallowedTemplateEdit(
   }
   const content = APPROVED_CONTENT_FIELDS.filter((field) => Object.prototype.hasOwnProperty.call(patch, field));
   if (content.length && (await hasSubmittedMetaVariant(templateId))) {
-    return {
-      ok: false,
-      status: 409,
-      error: "تم إرسال هذا القالب إلى Meta بالفعل؛ لا يمكن تغيير النص محليًا بينما نسخة Meta لها دورة مراجعة مستقلة. أنشئ قالبًا جديدًا عند الحاجة لتغيير المحتوى.",
-      fields: [...content],
+    /*
+     * Retrying a partial Meta publish sends the same draft back through PATCH. Presence alone must
+     * not count as an edit or the retry is permanently blocked after the first WABA succeeds.
+     * Compare the submitted values to the stored draft and freeze only actual content changes.
+     */
+    const current = await prisma.whatsappTemplate.findUnique({
+      where: { id: templateId },
+      select: {
+        body: true,
+        translations: true,
+        variables: true,
+        header: true,
+        buttons: true,
+        footerText: true,
+        authentication: true,
+      },
+    }).catch(() => null);
+    const stable = (value: unknown): string => {
+      if (value === null || value === undefined) return "null";
+      if (Array.isArray(value)) return `[${value.map(stable).join(",")}]`;
+      if (typeof value === "object") {
+        const entries = Object.entries(value as Record<string, unknown>)
+          .filter(([, item]) => item !== undefined)
+          .sort(([a], [b]) => a.localeCompare(b))
+          .map(([key, item]) => `${JSON.stringify(key)}:${stable(item)}`);
+        return `{${entries.join(",")}}`;
+      }
+      return JSON.stringify(value);
     };
+    const changed = current
+      ? content.filter((field) => stable((patch as Record<string, unknown>)[field]) !== stable((current as unknown as Record<string, unknown>)[field]))
+      : content;
+    if (changed.length) {
+      return {
+        ok: false,
+        status: 409,
+        error: "تم إرسال هذا القالب إلى Meta بالفعل؛ لا يمكن تغيير المحتوى بعد بدء دورة المراجعة. أنشئ قالبًا جديدًا عند الحاجة لتغيير النص أو المكونات.",
+        fields: changed,
+      };
+    }
   }
   return null;
 }
