@@ -87,6 +87,12 @@ function metaNamedText(text: string): string {
   });
 }
 
+function metaPositionalText(text: string): string {
+  const variables = variableOrder(text);
+  const positions = new Map(variables.map((key, index) => [key, index + 1]));
+  return text.replace(SCALAR_RE, (_full, key: string) => `{{${positions.get(key) ?? 1}}}`);
+}
+
 function namedExamples(text: string): Array<{ param_name: string; example: string }> {
   return variableOrder(text).map((key) => ({
     param_name: metaParameterName(key),
@@ -111,19 +117,28 @@ export function buildStandardMetaComponents(input: {
   headerText: string;
   footerText: string;
   buttons: ButtonDraft[];
-}): { components: unknown[]; bindings: VariableBinding[] } {
+}): { components: unknown[]; bindings: VariableBinding[]; parameterFormat: "named" | "positional" } {
   const components: unknown[] = [];
   const bindings: VariableBinding[] = [];
   const headerType = String(input.header.type ?? "NONE").toUpperCase();
+
+  // The supplied Meta docs explicitly document named body parameters. For templates that also
+  // parameterize a text header or URL button, keep the whole template positional until those
+  // named component shapes are explicitly verified. Meta's parameter_format applies template-wide.
+  const hasDynamicHeader = headerType === "TEXT" && variableOrder(input.headerText).length > 0;
+  const hasDynamicUrl = input.buttons.some((button) =>
+    String(button.type ?? "").toUpperCase() === "URL" && variableOrder(String(button.url ?? "")).length > 0,
+  );
+  const parameterFormat: "named" | "positional" = hasDynamicHeader || hasDynamicUrl ? "positional" : "named";
 
   if (headerType === "TEXT" && input.headerText.trim()) {
     const vars = variableOrder(input.headerText);
     const component: Record<string, unknown> = {
       type: "HEADER",
       format: "TEXT",
-      text: metaNamedText(input.headerText.trim()),
+      text: parameterFormat === "named" ? metaNamedText(input.headerText.trim()) : metaPositionalText(input.headerText.trim()),
     };
-    if (vars.length) component.example = { header_text_named_params: namedExamples(input.headerText.trim()) };
+    if (vars.length) component.example = { header_text: vars.map((key) => exampleByToken.get(key) ?? "example") };
     components.push(component);
     bindings.push(...bindingsFor(input.headerText, "header"));
   } else if (["IMAGE", "VIDEO", "DOCUMENT"].includes(headerType)) {
@@ -138,8 +153,15 @@ export function buildStandardMetaComponents(input: {
   }
 
   const bodyVars = variableOrder(input.body);
-  const body: Record<string, unknown> = { type: "BODY", text: metaNamedText(input.body) };
-  if (bodyVars.length) body.example = { body_text_named_params: namedExamples(input.body) };
+  const body: Record<string, unknown> = {
+    type: "BODY",
+    text: parameterFormat === "named" ? metaNamedText(input.body) : metaPositionalText(input.body),
+  };
+  if (bodyVars.length) {
+    body.example = parameterFormat === "named"
+      ? { body_text_named_params: namedExamples(input.body) }
+      : { body_text: [bodyVars.map((key) => exampleByToken.get(key) ?? "example")] };
+  }
   components.push(body);
   bindings.push(...bindingsFor(input.body, "body"));
 
@@ -164,7 +186,7 @@ export function buildStandardMetaComponents(input: {
         return {
           type: "URL",
           text: String(button.text ?? "").trim(),
-          url: metaNamedText(rawUrl),
+          url: parameterFormat === "named" ? metaNamedText(rawUrl) : metaPositionalText(rawUrl),
           ...(vars.length ? { example: [button.example?.trim() || exampleByToken.get(vars[0]) || "example"] } : {}),
         };
       }
@@ -173,7 +195,7 @@ export function buildStandardMetaComponents(input: {
     components.push({ type: "BUTTONS", buttons });
   }
 
-  return { components, bindings };
+  return { components, bindings, parameterFormat };
 }
 
 export function buildAuthenticationMetaComponents(auth: AuthDraft): unknown[] {
