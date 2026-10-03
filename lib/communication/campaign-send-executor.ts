@@ -23,6 +23,10 @@ export { computeFinalStatus };
 async function loadWhatsappTemplateTruth(templateId: string): Promise<{
   byWaba: Map<string, Parameters<typeof resolveVariantForLocale>[0]>;
   positionalNames: string[];
+  scopedNames: Record<string, string>;
+  headerMediaUrl: string | null;
+  headerMediaFilename: string | null;
+  headerLocation: { latitude: number; longitude: number; name?: string; address?: string } | null;
 }> {
   const [variants, tpl] = await Promise.all([
     prisma.whatsappTemplateWabaVariant.findMany({
@@ -38,7 +42,7 @@ async function loadWhatsappTemplateTruth(templateId: string): Promise<{
         lastSyncedAt: true,
       },
     }).catch(() => []),
-    prisma.whatsappTemplate.findUnique({ where: { id: templateId }, select: { variables: true } }).catch(() => null),
+    prisma.whatsappTemplate.findUnique({ where: { id: templateId }, select: { variables: true, header: true } }).catch(() => null),
   ]);
   const byWaba = new Map<string, Parameters<typeof resolveVariantForLocale>[0]>();
   for (const row of variants) {
@@ -47,10 +51,36 @@ async function loadWhatsappTemplateTruth(templateId: string): Promise<{
     byWaba.set(row.businessAccountId, list);
   }
   const catalog = Array.isArray(tpl?.variables) ? (tpl!.variables as unknown[]) : [];
-  const positionalNames = catalog
-    .map((entry) => (entry && typeof entry === "object" ? String((entry as { key?: unknown }).key ?? "") : ""))
-    .filter((key) => key.length > 0);
-  return { byWaba, positionalNames };
+  const positionalNames: string[] = [];
+  const scopedNames: Record<string, string> = {};
+  for (const entry of catalog) {
+    if (!entry || typeof entry !== "object") continue;
+    const row = entry as { key?: unknown; scope?: unknown; position?: unknown };
+    const key = String(row.key ?? "");
+    if (!key) continue;
+    if (!positionalNames.includes(key)) positionalNames.push(key);
+    const scope = typeof row.scope === "string" ? row.scope : null;
+    const position = Number(row.position);
+    if (scope && Number.isFinite(position) && position > 0) scopedNames[`${scope}.${position}`] = key;
+  }
+
+  const header = tpl?.header && typeof tpl.header === "object"
+    ? (tpl.header as Record<string, unknown>)
+    : {};
+  const headerMediaUrl = typeof header.mediaUrl === "string" && header.mediaUrl.trim() ? header.mediaUrl.trim() : null;
+  const headerMediaFilename = typeof header.fileName === "string" && header.fileName.trim() ? header.fileName.trim() : null;
+  const latitude = Number(header.latitude);
+  const longitude = Number(header.longitude);
+  const headerLocation = Number.isFinite(latitude) && Number.isFinite(longitude)
+    ? {
+        latitude,
+        longitude,
+        ...(typeof header.name === "string" && header.name.trim() ? { name: header.name.trim() } : {}),
+        ...(typeof header.address === "string" && header.address.trim() ? { address: header.address.trim() } : {}),
+      }
+    : null;
+
+  return { byWaba, positionalNames, scopedNames, headerMediaUrl, headerMediaFilename, headerLocation };
 }
 
 /**
@@ -359,6 +389,10 @@ export async function executeCampaignSend(
           componentsSchema: readiness.componentsSchema,
           values: templateValuesFor(whatsapp?.positionalNames ?? [], recipientCtx),
           positionalNames: whatsapp?.positionalNames ?? [],
+          scopedNames: whatsapp?.scopedNames ?? {},
+          headerMediaUrl: whatsapp?.headerMediaUrl ?? null,
+          headerMediaFilename: whatsapp?.headerMediaFilename ?? null,
+          headerLocation: whatsapp?.headerLocation ?? null,
         });
         if (!built.ok) {
           await markDeliveryStatus(deliveryId, "SKIPPED", { errorMessage: `${built.reason}  ${built.detail}` });
