@@ -150,6 +150,12 @@ export async function publishWhatsappTemplateToMeta(
       try {
         if (category === "AUTHENTICATION") {
           components = buildAuthenticationMetaComponents(auth);
+          if (locale === "ar") {
+            canonicalBindings = [
+              { key: "otp.code", scope: "body", position: 1, exampleValue: "123456", mapping: "otp.code", validationStatus: "VALID" },
+              { key: "otp.code", scope: "button.0", position: 1, exampleValue: "123456", mapping: "otp.code", validationStatus: "VALID" },
+            ];
+          }
         } else {
           const built = buildStandardMetaComponents({
             body: variant.body ?? "",
