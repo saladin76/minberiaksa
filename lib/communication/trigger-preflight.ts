@@ -41,13 +41,14 @@ export type PreflightResult = {
 
 const READY: PreflightResult = { ok: true, problems: [], approvedLocales: [], canonical: null };
 
-export async function preflightTrigger(input: { channel: string; templateId: string }): Promise<PreflightResult> {
-  if (input.channel === "EMAIL") return preflightEmailTrigger(input.templateId);
+export async function preflightTrigger(input: { channel: string; templateId: string; event?: string | null }): Promise<PreflightResult> {
+  const purpose = input.event === "DONATION_LAPSED" ? "MARKETING" : "TRANSACTIONAL";
+  if (input.channel === "EMAIL") return preflightEmailTrigger(input.templateId, purpose);
   if (input.channel !== "WHATSAPP") return READY;
-  return preflightWhatsappTrigger(input.templateId);
+  return preflightWhatsappTrigger(input.templateId, purpose);
 }
 
-async function preflightEmailTrigger(templateId: string): Promise<PreflightResult> {
+async function preflightEmailTrigger(templateId: string, purpose: "TRANSACTIONAL" | "MARKETING"): Promise<PreflightResult> {
   const problems: PreflightProblem[] = [];
   const tpl = await prisma.emailTemplate.findUnique({ where: { id: templateId }, select: { id: true } }).catch(() => null);
   if (!tpl) {
@@ -56,18 +57,18 @@ async function preflightEmailTrigger(templateId: string): Promise<PreflightResul
   }
   /* Email needs a usable sending identity, nothing more  no per-language approval exists. */
   const snapshot = await loadSenderRoutingSnapshot("EMAIL");
-  const routed = resolveSenderFromSnapshot(snapshot, { purpose: "TRANSACTIONAL" });
+  const routed = resolveSenderFromSnapshot(snapshot, { purpose });
   if (!routed.ok || !routed.sender.senderEmail) {
     problems.push({ code: "NO_SENDER", messageAr: "لا توجد هوية مُرسِل بريد مُفعّلة.", detail: routed.ok ? null : routed.reason });
   }
   return { ok: problems.length === 0, problems, approvedLocales: [], canonical: null };
 }
 
-async function preflightWhatsappTrigger(templateId: string): Promise<PreflightResult> {
+async function preflightWhatsappTrigger(templateId: string, purpose: "TRANSACTIONAL" | "MARKETING"): Promise<PreflightResult> {
   const problems: PreflightProblem[] = [];
 
   const tpl = await prisma.whatsappTemplate
-    .findUnique({ where: { id: templateId }, select: { id: true, provider: true, name: true } })
+    .findUnique({ where: { id: templateId }, select: { id: true, provider: true, name: true, category: true } })
     .catch(() => null);
   if (!tpl) {
     problems.push({ code: "TEMPLATE_NOT_FOUND", messageAr: "القالب غير موجود." });
@@ -85,8 +86,17 @@ async function preflightWhatsappTrigger(templateId: string): Promise<PreflightRe
     });
   }
 
+  const category = String(tpl.category ?? "").toUpperCase();
+  if (purpose === "MARKETING" && category && category !== "MARKETING") {
+    problems.push({
+      code: "PROVIDER_NOT_CONFIGURED",
+      messageAr: "هذا الحدث تسويقي ويجب ربطه بقالب Meta من فئة Marketing.",
+      detail: `template category: ${category}`,
+    });
+  }
+
   const snapshot = await loadSenderRoutingSnapshot("WHATSAPP");
-  const routed = resolveSenderFromSnapshot(snapshot, { locale: "ar", purpose: "TRANSACTIONAL" });
+  const routed = resolveSenderFromSnapshot(snapshot, { locale: "ar", purpose });
 
   if (!routed.ok) {
     problems.push({ code: "NO_SENDER", messageAr: "لا يوجد رقم واتساب مُفعّل يخدم هذه الرسالة.", detail: routed.reason });
