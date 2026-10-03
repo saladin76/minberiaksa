@@ -75,6 +75,14 @@ export async function createSender(input: SenderInput, actor?: Actor): Promise<S
   if (!isCommunicationProvider(input.provider)) return { ok: false, status: 400, error: "Invalid provider." };
   if (!input.name?.trim()) return { ok: false, status: 400, error: "Name is required." };
   try {
+    if (input.channel === "WHATSAPP" && input.phoneNumberId) {
+      const duplicate = await prisma.communicationSender.findFirst({
+        where: { channel: "WHATSAPP", phoneNumberId: input.phoneNumberId },
+        select: { id: true, name: true },
+      });
+      if (duplicate) return { ok: false, status: 409, error: `Phone Number ID مستخدم بالفعل في المُرسِل «${duplicate.name}».` };
+    }
+
     const row = await prisma.communicationSender.create({
       data: {
         channel: input.channel,
@@ -118,18 +126,29 @@ export async function createSender(input: SenderInput, actor?: Actor): Promise<S
 export async function updateSender(id: string, patch: Partial<SenderInput>, actor?: Actor): Promise<ServiceResult<CommunicationSender>> {
   if (!process.env.DATABASE_URL) return dbUnavailable();
   try {
+    const current = await prisma.communicationSender.findUnique({ where: { id } });
+    if (!current) return { ok: false, status: 404, error: "Sender not found." };
+
+    if (patch.phoneNumberId) {
+      const duplicate = await prisma.communicationSender.findFirst({
+        where: { id: { not: id }, channel: "WHATSAPP", phoneNumberId: patch.phoneNumberId },
+        select: { id: true, name: true },
+      });
+      if (duplicate) return { ok: false, status: 409, error: `Phone Number ID مستخدم بالفعل في المُرسِل «${duplicate.name}».` };
+    }
+
     const row = await prisma.communicationSender.update({
       where: { id },
       data: {
         channel: patch.channel,
         provider: patch.provider,
         name: patch.name?.trim(),
-        displayName: patch.displayName ?? undefined,
-        phoneNumberId: patch.phoneNumberId ?? undefined,
-        displayPhoneNumber: patch.displayPhoneNumber ?? undefined,
-        businessAccountId: patch.businessAccountId ?? undefined,
-        senderEmail: patch.senderEmail ?? undefined,
-        smsSender: patch.smsSender ?? undefined,
+        displayName: "displayName" in patch ? patch.displayName : undefined,
+        phoneNumberId: "phoneNumberId" in patch ? patch.phoneNumberId : undefined,
+        displayPhoneNumber: "displayPhoneNumber" in patch ? patch.displayPhoneNumber : undefined,
+        businessAccountId: "businessAccountId" in patch ? patch.businessAccountId : undefined,
+        senderEmail: "senderEmail" in patch ? patch.senderEmail : undefined,
+        smsSender: "smsSender" in patch ? patch.smsSender : undefined,
         supportedLocales: patch.supportedLocales,
         supportedCountries: patch.supportedCountries,
         supportedPurposes: patch.supportedPurposes,
@@ -156,6 +175,62 @@ export async function updateSender(id: string, patch: Partial<SenderInput>, acto
   } catch (error) {
     console.error("updateSender failed", error);
     return { ok: false, status: 500, error: "Failed to update sender." };
+  }
+}
+
+/**
+ * Hard deletion is deliberately conservative. A sender that has ever been used is part of the
+ * communication audit trail and must be disabled instead of erased. Routing references and a
+ * default flag must also be resolved explicitly before deletion.
+ */
+export async function deleteSender(id: string, actor?: Actor): Promise<ServiceResult<{ id: string }>> {
+  if (!process.env.DATABASE_URL) return dbUnavailable();
+  try {
+    const sender = await prisma.communicationSender.findUnique({ where: { id } });
+    if (!sender) return { ok: false, status: 404, error: "Sender not found." };
+    if (sender.isDefault) {
+      return { ok: false, status: 409, error: "لا يمكن حذف المُرسِل الافتراضي. عيّن مُرسِلًا افتراضيًا آخر أولًا." };
+    }
+
+    const [primaryRules, fallbackRules, deliveries, providerEvents] = await Promise.all([
+      prisma.senderRoutingRule.count({ where: { senderId: id } }),
+      prisma.senderRoutingRule.count({ where: { fallbackSenderId: id } }),
+      prisma.communicationDelivery.count({ where: { senderId: id } }),
+      prisma.communicationProviderEvent.count({ where: { senderId: id } }),
+    ]);
+
+    if (primaryRules || fallbackRules) {
+      return {
+        ok: false,
+        status: 409,
+        error: `لا يمكن حذف المُرسِل لأنه مستخدم في قواعد التوجيه (${primaryRules + fallbackRules}). عدّل أو احذف القواعد المرتبطة أولًا.`,
+      };
+    }
+    if (deliveries || providerEvents) {
+      return {
+        ok: false,
+        status: 409,
+        error: "لا يمكن حذف مُرسِل له سجل إرسال أو أحداث سابقة حفاظًا على سجل التدقيق. عطّله بدلًا من حذفه.",
+      };
+    }
+
+    await prisma.communicationSender.delete({ where: { id } });
+    await writeAuditLog({
+      actorId: actor?.actorId ?? undefined,
+      actorName: actor?.actorName ?? undefined,
+      actorRole: actor?.actorRole ?? "ADMIN",
+      action: "communication.sender.delete",
+      messageAr: `تم حذف مُرسِل تواصل: ${sender.name}`,
+      messageEn: `Communication sender deleted: ${sender.name}`,
+      entityType: "CommunicationSender",
+      entityId: id,
+      metadata: { channel: sender.channel, provider: sender.provider, externalCall: false },
+      stream: "TEAM",
+    });
+    return { ok: true, data: { id } };
+  } catch (error) {
+    console.error("deleteSender failed", error);
+    return { ok: false, status: 500, error: "Failed to delete sender." };
   }
 }
 
