@@ -198,12 +198,18 @@ export async function processWhatsappEvents(events: NormalizedWebhookEvent[]): P
         buttonReply: event.buttonReply ?? null,
       },
     });
-    if (outcome === "DUPLICATE") { summary.duplicates += 1; continue; }
-    if (outcome === "ERROR") { summary.persistenceErrors += 1; continue; }
-    summary.processed += 1;
-    summary.inbound += 1;
+    if (outcome === "DUPLICATE") {
+      summary.duplicates += 1;
+    } else if (outcome === "ERROR") {
+      summary.persistenceErrors += 1;
+      continue;
+    } else {
+      summary.processed += 1;
+      summary.inbound += 1;
+    }
 
-    await attributeReply(event.from, senderId, summary);
+    const attributed = await attributeReply(event.from, senderId, summary);
+    if (!attributed) summary.persistenceErrors += 1;
   }
 
   return summary;
@@ -218,12 +224,14 @@ export async function processWhatsappEvents(events: NormalizedWebhookEvent[]): P
  * dropped rather than the attribution  a single-sender deployment that predates sender rows still
  * gets its replies matched.
  */
-async function attributeReply(from: string | null, senderId: string | null, summary: WebhookProcessSummary): Promise<void> {
-  if (!from) return;
+async function attributeReply(from: string | null, senderId: string | null, summary: WebhookProcessSummary): Promise<boolean> {
+  if (!from) return true;
   const variants = phoneMatchVariants(from);
-  if (!variants.length) return;
-  const lastOutbound = await prisma.communicationDelivery
-    .findFirst({
+  if (!variants.length) return true;
+
+  let lastOutbound: { id: string; status: string; providerMessageId: string | null } | null = null;
+  try {
+    lastOutbound = await prisma.communicationDelivery.findFirst({
       where: {
         channel: "WHATSAPP",
         recipientPhone: { in: variants },
@@ -233,10 +241,18 @@ async function attributeReply(from: string | null, senderId: string | null, summ
       },
       orderBy: { createdAt: "desc" },
       select: { id: true, status: true, providerMessageId: true },
-    })
-    .catch(() => null);
-  if (!lastOutbound?.providerMessageId) return;
-  if (!shouldApplyDeliveryStatus(lastOutbound.status, "REPLIED")) return;
+    });
+  } catch (error) {
+    console.error("WhatsApp reply attribution lookup failed", { from, senderId, error });
+    return false;
+  }
+
+  if (!lastOutbound?.providerMessageId) return true;
+  if (!shouldApplyDeliveryStatus(lastOutbound.status, "REPLIED")) return true;
   const res = await markDeliveryStatus(lastOutbound.id, "REPLIED", { providerMessageId: lastOutbound.providerMessageId });
-  if (res.ok) summary.deliveryUpdates += 1;
+  if (res.ok) {
+    summary.deliveryUpdates += 1;
+    return true;
+  }
+  return false;
 }
