@@ -752,7 +752,11 @@ function WhatsappPreview({
       <FieldLabel hint="بيانات تجريبية">المعاينة الحية</FieldLabel>
       <div className="mt-2 min-h-[520px] rounded-2xl border border-border bg-[#E5DDD5] p-5">
         <div className="mx-auto max-w-[360px] overflow-hidden rounded-xl bg-white shadow-sm">
-          {headerType === "IMAGE" && mediaPreview && <img src={mediaPreview} alt="" className="h-48 w-full object-cover" />}
+          {/* Blob/data URLs are local editor previews; next/image does not support them reliably. */}
+          {headerType === "IMAGE" && mediaPreview && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={mediaPreview} alt="" className="h-48 w-full object-cover" />
+          )}
           {headerType === "VIDEO" && mediaPreview && <video src={mediaPreview} controls className="h-48 w-full bg-black object-contain" />}
           {headerType === "DOCUMENT" && (
             <div className="flex items-center gap-3 bg-slate-100 p-4"><FileText className="h-7 w-7 text-red-500" /><span className="truncate text-xs">{fileName ?? "document.pdf"}</span></div>
