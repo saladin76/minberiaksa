@@ -6,6 +6,7 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 import { requireAdminOrDashboardPermission } from "@/lib/dashboard/api-auth";
 import { prisma } from "@/lib/prisma";
 import { auditActorFromDashboardSession, writeAuditLog } from "@/lib/audit-log";
+import { publishWhatsappTemplateToMeta } from "@/lib/communication/meta-template-publisher";
 
 const createSchema = z.object({
   name: z.string().min(1).max(120),
@@ -15,6 +16,7 @@ const createSchema = z.object({
     /* null = Arabic only, as the editor sends it and the update route accepts. */
     .nullable()
     .optional(),
+  metaCategory: z.enum(["UTILITY", "MARKETING", "AUTHENTICATION"]).default("UTILITY"),
 });
 
 export async function GET() {
@@ -76,6 +78,10 @@ export async function POST(request: NextRequest) {
       translations: parsed.data.translations
         ? (parsed.data.translations as Prisma.InputJsonValue)
         : undefined,
+      category: parsed.data.metaCategory,
+      purpose: parsed.data.metaCategory,
+      provider: "MANUAL",
+      channel: "WHATSAPP",
       createdById: actor.actorId,
     },
   });
@@ -87,5 +93,18 @@ export async function POST(request: NextRequest) {
     entityId: created.id,
     stream: "TEAM",
   });
-  return NextResponse.json({ template: created });
+  const publish = await publishWhatsappTemplateToMeta(created.id, actor, { category: parsed.data.metaCategory });
+  if (!publish.ok) {
+    return NextResponse.json(
+      {
+        error: "تم حفظ القالب محليًا لكن لم يكتمل إنشاؤه في Meta.",
+        saved: true,
+        template: created,
+        publish,
+      },
+      { status: 502 },
+    );
+  }
+  const fresh = await prisma.whatsappTemplate.findUnique({ where: { id: created.id } });
+  return NextResponse.json({ template: fresh ?? created, publish }, { status: 201 });
 }
