@@ -51,12 +51,14 @@ export function providerOwnedEdits(patch: Record<string, unknown>): string[] {
   return PROVIDER_OWNED_FIELDS.filter((field) => Object.prototype.hasOwnProperty.call(patch, field));
 }
 
-export async function hasApprovedVariant(templateId: string): Promise<boolean> {
+export async function hasSubmittedMetaVariant(templateId: string): Promise<boolean> {
   if (!process.env.DATABASE_URL) return false;
-  const count = await prisma.whatsappTemplateVariant
-    .count({ where: { templateId, approvalStatus: "APPROVED" } })
-    .catch(() => 0);
-  return count > 0;
+  const [count, template] = await Promise.all([
+    prisma.whatsappTemplateVariant.count({ where: { templateId, provider: "META_WHATSAPP" } }).catch(() => 0),
+    prisma.whatsappTemplate.findUnique({ where: { id: templateId }, select: { provider: true, externalTemplateId: true } }).catch(() => null),
+  ]);
+  const provider = String(template?.provider ?? "").toUpperCase();
+  return count > 0 || ((provider === "META" || provider === "META_WHATSAPP") && Boolean(template?.externalTemplateId));
 }
 
 /**
@@ -79,11 +81,11 @@ export async function rejectDisallowedTemplateEdit(
     };
   }
   const content = APPROVED_CONTENT_FIELDS.filter((field) => Object.prototype.hasOwnProperty.call(patch, field));
-  if (content.length && (await hasApprovedVariant(templateId))) {
+  if (content.length && (await hasSubmittedMetaVariant(templateId))) {
     return {
       ok: false,
       status: 409,
-      error: "القالب معتمد من Meta  تعديل نصه هنا لا يغيّر ما يُرسل فعليًا. أنشئ قالبًا جديدًا وأرسله للاعتماد.",
+      error: "تم إرسال هذا القالب إلى Meta بالفعل؛ لا يمكن تغيير النص محليًا بينما نسخة Meta لها دورة مراجعة مستقلة. أنشئ قالبًا جديدًا عند الحاجة لتغيير المحتوى.",
       fields: [...content],
     };
   }
