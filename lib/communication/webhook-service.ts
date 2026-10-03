@@ -45,13 +45,16 @@ export type WebhookProcessSummary = {
 
 type RecordOutcome = "INSERTED" | "DUPLICATE" | "ERROR";
 
-async function senderIdForPhoneNumber(phoneNumberId: string | null): Promise<string | null> {
-  if (!phoneNumberId) return null;
+async function senderIdForPhoneNumber(
+  phoneNumberId: string | null,
+): Promise<{ ok: true; senderId: string | null } | { ok: false }> {
+  if (!phoneNumberId) return { ok: true, senderId: null };
   try {
     const s = await prisma.communicationSender.findFirst({ where: { phoneNumberId }, select: { id: true } });
-    return s?.id ?? null;
-  } catch {
-    return null;
+    return { ok: true, senderId: s?.id ?? null };
+  } catch (error) {
+    console.error("sender lookup failed for WhatsApp webhook", { phoneNumberId, error });
+    return { ok: false };
   }
 }
 
@@ -112,7 +115,12 @@ export async function processWhatsappEvents(events: NormalizedWebhookEvent[]): P
   }
 
   for (const event of events) {
-    const senderId = await senderIdForPhoneNumber(event.phoneNumberId);
+    const senderLookup = await senderIdForPhoneNumber(event.phoneNumberId);
+    if (!senderLookup.ok) {
+      summary.persistenceErrors += 1;
+      continue;
+    }
+    const senderId = senderLookup.senderId;
 
     if (event.kind === "status") {
       let delivery: { id: string; status: string } | null = null;
@@ -208,6 +216,12 @@ export async function processWhatsappEvents(events: NormalizedWebhookEvent[]): P
       summary.inbound += 1;
     }
 
+    /*
+     * If Meta identifies a concrete business phone but we do not have a matching sender row, do not
+     * fall back to a cross-sender reply lookup. Archiving the inbound event is still useful, while
+     * attribution waits until the sender configuration is corrected.
+     */
+    if (event.phoneNumberId && !senderId) continue;
     const attributed = await attributeReply(event.from, senderId, summary);
     if (!attributed) summary.persistenceErrors += 1;
   }
