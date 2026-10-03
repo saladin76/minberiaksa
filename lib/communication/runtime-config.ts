@@ -87,10 +87,10 @@ export type MetaWhatsappRuntimeValues = {
   accessToken: string;
   appSecret: string;
   verifyToken: string;
-  /** Legacy environment fallback only. WABA identity is stored per CommunicationSender. */
-  businessAccountId: string | null;
-  /** Legacy environment fallback only. Normal sends resolve a CommunicationSender. */
-  defaultPhoneNumberId: string | null;
+  /** Legacy environment fallback only. Empty when not configured centrally. */
+  businessAccountId: string;
+  /** Legacy environment fallback only. Empty when normal sends resolve a CommunicationSender. */
+  defaultPhoneNumberId: string;
   graphVersion: string;
 };
 
@@ -98,8 +98,8 @@ const metaValues = (v: Record<string, string>): MetaWhatsappRuntimeValues => ({
   accessToken: v.ACCESS_TOKEN,
   appSecret: v.APP_SECRET,
   verifyToken: v.WEBHOOK_VERIFY_TOKEN,
-  businessAccountId: v.BUSINESS_ACCOUNT_ID?.trim() || null,
-  defaultPhoneNumberId: v.DEFAULT_PHONE_NUMBER_ID?.trim() || null,
+  businessAccountId: v.BUSINESS_ACCOUNT_ID?.trim() || "",
+  defaultPhoneNumberId: v.DEFAULT_PHONE_NUMBER_ID?.trim() || "",
   graphVersion: v.GRAPH_API_VERSION,
 });
 
