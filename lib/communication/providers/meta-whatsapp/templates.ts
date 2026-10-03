@@ -1,6 +1,6 @@
 import { getActiveMetaWhatsappRuntimeConfig } from "../../runtime-config";
 import { graphFetch, metaRuntimeFailure, type MetaRuntimeConfig } from "./client";
-import { META_REASONS } from "./errors";
+import { mapGraphError, META_REASONS } from "./errors";
 
 /**
  * Reading the template catalogue out of Meta.
