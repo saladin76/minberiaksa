@@ -65,9 +65,33 @@ export function sameVariables(left: string[], right: string[]): boolean {
   return left.length === right.length && left.every((key, index) => key === right[index]);
 }
 
-function metaText(text: string, variables: string[]): string {
-  const positions = new Map(variables.map((key, index) => [key, index + 1]));
-  return text.replace(SCALAR_RE, (_full, key: string) => `{{${positions.get(key) ?? 1}}}`);
+export function metaParameterName(key: string): string {
+  const normalized = key
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9_]+/g, "_")
+    .replace(/^_+|_+$/g, "")
+    .replace(/_+/g, "_");
+  if (!normalized) throw new Error("INVALID_META_PARAMETER_NAME");
+  return /^[a-z]/.test(normalized) ? normalized : `p_${normalized}`;
+}
+
+function metaNamedText(text: string): string {
+  const used = new Map<string, string>();
+  return text.replace(SCALAR_RE, (_full, key: string) => {
+    const candidate = metaParameterName(key);
+    const previous = used.get(candidate);
+    if (previous && previous !== key) throw new Error(`META_PARAMETER_NAME_COLLISION:${previous}:${key}`);
+    used.set(candidate, key);
+    return `{{${candidate}}}`;
+  });
+}
+
+function namedExamples(text: string): Array<{ param_name: string; example: string }> {
+  return variableOrder(text).map((key) => ({
+    param_name: metaParameterName(key),
+    example: exampleByToken.get(key) ?? "example",
+  }));
 }
 
 function bindingsFor(text: string, scope: string): VariableBinding[] {
@@ -97,9 +121,9 @@ export function buildStandardMetaComponents(input: {
     const component: Record<string, unknown> = {
       type: "HEADER",
       format: "TEXT",
-      text: metaText(input.headerText.trim(), vars),
+      text: metaNamedText(input.headerText.trim()),
     };
-    if (vars.length) component.example = { header_text: vars.map((key) => exampleByToken.get(key) ?? "example") };
+    if (vars.length) component.example = { header_text_named_params: namedExamples(input.headerText.trim()) };
     components.push(component);
     bindings.push(...bindingsFor(input.headerText, "header"));
   } else if (["IMAGE", "VIDEO", "DOCUMENT"].includes(headerType)) {
@@ -114,8 +138,8 @@ export function buildStandardMetaComponents(input: {
   }
 
   const bodyVars = variableOrder(input.body);
-  const body: Record<string, unknown> = { type: "BODY", text: metaText(input.body, bodyVars) };
-  if (bodyVars.length) body.example = { body_text: [bodyVars.map((key) => exampleByToken.get(key) ?? "example")] };
+  const body: Record<string, unknown> = { type: "BODY", text: metaNamedText(input.body) };
+  if (bodyVars.length) body.example = { body_text_named_params: namedExamples(input.body) };
   components.push(body);
   bindings.push(...bindingsFor(input.body, "body"));
 
@@ -140,7 +164,7 @@ export function buildStandardMetaComponents(input: {
         return {
           type: "URL",
           text: String(button.text ?? "").trim(),
-          url: metaText(rawUrl, vars),
+          url: metaNamedText(rawUrl),
           ...(vars.length ? { example: [button.example?.trim() || exampleByToken.get(vars[0]) || "example"] } : {}),
         };
       }
