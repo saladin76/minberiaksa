@@ -122,18 +122,89 @@ export async function listBusinessPortfolioWabas(runtime?: MetaRuntimeConfig): P
   };
 }
 
+export type MetaWabaAccessDiagnostic = {
+  wabaReadable: boolean;
+  wabaName: string | null;
+  assignedUserCount: number | null;
+  directError: string | null;
+  assignedUsersError: string | null;
+};
+
+async function diagnoseWabaAccess(
+  businessAccountId: string,
+  businessId: string,
+  runtime: MetaRuntimeConfig,
+): Promise<MetaWabaAccessDiagnostic> {
+  if (!runtime.configured) {
+    return {
+      wabaReadable: false,
+      wabaName: null,
+      assignedUserCount: null,
+      directError: metaRuntimeFailure(runtime),
+      assignedUsersError: null,
+    };
+  }
+
+  const direct = await graphFetch(runtime.values, `${businessAccountId}?fields=id,name`, { method: "GET" });
+  let wabaReadable = false;
+  let wabaName: string | null = null;
+  let directError: string | null = null;
+
+  if (direct.ok) {
+    wabaReadable = true;
+    const row = direct.data && typeof direct.data === "object"
+      ? direct.data as Record<string, unknown>
+      : {};
+    wabaName = typeof row.name === "string" ? row.name : null;
+  } else {
+    directError = [direct.reason, direct.detail].filter(Boolean).join(" · ");
+  }
+
+  const assigned = await graphFetch(
+    runtime.values,
+    `${businessAccountId}/assigned_users?business=${encodeURIComponent(businessId)}`,
+    { method: "GET" },
+  );
+  let assignedUserCount: number | null = null;
+  let assignedUsersError: string | null = null;
+  if (assigned.ok) {
+    const rows = Array.isArray((assigned.data as { data?: unknown[] } | null)?.data)
+      ? ((assigned.data as { data: unknown[] }).data)
+      : [];
+    assignedUserCount = rows.length;
+  } else {
+    assignedUsersError = [assigned.reason, assigned.detail].filter(Boolean).join(" · ");
+  }
+
+  return { wabaReadable, wabaName, assignedUserCount, directError, assignedUsersError };
+}
+
 export async function verifyWabaInBusinessPortfolio(
   businessAccountId: string,
   runtime?: MetaRuntimeConfig,
 ): Promise<{ ok: true; asset: MetaBusinessPortfolioAsset } | { ok: false; reason: string; detail?: string }> {
-  const assets = await listBusinessPortfolioWabas(runtime);
+  const resolved = runtime ?? await getActiveMetaWhatsappRuntimeConfig();
+  const assets = await listBusinessPortfolioWabas(resolved);
   if (!assets.ok) return assets;
   const asset = assets.wabas.find((row) => row.id === businessAccountId);
   if (!asset) {
+    const diagnostic = await diagnoseWabaAccess(businessAccountId, assets.businessId, resolved);
+    let detail = `WABA ${businessAccountId} is not returned by Business Portfolio ${assets.businessId}.`;
+
+    if (!diagnostic.wabaReadable) {
+      detail += " The current Access Token cannot read this WABA directly. Assign the System User/token owner to this WhatsApp account and regenerate a token with business_management, whatsapp_business_management and whatsapp_business_messaging.";
+      if (diagnostic.directError) detail += ` Direct check: ${diagnostic.directError}.`;
+    } else if (diagnostic.assignedUserCount === 0) {
+      detail += ` Meta can read the WABA${diagnostic.wabaName ? ` “${diagnostic.wabaName}”` : ""}, but no system user from this Business Portfolio is assigned to it. Assign the System User with MANAGE or DEVELOP access, then regenerate/refresh the token.`;
+    } else {
+      detail += ` Meta can read the WABA${diagnostic.wabaName ? ` “${diagnostic.wabaName}”` : ""}, but it is not exposed by owned_whatsapp_business_accounts/client_whatsapp_business_accounts for this Business Portfolio. Review the WABA asset ownership/sharing and System User assignment in Meta Business Settings.`;
+      if (diagnostic.assignedUsersError) detail += ` assigned_users check: ${diagnostic.assignedUsersError}.`;
+    }
+
     return {
       ok: false,
       reason: "META_WABA_NOT_IN_BUSINESS_PORTFOLIO",
-      detail: `WABA ${businessAccountId} is not owned/shared by Business Portfolio ${assets.businessId}.`,
+      detail,
     };
   }
   return { ok: true, asset };
