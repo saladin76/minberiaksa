@@ -252,12 +252,24 @@ export async function sendAutomaticWhatsappMessage(
 
   if (!res.ok) {
     const terminal = isTerminalConfigReason(res.reason);
-    await markDeliveryStatus(id, terminal ? "SKIPPED" : "FAILED", { errorMessage: res.reason });
-    await mirrorSentMessage("WHATSAPP", input, terminal ? "SKIPPED" : "FAILED", { recipientPhone: input.recipientPhone, renderedBody: input.renderedBody, errorMessage: res.reason });
+    const errorMessage = res.detail ? `${res.reason}  ${res.detail}` : res.reason;
+    await markDeliveryStatus(id, terminal ? "SKIPPED" : "FAILED", { errorMessage });
+    await mirrorSentMessage("WHATSAPP", input, terminal ? "SKIPPED" : "FAILED", {
+      recipientPhone: input.recipientPhone,
+      renderedBody: input.renderedBody,
+      errorMessage,
+    });
     return { outcome: terminal ? "SKIPPED" : "FAILED", reason: res.reason };
   }
 
-  await markDeliveryStatus(id, "SENT", { providerMessageId: res.providerMessageId, internalAccepted: res.internalAccepted });
+  const persisted = await markDeliveryStatus(id, "SENT", { providerMessageId: res.providerMessageId, internalAccepted: res.internalAccepted });
+  if (!persisted.ok) {
+    console.error("Meta accepted WhatsApp trigger send but delivery status persistence failed", {
+      deliveryId: id,
+      providerMessageId: res.providerMessageId,
+      error: persisted.error,
+    });
+  }
   await mirrorSentMessage("WHATSAPP", input, "SENT", { recipientPhone: input.recipientPhone, renderedBody: input.renderedBody, providerMessageId: res.providerMessageId });
   return { outcome: "SENT", providerMessageId: res.providerMessageId };
 }
