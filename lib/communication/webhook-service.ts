@@ -147,9 +147,14 @@ export async function processWhatsappEvents(events: NormalizedWebhookEvent[]): P
           error: event.errorMessage,
         },
       });
-      if (outcome === "DUPLICATE") { summary.duplicates += 1; continue; }
-      if (outcome === "ERROR") { summary.persistenceErrors += 1; continue; }
-      summary.processed += 1;
+      if (outcome === "DUPLICATE") {
+        summary.duplicates += 1;
+      } else if (outcome === "ERROR") {
+        summary.persistenceErrors += 1;
+        continue;
+      } else {
+        summary.processed += 1;
+      }
 
       if (delivery) {
         /* Out-of-order callbacks are normal; a late `sent` must not undo a `read`. The event itself
@@ -163,6 +168,7 @@ export async function processWhatsappEvents(events: NormalizedWebhookEvent[]): P
           : { providerMessageId: event.providerMessageId };
         const res = await markDeliveryStatus(delivery.id, event.status, patch);
         if (res.ok) summary.deliveryUpdates += 1;
+        else summary.persistenceErrors += 1;
       }
       continue;
     }
