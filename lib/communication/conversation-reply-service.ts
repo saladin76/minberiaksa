@@ -91,17 +91,20 @@ export async function sendConversationReply(
   /* A conversation that names a sender must reply from that exact sender. Falling back to another
      number would split the donor's thread across business identities and can attribute a reply to
      the wrong WABA. Only legacy conversations with no sender id at all may use normal routing. */
-  let resolvedSender = known;
   if (senderId && !known) {
     return { ok: false, reason: "CONVERSATION_SENDER_NOT_FOUND" };
   }
-  if (!resolvedSender) {
+
+  let resolvedSenderId: string | null = known?.id ?? null;
+  let phoneNumberId: string | null = known?.phoneNumberId ?? null;
+
+  if (!known) {
     const routed = resolveSenderFromSnapshot(snapshot, { purpose: "UTILITY" });
     if (!routed.ok) return { ok: false, reason: routed.reason };
-    resolvedSender = routed.sender;
+    resolvedSenderId = routed.sender.id;
+    phoneNumberId = routed.sender.phoneNumberId;
   }
 
-  const phoneNumberId = resolvedSender.phoneNumberId;
   if (!phoneNumberId) return { ok: false, reason: "META_SENDER_MISSING_PHONE_NUMBER_ID" };
 
   const created = await createDeliveryRecord({
@@ -111,7 +114,7 @@ export async function sendConversationReply(
     purpose: "UTILITY",
     recipientPhone: to,
     renderedBody: text,
-    senderId: resolvedSender.id,
+    senderId: resolvedSenderId,
     createdBy: actor?.actorId ?? null,
     status: "RENDERED",
   });
