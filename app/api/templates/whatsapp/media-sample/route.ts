@@ -7,7 +7,7 @@ import cloudinary from "@/lib/cloudinary";
 import type { UploadApiResponse } from "cloudinary";
 
 export const runtime = "nodejs";
-export const maxDuration = 60;
+export const maxDuration = 300;
 
 const MEDIA_LIMITS: Record<string, { maxBytes: number; label: string; allowed: Set<string> }> = {
   IMAGE: {
@@ -108,6 +108,16 @@ export async function POST(request: Request) {
     }
     if (!remote.ok) {
       return NextResponse.json({ error: "تعذر قراءة الملف المرفوع من التخزين.", detail: `HTTP ${remote.status}` }, { status: 502 });
+    }
+
+    const remoteType = (remote.headers.get("content-type") ?? "").split(";")[0].trim().toLowerCase();
+    if (remoteType && remoteType !== type.toLowerCase()) {
+      return NextResponse.json({ error: "نوع الملف المخزن لا يطابق النوع المرسل.", detail: remoteType }, { status: 400 });
+    }
+    const contentLength = Number(remote.headers.get("content-length") ?? 0);
+    if (contentLength) {
+      const remoteCheck = validateMedia(type, contentLength);
+      if (!remoteCheck.ok) return NextResponse.json({ error: remoteCheck.error }, { status: remoteCheck.status });
     }
 
     const bytes = new Uint8Array(await remote.arrayBuffer());
