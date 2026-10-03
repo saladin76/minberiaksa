@@ -19,6 +19,7 @@ function response(status: number, body: unknown): Response {
 
 const metaValues = {
   ACCESS_TOKEN: "valid-meta-access-token-for-testing-123456",
+  APP_ID: "123456789012345",
   APP_SECRET: "0123456789abcdef0123456789abcdef",
   BUSINESS_PORTFOLIO_ID: "1189382739255774",
   WEBHOOK_VERIFY_TOKEN: "local-webhook-verify-token-123456",
@@ -52,18 +53,32 @@ test("Meta tester validates app credentials and root Business Portfolio without 
     values: metaValues,
   });
   assert.equal(result.success, true);
-  assert.equal(calls.length, 4);
+  assert.equal(calls.length, 5);
   assert.equal(calls.some((url) => url.includes("/phone_numbers")), false);
   assert.equal(calls.some((url) => url.endsWith("/messages")), false);
+  assert.equal(calls.some((url) => url.includes(`/${metaValues.APP_ID}?fields=id,name`)), true);
   assert.equal(calls.some((url) => url.includes(`/${metaValues.BUSINESS_PORTFOLIO_ID}?fields=id,name`)), true);
   assert.equal(calls.some((url) => url.includes("/owned_whatsapp_business_accounts")), true);
-  assert.equal(calls.filter((url) => url.includes("appsecret_proof=")).length, 3);
+  assert.equal(calls.filter((url) => url.includes("appsecret_proof=")).length, 4);
   assert.match(result.messageAr, /Business Portfolio/);
   assert.match(result.messageAr, /1 حساب WABA/);
   const safe = JSON.stringify(result);
   assert.equal(safe.includes(metaValues.ACCESS_TOKEN), false);
   assert.equal(safe.includes(metaValues.APP_SECRET), false);
   assert.equal(safe.includes(proof), false);
+});
+
+test("Meta tester requires the configured App ID before any network call", async () => {
+  let called = false;
+  const fakeFetch: ProviderFetch = async () => { called = true; return response(200, {}); };
+  const result = await new MetaWhatsAppConnectionTester(fakeFetch).test({
+    provider: "META_WHATSAPP",
+    candidateVersion: null,
+    values: { ...metaValues, APP_ID: "" },
+  });
+  assert.equal(result.success, false);
+  assert.equal(result.failureCode, "META_CONFIGURATION_INCOMPLETE");
+  assert.equal(called, false);
 });
 
 test("Meta tester fails when the root Business Portfolio cannot be read", async () => {
