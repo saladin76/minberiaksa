@@ -229,6 +229,7 @@ export async function sendAutomaticWhatsappMessage(
     componentsSchema: input.metaTemplate.componentsSchema,
     values: input.templateValues ?? {},
     positionalNames: input.metaTemplate.positionalNames,
+    scopedNames: input.metaTemplate.scopedNames,
     headerMediaUrl: input.headerMediaUrl ?? null,
   });
   if (!built.ok) {
@@ -320,6 +321,8 @@ export type MetaTemplateMapping = {
   name: string;
   /** `{{1}}`, `{{2}}` … in order, from the local template's variable catalog. */
   positionalNames: string[];
+  /** Semantic name by component-scoped position (header.1, body.1, button.0.1). */
+  scopedNames: Record<string, string>;
   /** The language code of the variant actually chosen  NOT the recipient's locale. */
   language: string;
   /** Meta's own component schema for that variant, for building parameters. */
@@ -356,9 +359,11 @@ export async function resolveMetaTemplateMapping(
   const { getTemplateReadiness } = await import("./whatsapp-template-sync");
   const readiness = await getTemplateReadiness(tpl.id, locale, businessAccountId);
   if (!readiness.ready || !readiness.providerTemplateName || !readiness.languageCode) return null;
+  const binding = variableBindingInfo(tpl.variables);
   return {
     name: readiness.providerTemplateName,
-    positionalNames: positionalVariableNames(tpl.variables),
+    positionalNames: binding.names,
+    scopedNames: binding.scopedNames,
     language: readiness.languageCode,
     componentsSchema: readiness.componentsSchema,
     resolvedLocale: readiness.locale,
@@ -366,9 +371,19 @@ export async function resolveMetaTemplateMapping(
 }
 
 /** The local `variables` catalog is `Array<{ key, … }>`, already in placeholder order. */
-function positionalVariableNames(variables: unknown): string[] {
-  if (!Array.isArray(variables)) return [];
-  return variables
-    .map((entry) => (entry && typeof entry === "object" ? String((entry as { key?: unknown }).key ?? "") : ""))
-    .filter((key) => key.length > 0);
+function variableBindingInfo(variables: unknown): { names: string[]; scopedNames: Record<string, string> } {
+  if (!Array.isArray(variables)) return { names: [], scopedNames: {} };
+  const names: string[] = [];
+  const scopedNames: Record<string, string> = {};
+  for (const entry of variables) {
+    if (!entry || typeof entry !== "object") continue;
+    const row = entry as { key?: unknown; scope?: unknown; position?: unknown };
+    const key = String(row.key ?? "");
+    if (!key) continue;
+    if (!names.includes(key)) names.push(key);
+    const scope = typeof row.scope === "string" ? row.scope : null;
+    const position = Number(row.position);
+    if (scope && Number.isFinite(position) && position > 0) scopedNames[`${scope}.${position}`] = key;
+  }
+  return { names, scopedNames };
 }
