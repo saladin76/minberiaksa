@@ -139,6 +139,62 @@ export async function verifyWabaInBusinessPortfolio(
   return { ok: true, asset };
 }
 
+
+export type MetaPortfolioPhoneAsset = {
+  id: string;
+  displayPhoneNumber: string | null;
+  verifiedName: string | null;
+  qualityRating: string | null;
+};
+
+export type MetaPortfolioWabaWithPhones = MetaBusinessPortfolioAsset & {
+  phones: MetaPortfolioPhoneAsset[];
+};
+
+export async function listBusinessPortfolioWhatsappAssets(
+  runtime?: MetaRuntimeConfig,
+): Promise<
+  | { ok: true; businessId: string; businessName: string | null; wabas: MetaPortfolioWabaWithPhones[] }
+  | { ok: false; reason: string; detail?: string }
+> {
+  const resolved = runtime ?? await getActiveMetaWhatsappRuntimeConfig();
+  if (!resolved.configured) return { ok: false, reason: metaRuntimeFailure(resolved) };
+  const base = await listBusinessPortfolioWabas(resolved);
+  if (!base.ok) return base;
+
+  const wabas: MetaPortfolioWabaWithPhones[] = [];
+  for (const waba of base.wabas) {
+    const phones = await graphFetch(
+      resolved.values,
+      `${waba.id}/phone_numbers?fields=id,display_phone_number,verified_name,quality_rating&limit=100`,
+      { method: "GET" },
+    );
+    if (!phones.ok) {
+      return {
+        ok: false,
+        reason: phones.reason,
+        detail: `Unable to read phone numbers for WABA ${waba.id}: ${phones.detail}`,
+      };
+    }
+    const rows = Array.isArray((phones.data as { data?: unknown[] } | null)?.data)
+      ? ((phones.data as { data: unknown[] }).data as Array<Record<string, unknown>>)
+      : [];
+    wabas.push({
+      ...waba,
+      phones: rows
+        .map((row) => ({
+          id: typeof row.id === "string" ? row.id : String(row.id ?? ""),
+          displayPhoneNumber: typeof row.display_phone_number === "string" ? row.display_phone_number : null,
+          verifiedName: typeof row.verified_name === "string" ? row.verified_name : null,
+          qualityRating: typeof row.quality_rating === "string" ? row.quality_rating : null,
+        }))
+        .filter((row) => /^\d+$/.test(row.id)),
+    });
+  }
+
+  return { ok: true, businessId: base.businessId, businessName: base.businessName, wabas };
+}
+
 /**
  * Verify that a Phone Number ID is both accessible with the active Meta connection and owned by the
  * WABA configured on the sender. This closes the gap where a syntactically valid numeric ID could be
