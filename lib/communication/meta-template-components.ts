@@ -1,4 +1,4 @@
-import { VARIABLE_CATALOG } from "@/lib/templates/variables";
+import { VARIABLE_CATALOG } from "../templates/variables";
 
 const SCALAR_RE = /\{\{\s*([a-zA-Z0-9_.]+)\s*\}\}/g;
 
