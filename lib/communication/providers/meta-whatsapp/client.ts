@@ -307,12 +307,22 @@ export async function ensureWabaWebhookSubscription(
   const verifiedAppIds = verifiedRows
     .map((row) => {
       const wa = row.whatsapp_business_api_data as Record<string, unknown> | undefined;
-      return typeof wa?.id === "string" ? wa.id : null;
+      const nested = typeof wa?.id === "string" ? wa.id : null;
+      const top = typeof row.id === "string" ? row.id : null;
+      return nested ?? top;
     })
     .filter((id): id is string => Boolean(id));
 
   if (!verifiedRows.length) {
     return { ok: false, reason: META_REASONS.INVALID_RESPONSE, detail: "WABA has no subscribed apps after subscription request." };
+  }
+  const expectedAppId = config.appId?.trim();
+  if (expectedAppId && !verifiedAppIds.includes(expectedAppId)) {
+    return {
+      ok: false,
+      reason: "META_WABA_APP_SUBSCRIPTION_MISMATCH",
+      detail: `The configured Meta app ${expectedAppId} is not listed in WABA subscribed_apps after the subscription request.`,
+    };
   }
   return { ok: true, subscribed: true, changed: true, appIds: verifiedAppIds.length ? verifiedAppIds : appIds };
 }
