@@ -3,7 +3,7 @@ import { writeAuditLog } from "@/lib/audit-log";
 import type { CommunicationSender } from "@prisma/client";
 import type { CommunicationSenderConfig } from "./sender-router";
 import type { CommunicationChannel } from "./communication-types";
-import { verifySenderOwnership } from "./providers/meta-whatsapp/client";
+import { ensureWabaWebhookSubscription, verifySenderOwnership } from "./providers/meta-whatsapp/client";
 import {
   isCommunicationChannel,
   isCommunicationProvider,
@@ -283,6 +283,32 @@ export async function verifyWhatsappSender(id: string, actor?: Actor): Promise<S
     return { ok: false, status: verification.reason === "META_WHATSAPP_NOT_CONFIGURED" ? 409 : 422, error: row.lastError ?? verification.reason };
   }
 
+  const subscription = await ensureWabaWebhookSubscription(sender.businessAccountId);
+  if (!subscription.ok) {
+    const row = await prisma.communicationSender.update({
+      where: { id },
+      data: {
+        status: "NEEDS_ATTENTION",
+        enabled: false,
+        lastHealthCheckAt: checkedAt,
+        lastError: ["WABA_WEBHOOK_SUBSCRIPTION_FAILED", subscription.reason, subscription.detail].filter(Boolean).join(" · ").slice(0, 500),
+      },
+    });
+    await writeAuditLog({
+      actorId: actor?.actorId ?? undefined,
+      actorName: actor?.actorName ?? undefined,
+      actorRole: actor?.actorRole ?? "ADMIN",
+      action: "communication.sender.verify.failed",
+      messageAr: `تم التحقق من الرقم لكن تعذر اشتراك WABA في Webhook: ${sender.name}`,
+      messageEn: `Phone verified but WABA webhook subscription failed: ${sender.name}`,
+      entityType: "CommunicationSender",
+      entityId: id,
+      metadata: { reason: subscription.reason, externalCall: true },
+      stream: "TEAM",
+    });
+    return { ok: false, status: 422, error: row.lastError ?? subscription.reason };
+  }
+
   const row = await prisma.communicationSender.update({
     where: { id },
     data: {
@@ -304,7 +330,7 @@ export async function verifyWhatsappSender(id: string, actor?: Actor): Promise<S
     messageEn: `WhatsApp sender verified with Meta: ${row.name}`,
     entityType: "CommunicationSender",
     entityId: id,
-    metadata: { qualityRating: row.qualityRating, externalCall: true },
+    metadata: { qualityRating: row.qualityRating, webhookSubscribed: true, subscriptionAppIds: subscription.appIds, externalCall: true },
     stream: "TEAM",
   });
   return { ok: true, data: row };
