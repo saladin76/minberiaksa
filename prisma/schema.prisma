@@ -1469,6 +1469,8 @@ model WhatsappTemplate {
   /// Buttons array. Shape: Array<{ type, text, url?, phoneNumber?, payload?, index }>
   /// type ∈ "url" | "phone" | "quick_reply" | "copy_code" | "donation_cta" | "tracking_url".
   buttons            Json?
+  /// Authentication template studio settings (OTP copy-code / one-tap).
+  authentication     Json?
   /// Template variable catalog. Shape: Array<{ key, exampleValue?, mapping?, validationStatus? }>
   variables          Json?
   /// Last successful sync from Twilio.
