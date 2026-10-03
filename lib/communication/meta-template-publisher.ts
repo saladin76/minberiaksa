@@ -258,7 +258,16 @@ export async function reconcilePublishedTemplatesToActiveWabas(actor?: Actor): P
   failures: Array<{ templateId: string; errors: MetaPublishSummary["errors"] }>;
 }> {
   const rows = await prisma.whatsappTemplate.findMany({
-    where: { provider: "META_WHATSAPP" },
+    where: {
+      provider: "META_WHATSAPP",
+      /* Backfill only templates that have already entered Meta's lifecycle somewhere. Drafts that
+         have never been submitted must remain drafts and must not be published just because a new
+         sender/WABA was activated. */
+      OR: [
+        { wabaVariants: { some: {} } },
+        { variants: { some: { provider: "META_WHATSAPP" } } },
+      ],
+    },
     select: { id: true },
     orderBy: { createdAt: "asc" },
   }).catch(() => []);
