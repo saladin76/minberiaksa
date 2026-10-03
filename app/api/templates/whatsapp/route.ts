@@ -12,6 +12,8 @@ const headerSchema = z.object({
   type: z.enum(["NONE", "TEXT", "IMAGE", "VIDEO", "DOCUMENT", "LOCATION"]).default("NONE"),
   text: z.string().max(60).nullable().optional(),
   exampleHandle: z.string().max(4096).nullable().optional(),
+  mediaUrl: z.string().max(4096).nullable().optional(),
+  mediaPublicId: z.string().max(512).nullable().optional(),
   previewUrl: z.string().max(4096).nullable().optional(),
   fileName: z.string().max(255).nullable().optional(),
   mimeType: z.string().max(120).nullable().optional(),
