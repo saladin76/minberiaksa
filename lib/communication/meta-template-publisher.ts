@@ -244,3 +244,44 @@ export async function publishWhatsappTemplateToMeta(
 
   return summary;
 }
+
+
+/**
+ * When a new WABA becomes active after templates already exist, backfill every template that has
+ * previously been submitted to Meta. Without this, the new sender can route traffic but lacks older
+ * approved templates until an operator manually edits/resubmits each one.
+ */
+export async function reconcilePublishedTemplatesToActiveWabas(actor?: Actor): Promise<{
+  ok: boolean;
+  templates: number;
+  failed: number;
+  failures: Array<{ templateId: string; errors: MetaPublishSummary["errors"] }>;
+}> {
+  const rows = await prisma.whatsappTemplate.findMany({
+    where: { provider: "META_WHATSAPP" },
+    select: { id: true },
+    orderBy: { createdAt: "asc" },
+  }).catch(() => []);
+
+  const failures: Array<{ templateId: string; errors: MetaPublishSummary["errors"] }> = [];
+  for (const row of rows) {
+    const result = await publishWhatsappTemplateToMeta(row.id, actor);
+    if (!result.ok) failures.push({ templateId: row.id, errors: result.errors });
+  }
+
+  await writeAuditLog({
+    actorId: actor?.actorId ?? undefined,
+    actorName: actor?.actorName ?? undefined,
+    actorRole: actor?.actorRole ?? "SYSTEM",
+    action: "communication.whatsapp.templates.reconcile",
+    messageAr: failures.length
+      ? `مزامنة القوالب مع حسابات WABA النشطة: ${rows.length - failures.length} نجح، ${failures.length} يحتاج مراجعة.`
+      : `تمت مزامنة ${rows.length} قالب واتساب مع جميع حسابات WABA النشطة.`,
+    messageEn: `WhatsApp template WABA reconciliation: templates=${rows.length}, failed=${failures.length}`,
+    entityType: "WhatsappTemplate",
+    metadata: { templates: rows.length, failed: failures.length, externalCall: rows.length > 0 },
+    stream: "TEAM",
+  }).catch(() => {});
+
+  return { ok: failures.length === 0, templates: rows.length, failed: failures.length, failures };
+}
