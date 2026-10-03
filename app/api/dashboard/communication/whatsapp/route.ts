@@ -73,7 +73,7 @@ export async function GET(request: NextRequest) {
 
     const [
       total, byStatus, deliveredCount, readCount, repliedCount, failedCount,
-      allTimeTotal, rows, listTotal, bucketRows, templates, metaConfig, retryableCount,
+      allTimeTotal, rows, listTotal, bucketRows, templates, metaConfig, retryableCount, activeSenders,
     ] = await Promise.all([
       prisma.communicationDelivery.count({ where: rangeWhere }),
       prisma.communicationDelivery.groupBy({ by: ["status"], where: rangeWhere, _count: { _all: true } }),
@@ -106,7 +106,7 @@ export async function GET(request: NextRequest) {
           id: true, name: true, category: true, updatedAt: true,
           /* Meta's own answer, per language  the single readiness contract. The local
              `approvalStatus`/`externalTemplateId` fields are deliberately not read here. */
-          variants: { select: { languageCode: true, locale: true, approvalStatus: true, providerTemplateName: true, componentsSchema: true, rejectionReason: true, lastSyncedAt: true } },
+          wabaVariants: { select: { businessAccountId: true, languageCode: true, locale: true, approvalStatus: true, providerTemplateName: true, componentsSchema: true, rejectionReason: true, lastSyncedAt: true } },
         },
         orderBy: { updatedAt: "desc" },
       }),
@@ -118,6 +118,15 @@ export async function GET(request: NextRequest) {
           status: { in: [...RETRYABLE_STATUSES] },
           OR: [{ retriedAt: null }, { retriedAt: { isSet: false } }],
         },
+      }),
+      prisma.communicationSender.findMany({
+        where: {
+          channel: "WHATSAPP",
+          enabled: true,
+          status: "ACTIVE",
+          businessAccountId: { not: null },
+        },
+        select: { businessAccountId: true },
       }),
     ]);
 
@@ -146,28 +155,57 @@ export async function GET(request: NextRequest) {
        row's hand-set `approvalStatus` and `externalTemplateId`, which is how this page could report
        a template READY while every send of it failed with META_TEMPLATE_REQUIRED. Two functions
        cannot agree; one cannot disagree with itself. */
+    const activeWabaIds = [...new Set(activeSenders.map((sender) => sender.businessAccountId).filter((id): id is string => Boolean(id)))];
     const templateRows = templates.map((t) => {
-      const canonical = resolveVariantForLocale(t.variants, "ar");
-      const approvedLanguages = t.variants.filter((v) => v.approvalStatus === "APPROVED").map((v) => v.languageCode);
-      const lastSyncedAt = t.variants.reduce<Date | null>((latest, v) => (!latest || v.lastSyncedAt > latest ? v.lastSyncedAt : latest), null);
+      const byWaba = new Map<string, typeof t.wabaVariants>();
+      for (const variant of t.wabaVariants) {
+        const bucket = byWaba.get(variant.businessAccountId) ?? [];
+        bucket.push(variant);
+        byWaba.set(variant.businessAccountId, bucket);
+      }
+
+      const readinessByWaba = activeWabaIds.map((wabaId) => {
+        const readiness = resolveVariantForLocale(byWaba.get(wabaId) ?? [], "ar");
+        return { wabaId, readiness };
+      });
+      const readyWabas = readinessByWaba.filter((item) => item.readiness.ready).length;
+      const allReady = activeWabaIds.length > 0 && readyWabas === activeWabaIds.length;
+      const partiallyReady = readyWabas > 0 && !allReady;
+      const canonical = readinessByWaba.find((item) => item.readiness.ready)?.readiness
+        ?? readinessByWaba[0]?.readiness
+        ?? resolveVariantForLocale([], "ar");
+
+      const approvedLanguages = [...new Set(
+        t.wabaVariants.filter((v) => v.approvalStatus === "APPROVED").map((v) => v.languageCode),
+      )];
+      const lastSyncedAt = t.wabaVariants.reduce<Date | null>(
+        (latest, v) => (!latest || v.lastSyncedAt > latest ? v.lastSyncedAt : latest),
+        null,
+      );
+
       return {
         id: t.id,
         name: t.name,
         approvalStatus: canonical.approvalStatus,
         category: t.category,
         language: canonical.languageCode,
-        /* "Registered" now means Meta has told us about it, not that somebody typed an id. */
-        registered: t.variants.length > 0,
-        ready: canonical.ready,
+        registered: t.wabaVariants.length > 0,
+        ready: allReady,
+        partiallyReady,
+        wabaCoverage: { ready: readyWabas, total: activeWabaIds.length },
         approvedLanguages,
-        approvedLocales: [...new Set(t.variants.filter((v) => v.approvalStatus === "APPROVED" && v.locale).map((v) => v.locale as string))],
+        approvedLocales: [...new Set(
+          t.wabaVariants.filter((v) => v.approvalStatus === "APPROVED" && v.locale).map((v) => v.locale as string),
+        )],
         rejectionReason: canonical.rejectionReason,
         lastSyncedAt: lastSyncedAt ? lastSyncedAt.toISOString() : null,
-        state: canonical.ready
+        state: allReady
           ? "READY"
-          : t.variants.length === 0
-            ? "NOT_REGISTERED"
-            : canonical.approvalStatus ?? "PENDING",
+          : partiallyReady
+            ? "PARTIAL"
+            : t.wabaVariants.length === 0
+              ? "NOT_REGISTERED"
+              : canonical.approvalStatus ?? "PENDING",
         updatedAt: t.updatedAt.toISOString(),
       };
     });
