@@ -24,6 +24,13 @@ import { cn } from "@/lib/utils";
 const CHANNELS = ["WHATSAPP", "EMAIL", "SMS"] as const;
 const PURPOSES = ["TRANSACTIONAL", "MARKETING", "UTILITY", "AUTHENTICATION"] as const;
 
+const SUPPORTED_LANGUAGES = [
+  ["ar", "العربية"], ["tr", "Türkçe"], ["en", "English"], ["fr", "Français"], ["de", "Deutsch"],
+  ["es", "Español"], ["id", "Bahasa Indonesia"], ["pt", "Português"], ["ur", "اردو"], ["sq", "Shqip"],
+  ["it", "Italiano"], ["nl", "Nederlands"], ["sv", "Svenska"], ["no", "Norsk"], ["da", "Dansk"],
+  ["ms", "Bahasa Melayu"], ["ja", "日本語"], ["zh", "中文"], ["hi", "हिंदी"],
+] as const;
+
 const CHANNEL_LABELS: Record<string, string> = { WHATSAPP: "واتساب", EMAIL: "بريد", SMS: "رسائل نصية" };
 const PURPOSE_LABELS: Record<string, string> = {
   TRANSACTIONAL: "معاملات", MARKETING: "تسويق", UTILITY: "خدمي", AUTHENTICATION: "توثيق",
@@ -338,8 +345,9 @@ function SenderForm({ onDone }: { onDone: () => Promise<void> }) {
   const [channel, setChannel] = useState<(typeof CHANNELS)[number]>("WHATSAPP");
   const [form, setForm] = useState({
     name: "", displayName: "", phoneNumberId: "", displayPhoneNumber: "", businessAccountId: "",
-    senderEmail: "", smsSender: "", supportedLocales: "", supportedCountries: "", priority: "100",
+    senderEmail: "", smsSender: "", supportedCountries: "", priority: "100",
   });
+  const [locales, setLocales] = useState<string[]>([]);
   const [purposes, setPurposes] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -365,7 +373,7 @@ function SenderForm({ onDone }: { onDone: () => Promise<void> }) {
           businessAccountId: channel === "WHATSAPP" ? form.businessAccountId || null : null,
           senderEmail: channel === "EMAIL" ? form.senderEmail || null : null,
           smsSender: channel === "SMS" ? form.smsSender || null : null,
-          supportedLocales: list(form.supportedLocales),
+          supportedLocales: locales,
           supportedCountries: list(form.supportedCountries).map((c) => c.toUpperCase()),
           supportedPurposes: purposes,
           priority: Number(form.priority) || 100,
@@ -430,10 +438,24 @@ function SenderForm({ onDone }: { onDone: () => Promise<void> }) {
           </label>
         )}
 
-        <label className="text-xs font-semibold text-slate-600">
-          اللغات المدعومة (فراغ = الكل)
-          <input value={form.supportedLocales} onChange={set("supportedLocales")} placeholder="ar, tr, en" className={cn(field, "mt-1")} />
-        </label>
+        <div className="text-xs font-semibold text-slate-600 sm:col-span-2 lg:col-span-3">
+          <p>اللغات المدعومة <span className="font-normal text-slate-400">(بدون اختيار = كل اللغات)</span></p>
+          <div className="mt-1.5 flex flex-wrap gap-1.5">
+            {SUPPORTED_LANGUAGES.map(([code, label]) => (
+              <button
+                key={code}
+                type="button"
+                onClick={() => setLocales((current) => current.includes(code) ? current.filter((item) => item !== code) : [...current, code])}
+                className={cn(
+                  "rounded-full border px-2.5 py-1 text-[11px] font-semibold",
+                  locales.includes(code) ? "border-brand/30 bg-brand/10 text-brand" : "border-slate-200 bg-white text-slate-500",
+                )}
+              >
+                {label} <span className="ms-1 text-[10px] opacity-60">{code}</span>
+              </button>
+            ))}
+          </div>
+        </div>
         <label className="text-xs font-semibold text-slate-600">
           الدول المدعومة (فراغ = الكل)
           <input value={form.supportedCountries} onChange={set("supportedCountries")} placeholder="TR, SA" className={cn(field, "mt-1")} />
