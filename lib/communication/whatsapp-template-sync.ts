@@ -3,7 +3,7 @@ import "server-only";
 import { prisma } from "@/lib/prisma";
 import { writeAuditLog } from "@/lib/audit-log";
 import { SUPPORTED_LOCALES, type SupportedLocale } from "@/lib/locales";
-import { listAllTemplates, type MetaTemplateDetail } from "./providers/meta-whatsapp/templates";
+import { listAllTemplates } from "./providers/meta-whatsapp/templates";
 
 export const META_PROVIDER = "META_WHATSAPP";
 
