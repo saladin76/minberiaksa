@@ -6,6 +6,16 @@ import { writeAuditLog } from "@/lib/audit-log";
 import { getActiveMetaWhatsappRuntimeConfig } from "./runtime-config";
 import { ensureMetaTemplate } from "./providers/meta-whatsapp/templates";
 import { syncMetaWhatsappTemplates } from "./whatsapp-template-sync";
+import {
+  buildAuthenticationMetaComponents,
+  buildStandardMetaComponents,
+  sameVariables,
+  variableOrder,
+  type AuthDraft,
+  type ButtonDraft,
+  type HeaderDraft,
+  type VariableBinding,
+} from "./meta-template-components";
 
 type Actor = { actorId?: string | null; actorName?: string | null; actorRole?: string | null };
 
@@ -28,23 +38,9 @@ const exampleByToken = (() => {
   return map;
 })();
 
-function variableOrder(body: string): string[] {
-  const out: string[] = [];
-  const seen = new Set<string>();
-  for (const match of body.matchAll(SCALAR_RE)) {
-    const key = match[1];
-    if (!seen.has(key)) { seen.add(key); out.push(key); }
-  }
-  return out;
-}
-
 function toMetaBody(body: string, variables: string[]): string {
   const index = new Map(variables.map((key, i) => [key, i + 1]));
   return body.replace(SCALAR_RE, (_full, key: string) => `{{${index.get(key) ?? 1}}}`);
-}
-
-function sameVariables(a: string[], b: string[]): boolean {
-  return a.length === b.length && a.every((key, index) => key === b[index]);
 }
 
 function categoryFor(template: { category: string | null; purpose: string | null; kind: string | null }) {
@@ -100,7 +96,7 @@ export async function publishWhatsappTemplateToMeta(
     where: { id: templateId },
     select: {
       id: true, name: true, body: true, translations: true, kind: true, purpose: true,
-      category: true, footerText: true,
+      category: true, header: true, footerText: true, buttons: true, authentication: true,
     },
   });
   if (!template) {
@@ -116,29 +112,40 @@ export async function publishWhatsappTemplateToMeta(
     return summary;
   }
 
-  const variants = new Map<string, string>();
-  variants.set("ar", template.body);
+  type TranslationDraft = { body?: string; headerText?: string | null; footerText?: string | null; buttons?: ButtonDraft[] };
+  const header = (template.header && typeof template.header === "object" ? template.header : { type: "NONE" }) as HeaderDraft;
+  const rootButtons = (Array.isArray(template.buttons) ? template.buttons : []) as ButtonDraft[];
+  const auth = (template.authentication && typeof template.authentication === "object" ? template.authentication : {}) as AuthDraft;
+  const variants = new Map<string, TranslationDraft>();
+  variants.set("ar", {
+    body: template.body,
+    headerText: header.text ?? "",
+    footerText: template.footerText ?? "",
+    buttons: rootButtons,
+  });
   const translations = (template.translations && typeof template.translations === "object"
-    ? template.translations as Record<string, { body?: string }>
+    ? template.translations as Record<string, TranslationDraft>
     : {});
   for (const [locale, value] of Object.entries(translations)) {
-    if (value?.body?.trim()) variants.set(locale, value.body.trim());
+    if (value?.body?.trim()) variants.set(locale, value);
   }
 
   const canonicalVariables = variableOrder(template.body);
-  for (const [locale, body] of variants) {
-    if (SECTION_RE.test(body)) {
+  const canonicalHeaderVariables = variableOrder(String(header.text ?? ""));
+  for (const [locale, variant] of variants) {
+    const body = variant.body ?? "";
+    const headerText = variant.headerText ?? String(header.text ?? "");
+    if (SECTION_RE.test(body) || SECTION_RE.test(headerText)) {
       summary.errors.push({
         businessAccountId: "", language: locale, reason: "UNSUPPORTED_META_SECTION",
-        detail: "قوالب Meta لا تدعم حلقات {{#...}} داخل النص. استخدم متغيرًا نصيًا جاهزًا بدل الحلقة.",
+        detail: "قوالب Meta لا تدعم حلقات {{#...}} داخل النص.",
       });
       return summary;
     }
-    const current = variableOrder(body);
-    if (!sameVariables(canonicalVariables, current)) {
+    if (!sameVariables(canonicalVariables, variableOrder(body)) || !sameVariables(canonicalHeaderVariables, variableOrder(headerText))) {
       summary.errors.push({
         businessAccountId: "", language: locale, reason: "VARIABLES_MISMATCH",
-        detail: "يجب أن تستخدم كل اللغات نفس المتغيرات وبنفس الترتيب حتى يظل الإرسال آمنًا.",
+        detail: "جميع اللغات يجب أن تستخدم نفس متغيرات النص والعنوان وبنفس الترتيب.",
       });
       return summary;
     }
@@ -164,16 +171,42 @@ export async function publishWhatsappTemplateToMeta(
   summary.canonicalWabaId = wabas[0];
 
   const category = opts.category ?? categoryFor(template);
+  let canonicalBindings: VariableBinding[] = [];
   for (const waba of wabas) {
-    for (const [locale, body] of variants) {
+    for (const [locale, variant] of variants) {
       const language = META_LANGUAGE[locale] ?? locale;
       summary.targets += 1;
+      let components: unknown[];
+      try {
+        if (category === "AUTHENTICATION") {
+          components = buildAuthenticationMetaComponents(auth);
+        } else {
+          const built = buildStandardMetaComponents({
+            body: variant.body ?? "",
+            header,
+            headerText: variant.headerText ?? String(header.text ?? ""),
+            footerText: variant.footerText ?? template.footerText ?? "",
+            buttons: variant.buttons ?? rootButtons,
+          });
+          components = built.components;
+          if (locale === "ar") canonicalBindings = built.bindings;
+        }
+      } catch (error) {
+        summary.failed += 1;
+        summary.errors.push({
+          businessAccountId: waba,
+          language,
+          reason: error instanceof Error ? error.message : "TEMPLATE_COMPONENT_BUILD_FAILED",
+        });
+        continue;
+      }
+
       const result = await ensureMetaTemplate({
         businessAccountId: waba,
         name: template.name,
         language,
         category,
-        components: componentsFor(body, canonicalVariables, template.footerText),
+        components,
       }, runtime);
       if (!result.ok) {
         summary.failed += 1;
@@ -197,12 +230,7 @@ export async function publishWhatsappTemplateToMeta(
       externalTemplateId: first?.id ?? undefined,
       approvalStatus: first?.status ?? "PENDING",
       language: first?.language ?? "ar",
-      variables: canonicalVariables.map((key) => ({
-        key,
-        exampleValue: exampleByToken.get(key) ?? "example",
-        mapping: key,
-        validationStatus: "VALID",
-      })) as never,
+      variables: canonicalBindings as never,
       lastImportedAt: new Date(),
       lastSyncStatus: summary.failed ? (summary.statuses.length ? "partial" : "failed") : "ok",
       lastSyncError: summary.errors.length
@@ -222,7 +250,7 @@ export async function publishWhatsappTemplateToMeta(
     await syncMetaWhatsappTemplates({ actor }).catch(() => null);
   }
 
-  summary.ok = summary.failed === 0 && summary.statuses.length > 0;
+  summary.ok = summary.failed === 0 && summary.statuses.length === summary.targets && summary.targets > 0;
   await writeAuditLog({
     actorId: actor?.actorId ?? undefined,
     actorName: actor?.actorName ?? undefined,
