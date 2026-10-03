@@ -195,13 +195,16 @@ function readPath(root: unknown, path: string): unknown {
 }
 
 /** Re-check the stored template against Meta's *current* approval state, per language. */
-async function resolveMetaTemplate(row: DeliveryRow) {
-  if (!row.templateId) return null;
+async function resolveMetaTemplate(row: DeliveryRow, businessAccountId: string | null) {
+  if (!row.templateId || !businessAccountId) return null;
   const tpl = await prisma.whatsappTemplate
-    .findUnique({ where: { id: row.templateId }, select: { id: true, provider: true, name: true, variables: true } })
+    .findUnique({
+      where: { id: row.templateId },
+      select: { id: true, provider: true, name: true, variables: true, header: true },
+    })
     .catch(() => null);
   if (!tpl) return null;
-  return resolveMetaTemplateMapping(tpl, row.locale || "ar");
+  return resolveMetaTemplateMapping(tpl, row.locale || "ar", businessAccountId);
 }
 
 /**
@@ -260,19 +263,26 @@ export async function retryDelivery(
       html: row.renderedBody,
     };
   } else if (channel === "WHATSAPP") {
-    const meta = await resolveMetaTemplate(row);
-    // Meta refuses business-initiated free text, so the stored body is not a fallback here: without
-    // a currently-approved template there is no legal payload to send at all.
-    if (!meta) return result(deliveryId, "META_TEMPLATE_REQUIRED", base);
     const routed = resolveTriggerSender(config, "WHATSAPP", { locale: row.locale, purpose: row.purpose as never });
     if (!routed.ok) return result(deliveryId, "NO_SENDER_IDENTITY", { ...base, detail: routed.reason });
-    if (!routed.sender.phoneNumberId) return result(deliveryId, "NO_SENDER_IDENTITY", base);
+    if (!routed.sender.phoneNumberId || !routed.sender.businessAccountId) {
+      return result(deliveryId, "NO_SENDER_IDENTITY", base);
+    }
+
+    const meta = await resolveMetaTemplate(row, routed.sender.businessAccountId);
+    // A retry must use a template approved on the exact WABA selected by today's routing.
+    if (!meta) return result(deliveryId, "META_TEMPLATE_REQUIRED", base);
+
     /* The stored variable snapshot is what the original send rendered from, so the retry carries the
        same parameters rather than re-deriving them from a donor record that may have moved on. */
     const built = buildMetaComponents({
       componentsSchema: meta.componentsSchema,
       values: storedTemplateValues(row.variables, meta.positionalNames),
       positionalNames: meta.positionalNames,
+      scopedNames: meta.scopedNames,
+      headerMediaUrl: meta.headerMediaUrl,
+      headerMediaFilename: meta.headerMediaFilename,
+      headerLocation: meta.headerLocation,
     });
     if (!built.ok) return result(deliveryId, built.reason as RetryOutcomeCode, { ...base, detail: built.detail });
     provider = "META_WHATSAPP";
