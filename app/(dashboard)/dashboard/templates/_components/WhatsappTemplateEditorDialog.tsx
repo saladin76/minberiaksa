@@ -354,7 +354,10 @@ export function WhatsappTemplateEditorDialog({ id, open, onOpenChange }: Props) 
       for (const locale of SUPPORTED_LOCALES) {
         if (locale === DEFAULT_LOCALE) continue;
         const draft = locales[locale];
-        if (draft?.body.trim()) translations[locale] = draft;
+        if (!draft) continue;
+        translations[locale] = category === "AUTHENTICATION"
+          ? { ...draft, body: "Authentication code" }
+          : draft;
       }
 
       const payload = {
@@ -423,16 +426,14 @@ export function WhatsappTemplateEditorDialog({ id, open, onOpenChange }: Props) 
       saveDisabled={uploadingSample}
       saveLabel="حفظ وإرسال إلى Meta"
       toolbar={
-        category === "AUTHENTICATION" ? undefined : (
-          <LocaleStrip
-            accent="whatsapp"
-            enabled={(locale) => Boolean(locales[locale])}
-            activeLocale={activeLocale}
-            onSelect={setActiveLocale}
-            onEnable={enableLocale}
-            onRemove={removeLocale}
-          />
-        )
+        <LocaleStrip
+          accent="whatsapp"
+          enabled={(locale) => Boolean(locales[locale])}
+          activeLocale={activeLocale}
+          onSelect={setActiveLocale}
+          onEnable={enableLocale}
+          onRemove={removeLocale}
+        />
       }
     >
       <div className="space-y-5">
@@ -478,7 +479,7 @@ export function WhatsappTemplateEditorDialog({ id, open, onOpenChange }: Props) 
           <div className="space-y-1.5">
             <FieldLabel>اللغة الحالية</FieldLabel>
             <div className="flex h-10 items-center rounded-md border border-border bg-slate-50 px-3 text-sm">
-              {category === "AUTHENTICATION" ? "تحددها Meta حسب قالب التحقق" : LOCALE_LABELS[activeLocale]}
+              {LOCALE_LABELS[activeLocale]}
             </div>
           </div>
         </section>
