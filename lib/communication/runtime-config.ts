@@ -112,7 +112,7 @@ const metaValues = (v: Record<string, string>): MetaWhatsappRuntimeValues => ({
 export function getActiveMetaWhatsappRuntimeConfig(): Promise<ActiveRuntimeConfig<MetaWhatsappRuntimeValues>> {
   // App-level connection only. WABA + phone-number IDs live on CommunicationSender rows so one
   // Meta app can serve multiple WhatsApp Business Accounts and multiple real numbers.
-  return resolve("META_WHATSAPP", ["ACCESS_TOKEN", "BUSINESS_PORTFOLIO_ID", "APP_SECRET", "WEBHOOK_VERIFY_TOKEN", "GRAPH_API_VERSION"], metaValues);
+  return resolve("META_WHATSAPP", ["ACCESS_TOKEN", "APP_ID", "BUSINESS_PORTFOLIO_ID", "APP_SECRET", "WEBHOOK_VERIFY_TOKEN", "GRAPH_API_VERSION"], metaValues);
 }
 
 export function getActiveMetaWebhookConfig(): Promise<ActiveRuntimeConfig<Pick<MetaWhatsappRuntimeValues, "appSecret" | "verifyToken">>> {
