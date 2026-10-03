@@ -52,10 +52,11 @@ export class MetaWhatsAppConnectionTester implements IntegrationProviderTester {
   async test(input: ProviderConnectionTestInput): Promise<ProviderConnectionTestResult> {
     const token = input.values.ACCESS_TOKEN;
     const appSecret = input.values.APP_SECRET;
+    const appId = input.values.APP_ID;
     const businessPortfolioId = input.values.BUSINESS_PORTFOLIO_ID;
     const verifyToken = input.values.WEBHOOK_VERIFY_TOKEN;
     const version = input.values.GRAPH_API_VERSION;
-    if (!token || !appSecret || !businessPortfolioId || !verifyToken || !version) {
+    if (!token || !appId || !appSecret || !businessPortfolioId || !verifyToken || !version) {
       return failed("بيانات Meta المركزية المطلوبة غير مكتملة.", "META_CONFIGURATION_INCOMPLETE");
     }
 
@@ -91,6 +92,15 @@ export class MetaWhatsAppConnectionTester implements IntegrationProviderTester {
         return failed("تعذر التحقق من توافق App Secret مع Access Token.", "META_APP_SECRET_MISMATCH");
       }
 
+      const app = await providerFetch(
+        this.fetchImpl,
+        `${base}/${metaPath(`${appId}?fields=id,name`, appSecretProof)}`,
+        { method: "GET", headers: bearer(token) },
+      );
+      if (!app.ok) {
+        return failed("تعذر الوصول إلى تطبيق Meta المحدد أو لا يتوافق مع بيانات الاعتماد.", "META_APP_ID_UNAVAILABLE");
+      }
+
       const business = await providerFetch(
         this.fetchImpl,
         `${base}/${metaPath(`${businessPortfolioId}?fields=id,name`, appSecretProof)}`,
@@ -114,7 +124,7 @@ export class MetaWhatsAppConnectionTester implements IntegrationProviderTester {
       const wabaCount = arrayFrom(wabas.body, "data").length;
 
       return connected(
-        `تم التحقق من Access Token وApp Secret وربط Business Portfolio الرئيسي بنجاح. تم اكتشاف ${wabaCount} حساب WABA مملوك مباشرة. أرقام الهاتف واشتراك Webhook تُفحص لكل مُرسِل قبل تفعيله.`
+        `تم التحقق من Access Token وApp ID وApp Secret وربط Business Portfolio الرئيسي بنجاح. تم اكتشاف ${wabaCount} حساب WABA مملوك مباشرة. أرقام الهاتف واشتراك Webhook تُفحص لكل مُرسِل قبل تفعيله.`
       );
     } catch {
       return failed("تعذر الاتصال بخدمة Meta حاليًا.", "META_REQUEST_FAILED");
