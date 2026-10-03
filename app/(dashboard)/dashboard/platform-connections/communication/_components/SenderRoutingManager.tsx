@@ -100,6 +100,7 @@ export function SenderRoutingManager() {
   const [showSenderForm, setShowSenderForm] = useState(false);
   const [editingSenderId, setEditingSenderId] = useState<string | null>(null);
   const [showRuleForm, setShowRuleForm] = useState(false);
+  const [editingRuleId, setEditingRuleId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -151,6 +152,27 @@ export function SenderRoutingManager() {
       }
       setEditingSenderId((current) => current === sender.id ? null : current);
       setNotice({ tone: "ok", text: "تم حذف المُرسِل." });
+      await load();
+    } finally {
+      setBusy(null);
+    }
+  }, [load]);
+
+  const removeRule = useCallback(async (rule: Rule) => {
+    const confirmed = window.confirm("هل أنت متأكد من حذف قاعدة التوجيه هذه؟");
+    if (!confirmed) return;
+
+    setBusy(`rule:${rule.id}`);
+    setNotice(null);
+    try {
+      const res = await fetch(`/api/dashboard/communication/routing-rules/${rule.id}`, { method: "DELETE" });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setNotice({ tone: "error", text: body.error ?? "تعذّر حذف قاعدة التوجيه." });
+        return;
+      }
+      setEditingRuleId((current) => current === rule.id ? null : current);
+      setNotice({ tone: "ok", text: "تم حذف قاعدة التوجيه." });
       await load();
     } finally {
       setBusy(null);
@@ -368,7 +390,7 @@ export function SenderRoutingManager() {
                 <Plus className="w-3.5 h-3.5" /> قاعدة جديدة
               </button>
             </div>
-            {showRuleForm && <RuleForm senders={data.senders} onDone={async () => { setShowRuleForm(false); await load(); }} />}
+            {showRuleForm && <RuleForm senders={data.senders} onCancel={() => setShowRuleForm(false)} onDone={async () => { setShowRuleForm(false); await load(); }} />}
             {data.rules.length === 0 ? (
               <p className="px-4 py-4 text-xs text-slate-500">
                 لا قواعد  يُختار المُرسِل بمطابقة قدراته ثم بالمُرسِل الافتراضي للقناة.
@@ -393,22 +415,59 @@ export function SenderRoutingManager() {
                       <span className="text-[11px] text-slate-400">أولوية {rule.priority}</span>
                       <button
                         type="button"
+                        disabled={busy === `rule:${rule.id}`}
                         onClick={() => void (async () => {
-                          const res = await fetch(`/api/dashboard/communication/routing-rules/${rule.id}`, {
-                            method: "PATCH",
-                            headers: { "content-type": "application/json" },
-                            body: JSON.stringify({ enabled: !rule.enabled }),
-                          });
-                          if (res.ok) await load();
+                          setBusy(`rule:${rule.id}`);
+                          try {
+                            const res = await fetch(`/api/dashboard/communication/routing-rules/${rule.id}`, {
+                              method: "PATCH",
+                              headers: { "content-type": "application/json" },
+                              body: JSON.stringify({ enabled: !rule.enabled }),
+                            });
+                            const body = await res.json().catch(() => ({}));
+                            if (!res.ok) {
+                              setNotice({ tone: "error", text: body.error ?? "تعذّر تحديث قاعدة التوجيه." });
+                              return;
+                            }
+                            await load();
+                          } finally {
+                            setBusy(null);
+                          }
                         })()}
                         className={cn(
-                          "rounded-lg border px-2 py-0.5 text-[11px] font-semibold",
+                          "rounded-lg border px-2 py-0.5 text-[11px] font-semibold disabled:opacity-40",
                           rule.enabled ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-slate-200 bg-slate-50 text-slate-500",
                         )}
                       >
                         {rule.enabled ? "مفعّلة" : "معطّلة"}
                       </button>
+                      <button
+                        type="button"
+                        disabled={busy === `rule:${rule.id}`}
+                        onClick={() => setEditingRuleId((current) => current === rule.id ? null : rule.id)}
+                        className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-2 py-0.5 text-[11px] font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-40"
+                      >
+                        <Pencil className="h-3 w-3" /> تعديل
+                      </button>
+                      <button
+                        type="button"
+                        disabled={busy === `rule:${rule.id}`}
+                        onClick={() => void removeRule(rule)}
+                        className="inline-flex items-center gap-1 rounded-lg border border-rose-200 px-2 py-0.5 text-[11px] font-semibold text-rose-700 hover:bg-rose-50 disabled:opacity-40"
+                      >
+                        <Trash2 className="h-3 w-3" /> حذف
+                      </button>
                     </div>
+                    {editingRuleId === rule.id && (
+                      <div className="basis-full border-t border-slate-100 pt-3">
+                        <RuleForm
+                          senders={data.senders}
+                          rule={rule}
+                          onCancel={() => setEditingRuleId(null)}
+                          onDone={async () => { setEditingRuleId(null); await load(); }}
+                        />
+                      </div>
+                    )}
                   </li>
                 ))}
               </ul>
@@ -712,8 +771,27 @@ function SenderForm({
   );
 }
 
-function RuleForm({ senders, onDone }: { senders: Sender[]; onDone: () => Promise<void> }) {
-  const [form, setForm] = useState({ channel: "WHATSAPP", locale: "", country: "", purpose: "", senderId: "", fallbackSenderId: "", priority: "100" });
+function RuleForm({
+  senders,
+  rule,
+  onDone,
+  onCancel,
+}: {
+  senders: Sender[];
+  rule?: Rule;
+  onDone: () => Promise<void>;
+  onCancel: () => void;
+}) {
+  const editing = Boolean(rule);
+  const [form, setForm] = useState({
+    channel: rule?.channel ?? "WHATSAPP",
+    locale: rule?.locale ?? "",
+    country: rule?.country ?? "",
+    purpose: rule?.purpose ?? "",
+    senderId: rule?.senderId ?? "",
+    fallbackSenderId: rule?.fallbackSenderId ?? "",
+    priority: String(rule?.priority ?? 100),
+  });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const options = senders.filter((s) => s.channel === form.channel);
@@ -722,22 +800,29 @@ function RuleForm({ senders, onDone }: { senders: Sender[]; onDone: () => Promis
     setSaving(true);
     setError(null);
     try {
-      const res = await fetch("/api/dashboard/communication/routing-rules", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          channel: form.channel,
-          locale: form.locale.trim() || null,
-          country: form.country.trim().toUpperCase() || null,
-          purpose: form.purpose || null,
-          senderId: form.senderId,
-          fallbackSenderId: form.fallbackSenderId || null,
-          priority: Number(form.priority) || 100,
-          enabled: true,
-        }),
-      });
+      const payload = {
+        ...(editing ? {} : { channel: form.channel }),
+        locale: form.locale.trim() || null,
+        country: form.country.trim().toUpperCase() || null,
+        purpose: form.purpose || null,
+        senderId: form.senderId,
+        fallbackSenderId: form.fallbackSenderId || null,
+        priority: Number(form.priority) || 100,
+        ...(editing ? {} : { enabled: true }),
+      };
+      const res = await fetch(
+        editing ? `/api/dashboard/communication/routing-rules/${rule!.id}` : "/api/dashboard/communication/routing-rules",
+        {
+          method: editing ? "PATCH" : "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(payload),
+        },
+      );
       const body = await res.json().catch(() => ({}));
-      if (!res.ok) { setError(body.error ?? "تعذّر الإنشاء."); return; }
+      if (!res.ok) {
+        setError(body.error ?? (editing ? "تعذّر حفظ التعديلات." : "تعذّر إنشاء القاعدة."));
+        return;
+      }
       await onDone();
     } finally {
       setSaving(false);
@@ -747,11 +832,22 @@ function RuleForm({ senders, onDone }: { senders: Sender[]; onDone: () => Promis
   const field = "w-full rounded-lg border border-slate-200 px-2.5 py-1.5 text-sm text-slate-800";
 
   return (
-    <div className="border-b border-slate-100 bg-slate-50/60 p-4">
+    <div className={cn("p-4", editing ? "rounded-xl border border-slate-200 bg-slate-50/70" : "border-b border-slate-100 bg-slate-50/60")}>
+      <div className="mb-3 flex items-center justify-between gap-2">
+        <p className="text-sm font-bold text-slate-900">{editing ? "تعديل قاعدة التوجيه" : "إضافة قاعدة توجيه"}</p>
+        <button type="button" onClick={onCancel} className="rounded-lg p-1.5 text-slate-400 hover:bg-white hover:text-slate-700" aria-label="إغلاق">
+          <X className="h-4 w-4" />
+        </button>
+      </div>
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <label className="text-xs font-semibold text-slate-600">
           القناة
-          <select value={form.channel} onChange={(e) => setForm((f) => ({ ...f, channel: e.target.value, senderId: "", fallbackSenderId: "" }))} className={cn(field, "mt-1")}>
+          <select
+            value={form.channel}
+            disabled={editing}
+            onChange={(e) => setForm((f) => ({ ...f, channel: e.target.value, senderId: "", fallbackSenderId: "" }))}
+            className={cn(field, "mt-1 disabled:bg-slate-100 disabled:text-slate-500")}
+          >
             {CHANNELS.map((c) => <option key={c} value={c}>{CHANNEL_LABELS[c]}</option>)}
           </select>
         </label>
@@ -786,18 +882,24 @@ function RuleForm({ senders, onDone }: { senders: Sender[]; onDone: () => Promis
         </label>
         <label className="text-xs font-semibold text-slate-600">
           الأولوية
-          <input value={form.priority} onChange={(e) => setForm((f) => ({ ...f, priority: e.target.value }))} className={cn(field, "mt-1")} />
+          <input inputMode="numeric" value={form.priority} onChange={(e) => setForm((f) => ({ ...f, priority: e.target.value }))} className={cn(field, "mt-1")} />
         </label>
       </div>
       {error && <p className="mt-2 text-xs font-medium text-rose-700">{error}</p>}
-      <button
-        type="button"
-        disabled={saving || !form.senderId}
-        onClick={() => void submit()}
-        className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-brand px-3 py-1.5 text-sm font-semibold text-white disabled:opacity-40"
-      >
-        {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />} حفظ القاعدة
-      </button>
+      <div className="mt-3 flex flex-wrap gap-2">
+        <button
+          type="button"
+          disabled={saving || !form.senderId}
+          onClick={() => void submit()}
+          className="inline-flex items-center gap-1.5 rounded-lg bg-brand px-3 py-1.5 text-sm font-semibold text-white disabled:opacity-40"
+        >
+          {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : editing ? <Check className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
+          {editing ? "حفظ التعديلات" : "حفظ القاعدة"}
+        </button>
+        <button type="button" disabled={saving} onClick={onCancel} className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-40">
+          إلغاء
+        </button>
+      </div>
     </div>
   );
 }
