@@ -237,13 +237,20 @@ export async function uploadMetaTemplateSample(
   }
   if (!file.bytes.byteLength) return { ok: false, reason: "META_TEMPLATE_SAMPLE_EMPTY" };
 
-  const { accessToken, graphVersion } = resolved.values;
+  const { accessToken, graphVersion, appId } = resolved.values;
+  if (!appId) {
+    return {
+      ok: false,
+      reason: "META_APP_ID_REQUIRED",
+      detail: "Meta App ID is required for resumable template media uploads. Add it in Meta WhatsApp integration settings.",
+    };
+  }
   const qs = new URLSearchParams({
     file_length: String(file.bytes.byteLength),
     file_type: file.type,
     file_name: file.name || "template-sample",
   });
-  const sessionUrl = `https://graph.facebook.com/${graphVersion}/app/uploads?${qs.toString()}`;
+  const sessionUrl = `https://graph.facebook.com/${graphVersion}/${encodeURIComponent(appId)}/uploads?${qs.toString()}`;
 
   let sessionResponse: Response;
   try {
