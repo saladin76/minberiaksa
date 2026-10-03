@@ -19,6 +19,7 @@
     "typecheck:baseline": "node scripts/typecheck-baseline.mjs",
     "typecheck:baseline:update": "node scripts/typecheck-baseline.mjs --update",
     "preflight:integration-settings": "prisma generate --schema prisma/integration-settings.schema.prisma && tsx scripts/preflight-integration-settings.ts",
+    "ensure:meta-whatsapp-indexes": "tsx scripts/ensure-meta-whatsapp-waba-indexes.ts",
     "verify:integration-settings-migration": "prisma generate --schema prisma/integration-settings.schema.prisma && tsx scripts/verify-integration-settings-migration.ts",
     "dashboard:schema:validate": "prisma validate --schema prisma/dashboard-foundation.schema.prisma",
     "i18n:audit": "node scripts/audit-i18n-messages.mjs",
