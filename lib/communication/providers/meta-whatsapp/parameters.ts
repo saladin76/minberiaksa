@@ -176,7 +176,24 @@ export function buildMetaComponents(input: {
 
     if (type === "BODY") {
       const positions = placeholderOrder(String(component.text ?? ""));
-      if (!positions.length) continue;
+      const isAuthenticationBody = (component as Record<string, unknown>).add_security_recommendation !== undefined;
+      if (!positions.length && !isAuthenticationBody) continue;
+
+      if (isAuthenticationBody) {
+        const otp =
+          input.values["otp.code"] ??
+          input.values["otp"] ??
+          input.values["code"] ??
+          input.values["1"] ??
+          input.values[input.positionalNames?.[0] ?? ""];
+        if (otp == null || !String(otp).trim()) {
+          return { ok: false, reason: "AUTHENTICATION_OTP_MISSING", detail: "authentication body requires an OTP code" };
+        }
+        components.push({ type: "body", parameters: [textParameter(otp)] });
+        used.push("body:otp");
+        continue;
+      }
+
       const parameters: MetaParameter[] = [];
       for (const position of positions) {
         const got = lookup(position, "body");
@@ -193,6 +210,22 @@ export function buildMetaComponents(input: {
       for (let index = 0; index < buttons.length; index += 1) {
         const button = buttons[index];
         const buttonType = String(button.type ?? "").toUpperCase();
+
+        if (buttonType === "OTP") {
+          const otp =
+            input.values["otp.code"] ??
+            input.values["otp"] ??
+            input.values["code"] ??
+            input.values["1"] ??
+            input.values[input.positionalNames?.[0] ?? ""];
+          if (otp == null || !String(otp).trim()) {
+            return { ok: false, reason: "AUTHENTICATION_OTP_MISSING", detail: `authentication button ${index} requires an OTP code` };
+          }
+          components.push({ type: "button", sub_type: "url", index: String(index), parameters: [textParameter(otp)] });
+          used.push(`button:${index}:otp`);
+          continue;
+        }
+
         /* Only a URL button with a dynamic suffix takes a parameter. Missing values must fail the
            send instead of silently dropping the parameter and letting Meta reject the message. */
         if (buttonType !== "URL") continue;
@@ -222,10 +255,15 @@ export function schemaTakesParameters(componentsSchema: unknown): boolean {
       if (format !== "TEXT") return true;
       if (placeholderOrder(String(component.text ?? "")).length) return true;
     }
-    if (type === "BODY" && placeholderOrder(String(component.text ?? "")).length) return true;
+    if (type === "BODY") {
+      if ((component as Record<string, unknown>).add_security_recommendation !== undefined) return true;
+      if (placeholderOrder(String(component.text ?? "")).length) return true;
+    }
     if (type === "BUTTONS") {
       for (const button of asArray(component.buttons) as { type?: unknown; url?: unknown }[]) {
-        if (String(button.type ?? "").toUpperCase() === "URL" && placeholderOrder(String(button.url ?? "")).length) return true;
+        const buttonType = String(button.type ?? "").toUpperCase();
+        if (buttonType === "OTP") return true;
+        if (buttonType === "URL" && placeholderOrder(String(button.url ?? "")).length) return true;
       }
     }
   }
