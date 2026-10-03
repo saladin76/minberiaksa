@@ -28,7 +28,8 @@ export type MetaParameter =
   | { type: "text"; text: string }
   | { type: "image"; image: { link: string } }
   | { type: "video"; video: { link: string } }
-  | { type: "document"; document: { link: string; filename?: string } };
+  | { type: "document"; document: { link: string; filename?: string } }
+  | { type: "location"; location: { latitude: number; longitude: number; name?: string; address?: string } };
 
 export type BuildResult =
   | { ok: true; components: MetaComponent[]; used: string[] }
@@ -89,6 +90,8 @@ export function buildMetaComponents(input: {
   /** Media URL for a template whose header is IMAGE/VIDEO/DOCUMENT. */
   headerMediaUrl?: string | null;
   headerMediaFilename?: string | null;
+  /** Static location configured on the local template for a LOCATION header. */
+  headerLocation?: { latitude: number; longitude: number; name?: string; address?: string } | null;
 }): BuildResult {
   const schema = asArray(input.componentsSchema) as SchemaComponent[];
   if (!schema.length) {
@@ -137,6 +140,26 @@ export function buildMetaComponents(input: {
         components.push({ type: "header", parameters });
         continue;
       }
+      if (format === "LOCATION") {
+        if (!input.headerLocation || !Number.isFinite(input.headerLocation.latitude) || !Number.isFinite(input.headerLocation.longitude)) {
+          return { ok: false, reason: "TEMPLATE_HEADER_LOCATION_MISSING", detail: "LOCATION header requires latitude and longitude" };
+        }
+        components.push({
+          type: "header",
+          parameters: [{
+            type: "location",
+            location: {
+              latitude: input.headerLocation.latitude,
+              longitude: input.headerLocation.longitude,
+              ...(input.headerLocation.name ? { name: input.headerLocation.name } : {}),
+              ...(input.headerLocation.address ? { address: input.headerLocation.address } : {}),
+            },
+          }],
+        });
+        used.push("header:location");
+        continue;
+      }
+
       /* A media header always takes exactly one parameter  the asset. */
       if (!input.headerMediaUrl) {
         return { ok: false, reason: "TEMPLATE_HEADER_MEDIA_MISSING", detail: `header format ${format}` };
