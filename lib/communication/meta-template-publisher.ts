@@ -80,7 +80,11 @@ export type MetaPublishSummary = {
   canonicalWabaId: string | null;
 };
 
-export async function publishWhatsappTemplateToMeta(templateId: string, actor?: Actor): Promise<MetaPublishSummary> {
+export async function publishWhatsappTemplateToMeta(
+  templateId: string,
+  actor?: Actor,
+  opts: { category?: "UTILITY" | "MARKETING" | "AUTHENTICATION" } = {},
+): Promise<MetaPublishSummary> {
   const summary: MetaPublishSummary = {
     ok: false, templateId, targets: 0, created: 0, existing: 0, failed: 0,
     statuses: [], errors: [], canonicalWabaId: null,
@@ -159,7 +163,7 @@ export async function publishWhatsappTemplateToMeta(templateId: string, actor?: 
   }
   summary.canonicalWabaId = wabas[0];
 
-  const category = categoryFor(template);
+  const category = opts.category ?? categoryFor(template);
   for (const waba of wabas) {
     for (const [locale, body] of variants) {
       const language = META_LANGUAGE[locale] ?? locale;
