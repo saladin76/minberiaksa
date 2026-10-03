@@ -7,6 +7,7 @@ import { requireAdminOrDashboardPermission } from "@/lib/dashboard/api-auth";
 import { prisma } from "@/lib/prisma";
 import { auditActorFromDashboardSession, writeAuditLog } from "@/lib/audit-log";
 import { deleteOrArchiveWhatsappTemplate, rejectDisallowedTemplateEdit } from "@/lib/communication/whatsapp-template-guard";
+import { publishWhatsappTemplateToMeta } from "@/lib/communication/meta-template-publisher";
 
 const updateSchema = z.object({
   name: z.string().min(1).max(120).optional(),
@@ -15,6 +16,7 @@ const updateSchema = z.object({
     .record(z.object({ body: z.string().optional() }))
     .nullable()
     .optional(),
+  metaCategory: z.enum(["UTILITY", "MARKETING", "AUTHENTICATION"]).optional(),
 });
 
 export async function GET(
@@ -55,17 +57,18 @@ export async function PATCH(
   }
 
   /* Meta owns the approval fields, and owns the body of anything it has approved. */
-  const rejection = await rejectDisallowedTemplateEdit(id, parsed.data as Record<string, unknown>);
+  const { metaCategory, ...editable } = parsed.data;
+  const rejection = await rejectDisallowedTemplateEdit(id, editable as Record<string, unknown>);
   if (rejection) return NextResponse.json({ error: rejection.error, fields: rejection.fields }, { status: rejection.status });
 
   const data: Prisma.WhatsappTemplateUpdateInput = {};
-  if (parsed.data.name != null) data.name = parsed.data.name;
-  if (parsed.data.body != null) data.body = parsed.data.body;
-  if (parsed.data.translations !== undefined) {
+  if (editable.name != null) data.name = editable.name;
+  if (editable.body != null) data.body = editable.body;
+  if (editable.translations !== undefined) {
     data.translations =
-      parsed.data.translations === null
+      editable.translations === null
         ? (Prisma.DbNull as unknown as Prisma.InputJsonValue)
-        : (parsed.data.translations as Prisma.InputJsonValue);
+        : (editable.translations as Prisma.InputJsonValue);
   }
 
   const updated = await prisma.whatsappTemplate.update({ where: { id }, data });
@@ -78,7 +81,20 @@ export async function PATCH(
     entityId: updated.id,
     stream: "TEAM",
   });
-  return NextResponse.json({ template: updated });
+  const publish = await publishWhatsappTemplateToMeta(updated.id, actor, metaCategory ? { category: metaCategory } : {});
+  if (!publish.ok) {
+    return NextResponse.json(
+      {
+        error: "تم حفظ التعديلات محليًا لكن لم يكتمل إنشاء/ربط القالب في Meta.",
+        saved: true,
+        template: updated,
+        publish,
+      },
+      { status: 502 },
+    );
+  }
+  const fresh = await prisma.whatsappTemplate.findUnique({ where: { id: updated.id } });
+  return NextResponse.json({ template: fresh ?? updated, publish });
 }
 
 export async function DELETE(
