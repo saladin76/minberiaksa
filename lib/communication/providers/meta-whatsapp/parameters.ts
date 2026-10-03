@@ -190,18 +190,21 @@ export function buildMetaComponents(input: {
 
     if (type === "BUTTONS") {
       const buttons = asArray(component.buttons) as { type?: unknown; url?: unknown; text?: unknown }[];
-      buttons.forEach((button, index) => {
+      for (let index = 0; index < buttons.length; index += 1) {
+        const button = buttons[index];
         const buttonType = String(button.type ?? "").toUpperCase();
-        /* Only a URL button with a `{{1}}` suffix takes a parameter. A static URL button, a phone
-           button and a plain quick reply carry none, and sending one for them is an error. */
-        if (buttonType !== "URL") return;
+        /* Only a URL button with a dynamic suffix takes a parameter. Missing values must fail the
+           send instead of silently dropping the parameter and letting Meta reject the message. */
+        if (buttonType !== "URL") continue;
         const positions = placeholderOrder(String(button.url ?? ""));
-        if (!positions.length) return;
+        if (!positions.length) continue;
         const got = lookup(positions[0], `button.${index}`);
-        if (!got.ok) return;
+        if (!got.ok) {
+          return { ok: false, reason: "TEMPLATE_PARAMETER_MISSING", detail: `button ${index} {{${got.key}}}` };
+        }
         components.push({ type: "button", sub_type: "url", index: String(index), parameters: [textParameter(got.value)] });
         used.push(`button:${index}`);
-      });
+      }
       continue;
     }
     /* FOOTER carries no parameters, ever. */
