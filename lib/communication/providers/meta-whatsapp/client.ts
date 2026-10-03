@@ -108,3 +108,67 @@ export async function healthCheck(phoneNumberId?: string | null, runtime?: MetaR
     verifiedName: typeof d.verified_name === "string" ? d.verified_name : null,
   };
 }
+
+
+export type WabaSubscriptionResult =
+  | { ok: true; subscribed: true; changed: boolean; appIds: string[] }
+  | { ok: false; reason: string; detail?: string };
+
+/**
+ * Ensure the active Meta app is subscribed to a WABA's webhooks.
+ *
+ * Meta's callback URL lives on the app, but delivery/inbound events are only emitted for WABAs to
+ * which the app is subscribed. A sender is therefore not considered production-ready until this
+ * succeeds. The POST is idempotent from our perspective and Meta returns { success: true }.
+ */
+export async function ensureWabaWebhookSubscription(
+  businessAccountId: string,
+  runtime?: MetaRuntimeConfig,
+): Promise<WabaSubscriptionResult> {
+  const resolved = runtime ?? await getActiveMetaWhatsappRuntimeConfig();
+  if (!resolved.configured) return { ok: false, reason: metaRuntimeFailure(resolved) };
+  const config = resolved.values;
+
+  const current = await graphFetch(config, `${businessAccountId}/subscribed_apps`, { method: "GET" });
+  if (!current.ok) return { ok: false, reason: current.reason, detail: current.detail };
+
+  const data = Array.isArray((current.data as { data?: unknown[] } | null)?.data)
+    ? ((current.data as { data: unknown[] }).data as Array<Record<string, unknown>>)
+    : [];
+  const appIds = data
+    .map((row) => {
+      const wa = row.whatsapp_business_api_data as Record<string, unknown> | undefined;
+      return typeof wa?.id === "string" ? wa.id : null;
+    })
+    .filter((id): id is string => Boolean(id));
+
+  /*
+   * We do not know the app id independently from the access token/runtime settings, and Meta does
+   * not expose it as a required local setting. If any subscription exists, the current token has
+   * access to the subscription edge, but it could still be a different app. POSTing is cheap and
+   * idempotent, so we always ensure the active app is subscribed rather than guessing by name/id.
+   */
+  const subscribe = await graphFetch(config, `${businessAccountId}/subscribed_apps`, { method: "POST" });
+  if (!subscribe.ok) return { ok: false, reason: subscribe.reason, detail: subscribe.detail };
+  const ok = (subscribe.data as { success?: unknown } | null)?.success;
+  if (ok !== true) {
+    return { ok: false, reason: META_REASONS.INVALID_RESPONSE, detail: "Meta did not confirm WABA webhook subscription." };
+  }
+
+  const verify = await graphFetch(config, `${businessAccountId}/subscribed_apps`, { method: "GET" });
+  if (!verify.ok) return { ok: false, reason: verify.reason, detail: verify.detail };
+  const verifiedRows = Array.isArray((verify.data as { data?: unknown[] } | null)?.data)
+    ? ((verify.data as { data: unknown[] }).data as Array<Record<string, unknown>>)
+    : [];
+  const verifiedAppIds = verifiedRows
+    .map((row) => {
+      const wa = row.whatsapp_business_api_data as Record<string, unknown> | undefined;
+      return typeof wa?.id === "string" ? wa.id : null;
+    })
+    .filter((id): id is string => Boolean(id));
+
+  if (!verifiedRows.length) {
+    return { ok: false, reason: META_REASONS.INVALID_RESPONSE, detail: "WABA has no subscribed apps after subscription request." };
+  }
+  return { ok: true, subscribed: true, changed: true, appIds: verifiedAppIds.length ? verifiedAppIds : appIds };
+}
