@@ -105,6 +105,7 @@ export async function PATCH(
   if (metaCategory) {
     data.category = metaCategory;
     data.purpose = metaCategory;
+    data.kind = metaCategory === "MARKETING" ? "CAMPAIGN" : "SYSTEM";
   }
   if (editable.name != null) data.name = editable.name;
   if (editable.body != null) data.body = editable.body;

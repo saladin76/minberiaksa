@@ -143,6 +143,17 @@ export async function publishWhatsappTemplateToMeta(
   summary.canonicalWabaId = wabas[0];
 
   const category = opts.category ?? categoryFor(template);
+
+  // Once Meta knows this template, every new language must be published under the exact same
+  // provider template name. The local editorial name may have changed, but using that changed name
+  // here would create a second Meta template family instead of a new language variant.
+  const existingProviderVariant = await prisma.whatsappTemplateWabaVariant.findFirst({
+    where: { templateId, provider: "META_WHATSAPP" },
+    select: { providerTemplateName: true },
+    orderBy: { createdAt: "asc" },
+  }).catch(() => null);
+  const providerTemplateName = existingProviderVariant?.providerTemplateName?.trim() || template.name;
+
   let canonicalBindings: VariableBinding[] = [];
   for (const waba of wabas) {
     let templateManagementBlocked = false;
@@ -185,7 +196,7 @@ export async function publishWhatsappTemplateToMeta(
 
       const result = await ensureMetaTemplate({
         businessAccountId: waba,
-        name: template.name,
+        name: providerTemplateName,
         language,
         category,
         components,

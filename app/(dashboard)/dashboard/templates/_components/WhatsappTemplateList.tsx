@@ -35,7 +35,23 @@ interface WhatsappTemplateRow {
   templateType: string | null;
   language: string | null;
   category: string | null;
+  kind: string | null;
+  purpose: string | null;
+  status: string | null;
   approvalStatus: string | null;
+  providerApprovalStatus?: string | null;
+  internalApprovalStatus?: string | null;
+  approvalLabelAr?: string | null;
+  approvalReason?: string | null;
+  statusUpdatedAt?: string | null;
+  variants?: Array<{
+    languageCode: string;
+    locale: string | null;
+    approvalStatus: string;
+    rejectionReason: string | null;
+    qualityRating: string | null;
+    lastSyncedAt: string;
+  }>;
   header: PreviewHeader | null;
   footerText: string | null;
   buttons: PreviewButton[] | null;
@@ -57,15 +73,34 @@ interface ImportSummary {
 
 const APPROVAL_PILL: Record<string, string> = {
   approved: "bg-emerald-50 text-emerald-700 border-emerald-200",
+  in_review: "bg-amber-50 text-amber-700 border-amber-200",
   pending: "bg-amber-50 text-amber-700 border-amber-200",
   rejected: "bg-rose-50 text-rose-700 border-rose-200",
+  paused: "bg-orange-50 text-orange-700 border-orange-200",
+  disabled: "bg-slate-100 text-slate-700 border-slate-300",
+  in_appeal: "bg-sky-50 text-sky-700 border-sky-200",
+  missing_in_waba: "bg-violet-50 text-violet-700 border-violet-200",
   unknown: "bg-slate-50 text-slate-600 border-slate-200",
+};
+
+const APPROVAL_LABEL: Record<string, string> = {
+  approved: "معتمد",
+  in_review: "قيد المراجعة",
+  pending: "قيد المراجعة",
+  rejected: "مرفوض",
+  paused: "موقوف مؤقتًا",
+  disabled: "معطّل",
+  in_appeal: "قيد الاستئناف",
+  missing_in_waba: "غير متاح في كل الحسابات",
+  unknown: "غير معروف",
 };
 
 export function WhatsappTemplateList() {
   const [templates, setTemplates] = React.useState<WhatsappTemplateRow[]>([]);
   const [loading, setLoading] = React.useState(true);
+  const [section, setSection] = React.useState<"SYSTEM" | "CAMPAIGN">("SYSTEM");
   const [importing, setImporting] = React.useState(false);
+  const [syncingMeta, setSyncingMeta] = React.useState(false);
   const [importStatus, setImportStatus] = React.useState<ImportSummary | null>(null);
   const [editor, setEditor] = React.useState<{ open: boolean; id: string | null }>({
     open: false,
@@ -91,6 +126,36 @@ export function WhatsappTemplateList() {
   React.useEffect(() => {
     fetchAll();
   }, [fetchAll]);
+
+  const visibleTemplates = templates.filter((template) => {
+    const category = String(template.category ?? template.purpose ?? "").toUpperCase();
+    const isSystem =
+      category === "UTILITY" ||
+      category === "TRANSACTIONAL" ||
+      category === "AUTHENTICATION" ||
+      template.kind === "SYSTEM";
+    const bucket = isSystem ? "SYSTEM" : "CAMPAIGN";
+    return bucket === section;
+  });
+
+  const handleMetaSync = async () => {
+    setSyncingMeta(true);
+    try {
+      const res = await axios.post("/api/dashboard/communication/whatsapp/templates/sync");
+      const summary = res.data?.summary;
+      toast.success(
+        summary
+          ? `تم تحديث حالات Meta: ${summary.matchedTemplates ?? 0} قالب، ${summary.variantsUpserted ?? 0} نسخة لغة/WABA.`
+          : "تم تحديث حالات Meta.",
+      );
+      await fetchAll();
+    } catch (error) {
+      const data = (error as { response?: { data?: { error?: string; detail?: string } } }).response?.data;
+      toast.error([data?.error, data?.detail].filter(Boolean).join(" — ") || "فشل تحديث حالات Meta");
+    } finally {
+      setSyncingMeta(false);
+    }
+  };
 
   const handleImport = async () => {
     setImporting(true);
@@ -127,10 +192,14 @@ export function WhatsappTemplateList() {
 
   return (
     <div className="space-y-4">
+      <div className="inline-flex rounded-lg border border-slate-200 bg-slate-50 p-1">
+        <button type="button" onClick={() => setSection("SYSTEM")} className={`rounded-md px-3 py-1.5 text-xs font-medium ${section === "SYSTEM" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500"}`}>التلقائية والتوثيق</button>
+        <button type="button" onClick={() => setSection("CAMPAIGN")} className={`rounded-md px-3 py-1.5 text-xs font-medium ${section === "CAMPAIGN" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500"}`}>الحملات التسويقية</button>
+      </div>
       <div className="flex justify-between items-center flex-wrap gap-2">
         <div className="flex items-center gap-2 flex-wrap">
           <p className="text-xs text-muted-foreground">
-            {loading ? "…" : `${templates.length} قالب واتساب`}
+            {loading ? "…" : `${visibleTemplates.length} قالب واتساب`}
           </p>
           {templates.some((t) => t.provider === "TWILIO") ? (
             <span className="inline-flex items-center px-2 py-0.5 rounded-full border border-slate-200 bg-slate-50 text-[10px] text-slate-600">
@@ -139,6 +208,17 @@ export function WhatsappTemplateList() {
           ) : null}
         </div>
         <div className="flex items-center gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={handleMetaSync}
+            disabled={syncingMeta}
+            className="gap-2"
+            title="جلب أحدث حالات اعتماد القوالب من Meta"
+          >
+            {syncingMeta ? <Loader2 className="w-4 h-4 animate-spin" /> : <DownloadCloud className="w-4 h-4" />}
+            تحديث من Meta
+          </Button>
           <Button
             size="sm"
             variant="outline"
@@ -207,16 +287,18 @@ export function WhatsappTemplateList() {
                   <Loader2 className="w-6 h-6 animate-spin mx-auto text-slate-400" />
                 </td>
               </tr>
-            ) : templates.length === 0 ? (
+            ) : visibleTemplates.length === 0 ? (
               <tr>
                 <td colSpan={6} className="py-12 text-center text-slate-500">
                   لا توجد قوالب بعد  اضغط «قالب جديد» للبدء
                 </td>
               </tr>
             ) : (
-              templates.map((t) => {
-                const approvalKey = (t.approvalStatus ?? "").toLowerCase();
+              visibleTemplates.map((t) => {
+                const mappedStatus = t.internalApprovalStatus ?? t.providerApprovalStatus ?? t.approvalStatus ?? "UNKNOWN";
+                const approvalKey = mappedStatus.toLowerCase();
                 const approvalClass = APPROVAL_PILL[approvalKey];
+                const approvalLabel = t.approvalLabelAr ?? t.approvalStatus ?? "غير معروف";
                 return (
                   <tr key={t.id} className="border-b border-slate-100 hover:bg-slate-50/60">
                     <td className="py-3 px-4">
@@ -243,22 +325,50 @@ export function WhatsappTemplateList() {
                             Twilio
                           </span>
                         ) : null}
-                        {t.language ? (
-                          <span className="inline-flex items-center px-2 py-0.5 rounded-full border border-slate-200 bg-white text-slate-600 text-[10px]">
-                            {t.language}
+                        {(t.variants?.length ? [...new Set(t.variants.map((variant) => variant.locale ?? variant.languageCode))] : t.language ? [t.language] : []).map((language) => (
+                          <span key={language} className="inline-flex items-center px-2 py-0.5 rounded-full border border-slate-200 bg-white text-slate-600 text-[10px]">
+                            {language}
                           </span>
-                        ) : null}
+                        ))}
                       </div>
                     </td>
                     <td className="py-3 px-4">
-                      {t.approvalStatus ? (
+                      {t.variants?.length ? (
+                        <div className="flex flex-col items-start gap-1.5">
+                          {t.variants
+                            .slice()
+                            .sort((a, b) => (a.locale ?? a.languageCode).localeCompare(b.locale ?? b.languageCode))
+                            .map((variant) => {
+                              const statusKey = String(variant.approvalStatus ?? "UNKNOWN").toLowerCase();
+                              const language = variant.locale ?? variant.languageCode;
+                              return (
+                                <span
+                                  key={variant.languageCode}
+                                  className={cn(
+                                    "inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[10px] font-medium",
+                                    APPROVAL_PILL[statusKey] ?? APPROVAL_PILL.unknown,
+                                  )}
+                                  title={variant.rejectionReason ?? undefined}
+                                >
+                                  <span className="font-mono">{language}</span>
+                                  <span>·</span>
+                                  <span>{APPROVAL_LABEL[statusKey] ?? APPROVAL_LABEL.unknown}</span>
+                                </span>
+                              );
+                            })}
+                          <span className="text-[9px] text-slate-400" title={t.approvalReason ?? undefined}>
+                            الإجمالي: {approvalLabel}
+                          </span>
+                        </div>
+                      ) : t.approvalStatus || t.providerApprovalStatus ? (
                         <span
                           className={cn(
-                            "inline-flex items-center px-2 py-0.5 rounded-full border text-[10px] font-medium",
-                            approvalClass ?? APPROVAL_PILL.unknown
+                            "inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-medium",
+                            approvalClass ?? APPROVAL_PILL.unknown,
                           )}
+                          title={t.approvalReason ?? undefined}
                         >
-                          {t.approvalStatus}
+                          {approvalLabel}
                         </span>
                       ) : (
                         <span className="text-slate-400 text-[10px]">محلي</span>

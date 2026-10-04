@@ -103,21 +103,43 @@ export async function rejectDisallowedTemplateEdit(
       if (Array.isArray(value)) return `[${value.map(stable).join(",")}]`;
       if (typeof value === "object") {
         const entries = Object.entries(value as Record<string, unknown>)
-          .filter(([, item]) => item !== undefined)
+          .filter(([, item]) => item !== undefined && item !== null)
           .sort(([a], [b]) => a.localeCompare(b))
           .map(([key, item]) => `${JSON.stringify(key)}:${stable(item)}`);
         return `{${entries.join(",")}}`;
       }
       return JSON.stringify(value);
     };
-    const changed = current
-      ? content.filter((field) => stable((patch as Record<string, unknown>)[field]) !== stable((current as unknown as Record<string, unknown>)[field]))
+    const currentRecord = current as unknown as Record<string, unknown> | null;
+    const changed = currentRecord
+      ? content.filter((field) => {
+          const nextValue = (patch as Record<string, unknown>)[field];
+          const currentValue = currentRecord[field];
+
+          // Meta allows adding a new language to an existing template name. Existing submitted
+          // languages remain immutable, but a translations patch that only adds new locale keys is
+          // safe and must not force the operator to create a second template such as *_tr.
+          if (field === "translations") {
+            const before = currentValue && typeof currentValue === "object" && !Array.isArray(currentValue)
+              ? currentValue as Record<string, unknown>
+              : {};
+            const after = nextValue && typeof nextValue === "object" && !Array.isArray(nextValue)
+              ? nextValue as Record<string, unknown>
+              : {};
+            for (const [locale, value] of Object.entries(before)) {
+              if (!(locale in after) || stable(after[locale]) !== stable(value)) return true;
+            }
+            return false;
+          }
+
+          return stable(nextValue) !== stable(currentValue);
+        })
       : content;
     if (changed.length) {
       return {
         ok: false,
         status: 409,
-        error: "تم إرسال هذا القالب إلى Meta بالفعل؛ لا يمكن تغيير المحتوى بعد بدء دورة المراجعة. أنشئ قالبًا جديدًا عند الحاجة لتغيير النص أو المكونات.",
+        error: "تم إرسال هذا القالب إلى Meta بالفعل؛ لا يمكن تغيير محتوى اللغات المرسلة. يمكنك إضافة لغة جديدة إلى نفس القالب، أما تغيير النص أو المكونات الحالية فيحتاج قالبًا جديدًا.",
         fields: changed,
       };
     }

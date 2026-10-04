@@ -38,10 +38,13 @@ interface ApiTemplate {
   subject: string;
   document: EmailDocument;
   translations?: Partial<Record<string, { subject?: string; document?: EmailDocument }>> | null;
+  kind?: "SYSTEM" | "CAMPAIGN" | null;
+  purpose?: "MARKETING" | "UTILITY" | "TRANSACTIONAL" | "AUTHENTICATION" | null;
 }
 
 export function EmailTemplateEditorDialog({ id, open, onOpenChange }: Props) {
   const [name, setName] = React.useState("");
+  const [kind, setKind] = React.useState<"SYSTEM" | "CAMPAIGN">("CAMPAIGN");
   const [variants, setVariants] = React.useState<VariantsState>({});
   const [activeLocale, setActiveLocale] = React.useState<SupportedLocale>(DEFAULT_LOCALE);
   const [loading, setLoading] = React.useState(false);
@@ -51,6 +54,7 @@ export function EmailTemplateEditorDialog({ id, open, onOpenChange }: Props) {
     if (!open) return;
     if (!id) {
       setName("");
+      setKind("CAMPAIGN");
       setVariants({ [DEFAULT_LOCALE]: { subject: "", document: defaultDocument() } });
       setActiveLocale(DEFAULT_LOCALE);
       return;
@@ -61,6 +65,7 @@ export function EmailTemplateEditorDialog({ id, open, onOpenChange }: Props) {
       .then((res) => {
         const t = res.data?.template as ApiTemplate;
         setName(t?.name ?? "");
+        setKind(t?.kind === "SYSTEM" || (t?.purpose && t.purpose !== "MARKETING") ? "SYSTEM" : "CAMPAIGN");
         const next: VariantsState = {
           [DEFAULT_LOCALE]: {
             subject: t?.subject ?? "",
@@ -138,6 +143,9 @@ export function EmailTemplateEditorDialog({ id, open, onOpenChange }: Props) {
         subject: arVariant.subject,
         document: arVariant.document,
         translations: Object.keys(translations).length > 0 ? translations : null,
+        kind,
+        purpose: kind === "CAMPAIGN" ? "MARKETING" : "TRANSACTIONAL",
+        status: "READY",
       };
       if (id) {
         await axios.patch(`/api/templates/email/${id}`, payload);
@@ -173,7 +181,7 @@ export function EmailTemplateEditorDialog({ id, open, onOpenChange }: Props) {
         <>
           {/* Name and subject sit above the canvas rather than inside the header: at full-screen
               width the header row was a third input-wide and the ✕ crowded it. */}
-          <div className="grid shrink-0 grid-cols-1 gap-3 border-b border-border px-5 py-3 sm:grid-cols-2">
+          <div className="grid shrink-0 grid-cols-1 gap-3 border-b border-border px-5 py-3 sm:grid-cols-3">
             <div className="min-w-0 space-y-1">
               <FieldLabel hint="لا يُرسل">اسم القالب</FieldLabel>
               <Input
@@ -182,6 +190,17 @@ export function EmailTemplateEditorDialog({ id, open, onOpenChange }: Props) {
                 placeholder="مثال: شكر التبرع الشهري"
                 className="h-9"
               />
+            </div>
+            <div className="min-w-0 space-y-1">
+              <FieldLabel>نوع الاستخدام</FieldLabel>
+              <select
+                value={kind}
+                onChange={(e) => setKind(e.target.value as "SYSTEM" | "CAMPAIGN")}
+                className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
+              >
+                <option value="SYSTEM">تلقائي / خدمي / توثيق</option>
+                <option value="CAMPAIGN">حملة تسويقية</option>
+              </select>
             </div>
             <div className="min-w-0 space-y-1">
               <FieldLabel hint={LOCALE_LABELS[activeLocale]}>موضوع البريد</FieldLabel>

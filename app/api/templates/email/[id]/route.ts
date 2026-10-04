@@ -11,6 +11,9 @@ const updateSchema = z.object({
   name: z.string().min(1).max(120).optional(),
   subject: z.string().min(1).max(200).optional(),
   document: z.record(z.unknown()).optional(),
+  kind: z.enum(["SYSTEM", "CAMPAIGN"]).optional(),
+  purpose: z.enum(["MARKETING", "UTILITY", "TRANSACTIONAL", "AUTHENTICATION"]).optional(),
+  status: z.enum(["DRAFT", "READY", "NEEDS_REVIEW", "ARCHIVED"]).optional(),
   translations: z
     .record(z.object({ subject: z.string().optional(), document: z.record(z.unknown()).optional() }))
     .nullable()
@@ -60,6 +63,9 @@ export async function PATCH(
   if (parsed.data.document != null) {
     data.document = parsed.data.document as Prisma.InputJsonValue;
   }
+  if (parsed.data.kind != null) data.kind = parsed.data.kind;
+  if (parsed.data.purpose != null) data.purpose = parsed.data.purpose;
+  if (parsed.data.status != null) data.status = parsed.data.status;
   if (parsed.data.translations !== undefined) {
     data.translations =
       parsed.data.translations === null
