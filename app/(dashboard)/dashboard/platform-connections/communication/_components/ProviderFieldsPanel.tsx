@@ -88,10 +88,29 @@ export function ProviderFieldsPanel({
           <Banner tone={notice.kind === "success" ? "success" : "danger"} title={notice.text} />
         )}
 
+        {!isCron && encryptionBlocked && permissions.canManage && (
+          <Banner
+            tone="danger"
+            title="تعذّر تعديل الحقول السرية لأن مفتاح التشفير غير مضبوط على السيرفر."
+          >
+            أضف متغير البيئة <code dir="ltr" className="rounded bg-white px-1.5 py-0.5 font-mono text-[11px]">INTEGRATION_SETTINGS_ENCRYPTION_KEY</code> بقيمة عشوائية آمنة طولها 32 بايت، ثم أعد نشر التطبيق. الحقول غير السرية تظل قابلة للتعديل، لكن Access Token وApp Secret وWebhook Verify Token لن تُحفظ بدون هذا المفتاح حفاظًا على الأسرار.
+          </Banner>
+        )}
+
         {isCron ? (
           <CronInfrastructure scheduler={scheduler} busy={busy} canTest={permissions.canTest} onTest={onTestActive} />
         ) : (
           <>
+            {provider === "META_WHATSAPP" && (
+              <InfoPanel
+                title="إعداد مركزي لتطبيق Meta"
+                description="رمز الوصول ومفتاح التطبيق وWebhook وإصدار Graph تُحفظ هنا مرة واحدة. كل رقم واتساب حقيقي — مع WABA ID وPhone Number ID واللغات والدول والأغراض — يُدار من قسم «المُرسِلون والتوجيه» أدناه، ويمكن تعيين أحدها كمُرسِل افتراضي."
+              >
+                <p className="text-xs text-brand-800/80">
+                  لا تحتاج إلى إدخال WABA واحد أو Phone Number ID واحد في إعداد المزود؛ المنصة تدعم عدة حسابات WhatsApp Business وعدة أرقام تحت نفس تطبيق Meta.
+                </p>
+              </InfoPanel>
+            )}
             <div className="grid gap-3 lg:grid-cols-2">
               {snapshot.fields.map((field) => (
                 <div key={field.key} className="rounded-xl border border-slate-200 bg-slate-50/60 p-4">
@@ -202,7 +221,7 @@ export function ProviderFieldsPanel({
               {permissions.canManage && <ActionButton disabled={!!busy || dirty.size === 0} loading={busy === "save"} onClick={onSave} icon={<Save className="h-4 w-4" />} label="حفظ التغييرات" variant="primary" />}
               {permissions.canTest && activeComplete && <ActionButton disabled={!!busy} loading={busy === "test-active"} onClick={onTestActive} icon={<ShieldCheck className="h-4 w-4" />} label="فحص الإعدادات الحالية" />}
               {permissions.canTest && snapshot.candidate.hasChanges && <ActionButton disabled={!!busy} loading={busy === "test-candidate"} onClick={onTestCandidate} icon={<TestTube2 className="h-4 w-4" />} label="اختبار التغييرات" />}
-              {permissions.canManage && snapshot.candidate.lastTestResult === "SUCCESS" && snapshot.candidate.version && <ActionButton disabled={!!busy} loading={busy === "activate"} onClick={onActivate} icon={<CheckCircle2 className="h-4 w-4" />} label="اعتماد الإعدادات" variant="success" />}
+              {permissions.canManage && snapshot.candidate.version && (snapshot.candidate.lastTestResult === "SUCCESS" || (lastCandidateTest?.success && lastCandidateTest.candidateVersion === snapshot.candidate.version)) && <ActionButton disabled={!!busy} loading={busy === "activate"} onClick={onActivate} icon={<CheckCircle2 className="h-4 w-4" />} label="اعتماد الإعدادات" variant="success" />}
               {permissions.canManage && snapshot.candidate.hasChanges && <ActionButton disabled={!!busy} loading={busy === "discard"} onClick={onDiscard} icon={<RotateCcw className="h-4 w-4" />} label="إلغاء التغييرات" variant="danger" />}
             </div>
           </>

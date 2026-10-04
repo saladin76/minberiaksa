@@ -38,6 +38,7 @@ export type ResolvedSender = {
   id: string | null;
   provider: string | null;
   phoneNumberId: string | null;
+  businessAccountId: string | null;
   senderEmail: string | null;
   smsSender: string | null;
   displayPhoneNumber: string | null;
@@ -86,14 +87,14 @@ function runtimeDefault(snapshot: SenderRoutingSnapshot): ResolvedSender | null 
   const { channel, runtime } = snapshot;
   if (channel === "WHATSAPP") {
     if (!runtime.meta.configured || !runtime.meta.values.defaultPhoneNumberId) return null;
-    return { id: null, provider: "META_WHATSAPP", phoneNumberId: runtime.meta.values.defaultPhoneNumberId, senderEmail: null, smsSender: null, displayPhoneNumber: null };
+    return { id: null, provider: "META_WHATSAPP", phoneNumberId: runtime.meta.values.defaultPhoneNumberId, businessAccountId: runtime.meta.values.businessAccountId || null, senderEmail: null, smsSender: null, displayPhoneNumber: null };
   }
   if (channel === "EMAIL") {
     if (!runtime.elasticEmail.configured || !runtime.elasticEmail.values.senderEmail) return null;
-    return { id: null, provider: null, phoneNumberId: null, senderEmail: runtime.elasticEmail.values.senderEmail, smsSender: null, displayPhoneNumber: null };
+    return { id: null, provider: null, phoneNumberId: null, businessAccountId: null, senderEmail: runtime.elasticEmail.values.senderEmail, smsSender: null, displayPhoneNumber: null };
   }
   /* SMS picks its provider per destination inside the SMS client; there is no single env sender. */
-  return { id: null, provider: null, phoneNumberId: null, senderEmail: null, smsSender: null, displayPhoneNumber: null };
+  return { id: null, provider: null, phoneNumberId: null, businessAccountId: null, senderEmail: null, smsSender: null, displayPhoneNumber: null };
 }
 
 /**
@@ -140,6 +141,7 @@ export function resolveSenderFromSnapshot(
       id: routed.sender.id,
       provider: raw?.provider ?? routed.sender.provider ?? null,
       phoneNumberId: raw?.phoneNumberId ?? null,
+      businessAccountId: raw?.businessAccountId ?? null,
       senderEmail: raw?.senderEmail ?? null,
       smsSender: raw?.smsSender ?? null,
       displayPhoneNumber: raw?.displayPhoneNumber ?? null,

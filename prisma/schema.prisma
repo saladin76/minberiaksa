@@ -1469,6 +1469,8 @@ model WhatsappTemplate {
   /// Buttons array. Shape: Array<{ type, text, url?, phoneNumber?, payload?, index }>
   /// type ∈ "url" | "phone" | "quick_reply" | "copy_code" | "donation_cta" | "tracking_url".
   buttons            Json?
+  /// Authentication template studio settings (OTP copy-code / one-tap).
+  authentication     Json?
   /// Template variable catalog. Shape: Array<{ key, exampleValue?, mapping?, validationStatus? }>
   variables          Json?
   /// Last successful sync from Twilio.
@@ -1488,8 +1490,10 @@ model WhatsappTemplate {
   /// "MARKETING" | "UTILITY" | "TRANSACTIONAL" | "AUTHENTICATION" (optional).
   purpose String?
 
-  /// Provider truth, one row per language. See WhatsappTemplateVariant.
+  /// Aggregated provider truth kept for backwards compatibility/read-only dashboards.
   variants WhatsappTemplateVariant[]
+  /// Exact Meta truth per WABA + language. Runtime sending must use this collection.
+  wabaVariants WhatsappTemplateWabaVariant[]
 
   @@index([name])
   @@index([externalTemplateId])
@@ -1511,6 +1515,31 @@ model WhatsappTemplate {
 /// editorial side  what the team calls the template and the copy they drafted. Nothing in this
 /// model is hand-edited: a field here is what the provider last said, which is what makes it
 /// trustworthy enough to gate a send on.
+model WhatsappTemplateWabaVariant {
+  id                String @id @default(auto()) @map("_id") @db.ObjectId
+  templateId        String @db.ObjectId
+  provider          String @default("META_WHATSAPP")
+  businessAccountId String
+  providerTemplateName String
+  providerTemplateId   String?
+  languageCode      String
+  locale            String?
+  approvalStatus    String
+  category          String?
+  rejectionReason   String?
+  qualityRating     String?
+  componentsSchema  Json?
+  lastSyncedAt      DateTime
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  template WhatsappTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+
+  @@unique([templateId, provider, businessAccountId, languageCode])
+  @@index([businessAccountId, approvalStatus])
+  @@index([providerTemplateName])
+}
+
 model WhatsappTemplateVariant {
   id         String @id @default(auto()) @map("_id") @db.ObjectId
   templateId String @db.ObjectId

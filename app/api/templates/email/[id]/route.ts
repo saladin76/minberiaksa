@@ -63,7 +63,7 @@ export async function PATCH(
   if (parsed.data.translations !== undefined) {
     data.translations =
       parsed.data.translations === null
-        ? (Prisma.DbNull as unknown as Prisma.InputJsonValue)
+        ? (null as unknown as Prisma.InputJsonValue)
         : (parsed.data.translations as Prisma.InputJsonValue);
   }
 

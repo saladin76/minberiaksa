@@ -4,7 +4,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 import { requireAdminOrDashboardPermission } from "@/lib/dashboard/api-auth";
 import { auditActorFromDashboardSession } from "@/lib/audit-log";
-import { updateRoutingRule } from "@/lib/communication/routing-rule-service";
+import { deleteRoutingRule, updateRoutingRule } from "@/lib/communication/routing-rule-service";
 import { COMMUNICATION_PURPOSES } from "@/lib/communication/communication-runtime-types";
 
 /** Editing one routing rule. The channel is fixed  a rule moved between channels is a new rule. */
@@ -39,4 +39,16 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   const result = await updateRoutingRule(id, parsed.data, auditActorFromDashboardSession(session!));
   if (!result.ok) return NextResponse.json({ error: result.error }, { status: result.status });
   return NextResponse.json({ ok: true, rule: result.data });
+}
+
+
+export async function DELETE(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const session = await getServerSession(authOptions);
+  const denied = requireAdminOrDashboardPermission(session, "messages");
+  if (denied) return denied;
+  const { id } = await params;
+
+  const result = await deleteRoutingRule(id, auditActorFromDashboardSession(session!));
+  if (!result.ok) return NextResponse.json({ error: result.error }, { status: result.status });
+  return NextResponse.json({ ok: true, deletedId: result.data.id });
 }

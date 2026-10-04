@@ -3,9 +3,13 @@
 export type MetaGraphConfig = {
   accessToken: string;
   graphVersion: string;
+  appId?: string | null;
+  businessPortfolioId?: string | null;
   appSecret: string | null;
   verifyToken: string | null;
+  /** Legacy fallback only; normal sends use a CommunicationSender phoneNumberId. */
   defaultPhoneNumberId: string | null;
+  /** Legacy fallback only; WABA identity is stored per CommunicationSender. */
   businessAccountId: string | null;
 };
 

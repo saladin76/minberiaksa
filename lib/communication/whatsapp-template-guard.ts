@@ -7,8 +7,10 @@ import { prisma } from "@/lib/prisma";
  *
  * **Provider-owned fields are not ours to edit.** `approvalStatus`, `language`, `category`,
  * `externalTemplateId`, `templateType`, `header` and `buttons` describe what Meta (or Twilio)
- * registered and approved. They were writable from the dashboard, which meant somebody could set a
- * rejected template to "approved" and the platform would believe it  until a campaign was built on
+ * registered/provider state. The authored header/buttons/footer are local studio content until
+ * submission and are frozen with the body once submitted. Provider status/id fields remain read-only.
+ * They were writable from the dashboard, which meant somebody could set a rejected template to "approved"
+ * and the platform would believe it  until a campaign was built on
  * it, scheduled, approved, and then failed at send time with `META_TEMPLATE_REQUIRED`. The provider
  * writes these through its sync (`whatsapp-template-sync.ts`) and nothing else does.
  *
@@ -31,9 +33,6 @@ export const PROVIDER_OWNED_FIELDS = [
   "category",
   "externalTemplateId",
   "templateType",
-  "header",
-  "buttons",
-  "footerText",
   "qualityRating",
   "providerRaw",
   "lastImportedAt",
@@ -42,7 +41,7 @@ export const PROVIDER_OWNED_FIELDS = [
 ] as const;
 
 /** Content that Meta approved as a unit, and that therefore cannot be edited in place. */
-export const APPROVED_CONTENT_FIELDS = ["body", "translations", "variables"] as const;
+export const APPROVED_CONTENT_FIELDS = ["body", "translations", "variables", "header", "buttons", "footerText", "authentication"] as const;
 
 export type EditRejection = { ok: false; status: number; error: string; fields: string[] };
 
@@ -51,12 +50,14 @@ export function providerOwnedEdits(patch: Record<string, unknown>): string[] {
   return PROVIDER_OWNED_FIELDS.filter((field) => Object.prototype.hasOwnProperty.call(patch, field));
 }
 
-export async function hasApprovedVariant(templateId: string): Promise<boolean> {
+export async function hasSubmittedMetaVariant(templateId: string): Promise<boolean> {
   if (!process.env.DATABASE_URL) return false;
-  const count = await prisma.whatsappTemplateVariant
-    .count({ where: { templateId, approvalStatus: "APPROVED" } })
-    .catch(() => 0);
-  return count > 0;
+  const [count, template] = await Promise.all([
+    prisma.whatsappTemplateVariant.count({ where: { templateId, provider: "META_WHATSAPP" } }).catch(() => 0),
+    prisma.whatsappTemplate.findUnique({ where: { id: templateId }, select: { provider: true, externalTemplateId: true } }).catch(() => null),
+  ]);
+  const provider = String(template?.provider ?? "").toUpperCase();
+  return count > 0 || ((provider === "META" || provider === "META_WHATSAPP") && Boolean(template?.externalTemplateId));
 }
 
 /**
@@ -79,13 +80,47 @@ export async function rejectDisallowedTemplateEdit(
     };
   }
   const content = APPROVED_CONTENT_FIELDS.filter((field) => Object.prototype.hasOwnProperty.call(patch, field));
-  if (content.length && (await hasApprovedVariant(templateId))) {
-    return {
-      ok: false,
-      status: 409,
-      error: "القالب معتمد من Meta  تعديل نصه هنا لا يغيّر ما يُرسل فعليًا. أنشئ قالبًا جديدًا وأرسله للاعتماد.",
-      fields: [...content],
+  if (content.length && (await hasSubmittedMetaVariant(templateId))) {
+    /*
+     * Retrying a partial Meta publish sends the same draft back through PATCH. Presence alone must
+     * not count as an edit or the retry is permanently blocked after the first WABA succeeds.
+     * Compare the submitted values to the stored draft and freeze only actual content changes.
+     */
+    const current = await prisma.whatsappTemplate.findUnique({
+      where: { id: templateId },
+      select: {
+        body: true,
+        translations: true,
+        variables: true,
+        header: true,
+        buttons: true,
+        footerText: true,
+        authentication: true,
+      },
+    }).catch(() => null);
+    const stable = (value: unknown): string => {
+      if (value === null || value === undefined) return "null";
+      if (Array.isArray(value)) return `[${value.map(stable).join(",")}]`;
+      if (typeof value === "object") {
+        const entries = Object.entries(value as Record<string, unknown>)
+          .filter(([, item]) => item !== undefined)
+          .sort(([a], [b]) => a.localeCompare(b))
+          .map(([key, item]) => `${JSON.stringify(key)}:${stable(item)}`);
+        return `{${entries.join(",")}}`;
+      }
+      return JSON.stringify(value);
     };
+    const changed = current
+      ? content.filter((field) => stable((patch as Record<string, unknown>)[field]) !== stable((current as unknown as Record<string, unknown>)[field]))
+      : content;
+    if (changed.length) {
+      return {
+        ok: false,
+        status: 409,
+        error: "تم إرسال هذا القالب إلى Meta بالفعل؛ لا يمكن تغيير المحتوى بعد بدء دورة المراجعة. أنشئ قالبًا جديدًا عند الحاجة لتغيير النص أو المكونات.",
+        fields: changed,
+      };
+    }
   }
   return null;
 }

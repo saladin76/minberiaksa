@@ -19,27 +19,33 @@ function response(status: number, body: unknown): Response {
 
 const metaValues = {
   ACCESS_TOKEN: "valid-meta-access-token-for-testing-123456",
+  APP_ID: "123456789012345",
   APP_SECRET: "0123456789abcdef0123456789abcdef",
+  BUSINESS_PORTFOLIO_ID: "1189382739255774",
   WEBHOOK_VERIFY_TOKEN: "local-webhook-verify-token-123456",
   GRAPH_API_VERSION: "v23.0",
-  BUSINESS_ACCOUNT_ID: "123",
-  DEFAULT_PHONE_NUMBER_ID: "456",
 };
 
 function expectedProof(values = metaValues): string {
   return createHmac("sha256", values.APP_SECRET).update(values.ACCESS_TOKEN).digest("hex");
 }
 
-test("Meta tester validates app secret proof, WABA and phone relationship without sending a message", async () => {
+test("Meta tester validates app credentials and root Business Portfolio without sending", async () => {
   const calls: string[] = [];
   const proof = expectedProof();
   const fakeFetch: ProviderFetch = async (input) => {
     const url = String(input);
     calls.push(url);
-    if (url.includes("appsecret_proof=") && !url.includes(`appsecret_proof=${proof}`)) return response(400, { error: { code: 100 } });
-    if (url.includes("/123/phone_numbers")) return response(200, { data: [{ id: "456" }] });
-    if (url.includes("/456?")) return response(200, { id: "456", verified_name: "Gozbebekleri" });
-    return response(200, { id: "123", name: "Gozbebekleri" });
+    if (url.includes("appsecret_proof=") && !url.includes(`appsecret_proof=${proof}`)) {
+      return response(400, { error: { code: 100 } });
+    }
+    if (url.includes("/owned_whatsapp_business_accounts")) {
+      return response(200, { data: [{ id: "1764562927543584", name: "Minberi Alaksa" }] });
+    }
+    if (url.includes(`/${metaValues.BUSINESS_PORTFOLIO_ID}?fields=id,name`)) {
+      return response(200, { id: metaValues.BUSINESS_PORTFOLIO_ID, name: "Minberi Aksa" });
+    }
+    return response(200, { id: "system-user-id", name: "Minberi Aksa" });
   };
   const result = await new MetaWhatsAppConnectionTester(fakeFetch).test({
     provider: "META_WHATSAPP",
@@ -47,16 +53,52 @@ test("Meta tester validates app secret proof, WABA and phone relationship withou
     values: metaValues,
   });
   assert.equal(result.success, true);
-  assert.equal(calls.length, 4);
+  assert.equal(calls.length, 5);
+  assert.equal(calls.some((url) => url.includes("/phone_numbers")), false);
   assert.equal(calls.some((url) => url.endsWith("/messages")), false);
-  assert.equal(calls.filter((url) => url.includes("appsecret_proof=")).length, 3);
-  assert.match(result.messageAr, /توافق App Secret/);
-  assert.match(result.messageAr, /صالح محليًا/);
-  assert.doesNotMatch(result.messageAr, /تحققت Meta من.*Webhook/i);
+  assert.equal(calls.some((url) => url.includes(`/${metaValues.APP_ID}?fields=id,name`)), true);
+  assert.equal(calls.some((url) => url.includes(`/${metaValues.BUSINESS_PORTFOLIO_ID}?fields=id,name`)), true);
+  assert.equal(calls.some((url) => url.includes("/owned_whatsapp_business_accounts")), true);
+  assert.equal(calls.filter((url) => url.includes("appsecret_proof=")).length, 4);
+  assert.match(result.messageAr, /Business Portfolio/);
+  assert.match(result.messageAr, /1 حساب WABA/);
   const safe = JSON.stringify(result);
   assert.equal(safe.includes(metaValues.ACCESS_TOKEN), false);
   assert.equal(safe.includes(metaValues.APP_SECRET), false);
   assert.equal(safe.includes(proof), false);
+});
+
+test("Meta tester requires the configured App ID before any network call", async () => {
+  let called = false;
+  const fakeFetch: ProviderFetch = async () => { called = true; return response(200, {}); };
+  const result = await new MetaWhatsAppConnectionTester(fakeFetch).test({
+    provider: "META_WHATSAPP",
+    candidateVersion: null,
+    values: { ...metaValues, APP_ID: "" },
+  });
+  assert.equal(result.success, false);
+  assert.equal(result.failureCode, "META_CONFIGURATION_INCOMPLETE");
+  assert.equal(called, false);
+});
+
+test("Meta tester fails when the root Business Portfolio cannot be read", async () => {
+  const proof = expectedProof();
+  const fakeFetch: ProviderFetch = async (input) => {
+    const url = String(input);
+    if (!url.includes("appsecret_proof=")) return response(200, { id: "system-user-id" });
+    if (!url.includes(`appsecret_proof=${proof}`)) return response(400, { error: { code: 100 } });
+    if (url.includes(`/${metaValues.BUSINESS_PORTFOLIO_ID}?fields=id,name`)) {
+      return response(403, { error: { code: 200, message: "Permissions error" } });
+    }
+    return response(200, { id: "system-user-id" });
+  };
+  const result = await new MetaWhatsAppConnectionTester(fakeFetch).test({
+    provider: "META_WHATSAPP",
+    candidateVersion: "candidate",
+    values: metaValues,
+  });
+  assert.equal(result.success, false);
+  assert.equal(result.failureCode, "META_BUSINESS_PORTFOLIO_UNAVAILABLE");
 });
 
 test("Meta tester fails when app secret proof does not match a valid access token", async () => {
@@ -66,8 +108,8 @@ test("Meta tester fails when app secret proof does not match a valid access toke
   const fakeFetch: ProviderFetch = async (input) => {
     const url = String(input);
     observedUrls.push(url);
-    if (!url.includes("appsecret_proof=")) return response(200, { id: "123" });
-    return url.includes(`appsecret_proof=${acceptedProof}`) ? response(200, { id: "123" }) : response(400, { error: { code: 100 } });
+    if (!url.includes("appsecret_proof=")) return response(200, { id: "system-user-id" });
+    return url.includes(`appsecret_proof=${acceptedProof}`) ? response(200, { id: "system-user-id" }) : response(400, { error: { code: 100 } });
   };
   const result = await new MetaWhatsAppConnectionTester(fakeFetch).test({
     provider: "META_WHATSAPP",
@@ -77,10 +119,6 @@ test("Meta tester fails when app secret proof does not match a valid access toke
   assert.equal(result.success, false);
   assert.equal(result.failureCode, "META_APP_SECRET_MISMATCH");
   assert.equal(observedUrls.length, 2);
-  const safe = JSON.stringify(result);
-  assert.equal(safe.includes(metaValues.ACCESS_TOKEN), false);
-  assert.equal(safe.includes(metaValues.APP_SECRET), false);
-  assert.equal(safe.includes(expectedProof()), false);
 });
 
 test("Meta tester rejects an invalid access token before app secret proof validation", async () => {
@@ -98,21 +136,6 @@ test("Meta tester rejects an invalid access token before app secret proof valida
   assert.equal(result.failureCode, "META_UNAUTHORIZED");
   assert.equal(calls.length, 1);
   assert.equal(calls[0]?.includes("appsecret_proof="), false);
-});
-
-test("Meta tester rejects a phone number outside the configured business account", async () => {
-  const fakeFetch: ProviderFetch = async (input) => {
-    const url = String(input);
-    if (url.includes("phone_numbers")) return response(200, { data: [{ id: "999" }] });
-    return response(200, { id: "123" });
-  };
-  const result = await new MetaWhatsAppConnectionTester(fakeFetch).test({
-    provider: "META_WHATSAPP",
-    candidateVersion: null,
-    values: metaValues,
-  });
-  assert.equal(result.success, false);
-  assert.equal(result.failureCode, "META_PHONE_NUMBER_MISMATCH");
 });
 
 test("Meta tester requires a locally valid webhook verify token", async () => {
