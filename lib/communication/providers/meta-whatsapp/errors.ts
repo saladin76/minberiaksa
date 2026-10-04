@@ -10,6 +10,7 @@ export const META_REASONS = {
   INVALID_RESPONSE: "META_WHATSAPP_INVALID_RESPONSE",
   UNAUTHORIZED: "META_WHATSAPP_UNAUTHORIZED",
   PHONE_NOT_IN_WABA: "META_WHATSAPP_PHONE_NOT_IN_WABA",
+  WABA_TEMPLATE_MANAGEMENT_NOT_ALLOWED: "META_WABA_TEMPLATE_MANAGEMENT_NOT_ALLOWED",
 } as const;
 
 /** Remove anything token-shaped from a string before it is logged/stored. */
@@ -24,11 +25,13 @@ export function scrubSecrets(input: string): string {
 export function mapGraphError(status: number, body: unknown): { reason: string; detail: string } {
   let message = "";
   let code: number | null = null;
+  let subcode: number | null = null;
   if (body && typeof body === "object") {
     const err = (body as { error?: { message?: unknown; code?: unknown; error_subcode?: unknown; error_user_title?: unknown; error_user_msg?: unknown; error_data?: { details?: unknown } } }).error;
     if (err) {
       if (typeof err.message === "string") message = err.message;
       if (typeof err.code === "number") code = err.code;
+      if (typeof err.error_subcode === "number") subcode = err.error_subcode;
       const extras = [
         typeof err.error_user_title === "string" ? err.error_user_title : "",
         typeof err.error_user_msg === "string" ? err.error_user_msg : "",
@@ -38,7 +41,13 @@ export function mapGraphError(status: number, body: unknown): { reason: string; 
       if (extras) message = [extras, message].filter(Boolean).join(" · ");
     }
   }
-  const reason = status === 401 || status === 403 || code === 190 ? META_REASONS.UNAUTHORIZED : META_REASONS.REQUEST_FAILED;
+  const lowerMessage = message.toLowerCase();
+  const templateManagementDenied = subcode === 2494160 || lowerMessage.includes("not allowed to manage templates") || lowerMessage.includes("not allowed to create or update templates");
+  const reason = templateManagementDenied
+    ? META_REASONS.WABA_TEMPLATE_MANAGEMENT_NOT_ALLOWED
+    : status === 401 || status === 403 || code === 190
+      ? META_REASONS.UNAUTHORIZED
+      : META_REASONS.REQUEST_FAILED;
   const detail = scrubSecrets(`${status}${code != null ? `/${code}` : ""}: ${message}`.slice(0, 300));
   return { reason, detail };
 }
