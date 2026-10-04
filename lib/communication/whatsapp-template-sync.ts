@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { writeAuditLog } from "@/lib/audit-log";
 import { SUPPORTED_LOCALES, type SupportedLocale } from "@/lib/locales";
 import { listAllTemplates } from "./providers/meta-whatsapp/templates";
+import { deriveOverallMetaTemplateStatus, normalizeMetaTemplateStatus } from "./whatsapp-template-status";
 
 export const META_PROVIDER = "META_WHATSAPP";
 
@@ -25,8 +26,7 @@ export function localeFromMetaLanguage(language: string): SupportedLocale | null
 }
 
 export function normalizeApprovalStatus(status: string): string {
-  const value = String(status ?? "").trim().toUpperCase();
-  return value || "UNKNOWN";
+  return normalizeMetaTemplateStatus(status);
 }
 
 function foldName(name: string): string {
@@ -157,7 +157,7 @@ export async function syncMetaWhatsappTemplates(opts: {
         },
       }).catch(() => ({ count: 0 }));
       summary.variantsRemoved += removed.count;
-      if (keptLanguages.length) touchedTemplates.add(local.id);
+      if (keptLanguages.length || removed.count > 0) touchedTemplates.add(local.id);
     }
   }
 
@@ -240,6 +240,32 @@ export async function syncMetaWhatsappTemplates(opts: {
       where: { templateId, provider: META_PROVIDER, languageCode: { notIn: keptLanguages } },
     }).catch(() => ({ count: 0 }));
     summary.variantsRemoved += removed.count;
+
+    // Keep the legacy parent fields useful for list views, while exact runtime truth remains
+    // in the WABA/language variant tables. Overall status is deliberately conservative.
+    const aggregate = await prisma.whatsappTemplateVariant.findMany({
+      where: { templateId, provider: META_PROVIDER },
+      select: {
+        approvalStatus: true,
+        providerTemplateId: true,
+        languageCode: true,
+        rejectionReason: true,
+        lastSyncedAt: true,
+      },
+    }).catch(() => []);
+    const overall = deriveOverallMetaTemplateStatus(aggregate.map((row) => row.approvalStatus));
+    const representative = aggregate[0] ?? null;
+    await prisma.whatsappTemplate.update({
+      where: { id: templateId },
+      data: {
+        approvalStatus: overall.providerStatus,
+        externalTemplateId: aggregate.length ? representative?.providerTemplateId ?? null : null,
+        language: aggregate.length ? representative?.languageCode ?? null : null,
+        lastImportedAt: now,
+        lastSyncStatus: aggregate.length ? "ok" : "missing",
+        lastSyncError: aggregate.map((row) => row.rejectionReason).find(Boolean) ?? null,
+      },
+    }).catch((error: unknown) => console.error("template parent status update failed", error));
   }
 
   summary.ok = true;

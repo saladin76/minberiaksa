@@ -43,6 +43,7 @@ function localesOf(row: SmsTemplateRow): SupportedLocale[] {
 export function SmsTemplateList() {
   const [templates, setTemplates] = React.useState<SmsTemplateRow[]>([]);
   const [loading, setLoading] = React.useState(true);
+  const [section, setSection] = React.useState<"SYSTEM" | "CAMPAIGN">("SYSTEM");
   const [editor, setEditor] = React.useState<{ open: boolean; id: string | null }>({ open: false, id: null });
 
   const fetchAll = React.useCallback(async () => {
@@ -72,21 +73,31 @@ export function SmsTemplateList() {
     }
   };
 
+  const visibleTemplates = templates.filter((template) => {
+    const isSystem = template.kind === "SYSTEM" || (template.purpose != null && template.purpose !== "MARKETING");
+    const bucket = isSystem ? "SYSTEM" : "CAMPAIGN";
+    return bucket === section;
+  });
+
   // Segment totals are computed on the merged preview for the same reason the editor does it:
   // the raw `{{token}}` length is not what anyone is billed for.
-  const totalSegments = templates.reduce(
+  const totalSegments = visibleTemplates.reduce(
     (sum, t) => sum + segmentSms(mergeText(t.body, SAMPLE_TEMPLATE_CONTEXT)).segments,
     0,
   );
 
   return (
     <div className="space-y-4">
+      <div className="inline-flex rounded-lg border border-slate-200 bg-slate-50 p-1">
+        <button type="button" onClick={() => setSection("SYSTEM")} className={`rounded-md px-3 py-1.5 text-xs font-medium ${section === "SYSTEM" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500"}`}>التلقائية والتوثيق</button>
+        <button type="button" onClick={() => setSection("CAMPAIGN")} className={`rounded-md px-3 py-1.5 text-xs font-medium ${section === "CAMPAIGN" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500"}`}>الحملات التسويقية</button>
+      </div>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex flex-wrap items-center gap-2">
           <p className="text-xs text-muted-foreground">
-            {loading ? "…" : `${templates.length} قالب رسالة نصية`}
+            {loading ? "…" : `${visibleTemplates.length} قالب رسالة نصية`}
           </p>
-          {!loading && templates.length > 0 && (
+          {!loading && visibleTemplates.length > 0 && (
             <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[10px] text-slate-600">
               <Layers className="h-3 w-3" />
               {totalSegments} مقطع إجمالًا
@@ -134,14 +145,14 @@ export function SmsTemplateList() {
                   <Loader2 className="mx-auto h-6 w-6 animate-spin text-slate-400" />
                 </td>
               </tr>
-            ) : templates.length === 0 ? (
+            ) : visibleTemplates.length === 0 ? (
               <tr>
                 <td colSpan={7} className="py-12 text-center text-slate-500">
                   لا توجد قوالب رسائل نصية بعد  اضغط «قالب جديد» للبدء
                 </td>
               </tr>
             ) : (
-              templates.map((t) => {
+              visibleTemplates.map((t) => {
                 const rendered = mergeText(t.body, SAMPLE_TEMPLATE_CONTEXT);
                 const seg = segmentSms(rendered);
                 const statusPill = STATUS_PILL[t.status ?? "DRAFT"] ?? STATUS_PILL.DRAFT;

@@ -28,6 +28,8 @@ interface ApiTemplate {
   name: string;
   body: string;
   translations?: Partial<Record<string, { body?: string }>> | null;
+  kind?: "SYSTEM" | "CAMPAIGN" | null;
+  purpose?: "MARKETING" | "UTILITY" | "TRANSACTIONAL" | "AUTHENTICATION" | null;
 }
 
 /**
@@ -108,6 +110,7 @@ function SegmentMeter({ text }: { text: string }) {
 
 export function SmsTemplateEditorDialog({ id, open, onOpenChange, onSaved }: Props) {
   const [name, setName] = React.useState("");
+  const [kind, setKind] = React.useState<"SYSTEM" | "CAMPAIGN">("CAMPAIGN");
   const [bodies, setBodies] = React.useState<BodiesState>({});
   const [activeLocale, setActiveLocale] = React.useState<SupportedLocale>(DEFAULT_LOCALE);
   const [loading, setLoading] = React.useState(false);
@@ -118,6 +121,7 @@ export function SmsTemplateEditorDialog({ id, open, onOpenChange, onSaved }: Pro
     if (!open) return;
     if (!id) {
       setName("");
+      setKind("CAMPAIGN");
       setBodies({ [DEFAULT_LOCALE]: "شكرًا {{user.name}}! تم استلام تبرعك بمبلغ {{amount}} {{currency}}." });
       setActiveLocale(DEFAULT_LOCALE);
       return;
@@ -128,6 +132,7 @@ export function SmsTemplateEditorDialog({ id, open, onOpenChange, onSaved }: Pro
       .then((res) => {
         const t = res.data?.template as ApiTemplate;
         setName(t?.name ?? "");
+        setKind(t?.kind === "SYSTEM" || (t?.purpose && t.purpose !== "MARKETING") ? "SYSTEM" : "CAMPAIGN");
         const next: BodiesState = { [DEFAULT_LOCALE]: t?.body ?? "" };
         if (t?.translations) {
           for (const [loc, v] of Object.entries(t.translations)) {
@@ -202,6 +207,9 @@ export function SmsTemplateEditorDialog({ id, open, onOpenChange, onSaved }: Pro
         name,
         body: arBody,
         translations: Object.keys(translations).length > 0 ? translations : null,
+        kind,
+        purpose: kind === "CAMPAIGN" ? "MARKETING" : "TRANSACTIONAL",
+        status: "READY",
       };
       if (id) await axios.patch(`/api/templates/sms/${id}`, payload);
       else await axios.post("/api/templates/sms", payload);
@@ -243,9 +251,22 @@ export function SmsTemplateEditorDialog({ id, open, onOpenChange, onSaved }: Pro
       }
     >
       <div className="space-y-4">
-        <div className="space-y-1.5">
-          <FieldLabel hint="لا يظهر للمتبرّع">اسم القالب</FieldLabel>
-          <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="مثال: تأكيد التبرع" />
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div className="space-y-1.5">
+            <FieldLabel hint="لا يظهر للمتبرّع">اسم القالب</FieldLabel>
+            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="مثال: تأكيد التبرع" />
+          </div>
+          <div className="space-y-1.5">
+            <FieldLabel>نوع الاستخدام</FieldLabel>
+            <select
+              value={kind}
+              onChange={(e) => setKind(e.target.value as "SYSTEM" | "CAMPAIGN")}
+              className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+            >
+              <option value="SYSTEM">تلقائي / خدمي / توثيق</option>
+              <option value="CAMPAIGN">حملة تسويقية</option>
+            </select>
+          </div>
         </div>
 
         {/* min-w-0 on both columns is what keeps the monospace textarea and the preview from

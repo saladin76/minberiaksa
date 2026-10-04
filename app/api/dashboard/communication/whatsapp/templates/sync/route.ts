@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/options";
-import { requireAdminOrDashboardPermission } from "@/lib/dashboard/api-auth";
+import { sessionHasDashboardPermission } from "@/lib/dashboard/permissions";
 import { auditActorFromDashboardSession } from "@/lib/audit-log";
 import { syncMetaWhatsappTemplates } from "@/lib/communication/whatsapp-template-sync";
 
@@ -17,8 +17,15 @@ import { syncMetaWhatsappTemplates } from "@/lib/communication/whatsapp-template
  */
 export async function POST() {
   const session = await getServerSession(authOptions);
-  const denied = requireAdminOrDashboardPermission(session, "messages");
-  if (denied) return denied;
+  if (!session?.user) {
+    return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
+  }
+  if (
+    !sessionHasDashboardPermission(session, "messages") &&
+    !sessionHasDashboardPermission(session, "templates")
+  ) {
+    return NextResponse.json({ ok: false, error: "Forbidden" }, { status: 403 });
+  }
 
   const summary = await syncMetaWhatsappTemplates({ actor: auditActorFromDashboardSession(session!) });
   if (!summary.ok) {

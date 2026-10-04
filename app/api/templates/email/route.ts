@@ -11,6 +11,9 @@ const createSchema = z.object({
   name: z.string().min(1).max(120),
   subject: z.string().min(1).max(200),
   document: z.record(z.unknown()),
+  kind: z.enum(["SYSTEM", "CAMPAIGN"]).optional(),
+  purpose: z.enum(["MARKETING", "UTILITY", "TRANSACTIONAL", "AUTHENTICATION"]).optional(),
+  status: z.enum(["DRAFT", "READY", "NEEDS_REVIEW", "ARCHIVED"]).optional(),
   translations: z
     .record(z.object({ subject: z.string().optional(), document: z.record(z.unknown()).optional() }))
     /* The editor sends null for an Arabic-only template (as the update route
@@ -32,6 +35,9 @@ export async function GET() {
       subject: true,
       createdAt: true,
       updatedAt: true,
+      kind: true,
+      purpose: true,
+      status: true,
     },
   });
   return NextResponse.json({ templates });
@@ -65,6 +71,9 @@ export async function POST(request: NextRequest) {
       translations: parsed.data.translations
         ? (parsed.data.translations as Prisma.InputJsonValue)
         : undefined,
+      kind: parsed.data.kind ?? "CAMPAIGN",
+      purpose: parsed.data.purpose ?? (parsed.data.kind === "SYSTEM" ? "TRANSACTIONAL" : "MARKETING"),
+      status: parsed.data.status ?? "READY",
       createdById: actor.actorId,
     },
   });

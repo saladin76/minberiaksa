@@ -7,6 +7,7 @@ import { requireAdminOrDashboardPermission } from "@/lib/dashboard/api-auth";
 import { prisma } from "@/lib/prisma";
 import { auditActorFromDashboardSession, writeAuditLog } from "@/lib/audit-log";
 import { publishWhatsappTemplateToMeta } from "@/lib/communication/meta-template-publisher";
+import { deriveOverallMetaTemplateStatus } from "@/lib/communication/whatsapp-template-status";
 
 const headerSchema = z.object({
   type: z.enum(["NONE", "TEXT", "IMAGE", "VIDEO", "DOCUMENT", "LOCATION"]).default("NONE"),
@@ -63,7 +64,7 @@ export async function GET() {
   const denied = requireAdminOrDashboardPermission(session, "templates");
   if (denied) return denied;
 
-  const templates = await prisma.whatsappTemplate.findMany({
+  const rows = await prisma.whatsappTemplate.findMany({
     orderBy: { updatedAt: "desc" },
     select: {
       id: true,
@@ -77,6 +78,9 @@ export async function GET() {
       templateType: true,
       language: true,
       category: true,
+      kind: true,
+      purpose: true,
+      status: true,
       approvalStatus: true,
       header: true,
       footerText: true,
@@ -85,7 +89,34 @@ export async function GET() {
       lastImportedAt: true,
       lastSyncStatus: true,
       lastSyncError: true,
+      variants: {
+        where: { provider: "META_WHATSAPP" },
+        select: {
+          languageCode: true,
+          locale: true,
+          approvalStatus: true,
+          rejectionReason: true,
+          qualityRating: true,
+          lastSyncedAt: true,
+        },
+      },
     },
+  });
+
+  const templates = rows.map((row) => {
+    const derived = deriveOverallMetaTemplateStatus(
+      row.variants.length ? row.variants.map((variant) => variant.approvalStatus) : [row.approvalStatus],
+    );
+    return {
+      ...row,
+      providerApprovalStatus: derived.providerStatus,
+      internalApprovalStatus: derived.internalStatus,
+      approvalLabelAr: derived.labelAr,
+      approvalReason: row.variants.map((variant) => variant.rejectionReason).find(Boolean) ?? row.lastSyncError ?? null,
+      statusUpdatedAt: row.variants
+        .map((variant) => variant.lastSyncedAt)
+        .sort((a, b) => b.getTime() - a.getTime())[0] ?? row.lastImportedAt ?? row.updatedAt,
+    };
   });
   return NextResponse.json({ templates });
 }
@@ -119,6 +150,8 @@ export async function POST(request: NextRequest) {
         : undefined,
       category: parsed.data.metaCategory,
       purpose: parsed.data.metaCategory,
+      kind: parsed.data.metaCategory === "MARKETING" ? "CAMPAIGN" : "SYSTEM",
+      status: "READY",
       header: parsed.data.header ? (parsed.data.header as Prisma.InputJsonValue) : undefined,
       footerText: parsed.data.footerText ?? null,
       buttons: parsed.data.buttons ? (parsed.data.buttons as Prisma.InputJsonValue) : undefined,

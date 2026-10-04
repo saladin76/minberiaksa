@@ -13,11 +13,15 @@ interface EmailTemplateRow {
   subject: string;
   createdAt: string;
   updatedAt: string;
+  kind: string | null;
+  purpose: string | null;
+  status: string | null;
 }
 
 export function EmailTemplateList() {
   const [templates, setTemplates] = React.useState<EmailTemplateRow[]>([]);
   const [loading, setLoading] = React.useState(true);
+  const [section, setSection] = React.useState<"SYSTEM" | "CAMPAIGN">("SYSTEM");
   const [editor, setEditor] = React.useState<{ open: boolean; id: string | null }>({
     open: false,
     id: null,
@@ -39,6 +43,12 @@ export function EmailTemplateList() {
     fetchAll();
   }, [fetchAll]);
 
+  const visibleTemplates = templates.filter((template) => {
+    const isSystem = template.kind === "SYSTEM" || (template.purpose != null && template.purpose !== "MARKETING");
+    const bucket = isSystem ? "SYSTEM" : "CAMPAIGN";
+    return bucket === section;
+  });
+
   const handleDelete = async (id: string) => {
     if (!window.confirm("هل تريد حذف هذا القالب؟")) return;
     try {
@@ -52,9 +62,13 @@ export function EmailTemplateList() {
 
   return (
     <div className="space-y-4">
+      <div className="inline-flex rounded-lg border border-slate-200 bg-slate-50 p-1">
+        <button type="button" onClick={() => setSection("SYSTEM")} className={`rounded-md px-3 py-1.5 text-xs font-medium ${section === "SYSTEM" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500"}`}>التلقائية والتوثيق</button>
+        <button type="button" onClick={() => setSection("CAMPAIGN")} className={`rounded-md px-3 py-1.5 text-xs font-medium ${section === "CAMPAIGN" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500"}`}>الحملات التسويقية</button>
+      </div>
       <div className="flex justify-between items-center">
         <p className="text-xs text-muted-foreground">
-          {loading ? "…" : `${templates.length} قالب بريد`}
+          {loading ? "…" : `${visibleTemplates.length} قالب بريد`}
         </p>
         <Button
           size="sm"
@@ -82,14 +96,14 @@ export function EmailTemplateList() {
                   <Loader2 className="w-6 h-6 animate-spin mx-auto text-slate-400" />
                 </td>
               </tr>
-            ) : templates.length === 0 ? (
+            ) : visibleTemplates.length === 0 ? (
               <tr>
                 <td colSpan={4} className="py-12 text-center text-slate-500">
                   لا توجد قوالب بعد  اضغط «قالب جديد» للبدء
                 </td>
               </tr>
             ) : (
-              templates.map((t) => (
+              visibleTemplates.map((t) => (
                 <tr key={t.id} className="border-b border-slate-100 hover:bg-slate-50/60">
                   <td className="py-3 px-4 font-medium text-slate-900">{t.name}</td>
                   <td className="py-3 px-4 text-slate-600 truncate max-w-[280px]" title={t.subject}>
