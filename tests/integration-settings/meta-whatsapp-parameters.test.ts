@@ -109,7 +109,7 @@ test("Meta standard template builder uses documented named body parameters when 
       text: "Donation {{donation_amount}} {{donation_currency}}",
       example: {
         body_text_named_params: [
-          { param_name: "donation_amount", example: "25" },
+          { param_name: "donation_amount", example: "50" },
           { param_name: "donation_currency", example: "USD" },
         ],
       },
