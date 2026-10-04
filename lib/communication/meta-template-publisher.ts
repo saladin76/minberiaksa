@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { writeAuditLog } from "@/lib/audit-log";
 import { getActiveMetaWhatsappRuntimeConfig } from "./runtime-config";
 import { ensureMetaTemplate } from "./providers/meta-whatsapp/templates";
+import { META_REASONS } from "./providers/meta-whatsapp/errors";
 import { syncMetaWhatsappTemplates } from "./whatsapp-template-sync";
 import {
   buildAuthenticationMetaComponents,
@@ -41,6 +42,7 @@ export type MetaPublishSummary = {
   created: number;
   existing: number;
   failed: number;
+  unsupportedWabas: Array<{ businessAccountId: string; reason: string; detail?: string }>;
   statuses: Array<{ businessAccountId: string; language: string; status: string; existed: boolean; id: string | null }>;
   errors: Array<{ businessAccountId: string; language: string; reason: string; detail?: string }>;
   canonicalWabaId: string | null;
@@ -53,7 +55,7 @@ export async function publishWhatsappTemplateToMeta(
 ): Promise<MetaPublishSummary> {
   const summary: MetaPublishSummary = {
     ok: false, templateId, targets: 0, created: 0, existing: 0, failed: 0,
-    statuses: [], errors: [], canonicalWabaId: null,
+    unsupportedWabas: [], statuses: [], errors: [], canonicalWabaId: null,
   };
 
   const runtime = await getActiveMetaWhatsappRuntimeConfig();
@@ -143,7 +145,9 @@ export async function publishWhatsappTemplateToMeta(
   const category = opts.category ?? categoryFor(template);
   let canonicalBindings: VariableBinding[] = [];
   for (const waba of wabas) {
+    let templateManagementBlocked = false;
     for (const [locale, variant] of variants) {
+      if (templateManagementBlocked) break;
       const language = META_LANGUAGE[locale] ?? locale;
       summary.targets += 1;
       let components: unknown[];
@@ -188,6 +192,22 @@ export async function publishWhatsappTemplateToMeta(
         parameterFormat,
       }, runtime);
       if (!result.ok) {
+        if (result.reason === META_REASONS.WABA_TEMPLATE_MANAGEMENT_NOT_ALLOWED) {
+          /*
+           * Some Meta assets (notably WABAs tied to WhatsApp Business App / restricted messaging
+           * accounts) are readable and can be valid senders, but Meta explicitly forbids template
+           * create/update on them (subcode 2494160). That is an account capability, not a malformed
+           * draft. Stop retrying every language on that WABA, record it as unsupported, and allow
+           * the same template to publish to the other eligible WABAs.
+           */
+          summary.unsupportedWabas.push({
+            businessAccountId: waba,
+            reason: result.reason,
+            detail: result.detail,
+          });
+          templateManagementBlocked = true;
+          continue;
+        }
         summary.failed += 1;
         summary.errors.push({ businessAccountId: waba, language, reason: result.reason, detail: result.detail });
         continue;
@@ -211,15 +231,23 @@ export async function publishWhatsappTemplateToMeta(
       language: first?.language ?? "ar",
       variables: canonicalBindings as never,
       lastImportedAt: new Date(),
-      lastSyncStatus: summary.failed ? (summary.statuses.length ? "partial" : "failed") : "ok",
-      lastSyncError: summary.errors.length
-        ? summary.errors.map((e) => [e.businessAccountId, e.language, e.reason, e.detail].filter(Boolean).join(": ")).join(" | ").slice(0, 1000)
+      lastSyncStatus: summary.failed
+        ? (summary.statuses.length ? "partial" : "failed")
+        : summary.unsupportedWabas.length
+          ? (summary.statuses.length ? "partial" : "unsupported")
+          : "ok",
+      lastSyncError: summary.errors.length || summary.unsupportedWabas.length
+        ? [
+            ...summary.errors.map((e) => [e.businessAccountId, e.language, e.reason, e.detail].filter(Boolean).join(": ")),
+            ...summary.unsupportedWabas.map((e) => [e.businessAccountId, e.reason, e.detail].filter(Boolean).join(": ")),
+          ].join(" | ").slice(0, 1000)
         : null,
       providerRaw: {
         autoPublish: true,
         canonicalWabaId: summary.canonicalWabaId,
         targets: summary.targets,
         statuses: summary.statuses,
+        unsupportedWabas: summary.unsupportedWabas,
         errors: summary.errors,
       } as never,
     },
@@ -229,16 +257,22 @@ export async function publishWhatsappTemplateToMeta(
     await syncMetaWhatsappTemplates({ actor }).catch(() => null);
   }
 
-  summary.ok = summary.failed === 0 && summary.statuses.length === summary.targets && summary.targets > 0;
+  /* Unsupported WABAs are not counted as provider failures: Meta has declared that account unable
+     to manage templates. Publishing is successful when at least one eligible WABA variant reached
+     Meta and there are no genuine request/build failures. If every active WABA is unsupported, the
+     operation remains not-ready so the UI never claims the template is usable anywhere. */
+  summary.ok = summary.failed === 0 && summary.statuses.length > 0;
   await writeAuditLog({
     actorId: actor?.actorId ?? undefined,
     actorName: actor?.actorName ?? undefined,
     actorRole: actor?.actorRole ?? "ADMIN",
     action: "communication.whatsapp.template.publish",
     messageAr: summary.ok
-      ? `تم إرسال قالب واتساب «${template.name}» تلقائيًا إلى Meta (${summary.targets} نسخة).`
+      ? summary.unsupportedWabas.length
+        ? `تم إرسال قالب واتساب «${template.name}» إلى WABA المؤهلة؛ ${summary.unsupportedWabas.length} WABA لا تسمح Meta بإدارة القوالب عليها.`
+        : `تم إرسال قالب واتساب «${template.name}» تلقائيًا إلى Meta (${summary.targets} نسخة).`
       : `اكتمل إرسال قالب واتساب «${template.name}» إلى Meta مع ${summary.failed} خطأ.`,
-    messageEn: `WhatsApp template auto-publish: ${template.name}; created=${summary.created}, existing=${summary.existing}, failed=${summary.failed}`,
+    messageEn: `WhatsApp template auto-publish: ${template.name}; created=${summary.created}, existing=${summary.existing}, failed=${summary.failed}, unsupportedWabas=${summary.unsupportedWabas.length}`,
     entityType: "WhatsappTemplate",
     entityId: templateId,
     metadata: { ...summary, externalCall: true },
