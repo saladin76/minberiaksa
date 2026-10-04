@@ -1,4 +1,4 @@
-import { VARIABLE_CATALOG } from "@/lib/templates/variables";
+import { VARIABLE_CATALOG } from "../templates/variable-catalog";
 
 const SCALAR_RE = /\{\{\s*([a-zA-Z0-9_.]+)\s*\}\}/g;
 
@@ -65,9 +65,39 @@ export function sameVariables(left: string[], right: string[]): boolean {
   return left.length === right.length && left.every((key, index) => key === right[index]);
 }
 
-function metaText(text: string, variables: string[]): string {
+export function metaParameterName(key: string): string {
+  const normalized = key
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9_]+/g, "_")
+    .replace(/^_+|_+$/g, "")
+    .replace(/_+/g, "_");
+  if (!normalized) throw new Error("INVALID_META_PARAMETER_NAME");
+  return /^[a-z]/.test(normalized) ? normalized : `p_${normalized}`;
+}
+
+function metaNamedText(text: string): string {
+  const used = new Map<string, string>();
+  return text.replace(SCALAR_RE, (_full, key: string) => {
+    const candidate = metaParameterName(key);
+    const previous = used.get(candidate);
+    if (previous && previous !== key) throw new Error(`META_PARAMETER_NAME_COLLISION:${previous}:${key}`);
+    used.set(candidate, key);
+    return `{{${candidate}}}`;
+  });
+}
+
+function metaPositionalText(text: string): string {
+  const variables = variableOrder(text);
   const positions = new Map(variables.map((key, index) => [key, index + 1]));
   return text.replace(SCALAR_RE, (_full, key: string) => `{{${positions.get(key) ?? 1}}}`);
+}
+
+function namedExamples(text: string): Array<{ param_name: string; example: string }> {
+  return variableOrder(text).map((key) => ({
+    param_name: metaParameterName(key),
+    example: exampleByToken.get(key) ?? "example",
+  }));
 }
 
 function bindingsFor(text: string, scope: string): VariableBinding[] {
@@ -87,17 +117,26 @@ export function buildStandardMetaComponents(input: {
   headerText: string;
   footerText: string;
   buttons: ButtonDraft[];
-}): { components: unknown[]; bindings: VariableBinding[] } {
+}): { components: unknown[]; bindings: VariableBinding[]; parameterFormat: "named" | "positional" } {
   const components: unknown[] = [];
   const bindings: VariableBinding[] = [];
   const headerType = String(input.header.type ?? "NONE").toUpperCase();
+
+  // The supplied Meta docs explicitly document named body parameters. For templates that also
+  // parameterize a text header or URL button, keep the whole template positional until those
+  // named component shapes are explicitly verified. Meta's parameter_format applies template-wide.
+  const hasDynamicHeader = headerType === "TEXT" && variableOrder(input.headerText).length > 0;
+  const hasDynamicUrl = input.buttons.some((button) =>
+    String(button.type ?? "").toUpperCase() === "URL" && variableOrder(String(button.url ?? "")).length > 0,
+  );
+  const parameterFormat: "named" | "positional" = hasDynamicHeader || hasDynamicUrl ? "positional" : "named";
 
   if (headerType === "TEXT" && input.headerText.trim()) {
     const vars = variableOrder(input.headerText);
     const component: Record<string, unknown> = {
       type: "HEADER",
       format: "TEXT",
-      text: metaText(input.headerText.trim(), vars),
+      text: parameterFormat === "named" ? metaNamedText(input.headerText.trim()) : metaPositionalText(input.headerText.trim()),
     };
     if (vars.length) component.example = { header_text: vars.map((key) => exampleByToken.get(key) ?? "example") };
     components.push(component);
@@ -114,8 +153,15 @@ export function buildStandardMetaComponents(input: {
   }
 
   const bodyVars = variableOrder(input.body);
-  const body: Record<string, unknown> = { type: "BODY", text: metaText(input.body, bodyVars) };
-  if (bodyVars.length) body.example = { body_text: [bodyVars.map((key) => exampleByToken.get(key) ?? "example")] };
+  const body: Record<string, unknown> = {
+    type: "BODY",
+    text: parameterFormat === "named" ? metaNamedText(input.body) : metaPositionalText(input.body),
+  };
+  if (bodyVars.length) {
+    body.example = parameterFormat === "named"
+      ? { body_text_named_params: namedExamples(input.body) }
+      : { body_text: [bodyVars.map((key) => exampleByToken.get(key) ?? "example")] };
+  }
   components.push(body);
   bindings.push(...bindingsFor(input.body, "body"));
 
@@ -140,7 +186,7 @@ export function buildStandardMetaComponents(input: {
         return {
           type: "URL",
           text: String(button.text ?? "").trim(),
-          url: metaText(rawUrl, vars),
+          url: parameterFormat === "named" ? metaNamedText(rawUrl) : metaPositionalText(rawUrl),
           ...(vars.length ? { example: [button.example?.trim() || exampleByToken.get(vars[0]) || "example"] } : {}),
         };
       }
@@ -149,7 +195,7 @@ export function buildStandardMetaComponents(input: {
     components.push({ type: "BUTTONS", buttons });
   }
 
-  return { components, bindings };
+  return { components, bindings, parameterFormat };
 }
 
 export function buildAuthenticationMetaComponents(auth: AuthDraft): unknown[] {

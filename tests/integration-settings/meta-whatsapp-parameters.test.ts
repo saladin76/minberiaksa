@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { buildMetaComponents } from "../../lib/communication/providers/meta-whatsapp/parameters";
+import { buildStandardMetaComponents } from "../../lib/communication/meta-template-components";
 
 test("Meta parameter builder maps scoped header/body variables independently", () => {
   const result = buildMetaComponents({
@@ -89,4 +90,85 @@ test("Meta location header requires coordinates and builds an exact location par
       location: { latitude: 41.0082, longitude: 28.9784, name: "Office", address: "Istanbul" },
     }],
   });
+});
+
+
+test("Meta standard template builder uses documented named body parameters when body is the only dynamic component", () => {
+  const built = buildStandardMetaComponents({
+    body: "Donation {{donation.amount}} {{donation.currency}}",
+    header: { type: "NONE" },
+    headerText: "",
+    footerText: "Thank you",
+    buttons: [{ type: "URL", text: "Open", url: "https://example.com/donate" }],
+  });
+
+  assert.equal(built.parameterFormat, "named");
+  assert.deepEqual(built.components, [
+    {
+      type: "BODY",
+      text: "Donation {{donation_amount}} {{donation_currency}}",
+      example: {
+        body_text_named_params: [
+          { param_name: "donation_amount", example: "50" },
+          { param_name: "donation_currency", example: "USD" },
+        ],
+      },
+    },
+    { type: "FOOTER", text: "Thank you" },
+    { type: "BUTTONS", buttons: [{ type: "URL", text: "Open", url: "https://example.com/donate" }] },
+  ]);
+});
+
+test("Meta standard template builder falls back to positional when header or URL is dynamic", () => {
+  const built = buildStandardMetaComponents({
+    body: "Donation {{donation.amount}}",
+    header: { type: "TEXT" },
+    headerText: "Hello {{user.name}}",
+    footerText: "",
+    buttons: [{ type: "URL", text: "Open", url: "https://example.com/{{donation.id}}" }],
+  });
+
+  assert.equal(built.parameterFormat, "positional");
+  assert.deepEqual(built.components, [
+    {
+      type: "HEADER",
+      format: "TEXT",
+      text: "Hello {{1}}",
+      example: { header_text: ["أحمد"] },
+    },
+    {
+      type: "BODY",
+      text: "Donation {{1}}",
+      example: { body_text: [["50"]] },
+    },
+    {
+      type: "BUTTONS",
+      buttons: [{ type: "URL", text: "Open", url: "https://example.com/{{1}}", example: ["65f12abc..."] }],
+    },
+  ]);
+});
+
+test("Meta send builder supplies parameter_name for named body templates", () => {
+  const result = buildMetaComponents({
+    componentsSchema: [
+      { type: "BODY", text: "Donation {{donation_amount}} {{donation_currency}}" },
+    ],
+    values: {
+      "donation.amount": "25",
+      "donation.currency": "USD",
+    },
+    positionalNames: ["donation.amount", "donation.currency"],
+  });
+
+  assert.equal(result.ok, true);
+  if (!result.ok) return;
+  assert.deepEqual(result.components, [
+    {
+      type: "body",
+      parameters: [
+        { type: "text", text: "25", parameter_name: "donation_amount" },
+        { type: "text", text: "USD", parameter_name: "donation_currency" },
+      ],
+    },
+  ]);
 });

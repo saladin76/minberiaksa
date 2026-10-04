@@ -122,6 +122,7 @@ export type CreateMetaTemplateInput = {
   language: string;
   category: "UTILITY" | "MARKETING" | "AUTHENTICATION";
   components: unknown[];
+  parameterFormat?: "named" | "positional";
 };
 
 export type CreateMetaTemplateResult =
@@ -195,6 +196,7 @@ export async function ensureMetaTemplate(
       name: input.name,
       language: input.language,
       category: input.category,
+      ...(input.category === "AUTHENTICATION" ? {} : { parameter_format: input.parameterFormat ?? "named" }),
       components: input.components,
     }),
   });
