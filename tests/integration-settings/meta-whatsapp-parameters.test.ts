@@ -134,16 +134,16 @@ test("Meta standard template builder falls back to positional when header or URL
       type: "HEADER",
       format: "TEXT",
       text: "Hello {{1}}",
-      example: { header_text: ["Amina"] },
+      example: { header_text: ["أحمد"] },
     },
     {
       type: "BODY",
       text: "Donation {{1}}",
-      example: { body_text: [["25"]] },
+      example: { body_text: [["50"]] },
     },
     {
       type: "BUTTONS",
-      buttons: [{ type: "URL", text: "Open", url: "https://example.com/{{1}}", example: ["sample-1"] }],
+      buttons: [{ type: "URL", text: "Open", url: "https://example.com/{{1}}", example: ["65f12abc..."] }],
     },
   ]);
 });
