@@ -69,7 +69,7 @@ import {
   DASHBOARD_DISPLAY_SYMBOLS,
 } from "@/lib/dashboard/format-dashboard-money";
 import { formatIstanbulCalendarMonthLong } from "@/lib/admin/current-calendar-month-utc";
-import { StatsMetricCard } from "@/components/dashboard/StatsMetricCard";
+import { BankTransfersCard, StatsMetricCard } from "@/components/dashboard/StatsMetricCard";
 import { getDashboardChartPeriodLabelAr } from "@/lib/dashboard/chart-period-label-ar";
 import { getPeriodDateKeys } from "@/lib/dashboard/period-date-range";
 import {
@@ -885,6 +885,7 @@ export default function DashboardPage() {
                 <StatsMetricCard
                   compact
                   title={`إيرادات ناجحة (${chartFilterPeriodLabelAr})`}
+                  bankTransfers={false}
                   value={stats?.totalAmount ?? 0}
                   icon={DollarSign}
                   accent="emerald"
@@ -893,13 +894,15 @@ export default function DashboardPage() {
                 />
                 <StatsMetricCard
                   compact
-                  title="إيرادات ناجحة (كل الوقت)"
-                  value={stats?.paidRevenueAllTimeUnfiltered ?? 0}
-                  icon={DollarSign}
-                  accent="emerald"
+                  title={`متوسط التبرع (${chartFilterPeriodLabelAr})`}
+                  bankTransfers={false}
+                  value={(stats?.paidCount ?? 0) > 0 ? (stats?.totalAmount ?? 0) / (stats?.paidCount ?? 1) : 0}
+                  icon={HandCoins}
+                  accent="sky"
                   format="money"
-                  subtitle="جميع التبرعات الناجحة بشكل عام دون فلتر"
+                  subtitle={`${formatMoney(stats?.totalAmount ?? 0, undefined, undefined, true)} ÷ ${(stats?.paidCount ?? 0).toLocaleString("en-US")} تبرع ناجح`}
                 />
+                <BankTransfersCard icon={DollarSign} />
                 <StatsMetricCard
                   compact
                   title="إيرادات شهرية متكررة (MRR)"

@@ -426,6 +426,7 @@ export function CategoryProgramme({
   typeKey = "project",
   columns = 3,
   film = true,
+  projects = true,
   children,
 }: {
   page: CategoryPageContent;
@@ -433,6 +434,8 @@ export function CategoryProgramme({
   columns?: number;
   /** Off when the host shows the film somewhere of its own. */
   film?: boolean;
+  /** Off for pages that never list campaigns  drops the grid and its empty state. */
+  projects?: boolean;
   children?: ReactNode;
 }) {
   return (
@@ -440,7 +443,7 @@ export function CategoryProgramme({
       {film && page.heroVideoId ? <CategoryHeroFilm page={page} style={{ boxShadow: "0 18px 50px rgba(16,33,43,.14)", border: "1px solid var(--border)" }} /> : null}
       {page.stats ? <CategoryStatsBand stats={page.stats} contained /> : null}
       <CategoryValuesStrip values={page.values} />
-      {children ?? <CategoryProjectsGrid page={page} columns={columns} />}
+      {projects ? (children ?? <CategoryProjectsGrid page={page} columns={columns} />) : null}
       {page.donateTarget ? (
         <div id="category-donate">
           <CategoryDonateBox page={page} typeKey={typeKey} />

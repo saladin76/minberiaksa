@@ -44,12 +44,14 @@ function currencyBreakdown(totals?: Record<string, number>) {
 }
 
 type BankTransfersSummary = { totals?: Record<string, number>; usdTotals?: Record<string, number>; totalUsd?: number; approvedCount?: number; pendingCount?: number };
-interface StatsMetricCardProps { title: string; value: number; icon: LucideIcon; accent?: Accent; format?: "money" | "number" | "percent"; subtitle?: string; compact?: boolean; variant?: "default" | "hero"; }
+interface StatsMetricCardProps { title: string; value: number; icon: LucideIcon; accent?: Accent; format?: "money" | "number" | "percent"; subtitle?: string; compact?: boolean; variant?: "default" | "hero";
+  /** Set false on period-filtered cards: their title reads "(كل الوقت)" when that period is picked, which would otherwise duplicate the all-time bank-transfer cards. */
+  bankTransfers?: boolean; }
 
-export function StatsMetricCard({ title, value, icon: Icon, accent = "slate", format, subtitle, compact, variant = "default" }: StatsMetricCardProps) {
+export function StatsMetricCard({ title, value, icon: Icon, accent = "slate", format, subtitle, compact, variant = "default", bankTransfers }: StatsMetricCardProps) {
   const colors = ACCENT_CLASSES[accent] ?? ACCENT_CLASSES.slate;
   const isHero = variant === "hero";
-  const shouldShowBankTransfers = title.includes("إيرادات ناجحة") && title.includes("كل الوقت");
+  const shouldShowBankTransfers = bankTransfers ?? (title.includes("إيرادات ناجحة") && title.includes("كل الوقت"));
   const [bankSummary, setBankSummary] = useState<BankTransfersSummary | null>(null);
   const { convertToCurrency, getSelectedCurrency } = useCurrency();
 
@@ -120,19 +122,50 @@ export function StatsMetricCard({ title, value, icon: Icon, accent = "slate", fo
   return (
     <>
       {mainCard}
-      <div className={shell}>
-        <span className={cn("absolute inset-y-0 start-0 w-1", ACCENT_CLASSES.blue.rail)} aria-hidden />
-        <div className="flex items-start justify-between gap-3 min-w-0">
-          <p className="min-w-0 flex-1 text-xs font-semibold leading-snug text-slate-600">الحوالات البنكية</p>
-          <span className={cn("shrink-0 rounded-lg p-1.5", ACCENT_CLASSES.blue.tile)}><Icon className="w-[18px] h-[18px]" /></span>
-        </div>
-        <p className="mt-2 text-2xl font-bold leading-8 tabular-nums tracking-tight text-slate-900">
-          {formatSelectedCurrency(bankDisplayValue, selectedCode)}
-        </p>
-        <p className="mt-1 truncate text-[11px] leading-tight text-slate-500">
-          الأصل: {currencyBreakdown(bankSummary?.totals)} • معتمد: {bankSummary?.approvedCount ?? 0} • مراجعة: {bankSummary?.pendingCount ?? 0}
-        </p>
-      </div>
+      <BankTransfersCardView icon={Icon} summary={bankSummary} displayValue={bankDisplayValue} currencyCode={selectedCode} />
     </>
   );
+}
+
+const CARD_SHELL = cn(
+  "group relative overflow-hidden rounded-xl border border-slate-200 bg-white p-4",
+  "shadow-[0_1px_2px_rgba(16,24,40,0.06)] transition-all duration-200",
+  "hover:shadow-[0_6px_20px_rgba(16,24,40,0.10)] hover:border-slate-300 hover:-translate-y-px",
+);
+
+function BankTransfersCardView({ icon: Icon, summary, displayValue, currencyCode }: { icon: LucideIcon; summary: BankTransfersSummary | null; displayValue: number; currencyCode: string }) {
+  return (
+    <div className={CARD_SHELL}>
+      <span className={cn("absolute inset-y-0 start-0 w-1", ACCENT_CLASSES.blue.rail)} aria-hidden />
+      <div className="flex items-start justify-between gap-3 min-w-0">
+        <p className="min-w-0 flex-1 text-xs font-semibold leading-snug text-slate-600">الحوالات البنكية</p>
+        <span className={cn("shrink-0 rounded-lg p-1.5", ACCENT_CLASSES.blue.tile)}><Icon className="w-[18px] h-[18px]" /></span>
+      </div>
+      <p className="mt-2 text-2xl font-bold leading-8 tabular-nums tracking-tight text-slate-900">
+        {formatSelectedCurrency(displayValue, currencyCode)}
+      </p>
+      <p className="mt-1 truncate text-[11px] leading-tight text-slate-500">
+        الأصل: {currencyBreakdown(summary?.totals)} • معتمد: {summary?.approvedCount ?? 0} • مراجعة: {summary?.pendingCount ?? 0}
+      </p>
+    </div>
+  );
+}
+
+/** Standalone all-time bank-transfers card, for pages that don't render the combined "الموقع + الحسابات البنكية" card. */
+export function BankTransfersCard({ icon }: { icon: LucideIcon }) {
+  const [summary, setSummary] = useState<BankTransfersSummary | null>(null);
+  const { convertToCurrency, getSelectedCurrency } = useCurrency();
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/admin/bank-transfers/summary").then((res) => (res.ok ? res.json() : null)).then((data) => { if (!cancelled) setSummary(data); }).catch(() => { if (!cancelled) setSummary(null); });
+    return () => { cancelled = true; };
+  }, []);
+
+  const selectedCurrency = getSelectedCurrency?.() ?? "DEFAULT";
+  const selectedCode = selectedCurrency === "DEFAULT" ? "USD" : selectedCurrency;
+  const usd = summary?.totalUsd ?? summary?.totals?.USD ?? 0;
+  const displayValue = selectedCurrency === "DEFAULT" ? usd : (convertToCurrency(usd)?.convertedValue ?? usd);
+
+  return <BankTransfersCardView icon={icon} summary={summary} displayValue={displayValue} currencyCode={selectedCode} />;
 }

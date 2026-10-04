@@ -529,6 +529,7 @@ export default function ReferralAnalyticsPage() {
                 <StatsMetricCard
                   compact
                   title={`إيرادات ناجحة (${chartFilterPeriodLabelAr})`}
+                  bankTransfers={false}
                   value={stats.totalAmount ?? 0}
                   icon={DollarSign}
                   accent="emerald"
