@@ -147,8 +147,17 @@ export function resolveSender(
     .sort(byPriority);
   if (capable.length > 0) return { sender: capable[0], matchedBy: "capability" };
 
-  // 3) Default sender for the channel.
-  const fallbackDefault = channelSenders.filter(isUsable).sort(byPriority).find((s) => s.isDefault);
+  // 3) Default sender for the channel, but never bypass its declared capabilities.
+  //
+  // The old fallback picked any usable default after capability matching failed. That meant an
+  // Arabic recipient could silently fall through to a Turkish-only default (or a marketing-only
+  // sender could receive a utility message) simply because no better match existed. A default is
+  // a preference among compatible senders, not permission to violate locale/country/purpose rules.
+  const fallbackDefault = channelSenders
+    .filter(isUsable)
+    .filter((s) => supportsLocale(s, locale) && supportsCountry(s, country) && supportsPurpose(s, request.purpose))
+    .sort(byPriority)
+    .find((s) => s.isDefault);
   if (fallbackDefault) return { sender: fallbackDefault, matchedBy: "default" };
 
   return { skipped: true, reason: "NO_SENDER_AVAILABLE" };
