@@ -107,6 +107,42 @@ function senderIdentity(sender: Sender): string {
   return sender.displayPhoneNumber || sender.senderEmail || sender.smsSender || "—";
 }
 
+type RuleGroup = {
+  key: string;
+  representative: Rule;
+  members: Rule[];
+  locales: string[];
+};
+
+/** Locale rows are an implementation detail: operators edit one logical route with many languages. */
+function ruleFamilyKey(rule: Rule): string {
+  return [
+    rule.channel,
+    rule.country ?? "*",
+    rule.purpose ?? "*",
+    rule.senderId,
+    rule.fallbackSenderId ?? "*",
+    String(rule.priority),
+    rule.enabled ? "1" : "0",
+  ].join("|");
+}
+
+function groupRoutingRules(rules: Rule[]): RuleGroup[] {
+  const grouped = new Map<string, Rule[]>();
+  for (const rule of rules) {
+    const key = ruleFamilyKey(rule);
+    grouped.set(key, [...(grouped.get(key) ?? []), rule]);
+  }
+  return [...grouped.entries()].map(([key, members]) => ({
+    key,
+    representative: members[0],
+    members,
+    locales: members.some((rule) => !rule.locale)
+      ? []
+      : members.map((rule) => rule.locale!).sort(),
+  }));
+}
+
 export function SenderRoutingManager() {
   const [data, setData] = useState<Payload | null>(null);
   const [metaAssets, setMetaAssets] = useState<MetaAssetsPayload | null>(null);
@@ -203,12 +239,40 @@ export function SenderRoutingManager() {
     }
   }, [load]);
 
+  const removeRuleGroup = useCallback(async (group: RuleGroup) => {
+    const label = group.locales.length ? group.locales.join("، ") : "كل اللغات";
+    const confirmed = window.confirm(`هل تريد حذف قاعدة التوجيه لهذه اللغات: ${label}؟`);
+    if (!confirmed) return;
+
+    const busyKey = `rule-group:${group.key}`;
+    setBusy(busyKey);
+    setNotice(null);
+    try {
+      for (const member of group.members) {
+        const res = await fetch(`/api/dashboard/communication/routing-rules/${member.id}`, { method: "DELETE" });
+        const body = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          setNotice({ tone: "error", text: body.error ?? "تعذّر حذف مجموعة قواعد التوجيه بالكامل." });
+          await load();
+          return;
+        }
+      }
+      setEditingRuleId(null);
+      setNotice({ tone: "ok", text: "تم حذف قاعدة التوجيه بكل لغاتها." });
+      await load();
+    } finally {
+      setBusy(null);
+    }
+  }, [load]);
+
   const byChannel = useMemo(() => {
     const map = new Map<string, Sender[]>();
     for (const channel of CHANNELS) map.set(channel, []);
     for (const sender of data?.senders ?? []) map.get(sender.channel)?.push(sender);
     return map;
   }, [data]);
+
+  const groupedRules = useMemo(() => groupRoutingRules(data?.rules ?? []), [data?.rules]);
 
   const senderName = useCallback(
     (id: string | null) => (id ? data?.senders.find((s) => s.id === id)?.name ?? id : "—"),
@@ -417,88 +481,99 @@ export function SenderRoutingManager() {
               </button>
             </div>
             {showRuleForm && <RuleForm senders={data.senders} onCancel={() => setShowRuleForm(false)} onDone={async () => { setShowRuleForm(false); await load(); }} />}
-            {data.rules.length === 0 ? (
+            {groupedRules.length === 0 ? (
               <p className="px-4 py-4 text-xs text-slate-500">
                 لا قواعد  يُختار المُرسِل بمطابقة قدراته ثم بالمُرسِل الافتراضي للقناة.
               </p>
             ) : (
               <ul className="divide-y divide-slate-100">
-                {data.rules.map((rule) => (
-                  <li key={rule.id} className="flex flex-wrap items-center justify-between gap-2 px-4 py-2.5">
-                    <p className="text-sm text-slate-800">
-                      <span className="font-semibold">{CHANNEL_LABELS[rule.channel] ?? rule.channel}</span>
-                      {" · "}
-                      {rule.locale ? `لغة ${rule.locale}` : "أي لغة"}
-                      {" · "}
-                      {rule.country ? `دولة ${rule.country}` : "أي دولة"}
-                      {" · "}
-                      {rule.purpose ? PURPOSE_LABELS[rule.purpose] ?? rule.purpose : "أي غرض"}
-                      {" → "}
-                      <span className="font-semibold">{senderName(rule.senderId)}</span>
-                      {rule.fallbackSenderId && <span className="text-slate-500"> (بديل: {senderName(rule.fallbackSenderId)})</span>}
-                    </p>
-                    <div className="flex items-center gap-2">
-                      <span className="text-[11px] text-slate-400">أولوية {rule.priority}</span>
-                      <button
-                        type="button"
-                        disabled={busy === `rule:${rule.id}`}
-                        onClick={() => void (async () => {
-                          setBusy(`rule:${rule.id}`);
-                          try {
-                            const res = await fetch(`/api/dashboard/communication/routing-rules/${rule.id}`, {
-                              method: "PATCH",
-                              headers: { "content-type": "application/json" },
-                              body: JSON.stringify({ enabled: !rule.enabled }),
-                            });
-                            const body = await res.json().catch(() => ({}));
-                            if (!res.ok) {
-                              setNotice({ tone: "error", text: body.error ?? "تعذّر تحديث قاعدة التوجيه." });
-                              return;
+                {groupedRules.map((group) => {
+                  const rule = group.representative;
+                  const busyKey = `rule-group:${group.key}`;
+                  const languageLabel = group.locales.length
+                    ? `لغات ${group.locales.join("، ")}`
+                    : "كل اللغات";
+                  return (
+                    <li key={group.key} className="flex flex-wrap items-center justify-between gap-2 px-4 py-2.5">
+                      <p className="text-sm text-slate-800">
+                        <span className="font-semibold">{CHANNEL_LABELS[rule.channel] ?? rule.channel}</span>
+                        {" · "}
+                        {languageLabel}
+                        {" · "}
+                        {rule.country ? `دولة ${rule.country}` : "أي دولة"}
+                        {" · "}
+                        {rule.purpose ? PURPOSE_LABELS[rule.purpose] ?? rule.purpose : "أي غرض"}
+                        {" → "}
+                        <span className="font-semibold">{senderName(rule.senderId)}</span>
+                        {rule.fallbackSenderId && <span className="text-slate-500"> (بديل: {senderName(rule.fallbackSenderId)})</span>}
+                      </p>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[11px] text-slate-400">أولوية {rule.priority}</span>
+                        <button
+                          type="button"
+                          disabled={busy === busyKey}
+                          onClick={() => void (async () => {
+                            setBusy(busyKey);
+                            setNotice(null);
+                            try {
+                              for (const member of group.members) {
+                                const res = await fetch(`/api/dashboard/communication/routing-rules/${member.id}`, {
+                                  method: "PATCH",
+                                  headers: { "content-type": "application/json" },
+                                  body: JSON.stringify({ enabled: !rule.enabled }),
+                                });
+                                const body = await res.json().catch(() => ({}));
+                                if (!res.ok) {
+                                  setNotice({ tone: "error", text: body.error ?? "تعذّر تحديث مجموعة قواعد التوجيه." });
+                                  await load();
+                                  return;
+                                }
+                              }
+                              await load();
+                            } finally {
+                              setBusy(null);
                             }
-                            await load();
-                          } finally {
-                            setBusy(null);
-                          }
-                        })()}
-                        className={cn(
-                          "rounded-lg border px-2 py-0.5 text-[11px] font-semibold disabled:opacity-40",
-                          rule.enabled ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-slate-200 bg-slate-50 text-slate-500",
-                        )}
-                      >
-                        {rule.enabled ? "مفعّلة" : "معطّلة"}
-                      </button>
-                      <button
-                        type="button"
-                        disabled={busy === `rule:${rule.id}`}
-                        onClick={() => setEditingRuleId((current) => current === rule.id ? null : rule.id)}
-                        className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-2 py-0.5 text-[11px] font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-40"
-                      >
-                        <Pencil className="h-3 w-3" /> تعديل
-                      </button>
-                      <button
-                        type="button"
-                        disabled={busy === `rule:${rule.id}`}
-                        onClick={() => void removeRule(rule)}
-                        className="inline-flex items-center gap-1 rounded-lg border border-rose-200 px-2 py-0.5 text-[11px] font-semibold text-rose-700 hover:bg-rose-50 disabled:opacity-40"
-                      >
-                        <Trash2 className="h-3 w-3" /> حذف
-                      </button>
-                    </div>
-                    {editingRuleId === rule.id && (
-                      <div className="basis-full border-t border-slate-100 pt-3">
-                        <RuleForm
-                          senders={data.senders}
-                          rule={rule}
-                          onCancel={() => setEditingRuleId(null)}
-                          onDone={async () => { setEditingRuleId(null); await load(); }}
-                        />
+                          })()}
+                          className={cn(
+                            "rounded-lg border px-2 py-0.5 text-[11px] font-semibold disabled:opacity-40",
+                            rule.enabled ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-slate-200 bg-slate-50 text-slate-500",
+                          )}
+                        >
+                          {rule.enabled ? "مفعّلة" : "معطّلة"}
+                        </button>
+                        <button
+                          type="button"
+                          disabled={busy === busyKey}
+                          onClick={() => setEditingRuleId((current) => current === rule.id ? null : rule.id)}
+                          className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-2 py-0.5 text-[11px] font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-40"
+                        >
+                          <Pencil className="h-3 w-3" /> تعديل
+                        </button>
+                        <button
+                          type="button"
+                          disabled={busy === busyKey}
+                          onClick={() => void removeRuleGroup(group)}
+                          className="inline-flex items-center gap-1 rounded-lg border border-rose-200 px-2 py-0.5 text-[11px] font-semibold text-rose-700 hover:bg-rose-50 disabled:opacity-40"
+                        >
+                          <Trash2 className="h-3 w-3" /> حذف
+                        </button>
                       </div>
-                    )}
-                  </li>
-                ))}
+                      {editingRuleId === rule.id && (
+                        <div className="basis-full border-t border-slate-100 pt-3">
+                          <RuleForm
+                            senders={data.senders}
+                            rule={rule}
+                            ruleGroup={group.members}
+                            onCancel={() => setEditingRuleId(null)}
+                            onDone={async () => { setEditingRuleId(null); await load(); }}
+                          />
+                        </div>
+                      )}
+                    </li>
+                  );
+                })}
               </ul>
-            )}
-          </div>
+            )}          </div>
 
           <RoutingPreview />
         </div>
@@ -883,18 +958,24 @@ function SenderForm({
 function RuleForm({
   senders,
   rule,
+  ruleGroup,
   onDone,
   onCancel,
 }: {
   senders: Sender[];
   rule?: Rule;
+  ruleGroup?: Rule[];
   onDone: () => Promise<void>;
   onCancel: () => void;
 }) {
   const editing = Boolean(rule);
+  const initialMembers = ruleGroup?.length ? ruleGroup : rule ? [rule] : [];
+  const initialLocales = initialMembers.some((member) => !member.locale)
+    ? []
+    : initialMembers.map((member) => member.locale!).sort();
   const [form, setForm] = useState({
     channel: rule?.channel ?? "WHATSAPP",
-    locales: rule?.locale ? [rule.locale] : [] as string[],
+    locales: initialLocales as string[],
     country: rule?.country ?? "",
     purpose: rule?.purpose ?? "",
     senderId: rule?.senderId ?? "",
@@ -919,19 +1000,29 @@ function RuleForm({
       };
 
       if (editing) {
-        const [primaryLocale, ...extraLocales] = locales;
-        const update = await fetch(`/api/dashboard/communication/routing-rules/${rule!.id}`, {
-          method: "PATCH",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ ...basePayload, locale: primaryLocale }),
-        });
-        const updateBody = await update.json().catch(() => ({}));
-        if (!update.ok) {
-          setError(updateBody.error ?? "تعذّر حفظ التعديلات.");
-          return;
-        }
+        const members = ruleGroup?.length ? ruleGroup : [rule!];
+        const keyFor = (locale: string | null) => locale ?? "__any__";
+        const desiredKeys = new Set(locales.map(keyFor));
+        const currentByLocale = new Map(members.map((member) => [keyFor(member.locale), member]));
 
-        for (const locale of extraLocales) {
+        // Keep existing locale rows whenever possible. This avoids converting one row into a locale
+        // already occupied by its sibling, which the server correctly treats as a routing conflict.
+        for (const locale of locales) {
+          const existing = currentByLocale.get(keyFor(locale));
+          if (existing) {
+            const update = await fetch(`/api/dashboard/communication/routing-rules/${existing.id}`, {
+              method: "PATCH",
+              headers: { "content-type": "application/json" },
+              body: JSON.stringify(basePayload),
+            });
+            const updateBody = await update.json().catch(() => ({}));
+            if (!update.ok) {
+              setError(updateBody.error ?? `تعذّر تحديث قاعدة اللغة ${locale ?? "العامة"}.`);
+              return;
+            }
+            continue;
+          }
+
           const create = await fetch("/api/dashboard/communication/routing-rules", {
             method: "POST",
             headers: { "content-type": "application/json" },
@@ -939,12 +1030,25 @@ function RuleForm({
               ...basePayload,
               channel: form.channel,
               locale,
-              enabled: true,
+              enabled: rule?.enabled ?? true,
             }),
           });
           const createBody = await create.json().catch(() => ({}));
           if (!create.ok) {
-            setError(createBody.error ?? `تم تحديث القاعدة الأساسية لكن تعذّر إنشاء قاعدة اللغة ${locale ?? "العامة"}.`);
+            setError(createBody.error ?? `تعذّر إنشاء قاعدة اللغة ${locale ?? "العامة"}.`);
+            return;
+          }
+        }
+
+        // Removing a language from the multi-select now removes its stored sibling row too. Before
+        // this, an old locale silently survived and continued routing traffic after the operator had
+        // visibly removed it from the editor.
+        for (const member of members) {
+          if (desiredKeys.has(keyFor(member.locale))) continue;
+          const remove = await fetch(`/api/dashboard/communication/routing-rules/${member.id}`, { method: "DELETE" });
+          const removeBody = await remove.json().catch(() => ({}));
+          if (!remove.ok) {
+            setError(removeBody.error ?? `حُفظت اللغات الجديدة لكن تعذّر حذف قاعدة اللغة ${member.locale ?? "العامة"}.`);
             return;
           }
         }
@@ -1005,7 +1109,7 @@ function RuleForm({
             />
           </div>
           <span className="mt-1 block text-[10px] font-normal text-slate-400">
-            اختيار عدة لغات ينشئ قاعدة توجيه مستقلة لكل لغة بنفس المُرسِل والشروط.
+            تُعرض اللغات كقاعدة واحدة، ويحافظ النظام داخليًا على صف مستقل لكل لغة لضمان توجيه دقيق.
           </span>
         </label>
         <label className="text-xs font-semibold text-slate-600">
