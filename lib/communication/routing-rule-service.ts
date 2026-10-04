@@ -31,6 +31,38 @@ function dbUnavailable() {
   return { ok: false as const, status: 503, error: "DATABASE_URL is not configured." };
 }
 
+function normalizePredicate(input: {
+  locale?: string | null;
+  country?: string | null;
+  purpose?: string | null;
+}) {
+  return {
+    locale: input.locale?.trim().toLowerCase() || null,
+    country: input.country?.trim().toUpperCase() || null,
+    purpose: input.purpose?.trim() || null,
+  };
+}
+
+async function findEnabledPredicateConflict(input: {
+  channel: CommunicationChannelId;
+  locale: string | null;
+  country: string | null;
+  purpose: string | null;
+  excludeId?: string | null;
+}) {
+  return prisma.senderRoutingRule.findFirst({
+    where: {
+      channel: input.channel,
+      locale: input.locale,
+      country: input.country,
+      purpose: input.purpose,
+      enabled: true,
+      ...(input.excludeId ? { id: { not: input.excludeId } } : {}),
+    },
+    select: { id: true, senderId: true, priority: true },
+  });
+}
+
 export async function listRoutingRules(channel?: CommunicationChannelId): Promise<SenderRoutingRule[]> {
   if (!process.env.DATABASE_URL) return [];
   try {
@@ -60,9 +92,7 @@ export async function createRoutingRule(input: RoutingRuleInput, actor?: Actor):
       if (fallback.channel !== input.channel) return { ok: false, status: 400, error: "Fallback sender channel does not match the routing rule channel." };
     }
 
-    const normalizedLocale = input.locale?.toLowerCase() ?? null;
-    const normalizedCountry = input.country?.toUpperCase() ?? null;
-    const normalizedPurpose = input.purpose ?? null;
+    const { locale: normalizedLocale, country: normalizedCountry, purpose: normalizedPurpose } = normalizePredicate(input);
 
     /*
      * Multi-language routing creates one stored rule per locale. Saving the same selection again
@@ -79,16 +109,49 @@ export async function createRoutingRule(input: RoutingRuleInput, actor?: Actor):
       },
     });
     if (existing) {
+      const nextEnabled = input.enabled ?? true;
+      if (nextEnabled) {
+        const conflict = await findEnabledPredicateConflict({
+          channel: input.channel,
+          locale: normalizedLocale,
+          country: normalizedCountry,
+          purpose: normalizedPurpose,
+          excludeId: existing.id,
+        });
+        if (conflict) {
+          return {
+            ok: false,
+            status: 409,
+            error: "توجد قاعدة مفعّلة أخرى بنفس القناة واللغة والدولة والغرض. عطّلها أو عدّلها بدل إنشاء مسار متعارض.",
+          };
+        }
+      }
       const row = await prisma.senderRoutingRule.update({
         where: { id: existing.id },
         data: {
           fallbackSenderId: input.fallbackSenderId ?? null,
           priority: input.priority ?? existing.priority,
-          enabled: input.enabled ?? true,
+          enabled: nextEnabled,
           notes: input.notes ?? existing.notes,
         },
       });
       return { ok: true, data: row };
+    }
+
+    if (input.enabled ?? true) {
+      const conflict = await findEnabledPredicateConflict({
+        channel: input.channel,
+        locale: normalizedLocale,
+        country: normalizedCountry,
+        purpose: normalizedPurpose,
+      });
+      if (conflict) {
+        return {
+          ok: false,
+          status: 409,
+          error: "توجد قاعدة مفعّلة أخرى بنفس القناة واللغة والدولة والغرض. استخدم المُرسِل البديل داخل نفس القاعدة بدل إنشاء قاعدة متعارضة.",
+        };
+      }
     }
 
     const row = await prisma.senderRoutingRule.create({
@@ -128,9 +191,18 @@ export async function updateRoutingRule(id: string, patch: Partial<RoutingRuleIn
   try {
     const current = await prisma.senderRoutingRule.findUnique({ where: { id } });
     if (!current) return { ok: false, status: 404, error: "Routing rule not found." };
-    const channel = current.channel as CommunicationChannelId;
+
+    const channel = (patch.channel ?? current.channel) as CommunicationChannelId;
+    if (!isCommunicationChannel(channel)) return { ok: false, status: 400, error: "Invalid channel." };
+
     const primaryId = patch.senderId ?? current.senderId;
     const fallbackId = patch.fallbackSenderId === undefined ? current.fallbackSenderId : patch.fallbackSenderId;
+    const predicate = normalizePredicate({
+      locale: patch.locale === undefined ? current.locale : patch.locale,
+      country: patch.country === undefined ? current.country : patch.country,
+      purpose: patch.purpose === undefined ? current.purpose : patch.purpose,
+    });
+    const nextEnabled = patch.enabled ?? current.enabled;
 
     const primary = await prisma.communicationSender.findUnique({ where: { id: primaryId }, select: { channel: true } });
     if (!primary || primary.channel !== channel) return { ok: false, status: 400, error: "Primary sender is missing or belongs to another channel." };
@@ -140,17 +212,34 @@ export async function updateRoutingRule(id: string, patch: Partial<RoutingRuleIn
       if (!fallback || fallback.channel !== channel) return { ok: false, status: 400, error: "Fallback sender is missing or belongs to another channel." };
     }
 
+    if (nextEnabled) {
+      const conflict = await findEnabledPredicateConflict({
+        channel,
+        locale: predicate.locale,
+        country: predicate.country,
+        purpose: predicate.purpose,
+        excludeId: id,
+      });
+      if (conflict) {
+        return {
+          ok: false,
+          status: 409,
+          error: "لا يمكن تفعيل هذه القاعدة لأن قاعدة مفعّلة أخرى تستخدم نفس القناة واللغة والدولة والغرض.",
+        };
+      }
+    }
+
     const row = await prisma.senderRoutingRule.update({
       where: { id },
       data: {
-        channel: patch.channel,
-        locale: patch.locale === undefined ? undefined : patch.locale?.toLowerCase() ?? null,
-        country: patch.country === undefined ? undefined : patch.country?.toUpperCase() ?? null,
-        purpose: patch.purpose === undefined ? undefined : patch.purpose ?? null,
-        senderId: patch.senderId,
-        fallbackSenderId: patch.fallbackSenderId === undefined ? undefined : patch.fallbackSenderId ?? null,
+        channel,
+        locale: predicate.locale,
+        country: predicate.country,
+        purpose: predicate.purpose,
+        senderId: primaryId,
+        fallbackSenderId: fallbackId ?? null,
         priority: patch.priority,
-        enabled: patch.enabled,
+        enabled: nextEnabled,
         notes: patch.notes === undefined ? undefined : patch.notes ?? null,
       },
     });
