@@ -3763,3 +3763,165 @@ html.cg-open .mia-scope:has(.mia-qb-sec) { padding-bottom: 0; }
   .mia-scope .mia-cart-plus { animation: none !important; }
   .mia-scope .mia-cart--full::before, .mia-scope .mia-cart--full::after { animation: none; opacity: .6; }
 }
+
+/* ─────────────────────────────────────────────────────────────────────────────
+ * Phone pass  header drawer, floating buttons, homepage FAQ, footer, the
+ * projects list and the project page. Kept together, after every section's
+ * own rules, so it wins where it has to without each rule needing !important.
+ * ───────────────────────────────────────────────────────────────────────────── */
+
+/* Header: the menu and the language panel become a drawer that opens flush
+   under the header and fills the screen, over a dimmed page. The header's own
+   height is written to --mia-head-h by Header.tsx. */
+.mia-head .mia-pop-backdrop { display: none; }
+@media (max-width: 700px) {
+  .mia-head .mia-pop-backdrop {
+    display: block;
+    position: fixed;
+    inset: var(--mia-head-h, 64px) 0 0 0;
+    z-index: 79;
+    background: rgba(16, 33, 43, .48);
+    animation: cg-fade .2s ease both;
+  }
+  .mia-head .mia-pop {
+    top: var(--mia-head-h, 64px) !important;
+    inset-inline: 0 !important;
+    bottom: 0;
+    max-height: none !important;
+    border-radius: 0 0 18px 18px !important;
+    border-inline: 0 !important;
+    border-top: 0 !important;
+    overscroll-behavior: contain;
+    animation: mia-drawer-in .22s cubic-bezier(.22, .61, .36, 1) both;
+  }
+  /* The drawer ends where its content does when that is shorter than the screen. */
+  .mia-head .mia-pop--menu {
+    bottom: auto;
+    max-height: calc(100dvh - var(--mia-head-h, 64px)) !important;
+    padding: 16px 16px calc(20px + env(safe-area-inset-bottom, 0px)) !important;
+    gap: 16px 14px !important;
+  }
+  .mia-head .mia-pop--locale {
+    bottom: auto;
+    max-height: calc(100dvh - var(--mia-head-h, 64px)) !important;
+  }
+  /* Labels wrap instead of being cut ("القدس والبلدة القدي…"), and every row
+     is a comfortable thumb target. */
+  .mia-head .mia-pop--menu .mia-menu-link {
+    white-space: normal !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
+    min-height: 44px;
+    padding: 10px 8px !important;
+    font-size: 14.5px !important;
+    line-height: 1.45;
+  }
+  .mia-head .mia-pop--menu .mia-menu-cat > span { white-space: normal !important; }
+  /* The drawer already scrolls; a second scroller inside it hid categories. */
+  .mia-head .mia-pop--menu .mia-menu-cats { max-height: none; overflow: visible; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .mia-head .mia-pop--locale button.mia-row { height: 44px; }
+}
+@keyframes mia-drawer-in { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: none; } }
+
+/* While a drawer is open the floating buttons step aside. */
+html[data-mia-drawer="open"] .mia-wa-fab,
+html[data-mia-drawer="open"] .mia-scope .cg-launch-wrap { display: none !important; }
+
+/* Floating buttons: on a phone the concierge pill becomes a round button the
+   size of the WhatsApp one, so the two stop covering the page's own content.
+   The label stays in the accessibility tree, just off-screen. */
+@media (max-width: 760px) {
+  .mia-scope .cg-launcher {
+    width: 50px;
+    height: 50px !important;
+    padding: 0 !important;
+    justify-content: center;
+    gap: 0 !important;
+  }
+  .mia-scope .cg-launcher-icon { width: 40px !important; height: 40px !important; }
+  .mia-scope .cg-launcher-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+  /* The pill clips its overflow (for the light sweep), so a corner tag would be cut. */
+  .mia-scope .cg-launcher-badge { display: none; }
+  .mia-scope .cg-launch-wrap { inset-inline-end: 14px; bottom: calc(14px + env(safe-area-inset-bottom, 0px)); }
+  .mia-wa-fab { inset-inline-start: 14px !important; bottom: calc(14px + env(safe-area-inset-bottom, 0px)) !important; }
+}
+
+/* Homepage FAQ. On one column the sticky aside slid over the questions as the
+   page scrolled; it is now static, the questions come straight after the
+   filters, and the "didn't find your answer" card closes the section. */
+@media (max-width: 960px) {
+  .mia-scope #faq { padding: 36px 0 !important; }
+  .mia-scope #faq-grid { gap: 16px !important; }
+  .mia-scope #faq-aside { display: contents !important; }
+  .mia-scope #faq-aside > h2 { order: 1; }
+  .mia-scope #faq-chips { order: 2; }
+  .mia-scope #faq-list { order: 3; }
+  .mia-scope #faq-help { order: 4; }
+}
+@media (max-width: 560px) {
+  .mia-scope #faq-grid { padding-inline: 16px !important; }
+  /* The topic tag sits above the question rather than eating its width. */
+  .mia-scope #faq-list .faq-q {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 6px 12px !important;
+    padding: 16px !important;
+    font-size: 15.5px !important;
+    line-height: 1.6;
+  }
+  .mia-scope #faq-list .faq-tag { grid-column: 1; justify-self: start; }
+  .mia-scope #faq-list .faq-qtext { grid-column: 1; }
+  .mia-scope #faq-list .faq-plus { grid-column: 2; grid-row: 1 / span 2; margin: 0 !important; }
+  .mia-scope #faq-list .faq-q > .faq-qtext:first-child + .faq-plus { grid-row: 1; }
+  .mia-scope #faq-list .faq-q + div { padding: 0 16px 18px !important; font-size: 14.5px !important; line-height: 1.85 !important; }
+}
+
+/* Footer: the copyright line wraps rather than ending in "…", and the photo
+   window is shorter on small phones. */
+@media (max-width: 720px) {
+  .mia-foot--photo > div:last-child { white-space: normal !important; line-height: 1.7; padding: 14px 18px calc(14px + env(safe-area-inset-bottom, 0px)) !important; }
+  .mia-foot--photo > div:last-child > span { overflow: visible !important; text-overflow: clip !important; }
+  .mia-foot .mia-foot-window { height: clamp(180px, 56vw, 300px) !important; }
+  .mia-foot div.cols#footcols > div:first-child p { font-size: 13.5px !important; }
+  .mia-foot div.cols#footcols > div:first-child > div { flex-wrap: wrap; }
+}
+
+/* Projects list: filter chips keep their size inside the sideways-scrolling
+   row (they were shrinking until the labels overlapped). */
+.mia-scope #proj-filters > .proj-cat { flex: 0 0 auto; }
+@media (max-width: 560px) {
+  .mia-scope #proj-filters {
+    margin-inline: -16px;
+    padding-inline: 16px;
+    scroll-padding-inline: 16px;
+    scrollbar-width: none;
+  }
+  .mia-scope #proj-filters > .proj-cat { height: 38px !important; padding: 0 14px !important; font-size: 13.5px !important; }
+  .mia-scope #all { padding: 26px 0 44px !important; }
+  .mia-scope #all > div { padding-inline: 16px !important; }
+}
+
+/* Project page: the tabs scroll sideways instead of wrapping onto a second
+   line, and the gutters match the rest of the phone layout. */
+@media (max-width: 640px) {
+  .mia-scope .pd-tabs {
+    flex-wrap: nowrap !important;
+    overflow-x: auto;
+    scrollbar-width: none;
+    margin-inline: -16px;
+    padding-inline: 16px;
+  }
+  .mia-scope .pd-tabs::-webkit-scrollbar { display: none; }
+  .mia-scope .pd-tabs > .pd-tab { flex: 0 0 auto; white-space: nowrap; padding: 0 13px !important; font-size: 14.5px !important; }
+  .mia-scope #pd-top, .mia-scope #pd-body { padding-inline: 16px !important; gap: 22px !important; }
+  .mia-scope #pd-top h1 { font-size: 25px !important; }
+  .mia-scope #pd-top p { font-size: 15.5px !important; line-height: 1.85 !important; }
+}

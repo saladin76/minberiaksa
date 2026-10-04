@@ -34,7 +34,7 @@ export async function PATCH(
   try {
     const donation = await prisma.donation.findUnique({
       where: { id },
-      select: { id: true, status: true, paidAt: true },
+      select: { id: true, status: true, paidAt: true, providerTxnResult: true },
     });
 
     if (!donation) {
@@ -48,6 +48,13 @@ export async function PATCH(
 
     if (donation.status === "FAILED") {
       return NextResponse.json({ ok: true, alreadyFailed: true });
+    }
+
+    // A server-side charge (the Albaraka 2D sale) is in flight; its own outcome
+    // decides the status. A browser error must not record it failed while the
+    // bank may be approving it.
+    if (donation.providerTxnResult === "Processing") {
+      return NextResponse.json({ ok: true, inProgress: true });
     }
 
     await prisma.donation.update({

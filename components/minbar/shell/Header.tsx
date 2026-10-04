@@ -201,6 +201,8 @@ export default function Header({
       applied = next;
       requestAnimationFrame(() => {
         spacer.style.height = `${next}px`;
+        // The phone menu drawer opens right under the header, whatever its height.
+        document.documentElement.style.setProperty("--mia-head-h", `${next}px`);
       });
     };
     sync();
@@ -240,10 +242,28 @@ export default function Header({
     }
   }, [pathname]);
 
-  /* A new page closes the categories panel, including via back/forward. */
+  /* A new page closes every panel, including via back/forward. */
   useEffect(() => {
     setCatsOpen(false);
+    setMenuOpen(false);
+    setLocaleOpen(false);
   }, [pathname]);
+
+  /* On a phone the menu and the language panel are full-height drawers: the
+     page behind them must not scroll, and the floating buttons (WhatsApp, the
+     concierge, quick donate) step aside  the CSS keys off `data-mia-drawer`. */
+  const drawerOpen = menuOpen || localeOpen;
+  useEffect(() => {
+    if (!drawerOpen || !window.matchMedia("(max-width: 700px)").matches) return;
+    const root = document.documentElement;
+    const previous = root.style.overflow;
+    root.style.overflow = "hidden";
+    root.setAttribute("data-mia-drawer", "open");
+    return () => {
+      root.style.overflow = previous;
+      root.removeAttribute("data-mia-drawer");
+    };
+  }, [drawerOpen]);
 
   /* Close the popovers on outside click and on Escape  both panels are large
      and overlay the page, so there has to be a way out that is not the toggle.
@@ -538,6 +558,10 @@ export default function Header({
               <path d="M4.5 19.5a7.5 7.5 0 0 1 15 0" />
             </svg>
           </Link>
+
+          {/* Phones only (CSS): dims the page under an open drawer. It sits
+              outside `popRef`, so a tap on it closes the drawer. */}
+          {drawerOpen ? <div className="mia-pop-backdrop" aria-hidden="true" /> : null}
 
           <div ref={popRef} style={{ display: "contents" }}>
             {/* Language + currency */}

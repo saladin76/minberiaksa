@@ -7,6 +7,8 @@ import { writeAuditLog } from "@/lib/audit-log";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
+// Charges through Albaraka, which only accepts the project's Static IPs (sin1).
+export const preferredRegion = "sin1";
 
 /**
  * The recurring scheduler's tick (`vercel.json`, every 15 minutes).

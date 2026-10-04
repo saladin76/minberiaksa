@@ -173,7 +173,7 @@ export default function ProjectDetail({ project, updates, gallery, related, dono
       <section style={{ position: "relative", zIndex: 1, padding: "48px 0 8px" }}>
         <div id="pd-body" style={{ maxWidth: 1240, margin: "0 auto", padding: "0 24px", display: "grid", gridTemplateColumns: "minmax(0,1.32fr) minmax(300px,.68fr)", gap: 34, alignItems: "start" }}>
           <div style={{ display: "grid", gap: 22, minWidth: 0 }}>
-            <div style={{ display: "flex", gap: 4, borderBottom: "1px solid var(--border)", flexWrap: "wrap" }}>
+            <div className="pd-tabs" style={{ display: "flex", gap: 4, borderBottom: "1px solid var(--border)", flexWrap: "wrap" }}>
               {tabs.map((item) => (
                 <button
                   key={item.id}

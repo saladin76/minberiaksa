@@ -130,8 +130,12 @@ export default function ProjectHeroMedia({ images, title, children }: ProjectHer
               />
             ))}
           </div>
-          <span aria-live="polite" className="pd-hero-count" style={{ position: "absolute", insetInlineEnd: 14, top: 14, padding: "4px 10px", borderRadius: 999, background: "rgba(16,33,43,.72)", color: "#fff", fontSize: 12, fontWeight: 900, direction: "ltr", pointerEvents: "none" }}>
-            {active + 1} / {images.length}
+          <span aria-live="polite" className="pd-hero-count" style={{ position: "absolute", insetInlineEnd: 14, top: 14, padding: "4px 10px", borderRadius: 999, background: "rgba(16,33,43,.72)", color: "#fff", fontSize: 12, fontWeight: 900, pointerEvents: "none" }}>
+            {/* Only the figures are isolated LTR  setting `direction` on the
+                badge itself would flip which side its inline-end is. */}
+            <bdi dir="ltr">
+              {active + 1} / {images.length}
+            </bdi>
           </span>
         </>
       ) : null}

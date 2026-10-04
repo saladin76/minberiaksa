@@ -2,7 +2,7 @@ import "server-only";
 
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import type { AlbarakaServiceResponse } from "@/lib/albaraka";
+import { albarakaIsoCode, type AlbarakaServiceResponse } from "@/lib/albaraka";
 import { sendDonationFailedConversions } from "@/lib/tracking/donation-conversion-server";
 import { dispatchDonationPaid, dispatchEvent } from "@/lib/events/dispatch";
 import { nextChargeAt, normalizeTimezone, type RecurringFrequency } from "@/lib/donations/recurring-schedule";
@@ -30,7 +30,9 @@ export async function failAlbarakaDonation(
   donationId: string,
   reason: string,
   extra: Record<string, unknown> = {},
-  orderId?: string
+  orderId?: string,
+  /** The bank's ResponseCode, kept so the failure page can explain the decline. */
+  responseCode?: string
 ): Promise<void> {
   console.error("[Albaraka] donation failed:", donationId, reason);
   try {
@@ -43,6 +45,7 @@ export async function failAlbarakaDonation(
         provider: "ALBARAKA",
         providerOrderId: donation.providerOrderId ?? orderId ?? null,
         providerTxnResult: "Failed",
+        ...(responseCode ? { providerProcReturnCode: albarakaIsoCode(responseCode) } : {}),
         providerErrorMessage: reason.slice(0, 500),
         providerRaw: asJson({ ...rawObject(donation.providerRaw), ...extra }),
       },

@@ -124,7 +124,7 @@ const TEXT_PATTERNS: Array<{ pattern: RegExp; key: PaymentErrorKey }> = [
   // 3-D Secure / SCA authentication failures
   { pattern: /authentication[_\s]*(required|failed)|3d[_\s_]?secure|sca[_\s]*failed|impossible.*authentifier/i, key: "authenticationFailed" },
   { pattern: /processing[_\s]*error|try[_\s]*again|temporary[_\s]*error/i, key: "processingError" },
-  { pattern: /network[_\s]*error|connection[_\s]*error|timeout/i, key: "networkError" },
+  { pattern: /network[_\s]*error|connection[_\s]*(error|failed)|timeout/i, key: "networkError" },
   { pattern: /issuer[_\s]*not[_\s]*available|issuer[_\s]*unavailable|issuer[_\s]*declined/i, key: "issuerUnavailable" },
   { pattern: /fraudulent|fraud[_\s]*suspected|suspected[_\s]*fraud|stolen[_\s]*card/i, key: "fraudSuspected" },
   // Generic decline catch-all

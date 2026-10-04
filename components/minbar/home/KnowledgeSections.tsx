@@ -200,7 +200,7 @@ export function FaqSection({ faqs, whatsappNumber = "905398436050" }: { faqs: Cm
   return (
     <section id="faq" style={{ position: "relative", zIndex: 1, background: "linear-gradient(to left, rgba(247,242,234,.60), rgba(247,242,234,.84))", padding: "48px 0", borderTop: "1px solid var(--border)", overflow: "hidden" }}>
       <div id="faq-grid" style={{ position: "relative", maxWidth: 1240, margin: "0 auto", padding: "0 24px", display: "grid", gridTemplateColumns: "minmax(0,.34fr) minmax(0,1fr)", gap: 44, alignItems: "start" }}>
-        <div style={{ display: "grid", gap: 18, justifyItems: "start", position: "sticky", top: 90 }}>
+        <div id="faq-aside" style={{ display: "grid", gap: 18, justifyItems: "start", position: "sticky", top: 90 }}>
           <h2 style={{ margin: 0, fontSize: "clamp(25px,2.5vw,34px)", lineHeight: 1.2, fontWeight: 900, letterSpacing: "-.01em" }}>{t("faqTitle")}</h2>
           <div id="faq-chips" style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             {["all", ...categories].map((id) => (
@@ -231,7 +231,7 @@ export function FaqSection({ faqs, whatsappNumber = "905398436050" }: { faqs: Cm
               </button>
             ))}
           </div>
-          <div style={{ display: "grid", gap: 10, width: "100%", padding: 20, background: "#fff", border: "1px solid rgba(211,154,39,.45)", borderRadius: 14, boxShadow: "0 1px 2px rgba(16,33,43,.04)" }}>
+          <div id="faq-help" style={{ display: "grid", gap: 10, width: "100%", padding: 20, background: "#fff", border: "1px solid rgba(211,154,39,.45)", borderRadius: 14, boxShadow: "0 1px 2px rgba(16,33,43,.04)" }}>
             <b style={{ fontSize: 16 }}>{t("faqNotFound")}</b>
             <span style={{ color: "var(--muted)", fontSize: 14, lineHeight: 1.8 }}>{t("faqWhatsapp")}</span>
             <a
@@ -246,7 +246,7 @@ export function FaqSection({ faqs, whatsappNumber = "905398436050" }: { faqs: Cm
           </div>
         </div>
 
-        <div style={{ display: "grid", background: "#fff", border: "1px solid var(--border)", borderRadius: 14, overflow: "hidden", boxShadow: "0 1px 2px rgba(16,33,43,.04)" }}>
+        <div id="faq-list" style={{ display: "grid", background: "#fff", border: "1px solid var(--border)", borderRadius: 14, overflow: "hidden", boxShadow: "0 1px 2px rgba(16,33,43,.04)" }}>
           {visible.map((faq, i) => {
             const isOpen = open === i;
             return (
@@ -262,15 +262,16 @@ export function FaqSection({ faqs, whatsappNumber = "905398436050" }: { faqs: Cm
                   type="button"
                   onClick={() => setOpen(isOpen ? -1 : i)}
                   aria-expanded={isOpen}
+                  className="faq-q"
                   style={{ width: "100%", display: "flex", alignItems: "center", gap: 14, padding: 20, background: "transparent", border: 0, cursor: "pointer", fontFamily: "inherit", fontSize: 17, fontWeight: 800, color: "var(--deep)", textAlign: "start" }}
                 >
                   {faq.page ? (
-                    <span style={{ flex: "0 0 auto", padding: "3px 9px", borderRadius: 999, background: "rgba(211,154,39,.12)", color: "#8a6415", fontSize: 11, fontWeight: 900 }}>
+                    <span className="faq-tag" style={{ flex: "0 0 auto", padding: "3px 9px", borderRadius: 999, background: "rgba(211,154,39,.12)", color: "#8a6415", fontSize: 11, fontWeight: 900 }}>
                       {label(faq.page)}
                     </span>
                   ) : null}
-                  {faq.question}
-                  <span style={{ marginInlineStart: "auto", flex: "0 0 auto", display: "grid", placeItems: "center", width: 28, height: 28, borderRadius: "50%", border: "1px solid var(--border)", color: "var(--gold)", fontSize: 16 }} aria-hidden="true">
+                  <span className="faq-qtext">{faq.question}</span>
+                  <span className="faq-plus" style={{ marginInlineStart: "auto", flex: "0 0 auto", display: "grid", placeItems: "center", width: 28, height: 28, borderRadius: "50%", border: "1px solid var(--border)", color: "var(--gold)", fontSize: 16 }} aria-hidden="true">
                     {isOpen ? "−" : "+"}
                   </span>
                 </button>

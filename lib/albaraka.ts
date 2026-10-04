@@ -294,9 +294,11 @@ export function isAlbarakaApproved(res: AlbarakaServiceResponse | null): boolean
 export async function albarakaService(
   transactionType: string,
   body: Record<string, unknown>,
-  opts: { correlationId: string; config?: AlbarakaConfig }
+  opts: { correlationId: string; config?: AlbarakaConfig; timeoutMs?: number }
 ): Promise<AlbarakaServiceResponse> {
   const cfg = opts.config ?? albarakaConfig();
+  // A hung bank call must not outlive the serverless function: past the timeout
+  // the caller treats the outcome as unknown and asks the bank what happened.
   const res = await fetch(`${cfg.serviceUrl}/${transactionType}`, {
     method: "POST",
     headers: {
@@ -308,6 +310,7 @@ export async function albarakaService(
       "X-CORRELATION-ID": opts.correlationId.replace(/[^A-Za-z0-9]/g, "").slice(0, 30),
     },
     body: JSON.stringify(body),
+    signal: AbortSignal.timeout(opts.timeoutMs ?? 40_000),
   });
 
   const text = await res.text();
@@ -319,8 +322,169 @@ export async function albarakaService(
         ResponseCode: String(res.status),
         ResponseDescription: text.slice(0, 500) || "Malformed response from Albaraka",
       },
+      TransportFailure: true,
     };
   }
+}
+
+/**
+ * True when the bank's answer could not be read (an HTML error page, a gateway
+ * 5xx). The transaction may or may not have gone through, so it is not a decline.
+ */
+export function isAlbarakaTransportFailure(res: AlbarakaServiceResponse | null): boolean {
+  return Boolean(res?.TransportFailure);
+}
+
+/**
+ * Banks answer `0051`-style four-digit codes where the ISO-8583 code is the last
+ * two digits. Normalised so the decline catalog can explain them to the donor.
+ */
+export function albarakaIsoCode(code: string): string {
+  const c = String(code || "").trim();
+  return /^00\d\d$/.test(c) ? c.slice(2) : c;
+}
+
+/** Codes meaning the request itself was refused before reaching the card. */
+export const ALBARAKA_MERCHANT_SIDE_CODES: Record<string, string> = {
+  // Posnet: MerchantNo / TerminalNo / source IP not authorised for this terminal.
+  // From a server this almost always means the outbound IP is not on the
+  // terminal's "Sabit IP" list in the merchant portal.
+  "0148": "Request not authorised by the bank (terminal or server IP not allowed)",
+  "0127": "Order id already used",
+};
+
+// ── Status inquiry (Agreement) and void (Reverse) ────────────────────────────
+
+/** MACParams for /Agreement (the document's "İşlem Durum Sorgulama"). */
+export const ALBARAKA_INQUIRY_MAC_PARAMS = "MerchantNo:TerminalNo";
+/** MACParams for /Reverse (İptal) and /Return (İade). */
+export const ALBARAKA_REVERSE_MAC_PARAMS = "MerchantNo:TerminalNo:ReferenceCode:OrderId";
+
+/**
+ * Plain SHA256 over MerchantNo + TerminalNo + key. Verified against the document's
+ * Capture/Agreement example → wgyfAJPbEPtTtce/+HRlXajSRfYA0J6mUcH+16EbB78=
+ */
+export function albarakaInquiryMac(cfg: Pick<AlbarakaConfig, "merchantNo" | "terminalNo">, encKey: string): string {
+  return sha256Base64(cfg.merchantNo + cfg.terminalNo + encKey);
+}
+
+/**
+ * Plain SHA256 over MerchantNo + TerminalNo + ReferenceCode + OrderId + key, an
+ * absent value taking part as "". Verified against all three /Reverse examples in
+ * the document (qhLo/…, ir8Jt…, 9Z4yl…).
+ */
+export function albarakaReverseMac(
+  params: { merchantNo: string; terminalNo: string; referenceCode?: string | null; orderId?: string | null },
+  encKey: string
+): string {
+  return sha256Base64(
+    params.merchantNo + params.terminalNo + (params.referenceCode ?? "") + (params.orderId ?? "") + encKey
+  );
+}
+
+export type AlbarakaInquiryResult =
+  | { state: "approved"; authCode: string; raw: AlbarakaServiceResponse }
+  | { state: "absent"; raw: AlbarakaServiceResponse }
+  | { state: "unknown"; raw: AlbarakaServiceResponse | null; error?: string };
+
+/**
+ * Asks the bank whether a sale with this order id went through: the recovery
+ * for a /Sale whose answer never arrived. Only a Sale row carrying an approval
+ * code counts as approved; "Kayıt Bulunamadı" (E219) means the bank has nothing.
+ */
+export async function albarakaInquireSale(orderId: string, cfg: AlbarakaConfig): Promise<AlbarakaInquiryResult> {
+  let res: AlbarakaServiceResponse;
+  try {
+    res = await albarakaService(
+      "Agreement",
+      {
+        ApiType: "JSON",
+        ApiVersion: "V100",
+        MAC: albarakaInquiryMac(cfg, cfg.encKey),
+        MACParams: ALBARAKA_INQUIRY_MAC_PARAMS,
+        MerchantNo: cfg.merchantNo,
+        TerminalNo: cfg.terminalNo,
+        IsEncrypted: "N",
+        OrderId: orderId,
+      },
+      { correlationId: `${orderId}Q`, config: cfg, timeoutMs: 20_000 }
+    );
+  } catch (err) {
+    return { state: "unknown", raw: null, error: String(err) };
+  }
+  if (isAlbarakaTransportFailure(res)) return { state: "unknown", raw: res };
+
+  const code = res.ServiceResponseData?.ResponseCode ?? "";
+  if (code === "E219") return { state: "absent", raw: res };
+  if (!isAlbarakaApproved(res)) return { state: "unknown", raw: res };
+
+  const rows = Array.isArray(res.TransactionData) ? (res.TransactionData as Array<Record<string, unknown>>) : [];
+  const sale = rows.find(
+    (r) => String(r.TransactionType ?? "").toLowerCase() === "sale" && String(r.AuthCode ?? "").trim() !== ""
+  );
+  return sale ? { state: "approved", authCode: String(sale.AuthCode), raw: res } : { state: "absent", raw: res };
+}
+
+/**
+ * Voids a same-day sale by order id (İptal; only before the bank's end of day).
+ * Used when a sale's outcome cannot be established, so the donor is never
+ * charged for a donation the site recorded as failed.
+ */
+export async function albarakaReverseSale(
+  orderId: string,
+  cfg: AlbarakaConfig,
+  referenceCode: string | null = null
+): Promise<AlbarakaServiceResponse | null> {
+  try {
+    return await albarakaService(
+      "Reverse",
+      {
+        ApiType: "JSON",
+        ApiVersion: "V100",
+        MAC: albarakaReverseMac(
+          { merchantNo: cfg.merchantNo, terminalNo: cfg.terminalNo, referenceCode, orderId: referenceCode ? null : orderId },
+          cfg.encKey
+        ),
+        MACParams: ALBARAKA_REVERSE_MAC_PARAMS,
+        MerchantNo: cfg.merchantNo,
+        TerminalNo: cfg.terminalNo,
+        IsEncrypted: "N",
+        OrderId: referenceCode ? null : orderId,
+        ReferenceCode: referenceCode,
+        TransactionType: "Sale",
+      },
+      { correlationId: `${orderId}R`, config: cfg, timeoutMs: 20_000 }
+    );
+  } catch (err) {
+    console.error("[Albaraka] reverse failed:", orderId, err);
+    return null;
+  }
+}
+
+// ── Card validation ──────────────────────────────────────────────────────────
+
+/** Luhn check on a digits-only PAN of plausible length. */
+export function isValidCardNumber(pan: string): boolean {
+  if (!/^\d{12,19}$/.test(pan)) return false;
+  let sum = 0;
+  for (let i = 0; i < pan.length; i++) {
+    let d = Number(pan[pan.length - 1 - i]);
+    if (i % 2 === 1) {
+      d *= 2;
+      if (d > 9) d -= 9;
+    }
+    sum += d;
+  }
+  return sum % 10 === 0;
+}
+
+/** A bank-format YYMM expiry that is a real month and not yet past. */
+export function isValidBankExpiry(yymm: string, now: Date = new Date()): boolean {
+  if (!/^\d{4}$/.test(yymm)) return false;
+  const year = 2000 + Number(yymm.slice(0, 2));
+  const month = Number(yymm.slice(2, 4));
+  if (month < 1 || month > 12) return false;
+  return now.getTime() < Date.UTC(year, month, 1);
 }
 
 /**

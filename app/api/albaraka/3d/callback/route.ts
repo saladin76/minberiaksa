@@ -15,6 +15,9 @@ import {
 import { failAlbarakaDonation, settleAlbarakaDonation } from "@/lib/donations/albaraka-settlement";
 import { withDonationToken } from "@/lib/donations/access-token";
 
+// Calls Albaraka's /Sale, which only accepts the project's Static IPs (sin1).
+export const preferredRegion = "sin1";
+
 /**
  * POST /api/albaraka/3d/callback
  *

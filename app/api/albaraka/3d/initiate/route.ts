@@ -11,9 +11,18 @@ import {
   albarakaMinorUnits,
   albarakaService,
   buildAlbaraka2DSale,
+  ALBARAKA_MERCHANT_SIDE_CODES,
+  albarakaInquireSale,
+  albarakaReverseSale,
   isAlbarakaApproved,
   isAlbarakaConfigured,
+  isAlbarakaRecurringEnabled,
+  isAlbarakaTransportFailure,
+  isValidBankExpiry,
+  isValidCardNumber,
+  type AlbarakaConfig,
   type AlbarakaCurrencyCode,
+  type AlbarakaServiceResponse,
 } from "@/lib/albaraka";
 import { failAlbarakaDonation, settleAlbarakaDonation } from "@/lib/donations/albaraka-settlement";
 import { parseMainGateway } from "@/lib/payment-gateway";
@@ -23,7 +32,6 @@ import {
   getUsdBaseRatesForServer,
 } from "@/lib/exchange/rates-service";
 import { decryptCard, detectCardType, encryptCard, hashCvc } from "@/lib/card-crypto";
-import { isAlbarakaRecurringEnabled } from "@/lib/albaraka";
 
 /**
  * POST /api/albaraka/3d/initiate
@@ -81,7 +89,72 @@ function toBankExpiry(raw: string): string {
   return `${yy}${mm}`;
 }
 
+// Room for the sale, plus a status inquiry and a void when its answer is lost.
+export const maxDuration = 90;
+// Albaraka only accepts calls from the IPs on the terminal's "Sabit IP" list.
+// Those are the project's Vercel Static IPs, which exist in ap-southeast-1 only,
+// so every route that calls the bank runs there.
+export const preferredRegion = "sin1";
+
+/**
+ * A /Sale whose answer never arrived. The bank is asked by order id: an
+ * approved sale settles the donation, no record fails it. When even that is
+ * unclear, the order is voided (same-day İptal) before the donation is failed,
+ * so the donor is never charged for a donation the site shows as failed.
+ * Returns whether the donation ended up paid.
+ */
+async function resolveUnknownOutcome(
+  donationId: string,
+  orderId: string,
+  cfg: AlbarakaConfig,
+  cause: unknown
+): Promise<boolean> {
+  console.error("[Albaraka 2D SALE] no readable answer, inquiring", { donationId, orderId, cause: String(cause) });
+  const inquiry = await albarakaInquireSale(orderId, cfg);
+
+  if (inquiry.state === "approved") {
+    await settleAlbarakaDonation(
+      donationId,
+      {
+        ServiceResponseData: { ResponseCode: "00", ResponseDescription: "Approved (recovered by status inquiry)" },
+        AuthCode: inquiry.authCode,
+        ReferenceCode: null,
+      },
+      { albarakaInquiry: inquiry.raw as unknown as Record<string, unknown> }
+    );
+    return true;
+  }
+
+  /* Void even when the bank reports no record: a sale still being processed
+     can land after the inquiry, and voiding an order that never existed is
+     harmless. */
+  const reverse: AlbarakaServiceResponse | null = await albarakaReverseSale(orderId, cfg);
+  console.error("[Albaraka 2D SALE] unresolved sale", {
+    donationId,
+    orderId,
+    inquiry: inquiry.state,
+    reverse: reverse?.ServiceResponseData ?? null,
+  });
+
+  await failAlbarakaDonation(
+    donationId,
+    inquiry.state === "absent"
+      ? "Bank connection failed; the bank has no record of the sale"
+      : `Bank connection failed; outcome unknown, void ${isAlbarakaApproved(reverse) ? "succeeded" : "not confirmed"}; check order ${orderId} in the merchant panel`,
+    {
+      albarakaInquiry: inquiry.raw as unknown as Record<string, unknown>,
+      albarakaReverse: reverse as unknown as Record<string, unknown>,
+    },
+    orderId,
+    ""
+  );
+  return false;
+}
+
 export async function POST(req: NextRequest) {
+  /* Set while this request holds the "Processing" claim but has not sent the
+     sale yet; an error in that window hands the donation back for a retry. */
+  let unsentClaim: string | null = null;
   try {
     const session = await getServerSession(authOptions);
     const cfg = albaraka2DConfig();
@@ -238,6 +311,61 @@ export async function POST(req: NextRequest) {
         { status: 400 }
       );
     }
+    // Caught here rather than spent as a bank decline (and a FAILED donation).
+    if (!isValidCardNumber(cardNo)) {
+      return NextResponse.json({ error: "Invalid card number" }, { status: 400 });
+    }
+    if (!isValidBankExpiry(expiredDate)) {
+      return NextResponse.json({ error: "Card expiry date is invalid or in the past" }, { status: 400 });
+    }
+    if (!/^\d{3,4}$/.test(cvv)) {
+      return NextResponse.json({ error: "Invalid security code" }, { status: 400 });
+    }
+    // CardInformationData.CardHolderName is max 50 characters.
+    cardHolderName = cardHolderName.replace(/\s+/g, " ").slice(0, 50);
+
+    /* Claim the donation for this attempt, atomically. A double-click or a
+       retried request must not send a second /Sale for the same donation: only
+       the request that flips it to "Processing" reaches the bank. The flag is
+       cleared by settlement ("Success") or failure ("Failed"). */
+    const claim = await prisma.donation.updateMany({
+      where: {
+        id: donation.id,
+        paidAt: null,
+        status: { not: "FAILED" },
+        OR: [
+          { providerTxnResult: { isSet: false } },
+          { providerTxnResult: null },
+          { providerTxnResult: { not: "Processing" } },
+        ],
+      },
+      data: {
+        locale,
+        provider: "ALBARAKA",
+        providerOrderId: orderId,
+        providerTxnType: transactionType,
+        providerTxnResult: "Processing",
+        // Snapshot of what we actually asked the bank to charge.
+        providerRaw: {
+          ...(typeof donation.providerRaw === "object" && donation.providerRaw ? (donation.providerRaw as object) : {}),
+          albarakaRequest: {
+            orderId,
+            amount,
+            currencyCode,
+            transactionType,
+            mode: "2D",
+            createdAt: new Date().toISOString(),
+          },
+        } as Prisma.InputJsonValue,
+      },
+    });
+    if (claim.count !== 1) {
+      return NextResponse.json(
+        { error: "A payment for this donation is already in progress or finished." },
+        { status: 409 }
+      );
+    }
+    unsentClaim = donation.id;
 
     /* A plan: keep the card the donor is authorising, so the scheduler can
        charge the later instalments. Stored the way the account's saved cards
@@ -265,45 +393,40 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    await prisma.donation.update({
-      where: { id: donation.id },
-      data: {
-        locale,
-        provider: "ALBARAKA",
-        providerOrderId: orderId,
-        providerTxnType: transactionType,
-        // Snapshot of what we actually asked the bank to charge. The callback
-        // replays it to detect an amount/order swap and to build the /Sale call
-        // without re-running the FX conversion (rates can move in between).
-        providerRaw: {
-          albarakaRequest: {
+    // ── 2D sale ──────────────────────────────────────────────────────────────
+    let sale: AlbarakaServiceResponse | null = null;
+    let transportError: unknown = null;
+    unsentClaim = null;
+    try {
+      sale = await albarakaService(
+        "Sale",
+        buildAlbaraka2DSale(
+          {
             orderId,
             amount,
             currencyCode,
-            transactionType,
-            mode: "2D",
-            createdAt: new Date().toISOString(),
+            card: { number: cardNo, expireDate: expiredDate, cvc2: cvv, holderName: cardHolderName },
           },
-        } as Prisma.InputJsonValue,
-      },
-    });
+          cfg
+        ),
+        { correlationId: orderId, config: cfg }
+      );
+    } catch (err) {
+      transportError = err;
+    }
 
-    // ── 2D sale ──────────────────────────────────────────────────────────────
-    const sale = await albarakaService(
-      "Sale",
-      buildAlbaraka2DSale(
-        {
-          orderId,
-          amount,
-          currencyCode,
-          card: { number: cardNo, expireDate: expiredDate, cvc2: cvv, holderName: cardHolderName },
-        },
-        cfg
-      ),
-      { correlationId: orderId, config: cfg }
-    );
-    const responseCode = sale.ServiceResponseData?.ResponseCode ?? "";
-    const responseDescription = sale.ServiceResponseData?.ResponseDescription ?? "";
+    /* The request left but no readable answer came back (timeout, dropped
+       connection, an HTML error page). The card may have been charged, so this
+       is not a decline: ask the bank, and if it cannot say, void the order so
+       a donation recorded as failed never keeps the donor's money. */
+    if (transportError || isAlbarakaTransportFailure(sale)) {
+      const paid = await resolveUnknownOutcome(donation.id, orderId, cfg, transportError ?? sale);
+      return NextResponse.json({ actionUrl: resultUrl, fields: {}, paid });
+    }
+
+    const approved = isAlbarakaApproved(sale);
+    const responseCode = sale?.ServiceResponseData?.ResponseCode ?? "";
+    const responseDescription = sale?.ServiceResponseData?.ResponseDescription ?? "";
 
     // The bank's answer, never the card: nothing card-bearing is logged.
     console.log("[Albaraka 2D SALE]", {
@@ -314,24 +437,32 @@ export async function POST(req: NextRequest) {
       plan: plan?.id ?? null,
       responseCode,
       responseDescription,
-      authCode: sale.AuthCode ?? null,
-      referenceCode: sale.ReferenceCode ?? null,
+      authCode: sale?.AuthCode ?? null,
+      referenceCode: sale?.ReferenceCode ?? null,
     });
 
-    if (isAlbarakaApproved(sale)) {
+    if (approved && sale) {
       await settleAlbarakaDonation(donation.id, sale);
     } else {
+      const merchantSide = ALBARAKA_MERCHANT_SIDE_CODES[responseCode];
+      if (merchantSide) console.error(`[Albaraka 2D SALE] ${responseCode}: ${merchantSide}`);
       await failAlbarakaDonation(
         donation.id,
-        responseDescription || `Sale declined (${responseCode || "no response code"})`,
+        responseDescription || merchantSide || `Sale declined (${responseCode || "no response code"})`,
         { albarakaSale: sale as unknown as Record<string, unknown> },
-        orderId
+        orderId,
+        responseCode
       );
     }
 
-    return NextResponse.json({ actionUrl: resultUrl, fields: {}, paid: isAlbarakaApproved(sale) });
+    return NextResponse.json({ actionUrl: resultUrl, fields: {}, paid: approved });
   } catch (error) {
     console.error("Albaraka initiate error:", error);
+    if (unsentClaim) {
+      await prisma.donation
+        .updateMany({ where: { id: unsentClaim, providerTxnResult: "Processing" }, data: { providerTxnResult: null } })
+        .catch(() => {});
+    }
     return NextResponse.json({ error: "Failed to initiate payment" }, { status: 500 });
   }
 }
