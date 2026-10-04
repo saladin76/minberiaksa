@@ -525,8 +525,20 @@ export function WhatsappTemplateEditorDialog({ id, open, onOpenChange }: Props) 
       const response = workingId
         ? await axios.patch(`/api/templates/whatsapp/${workingId}`, payload)
         : await axios.post("/api/templates/whatsapp", payload);
-      const publish = response.data?.publish as { targets?: number } | undefined;
-      toast.success(`تم إنشاء القالب وإرساله إلى Meta للمراجعة${publish?.targets ? ` (${publish.targets} نسخة WABA/لغة)` : ""}`);
+      const publish = response.data?.publish as {
+        targets?: number;
+        statuses?: Array<unknown>;
+        unsupportedWabas?: Array<{ businessAccountId?: string }>;
+      } | undefined;
+      const publishedCount = publish?.statuses?.length ?? 0;
+      const unsupportedCount = publish?.unsupportedWabas?.length ?? 0;
+      if (unsupportedCount > 0) {
+        toast.success(
+          `تم إرسال القالب إلى ${publishedCount} نسخة مؤهلة في Meta. تم تجاوز ${unsupportedCount} WABA لأن Meta لا تسمح بإدارة القوالب عليها.`,
+        );
+      } else {
+        toast.success(`تم إنشاء القالب وإرساله إلى Meta للمراجعة${publish?.targets ? ` (${publish.targets} نسخة WABA/لغة)` : ""}`);
+      }
       onOpenChange(false);
     } catch (error) {
       const data = (error as {
