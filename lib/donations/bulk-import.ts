@@ -295,8 +295,12 @@ export const IMPORT_RUN_ID_RE = /^[a-z0-9]{8,40}$/i;
 /** The row shape the browser posts to the commit route  a ParsedDonationRow without the display-only fields. */
 export type ImportRowInput = Omit<ParsedDonationRow, "valid" | "issues" | "raw">;
 
-export function toImportRowInput({ valid: _valid, issues: _issues, raw: _raw, ...row }: ParsedDonationRow): ImportRowInput {
-  return row;
+export function toImportRowInput(row: ParsedDonationRow): ImportRowInput {
+  const { valid, issues, raw, ...rest } = row;
+  void valid;
+  void issues;
+  void raw;
+  return rest;
 }
 
 function text(value: unknown, max = 300): string | null {
