@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { toast } from "react-hot-toast";
-import { Dialog, DialogContent, DialogOverlay, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { MessageCircle, Clock, ShieldCheck, Megaphone, Loader2, Send, History, CircleAlert } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -153,7 +153,6 @@ export function SmartWhatsappDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogOverlay className="fixed inset-0 bg-black/50" />
       <DialogContent
         className="fixed left-1/2 top-1/2 w-[calc(100%-2rem)] max-w-2xl max-h-[90vh] overflow-y-auto p-0 transform -translate-x-1/2 -translate-y-1/2 border border-border rounded-2xl shadow-2xl bg-white"
         dir="rtl"
