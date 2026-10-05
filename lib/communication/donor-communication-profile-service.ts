@@ -41,6 +41,38 @@ export async function getProfile(userId: string): Promise<DonorCommunicationProf
   }
 }
 
+/** Create only MISSING profiles from legacy flags. Existing profile consent is never overwritten. */
+export async function ensureProfilesForUsers(userIds: string[]): Promise<void> {
+  if (!process.env.DATABASE_URL) return;
+  const ids = [...new Set(userIds.filter(Boolean))];
+  if (!ids.length) return;
+  const existing = await prisma.donorCommunicationProfile.findMany({ where: { userId: { in: ids } }, select: { userId: true } }).catch(() => []);
+  const have = new Set(existing.map((row) => row.userId));
+  const missing = ids.filter((id) => !have.has(id));
+  if (!missing.length) return;
+  const users = await prisma.user.findMany({
+    where: { id: { in: missing }, role: "DONOR" },
+    select: { id: true, email: true, phone: true, countryCode: true, preferredLang: true, emailNotifications: true, smsNotifications: true },
+  }).catch(() => []);
+  for (const user of users) {
+    const preferredLocale = resolvePreferredLocale(user.preferredLang, null, user.countryCode);
+    await prisma.donorCommunicationProfile.create({
+      data: {
+        userId: user.id,
+        preferredLocale,
+        countryCode: user.countryCode ?? null,
+        phone: user.phone ?? null,
+        email: user.email ?? null,
+        emailOptIn: Boolean(user.email) && user.emailNotifications !== false,
+        smsOptIn: Boolean(user.phone) && user.smsNotifications !== false,
+        whatsappOptIn: false,
+        consentSource: "legacy-profile-bootstrap",
+        lastConsentAt: new Date(),
+      },
+    }).catch(() => {});
+  }
+}
+
 export type ProfileSyncResult =
   | { ok: true; data: DonorCommunicationProfile }
   | { ok: false; status: number; error: string };
@@ -79,27 +111,34 @@ export async function upsertProfileForUser(
     ]);
 
     const preferredLocale = resolvePreferredLocale(user.preferredLang, opts?.donationLocale ?? null, user.countryCode);
-    const existing = await prisma.donorCommunicationProfile.findUnique({ where: { userId }, select: { whatsappOptIn: true } });
+    const existing = await prisma.donorCommunicationProfile.findUnique({
+      where: { userId },
+      select: { id: true, whatsappOptIn: true, emailOptIn: true, smsOptIn: true, doNotContact: true },
+    });
 
-    const data = {
+    const profileData = {
       preferredLocale,
       countryCode: user.countryCode ?? null,
       phone: user.phone ?? null,
       email: user.email ?? null,
-      // Email/SMS opt-in mirror the existing notification flags (marketing gate).
-      emailOptIn: user.email ? user.emailNotifications !== false : false,
-      smsOptIn: user.phone ? user.smsNotifications !== false : false,
-      // WhatsApp consent is never assumed  keep any existing explicit value, else false.
-      whatsappOptIn: existing?.whatsappOptIn ?? false,
       lastDonationAt: lastPaid?.paidAt ?? null,
       totalDonations: paidCount,
     };
 
-    const row = await prisma.donorCommunicationProfile.upsert({
-      where: { userId },
-      create: { userId, ...data },
-      update: data,
-    });
+    const row = existing
+      ? await prisma.donorCommunicationProfile.update({
+          where: { userId },
+          data: profileData,
+        })
+      : await prisma.donorCommunicationProfile.create({
+          data: {
+            userId,
+            ...profileData,
+            emailOptIn: user.email ? user.emailNotifications !== false : false,
+            smsOptIn: user.phone ? user.smsNotifications !== false : false,
+            whatsappOptIn: false,
+          },
+        });
     return { ok: true, data: row };
   } catch (error) {
     console.error("upsertProfileForUser failed", error);

@@ -227,6 +227,51 @@ export async function publishWhatsappTemplateToMeta(
       summary.statuses.push({
         businessAccountId: waba, language, status: result.status, existed: result.existed, id: result.id,
       });
+
+      // Persist provider truth immediately after Meta accepts/returns the language variant.
+      // This is the lifecycle boundary used by the edit guard: local drafts remain editable until
+      // this row exists with a real provider id, even when a previous publish attempt failed.
+      await prisma.whatsappTemplateWabaVariant.upsert({
+        where: {
+          templateId_provider_businessAccountId_languageCode: {
+            templateId,
+            provider: "META_WHATSAPP",
+            businessAccountId: waba,
+            languageCode: language,
+          },
+        },
+        update: {
+          providerTemplateName,
+          providerTemplateId: result.id,
+          locale,
+          approvalStatus: result.status,
+          category,
+          componentsSchema: components as never,
+          rejectionReason: null,
+          lastSyncedAt: new Date(),
+        },
+        create: {
+          templateId,
+          provider: "META_WHATSAPP",
+          businessAccountId: waba,
+          providerTemplateName,
+          providerTemplateId: result.id,
+          languageCode: language,
+          locale,
+          approvalStatus: result.status,
+          category,
+          componentsSchema: components as never,
+          rejectionReason: null,
+          lastSyncedAt: new Date(),
+        },
+      }).catch((error: unknown) => {
+        console.error("Persisting Meta WABA/language variant after publish failed", {
+          templateId,
+          businessAccountId: waba,
+          language,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      });
     }
   }
 

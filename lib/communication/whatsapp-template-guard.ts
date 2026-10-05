@@ -60,6 +60,29 @@ export async function hasSubmittedMetaVariant(templateId: string): Promise<boole
   return count > 0 || ((provider === "META" || provider === "META_WHATSAPP") && Boolean(template?.externalTemplateId));
 }
 
+
+function localeFromProviderLanguage(languageCode: string | null | undefined, locale: string | null | undefined): string | null {
+  const direct = String(locale ?? "").trim().toLowerCase();
+  if (direct) return direct;
+  const code = String(languageCode ?? "").trim().toLowerCase();
+  return code ? code.replace(/[_-].*$/, "") : null;
+}
+
+export async function submittedMetaLocales(templateId: string): Promise<Set<string>> {
+  if (!process.env.DATABASE_URL) return new Set();
+  const rows = await prisma.whatsappTemplateWabaVariant.findMany({
+    where: { templateId, provider: "META_WHATSAPP" },
+    select: { languageCode: true, locale: true, providerTemplateId: true },
+  }).catch(() => []);
+  const locales = new Set<string>();
+  for (const row of rows) {
+    if (!row.providerTemplateId) continue;
+    const locale = localeFromProviderLanguage(row.languageCode, row.locale);
+    if (locale) locales.add(locale);
+  }
+  return locales;
+}
+
 /**
  * Gate one edit. Returns null when the edit is allowed.
  *
@@ -72,77 +95,68 @@ export async function rejectDisallowedTemplateEdit(
 ): Promise<EditRejection | null> {
   const owned = providerOwnedEdits(patch);
   if (owned.length) {
+    return { ok: false, status: 409, error: "هذه الحقول يملكها المزوّد وتُحدَّث من مزامنة Meta فقط.", fields: owned };
+  }
+
+  const content = APPROVED_CONTENT_FIELDS.filter((field) => Object.prototype.hasOwnProperty.call(patch, field));
+  if (!content.length) return null;
+
+  const submittedLocales = await submittedMetaLocales(templateId);
+  if (!submittedLocales.size) return null;
+
+  const current = await prisma.whatsappTemplate.findUnique({
+    where: { id: templateId },
+    select: { body: true, translations: true, variables: true, header: true, buttons: true, footerText: true, authentication: true },
+  }).catch(() => null);
+  if (!current) return null;
+
+  const stable = (value: unknown): string => {
+    if (value === null || value === undefined) return "null";
+    if (Array.isArray(value)) return `[${value.map(stable).join(",")}]`;
+    if (typeof value === "object") {
+      const entries = Object.entries(value as Record<string, unknown>)
+        .filter(([, item]) => item !== undefined && item !== null)
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([key, item]) => `${JSON.stringify(key)}:${stable(item)}`);
+      return `{${entries.join(",")}}`;
+    }
+    return JSON.stringify(value);
+  };
+
+  const currentRecord = current as unknown as Record<string, unknown>;
+  const changed: string[] = [];
+
+  for (const field of content) {
+    const nextValue = patch[field];
+    const currentValue = currentRecord[field];
+
+    if (field === "translations") {
+      const before = currentValue && typeof currentValue === "object" && !Array.isArray(currentValue)
+        ? currentValue as Record<string, unknown>
+        : {};
+      const after = nextValue && typeof nextValue === "object" && !Array.isArray(nextValue)
+        ? nextValue as Record<string, unknown>
+        : {};
+
+      for (const locale of submittedLocales) {
+        if (locale === "ar" || !(locale in before)) continue;
+        if (!(locale in after) || stable(after[locale]) !== stable(before[locale])) {
+          changed.push(`translations.${locale}`);
+        }
+      }
+      continue;
+    }
+
+    if (submittedLocales.has("ar") && stable(nextValue) !== stable(currentValue)) changed.push(field);
+  }
+
+  if (changed.length) {
     return {
       ok: false,
       status: 409,
-      error: "هذه الحقول يملكها المزوّد وتُحدَّث من مزامنة Meta فقط.",
-      fields: owned,
+      error: "لا يمكن تعديل لغة تم إرسالها فعليًا إلى Meta. اللغات المحلية التي لم تصل إلى Meta بعد تبقى قابلة للتعديل وإعادة الإرسال.",
+      fields: changed,
     };
-  }
-  const content = APPROVED_CONTENT_FIELDS.filter((field) => Object.prototype.hasOwnProperty.call(patch, field));
-  if (content.length && (await hasSubmittedMetaVariant(templateId))) {
-    /*
-     * Retrying a partial Meta publish sends the same draft back through PATCH. Presence alone must
-     * not count as an edit or the retry is permanently blocked after the first WABA succeeds.
-     * Compare the submitted values to the stored draft and freeze only actual content changes.
-     */
-    const current = await prisma.whatsappTemplate.findUnique({
-      where: { id: templateId },
-      select: {
-        body: true,
-        translations: true,
-        variables: true,
-        header: true,
-        buttons: true,
-        footerText: true,
-        authentication: true,
-      },
-    }).catch(() => null);
-    const stable = (value: unknown): string => {
-      if (value === null || value === undefined) return "null";
-      if (Array.isArray(value)) return `[${value.map(stable).join(",")}]`;
-      if (typeof value === "object") {
-        const entries = Object.entries(value as Record<string, unknown>)
-          .filter(([, item]) => item !== undefined && item !== null)
-          .sort(([a], [b]) => a.localeCompare(b))
-          .map(([key, item]) => `${JSON.stringify(key)}:${stable(item)}`);
-        return `{${entries.join(",")}}`;
-      }
-      return JSON.stringify(value);
-    };
-    const currentRecord = current as unknown as Record<string, unknown> | null;
-    const changed = currentRecord
-      ? content.filter((field) => {
-          const nextValue = (patch as Record<string, unknown>)[field];
-          const currentValue = currentRecord[field];
-
-          // Meta allows adding a new language to an existing template name. Existing submitted
-          // languages remain immutable, but a translations patch that only adds new locale keys is
-          // safe and must not force the operator to create a second template such as *_tr.
-          if (field === "translations") {
-            const before = currentValue && typeof currentValue === "object" && !Array.isArray(currentValue)
-              ? currentValue as Record<string, unknown>
-              : {};
-            const after = nextValue && typeof nextValue === "object" && !Array.isArray(nextValue)
-              ? nextValue as Record<string, unknown>
-              : {};
-            for (const [locale, value] of Object.entries(before)) {
-              if (!(locale in after) || stable(after[locale]) !== stable(value)) return true;
-            }
-            return false;
-          }
-
-          return stable(nextValue) !== stable(currentValue);
-        })
-      : content;
-    if (changed.length) {
-      return {
-        ok: false,
-        status: 409,
-        error: "تم إرسال هذا القالب إلى Meta بالفعل؛ لا يمكن تغيير محتوى اللغات المرسلة. يمكنك إضافة لغة جديدة إلى نفس القالب، أما تغيير النص أو المكونات الحالية فيحتاج قالبًا جديدًا.",
-        fields: changed,
-      };
-    }
   }
   return null;
 }

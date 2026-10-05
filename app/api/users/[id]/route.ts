@@ -10,6 +10,7 @@ import {
 import { requireAdminSession } from '@/lib/dashboard/api-auth';
 import { writeAuditLog } from '@/lib/audit-log';
 import { getBadgeIdsByUser } from '@/lib/badge-criteria';
+import { setProfileConsent, upsertProfileForUser } from '@/lib/communication/donor-communication-profile-service';
 
 function roleLabelAr(r: string) {
   if (r === 'ADMIN') return 'مدير';
@@ -416,6 +417,24 @@ export async function PUT(
         ...(nextClarityId !== undefined && { clarityId: nextClarityId }),
       },
     });
+
+    if (
+      updatedUser.role === 'DONOR' &&
+      (email !== undefined || phone !== undefined || countryCode !== undefined || preferredLang !== undefined || emailNotifications !== undefined || smsNotifications !== undefined)
+    ) {
+      await upsertProfileForUser(id).catch(() => null);
+      if (emailNotifications !== undefined || smsNotifications !== undefined) {
+        await setProfileConsent(
+          id,
+          {
+            ...(emailNotifications !== undefined ? { emailOptIn: Boolean(emailNotifications) } : {}),
+            ...(smsNotifications !== undefined ? { smsOptIn: Boolean(smsNotifications) } : {}),
+            consentSource: isSelf ? 'donor-profile' : 'admin-user-profile',
+          },
+          { actorId: session.user.id, actorName: session.user.name, actorRole: session.user.role },
+        ).catch(() => null);
+      }
+    }
 
     if (isAdmin && wantsAuthorityChange) {
       const actor = session.user;

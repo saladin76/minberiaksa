@@ -87,9 +87,23 @@ export async function syncMetaWhatsappTemplates(opts: {
   const wabas = await activeWabaIds(opts.businessAccountId);
   if (!wabas.length) return { ...summary, reason: "NO_ACTIVE_WABA", detail: "No active Meta WhatsApp sender has a WABA ID." };
 
-  const locals = await prisma.whatsappTemplate.findMany({ select: { id: true, name: true } }).catch(() => []);
+  const locals = await prisma.whatsappTemplate.findMany({
+    select: {
+      id: true,
+      name: true,
+      wabaVariants: {
+        where: { provider: META_PROVIDER },
+        select: { providerTemplateName: true },
+      },
+    },
+  }).catch(() => []);
   const byFoldedName = new Map<string, string>();
-  for (const local of locals) byFoldedName.set(foldName(local.name), local.id);
+  for (const local of locals) {
+    byFoldedName.set(foldName(local.name), local.id);
+    for (const variant of local.wabaVariants) {
+      if (variant.providerTemplateName) byFoldedName.set(foldName(variant.providerTemplateName), local.id);
+    }
+  }
 
   const unmatched = new Set<string>();
   const touchedTemplates = new Set<string>();

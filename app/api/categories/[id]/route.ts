@@ -20,7 +20,6 @@ import {
   whereByIdOrAnyLocaleSlug,
   whereByIdOrSlug,
 } from "@/lib/slug";
-import { NOT_SOFT_DELETED } from "@/lib/campaign/soft-delete-filter";
 
 // GET: return a single category (localized) with optional counts
 export async function GET(
@@ -289,25 +288,11 @@ export async function PATCH(
       data: { isActive: nextActive },
     });
 
-    // Cascade to every non-deleted member campaign. updateMany on the m2m
-    // mirror is safe  categoryIds is just an ObjectId[] on the Campaign side.
-    // Soft-deleted campaigns are skipped so re-activating a category doesn't
-    // resurrect them.
-    const cascade = await prisma.campaign.updateMany({
-      where: {
-        AND: [
-          { categoryIds: { has: id } },
-          NOT_SOFT_DELETED,
-        ],
-      },
-      data: { isActive: nextActive },
-    });
-
     const actor = auditActorFromDashboardSession(session!);
     await writeAuditLog({
       ...actor,
       action: nextActive ? 'CATEGORY_ACTIVATE' : 'CATEGORY_ARCHIVE',
-      messageAr: `${actor.actorName ?? 'مسؤول'} ${nextActive ? 'فعّل' : 'أرشف'} الحملة "${existing.name}" (${cascade.count} مشروع تابع)`,
+      messageAr: `${actor.actorName ?? 'مسؤول'} ${nextActive ? 'فعّل' : 'أرشف'} التصنيف "${existing.name}" دون تغيير حالة المشاريع التابعة`,
       entityType: 'Category',
       entityId: id,
     });
@@ -315,7 +300,7 @@ export async function PATCH(
     return NextResponse.json({
       id,
       isActive: nextActive,
-      cascadedCampaigns: cascade.count,
+      affectedCampaigns: 0,
     });
   } catch (error) {
     console.error('Error toggling category isActive:', error);

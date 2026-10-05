@@ -4,11 +4,12 @@ import type { CommunicationChannelId } from "./communication-runtime-types";
 import { donorChannelEligibility } from "./audience-service";
 import { parseListKey, loadListMembers, loadListMembersPage, memberEligibleForChannel, type ResolvedListMember } from "./audience-list-service";
 import { safeCountValue } from "@/lib/dashboard/safe-count";
+import { ensureProfilesForUsers } from "./donor-communication-profile-service";
 
 /**
  * Recipient counts + eligibility breakdown for a campaign, per locale, for one channel.
- * Read-only. Prefers the DonorCommunicationProfile for WhatsApp opt-in and do-not-contact,
- * and falls back to the legacy User notification flags for email/SMS.
+ * DonorCommunicationProfile is the sole consent source. Legacy User flags bootstrap only missing
+ * profiles and never override existing recorded consent.
  */
 
 export type LocaleRecipientBreakdown = {
@@ -41,18 +42,22 @@ async function localeBreakdown(channel: CommunicationChannelId, locale: Supporte
   ]);
 
   if (channel === "EMAIL") {
-    const [eligible, optedOut] = await Promise.all([
-      prisma.user.count({ where: { ...base, email: { not: null }, emailNotifications: true } }),
-      prisma.user.count({ where: { ...base, email: { not: null }, emailNotifications: false } }),
+    const [eligible, optedOut, profiled] = await Promise.all([
+      safeCountValue("recipients.emailEligible", () => prisma.donorCommunicationProfile.count({ where: { preferredLocale: locale, email: { not: null }, emailOptIn: true, doNotContact: false } })),
+      safeCountValue("recipients.emailOptedOut", () => prisma.donorCommunicationProfile.count({ where: { preferredLocale: locale, email: { not: null }, emailOptIn: false, doNotContact: false } })),
+      safeCountValue("recipients.emailProfiled", () => prisma.donorCommunicationProfile.count({ where: { preferredLocale: locale, email: { not: null } } })),
     ]);
-    return { locale, label: LOCALES[locale].label, total, eligible: Math.max(0, eligible - dnc), needsReview: 0, missingContact: Math.max(0, total - withEmail), optedOut, doNotContact: dnc };
+    const needsReview = Math.max(0, withEmail - profiled);
+    return { locale, label: LOCALES[locale].label, total, eligible, needsReview, missingContact: Math.max(0, total - withEmail), optedOut, doNotContact: dnc };
   }
   if (channel === "SMS") {
-    const [eligible, optedOut] = await Promise.all([
-      prisma.user.count({ where: { ...base, phone: { not: null }, smsNotifications: true } }),
-      prisma.user.count({ where: { ...base, phone: { not: null }, smsNotifications: false } }),
+    const [eligible, optedOut, profiled] = await Promise.all([
+      safeCountValue("recipients.smsEligible", () => prisma.donorCommunicationProfile.count({ where: { preferredLocale: locale, phone: { not: null }, smsOptIn: true, doNotContact: false } })),
+      safeCountValue("recipients.smsOptedOut", () => prisma.donorCommunicationProfile.count({ where: { preferredLocale: locale, phone: { not: null }, smsOptIn: false, doNotContact: false } })),
+      safeCountValue("recipients.smsProfiled", () => prisma.donorCommunicationProfile.count({ where: { preferredLocale: locale, phone: { not: null } } })),
     ]);
-    return { locale, label: LOCALES[locale].label, total, eligible: Math.max(0, eligible - dnc), needsReview: 0, missingContact: Math.max(0, total - withPhone), optedOut, doNotContact: dnc };
+    const needsReview = Math.max(0, withPhone - profiled);
+    return { locale, label: LOCALES[locale].label, total, eligible, needsReview, missingContact: Math.max(0, total - withPhone), optedOut, doNotContact: dnc };
   }
   // WHATSAPP  eligible only with explicit opt-in; other phone contacts need review.
   const eligible = await safeCountValue("recipients.whatsappEligible", () =>
@@ -68,6 +73,7 @@ async function localeBreakdown(channel: CommunicationChannelId, locale: Supporte
 async function resolveListMembersWithEligibility(channel: CommunicationChannelId, listId: string): Promise<{ m: ResolvedListMember; eligible: boolean }[]> {
   const members = await loadListMembers(listId);
   const donorIds = members.filter((m) => m.contactType === "DONOR" && m.userId).map((m) => m.userId!) as string[];
+  if (donorIds.length) await ensureProfilesForUsers(donorIds);
   const profiles = donorIds.length
     ? await prisma.donorCommunicationProfile.findMany({ where: { userId: { in: donorIds } }, select: { userId: true, whatsappOptIn: true, emailOptIn: true, smsOptIn: true, doNotContact: true } }).catch(() => [])
     : [];
@@ -194,6 +200,7 @@ export async function loadCampaignRecipients(
   if (listId) {
     const { members, nextCursor, exhausted } = await loadListMembersPage(listId, { limit, cursorId: cursor });
     const donorIds = members.filter((m) => m.contactType === "DONOR" && m.userId).map((m) => m.userId!) as string[];
+    if (donorIds.length) await ensureProfilesForUsers(donorIds);
     const profiles = donorIds.length
       ? await prisma.donorCommunicationProfile.findMany({ where: { userId: { in: donorIds } }, select: { userId: true, whatsappOptIn: true, emailOptIn: true, smsOptIn: true, doNotContact: true } }).catch(() => [])
       : [];
@@ -223,6 +230,7 @@ export async function loadCampaignRecipients(
   const page = users;
   const nextCursor = page.length ? page[page.length - 1].id : cursor;
 
+  await ensureProfilesForUsers(page.map((u) => u.id));
   const profiles = await prisma.donorCommunicationProfile
     .findMany({ where: { userId: { in: page.map((u) => u.id) } }, select: { userId: true, whatsappOptIn: true, emailOptIn: true, smsOptIn: true, doNotContact: true } })
     .catch(() => []);

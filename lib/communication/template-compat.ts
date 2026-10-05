@@ -87,6 +87,35 @@ export async function listChannelTemplates(
     const keep = (row: { id: string; kind?: string | null }) =>
       opts.includeSystem || (row.kind !== "SYSTEM" && !systemIds.has(row.id));
 
+    if (channel === "WHATSAPP") {
+      // WhatsApp campaign coverage is provider truth: only Meta-approved aggregate variants count.
+      // A locally drafted/PENDING language cannot make a campaign pass review.
+      const rows = await prisma.whatsappTemplate.findMany({
+        select: {
+          id: true,
+          name: true,
+          kind: true,
+          variants: {
+            where: { provider: "META_WHATSAPP", approvalStatus: "APPROVED" },
+            select: { locale: true, languageCode: true },
+          },
+        },
+        orderBy: { createdAt: "desc" },
+        take: 200,
+      });
+      return rows
+        .filter(keep)
+        .map((row) => {
+          const locales = new Set<SupportedLocale>();
+          for (const variant of row.variants) {
+            const candidate = (variant.locale || variant.languageCode.toLowerCase().replace(/[_-].*$/, "")) as string;
+            if (isValidLocale(candidate)) locales.add(candidate as SupportedLocale);
+          }
+          return { id: row.id, name: row.name, availableLocales: [...locales] };
+        })
+        .filter((row) => row.availableLocales.length > 0);
+    }
+
     const textRows = await listTextTemplates(channel);
     if (textRows) {
       return textRows.filter(keep).map((t) => ({ id: t.id, name: t.name, availableLocales: localesFromTranslations(DEFAULT_LOCALE, t.translations) }));

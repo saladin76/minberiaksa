@@ -101,7 +101,7 @@ const MONTH_DAYS = Array.from({ length: 28 }, (_, i) => i + 1);
  * time as hour and minute. An unparseable time falls back to the default.
  */
 function scheduleOf(freq: Exclude<CartFreqKey, "once">, monthDay: number, localTime: string, notes: string): CartRecurringSchedule {
-  const match = /^(d{1,2}):(d{2})/.exec(localTime);
+  const match = /^(\d{1,2}):(\d{2})$/.exec(localTime);
   const hour = match ? Math.min(23, Number(match[1])) : 14;
   const minute = match ? Math.min(59, Number(match[2])) : 30;
   const note = notes.trim();

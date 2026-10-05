@@ -43,7 +43,7 @@ function localesOf(row: SmsTemplateRow): SupportedLocale[] {
 export function SmsTemplateList() {
   const [templates, setTemplates] = React.useState<SmsTemplateRow[]>([]);
   const [loading, setLoading] = React.useState(true);
-  const [section, setSection] = React.useState<"SYSTEM" | "CAMPAIGN">("SYSTEM");
+  const [section, setSection] = React.useState<"SYSTEM" | "CAMPAIGN">("CAMPAIGN");
   const [editor, setEditor] = React.useState<{ open: boolean; id: string | null }>({ open: false, id: null });
 
   const fetchAll = React.useCallback(async () => {
@@ -89,8 +89,8 @@ export function SmsTemplateList() {
   return (
     <div className="space-y-4">
       <div className="inline-flex rounded-lg border border-slate-200 bg-slate-50 p-1">
-        <button type="button" onClick={() => setSection("SYSTEM")} className={`rounded-md px-3 py-1.5 text-xs font-medium ${section === "SYSTEM" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500"}`}>التلقائية والتوثيق</button>
         <button type="button" onClick={() => setSection("CAMPAIGN")} className={`rounded-md px-3 py-1.5 text-xs font-medium ${section === "CAMPAIGN" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500"}`}>الحملات التسويقية</button>
+        <button type="button" onClick={() => setSection("SYSTEM")} className={`rounded-md px-3 py-1.5 text-xs font-medium ${section === "SYSTEM" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500"}`}>التلقائية والتوثيق</button>
       </div>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex flex-wrap items-center gap-2">

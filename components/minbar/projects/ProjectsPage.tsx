@@ -35,25 +35,22 @@ import ProjectsHero, { type ProjectSlide } from "./ProjectsHero";
 const PAGE_SIZE = 6;
 
 /**
- * Icons and label sources for the categories the design ships. A category slug
- * outside this map still gets a chip  it falls back to the grid glyph and its
- * own CMS name  so adding a category in the dashboard does not require a
- * code change.
+ * The projects page intentionally exposes only the seven destinations approved
+ * for the public information architecture. Other CMS categories remain usable
+ * internally, but never grow the public filter rail automatically.
+ *
+ * Three entries filter the project grid; three are direct site destinations
+ * (zakat, waqf, Jerusalem-home restoration); "all" clears the filter.
  */
-const CATEGORY_PRESETS: Record<string, { icon: CategoryIconName; ns: string; key: string }> = {
-  "al-quds": { icon: "landmark", ns: "homepage", key: "regionQuds" },
-  gaza: { icon: "hand-heart", ns: "homepage", key: "storyGaza" },
-  "al-aqsa": { icon: "moon-star", ns: "homepage", key: "regionAqsa" },
-  urgent: { icon: "siren", ns: "projects", key: "catUrgent" },
-  zakat: { icon: "hand-coins", ns: "navigation", key: "zakat" },
-  waqf: { icon: "scroll-text", ns: "navigation", key: "waqf" },
-  ibadan: { icon: "book-open-check", ns: "navigation", key: "ibadanProject" },
-  education: { icon: "graduation-cap", ns: "projects", key: "catEduQuds" },
-  repair: { icon: "home", ns: "projects", key: "catHomeRepair" },
-  ramadan: { icon: "calendar-heart", ns: "projects", key: "catRamadan" },
-  qurbani: { icon: "beef", ns: "projects", key: "catQurbani" },
-  africa: { icon: "globe", ns: "projects", key: "catAfrica" },
-};
+const PUBLIC_PROJECT_FILTERS = [
+  { id: "all", icon: "layout-grid" as CategoryIconName, kind: "filter" as const },
+  { id: "region-al-quds", icon: "landmark" as CategoryIconName, kind: "filter" as const },
+  { id: "region-gaza", icon: "hand-heart" as CategoryIconName, kind: "filter" as const },
+  { id: "region-al-aqsa", icon: "moon-star" as CategoryIconName, kind: "filter" as const },
+  { id: "zakat", icon: "hand-coins" as CategoryIconName, kind: "link" as const, route: "zakat" as const },
+  { id: "waqf", icon: "scroll-text" as CategoryIconName, kind: "link" as const, route: "waqf" as const },
+  { id: "repair", icon: "home" as CategoryIconName, kind: "link" as const, route: "restoration" as const },
+] as const;
 
 export interface ProjectsPageProps {
   projects: MinbarProject[];
@@ -72,39 +69,18 @@ export default function ProjectsPage({ projects, slides }: ProjectsPageProps) {
   const [category, setCategory] = useState("all");
   const [limit, setLimit] = useState(PAGE_SIZE);
 
-  const label = (ns: string, key: string) =>
-    ns === "system" ? tSystem(key)
-      : ns === "navigation" ? tNav(key)
-        : ns === "homepage" ? tHome(key)
-          : t(key);
-
-  /** Every category that has at least one published project, in project order. */
-  const categories = useMemo(() => {
-    const seen = new Map<string, string>();
-    for (const project of projects) {
-      if (project.region && !seen.has(project.region)) {
-        seen.set(project.region, project.regionLabel ?? project.region);
-      }
-    }
-    return [
-      { id: "all", icon: "layout-grid" as CategoryIconName, label: tSystem("allFilter") },
-      ...[...seen.entries()].map(([slug, name]) => {
-        const preset = CATEGORY_PRESETS[slug];
-        return {
-          id: slug,
-          icon: preset?.icon ?? ("layout-grid" as CategoryIconName),
-          // A preset label is the glossary-approved translation; otherwise the
-          // CMS name, which is already per-locale.
-          label: preset ? label(preset.ns, preset.key) : name,
-        };
-      }),
-    ];
-    // `label` closes over the translators, which are stable for a locale.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [projects, locale]);
+  const categories = useMemo(() => PUBLIC_PROJECT_FILTERS.map((item) => {
+    if (item.id === "all") return { ...item, label: tSystem("allFilter") };
+    if (item.id === "region-al-quds") return { ...item, label: tHome("regionQuds") };
+    if (item.id === "region-gaza") return { ...item, label: tHome("storyGaza") };
+    if (item.id === "region-al-aqsa") return { ...item, label: tNav("aqsa") };
+    if (item.id === "zakat") return { ...item, label: locale === "ar" ? "زكاة" : tNav("zakat") };
+    if (item.id === "waqf") return { ...item, label: locale === "ar" ? "أوقاف" : tNav("waqf") };
+    return { ...item, label: t("catHomeRepair") };
+  }), [locale, t, tHome, tNav, tSystem]);
 
   const filtered = useMemo(
-    () => (category === "all" ? projects : projects.filter((p) => p.region === category)),
+    () => (category === "all" ? projects : projects.filter((p) => p.categories.some((c) => c.slug === category))),
     [projects, category]
   );
 
@@ -161,40 +137,60 @@ export default function ProjectsPage({ projects, slides }: ProjectsPageProps) {
         />
         <div style={{ position: "relative", maxWidth: 1240, margin: "0 auto", padding: "30px 24px 34px", display: "grid", gap: 18 }}>
           <div className="mia-rail" id="proj-filters" style={{ display: "flex", gap: 10, flexWrap: "wrap", justifyContent: "center", paddingBottom: 4 }}>
-            {categories.map((c) => (
-              <button
-                key={c.id}
-                type="button"
-                data-cat={category === c.id ? "1" : ""}
-                onClick={() => {
-                  setCategory(c.id);
-                  setLimit(PAGE_SIZE);
-                }}
-                className="proj-cat"
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 8,
-                  height: 40,
-                  padding: "0 16px",
-                  cursor: "pointer",
-                  fontFamily: "inherit",
-                  borderRadius: 999,
-                  fontSize: 14,
-                  fontWeight: 800,
-                  whiteSpace: "nowrap",
-                  transition: "all .18s ease",
-                  border: "1px solid var(--border)",
-                  background: "#fff",
-                  color: "var(--muted)",
-                }}
-              >
-                <span style={{ display: "inline-flex", width: 15, height: 15 }}>
-                  <CategoryIcon name={c.icon} />
-                </span>
-                {c.label}
-              </button>
-            ))}
+            {categories.map((c) => {
+              const style = {
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 8,
+                height: 40,
+                padding: "0 16px",
+                cursor: "pointer",
+                fontFamily: "inherit",
+                borderRadius: 999,
+                fontSize: 14,
+                fontWeight: 800,
+                whiteSpace: "nowrap" as const,
+                transition: "all .18s ease",
+                border: "1px solid var(--border)",
+                background: "#fff",
+                color: "var(--muted)",
+                textDecoration: "none",
+              };
+
+              if (c.kind === "link") {
+                const href =
+                  c.route === "zakat" ? `/${locale}/zakat`
+                    : c.route === "waqf" ? `/${locale}/waqf`
+                      : `/${locale}/projects/al-quds-home-restoration`;
+                return (
+                  <a key={c.id} href={href} className="proj-cat" style={style}>
+                    <span style={{ display: "inline-flex", width: 15, height: 15 }}>
+                      <CategoryIcon name={c.icon} />
+                    </span>
+                    {c.label}
+                  </a>
+                );
+              }
+
+              return (
+                <button
+                  key={c.id}
+                  type="button"
+                  data-cat={category === c.id ? "1" : ""}
+                  onClick={() => {
+                    setCategory(c.id);
+                    setLimit(PAGE_SIZE);
+                  }}
+                  className="proj-cat"
+                  style={style}
+                >
+                  <span style={{ display: "inline-flex", width: 15, height: 15 }}>
+                    <CategoryIcon name={c.icon} />
+                  </span>
+                  {c.label}
+                </button>
+              );
+            })}
           </div>
         </div>
       </section>

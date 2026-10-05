@@ -7,10 +7,8 @@ import { safeCountValue } from "@/lib/dashboard/safe-count";
  * Dynamic audiences  computed live from the donor base (`User`), never a manual
  * per-channel list. Language comes from `User.preferredLang`; channel eligibility is
  * derived from existing fields with lawful-safe defaults:
- *   - EMAIL  : has email AND emailNotifications !== false
- *   - SMS    : has phone AND smsNotifications !== false
- *   - WHATSAPP: has phone → NEEDS_REVIEW (no WhatsApp marketing-consent field exists,
- *               so donors are never silently bulk-eligible; a human must confirm consent)
+ * DonorCommunicationProfile is the sole runtime source of consent. Legacy User notification flags
+ * bootstrap only a missing profile; they never override an existing recorded preference.
  *
  * Read-only: no writes, no sends, no provider calls.
  */
@@ -58,11 +56,9 @@ async function localeCounts(locale: SupportedLocale) {
     prisma.user.count({ where: base }),
     prisma.user.count({ where: { ...base, email: { not: null } } }),
     prisma.user.count({ where: { ...base, phone: { not: null } } }),
-    // Email/SMS eligibility from the notification flags (the runtime profile mirrors these).
-    prisma.user.count({ where: { ...base, email: { not: null }, emailNotifications: true } }),
-    prisma.user.count({ where: { ...base, phone: { not: null }, smsNotifications: true } }),
-    // WhatsApp is only eligible with an explicit opt-in on the donor communication profile.
-    safeCountValue("audience.whatsappReachable", () => prisma.donorCommunicationProfile.count({ where: { preferredLocale: locale, whatsappOptIn: true, doNotContact: false } })),
+    safeCountValue("audience.emailReachable", () => prisma.donorCommunicationProfile.count({ where: { preferredLocale: locale, email: { not: null }, emailOptIn: true, doNotContact: false } })),
+    safeCountValue("audience.smsReachable", () => prisma.donorCommunicationProfile.count({ where: { preferredLocale: locale, phone: { not: null }, smsOptIn: true, doNotContact: false } })),
+    safeCountValue("audience.whatsappReachable", () => prisma.donorCommunicationProfile.count({ where: { preferredLocale: locale, phone: { not: null }, whatsappOptIn: true, doNotContact: false } })),
   ]);
   // Phone contacts without an explicit opt-in still need human review before any bulk WhatsApp.
   const whatsappNeedsReview = Math.max(0, withPhone - whatsappEligible);
@@ -107,8 +103,8 @@ export async function getAudienceOverview(): Promise<AudienceOverview> {
 }
 
 /**
- * Whether a donor is eligible on a channel for marketing. Prefers the runtime
- * DonorCommunicationProfile when present, falling back to the legacy User flags.
+ * Whether a donor is eligible on a channel for marketing. DonorCommunicationProfile is authoritative.
+ * Missing profile = NEEDS_REVIEW; legacy User flags are not consulted here.
  */
 export function donorChannelEligibility(
   donor: { email?: string | null; phone?: string | null; emailNotifications?: boolean; smsNotifications?: boolean },
@@ -124,15 +120,15 @@ export function donorChannelEligibility(
 
   if (channel === "EMAIL") {
     if (!donor.email) return "UNAVAILABLE";
-    const optedIn = profile ? profile.emailOptIn === true : donor.emailNotifications !== false;
-    return optedIn ? "ELIGIBLE" : "UNAVAILABLE";
+    if (!profile) return "NEEDS_REVIEW";
+    return profile.emailOptIn === true ? "ELIGIBLE" : "UNAVAILABLE";
   }
   if (channel === "SMS") {
     if (!donor.phone) return "UNAVAILABLE";
-    const optedIn = profile ? profile.smsOptIn === true : donor.smsNotifications !== false;
-    return optedIn ? "ELIGIBLE" : "UNAVAILABLE";
+    if (!profile) return "NEEDS_REVIEW";
+    return profile.smsOptIn === true ? "ELIGIBLE" : "UNAVAILABLE";
   }
-  // WHATSAPP  eligible only with an explicit opt-in; otherwise phone contacts need review.
-  if (profile?.whatsappOptIn) return "ELIGIBLE";
-  return donor.phone ? "NEEDS_REVIEW" : "UNAVAILABLE";
+  if (!donor.phone) return "UNAVAILABLE";
+  if (!profile) return "NEEDS_REVIEW";
+  return profile.whatsappOptIn === true ? "ELIGIBLE" : "UNAVAILABLE";
 }
