@@ -49,7 +49,7 @@ export function campaignSendControls(campaign: Pick<CommunicationCampaign, "meta
     speedMode: speed in SPEEDS ? speed : "BALANCED",
     dailyCap: positiveInt(raw.dailyCap, defaultCap),
     quietHours: {
-      enabled: quiet.enabled !== false,
+      enabled: quiet.enabled === true,
       start: hhmm(quiet.start, "00:00"),
       end: hhmm(quiet.end, "08:00"),
       timezone: typeof quiet.timezone === "string" && quiet.timezone.trim() ? quiet.timezone.trim() : "Europe/Istanbul",
