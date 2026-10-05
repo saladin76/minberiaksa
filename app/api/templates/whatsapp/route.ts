@@ -95,9 +95,18 @@ export async function GET() {
           languageCode: true,
           locale: true,
           approvalStatus: true,
+          category: true,
           rejectionReason: true,
           qualityRating: true,
           lastSyncedAt: true,
+        },
+      },
+      wabaVariants: {
+        where: { provider: "META_WHATSAPP" },
+        select: {
+          languageCode: true,
+          locale: true,
+          category: true,
         },
       },
     },
@@ -107,8 +116,21 @@ export async function GET() {
     const derived = deriveOverallMetaTemplateStatus(
       row.variants.length ? row.variants.map((variant) => variant.approvalStatus) : [row.approvalStatus],
     );
+    const variants = row.variants.map((variant) => {
+      const baseLocale = String(variant.locale ?? variant.languageCode ?? "").toLowerCase().replace(/[_-].*$/, "");
+      const providerCategories = [...new Set(
+        row.wabaVariants
+          .filter((item) => String(item.locale ?? item.languageCode ?? "").toLowerCase().replace(/[_-].*$/, "") === baseLocale)
+          .map((item) => String(item.category ?? "").toUpperCase())
+          .filter(Boolean),
+      )];
+      if (!providerCategories.length && variant.category) providerCategories.push(String(variant.category).toUpperCase());
+      return { ...variant, providerCategories };
+    });
     return {
       ...row,
+      variants,
+      wabaVariants: undefined,
       providerApprovalStatus: derived.providerStatus,
       internalApprovalStatus: derived.internalStatus,
       approvalLabelAr: derived.labelAr,

@@ -93,6 +93,7 @@ interface ApiTemplate {
   authentication?: Partial<AuthenticationDraft> | null;
   translations?: Partial<Record<string, Partial<LocaleDraft>>> | null;
   submittedLocales?: string[];
+  providerCategoriesByLocale?: Record<string, string[]>;
 }
 
 const emptyLocale = (): LocaleDraft => ({ body: "", headerText: "", footerText: "", buttons: [] });
@@ -239,6 +240,7 @@ export function WhatsappTemplateEditorDialog({ id, open, onOpenChange }: Props) 
   const [authentication, setAuthentication] = React.useState<AuthenticationDraft>(defaultAuth());
   const [activeLocale, setActiveLocale] = React.useState<SupportedLocale>(DEFAULT_LOCALE);
   const [submittedLocales, setSubmittedLocales] = React.useState<Set<SupportedLocale>>(new Set());
+  const [providerCategoriesByLocale, setProviderCategoriesByLocale] = React.useState<Record<string, string[]>>({});
   const [loading, setLoading] = React.useState(false);
   const [saving, setSaving] = React.useState(false);
   const [uploadingSample, setUploadingSample] = React.useState(false);
@@ -269,6 +271,7 @@ export function WhatsappTemplateEditorDialog({ id, open, onOpenChange }: Props) 
       });
       setAuthentication(defaultAuth());
       setSubmittedLocales(new Set());
+      setProviderCategoriesByLocale({});
       setActiveLocale(DEFAULT_LOCALE);
       return;
     }
@@ -428,6 +431,7 @@ export function WhatsappTemplateEditorDialog({ id, open, onOpenChange }: Props) 
   };
 
   const insertToken = (token: string) => {
+    if (submittedLocales.has(activeLocale)) return;
     if (insertTarget === "header" && header.type === "TEXT") {
       const element = headerRef.current;
       const value = current.headerText;
@@ -454,6 +458,7 @@ export function WhatsappTemplateEditorDialog({ id, open, onOpenChange }: Props) 
   };
 
   const wrapSelection = (before: string, after = before) => {
+    if (submittedLocales.has(activeLocale)) return;
     const element = bodyRef.current;
     if (!element) return;
     const value = current.body;
@@ -465,6 +470,7 @@ export function WhatsappTemplateEditorDialog({ id, open, onOpenChange }: Props) 
   };
 
   const addButton = (type: ButtonType) => {
+    if (submittedLocales.has(activeLocale)) return;
     if (current.buttons.length >= 10) {
       toast.error("الحد الأقصى 10 أزرار");
       return;
@@ -482,12 +488,14 @@ export function WhatsappTemplateEditorDialog({ id, open, onOpenChange }: Props) 
   };
 
   const updateButton = (index: number, patch: Partial<StudioButton>) => {
+    if (submittedLocales.has(activeLocale)) return;
     const buttons = cloneButtons(current.buttons);
     buttons[index] = { ...buttons[index], ...patch };
     setCurrent({ buttons });
   };
 
   const removeButton = (index: number) => {
+    if (submittedLocales.has(activeLocale)) return;
     setCurrent({ buttons: current.buttons.filter((_, position) => position !== index) });
   };
 
@@ -541,8 +549,12 @@ export function WhatsappTemplateEditorDialog({ id, open, onOpenChange }: Props) 
       const unsupportedCount = publish?.unsupportedWabas?.length ?? 0;
       if (unsupportedCount > 0) {
         toast.success(
-          `تم إرسال القالب إلى ${publishedCount} نسخة مؤهلة في Meta. تم تجاوز ${unsupportedCount} WABA لأن Meta لا تسمح بإدارة القوالب عليها.`,
+          `تم إرسال ${publishedCount} نسخة مؤهلة إلى Meta. تم تجاوز ${unsupportedCount} WABA لأن Meta لا تسمح بإدارة القوالب عليها.`,
         );
+      } else if (workingId && (publish?.targets ?? 0) > 0) {
+        toast.success(`تم حفظ اللغة الجديدة وإرسالها إلى Meta للمراجعة (${publish?.targets} نسخة WABA/لغة)`);
+      } else if (workingId) {
+        toast.success("تم حفظ القالب بدون إعادة إرسال اللغات الموجودة إلى Meta.");
       } else {
         toast.success(`تم إنشاء القالب وإرساله إلى Meta للمراجعة${publish?.targets ? ` (${publish.targets} نسخة WABA/لغة)` : ""}`);
       }
@@ -611,12 +623,14 @@ export function WhatsappTemplateEditorDialog({ id, open, onOpenChange }: Props) 
               <button
                 key={option.value}
                 type="button"
+                disabled={submittedLocales.size > 0}
                 onClick={() => setCategory(option.value)}
                 className={cn(
                   "flex items-center justify-center gap-2 border-b p-3 text-sm transition-colors md:border-b-0 md:border-e",
                   category === option.value
                     ? "bg-slate-800 font-semibold text-white"
                     : "bg-slate-50 text-slate-700 hover:bg-slate-100",
+                  submittedLocales.size > 0 && "cursor-not-allowed opacity-70",
                 )}
               >
                 {option.icon}
@@ -627,6 +641,22 @@ export function WhatsappTemplateEditorDialog({ id, open, onOpenChange }: Props) 
               </button>
             ))}
           </div>
+          {(() => {
+            const actual = (providerCategoriesByLocale[activeLocale] ?? []).map((value) => String(value).toUpperCase());
+            const mismatch = actual.some((value) => value !== category);
+            if (!actual.length) return null;
+            return (
+              <div className={cn(
+                "border-t px-4 py-2.5 text-xs",
+                mismatch ? "border-orange-200 bg-orange-50 text-orange-800" : "border-emerald-100 bg-emerald-50/60 text-emerald-700",
+              )}>
+                <span className="font-semibold">تصنيف المنصة: {category}</span>
+                <span className="mx-2 opacity-50">•</span>
+                <span className="font-semibold">تصنيف Meta لهذه اللغة: {actual.join(" / ")}</span>
+                {mismatch && <span className="ms-2 font-semibold">⚠ أعادت Meta تصنيف هذه اللغة</span>}
+              </div>
+            );
+          })()}
         </section>
 
         <section className="grid grid-cols-1 gap-4 rounded-xl border border-border bg-white p-4 lg:grid-cols-[1fr_260px]">
@@ -736,7 +766,7 @@ export function WhatsappTemplateEditorDialog({ id, open, onOpenChange }: Props) 
                       <button
                         key={option.value}
                         type="button"
-                        disabled={submittedLocales.has(activeLocale)}
+                        disabled={submittedLocales.size > 0}
                         onClick={() => {
                           setHeader((previous) => ({
                             ...previous,
@@ -795,7 +825,7 @@ export function WhatsappTemplateEditorDialog({ id, open, onOpenChange }: Props) 
                               type="file"
                               className="hidden"
                               accept={mediaAccept(header.type)}
-                              disabled={uploadingSample}
+                              disabled={uploadingSample || submittedLocales.size > 0}
                               onChange={(event) => {
                                 const file = event.target.files?.[0];
                                 if (file) void uploadSample(file);
@@ -827,9 +857,9 @@ export function WhatsappTemplateEditorDialog({ id, open, onOpenChange }: Props) 
 
                   {header.type === "LOCATION" && (
                     <div className="grid grid-cols-1 gap-2 md:grid-cols-3">
-                      <Input placeholder="Latitude" type="number" value={header.latitude ?? ""} onChange={(e) => setHeader((p) => ({ ...p, latitude: e.target.value ? Number(e.target.value) : null }))} />
-                      <Input placeholder="Longitude" type="number" value={header.longitude ?? ""} onChange={(e) => setHeader((p) => ({ ...p, longitude: e.target.value ? Number(e.target.value) : null }))} />
-                      <Input placeholder="العنوان للمعاينة" value={header.address ?? ""} onChange={(e) => setHeader((p) => ({ ...p, address: e.target.value }))} />
+                      <Input disabled={submittedLocales.size > 0} placeholder="Latitude" type="number" value={header.latitude ?? ""} onChange={(e) => setHeader((p) => ({ ...p, latitude: e.target.value ? Number(e.target.value) : null }))} />
+                      <Input disabled={submittedLocales.size > 0} placeholder="Longitude" type="number" value={header.longitude ?? ""} onChange={(e) => setHeader((p) => ({ ...p, longitude: e.target.value ? Number(e.target.value) : null }))} />
+                      <Input disabled={submittedLocales.size > 0} placeholder="العنوان للمعاينة" value={header.address ?? ""} onChange={(e) => setHeader((p) => ({ ...p, address: e.target.value }))} />
                     </div>
                   )}
                 </div>
@@ -879,9 +909,9 @@ export function WhatsappTemplateEditorDialog({ id, open, onOpenChange }: Props) 
                     <p className="text-[11px] text-slate-400">Quick Reply / Website URL / Phone Number — حتى 10 أزرار</p>
                   </div>
                   <div className="flex gap-1">
-                    <Button type="button" size="sm" variant="outline" onClick={() => addButton("QUICK_REPLY")}><Plus className="me-1 h-3.5 w-3.5" />رد سريع</Button>
-                    <Button type="button" size="sm" variant="outline" onClick={() => addButton("URL")}><Plus className="me-1 h-3.5 w-3.5" />رابط</Button>
-                    <Button type="button" size="sm" variant="outline" onClick={() => addButton("PHONE_NUMBER")}><Plus className="me-1 h-3.5 w-3.5" />هاتف</Button>
+                    <Button type="button" size="sm" variant="outline" disabled={submittedLocales.has(activeLocale)} onClick={() => addButton("QUICK_REPLY")}><Plus className="me-1 h-3.5 w-3.5" />رد سريع</Button>
+                    <Button type="button" size="sm" variant="outline" disabled={submittedLocales.has(activeLocale)} onClick={() => addButton("URL")}><Plus className="me-1 h-3.5 w-3.5" />رابط</Button>
+                    <Button type="button" size="sm" variant="outline" disabled={submittedLocales.has(activeLocale)} onClick={() => addButton("PHONE_NUMBER")}><Plus className="me-1 h-3.5 w-3.5" />هاتف</Button>
                   </div>
                 </div>
                 {current.buttons.length === 0 ? (
@@ -891,15 +921,15 @@ export function WhatsappTemplateEditorDialog({ id, open, onOpenChange }: Props) 
                     {current.buttons.map((button, index) => (
                       <div key={index} className="grid grid-cols-1 gap-2 rounded-lg border border-border bg-slate-50 p-3 md:grid-cols-[130px_1fr_1.5fr_36px]">
                         <div className="flex h-10 items-center gap-1 rounded-md border bg-white px-2 text-xs">{buttonIcon(button.type)}{button.type}</div>
-                        <Input value={button.text} maxLength={25} onChange={(e) => updateButton(index, { text: e.target.value })} placeholder="نص الزر" />
+                        <Input disabled={submittedLocales.has(activeLocale)} value={button.text} maxLength={25} onChange={(e) => updateButton(index, { text: e.target.value })} placeholder="نص الزر" />
                         {button.type === "URL" ? (
-                          <Input dir="ltr" value={button.url ?? ""} onChange={(e) => updateButton(index, { url: e.target.value })} placeholder="https://... أو {{variable}}" />
+                          <Input disabled={submittedLocales.has(activeLocale)} dir="ltr" value={button.url ?? ""} onChange={(e) => updateButton(index, { url: e.target.value })} placeholder="https://... أو {{variable}}" />
                         ) : button.type === "PHONE_NUMBER" ? (
-                          <Input dir="ltr" value={button.phoneNumber ?? ""} onChange={(e) => updateButton(index, { phoneNumber: e.target.value })} placeholder="+905..." />
+                          <Input disabled={submittedLocales.has(activeLocale)} dir="ltr" value={button.phoneNumber ?? ""} onChange={(e) => updateButton(index, { phoneNumber: e.target.value })} placeholder="+905..." />
                         ) : (
                           <div className="flex h-10 items-center rounded-md border bg-white px-3 text-xs text-slate-400">لا يحتاج قيمة إضافية</div>
                         )}
-                        <button type="button" onClick={() => removeButton(index)} className="grid h-10 w-9 place-items-center rounded-md text-red-500 hover:bg-red-50"><Trash2 className="h-4 w-4" /></button>
+                        <button type="button" disabled={submittedLocales.has(activeLocale)} onClick={() => removeButton(index)} className="grid h-10 w-9 disabled:cursor-not-allowed disabled:opacity-40 place-items-center rounded-md text-red-500 hover:bg-red-50"><Trash2 className="h-4 w-4" /></button>
                       </div>
                     ))}
                   </div>

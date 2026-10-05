@@ -65,6 +65,16 @@ export function sameVariables(left: string[], right: string[]): boolean {
   return left.length === right.length && left.every((key, index) => key === right[index]);
 }
 
+/**
+ * Named Meta parameters are matched by parameter name, so translations may naturally reorder them.
+ * Positional templates (dynamic text header / dynamic URL button) still need identical ordering.
+ */
+export function sameVariableSet(left: string[], right: string[]): boolean {
+  if (left.length !== right.length) return false;
+  const rightSet = new Set(right);
+  return left.every((key) => rightSet.has(key));
+}
+
 export function metaParameterName(key: string): string {
   const normalized = key
     .trim()

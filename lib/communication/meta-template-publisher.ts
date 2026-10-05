@@ -10,6 +10,7 @@ import {
   buildAuthenticationMetaComponents,
   buildStandardMetaComponents,
   sameVariables,
+  sameVariableSet,
   variableOrder,
   type AuthDraft,
   type ButtonDraft,
@@ -131,10 +132,33 @@ export async function publishWhatsappTemplateToMeta(
       });
       return summary;
     }
-    if (!sameVariables(canonicalVariables, variableOrder(body)) || !sameVariables(canonicalHeaderVariables, variableOrder(headerText))) {
+    const bodyVariables = variableOrder(body);
+    const headerVariables = variableOrder(headerText);
+    const hasDynamicHeader = canonicalHeaderVariables.length > 0 || headerVariables.length > 0;
+    const hasDynamicUrl = rootButtons.some((button) =>
+      String(button.type ?? "").toUpperCase() === "URL" && variableOrder(String(button.url ?? "")).length > 0,
+    );
+    const positional = hasDynamicHeader || hasDynamicUrl;
+
+    const bodyMatches = positional
+      ? sameVariables(canonicalVariables, bodyVariables)
+      : sameVariableSet(canonicalVariables, bodyVariables);
+    const headerMatches = positional
+      ? sameVariables(canonicalHeaderVariables, headerVariables)
+      : sameVariableSet(canonicalHeaderVariables, headerVariables);
+
+    if (!bodyMatches || !headerMatches) {
+      const missingBody = canonicalVariables.filter((key) => !bodyVariables.includes(key));
+      const extraBody = bodyVariables.filter((key) => !canonicalVariables.includes(key));
+      const missingHeader = canonicalHeaderVariables.filter((key) => !headerVariables.includes(key));
+      const extraHeader = headerVariables.filter((key) => !canonicalHeaderVariables.includes(key));
       summary.errors.push({
-        businessAccountId: "", language: locale, reason: "VARIABLES_MISMATCH",
-        detail: "جميع اللغات يجب أن تستخدم نفس متغيرات النص والعنوان وبنفس الترتيب.",
+        businessAccountId: "",
+        language: locale,
+        reason: "VARIABLES_MISMATCH",
+        detail: positional
+          ? `اللغة ${locale}: هذا القالب يستخدم متغيرات موضعية، لذلك يجب الحفاظ على نفس المتغيرات وبنفس الترتيب.`
+          : `اللغة ${locale}: يجب أن تحتوي على نفس المتغيرات. ناقص: ${[...missingBody, ...missingHeader].join(", ") || "لا يوجد"}؛ زائد: ${[...extraBody, ...extraHeader].join(", ") || "لا يوجد"}.`,
       });
       return summary;
     }
