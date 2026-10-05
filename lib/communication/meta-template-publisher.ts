@@ -51,7 +51,7 @@ export type MetaPublishSummary = {
 export async function publishWhatsappTemplateToMeta(
   templateId: string,
   actor?: Actor,
-  opts: { category?: "UTILITY" | "MARKETING" | "AUTHENTICATION" } = {},
+  opts: { category?: "UTILITY" | "MARKETING" | "AUTHENTICATION"; locales?: string[] } = {},
 ): Promise<MetaPublishSummary> {
   const summary: MetaPublishSummary = {
     ok: false, templateId, targets: 0, created: 0, existing: 0, failed: 0,
@@ -69,6 +69,7 @@ export async function publishWhatsappTemplateToMeta(
     select: {
       id: true, name: true, body: true, translations: true, kind: true, purpose: true,
       category: true, header: true, footerText: true, buttons: true, authentication: true,
+      externalTemplateId: true, language: true,
     },
   });
   if (!template) {
@@ -100,6 +101,22 @@ export async function publishWhatsappTemplateToMeta(
     : {});
   for (const [locale, value] of Object.entries(translations)) {
     if (value?.body?.trim()) variants.set(locale, value);
+  }
+
+  // Editing an already-published template may add just one new language. Meta treats each language
+  // as a separate template variant under the same provider name, so publish only the requested
+  // locales instead of touching every existing/approved variant again.
+  const requestedLocales = opts.locales?.length
+    ? new Set(opts.locales.map((locale) => String(locale).trim().toLowerCase()).filter(Boolean))
+    : null;
+  if (requestedLocales) {
+    for (const locale of Array.from(variants.keys())) {
+      if (!requestedLocales.has(locale)) variants.delete(locale);
+    }
+    if (!variants.size) {
+      summary.ok = true;
+      return summary;
+    }
   }
 
   const canonicalVariables = variableOrder(template.body);
@@ -282,10 +299,10 @@ export async function publishWhatsappTemplateToMeta(
       provider: "META_WHATSAPP",
       channel: "WHATSAPP",
       category,
-      externalTemplateId: first?.id ?? undefined,
+      externalTemplateId: template.externalTemplateId ?? first?.id ?? undefined,
       approvalStatus: first?.status ?? "PENDING",
-      language: first?.language ?? "ar",
-      variables: canonicalBindings as never,
+      language: template.language ?? first?.language ?? "ar",
+      variables: canonicalBindings.length ? (canonicalBindings as never) : undefined,
       lastImportedAt: new Date(),
       lastSyncStatus: summary.failed
         ? (summary.statuses.length ? "partial" : "failed")
