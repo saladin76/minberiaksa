@@ -10,7 +10,7 @@
     },
     {
       "path": "/api/cron/communication-run-due",
-      "schedule": "*/10 * * * *"
+      "schedule": "* * * * *"
     },
     {
       "path": "/api/cron/communication-sync-email-events",
