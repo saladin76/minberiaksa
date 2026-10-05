@@ -4,15 +4,15 @@ import { sendPreparedDelivery } from "./provider-router";
 import { EMAIL_PROVIDER_ID } from "./providers/email/client";
 import { logSentMessage } from "@/lib/messaging/log-sent";
 import type { CommunicationPurposeId } from "./communication-runtime-types";
+import { getActiveMetaWhatsappRuntimeConfig } from "./runtime-config";
 
 /**
  * Automatic (trigger-fired) message dispatcher for the Communication Center.
  *
  * Every automatic donation/subscription message now flows through the FINAL provider architecture:
  *   - EMAIL    → Elastic Email (via ProviderRouter). Never SendGrid, never Brevo.
- *   - WHATSAPP → Meta WhatsApp Cloud API using an APPROVED template. Never Twilio. If the stored
- *                WhatsappTemplate has no Meta-approved template mapping, the send is SKIPPED with
- *                `META_TEMPLATE_REQUIRED_FOR_AUTOMATIC_WHATSAPP` (never faked, never Twilio).
+ *   - WHATSAPP → Meta Cloud API. Utility/Auth prefers Direct Send when the beta is enabled, then
+ *                falls back to an approved Meta template. Marketing stays template-only. Never Twilio.
  *   - SMS      → TR (+90) → Netgsm, international → Brevo SMS. (No trigger channel emits SMS today 
  *                Prisma `enum MessageChannel` is EMAIL | WHATSAPP  so `sendAutomaticSmsMessage` is
  *                provided for a future SMS trigger channel only.)
