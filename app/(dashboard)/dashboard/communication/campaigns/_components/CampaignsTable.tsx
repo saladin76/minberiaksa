@@ -178,9 +178,16 @@ export function CampaignsTable({
                   </td>
 
                   <td className="whitespace-nowrap px-3 py-2.5 align-middle">
-                    <span className={cn("inline-block rounded-full border px-2 py-0.5 text-[10px] font-medium", st.tone)}>
-                      {st.label}
-                    </span>
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <span className={cn("inline-block rounded-full border px-2 py-0.5 text-[10px] font-medium", st.tone)}>
+                        {st.label}
+                      </span>
+                      {c.metadata?.sendControls?.paused && (
+                        <span className="inline-block rounded-full border border-orange-200 bg-orange-50 px-2 py-0.5 text-[10px] font-semibold text-orange-700">
+                          متوقفة مؤقتًا
+                        </span>
+                      )}
+                    </div>
                   </td>
 
                   <CountCell value={c.sentCount} show={showResults} />
