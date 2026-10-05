@@ -47,6 +47,9 @@ const BLOCKED_LABELS: Record<string, string> = {
   ALREADY_RUNNING: "الحملة قيد الإرسال الآن  انتظر انتهاء الدفعة الجارية.",
   ALREADY_COMPLETE: "اكتمل إرسال هذه الحملة.",
   NOT_RESUMABLE: "لا توجد دفعة متوقفة لمتابعتها.",
+  PAUSED: "الحملة متوقفة مؤقتًا من تحكمات الإرسال.",
+  QUIET_HOURS: "الحملة داخل ساعات عدم الإرسال وستستأنف تلقائيًا بعدها.",
+  DAILY_CAP_REACHED: "تم بلوغ الحد اليومي المسموح لرسائل واتساب.",
 };
 
 /** `audienceTotal` is the whole audience; `total` is only the first batch. */
