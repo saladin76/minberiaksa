@@ -101,12 +101,10 @@ export default function Footer({
   whatsappNumber = ORG.whatsapp,
   closingImage = "/minbar/assets/footer-quds.jpg",
   socialLinks,
-  categories = [],
 }: FooterProps) {
   const locale = useLocale();
   const dir = localeDirection(locale);
   const tCommon = useTranslations("common");
-  const tCats = useTranslations("CategoryNav");
   const label = useMinbarLabel();
 
   /* Mobile accordion. On desktop the CSS keeps every list open regardless. */
