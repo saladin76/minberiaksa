@@ -29,6 +29,18 @@ export type SendTextInput = {
   replyToMessageId?: string | null;
 };
 
+/**
+ * Meta Direct Send (beta): business-initiated Utility/Auth text without manually pre-creating a
+ * template. Meta matches or creates the provider template behind the scenes. This is deliberately
+ * separate from free-form replies so a caller cannot accidentally use it for Marketing.
+ */
+export type SendDirectTextInput = {
+  phoneNumberId: string;
+  to: string;
+  body: string;
+  category: "utility" | "authentication";
+};
+
 export type SendResult =
   | { ok: true; providerMessageId: string }
   | { ok: false; reason: string; detail?: string };
