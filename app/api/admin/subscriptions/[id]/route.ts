@@ -8,7 +8,7 @@ import {
   writeAuditLog,
   auditActorFromDashboardSession,
 } from "@/lib/audit-log";
-import { nextChargeAt, normalizeTimezone, type RecurringFrequency } from "@/lib/donations/recurring-schedule";
+import { nextChargeForPlan } from "@/lib/donations/recurring-schedule";
 import {
   applyPlanStatusAtProvider,
   ProviderSyncError,
@@ -48,6 +48,7 @@ export async function PATCH(
         status: true,
         frequency: true,
         timezone: true,
+        scheduleRule: true,
         provider: true,
         stripeSubscriptionId: true,
         payforToken: true,
@@ -87,9 +88,10 @@ export async function PATCH(
     } = { status: nextStatus };
 
     if (nextStatus === "ACTIVE" && sub.status !== "ACTIVE") {
-      // Stripe owns the real cadence; seed nextBillingDate at the plan's own
-      // frequency and zone so list filters work until the next paid invoice.
-      data.nextBillingDate = nextChargeAt(sub.frequency as RecurringFrequency, new Date(), normalizeTimezone(sub.timezone));
+      // Resume at the plan's next own slot (the donor's chosen day and time,
+      // in its zone). Stripe owns its plans' real cadence; this seeds the
+      // mirror so list filters work until the next paid invoice.
+      data.nextBillingDate = nextChargeForPlan(sub, new Date());
     }
 
     await prisma.subscription.update({

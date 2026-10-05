@@ -21,12 +21,13 @@ import {
   createDonation,
   initiateBankPayment,
   markDonationFailed,
+  orderSchedule,
   orderType,
   startPayPalPayment,
   submitGatewayForm,
   type CheckoutMethod,
 } from "@/lib/minbar/checkout";
-import { frequencyOfOrderType, nextChargeAt } from "@/lib/donations/recurring-schedule";
+import { firstChargeAfterCheckout, frequencyOfOrderType, scheduleRuleFor } from "@/lib/donations/recurring-schedule";
 import { withDonationToken } from "@/lib/donations/access-token-link";
 import { clearCart, readTeamSupport, readTeamSupportRecurring, teamSupportIsRecurring } from "@/lib/minbar/cart";
 import { fetchGlobalSettings } from "@/lib/global-settings-client";
@@ -214,8 +215,11 @@ export default function CheckoutPage({ projects, categories, banks, donor, defau
   const planFrequency = frequencyOfOrderType(orderTypeForCart);
 
   /* When the plan will charge  shown before the donor confirms, computed
-     the way the server computes it, in the browser's zone. Set in an effect:
-     the date depends on "now", which the server render cannot share. */
+     the way the server computes it: the same rule from the donor's chosen
+     day and time, in the browser's zone. Set in an effect: the date depends
+     on "now", which the server render cannot share. */
+  const schedule = orderSchedule(items);
+  const scheduleKey = schedule ? `${schedule.dayOfMonth ?? ""}@${schedule.hour}:${schedule.minute}` : "";
   const [nextChargeText, setNextChargeText] = useState<string | null>(null);
   useEffect(() => {
     if (!planFrequency) {
@@ -223,14 +227,16 @@ export default function CheckoutPage({ projects, categories, banks, donor, defau
       return;
     }
     const tz = browserTimezone();
+    const now = new Date();
+    const next = firstChargeAfterCheckout(scheduleRuleFor(planFrequency, now, tz, schedule ?? null), now, tz);
     try {
-      setNextChargeText(
-        new Intl.DateTimeFormat(locale, { dateStyle: "full", timeZone: tz }).format(nextChargeAt(planFrequency, new Date(), tz))
-      );
+      setNextChargeText(new Intl.DateTimeFormat(locale, { dateStyle: "full", timeStyle: "short", timeZone: tz }).format(next));
     } catch {
-      setNextChargeText(nextChargeAt(planFrequency, new Date(), tz).toISOString().slice(0, 10));
+      setNextChargeText(next.toISOString().slice(0, 16).replace("T", " "));
     }
-  }, [planFrequency, locale]);
+    // `schedule` is a fresh object each render; `scheduleKey` is its value.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [planFrequency, locale, scheduleKey]);
 
   /* The rail this basket will run on, resolved the same way the server resolves
      it, so the card step can render what that rail actually needs. Before the

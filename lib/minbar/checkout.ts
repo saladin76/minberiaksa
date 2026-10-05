@@ -193,6 +193,15 @@ export function orderType(items: readonly MinbarCartItem[]): OrderType {
 }
 
 /**
+ * The schedule the order carries: the chosen day/time of the row that sets
+ * the order's cadence (`orderTypeForItems` takes the first recurring row, so
+ * this does too). Absent for one-time orders and rows added elsewhere.
+ */
+export function orderSchedule(items: readonly MinbarCartItem[]): MinbarCartItem["schedule"] {
+  return items.find((item) => item.freqKey !== "once")?.schedule;
+}
+
+/**
  * The browser's IANA zone, for the plan's Friday / month-day resolution. The
  * server validates it and falls back to UTC; it is never used for the charge
  * itself, only to say which day "Friday" is for this donor.
@@ -235,6 +244,7 @@ export async function createDonation(input: CreateDonationInput): Promise<Create
       amountsIn: "USD",
       type: orderType(input.items),
       timezone: browserTimezone(),
+      ...(orderType(input.items) !== "ONE_TIME" && orderSchedule(input.items) ? { schedule: orderSchedule(input.items) } : {}),
       teamSupport: input.teamSupport > 0 ? input.teamSupport : 0,
       teamSupportRecurring: input.teamSupportRecurring,
       /* Analytics only: marks an order whose basket went through the concierge. */

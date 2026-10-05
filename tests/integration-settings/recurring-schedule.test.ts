@@ -5,13 +5,19 @@ import {
   FRIDAY_CHARGE_HOUR,
   chargesPerMonth,
   consentSnapshotFor,
+  firstChargeAfterCheckout,
+  firstChargeForPlan,
   frequencyOfOrderType,
   isOrderType,
   nextChargeAt,
+  nextChargeForPlan,
+  nextChargeFromRule,
   nextRetryAt,
   normalizeTimezone,
   orderTypeForFreqKey,
   orderTypeForItems,
+  parseScheduleChoice,
+  parseScheduleRule,
   railForFrequency,
   retryLadderHours,
   scheduleRuleFor,
@@ -131,11 +137,17 @@ test("MONTHLY: same day next month, clamped to the last day of a shorter month",
 
 test("schedule rules are structure, never prose", () => {
   const at = new Date("2026-09-15T12:00:00Z");
-  assert.deepEqual(scheduleRuleFor("DAILY", at, "UTC"), { kind: "daily" });
-  assert.deepEqual(scheduleRuleFor("FRIDAY", at, "UTC"), { kind: "weekday", weekday: 5, hour: FRIDAY_CHARGE_HOUR });
-  assert.deepEqual(scheduleRuleFor("MONTHLY", at, "UTC"), { kind: "monthDay", day: 15 });
+  // Without a donor choice the rule is the creation moment's, as structure.
+  assert.deepEqual(scheduleRuleFor("DAILY", at, "UTC"), { kind: "daily", hour: 12, minute: 0 });
+  assert.deepEqual(scheduleRuleFor("FRIDAY", at, "UTC"), { kind: "weekday", weekday: 5, hour: FRIDAY_CHARGE_HOUR, minute: 0 });
+  assert.deepEqual(scheduleRuleFor("MONTHLY", at, "UTC"), { kind: "monthDay", day: 15, hour: 12, minute: 0 });
   // Month-day is read in the plan's zone: 23:30Z on the 15th is already the 16th in Tokyo.
-  assert.deepEqual(scheduleRuleFor("MONTHLY", new Date("2026-09-15T23:30:00Z"), "Asia/Tokyo"), { kind: "monthDay", day: 16 });
+  assert.deepEqual(scheduleRuleFor("MONTHLY", new Date("2026-09-15T23:30:00Z"), "Asia/Tokyo"), { kind: "monthDay", day: 16, hour: 8, minute: 30 });
+  // With a choice, the rule is the donor's day and time, not the creation moment's.
+  const choice = { dayOfMonth: 15, hour: 14, minute: 30 };
+  assert.deepEqual(scheduleRuleFor("MONTHLY", new Date("2026-10-04T09:00:00Z"), "Europe/Istanbul", choice), { kind: "monthDay", day: 15, hour: 14, minute: 30 });
+  assert.deepEqual(scheduleRuleFor("DAILY", at, "UTC", choice), { kind: "daily", hour: 14, minute: 30 });
+  assert.deepEqual(scheduleRuleFor("FRIDAY", at, "UTC", { hour: 9, minute: 0 }), { kind: "weekday", weekday: 5, hour: 9, minute: 0 });
 });
 
 test("retry ladder: configurable, defaults to 1h / 6h / 24h, then stops", () => {
@@ -164,7 +176,84 @@ test("the consent snapshot records exactly what the donor was shown, and the rai
   assert.equal(snap.frequency, "FRIDAY");
   assert.equal(snap.amount, 50);
   assert.equal(snap.nextChargeAt, "2026-09-25T06:00:00.000Z");
+  assert.deepEqual(snap.schedule, { kind: "weekday", weekday: 5, hour: FRIDAY_CHARGE_HOUR, minute: 0 });
   assert.equal(snap.rail, "ALBARAKA");
   assert.equal(snap.acceptedAt, now.toISOString());
   assert.equal(snap.locale, "ar");
+});
+
+test("schedule choices from the browser are validated, never coerced", () => {
+  assert.deepEqual(parseScheduleChoice(undefined), { ok: true, value: null });
+  assert.deepEqual(parseScheduleChoice({ dayOfMonth: 15, hour: 14, minute: 30, notes: "  for my mother  " }), {
+    ok: true,
+    value: { hour: 14, minute: 30, dayOfMonth: 15, notes: "for my mother" },
+  });
+  for (const bad of [{ hour: 24, minute: 0 }, { hour: 9, minute: 60 }, { hour: 9.5, minute: 0 }, { hour: "9", minute: 0 }, { dayOfMonth: 29, hour: 9, minute: 0 }, { dayOfMonth: 0, hour: 9, minute: 0 }, "15@14:30", [1]]) {
+    assert.equal(parseScheduleChoice(bad).ok, false, JSON.stringify(bad));
+  }
+});
+
+test("acceptance: monthly, day 15, 14:30, Europe/Istanbul  rule, first charge, consent and every later cycle agree", () => {
+  const tz = "Europe/Istanbul"; // UTC+3
+  const checkout = new Date("2026-10-04T09:00:00Z"); // Sunday 4 Oct 12:00 Istanbul
+  const parsed = parseScheduleChoice({ dayOfMonth: 15, hour: 14, minute: 30 });
+  assert.ok(parsed.ok);
+  const rule = scheduleRuleFor("MONTHLY", checkout, tz, parsed.value);
+  assert.deepEqual(rule, { kind: "monthDay", day: 15, hour: 14, minute: 30 });
+
+  // Today's checkout payment is October's gift; the first scheduled charge is 15 Nov 14:30 Istanbul.
+  const first = firstChargeAfterCheckout(rule, checkout, tz);
+  assert.equal(first.toISOString(), "2026-11-15T11:30:00.000Z");
+
+  const consent = consentSnapshotFor({ frequency: "MONTHLY", amount: 25, currency: "USD", timezone: tz, rail: "ALBARAKA", locale: "ar", now: checkout, rule, notes: "x" });
+  assert.deepEqual(consent.schedule, rule);
+  assert.equal(consent.nextChargeAt, first.toISOString());
+  assert.equal(consent.notes, "x");
+
+  // The stored plan, as the settlement and the scheduler read it.
+  const plan = { frequency: "MONTHLY", scheduleRule: JSON.parse(JSON.stringify(rule)), timezone: tz };
+  assert.equal(firstChargeForPlan(plan, checkout).toISOString(), first.toISOString());
+  // After the 15 Nov charge, the next is 15 Dec 14:30  the same rule.
+  assert.equal(nextChargeForPlan(plan, first).toISOString(), "2026-12-15T11:30:00.000Z");
+  // A charge that only succeeded on a 24h retry does not drag the cycle to the 16th.
+  assert.equal(nextChargeForPlan(plan, new Date("2026-11-16T11:31:00Z")).toISOString(), "2026-12-15T11:30:00.000Z");
+});
+
+test("first charge after checkout skips the period the checkout already paid", () => {
+  const tz = "Europe/Istanbul";
+  // Daily at 14:30, paid at 10:00 → tomorrow 14:30, not this afternoon.
+  assert.equal(firstChargeAfterCheckout({ kind: "daily", hour: 14, minute: 30 }, new Date("2026-10-05T07:00:00Z"), tz).toISOString(), "2026-10-06T11:30:00.000Z");
+  // Monthly on the 15th, paid on the 20th → next month's 15th.
+  assert.equal(firstChargeAfterCheckout({ kind: "monthDay", day: 15, hour: 14, minute: 30 }, new Date("2026-10-20T07:00:00Z"), tz).toISOString(), "2026-11-15T11:30:00.000Z");
+  // Friday 09:00, paid on Thursday → tomorrow (a different Friday's gift).
+  assert.equal(firstChargeAfterCheckout({ kind: "weekday", weekday: 5, hour: 9, minute: 0 }, new Date("2026-10-08T07:00:00Z"), tz).toISOString(), "2026-10-09T06:00:00.000Z");
+  // Friday 09:00, paid on Friday at 08:00 → next Friday, not an hour later.
+  assert.equal(firstChargeAfterCheckout({ kind: "weekday", weekday: 5, hour: 9, minute: 0 }, new Date("2026-10-09T05:00:00Z"), tz).toISOString(), "2026-10-16T06:00:00.000Z");
+});
+
+test("rule-based next charge: daily time across DST, month-end clamp", () => {
+  // New York daily at 14:30 across the March DST change keeps 14:30 local.
+  const ny = nextChargeFromRule({ kind: "daily", hour: 14, minute: 30 }, new Date("2026-03-07T19:30:00Z"), "America/New_York");
+  const w = wallClock(ny, "America/New_York");
+  assert.deepEqual([w.month, w.day, w.hour, w.minute], [3, 8, 14, 30]);
+  // A legacy monthDay of 31 still charges on February's last day.
+  const feb = wallClock(nextChargeFromRule({ kind: "monthDay", day: 31, hour: 9, minute: 0 }, new Date("2026-02-01T00:00:00Z"), "UTC"), "UTC");
+  assert.deepEqual([feb.month, feb.day, feb.hour], [2, 28, 9]);
+});
+
+test("legacy plans without a stored time keep their old cadence", () => {
+  const tz = "Europe/Istanbul";
+  const from = new Date("2026-10-05T07:12:00Z");
+  const cases = [
+    ["DAILY", { kind: "daily" }],
+    ["MONTHLY", { kind: "monthDay", day: 5 }],
+    ["MONTHLY", null],
+    // A rule that does not match the plan's cadence is ignored.
+    ["DAILY", { kind: "monthDay", day: 5, hour: 9 }],
+  ] as const;
+  for (const [frequency, scheduleRule] of cases) {
+    assert.equal(nextChargeForPlan({ frequency, scheduleRule, timezone: tz }, from).toISOString(), nextChargeAt(frequency, from, tz).toISOString(), JSON.stringify(scheduleRule));
+  }
+  assert.equal(parseScheduleRule({ kind: "weekday", weekday: 5, hour: 9 })?.kind, "weekday");
+  assert.equal(parseScheduleRule({ kind: "prayer" }), null);
 });

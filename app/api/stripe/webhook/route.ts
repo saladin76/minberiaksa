@@ -10,7 +10,7 @@ import { sendDonationFailedConversions } from "@/lib/tracking/donation-conversio
 import { dispatchDonationPaid, dispatchEvent } from "@/lib/events/dispatch";
 import { donationFieldEmpty } from "@/lib/donations/mongo-null";
 import { normalizeDonationCurrencyCode } from "@/lib/exchange/convert-amount-in-currency-to-usd";
-import { nextChargeAt, normalizeTimezone, type RecurringFrequency } from "@/lib/donations/recurring-schedule";
+import { firstChargeForPlan, nextChargeForPlan } from "@/lib/donations/recurring-schedule";
 import { mintDonationAccessToken } from "@/lib/donations/access-token";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
@@ -164,14 +164,13 @@ export async function POST(req: NextRequest) {
         const isSignupInvoice = billingReason === "subscription_create";
 
         // nextBillingDate mirrors Stripe's cadence for the admin UI and the
-        // donor's account: one day, one Friday or one month after this invoice
-        // was paid, resolved in the plan's own timezone (a shorter month charges
-        // on its last day). Stripe owns the actual billing; this is the mirror.
-        const nextBillingDate = nextChargeAt(
-          dbSubscription.frequency as RecurringFrequency,
-          paidAt,
-          normalizeTimezone(dbSubscription.timezone)
-        );
+        // donor's account: the next slot of the plan's own rule (the donor's
+        // chosen day and time) in its timezone  after the signup payment, the
+        // first slot of the next month, which is where /api/stripe/charge
+        // anchored the Stripe subscription. Stripe owns the actual billing.
+        const nextBillingDate = isSignupInvoice
+          ? firstChargeForPlan(dbSubscription, paidAt)
+          : nextChargeForPlan(dbSubscription, paidAt);
 
         const fees = (dbSubscription.amount + dbSubscription.teamSupport) * 0.03;
         const finalTotal =
@@ -548,7 +547,8 @@ export async function POST(req: NextRequest) {
             where: { id: dbSubscription.id },
             data: { status: "PAUSED" },
           });
-        } else if (!pausedAtStripe && dbSubscription.status === "PAUSED" && stripeSub.status === "active") {
+        } else if (!pausedAtStripe && dbSubscription.status === "PAUSED" && (stripeSub.status === "active" || stripeSub.status === "trialing")) {
+          // "trialing": a plan anchored to the donor's chosen day runs as a trial until its first scheduled charge.
           await prisma.subscription.update({
             where: { id: dbSubscription.id },
             data: { status: "ACTIVE" },

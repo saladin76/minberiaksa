@@ -5,7 +5,7 @@ import Stripe from "stripe";
 import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 import { prisma } from "@/lib/prisma";
 import { applyPlanStatusAtProvider, ProviderSyncError, planRail } from "@/lib/donations/subscription-provider-control";
-import { nextChargeAt, normalizeTimezone, scheduleRuleFor, type RecurringFrequency } from "@/lib/donations/recurring-schedule";
+import { firstChargeAfterCheckout, nextChargeForPlan, normalizeTimezone, parseScheduleRule, scheduleRuleFor, type RecurringFrequency } from "@/lib/donations/recurring-schedule";
 import { convertAmountInCurrencyToUsd } from "@/lib/exchange/convert-amount-in-currency-to-usd";
 import { writeAuditLog, auditActorFromSiteSession, auditStreamForRole } from "@/lib/audit-log";
 
@@ -49,7 +49,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
 
   const sub = await prisma.subscription.findFirst({
     where: { id, donorId: session.user.id },
-    select: { id: true, status: true, amount: true, currency: true, frequency: true, timezone: true, provider: true, stripeSubscriptionId: true, payforToken: true, teamSupport: true },
+    select: { id: true, status: true, amount: true, currency: true, frequency: true, timezone: true, scheduleRule: true, provider: true, stripeSubscriptionId: true, payforToken: true, teamSupport: true },
   });
   if (!sub) return NextResponse.json({ error: "Plan not found" }, { status: 404 });
   if (sub.status === "CANCELLED") return NextResponse.json({ error: "A cancelled plan cannot be changed; start a new plan instead", code: "CANCELLED" }, { status: 409 });
@@ -64,9 +64,17 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     }
     const tz = normalizeTimezone(sub.timezone);
     const now = new Date();
+    /* The new cadence keeps the time of day (and, back to monthly, the day)
+       the donor chose; only what the old rule never had comes from now. The
+       current period counts as given, as it did before. */
+    const old = parseScheduleRule(sub.scheduleRule);
+    const keep = old?.hour !== undefined
+      ? { hour: old.hour, minute: old.minute ?? 0, ...(old.kind === "monthDay" && old.day <= 28 ? { dayOfMonth: old.day } : {}) }
+      : null;
+    const rule = scheduleRuleFor(input.frequency, now, tz, keep);
     data.frequency = input.frequency;
-    data.scheduleRule = scheduleRuleFor(input.frequency, now, tz);
-    data.nextBillingDate = nextChargeAt(input.frequency, now, tz);
+    data.scheduleRule = rule;
+    data.nextBillingDate = firstChargeAfterCheckout(rule, now, tz);
     changes.push(`frequency ${sub.frequency} → ${input.frequency}`);
   }
 
@@ -108,7 +116,10 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       throw err;
     }
     data.status = input.status;
-    if (input.status === "ACTIVE") data.nextBillingDate = nextChargeAt((data.frequency ?? sub.frequency) as RecurringFrequency, new Date(), normalizeTimezone(sub.timezone));
+    // Resume at the plan's next own slot (its rule  possibly the one just set above).
+    if (input.status === "ACTIVE") {
+      data.nextBillingDate = nextChargeForPlan({ frequency: data.frequency ?? sub.frequency, scheduleRule: data.scheduleRule ?? sub.scheduleRule, timezone: sub.timezone }, new Date());
+    }
     changes.push(`status ${sub.status} → ${input.status}`);
   }
 

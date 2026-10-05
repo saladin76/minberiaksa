@@ -3,7 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 import { prisma } from "@/lib/prisma";
 import Stripe from "stripe";
-import { nextChargeAt, normalizeTimezone, type RecurringFrequency } from "@/lib/donations/recurring-schedule";
+import { firstChargeForPlan, normalizeTimezone, type RecurringFrequency } from "@/lib/donations/recurring-schedule";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: "2026-03-25.dahlia",
@@ -52,7 +52,7 @@ export async function POST(req: NextRequest) {
           /* amount/teamSupport/coverFees are what the recurring price is computed from a few dozen
               lines below; leaving them out of the select made them `undefined` at runtime, so
               `planFees` was NaN and every monthly Stripe plan was priced from a NaN total. */
-          select: { id: true, frequency: true, timezone: true, stripeSubscriptionId: true, payforToken: true, amount: true, teamSupport: true, coverFees: true },
+          select: { id: true, frequency: true, timezone: true, scheduleRule: true, stripeSubscriptionId: true, payforToken: true, amount: true, teamSupport: true, coverFees: true },
         },
         donor: { select: { id: true, email: true, name: true } },
       },
@@ -143,7 +143,16 @@ export async function POST(req: NextRequest) {
     const planFees = (plan.amount + plan.teamSupport) * 0.03;
     const planTotal = plan.amount + plan.teamSupport + (plan.coverFees ? planFees : 0);
     const recurringInSmallestUnit = Math.round(planTotal * 100);
-    const onceInSmallestUnit = amountInSmallestUnit - recurringInSmallestUnit;
+
+    /* The plan bills on the donor's chosen day and time, not on the day they
+       checked out. Stripe cannot anchor a monthly cycle further out than its
+       natural billing date, so the plan runs as a trial until its first
+       scheduled charge (`firstChargeForPlan`  the chosen slot in the next
+       month): the trial's end is the cycle anchor, and every later invoice
+       falls on the same day and time. Today's payment  the first month's
+       gift, with any once-only team support  is charged now as a one-off
+       line on the signup invoice. */
+    const firstScheduledCharge = firstChargeForPlan(plan, now);
 
     const subscription = await stripe.subscriptions.create({
       customer: customerId,
@@ -157,9 +166,8 @@ export async function POST(req: NextRequest) {
           },
         },
       ],
-      ...(onceInSmallestUnit > 0 && recurringInSmallestUnit > 0
-        ? { add_invoice_items: [{ price_data: { currency, product: product.id, unit_amount: onceInSmallestUnit } }] }
-        : {}),
+      add_invoice_items: [{ price_data: { currency, product: product.id, unit_amount: amountInSmallestUnit } }],
+      trial_end: Math.floor(firstScheduledCharge.getTime() / 1000),
       payment_behavior: "default_incomplete",
       payment_settings: { save_default_payment_method: "on_subscription" },
       expand: ["latest_invoice.payment_intent"],
@@ -181,7 +189,7 @@ export async function POST(req: NextRequest) {
           stripeSubscriptionId: subscription.id,
           // Kept for the webhook's older lookup path and the admin exports.
           payforToken: subscription.id,
-          nextBillingDate: nextChargeAt("MONTHLY", now, timezone),
+          nextBillingDate: firstScheduledCharge,
         },
       }),
       prisma.donation.update({

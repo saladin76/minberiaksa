@@ -17,7 +17,7 @@ import {
   paypalVaultOf,
   type PayPalOrder,
 } from "@/lib/paypal";
-import { nextChargeAt, normalizeTimezone, type RecurringFrequency } from "@/lib/donations/recurring-schedule";
+import { firstChargeForPlan } from "@/lib/donations/recurring-schedule";
 import { dispatchDonationPaid, dispatchEvent } from "@/lib/events/dispatch";
 import { sendDonationFailedConversions } from "@/lib/tracking/donation-conversion-server";
 
@@ -295,7 +295,7 @@ export async function settlePayPalDonation(input: {
     if (fresh.subscriptionId) {
       const plan = await tx.subscription.findUnique({
         where: { id: fresh.subscriptionId },
-        select: { id: true, frequency: true, timezone: true, lastBillingDate: true },
+        select: { id: true, frequency: true, timezone: true, scheduleRule: true, lastBillingDate: true },
       });
       if (plan && plan.lastBillingDate === null) {
         if (input.vault) {
@@ -307,7 +307,8 @@ export async function settlePayPalDonation(input: {
               paypalVaultId: input.vault.id,
               paypalCustomerId: input.vault.customerId,
               lastBillingDate: paidAt,
-              nextBillingDate: nextChargeAt(plan.frequency as RecurringFrequency, paidAt, normalizeTimezone(plan.timezone)),
+              // The first slot of the plan's own rule after this payment.
+              nextBillingDate: firstChargeForPlan(plan, paidAt),
               chargeAttempts: 0,
               lastChargeError: null,
             },

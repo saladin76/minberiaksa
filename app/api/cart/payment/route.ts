@@ -26,10 +26,11 @@ import { WAQF_MAX_COUNT, WAQF_UNIT_PRICE_USD, isWaqfUnitKey } from "@/lib/minbar
 import { MIN_DONATION_USD, MIN_DONATION_USD_TOLERANCE, parseLocalAmount } from "@/lib/minbar/donation-amount";
 import {
   consentSnapshotFor,
+  firstChargeAfterCheckout,
   frequencyOfOrderType,
   isOrderType,
-  nextChargeAt,
   normalizeTimezone,
+  parseScheduleChoice,
   railForFrequency,
   scheduleRuleFor,
 } from "@/lib/donations/recurring-schedule";
@@ -170,6 +171,10 @@ export async function POST(request: NextRequest) {
       /* The donor's IANA zone, so "Friday" and "the 15th" are their Friday
          and their 15th. Validated below; UTC when absent or invalid. */
       timezone: timezoneIn,
+      /* Recurring only: the day (monthly) and local time the donor chose on
+         the recurring page, plus their note. Validated below; absent means
+         the plan is scheduled from its creation time. */
+      schedule: scheduleIn,
       paymentMethod,
       cardDetails = null,
       referralCode,
@@ -245,6 +250,12 @@ export async function POST(request: NextRequest) {
     }
     const frequency = frequencyOfOrderType(type);
     const timezone = normalizeTimezone(timezoneIn);
+    /* Never let a malformed schedule fall back to a different one silently:
+       the donor would be charged on a day they did not pick. */
+    const scheduleChoice = parseScheduleChoice(frequency ? scheduleIn : null);
+    if (!scheduleChoice.ok) {
+      return NextResponse.json({ error: scheduleChoice.error }, { status: 400 });
+    }
     const isBankTransfer = paymentMethod === "BANK_TRANSFER";
     /* A transfer is a one-off act by the donor; nothing can be charged again
        tomorrow, on Friday or next month. The checkout hides the option for a
@@ -604,11 +615,14 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      /* The plan's own clock. `nextBillingDate` is the server's estimate until
-         the first paid instalment replaces it; `consentSnapshot` is what the
-         donor saw and agreed to, and is never rewritten. */
+      /* The plan's own clock: ONE rule  the donor's chosen day and time
+         from which the first `nextBillingDate` and the consent record are
+         both computed, so the three cannot disagree. `nextBillingDate` is
+         re-derived from the same rule when the first instalment settles;
+         `consentSnapshot` is never rewritten. */
       const now = new Date();
-      const nextBilling = nextChargeAt(frequency, now, timezone);
+      const rule = scheduleRuleFor(frequency, now, timezone, scheduleChoice.value);
+      const nextBilling = firstChargeAfterCheckout(rule, now, timezone);
       const consent = consentSnapshotFor({
         frequency,
         amount: finalTotalAmount,
@@ -617,6 +631,8 @@ export async function POST(request: NextRequest) {
         rail,
         locale: validLocale,
         now,
+        rule,
+        notes: scheduleChoice.value?.notes ?? null,
       });
 
       const result = await prisma.$transaction(async (tx) => {
@@ -637,7 +653,7 @@ export async function POST(request: NextRequest) {
             provider: rail,
             /* Plain data, but Prisma's `InputJsonValue` does not accept a
                named interface without the cast. */
-            scheduleRule: scheduleRuleFor(frequency, now, timezone) as unknown as Prisma.InputJsonValue,
+            scheduleRule: rule as unknown as Prisma.InputJsonValue,
             consentSnapshot: consent as unknown as Prisma.InputJsonValue,
             nextBillingDate: nextBilling,
             /* Stamped when the first instalment actually settles  by the

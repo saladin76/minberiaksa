@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useLocale, useMessages, useTranslations } from "next-intl";
 import { Button } from "@/components/minbar/ds";
 import { miaPath } from "@/lib/minbar/routes";
-import { addToCart, type CartFreqKey } from "@/lib/minbar/cart";
+import { addToCart, type CartFreqKey, type CartRecurringSchedule } from "@/lib/minbar/cart";
 import { verseBlock } from "@/lib/minbar/quran";
 import { useMinbarMoney } from "@/hooks/useMinbarMoney";
 import { useDonationAmount } from "@/hooks/useDonationAmount";
@@ -20,21 +20,21 @@ import type { MinbarProject } from "@/lib/minbar/projects";
  * Timing is the part with real backend weight. `DONATION_LOGIC_SPEC §1.3` and
  * the Recurring Time Contract require a plan to store its **timezone**, its
  * schedule type, and its schedule rule *as structure*  `{dayOfMonth: 15}`, not
- * "the fifteenth"  with `nextChargeAt` computed on the server. A prayer-linked
- * charge additionally stores the location and prayer rule and is recalculated
- * each run, so daylight saving and shifting prayer times are absorbed rather
- * than baked into a stored offset.
+ * "the fifteenth"  with `nextChargeAt` computed on the server.
  *
- * This form collects exactly that structure. It never computes a charge date:
- * `RECURRING_DONATION_FLOW_MAP.md` forbids relying on the donor's browser clock
- * for a withdrawal.
+ * This form collects that structure  the day of the month (monthly) and a
+ * local time  and puts it on the cart row as `schedule`; the order sends it
+ * and the server validates it and builds the plan's rule from it. It never
+ * computes a charge date: `RECURRING_DONATION_FLOW_MAP.md` forbids relying on
+ * the donor's browser clock for a withdrawal.
+ *
+ * A prayer-time option is deliberately not offered: no scheduler resolves
+ * prayer times, and offering it would promise a charge time nothing honours.
  *
  * The cart stores `freqKey` (`once`/`daily`/`friday`/`monthly`); the backend
  * normalises that to the official `donationMode`/`frequency` pair and never
  * reuses `freqKey` in an external API.
  */
-
-type TimeMode = "prayer" | "local";
 
 const AMOUNTS = [25, 50, 100, 250, 500];
 
@@ -71,56 +71,6 @@ const FREQUENCIES: ReadonlyArray<{ id: Exclude<CartFreqKey, "once">; labelKey: s
   },
 ];
 
-/** The five daily prayers, each with its own drawn glyph. */
-const PRAYERS: ReadonlyArray<{ key: string; labelKey: string; icon: ReactElement }> = [
-  {
-    key: "Fajr",
-    labelKey: "prayerFajr",
-    icon: (
-      <>
-        <path d="M12 2v4" />
-        <circle cx="12" cy="14" r="4.2" />
-        <path d="M2 21h20M2 17h20M5.5 9.5l1.4 1.4M18.5 9.5l-1.4 1.4" />
-      </>
-    ),
-  },
-  {
-    key: "Dhuhr",
-    labelKey: "prayerDhuhr",
-    icon: (
-      <>
-        <circle cx="12" cy="11" r="4.2" />
-        <path d="M12 3v2M12 17v2M3.5 11h2M18.5 11h2M6 5.5l1.4 1.4M18 5.5l-1.4 1.4M6 16.5l1.4-1.4M18 16.5l-1.4-1.4" />
-      </>
-    ),
-  },
-  {
-    key: "Asr",
-    labelKey: "prayerAsr",
-    icon: (
-      <>
-        <circle cx="12" cy="12" r="4.2" />
-        <path d="M12 3.5v2M4.5 12h2M19.5 12h2M6.6 6.6l1.4 1.4M17.4 6.6l-1.4 1.4" />
-      </>
-    ),
-  },
-  {
-    key: "Maghrib",
-    labelKey: "prayerMaghrib",
-    icon: (
-      <>
-        <circle cx="12" cy="14" r="4.2" />
-        <path d="M4.5 14h2M17.5 14h2M7 8.5l1.4 1.4M17 8.5l-1.4 1.4M2 21h20" />
-      </>
-    ),
-  },
-  {
-    key: "Isha",
-    labelKey: "prayerIsha",
-    icon: <path d="M19.8 13.6a7.5 7.5 0 1 1-9.4-9.4 6.2 6.2 0 0 0 9.4 9.4Z" />,
-  },
-];
-
 const BENEFITS = [
   { id: "sustain", image: "/minbar/assets/icon-recurring-sustain.png" },
   { id: "duty", image: "/minbar/assets/icon-recurring-duty.png" },
@@ -146,6 +96,18 @@ const SERVED: ReadonlyArray<{ id: string; titleNs: "recurring" | "navigation"; t
 /** Days 1–28 only: every month has them, so a plan can never skip a month. */
 const MONTH_DAYS = Array.from({ length: 28 }, (_, i) => i + 1);
 
+/**
+ * The cart row's schedule: the chosen day (monthly plans only) and the local
+ * time as hour and minute. An unparseable time falls back to the default.
+ */
+function scheduleOf(freq: Exclude<CartFreqKey, "once">, monthDay: number, localTime: string, notes: string): CartRecurringSchedule {
+  const match = /^(d{1,2}):(d{2})/.exec(localTime);
+  const hour = match ? Math.min(23, Number(match[1])) : 14;
+  const minute = match ? Math.min(59, Number(match[2])) : 30;
+  const note = notes.trim();
+  return { hour, minute, ...(freq === "monthly" ? { dayOfMonth: monthDay } : {}), ...(note ? { notes: note } : {}) };
+}
+
 export interface RecurringPageProps {
   projects: MinbarProject[];
 }
@@ -165,8 +127,6 @@ export default function RecurringPage({ projects }: RecurringPageProps) {
   const [amount, setAmount] = useState(100);
   const [custom, setCustom] = useState("");
   const [freq, setFreq] = useState<Exclude<CartFreqKey, "once">>("monthly");
-  const [timeMode, setTimeMode] = useState<TimeMode>("prayer");
-  const [prayer, setPrayer] = useState("Dhuhr");
   const [localTime, setLocalTime] = useState("14:30");
   const [monthDay, setMonthDay] = useState(1);
   const [notes, setNotes] = useState("");
@@ -190,6 +150,8 @@ export default function RecurringPage({ projects }: RecurringPageProps) {
       amount: value,
       currency: "USD",
       ...("local" in given && given.local ? { local: given.local } : {}),
+      // The chosen day and local time; the server builds the plan's rule from it.
+      schedule: scheduleOf(freq, monthDay, localTime, notes),
     });
     router.push(miaPath("cart", locale));
   };
@@ -354,8 +316,8 @@ export default function RecurringPage({ projects }: RecurringPageProps) {
                 </div>
               </div>
 
-              {/* Schedule. Stored as structure  a day number and either a prayer
-                  key or a wall-clock time  never as a sentence. */}
+              {/* Schedule. Stored as structure  a day number and a wall-clock
+                  time  never as a sentence. */}
               <div style={{ display: "grid", gap: 12, padding: 16, background: "var(--ivory)", border: "1px solid var(--border)", borderRadius: 12 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                   <span aria-hidden="true" style={{ width: 24, height: 24, borderRadius: 7, background: "var(--sand)", display: "grid", placeItems: "center", color: "var(--gold)" }}>
@@ -386,62 +348,20 @@ export default function RecurringPage({ projects }: RecurringPageProps) {
 
                 <div style={{ display: "grid", gap: 7 }}>
                   <span style={{ fontSize: 11, fontWeight: 800, color: "var(--muted)" }}>{t("timeOfDay")}</span>
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(2,minmax(0,1fr))", gap: 6, padding: 4, background: "var(--sand)", borderRadius: 999 }}>
-                    <button type="button" onClick={() => setTimeMode("prayer")} className="rc-seg" style={segment(timeMode === "prayer")}>
-                      {t("prayerTime")}
-                    </button>
-                    <button type="button" onClick={() => setTimeMode("local")} className="rc-seg" style={segment(timeMode === "local")}>
-                      {t("localTime")}
-                    </button>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, height: 46, padding: "0 14px", background: "#fff", border: "1px solid var(--border)", borderRadius: 8 }}>
+                    <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="var(--gold)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                      <circle cx="12" cy="12" r="9" />
+                      <path d="M12 7v5l3 3" />
+                    </svg>
+                    <input
+                      type="time"
+                      value={localTime}
+                      onChange={(e) => setLocalTime(e.target.value)}
+                      dir="ltr"
+                      aria-label={t("localTime")}
+                      style={{ flex: "1 1 auto", background: "transparent", border: 0, fontFamily: "inherit", fontSize: 15, fontWeight: 900, color: "var(--deep)", unicodeBidi: "plaintext", outline: "none" }}
+                    />
                   </div>
-
-                  {timeMode === "prayer" ? (
-                    <div id="rc-prayers" style={{ display: "grid", gridTemplateColumns: "repeat(5,minmax(0,1fr))", gap: 6 }}>
-                      {PRAYERS.map((p) => (
-                        <button
-                          key={p.key}
-                          type="button"
-                          onClick={() => setPrayer(p.key)}
-                          className="rc-prayer"
-                          style={{
-                            display: "grid",
-                            justifyItems: "center",
-                            gap: 5,
-                            padding: "10px 4px",
-                            borderRadius: 10,
-                            border: `1px solid ${prayer === p.key ? "var(--gold)" : "var(--border)"}`,
-                            background: prayer === p.key ? "var(--sand)" : "#fff",
-                            color: prayer === p.key ? "var(--deep)" : "var(--muted)",
-                            fontFamily: "inherit",
-                            fontSize: 11.5,
-                            fontWeight: 800,
-                            cursor: "pointer",
-                            transition: "all .18s ease",
-                          }}
-                        >
-                          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                            {p.icon}
-                          </svg>
-                          {t(p.labelKey)}
-                        </button>
-                      ))}
-                    </div>
-                  ) : (
-                    <div style={{ display: "flex", alignItems: "center", gap: 10, height: 46, padding: "0 14px", background: "#fff", border: "1px solid var(--border)", borderRadius: 8 }}>
-                      <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="var(--gold)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                        <circle cx="12" cy="12" r="9" />
-                        <path d="M12 7v5l3 3" />
-                      </svg>
-                      <input
-                        type="time"
-                        value={localTime}
-                        onChange={(e) => setLocalTime(e.target.value)}
-                        dir="ltr"
-                        aria-label={t("localTime")}
-                        style={{ flex: "1 1 auto", background: "transparent", border: 0, fontFamily: "inherit", fontSize: 15, fontWeight: 900, color: "var(--deep)", unicodeBidi: "plaintext", outline: "none" }}
-                      />
-                    </div>
-                  )}
                 </div>
               </div>
 

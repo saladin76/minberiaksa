@@ -69,6 +69,19 @@ export interface CartGiftDetails {
   showAmount: boolean;
 }
 
+/**
+ * When a recurring row charges, as the donor chose it on the recurring page:
+ * a day of the month (monthly only, 1–28) and a local wall-clock time in the
+ * donor's own timezone. Sent with the order; the server validates it and
+ * builds the plan's schedule rule from it.
+ */
+export interface CartRecurringSchedule {
+  dayOfMonth?: number;
+  hour: number;
+  minute: number;
+  notes?: string;
+}
+
 export interface MinbarCartItem {
   /** Project slug from the projects source. Absent for non-project intentions. */
   projectId?: string;
@@ -114,6 +127,8 @@ export interface MinbarCartItem {
    * the share price. Sent with the order so the receipt says "3 shares".
    */
   shareCount?: number;
+  /** Recurring rows from the recurring page: the chosen charge day and time. */
+  schedule?: CartRecurringSchedule;
 }
 
 export const CART_ITEMS_KEY = "mia_cart_items";
@@ -174,6 +189,19 @@ function parseWaqf(value: unknown): CartWaqfDetails | undefined {
   };
 }
 
+/** The schedule of a stored row, or nothing if it is not a whole one. */
+function parseSchedule(value: unknown): CartRecurringSchedule | undefined {
+  if (!value || typeof value !== "object") return undefined;
+  const raw = value as Record<string, unknown>;
+  const int = (v: unknown, min: number, max: number) => (typeof v === "number" && Number.isInteger(v) && v >= min && v <= max ? v : undefined);
+  const hour = int(raw.hour, 0, 23);
+  const minute = int(raw.minute, 0, 59);
+  if (hour === undefined || minute === undefined) return undefined;
+  const dayOfMonth = int(raw.dayOfMonth, 1, 28);
+  const notes = typeof raw.notes === "string" && raw.notes.trim() ? raw.notes.trim() : undefined;
+  return { hour, minute, ...(dayOfMonth ? { dayOfMonth } : {}), ...(notes ? { notes } : {}) };
+}
+
 /** The gift details of a stored row, or nothing without a recipient name. */
 function parseGift(value: unknown): CartGiftDetails | undefined {
   if (!value || typeof value !== "object") return undefined;
@@ -227,6 +255,7 @@ export function migrateItem(
       typeof raw.shareCount === "number" && Number.isInteger(raw.shareCount) && raw.shareCount > 0
         ? raw.shareCount
         : undefined,
+    schedule: parseSchedule(raw.schedule),
   };
 
   if (!item.projectId && !item.categoryId && !item.titleKey && item.title && resolveTitle) {

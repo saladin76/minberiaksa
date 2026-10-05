@@ -5,7 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { albarakaIsoCode, type AlbarakaServiceResponse } from "@/lib/albaraka";
 import { sendDonationFailedConversions } from "@/lib/tracking/donation-conversion-server";
 import { dispatchDonationPaid, dispatchEvent } from "@/lib/events/dispatch";
-import { nextChargeAt, normalizeTimezone, type RecurringFrequency } from "@/lib/donations/recurring-schedule";
+import { firstChargeForPlan } from "@/lib/donations/recurring-schedule";
 
 /**
  * Settling an Albaraka charge, shared by the 2D sale (`/api/albaraka/3d/initiate`,
@@ -121,12 +121,13 @@ export async function settleAlbarakaDonation(
     }
 
     /* A plan's first instalment: the plan is live from here, and its next
-       charge is computed from this settlement in its own zone. The scheduler
+       charge is the first slot of its own rule (the donor's chosen day and
+       time) after this settlement. The scheduler
        (`lib/donations/albaraka-recurring.ts`) takes over. */
     if (fresh.subscriptionId) {
       const plan = await tx.subscription.findUnique({
         where: { id: fresh.subscriptionId },
-        select: { id: true, frequency: true, timezone: true },
+        select: { id: true, frequency: true, timezone: true, scheduleRule: true },
       });
       if (plan) {
         const paidAt = new Date();
@@ -136,7 +137,7 @@ export async function settleAlbarakaDonation(
             status: "ACTIVE",
             provider: "ALBARAKA",
             lastBillingDate: paidAt,
-            nextBillingDate: nextChargeAt(plan.frequency as RecurringFrequency, paidAt, normalizeTimezone(plan.timezone)),
+            nextBillingDate: firstChargeForPlan(plan, paidAt),
             chargeAttempts: 0,
             lastChargeError: null,
           },

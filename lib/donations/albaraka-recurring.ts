@@ -26,7 +26,7 @@ import { normalizeDonationCurrencyCode } from "@/lib/exchange/convert-amount-in-
 import { getDonorCountryCodeForSnapshot } from "@/lib/donations/donor-country-code";
 import { dispatchDonationPaid, dispatchEvent } from "@/lib/events/dispatch";
 import { sendDonationFailedConversions } from "@/lib/tracking/donation-conversion-server";
-import { nextChargeAt, nextRetryAt, normalizeTimezone, type RecurringFrequency } from "./recurring-schedule";
+import { nextChargeForPlan, nextRetryAt } from "./recurring-schedule";
 import { mintDonationAccessToken } from "@/lib/donations/access-token";
 
 /**
@@ -106,13 +106,18 @@ async function chargeFor(totalAmount: number, currency: string): Promise<{ amoun
   return { amount: albarakaMinorUnits(convertAmountInCurrencyToTry(totalAmount, currency, rates)), currencyCode: "TL" };
 }
 
-/** The first cycle still ahead of `now`, stepping from the cycle that was due. */
-function nextCycleAfter(frequency: RecurringFrequency, due: Date, now: Date, timezone: string): Date {
-  let next = nextChargeAt(frequency, due, timezone);
+/**
+ * The first cycle still ahead of `now`, stepping from the cycle that was due.
+ * Each step follows the plan's own rule (the donor's chosen day and time), so
+ * a charge that succeeded on a retry hours later does not drag the next cycle
+ * off that slot. Plans without a rule step by frequency, as before.
+ */
+function nextCycleAfter(sub: { frequency: string; scheduleRule: unknown; timezone: string | null }, due: Date, now: Date): Date {
+  let next = nextChargeForPlan(sub, due);
   // Bounded: a daily plan two years behind is 730 steps, which is fine; the
   // cap only guards against a clock that is wildly wrong.
   for (let i = 0; i < 2000 && next.getTime() <= now.getTime(); i += 1) {
-    next = nextChargeAt(frequency, next, timezone);
+    next = nextChargeForPlan(sub, next);
   }
   return next;
 }
@@ -164,8 +169,6 @@ export async function chargeDueAlbarakaSubscriptions(options: { now?: Date; dryR
 }
 
 async function chargeOne(sub: DueSubscription, now: Date, dryRun: boolean): Promise<RecurringChargeOutcome> {
-  const frequency = sub.frequency as RecurringFrequency;
-  const timezone = normalizeTimezone(sub.timezone);
   const due = sub.nextBillingDate ?? now;
   const attempt = sub.chargeAttempts + 1;
   const orderId = albarakaRecurringOrderId(sub.id, due.toISOString(), attempt);
@@ -282,7 +285,7 @@ async function chargeOne(sub: DueSubscription, now: Date, dryRun: boolean): Prom
   }
 
   // ── Settle ───────────────────────────────────────────────────────────────
-  const nextBillingDate = nextCycleAfter(frequency, due, now, timezone);
+  const nextBillingDate = nextCycleAfter(sub, due, now);
   await prisma.$transaction(async (tx) => {
     const fresh = await tx.donation.findUnique({ where: { id: donation.id }, include: { items: true, categoryItems: true } });
     if (!fresh || fresh.paidAt) return;

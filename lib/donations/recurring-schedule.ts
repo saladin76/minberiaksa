@@ -133,22 +133,99 @@ export function normalizeTimezone(value: unknown, fallback = "UTC"): string {
   }
 }
 
+/**
+ * A plan's schedule, as structure, in its own timezone. `hour`/`minute` are
+ * the wall-clock time of every charge. Plans created before the donor could
+ * choose a time stored `{ kind: "daily" }` / `{ kind: "monthDay", day }`
+ * without one; those keep their old cadence through `nextChargeAt` (see
+ * `nextChargeForPlan`).
+ */
 export type ScheduleRule =
-  | { kind: "daily" }
-  | { kind: "weekday"; weekday: 5; hour: number }
-  | { kind: "monthDay"; day: number };
+  | { kind: "daily"; hour?: number; minute?: number }
+  | { kind: "weekday"; weekday: 5; hour: number; minute?: number }
+  | { kind: "monthDay"; day: number; hour?: number; minute?: number };
 
-/** The rule a plan created at `at` in `timezone` follows, as structure. */
-export function scheduleRuleFor(frequency: RecurringFrequency, at: Date, timezone: string): ScheduleRule {
+/** What the donor chose on the recurring page: a day (monthly only) and a local time. */
+export interface RecurringScheduleChoice {
+  /** 1–28, so every month has it. Monthly plans only. */
+  dayOfMonth?: number;
+  hour: number;
+  minute: number;
+  /** Free text the donor attached to the schedule. Kept on the consent record. */
+  notes?: string;
+}
+
+export const MAX_SCHEDULE_NOTES = 500;
+
+const isIntIn = (value: unknown, min: number, max: number): value is number =>
+  typeof value === "number" && Number.isInteger(value) && value >= min && value <= max;
+
+/**
+ * Validate a schedule choice from the browser. Absent is fine (`value: null`
+ *  the plan is then scheduled from its creation time, as before); present but
+ * malformed is an error, never silently replaced by a different schedule.
+ */
+export function parseScheduleChoice(
+  value: unknown
+): { ok: true; value: RecurringScheduleChoice | null } | { ok: false; error: string } {
+  if (value === undefined || value === null) return { ok: true, value: null };
+  if (typeof value !== "object" || Array.isArray(value)) return { ok: false, error: "Invalid schedule" };
+  const o = value as Record<string, unknown>;
+  if (!isIntIn(o.hour, 0, 23) || !isIntIn(o.minute, 0, 59)) return { ok: false, error: "Schedule time must be a valid hour (0–23) and minute (0–59)" };
+  if (o.dayOfMonth !== undefined && o.dayOfMonth !== null && !isIntIn(o.dayOfMonth, 1, 28)) {
+    return { ok: false, error: "Schedule day of month must be between 1 and 28" };
+  }
+  if (o.notes !== undefined && o.notes !== null && typeof o.notes !== "string") return { ok: false, error: "Invalid schedule notes" };
+  const notes = typeof o.notes === "string" ? o.notes.trim().slice(0, MAX_SCHEDULE_NOTES) : "";
+  return {
+    ok: true,
+    value: {
+      hour: o.hour,
+      minute: o.minute,
+      ...(isIntIn(o.dayOfMonth, 1, 28) ? { dayOfMonth: o.dayOfMonth } : {}),
+      ...(notes ? { notes } : {}),
+    },
+  };
+}
+
+/**
+ * The rule a plan follows: the donor's chosen day and time when there is a
+ * choice, otherwise the creation moment's (the Friday default stays
+ * `FRIDAY_CHARGE_HOUR`). A monthly plan with no chosen day keeps the creation
+ * day  e.g. a cart row switched to monthly after the recurring page.
+ */
+export function scheduleRuleFor(
+  frequency: RecurringFrequency,
+  at: Date,
+  timezone: string,
+  choice: RecurringScheduleChoice | null = null
+): ScheduleRule {
+  const wall = wallClock(at, normalizeTimezone(timezone));
   switch (frequency) {
     case "DAILY":
-      return { kind: "daily" };
+      return { kind: "daily", hour: choice?.hour ?? wall.hour, minute: choice?.minute ?? wall.minute };
     case "FRIDAY":
-      return { kind: "weekday", weekday: FRIDAY, hour: FRIDAY_CHARGE_HOUR };
+      return { kind: "weekday", weekday: FRIDAY, hour: choice?.hour ?? FRIDAY_CHARGE_HOUR, minute: choice?.minute ?? 0 };
     case "MONTHLY":
-      return { kind: "monthDay", day: wallClock(at, timezone).day };
+      return { kind: "monthDay", day: choice?.dayOfMonth ?? wall.day, hour: choice?.hour ?? wall.hour, minute: choice?.minute ?? wall.minute };
   }
 }
+
+/** A stored `scheduleRule` JSON, if it is one this module understands. */
+export function parseScheduleRule(value: unknown): ScheduleRule | null {
+  if (!value || typeof value !== "object") return null;
+  const o = value as Record<string, unknown>;
+  const time = {
+    ...(isIntIn(o.hour, 0, 23) ? { hour: o.hour } : {}),
+    ...(isIntIn(o.minute, 0, 59) ? { minute: o.minute } : {}),
+  };
+  if (o.kind === "daily") return { kind: "daily", ...time };
+  if (o.kind === "weekday" && o.weekday === FRIDAY) return { kind: "weekday", weekday: FRIDAY, hour: time.hour ?? FRIDAY_CHARGE_HOUR, ...(time.minute !== undefined ? { minute: time.minute } : {}) };
+  if (o.kind === "monthDay" && isIntIn(o.day, 1, 31)) return { kind: "monthDay", day: o.day, ...time };
+  return null;
+}
+
+const RULE_KIND: Record<RecurringFrequency, ScheduleRule["kind"]> = { DAILY: "daily", FRIDAY: "weekday", MONTHLY: "monthDay" };
 
 // ── Zoned time ──────────────────────────────────────────────────────────────
 
@@ -267,6 +344,104 @@ export function nextChargeAt(frequency: RecurringFrequency, from: Date, timezone
   }
 }
 
+/**
+ * The first moment strictly after `from` at which `rule` charges, in the
+ * plan's zone. A rule stored without a time (plans from before the donor
+ * could choose one) falls back to `nextChargeAt`'s same-wall-time cadence.
+ * A month shorter than `rule.day` charges on its last day.
+ */
+export function nextChargeFromRule(rule: ScheduleRule, from: Date, timezone: string): Date {
+  const tz = normalizeTimezone(timezone);
+  if (rule.hour === undefined) return nextChargeAt(rule.kind === "daily" ? "DAILY" : "MONTHLY", from, tz);
+  const at = { hour: rule.hour, minute: rule.minute ?? 0, second: 0 };
+  const wall = wallClock(from, tz);
+
+  switch (rule.kind) {
+    case "daily":
+      for (let offset = 0; offset < 3; offset += 1) {
+        const candidate = fromWallClock({ ...addCalendarDays(wall, offset), ...at }, tz);
+        if (candidate.getTime() > from.getTime()) return candidate;
+      }
+      break;
+
+    case "weekday":
+      for (let offset = 0; offset < 9; offset += 1) {
+        const candidate = fromWallClock({ ...addCalendarDays(wall, offset), ...at }, tz);
+        if (wallClock(candidate, tz).weekday === rule.weekday && candidate.getTime() > from.getTime()) return candidate;
+      }
+      break;
+
+    case "monthDay":
+      for (let ahead = 0; ahead < 3; ahead += 1) {
+        const index = wall.month - 1 + ahead;
+        const year = wall.year + Math.floor(index / 12);
+        const month = (index % 12) + 1;
+        const candidate = fromWallClock({ year, month, day: Math.min(rule.day, daysInMonth(year, month)), ...at }, tz);
+        if (candidate.getTime() > from.getTime()) return candidate;
+      }
+      break;
+  }
+  /* Unreachable: each loop spans more than one full period. */
+  throw new Error(`nextChargeFromRule: no occurrence found for ${rule.kind}`);
+}
+
+/** Whether two instants fall in the same billing period of a rule: the same local day, or the same local month for a monthly plan. */
+function samePeriod(rule: ScheduleRule, a: Date, b: Date, tz: string): boolean {
+  const x = wallClock(a, tz);
+  const y = wallClock(b, tz);
+  if (x.year !== y.year || x.month !== y.month) return false;
+  return rule.kind === "monthDay" || x.day === y.day;
+}
+
+/**
+ * The first scheduled charge after the checkout payment at `paidAt`. That
+ * payment is the current period's gift, so the schedule starts in the next
+ * period: a monthly plan for the 15th paid on the 4th next charges on the 15th
+ * of NEXT month, and a daily plan paid at 10:00 for 14:30 next charges
+ * tomorrow  never twice in one day or month. A Friday plan paid on a
+ * Thursday still charges the next day: that is a different Friday's gift.
+ */
+export function firstChargeAfterCheckout(rule: ScheduleRule, paidAt: Date, timezone: string): Date {
+  const tz = normalizeTimezone(timezone);
+  let next = nextChargeFromRule(rule, paidAt, tz);
+  if (rule.hour === undefined) return next; // legacy rules already skip the current period
+  for (let guard = 0; guard < 3 && samePeriod(rule, next, paidAt, tz); guard += 1) {
+    next = nextChargeFromRule(rule, next, tz);
+  }
+  return next;
+}
+
+/**
+ * A plan's own rule, when it has a usable one matching its cadence. A plan
+ * whose frequency was changed without a new rule, or with no rule at all,
+ * gets `null` and callers use the frequency-only `nextChargeAt`.
+ */
+export function planRule(plan: { frequency: string; scheduleRule?: unknown }): ScheduleRule | null {
+  if (!isRecurringFrequency(plan.frequency)) return null;
+  const rule = parseScheduleRule(plan.scheduleRule);
+  return rule && rule.kind === RULE_KIND[plan.frequency] ? rule : null;
+}
+
+/**
+ * The next charge of a stored plan strictly after `from`: from its rule when
+ * it has one, so every cycle lands on the donor's chosen day and time (a
+ * retried charge does not drag later cycles off it), else by frequency.
+ */
+export function nextChargeForPlan(plan: { frequency: string; scheduleRule?: unknown; timezone?: string | null }, from: Date): Date {
+  const tz = normalizeTimezone(plan.timezone);
+  const rule = planRule(plan);
+  if (rule) return nextChargeFromRule(rule, from, tz);
+  return nextChargeAt(isRecurringFrequency(plan.frequency) ? plan.frequency : "MONTHLY", from, tz);
+}
+
+/** The first scheduled charge of a stored plan after its checkout payment  see `firstChargeAfterCheckout`. */
+export function firstChargeForPlan(plan: { frequency: string; scheduleRule?: unknown; timezone?: string | null }, paidAt: Date): Date {
+  const tz = normalizeTimezone(plan.timezone);
+  const rule = planRule(plan);
+  if (rule) return firstChargeAfterCheckout(rule, paidAt, tz);
+  return nextChargeAt(isRecurringFrequency(plan.frequency) ? plan.frequency : "MONTHLY", paidAt, tz);
+}
+
 // ── Retry ladder (Albaraka scheduler) ───────────────────────────────────────
 
 /**
@@ -316,8 +491,12 @@ export interface ConsentSnapshot {
   amount: number;
   currency: string;
   timezone: string;
-  /** ISO  the next-charge date the checkout displayed. */
+  /** The schedule the donor agreed to  the same rule stored on the plan. */
+  schedule: ScheduleRule;
+  /** ISO  the first scheduled charge, computed from `schedule`. */
   nextChargeAt: string;
+  /** The donor's note on the schedule, if any. */
+  notes: string | null;
   /** The rail the plan was created for. */
   rail: RecurringRail;
   locale: string | null;
@@ -325,6 +504,11 @@ export interface ConsentSnapshot {
   acceptedAt: string;
 }
 
+/**
+ * Written once onto the plan. `schedule` and `nextChargeAt` come from the one
+ * rule the plan stores, so the plan's `scheduleRule`, its first
+ * `nextBillingDate` and this record cannot disagree.
+ */
 export function consentSnapshotFor(input: {
   frequency: RecurringFrequency;
   amount: number;
@@ -333,13 +517,19 @@ export function consentSnapshotFor(input: {
   rail: RecurringRail;
   locale: string | null;
   now: Date;
+  /** Defaults to the creation-time rule, as `scheduleRuleFor` builds it. */
+  rule?: ScheduleRule;
+  notes?: string | null;
 }): ConsentSnapshot {
+  const rule = input.rule ?? scheduleRuleFor(input.frequency, input.now, input.timezone);
   return {
     frequency: input.frequency,
     amount: input.amount,
     currency: input.currency,
     timezone: input.timezone,
-    nextChargeAt: nextChargeAt(input.frequency, input.now, input.timezone).toISOString(),
+    schedule: rule,
+    nextChargeAt: firstChargeAfterCheckout(rule, input.now, input.timezone).toISOString(),
+    notes: input.notes ?? null,
     rail: input.rail,
     locale: input.locale,
     acceptedAt: input.now.toISOString(),
