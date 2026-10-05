@@ -106,7 +106,7 @@ export async function GET(request: NextRequest) {
           id: true, name: true, category: true, updatedAt: true,
           /* Meta's own answer, per language  the single readiness contract. The local
              `approvalStatus`/`externalTemplateId` fields are deliberately not read here. */
-          wabaVariants: { select: { businessAccountId: true, languageCode: true, locale: true, approvalStatus: true, providerTemplateName: true, componentsSchema: true, rejectionReason: true, lastSyncedAt: true } },
+          wabaVariants: { select: { businessAccountId: true, languageCode: true, locale: true, approvalStatus: true, category: true, providerTemplateName: true, componentsSchema: true, rejectionReason: true, lastSyncedAt: true } },
         },
         orderBy: { updatedAt: "desc" },
       }),
