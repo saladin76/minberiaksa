@@ -204,14 +204,6 @@ export async function sendAutomaticWhatsappMessage(
     return { outcome: "SKIPPED", reason: "NO_RECIPIENT_PHONE" };
   }
 
-  // Meta does not allow arbitrary free-text outbound  an approved template mapping is required.
-  if (!input.metaTemplate) {
-    const created = await createDeliveryRecord({ ...base, recipientPhone: input.recipientPhone, status: "RENDERED" });
-    if (created.ok) await markDeliveryStatus(created.data.id, "SKIPPED", { errorMessage: "META_TEMPLATE_REQUIRED_FOR_AUTOMATIC_WHATSAPP" });
-    await mirrorSentMessage("WHATSAPP", input, "SKIPPED", { recipientPhone: input.recipientPhone, renderedBody: input.renderedBody, errorMessage: "META_TEMPLATE_REQUIRED_FOR_AUTOMATIC_WHATSAPP" });
-    return { outcome: "SKIPPED", reason: "META_TEMPLATE_REQUIRED_FOR_AUTOMATIC_WHATSAPP" };
-  }
-
   const created = await createDeliveryRecord({ ...base, recipientPhone: input.recipientPhone, status: "RENDERED" });
   if (!created.ok) {
     await mirrorSentMessage("WHATSAPP", input, "FAILED", { recipientPhone: input.recipientPhone, renderedBody: input.renderedBody, errorMessage: "ARCHIVE_FAILED" });
@@ -223,6 +215,56 @@ export async function sendAutomaticWhatsappMessage(
     await markDeliveryStatus(id, "SKIPPED", { errorMessage: "META_SENDER_MISSING_PHONE_NUMBER_ID" });
     await mirrorSentMessage("WHATSAPP", input, "SKIPPED", { recipientPhone: input.recipientPhone, renderedBody: input.renderedBody, errorMessage: "META_SENDER_MISSING_PHONE_NUMBER_ID" });
     return { outcome: "SKIPPED", reason: "META_SENDER_MISSING_PHONE_NUMBER_ID" };
+  }
+
+  /*
+   * Hybrid automatic WhatsApp:
+   *   1) Direct Send for Utility/Auth when the beta is enabled for the account.
+   *   2) Approved Meta template as a deterministic fallback.
+   *
+   * Transactional donation/account notices map to Direct Send's Utility category. Marketing is
+   * never allowed here. A Direct Send rejection does NOT lose the notification: if a matching
+   * approved template exists, the exact same event falls back to it.
+   */
+  const directCategory =
+    input.purpose === "AUTHENTICATION"
+      ? "authentication"
+      : input.purpose === "UTILITY" || input.purpose === "TRANSACTIONAL"
+        ? "utility"
+        : null;
+  if (directCategory && process.env.META_WHATSAPP_DIRECT_SEND_ENABLED === "true") {
+    const runtime = await getActiveMetaWhatsappRuntimeConfig();
+    const { sendDirectTextMessage } = await import("./providers/meta-whatsapp/messages");
+    const direct = await sendDirectTextMessage(
+      {
+        phoneNumberId: input.sender.phoneNumberId,
+        to: input.recipientPhone,
+        body: input.renderedBody,
+        category: directCategory,
+      },
+      runtime,
+    );
+    if (direct.ok) {
+      await markDeliveryStatus(id, "SENT", { providerMessageId: direct.providerMessageId });
+      await mirrorSentMessage("WHATSAPP", input, "SENT", {
+        recipientPhone: input.recipientPhone,
+        renderedBody: input.renderedBody,
+        providerMessageId: direct.providerMessageId,
+      });
+      return { outcome: "SENT", providerMessageId: direct.providerMessageId };
+    }
+    // Keep going to the approved-template fallback below. The final delivery row records only the
+    // terminal result so reporting stays one row per automatic event.
+  }
+
+  if (!input.metaTemplate) {
+    await markDeliveryStatus(id, "SKIPPED", { errorMessage: "META_DIRECT_SEND_OR_TEMPLATE_REQUIRED" });
+    await mirrorSentMessage("WHATSAPP", input, "SKIPPED", {
+      recipientPhone: input.recipientPhone,
+      renderedBody: input.renderedBody,
+      errorMessage: "META_DIRECT_SEND_OR_TEMPLATE_REQUIRED",
+    });
+    return { outcome: "SKIPPED", reason: "META_DIRECT_SEND_OR_TEMPLATE_REQUIRED" };
   }
 
   /* Meta counts parameters against the schema it approved, so the components are built from that
