@@ -99,6 +99,7 @@ const APPROVAL_LABEL: Record<string, string> = {
 
 export function WhatsappTemplateList() {
   const [templates, setTemplates] = React.useState<WhatsappTemplateRow[]>([]);
+  const [directSendEnabled, setDirectSendEnabled] = React.useState(false);
   const [loading, setLoading] = React.useState(true);
   const [section, setSection] = React.useState<"SYSTEM" | "CAMPAIGN">("CAMPAIGN");
   const [importing, setImporting] = React.useState(false);
@@ -118,6 +119,7 @@ export function WhatsappTemplateList() {
     try {
       const res = await axios.get("/api/templates/whatsapp");
       setTemplates(res.data?.templates ?? []);
+      setDirectSendEnabled(res.data?.directSendEnabled === true);
     } catch {
       toast.error("فشل في تحميل القوالب");
     } finally {
@@ -198,6 +200,21 @@ export function WhatsappTemplateList() {
         <button type="button" onClick={() => setSection("CAMPAIGN")} className={`rounded-md px-3 py-1.5 text-xs font-medium ${section === "CAMPAIGN" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500"}`}>الحملات التسويقية</button>
         <button type="button" onClick={() => setSection("SYSTEM")} className={`rounded-md px-3 py-1.5 text-xs font-medium ${section === "SYSTEM" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500"}`}>التلقائية والتوثيق</button>
       </div>
+      {section === "SYSTEM" && (
+        <div className={cn(
+          "rounded-xl border px-3 py-2.5 text-xs leading-5",
+          directSendEnabled
+            ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+            : "border-slate-200 bg-slate-50 text-slate-600",
+        )}>
+          <span className="font-semibold">
+            {directSendEnabled ? "Direct Send مفعّل للرسائل التلقائية." : "Direct Send Beta غير مفعّل بعد."}
+          </span>{" "}
+          {directSendEnabled
+            ? "رسائل Utility/Auth التلقائية تحاول Direct Send أولًا، وتبقى قوالب Meta الحالية مسار fallback آمنًا إذا تعذر الإرسال المباشر."
+            : "القوالب المعتمدة الحالية تظل مسار الإرسال الأساسي. عند تفعيل Direct Send لن نحذفها؛ ستبقى fallback للموثوقية."}
+        </div>
+      )}
       <div className="flex justify-between items-center flex-wrap gap-2">
         <div className="flex items-center gap-2 flex-wrap">
           <p className="text-xs text-muted-foreground">
