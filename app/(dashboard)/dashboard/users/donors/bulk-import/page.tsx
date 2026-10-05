@@ -3,6 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { UploadCloud, Loader2, ArrowLeft, CheckCircle2, AlertTriangle, FileSpreadsheet } from "lucide-react";
+import type { ImportRowInput } from "@/lib/donations/bulk-import";
 
 type PreviewRow = {
   rowNumber: number;
@@ -36,12 +37,57 @@ type PreviewResponse = {
   sampleTruncated: boolean;
 };
 
-type CommitResponse = {
+type CommitResult = { createdDonations: number; createdDonors: number; linkedExistingDonors: number; skippedRows: number };
+
+type BatchResponse = {
   ok: true; createdDonations: number; createdDonors: number; linkedExistingDonors: number;
-  skippedDuplicate: number; unresolved: number; truncated: boolean; warnings: string[];
+  alreadyImported: number; unresolved: number; rejected: number;
+};
+
+/**
+ * The file is parsed HERE, in the browser, and rows go to the server in batches. Posting the whole
+ * workbook hit Vercel's 4.5MB request-body limit, and importing it in one request hit the function
+ * timeout  so big files failed and never imported.
+ */
+type ImportState = {
+  runId: string;
+  fileHash: string;
+  totalRows: number;
+  validRows: number;
+  rows: ImportRowInput[];
+  nextIndex: number;
+  totals: CommitResult;
 };
 
 const API = "/api/admin/donations/bulk-import";
+const EMAIL_BATCH = 2000;
+const IMPORT_BATCH = 400;
+const SAMPLE_LIMIT = 500;
+const MAX_FILE_BYTES = 100 * 1024 * 1024;
+
+function newRunId() {
+  const bytes = new Uint8Array(12);
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+/** POST JSON, retrying transient failures (network, 5xx, timeouts) with backoff. 4xx is final. */
+async function postJson<T>(url: string, body: unknown, attempts = 4): Promise<T> {
+  let lastError = "تعذّر الاتصال بالخادم.";
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
+    if (attempt > 0) await new Promise((r) => setTimeout(r, 1000 * 2 ** (attempt - 1)));
+    try {
+      const res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+      const j = await res.json().catch(() => null);
+      if (res.ok) return j as T;
+      lastError = j?.error ?? `خطأ من الخادم (${res.status}).`;
+      if (res.status < 500 && res.status !== 408 && res.status !== 429) break;
+    } catch {
+      lastError = "تعذّر الاتصال بالخادم.";
+    }
+  }
+  throw new Error(lastError);
+}
 const num = (n: number) => n.toLocaleString("ar");
 const fmtDate = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString("ar", { year: "numeric", month: "2-digit", day: "2-digit" }) : "—");
 
@@ -60,11 +106,16 @@ export default function BulkDonationImportPage() {
   const [busy, setBusy] = React.useState<"preview" | "commit" | null>(null);
   const [error, setError] = React.useState<string | null>(null);
   const [preview, setPreview] = React.useState<PreviewResponse | null>(null);
-  const [result, setResult] = React.useState<CommitResponse | null>(null);
+  const [result, setResult] = React.useState<CommitResult | null>(null);
+  const [progress, setProgress] = React.useState<{ done: number; total: number; label: string } | null>(null);
+  /** The parsed rows + how far the import got; kept so a failed import can resume where it stopped. */
+  const importRef = React.useRef<ImportState | null>(null);
+  const [canResume, setCanResume] = React.useState(false);
   const inputRef = React.useRef<HTMLInputElement | null>(null);
 
   function reset() {
-    setPreview(null); setResult(null); setError(null);
+    setPreview(null); setResult(null); setError(null); setProgress(null); setCanResume(false);
+    importRef.current = null;
   }
 
   function onPick(f: File | null) {
@@ -74,36 +125,112 @@ export default function BulkDonationImportPage() {
 
   async function runPreview() {
     if (!file) return;
-    setBusy("preview"); setError(null); setResult(null);
+    reset();
+    if (file.size > MAX_FILE_BYTES) { setError("حجم الملف كبير جدًا (الحد 100MB). قسّمه إلى ملفين."); return; }
+    setBusy("preview");
     try {
-      const fd = new FormData();
-      fd.append("file", file);
-      const res = await fetch(`${API}/preview`, { method: "POST", body: fd });
-      const j = await res.json().catch(() => null);
-      if (!res.ok) { setError(j?.error ?? "تعذّرت المعاينة."); setPreview(null); return; }
-      setPreview(j as PreviewResponse);
-    } catch {
-      setError("تعذّر الاتصال بالخادم.");
+      setProgress({ done: 0, total: 0, label: "جارٍ قراءة الملف…" });
+      // Let the label paint before the (synchronous) parse occupies the main thread.
+      await new Promise((r) => setTimeout(r, 30));
+      const { parseDonationImportBuffer, toImportRowInput } = await import("@/lib/donations/bulk-import");
+      const parsed = parseDonationImportBuffer(await file.arrayBuffer());
+      if (parsed.totalRows === 0) { setError(parsed.warnings[0] ?? "لا توجد صفوف قابلة للاستيراد في الملف."); return; }
+
+      const valid = parsed.rows.filter((r) => r.valid);
+      const emails = [...new Set(valid.map((r) => r.email).filter(Boolean) as string[])];
+
+      // Donor dedup by email only. Donations are NOT deduped  every valid row (incl. repeats) imports.
+      const existing = new Set<string>();
+      for (let i = 0; i < emails.length; i += EMAIL_BATCH) {
+        setProgress({ done: i, total: emails.length, label: "التحقق من المتبرعين الحاليين…" });
+        const j = await postJson<{ existing: string[] }>(`${API}/preview`, { emails: emails.slice(i, i + EMAIL_BATCH) });
+        for (const e of j.existing) existing.add(e);
+      }
+
+      const byCurrency: Record<string, { count: number; amount: number }> = {};
+      let totalUsdPaid = 0;
+      let paid = 0;
+      for (const r of valid) {
+        if (r.status === "PAID") { paid += 1; totalUsdPaid += r.amountUSD ?? 0; }
+        const c = byCurrency[r.currency] ?? { count: 0, amount: 0 };
+        c.count += 1; c.amount += r.amount ?? 0;
+        byCurrency[r.currency] = c;
+      }
+      const newDonors = emails.filter((e) => !existing.has(e)).length;
+
+      importRef.current = {
+        runId: newRunId(),
+        fileHash: parsed.fileHash,
+        totalRows: parsed.totalRows,
+        validRows: valid.length,
+        rows: valid.map(toImportRowInput),
+        nextIndex: 0,
+        totals: { createdDonations: 0, createdDonors: 0, linkedExistingDonors: 0, skippedRows: 0 },
+      };
+      setPreview({
+        warnings: parsed.warnings,
+        summary: {
+          totalRows: parsed.totalRows,
+          validRows: valid.length,
+          invalidRows: parsed.totalRows - valid.length,
+          paid,
+          failed: valid.length - paid,
+          alreadyImported: 0,
+          newlyImportable: valid.length,
+          newDonors,
+          existingDonors: emails.length - newDonors,
+          totalUsdPaidNew: Math.round(totalUsdPaid * 100) / 100,
+          byCurrency,
+        },
+        sample: parsed.rows.slice(0, SAMPLE_LIMIT).map((r) => ({
+          rowNumber: r.rowNumber, name: r.name, email: r.email, phone: r.phone, basket: r.basket,
+          amount: r.amount, currency: r.currency, amountUSD: r.amountUSD, status: r.status,
+          country: r.country, countryCode: r.countryCode, locale: r.locale, createdAtISO: r.createdAtISO,
+          valid: r.valid, issues: r.issues, alreadyImported: false,
+          isNewDonor: !!r.email && !existing.has(r.email),
+        })),
+        sampleTruncated: parsed.rows.length > SAMPLE_LIMIT,
+      });
+    } catch (e) {
+      setError(e instanceof Error && e.message ? e.message : "تعذّرت قراءة الملف. تأكد أنه Excel (.xlsx) أو CSV صالح.");
     } finally {
       setBusy(null);
+      setProgress(null);
     }
   }
 
-  async function runImport() {
-    if (!file || !preview) return;
-    if (!window.confirm(`سيتم إنشاء ${preview.summary.newlyImportable} تبرع و ${preview.summary.newDonors} متبرع جديد. متابعة؟`)) return;
-    setBusy("commit"); setError(null);
+  async function runImport(resume = false) {
+    const state = importRef.current;
+    if (!state || !preview) return;
+    if (!resume && !window.confirm(`سيتم إنشاء ${preview.summary.newlyImportable} تبرع و ${preview.summary.newDonors} متبرع جديد. متابعة؟`)) return;
+    setBusy("commit"); setError(null); setCanResume(false);
     try {
-      const fd = new FormData();
-      fd.append("file", file);
-      const res = await fetch(`${API}/commit`, { method: "POST", body: fd });
-      const j = await res.json().catch(() => null);
-      if (!res.ok) { setError(j?.error ?? "تعذّر الاستيراد."); return; }
-      setResult(j as CommitResponse);
-    } catch {
-      setError("تعذّر الاتصال بالخادم.");
+      // Batches run in order; each is retried, and retries of the same run are idempotent on the server.
+      while (state.nextIndex < state.rows.length) {
+        setProgress({ done: state.nextIndex, total: state.rows.length, label: "جارٍ الاستيراد…" });
+        const batch = state.rows.slice(state.nextIndex, state.nextIndex + IMPORT_BATCH);
+        const j = await postJson<BatchResponse>(`${API}/commit`, { runId: state.runId, rows: batch });
+        state.totals.createdDonations += j.createdDonations + j.alreadyImported;
+        state.totals.createdDonors += j.createdDonors;
+        state.totals.linkedExistingDonors += j.linkedExistingDonors;
+        state.totals.skippedRows += j.rejected + j.unresolved;
+        state.nextIndex += batch.length;
+      }
+      setProgress({ done: state.rows.length, total: state.rows.length, label: "جارٍ إنهاء الاستيراد…" });
+      const fin = await postJson<{ createdDonations: number }>(`${API}/commit`, {
+        runId: state.runId,
+        finalize: { fileHash: state.fileHash, totalRows: state.totalRows, validRows: state.validRows, createdDonors: state.totals.createdDonors, skippedRows: state.totals.skippedRows },
+      }).catch(() => null);
+      // Per-batch "existing" counts would re-count donors created by an earlier batch; the preview's figure is exact.
+      setResult({ ...state.totals, linkedExistingDonors: preview.summary.existingDonors, createdDonations: fin?.createdDonations ?? state.totals.createdDonations });
+      importRef.current = null;
+    } catch (e) {
+      const done = state.nextIndex;
+      setError(`${e instanceof Error ? e.message : "تعذّر الاستيراد."}  تم استيراد ${num(done)} من ${num(state.rows.length)} صف. اضغط «متابعة الاستيراد» لإكمال الباقي دون تكرار.`);
+      setCanResume(true);
     } finally {
       setBusy(null);
+      setProgress(null);
     }
   }
 
@@ -145,7 +272,29 @@ export default function BulkDonationImportPage() {
             </button>
           </div>
         </div>
-        {error ? <p className="mt-3 flex items-center gap-2 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-semibold text-rose-700"><AlertTriangle className="h-4 w-4" /> {error}</p> : null}
+        {progress ? (
+          <div className="mt-3 rounded-lg border border-slate-200 bg-white px-3 py-2">
+            <div className="flex items-center justify-between gap-3 text-xs font-semibold text-slate-600">
+              <span className="flex items-center gap-2"><Loader2 className="h-3.5 w-3.5 animate-spin" /> {progress.label}</span>
+              {progress.total > 0 ? <span dir="ltr">{num(progress.done)} / {num(progress.total)}</span> : null}
+            </div>
+            {progress.total > 0 ? (
+              <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-100">
+                <div className="h-full rounded-full bg-emerald-500 transition-all" style={{ width: `${Math.round((progress.done / progress.total) * 100)}%` }} />
+              </div>
+            ) : null}
+          </div>
+        ) : null}
+        {error ? (
+          <div className="mt-3 flex flex-wrap items-center gap-2 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-semibold text-rose-700">
+            <AlertTriangle className="h-4 w-4 shrink-0" /> <span className="flex-1">{error}</span>
+            {canResume ? (
+              <button type="button" disabled={busy !== null} onClick={() => runImport(true)} className="inline-flex h-8 items-center gap-2 rounded-md bg-emerald-600 px-3 text-xs font-bold text-white hover:bg-emerald-700 disabled:opacity-40">
+                متابعة الاستيراد
+              </button>
+            ) : null}
+          </div>
+        ) : null}
       </section>
 
       {/* Preview */}
@@ -170,7 +319,7 @@ export default function BulkDonationImportPage() {
           <section className="rounded-xl border border-slate-200 bg-white shadow-sm">
             <div className="flex items-center justify-between border-b p-4">
               <h2 className="text-sm font-black text-slate-800">معاينة الصفوف {preview!.sampleTruncated ? "(أول 500 صف)" : ""}</h2>
-              <button type="button" disabled={s.newlyImportable === 0 || busy !== null} onClick={runImport} className="inline-flex h-9 items-center gap-2 rounded-md bg-emerald-600 px-4 text-sm font-bold text-white hover:bg-emerald-700 disabled:opacity-40">
+              <button type="button" disabled={s.newlyImportable === 0 || busy !== null || canResume || !!result} onClick={() => runImport()}className="inline-flex h-9 items-center gap-2 rounded-md bg-emerald-600 px-4 text-sm font-bold text-white hover:bg-emerald-700 disabled:opacity-40">
                 {busy === "commit" ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />} استيراد {num(s.newlyImportable)} تبرع
               </button>
             </div>
@@ -226,7 +375,7 @@ export default function BulkDonationImportPage() {
             <p>متبرعون جدد: <b>{num(result.createdDonors)}</b></p>
             <p>مرتبطة بمتبرعين حاليين: <b>{num(result.linkedExistingDonors)}</b></p>
           </div>
-          {result.truncated ? <p className="mt-2 text-xs font-semibold text-amber-700">تم استيراد أول 5000 صف فقط في هذه الدفعة  أعد رفع الملف لاستيراد الباقي.</p> : null}
+          {result.skippedRows > 0 ? <p className="mt-2 text-xs font-semibold text-amber-700">تم تخطّي {num(result.skippedRows)} صف لم يجتز التحقق على الخادم.</p> : null}
           <div className="mt-4 flex gap-2">
             <Link href="/dashboard/users/donors" className="inline-flex h-9 items-center gap-2 rounded-md bg-brand px-4 text-sm font-bold text-white hover:bg-brand-700">عرض المتبرعين</Link>
             <button type="button" onClick={() => { onPick(null); if (inputRef.current) inputRef.current.value = ""; }} className="inline-flex h-9 items-center gap-2 rounded-md border border-slate-300 bg-white px-4 text-sm font-bold text-slate-700">استيراد ملف آخر</button>
