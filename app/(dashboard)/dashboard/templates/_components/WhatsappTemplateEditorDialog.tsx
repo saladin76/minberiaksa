@@ -92,6 +92,7 @@ interface ApiTemplate {
   buttons?: StudioButton[] | null;
   authentication?: Partial<AuthenticationDraft> | null;
   translations?: Partial<Record<string, Partial<LocaleDraft>>> | null;
+  submittedLocales?: string[];
 }
 
 const emptyLocale = (): LocaleDraft => ({ body: "", headerText: "", footerText: "", buttons: [] });
@@ -237,6 +238,7 @@ export function WhatsappTemplateEditorDialog({ id, open, onOpenChange }: Props) 
   const [locales, setLocales] = React.useState<Partial<Record<SupportedLocale, LocaleDraft>>>({});
   const [authentication, setAuthentication] = React.useState<AuthenticationDraft>(defaultAuth());
   const [activeLocale, setActiveLocale] = React.useState<SupportedLocale>(DEFAULT_LOCALE);
+  const [submittedLocales, setSubmittedLocales] = React.useState<Set<SupportedLocale>>(new Set());
   const [loading, setLoading] = React.useState(false);
   const [saving, setSaving] = React.useState(false);
   const [uploadingSample, setUploadingSample] = React.useState(false);
@@ -266,6 +268,7 @@ export function WhatsappTemplateEditorDialog({ id, open, onOpenChange }: Props) 
         },
       });
       setAuthentication(defaultAuth());
+      setSubmittedLocales(new Set());
       setActiveLocale(DEFAULT_LOCALE);
       return;
     }
@@ -309,6 +312,7 @@ export function WhatsappTemplateEditorDialog({ id, open, onOpenChange }: Props) 
         }
         setLocales(next);
         setAuthentication({ ...defaultAuth(), ...(template?.authentication ?? {}) });
+        setSubmittedLocales(new Set((template?.submittedLocales ?? []).filter((locale): locale is SupportedLocale => SUPPORTED_LOCALES.includes(locale as SupportedLocale))));
         setActiveLocale(DEFAULT_LOCALE);
       })
       .catch(() => toast.error("فشل تحميل القالب"))
@@ -336,7 +340,10 @@ export function WhatsappTemplateEditorDialog({ id, open, onOpenChange }: Props) 
   };
 
   const removeLocale = (locale: SupportedLocale) => {
-    if (locale === DEFAULT_LOCALE) return;
+    if (locale === DEFAULT_LOCALE || submittedLocales.has(locale)) {
+      if (submittedLocales.has(locale)) toast.error("هذه اللغة أُرسلت بالفعل إلى Meta ولا يمكن حذفها من القالب.");
+      return;
+    }
     setLocales((previous) => {
       const next = { ...previous };
       delete next[locale];
@@ -593,6 +600,7 @@ export function WhatsappTemplateEditorDialog({ id, open, onOpenChange }: Props) 
           onSelect={setActiveLocale}
           onEnable={enableLocale}
           onRemove={removeLocale}
+          locked={(locale) => submittedLocales.has(locale)}
         />
       }
     >
@@ -709,9 +717,16 @@ export function WhatsappTemplateEditorDialog({ id, open, onOpenChange }: Props) 
                     <h3 className="font-semibold text-slate-800">المحتوى</h3>
                     <p className="text-[11px] text-slate-400">Header + Body + Footer + Buttons بنفس بنية Meta</p>
                   </div>
-                  <span className="rounded-full bg-[#25D366]/10 px-2.5 py-1 text-[10px] font-semibold text-[#128C7E]">
-                    {LOCALE_LABELS[activeLocale]}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    {submittedLocales.has(activeLocale) && (
+                      <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-semibold text-emerald-700 ring-1 ring-emerald-200">
+                        مُرسلة إلى Meta · للقراءة فقط
+                      </span>
+                    )}
+                    <span className="rounded-full bg-[#25D366]/10 px-2.5 py-1 text-[10px] font-semibold text-[#128C7E]">
+                      {LOCALE_LABELS[activeLocale]}
+                    </span>
+                  </div>
                 </div>
 
                 <div className="space-y-2">
@@ -721,6 +736,7 @@ export function WhatsappTemplateEditorDialog({ id, open, onOpenChange }: Props) 
                       <button
                         key={option.value}
                         type="button"
+                        disabled={submittedLocales.has(activeLocale)}
                         onClick={() => {
                           setHeader((previous) => ({
                             ...previous,
@@ -747,6 +763,7 @@ export function WhatsappTemplateEditorDialog({ id, open, onOpenChange }: Props) 
                     <div className="space-y-1">
                       <Input
                         ref={headerRef}
+                        disabled={submittedLocales.has(activeLocale)}
                         value={current.headerText}
                         onFocus={() => setInsertTarget("header")}
                         onChange={(event) => setCurrent({ headerText: event.target.value })}
@@ -829,6 +846,7 @@ export function WhatsappTemplateEditorDialog({ id, open, onOpenChange }: Props) 
                   </div>
                   <Textarea
                     ref={bodyRef}
+                    disabled={submittedLocales.has(activeLocale)}
                     value={current.body}
                     maxLength={1024}
                     onFocus={() => setInsertTarget("body")}
@@ -845,6 +863,7 @@ export function WhatsappTemplateEditorDialog({ id, open, onOpenChange }: Props) 
                   <FieldLabel hint={`اختياري · ${current.footerText.length}/60`}>Footer</FieldLabel>
                   <Input
                     value={current.footerText}
+                    disabled={submittedLocales.has(activeLocale)}
                     onChange={(event) => setCurrent({ footerText: event.target.value })}
                     maxLength={60}
                     placeholder="سطر قصير أسفل الرسالة"
