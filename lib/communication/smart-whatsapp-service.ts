@@ -109,7 +109,7 @@ export async function getSmartWhatsappContext(userId: string): Promise<SmartWhat
     prisma.whatsappTemplate.findMany({
       where: {
         OR: [{ category: "MARKETING" }, { purpose: "MARKETING" }, { kind: "CAMPAIGN" }],
-        variants: { some: { provider: "META_WHATSAPP", approvalStatus: "APPROVED" } },
+        variants: { some: { provider: "META_WHATSAPP", approvalStatus: "APPROVED", category: "MARKETING" } },
       },
       select: { id: true, name: true, category: true },
       orderBy: { updatedAt: "desc" },
@@ -117,8 +117,8 @@ export async function getSmartWhatsappContext(userId: string): Promise<SmartWhat
     }).catch(() => []),
     prisma.whatsappTemplate.findMany({
       where: {
-        OR: [{ category: "UTILITY" }, { purpose: "UTILITY" }, { purpose: "TRANSACTIONAL" }, { kind: "SYSTEM" }],
-        variants: { some: { provider: "META_WHATSAPP", approvalStatus: "APPROVED" } },
+        OR: [{ category: "UTILITY" }, { purpose: "UTILITY" }, { purpose: "TRANSACTIONAL" }],
+        variants: { some: { provider: "META_WHATSAPP", approvalStatus: "APPROVED", category: "UTILITY" } },
       },
       select: { id: true, name: true, category: true },
       orderBy: { updatedAt: "desc" },
@@ -164,7 +164,7 @@ async function sendApprovedTemplateForDonor(args: {
   const category = String(template.category ?? template.purpose ?? "").toUpperCase();
   if (args.expected === "MARKETING") {
     if (category !== "MARKETING" && template.kind !== "CAMPAIGN") return { ok: false, reason: "MARKETING_TEMPLATE_REQUIRED" };
-  } else if (!["UTILITY", "TRANSACTIONAL"].includes(category) && template.kind !== "SYSTEM") {
+  } else if (!["UTILITY", "TRANSACTIONAL"].includes(category)) {
     return { ok: false, reason: "UTILITY_TEMPLATE_REQUIRED" };
   }
 
@@ -176,6 +176,10 @@ async function sendApprovedTemplateForDonor(args: {
 
   const mapping = await resolveMetaTemplateMapping(template, args.locale, args.sender.businessAccountId);
   if (!mapping) return { ok: false, reason: "META_TEMPLATE_NOT_APPROVED_FOR_SENDER_LANGUAGE" };
+  const providerCategory = String(mapping.category ?? "").toUpperCase();
+  if (providerCategory && providerCategory !== args.expected) {
+    return { ok: false, reason: "META_TEMPLATE_CATEGORY_MISMATCH", detail: `Meta: ${providerCategory} · Expected: ${args.expected}` };
+  }
   const built = buildMetaComponents({
     componentsSchema: mapping.componentsSchema,
     values: valuesFor(mapping.positionalNames, renderCtx),

@@ -36,6 +36,7 @@ export function CampaignControlsDialog({
   onChanged: () => void;
 }) {
   const [controls, setControls] = React.useState<Controls | null>(null);
+  const [usage, setUsage] = React.useState<{ usedLast24h: number; remaining: number | null } | null>(null);
   const [loading, setLoading] = React.useState(false);
   const [saving, setSaving] = React.useState(false);
 
@@ -47,6 +48,7 @@ export function CampaignControlsDialog({
         const data = await res.json();
         if (!res.ok || !data.ok) throw new Error(data.error ?? "load failed");
         setControls(data.controls);
+        setUsage(data.usage ?? null);
       })
       .catch(() => toast.error("تعذّر تحميل إعدادات الإرسال"))
       .finally(() => setLoading(false));
@@ -193,7 +195,19 @@ export function CampaignControlsDialog({
                   dir="ltr"
                 />
               </div>
-              <p className="text-[11px] text-slate-500">الحد يُطبّق على إجمالي WhatsApp المرسل خلال آخر 24 ساعة حتى لا تتجاوز المنصة السقف الذي تحدده.</p>
+              {usage && (
+                <div className="grid grid-cols-2 gap-2 sm:max-w-md">
+                  <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+                    <div className="text-[10px] text-slate-500">المستخدم آخر 24 ساعة</div>
+                    <div className="mt-0.5 text-sm font-bold tabular-nums text-slate-900">{usage.usedLast24h.toLocaleString("en-US")}</div>
+                  </div>
+                  <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2">
+                    <div className="text-[10px] text-emerald-700">المتبقي حسب الحد الحالي</div>
+                    <div className="mt-0.5 text-sm font-bold tabular-nums text-emerald-800">{Math.max(controls.dailyCap - usage.usedLast24h, 0).toLocaleString("en-US")}</div>
+                  </div>
+                </div>
+              )}
+              <p className="text-[11px] text-slate-500">الحد يُطبّق على إجمالي WhatsApp الذي قبلته Meta خلال آخر 24 ساعة، وليس على هذه الحملة وحدها.</p>
             </section>
 
             <div className="flex justify-end gap-2 border-t border-slate-100 pt-4">

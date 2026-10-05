@@ -257,6 +257,20 @@ export async function sendAutomaticWhatsappMessage(
     // terminal result so reporting stays one row per automatic event.
   }
 
+  if (input.metaTemplate && directCategory) {
+    const actualCategory = String(input.metaTemplate.category ?? "").toUpperCase();
+    const expectedCategory = directCategory === "authentication" ? "AUTHENTICATION" : "UTILITY";
+    if (actualCategory && actualCategory !== expectedCategory) {
+      await markDeliveryStatus(id, "SKIPPED", { errorMessage: `META_TEMPLATE_CATEGORY_MISMATCH:${actualCategory}` });
+      await mirrorSentMessage("WHATSAPP", input, "SKIPPED", {
+        recipientPhone: input.recipientPhone,
+        renderedBody: input.renderedBody,
+        errorMessage: `META_TEMPLATE_CATEGORY_MISMATCH:${actualCategory}`,
+      });
+      return { outcome: "SKIPPED", reason: "META_TEMPLATE_CATEGORY_MISMATCH" };
+    }
+  }
+
   if (!input.metaTemplate) {
     await markDeliveryStatus(id, "SKIPPED", { errorMessage: "META_DIRECT_SEND_OR_TEMPLATE_REQUIRED" });
     await mirrorSentMessage("WHATSAPP", input, "SKIPPED", {
@@ -379,6 +393,8 @@ export async function sendAutomaticSmsMessage(
 
 export type MetaTemplateMapping = {
   name: string;
+  /** Meta's actual category for the selected provider variant. */
+  category: string | null;
   /** `{{1}}`, `{{2}}` … in order, from the local template's variable catalog. */
   positionalNames: string[];
   /** Semantic name by component-scoped position (header.1, body.1, button.0.1). */
@@ -428,6 +444,7 @@ export async function resolveMetaTemplateMapping(
   const longitude = Number(header.longitude);
   return {
     name: readiness.providerTemplateName,
+    category: readiness.category ? String(readiness.category).toUpperCase() : null,
     positionalNames: binding.names,
     scopedNames: binding.scopedNames,
     headerMediaUrl: typeof header.mediaUrl === "string" && header.mediaUrl.trim() ? header.mediaUrl.trim() : null,

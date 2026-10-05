@@ -6,7 +6,7 @@ import { requireAdminOrDashboardPermission } from "@/lib/dashboard/api-auth";
 import { auditActorFromDashboardSession, writeAuditLog } from "@/lib/audit-log";
 import { prisma } from "@/lib/prisma";
 import { getCampaign } from "@/lib/communication/campaign-service";
-import { campaignSendControls, isValidTimeZone } from "@/lib/communication/campaign-send-controls";
+import { campaignSendControls, isValidTimeZone, whatsappSentLast24Hours } from "@/lib/communication/campaign-send-controls";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -30,7 +30,16 @@ export async function GET(_: NextRequest, { params }: { params: Promise<{ id: st
   const { id } = await params;
   const campaign = await getCampaign(id);
   if (!campaign) return NextResponse.json({ ok: false, error: "Not found" }, { status: 404 });
-  return NextResponse.json({ ok: true, controls: campaignSendControls(campaign) });
+  const controls = campaignSendControls(campaign);
+  const usedLast24h = campaign.channel === "WHATSAPP" ? await whatsappSentLast24Hours() : 0;
+  return NextResponse.json({
+    ok: true,
+    controls,
+    usage: {
+      usedLast24h,
+      remaining: campaign.channel === "WHATSAPP" ? Math.max(controls.dailyCap - usedLast24h, 0) : null,
+    },
+  });
 }
 
 export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {

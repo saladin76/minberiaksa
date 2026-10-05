@@ -37,6 +37,7 @@ async function loadWhatsappTemplateTruth(templateId: string): Promise<{
         languageCode: true,
         locale: true,
         approvalStatus: true,
+        category: true,
         providerTemplateName: true,
         componentsSchema: true,
         rejectionReason: true,
@@ -507,6 +508,21 @@ export async function executeCampaignSend(
         if (!readiness.ready || !readiness.providerTemplateName || !readiness.languageCode) {
           const reason = readiness.reason ?? "META_TEMPLATE_REQUIRED";
           await markDeliveryStatus(deliveryId, "SKIPPED", { errorMessage: reason });
+          outcome.skipped += 1;
+          bump(outcome.reasons, reason);
+          return outcome;
+        }
+        const actualMetaCategory = String(readiness.category ?? "").toUpperCase();
+        const expectedMetaCategory =
+          purpose === "MARKETING" ? "MARKETING"
+          : purpose === "AUTHENTICATION" ? "AUTHENTICATION"
+          : purpose === "UTILITY" || purpose === "TRANSACTIONAL" ? "UTILITY"
+          : null;
+        if (expectedMetaCategory && actualMetaCategory && actualMetaCategory !== expectedMetaCategory) {
+          const reason = "META_TEMPLATE_CATEGORY_MISMATCH";
+          await markDeliveryStatus(deliveryId, "SKIPPED", {
+            errorMessage: `${reason}: Meta=${actualMetaCategory}; expected=${expectedMetaCategory}`,
+          });
           outcome.skipped += 1;
           bump(outcome.reasons, reason);
           return outcome;
