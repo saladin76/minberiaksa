@@ -42,12 +42,14 @@ export function campaignSendControls(campaign: Pick<CommunicationCampaign, "meta
     ? raw.quietHours
     : {}) as Record<string, unknown>;
   const speed = String(raw.speedMode ?? "BALANCED").toUpperCase() as CampaignSpeedMode;
-  const defaultCap = positiveInt(process.env.COMMUNICATION_WHATSAPP_DAILY_CAP, 100_000);
+  const globalCap = positiveInt(process.env.COMMUNICATION_WHATSAPP_DAILY_CAP, 100_000);
+  const requestedCap = positiveInt(raw.dailyCap, globalCap);
 
   return {
     paused: raw.paused === true,
     speedMode: speed in SPEEDS ? speed : "BALANCED",
-    dailyCap: positiveInt(raw.dailyCap, defaultCap),
+    // Per-campaign controls may be stricter than the account tier, never looser.
+    dailyCap: Math.min(requestedCap, globalCap),
     quietHours: {
       enabled: quiet.enabled === true,
       start: hhmm(quiet.start, "00:00"),
