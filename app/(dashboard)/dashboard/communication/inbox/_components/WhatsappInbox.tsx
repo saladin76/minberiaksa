@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import {
   MessageCircle, Search, Loader2, RefreshCw, Send, Check, CircleAlert, Clock,
   UserRound, UserX, Image as ImageIcon, Mic, FileText, MapPin, Video, Link2, Flag,
@@ -10,6 +11,7 @@ import { PageHeader } from "@/components/dashboard/PageHeader";
 import { EmptyState } from "@/components/dashboard/EmptyState";
 import { SegmentedControl, fmtDateTime, fmtFull } from "../../_shared/channel-ui";
 import { cn } from "@/lib/utils";
+import { SmartWhatsappDialog } from "@/components/dashboard/SmartWhatsappDialog";
 
 /**
  * The WhatsApp inbox.
@@ -105,12 +107,14 @@ function windowText(window: ReplyWindow): string {
 }
 
 export function WhatsappInbox() {
+  const searchParams = useSearchParams();
+  const initialQuery = searchParams.get("q") ?? "";
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [senders, setSenders] = useState<Sender[]>([]);
   const [needsReply, setNeedsReply] = useState(0);
   const [filter, setFilter] = useState("needsReply");
   const [senderId, setSenderId] = useState<string>("");
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useState(initialQuery);
   const [loadingList, setLoadingList] = useState(true);
 
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -121,6 +125,7 @@ export function WhatsappInbox() {
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
   const [notice, setNotice] = useState<{ tone: "ok" | "error"; text: string } | null>(null);
+  const [smartOpen, setSmartOpen] = useState(false);
   const timelineRef = useRef<HTMLDivElement | null>(null);
 
   const loadList = useCallback(async () => {
@@ -455,30 +460,60 @@ export function WhatsappInbox() {
                     {notice.text}
                   </p>
                 )}
-                <div className="flex items-end gap-2">
-                  <textarea
-                    value={draft}
-                    onChange={(e) => setDraft(e.target.value)}
-                    disabled={!replyWindow?.open || sending}
-                    rows={2}
-                    placeholder={replyWindow?.open ? "اكتب ردًّا…" : "الردّ الحر غير متاح الآن"}
-                    className="flex-1 resize-none rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-800 placeholder:text-slate-400 disabled:bg-slate-50 disabled:text-slate-400"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => void sendReply()}
-                    disabled={!replyWindow?.open || sending || !draft.trim()}
-                    className="inline-flex items-center gap-1.5 rounded-lg bg-brand px-3 py-2 text-sm font-semibold text-white disabled:opacity-40"
-                  >
-                    {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-                    إرسال
-                  </button>
-                </div>
+                {replyWindow?.open ? (
+                  <div className="flex items-end gap-2">
+                    <textarea
+                      value={draft}
+                      onChange={(e) => setDraft(e.target.value)}
+                      disabled={sending}
+                      rows={2}
+                      placeholder="اكتب ردًّا…"
+                      className="flex-1 resize-none rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-800 placeholder:text-slate-400"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => void sendReply()}
+                      disabled={sending || !draft.trim()}
+                      className="inline-flex items-center gap-1.5 rounded-lg bg-brand px-3 py-2 text-sm font-semibold text-white disabled:opacity-40"
+                    >
+                      {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                      إرسال
+                    </button>
+                  </div>
+                ) : detail.donor?.userId ? (
+                  <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3">
+                    <div>
+                      <p className="text-xs font-semibold text-amber-800">نافذة الرد الحر مغلقة</p>
+                      <p className="mt-1 text-[11px] text-amber-700">يمكن إرسال رسالة خدمة عبر Direct Send أو اختيار قالب Marketing معتمد.</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setSmartOpen(true)}
+                      className="inline-flex items-center gap-1.5 rounded-lg bg-[#25D366] px-3 py-2 text-xs font-semibold text-white hover:bg-[#20bd5a]"
+                    >
+                      <MessageCircle className="h-4 w-4" />
+                      إرسال ذكي
+                    </button>
+                  </div>
+                ) : (
+                  <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs text-slate-500">
+                    اربط المحادثة بمتبرع أولًا لاستخدام Direct Send أو القوالب التسويقية.
+                  </div>
+                )}
               </div>
             </>
           )}
         </div>
       </div>
+      {detail?.donor?.userId && (
+        <SmartWhatsappDialog
+          open={smartOpen}
+          onOpenChange={setSmartOpen}
+          userId={detail.donor.userId}
+          userName={detail.donor.name}
+          phone={detail.phone}
+        />
+      )}
     </div>
   );
 }
