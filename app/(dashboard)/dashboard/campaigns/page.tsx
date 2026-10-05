@@ -76,6 +76,7 @@ import { computeCampaignProgressPercent, showCampaignProgress } from '@/lib/camp
 interface Campaign {
   goalType: string;
   id: string;
+  slug?: string | null;
   title: string;
   targetAmount: number;
   currentAmount: number;
@@ -427,7 +428,7 @@ export default function CampaignsPage() {
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuLabel>إجراءات</DropdownMenuLabel>
-                          <DropdownMenuItem onClick={() => router.push(`/${locale}/campaign/${(campaign as any).slug || campaign.id}`)}>
+                          <DropdownMenuItem onClick={() => router.push(`/${locale}/projects/${campaign.slug || campaign.id}`)}>
                             <Eye className="w-4 h-4 ml-2" /> عرض
                           </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => router.push(`/dashboard/campaigns/edit/${campaign.id}`)}>

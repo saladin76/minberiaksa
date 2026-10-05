@@ -58,6 +58,13 @@ export async function GET(
   try {
     const { id } = await params; // Campaign ID from URL
     const url = new URL(request.url);
+    const wantsFresh = url.searchParams.get("fresh") === "1";
+    if (wantsFresh) {
+      const session = await getServerSession(authOptions);
+      const denied = requireAdminOrDashboardPermission(session, "campaigns");
+      if (denied) return denied;
+    }
+
     const locale =
       request.headers.get("x-locale") ||
       url.searchParams.get("locale") ||
@@ -76,8 +83,9 @@ export async function GET(
       where: {
         AND: [
           whereByIdOrAnyLocaleSlug(id),
+          wantsFresh ? {} : { isActive: true },
           NOT_SOFT_DELETED,
-        ],
+        ].filter((condition) => Object.keys(condition).length > 0),
       },
       select: {
         // Basic fields
@@ -178,7 +186,7 @@ export async function GET(
       orderBy: Prisma.DonationItemOrderByWithRelationInput
     ): Promise<DonationStat> => {
       const item = await prisma.donationItem.findFirst({
-        where: { campaignId: realId },
+        where: { campaignId: realId, donation: PAID_DONATION_FILTER },
         orderBy,
         select: { amount: true, donationId: true },
       });
@@ -309,7 +317,6 @@ export async function GET(
     // reopened a campaign could be handed their own pre-edit copy and conclude
     // the save had silently failed. `?fresh=1` (sent by the dashboard) opts that
     // one caller out; the URL differs, so public traffic still hits the cache.
-    const wantsFresh = url.searchParams.get("fresh") === "1";
     return NextResponse.json(transformedCampaign, {
       headers: {
         "Cache-Control": wantsFresh
