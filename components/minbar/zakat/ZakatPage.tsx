@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, type CSSProperties, type ReactElement } from "react";
+import { useEffect, useState, type CSSProperties, type ReactElement } from "react";
 import { useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import { Button } from "@/components/minbar/ds";
 import { miaPath } from "@/lib/minbar/routes";
 import { addToCart, type MinbarCartItem } from "@/lib/minbar/cart";
+import { formatMoney } from "@/lib/minbar/money";
 import { youtubeEmbed } from "@/lib/minbar/content/media";
 import { useMinbarMoney } from "@/hooks/useMinbarMoney";
 import TravelBanner from "@/components/minbar/banners/TravelBanner";
@@ -137,6 +138,7 @@ const FIELD_ICONS: Record<string, ReactElement> = {
  */
 const FAQS = ["hawl", "metal", "salary", "jewelry", "early", "channels"] as const;
 
+const QUICK_AMOUNTS = [1000, 2000, 3000, 5000];
 const ZAKAT_RATE = 0.025;
 
 export interface ZakatPageProps {
@@ -163,8 +165,20 @@ export default function ZakatPage({
   const router = useRouter();
   const t = useTranslations("zakat");
   const tCommon = useTranslations("common");
-  const { format } = useMinbarMoney();
+  const { format, currency: selectedCurrency } = useMinbarMoney();
 
+  /* The hero's chips: the category's amounts when one is bound, under the
+     same currency contract as its donation box  USD converted for display,
+     unless the visitor's currency has a list of its own. */
+  const visitorCode = selectedCurrency && selectedCurrency !== "DEFAULT" ? selectedCurrency : "USD";
+  const override = category && visitorCode !== "USD" ? category.suggestedByCurrency[visitorCode] : undefined;
+  const quickAmounts = override?.length ? override : category?.suggestedAmounts.length ? category.suggestedAmounts : QUICK_AMOUNTS;
+  const chipCurrency = override?.length ? visitorCode : "USD";
+  const showMoney = (value: number, code: string) => (code === "USD" ? format(value) : formatMoney(value, code, locale));
+
+  const [amount, setAmount] = useState(quickAmounts[0]);
+  const [heroCustom, setHeroCustom] = useState("");
+  const [added, setAdded] = useState(false);
   const [calcOpen, setCalcOpen] = useState(false);
   const [values, setValues] = useState<Record<string, string>>({});
   const [openFaq, setOpenFaq] = useState(-1);
@@ -181,6 +195,9 @@ export default function ZakatPage({
   };
   const base = Math.max(0, num(values.cash) + num(values.gold) + num(values.trade) - num(values.debts));
   const due = base * ZAKAT_RATE;
+  const heroAmount = heroCustom ? num(heroCustom) : amount;
+  const heroCurrency = heroCustom ? visitorCode : chipCurrency;
+
   /**
    * Every add from this page is zakat  that is what keeps it ring-fenced.
    * With a bound category the gift goes where its donation box points; with
@@ -196,14 +213,127 @@ export default function ZakatPage({
     addToCart({ ...target, typeKey: "zakat", freqKey: "once", amount: value, currency });
   };
 
+  const onDonateNow = () => {
+    if (!(heroAmount > 0)) return;
+    addZakat(heroAmount, heroCurrency);
+    router.push(miaPath("cart", locale));
+  };
+
+  const onAddToCart = () => {
+    if (!(heroAmount > 0)) return;
+    addZakat(heroAmount, heroCurrency);
+    setAdded(true);
+    window.setTimeout(() => setAdded(false), 1800);
+  };
+
   const onDonateCalculated = () => {
     if (!(base > 0)) return;
     addZakat(Math.round(due));
     router.push(miaPath("cart", locale));
   };
 
+  const onShare = async () => {
+    const url = window.location.href;
+    if (navigator.share) await navigator.share({ title: t("heroTitle"), url }).catch(() => {});
+    else if (navigator.clipboard) await navigator.clipboard.writeText(url).catch(() => {});
+  };
+
   return (
     <div style={{ position: "relative" }}>
+      {/* ── Hero ─────────────────────────────────────────────────────────── */}
+      <section style={{ position: "relative", background: "#fff", borderBottom: "1px solid var(--border)", overflow: "hidden" }}>
+        <div aria-hidden="true" data-aqsa-pattern="" style={pattern(520)} />
+        <div id="zk-hero-grid" style={{ position: "relative", maxWidth: 1240, margin: "0 auto", padding: "54px 24px 56px", display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(0,.55fr)", gap: 30, alignItems: "center" }}>
+          <div style={{ display: "grid", gap: 18, justifyItems: "start", maxWidth: 640 }}>
+            <h1 style={{ margin: 0, fontSize: "clamp(30px,3.6vw,50px)", lineHeight: 1.3, fontWeight: 900 }}>{t("heroTitle")}</h1>
+            {category?.heroLead ? (
+              <p style={{ margin: 0, maxWidth: "58ch", color: "var(--muted)", fontSize: 16.5, lineHeight: 1.95 }}>{category.heroLead}</p>
+            ) : null}
+
+            <div id="zk-amounts" style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+              {quickAmounts.map((value) => (
+                <button
+                  key={value}
+                  type="button"
+                  data-pick={amount === value && !heroCustom ? "1" : ""}
+                  onClick={() => {
+                    setAmount(value);
+                    setHeroCustom("");
+                  }}
+                  className="zk-amt"
+                  style={{ height: 46, padding: "0 22px", cursor: "pointer", fontFamily: "inherit", fontSize: 15, fontWeight: 800, borderRadius: 8, border: "1px solid var(--border)", background: "#fff", color: "var(--muted)", transition: "all .18s ease" }}
+                >
+                  <span dir="ltr" style={{ unicodeBidi: "isolate" }}>
+                    {showMoney(value, chipCurrency)}
+                  </span>
+                </button>
+              ))}
+              <input
+                value={heroCustom}
+                onChange={(e) => setHeroCustom(e.target.value.replace(/[^0-9.]/g, ""))}
+                inputMode="decimal"
+                placeholder={tCommon("customAmount")}
+                aria-label={tCommon("customAmount")}
+                className="zk-input"
+                style={{ height: 46, width: 140, padding: "0 14px", borderRadius: 8, border: "1px solid var(--border)", background: "#fff", fontFamily: "inherit", fontSize: 15, fontWeight: 800, color: "var(--deep)", boxSizing: "border-box", transition: "border-color .18s ease" }}
+              />
+            </div>
+
+            <div id="zk-ctas" style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 6 }}>
+              <button type="button" onClick={onDonateNow} className="zk-donate" style={{ height: 54, padding: "0 30px", border: 0, borderRadius: 999, cursor: "pointer", background: "var(--red)", color: "#fff", fontFamily: "inherit", fontWeight: 900, fontSize: 15, boxShadow: "0 8px 20px rgba(169,52,40,.24)", whiteSpace: "nowrap", transition: "all .2s cubic-bezier(.22,.61,.36,1)" }}>
+                {tCommon("donateNow")}
+              </button>
+              <button
+                type="button"
+                onClick={onAddToCart}
+                className="zk-cart"
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 8,
+                  height: 54,
+                  padding: "0 26px",
+                  border: added ? "1px solid var(--green)" : "1.5px solid var(--deep)",
+                  borderRadius: 999,
+                  cursor: "pointer",
+                  background: added ? "var(--green)" : "#fff",
+                  color: added ? "#fff" : "var(--deep)",
+                  fontFamily: "inherit",
+                  fontWeight: 900,
+                  fontSize: 15,
+                  whiteSpace: "nowrap",
+                  transition: "all .2s cubic-bezier(.22,.61,.36,1)",
+                }}
+              >
+                <span aria-hidden="true" style={{ display: "inline-flex" }}>
+                  <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="9" cy="20" r="1.4" />
+                    <circle cx="17" cy="20" r="1.4" />
+                    <path d="M3 4h2.2l2.3 11.2a1.6 1.6 0 0 0 1.6 1.3h7.6a1.6 1.6 0 0 0 1.6-1.2L20 8H6" />
+                  </svg>
+                </span>
+                {added ? tCommon("addedToCart") : tCommon("addToCart")}
+              </button>
+              <button type="button" onClick={onShare} title={tCommon("sharePage")} aria-label={tCommon("sharePage")} className="zk-share" style={{ flex: "0 0 auto", width: 54, height: 54, display: "grid", placeItems: "center", border: "1px solid var(--border)", borderRadius: 999, background: "#fff", color: "var(--deep)", cursor: "pointer", transition: "all .18s ease" }}>
+                <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <circle cx="18" cy="5" r="3" />
+                  <circle cx="6" cy="12" r="3" />
+                  <circle cx="18" cy="19" r="3" />
+                  <path d="m8.6 10.6 6.8-3.8M8.6 13.4l6.8 3.8" />
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <span style={{ display: "block", maxWidth: 380, justifySelf: "end", width: "100%" }}>
+            {/* The category's hero picture takes the coins' slot, shown the same
+                way  the seed gives the bound category the coins themselves. */}
+            <img src={category?.heroImage || "/minbar/assets/zakat-hero-coins.png"} alt={t("heroTitle")} style={{ display: "block", width: "100%", height: "auto" }} />
+          </span>
+        </div>
+      </section>
+
       {/* ── Quick estimator ──────────────────────────────────────────────── */}
       <section id="calculator" style={{ background: "#fff", padding: "62px 0", borderBottom: "1px solid var(--border)" }}>
         <div style={{ maxWidth: 1240, margin: "0 auto", padding: "0 24px" }}>
@@ -328,16 +458,6 @@ export default function ZakatPage({
           </div>
         </div>
       </section>
-
-      {/* ── Why Palestine ────────────────────────────────────────────────── */}
-      <TwoColumn
-        id="why"
-        background="transparent"
-        image="/minbar/assets/zakat-balance.png"
-        imageFirst={false}
-        heading={t("whyPalestine")}
-        text={t("whyText")}
-      />
 
       {/* ── The reward ───────────────────────────────────────────────────── */}
       <TwoColumn
