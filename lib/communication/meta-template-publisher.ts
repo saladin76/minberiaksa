@@ -69,7 +69,7 @@ export async function publishWhatsappTemplateToMeta(
     select: {
       id: true, name: true, body: true, translations: true, kind: true, purpose: true,
       category: true, header: true, footerText: true, buttons: true, authentication: true,
-      externalTemplateId: true, language: true,
+      externalTemplateId: true, language: true, approvalStatus: true,
     },
   });
   if (!template) {
@@ -300,7 +300,7 @@ export async function publishWhatsappTemplateToMeta(
       channel: "WHATSAPP",
       category,
       externalTemplateId: template.externalTemplateId ?? first?.id ?? undefined,
-      approvalStatus: first?.status ?? "PENDING",
+      approvalStatus: template.approvalStatus ?? first?.status ?? "PENDING",
       language: template.language ?? first?.language ?? "ar",
       variables: canonicalBindings.length ? (canonicalBindings as never) : undefined,
       lastImportedAt: new Date(),
