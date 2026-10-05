@@ -296,6 +296,9 @@ export const IMPORT_RUN_ID_RE = /^[a-z0-9]{8,40}$/i;
 export type ImportRowInput = Omit<ParsedDonationRow, "valid" | "issues" | "raw">;
 
 export function toImportRowInput({ valid: _valid, issues: _issues, raw: _raw, ...row }: ParsedDonationRow): ImportRowInput {
+  void _valid;
+  void _issues;
+  void _raw;
   return row;
 }
 
