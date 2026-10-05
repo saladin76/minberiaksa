@@ -348,6 +348,7 @@ export default function Header({
                 boxShadow: "0 0 0 1px rgba(255,255,255,.5)",
               }}
             >
+              {/* eslint-disable-next-line @next/next/no-img-element -- dashboard-controlled brand asset */}
               <img
                 src="/minbar/assets/logo-horizontal.png"
                 alt={tCommon("orgOfficialName")}
@@ -937,6 +938,7 @@ function CategoryThumb({ image, size }: { image: string; size: number }) {
       }}
     >
       {image ? (
+        {/* eslint-disable-next-line @next/next/no-img-element -- dynamic category image URL */}
         <img src={image} alt="" loading="lazy" decoding="async" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
       ) : (
         <span style={{ width: size / 4, height: size / 4, background: "#D39A27", transform: "rotate(45deg)" }} />
