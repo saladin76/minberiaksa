@@ -16,6 +16,7 @@ import { buildMetaComponents } from "./providers/meta-whatsapp/parameters";
 import { resolveAudienceOrigin } from "./audience-list-service";
 import { computeFinalStatus, recomputeCampaignCounters } from "./campaign-counter-service";
 import { type CommunicationChannelId, type CommunicationPurposeId } from "./communication-runtime-types";
+import { evaluateCampaignSendControls, speedSettings, type CampaignSpeedMode } from "./campaign-send-controls";
 
 export { computeFinalStatus };
 
@@ -228,10 +229,11 @@ function concurrencyFromEnv(name: string, fallback: number, cap = 50): number {
   return Math.min(Math.floor(parsed), cap);
 }
 
-function sendConcurrency(channel: CommunicationChannelId): number {
-  if (channel === "WHATSAPP") return concurrencyFromEnv("COMMUNICATION_WHATSAPP_CONCURRENCY", 10);
-  if (channel === "EMAIL") return concurrencyFromEnv("COMMUNICATION_EMAIL_CONCURRENCY", 20);
-  return concurrencyFromEnv("COMMUNICATION_SMS_CONCURRENCY", 10);
+function sendConcurrency(channel: CommunicationChannelId, speedMode: CampaignSpeedMode = "BALANCED"): number {
+  const speed = speedSettings(speedMode);
+  if (channel === "WHATSAPP") return concurrencyFromEnv("COMMUNICATION_WHATSAPP_CONCURRENCY", speed.concurrency);
+  if (channel === "EMAIL") return concurrencyFromEnv("COMMUNICATION_EMAIL_CONCURRENCY", Math.max(speed.concurrency, 20));
+  return concurrencyFromEnv("COMMUNICATION_SMS_CONCURRENCY", speed.concurrency);
 }
 
 async function mapWithConcurrency<T, R>(
@@ -267,13 +269,20 @@ export async function executeCampaignSend(
   opts: { actor?: Actor; mode?: SendMode; batchSize?: number; maxBatches?: number } = {},
 ): Promise<ExecutionSummary> {
   const mode = opts.mode ?? "SEND_NOW";
-  const batchSize = Math.min(opts.batchSize ?? 200, 1000);
   const maxBatches = Math.max(1, Math.min(opts.maxBatches ?? DEFAULT_MAX_BATCHES, 50));
   const actor = opts.actor ?? null;
   const base: ExecutionSummary = { ok: false, campaignId, status: "", total: 0, sent: 0, skipped: 0, failed: 0, truncated: false, reasons: {}, batches: 0 };
   const campaign = await getCampaign(campaignId);
   if (!campaign) return { ...base, blocked: "NOT_FOUND" };
   base.status = campaign.status;
+
+  // Intentional campaign controls are checked before planning/claiming, so a paused campaign or a
+  // quiet-hours wait never increments the "broken provider" retry counter and can resume forever.
+  const controlGate = await evaluateCampaignSendControls(campaign);
+  if (!controlGate.ok) return { ...base, blocked: controlGate.reason };
+  const speed = speedSettings(controlGate.controls.speedMode);
+  const requestedBatch = Math.min(opts.batchSize ?? speed.batchSize, 1000);
+  const batchSize = Math.max(1, Math.min(requestedBatch, controlGate.remainingDaily ?? requestedBatch));
 
   /* ── Gate + claim ──────────────────────────────────────────────────────
      The claim is an atomic status transition, so two runners cannot both start
@@ -410,7 +419,7 @@ export async function executeCampaignSend(
      * limits or exhaust database connections. Defaults are deliberately conservative and can be
      * tuned per environment with COMMUNICATION_*_CONCURRENCY.
      */
-    const outcomes = await mapWithConcurrency(plan.recipients, sendConcurrency(channel), async (recipient): Promise<BatchTally> => {
+    const outcomes = await mapWithConcurrency(plan.recipients, sendConcurrency(channel, controlGate.controls.speedMode), async (recipient): Promise<BatchTally> => {
       const outcome: BatchTally = { total: 0, sent: 0, skipped: 0, failed: 0, reasons: {} };
       if (alreadyDone.has(recipient.userId)) {
         bump(outcome.reasons, "ALREADY_PROCESSED");
@@ -579,6 +588,13 @@ export async function executeCampaignSend(
   let cursor = firstPlan.nextCursor;
 
   while (plan && batches < maxBatches) {
+    // Re-check before every page so an operator can hit Pause while a large campaign is mid-walk,
+    // and so crossing midnight/quiet-hours or the rolling daily cap stops before the next provider call.
+    const liveCampaign = await getCampaign(campaignId);
+    if (!liveCampaign) { base.blocked = "NOT_FOUND"; break; }
+    const liveGate = await evaluateCampaignSendControls(liveCampaign);
+    if (!liveGate.ok) { base.blocked = liveGate.reason; break; }
+
     const tally = await runBatch(plan);
     batches += 1;
     exhausted = plan.exhausted;
@@ -600,7 +616,12 @@ export async function executeCampaignSend(
     await patchMetadata(campaignId, metaOf(campaign), { sendProgress: { ...progress }, sendLease: exhausted ? null : lease });
 
     if (exhausted || batches >= maxBatches) break;
-    const next = await planCampaignSend(campaignId, { batchSize, cursor });
+    const fresh = await getCampaign(campaignId);
+    if (!fresh) { base.blocked = "NOT_FOUND"; break; }
+    const nextGate = await evaluateCampaignSendControls(fresh);
+    if (!nextGate.ok) { base.blocked = nextGate.reason; break; }
+    const nextBatchSize = Math.max(1, Math.min(batchSize, nextGate.remainingDaily ?? batchSize));
+    const next = await planCampaignSend(campaignId, { batchSize: nextBatchSize, cursor });
     /* A blocked page mid-walk (a provider that went away, a template that stopped rendering) stops
        the walk here and leaves the campaign resumable rather than declaring it finished. */
     if (next.blocked) {
