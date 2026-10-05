@@ -222,6 +222,46 @@ async function auditBlocked(campaign: CommunicationCampaign, reason: string, act
 /** Tallies for one batch, added into the run's and the campaign's running totals. */
 type BatchTally = { total: number; sent: number; skipped: number; failed: number; reasons: Record<string, number> };
 
+function concurrencyFromEnv(name: string, fallback: number, cap = 50): number {
+  const parsed = Number(process.env[name]);
+  if (!Number.isFinite(parsed) || parsed < 1) return fallback;
+  return Math.min(Math.floor(parsed), cap);
+}
+
+function sendConcurrency(channel: CommunicationChannelId): number {
+  if (channel === "WHATSAPP") return concurrencyFromEnv("COMMUNICATION_WHATSAPP_CONCURRENCY", 10);
+  if (channel === "EMAIL") return concurrencyFromEnv("COMMUNICATION_EMAIL_CONCURRENCY", 20);
+  return concurrencyFromEnv("COMMUNICATION_SMS_CONCURRENCY", 10);
+}
+
+async function mapWithConcurrency<T, R>(
+  items: readonly T[],
+  limit: number,
+  worker: (item: T, index: number) => Promise<R>,
+): Promise<R[]> {
+  if (!items.length) return [];
+  const output = new Array<R>(items.length);
+  let nextIndex = 0;
+  const workers = Array.from({ length: Math.min(Math.max(1, limit), items.length) }, async () => {
+    while (true) {
+      const index = nextIndex++;
+      if (index >= items.length) return;
+      output[index] = await worker(items[index], index);
+    }
+  });
+  await Promise.all(workers);
+  return output;
+}
+
+function mergeBatchTally(target: BatchTally, source: BatchTally) {
+  target.sent += source.sent;
+  target.skipped += source.skipped;
+  target.failed += source.failed;
+  for (const [key, value] of Object.entries(source.reasons)) {
+    target.reasons[key] = (target.reasons[key] ?? 0) + value;
+  }
+}
+
 export async function executeCampaignSend(
   campaignId: string,
   opts: { actor?: Actor; mode?: SendMode; batchSize?: number; maxBatches?: number } = {},
@@ -318,62 +358,136 @@ export async function executeCampaignSend(
   /** One batch: archive its skips, render, route and send each eligible recipient. */
   async function runBatch(plan: SendPlan): Promise<BatchTally> {
     const tally: BatchTally = { total: plan.total, sent: 0, skipped: 0, failed: 0, reasons: {} };
-    /* Read per batch rather than once per run: a batch can take minutes, and this is the guard that
-       makes a re-run (or an overlapping one) stop short of sending twice. */
-    const existing = await prisma.communicationDelivery.findMany({ where: { campaignId, templateId, channel, origin }, select: { recipientUserId: true, status: true, providerMessageId: true } }).catch(() => []);
-    const alreadyDone = new Set(existing.filter((delivery) => (delivery.status && PROCESSED_STATUSES.includes(delivery.status)) || !!delivery.providerMessageId).map((delivery) => delivery.recipientUserId).filter(Boolean) as string[]);
+
+    /*
+     * Idempotency guard, scoped to THIS page of the audience.
+     *
+     * The previous query loaded every delivery ever written for the campaign before every batch.
+     * On a 20k-donor campaign that meant repeatedly scanning and transferring thousands of historic
+     * rows just to learn whether the next 200 recipients were already handled. Restricting the query
+     * to the current page keeps the work proportional to batch size while preserving the same
+     * double-send protection.
+     */
+    const batchUserIds = Array.from(new Set([
+      ...plan.recipients.map((recipient) => recipient.userId),
+      ...plan.skippedList.map((recipient) => recipient.userId),
+    ]));
+    const existing = batchUserIds.length
+      ? await prisma.communicationDelivery.findMany({
+          where: {
+            campaignId,
+            templateId,
+            channel,
+            origin,
+            recipientUserId: { in: batchUserIds },
+          },
+          select: { recipientUserId: true, status: true, providerMessageId: true },
+        }).catch(() => [])
+      : [];
+    const alreadyDone = new Set(
+      existing
+        .filter((delivery) => (delivery.status && PROCESSED_STATUSES.includes(delivery.status)) || !!delivery.providerMessageId)
+        .map((delivery) => delivery.recipientUserId)
+        .filter(Boolean) as string[],
+    );
 
     for (const skipped of plan.skippedList) {
       if (alreadyDone.has(skipped.userId)) continue;
       await recordSkippedDelivery({ channel, campaignId, templateId, recipientUserId: skipped.userId, locale: skipped.locale, purpose, origin, createdBy: actor?.actorId ?? null }, skipped.reason);
-      tally.skipped += 1; bump(tally.reasons, skipped.reason);
+      tally.skipped += 1;
+      bump(tally.reasons, skipped.reason);
     }
 
     // One batched query for every recipient variable set, rather than per-message: without a real
     // context the renderer falls back to SAMPLE values, which is how campaigns were going out
     // addressed to the sample donor instead of the actual one.
-    const contexts = await loadContextsForUserIds(plan.recipients.map((r) => r.userId)).catch(() => new Map());
+    const contexts = await loadContextsForUserIds(plan.recipients.map((recipient) => recipient.userId)).catch(() => new Map());
 
-    for (const recipient of plan.recipients) {
-      if (alreadyDone.has(recipient.userId)) { bump(tally.reasons, "ALREADY_PROCESSED"); continue; }
+    /*
+     * Provider calls are I/O-bound. Sending one recipient at a time made a 200-recipient page take
+     * roughly the sum of 200 network round trips. Use bounded concurrency instead: enough parallelism
+     * to keep Meta/Elastic Email busy, but never an unbounded Promise.all that could burst provider
+     * limits or exhaust database connections. Defaults are deliberately conservative and can be
+     * tuned per environment with COMMUNICATION_*_CONCURRENCY.
+     */
+    const outcomes = await mapWithConcurrency(plan.recipients, sendConcurrency(channel), async (recipient): Promise<BatchTally> => {
+      const outcome: BatchTally = { total: 0, sent: 0, skipped: 0, failed: 0, reasons: {} };
+      if (alreadyDone.has(recipient.userId)) {
+        bump(outcome.reasons, "ALREADY_PROCESSED");
+        return outcome;
+      }
+
       const loadedCtx = contexts.get(recipient.userId) ?? null;
-      const recipientCtx = loadedCtx && updateSource ? { ...loadedCtx, update: updateContextFor(updateSource, recipient.locale, campaignId) } : loadedCtx;
+      const recipientCtx = loadedCtx && updateSource
+        ? { ...loadedCtx, update: updateContextFor(updateSource, recipient.locale, campaignId) }
+        : loadedCtx;
       if (!recipientCtx) {
         await recordSkippedDelivery({ channel, campaignId, templateId, recipientUserId: recipient.userId, locale: recipient.locale, purpose, origin }, "CONTEXT_LOAD_FAILED");
-        tally.skipped += 1; bump(tally.reasons, "CONTEXT_LOAD_FAILED"); continue;
+        outcome.skipped += 1;
+        bump(outcome.reasons, "CONTEXT_LOAD_FAILED");
+        return outcome;
       }
+
       const rendered = await renderChannelTemplate(channel, templateId, recipient.locale, recipientCtx);
       if (!rendered) {
         await recordSkippedDelivery({ channel, campaignId, templateId, recipientUserId: recipient.userId, locale: recipient.locale, purpose, origin }, "TEMPLATE_RENDER_FAILED");
-        tally.skipped += 1; bump(tally.reasons, "TEMPLATE_RENDER_FAILED"); continue;
+        outcome.skipped += 1;
+        bump(outcome.reasons, "TEMPLATE_RENDER_FAILED");
+        return outcome;
       }
       if (rendered.usedFallback && decisions[recipient.locale] === "EXCLUDE") {
         await recordSkippedDelivery({ channel, campaignId, templateId, recipientUserId: recipient.userId, locale: recipient.locale, purpose, origin, templateName: rendered.templateName }, "LANGUAGE_EXCLUDED");
-        tally.skipped += 1; bump(tally.reasons, "LANGUAGE_EXCLUDED"); continue;
+        outcome.skipped += 1;
+        bump(outcome.reasons, "LANGUAGE_EXCLUDED");
+        return outcome;
       }
 
-      /* One resolver, the same one triggers, retries and gift messages use, routed on this
-         recipient's own locale and country. A refusal is final: the environment default number no
-         longer overrides a rule that deliberately declined to serve this recipient. */
       const routed = resolveSenderFromSnapshot(senderSnapshot, { locale: recipient.locale, country: recipient.country, purpose });
       const sender = routed.ok ? routed.sender : null;
       const routingReason = routed.ok ? null : routed.reason;
       const to = channel === "EMAIL" ? recipient.email ?? "" : recipient.phone ?? "";
       const decision = resolveProviderForSendWithRuntime(runtime, channel, sender, { country: recipient.country, phone: to });
-      const provider = decision.canSend ? decision.providerId : channel === "WHATSAPP" ? "META_WHATSAPP" : channel === "EMAIL" ? EMAIL_PROVIDER_ID : undefined;
-      const created = await createDeliveryRecord({ channel, provider: provider as never, campaignId, templateId, templateName: rendered.templateName, recipientUserId: recipient.userId, recipientEmail: channel === "EMAIL" ? recipient.email : null, recipientPhone: channel !== "EMAIL" ? recipient.phone : null, recipientName: recipient.name, locale: recipient.locale, purpose, origin, renderedSubject: rendered.subject, renderedBody: rendered.body, senderId: sender?.id ?? null, createdBy: actor?.actorId ?? null, status: "RENDERED" });
-      if (!created.ok) { tally.failed += 1; bump(tally.reasons, "ARCHIVE_FAILED"); continue; }
+      const provider = decision.canSend
+        ? decision.providerId
+        : channel === "WHATSAPP"
+          ? "META_WHATSAPP"
+          : channel === "EMAIL"
+            ? EMAIL_PROVIDER_ID
+            : undefined;
+      const created = await createDeliveryRecord({
+        channel,
+        provider: provider as never,
+        campaignId,
+        templateId,
+        templateName: rendered.templateName,
+        recipientUserId: recipient.userId,
+        recipientEmail: channel === "EMAIL" ? recipient.email : null,
+        recipientPhone: channel !== "EMAIL" ? recipient.phone : null,
+        recipientName: recipient.name,
+        locale: recipient.locale,
+        purpose,
+        origin,
+        renderedSubject: rendered.subject,
+        renderedBody: rendered.body,
+        senderId: sender?.id ?? null,
+        createdBy: actor?.actorId ?? null,
+        status: "RENDERED",
+      });
+      if (!created.ok) {
+        outcome.failed += 1;
+        bump(outcome.reasons, "ARCHIVE_FAILED");
+        return outcome;
+      }
+
       const deliveryId = created.data.id;
       if (!sender && channel !== "SMS") {
         const reason = routingReason ?? "NO_SENDER_AVAILABLE";
         await markDeliveryStatus(deliveryId, "SKIPPED", { errorMessage: reason });
-        tally.skipped += 1; bump(tally.reasons, reason); continue;
+        outcome.skipped += 1;
+        bump(outcome.reasons, reason);
+        return outcome;
       }
 
-      /* WhatsApp: the name and language come from the variant Meta actually approved for this
-         locale, and the parameters from the schema that variant declares. Sending the recipient's
-         own locale as the language, as this did, is rejected outright whenever that language was
-         never approved  the message was lost although a good Arabic variant existed. */
       let metaName = rendered.templateName;
       let metaLanguage: string = recipient.locale;
       let metaComponents: unknown[] | undefined;
@@ -384,7 +498,9 @@ export async function executeCampaignSend(
         if (!readiness.ready || !readiness.providerTemplateName || !readiness.languageCode) {
           const reason = readiness.reason ?? "META_TEMPLATE_REQUIRED";
           await markDeliveryStatus(deliveryId, "SKIPPED", { errorMessage: reason });
-          tally.skipped += 1; bump(tally.reasons, reason); continue;
+          outcome.skipped += 1;
+          bump(outcome.reasons, reason);
+          return outcome;
         }
         const built = buildMetaComponents({
           componentsSchema: readiness.componentsSchema,
@@ -397,7 +513,9 @@ export async function executeCampaignSend(
         });
         if (!built.ok) {
           await markDeliveryStatus(deliveryId, "SKIPPED", { errorMessage: `${built.reason}  ${built.detail}` });
-          tally.skipped += 1; bump(tally.reasons, built.reason); continue;
+          outcome.skipped += 1;
+          bump(outcome.reasons, built.reason);
+          return outcome;
         }
         metaName = readiness.providerTemplateName;
         metaLanguage = readiness.languageCode;
@@ -418,22 +536,35 @@ export async function executeCampaignSend(
         locale: recipient.locale,
         channelName: campaignName,
       }, runtime);
+
       if (!result.ok) {
-        const terminal = result.reason.endsWith("_NOT_CONFIGURED") || result.reason.endsWith("_NOT_IMPLEMENTED") || result.reason === "EMAIL_SUPPRESSED" || result.reason.includes("SENDER_MISSING") || result.reason === "PROVIDER_DISABLED" || result.reason === "INTEGRATION_DECRYPTION_FAILED" || result.reason === "INTEGRATION_DATABASE_UNAVAILABLE";
-        // `detail` carries the provider's own answer  the HTTP status and the scrubbed response body
-        // (e.g. `406: {"code":"30","description":"Check the usercode-password information and API
-        // access permission"}`). Dropping it left the send log showing only NETGSM_REQUEST_FAILED,
-        // with the one line that explains the failure existing nowhere at all. The adapters already
-        // scrub credentials out of `detail` before returning it.
+        const terminal =
+          result.reason.endsWith("_NOT_CONFIGURED") ||
+          result.reason.endsWith("_NOT_IMPLEMENTED") ||
+          result.reason === "EMAIL_SUPPRESSED" ||
+          result.reason.includes("SENDER_MISSING") ||
+          result.reason === "PROVIDER_DISABLED" ||
+          result.reason === "INTEGRATION_DECRYPTION_FAILED" ||
+          result.reason === "INTEGRATION_DATABASE_UNAVAILABLE";
         await markDeliveryStatus(deliveryId, terminal ? "SKIPPED" : "FAILED", {
           errorMessage: result.detail ? `${result.reason}  ${result.detail}` : result.reason,
         });
-        if (terminal) tally.skipped += 1; else tally.failed += 1;
-        bump(tally.reasons, result.reason); continue;
+        if (terminal) outcome.skipped += 1;
+        else outcome.failed += 1;
+        bump(outcome.reasons, result.reason);
+        return outcome;
       }
-      await markDeliveryStatus(deliveryId, "SENT", { providerMessageId: result.providerMessageId, internalAccepted: result.internalAccepted });
-      tally.sent += 1; bump(tally.reasons, "SENT");
-    }
+
+      await markDeliveryStatus(deliveryId, "SENT", {
+        providerMessageId: result.providerMessageId,
+        internalAccepted: result.internalAccepted,
+      });
+      outcome.sent += 1;
+      bump(outcome.reasons, "SENT");
+      return outcome;
+    });
+
+    for (const outcome of outcomes) mergeBatchTally(tally, outcome);
     return tally;
   }
 
