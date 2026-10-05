@@ -518,12 +518,6 @@ export default function ZakatPage({
         <section id="zakat-campaigns" style={{ position: "relative", background: "var(--sand)", padding: "62px 0", borderBottom: "1px solid var(--border)", overflow: "hidden" }}>
           <div aria-hidden="true" data-aqsa-pattern="" style={pattern(520)} />
           <div style={{ position: "relative", maxWidth: 1240, margin: "0 auto", padding: "0 24px", display: "grid", gap: 26 }}>
-            <div style={{ display: "grid", gap: 8 }}>
-              <h2 style={{ margin: 0, fontSize: "clamp(26px,2.8vw,38px)", lineHeight: 1.2, fontWeight: 900 }}>{category.projectsTitle || category.name}</h2>
-              {category.description ? (
-                <p style={{ margin: 0, maxWidth: "70ch", color: "var(--muted)", fontSize: 16, lineHeight: 1.9 }}>{category.description}</p>
-              ) : null}
-            </div>
             {/* Every gift here is filed as zakat, the way the hero's are. The page
                 never lists campaigns, so no grid and no "no projects" state. */}
             <CategoryProgramme page={category} typeKey="zakat" film={false} projects={false} />
