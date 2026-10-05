@@ -459,16 +459,6 @@ export default function ZakatPage({
         </div>
       </section>
 
-      {/* ── Why Palestine ────────────────────────────────────────────────── */}
-      <TwoColumn
-        id="why"
-        background="transparent"
-        image="/minbar/assets/zakat-balance.png"
-        imageFirst={false}
-        heading={t("whyPalestine")}
-        text={t("whyText")}
-      />
-
       {/* ── The reward ───────────────────────────────────────────────────── */}
       <TwoColumn
         id="reward"
