@@ -191,6 +191,7 @@ export function LocaleStrip({
   onSelect,
   onEnable,
   onRemove,
+  locked,
   accent = "brand",
 }: {
   enabled: (loc: SupportedLocale) => boolean;
@@ -198,6 +199,7 @@ export function LocaleStrip({
   onSelect: (loc: SupportedLocale) => void;
   onEnable: (loc: SupportedLocale) => void;
   onRemove: (loc: SupportedLocale) => void;
+  locked?: (loc: SupportedLocale) => boolean;
   accent?: DialogAccent;
 }) {
   const a = ACCENTS[accent];
@@ -208,6 +210,7 @@ export function LocaleStrip({
         const has = enabled(loc);
         const active = activeLocale === loc;
         const isDefault = loc === DEFAULT_LOCALE;
+        const isLocked = locked?.(loc) ?? false;
         return (
           <span
             key={loc}
@@ -229,8 +232,9 @@ export function LocaleStrip({
               {LOCALE_LABELS[loc]}
               {!has && <span className="ms-1">+</span>}
               {isDefault && <span className="ms-1 text-[9px] opacity-70">افتراضي</span>}
+              {isLocked && <span className="ms-1 text-[9px] opacity-70">Meta</span>}
             </button>
-            {has && !isDefault && (
+            {has && !isDefault && !isLocked && (
               <button
                 type="button"
                 onClick={() => onRemove(loc)}
