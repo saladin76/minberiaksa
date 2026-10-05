@@ -33,6 +33,15 @@ function positiveInt(value: unknown, fallback: number, max = 1_000_000): number 
   return Number.isFinite(n) && n > 0 ? Math.min(Math.floor(n), max) : fallback;
 }
 
+export function isValidTimeZone(value: string): boolean {
+  try {
+    new Intl.DateTimeFormat("en-US", { timeZone: value }).format(new Date());
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export function campaignSendControls(campaign: Pick<CommunicationCampaign, "metadata">): CampaignSendControls {
   const metadata = (campaign.metadata as Record<string, unknown> | null) ?? {};
   const raw = (metadata.sendControls && typeof metadata.sendControls === "object"
@@ -54,7 +63,10 @@ export function campaignSendControls(campaign: Pick<CommunicationCampaign, "meta
       enabled: quiet.enabled === true,
       start: hhmm(quiet.start, "00:00"),
       end: hhmm(quiet.end, "08:00"),
-      timezone: typeof quiet.timezone === "string" && quiet.timezone.trim() ? quiet.timezone.trim() : "Europe/Istanbul",
+      timezone:
+        typeof quiet.timezone === "string" && quiet.timezone.trim() && isValidTimeZone(quiet.timezone.trim())
+          ? quiet.timezone.trim()
+          : "Europe/Istanbul",
     },
   };
 }

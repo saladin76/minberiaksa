@@ -365,7 +365,7 @@ export async function executeCampaignSend(
   const updateSource = sourceUpdateMeta ? await loadUpdateSource(sourceUpdateMeta.updateId).catch(() => null) : null;
 
   /** One batch: archive its skips, render, route and send each eligible recipient. */
-  async function runBatch(plan: SendPlan): Promise<BatchTally> {
+  async function runBatch(plan: SendPlan, speedMode: CampaignSpeedMode): Promise<BatchTally> {
     const tally: BatchTally = { total: plan.total, sent: 0, skipped: 0, failed: 0, reasons: {} };
 
     /*
@@ -419,7 +419,7 @@ export async function executeCampaignSend(
      * limits or exhaust database connections. Defaults are deliberately conservative and can be
      * tuned per environment with COMMUNICATION_*_CONCURRENCY.
      */
-    const outcomes = await mapWithConcurrency(plan.recipients, sendConcurrency(channel, controlGate.controls.speedMode), async (recipient): Promise<BatchTally> => {
+    const outcomes = await mapWithConcurrency(plan.recipients, sendConcurrency(channel, speedMode), async (recipient): Promise<BatchTally> => {
       const outcome: BatchTally = { total: 0, sent: 0, skipped: 0, failed: 0, reasons: {} };
       if (alreadyDone.has(recipient.userId)) {
         bump(outcome.reasons, "ALREADY_PROCESSED");
@@ -595,7 +595,8 @@ export async function executeCampaignSend(
     const liveGate = await evaluateCampaignSendControls(liveCampaign);
     if (!liveGate.ok) { base.blocked = liveGate.reason; break; }
 
-    const tally = await runBatch(plan);
+    const liveSpeed = liveGate.controls.speedMode;
+    const tally = await runBatch(plan, liveSpeed);
     batches += 1;
     exhausted = plan.exhausted;
     cursor = plan.nextCursor;
@@ -620,7 +621,9 @@ export async function executeCampaignSend(
     if (!fresh) { base.blocked = "NOT_FOUND"; break; }
     const nextGate = await evaluateCampaignSendControls(fresh);
     if (!nextGate.ok) { base.blocked = nextGate.reason; break; }
-    const nextBatchSize = Math.max(1, Math.min(batchSize, nextGate.remainingDaily ?? batchSize));
+    const nextSpeed = speedSettings(nextGate.controls.speedMode);
+    const desiredNextBatch = Math.min(opts.batchSize ?? nextSpeed.batchSize, 1000);
+    const nextBatchSize = Math.max(1, Math.min(desiredNextBatch, nextGate.remainingDaily ?? desiredNextBatch));
     const next = await planCampaignSend(campaignId, { batchSize: nextBatchSize, cursor });
     /* A blocked page mid-walk (a provider that went away, a template that stopped rendering) stops
        the walk here and leaves the campaign resumable rather than declaring it finished. */

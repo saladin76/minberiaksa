@@ -6,7 +6,7 @@ import { requireAdminOrDashboardPermission } from "@/lib/dashboard/api-auth";
 import { auditActorFromDashboardSession, writeAuditLog } from "@/lib/audit-log";
 import { prisma } from "@/lib/prisma";
 import { getCampaign } from "@/lib/communication/campaign-service";
-import { campaignSendControls } from "@/lib/communication/campaign-send-controls";
+import { campaignSendControls, isValidTimeZone } from "@/lib/communication/campaign-send-controls";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -19,7 +19,7 @@ const schema = z.object({
     enabled: z.boolean(),
     start: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/),
     end: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/),
-    timezone: z.string().min(1).max(120),
+    timezone: z.string().min(1).max(120).refine(isValidTimeZone, "Invalid IANA timezone"),
   }).optional(),
 });
 

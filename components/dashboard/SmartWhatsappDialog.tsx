@@ -22,6 +22,7 @@ type SmartContext = {
   replyWindow: ReplyWindow;
   sender: { id: string; name: string; phone: string | null } | null;
   marketingTemplates: Array<{ id: string; name: string; category: string | null }>;
+  utilityTemplates: Array<{ id: string; name: string; category: string | null }>;
 };
 
 function remainingLabel(window: ReplyWindow): string {
@@ -33,7 +34,9 @@ function remainingLabel(window: ReplyWindow): string {
 
 const ERROR_LABELS: Record<string, string> = {
   REPLY_WINDOW_CLOSED: "انتهت نافذة الرد الحر. اختر رسالة خدمة أو قالبًا تسويقيًا.",
-  META_DIRECT_SEND_DISABLED: "Direct Send غير مفعّل على بيئة المنصة حاليًا.",
+  META_DIRECT_SEND_DISABLED: "Direct Send غير مفعّل حاليًا. اختر قالب Utility معتمد كمسار احتياطي.",
+  UTILITY_TEMPLATE_REQUIRED: "اختر قالب Utility معتمد كمسار احتياطي.",
+
   DO_NOT_CONTACT: "هذا المتبرع موقوف عن التواصل المباشر.",
   NO_RECIPIENT_PHONE: "لا يوجد رقم واتساب صالح لهذا المتبرع.",
   MARKETING_TEMPLATE_REQUIRED: "اختر قالب Marketing معتمد.",
@@ -87,8 +90,16 @@ export function SmartWhatsappDialog({
 
   const send = async () => {
     if (!ctx) return;
-    if ((mode === "FREEFORM" || mode === "UTILITY") && !body.trim()) {
+    if (mode === "FREEFORM" && !body.trim()) {
       toast.error("اكتب الرسالة أولًا.");
+      return;
+    }
+    if (mode === "UTILITY" && ctx.directSendEnabled && !body.trim()) {
+      toast.error("اكتب رسالة الخدمة أولًا.");
+      return;
+    }
+    if (mode === "UTILITY" && !ctx.directSendEnabled && !templateId) {
+      toast.error("Direct Send غير مفعّل؛ اختر قالب Utility معتمد.");
       return;
     }
     if (mode === "MARKETING" && !templateId) {
@@ -104,7 +115,7 @@ export function SmartWhatsappDialog({
           userId,
           mode,
           body: mode === "MARKETING" ? null : body.trim(),
-          templateId: mode === "MARKETING" ? templateId : null,
+          templateId: mode === "FREEFORM" ? null : (templateId || null),
         }),
       });
       const data = await res.json().catch(() => ({}));
@@ -118,7 +129,9 @@ export function SmartWhatsappDialog({
           ? "تم إرسال الرد داخل نافذة 24 ساعة."
           : transport === "DIRECT_SEND"
             ? "تم إرسال رسالة الخدمة عبر Direct Send."
-            : "تم إرسال القالب التسويقي المعتمد.",
+            : transport === "UTILITY_TEMPLATE_FALLBACK"
+              ? "تعذّر Direct Send وتم إرسال قالب Utility المعتمد بنجاح."
+              : "تم إرسال القالب التسويقي المعتمد.",
       );
       setBody("");
       onOpenChange(false);
@@ -138,9 +151,9 @@ export function SmartWhatsappDialog({
     {
       id: "UTILITY" as const,
       title: "رسالة خدمة",
-      desc: "Direct Send · Utility",
+      desc: ctx?.directSendEnabled ? "Direct Send · Utility + fallback" : "Utility Template fallback",
       icon: ShieldCheck,
-      disabled: !ctx?.directSendEnabled,
+      disabled: Boolean(ctx && !ctx.directSendEnabled && ctx.utilityTemplates.length === 0),
     },
     {
       id: "MARKETING" as const,
@@ -243,29 +256,62 @@ export function SmartWhatsappDialog({
                     خارج نافذة 24 ساعة لا تُرسل الرسائل التسويقية كنص حر. المنصة تستخدم نسخة Meta المعتمدة المناسبة للغة والرقم التجاري.
                   </p>
                 </div>
+              ) : mode === "UTILITY" ? (
+                <div className="space-y-3">
+                  {ctx.directSendEnabled ? (
+                    <>
+                      <label className="text-xs font-semibold text-slate-700">رسالة خدمة مرتبطة بعلاقة المتبرع بالمؤسسة</label>
+                      <textarea
+                        value={body}
+                        onChange={(e) => setBody(e.target.value)}
+                        rows={6}
+                        maxLength={4096}
+                        placeholder="مثال: تم إصدار إيصال تبرعك ويمكننا إرسال الرابط لك هنا."
+                        className="w-full resize-y rounded-xl border border-slate-200 px-3 py-2.5 text-sm leading-6 outline-none focus:border-brand"
+                      />
+                      <div className="flex justify-between text-[10px] text-slate-400">
+                        <span>سيحاول النظام Direct Send كـ Utility أولًا.</span>
+                        <span>{body.length}/4096</span>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-800">
+                      Direct Send غير مفعّل لهذه البيئة. ستُرسل رسالة الخدمة باستخدام قالب Utility معتمد فقط.
+                    </div>
+                  )}
+
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold text-slate-700">
+                      قالب Utility الاحتياطي {ctx.directSendEnabled ? "(موصى به)" : "(مطلوب)"}
+                    </label>
+                    <select
+                      value={templateId}
+                      onChange={(e) => setTemplateId(e.target.value)}
+                      className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm"
+                    >
+                      <option value="">{ctx.directSendEnabled ? "بدون قالب احتياطي" : "اختر قالب Utility معتمد"}</option>
+                      {ctx.utilityTemplates.map((template) => (
+                        <option key={template.id} value={template.id}>{template.name}</option>
+                      ))}
+                    </select>
+                    <p className="text-[11px] leading-5 text-slate-500">
+                      إذا تعذّر Direct Send، يرسل النظام القالب المعتمد بدل فقد الرسالة. محتوى القالب هو الذي سيصل عند استخدام fallback.
+                    </p>
+                  </div>
+                </div>
               ) : (
                 <div className="space-y-2">
-                  <label className="text-xs font-semibold text-slate-700">
-                    {mode === "UTILITY" ? "رسالة خدمة مرتبطة بعلاقة المتبرع بالمؤسسة" : "الرسالة"}
-                  </label>
+                  <label className="text-xs font-semibold text-slate-700">الرسالة</label>
                   <textarea
                     value={body}
                     onChange={(e) => setBody(e.target.value)}
                     rows={6}
                     maxLength={4096}
-                    placeholder={
-                      mode === "UTILITY"
-                        ? "مثال: تم إصدار إيصال تبرعك ويمكننا إرسال الرابط لك هنا."
-                        : "اكتب ردك للمتبرع…"
-                    }
+                    placeholder="اكتب ردك للمتبرع…"
                     className="w-full resize-y rounded-xl border border-slate-200 px-3 py-2.5 text-sm leading-6 outline-none focus:border-brand"
                   />
                   <div className="flex justify-between text-[10px] text-slate-400">
-                    <span>
-                      {mode === "UTILITY"
-                        ? "يُرسل كـ Utility عبر Direct Send، وليس كرسالة تسويقية."
-                        : "يرسل كنص حر لأن نافذة خدمة العميل مفتوحة."}
-                    </span>
+                    <span>يرسل كنص حر لأن نافذة خدمة العميل مفتوحة.</span>
                     <span>{body.length}/4096</span>
                   </div>
                 </div>
@@ -282,7 +328,13 @@ export function SmartWhatsappDialog({
                   <Button variant="outline" onClick={() => onOpenChange(false)} disabled={sending}>إلغاء</Button>
                   <Button
                     onClick={send}
-                    disabled={sending || (mode === "MARKETING" ? !templateId : !body.trim()) || (mode === "UTILITY" && !ctx.directSendEnabled)}
+                    disabled={
+                      sending ||
+                      (mode === "FREEFORM" && !body.trim()) ||
+                      (mode === "MARKETING" && !templateId) ||
+                      (mode === "UTILITY" && ctx.directSendEnabled && !body.trim()) ||
+                      (mode === "UTILITY" && !ctx.directSendEnabled && !templateId)
+                    }
                     className="bg-[#25D366] text-white hover:bg-[#20bd5a]"
                   >
                     {sending ? <Loader2 className="me-2 h-4 w-4 animate-spin" /> : <Send className="me-2 h-4 w-4" />}

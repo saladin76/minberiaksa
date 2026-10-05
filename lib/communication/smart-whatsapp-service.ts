@@ -31,6 +31,7 @@ export type SmartWhatsappContext = {
   replyWindow: Awaited<ReturnType<typeof replyWindowFor>>;
   sender: { id: string; name: string; phone: string | null } | null;
   marketingTemplates: Array<{ id: string; name: string; category: string | null }>;
+  utilityTemplates: Array<{ id: string; name: string; category: string | null }>;
 };
 
 function valueAtPath(ctx: unknown, path: string): string {
@@ -104,15 +105,26 @@ export async function getSmartWhatsappContext(userId: string): Promise<SmartWhat
       }).catch(() => null)
     : null;
 
-  const templates = await prisma.whatsappTemplate.findMany({
-    where: {
-      OR: [{ category: "MARKETING" }, { purpose: "MARKETING" }, { kind: "CAMPAIGN" }],
-      variants: { some: { provider: "META_WHATSAPP", approvalStatus: "APPROVED" } },
-    },
-    select: { id: true, name: true, category: true },
-    orderBy: { updatedAt: "desc" },
-    take: 100,
-  }).catch(() => []);
+  const [marketingTemplates, utilityTemplates] = await Promise.all([
+    prisma.whatsappTemplate.findMany({
+      where: {
+        OR: [{ category: "MARKETING" }, { purpose: "MARKETING" }, { kind: "CAMPAIGN" }],
+        variants: { some: { provider: "META_WHATSAPP", approvalStatus: "APPROVED" } },
+      },
+      select: { id: true, name: true, category: true },
+      orderBy: { updatedAt: "desc" },
+      take: 100,
+    }).catch(() => []),
+    prisma.whatsappTemplate.findMany({
+      where: {
+        OR: [{ category: "UTILITY" }, { purpose: "UTILITY" }, { purpose: "TRANSACTIONAL" }, { kind: "SYSTEM" }],
+        variants: { some: { provider: "META_WHATSAPP", approvalStatus: "APPROVED" } },
+      },
+      select: { id: true, name: true, category: true },
+      orderBy: { updatedAt: "desc" },
+      take: 100,
+    }).catch(() => []),
+  ]);
 
   return {
     userId,
@@ -126,13 +138,116 @@ export async function getSmartWhatsappContext(userId: string): Promise<SmartWhat
     conversationId: convId,
     replyWindow,
     sender: sender ? { id: sender.id, name: sender.displayName || sender.name, phone: sender.displayPhoneNumber ?? null } : null,
-    marketingTemplates: templates,
+    marketingTemplates,
+    utilityTemplates,
   };
 }
 
 export type SmartWhatsappSendResult =
-  | { ok: true; transport: "FREEFORM" | "DIRECT_SEND" | "MARKETING_TEMPLATE"; deliveryId: string; providerMessageId: string | null }
+  | { ok: true; transport: "FREEFORM" | "DIRECT_SEND" | "UTILITY_TEMPLATE_FALLBACK" | "MARKETING_TEMPLATE"; deliveryId: string; providerMessageId: string | null }
   | { ok: false; reason: string; detail?: string | null };
+
+async function sendApprovedTemplateForDonor(args: {
+  templateId: string;
+  expected: "UTILITY" | "MARKETING";
+  ctx: SmartWhatsappContext;
+  locale: SupportedLocale;
+  sender: { id: string; phoneNumberId: string | null; businessAccountId?: string | null };
+  actor?: Actor;
+}): Promise<SmartWhatsappSendResult> {
+  const template = await prisma.whatsappTemplate.findUnique({
+    where: { id: args.templateId },
+    select: { id: true, provider: true, name: true, variables: true, header: true, category: true, purpose: true, kind: true },
+  });
+  if (!template) return { ok: false, reason: "TEMPLATE_NOT_FOUND" };
+
+  const category = String(template.category ?? template.purpose ?? "").toUpperCase();
+  if (args.expected === "MARKETING") {
+    if (category !== "MARKETING" && template.kind !== "CAMPAIGN") return { ok: false, reason: "MARKETING_TEMPLATE_REQUIRED" };
+  } else if (!["UTILITY", "TRANSACTIONAL"].includes(category) && template.kind !== "SYSTEM") {
+    return { ok: false, reason: "UTILITY_TEMPLATE_REQUIRED" };
+  }
+
+  const contexts = await loadContextsForUserIds([args.ctx.userId]);
+  const renderCtx = contexts.get(args.ctx.userId);
+  if (!renderCtx) return { ok: false, reason: "CONTEXT_LOAD_FAILED" };
+  const rendered = await renderChannelTemplate("WHATSAPP", template.id, args.locale, renderCtx);
+  if (!rendered) return { ok: false, reason: "TEMPLATE_RENDER_FAILED" };
+
+  const mapping = await resolveMetaTemplateMapping(template, args.locale, args.sender.businessAccountId);
+  if (!mapping) return { ok: false, reason: "META_TEMPLATE_NOT_APPROVED_FOR_SENDER_LANGUAGE" };
+  const built = buildMetaComponents({
+    componentsSchema: mapping.componentsSchema,
+    values: valuesFor(mapping.positionalNames, renderCtx),
+    positionalNames: mapping.positionalNames,
+    scopedNames: mapping.scopedNames,
+    headerMediaUrl: mapping.headerMediaUrl,
+    headerMediaFilename: mapping.headerMediaFilename,
+    headerLocation: mapping.headerLocation,
+  });
+  if (!built.ok) return { ok: false, reason: built.reason, detail: built.detail };
+
+  const created = await createDeliveryRecord({
+    channel: "WHATSAPP",
+    provider: "META_WHATSAPP",
+    origin: "MANUAL",
+    purpose: args.expected,
+    templateId: template.id,
+    templateName: mapping.name,
+    recipientUserId: args.ctx.userId,
+    recipientName: args.ctx.name,
+    recipientPhone: args.ctx.phone,
+    locale: args.locale,
+    renderedBody: rendered.body,
+    senderId: args.sender.id,
+    createdBy: args.actor?.actorId ?? null,
+    status: "RENDERED",
+  });
+  if (!created.ok) return { ok: false, reason: "ARCHIVE_FAILED" };
+
+  const { sendTemplateMessage } = await import("./providers/meta-whatsapp/messages");
+  const runtime = await getActiveMetaWhatsappRuntimeConfig();
+  const sent = await sendTemplateMessage({
+    phoneNumberId: args.sender.phoneNumberId!,
+    to: args.ctx.phone!,
+    templateName: mapping.name,
+    languageCode: mapping.language,
+    components: built.components,
+  }, runtime);
+
+  if (!sent.ok) {
+    await markDeliveryStatus(created.data.id, "FAILED", { errorMessage: sent.detail ? `${sent.reason}  ${sent.detail}` : sent.reason });
+    return { ok: false, reason: sent.reason, detail: sent.detail ?? null };
+  }
+
+  await markDeliveryStatus(created.data.id, "SENT", { providerMessageId: sent.providerMessageId });
+  await touchProfileCommunication(args.ctx.userId, "WHATSAPP");
+  await writeAuditLog({
+    actorId: args.actor?.actorId ?? undefined,
+    actorName: args.actor?.actorName ?? undefined,
+    actorRole: args.actor?.actorRole ?? "ADMIN",
+    action: args.expected === "MARKETING"
+      ? "communication.whatsapp.marketing-template-send"
+      : "communication.whatsapp.utility-template-fallback",
+    messageAr: args.expected === "MARKETING"
+      ? `تم إرسال قالب واتساب تسويقي إلى ${args.ctx.name || args.ctx.phone}`
+      : `تم إرسال قالب واتساب خدمي احتياطي إلى ${args.ctx.name || args.ctx.phone}`,
+    messageEn: args.expected === "MARKETING"
+      ? `Marketing WhatsApp template sent to ${args.ctx.name || args.ctx.phone}`
+      : `Utility WhatsApp fallback template sent to ${args.ctx.name || args.ctx.phone}`,
+    entityType: "User",
+    entityId: args.ctx.userId,
+    metadata: { deliveryId: created.data.id, templateId: template.id, fallback: args.expected === "UTILITY", externalCall: true },
+    stream: "TEAM",
+  }).catch(() => {});
+
+  return {
+    ok: true,
+    transport: args.expected === "MARKETING" ? "MARKETING_TEMPLATE" : "UTILITY_TEMPLATE_FALLBACK",
+    deliveryId: created.data.id,
+    providerMessageId: sent.providerMessageId,
+  };
+}
 
 export async function sendSmartWhatsapp(input: {
   userId: string;
@@ -173,129 +288,101 @@ export async function sendSmartWhatsapp(input: {
   if (!sender.phoneNumberId) return { ok: false, reason: "META_SENDER_MISSING_PHONE_NUMBER_ID" };
 
   if (mode === "UTILITY") {
-    if (!body) return { ok: false, reason: "EMPTY_BODY" };
-    if (!ctx.directSendEnabled) return { ok: false, reason: "META_DIRECT_SEND_DISABLED" };
+    let directFailure: { reason: string; detail?: string | null } | null = null;
 
-    const created = await createDeliveryRecord({
-      channel: "WHATSAPP",
-      provider: "META_WHATSAPP",
-      origin: "MANUAL",
-      purpose: "UTILITY",
-      recipientUserId: ctx.userId,
-      recipientName: ctx.name,
-      recipientPhone: ctx.phone,
-      locale,
-      renderedBody: body,
-      senderId: sender.id,
-      createdBy: input.actor?.actorId ?? null,
-      status: "RENDERED",
-    });
-    if (!created.ok) return { ok: false, reason: "ARCHIVE_FAILED" };
+    if (ctx.directSendEnabled) {
+      if (!body) return { ok: false, reason: "EMPTY_BODY" };
 
-    const runtime = await getActiveMetaWhatsappRuntimeConfig();
-    const { sendDirectTextMessage } = await import("./providers/meta-whatsapp/messages");
-    const sent = await sendDirectTextMessage({
-      phoneNumberId: sender.phoneNumberId,
-      to: ctx.phone,
-      body,
-      category: "utility",
-    }, runtime);
-    if (!sent.ok) {
-      await markDeliveryStatus(created.data.id, "FAILED", { errorMessage: sent.detail ? `${sent.reason}  ${sent.detail}` : sent.reason });
-      return { ok: false, reason: sent.reason, detail: sent.detail ?? null };
+      const created = await createDeliveryRecord({
+        channel: "WHATSAPP",
+        provider: "META_WHATSAPP",
+        origin: "MANUAL",
+        purpose: "UTILITY",
+        recipientUserId: ctx.userId,
+        recipientName: ctx.name,
+        recipientPhone: ctx.phone,
+        locale,
+        renderedBody: body,
+        senderId: sender.id,
+        createdBy: input.actor?.actorId ?? null,
+        status: "RENDERED",
+      });
+      if (!created.ok) return { ok: false, reason: "ARCHIVE_FAILED" };
+
+      const runtime = await getActiveMetaWhatsappRuntimeConfig();
+      const { sendDirectTextMessage } = await import("./providers/meta-whatsapp/messages");
+      const sent = await sendDirectTextMessage({
+        phoneNumberId: sender.phoneNumberId,
+        to: ctx.phone,
+        body,
+        category: "utility",
+      }, runtime);
+
+      if (sent.ok) {
+        await markDeliveryStatus(created.data.id, "SENT", { providerMessageId: sent.providerMessageId });
+        await touchProfileCommunication(ctx.userId, "WHATSAPP");
+        await writeAuditLog({
+          actorId: input.actor?.actorId ?? undefined,
+          actorName: input.actor?.actorName ?? undefined,
+          actorRole: input.actor?.actorRole ?? "ADMIN",
+          action: "communication.whatsapp.direct-send",
+          messageAr: `تم إرسال رسالة خدمة واتساب مباشرة إلى ${ctx.name || ctx.phone}`,
+          messageEn: `Direct Send WhatsApp utility message to ${ctx.name || ctx.phone}`,
+          entityType: "User",
+          entityId: ctx.userId,
+          metadata: { deliveryId: created.data.id, transport: "DIRECT_SEND", externalCall: true },
+          stream: "TEAM",
+        }).catch(() => {});
+        return { ok: true, transport: "DIRECT_SEND", deliveryId: created.data.id, providerMessageId: sent.providerMessageId };
+      }
+
+      directFailure = { reason: sent.reason, detail: sent.detail ?? null };
+      await markDeliveryStatus(created.data.id, "FAILED", {
+        errorMessage: sent.detail ? `${sent.reason}  ${sent.detail}` : sent.reason,
+      });
+    } else {
+      directFailure = { reason: "META_DIRECT_SEND_DISABLED" };
     }
-    await markDeliveryStatus(created.data.id, "SENT", { providerMessageId: sent.providerMessageId });
-    await touchProfileCommunication(ctx.userId, "WHATSAPP");
-    await writeAuditLog({
-      actorId: input.actor?.actorId ?? undefined,
-      actorName: input.actor?.actorName ?? undefined,
-      actorRole: input.actor?.actorRole ?? "ADMIN",
-      action: "communication.whatsapp.direct-send",
-      messageAr: `تم إرسال رسالة خدمة واتساب مباشرة إلى ${ctx.name || ctx.phone}`,
-      messageEn: `Direct Send WhatsApp utility message to ${ctx.name || ctx.phone}`,
-      entityType: "User",
-      entityId: ctx.userId,
-      metadata: { deliveryId: created.data.id, transport: "DIRECT_SEND", externalCall: true },
-      stream: "TEAM",
-    }).catch(() => {});
-    return { ok: true, transport: "DIRECT_SEND", deliveryId: created.data.id, providerMessageId: sent.providerMessageId };
+
+    // Direct Send is beta. A pre-approved Utility template is the deterministic fallback so a
+    // service conversation can still start when the beta is disabled or Meta rejects a Direct Send.
+    if (input.templateId) {
+      const fallback = await sendApprovedTemplateForDonor({
+        templateId: input.templateId,
+        expected: "UTILITY",
+        ctx,
+        locale,
+        sender,
+        actor: input.actor,
+      });
+      if (fallback.ok) return fallback;
+      return {
+        ok: false,
+        reason: fallback.reason,
+        detail: [
+          directFailure ? `Direct Send: ${directFailure.reason}${directFailure.detail ? ` — ${directFailure.detail}` : ""}` : null,
+          fallback.detail,
+        ].filter(Boolean).join(" | ") || null,
+      };
+    }
+
+    return {
+      ok: false,
+      reason: directFailure?.reason ?? "UTILITY_TEMPLATE_REQUIRED",
+      detail: directFailure?.detail ?? "اختر قالب Utility معتمد كمسار احتياطي.",
+    };
   }
 
   if (mode !== "MARKETING") return { ok: false, reason: "INVALID_MODE" };
   if (!ctx.whatsappOptIn) return { ok: false, reason: "WHATSAPP_MARKETING_OPT_IN_REQUIRED" };
   if (!input.templateId) return { ok: false, reason: "MARKETING_TEMPLATE_REQUIRED" };
 
-  const template = await prisma.whatsappTemplate.findUnique({
-    where: { id: input.templateId },
-    select: { id: true, provider: true, name: true, variables: true, header: true, category: true, purpose: true, kind: true },
+  return sendApprovedTemplateForDonor({
+    templateId: input.templateId,
+    expected: "MARKETING",
+    ctx,
+    locale,
+    sender,
+    actor: input.actor,
   });
-  if (!template) return { ok: false, reason: "TEMPLATE_NOT_FOUND" };
-  const category = String(template.category ?? template.purpose ?? "").toUpperCase();
-  if (category !== "MARKETING" && template.kind !== "CAMPAIGN") return { ok: false, reason: "MARKETING_TEMPLATE_REQUIRED" };
-
-  const contexts = await loadContextsForUserIds([ctx.userId]);
-  const renderCtx = contexts.get(ctx.userId);
-  if (!renderCtx) return { ok: false, reason: "CONTEXT_LOAD_FAILED" };
-  const rendered = await renderChannelTemplate("WHATSAPP", template.id, locale, renderCtx);
-  if (!rendered) return { ok: false, reason: "TEMPLATE_RENDER_FAILED" };
-
-  const mapping = await resolveMetaTemplateMapping(template, locale, sender.businessAccountId);
-  if (!mapping) return { ok: false, reason: "META_TEMPLATE_NOT_APPROVED_FOR_SENDER_LANGUAGE" };
-  const built = buildMetaComponents({
-    componentsSchema: mapping.componentsSchema,
-    values: valuesFor(mapping.positionalNames, renderCtx),
-    positionalNames: mapping.positionalNames,
-    scopedNames: mapping.scopedNames,
-    headerMediaUrl: mapping.headerMediaUrl,
-    headerMediaFilename: mapping.headerMediaFilename,
-    headerLocation: mapping.headerLocation,
-  });
-  if (!built.ok) return { ok: false, reason: built.reason, detail: built.detail };
-
-  const created = await createDeliveryRecord({
-    channel: "WHATSAPP",
-    provider: "META_WHATSAPP",
-    origin: "MANUAL",
-    purpose: "MARKETING",
-    templateId: template.id,
-    templateName: mapping.name,
-    recipientUserId: ctx.userId,
-    recipientName: ctx.name,
-    recipientPhone: ctx.phone,
-    locale: ctx.locale,
-    renderedBody: rendered.body,
-    senderId: sender.id,
-    createdBy: input.actor?.actorId ?? null,
-    status: "RENDERED",
-  });
-  if (!created.ok) return { ok: false, reason: "ARCHIVE_FAILED" };
-
-  const { sendTemplateMessage } = await import("./providers/meta-whatsapp/messages");
-  const runtime = await getActiveMetaWhatsappRuntimeConfig();
-  const sent = await sendTemplateMessage({
-    phoneNumberId: sender.phoneNumberId,
-    to: ctx.phone,
-    templateName: mapping.name,
-    languageCode: mapping.language,
-    components: built.components,
-  }, runtime);
-  if (!sent.ok) {
-    await markDeliveryStatus(created.data.id, "FAILED", { errorMessage: sent.detail ? `${sent.reason}  ${sent.detail}` : sent.reason });
-    return { ok: false, reason: sent.reason, detail: sent.detail ?? null };
-  }
-  await markDeliveryStatus(created.data.id, "SENT", { providerMessageId: sent.providerMessageId });
-  await touchProfileCommunication(ctx.userId, "WHATSAPP");
-  await writeAuditLog({
-    actorId: input.actor?.actorId ?? undefined,
-    actorName: input.actor?.actorName ?? undefined,
-    actorRole: input.actor?.actorRole ?? "ADMIN",
-    action: "communication.whatsapp.marketing-template-send",
-    messageAr: `تم إرسال قالب واتساب تسويقي إلى ${ctx.name || ctx.phone}`,
-    messageEn: `Marketing WhatsApp template sent to ${ctx.name || ctx.phone}`,
-    entityType: "User",
-    entityId: ctx.userId,
-    metadata: { deliveryId: created.data.id, templateId: template.id, externalCall: true },
-    stream: "TEAM",
-  }).catch(() => {});
-  return { ok: true, transport: "MARKETING_TEMPLATE", deliveryId: created.data.id, providerMessageId: sent.providerMessageId };
 }
