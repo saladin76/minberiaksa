@@ -513,18 +513,6 @@ export default function ZakatPage({
         </div>
       </section>
 
-      {/* ── The category's campaigns ─────────────────────────────────────── */}
-      {category ? (
-        <section id="zakat-campaigns" style={{ position: "relative", background: "var(--sand)", padding: "62px 0", borderBottom: "1px solid var(--border)", overflow: "hidden" }}>
-          <div aria-hidden="true" data-aqsa-pattern="" style={pattern(520)} />
-          <div style={{ position: "relative", maxWidth: 1240, margin: "0 auto", padding: "0 24px", display: "grid", gap: 26 }}>
-            {/* Every gift here is filed as zakat, the way the hero's are. The page
-                never lists campaigns, so no grid and no "no projects" state. */}
-            <CategoryProgramme page={category} typeKey="zakat" film={false} projects={false} />
-          </div>
-        </section>
-      ) : null}
-
       {/* ── Expediting zakat, and the two testimonies ────────────────────── */}
       <section id="taajil" style={{ background: "#fff", padding: "62px 0", borderBottom: "1px solid var(--border)" }}>
         <div style={{ maxWidth: 1240, margin: "0 auto", padding: "0 24px" }}>
