@@ -11,6 +11,7 @@ import { loadContextsForUserIds } from "@/lib/templates/variables";
 import { renderChannelTemplate } from "./template-compat";
 import { resolveMetaTemplateMapping } from "./automatic-message-dispatcher";
 import { buildMetaComponents } from "./providers/meta-whatsapp/parameters";
+import { isValidLocale, type SupportedLocale } from "@/lib/locales";
 
 type Actor = { actorId?: string | null; actorName?: string | null; actorRole?: string | null } | null;
 export type SmartWhatsappMode = "AUTO" | "FREEFORM" | "UTILITY" | "MARKETING";
@@ -140,6 +141,7 @@ export async function sendSmartWhatsapp(input: {
   if (!ctx.phone) return { ok: false, reason: "NO_RECIPIENT_PHONE" };
 
   const body = input.body?.trim() ?? "";
+  const locale: SupportedLocale = isValidLocale(ctx.locale) ? ctx.locale : "ar";
   const mode = input.mode === "AUTO"
     ? (ctx.replyWindow.open ? "FREEFORM" : "UTILITY")
     : input.mode;
@@ -157,7 +159,7 @@ export async function sendSmartWhatsapp(input: {
 
   const snapshot = await loadSenderRoutingSnapshot("WHATSAPP");
   const routed = resolveSenderFromSnapshot(snapshot, {
-    locale: ctx.locale,
+    locale,
     country: ctx.country,
     purpose: mode === "MARKETING" ? "MARKETING" : "UTILITY",
   });
@@ -177,7 +179,7 @@ export async function sendSmartWhatsapp(input: {
       recipientUserId: ctx.userId,
       recipientName: ctx.name,
       recipientPhone: ctx.phone,
-      locale: ctx.locale,
+      locale,
       renderedBody: body,
       senderId: sender.id,
       createdBy: input.actor?.actorId ?? null,
@@ -215,10 +217,10 @@ export async function sendSmartWhatsapp(input: {
   const contexts = await loadContextsForUserIds([ctx.userId]);
   const renderCtx = contexts.get(ctx.userId);
   if (!renderCtx) return { ok: false, reason: "CONTEXT_LOAD_FAILED" };
-  const rendered = await renderChannelTemplate("WHATSAPP", template.id, ctx.locale, renderCtx);
+  const rendered = await renderChannelTemplate("WHATSAPP", template.id, locale, renderCtx);
   if (!rendered) return { ok: false, reason: "TEMPLATE_RENDER_FAILED" };
 
-  const mapping = await resolveMetaTemplateMapping(template, ctx.locale, sender.businessAccountId);
+  const mapping = await resolveMetaTemplateMapping(template, locale, sender.businessAccountId);
   if (!mapping) return { ok: false, reason: "META_TEMPLATE_NOT_APPROVED_FOR_SENDER_LANGUAGE" };
   const built = buildMetaComponents({
     componentsSchema: mapping.componentsSchema,
