@@ -13,6 +13,7 @@ import { resolveMetaTemplateMapping } from "./automatic-message-dispatcher";
 import { buildMetaComponents } from "./providers/meta-whatsapp/parameters";
 import { isValidLocale, type SupportedLocale } from "@/lib/locales";
 import { writeAuditLog } from "@/lib/audit-log";
+import { touchProfileCommunication } from "./donor-communication-profile-service";
 
 type Actor = { actorId?: string | null; actorName?: string | null; actorRole?: string | null } | null;
 export type SmartWhatsappMode = "AUTO" | "FREEFORM" | "UTILITY" | "MARKETING";
@@ -204,6 +205,7 @@ export async function sendSmartWhatsapp(input: {
       return { ok: false, reason: sent.reason, detail: sent.detail ?? null };
     }
     await markDeliveryStatus(created.data.id, "SENT", { providerMessageId: sent.providerMessageId });
+    await touchProfileCommunication(ctx.userId, "WHATSAPP");
     await writeAuditLog({
       actorId: input.actor?.actorId ?? undefined,
       actorName: input.actor?.actorName ?? undefined,
@@ -282,6 +284,7 @@ export async function sendSmartWhatsapp(input: {
     return { ok: false, reason: sent.reason, detail: sent.detail ?? null };
   }
   await markDeliveryStatus(created.data.id, "SENT", { providerMessageId: sent.providerMessageId });
+  await touchProfileCommunication(ctx.userId, "WHATSAPP");
   await writeAuditLog({
     actorId: input.actor?.actorId ?? undefined,
     actorName: input.actor?.actorName ?? undefined,
