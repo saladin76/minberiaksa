@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { toast } from "react-hot-toast";
-import { Ban, Loader2, MoreHorizontal, Send, ShieldCheck, Settings2 } from "lucide-react";
+import { Ban, Loader2, MoreHorizontal, Send, ShieldCheck, Settings2, Pause, Play } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -72,6 +72,26 @@ export function CampaignRowActions({
   const canCancel = isPreSend(campaign.status);
   const canControl = campaign.channel === "WHATSAPP" && !["SENT", "FAILED", "CANCELLED", "ARCHIVED"].includes(campaign.status);
   if (!canConfirm && !canSend && !canCancel && !canControl) return null;
+
+  const togglePause = async () => {
+    const currentlyPaused = campaign.metadata?.sendControls?.paused === true;
+    setBusy(true);
+    try {
+      const res = await fetch(`/api/communication/campaigns/${campaign.id}/controls`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ paused: !currentlyPaused }),
+      });
+      const json = await res.json();
+      if (!res.ok || !json.ok) throw new Error(json?.error || "تعذّر تحديث حالة الإرسال");
+      toast.success(currentlyPaused ? "تم استئناف الحملة" : "تم إيقاف الحملة مؤقتًا");
+      onChanged();
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
 
   const transition = async (action: string) => {
     setBusy(true);
@@ -171,10 +191,20 @@ export function CampaignRowActions({
             </DropdownMenuItem>
           )}
           {canControl && (
-            <DropdownMenuItem onClick={() => setControlsOpen(true)}>
-              <Settings2 className="me-2 h-3.5 w-3.5" />
-              تحكم الإرسال
-            </DropdownMenuItem>
+            <>
+              <DropdownMenuItem onClick={togglePause}>
+                {campaign.metadata?.sendControls?.paused ? (
+                  <Play className="me-2 h-3.5 w-3.5" />
+                ) : (
+                  <Pause className="me-2 h-3.5 w-3.5" />
+                )}
+                {campaign.metadata?.sendControls?.paused ? "استئناف الحملة" : "إيقاف مؤقت فورًا"}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setControlsOpen(true)}>
+                <Settings2 className="me-2 h-3.5 w-3.5" />
+                إعدادات السرعة والوقت
+              </DropdownMenuItem>
+            </>
           )}
           {canCancel && (
             <DropdownMenuItem onClick={() => transition("CANCEL")} className="text-rose-600 focus:text-rose-700">
