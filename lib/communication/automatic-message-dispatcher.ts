@@ -49,6 +49,7 @@ function isTerminalConfigReason(reason: string): boolean {
   return (
     reason.endsWith("_NOT_CONFIGURED") ||
     reason.endsWith("_NOT_IMPLEMENTED") ||
+    reason === "EMAIL_SUPPRESSED" ||
     reason.includes("SENDER_MISSING") ||
     reason.includes("REQUIRED_FOR_AUTOMATIC") ||
     reason === "TWILIO_LEGACY_DISABLED"
@@ -143,6 +144,9 @@ export async function sendAutomaticEmailMessage(
     to: input.recipientEmail,
     subject: input.renderedSubject,
     html: input.renderedBody,
+    purpose: input.purpose ?? "TRANSACTIONAL",
+    locale: input.locale,
+    channelName: `trigger:${input.triggerEvent}`,
     attachments: input.attachments,
   });
 

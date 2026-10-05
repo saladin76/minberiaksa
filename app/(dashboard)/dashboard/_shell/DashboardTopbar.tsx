@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { ChevronLeft, ChevronRight, ExternalLink, Menu, Search } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ExternalLink, Menu, MessageCircle, Search } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
 import type { Crumb } from '@/lib/dashboard/breadcrumbs';
@@ -12,9 +12,11 @@ type Props = {
   onOpenSidebar: () => void;
   onOpenSearch: () => void;
   dir: 'rtl' | 'ltr';
+  showWhatsappInbox?: boolean;
+  whatsappInboxCount?: number;
 };
 
-export function DashboardTopbar({ crumbs, onOpenSidebar, onOpenSearch, dir }: Props) {
+export function DashboardTopbar({ crumbs, onOpenSidebar, onOpenSearch, dir, showWhatsappInbox = false, whatsappInboxCount = 0 }: Props) {
   // Chevrons are directional: in RTL the trail reads right-to-left, so the separator must
   // point left. The old shell used ChevronLeft unconditionally.
   const Separator = dir === 'rtl' ? ChevronLeft : ChevronRight;
@@ -78,6 +80,22 @@ export function DashboardTopbar({ crumbs, onOpenSidebar, onOpenSearch, dir }: Pr
         >
           <Search className="w-4 h-4" />
         </button>
+        {showWhatsappInbox && (
+          <Link
+            href="/dashboard/communication/inbox"
+            className="relative inline-flex h-9 items-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 text-xs font-semibold text-emerald-800 transition-colors hover:bg-emerald-100"
+            aria-label={whatsappInboxCount > 0 ? `واتساب، ${whatsappInboxCount} محادثة تنتظر الرد` : "محادثات واتساب"}
+            title="محادثات واتساب"
+          >
+            <MessageCircle className="h-4 w-4" />
+            <span className="hidden sm:inline">واتساب</span>
+            {whatsappInboxCount > 0 && (
+              <span className="inline-flex min-w-5 h-5 items-center justify-center rounded-full bg-emerald-600 px-1 text-[10px] font-bold tabular-nums text-white">
+                {whatsappInboxCount > 99 ? "99+" : whatsappInboxCount}
+              </span>
+            )}
+          </Link>
+        )}
         <CurrencySelector showDefaultCurrencyOption onDark={false} />
         <Link
           href="/"

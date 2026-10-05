@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { writeAuditLog } from "@/lib/audit-log";
 import type { EmailSuppressionReason } from "./providers/elastic-email/webhook-events";
+import { recordEmailSuppression, type GlobalEmailSuppressionReason } from "./email-suppression-store";
 
 /**
  * Turns an Elastic Email opt-out signal into an actual consent change.
@@ -36,14 +37,24 @@ export async function suppressEmailRecipient(
   const out: SuppressionOutcome = { applied: false, userId: null, reason };
   if (reason === "none") return out;
 
-  const address = email?.trim();
+  const address = email?.trim().toLowerCase();
   if (!address || !process.env.DATABASE_URL) return out;
+
+  const globalReason: GlobalEmailSuppressionReason =
+    reason === "complaint" ? "COMPLAINT" : reason === "hard-bounce" ? "HARD_BOUNCE" : "UNSUBSCRIBE";
 
   try {
     const user = await prisma.user.findFirst({
       where: { email: { equals: address, mode: "insensitive" } },
       select: { id: true, name: true, emailNotifications: true },
     });
+    const globallySuppressed = await recordEmailSuppression({
+      email: address,
+      reason: globalReason,
+      source: `elastic-email:${reason}`,
+      userId: user?.id ?? null,
+    });
+    out.applied = globallySuppressed;
     if (!user) return out;
     out.userId = user.id;
 
@@ -56,6 +67,7 @@ export async function suppressEmailRecipient(
       where: { id: user.id },
       data: { emailNotifications: false },
     });
+    out.applied = true;
 
     // The profile is the audience layer's source of truth; upsert because a
     // donor who never opened the dashboard may not have one yet.

@@ -2231,6 +2231,24 @@ model DonorCommunicationProfile {
   @@index([countryCode])
 }
 
+
+/// Global e-mail suppression truth. Checked by every send path before Elastic Email is called.
+/// UNSUBSCRIBE blocks marketing only; HARD_BOUNCE and COMPLAINT block every e-mail purpose.
+model EmailSuppression {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  email     String   @unique
+  reason    String   // UNSUBSCRIBE | HARD_BOUNCE | COMPLAINT
+  scope     String   // MARKETING | ALL
+  source    String?
+  userId    String?  @db.ObjectId
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([scope])
+  @@index([reason])
+  @@index([userId])
+}
+
 model CommunicationCampaign {
   id                 String    @id @default(auto()) @map("_id") @db.ObjectId
   name               String
