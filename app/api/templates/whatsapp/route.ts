@@ -140,7 +140,10 @@ export async function GET() {
         .sort((a, b) => b.getTime() - a.getTime())[0] ?? row.lastImportedAt ?? row.updatedAt,
     };
   });
-  return NextResponse.json({ templates });
+  return NextResponse.json({
+    templates,
+    directSendEnabled: process.env.META_WHATSAPP_DIRECT_SEND_ENABLED === "true",
+  });
 }
 
 export async function POST(request: NextRequest) {
