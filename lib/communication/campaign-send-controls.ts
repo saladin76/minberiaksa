@@ -99,8 +99,10 @@ export async function whatsappSentLast24Hours(): Promise<number> {
   return prisma.communicationDelivery.count({
     where: {
       channel: "WHATSAPP",
+      // Count every provider-accepted send even if a later webhook changes its final status to
+      // FAILED. The account tier is about messages handed to Meta, so excluding a later failure
+      // would silently reopen capacity and could push us over the real 24-hour safety ceiling.
       sentAt: { gte: since },
-      status: { in: ["SENT", "DELIVERED", "READ", "REPLIED"] },
     },
   }).catch(() => 0);
 }
