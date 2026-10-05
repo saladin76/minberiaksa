@@ -12,6 +12,7 @@ import { renderChannelTemplate } from "./template-compat";
 import { resolveMetaTemplateMapping } from "./automatic-message-dispatcher";
 import { buildMetaComponents } from "./providers/meta-whatsapp/parameters";
 import { isValidLocale, type SupportedLocale } from "@/lib/locales";
+import { writeAuditLog } from "@/lib/audit-log";
 
 type Actor = { actorId?: string | null; actorName?: string | null; actorRole?: string | null } | null;
 export type SmartWhatsappMode = "AUTO" | "FREEFORM" | "UTILITY" | "MARKETING";
@@ -23,6 +24,7 @@ export type SmartWhatsappContext = {
   locale: string;
   country: string | null;
   doNotContact: boolean;
+  whatsappOptIn: boolean;
   directSendEnabled: boolean;
   conversationId: string | null;
   replyWindow: Awaited<ReturnType<typeof replyWindowFor>>;
@@ -58,7 +60,7 @@ async function donor(userId: string) {
     }),
     prisma.donorCommunicationProfile.findUnique({
       where: { userId },
-      select: { phone: true, preferredLocale: true, countryCode: true, doNotContact: true },
+      select: { phone: true, preferredLocale: true, countryCode: true, doNotContact: true, whatsappOptIn: true },
     }).catch(() => null),
   ]);
   if (!user) return null;
@@ -69,6 +71,7 @@ async function donor(userId: string) {
     locale: profile?.preferredLocale ?? user.preferredLang ?? "ar",
     country: profile?.countryCode ?? user.countryCode ?? null,
     doNotContact: profile?.doNotContact ?? false,
+    whatsappOptIn: profile?.whatsappOptIn ?? false,
   };
 }
 
@@ -117,6 +120,7 @@ export async function getSmartWhatsappContext(userId: string): Promise<SmartWhat
     locale: d.locale,
     country: d.country,
     doNotContact: d.doNotContact,
+    whatsappOptIn: d.whatsappOptIn,
     directSendEnabled: process.env.META_WHATSAPP_DIRECT_SEND_ENABLED === "true",
     conversationId: convId,
     replyWindow,
@@ -200,10 +204,23 @@ export async function sendSmartWhatsapp(input: {
       return { ok: false, reason: sent.reason, detail: sent.detail ?? null };
     }
     await markDeliveryStatus(created.data.id, "SENT", { providerMessageId: sent.providerMessageId });
+    await writeAuditLog({
+      actorId: input.actor?.actorId ?? undefined,
+      actorName: input.actor?.actorName ?? undefined,
+      actorRole: input.actor?.actorRole ?? "ADMIN",
+      action: "communication.whatsapp.direct-send",
+      messageAr: `تم إرسال رسالة خدمة واتساب مباشرة إلى ${ctx.name || ctx.phone}`,
+      messageEn: `Direct Send WhatsApp utility message to ${ctx.name || ctx.phone}`,
+      entityType: "User",
+      entityId: ctx.userId,
+      metadata: { deliveryId: created.data.id, transport: "DIRECT_SEND", externalCall: true },
+      stream: "TEAM",
+    }).catch(() => {});
     return { ok: true, transport: "DIRECT_SEND", deliveryId: created.data.id, providerMessageId: sent.providerMessageId };
   }
 
   if (mode !== "MARKETING") return { ok: false, reason: "INVALID_MODE" };
+  if (!ctx.whatsappOptIn) return { ok: false, reason: "WHATSAPP_MARKETING_OPT_IN_REQUIRED" };
   if (!input.templateId) return { ok: false, reason: "MARKETING_TEMPLATE_REQUIRED" };
 
   const template = await prisma.whatsappTemplate.findUnique({
@@ -265,5 +282,17 @@ export async function sendSmartWhatsapp(input: {
     return { ok: false, reason: sent.reason, detail: sent.detail ?? null };
   }
   await markDeliveryStatus(created.data.id, "SENT", { providerMessageId: sent.providerMessageId });
+  await writeAuditLog({
+    actorId: input.actor?.actorId ?? undefined,
+    actorName: input.actor?.actorName ?? undefined,
+    actorRole: input.actor?.actorRole ?? "ADMIN",
+    action: "communication.whatsapp.marketing-template-send",
+    messageAr: `تم إرسال قالب واتساب تسويقي إلى ${ctx.name || ctx.phone}`,
+    messageEn: `Marketing WhatsApp template sent to ${ctx.name || ctx.phone}`,
+    entityType: "User",
+    entityId: ctx.userId,
+    metadata: { deliveryId: created.data.id, templateId: template.id, externalCall: true },
+    stream: "TEAM",
+  }).catch(() => {});
   return { ok: true, transport: "MARKETING_TEMPLATE", deliveryId: created.data.id, providerMessageId: sent.providerMessageId };
 }
