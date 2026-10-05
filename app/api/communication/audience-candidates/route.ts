@@ -17,6 +17,7 @@ import {
   parseGenderParam,
 } from "@/lib/dashboard/user-demographics";
 import { AUDIENCE_SELECTION_MAX } from "@/lib/communication/audience-limits";
+import { ensureProfilesForUsers } from "@/lib/communication/donor-communication-profile-service";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -131,6 +132,7 @@ type ConsentProfile = { doNotContact: boolean; emailOptIn: boolean; smsOptIn: bo
 
 async function eligibilityProfiles(userIds: string[]): Promise<Map<string, ConsentProfile>> {
   if (userIds.length === 0) return new Map();
+  await ensureProfilesForUsers(userIds);
   const rows = await prisma.donorCommunicationProfile
     .findMany({
       where: { userId: { in: userIds } },

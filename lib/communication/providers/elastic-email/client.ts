@@ -1,6 +1,6 @@
 import { getActiveElasticEmailRuntimeConfig, RUNTIME_FAILURE, type ActiveRuntimeConfig, type ElasticEmailRuntimeValues } from "../../runtime-config";
 import { ELASTIC_EMAIL_REASONS, mapElasticEmailError, scrubElasticEmail } from "./errors";
-import { buildElasticEmailPayload, readElasticEmailMessageId, ELASTIC_EMAIL_ENDPOINT } from "./payload";
+import { buildElasticEmailPayload, readElasticEmailMessageId, ELASTIC_EMAIL_ENDPOINT, ELASTIC_EMAIL_MARKETING_ENDPOINT } from "./payload";
 import type { ElasticEmailInput, ElasticEmailSendResult } from "./types";
 
 /**
@@ -41,7 +41,8 @@ export async function sendElasticEmail(input: ElasticEmailInput, runtime?: Elast
   try {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
-    const res = await fetch(ELASTIC_EMAIL_ENDPOINT, {
+    const endpoint = input.marketing ? ELASTIC_EMAIL_MARKETING_ENDPOINT : ELASTIC_EMAIL_ENDPOINT;
+    const res = await fetch(endpoint, {
       method: "POST",
       headers: {
         "X-ElasticEmail-ApiKey": cfg.values.apiKey,

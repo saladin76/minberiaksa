@@ -297,6 +297,7 @@ export async function executeCampaignSend(
 
   /* ── Everything the batches share, resolved once ───────────────────── */
   const runtime = await getActiveCommunicationRuntimeBundle();
+  const campaignName = campaign.name;
   const channel = campaign.channel as CommunicationChannelId;
   const templateId = campaign.templateGroupId as string;
   const decisions = coverageDecisions(campaign);
@@ -403,9 +404,22 @@ export async function executeCampaignSend(
         metaComponents = built.components;
       }
 
-      const result = await sendPreparedDelivery({ channel, sender, country: recipient.country, to, templateName: metaName, languageCode: metaLanguage, components: metaComponents, subject: rendered.subject, html: rendered.body }, runtime);
+      const result = await sendPreparedDelivery({
+        channel,
+        sender,
+        country: recipient.country,
+        to,
+        templateName: metaName,
+        languageCode: metaLanguage,
+        components: metaComponents,
+        subject: rendered.subject,
+        html: rendered.body,
+        purpose,
+        locale: recipient.locale,
+        channelName: campaignName,
+      }, runtime);
       if (!result.ok) {
-        const terminal = result.reason.endsWith("_NOT_CONFIGURED") || result.reason.endsWith("_NOT_IMPLEMENTED") || result.reason.includes("SENDER_MISSING") || result.reason === "PROVIDER_DISABLED" || result.reason === "INTEGRATION_DECRYPTION_FAILED" || result.reason === "INTEGRATION_DATABASE_UNAVAILABLE";
+        const terminal = result.reason.endsWith("_NOT_CONFIGURED") || result.reason.endsWith("_NOT_IMPLEMENTED") || result.reason === "EMAIL_SUPPRESSED" || result.reason.includes("SENDER_MISSING") || result.reason === "PROVIDER_DISABLED" || result.reason === "INTEGRATION_DECRYPTION_FAILED" || result.reason === "INTEGRATION_DATABASE_UNAVAILABLE";
         // `detail` carries the provider's own answer  the HTTP status and the scrubbed response body
         // (e.g. `406: {"code":"30","description":"Check the usercode-password information and API
         // access permission"}`). Dropping it left the send log showing only NETGSM_REQUEST_FAILED,

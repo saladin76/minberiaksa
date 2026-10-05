@@ -98,7 +98,7 @@ const APPROVAL_LABEL: Record<string, string> = {
 export function WhatsappTemplateList() {
   const [templates, setTemplates] = React.useState<WhatsappTemplateRow[]>([]);
   const [loading, setLoading] = React.useState(true);
-  const [section, setSection] = React.useState<"SYSTEM" | "CAMPAIGN">("SYSTEM");
+  const [section, setSection] = React.useState<"SYSTEM" | "CAMPAIGN">("CAMPAIGN");
   const [importing, setImporting] = React.useState(false);
   const [syncingMeta, setSyncingMeta] = React.useState(false);
   const [importStatus, setImportStatus] = React.useState<ImportSummary | null>(null);
@@ -193,8 +193,8 @@ export function WhatsappTemplateList() {
   return (
     <div className="space-y-4">
       <div className="inline-flex rounded-lg border border-slate-200 bg-slate-50 p-1">
-        <button type="button" onClick={() => setSection("SYSTEM")} className={`rounded-md px-3 py-1.5 text-xs font-medium ${section === "SYSTEM" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500"}`}>التلقائية والتوثيق</button>
         <button type="button" onClick={() => setSection("CAMPAIGN")} className={`rounded-md px-3 py-1.5 text-xs font-medium ${section === "CAMPAIGN" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500"}`}>الحملات التسويقية</button>
+        <button type="button" onClick={() => setSection("SYSTEM")} className={`rounded-md px-3 py-1.5 text-xs font-medium ${section === "SYSTEM" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500"}`}>التلقائية والتوثيق</button>
       </div>
       <div className="flex justify-between items-center flex-wrap gap-2">
         <div className="flex items-center gap-2 flex-wrap">

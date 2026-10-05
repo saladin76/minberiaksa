@@ -79,6 +79,10 @@ export type PreparedSendInput = {
   subject?: string | null;
   html?: string | null;
   text?: string | null;
+  /** Email purpose controls suppression policy and marketing/bulk transport. */
+  purpose?: "MARKETING" | "TRANSACTIONAL" | "UTILITY" | "AUTHENTICATION" | null;
+  locale?: string | null;
+  channelName?: string | null;
   /** Email only: files to attach (base64 content). */
   attachments?: Array<{ filename: string; content: string; contentType: string }>;
 };
@@ -114,6 +118,9 @@ export async function sendPreparedDelivery(input: PreparedSendInput, runtime?: C
       html: input.html ?? "",
       text: input.text,
       senderEmail: emailIdentity(input.sender, bundle) ?? undefined,
+      purpose: input.purpose,
+      locale: input.locale,
+      channelName: input.channelName,
       attachments: input.attachments,
     }, bundle.elasticEmail);
     if (!res.ok) return { ok: false, provider: EMAIL_PROVIDER_ID, reason: res.reason, detail: res.detail };

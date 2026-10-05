@@ -6,6 +6,7 @@ import { formatSenderIdentity, type ElasticEmailInput } from "./types";
  */
 
 export const ELASTIC_EMAIL_ENDPOINT = "https://api.elasticemail.com/v4/emails/transactional";
+export const ELASTIC_EMAIL_MARKETING_ENDPOINT = "https://api.elasticemail.com/v4/emails";
 export const ELASTIC_EMAIL_EVENTS_ENDPOINT = "https://api.elasticemail.com/v4/events";
 /** Elastic Email caps a page well below this; the limit only stops one poll growing unbounded. */
 export const MAX_EVENTS_PER_POLL = 500;
@@ -32,6 +33,7 @@ export function buildElasticEmailPayload(input: ElasticEmailInput, sender: { ema
   };
   if (input.replyTo) content.ReplyTo = input.replyTo;
   if (input.toName) content.To = [formatSenderIdentity(input.to, input.toName)];
+  if (input.headers && Object.keys(input.headers).length) content.Headers = input.headers;
   // v4 takes attachments inline as base64 (`BinaryContent`); nothing is uploaded first.
   if (input.attachments?.length) {
     content.Attachments = input.attachments.map((file) => ({
@@ -42,7 +44,7 @@ export function buildElasticEmailPayload(input: ElasticEmailInput, sender: { ema
   }
 
   return {
-    Recipients: { To: [input.to] },
+    Recipients: input.marketing ? [{ Email: input.to }] : { To: [input.to] },
     Content: content,
     Options: {
       TrackOpens: input.trackOpens ?? true,
