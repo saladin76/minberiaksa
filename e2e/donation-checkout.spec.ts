@@ -34,7 +34,7 @@ async function seedCart(page: import("@playwright/test").Page, items: SeedItem[]
   await page.goto("/ar", { waitUntil: "domcontentloaded" });
   await page.evaluate(
     ([keys, version, payload]) => {
-      const [itemsKey, schemaKey, countKey] = keys as string[];
+      const [itemsKey, schemaKey, countKey] = keys;
       window.localStorage.setItem(itemsKey, JSON.stringify(payload));
       window.localStorage.setItem(schemaKey, String(version));
       window.localStorage.setItem(countKey, String((payload as unknown[]).length));
