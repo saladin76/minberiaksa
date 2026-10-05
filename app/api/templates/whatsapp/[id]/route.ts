@@ -124,7 +124,15 @@ export async function PATCH(
       : (editable.authentication as Prisma.InputJsonValue);
   }
 
-  const updated = await prisma.whatsappTemplate.update({ where: { id }, data });
+  let updated;
+  try {
+    updated = await prisma.whatsappTemplate.update({ where: { id }, data });
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2025") {
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
+    throw error;
+  }
   const actor = auditActorFromDashboardSession(session!);
   await writeAuditLog({
     ...actor,
