@@ -218,27 +218,6 @@ export function SenderRoutingManager() {
     }
   }, [load]);
 
-  const removeRule = useCallback(async (rule: Rule) => {
-    const confirmed = window.confirm("هل أنت متأكد من حذف قاعدة التوجيه هذه؟");
-    if (!confirmed) return;
-
-    setBusy(`rule:${rule.id}`);
-    setNotice(null);
-    try {
-      const res = await fetch(`/api/dashboard/communication/routing-rules/${rule.id}`, { method: "DELETE" });
-      const body = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        setNotice({ tone: "error", text: body.error ?? "تعذّر حذف قاعدة التوجيه." });
-        return;
-      }
-      setEditingRuleId((current) => current === rule.id ? null : current);
-      setNotice({ tone: "ok", text: "تم حذف قاعدة التوجيه." });
-      await load();
-    } finally {
-      setBusy(null);
-    }
-  }, [load]);
-
   const removeRuleGroup = useCallback(async (group: RuleGroup) => {
     const label = group.locales.length ? group.locales.join("، ") : "كل اللغات";
     const confirmed = window.confirm(`هل تريد حذف قاعدة التوجيه لهذه اللغات: ${label}؟`);
