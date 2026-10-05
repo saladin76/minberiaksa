@@ -5,6 +5,7 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 import { requireAdminOrDashboardPermission } from "@/lib/dashboard/api-auth";
 import { queueAuditLog, auditActorFromDashboardSession } from "@/lib/audit-log";
 import { writeErrorMessage } from "@/lib/dashboard/write-error-message";
+import { NOT_SOFT_DELETED } from "@/lib/campaign/soft-delete-filter";
 
 /** Guards against a malformed or unbounded payload reaching the transaction. */
 const MAX_REORDER_ITEMS = 500;
@@ -43,14 +44,20 @@ export async function POST(req: NextRequest) {
       updates.push({ id, order });
     }
 
-    await prisma.$transaction(
-      updates.map(({ id, order }) =>
+    await prisma.$transaction([
+      // The selected list is the whole priority set. Clearing first is essential:
+      // removing a project in the dialog must really remove its old priority.
+      prisma.campaign.updateMany({
+        where: { AND: [{ priority: { not: null } }, NOT_SOFT_DELETED] },
+        data: { priority: null },
+      }),
+      ...updates.map(({ id, order }) =>
         prisma.campaign.update({
           where: { id },
           data: { priority: order },
         })
-      )
-    );
+      ),
+    ]);
 
     const actor = auditActorFromDashboardSession(session!);
     queueAuditLog({

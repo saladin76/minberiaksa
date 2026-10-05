@@ -45,6 +45,10 @@ function campaignCreateData(data: CampaignPersistenceData): Prisma.CampaignCreat
     description: data.description,
     targetAmount: data.targetAmount,
     currentAmount: data.currentAmount,
+    // A new campaign has no settled online donations yet, so any opening total
+    // entered by the admin is historical/offline money and must also become the
+    // baseline. Otherwise the first later recompute would erase that opening total.
+    baselineAmount: data.currentAmount,
     images: data.images,
     videoUrl: data.videoUrl,
     isActive: data.isActive,

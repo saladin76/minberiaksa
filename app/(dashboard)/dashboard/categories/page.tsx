@@ -166,8 +166,8 @@ export default function CategoriesPage() {
       open: true,
       title: 'تعطيل الحملة',
       description: count > 0
-        ? `سيتم إخفاء حملة "${category.name}" من الموقع، وسيتم تعطيل جميع المشاريع التابعة لها (${count} مشروع). يمكنك إعادة التفعيل لاحقاً.`
-        : `سيتم إخفاء حملة "${category.name}" من الموقع. يمكنك إعادة تفعيلها في أي وقت.`,
+        ? `سيتم نقل التصنيف "${category.name}" إلى الأرشيف وإخفاؤه من قوائم التصنيفات العامة. المشاريع التابعة له (${count} مشروع) ستبقى منشورة ولن تتغير حالتها.`
+        : `سيتم نقل التصنيف "${category.name}" إلى الأرشيف وإخفاؤه من قوائم التصنيفات العامة.`,
       actionLabel: 'تعطيل',
       actionClassName: 'bg-amber-600 hover:bg-amber-700 text-white',
       onConfirm: () => setActive(category, false),
@@ -180,8 +180,8 @@ export default function CategoriesPage() {
       open: true,
       title: 'إعادة تفعيل الحملة',
       description: count > 0
-        ? `سيتم نشر حملة "${category.name}" على الموقع، وسيتم إعادة تفعيل جميع المشاريع التابعة لها (${count} مشروع).`
-        : `سيتم نشر حملة "${category.name}" على الموقع مجدداً.`,
+        ? `سيتم إعادة التصنيف "${category.name}" إلى قوائم التصنيفات العامة. المشاريع التابعة له (${count} مشروع) لن تتغير حالتها.`
+        : `سيتم إعادة التصنيف "${category.name}" إلى قوائم التصنيفات العامة.`,
       actionLabel: 'تفعيل',
       actionClassName: 'bg-emerald-600 hover:bg-emerald-700 text-white',
       onConfirm: () => setActive(category, true),
@@ -336,7 +336,7 @@ export default function CategoriesPage() {
               onClick={() => setArchiveOpen(true)}
             >
               <Archive className="w-4 h-4" />
-              أرشيف الحملات
+              أرشيف التصنيفات
               {archivedCategories.length > 0 && (
                 <span className="bg-amber-100 text-amber-700 text-xs font-bold px-1.5 py-0.5 rounded-full">
                   {archivedCategories.length}
@@ -456,7 +456,7 @@ export default function CategoriesPage() {
                       onClick={() => handleDeactivate(category)}
                       className="text-amber-600 hover:bg-amber-50"
                       disabled={actionLoading === category.id}
-                      title="تعطيل الحملة وأرشفتها"
+                      title="أرشفة التصنيف دون تعطيل المشاريع"
                     >
                       {actionLoading === category.id
                         ? <Loader2 className="w-4 h-4 animate-spin" />
