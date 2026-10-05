@@ -70,7 +70,8 @@ export async function GET(
 
   const template = await prisma.whatsappTemplate.findUnique({ where: { id } });
   if (!template) return NextResponse.json({ error: "Not found" }, { status: 404 });
-  return NextResponse.json({ template });
+  const submittedLocales = Array.from(await submittedMetaLocales(id)).sort();
+  return NextResponse.json({ template: { ...template, submittedLocales } });
 }
 
 export async function PATCH(
@@ -150,14 +151,27 @@ export async function PATCH(
     entityId: updated.id,
     stream: "TEAM",
   });
-  const publish = await publishWhatsappTemplateToMeta(updated.id, actor, {
-    ...(metaCategory ? { category: metaCategory } : {}),
-    ...(newlyAddedLocales.length ? { locales: newlyAddedLocales } : {}),
-  });
+  const publish = newlyAddedLocales.length
+    ? await publishWhatsappTemplateToMeta(updated.id, actor, {
+        ...(metaCategory ? { category: metaCategory } : {}),
+        locales: newlyAddedLocales,
+      })
+    : {
+        ok: true,
+        templateId: updated.id,
+        targets: 0,
+        created: 0,
+        existing: 0,
+        failed: 0,
+        unsupportedWabas: [],
+        statuses: [],
+        errors: [],
+        canonicalWabaId: null,
+      };
   if (!publish.ok) {
     return NextResponse.json(
       {
-        error: "تم حفظ التعديلات محليًا لكن لم يكتمل إنشاء/ربط القالب في Meta.",
+        error: "تم حفظ التعديلات محليًا لكن لم يكتمل إنشاء/ربط اللغة الجديدة في Meta.",
         saved: true,
         template: updated,
         publish,
@@ -166,7 +180,8 @@ export async function PATCH(
     );
   }
   const fresh = await prisma.whatsappTemplate.findUnique({ where: { id: updated.id } });
-  return NextResponse.json({ template: fresh ?? updated, publish });
+  const submittedLocales = Array.from(await submittedMetaLocales(updated.id)).sort();
+  return NextResponse.json({ template: { ...(fresh ?? updated), submittedLocales }, publish });
 }
 
 export async function DELETE(
