@@ -16,6 +16,7 @@ type SmartContext = {
   locale: string;
   country: string | null;
   doNotContact: boolean;
+  whatsappOptIn: boolean;
   directSendEnabled: boolean;
   conversationId: string | null;
   replyWindow: ReplyWindow;
@@ -36,6 +37,7 @@ const ERROR_LABELS: Record<string, string> = {
   DO_NOT_CONTACT: "هذا المتبرع موقوف عن التواصل المباشر.",
   NO_RECIPIENT_PHONE: "لا يوجد رقم واتساب صالح لهذا المتبرع.",
   MARKETING_TEMPLATE_REQUIRED: "اختر قالب Marketing معتمد.",
+  WHATSAPP_MARKETING_OPT_IN_REQUIRED: "لا توجد موافقة واتساب تسويقية مسجلة لهذا المتبرع.",
   META_TEMPLATE_NOT_APPROVED_FOR_SENDER_LANGUAGE: "لا توجد نسخة معتمدة من القالب لهذا الرقم/اللغة.",
 };
 
@@ -145,7 +147,7 @@ export function SmartWhatsappDialog({
       title: "رسالة تسويقية",
       desc: "قالب Marketing معتمد",
       icon: Megaphone,
-      disabled: false,
+      disabled: Boolean(ctx && !ctx.whatsappOptIn),
     },
   ];
 
@@ -191,6 +193,11 @@ export function SmartWhatsappDialog({
               {ctx.doNotContact && (
                 <div className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700">
                   المتبرع موقوف عن الرسائل الجديدة. يمكن فقط الرد على رسالة واردة أثناء نافذة 24 ساعة.
+                </div>
+              )}
+              {!ctx.whatsappOptIn && (
+                <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">
+                  لا توجد موافقة تسويقية عبر واتساب لهذا المتبرع؛ لذلك القوالب التسويقية معطلة. رسائل الخدمة لا تتأثر ما لم يكن التواصل موقوفًا بالكامل.
                 </div>
               )}
 
