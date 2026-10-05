@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import Cookies from "js-cookie";
@@ -348,9 +349,12 @@ export default function Header({
                 boxShadow: "0 0 0 1px rgba(255,255,255,.5)",
               }}
             >
-              <img
+              <Image
                 src="/minbar/assets/logo-horizontal.png"
                 alt={tCommon("orgOfficialName")}
+                width={150}
+                height={38}
+                priority
                 style={{ height: 38, width: "auto", maxWidth: 150, objectFit: "contain", display: "block" }}
               />
             </span>
