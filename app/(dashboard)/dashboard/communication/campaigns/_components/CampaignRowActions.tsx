@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { toast } from "react-hot-toast";
-import { Ban, Loader2, MoreHorizontal, Send, ShieldCheck } from "lucide-react";
+import { Ban, Loader2, MoreHorizontal, Send, ShieldCheck, Settings2 } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -20,6 +20,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { channelMeta, isPreSend, type CampaignRow } from "./campaign-ui";
+import { CampaignControlsDialog } from "./CampaignControlsDialog";
 
 /**
  * Campaign lifecycle actions, in the list row.
@@ -61,11 +62,13 @@ export function CampaignRowActions({
   const [busy, setBusy] = React.useState(false);
   const [plan, setPlan] = React.useState<SendPlan | null>(null);
   const [confirmOpen, setConfirmOpen] = React.useState(false);
+  const [controlsOpen, setControlsOpen] = React.useState(false);
 
   const canConfirm = campaign.status === "DRAFT" || campaign.status === "REVIEW";
   const canSend = campaign.status === "APPROVED";
   const canCancel = isPreSend(campaign.status);
-  if (!canConfirm && !canSend && !canCancel) return null;
+  const canControl = campaign.channel === "WHATSAPP" && !["SENT", "FAILED", "CANCELLED", "ARCHIVED"].includes(campaign.status);
+  if (!canConfirm && !canSend && !canCancel && !canControl) return null;
 
   const transition = async (action: string) => {
     setBusy(true);
@@ -164,6 +167,12 @@ export function CampaignRowActions({
               إرسال الآن
             </DropdownMenuItem>
           )}
+          {canControl && (
+            <DropdownMenuItem onClick={() => setControlsOpen(true)}>
+              <Settings2 className="me-2 h-3.5 w-3.5" />
+              تحكم الإرسال
+            </DropdownMenuItem>
+          )}
           {canCancel && (
             <DropdownMenuItem onClick={() => transition("CANCEL")} className="text-rose-600 focus:text-rose-700">
               <Ban className="me-2 h-3.5 w-3.5" />
@@ -172,6 +181,14 @@ export function CampaignRowActions({
           )}
         </DropdownMenuContent>
       </DropdownMenu>
+
+      <CampaignControlsDialog
+        open={controlsOpen}
+        onOpenChange={setControlsOpen}
+        campaignId={campaign.id}
+        campaignName={campaign.name}
+        onChanged={onChanged}
+      />
 
       <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
         <AlertDialogContent dir="rtl">
