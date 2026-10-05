@@ -6,7 +6,7 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 import { requireAdminOrDashboardPermission } from "@/lib/dashboard/api-auth";
 import { prisma } from "@/lib/prisma";
 import { auditActorFromDashboardSession, writeAuditLog } from "@/lib/audit-log";
-import { deleteOrArchiveWhatsappTemplate, rejectDisallowedTemplateEdit } from "@/lib/communication/whatsapp-template-guard";
+import { deleteOrArchiveWhatsappTemplate, rejectDisallowedTemplateEdit, submittedMetaLocales } from "@/lib/communication/whatsapp-template-guard";
 import { publishWhatsappTemplateToMeta } from "@/lib/communication/meta-template-publisher";
 
 const headerSchema = z.object({
@@ -98,8 +98,16 @@ export async function PATCH(
 
   /* Meta owns the approval fields, and owns the body of anything it has approved. */
   const { metaCategory, ...editable } = parsed.data;
+  const submittedBefore = await submittedMetaLocales(id);
   const rejection = await rejectDisallowedTemplateEdit(id, editable as Record<string, unknown>);
   if (rejection) return NextResponse.json({ error: rejection.error, fields: rejection.fields }, { status: rejection.status });
+
+  // Languages are separate Meta variants under the same provider template name. For an existing
+  // template, publish only newly-added locales; do not resubmit already-approved/in-review variants.
+  const requestedTranslations = editable.translations && typeof editable.translations === "object"
+    ? Object.keys(editable.translations as Record<string, unknown>).map((locale) => locale.toLowerCase())
+    : [];
+  const newlyAddedLocales = requestedTranslations.filter((locale) => !submittedBefore.has(locale));
 
   const data: Prisma.WhatsappTemplateUpdateInput = {};
   if (metaCategory) {
@@ -142,7 +150,10 @@ export async function PATCH(
     entityId: updated.id,
     stream: "TEAM",
   });
-  const publish = await publishWhatsappTemplateToMeta(updated.id, actor, metaCategory ? { category: metaCategory } : {});
+  const publish = await publishWhatsappTemplateToMeta(updated.id, actor, {
+    ...(metaCategory ? { category: metaCategory } : {}),
+    ...(newlyAddedLocales.length ? { locales: newlyAddedLocales } : {}),
+  });
   if (!publish.ok) {
     return NextResponse.json(
       {
