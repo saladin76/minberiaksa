@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { toast } from "react-hot-toast";
-import { Dialog, DialogContent, DialogOverlay, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Loader2, Pause, Play, Gauge, Moon, ShieldCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -75,7 +75,6 @@ export function CampaignControlsDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogOverlay className="fixed inset-0 bg-black/45" />
       <DialogContent className="fixed left-1/2 top-1/2 w-[calc(100%-2rem)] max-w-2xl -translate-x-1/2 -translate-y-1/2 rounded-2xl border bg-white p-0 shadow-2xl" dir="rtl">
         <div className="border-b border-slate-100 px-5 py-4">
           <DialogTitle className="flex items-center gap-2 text-base font-bold text-slate-900">
