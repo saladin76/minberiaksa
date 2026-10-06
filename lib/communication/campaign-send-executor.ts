@@ -677,10 +677,10 @@ export async function executeCampaignSend(
     if (!fresh) { base.blocked = "NOT_FOUND"; break; }
     const nextGate = await evaluateCampaignSendControls(fresh);
     if (!nextGate.ok) { base.blocked = nextGate.reason; break; }
-    const remainingRecipients = Math.max(firstPlan.audienceTotal - progress.total, 0);
+    const remainingForNextBatch = Math.max(firstPlan.audienceTotal - progress.total, 0);
     const nextMode = nextGate.controls.autoSpeed
       ? autoSpeedMode({
-          remainingRecipients,
+          remainingRecipients: remainingForNextBatch,
           remainingDaily: nextGate.remainingDaily,
           scheduledStopAt: nextGate.controls.scheduledStopAt,
         })
