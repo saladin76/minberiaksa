@@ -18,6 +18,7 @@ import { computeFinalStatus, recomputeCampaignCounters } from "./campaign-counte
 import { type CommunicationChannelId, type CommunicationPurposeId } from "./communication-runtime-types";
 import { autoSpeedMode, campaignPriorityRank, campaignSendControls, evaluateCampaignSendControls, speedSettings, type CampaignSpeedMode } from "./campaign-send-controls";
 import { mergeCampaignMetadata, mutateCampaignMetadata } from "./campaign-metadata-store";
+import { normalizePhoneE164, phoneMatchVariants } from "./phone";
 
 export { computeFinalStatus };
 
@@ -184,20 +185,8 @@ function normalizeRecipientContact(channel: CommunicationChannelId, email: strin
     const value = String(email ?? "").trim().toLowerCase();
     return value ? `email:${value}` : null;
   }
-  const raw = String(phone ?? "").trim();
-  if (!raw) return null;
-  let digits = raw.replace(/\D/g, "");
-  if (digits.startsWith("00")) digits = digits.slice(2);
-  return digits.length >= 7 ? `phone:${digits}` : null;
-}
-
-function phoneLookupVariants(phone: string | null | undefined): string[] {
-  const raw = String(phone ?? "").trim();
-  if (!raw) return [];
-  let digits = raw.replace(/\D/g, "");
-  if (digits.startsWith("00")) digits = digits.slice(2);
-  if (!digits) return [raw];
-  return Array.from(new Set([raw, digits, `+${digits}`, `00${digits}`]));
+  const canonical = normalizePhoneE164(phone);
+  return canonical ? `phone:${canonical}` : null;
 }
 function metaOf(campaign: CommunicationCampaign) { return (campaign.metadata as Record<string, unknown> | null) ?? {}; }
 function coverageDecisions(campaign: CommunicationCampaign): Record<string, string> { return (metaOf(campaign).coverageDecisions ?? {}) as Record<string, string>; }
@@ -442,7 +431,7 @@ export async function executeCampaignSend(
         .filter(Boolean),
     ));
     const batchPhones = Array.from(new Set(
-      plan.recipients.flatMap((recipient) => phoneLookupVariants(recipient.phone)),
+      plan.recipients.flatMap((recipient) => phoneMatchVariants(recipient.phone)),
     ));
     const existing = (batchUserIds.length || batchEmails.length || batchPhones.length)
       ? await prisma.communicationDelivery.findMany({
