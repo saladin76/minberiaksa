@@ -32,9 +32,7 @@ export const dynamic = "force-dynamic";
  * campaign's channel, and the counts distinguish "matched your filter" from "can actually receive
  * this".
  *
- * `NEEDS_REVIEW` is WhatsApp-specific and stays distinct from `UNAVAILABLE` rather than folded into
- * it: those donors have a phone but no recorded opt-in, which is a consent decision for a human,
- * not a filtering accident.
+ * WhatsApp donors with a valid phone are eligible unless explicitly marked do-not-contact.
  *
  * Country, badges and language mirror the المتبرعون table so the same audience can be reasoned
  * about the same way in both places. Facets (the filter dropdowns' options) are returned from here
@@ -138,10 +136,10 @@ function eligibilityReason(
   if (profile?.doNotContact) return "التواصل موقوف لهذا المتبرع";
   if (channel === "EMAIL" && !donor.email) return "لا يوجد بريد إلكتروني";
   if ((channel === "WHATSAPP" || channel === "SMS") && !donor.phone) return "لا يوجد رقم هاتف";
+  if (channel === "WHATSAPP") return null;
   if (!profile) return "لم تُراجع موافقة التواصل بعد";
   if (channel === "EMAIL" && profile.emailOptIn !== true) return "لا توجد موافقة بريد تسويقي";
   if (channel === "SMS" && profile.smsOptIn !== true) return "لا توجد موافقة SMS";
-  if (channel === "WHATSAPP" && profile.whatsappOptIn !== true) return "لا توجد موافقة واتساب تسويقية";
   return null;
 }
 
@@ -222,11 +220,7 @@ export async function GET(request: NextRequest) {
         profile,
       ),
       eligibilityReason: eligibilityReason({ email: u.email, phone: u.phone }, channel, profile),
-      canConfirmWhatsappOptIn:
-        channel === "WHATSAPP" &&
-        Boolean(u.phone) &&
-        !profile?.doNotContact &&
-        profile?.whatsappOptIn !== true,
+      canConfirmWhatsappOptIn: false,
     };
   });
 
