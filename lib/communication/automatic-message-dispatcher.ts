@@ -353,7 +353,7 @@ export async function sendAutomaticSmsMessage(
   const base = {
     channel: "SMS" as const,
     origin: "TRIGGER" as const,
-    purpose: "TRANSACTIONAL" as const,
+    purpose: input.purpose ?? ("TRANSACTIONAL" as const),
     templateId: input.templateId,
     templateName: input.templateName,
     recipientUserId: input.recipientUserId,
@@ -379,6 +379,7 @@ export async function sendAutomaticSmsMessage(
     country: input.country,
     to: input.recipientPhone,
     html: input.renderedBody,
+    purpose: input.purpose ?? "TRANSACTIONAL",
   });
 
   if (!res.ok) {
