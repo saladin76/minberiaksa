@@ -130,6 +130,21 @@ async function buildWhere(f: FilterInput): Promise<Prisma.UserWhereInput> {
 
 type ConsentProfile = { doNotContact: boolean; emailOptIn: boolean; smsOptIn: boolean; whatsappOptIn: boolean };
 
+function eligibilityReason(
+  donor: { email?: string | null; phone?: string | null },
+  channel: "EMAIL" | "WHATSAPP" | "SMS",
+  profile?: ConsentProfile | null,
+): string | null {
+  if (profile?.doNotContact) return "التواصل موقوف لهذا المتبرع";
+  if (channel === "EMAIL" && !donor.email) return "لا يوجد بريد إلكتروني";
+  if ((channel === "WHATSAPP" || channel === "SMS") && !donor.phone) return "لا يوجد رقم هاتف";
+  if (!profile) return "لم تُراجع موافقة التواصل بعد";
+  if (channel === "EMAIL" && profile.emailOptIn !== true) return "لا توجد موافقة بريد تسويقي";
+  if (channel === "SMS" && profile.smsOptIn !== true) return "لا توجد موافقة SMS";
+  if (channel === "WHATSAPP" && profile.whatsappOptIn !== true) return "لا توجد موافقة واتساب تسويقية";
+  return null;
+}
+
 async function eligibilityProfiles(userIds: string[]): Promise<Map<string, ConsentProfile>> {
   if (userIds.length === 0) return new Map();
   await ensureProfilesForUsers(userIds);
@@ -190,6 +205,7 @@ export async function GET(request: NextRequest) {
 
   let donors = rows.map((u) => {
     const resolved = resolveUserCountry(u as DonorRow);
+    const profile = profiles.get(u.id) ?? null;
     return {
       id: u.id,
       name: u.name,
@@ -203,8 +219,9 @@ export async function GET(request: NextRequest) {
       eligibility: donorChannelEligibility(
         { email: u.email, phone: u.phone, emailNotifications: u.emailNotifications, smsNotifications: u.smsNotifications },
         channel,
-        profiles.get(u.id) ?? null,
+        profile,
       ),
+      eligibilityReason: eligibilityReason({ email: u.email, phone: u.phone }, channel, profile),
     };
   });
 
