@@ -94,23 +94,12 @@ export async function getRecipientBreakdown(
           locale: locale as SupportedLocale,
           label: LOCALES[locale as SupportedLocale].label,
           total,
-          eligible: 0,
+          eligible: preview.eligibleLanguages[locale] ?? 0,
           needsReview: 0,
           missingContact: 0,
           optedOut: 0,
           doNotContact: 0,
         }));
-      const eligibleTotal = preview.eligible;
-      const languageTotal = locales.reduce((sum, l) => sum + l.total, 0) || 1;
-      let allocated = 0;
-      for (let i = 0; i < locales.length; i++) {
-        const l = locales[i];
-        const value = i === locales.length - 1
-          ? Math.max(0, eligibleTotal - allocated)
-          : Math.min(l.total, Math.round((l.total / languageTotal) * eligibleTotal));
-        l.eligible = value;
-        allocated += value;
-      }
       const totals = {
         total: preview.matched,
         eligible: preview.eligible,
