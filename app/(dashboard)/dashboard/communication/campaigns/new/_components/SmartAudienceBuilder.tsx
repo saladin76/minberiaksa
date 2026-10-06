@@ -1,9 +1,8 @@
 "use client";
 
 import * as React from "react";
-import { Loader2, Search, X, Users, ShieldCheck, Languages } from "lucide-react";
+import { Loader2, Search, X, Users, ShieldCheck } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
 import { LOCALE_LABELS, SUPPORTED_LOCALES } from "@/lib/locales";
 
 export type SmartAudienceDraft = {
@@ -238,31 +237,6 @@ export function SmartAudienceBuilder({
               لديهم وسيلة اتصال للقناة فقط
             </label>
           </div>
-        </div>
-      </section>
-
-      <section className="rounded-xl border border-slate-200 bg-white p-4">
-        <div className="mb-2 flex items-center gap-2">
-          <Languages className="h-4 w-4 text-brand" />
-          <h3 className="text-sm font-semibold text-slate-900">قواعد اللغة</h3>
-        </div>
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-          <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-xs text-emerald-800">
-            <strong>تلقائي حسب لغة المتبرع</strong>
-            <p className="mt-1">سيتم اختيار نسخة القالب المطابقة للغة كل متبرع تلقائيًا.</p>
-          </div>
-          <label className="space-y-1 text-xs text-slate-600">
-            <span>Fallback عند عدم وجود نسخة للغة</span>
-            <select
-              value={value.fallbackLocale ?? "ar"}
-              onChange={(e) => onChange({ ...value, channel, fallbackLocale: e.target.value })}
-              className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm"
-            >
-              {SUPPORTED_LOCALES.map((locale) => (
-                <option key={locale} value={locale}>{LOCALE_LABELS[locale]}</option>
-              ))}
-            </select>
-          </label>
         </div>
       </section>
 
