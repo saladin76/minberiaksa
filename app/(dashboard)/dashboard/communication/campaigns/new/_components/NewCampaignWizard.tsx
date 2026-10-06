@@ -19,6 +19,15 @@ interface TemplateSummary {
   availableLocales: string[];
 }
 
+interface AudienceListSummary {
+  id: string;
+  name: string;
+  type: "CUSTOM" | "TEST" | "SMART";
+  status: string;
+  channels: string[];
+  membersCount: number;
+}
+
 const CHANNEL_ORDER = ["EMAIL", "WHATSAPP", "SMS"] as const;
 const BASE_STEPS = ["القناة", "القالب", "الجمهور"] as const;
 
@@ -116,8 +125,10 @@ export function NewCampaignWizard() {
   const [templateId, setTemplateId] = React.useState("");
   const [name, setName] = React.useState("");
   const [selected, setSelected] = React.useState<Set<string>>(new Set());
-  const [audienceMode, setAudienceMode] = React.useState<"SMART" | "SPECIFIC">("SMART");
+  const [audienceMode, setAudienceMode] = React.useState<"SMART" | "SAVED" | "SPECIFIC">("SMART");
   const [smartPreview, setSmartPreview] = React.useState<SmartAudiencePreview | null>(null);
+  const [savedLists, setSavedLists] = React.useState<AudienceListSummary[]>([]);
+  const [savedListId, setSavedListId] = React.useState("");
   const [smartAudience, setSmartAudience] = React.useState<SmartAudienceDraft>({
     version: 1,
     kind: "SMART",
@@ -163,11 +174,20 @@ export function NewCampaignWizard() {
   React.useEffect(() => {
     if (!channel || !["EMAIL", "WHATSAPP", "SMS"].includes(channel)) return;
     setSmartAudience((current) => ({ ...current, channel: channel as SmartAudienceDraft["channel"] }));
+    setSavedListId("");
+    fetch("/api/communication/audience-lists", { cache: "no-store" })
+      .then((response) => readApiJson(response, "تعذر تحميل القوائم المحفوظة"))
+      .then((data) => {
+        const lists = (data.lists ?? []) as AudienceListSummary[];
+        setSavedLists(lists.filter((list) => list.status === "ACTIVE" && (list.channels?.length === 0 || list.channels.includes(channel))));
+      })
+      .catch(() => setSavedLists([]));
   }, [channel]);
 
   const smartAudienceReady = audienceMode === "SMART" && (smartPreview?.eligible ?? 0) > 0;
+  const savedAudienceReady = audienceMode === "SAVED" && Boolean(savedListId);
   const specificAudienceReady = audienceMode === "SPECIFIC" && selected.size > 0;
-  const audienceReady = smartAudienceReady || specificAudienceReady;
+  const audienceReady = smartAudienceReady || savedAudienceReady || specificAudienceReady;
 
   const create = async () => {
     if (!name.trim()) {
@@ -175,26 +195,41 @@ export function NewCampaignWizard() {
       return;
     }
     if (!audienceReady) {
-      toast.error(audienceMode === "SMART" ? "لا يوجد مستلم مؤهل ضمن شروط الجمهور الحالية" : "اختر متبرعًا واحدًا على الأقل");
+      toast.error(
+        audienceMode === "SMART"
+          ? "لا يوجد مستلم مؤهل ضمن شروط الجمهور الحالية"
+          : audienceMode === "SAVED"
+            ? "اختر قائمة محفوظة"
+            : "اختر متبرعًا واحدًا على الأقل",
+      );
       return;
     }
     setSaving(true);
     try {
-      // 1. The selection becomes a reusable audience list, which is what the send pipeline reads.
-      const listRes = await fetch("/api/communication/audience-lists", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(
-          audienceMode === "SMART"
-            ? { name: `جمهور ذكي: ${name.trim()}`, channel, smartDefinition: smartAudience }
-            : { name: `جمهور: ${name.trim()}`, channel, userIds: [...selected] },
-        ),
-      });
-      const listJson = await readApiJson(listRes, "تعذّر إنشاء قائمة الجمهور");
-      if (!listJson.ok) throw new Error(String(listJson.error || "تعذّر إنشاء قائمة الجمهور"));
+      let audienceSegmentKey = "";
+      let audienceCount = 0;
 
-      // 2. Then the campaign, pointed at that list. Created as DRAFT  sending is a separate,
-      //    explicitly approved act on the campaign page.
+      if (audienceMode === "SAVED") {
+        audienceSegmentKey = `list:${savedListId}`;
+        audienceCount = savedLists.find((list) => list.id === savedListId)?.membersCount ?? 0;
+      } else {
+        const listRes = await fetch("/api/communication/audience-lists", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(
+            audienceMode === "SMART"
+              ? { name: `جمهور ذكي: ${name.trim()}`, channel, smartDefinition: smartAudience }
+              : { name: `جمهور: ${name.trim()}`, channel, userIds: [...selected] },
+          ),
+        });
+        const listJson = await readApiJson(listRes, "تعذّر إنشاء قائمة الجمهور");
+        if (!listJson.ok) throw new Error(String(listJson.error || "تعذّر إنشاء قائمة الجمهور"));
+        audienceSegmentKey = String(listJson.audienceSegmentKey || "");
+        audienceCount = audienceMode === "SMART"
+          ? Number(listJson.matched ?? smartPreview?.matched ?? 0)
+          : Number(listJson.added ?? selected.size);
+      }
+
       const res = await fetch("/api/communication/campaigns", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -203,16 +238,15 @@ export function NewCampaignWizard() {
           channel,
           purpose: "MARKETING",
           templateGroupId: templateId,
-          audienceSegmentKey: listJson.audienceSegmentKey,
+          audienceSegmentKey,
+          fallbackLocale: smartAudience.fallbackLocale ?? "ar",
           ...(channel === "WHATSAPP" ? { sendControls } : {}),
         }),
       });
       const json = await readApiJson(res, "تعذّر إنشاء الحملة");
       if (!json.ok) throw new Error(String(json.error || "تعذّر إنشاء الحملة"));
 
-      toast.success(audienceMode === "SMART" ? `تم إنشاء الحملة لجمهور ذكي يطابق ${Number(listJson.matched ?? smartPreview?.matched ?? 0).toLocaleString("en-US")} متبرعًا` : `تم إنشاء الحملة بـ ${listJson.added} متبرعًا`);
-      // Back to the list: a brand-new campaign is a DRAFT with no sends, so the
-      // channel report would be empty, and the list is where it gets confirmed.
+      toast.success(`تم إنشاء الحملة لجمهور حجمه ${audienceCount.toLocaleString("en-US")}`);
       router.push("/dashboard/communication/campaigns");
     } catch (e) {
       toast.error((e as Error).message);
@@ -331,31 +365,53 @@ export function NewCampaignWizard() {
             <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="مثال: حملة رمضان — المتبرعون النشطون" />
           </div>
 
-          <div className="grid grid-cols-2 gap-2 rounded-xl border border-slate-200 bg-slate-50 p-1">
-            <button
-              type="button"
-              onClick={() => setAudienceMode("SMART")}
-              className={cn("rounded-lg px-3 py-2 text-xs font-semibold transition", audienceMode === "SMART" ? "bg-white text-brand shadow-sm" : "text-slate-500")}
-            >
-              جمهور ذكي
-            </button>
-            <button
-              type="button"
-              onClick={() => setAudienceMode("SPECIFIC")}
-              className={cn("rounded-lg px-3 py-2 text-xs font-semibold transition", audienceMode === "SPECIFIC" ? "bg-white text-brand shadow-sm" : "text-slate-500")}
-            >
-              أشخاص محددون
-            </button>
+          <div className="grid grid-cols-3 gap-2 rounded-xl border border-slate-200 bg-slate-50 p-1">
+            {([
+              ["SMART", "جمهور ذكي"],
+              ["SAVED", "قائمة محفوظة"],
+              ["SPECIFIC", "أشخاص محددون"],
+            ] as const).map(([mode, label]) => (
+              <button
+                key={mode}
+                type="button"
+                onClick={() => setAudienceMode(mode)}
+                className={cn("rounded-lg px-3 py-2 text-xs font-semibold transition", audienceMode === mode ? "bg-white text-brand shadow-sm" : "text-slate-500")}
+              >
+                {label}
+              </button>
+            ))}
           </div>
 
-          {audienceMode === "SMART" ? (
+          {audienceMode === "SMART" && (
             <SmartAudienceBuilder
               channel={channel as SmartAudienceDraft["channel"]}
               value={smartAudience}
               onChange={setSmartAudience}
               onPreview={setSmartPreview}
             />
-          ) : (
+          )}
+
+          {audienceMode === "SAVED" && (
+            <div className="rounded-xl border border-slate-200 bg-white p-4">
+              <label className="space-y-1.5 text-xs text-slate-600">
+                <span>اختر قائمة جمهور محفوظة</span>
+                <select
+                  value={savedListId}
+                  onChange={(e) => setSavedListId(e.target.value)}
+                  className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm"
+                >
+                  <option value="">اختر قائمة...</option>
+                  {savedLists.filter((list) => list.type !== "TEST").map((list) => (
+                    <option key={list.id} value={list.id}>
+                      {list.name}{list.type === "SMART" ? " — ذكية" : ` — ${list.membersCount.toLocaleString("en-US")} عضو`}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+          )}
+
+          {audienceMode === "SPECIFIC" && (
             <div className="space-y-2">
               <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
                 هذا المسار للحالات الصغيرة فقط. الحملات الكبيرة يجب أن تستخدم «جمهور ذكي» حتى لا تُرسل آلاف المعرّفات من المتصفح.
