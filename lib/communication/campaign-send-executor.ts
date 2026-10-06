@@ -18,6 +18,7 @@ import { computeFinalStatus, recomputeCampaignCounters } from "./campaign-counte
 import { type CommunicationChannelId, type CommunicationPurposeId } from "./communication-runtime-types";
 import { autoSpeedMode, campaignPriorityRank, campaignSendControls, evaluateCampaignSendControls, speedSettings, type CampaignSpeedMode } from "./campaign-send-controls";
 import { mergeCampaignMetadata, mutateCampaignMetadata } from "./campaign-metadata-store";
+import { normalizePhoneE164, phoneMatchVariants } from "./phone";
 
 export { computeFinalStatus };
 
@@ -178,6 +179,15 @@ const MAX_BLOCKED_RESUMES = 3;
 type Lease = { token: string; expiresAt: string; holder?: string | null };
 
 function bump(reasons: Record<string, number>, key: string) { reasons[key] = (reasons[key] ?? 0) + 1; }
+
+function normalizeRecipientContact(channel: CommunicationChannelId, email: string | null | undefined, phone: string | null | undefined): string | null {
+  if (channel === "EMAIL") {
+    const value = String(email ?? "").trim().toLowerCase();
+    return value ? `email:${value}` : null;
+  }
+  const canonical = normalizePhoneE164(phone);
+  return canonical ? `phone:${canonical}` : null;
+}
 function metaOf(campaign: CommunicationCampaign) { return (campaign.metadata as Record<string, unknown> | null) ?? {}; }
 function coverageDecisions(campaign: CommunicationCampaign): Record<string, string> { return (metaOf(campaign).coverageDecisions ?? {}) as Record<string, string>; }
 function progressOf(campaign: CommunicationCampaign): SendProgress | null {
@@ -415,24 +425,52 @@ export async function executeCampaignSend(
       ...plan.recipients.map((recipient) => recipient.userId),
       ...plan.skippedList.map((recipient) => recipient.userId),
     ]));
-    const existing = batchUserIds.length
+    const batchEmails = Array.from(new Set(
+      plan.recipients
+        .map((recipient) => String(recipient.email ?? "").trim())
+        .filter(Boolean),
+    ));
+    const batchPhones = Array.from(new Set(
+      plan.recipients.flatMap((recipient) => phoneMatchVariants(recipient.phone)),
+    ));
+    const existing = (batchUserIds.length || batchEmails.length || batchPhones.length)
       ? await prisma.communicationDelivery.findMany({
           where: {
             campaignId,
             templateId,
             channel,
             origin,
-            recipientUserId: { in: batchUserIds },
+            OR: [
+              ...(batchUserIds.length ? [{ recipientUserId: { in: batchUserIds } }] : []),
+              ...(batchEmails.length ? [{ recipientEmail: { in: batchEmails } }] : []),
+              ...(batchPhones.length ? [{ recipientPhone: { in: batchPhones } }] : []),
+            ],
           },
-          select: { recipientUserId: true, status: true, providerMessageId: true },
+          select: {
+            recipientUserId: true,
+            recipientEmail: true,
+            recipientPhone: true,
+            status: true,
+            providerMessageId: true,
+          },
         }).catch(() => [])
       : [];
+    const processedExisting = existing.filter(
+      (delivery) => (delivery.status && PROCESSED_STATUSES.includes(delivery.status)) || !!delivery.providerMessageId,
+    );
     const alreadyDone = new Set(
-      existing
-        .filter((delivery) => (delivery.status && PROCESSED_STATUSES.includes(delivery.status)) || !!delivery.providerMessageId)
+      processedExisting
         .map((delivery) => delivery.recipientUserId)
         .filter(Boolean) as string[],
     );
+    const alreadyDoneContacts = new Set(
+      processedExisting
+        .map((delivery) => normalizeRecipientContact(channel, delivery.recipientEmail, delivery.recipientPhone))
+        .filter(Boolean) as string[],
+    );
+    // Shared within this page. Each callback claims its contact synchronously before its first await,
+    // so duplicate donor rows that point to the same destination cannot race into the provider.
+    const claimedBatchContacts = new Set<string>();
 
     for (const skipped of plan.skippedList) {
       if (alreadyDone.has(skipped.userId)) continue;
@@ -459,6 +497,26 @@ export async function executeCampaignSend(
         bump(outcome.reasons, "ALREADY_PROCESSED");
         return outcome;
       }
+
+      const contactKey = normalizeRecipientContact(channel, recipient.email, recipient.phone);
+      if (contactKey && (alreadyDoneContacts.has(contactKey) || claimedBatchContacts.has(contactKey))) {
+        await recordSkippedDelivery({
+          channel,
+          campaignId,
+          templateId,
+          recipientUserId: recipient.userId,
+          recipientEmail: channel === "EMAIL" ? recipient.email : null,
+          recipientPhone: channel !== "EMAIL" ? recipient.phone : null,
+          locale: recipient.locale,
+          purpose,
+          origin,
+          createdBy: actor?.actorId ?? null,
+        }, "DUPLICATE_RECIPIENT_CONTACT");
+        outcome.skipped += 1;
+        bump(outcome.reasons, "DUPLICATE_RECIPIENT_CONTACT");
+        return outcome;
+      }
+      if (contactKey) claimedBatchContacts.add(contactKey);
 
       const loadedCtx = contexts.get(recipient.userId) ?? null;
       const recipientCtx = loadedCtx && updateSource
