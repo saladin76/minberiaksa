@@ -25,7 +25,45 @@ export async function GET(request: NextRequest) {
     const locale = params.get('locale') || 'ar';
     const search = params.get('search')?.toLowerCase();
 
+    const where = search
+      ? {
+          OR: [
+            { title: { contains: search, mode: 'insensitive' as const } },
+            { description: { contains: search, mode: 'insensitive' as const } },
+            { content: { contains: search, mode: 'insensitive' as const } },
+            {
+              translations: {
+                some: {
+                  locale,
+                  OR: [
+                    { title: { contains: search, mode: 'insensitive' as const } },
+                    { description: { contains: search, mode: 'insensitive' as const } },
+                    { content: { contains: search, mode: 'insensitive' as const } },
+                    { seoKeywords: { has: search } },
+                  ],
+                },
+              },
+            },
+            {
+              category: {
+                is: {
+                  OR: [
+                    { name: { contains: search, mode: 'insensitive' as const } },
+                    {
+                      translations: {
+                        some: { locale, name: { contains: search, mode: 'insensitive' as const } },
+                      },
+                    },
+                  ],
+                },
+              },
+            },
+          ],
+        }
+      : undefined;
+
     const posts = await prisma.post.findMany({
+      where,
       take: limit + 1,
       ...(cursor && { skip: 1, cursor: { id: cursor } }),
       orderBy: { createdAt: 'desc' },
@@ -56,18 +94,10 @@ export async function GET(request: NextRequest) {
       }
     });
 
-    let filtered = posts;
-    if (search) {
-      filtered = posts.filter(p => {
-        const t = pickTranslation(p.translations, locale);
-        const title = t?.title || p.title || '';
-        const desc = t?.description || p.description || '';
-        return title.toLowerCase().includes(search) || desc.toLowerCase().includes(search);
-      });
-    }
-
-    const hasMore = filtered.length > limit;
-    const items = hasMore ? filtered.slice(0, -1) : filtered;
+    // Search is applied in the database before pagination. Filtering after `take`
+    // made valid matches beyond the first page invisible and produced incorrect hasMore values.
+    const hasMore = posts.length > limit;
+    const items = hasMore ? posts.slice(0, -1) : posts;
     const nextCursor = hasMore ? items[items.length - 1]?.id : null;
 
     const allCampaignIds = [...new Set(items.flatMap((p) => p.campaignIds ?? []))];
