@@ -222,3 +222,23 @@ test("campaign wizard never assumes an error response is JSON", () => {
   assert.doesNotMatch(wizard, /const listJson = await listRes\.json\(\)/);
   assert.doesNotMatch(wizard, /const json = await res\.json\(\)/);
 });
+
+
+test("campaign audience explains why a donor is unavailable and does not trust non-JSON responses", () => {
+  const picker = read("app/(dashboard)/dashboard/communication/campaigns/new/_components/DonorPicker.tsx");
+  const route = read("app/api/communication/audience-candidates/route.ts");
+  assert.match(route, /eligibilityReason/);
+  assert.match(route, /لا توجد موافقة واتساب تسويقية/);
+  assert.match(route, /لا توجد موافقة SMS/);
+  assert.match(route, /لا توجد موافقة بريد تسويقي/);
+  assert.match(picker, /eligibilityReason/);
+  assert.match(picker, /async function readApiJson/);
+  assert.doesNotMatch(picker, /const json = await res\.json\(\)/);
+});
+
+test("automatic-events list fails visibly instead of spinning forever", () => {
+  const triggers = read("app/(dashboard)/dashboard/templates/_components/TriggerList.tsx");
+  assert.match(triggers, /timeout: 15000/);
+  assert.match(triggers, /loadError/);
+  assert.match(triggers, /إعادة المحاولة/);
+});
