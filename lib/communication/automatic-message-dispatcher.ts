@@ -13,9 +13,8 @@ import { getActiveMetaWhatsappRuntimeConfig } from "./runtime-config";
  *   - EMAIL    → Elastic Email (via ProviderRouter). Never SendGrid, never Brevo.
  *   - WHATSAPP → Meta Cloud API. Utility/Auth prefers Direct Send when the beta is enabled, then
  *                falls back to an approved Meta template. Marketing stays template-only. Never Twilio.
- *   - SMS      → TR (+90) → Netgsm, international → Brevo SMS. (No trigger channel emits SMS today 
- *                Prisma `enum MessageChannel` is EMAIL | WHATSAPP  so `sendAutomaticSmsMessage` is
- *                provided for a future SMS trigger channel only.)
+ *   - SMS      → TR (+90) → Netgsm, international → Brevo SMS. Automatic SMS triggers use the
+ *                same delivery archive, consent gates and provider router as SMS campaigns.
  *
  * Each helper creates a CommunicationDelivery (origin TRIGGER, status RENDERED) BEFORE any provider
  * call, then advances it to SENT / SKIPPED / FAILED based on the real provider outcome. It NEVER marks
@@ -337,10 +336,10 @@ export async function sendAutomaticWhatsappMessage(
 /* ─────────────────────────── SMS (Netgsm TR / Brevo) ─────────────────────────── */
 
 /**
- * Automatic SMS. NOTE: no trigger channel currently emits SMS (Prisma `enum MessageChannel` is
- * EMAIL | WHATSAPP), so this is not reached from `dispatchEvent` today. It is provided so a future
- * SMS trigger channel routes correctly (TR → Netgsm, international → Brevo SMS) with a
- * CommunicationDelivery record and no Twilio. No SentMessage mirror (that enum has no SMS value).
+ * Automatic SMS. Trigger events route through the same final provider architecture as campaigns:
+ * Turkish recipients → Netgsm, international recipients → Brevo SMS. Every attempt is archived in
+ * CommunicationDelivery before the provider call. SentMessage remains only a legacy email/WhatsApp
+ * mirror, so SMS does not depend on it.
  */
 export async function sendAutomaticSmsMessage(
   input: CommonInput & {
