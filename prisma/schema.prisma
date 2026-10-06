@@ -2277,6 +2277,15 @@ model CommunicationCampaign {
   @@index([status])
 }
 
+model CommunicationGlobalControl {
+  id            String   @id @map("_id") @db.ObjectId
+  emergencyStop Boolean  @default(false)
+  updatedBy     String?  @db.ObjectId
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+
 model CommunicationDelivery {
   id                     String    @id @default(auto()) @map("_id") @db.ObjectId
   channel                String // WHATSAPP | EMAIL | SMS
