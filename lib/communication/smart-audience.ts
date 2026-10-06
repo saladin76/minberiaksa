@@ -10,6 +10,7 @@ export type SmartAudienceFilters = {
   countries?: string[];
   locales?: string[];
   donatedWithinDays?: number | null;
+  notDonatedWithinDays?: number | null;
   projectIds?: string[];
   recurringOnly?: boolean;
   minDonationAmountUSD?: number | null;
@@ -55,6 +56,9 @@ export function normalizeSmartAudienceDefinition(input: unknown, channel: Commun
   const donatedWithinDays = typeof f.donatedWithinDays === "number" && Number.isFinite(f.donatedWithinDays)
     ? Math.max(1, Math.min(3650, Math.floor(f.donatedWithinDays)))
     : null;
+  const notDonatedWithinDays = typeof f.notDonatedWithinDays === "number" && Number.isFinite(f.notDonatedWithinDays)
+    ? Math.max(1, Math.min(3650, Math.floor(f.notDonatedWithinDays)))
+    : null;
   const minDonationAmountUSD = typeof f.minDonationAmountUSD === "number" && Number.isFinite(f.minDonationAmountUSD)
     ? Math.max(0, f.minDonationAmountUSD)
     : null;
@@ -70,6 +74,7 @@ export function normalizeSmartAudienceDefinition(input: unknown, channel: Commun
       countries: cleanList(f.countries).map((v) => v.toUpperCase()).slice(0, 100),
       locales: cleanList(f.locales).filter(isValidLocale),
       donatedWithinDays,
+      notDonatedWithinDays,
       projectIds: cleanList(f.projectIds).slice(0, 100),
       recurringOnly: f.recurringOnly === true,
       minDonationAmountUSD,
@@ -135,6 +140,15 @@ export function buildSmartAudienceUserWhere(definition: SmartAudienceDefinition)
   }
   if (donationClauses.length) {
     where.donations = { some: donationClauses.length === 1 ? donationClauses[0] : { AND: donationClauses } };
+  }
+
+  if (f.notDonatedWithinDays) {
+    const since = new Date(Date.now() - f.notDonatedWithinDays * 24 * 60 * 60 * 1000);
+    const currentAnd = Array.isArray(where.AND) ? where.AND : where.AND ? [where.AND] : [];
+    where.AND = [
+      ...currentAnd,
+      { donations: { none: { status: "PAID", paidAt: { gte: since } } } },
+    ];
   }
 
   if (f.recurringOnly) where.subscriptions = { some: { status: "ACTIVE" } };
