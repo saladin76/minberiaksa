@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { buildMetaComponents } from "../../lib/communication/providers/meta-whatsapp/parameters";
 import { buildStandardMetaComponents } from "../../lib/communication/meta-template-components";
+import { metaParameterName } from "../../lib/communication/meta-parameter-name";
 
 test("Meta parameter builder maps scoped header/body variables independently", () => {
   const result = buildMetaComponents({
@@ -171,4 +172,60 @@ test("Meta send builder supplies parameter_name for named body templates", () =>
       ],
     },
   ]);
+});
+
+
+test("Meta parameter names never exceed the provider's 20-character send limit", () => {
+  const compact = metaParameterName("donation.campaignTitle");
+  assert.ok(compact.length <= 20);
+  assert.match(compact, /^[a-z][a-z0-9_]*$/);
+  assert.equal(compact, metaParameterName("donation.campaignTitle"));
+  assert.notEqual(compact, metaParameterName("donation.campaignName"));
+});
+
+test("Meta publisher uses the same compact name that the send builder can map back to semantics", () => {
+  const published = buildStandardMetaComponents({
+    body: "Project {{donation.campaignTitle}} amount {{donation.totalAmount}}",
+    header: { type: "NONE" },
+    headerText: "",
+    footerText: "",
+    buttons: [],
+  });
+  assert.equal(published.parameterFormat, "named");
+  const body = published.components[0] as { text: string };
+  const campaignName = metaParameterName("donation.campaignTitle");
+  const totalName = metaParameterName("donation.totalAmount");
+  assert.match(body.text, new RegExp(`\\{\\{${campaignName}\\}\\}`));
+  assert.match(body.text, new RegExp(`\\{\\{${totalName}\\}\\}`));
+
+  const sent = buildMetaComponents({
+    componentsSchema: published.components,
+    values: {
+      "donation.campaignTitle": "Water for Gaza",
+      "donation.totalAmount": "25",
+    },
+    positionalNames: ["donation.campaignTitle", "donation.totalAmount"],
+  });
+  assert.equal(sent.ok, true);
+  if (!sent.ok) return;
+  assert.deepEqual(sent.components, [{
+    type: "body",
+    parameters: [
+      { type: "text", text: "Water for Gaza", parameter_name: campaignName },
+      { type: "text", text: "25", parameter_name: totalName },
+    ],
+  }]);
+});
+
+test("old approved schemas with overlong parameter names fail locally instead of calling Meta", () => {
+  const result = buildMetaComponents({
+    componentsSchema: [
+      { type: "BODY", text: "Project {{donation_campaign_title}}" },
+    ],
+    values: { "donation.campaignTitle": "Water for Gaza" },
+    positionalNames: ["donation.campaignTitle"],
+  });
+  assert.equal(result.ok, false);
+  if (result.ok) return;
+  assert.equal(result.reason, "META_TEMPLATE_PARAMETER_NAME_INVALID");
 });
