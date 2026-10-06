@@ -50,12 +50,14 @@ export function SmartWhatsappDialog({
   userId,
   userName,
   phone,
+  initialMode,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   userId: string;
   userName?: string | null;
   phone?: string | null;
+  initialMode?: "FREEFORM" | "UTILITY" | "MARKETING";
 }) {
   const [ctx, setCtx] = React.useState<SmartContext | null>(null);
   const [loading, setLoading] = React.useState(false);
@@ -72,14 +74,17 @@ export function SmartWhatsappDialog({
       if (!res.ok || !data.ok) throw new Error(data.error ?? "load failed");
       const next = data.context as SmartContext;
       setCtx(next);
-      setMode(next.replyWindow.open ? "FREEFORM" : "UTILITY");
+      const preferred = initialMode ?? (next.replyWindow.open ? "FREEFORM" : "UTILITY");
+      if (preferred === "FREEFORM" && !next.replyWindow.open) setMode("UTILITY");
+      else if (preferred === "MARKETING" && !next.whatsappOptIn) setMode(next.replyWindow.open ? "FREEFORM" : "UTILITY");
+      else setMode(preferred);
     } catch {
       toast.error("تعذّر تجهيز إرسال واتساب لهذا المتبرع.");
       setCtx(null);
     } finally {
       setLoading(false);
     }
-  }, [userId]);
+  }, [userId, initialMode]);
 
   React.useEffect(() => {
     if (!open) return;
