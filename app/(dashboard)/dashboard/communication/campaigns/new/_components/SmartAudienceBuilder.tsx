@@ -13,6 +13,7 @@ export type SmartAudienceDraft = {
     countries?: string[];
     locales?: string[];
     donatedWithinDays?: number | null;
+    notDonatedWithinDays?: number | null;
     projectIds?: string[];
     recurringOnly?: boolean;
     minDonationAmountUSD?: number | null;
@@ -191,6 +192,21 @@ export function SmartAudienceBuilder({
               <option value="90">خلال آخر 90 يومًا</option>
               <option value="365">خلال آخر 365 يومًا</option>
               <option value="730">خلال آخر سنتين</option>
+            </select>
+          </label>
+
+          <label className="space-y-1 text-xs text-slate-600">
+            <span>لم يتبرع منذ</span>
+            <select
+              value={value.filters.notDonatedWithinDays ?? ""}
+              onChange={(e) => updateFilters({ notDonatedWithinDays: e.target.value ? Number(e.target.value) : null })}
+              className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm"
+            >
+              <option value="">بدون شرط</option>
+              <option value="30">لم يتبرع آخر 30 يومًا</option>
+              <option value="90">لم يتبرع آخر 90 يومًا</option>
+              <option value="180">لم يتبرع آخر 180 يومًا</option>
+              <option value="365">لم يتبرع آخر 365 يومًا</option>
             </select>
           </label>
 
