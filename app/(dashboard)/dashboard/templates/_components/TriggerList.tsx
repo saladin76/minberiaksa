@@ -6,7 +6,7 @@ import { toast } from "react-hot-toast";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
-import { Loader2, Plus, Trash2, Mail, MessageCircle, MessageSquare, Clock, Play, Eye } from "lucide-react";
+import { Loader2, Plus, Trash2, Mail, MessageCircle, MessageSquare, Clock, Play, Eye, AlertTriangle, RefreshCw } from "lucide-react";
 import { TriggerEditorDialog } from "./TriggerEditorDialog";
 import { EVENT_CATALOG, DEFAULT_COOLDOWN_DAYS, DEFAULT_LAPSE_DAYS } from "@/lib/events/catalog";
 
@@ -41,17 +41,24 @@ const isScheduledEvent = (e: string) =>
 export function TriggerList() {
   const [triggers, setTriggers] = React.useState<TriggerRow[]>([]);
   const [loading, setLoading] = React.useState(true);
+  const [loadError, setLoadError] = React.useState<string | null>(null);
   const [editorOpen, setEditorOpen] = React.useState(false);
   const [running, setRunning] = React.useState<"" | "preview" | "send">("");
   const [lastRun, setLastRun] = React.useState<LapsedRunSummary | null>(null);
 
   const fetchAll = React.useCallback(async () => {
     setLoading(true);
+    setLoadError(null);
     try {
-      const res = await axios.get("/api/templates/triggers");
+      const res = await axios.get("/api/templates/triggers", { timeout: 15000 });
       setTriggers(res.data?.triggers ?? []);
-    } catch {
-      toast.error("فشل في تحميل الأحداث");
+    } catch (error) {
+      const status = axios.isAxiosError(error) ? error.response?.status : undefined;
+      const message = status
+        ? `تعذّر تحميل الأحداث التلقائية (HTTP ${status})`
+        : "تعذّر تحميل الأحداث التلقائية. حاول مرة أخرى.";
+      setLoadError(message);
+      toast.error(message);
     } finally {
       setLoading(false);
     }
@@ -158,6 +165,19 @@ export function TriggerList() {
               <tr>
                 <td colSpan={6} className="py-12 text-center">
                   <Loader2 className="w-6 h-6 animate-spin mx-auto text-slate-400" />
+                </td>
+              </tr>
+            ) : loadError ? (
+              <tr>
+                <td colSpan={6} className="py-10 text-center">
+                  <div className="mx-auto flex max-w-md flex-col items-center gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-amber-900">
+                    <AlertTriangle className="h-5 w-5" />
+                    <p className="text-xs font-medium">{loadError}</p>
+                    <Button size="sm" variant="outline" onClick={() => void fetchAll()} className="gap-1.5 bg-white">
+                      <RefreshCw className="h-3.5 w-3.5" />
+                      إعادة المحاولة
+                    </Button>
+                  </div>
                 </td>
               </tr>
             ) : triggers.length === 0 ? (
