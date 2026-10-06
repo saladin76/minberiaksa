@@ -19,6 +19,14 @@ export interface CampaignRow {
   repliedCount: number;
   donationCount: number;
   revenue: number;
+  metadata?: {
+    sendControls?: {
+      paused?: boolean;
+      speedMode?: string;
+      dailyCap?: number;
+      quietHours?: { enabled?: boolean; start?: string; end?: string; timezone?: string };
+    };
+  } | null;
   createdAt: string;
   updatedAt: string;
 }

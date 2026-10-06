@@ -302,6 +302,7 @@ export type VariantReadiness = {
   reason: string | null;
   languageCode: string | null;
   approvalStatus: string | null;
+  category: string | null;
   locale: string | null;
   providerTemplateName: string | null;
   componentsSchema: unknown;
@@ -314,6 +315,7 @@ export const NOT_READY: VariantReadiness = {
   reason: "NO_VARIANT",
   languageCode: null,
   approvalStatus: null,
+  category: null,
   locale: null,
   providerTemplateName: null,
   componentsSchema: null,
@@ -325,6 +327,7 @@ export type VariantRow = {
   languageCode: string;
   locale: string | null;
   approvalStatus: string;
+  category: string | null;
   providerTemplateName: string;
   componentsSchema: unknown;
   rejectionReason: string | null;
@@ -350,6 +353,7 @@ export function resolveVariantForLocale(variants: VariantRow[], locale: string):
     reason: ready ? null : "NOT_APPROVED",
     languageCode: chosen.languageCode,
     approvalStatus: chosen.approvalStatus,
+    category: chosen.category ?? null,
     locale: chosen.locale,
     providerTemplateName: chosen.providerTemplateName,
     componentsSchema: chosen.componentsSchema,
@@ -375,6 +379,7 @@ export async function getTemplateReadiness(
         languageCode: true,
         locale: true,
         approvalStatus: true,
+        category: true,
         providerTemplateName: true,
         componentsSchema: true,
         rejectionReason: true,
@@ -389,6 +394,7 @@ export async function getTemplateReadiness(
       languageCode: true,
       locale: true,
       approvalStatus: true,
+      category: true,
       providerTemplateName: true,
       componentsSchema: true,
       rejectionReason: true,

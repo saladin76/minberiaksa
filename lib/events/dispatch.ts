@@ -19,7 +19,7 @@ import { getServerBaseUrl } from "@/lib/server-base-url";
 
 export type MessageTriggerEvent = "DONATION_PAID" | "DONATION_FAILED" | "FIRST_DONATION" | "USER_REGISTERED" | "SUBSCRIPTION_CREATED" | "SUBSCRIPTION_PAYMENT" | "SUBSCRIPTION_CANCELLED" | "DONATION_LAPSED";
 export interface EventDispatchInput { userId?: string; donationId?: string }
-interface DispatchResult { triggers: number; emailsSent: number; whatsappSent: number; errors: number }
+interface DispatchResult { triggers: number; emailsSent: number; whatsappSent: number; skipped: number; errors: number; skipReasons: Record<string, number> }
 
 /**
  * The sender tables and routing rules for one dispatch/batch run.
@@ -126,50 +126,126 @@ export function dispatchClaimKey(event: MessageTriggerEvent, donationId: string)
 }
 
 /**
- * Atomically claim (event, donation). Returns false when it was already claimed.
+ * Recoverable once-per-donation claim.
  *
- * The key is the document `_id`, so MongoDB's built-in `_id` uniqueness makes the
- * claim race-safe with no index or schema change. On any other database error it
- * fails open (returns true): a duplicate thank-you is better than a lost receipt.
+ * A plain permanent insert prevented duplicates, but it also turned a serverless crash into a
+ * permanent lost notification: the claim could be committed and the function terminated before
+ * WhatsApp/email was sent. Claims are now short leases. A completed dispatch stays deduplicated;
+ * an interrupted dispatch can be reclaimed after the lease expires.
  */
-async function claimDispatch(event: MessageTriggerEvent, donationId: string): Promise<boolean> {
+const DISPATCH_CLAIM_LEASE_MS = 10 * 60 * 1000;
+type DispatchClaim = { acquired: boolean; token: string | null };
+
+async function claimDispatch(event: MessageTriggerEvent, donationId: string): Promise<DispatchClaim> {
   const isDuplicate = (value: unknown) => /E11000|duplicate key/i.test(String(value));
+  const token = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 12)}`;
+  const now = new Date();
+  const leaseExpiresAt = new Date(now.getTime() + DISPATCH_CLAIM_LEASE_MS);
+  const key = dispatchClaimKey(event, donationId);
+
   try {
-    const res = (await prisma.$runCommandRaw({
+    const inserted = (await prisma.$runCommandRaw({
       insert: "EventDispatchClaim",
-      documents: [{ _id: dispatchClaimKey(event, donationId), event, donationId, createdAt: { $date: new Date().toISOString() } }],
+      documents: [{
+        _id: key,
+        event,
+        donationId,
+        state: "IN_PROGRESS",
+        token,
+        createdAt: { $date: now.toISOString() },
+        updatedAt: { $date: now.toISOString() },
+        leaseExpiresAt: { $date: leaseExpiresAt.toISOString() },
+      }],
     })) as { n?: number; writeErrors?: Array<{ code?: number; errmsg?: string }> };
-    if (res.writeErrors?.some((e) => e.code === 11000 || isDuplicate(e.errmsg))) return false;
-    return true;
+
+    const duplicate = inserted.writeErrors?.some((e) => e.code === 11000 || isDuplicate(e.errmsg));
+    if (!duplicate) return { acquired: true, token };
+
+    const takeover = (await prisma.$runCommandRaw({
+      findAndModify: "EventDispatchClaim",
+      query: {
+        _id: key,
+        state: "IN_PROGRESS",
+        leaseExpiresAt: { $lte: { $date: now.toISOString() } },
+      },
+      update: {
+        $set: {
+          token,
+          updatedAt: { $date: now.toISOString() },
+          leaseExpiresAt: { $date: leaseExpiresAt.toISOString() },
+        },
+      },
+      new: true,
+    })) as { value?: { token?: string } | null };
+
+    return { acquired: takeover.value?.token === token, token: takeover.value?.token === token ? token : null };
   } catch (error) {
-    if (isDuplicate(error instanceof Error ? error.message : error)) return false;
+    if (isDuplicate(error instanceof Error ? error.message : error)) return { acquired: false, token: null };
     console.error("claimDispatch failed; dispatching anyway", { event, donationId, error: error instanceof Error ? error.message : String(error) });
-    return true;
+    // Fail open for availability. A null token means there is no claim to complete.
+    return { acquired: true, token: null };
   }
 }
 
+async function completeDispatchClaim(event: MessageTriggerEvent, donationId: string, token: string | null): Promise<void> {
+  if (!token) return;
+  const now = new Date();
+  await prisma.$runCommandRaw({
+    findAndModify: "EventDispatchClaim",
+    query: { _id: dispatchClaimKey(event, donationId), token, state: "IN_PROGRESS" },
+    update: {
+      $set: {
+        state: "COMPLETED",
+        completedAt: { $date: now.toISOString() },
+        updatedAt: { $date: now.toISOString() },
+      },
+      $unset: { token: "", leaseExpiresAt: "" },
+    },
+    new: false,
+  }).catch((error) => {
+    console.error("completeDispatchClaim failed", { event, donationId, error: error instanceof Error ? error.message : String(error) });
+  });
+}
+
 export async function dispatchEvent(event: MessageTriggerEvent, input: EventDispatchInput): Promise<DispatchResult> {
-  const result: DispatchResult = { triggers: 0, emailsSent: 0, whatsappSent: 0, errors: 0 };
-  if (input.donationId && ONCE_PER_DONATION.has(event) && !(await claimDispatch(event, input.donationId))) {
-    return result;
-  }
+  const result: DispatchResult = { triggers: 0, emailsSent: 0, whatsappSent: 0, skipped: 0, errors: 0, skipReasons: {} };
+  let claimToken: string | null = null;
+  let claimed = false;
+
   if (input.donationId && (event === "DONATION_PAID" || event === "DONATION_FAILED" || event === "FIRST_DONATION")) void notifyDonationEvent(event, input.donationId);
+
   try {
+    // Do not consume the once-per-donation claim until we know there is actual work and a
+    // renderable recipient. This keeps a temporarily missing trigger/context retryable.
     const triggers = await prisma.messageTrigger.findMany({ where: { event, enabled: true } });
     result.triggers = triggers.length;
-    if (!triggers.length) return result;
+    if (!triggers.length) {
+      await writeAuditLog({
+        actorRole: "SYSTEM",
+        action: "EVENT_DISPATCH_NO_TRIGGERS",
+        messageAr: `لا توجد رسائل تلقائية مفعّلة عند «${triggerEventLabelAr(event)}»`,
+        metadata: { event, ...input },
+        stream: "TEAM",
+      });
+      return result;
+    }
+
     const ctx: TemplateContext | null = input.donationId ? await loadContextForDonation(input.donationId) : input.userId ? await loadContext(input.userId) : null;
     if (!ctx) {
       await writeAuditLog({ actorRole: "SYSTEM", action: "EVENT_DISPATCH_NO_CONTEXT", messageAr: `تعذّر إرسال الرسائل التلقائية عند «${triggerEventLabelAr(event)}»  بيانات المستلم غير متاحة`, metadata: { event, ...input }, stream: "TEAM" });
       return result;
     }
+
+    if (input.donationId && ONCE_PER_DONATION.has(event)) {
+      const claim = await claimDispatch(event, input.donationId);
+      if (!claim.acquired) return result;
+      claimed = true;
+      claimToken = claim.token;
+    }
+
     const locale = pickLocale({ recipientLang: ctx.user.preferredLang });
     const config = await resolveTriggerSendConfig();
-    /* CERTIFICATES_DOWNLOADS_HANDOFF §7: the confirmation email carries the
-       real PDFs  thank-you certificate, receipt, any waqf certificate  not
-       just links. Generated once here and attached to every EMAIL trigger of
-       the event. A rendering failure is logged and the email still goes out
-       with its links; the documents stay downloadable from the success page. */
+
     let attachments: EmailAttachment[] | undefined;
     if (event === "DONATION_PAID" && input.donationId && triggers.some((trigger) => trigger.channel === "EMAIL")) {
       attachments = await donationPaidAttachments(input.donationId);
@@ -178,38 +254,57 @@ export async function dispatchEvent(event: MessageTriggerEvent, input: EventDisp
     for (const trigger of triggers) {
       try {
         const sent = await sendTriggerMessage(trigger, ctx, { event, locale, config, donationId: input.donationId ?? null, attachments });
-        if (!sent) continue;
+        if (!sent) {
+          result.skipped += 1;
+          result.skipReasons.TEMPLATE_NOT_FOUND = (result.skipReasons.TEMPLATE_NOT_FOUND ?? 0) + 1;
+          continue;
+        }
         if (sent.outcome === "SENT") {
           if (sent.channel === "EMAIL") result.emailsSent += 1;
           else result.whatsappSent += 1;
-        } else if (sent.outcome === "FAILED") {
+        } else if (sent.outcome === "SKIPPED") {
+          result.skipped += 1;
+          const reason = sent.reason ?? "SKIPPED";
+          result.skipReasons[reason] = (result.skipReasons[reason] ?? 0) + 1;
+        } else {
           result.errors += 1;
         }
-      } catch {
+      } catch (error) {
         result.errors += 1;
+        console.error("sendTriggerMessage failed", {
+          event,
+          donationId: input.donationId ?? null,
+          channel: trigger.channel,
+          templateId: trigger.templateId,
+          error: error instanceof Error ? error.message : String(error),
+        });
       }
     }
-    // Only record a dispatch that actually did something. A trigger that matched
-    // no recipient produced «حدث تلقائي DONATION_FAILED  0 بريد، 0 واتساب»,
-    // which says nothing and drowned the rows that do.
-    const didSomething = result.emailsSent > 0 || result.whatsappSent > 0 || result.errors > 0;
-    if (didSomething) {
-      const parts = [
-        result.emailsSent ? `${result.emailsSent} بريد` : null,
-        result.whatsappSent ? `${result.whatsappSent} واتساب` : null,
-        result.errors ? `${result.errors} فشل` : null,
-      ].filter(Boolean);
-      await writeAuditLog({
-        actorRole: "SYSTEM",
-        action: "EVENT_DISPATCH",
-        // The raw enum key used to leak into the message; label it instead.
-        messageAr: `رسائل تلقائية عند «${triggerEventLabelAr(event)}»  ${parts.join("، ")}`,
-        metadata: { event, ...input, ...result },
-        stream: "TEAM",
-      });
+
+    const parts = [
+      result.emailsSent ? `${result.emailsSent} بريد` : null,
+      result.whatsappSent ? `${result.whatsappSent} واتساب` : null,
+      result.skipped ? `${result.skipped} متخطى` : null,
+      result.errors ? `${result.errors} فشل` : null,
+    ].filter(Boolean);
+
+    await writeAuditLog({
+      actorRole: "SYSTEM",
+      action: "EVENT_DISPATCH",
+      messageAr: `رسائل تلقائية عند «${triggerEventLabelAr(event)}»  ${parts.join("، ") || "لم يتم إرسال شيء"}`,
+      metadata: { event, ...input, ...result },
+      stream: "TEAM",
+    });
+
+    // Only a run that reached the end becomes permanently deduplicated. A process killed after
+    // acquiring the claim leaves an expiring lease and can be recovered on a later callback/retry.
+    if (claimed && input.donationId) {
+      await completeDispatchClaim(event, input.donationId, claimToken);
     }
-  } catch {
+  } catch (error) {
     result.errors += 1;
+    console.error("dispatchEvent failed", { event, ...input, error: error instanceof Error ? error.message : String(error) });
+    // Do not complete the claim here: the lease is intentionally left recoverable.
   }
   return result;
 }

@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { toast } from "react-hot-toast";
-import { Ban, Loader2, MoreHorizontal, Send, ShieldCheck } from "lucide-react";
+import { Ban, Loader2, MoreHorizontal, Send, ShieldCheck, Settings2, Pause, Play } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -20,6 +20,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { channelMeta, isPreSend, type CampaignRow } from "./campaign-ui";
+import { CampaignControlsDialog } from "./CampaignControlsDialog";
 
 /**
  * Campaign lifecycle actions, in the list row.
@@ -46,6 +47,9 @@ const BLOCKED_LABELS: Record<string, string> = {
   ALREADY_RUNNING: "الحملة قيد الإرسال الآن  انتظر انتهاء الدفعة الجارية.",
   ALREADY_COMPLETE: "اكتمل إرسال هذه الحملة.",
   NOT_RESUMABLE: "لا توجد دفعة متوقفة لمتابعتها.",
+  PAUSED: "الحملة متوقفة مؤقتًا من تحكمات الإرسال.",
+  QUIET_HOURS: "الحملة داخل ساعات عدم الإرسال وستستأنف تلقائيًا بعدها.",
+  DAILY_CAP_REACHED: "تم بلوغ الحد اليومي المسموح لرسائل واتساب.",
 };
 
 /** `audienceTotal` is the whole audience; `total` is only the first batch. */
@@ -61,11 +65,33 @@ export function CampaignRowActions({
   const [busy, setBusy] = React.useState(false);
   const [plan, setPlan] = React.useState<SendPlan | null>(null);
   const [confirmOpen, setConfirmOpen] = React.useState(false);
+  const [controlsOpen, setControlsOpen] = React.useState(false);
 
   const canConfirm = campaign.status === "DRAFT" || campaign.status === "REVIEW";
   const canSend = campaign.status === "APPROVED";
   const canCancel = isPreSend(campaign.status);
-  if (!canConfirm && !canSend && !canCancel) return null;
+  const canControl = campaign.channel === "WHATSAPP" && !["SENT", "FAILED", "CANCELLED", "ARCHIVED"].includes(campaign.status);
+  if (!canConfirm && !canSend && !canCancel && !canControl) return null;
+
+  const togglePause = async () => {
+    const currentlyPaused = campaign.metadata?.sendControls?.paused === true;
+    setBusy(true);
+    try {
+      const res = await fetch(`/api/communication/campaigns/${campaign.id}/controls`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ paused: !currentlyPaused }),
+      });
+      const json = await res.json();
+      if (!res.ok || !json.ok) throw new Error(json?.error || "تعذّر تحديث حالة الإرسال");
+      toast.success(currentlyPaused ? "تم استئناف الحملة" : "تم إيقاف الحملة مؤقتًا");
+      onChanged();
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
 
   const transition = async (action: string) => {
     setBusy(true);
@@ -164,6 +190,22 @@ export function CampaignRowActions({
               إرسال الآن
             </DropdownMenuItem>
           )}
+          {canControl && (
+            <>
+              <DropdownMenuItem onClick={togglePause}>
+                {campaign.metadata?.sendControls?.paused ? (
+                  <Play className="me-2 h-3.5 w-3.5" />
+                ) : (
+                  <Pause className="me-2 h-3.5 w-3.5" />
+                )}
+                {campaign.metadata?.sendControls?.paused ? "استئناف الحملة" : "إيقاف مؤقت فورًا"}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setControlsOpen(true)}>
+                <Settings2 className="me-2 h-3.5 w-3.5" />
+                إعدادات السرعة والوقت
+              </DropdownMenuItem>
+            </>
+          )}
           {canCancel && (
             <DropdownMenuItem onClick={() => transition("CANCEL")} className="text-rose-600 focus:text-rose-700">
               <Ban className="me-2 h-3.5 w-3.5" />
@@ -172,6 +214,14 @@ export function CampaignRowActions({
           )}
         </DropdownMenuContent>
       </DropdownMenu>
+
+      <CampaignControlsDialog
+        open={controlsOpen}
+        onOpenChange={setControlsOpen}
+        campaignId={campaign.id}
+        campaignName={campaign.name}
+        onChanged={onChanged}
+      />
 
       <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
         <AlertDialogContent dir="rtl">

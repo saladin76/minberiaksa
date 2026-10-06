@@ -68,10 +68,30 @@ export async function GET(
   if (denied) return denied;
   const { id } = await params;
 
-  const template = await prisma.whatsappTemplate.findUnique({ where: { id } });
+  const template = await prisma.whatsappTemplate.findUnique({
+    where: { id },
+    include: {
+      variants: {
+        where: { provider: "META_WHATSAPP" },
+        select: { languageCode: true, locale: true, category: true },
+      },
+      wabaVariants: {
+        where: { provider: "META_WHATSAPP" },
+        select: { languageCode: true, locale: true, category: true },
+      },
+    },
+  });
   if (!template) return NextResponse.json({ error: "Not found" }, { status: 404 });
   const submittedLocales = Array.from(await submittedMetaLocales(id)).sort();
-  return NextResponse.json({ template: { ...template, submittedLocales } });
+  const providerCategoriesByLocale: Record<string, string[]> = {};
+  for (const variant of [...template.variants, ...template.wabaVariants]) {
+    const locale = String(variant.locale ?? variant.languageCode ?? "").toLowerCase().replace(/[_-].*$/, "");
+    const category = String(variant.category ?? "").toUpperCase();
+    if (!locale || !category) continue;
+    providerCategoriesByLocale[locale] = [...new Set([...(providerCategoriesByLocale[locale] ?? []), category])];
+  }
+  const { variants: _variants, wabaVariants: _wabaVariants, ...templateData } = template;
+  return NextResponse.json({ template: { ...templateData, submittedLocales, providerCategoriesByLocale } });
 }
 
 export async function PATCH(
