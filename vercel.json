@@ -33,5 +33,5 @@
       "schedule": "*/15 * * * *"
     }
   ],
-  "installCommand": "npm ci"
+  "installCommand": "npm ci --prefer-offline --no-audit --no-fund"
 }
