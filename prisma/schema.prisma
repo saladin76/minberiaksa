@@ -2280,7 +2280,7 @@ model CommunicationCampaign {
 model CommunicationGlobalControl {
   id            String   @id @map("_id") @db.ObjectId
   emergencyStop Boolean  @default(false)
-  updatedBy     String?  @db.ObjectId
+  updatedBy     String?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 }
