@@ -161,15 +161,19 @@ export function WhatsappInbox() {
         setActiveId(null);
         setDetail(null);
         setReplyWindow(null);
-      } else if (!activeId || !nextConversations.some((conversation: Conversation) => conversation.id === activeId)) {
-        setActiveId(nextConversations[0].id);
+      } else {
+        setActiveId((current) =>
+          current && nextConversations.some((conversation: Conversation) => conversation.id === current)
+            ? current
+            : nextConversations[0].id,
+        );
       }
     } catch {
       setConversations([]);
     } finally {
       setLoadingList(false);
     }
-  }, [filter, senderId, query, activeId]);
+  }, [filter, senderId, query]);
 
   useEffect(() => { void loadList(); }, [loadList]);
 
