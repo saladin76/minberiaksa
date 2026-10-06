@@ -38,6 +38,15 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ ok: false, error: "Invalid payload" }, { status: 400 });
   }
 
+  const envHardStop = String(process.env.COMMUNICATION_CAMPAIGN_EMERGENCY_STOP ?? "").toLowerCase() === "true";
+  if (envHardStop && parsed.data.emergencyStop === false) {
+    return NextResponse.json({
+      ok: false,
+      error: "إيقاف الطوارئ مفروض من إعدادات الخادم ولا يمكن إلغاؤه من الداشبورد.",
+      code: "EMERGENCY_STOP_ENV_LOCK",
+    }, { status: 409 });
+  }
+
   const actor = auditActorFromDashboardSession(session!);
   const saved = await setCampaignEmergencyStop(parsed.data.emergencyStop, actor.actorId ?? null);
   if (!saved) {
