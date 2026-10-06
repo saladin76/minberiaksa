@@ -204,3 +204,14 @@ test("WhatsApp inbox exposes free-form inside 24h and greeting-template re-entry
   assert.match(smart, /initialMode\?: "FREEFORM" \| "UTILITY" \| "MARKETING"/);
   assert.match(smart, /preferred === "MARKETING"/);
 });
+
+
+test("dashboard topbar highlights unanswered WhatsApp conversations", () => {
+  const topbar = read("app/(dashboard)/dashboard/_shell/DashboardTopbar.tsx");
+  const layout = read("app/(dashboard)/dashboard/DashboardLayoutClient.tsx");
+  assert.match(layout, /filter=needsReply/);
+  assert.match(layout, /setInterval\(run, 30000\)/);
+  assert.match(topbar, /بانتظار رد/);
+  assert.match(topbar, /animate-ping/);
+  assert.match(topbar, /whatsappInboxCount > 99 \? "99\+" : whatsappInboxCount/);
+});
