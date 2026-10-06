@@ -5,7 +5,7 @@ import Link from "next/link";
 import { toast } from "react-hot-toast";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { MessageCircle, Clock, ShieldCheck, Megaphone, Loader2, Send, History, CircleAlert, CheckCircle2 } from "lucide-react";
+import { MessageCircle, Clock, ShieldCheck, Megaphone, Loader2, Send, History, CircleAlert } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type ReplyWindow = { open: boolean; lastInboundAt: string | null; remainingMs: number; lastInboundMessageId: string | null };
@@ -16,7 +16,6 @@ type SmartContext = {
   locale: string;
   country: string | null;
   doNotContact: boolean;
-  whatsappOptIn: boolean;
   directSendEnabled: boolean;
   conversationId: string | null;
   replyWindow: ReplyWindow;
@@ -40,7 +39,6 @@ const ERROR_LABELS: Record<string, string> = {
   DO_NOT_CONTACT: "هذا المتبرع موقوف عن التواصل المباشر.",
   NO_RECIPIENT_PHONE: "لا يوجد رقم واتساب صالح لهذا المتبرع.",
   MARKETING_TEMPLATE_REQUIRED: "اختر قالب Marketing معتمد.",
-  WHATSAPP_MARKETING_OPT_IN_REQUIRED: "لا توجد موافقة واتساب تسويقية مسجلة لهذا المتبرع.",
   META_TEMPLATE_NOT_APPROVED_FOR_SENDER_LANGUAGE: "لا توجد نسخة معتمدة من القالب لهذا الرقم/اللغة.",
 };
 
@@ -62,7 +60,6 @@ export function SmartWhatsappDialog({
   const [ctx, setCtx] = React.useState<SmartContext | null>(null);
   const [loading, setLoading] = React.useState(false);
   const [sending, setSending] = React.useState(false);
-  const [consentSaving, setConsentSaving] = React.useState(false);
   const [mode, setMode] = React.useState<"FREEFORM" | "UTILITY" | "MARKETING">("UTILITY");
   const [body, setBody] = React.useState("");
   const [templateId, setTemplateId] = React.useState("");
@@ -77,7 +74,6 @@ export function SmartWhatsappDialog({
       setCtx(next);
       const preferred = initialMode ?? (next.replyWindow.open ? "FREEFORM" : "UTILITY");
       if (preferred === "FREEFORM" && !next.replyWindow.open) setMode("UTILITY");
-      else if (preferred === "MARKETING" && !next.whatsappOptIn) setMode(next.replyWindow.open ? "FREEFORM" : "UTILITY");
       else setMode(preferred);
     } catch {
       toast.error("تعذّر تجهيز إرسال واتساب لهذا المتبرع.");
@@ -93,34 +89,6 @@ export function SmartWhatsappDialog({
     setTemplateId("");
     void load();
   }, [open, load]);
-
-  const setMarketingConsent = async (enabled: boolean) => {
-    if (!ctx || consentSaving) return;
-    if (enabled && !window.confirm("تأكيد أن لديك موافقة صريحة من هذا الشخص لاستقبال رسائل واتساب تسويقية؟")) return;
-    setConsentSaving(true);
-    try {
-      const res = await fetch("/api/dashboard/communication/whatsapp/smart-send", {
-        method: "PATCH",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ userId, whatsappOptIn: enabled, confirmed: true }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok || !data.ok) {
-        toast.error(data.error || "تعذّر تحديث موافقة واتساب.");
-        return;
-      }
-      setCtx(data.context as SmartContext);
-      if (enabled) {
-        setMode("MARKETING");
-        toast.success("تم تسجيل موافقة واتساب التسويقية لهذا الشخص.");
-      } else {
-        if (mode === "MARKETING") setMode(data.context?.replyWindow?.open ? "FREEFORM" : "UTILITY");
-        toast.success("تم إلغاء موافقة واتساب التسويقية.");
-      }
-    } finally {
-      setConsentSaving(false);
-    }
-  };
 
   const send = async () => {
     if (!ctx) return;
@@ -194,7 +162,7 @@ export function SmartWhatsappDialog({
       title: "رسالة تسويقية",
       desc: "قالب Marketing معتمد",
       icon: Megaphone,
-      disabled: Boolean(ctx && !ctx.whatsappOptIn),
+      disabled: false,
     },
   ];
 
@@ -241,38 +209,6 @@ export function SmartWhatsappDialog({
                   المتبرع موقوف عن الرسائل الجديدة. يمكن فقط الرد على رسالة واردة أثناء نافذة 24 ساعة.
                 </div>
               )}
-              {!ctx.whatsappOptIn ? (
-                <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">
-                  <div>
-                    <p className="font-semibold text-slate-700">لا توجد موافقة واتساب تسويقية مسجلة.</p>
-                    <p className="mt-1 leading-5">وصول رسالة تبرع فاشل يثبت أن الرقم صالح، لكنه لا يُعتبر موافقة تسويقية. لو لديك موافقة صريحة من الشخص يمكنك تسجيلها هنا.</p>
-                  </div>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    disabled={consentSaving}
-                    onClick={() => void setMarketingConsent(true)}
-                    className="shrink-0 bg-white"
-                  >
-                    {consentSaving ? <Loader2 className="me-1.5 h-4 w-4 animate-spin" /> : <CheckCircle2 className="me-1.5 h-4 w-4" />}
-                    تسجيل الموافقة
-                  </Button>
-                </div>
-              ) : (
-                <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-800">
-                  <span className="font-semibold">موافقة واتساب التسويقية مسجلة لهذا الشخص.</span>
-                  <button
-                    type="button"
-                    disabled={consentSaving}
-                    onClick={() => void setMarketingConsent(false)}
-                    className="text-[11px] underline underline-offset-2 disabled:opacity-50"
-                  >
-                    إلغاء الموافقة
-                  </button>
-                </div>
-              )}
-
               <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
                 {tabs.map((tab) => {
                   const Icon = tab.icon;
