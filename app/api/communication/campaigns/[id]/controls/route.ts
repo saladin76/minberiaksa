@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import type { CommunicationCampaign } from "@prisma/client";
 import { z } from "zod";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/options";
@@ -76,7 +77,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   // cannot erase an operator's Pause/Resume or quiet-hours change.
   const normalized = campaignSendControls({
     metadata: { sendControls: requested } as never,
-  } as Pick<Awaited<ReturnType<typeof getCampaign>>, "metadata">);
+  } as Pick<CommunicationCampaign, "metadata">);
   const next = normalized;
 
   const saved = await mutateCampaignMetadata(id, (latest) => ({ ...latest, sendControls: next }));
