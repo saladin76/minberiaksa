@@ -6,7 +6,7 @@ import { toast } from "react-hot-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { EmptyState } from "@/components/dashboard/EmptyState";
-import { Check, ChevronLeft, Loader2, FileText, Languages, Users, TriangleAlert } from "lucide-react";
+import { Check, ChevronLeft, Loader2, FileText, Languages, Users, TriangleAlert, Gauge, Zap, CalendarClock, Moon, ShieldCheck } from "lucide-react";
 import { LOCALE_LABELS } from "@/lib/locales";
 import { cn } from "@/lib/utils";
 import { CHANNEL_META } from "../../_components/campaign-ui";
@@ -19,12 +19,40 @@ interface TemplateSummary {
 }
 
 const CHANNEL_ORDER = ["EMAIL", "WHATSAPP", "SMS"] as const;
-const STEPS = ["القناة", "القالب", "الجمهور"] as const;
+const BASE_STEPS = ["القناة", "القالب", "الجمهور"] as const;
 
-function Stepper({ step }: { step: number }) {
+type CampaignSendControlsDraft = {
+  paused: boolean;
+  speedMode: "SAFE" | "BALANCED" | "FAST" | "MAX";
+  autoSpeed: boolean;
+  priority: "LOW" | "NORMAL" | "HIGH" | "URGENT";
+  dailyCap: number;
+  scheduledStopAt: string | null;
+  resumeAt: string | null;
+  quietHours: { enabled: boolean; start: string; end: string; timezone: string };
+};
+
+const DEFAULT_SEND_CONTROLS: CampaignSendControlsDraft = {
+  paused: false,
+  speedMode: "BALANCED",
+  autoSpeed: true,
+  priority: "NORMAL",
+  dailyCap: 100000,
+  scheduledStopAt: null,
+  resumeAt: null,
+  quietHours: { enabled: false, start: "00:00", end: "08:00", timezone: "Europe/Istanbul" },
+};
+
+function fromLocalInput(value: string): string | null {
+  if (!value) return null;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date.toISOString();
+}
+
+function Stepper({ step, steps }: { step: number; steps: readonly string[] }) {
   return (
     <ol className="mb-5 flex items-center gap-2">
-      {STEPS.map((label, i) => {
+      {steps.map((label, i) => {
         const state = i < step ? "done" : i === step ? "current" : "todo";
         return (
           <li key={label} className="flex min-w-0 items-center gap-2">
@@ -41,7 +69,7 @@ function Stepper({ step }: { step: number }) {
             <span className={cn("truncate text-xs", state === "todo" ? "text-slate-400" : "font-medium text-slate-800")}>
               {label}
             </span>
-            {i < STEPS.length - 1 && <span className="mx-1 h-px w-6 shrink-0 bg-slate-200 sm:w-10" />}
+            {i < steps.length - 1 && <span className="mx-1 h-px w-6 shrink-0 bg-slate-200 sm:w-10" />}
           </li>
         );
       })}
@@ -70,7 +98,13 @@ export function NewCampaignWizard() {
   const [templateId, setTemplateId] = React.useState("");
   const [name, setName] = React.useState("");
   const [selected, setSelected] = React.useState<Set<string>>(new Set());
+  const [sendControls, setSendControls] = React.useState<CampaignSendControlsDraft>(DEFAULT_SEND_CONTROLS);
   const [saving, setSaving] = React.useState(false);
+
+  const steps = React.useMemo(
+    () => channel === "WHATSAPP" ? [...BASE_STEPS, "التحكم"] : [...BASE_STEPS],
+    [channel],
+  );
 
   // Templates load on entering step 2  the channel is known by then and cannot change without
   // coming back, which also resets the choice below.
@@ -121,6 +155,7 @@ export function NewCampaignWizard() {
           purpose: "MARKETING",
           templateGroupId: templateId,
           audienceSegmentKey: listJson.audienceSegmentKey,
+          ...(channel === "WHATSAPP" ? { sendControls } : {}),
         }),
       });
       const json = await res.json();
@@ -138,7 +173,7 @@ export function NewCampaignWizard() {
 
   return (
     <div dir="rtl">
-      <Stepper step={step} />
+      <Stepper step={step} steps={steps} />
 
       {step === 0 && (
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
@@ -250,6 +285,134 @@ export function NewCampaignWizard() {
         </div>
       )}
 
+      {step === 3 && channel === "WHATSAPP" && (
+        <div className="space-y-4">
+          <div className="rounded-xl border border-brand/20 bg-brand-50/40 p-4">
+            <div className="flex items-center gap-2">
+              <Gauge className="h-4 w-4 text-brand" />
+              <h3 className="text-sm font-semibold text-slate-900">تحكم إرسال الحملة قبل الإنشاء</h3>
+            </div>
+            <p className="mt-1 text-xs text-slate-500">هذه الإعدادات تُحفظ مع الحملة من البداية، ويمكن تعديلها لاحقًا من مركز التحكم.</p>
+          </div>
+
+          <section className="space-y-3 rounded-xl border border-slate-200 bg-white p-4">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <h4 className="text-sm font-semibold text-slate-900">سرعة الإرسال</h4>
+                <p className="mt-1 text-xs text-slate-500">Auto Speed هو الاختيار الموصى به، ويضبط السرعة حسب الجمهور والحد اليومي.</p>
+              </div>
+              <label className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-medium">
+                <input
+                  type="checkbox"
+                  checked={sendControls.autoSpeed}
+                  onChange={(e) => setSendControls((current) => ({ ...current, autoSpeed: e.target.checked }))}
+                />
+                <Zap className="h-3.5 w-3.5 text-amber-500" />
+                Auto Speed
+              </label>
+            </div>
+            <div className={cn("grid grid-cols-2 gap-2 md:grid-cols-4", sendControls.autoSpeed && "opacity-50")}>
+              {([
+                ["SAFE", "هادئ"],
+                ["BALANCED", "متوازن"],
+                ["FAST", "سريع"],
+                ["MAX", "أقصى سرعة آمنة"],
+              ] as const).map(([id, label]) => (
+                <button
+                  key={id}
+                  type="button"
+                  disabled={sendControls.autoSpeed}
+                  onClick={() => setSendControls((current) => ({ ...current, speedMode: id }))}
+                  className={cn(
+                    "rounded-xl border p-3 text-right text-xs disabled:cursor-not-allowed",
+                    sendControls.speedMode === id ? "border-brand bg-brand/5 ring-1 ring-brand/20" : "border-slate-200 hover:bg-slate-50",
+                  )}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </section>
+
+          <section className="space-y-3 rounded-xl border border-slate-200 bg-white p-4">
+            <h4 className="text-sm font-semibold text-slate-900">أولوية الحملة</h4>
+            <select
+              value={sendControls.priority}
+              onChange={(e) => setSendControls((current) => ({ ...current, priority: e.target.value as CampaignSendControlsDraft["priority"] }))}
+              className="h-10 w-full max-w-sm rounded-lg border border-slate-200 bg-white px-3 text-sm"
+            >
+              <option value="LOW">منخفضة</option>
+              <option value="NORMAL">عادية</option>
+              <option value="HIGH">عالية</option>
+              <option value="URGENT">عاجلة</option>
+            </select>
+          </section>
+
+          <section className="space-y-3 rounded-xl border border-slate-200 bg-white p-4">
+            <div className="flex items-center gap-2">
+              <CalendarClock className="h-4 w-4 text-slate-500" />
+              <h4 className="text-sm font-semibold text-slate-900">توقف واستئناف مجدول</h4>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <label className="space-y-1 text-xs text-slate-600">
+                <span>إيقاف الإرسال عند</span>
+                <input
+                  type="datetime-local"
+                  onChange={(e) => setSendControls((current) => ({ ...current, scheduledStopAt: fromLocalInput(e.target.value) }))}
+                  className="h-10 w-full rounded-lg border border-slate-200 px-3"
+                  dir="ltr"
+                />
+              </label>
+              <label className="space-y-1 text-xs text-slate-600">
+                <span>استئناف تلقائي عند (اختياري)</span>
+                <input
+                  type="datetime-local"
+                  onChange={(e) => setSendControls((current) => ({ ...current, resumeAt: fromLocalInput(e.target.value) }))}
+                  className="h-10 w-full rounded-lg border border-slate-200 px-3"
+                  dir="ltr"
+                />
+              </label>
+            </div>
+          </section>
+
+          <section className="space-y-3 rounded-xl border border-slate-200 bg-white p-4">
+            <div className="flex items-center gap-2">
+              <Moon className="h-4 w-4 text-slate-500" />
+              <h4 className="text-sm font-semibold text-slate-900">ساعات عدم الإرسال</h4>
+            </div>
+            <label className="flex items-center gap-2 text-xs text-slate-700">
+              <input
+                type="checkbox"
+                checked={sendControls.quietHours.enabled}
+                onChange={(e) => setSendControls((current) => ({ ...current, quietHours: { ...current.quietHours, enabled: e.target.checked } }))}
+              />
+              تفعيل Quiet Hours
+            </label>
+            <div className="grid gap-3 sm:grid-cols-3">
+              <input type="time" value={sendControls.quietHours.start} onChange={(e) => setSendControls((current) => ({ ...current, quietHours: { ...current.quietHours, start: e.target.value } }))} className="h-10 rounded-lg border border-slate-200 px-3" />
+              <input type="time" value={sendControls.quietHours.end} onChange={(e) => setSendControls((current) => ({ ...current, quietHours: { ...current.quietHours, end: e.target.value } }))} className="h-10 rounded-lg border border-slate-200 px-3" />
+              <input value={sendControls.quietHours.timezone} onChange={(e) => setSendControls((current) => ({ ...current, quietHours: { ...current.quietHours, timezone: e.target.value } }))} className="h-10 rounded-lg border border-slate-200 px-3" dir="ltr" />
+            </div>
+          </section>
+
+          <section className="space-y-3 rounded-xl border border-slate-200 bg-white p-4">
+            <div className="flex items-center gap-2">
+              <ShieldCheck className="h-4 w-4 text-slate-500" />
+              <h4 className="text-sm font-semibold text-slate-900">الحد اليومي</h4>
+            </div>
+            <input
+              type="number"
+              min={1}
+              max={1_000_000}
+              value={sendControls.dailyCap}
+              onChange={(e) => setSendControls((current) => ({ ...current, dailyCap: Math.max(1, Number(e.target.value) || 1) }))}
+              className="h-10 w-full max-w-sm rounded-lg border border-slate-200 px-3"
+              dir="ltr"
+            />
+          </section>
+        </div>
+      )}
+
       <div className="mt-5 flex items-center justify-between gap-2 border-t border-slate-200 pt-4">
         <Button
           variant="outline"
@@ -266,8 +429,24 @@ export function NewCampaignWizard() {
             التالي: اختيار الجمهور
           </Button>
         )}
-        {step === 2 && (
+        {step === 2 && channel === "WHATSAPP" && (
+          <Button
+            onClick={() => setStep(3)}
+            disabled={selected.size === 0 || !name.trim()}
+            className="gap-1.5 bg-brand hover:bg-brand/90"
+          >
+            <Gauge className="h-4 w-4" />
+            التالي: إعداد الإرسال
+          </Button>
+        )}
+        {step === 2 && channel !== "WHATSAPP" && (
           <Button onClick={create} disabled={saving || selected.size === 0 || !name.trim()} className="gap-1.5 bg-brand hover:bg-brand/90">
+            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Users className="h-4 w-4" />}
+            إنشاء الحملة ({selected.size})
+          </Button>
+        )}
+        {step === 3 && channel === "WHATSAPP" && (
+          <Button onClick={create} disabled={saving} className="gap-1.5 bg-brand hover:bg-brand/90">
             {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Users className="h-4 w-4" />}
             إنشاء الحملة ({selected.size})
           </Button>
