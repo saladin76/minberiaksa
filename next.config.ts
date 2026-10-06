@@ -148,17 +148,19 @@ const nextConfig: NextConfig = {
      callbacks, reconciliation/recurring jobs, manual bank-transfer confirmation and admin imports
      are included alongside the direct receipt/certificate endpoints. */
   outputFileTracingIncludes: {
+    // Chromium's compressed binaries are large. Keep them only on functions that can actually
+    // render a donation PDF or dispatch a DONATION_PAID email with PDF attachments. Broad globs
+    // duplicated the same browser archive across many unrelated functions and made Vercel spend
+    // ~15 minutes in "Deploying outputs..." after a ~3 minute build.
     "/api/certificates/**/*": ["./node_modules/@sparticuz/chromium/bin/**"],
     "/api/receipts/**/*": ["./node_modules/@sparticuz/chromium/bin/**"],
-    "/api/payfor/**/*": ["./node_modules/@sparticuz/chromium/bin/**"],
-    "/api/stripe/**/*": ["./node_modules/@sparticuz/chromium/bin/**"],
-    "/api/paypal/**/*": ["./node_modules/@sparticuz/chromium/bin/**"],
-    "/api/albaraka/**/*": ["./node_modules/@sparticuz/chromium/bin/**"],
-    "/api/bank-transfer/**/*": ["./node_modules/@sparticuz/chromium/bin/**"],
-    "/api/admin/transfer-receipts/**/*": ["./node_modules/@sparticuz/chromium/bin/**"],
-    "/api/admin/donations/bulk-import/**/*": ["./node_modules/@sparticuz/chromium/bin/**"],
-    "/api/donations/**/*": ["./node_modules/@sparticuz/chromium/bin/**"],
-    "/api/cron/reconcile-donations": ["./node_modules/@sparticuz/chromium/bin/**"],
+    "/api/payfor/3dpay/ok": ["./node_modules/@sparticuz/chromium/bin/**"],
+    "/api/stripe/webhook": ["./node_modules/@sparticuz/chromium/bin/**"],
+    "/api/paypal/return": ["./node_modules/@sparticuz/chromium/bin/**"],
+    "/api/albaraka/3d/initiate": ["./node_modules/@sparticuz/chromium/bin/**"],
+    "/api/albaraka/3d/callback": ["./node_modules/@sparticuz/chromium/bin/**"],
+    "/api/admin/transfer-receipts/[id]": ["./node_modules/@sparticuz/chromium/bin/**"],
+    "/api/donations/[id]": ["./node_modules/@sparticuz/chromium/bin/**"],
     "/api/cron/recurring-charges": ["./node_modules/@sparticuz/chromium/bin/**"],
   },
   compiler: { removeConsole: process.env.NODE_ENV === "production" ? { exclude: ["error", "warn"] } : false },
