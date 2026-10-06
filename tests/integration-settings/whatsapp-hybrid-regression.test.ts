@@ -250,3 +250,15 @@ test("campaign audience badge evaluation stays scoped to visible donors", () => 
   assert.match(badges, /donorId: \{ in: candidateUserIds \}/);
   assert.match(badges, /getUserIdsMatchingBadge\(badge\.criteria, userIds\)/);
 });
+
+
+test("individual WhatsApp marketing consent can be explicitly confirmed and audited from Smart WhatsApp", () => {
+  const route = read("app/api/dashboard/communication/whatsapp/smart-send/route.ts");
+  const dialog = read("components/dashboard/SmartWhatsappDialog.tsx");
+  assert.match(route, /consentSchema/);
+  assert.match(route, /dashboard-manual-whatsapp-confirmation/);
+  assert.match(route, /setProfileConsent/);
+  assert.match(dialog, /تسجيل الموافقة/);
+  assert.match(dialog, /وصول رسالة تبرع فاشل يثبت أن الرقم صالح/);
+  assert.match(dialog, /setMarketingConsent/);
+});
