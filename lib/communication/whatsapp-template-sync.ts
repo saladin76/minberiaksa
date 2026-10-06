@@ -351,9 +351,9 @@ export function resolveVariantForLocale(variants: VariantRow[], locale: string):
     pool.find((v) => v.languageCode.toLowerCase().startsWith("ar")) ??
     null;
   if (!chosen) return NOT_READY;
-  const approved = normalizeApprovalStatus(chosen.approvalStatus) === "APPROVED";
-  const parameterSchemaInvalid = approved && schemaHasInvalidMetaParameterNames(chosen.componentsSchema);
-  const ready = approved && !parameterSchemaInvalid;
+  const isApproved = normalizeApprovalStatus(chosen.approvalStatus) === "APPROVED";
+  const parameterSchemaInvalid = isApproved && schemaHasInvalidMetaParameterNames(chosen.componentsSchema);
+  const ready = isApproved && !parameterSchemaInvalid;
   return {
     ready,
     reason: parameterSchemaInvalid ? "META_TEMPLATE_PARAMETER_NAME_INVALID" : ready ? null : "NOT_APPROVED",
