@@ -439,3 +439,61 @@ export async function reconcilePublishedTemplatesToActiveWabas(actor?: Actor): P
 
   return { ok: failures.length === 0, templates: rows.length, failed: failures.length, failures };
 }
+
+
+/**
+ * One-shot safe repair pass for provider templates that Meta marked APPROVED even though one of
+ * their named placeholders is longer than the send API accepts. The publisher above versions only
+ * those broken provider families and leaves all healthy templates untouched.
+ */
+export async function repairInvalidMetaParameterTemplates(actor?: Actor): Promise<{
+  scanned: number;
+  repaired: number;
+  pending: number;
+  failed: number;
+  results: Array<{ templateId: string; ok: boolean; failed: number; created: number; existing: number }>;
+}> {
+  const rows = await prisma.whatsappTemplate.findMany({
+    where: {
+      provider: "META_WHATSAPP",
+      wabaVariants: { some: { provider: "META_WHATSAPP", approvalStatus: "APPROVED" } },
+    },
+    select: {
+      id: true,
+      wabaVariants: {
+        where: { provider: "META_WHATSAPP", approvalStatus: "APPROVED" },
+        select: { componentsSchema: true },
+      },
+    },
+  }).catch(() => []);
+
+  const broken = rows.filter((row) =>
+    row.wabaVariants.some((variant) => schemaHasInvalidMetaParameterNames(variant.componentsSchema))
+  );
+  const results: Array<{ templateId: string; ok: boolean; failed: number; created: number; existing: number }> = [];
+  let repaired = 0;
+  let pending = 0;
+  let failed = 0;
+
+  for (const row of broken) {
+    const result = await publishWhatsappTemplateToMeta(row.id, actor);
+    results.push({
+      templateId: row.id,
+      ok: result.ok,
+      failed: result.failed,
+      created: result.created,
+      existing: result.existing,
+    });
+    if (!result.ok) {
+      failed += 1;
+      continue;
+    }
+    // New provider families normally enter PENDING first; count them separately from fully repaired
+    // families so operations never interprets "submitted" as "approved".
+    const allApproved = result.statuses.length > 0 && result.statuses.every((s) => s.status === "APPROVED");
+    if (allApproved) repaired += 1;
+    else pending += 1;
+  }
+
+  return { scanned: rows.length, repaired, pending, failed, results };
+}
