@@ -94,6 +94,11 @@ export function smartAudienceMetadata(definition: SmartAudienceDefinition, extra
 }
 
 
+export async function getSmartAudienceDefinitionForSegmentKey(key: string | null | undefined): Promise<SmartAudienceDefinition | null> {
+  if (!key || !key.startsWith("list:")) return null;
+  return getSmartAudienceDefinitionForList(key.slice("list:".length));
+}
+
 export async function getSmartAudienceDefinitionForList(listId: string): Promise<SmartAudienceDefinition | null> {
   const row = await prisma.communicationAudienceList
     .findUnique({ where: { id: listId }, select: { type: true, metadata: true, channels: true } })
