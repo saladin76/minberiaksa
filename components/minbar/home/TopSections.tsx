@@ -204,9 +204,9 @@ export function StoriesRail() {
  *
  * The intro film is a different recording per language edition, so the play
  * action resolves the id from the locale rather than subtitling one cut  and
- * the poster is the film's own frame at 0:03, captured per edition and served
- * from public/minbar/assets/hero/, rather than YouTube's auto-thumbnail or an
- * unrelated photograph. A poster that IS the film is the honest preview.
+ * the poster is a frame of that edition's own film, served from
+ * public/minbar/assets/hero/ rather than an unrelated photograph. A poster
+ * that IS the film is the honest preview.
  *
  * Layered background: an ivory base, two soft gold glows placed toward the
  * film, the Aqsa pattern at its quietest, and the dome line faint at the end
@@ -244,9 +244,11 @@ function AccentedTitle({ text, accent }: { text: string; accent: string }) {
 
 /** The 0:03 frame of the intro film for this edition. */
 export function heroPoster(locale: string): string {
-  if (locale === "ar") return "/minbar/assets/hero/intro-ar.webp";
-  if (locale === "tr") return "/minbar/assets/hero/intro-tr.webp";
-  return "/minbar/assets/hero/intro-intl.webp";
+  // Named after the film they belong to (see `introVideoId`), so a new film
+  // gets a new file and no cache keeps showing the old one.
+  if (locale === "ar") return "/minbar/assets/hero/intro-ar-E_TZglHItoY.webp";
+  if (locale === "tr") return "/minbar/assets/hero/intro-tr-G7mgN6jux2s.webp";
+  return "/minbar/assets/hero/intro-intl-3VVMdV5c_RU.webp";
 }
 
 /** Headline figures from the achievements record, formatted for the locale. */

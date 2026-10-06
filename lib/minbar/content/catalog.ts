@@ -17,9 +17,9 @@
  * international cuts are separate recordings, not subtitles of one.
  */
 export function introVideoId(locale: string): string {
-  if (locale === "ar") return "kdsphkfqq6Q";
-  if (locale === "tr") return "35aS9lTFsXs";
-  return "yPXKyaiNKU4";
+  if (locale === "ar") return "E_TZglHItoY";
+  if (locale === "tr") return "G7mgN6jux2s";
+  return "3VVMdV5c_RU";
 }
 
 /**
