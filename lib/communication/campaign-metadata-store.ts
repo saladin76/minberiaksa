@@ -5,7 +5,10 @@ import { prisma } from "@/lib/prisma";
 export type CampaignMetadata = Record<string, unknown>;
 
 type MutationOptions = {
+  /** Optional status to write atomically with the metadata mutation. */
   status?: string;
+  /** Optional status precondition; useful when a lease may only be claimed while SENDING. */
+  expectedStatus?: string;
   attempts?: number;
 };
 
@@ -39,7 +42,11 @@ export async function mutateCampaignMetadata(
     if (options.status) data.status = options.status;
 
     const result = await prisma.communicationCampaign.updateMany({
-      where: { id: campaignId, updatedAt: latest.updatedAt },
+      where: {
+        id: campaignId,
+        updatedAt: latest.updatedAt,
+        ...(options.expectedStatus ? { status: options.expectedStatus } : {}),
+      },
       data,
     }).catch(() => ({ count: 0 }));
 
