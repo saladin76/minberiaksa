@@ -184,3 +184,23 @@ test("campaign controls dialog stays scrollable and cannot bubble clicks into th
   assert.match(dialog, /onClick=\{\(event\) => event\.stopPropagation\(\)\}/);
   assert.match(dialog, /onPointerDown=\{\(event\) => event\.stopPropagation\(\)\}/);
 });
+
+
+test("WhatsApp inbox defaults to all conversations and auto-selects an available sender/conversation", () => {
+  const inbox = read("app/(dashboard)/dashboard/communication/inbox/_components/WhatsappInbox.tsx");
+  assert.match(inbox, /useState\("all"\)/);
+  assert.match(inbox, /communication:whatsapp:senderId/);
+  assert.match(inbox, /nextSenders\.length === 1/);
+  assert.match(inbox, /setActiveId\(nextConversations\[0\]\.id\)/);
+  assert.match(inbox, /عرض كل المحادثات/);
+});
+
+test("WhatsApp inbox exposes free-form inside 24h and greeting-template re-entry outside the window", () => {
+  const inbox = read("app/(dashboard)/dashboard/communication/inbox/_components/WhatsappInbox.tsx");
+  const smart = read("components/dashboard/SmartWhatsappDialog.tsx");
+  assert.match(inbox, /replyWindow\?\.open/);
+  assert.match(inbox, /إرسال قالب تحية/);
+  assert.match(inbox, /initialMode=\{smartInitialMode\}/);
+  assert.match(smart, /initialMode\?: "FREEFORM" \| "UTILITY" \| "MARKETING"/);
+  assert.match(smart, /preferred === "MARKETING"/);
+});
