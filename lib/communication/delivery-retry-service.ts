@@ -134,11 +134,10 @@ async function consentBlockReason(
       select: { doNotContact: true, emailOptIn: true, whatsappOptIn: true, smsOptIn: true },
     })
     .catch(() => null);
-  if (!profile) return purpose === "MARKETING" ? "لا توجد موافقة مسجّلة لهذا المستلم" : null;
+  if (!profile) return channel === "WHATSAPP" ? null : (purpose === "MARKETING" ? "لا توجد موافقة مسجّلة لهذا المستلم" : null);
   if (profile.doNotContact) return "المستلم مفعّل عليه «عدم التواصل»";
-  if (purpose !== "MARKETING") return null;
-  const optedIn =
-    channel === "EMAIL" ? profile.emailOptIn : channel === "WHATSAPP" ? profile.whatsappOptIn : profile.smsOptIn;
+  if (purpose !== "MARKETING" || channel === "WHATSAPP") return null;
+  const optedIn = channel === "EMAIL" ? profile.emailOptIn : profile.smsOptIn;
   return optedIn ? null : "رسالة تسويقية بدون موافقة على هذه القناة";
 }
 
