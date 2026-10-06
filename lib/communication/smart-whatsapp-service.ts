@@ -7,7 +7,7 @@ import { replyWindowFor, sendConversationReply } from "./conversation-reply-serv
 import { normalizePhoneE164, phoneMatchVariants } from "./phone";
 import { loadSenderRoutingSnapshot, resolveSenderFromSnapshot, type ResolvedSender } from "./sender-resolution";
 import { getActiveMetaWhatsappRuntimeConfig } from "./runtime-config";
-import { loadContextsForUserIds } from "@/lib/templates/variables";
+import { loadContextForDonation, loadContextsForUserIds, type TemplateContext } from "@/lib/templates/variables";
 import { renderChannelTemplate } from "./template-compat";
 import { resolveMetaTemplateMapping } from "./automatic-message-dispatcher";
 import { buildMetaComponents } from "./providers/meta-whatsapp/parameters";
@@ -169,8 +169,44 @@ async function sendApprovedTemplateForDonor(args: {
   }
 
   const contexts = await loadContextsForUserIds([args.ctx.userId]);
-  const renderCtx = contexts.get(args.ctx.userId);
+  let renderCtx: TemplateContext | undefined = contexts.get(args.ctx.userId);
   if (!renderCtx) return { ok: false, reason: "CONTEXT_LOAD_FAILED" };
+
+  // Transactional Meta templates often depend on {{donation.*}}. A donor-profile send previously
+  // loaded only user + PAID-history context, so choosing donation_failed from the Smart WhatsApp
+  // dialog could never supply donation.amount/currency/title. Resolve the template's enabled
+  // trigger and focus the latest matching donation before rendering. This keeps manual resend/test
+  // behavior aligned with the automatic event path without asking operators to understand variables.
+  const variableRows = Array.isArray(template.variables) ? template.variables : [];
+  const needsDonationContext = variableRows.some((entry) => {
+    if (!entry || typeof entry !== "object") return false;
+    const key = String((entry as { key?: unknown }).key ?? "");
+    return key === "donation" || key.startsWith("donation.");
+  });
+  if (needsDonationContext) {
+    const trigger = await prisma.messageTrigger.findFirst({
+      where: { templateId: template.id, enabled: true },
+      select: { event: true },
+    }).catch(() => null);
+    const event = String(trigger?.event ?? "");
+    const status =
+      event === "DONATION_FAILED" ? "FAILED"
+      : ["DONATION_PAID", "FIRST_DONATION", "SUBSCRIPTION_PAYMENT"].includes(event) ? "PAID"
+      : null;
+    const focus = await prisma.donation.findFirst({
+      where: {
+        donorId: args.ctx.userId,
+        ...(status ? { status } : {}),
+      },
+      orderBy: { createdAt: "desc" },
+      select: { id: true },
+    }).catch(() => null);
+    if (focus?.id) {
+      const focused = await loadContextForDonation(focus.id);
+      if (focused) renderCtx = focused;
+    }
+  }
+
   const rendered = await renderChannelTemplate("WHATSAPP", template.id, args.locale, renderCtx);
   if (!rendered) return { ok: false, reason: "TEMPLATE_RENDER_FAILED" };
 
@@ -203,6 +239,7 @@ async function sendApprovedTemplateForDonor(args: {
     recipientPhone: args.ctx.phone,
     locale: args.locale,
     renderedBody: rendered.body,
+    variables: { snapshot: renderCtx } as never,
     senderId: args.sender.id,
     createdBy: args.actor?.actorId ?? null,
     status: "RENDERED",

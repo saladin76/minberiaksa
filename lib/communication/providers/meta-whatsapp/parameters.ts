@@ -1,3 +1,4 @@
+import { isValidMetaParameterName, metaParameterName } from "../../meta-parameter-name";
 /**
  * Template context → Meta `components`.
  *
@@ -65,15 +66,11 @@ function namedPlaceholderOrder(text: string): string[] {
   return out;
 }
 
-function toMetaParameterName(key: string): string {
-  const normalized = key
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9_]+/g, "_")
-    .replace(/^_+|_+$/g, "")
-    .replace(/_+/g, "_");
-  return /^[a-z]/.test(normalized) ? normalized : `p_${normalized || "value"}`;
+function invalidNamedParameter(names: string[]): string | null {
+  return names.find((name) => !isValidMetaParameterName(name)) ?? null;
 }
+
+const toMetaParameterName = metaParameterName;
 
 function asArray(value: unknown): unknown[] {
   return Array.isArray(value) ? value : [];
@@ -170,6 +167,14 @@ export function buildMetaComponents(input: {
         const text = String(component.text ?? "");
         const names = namedPlaceholderOrder(text);
         const positions = placeholderOrder(text);
+        const invalidName = invalidNamedParameter(names);
+        if (invalidName) {
+          return {
+            ok: false,
+            reason: "META_TEMPLATE_PARAMETER_NAME_INVALID",
+            detail: `header {{${invalidName}}} exceeds Meta's 20-character parameter-name limit; republish this template.`,
+          };
+        }
         if (!positions.length && !names.length) continue;
         const parameters: MetaParameter[] = [];
         if (names.length) {
@@ -228,6 +233,14 @@ export function buildMetaComponents(input: {
       const bodyText = String(component.text ?? "");
       const names = namedPlaceholderOrder(bodyText);
       const positions = placeholderOrder(bodyText);
+      const invalidName = invalidNamedParameter(names);
+      if (invalidName) {
+        return {
+          ok: false,
+          reason: "META_TEMPLATE_PARAMETER_NAME_INVALID",
+          detail: `body {{${invalidName}}} exceeds Meta's 20-character parameter-name limit; republish this template.`,
+        };
+      }
       const isAuthenticationBody = (component as Record<string, unknown>).add_security_recommendation !== undefined;
       if (!positions.length && !names.length && !isAuthenticationBody) continue;
 
@@ -293,6 +306,14 @@ export function buildMetaComponents(input: {
         const url = String(button.url ?? "");
         const names = namedPlaceholderOrder(url);
         const positions = placeholderOrder(url);
+        const invalidName = invalidNamedParameter(names);
+        if (invalidName) {
+          return {
+            ok: false,
+            reason: "META_TEMPLATE_PARAMETER_NAME_INVALID",
+            detail: `button ${index} {{${invalidName}}} exceeds Meta's 20-character parameter-name limit; republish this template.`,
+          };
+        }
         if (!positions.length && !names.length) continue;
         if (names.length > 1 || positions.length > 1) {
           return { ok: false, reason: "TEMPLATE_URL_PARAMETER_COUNT_INVALID", detail: `button ${index}` };
