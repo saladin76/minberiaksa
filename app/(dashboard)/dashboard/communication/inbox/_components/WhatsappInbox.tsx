@@ -244,7 +244,8 @@ export function WhatsappInbox() {
         }
       />
 
-      <div className="mb-4 flex flex-wrap items-center gap-3">
+      <div className="mb-4 rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+        <div className="flex flex-wrap items-center gap-3">
         <SegmentedControl
           value={filter}
           onChange={(v) => setFilter(String(v))}
@@ -266,14 +267,18 @@ export function WhatsappInbox() {
             className="w-64 rounded-lg border border-slate-200 bg-white py-1.5 pr-8 pl-3 text-sm text-slate-700 placeholder:text-slate-400"
           />
         </div>
-        <span className="text-xs text-slate-500">
+        <span className={cn(
+          "mr-auto rounded-full px-2.5 py-1 text-xs font-medium",
+          needsReply > 0 ? "bg-amber-50 text-amber-700" : "bg-emerald-50 text-emerald-700",
+        )}>
           {needsReply > 0 ? `${needsReply} محادثة بانتظار ردّ` : "لا شيء بانتظار ردّ"}
         </span>
+        </div>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,22rem)_minmax(0,1fr)]">
+      <div className="grid gap-4 xl:grid-cols-[minmax(20rem,23rem)_minmax(0,1fr)]">
         {/* ── Conversation list ─────────────────────────────────── */}
-        <div className="rounded-xl border border-slate-200 bg-white overflow-hidden">
+        <div className="rounded-xl border border-slate-200 bg-white overflow-hidden shadow-sm min-h-[34rem]">
           {loadingList ? (
             <div className="flex items-center justify-center py-16 text-slate-400">
               <Loader2 className="w-5 h-5 animate-spin" />
@@ -294,8 +299,8 @@ export function WhatsappInbox() {
                       type="button"
                       onClick={() => setActiveId(c.id)}
                       className={cn(
-                        "w-full text-right px-3 py-3 hover:bg-slate-50 transition-colors",
-                        activeId === c.id && "bg-brand/5",
+                        "relative w-full text-right px-3 py-3 hover:bg-slate-50 transition-colors",
+                        activeId === c.id && "bg-emerald-50/70 before:absolute before:inset-y-2 before:right-0 before:w-1 before:rounded-l-full before:bg-emerald-500",
                       )}
                     >
                       <div className="flex items-center justify-between gap-2">
@@ -327,7 +332,7 @@ export function WhatsappInbox() {
         </div>
 
         {/* ── Thread ─────────────────────────────────────────────── */}
-        <div className="rounded-xl border border-slate-200 bg-white overflow-hidden flex flex-col">
+        <div className="rounded-xl border border-slate-200 bg-white overflow-hidden flex min-h-[34rem] flex-col shadow-sm">
           {!activeId ? (
             <EmptyState variant="inline" title="اختر محادثة" description="ستظهر الرسائل وملف المتبرع هنا." />
           ) : loadingDetail && !detail ? (
@@ -338,7 +343,7 @@ export function WhatsappInbox() {
             <EmptyState variant="inline" title="تعذّر تحميل المحادثة" />
           ) : (
             <>
-              <div className="border-b border-slate-100 px-4 py-3">
+              <div className="border-b border-slate-100 bg-white px-4 py-3">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="min-w-0">
                     <p className="text-sm font-semibold text-slate-900 truncate">
@@ -387,7 +392,7 @@ export function WhatsappInbox() {
                 )}
               </div>
 
-              <div ref={timelineRef} className="flex-1 overflow-y-auto px-4 py-4 space-y-2 max-h-[52vh] bg-slate-50/50">
+              <div ref={timelineRef} className="flex-1 overflow-y-auto px-4 py-5 space-y-3 min-h-[26rem] max-h-[58vh] bg-[linear-gradient(180deg,#f8fafc_0%,#f1f5f9_100%)]">
                 {detail.hasMore && (
                   <button
                     type="button"
@@ -410,19 +415,23 @@ export function WhatsappInbox() {
                 {detail.timeline.map((item, index) => {
                   if (item.kind === "status") {
                     return (
-                      <p key={index} className="text-center text-[11px] text-slate-400">
-                        {item.status} · {fmtFull(item.at)}
-                      </p>
+                      <div key={index} className="flex justify-center py-0.5">
+                        <span className="rounded-full border border-slate-200 bg-white/90 px-2.5 py-1 text-[10px] font-medium text-slate-500 shadow-sm">
+                          {item.status} · {fmtFull(item.at)}
+                        </span>
+                      </div>
                     );
                   }
                   const inbound = item.kind === "inbound";
                   const MediaIcon = item.media ? MEDIA_ICONS[item.media.kind] ?? FileText : null;
                   return (
-                    <div key={index} className={cn("flex", inbound ? "justify-start" : "justify-end")}>
+                    <div key={index} className="flex w-full">
                       <div
                         className={cn(
-                          "max-w-[80%] rounded-2xl px-3 py-2 text-sm",
-                          inbound ? "bg-white border border-slate-200 text-slate-800" : "bg-brand/10 border border-brand/20 text-slate-900",
+                          "max-w-[72%] rounded-2xl px-3.5 py-2.5 text-sm leading-6 shadow-sm",
+                          inbound
+                            ? "mr-auto rounded-bl-md border border-slate-200 bg-white text-slate-800"
+                            : "ml-auto rounded-br-md border border-emerald-200 bg-emerald-50 text-slate-900",
                         )}
                       >
                         {item.media && MediaIcon && (
@@ -445,7 +454,7 @@ export function WhatsappInbox() {
                 })}
               </div>
 
-              <div className="border-t border-slate-100 px-4 py-3">
+              <div className="border-t border-slate-100 bg-white px-4 py-3">
                 {replyWindow && (
                   <p className={cn(
                     "mb-2 inline-flex items-center gap-1.5 text-xs",
@@ -481,7 +490,7 @@ export function WhatsappInbox() {
                     </button>
                   </div>
                 ) : detail.donor?.userId ? (
-                  <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3">
+                  <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50 p-3">
                     <div>
                       <p className="text-xs font-semibold text-amber-800">نافذة الرد الحر مغلقة</p>
                       <p className="mt-1 text-[11px] text-amber-700">يمكن إرسال رسالة خدمة عبر Direct Send أو اختيار قالب Marketing معتمد.</p>
