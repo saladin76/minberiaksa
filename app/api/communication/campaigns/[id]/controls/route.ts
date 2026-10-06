@@ -6,7 +6,7 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 import { requireAdminOrDashboardPermission } from "@/lib/dashboard/api-auth";
 import { auditActorFromDashboardSession, writeAuditLog } from "@/lib/audit-log";
 import { getCampaign } from "@/lib/communication/campaign-service";
-import { campaignSendControls, isValidTimeZone, whatsappSentLast24Hours } from "@/lib/communication/campaign-send-controls";
+import { campaignEmergencyStopEnabled, campaignSendControls, isValidTimeZone, whatsappSentLast24Hours } from "@/lib/communication/campaign-send-controls";
 import { mutateCampaignMetadata } from "@/lib/communication/campaign-metadata-store";
 
 export const runtime = "nodejs";
@@ -15,13 +15,29 @@ export const dynamic = "force-dynamic";
 const schema = z.object({
   paused: z.boolean().optional(),
   speedMode: z.enum(["SAFE", "BALANCED", "FAST", "MAX"]).optional(),
+  autoSpeed: z.boolean().optional(),
+  priority: z.enum(["LOW", "NORMAL", "HIGH", "URGENT"]).optional(),
   dailyCap: z.number().int().min(1).max(1_000_000).optional(),
+  scheduledStopAt: z.string().datetime().nullable().optional(),
+  resumeAt: z.string().datetime().nullable().optional(),
   quietHours: z.object({
     enabled: z.boolean(),
     start: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/),
     end: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/),
     timezone: z.string().min(1).max(120).refine(isValidTimeZone, "Invalid IANA timezone"),
   }).optional(),
+}).superRefine((value, ctx) => {
+  if (value.scheduledStopAt && value.resumeAt) {
+    const stop = Date.parse(value.scheduledStopAt);
+    const resume = Date.parse(value.resumeAt);
+    if (Number.isFinite(stop) && Number.isFinite(resume) && resume <= stop) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["resumeAt"],
+        message: "وقت الاستئناف يجب أن يكون بعد وقت التوقف.",
+      });
+    }
+  }
 });
 
 export async function GET(_: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -39,6 +55,10 @@ export async function GET(_: NextRequest, { params }: { params: Promise<{ id: st
     usage: {
       usedLast24h,
       remaining: campaign.channel === "WHATSAPP" ? Math.max(controls.dailyCap - usedLast24h, 0) : null,
+    },
+    global: {
+      emergencyStop: await campaignEmergencyStopEnabled(),
+      canManage: session?.user?.role === "ADMIN",
     },
   });
 }
@@ -68,7 +88,11 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   const requested = {
     paused: parsed.data.paused ?? current.paused,
     speedMode: parsed.data.speedMode ?? current.speedMode,
+    autoSpeed: parsed.data.autoSpeed ?? current.autoSpeed,
+    priority: parsed.data.priority ?? current.priority,
     dailyCap: parsed.data.dailyCap ?? current.dailyCap,
+    scheduledStopAt: parsed.data.scheduledStopAt !== undefined ? parsed.data.scheduledStopAt : current.scheduledStopAt,
+    resumeAt: parsed.data.resumeAt !== undefined ? parsed.data.resumeAt : current.resumeAt,
     quietHours: parsed.data.quietHours ?? current.quietHours,
   };
 
