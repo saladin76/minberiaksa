@@ -11,10 +11,8 @@
  * the member writer and the send-time member loader all read it. Raising it
  * raises all four together, which is the point.
  *
- * This is still a stored list of ids. For audiences in the tens of thousands
- * the right shape is a stored *definition* (the filter the picker used) that
- * the sender resolves at run time  a follow-up, tracked separately; until it
- * exists this constant is the honest boundary of the feature, and both the UI
- * and the API say the same thing about where it is.
+ * The current implementation supports full large campaign audiences up to 100,000
+ * selected donors in one saved list. The UI, API validator, member writer and send
+ * path share this ceiling so "select all" never silently truncates at 5,000.
  */
-export const AUDIENCE_SELECTION_MAX = 5000;
+export const AUDIENCE_SELECTION_MAX = 100000;
