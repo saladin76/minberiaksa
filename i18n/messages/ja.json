@@ -688,7 +688,8 @@
     "giftBothLong": "WhatsAppとメール",
     "giftWithAmount": "、金額：",
     "giftNoAmount": "、金額は記載されません",
-    "recipientWhatsapp": "贈り先のWhatsApp番号"
+    "recipientWhatsapp": "贈り先のWhatsApp番号",
+    "itemsUnavailable": "次の項目はお支払いできません：{items}。カートから削除するか、特定のプロジェクトを選んでもう一度お試しください。"
   },
   "certificates": {
     "certNoLabel": "証明書番号",

@@ -200,8 +200,11 @@ export default function ZakatPage({
 
   /**
    * Every add from this page is zakat  that is what keeps it ring-fenced.
-   * With a bound category the gift goes where its donation box points; with
-   * none it is the generic zakat intention, as before.
+   * With a bound category the gift goes where its donation box points, and to
+   * the category itself when the box has no target (the zakat category holds
+   * no campaigns, so there is no campaign to fall back to). The bare
+   * `zakatToPalestine` intention has no destination the order can carry; it
+   * is only left for a site with no zakat category at all.
    */
   const addZakat = (value: number, currency = "USD") => {
     const target: Partial<MinbarCartItem> =
@@ -209,7 +212,9 @@ export default function ZakatPage({
         ? { categoryId: category.donateTarget.id }
         : category?.donateTarget?.kind === "campaign"
           ? { projectId: category.donateTarget.slug }
-          : { titleKey: "zakatToPalestine" };
+          : category
+            ? { categoryId: category.id }
+            : { titleKey: "zakatToPalestine" };
     addToCart({ ...target, typeKey: "zakat", freqKey: "once", amount: value, currency });
   };
 

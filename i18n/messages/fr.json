@@ -1722,7 +1722,8 @@
     "giftNoAmount": ", sans mention du montant",
     "recipientWhatsapp": "Numéro WhatsApp du destinataire",
     "bankTransferUploadNote": "Après le virement, vous téléverserez le reçu ou l'avis de virement sur la page suivante. Votre don est confirmé une fois que notre équipe financière l'a rapproché du compte.",
-    "ctaBankContinue": "Continuer  envoyer le reçu du virement"
+    "ctaBankContinue": "Continuer  envoyer le reçu du virement",
+    "itemsUnavailable": "Ces éléments ne peuvent pas être réglés : {items}. Retirez-les de votre panier ou choisissez un projet précis, puis réessayez."
   },
   "certificates": {
     "certNoLabel": "N° du Certificat",

@@ -5,7 +5,7 @@ import { getServerSession } from "next-auth";
 import { prisma } from "@/lib/prisma";
 import { resolveGeoFromRequest } from "@/lib/geo/country-from-request";
 import { authOptions } from "@/app/api/auth/[...nextauth]/options";
-import { listProjects } from "@/lib/minbar/projects";
+import { listProjectSlugAliases, listProjects } from "@/lib/minbar/projects";
 import { listCategoryTitles } from "@/lib/minbar/category-page";
 import { banksFor } from "@/lib/minbar/banks-server";
 import MinbarMessages from "@/components/minbar/MinbarMessages";
@@ -51,8 +51,9 @@ async function visitorCountry(): Promise<string | null> {
  */
 export default async function Checkout({ params }: Props) {
   const { locale } = await params;
-  const [projects, categories, session, banks, ipCountry] = await Promise.all([
+  const [projects, projectAliases, categories, session, banks, ipCountry] = await Promise.all([
     listProjects(locale),
+    listProjectSlugAliases(),
     listCategoryTitles(locale),
     getServerSession(authOptions),
     banksFor(locale),
@@ -85,7 +86,7 @@ export default async function Checkout({ params }: Props) {
 
   return (
     <MinbarMessages locale={locale} namespaces={NAMESPACES}>
-      <CheckoutPage projects={projects} categories={categories} banks={banks} donor={donor} defaultCountry={defaultCountry} />
+      <CheckoutPage projects={projects} projectAliases={projectAliases} categories={categories} banks={banks} donor={donor} defaultCountry={defaultCountry} />
     </MinbarMessages>
   );
 }

@@ -688,7 +688,8 @@
     "giftBothLong": "WhatsApp和邮件",
     "giftWithAmount": "，金额为",
     "giftNoAmount": "，不显示金额",
-    "recipientWhatsapp": "受赠人的WhatsApp号码"
+    "recipientWhatsapp": "受赠人的WhatsApp号码",
+    "itemsUnavailable": "以下项目无法支付：{items}。请将其从捐赠篮中移除或选择具体项目后重试。"
   },
   "certificates": {
     "certNoLabel": "证书编号",

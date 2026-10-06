@@ -48,14 +48,21 @@ export async function resolveGuestDonor(
   opts: ResolveOptions
 ): Promise<ResolvedDonor> {
   const email = guest.email?.trim().toLowerCase() || null;
-  const phone = guest.phone?.trim() || null;
+  const rawPhone = guest.phone?.trim() || null;
+  /* The checkout's phone field always carries the dial code, so a guest who
+     leaves it empty sends just "+20" or "+90". Hundreds of accounts hold such a
+     bare code, and matching on it merged unrelated guests into the oldest of
+     them  their gift, and their email if that account had none. A number
+     needs at least 7 digits to identify anyone; anything shorter is no phone. */
+  const phone = rawPhone && rawPhone.replace(/\D/g, "").length >= 7 ? rawPhone : null;
   const name = [guest.firstName, guest.lastName].filter(Boolean).join(" ").trim() || null;
   // Phone-derived country is a stronger signal than IP geo and lets us avoid
   // leaving brand-new donors with an empty `countryCode` (which then defaults
   // to whatever Meta CAPI infers from the request IP  often wrong on mobile
   // carriers and VPNs).
   const countryCode =
-    guest.countryCode?.trim().toUpperCase() || countryCodeFromPhone(phone) || null;
+    // The dial code alone still says which country, even when it is no number.
+    guest.countryCode?.trim().toUpperCase() || countryCodeFromPhone(rawPhone) || null;
   const city = guest.city?.trim() || null;
   const region = guest.region?.trim() || null;
   const birthdate = normalizeBirthdate(guest.birthdate);

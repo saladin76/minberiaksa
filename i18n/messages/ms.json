@@ -688,7 +688,8 @@
     "giftBothLong": "WhatsApp dan e-mel",
     "giftWithAmount": ", berjumlah ",
     "giftNoAmount": ", tanpa menyebut jumlah",
-    "recipientWhatsapp": "Nombor WhatsApp penerima"
+    "recipientWhatsapp": "Nombor WhatsApp penerima",
+    "itemsUnavailable": "Item berikut tidak boleh dibayar: {items}. Buang dari bakul atau pilih projek tertentu, kemudian cuba lagi."
   },
   "certificates": {
     "certNoLabel": "No. sijil",

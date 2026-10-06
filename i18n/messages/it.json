@@ -688,7 +688,8 @@
     "giftBothLong": "WhatsApp ed e-mail",
     "giftWithAmount": ", per un importo di ",
     "giftNoAmount": ", senza indicare l'importo",
-    "recipientWhatsapp": "Numero WhatsApp del destinatario"
+    "recipientWhatsapp": "Numero WhatsApp del destinatario",
+    "itemsUnavailable": "Non è possibile pagare questi elementi: {items}. Rimuovili dal carrello o scegli un progetto specifico, poi riprova."
   },
   "certificates": {
     "certNoLabel": "N. certificato",

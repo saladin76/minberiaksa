@@ -688,7 +688,8 @@
     "giftBothLong": "WhatsApp en e-mail",
     "giftWithAmount": ", met een bedrag van ",
     "giftNoAmount": ", zonder het bedrag te vermelden",
-    "recipientWhatsapp": "WhatsApp-nummer van de ontvanger"
+    "recipientWhatsapp": "WhatsApp-nummer van de ontvanger",
+    "itemsUnavailable": "Deze items kunnen niet worden betaald: {items}. Verwijder ze uit je mandje of kies een specifiek project en probeer het opnieuw."
   },
   "certificates": {
     "certNoLabel": "Certificaatnr.",

@@ -688,7 +688,8 @@
     "giftBothLong": "व्हाट्सऐप और ईमेल",
     "giftWithAmount": ", राशि ",
     "giftNoAmount": ", राशि का उल्लेख किए बिना",
-    "recipientWhatsapp": "प्राप्तकर्ता का व्हाट्सऐप नंबर"
+    "recipientWhatsapp": "प्राप्तकर्ता का व्हाट्सऐप नंबर",
+    "itemsUnavailable": "इन मदों का भुगतान नहीं हो सकता: {items}। इन्हें टोकरी से हटाएँ या कोई विशेष परियोजना चुनें, फिर दोबारा प्रयास करें।"
   },
   "certificates": {
     "certNoLabel": "प्रमाणपत्र संख्या",

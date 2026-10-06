@@ -1722,7 +1722,8 @@
     "giftNoAmount": ", tutar belirtilmeden",
     "recipientWhatsapp": "Hediye edilenin WhatsApp numarası",
     "bankTransferUploadNote": "Havaleyi yaptıktan sonra dekontu veya havale bildirimini bir sonraki sayfada yükleyeceksiniz. Bağışınız, finans ekibimiz hesapla eşleştirdiğinde onaylanır.",
-    "ctaBankContinue": "Devam  havale dekontunu yükle"
+    "ctaBankContinue": "Devam  havale dekontunu yükle",
+    "itemsUnavailable": "Şu kalemler için ödeme yapılamıyor: {items}. Sepetinizden kaldırın veya belirli bir proje seçin, ardından tekrar deneyin."
   },
   "certificates": {
     "certNoLabel": "Sertifika no",

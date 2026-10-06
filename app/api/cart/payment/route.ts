@@ -493,7 +493,10 @@ export async function POST(request: NextRequest) {
         where: { id: { in: campaignIds } },
       });
 
-      if (campaigns.length !== items.length) {
+      /* Against DISTINCT ids: two basket rows for the same project are one
+         campaign row, and comparing with `items.length` refused that whole
+         order as "not found". */
+      if (campaigns.length !== new Set(campaignIds).size) {
         return NextResponse.json(
           { error: "One or more campaigns not found" },
           { status: 404 }
@@ -519,7 +522,8 @@ export async function POST(request: NextRequest) {
         select: { id: true, isActive: true },
       });
 
-      if (categories.length !== categoryItems.length) {
+      // Distinct ids, as for campaigns: the same category twice is one row.
+      if (categories.length !== new Set(categoryIds).size) {
         return NextResponse.json({ error: "One or more categories not found" }, { status: 404 });
       }
 

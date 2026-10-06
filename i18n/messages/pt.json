@@ -1720,7 +1720,8 @@
     "giftBothLong": "WhatsApp e e-mail",
     "giftWithAmount": ", no valor de ",
     "giftNoAmount": ", sem mencionar o valor",
-    "recipientWhatsapp": "Número de WhatsApp do destinatário"
+    "recipientWhatsapp": "Número de WhatsApp do destinatário",
+    "itemsUnavailable": "Não é possível pagar estes itens: {items}. Remova-os do seu cesto ou escolha um projeto específico e tente novamente."
   },
   "certificates": {
     "certNoLabel": "N.º do certificado",

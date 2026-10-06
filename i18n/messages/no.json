@@ -688,7 +688,8 @@
     "giftBothLong": "WhatsApp og e-post",
     "giftWithAmount": ", med beløpet ",
     "giftNoAmount": ", uten at beløpet nevnes",
-    "recipientWhatsapp": "Mottakerens WhatsApp-nummer"
+    "recipientWhatsapp": "Mottakerens WhatsApp-nummer",
+    "itemsUnavailable": "Disse elementene kan ikke betales: {items}. Fjern dem fra kurven eller velg et bestemt prosjekt, og prøv igjen."
   },
   "certificates": {
     "certNoLabel": "Sertifikatnr.",

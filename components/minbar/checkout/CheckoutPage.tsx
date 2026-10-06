@@ -21,10 +21,12 @@ import {
   createDonation,
   initiateBankPayment,
   markDonationFailed,
+  OrderRejectedError,
   orderSchedule,
   orderType,
   startPayPalPayment,
   submitGatewayForm,
+  UnpayableItemsError,
   type CheckoutMethod,
 } from "@/lib/minbar/checkout";
 import { firstChargeAfterCheckout, frequencyOfOrderType, scheduleRuleFor } from "@/lib/donations/recurring-schedule";
@@ -72,6 +74,8 @@ type PaymentMethod = "card" | "paypal" | "bank";
 
 export interface CheckoutPageProps {
   projects: MinbarProject[];
+  /** Every published campaign's slugs in all languages → id (see `listProjectSlugAliases`). */
+  projectAliases?: Record<string, string>;
   categories: MinbarCategoryTitle[];
   banks: readonly MinbarBank[];
   donor: { firstName: string; lastName: string; email: string; phone: string } | null;
@@ -79,7 +83,7 @@ export interface CheckoutPageProps {
   defaultCountry: string;
 }
 
-export default function CheckoutPage({ projects, categories, banks, donor, defaultCountry }: CheckoutPageProps) {
+export default function CheckoutPage({ projects, projectAliases, categories, banks, donor, defaultCountry }: CheckoutPageProps) {
   const locale = useLocale();
   const t = useTranslations("cart");
   const tCommon = useTranslations("common");
@@ -347,7 +351,8 @@ export default function CheckoutPage({ projects, categories, banks, donor, defau
 
     /* A signed-in donor's number goes on their account, so the next checkout
        starts with it filled in. Best effort: the order does not wait on it. */
-    if (signedIn && phone.trim() && phone.trim() !== donor?.phone) {
+    // A bare dial code ("+90") is the empty field, not a number to save.
+    if (signedIn && phone.replace(/\D/g, "").length >= 7 && phone.trim() !== donor?.phone) {
       void fetch("/api/users/me/phone", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ phone: phone.trim() }) }).catch(() => undefined);
     }
 
@@ -356,6 +361,7 @@ export default function CheckoutPage({ projects, categories, banks, donor, defau
       const donation = await createDonation({
         items,
         projects,
+        projectAliases,
         currency,
         locale,
         method: methodForServer,
@@ -453,7 +459,17 @@ export default function CheckoutPage({ projects, categories, banks, donor, defau
       submitGatewayForm(form, browserFields);
     } catch (cause) {
       if (donationId) await markDonationFailed(donationId, String(cause));
-      setError(tSystem("techErrorLead"));
+      console.error("[checkout] could not complete the donation:", cause);
+      /* Say what actually went wrong. Every failure used to read "we are
+         fixing the problem", which hid both a basket the order cannot carry
+         and the server's own reason for refusing it. */
+      if (cause instanceof UnpayableItemsError) {
+        setError(t("itemsUnavailable", { items: cause.items.map(resolveTitle).join("، ") }));
+      } else if (cause instanceof OrderRejectedError && cause.status >= 400 && cause.status < 500 && cause.message !== "order-failed") {
+        setError(cause.message);
+      } else {
+        setError(tSystem("techErrorLead"));
+      }
       setSubmitting(false);
     }
   };

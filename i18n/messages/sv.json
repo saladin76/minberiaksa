@@ -688,7 +688,8 @@
     "giftBothLong": "WhatsApp och e-post",
     "giftWithAmount": ", med beloppet ",
     "giftNoAmount": ", utan att beloppet nämns",
-    "recipientWhatsapp": "Mottagarens WhatsApp-nummer"
+    "recipientWhatsapp": "Mottagarens WhatsApp-nummer",
+    "itemsUnavailable": "Dessa poster kan inte betalas: {items}. Ta bort dem från korgen eller välj ett specifikt projekt och försök igen."
   },
   "certificates": {
     "certNoLabel": "Certifikatnr",

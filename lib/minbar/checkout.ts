@@ -49,6 +49,8 @@ export interface CreateDonationInput {
   items: readonly MinbarCartItem[];
   /** Every published project, used to resolve a cart slug to a campaign id. */
   projects: readonly MinbarProject[];
+  /** Slugs in every language → campaign id, for rows added on another language's pages. */
+  projectAliases?: Readonly<Record<string, string>>;
   currency: string;
   locale: string;
   method: CheckoutMethod;
@@ -134,14 +136,20 @@ export interface OrderLines {
  */
 export function toOrderItems(
   items: readonly MinbarCartItem[],
-  projects: readonly MinbarProject[]
-): OrderLines {
+  projects: readonly MinbarProject[],
+  /**
+   * Every published campaign's slug in EVERY language (and its id) → id. A
+   * row added on /en carries the English slug, which the /ar project list does
+   * not have; without this the row was dropped.
+   */
+  aliases: Readonly<Record<string, string>> = {}
+): OrderLines & { unmatched: MinbarCartItem[] } {
   const bySlug = new Map(projects.map((project) => [project.slug, project.id]));
-  const lines: OrderLines = { items: [], categoryItems: [], waqfItems: [] };
+  const lines: OrderLines & { unmatched: MinbarCartItem[] } = { items: [], categoryItems: [], waqfItems: [], unmatched: [] };
 
   for (const item of items) {
     const local = lineLocal(item);
-    const campaignId = item.projectId ? bySlug.get(item.projectId) : undefined;
+    const campaignId = item.projectId ? bySlug.get(item.projectId) ?? aliases[item.projectId] : undefined;
     if (campaignId) {
       lines.items.push({
         campaignId,
@@ -173,9 +181,32 @@ export function toOrderItems(
         onBehalf: item.waqf.onBehalf.trim(),
       });
     }
+    else {
+      // Nothing the server can price: a generic intention with no target, or
+      // a project that has since been unpublished. Reported, never dropped.
+      lines.unmatched.push(item);
+    }
   }
 
   return lines;
+}
+
+/**
+ * The basket holds rows the order cannot carry. Thrown before anything is
+ * sent: charging the rest silently would take less than the donor was shown,
+ * and sending nothing used to surface as "we are fixing the problem".
+ */
+export class UnpayableItemsError extends Error {
+  constructor(readonly items: MinbarCartItem[]) {
+    super("unpayable-items");
+  }
+}
+
+/** The order API refused the order; `message` is its reason. */
+export class OrderRejectedError extends Error {
+  constructor(message: string, readonly status: number) {
+    super(message);
+  }
 }
 
 /**
@@ -226,7 +257,8 @@ function conciergeMarker(): { sessionId: string; intent: string | null; campaign
 }
 
 export async function createDonation(input: CreateDonationInput): Promise<CreatedDonation> {
-  const { items, categoryItems, waqfItems } = toOrderItems(input.items, input.projects);
+  const { items, categoryItems, waqfItems, unmatched } = toOrderItems(input.items, input.projects, input.projectAliases);
+  if (unmatched.length) throw new UnpayableItemsError(unmatched);
   if (items.length === 0 && categoryItems.length === 0 && waqfItems.length === 0) throw new Error("cart-empty");
 
   const response = await fetch("/api/cart/payment", {
@@ -280,7 +312,7 @@ export async function createDonation(input: CreateDonationInput): Promise<Create
     | null;
 
   if (!response.ok || !payload?.donation?.id) {
-    throw new Error(payload?.error || "order-failed");
+    throw new OrderRejectedError(payload?.error || "order-failed", response.status);
   }
 
   return {

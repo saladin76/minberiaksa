@@ -284,6 +284,26 @@ export async function listProjects(locale: string, limit?: number): Promise<Minb
 }
 
 /**
+ * Every published campaign's identifiers  its id, base slug and the slug in
+ * every language  mapped to its id. A cart row stores the slug of the page it
+ * was added on, so a gift added on /en and paid on /ar carries a slug the
+ * Arabic project list does not have; the checkout resolves it through this.
+ */
+export async function listProjectSlugAliases(): Promise<Record<string, string>> {
+  const rows = await prisma.campaign.findMany({
+    where: { AND: [{ isActive: true }, NOT_SOFT_DELETED] },
+    select: { id: true, slug: true, translations: { select: { slug: true } } },
+  });
+  const aliases: Record<string, string> = {};
+  for (const row of rows) {
+    aliases[row.id] = row.id;
+    if (row.slug) aliases[row.slug] = row.id;
+    for (const t of row.translations) if (t.slug) aliases[t.slug] = row.id;
+  }
+  return aliases;
+}
+
+/**
  * Every published project filed under one category, in the same order.
  *
  * Filtered on `categoryIds` rather than on `MinbarProject.region`: region is

@@ -1722,7 +1722,8 @@
     "giftNoAmount": ", without mentioning the amount",
     "recipientWhatsapp": "Recipient's WhatsApp number",
     "bankTransferUploadNote": "After you transfer, you will upload the receipt or transfer notice on the next page. Your donation is confirmed once our finance team matches it against the account.",
-    "ctaBankContinue": "Continue  upload the transfer receipt"
+    "ctaBankContinue": "Continue  upload the transfer receipt",
+    "itemsUnavailable": "These items can't be paid for: {items}. Remove them from your basket or choose a specific project, then try again."
   },
   "certificates": {
     "certNoLabel": "Certificate no.",

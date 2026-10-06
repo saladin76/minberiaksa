@@ -688,7 +688,8 @@
     "giftBothLong": "واٹس ایپ اور ای میل",
     "giftWithAmount": "، بمبلغ ",
     "giftNoAmount": "، رقم کے ذکر کے بغیر",
-    "recipientWhatsapp": "وصول کنندہ کا واٹس ایپ نمبر"
+    "recipientWhatsapp": "وصول کنندہ کا واٹس ایپ نمبر",
+    "itemsUnavailable": "ان اشیاء کی ادائیگی ممکن نہیں: {items}۔ انہیں ٹوکری سے ہٹا دیں یا کوئی مخصوص منصوبہ منتخب کریں، پھر دوبارہ کوشش کریں۔"
   },
   "certificates": {
     "certNoLabel": "شہادت نمبر",

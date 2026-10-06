@@ -688,7 +688,8 @@
     "giftBothLong": "WhatsApp dhe email",
     "giftWithAmount": ", me shumën ",
     "giftNoAmount": ", pa e përmendur shumën",
-    "recipientWhatsapp": "Numri i WhatsApp i marrësit"
+    "recipientWhatsapp": "Numri i WhatsApp i marrësit",
+    "itemsUnavailable": "Këta artikuj nuk mund të paguhen: {items}. Hiqini nga shporta ose zgjidhni një projekt të caktuar, pastaj provoni përsëri."
   },
   "certificates": {
     "certNoLabel": "Nr. i certifikatës",
