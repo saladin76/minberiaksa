@@ -112,7 +112,7 @@ export function WhatsappInbox() {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [senders, setSenders] = useState<Sender[]>([]);
   const [needsReply, setNeedsReply] = useState(0);
-  const [filter, setFilter] = useState("needsReply");
+  const [filter, setFilter] = useState("all");
   const [senderId, setSenderId] = useState<string>("");
   const [query, setQuery] = useState(initialQuery);
   const [loadingList, setLoadingList] = useState(true);
@@ -126,6 +126,8 @@ export function WhatsappInbox() {
   const [sending, setSending] = useState(false);
   const [notice, setNotice] = useState<{ tone: "ok" | "error"; text: string } | null>(null);
   const [smartOpen, setSmartOpen] = useState(false);
+  const [smartInitialMode, setSmartInitialMode] = useState<"FREEFORM" | "UTILITY" | "MARKETING" | undefined>(undefined);
+  const senderSelectionReady = useRef(false);
   const timelineRef = useRef<HTMLDivElement | null>(null);
 
   const loadList = useCallback(async () => {
@@ -137,15 +139,37 @@ export function WhatsappInbox() {
       const res = await fetch(`/api/dashboard/communication/inbox?${params}`, { cache: "no-store" });
       const data = await res.json();
       if (!res.ok || !data.ok) throw new Error(data.error ?? "load failed");
-      setConversations(data.conversations ?? []);
-      setSenders(data.senders ?? []);
+      const nextConversations = data.conversations ?? [];
+      const nextSenders = data.senders ?? [];
+      setConversations(nextConversations);
+      setSenders(nextSenders);
       setNeedsReply(data.needsReply ?? 0);
+
+      if (!senderSelectionReady.current && nextSenders.length > 0) {
+        senderSelectionReady.current = true;
+        const remembered = typeof window !== "undefined" ? window.localStorage.getItem("communication:whatsapp:senderId") : null;
+        const preferred = remembered && nextSenders.some((sender: Sender) => sender.id === remembered)
+          ? remembered
+          : (nextSenders.length === 1 ? nextSenders[0].id : "");
+        if (preferred !== senderId) {
+          setSenderId(preferred);
+          return;
+        }
+      }
+
+      if (nextConversations.length === 0) {
+        setActiveId(null);
+        setDetail(null);
+        setReplyWindow(null);
+      } else if (!activeId || !nextConversations.some((conversation: Conversation) => conversation.id === activeId)) {
+        setActiveId(nextConversations[0].id);
+      }
     } catch {
       setConversations([]);
     } finally {
       setLoadingList(false);
     }
-  }, [filter, senderId, query]);
+  }, [filter, senderId, query, activeId]);
 
   useEffect(() => { void loadList(); }, [loadList]);
 
@@ -244,7 +268,8 @@ export function WhatsappInbox() {
         }
       />
 
-      <div className="mb-4 flex flex-wrap items-center gap-3">
+      <div className="mb-4 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
+        <div className="flex flex-wrap items-center gap-3">
         <SegmentedControl
           value={filter}
           onChange={(v) => setFilter(String(v))}
@@ -252,7 +277,14 @@ export function WhatsappInbox() {
         />
         <select
           value={senderId}
-          onChange={(e) => setSenderId(e.target.value)}
+          onChange={(e) => {
+            const value = e.target.value;
+            setSenderId(value);
+            if (typeof window !== "undefined") {
+              if (value) window.localStorage.setItem("communication:whatsapp:senderId", value);
+              else window.localStorage.removeItem("communication:whatsapp:senderId");
+            }
+          }}
           className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-700"
         >
           {senderOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
@@ -266,26 +298,41 @@ export function WhatsappInbox() {
             className="w-64 rounded-lg border border-slate-200 bg-white py-1.5 pr-8 pl-3 text-sm text-slate-700 placeholder:text-slate-400"
           />
         </div>
-        <span className="text-xs text-slate-500">
+        <span className={cn(
+          "rounded-full border px-2.5 py-1 text-xs font-medium",
+          needsReply > 0 ? "border-amber-200 bg-amber-50 text-amber-700" : "border-emerald-200 bg-emerald-50 text-emerald-700",
+        )}>
           {needsReply > 0 ? `${needsReply} محادثة بانتظار ردّ` : "لا شيء بانتظار ردّ"}
         </span>
+        </div>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,22rem)_minmax(0,1fr)]">
+      <div className="grid min-h-[68vh] gap-4 xl:grid-cols-[minmax(20rem,23rem)_minmax(0,1fr)]">
         {/* ── Conversation list ─────────────────────────────────── */}
-        <div className="rounded-xl border border-slate-200 bg-white overflow-hidden">
+        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
           {loadingList ? (
             <div className="flex items-center justify-center py-16 text-slate-400">
               <Loader2 className="w-5 h-5 animate-spin" />
             </div>
           ) : conversations.length === 0 ? (
-            <EmptyState
-              variant="inline"
-              title="لا توجد محادثات"
-              description={filter === "needsReply" ? "كل الردود مُعالَجة." : "لم تصل أي ردود على هذا الرقم بعد."}
-            />
+            <div className="p-5">
+              <EmptyState
+                variant="inline"
+                title="لا توجد محادثات"
+                description={filter === "needsReply" ? "لا توجد محادثات بانتظار الرد حاليًا." : "لم تصل أي محادثات مطابقة لهذا الفلتر."}
+              />
+              {filter !== "all" && (
+                <button
+                  type="button"
+                  onClick={() => setFilter("all")}
+                  className="mx-auto mt-3 block rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                >
+                  عرض كل المحادثات
+                </button>
+              )}
+            </div>
           ) : (
-            <ul className="divide-y divide-slate-100 max-h-[70vh] overflow-y-auto">
+            <ul className="max-h-[72vh] divide-y divide-slate-100 overflow-y-auto">
               {conversations.map((c) => {
                 const at = fmtDateTime(c.lastMessageAt);
                 return (
@@ -294,10 +341,11 @@ export function WhatsappInbox() {
                       type="button"
                       onClick={() => setActiveId(c.id)}
                       className={cn(
-                        "w-full text-right px-3 py-3 hover:bg-slate-50 transition-colors",
-                        activeId === c.id && "bg-brand/5",
+                        "relative w-full px-3 py-3.5 text-right transition-colors hover:bg-slate-50",
+                        activeId === c.id && "bg-emerald-50/70",
                       )}
                     >
+                      {activeId === c.id && <span className="absolute inset-y-2 right-0 w-1 rounded-l-full bg-emerald-500" />}
                       <div className="flex items-center justify-between gap-2">
                         <span className="text-sm font-semibold text-slate-900 truncate">
                           {c.donor?.name || c.phone}
@@ -327,7 +375,7 @@ export function WhatsappInbox() {
         </div>
 
         {/* ── Thread ─────────────────────────────────────────────── */}
-        <div className="rounded-xl border border-slate-200 bg-white overflow-hidden flex flex-col">
+        <div className="flex min-h-[68vh] flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
           {!activeId ? (
             <EmptyState variant="inline" title="اختر محادثة" description="ستظهر الرسائل وملف المتبرع هنا." />
           ) : loadingDetail && !detail ? (
@@ -387,7 +435,7 @@ export function WhatsappInbox() {
                 )}
               </div>
 
-              <div ref={timelineRef} className="flex-1 overflow-y-auto px-4 py-4 space-y-2 max-h-[52vh] bg-slate-50/50">
+              <div ref={timelineRef} className="flex-1 space-y-3 overflow-y-auto bg-gradient-to-b from-slate-50/80 to-white px-4 py-4">
                 {detail.hasMore && (
                   <button
                     type="button"
@@ -421,8 +469,8 @@ export function WhatsappInbox() {
                     <div key={index} className={cn("flex", inbound ? "justify-start" : "justify-end")}>
                       <div
                         className={cn(
-                          "max-w-[80%] rounded-2xl px-3 py-2 text-sm",
-                          inbound ? "bg-white border border-slate-200 text-slate-800" : "bg-brand/10 border border-brand/20 text-slate-900",
+                          "max-w-[78%] rounded-2xl px-3 py-2.5 text-sm shadow-sm",
+                          inbound ? "border border-slate-200 bg-white text-slate-800" : "border border-emerald-200 bg-emerald-50 text-slate-900",
                         )}
                       >
                         {item.media && MediaIcon && (
@@ -486,14 +534,30 @@ export function WhatsappInbox() {
                       <p className="text-xs font-semibold text-amber-800">نافذة الرد الحر مغلقة</p>
                       <p className="mt-1 text-[11px] text-amber-700">يمكن إرسال رسالة خدمة عبر Direct Send أو اختيار قالب Marketing معتمد.</p>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => setSmartOpen(true)}
-                      className="inline-flex items-center gap-1.5 rounded-lg bg-[#25D366] px-3 py-2 text-xs font-semibold text-white hover:bg-[#20bd5a]"
-                    >
-                      <MessageCircle className="h-4 w-4" />
-                      إرسال ذكي
-                    </button>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSmartInitialMode("MARKETING");
+                          setSmartOpen(true);
+                        }}
+                        className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-200 bg-white px-3 py-2 text-xs font-semibold text-emerald-700 hover:bg-emerald-50"
+                      >
+                        <MessageCircle className="h-4 w-4" />
+                        إرسال قالب تحية
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSmartInitialMode("UTILITY");
+                          setSmartOpen(true);
+                        }}
+                        className="inline-flex items-center gap-1.5 rounded-lg bg-[#25D366] px-3 py-2 text-xs font-semibold text-white hover:bg-[#20bd5a]"
+                      >
+                        <Send className="h-4 w-4" />
+                        خيارات الإرسال
+                      </button>
+                    </div>
                   </div>
                 ) : (
                   <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs text-slate-500">
@@ -512,6 +576,7 @@ export function WhatsappInbox() {
           userId={detail.donor.userId}
           userName={detail.donor.name}
           phone={detail.phone}
+          initialMode={smartInitialMode}
         />
       )}
     </div>
