@@ -86,7 +86,6 @@ export function DataTable<TData, TValue>({
   createLink = "#",
   noResultsLabel = "No results found",
   hasEndDate = false,
-  searchColumn = "title",
   showCreateButton = true,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = useState<SortingState>([]);
@@ -133,16 +132,6 @@ export function DataTable<TData, TValue>({
     },
   });
 
-  const handleSearch = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
-    const value = event.target.value;
-    setSearchValue(value);
-    // Search the whole row, including nested relations (campaign/category/donor),
-    // instead of silently doing nothing when a page does not expose the default "title" column.
-    setGlobalFilter(value);
-    updateActiveFilters("بحث", value);
-    table.setPageIndex(0);
-  }, [table, updateActiveFilters]);
-
   const handleDateChange = useCallback((key: keyof DateRange, value: string) => {
     setDateRange(prev => ({ ...prev, [key]: value }));
   }, []);
@@ -163,6 +152,16 @@ export function DataTable<TData, TValue>({
       return newFilters;
     });
   }, []);
+
+  const handleSearch = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    const value = event.target.value;
+    setSearchValue(value);
+    // Search the whole row, including nested relations (campaign/category/donor),
+    // instead of silently doing nothing when a page does not expose the default "title" column.
+    setGlobalFilter(value);
+    updateActiveFilters("بحث", value);
+    table.setPageIndex(0);
+  }, [table, updateActiveFilters]);
 
   const applyDateFilter = useCallback(() => {
     const dateColumn = table.getColumn("endDate");
@@ -193,7 +192,7 @@ export function DataTable<TData, TValue>({
       table.getColumn("endDate")?.setFilterValue({ from: "", to: "" });
     }
     setActiveFilters(prev => prev.filter(f => f !== filter));
-  }, [searchColumn, table]);
+  }, [table]);
 
   // Function to export table data as CSV
   const exportToCSV = useCallback(() => {
