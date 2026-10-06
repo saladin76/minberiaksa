@@ -19,7 +19,6 @@ import { type CommunicationChannelId, type CommunicationPurposeId } from "./comm
 import { autoSpeedMode, campaignPriorityRank, campaignSendControls, evaluateCampaignSendControls, speedSettings, type CampaignSpeedMode } from "./campaign-send-controls";
 import { mergeCampaignMetadata, mutateCampaignMetadata } from "./campaign-metadata-store";
 import { normalizePhoneE164, phoneMatchVariants } from "./phone";
-import { getSmartAudienceDefinitionForSegmentKey } from "./smart-audience";
 import { DEFAULT_LOCALE, isValidLocale, type SupportedLocale } from "@/lib/locales";
 
 export { computeFinalStatus };
@@ -398,10 +397,11 @@ export async function executeCampaignSend(
   const decisions = coverageDecisions(campaign);
   const purpose = campaign.purpose as CommunicationPurposeId;
   const origin = await resolveAudienceOrigin(campaign.audienceSegmentKey);
-  const smartAudience = await getSmartAudienceDefinitionForSegmentKey(campaign.audienceSegmentKey);
-  const fallbackLocale = (smartAudience?.fallbackLocale && isValidLocale(smartAudience.fallbackLocale)
-    ? smartAudience.fallbackLocale
-    : DEFAULT_LOCALE) as SupportedLocale;
+  const campaignMetadata = campaign.metadata && typeof campaign.metadata === "object"
+    ? campaign.metadata as Record<string, unknown>
+    : {};
+  const fallbackCandidate = typeof campaignMetadata.fallbackLocale === "string" ? campaignMetadata.fallbackLocale : null;
+  const fallbackLocale = (fallbackCandidate && isValidLocale(fallbackCandidate) ? fallbackCandidate : DEFAULT_LOCALE) as SupportedLocale;
   const senderSnapshot = await loadSenderRoutingSnapshot(channel, runtime);
   /* WhatsApp template truth, read once for the whole run: which languages Meta approved, and what
      parameters each of those variants takes. Reading it per recipient would be thousands of queries
