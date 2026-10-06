@@ -28,10 +28,11 @@ interface TemplateRow {
 
 export function TriggerEditorDialog({ open, onOpenChange }: Props) {
   const [event, setEvent] = React.useState<MessageTriggerEvent | "">("");
-  const [channel, setChannel] = React.useState<"EMAIL" | "WHATSAPP">("EMAIL");
+  const [channel, setChannel] = React.useState<"EMAIL" | "WHATSAPP" | "SMS">("EMAIL");
   const [templateId, setTemplateId] = React.useState<string>("");
   const [emailTemplates, setEmailTemplates] = React.useState<TemplateRow[]>([]);
   const [whatsappTemplates, setWhatsappTemplates] = React.useState<TemplateRow[]>([]);
+  const [smsTemplates, setSmsTemplates] = React.useState<TemplateRow[]>([]);
   const [lapseDays, setLapseDays] = React.useState(String(DEFAULT_LAPSE_DAYS));
   const [cooldownDays, setCooldownDays] = React.useState(String(DEFAULT_COOLDOWN_DAYS));
   const [loading, setLoading] = React.useState(false);
@@ -49,10 +50,12 @@ export function TriggerEditorDialog({ open, onOpenChange }: Props) {
     Promise.all([
       axios.get("/api/templates/email").then((res) => res.data?.templates ?? []),
       axios.get("/api/templates/whatsapp").then((res) => res.data?.templates ?? []),
+      axios.get("/api/templates/sms").then((res) => res.data?.templates ?? []),
     ])
-      .then(([emails, wa]) => {
+      .then(([emails, wa, sms]) => {
         setEmailTemplates(emails);
         setWhatsappTemplates(wa);
+        setSmsTemplates(sms);
       })
       .catch(() => toast.error("فشل تحميل القوالب"))
       .finally(() => setLoading(false));
@@ -63,7 +66,7 @@ export function TriggerEditorDialog({ open, onOpenChange }: Props) {
   }, [channel]);
 
   const eventDef = event ? EVENT_CATALOG.find((e) => e.event === event) : null;
-  const templates = channel === "EMAIL" ? emailTemplates : whatsappTemplates;
+  const templates = channel === "EMAIL" ? emailTemplates : channel === "WHATSAPP" ? whatsappTemplates : smsTemplates;
   const isScheduled = eventDef?.scheduled === true;
   const lapseValue = Number(lapseDays);
   const cooldownValue = Number(cooldownDays);
@@ -165,11 +168,12 @@ export function TriggerEditorDialog({ open, onOpenChange }: Props) {
 
         <div className="space-y-1.5">
           <FieldLabel>القناة</FieldLabel>
-          <Select value={channel} onValueChange={(v) => setChannel(v as "EMAIL" | "WHATSAPP")}>
+          <Select value={channel} onValueChange={(v) => setChannel(v as "EMAIL" | "WHATSAPP" | "SMS")}>
             <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="EMAIL">بريد إلكتروني</SelectItem>
               <SelectItem value="WHATSAPP">واتساب</SelectItem>
+              <SelectItem value="SMS">رسالة نصية SMS</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -181,7 +185,7 @@ export function TriggerEditorDialog({ open, onOpenChange }: Props) {
               <SelectValue
                 placeholder={
                   templates.length === 0
-                    ? "لا توجد قوالب  أنشئ قالبًا من تبويبة البريد/الواتساب"
+                    ? "لا توجد قوالب  أنشئ قالبًا للقناة أولًا"
                     : "اختر قالبًا"
                 }
               />

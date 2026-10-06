@@ -6,14 +6,14 @@ import { toast } from "react-hot-toast";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
-import { Loader2, Plus, Trash2, Mail, MessageCircle, Clock, Play, Eye } from "lucide-react";
+import { Loader2, Plus, Trash2, Mail, MessageCircle, MessageSquare, Clock, Play, Eye } from "lucide-react";
 import { TriggerEditorDialog } from "./TriggerEditorDialog";
 import { EVENT_CATALOG, DEFAULT_COOLDOWN_DAYS, DEFAULT_LAPSE_DAYS } from "@/lib/events/catalog";
 
 interface TriggerRow {
   id: string;
   event: string;
-  channel: "EMAIL" | "WHATSAPP";
+  channel: "EMAIL" | "WHATSAPP" | "SMS";
   templateId: string;
   templateName: string | null;
   enabled: boolean;
@@ -176,9 +176,13 @@ export function TriggerList() {
                         <>
                           <Mail className="w-3.5 h-3.5 text-brand" /> بريد
                         </>
-                      ) : (
+                      ) : t.channel === "WHATSAPP" ? (
                         <>
                           <MessageCircle className="w-3.5 h-3.5 text-[#25D366]" /> واتساب
+                        </>
+                      ) : (
+                        <>
+                          <MessageSquare className="w-3.5 h-3.5 text-orange-500" /> SMS
                         </>
                       )}
                     </span>

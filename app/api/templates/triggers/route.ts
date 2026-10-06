@@ -28,7 +28,7 @@ const EVENT_VALUES = [
 
 const createSchema = z.object({
   event: z.enum(EVENT_VALUES),
-  channel: z.enum(["EMAIL", "WHATSAPP"]),
+  channel: z.enum(["EMAIL", "WHATSAPP", "SMS"]),
   templateId: z.string().min(1),
   enabled: z.boolean().optional(),
   // DONATION_LAPSED timing  ignored for event-driven triggers.
@@ -41,7 +41,8 @@ async function enrichTriggers(
 ) {
   const emailIds = rows.filter((r) => r.channel === "EMAIL").map((r) => r.templateId);
   const waIds = rows.filter((r) => r.channel === "WHATSAPP").map((r) => r.templateId);
-  const [emails, wa] = await Promise.all([
+  const smsIds = rows.filter((r) => r.channel === "SMS").map((r) => r.templateId);
+  const [emails, wa, sms] = await Promise.all([
     emailIds.length
       ? prisma.emailTemplate.findMany({
           where: { id: { in: emailIds } },
@@ -54,13 +55,20 @@ async function enrichTriggers(
           select: { id: true, name: true },
         })
       : Promise.resolve([]),
+    smsIds.length
+      ? prisma.smsTemplate.findMany({
+          where: { id: { in: smsIds } },
+          select: { id: true, name: true },
+        })
+      : Promise.resolve([]),
   ]);
   const nameById = new Map<string, string>();
   for (const t of emails) nameById.set(`E:${t.id}`, t.name);
   for (const t of wa) nameById.set(`W:${t.id}`, t.name);
+  for (const t of sms) nameById.set(`S:${t.id}`, t.name);
   return rows.map((r) => ({
     ...r,
-    templateName: nameById.get(`${r.channel === "EMAIL" ? "E" : "W"}:${r.templateId}`) ?? null,
+    templateName: nameById.get(`${r.channel === "EMAIL" ? "E" : r.channel === "WHATSAPP" ? "W" : "S"}:${r.templateId}`) ?? null,
   }));
 }
 
@@ -104,7 +112,9 @@ export async function POST(request: NextRequest) {
   const exists =
     channel === "EMAIL"
       ? await prisma.emailTemplate.findUnique({ where: { id: templateId }, select: { id: true } })
-      : await prisma.whatsappTemplate.findUnique({ where: { id: templateId }, select: { id: true } });
+      : channel === "WHATSAPP"
+        ? await prisma.whatsappTemplate.findUnique({ where: { id: templateId }, select: { id: true } })
+        : await prisma.smsTemplate.findUnique({ where: { id: templateId }, select: { id: true } });
   if (!exists) {
     return NextResponse.json({ error: "Template not found for channel" }, { status: 400 });
   }
