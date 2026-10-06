@@ -118,8 +118,25 @@ export function autoSpeedMode(input: {
   return remaining <= 10_000 ? "FAST" : "MAX";
 }
 
-export function campaignEmergencyStopEnabled(): boolean {
-  return String(process.env.COMMUNICATION_CAMPAIGN_EMERGENCY_STOP ?? "").toLowerCase() === "true";
+const GLOBAL_CONTROL_ID = "000000000000000000000001";
+
+export async function campaignEmergencyStopEnabled(): Promise<boolean> {
+  if (String(process.env.COMMUNICATION_CAMPAIGN_EMERGENCY_STOP ?? "").toLowerCase() === "true") return true;
+  const row = await prisma.communicationGlobalControl.findUnique({
+    where: { id: GLOBAL_CONTROL_ID },
+    select: { emergencyStop: true },
+  }).catch(() => null);
+  return row?.emergencyStop === true;
+}
+
+export async function setCampaignEmergencyStop(enabled: boolean, updatedBy?: string | null): Promise<boolean> {
+  const row = await prisma.communicationGlobalControl.upsert({
+    where: { id: GLOBAL_CONTROL_ID },
+    create: { id: GLOBAL_CONTROL_ID, emergencyStop: enabled, updatedBy: updatedBy ?? null },
+    update: { emergencyStop: enabled, updatedBy: updatedBy ?? null },
+    select: { emergencyStop: true },
+  }).catch(() => null);
+  return row?.emergencyStop === enabled;
 }
 
 export function insideScheduledStop(controls: CampaignSendControls, now = new Date()): boolean {
@@ -179,7 +196,7 @@ export async function evaluateCampaignSendControls(
   campaign: Pick<CommunicationCampaign, "channel" | "metadata">,
 ): Promise<{ ok: true; controls: CampaignSendControls; remainingDaily: number | null } | { ok: false; controls: CampaignSendControls; reason: "EMERGENCY_STOP" | "PAUSED" | "QUIET_HOURS" | "SCHEDULED_STOP" | "DAILY_CAP_REACHED"; remainingDaily: number | null }> {
   const controls = campaignSendControls(campaign);
-  if (campaignEmergencyStopEnabled()) return { ok: false, controls, reason: "EMERGENCY_STOP", remainingDaily: null };
+  if (await campaignEmergencyStopEnabled()) return { ok: false, controls, reason: "EMERGENCY_STOP", remainingDaily: null };
   if (controls.paused) return { ok: false, controls, reason: "PAUSED", remainingDaily: null };
   if (insideScheduledStop(controls)) return { ok: false, controls, reason: "SCHEDULED_STOP", remainingDaily: null };
   if (insideQuietHours(controls)) return { ok: false, controls, reason: "QUIET_HOURS", remainingDaily: null };
