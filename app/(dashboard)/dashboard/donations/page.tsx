@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useDebounce } from 'use-debounce';
 import axios from 'axios';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -112,6 +113,7 @@ export default function DonationsPage() {
   const [donations, setDonations] = useState<Donation[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearch] = useDebounce(searchQuery.trim(), 300);
   const [sortField, setSortField] = useState<keyof Donation>('createdAt');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   const [page, setPage] = useState(1);
@@ -123,8 +125,9 @@ export default function DonationsPage() {
   useEffect(() => {
     const fetchData = async () => {
       try {
+        setLoading(true);
         const response = await axios.get('/api/donations', {
-          params: { page, limit: itemsPerPage },
+          params: { page, limit: itemsPerPage, search: debouncedSearch || undefined },
         });
         setDonations(response.data.donations);
         setTotalPages(response.data.pagination.pages);
@@ -137,7 +140,11 @@ export default function DonationsPage() {
     };
 
     fetchData();
-  }, [page]);
+  }, [page, itemsPerPage, debouncedSearch]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [debouncedSearch]);
 
   const handleSort = (field: keyof Donation) => {
     if (field === sortField) {
@@ -194,19 +201,12 @@ export default function DonationsPage() {
     }
   };
 
-  const filteredDonations = donations
-    .filter(donation => {
-      const matchesSearch = donation.items.some(item =>
-        item.campaign.title.toLowerCase().includes(searchQuery.toLowerCase())
-      );
-      return matchesSearch;
-    })
-    .sort((a, b) => compareBySortField(a, b, sortField, sortDirection));
-
-  const paginatedDonations = filteredDonations.slice(
-    (page - 1) * itemsPerPage,
-    page * itemsPerPage
+  // API search is authoritative and runs before pagination; only sort the current page locally.
+  const filteredDonations = [...donations].sort((a, b) =>
+    compareBySortField(a, b, sortField, sortDirection)
   );
+
+  const paginatedDonations = filteredDonations;
 
   const exportToCSV = () => {
     const headers = ['Amount', 'Currency', 'Type', 'Status', 'Payment Method', 'Created At', 'Donor Name', 'Campaigns'];
@@ -401,7 +401,7 @@ export default function DonationsPage() {
         {/* Pagination */}
         <div className="flex items-center justify-between p-4">
           <div className="text-sm text-gray-600">
-            Showing {((page - 1) * itemsPerPage) + 1} to {Math.min(page * itemsPerPage, filteredDonations.length)} of {filteredDonations.length} donations
+            Showing {filteredDonations.length ? ((page - 1) * itemsPerPage) + 1 : 0} to {((page - 1) * itemsPerPage) + filteredDonations.length} · page {page} of {Math.max(totalPages, 1)}
           </div>
           <div className="flex gap-2">
             <Button
@@ -416,7 +416,7 @@ export default function DonationsPage() {
               variant="outline"
               size="sm"
               onClick={() => setPage(page + 1)}
-              disabled={page * itemsPerPage >= filteredDonations.length}
+              disabled={page >= totalPages}
             >
               Next
             </Button>
