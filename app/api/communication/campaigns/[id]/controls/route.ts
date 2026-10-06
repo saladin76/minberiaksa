@@ -56,7 +56,7 @@ export async function GET(_: NextRequest, { params }: { params: Promise<{ id: st
       usedLast24h,
       remaining: campaign.channel === "WHATSAPP" ? Math.max(controls.dailyCap - usedLast24h, 0) : null,
     },
-    global: { emergencyStop: campaignEmergencyStopEnabled() },
+    global: { emergencyStop: await campaignEmergencyStopEnabled() },
   });
 }
 
