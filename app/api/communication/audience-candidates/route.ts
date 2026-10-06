@@ -222,6 +222,11 @@ export async function GET(request: NextRequest) {
         profile,
       ),
       eligibilityReason: eligibilityReason({ email: u.email, phone: u.phone }, channel, profile),
+      canConfirmWhatsappOptIn:
+        channel === "WHATSAPP" &&
+        Boolean(u.phone) &&
+        !profile?.doNotContact &&
+        profile?.whatsappOptIn !== true,
     };
   });
 
