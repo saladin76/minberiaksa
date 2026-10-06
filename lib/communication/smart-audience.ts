@@ -73,7 +73,7 @@ export function normalizeSmartAudienceDefinition(input: unknown, channel: Commun
       projectIds: cleanList(f.projectIds).slice(0, 100),
       recurringOnly: f.recurringOnly === true,
       minDonationAmountUSD,
-      hasContact: f.hasContact !== false,
+      hasContact: f.hasContact === true,
     },
     excludeUserIds: cleanList(raw.excludeUserIds).slice(0, 500),
     fallbackLocale: fallback,
@@ -173,67 +173,99 @@ export async function countSmartAudience(definition: SmartAudienceDefinition): P
   return prisma.user.count({ where: buildSmartAudienceUserWhere(definition) }).catch(() => 0);
 }
 
+function eligibleWhere(definition: SmartAudienceDefinition): Prisma.UserWhereInput {
+  const base = buildSmartAudienceUserWhere(definition);
+  const profileRelation = "communicationProfile";
+  if (definition.channel === "EMAIL") {
+    return {
+      ...base,
+      email: { not: null },
+      communicationProfile: { is: { emailOptIn: true, doNotContact: false } },
+    };
+  }
+  if (definition.channel === "SMS") {
+    return {
+      ...base,
+      phone: { not: null },
+      communicationProfile: { is: { smsOptIn: true, doNotContact: false } },
+    };
+  }
+  return {
+    ...base,
+    phone: { not: null },
+    OR: [
+      { communicationProfile: { is: null } },
+      { communicationProfile: { is: { doNotContact: false } } },
+    ],
+  };
+}
+
 export async function previewSmartAudience(
   definition: SmartAudienceDefinition,
   sampleLimit = 50,
 ): Promise<SmartAudiencePreview> {
   const where = buildSmartAudienceUserWhere(definition);
-  const matched = await prisma.user.count({ where }).catch(() => 0);
+  const eligibleFilter = eligibleWhere(definition);
+  const missingFilter: Prisma.UserWhereInput =
+    definition.channel === "EMAIL" ? { ...where, email: null } : { ...where, phone: null };
+  const dncFilter: Prisma.UserWhereInput = {
+    ...where,
+    communicationProfile: { is: { doNotContact: true } },
+  };
+
+  const [matched, eligible, missingContact, doNotContact, languageRows, sampleRows] = await Promise.all([
+    prisma.user.count({ where }).catch(() => 0),
+    prisma.user.count({ where: eligibleFilter }).catch(() => 0),
+    prisma.user.count({ where: missingFilter }).catch(() => 0),
+    prisma.user.count({ where: dncFilter }).catch(() => 0),
+    prisma.user.groupBy({ by: ["preferredLang"], where, _count: { id: true } }).catch(() => []),
+    prisma.user.findMany({
+      where,
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        phone: true,
+        preferredLang: true,
+        countryCode: true,
+        communicationProfile: { select: { doNotContact: true, emailOptIn: true, smsOptIn: true, whatsappOptIn: true } },
+      },
+      orderBy: { id: "asc" },
+      take: Math.max(1, Math.min(sampleLimit, 50)),
+    }).catch(() => []),
+  ]);
 
   const languages: Record<string, number> = {};
-  const sample: SmartAudiencePreview["sample"] = [];
-  let eligible = 0;
-  let missingContact = 0;
-  let doNotContact = 0;
-  let unavailable = 0;
-  let cursor: string | null = null;
-
-  while (true) {
-    const rows = await prisma.user.findMany({
-      where: { ...where, ...(cursor ? { id: { gt: cursor } } : {}) },
-      select: { id: true, name: true, email: true, phone: true, preferredLang: true, countryCode: true, emailNotifications: true, smsNotifications: true },
-      orderBy: { id: "asc" },
-      take: 1000,
-    });
-    if (!rows.length) break;
-    cursor = rows[rows.length - 1].id;
-
-    await ensureProfilesForUsers(rows.map((r) => r.id));
-    const profiles = await prisma.donorCommunicationProfile.findMany({
-      where: { userId: { in: rows.map((r) => r.id) } },
-      select: { userId: true, doNotContact: true, emailOptIn: true, smsOptIn: true, whatsappOptIn: true },
-    }).catch(() => []);
-    const pMap = new Map(profiles.map((p) => [p.userId, p]));
-
-    for (const u of rows) {
-      const locale = (u.preferredLang && isValidLocale(u.preferredLang) ? u.preferredLang : DEFAULT_LOCALE) as SupportedLocale;
-      languages[locale] = (languages[locale] ?? 0) + 1;
-      const profile = pMap.get(u.id) ?? null;
-      const missing = definition.channel === "EMAIL" ? !u.email : !u.phone;
-      if (missing) missingContact += 1;
-      if (profile?.doNotContact) doNotContact += 1;
-      const state = donorChannelEligibility(
-        { email: u.email, phone: u.phone, emailNotifications: u.emailNotifications, smsNotifications: u.smsNotifications },
-        definition.channel,
-        profile,
-      );
-      if (state === "ELIGIBLE") eligible += 1;
-      else unavailable += 1;
-
-      if (sample.length < sampleLimit) {
-        sample.push({
-          id: u.id,
-          name: u.name,
-          email: u.email,
-          phone: u.phone,
-          locale,
-          countryCode: u.countryCode,
-          eligible: state === "ELIGIBLE",
-        });
-      }
-    }
-    if (rows.length < 1000) break;
+  for (const row of languageRows) {
+    const locale = row.preferredLang && isValidLocale(row.preferredLang) ? row.preferredLang : DEFAULT_LOCALE;
+    languages[locale] = (languages[locale] ?? 0) + row._count.id;
   }
 
-  return { matched, eligible, missingContact, doNotContact, unavailable, languages, sample };
+  const sample = sampleRows.map((u) => {
+    const locale = (u.preferredLang && isValidLocale(u.preferredLang) ? u.preferredLang : DEFAULT_LOCALE) as SupportedLocale;
+    const state = donorChannelEligibility(
+      { email: u.email, phone: u.phone },
+      definition.channel,
+      u.communicationProfile,
+    );
+    return {
+      id: u.id,
+      name: u.name,
+      email: u.email,
+      phone: u.phone,
+      locale,
+      countryCode: u.countryCode,
+      eligible: state === "ELIGIBLE",
+    };
+  });
+
+  return {
+    matched,
+    eligible,
+    missingContact,
+    doNotContact,
+    unavailable: Math.max(0, matched - eligible),
+    languages,
+    sample,
+  };
 }
