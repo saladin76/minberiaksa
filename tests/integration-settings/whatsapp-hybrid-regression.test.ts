@@ -164,3 +164,23 @@ test("global campaign emergency stop is persisted, admin-only, and enforced befo
   assert.match(actions, /EMERGENCY_STOP/);
   assert.match(actions, /SCHEDULED_STOP/);
 });
+
+
+test("WhatsApp campaign creation configures send controls before the campaign row is created", () => {
+  const wizard = read("app/(dashboard)/dashboard/communication/campaigns/new/_components/NewCampaignWizard.tsx");
+  const route = read("app/api/communication/campaigns/route.ts");
+
+  assert.match(wizard, /"التحكم"/);
+  assert.match(wizard, /التالي: إعداد الإرسال/);
+  assert.match(wizard, /sendControls/);
+  assert.match(route, /sendControlsSchema/);
+  assert.match(route, /metadata: \{ sendControls \}/);
+});
+
+test("campaign controls dialog stays scrollable and cannot bubble clicks into the campaign row", () => {
+  const dialog = read("app/(dashboard)/dashboard/communication/campaigns/_components/CampaignControlsDialog.tsx");
+  assert.match(dialog, /max-h-\[calc\(100dvh-2rem\)\]/);
+  assert.match(dialog, /overflow-y-auto/);
+  assert.match(dialog, /onClick=\{\(event\) => event\.stopPropagation\(\)\}/);
+  assert.match(dialog, /onPointerDown=\{\(event\) => event\.stopPropagation\(\)\}/);
+});
