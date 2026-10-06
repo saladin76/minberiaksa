@@ -10,8 +10,8 @@ import { Check, ChevronLeft, Loader2, FileText, Languages, Users, TriangleAlert,
 import { LOCALE_LABELS } from "@/lib/locales";
 import { cn } from "@/lib/utils";
 import { CHANNEL_META } from "../../_components/campaign-ui";
-import { DonorPicker } from "./DonorPicker";
 import { SmartAudienceBuilder, type SmartAudienceDraft, type SmartAudiencePreview } from "./SmartAudienceBuilder";
+import { SpecificDonorPicker } from "./SpecificDonorPicker";
 
 interface TemplateSummary {
   id: string;
@@ -417,12 +417,7 @@ export function NewCampaignWizard() {
           )}
 
           {audienceMode === "SPECIFIC" && (
-            <div className="space-y-2">
-              <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
-                هذا المسار للحالات الصغيرة فقط. الحملات الكبيرة يجب أن تستخدم «جمهور ذكي» حتى لا تُرسل آلاف المعرّفات من المتصفح.
-              </div>
-              <DonorPicker channel={channel} selected={selected} onChange={setSelected} />
-            </div>
+            <SpecificDonorPicker selected={selected} onChange={setSelected} />
           )}
         </div>
       )}
