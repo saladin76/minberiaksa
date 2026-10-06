@@ -5,7 +5,7 @@ import { createDeliveryRecord, markDeliveryStatus } from "./delivery-log-service
 import { conversationId } from "./conversation-service";
 import { replyWindowFor, sendConversationReply } from "./conversation-reply-service";
 import { normalizePhoneE164, phoneMatchVariants } from "./phone";
-import { loadSenderRoutingSnapshot, resolveSenderFromSnapshot } from "./sender-resolution";
+import { loadSenderRoutingSnapshot, resolveSenderFromSnapshot, type ResolvedSender } from "./sender-resolution";
 import { getActiveMetaWhatsappRuntimeConfig } from "./runtime-config";
 import { loadContextsForUserIds } from "@/lib/templates/variables";
 import { renderChannelTemplate } from "./template-compat";
@@ -152,7 +152,7 @@ async function sendApprovedTemplateForDonor(args: {
   expected: "UTILITY" | "MARKETING";
   ctx: SmartWhatsappContext;
   locale: SupportedLocale;
-  sender: { id: string; phoneNumberId: string | null; businessAccountId?: string | null };
+  sender: ResolvedSender;
   actor?: Actor;
 }): Promise<SmartWhatsappSendResult> {
   const template = await prisma.whatsappTemplate.findUnique({
