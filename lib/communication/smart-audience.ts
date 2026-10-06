@@ -3,7 +3,6 @@ import { prisma } from "@/lib/prisma";
 import { DEFAULT_LOCALE, isValidLocale, type SupportedLocale } from "@/lib/locales";
 import type { CommunicationChannelId } from "./communication-runtime-types";
 import { donorChannelEligibility } from "./audience-service";
-import { ensureProfilesForUsers } from "./donor-communication-profile-service";
 
 export const SMART_AUDIENCE_METADATA_KEY = "smartAudience";
 
@@ -94,6 +93,15 @@ export function smartAudienceMetadata(definition: SmartAudienceDefinition, extra
   return { ...extra, [SMART_AUDIENCE_METADATA_KEY]: definition };
 }
 
+
+export async function getSmartAudienceDefinitionForList(listId: string): Promise<SmartAudienceDefinition | null> {
+  const row = await prisma.communicationAudienceList
+    .findUnique({ where: { id: listId }, select: { type: true, metadata: true, channels: true } })
+    .catch(() => null);
+  if (!row || row.type !== "SMART") return null;
+  return smartAudienceFromMetadata(row.metadata);
+}
+
 export function buildSmartAudienceUserWhere(definition: SmartAudienceDefinition): Prisma.UserWhereInput {
   const f = definition.filters;
   const where: Prisma.UserWhereInput = { role: "DONOR" };
@@ -175,7 +183,6 @@ export async function countSmartAudience(definition: SmartAudienceDefinition): P
 
 function eligibleWhere(definition: SmartAudienceDefinition): Prisma.UserWhereInput {
   const base = buildSmartAudienceUserWhere(definition);
-  const profileRelation = "communicationProfile";
   if (definition.channel === "EMAIL") {
     return {
       ...base,
