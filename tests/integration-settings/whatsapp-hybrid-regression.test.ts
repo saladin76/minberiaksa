@@ -101,3 +101,21 @@ test("campaign resume lease is claimed atomically and cannot overwrite cancellat
   assert.match(executor, /expectedStatus: "SENDING"/);
   assert.match(executor, /never overwrite concurrent campaign cancellation|Concurrent/i);
 });
+
+
+test("PayFor success keeps donation notification dispatch alive after redirect", () => {
+  const route = read("app/api/payfor/3dpay/ok/route.ts");
+  assert.match(route, /import \{ after, NextRequest, NextResponse \} from "next\/server"/);
+  assert.match(route, /after\(\(\) => dispatchDonationPaid\(donationId\)\)/);
+  assert.doesNotMatch(route, /void dispatchDonationPaid\(donationId\)/);
+});
+
+test("automatic donation dispatch is observable and recoverable after interruption", () => {
+  const source = read("lib/events/dispatch.ts");
+  assert.match(source, /DISPATCH_CLAIM_LEASE_MS/);
+  assert.match(source, /state: "IN_PROGRESS"/);
+  assert.match(source, /state: "COMPLETED"/);
+  assert.match(source, /EVENT_DISPATCH_NO_TRIGGERS/);
+  assert.match(source, /skipReasons/);
+  assert.match(source, /META_DIRECT_SEND_OR_TEMPLATE_REQUIRED|sendTriggerMessage/);
+});
