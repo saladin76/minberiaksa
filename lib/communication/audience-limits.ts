@@ -1,20 +1,14 @@
 /**
- * One ceiling for a hand-picked audience, shared by every layer that touches it.
+ * Maximum size of an explicitly selected campaign audience.
  *
- * It used to be two: the donor picker let a user "select all" up to 5,000
- * matches, and the route that turns that selection into an audience list
- * rejected anything over 1,000. The wizard therefore offered a selection it
- * could not save  the request failed with a validation error after the user
- * had already chosen the audience, the template and the name.
+ * The old 5,000 cap made "select all matching" unusable for real donor segments.
+ * 100,000 is the operational target requested for campaign audiences and is
+ * shared by the picker, list API and member writer so every layer agrees.
  *
- * So the number lives here, and the picker's ceiling, the list route's schema,
- * the member writer and the send-time member loader all read it. Raising it
- * raises all four together, which is the point.
- *
- * This is still a stored list of ids. For audiences in the tens of thousands
- * the right shape is a stored *definition* (the filter the picker used) that
- * the sender resolves at run time  a follow-up, tracked separately; until it
- * exists this constant is the honest boundary of the feature, and both the UI
- * and the API say the same thing about where it is.
+ * Large selections are resolved and written in server-side batches; the UI
+ * still receives only donor ids, not full donor records.
  */
-export const AUDIENCE_SELECTION_MAX = 5000;
+export const AUDIENCE_SELECTION_MAX = 100_000;
+
+/** Small database page used while resolving/writing very large audiences. */
+export const AUDIENCE_SELECTION_PAGE = 2_000;
