@@ -11,6 +11,7 @@ import { LOCALE_LABELS } from "@/lib/locales";
 import { cn } from "@/lib/utils";
 import { CHANNEL_META } from "../../_components/campaign-ui";
 import { DonorPicker } from "./DonorPicker";
+import { SmartAudienceBuilder, type SmartAudienceDraft, type SmartAudiencePreview } from "./SmartAudienceBuilder";
 
 interface TemplateSummary {
   id: string;
@@ -115,6 +116,24 @@ export function NewCampaignWizard() {
   const [templateId, setTemplateId] = React.useState("");
   const [name, setName] = React.useState("");
   const [selected, setSelected] = React.useState<Set<string>>(new Set());
+  const [audienceMode, setAudienceMode] = React.useState<"SMART" | "SPECIFIC">("SMART");
+  const [smartPreview, setSmartPreview] = React.useState<SmartAudiencePreview | null>(null);
+  const [smartAudience, setSmartAudience] = React.useState<SmartAudienceDraft>({
+    version: 1,
+    kind: "SMART",
+    channel: "WHATSAPP",
+    filters: {
+      countries: [],
+      locales: [],
+      donatedWithinDays: null,
+      projectIds: [],
+      recurringOnly: false,
+      minDonationAmountUSD: null,
+      hasContact: false,
+    },
+    excludeUserIds: [],
+    fallbackLocale: "ar",
+  });
   const [sendControls, setSendControls] = React.useState<CampaignSendControlsDraft>(DEFAULT_SEND_CONTROLS);
   const [saving, setSaving] = React.useState(false);
 
@@ -141,13 +160,22 @@ export function NewCampaignWizard() {
 
   const chosenTemplate = templates.find((t) => t.id === templateId) ?? null;
 
+  React.useEffect(() => {
+    if (!channel || !["EMAIL", "WHATSAPP", "SMS"].includes(channel)) return;
+    setSmartAudience((current) => ({ ...current, channel: channel as SmartAudienceDraft["channel"] }));
+  }, [channel]);
+
+  const smartAudienceReady = audienceMode === "SMART" && (smartPreview?.eligible ?? 0) > 0;
+  const specificAudienceReady = audienceMode === "SPECIFIC" && selected.size > 0;
+  const audienceReady = smartAudienceReady || specificAudienceReady;
+
   const create = async () => {
     if (!name.trim()) {
       toast.error("اسم الحملة مطلوب");
       return;
     }
-    if (selected.size === 0) {
-      toast.error("اختر متبرعًا واحدًا على الأقل");
+    if (!audienceReady) {
+      toast.error(audienceMode === "SMART" ? "لا يوجد مستلم مؤهل ضمن شروط الجمهور الحالية" : "اختر متبرعًا واحدًا على الأقل");
       return;
     }
     setSaving(true);
@@ -156,7 +184,11 @@ export function NewCampaignWizard() {
       const listRes = await fetch("/api/communication/audience-lists", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: `جمهور: ${name.trim()}`, channel, userIds: [...selected] }),
+        body: JSON.stringify(
+          audienceMode === "SMART"
+            ? { name: `جمهور ذكي: ${name.trim()}`, channel, smartDefinition: smartAudience }
+            : { name: `جمهور: ${name.trim()}`, channel, userIds: [...selected] },
+        ),
       });
       const listJson = await readApiJson(listRes, "تعذّر إنشاء قائمة الجمهور");
       if (!listJson.ok) throw new Error(String(listJson.error || "تعذّر إنشاء قائمة الجمهور"));
@@ -178,7 +210,7 @@ export function NewCampaignWizard() {
       const json = await readApiJson(res, "تعذّر إنشاء الحملة");
       if (!json.ok) throw new Error(String(json.error || "تعذّر إنشاء الحملة"));
 
-      toast.success(`تم إنشاء الحملة بـ ${listJson.added} متبرعًا`);
+      toast.success(audienceMode === "SMART" ? `تم إنشاء الحملة لجمهور ذكي يطابق ${Number(listJson.matched ?? smartPreview?.matched ?? 0).toLocaleString("en-US")} متبرعًا` : `تم إنشاء الحملة بـ ${listJson.added} متبرعًا`);
       // Back to the list: a brand-new campaign is a DRAFT with no sends, so the
       // channel report would be empty, and the list is where it gets confirmed.
       router.push("/dashboard/communication/campaigns");
@@ -296,9 +328,41 @@ export function NewCampaignWizard() {
         <div className="space-y-4">
           <div className="space-y-1.5">
             <label className="text-xs font-medium text-slate-600">اسم الحملة (داخلي)</label>
-            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="مثال: حملة رمضان  المتبرعون النشطون" />
+            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="مثال: حملة رمضان — المتبرعون النشطون" />
           </div>
-          <DonorPicker channel={channel} selected={selected} onChange={setSelected} />
+
+          <div className="grid grid-cols-2 gap-2 rounded-xl border border-slate-200 bg-slate-50 p-1">
+            <button
+              type="button"
+              onClick={() => setAudienceMode("SMART")}
+              className={cn("rounded-lg px-3 py-2 text-xs font-semibold transition", audienceMode === "SMART" ? "bg-white text-brand shadow-sm" : "text-slate-500")}
+            >
+              جمهور ذكي
+            </button>
+            <button
+              type="button"
+              onClick={() => setAudienceMode("SPECIFIC")}
+              className={cn("rounded-lg px-3 py-2 text-xs font-semibold transition", audienceMode === "SPECIFIC" ? "bg-white text-brand shadow-sm" : "text-slate-500")}
+            >
+              أشخاص محددون
+            </button>
+          </div>
+
+          {audienceMode === "SMART" ? (
+            <SmartAudienceBuilder
+              channel={channel as SmartAudienceDraft["channel"]}
+              value={smartAudience}
+              onChange={setSmartAudience}
+              onPreview={setSmartPreview}
+            />
+          ) : (
+            <div className="space-y-2">
+              <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
+                هذا المسار للحالات الصغيرة فقط. الحملات الكبيرة يجب أن تستخدم «جمهور ذكي» حتى لا تُرسل آلاف المعرّفات من المتصفح.
+              </div>
+              <DonorPicker channel={channel} selected={selected} onChange={setSelected} />
+            </div>
+          )}
         </div>
       )}
 
@@ -449,7 +513,7 @@ export function NewCampaignWizard() {
         {step === 2 && channel === "WHATSAPP" && (
           <Button
             onClick={() => setStep(3)}
-            disabled={selected.size === 0 || !name.trim()}
+            disabled={!audienceReady || !name.trim()}
             className="gap-1.5 bg-brand hover:bg-brand/90"
           >
             <Gauge className="h-4 w-4" />
@@ -457,9 +521,9 @@ export function NewCampaignWizard() {
           </Button>
         )}
         {step === 2 && channel !== "WHATSAPP" && (
-          <Button onClick={create} disabled={saving || selected.size === 0 || !name.trim()} className="gap-1.5 bg-brand hover:bg-brand/90">
+          <Button onClick={create} disabled={saving || !audienceReady || !name.trim()} className="gap-1.5 bg-brand hover:bg-brand/90">
             {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Users className="h-4 w-4" />}
-            إنشاء الحملة ({selected.size})
+            إنشاء الحملة ({audienceMode === "SMART" ? (smartPreview?.eligible ?? 0).toLocaleString("en-US") : selected.size.toLocaleString("en-US")})
           </Button>
         )}
         {step === 3 && channel === "WHATSAPP" && (
