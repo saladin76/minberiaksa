@@ -184,3 +184,96 @@ test("campaign controls dialog stays scrollable and cannot bubble clicks into th
   assert.match(dialog, /onClick=\{\(event\) => event\.stopPropagation\(\)\}/);
   assert.match(dialog, /onPointerDown=\{\(event\) => event\.stopPropagation\(\)\}/);
 });
+
+
+test("WhatsApp inbox defaults to all conversations and remembers an available sender", () => {
+  const inbox = read("app/(dashboard)/dashboard/communication/inbox/_components/WhatsappInbox.tsx");
+  assert.match(inbox, /useState\("all"\)/);
+  assert.match(inbox, /communication:whatsapp:senderId/);
+  assert.match(inbox, /nextSenders\.length === 1/);
+  assert.match(inbox, /setActiveId\(nextConversations\[0\]\.id\)/);
+  assert.match(inbox, /عرض كل المحادثات/);
+});
+
+test("WhatsApp inbox exposes the greeting-template re-entry path outside the 24-hour window", () => {
+  const inbox = read("app/(dashboard)/dashboard/communication/inbox/_components/WhatsappInbox.tsx");
+  const smart = read("components/dashboard/SmartWhatsappDialog.tsx");
+  assert.match(inbox, /إرسال قالب تحية/);
+  assert.match(inbox, /initialMode=\{smartInitialMode\}/);
+  assert.match(smart, /initialMode\?: "FREEFORM" \| "UTILITY" \| "MARKETING"/);
+  assert.match(smart, /preferred === "MARKETING"/);
+});
+
+test("dashboard topbar makes unanswered WhatsApp conversations visually prominent", () => {
+  const topbar = read("app/(dashboard)/dashboard/_shell/DashboardTopbar.tsx");
+  const layout = read("app/(dashboard)/dashboard/DashboardLayoutClient.tsx");
+  assert.match(layout, /filter=needsReply/);
+  assert.match(layout, /setInterval\(run, 30000\)/);
+  assert.match(topbar, /بانتظار رد/);
+  assert.match(topbar, /animate-ping/);
+  assert.match(topbar, /whatsappInboxCount > 99 \? "99\+" : whatsappInboxCount/);
+});
+
+test("campaign wizard never assumes an error response is JSON", () => {
+  const wizard = read("app/(dashboard)/dashboard/communication/campaigns/new/_components/NewCampaignWizard.tsx");
+  assert.match(wizard, /async function readApiJson/);
+  assert.match(wizard, /await response\.text\(\)/);
+  assert.match(wizard, /HTTP \$\{response\.status\}/);
+  assert.doesNotMatch(wizard, /const listJson = await listRes\.json\(\)/);
+  assert.doesNotMatch(wizard, /const json = await res\.json\(\)/);
+});
+
+
+test("campaign audience explains why a donor is unavailable and does not trust non-JSON responses", () => {
+  const picker = read("app/(dashboard)/dashboard/communication/campaigns/new/_components/DonorPicker.tsx");
+  const route = read("app/api/communication/audience-candidates/route.ts");
+  assert.match(route, /eligibilityReason/);
+  assert.match(route, /لا توجد موافقة واتساب تسويقية/);
+  assert.match(route, /لا توجد موافقة SMS/);
+  assert.match(route, /لا توجد موافقة بريد تسويقي/);
+  assert.match(picker, /eligibilityReason/);
+  assert.match(picker, /async function readApiJson/);
+  assert.doesNotMatch(picker, /const json = await res\.json\(\)/);
+});
+
+test("automatic-events list fails visibly instead of spinning forever", () => {
+  const triggers = read("app/(dashboard)/dashboard/templates/_components/TriggerList.tsx");
+  assert.match(triggers, /timeout: 15000/);
+  assert.match(triggers, /loadError/);
+  assert.match(triggers, /إعادة المحاولة/);
+});
+
+
+test("campaign audience badge evaluation stays scoped to visible donors", () => {
+  const badges = read("lib/badge-criteria.ts");
+  assert.match(badges, /candidateUserIds\?: string\[\]/);
+  assert.match(badges, /donorId: \{ in: candidateUserIds \}/);
+  assert.match(badges, /getUserIdsMatchingBadge\(badge\.criteria, userIds\)/);
+});
+
+
+test("individual WhatsApp marketing consent can be explicitly confirmed and audited from Smart WhatsApp", () => {
+  const route = read("app/api/dashboard/communication/whatsapp/smart-send/route.ts");
+  const dialog = read("components/dashboard/SmartWhatsappDialog.tsx");
+  assert.match(route, /consentSchema/);
+  assert.match(route, /dashboard-manual-whatsapp-confirmation/);
+  assert.match(route, /setProfileConsent/);
+  assert.match(dialog, /تسجيل الموافقة/);
+  assert.match(dialog, /وصول رسالة تبرع فاشل يثبت أن الرقم صالح/);
+  assert.match(dialog, /setMarketingConsent/);
+});
+
+
+test("WhatsApp donor marketing no longer depends on internal opt-in", () => {
+  const audience = read("lib/communication/audience-service.ts");
+  const smart = read("lib/communication/smart-whatsapp-service.ts");
+  const pickerApi = read("app/api/communication/audience-candidates/route.ts");
+  const dialog = read("components/dashboard/SmartWhatsappDialog.tsx");
+  const retry = read("lib/communication/delivery-retry-service.ts");
+
+  assert.match(audience, /if \(!donor\.phone\) return "UNAVAILABLE";\s*return "ELIGIBLE";/);
+  assert.doesNotMatch(smart, /WHATSAPP_MARKETING_OPT_IN_REQUIRED/);
+  assert.doesNotMatch(pickerApi, /لا توجد موافقة واتساب تسويقية/);
+  assert.doesNotMatch(dialog, /تسجيل الموافقة/);
+  assert.match(retry, /purpose !== "MARKETING" \|\| channel === "WHATSAPP"/);
+});

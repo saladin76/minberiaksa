@@ -417,7 +417,6 @@ export async function sendSmartWhatsapp(input: {
   }
 
   if (mode !== "MARKETING") return { ok: false, reason: "INVALID_MODE" };
-  if (!ctx.whatsappOptIn) return { ok: false, reason: "WHATSAPP_MARKETING_OPT_IN_REQUIRED" };
   if (!input.templateId) return { ok: false, reason: "MARKETING_TEMPLATE_REQUIRED" };
 
   return sendApprovedTemplateForDonor({

@@ -49,6 +49,23 @@ function fromLocalInput(value: string): string | null {
   return Number.isNaN(date.getTime()) ? null : date.toISOString();
 }
 
+async function readApiJson(response: Response, fallback: string): Promise<Record<string, any>> {
+  const text = await response.text();
+  let data: Record<string, any> = {};
+  if (text) {
+    try {
+      data = JSON.parse(text) as Record<string, any>;
+    } catch {
+      const compact = text.replace(/\s+/g, " ").trim().slice(0, 180);
+      throw new Error(response.ok ? fallback : `${fallback} (HTTP ${response.status})${compact ? `: ${compact}` : ""}`);
+    }
+  }
+  if (!response.ok) {
+    throw new Error(String(data.error || data.message || `${fallback} (HTTP ${response.status})`));
+  }
+  return data;
+}
+
 function Stepper({ step, steps }: { step: number; steps: readonly string[] }) {
   return (
     <ol className="mb-5 flex items-center gap-2">
@@ -113,9 +130,9 @@ export function NewCampaignWizard() {
     setTemplatesLoading(true);
     setTemplateId("");
     fetch(`/api/communication/templates?channel=${channel}`, { cache: "no-store" })
-      .then((r) => r.json())
+      .then((response) => readApiJson(response, "تعذّر تحميل القوالب"))
       .then((j) => {
-        if (!j.ok) throw new Error(j.error || "تعذّر تحميل القوالب");
+        if (!j.ok) throw new Error(String(j.error || "تعذّر تحميل القوالب"));
         setTemplates(j.templates ?? []);
       })
       .catch((e) => toast.error((e as Error).message))
@@ -141,8 +158,8 @@ export function NewCampaignWizard() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: `جمهور: ${name.trim()}`, channel, userIds: [...selected] }),
       });
-      const listJson = await listRes.json();
-      if (!listRes.ok || !listJson.ok) throw new Error(listJson?.error || "تعذّر إنشاء قائمة الجمهور");
+      const listJson = await readApiJson(listRes, "تعذّر إنشاء قائمة الجمهور");
+      if (!listJson.ok) throw new Error(String(listJson.error || "تعذّر إنشاء قائمة الجمهور"));
 
       // 2. Then the campaign, pointed at that list. Created as DRAFT  sending is a separate,
       //    explicitly approved act on the campaign page.
@@ -158,8 +175,8 @@ export function NewCampaignWizard() {
           ...(channel === "WHATSAPP" ? { sendControls } : {}),
         }),
       });
-      const json = await res.json();
-      if (!res.ok || !json.ok) throw new Error(json?.error || "تعذّر إنشاء الحملة");
+      const json = await readApiJson(res, "تعذّر إنشاء الحملة");
+      if (!json.ok) throw new Error(String(json.error || "تعذّر إنشاء الحملة"));
 
       toast.success(`تم إنشاء الحملة بـ ${listJson.added} متبرعًا`);
       // Back to the list: a brand-new campaign is a DRAFT with no sends, so the

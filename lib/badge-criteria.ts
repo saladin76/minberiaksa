@@ -18,8 +18,9 @@ export interface BadgeCriteria {
 /**
  * Returns user IDs that match the badge criteria.
  */
-export async function getUserIdsMatchingBadge(criteria: unknown): Promise<string[]> {
+export async function getUserIdsMatchingBadge(criteria: unknown, candidateUserIds?: string[]): Promise<string[]> {
   const c = criteria as BadgeCriteria | null;
+  const candidateWhere = candidateUserIds?.length ? { donorId: { in: candidateUserIds } } : {};
   if (!c?.type) return [];
 
   switch (c.type) {
@@ -30,7 +31,7 @@ export async function getUserIdsMatchingBadge(criteria: unknown): Promise<string
       since.setMonth(since.getMonth() - months);
       const groups = await prisma.donation.groupBy({
         by: ["donorId"],
-        where: { createdAt: { gte: since } },
+        where: { ...candidateWhere, createdAt: { gte: since } },
         _sum: { amountUSD: true },
       });
       const effectiveMin = amountMin > 0 ? amountMin : 0.01;
@@ -44,6 +45,7 @@ export async function getUserIdsMatchingBadge(criteria: unknown): Promise<string
       const amountMin = c.amountMinUSD ?? 0;
       const effectiveMin = amountMin > 0 ? amountMin : 0.01;
       const allDonations = await prisma.donation.findMany({
+        where: candidateWhere,
         select: { donorId: true, amountUSD: true, createdAt: true },
       });
       const byUser = new Map<string, { amountUSD: number; createdAt: Date }[]>();
@@ -96,7 +98,7 @@ export async function getUserIdsMatchingBadge(criteria: unknown): Promise<string
       const min = c.amountMinUSD ?? 0;
       const max = c.amountMaxUSD ?? Number.MAX_SAFE_INTEGER;
       const subs = await prisma.subscription.findMany({
-        where: { status: "ACTIVE" },
+        where: { status: "ACTIVE", ...(candidateUserIds?.length ? { donorId: { in: candidateUserIds } } : {}) },
         select: { donorId: true, amountUSD: true },
       });
       const byDonor = new Map<string, number>();
@@ -115,6 +117,7 @@ export async function getUserIdsMatchingBadge(criteria: unknown): Promise<string
       const effectiveMin = amountMin > 0 ? amountMin : 0.01;
       const groups = await prisma.donation.groupBy({
         by: ["donorId"],
+        where: candidateWhere,
         _sum: { amountUSD: true },
       });
       return groups
@@ -127,6 +130,7 @@ export async function getUserIdsMatchingBadge(criteria: unknown): Promise<string
       if (countMin <= 0) return [];
       const groups = await prisma.donation.groupBy({
         by: ["donorId"],
+        where: candidateWhere,
         _count: { id: true },
       });
       return groups
@@ -150,7 +154,7 @@ export async function getBadgeIdsByUser(
   for (const id of userIds) result.set(id, []);
 
   for (const badge of badges) {
-    const matching = await getUserIdsMatchingBadge(badge.criteria);
+    const matching = await getUserIdsMatchingBadge(badge.criteria, userIds);
     for (const uid of matching) {
       if (result.has(uid)) result.get(uid)!.push(badge.id);
     }

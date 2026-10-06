@@ -16,7 +16,6 @@ type SmartContext = {
   locale: string;
   country: string | null;
   doNotContact: boolean;
-  whatsappOptIn: boolean;
   directSendEnabled: boolean;
   conversationId: string | null;
   replyWindow: ReplyWindow;
@@ -40,7 +39,6 @@ const ERROR_LABELS: Record<string, string> = {
   DO_NOT_CONTACT: "هذا المتبرع موقوف عن التواصل المباشر.",
   NO_RECIPIENT_PHONE: "لا يوجد رقم واتساب صالح لهذا المتبرع.",
   MARKETING_TEMPLATE_REQUIRED: "اختر قالب Marketing معتمد.",
-  WHATSAPP_MARKETING_OPT_IN_REQUIRED: "لا توجد موافقة واتساب تسويقية مسجلة لهذا المتبرع.",
   META_TEMPLATE_NOT_APPROVED_FOR_SENDER_LANGUAGE: "لا توجد نسخة معتمدة من القالب لهذا الرقم/اللغة.",
 };
 
@@ -50,12 +48,14 @@ export function SmartWhatsappDialog({
   userId,
   userName,
   phone,
+  initialMode,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   userId: string;
   userName?: string | null;
   phone?: string | null;
+  initialMode?: "FREEFORM" | "UTILITY" | "MARKETING";
 }) {
   const [ctx, setCtx] = React.useState<SmartContext | null>(null);
   const [loading, setLoading] = React.useState(false);
@@ -72,14 +72,16 @@ export function SmartWhatsappDialog({
       if (!res.ok || !data.ok) throw new Error(data.error ?? "load failed");
       const next = data.context as SmartContext;
       setCtx(next);
-      setMode(next.replyWindow.open ? "FREEFORM" : "UTILITY");
+      const preferred = initialMode ?? (next.replyWindow.open ? "FREEFORM" : "UTILITY");
+      if (preferred === "FREEFORM" && !next.replyWindow.open) setMode("UTILITY");
+      else setMode(preferred);
     } catch {
       toast.error("تعذّر تجهيز إرسال واتساب لهذا المتبرع.");
       setCtx(null);
     } finally {
       setLoading(false);
     }
-  }, [userId]);
+  }, [userId, initialMode]);
 
   React.useEffect(() => {
     if (!open) return;
@@ -160,7 +162,7 @@ export function SmartWhatsappDialog({
       title: "رسالة تسويقية",
       desc: "قالب Marketing معتمد",
       icon: Megaphone,
-      disabled: Boolean(ctx && !ctx.whatsappOptIn),
+      disabled: false,
     },
   ];
 
@@ -207,12 +209,6 @@ export function SmartWhatsappDialog({
                   المتبرع موقوف عن الرسائل الجديدة. يمكن فقط الرد على رسالة واردة أثناء نافذة 24 ساعة.
                 </div>
               )}
-              {!ctx.whatsappOptIn && (
-                <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">
-                  لا توجد موافقة تسويقية عبر واتساب لهذا المتبرع؛ لذلك القوالب التسويقية معطلة. رسائل الخدمة لا تتأثر ما لم يكن التواصل موقوفًا بالكامل.
-                </div>
-              )}
-
               <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
                 {tabs.map((tab) => {
                   const Icon = tab.icon;
