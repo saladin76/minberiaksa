@@ -147,3 +147,20 @@ test("advanced campaign controls keep restart windows sane", () => {
   assert.match(route, /resume <= stop/);
   assert.match(route, /وقت الاستئناف يجب أن يكون بعد وقت التوقف/);
 });
+
+
+test("global campaign emergency stop is persisted, admin-only, and enforced before sends", () => {
+  const schema = read("prisma/schema.prisma");
+  const controls = read("lib/communication/campaign-send-controls.ts");
+  const route = read("app/api/communication/campaigns/global-controls/route.ts");
+  const actions = read("app/(dashboard)/dashboard/communication/campaigns/_components/CampaignRowActions.tsx");
+
+  assert.match(schema, /model CommunicationGlobalControl/);
+  assert.match(controls, /communicationGlobalControl\.findUnique/);
+  assert.match(controls, /communicationGlobalControl\.upsert/);
+  assert.match(controls, /EMERGENCY_STOP/);
+  assert.match(route, /requireAdminSession/);
+  assert.match(route, /EMERGENCY_STOP_ENV_LOCK/);
+  assert.match(actions, /EMERGENCY_STOP/);
+  assert.match(actions, /SCHEDULED_STOP/);
+});
