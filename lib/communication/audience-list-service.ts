@@ -15,7 +15,7 @@ import { AUDIENCE_SELECTION_MAX } from "./audience-limits";
 type Actor = { actorId?: string | null; actorName?: string | null; actorRole?: string | null };
 export type ServiceResult<T = { id: string }> = { ok: true; data: T } | { ok: false; status: number; error: string };
 
-export type AudienceListType = "CUSTOM" | "TEST";
+export type AudienceListType = "CUSTOM" | "TEST" | "SMART";
 export const AUDIENCE_LIST_PREFIX = "list:";
 
 async function audit(actor: Actor, action: string, ar: string, en: string, entityId: string, metadata: Record<string, unknown>) {
@@ -59,7 +59,7 @@ export async function listAudienceLists(): Promise<AudienceListSummary[]> {
     id: l.id,
     name: l.name,
     description: l.description ?? null,
-    type: (l.type === "TEST" ? "TEST" : "CUSTOM") as AudienceListType,
+    type: (l.type === "TEST" ? "TEST" : l.type === "SMART" ? "SMART" : "CUSTOM") as AudienceListType,
     status: l.status,
     locale: l.locale ?? null,
     channels: l.channels ?? [],
@@ -102,7 +102,7 @@ export async function getAudienceList(id: string): Promise<{ list: AudienceListS
   });
 
   const summary: AudienceListSummary = {
-    id: l.id, name: l.name, description: l.description ?? null, type: (l.type === "TEST" ? "TEST" : "CUSTOM"),
+    id: l.id, name: l.name, description: l.description ?? null, type: (l.type === "TEST" ? "TEST" : l.type === "SMART" ? "SMART" : "CUSTOM"),
     status: l.status, locale: l.locale ?? null, channels: l.channels ?? [], membersCount: members.length,
     owner: l.createdByName ?? null, updatedAt: l.updatedAt.toISOString(), lastTestAt: (l.metadata as { lastTestAt?: string } | null)?.lastTestAt ?? null,
   };
@@ -112,7 +112,7 @@ export async function getAudienceList(id: string): Promise<{ list: AudienceListS
 // ─────────────────────────── Mutations ───────────────────────────
 
 export async function createAudienceList(
-  input: { name: string; description?: string | null; type?: AudienceListType; locale?: string | null; channels?: string[] },
+  input: { name: string; description?: string | null; type?: AudienceListType; locale?: string | null; channels?: string[]; metadata?: Record<string, unknown> | null },
   actor: Actor
 ): Promise<ServiceResult> {
   if (!process.env.DATABASE_URL) return { ok: false, status: 503, error: "DATABASE_URL is not configured." };
@@ -124,12 +124,13 @@ export async function createAudienceList(
       data: {
         name,
         description: input.description ?? null,
-        type: input.type === "TEST" ? "TEST" : "CUSTOM",
+        type: input.type === "TEST" ? "TEST" : input.type === "SMART" ? "SMART" : "CUSTOM",
         status: "ACTIVE",
         locale: input.locale && isValidLocale(input.locale) ? input.locale : null,
         channels,
         createdBy: actor.actorId ?? null,
         createdByName: actor.actorName ?? null,
+        metadata: input.metadata ?? undefined,
       },
       select: { id: true },
     });
@@ -178,6 +179,7 @@ export async function duplicateAudienceList(id: string, actor: Actor): Promise<S
         channels: src.channels ?? [],
         createdBy: actor.actorId ?? null,
         createdByName: actor.actorName ?? null,
+        metadata: src.metadata ?? undefined,
       },
       select: { id: true },
     });
