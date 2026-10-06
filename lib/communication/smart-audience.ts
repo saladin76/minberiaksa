@@ -32,6 +32,7 @@ export type SmartAudiencePreview = {
   doNotContact: number;
   unavailable: number;
   languages: Record<string, number>;
+  eligibleLanguages: Record<string, number>;
   sample: Array<{
     id: string;
     name: string | null;
@@ -225,12 +226,13 @@ export async function previewSmartAudience(
     communicationProfile: { is: { doNotContact: true } },
   };
 
-  const [matched, eligible, missingContact, doNotContact, languageRows, sampleRows] = await Promise.all([
+  const [matched, eligible, missingContact, doNotContact, languageRows, eligibleLanguageRows, sampleRows] = await Promise.all([
     prisma.user.count({ where }).catch(() => 0),
     prisma.user.count({ where: eligibleFilter }).catch(() => 0),
     prisma.user.count({ where: missingFilter }).catch(() => 0),
     prisma.user.count({ where: dncFilter }).catch(() => 0),
     prisma.user.groupBy({ by: ["preferredLang"], where, _count: { id: true } }).catch(() => []),
+    prisma.user.groupBy({ by: ["preferredLang"], where: eligibleFilter, _count: { id: true } }).catch(() => []),
     prisma.user.findMany({
       where,
       select: {
@@ -251,6 +253,12 @@ export async function previewSmartAudience(
   for (const row of languageRows) {
     const locale = row.preferredLang && isValidLocale(row.preferredLang) ? row.preferredLang : DEFAULT_LOCALE;
     languages[locale] = (languages[locale] ?? 0) + row._count.id;
+  }
+
+  const eligibleLanguages: Record<string, number> = {};
+  for (const row of eligibleLanguageRows) {
+    const locale = row.preferredLang && isValidLocale(row.preferredLang) ? row.preferredLang : DEFAULT_LOCALE;
+    eligibleLanguages[locale] = (eligibleLanguages[locale] ?? 0) + row._count.id;
   }
 
   const sample = sampleRows.map((u) => {
@@ -278,6 +286,7 @@ export async function previewSmartAudience(
     doNotContact,
     unavailable: Math.max(0, matched - eligible),
     languages,
+    eligibleLanguages,
     sample,
   };
 }
