@@ -13,6 +13,9 @@ test("automatic email keeps Elastic Email, suppression, unsubscribe and provider
   assert.match(dispatcher, /EMAIL_PROVIDER_ID/);
   assert.match(dispatcher, /createDeliveryRecord/);
   assert.match(dispatcher, /sendPreparedDelivery/);
+  assert.match(dispatcher, /automaticConsentBlock/);
+  assert.match(dispatcher, /DO_NOT_CONTACT/);
+  assert.match(dispatcher, /EMAIL_MARKETING_OPT_IN_REQUIRED/);
   assert.match(email, /emailSuppressionDecision/);
   assert.match(email, /appendMarketingUnsubscribeFooter/);
   assert.match(email, /List-Unsubscribe/);
@@ -49,6 +52,7 @@ test("automatic SMS is a first-class trigger channel with consent-aware lapsed r
   assert.match(dispatch, /sendAutomaticSmsMessage/);
   assert.match(dispatch, /prisma\.smsTemplate/);
   assert.match(dispatch, /smsSent/);
+  assert.match(read("lib/communication/automatic-message-dispatcher.ts"), /SMS_OPT_IN_REQUIRED/);
   assert.match(lapsed, /trigger\.channel === "SMS"/);
   assert.match(lapsed, /donorChannelEligibility/);
   assert.match(editor, /value="SMS"/);
