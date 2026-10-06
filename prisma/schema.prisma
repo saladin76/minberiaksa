@@ -1630,13 +1630,15 @@ enum MessageTriggerEvent {
 enum MessageChannel {
   EMAIL
   WHATSAPP
+  SMS
 }
 
 model MessageTrigger {
   id           String              @id @default(auto()) @map("_id") @db.ObjectId
   event        MessageTriggerEvent
   channel      MessageChannel
-  /// Refers to EmailTemplate.id when channel=EMAIL, WhatsappTemplate.id when channel=WHATSAPP
+  /// Refers to EmailTemplate.id when channel=EMAIL, WhatsappTemplate.id when channel=WHATSAPP,
+  /// and SmsTemplate.id when channel=SMS
   templateId   String              @db.ObjectId
   enabled      Boolean             @default(true)
   /// DONATION_LAPSED only  days since the donor's last PAID donation before the reminder fires.
@@ -1663,7 +1665,8 @@ enum SentMessageOrigin {
   BACKFILL // imported from legacy audit logs (no per-recipient detail)
 }
 
-/// Per-recipient log of every templated email or WhatsApp message that goes out.
+/// Per-recipient legacy mirror of templated email/WhatsApp messages. SMS trigger sends use
+/// CommunicationDelivery as the source of truth and do not depend on this legacy mirror.
 /// Stores the rendered subject/body and a snapshot of the variables so the
 /// dashboard history page can show exactly what was sent to each person.
 model SentMessage {
