@@ -207,6 +207,7 @@ model User {
   cartItems     CartItem[]
   messages      Message[]
   creditCards   CreditCard[]
+  communicationProfile DonorCommunicationProfile?
 }
 
 /**
@@ -2209,6 +2210,7 @@ model SenderRoutingRule {
 model DonorCommunicationProfile {
   id                  String    @id @default(auto()) @map("_id") @db.ObjectId
   userId              String    @unique @db.ObjectId
+  user                User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   preferredLocale     String?
   countryCode         String?
   timezone            String?
