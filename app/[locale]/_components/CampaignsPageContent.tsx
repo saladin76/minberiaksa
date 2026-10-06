@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import axios from "axios";
 import { Search, HandHeart, ArrowRight, X, ChevronDown, ChevronRight, Check } from "lucide-react";
 import CampaignCard from "@/app/[locale]/_components/CampaignCard";
@@ -70,11 +71,12 @@ const CampaignsPage = ({
   initialTotal = initialCampaigns.length,
 }: CampaignsPageContentProps = {}) => {
   const t = useTranslations("CampaignsPage");
+  const urlSearchParams = useSearchParams();
   const [campaigns, setCampaigns] = useState<Campaign[]>(initialCampaigns);
   const [categories, setCategories] = useState<Category[]>(initialCategories);
   const [loading, setLoading] = useState(initialCampaigns.length === 0);
   const [error, setError] = useState<string | null>(null);
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery, setSearchQuery] = useState(() => urlSearchParams.get("search")?.trim() ?? "");
   const [debouncedSearch] = useDebounce(searchQuery, 300);
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [filters, setFilters] = useState<FilterState>({ sortBy: "newest", minAmount: 0, maxAmount: 100000000 });
@@ -89,6 +91,11 @@ const CampaignsPage = ({
   const ITEMS_PER_PAGE = 6;
   const locale = useLocale() as string;
   const isRTL = locale === "ar";
+
+  useEffect(() => {
+    const incoming = urlSearchParams.get("search")?.trim() ?? "";
+    setSearchQuery((current) => (current === incoming ? current : incoming));
+  }, [urlSearchParams]);
 
   const fetchData = useCallback(async (pageToLoad = 1) => {
     const requestId = ++requestSeqRef.current;
