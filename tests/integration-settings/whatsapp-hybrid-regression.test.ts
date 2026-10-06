@@ -242,3 +242,11 @@ test("automatic-events list fails visibly instead of spinning forever", () => {
   assert.match(triggers, /loadError/);
   assert.match(triggers, /إعادة المحاولة/);
 });
+
+
+test("campaign audience badge evaluation stays scoped to visible donors", () => {
+  const badges = read("lib/badge-criteria.ts");
+  assert.match(badges, /candidateUserIds\?: string\[\]/);
+  assert.match(badges, /donorId: \{ in: candidateUserIds \}/);
+  assert.match(badges, /getUserIdsMatchingBadge\(badge\.criteria, userIds\)/);
+});
