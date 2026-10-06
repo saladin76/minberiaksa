@@ -1,3 +1,4 @@
+import { metaParameterName } from "./meta-parameter-name";
 import { VARIABLE_CATALOG } from "../templates/variable-catalog";
 
 const SCALAR_RE = /\{\{\s*([a-zA-Z0-9_.]+)\s*\}\}/g;
@@ -73,17 +74,6 @@ export function sameVariableSet(left: string[], right: string[]): boolean {
   if (left.length !== right.length) return false;
   const rightSet = new Set(right);
   return left.every((key) => rightSet.has(key));
-}
-
-export function metaParameterName(key: string): string {
-  const normalized = key
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9_]+/g, "_")
-    .replace(/^_+|_+$/g, "")
-    .replace(/_+/g, "_");
-  if (!normalized) throw new Error("INVALID_META_PARAMETER_NAME");
-  return /^[a-z]/.test(normalized) ? normalized : `p_${normalized}`;
 }
 
 function metaNamedText(text: string): string {
