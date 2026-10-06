@@ -4,10 +4,15 @@ import { prisma } from "@/lib/prisma";
 import type { CommunicationCampaign } from "@prisma/client";
 
 export type CampaignSpeedMode = "SAFE" | "BALANCED" | "FAST" | "MAX";
+export type CampaignPriority = "LOW" | "NORMAL" | "HIGH" | "URGENT";
 export type CampaignSendControls = {
   paused: boolean;
   speedMode: CampaignSpeedMode;
+  autoSpeed: boolean;
+  priority: CampaignPriority;
   dailyCap: number;
+  scheduledStopAt: string | null;
+  resumeAt: string | null;
   quietHours: {
     enabled: boolean;
     start: string; // HH:mm
@@ -51,12 +56,22 @@ export function campaignSendControls(campaign: Pick<CommunicationCampaign, "meta
     ? raw.quietHours
     : {}) as Record<string, unknown>;
   const speed = String(raw.speedMode ?? "BALANCED").toUpperCase() as CampaignSpeedMode;
+  const priority = String(raw.priority ?? "NORMAL").toUpperCase() as CampaignPriority;
+  const isoOrNull = (value: unknown) => {
+    if (typeof value !== "string" || !value.trim()) return null;
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? null : date.toISOString();
+  };
   const globalCap = positiveInt(process.env.COMMUNICATION_WHATSAPP_DAILY_CAP, 100_000);
   const requestedCap = positiveInt(raw.dailyCap, globalCap);
 
   return {
     paused: raw.paused === true,
     speedMode: speed in SPEEDS ? speed : "BALANCED",
+    autoSpeed: raw.autoSpeed === true,
+    priority: ["LOW", "NORMAL", "HIGH", "URGENT"].includes(priority) ? priority : "NORMAL",
+    scheduledStopAt: isoOrNull(raw.scheduledStopAt),
+    resumeAt: isoOrNull(raw.resumeAt),
     // Per-campaign controls may be stricter than the account tier, never looser.
     dailyCap: Math.min(requestedCap, globalCap),
     quietHours: {
@@ -73,6 +88,64 @@ export function campaignSendControls(campaign: Pick<CommunicationCampaign, "meta
 
 export function speedSettings(mode: CampaignSpeedMode) {
   return SPEEDS[mode] ?? SPEEDS.BALANCED;
+}
+
+export function campaignPriorityRank(priority: CampaignPriority): number {
+  return priority === "URGENT" ? 0 : priority === "HIGH" ? 1 : priority === "NORMAL" ? 2 : 3;
+}
+
+export function autoSpeedMode(input: {
+  remainingRecipients: number;
+  remainingDaily: number | null;
+  scheduledStopAt: string | null;
+  now?: Date;
+}): CampaignSpeedMode {
+  const now = input.now ?? new Date();
+  const remaining = Math.max(0, Math.min(input.remainingRecipients, input.remainingDaily ?? input.remainingRecipients));
+  if (remaining <= 250) return "SAFE";
+  if (remaining <= 2_000) return "BALANCED";
+
+  if (input.scheduledStopAt) {
+    const stop = Date.parse(input.scheduledStopAt);
+    if (Number.isFinite(stop) && stop > now.getTime()) {
+      const hours = Math.max((stop - now.getTime()) / 3_600_000, 0.25);
+      const neededPerHour = remaining / hours;
+      if (neededPerHour <= 500) return "BALANCED";
+      if (neededPerHour <= 2_500) return "FAST";
+      return "MAX";
+    }
+  }
+  return remaining <= 10_000 ? "FAST" : "MAX";
+}
+
+const GLOBAL_CONTROL_ID = "000000000000000000000001";
+
+export async function campaignEmergencyStopEnabled(): Promise<boolean> {
+  if (String(process.env.COMMUNICATION_CAMPAIGN_EMERGENCY_STOP ?? "").toLowerCase() === "true") return true;
+  const row = await prisma.communicationGlobalControl.findUnique({
+    where: { id: GLOBAL_CONTROL_ID },
+    select: { emergencyStop: true },
+  }).catch(() => null);
+  return row?.emergencyStop === true;
+}
+
+export async function setCampaignEmergencyStop(enabled: boolean, updatedBy?: string | null): Promise<boolean> {
+  const row = await prisma.communicationGlobalControl.upsert({
+    where: { id: GLOBAL_CONTROL_ID },
+    create: { id: GLOBAL_CONTROL_ID, emergencyStop: enabled, updatedBy: updatedBy ?? null },
+    update: { emergencyStop: enabled, updatedBy: updatedBy ?? null },
+    select: { emergencyStop: true },
+  }).catch(() => null);
+  return row?.emergencyStop === enabled;
+}
+
+export function insideScheduledStop(controls: CampaignSendControls, now = new Date()): boolean {
+  if (!controls.scheduledStopAt) return false;
+  const stop = Date.parse(controls.scheduledStopAt);
+  if (!Number.isFinite(stop) || now.getTime() < stop) return false;
+  if (!controls.resumeAt) return true;
+  const resume = Date.parse(controls.resumeAt);
+  return !Number.isFinite(resume) || now.getTime() < resume;
 }
 
 function localMinutes(date: Date, timeZone: string): number | null {
@@ -121,9 +194,11 @@ export async function whatsappSentLast24Hours(): Promise<number> {
 
 export async function evaluateCampaignSendControls(
   campaign: Pick<CommunicationCampaign, "channel" | "metadata">,
-): Promise<{ ok: true; controls: CampaignSendControls; remainingDaily: number | null } | { ok: false; controls: CampaignSendControls; reason: "PAUSED" | "QUIET_HOURS" | "DAILY_CAP_REACHED"; remainingDaily: number | null }> {
+): Promise<{ ok: true; controls: CampaignSendControls; remainingDaily: number | null } | { ok: false; controls: CampaignSendControls; reason: "EMERGENCY_STOP" | "PAUSED" | "QUIET_HOURS" | "SCHEDULED_STOP" | "DAILY_CAP_REACHED"; remainingDaily: number | null }> {
   const controls = campaignSendControls(campaign);
+  if (await campaignEmergencyStopEnabled()) return { ok: false, controls, reason: "EMERGENCY_STOP", remainingDaily: null };
   if (controls.paused) return { ok: false, controls, reason: "PAUSED", remainingDaily: null };
+  if (insideScheduledStop(controls)) return { ok: false, controls, reason: "SCHEDULED_STOP", remainingDaily: null };
   if (insideQuietHours(controls)) return { ok: false, controls, reason: "QUIET_HOURS", remainingDaily: null };
 
   if (campaign.channel === "WHATSAPP") {

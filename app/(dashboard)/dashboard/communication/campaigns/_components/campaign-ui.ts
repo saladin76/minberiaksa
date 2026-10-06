@@ -19,11 +19,16 @@ export interface CampaignRow {
   repliedCount: number;
   donationCount: number;
   revenue: number;
+  failedDonationCount?: number;
   metadata?: {
     sendControls?: {
       paused?: boolean;
       speedMode?: string;
+      autoSpeed?: boolean;
+      priority?: "LOW" | "NORMAL" | "HIGH" | "URGENT";
       dailyCap?: number;
+      scheduledStopAt?: string | null;
+      resumeAt?: string | null;
       quietHours?: { enabled?: boolean; start?: string; end?: string; timezone?: string };
     };
   } | null;

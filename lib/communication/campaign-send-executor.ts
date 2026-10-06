@@ -16,8 +16,9 @@ import { buildMetaComponents } from "./providers/meta-whatsapp/parameters";
 import { resolveAudienceOrigin } from "./audience-list-service";
 import { computeFinalStatus, recomputeCampaignCounters } from "./campaign-counter-service";
 import { type CommunicationChannelId, type CommunicationPurposeId } from "./communication-runtime-types";
-import { evaluateCampaignSendControls, speedSettings, type CampaignSpeedMode } from "./campaign-send-controls";
+import { autoSpeedMode, campaignPriorityRank, campaignSendControls, evaluateCampaignSendControls, speedSettings, type CampaignSpeedMode } from "./campaign-send-controls";
 import { mergeCampaignMetadata, mutateCampaignMetadata } from "./campaign-metadata-store";
+import { normalizePhoneE164, phoneMatchVariants } from "./phone";
 
 export { computeFinalStatus };
 
@@ -178,6 +179,15 @@ const MAX_BLOCKED_RESUMES = 3;
 type Lease = { token: string; expiresAt: string; holder?: string | null };
 
 function bump(reasons: Record<string, number>, key: string) { reasons[key] = (reasons[key] ?? 0) + 1; }
+
+function normalizeRecipientContact(channel: CommunicationChannelId, email: string | null | undefined, phone: string | null | undefined): string | null {
+  if (channel === "EMAIL") {
+    const value = String(email ?? "").trim().toLowerCase();
+    return value ? `email:${value}` : null;
+  }
+  const canonical = normalizePhoneE164(phone);
+  return canonical ? `phone:${canonical}` : null;
+}
 function metaOf(campaign: CommunicationCampaign) { return (campaign.metadata as Record<string, unknown> | null) ?? {}; }
 function coverageDecisions(campaign: CommunicationCampaign): Record<string, string> { return (metaOf(campaign).coverageDecisions ?? {}) as Record<string, string>; }
 function progressOf(campaign: CommunicationCampaign): SendProgress | null {
@@ -415,24 +425,52 @@ export async function executeCampaignSend(
       ...plan.recipients.map((recipient) => recipient.userId),
       ...plan.skippedList.map((recipient) => recipient.userId),
     ]));
-    const existing = batchUserIds.length
+    const batchEmails = Array.from(new Set(
+      plan.recipients
+        .map((recipient) => String(recipient.email ?? "").trim())
+        .filter(Boolean),
+    ));
+    const batchPhones = Array.from(new Set(
+      plan.recipients.flatMap((recipient) => phoneMatchVariants(recipient.phone)),
+    ));
+    const existing = (batchUserIds.length || batchEmails.length || batchPhones.length)
       ? await prisma.communicationDelivery.findMany({
           where: {
             campaignId,
             templateId,
             channel,
             origin,
-            recipientUserId: { in: batchUserIds },
+            OR: [
+              ...(batchUserIds.length ? [{ recipientUserId: { in: batchUserIds } }] : []),
+              ...(batchEmails.length ? [{ recipientEmail: { in: batchEmails } }] : []),
+              ...(batchPhones.length ? [{ recipientPhone: { in: batchPhones } }] : []),
+            ],
           },
-          select: { recipientUserId: true, status: true, providerMessageId: true },
+          select: {
+            recipientUserId: true,
+            recipientEmail: true,
+            recipientPhone: true,
+            status: true,
+            providerMessageId: true,
+          },
         }).catch(() => [])
       : [];
+    const processedExisting = existing.filter(
+      (delivery) => (delivery.status && PROCESSED_STATUSES.includes(delivery.status)) || !!delivery.providerMessageId,
+    );
     const alreadyDone = new Set(
-      existing
-        .filter((delivery) => (delivery.status && PROCESSED_STATUSES.includes(delivery.status)) || !!delivery.providerMessageId)
+      processedExisting
         .map((delivery) => delivery.recipientUserId)
         .filter(Boolean) as string[],
     );
+    const alreadyDoneContacts = new Set(
+      processedExisting
+        .map((delivery) => normalizeRecipientContact(channel, delivery.recipientEmail, delivery.recipientPhone))
+        .filter(Boolean) as string[],
+    );
+    // Shared within this page. Each callback claims its contact synchronously before its first await,
+    // so duplicate donor rows that point to the same destination cannot race into the provider.
+    const claimedBatchContacts = new Set<string>();
 
     for (const skipped of plan.skippedList) {
       if (alreadyDone.has(skipped.userId)) continue;
@@ -459,6 +497,26 @@ export async function executeCampaignSend(
         bump(outcome.reasons, "ALREADY_PROCESSED");
         return outcome;
       }
+
+      const contactKey = normalizeRecipientContact(channel, recipient.email, recipient.phone);
+      if (contactKey && (alreadyDoneContacts.has(contactKey) || claimedBatchContacts.has(contactKey))) {
+        await recordSkippedDelivery({
+          channel,
+          campaignId,
+          templateId,
+          recipientUserId: recipient.userId,
+          recipientEmail: channel === "EMAIL" ? recipient.email : null,
+          recipientPhone: channel !== "EMAIL" ? recipient.phone : null,
+          locale: recipient.locale,
+          purpose,
+          origin,
+          createdBy: actor?.actorId ?? null,
+        }, "DUPLICATE_RECIPIENT_CONTACT");
+        outcome.skipped += 1;
+        bump(outcome.reasons, "DUPLICATE_RECIPIENT_CONTACT");
+        return outcome;
+      }
+      if (contactKey) claimedBatchContacts.add(contactKey);
 
       const loadedCtx = contexts.get(recipient.userId) ?? null;
       const recipientCtx = loadedCtx && updateSource
@@ -644,7 +702,14 @@ export async function executeCampaignSend(
     const liveGate = await evaluateCampaignSendControls(liveCampaign);
     if (!liveGate.ok) { base.blocked = liveGate.reason; break; }
 
-    const liveSpeed = liveGate.controls.speedMode;
+    const remainingRecipients = Math.max(plan.audienceTotal - progress.total, plan.total);
+    const liveSpeed = liveGate.controls.autoSpeed
+      ? autoSpeedMode({
+          remainingRecipients,
+          remainingDaily: liveGate.remainingDaily,
+          scheduledStopAt: liveGate.controls.scheduledStopAt,
+        })
+      : liveGate.controls.speedMode;
     const tally = await runBatch(plan, liveSpeed);
     batches += 1;
     exhausted = plan.exhausted;
@@ -670,7 +735,15 @@ export async function executeCampaignSend(
     if (!fresh) { base.blocked = "NOT_FOUND"; break; }
     const nextGate = await evaluateCampaignSendControls(fresh);
     if (!nextGate.ok) { base.blocked = nextGate.reason; break; }
-    const nextSpeed = speedSettings(nextGate.controls.speedMode);
+    const remainingForNextBatch = Math.max(firstPlan.audienceTotal - progress.total, 0);
+    const nextMode = nextGate.controls.autoSpeed
+      ? autoSpeedMode({
+          remainingRecipients: remainingForNextBatch,
+          remainingDaily: nextGate.remainingDaily,
+          scheduledStopAt: nextGate.controls.scheduledStopAt,
+        })
+      : nextGate.controls.speedMode;
+    const nextSpeed = speedSettings(nextMode);
     const desiredNextBatch = Math.min(opts.batchSize ?? nextSpeed.batchSize, 1000);
     const nextBatchSize = Math.max(1, Math.min(desiredNextBatch, nextGate.remainingDaily ?? desiredNextBatch));
     const next = await planCampaignSend(campaignId, { batchSize: nextBatchSize, cursor });
@@ -739,12 +812,33 @@ export async function runDueCampaigns(opts: { actor?: Actor; max?: number } = {}
   const max = Math.min(opts.max ?? 10, 50);
   const results: ExecutionSummary[] = [];
 
-  const due = await prisma.communicationCampaign.findMany({ where: { status: "SCHEDULED", scheduledAt: { lte: new Date() } }, select: { id: true }, take: max }).catch(() => []);
+  const dueCandidates = await prisma.communicationCampaign.findMany({
+    where: { status: "SCHEDULED", scheduledAt: { lte: new Date() } },
+    select: { id: true, metadata: true, scheduledAt: true },
+    take: Math.min(max * 5, 250),
+  }).catch(() => []);
+  dueCandidates.sort((a, b) => {
+    const pa = campaignPriorityRank(campaignSendControls(a as Pick<CommunicationCampaign, "metadata">).priority);
+    const pb = campaignPriorityRank(campaignSendControls(b as Pick<CommunicationCampaign, "metadata">).priority);
+    if (pa !== pb) return pa - pb;
+    return (a.scheduledAt?.getTime() ?? 0) - (b.scheduledAt?.getTime() ?? 0);
+  });
+  const due = dueCandidates.slice(0, max);
   for (const campaign of due) results.push(await executeCampaignSend(campaign.id, { actor: opts.actor, mode: "DUE" }));
 
   const budget = max - due.length;
   if (budget > 0) {
-    const inFlight = await prisma.communicationCampaign.findMany({ where: { status: "SENDING" }, select: { id: true, metadata: true }, take: budget * 4 }).catch(() => []);
+    const inFlight = await prisma.communicationCampaign.findMany({
+      where: { status: "SENDING" },
+      select: { id: true, metadata: true, updatedAt: true },
+      take: Math.min(budget * 8, 250),
+    }).catch(() => []);
+    inFlight.sort((a, b) => {
+      const pa = campaignPriorityRank(campaignSendControls(a as Pick<CommunicationCampaign, "metadata">).priority);
+      const pb = campaignPriorityRank(campaignSendControls(b as Pick<CommunicationCampaign, "metadata">).priority);
+      if (pa !== pb) return pa - pb;
+      return a.updatedAt.getTime() - b.updatedAt.getTime();
+    });
     for (const row of inFlight) {
       if (results.length >= max) break;
       const asCampaign = row as unknown as CommunicationCampaign;

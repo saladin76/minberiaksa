@@ -13,6 +13,8 @@ import {
   DownloadCloud,
   RefreshCw,
   Info,
+  Archive,
+  ArchiveRestore,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { WhatsappTemplateEditorDialog } from "./WhatsappTemplateEditorDialog";
@@ -102,6 +104,7 @@ export function WhatsappTemplateList() {
   const [directSendEnabled, setDirectSendEnabled] = React.useState(false);
   const [loading, setLoading] = React.useState(true);
   const [section, setSection] = React.useState<"SYSTEM" | "CAMPAIGN">("CAMPAIGN");
+  const [archiveView, setArchiveView] = React.useState<"ACTIVE" | "ARCHIVED">("ACTIVE");
   const [importing, setImporting] = React.useState(false);
   const [syncingMeta, setSyncingMeta] = React.useState(false);
   const [importStatus, setImportStatus] = React.useState<ImportSummary | null>(null);
@@ -139,8 +142,11 @@ export function WhatsappTemplateList() {
       category === "AUTHENTICATION" ||
       template.kind === "SYSTEM";
     const bucket = isSystem ? "SYSTEM" : "CAMPAIGN";
-    return bucket === section;
+    const archived = String(template.status ?? "").toUpperCase() === "ARCHIVED";
+    return bucket === section && (archiveView === "ARCHIVED" ? archived : !archived);
   });
+
+  const archivedCount = templates.filter((template) => String(template.status ?? "").toUpperCase() === "ARCHIVED").length;
 
   const handleMetaSync = async () => {
     setSyncingMeta(true);
@@ -183,6 +189,22 @@ export function WhatsappTemplateList() {
     }
   };
 
+  const handleArchive = async (template: WhatsappTemplateRow, action: "ARCHIVE" | "RESTORE") => {
+    const prompt = action === "ARCHIVE"
+      ? `أرشفة «${template.name}»؟ سيختفي من اختيارات الإرسال الجديدة مع بقاء السجل والتاريخ محفوظين.`
+      : `استعادة «${template.name}» من الأرشيف؟`;
+    if (!window.confirm(prompt)) return;
+    try {
+      const res = await axios.post(`/api/templates/whatsapp/${template.id}/archive`, { action });
+      if (!res.data?.ok) throw new Error(res.data?.error || "تعذّر تحديث القالب");
+      toast.success(action === "ARCHIVE" ? "تمت أرشفة القالب" : "تمت استعادة القالب");
+      await fetchAll();
+    } catch (error) {
+      const data = (error as { response?: { data?: { error?: string } } }).response?.data;
+      toast.error(data?.error || (error as Error).message || "تعذّر تحديث القالب");
+    }
+  };
+
   const handleDelete = async (id: string) => {
     if (!window.confirm("هل تريد حذف هذا القالب؟")) return;
     try {
@@ -196,9 +218,17 @@ export function WhatsappTemplateList() {
 
   return (
     <div className="space-y-4">
-      <div className="inline-flex rounded-lg border border-slate-200 bg-slate-50 p-1">
-        <button type="button" onClick={() => setSection("CAMPAIGN")} className={`rounded-md px-3 py-1.5 text-xs font-medium ${section === "CAMPAIGN" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500"}`}>الحملات التسويقية</button>
-        <button type="button" onClick={() => setSection("SYSTEM")} className={`rounded-md px-3 py-1.5 text-xs font-medium ${section === "SYSTEM" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500"}`}>التلقائية والتوثيق</button>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="inline-flex rounded-lg border border-slate-200 bg-slate-50 p-1">
+          <button type="button" onClick={() => setSection("CAMPAIGN")} className={`rounded-md px-3 py-1.5 text-xs font-medium ${section === "CAMPAIGN" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500"}`}>الحملات التسويقية</button>
+          <button type="button" onClick={() => setSection("SYSTEM")} className={`rounded-md px-3 py-1.5 text-xs font-medium ${section === "SYSTEM" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500"}`}>التلقائية والتوثيق</button>
+        </div>
+        <div className="inline-flex rounded-lg border border-slate-200 bg-white p-1">
+          <button type="button" onClick={() => setArchiveView("ACTIVE")} className={`rounded-md px-3 py-1.5 text-xs font-medium ${archiveView === "ACTIVE" ? "bg-slate-900 text-white shadow-sm" : "text-slate-500"}`}>النشطة</button>
+          <button type="button" onClick={() => setArchiveView("ARCHIVED")} className={`rounded-md px-3 py-1.5 text-xs font-medium ${archiveView === "ARCHIVED" ? "bg-slate-900 text-white shadow-sm" : "text-slate-500"}`}>
+            الأرشيف {archivedCount > 0 ? `(${archivedCount})` : ""}
+          </button>
+        </div>
       </div>
       {section === "SYSTEM" && (
         <div className={cn(
@@ -472,14 +502,35 @@ export function WhatsappTemplateList() {
                         >
                           <Pencil className="w-3.5 h-3.5 me-1" /> تعديل
                         </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleDelete(t.id)}
-                          className="text-red-600 hover:text-red-700"
-                        >
-                          <Trash2 className="w-3.5 h-3.5 me-1" /> حذف
-                        </Button>
+                        {archiveView === "ACTIVE" ? (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => void handleArchive(t, "ARCHIVE")}
+                            className="text-slate-700 hover:text-slate-900"
+                          >
+                            <Archive className="w-3.5 h-3.5 me-1" /> أرشف
+                          </Button>
+                        ) : (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => void handleArchive(t, "RESTORE")}
+                            className="text-emerald-700 hover:text-emerald-800"
+                          >
+                            <ArchiveRestore className="w-3.5 h-3.5 me-1" /> استعادة
+                          </Button>
+                        )}
+                        {archiveView === "ACTIVE" && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleDelete(t.id)}
+                            className="text-red-600 hover:text-red-700"
+                          >
+                            <Trash2 className="w-3.5 h-3.5 me-1" /> حذف
+                          </Button>
+                        )}
                       </div>
                     </td>
                   </tr>
