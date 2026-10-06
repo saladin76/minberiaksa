@@ -5,6 +5,8 @@ import { EMAIL_PROVIDER_ID } from "./providers/email/client";
 import { logSentMessage } from "@/lib/messaging/log-sent";
 import type { CommunicationPurposeId } from "./communication-runtime-types";
 import { getActiveMetaWhatsappRuntimeConfig } from "./runtime-config";
+import { prisma } from "@/lib/prisma";
+import { ensureProfilesForUsers } from "./donor-communication-profile-service";
 
 /**
  * Automatic (trigger-fired) message dispatcher for the Communication Center.
@@ -58,6 +60,23 @@ function isTerminalConfigReason(reason: string): boolean {
 /** Build the delivery/mirror variables snapshot, tagging the trigger + donation context. */
 function deliveryVariables(input: CommonInput): Record<string, unknown> {
   return { trigger: { event: input.triggerEvent, donationId: input.donationId ?? null }, snapshot: input.variables };
+}
+
+async function automaticConsentBlock(
+  userId: string,
+  channel: "EMAIL" | "SMS",
+  purpose: CommunicationPurposeId | undefined,
+): Promise<string | null> {
+  await ensureProfilesForUsers([userId]);
+  const profile = await prisma.donorCommunicationProfile.findUnique({
+    where: { userId },
+    select: { doNotContact: true, emailOptIn: true, smsOptIn: true },
+  }).catch(() => null);
+
+  if (profile?.doNotContact) return "DO_NOT_CONTACT";
+  if (channel === "SMS" && profile?.smsOptIn !== true) return "SMS_OPT_IN_REQUIRED";
+  if (channel === "EMAIL" && purpose === "MARKETING" && profile?.emailOptIn !== true) return "EMAIL_MARKETING_OPT_IN_REQUIRED";
+  return null;
 }
 
 /** Secondary SentMessage mirror  written only AFTER the delivery status is known. Best-effort. */
@@ -122,6 +141,19 @@ export async function sendAutomaticEmailMessage(
     renderedBody: input.renderedBody,
     variables: deliveryVariables(input),
   };
+
+  const consentBlock = await automaticConsentBlock(input.recipientUserId, "EMAIL", input.purpose);
+  if (consentBlock) {
+    const created = await createDeliveryRecord({ ...base, recipientEmail: input.recipientEmail, status: "RENDERED" });
+    if (created.ok) await markDeliveryStatus(created.data.id, "SKIPPED", { errorMessage: consentBlock });
+    await mirrorSentMessage("EMAIL", input, "SKIPPED", {
+      recipientEmail: input.recipientEmail,
+      renderedSubject: input.renderedSubject,
+      renderedBody: input.renderedBody,
+      errorMessage: consentBlock,
+    });
+    return { outcome: "SKIPPED", reason: consentBlock };
+  }
 
   if (!input.recipientEmail) {
     const created = await createDeliveryRecord({ ...base, recipientEmail: null, status: "RENDERED" });
@@ -361,6 +393,13 @@ export async function sendAutomaticSmsMessage(
     renderedBody: input.renderedBody,
     variables: deliveryVariables(input),
   };
+
+  const consentBlock = await automaticConsentBlock(input.recipientUserId, "SMS", input.purpose);
+  if (consentBlock) {
+    const created = await createDeliveryRecord({ ...base, recipientPhone: input.recipientPhone, status: "RENDERED" });
+    if (created.ok) await markDeliveryStatus(created.data.id, "SKIPPED", { errorMessage: consentBlock });
+    return { outcome: "SKIPPED", reason: consentBlock };
+  }
 
   if (!input.recipientPhone) {
     const created = await createDeliveryRecord({ ...base, recipientPhone: null, status: "RENDERED" });
