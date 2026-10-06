@@ -59,13 +59,9 @@ async function localeBreakdown(channel: CommunicationChannelId, locale: Supporte
     const needsReview = Math.max(0, withPhone - profiled);
     return { locale, label: LOCALES[locale].label, total, eligible, needsReview, missingContact: Math.max(0, total - withPhone), optedOut, doNotContact: dnc };
   }
-  // WHATSAPP  eligible only with explicit opt-in; other phone contacts need review.
-  const eligible = await safeCountValue("recipients.whatsappEligible", () =>
-    prisma.donorCommunicationProfile.count({
-      where: { preferredLocale: locale, whatsappOptIn: true, doNotContact: false },
-    })
-  );
-  const needsReview = Math.max(0, withPhone - eligible);
+  // WHATSAPP donors with a phone are eligible unless explicitly marked do-not-contact.
+  const eligible = Math.max(0, withPhone - dnc);
+  const needsReview = 0;
   return { locale, label: LOCALES[locale].label, total, eligible, needsReview, missingContact: Math.max(0, total - withPhone), optedOut: 0, doNotContact: dnc };
 }
 
