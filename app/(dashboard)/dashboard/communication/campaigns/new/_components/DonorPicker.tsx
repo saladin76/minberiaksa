@@ -35,6 +35,7 @@ export interface DonorCandidate {
   countryName: string;
   badgeIds: string[];
   eligibility: Eligibility;
+  eligibilityReason: string | null;
 }
 
 interface Facets {
@@ -43,6 +44,20 @@ interface Facets {
 }
 
 const PAGE_SIZE = 25;
+
+async function readApiJson(response: Response, fallback: string): Promise<Record<string, any>> {
+  const text = await response.text();
+  let data: Record<string, any> = {};
+  if (text) {
+    try {
+      data = JSON.parse(text) as Record<string, any>;
+    } catch {
+      throw new Error(response.ok ? fallback : `${fallback} (HTTP ${response.status})`);
+    }
+  }
+  if (!response.ok) throw new Error(String(data.error || data.message || `${fallback} (HTTP ${response.status})`));
+  return data;
+}
 
 const ELIGIBILITY_META: Record<Eligibility, { label: string; tone: string; icon: typeof Check }> = {
   ELIGIBLE: { label: "يمكن مراسلته", tone: "border-emerald-200 bg-emerald-50 text-emerald-700", icon: Check },
@@ -112,7 +127,7 @@ export function DonorPicker({
     applyAgeBracketParams(params, ageBracket);
 
     fetch(`/api/communication/audience-candidates?${params}`, { cache: "no-store" })
-      .then((r) => r.json())
+      .then((response) => readApiJson(response, "تعذّر تحميل المتبرعين"))
       .then((j) => {
         if (cancelled) return;
         if (!j.ok) throw new Error(j.error || "تعذّر تحميل المتبرعين");
@@ -169,8 +184,8 @@ export function DonorPicker({
           ...ageBracketBody(ageBracket),
         }),
       });
-      const json = await res.json();
-      if (!json.ok) throw new Error(json.error || "تعذّر التحديد");
+      const json = await readApiJson(res, "تعذّر التحديد");
+      if (!json.ok) throw new Error(String(json.error || "تعذّر التحديد"));
       onChange(new Set([...selected, ...json.ids]));
       if (json.truncated) toast("اكتفينا بأول ٥٠٠٠ متبرع مطابق.", { icon: "ℹ️" });
       else toast.success(`تم تحديد ${json.ids.length} متبرعًا`);
@@ -429,10 +444,18 @@ export function DonorPicker({
                     </td>
 
                     <td className="px-3 py-2.5">
-                      <span className={cn("inline-flex items-center gap-1 rounded border px-1.5 py-0.5 text-[10px] whitespace-nowrap", meta.tone)}>
-                        <EIcon className="h-3 w-3" />
-                        {meta.label}
-                      </span>
+                      <div className="space-y-1">
+                        <span
+                          className={cn("inline-flex items-center gap-1 rounded border px-1.5 py-0.5 text-[10px] whitespace-nowrap", meta.tone)}
+                          title={d.eligibilityReason ?? undefined}
+                        >
+                          <EIcon className="h-3 w-3" />
+                          {meta.label}
+                        </span>
+                        {d.eligibilityReason && (
+                          <p className="max-w-[180px] text-[10px] leading-4 text-slate-500">{d.eligibilityReason}</p>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 );
