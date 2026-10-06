@@ -327,7 +327,7 @@ export async function executeCampaignSend(
       await mutateCampaignMetadata(
         campaignId,
         (current) => ({ ...current, sendProgress: { ...progress }, sendLease: null, lastRun }),
-        { status: computeFinalStatus(progress.total, progress.sent, progress.skipped, progress.failed) },
+        { status: computeFinalStatus(progress.total, progress.sent, progress.skipped, progress.failed), expectedStatus: "SENDING" },
       );
     } else {
       await patchMetadata(campaignId, { lastRun, sendLease: null, ...(resuming ? { sendProgress: { ...progress } } : {}) });
@@ -702,7 +702,7 @@ export async function executeCampaignSend(
       sendLease: null,
       lastRun: { ranAt: new Date().toISOString(), mode, batches, total: progress.total, sent: progress.sent, skipped: progress.skipped, failed: progress.failed, blocked: base.blocked ?? null, reasons: progress.reasons, truncated: hasMore, hasMore },
     }),
-    { status: finalStatus },
+    { status: finalStatus, expectedStatus: "SENDING" },
   );
   // The counters are derived from the delivery rows rather than incremented by this run's tallies.
   // `{ increment }` double-counted a re-run and, more importantly, froze `sentCount` at "the
