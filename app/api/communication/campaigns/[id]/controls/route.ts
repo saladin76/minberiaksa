@@ -26,6 +26,18 @@ const schema = z.object({
     end: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/),
     timezone: z.string().min(1).max(120).refine(isValidTimeZone, "Invalid IANA timezone"),
   }).optional(),
+}).superRefine((value, ctx) => {
+  if (value.scheduledStopAt && value.resumeAt) {
+    const stop = Date.parse(value.scheduledStopAt);
+    const resume = Date.parse(value.resumeAt);
+    if (Number.isFinite(stop) && Number.isFinite(resume) && resume <= stop) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["resumeAt"],
+        message: "وقت الاستئناف يجب أن يكون بعد وقت التوقف.",
+      });
+    }
+  }
 });
 
 export async function GET(_: NextRequest, { params }: { params: Promise<{ id: string }> }) {
