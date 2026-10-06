@@ -20,7 +20,7 @@ type MutationOptions = {
  */
 export async function mutateCampaignMetadata(
   campaignId: string,
-  mutate: (current: CampaignMetadata) => CampaignMetadata,
+  mutate: (current: CampaignMetadata) => CampaignMetadata | null,
   options: MutationOptions = {},
 ): Promise<boolean> {
   const attempts = Math.max(1, Math.min(options.attempts ?? 5, 10));
@@ -34,6 +34,7 @@ export async function mutateCampaignMetadata(
 
     const current = (latest.metadata as CampaignMetadata | null) ?? {};
     const next = mutate(current);
+    if (next === null) return false;
     const data: { metadata: never; status?: string } = { metadata: next as never };
     if (options.status) data.status = options.status;
 
