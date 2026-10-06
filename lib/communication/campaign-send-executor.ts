@@ -342,8 +342,41 @@ export async function executeCampaignSend(
       .updateMany({ where: { id: campaignId, status: expected }, data: { status: "SENDING" } })
       .catch(() => ({ count: 0 }));
     if (!claimed.count) return { ...base, blocked: "ALREADY_RUNNING" };
+
+    const metadataClaimed = await mergeCampaignMetadata(
+      campaignId,
+      { sendLease: lease, sendProgress: { ...progress, updatedAt: new Date().toISOString() } },
+      { expectedStatus: "SENDING" },
+    );
+    if (!metadataClaimed) {
+      await prisma.communicationCampaign
+        .updateMany({ where: { id: campaignId, status: "SENDING" }, data: { status: expected } })
+        .catch(() => ({ count: 0 }));
+      return { ...base, blocked: "CLAIM_CONFLICT" };
+    }
+  } else {
+    // Resume lease acquisition must be atomic. Two scheduler ticks may both observe an expired
+    // lease; only one is allowed to replace it. The metadata CAS re-reads the latest lease on
+    // every retry and refuses if another runner has already claimed the campaign.
+    const leaseClaimed = await mutateCampaignMetadata(
+      campaignId,
+      (current) => {
+        const raw = current.sendLease as Partial<Lease> | null | undefined;
+        const currentLease =
+          raw && typeof raw.token === "string" && typeof raw.expiresAt === "string"
+            ? { token: raw.token, expiresAt: raw.expiresAt, holder: raw.holder ?? null }
+            : null;
+        if (leaseIsFresh(currentLease)) return null;
+        return {
+          ...current,
+          sendLease: lease,
+          sendProgress: { ...progress, updatedAt: new Date().toISOString() },
+        };
+      },
+      { expectedStatus: "SENDING" },
+    );
+    if (!leaseClaimed) return { ...base, blocked: "ALREADY_RUNNING" };
   }
-  await patchMetadata(campaignId, { sendLease: lease, sendProgress: { ...progress, updatedAt: new Date().toISOString() } });
 
   /* ── Everything the batches share, resolved once ───────────────────── */
   const runtime = await getActiveCommunicationRuntimeBundle();
