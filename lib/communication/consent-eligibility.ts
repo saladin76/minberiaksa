@@ -11,14 +11,14 @@ export function contactChannelEligibility(preference: ContactPreference | null |
 
   if (purpose === "TRANSACTIONAL") {
     if (channel === "EMAIL") return { eligible: true, reason: "تواصل تشغيلي عبر الإيميل." };
+    if (channel === "WHATSAPP") return { eligible: true, reason: "تواصل تشغيلي عبر واتساب للمتبرعين." };
     if (channel === "SMS" && preference.smsOptIn) return { eligible: true, reason: "تواصل تشغيلي عبر SMS مع موافقة." };
-    if (channel === "WHATSAPP" && preference.whatsappOptIn) return { eligible: true, reason: "تواصل تشغيلي عبر واتساب مع موافقة." };
-    return { eligible: false, reason: "القناة التشغيلية تحتاج موافقة صريحة لهذا الشخص." };
+    return { eligible: false, reason: "القناة التشغيلية غير متاحة لهذا الشخص." };
   }
 
   if (channel === "EMAIL" && preference.emailOptIn) return { eligible: true, reason: "تواصل تسويقي عبر الإيميل مع موافقة." };
   if (channel === "SMS" && preference.smsOptIn) return { eligible: true, reason: "تواصل تسويقي عبر SMS مع موافقة." };
-  if (channel === "WHATSAPP" && preference.whatsappOptIn) return { eligible: true, reason: "تواصل تسويقي عبر واتساب مع موافقة." };
+  if (channel === "WHATSAPP") return { eligible: true, reason: "متبرع مسجل برقم واتساب صالح." };
 
   return { eligible: false, reason: "التواصل التسويقي يحتاج موافقة واضحة على نفس القناة." };
 }
