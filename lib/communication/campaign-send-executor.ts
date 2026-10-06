@@ -17,6 +17,7 @@ import { resolveAudienceOrigin } from "./audience-list-service";
 import { computeFinalStatus, recomputeCampaignCounters } from "./campaign-counter-service";
 import { type CommunicationChannelId, type CommunicationPurposeId } from "./communication-runtime-types";
 import { evaluateCampaignSendControls, speedSettings, type CampaignSpeedMode } from "./campaign-send-controls";
+import { mergeCampaignMetadata, mutateCampaignMetadata } from "./campaign-metadata-store";
 
 export { computeFinalStatus };
 
@@ -210,11 +211,9 @@ function newLease(actor: Actor): Lease {
   return { token: `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`, expiresAt: new Date(Date.now() + LEASE_MS).toISOString(), holder: actor?.actorName ?? actor?.actorRole ?? null };
 }
 
-/** Merge into the campaign's metadata without dropping the keys this module does not own. */
-async function patchMetadata(campaignId: string, current: Record<string, unknown>, patch: Record<string, unknown>) {
-  await prisma.communicationCampaign
-    .update({ where: { id: campaignId }, data: { metadata: { ...current, ...patch } as never } })
-    .catch(() => {});
+/** Merge into the latest campaign metadata without overwriting live operator controls. */
+async function patchMetadata(campaignId: string, patch: Record<string, unknown>) {
+  await mergeCampaignMetadata(campaignId, patch);
 }
 
 async function auditBlocked(campaign: CommunicationCampaign, reason: string, actor: Actor, mode: SendMode, plan?: SendPlan) {
@@ -325,12 +324,13 @@ export async function executeCampaignSend(
     }
     const lastRun = { ranAt: new Date().toISOString(), mode, total: firstPlan.total, sent: 0, skipped: firstPlan.skipped, failed: 0, blocked: firstPlan.blocked, reasons: firstPlan.reasons, truncated: firstPlan.truncated, gaveUp: giveUp || undefined };
     if (giveUp) {
-      await prisma.communicationCampaign.update({
-        where: { id: campaignId },
-        data: { status: computeFinalStatus(progress.total, progress.sent, progress.skipped, progress.failed), metadata: { ...metaOf(campaign), sendProgress: { ...progress }, sendLease: null, lastRun } as never },
-      }).catch(() => {});
+      await mutateCampaignMetadata(
+        campaignId,
+        (current) => ({ ...current, sendProgress: { ...progress }, sendLease: null, lastRun }),
+        { status: computeFinalStatus(progress.total, progress.sent, progress.skipped, progress.failed) },
+      );
     } else {
-      await patchMetadata(campaignId, metaOf(campaign), { lastRun, sendLease: null, ...(resuming ? { sendProgress: { ...progress } } : {}) });
+      await patchMetadata(campaignId, { lastRun, sendLease: null, ...(resuming ? { sendProgress: { ...progress } } : {}) });
     }
     return { ...base, blocked: firstPlan.blocked };
   }
@@ -343,7 +343,7 @@ export async function executeCampaignSend(
       .catch(() => ({ count: 0 }));
     if (!claimed.count) return { ...base, blocked: "ALREADY_RUNNING" };
   }
-  await patchMetadata(campaignId, metaOf(campaign), { sendLease: lease, sendProgress: { ...progress, updatedAt: new Date().toISOString() } });
+  await patchMetadata(campaignId, { sendLease: lease, sendProgress: { ...progress, updatedAt: new Date().toISOString() } });
 
   /* ── Everything the batches share, resolved once ───────────────────── */
   const runtime = await getActiveCommunicationRuntimeBundle();
@@ -630,7 +630,7 @@ export async function executeCampaignSend(
     /* The lease is renewed with each batch: a long but healthy walk must not look crashed to the
        next scheduler tick while it is still working. */
     lease.expiresAt = new Date(Date.now() + LEASE_MS).toISOString();
-    await patchMetadata(campaignId, metaOf(campaign), { sendProgress: { ...progress }, sendLease: exhausted ? null : lease });
+    await patchMetadata(campaignId, { sendProgress: { ...progress }, sendLease: exhausted ? null : lease });
 
     if (exhausted || batches >= maxBatches) break;
     const fresh = await getCampaign(campaignId);
@@ -644,7 +644,7 @@ export async function executeCampaignSend(
     /* A blocked page mid-walk (a provider that went away, a template that stopped rendering) stops
        the walk here and leaves the campaign resumable rather than declaring it finished. */
     if (next.blocked) {
-      if (next.blocked === "AUDIENCE_EXHAUSTED") { exhausted = true; progress.done = true; await patchMetadata(campaignId, metaOf(campaign), { sendProgress: { ...progress }, sendLease: null }); }
+      if (next.blocked === "AUDIENCE_EXHAUSTED") { exhausted = true; progress.done = true; await patchMetadata(campaignId, { sendProgress: { ...progress }, sendLease: null }); }
       else base.blocked = next.blocked;
       break;
     }
@@ -657,22 +657,20 @@ export async function executeCampaignSend(
      SENDING  which is both the truth and what makes the scheduler pick it up again. */
   const finalStatus = hasMore ? "SENDING" : computeFinalStatus(progress.total, progress.sent, progress.skipped, progress.failed);
   base.truncated = hasMore;
-  await prisma.communicationCampaign.update({
-    where: { id: campaignId },
-    data: {
-      status: finalStatus,
-      metadata: {
-        ...metaOf(campaign),
-        /* Released on every exit, including one that stops with recipients left: the lease protects a
-           run that is *in flight*, and this one has finished. Holding it would stall the next
-           scheduler tick (and any deliberate resume) for no reason. A crashed run is the case the
-           expiry is for  it leaves the lease behind and it goes stale on its own. */
-        sendProgress: { ...progress },
-        sendLease: null,
-        lastRun: { ranAt: new Date().toISOString(), mode, batches, total: progress.total, sent: progress.sent, skipped: progress.skipped, failed: progress.failed, blocked: base.blocked ?? null, reasons: progress.reasons, truncated: hasMore, hasMore },
-      } as never,
-    },
-  }).catch(() => {});
+  await mutateCampaignMetadata(
+    campaignId,
+    (current) => ({
+      ...current,
+      /* Released on every exit, including one that stops with recipients left: the lease protects a
+         run that is *in flight*, and this one has finished. Holding it would stall the next
+         scheduler tick (and any deliberate resume) for no reason. A crashed run is the case the
+         expiry is for  it leaves the lease behind and it goes stale on its own. */
+      sendProgress: { ...progress },
+      sendLease: null,
+      lastRun: { ranAt: new Date().toISOString(), mode, batches, total: progress.total, sent: progress.sent, skipped: progress.skipped, failed: progress.failed, blocked: base.blocked ?? null, reasons: progress.reasons, truncated: hasMore, hasMore },
+    }),
+    { status: finalStatus },
+  );
   // The counters are derived from the delivery rows rather than incremented by this run's tallies.
   // `{ increment }` double-counted a re-run and, more importantly, froze `sentCount` at "the
   // provider accepted it"  the number the event webhook later contradicts. Deriving keeps the
