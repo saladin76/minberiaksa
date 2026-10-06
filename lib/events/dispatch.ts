@@ -9,7 +9,7 @@ import type { TReaderDocument } from "@usewaypoint/email-builder";
 import { notifyDonationEvent } from "@/lib/telegram/notify";
 import { sendDonationServerConversions } from "@/lib/tracking/donation-conversion-server";
 import { upsertProfileForUser } from "@/lib/communication/donor-communication-profile-service";
-import { sendAutomaticEmailMessage, sendAutomaticWhatsappMessage, resolveMetaTemplateMapping, type AutomaticOutcome } from "@/lib/communication/automatic-message-dispatcher";
+import { sendAutomaticEmailMessage, sendAutomaticWhatsappMessage, sendAutomaticSmsMessage, resolveMetaTemplateMapping, type AutomaticOutcome } from "@/lib/communication/automatic-message-dispatcher";
 import { loadSenderRoutingSnapshot, resolveSenderFromSnapshot, type SenderResolution, type SenderRoutingSnapshot } from "@/lib/communication/sender-resolution";
 import type { CommunicationPurposeId } from "@/lib/communication/communication-runtime-types";
 import type { SupportedLocale } from "@/lib/locales";
@@ -19,7 +19,7 @@ import { getServerBaseUrl } from "@/lib/server-base-url";
 
 export type MessageTriggerEvent = "DONATION_PAID" | "DONATION_FAILED" | "FIRST_DONATION" | "USER_REGISTERED" | "SUBSCRIPTION_CREATED" | "SUBSCRIPTION_PAYMENT" | "SUBSCRIPTION_CANCELLED" | "DONATION_LAPSED";
 export interface EventDispatchInput { userId?: string; donationId?: string }
-interface DispatchResult { triggers: number; emailsSent: number; whatsappSent: number; skipped: number; errors: number; skipReasons: Record<string, number> }
+interface DispatchResult { triggers: number; emailsSent: number; whatsappSent: number; smsSent: number; skipped: number; errors: number; skipReasons: Record<string, number> }
 
 /**
  * The sender tables and routing rules for one dispatch/batch run.
@@ -59,7 +59,7 @@ export function resolveTriggerSender(
   });
 }
 
-export type TriggerSendOutcome = { channel: "EMAIL" | "WHATSAPP"; outcome: AutomaticOutcome; reason?: string };
+export type TriggerSendOutcome = { channel: "EMAIL" | "WHATSAPP" | "SMS"; outcome: AutomaticOutcome; reason?: string };
 
 /**
  * Render one trigger's template for one recipient and hand it to the provider layer.
@@ -85,6 +85,28 @@ export async function sendTriggerMessage(
     if (!routed.ok) return { channel: "EMAIL", outcome: "SKIPPED", reason: routed.reason };
     const response = await sendAutomaticEmailMessage({ triggerEvent: event, templateId: tpl.id, templateName: tpl.name, locale, recipientUserId: ctx.user.id, recipientName: ctx.user.name || null, recipientEmail: ctx.user.email ?? null, renderedSubject: subject, renderedBody: html, senderEmail: routed.sender.senderEmail, variables, donationId, purpose: opts.purpose, attachments: opts.attachments });
     return { channel: "EMAIL", outcome: response.outcome, reason: response.reason };
+  }
+
+  if (trigger.channel === "SMS") {
+    const tpl = await prisma.smsTemplate.findUnique({ where: { id: trigger.templateId } });
+    if (!tpl) return null;
+    const variant = resolveWhatsappBody(tpl, locale);
+    const body = mergeText(variant.body, ctx);
+    const response = await sendAutomaticSmsMessage({
+      triggerEvent: event,
+      templateId: tpl.id,
+      templateName: tpl.name,
+      locale,
+      recipientUserId: ctx.user.id,
+      recipientName: ctx.user.name || null,
+      recipientPhone: ctx.user.phone || null,
+      country: ctx.user.countryCode || null,
+      renderedBody: body,
+      variables,
+      donationId,
+      purpose: opts.purpose,
+    });
+    return { channel: "SMS", outcome: response.outcome, reason: response.reason };
   }
 
   if (trigger.channel === "WHATSAPP") {
@@ -208,7 +230,7 @@ async function completeDispatchClaim(event: MessageTriggerEvent, donationId: str
 }
 
 export async function dispatchEvent(event: MessageTriggerEvent, input: EventDispatchInput): Promise<DispatchResult> {
-  const result: DispatchResult = { triggers: 0, emailsSent: 0, whatsappSent: 0, skipped: 0, errors: 0, skipReasons: {} };
+  const result: DispatchResult = { triggers: 0, emailsSent: 0, whatsappSent: 0, smsSent: 0, skipped: 0, errors: 0, skipReasons: {} };
   let claimToken: string | null = null;
   let claimed = false;
 
@@ -261,7 +283,8 @@ export async function dispatchEvent(event: MessageTriggerEvent, input: EventDisp
         }
         if (sent.outcome === "SENT") {
           if (sent.channel === "EMAIL") result.emailsSent += 1;
-          else result.whatsappSent += 1;
+          else if (sent.channel === "WHATSAPP") result.whatsappSent += 1;
+          else result.smsSent += 1;
         } else if (sent.outcome === "SKIPPED") {
           result.skipped += 1;
           const reason = sent.reason ?? "SKIPPED";
@@ -284,6 +307,7 @@ export async function dispatchEvent(event: MessageTriggerEvent, input: EventDisp
     const parts = [
       result.emailsSent ? `${result.emailsSent} بريد` : null,
       result.whatsappSent ? `${result.whatsappSent} واتساب` : null,
+      result.smsSent ? `${result.smsSent} SMS` : null,
       result.skipped ? `${result.skipped} متخطى` : null,
       result.errors ? `${result.errors} فشل` : null,
     ].filter(Boolean);
