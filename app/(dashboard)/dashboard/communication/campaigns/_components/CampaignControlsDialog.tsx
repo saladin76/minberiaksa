@@ -56,7 +56,7 @@ export function CampaignControlsDialog({
 }) {
   const [controls, setControls] = React.useState<Controls | null>(null);
   const [usage, setUsage] = React.useState<{ usedLast24h: number; remaining: number | null } | null>(null);
-  const [globalState, setGlobalState] = React.useState<{ emergencyStop: boolean }>({ emergencyStop: false });
+  const [globalState, setGlobalState] = React.useState<{ emergencyStop: boolean; canManage: boolean }>({ emergencyStop: false, canManage: false });
   const [loading, setLoading] = React.useState(false);
   const [saving, setSaving] = React.useState(false);
 
@@ -69,11 +69,34 @@ export function CampaignControlsDialog({
         if (!res.ok || !data.ok) throw new Error(data.error ?? "load failed");
         setControls(data.controls);
         setUsage(data.usage ?? null);
-        setGlobalState(data.global ?? { emergencyStop: false });
+        setGlobalState(data.global ?? { emergencyStop: false, canManage: false });
       })
       .catch(() => toast.error("تعذّر تحميل إعدادات الإرسال"))
       .finally(() => setLoading(false));
   }, [open, campaignId]);
+
+  const toggleEmergencyStop = async () => {
+    if (!globalState.canManage) return;
+    const next = !globalState.emergencyStop;
+    const prompt = next
+      ? "سيتم إيقاف جميع حملات التواصل فورًا قبل أي دفعة جديدة. هل تريد المتابعة؟"
+      : "سيتم السماح للحملات المجدولة والجارية بالاستئناف وفق تحكماتها. هل تريد المتابعة؟";
+    if (!window.confirm(prompt)) return;
+    try {
+      const res = await fetch("/api/communication/campaigns/global-controls", {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ emergencyStop: next }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.ok) throw new Error(data.error ?? "تعذّر تحديث إيقاف الطوارئ");
+      setGlobalState((current) => ({ ...current, emergencyStop: Boolean(data.emergencyStop) }));
+      toast.success(next ? "تم إيقاف جميع الحملات" : "تم إلغاء إيقاف الطوارئ");
+      onChanged();
+    } catch (error) {
+      toast.error((error as Error).message);
+    }
+  };
 
   const save = async () => {
     if (!controls) return;
@@ -131,17 +154,39 @@ export function CampaignControlsDialog({
               </div>
             </section>
 
-            {globalState.emergencyStop && (
-              <section className="rounded-xl border border-rose-200 bg-rose-50 p-4">
+            <section className={cn(
+              "rounded-xl border p-4",
+              globalState.emergencyStop ? "border-rose-200 bg-rose-50" : "border-slate-200 bg-slate-50",
+            )}>
+              <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="flex items-start gap-2">
-                  <AlertTriangle className="mt-0.5 h-4 w-4 text-rose-600" />
+                  <AlertTriangle className={cn("mt-0.5 h-4 w-4", globalState.emergencyStop ? "text-rose-600" : "text-slate-500")} />
                   <div>
-                    <h3 className="text-sm font-semibold text-rose-800">إيقاف طوارئ عام مفعّل</h3>
-                    <p className="mt-1 text-xs text-rose-700">جميع الحملات محجوبة على مستوى النظام حتى إلغاء مفتاح الطوارئ.</p>
+                    <h3 className={cn("text-sm font-semibold", globalState.emergencyStop ? "text-rose-800" : "text-slate-800")}>
+                      إيقاف الطوارئ العام
+                    </h3>
+                    <p className={cn("mt-1 text-xs", globalState.emergencyStop ? "text-rose-700" : "text-slate-500")}>
+                      {globalState.emergencyStop
+                        ? "جميع الحملات متوقفة قبل أي دفعة جديدة."
+                        : "الحملات تعمل وفق الجدولة والحدود والتحكمات الحالية."}
+                    </p>
                   </div>
                 </div>
-              </section>
-            )}
+                {globalState.canManage ? (
+                  <Button
+                    type="button"
+                    variant={globalState.emergencyStop ? "outline" : "destructive"}
+                    onClick={() => void toggleEmergencyStop()}
+                    className={cn(globalState.emergencyStop && "border-emerald-200 text-emerald-700 hover:bg-emerald-50")}
+                  >
+                    {globalState.emergencyStop ? <Play className="me-1.5 h-4 w-4" /> : <Pause className="me-1.5 h-4 w-4" />}
+                    {globalState.emergencyStop ? "إلغاء إيقاف الطوارئ" : "إيقاف جميع الحملات"}
+                  </Button>
+                ) : (
+                  <span className="text-[11px] text-slate-400">متاح للمدير فقط</span>
+                )}
+              </div>
+            </section>
 
             <section className="space-y-3 rounded-xl border border-slate-200 p-4">
               <div className="flex flex-wrap items-start justify-between gap-3">
