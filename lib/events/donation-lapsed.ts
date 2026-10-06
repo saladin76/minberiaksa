@@ -150,7 +150,12 @@ export async function runDonationLapsedReminders(
   for (const trigger of triggers) {
     const lapseDays = normalizeLapseDays(trigger.lapseDays);
     const cooldownDays = normalizeCooldownDays(trigger.cooldownDays);
-    const channel = trigger.channel === "WHATSAPP" ? "WHATSAPP" : "EMAIL";
+    const channel =
+      trigger.channel === "WHATSAPP"
+        ? "WHATSAPP"
+        : trigger.channel === "SMS"
+          ? "SMS"
+          : "EMAIL";
     const row: LapsedTriggerSummary = { triggerId: trigger.id, channel, templateId: trigger.templateId, lapseDays, cooldownDays, candidates: 0, sent: 0, skipped: 0, failed: 0, reasons: {} };
     summary.byTrigger.push(row);
 
