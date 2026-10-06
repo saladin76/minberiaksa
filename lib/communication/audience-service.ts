@@ -6,9 +6,9 @@ import { safeCountValue } from "@/lib/dashboard/safe-count";
 /**
  * Dynamic audiences  computed live from the donor base (`User`), never a manual
  * per-channel list. Language comes from `User.preferredLang`; channel eligibility is
- * derived from the donor record and contact availability.
- * For WhatsApp, an existing donor with a valid phone is internally eligible unless doNotContact is set.
- * Meta template/category/provider rules still apply at send time.
+ * derived from existing fields with lawful-safe defaults:
+ * DonorCommunicationProfile is the sole runtime source of consent. Legacy User notification flags
+ * bootstrap only a missing profile; they never override an existing recorded preference.
  *
  * Read-only: no writes, no sends, no provider calls.
  */
@@ -27,9 +27,9 @@ export type LanguageAudienceSummary = {
   /** Marketing eligibility counts per channel. */
   emailEligible: number;
   smsEligible: number;
-  /** Donors reachable on WhatsApp from the donor base, excluding do-not-contact records. */
+  /** Donors with an explicit WhatsApp opt-in on their communication profile. */
   whatsappEligible: number;
-  /** Retained for dashboard compatibility; WhatsApp donors no longer require manual review. */
+  /** Phone contacts without an explicit WhatsApp opt-in  need human review before bulk send. */
   whatsappNeedsReview: number;
 };
 
@@ -49,19 +49,19 @@ export type AudienceOverview = {
 
 const DONOR_BASE = { role: "DONOR" as const };
 
-/** Count donors for a locale + per-channel eligibility. */
+/** Count donors for a locale + per-channel eligibility (legacy User flags + WhatsApp opt-in profiles). */
 async function localeCounts(locale: SupportedLocale) {
   const base = { ...DONOR_BASE, preferredLang: locale };
-  const [total, withEmail, withPhone, emailEligible, smsEligible, whatsappBlocked] = await Promise.all([
+  const [total, withEmail, withPhone, emailEligible, smsEligible, whatsappEligible] = await Promise.all([
     prisma.user.count({ where: base }),
     prisma.user.count({ where: { ...base, email: { not: null } } }),
     prisma.user.count({ where: { ...base, phone: { not: null } } }),
     safeCountValue("audience.emailReachable", () => prisma.donorCommunicationProfile.count({ where: { preferredLocale: locale, email: { not: null }, emailOptIn: true, doNotContact: false } })),
     safeCountValue("audience.smsReachable", () => prisma.donorCommunicationProfile.count({ where: { preferredLocale: locale, phone: { not: null }, smsOptIn: true, doNotContact: false } })),
-    safeCountValue("audience.whatsappBlocked", () => prisma.donorCommunicationProfile.count({ where: { preferredLocale: locale, phone: { not: null }, doNotContact: true } })),
+    safeCountValue("audience.whatsappReachable", () => prisma.donorCommunicationProfile.count({ where: { preferredLocale: locale, phone: { not: null }, whatsappOptIn: true, doNotContact: false } })),
   ]);
-  const whatsappEligible = Math.max(0, withPhone - whatsappBlocked);
-  const whatsappNeedsReview = 0;
+  // Phone contacts without an explicit opt-in still need human review before any bulk WhatsApp.
+  const whatsappNeedsReview = Math.max(0, withPhone - whatsappEligible);
   return { total, withEmail, withPhone, emailEligible, smsEligible, whatsappEligible, whatsappNeedsReview };
 }
 
@@ -98,14 +98,13 @@ export async function getAudienceOverview(): Promise<AudienceOverview> {
     totals,
     languages,
     consentNote:
-      "متبرعو واتساب الذين لديهم رقم صالح مؤهلون داخليًا للإرسال ما لم يكن التواصل موقوفًا عليهم. قيود Meta على نوع القالب وفئة الرسالة تظل مطبقة.",
+      "أهلية القنوات تُشتق من تفضيلات الإشعارات المسجّلة. لا توجد موافقة تسويقية صريحة لواتساب بعد، لذلك يظهر المتبرعون كـ«يحتاج مراجعة» ولا يُرسل لهم جماعيًا دون موافقة.",
   };
 }
 
 /**
- * Whether a donor is eligible on a channel for marketing.
- * WhatsApp donor eligibility is based on an existing donor record + phone unless doNotContact is set.
- * Email/SMS retain their recorded channel-preference behavior.
+ * Whether a donor is eligible on a channel for marketing. DonorCommunicationProfile is authoritative.
+ * Missing profile = NEEDS_REVIEW; legacy User flags are not consulted here.
  */
 export function donorChannelEligibility(
   donor: { email?: string | null; phone?: string | null; emailNotifications?: boolean; smsNotifications?: boolean },
@@ -130,5 +129,6 @@ export function donorChannelEligibility(
     return profile.smsOptIn === true ? "ELIGIBLE" : "UNAVAILABLE";
   }
   if (!donor.phone) return "UNAVAILABLE";
-  return "ELIGIBLE";
+  if (!profile) return "NEEDS_REVIEW";
+  return profile.whatsappOptIn === true ? "ELIGIBLE" : "UNAVAILABLE";
 }
