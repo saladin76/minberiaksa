@@ -119,3 +119,31 @@ test("automatic donation dispatch is observable and recoverable after interrupti
   assert.match(source, /skipReasons/);
   assert.match(source, /META_DIRECT_SEND_OR_TEMPLATE_REQUIRED|sendTriggerMessage/);
 });
+
+
+test("advanced campaign controls include auto speed, scheduled stop, priority, and emergency gating", () => {
+  const controls = read("lib/communication/campaign-send-controls.ts");
+  const route = read("app/api/communication/campaigns/[id]/controls/route.ts");
+  const executor = read("lib/communication/campaign-send-executor.ts");
+  const ui = read("app/(dashboard)/dashboard/communication/campaigns/_components/CampaignControlsDialog.tsx");
+
+  assert.match(controls, /autoSpeedMode/);
+  assert.match(controls, /scheduledStopAt/);
+  assert.match(controls, /resumeAt/);
+  assert.match(controls, /campaignPriorityRank/);
+  assert.match(controls, /COMMUNICATION_CAMPAIGN_EMERGENCY_STOP/);
+  assert.match(controls, /SCHEDULED_STOP/);
+  assert.match(executor, /campaignPriorityRank/);
+  assert.match(executor, /autoSpeedMode/);
+  assert.match(route, /priority: z\.enum\(\["LOW", "NORMAL", "HIGH", "URGENT"\]\)/);
+  assert.match(route, /resumeAt/);
+  assert.match(ui, /Auto Speed/);
+  assert.match(ui, /توقف واستئناف مجدول/);
+  assert.match(ui, /أولوية الحملة/);
+});
+
+test("advanced campaign controls keep restart windows sane", () => {
+  const route = read("app/api/communication/campaigns/[id]/controls/route.ts");
+  assert.match(route, /resume <= stop/);
+  assert.match(route, /وقت الاستئناف يجب أن يكون بعد وقت التوقف/);
+});
