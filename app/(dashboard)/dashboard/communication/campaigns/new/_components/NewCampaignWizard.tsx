@@ -29,7 +29,7 @@ interface AudienceListSummary {
 }
 
 const CHANNEL_ORDER = ["EMAIL", "WHATSAPP", "SMS"] as const;
-const BASE_STEPS = ["القناة", "الرسالة", "الجمهور"] as const;
+const BASE_STEPS = ["القناة", "الرسالة", "الجمهور", "اللغة"] as const;
 
 type CampaignSendControlsDraft = {
   paused: boolean;
@@ -354,13 +354,10 @@ export function NewCampaignWizard() {
             </ul>
           )}
 
-          {/* Stated before the audience is chosen, because it is what the audience step implies:
-              a donor whose language the template lacks still receives it, in Arabic. */}
           {chosenTemplate && chosenTemplate.availableLocales.length < 2 && (
             <p className="flex items-start gap-1.5 rounded-lg border border-amber-200 bg-amber-50 p-2.5 text-[11px] leading-5 text-amber-900">
               <TriangleAlert className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-              هذا القالب متوفّر بلغة واحدة فقط. المتبرعون بلغات أخرى سيستلمونه بالنسخة الافتراضية
-              (العربية)  أضف ترجمات للقالب إن أردت أن يصل كلٌّ بلغته.
+              هذا القالب متوفّر بلغة واحدة فقط. في خطوة «اللغة» ستحدد نسخة الـFallback التي تستخدم عند غياب لغة المتبرع.
             </p>
           )}
         </div>
@@ -430,7 +427,53 @@ export function NewCampaignWizard() {
         </div>
       )}
 
-      {step === 3 && channel === "WHATSAPP" && (
+      {step === 3 && (
+        <div className="space-y-4">
+          <section className="rounded-xl border border-slate-200 bg-white p-4">
+            <div className="flex items-center gap-2">
+              <Languages className="h-4 w-4 text-brand" />
+              <h3 className="text-sm font-semibold text-slate-900">قواعد اللغة</h3>
+            </div>
+            <p className="mt-1 text-xs text-slate-500">
+              النظام يختار نسخة القالب حسب لغة كل متبرع تلقائيًا. لا تحتاج إلى إنشاء حملة منفصلة لكل لغة.
+            </p>
+
+            <div className="mt-4 grid gap-3 md:grid-cols-2">
+              <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-xs text-emerald-800">
+                <p className="font-semibold">تلقائي حسب لغة المتبرع ✓</p>
+                <p className="mt-1">Arabic / Turkish / English / French وغيرها تُرسل من نفس Template Family حسب preferredLang.</p>
+              </div>
+              <label className="space-y-1 text-xs text-slate-600">
+                <span>Fallback عند عدم وجود نسخة مطابقة</span>
+                <select
+                  value={smartAudience.fallbackLocale ?? "ar"}
+                  onChange={(e) => setSmartAudience((current) => ({ ...current, fallbackLocale: e.target.value }))}
+                  className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm"
+                >
+                  {Object.entries(LOCALE_LABELS).map(([locale, label]) => (
+                    <option key={locale} value={locale}>{label}</option>
+                  ))}
+                </select>
+              </label>
+            </div>
+
+            {chosenTemplate && (
+              <div className="mt-4">
+                <p className="text-[11px] text-slate-500">اللغات المتاحة في القالب</p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {chosenTemplate.availableLocales.map((locale) => (
+                    <span key={locale} className="rounded-full border border-slate-200 bg-slate-50 px-2 py-1 text-[11px]">
+                      {LOCALE_LABELS[locale as keyof typeof LOCALE_LABELS] ?? locale}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+          </section>
+        </div>
+      )}
+
+      {step === 4 && channel === "WHATSAPP" && (
         <div className="space-y-4">
           <div className="rounded-xl border border-brand/20 bg-brand-50/40 p-4">
             <div className="flex items-center gap-2">
@@ -559,7 +602,7 @@ export function NewCampaignWizard() {
       )}
 
 
-      {((step === 3 && channel !== "WHATSAPP") || (step === 4 && channel === "WHATSAPP")) && (
+      {((step === 4 && channel !== "WHATSAPP") || (step === 5 && channel === "WHATSAPP")) && (
         <div className="space-y-4">
           <div className="rounded-xl border border-brand/20 bg-brand-50/40 p-4">
             <h3 className="text-sm font-semibold text-slate-900">مراجعة الحملة قبل الإنشاء</h3>
@@ -642,23 +685,28 @@ export function NewCampaignWizard() {
             التالي: اختيار الجمهور
           </Button>
         )}
-        {step === 2 && channel === "WHATSAPP" && (
-          <Button onClick={() => setStep(3)} disabled={!audienceReady || !name.trim()} className="gap-1.5 bg-brand hover:bg-brand/90">
+        {step === 2 && (
+          <Button onClick={() => setStep(3)} disabled={!audienceReady || !name.trim()} className="bg-brand hover:bg-brand/90">
+            التالي: قواعد اللغة
+          </Button>
+        )}
+        {step === 3 && channel === "WHATSAPP" && (
+          <Button onClick={() => setStep(4)} disabled={saving} className="gap-1.5 bg-brand hover:bg-brand/90">
             <Gauge className="h-4 w-4" />
             التالي: إعداد الإرسال
           </Button>
         )}
-        {step === 2 && channel !== "WHATSAPP" && (
-          <Button onClick={() => setStep(3)} disabled={!audienceReady || !name.trim()} className="bg-brand hover:bg-brand/90">
-            التالي: المراجعة
-          </Button>
-        )}
-        {step === 3 && channel === "WHATSAPP" && (
+        {step === 3 && channel !== "WHATSAPP" && (
           <Button onClick={() => setStep(4)} disabled={saving} className="bg-brand hover:bg-brand/90">
             التالي: المراجعة
           </Button>
         )}
-        {((step === 3 && channel !== "WHATSAPP") || (step === 4 && channel === "WHATSAPP")) && (
+        {step === 4 && channel === "WHATSAPP" && (
+          <Button onClick={() => setStep(5)} disabled={saving} className="bg-brand hover:bg-brand/90">
+            التالي: المراجعة
+          </Button>
+        )}
+        {((step === 4 && channel !== "WHATSAPP") || (step === 5 && channel === "WHATSAPP")) && (
           <Button onClick={create} disabled={saving} className="gap-1.5 bg-brand hover:bg-brand/90">
             {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Users className="h-4 w-4" />}
             إنشاء الحملة
