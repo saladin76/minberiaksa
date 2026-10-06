@@ -4,9 +4,9 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 import { requireAdminOrDashboardPermission } from "@/lib/dashboard/api-auth";
 import { auditActorFromDashboardSession, writeAuditLog } from "@/lib/audit-log";
-import { prisma } from "@/lib/prisma";
 import { getCampaign } from "@/lib/communication/campaign-service";
 import { campaignSendControls, isValidTimeZone, whatsappSentLast24Hours } from "@/lib/communication/campaign-send-controls";
+import { mutateCampaignMetadata } from "@/lib/communication/campaign-metadata-store";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -63,19 +63,28 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     return NextResponse.json({ ok: false, error: "لا يمكن تعديل تحكمات حملة منتهية." }, { status: 409 });
   }
 
-  const currentMeta = (campaign.metadata as Record<string, unknown> | null) ?? {};
   const current = campaignSendControls(campaign);
-  const next = {
+  const requested = {
     paused: parsed.data.paused ?? current.paused,
     speedMode: parsed.data.speedMode ?? current.speedMode,
     dailyCap: parsed.data.dailyCap ?? current.dailyCap,
     quietHours: parsed.data.quietHours ?? current.quietHours,
   };
 
-  const updated = await prisma.communicationCampaign.update({
-    where: { id },
-    data: { metadata: { ...currentMeta, sendControls: next } as never },
-  });
+  // Normalize through the same rules the sender uses (notably the global WhatsApp cap),
+  // then merge into the freshest metadata document so an in-flight send-progress write
+  // cannot erase an operator's Pause/Resume or quiet-hours change.
+  const normalized = campaignSendControls({
+    metadata: { sendControls: requested } as never,
+  } as Pick<Awaited<ReturnType<typeof getCampaign>>, "metadata">);
+  const next = normalized;
+
+  const saved = await mutateCampaignMetadata(id, (latest) => ({ ...latest, sendControls: next }));
+  if (!saved) {
+    return NextResponse.json({ ok: false, error: "تعذّر حفظ التحكمات بسبب تعديل متزامن. أعد المحاولة." }, { status: 409 });
+  }
+  const updated = await getCampaign(id);
+  if (!updated) return NextResponse.json({ ok: false, error: "Not found" }, { status: 404 });
 
   const actor = auditActorFromDashboardSession(session!);
   await writeAuditLog({
