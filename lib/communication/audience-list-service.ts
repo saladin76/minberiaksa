@@ -1,3 +1,4 @@
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { writeAuditLog } from "@/lib/audit-log";
 import { DEFAULT_LOCALE, isValidLocale, type SupportedLocale } from "@/lib/locales";
@@ -112,7 +113,7 @@ export async function getAudienceList(id: string): Promise<{ list: AudienceListS
 // ─────────────────────────── Mutations ───────────────────────────
 
 export async function createAudienceList(
-  input: { name: string; description?: string | null; type?: AudienceListType; locale?: string | null; channels?: string[]; metadata?: Record<string, unknown> | null },
+  input: { name: string; description?: string | null; type?: AudienceListType; locale?: string | null; channels?: string[]; metadata?: Prisma.InputJsonValue | null },
   actor: Actor
 ): Promise<ServiceResult> {
   if (!process.env.DATABASE_URL) return { ok: false, status: 503, error: "DATABASE_URL is not configured." };
