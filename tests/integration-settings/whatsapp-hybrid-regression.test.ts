@@ -262,3 +262,18 @@ test("individual WhatsApp marketing consent can be explicitly confirmed and audi
   assert.match(dialog, /وصول رسالة تبرع فاشل يثبت أن الرقم صالح/);
   assert.match(dialog, /setMarketingConsent/);
 });
+
+
+test("WhatsApp donor marketing no longer depends on internal opt-in", () => {
+  const audience = read("lib/communication/audience-service.ts");
+  const smart = read("lib/communication/smart-whatsapp-service.ts");
+  const pickerApi = read("app/api/communication/audience-candidates/route.ts");
+  const dialog = read("components/dashboard/SmartWhatsappDialog.tsx");
+  const retry = read("lib/communication/delivery-retry-service.ts");
+
+  assert.match(audience, /if \(!donor\.phone\) return "UNAVAILABLE";\s*return "ELIGIBLE";/);
+  assert.doesNotMatch(smart, /WHATSAPP_MARKETING_OPT_IN_REQUIRED/);
+  assert.doesNotMatch(pickerApi, /لا توجد موافقة واتساب تسويقية/);
+  assert.doesNotMatch(dialog, /تسجيل الموافقة/);
+  assert.match(retry, /purpose !== "MARKETING" \|\| channel === "WHATSAPP"/);
+});
