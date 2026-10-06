@@ -338,7 +338,7 @@ export type VariantRow = {
   lastSyncedAt: Date;
 };
 
-export function resolveVariantForLocale(variants: VariantRow[], locale: string): VariantReadiness {
+export function resolveVariantForLocale(variants: VariantRow[], locale: string, fallbackLocale = "ar"): VariantReadiness {
   if (!variants.length) return NOT_READY;
   const approved = variants.filter((v) => v.approvalStatus === "APPROVED");
   const pool = approved.length ? approved : variants;
@@ -347,6 +347,9 @@ export function resolveVariantForLocale(variants: VariantRow[], locale: string):
     pool.find((v) => v.locale === locale) ??
     pool.find((v) => v.languageCode.toLowerCase() === locale.toLowerCase()) ??
     pool.find((v) => v.languageCode.toLowerCase().replace(/[_-].*$/, "") === base) ??
+    pool.find((v) => v.locale === fallbackLocale) ??
+    pool.find((v) => v.languageCode.toLowerCase() === fallbackLocale.toLowerCase()) ??
+    pool.find((v) => v.languageCode.toLowerCase().replace(/[_-].*$/, "") === fallbackLocale.toLowerCase()) ??
     pool.find((v) => v.locale === "ar") ??
     pool.find((v) => v.languageCode.toLowerCase().startsWith("ar")) ??
     null;
