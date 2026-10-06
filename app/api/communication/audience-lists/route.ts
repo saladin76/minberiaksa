@@ -68,18 +68,18 @@ export async function POST(request: NextRequest) {
 
   if (parsed.data.smartDefinition) {
     const definition = normalizeSmartAudienceDefinition(parsed.data.smartDefinition, parsed.data.channel);
+    const matched = await countSmartAudience(definition);
     const created = await createAudienceList(
       {
         name: parsed.data.name,
         description: parsed.data.description ?? null,
         type: "SMART",
         channels: [parsed.data.channel],
-        metadata: smartAudienceMetadata(definition),
+        metadata: smartAudienceMetadata(definition, { lastMatchedCount: matched }),
       },
       actor,
     );
     if (!created.ok) return NextResponse.json({ ok: false, error: created.error }, { status: created.status });
-    const matched = await countSmartAudience(definition);
     return NextResponse.json({
       ok: true,
       listId: created.data.id,
