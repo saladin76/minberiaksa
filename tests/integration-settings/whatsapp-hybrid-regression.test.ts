@@ -75,3 +75,29 @@ test("dashboard keeps the simple operator-facing Smart WhatsApp flow", () => {
   assert.match(dialog, /Utility/);
   assert.match(dialog, /Marketing/);
 });
+
+
+test("campaign progress updates preserve live send controls through compare-and-swap", () => {
+  const store = read("lib/communication/campaign-metadata-store.ts");
+  const executor = read("lib/communication/campaign-send-executor.ts");
+  const controlsRoute = read("app/api/communication/campaigns/[id]/controls/route.ts");
+
+  assert.match(store, /updatedAt/);
+  assert.match(store, /updateMany/);
+  assert.match(store, /expectedStatus/);
+  assert.match(executor, /mergeCampaignMetadata/);
+  assert.match(executor, /mutateCampaignMetadata/);
+  assert.match(executor, /CLAIM_CONFLICT/);
+  assert.match(executor, /expectedStatus: "SENDING"/);
+  assert.match(controlsRoute, /mutateCampaignMetadata/);
+});
+
+test("campaign resume lease is claimed atomically and cannot overwrite cancellation", () => {
+  const executor = read("lib/communication/campaign-send-executor.ts");
+
+  assert.match(executor, /leaseClaimed/);
+  assert.match(executor, /leaseIsFresh\(currentLease\)/);
+  assert.match(executor, /return null/);
+  assert.match(executor, /expectedStatus: "SENDING"/);
+  assert.match(executor, /never overwrite concurrent campaign cancellation|Concurrent/i);
+});
