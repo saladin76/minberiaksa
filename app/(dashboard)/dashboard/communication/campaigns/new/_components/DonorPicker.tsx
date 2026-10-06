@@ -36,6 +36,7 @@ export interface DonorCandidate {
   badgeIds: string[];
   eligibility: Eligibility;
   eligibilityReason: string | null;
+  canConfirmWhatsappOptIn: boolean;
 }
 
 interface Facets {
@@ -96,6 +97,8 @@ export function DonorPicker({
   const [page, setPage] = React.useState(1);
   const [loading, setLoading] = React.useState(true);
   const [selectingAll, setSelectingAll] = React.useState(false);
+  const [refreshKey, setRefreshKey] = React.useState(0);
+  const [consentSavingId, setConsentSavingId] = React.useState<string | null>(null);
 
   const [searchInput, setSearchInput] = React.useState("");
   const [search, setSearch] = React.useState("");
@@ -140,12 +143,33 @@ export function DonorPicker({
     return () => {
       cancelled = true;
     };
-  }, [channel, page, search, locale, country, badgeId, eligibility, gender, ageBracket]);
+  }, [channel, page, search, locale, country, badgeId, eligibility, gender, ageBracket, refreshKey]);
 
   const badgeById = React.useMemo(
     () => new Map(facets.badges.map((b) => [b.id, b])),
     [facets.badges],
   );
+
+  const confirmWhatsappConsent = async (donor: DonorCandidate) => {
+    if (!donor.canConfirmWhatsappOptIn || consentSavingId) return;
+    if (!window.confirm(`تأكيد وجود موافقة صريحة من ${donor.name ?? "هذا المتبرع"} لاستقبال رسائل واتساب تسويقية؟`)) return;
+    setConsentSavingId(donor.id);
+    try {
+      const res = await fetch("/api/dashboard/communication/whatsapp/smart-send", {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ userId: donor.id, whatsappOptIn: true, confirmed: true }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.ok) throw new Error(data.error || "تعذّر تسجيل الموافقة");
+      toast.success("تم تسجيل موافقة واتساب التسويقية");
+      setRefreshKey((value) => value + 1);
+    } catch (error) {
+      toast.error((error as Error).message);
+    } finally {
+      setConsentSavingId(null);
+    }
+  };
 
   const toggle = (id: string) => {
     const next = new Set(selected);
@@ -454,6 +478,19 @@ export function DonorPicker({
                         </span>
                         {d.eligibilityReason && (
                           <p className="max-w-[180px] text-[10px] leading-4 text-slate-500">{d.eligibilityReason}</p>
+                        )}
+                        {channel === "WHATSAPP" && d.canConfirmWhatsappOptIn && (
+                          <button
+                            type="button"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              void confirmWhatsappConsent(d);
+                            }}
+                            disabled={consentSavingId === d.id}
+                            className="text-[10px] font-semibold text-brand underline underline-offset-2 disabled:opacity-50"
+                          >
+                            {consentSavingId === d.id ? "جارٍ التسجيل…" : "تسجيل موافقة واتساب"}
+                          </button>
                         )}
                       </div>
                     </td>
