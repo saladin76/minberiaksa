@@ -184,3 +184,41 @@ test("campaign controls dialog stays scrollable and cannot bubble clicks into th
   assert.match(dialog, /onClick=\{\(event\) => event\.stopPropagation\(\)\}/);
   assert.match(dialog, /onPointerDown=\{\(event\) => event\.stopPropagation\(\)\}/);
 });
+
+
+test("WhatsApp inbox defaults to all conversations and remembers an available sender", () => {
+  const inbox = read("app/(dashboard)/dashboard/communication/inbox/_components/WhatsappInbox.tsx");
+  assert.match(inbox, /useState\("all"\)/);
+  assert.match(inbox, /communication:whatsapp:senderId/);
+  assert.match(inbox, /nextSenders\.length === 1/);
+  assert.match(inbox, /setActiveId\(nextConversations\[0\]\.id\)/);
+  assert.match(inbox, /عرض كل المحادثات/);
+});
+
+test("WhatsApp inbox exposes the greeting-template re-entry path outside the 24-hour window", () => {
+  const inbox = read("app/(dashboard)/dashboard/communication/inbox/_components/WhatsappInbox.tsx");
+  const smart = read("components/dashboard/SmartWhatsappDialog.tsx");
+  assert.match(inbox, /إرسال قالب تحية/);
+  assert.match(inbox, /initialMode=\{smartInitialMode\}/);
+  assert.match(smart, /initialMode\?: "FREEFORM" \| "UTILITY" \| "MARKETING"/);
+  assert.match(smart, /preferred === "MARKETING"/);
+});
+
+test("dashboard topbar makes unanswered WhatsApp conversations visually prominent", () => {
+  const topbar = read("app/(dashboard)/dashboard/_shell/DashboardTopbar.tsx");
+  const layout = read("app/(dashboard)/dashboard/DashboardLayoutClient.tsx");
+  assert.match(layout, /filter=needsReply/);
+  assert.match(layout, /setInterval\(run, 30000\)/);
+  assert.match(topbar, /بانتظار رد/);
+  assert.match(topbar, /animate-ping/);
+  assert.match(topbar, /whatsappInboxCount > 99 \? "99\+" : whatsappInboxCount/);
+});
+
+test("campaign wizard never assumes an error response is JSON", () => {
+  const wizard = read("app/(dashboard)/dashboard/communication/campaigns/new/_components/NewCampaignWizard.tsx");
+  assert.match(wizard, /async function readApiJson/);
+  assert.match(wizard, /await response\.text\(\)/);
+  assert.match(wizard, /HTTP \$\{response\.status\}/);
+  assert.doesNotMatch(wizard, /const listJson = await listRes\.json\(\)/);
+  assert.doesNotMatch(wizard, /const json = await res\.json\(\)/);
+});
