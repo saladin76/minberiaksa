@@ -64,7 +64,9 @@ export async function listAudienceLists(): Promise<AudienceListSummary[]> {
     status: l.status,
     locale: l.locale ?? null,
     channels: l.channels ?? [],
-    membersCount: countMap.get(l.id) ?? 0,
+    membersCount: l.type === "SMART"
+      ? Number((l.metadata as { lastMatchedCount?: number } | null)?.lastMatchedCount ?? 0)
+      : countMap.get(l.id) ?? 0,
     owner: l.createdByName ?? null,
     updatedAt: l.updatedAt.toISOString(),
     lastTestAt: (l.metadata as { lastTestAt?: string } | null)?.lastTestAt ?? null,
@@ -104,7 +106,10 @@ export async function getAudienceList(id: string): Promise<{ list: AudienceListS
 
   const summary: AudienceListSummary = {
     id: l.id, name: l.name, description: l.description ?? null, type: (l.type === "TEST" ? "TEST" : l.type === "SMART" ? "SMART" : "CUSTOM"),
-    status: l.status, locale: l.locale ?? null, channels: l.channels ?? [], membersCount: members.length,
+    status: l.status, locale: l.locale ?? null, channels: l.channels ?? [],
+    membersCount: l.type === "SMART"
+      ? Number((l.metadata as { lastMatchedCount?: number } | null)?.lastMatchedCount ?? 0)
+      : members.length,
     owner: l.createdByName ?? null, updatedAt: l.updatedAt.toISOString(), lastTestAt: (l.metadata as { lastTestAt?: string } | null)?.lastTestAt ?? null,
   };
   return { list: summary, members };
