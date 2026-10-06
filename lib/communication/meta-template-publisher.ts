@@ -6,6 +6,7 @@ import { getActiveMetaWhatsappRuntimeConfig } from "./runtime-config";
 import { ensureMetaTemplate } from "./providers/meta-whatsapp/templates";
 import { META_REASONS } from "./providers/meta-whatsapp/errors";
 import { syncMetaWhatsappTemplates } from "./whatsapp-template-sync";
+import { schemaHasInvalidMetaParameterNames } from "./meta-parameter-name";
 import {
   buildAuthenticationMetaComponents,
   buildStandardMetaComponents,
@@ -188,12 +189,22 @@ export async function publishWhatsappTemplateToMeta(
   // Once Meta knows this template, every new language must be published under the exact same
   // provider template name. The local editorial name may have changed, but using that changed name
   // here would create a second Meta template family instead of a new language variant.
-  const existingProviderVariant = await prisma.whatsappTemplateWabaVariant.findFirst({
+  const existingProviderVariants = await prisma.whatsappTemplateWabaVariant.findMany({
     where: { templateId, provider: "META_WHATSAPP" },
-    select: { providerTemplateName: true },
+    select: { providerTemplateName: true, componentsSchema: true },
     orderBy: { createdAt: "asc" },
-  }).catch(() => null);
-  const providerTemplateName = existingProviderVariant?.providerTemplateName?.trim() || template.name;
+  }).catch(() => []);
+  const existingProviderName = existingProviderVariants[0]?.providerTemplateName?.trim() || template.name;
+  const requiresParameterNameRepair = existingProviderVariants.some((row) =>
+    schemaHasInvalidMetaParameterNames(row.componentsSchema)
+  );
+  // Provider templates are immutable after approval. If Meta previously approved a family whose
+  // named placeholders exceed the send-time 20-character limit, publishing corrected components
+  // under the same name only yields CONTENT_MISMATCH. Create one deterministic successor family
+  // instead, then point the local WABA/language rows at it. Old provider rows remain historical only.
+  const providerTemplateName = requiresParameterNameRepair
+    ? `${existingProviderName.replace(/_v2$/, "").slice(0, 117)}_v2`
+    : existingProviderName;
 
   let canonicalBindings: VariableBinding[] = [];
   for (const waba of wabas) {
