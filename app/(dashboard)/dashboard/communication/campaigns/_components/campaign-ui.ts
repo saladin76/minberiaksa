@@ -19,6 +19,7 @@ export interface CampaignRow {
   repliedCount: number;
   donationCount: number;
   revenue: number;
+  failedDonationCount?: number;
   metadata?: {
     sendControls?: {
       paused?: boolean;

@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/dashboard/EmptyState";
 import { FilterBar } from "@/components/dashboard/FilterBar";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
-import { Megaphone, Plus, RefreshCw } from "lucide-react";
+import { Megaphone, Plus, RefreshCw, Send, Eye, MousePointerClick, HandHeart, Banknote } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { CampaignsTable, sortCampaigns, type CampaignSort } from "./CampaignsTable";
 import { type CampaignRow, CHANNEL_META, STATUS_META } from "./campaign-ui";
@@ -59,6 +59,23 @@ export function CampaignsListClient() {
 
   const byChannel = (id: string) => campaigns.filter((c) => c.channel === id).length;
 
+  const analytics = React.useMemo(() => {
+    return filtered.reduce(
+      (acc, campaign) => {
+        acc.sent += campaign.sentCount;
+        acc.engaged += Math.max(campaign.readCount, campaign.clickedCount, campaign.repliedCount);
+        acc.clicked += campaign.clickedCount;
+        acc.donations += campaign.donationCount;
+        acc.revenue += campaign.revenue;
+        return acc;
+      },
+      { sent: 0, engaged: 0, clicked: 0, donations: 0, revenue: 0 },
+    );
+  }, [filtered]);
+
+  const engagementRate = analytics.sent > 0 ? Math.round((analytics.engaged / analytics.sent) * 1000) / 10 : 0;
+  const clickRate = analytics.sent > 0 ? Math.round((analytics.clicked / analytics.sent) * 1000) / 10 : 0;
+
   return (
     <div dir="rtl">
       <FilterBar
@@ -106,6 +123,30 @@ export function CampaignsListClient() {
           </SelectContent>
         </Select>
       </FilterBar>
+
+      {!loading && campaigns.length > 0 && (
+        <div className="mb-4 grid grid-cols-2 gap-2 md:grid-cols-3 xl:grid-cols-5">
+          {[
+            { label: "إجمالي المُرسل", value: analytics.sent.toLocaleString("en-US"), hint: "رسالة مقبولة لدى المزوّد", icon: Send },
+            { label: "تفاعل/فتح", value: `${analytics.engaged.toLocaleString("en-US")} · ${engagementRate}%`, hint: "قراءة/فتح/نقر/رد مثبت", icon: Eye },
+            { label: "ضغطات مسجلة", value: `${analytics.clicked.toLocaleString("en-US")} · ${clickRate}%`, hint: "متاح عندما يرسل المزوّد حدث Click", icon: MousePointerClick },
+            { label: "تبرعات منسوبة", value: analytics.donations.toLocaleString("en-US"), hint: "UTM مطابق للحملة", icon: HandHeart },
+            { label: "إيراد منسوب", value: `${analytics.revenue.toLocaleString("en-US", { maximumFractionDigits: 2 })}`, hint: "تبرعات PAID من روابط الحملة", icon: Banknote },
+          ].map((item) => {
+            const Icon = item.icon;
+            return (
+              <div key={item.label} className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-[11px] font-medium text-slate-500">{item.label}</span>
+                  <Icon className="h-4 w-4 text-slate-400" />
+                </div>
+                <p className="mt-2 text-lg font-bold tabular-nums text-slate-900">{item.value}</p>
+                <p className="mt-1 text-[10px] text-slate-400">{item.hint}</p>
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       {loading ? (
         // Shaped like the table it replaces, so the layout does not jump when rows arrive.

@@ -46,7 +46,7 @@ function localesFromTranslations(base: SupportedLocale, translations: unknown): 
 type TextTemplateSummary = { id: string; name: string; translations: unknown; kind: string | null };
 
 async function listTextTemplates(channel: CommunicationChannelId): Promise<TextTemplateSummary[] | null> {
-  const query = { select: { id: true, name: true, translations: true, kind: true }, orderBy: { createdAt: "desc" }, take: 200 } as const;
+  const query = { where: { status: { not: "ARCHIVED" } }, select: { id: true, name: true, translations: true, kind: true }, orderBy: { createdAt: "desc" }, take: 200 } as const;
   if (channel === "WHATSAPP") return prisma.whatsappTemplate.findMany(query);
   if (channel === "SMS") return prisma.smsTemplate.findMany(query);
   return null;
@@ -91,6 +91,7 @@ export async function listChannelTemplates(
       // WhatsApp campaign coverage is provider truth: only Meta-approved aggregate variants count.
       // A locally drafted/PENDING language cannot make a campaign pass review.
       const rows = await prisma.whatsappTemplate.findMany({
+        where: { status: { not: "ARCHIVED" } },
         select: {
           id: true,
           name: true,
@@ -121,6 +122,7 @@ export async function listChannelTemplates(
       return textRows.filter(keep).map((t) => ({ id: t.id, name: t.name, availableLocales: localesFromTranslations(DEFAULT_LOCALE, t.translations) }));
     }
     const rows = await prisma.emailTemplate.findMany({
+      where: { status: { not: "ARCHIVED" } },
       select: { id: true, name: true, translations: true, kind: true },
       orderBy: { createdAt: "desc" },
       take: 200,

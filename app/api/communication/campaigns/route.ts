@@ -5,6 +5,7 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 import { requireAdminOrDashboardPermission } from "@/lib/dashboard/api-auth";
 import { auditActorFromDashboardSession } from "@/lib/audit-log";
 import { listCampaigns, createCampaign } from "@/lib/communication/campaign-service";
+import { getCampaignOutcomeMetrics } from "@/lib/communication/campaign-attribution-service";
 import { COMMUNICATION_CHANNELS, COMMUNICATION_PURPOSES } from "@/lib/communication/communication-runtime-types";
 
 export const runtime = "nodejs";
@@ -34,7 +35,17 @@ export async function GET(request: NextRequest) {
 
   const includeArchived = request.nextUrl.searchParams.get("includeArchived") === "true";
   const campaigns = await listCampaigns({ includeArchived });
-  return NextResponse.json({ ok: true, campaigns });
+  const outcomeMetrics = await getCampaignOutcomeMetrics(campaigns.map((campaign) => campaign.id));
+  const enriched = campaigns.map((campaign) => {
+    const outcome = outcomeMetrics.get(campaign.id);
+    return {
+      ...campaign,
+      donationCount: outcome?.donationCount ?? 0,
+      revenue: outcome?.revenue ?? 0,
+      failedDonationCount: outcome?.failedDonationCount ?? 0,
+    };
+  });
+  return NextResponse.json({ ok: true, campaigns: enriched });
 }
 
 export async function POST(request: NextRequest) {

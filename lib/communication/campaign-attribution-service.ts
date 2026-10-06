@@ -217,6 +217,46 @@ export async function getCampaignDonationReport(campaign: { id: string; channel:
 
 // ─────────────────────────── Communication-wide donation overview (reports page) ───────────────────────────
 
+export type CampaignOutcomeMetric = {
+  donationCount: number;
+  revenue: number;
+  failedDonationCount: number;
+};
+
+/**
+ * Batch exact-attribution metrics for the campaign list.
+ *
+ * Only donations whose checkout snapshot contains `utm_medium=communication` and an exact
+ * `utm_campaign=<CommunicationCampaign.id>` are credited. There is deliberately no channel-level
+ * fallback here: a list comparing many campaigns must never double-credit the same donation.
+ */
+export async function getCampaignOutcomeMetrics(
+  campaignIds: readonly string[],
+): Promise<Map<string, CampaignOutcomeMetric>> {
+  const ids = new Set(campaignIds.filter(Boolean));
+  const out = new Map<string, CampaignOutcomeMetric>();
+  if (!ids.size) return out;
+
+  const donations = await loadCommunicationDonations();
+  for (const donation of donations) {
+    const campaignId = str(attr(donation), "utm_campaign");
+    if (!campaignId || !ids.has(campaignId)) continue;
+    const current = out.get(campaignId) ?? { donationCount: 0, revenue: 0, failedDonationCount: 0 };
+    if (donation.status === "PAID") {
+      current.donationCount += 1;
+      current.revenue += valueUSD(donation);
+    } else if (donation.status === "FAILED") {
+      current.failedDonationCount += 1;
+    }
+    out.set(campaignId, current);
+  }
+
+  for (const [id, metric] of out) {
+    out.set(id, { ...metric, revenue: Math.round(metric.revenue * 100) / 100 });
+  }
+  return out;
+}
+
 export type CommunicationDonationOverview = {
   hasData: boolean;
   byChannel: { source: string; label: string; count: number; valueUSD: number }[];

@@ -108,6 +108,7 @@ export async function getSmartWhatsappContext(userId: string): Promise<SmartWhat
   const [marketingTemplates, utilityTemplates] = await Promise.all([
     prisma.whatsappTemplate.findMany({
       where: {
+        status: { not: "ARCHIVED" },
         OR: [{ category: "MARKETING" }, { purpose: "MARKETING" }, { kind: "CAMPAIGN" }],
         variants: { some: { provider: "META_WHATSAPP", approvalStatus: "APPROVED", category: "MARKETING" } },
       },
@@ -117,6 +118,7 @@ export async function getSmartWhatsappContext(userId: string): Promise<SmartWhat
     }).catch(() => []),
     prisma.whatsappTemplate.findMany({
       where: {
+        status: { not: "ARCHIVED" },
         OR: [{ category: "UTILITY" }, { purpose: "UTILITY" }, { purpose: "TRANSACTIONAL" }],
         variants: { some: { provider: "META_WHATSAPP", approvalStatus: "APPROVED", category: "UTILITY" } },
       },
