@@ -16,7 +16,7 @@ import { buildMetaComponents } from "./providers/meta-whatsapp/parameters";
 import { resolveAudienceOrigin } from "./audience-list-service";
 import { computeFinalStatus, recomputeCampaignCounters } from "./campaign-counter-service";
 import { type CommunicationChannelId, type CommunicationPurposeId } from "./communication-runtime-types";
-import { evaluateCampaignSendControls, speedSettings, type CampaignSpeedMode } from "./campaign-send-controls";
+import { autoSpeedMode, campaignPriorityRank, campaignSendControls, evaluateCampaignSendControls, speedSettings, type CampaignSpeedMode } from "./campaign-send-controls";
 import { mergeCampaignMetadata, mutateCampaignMetadata } from "./campaign-metadata-store";
 
 export { computeFinalStatus };
@@ -644,7 +644,14 @@ export async function executeCampaignSend(
     const liveGate = await evaluateCampaignSendControls(liveCampaign);
     if (!liveGate.ok) { base.blocked = liveGate.reason; break; }
 
-    const liveSpeed = liveGate.controls.speedMode;
+    const remainingRecipients = Math.max(plan.audienceTotal - progress.total, plan.total);
+    const liveSpeed = liveGate.controls.autoSpeed
+      ? autoSpeedMode({
+          remainingRecipients,
+          remainingDaily: liveGate.remainingDaily,
+          scheduledStopAt: liveGate.controls.scheduledStopAt,
+        })
+      : liveGate.controls.speedMode;
     const tally = await runBatch(plan, liveSpeed);
     batches += 1;
     exhausted = plan.exhausted;
@@ -670,7 +677,15 @@ export async function executeCampaignSend(
     if (!fresh) { base.blocked = "NOT_FOUND"; break; }
     const nextGate = await evaluateCampaignSendControls(fresh);
     if (!nextGate.ok) { base.blocked = nextGate.reason; break; }
-    const nextSpeed = speedSettings(nextGate.controls.speedMode);
+    const remainingRecipients = Math.max(firstPlan.audienceTotal - progress.total, 0);
+    const nextMode = nextGate.controls.autoSpeed
+      ? autoSpeedMode({
+          remainingRecipients,
+          remainingDaily: nextGate.remainingDaily,
+          scheduledStopAt: nextGate.controls.scheduledStopAt,
+        })
+      : nextGate.controls.speedMode;
+    const nextSpeed = speedSettings(nextMode);
     const desiredNextBatch = Math.min(opts.batchSize ?? nextSpeed.batchSize, 1000);
     const nextBatchSize = Math.max(1, Math.min(desiredNextBatch, nextGate.remainingDaily ?? desiredNextBatch));
     const next = await planCampaignSend(campaignId, { batchSize: nextBatchSize, cursor });
@@ -739,12 +754,33 @@ export async function runDueCampaigns(opts: { actor?: Actor; max?: number } = {}
   const max = Math.min(opts.max ?? 10, 50);
   const results: ExecutionSummary[] = [];
 
-  const due = await prisma.communicationCampaign.findMany({ where: { status: "SCHEDULED", scheduledAt: { lte: new Date() } }, select: { id: true }, take: max }).catch(() => []);
+  const dueCandidates = await prisma.communicationCampaign.findMany({
+    where: { status: "SCHEDULED", scheduledAt: { lte: new Date() } },
+    select: { id: true, metadata: true, scheduledAt: true },
+    take: Math.min(max * 5, 250),
+  }).catch(() => []);
+  dueCandidates.sort((a, b) => {
+    const pa = campaignPriorityRank(campaignSendControls(a as Pick<CommunicationCampaign, "metadata">).priority);
+    const pb = campaignPriorityRank(campaignSendControls(b as Pick<CommunicationCampaign, "metadata">).priority);
+    if (pa !== pb) return pa - pb;
+    return (a.scheduledAt?.getTime() ?? 0) - (b.scheduledAt?.getTime() ?? 0);
+  });
+  const due = dueCandidates.slice(0, max);
   for (const campaign of due) results.push(await executeCampaignSend(campaign.id, { actor: opts.actor, mode: "DUE" }));
 
   const budget = max - due.length;
   if (budget > 0) {
-    const inFlight = await prisma.communicationCampaign.findMany({ where: { status: "SENDING" }, select: { id: true, metadata: true }, take: budget * 4 }).catch(() => []);
+    const inFlight = await prisma.communicationCampaign.findMany({
+      where: { status: "SENDING" },
+      select: { id: true, metadata: true, updatedAt: true },
+      take: Math.min(budget * 8, 250),
+    }).catch(() => []);
+    inFlight.sort((a, b) => {
+      const pa = campaignPriorityRank(campaignSendControls(a as Pick<CommunicationCampaign, "metadata">).priority);
+      const pb = campaignPriorityRank(campaignSendControls(b as Pick<CommunicationCampaign, "metadata">).priority);
+      if (pa !== pb) return pa - pb;
+      return a.updatedAt.getTime() - b.updatedAt.getTime();
+    });
     for (const row of inFlight) {
       if (results.length >= max) break;
       const asCampaign = row as unknown as CommunicationCampaign;
