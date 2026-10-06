@@ -49,6 +49,8 @@ const BLOCKED_LABELS: Record<string, string> = {
   NOT_RESUMABLE: "لا توجد دفعة متوقفة لمتابعتها.",
   PAUSED: "الحملة متوقفة مؤقتًا من تحكمات الإرسال.",
   QUIET_HOURS: "الحملة داخل ساعات عدم الإرسال وستستأنف تلقائيًا بعدها.",
+  SCHEDULED_STOP: "الحملة وصلت إلى وقت التوقف المجدول.",
+  EMERGENCY_STOP: "إرسال الحملات متوقف حاليًا بسبب إيقاف الطوارئ العام.",
   DAILY_CAP_REACHED: "تم بلوغ الحد اليومي المسموح لرسائل واتساب.",
 };
 
@@ -202,7 +204,7 @@ export function CampaignRowActions({
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => setControlsOpen(true)}>
                 <Settings2 className="me-2 h-3.5 w-3.5" />
-                إعدادات السرعة والوقت
+                مركز التحكم المتقدم
               </DropdownMenuItem>
             </>
           )}
