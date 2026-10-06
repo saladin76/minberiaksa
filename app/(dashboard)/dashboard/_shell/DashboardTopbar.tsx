@@ -83,14 +83,25 @@ export function DashboardTopbar({ crumbs, onOpenSidebar, onOpenSearch, dir, show
         {showWhatsappInbox && (
           <Link
             href="/dashboard/communication/inbox"
-            className="relative inline-flex h-9 items-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 text-xs font-semibold text-emerald-800 transition-colors hover:bg-emerald-100"
+            className={cn(
+              "relative inline-flex h-9 items-center gap-1.5 rounded-lg border px-2.5 text-xs font-semibold transition-all",
+              whatsappInboxCount > 0
+                ? "border-amber-300 bg-amber-50 text-amber-900 shadow-sm hover:bg-amber-100"
+                : "border-emerald-200 bg-emerald-50 text-emerald-800 hover:bg-emerald-100",
+            )}
             aria-label={whatsappInboxCount > 0 ? `واتساب، ${whatsappInboxCount} محادثة تنتظر الرد` : "محادثات واتساب"}
-            title="محادثات واتساب"
+            title={whatsappInboxCount > 0 ? `${whatsappInboxCount} محادثة واتساب تنتظر الرد` : "محادثات واتساب"}
           >
-            <MessageCircle className="h-4 w-4" />
-            <span className="hidden sm:inline">واتساب</span>
             {whatsappInboxCount > 0 && (
-              <span className="inline-flex min-w-5 h-5 items-center justify-center rounded-full bg-emerald-600 px-1 text-[10px] font-bold tabular-nums text-white">
+              <span className="absolute -right-1 -top-1 flex h-3 w-3">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-rose-400 opacity-70" />
+                <span className="relative inline-flex h-3 w-3 rounded-full border-2 border-white bg-rose-500" />
+              </span>
+            )}
+            <MessageCircle className="h-4 w-4" />
+            <span className="hidden sm:inline">{whatsappInboxCount > 0 ? "بانتظار رد" : "واتساب"}</span>
+            {whatsappInboxCount > 0 && (
+              <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-rose-600 px-1 text-[10px] font-bold tabular-nums text-white">
                 {whatsappInboxCount > 99 ? "99+" : whatsappInboxCount}
               </span>
             )}
