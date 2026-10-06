@@ -23,7 +23,11 @@ export interface CampaignRow {
     sendControls?: {
       paused?: boolean;
       speedMode?: string;
+      autoSpeed?: boolean;
+      priority?: "LOW" | "NORMAL" | "HIGH" | "URGENT";
       dailyCap?: number;
+      scheduledStopAt?: string | null;
+      resumeAt?: string | null;
       quietHours?: { enabled?: boolean; start?: string; end?: string; timezone?: string };
     };
   } | null;
