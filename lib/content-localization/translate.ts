@@ -80,10 +80,13 @@ function stripCodeFence(value: string): string {
   return value.replace(/^```json\s*/i, "").replace(/^```\s*/i, "").replace(/```$/i, "").trim();
 }
 
-const PROTECTED_TOKEN_RE = /https?:\/\/[^\s<>"')]+|[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}|\{\{[^{}]+\}\}|\{[A-Za-z0-9_.-]+\}|\b(?:USD|EUR|TRY|SAR|AED|QAR|KWD|JOD|GBP)\b|(?:[$€£₺﷼]\s*)?\d+(?:[.,]\d+)?%?/giu;
+const PROTECTED_LITERAL_RE = /https?:\/\/[^\s<>"')]+|[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}|\{\{[^{}]+\}\}|<\/?[A-Za-z][^>]*>|\b(?:USD|EUR|TRY|SAR|AED|QAR|KWD|JOD|GBP)\b|(?:[$€£₺﷼]\s*)?\d+(?:[.,]\d+)?%?/giu;
+const ICU_VARIABLE_RE = /\{([A-Za-z0-9_.-]+)(?=[,}])/g;
 
 function protectedTokens(value: string): string[] {
-  return (value.match(PROTECTED_TOKEN_RE) ?? []).map((token) => token.trim()).sort();
+  const literals = (value.match(PROTECTED_LITERAL_RE) ?? []).map((token) => token.trim());
+  const variables = Array.from(value.matchAll(ICU_VARIABLE_RE), (match) => `{${match[1]}}`);
+  return [...literals, ...variables].sort();
 }
 
 function sameProtectedTokens(source: string, translated: string): boolean {
