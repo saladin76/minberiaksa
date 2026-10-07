@@ -35,7 +35,6 @@ type EditState = { donorName: string; donorLocale: DonorLocale; finalProject: st
 type CampaignOption = { id: string; title: string };
 const GENERAL_DONATION = "__general__";
 type Filters = { q: string; status: string; bankId: string; currency: string; donorLocale: string; dateFrom: string; dateTo: string; amountMin: string; amountMax: string; sortBy: string; sortDir: string; limit: string };
-type BankTransferSummary = { approvedCount: number; pendingCount: number; ignoredCount: number; totalCount: number; totalUsd: number; totals: Record<string, number>; usdTotals: Record<string, number> };
 
 const emptyForm: FormState = { nameAr: "", nameEn: "", nameTr: "", accountName: "", ibanLast4: "", currency: "USD" };
 const defaultFilters: Filters = { q: "", status: "all", bankId: "all", currency: "all", donorLocale: "all", dateFrom: "", dateTo: "", amountMin: "", amountMax: "", sortBy: "createdAt", sortDir: "desc", limit: "50" };
@@ -50,24 +49,6 @@ function statusClass(status: TransactionStatus) { if (status === "APPROVED" || s
 function previewRowKey(row: PreviewRow) { return row.transactionHash ?? `${row.rowNumber}-${row.description}`; }
 function editFor(tx: ImportedTransaction): EditState { return { donorName: tx.donorName ?? "", donorLocale: tx.donorLocale || "ar", finalProject: tx.finalProject || tx.suggestedProject || "تبرع عام", campaignId: tx.campaignId ?? "", donorContact: tx.donorContact ?? "" }; }
 function apiError(e: unknown, fallback: string) { return axios.isAxiosError(e) && typeof e.response?.data?.error === "string" ? e.response.data.error : fallback; }
-
-async function allSettledWithConcurrency<T, R>(items: readonly T[], limit: number, worker: (item: T) => Promise<R>): Promise<PromiseSettledResult<R>[]> {
-  const output: PromiseSettledResult<R>[] = new Array(items.length);
-  let next = 0;
-  const workers = Array.from({ length: Math.min(Math.max(1, limit), items.length) }, async () => {
-    while (true) {
-      const index = next++;
-      if (index >= items.length) return;
-      try {
-        output[index] = { status: "fulfilled", value: await worker(items[index]) };
-      } catch (reason) {
-        output[index] = { status: "rejected", reason };
-      }
-    }
-  });
-  await Promise.all(workers);
-  return output;
-}
 
 export default function BankTransfersPage() {
   const [banks, setBanks] = useState<Bank[]>([]);
@@ -94,13 +75,12 @@ export default function BankTransfersPage() {
   const [edits, setEdits] = useState<Record<string, EditState>>({});
   const [campaigns, setCampaigns] = useState<CampaignOption[]>([]);
   const [filters, setFilters] = useState<Filters>(defaultFilters);
-  const [summary, setSummary] = useState<BankTransferSummary>({ approvedCount: 0, pendingCount: 0, ignoredCount: 0, totalCount: 0, totalUsd: 0, totals: {}, usdTotals: {} });
 
   const activeBanks = useMemo(() => banks.filter((b) => b.isActive), [banks]);
   const selectedBank = activeBanks.find((b) => b.id === selectedBankId || b.code === selectedBankId) ?? activeBanks[0];
-  const pendingCount = summary.pendingCount;
-  const approvedCount = summary.approvedCount;
-  const ignoredCount = summary.ignoredCount;
+  const pendingCount = transactions.filter((tx) => tx.status === "PENDING_REVIEW").length;
+  const approvedCount = transactions.filter((tx) => tx.status === "APPROVED" || tx.status === "IMPORTED").length;
+  const ignoredCount = transactions.filter((tx) => tx.status === "IGNORED").length;
   const visibleIds = transactions.map((tx) => tx.id).filter((id): id is string => Boolean(id));
   const allVisibleSelected = visibleIds.length > 0 && visibleIds.every((id) => selectedIds.has(id));
   const visiblePreviewRows = useMemo(() => preview?.rows.filter((row) => !row.transactionHash || !excludedPreviewHashes.has(row.transactionHash)) ?? [], [preview, excludedPreviewHashes]);
@@ -129,45 +109,14 @@ export default function BankTransfersPage() {
   }
 
   function initEdits(rows: ImportedTransaction[]) { const next: Record<string, EditState> = {}; rows.forEach((tx) => { if (!tx.id) return; next[tx.id] = editFor(tx); }); setEdits(next); }
-  async function loadInitial() {
-    setLoading(true);
-    try {
-      const [banksRes] = await Promise.all([
-        axios.get<{ banks: Bank[]; supportedCurrencies: Currency[] }>("/api/admin/bank-transfers/banks"),
-        loadSummary(),
-        loadTransactions(defaultFilters, 1),
-      ]);
-      setBanks(banksRes.data.banks ?? []);
-      setSupportedCurrencies(banksRes.data.supportedCurrencies ?? ["USD", "TRY", "EUR"]);
-    } catch {
-      toast.error("فشل تحميل بيانات التحويلات البنكية");
-    } finally {
-      setLoading(false);
-    }
-  }
+  async function loadInitial() { setLoading(true); try { const banksRes = await axios.get<{ banks: Bank[]; supportedCurrencies: Currency[] }>("/api/admin/bank-transfers/banks"); setBanks(banksRes.data.banks ?? []); setSupportedCurrencies(banksRes.data.supportedCurrencies ?? ["USD", "TRY", "EUR"]); await loadTransactions(defaultFilters, 1); } catch { toast.error("فشل تحميل بيانات التحويلات البنكية"); } finally { setLoading(false); } }
   async function loadTransactions(nextFilters = filters, nextPage = page) { setTransactionsLoading(true); try { const query = buildQuery(nextFilters, nextPage); const txRes = await axios.get<{ transactions: ImportedTransaction[]; page: number; totalPages: number; total: number }>(`/api/admin/bank-transfers/transactions?${query}`); const rows = txRes.data.transactions ?? []; setTransactions(rows); setPage(txRes.data.page ?? nextPage); setTotalPages(txRes.data.totalPages ?? 1); setTotal(txRes.data.total ?? rows.length); initEdits(rows); } catch { toast.error("فشل تحميل العمليات البنكية"); } finally { setTransactionsLoading(false); } }
-  async function loadSummary() {
-    try {
-      const res = await axios.get<BankTransferSummary>("/api/admin/bank-transfers/summary");
-      setSummary({
-        approvedCount: res.data.approvedCount ?? 0,
-        pendingCount: res.data.pendingCount ?? 0,
-        ignoredCount: res.data.ignoredCount ?? 0,
-        totalCount: res.data.totalCount ?? 0,
-        totalUsd: res.data.totalUsd ?? 0,
-        totals: res.data.totals ?? {},
-        usdTotals: res.data.usdTotals ?? {},
-      });
-    } catch {
-      // Keep the last good summary. The review table still remains usable.
-    }
-  }
   async function refreshBanksOnly() { try { const res = await axios.get<{ banks: Bank[]; supportedCurrencies: Currency[] }>("/api/admin/bank-transfers/banks"); setBanks(res.data.banks ?? []); setSupportedCurrencies(res.data.supportedCurrencies ?? supportedCurrencies); } catch {} }
   async function addBank() { if (!form.nameAr.trim()) return toast.error("اسم البنك بالعربية مطلوب"); setSaving(true); try { const res = await axios.post<{ banks: Bank[]; supportedCurrencies: Currency[] }>("/api/admin/bank-transfers/banks", { ...form, nameAr: form.nameAr.trim(), nameEn: form.nameEn.trim() || null, nameTr: form.nameTr.trim() || null, accountName: form.accountName.trim() || null, ibanLast4: form.ibanLast4.trim() || null }); setBanks(res.data.banks ?? []); setSupportedCurrencies(res.data.supportedCurrencies ?? supportedCurrencies); setForm(emptyForm); toast.success("تم إضافة البنك بنجاح"); } catch { toast.error("فشل إضافة البنك"); } finally { setSaving(false); } }
   function onFileChange(event: ChangeEvent<HTMLInputElement>) { setStatementFile(event.target.files?.[0] ?? null); setPreview(null); setExcludedPreviewHashes(new Set()); }
   function buildFormData() { if (!statementFile || !selectedBank) return null; const fd = new FormData(); fd.append("file", statementFile); fd.append("bankId", selectedBank.id ?? selectedBank.code ?? ""); fd.append("currency", statementCurrency); fd.append("donorLocale", donorLocale); fd.append("excludedHashes", JSON.stringify([...excludedPreviewHashes])); return fd; }
   async function parsePreview() { const fd = buildFormData(); if (!fd) return toast.error("اختر البنك والملف أولًا"); setParsing(true); try { const res = await axios.post<PreviewResponse>("/api/admin/bank-transfers/preview", fd); setPreview(res.data); setExcludedPreviewHashes(new Set()); if (res.data.warning) toast(res.data.warning); toast.success(`تمت قراءة ${res.data.rowCount} صف`); } catch (e) { toast.error(axios.isAxiosError(e) && typeof e.response?.data?.error === "string" ? e.response.data.error : "فشل قراءة الملف"); } finally { setParsing(false); } }
-  async function importStatement() { const fd = buildFormData(); if (!fd) return toast.error("اختر البنك والملف أولًا"); setImporting(true); try { const res = await axios.post<{ importedCount: number; duplicateCount: number; excludedCount?: number; warning: string | null }>("/api/admin/bank-transfers/import", fd); if (res.data.warning) toast(res.data.warning); toast.success(`تم إدخال ${res.data.importedCount} عملية للمراجعة، وتجاهل ${res.data.duplicateCount} مكررة، واستبعاد ${res.data.excludedCount ?? excludedPreviewHashes.size}`); setPreview(null); setExcludedPreviewHashes(new Set()); setStatementFile(null); await Promise.all([loadTransactions(filters, 1), refreshBanksOnly(), loadSummary()]); } catch (e) { toast.error(axios.isAxiosError(e) && typeof e.response?.data?.error === "string" ? e.response.data.error : "فشل إدخال العمليات"); } finally { setImporting(false); } }
+  async function importStatement() { const fd = buildFormData(); if (!fd) return toast.error("اختر البنك والملف أولًا"); setImporting(true); try { const res = await axios.post<{ importedCount: number; duplicateCount: number; excludedCount?: number; warning: string | null }>("/api/admin/bank-transfers/import", fd); if (res.data.warning) toast(res.data.warning); toast.success(`تم إدخال ${res.data.importedCount} عملية للمراجعة، وتجاهل ${res.data.duplicateCount} مكررة، واستبعاد ${res.data.excludedCount ?? excludedPreviewHashes.size}`); setPreview(null); setExcludedPreviewHashes(new Set()); setStatementFile(null); await loadTransactions(filters, 1); await refreshBanksOnly(); } catch (e) { toast.error(axios.isAxiosError(e) && typeof e.response?.data?.error === "string" ? e.response.data.error : "فشل إدخال العمليات"); } finally { setImporting(false); } }
   function removePreviewRow(row: PreviewRow) { if (!row.transactionHash) return toast.error("لا يمكن حذف هذا الصف من الاستيراد لأنه لا يملك بصمة عملية واضحة"); setExcludedPreviewHashes((prev) => new Set([...prev, row.transactionHash!])); toast.success("تم حذف الصف من المعاينة"); }
   function setEdit(id: string, patch: Partial<EditState>) { setEdits((prev) => ({ ...prev, [id]: { ...prev[id], ...patch } })); }
   function toggleSelected(id: string) { setSelectedIds((prev) => { const next = new Set(prev); if (next.has(id)) next.delete(id); else next.add(id); return next; }); }
@@ -182,7 +131,6 @@ export default function BankTransfersPage() {
       setTransactions((prev) => prev.map((item) => item.id === tx.id ? updated : item));
       toast.success(status === "APPROVED" ? (edit.campaignId ? "تم اعتماد العملية وإضافتها لإجمالي المشروع" : "تم اعتماد العملية كتبرع عام") : status === "IGNORED" ? "تم استبعاد العملية" : "تم حفظ التعديل");
       if (status === "APPROVED") void refreshBanksOnly();
-      void loadSummary();
     } catch (e) {
       toast.error(apiError(e, "فشل تحديث العملية"));
     } finally {
@@ -197,15 +145,12 @@ export default function BankTransfersPage() {
       // Each row carries its own reviewer choices (project, donor contact) so bulk approval
       // does not silently drop them; each result is reported, not all-or-nothing.
       const byId = new Map(transactions.filter((tx) => tx.id).map((tx) => [tx.id as string, tx]));
-      // Cap concurrent approvals: each approval may create a donor/donation and recompute a project total.
-      // Firing 100–200 writes simultaneously makes Atlas and Vercel slower, not faster.
-      const results = await allSettledWithConcurrency(ids, 8, async (id) => {
+      const results = await Promise.allSettled(ids.map((id) => {
         const tx = byId.get(id);
         const edit = edits[id] ?? (tx ? editFor(tx) : undefined);
         const payload = edit ? { ...edit, campaignId: edit.campaignId || null, donorContact: edit.donorContact || null, status } : { status };
-        await axios.patch(`/api/admin/bank-transfers/transactions/${id}`, payload);
-        return id;
-      });
+        return axios.patch(`/api/admin/bank-transfers/transactions/${id}`, payload).then(() => id);
+      }));
       const done = new Set(results.filter((r): r is PromiseFulfilledResult<string> => r.status === "fulfilled").map((r) => r.value));
       const failed = results.length - done.size;
       setTransactions((prev) => prev.map((tx) => tx.id && done.has(tx.id) ? { ...tx, status } : tx));
@@ -215,7 +160,7 @@ export default function BankTransfersPage() {
         const firstError = results.find((r): r is PromiseRejectedResult => r.status === "rejected");
         toast.error(`تم تنفيذ ${done.size} وتعذّر ${failed}${firstError ? `  ${apiError(firstError.reason, "")}` : ""}. العمليات التي تعذّرت بقيت محددة.`);
       }
-      await Promise.all([loadTransactions(filters, page), refreshBanksOnly(), loadSummary()]);
+      void refreshBanksOnly();
     } finally {
       setBulkBusy(false);
     }
@@ -223,29 +168,29 @@ export default function BankTransfersPage() {
   async function bulkDelete() {
     const ids = [...selectedIds];
     if (!ids.length) return;
-    if (!window.confirm(`تأكيد حذف ${ids.length} عملية محددة؟ سيتم إخفاؤها من المراجعة ولن تُحتسب في الإجماليات.`)) return;
+    if (!window.confirm(`تأكيد حذف ${ids.length} عملية محددة؟`)) return;
     setBulkBusy(true);
     try {
-      const results = await allSettledWithConcurrency(ids, 8, async (id) => {
-        await axios.delete(`/api/admin/bank-transfers/transactions/${id}`);
-        return id;
-      });
-      const done = new Set(results.filter((r): r is PromiseFulfilledResult<string> => r.status === "fulfilled").map((r) => r.value));
-      const failed = results.length - done.size;
-      setSelectedIds(new Set(ids.filter((id) => !done.has(id))));
-      await Promise.all([loadTransactions(filters, page), loadSummary(), refreshBanksOnly()]);
-      if (failed === 0) {
-        toast.success(`تم حذف ${done.size} عملية`);
-      } else {
-        const firstError = results.find((r): r is PromiseRejectedResult => r.status === "rejected");
-        toast.error(`تم حذف ${done.size} وتعذّر حذف ${failed}${firstError ? ` — ${apiError(firstError.reason, "")}` : ""}`);
-      }
+      const results = await Promise.allSettled(
+        ids.map((id) => axios.delete(`/api/admin/bank-transfers/transactions/${id}`).then(() => id)),
+      );
+      const deleted = new Set(
+        results
+          .filter((result): result is PromiseFulfilledResult<string> => result.status === "fulfilled")
+          .map((result) => result.value),
+      );
+      const failed = results.length - deleted.size;
+      setTransactions((prev) => prev.filter((tx) => !tx.id || !deleted.has(tx.id)));
+      setSelectedIds(new Set(ids.filter((id) => !deleted.has(id))));
+      if (failed === 0) toast.success(`تم حذف ${deleted.size} عملية`);
+      else toast.error(`تم حذف ${deleted.size} وتعذّر حذف ${failed}`);
+      void refreshBanksOnly();
     } finally {
       setBulkBusy(false);
     }
   }
 
-  async function deleteTransaction(tx: ImportedTransaction) { if (!tx.id) return; if (!window.confirm(`تأكيد حذف عملية ${tx.donorName || "بدون اسم"} بقيمة ${money(tx.amount, tx.currency)}؟`)) return; setReviewingId(tx.id); try { await axios.delete(`/api/admin/bank-transfers/transactions/${tx.id}`); setTransactions((prev) => prev.filter((item) => item.id !== tx.id)); toast.success("تم حذف العملية"); void refreshBanksOnly(); void loadSummary(); } catch { toast.error("فشل حذف العملية"); } finally { setReviewingId(null); } }
+  async function deleteTransaction(tx: ImportedTransaction) { if (!tx.id) return; if (!window.confirm(`تأكيد حذف عملية ${tx.donorName || "بدون اسم"} بقيمة ${money(tx.amount, tx.currency)}؟`)) return; setReviewingId(tx.id); try { await axios.delete(`/api/admin/bank-transfers/transactions/${tx.id}`); setTransactions((prev) => prev.filter((item) => item.id !== tx.id)); toast.success("تم حذف العملية"); void refreshBanksOnly(); } catch { toast.error("فشل حذف العملية"); } finally { setReviewingId(null); } }
   function applyFilters() { setPage(1); void loadTransactions(filters, 1); }
   function resetFilters() { setFilters(defaultFilters); setPage(1); void loadTransactions(defaultFilters, 1); }
 
@@ -274,7 +219,7 @@ export default function BankTransfersPage() {
         icon={Landmark}
         actions={
           <>
-            <Button variant="outline" className="gap-2" onClick={() => void Promise.all([loadTransactions(filters, page), loadSummary(), refreshBanksOnly()])} disabled={transactionsLoading}>
+            <Button variant="outline" className="gap-2" onClick={() => loadTransactions(filters, page)} disabled={transactionsLoading}>
               <RefreshCw className={`h-4 w-4 ${transactionsLoading ? "animate-spin" : ""}`} />
               تحديث
             </Button>
@@ -294,10 +239,10 @@ export default function BankTransfersPage() {
       <MetricSummaryBand
         eyebrow="عمليات تنتظر المراجعة"
         value={String(pendingCount)}
-        note={`من إجمالي ${summary.totalCount.toLocaleString("en-US")} عملية واردة محفوظة.`}
+        note={`من إجمالي ${total.toLocaleString("en-US")} عملية مطابقة للتصفية الحالية.`}
         stats={[
-          { label: "معتمد", value: String(approvedCount) },
-          { label: "مستبعد", value: String(ignoredCount) },
+          { label: "معتمد في الصفحة", value: String(approvedCount) },
+          { label: "مستبعد في الصفحة", value: String(ignoredCount) },
           { label: "البنوك النشطة", value: String(activeBanks.length) },
         ]}
       />

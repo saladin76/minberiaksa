@@ -8,7 +8,6 @@ import {
   parseBankStatementFile,
 } from "@/lib/bank-transfers/statement-parser";
 import { enhanceBankTransferRowsSmart } from "@/lib/bank-transfers/smart-enhancer";
-import { aiEnhanceBankRows, applyAiEnhancements } from "@/lib/bank-transfers/ai-extractor";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -48,17 +47,7 @@ export async function POST(request: NextRequest) {
       donorLocale,
       bankId,
     });
-    let rows = enhanceBankTransferRowsSmart(parsed.rows);
-    let aiApplied = false;
-    try {
-      const ai = await aiEnhanceBankRows(rows);
-      if (ai) {
-        rows = applyAiEnhancements(rows, ai).rows;
-        aiApplied = true;
-      }
-    } catch (err) {
-      console.error("[bank-transfers] preview AI enhancement failed, using heuristics", err);
-    }
+    const rows = enhanceBankTransferRowsSmart(parsed.rows);
 
     return NextResponse.json({
       fileName,
@@ -71,7 +60,6 @@ export async function POST(request: NextRequest) {
       rowCount: rows.length,
       rows,
       smartAnalysis: true,
-      aiEnhanced: aiApplied,
       // Lets the preview state plainly which column the money was read from,
       // so a wrong pick is caught before the import rather than after.
       amountColumn: parsed.amountColumn,

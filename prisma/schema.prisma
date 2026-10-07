@@ -2340,6 +2340,27 @@ model CommunicationDelivery {
   @@index([providerMessageId])
 }
 
+/// Durable queue for recipients temporarily held by recipient-local quiet hours.
+/// They have been scanned from the campaign audience, but not sent yet. The scheduler
+/// re-evaluates their local clock and sends them once their quiet window ends.
+model CommunicationCampaignDeferredRecipient {
+  id            String   @id @default(auto()) @map("_id") @db.ObjectId
+  campaignId    String   @db.ObjectId
+  cursorId      String
+  userId        String   @db.ObjectId
+  name          String?
+  email         String?
+  phone         String?
+  locale        String
+  country       String?
+  nextAttemptAt DateTime @default(now())
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([campaignId, cursorId])
+  @@index([campaignId, nextAttemptAt])
+}
+
 model CommunicationProviderEvent {
   id                String    @id @default(auto()) @map("_id") @db.ObjectId
   deliveryId        String?   @db.ObjectId

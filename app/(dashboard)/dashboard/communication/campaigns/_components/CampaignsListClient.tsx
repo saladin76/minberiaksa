@@ -17,7 +17,7 @@ export function CampaignsListClient() {
   const [loading, setLoading] = React.useState(true);
   const [search, setSearch] = React.useState("");
   const [channel, setChannel] = React.useState("all");
-  const [status, setStatus] = React.useState("all");
+  const [status, setStatus] = React.useState("active");
   // Newest first: the campaign someone came here to check is almost always the one just sent.
   const [sort, setSort] = React.useState<CampaignSort>({ key: "date", dir: "desc" });
 
@@ -30,7 +30,7 @@ export function CampaignsListClient() {
   const load = React.useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/communication/campaigns", { cache: "no-store" });
+      const res = await fetch("/api/communication/campaigns?includeArchived=true", { cache: "no-store" });
       const json = await res.json();
       if (!res.ok || !json.ok) throw new Error(json?.error || "تعذّر تحميل الحملات");
       setCampaigns(json.campaigns ?? []);
@@ -50,7 +50,9 @@ export function CampaignsListClient() {
   const filtered = sortCampaigns(
     campaigns.filter((c) => {
       if (channel !== "all" && c.channel !== channel) return false;
-      if (status !== "all" && c.status !== status) return false;
+      if (status === "active" && c.status === "ARCHIVED") return false;
+      if (status === "archived" && c.status !== "ARCHIVED") return false;
+      if (!["all", "active", "archived"].includes(status) && c.status !== status) return false;
       if (search && !c.name.toLowerCase().includes(search.toLowerCase())) return false;
       return true;
     }),
@@ -116,10 +118,16 @@ export function CampaignsListClient() {
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
+            <SelectItem value="active" className="text-xs">الحملات النشطة</SelectItem>
+            <SelectItem value="archived" className="text-xs">
+              المؤرشفة ({campaigns.filter((c) => c.status === "ARCHIVED").length})
+            </SelectItem>
             <SelectItem value="all" className="text-xs">كل الحالات</SelectItem>
-            {Object.entries(STATUS_META).map(([id, m]) => (
-              <SelectItem key={id} value={id} className="text-xs">{m.label}</SelectItem>
-            ))}
+            {Object.entries(STATUS_META)
+              .filter(([id]) => id !== "ARCHIVED")
+              .map(([id, m]) => (
+                <SelectItem key={id} value={id} className="text-xs">{m.label}</SelectItem>
+              ))}
           </SelectContent>
         </Select>
       </FilterBar>
@@ -185,7 +193,7 @@ export function CampaignsListClient() {
                 onClick={() => {
                   setSearch("");
                   setChannel("all");
-                  setStatus("all");
+                  setStatus("active");
                 }}
               >
                 مسح التصفية

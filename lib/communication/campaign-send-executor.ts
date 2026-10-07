@@ -6,13 +6,14 @@ import { planCampaignSend, type SendPlan } from "./campaign-send-planner";
 import { renderChannelTemplate } from "./template-compat";
 import { loadContextsForUserIds } from "@/lib/templates/variables";
 import { loadUpdateSource, sourceUpdateOf, updateContextFor } from "./update-campaign";
-import { createDeliveryRecord, recordSkippedDelivery, markDeliveryStatus } from "./delivery-log-service";
+import { createDeliveryRecord, recordSkippedDelivery, markDeliveryStatus, updateDeliveryVariables } from "./delivery-log-service";
 import { resolveProviderForSendWithRuntime, sendPreparedDelivery } from "./provider-router";
 import { EMAIL_PROVIDER_ID } from "./providers/email/client";
 import { getActiveCommunicationRuntimeBundle } from "./runtime-config";
 import { loadSenderRoutingSnapshot, resolveSenderFromSnapshot } from "./sender-resolution";
 import { resolveVariantForLocale, NOT_READY, META_PROVIDER } from "./whatsapp-template-sync";
 import { buildMetaComponents } from "./providers/meta-whatsapp/parameters";
+import { buildWhatsappRenderedPreview } from "./whatsapp-rendered-preview";
 import { resolveAudienceOrigin } from "./audience-list-service";
 import { computeFinalStatus, recomputeCampaignCounters } from "./campaign-counter-service";
 import { type CommunicationChannelId, type CommunicationPurposeId } from "./communication-runtime-types";
@@ -24,52 +25,130 @@ import { recipientTimeZone } from "./recipient-timezone";
 
 export { computeFinalStatus };
 
-function recipientQuietHoursSlice(plan: SendPlan, controls: CampaignSendControls): { plan: SendPlan | null; blocked: boolean } {
+const QUIET_RETRY_MS = 5 * 60 * 1000;
+
+async function queueRecipientQuietHours(
+  campaignId: string,
+  plan: SendPlan,
+  controls: CampaignSendControls,
+): Promise<{ plan: SendPlan; deferred: number }> {
   if (!controls.quietHours.enabled || controls.quietHours.timezoneMode !== "RECIPIENT") {
-    return { plan, blocked: false };
+    return { plan, deferred: 0 };
   }
 
   const now = new Date();
-  const orderedRecipients = [...plan.recipients].sort((a, b) => a.cursorId.localeCompare(b.cursorId));
-  const firstQuiet = orderedRecipients.find((recipient) => {
+  const quiet = plan.recipients.filter((recipient) => {
     const zone = recipientTimeZone(
       { country: recipient.country, phone: recipient.phone },
       controls.quietHours.timezone,
     );
     return insideQuietHours(controls, now, zone);
   });
-  if (!firstQuiet) return { plan, blocked: false };
+  if (!quiet.length) return { plan, deferred: 0 };
 
-  // Stop immediately before the first recipient whose local clock is quiet. The cursor is the
-  // underlying audience cursor (donor id for smart/global audiences, list-member id for saved
-  // audiences), so this works for every audience type without dropping a recipient.
-  const beforeRecipients = plan.recipients.filter((recipient) => recipient.cursorId < firstQuiet.cursorId);
-  const beforeSkipped = plan.skippedList.filter((recipient) => recipient.cursorId < firstQuiet.cursorId);
-  const ids = [
-    ...beforeRecipients.map((recipient) => recipient.cursorId),
-    ...beforeSkipped.map((recipient) => recipient.cursorId),
-  ].sort();
+  const nextAttemptAt = new Date(now.getTime() + QUIET_RETRY_MS);
+  await Promise.all(
+    quiet.map((recipient) =>
+      prisma.communicationCampaignDeferredRecipient.upsert({
+        where: {
+          campaignId_cursorId: {
+            campaignId,
+            cursorId: recipient.cursorId,
+          },
+        },
+        create: {
+          campaignId,
+          cursorId: recipient.cursorId,
+          userId: recipient.userId,
+          name: recipient.name,
+          email: recipient.email,
+          phone: recipient.phone,
+          locale: recipient.locale,
+          country: recipient.country,
+          nextAttemptAt,
+        },
+        update: {
+          name: recipient.name,
+          email: recipient.email,
+          phone: recipient.phone,
+          locale: recipient.locale,
+          country: recipient.country,
+          nextAttemptAt,
+        },
+      }),
+    ),
+  );
 
-  if (!ids.length) return { plan: null, blocked: true };
-  const cutoff = ids[ids.length - 1]!;
-  const reasons: Record<string, number> = {};
-  for (const item of beforeSkipped) reasons[item.reason] = (reasons[item.reason] ?? 0) + 1;
+  const quietIds = new Set(quiet.map((recipient) => recipient.cursorId));
+  const activeRecipients = plan.recipients.filter((recipient) => !quietIds.has(recipient.cursorId));
 
+  // Advance through the whole audience page. Quiet recipients are now durable queue rows and no
+  // longer pin the audience cursor in place; the scheduler will send them when their own local
+  // quiet window ends.
   return {
-    blocked: false,
+    deferred: quiet.length,
     plan: {
       ...plan,
-      recipients: beforeRecipients,
-      skippedList: beforeSkipped,
-      total: beforeRecipients.length + beforeSkipped.length,
-      eligible: beforeRecipients.length,
-      skipped: beforeSkipped.length,
-      reasons,
-      nextCursor: cutoff,
-      exhausted: false,
-      truncated: true,
+      recipients: activeRecipients,
+      eligible: activeRecipients.length,
+      // Keep total unchanged: these recipients were scanned from the audience and are now queued.
+      total: plan.total,
     },
   };
+}
+
+async function loadDueQuietRecipients(
+  campaignId: string,
+  controls: CampaignSendControls,
+  limit: number,
+): Promise<{ recipients: SendPlan["recipients"]; queueIds: string[] }> {
+  const rows = await prisma.communicationCampaignDeferredRecipient.findMany({
+    where: { campaignId, nextAttemptAt: { lte: new Date() } },
+    orderBy: [{ nextAttemptAt: "asc" }, { id: "asc" }],
+    take: Math.min(Math.max(limit, 1), 1000),
+  });
+
+  if (!rows.length) return { recipients: [], queueIds: [] };
+
+  const now = new Date();
+  const ready: typeof rows = [];
+  const stillQuiet: typeof rows = [];
+  for (const row of rows) {
+    const zone = recipientTimeZone(
+      { country: row.country, phone: row.phone },
+      controls.quietHours.timezone,
+    );
+    if (controls.quietHours.enabled && controls.quietHours.timezoneMode === "RECIPIENT" && insideQuietHours(controls, now, zone)) {
+      stillQuiet.push(row);
+    } else {
+      ready.push(row);
+    }
+  }
+
+  if (stillQuiet.length) {
+    const nextAttemptAt = new Date(now.getTime() + QUIET_RETRY_MS);
+    await prisma.communicationCampaignDeferredRecipient.updateMany({
+      where: { id: { in: stillQuiet.map((row) => row.id) } },
+      data: { nextAttemptAt },
+    });
+  }
+
+  return {
+    queueIds: ready.map((row) => row.id),
+    recipients: ready.map((row) => ({
+      cursorId: row.cursorId,
+      userId: row.userId,
+      name: row.name,
+      email: row.email,
+      phone: row.phone,
+      locale: (isValidLocale(row.locale) ? row.locale : DEFAULT_LOCALE) as SupportedLocale,
+      country: row.country,
+    })),
+  };
+}
+
+async function countDeferredQuietRecipients(campaignId: string): Promise<number> {
+  return prisma.communicationCampaignDeferredRecipient.count({ where: { campaignId } }).catch(() => 0);
 }
 
 /** Meta truth for one template, partitioned by WABA so routing and approval can never disagree. */
@@ -369,7 +448,26 @@ export async function executeCampaignSend(
     startedAt: new Date().toISOString(), updatedAt: new Date().toISOString(), done: false, blockedRuns: 0,
   };
 
-  const firstPlan = await planCampaignSend(campaignId, { batchSize, cursor: resuming ? progress.cursor : null });
+  let firstPlan = await planCampaignSend(campaignId, { batchSize, cursor: resuming ? progress.cursor : null });
+  const deferredBeforeRun = resuming ? await countDeferredQuietRecipients(campaignId) : 0;
+  const audienceAlreadyScanned =
+    resuming && firstPlan.blocked === "AUDIENCE_EXHAUSTED" && deferredBeforeRun > 0;
+
+  if (audienceAlreadyScanned) {
+    firstPlan = {
+      ...firstPlan,
+      blocked: undefined,
+      exhausted: true,
+      truncated: false,
+      total: 0,
+      eligible: 0,
+      skipped: 0,
+      reasons: {},
+      recipients: [],
+      skippedList: [],
+    };
+  }
+
   base.total = firstPlan.total; base.truncated = firstPlan.truncated; base.reasons = { ...firstPlan.reasons };
   if (firstPlan.blocked) {
     await auditBlocked(campaign, firstPlan.blocked, actor, mode, firstPlan);
@@ -691,6 +789,16 @@ export async function executeCampaignSend(
         metaName = readiness.providerTemplateName;
         metaLanguage = readiness.languageCode;
         metaComponents = built.components;
+
+        await updateDeliveryVariables(deliveryId, {
+          whatsappPreview: buildWhatsappRenderedPreview({
+            componentsSchema: readiness.componentsSchema,
+            builtComponents: built.components,
+            fallbackBody: rendered.body,
+            providerTemplateName: readiness.providerTemplateName,
+            languageCode: readiness.languageCode,
+          }),
+        });
       }
 
       const result = await sendPreparedDelivery({
@@ -744,7 +852,7 @@ export async function executeCampaignSend(
      is spent, or a batch turns out to be blocked. The cursor and tallies are
      written after every batch, so a request that dies mid-walk loses at most
      the batch it was in  the next run resumes from the last cursor. */
-  let plan: SendPlan | null = firstPlan;
+  let plan: SendPlan | null = audienceAlreadyScanned ? null : firstPlan;
   let batches = 0;
   let exhausted = firstPlan.exhausted;
   let cursor = firstPlan.nextCursor;
@@ -757,11 +865,7 @@ export async function executeCampaignSend(
     const liveGate = await evaluateCampaignSendControls(liveCampaign);
     if (!liveGate.ok) { base.blocked = liveGate.reason; break; }
 
-    const quietSlice = recipientQuietHoursSlice(plan, liveGate.controls);
-    if (quietSlice.blocked || !quietSlice.plan) {
-      base.blocked = "QUIET_HOURS";
-      break;
-    }
+    const quietSlice = await queueRecipientQuietHours(campaignId, plan, liveGate.controls);
     plan = quietSlice.plan;
 
     const remainingRecipients = Math.max(plan.audienceTotal - progress.total, plan.total);
@@ -784,13 +888,13 @@ export async function executeCampaignSend(
     progress.total += tally.total; progress.sent += tally.sent; progress.skipped += tally.skipped; progress.failed += tally.failed;
     for (const [key, value] of Object.entries(tally.reasons)) progress.reasons[key] = (progress.reasons[key] ?? 0) + value;
     progress.updatedAt = new Date().toISOString();
-    progress.done = exhausted;
+    progress.done = exhausted ? (await countDeferredQuietRecipients(campaignId)) === 0 : false;
     /* A batch that ran clears the blocked streak  the count is about consecutive failures to start. */
     progress.blockedRuns = 0;
     /* The lease is renewed with each batch: a long but healthy walk must not look crashed to the
        next scheduler tick while it is still working. */
     lease.expiresAt = new Date(Date.now() + LEASE_MS).toISOString();
-    await patchMetadata(campaignId, { sendProgress: { ...progress }, sendLease: exhausted ? null : lease });
+    await patchMetadata(campaignId, { sendProgress: { ...progress }, sendLease: progress.done ? null : lease });
 
     if (exhausted || batches >= maxBatches) break;
     const fresh = await getCampaign(campaignId);
@@ -812,7 +916,7 @@ export async function executeCampaignSend(
     /* A blocked page mid-walk (a provider that went away, a template that stopped rendering) stops
        the walk here and leaves the campaign resumable rather than declaring it finished. */
     if (next.blocked) {
-      if (next.blocked === "AUDIENCE_EXHAUSTED") { exhausted = true; progress.done = true; await patchMetadata(campaignId, { sendProgress: { ...progress }, sendLease: null }); }
+      if (next.blocked === "AUDIENCE_EXHAUSTED") { exhausted = true; await patchMetadata(campaignId, { sendProgress: { ...progress, done: false }, sendLease: null }); }
       else base.blocked = next.blocked;
       break;
     }
@@ -820,9 +924,80 @@ export async function executeCampaignSend(
     base.truncated = next.truncated;
   }
 
-  const hasMore = !exhausted;
-  /* The status is only final once the audience is. While recipients remain the campaign stays
-     SENDING  which is both the truth and what makes the scheduler pick it up again. */
+  // Once the main audience cursor reaches the end, drain recipients that were held only because
+  // it was nighttime in their own country. This queue is separate from the audience cursor, so one
+  // sleeping recipient can never block thousands of recipients after them.
+  if (exhausted && batches < maxBatches) {
+    const fresh = await getCampaign(campaignId);
+    if (fresh) {
+      const liveGate = await evaluateCampaignSendControls(fresh);
+      if (liveGate.ok) {
+        const modeForDeferred = liveGate.controls.autoSpeed
+          ? autoSpeedMode({
+              remainingRecipients: await countDeferredQuietRecipients(campaignId),
+              remainingDaily: liveGate.remainingDaily,
+              scheduledStopAt: liveGate.controls.scheduledStopAt,
+            })
+          : liveGate.controls.speedMode;
+        const deferredBatchSize = Math.max(
+          1,
+          Math.min(speedSettings(modeForDeferred).batchSize, liveGate.remainingDaily ?? 1000, 1000),
+        );
+        const due = await loadDueQuietRecipients(campaignId, liveGate.controls, deferredBatchSize);
+        if (due.recipients.length) {
+          const deferredPlan: SendPlan = {
+            campaignId,
+            channel,
+            status: "SENDING",
+            total: due.recipients.length,
+            audienceTotal: Math.max(firstPlan.audienceTotal, progress.total),
+            eligible: due.recipients.length,
+            skipped: 0,
+            reasons: {},
+            coverage: { ok: true, undecided: [] },
+            providerReady: true,
+            senderReady: true,
+            willSend: true,
+            truncated: false,
+            nextCursor: cursor,
+            exhausted: true,
+            recipients: due.recipients,
+            skippedList: [],
+          };
+          const tally = await runBatch(deferredPlan, modeForDeferred);
+          await prisma.communicationCampaignDeferredRecipient
+            .deleteMany({ where: { id: { in: due.queueIds } } })
+            .catch(() => ({ count: 0 }));
+
+          batches += 1;
+          base.sent += tally.sent;
+          base.skipped += tally.skipped;
+          base.failed += tally.failed;
+          for (const [key, value] of Object.entries(tally.reasons)) {
+            base.reasons[key] = (base.reasons[key] ?? 0) + value;
+            progress.reasons[key] = (progress.reasons[key] ?? 0) + value;
+          }
+          // These contacts were already included in progress.total when the audience page was
+          // scanned and queued. Only outcome counters change here.
+          progress.sent += tally.sent;
+          progress.skipped += tally.skipped;
+          progress.failed += tally.failed;
+          progress.batches += 1;
+          progress.updatedAt = new Date().toISOString();
+          progress.blockedRuns = 0;
+        }
+      } else {
+        base.blocked = liveGate.reason;
+      }
+    }
+  }
+
+  const deferredRemaining = await countDeferredQuietRecipients(campaignId);
+  const hasMore = !exhausted || deferredRemaining > 0;
+  progress.done = !hasMore;
+  /* The status is only final once both the audience cursor and the local-time deferred queue are
+     exhausted. While either has recipients left, the campaign stays SENDING and the scheduler keeps
+     picking it up. */
   const finalStatus = hasMore ? "SENDING" : computeFinalStatus(progress.total, progress.sent, progress.skipped, progress.failed);
   base.truncated = hasMore;
   await mutateCampaignMetadata(
