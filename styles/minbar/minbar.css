@@ -4684,3 +4684,171 @@ html[data-mia-drawer="open"] .mia-scope .mia-qb-sec { display: none !important; 
     transition: none;
   }
 }
+
+
+/* ── Homepage refinement: mobile hierarchy, impact, shared banners and waqf. ── */
+.mia-scope .mia-hero-actions--mobile { display: none; }
+
+@media (max-width: 560px) {
+  /* Intro film comes before the two conversion buttons on phones. */
+  .mia-scope .mia-hero-actions--desktop { display: none !important; }
+  .mia-scope .mia-hero-actions--mobile {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0,1fr));
+    gap: 10px;
+    width: 100%;
+    margin-top: -4px;
+  }
+
+  /* Impact: compact hierarchy instead of three oversized full-width blocks. */
+  .mia-scope #stats > div {
+    padding-inline: 16px !important;
+  }
+  .mia-scope #stats > div > div:first-child {
+    margin-bottom: 16px !important;
+    align-items: center !important;
+  }
+  .mia-scope #impact-metrics {
+    grid-template-columns: repeat(2, minmax(0,1fr)) !important;
+    gap: 10px !important;
+    border-top: 0 !important;
+  }
+  .mia-scope #impact-metrics > * {
+    min-height: 132px;
+    padding: 16px !important;
+    gap: 6px !important;
+    border: 1px solid var(--border) !important;
+    border-radius: 14px !important;
+    background: #fff !important;
+    box-shadow: 0 8px 22px rgba(16,33,43,.055) !important;
+  }
+  .mia-scope #impact-metrics > *:nth-child(3) {
+    grid-column: 1 / -1;
+    min-height: 108px;
+  }
+  .mia-scope #impact-metrics b[dir="ltr"] {
+    font-size: clamp(27px, 8vw, 36px) !important;
+  }
+  .mia-scope #impact-metrics > * > span:nth-of-type(1) {
+    font-size: 13px !important;
+  }
+  .mia-scope #impact-metrics > * > span:nth-of-type(2) {
+    font-size: 11.5px !important;
+    line-height: 1.55 !important;
+  }
+
+  .mia-scope #sector-metrics {
+    grid-template-columns: repeat(2, minmax(0,1fr)) !important;
+    gap: 10px !important;
+    margin-top: 14px !important;
+  }
+  .mia-scope #sector-metrics > * {
+    min-height: 112px;
+    padding: 14px !important;
+    border-radius: 12px !important;
+    box-shadow: 0 6px 18px rgba(16,33,43,.045) !important;
+  }
+  .mia-scope #sector-metrics > * > span:first-child {
+    font-size: 11.5px !important;
+  }
+  .mia-scope #sector-metrics b[dir="ltr"] {
+    font-size: clamp(20px, 6vw, 26px) !important;
+  }
+
+  /* The two shared campaign banners keep identical proportions everywhere. */
+  .mia-scope #friday,
+  .mia-scope #ibadan-banner {
+    padding-bottom: 30px !important;
+  }
+  .mia-scope #friday > div,
+  .mia-scope #ibadan-banner > div {
+    padding-inline: 14px !important;
+  }
+  .mia-scope .friday-wrap,
+  .mia-scope .ibadan-wrap {
+    border-radius: 14px !important;
+    box-shadow: 0 12px 30px rgba(16,33,43,.12) !important;
+  }
+  .mia-scope .friday-body,
+  .mia-scope .ibadan-body {
+    min-height: 220px !important;
+    aspect-ratio: 16 / 7.7;
+  }
+  .mia-scope .friday-content,
+  .mia-scope .ibadan-content {
+    min-height: 220px !important;
+    padding: 16px 14px 14px !important;
+    gap: 9px !important;
+  }
+  .mia-scope #friday h2,
+  .mia-scope #ibadan-banner h2 {
+    font-size: clamp(14px, 4vw, 17px) !important;
+    line-height: 1.45 !important;
+  }
+  .mia-scope .ibadan-logo {
+    inset-inline-end: 10px !important;
+    top: 10px !important;
+    width: min(29vw, 122px) !important;
+    padding: 6px 8px !important;
+  }
+  .mia-scope .friday-ctas,
+  .mia-scope .ibadan-ctas {
+    margin-top: 0 !important;
+  }
+
+  /* Waqf: compact intro + balanced programme matrix instead of a long list. */
+  .mia-scope #waqf {
+    padding: 24px 0 !important;
+  }
+  .mia-scope #waqf > div:last-child {
+    padding-inline: 16px !important;
+  }
+  .mia-scope #waqf-grid {
+    grid-template-columns: minmax(0,1fr) !important;
+    gap: 18px !important;
+  }
+  .mia-scope #waqf-grid > div:first-child {
+    gap: 11px !important;
+    padding: 18px 16px;
+    border: 1px solid rgba(211,154,39,.24);
+    border-radius: 14px;
+    background: rgba(255,255,255,.62);
+    box-shadow: 0 8px 24px rgba(16,33,43,.045);
+  }
+  .mia-scope #waqf-grid > div:first-child h2 {
+    font-size: 26px !important;
+  }
+  .mia-scope #waqf-grid > div:first-child p {
+    font-size: 14px !important;
+    line-height: 1.75 !important;
+  }
+  .mia-scope #waqf-grid > div:first-child a {
+    width: 100%;
+    justify-content: center;
+    min-height: 46px;
+  }
+  .mia-scope #waqf-areas {
+    grid-template-columns: repeat(2, minmax(0,1fr)) !important;
+    gap: 9px !important;
+  }
+  .mia-scope #waqf-areas > * {
+    min-height: 68px !important;
+    padding: 12px 10px !important;
+    border-radius: 11px !important;
+    font-size: 12px !important;
+    line-height: 1.55 !important;
+    align-items: flex-start !important;
+    box-shadow: 0 5px 16px rgba(16,33,43,.04) !important;
+  }
+}
+
+@media (min-width: 561px) and (max-width: 900px) {
+  .mia-scope .friday-body,
+  .mia-scope .ibadan-body {
+    min-height: 300px !important;
+  }
+  .mia-scope .friday-content,
+  .mia-scope .ibadan-content {
+    min-height: 300px !important;
+  }
+}
