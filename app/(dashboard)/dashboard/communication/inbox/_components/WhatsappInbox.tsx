@@ -58,12 +58,38 @@ type Conversation = {
 
 type Media = { kind: string; mediaId: string | null; mimeType: string | null; filename: string | null; caption: string | null };
 
+type WhatsappPreview = {
+  header: {
+    type: "text" | "image" | "video" | "document" | "location";
+    text?: string | null;
+    mediaUrl?: string | null;
+    fileName?: string | null;
+    latitude?: number | null;
+    longitude?: number | null;
+    address?: string | null;
+    name?: string | null;
+  } | null;
+  body: string;
+  footerText: string | null;
+  buttons: Array<{
+    type: string;
+    text: string;
+    url?: string | null;
+    phoneNumber?: string | null;
+    payload?: string | null;
+    index: number;
+  }>;
+  providerTemplateName: string | null;
+  languageCode: string | null;
+};
+
 type TimelineItem = {
   kind: "inbound" | "outbound" | "status";
   at: string | null;
   text: string | null;
   status: string | null;
   media?: Media | null;
+  whatsappPreview?: WhatsappPreview | null;
 };
 
 type Detail = {
@@ -485,8 +511,65 @@ export function WhatsappInbox() {
                             {mediaLabel(item.media)}
                           </p>
                         )}
+
+                        {!inbound && item.whatsappPreview?.header?.type === "image" && item.whatsappPreview.header.mediaUrl && (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={item.whatsappPreview.header.mediaUrl}
+                            alt={item.whatsappPreview.header.text ?? "WhatsApp header"}
+                            className="mb-2 max-h-64 w-full rounded-xl object-cover"
+                          />
+                        )}
+                        {!inbound && item.whatsappPreview?.header?.type === "video" && item.whatsappPreview.header.mediaUrl && (
+                          <video controls preload="metadata" className="mb-2 max-h-64 w-full rounded-xl">
+                            <source src={item.whatsappPreview.header.mediaUrl} />
+                          </video>
+                        )}
+                        {!inbound && item.whatsappPreview?.header?.type === "document" && (
+                          <div className="mb-2 flex items-center gap-2 rounded-lg border border-slate-200 bg-white/70 p-2 text-xs text-slate-600">
+                            <FileText className="h-4 w-4" />
+                            <span>{item.whatsappPreview.header.fileName || "ملف مرفق"}</span>
+                          </div>
+                        )}
+                        {!inbound && item.whatsappPreview?.header?.type === "location" && (
+                          <div className="mb-2 flex items-start gap-2 rounded-lg border border-slate-200 bg-white/70 p-2 text-xs text-slate-600">
+                            <MapPin className="mt-0.5 h-4 w-4 shrink-0" />
+                            <span>
+                              {item.whatsappPreview.header.name || item.whatsappPreview.header.address || "موقع"}
+                              {item.whatsappPreview.header.latitude != null && item.whatsappPreview.header.longitude != null
+                                ? ` · ${item.whatsappPreview.header.latitude}, ${item.whatsappPreview.header.longitude}`
+                                : ""}
+                            </span>
+                          </div>
+                        )}
+                        {!inbound && item.whatsappPreview?.header?.type === "text" && item.whatsappPreview.header.text && (
+                          <p className="mb-1.5 whitespace-pre-wrap break-words font-semibold">
+                            {item.whatsappPreview.header.text}
+                          </p>
+                        )}
+
                         {item.text && <p className="whitespace-pre-wrap break-words">{item.text}</p>}
-                        {!item.text && !item.media && <p className="text-slate-400">—</p>}
+                        {!item.text && !item.media && !item.whatsappPreview && <p className="text-slate-400">—</p>}
+
+                        {!inbound && item.whatsappPreview?.footerText && (
+                          <p className="mt-2 whitespace-pre-wrap break-words text-[11px] text-slate-500">
+                            {item.whatsappPreview.footerText}
+                          </p>
+                        )}
+                        {!inbound && item.whatsappPreview?.buttons?.length ? (
+                          <div className="mt-2 space-y-1 border-t border-emerald-200/70 pt-2">
+                            {item.whatsappPreview.buttons.map((button) => (
+                              <div
+                                key={button.index}
+                                className="flex items-center justify-center gap-1.5 rounded-lg bg-white/80 px-2 py-1.5 text-xs font-semibold text-emerald-700"
+                              >
+                                <Link2 className="h-3.5 w-3.5" />
+                                <span>{button.text || button.url || button.phoneNumber || "إجراء"}</span>
+                              </div>
+                            ))}
+                          </div>
+                        ) : null}
+
                         <p className="mt-1 text-[10px] text-slate-400">
                           {fmtFull(item.at)}
                           {!inbound && item.status ? ` · ${item.status}` : ""}
