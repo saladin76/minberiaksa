@@ -64,18 +64,19 @@ function deliveryVariables(input: CommonInput): Record<string, unknown> {
 
 async function automaticConsentBlock(
   userId: string,
-  channel: "EMAIL" | "SMS",
+  channel: "EMAIL" | "SMS" | "WHATSAPP",
   purpose: CommunicationPurposeId | undefined,
 ): Promise<string | null> {
   await ensureProfilesForUsers([userId]);
   const profile = await prisma.donorCommunicationProfile.findUnique({
     where: { userId },
-    select: { doNotContact: true, emailOptIn: true, smsOptIn: true },
+    select: { doNotContact: true, emailOptIn: true, smsOptIn: true, whatsappOptIn: true },
   }).catch(() => null);
 
   if (profile?.doNotContact) return "DO_NOT_CONTACT";
   if (channel === "SMS" && profile?.smsOptIn !== true) return "SMS_OPT_IN_REQUIRED";
   if (channel === "EMAIL" && purpose === "MARKETING" && profile?.emailOptIn !== true) return "EMAIL_MARKETING_OPT_IN_REQUIRED";
+  if (channel === "WHATSAPP" && purpose === "MARKETING" && profile?.whatsappOptIn !== true) return "WHATSAPP_MARKETING_OPT_IN_REQUIRED";
   return null;
 }
 
@@ -227,6 +228,18 @@ export async function sendAutomaticWhatsappMessage(
     variables: deliveryVariables(input),
     senderId: input.sender?.id ?? null,
   };
+
+  const consentBlock = await automaticConsentBlock(input.recipientUserId, "WHATSAPP", input.purpose);
+  if (consentBlock) {
+    const created = await createDeliveryRecord({ ...base, recipientPhone: input.recipientPhone, status: "RENDERED" });
+    if (created.ok) await markDeliveryStatus(created.data.id, "SKIPPED", { errorMessage: consentBlock });
+    await mirrorSentMessage("WHATSAPP", input, "SKIPPED", {
+      recipientPhone: input.recipientPhone,
+      renderedBody: input.renderedBody,
+      errorMessage: consentBlock,
+    });
+    return { outcome: "SKIPPED", reason: consentBlock };
+  }
 
   if (!input.recipientPhone) {
     const created = await createDeliveryRecord({ ...base, recipientPhone: null, status: "RENDERED" });
