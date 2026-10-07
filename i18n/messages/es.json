@@ -3481,6 +3481,8 @@
     "viewDonation": "Ver la donación",
     "viewFile": "Abrir",
     "whatNext": "Qué sucede a continuación",
-    "yourDonation": "Tu donación"
+    "yourDonation": "Tu donación",
+    "fileTooLarge": "El archivo ocupa {size}; el máximo permitido es {max}. Comprime la foto o expórtala como PDF e inténtalo de nuevo.",
+    "uploadFailed": "La carga no se completó. Comprueba tu conexión e inténtalo de nuevo."
   }
 }
