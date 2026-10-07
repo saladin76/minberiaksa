@@ -165,12 +165,22 @@ export async function GET(request: NextRequest) {
       }
 
       const readinessByWaba = activeWabaIds.map((wabaId) => {
-        const readiness = resolveVariantForLocale(byWaba.get(wabaId) ?? [], "ar");
+        const variants = byWaba.get(wabaId) ?? [];
+        // Readiness here is channel-level, not Arabic-only. A template approved
+        // for Turkish/English must not be reported unusable merely because it has
+        // no Arabic variant. Try every locale/language Meta actually returned.
+        const candidates = [...new Set(
+          variants.flatMap((variant) => [variant.locale, variant.languageCode]).filter((value): value is string => Boolean(value)),
+        )];
+        const readiness =
+          candidates.map((candidate) => resolveVariantForLocale(variants, candidate)).find((item) => item.ready)
+          ?? resolveVariantForLocale(variants, candidates[0] ?? "ar");
         return { wabaId, readiness };
       });
       const readyWabas = readinessByWaba.filter((item) => item.readiness.ready).length;
+      const anyReady = readyWabas > 0;
       const allReady = activeWabaIds.length > 0 && readyWabas === activeWabaIds.length;
-      const partiallyReady = readyWabas > 0 && !allReady;
+      const partiallyReady = anyReady && !allReady;
       const canonical = readinessByWaba.find((item) => item.readiness.ready)?.readiness
         ?? readinessByWaba[0]?.readiness
         ?? resolveVariantForLocale([], "ar");
@@ -178,10 +188,16 @@ export async function GET(request: NextRequest) {
       const approvedLanguages = [...new Set(
         t.wabaVariants.filter((v) => v.approvalStatus === "APPROVED").map((v) => v.languageCode),
       )];
-      const lastSyncedAt = t.wabaVariants.reduce<Date | null>(
-        (latest, v) => (!latest || v.lastSyncedAt > latest ? v.lastSyncedAt : latest),
-        null,
-      );
+      // Freshness is trustworthy only when every registered variant has been
+      // synced. When they all have timestamps, expose the oldest one because the
+      // template is only as fresh as its least-recently-synced variant.
+      const allVariantsSynced = t.wabaVariants.length > 0 && t.wabaVariants.every((v) => Boolean(v.lastSyncedAt));
+      const lastSyncedAt = allVariantsSynced
+        ? t.wabaVariants.reduce<Date | null>(
+            (oldest, v) => (!oldest || v.lastSyncedAt < oldest ? v.lastSyncedAt : oldest),
+            null,
+          )
+        : null;
 
       return {
         id: t.id,
@@ -190,7 +206,7 @@ export async function GET(request: NextRequest) {
         category: t.category,
         language: canonical.languageCode,
         registered: t.wabaVariants.length > 0,
-        ready: allReady,
+        ready: anyReady,
         partiallyReady,
         wabaCoverage: { ready: readyWabas, total: activeWabaIds.length },
         approvedLanguages,
