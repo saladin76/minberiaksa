@@ -122,6 +122,10 @@ export async function POST(req: NextRequest) {
       if (secret) return NextResponse.json({ clientSecret: secret });
     }
 
+    if (!donation.donor) {
+      return NextResponse.json({ error: "This donation has no donor profile and cannot be charged by Stripe" }, { status: 400 });
+    }
+
     const customerId = await stripeCustomerFor({
       userId: donation.donor.id,
       email: session?.user?.email ?? donation.donor.email,
