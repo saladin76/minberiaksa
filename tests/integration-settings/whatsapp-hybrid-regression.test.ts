@@ -264,16 +264,36 @@ test("individual WhatsApp marketing consent can be explicitly confirmed and audi
 });
 
 
-test("WhatsApp donor marketing no longer depends on internal opt-in", () => {
+test("WhatsApp donor marketing requires explicit channel consent across every send path", () => {
   const audience = read("lib/communication/audience-service.ts");
   const smart = read("lib/communication/smart-whatsapp-service.ts");
   const pickerApi = read("app/api/communication/audience-candidates/route.ts");
   const dialog = read("components/dashboard/SmartWhatsappDialog.tsx");
   const retry = read("lib/communication/delivery-retry-service.ts");
+  const smartAudience = read("lib/communication/smart-audience.ts");
 
-  assert.match(audience, /if \(!donor\.phone\) return "UNAVAILABLE";\s*return "ELIGIBLE";/);
-  assert.doesNotMatch(smart, /WHATSAPP_MARKETING_OPT_IN_REQUIRED/);
-  assert.doesNotMatch(pickerApi, /لا توجد موافقة واتساب تسويقية/);
-  assert.doesNotMatch(dialog, /تسجيل الموافقة/);
-  assert.match(retry, /purpose !== "MARKETING" \|\| channel === "WHATSAPP"/);
+  assert.match(audience, /profile\.whatsappOptIn === true \? "ELIGIBLE" : "UNAVAILABLE"/);
+  assert.match(smart, /WHATSAPP_MARKETING_OPT_IN_REQUIRED/);
+  assert.match(pickerApi, /لا توجد موافقة واتساب تسويقية/);
+  assert.match(dialog, /تسجيل الموافقة/);
+  assert.match(retry, /channel === "WHATSAPP" \? profile\.whatsappOptIn/);
+  assert.match(smartAudience, /whatsappOptIn: true, doNotContact: false/);
+});
+
+test("Meta template lifecycle webhooks trigger immediate provider-truth reconciliation", () => {
+  const parser = read("lib/communication/providers/meta-whatsapp/webhooks.ts");
+  const route = read("app/api/webhooks/meta/whatsapp/route.ts");
+  assert.match(parser, /templateLifecycleWebhookWabaIds/);
+  assert.match(parser, /message_template_/);
+  assert.match(route, /syncMetaWhatsappTemplates/);
+  assert.match(route, /template state not reconciled/);
+});
+
+test("communication cron keeps each minute tick bounded and resumable", () => {
+  const route = read("app/api/cron/communication-run-due/route.ts");
+  const executor = read("lib/communication/campaign-send-executor.ts");
+  assert.match(route, /max: 4/);
+  assert.match(route, /maxBatchesPerCampaign: 1/);
+  assert.match(executor, /maxBatchesPerCampaign/);
+  assert.match(executor, /mode: "RESUME", maxBatches: maxBatchesPerCampaign/);
 });
