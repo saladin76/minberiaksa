@@ -4350,3 +4350,202 @@ html[data-mia-drawer="open"] .mia-scope .mia-qb-sec { display: none !important; 
     padding-top: 10px !important;
   }
 }
+
+
+/* ── Comprehensive mobile responsiveness pass: preserve page order/design,
+   but normalize spacing, stacking, visibility and motion on phones. ── */
+@media (max-width: 760px) {
+  /* Giving assistant: keep the full branded pill visible and draggable.
+     Dragging happens on the wrapper so the launcher's own float animation stays intact. */
+  .mia-scope .cg-launch-wrap[data-draggable="1"] {
+    inset-inline-end: 14px;
+    max-width: calc(100vw - 28px);
+    will-change: transform;
+    transition: transform .22s cubic-bezier(.22,.61,.36,1);
+    touch-action: none;
+  }
+  .mia-scope .cg-launch-wrap[data-draggable="1"] .cg-halo {
+    max-width: 100%;
+  }
+  .mia-scope .cg-launch-wrap[data-draggable="1"] .cg-launcher {
+    width: auto !important;
+    min-width: 0;
+    max-width: min(290px, calc(100vw - 28px));
+    height: 52px !important;
+    padding-inline: 7px 12px !important;
+    gap: 9px !important;
+    justify-content: flex-start !important;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+    cursor: grab;
+  }
+  .mia-scope .cg-launch-wrap[data-draggable="1"] .cg-launcher:active { cursor: grabbing; }
+  .mia-scope .cg-launch-wrap[data-draggable="1"] .cg-launcher-icon {
+    width: 38px !important;
+    height: 38px !important;
+    flex: 0 0 38px;
+  }
+  .mia-scope .cg-launch-wrap[data-draggable="1"] .cg-launcher-label {
+    position: static !important;
+    width: auto !important;
+    height: auto !important;
+    overflow: visible !important;
+    clip: auto !important;
+    white-space: nowrap;
+    font-size: 14px;
+  }
+  .mia-scope .cg-launch-wrap[data-draggable="1"] .cg-launcher-badge {
+    display: inline-flex !important;
+    flex: 0 0 auto;
+  }
+  .mia-scope .cg-launch-wrap[data-draggable="1"] .cg-teaser {
+    max-width: min(290px, calc(100vw - 28px));
+  }
+
+  /* Shared public-page containers: no section may be wider than the viewport. */
+  .mia-scope :is(.aq-page, .qd-page) {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: clip;
+  }
+  .mia-scope :is(.aq-page, .qd-page) section > div:not(.qd-pattern) {
+    min-width: 0;
+    max-width: 100%;
+  }
+  .mia-scope :is(.aq-page, .qd-page) :is(img, svg, video, iframe) {
+    max-width: 100%;
+    height: auto;
+  }
+
+  /* Long-form Jerusalem / Al-Aqsa pages: same content order, tighter and clearer. */
+  .mia-scope :is(.aq-page, .qd-page) section {
+    padding-top: 30px !important;
+    padding-bottom: 30px !important;
+  }
+  .mia-scope :is(.aq-page, .qd-page) .qd-two,
+  .mia-scope :is(.aq-page, .qd-page) .qd-map {
+    grid-template-columns: minmax(0,1fr) !important;
+    gap: 22px !important;
+    padding-inline: 16px !important;
+  }
+  .mia-scope :is(.aq-page, .qd-page) .qd-grid3,
+  .mia-scope :is(.aq-page, .qd-page) .qd-grid4,
+  .mia-scope :is(.aq-page, .qd-page) .qd-gates,
+  .mia-scope .aq-page .aq-virtues,
+  .mia-scope .aq-page .aq-timeline {
+    grid-template-columns: minmax(0,1fr) !important;
+    gap: 12px !important;
+  }
+  .mia-scope :is(.aq-page, .qd-page) .qd-facts {
+    grid-template-columns: repeat(2, minmax(0,1fr)) !important;
+    padding-inline: 16px !important;
+  }
+  .mia-scope :is(.aq-page, .qd-page) .qd-facts > div {
+    padding: 18px 12px !important;
+    min-width: 0;
+  }
+  .mia-scope :is(.aq-page, .qd-page) .qd-facts b {
+    font-size: clamp(22px, 7vw, 30px) !important;
+    overflow-wrap: anywhere;
+  }
+  .mia-scope :is(.aq-page, .qd-page) .qd-hero > div {
+    padding: 18px 16px !important;
+    gap: 10px !important;
+    width: 100%;
+    max-width: 100%;
+  }
+  .mia-scope :is(.aq-page, .qd-page) .qd-hero h1 {
+    font-size: clamp(26px, 8vw, 36px) !important;
+    line-height: 1.22 !important;
+  }
+  .mia-scope :is(.aq-page, .qd-page) .qd-hero p {
+    font-size: 14px !important;
+    line-height: 1.8 !important;
+  }
+  .mia-scope :is(.aq-page, .qd-page) .qd-hero a,
+  .mia-scope :is(.aq-page, .qd-page) .qd-hero button {
+    min-height: 44px;
+    white-space: normal !important;
+    text-align: center;
+  }
+  .mia-scope :is(.aq-page, .qd-page) .qd-map-side {
+    position: static !important;
+    top: auto !important;
+  }
+
+  /* Dense fact blocks remain readable without forcing horizontal overflow. */
+  .mia-scope .aq-page .aq-mnfacts {
+    grid-template-columns: repeat(2, minmax(0,1fr)) !important;
+    gap: 10px !important;
+  }
+  .mia-scope .aq-page .aq-mnfacts > div {
+    padding: 16px !important;
+    min-width: 0;
+  }
+  .mia-scope .aq-page .aq-timeline > div {
+    margin: 0 !important;
+    padding: 17px 16px !important;
+  }
+  .mia-scope :is(.aq-page, .qd-page) .qd-gates > * {
+    min-width: 0;
+    flex-wrap: wrap;
+  }
+
+  /* General public cards and headings: avoid edge collisions while retaining hierarchy. */
+  .mia-scope section > div[style*="max-width: 1240"] {
+    padding-inline: 16px !important;
+  }
+  .mia-scope h1,
+  .mia-scope h2 {
+    text-wrap: balance;
+  }
+  .mia-scope p,
+  .mia-scope li,
+  .mia-scope span {
+    text-wrap: pretty;
+  }
+
+  /* Buttons inside two-column CTA groups can wrap their labels instead of clipping. */
+  .mia-scope :is(.friday-ctas, .ibadan-ctas, #zk-ctas) > * {
+    min-width: 0;
+  }
+}
+
+@media (max-width: 480px) {
+  .mia-scope .cg-launch-wrap[data-draggable="1"] .cg-launcher {
+    max-width: calc(100vw - 24px);
+    height: 50px !important;
+    padding-inline: 6px 10px !important;
+    gap: 7px !important;
+  }
+  .mia-scope .cg-launch-wrap[data-draggable="1"] .cg-launcher-icon {
+    width: 36px !important;
+    height: 36px !important;
+    flex-basis: 36px;
+  }
+  .mia-scope .cg-launch-wrap[data-draggable="1"] .cg-launcher-label {
+    font-size: 13px;
+  }
+
+  .mia-scope :is(.aq-page, .qd-page) section {
+    padding-top: 24px !important;
+    padding-bottom: 24px !important;
+  }
+  .mia-scope :is(.aq-page, .qd-page) .qd-facts {
+    grid-template-columns: minmax(0,1fr) !important;
+  }
+  .mia-scope .aq-page .aq-mnfacts {
+    grid-template-columns: minmax(0,1fr) !important;
+  }
+  .mia-scope :is(.aq-page, .qd-page) .qd-hero > div > div:last-child,
+  .mia-scope :is(.aq-page, .qd-page) .qd-hero [style*="display: flex"][style*="gap: 10"] {
+    width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mia-scope .cg-launch-wrap[data-draggable="1"] {
+    transition: none;
+  }
+}
