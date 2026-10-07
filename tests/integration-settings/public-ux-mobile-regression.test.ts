@@ -133,3 +133,27 @@ test("long-form Al-Aqsa and Jerusalem pages stay inside the phone viewport", () 
   assert.match(css, /\.qd-two,[\s\S]*\.qd-map[\s\S]*grid-template-columns: minmax\(0,1fr\) !important/);
   assert.match(css, /\.qd-grid3,[\s\S]*\.qd-grid4,[\s\S]*\.qd-gates[\s\S]*grid-template-columns: minmax\(0,1fr\) !important/);
 });
+
+
+test("mobile bottom navigation exposes the seven requested destinations", () => {
+  const nav = read("components/minbar/shell/MobileBottomNav.tsx");
+  const layout = read("app/[locale]/layout.tsx");
+  assert.match(layout, /<MobileBottomNav signedIn=/);
+  assert.match(nav, /route: "account"/);
+  assert.match(nav, /route: "projects"/);
+  assert.match(nav, /route: "achievementVideos"/);
+  assert.match(nav, /route: "home"/);
+  assert.match(nav, /route: "waqf"/);
+  assert.match(nav, /route: "recurring"/);
+  assert.match(nav, /route: "zakat"/);
+});
+
+test("mobile bottom navigation stays out of payment flows and clears floating actions", () => {
+  const nav = read("components/minbar/shell/MobileBottomNav.tsx");
+  const css = read("styles/minbar/minbar.css");
+  assert.match(nav, /"cart",[\s\S]*"checkout",[\s\S]*"donationSuccess"/);
+  assert.match(css, /--mia-mobile-nav-h: 74px/);
+  assert.match(css, /cg-launch-wrap[\s\S]*var\(--mia-mobile-nav-h\)/);
+  assert.match(css, /mia-wa-fab[\s\S]*var\(--mia-mobile-nav-h\)/);
+  assert.match(css, /data-mia-drawer="open"[\s\S]*mia-mobile-bottom-nav/);
+});
