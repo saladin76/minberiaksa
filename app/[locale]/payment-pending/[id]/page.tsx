@@ -74,7 +74,7 @@ export default async function Page({ params, searchParams }: Props) {
         /* An owner's session is proof enough; the token is only forwarded to
            the API when it is what let this visitor in. */
         token={isOwner ? null : (token ?? null)}
-        donorName={claim.donation.donor.name}
+        donorName={claim.donation.donor?.name ?? null}
       />
     </MinbarMessages>
   );
