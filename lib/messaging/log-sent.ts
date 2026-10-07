@@ -51,9 +51,12 @@ export async function logSentMessage(input: LogSentMessageInput): Promise<void> 
         recipientName: input.recipientName ?? null,
         renderedSubject: input.renderedSubject ?? null,
         renderedBody: input.renderedBody,
+        // MongoDB optional Json fields accept a literal null. Prisma.JsonNull/DbNull
+        // sentinels are rejected by the Mongo query engine and made this best-effort
+        // legacy mirror silently drop rows whenever no variable snapshot was supplied.
         variables:
           input.variables == null
-            ? (Prisma.JsonNull as unknown as Prisma.InputJsonValue)
+            ? (null as unknown as Prisma.InputJsonValue)
             : input.variables,
         errorMessage: input.errorMessage ?? null,
         providerMessageId: input.providerMessageId ?? null,
