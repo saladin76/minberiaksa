@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { translateLocale } from "@/lib/content-localization/translate";
+import { translateItem } from "@/lib/content-localization/translate";
 import { isValidLocale } from "@/lib/locales";
 
 import en from "@/i18n/messages/en.json";
@@ -89,7 +89,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ ok: true, locale, totalMissing: missing.length, offset, keys: [], translations: {}, warnings: [] });
   }
 
-  const translated = await translateLocale(
+  const translated = await translateItem(
     { fields, sourceLocale: "en", itemLabel: "website interface message catalog", policy: "STANDARD" },
     locale,
   );
