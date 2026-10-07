@@ -143,6 +143,48 @@ function eligibilityReason(
   return null;
 }
 
+function channelEligibilityWhere(
+  base: Prisma.UserWhereInput,
+  channel: "EMAIL" | "WHATSAPP" | "SMS",
+  eligibility: string,
+): Prisma.UserWhereInput {
+  if (eligibility !== "eligible" && eligibility !== "ineligible") return base;
+
+  const eligibleGate: Prisma.UserWhereInput =
+    channel === "EMAIL"
+      ? {
+          email: { not: null },
+          OR: [
+            { communicationProfile: { is: { emailOptIn: true, doNotContact: false } } },
+            // Legacy donors without a profile are bootstrapped from the User
+            // notification flag by ensureProfilesForUsers().
+            { communicationProfile: { is: null }, emailNotifications: true },
+          ],
+        }
+      : channel === "SMS"
+        ? {
+            phone: { not: null },
+            OR: [
+              { communicationProfile: { is: { smsOptIn: true, doNotContact: false } } },
+              { communicationProfile: { is: null }, smsNotifications: true },
+            ],
+          }
+        : {
+            phone: { not: null },
+            OR: [
+              { communicationProfile: { is: null } },
+              { communicationProfile: { is: { doNotContact: false } } },
+            ],
+          };
+
+  // Apply channel eligibility before count/skip/take. Filtering rows after pagination
+  // made totals and page counts lie and could produce an empty page while valid donors
+  // existed later in the result set.
+  return eligibility === "eligible"
+    ? { AND: [base, eligibleGate] }
+    : { AND: [base, { NOT: eligibleGate }] };
+}
+
 async function eligibilityProfiles(userIds: string[]): Promise<Map<string, ConsentProfile>> {
   if (userIds.length === 0) return new Map();
   await ensureProfilesForUsers(userIds);
@@ -170,7 +212,7 @@ export async function GET(request: NextRequest) {
   const page = Math.max(1, parseInt(sp.get("page") || "1"));
   const limit = Math.min(PAGE_SIZE_MAX, Math.max(1, parseInt(sp.get("limit") || "25")));
 
-  const where = await buildWhere({
+  const baseWhere = await buildWhere({
     search: sp.get("search"),
     locale: sp.get("locale"),
     country: sp.get("country"),
@@ -179,6 +221,7 @@ export async function GET(request: NextRequest) {
     minAge: sp.get("minAge"),
     maxAge: sp.get("maxAge"),
   });
+  const where = channelEligibilityWhere(baseWhere, channel, eligibilityFilter);
 
   const [total, rows, allBadges] = await Promise.all([
     prisma.user.count({ where }),
@@ -223,9 +266,6 @@ export async function GET(request: NextRequest) {
       canConfirmWhatsappOptIn: false,
     };
   });
-
-  if (eligibilityFilter === "eligible") donors = donors.filter((d) => d.eligibility === "ELIGIBLE");
-  else if (eligibilityFilter === "ineligible") donors = donors.filter((d) => d.eligibility !== "ELIGIBLE");
 
   // Facets are computed over ALL donors, not the current filter, so narrowing by one dimension
   // never empties the other dropdowns and strands the operator with no way back.
@@ -278,21 +318,13 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: false, error: "channel must be EMAIL, WHATSAPP or SMS" }, { status: 400 });
   }
 
-  const where = await buildWhere(body);
-  const rows = await prisma.user.findMany({ where, select: eligibilitySelect, take: SELECT_ALL_CEILING });
-  const profiles = await eligibilityProfiles(rows.map((r) => r.id));
+  const baseWhere = await buildWhere(body);
+  const where = channelEligibilityWhere(baseWhere, channel, body.eligibility ?? "all");
+  const rows = await prisma.user.findMany({ where, select: { id: true }, take: SELECT_ALL_CEILING });
 
-  const ids = rows
-    .filter((u) => {
-      if (!body.eligibility || body.eligibility === "all") return true;
-      const e = donorChannelEligibility(
-        { email: u.email, phone: u.phone, emailNotifications: u.emailNotifications, smsNotifications: u.smsNotifications },
-        channel,
-        profiles.get(u.id) ?? null,
-      );
-      return body.eligibility === "ineligible" ? e !== "ELIGIBLE" : e === "ELIGIBLE";
-    })
-    .map((u) => u.id);
-
-  return NextResponse.json({ ok: true, ids, truncated: rows.length >= SELECT_ALL_CEILING });
+  return NextResponse.json({
+    ok: true,
+    ids: rows.map((u) => u.id),
+    truncated: rows.length >= SELECT_ALL_CEILING,
+  });
 }

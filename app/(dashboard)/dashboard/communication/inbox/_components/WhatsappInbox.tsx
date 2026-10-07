@@ -142,11 +142,13 @@ export function WhatsappInbox() {
   const [senderId, setSenderId] = useState<string>("");
   const [query, setQuery] = useState(initialQuery);
   const [loadingList, setLoadingList] = useState(true);
+  const [listError, setListError] = useState<string | null>(null);
 
   const [activeId, setActiveId] = useState<string | null>(null);
   const [detail, setDetail] = useState<Detail | null>(null);
   const [replyWindow, setReplyWindow] = useState<ReplyWindow | null>(null);
   const [loadingDetail, setLoadingDetail] = useState(false);
+  const [detailError, setDetailError] = useState<string | null>(null);
 
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
@@ -156,8 +158,9 @@ export function WhatsappInbox() {
   const senderSelectionReady = useRef(false);
   const timelineRef = useRef<HTMLDivElement | null>(null);
 
-  const loadList = useCallback(async () => {
-    setLoadingList(true);
+  const loadList = useCallback(async (silent = false) => {
+    if (!silent) setLoadingList(true);
+    setListError(null);
     try {
       const params = new URLSearchParams({ filter });
       if (senderId) params.set("senderId", senderId);
@@ -194,33 +197,51 @@ export function WhatsappInbox() {
             : nextConversations[0].id,
         );
       }
-    } catch {
-      setConversations([]);
+    } catch (error) {
+      setListError((error as Error).message || "تعذّر تحميل صندوق واتساب");
     } finally {
-      setLoadingList(false);
+      if (!silent) setLoadingList(false);
     }
   }, [filter, senderId, query]);
 
   useEffect(() => { void loadList(); }, [loadList]);
 
-  const loadDetail = useCallback(async (id: string) => {
-    setLoadingDetail(true);
-    setNotice(null);
+  // Keep an operational inbox fresh without forcing the team to click «تحديث».
+  // Silent polling preserves the current list on transient errors instead of
+  // turning a backend/network failure into a false empty state.
+  useEffect(() => {
+    const id = window.setInterval(() => {
+      if (document.visibilityState === "visible") void loadList(true);
+    }, 30_000);
+    return () => window.clearInterval(id);
+  }, [loadList]);
+
+  const loadDetail = useCallback(async (id: string, silent = false) => {
+    if (!silent) setLoadingDetail(true);
+    if (!silent) setNotice(null);
+    setDetailError(null);
     try {
       const res = await fetch(`/api/dashboard/communication/inbox/${encodeURIComponent(id)}`, { cache: "no-store" });
       const data = await res.json();
       if (!res.ok || !data.ok) throw new Error(data.error ?? "load failed");
       setDetail(data.conversation);
       setReplyWindow(data.replyWindow);
-    } catch {
-      setDetail(null);
-      setReplyWindow(null);
+    } catch (error) {
+      setDetailError((error as Error).message || "تعذّر تحميل المحادثة");
     } finally {
-      setLoadingDetail(false);
+      if (!silent) setLoadingDetail(false);
     }
   }, []);
 
   useEffect(() => { if (activeId) void loadDetail(activeId); }, [activeId, loadDetail]);
+
+  useEffect(() => {
+    if (!activeId) return;
+    const id = window.setInterval(() => {
+      if (document.visibilityState === "visible") void loadDetail(activeId, true);
+    }, 15_000);
+    return () => window.clearInterval(id);
+  }, [activeId, loadDetail]);
 
   /* Newest message in view when a conversation opens  the reason anyone opened it. */
   useEffect(() => {
@@ -340,9 +361,29 @@ export function WhatsappInbox() {
       <div className="grid min-h-[68vh] gap-4 xl:grid-cols-[minmax(20rem,23rem)_minmax(0,1fr)]">
         {/* ── Conversation list ─────────────────────────────────── */}
         <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+          {listError && conversations.length > 0 && (
+            <div className="border-b border-amber-200 bg-amber-50 px-3 py-2 text-[11px] font-medium text-amber-800">
+              تعذّر تحديث القائمة الآن؛ المعروض هو آخر بيانات ناجحة.
+            </div>
+          )}
           {loadingList ? (
             <div className="flex items-center justify-center py-16 text-slate-400">
               <Loader2 className="w-5 h-5 animate-spin" />
+            </div>
+          ) : listError && conversations.length === 0 ? (
+            <div className="p-5">
+              <EmptyState
+                variant="inline"
+                title="تعذّر تحميل المحادثات"
+                description={listError}
+              />
+              <button
+                type="button"
+                onClick={() => void loadList()}
+                className="mx-auto mt-3 block rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+              >
+                إعادة المحاولة
+              </button>
             </div>
           ) : conversations.length === 0 ? (
             <div className="p-5">
@@ -412,10 +453,26 @@ export function WhatsappInbox() {
             <div className="flex items-center justify-center py-20 text-slate-400">
               <Loader2 className="w-5 h-5 animate-spin" />
             </div>
+          ) : detailError && !detail ? (
+            <div className="p-5">
+              <EmptyState variant="inline" title="تعذّر تحميل المحادثة" description={detailError} />
+              <button
+                type="button"
+                onClick={() => activeId && void loadDetail(activeId)}
+                className="mx-auto mt-3 block rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+              >
+                إعادة المحاولة
+              </button>
+            </div>
           ) : !detail ? (
             <EmptyState variant="inline" title="تعذّر تحميل المحادثة" />
           ) : (
             <>
+              {detailError && (
+                <div className="border-b border-amber-200 bg-amber-50 px-4 py-2 text-[11px] font-medium text-amber-800">
+                  تعذّر تحديث المحادثة الآن؛ المعروض هو آخر بيانات ناجحة.
+                </div>
+              )}
               <div className="border-b border-slate-100 px-4 py-3">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="min-w-0">
@@ -595,7 +652,11 @@ export function WhatsappInbox() {
                     {notice.text}
                   </p>
                 )}
-                {replyWindow?.open ? (
+                {detail.donor?.doNotContact ? (
+                  <div className="rounded-lg border border-rose-200 bg-rose-50 p-3 text-xs font-semibold text-rose-700">
+                    المتبرع مفعّل عليه «عدم التواصل». الإرسال متوقف حتى تُعدّل حالة التواصل.
+                  </div>
+                ) : replyWindow?.open ? (
                   <div className="flex items-end gap-2">
                     <textarea
                       value={draft}

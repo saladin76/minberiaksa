@@ -319,6 +319,10 @@ export async function sendSmartWhatsapp(input: {
     ? (ctx.replyWindow.open ? "FREEFORM" : "UTILITY")
     : input.mode;
 
+  // A platform-level do-not-contact block applies to every outbound path,
+  // including free-form replies inside Meta's 24-hour window.
+  if (ctx.doNotContact) return { ok: false, reason: "DO_NOT_CONTACT" };
+
   if (mode === "FREEFORM") {
     if (!ctx.conversationId || !ctx.replyWindow.open) return { ok: false, reason: "REPLY_WINDOW_CLOSED" };
     if (!body) return { ok: false, reason: "EMPTY_BODY" };
@@ -327,8 +331,6 @@ export async function sendSmartWhatsapp(input: {
       ? { ok: true, transport: "FREEFORM", deliveryId: sent.deliveryId, providerMessageId: sent.providerMessageId }
       : sent;
   }
-
-  if (ctx.doNotContact) return { ok: false, reason: "DO_NOT_CONTACT" };
 
   const snapshot = await loadSenderRoutingSnapshot("WHATSAPP");
   const routed = resolveSenderFromSnapshot(snapshot, {

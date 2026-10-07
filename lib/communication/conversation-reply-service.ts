@@ -75,6 +75,17 @@ export async function sendConversationReply(
   const to = normalizePhoneE164(phone);
   if (!to) return { ok: false, reason: "INVALID_RECIPIENT" };
 
+  // `doNotContact` is an absolute outbound guard. The 24-hour customer-service
+  // window permits free-form replies at Meta, but it does not override a donor's
+  // explicit platform-level communication block.
+  const blockedProfile = await prisma.donorCommunicationProfile
+    .findFirst({
+      where: { phone: { in: phoneMatchVariants(to) }, doNotContact: true },
+      select: { id: true },
+    })
+    .catch(() => null);
+  if (blockedProfile) return { ok: false, reason: "DO_NOT_CONTACT" };
+
   const window = await replyWindowFor(conversationId);
   if (!window.open) {
     /* Told before the send, not after: outside the window Meta refuses free text, and the operator
