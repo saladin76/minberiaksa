@@ -423,12 +423,12 @@ export default function TrackingLinkBuilder() {
     <div className="mx-auto max-w-4xl space-y-6 pb-12" dir="rtl">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Link href="/dashboard/referrals" className="hover:text-brand">روابط التتبع</Link>
+          <Link href="/dashboard/marketing/attribution" className="hover:text-brand">روابط التتبع</Link>
           <span className="opacity-40">/</span>
           <span className="font-medium text-foreground">منشئ روابط الموقع والحملات</span>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Link href="/dashboard/marketing-intelligence/campaign-links" className="rounded-md border px-3 py-2 text-sm hover:bg-slate-50">أداء الروابط</Link>
+          <Link href="/dashboard/marketing/attribution#links" className="rounded-md border px-3 py-2 text-sm hover:bg-slate-50">أداء الروابط</Link>
           <Button type="button" variant="ghost" size="sm" onClick={resetForm} className="gap-1.5 text-muted-foreground"><RotateCcw className="h-4 w-4" />مسح الكل</Button>
         </div>
       </div>
@@ -530,7 +530,7 @@ export default function TrackingLinkBuilder() {
                   <span className="block">
                     {lastSavedLink.name} · {lastSavedLink.mode === "marketing" ? "رابط حملة" : "رابط موقع"}{lastSavedLink.copied ? " · تم نسخه أيضًا" : ""}
                   </span>
-                  <Link href="/dashboard/marketing/campaign-links" className="inline-flex text-xs font-semibold text-emerald-800 underline-offset-4 hover:underline">
+                  <Link href="/dashboard/marketing/attribution#links" className="inline-flex text-xs font-semibold text-emerald-800 underline-offset-4 hover:underline">
                     Open in Campaign Registry
                   </Link>
                 </AlertDescription>
