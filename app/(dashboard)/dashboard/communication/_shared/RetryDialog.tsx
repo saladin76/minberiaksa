@@ -305,7 +305,7 @@ function ConfirmStep({
         {capped && (
           <p className="mt-1.5 text-[11px] leading-5 text-slate-500">
             من أصل {preflight.eligible.toLocaleString("en-US")} محاولة متعثّرة خلال آخر {days} يومًا.
-            تُراجع على دفعات من {preflight.cap}؛ ويُرسل فقط ما ما زال صالحًا بعد إعادة فحص العنوان والموافقة والقالب وهوية المُرسل.
+            تُراجع على دفعات من {preflight.cap}؛ ويُرسل فقط ما زال صالحًا بعد إعادة فحص العنوان والموافقة والقالب وهوية المُرسل.
           </p>
         )}
       </div>
