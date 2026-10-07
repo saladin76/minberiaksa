@@ -191,7 +191,7 @@ test("WhatsApp inbox defaults to all conversations and remembers an available se
   assert.match(inbox, /useState\("all"\)/);
   assert.match(inbox, /communication:whatsapp:senderId/);
   assert.match(inbox, /nextSenders\.length === 1/);
-  assert.match(inbox, /setActiveId\(nextConversations\[0\]\.id\)/);
+  assert.match(inbox, /setActiveId\(\(current\) =>[\s\S]*nextConversations\[0\]\.id/);
   assert.match(inbox, /عرض كل المحادثات/);
 });
 
