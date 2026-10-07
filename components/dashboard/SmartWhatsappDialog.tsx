@@ -16,6 +16,7 @@ type SmartContext = {
   locale: string;
   country: string | null;
   doNotContact: boolean;
+  whatsappOptIn: boolean;
   directSendEnabled: boolean;
   conversationId: string | null;
   replyWindow: ReplyWindow;
@@ -39,6 +40,7 @@ const ERROR_LABELS: Record<string, string> = {
   DO_NOT_CONTACT: "هذا المتبرع موقوف عن التواصل المباشر.",
   NO_RECIPIENT_PHONE: "لا يوجد رقم واتساب صالح لهذا المتبرع.",
   MARKETING_TEMPLATE_REQUIRED: "اختر قالب Marketing معتمد.",
+  WHATSAPP_MARKETING_OPT_IN_REQUIRED: "يلزم تسجيل موافقة واتساب التسويقية قبل الإرسال.",
   META_TEMPLATE_NOT_APPROVED_FOR_SENDER_LANGUAGE: "لا توجد نسخة معتمدة من القالب لهذا الرقم/اللغة.",
 };
 
@@ -60,6 +62,7 @@ export function SmartWhatsappDialog({
   const [ctx, setCtx] = React.useState<SmartContext | null>(null);
   const [loading, setLoading] = React.useState(false);
   const [sending, setSending] = React.useState(false);
+  const [savingConsent, setSavingConsent] = React.useState(false);
   const [mode, setMode] = React.useState<"FREEFORM" | "UTILITY" | "MARKETING">("UTILITY");
   const [body, setBody] = React.useState("");
   const [templateId, setTemplateId] = React.useState("");
@@ -90,6 +93,27 @@ export function SmartWhatsappDialog({
     void load();
   }, [open, load]);
 
+  const setMarketingConsent = async () => {
+    if (!ctx || ctx.whatsappOptIn) return;
+    setSavingConsent(true);
+    try {
+      const res = await fetch("/api/dashboard/communication/whatsapp/smart-send", {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ userId, whatsappOptIn: true, confirmed: true }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.ok) {
+        toast.error(data.error ?? "تعذّر تسجيل موافقة واتساب.");
+        return;
+      }
+      setCtx((current) => current ? { ...current, whatsappOptIn: true } : current);
+      toast.success("تم تسجيل موافقة واتساب التسويقية.");
+    } finally {
+      setSavingConsent(false);
+    }
+  };
+
   const send = async () => {
     if (!ctx) return;
     if (mode === "FREEFORM" && !body.trim()) {
@@ -102,6 +126,10 @@ export function SmartWhatsappDialog({
     }
     if (mode === "UTILITY" && !ctx.directSendEnabled && !templateId) {
       toast.error("Direct Send غير مفعّل؛ اختر قالب Utility معتمد.");
+      return;
+    }
+    if (mode === "MARKETING" && !ctx.whatsappOptIn) {
+      toast.error("يلزم تسجيل موافقة واتساب التسويقية أولًا.");
       return;
     }
     if (mode === "MARKETING" && !templateId) {
@@ -160,7 +188,7 @@ export function SmartWhatsappDialog({
     {
       id: "MARKETING" as const,
       title: "رسالة تسويقية",
-      desc: "قالب Marketing معتمد",
+      desc: ctx?.whatsappOptIn ? "قالب Marketing معتمد" : "يتطلب موافقة واتساب",
       icon: Megaphone,
       disabled: false,
     },
@@ -237,6 +265,23 @@ export function SmartWhatsappDialog({
 
               {mode === "MARKETING" ? (
                 <div className="space-y-2">
+                  {!ctx.whatsappOptIn && (
+                    <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs leading-5 text-amber-900">
+                      <div className="font-semibold">لا توجد موافقة واتساب تسويقية مسجلة لهذا المتبرع.</div>
+                      <div className="mt-1 text-amber-800">سجّل الموافقة فقط إذا كان لديك أساس موثق يثبت موافقة المتبرع على الرسائل التسويقية عبر واتساب.</div>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="mt-2"
+                        disabled={savingConsent}
+                        onClick={setMarketingConsent}
+                      >
+                        {savingConsent ? <Loader2 className="me-1.5 h-4 w-4 animate-spin" /> : <ShieldCheck className="me-1.5 h-4 w-4" />}
+                        تسجيل الموافقة
+                      </Button>
+                    </div>
+                  )}
                   <label className="text-xs font-semibold text-slate-700">القالب التسويقي المعتمد</label>
                   <select
                     value={templateId}
@@ -327,7 +372,7 @@ export function SmartWhatsappDialog({
                     disabled={
                       sending ||
                       (mode === "FREEFORM" && !body.trim()) ||
-                      (mode === "MARKETING" && !templateId) ||
+                      (mode === "MARKETING" && (!ctx.whatsappOptIn || !templateId)) ||
                       (mode === "UTILITY" && ctx.directSendEnabled && !body.trim()) ||
                       (mode === "UTILITY" && !ctx.directSendEnabled && !templateId)
                     }
