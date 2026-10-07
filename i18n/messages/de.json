@@ -3481,6 +3481,8 @@
     "viewDonation": "Spende ansehen",
     "viewFile": "Öffnen",
     "whatNext": "Was passiert als Nächstes",
-    "yourDonation": "Ihre Spende"
+    "yourDonation": "Ihre Spende",
+    "fileTooLarge": "Die Datei ist {size} groß – maximal erlaubt sind {max}. Komprimiere das Foto oder exportiere eine PDF und versuche es erneut.",
+    "uploadFailed": "Der Upload ist fehlgeschlagen. Prüfe deine Verbindung und versuche es erneut."
   }
 }
