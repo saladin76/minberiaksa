@@ -21,6 +21,7 @@ export default async function TrackingPage() {
 
   const { rows, configuredCount, total } = await getTrackingReadiness();
   const canManage = userHasDashboardPermission(access.session.user, "platformConnectionsManage");
+  const canTest = userHasDashboardPermission(access.session.user, "platformConnectionsTest");
 
   return (
     <main className="space-y-5 p-4 sm:p-6" dir="rtl">
@@ -69,8 +70,8 @@ export default async function TrackingPage() {
         </div>
       </Card>
 
-      {canManage ? (
-        <TrackingSettingsManager />
+      {canManage || canTest ? (
+        <TrackingSettingsManager canManage={canManage} canTest={canTest} />
       ) : (
         <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
           لديك صلاحية عرض حالة الربط فقط. تعديل البكسلات والمفاتيح يحتاج صلاحية «ربط المنصات: حفظ وتفعيل الإعدادات».
