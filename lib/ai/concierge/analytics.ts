@@ -68,7 +68,7 @@ export interface AttributedDonation {
   currency: string;
   amount: number;
   createdAt: Date;
-  donorId: string;
+  donorId: string | null;
   recurring: boolean;
 }
 
@@ -144,6 +144,7 @@ export async function findAttributedDonations(opts: {
     for (const d of own) {
       if (out.has(d.id)) continue;
       const t = d.createdAt.getTime();
+      if (!d.donorId) continue;
       const hit = byUser.get(d.donorId)?.find((c) => t >= c.startedAt.getTime() - 60_000 && t <= c.lastMessageAt.getTime() + windowMs);
       if (hit) out.set(d.id, { ...base(d), kind: "indirect", via: "account", sessionId: hit.sessionId });
     }
