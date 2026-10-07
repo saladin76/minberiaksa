@@ -2428,5 +2428,16 @@
     "yourDonation": "Din donation",
     "fileTooLarge": "Filen er {size}; den maksimale tilladte størrelse er {max}. Komprimer billedet eller eksportér en PDF, og prøv igen.",
     "uploadFailed": "Uploaden blev ikke gennemført. Kontrollér din forbindelse, og prøv igen."
+  },
+  "ProjectShares": {
+    "unitSingular": "andel",
+    "unitPlural": "andele",
+    "count": "{count, plural, one {# andel} other {# andele}}",
+    "countWithUnit": "{count} {unit}",
+    "pricePer": "{price} pr. {unit}",
+    "soldOfTotal": "{sold} af {total} {unit}",
+    "givenSoFar": "{count} {unit} givet indtil nu",
+    "chooseCount": "Vælg antal {unit}",
+    "customCountPh": "Andet antal"
   }
 }
