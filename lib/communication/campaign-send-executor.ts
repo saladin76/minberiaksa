@@ -841,7 +841,7 @@ export async function executeCampaignSend(
      is spent, or a batch turns out to be blocked. The cursor and tallies are
      written after every batch, so a request that dies mid-walk loses at most
      the batch it was in  the next run resumes from the last cursor. */
-  let plan: SendPlan | null = firstPlan;
+  let plan: SendPlan | null = audienceAlreadyScanned ? null : firstPlan;
   let batches = 0;
   let exhausted = firstPlan.exhausted;
   let cursor = firstPlan.nextCursor;
@@ -905,7 +905,7 @@ export async function executeCampaignSend(
     /* A blocked page mid-walk (a provider that went away, a template that stopped rendering) stops
        the walk here and leaves the campaign resumable rather than declaring it finished. */
     if (next.blocked) {
-      if (next.blocked === "AUDIENCE_EXHAUSTED") { exhausted = true; progress.done = true; await patchMetadata(campaignId, { sendProgress: { ...progress }, sendLease: null }); }
+      if (next.blocked === "AUDIENCE_EXHAUSTED") { exhausted = true; await patchMetadata(campaignId, { sendProgress: { ...progress, done: false }, sendLease: null }); }
       else base.blocked = next.blocked;
       break;
     }
@@ -913,9 +913,80 @@ export async function executeCampaignSend(
     base.truncated = next.truncated;
   }
 
-  const hasMore = !exhausted;
-  /* The status is only final once the audience is. While recipients remain the campaign stays
-     SENDING  which is both the truth and what makes the scheduler pick it up again. */
+  // Once the main audience cursor reaches the end, drain recipients that were held only because
+  // it was nighttime in their own country. This queue is separate from the audience cursor, so one
+  // sleeping recipient can never block thousands of recipients after them.
+  if (exhausted && batches < maxBatches) {
+    const fresh = await getCampaign(campaignId);
+    if (fresh) {
+      const liveGate = await evaluateCampaignSendControls(fresh);
+      if (liveGate.ok) {
+        const modeForDeferred = liveGate.controls.autoSpeed
+          ? autoSpeedMode({
+              remainingRecipients: await countDeferredQuietRecipients(campaignId),
+              remainingDaily: liveGate.remainingDaily,
+              scheduledStopAt: liveGate.controls.scheduledStopAt,
+            })
+          : liveGate.controls.speedMode;
+        const deferredBatchSize = Math.max(
+          1,
+          Math.min(speedSettings(modeForDeferred).batchSize, liveGate.remainingDaily ?? 1000, 1000),
+        );
+        const due = await loadDueQuietRecipients(campaignId, liveGate.controls, deferredBatchSize);
+        if (due.recipients.length) {
+          const deferredPlan: SendPlan = {
+            campaignId,
+            channel,
+            status: "SENDING",
+            total: due.recipients.length,
+            audienceTotal: Math.max(firstPlan.audienceTotal, progress.total),
+            eligible: due.recipients.length,
+            skipped: 0,
+            reasons: {},
+            coverage: { ok: true, undecided: [] },
+            providerReady: true,
+            senderReady: true,
+            willSend: true,
+            truncated: false,
+            nextCursor: cursor,
+            exhausted: true,
+            recipients: due.recipients,
+            skippedList: [],
+          };
+          const tally = await runBatch(deferredPlan, modeForDeferred);
+          await prisma.communicationCampaignDeferredRecipient
+            .deleteMany({ where: { id: { in: due.queueIds } } })
+            .catch(() => ({ count: 0 }));
+
+          batches += 1;
+          base.sent += tally.sent;
+          base.skipped += tally.skipped;
+          base.failed += tally.failed;
+          for (const [key, value] of Object.entries(tally.reasons)) {
+            base.reasons[key] = (base.reasons[key] ?? 0) + value;
+            progress.reasons[key] = (progress.reasons[key] ?? 0) + value;
+          }
+          // These contacts were already included in progress.total when the audience page was
+          // scanned and queued. Only outcome counters change here.
+          progress.sent += tally.sent;
+          progress.skipped += tally.skipped;
+          progress.failed += tally.failed;
+          progress.batches += 1;
+          progress.updatedAt = new Date().toISOString();
+          progress.blockedRuns = 0;
+        }
+      } else {
+        base.blocked = liveGate.reason;
+      }
+    }
+  }
+
+  const deferredRemaining = await countDeferredQuietRecipients(campaignId);
+  const hasMore = !exhausted || deferredRemaining > 0;
+  progress.done = !hasMore;
+  /* The status is only final once both the audience cursor and the local-time deferred queue are
+     exhausted. While either has recipients left, the campaign stays SENDING and the scheduler keeps
+     picking it up. */
   const finalStatus = hasMore ? "SENDING" : computeFinalStatus(progress.total, progress.sent, progress.skipped, progress.failed);
   base.truncated = hasMore;
   await mutateCampaignMetadata(
