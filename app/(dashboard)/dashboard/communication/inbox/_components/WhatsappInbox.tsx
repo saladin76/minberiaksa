@@ -361,11 +361,16 @@ export function WhatsappInbox() {
       <div className="grid min-h-[68vh] gap-4 xl:grid-cols-[minmax(20rem,23rem)_minmax(0,1fr)]">
         {/* ── Conversation list ─────────────────────────────────── */}
         <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+          {listError && conversations.length > 0 && (
+            <div className="border-b border-amber-200 bg-amber-50 px-3 py-2 text-[11px] font-medium text-amber-800">
+              تعذّر تحديث القائمة الآن؛ المعروض هو آخر بيانات ناجحة.
+            </div>
+          )}
           {loadingList ? (
             <div className="flex items-center justify-center py-16 text-slate-400">
               <Loader2 className="w-5 h-5 animate-spin" />
             </div>
-          ) : listError ? (
+          ) : listError && conversations.length === 0 ? (
             <div className="p-5">
               <EmptyState
                 variant="inline"
@@ -448,7 +453,7 @@ export function WhatsappInbox() {
             <div className="flex items-center justify-center py-20 text-slate-400">
               <Loader2 className="w-5 h-5 animate-spin" />
             </div>
-          ) : detailError ? (
+          ) : detailError && !detail ? (
             <div className="p-5">
               <EmptyState variant="inline" title="تعذّر تحميل المحادثة" description={detailError} />
               <button
@@ -463,6 +468,11 @@ export function WhatsappInbox() {
             <EmptyState variant="inline" title="تعذّر تحميل المحادثة" />
           ) : (
             <>
+              {detailError && (
+                <div className="border-b border-amber-200 bg-amber-50 px-4 py-2 text-[11px] font-medium text-amber-800">
+                  تعذّر تحديث المحادثة الآن؛ المعروض هو آخر بيانات ناجحة.
+                </div>
+              )}
               <div className="border-b border-slate-100 px-4 py-3">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="min-w-0">
