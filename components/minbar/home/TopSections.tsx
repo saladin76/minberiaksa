@@ -252,7 +252,6 @@ export function Hero({ onPlayIntro }: { onPlayIntro: (embed: string) => void }) 
   const locale = useLocale();
   const t = useTranslations("homepage");
   const tCommon = useTranslations("common");
-  const tNav = useTranslations("navigation");
   const poster = heroPoster(locale);
 
   return (
@@ -287,7 +286,7 @@ export function Hero({ onPlayIntro }: { onPlayIntro: (embed: string) => void }) 
 
             <p className="mia-hero-lead">{t("heroLead")}</p>
 
-            <div className="mia-hero-actions">
+            <div className="mia-hero-actions mia-hero-actions--desktop">
               <Button variant="primary" size="lg" href={miaPath("projects", locale)} className="mia-hero-btn">
                 {t("heroCtaPrimary")}
                 <ArrowGlyph size={14} />
@@ -331,6 +330,16 @@ export function Hero({ onPlayIntro }: { onPlayIntro: (embed: string) => void }) 
                 </span>
               </button>
             </div>
+          </div>
+
+          <div className="mia-hero-actions mia-hero-actions--mobile">
+            <Button variant="primary" size="lg" href={miaPath("projects", locale)} className="mia-hero-btn">
+              {t("heroCtaPrimary")}
+              <ArrowGlyph size={14} />
+            </Button>
+            <Button variant="gold" size="lg" href={miaPath("zakatCalculator", locale)} className="mia-hero-btn">
+              {tCommon("zakatCalculator")}
+            </Button>
           </div>
         </div>
 
