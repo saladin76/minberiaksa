@@ -63,8 +63,10 @@ export function campaignSendControls(campaign: Pick<CommunicationCampaign, "meta
     const date = new Date(value);
     return Number.isNaN(date.getTime()) ? null : date.toISOString();
   };
-  const globalCap = positiveInt(process.env.COMMUNICATION_WHATSAPP_DAILY_CAP, 100_000);
-  const requestedCap = positiveInt(raw.dailyCap, globalCap);
+  const configuredGlobalCap = process.env.COMMUNICATION_WHATSAPP_DAILY_CAP
+    ? positiveInt(process.env.COMMUNICATION_WHATSAPP_DAILY_CAP, 100_000)
+    : null;
+  const requestedCap = positiveInt(raw.dailyCap, configuredGlobalCap ?? 100_000);
 
   return {
     paused: raw.paused === true,
@@ -73,8 +75,9 @@ export function campaignSendControls(campaign: Pick<CommunicationCampaign, "meta
     priority: ["LOW", "NORMAL", "HIGH", "URGENT"].includes(priority) ? priority : "NORMAL",
     scheduledStopAt: isoOrNull(raw.scheduledStopAt),
     resumeAt: isoOrNull(raw.resumeAt),
-    // Per-campaign controls may be stricter than the account tier, never looser.
-    dailyCap: Math.min(requestedCap, globalCap),
+    // An explicitly configured environment ceiling remains a hard safety cap. When there is no
+    // environment override, the campaign value can come directly from Meta's current account tier.
+    dailyCap: configuredGlobalCap ? Math.min(requestedCap, configuredGlobalCap) : requestedCap,
     quietHours: {
       enabled: quiet.enabled === true,
       start: hhmm(quiet.start, "00:00"),
