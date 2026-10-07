@@ -27,9 +27,9 @@ export type LanguageAudienceSummary = {
   /** Marketing eligibility counts per channel. */
   emailEligible: number;
   smsEligible: number;
-  /** Donors with a phone who are not explicitly marked do-not-contact. */
+  /** Donors with an explicit WhatsApp marketing opt-in. */
   whatsappEligible: number;
-  /** Kept for dashboard compatibility; WhatsApp donor audiences no longer require manual review. */
+  /** Phone contacts without explicit WhatsApp marketing consent. */
   whatsappNeedsReview: number;
 };
 
@@ -52,16 +52,15 @@ const DONOR_BASE = { role: "DONOR" as const };
 /** Count donors for a locale + per-channel eligibility (legacy User flags + WhatsApp opt-in profiles). */
 async function localeCounts(locale: SupportedLocale) {
   const base = { ...DONOR_BASE, preferredLang: locale };
-  const [total, withEmail, withPhone, emailEligible, smsEligible, whatsappBlocked] = await Promise.all([
+  const [total, withEmail, withPhone, emailEligible, smsEligible, whatsappEligible] = await Promise.all([
     prisma.user.count({ where: base }),
     prisma.user.count({ where: { ...base, email: { not: null } } }),
     prisma.user.count({ where: { ...base, phone: { not: null } } }),
     safeCountValue("audience.emailReachable", () => prisma.donorCommunicationProfile.count({ where: { preferredLocale: locale, email: { not: null }, emailOptIn: true, doNotContact: false } })),
     safeCountValue("audience.smsReachable", () => prisma.donorCommunicationProfile.count({ where: { preferredLocale: locale, phone: { not: null }, smsOptIn: true, doNotContact: false } })),
-    safeCountValue("audience.whatsappBlocked", () => prisma.donorCommunicationProfile.count({ where: { preferredLocale: locale, phone: { not: null }, doNotContact: true } })),
+    safeCountValue("audience.whatsappReachable", () => prisma.donorCommunicationProfile.count({ where: { preferredLocale: locale, phone: { not: null }, whatsappOptIn: true, doNotContact: false } })),
   ]);
-  const whatsappEligible = Math.max(0, withPhone - whatsappBlocked);
-  const whatsappNeedsReview = 0;
+  const whatsappNeedsReview = Math.max(0, withPhone - whatsappEligible);
   return { total, withEmail, withPhone, emailEligible, smsEligible, whatsappEligible, whatsappNeedsReview };
 }
 
@@ -98,7 +97,7 @@ export async function getAudienceOverview(): Promise<AudienceOverview> {
     totals,
     languages,
     consentNote:
-      "متبرعو واتساب الذين لديهم رقم صالح يُعتبرون مؤهلين داخليًا للإرسال ما لم يكن التواصل موقوفًا عليهم.",
+      "التسويق عبر واتساب يتطلب موافقة صريحة مسجلة. وجود رقم صالح وحده لا يجعل المتبرع مؤهلًا لحملة تسويقية.",
   };
 }
 
@@ -129,5 +128,6 @@ export function donorChannelEligibility(
     return profile.smsOptIn === true ? "ELIGIBLE" : "UNAVAILABLE";
   }
   if (!donor.phone) return "UNAVAILABLE";
-  return "ELIGIBLE";
+  if (!profile) return "NEEDS_REVIEW";
+  return profile.whatsappOptIn === true ? "ELIGIBLE" : "UNAVAILABLE";
 }
