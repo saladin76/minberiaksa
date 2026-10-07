@@ -117,7 +117,7 @@ function evaluate(link: CampaignLinkRecord, duplicateCount: number) {
 
 export async function GET(request: NextRequest) {
   const session = await getServerSession(authOptions);
-  const denied = requireAdminOrDashboardPermission(session, "ads");
+  const denied = requireAdminOrDashboardPermission(session, "referrals");
   if (denied) return denied;
 
   const limit = numberParam(request, "limit", 100, 1, 500);
