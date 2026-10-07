@@ -3,9 +3,9 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 import { requireAdminOrDashboardPermission } from "@/lib/dashboard/api-auth";
 import { getRawTrackingSettings } from "@/lib/tracking/tracking-settings";
-import { prisma } from "@/lib/prisma";
 import { auditActorFromDashboardSession, writeAuditLog } from "@/lib/audit-log";
 import { sendMetaCapiEvent } from "@/lib/tracking/meta-capi";
+import { getRawTrackingSettings, trackingBoolean, trackingString } from "@/lib/tracking/tracking-settings";
 
 type Platform = "meta" | "ga4" | "google_ads" | "tiktok" | "x";
 
@@ -14,14 +14,8 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-function str(row: Record<string, unknown> | null, key: string): string | null {
-  const v = row?.[key];
-  return typeof v === "string" && v.trim() ? v.trim() : null;
-}
-
-function bool(row: Record<string, unknown> | null, key: string): boolean {
-  return row?.[key] === true;
-}
+const str = trackingString;
+const bool = trackingBoolean;
 
 function missingConfig(platform: Platform, missingFields: string[], guidance: string[]) {
   return NextResponse.json({
