@@ -1061,7 +1061,7 @@ export async function runDueCampaigns(opts: { actor?: Actor; max?: number } = {}
     return (a.scheduledAt?.getTime() ?? 0) - (b.scheduledAt?.getTime() ?? 0);
   });
   const due = dueCandidates.slice(0, max);
-  for (const campaign of due) results.push(await executeCampaignSend(campaign.id, { actor: opts.actor, mode: "DUE" }));
+  for (const campaign of due) results.push(await executeCampaignSend(campaign.id, { actor: opts.actor, mode: "DUE", maxBatches: 1 }));
 
   const budget = max - due.length;
   if (budget > 0) {
@@ -1082,7 +1082,7 @@ export async function runDueCampaigns(opts: { actor?: Actor; max?: number } = {}
       const progress = progressOf(asCampaign);
       if (!progress || progress.done) continue;
       if (leaseIsFresh(leaseOf(asCampaign))) continue;
-      results.push(await executeCampaignSend(row.id, { actor: opts.actor, mode: "RESUME" }));
+      results.push(await executeCampaignSend(row.id, { actor: opts.actor, mode: "RESUME", maxBatches: 1 }));
     }
   }
   return results;

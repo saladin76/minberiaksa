@@ -277,3 +277,10 @@ test("WhatsApp donor marketing no longer depends on internal opt-in", () => {
   assert.doesNotMatch(dialog, /تسجيل الموافقة/);
   assert.match(retry, /purpose !== "MARKETING" \|\| channel === "WHATSAPP"/);
 });
+
+
+test("communication scheduler processes one resumable batch per campaign per minute", () => {
+  const executor = read("lib/communication/campaign-send-executor.ts");
+  assert.match(executor, /mode: "DUE", maxBatches: 1/);
+  assert.match(executor, /mode: "RESUME", maxBatches: 1/);
+});
