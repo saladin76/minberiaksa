@@ -31,6 +31,37 @@ export async function verifyWebhookSignature(rawBody: string, signatureHeader: s
   }
 }
 
+/**
+ * Return WABA ids for provider webhook changes that concern message-template lifecycle/quality.
+ *
+ * Delivery/inbound parsing below intentionally normalizes only message traffic. Template lifecycle
+ * is different: Meta is the source of truth and our existing sync already reconciles status,
+ * category, quality and missing variants. A webhook therefore only needs to identify the affected
+ * WABA and trigger that canonical reconciliation immediately.
+ */
+export function templateLifecycleWebhookWabaIds(payload: unknown): string[] {
+  const out = new Set<string>();
+  const root = payload as { object?: unknown; entry?: unknown[] } | null;
+  if (!root || root.object !== "whatsapp_business_account" || !Array.isArray(root.entry)) return [];
+
+  for (const rawEntry of root.entry) {
+    if (!rawEntry || typeof rawEntry !== "object") continue;
+    const entry = rawEntry as { id?: unknown; changes?: unknown[] };
+    const wabaId = typeof entry.id === "string" && /^\d+$/.test(entry.id) ? entry.id : null;
+    if (!wabaId || !Array.isArray(entry.changes)) continue;
+
+    for (const rawChange of entry.changes) {
+      if (!rawChange || typeof rawChange !== "object") continue;
+      const field = (rawChange as { field?: unknown }).field;
+      if (typeof field === "string" && field.startsWith("message_template_")) {
+        out.add(wabaId);
+        break;
+      }
+    }
+  }
+  return [...out];
+}
+
 function toNumber(value: unknown): number | null {
   const n = typeof value === "string" ? Number(value) : typeof value === "number" ? value : NaN;
   return Number.isFinite(n) ? n : null;
