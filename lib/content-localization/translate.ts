@@ -211,6 +211,8 @@ export async function translateItem(input: TranslateInput, targetLocale: string)
       policyInstruction(policy),
       "Never translate Qur'anic Arabic text. If a source fragment is a Qur'anic verse, return it unchanged.",
       "Preserve placeholders, URLs, email addresses, currency codes, amounts, percentages and identifiers byte-for-byte.",
+      "Terminology: Minbar Al-Aqsa / Minber-i Aksa is the institution brand; do not invent a different organization name. Keep Al-Aqsa, Al-Quds/Jerusalem, Zakat and Waqf terminology consistent with established usage in the target language.",
+      "Do not translate registered legal entity names, bank account identifiers, IBAN/SWIFT values, payment-provider names or official document numbers unless the source explicitly supplies a translated form.",
       `Return exactly: {"fields":{<same keys, translated>},"richTexts":{<same keys, arrays of the SAME LENGTH and ORDER, each entry translated>}}.`,
       "Entries in richTexts are fragments of one formatted document, in reading order; translate each fragment so the sequence still reads as one text. Keep leading/trailing spaces of each fragment.",
       `Input: ${JSON.stringify(request)}`,
