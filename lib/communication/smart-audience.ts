@@ -166,7 +166,7 @@ export function buildSmartAudienceUserWhere(definition: SmartAudienceDefinition)
 
 
 async function resolveSmartAudienceUserWhere(definition: SmartAudienceDefinition): Promise<Prisma.UserWhereInput> {
-  const where = await resolveSmartAudienceUserWhere(definition);
+  const where = buildSmartAudienceUserWhere(definition);
   const badgeIds = definition.filters.badgeIds ?? [];
   if (!badgeIds.length) return where;
 
@@ -202,7 +202,7 @@ export async function loadSmartAudiencePage(
   opts: { limit: number; cursorId?: string | null },
 ): Promise<{ members: Array<SmartUserRow & { locale: SupportedLocale }>; nextCursor: string | null; exhausted: boolean }> {
   const limit = Math.max(1, Math.min(opts.limit, 1000));
-  const where = buildSmartAudienceUserWhere(definition);
+  const where = await resolveSmartAudienceUserWhere(definition);
   if (opts.cursorId) {
     const currentId = where.id && typeof where.id === "object" && !Array.isArray(where.id) ? where.id : {};
     where.id = { ...(currentId as Prisma.StringFilter), gt: opts.cursorId };
