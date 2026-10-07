@@ -187,12 +187,21 @@ export async function buildShard(id: string): Promise<SitemapEntry[] | null> {
   if (group === "campaigns") {
     const rows = await prisma.campaign.findMany({
       where: { isActive: true },
-      select: { id: true, slug: true, updatedAt: true, translations: { select: { locale: true, slug: true } } },
+      select: { id: true, slug: true, updatedAt: true, translations: { select: { locale: true, slug: true, title: true, description: true } } },
       orderBy: { updatedAt: "desc" },
       skip,
       take: SHARD_SIZE,
     });
-    return rows.flatMap((c) => expand(entityAlternates("/campaign", c.slug, c.translations, c.id), c.updatedAt, "weekly", 0.85));
+    return rows.flatMap((c) => {
+      const availableLocales = Array.from(new Set([
+        "ar",
+        ...c.translations
+          .filter((translation) => Boolean(translation.title?.trim()) && Boolean(translation.description?.trim()))
+          .map((translation) => translation.locale),
+      ]));
+      const alternates = entityAlternates("/campaign", c.slug, c.translations, c.id, availableLocales);
+      return expand(alternates, c.updatedAt, "weekly", 0.85, availableLocales);
+    });
   }
 
   if (group === "categories") {
@@ -200,13 +209,22 @@ export async function buildShard(id: string): Promise<SitemapEntry[] | null> {
        page is already in the static shard. */
     const rows = await prisma.category.findMany({
       where: { pageTemplate: null },
-      select: { id: true, slug: true, translations: { select: { locale: true, slug: true } } },
+      select: { id: true, slug: true, translations: { select: { locale: true, slug: true, name: true } } },
       orderBy: { id: "asc" },
       skip,
       take: SHARD_SIZE,
     });
     const now = new Date();
-    return rows.flatMap((c) => expand(entityAlternates("/category", c.slug, c.translations, c.id), now, "weekly", 0.7));
+    return rows.flatMap((c) => {
+      const availableLocales = Array.from(new Set([
+        "ar",
+        ...c.translations
+          .filter((translation) => Boolean(translation.name?.trim()))
+          .map((translation) => translation.locale),
+      ]));
+      const alternates = entityAlternates("/category", c.slug, c.translations, c.id, availableLocales);
+      return expand(alternates, now, "weekly", 0.7, availableLocales);
+    });
   }
 
   const rows = await prisma.post.findMany({
