@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 import { requireAdminOrDashboardPermission } from "@/lib/dashboard/api-auth";
-import { getRawTrackingSettings, TRACKING_SETTINGS_TRACKING_TRACKING_SETTINGS_COLLECTION } from "@/lib/tracking/tracking-settings";
+import { getRawTrackingSettings } from "@/lib/tracking/tracking-settings";
 import { prisma } from "@/lib/prisma";
 import { auditActorFromDashboardSession, writeAuditLog } from "@/lib/audit-log";
 import { sendMetaCapiEvent } from "@/lib/tracking/meta-capi";
