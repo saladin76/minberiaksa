@@ -1,62 +1,108 @@
-# Communication Center  Architecture
+# Communication Center Architecture
 
-Canonical architecture for the one Communication Center that handles **WhatsApp, Email,
-and SMS as channels** (not separate modules). Pairs with the current-state record in
-`docs/architecture/communication-center-audit.md` and the operating-system north star in
-`docs/dashboard-operating-system.md`.
+This document describes the **current production architecture** for outbound and inbound
+communication. The executable invariants live in `lib/communication/README.md` and the canonical
+runtime types in `lib/communication/communication-runtime-types.ts`.
 
 ## Principle
-One center, channels not products. Providers sit behind swappable adapters. WhatsApp moves
-toward **Meta WhatsApp Cloud API**; **Twilio stays intact** as legacy/fallback and for SMS;
-**SendGrid** stays for email (the only channel configured today). Language is never hardcoded
-per channel  everything reads the locale catalog (`lib/locales.ts`).
 
-## Layers (target)
+One communication domain, three channels, provider adapters behind one routing layer.
+
+| Channel | Active provider |
+| --- | --- |
+| WhatsApp | Meta WhatsApp Cloud API |
+| Email | Elastic Email |
+| SMS Türkiye | Netgsm |
+| SMS international | Brevo SMS |
+
+Twilio and SendGrid are historical only. They must not be reintroduced into active routing.
+
+## Layers
+
+```text
+Dashboard / API / event
+        |
+        v
+Application service
+  campaign / trigger / inbox
+        |
+        +--> consent & audience
+        +--> template/provider truth
+        +--> sender routing
+        +--> delivery archive
+        |
+        v
+ProviderRouter
+        |
+        +--> Meta WhatsApp
+        +--> Elastic Email
+        +--> Netgsm / Brevo SMS
 ```
-UI page  →  API route / server action  →  service  →  repository / provider adapter  →  DB / provider
-```
-```
-Communication Center
-├─ TemplateRenderer        lib/communication/template-renderer.ts        (done)
-├─ ConsentService          lib/communication/consent-eligibility.ts      (done)
-├─ AudienceService         lib/communication/audience-service.ts         (done  dynamic language×channel)
-├─ SenderRouter            lib/communication/sender-router.ts            (done  pure locale/country/purpose/fallback)
-├─ LanguageCoverage        lib/communication/language-coverage.ts        (done  block wrong-language sends)
-├─ ProviderRegistry        lib/communication/provider-registry.ts        (done  metadata)
-├─ ProviderConnections     lib/communication/provider-connections.ts     (done  server-side readiness, no secrets)
-├─ DeliveryLogService      (pending  extend SentMessage or add CommunicationDelivery)
-├─ WebhookReceiver         (pending  idempotent provider events)
-├─ ConversationService     (pending  Inbox)
-├─ MetaWhatsAppProvider    lib/communication/providers/meta-whatsapp/    (done  adapter + webhooks + inbox; send config-gated)
-├─ WebhookReceiver         /api/webhooks/meta/whatsapp + webhook-service  (done  idempotent, signature-verified)
-├─ ConversationService     lib/communication/conversation-service.ts     (done  Inbox, phone-matched)
-├─ EmailProvider           lib/communication/providers/email/ → lib/email.ts (SendGrid) (done  behind ProviderRouter)
-├─ SmsProvider             lib/communication/providers/sms/ (Netgsm TR / Twilio intl)  (done  config-gated router)
-└─ LegacyTwilioProvider    lib/whatsapp.ts (Twilio)                      (legacy, working  do not break)
-```
 
-## Hard rules (enforced)
-- No auto-send; every campaign send requires human approval.
-- No page → provider call; UI never holds tokens/secrets.
-- No send without consent + channel eligibility. WhatsApp marketing has no consent field yet,
-  so audiences mark it `NEEDS_REVIEW`  never silently bulk-eligible.
-- Every outgoing message archived; every provider webhook creates/updates a safe, idempotent
-  event log; raw payloads sanitized before storage.
-- Missing provider config → `SKIPPED` with a clear reason (e.g. `META_WHATSAPP_NOT_CONFIGURED`);
-  never a fake "sent".
+No UI route calls a provider SDK directly. Provider credentials are resolved server-side from the
+active integration runtime and are never copied into campaign metadata, audit logs or client state.
 
-## Routes
-Official home `/dashboard/operations/communication` (+ `/providers`, `/templates`, `/preferences`,
-`/flows`, and now `/audiences`). Legacy `/dashboard/messages` + `/dashboard/templates` +
-`/api/templates/*` stay as the working Twilio + SendGrid send path (do not delete/break).
+## Consent invariants
 
-## Data (target  reuse first)
-Reuse `SentMessage` (message archive), `WhatsappTemplate`/`EmailTemplate` (+ translations),
-`MessageTrigger`, `AuditLog`, `User` consent fields. Add only when needed: `CommunicationSender`,
-`SenderRoutingRule`, `CommunicationTemplateGroup/Variant`, `CommunicationCampaign`,
-`CommunicationDelivery`, `CommunicationProviderEvent`, `DonorCommunicationProfile`  each with
-compatibility for existing records, justified in its package doc.
+- `DonorCommunicationProfile` is the runtime source of marketing consent.
+- Marketing Email requires `emailOptIn=true`.
+- Marketing SMS requires `smsOptIn=true`.
+- Marketing WhatsApp requires `whatsappOptIn=true`.
+- A phone number, a previous donation, or a successfully delivered transactional message is **not**
+  proof of marketing consent.
+- Transactional WhatsApp/Email may be sent without marketing opt-in, but `doNotContact=true`
+  remains a hard stop.
+- Every campaign, smart one-to-one send, automatic marketing trigger and retry must re-check the
+  current consent state before provider dispatch.
 
-## Provider order (per mission rule 20)
-Official docs first → scopes/products → schema → connection health → sync/events/webhooks →
-safe implementation → repo docs (`docs/integrations/*`). No provider implemented from memory.
+## WhatsApp provider truth
+
+Meta is authoritative for template status, language, category and quality.
+
+- A variant is sendable only when Meta reports it approved for the exact WABA used by routing.
+- `PAUSED`, `DISABLED`, rejected or unknown variants are never considered ready.
+- Meta template lifecycle webhooks trigger immediate WABA reconciliation.
+- `/api/cron/communication-sync-whatsapp-templates` remains the periodic reconciliation fallback.
+- Delivery/inbound webhooks and template lifecycle updates share the same signature-verified
+  `/api/webhooks/meta/whatsapp` endpoint.
+
+## Campaign execution
+
+Campaign delivery is resumable and server-side:
+
+1. The browser stores an audience definition/list reference, not thousands of donor ids.
+2. `campaign-send-planner.ts` resolves one page.
+3. `campaign-send-executor.ts` claims a lease, applies controls, sends a bounded batch and persists
+   progress.
+4. Recipient-local quiet-hour contacts are moved to
+   `CommunicationCampaignDeferredRecipient` instead of pinning the audience cursor.
+5. Vercel Cron processes only a small bounded slice per minute. Unfinished campaigns remain
+   `SENDING` and continue on the next tick.
+
+This prevents one large campaign or slow provider from consuming the entire serverless runtime.
+
+## Delivery truth
+
+`CommunicationDelivery` is the authoritative outbound archive. Provider acceptance advances a row
+to `SENT`; provider webhooks may advance it to `DELIVERED`, `READ`, etc., but never downgrade
+terminal truth. `SentMessage` is compatibility/reporting data only where still present.
+
+## Safety and quality gates
+
+- Every outbound attempt is archived before the external call.
+- No fake `SENT` status when configuration/provider calls fail.
+- Campaign pause, emergency stop, daily cap, speed controls and quiet hours remain enforced.
+- Marketing consent is enforced at the shared eligibility/service layers, not just in UI.
+- Critical integration regressions run during the Vercel build before Next.js production build.
+- The 15-minute template sync is fallback reconciliation, not the sole source of template state.
+
+## Ownership
+
+- `lib/communication/` owns communication business logic.
+- `lib/communication/providers/*` owns provider-specific behavior.
+- `lib/integration-settings/` owns active provider credentials/configuration.
+- `app/api/webhooks/*` owns externally authenticated provider callbacks.
+- Dashboard pages are operators of these services; they do not own provider logic.
+
+Do not create parallel communication engines or duplicate provider readers. Extend the canonical
+service/adapter that already owns the responsibility.
