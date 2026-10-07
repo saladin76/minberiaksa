@@ -110,7 +110,7 @@ export async function POST(request: NextRequest) {
       {
         event_name: eventName,
         event_id: eventId,
-        event_source_url: "https://www.minberiaksa.org/dashboard/pixels",
+        event_source_url: "https://www.minberiaksa.org/dashboard/platform-connections/tracking",
         test_event_code: testEventCode,
         user_data: {
           email: "tracking-test@minberiaksa.org",
