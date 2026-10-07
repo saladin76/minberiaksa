@@ -75,11 +75,6 @@ const DEFAULT_SEND_CONTROLS: CampaignSendControlsDraft = {
   quietHours: { enabled: false, start: "00:00", end: "08:00", timezoneMode: "RECIPIENT", timezone: "Europe/Istanbul" },
 };
 
-function fromLocalInput(value: string): string | null {
-  if (!value) return null;
-  const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? null : date.toISOString();
-}
 
 async function readApiJson(response: Response, fallback: string): Promise<Record<string, any>> {
   const text = await response.text();
