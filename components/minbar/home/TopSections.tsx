@@ -10,8 +10,6 @@ import { miaPath } from "@/lib/minbar/routes";
 import { verseBlock } from "@/lib/minbar/quran";
 import { IMG } from "@/lib/minbar/content/media";
 import { introVideoId } from "@/lib/minbar/content/catalog";
-import { BIG_STATS } from "@/lib/minbar/achievements";
-import { useMinbarCountUp } from "@/hooks/useMinbarReveal";
 import { youtubeEmbed } from "@/lib/minbar/content/media";
 
 /**
@@ -82,7 +80,6 @@ function readSeen(): Set<string> {
 export function StoriesRail() {
   const locale = useLocale();
   const t = useTranslations("homepage");
-  const tNav = useTranslations("navigation");
   const tCommon = useTranslations("common");
   const dir = (LOCALES as Record<string, { direction?: "rtl" | "ltr" }>)[locale]?.direction ?? "rtl";
 
@@ -251,27 +248,11 @@ export function heroPoster(locale: string): string {
   return "/minbar/assets/hero/intro-intl-3VVMdV5c_RU.webp";
 }
 
-/** Headline figures from the achievements record, formatted for the locale. */
-function HeroStat({ value, label }: { value: number; label: string }) {
-  const locale = useLocale();
-  const { ref, value: shown } = useMinbarCountUp(value, 1600);
-  return (
-    <div ref={ref as React.RefObject<HTMLDivElement>} className="mia-hero-stat">
-      <b>
-        {new Intl.NumberFormat(locale).format(shown)}
-        <span>+</span>
-      </b>
-      <span>{label}</span>
-    </div>
-  );
-}
-
 export function Hero({ onPlayIntro }: { onPlayIntro: (embed: string) => void }) {
   const locale = useLocale();
   const t = useTranslations("homepage");
   const tCommon = useTranslations("common");
   const tNav = useTranslations("navigation");
-  const tAch = useTranslations("achievements");
   const poster = heroPoster(locale);
 
   return (
@@ -353,19 +334,6 @@ export function Hero({ onPlayIntro }: { onPlayIntro: (embed: string) => void }) 
           </div>
         </div>
 
-        {/* ── Proof band: the two headline figures the reports page opens with. */}
-        <div className="mia-hero-proof">
-          {BIG_STATS.map((s, i) => (
-            <div key={s.labelKey} style={{ display: "contents" }}>
-              {i > 0 ? <span aria-hidden="true" className="mia-hero-proof-rule" /> : null}
-              <HeroStat value={s.count} label={tAch(s.labelKey)} />
-            </div>
-          ))}
-          <Link href={miaPath("reports", locale)} className="mia-hero-textlink">
-            {tNav("reports")}
-            <ArrowGlyph size={13} />
-          </Link>
-        </div>
       </div>
     </section>
   );
