@@ -216,7 +216,7 @@ async function persistRawSettings(update: { $set: Record<string, unknown>; $unse
 export async function GET() {
   try {
     const session = await getServerSession(authOptions);
-    const denied = requireAdminOrDashboardPermission(session, "pixels");
+    const denied = requireAdminOrDashboardPermission(session, "platformConnections");
     if (denied) return denied;
 
     const settings = await getRawTrackingSettings();
