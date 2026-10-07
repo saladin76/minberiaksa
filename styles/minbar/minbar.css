@@ -1846,7 +1846,7 @@
   .mia-scope .pd-hero-media:hover .pd-hero-nav, .mia-scope .pd-hero-nav:focus-visible { opacity: 1; }
 }
 @media (max-width: 560px) {
-  .mia-scope .pd-hero-nav { width: 34px; height: 34px; }
+  .mia-scope .pd-hero-nav { width: 44px; height: 44px; }
   .mia-scope .pd-hero-nav[data-side="prev"] { inset-inline-start: 8px; }
   .mia-scope .pd-hero-nav[data-side="next"] { inset-inline-end: 8px; }
   .mia-scope .pd-hero-nav svg { width: 14px; height: 14px; }
@@ -1878,6 +1878,7 @@
 @media (max-width: 560px) {
   .mia-scope #pd-related { grid-template-columns: minmax(0,1fr) !important; }
   .mia-scope #pd-aside { padding: 18px !important; }
+  .mia-scope #pd-aside :is(button, input, select) { min-height: 44px; }
 }
 
 @media (max-width: 760px) {
@@ -3856,8 +3857,10 @@ html.cg-open .mia-scope:has(.mia-qb-sec) { padding-bottom: 0; }
   .mia-head .mia-pop--locale button.mia-row { height: 44px; }
 }
 @media (max-width: 460px) {
-  .mia-head .mia-pop--menu { grid-template-columns: minmax(0, 1fr) !important; }
+  .mia-head .mia-pop--menu,
+  .mia-head .mia-pop--locale { grid-template-columns: minmax(0, 1fr) !important; }
   .mia-head .mia-pop--menu .mia-menu-cats { grid-template-columns: minmax(0, 1fr) !important; }
+  .mia-head .mia-pop--locale > div:first-child { border-inline-end: 0 !important; border-bottom: 1px solid rgba(16,33,43,.1); }
 }
 @keyframes mia-drawer-in { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: none; } }
 
@@ -3952,10 +3955,10 @@ html[data-mia-drawer="open"] .mia-scope .mia-qb-sec { display: none !important; 
     inset-inline-end: 0;
     width: 34px;
     pointer-events: none;
-    background: linear-gradient(to left, var(--ivory), rgba(255,253,248,0));
+    background: linear-gradient(to right, var(--ivory), rgba(255,253,248,0));
   }
   .mia-scope[dir="ltr"] .proj-filters-wrap::after {
-    background: linear-gradient(to right, var(--ivory), rgba(255,253,248,0));
+    background: linear-gradient(to left, var(--ivory), rgba(255,253,248,0));
   }
   .mia-scope #proj-filters {
     margin-inline: 0;
