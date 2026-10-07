@@ -123,6 +123,23 @@ export async function recordSkippedDelivery(input: CreateDeliveryInput, reason: 
   }
 }
 
+export async function updateDeliveryVariables(
+  id: string,
+  variables: Record<string, unknown>,
+): Promise<ServiceResult> {
+  if (!process.env.DATABASE_URL) return dbUnavailable();
+  try {
+    await prisma.communicationDelivery.update({
+      where: { id },
+      data: { variables: variables as Prisma.InputJsonValue },
+    });
+    return { ok: true, data: { id } };
+  } catch (error) {
+    console.error("updateDeliveryVariables failed", error);
+    return { ok: false, status: 500, error: "Failed to update delivery preview snapshot." };
+  }
+}
+
 export type DeliveryStatusPatch = {
   providerMessageId?: string | null;
   providerConversationId?: string | null;
