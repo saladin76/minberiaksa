@@ -17,6 +17,7 @@ export type CampaignSendControls = {
     enabled: boolean;
     start: string; // HH:mm
     end: string;   // HH:mm
+    timezoneMode: "RECIPIENT" | "FIXED";
     timezone: string;
   };
 };
@@ -78,6 +79,8 @@ export function campaignSendControls(campaign: Pick<CommunicationCampaign, "meta
       enabled: quiet.enabled === true,
       start: hhmm(quiet.start, "00:00"),
       end: hhmm(quiet.end, "08:00"),
+      // Old campaigns had one fixed timezone. Preserve that behavior unless the new mode is explicit.
+      timezoneMode: quiet.timezoneMode === "RECIPIENT" ? "RECIPIENT" : "FIXED",
       timezone:
         typeof quiet.timezone === "string" && quiet.timezone.trim() && isValidTimeZone(quiet.timezone.trim())
           ? quiet.timezone.trim()
@@ -169,9 +172,10 @@ function parseMinutes(value: string): number {
   return hour * 60 + minute;
 }
 
-export function insideQuietHours(controls: CampaignSendControls, now = new Date()): boolean {
+export function insideQuietHours(controls: CampaignSendControls, now = new Date(), timeZoneOverride?: string): boolean {
   if (!controls.quietHours.enabled) return false;
-  const current = localMinutes(now, controls.quietHours.timezone);
+  const timeZone = timeZoneOverride || controls.quietHours.timezone;
+  const current = localMinutes(now, timeZone);
   if (current == null) return false;
   const start = parseMinutes(controls.quietHours.start);
   const end = parseMinutes(controls.quietHours.end);
@@ -199,7 +203,10 @@ export async function evaluateCampaignSendControls(
   if (await campaignEmergencyStopEnabled()) return { ok: false, controls, reason: "EMERGENCY_STOP", remainingDaily: null };
   if (controls.paused) return { ok: false, controls, reason: "PAUSED", remainingDaily: null };
   if (insideScheduledStop(controls)) return { ok: false, controls, reason: "SCHEDULED_STOP", remainingDaily: null };
-  if (insideQuietHours(controls)) return { ok: false, controls, reason: "QUIET_HOURS", remainingDaily: null };
+  // Recipient-local quiet hours are evaluated inside the send walk for each donor.
+  if (controls.quietHours.timezoneMode === "FIXED" && insideQuietHours(controls)) {
+    return { ok: false, controls, reason: "QUIET_HOURS", remainingDaily: null };
+  }
 
   if (campaign.channel === "WHATSAPP") {
     const used = await whatsappSentLast24Hours();
