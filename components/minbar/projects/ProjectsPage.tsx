@@ -131,7 +131,7 @@ export default function ProjectsPage({ projects, slides }: ProjectsPageProps) {
 
       <ProjectsHero slides={slides} />
 
-      <section style={{ position: "relative", background: "var(--ivory)", overflow: "hidden" }}>
+      <section id="project-filters-section" style={{ position: "relative", background: "var(--ivory)", overflow: "hidden" }}>
         <div
           aria-hidden="true"
           data-aqsa-pattern=""
