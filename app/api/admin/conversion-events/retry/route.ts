@@ -10,7 +10,7 @@ function readString(value: unknown): string | null {
 
 export async function POST(request: NextRequest) {
   const session = await getServerSession(authOptions);
-  const denied = requireAdminOrDashboardPermission(session, "pixels");
+  const denied = requireAdminOrDashboardPermission(session, "platformConnectionsTest");
   if (denied) return denied;
 
   const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
