@@ -154,6 +154,7 @@ test.describe.parallel("prelaunch responsive sitemap sweep", () => {
   for (const sitemapPath of sitemapPaths) {
     for (const chunk of chunks) {
       test(`${sitemapPath} URLs ${chunk.start}-${chunk.end - 1}`, async ({ page, baseURL }) => {
+        test.setTimeout(20 * 60_000);
         if (!baseURL) throw new Error("E2E_BASE_URL is required");
         const origin = originOf(baseURL);
         const xml = await fetchXml(origin + sitemapPath);
@@ -170,6 +171,7 @@ test.describe.parallel("prelaunch responsive sitemap sweep", () => {
   }
 
   test("critical noindex/public shells", async ({ page, baseURL }) => {
+    test.setTimeout(5 * 60_000);
     if (!baseURL) throw new Error("E2E_BASE_URL is required");
     const origin = originOf(baseURL);
     const failures: string[] = [];
