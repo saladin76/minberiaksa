@@ -4207,3 +4207,146 @@ html[data-mia-drawer="open"] .mia-scope .mia-qb-sec { display: none !important; 
   }
   .mia-scope #pay-grid .pay-form { order: 2; }
 }
+
+
+/* ── Mobile homepage spacing + full-section visibility fixes. ── */
+@media (max-width: 768px) {
+  /* These sections are content, not carousels. Keep every card fully visible
+     on phones instead of clipping the next card off-screen. */
+  .mia-scope #path-steps,
+  .mia-scope #impact-metrics,
+  .mia-scope #sector-metrics,
+  .mia-scope #regions,
+  .mia-scope #waqf-areas,
+  .mia-scope #account-features {
+    display: grid !important;
+    overflow: visible !important;
+    scroll-snap-type: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  .mia-scope #path-steps,
+  .mia-scope #impact-metrics,
+  .mia-scope #regions,
+  .mia-scope #waqf-areas {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  .mia-scope #sector-metrics,
+  .mia-scope #account-features {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  .mia-scope #path-steps > *,
+  .mia-scope #impact-metrics > *,
+  .mia-scope #sector-metrics > *,
+  .mia-scope #regions > *,
+  .mia-scope #waqf-areas > *,
+  .mia-scope #account-features > * {
+    width: auto !important;
+    max-width: none !important;
+    min-width: 0 !important;
+    scroll-snap-align: none !important;
+  }
+
+  /* Restore full-width readable cards for the two sections that were styled
+     specifically as carousel cards by the later phone rail rule. */
+  .mia-scope #impact-metrics > * {
+    border-radius: 12px !important;
+    padding: 18px 16px !important;
+  }
+
+  .mia-scope #path-steps > * {
+    grid-template-columns: auto minmax(0,1fr) !important;
+    column-gap: 14px !important;
+    row-gap: 6px !important;
+    padding: 14px 0 !important;
+    border: 0 !important;
+    border-top: 1px solid var(--border) !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+  }
+  .mia-scope #path-steps > *:first-child { border-top: 0 !important; }
+  .mia-scope #path-steps > * > span:first-child {
+    grid-row: 1 / span 2 !important;
+    grid-column: 1 !important;
+  }
+  .mia-scope #path-steps > * > b,
+  .mia-scope #path-steps > * > span:last-child {
+    grid-column: 2 !important;
+  }
+
+  /* Tighten the large empty vertical bands visible around these homepage
+     blocks while preserving their visual hierarchy. */
+  .mia-scope #path,
+  .mia-scope #stats,
+  .mia-scope #waqf,
+  .mia-scope #monthly,
+  .mia-scope #account,
+  .mia-scope #regions-section {
+    padding-top: 28px !important;
+    padding-bottom: 28px !important;
+  }
+
+  .mia-scope #regions-section {
+    padding-bottom: 28px !important;
+  }
+
+  .mia-scope #account-grid,
+  .mia-scope #waqf-grid,
+  .mia-scope #monthly-grid {
+    gap: 22px !important;
+  }
+
+  .mia-scope #account-features,
+  .mia-scope #sector-metrics {
+    gap: 10px !important;
+  }
+
+  /* Projects catalogue: remove the dead band between filters and first card. */
+  .mia-scope #project-filters-section > div {
+    padding-top: 16px !important;
+    padding-bottom: 12px !important;
+  }
+  .mia-scope #all {
+    padding-top: 14px !important;
+  }
+  .mia-scope .proj-grid {
+    margin-top: 0 !important;
+  }
+}
+
+@media (max-width: 560px) {
+  .mia-scope #sector-metrics,
+  .mia-scope #account-features {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  .mia-scope #path,
+  .mia-scope #stats,
+  .mia-scope #waqf,
+  .mia-scope #monthly,
+  .mia-scope #account,
+  .mia-scope #regions-section {
+    padding-top: 22px !important;
+    padding-bottom: 22px !important;
+  }
+
+  .mia-scope #regions > * {
+    min-height: 220px !important;
+  }
+
+  .mia-scope #account-features > *,
+  .mia-scope #sector-metrics > * {
+    padding: 16px !important;
+  }
+
+  .mia-scope #project-filters-section > div {
+    padding-top: 12px !important;
+    padding-bottom: 8px !important;
+  }
+  .mia-scope #all {
+    padding-top: 10px !important;
+  }
+}

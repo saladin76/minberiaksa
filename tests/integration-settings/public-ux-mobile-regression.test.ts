@@ -95,3 +95,21 @@ test("checkout puts the donation summary before the form on phones only", () => 
   assert.match(css, /#pay-grid #pay-summary[\s\S]*order: 1/);
   assert.match(css, /#pay-grid \.pay-form \{ order: 2; \}/);
 });
+
+
+test("homepage phone sections do not clip content into horizontal rails", () => {
+  const css = read("styles/minbar/minbar.css");
+  assert.match(css, /#path-steps,[\s\S]*#impact-metrics,[\s\S]*#sector-metrics,[\s\S]*#regions,[\s\S]*#waqf-areas,[\s\S]*#account-features[\s\S]*display: grid !important/);
+  assert.match(css, /#regions[\s\S]*grid-template-columns: minmax\(0, 1fr\) !important/);
+  assert.match(css, /#account-features[\s\S]*grid-template-columns: repeat\(2, minmax\(0, 1fr\)\) !important/);
+});
+
+test("homepage and project catalogue remove oversized mobile dead space", () => {
+  const home = read("components/minbar/home/ImpactSections.tsx");
+  const projects = read("components/minbar/projects/ProjectsPage.tsx");
+  const css = read("styles/minbar/minbar.css");
+  assert.match(home, /id="regions-section"/);
+  assert.match(projects, /id="project-filters-section"/);
+  assert.match(css, /#project-filters-section > div[\s\S]*padding-bottom: 12px !important/);
+  assert.match(css, /#all[\s\S]*padding-top: 14px !important/);
+});
