@@ -160,7 +160,7 @@ function auditToEvent(row: AuditFallbackRow): ConversionEventLike {
 
 export async function GET(request: NextRequest) {
   const session = await getServerSession(authOptions);
-  const denied = requireAdminOrDashboardPermission(session, "ads");
+  const denied = requireAdminOrDashboardPermission(session, "pixels");
   if (denied) return denied;
 
   await ensureConversionEventIndexes();
