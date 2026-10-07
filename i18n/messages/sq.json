@@ -2425,6 +2425,8 @@
     "viewDonation": "Shiko dhurimin",
     "viewFile": "Hap",
     "whatNext": "Çfarë ndodh më pas",
-    "yourDonation": "Dhurimi juaj"
+    "yourDonation": "Dhurimi juaj",
+    "fileTooLarge": "Skedari është {size}; maksimumi i lejuar është {max}. Kompresoni foton ose eksportojeni si PDF dhe provoni përsëri.",
+    "uploadFailed": "Ngarkimi nuk u përfundua. Kontrolloni lidhjen tuaj dhe provoni përsëri."
   }
 }
