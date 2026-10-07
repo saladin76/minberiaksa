@@ -65,6 +65,7 @@ const marketingRedirects = [
   ["/dashboard/marketing/performance", "/dashboard/marketing/attribution"],
   ["/dashboard/marketing/recommendations", "/dashboard/marketing/attribution"],
   ["/dashboard/platform-connections", "/dashboard/platform-connections/tracking"],
+  ["/dashboard/pixels", "/dashboard/platform-connections/tracking"],
   ["/dashboard/platform-connections/ad-accounts", "/dashboard/platform-connections/tracking"],
   ["/dashboard/platform-connections/webhooks", "/dashboard/platform-connections/communication"],
   ["/dashboard/platform-connections/logs", "/dashboard/platform-connections/health"],
