@@ -166,7 +166,9 @@ export default function ProjectDetail({ project, updates, gallery, related, dono
           </div>
 
           <DonationPanel project={project} donorCount={donorCount} />
-          <ConciergeEntry intent="current_page" />
+          <div className="pd-project-concierge">
+            <ConciergeEntry intent="current_page" />
+          </div>
         </div>
       </section>
 
