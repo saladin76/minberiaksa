@@ -447,7 +447,26 @@ export async function executeCampaignSend(
     startedAt: new Date().toISOString(), updatedAt: new Date().toISOString(), done: false, blockedRuns: 0,
   };
 
-  const firstPlan = await planCampaignSend(campaignId, { batchSize, cursor: resuming ? progress.cursor : null });
+  let firstPlan = await planCampaignSend(campaignId, { batchSize, cursor: resuming ? progress.cursor : null });
+  const deferredBeforeRun = resuming ? await countDeferredQuietRecipients(campaignId) : 0;
+  const audienceAlreadyScanned =
+    resuming && firstPlan.blocked === "AUDIENCE_EXHAUSTED" && deferredBeforeRun > 0;
+
+  if (audienceAlreadyScanned) {
+    firstPlan = {
+      ...firstPlan,
+      blocked: undefined,
+      exhausted: true,
+      truncated: false,
+      total: 0,
+      eligible: 0,
+      skipped: 0,
+      reasons: {},
+      recipients: [],
+      skippedList: [],
+    };
+  }
+
   base.total = firstPlan.total; base.truncated = firstPlan.truncated; base.reasons = { ...firstPlan.reasons };
   if (firstPlan.blocked) {
     await auditBlocked(campaign, firstPlan.blocked, actor, mode, firstPlan);
@@ -835,11 +854,7 @@ export async function executeCampaignSend(
     const liveGate = await evaluateCampaignSendControls(liveCampaign);
     if (!liveGate.ok) { base.blocked = liveGate.reason; break; }
 
-    const quietSlice = recipientQuietHoursSlice(plan, liveGate.controls);
-    if (quietSlice.blocked || !quietSlice.plan) {
-      base.blocked = "QUIET_HOURS";
-      break;
-    }
+    const quietSlice = await queueRecipientQuietHours(campaignId, plan, liveGate.controls);
     plan = quietSlice.plan;
 
     const remainingRecipients = Math.max(plan.audienceTotal - progress.total, plan.total);
