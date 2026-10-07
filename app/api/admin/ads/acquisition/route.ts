@@ -153,7 +153,7 @@ export async function GET(request: NextRequest) {
           firstDonationUSD: amount,
         });
       } else {
-        if (!row.returningDonorSet.has(d.donorId)) {
+        if (d.donorId && !row.returningDonorSet.has(d.donorId)) {
           row.returningDonorSet.add(d.donorId);
           totalReturningDonors += 1;
         }
