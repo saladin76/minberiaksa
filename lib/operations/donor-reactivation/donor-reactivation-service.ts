@@ -157,6 +157,7 @@ export async function getDonorReactivationOverview(): Promise<DonorReactivationO
     const handled = new Set(handledIds);
     const latestByDonor = new Map<string, (typeof donations)[number]>();
     for (const donation of donations) {
+      if (!donation.donorId || !donation.donor) continue;
       if (!latestByDonor.has(donation.donorId)) latestByDonor.set(donation.donorId, donation);
     }
 
