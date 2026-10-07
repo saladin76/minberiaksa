@@ -137,7 +137,7 @@ function statusSummary(statuses: Record<string, number>) {
   return order.filter((s) => statuses[s]).map((s) => `${statusLabel(s)}: ${statuses[s]}`).join(" · ") || "—";
 }
 
-export default function ConversionEventsPanel() {
+export default function ConversionEventsPanel({ canRetry = false }: { canRetry?: boolean }) {
   const [events, setEvents] = React.useState<ConversionEventRow[]>([]);
   const [total, setTotal] = React.useState(0);
   const [rawTotal, setRawTotal] = React.useState(0);
@@ -265,10 +265,10 @@ export default function ConversionEventsPanel() {
               <div className="text-sm text-slate-600">{timeline.platforms.length ? timeline.platforms.join(" · ") : "—"}</div>
               <div className="text-xs text-slate-500">{statusSummary(timeline.statuses)}</div>
               {timeline.donationId !== "—" ? <Link href={timelineHref(timeline.donationId)} className="inline-flex items-center rounded-md border px-3 py-2 text-xs font-bold text-brand hover:bg-slate-50">فتح Timeline</Link> : null}
-              <Button size="sm" variant="outline" disabled={!timeline.canRetry || retryingDonationId === timeline.donationId} onClick={() => retryDonation(timeline.donationId)} className="gap-2">
+{canRetry ? <Button size="sm" variant="outline" disabled={!timeline.canRetry || retryingDonationId === timeline.donationId} onClick={() => retryDonation(timeline.donationId)} className="gap-2">
                 {retryingDonationId === timeline.donationId ? <Loader2 className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-3 w-3" />}
                 إعادة المحاولة
-              </Button>
+              </Button> : null}
             </div>
             <div className="mt-3 space-y-2">
               {timeline.events.map((row, index) => <div key={rowKey(row, index)} className="grid grid-cols-1 gap-2 rounded-lg bg-slate-50 px-3 py-2 text-sm md:grid-cols-[9rem_7rem_7rem_1fr_8rem_1fr]">
