@@ -85,6 +85,19 @@ const clip = (s, max) => {
   return `${(lastSpace > max * 0.6 ? cut.slice(0, lastSpace) : cut).trim()}…`;
 };
 
+/**
+ * Keep the organisation name intact. If "page | organisation" would overflow
+ * the title budget, prefer the complete page intent by itself rather than
+ * clipping the brand halfway through (for example "Minbar Al Aqsa…").
+ */
+const composeTitle = (label, siteName, max = 70) => {
+  const cleanLabel = String(label || "").replace(/\s+/g, " ").trim();
+  const cleanSite = String(siteName || "").replace(/\s+/g, " ").trim();
+  const full = [cleanLabel, cleanSite].filter(Boolean).join(" | ");
+  if (full.length <= max) return full;
+  return clip(cleanLabel || cleanSite, max);
+};
+
 const entries = {};
 const contaminated = [];
 
@@ -114,26 +127,26 @@ for (const locale of LOCALES) {
 
   entries[locale] = {
     siteName,
-    title: clip(`${heroTitle} | ${siteName}`, 70),
+    title: composeTitle(heroTitle, siteName),
     description: clip(heroLead, 165),
     keywords: [...new Set(keywords)],
     titleTemplate: `%s | ${siteName}`,
     campaigns: {
-      title: clip(`${pick(nav, "projects")} | ${siteName}`, 70),
+      title: composeTitle(pick(nav, "projects"), siteName),
       description: clip(describe(pick(projects, "lead", "allProjectsLead", "intro"), heroLead), 165),
     },
     about: {
-      title: clip(`${pick(nav, "about")} | ${siteName}`, 70),
+      title: composeTitle(pick(nav, "about"), siteName),
       /* `about.mission` is the one-sentence mission statement  the truest
          description of the About page the bundle has. */
       description: clip(describe(pick(about, "lead", "intro", "missionLead", "mission"), heroLead), 165),
     },
     contact: {
-      title: clip(`${pick(nav, "contact")} | ${siteName}`, 70),
+      title: composeTitle(pick(nav, "contact"), siteName),
       description: clip(describe(pick(contact, "lead", "intro"), heroLead), 165),
     },
     blog: {
-      title: clip(`${pick(nav, "blog")} | ${siteName}`, 70),
+      title: composeTitle(pick(nav, "blog"), siteName),
       description: clip(describe(pick(blog, "lead", "intro"), heroLead), 165),
     },
   };

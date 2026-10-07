@@ -68,7 +68,7 @@ export const MINBAR_LOCALE_SEO = {
   },
   "tr": {
     "siteName": "Uluslararası Minber-i Aksâ Derneği",
-    "title": "Kudüs ve orada nöbet tutan halkının hizmetinde | Uluslararası…",
+    "title": "Kudüs ve orada nöbet tutan halkının hizmetinde",
     "description": "Beytülmakdis davasına hizmet için âlimleri, hatipleri ve davetçileri bir araya getiren uluslararası bir kurum; projeleri Kudüs'teki ailelere ve Gazze halkına…",
     "keywords": [
       "Projeler",
@@ -105,7 +105,7 @@ export const MINBAR_LOCALE_SEO = {
   },
   "en": {
     "siteName": "Minbar Al Aqsa International Association",
-    "title": "In the service of Al-Quds and its steadfast people | Minbar Al Aqsa…",
+    "title": "In the service of Al-Quds and its steadfast people",
     "description": "An international association bringing together scholars, preachers and callers in the service of Al-Quds, with projects reaching Jerusalemite families and the…",
     "keywords": [
       "Projects",
@@ -141,7 +141,7 @@ export const MINBAR_LOCALE_SEO = {
   },
   "fr": {
     "siteName": "Minbar Al Aqsa International Association",
-    "title": "Au service d'Al-Quds et de son peuple résilient | Minbar Al Aqsa…",
+    "title": "Au service d'Al-Quds et de son peuple résilient",
     "description": "Une association internationale réunissant savants, prédicateurs et prêcheurs au service de la cause d'Al-Quds, dont les projets atteignent les familles de Jérusalem…",
     "keywords": [
       "Projets",
@@ -177,7 +177,7 @@ export const MINBAR_LOCALE_SEO = {
   },
   "de": {
     "siteName": "Minbar Al Aqsa International Association",
-    "title": "Im Dienst von Al-Quds und seiner standhaften Bevölkerung | Minbar Al…",
+    "title": "Im Dienst von Al-Quds und seiner standhaften Bevölkerung",
     "description": "Ein internationaler Verband, der Gelehrte, Prediger und Verkünder im Dienst der Sache von Al-Quds vereint; seine Projekte erreichen Familien in Al-Quds und die…",
     "keywords": [
       "Projekte",
@@ -213,7 +213,7 @@ export const MINBAR_LOCALE_SEO = {
   },
   "es": {
     "siteName": "Minbar Al Aqsa International Association",
-    "title": "Al servicio de Al-Quds y de su pueblo firme | Minbar Al Aqsa…",
+    "title": "Al servicio de Al-Quds y de su pueblo firme",
     "description": "Una asociación internacional que reúne a eruditos, predicadores y divulgadores al servicio de la causa de Al-Quds, con proyectos que llegan a las familias de…",
     "keywords": [
       "Proyectos",
@@ -249,7 +249,7 @@ export const MINBAR_LOCALE_SEO = {
   },
   "id": {
     "siteName": "Minbar Al Aqsa International Association",
-    "title": "Melayani Al-Quds dan penduduknya yang bertahan | Minbar Al Aqsa…",
+    "title": "Melayani Al-Quds dan penduduknya yang bertahan",
     "description": "Lembaga internasional yang menghimpun para ulama, khatib, dan dai untuk melayani perkara Al-Quds, dengan proyek yang menjangkau keluarga di Al-Quds dan rakyat Gaza.",
     "keywords": [
       "Proyek",
@@ -285,7 +285,7 @@ export const MINBAR_LOCALE_SEO = {
   },
   "pt": {
     "siteName": "Minbar Al Aqsa International Association",
-    "title": "Ao serviço de Al-Quds e do seu povo resiliente | Minbar Al Aqsa…",
+    "title": "Ao serviço de Al-Quds e do seu povo resiliente",
     "description": "Uma associação internacional que reúne académicos, pregadores e divulgadores ao serviço da causa de Al-Quds, com projetos que chegam às famílias de Al-Quds e ao…",
     "keywords": [
       "Projetos",
@@ -321,7 +321,7 @@ export const MINBAR_LOCALE_SEO = {
   },
   "ur": {
     "siteName": "Minbar Al Aqsa International Association",
-    "title": "القدس اور اس کے ثابت قدم باشندوں کی خدمت میں | Minbar Al Aqsa…",
+    "title": "القدس اور اس کے ثابت قدم باشندوں کی خدمت میں",
     "description": "ایک بین الاقوامی ادارہ جو بیت المقدس کے مسئلے کی خدمت کے لیے علماء، خطباء اور داعیوں کو جمع کرتا ہے، اور اس کے منصوبے مقدسی خاندانوں اور اہلِ غزہ تک پہنچتے ہیں۔",
     "keywords": [
       "منصوبے",
@@ -357,7 +357,7 @@ export const MINBAR_LOCALE_SEO = {
   },
   "sq": {
     "siteName": "Minbar Al Aqsa International Association",
-    "title": "Në shërbim të kudsit dhe popullit të tij të palëkundur | Minbar Al…",
+    "title": "Në shërbim të kudsit dhe popullit të tij të palëkundur",
     "description": "Një shoqatë ndërkombëtare që bashkon dijetarë, hatibë dhe thirrës në shërbim të çështjes së Kudsit, me projekte që arrijnë familjet kudsiane dhe popullin e Gazës.",
     "keywords": [
       "Projektet",
@@ -393,7 +393,7 @@ export const MINBAR_LOCALE_SEO = {
   },
   "it": {
     "siteName": "Minbar Al Aqsa International Association",
-    "title": "Al servizio di Al-Quds e del suo popolo tenace | Minbar Al Aqsa…",
+    "title": "Al servizio di Al-Quds e del suo popolo tenace",
     "description": "Un'associazione internazionale che riunisce studiosi, predicatori e divulgatori al servizio della causa di Al-Quds, con progetti che raggiungono le famiglie di…",
     "keywords": [
       "Progetti",
@@ -429,7 +429,7 @@ export const MINBAR_LOCALE_SEO = {
   },
   "nl": {
     "siteName": "Minbar Al Aqsa International Association",
-    "title": "In dienst van Al-Quds en zijn standvastige bevolking | Minbar Al Aqsa…",
+    "title": "In dienst van Al-Quds en zijn standvastige bevolking",
     "description": "Een internationale vereniging die geleerden, predikers en verkondigers samenbrengt in dienst van de zaak van Al-Quds, met projecten die families in Al-Quds en de…",
     "keywords": [
       "Projecten",
@@ -465,7 +465,7 @@ export const MINBAR_LOCALE_SEO = {
   },
   "sv": {
     "siteName": "Minbar Al Aqsa International Association",
-    "title": "I tjänst för Al-Quds och dess ståndaktiga folk | Minbar Al Aqsa…",
+    "title": "I tjänst för Al-Quds och dess ståndaktiga folk",
     "description": "En internationell förening som samlar lärda, predikanter och förkunnare i tjänst för Al-Quds sak, med projekt som når familjer i Al-Quds och Gazas folk.",
     "keywords": [
       "Projekt",
@@ -501,7 +501,7 @@ export const MINBAR_LOCALE_SEO = {
   },
   "no": {
     "siteName": "Minbar Al Aqsa International Association",
-    "title": "I tjeneste for Al-Quds og dens standhaftige folk | Minbar Al Aqsa…",
+    "title": "I tjeneste for Al-Quds og dens standhaftige folk",
     "description": "Vi støtter prosjekter i Al-Quds og ved Al-Aqsa-moskeen, og bidrar til nødhjelp i Gaza gjennom dokumenterte prosjekter.",
     "keywords": [
       "Prosjekter",
@@ -538,7 +538,7 @@ export const MINBAR_LOCALE_SEO = {
   },
   "da": {
     "siteName": "Minbar Al Aqsa International Association",
-    "title": "I tjeneste for Al-Quds og dens standhaftige folk | Minbar Al Aqsa…",
+    "title": "I tjeneste for Al-Quds og dens standhaftige folk",
     "description": "Vi støtter projekter i Al-Quds og ved Al-Aqsa-moskéen og bidrager til nødhjælp i Gaza gennem dokumenterede projekter.",
     "keywords": [
       "Projekter",
@@ -575,7 +575,7 @@ export const MINBAR_LOCALE_SEO = {
   },
   "ms": {
     "siteName": "Minbar Al Aqsa International Association",
-    "title": "Berkhidmat untuk Al-Quds dan penduduknya yang bertahan | Minbar Al…",
+    "title": "Berkhidmat untuk Al-Quds dan penduduknya yang bertahan",
     "description": "Kami menyokong projek di Al-Quds dan Masjid Al-Aqsa serta membantu bantuan di Gaza melalui projek terdokumentasi.",
     "keywords": [
       "Projek",
@@ -686,7 +686,7 @@ export const MINBAR_LOCALE_SEO = {
   },
   "hi": {
     "siteName": "Minbar Al Aqsa International Association",
-    "title": "अल-क़ुद्स और उसके अडिग निवासियों की सेवा में | Minbar Al Aqsa…",
+    "title": "अल-क़ुद्स और उसके अडिग निवासियों की सेवा में",
     "description": "हम अल-क़ुद्स और मस्जिद अल-अक़्सा की परियोजनाओं का समर्थन करते हैं, और प्रलेखित परियोजनाओं के माध्यम से ग़ज़ा की राहत में सहयोग देते हैं।",
     "keywords": [
       "परियोजनाएँ",

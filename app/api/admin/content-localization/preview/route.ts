@@ -9,14 +9,12 @@ import {
 } from "@/lib/content-localization/access";
 import { prisma } from "@/lib/prisma";
 import { SUPPORTED_LOCALES as ALL_LOCALES } from "@/lib/locales";
-import { LOCALE_ENGLISH_NAMES } from "@/lib/content-localization/translate";
+import { translateItem } from "@/lib/content-localization/translate";
 
 /* Every language the site publishes, from the one list  this used to be a
    hand-kept seven while the site served nineteen. */
-const TRANSLATION_LOCALES = ALL_LOCALES.filter((l) => l !== "ar");
 const SUPPORTED_LOCALES = ALL_LOCALES;
 type Locale = (typeof SUPPORTED_LOCALES)[number];
-type TranslationLocale = (typeof TRANSLATION_LOCALES)[number];
 type ItemType = "campaign" | "category" | "post" | "postCategory" | "slide";
 
 type PreviewRow = {
@@ -34,18 +32,12 @@ type PreviewRow = {
   qualityNotes?: string[];
 };
 
-const LOCALE_NAMES: Record<string, string> = LOCALE_ENGLISH_NAMES;
 
 function parseLocale(value: unknown): Locale | null {
   return typeof value === "string" &&
     (SUPPORTED_LOCALES as readonly string[]).includes(value)
     ? (value as Locale)
     : null;
-}
-
-function isTranslationLocale(locale: Locale): locale is TranslationLocale {
-  return locale !== "ar" &&
-    (TRANSLATION_LOCALES as readonly string[]).includes(locale);
 }
 
 function normalizeText(value: unknown): string {
@@ -257,19 +249,49 @@ async function generateProfessionalTranslation(
   row: PreviewRow,
   locale: Locale,
 ): Promise<PreviewRow> {
+  const fields = Object.keys(row.sourceArabic);
+
+  if (locale !== "ar") {
+    const plainFields: Record<string, string> = {};
+    const richFields: Record<string, string> = {};
+    for (const field of fields) {
+      const value = compactText(row.sourceArabic[field]);
+      if (!value) continue;
+      if (field === "content" && value.trim().startsWith("{")) richFields[field] = value;
+      else plainFields[field] = value;
+    }
+
+    const translated = await translateItem(
+      {
+        fields: plainFields,
+        richFields,
+        itemLabel: row.typeLabel,
+        sourceLocale: "ar",
+        policy: "STANDARD",
+      },
+      locale,
+    );
+
+    return {
+      ...row,
+      suggestedTranslation: {
+        ...row.suggestedTranslation,
+        ...translated.fields,
+        ...translated.richFields,
+      },
+      qualityNotes: translated.warnings,
+    };
+  }
+
+  // Arabic remains proofreading, not translation. Keep this deliberately
+  // separate from translateItem so RELIGIOUS_LOCKED rules cannot accidentally
+  // turn a proofreading action into machine translation.
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) throw new Error("OPENAI_API_KEY is not configured");
 
-  const fields = Object.keys(row.sourceArabic);
   const sourceArabic = Object.fromEntries(
     fields.map((field) => [field, compactText(row.sourceArabic[field])]),
   );
-  const currentTranslation = Object.fromEntries(
-    fields.map((field) => [field, compactText(row.currentTranslation[field])]),
-  );
-  const task = locale === "ar"
-    ? "Proofread the Arabic fields for preview only. Preserve every fact, number, name, URL, placeholder, and currency."
-    : "Translate the Arabic fields into the target language for preview only. Preserve every fact, number, name, URL, placeholder, and currency.";
 
   const response = await fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
@@ -279,22 +301,21 @@ async function generateProfessionalTranslation(
     },
     body: JSON.stringify({
       model: process.env.CONTENT_LOCALIZATION_MODEL || "gpt-4o-mini",
-      temperature: 0.15,
+      temperature: 0.1,
       response_format: { type: "json_object" },
       messages: [
         {
           role: "system",
-          content: "Return valid JSON only. Never fabricate details. This is a preview and must not imply that content was saved.",
+          content:
+            "Return valid JSON only. Proofread Arabic conservatively. Preserve every fact, number, name, URL, placeholder, currency and religious quotation exactly unless correcting an obvious spelling or grammar error.",
         },
         {
           role: "user",
           content: [
-            task,
-            `Target language: ${LOCALE_NAMES[locale]} (${locale}).`,
+            "Proofread the Arabic fields for preview only. Do not translate.",
             "Return: {\"fields\":{...},\"qualityNotes\":[\"...\"]}",
             `Item type: ${row.typeLabel}`,
             `Arabic source JSON: ${JSON.stringify(sourceArabic)}`,
-            `Current text JSON: ${JSON.stringify(currentTranslation)}`,
           ].join("\n"),
         },
       ],
@@ -303,18 +324,15 @@ async function generateProfessionalTranslation(
 
   if (!response.ok) {
     const details = await response.text().catch(() => "");
-    throw new Error(`AI translation failed: ${response.status} ${details.slice(0, 300)}`);
+    throw new Error(`AI proofreading failed: ${response.status} ${details.slice(0, 300)}`);
   }
 
   const payload = await response.json();
   const raw = payload?.choices?.[0]?.message?.content;
-  if (typeof raw !== "string" || !raw) {
-    throw new Error("AI translation returned no content");
-  }
+  if (typeof raw !== "string" || !raw) throw new Error("AI proofreading returned no content");
   const parsed = JSON.parse(stripCodeFence(raw));
-  const generated = parsed?.fields && typeof parsed.fields === "object"
-    ? parsed.fields
-    : {};
+  const generated = parsed?.fields && typeof parsed.fields === "object" ? parsed.fields : {};
+
   const suggestedTranslation = { ...row.suggestedTranslation };
   for (const field of fields) {
     const value = generated[field];

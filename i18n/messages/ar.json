@@ -1807,7 +1807,7 @@
     "donationSummary": "تبرّعت بـ{amount} لمشروع {project}",
     "projectCount": {
       "zero": "لا مشاريع",
-      "one": "مشروع واحد",
+      "one": "{count} مشروع",
       "two": "مشروعان",
       "few": "{count} مشاريع",
       "many": "{count} مشروعًا",
@@ -3480,6 +3480,7 @@
     "perOnce": "مرة واحدة",
     "chooseFirst": "اختر طريقة تبرعك أولًا",
     "otherAmount": "مبلغ آخر",
-    "otherCount": "عدد آخر"
+    "otherCount": "عدد آخر",
+    "hadithMeaning": "«أحبُّ الأعمال إلى الله أدومُها وإن قلَّ.»"
   }
 }

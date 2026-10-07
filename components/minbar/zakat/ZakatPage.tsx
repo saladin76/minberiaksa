@@ -12,7 +12,6 @@ import { useMinbarMoney } from "@/hooks/useMinbarMoney";
 import TravelBanner from "@/components/minbar/banners/TravelBanner";
 import IbadanBanner from "@/components/minbar/banners/IbadanBanner";
 import { ArrowGlyph } from "@/components/minbar/home/TopSections";
-import { CategoryProgramme } from "@/components/minbar/categories/CategorySections";
 import type { CategoryPageContent } from "@/lib/minbar/category-page";
 
 /**

@@ -76,12 +76,27 @@ const DEFAULT_SEND_CONTROLS: CampaignSendControlsDraft = {
 };
 
 
-async function readApiJson(response: Response, fallback: string): Promise<Record<string, any>> {
+type CampaignApiJson = {
+  ok?: boolean;
+  error?: unknown;
+  message?: unknown;
+  templates?: TemplateSummary[];
+  lists?: AudienceListSummary[];
+  badges?: BadgeSummary[];
+  dailyCap?: unknown;
+  source?: unknown;
+  audienceSegmentKey?: unknown;
+  matched?: unknown;
+  added?: unknown;
+  [key: string]: unknown;
+};
+
+async function readApiJson(response: Response, fallback: string): Promise<CampaignApiJson> {
   const text = await response.text();
-  let data: Record<string, any> = {};
+  let data: CampaignApiJson = {};
   if (text) {
     try {
-      data = JSON.parse(text) as Record<string, any>;
+      data = JSON.parse(text) as CampaignApiJson;
     } catch {
       const compact = text.replace(/\s+/g, " ").trim().slice(0, 180);
       throw new Error(response.ok ? fallback : `${fallback} (HTTP ${response.status})${compact ? `: ${compact}` : ""}`);

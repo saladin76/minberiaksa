@@ -31,7 +31,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24
           cache: npm
       - run: npm ci --ignore-scripts
       # The Prisma client is generated code that the typecheck reads; without it every model access
@@ -55,7 +55,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24
           cache: npm
       - run: npm ci --ignore-scripts
       - run: npx prisma generate
@@ -65,11 +65,15 @@ jobs:
   unit:
     name: Integration-settings suite
     runs-on: ubuntu-latest
+    env:
+      # Prisma validate only needs a syntactically valid datasource URL; source-contract
+      # tests must not depend on a live production/staging database.
+      DATABASE_URL: mongodb://127.0.0.1:27017/minberiaksa_ci
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24
           cache: npm
       - run: npm ci --ignore-scripts
       - run: npx prisma generate
@@ -83,7 +87,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24
           cache: npm
       - run: npm ci --ignore-scripts
       - run: npm run i18n:audit:strict
@@ -100,7 +104,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24
           cache: npm
       - run: npm ci --ignore-scripts
       - run: npx prisma generate

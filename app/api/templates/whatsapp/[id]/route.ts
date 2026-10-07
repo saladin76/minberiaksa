@@ -90,7 +90,7 @@ export async function GET(
     if (!locale || !category) continue;
     providerCategoriesByLocale[locale] = [...new Set([...(providerCategoriesByLocale[locale] ?? []), category])];
   }
-  const { variants: _variants, wabaVariants: _wabaVariants, ...templateData } = template;
+  const templateData = { ...template, variants: undefined, wabaVariants: undefined };
   return NextResponse.json({ template: { ...templateData, submittedLocales, providerCategoriesByLocale } });
 }
 

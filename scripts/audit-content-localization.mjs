@@ -4,8 +4,11 @@ import path from "node:path";
 import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
-const TARGET_LOCALES = ["en", "fr", "tr", "id", "pt", "es", "de"];
-const CRITICAL_LOCALE = "de";
+const TARGET_LOCALES = [
+  "tr", "en", "fr", "de", "es", "id", "pt", "ur", "sq",
+  "it", "nl", "sv", "no", "da", "ms", "ja", "zh", "hi",
+];
+const CRITICAL_LOCALES = new Set(TARGET_LOCALES);
 const strict = process.argv.includes("--strict");
 const repoRoot = process.cwd();
 const outDir = path.join(repoRoot, "tmp");
@@ -133,7 +136,7 @@ async function main() {
   const report = {
     generatedAt: new Date().toISOString(),
     targetLocales: TARGET_LOCALES,
-    criticalLocale: CRITICAL_LOCALE,
+    criticalLocales: [...CRITICAL_LOCALES],
     dataSources: { categories: categories.length, campaigns: campaigns.length, blogPosts: posts.length, blogCategories: postCategories.length },
     summary: summarize(items),
     items,
@@ -149,7 +152,11 @@ async function main() {
   fs.writeFileSync(path.join(outDir, "content-localization-workload.json"), JSON.stringify(workload, null, 2));
   console.log("Content localization audit complete");
   console.log(JSON.stringify(report.summary, null, 2));
-  if (strict && (report.summary.arabicQualityIssues > 0 || (report.summary.byLocale.de?.incompleteItems ?? 0) > 0)) process.exit(1);
+  const incompleteCritical = TARGET_LOCALES.reduce(
+    (sum, locale) => sum + (report.summary.byLocale[locale]?.incompleteItems ?? 0),
+    0,
+  );
+  if (strict && (report.summary.arabicQualityIssues > 0 || incompleteCritical > 0)) process.exit(1);
 }
 
 main().catch((error) => { console.error(error); process.exit(1); }).finally(async () => prisma.$disconnect());

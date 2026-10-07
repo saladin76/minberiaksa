@@ -1,3 +1,5 @@
+import { isValidLocale } from "@/lib/locales";
+import { LOCALE_ENGLISH_NAMES } from "@/lib/content-localization/translate";
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/options";
@@ -44,7 +46,21 @@ function cleanArray(value: unknown, maxItems = 8, maxLen = 80) {
     .slice(0, maxItems);
 }
 
-function sanitizeSuggestion(raw: any, fallbackTitle: string, type: SeoContentType): SeoSuggestion {
+function seoTitleMax(locale: string) {
+  return locale === "ja" || locale === "zh" ? 42 : 70;
+}
+
+function metaDescriptionMax(locale: string) {
+  return locale === "ja" || locale === "zh" ? 90 : 160;
+}
+
+const SCHEMA_BY_TYPE: Record<SeoContentType, string> = {
+  campaign: "DonateAction + BreadcrumbList + FAQPage",
+  category: "CollectionPage + BreadcrumbList",
+  blog: "Article + BreadcrumbList + FAQPage",
+};
+
+function sanitizeSuggestion(raw: any, fallbackTitle: string, type: SeoContentType, locale: string): SeoSuggestion {
   const faqSource = Array.isArray(raw?.faq) ? raw.faq : [];
   const faq = faqSource
     .map((item: any) => ({ question: cleanString(item?.question, 120), answer: cleanString(item?.answer, 260) }))
@@ -52,14 +68,14 @@ function sanitizeSuggestion(raw: any, fallbackTitle: string, type: SeoContentTyp
     .slice(0, 5);
 
   return {
-    seoTitle: cleanString(raw?.seoTitle, 80) || fallbackTitle,
-    metaDescription: cleanString(raw?.metaDescription, 180),
+    seoTitle: cleanString(raw?.seoTitle, seoTitleMax(locale)) || cleanString(fallbackTitle, seoTitleMax(locale)),
+    metaDescription: cleanString(raw?.metaDescription, metaDescriptionMax(locale)),
     primaryKeyword: cleanString(raw?.primaryKeyword, 80),
     keywords: cleanArray(raw?.keywords, 10, 60),
     longTailKeywords: cleanArray(raw?.longTailKeywords, 8, 100),
     altText: cleanString(raw?.altText, 140),
     faq,
-    schemaType: cleanString(raw?.schemaType, 60) || (type === "blog" ? "Article + FAQ" : type === "category" ? "CollectionPage + Breadcrumb" : "Fundraising Campaign + FAQ"),
+    schemaType: SCHEMA_BY_TYPE[type],
     notes: cleanArray(raw?.notes, 5, 160),
   };
 }
@@ -81,19 +97,25 @@ export async function POST(request: NextRequest) {
 
     const title = cleanString(body?.title, 220);
     const description = cleanString(body?.description, 3500);
-    const locale = cleanString(body?.locale, 20) || "ar";
+    const requestedLocale = cleanString(body?.locale, 20) || "ar";
+    const locale = isValidLocale(requestedLocale) ? requestedLocale : "ar";
+    const languageName = LOCALE_ENGLISH_NAMES[locale] ?? locale;
     const currentKeywords = cleanArray(body?.keywords, 8, 60);
 
     const prompt = [
       "You are a senior SEO strategist and humanitarian fundraising copywriter.",
       "Create professional SEO suggestions for a nonprofit donation website.",
       "Use natural human wording. Do not mention AI, models, generation, or automation.",
+      `Write every suggested human-facing field in ${languageName}. Do not return English copy unless the target language is English or a proper noun genuinely requires it.`,
+      "Localize search intent for the target market; do not merely translate English keywords word-for-word.",
       "Keep the visible site name/title separate from SEO title. Do not ask to rename the visible category/project/article unless necessary.",
       "Preserve facts. Do not invent countries, numbers, guarantees, dates, medical claims, religious quotes, or promises.",
       "Return strict JSON only with this shape:",
       "{\"seoTitle\":\"\",\"metaDescription\":\"\",\"primaryKeyword\":\"\",\"keywords\":[\"\"],\"longTailKeywords\":[\"\"],\"altText\":\"\",\"faq\":[{\"question\":\"\",\"answer\":\"\"}],\"schemaType\":\"\",\"notes\":[\"\"]}",
       "SEO title should usually be 45-70 characters. Meta description should usually be 130-160 characters.",
-      "FAQ answers must be short and careful.",
+      "FAQ answers must be short and careful. Only create FAQ claims directly supported by the supplied content; otherwise omit the FAQ item.",
+      "Do not invent impact numbers, beneficiary counts, tax status, urgency, religious rulings, guarantees, delivery dates or locations.",
+      `Target SEO-title maximum: ${seoTitleMax(locale)} characters. Target meta-description maximum: ${metaDescriptionMax(locale)} characters.`,
       `Content type: ${type}`,
       `Locale: ${locale}`,
       `Visible title/name: ${title}`,
@@ -127,7 +149,7 @@ export async function POST(request: NextRequest) {
     }
 
     const parsed = JSON.parse(stripCodeFence(raw));
-    const suggestion = sanitizeSuggestion(parsed, title, type);
+    const suggestion = sanitizeSuggestion(parsed, title, type, locale);
     return NextResponse.json({ ok: true, suggestion });
   } catch (error) {
     console.error("SEO suggestions failed:", error);

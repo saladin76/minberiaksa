@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import { toast } from "react-hot-toast";
 import { Loader2, Save, TestTube2, RefreshCw } from "lucide-react";
@@ -139,8 +139,6 @@ export default function TrackingSettingsManager({ canManage, canTest }: { canMan
   const [refreshingDiagnostics, setRefreshingDiagnostics] = useState(false);
   const [lastTest, setLastTest] = useState<Partial<Record<Platform, string>>>({});
 
-  useEffect(() => { void load(); }, []);
-
   const status = useMemo(() => ({
     meta: !settings.facebookPixelId && !settings.facebookAccessTokenPresent ? "غير مفعّل" : settings.facebookPixelId && settings.facebookAccessTokenPresent ? "مُعدّ" : "إعدادات ناقصة",
     ga4: !settings.gaMeasurementId && !settings.gaApiSecretPresent ? "غير مفعّل" : settings.gaMeasurementId && settings.gaApiSecretPresent ? "مُعدّ" : "إعدادات ناقصة",
@@ -149,23 +147,25 @@ export default function TrackingSettingsManager({ canManage, canTest }: { canMan
     x: !settings.xPixelId && !settings.xConversionEventId && !settings.xAccessTokenPresent ? "غير مفعّل" : (settings.xPixelId || settings.xConversionEventId) && settings.xAccessTokenPresent && settings.xAdAccountId ? "مُعدّ" : "إعدادات ناقصة",
   }), [settings]);
 
-  async function load() {
-    try {
-      const res = await axios.get<Partial<Settings>>("/api/admin/tracking");
-      setSettings({ ...defaults, ...res.data, metaDonateEventName: res.data.metaDonateEventName ?? "Donate" });
-      await loadDiagnostics();
-    } catch { toast.error("فشل تحميل إعدادات التتبع"); }
-    finally { setLoading(false); }
-  }
-
-  async function loadDiagnostics() {
+  const loadDiagnostics = useCallback(async () => {
     setRefreshingDiagnostics(true);
     try {
       const res = await axios.get<{ ok: boolean; diagnostics: Diagnostics }>("/api/admin/tracking/diagnostics");
       if (res.data.ok) setDiagnostics(res.data.diagnostics ?? {});
     } catch { toast.error("فشل تحميل تشخيص التتبع"); }
     finally { setRefreshingDiagnostics(false); }
-  }
+  }, []);
+
+  const load = useCallback(async () => {
+    try {
+      const res = await axios.get<Partial<Settings>>("/api/admin/tracking");
+      setSettings({ ...defaults, ...res.data, metaDonateEventName: res.data.metaDonateEventName ?? "Donate" });
+      await loadDiagnostics();
+    } catch { toast.error("فشل تحميل إعدادات التتبع"); }
+    finally { setLoading(false); }
+  }, [loadDiagnostics]);
+
+  useEffect(() => { void load(); }, [load]);
 
   function set<K extends keyof Settings>(key: K, value: Settings[K]) { setSettings((s) => ({ ...s, [key]: value })); }
 

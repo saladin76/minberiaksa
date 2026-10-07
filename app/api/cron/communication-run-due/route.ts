@@ -14,7 +14,14 @@ export async function GET(request: NextRequest) {
 
   try {
     // Due schedules first, then campaigns still mid-walk  see `runDueCampaigns`.
-    const results = await runDueCampaigns({ actor: { actorRole: "SYSTEM" }, max: 20 });
+    // The cron runs every minute. Keep each invocation intentionally small so provider/network
+    // latency cannot push the function into Vercel's 300-second hard timeout; unfinished campaigns
+    // remain SENDING and resume safely on the next tick.
+    const results = await runDueCampaigns({
+      actor: { actorRole: "SYSTEM" },
+      max: 4,
+      maxBatchesPerCampaign: 1,
+    });
     const totals = results.reduce(
       (acc, row) => ({ sent: acc.sent + row.sent, skipped: acc.skipped + row.skipped, failed: acc.failed + row.failed }),
       { sent: 0, skipped: 0, failed: 0 }

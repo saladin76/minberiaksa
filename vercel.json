@@ -34,5 +34,13 @@
     }
   ],
   "installCommand": "npm ci --prefer-offline --no-audit --no-fund",
-  "buildCommand": "npm run build:vercel"
+  "buildCommand": "npm run build:vercel",
+  "github": {
+    "autoJobCancelation": true
+  },
+  "git": {
+    "deploymentEnabled": {
+      "fix/production-runtime-audit-oct7-safe": false
+    }
+  }
 }

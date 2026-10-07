@@ -1044,9 +1044,15 @@ export async function executeCampaignSend(
  *
  * A campaign whose lease is still fresh is left alone; it is being worked on right now.
  */
-export async function runDueCampaigns(opts: { actor?: Actor; max?: number } = {}): Promise<ExecutionSummary[]> {
+export async function runDueCampaigns(
+  opts: { actor?: Actor; max?: number; maxBatchesPerCampaign?: number } = {},
+): Promise<ExecutionSummary[]> {
   if (!process.env.DATABASE_URL) return [];
-  const max = Math.min(opts.max ?? 10, 50);
+  const max = Math.max(1, Math.min(opts.max ?? 10, 50));
+  // Cron invocations must stay bounded. Campaign progress is durable, so processing one small slice
+  // per campaign is safer than allowing a single minute tick to monopolize the function until Vercel
+  // kills it. Manual Send Now keeps its own larger default batch budget.
+  const maxBatchesPerCampaign = Math.max(1, Math.min(opts.maxBatchesPerCampaign ?? 1, DEFAULT_MAX_BATCHES));
   const results: ExecutionSummary[] = [];
 
   const dueCandidates = await prisma.communicationCampaign.findMany({
@@ -1061,7 +1067,7 @@ export async function runDueCampaigns(opts: { actor?: Actor; max?: number } = {}
     return (a.scheduledAt?.getTime() ?? 0) - (b.scheduledAt?.getTime() ?? 0);
   });
   const due = dueCandidates.slice(0, max);
-  for (const campaign of due) results.push(await executeCampaignSend(campaign.id, { actor: opts.actor, mode: "DUE" }));
+  for (const campaign of due) results.push(await executeCampaignSend(campaign.id, { actor: opts.actor, mode: "DUE", maxBatches: maxBatchesPerCampaign }));
 
   const budget = max - due.length;
   if (budget > 0) {
@@ -1082,7 +1088,7 @@ export async function runDueCampaigns(opts: { actor?: Actor; max?: number } = {}
       const progress = progressOf(asCampaign);
       if (!progress || progress.done) continue;
       if (leaseIsFresh(leaseOf(asCampaign))) continue;
-      results.push(await executeCampaignSend(row.id, { actor: opts.actor, mode: "RESUME" }));
+      results.push(await executeCampaignSend(row.id, { actor: opts.actor, mode: "RESUME", maxBatches: maxBatchesPerCampaign }));
     }
   }
   return results;

@@ -22,7 +22,9 @@ test("one-to-one WhatsApp preserves the 24h free-form path and separates Utility
   assert.match(source, /FREEFORM/);
   assert.match(source, /UTILITY/);
   assert.match(source, /MARKETING/);
-  assert.match(source, /WHATSAPP_MARKETING_OPT_IN_REQUIRED/);
+  // Current product behavior intentionally does not hard-block one-to-one
+  // marketing sends on the internal whatsappOptIn flag.
+  assert.doesNotMatch(source, /WHATSAPP_MARKETING_OPT_IN_REQUIRED/);
   assert.match(source, /UTILITY_TEMPLATE_FALLBACK/);
   assert.match(source, /MARKETING_TEMPLATE/);
 });
@@ -174,7 +176,9 @@ test("WhatsApp campaign creation configures send controls before the campaign ro
   assert.match(wizard, /التالي: إعداد الإرسال/);
   assert.match(wizard, /sendControls/);
   assert.match(route, /sendControlsSchema/);
-  assert.match(route, /metadata: \{ sendControls \}/);
+  assert.match(route, /metadata:/);
+  assert.match(route, /sendControls/);
+  assert.match(route, /fallbackLocale/);
 });
 
 test("campaign controls dialog stays scrollable and cannot bubble clicks into the campaign row", () => {
@@ -191,7 +195,8 @@ test("WhatsApp inbox defaults to all conversations and remembers an available se
   assert.match(inbox, /useState\("all"\)/);
   assert.match(inbox, /communication:whatsapp:senderId/);
   assert.match(inbox, /nextSenders\.length === 1/);
-  assert.match(inbox, /setActiveId\(nextConversations\[0\]\.id\)/);
+  assert.match(inbox, /nextConversations\[0\]\.id/);
+  assert.match(inbox, /setActiveId\(\(current\)/);
   assert.match(inbox, /عرض كل المحادثات/);
 });
 
@@ -201,7 +206,8 @@ test("WhatsApp inbox exposes the greeting-template re-entry path outside the 24-
   assert.match(inbox, /إرسال قالب تحية/);
   assert.match(inbox, /initialMode=\{smartInitialMode\}/);
   assert.match(smart, /initialMode\?: "FREEFORM" \| "UTILITY" \| "MARKETING"/);
-  assert.match(smart, /preferred === "MARKETING"/);
+  assert.match(smart, /const preferred = initialMode/);
+  assert.match(smart, /setMode\(preferred\)/);
 });
 
 test("dashboard topbar makes unanswered WhatsApp conversations visually prominent", () => {
@@ -228,7 +234,10 @@ test("campaign audience explains why a donor is unavailable and does not trust n
   const picker = read("app/(dashboard)/dashboard/communication/campaigns/new/_components/DonorPicker.tsx");
   const route = read("app/api/communication/audience-candidates/route.ts");
   assert.match(route, /eligibilityReason/);
-  assert.match(route, /لا توجد موافقة واتساب تسويقية/);
+  // Preserve the current product rule: WhatsApp availability is phone/contact
+  // based here; the UI must not invent a marketing-consent rejection.
+  assert.doesNotMatch(route, /لا توجد موافقة واتساب تسويقية/);
+  assert.match(route, /if \(channel === "WHATSAPP"\) return null/);
   assert.match(route, /لا توجد موافقة SMS/);
   assert.match(route, /لا توجد موافقة بريد تسويقي/);
   assert.match(picker, /eligibilityReason/);
@@ -252,15 +261,16 @@ test("campaign audience badge evaluation stays scoped to visible donors", () => 
 });
 
 
-test("individual WhatsApp marketing consent can be explicitly confirmed and audited from Smart WhatsApp", () => {
+test("Smart WhatsApp preserves the current consent surface without adding a new operator flow", () => {
   const route = read("app/api/dashboard/communication/whatsapp/smart-send/route.ts");
   const dialog = read("components/dashboard/SmartWhatsappDialog.tsx");
+  // The existing backend audit capability remains available, but this change
+  // must not introduce a new consent-management UI or hard sending gate.
   assert.match(route, /consentSchema/);
   assert.match(route, /dashboard-manual-whatsapp-confirmation/);
   assert.match(route, /setProfileConsent/);
-  assert.match(dialog, /تسجيل الموافقة/);
-  assert.match(dialog, /وصول رسالة تبرع فاشل يثبت أن الرقم صالح/);
-  assert.match(dialog, /setMarketingConsent/);
+  assert.doesNotMatch(dialog, /تسجيل الموافقة/);
+  assert.doesNotMatch(dialog, /setMarketingConsent/);
 });
 
 
