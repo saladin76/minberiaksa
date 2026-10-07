@@ -138,9 +138,30 @@ export async function createDonationFromBankTransfer(input: BankTransferDonation
     donorId = matches[0].id;
   }
   if (!donorId) {
+    // Mongo unique indexes do not allow creating many User rows with the same missing/null
+    // value on an @unique field. Bank statements often contain no email/phone, so give the
+    // synthetic donor a deterministic non-deliverable address that is unique to this transfer.
+    // Marketing is explicitly disabled so this internal identity can never become a send target.
+    const internalEmail = `bank-transfer+${input.transactionHash.toLowerCase()}@donor.invalid`;
     const created = await prisma.user
-      .create({ data: { name: name || "متبرع تحويل بنكي", role: "DONOR", preferredLang: locale }, select: { id: true } })
-      .catch(() => null);
+      .create({
+        data: {
+          name: name || "متبرع تحويل بنكي",
+          email: internalEmail,
+          role: "DONOR",
+          preferredLang: locale,
+          emailNotifications: false,
+          smsNotifications: false,
+        },
+        select: { id: true },
+      })
+      .catch((error) => {
+        console.error("[bank-transfers] donor create failed", {
+          transactionHash: input.transactionHash,
+          error: error instanceof Error ? error.message : String(error),
+        });
+        return null;
+      });
     if (!created) return { ok: false, reason: "DONOR_CREATE_FAILED" };
     donorId = created.id;
   }
