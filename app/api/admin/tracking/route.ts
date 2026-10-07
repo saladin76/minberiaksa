@@ -4,7 +4,7 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 import { prisma } from "@/lib/prisma";
 import { rawCommand } from "@/lib/prisma-raw-command";
 import { requireAdminOrDashboardPermission } from "@/lib/dashboard/api-auth";
-import { getRawTrackingSettings, TRACKING_SETTINGS_TRACKING_TRACKING_SETTINGS_COLLECTION } from "@/lib/tracking/tracking-settings";
+import { getRawTrackingSettings, TRACKING_SETTINGS_COLLECTION } from "@/lib/tracking/tracking-settings";
 import { writeAuditLog, auditActorFromDashboardSession } from "@/lib/audit-log";
 
 
@@ -175,7 +175,7 @@ async function persistRawSettings(update: { $set: Record<string, unknown>; $unse
 
   if (id) {
     const command: Record<string, unknown> = {
-      update: TRACKING_TRACKING_SETTINGS_COLLECTION,
+      update: TRACKING_SETTINGS_COLLECTION,
       updates: [
         {
           q: { _id: { $oid: id } },
@@ -197,7 +197,7 @@ async function persistRawSettings(update: { $set: Record<string, unknown>; $unse
     updatedAt: now,
     metaDonateEventName: update.$set.metaDonateEventName ?? "Donate",
   };
-  await prisma.$runCommandRaw({ insert: TRACKING_TRACKING_SETTINGS_COLLECTION, documents: [insertDoc] });
+  await prisma.$runCommandRaw({ insert: TRACKING_SETTINGS_COLLECTION, documents: [insertDoc] });
   return getRawTrackingSettings();
 }
 
