@@ -2432,12 +2432,12 @@
   "ProjectShares": {
     "unitSingular": "份",
     "unitPlural": "份",
-    "count": "{count}份",
-    "countWithUnit": "{count}{unit}",
-    "pricePer": "每{unit}{price}",
-    "soldOfTotal": "{total}{unit}中已有{sold}",
-    "givenSoFar": "目前已捐出{count}{unit}",
-    "chooseCount": "选择{unit}数",
+    "count": "{count} 份",
+    "countWithUnit": "{count} {unit}",
+    "pricePer": "每 {unit} {price}",
+    "soldOfTotal": "{total} {unit} 中已完成 {sold}",
+    "givenSoFar": "目前已捐出 {count} {unit}",
+    "chooseCount": "选择 {unit} 数量",
     "customCountPh": "其他数量"
   }
 }
