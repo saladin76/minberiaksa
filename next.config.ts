@@ -140,14 +140,8 @@ const nextConfig: NextConfig = {
   devIndicators: { position: "bottom-right" },
   reactStrictMode: true,
   serverExternalPackages: ["@usewaypoint/email-builder"],
-  /* Donation PDFs use the remote Chromium pack in lib/certificates/pdf.ts.
-     The full package is retained for API stability, but its compressed local
-     browser archives are intentionally excluded from every server trace. Without
-     this, the same ~68 MB bin/ payload is copied into multiple Vercel functions
-     and "Deploying outputs..." dominates the deployment time. */
-  outputFileTracingExcludes: {
-    "/*": ["./node_modules/@sparticuz/chromium/bin/**"],
-  },
+  /* Donation PDFs use @sparticuz/chromium-min + a remote browser pack.
+     The large browser archive is therefore absent from serverless outputs. */
   compiler: { removeConsole: process.env.NODE_ENV === "production" ? { exclude: ["error", "warn"] } : false },
   /* Preview and development deployments carry production canonicals and
      hreflang, which does not stop a crawler indexing the preview URL itself.
