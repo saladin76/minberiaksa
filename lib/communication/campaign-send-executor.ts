@@ -30,7 +30,8 @@ function recipientQuietHoursSlice(plan: SendPlan, controls: CampaignSendControls
   }
 
   const now = new Date();
-  const firstQuiet = plan.recipients.find((recipient) => {
+  const orderedRecipients = [...plan.recipients].sort((a, b) => a.cursorId.localeCompare(b.cursorId));
+  const firstQuiet = orderedRecipients.find((recipient) => {
     const zone = recipientTimeZone(
       { country: recipient.country, phone: recipient.phone },
       controls.quietHours.timezone,
@@ -39,14 +40,14 @@ function recipientQuietHoursSlice(plan: SendPlan, controls: CampaignSendControls
   });
   if (!firstQuiet) return { plan, blocked: false };
 
-  // Audience rows are walked by ascending ObjectId. Stop immediately before the first recipient
-  // whose local clock is quiet, so that recipient remains behind the persisted cursor and is
-  // retried automatically by the next scheduler run instead of being permanently skipped.
-  const beforeRecipients = plan.recipients.filter((recipient) => recipient.userId < firstQuiet.userId);
-  const beforeSkipped = plan.skippedList.filter((recipient) => recipient.userId < firstQuiet.userId);
+  // Stop immediately before the first recipient whose local clock is quiet. The cursor is the
+  // underlying audience cursor (donor id for smart/global audiences, list-member id for saved
+  // audiences), so this works for every audience type without dropping a recipient.
+  const beforeRecipients = plan.recipients.filter((recipient) => recipient.cursorId < firstQuiet.cursorId);
+  const beforeSkipped = plan.skippedList.filter((recipient) => recipient.cursorId < firstQuiet.cursorId);
   const ids = [
-    ...beforeRecipients.map((recipient) => recipient.userId),
-    ...beforeSkipped.map((recipient) => recipient.userId),
+    ...beforeRecipients.map((recipient) => recipient.cursorId),
+    ...beforeSkipped.map((recipient) => recipient.cursorId),
   ].sort();
 
   if (!ids.length) return { plan: null, blocked: true };
