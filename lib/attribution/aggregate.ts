@@ -46,7 +46,7 @@ export interface AggregateDonationInput {
   attribution: Record<string, unknown> | null;
   conversionEventsSentAt: Date | null;
   conversionFailedEventsSentAt: Date | null;
-  donorId: string;
+  donorId: string | null;
   donorCountryCode: string | null;
   /** First donation ever (across all time) for this donor  used to flag new-donor revenue. */
   isFirstEverDonation: boolean;
@@ -284,9 +284,11 @@ export function aggregateBreakdown(
     if (d.status === "PAID" && d.paidAt) {
       row.revenueUSD += amount;
       row.paidCount += 1;
-      row.donorSet.add(d.donorId);
-      if (d.isFirstEverDonation) row.newDonorSet.add(d.donorId);
-      else row.returningDonorSet.add(d.donorId);
+      if (d.donorId) {
+        row.donorSet.add(d.donorId);
+        if (d.isFirstEverDonation) row.newDonorSet.add(d.donorId);
+        else row.returningDonorSet.add(d.donorId);
+      }
       if (PAID_ATTRIBUTION_STATUSES.has(source.status)) {
         row.paidConfidenceSum += source.confidence;
         row.paidConfidenceCount += 1;
@@ -554,11 +556,11 @@ export function computeOverview(donations: AggregateDonationInput[]): OverviewRe
     if (NON_AD_ATTRIBUTION_STATUSES.has(source.status)) {
       organicRevenueUSD += amount;
       paidOrganicCount += 1;
-      if (d.isFirstEverDonation) newDonorsOrg.add(d.donorId);
+      if (d.isFirstEverDonation && d.donorId) newDonorsOrg.add(d.donorId);
     } else {
       adRevenueUSD += amount;
       paidAdCount += 1;
-      if (d.isFirstEverDonation) newDonorsAd.add(d.donorId);
+      if (d.isFirstEverDonation && d.donorId) newDonorsAd.add(d.donorId);
       if (PAID_ATTRIBUTION_STATUSES.has(source.status)) {
         paidAdConfidenceSum += source.confidence;
         paidAdConfidenceCount += 1;
