@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { LOCALE_SEO, OG_LOCALE_MAP, OG_IMAGE, SITE_URL, buildHreflang } from "@/lib/seo";
+import { LOCALES, LOCALE_SEO, OG_LOCALE_MAP, OG_IMAGE, SITE_URL, buildHreflang } from "@/lib/seo";
 import type { Locale } from "@/lib/seo";
 import { Suspense } from "react";
 import { getServerSession } from "next-auth";
@@ -72,6 +72,7 @@ export async function generateMetadata({
       siteName: seo.siteName,
       images: [{ url: OG_IMAGE, width: 1200, height: 630, alt: seo.siteName }],
       locale: OG_LOCALE_MAP[locale],
+      alternateLocale: LOCALES.filter((candidate) => candidate !== locale).map((candidate) => OG_LOCALE_MAP[candidate]),
       type: "website",
     },
     twitter: {
