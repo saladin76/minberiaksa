@@ -222,6 +222,7 @@ export async function submitBankTransferReceipt(input: SubmitReceiptInput): Prom
 
   const updated = (await findClaimById(claim.id))!;
   const donor = updated.donation.donor;
+  if (!donor) return { ok: false, reason: "CLOSED" };
   const amount = safeMoney(updated.donation.totalAmount, updated.donation.currency, "en");
   await writeAuditLog({
     actorId: donor.id,
@@ -309,7 +310,7 @@ export async function confirmBankTransferClaim(claimId: string, actor: ClaimActo
     actorName: actor.actorName,
     actorRole: actor.actorRole,
     action: "BANK_TRANSFER_CONFIRMED",
-    messageAr: `${actor.actorName ?? "مسؤول"} أكّد تحويلًا بنكيًا من ${updated.donation.donor.name ?? "متبرع"} (${amount})`,
+    messageAr: `${actor.actorName ?? "مسؤول"} أكّد تحويلًا بنكيًا من ${updated.donation.donor?.name ?? "متبرع"} (${amount})`,
     entityType: "Donation",
     entityId: updated.donationId,
     metadata: { claimId: updated.id, amountUSD: updated.donation.amountUSD ?? null, submissions: updated.submissionCount },
@@ -319,7 +320,7 @@ export async function confirmBankTransferClaim(claimId: string, actor: ClaimActo
   /* The same pipeline a card payment runs: DONATION_PAID triggers (the
      official receipt email), Telegram, server conversions, FIRST_DONATION. */
   void dispatchDonationPaid(updated.donationId);
-  void sendBankTransferEmail("CONFIRMED", updated, { locale: updated.donation.locale ?? updated.donation.donor.preferredLang ?? "en", origin: opts.origin });
+  void sendBankTransferEmail("CONFIRMED", updated, { locale: updated.donation.locale ?? updated.donation.donor?.preferredLang ?? "en", origin: opts.origin });
 
   return { ok: true, claim: updated };
 }
@@ -365,14 +366,14 @@ export async function rejectBankTransferClaim(claimId: string, actor: ClaimActor
     actorName: actor.actorName,
     actorRole: actor.actorRole,
     action: "BANK_TRANSFER_REJECTED",
-    messageAr: `${actor.actorName ?? "مسؤول"} رفض إيصال تحويل بنكي من ${updated.donation.donor.name ?? "متبرع"} (${amount})  ${reason}`,
+    messageAr: `${actor.actorName ?? "مسؤول"} رفض إيصال تحويل بنكي من ${updated.donation.donor?.name ?? "متبرع"} (${amount})  ${reason}`,
     entityType: "Donation",
     entityId: updated.donationId,
     metadata: { claimId: updated.id, reason, submissions: updated.submissionCount },
     stream: "TEAM",
   });
 
-  void sendBankTransferEmail("REJECTED", updated, { locale: updated.donation.locale ?? updated.donation.donor.preferredLang ?? "en", origin: input.origin });
+  void sendBankTransferEmail("REJECTED", updated, { locale: updated.donation.locale ?? updated.donation.donor?.preferredLang ?? "en", origin: input.origin });
 
   return { ok: true, claim: updated };
 }
@@ -397,7 +398,7 @@ async function notifyTeamOfReceipt(claim: ClaimWithDonation, origin: string): Pr
     const text = [
       `🏦 <b>إيصال تحويل بنكي جديد بانتظار المراجعة</b>`,
       ``,
-      `👤 ${htmlEscape(d.donor.name ?? "—")}${d.donor.email ? ` · ${htmlEscape(d.donor.email)}` : ""}`,
+      `👤 ${htmlEscape(d.donor?.name ?? "—")}${d.donor?.email ? ` · ${htmlEscape(d.donor.email)}` : ""}`,
       `💵 <b>${htmlEscape(amount)}</b>${d.amountUSD != null && d.currency !== "USD" ? ` (≈ $${Math.round(d.amountUSD)})` : ""}`,
       claim.bankName ? `🏛 ${htmlEscape(claim.bankName)}${claim.bankCurrency ? ` · ${claim.bankCurrency}` : ""}` : null,
       lines.length ? `🎯 ${htmlEscape(lines.join("، "))}` : null,
