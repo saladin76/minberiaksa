@@ -2428,5 +2428,16 @@
     "yourDonation": "Uw donatie",
     "fileTooLarge": "Het bestand is {size}; maximaal toegestaan is {max}. Comprimeer de foto of exporteer een pdf en probeer het opnieuw.",
     "uploadFailed": "Het uploaden is niet gelukt. Controleer je verbinding en probeer het opnieuw."
+  },
+  "ProjectShares": {
+    "unitSingular": "aandeel",
+    "unitPlural": "aandelen",
+    "count": "{count, plural, one {# aandeel} other {# aandelen}}",
+    "countWithUnit": "{count} {unit}",
+    "pricePer": "{price} per {unit}",
+    "soldOfTotal": "{sold} van {total} {unit}",
+    "givenSoFar": "Tot nu toe {count} {unit} gegeven",
+    "chooseCount": "Kies het aantal {unit}",
+    "customCountPh": "Ander aantal"
   }
 }
