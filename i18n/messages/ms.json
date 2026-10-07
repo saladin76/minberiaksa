@@ -2428,5 +2428,16 @@
     "yourDonation": "Sumbangan anda",
     "fileTooLarge": "Saiz fail ialah {size}; had maksimum ialah {max}. Mampatkan foto atau eksport sebagai PDF dan cuba lagi.",
     "uploadFailed": "Muat naik tidak berjaya. Periksa sambungan anda dan cuba lagi."
+  },
+  "ProjectShares": {
+    "unitSingular": "bahagian",
+    "unitPlural": "bahagian",
+    "count": "{count} bahagian",
+    "countWithUnit": "{count} {unit}",
+    "pricePer": "{price} bagi setiap {unit}",
+    "soldOfTotal": "{sold} daripada {total} {unit}",
+    "givenSoFar": "{count} {unit} telah diberikan setakat ini",
+    "chooseCount": "Pilih bilangan {unit}",
+    "customCountPh": "Bilangan lain"
   }
 }
