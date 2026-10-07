@@ -121,7 +121,7 @@ export async function GET(request: NextRequest) {
       });
       const row = get(source.platform);
       const amount = donationAmount(d);
-      if (d.isFirstEverDonation) {
+      if (d.isFirstEverDonation && d.donorId) {
         if (!row.newDonorSet.has(d.donorId)) {
           row.newDonorSet.add(d.donorId);
           totalNewDonors += 1;
