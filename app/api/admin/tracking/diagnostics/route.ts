@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 import { requireAdminOrDashboardPermission } from "@/lib/dashboard/api-auth";
-import { getRawTrackingSettings } from "@/lib/tracking/tracking-settings";
 import { prisma } from "@/lib/prisma";
 import { rawCommand } from "@/lib/prisma-raw-command";
 import { getRawTrackingSettings, trackingString } from "@/lib/tracking/tracking-settings";
@@ -26,13 +25,8 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-function text(row: Record<string, unknown> | null, key: string): string | null {
-  const value = row?.[key];
-  return typeof value === "string" && value.trim() ? value.trim() : null;
-}
-
 function present(row: Record<string, unknown> | null, key: string): boolean {
-  return Boolean(text(row, key));
+  return Boolean(trackingString(row, key));
 }
 
 async function latestEvent(platform: EventPlatform, channel?: "browser" | "server") {
