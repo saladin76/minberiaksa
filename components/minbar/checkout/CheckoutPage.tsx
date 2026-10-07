@@ -567,7 +567,7 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
 
       <section style={{ padding: "0 0 64px" }}>
         <div id="pay-grid" style={{ maxWidth: 1240, margin: "0 auto", padding: "0 24px", display: "grid", gridTemplateColumns: "minmax(0,1.15fr) minmax(0,.85fr)", gap: 40, alignItems: "start" }}>
-          <form style={{ display: "grid", gap: 22 }} onSubmit={onSubmit} noValidate>
+          <form className="pay-form" style={{ display: "grid", gap: 22 }} onSubmit={onSubmit} noValidate>
             {/* ── Donor details ──────────────────────────────────────────── */}
             <div className="pay-card" style={cardBox}>
               <h2 style={headingStyle}>
