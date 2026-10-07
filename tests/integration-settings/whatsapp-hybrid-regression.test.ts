@@ -201,7 +201,7 @@ test("WhatsApp inbox exposes the greeting-template re-entry path outside the 24-
   assert.match(inbox, /إرسال قالب تحية/);
   assert.match(inbox, /initialMode=\{smartInitialMode\}/);
   assert.match(smart, /initialMode\?: "FREEFORM" \| "UTILITY" \| "MARKETING"/);
-  assert.match(smart, /preferred === "MARKETING"/);
+  assert.match(smart, /setMode\(preferred\)/);
 });
 
 test("dashboard topbar makes unanswered WhatsApp conversations visually prominent", () => {
