@@ -78,3 +78,20 @@ test("guest checkout rejects an empty phone that is only a dial code", () => {
   assert.match(page, /const phoneDigits = phone\.replace\(\/\\D\/g, ""\)/);
   assert.match(page, /phoneDigits\.length < 7/);
 });
+
+
+test("recurring donation puts the plan builder before video on phones", () => {
+  const page = read("components/minbar/recurring/RecurringPage.tsx");
+  const css = read("styles/minbar/minbar.css");
+  assert.match(page, /className="rc-builder"/);
+  assert.match(css, /#rc-grid \.rc-builder \{ order: 1; \}/);
+  assert.match(css, /#rc-grid \.rc-video \{ order: 2; \}/);
+});
+
+test("checkout puts the donation summary before the form on phones only", () => {
+  const page = read("components/minbar/checkout/CheckoutPage.tsx");
+  const css = read("styles/minbar/minbar.css");
+  assert.match(page, /className="pay-form"/);
+  assert.match(css, /#pay-grid #pay-summary[\s\S]*order: 1/);
+  assert.match(css, /#pay-grid \.pay-form \{ order: 2; \}/);
+});
