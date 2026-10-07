@@ -202,6 +202,9 @@ export async function issueDonationDocuments(donationId: string): Promise<Issued
   });
   if (!donation) throw new DonationNotFoundError(donationId);
   if (!isDonationConfirmed(donation)) throw new DonationNotConfirmedError(donationId);
+  // Imported bank transfers without a donor profile are accounting records only:
+  // they do not have a person to name on certificates.
+  if (!donation.donorId || !donation.donor) throw new DonationNotFoundError(donationId);
 
   const locale = documentLocale(donation.locale, donation.donor?.preferredLang);
   const base = { ...donation, donorName: (donation.donor?.name ?? "").trim() };
