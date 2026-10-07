@@ -153,14 +153,8 @@ export default function CartPage({ projects, categories }: { projects: MinbarPro
     if (!teamAmounts.includes(value)) setCustomTeam(value > 0 ? String(value) : "");
     else setCustomTeam("");
   };
-  /* The step is on and the donor has not answered: checkout waits. */
-  const teamSupportPending = settings !== null && teamSupportEnabled && teamSupport === null;
-  const [teamNudge, setTeamNudge] = useState(false);
-  const nudgeTeamSupport = () => {
-    document.getElementById("cart-team-support")?.scrollIntoView({ behavior: "smooth", block: "center" });
-    setTeamNudge(true);
-    window.setTimeout(() => setTeamNudge(false), 1600);
-  };
+  /* Team support is optional: an unanswered choice is the same as no extra support
+     for checkout, while any explicit amount still persists normally. */
   const recurringBasket = cartHasRecurring(items);
 
   /* A row added from the cross-sell block: scroll it into view and let it
@@ -720,8 +714,7 @@ export default function CartPage({ projects, categories }: { projects: MinbarPro
               {settings && teamSupportEnabled ? (
                 <div
                   id="cart-team-support"
-                  className={teamNudge ? "cart-team-nudge" : undefined}
-                  style={{ display: "grid", gap: 10, padding: "16px 18px", borderRadius: 12, background: "#fff", border: `1px solid ${teamSupportPending ? "var(--gold)" : "rgba(211,154,39,.45)"}` }}
+                  style={{ display: "grid", gap: 10, padding: "16px 18px", borderRadius: 12, background: "#fff", border: "1px solid rgba(211,154,39,.45)" }}
                 >
                   <b style={{ fontSize: 15, fontWeight: 900, color: "var(--deep)" }}>{tTeam("title")}</b>
                   <span style={{ fontSize: 12.5, color: "var(--muted)", lineHeight: 1.7 }}>{tTeam("lead")}</span>
@@ -755,7 +748,7 @@ export default function CartPage({ projects, categories }: { projects: MinbarPro
                           writeTeamSupport(n);
                           setTeamSupport(n);
                         } else {
-                          /* An emptied field is no answer  the question stands. */
+                          /* Clearing the optional field removes the extra support. */
                           clearTeamSupport();
                           setTeamSupport(null);
                         }
@@ -792,21 +785,6 @@ export default function CartPage({ projects, categories }: { projects: MinbarPro
                   </Button>
                   <span role="status" style={{ marginTop: -8, textAlign: "center", fontSize: 12.5, fontWeight: 800, color: "var(--red)", lineHeight: 1.6 }}>
                     {tGive("belowMinCheckout", { amount: minLabel })}
-                  </span>
-                </>
-              ) : teamSupportPending ? (
-                <>
-                  <Button
-                    variant="primary"
-                    full
-                    title={tTeam("chooseFirst")}
-                    onClick={nudgeTeamSupport}
-                    style={{ whiteSpace: "nowrap", height: 52, opacity: 0.55, boxShadow: "none", cursor: "not-allowed" }}
-                  >
-                    {t("checkout")}
-                  </Button>
-                  <span role="status" style={{ marginTop: -8, textAlign: "center", fontSize: 12.5, fontWeight: 800, color: "var(--red)", lineHeight: 1.6 }}>
-                    {tTeam("chooseFirst")}
                   </span>
                 </>
               ) : (
