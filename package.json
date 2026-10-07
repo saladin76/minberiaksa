@@ -162,7 +162,7 @@
     "xlsx": "^0.18.5",
     "zod": "^3.24.1",
     "zustand": "^5.0.3",
-    "@sparticuz/chromium-min": "^138.0.2"
+    "@sparticuz/chromium": "^138.0.2"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
