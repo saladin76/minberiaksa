@@ -1,10 +1,24 @@
-export type CommunicationChannel = "WHATSAPP" | "EMAIL" | "SMS";
-export type CommunicationPurpose = "TRANSACTIONAL" | "MARKETING";
-export type CommunicationProviderKey = "META_WHATSAPP" | "ELASTIC_EMAIL" | "BREVO_EMAIL" | "BREVO_SMS" | "SMS_FALLBACK";
+import type {
+  ActiveCommunicationProviderId,
+  CommunicationChannelId,
+  CommunicationPurposeId,
+  DeliveryStatusId,
+} from "./communication-runtime-types";
+
+/**
+ * UI/repository DTOs for the Communication Center.
+ *
+ * Runtime identifiers come from communication-runtime-types.ts. Do not duplicate provider,
+ * channel, purpose, or delivery-status vocabularies in this file.
+ */
+export type CommunicationChannel = CommunicationChannelId;
+export type CommunicationPurpose = CommunicationPurposeId;
+export type CommunicationProviderKey = ActiveCommunicationProviderId;
+export type DeliveryStatus = DeliveryStatusId;
+
 export type ProviderConnectionStatus = "NOT_CONFIGURED" | "CONFIGURED" | "NEEDS_ATTENTION" | "DISABLED";
 export type TemplateReviewStatus = "DRAFT" | "NEEDS_REVIEW" | "APPROVED" | "ARCHIVED";
 export type FlowStatus = "DRAFT" | "ACTIVE" | "PAUSED";
-export type DeliveryStatus = "QUEUED" | "RENDERED" | "SENT_TO_PROVIDER" | "DELIVERED" | "OPENED" | "CLICKED" | "FAILED" | "BOUNCED" | "UNSUBSCRIBED";
 
 export type ProviderConnection = {
   key: CommunicationProviderKey;
