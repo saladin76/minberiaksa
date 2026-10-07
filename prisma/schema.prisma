@@ -756,8 +756,8 @@ model Donation {
   paidAmount      Float?
   paidCurrency    String?
 
-  donorId          String    @db.ObjectId
-  donor            User      @relation(fields: [donorId], references: [id])
+  donorId          String?   @db.ObjectId
+  donor            User?     @relation(fields: [donorId], references: [id])
   /// ISO 3166-1 alpha-2 snapshot from donor User.countryCode at donation time
   donorCountryCode String?
   referralId       String?   @db.ObjectId
