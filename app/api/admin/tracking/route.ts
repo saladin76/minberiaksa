@@ -218,7 +218,7 @@ export async function GET() {
 export async function PUT(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    const denied = requireAdminOrDashboardPermission(session, "pixels");
+    const denied = requireAdminOrDashboardPermission(session, "platformConnectionsManage");
     if (denied) return denied;
 
     const bodyRaw = await request.json().catch(() => null);
