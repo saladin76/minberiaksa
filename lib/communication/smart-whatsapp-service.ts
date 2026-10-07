@@ -11,6 +11,7 @@ import { loadContextForDonation, loadContextsForUserIds, type TemplateContext } 
 import { renderChannelTemplate } from "./template-compat";
 import { resolveMetaTemplateMapping } from "./automatic-message-dispatcher";
 import { buildMetaComponents } from "./providers/meta-whatsapp/parameters";
+import { buildWhatsappRenderedPreview } from "./whatsapp-rendered-preview";
 import { isValidLocale, type SupportedLocale } from "@/lib/locales";
 import { writeAuditLog } from "@/lib/audit-log";
 import { touchProfileCommunication } from "./donor-communication-profile-service";
@@ -241,7 +242,16 @@ async function sendApprovedTemplateForDonor(args: {
     recipientPhone: args.ctx.phone,
     locale: args.locale,
     renderedBody: rendered.body,
-    variables: { snapshot: renderCtx } as never,
+    variables: {
+      snapshot: renderCtx,
+      whatsappPreview: buildWhatsappRenderedPreview({
+        componentsSchema: mapping.componentsSchema,
+        builtComponents: built.components,
+        fallbackBody: rendered.body,
+        providerTemplateName: mapping.name,
+        languageCode: mapping.language,
+      }),
+    } as never,
     senderId: args.sender.id,
     createdBy: args.actor?.actorId ?? null,
     status: "RENDERED",
