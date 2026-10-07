@@ -247,10 +247,7 @@ async function eligibleWhere(definition: SmartAudienceDefinition): Promise<Prism
   return {
     ...base,
     phone: { not: null },
-    OR: [
-      { communicationProfile: { is: null } },
-      { communicationProfile: { is: { doNotContact: false } } },
-    ],
+    communicationProfile: { is: { whatsappOptIn: true, doNotContact: false } },
   };
 }
 
