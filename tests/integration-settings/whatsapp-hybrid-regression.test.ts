@@ -259,7 +259,7 @@ test("individual WhatsApp marketing consent can be explicitly confirmed and audi
   assert.match(route, /dashboard-manual-whatsapp-confirmation/);
   assert.match(route, /setProfileConsent/);
   assert.match(dialog, /تسجيل الموافقة/);
-  assert.match(dialog, /وصول رسالة تبرع فاشل يثبت أن الرقم صالح/);
+  assert.match(dialog, /سجّل الموافقة فقط إذا كان لديك أساس موثق/);
   assert.match(dialog, /setMarketingConsent/);
 });
 
