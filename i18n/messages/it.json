@@ -2428,5 +2428,16 @@
     "fileTooLarge": "Il file è di {size}; il limite massimo è {max}. Comprimi la foto o esporta un PDF e riprova.",
     "uploadFailed": "Il caricamento non è riuscito. Controlla la connessione e riprova.",
     "reviewLead": "Il nostro team finanziario sta verificando il bonifico rispetto al conto bancario. Di solito occorrono da uno a tre giorni lavorativi e riceverai un’e-mail non appena sarà confermato."
+  },
+  "ProjectShares": {
+    "unitSingular": "quota",
+    "unitPlural": "quote",
+    "count": "{count, plural, one {# quota} other {# quote}}",
+    "countWithUnit": "{count} {unit}",
+    "pricePer": "{price} per {unit}",
+    "soldOfTotal": "{sold} su {total} {unit}",
+    "givenSoFar": "{count} {unit} donate finora",
+    "chooseCount": "Scegli il numero di {unit}",
+    "customCountPh": "Altro numero"
   }
 }
