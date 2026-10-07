@@ -55,6 +55,11 @@ ProviderRouter
 
 Large campaigns must never send thousands of donor ids from the browser. The browser stores an audience definition; the backend resolves recipients in pages.
 
+Marketing consent is channel-specific and authoritative in `DonorCommunicationProfile`:
+`emailOptIn`, `smsOptIn`, and `whatsappOptIn`. A valid phone number or previous donation is not
+marketing consent. Transactional communication may use the operational channel without marketing
+opt-in, subject to the global do-not-contact gate.
+
 ### Routing
 
 - `sender-router.ts` is pure and has no database access.
@@ -98,6 +103,10 @@ Provider webhooks may advance a delivery but must never downgrade it.
 
 Marketing campaigns use provider-approved Meta templates. The actual resolved message (header, body, footer, buttons and language) is snapshotted on the delivery at send time so the inbox can show exactly what the donor received even if the template is edited later.
 
+Meta is the status/quality source of truth. Template lifecycle webhooks immediately reconcile the
+affected WABA; the 15-minute template sync remains a fallback. A PAUSED/DISABLED/rejected variant
+must never resolve as sendable.
+
 ## Quiet hours
 
 Fixed-timezone quiet hours gate the campaign globally.
@@ -112,6 +121,10 @@ Vercel Cron calls:
 
 The executor uses leases, cursors and persisted progress. A serverless timeout or interrupted request resumes from the last persisted cursor instead of starting over.
 
+Each one-minute cron tick is intentionally bounded to a small number of campaigns and one batch per
+campaign. Large campaigns stay `SENDING` and continue on later ticks instead of running until the
+serverless hard timeout.
+
 ## Rules for future work
 
 1. Add provider-specific behavior only inside a provider adapter.
@@ -121,3 +134,4 @@ The executor uses leases, cursors and persisted progress. A serverless timeout o
 5. Do not create a second campaign executor or direct-send path for a new UI.
 6. Keep historical compatibility code isolated from active routing.
 7. Add communication files to `tsconfig.communication-runtime.json` so the domain remains type-clean.
+8. Keep critical communication regression tests in the Vercel build gate; do not allow a production deploy to skip them.
