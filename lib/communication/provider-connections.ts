@@ -63,9 +63,11 @@ export async function getProviderConnectionsReadiness(): Promise<ProviderConnect
         { id: "webhook", label: "Webhook لحالات الإرسال", configured: smsWebhook.configured, required: false },
       ];
     } else {
-      enabled = false;
+      enabled = runtime.netgsm.enabled;
       requirements = [
-        { id: "provider", label: "المزودات الاحتياطية القديمة غير مستخدمة", configured: false, required: true },
+        { id: "credentials", label: "بيانات اتصال Netgsm", configured: runtime.netgsm.configured, required: true },
+        { id: "sender", label: "عنوان المرسل التركي", configured: runtime.netgsm.configured && !!runtime.netgsm.values.header, required: true },
+        { id: "country_rules", label: "التوجيه للأرقام التركية (+90)", configured: true, required: true },
       ];
     }
     const required = requirements.filter((item) => item.required);
