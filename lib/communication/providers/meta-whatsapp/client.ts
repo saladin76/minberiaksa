@@ -47,6 +47,40 @@ export async function graphFetch(config: MetaGraphConfig, path: string, init?: R
   }
 }
 
+export type MetaPhoneCapacityResult =
+  | {
+      ok: true;
+      displayPhoneNumber: string | null;
+      qualityRating: string | null;
+      messagingLimitTier: string | null;
+    }
+  | { ok: false; reason: string; detail?: string };
+
+export async function getMetaPhoneCapacity(
+  phoneNumberId: string,
+  runtime?: MetaRuntimeConfig,
+): Promise<MetaPhoneCapacityResult> {
+  const resolved = runtime ?? await getActiveMetaWhatsappRuntimeConfig();
+  if (!resolved.configured) return { ok: false, reason: metaRuntimeFailure(resolved) };
+
+  // Meta exposes the current business-initiated messaging tier on the phone-number node for
+  // eligible Cloud API numbers. Some accounts/API versions omit the field; callers must keep a
+  // conservative configured fallback rather than failing campaign creation.
+  const result = await graphFetch(
+    resolved.values,
+    `${phoneNumberId}?fields=display_phone_number,quality_rating,messaging_limit_tier`,
+    { method: "GET" },
+  );
+  if (!result.ok) return { ok: false, reason: result.reason, detail: result.detail };
+  const row = (result.data ?? {}) as Record<string, unknown>;
+  return {
+    ok: true,
+    displayPhoneNumber: typeof row.display_phone_number === "string" ? row.display_phone_number : null,
+    qualityRating: typeof row.quality_rating === "string" ? row.quality_rating : null,
+    messagingLimitTier: typeof row.messaging_limit_tier === "string" ? row.messaging_limit_tier : null,
+  };
+}
+
 export type MetaSenderVerification =
   | { ok: true; displayPhoneNumber: string | null; qualityRating: string | null; verifiedName: string | null }
   | { ok: false; reason: string; detail?: string };

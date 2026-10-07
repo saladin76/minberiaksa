@@ -13,7 +13,7 @@ export async function GET() {
   const denied = requireAdminOrDashboardPermission(session, "messages");
   if (denied) return denied;
 
-  const [countryRows, campaigns] = await Promise.all([
+  const [countryRows, campaigns, badges] = await Promise.all([
     prisma.user.groupBy({
       by: ["countryCode"],
       where: { role: "DONOR", countryCode: { not: null } },
@@ -24,6 +24,11 @@ export async function GET() {
       select: { id: true, title: true, slug: true },
       orderBy: { title: "asc" },
       take: 500,
+    }).catch(() => []),
+    prisma.badge.findMany({
+      select: { id: true, name: true, color: true, translations: { select: { locale: true, name: true } } },
+      orderBy: { order: "asc" },
+      take: 200,
     }).catch(() => []),
   ]);
 
@@ -43,6 +48,11 @@ export async function GET() {
       id: campaign.id,
       name: campaign.title,
       slug: campaign.slug,
+    })),
+    badges: badges.map((badge) => ({
+      id: badge.id,
+      name: badge.translations.find((translation) => translation.locale === "ar")?.name || badge.name,
+      color: badge.color,
     })),
   });
 }

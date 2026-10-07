@@ -157,6 +157,8 @@ export async function getRecipientBreakdown(
 }
 
 export type CampaignRecipient = {
+  /** Cursor position in the underlying audience source (user id for smart/global, member id for saved lists). */
+  cursorId: string;
   userId: string;
   name: string | null;
   email: string | null;
@@ -167,7 +169,7 @@ export type CampaignRecipient = {
 
 export type RecipientLoadResult = {
   recipients: CampaignRecipient[];
-  skipped: { userId: string; locale: string; reason: string }[];
+  skipped: { cursorId: string; userId: string; locale: string; reason: string }[];
   /** True when this page did not reach the end of the audience  another page follows. */
   truncated: boolean;
   /** Pass back as `cursor` to continue after this page. Null when there is nothing to continue from. */
@@ -236,7 +238,7 @@ export async function loadCampaignRecipients(
         : [];
       const pMap = new Map(profiles.map((p) => [p.userId, p]));
       const recipients: CampaignRecipient[] = [];
-      const skipped: { userId: string; locale: string; reason: string }[] = [];
+      const skipped: { cursorId: string; userId: string; locale: string; reason: string }[] = [];
       for (const m of members) {
         const eligibility = donorChannelEligibility(
           { email: m.email, phone: m.phone },
@@ -244,9 +246,9 @@ export async function loadCampaignRecipients(
           pMap.get(m.id) ?? null,
         );
         if (eligibility === "ELIGIBLE") {
-          recipients.push({ userId: m.id, name: m.name, email: m.email, phone: m.phone, locale: m.locale, country: m.countryCode });
+          recipients.push({ cursorId: m.id, userId: m.id, name: m.name, email: m.email, phone: m.phone, locale: m.locale, country: m.countryCode });
         } else {
-          skipped.push({ userId: m.id, locale: m.locale, reason: eligibility === "NEEDS_REVIEW" ? "NEEDS_CONSENT_REVIEW" : "NOT_ELIGIBLE" });
+          skipped.push({ cursorId: m.id, userId: m.id, locale: m.locale, reason: eligibility === "NEEDS_REVIEW" ? "NEEDS_CONSENT_REVIEW" : "NOT_ELIGIBLE" });
         }
       }
       return { recipients, skipped, truncated: !exhausted, nextCursor, exhausted };
@@ -259,13 +261,13 @@ export async function loadCampaignRecipients(
       : [];
     const pMap = new Map(profiles.map((p) => [p.userId, p]));
     const recipients: CampaignRecipient[] = [];
-    const skipped: { userId: string; locale: string; reason: string }[] = [];
+    const skipped: { cursorId: string; userId: string; locale: string; reason: string }[] = [];
     for (const m of members) {
       if (m.contactType !== "DONOR" || !m.userId) continue;
       if (memberEligibleForChannel(m, channel, pMap.get(m.userId) ?? null)) {
-        recipients.push({ userId: m.userId, name: m.name, email: m.email, phone: m.phone, locale: m.locale, country: m.country });
+        recipients.push({ cursorId: m.memberId, userId: m.userId, name: m.name, email: m.email, phone: m.phone, locale: m.locale, country: m.country });
       } else {
-        skipped.push({ userId: m.userId, locale: m.locale, reason: "NOT_ELIGIBLE" });
+        skipped.push({ cursorId: m.memberId, userId: m.userId, locale: m.locale, reason: "NOT_ELIGIBLE" });
       }
     }
     return { recipients, skipped, truncated: !exhausted, nextCursor, exhausted };
@@ -290,7 +292,7 @@ export async function loadCampaignRecipients(
   const profileMap = new Map(profiles.map((p) => [p.userId, p]));
 
   const recipients: CampaignRecipient[] = [];
-  const skipped: { userId: string; locale: string; reason: string }[] = [];
+  const skipped: { cursorId: string; userId: string; locale: string; reason: string }[] = [];
 
   for (const u of page) {
     const locale = (u.preferredLang && isValidLocale(u.preferredLang) ? u.preferredLang : DEFAULT_LOCALE) as SupportedLocale;
@@ -301,9 +303,9 @@ export async function loadCampaignRecipients(
       profile
     );
     if (eligibility === "ELIGIBLE") {
-      recipients.push({ userId: u.id, name: u.name, email: u.email, phone: u.phone, locale, country: u.countryCode });
+      recipients.push({ cursorId: u.id, userId: u.id, name: u.name, email: u.email, phone: u.phone, locale, country: u.countryCode });
     } else {
-      skipped.push({ userId: u.id, locale, reason: eligibility === "NEEDS_REVIEW" ? "NEEDS_CONSENT_REVIEW" : "NOT_ELIGIBLE" });
+      skipped.push({ cursorId: u.id, userId: u.id, locale, reason: eligibility === "NEEDS_REVIEW" ? "NEEDS_CONSENT_REVIEW" : "NOT_ELIGIBLE" });
     }
   }
 

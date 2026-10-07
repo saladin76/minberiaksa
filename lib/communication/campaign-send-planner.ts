@@ -30,7 +30,7 @@ export type SendPlan = {
   /** True when this page reached the end of the audience. */
   exhausted: boolean;
   recipients: CampaignRecipient[];
-  skippedList: { userId: string; locale: string; reason: string }[];
+  skippedList: { cursorId: string; userId: string; locale: string; reason: string }[];
 };
 
 /**

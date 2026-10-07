@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { DEFAULT_LOCALE, isValidLocale, type SupportedLocale } from "@/lib/locales";
 import type { CommunicationChannelId } from "./communication-runtime-types";
 import { donorChannelEligibility } from "./audience-service";
+import { getUserIdsMatchingBadge } from "@/lib/badge-criteria";
 
 export const SMART_AUDIENCE_METADATA_KEY = "smartAudience";
 
@@ -12,6 +13,7 @@ export type SmartAudienceFilters = {
   donatedWithinDays?: number | null;
   notDonatedWithinDays?: number | null;
   projectIds?: string[];
+  badgeIds?: string[];
   recurringOnly?: boolean;
   minDonationAmountUSD?: number | null;
   hasContact?: boolean;
@@ -76,6 +78,7 @@ export function normalizeSmartAudienceDefinition(input: unknown, channel: Commun
       donatedWithinDays,
       notDonatedWithinDays,
       projectIds: cleanList(f.projectIds).slice(0, 100),
+      badgeIds: cleanList(f.badgeIds).slice(0, 20),
       recurringOnly: f.recurringOnly === true,
       minDonationAmountUSD,
       hasContact: f.hasContact === true,
@@ -161,6 +164,30 @@ export function buildSmartAudienceUserWhere(definition: SmartAudienceDefinition)
   return where;
 }
 
+
+async function resolveSmartAudienceUserWhere(definition: SmartAudienceDefinition): Promise<Prisma.UserWhereInput> {
+  const where = buildSmartAudienceUserWhere(definition);
+  const badgeIds = definition.filters.badgeIds ?? [];
+  if (!badgeIds.length) return where;
+
+  const badges = await prisma.badge.findMany({
+    where: { id: { in: badgeIds } },
+    select: { id: true, criteria: true },
+  }).catch(() => []);
+
+  const matched = new Set<string>();
+  for (const badge of badges) {
+    const ids = await getUserIdsMatchingBadge(badge.criteria).catch(() => []);
+    for (const id of ids) matched.add(id);
+  }
+
+  const existingId = where.id && typeof where.id === "object" && !Array.isArray(where.id)
+    ? where.id as Prisma.StringFilter
+    : {};
+  where.id = { ...existingId, in: [...matched] };
+  return where;
+}
+
 type SmartUserRow = {
   id: string;
   name: string | null;
@@ -175,7 +202,7 @@ export async function loadSmartAudiencePage(
   opts: { limit: number; cursorId?: string | null },
 ): Promise<{ members: Array<SmartUserRow & { locale: SupportedLocale }>; nextCursor: string | null; exhausted: boolean }> {
   const limit = Math.max(1, Math.min(opts.limit, 1000));
-  const where = buildSmartAudienceUserWhere(definition);
+  const where = await resolveSmartAudienceUserWhere(definition);
   if (opts.cursorId) {
     const currentId = where.id && typeof where.id === "object" && !Array.isArray(where.id) ? where.id : {};
     where.id = { ...(currentId as Prisma.StringFilter), gt: opts.cursorId };
@@ -198,11 +225,11 @@ export async function loadSmartAudiencePage(
 }
 
 export async function countSmartAudience(definition: SmartAudienceDefinition): Promise<number> {
-  return prisma.user.count({ where: buildSmartAudienceUserWhere(definition) }).catch(() => 0);
+  return prisma.user.count({ where: await resolveSmartAudienceUserWhere(definition) }).catch(() => 0);
 }
 
-function eligibleWhere(definition: SmartAudienceDefinition): Prisma.UserWhereInput {
-  const base = buildSmartAudienceUserWhere(definition);
+async function eligibleWhere(definition: SmartAudienceDefinition): Promise<Prisma.UserWhereInput> {
+  const base = await resolveSmartAudienceUserWhere(definition);
   if (definition.channel === "EMAIL") {
     return {
       ...base,
@@ -231,8 +258,8 @@ export async function previewSmartAudience(
   definition: SmartAudienceDefinition,
   sampleLimit = 50,
 ): Promise<SmartAudiencePreview> {
-  const where = buildSmartAudienceUserWhere(definition);
-  const eligibleFilter = eligibleWhere(definition);
+  const where = await resolveSmartAudienceUserWhere(definition);
+  const eligibleFilter = await eligibleWhere(definition);
   const missingFilter: Prisma.UserWhereInput =
     definition.channel === "EMAIL" ? { ...where, email: null } : { ...where, phone: null };
   const dncFilter: Prisma.UserWhereInput = {
