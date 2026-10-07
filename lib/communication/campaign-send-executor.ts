@@ -16,12 +16,60 @@ import { buildMetaComponents } from "./providers/meta-whatsapp/parameters";
 import { resolveAudienceOrigin } from "./audience-list-service";
 import { computeFinalStatus, recomputeCampaignCounters } from "./campaign-counter-service";
 import { type CommunicationChannelId, type CommunicationPurposeId } from "./communication-runtime-types";
-import { autoSpeedMode, campaignPriorityRank, campaignSendControls, evaluateCampaignSendControls, speedSettings, type CampaignSpeedMode } from "./campaign-send-controls";
+import { autoSpeedMode, campaignPriorityRank, campaignSendControls, evaluateCampaignSendControls, insideQuietHours, speedSettings, type CampaignSpeedMode, type CampaignSendControls } from "./campaign-send-controls";
 import { mergeCampaignMetadata, mutateCampaignMetadata } from "./campaign-metadata-store";
 import { normalizePhoneE164, phoneMatchVariants } from "./phone";
 import { DEFAULT_LOCALE, isValidLocale, type SupportedLocale } from "@/lib/locales";
+import { recipientTimeZone } from "./recipient-timezone";
 
 export { computeFinalStatus };
+
+function recipientQuietHoursSlice(plan: SendPlan, controls: CampaignSendControls): { plan: SendPlan | null; blocked: boolean } {
+  if (!controls.quietHours.enabled || controls.quietHours.timezoneMode !== "RECIPIENT") {
+    return { plan, blocked: false };
+  }
+
+  const now = new Date();
+  const firstQuiet = plan.recipients.find((recipient) => {
+    const zone = recipientTimeZone(
+      { country: recipient.country, phone: recipient.phone },
+      controls.quietHours.timezone,
+    );
+    return insideQuietHours(controls, now, zone);
+  });
+  if (!firstQuiet) return { plan, blocked: false };
+
+  // Audience rows are walked by ascending ObjectId. Stop immediately before the first recipient
+  // whose local clock is quiet, so that recipient remains behind the persisted cursor and is
+  // retried automatically by the next scheduler run instead of being permanently skipped.
+  const beforeRecipients = plan.recipients.filter((recipient) => recipient.userId < firstQuiet.userId);
+  const beforeSkipped = plan.skippedList.filter((recipient) => recipient.userId < firstQuiet.userId);
+  const ids = [
+    ...beforeRecipients.map((recipient) => recipient.userId),
+    ...beforeSkipped.map((recipient) => recipient.userId),
+  ].sort();
+
+  if (!ids.length) return { plan: null, blocked: true };
+  const cutoff = ids[ids.length - 1]!;
+  const reasons: Record<string, number> = {};
+  for (const item of beforeSkipped) reasons[item.reason] = (reasons[item.reason] ?? 0) + 1;
+
+  return {
+    blocked: false,
+    plan: {
+      ...plan,
+      recipients: beforeRecipients,
+      skippedList: beforeSkipped,
+      total: beforeRecipients.length + beforeSkipped.length,
+      eligible: beforeRecipients.length,
+      skipped: beforeSkipped.length,
+      reasons,
+      nextCursor: cutoff,
+      exhausted: false,
+      truncated: true,
+    },
+  };
+}
 
 /** Meta truth for one template, partitioned by WABA so routing and approval can never disagree. */
 async function loadWhatsappTemplateTruth(templateId: string): Promise<{
@@ -707,6 +755,13 @@ export async function executeCampaignSend(
     if (!liveCampaign) { base.blocked = "NOT_FOUND"; break; }
     const liveGate = await evaluateCampaignSendControls(liveCampaign);
     if (!liveGate.ok) { base.blocked = liveGate.reason; break; }
+
+    const quietSlice = recipientQuietHoursSlice(plan, liveGate.controls);
+    if (quietSlice.blocked || !quietSlice.plan) {
+      base.blocked = "QUIET_HOURS";
+      break;
+    }
+    plan = quietSlice.plan;
 
     const remainingRecipients = Math.max(plan.audienceTotal - progress.total, plan.total);
     const liveSpeed = liveGate.controls.autoSpeed
