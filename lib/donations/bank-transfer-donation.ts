@@ -10,9 +10,9 @@ import { recomputeCampaignCurrentAmount } from "@/lib/campaign/current-amount";
  * receipts. Amount is stored in its original currency with a computed amountUSD so USD revenue
  * dashboards include it. Idempotent: one Donation per bank transaction hash.
  *
- * Donor: never matched by name alone  two people called «محمد أحمد» are two people. The reviewer
- * either picks the donor (`donorUserId`), gives an exact email/phone (`donorContact`), or a new
- * donor is created for this sender. Country is left empty: the bank's location is not the donor's.
+ * Donor: never matched by name alone  two people called «محمد أحمد» are two people. A bank transfer
+ * may stay anonymous. Only an explicit donor choice or a real email/phone creates/links a donor profile.
+ * Country is left empty: the bank's location is not the donor's.
  *
  * Project: when the reviewer picks a project (`campaignId`) a DonationItem is written and the
  * project's total is recomputed, exactly as for any other paid donation. Without one the gift is
@@ -55,7 +55,7 @@ export type BankTransferDonationFailure =
   | "DONATION_CREATE_FAILED";
 
 export type BankTransferDonationResult =
-  | { ok: true; donationId: string; donorId: string; duplicate: boolean; campaignId: string | null }
+  | { ok: true; donationId: string; donorId: string | null; duplicate: boolean; campaignId: string | null }
   | { ok: false; reason: BankTransferDonationFailure };
 
 const OBJECT_ID = /^[a-f0-9]{24}$/i;
@@ -119,7 +119,9 @@ export async function createDonationFromBankTransfer(input: BankTransferDonation
     campaignId = campaign.id;
   }
 
-  // Donor: explicit choice → exact contact → a new donor. Never by name.
+  // Donor policy for bank transfers:
+  // explicit donor → link it; real email/phone → link existing or create a real profile;
+  // no contact at all → keep the donation anonymous. Never match or create by name alone.
   let donorId: string | null = null;
   if (input.donorUserId) {
     const found = OBJECT_ID.test(input.donorUserId)
@@ -129,41 +131,45 @@ export async function createDonationFromBankTransfer(input: BankTransferDonation
     donorId = found.id;
   } else if (input.donorContact?.trim()) {
     const contact = input.donorContact.trim();
-    const where = contact.includes("@")
-      ? { email: { equals: contact, mode: "insensitive" as const } }
-      : { phone: contact.replace(/[\s()-]/g, "") };
+    const isEmail = contact.includes("@");
+    const normalizedContact = isEmail ? contact.toLowerCase() : contact.replace(/[\s()-]/g, "");
+    const where = isEmail
+      ? { email: { equals: normalizedContact, mode: "insensitive" as const } }
+      : { phone: normalizedContact };
     const matches = await prisma.user.findMany({ where, select: { id: true }, take: 2 }).catch(() => []);
-    if (matches.length === 0) return { ok: false, reason: "DONOR_CONTACT_NOT_FOUND" };
     if (matches.length > 1) return { ok: false, reason: "DONOR_CONTACT_AMBIGUOUS" };
-    donorId = matches[0].id;
-  }
-  if (!donorId) {
-    // Mongo unique indexes do not allow creating many User rows with the same missing/null
-    // value on an @unique field. Bank statements often contain no email/phone, so give the
-    // synthetic donor a deterministic non-deliverable address that is unique to this transfer.
-    // Marketing is explicitly disabled so this internal identity can never become a send target.
-    const internalEmail = `bank-transfer+${input.transactionHash.toLowerCase()}@donor.invalid`;
-    const created = await prisma.user
-      .create({
-        data: {
-          name: name || "متبرع تحويل بنكي",
-          email: internalEmail,
-          role: "DONOR",
-          preferredLang: locale,
-          emailNotifications: false,
-          smsNotifications: false,
-        },
-        select: { id: true },
-      })
-      .catch((error) => {
-        console.error("[bank-transfers] donor create failed", {
-          transactionHash: input.transactionHash,
-          error: error instanceof Error ? error.message : String(error),
+    if (matches.length === 1) {
+      donorId = matches[0].id;
+    } else {
+      // A profile is created only because the reviewer supplied a real contact.
+      // For phone-only profiles, keep a deterministic internal email solely to satisfy the legacy
+      // unique email index; the real identity/contact is the phone and marketing email is disabled.
+      const created = await prisma.user
+        .create({
+          data: {
+            name: name || "متبرع تحويل بنكي",
+            email: isEmail
+              ? normalizedContact
+              : `bank-transfer-phone+${input.transactionHash.toLowerCase()}@donor.invalid`,
+            phone: isEmail ? undefined : normalizedContact,
+            role: "DONOR",
+            preferredLang: locale,
+            emailNotifications: isEmail,
+            smsNotifications: !isEmail,
+          },
+          select: { id: true },
+        })
+        .catch((error) => {
+          console.error("[bank-transfers] donor create failed", {
+            transactionHash: input.transactionHash,
+            contactType: isEmail ? "email" : "phone",
+            error: error instanceof Error ? error.message : String(error),
+          });
+          return null;
         });
-        return null;
-      });
-    if (!created) return { ok: false, reason: "DONOR_CREATE_FAILED" };
-    donorId = created.id;
+      if (!created) return { ok: false, reason: "DONOR_CREATE_FAILED" };
+      donorId = created.id;
+    }
   }
 
   const amountUSD = await amountToUsd(input.amount, input.currency);
