@@ -374,6 +374,9 @@ export async function POST(req: NextRequest) {
        anything, so a plan can never be activated without a card to bill. A
        retry of the same checkout reuses the card already linked. */
     if (plan && !plan.paymentCardId) {
+      if (!donation.donorId) {
+        return NextResponse.json({ error: "Recurring card payments require a donor profile." }, { status: 400 });
+      }
       const card = await prisma.creditCard.create({
         data: {
           userId: donation.donorId,
