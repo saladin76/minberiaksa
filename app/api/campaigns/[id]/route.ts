@@ -51,6 +51,22 @@ import { RECOMMENDED_FREQUENCY_VALUES, isRecommendedFrequencySetting } from "@/l
 // is how a MongoDB deployment runs out of connections and starts erroring on
 // perfectly ordinary saves.
 
+async function retryWriteConflict<T>(operation: () => Promise<T>, attempts = 3): Promise<T> {
+  let lastError: unknown;
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    try {
+      return await operation();
+    } catch (error) {
+      lastError = error;
+      const retryable =
+        error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2034";
+      if (!retryable || attempt === attempts) throw error;
+      await new Promise((resolve) => setTimeout(resolve, 50 * attempt));
+    }
+  }
+  throw lastError;
+}
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -602,8 +618,9 @@ export async function PUT(
     // used to make it necessary  a findUnique per locale  has moved out.
     // The transaction's return value is not bound to a name: STEP 5 re-reads the
     // row with the full select the client needs.
-    await prisma.$transaction(
-      async (tx) => {
+    await retryWriteConflict(() =>
+      prisma.$transaction(
+        async (tx) => {
         await tx.campaign.update({
           where: { id },
           data: updateData,
@@ -718,7 +735,8 @@ export async function PUT(
           });
         }
       },
-      { maxWait: 10_000, timeout: 60_000 }
+        { maxWait: 10_000, timeout: 60_000 }
+      )
     );
 
     // ✅ STEP 5: Fetch updated campaign with all translations
