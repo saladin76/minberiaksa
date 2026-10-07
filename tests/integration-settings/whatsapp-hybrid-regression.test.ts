@@ -271,6 +271,7 @@ test("WhatsApp donor marketing requires explicit channel consent across every se
   const dialog = read("components/dashboard/SmartWhatsappDialog.tsx");
   const retry = read("lib/communication/delivery-retry-service.ts");
   const smartAudience = read("lib/communication/smart-audience.ts");
+  const automatic = read("lib/communication/automatic-message-dispatcher.ts");
 
   assert.match(audience, /profile\.whatsappOptIn === true \? "ELIGIBLE" : "UNAVAILABLE"/);
   assert.match(smart, /WHATSAPP_MARKETING_OPT_IN_REQUIRED/);
@@ -278,6 +279,8 @@ test("WhatsApp donor marketing requires explicit channel consent across every se
   assert.match(dialog, /تسجيل الموافقة/);
   assert.match(retry, /channel === "WHATSAPP" \? profile\.whatsappOptIn/);
   assert.match(smartAudience, /whatsappOptIn: true, doNotContact: false/);
+  assert.match(automatic, /WHATSAPP_MARKETING_OPT_IN_REQUIRED/);
+  assert.match(automatic, /automaticConsentBlock\(input\.recipientUserId, "WHATSAPP"/);
 });
 
 test("Meta template lifecycle webhooks trigger immediate provider-truth reconciliation", () => {
