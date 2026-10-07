@@ -186,7 +186,7 @@ export function buildPageMetadata(
   const description = clipSeoDescription(overrides.description, locale);
 
   return {
-    title: overrides.title,
+    title: { absolute: overrides.title },
     description,
     keywords: overrides.keywords ?? seo.keywords,
     alternates,
