@@ -272,10 +272,12 @@ export default function ProjectDonateCard({ project, width, tag }: ProjectDonate
                 }}
               />
             </span>
-            <span style={{ display: "flex", justifyContent: "space-between", fontSize: 12.5, color: "rgba(255,255,255,.72)" }}>
-              <b dir="ltr" style={{ color: "#fff", unicodeBidi: "isolate" }}>
-                {format(project.raised)}
-              </b>
+            <span style={{ display: "flex", justifyContent: project.raised > 0 ? "space-between" : "flex-end", fontSize: 12.5, color: "rgba(255,255,255,.72)" }}>
+              {project.raised > 0 ? (
+                <b dir="ltr" style={{ color: "#fff", unicodeBidi: "isolate" }}>
+                  {format(project.raised)}
+                </b>
+              ) : null}
               <span dir="ltr" style={{ unicodeBidi: "isolate", display: "inline-block" }}>
                 {t("goal")} {format(project.goal as number)}
               </span>
