@@ -69,18 +69,32 @@ export interface CartGiftDetails {
   showAmount: boolean;
 }
 
+export type CartPrayerKey = "Fajr" | "Dhuhr" | "Asr" | "Maghrib" | "Isha";
+
 /**
- * When a recurring row charges, as the donor chose it on the recurring page:
- * a day of the month (monthly only, 1–28) and a local wall-clock time in the
- * donor's own timezone. Sent with the order; the server validates it and
- * builds the plan's schedule rule from it.
+ * When a recurring row charges, as the donor chose it on the recurring page.
+ *
+ * `local` stores an ordinary wall-clock time. `prayer` stores the prayer name,
+ * not a fake hour: the server resolves that prayer for the donor's location
+ * and timezone when the plan is created and again for every later cycle.
+ *
+ * Legacy rows from before the discriminator existed have no `mode`; they are
+ * read as local schedules so old baskets keep working.
  */
-export interface CartRecurringSchedule {
-  dayOfMonth?: number;
-  hour: number;
-  minute: number;
-  notes?: string;
-}
+export type CartRecurringSchedule =
+  | {
+      mode?: "local";
+      dayOfMonth?: number;
+      hour: number;
+      minute: number;
+      notes?: string;
+    }
+  | {
+      mode: "prayer";
+      dayOfMonth?: number;
+      prayer: CartPrayerKey;
+      notes?: string;
+    };
 
 export interface MinbarCartItem {
   /** Project slug from the projects source. Absent for non-project intentions. */
@@ -189,17 +203,29 @@ function parseWaqf(value: unknown): CartWaqfDetails | undefined {
   };
 }
 
+const CART_PRAYERS: readonly CartPrayerKey[] = ["Fajr", "Dhuhr", "Asr", "Maghrib", "Isha"];
+
 /** The schedule of a stored row, or nothing if it is not a whole one. */
 function parseSchedule(value: unknown): CartRecurringSchedule | undefined {
   if (!value || typeof value !== "object") return undefined;
   const raw = value as Record<string, unknown>;
   const int = (v: unknown, min: number, max: number) => (typeof v === "number" && Number.isInteger(v) && v >= min && v <= max ? v : undefined);
+  const dayOfMonth = int(raw.dayOfMonth, 1, 28);
+  const notes = typeof raw.notes === "string" && raw.notes.trim() ? raw.notes.trim() : undefined;
+
+  if (raw.mode === "prayer") {
+    const prayer = typeof raw.prayer === "string" && (CART_PRAYERS as readonly string[]).includes(raw.prayer)
+      ? (raw.prayer as CartPrayerKey)
+      : null;
+    if (!prayer) return undefined;
+    return { mode: "prayer", prayer, ...(dayOfMonth ? { dayOfMonth } : {}), ...(notes ? { notes } : {}) };
+  }
+
+  /* No mode is the v2 legacy local-time shape. */
   const hour = int(raw.hour, 0, 23);
   const minute = int(raw.minute, 0, 59);
   if (hour === undefined || minute === undefined) return undefined;
-  const dayOfMonth = int(raw.dayOfMonth, 1, 28);
-  const notes = typeof raw.notes === "string" && raw.notes.trim() ? raw.notes.trim() : undefined;
-  return { hour, minute, ...(dayOfMonth ? { dayOfMonth } : {}), ...(notes ? { notes } : {}) };
+  return { mode: "local", hour, minute, ...(dayOfMonth ? { dayOfMonth } : {}), ...(notes ? { notes } : {}) };
 }
 
 /** The gift details of a stored row, or nothing without a recipient name. */
