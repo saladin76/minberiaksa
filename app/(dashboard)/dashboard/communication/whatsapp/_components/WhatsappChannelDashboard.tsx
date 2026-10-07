@@ -90,6 +90,7 @@ const STATUS_FILTERS = [
 
 const TEMPLATE_STATE_STYLE: Record<string, { label: string; className: string }> = {
   READY: { label: "جاهز للإرسال", className: "border-emerald-200 bg-emerald-50 text-emerald-700" },
+  PARTIAL: { label: "جاهز على بعض الأرقام", className: "border-amber-200 bg-amber-50 text-amber-700" },
   NOT_REGISTERED: { label: "غير مسجّل لدى Meta", className: "border-amber-200 bg-amber-50 text-amber-700" },
   PENDING: { label: "بانتظار الموافقة", className: "border-sky-200 bg-sky-50 text-sky-700" },
   REJECTED: { label: "مرفوض", className: "border-rose-200 bg-rose-50 text-rose-700" },
@@ -118,10 +119,12 @@ function ReadinessCard({ provider, templates, onSynced }: { provider: Payload["p
   const [syncNote, setSyncNote] = useState<string | null>(null);
   /* The oldest sync across templates: readiness is only as current as the least recently synced row,
      and "never synced" is the single most common reason a template reads NOT_REGISTERED. */
-  const lastSyncedAt = templates.rows.reduce<string | null>(
-    (oldest, row) => (row.lastSyncedAt && (!oldest || row.lastSyncedAt < oldest) ? row.lastSyncedAt : oldest),
-    null,
-  );
+  const lastSyncedAt = templates.rows.length > 0 && templates.rows.every((row) => Boolean(row.lastSyncedAt))
+    ? templates.rows.reduce<string | null>(
+        (oldest, row) => (row.lastSyncedAt && (!oldest || row.lastSyncedAt < oldest) ? row.lastSyncedAt : oldest),
+        null,
+      )
+    : null;
 
   const sync = async () => {
     setSyncing(true);
@@ -272,7 +275,7 @@ export function WhatsappChannelDashboard() {
   }, [days, status, page, search, campaignId]);
 
   useEffect(() => { void load(); }, [load]);
-  useEffect(() => { setPage(1); }, [days, status, search]);
+  useEffect(() => { setPage(1); }, [days, status, search, campaignId]);
 
   const summary = data?.summary;
   const trackingLive = data?.trackingLive ?? false;
