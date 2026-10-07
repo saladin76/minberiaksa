@@ -4,7 +4,6 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 import { prisma } from "@/lib/prisma";
 import { requireAdminOrDashboardPermission } from "@/lib/dashboard/api-auth";
 import { rawCommand } from "@/lib/prisma-raw-command";
-import { ensureBankTransferIndexes } from "@/lib/bank-transfers/indexes";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -116,8 +115,6 @@ export async function GET(request: NextRequest) {
     const session = await getServerSession(authOptions);
     const denied = requireAdminOrDashboardPermission(session, "bankTransfers");
     if (denied) return denied;
-
-    await ensureBankTransferIndexes();
 
     const url = new URL(request.url);
     const page = Math.max(1, Number(url.searchParams.get("page") || 1));
