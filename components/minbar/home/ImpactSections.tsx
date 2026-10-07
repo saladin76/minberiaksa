@@ -220,7 +220,7 @@ export function RegionCards({ images }: { images: { quds: string; aqsa: string; 
   ];
 
   return (
-    <section style={{ position: "relative", zIndex: 1, background: "linear-gradient(to left, rgba(247,242,234,.36), rgba(247,242,234,.64))", padding: "48px 0 0" }}>
+    <section id="regions-section" style={{ position: "relative", zIndex: 1, background: "linear-gradient(to left, rgba(247,242,234,.36), rgba(247,242,234,.64))", padding: "48px 0 0" }}>
       <div id="regions" style={{ maxWidth: 1240, margin: "0 auto", padding: "0 24px", display: "grid", gridTemplateColumns: "repeat(3,minmax(0,1fr))", gap: 18 }}>
         {cards.map((card) => (
           /* The card is a column the full height of the row: title and copy at
