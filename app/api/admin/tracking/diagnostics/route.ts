@@ -4,7 +4,7 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 import { requireAdminOrDashboardPermission } from "@/lib/dashboard/api-auth";
 import { prisma } from "@/lib/prisma";
 import { rawCommand } from "@/lib/prisma-raw-command";
-import { getRawTrackingSettings, trackingString } from "@/lib/tracking/tracking-settings";
+import { getRawTrackingSettings, trackingBoolean, trackingString } from "@/lib/tracking/tracking-settings";
 
 export const dynamic = "force-dynamic";
 
@@ -72,15 +72,24 @@ function eventSummary(event: Record<string, unknown> | null) {
   };
 }
 
-function buildDiagnostics(row: Record<string, unknown> | null, platform: Platform, browserFields: string[], serverFields: string[]) {
+function buildDiagnostics(
+  row: Record<string, unknown> | null,
+  platform: Platform,
+  browserFields: string[],
+  serverFields: string[],
+  serverEnabled: boolean | null = null,
+) {
   const browserMissing = browserFields.filter((field) => !present(row, field));
   const serverMissing = serverFields.filter((field) => !present(row, field));
+  const server = serverFields.length === 0
+    ? { state: "not_required", label: "غير مطلوب", missingFields: [] as string[] }
+    : serverEnabled === false
+      ? { state: "disabled", label: "غير مفعّل", missingFields: serverMissing }
+      : { ...status(serverMissing.length === 0, "جاهز"), missingFields: serverMissing };
   return {
     platform,
     browser: { ...status(browserMissing.length === 0, "جاهز"), missingFields: browserMissing },
-    server: serverFields.length === 0
-      ? { state: "not_required", label: "غير مطلوب", missingFields: [] as string[] }
-      : { ...status(serverMissing.length === 0, "جاهز"), missingFields: serverMissing },
+    server,
   };
 }
 
@@ -92,11 +101,23 @@ export async function GET() {
 
     const row = await getRawTrackingSettings();
     const base = {
-      meta: buildDiagnostics(row, "meta", ["facebookPixelId"], ["facebookAccessToken"]),
-      ga4: buildDiagnostics(row, "ga4", ["gaMeasurementId"], ["gaApiSecret"]),
+      meta: buildDiagnostics(row, "meta", ["facebookPixelId"], ["facebookPixelId", "facebookAccessToken"]),
+      ga4: buildDiagnostics(row, "ga4", ["gaMeasurementId"], ["gaMeasurementId", "gaApiSecret"]),
       google_ads: buildDiagnostics(row, "google_ads", ["googleAdsConversionId", "googleAdsConversionLabel"], []),
-      tiktok: buildDiagnostics(row, "tiktok", ["tiktokPixelId"], ["tiktokAccessToken"]),
-      x: buildDiagnostics(row, "x", ["xPixelId"], ["xAccessToken", "xAdAccountId"]),
+      tiktok: buildDiagnostics(
+        row,
+        "tiktok",
+        ["tiktokPixelId"],
+        ["tiktokPixelId", "tiktokAccessToken"],
+        trackingBoolean(row, "tiktokEventsApiEnabled"),
+      ),
+      x: buildDiagnostics(
+        row,
+        "x",
+        ["xPixelId"],
+        ["xConversionEventId", "xAccessToken", "xAdAccountId"],
+        trackingBoolean(row, "xConversionsApiEnabled"),
+      ),
     };
 
     const entries = await Promise.all((Object.keys(base) as Platform[]).map(async (platform) => {
