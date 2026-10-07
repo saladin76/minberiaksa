@@ -1,0 +1,211 @@
+import "server-only";
+
+import { prisma } from "@/lib/prisma";
+import type { CommunicationCampaign } from "@prisma/client";
+
+export type CampaignSpeedMode = "SAFE" | "BALANCED" | "FAST" | "MAX";
+export type CampaignPriority = "LOW" | "NORMAL" | "HIGH" | "URGENT";
+export type CampaignSendControls = {
+  paused: boolean;
+  speedMode: CampaignSpeedMode;
+  autoSpeed: boolean;
+  priority: CampaignPriority;
+  dailyCap: number;
+  scheduledStopAt: string | null;
+  resumeAt: string | null;
+  quietHours: {
+    enabled: boolean;
+    start: string; // HH:mm
+    end: string;   // HH:mm
+    timezone: string;
+  };
+};
+
+const SPEEDS: Record<CampaignSpeedMode, { batchSize: number; concurrency: number; labelAr: string }> = {
+  SAFE: { batchSize: 100, concurrency: 5, labelAr: "هادئ" },
+  BALANCED: { batchSize: 250, concurrency: 10, labelAr: "متوازن" },
+  FAST: { batchSize: 500, concurrency: 25, labelAr: "سريع" },
+  MAX: { batchSize: 1000, concurrency: 40, labelAr: "أقصى سرعة آمنة" },
+};
+
+function hhmm(value: unknown, fallback: string): string {
+  const text = String(value ?? "");
+  return /^([01]\d|2[0-3]):[0-5]\d$/.test(text) ? text : fallback;
+}
+
+function positiveInt(value: unknown, fallback: number, max = 1_000_000): number {
+  const n = Number(value);
+  return Number.isFinite(n) && n > 0 ? Math.min(Math.floor(n), max) : fallback;
+}
+
+export function isValidTimeZone(value: string): boolean {
+  try {
+    new Intl.DateTimeFormat("en-US", { timeZone: value }).format(new Date());
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export function campaignSendControls(campaign: Pick<CommunicationCampaign, "metadata">): CampaignSendControls {
+  const metadata = (campaign.metadata as Record<string, unknown> | null) ?? {};
+  const raw = (metadata.sendControls && typeof metadata.sendControls === "object"
+    ? metadata.sendControls
+    : {}) as Record<string, unknown>;
+  const quiet = (raw.quietHours && typeof raw.quietHours === "object"
+    ? raw.quietHours
+    : {}) as Record<string, unknown>;
+  const speed = String(raw.speedMode ?? "BALANCED").toUpperCase() as CampaignSpeedMode;
+  const priority = String(raw.priority ?? "NORMAL").toUpperCase() as CampaignPriority;
+  const isoOrNull = (value: unknown) => {
+    if (typeof value !== "string" || !value.trim()) return null;
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? null : date.toISOString();
+  };
+  const globalCap = positiveInt(process.env.COMMUNICATION_WHATSAPP_DAILY_CAP, 100_000);
+  const requestedCap = positiveInt(raw.dailyCap, globalCap);
+
+  return {
+    paused: raw.paused === true,
+    speedMode: speed in SPEEDS ? speed : "BALANCED",
+    autoSpeed: raw.autoSpeed === true,
+    priority: ["LOW", "NORMAL", "HIGH", "URGENT"].includes(priority) ? priority : "NORMAL",
+    scheduledStopAt: isoOrNull(raw.scheduledStopAt),
+    resumeAt: isoOrNull(raw.resumeAt),
+    // Per-campaign controls may be stricter than the account tier, never looser.
+    dailyCap: Math.min(requestedCap, globalCap),
+    quietHours: {
+      enabled: quiet.enabled === true,
+      start: hhmm(quiet.start, "00:00"),
+      end: hhmm(quiet.end, "08:00"),
+      timezone:
+        typeof quiet.timezone === "string" && quiet.timezone.trim() && isValidTimeZone(quiet.timezone.trim())
+          ? quiet.timezone.trim()
+          : "Europe/Istanbul",
+    },
+  };
+}
+
+export function speedSettings(mode: CampaignSpeedMode) {
+  return SPEEDS[mode] ?? SPEEDS.BALANCED;
+}
+
+export function campaignPriorityRank(priority: CampaignPriority): number {
+  return priority === "URGENT" ? 0 : priority === "HIGH" ? 1 : priority === "NORMAL" ? 2 : 3;
+}
+
+export function autoSpeedMode(input: {
+  remainingRecipients: number;
+  remainingDaily: number | null;
+  scheduledStopAt: string | null;
+  now?: Date;
+}): CampaignSpeedMode {
+  const now = input.now ?? new Date();
+  const remaining = Math.max(0, Math.min(input.remainingRecipients, input.remainingDaily ?? input.remainingRecipients));
+  if (remaining <= 250) return "SAFE";
+  if (remaining <= 2_000) return "BALANCED";
+
+  if (input.scheduledStopAt) {
+    const stop = Date.parse(input.scheduledStopAt);
+    if (Number.isFinite(stop) && stop > now.getTime()) {
+      const hours = Math.max((stop - now.getTime()) / 3_600_000, 0.25);
+      const neededPerHour = remaining / hours;
+      if (neededPerHour <= 500) return "BALANCED";
+      if (neededPerHour <= 2_500) return "FAST";
+      return "MAX";
+    }
+  }
+  return remaining <= 10_000 ? "FAST" : "MAX";
+}
+
+const GLOBAL_CONTROL_ID = "000000000000000000000001";
+
+export async function campaignEmergencyStopEnabled(): Promise<boolean> {
+  if (String(process.env.COMMUNICATION_CAMPAIGN_EMERGENCY_STOP ?? "").toLowerCase() === "true") return true;
+  const row = await prisma.communicationGlobalControl.findUnique({
+    where: { id: GLOBAL_CONTROL_ID },
+    select: { emergencyStop: true },
+  }).catch(() => null);
+  return row?.emergencyStop === true;
+}
+
+export async function setCampaignEmergencyStop(enabled: boolean, updatedBy?: string | null): Promise<boolean> {
+  const row = await prisma.communicationGlobalControl.upsert({
+    where: { id: GLOBAL_CONTROL_ID },
+    create: { id: GLOBAL_CONTROL_ID, emergencyStop: enabled, updatedBy: updatedBy ?? null },
+    update: { emergencyStop: enabled, updatedBy: updatedBy ?? null },
+    select: { emergencyStop: true },
+  }).catch(() => null);
+  return row?.emergencyStop === enabled;
+}
+
+export function insideScheduledStop(controls: CampaignSendControls, now = new Date()): boolean {
+  if (!controls.scheduledStopAt) return false;
+  const stop = Date.parse(controls.scheduledStopAt);
+  if (!Number.isFinite(stop) || now.getTime() < stop) return false;
+  if (!controls.resumeAt) return true;
+  const resume = Date.parse(controls.resumeAt);
+  return !Number.isFinite(resume) || now.getTime() < resume;
+}
+
+function localMinutes(date: Date, timeZone: string): number | null {
+  try {
+    const parts = new Intl.DateTimeFormat("en-GB", {
+      timeZone,
+      hour: "2-digit",
+      minute: "2-digit",
+      hourCycle: "h23",
+    }).formatToParts(date);
+    const hour = Number(parts.find((part) => part.type === "hour")?.value);
+    const minute = Number(parts.find((part) => part.type === "minute")?.value);
+    return Number.isFinite(hour) && Number.isFinite(minute) ? hour * 60 + minute : null;
+  } catch {
+    return null;
+  }
+}
+
+function parseMinutes(value: string): number {
+  const [hour, minute] = value.split(":").map(Number);
+  return hour * 60 + minute;
+}
+
+export function insideQuietHours(controls: CampaignSendControls, now = new Date()): boolean {
+  if (!controls.quietHours.enabled) return false;
+  const current = localMinutes(now, controls.quietHours.timezone);
+  if (current == null) return false;
+  const start = parseMinutes(controls.quietHours.start);
+  const end = parseMinutes(controls.quietHours.end);
+  if (start === end) return true; // explicit 24h quiet window
+  return start < end ? current >= start && current < end : current >= start || current < end;
+}
+
+export async function whatsappSentLast24Hours(): Promise<number> {
+  const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
+  return prisma.communicationDelivery.count({
+    where: {
+      channel: "WHATSAPP",
+      // Count every provider-accepted send even if a later webhook changes its final status to
+      // FAILED. The account tier is about messages handed to Meta, so excluding a later failure
+      // would silently reopen capacity and could push us over the real 24-hour safety ceiling.
+      sentAt: { gte: since },
+    },
+  }).catch(() => 0);
+}
+
+export async function evaluateCampaignSendControls(
+  campaign: Pick<CommunicationCampaign, "channel" | "metadata">,
+): Promise<{ ok: true; controls: CampaignSendControls; remainingDaily: number | null } | { ok: false; controls: CampaignSendControls; reason: "EMERGENCY_STOP" | "PAUSED" | "QUIET_HOURS" | "SCHEDULED_STOP" | "DAILY_CAP_REACHED"; remainingDaily: number | null }> {
+  const controls = campaignSendControls(campaign);
+  if (await campaignEmergencyStopEnabled()) return { ok: false, controls, reason: "EMERGENCY_STOP", remainingDaily: null };
+  if (controls.paused) return { ok: false, controls, reason: "PAUSED", remainingDaily: null };
+  if (insideScheduledStop(controls)) return { ok: false, controls, reason: "SCHEDULED_STOP", remainingDaily: null };
+  if (insideQuietHours(controls)) return { ok: false, controls, reason: "QUIET_HOURS", remainingDaily: null };
+
+  if (campaign.channel === "WHATSAPP") {
+    const used = await whatsappSentLast24Hours();
+    const remaining = Math.max(controls.dailyCap - used, 0);
+    if (remaining <= 0) return { ok: false, controls, reason: "DAILY_CAP_REACHED", remainingDaily: 0 };
+    return { ok: true, controls, remainingDaily: remaining };
+  }
+  return { ok: true, controls, remainingDaily: null };
+}

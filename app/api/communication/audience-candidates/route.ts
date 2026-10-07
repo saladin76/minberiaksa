@@ -32,9 +32,7 @@ export const dynamic = "force-dynamic";
  * campaign's channel, and the counts distinguish "matched your filter" from "can actually receive
  * this".
  *
- * `NEEDS_REVIEW` is WhatsApp-specific and stays distinct from `UNAVAILABLE` rather than folded into
- * it: those donors have a phone but no recorded opt-in, which is a consent decision for a human,
- * not a filtering accident.
+ * WhatsApp donors with a valid phone are eligible unless explicitly marked do-not-contact.
  *
  * Country, badges and language mirror the المتبرعون table so the same audience can be reasoned
  * about the same way in both places. Facets (the filter dropdowns' options) are returned from here
@@ -130,6 +128,21 @@ async function buildWhere(f: FilterInput): Promise<Prisma.UserWhereInput> {
 
 type ConsentProfile = { doNotContact: boolean; emailOptIn: boolean; smsOptIn: boolean; whatsappOptIn: boolean };
 
+function eligibilityReason(
+  donor: { email?: string | null; phone?: string | null },
+  channel: "EMAIL" | "WHATSAPP" | "SMS",
+  profile?: ConsentProfile | null,
+): string | null {
+  if (profile?.doNotContact) return "التواصل موقوف لهذا المتبرع";
+  if (channel === "EMAIL" && !donor.email) return "لا يوجد بريد إلكتروني";
+  if ((channel === "WHATSAPP" || channel === "SMS") && !donor.phone) return "لا يوجد رقم هاتف";
+  if (channel === "WHATSAPP") return null;
+  if (!profile) return "لم تُراجع موافقة التواصل بعد";
+  if (channel === "EMAIL" && profile.emailOptIn !== true) return "لا توجد موافقة بريد تسويقي";
+  if (channel === "SMS" && profile.smsOptIn !== true) return "لا توجد موافقة SMS";
+  return null;
+}
+
 async function eligibilityProfiles(userIds: string[]): Promise<Map<string, ConsentProfile>> {
   if (userIds.length === 0) return new Map();
   await ensureProfilesForUsers(userIds);
@@ -190,6 +203,7 @@ export async function GET(request: NextRequest) {
 
   let donors = rows.map((u) => {
     const resolved = resolveUserCountry(u as DonorRow);
+    const profile = profiles.get(u.id) ?? null;
     return {
       id: u.id,
       name: u.name,
@@ -203,8 +217,10 @@ export async function GET(request: NextRequest) {
       eligibility: donorChannelEligibility(
         { email: u.email, phone: u.phone, emailNotifications: u.emailNotifications, smsNotifications: u.smsNotifications },
         channel,
-        profiles.get(u.id) ?? null,
+        profile,
       ),
+      eligibilityReason: eligibilityReason({ email: u.email, phone: u.phone }, channel, profile),
+      canConfirmWhatsappOptIn: false,
     };
   });
 

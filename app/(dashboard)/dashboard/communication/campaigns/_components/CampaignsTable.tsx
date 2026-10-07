@@ -18,7 +18,7 @@ import { CampaignRowActions } from "./CampaignRowActions";
  * anything. Sorting only makes sense once they are columns, which is the other half of the move.
  */
 
-type SortKey = "name" | "channel" | "status" | "sentCount" | "deliveredCount" | "failedCount" | "date";
+type SortKey = "name" | "channel" | "status" | "sentCount" | "deliveredCount" | "readCount" | "clickedCount" | "repliedCount" | "donationCount" | "revenue" | "failedCount" | "date";
 type SortDir = "asc" | "desc";
 export type CampaignSort = { key: SortKey; dir: SortDir };
 
@@ -121,6 +121,11 @@ export function CampaignsTable({
               <SortHeader label="الحالة" sortKey="status" sort={sort} onSort={onSort} />
               <SortHeader label="أُرسلت" sortKey="sentCount" sort={sort} onSort={onSort} align="left" className="text-left" />
               <SortHeader label="وصلت" sortKey="deliveredCount" sort={sort} onSort={onSort} align="left" className="text-left" />
+              <SortHeader label="فتح/قرأ" sortKey="readCount" sort={sort} onSort={onSort} align="left" className="text-left" />
+              <SortHeader label="ضغط" sortKey="clickedCount" sort={sort} onSort={onSort} align="left" className="text-left" />
+              <SortHeader label="رد" sortKey="repliedCount" sort={sort} onSort={onSort} align="left" className="text-left" />
+              <SortHeader label="تبرعات" sortKey="donationCount" sort={sort} onSort={onSort} align="left" className="text-left" />
+              <SortHeader label="إيراد $" sortKey="revenue" sort={sort} onSort={onSort} align="left" className="text-left" />
               <SortHeader label="فشلت" sortKey="failedCount" sort={sort} onSort={onSort} align="left" className="text-left" />
               <SortHeader label="التاريخ" sortKey="date" sort={sort} onSort={onSort} />
               <th scope="col" className="w-px px-3 py-2.5">
@@ -178,13 +183,33 @@ export function CampaignsTable({
                   </td>
 
                   <td className="whitespace-nowrap px-3 py-2.5 align-middle">
-                    <span className={cn("inline-block rounded-full border px-2 py-0.5 text-[10px] font-medium", st.tone)}>
-                      {st.label}
-                    </span>
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <span className={cn("inline-block rounded-full border px-2 py-0.5 text-[10px] font-medium", st.tone)}>
+                        {st.label}
+                      </span>
+                      {c.metadata?.sendControls?.paused && (
+                        <span className="inline-block rounded-full border border-orange-200 bg-orange-50 px-2 py-0.5 text-[10px] font-semibold text-orange-700">
+                          متوقفة مؤقتًا
+                        </span>
+                      )}
+                    </div>
                   </td>
 
                   <CountCell value={c.sentCount} show={showResults} />
                   <CountCell value={c.deliveredCount} show={showResults} tone="text-emerald-700" />
+                  <CountCell value={c.readCount} show={showResults} tone="text-sky-700" />
+                  <CountCell value={c.clickedCount} show={showResults} tone="text-violet-700" />
+                  <CountCell value={c.repliedCount} show={showResults} tone="text-amber-700" />
+                  <CountCell value={c.donationCount} show={showResults} tone="text-emerald-700" />
+                  <td className="whitespace-nowrap px-3 py-2.5 text-left align-middle tabular-nums">
+                    {!showResults ? (
+                      <span className="text-slate-300">—</span>
+                    ) : (
+                      <span className={cn("font-semibold", c.revenue === 0 ? "text-slate-400" : "text-emerald-700")}>
+                        {c.revenue.toLocaleString("en-US", { maximumFractionDigits: 2 })}
+                      </span>
+                    )}
+                  </td>
                   <CountCell value={c.failedCount} show={showResults} tone="text-rose-700" />
 
                   <td className="whitespace-nowrap px-3 py-2.5 align-middle text-slate-600">

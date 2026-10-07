@@ -4,18 +4,19 @@ import { sendPreparedDelivery } from "./provider-router";
 import { EMAIL_PROVIDER_ID } from "./providers/email/client";
 import { logSentMessage } from "@/lib/messaging/log-sent";
 import type { CommunicationPurposeId } from "./communication-runtime-types";
+import { getActiveMetaWhatsappRuntimeConfig } from "./runtime-config";
+import { prisma } from "@/lib/prisma";
+import { ensureProfilesForUsers } from "./donor-communication-profile-service";
 
 /**
  * Automatic (trigger-fired) message dispatcher for the Communication Center.
  *
  * Every automatic donation/subscription message now flows through the FINAL provider architecture:
  *   - EMAIL    → Elastic Email (via ProviderRouter). Never SendGrid, never Brevo.
- *   - WHATSAPP → Meta WhatsApp Cloud API using an APPROVED template. Never Twilio. If the stored
- *                WhatsappTemplate has no Meta-approved template mapping, the send is SKIPPED with
- *                `META_TEMPLATE_REQUIRED_FOR_AUTOMATIC_WHATSAPP` (never faked, never Twilio).
- *   - SMS      → TR (+90) → Netgsm, international → Brevo SMS. (No trigger channel emits SMS today 
- *                Prisma `enum MessageChannel` is EMAIL | WHATSAPP  so `sendAutomaticSmsMessage` is
- *                provided for a future SMS trigger channel only.)
+ *   - WHATSAPP → Meta Cloud API. Utility/Auth prefers Direct Send when the beta is enabled, then
+ *                falls back to an approved Meta template. Marketing stays template-only. Never Twilio.
+ *   - SMS      → TR (+90) → Netgsm, international → Brevo SMS. Automatic SMS triggers use the
+ *                same delivery archive, consent gates and provider router as SMS campaigns.
  *
  * Each helper creates a CommunicationDelivery (origin TRIGGER, status RENDERED) BEFORE any provider
  * call, then advances it to SENT / SKIPPED / FAILED based on the real provider outcome. It NEVER marks
@@ -59,6 +60,23 @@ function isTerminalConfigReason(reason: string): boolean {
 /** Build the delivery/mirror variables snapshot, tagging the trigger + donation context. */
 function deliveryVariables(input: CommonInput): Record<string, unknown> {
   return { trigger: { event: input.triggerEvent, donationId: input.donationId ?? null }, snapshot: input.variables };
+}
+
+async function automaticConsentBlock(
+  userId: string,
+  channel: "EMAIL" | "SMS",
+  purpose: CommunicationPurposeId | undefined,
+): Promise<string | null> {
+  await ensureProfilesForUsers([userId]);
+  const profile = await prisma.donorCommunicationProfile.findUnique({
+    where: { userId },
+    select: { doNotContact: true, emailOptIn: true, smsOptIn: true },
+  }).catch(() => null);
+
+  if (profile?.doNotContact) return "DO_NOT_CONTACT";
+  if (channel === "SMS" && profile?.smsOptIn !== true) return "SMS_OPT_IN_REQUIRED";
+  if (channel === "EMAIL" && purpose === "MARKETING" && profile?.emailOptIn !== true) return "EMAIL_MARKETING_OPT_IN_REQUIRED";
+  return null;
 }
 
 /** Secondary SentMessage mirror  written only AFTER the delivery status is known. Best-effort. */
@@ -123,6 +141,19 @@ export async function sendAutomaticEmailMessage(
     renderedBody: input.renderedBody,
     variables: deliveryVariables(input),
   };
+
+  const consentBlock = await automaticConsentBlock(input.recipientUserId, "EMAIL", input.purpose);
+  if (consentBlock) {
+    const created = await createDeliveryRecord({ ...base, recipientEmail: input.recipientEmail, status: "RENDERED" });
+    if (created.ok) await markDeliveryStatus(created.data.id, "SKIPPED", { errorMessage: consentBlock });
+    await mirrorSentMessage("EMAIL", input, "SKIPPED", {
+      recipientEmail: input.recipientEmail,
+      renderedSubject: input.renderedSubject,
+      renderedBody: input.renderedBody,
+      errorMessage: consentBlock,
+    });
+    return { outcome: "SKIPPED", reason: consentBlock };
+  }
 
   if (!input.recipientEmail) {
     const created = await createDeliveryRecord({ ...base, recipientEmail: null, status: "RENDERED" });
@@ -204,14 +235,6 @@ export async function sendAutomaticWhatsappMessage(
     return { outcome: "SKIPPED", reason: "NO_RECIPIENT_PHONE" };
   }
 
-  // Meta does not allow arbitrary free-text outbound  an approved template mapping is required.
-  if (!input.metaTemplate) {
-    const created = await createDeliveryRecord({ ...base, recipientPhone: input.recipientPhone, status: "RENDERED" });
-    if (created.ok) await markDeliveryStatus(created.data.id, "SKIPPED", { errorMessage: "META_TEMPLATE_REQUIRED_FOR_AUTOMATIC_WHATSAPP" });
-    await mirrorSentMessage("WHATSAPP", input, "SKIPPED", { recipientPhone: input.recipientPhone, renderedBody: input.renderedBody, errorMessage: "META_TEMPLATE_REQUIRED_FOR_AUTOMATIC_WHATSAPP" });
-    return { outcome: "SKIPPED", reason: "META_TEMPLATE_REQUIRED_FOR_AUTOMATIC_WHATSAPP" };
-  }
-
   const created = await createDeliveryRecord({ ...base, recipientPhone: input.recipientPhone, status: "RENDERED" });
   if (!created.ok) {
     await mirrorSentMessage("WHATSAPP", input, "FAILED", { recipientPhone: input.recipientPhone, renderedBody: input.renderedBody, errorMessage: "ARCHIVE_FAILED" });
@@ -223,6 +246,70 @@ export async function sendAutomaticWhatsappMessage(
     await markDeliveryStatus(id, "SKIPPED", { errorMessage: "META_SENDER_MISSING_PHONE_NUMBER_ID" });
     await mirrorSentMessage("WHATSAPP", input, "SKIPPED", { recipientPhone: input.recipientPhone, renderedBody: input.renderedBody, errorMessage: "META_SENDER_MISSING_PHONE_NUMBER_ID" });
     return { outcome: "SKIPPED", reason: "META_SENDER_MISSING_PHONE_NUMBER_ID" };
+  }
+
+  /*
+   * Hybrid automatic WhatsApp:
+   *   1) Direct Send for Utility/Auth when the beta is enabled for the account.
+   *   2) Approved Meta template as a deterministic fallback.
+   *
+   * Transactional donation/account notices map to Direct Send's Utility category. Marketing is
+   * never allowed here. A Direct Send rejection does NOT lose the notification: if a matching
+   * approved template exists, the exact same event falls back to it.
+   */
+  const directCategory =
+    input.purpose === "AUTHENTICATION"
+      ? "authentication"
+      : input.purpose === "UTILITY" || input.purpose === "TRANSACTIONAL"
+        ? "utility"
+        : null;
+  if (directCategory && process.env.META_WHATSAPP_DIRECT_SEND_ENABLED === "true") {
+    const runtime = await getActiveMetaWhatsappRuntimeConfig();
+    const { sendDirectTextMessage } = await import("./providers/meta-whatsapp/messages");
+    const direct = await sendDirectTextMessage(
+      {
+        phoneNumberId: input.sender.phoneNumberId,
+        to: input.recipientPhone,
+        body: input.renderedBody,
+        category: directCategory,
+      },
+      runtime,
+    );
+    if (direct.ok) {
+      await markDeliveryStatus(id, "SENT", { providerMessageId: direct.providerMessageId });
+      await mirrorSentMessage("WHATSAPP", input, "SENT", {
+        recipientPhone: input.recipientPhone,
+        renderedBody: input.renderedBody,
+        providerMessageId: direct.providerMessageId,
+      });
+      return { outcome: "SENT", providerMessageId: direct.providerMessageId };
+    }
+    // Keep going to the approved-template fallback below. The final delivery row records only the
+    // terminal result so reporting stays one row per automatic event.
+  }
+
+  if (input.metaTemplate && directCategory) {
+    const actualCategory = String(input.metaTemplate.category ?? "").toUpperCase();
+    const expectedCategory = directCategory === "authentication" ? "AUTHENTICATION" : "UTILITY";
+    if (actualCategory && actualCategory !== expectedCategory) {
+      await markDeliveryStatus(id, "SKIPPED", { errorMessage: `META_TEMPLATE_CATEGORY_MISMATCH:${actualCategory}` });
+      await mirrorSentMessage("WHATSAPP", input, "SKIPPED", {
+        recipientPhone: input.recipientPhone,
+        renderedBody: input.renderedBody,
+        errorMessage: `META_TEMPLATE_CATEGORY_MISMATCH:${actualCategory}`,
+      });
+      return { outcome: "SKIPPED", reason: "META_TEMPLATE_CATEGORY_MISMATCH" };
+    }
+  }
+
+  if (!input.metaTemplate) {
+    await markDeliveryStatus(id, "SKIPPED", { errorMessage: "META_DIRECT_SEND_OR_TEMPLATE_REQUIRED" });
+    await mirrorSentMessage("WHATSAPP", input, "SKIPPED", {
+      recipientPhone: input.recipientPhone,
+      renderedBody: input.renderedBody,
+      errorMessage: "META_DIRECT_SEND_OR_TEMPLATE_REQUIRED",
+    });
+    return { outcome: "SKIPPED", reason: "META_DIRECT_SEND_OR_TEMPLATE_REQUIRED" };
   }
 
   /* Meta counts parameters against the schema it approved, so the components are built from that
@@ -281,10 +368,10 @@ export async function sendAutomaticWhatsappMessage(
 /* ─────────────────────────── SMS (Netgsm TR / Brevo) ─────────────────────────── */
 
 /**
- * Automatic SMS. NOTE: no trigger channel currently emits SMS (Prisma `enum MessageChannel` is
- * EMAIL | WHATSAPP), so this is not reached from `dispatchEvent` today. It is provided so a future
- * SMS trigger channel routes correctly (TR → Netgsm, international → Brevo SMS) with a
- * CommunicationDelivery record and no Twilio. No SentMessage mirror (that enum has no SMS value).
+ * Automatic SMS. Trigger events route through the same final provider architecture as campaigns:
+ * Turkish recipients → Netgsm, international recipients → Brevo SMS. Every attempt is archived in
+ * CommunicationDelivery before the provider call. SentMessage remains only a legacy email/WhatsApp
+ * mirror, so SMS does not depend on it.
  */
 export async function sendAutomaticSmsMessage(
   input: CommonInput & {
@@ -297,7 +384,7 @@ export async function sendAutomaticSmsMessage(
   const base = {
     channel: "SMS" as const,
     origin: "TRIGGER" as const,
-    purpose: "TRANSACTIONAL" as const,
+    purpose: input.purpose ?? ("TRANSACTIONAL" as const),
     templateId: input.templateId,
     templateName: input.templateName,
     recipientUserId: input.recipientUserId,
@@ -306,6 +393,13 @@ export async function sendAutomaticSmsMessage(
     renderedBody: input.renderedBody,
     variables: deliveryVariables(input),
   };
+
+  const consentBlock = await automaticConsentBlock(input.recipientUserId, "SMS", input.purpose);
+  if (consentBlock) {
+    const created = await createDeliveryRecord({ ...base, recipientPhone: input.recipientPhone, status: "RENDERED" });
+    if (created.ok) await markDeliveryStatus(created.data.id, "SKIPPED", { errorMessage: consentBlock });
+    return { outcome: "SKIPPED", reason: consentBlock };
+  }
 
   if (!input.recipientPhone) {
     const created = await createDeliveryRecord({ ...base, recipientPhone: null, status: "RENDERED" });
@@ -323,6 +417,7 @@ export async function sendAutomaticSmsMessage(
     country: input.country,
     to: input.recipientPhone,
     html: input.renderedBody,
+    purpose: input.purpose ?? "TRANSACTIONAL",
   });
 
   if (!res.ok) {
@@ -337,6 +432,8 @@ export async function sendAutomaticSmsMessage(
 
 export type MetaTemplateMapping = {
   name: string;
+  /** Meta's actual category for the selected provider variant. */
+  category: string | null;
   /** `{{1}}`, `{{2}}` … in order, from the local template's variable catalog. */
   positionalNames: string[];
   /** Semantic name by component-scoped position (header.1, body.1, button.0.1). */
@@ -386,6 +483,7 @@ export async function resolveMetaTemplateMapping(
   const longitude = Number(header.longitude);
   return {
     name: readiness.providerTemplateName,
+    category: readiness.category ? String(readiness.category).toUpperCase() : null,
     positionalNames: binding.names,
     scopedNames: binding.scopedNames,
     headerMediaUrl: typeof header.mediaUrl === "string" && header.mediaUrl.trim() ? header.mediaUrl.trim() : null,

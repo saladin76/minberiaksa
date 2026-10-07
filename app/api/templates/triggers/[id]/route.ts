@@ -42,7 +42,9 @@ export async function PATCH(
     const exists =
       existing.channel === "EMAIL"
         ? await prisma.emailTemplate.findUnique({ where: { id: parsed.data.templateId }, select: { id: true } })
-        : await prisma.whatsappTemplate.findUnique({ where: { id: parsed.data.templateId }, select: { id: true } });
+        : existing.channel === "WHATSAPP"
+          ? await prisma.whatsappTemplate.findUnique({ where: { id: parsed.data.templateId }, select: { id: true } })
+          : await prisma.smsTemplate.findUnique({ where: { id: parsed.data.templateId }, select: { id: true } });
     if (!exists) {
       return NextResponse.json({ error: "Template not found for channel" }, { status: 400 });
     }

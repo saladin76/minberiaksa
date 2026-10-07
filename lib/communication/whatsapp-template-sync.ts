@@ -1,3 +1,4 @@
+import { schemaHasInvalidMetaParameterNames } from "./meta-parameter-name";
 import "server-only";
 
 import { prisma } from "@/lib/prisma";
@@ -99,7 +100,10 @@ export async function syncMetaWhatsappTemplates(opts: {
   }).catch(() => []);
   const byFoldedName = new Map<string, string>();
   for (const local of locals) {
-    byFoldedName.set(foldName(local.name), local.id);
+    // Once an exact provider family exists, it becomes authoritative. Keeping the local editorial
+    // name mapped as well would let an obsolete provider family overwrite a repaired/versioned
+    // family during the same Meta sync simply because both names point at the same local template.
+    if (!local.wabaVariants.length) byFoldedName.set(foldName(local.name), local.id);
     for (const variant of local.wabaVariants) {
       if (variant.providerTemplateName) byFoldedName.set(foldName(variant.providerTemplateName), local.id);
     }
@@ -302,6 +306,7 @@ export type VariantReadiness = {
   reason: string | null;
   languageCode: string | null;
   approvalStatus: string | null;
+  category: string | null;
   locale: string | null;
   providerTemplateName: string | null;
   componentsSchema: unknown;
@@ -314,6 +319,7 @@ export const NOT_READY: VariantReadiness = {
   reason: "NO_VARIANT",
   languageCode: null,
   approvalStatus: null,
+  category: null,
   locale: null,
   providerTemplateName: null,
   componentsSchema: null,
@@ -325,6 +331,7 @@ export type VariantRow = {
   languageCode: string;
   locale: string | null;
   approvalStatus: string;
+  category: string | null;
   providerTemplateName: string;
   componentsSchema: unknown;
   rejectionReason: string | null;
@@ -344,12 +351,15 @@ export function resolveVariantForLocale(variants: VariantRow[], locale: string):
     pool.find((v) => v.languageCode.toLowerCase().startsWith("ar")) ??
     null;
   if (!chosen) return NOT_READY;
-  const ready = normalizeApprovalStatus(chosen.approvalStatus) === "APPROVED";
+  const isApproved = normalizeApprovalStatus(chosen.approvalStatus) === "APPROVED";
+  const parameterSchemaInvalid = isApproved && schemaHasInvalidMetaParameterNames(chosen.componentsSchema);
+  const ready = isApproved && !parameterSchemaInvalid;
   return {
     ready,
-    reason: ready ? null : "NOT_APPROVED",
+    reason: parameterSchemaInvalid ? "META_TEMPLATE_PARAMETER_NAME_INVALID" : ready ? null : "NOT_APPROVED",
     languageCode: chosen.languageCode,
     approvalStatus: chosen.approvalStatus,
+    category: chosen.category ?? null,
     locale: chosen.locale,
     providerTemplateName: chosen.providerTemplateName,
     componentsSchema: chosen.componentsSchema,
@@ -375,6 +385,7 @@ export async function getTemplateReadiness(
         languageCode: true,
         locale: true,
         approvalStatus: true,
+        category: true,
         providerTemplateName: true,
         componentsSchema: true,
         rejectionReason: true,
@@ -389,6 +400,7 @@ export async function getTemplateReadiness(
       languageCode: true,
       locale: true,
       approvalStatus: true,
+      category: true,
       providerTemplateName: true,
       componentsSchema: true,
       rejectionReason: true,
@@ -403,14 +415,15 @@ export async function approvedLocalesFor(templateId: string, businessAccountId?:
   const variants = businessAccountId
     ? await prisma.whatsappTemplateWabaVariant.findMany({
         where: { templateId, provider: META_PROVIDER, businessAccountId, approvalStatus: "APPROVED" },
-        select: { locale: true, languageCode: true },
+        select: { locale: true, languageCode: true, componentsSchema: true },
       }).catch(() => [])
     : await prisma.whatsappTemplateVariant.findMany({
         where: { templateId, provider: META_PROVIDER, approvalStatus: "APPROVED" },
-        select: { locale: true, languageCode: true },
+        select: { locale: true, languageCode: true, componentsSchema: true },
       }).catch(() => []);
   const out = new Set<string>();
   for (const v of variants) {
+    if (schemaHasInvalidMetaParameterNames(v.componentsSchema)) continue;
     const locale = v.locale ?? localeFromMetaLanguage(v.languageCode);
     if (locale) out.add(locale);
   }

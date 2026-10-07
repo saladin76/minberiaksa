@@ -16,6 +16,9 @@ import { buildMetaComponents } from "./providers/meta-whatsapp/parameters";
 import { resolveAudienceOrigin } from "./audience-list-service";
 import { computeFinalStatus, recomputeCampaignCounters } from "./campaign-counter-service";
 import { type CommunicationChannelId, type CommunicationPurposeId } from "./communication-runtime-types";
+import { autoSpeedMode, campaignPriorityRank, campaignSendControls, evaluateCampaignSendControls, speedSettings, type CampaignSpeedMode } from "./campaign-send-controls";
+import { mergeCampaignMetadata, mutateCampaignMetadata } from "./campaign-metadata-store";
+import { normalizePhoneE164, phoneMatchVariants } from "./phone";
 
 export { computeFinalStatus };
 
@@ -36,6 +39,7 @@ async function loadWhatsappTemplateTruth(templateId: string): Promise<{
         languageCode: true,
         locale: true,
         approvalStatus: true,
+        category: true,
         providerTemplateName: true,
         componentsSchema: true,
         rejectionReason: true,
@@ -175,6 +179,15 @@ const MAX_BLOCKED_RESUMES = 3;
 type Lease = { token: string; expiresAt: string; holder?: string | null };
 
 function bump(reasons: Record<string, number>, key: string) { reasons[key] = (reasons[key] ?? 0) + 1; }
+
+function normalizeRecipientContact(channel: CommunicationChannelId, email: string | null | undefined, phone: string | null | undefined): string | null {
+  if (channel === "EMAIL") {
+    const value = String(email ?? "").trim().toLowerCase();
+    return value ? `email:${value}` : null;
+  }
+  const canonical = normalizePhoneE164(phone);
+  return canonical ? `phone:${canonical}` : null;
+}
 function metaOf(campaign: CommunicationCampaign) { return (campaign.metadata as Record<string, unknown> | null) ?? {}; }
 function coverageDecisions(campaign: CommunicationCampaign): Record<string, string> { return (metaOf(campaign).coverageDecisions ?? {}) as Record<string, string>; }
 function progressOf(campaign: CommunicationCampaign): SendProgress | null {
@@ -208,11 +221,9 @@ function newLease(actor: Actor): Lease {
   return { token: `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`, expiresAt: new Date(Date.now() + LEASE_MS).toISOString(), holder: actor?.actorName ?? actor?.actorRole ?? null };
 }
 
-/** Merge into the campaign's metadata without dropping the keys this module does not own. */
-async function patchMetadata(campaignId: string, current: Record<string, unknown>, patch: Record<string, unknown>) {
-  await prisma.communicationCampaign
-    .update({ where: { id: campaignId }, data: { metadata: { ...current, ...patch } as never } })
-    .catch(() => {});
+/** Merge into the latest campaign metadata without overwriting live operator controls. */
+async function patchMetadata(campaignId: string, patch: Record<string, unknown>) {
+  await mergeCampaignMetadata(campaignId, patch);
 }
 
 async function auditBlocked(campaign: CommunicationCampaign, reason: string, actor: Actor, mode: SendMode, plan?: SendPlan) {
@@ -228,10 +239,11 @@ function concurrencyFromEnv(name: string, fallback: number, cap = 50): number {
   return Math.min(Math.floor(parsed), cap);
 }
 
-function sendConcurrency(channel: CommunicationChannelId): number {
-  if (channel === "WHATSAPP") return concurrencyFromEnv("COMMUNICATION_WHATSAPP_CONCURRENCY", 10);
-  if (channel === "EMAIL") return concurrencyFromEnv("COMMUNICATION_EMAIL_CONCURRENCY", 20);
-  return concurrencyFromEnv("COMMUNICATION_SMS_CONCURRENCY", 10);
+function sendConcurrency(channel: CommunicationChannelId, speedMode: CampaignSpeedMode = "BALANCED"): number {
+  const speed = speedSettings(speedMode);
+  if (channel === "WHATSAPP") return concurrencyFromEnv("COMMUNICATION_WHATSAPP_CONCURRENCY", speed.concurrency);
+  if (channel === "EMAIL") return concurrencyFromEnv("COMMUNICATION_EMAIL_CONCURRENCY", Math.max(speed.concurrency, 20));
+  return concurrencyFromEnv("COMMUNICATION_SMS_CONCURRENCY", speed.concurrency);
 }
 
 async function mapWithConcurrency<T, R>(
@@ -267,13 +279,20 @@ export async function executeCampaignSend(
   opts: { actor?: Actor; mode?: SendMode; batchSize?: number; maxBatches?: number } = {},
 ): Promise<ExecutionSummary> {
   const mode = opts.mode ?? "SEND_NOW";
-  const batchSize = Math.min(opts.batchSize ?? 200, 1000);
   const maxBatches = Math.max(1, Math.min(opts.maxBatches ?? DEFAULT_MAX_BATCHES, 50));
   const actor = opts.actor ?? null;
   const base: ExecutionSummary = { ok: false, campaignId, status: "", total: 0, sent: 0, skipped: 0, failed: 0, truncated: false, reasons: {}, batches: 0 };
   const campaign = await getCampaign(campaignId);
   if (!campaign) return { ...base, blocked: "NOT_FOUND" };
   base.status = campaign.status;
+
+  // Intentional campaign controls are checked before planning/claiming, so a paused campaign or a
+  // quiet-hours wait never increments the "broken provider" retry counter and can resume forever.
+  const controlGate = await evaluateCampaignSendControls(campaign);
+  if (!controlGate.ok) return { ...base, blocked: controlGate.reason };
+  const speed = speedSettings(controlGate.controls.speedMode);
+  const requestedBatch = Math.min(opts.batchSize ?? speed.batchSize, 1000);
+  const batchSize = Math.max(1, Math.min(requestedBatch, controlGate.remainingDaily ?? requestedBatch));
 
   /* ── Gate + claim ──────────────────────────────────────────────────────
      The claim is an atomic status transition, so two runners cannot both start
@@ -315,12 +334,13 @@ export async function executeCampaignSend(
     }
     const lastRun = { ranAt: new Date().toISOString(), mode, total: firstPlan.total, sent: 0, skipped: firstPlan.skipped, failed: 0, blocked: firstPlan.blocked, reasons: firstPlan.reasons, truncated: firstPlan.truncated, gaveUp: giveUp || undefined };
     if (giveUp) {
-      await prisma.communicationCampaign.update({
-        where: { id: campaignId },
-        data: { status: computeFinalStatus(progress.total, progress.sent, progress.skipped, progress.failed), metadata: { ...metaOf(campaign), sendProgress: { ...progress }, sendLease: null, lastRun } as never },
-      }).catch(() => {});
+      await mutateCampaignMetadata(
+        campaignId,
+        (current) => ({ ...current, sendProgress: { ...progress }, sendLease: null, lastRun }),
+        { status: computeFinalStatus(progress.total, progress.sent, progress.skipped, progress.failed), expectedStatus: "SENDING" },
+      );
     } else {
-      await patchMetadata(campaignId, metaOf(campaign), { lastRun, sendLease: null, ...(resuming ? { sendProgress: { ...progress } } : {}) });
+      await patchMetadata(campaignId, { lastRun, sendLease: null, ...(resuming ? { sendProgress: { ...progress } } : {}) });
     }
     return { ...base, blocked: firstPlan.blocked };
   }
@@ -332,8 +352,41 @@ export async function executeCampaignSend(
       .updateMany({ where: { id: campaignId, status: expected }, data: { status: "SENDING" } })
       .catch(() => ({ count: 0 }));
     if (!claimed.count) return { ...base, blocked: "ALREADY_RUNNING" };
+
+    const metadataClaimed = await mergeCampaignMetadata(
+      campaignId,
+      { sendLease: lease, sendProgress: { ...progress, updatedAt: new Date().toISOString() } },
+      { expectedStatus: "SENDING" },
+    );
+    if (!metadataClaimed) {
+      await prisma.communicationCampaign
+        .updateMany({ where: { id: campaignId, status: "SENDING" }, data: { status: expected } })
+        .catch(() => ({ count: 0 }));
+      return { ...base, blocked: "CLAIM_CONFLICT" };
+    }
+  } else {
+    // Resume lease acquisition must be atomic. Two scheduler ticks may both observe an expired
+    // lease; only one is allowed to replace it. The metadata CAS re-reads the latest lease on
+    // every retry and refuses if another runner has already claimed the campaign.
+    const leaseClaimed = await mutateCampaignMetadata(
+      campaignId,
+      (current) => {
+        const raw = current.sendLease as Partial<Lease> | null | undefined;
+        const currentLease =
+          raw && typeof raw.token === "string" && typeof raw.expiresAt === "string"
+            ? { token: raw.token, expiresAt: raw.expiresAt, holder: raw.holder ?? null }
+            : null;
+        if (leaseIsFresh(currentLease)) return null;
+        return {
+          ...current,
+          sendLease: lease,
+          sendProgress: { ...progress, updatedAt: new Date().toISOString() },
+        };
+      },
+      { expectedStatus: "SENDING" },
+    );
+    if (!leaseClaimed) return { ...base, blocked: "ALREADY_RUNNING" };
   }
-  await patchMetadata(campaignId, metaOf(campaign), { sendLease: lease, sendProgress: { ...progress, updatedAt: new Date().toISOString() } });
 
   /* ── Everything the batches share, resolved once ───────────────────── */
   const runtime = await getActiveCommunicationRuntimeBundle();
@@ -356,7 +409,7 @@ export async function executeCampaignSend(
   const updateSource = sourceUpdateMeta ? await loadUpdateSource(sourceUpdateMeta.updateId).catch(() => null) : null;
 
   /** One batch: archive its skips, render, route and send each eligible recipient. */
-  async function runBatch(plan: SendPlan): Promise<BatchTally> {
+  async function runBatch(plan: SendPlan, speedMode: CampaignSpeedMode): Promise<BatchTally> {
     const tally: BatchTally = { total: plan.total, sent: 0, skipped: 0, failed: 0, reasons: {} };
 
     /*
@@ -372,24 +425,52 @@ export async function executeCampaignSend(
       ...plan.recipients.map((recipient) => recipient.userId),
       ...plan.skippedList.map((recipient) => recipient.userId),
     ]));
-    const existing = batchUserIds.length
+    const batchEmails = Array.from(new Set(
+      plan.recipients
+        .map((recipient) => String(recipient.email ?? "").trim())
+        .filter(Boolean),
+    ));
+    const batchPhones = Array.from(new Set(
+      plan.recipients.flatMap((recipient) => phoneMatchVariants(recipient.phone)),
+    ));
+    const existing = (batchUserIds.length || batchEmails.length || batchPhones.length)
       ? await prisma.communicationDelivery.findMany({
           where: {
             campaignId,
             templateId,
             channel,
             origin,
-            recipientUserId: { in: batchUserIds },
+            OR: [
+              ...(batchUserIds.length ? [{ recipientUserId: { in: batchUserIds } }] : []),
+              ...(batchEmails.length ? [{ recipientEmail: { in: batchEmails } }] : []),
+              ...(batchPhones.length ? [{ recipientPhone: { in: batchPhones } }] : []),
+            ],
           },
-          select: { recipientUserId: true, status: true, providerMessageId: true },
+          select: {
+            recipientUserId: true,
+            recipientEmail: true,
+            recipientPhone: true,
+            status: true,
+            providerMessageId: true,
+          },
         }).catch(() => [])
       : [];
+    const processedExisting = existing.filter(
+      (delivery) => (delivery.status && PROCESSED_STATUSES.includes(delivery.status)) || !!delivery.providerMessageId,
+    );
     const alreadyDone = new Set(
-      existing
-        .filter((delivery) => (delivery.status && PROCESSED_STATUSES.includes(delivery.status)) || !!delivery.providerMessageId)
+      processedExisting
         .map((delivery) => delivery.recipientUserId)
         .filter(Boolean) as string[],
     );
+    const alreadyDoneContacts = new Set(
+      processedExisting
+        .map((delivery) => normalizeRecipientContact(channel, delivery.recipientEmail, delivery.recipientPhone))
+        .filter(Boolean) as string[],
+    );
+    // Shared within this page. Each callback claims its contact synchronously before its first await,
+    // so duplicate donor rows that point to the same destination cannot race into the provider.
+    const claimedBatchContacts = new Set<string>();
 
     for (const skipped of plan.skippedList) {
       if (alreadyDone.has(skipped.userId)) continue;
@@ -410,12 +491,32 @@ export async function executeCampaignSend(
      * limits or exhaust database connections. Defaults are deliberately conservative and can be
      * tuned per environment with COMMUNICATION_*_CONCURRENCY.
      */
-    const outcomes = await mapWithConcurrency(plan.recipients, sendConcurrency(channel), async (recipient): Promise<BatchTally> => {
+    const outcomes = await mapWithConcurrency(plan.recipients, sendConcurrency(channel, speedMode), async (recipient): Promise<BatchTally> => {
       const outcome: BatchTally = { total: 0, sent: 0, skipped: 0, failed: 0, reasons: {} };
       if (alreadyDone.has(recipient.userId)) {
         bump(outcome.reasons, "ALREADY_PROCESSED");
         return outcome;
       }
+
+      const contactKey = normalizeRecipientContact(channel, recipient.email, recipient.phone);
+      if (contactKey && (alreadyDoneContacts.has(contactKey) || claimedBatchContacts.has(contactKey))) {
+        await recordSkippedDelivery({
+          channel,
+          campaignId,
+          templateId,
+          recipientUserId: recipient.userId,
+          recipientEmail: channel === "EMAIL" ? recipient.email : null,
+          recipientPhone: channel !== "EMAIL" ? recipient.phone : null,
+          locale: recipient.locale,
+          purpose,
+          origin,
+          createdBy: actor?.actorId ?? null,
+        }, "DUPLICATE_RECIPIENT_CONTACT");
+        outcome.skipped += 1;
+        bump(outcome.reasons, "DUPLICATE_RECIPIENT_CONTACT");
+        return outcome;
+      }
+      if (contactKey) claimedBatchContacts.add(contactKey);
 
       const loadedCtx = contexts.get(recipient.userId) ?? null;
       const recipientCtx = loadedCtx && updateSource
@@ -502,6 +603,21 @@ export async function executeCampaignSend(
           bump(outcome.reasons, reason);
           return outcome;
         }
+        const actualMetaCategory = String(readiness.category ?? "").toUpperCase();
+        const expectedMetaCategory =
+          purpose === "MARKETING" ? "MARKETING"
+          : purpose === "AUTHENTICATION" ? "AUTHENTICATION"
+          : purpose === "UTILITY" || purpose === "TRANSACTIONAL" ? "UTILITY"
+          : null;
+        if (expectedMetaCategory && actualMetaCategory && actualMetaCategory !== expectedMetaCategory) {
+          const reason = "META_TEMPLATE_CATEGORY_MISMATCH";
+          await markDeliveryStatus(deliveryId, "SKIPPED", {
+            errorMessage: `${reason}: Meta=${actualMetaCategory}; expected=${expectedMetaCategory}`,
+          });
+          outcome.skipped += 1;
+          bump(outcome.reasons, reason);
+          return outcome;
+        }
         const built = buildMetaComponents({
           componentsSchema: readiness.componentsSchema,
           values: templateValuesFor(whatsapp?.positionalNames ?? [], recipientCtx),
@@ -579,7 +695,22 @@ export async function executeCampaignSend(
   let cursor = firstPlan.nextCursor;
 
   while (plan && batches < maxBatches) {
-    const tally = await runBatch(plan);
+    // Re-check before every page so an operator can hit Pause while a large campaign is mid-walk,
+    // and so crossing midnight/quiet-hours or the rolling daily cap stops before the next provider call.
+    const liveCampaign = await getCampaign(campaignId);
+    if (!liveCampaign) { base.blocked = "NOT_FOUND"; break; }
+    const liveGate = await evaluateCampaignSendControls(liveCampaign);
+    if (!liveGate.ok) { base.blocked = liveGate.reason; break; }
+
+    const remainingRecipients = Math.max(plan.audienceTotal - progress.total, plan.total);
+    const liveSpeed = liveGate.controls.autoSpeed
+      ? autoSpeedMode({
+          remainingRecipients,
+          remainingDaily: liveGate.remainingDaily,
+          scheduledStopAt: liveGate.controls.scheduledStopAt,
+        })
+      : liveGate.controls.speedMode;
+    const tally = await runBatch(plan, liveSpeed);
     batches += 1;
     exhausted = plan.exhausted;
     cursor = plan.nextCursor;
@@ -597,14 +728,29 @@ export async function executeCampaignSend(
     /* The lease is renewed with each batch: a long but healthy walk must not look crashed to the
        next scheduler tick while it is still working. */
     lease.expiresAt = new Date(Date.now() + LEASE_MS).toISOString();
-    await patchMetadata(campaignId, metaOf(campaign), { sendProgress: { ...progress }, sendLease: exhausted ? null : lease });
+    await patchMetadata(campaignId, { sendProgress: { ...progress }, sendLease: exhausted ? null : lease });
 
     if (exhausted || batches >= maxBatches) break;
-    const next = await planCampaignSend(campaignId, { batchSize, cursor });
+    const fresh = await getCampaign(campaignId);
+    if (!fresh) { base.blocked = "NOT_FOUND"; break; }
+    const nextGate = await evaluateCampaignSendControls(fresh);
+    if (!nextGate.ok) { base.blocked = nextGate.reason; break; }
+    const remainingForNextBatch = Math.max(firstPlan.audienceTotal - progress.total, 0);
+    const nextMode = nextGate.controls.autoSpeed
+      ? autoSpeedMode({
+          remainingRecipients: remainingForNextBatch,
+          remainingDaily: nextGate.remainingDaily,
+          scheduledStopAt: nextGate.controls.scheduledStopAt,
+        })
+      : nextGate.controls.speedMode;
+    const nextSpeed = speedSettings(nextMode);
+    const desiredNextBatch = Math.min(opts.batchSize ?? nextSpeed.batchSize, 1000);
+    const nextBatchSize = Math.max(1, Math.min(desiredNextBatch, nextGate.remainingDaily ?? desiredNextBatch));
+    const next = await planCampaignSend(campaignId, { batchSize: nextBatchSize, cursor });
     /* A blocked page mid-walk (a provider that went away, a template that stopped rendering) stops
        the walk here and leaves the campaign resumable rather than declaring it finished. */
     if (next.blocked) {
-      if (next.blocked === "AUDIENCE_EXHAUSTED") { exhausted = true; progress.done = true; await patchMetadata(campaignId, metaOf(campaign), { sendProgress: { ...progress }, sendLease: null }); }
+      if (next.blocked === "AUDIENCE_EXHAUSTED") { exhausted = true; progress.done = true; await patchMetadata(campaignId, { sendProgress: { ...progress }, sendLease: null }); }
       else base.blocked = next.blocked;
       break;
     }
@@ -617,22 +763,20 @@ export async function executeCampaignSend(
      SENDING  which is both the truth and what makes the scheduler pick it up again. */
   const finalStatus = hasMore ? "SENDING" : computeFinalStatus(progress.total, progress.sent, progress.skipped, progress.failed);
   base.truncated = hasMore;
-  await prisma.communicationCampaign.update({
-    where: { id: campaignId },
-    data: {
-      status: finalStatus,
-      metadata: {
-        ...metaOf(campaign),
-        /* Released on every exit, including one that stops with recipients left: the lease protects a
-           run that is *in flight*, and this one has finished. Holding it would stall the next
-           scheduler tick (and any deliberate resume) for no reason. A crashed run is the case the
-           expiry is for  it leaves the lease behind and it goes stale on its own. */
-        sendProgress: { ...progress },
-        sendLease: null,
-        lastRun: { ranAt: new Date().toISOString(), mode, batches, total: progress.total, sent: progress.sent, skipped: progress.skipped, failed: progress.failed, blocked: base.blocked ?? null, reasons: progress.reasons, truncated: hasMore, hasMore },
-      } as never,
-    },
-  }).catch(() => {});
+  await mutateCampaignMetadata(
+    campaignId,
+    (current) => ({
+      ...current,
+      /* Released on every exit, including one that stops with recipients left: the lease protects a
+         run that is *in flight*, and this one has finished. Holding it would stall the next
+         scheduler tick (and any deliberate resume) for no reason. A crashed run is the case the
+         expiry is for  it leaves the lease behind and it goes stale on its own. */
+      sendProgress: { ...progress },
+      sendLease: null,
+      lastRun: { ranAt: new Date().toISOString(), mode, batches, total: progress.total, sent: progress.sent, skipped: progress.skipped, failed: progress.failed, blocked: base.blocked ?? null, reasons: progress.reasons, truncated: hasMore, hasMore },
+    }),
+    { status: finalStatus, expectedStatus: "SENDING" },
+  );
   // The counters are derived from the delivery rows rather than incremented by this run's tallies.
   // `{ increment }` double-counted a re-run and, more importantly, froze `sentCount` at "the
   // provider accepted it"  the number the event webhook later contradicts. Deriving keeps the
@@ -668,12 +812,33 @@ export async function runDueCampaigns(opts: { actor?: Actor; max?: number } = {}
   const max = Math.min(opts.max ?? 10, 50);
   const results: ExecutionSummary[] = [];
 
-  const due = await prisma.communicationCampaign.findMany({ where: { status: "SCHEDULED", scheduledAt: { lte: new Date() } }, select: { id: true }, take: max }).catch(() => []);
+  const dueCandidates = await prisma.communicationCampaign.findMany({
+    where: { status: "SCHEDULED", scheduledAt: { lte: new Date() } },
+    select: { id: true, metadata: true, scheduledAt: true },
+    take: Math.min(max * 5, 250),
+  }).catch(() => []);
+  dueCandidates.sort((a, b) => {
+    const pa = campaignPriorityRank(campaignSendControls(a as Pick<CommunicationCampaign, "metadata">).priority);
+    const pb = campaignPriorityRank(campaignSendControls(b as Pick<CommunicationCampaign, "metadata">).priority);
+    if (pa !== pb) return pa - pb;
+    return (a.scheduledAt?.getTime() ?? 0) - (b.scheduledAt?.getTime() ?? 0);
+  });
+  const due = dueCandidates.slice(0, max);
   for (const campaign of due) results.push(await executeCampaignSend(campaign.id, { actor: opts.actor, mode: "DUE" }));
 
   const budget = max - due.length;
   if (budget > 0) {
-    const inFlight = await prisma.communicationCampaign.findMany({ where: { status: "SENDING" }, select: { id: true, metadata: true }, take: budget * 4 }).catch(() => []);
+    const inFlight = await prisma.communicationCampaign.findMany({
+      where: { status: "SENDING" },
+      select: { id: true, metadata: true, updatedAt: true },
+      take: Math.min(budget * 8, 250),
+    }).catch(() => []);
+    inFlight.sort((a, b) => {
+      const pa = campaignPriorityRank(campaignSendControls(a as Pick<CommunicationCampaign, "metadata">).priority);
+      const pb = campaignPriorityRank(campaignSendControls(b as Pick<CommunicationCampaign, "metadata">).priority);
+      if (pa !== pb) return pa - pb;
+      return a.updatedAt.getTime() - b.updatedAt.getTime();
+    });
     for (const row of inFlight) {
       if (results.length >= max) break;
       const asCampaign = row as unknown as CommunicationCampaign;

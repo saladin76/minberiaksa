@@ -97,14 +97,45 @@ export async function GET(request: NextRequest) {
     const searchWhere =
       search && isAdmin
         ? {
-            donor: {
-              is: {
-                OR: [
-                  { name: { contains: search, mode: "insensitive" as const } },
-                  { email: { contains: search, mode: "insensitive" as const } },
-                ],
+            OR: [
+              { id: { contains: search, mode: "insensitive" as const } },
+              { providerOrderId: { contains: search, mode: "insensitive" as const } },
+              {
+                donor: {
+                  is: {
+                    OR: [
+                      { name: { contains: search, mode: "insensitive" as const } },
+                      { email: { contains: search, mode: "insensitive" as const } },
+                      { phone: { contains: search, mode: "insensitive" as const } },
+                    ],
+                  },
+                },
               },
-            },
+              {
+                items: {
+                  some: {
+                    campaign: {
+                      OR: [
+                        { title: { contains: search, mode: "insensitive" as const } },
+                        { translations: { some: { title: { contains: search, mode: "insensitive" as const } } } },
+                      ],
+                    },
+                  },
+                },
+              },
+              {
+                categoryItems: {
+                  some: {
+                    category: {
+                      OR: [
+                        { name: { contains: search, mode: "insensitive" as const } },
+                        { translations: { some: { name: { contains: search, mode: "insensitive" as const } } } },
+                      ],
+                    },
+                  },
+                },
+              },
+            ],
           }
         : null;
 

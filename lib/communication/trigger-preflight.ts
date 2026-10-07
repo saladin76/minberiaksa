@@ -3,6 +3,7 @@ import "server-only";
 import { prisma } from "@/lib/prisma";
 import { approvedLocalesFor, getTemplateReadiness } from "./whatsapp-template-sync";
 import { loadSenderRoutingSnapshot, resolveSenderFromSnapshot } from "./sender-resolution";
+import { getActiveCommunicationRuntimeBundle } from "./runtime-config";
 
 /**
  * Can this trigger actually send? Answered before it is switched on, not at the donor's expense.
@@ -44,6 +45,7 @@ const READY: PreflightResult = { ok: true, problems: [], approvedLocales: [], ca
 export async function preflightTrigger(input: { channel: string; templateId: string; event?: string | null }): Promise<PreflightResult> {
   const purpose = input.event === "DONATION_LAPSED" ? "MARKETING" : "TRANSACTIONAL";
   if (input.channel === "EMAIL") return preflightEmailTrigger(input.templateId, purpose);
+  if (input.channel === "SMS") return preflightSmsTrigger(input.templateId);
   if (input.channel !== "WHATSAPP") return READY;
   return preflightWhatsappTrigger(input.templateId, purpose);
 }
@@ -55,11 +57,44 @@ async function preflightEmailTrigger(templateId: string, purpose: "TRANSACTIONAL
     problems.push({ code: "TEMPLATE_NOT_FOUND", messageAr: "القالب غير موجود." });
     return { ok: false, problems, approvedLocales: [], canonical: null };
   }
-  /* Email needs a usable sending identity, nothing more  no per-language approval exists. */
+  const runtime = await getActiveCommunicationRuntimeBundle();
+  if (!runtime.elasticEmail.configured) {
+    problems.push({
+      code: "PROVIDER_NOT_CONFIGURED",
+      messageAr: "مزود البريد Elastic Email غير مُعدّ للإرسال.",
+      detail: runtime.elasticEmail.reason ?? null,
+    });
+  }
+
+  /* Email also needs a usable sending identity; there is no per-language provider approval. */
   const snapshot = await loadSenderRoutingSnapshot("EMAIL");
   const routed = resolveSenderFromSnapshot(snapshot, { purpose });
   if (!routed.ok || !routed.sender.senderEmail) {
     problems.push({ code: "NO_SENDER", messageAr: "لا توجد هوية مُرسِل بريد مُفعّلة.", detail: routed.ok ? null : routed.reason });
+  }
+  return { ok: problems.length === 0, problems, approvedLocales: [], canonical: null };
+}
+
+async function preflightSmsTrigger(templateId: string): Promise<PreflightResult> {
+  const problems: PreflightProblem[] = [];
+  const tpl = await prisma.smsTemplate
+    .findUnique({ where: { id: templateId }, select: { id: true, status: true } })
+    .catch(() => null);
+  if (!tpl) {
+    problems.push({ code: "TEMPLATE_NOT_FOUND", messageAr: "قالب SMS غير موجود." });
+    return { ok: false, problems, approvedLocales: [], canonical: null };
+  }
+  if (String(tpl.status ?? "DRAFT").toUpperCase() === "ARCHIVED") {
+    problems.push({ code: "TEMPLATE_NOT_FOUND", messageAr: "قالب SMS مؤرشف ولا يمكن استخدامه في إرسال تلقائي." });
+  }
+
+  const runtime = await getActiveCommunicationRuntimeBundle();
+  if (!runtime.netgsm.configured && !runtime.brevoSms.configured) {
+    problems.push({
+      code: "PROVIDER_NOT_CONFIGURED",
+      messageAr: "لا يوجد مزود SMS جاهز. فعّل Netgsm لتركيا أو Brevo للأرقام الدولية.",
+      detail: [runtime.netgsm.reason, runtime.brevoSms.reason].filter(Boolean).join(" | ") || null,
+    });
   }
   return { ok: problems.length === 0, problems, approvedLocales: [], canonical: null };
 }

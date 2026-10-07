@@ -10,6 +10,7 @@ import {
   ColumnFiltersState,
   getFilteredRowModel,
   FilterFn,
+  getFacetedRowModel,
 } from "@tanstack/react-table";
 import {
   Table,
@@ -85,12 +86,12 @@ export function DataTable<TData, TValue>({
   createLink = "#",
   noResultsLabel = "No results found",
   hasEndDate = false,
-  searchColumn = "title",
   showCreateButton = true,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [searchValue, setSearchValue] = useState("");
+  const [globalFilter, setGlobalFilter] = useState("");
   const [dateRange, setDateRange] = useState<DateRange>({ from: "", to: "" });
   const [isDateFilterOpen, setIsDateFilterOpen] = useState(false);
   const [activeFilters, setActiveFilters] = useState<string[]>([]);
@@ -103,22 +104,33 @@ export function DataTable<TData, TValue>({
     onSortingChange: setSorting,
     getSortedRowModel: getSortedRowModel(),
     onColumnFiltersChange: setColumnFilters,
+    onGlobalFilterChange: setGlobalFilter,
     getFilteredRowModel: getFilteredRowModel(),
+    getFacetedRowModel: getFacetedRowModel(),
+    globalFilterFn: (row, _columnId, filterValue) => {
+      const needle = String(filterValue ?? "").trim().toLocaleLowerCase("ar");
+      if (!needle) return true;
+      const seen = new Set<unknown>();
+      const flatten = (value: unknown): string => {
+        if (value == null) return "";
+        if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") return String(value);
+        if (value instanceof Date) return value.toISOString();
+        if (typeof value !== "object" || seen.has(value)) return "";
+        seen.add(value);
+        if (Array.isArray(value)) return value.map(flatten).join(" ");
+        return Object.values(value as Record<string, unknown>).map(flatten).join(" ");
+      };
+      return flatten(row.original).toLocaleLowerCase("ar").includes(needle);
+    },
     state: {
       sorting,
       columnFilters,
+      globalFilter,
     },
     filterFns: {
       dateRange: dateRangeFilter,
     },
   });
-
-  const handleSearch = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
-    const value = event.target.value;
-    setSearchValue(value);
-    table.getColumn(searchColumn)?.setFilterValue(value);
-    updateActiveFilters("بحث", value);
-  }, [searchColumn, table]);
 
   const handleDateChange = useCallback((key: keyof DateRange, value: string) => {
     setDateRange(prev => ({ ...prev, [key]: value }));
@@ -141,6 +153,16 @@ export function DataTable<TData, TValue>({
     });
   }, []);
 
+  const handleSearch = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    const value = event.target.value;
+    setSearchValue(value);
+    // Search the whole row, including nested relations (campaign/category/donor),
+    // instead of silently doing nothing when a page does not expose the default "title" column.
+    setGlobalFilter(value);
+    updateActiveFilters("بحث", value);
+    table.setPageIndex(0);
+  }, [table, updateActiveFilters]);
+
   const applyDateFilter = useCallback(() => {
     const dateColumn = table.getColumn("endDate");
     if (dateColumn) {
@@ -157,19 +179,20 @@ export function DataTable<TData, TValue>({
     setDateRange({ from: "", to: "" });
     setActiveFilters([]);
     table.resetColumnFilters();
+    setGlobalFilter("");
   }, [table]);
 
   const clearSingleFilter = useCallback((filter: string) => {
     const [type] = filter.split(":");
     if (type === "بحث") {
       setSearchValue("");
-      table.getColumn(searchColumn)?.setFilterValue("");
+      setGlobalFilter("");
     } else if (type === "تاريخ") {
       setDateRange({ from: "", to: "" });
       table.getColumn("endDate")?.setFilterValue({ from: "", to: "" });
     }
     setActiveFilters(prev => prev.filter(f => f !== filter));
-  }, [searchColumn, table]);
+  }, [table]);
 
   // Function to export table data as CSV
   const exportToCSV = useCallback(() => {

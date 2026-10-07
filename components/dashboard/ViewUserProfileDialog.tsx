@@ -56,6 +56,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SendTemplateDialog } from "@/components/dashboard/SendTemplateDialog";
+import { SmartWhatsappDialog } from "@/components/dashboard/SmartWhatsappDialog";
 
 // lucide-react is pinned at 0.474, which predates its `Mars`/`Venus` icons.
 // They are redrawn here with lucide's own geometry and default attributes so
@@ -335,6 +336,7 @@ export function ViewUserProfileDialog({
     open: boolean;
     channel: "email" | "whatsapp";
   }>({ open: false, channel: "email" });
+  const [smartWhatsappOpen, setSmartWhatsappOpen] = React.useState(false);
   const [idCopied, setIdCopied] = React.useState(false);
 
   const formatMoney = (n: number) => {
@@ -659,12 +661,12 @@ export function ViewUserProfileDialog({
                 {canOpenCommunication && (
                   <Button
                     size="sm"
-                    asChild
+                    onClick={() => setSmartWhatsappOpen(true)}
+                    disabled={!user.phone}
+                    title={!user.phone ? "لا يوجد رقم هاتف" : "فتح التواصل الذكي عبر واتساب"}
                     className="h-8 gap-1.5 bg-[#25D366] hover:bg-[#25D366]/90 text-white"
                   >
-                    <a href="/dashboard/communication/whatsapp" title="الإرسال عبر واتساب يتم من مركز التواصل بقوالب Meta المعتمدة">
-                      <MessageCircle className="w-3.5 h-3.5" /> واتساب
-                    </a>
+                    <MessageCircle className="w-3.5 h-3.5" /> واتساب
                   </Button>
                 )}
                 {canSendEmail && (
@@ -685,12 +687,21 @@ export function ViewUserProfileDialog({
       </DialogContent>
 
       {user && (
-        <SendTemplateDialog
-          open={sendDialog.open}
-          onOpenChange={(open) => setSendDialog((prev) => ({ ...prev, open }))}
-          channel={sendDialog.channel}
-          target={{ kind: "user", userId: user.id }}
-        />
+        <>
+          <SendTemplateDialog
+            open={sendDialog.open}
+            onOpenChange={(open) => setSendDialog((prev) => ({ ...prev, open }))}
+            channel={sendDialog.channel}
+            target={{ kind: "user", userId: user.id }}
+          />
+          <SmartWhatsappDialog
+            open={smartWhatsappOpen}
+            onOpenChange={setSmartWhatsappOpen}
+            userId={user.id}
+            userName={user.name}
+            phone={user.phone}
+          />
+        </>
       )}
     </Dialog>
   );

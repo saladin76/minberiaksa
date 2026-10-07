@@ -54,22 +54,36 @@ export async function ensureProfilesForUsers(userIds: string[]): Promise<void> {
     where: { id: { in: missing }, role: "DONOR" },
     select: { id: true, email: true, phone: true, countryCode: true, preferredLang: true, emailNotifications: true, smsNotifications: true },
   }).catch(() => []);
-  for (const user of users) {
-    const preferredLocale = resolvePreferredLocale(user.preferredLang, null, user.countryCode);
-    await prisma.donorCommunicationProfile.create({
-      data: {
-        userId: user.id,
-        preferredLocale,
-        countryCode: user.countryCode ?? null,
-        phone: user.phone ?? null,
-        email: user.email ?? null,
-        emailOptIn: Boolean(user.email) && user.emailNotifications !== false,
-        smsOptIn: Boolean(user.phone) && user.smsNotifications !== false,
-        whatsappOptIn: false,
-        consentSource: "legacy-profile-bootstrap",
-        lastConsentAt: new Date(),
-      },
-    }).catch(() => {});
+  const now = new Date();
+  const rows = users.map((user) => ({
+    userId: user.id,
+    preferredLocale: resolvePreferredLocale(user.preferredLang, null, user.countryCode),
+    countryCode: user.countryCode ?? null,
+    phone: user.phone ?? null,
+    email: user.email ?? null,
+    emailOptIn: Boolean(user.email) && user.emailNotifications !== false,
+    smsOptIn: Boolean(user.phone) && user.smsNotifications !== false,
+    whatsappOptIn: false,
+    consentSource: "legacy-profile-bootstrap",
+    lastConsentAt: now,
+  }));
+
+  // Read paths can request thousands of candidates at once. Creating profiles one-by-one made
+  // audience selection scale linearly with network round trips and could hit Vercel's 300s limit.
+  // Use bounded createMany batches; if a concurrent request wins a unique userId race, fall back
+  // only for that batch so existing consent is never overwritten.
+  const BATCH = 250;
+  for (let i = 0; i < rows.length; i += BATCH) {
+    const batch = rows.slice(i, i + BATCH);
+    try {
+      await prisma.donorCommunicationProfile.createMany({ data: batch });
+    } catch {
+      await Promise.all(
+        batch.map((data) =>
+          prisma.donorCommunicationProfile.create({ data }).catch(() => undefined)
+        ),
+      );
+    }
   }
 }
 

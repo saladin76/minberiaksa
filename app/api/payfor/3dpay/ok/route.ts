@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { after, NextRequest, NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { withDonationToken } from "@/lib/donations/access-token";
@@ -153,15 +153,19 @@ export async function POST(req: NextRequest) {
     });
 
     if (result.ok) {
-      void dispatchDonationPaid(donationId);
+      after(() => dispatchDonationPaid(donationId));
       return NextResponse.redirect(new URL(withDonationToken(`/${locale}/success/${donationId}`, result.accessToken), origin));
     }
     if (result.reason === "failed") {
-      void dispatchEvent("DONATION_FAILED", { donationId });
-      void sendDonationFailedConversions(donationId);
+      after(async () => {
+        await Promise.allSettled([
+          dispatchEvent("DONATION_FAILED", { donationId }),
+          sendDonationFailedConversions(donationId),
+        ]);
+      });
     }
     if (result.reason === "order_mismatch") {
-      void sendDonationFailedConversions(donationId);
+      after(() => sendDonationFailedConversions(donationId));
     }
 
     return NextResponse.redirect(

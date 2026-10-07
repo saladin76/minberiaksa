@@ -6,10 +6,12 @@ import { getActiveMetaWhatsappRuntimeConfig } from "./runtime-config";
 import { ensureMetaTemplate } from "./providers/meta-whatsapp/templates";
 import { META_REASONS } from "./providers/meta-whatsapp/errors";
 import { syncMetaWhatsappTemplates } from "./whatsapp-template-sync";
+import { schemaHasInvalidMetaParameterNames } from "./meta-parameter-name";
 import {
   buildAuthenticationMetaComponents,
   buildStandardMetaComponents,
   sameVariables,
+  sameVariableSet,
   variableOrder,
   type AuthDraft,
   type ButtonDraft,
@@ -131,10 +133,33 @@ export async function publishWhatsappTemplateToMeta(
       });
       return summary;
     }
-    if (!sameVariables(canonicalVariables, variableOrder(body)) || !sameVariables(canonicalHeaderVariables, variableOrder(headerText))) {
+    const bodyVariables = variableOrder(body);
+    const headerVariables = variableOrder(headerText);
+    const hasDynamicHeader = canonicalHeaderVariables.length > 0 || headerVariables.length > 0;
+    const hasDynamicUrl = rootButtons.some((button) =>
+      String(button.type ?? "").toUpperCase() === "URL" && variableOrder(String(button.url ?? "")).length > 0,
+    );
+    const positional = hasDynamicHeader || hasDynamicUrl;
+
+    const bodyMatches = positional
+      ? sameVariables(canonicalVariables, bodyVariables)
+      : sameVariableSet(canonicalVariables, bodyVariables);
+    const headerMatches = positional
+      ? sameVariables(canonicalHeaderVariables, headerVariables)
+      : sameVariableSet(canonicalHeaderVariables, headerVariables);
+
+    if (!bodyMatches || !headerMatches) {
+      const missingBody = canonicalVariables.filter((key) => !bodyVariables.includes(key));
+      const extraBody = bodyVariables.filter((key) => !canonicalVariables.includes(key));
+      const missingHeader = canonicalHeaderVariables.filter((key) => !headerVariables.includes(key));
+      const extraHeader = headerVariables.filter((key) => !canonicalHeaderVariables.includes(key));
       summary.errors.push({
-        businessAccountId: "", language: locale, reason: "VARIABLES_MISMATCH",
-        detail: "جميع اللغات يجب أن تستخدم نفس متغيرات النص والعنوان وبنفس الترتيب.",
+        businessAccountId: "",
+        language: locale,
+        reason: "VARIABLES_MISMATCH",
+        detail: positional
+          ? `اللغة ${locale}: هذا القالب يستخدم متغيرات موضعية، لذلك يجب الحفاظ على نفس المتغيرات وبنفس الترتيب.`
+          : `اللغة ${locale}: يجب أن تحتوي على نفس المتغيرات. ناقص: ${[...missingBody, ...missingHeader].join(", ") || "لا يوجد"}؛ زائد: ${[...extraBody, ...extraHeader].join(", ") || "لا يوجد"}.`,
       });
       return summary;
     }
@@ -164,12 +189,22 @@ export async function publishWhatsappTemplateToMeta(
   // Once Meta knows this template, every new language must be published under the exact same
   // provider template name. The local editorial name may have changed, but using that changed name
   // here would create a second Meta template family instead of a new language variant.
-  const existingProviderVariant = await prisma.whatsappTemplateWabaVariant.findFirst({
+  const existingProviderVariants = await prisma.whatsappTemplateWabaVariant.findMany({
     where: { templateId, provider: "META_WHATSAPP" },
-    select: { providerTemplateName: true },
+    select: { providerTemplateName: true, componentsSchema: true },
     orderBy: { createdAt: "asc" },
-  }).catch(() => null);
-  const providerTemplateName = existingProviderVariant?.providerTemplateName?.trim() || template.name;
+  }).catch(() => []);
+  const existingProviderName = existingProviderVariants[0]?.providerTemplateName?.trim() || template.name;
+  const requiresParameterNameRepair = existingProviderVariants.some((row) =>
+    schemaHasInvalidMetaParameterNames(row.componentsSchema)
+  );
+  // Provider templates are immutable after approval. If Meta previously approved a family whose
+  // named placeholders exceed the send-time 20-character limit, publishing corrected components
+  // under the same name only yields CONTENT_MISMATCH. Create one deterministic successor family
+  // instead, then point the local WABA/language rows at it. Old provider rows remain historical only.
+  const providerTemplateName = requiresParameterNameRepair
+    ? `${existingProviderName.replace(/_v2$/, "").slice(0, 117)}_v2`
+    : existingProviderName;
 
   let canonicalBindings: VariableBinding[] = [];
   for (const waba of wabas) {
@@ -403,4 +438,62 @@ export async function reconcilePublishedTemplatesToActiveWabas(actor?: Actor): P
   }).catch(() => {});
 
   return { ok: failures.length === 0, templates: rows.length, failed: failures.length, failures };
+}
+
+
+/**
+ * One-shot safe repair pass for provider templates that Meta marked APPROVED even though one of
+ * their named placeholders is longer than the send API accepts. The publisher above versions only
+ * those broken provider families and leaves all healthy templates untouched.
+ */
+export async function repairInvalidMetaParameterTemplates(actor?: Actor): Promise<{
+  scanned: number;
+  repaired: number;
+  pending: number;
+  failed: number;
+  results: Array<{ templateId: string; ok: boolean; failed: number; created: number; existing: number }>;
+}> {
+  const rows = await prisma.whatsappTemplate.findMany({
+    where: {
+      provider: "META_WHATSAPP",
+      wabaVariants: { some: { provider: "META_WHATSAPP", approvalStatus: "APPROVED" } },
+    },
+    select: {
+      id: true,
+      wabaVariants: {
+        where: { provider: "META_WHATSAPP", approvalStatus: "APPROVED" },
+        select: { componentsSchema: true },
+      },
+    },
+  }).catch(() => []);
+
+  const broken = rows.filter((row) =>
+    row.wabaVariants.some((variant) => schemaHasInvalidMetaParameterNames(variant.componentsSchema))
+  );
+  const results: Array<{ templateId: string; ok: boolean; failed: number; created: number; existing: number }> = [];
+  let repaired = 0;
+  let pending = 0;
+  let failed = 0;
+
+  for (const row of broken) {
+    const result = await publishWhatsappTemplateToMeta(row.id, actor);
+    results.push({
+      templateId: row.id,
+      ok: result.ok,
+      failed: result.failed,
+      created: result.created,
+      existing: result.existing,
+    });
+    if (!result.ok) {
+      failed += 1;
+      continue;
+    }
+    // New provider families normally enter PENDING first; count them separately from fully repaired
+    // families so operations never interprets "submitted" as "approved".
+    const allApproved = result.statuses.length > 0 && result.statuses.every((s) => s.status === "APPROVED");
+    if (allApproved) repaired += 1;
+    else pending += 1;
+  }
+
+  return { scanned: rows.length, repaired, pending, failed, results };
 }

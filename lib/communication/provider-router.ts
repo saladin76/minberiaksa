@@ -127,7 +127,14 @@ export async function sendPreparedDelivery(input: PreparedSendInput, runtime?: C
     return { ok: true, provider: res.providerId, providerMessageId: res.providerMessageId, internalAccepted: res.internalAccepted };
   }
 
-  const res = await sendSmsMessage({ to: input.to, content: input.html ?? input.subject ?? "", country: input.country, sender: input.sender?.smsSender, tag: "communication" }, bundle);
+  const res = await sendSmsMessage({
+    to: input.to,
+    content: input.html ?? input.subject ?? "",
+    country: input.country,
+    sender: input.sender?.smsSender,
+    type: input.purpose === "MARKETING" ? "marketing" : "transactional",
+    tag: input.channelName ? `communication:${input.channelName}` : "communication",
+  }, bundle);
   if (!res.ok) return { ok: false, provider: res.provider, reason: res.reason, detail: res.detail };
   return { ok: true, provider: res.provider, providerMessageId: res.providerMessageId, internalAccepted: res.internalAccepted };
 }

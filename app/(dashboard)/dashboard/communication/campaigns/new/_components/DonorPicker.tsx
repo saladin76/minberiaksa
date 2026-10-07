@@ -35,6 +35,8 @@ export interface DonorCandidate {
   countryName: string;
   badgeIds: string[];
   eligibility: Eligibility;
+  eligibilityReason: string | null;
+  canConfirmWhatsappOptIn: boolean;
 }
 
 interface Facets {
@@ -43,6 +45,20 @@ interface Facets {
 }
 
 const PAGE_SIZE = 25;
+
+async function readApiJson(response: Response, fallback: string): Promise<Record<string, any>> {
+  const text = await response.text();
+  let data: Record<string, any> = {};
+  if (text) {
+    try {
+      data = JSON.parse(text) as Record<string, any>;
+    } catch {
+      throw new Error(response.ok ? fallback : `${fallback} (HTTP ${response.status})`);
+    }
+  }
+  if (!response.ok) throw new Error(String(data.error || data.message || `${fallback} (HTTP ${response.status})`));
+  return data;
+}
 
 const ELIGIBILITY_META: Record<Eligibility, { label: string; tone: string; icon: typeof Check }> = {
   ELIGIBLE: { label: "يمكن مراسلته", tone: "border-emerald-200 bg-emerald-50 text-emerald-700", icon: Check },
@@ -81,6 +97,8 @@ export function DonorPicker({
   const [page, setPage] = React.useState(1);
   const [loading, setLoading] = React.useState(true);
   const [selectingAll, setSelectingAll] = React.useState(false);
+  const [refreshKey, setRefreshKey] = React.useState(0);
+  const [consentSavingId, setConsentSavingId] = React.useState<string | null>(null);
 
   const [searchInput, setSearchInput] = React.useState("");
   const [search, setSearch] = React.useState("");
@@ -112,7 +130,7 @@ export function DonorPicker({
     applyAgeBracketParams(params, ageBracket);
 
     fetch(`/api/communication/audience-candidates?${params}`, { cache: "no-store" })
-      .then((r) => r.json())
+      .then((response) => readApiJson(response, "تعذّر تحميل المتبرعين"))
       .then((j) => {
         if (cancelled) return;
         if (!j.ok) throw new Error(j.error || "تعذّر تحميل المتبرعين");
@@ -125,12 +143,33 @@ export function DonorPicker({
     return () => {
       cancelled = true;
     };
-  }, [channel, page, search, locale, country, badgeId, eligibility, gender, ageBracket]);
+  }, [channel, page, search, locale, country, badgeId, eligibility, gender, ageBracket, refreshKey]);
 
   const badgeById = React.useMemo(
     () => new Map(facets.badges.map((b) => [b.id, b])),
     [facets.badges],
   );
+
+  const confirmWhatsappConsent = async (donor: DonorCandidate) => {
+    if (!donor.canConfirmWhatsappOptIn || consentSavingId) return;
+    if (!window.confirm(`تأكيد وجود موافقة صريحة من ${donor.name ?? "هذا المتبرع"} لاستقبال رسائل واتساب تسويقية؟`)) return;
+    setConsentSavingId(donor.id);
+    try {
+      const res = await fetch("/api/dashboard/communication/whatsapp/smart-send", {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ userId: donor.id, whatsappOptIn: true, confirmed: true }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.ok) throw new Error(data.error || "تعذّر تسجيل الموافقة");
+      toast.success("تم تسجيل موافقة واتساب التسويقية");
+      setRefreshKey((value) => value + 1);
+    } catch (error) {
+      toast.error((error as Error).message);
+    } finally {
+      setConsentSavingId(null);
+    }
+  };
 
   const toggle = (id: string) => {
     const next = new Set(selected);
@@ -169,8 +208,8 @@ export function DonorPicker({
           ...ageBracketBody(ageBracket),
         }),
       });
-      const json = await res.json();
-      if (!json.ok) throw new Error(json.error || "تعذّر التحديد");
+      const json = await readApiJson(res, "تعذّر التحديد");
+      if (!json.ok) throw new Error(String(json.error || "تعذّر التحديد"));
       onChange(new Set([...selected, ...json.ids]));
       if (json.truncated) toast("اكتفينا بأول ٥٠٠٠ متبرع مطابق.", { icon: "ℹ️" });
       else toast.success(`تم تحديد ${json.ids.length} متبرعًا`);
@@ -429,10 +468,31 @@ export function DonorPicker({
                     </td>
 
                     <td className="px-3 py-2.5">
-                      <span className={cn("inline-flex items-center gap-1 rounded border px-1.5 py-0.5 text-[10px] whitespace-nowrap", meta.tone)}>
-                        <EIcon className="h-3 w-3" />
-                        {meta.label}
-                      </span>
+                      <div className="space-y-1">
+                        <span
+                          className={cn("inline-flex items-center gap-1 rounded border px-1.5 py-0.5 text-[10px] whitespace-nowrap", meta.tone)}
+                          title={d.eligibilityReason ?? undefined}
+                        >
+                          <EIcon className="h-3 w-3" />
+                          {meta.label}
+                        </span>
+                        {d.eligibilityReason && (
+                          <p className="max-w-[180px] text-[10px] leading-4 text-slate-500">{d.eligibilityReason}</p>
+                        )}
+                        {channel === "WHATSAPP" && d.canConfirmWhatsappOptIn && (
+                          <button
+                            type="button"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              void confirmWhatsappConsent(d);
+                            }}
+                            disabled={consentSavingId === d.id}
+                            className="text-[10px] font-semibold text-brand underline underline-offset-2 disabled:opacity-50"
+                          >
+                            {consentSavingId === d.id ? "جارٍ التسجيل…" : "تسجيل موافقة واتساب"}
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 );

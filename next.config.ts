@@ -139,13 +139,29 @@ const nextConfig: NextConfig = {
   devIndicators: { position: "bottom-right" },
   reactStrictMode: true,
   serverExternalPackages: ["@usewaypoint/email-builder"],
-  /* `@sparticuz/chromium` unpacks its browser from `bin/*.br` at runtime, through a path the file
-     tracer cannot follow — without this the archives never reach the function and every PDF
-     (receipt, certificates, confirmation-email attachments) fails on Vercel. Every API route, not
-     just the three download routes: the confirmation email renders the same PDFs from the payment
-     webhooks, crons and dashboard actions that reach `lib/events/dispatch`. */
+  /* `@sparticuz/chromium` resolves its compressed browser archives dynamically, so Next's
+     file tracer cannot discover `bin/*.br` automatically. Do NOT attach Chromium to every API
+     function: the archive is large, and doing so multiplies deployment output size across hundreds
+     of serverless functions, making Vercel spend far longer in "Deploying outputs..." than in the
+     actual build. Keep the manual include only on routes that can render/download donation PDFs or
+     dispatch DONATION_PAID emails with PDF attachments. This is deliberately conservative: provider
+     callbacks, reconciliation/recurring jobs, manual bank-transfer confirmation and admin imports
+     are included alongside the direct receipt/certificate endpoints. */
   outputFileTracingIncludes: {
-    "/api/**/*": ["./node_modules/@sparticuz/chromium/bin/**"],
+    // Chromium's compressed binaries are large. Keep them only on functions that can actually
+    // render a donation PDF or dispatch a DONATION_PAID email with PDF attachments. Broad globs
+    // duplicated the same browser archive across many unrelated functions and made Vercel spend
+    // ~15 minutes in "Deploying outputs..." after a ~3 minute build.
+    "/api/certificates/**/*": ["./node_modules/@sparticuz/chromium/bin/**"],
+    "/api/receipts/**/*": ["./node_modules/@sparticuz/chromium/bin/**"],
+    "/api/payfor/3dpay/ok": ["./node_modules/@sparticuz/chromium/bin/**"],
+    "/api/stripe/webhook": ["./node_modules/@sparticuz/chromium/bin/**"],
+    "/api/paypal/return": ["./node_modules/@sparticuz/chromium/bin/**"],
+    "/api/albaraka/3d/initiate": ["./node_modules/@sparticuz/chromium/bin/**"],
+    "/api/albaraka/3d/callback": ["./node_modules/@sparticuz/chromium/bin/**"],
+    "/api/admin/transfer-receipts/[id]": ["./node_modules/@sparticuz/chromium/bin/**"],
+    "/api/donations/[id]": ["./node_modules/@sparticuz/chromium/bin/**"],
+    "/api/cron/recurring-charges": ["./node_modules/@sparticuz/chromium/bin/**"],
   },
   compiler: { removeConsole: process.env.NODE_ENV === "production" ? { exclude: ["error", "warn"] } : false },
   /* Preview and development deployments carry production canonicals and

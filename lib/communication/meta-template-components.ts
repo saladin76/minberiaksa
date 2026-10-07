@@ -1,3 +1,4 @@
+import { metaParameterName } from "./meta-parameter-name";
 import { VARIABLE_CATALOG } from "../templates/variable-catalog";
 
 const SCALAR_RE = /\{\{\s*([a-zA-Z0-9_.]+)\s*\}\}/g;
@@ -65,15 +66,14 @@ export function sameVariables(left: string[], right: string[]): boolean {
   return left.length === right.length && left.every((key, index) => key === right[index]);
 }
 
-export function metaParameterName(key: string): string {
-  const normalized = key
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9_]+/g, "_")
-    .replace(/^_+|_+$/g, "")
-    .replace(/_+/g, "_");
-  if (!normalized) throw new Error("INVALID_META_PARAMETER_NAME");
-  return /^[a-z]/.test(normalized) ? normalized : `p_${normalized}`;
+/**
+ * Named Meta parameters are matched by parameter name, so translations may naturally reorder them.
+ * Positional templates (dynamic text header / dynamic URL button) still need identical ordering.
+ */
+export function sameVariableSet(left: string[], right: string[]): boolean {
+  if (left.length !== right.length) return false;
+  const rightSet = new Set(right);
+  return left.every((key) => rightSet.has(key));
 }
 
 function metaNamedText(text: string): string {
