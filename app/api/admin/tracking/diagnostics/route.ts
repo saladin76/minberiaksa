@@ -2,13 +2,13 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 import { requireAdminOrDashboardPermission } from "@/lib/dashboard/api-auth";
+import { getRawTrackingSettings, TRACKING_SETTINGS_TRACKING_TRACKING_SETTINGS_COLLECTION } from "@/lib/tracking/tracking-settings";
 import { prisma } from "@/lib/prisma";
 import { rawCommand } from "@/lib/prisma-raw-command";
 
 export const dynamic = "force-dynamic";
 
-const SETTINGS_COLLECTION = "TrackingSettings";
-const EVENTS_COLLECTION = "ConversionEvent";
+const EVENTS_TRACKING_TRACKING_SETTINGS_COLLECTION = "ConversionEvent";
 
 type Platform = "meta" | "ga4" | "google_ads" | "tiktok" | "x";
 type EventPlatform = "META" | "GA4" | "GOOGLE_ADS" | "TIKTOK" | "X";
@@ -34,17 +34,11 @@ function present(row: Record<string, unknown> | null, key: string): boolean {
   return Boolean(text(row, key));
 }
 
-async function getSettings(): Promise<Record<string, unknown> | null> {
-  const result = await prisma.$runCommandRaw(rawCommand({ find: SETTINGS_COLLECTION, limit: 1, sort: { createdAt: 1 } }));
-  const batch = isRecord(result) && isRecord(result.cursor) && Array.isArray(result.cursor.firstBatch) ? result.cursor.firstBatch : [];
-  return (batch[0] as Record<string, unknown> | undefined) ?? null;
-}
-
 async function latestEvent(platform: EventPlatform, channel?: "browser" | "server") {
   const query: Record<string, unknown> = { platform };
   if (channel) query.channel = channel;
   const result = await prisma.$runCommandRaw(rawCommand({
-    find: EVENTS_COLLECTION,
+    find: EVENTS_TRACKING_TRACKING_SETTINGS_COLLECTION,
     filter: query,
     sort: { updatedAt: -1, createdAt: -1 },
     limit: 1,
@@ -101,7 +95,7 @@ export async function GET() {
     const denied = requireAdminOrDashboardPermission(session, "platformConnections");
     if (denied) return denied;
 
-    const row = await getSettings();
+    const row = await getRawTrackingSettings();
     const base = {
       meta: buildDiagnostics(row, "meta", ["facebookPixelId"], ["facebookAccessToken"]),
       ga4: buildDiagnostics(row, "ga4", ["gaMeasurementId"], ["gaApiSecret"]),
