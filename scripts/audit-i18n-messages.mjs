@@ -67,7 +67,10 @@ function flatten(value, prefix = "", out = {}) {
 }
 
 function tokens(value) {
-  return (String(value).match(/\{\{[^{}]+\}\}|\{[A-Za-z0-9_.-]+\}|https?:\/\/[^\s<>"')]+/g) ?? []).sort();
+  const text = String(value);
+  const literals = text.match(/\{\{[^{}]+\}\}|<\/?[A-Za-z][^>]*>|https?:\/\/[^\s<>"')]+/g) ?? [];
+  const variables = Array.from(text.matchAll(/\{([A-Za-z0-9_.-]+)(?=[,}])/g), (match) => `{${match[1]}}`);
+  return [...literals, ...variables].sort();
 }
 
 function protectedKeyOptional(locale, key) {
