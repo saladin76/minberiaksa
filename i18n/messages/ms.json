@@ -2425,6 +2425,8 @@
     "viewDonation": "Lihat sumbangan",
     "viewFile": "Buka",
     "whatNext": "Apa yang berlaku seterusnya",
-    "yourDonation": "Sumbangan anda"
+    "yourDonation": "Sumbangan anda",
+    "fileTooLarge": "Saiz fail ialah {size}; had maksimum ialah {max}. Mampatkan foto atau eksport sebagai PDF dan cuba lagi.",
+    "uploadFailed": "Muat naik tidak berjaya. Periksa sambungan anda dan cuba lagi."
   }
 }
