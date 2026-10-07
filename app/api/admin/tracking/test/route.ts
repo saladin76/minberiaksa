@@ -2,28 +2,16 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 import { requireAdminOrDashboardPermission } from "@/lib/dashboard/api-auth";
+import { getRawTrackingSettings, TRACKING_SETTINGS_TRACKING_TRACKING_SETTINGS_COLLECTION } from "@/lib/tracking/tracking-settings";
 import { prisma } from "@/lib/prisma";
 import { auditActorFromDashboardSession, writeAuditLog } from "@/lib/audit-log";
 import { sendMetaCapiEvent } from "@/lib/tracking/meta-capi";
 
 type Platform = "meta" | "ga4" | "google_ads" | "tiktok" | "x";
 
-const COLLECTION = "TrackingSettings";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-async function getSettings(): Promise<Record<string, unknown> | null> {
-  const result = await prisma.$runCommandRaw({
-    find: COLLECTION,
-    limit: 1,
-    sort: { createdAt: 1 },
-  });
-  const batch = isRecord(result) && isRecord(result.cursor) && Array.isArray(result.cursor.firstBatch)
-    ? result.cursor.firstBatch
-    : [];
-  return (batch[0] as Record<string, unknown> | undefined) ?? null;
 }
 
 function str(row: Record<string, unknown> | null, key: string): string | null {
@@ -81,7 +69,7 @@ export async function POST(request: NextRequest) {
   }
 
   const p = platform as Platform;
-  const settings = await getSettings();
+  const settings = await getRawTrackingSettings();
   const eventId = `test_${p}_${Date.now()}`;
 
   if (p === "meta") {
