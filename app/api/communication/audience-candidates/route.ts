@@ -154,12 +154,20 @@ function channelEligibilityWhere(
     channel === "EMAIL"
       ? {
           email: { not: null },
-          communicationProfile: { is: { emailOptIn: true, doNotContact: false } },
+          OR: [
+            { communicationProfile: { is: { emailOptIn: true, doNotContact: false } } },
+            // Legacy donors without a profile are bootstrapped from the User
+            // notification flag by ensureProfilesForUsers().
+            { communicationProfile: { is: null }, emailNotifications: true },
+          ],
         }
       : channel === "SMS"
         ? {
             phone: { not: null },
-            communicationProfile: { is: { smsOptIn: true, doNotContact: false } },
+            OR: [
+              { communicationProfile: { is: { smsOptIn: true, doNotContact: false } } },
+              { communicationProfile: { is: null }, smsNotifications: true },
+            ],
           }
         : {
             phone: { not: null },
