@@ -24,52 +24,130 @@ import { recipientTimeZone } from "./recipient-timezone";
 
 export { computeFinalStatus };
 
-function recipientQuietHoursSlice(plan: SendPlan, controls: CampaignSendControls): { plan: SendPlan | null; blocked: boolean } {
+const QUIET_RETRY_MS = 5 * 60 * 1000;
+
+async function queueRecipientQuietHours(
+  campaignId: string,
+  plan: SendPlan,
+  controls: CampaignSendControls,
+): Promise<{ plan: SendPlan; deferred: number }> {
   if (!controls.quietHours.enabled || controls.quietHours.timezoneMode !== "RECIPIENT") {
-    return { plan, blocked: false };
+    return { plan, deferred: 0 };
   }
 
   const now = new Date();
-  const orderedRecipients = [...plan.recipients].sort((a, b) => a.cursorId.localeCompare(b.cursorId));
-  const firstQuiet = orderedRecipients.find((recipient) => {
+  const quiet = plan.recipients.filter((recipient) => {
     const zone = recipientTimeZone(
       { country: recipient.country, phone: recipient.phone },
       controls.quietHours.timezone,
     );
     return insideQuietHours(controls, now, zone);
   });
-  if (!firstQuiet) return { plan, blocked: false };
+  if (!quiet.length) return { plan, deferred: 0 };
 
-  // Stop immediately before the first recipient whose local clock is quiet. The cursor is the
-  // underlying audience cursor (donor id for smart/global audiences, list-member id for saved
-  // audiences), so this works for every audience type without dropping a recipient.
-  const beforeRecipients = plan.recipients.filter((recipient) => recipient.cursorId < firstQuiet.cursorId);
-  const beforeSkipped = plan.skippedList.filter((recipient) => recipient.cursorId < firstQuiet.cursorId);
-  const ids = [
-    ...beforeRecipients.map((recipient) => recipient.cursorId),
-    ...beforeSkipped.map((recipient) => recipient.cursorId),
-  ].sort();
+  const nextAttemptAt = new Date(now.getTime() + QUIET_RETRY_MS);
+  await Promise.all(
+    quiet.map((recipient) =>
+      prisma.communicationCampaignDeferredRecipient.upsert({
+        where: {
+          campaignId_cursorId: {
+            campaignId,
+            cursorId: recipient.cursorId,
+          },
+        },
+        create: {
+          campaignId,
+          cursorId: recipient.cursorId,
+          userId: recipient.userId,
+          name: recipient.name,
+          email: recipient.email,
+          phone: recipient.phone,
+          locale: recipient.locale,
+          country: recipient.country,
+          nextAttemptAt,
+        },
+        update: {
+          name: recipient.name,
+          email: recipient.email,
+          phone: recipient.phone,
+          locale: recipient.locale,
+          country: recipient.country,
+          nextAttemptAt,
+        },
+      }),
+    ),
+  );
 
-  if (!ids.length) return { plan: null, blocked: true };
-  const cutoff = ids[ids.length - 1]!;
-  const reasons: Record<string, number> = {};
-  for (const item of beforeSkipped) reasons[item.reason] = (reasons[item.reason] ?? 0) + 1;
+  const quietIds = new Set(quiet.map((recipient) => recipient.cursorId));
+  const activeRecipients = plan.recipients.filter((recipient) => !quietIds.has(recipient.cursorId));
 
+  // Advance through the whole audience page. Quiet recipients are now durable queue rows and no
+  // longer pin the audience cursor in place; the scheduler will send them when their own local
+  // quiet window ends.
   return {
-    blocked: false,
+    deferred: quiet.length,
     plan: {
       ...plan,
-      recipients: beforeRecipients,
-      skippedList: beforeSkipped,
-      total: beforeRecipients.length + beforeSkipped.length,
-      eligible: beforeRecipients.length,
-      skipped: beforeSkipped.length,
-      reasons,
-      nextCursor: cutoff,
-      exhausted: false,
-      truncated: true,
+      recipients: activeRecipients,
+      eligible: activeRecipients.length,
+      // Keep total unchanged: these recipients were scanned from the audience and are now queued.
+      total: plan.total,
     },
   };
+}
+
+async function loadDueQuietRecipients(
+  campaignId: string,
+  controls: CampaignSendControls,
+  limit: number,
+): Promise<{ recipients: SendPlan["recipients"]; queueIds: string[] }> {
+  const rows = await prisma.communicationCampaignDeferredRecipient.findMany({
+    where: { campaignId, nextAttemptAt: { lte: new Date() } },
+    orderBy: [{ nextAttemptAt: "asc" }, { id: "asc" }],
+    take: Math.min(Math.max(limit, 1), 1000),
+  });
+
+  if (!rows.length) return { recipients: [], queueIds: [] };
+
+  const now = new Date();
+  const ready: typeof rows = [];
+  const stillQuiet: typeof rows = [];
+  for (const row of rows) {
+    const zone = recipientTimeZone(
+      { country: row.country, phone: row.phone },
+      controls.quietHours.timezone,
+    );
+    if (controls.quietHours.enabled && controls.quietHours.timezoneMode === "RECIPIENT" && insideQuietHours(controls, now, zone)) {
+      stillQuiet.push(row);
+    } else {
+      ready.push(row);
+    }
+  }
+
+  if (stillQuiet.length) {
+    const nextAttemptAt = new Date(now.getTime() + QUIET_RETRY_MS);
+    await prisma.communicationCampaignDeferredRecipient.updateMany({
+      where: { id: { in: stillQuiet.map((row) => row.id) } },
+      data: { nextAttemptAt },
+    });
+  }
+
+  return {
+    queueIds: ready.map((row) => row.id),
+    recipients: ready.map((row) => ({
+      cursorId: row.cursorId,
+      userId: row.userId,
+      name: row.name,
+      email: row.email,
+      phone: row.phone,
+      locale: (isValidLocale(row.locale) ? row.locale : DEFAULT_LOCALE) as SupportedLocale,
+      country: row.country,
+    })),
+  };
+}
+
+async function countDeferredQuietRecipients(campaignId: string): Promise<number> {
+  return prisma.communicationCampaignDeferredRecipient.count({ where: { campaignId } }).catch(() => 0);
 }
 
 /** Meta truth for one template, partitioned by WABA so routing and approval can never disagree. */
