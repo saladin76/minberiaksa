@@ -2425,6 +2425,8 @@
     "viewDonation": "查看捐款",
     "viewFile": "打开",
     "whatNext": "接下来会发生什么",
-    "yourDonation": "您的捐款"
+    "yourDonation": "您的捐款",
+    "fileTooLarge": "文件大小为 {size}；允许的最大值为 {max}。请压缩图片或导出为 PDF，然后重试。",
+    "uploadFailed": "上传未成功。请检查网络连接后重试。"
   }
 }
