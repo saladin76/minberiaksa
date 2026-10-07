@@ -4,9 +4,9 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 import { prisma } from "@/lib/prisma";
 import { rawCommand } from "@/lib/prisma-raw-command";
 import { requireAdminOrDashboardPermission } from "@/lib/dashboard/api-auth";
+import { getRawTrackingSettings, TRACKING_SETTINGS_TRACKING_TRACKING_SETTINGS_COLLECTION } from "@/lib/tracking/tracking-settings";
 import { writeAuditLog, auditActorFromDashboardSession } from "@/lib/audit-log";
 
-const COLLECTION = "TrackingSettings";
 
 const PLAIN_FIELDS = [
   "facebookPixelId",
@@ -86,18 +86,6 @@ function sanitizeScalar(value: unknown): string | boolean | null {
     return trimmed.length ? trimmed : null;
   }
   return null;
-}
-
-async function getRawTrackingSettings(): Promise<TrackingRaw | null> {
-  const result = await prisma.$runCommandRaw({
-    find: COLLECTION,
-    limit: 1,
-    sort: { createdAt: 1 },
-  });
-  const batch = isPlainObject(result) && isPlainObject(result.cursor) && Array.isArray(result.cursor.firstBatch)
-    ? result.cursor.firstBatch
-    : [];
-  return (batch[0] as TrackingRaw | undefined) ?? null;
 }
 
 function serializeSettings(raw: TrackingRaw | null) {
@@ -187,7 +175,7 @@ async function persistRawSettings(update: { $set: Record<string, unknown>; $unse
 
   if (id) {
     const command: Record<string, unknown> = {
-      update: COLLECTION,
+      update: TRACKING_TRACKING_SETTINGS_COLLECTION,
       updates: [
         {
           q: { _id: { $oid: id } },
@@ -209,7 +197,7 @@ async function persistRawSettings(update: { $set: Record<string, unknown>; $unse
     updatedAt: now,
     metaDonateEventName: update.$set.metaDonateEventName ?? "Donate",
   };
-  await prisma.$runCommandRaw({ insert: COLLECTION, documents: [insertDoc] });
+  await prisma.$runCommandRaw({ insert: TRACKING_TRACKING_SETTINGS_COLLECTION, documents: [insertDoc] });
   return getRawTrackingSettings();
 }
 
