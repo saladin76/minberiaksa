@@ -119,7 +119,7 @@ function Toggle({ label, checked, onChange, disabled = false }: { label: string;
 }
 
 function Status({ label, status }: { label: string; status: string }) {
-  const cls = status === "متصل" ? "border-emerald-200 bg-emerald-50 text-emerald-700" : status === "غير مفعّل" ? "border-slate-200 bg-slate-50 text-slate-600" : "border-amber-200 bg-amber-50 text-amber-700";
+  const cls = status === "مُعدّ" ? "border-emerald-200 bg-emerald-50 text-emerald-700" : status === "غير مفعّل" ? "border-slate-200 bg-slate-50 text-slate-600" : "border-amber-200 bg-amber-50 text-amber-700";
   return <Card><CardContent className="p-4"><p className="mb-2 text-xs text-slate-500">{label}</p><span className={`rounded-full border px-2 py-1 text-xs ${cls}`}>{status}</span></CardContent></Card>;
 }
 
@@ -142,11 +142,11 @@ export default function TrackingSettingsManager({ canManage, canTest }: { canMan
   useEffect(() => { void load(); }, []);
 
   const status = useMemo(() => ({
-    meta: !settings.facebookPixelId && !settings.facebookAccessTokenPresent ? "غير مفعّل" : settings.facebookPixelId && settings.facebookAccessTokenPresent ? "متصل" : "إعدادات ناقصة",
-    ga4: !settings.gaMeasurementId && !settings.gaApiSecretPresent ? "غير مفعّل" : settings.gaMeasurementId && settings.gaApiSecretPresent ? "متصل" : "إعدادات ناقصة",
-    google_ads: !settings.googleAdsConversionId && !settings.googleAdsConversionLabel ? "غير مفعّل" : settings.googleAdsConversionId && settings.googleAdsConversionLabel ? "متصل" : "إعدادات ناقصة",
-    tiktok: !settings.tiktokPixelId && !settings.tiktokAccessTokenPresent ? "غير مفعّل" : settings.tiktokPixelId && settings.tiktokAccessTokenPresent ? "متصل" : "إعدادات ناقصة",
-    x: !settings.xPixelId && !settings.xConversionEventId && !settings.xAccessTokenPresent ? "غير مفعّل" : (settings.xPixelId || settings.xConversionEventId) && settings.xAccessTokenPresent && settings.xAdAccountId ? "متصل" : "إعدادات ناقصة",
+    meta: !settings.facebookPixelId && !settings.facebookAccessTokenPresent ? "غير مفعّل" : settings.facebookPixelId && settings.facebookAccessTokenPresent ? "مُعدّ" : "إعدادات ناقصة",
+    ga4: !settings.gaMeasurementId && !settings.gaApiSecretPresent ? "غير مفعّل" : settings.gaMeasurementId && settings.gaApiSecretPresent ? "مُعدّ" : "إعدادات ناقصة",
+    google_ads: !settings.googleAdsConversionId && !settings.googleAdsConversionLabel ? "غير مفعّل" : settings.googleAdsConversionId && settings.googleAdsConversionLabel ? "مُعدّ" : "إعدادات ناقصة",
+    tiktok: !settings.tiktokPixelId && !settings.tiktokAccessTokenPresent ? "غير مفعّل" : settings.tiktokPixelId && settings.tiktokAccessTokenPresent ? "مُعدّ" : "إعدادات ناقصة",
+    x: !settings.xPixelId && !settings.xConversionEventId && !settings.xAccessTokenPresent ? "غير مفعّل" : (settings.xPixelId || settings.xConversionEventId) && settings.xAccessTokenPresent && settings.xAdAccountId ? "مُعدّ" : "إعدادات ناقصة",
   }), [settings]);
 
   async function load() {
