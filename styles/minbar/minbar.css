@@ -3980,3 +3980,212 @@ html[data-mia-drawer="open"] .mia-scope .mia-qb-sec { display: none !important; 
   .mia-scope #pd-top h1 { font-size: 25px !important; }
   .mia-scope #pd-top p { font-size: 15.5px !important; line-height: 1.85 !important; }
 }
+
+
+/* ── Mobile donor-flow hardening: prevent horizontal drift, undersized taps,
+   and cramped transactional controls without changing the visual design. ── */
+@media (max-width: 760px) {
+  .mia-scope,
+  .mia-scope > * {
+    max-width: 100%;
+  }
+
+  .mia-scope :is(img, video, iframe, canvas, svg) {
+    max-width: 100%;
+  }
+
+  .mia-scope :is(#zk-hero-grid, #meter-picker, #rc-grid, #cart-grid, #pay-grid, #pd-top, #pd-body) {
+    min-width: 0 !important;
+  }
+
+  .mia-scope :is(#zk-hero-grid, #meter-picker, #rc-grid, #cart-grid, #pay-grid) > * {
+    min-width: 0 !important;
+    max-width: 100%;
+  }
+
+  /* Zakat: amount row may wrap but must never widen the viewport. */
+  .mia-scope #zk-amounts {
+    width: 100%;
+    min-width: 0;
+  }
+  .mia-scope #zk-amounts .zk-input {
+    flex: 1 1 130px;
+    width: auto !important;
+    min-width: 110px;
+    max-width: 100%;
+  }
+  .mia-scope #zk-ctas {
+    width: 100%;
+    min-width: 0;
+  }
+  .mia-scope #zk-ctas > button {
+    min-height: 44px !important;
+  }
+  .mia-scope #zk-result > * {
+    min-width: 0;
+  }
+
+  /* Waqf: all real interactive controls meet the 44px touch target. */
+  .mia-scope #meter-picker button,
+  .mia-scope #meter-picker input {
+    min-height: 44px;
+  }
+  .mia-scope #meter-picker .wq-step {
+    width: 44px !important;
+    height: 44px !important;
+  }
+  .mia-scope #meter-picker .wq-link {
+    min-height: 44px;
+    padding: 8px 0 !important;
+  }
+  .mia-scope #waqf-cert-toggle {
+    min-height: 44px !important;
+    height: 44px !important;
+  }
+  .mia-scope #meter-picker > * {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  /* Recurring: compact controls remain finger-sized and the summary wraps
+     instead of forcing sideways scrolling on narrow phones. */
+  .mia-scope #rc-grid button,
+  .mia-scope #rc-grid select,
+  .mia-scope #rc-grid input {
+    min-height: 44px;
+  }
+  .mia-scope #rc-grid .rc-seg {
+    height: 44px !important;
+    min-height: 44px !important;
+  }
+  .mia-scope #rc-grid select {
+    height: 44px !important;
+  }
+  .mia-scope .rc-plan-summary {
+    flex-wrap: wrap;
+  }
+  .mia-scope .rc-plan-summary > span:last-child {
+    min-width: 0;
+    flex-wrap: wrap;
+  }
+  .mia-scope .rc-plan-summary b {
+    overflow-wrap: anywhere;
+  }
+
+  /* Basket: the controls in rows and upsells previously regressed below the
+     44px rule because later selectors overrode the earlier mobile patch. */
+  .mia-scope .cart-row .cart-amt-btn,
+  .mia-scope .cart-row .cart-monthly,
+  .mia-scope .cart-row .c-del,
+  .mia-scope .cart-row .cart-ok,
+  .mia-scope .cart-row .cart-cancel,
+  .mia-scope .cart-row .cart-min-warn button {
+    min-height: 44px !important;
+  }
+  .mia-scope .cart-row .c-del,
+  .mia-scope .cart-row .cart-ok,
+  .mia-scope .cart-row .cart-cancel {
+    min-width: 44px !important;
+    width: 44px !important;
+    height: 44px !important;
+  }
+  .mia-scope .cart-row .cart-monthly {
+    height: 44px !important;
+  }
+  .mia-scope .cart-row .cart-amt-btn > span:first-child {
+    min-height: 44px !important;
+    height: 44px !important;
+  }
+  .mia-scope #upsell-rail > div button,
+  .mia-scope #upsell-rail > div input,
+  .mia-scope #cart-team-support button,
+  .mia-scope #cart-team-support input {
+    min-height: 44px !important;
+    height: 44px !important;
+  }
+  .mia-scope #upsell-rail .upsell-add {
+    min-width: 44px !important;
+    width: 44px !important;
+  }
+  .mia-scope #upsell-rail > div > div {
+    max-width: 100%;
+    flex-wrap: wrap !important;
+  }
+  .mia-scope #upsell-rail .upsell-custom-input {
+    flex: 1 1 110px !important;
+    width: auto !important;
+    min-width: 90px !important;
+  }
+  .mia-scope #cart-summary,
+  .mia-scope .cart-row,
+  .mia-scope #upsell-rail {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  /* Checkout: bank and payment controls no longer fall under 44px, and long
+     account identifiers remain inside the card instead of widening the page. */
+  .mia-scope #pay-methods .pay-method,
+  .mia-scope #pay-grid select,
+  .mia-scope #pay-grid .pay-copy-btn,
+  .mia-scope #pay-grid button[role="radio"] {
+    min-height: 44px !important;
+  }
+  .mia-scope #pay-grid .pay-copy-btn {
+    min-width: 44px !important;
+    width: 44px !important;
+    height: 44px !important;
+  }
+  .mia-scope #pay-grid button[role="radio"] {
+    height: 44px !important;
+  }
+  .mia-scope #pay-grid :is(input, select, textarea, button) {
+    max-width: 100%;
+  }
+  .mia-scope #pay-grid b[dir="ltr"],
+  .mia-scope #pay-grid span[dir="ltr"] {
+    max-width: 100%;
+  }
+  .mia-scope .pay-phone .pay-phone-field {
+    min-width: 0;
+    max-width: 100%;
+  }
+  .mia-scope .pay-phone .pay-phone-dropdown {
+    width: min(340px, calc(100vw - 32px));
+    max-width: calc(100vw - 32px);
+  }
+
+  /* Shared transactional rails should scroll internally only where intended. */
+  .mia-scope #cart-steps,
+  .mia-scope #pay-steps {
+    max-width: 100%;
+    overscroll-behavior-inline: contain;
+  }
+}
+
+@media (max-width: 480px) {
+  .mia-scope #zk-hero-grid,
+  .mia-scope #meter-picker,
+  .mia-scope #rc-grid,
+  .mia-scope #cart-grid,
+  .mia-scope #pay-grid {
+    padding-inline: 16px !important;
+  }
+
+  .mia-scope #meter-picker {
+    padding-inline: 16px !important;
+  }
+
+  .mia-scope .rc-plan-summary {
+    padding-inline: 14px !important;
+  }
+
+  .mia-scope #pay-methods > * {
+    flex: 1 1 100% !important;
+  }
+
+  .mia-scope .cart-row .c-ctl {
+    max-width: 100%;
+    flex-wrap: wrap;
+  }
+}
