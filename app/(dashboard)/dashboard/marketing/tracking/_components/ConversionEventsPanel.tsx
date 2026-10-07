@@ -92,7 +92,7 @@ function moneyLabel(row: ConversionEventRow) {
 }
 
 function timelineHref(donationId: string) {
-  return `/dashboard/conversion-events/timeline?donationId=${encodeURIComponent(donationId)}`;
+  return `/dashboard/marketing/tracking?donationId=${encodeURIComponent(donationId)}`;
 }
 
 function groupByDonation(events: ConversionEventRow[]): DonationTimeline[] {
