@@ -136,8 +136,8 @@ function eligibilityReason(
   if (profile?.doNotContact) return "التواصل موقوف لهذا المتبرع";
   if (channel === "EMAIL" && !donor.email) return "لا يوجد بريد إلكتروني";
   if ((channel === "WHATSAPP" || channel === "SMS") && !donor.phone) return "لا يوجد رقم هاتف";
-  if (channel === "WHATSAPP") return null;
   if (!profile) return "لم تُراجع موافقة التواصل بعد";
+  if (channel === "WHATSAPP" && profile.whatsappOptIn !== true) return "لا توجد موافقة واتساب تسويقية";
   if (channel === "EMAIL" && profile.emailOptIn !== true) return "لا توجد موافقة بريد تسويقي";
   if (channel === "SMS" && profile.smsOptIn !== true) return "لا توجد موافقة SMS";
   return null;
