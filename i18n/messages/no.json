@@ -2428,5 +2428,16 @@
     "yourDonation": "Din donasjon",
     "fileTooLarge": "Filen er {size}; maksimal tillatt størrelse er {max}. Komprimer bildet eller eksporter en PDF og prøv igjen.",
     "uploadFailed": "Opplastingen mislyktes. Kontroller tilkoblingen og prøv igjen."
+  },
+  "ProjectShares": {
+    "unitSingular": "andel",
+    "unitPlural": "andeler",
+    "count": "{count, plural, one {# andel} other {# andeler}}",
+    "countWithUnit": "{count} {unit}",
+    "pricePer": "{price} per {unit}",
+    "soldOfTotal": "{sold} av {total} {unit}",
+    "givenSoFar": "{count} {unit} gitt så langt",
+    "chooseCount": "Velg antall {unit}",
+    "customCountPh": "Annet antall"
   }
 }
