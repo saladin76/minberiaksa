@@ -48,20 +48,25 @@ export const LOCALE_ENGLISH_NAMES: Record<string, string> = {
   hi: "Hindi",
 };
 
+export type TranslationPolicy = "STANDARD" | "LEGAL_REVIEW_REQUIRED" | "RELIGIOUS_LOCKED" | "SEO";
+
 export interface TranslateInput {
-  /** Plain text fields, Arabic. Empty values are skipped. */
+  /** Plain text fields. Empty values are skipped. */
   fields: Record<string, string>;
-  /** Tiptap JSON documents (stringified), Arabic. */
+  /** Tiptap JSON documents (stringified). */
   richFields?: Record<string, string>;
   /** Shown to the model so it knows the register  "campaign", "FAQ", … */
   itemLabel?: string;
   /** The language the source is written in. Arabic unless said otherwise. */
   sourceLocale?: string;
+  /** Safety policy for protected content. */
+  policy?: TranslationPolicy;
 }
 
 export interface TranslateOutput {
   fields: Record<string, string>;
   richFields: Record<string, string>;
+  warnings: string[];
 }
 
 const MAX_TEXT = 12000;
@@ -73,6 +78,26 @@ function compact(value: string, max = MAX_TEXT): string {
 
 function stripCodeFence(value: string): string {
   return value.replace(/^```json\s*/i, "").replace(/^```\s*/i, "").replace(/```$/i, "").trim();
+}
+
+const PROTECTED_TOKEN_RE = /https?:\\/\\/[^\\s<>"')]+|[A-Z0-9._%+-]+@[A-Z0-9.-]+\\.[A-Z]{2,}|\\{\\{[^{}]+\\}\\}|\\{[A-Za-z0-9_.-]+\\}|\\b(?:USD|EUR|TRY|SAR|AED|QAR|KWD|JOD|GBP)\\b|(?:[$€£₺﷼]\\s*)?\\d+(?:[.,]\\d+)?%?/giu;
+
+function protectedTokens(value: string): string[] {
+  return (value.match(PROTECTED_TOKEN_RE) ?? []).map((token) => token.trim()).sort();
+}
+
+function sameProtectedTokens(source: string, translated: string): boolean {
+  return JSON.stringify(protectedTokens(source)) === JSON.stringify(protectedTokens(translated));
+}
+
+function policyInstruction(policy: TranslationPolicy): string {
+  if (policy === "LEGAL_REVIEW_REQUIRED") {
+    return "This is legal/policy copy. Produce a faithful draft only; preserve clause numbering, official names and legal meaning. Never imply legal approval.";
+  }
+  if (policy === "SEO") {
+    return "This is SEO copy. Localize search intent naturally for the target market; do not keyword-stuff or invent claims.";
+  }
+  return "This is general public-facing charity copy.";
 }
 
 /* ── Tiptap text lifting ─────────────────────────────────────────────────── */
@@ -166,7 +191,12 @@ export async function translateItem(input: TranslateInput, targetLocale: string)
     else if (!lifted) richAsPlain[k] = compact(v);
   }
 
-  const out: TranslateOutput = { fields: {}, richFields: {} };
+  const policy = input.policy ?? "STANDARD";
+  if (policy === "RELIGIOUS_LOCKED") {
+    throw new Error("RELIGIOUS_LOCKED content must not be machine translated");
+  }
+
+  const out: TranslateOutput = { fields: {}, richFields: {}, warnings: [] };
   if (!Object.keys(plain).length && !Object.keys(rich).length && !Object.keys(richAsPlain).length) return out;
 
   const request = {
@@ -178,6 +208,9 @@ export async function translateItem(input: TranslateInput, targetLocale: string)
     [
       `Translate from ${source} to ${target} (${targetLocale}).`,
       input.itemLabel ? `Item type: ${input.itemLabel}.` : "",
+      policyInstruction(policy),
+      "Never translate Qur'anic Arabic text. If a source fragment is a Qur'anic verse, return it unchanged.",
+      "Preserve placeholders, URLs, email addresses, currency codes, amounts, percentages and identifiers byte-for-byte.",
       `Return exactly: {"fields":{<same keys, translated>},"richTexts":{<same keys, arrays of the SAME LENGTH and ORDER, each entry translated>}}.`,
       "Entries in richTexts are fragments of one formatted document, in reading order; translate each fragment so the sequence still reads as one text. Keep leading/trailing spaces of each fragment.",
       `Input: ${JSON.stringify(request)}`,
@@ -189,11 +222,17 @@ export async function translateItem(input: TranslateInput, targetLocale: string)
   const gotFields = (parsed.fields && typeof parsed.fields === "object" ? parsed.fields : {}) as Record<string, unknown>;
   for (const k of Object.keys(plain)) {
     const v = gotFields[k];
-    if (typeof v === "string" && v.trim()) out.fields[k] = v.trim();
+    if (typeof v === "string" && v.trim()) {
+      if (sameProtectedTokens(plain[k], v)) out.fields[k] = v.trim();
+      else out.warnings.push(`${targetLocale}:${k} rejected because a protected token changed`);
+    }
   }
   for (const k of Object.keys(richAsPlain)) {
     const v = gotFields[k];
-    if (typeof v === "string" && v.trim()) out.richFields[k] = v.trim();
+    if (typeof v === "string" && v.trim()) {
+      if (sameProtectedTokens(richAsPlain[k], v)) out.richFields[k] = v.trim();
+      else out.warnings.push(`${targetLocale}:${k} rejected because a protected token changed`);
+    }
   }
 
   const gotRich = (parsed.richTexts && typeof parsed.richTexts === "object" ? parsed.richTexts : {}) as Record<string, unknown>;
@@ -204,7 +243,12 @@ export async function translateItem(input: TranslateInput, targetLocale: string)
          heading; better to leave this field untranslated and say so. */
       continue;
     }
-    out.richFields[k] = injectTexts(structuredClone(lifted.doc), arr as string[]);
+    const translatedTexts = arr as string[];
+    if (!lifted.texts.every((sourceText, index) => sameProtectedTokens(sourceText, translatedTexts[index]))) {
+      out.warnings.push(`${targetLocale}:${k} rejected because a protected token changed`);
+      continue;
+    }
+    out.richFields[k] = injectTexts(structuredClone(lifted.doc), translatedTexts);
   }
   return out;
 }
