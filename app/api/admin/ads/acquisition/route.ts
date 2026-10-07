@@ -241,6 +241,9 @@ export async function GET(request: NextRequest) {
         { totalUSD: number; donationCount: number; firstPaidAt: number | null }
       >();
       for (const ld of lifetime) {
+        // Anonymous bank-transfer donations still count in global revenue, but they have no donor
+        // identity and therefore must not participate in donor lifetime/acquisition attribution.
+        if (!ld.donorId) continue;
         const amt = donationAmount(ld);
         const prev = donorLifetime.get(ld.donorId) ?? {
           totalUSD: 0,
