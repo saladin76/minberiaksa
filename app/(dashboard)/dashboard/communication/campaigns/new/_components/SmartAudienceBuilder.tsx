@@ -15,6 +15,7 @@ export type SmartAudienceDraft = {
     donatedWithinDays?: number | null;
     notDonatedWithinDays?: number | null;
     projectIds?: string[];
+    badgeIds?: string[];
     recurringOnly?: boolean;
     minDonationAmountUSD?: number | null;
     hasContact?: boolean;
@@ -30,6 +31,7 @@ export type SmartAudiencePreview = {
   doNotContact: number;
   unavailable: number;
   languages: Record<string, number>;
+  eligibleLanguages?: Record<string, number>;
   sample: Array<{
     id: string;
     name: string | null;
