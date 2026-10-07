@@ -52,6 +52,7 @@ type Payload = {
   trackingLive: boolean;
   /** Failed/skipped messages in range that have not been re-sent yet. */
   retryableCount: number;
+  provider: { configured: boolean; reason: string | null; missingFields: string[]; senderReady: boolean };
   statusCounts: Record<string, number>;
   timeseries: Array<{ date: string; sent: number; delivered: number; opened: number; failed: number }>;
   topTemplates: Array<{ name: string; count: number }>;
@@ -122,10 +123,18 @@ export function EmailChannelDashboard() {
   useEffect(() => { void load(); }, [load]);
 
   // Filter changes must reset paging, or page 7 of the old filter silently shows an empty table.
-  useEffect(() => { setPage(1); }, [days, status, search]);
+  useEffect(() => { setPage(1); }, [days, status, search, campaignId]);
 
   const summary = data?.summary;
   const trackingLive = data?.trackingLive ?? false;
+  const retryReady = Boolean(data?.provider.configured && data?.provider.senderReady);
+  const retryBlockedReason = !data
+    ? null
+    : !data.provider.configured
+      ? "مزوّد Elastic Email غير مُعدّ بالكامل."
+      : !data.provider.senderReady
+        ? "لا توجد هوية مُرسِل بريد مُفعّلة."
+        : null;
 
   const chartData = useMemo(
     () => (data?.timeseries ?? []).map((d) => ({
@@ -150,9 +159,10 @@ export function EmailChannelDashboard() {
               {(data?.retryableCount ?? 0) > 0 && (
                 <button
                   type="button"
-                  onClick={() => setRetryIds(null)}
-                  disabled={loading}
-                  className="inline-flex h-9 items-center gap-2 rounded-lg bg-brand px-3 text-xs font-semibold text-white transition hover:bg-brand/90 disabled:opacity-50"
+                  onClick={() => retryReady && setRetryIds(null)}
+                  disabled={loading || !retryReady}
+                  title={retryReady ? undefined : retryBlockedReason ?? undefined}
+                  className="inline-flex h-9 items-center gap-2 rounded-lg bg-brand px-3 text-xs font-semibold text-white transition hover:bg-brand/90 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   <Send className="h-3.5 w-3.5" />
                   إعادة إرسال المتعثّرة
@@ -175,6 +185,16 @@ export function EmailChannelDashboard() {
         />
 
         <CampaignScopeBanner campaignId={campaignId} campaignName={campaignName} clearHref="/dashboard/communication/email" />
+
+        {data && (!data.provider.configured || !data.provider.senderReady) && (
+          <TrackingBanner>
+            <b>إرسال البريد غير جاهز بالكامل.</b>{" "}
+            {!data.provider.configured
+              ? "إعداد Elastic Email غير مكتمل."
+              : "الاتصال جاهز لكن لا توجد هوية مُرسِل بريد صالحة."}
+            {" "}تم تعطيل إعادة الإرسال حتى تُحل الجاهزية، بدل إنشاء محاولات محكوم عليها بالفشل.
+          </TrackingBanner>
+        )}
 
         {/* Tracking blindness is a first-class state, not a footnote: without it every engagement
             figure below reads as an authoritative zero when it is really "we don't know". */}
