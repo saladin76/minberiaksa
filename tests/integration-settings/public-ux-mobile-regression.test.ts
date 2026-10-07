@@ -157,3 +157,28 @@ test("mobile bottom navigation stays out of payment flows and clears floating ac
   assert.match(css, /mia-wa-fab[\s\S]*var\(--mia-mobile-nav-h\)/);
   assert.match(css, /data-mia-drawer="open"[\s\S]*mia-mobile-bottom-nav/);
 });
+
+
+test("homepage phone hero shows the video before its conversion buttons", () => {
+  const hero = read("components/minbar/home/TopSections.tsx");
+  const css = read("styles/minbar/minbar.css");
+  const mediaAt = hero.indexOf('className="mia-hero-media"');
+  const mobileActionsAt = hero.indexOf('className="mia-hero-actions mia-hero-actions--mobile"');
+  assert.ok(mediaAt >= 0 && mobileActionsAt > mediaAt);
+  assert.match(css, /mia-hero-actions--desktop[\s\S]*display: none !important/);
+  assert.match(css, /mia-hero-actions--mobile[\s\S]*display: grid !important/);
+});
+
+test("homepage hero no longer duplicates the reports proof strip", () => {
+  const hero = read("components/minbar/home/TopSections.tsx");
+  assert.doesNotMatch(hero, /mia-hero-proof/);
+  assert.doesNotMatch(hero, /BIG_STATS/);
+});
+
+test("mobile impact, campaign banners and waqf use the refined layouts", () => {
+  const css = read("styles/minbar/minbar.css");
+  assert.match(css, /#impact-metrics[\s\S]*grid-template-columns: repeat\(2, minmax\(0,1fr\)\) !important/);
+  assert.match(css, /#sector-metrics[\s\S]*grid-template-columns: repeat\(2, minmax\(0,1fr\)\) !important/);
+  assert.match(css, /\.friday-body,[\s\S]*\.ibadan-body[\s\S]*min-height: 220px !important/);
+  assert.match(css, /#waqf-areas[\s\S]*grid-template-columns: repeat\(2, minmax\(0,1fr\)\) !important/);
+});
