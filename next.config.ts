@@ -202,10 +202,14 @@ const nextConfig: NextConfig = {
   },
 };
 
-/* `export default`, not `module.exports`: this file uses ESM `import` at the top,
-   so Next loads it as a module and a CJS assignment is not its export. With that
-   assignment the next-intl plugin never applied, `i18n/request.ts` was never
-   registered, and every `getTranslations()` in a `generateMetadata()` threw
-   "Couldn't find next-intl config file"  which Next swallows, so each affected
-   page shipped with no <title> and no description at all. */
-export default withNextIntl(nextConfig);
+/* next-intl 3.x still injects the old `experimental.turbo` alias. Next 16 reads the
+   top-level `turbopack` alias above and warns about the legacy key on every build.
+   Keep the plugin for i18n registration, then remove only that obsolete duplicate. */
+const configured = withNextIntl(nextConfig) as NextConfig & {
+  experimental?: NextConfig["experimental"] & { turbo?: unknown };
+};
+if (configured.experimental && "turbo" in configured.experimental) {
+  delete configured.experimental.turbo;
+}
+
+export default configured;
