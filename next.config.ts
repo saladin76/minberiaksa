@@ -162,6 +162,11 @@ const nextConfig: NextConfig = {
   },
   async rewrites() {
     return [
+      /* Large, immutable public PDFs live in the pinned Git commit CDN rather than
+         every Vercel build output. Public URLs stay unchanged for users, database
+         rows and search engines while previews no longer upload ~90 MB each time. */
+      { source: "/minbar/reports/:path*", destination: "https://cdn.jsdelivr.net/gh/saladin76/minberiaksa@c58f7414e55f964462a37aa0979ba5723311ed2b/public/minbar/reports/:path*" },
+      { source: "/minbar/assets/books/isharat-altanzil.pdf", destination: "https://cdn.jsdelivr.net/gh/saladin76/minberiaksa@c58f7414e55f964462a37aa0979ba5723311ed2b/public/minbar/assets/books/isharat-altanzil.pdf" },
       { source: "/api/admin/subscriptions/chart", destination: "/api/admin/subscriptions/overview/chart" },
       { source: "/api/admin/subscriptions/stats", destination: "/api/admin/subscriptions/overview/stats" },
     ];
