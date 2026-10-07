@@ -17,6 +17,8 @@ export type DashboardNavItem = {
    * slug to a poller and hands the resolved numbers back down.
    */
   badge?: DashboardNavBadgeKey;
+  /** Page is intentionally restricted to ADMIN even if staff hold related integration grants. */
+  adminOnly?: boolean;
 };
 
 /** Counters the sidebar knows how to fetch. */
@@ -146,12 +148,13 @@ export const DASHBOARD_NAV_GROUPS: DashboardNavGroup[] = [
       // No dedicated "telegram" permission key exists, and inventing one would need a matching
       // grant UI. It is an outbound integration, so it sits under platformConnections with the
       // other providers. Donation notifications depend on this page being configurable.
-      { key: "platformConnectionsAdmin", title: "تيليجرام", href: "/dashboard/telegram", icon: "send", keywords: ["telegram", "bot", "notifications"] },
+      { key: "platformConnectionsAdmin", title: "تيليجرام", href: "/dashboard/telegram", icon: "send", keywords: ["telegram", "bot", "notifications"], adminOnly: true },
     ],
   },
   {
     group: "الإدارة",
     items: [
+      { key: "archive", title: "الأرشيف", href: "/dashboard/archive/collections", icon: "archive", keywords: ["archive", "files", "assets", "أرشيف", "ملفات"] },
       { key: "team", title: "الفريق", href: "/dashboard/users/team", icon: "userCog", keywords: ["team", "staff", "permissions", "صلاحيات"] },
       { key: "generalSettings", title: "الإعدادات", href: "/dashboard/general/payment-gateways", icon: "settings", keywords: ["settings", "payment", "gateways", "stripe"] },
       { key: "logs", title: "سجلات النظام", href: "/dashboard/logs", icon: "scrollText", keywords: ["logs", "audit", "system"] },
