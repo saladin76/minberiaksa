@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { writeAuditLog } from "@/lib/audit-log";
 import { normalizePhoneE164, phoneDigits, phoneMatchVariants } from "./phone";
+import type { WhatsappRenderedPreview } from "./whatsapp-rendered-preview";
 
 type Actor = { actorId?: string | null; actorName?: string | null; actorRole?: string | null } | null;
 
@@ -304,6 +305,8 @@ export type TimelineItem = {
   status: string | null;
   /** Inbound only: a non-text message the donor sent (image, voice note, document…). */
   media?: { kind: string; mediaId: string | null; mimeType: string | null; filename: string | null; caption: string | null } | null;
+  /** Outbound only: frozen provider-approved WhatsApp message, including header/footer/buttons. */
+  whatsappPreview?: WhatsappRenderedPreview | null;
 };
 
 export type ConversationDetail = {
@@ -353,7 +356,7 @@ export async function getConversation(
         where: { channel: "WHATSAPP", recipientPhone: { in: variants }, ...senderScope, ...(before ? { createdAt: { lt: before } } : {}) },
         orderBy: { createdAt: "desc" },
         take: limit + 1,
-        select: { createdAt: true, renderedBody: true, status: true, senderId: true },
+        select: { createdAt: true, renderedBody: true, variables: true, status: true, senderId: true },
       })
       .catch(() => []),
     matchDonors([phoneDigits(phone)]),
@@ -366,7 +369,19 @@ export async function getConversation(
 
   const timeline: TimelineItem[] = [];
   for (const delivery of deliveries.slice(0, limit)) {
-    timeline.push({ kind: "outbound", at: delivery.createdAt?.toISOString() ?? null, text: delivery.renderedBody ?? null, status: delivery.status });
+    const vars = delivery.variables && typeof delivery.variables === "object"
+      ? (delivery.variables as Record<string, unknown>)
+      : null;
+    const preview = vars?.whatsappPreview && typeof vars.whatsappPreview === "object"
+      ? (vars.whatsappPreview as WhatsappRenderedPreview)
+      : null;
+    timeline.push({
+      kind: "outbound",
+      at: delivery.createdAt?.toISOString() ?? null,
+      text: preview?.body ?? delivery.renderedBody ?? null,
+      status: delivery.status,
+      whatsappPreview: preview,
+    });
   }
   let resolvedSenderId: string | null = senderId;
   for (const event of events.slice(0, limit)) {
