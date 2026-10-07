@@ -138,7 +138,8 @@ export default function ProjectsPage({ projects, slides }: ProjectsPageProps) {
           style={{ position: "absolute", inset: 0, backgroundImage: "url('/minbar/assets/patterns/aqsa-white-pattern.webp')", backgroundRepeat: "repeat", backgroundSize: "520px 520px", opacity: 0.05, pointerEvents: "none" }}
         />
         <div style={{ position: "relative", maxWidth: 1240, margin: "0 auto", padding: "30px 24px 34px", display: "grid", gap: 18 }}>
-          <div className="mia-rail" id="proj-filters" style={{ display: "flex", gap: 10, flexWrap: "wrap", justifyContent: "center", paddingBottom: 4 }}>
+          <div className="proj-filters-wrap">
+            <div className="mia-rail" id="proj-filters" style={{ display: "flex", gap: 10, flexWrap: "wrap", justifyContent: "center", paddingBottom: 4 }}>
             {categories.map((c) => {
               const style = {
                 display: "inline-flex",
@@ -194,6 +195,7 @@ export default function ProjectsPage({ projects, slides }: ProjectsPageProps) {
                 </button>
               );
             })}
+            </div>
           </div>
         </div>
       </section>
