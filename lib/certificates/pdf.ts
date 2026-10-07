@@ -39,7 +39,7 @@ const isServerless = () => Boolean(process.env.AWS_LAMBDA_FUNCTION_NAME || proce
  *
  * CHROMIUM_REMOTE_PACK_URL is an escape hatch so the pack can later be mirrored
  * to our own CDN/Blob storage without a code release. The pinned official pack
- * matches the installed @sparticuz/chromium 138.0.2 package.
+ * matches the installed @sparticuz/chromium-min 138.0.2 package.
  */
 const REMOTE_CHROMIUM_PACK =
   process.env.CHROMIUM_REMOTE_PACK_URL?.trim() ||
@@ -73,7 +73,7 @@ async function launch(): Promise<Browser> {
   const puppeteer = await import("puppeteer-core");
 
   if (isServerless()) {
-    const chromium = await import("@sparticuz/chromium");
+    const chromium = await import("@sparticuz/chromium-min");
     const executablePath = await chromium.default.executablePath(REMOTE_CHROMIUM_PACK);
     return puppeteer.default.launch({
       args: chromium.default.args,
