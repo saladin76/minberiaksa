@@ -39,7 +39,8 @@ const bodySchema = z.object({
   richFields: z.record(z.string(), z.string().max(200000)).default({}),
   locales: z.array(z.string()).max(SUPPORTED_LOCALES.length).optional(),
   itemLabel: z.string().max(80).optional(),
-  sourceLocale: z.string().max(5).optional(),
+  sourceLocale: z.enum(SUPPORTED_LOCALES).optional(),
+  policy: z.enum(["STANDARD", "LEGAL_REVIEW_REQUIRED", "RELIGIOUS_LOCKED", "SEO"]).default("STANDARD"),
 });
 
 export async function POST(request: NextRequest) {
@@ -53,7 +54,7 @@ export async function POST(request: NextRequest) {
   if (!parsed.success) {
     return NextResponse.json({ error: "Invalid payload", issues: parsed.error.flatten() }, { status: 400 });
   }
-  const { fields, richFields, locales, itemLabel, sourceLocale } = parsed.data;
+  const { fields, richFields, locales, itemLabel, sourceLocale, policy } = parsed.data;
 
   const hasContent =
     Object.values(fields).some((v) => v.trim()) || Object.values(richFields).some((v) => v.trim());
@@ -63,7 +64,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const result = await translateToLocales(
-      { fields, richFields, itemLabel, sourceLocale },
+      { fields, richFields, itemLabel, sourceLocale, policy },
       locales?.length ? locales : TRANSLATION_TARGET_LOCALES
     );
     return NextResponse.json(result, { headers: { "Cache-Control": "no-store" } });
