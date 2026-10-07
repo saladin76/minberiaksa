@@ -2428,5 +2428,16 @@
     "yourDonation": "您的捐款",
     "fileTooLarge": "文件大小为 {size}；允许的最大值为 {max}。请压缩图片或导出为 PDF，然后重试。",
     "uploadFailed": "上传未成功。请检查网络连接后重试。"
+  },
+  "ProjectShares": {
+    "unitSingular": "份",
+    "unitPlural": "份",
+    "count": "{count}份",
+    "countWithUnit": "{count}{unit}",
+    "pricePer": "每{unit}{price}",
+    "soldOfTotal": "{total}{unit}中已有{sold}",
+    "givenSoFar": "目前已捐出{count}{unit}",
+    "chooseCount": "选择{unit}数",
+    "customCountPh": "其他数量"
   }
 }
