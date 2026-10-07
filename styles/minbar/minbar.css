@@ -411,10 +411,10 @@
  * the label, the gaps and the circles just tighten. */
 @media (max-width: 480px) {
   .mia-head .mia-locale-label { display: none; }
-  .mia-head .mia-locale-btn { padding-inline-end: 8px; gap: 4px; height: 38px !important; }
+  .mia-head .mia-locale-btn { padding-inline-end: 8px; gap: 4px; height: 44px !important; }
   .mia-head .mia-main-row { gap: 7px !important; padding-inline: 12px !important; }
   .mia-head .mia-main-row img[src*="logo-horizontal"] { height: 30px !important; max-width: 104px !important; }
-  .mia-head .mia-main-row .mia-circle { width: 38px !important; height: 38px !important; }
+  .mia-head .mia-main-row .mia-circle { width: 44px !important; height: 44px !important; }
   .mia-head .mia-main-row > span[aria-hidden="true"] { display: none; }
 }
 
@@ -1869,7 +1869,7 @@
   .mia-scope #pd-top .pd-project-summary { order: 2; }
   .mia-scope #pd-top #pd-aside { order: 3; }
   .mia-scope #pd-top .pd-project-video { order: 4; }
-  .mia-scope #pd-top > .cg-entry { order: 5; }
+  .mia-scope #pd-top > .pd-project-concierge { order: 5; }
   /* The donation panel stops being sticky once it is the full width  a
      full-width sticky block would cover the article as you scroll. */
   .mia-scope #pd-aside { position: static !important; }
@@ -1878,6 +1878,20 @@
 @media (max-width: 560px) {
   .mia-scope #pd-related { grid-template-columns: minmax(0,1fr) !important; }
   .mia-scope #pd-aside { padding: 18px !important; }
+}
+
+@media (max-width: 760px) {
+  .mia-scope #cart-team-support button,
+  .mia-scope #cart-team-support input,
+  .mia-scope .upsell-card button,
+  .mia-scope .upsell-card input {
+    min-height: 44px !important;
+    height: 44px !important;
+  }
+  .mia-scope .upsell-card .upsell-add {
+    min-width: 44px !important;
+    width: 44px !important;
+  }
 }
 
 /* ─────────────────────────────────────────────────────────────────────────────
