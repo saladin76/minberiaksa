@@ -98,7 +98,7 @@ function buildDiagnostics(row: Record<string, unknown> | null, platform: Platfor
 export async function GET() {
   try {
     const session = await getServerSession(authOptions);
-    const denied = requireAdminOrDashboardPermission(session, "pixels");
+    const denied = requireAdminOrDashboardPermission(session, "platformConnections");
     if (denied) return denied;
 
     const row = await getSettings();
