@@ -18,10 +18,10 @@ const sitemapPaths = [
   "/sitemap/posts-2.xml",
 ];
 
-const chunkSize = 100;
+const chunkSize = 50;
 // Eight chunks per shard cover up to 1,600 URLs in a single shard while still
 // allowing Playwright workers to parallelise the full sweep safely.
-const chunks = Array.from({ length: 16 }, (_, index) => ({
+const chunks = Array.from({ length: 32 }, (_, index) => ({
   start: index * chunkSize,
   end: (index + 1) * chunkSize,
 }));
@@ -82,7 +82,7 @@ async function inspectUrl(
   page.on("requestfailed", onRequestFailed);
 
   try {
-    const response = await page.goto(url, { waitUntil: "domcontentloaded", timeout: 30_000 });
+    const response = await page.goto(url, { waitUntil: "domcontentloaded", timeout: 15_000 });
     const status = response?.status() ?? 0;
     if (status >= 400) failures.push(`HTTP ${status} ${url}`);
 
