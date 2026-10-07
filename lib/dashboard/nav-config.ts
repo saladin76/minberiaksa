@@ -141,7 +141,7 @@ export const DASHBOARD_NAV_GROUPS: DashboardNavGroup[] = [
       // The overview, الحسابات الإعلانية, Webhooks and سجلات المنصات pages were removed. The three
       // pages left are the ones that configure something: pixels, providers, and the health check.
       { key: "platformConnections", title: "بكسلات التتبع", href: "/dashboard/platform-connections/tracking", icon: "radar", keywords: ["pixels", "meta", "tiktok", "snap"] },
-      { key: "platformConnections", title: "مزودو التواصل والإرسال", href: "/dashboard/platform-connections/communication", icon: "server", keywords: ["providers", "twilio", "smtp", "whatsapp"] },
+      { key: "platformConnections", title: "مزودو التواصل والإرسال", href: "/dashboard/platform-connections/communication", icon: "server", keywords: ["providers", "meta", "elastic email", "brevo", "netgsm", "whatsapp", "sms", "email"] },
       { key: "platformConnections", title: "فحص الاتصال", href: "/dashboard/platform-connections/health", icon: "heartPulse", keywords: ["health", "status", "diagnostics"] },
       // No dedicated "telegram" permission key exists, and inventing one would need a matching
       // grant UI. It is an outbound integration, so it sits under platformConnections with the
