@@ -79,8 +79,18 @@ export async function GET(request: NextRequest) {
 
   const reference = flatten(en);
   const target = flatten(catalogs[locale]);
+  const scope = request.nextUrl.searchParams.get("scope") ?? "all";
   const missing = Object.keys(reference)
     .filter((key) => !(key in target) && !optionalLocked(locale, key))
+    .filter((key) => {
+      if (scope !== "public-core") return true;
+      return (
+        key.startsWith("CardGive.") ||
+        key.startsWith("cart.") ||
+        key.startsWith("common.") ||
+        key.startsWith("transferReceipt.")
+      );
+    })
     .sort();
 
   const keys = missing.slice(offset, offset + limit);
