@@ -7,6 +7,28 @@ const messagesDir = path.join(root, "i18n", "messages");
 const strict = process.argv.includes("--strict");
 const referenceLocale = "en";
 
+/**
+ * Lowercase namespaces are the current Minbar public site. A small set of
+ * PascalCase namespaces are also mounted by the current public shell/donation
+ * flow. Other PascalCase namespaces belong to the pre-Minbar UI and deliberately
+ * use the documented locale -> English fallback; they stay visible in the
+ * report, but do not make the public-site translation gate fail.
+ */
+const PUBLIC_APP_NAMESPACES = new Set([
+  "Recurring",
+  "TeamSupport",
+  "Gift",
+  "Concierge",
+  "ProjectShares",
+  "CategoryNav",
+  "CardGive",
+]);
+
+function isPublicBlockingKey(key) {
+  const root = String(key).split(".")[0];
+  return /^[a-z]/.test(root) || PUBLIC_APP_NAMESPACES.has(root);
+}
+
 const preferredOrder = [
   "ar","tr","en","fr","de","es","id","pt","ur","sq","it","nl","sv","no","da","ms","ja","zh","hi",
 ];
@@ -91,7 +113,10 @@ for (const locale of locales) {
   const englishLeakCandidates = referenceKeys.filter((key) => key in current && likelyEnglishLeak(locale, current[key]));
   const extras = Object.keys(current).filter((key) => !(key in reference));
 
-  const localeBlocking = missing.length + empty.length + tokenMismatch.length;
+  const blockingMissing = missing.filter(isPublicBlockingKey);
+  const blockingEmpty = empty.filter(isPublicBlockingKey);
+  const blockingTokenMismatch = tokenMismatch.filter(isPublicBlockingKey);
+  const localeBlocking = blockingMissing.length + blockingEmpty.length + blockingTokenMismatch.length;
   blocking += localeBlocking;
 
   rows.push({
@@ -104,11 +129,18 @@ for (const locale of locales) {
     identicalToEnglish: identicalToEnglish.length,
     englishLeakCandidates: englishLeakCandidates.length,
     extraKeys: extras.length,
+    publicBlockingIssues: localeBlocking,
+    legacyFallbackMissing: missing.length - blockingMissing.length,
   });
   details[locale] = {
     missing,
     empty,
     tokenMismatch,
+    publicBlocking: {
+      missing: blockingMissing,
+      empty: blockingEmpty,
+      tokenMismatch: blockingTokenMismatch,
+    },
     identicalToEnglish,
     englishLeakCandidates,
     extras,
@@ -126,9 +158,9 @@ fs.writeFileSync(
 
 if (strict && blocking > 0) {
   console.error(`i18n strict audit failed: ${blocking} blocking catalog issue(s) across ${locales.length} public locales.`);
-  for (const row of rows.filter((r) => r.missingKeys || r.emptyStrings || r.tokenMismatch)) {
+  for (const row of rows.filter((r) => r.publicBlockingIssues > 0)) {
     console.error(
-      `  ${row.locale}: missing=${row.missingKeys}, empty=${row.emptyStrings}, protected-token-mismatch=${row.tokenMismatch}`,
+      `  ${row.locale}: public-blocking=${row.publicBlockingIssues} (all-catalog missing=${row.missingKeys}, empty=${row.emptyStrings}, token-mismatch=${row.tokenMismatch})`,
     );
   }
   process.exit(1);
