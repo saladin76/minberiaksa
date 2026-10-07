@@ -18,10 +18,10 @@ const sitemapPaths = [
   "/sitemap/posts-2.xml",
 ];
 
-const chunkSize = 200;
+const chunkSize = 100;
 // Eight chunks per shard cover up to 1,600 URLs in a single shard while still
 // allowing Playwright workers to parallelise the full sweep safely.
-const chunks = Array.from({ length: 8 }, (_, index) => ({
+const chunks = Array.from({ length: 16 }, (_, index) => ({
   start: index * chunkSize,
   end: (index + 1) * chunkSize,
 }));
