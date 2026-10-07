@@ -223,7 +223,7 @@ export async function loadContextForDonation(
     where: { id: donationId },
     select: { ...donationSelect, donorId: true },
   });
-  if (!donation) return null;
+  if (!donation || !donation.donorId) return null;
   const base = await loadContext(donation.donorId);
   if (!base) return null;
   return {
@@ -247,6 +247,7 @@ export async function loadContextsForUserIds(
 
   const byDonor = new Map<string, RawDonation[]>();
   for (const d of donations) {
+    if (!d.donorId) continue;
     const arr = byDonor.get(d.donorId) ?? [];
     arr.push(d as RawDonation);
     byDonor.set(d.donorId, arr);
