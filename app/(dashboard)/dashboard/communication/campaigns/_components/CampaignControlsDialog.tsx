@@ -122,12 +122,12 @@ export function CampaignControlsDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className="fixed left-1/2 top-1/2 max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-2xl -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-2xl border bg-white p-0 shadow-2xl"
+        className="fixed left-1/2 top-1/2 flex max-h-[92dvh] w-[calc(100%-2rem)] max-w-4xl -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-2xl border bg-white p-0 shadow-2xl"
         dir="rtl"
         onClick={(event) => event.stopPropagation()}
         onPointerDown={(event) => event.stopPropagation()}
       >
-        <div className="border-b border-slate-100 px-5 py-4">
+        <div className="shrink-0 border-b border-slate-100 bg-white px-5 py-4">
           <DialogTitle className="flex items-center gap-2 text-base font-bold text-slate-900">
             <Gauge className="h-5 w-5 text-brand" />
             تحكم إرسال الحملة
@@ -140,7 +140,7 @@ export function CampaignControlsDialog({
             <Loader2 className="h-5 w-5 animate-spin" />
           </div>
         ) : (
-          <div className="space-y-5 p-5">
+          <div className="min-h-0 flex-1 space-y-5 overflow-y-auto p-5">
             <section className="rounded-xl border border-slate-200 p-4">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
@@ -355,7 +355,7 @@ export function CampaignControlsDialog({
               <p className="text-[11px] text-slate-500">الحد يُطبّق على إجمالي WhatsApp الذي قبلته Meta خلال آخر 24 ساعة، وليس على هذه الحملة وحدها.</p>
             </section>
 
-            <div className="flex justify-end gap-2 border-t border-slate-100 pt-4">
+            <div className="sticky bottom-0 z-10 -mx-5 flex justify-end gap-2 border-t border-slate-100 bg-white px-5 pb-1 pt-4">
               <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>إلغاء</Button>
               <Button onClick={save} disabled={saving} className="bg-brand hover:bg-brand/90">
                 {saving && <Loader2 className="me-1.5 h-4 w-4 animate-spin" />}
