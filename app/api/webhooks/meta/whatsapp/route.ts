@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { verifyWebhookChallenge, verifyWebhookSignature, parseWebhookPayload } from "@/lib/communication/providers/meta-whatsapp/webhooks";
+import { verifyWebhookChallenge, verifyWebhookSignature, parseWebhookPayload, templateLifecycleWebhookWabaIds } from "@/lib/communication/providers/meta-whatsapp/webhooks";
 import { processWhatsappEvents } from "@/lib/communication/webhook-service";
+import { syncMetaWhatsappTemplates } from "@/lib/communication/whatsapp-template-sync";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -35,7 +36,32 @@ export async function POST(req: NextRequest) {
     if (summary.persistenceErrors > 0) {
       return NextResponse.json({ ok: false, error: "events not persisted", summary }, { status: 503 });
     }
-    return NextResponse.json({ ok: true, summary, signatureVerified: verdict === "valid" }, { status: 200 });
+
+    // Template status/quality changes are not delivery events. Reconcile the affected WABA
+    // immediately so a PAUSED/DISABLED template stops being considered sendable without waiting
+    // for the 15-minute safety reconciliation cron.
+    const templateWabas = templateLifecycleWebhookWabaIds(payload);
+    const templateSync = [];
+    for (const businessAccountId of templateWabas) {
+      const synced = await syncMetaWhatsappTemplates({
+        businessAccountId,
+        actor: { actorRole: "SYSTEM" },
+      });
+      templateSync.push({ businessAccountId, ok: synced.ok, reason: synced.reason ?? null });
+      if (!synced.ok) {
+        return NextResponse.json(
+          { ok: false, error: "template state not reconciled", summary, templateSync },
+          { status: 503 },
+        );
+      }
+    }
+
+    return NextResponse.json({
+      ok: true,
+      summary,
+      templateSync,
+      signatureVerified: verdict === "valid",
+    }, { status: 200 });
   } catch (error) {
     console.error("meta whatsapp webhook processing threw", error);
     return NextResponse.json({ ok: false, error: "processing failed" }, { status: 503 });
