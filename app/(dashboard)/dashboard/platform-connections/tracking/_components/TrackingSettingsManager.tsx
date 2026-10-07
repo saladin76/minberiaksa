@@ -124,7 +124,7 @@ function Status({ label, status }: { label: string; status: string }) {
 }
 
 function DiagnosticBadge({ state, label }: { state: string; label: string }) {
-  const cls = state === "ok" ? "border-emerald-200 bg-emerald-50 text-emerald-700" : state === "not_required" ? "border-slate-200 bg-slate-50 text-slate-600" : "border-amber-200 bg-amber-50 text-amber-700";
+  const cls = state === "ok" ? "border-emerald-200 bg-emerald-50 text-emerald-700" : state === "not_required" || state === "disabled" ? "border-slate-200 bg-slate-50 text-slate-600" : "border-amber-200 bg-amber-50 text-amber-700";
   return <span className={`rounded-full border px-2 py-0.5 ${cls}`}>{label}</span>;
 }
 
