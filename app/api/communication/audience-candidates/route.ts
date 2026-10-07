@@ -220,7 +220,7 @@ export async function GET(request: NextRequest) {
         profile,
       ),
       eligibilityReason: eligibilityReason({ email: u.email, phone: u.phone }, channel, profile),
-      canConfirmWhatsappOptIn: false,
+      canConfirmWhatsappOptIn: channel === "WHATSAPP" && Boolean(u.phone) && profile?.doNotContact !== true && profile?.whatsappOptIn !== true,
     };
   });
 
