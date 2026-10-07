@@ -164,12 +164,11 @@ export default function ZakatPage({
   const router = useRouter();
   const t = useTranslations("zakat");
   const tCommon = useTranslations("common");
-  const { format, currency: selectedCurrency } = useMinbarMoney();
+  const { format, formatLocal, code: visitorCode } = useMinbarMoney();
 
   /* The hero's chips: the category's amounts when one is bound, under the
      same currency contract as its donation box  USD converted for display,
      unless the visitor's currency has a list of its own. */
-  const visitorCode = selectedCurrency && selectedCurrency !== "DEFAULT" ? selectedCurrency : "USD";
   const override = category && visitorCode !== "USD" ? category.suggestedByCurrency[visitorCode] : undefined;
   const quickAmounts = override?.length ? override : category?.suggestedAmounts.length ? category.suggestedAmounts : QUICK_AMOUNTS;
   const chipCurrency = override?.length ? visitorCode : "USD";
@@ -194,6 +193,7 @@ export default function ZakatPage({
   };
   const base = Math.max(0, num(values.cash) + num(values.gold) + num(values.trade) - num(values.debts));
   const due = base * ZAKAT_RATE;
+  const dueRounded = Math.round(due * 100) / 100;
   const heroAmount = heroCustom ? num(heroCustom) : amount;
   const heroCurrency = heroCustom ? visitorCode : chipCurrency;
 
@@ -231,8 +231,8 @@ export default function ZakatPage({
   };
 
   const onDonateCalculated = () => {
-    if (!(base > 0)) return;
-    addZakat(Math.round(due));
+    if (!(base > 0) || !(dueRounded > 0)) return;
+    addZakat(dueRounded, visitorCode);
     router.push(miaPath("cart", locale));
   };
 
@@ -395,8 +395,8 @@ export default function ZakatPage({
                         <span style={{ fontSize: 13, fontWeight: 800, color: "var(--deep)" }}>{t(field.labelKey)}</span>
                       </span>
                       <span style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 0, background: "var(--ivory)", border: "1px solid var(--border)", borderRadius: 10, padding: "0 12px", boxSizing: "border-box" }}>
-                        <span dir="ltr" style={{ flex: "0 0 auto", color: "var(--muted)", fontWeight: 900, fontSize: 15 }}>
-                          $
+                        <span dir="ltr" style={{ flex: "0 0 auto", color: "var(--muted)", fontWeight: 900, fontSize: 13.5, unicodeBidi: "isolate" }}>
+                          {visitorCode}
                         </span>
                         <input
                           value={values[field.id] ?? ""}
@@ -422,7 +422,7 @@ export default function ZakatPage({
                   <span style={{ position: "relative", display: "grid", gap: 4, paddingInlineStart: 24, borderInlineStart: "1px solid rgba(31,122,77,.28)" }}>
                     <span style={{ ...micro, color: "var(--green)" }}>{t("zakatDueLabel")}</span>
                     <b dir="ltr" style={{ fontSize: 32, color: "var(--green)", unicodeBidi: "isolate" }}>
-                      {format(due)}
+                      {formatLocal(dueRounded)}
                     </b>
                   </span>
                   <span style={{ position: "relative" }}>
