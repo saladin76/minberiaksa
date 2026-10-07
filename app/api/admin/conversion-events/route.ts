@@ -257,17 +257,18 @@ export async function GET(request: NextRequest) {
 
   let collapsed = collapseEvents(batch);
   if (status && status !== "all") collapsed = collapsed.filter((event) => event.status === status);
-  collapsed = collapsed.slice(0, limit);
+  const total = collapsed.length;
+  const events = collapsed.slice(0, limit);
 
   return NextResponse.json({
     ok: true,
     source,
-    total: collapsed.length,
+    total,
     rawTotal: batch.length,
     limit,
     from: from.toISOString(),
     to: to.toISOString(),
     filters: { platform, channel, status, eventName, donationId, search },
-    events: collapsed,
+    events,
   });
 }
