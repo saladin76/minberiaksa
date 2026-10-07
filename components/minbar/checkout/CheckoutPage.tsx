@@ -320,7 +320,8 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
     }
 
     const signedIn = Boolean(session?.user);
-    if (!signedIn && (!firstName.trim() || !email.trim())) {
+    const phoneDigits = phone.replace(/\D/g, "");
+    if (!signedIn && (!firstName.trim() || !email.trim() || phoneDigits.length < 7)) {
       setError(tValidation("required"));
       return;
     }

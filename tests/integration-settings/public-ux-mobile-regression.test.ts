@@ -46,3 +46,35 @@ test("team support remains optional and never blocks checkout", () => {
   assert.doesNotMatch(cart, /nudgeTeamSupport/);
   assert.match(cart, /href=\{miaPath\("checkout", locale\)\}/);
 });
+
+
+test("zakat calculator uses the visitor currency instead of a fixed dollar unit", () => {
+  const page = read("components/minbar/zakat/ZakatPage.tsx");
+  assert.match(page, /formatLocal, code: visitorCode/);
+  assert.match(page, /\{visitorCode\}/);
+  assert.match(page, /addZakat\(dueRounded, visitorCode\)/);
+  assert.doesNotMatch(page, /addZakat\(Math\.round\(due\)\)/);
+});
+
+test("mobile donor controls cannot regress below the 44px touch target", () => {
+  const css = read("styles/minbar/minbar.css");
+  assert.match(css, /#meter-picker \.wq-step[\s\S]*width: 44px !important;[\s\S]*height: 44px !important/);
+  assert.match(css, /#rc-grid \.rc-seg[\s\S]*height: 44px !important/);
+  assert.match(css, /cart-row \.cart-monthly[\s\S]*height: 44px !important/);
+  assert.match(css, /#upsell-rail > div button[\s\S]*height: 44px !important/);
+  assert.match(css, /#pay-grid button\[role="radio"\][\s\S]*height: 44px !important/);
+});
+
+test("mobile donor layouts constrain wide content to the viewport", () => {
+  const css = read("styles/minbar/minbar.css");
+  assert.match(css, /#zk-hero-grid, #meter-picker, #rc-grid, #cart-grid, #pay-grid, #pd-top, #pd-body/);
+  assert.match(css, /max-width: 100%/);
+  assert.match(css, /pay-phone-dropdown[\s\S]*max-width: calc\(100vw - 32px\)/);
+  assert.match(css, /upsell-custom-input[\s\S]*min-width: 90px !important/);
+});
+
+test("guest checkout rejects an empty phone that is only a dial code", () => {
+  const page = read("components/minbar/checkout/CheckoutPage.tsx");
+  assert.match(page, /const phoneDigits = phone\.replace\(\/\\D\/g, ""\)/);
+  assert.match(page, /phoneDigits\.length < 7/);
+});
