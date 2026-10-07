@@ -2428,5 +2428,16 @@
     "yourDonation": "Dhurimi juaj",
     "fileTooLarge": "Skedari është {size}; maksimumi i lejuar është {max}. Kompresoni foton ose eksportojeni si PDF dhe provoni përsëri.",
     "uploadFailed": "Ngarkimi nuk u përfundua. Kontrolloni lidhjen tuaj dhe provoni përsëri."
+  },
+  "ProjectShares": {
+    "unitSingular": "pjesë",
+    "unitPlural": "pjesë",
+    "count": "{count} pjesë",
+    "countWithUnit": "{count} {unit}",
+    "pricePer": "{price} për {unit}",
+    "soldOfTotal": "{sold} nga {total} {unit}",
+    "givenSoFar": "{count} {unit} të dhëna deri tani",
+    "chooseCount": "Zgjidh numrin e {unit}",
+    "customCountPh": "Numër tjetër"
   }
 }
