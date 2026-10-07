@@ -102,7 +102,7 @@ async function loadLastPaidDonationByDonor(): Promise<Map<string, { at: Date; do
   });
   const out = new Map<string, { at: Date; donationId: string }>();
   for (const row of grouped) {
-    if (row._max.createdAt) out.set(row.donorId, { at: row._max.createdAt, donationId: "" });
+    if (row.donorId && row._max.createdAt) out.set(row.donorId, { at: row._max.createdAt, donationId: "" });
   }
   return out;
 }
@@ -116,6 +116,7 @@ async function attachLastDonationIds(donorIds: string[], lastByDonor: Map<string
     orderBy: { createdAt: "desc" },
   });
   for (const row of rows) {
+    if (!row.donorId) continue;
     const entry = lastByDonor.get(row.donorId);
     if (entry && !entry.donationId) entry.donationId = row.id;
   }
