@@ -5,6 +5,7 @@ import type { Locale } from "@/lib/seo";
 import { Suspense } from "react";
 import { getServerSession } from "next-auth";
 import Header from "@/components/minbar/shell/Header";
+import MobileBottomNav from "@/components/minbar/shell/MobileBottomNav";
 import MinbarFooter from "@/components/minbar/shell/Footer";
 import QuickDonate from "@/components/minbar/shell/QuickDonate";
 import ConciergeLauncher from "@/components/minbar/concierge/ConciergeLauncher";
@@ -129,6 +130,7 @@ export default async function Rootlayout({
               <PreferredLangSync />
               <ScrollToTop />
               <Header signedIn={!!session?.user} isAdmin={session?.user?.role === "ADMIN"} categories={navCategories} />
+              <MobileBottomNav signedIn={!!session?.user} />
               {/* No top padding here: the header renders its own spacer, sized
                   from its measured height, because that height changes with the
                   language, the back button and the viewport. */}
