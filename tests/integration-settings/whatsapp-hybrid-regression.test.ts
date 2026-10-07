@@ -174,7 +174,7 @@ test("WhatsApp campaign creation configures send controls before the campaign ro
   assert.match(wizard, /التالي: إعداد الإرسال/);
   assert.match(wizard, /sendControls/);
   assert.match(route, /sendControlsSchema/);
-  assert.match(route, /metadata: \{ sendControls \}/);
+  assert.match(route, /sendControls \? \{ sendControls \} : \{\}/);
 });
 
 test("campaign controls dialog stays scrollable and cannot bubble clicks into the campaign row", () => {
