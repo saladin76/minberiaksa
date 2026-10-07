@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent, type PointerEvent as ReactPointerEvent } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { localeDirection } from "@/lib/locales";
 import { QUICK_DONATE_ROUTES, type MinbarRoute } from "@/lib/minbar/routes";
@@ -13,6 +13,7 @@ import { useConciergeConfig } from "./useConciergeConfig";
 const SEEN_KEY = "mia_concierge_seen";
 const TEASER_KEY = "mia_concierge_teaser_done";
 const TEASER_VISIBLE_MS = 14_000;
+const MOBILE_POS_KEY = "mia_concierge_mobile_pos";
 
 function readFlag(storage: "local" | "session", key: string): boolean {
   try {
@@ -65,6 +66,23 @@ export default function ConciergeLauncher() {
   /* null until read on the client, so the server render never guesses. */
   const [seen, setSeen] = useState<boolean | null>(null);
   const [teaserOpen, setTeaserOpen] = useState(false);
+  const launcherWrapRef = useRef<HTMLDivElement>(null);
+  const dragRef = useRef<{ pointerId: number; startX: number; startY: number; originX: number; originY: number; moved: boolean } | null>(null);
+  const suppressClickRef = useRef(false);
+  const [mobileOffset, setMobileOffset] = useState({ x: 0, y: 0 });
+
+  useEffect(() => {
+    try {
+      const saved = window.sessionStorage.getItem(MOBILE_POS_KEY);
+      if (!saved) return;
+      const parsed = JSON.parse(saved) as { x?: number; y?: number };
+      if (Number.isFinite(parsed.x) && Number.isFinite(parsed.y)) {
+        setMobileOffset({ x: Number(parsed.x), y: Number(parsed.y) });
+      }
+    } catch {
+      /* A private session simply starts from the default corner. */
+    }
+  }, []);
 
   useEffect(() => {
     setSeen(readFlag("local", SEEN_KEY));
@@ -149,6 +167,69 @@ export default function ConciergeLauncher() {
     writeFlag("session", TEASER_KEY);
   };
 
+  const persistMobileOffset = (next: { x: number; y: number }) => {
+    setMobileOffset(next);
+    try { window.sessionStorage.setItem(MOBILE_POS_KEY, JSON.stringify(next)); } catch { /* optional */ }
+  };
+
+  const onLauncherPointerDown = (e: ReactPointerEvent<HTMLButtonElement>) => {
+    if (window.matchMedia("(min-width: 761px)").matches) return;
+    const wrap = launcherWrapRef.current;
+    if (!wrap) return;
+    dragRef.current = {
+      pointerId: e.pointerId,
+      startX: e.clientX,
+      startY: e.clientY,
+      originX: mobileOffset.x,
+      originY: mobileOffset.y,
+      moved: false,
+    };
+    e.currentTarget.setPointerCapture(e.pointerId);
+  };
+
+  const onLauncherPointerMove = (e: ReactPointerEvent<HTMLButtonElement>) => {
+    const drag = dragRef.current;
+    const wrap = launcherWrapRef.current;
+    if (!drag || drag.pointerId !== e.pointerId || !wrap) return;
+
+    const dx = e.clientX - drag.startX;
+    const dy = e.clientY - drag.startY;
+    if (!drag.moved && Math.hypot(dx, dy) < 6) return;
+    drag.moved = true;
+
+    const rect = wrap.getBoundingClientRect();
+    const margin = 12;
+    const minDx = margin - rect.left;
+    const maxDx = window.innerWidth - margin - rect.right;
+    const minDy = margin - rect.top;
+    const maxDy = window.innerHeight - margin - rect.bottom;
+    const next = {
+      x: mobileOffset.x + Math.max(minDx, Math.min(maxDx, dx - (mobileOffset.x - drag.originX))),
+      y: mobileOffset.y + Math.max(minDy, Math.min(maxDy, dy - (mobileOffset.y - drag.originY))),
+    };
+    setMobileOffset(next);
+  };
+
+  const onLauncherPointerUp = (e: ReactPointerEvent<HTMLButtonElement>) => {
+    const drag = dragRef.current;
+    const wrap = launcherWrapRef.current;
+    if (!drag || drag.pointerId !== e.pointerId) return;
+    dragRef.current = null;
+
+    if (!drag.moved || !wrap) return;
+    suppressClickRef.current = true;
+
+    const rect = wrap.getBoundingClientRect();
+    const margin = 14;
+    const leftGap = rect.left - margin;
+    const rightGap = window.innerWidth - margin - rect.right;
+    const snapDx = leftGap <= rightGap ? -leftGap : rightGap;
+    const next = { x: mobileOffset.x + snapDx, y: mobileOffset.y };
+    persistMobileOffset(next);
+
+    window.setTimeout(() => { suppressClickRef.current = false; }, 0);
+  };
+
   const onSubmit = (e: FormEvent) => {
     e.preventDefault();
     if (!draft.trim()) return;
@@ -159,7 +240,14 @@ export default function ConciergeLauncher() {
   return (
     <>
       {!open ? (
-        <div className="cg-launch-wrap" data-above-pill={abovePill ? "1" : "0"} dir={dir}>
+        <div
+          ref={launcherWrapRef}
+          className="cg-launch-wrap"
+          data-above-pill={abovePill ? "1" : "0"}
+          data-draggable="1"
+          dir={dir}
+          style={{ transform: `translate3d(${mobileOffset.x}px, ${mobileOffset.y}px, 0)` }}
+        >
           {teaserOpen ? (
             <div className="cg-teaser" role="status">
               <button type="button" className="cg-teaser-body" onClick={() => openPanel()}>
@@ -174,7 +262,16 @@ export default function ConciergeLauncher() {
             </div>
           ) : null}
           <span className="cg-halo" data-pulse={config.pulse && seen === false ? "1" : "0"}>
-          <button type="button" className="cg-launcher" aria-haspopup="dialog" onClick={() => openPanel()}>
+          <button
+            type="button"
+            className="cg-launcher"
+            aria-haspopup="dialog"
+            onPointerDown={onLauncherPointerDown}
+            onPointerMove={onLauncherPointerMove}
+            onPointerUp={onLauncherPointerUp}
+            onPointerCancel={() => { dragRef.current = null; }}
+            onClick={() => { if (!suppressClickRef.current) openPanel(); }}
+          >
             <span className="cg-launcher-icon" aria-hidden="true">
               <SparkGlyph />
             </span>

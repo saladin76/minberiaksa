@@ -113,3 +113,23 @@ test("homepage and project catalogue remove oversized mobile dead space", () => 
   assert.match(css, /#project-filters-section > div[\s\S]*padding-bottom: 12px !important/);
   assert.match(css, /#all[\s\S]*padding-top: 14px !important/);
 });
+
+
+test("mobile giving assistant stays fully visible and draggable", () => {
+  const launcher = read("components/minbar/concierge/ConciergeLauncher.tsx");
+  const css = read("styles/minbar/minbar.css");
+  assert.match(launcher, /MOBILE_POS_KEY/);
+  assert.match(launcher, /onLauncherPointerDown/);
+  assert.match(launcher, /setPointerCapture/);
+  assert.match(launcher, /data-draggable="1"/);
+  assert.match(css, /cg-launch-wrap\[data-draggable="1"\][\s\S]*max-width: calc\(100vw - 28px\)/);
+  assert.match(css, /cg-launcher-label[\s\S]*position: static !important/);
+  assert.match(css, /cg-launcher-badge[\s\S]*display: inline-flex !important/);
+});
+
+test("long-form Al-Aqsa and Jerusalem pages stay inside the phone viewport", () => {
+  const css = read("styles/minbar/minbar.css");
+  assert.match(css, /:is\(\.aq-page, \.qd-page\)[\s\S]*overflow-x: clip/);
+  assert.match(css, /\.qd-two,[\s\S]*\.qd-map[\s\S]*grid-template-columns: minmax\(0,1fr\) !important/);
+  assert.match(css, /\.qd-grid3,[\s\S]*\.qd-grid4,[\s\S]*\.qd-gates[\s\S]*grid-template-columns: minmax\(0,1fr\) !important/);
+});

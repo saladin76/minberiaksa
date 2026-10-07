@@ -244,7 +244,7 @@ export async function GET(request: NextRequest) {
     pageIds.length ? getBadgeIdsByUser(pageIds, allBadges) : Promise.resolve(new Map<string, string[]>()),
   ]);
 
-  let donors = rows.map((u) => {
+  const donors = rows.map((u) => {
     const resolved = resolveUserCountry(u as DonorRow);
     const profile = profiles.get(u.id) ?? null;
     return {
