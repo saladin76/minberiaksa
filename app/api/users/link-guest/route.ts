@@ -36,6 +36,9 @@ export async function POST(req: NextRequest) {
     if (!donation) {
       return NextResponse.json({ error: "Donation not found" }, { status: 404 });
     }
+    if (!donation.donorId) {
+      return NextResponse.json({ error: "Donation has no donor profile to link" }, { status: 409 });
+    }
 
     const result = await linkGuestUserToTarget(donation.donorId, session.user.id);
     if (!result.ok) {
