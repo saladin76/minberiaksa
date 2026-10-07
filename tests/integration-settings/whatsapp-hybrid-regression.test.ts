@@ -179,7 +179,7 @@ test("WhatsApp campaign creation configures send controls before the campaign ro
 
 test("campaign controls dialog stays scrollable and cannot bubble clicks into the campaign row", () => {
   const dialog = read("app/(dashboard)/dashboard/communication/campaigns/_components/CampaignControlsDialog.tsx");
-  assert.match(dialog, /max-h-\[calc\(100dvh-2rem\)\]/);
+  assert.match(dialog, /max-h-\[92dvh\]/);
   assert.match(dialog, /overflow-y-auto/);
   assert.match(dialog, /onClick=\{\(event\) => event\.stopPropagation\(\)\}/);
   assert.match(dialog, /onPointerDown=\{\(event\) => event\.stopPropagation\(\)\}/);
