@@ -9,14 +9,12 @@ import {
 } from "@/lib/content-localization/access";
 import { prisma } from "@/lib/prisma";
 import { SUPPORTED_LOCALES as ALL_LOCALES } from "@/lib/locales";
-import { LOCALE_ENGLISH_NAMES, translateItem } from "@/lib/content-localization/translate";
+import { translateItem } from "@/lib/content-localization/translate";
 
 /* Every language the site publishes, from the one list  this used to be a
    hand-kept seven while the site served nineteen. */
-const TRANSLATION_LOCALES = ALL_LOCALES.filter((l) => l !== "ar");
 const SUPPORTED_LOCALES = ALL_LOCALES;
 type Locale = (typeof SUPPORTED_LOCALES)[number];
-type TranslationLocale = (typeof TRANSLATION_LOCALES)[number];
 type ItemType = "campaign" | "category" | "post" | "postCategory" | "slide";
 
 type PreviewRow = {
@@ -34,18 +32,12 @@ type PreviewRow = {
   qualityNotes?: string[];
 };
 
-const LOCALE_NAMES: Record<string, string> = LOCALE_ENGLISH_NAMES;
 
 function parseLocale(value: unknown): Locale | null {
   return typeof value === "string" &&
     (SUPPORTED_LOCALES as readonly string[]).includes(value)
     ? (value as Locale)
     : null;
-}
-
-function isTranslationLocale(locale: Locale): locale is TranslationLocale {
-  return locale !== "ar" &&
-    (TRANSLATION_LOCALES as readonly string[]).includes(locale);
 }
 
 function normalizeText(value: unknown): string {
