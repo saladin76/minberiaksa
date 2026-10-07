@@ -2428,5 +2428,16 @@
     "notePlaceholder": "照合に役立つ情報があればご記入ください。例：送金者名が異なる、一部金額のみの送金、一つの注文に対して二件の送金がある場合など…",
     "reviewLead": "財務チームが銀行口座への入金と照合しています。通常は一〜三営業日ほどかかり、確認が完了し次第メールでお知らせします。",
     "uploadFailed": "アップロードできませんでした。接続状況を確認して、もう一度お試しください。"
+  },
+  "ProjectShares": {
+    "unitSingular": "口",
+    "unitPlural": "口",
+    "count": "{count}口",
+    "countWithUnit": "{count}{unit}",
+    "pricePer": "{unit}あたり{price}",
+    "soldOfTotal": "{total}{unit}のうち{sold}",
+    "givenSoFar": "これまでに{count}{unit}寄付されました",
+    "chooseCount": "{unit}数を選択",
+    "customCountPh": "その他の口数"
   }
 }
