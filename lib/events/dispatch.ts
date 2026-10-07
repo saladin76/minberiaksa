@@ -370,11 +370,14 @@ export async function dispatchDonationPaid(donationId: string): Promise<void> {
   try {
     const donation = await prisma.donation.findUnique({ where: { id: donationId }, select: { donorId: true, amount: true, amountUSD: true, currency: true, subscriptionId: true, paymentMethod: true, provider: true, locale: true } });
     if (!donation) return;
-    try { await upsertProfileForUser(donation.donorId, { donationLocale: donation.locale }); } catch { console.error("dispatchDonationPaid profile sync failed", { donationId }); }
-    const paidCount = await prisma.donation.count({ where: { donorId: donation.donorId, status: "PAID" } });
-    if (paidCount === 1) await dispatchEvent("FIRST_DONATION", { donationId });
+    let paidCount = 0;
+    if (donation.donorId) {
+      try { await upsertProfileForUser(donation.donorId, { donationLocale: donation.locale }); } catch { console.error("dispatchDonationPaid profile sync failed", { donationId }); }
+      paidCount = await prisma.donation.count({ where: { donorId: donation.donorId, status: "PAID" } });
+      if (paidCount === 1) await dispatchEvent("FIRST_DONATION", { donationId });
+    }
     try {
-      await vercelTrack("donation_paid_server", { donation_id: donationId, amount: donation.amount ?? 0, amount_usd: donation.amountUSD ?? donation.amount ?? 0, currency: donation.currency ?? "USD", donation_type: donation.subscriptionId ? "SUBSCRIPTION" : "ONE_TIME", payment_method: donation.paymentMethod ?? null, gateway: donation.provider ?? null, is_first_donation: paidCount === 1 });
+      await vercelTrack("donation_paid_server", { donation_id: donationId, amount: donation.amount ?? 0, amount_usd: donation.amountUSD ?? donation.amount ?? 0, currency: donation.currency ?? "USD", donation_type: donation.subscriptionId ? "SUBSCRIPTION" : "ONE_TIME", payment_method: donation.paymentMethod ?? null, gateway: donation.provider ?? null, is_first_donation: Boolean(donation.donorId && paidCount === 1) });
     } catch { console.error("Vercel donation_paid_server track failed"); }
   } catch { console.error("dispatchDonationPaid first-donation check failed", { donationId }); }
 }
