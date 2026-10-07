@@ -18,7 +18,7 @@ export const foundationTransactionalFlows: TransactionalFlow[] = [
     status: "DRAFT",
     steps: [
       { id: "failed_email_retry", channel: "EMAIL", providerKey: "ELASTIC_EMAIL", templateId: "payment_failed_retry", delayMinutes: 5, requiresConsent: false },
-      { id: "failed_sms_retry", channel: "SMS", providerKey: "BREVO_SMS", templateId: "payment_failed_retry_sms", delayMinutes: 60, requiresConsent: true, fallbackProviderKey: "SMS_FALLBACK" },
+      { id: "failed_sms_retry", channel: "SMS", providerKey: "BREVO_SMS", templateId: "payment_failed_retry_sms", delayMinutes: 60, requiresConsent: true },
     ],
   },
   {
