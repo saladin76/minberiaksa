@@ -215,12 +215,36 @@ export default function BankTransfersPage() {
         const firstError = results.find((r): r is PromiseRejectedResult => r.status === "rejected");
         toast.error(`تم تنفيذ ${done.size} وتعذّر ${failed}${firstError ? `  ${apiError(firstError.reason, "")}` : ""}. العمليات التي تعذّرت بقيت محددة.`);
       }
-      void refreshBanksOnly();
-      void loadSummary();
+      await Promise.all([loadTransactions(filters, page), refreshBanksOnly(), loadSummary()]);
     } finally {
       setBulkBusy(false);
     }
   }
+  async function bulkDelete() {
+    const ids = [...selectedIds];
+    if (!ids.length) return;
+    if (!window.confirm(`تأكيد حذف ${ids.length} عملية محددة؟ سيتم إخفاؤها من المراجعة ولن تُحتسب في الإجماليات.`)) return;
+    setBulkBusy(true);
+    try {
+      const results = await allSettledWithConcurrency(ids, 8, async (id) => {
+        await axios.delete(`/api/admin/bank-transfers/transactions/${id}`);
+        return id;
+      });
+      const done = new Set(results.filter((r): r is PromiseFulfilledResult<string> => r.status === "fulfilled").map((r) => r.value));
+      const failed = results.length - done.size;
+      setSelectedIds(new Set(ids.filter((id) => !done.has(id))));
+      await Promise.all([loadTransactions(filters, page), loadSummary(), refreshBanksOnly()]);
+      if (failed === 0) {
+        toast.success(`تم حذف ${done.size} عملية`);
+      } else {
+        const firstError = results.find((r): r is PromiseRejectedResult => r.status === "rejected");
+        toast.error(`تم حذف ${done.size} وتعذّر حذف ${failed}${firstError ? ` — ${apiError(firstError.reason, "")}` : ""}`);
+      }
+    } finally {
+      setBulkBusy(false);
+    }
+  }
+
   async function deleteTransaction(tx: ImportedTransaction) { if (!tx.id) return; if (!window.confirm(`تأكيد حذف عملية ${tx.donorName || "بدون اسم"} بقيمة ${money(tx.amount, tx.currency)}؟`)) return; setReviewingId(tx.id); try { await axios.delete(`/api/admin/bank-transfers/transactions/${tx.id}`); setTransactions((prev) => prev.filter((item) => item.id !== tx.id)); toast.success("تم حذف العملية"); void refreshBanksOnly(); void loadSummary(); } catch { toast.error("فشل حذف العملية"); } finally { setReviewingId(null); } }
   function applyFilters() { setPage(1); void loadTransactions(filters, 1); }
   function resetFilters() { setFilters(defaultFilters); setPage(1); void loadTransactions(defaultFilters, 1); }
@@ -588,6 +612,10 @@ export default function BankTransfersPage() {
             <div className="flex flex-wrap gap-2">
               <Button size="sm" className="bg-brand hover:bg-brand-dark" disabled={bulkBusy} onClick={() => bulkReview("APPROVED")}>اعتماد المحدد</Button>
               <Button size="sm" variant="outline" disabled={bulkBusy} onClick={() => bulkReview("IGNORED")}>استبعاد المحدد</Button>
+              <Button size="sm" variant="outline" className="border-rose-200 text-rose-700 hover:bg-rose-50 hover:text-rose-800" disabled={bulkBusy} onClick={bulkDelete}>
+                <Trash2 className="h-3.5 w-3.5" />
+                حذف المحدد
+              </Button>
               <Button size="sm" variant="ghost" disabled={bulkBusy} onClick={() => setSelectedIds(new Set())}>إلغاء التحديد</Button>
             </div>
           </div>
