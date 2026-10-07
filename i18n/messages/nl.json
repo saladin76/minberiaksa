@@ -2425,6 +2425,8 @@
     "viewDonation": "Bekijk de donatie",
     "viewFile": "Openen",
     "whatNext": "Wat gebeurt er nu",
-    "yourDonation": "Uw donatie"
+    "yourDonation": "Uw donatie",
+    "fileTooLarge": "Het bestand is {size}; maximaal toegestaan is {max}. Comprimeer de foto of exporteer een pdf en probeer het opnieuw.",
+    "uploadFailed": "Het uploaden is niet gelukt. Controleer je verbinding en probeer het opnieuw."
   }
 }
