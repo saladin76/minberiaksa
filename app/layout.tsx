@@ -66,10 +66,7 @@ export const metadata: Metadata = {
 
   /* The fallback for routes outside `[locale]` (the dashboard, error pages).
      Locale pages override all of this from the same generated source. */
-  title: {
-    default: LOCALE_SEO.ar.title,
-    template: LOCALE_SEO.ar.titleTemplate,
-  },
+  title: LOCALE_SEO.ar.title,
   description: LOCALE_SEO.ar.description,
 
   authors: [{ name: SITE_NAME, url: SITE }],
