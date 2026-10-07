@@ -18,7 +18,7 @@ export function contactChannelEligibility(preference: ContactPreference | null |
 
   if (channel === "EMAIL" && preference.emailOptIn) return { eligible: true, reason: "تواصل تسويقي عبر الإيميل مع موافقة." };
   if (channel === "SMS" && preference.smsOptIn) return { eligible: true, reason: "تواصل تسويقي عبر SMS مع موافقة." };
-  if (channel === "WHATSAPP") return { eligible: true, reason: "متبرع مسجل برقم واتساب صالح." };
+  if (channel === "WHATSAPP" && preference.whatsappOptIn) return { eligible: true, reason: "تواصل تسويقي عبر واتساب مع موافقة." };
 
   return { eligible: false, reason: "التواصل التسويقي يحتاج موافقة واضحة على نفس القناة." };
 }
