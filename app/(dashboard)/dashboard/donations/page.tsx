@@ -86,13 +86,13 @@ interface Donation {
   fees: number;
   totalAmount: number;
   donorCountryCode?: string | null;
-  donorId: string;
+  donorId: string | null;
   donor: {
     id: string;
-    name: string;
-    email: string;
-    image: string;
-  };
+    name: string | null;
+    email: string | null;
+    image: string | null;
+  } | null;
   type: 'ONE_TIME' | 'MONTHLY';
   status: 'ACTIVE' | 'INACTIVE';
   paymentMethod: string | null;
@@ -217,7 +217,7 @@ export default function DonationsPage() {
       donation.status,
       donation.paymentMethod,
       format(new Date(donation.createdAt), 'PPP', { locale: ar }),
-      donation.donor.name,
+      donation.donor?.name ?? "تحويل بنكي بدون ملف متبرع",
       donation.items.map(item => item.campaign.title).join(', '), // Include campaign titles
     ]);
 
@@ -328,24 +328,23 @@ export default function DonationsPage() {
                   />
                 </TableCell>
                 <TableCell className="font-medium">
-                <div className="flex items-center gap-2">
-  {donation.donor.image ? (
-    <img
-      src={donation.donor.image}
-      alt={donation.donor.name}
-      className="w-8 h-8 rounded-full"
-    />
-  ) : (
-    <div className="w-8 h-8 rounded-full bg-brand flex items-center justify-center text-white font-medium">
-      {donation.donor.name.charAt(0).toUpperCase()}
-    </div>
-  )}
-  <div>
-    <p className="text-sm font-medium">{donation.donor.name}</p>
-    <p className="text-xs text-gray-500">{donation.donor.email}</p>
-  </div>
-</div>
-
+                  <div className="flex items-center gap-2">
+                    {donation.donor?.image ? (
+                      <img
+                        src={donation.donor.image}
+                        alt={donation.donor.name ?? "متبرع"}
+                        className="w-8 h-8 rounded-full"
+                      />
+                    ) : (
+                      <div className="w-8 h-8 rounded-full bg-brand flex items-center justify-center text-white font-medium">
+                        {(donation.donor?.name ?? "ب").charAt(0).toUpperCase()}
+                      </div>
+                    )}
+                    <div>
+                      <p className="text-sm font-medium">{donation.donor?.name ?? "تحويل بنكي بدون ملف متبرع"}</p>
+                      <p className="text-xs text-gray-500">{donation.donor?.email ?? "—"}</p>
+                    </div>
+                  </div>
                 </TableCell>
                 <TableCell className="w-10 px-2 text-center align-middle">
                   <DonationCountryFlag countryCode={donation.donorCountryCode} />
