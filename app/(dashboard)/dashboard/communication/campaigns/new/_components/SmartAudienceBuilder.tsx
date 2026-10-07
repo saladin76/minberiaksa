@@ -4,6 +4,7 @@ import * as React from "react";
 import { Loader2, Search, X, Users, ShieldCheck } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { LOCALE_LABELS, SUPPORTED_LOCALES } from "@/lib/locales";
+import { RECIPIENT_REASON_LABELS, type RecipientExclusionReason } from "@/lib/communication/campaign-audience-accounting";
 
 export type SmartAudienceDraft = {
   version: 1;
@@ -29,6 +30,7 @@ export type SmartAudiencePreview = {
   eligible: number;
   missingContact: number;
   doNotContact: number;
+  needsReview?: number;
   unavailable: number;
   languages: Record<string, number>;
   eligibleLanguages?: Record<string, number>;
@@ -40,6 +42,7 @@ export type SmartAudiencePreview = {
     locale: string;
     countryCode: string | null;
     eligible: boolean;
+    exclusionReason?: RecipientExclusionReason | null;
   }>;
 };
 
@@ -75,6 +78,7 @@ export function SmartAudienceBuilder({
   const [facets, setFacets] = React.useState<Facets>({ countries: [], projects: [] });
   const [preview, setPreview] = React.useState<SmartAudiencePreview | null>(null);
   const [loading, setLoading] = React.useState(false);
+  const [previewError, setPreviewError] = React.useState<string | null>(null);
   const [excludeQuery, setExcludeQuery] = React.useState("");
   const [excludeResults, setExcludeResults] = React.useState<DonorSearchResult[]>([]);
   const [excluded, setExcluded] = React.useState<DonorSearchResult[]>([]);
@@ -87,26 +91,39 @@ export function SmartAudienceBuilder({
   }, []);
 
   React.useEffect(() => {
+    const controller = new AbortController();
+    setLoading(true);
+    setPreview(null);
+    setPreviewError(null);
+    onPreview?.(null);
     const timer = setTimeout(() => {
-      setLoading(true);
       fetch("/api/communication/audiences/preview", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ channel, definition: { ...value, channel } }),
+        signal: controller.signal,
       })
         .then(json)
         .then((data) => {
+          if (controller.signal.aborted) return;
           const next = data as SmartAudiencePreview;
           setPreview(next);
           onPreview?.(next);
         })
         .catch(() => {
+          if (controller.signal.aborted) return;
           setPreview(null);
+          setPreviewError("تعذّر حساب الجمهور. أعد المحاولة؛ الأعداد غير متاحة وليست صفرًا.");
           onPreview?.(null);
         })
-        .finally(() => setLoading(false));
+        .finally(() => {
+          if (!controller.signal.aborted) setLoading(false);
+        });
     }, 350);
-    return () => clearTimeout(timer);
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
   }, [channel, value, onPreview]);
 
   React.useEffect(() => {
@@ -144,13 +161,15 @@ export function SmartAudienceBuilder({
   };
 
   const topLanguages = Object.entries(preview?.languages ?? {}).sort((a, b) => b[1] - a[1]);
+  const reviewCount = preview?.needsReview ?? 0;
+  const contactRestrictions = (preview?.doNotContact ?? 0) + reviewCount;
 
   return (
     <div className="space-y-4">
       <section className="rounded-xl border border-slate-200 bg-white p-4">
         <div className="mb-3">
           <h3 className="text-sm font-semibold text-slate-900">من تريد أن تصل إليه الحملة؟</h3>
-          <p className="mt-1 text-xs text-slate-500">الشروط تُحفظ كتعريف جمهور، ولا يتم تحميل آلاف المتبرعين إلى المتصفح.</p>
+          <p className="mt-1 text-xs text-slate-500" role={previewError ? "alert" : undefined}>{previewError ?? "تُحفظ كل السجلات المطابقة كجمهور للحملة. تُراجع بيانات الاتصال والموافقة عند التنفيذ؛ الأهلية المبدئية ليست ضمانًا للتسليم."}</p>
         </div>
 
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
@@ -298,10 +317,10 @@ export function SmartAudienceBuilder({
           {loading && <Loader2 className="h-4 w-4 animate-spin text-brand" />}
         </div>
         <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
-          <div className="rounded-lg bg-white p-3"><p className="text-[11px] text-slate-500">مطابق</p><p className="mt-1 text-xl font-bold">{(preview?.matched ?? 0).toLocaleString("en-US")}</p></div>
-          <div className="rounded-lg bg-white p-3"><p className="text-[11px] text-slate-500">قابل للإرسال</p><p className="mt-1 text-xl font-bold text-emerald-700">{(preview?.eligible ?? 0).toLocaleString("en-US")}</p></div>
-          <div className="rounded-lg bg-white p-3"><p className="text-[11px] text-slate-500">بدون وسيلة اتصال</p><p className="mt-1 text-xl font-bold">{(preview?.missingContact ?? 0).toLocaleString("en-US")}</p></div>
-          <div className="rounded-lg bg-white p-3"><p className="text-[11px] text-slate-500">عدم تواصل</p><p className="mt-1 text-xl font-bold">{(preview?.doNotContact ?? 0).toLocaleString("en-US")}</p></div>
+          <div className="rounded-lg bg-white p-3"><p className="text-[11px] text-slate-500">جمهور الحملة</p><p className="mt-1 text-xl font-bold">{preview ? preview.matched.toLocaleString("en-US") : "—"}</p></div>
+          <div className="rounded-lg bg-white p-3"><p className="text-[11px] text-slate-500">مؤهل مبدئيًا</p><p className="mt-1 text-xl font-bold text-emerald-700">{preview ? preview.eligible.toLocaleString("en-US") : "—"}</p></div>
+          <div className="rounded-lg bg-white p-3"><p className="text-[11px] text-slate-500">بدون وسيلة اتصال</p><p className="mt-1 text-xl font-bold">{preview ? preview.missingContact.toLocaleString("en-US") : "—"}</p></div>
+          <div className="rounded-lg bg-white p-3" title={preview ? `إيقاف التواصل: ${preview.doNotContact.toLocaleString("en-US")}؛ مراجعة الموافقة: ${reviewCount.toLocaleString("en-US")}` : undefined}><p className="text-[11px] text-slate-500">تواصل موقوف / يحتاج مراجعة</p><p className="mt-1 text-xl font-bold">{preview ? contactRestrictions.toLocaleString("en-US") : "—"}</p></div>
         </div>
 
         {topLanguages.length > 0 && (
@@ -320,7 +339,7 @@ export function SmartAudienceBuilder({
           <div className="mb-3 flex items-center justify-between">
             <div>
               <h3 className="text-sm font-semibold text-slate-900">عينة من الجمهور</h3>
-              <p className="mt-1 text-xs text-slate-500">يُعرض عدد محدود للمعاينة فقط؛ الحملة تستخدم كل الجمهور المطابق من الخادم.</p>
+              <p className="mt-1 text-xs text-slate-500">تُحفظ كل السجلات المطابقة. إيقاف التواصل: {preview.doNotContact.toLocaleString("en-US")}؛ مراجعة الموافقة: {reviewCount.toLocaleString("en-US")}. تُراجع الحالة مجددًا عند التنفيذ.</p>
             </div>
             <ShieldCheck className="h-4 w-4 text-emerald-600" />
           </div>
@@ -332,7 +351,7 @@ export function SmartAudienceBuilder({
                   <tr key={donor.id} className="border-t border-slate-100">
                     <td className="p-2"><div className="font-medium">{donor.name ?? "بلا اسم"}</div><div className="text-[10px] text-slate-500">{channel === "EMAIL" ? donor.email : donor.phone}</div></td>
                     <td className="p-2">{LOCALE_LABELS[donor.locale as keyof typeof LOCALE_LABELS] ?? donor.locale}</td>
-                    <td className="p-2">{donor.eligible ? <span className="text-emerald-700">قابل للإرسال</span> : <span className="text-amber-700">مستبعد وقت الإرسال</span>}</td>
+                    <td className="p-2">{donor.eligible ? <span className="text-emerald-700">مؤهل مبدئيًا</span> : <span className="text-amber-700">{donor.exclusionReason ? RECIPIENT_REASON_LABELS[donor.exclusionReason] : "تحتاج الحالة مراجعة"}</span>}</td>
                   </tr>
                 ))}
               </tbody>
