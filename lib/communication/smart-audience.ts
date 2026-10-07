@@ -2,8 +2,9 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { DEFAULT_LOCALE, isValidLocale, type SupportedLocale } from "@/lib/locales";
 import type { CommunicationChannelId } from "./communication-runtime-types";
-import { donorChannelEligibility } from "./audience-service";
 import { getUserIdsMatchingBadge } from "@/lib/badge-criteria";
+import { summarizeCampaignAudience, type AudienceAccountingRow } from "./audience-preview-accounting";
+import type { RecipientExclusionReason } from "./campaign-audience-accounting";
 
 export const SMART_AUDIENCE_METADATA_KEY = "smartAudience";
 
@@ -33,9 +34,11 @@ export type SmartAudiencePreview = {
   eligible: number;
   missingContact: number;
   doNotContact: number;
+  needsReview: number;
   unavailable: number;
   languages: Record<string, number>;
   eligibleLanguages: Record<string, number>;
+  reasons: Partial<Record<RecipientExclusionReason, number>>;
   sample: Array<{
     id: string;
     name: string | null;
@@ -44,6 +47,7 @@ export type SmartAudiencePreview = {
     locale: SupportedLocale;
     countryCode: string | null;
     eligible: boolean;
+    exclusionReason: RecipientExclusionReason | null;
   }>;
 };
 
@@ -102,7 +106,6 @@ export function smartAudienceMetadata(definition: SmartAudienceDefinition, extra
   return { ...extra, [SMART_AUDIENCE_METADATA_KEY]: definition };
 }
 
-
 export async function getSmartAudienceDefinitionForSegmentKey(key: string | null | undefined): Promise<SmartAudienceDefinition | null> {
   if (!key || !key.startsWith("list:")) return null;
   return getSmartAudienceDefinitionForList(key.slice("list:".length));
@@ -110,8 +113,7 @@ export async function getSmartAudienceDefinitionForSegmentKey(key: string | null
 
 export async function getSmartAudienceDefinitionForList(listId: string): Promise<SmartAudienceDefinition | null> {
   const row = await prisma.communicationAudienceList
-    .findUnique({ where: { id: listId }, select: { type: true, metadata: true, channels: true } })
-    .catch(() => null);
+    .findUnique({ where: { id: listId }, select: { type: true, metadata: true, channels: true } });
   if (!row || row.type !== "SMART") return null;
   return smartAudienceFromMetadata(row.metadata);
 }
@@ -156,14 +158,17 @@ export function buildSmartAudienceUserWhere(definition: SmartAudienceDefinition)
 
   if (f.recurringOnly) where.subscriptions = { some: { status: "ACTIVE" } };
 
-  if (f.hasContact !== false) {
-    if (definition.channel === "EMAIL") where.email = { not: null };
-    else where.phone = { not: null };
+  // Contact presence is an explicit audience choice, never an implicit default.
+  if (f.hasContact === true) {
+    const currentAnd = Array.isArray(where.AND) ? where.AND : where.AND ? [where.AND] : [];
+    const contactFilter: Prisma.UserWhereInput[] = definition.channel === "EMAIL"
+      ? [{ email: { not: null } }, { email: { not: "" } }]
+      : [{ phone: { not: null } }, { phone: { not: "" } }];
+    where.AND = [...currentAnd, ...contactFilter];
   }
 
   return where;
 }
-
 
 async function resolveSmartAudienceUserWhere(definition: SmartAudienceDefinition): Promise<Prisma.UserWhereInput> {
   const where = buildSmartAudienceUserWhere(definition);
@@ -173,11 +178,11 @@ async function resolveSmartAudienceUserWhere(definition: SmartAudienceDefinition
   const badges = await prisma.badge.findMany({
     where: { id: { in: badgeIds } },
     select: { id: true, criteria: true },
-  }).catch(() => []);
+  });
 
   const matched = new Set<string>();
   for (const badge of badges) {
-    const ids = await getUserIdsMatchingBadge(badge.criteria).catch(() => []);
+    const ids = await getUserIdsMatchingBadge(badge.criteria);
     for (const id of ids) matched.add(id);
   }
 
@@ -225,109 +230,57 @@ export async function loadSmartAudiencePage(
 }
 
 export async function countSmartAudience(definition: SmartAudienceDefinition): Promise<number> {
-  return prisma.user.count({ where: await resolveSmartAudienceUserWhere(definition) }).catch(() => 0);
+  return prisma.user.count({ where: await resolveSmartAudienceUserWhere(definition) });
 }
 
-async function eligibleWhere(definition: SmartAudienceDefinition): Promise<Prisma.UserWhereInput> {
-  const base = await resolveSmartAudienceUserWhere(definition);
-  if (definition.channel === "EMAIL") {
-    return {
-      ...base,
-      email: { not: null },
-      communicationProfile: { is: { emailOptIn: true, doNotContact: false } },
-    };
-  }
-  if (definition.channel === "SMS") {
-    return {
-      ...base,
-      phone: { not: null },
-      communicationProfile: { is: { smsOptIn: true, doNotContact: false } },
-    };
-  }
-  return {
-    ...base,
-    phone: { not: null },
-    OR: [
-      { communicationProfile: { is: null } },
-      { communicationProfile: { is: { doNotContact: false } } },
-    ],
-  };
-}
-
+/**
+ * Read each selected donor once, in bounded server-side pages. The previous
+ * independent counts disagreed on MongoDB missing fields and silently returned
+ * zero on read failures. Membership is unchanged by consent/contact checks;
+ * those checks explain eligibility instead of deleting people from the audience.
+ */
 export async function previewSmartAudience(
   definition: SmartAudienceDefinition,
   sampleLimit = 50,
+  signal?: AbortSignal,
 ): Promise<SmartAudiencePreview> {
+  signal?.throwIfAborted();
   const where = await resolveSmartAudienceUserWhere(definition);
-  const eligibleFilter = await eligibleWhere(definition);
-  const missingFilter: Prisma.UserWhereInput =
-    definition.channel === "EMAIL" ? { ...where, email: null } : { ...where, phone: null };
-  const dncFilter: Prisma.UserWhereInput = {
-    ...where,
-    communicationProfile: { is: { doNotContact: true } },
-  };
-
-  const [matched, eligible, missingContact, doNotContact, languageRows, eligibleLanguageRows, sampleRows] = await Promise.all([
-    prisma.user.count({ where }).catch(() => 0),
-    prisma.user.count({ where: eligibleFilter }).catch(() => 0),
-    prisma.user.count({ where: missingFilter }).catch(() => 0),
-    prisma.user.count({ where: dncFilter }).catch(() => 0),
-    prisma.user.groupBy({ by: ["preferredLang"], where, _count: { id: true } }).catch(() => []),
-    prisma.user.groupBy({ by: ["preferredLang"], where: eligibleFilter, _count: { id: true } }).catch(() => []),
-    prisma.user.findMany({
-      where,
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        phone: true,
-        preferredLang: true,
-        countryCode: true,
-        communicationProfile: { select: { doNotContact: true, emailOptIn: true, smsOptIn: true, whatsappOptIn: true } },
-      },
-      orderBy: { id: "asc" },
-      take: Math.max(1, Math.min(sampleLimit, 50)),
-    }).catch(() => []),
-  ]);
-
-  const languages: Record<string, number> = {};
-  for (const row of languageRows) {
-    const locale = row.preferredLang && isValidLocale(row.preferredLang) ? row.preferredLang : DEFAULT_LOCALE;
-    languages[locale] = (languages[locale] ?? 0) + row._count.id;
-  }
-
-  const eligibleLanguages: Record<string, number> = {};
-  for (const row of eligibleLanguageRows) {
-    const locale = row.preferredLang && isValidLocale(row.preferredLang) ? row.preferredLang : DEFAULT_LOCALE;
-    eligibleLanguages[locale] = (eligibleLanguages[locale] ?? 0) + row._count.id;
-  }
-
-  const sample = sampleRows.map((u) => {
-    const locale = (u.preferredLang && isValidLocale(u.preferredLang) ? u.preferredLang : DEFAULT_LOCALE) as SupportedLocale;
-    const state = donorChannelEligibility(
-      { email: u.email, phone: u.phone },
-      definition.channel,
-      u.communicationProfile,
-    );
-    return {
-      id: u.id,
-      name: u.name,
-      email: u.email,
-      phone: u.phone,
-      locale,
-      countryCode: u.countryCode,
-      eligible: state === "ELIGIBLE",
-    };
+  const last = await prisma.user.findFirst({
+    where, orderBy: { id: "desc" }, select: { id: true },
   });
 
+  async function* rows(): AsyncGenerator<AudienceAccountingRow> {
+    if (!last) return;
+    let cursor: string | null = null;
+    while (true) {
+      signal?.throwIfAborted();
+      const page = await prisma.user.findMany({
+        where: { AND: [where, { id: { lte: last.id, ...(cursor ? { gt: cursor } : {}) } }] },
+        select: {
+          id: true, name: true, email: true, phone: true,
+          preferredLang: true, countryCode: true,
+          communicationProfile: { select: { doNotContact: true, emailOptIn: true, smsOptIn: true, whatsappOptIn: true } },
+        },
+        orderBy: { id: "asc" },
+        take: 1000,
+      });
+      if (!page.length) return;
+      for (const user of page) {
+        yield {
+          id: user.id, name: user.name, email: user.email, phone: user.phone,
+          countryCode: user.countryCode, communicationProfile: user.communicationProfile,
+          locale: user.preferredLang && isValidLocale(user.preferredLang) ? user.preferredLang : DEFAULT_LOCALE,
+        };
+      }
+      cursor = page[page.length - 1].id;
+      if (page.length < 1000) return;
+    }
+  }
+
+  const result = await summarizeCampaignAudience(rows(), definition.channel, sampleLimit, signal);
   return {
-    matched,
-    eligible,
-    missingContact,
-    doNotContact,
-    unavailable: Math.max(0, matched - eligible),
-    languages,
-    eligibleLanguages,
-    sample,
+    ...result,
+    sample: result.sample.map((item) => ({ ...item, locale: item.locale as SupportedLocale })),
   };
 }
