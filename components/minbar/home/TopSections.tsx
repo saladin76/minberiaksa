@@ -81,6 +81,7 @@ export function StoriesRail() {
   const locale = useLocale();
   const t = useTranslations("homepage");
   const tCommon = useTranslations("common");
+  const tNav = useTranslations("navigation");
   const dir = (LOCALES as Record<string, { direction?: "rtl" | "ltr" }>)[locale]?.direction ?? "rtl";
 
   const [cms, setCms] = useState<PublicStory[] | null>(null);
