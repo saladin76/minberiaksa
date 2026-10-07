@@ -38,7 +38,7 @@
     "blog:seed:dry": "tsx prisma/seed/seed-posts.ts --dry",
     "blog:seed": "tsx prisma/seed/seed-posts.ts",
     "blog:seed:replace": "tsx prisma/seed/seed-posts.ts --replace",
-    "build:vercel": "npm run typecheck:communication-runtime && npm run typecheck:integration-release && next build",
+    "build:vercel": "npm run test:integration-settings && npm run typecheck:communication-runtime && npm run typecheck:integration-release && next build",
     "quality:ci": "npm run test:integration-settings && npm run typecheck:baseline && npm run lint:ci"
   },
   "prisma": {
