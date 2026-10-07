@@ -129,7 +129,7 @@ const DonationSuccessPage = () => {
           <div className='flex items-center justify-center gap-2  mb-2'>
 
           <p className="text-2xl font-bold bg-gradient-to-r from-pink-600 via-purple-600 to-blue-600 bg-clip-text text-transparent animate-gradient">
-            {t('thankYou')} {donation.donor.name}! 
+            {t('thankYou')} {donation.donor?.name ?? ''}! 
           </p>
           <p className='text-2xl'>🎉</p>
           </div>
