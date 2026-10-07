@@ -2,38 +2,19 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 import { requireAdminOrDashboardPermission } from "@/lib/dashboard/api-auth";
-import { prisma } from "@/lib/prisma";
 import { auditActorFromDashboardSession, writeAuditLog } from "@/lib/audit-log";
 import { sendMetaCapiEvent } from "@/lib/tracking/meta-capi";
+import { getRawTrackingSettings, trackingBoolean, trackingString } from "@/lib/tracking/tracking-settings";
 
 type Platform = "meta" | "ga4" | "google_ads" | "tiktok" | "x";
 
-const COLLECTION = "TrackingSettings";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-async function getSettings(): Promise<Record<string, unknown> | null> {
-  const result = await prisma.$runCommandRaw({
-    find: COLLECTION,
-    limit: 1,
-    sort: { createdAt: 1 },
-  });
-  const batch = isRecord(result) && isRecord(result.cursor) && Array.isArray(result.cursor.firstBatch)
-    ? result.cursor.firstBatch
-    : [];
-  return (batch[0] as Record<string, unknown> | undefined) ?? null;
-}
-
-function str(row: Record<string, unknown> | null, key: string): string | null {
-  const v = row?.[key];
-  return typeof v === "string" && v.trim() ? v.trim() : null;
-}
-
-function bool(row: Record<string, unknown> | null, key: string): boolean {
-  return row?.[key] === true;
-}
+const str = trackingString;
+const bool = trackingBoolean;
 
 function missingConfig(platform: Platform, missingFields: string[], guidance: string[]) {
   return NextResponse.json({
@@ -71,7 +52,7 @@ async function audit(platform: Platform, status: string, eventName: string, even
 
 export async function POST(request: NextRequest) {
   const session = await getServerSession(authOptions);
-  const denied = requireAdminOrDashboardPermission(session, "pixels");
+  const denied = requireAdminOrDashboardPermission(session, "platformConnectionsTest");
   if (denied) return denied;
 
   const body = await request.json().catch(() => ({}));
@@ -81,7 +62,7 @@ export async function POST(request: NextRequest) {
   }
 
   const p = platform as Platform;
-  const settings = await getSettings();
+  const settings = await getRawTrackingSettings();
   const eventId = `test_${p}_${Date.now()}`;
 
   if (p === "meta") {
@@ -110,7 +91,7 @@ export async function POST(request: NextRequest) {
       {
         event_name: eventName,
         event_id: eventId,
-        event_source_url: "https://www.minberiaksa.org/dashboard/pixels",
+        event_source_url: "https://www.minberiaksa.org/dashboard/platform-connections/tracking",
         test_event_code: testEventCode,
         user_data: {
           email: "tracking-test@minberiaksa.org",
@@ -222,10 +203,10 @@ export async function POST(request: NextRequest) {
   }
   await audit(p, "not_implemented", cfg.event, eventId, { ready: true });
   return NextResponse.json({
-    ok: true,
+    ok: false,
     platform: p,
     status: "not_implemented",
     message: cfg.message,
     eventId,
-  });
+  }, { status: 501 });
 }

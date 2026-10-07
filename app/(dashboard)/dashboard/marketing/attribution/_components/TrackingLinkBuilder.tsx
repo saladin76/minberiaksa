@@ -16,7 +16,7 @@ import { cn } from "@/lib/utils";
 
 type PageKind = "home" | "campaigns" | "campaign" | "category" | "blog" | "blog_post" | "blog_post_category" | "about_us" | "contact_us" | "profile" | "success" | "success_donation" | "auth_signin";
 type LinkMode = "standard" | "marketing";
-type MarketingPlatform = "meta" | "google_ads" | "tiktok" | "x" | "twilio_whatsapp" | "twilio_sms" | "twilio_email" | "email" | "whatsapp" | "sms" | "organic";
+type MarketingPlatform = "meta" | "google_ads" | "tiktok" | "x" | "email" | "whatsapp" | "sms" | "organic";
 
 interface EntityRow { id: string; slug?: string | null; title?: string; name?: string; published?: boolean; supportedLocales: string[]; slugByLocale?: Record<string, string | null>; }
 interface Bundle { locales: string[]; currencies: string[]; campaigns: EntityRow[]; categories: EntityRow[]; posts: EntityRow[]; postCategories: EntityRow[]; }
@@ -35,8 +35,8 @@ interface MarketingForm {
   device: string;
   objective: string;
   customContent: string;
-  twilioCampaignId: string;
-  twilioTemplateId: string;
+  messagingCampaignId: string;
+  messagingTemplateId: string;
   buttonId: string;
   buttonLabel: string;
   internalNotes: string;
@@ -63,12 +63,9 @@ const PLATFORM_OPTIONS: { id: MarketingPlatform; label: string; source: string; 
   { id: "google_ads", label: "Google Ads", source: "google", medium: "paid_search", channel: "google_ads", hint: "بحث، Display، YouTube، Performance Max" },
   { id: "tiktok", label: "TikTok Ads", source: "tiktok", medium: "paid_social", channel: "tiktok_ads", hint: "حملات تيك توك المدفوعة" },
   { id: "x", label: "X Ads", source: "x", medium: "paid_social", channel: "x_ads", hint: "إعلانات منصة X" },
-  { id: "twilio_whatsapp", label: "Twilio WhatsApp", source: "twilio", medium: "whatsapp", channel: "twilio_whatsapp", hint: "روابط قوالب ورسائل واتساب عبر Twilio" },
-  { id: "twilio_sms", label: "Twilio SMS", source: "twilio", medium: "sms", channel: "twilio_sms", hint: "حملات SMS عبر Twilio" },
-  { id: "twilio_email", label: "Twilio Email", source: "twilio", medium: "email", channel: "twilio_email", hint: "رسائل بريدية عبر Twilio / SendGrid" },
-  { id: "email", label: "Email", source: "email", medium: "email", channel: "email", hint: "حملات بريدية عامة" },
-  { id: "whatsapp", label: "WhatsApp عادي", source: "whatsapp", medium: "messaging", channel: "whatsapp", hint: "مشاركة واتساب بدون Twilio" },
-  { id: "sms", label: "SMS عادي", source: "sms", medium: "messaging", channel: "sms", hint: "رسائل قصيرة خارج Twilio" },
+  { id: "email", label: "Email", source: "email", medium: "email", channel: "email", hint: "حملات البريد عبر نظام التواصل" },
+  { id: "whatsapp", label: "WhatsApp", source: "whatsapp", medium: "messaging", channel: "whatsapp", hint: "حملات واتساب عبر Meta Cloud API أو روابط مشاركة" },
+  { id: "sms", label: "SMS", source: "sms", medium: "messaging", channel: "sms", hint: "حملات الرسائل النصية عبر نظام التواصل" },
   { id: "organic", label: "Organic / مشاركة طبيعية", source: "organic", medium: "organic", channel: "organic", hint: "روابط غير مدفوعة أو مشاركة عضوية" },
 ];
 
@@ -86,8 +83,8 @@ const initialMarketingForm: MarketingForm = {
   device: "",
   objective: "donations",
   customContent: "",
-  twilioCampaignId: "",
-  twilioTemplateId: "",
+  messagingCampaignId: "",
+  messagingTemplateId: "",
   buttonId: "",
   buttonLabel: "",
   internalNotes: "",
@@ -168,8 +165,8 @@ function makeMarketingParams(form: MarketingForm, loc: string) {
   if (effective.objective.trim()) params.objective = effective.objective.trim();
   if (effective.messageVariant.trim()) params.message_variant = effective.messageVariant.trim();
   if (effective.audienceSegment.trim()) params.audience_segment = effective.audienceSegment.trim();
-  if (effective.twilioCampaignId.trim()) params.twilio_campaign_id = effective.twilioCampaignId.trim();
-  if (effective.twilioTemplateId.trim()) params.twilio_template_id = effective.twilioTemplateId.trim();
+  if (effective.messagingCampaignId.trim()) params.messaging_campaign_id = effective.messagingCampaignId.trim();
+  if (effective.messagingTemplateId.trim()) params.messaging_template_id = effective.messagingTemplateId.trim();
   if (effective.buttonId.trim()) params.button_id = effective.buttonId.trim();
   if (effective.buttonLabel.trim()) params.button_label = effective.buttonLabel.trim();
   if (effective.buttonLabel.trim() || effective.buttonId.trim()) params.link_position = "button";
@@ -188,7 +185,6 @@ function marketingValidation(form: MarketingForm, loc: string) {
   if (auto && ["meta", "google_ads", "tiktok", "x"].includes(form.platform)) issues.push({ level: "ok", text: "تم تفعيل متغيرات المنصة الديناميكية. استخدمها فقط إذا كانت المنصة ستستبدلها عند النقر." });
   if (!auto && !form.campaignName.trim() && !form.campaignId.trim()) issues.push({ level: "warn", text: "أضف اسم الحملة أو Campaign ID حتى يسهل ربط التبرعات بالحملة." });
   if (!auto && ["meta", "google_ads", "tiktok", "x"].includes(form.platform) && !form.campaignId.trim()) issues.push({ level: "warn", text: "الحملة المدفوعة تستفيد من Campaign ID للمطابقة مع بيانات المنصة." });
-  if (form.platform.startsWith("twilio") && !form.twilioCampaignId.trim()) issues.push({ level: "warn", text: "أضف Twilio Campaign ID حتى نربط الرسائل بالتبرعات لاحقًا." });
   if (!form.targetCountry.trim()) issues.push({ level: "warn", text: "Target country اختياري لكنه مهم لتحليل الدول والميزانيات." });
   if (!auto && hasUnresolvedMacro(values)) issues.push({ level: "warn", text: "يوجد Macro غير مستبدل؛ لا تستخدمه إلا إذا كانت المنصة ستستبدله فعلًا." });
   if (values.includes("fbclid") || values.includes("gclid")) issues.push({ level: "warn", text: "لا تضف fbclid أو gclid يدويًا؛ المنصات تضيفها تلقائيًا." });
@@ -205,7 +201,7 @@ function trackingHealthScore(form: MarketingForm, loc: string) {
   if (form.targetCountry.trim()) score += 6;
   if (form.audienceSegment.trim() || form.messageVariant.trim()) score += 5;
   if (/^[a-z]{2}(-[A-Z]{2})?$/.test(loc)) score += 4;
-  if (form.platform.startsWith("twilio") && form.twilioCampaignId.trim()) score += 8;
+  if (["email", "whatsapp", "sms"].includes(form.platform) && form.messagingCampaignId.trim()) score += 8;
   return Math.max(0, Math.min(100, score));
 }
 
@@ -217,7 +213,7 @@ function pageOptionLabel(kind: PageKind) {
   return PAGE_OPTIONS.find((item) => item.id === kind)?.label || "رابط موقع";
 }
 
-export default function LinkGeneratorPage() {
+export default function TrackingLinkBuilder() {
   const [bundle, setBundle] = useState<Bundle | null>(null);
   const [referrals, setReferrals] = useState<ReferralRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -395,8 +391,8 @@ export default function LinkGeneratorPage() {
           openCartPayment,
           autoLocale,
           autoCurrency,
-          twilioCampaignId: isMarketingLink ? fieldValue(effectiveMarketingForm.twilioCampaignId) : undefined,
-          twilioTemplateId: isMarketingLink ? fieldValue(effectiveMarketingForm.twilioTemplateId) : undefined,
+          messagingCampaignId: isMarketingLink ? fieldValue(effectiveMarketingForm.messagingCampaignId) : undefined,
+          messagingTemplateId: isMarketingLink ? fieldValue(effectiveMarketingForm.messagingTemplateId) : undefined,
           buttonId: isMarketingLink ? fieldValue(effectiveMarketingForm.buttonId) : undefined,
           buttonLabel: isMarketingLink ? fieldValue(effectiveMarketingForm.buttonLabel) : undefined,
         },
@@ -427,12 +423,12 @@ export default function LinkGeneratorPage() {
     <div className="mx-auto max-w-4xl space-y-6 pb-12" dir="rtl">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Link href="/dashboard/referrals" className="hover:text-brand">روابط التتبع</Link>
+          <Link href="/dashboard/marketing/attribution" className="hover:text-brand">روابط التتبع</Link>
           <span className="opacity-40">/</span>
           <span className="font-medium text-foreground">منشئ روابط الموقع والحملات</span>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Link href="/dashboard/marketing-intelligence/campaign-links" className="rounded-md border px-3 py-2 text-sm hover:bg-slate-50">أداء الروابط</Link>
+          <Link href="/dashboard/marketing/attribution#links" className="rounded-md border px-3 py-2 text-sm hover:bg-slate-50">أداء الروابط</Link>
           <Button type="button" variant="ghost" size="sm" onClick={resetForm} className="gap-1.5 text-muted-foreground"><RotateCcw className="h-4 w-4" />مسح الكل</Button>
         </div>
       </div>
@@ -494,8 +490,8 @@ export default function LinkGeneratorPage() {
                 <Field label="Message Variant" value={marketingForm.messageVariant} onChange={(v) => updateMarketing({ messageVariant: v })} placeholder="v1_image / v2_video" />
                 <Field label="Objective" value={marketingForm.objective} onChange={(v) => updateMarketing({ objective: v })} placeholder="donations" />
                 <Field label="Custom Content" value={marketingForm.customContent} onChange={(v) => updateMarketing({ customContent: v })} placeholder="ad name / creative" />
-                {marketingForm.platform.startsWith("twilio") ? <Field label="Twilio Campaign ID" value={marketingForm.twilioCampaignId} onChange={(v) => updateMarketing({ twilioCampaignId: v })} dir="ltr" /> : null}
-                {marketingForm.platform.startsWith("twilio") ? <Field label="Twilio Template ID" value={marketingForm.twilioTemplateId} onChange={(v) => updateMarketing({ twilioTemplateId: v })} dir="ltr" /> : null}
+                {["email", "whatsapp", "sms"].includes(marketingForm.platform) ? <Field label="Messaging Campaign ID" value={marketingForm.messagingCampaignId} onChange={(v) => updateMarketing({ messagingCampaignId: v })} dir="ltr" /> : null}
+                {["email", "whatsapp", "sms"].includes(marketingForm.platform) ? <Field label="Messaging Template ID" value={marketingForm.messagingTemplateId} onChange={(v) => updateMarketing({ messagingTemplateId: v })} dir="ltr" /> : null}
                 <Field label="Button ID" value={marketingForm.buttonId} onChange={(v) => updateMarketing({ buttonId: v })} dir="ltr" />
                 <Field label="Button Label" value={marketingForm.buttonLabel} onChange={(v) => updateMarketing({ buttonLabel: v })} />
               </div>
@@ -534,7 +530,7 @@ export default function LinkGeneratorPage() {
                   <span className="block">
                     {lastSavedLink.name} · {lastSavedLink.mode === "marketing" ? "رابط حملة" : "رابط موقع"}{lastSavedLink.copied ? " · تم نسخه أيضًا" : ""}
                   </span>
-                  <Link href="/dashboard/marketing/campaign-links" className="inline-flex text-xs font-semibold text-emerald-800 underline-offset-4 hover:underline">
+                  <Link href="/dashboard/marketing/attribution#links" className="inline-flex text-xs font-semibold text-emerald-800 underline-offset-4 hover:underline">
                     Open in Campaign Registry
                   </Link>
                 </AlertDescription>

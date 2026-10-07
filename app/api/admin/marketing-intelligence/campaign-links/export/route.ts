@@ -19,7 +19,7 @@ function matchesSearch(row: CampaignLinkRecord, search: string) {
 
 export async function GET(request: NextRequest) {
   const session = await getServerSession(authOptions);
-  const denied = requireAdminOrDashboardPermission(session, "referrals");
+  const denied = requireAdminOrDashboardPermission(session, "reportsExport");
   if (denied) return denied;
   const platform = readString(request.nextUrl.searchParams.get("platform"));
   const status = parseCampaignLinkStatusFilter(request.nextUrl.searchParams.get("status"));
