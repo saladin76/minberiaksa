@@ -2425,6 +2425,8 @@
     "viewDonation": "Se donasjonen",
     "viewFile": "Åpne",
     "whatNext": "Hva skjer neste",
-    "yourDonation": "Din donasjon"
+    "yourDonation": "Din donasjon",
+    "fileTooLarge": "Filen er {size}; maksimal tillatt størrelse er {max}. Komprimer bildet eller eksporter en PDF og prøv igjen.",
+    "uploadFailed": "Opplastingen mislyktes. Kontroller tilkoblingen og prøv igjen."
   }
 }
