@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 import { requireAdminOrDashboardPermission } from "@/lib/dashboard/api-auth";
-import { getRawTrackingSettings } from "@/lib/tracking/tracking-settings";
 import { auditActorFromDashboardSession, writeAuditLog } from "@/lib/audit-log";
 import { sendMetaCapiEvent } from "@/lib/tracking/meta-capi";
 import { getRawTrackingSettings, trackingBoolean, trackingString } from "@/lib/tracking/tracking-settings";
@@ -204,10 +203,10 @@ export async function POST(request: NextRequest) {
   }
   await audit(p, "not_implemented", cfg.event, eventId, { ready: true });
   return NextResponse.json({
-    ok: true,
+    ok: false,
     platform: p,
     status: "not_implemented",
     message: cfg.message,
     eventId,
-  });
+  }, { status: 501 });
 }
