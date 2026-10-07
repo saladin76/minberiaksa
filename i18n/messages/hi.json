@@ -2428,5 +2428,16 @@
     "yourDonation": "आपका दान",
     "fileTooLarge": "फ़ाइल का आकार {size} है; अधिकतम सीमा {max} है। फ़ोटो को संपीड़ित करें या PDF के रूप में निर्यात करके फिर प्रयास करें।",
     "uploadFailed": "अपलोड पूरा नहीं हुआ। अपना कनेक्शन जाँचें और फिर प्रयास करें।"
+  },
+  "ProjectShares": {
+    "unitSingular": "हिस्सा",
+    "unitPlural": "हिस्से",
+    "count": "{count, plural, one {# हिस्सा} other {# हिस्से}}",
+    "countWithUnit": "{count} {unit}",
+    "pricePer": "प्रति {unit} {price}",
+    "soldOfTotal": "{total} {unit} में से {sold}",
+    "givenSoFar": "अब तक {count} {unit} दिए गए",
+    "chooseCount": "{unit} की संख्या चुनें",
+    "customCountPh": "अन्य संख्या"
   }
 }
