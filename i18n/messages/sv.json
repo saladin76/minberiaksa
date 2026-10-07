@@ -2428,5 +2428,16 @@
     "yourDonation": "Din donation",
     "fileTooLarge": "Filen är {size}; högsta tillåtna storlek är {max}. Komprimera bilden eller exportera en PDF och försök igen.",
     "uploadFailed": "Uppladdningen misslyckades. Kontrollera din anslutning och försök igen."
+  },
+  "ProjectShares": {
+    "unitSingular": "andel",
+    "unitPlural": "andelar",
+    "count": "{count, plural, one {# andel} other {# andelar}}",
+    "countWithUnit": "{count} {unit}",
+    "pricePer": "{price} per {unit}",
+    "soldOfTotal": "{sold} av {total} {unit}",
+    "givenSoFar": "{count} {unit} givna hittills",
+    "chooseCount": "Välj antal {unit}",
+    "customCountPh": "Annat antal"
   }
 }
