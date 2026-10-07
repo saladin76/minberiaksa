@@ -55,6 +55,7 @@ const createSchema = z.object({
   templateGroupId: z.string().min(1).nullable().optional(),
   audienceSegmentKey: z.string().min(1).nullable().optional(),
   sendControls: sendControlsSchema.optional(),
+  fallbackLocale: z.string().min(2).max(10).optional(),
 });
 
 export async function GET(request: NextRequest) {
@@ -93,11 +94,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: false, error: "Invalid payload", issues: parsed.error.flatten() }, { status: 400 });
   }
 
-  const { sendControls, ...campaignInput } = parsed.data;
+  const { sendControls, fallbackLocale, ...campaignInput } = parsed.data;
   const result = await createCampaign(
     {
       ...campaignInput,
-      ...(sendControls ? { metadata: { sendControls } } : {}),
+      ...((sendControls || fallbackLocale) ? { metadata: { ...(sendControls ? { sendControls } : {}), ...(fallbackLocale ? { fallbackLocale } : {}) } } : {}),
     },
     auditActorFromDashboardSession(session!),
   );

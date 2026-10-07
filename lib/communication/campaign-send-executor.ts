@@ -19,6 +19,7 @@ import { type CommunicationChannelId, type CommunicationPurposeId } from "./comm
 import { autoSpeedMode, campaignPriorityRank, campaignSendControls, evaluateCampaignSendControls, speedSettings, type CampaignSpeedMode } from "./campaign-send-controls";
 import { mergeCampaignMetadata, mutateCampaignMetadata } from "./campaign-metadata-store";
 import { normalizePhoneE164, phoneMatchVariants } from "./phone";
+import { DEFAULT_LOCALE, isValidLocale, type SupportedLocale } from "@/lib/locales";
 
 export { computeFinalStatus };
 
@@ -396,6 +397,11 @@ export async function executeCampaignSend(
   const decisions = coverageDecisions(campaign);
   const purpose = campaign.purpose as CommunicationPurposeId;
   const origin = await resolveAudienceOrigin(campaign.audienceSegmentKey);
+  const campaignMetadata = campaign.metadata && typeof campaign.metadata === "object"
+    ? campaign.metadata as Record<string, unknown>
+    : {};
+  const fallbackCandidate = typeof campaignMetadata.fallbackLocale === "string" ? campaignMetadata.fallbackLocale : null;
+  const fallbackLocale = (fallbackCandidate && isValidLocale(fallbackCandidate) ? fallbackCandidate : DEFAULT_LOCALE) as SupportedLocale;
   const senderSnapshot = await loadSenderRoutingSnapshot(channel, runtime);
   /* WhatsApp template truth, read once for the whole run: which languages Meta approved, and what
      parameters each of those variants takes. Reading it per recipient would be thousands of queries
@@ -529,7 +535,7 @@ export async function executeCampaignSend(
         return outcome;
       }
 
-      const rendered = await renderChannelTemplate(channel, templateId, recipient.locale, recipientCtx);
+      const rendered = await renderChannelTemplate(channel, templateId, recipient.locale, recipientCtx, fallbackLocale);
       if (!rendered) {
         await recordSkippedDelivery({ channel, campaignId, templateId, recipientUserId: recipient.userId, locale: recipient.locale, purpose, origin }, "TEMPLATE_RENDER_FAILED");
         outcome.skipped += 1;
@@ -594,7 +600,7 @@ export async function executeCampaignSend(
       let metaComponents: unknown[] | undefined;
       if (channel === "WHATSAPP") {
         const readiness = whatsapp && sender?.businessAccountId
-          ? resolveVariantForLocale(whatsapp.byWaba.get(sender.businessAccountId) ?? [], recipient.locale)
+          ? resolveVariantForLocale(whatsapp.byWaba.get(sender.businessAccountId) ?? [], recipient.locale, fallbackLocale)
           : NOT_READY;
         if (!readiness.ready || !readiness.providerTemplateName || !readiness.languageCode) {
           const reason = readiness.reason ?? "META_TEMPLATE_REQUIRED";

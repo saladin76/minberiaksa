@@ -10,7 +10,8 @@ import { Check, ChevronLeft, Loader2, FileText, Languages, Users, TriangleAlert,
 import { LOCALE_LABELS } from "@/lib/locales";
 import { cn } from "@/lib/utils";
 import { CHANNEL_META } from "../../_components/campaign-ui";
-import { DonorPicker } from "./DonorPicker";
+import { SmartAudienceBuilder, type SmartAudienceDraft, type SmartAudiencePreview } from "./SmartAudienceBuilder";
+import { SpecificDonorPicker } from "./SpecificDonorPicker";
 
 interface TemplateSummary {
   id: string;
@@ -18,8 +19,17 @@ interface TemplateSummary {
   availableLocales: string[];
 }
 
+interface AudienceListSummary {
+  id: string;
+  name: string;
+  type: "CUSTOM" | "TEST" | "SMART";
+  status: string;
+  channels: string[];
+  membersCount: number;
+}
+
 const CHANNEL_ORDER = ["EMAIL", "WHATSAPP", "SMS"] as const;
-const BASE_STEPS = ["القناة", "القالب", "الجمهور"] as const;
+const BASE_STEPS = ["القناة", "الرسالة", "الجمهور", "اللغة"] as const;
 
 type CampaignSendControlsDraft = {
   paused: boolean;
@@ -115,11 +125,31 @@ export function NewCampaignWizard() {
   const [templateId, setTemplateId] = React.useState("");
   const [name, setName] = React.useState("");
   const [selected, setSelected] = React.useState<Set<string>>(new Set());
+  const [audienceMode, setAudienceMode] = React.useState<"SMART" | "SAVED" | "SPECIFIC">("SMART");
+  const [smartPreview, setSmartPreview] = React.useState<SmartAudiencePreview | null>(null);
+  const [savedLists, setSavedLists] = React.useState<AudienceListSummary[]>([]);
+  const [savedListId, setSavedListId] = React.useState("");
+  const [smartAudience, setSmartAudience] = React.useState<SmartAudienceDraft>({
+    version: 1,
+    kind: "SMART",
+    channel: "WHATSAPP",
+    filters: {
+      countries: [],
+      locales: [],
+      donatedWithinDays: null,
+      projectIds: [],
+      recurringOnly: false,
+      minDonationAmountUSD: null,
+      hasContact: false,
+    },
+    excludeUserIds: [],
+    fallbackLocale: "ar",
+  });
   const [sendControls, setSendControls] = React.useState<CampaignSendControlsDraft>(DEFAULT_SEND_CONTROLS);
   const [saving, setSaving] = React.useState(false);
 
   const steps = React.useMemo(
-    () => channel === "WHATSAPP" ? [...BASE_STEPS, "التحكم"] : [...BASE_STEPS],
+    () => channel === "WHATSAPP" ? [...BASE_STEPS, "التحكم", "المراجعة"] : [...BASE_STEPS, "المراجعة"],
     [channel],
   );
 
@@ -141,28 +171,73 @@ export function NewCampaignWizard() {
 
   const chosenTemplate = templates.find((t) => t.id === templateId) ?? null;
 
+  React.useEffect(() => {
+    if (!channel || !["EMAIL", "WHATSAPP", "SMS"].includes(channel)) return;
+    setSmartAudience((current) => ({ ...current, channel: channel as SmartAudienceDraft["channel"] }));
+    setSavedListId("");
+    fetch("/api/communication/audience-lists", { cache: "no-store" })
+      .then((response) => readApiJson(response, "تعذر تحميل القوائم المحفوظة"))
+      .then((data) => {
+        const lists = (data.lists ?? []) as AudienceListSummary[];
+        setSavedLists(lists.filter((list) => list.status === "ACTIVE" && (list.channels?.length === 0 || list.channels.includes(channel))));
+      })
+      .catch(() => setSavedLists([]));
+  }, [channel]);
+
+  const smartAudienceReady = audienceMode === "SMART" && (smartPreview?.eligible ?? 0) > 0;
+  const savedAudienceReady = audienceMode === "SAVED" && Boolean(savedListId);
+  const specificAudienceReady = audienceMode === "SPECIFIC" && selected.size > 0;
+  const audienceReady = smartAudienceReady || savedAudienceReady || specificAudienceReady;
+  const selectedSavedList = savedLists.find((list) => list.id === savedListId) ?? null;
+  const reviewMatched = audienceMode === "SMART"
+    ? (smartPreview?.matched ?? 0)
+    : audienceMode === "SAVED"
+      ? (selectedSavedList?.membersCount ?? 0)
+      : selected.size;
+  const reviewEligible = audienceMode === "SMART" ? (smartPreview?.eligible ?? 0) : reviewMatched;
+  const reviewLanguages = Object.entries(smartPreview?.languages ?? {}).sort((a, b) => b[1] - a[1]);
+
   const create = async () => {
     if (!name.trim()) {
       toast.error("اسم الحملة مطلوب");
       return;
     }
-    if (selected.size === 0) {
-      toast.error("اختر متبرعًا واحدًا على الأقل");
+    if (!audienceReady) {
+      toast.error(
+        audienceMode === "SMART"
+          ? "لا يوجد مستلم مؤهل ضمن شروط الجمهور الحالية"
+          : audienceMode === "SAVED"
+            ? "اختر قائمة محفوظة"
+            : "اختر متبرعًا واحدًا على الأقل",
+      );
       return;
     }
     setSaving(true);
     try {
-      // 1. The selection becomes a reusable audience list, which is what the send pipeline reads.
-      const listRes = await fetch("/api/communication/audience-lists", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: `جمهور: ${name.trim()}`, channel, userIds: [...selected] }),
-      });
-      const listJson = await readApiJson(listRes, "تعذّر إنشاء قائمة الجمهور");
-      if (!listJson.ok) throw new Error(String(listJson.error || "تعذّر إنشاء قائمة الجمهور"));
+      let audienceSegmentKey = "";
+      let audienceCount = 0;
 
-      // 2. Then the campaign, pointed at that list. Created as DRAFT  sending is a separate,
-      //    explicitly approved act on the campaign page.
+      if (audienceMode === "SAVED") {
+        audienceSegmentKey = `list:${savedListId}`;
+        audienceCount = savedLists.find((list) => list.id === savedListId)?.membersCount ?? 0;
+      } else {
+        const listRes = await fetch("/api/communication/audience-lists", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(
+            audienceMode === "SMART"
+              ? { name: `جمهور ذكي: ${name.trim()}`, channel, smartDefinition: smartAudience }
+              : { name: `جمهور: ${name.trim()}`, channel, userIds: [...selected] },
+          ),
+        });
+        const listJson = await readApiJson(listRes, "تعذّر إنشاء قائمة الجمهور");
+        if (!listJson.ok) throw new Error(String(listJson.error || "تعذّر إنشاء قائمة الجمهور"));
+        audienceSegmentKey = String(listJson.audienceSegmentKey || "");
+        audienceCount = audienceMode === "SMART"
+          ? Number(listJson.matched ?? smartPreview?.matched ?? 0)
+          : Number(listJson.added ?? selected.size);
+      }
+
       const res = await fetch("/api/communication/campaigns", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -171,16 +246,15 @@ export function NewCampaignWizard() {
           channel,
           purpose: "MARKETING",
           templateGroupId: templateId,
-          audienceSegmentKey: listJson.audienceSegmentKey,
+          audienceSegmentKey,
+          fallbackLocale: smartAudience.fallbackLocale ?? "ar",
           ...(channel === "WHATSAPP" ? { sendControls } : {}),
         }),
       });
       const json = await readApiJson(res, "تعذّر إنشاء الحملة");
       if (!json.ok) throw new Error(String(json.error || "تعذّر إنشاء الحملة"));
 
-      toast.success(`تم إنشاء الحملة بـ ${listJson.added} متبرعًا`);
-      // Back to the list: a brand-new campaign is a DRAFT with no sends, so the
-      // channel report would be empty, and the list is where it gets confirmed.
+      toast.success(`تم إنشاء الحملة لجمهور حجمه ${audienceCount.toLocaleString("en-US")}`);
       router.push("/dashboard/communication/campaigns");
     } catch (e) {
       toast.error((e as Error).message);
@@ -280,13 +354,10 @@ export function NewCampaignWizard() {
             </ul>
           )}
 
-          {/* Stated before the audience is chosen, because it is what the audience step implies:
-              a donor whose language the template lacks still receives it, in Arabic. */}
           {chosenTemplate && chosenTemplate.availableLocales.length < 2 && (
             <p className="flex items-start gap-1.5 rounded-lg border border-amber-200 bg-amber-50 p-2.5 text-[11px] leading-5 text-amber-900">
               <TriangleAlert className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-              هذا القالب متوفّر بلغة واحدة فقط. المتبرعون بلغات أخرى سيستلمونه بالنسخة الافتراضية
-              (العربية)  أضف ترجمات للقالب إن أردت أن يصل كلٌّ بلغته.
+              هذا القالب متوفّر بلغة واحدة فقط. في خطوة «اللغة» ستحدد نسخة الـFallback التي تستخدم عند غياب لغة المتبرع.
             </p>
           )}
         </div>
@@ -296,13 +367,108 @@ export function NewCampaignWizard() {
         <div className="space-y-4">
           <div className="space-y-1.5">
             <label className="text-xs font-medium text-slate-600">اسم الحملة (داخلي)</label>
-            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="مثال: حملة رمضان  المتبرعون النشطون" />
+            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="مثال: حملة رمضان — المتبرعون النشطون" />
           </div>
-          <DonorPicker channel={channel} selected={selected} onChange={setSelected} />
+
+          <div className="grid grid-cols-3 gap-2 rounded-xl border border-slate-200 bg-slate-50 p-1">
+            {([
+              ["SMART", "جمهور ذكي"],
+              ["SAVED", "قائمة محفوظة"],
+              ["SPECIFIC", "أشخاص محددون"],
+            ] as const).map(([mode, label]) => (
+              <button
+                key={mode}
+                type="button"
+                onClick={() => setAudienceMode(mode)}
+                className={cn("rounded-lg px-3 py-2 text-xs font-semibold transition", audienceMode === mode ? "bg-white text-brand shadow-sm" : "text-slate-500")}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+
+          {audienceMode === "SMART" && (
+            <SmartAudienceBuilder
+              channel={channel as SmartAudienceDraft["channel"]}
+              value={smartAudience}
+              onChange={setSmartAudience}
+              onPreview={setSmartPreview}
+            />
+          )}
+
+          {audienceMode === "SAVED" && (
+            <div className="rounded-xl border border-slate-200 bg-white p-4">
+              <label className="space-y-1.5 text-xs text-slate-600">
+                <span>اختر قائمة جمهور محفوظة</span>
+                <select
+                  value={savedListId}
+                  onChange={(e) => setSavedListId(e.target.value)}
+                  className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm"
+                >
+                  <option value="">اختر قائمة...</option>
+                  {savedLists.filter((list) => list.type !== "TEST").map((list) => (
+                    <option key={list.id} value={list.id}>
+                      {list.name}{list.type === "SMART" ? " — ذكية" : ` — ${list.membersCount.toLocaleString("en-US")} عضو`}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+          )}
+
+          {audienceMode === "SPECIFIC" && (
+            <SpecificDonorPicker selected={selected} onChange={setSelected} />
+          )}
         </div>
       )}
 
-      {step === 3 && channel === "WHATSAPP" && (
+      {step === 3 && (
+        <div className="space-y-4">
+          <section className="rounded-xl border border-slate-200 bg-white p-4">
+            <div className="flex items-center gap-2">
+              <Languages className="h-4 w-4 text-brand" />
+              <h3 className="text-sm font-semibold text-slate-900">قواعد اللغة</h3>
+            </div>
+            <p className="mt-1 text-xs text-slate-500">
+              النظام يختار نسخة القالب حسب لغة كل متبرع تلقائيًا. لا تحتاج إلى إنشاء حملة منفصلة لكل لغة.
+            </p>
+
+            <div className="mt-4 grid gap-3 md:grid-cols-2">
+              <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-xs text-emerald-800">
+                <p className="font-semibold">تلقائي حسب لغة المتبرع ✓</p>
+                <p className="mt-1">Arabic / Turkish / English / French وغيرها تُرسل من نفس Template Family حسب preferredLang.</p>
+              </div>
+              <label className="space-y-1 text-xs text-slate-600">
+                <span>Fallback عند عدم وجود نسخة مطابقة</span>
+                <select
+                  value={smartAudience.fallbackLocale ?? "ar"}
+                  onChange={(e) => setSmartAudience((current) => ({ ...current, fallbackLocale: e.target.value }))}
+                  className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm"
+                >
+                  {Object.entries(LOCALE_LABELS).map(([locale, label]) => (
+                    <option key={locale} value={locale}>{label}</option>
+                  ))}
+                </select>
+              </label>
+            </div>
+
+            {chosenTemplate && (
+              <div className="mt-4">
+                <p className="text-[11px] text-slate-500">اللغات المتاحة في القالب</p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {chosenTemplate.availableLocales.map((locale) => (
+                    <span key={locale} className="rounded-full border border-slate-200 bg-slate-50 px-2 py-1 text-[11px]">
+                      {LOCALE_LABELS[locale as keyof typeof LOCALE_LABELS] ?? locale}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+          </section>
+        </div>
+      )}
+
+      {step === 4 && channel === "WHATSAPP" && (
         <div className="space-y-4">
           <div className="rounded-xl border border-brand/20 bg-brand-50/40 p-4">
             <div className="flex items-center gap-2">
@@ -430,6 +596,74 @@ export function NewCampaignWizard() {
         </div>
       )}
 
+
+      {((step === 4 && channel !== "WHATSAPP") || (step === 5 && channel === "WHATSAPP")) && (
+        <div className="space-y-4">
+          <div className="rounded-xl border border-brand/20 bg-brand-50/40 p-4">
+            <h3 className="text-sm font-semibold text-slate-900">مراجعة الحملة قبل الإنشاء</h3>
+            <p className="mt-1 text-xs text-slate-500">لن يتم الإرسال الآن. سيتم إنشاء الحملة كمسودة للمراجعة والاعتماد.</p>
+          </div>
+
+          <div className="grid gap-3 md:grid-cols-2">
+            <section className="rounded-xl border border-slate-200 bg-white p-4">
+              <p className="text-[11px] text-slate-500">الحملة</p>
+              <p className="mt-1 text-sm font-semibold text-slate-900">{name || "—"}</p>
+              <p className="mt-2 text-xs text-slate-600">القناة: {CHANNEL_META[channel as keyof typeof CHANNEL_META]?.label ?? channel}</p>
+              <p className="mt-1 text-xs text-slate-600">القالب: {chosenTemplate?.name ?? "—"}</p>
+              <p className="mt-1 text-xs text-slate-600">نوع الجمهور: {audienceMode === "SMART" ? "جمهور ذكي" : audienceMode === "SAVED" ? "قائمة محفوظة" : "أشخاص محددون"}</p>
+              <p className="mt-1 text-xs text-slate-600">Fallback: {LOCALE_LABELS[(smartAudience.fallbackLocale ?? "ar") as keyof typeof LOCALE_LABELS] ?? smartAudience.fallbackLocale ?? "ar"}</p>
+            </section>
+
+            <section className="rounded-xl border border-slate-200 bg-white p-4">
+              <p className="text-[11px] text-slate-500">الجمهور</p>
+              <div className="mt-2 grid grid-cols-2 gap-2">
+                <div className="rounded-lg bg-slate-50 p-3">
+                  <p className="text-[10px] text-slate-500">مطابق</p>
+                  <p className="text-lg font-bold">{reviewMatched.toLocaleString("en-US")}</p>
+                </div>
+                <div className="rounded-lg bg-emerald-50 p-3">
+                  <p className="text-[10px] text-emerald-700">قابل للإرسال</p>
+                  <p className="text-lg font-bold text-emerald-800">{reviewEligible.toLocaleString("en-US")}</p>
+                </div>
+              </div>
+              {audienceMode === "SMART" && (
+                <div className="mt-2 space-y-1 text-[11px] text-slate-600">
+                  <p>بدون وسيلة اتصال: {(smartPreview?.missingContact ?? 0).toLocaleString("en-US")}</p>
+                  <p>عدم تواصل: {(smartPreview?.doNotContact ?? 0).toLocaleString("en-US")}</p>
+                  <p>استثناءات يدوية: {(smartAudience.excludeUserIds?.length ?? 0).toLocaleString("en-US")}</p>
+                </div>
+              )}
+            </section>
+          </div>
+
+          {reviewLanguages.length > 0 && (
+            <section className="rounded-xl border border-slate-200 bg-white p-4">
+              <h4 className="text-sm font-semibold text-slate-900">توزيع اللغات</h4>
+              <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
+                {reviewLanguages.map(([locale, count]) => (
+                  <div key={locale} className="rounded-lg border border-slate-100 bg-slate-50 p-2.5">
+                    <p className="text-[11px] text-slate-500">{LOCALE_LABELS[locale as keyof typeof LOCALE_LABELS] ?? locale}</p>
+                    <p className="mt-1 text-sm font-semibold">{count.toLocaleString("en-US")}</p>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
+
+          {channel === "WHATSAPP" && (
+            <section className="rounded-xl border border-slate-200 bg-white p-4">
+              <h4 className="text-sm font-semibold text-slate-900">إعدادات الإرسال</h4>
+              <div className="mt-2 grid gap-2 text-xs text-slate-600 sm:grid-cols-2">
+                <p>Auto Speed: {sendControls.autoSpeed ? "مفعّل" : "متوقف"}</p>
+                <p>الأولوية: {sendControls.priority}</p>
+                <p>الحد اليومي: {sendControls.dailyCap.toLocaleString("en-US")}</p>
+                <p>Quiet Hours: {sendControls.quietHours.enabled ? `${sendControls.quietHours.start} — ${sendControls.quietHours.end}` : "غير مفعلة"}</p>
+              </div>
+            </section>
+          )}
+        </div>
+      )}
+
       <div className="mt-5 flex items-center justify-between gap-2 border-t border-slate-200 pt-4">
         <Button
           variant="outline"
@@ -446,26 +680,31 @@ export function NewCampaignWizard() {
             التالي: اختيار الجمهور
           </Button>
         )}
-        {step === 2 && channel === "WHATSAPP" && (
-          <Button
-            onClick={() => setStep(3)}
-            disabled={selected.size === 0 || !name.trim()}
-            className="gap-1.5 bg-brand hover:bg-brand/90"
-          >
+        {step === 2 && (
+          <Button onClick={() => setStep(3)} disabled={!audienceReady || !name.trim()} className="bg-brand hover:bg-brand/90">
+            التالي: قواعد اللغة
+          </Button>
+        )}
+        {step === 3 && channel === "WHATSAPP" && (
+          <Button onClick={() => setStep(4)} disabled={saving} className="gap-1.5 bg-brand hover:bg-brand/90">
             <Gauge className="h-4 w-4" />
             التالي: إعداد الإرسال
           </Button>
         )}
-        {step === 2 && channel !== "WHATSAPP" && (
-          <Button onClick={create} disabled={saving || selected.size === 0 || !name.trim()} className="gap-1.5 bg-brand hover:bg-brand/90">
-            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Users className="h-4 w-4" />}
-            إنشاء الحملة ({selected.size})
+        {step === 3 && channel !== "WHATSAPP" && (
+          <Button onClick={() => setStep(4)} disabled={saving} className="bg-brand hover:bg-brand/90">
+            التالي: المراجعة
           </Button>
         )}
-        {step === 3 && channel === "WHATSAPP" && (
+        {step === 4 && channel === "WHATSAPP" && (
+          <Button onClick={() => setStep(5)} disabled={saving} className="bg-brand hover:bg-brand/90">
+            التالي: المراجعة
+          </Button>
+        )}
+        {((step === 4 && channel !== "WHATSAPP") || (step === 5 && channel === "WHATSAPP")) && (
           <Button onClick={create} disabled={saving} className="gap-1.5 bg-brand hover:bg-brand/90">
             {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Users className="h-4 w-4" />}
-            إنشاء الحملة ({selected.size})
+            إنشاء الحملة
           </Button>
         )}
       </div>

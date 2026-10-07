@@ -4,6 +4,7 @@ import type { CommunicationChannelId } from "./communication-runtime-types";
 import { donorChannelEligibility } from "./audience-service";
 import { parseListKey, loadListMembers, loadListMembersPage, memberEligibleForChannel, type ResolvedListMember } from "./audience-list-service";
 import { safeCountValue } from "@/lib/dashboard/safe-count";
+import { countSmartAudience, getSmartAudienceDefinitionForList, loadSmartAudiencePage, previewSmartAudience } from "./smart-audience";
 import { ensureProfilesForUsers } from "./donor-communication-profile-service";
 
 /**
@@ -84,6 +85,33 @@ export async function getRecipientBreakdown(
   // Custom / test list audience  compute the breakdown from the list's members.
   const listId = parseListKey(opts.locale);
   if (listId) {
+    const smart = await getSmartAudienceDefinitionForList(listId);
+    if (smart) {
+      const preview = await previewSmartAudience(smart, 1);
+      const locales: LocaleRecipientBreakdown[] = Object.entries(preview.languages)
+        .filter(([locale]) => isValidLocale(locale))
+        .map(([locale, total]) => ({
+          locale: locale as SupportedLocale,
+          label: LOCALES[locale as SupportedLocale].label,
+          total,
+          eligible: preview.eligibleLanguages[locale] ?? 0,
+          needsReview: 0,
+          missingContact: 0,
+          optedOut: 0,
+          doNotContact: 0,
+        }));
+      const totals = {
+        total: preview.matched,
+        eligible: preview.eligible,
+        needsReview: 0,
+        missingContact: preview.missingContact,
+        optedOut: Math.max(0, preview.unavailable - preview.missingContact - preview.doNotContact),
+        doNotContact: preview.doNotContact,
+      };
+      const recipientLocaleCounts: Record<string, number> = {};
+      for (const l of locales) recipientLocaleCounts[l.locale] = l.eligible;
+      return { channel, locales, totals, recipientLocaleCounts };
+    }
     const resolved = await resolveListMembersWithEligibility(channel, listId);
     const byLocale = new Map<SupportedLocale, { total: number; eligible: number }>();
     for (const { m, eligible } of resolved) {
@@ -160,6 +188,8 @@ export async function countCampaignAudience(audienceSegmentKey: string | null): 
   if (!process.env.DATABASE_URL) return 0;
   const listId = parseListKey(audienceSegmentKey);
   if (listId) {
+    const smart = await getSmartAudienceDefinitionForList(listId);
+    if (smart) return countSmartAudience(smart);
     return prisma.communicationAudienceMember
       .count({ where: { listId, status: "ACTIVE", contactType: "DONOR" } })
       .catch(() => 0);
@@ -194,6 +224,33 @@ export async function loadCampaignRecipients(
   // campaign executor; they are reserved for the dedicated test-send tooling).
   const listId = parseListKey(audienceSegmentKey);
   if (listId) {
+    const smart = await getSmartAudienceDefinitionForList(listId);
+    if (smart) {
+      const { members, nextCursor, exhausted } = await loadSmartAudiencePage(smart, { limit, cursorId: cursor });
+      const userIds = members.map((m) => m.id);
+      const profiles = userIds.length
+        ? await prisma.donorCommunicationProfile.findMany({
+            where: { userId: { in: userIds } },
+            select: { userId: true, whatsappOptIn: true, emailOptIn: true, smsOptIn: true, doNotContact: true },
+          }).catch(() => [])
+        : [];
+      const pMap = new Map(profiles.map((p) => [p.userId, p]));
+      const recipients: CampaignRecipient[] = [];
+      const skipped: { userId: string; locale: string; reason: string }[] = [];
+      for (const m of members) {
+        const eligibility = donorChannelEligibility(
+          { email: m.email, phone: m.phone },
+          channel,
+          pMap.get(m.id) ?? null,
+        );
+        if (eligibility === "ELIGIBLE") {
+          recipients.push({ userId: m.id, name: m.name, email: m.email, phone: m.phone, locale: m.locale, country: m.countryCode });
+        } else {
+          skipped.push({ userId: m.id, locale: m.locale, reason: eligibility === "NEEDS_REVIEW" ? "NEEDS_CONSENT_REVIEW" : "NOT_ELIGIBLE" });
+        }
+      }
+      return { recipients, skipped, truncated: !exhausted, nextCursor, exhausted };
+    }
     const { members, nextCursor, exhausted } = await loadListMembersPage(listId, { limit, cursorId: cursor });
     const donorIds = members.filter((m) => m.contactType === "DONOR" && m.userId).map((m) => m.userId!) as string[];
     if (donorIds.length) await ensureProfilesForUsers(donorIds);
