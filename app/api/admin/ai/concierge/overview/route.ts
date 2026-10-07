@@ -26,7 +26,7 @@ export async function GET(request: NextRequest) {
     const settings = await loadConciergeSettings();
     const overview = await conciergeOverview(range, settings.attributionWindowDays);
 
-    const donorIds = [...new Set(overview.recentDonations.map((d) => d.donorId))];
+    const donorIds = [...new Set(overview.recentDonations.map((d) => d.donorId).filter((id): id is string => Boolean(id)))];
     const donors = donorIds.length
       ? await prisma.user.findMany({ where: { id: { in: donorIds } }, select: { id: true, name: true, email: true } })
       : [];
