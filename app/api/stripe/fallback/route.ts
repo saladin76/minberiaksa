@@ -40,7 +40,7 @@ export async function POST(req: NextRequest) {
     if (!donation) {
       return NextResponse.json({ error: "Donation not found" }, { status: 404 });
     }
-    if (donation.donorId !== session.user.id) {
+    if (!donation.donorId || donation.donorId !== session.user.id) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
     if (donation.status === "PAID") {
