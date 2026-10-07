@@ -86,6 +86,7 @@ export async function GET(request: NextRequest) {
       if (scope !== "public-core") return true;
       return (
         key.startsWith("CardGive.") ||
+        key.startsWith("ProjectShares.") ||
         key.startsWith("cart.") ||
         key.startsWith("common.") ||
         key.startsWith("transferReceipt.")
