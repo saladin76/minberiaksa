@@ -76,7 +76,7 @@ export async function fetchAdsDonations(
   });
 
   // First-ever paid donation per donor  anchors new-donor attribution.
-  const donorIds = Array.from(new Set(rows.map((r) => r.donorId)));
+  const donorIds = Array.from(new Set(rows.map((r) => r.donorId).filter((id): id is string => Boolean(id))));
   const firstByDonor: Record<string, Date> = {};
   if (donorIds.length > 0) {
     const firsts = await prisma.donation.groupBy({
@@ -85,12 +85,12 @@ export async function fetchAdsDonations(
       _min: { paidAt: true },
     });
     for (const f of firsts) {
-      if (f._min.paidAt) firstByDonor[f.donorId] = f._min.paidAt;
+      if (f.donorId && f._min.paidAt) firstByDonor[f.donorId] = f._min.paidAt;
     }
   }
 
   const donations: AggregateDonationInput[] = rows.map((d) => {
-    const firstPaid = firstByDonor[d.donorId];
+    const firstPaid = d.donorId ? firstByDonor[d.donorId] : undefined;
     const isFirstEverDonation =
       d.status === "PAID" &&
       d.paidAt != null &&
