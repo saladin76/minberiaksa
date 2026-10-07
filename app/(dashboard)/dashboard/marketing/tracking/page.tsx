@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 import { resolveDashboardPageAccess } from "@/lib/dashboard/page-access";
+import { userHasDashboardPermission } from "@/lib/dashboard/permissions";
 import ConversionEventsPanel from "./_components/ConversionEventsPanel";
 
 export const metadata = { title: "التتبع والتحويلات | لوحة التحكم" };
@@ -17,7 +18,7 @@ export default async function MarketingTrackingPage() {
 
   return (
     <main className="p-4 sm:p-6" dir="rtl">
-      <ConversionEventsPanel />
+      <ConversionEventsPanel canRetry={userHasDashboardPermission(access.session.user, "platformConnectionsTest")} />
     </main>
   );
 }
