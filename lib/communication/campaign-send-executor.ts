@@ -6,13 +6,14 @@ import { planCampaignSend, type SendPlan } from "./campaign-send-planner";
 import { renderChannelTemplate } from "./template-compat";
 import { loadContextsForUserIds } from "@/lib/templates/variables";
 import { loadUpdateSource, sourceUpdateOf, updateContextFor } from "./update-campaign";
-import { createDeliveryRecord, recordSkippedDelivery, markDeliveryStatus } from "./delivery-log-service";
+import { createDeliveryRecord, recordSkippedDelivery, markDeliveryStatus, updateDeliveryVariables } from "./delivery-log-service";
 import { resolveProviderForSendWithRuntime, sendPreparedDelivery } from "./provider-router";
 import { EMAIL_PROVIDER_ID } from "./providers/email/client";
 import { getActiveCommunicationRuntimeBundle } from "./runtime-config";
 import { loadSenderRoutingSnapshot, resolveSenderFromSnapshot } from "./sender-resolution";
 import { resolveVariantForLocale, NOT_READY, META_PROVIDER } from "./whatsapp-template-sync";
 import { buildMetaComponents } from "./providers/meta-whatsapp/parameters";
+import { buildWhatsappRenderedPreview } from "./whatsapp-rendered-preview";
 import { resolveAudienceOrigin } from "./audience-list-service";
 import { computeFinalStatus, recomputeCampaignCounters } from "./campaign-counter-service";
 import { type CommunicationChannelId, type CommunicationPurposeId } from "./communication-runtime-types";
@@ -691,6 +692,16 @@ export async function executeCampaignSend(
         metaName = readiness.providerTemplateName;
         metaLanguage = readiness.languageCode;
         metaComponents = built.components;
+
+        await updateDeliveryVariables(deliveryId, {
+          whatsappPreview: buildWhatsappRenderedPreview({
+            componentsSchema: readiness.componentsSchema,
+            builtComponents: built.components,
+            fallbackBody: rendered.body,
+            providerTemplateName: readiness.providerTemplateName,
+            languageCode: readiness.languageCode,
+          }),
+        });
       }
 
       const result = await sendPreparedDelivery({
