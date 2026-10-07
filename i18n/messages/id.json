@@ -3481,6 +3481,8 @@
     "viewDonation": "Lihat donasi",
     "viewFile": "Buka",
     "whatNext": "Apa yang terjadi selanjutnya",
-    "yourDonation": "Donasi Anda"
+    "yourDonation": "Donasi Anda",
+    "fileTooLarge": "Ukuran file adalah {size}; batas maksimumnya {max}. Kompres foto atau ekspor sebagai PDF lalu coba lagi.",
+    "uploadFailed": "Unggahan tidak berhasil. Periksa koneksi Anda lalu coba lagi."
   }
 }
