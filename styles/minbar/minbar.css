@@ -202,19 +202,19 @@
   .mia-scope div[style*="gap: 7px"] > button[data-pick],
   .mia-scope div[style*="gap: 7px"] > button[data-chip],
   .mia-scope div[style*="gap: 7px"] > button[data-amt] {
-    flex: 1 1 0 !important; min-width: 0 !important; height: 36px !important;
+    flex: 1 1 0 !important; min-width: 0 !important; height: 44px !important;
     padding: 0 4px !important; font-size: 12.5px !important;
   }
   .mia-scope div[style*="gap: 7px"]:has(> button[data-pick]) > input,
   .mia-scope div[style*="gap: 7px"]:has(> button[data-chip]) > input,
   .mia-scope div[style*="gap: 7px"]:has(> button[data-amt]) > input {
     flex: 1.25 1 0 !important; min-width: 0 !important; max-width: none !important;
-    width: auto !important; height: 36px !important; font-size: 11.5px !important;
+    width: auto !important; height: 44px !important; font-size: 11.5px !important;
   }
   .mia-scope div[style*="gap: 7px"]:has(> button[data-pick]) ~ div > button[data-icon-action],
   .mia-scope div[style*="gap: 7px"]:has(> button[data-chip]) ~ div > button[data-icon-action],
   .mia-scope div[style*="gap: 7px"]:has(> button[data-amt]) ~ div > button[data-icon-action] {
-    width: 40px !important; height: 40px !important;
+    width: 44px !important; height: 44px !important;
   }
 }
 
@@ -1431,8 +1431,8 @@
   .mia-scope .mia-qb-group > b { font-size: 12px; font-weight: 900; color: var(--muted); }
   .mia-scope .mia-qb-sheet .mia-sel-trigger { min-height: 46px; border-radius: 10px; border-width: 1px; font-size: 14px; }
   .mia-scope .mia-qb-sheet .mia-qb-chips { flex-wrap: wrap; }
-  .mia-scope .mia-qb-sheet .mia-qb-chip { height: 40px; padding: 0 15px; font-size: 13.5px; }
-  .mia-scope .mia-qb-sheet .mia-qb-free { height: 40px; padding: 0 12px; font-size: 13.5px; border-style: dashed; border-color: rgba(211,154,39,.65); }
+  .mia-scope .mia-qb-sheet .mia-qb-chip { height: 44px; padding: 0 15px; font-size: 13.5px; }
+  .mia-scope .mia-qb-sheet .mia-qb-free { height: 44px; padding: 0 12px; font-size: 13.5px; border-style: dashed; border-color: rgba(211,154,39,.65); }
   .mia-scope .mia-qb-sheet .mia-qb-free[data-active="true"] { border-style: solid; border-color: var(--deep); }
   .mia-scope .mia-qb-sheet .mia-qb-free > input { width: 10ch; }
 
@@ -1453,7 +1453,7 @@
 }
 @media (max-width: 560px) {
   .mia-scope .mia-qb-sheet { padding-inline: 10px; }
-  .mia-scope .mia-qb-toggle { flex-basis: 40px; width: 40px; height: 40px; }
+  .mia-scope .mia-qb-toggle { flex-basis: 44px; width: 44px; height: 44px; }
   .mia-scope:has(.mia-qb-sec) { padding-bottom: 84px; }
 }
 
@@ -1862,6 +1862,14 @@
 
 @media (max-width: 980px) {
   .mia-scope #pd-top, .mia-scope #pd-body { grid-template-columns: minmax(0,1fr) !important; }
+  /* Flatten the media/copy wrapper only on smaller screens so the donation
+     panel can sit after the hero summary and before the optional video. */
+  .mia-scope #pd-top > .pd-project-main { display: contents !important; }
+  .mia-scope #pd-top .pd-hero-media { order: 1; }
+  .mia-scope #pd-top .pd-project-summary { order: 2; }
+  .mia-scope #pd-top #pd-aside { order: 3; }
+  .mia-scope #pd-top .pd-project-video { order: 4; }
+  .mia-scope #pd-top > .cg-entry { order: 5; }
   /* The donation panel stops being sticky once it is the full width  a
      full-width sticky block would cover the article as you scroll. */
   .mia-scope #pd-aside { position: static !important; }
@@ -3419,6 +3427,12 @@ html.cg-open .mia-scope:has(.mia-qb-sec) { padding-bottom: 0; }
 .mia-scope .pdc-body input { cursor: text; }
 /* Three amount chips and the free field: one even row of four. */
 .mia-scope .pdc-amounts { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+@media (max-width: 760px) {
+  .mia-scope .pdc-amounts > button,
+  .mia-scope .pdc-amounts > .pdc-custom { min-height: 44px !important; height: 44px !important; }
+  .mia-scope .pdc-card .mia-card-cta { min-height: 44px !important; height: 44px !important; }
+  .mia-scope .pdc-card button[data-icon-action] { min-width: 44px !important; width: 44px !important; min-height: 44px !important; height: 44px !important; }
+}
 .mia-scope .pdc-custom::placeholder { color: rgba(255,255,255,.62); font-size: 11.5px; font-weight: 700; }
 
 /* No amount yet: the chips shake in a wave and light up gold. */
@@ -3796,14 +3810,20 @@ html.cg-open .mia-scope:has(.mia-qb-sec) { padding-bottom: 0; }
   }
   /* The drawer ends where its content does when that is shorter than the screen. */
   .mia-head .mia-pop--menu {
-    bottom: auto;
+    bottom: 0;
+    height: calc(100dvh - var(--mia-head-h, 64px));
     max-height: calc(100dvh - var(--mia-head-h, 64px)) !important;
+    overflow-y: auto !important;
     padding: 16px 16px calc(20px + env(safe-area-inset-bottom, 0px)) !important;
     gap: 16px 14px !important;
+    border-radius: 0 !important;
   }
   .mia-head .mia-pop--locale {
-    bottom: auto;
+    bottom: 0;
+    height: calc(100dvh - var(--mia-head-h, 64px));
     max-height: calc(100dvh - var(--mia-head-h, 64px)) !important;
+    overflow-y: auto !important;
+    border-radius: 0 !important;
   }
   /* Labels wrap instead of being cut ("القدس والبلدة القدي…"), and every row
      is a comfortable thumb target. */
@@ -3821,11 +3841,16 @@ html.cg-open .mia-scope:has(.mia-qb-sec) { padding-bottom: 0; }
   .mia-head .mia-pop--menu .mia-menu-cats { max-height: none; overflow: visible; grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .mia-head .mia-pop--locale button.mia-row { height: 44px; }
 }
+@media (max-width: 460px) {
+  .mia-head .mia-pop--menu { grid-template-columns: minmax(0, 1fr) !important; }
+  .mia-head .mia-pop--menu .mia-menu-cats { grid-template-columns: minmax(0, 1fr) !important; }
+}
 @keyframes mia-drawer-in { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: none; } }
 
 /* While a drawer is open the floating buttons step aside. */
 html[data-mia-drawer="open"] .mia-wa-fab,
-html[data-mia-drawer="open"] .mia-scope .cg-launch-wrap { display: none !important; }
+html[data-mia-drawer="open"] .mia-scope .cg-launch-wrap,
+html[data-mia-drawer="open"] .mia-scope .mia-qb-sec { display: none !important; }
 
 /* Floating buttons: on a phone the concierge pill becomes a round button the
    size of the WhatsApp one, so the two stop covering the page's own content.
@@ -3851,6 +3876,10 @@ html[data-mia-drawer="open"] .mia-scope .cg-launch-wrap { display: none !importa
   .mia-scope .cg-launcher-badge { display: none; }
   .mia-scope .cg-launch-wrap { inset-inline-end: 14px; bottom: calc(14px + env(safe-area-inset-bottom, 0px)); }
   .mia-wa-fab { inset-inline-start: 14px !important; bottom: calc(14px + env(safe-area-inset-bottom, 0px)) !important; }
+  .mia-scope:has(.mia-qb-sec) .cg-launch-wrap,
+  .mia-scope:has(.mia-qb-sec) .mia-wa-fab {
+    bottom: calc(92px + env(safe-area-inset-bottom, 0px)) !important;
+  }
 }
 
 /* Homepage FAQ. On one column the sticky aside slid over the questions as the
@@ -3896,15 +3925,31 @@ html[data-mia-drawer="open"] .mia-scope .cg-launch-wrap { display: none !importa
 
 /* Projects list: filter chips keep their size inside the sideways-scrolling
    row (they were shrinking until the labels overlapped). */
+.mia-scope .proj-filters-wrap { position: relative; min-width: 0; }
 .mia-scope #proj-filters > .proj-cat { flex: 0 0 auto; }
 @media (max-width: 560px) {
-  .mia-scope #proj-filters {
+  .mia-scope .proj-filters-wrap {
     margin-inline: -16px;
-    padding-inline: 16px;
+  }
+  .mia-scope .proj-filters-wrap::after {
+    content: "";
+    position: absolute;
+    inset-block: 0;
+    inset-inline-end: 0;
+    width: 34px;
+    pointer-events: none;
+    background: linear-gradient(to left, var(--ivory), rgba(255,253,248,0));
+  }
+  .mia-scope[dir="ltr"] .proj-filters-wrap::after {
+    background: linear-gradient(to right, var(--ivory), rgba(255,253,248,0));
+  }
+  .mia-scope #proj-filters {
+    margin-inline: 0;
+    padding-inline: 16px 40px;
     scroll-padding-inline: 16px;
     scrollbar-width: none;
   }
-  .mia-scope #proj-filters > .proj-cat { height: 38px !important; padding: 0 14px !important; font-size: 13.5px !important; }
+  .mia-scope #proj-filters > .proj-cat { min-height: 44px !important; height: 44px !important; padding: 0 14px !important; font-size: 13.5px !important; }
   .mia-scope #all { padding: 26px 0 44px !important; }
   .mia-scope #all > div { padding-inline: 16px !important; }
 }
