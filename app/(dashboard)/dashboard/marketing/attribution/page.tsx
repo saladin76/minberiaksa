@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 import { resolveDashboardPageAccess } from "@/lib/dashboard/page-access";
+import { userHasDashboardPermission } from "@/lib/dashboard/permissions";
 import TrackingLinkBuilder from "./_components/TrackingLinkBuilder";
 import CampaignLinksPanel from "./_components/CampaignLinksPanel";
 
@@ -22,7 +23,7 @@ export default async function MarketingAttributionPage() {
         <TrackingLinkBuilder />
       </section>
       <section id="links" className="rounded-2xl border border-slate-200 bg-white">
-        <CampaignLinksPanel />
+        <CampaignLinksPanel canExport={userHasDashboardPermission(access.session.user, "reportsExport")} />
       </section>
     </main>
   );
