@@ -4189,3 +4189,21 @@ html[data-mia-drawer="open"] .mia-scope .mia-qb-sec { display: none !important; 
     flex-wrap: wrap;
   }
 }
+
+
+/* ── Mobile donor-flow ordering: keep desktop unchanged. ── */
+@media (max-width: 760px) {
+  /* Recurring donation: the donor came to build a plan, so the builder comes
+     before the explanatory video on phones. */
+  .mia-scope #rc-grid .rc-builder { order: 1; }
+  .mia-scope #rc-grid .rc-video { order: 2; }
+
+  /* Checkout: show the donation summary before asking for donor/payment data.
+     Desktop keeps the original side-by-side sticky summary. */
+  .mia-scope #pay-grid #pay-summary {
+    order: 1;
+    position: static !important;
+    top: auto !important;
+  }
+  .mia-scope #pay-grid .pay-form { order: 2; }
+}

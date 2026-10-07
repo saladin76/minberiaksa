@@ -240,7 +240,7 @@ export default function RecurringPage({ projects }: RecurringPageProps) {
               />
             </span>
 
-            <div style={{ display: "grid", gap: 22, alignContent: "start", padding: 32, background: "#fff", border: "1px solid var(--border)", borderRadius: 16, boxShadow: "0 18px 44px rgba(16,33,43,.1)" }}>
+            <div className="rc-builder" style={{ display: "grid", gap: 22, alignContent: "start", padding: 32, background: "#fff", border: "1px solid var(--border)", borderRadius: 16, boxShadow: "0 18px 44px rgba(16,33,43,.1)" }}>
               {/* Step 1  fund */}
               <div style={{ display: "grid", gap: 9 }}>
                 <span style={stepLabel}>
