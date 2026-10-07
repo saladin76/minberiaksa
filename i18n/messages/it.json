@@ -2424,6 +2424,9 @@
     "viewDonation": "Visualizza la donazione",
     "viewFile": "Apri",
     "whatNext": "Cosa succede dopo",
-    "yourDonation": "La tua donazione"
+    "yourDonation": "La tua donazione",
+    "fileTooLarge": "Il file è di {size}; il limite massimo è {max}. Comprimi la foto o esporta un PDF e riprova.",
+    "uploadFailed": "Il caricamento non è riuscito. Controlla la connessione e riprova.",
+    "reviewLead": "Il nostro team finanziario sta verificando il bonifico rispetto al conto bancario. Di solito occorrono da uno a tre giorni lavorativi e riceverai un’e-mail non appena sarà confermato."
   }
 }
