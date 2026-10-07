@@ -377,7 +377,7 @@ export default function RecurringPage({ projects }: RecurringPageProps) {
                 />
               </label>
 
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 14, padding: "16px 20px", background: "var(--sand)", borderRadius: 12 }}>
+              <div className="rc-plan-summary" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 14, padding: "16px 20px", background: "var(--sand)", borderRadius: 12 }}>
                 <span aria-hidden="true" style={{ flex: "0 0 auto", width: 36, height: 36, borderRadius: "50%", background: "#fff", display: "grid", placeItems: "center", color: "var(--gold)" }}>
                   <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
                     <path d="M12 21s-7.5-4.7-7.5-10A4.5 4.5 0 0 1 12 8a4.5 4.5 0 0 1 7.5 3c0 5.3-7.5 10-7.5 10Z" />
