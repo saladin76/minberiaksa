@@ -877,13 +877,13 @@ export async function executeCampaignSend(
     progress.total += tally.total; progress.sent += tally.sent; progress.skipped += tally.skipped; progress.failed += tally.failed;
     for (const [key, value] of Object.entries(tally.reasons)) progress.reasons[key] = (progress.reasons[key] ?? 0) + value;
     progress.updatedAt = new Date().toISOString();
-    progress.done = exhausted;
+    progress.done = exhausted ? (await countDeferredQuietRecipients(campaignId)) === 0 : false;
     /* A batch that ran clears the blocked streak  the count is about consecutive failures to start. */
     progress.blockedRuns = 0;
     /* The lease is renewed with each batch: a long but healthy walk must not look crashed to the
        next scheduler tick while it is still working. */
     lease.expiresAt = new Date(Date.now() + LEASE_MS).toISOString();
-    await patchMetadata(campaignId, { sendProgress: { ...progress }, sendLease: exhausted ? null : lease });
+    await patchMetadata(campaignId, { sendProgress: { ...progress }, sendLease: progress.done ? null : lease });
 
     if (exhausted || batches >= maxBatches) break;
     const fresh = await getCampaign(campaignId);
