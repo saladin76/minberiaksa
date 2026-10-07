@@ -127,7 +127,7 @@ export default function ProjectDetail({ project, updates, gallery, related, dono
         </span>
 
         <div id="pd-top" style={{ maxWidth: 1240, margin: "0 auto", padding: "0 24px", display: "grid", gridTemplateColumns: "minmax(0,1.32fr) minmax(330px,.68fr)", gap: 34, alignItems: "start" }}>
-          <div style={{ display: "grid", gap: 18, minWidth: 0 }}>
+          <div className="pd-project-main" style={{ display: "grid", gap: 18, minWidth: 0 }}>
             <ProjectHeroMedia images={project.images.length ? project.images : project.image ? [project.image] : []} title={project.title}>
               {project.regionLabel ? (
                 <span style={{ position: "absolute", insetInlineStart: 16, top: 16, display: "inline-flex", alignItems: "center", gap: 7, padding: "6px 13px", borderRadius: 999, background: "rgba(16,33,43,.78)", color: "#fff", fontSize: 12, fontWeight: 900 }}>
@@ -137,7 +137,7 @@ export default function ProjectDetail({ project, updates, gallery, related, dono
               ) : null}
             </ProjectHeroMedia>
 
-            <div style={{ display: "grid", gap: 12 }}>
+            <div className="pd-project-summary" style={{ display: "grid", gap: 12 }}>
               <h1 style={{ margin: 0, fontSize: "clamp(27px,3vw,40px)", lineHeight: 1.32, fontWeight: 900, letterSpacing: "-.01em" }}>{project.title}</h1>
               <p style={{ margin: 0, maxWidth: "66ch", fontSize: 16.5, lineHeight: 1.95, color: "var(--muted)" }}>{summary}</p>
               {project.categories.length ? (
@@ -158,7 +158,7 @@ export default function ProjectDetail({ project, updates, gallery, related, dono
             </div>
 
             {project.videoUrl ? (
-              <div style={{ display: "grid", gap: 10 }}>
+              <div className="pd-project-video" style={{ display: "grid", gap: 10 }}>
                 <b style={{ fontSize: 15.5 }}>{tExtras("video")}</b>
                 <ProjectVideo url={project.videoUrl} title={project.title} />
               </div>
@@ -166,7 +166,9 @@ export default function ProjectDetail({ project, updates, gallery, related, dono
           </div>
 
           <DonationPanel project={project} donorCount={donorCount} />
-          <ConciergeEntry intent="current_page" />
+          <div className="pd-project-concierge">
+            <ConciergeEntry intent="current_page" />
+          </div>
         </div>
       </section>
 
