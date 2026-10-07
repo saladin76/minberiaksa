@@ -2,13 +2,13 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 import { requireAdminOrDashboardPermission } from "@/lib/dashboard/api-auth";
-import { getRawTrackingSettings, TRACKING_SETTINGS_TRACKING_TRACKING_SETTINGS_COLLECTION } from "@/lib/tracking/tracking-settings";
+import { getRawTrackingSettings } from "@/lib/tracking/tracking-settings";
 import { prisma } from "@/lib/prisma";
 import { rawCommand } from "@/lib/prisma-raw-command";
 
 export const dynamic = "force-dynamic";
 
-const EVENTS_TRACKING_TRACKING_SETTINGS_COLLECTION = "ConversionEvent";
+const EVENTS_COLLECTION = "ConversionEvent";
 
 type Platform = "meta" | "ga4" | "google_ads" | "tiktok" | "x";
 type EventPlatform = "META" | "GA4" | "GOOGLE_ADS" | "TIKTOK" | "X";
@@ -38,7 +38,7 @@ async function latestEvent(platform: EventPlatform, channel?: "browser" | "serve
   const query: Record<string, unknown> = { platform };
   if (channel) query.channel = channel;
   const result = await prisma.$runCommandRaw(rawCommand({
-    find: EVENTS_TRACKING_TRACKING_SETTINGS_COLLECTION,
+    find: EVENTS_COLLECTION,
     filter: query,
     sort: { updatedAt: -1, createdAt: -1 },
     limit: 1,
