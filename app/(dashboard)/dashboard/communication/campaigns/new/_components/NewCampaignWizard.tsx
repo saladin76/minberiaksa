@@ -6,12 +6,12 @@ import { toast } from "react-hot-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { EmptyState } from "@/components/dashboard/EmptyState";
-import { Check, ChevronLeft, Loader2, FileText, Languages, Users, TriangleAlert, Gauge, Zap, CalendarClock, Moon, ShieldCheck } from "lucide-react";
+import { Check, ChevronLeft, Loader2, FileText, Languages, Users, TriangleAlert, Gauge, Zap, Moon, ShieldCheck, Tag } from "lucide-react";
 import { LOCALE_LABELS } from "@/lib/locales";
 import { cn } from "@/lib/utils";
 import { CHANNEL_META } from "../../_components/campaign-ui";
 import { SmartAudienceBuilder, type SmartAudienceDraft, type SmartAudiencePreview } from "./SmartAudienceBuilder";
-import { SpecificDonorPicker } from "./SpecificDonorPicker";
+import { DonorPicker } from "./DonorPicker";
 
 interface TemplateSummary {
   id: string;
@@ -28,6 +28,28 @@ interface AudienceListSummary {
   membersCount: number;
 }
 
+interface BadgeSummary {
+  id: string;
+  name: string;
+  color: string;
+}
+
+const TIMEZONE_OPTIONS = [
+  ["Europe/Istanbul", "تركيا — Istanbul"],
+  ["Asia/Riyadh", "السعودية — Riyadh"],
+  ["Asia/Dubai", "الإمارات — Dubai"],
+  ["Asia/Jerusalem", "فلسطين / القدس"],
+  ["Africa/Cairo", "مصر — Cairo"],
+  ["Europe/London", "المملكة المتحدة — London"],
+  ["Europe/Paris", "فرنسا — Paris"],
+  ["Europe/Berlin", "ألمانيا — Berlin"],
+  ["America/New_York", "أمريكا — New York"],
+  ["America/Chicago", "أمريكا — Chicago"],
+  ["America/Los_Angeles", "أمريكا — Los Angeles"],
+  ["America/Toronto", "كندا — Toronto"],
+  ["UTC", "UTC"],
+] as const;
+
 const CHANNEL_ORDER = ["EMAIL", "WHATSAPP", "SMS"] as const;
 const BASE_STEPS = ["القناة", "الرسالة", "الجمهور", "اللغة"] as const;
 
@@ -39,7 +61,7 @@ type CampaignSendControlsDraft = {
   dailyCap: number;
   scheduledStopAt: string | null;
   resumeAt: string | null;
-  quietHours: { enabled: boolean; start: string; end: string; timezone: string };
+  quietHours: { enabled: boolean; start: string; end: string; timezoneMode: "RECIPIENT" | "FIXED"; timezone: string };
 };
 
 const DEFAULT_SEND_CONTROLS: CampaignSendControlsDraft = {
@@ -50,7 +72,7 @@ const DEFAULT_SEND_CONTROLS: CampaignSendControlsDraft = {
   dailyCap: 100000,
   scheduledStopAt: null,
   resumeAt: null,
-  quietHours: { enabled: false, start: "00:00", end: "08:00", timezone: "Europe/Istanbul" },
+  quietHours: { enabled: false, start: "00:00", end: "08:00", timezoneMode: "RECIPIENT", timezone: "Europe/Istanbul" },
 };
 
 function fromLocalInput(value: string): string | null {
@@ -125,10 +147,14 @@ export function NewCampaignWizard() {
   const [templateId, setTemplateId] = React.useState("");
   const [name, setName] = React.useState("");
   const [selected, setSelected] = React.useState<Set<string>>(new Set());
-  const [audienceMode, setAudienceMode] = React.useState<"SMART" | "SAVED" | "SPECIFIC">("SMART");
+  const [audienceMode, setAudienceMode] = React.useState<"SMART" | "BADGE" | "SAVED" | "SPECIFIC">("SMART");
   const [smartPreview, setSmartPreview] = React.useState<SmartAudiencePreview | null>(null);
   const [savedLists, setSavedLists] = React.useState<AudienceListSummary[]>([]);
   const [savedListId, setSavedListId] = React.useState("");
+  const [badges, setBadges] = React.useState<BadgeSummary[]>([]);
+  const [badgeId, setBadgeId] = React.useState("");
+  const [badgePreview, setBadgePreview] = React.useState<SmartAudiencePreview | null>(null);
+  const [dailyCapSource, setDailyCapSource] = React.useState<"META" | "FALLBACK">("FALLBACK");
   const [smartAudience, setSmartAudience] = React.useState<SmartAudienceDraft>({
     version: 1,
     kind: "SMART",
@@ -138,6 +164,7 @@ export function NewCampaignWizard() {
       locales: [],
       donatedWithinDays: null,
       projectIds: [],
+      badgeIds: [],
       recurringOnly: false,
       minDonationAmountUSD: null,
       hasContact: false,
@@ -175,27 +202,70 @@ export function NewCampaignWizard() {
     if (!channel || !["EMAIL", "WHATSAPP", "SMS"].includes(channel)) return;
     setSmartAudience((current) => ({ ...current, channel: channel as SmartAudienceDraft["channel"] }));
     setSavedListId("");
-    fetch("/api/communication/audience-lists", { cache: "no-store" })
-      .then((response) => readApiJson(response, "تعذر تحميل القوائم المحفوظة"))
-      .then((data) => {
-        const lists = (data.lists ?? []) as AudienceListSummary[];
+    setBadgeId("");
+    setBadgePreview(null);
+    Promise.all([
+      fetch("/api/communication/audience-lists", { cache: "no-store" }).then((response) => readApiJson(response, "تعذر تحميل القوائم المحفوظة")),
+      fetch("/api/communication/audiences/facets", { cache: "no-store" }).then((response) => readApiJson(response, "تعذر تحميل الشارات")),
+    ])
+      .then(([listsData, facetsData]) => {
+        const lists = (listsData.lists ?? []) as AudienceListSummary[];
         setSavedLists(lists.filter((list) => list.status === "ACTIVE" && (list.channels?.length === 0 || list.channels.includes(channel))));
+        setBadges((facetsData.badges ?? []) as BadgeSummary[]);
       })
-      .catch(() => setSavedLists([]));
+      .catch(() => {
+        setSavedLists([]);
+        setBadges([]);
+      });
+
+    if (channel === "WHATSAPP") {
+      fetch("/api/communication/whatsapp/meta-capacity", { cache: "no-store" })
+        .then((response) => readApiJson(response, "تعذر قراءة حد Meta"))
+        .then((data) => {
+          const cap = Number(data.dailyCap);
+          if (Number.isFinite(cap) && cap > 0) {
+            setSendControls((current) => ({ ...current, dailyCap: cap }));
+            setDailyCapSource(data.source === "META" ? "META" : "FALLBACK");
+          }
+        })
+        .catch(() => setDailyCapSource("FALLBACK"));
+    }
   }, [channel]);
 
+  React.useEffect(() => {
+    if (audienceMode !== "BADGE" || !badgeId || !channel) {
+      if (audienceMode !== "BADGE") setBadgePreview(null);
+      return;
+    }
+    const definition: SmartAudienceDraft = {
+      ...smartAudience,
+      channel: channel as SmartAudienceDraft["channel"],
+      filters: { ...smartAudience.filters, badgeIds: [badgeId] },
+    };
+    fetch("/api/communication/audiences/preview", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ channel, definition }),
+    })
+      .then((response) => readApiJson(response, "تعذر معاينة جمهور الشارة"))
+      .then((data) => setBadgePreview(data as unknown as SmartAudiencePreview))
+      .catch(() => setBadgePreview(null));
+  }, [audienceMode, badgeId, channel, smartAudience]);
+
   const smartAudienceReady = audienceMode === "SMART" && (smartPreview?.eligible ?? 0) > 0;
+  const badgeAudienceReady = audienceMode === "BADGE" && Boolean(badgeId) && (badgePreview?.eligible ?? 0) > 0;
   const savedAudienceReady = audienceMode === "SAVED" && Boolean(savedListId);
   const specificAudienceReady = audienceMode === "SPECIFIC" && selected.size > 0;
-  const audienceReady = smartAudienceReady || savedAudienceReady || specificAudienceReady;
+  const audienceReady = smartAudienceReady || badgeAudienceReady || savedAudienceReady || specificAudienceReady;
   const selectedSavedList = savedLists.find((list) => list.id === savedListId) ?? null;
-  const reviewMatched = audienceMode === "SMART"
-    ? (smartPreview?.matched ?? 0)
+  const activePreview = audienceMode === "BADGE" ? badgePreview : smartPreview;
+  const reviewMatched = audienceMode === "SMART" || audienceMode === "BADGE"
+    ? (activePreview?.matched ?? 0)
     : audienceMode === "SAVED"
       ? (selectedSavedList?.membersCount ?? 0)
       : selected.size;
-  const reviewEligible = audienceMode === "SMART" ? (smartPreview?.eligible ?? 0) : reviewMatched;
-  const reviewLanguages = Object.entries(smartPreview?.languages ?? {}).sort((a, b) => b[1] - a[1]);
+  const reviewEligible = audienceMode === "SMART" || audienceMode === "BADGE" ? (activePreview?.eligible ?? 0) : reviewMatched;
+  const reviewLanguages = Object.entries(activePreview?.languages ?? {}).sort((a, b) => b[1] - a[1]);
 
   const create = async () => {
     if (!name.trim()) {
@@ -206,9 +276,11 @@ export function NewCampaignWizard() {
       toast.error(
         audienceMode === "SMART"
           ? "لا يوجد مستلم مؤهل ضمن شروط الجمهور الحالية"
-          : audienceMode === "SAVED"
-            ? "اختر قائمة محفوظة"
-            : "اختر متبرعًا واحدًا على الأقل",
+          : audienceMode === "BADGE"
+            ? "اختر شارة تحتوي على مستلمين مؤهلين"
+            : audienceMode === "SAVED"
+              ? "اختر قائمة محفوظة"
+              : "اختر متبرعًا واحدًا على الأقل",
       );
       return;
     }
@@ -227,14 +299,24 @@ export function NewCampaignWizard() {
           body: JSON.stringify(
             audienceMode === "SMART"
               ? { name: `جمهور ذكي: ${name.trim()}`, channel, smartDefinition: smartAudience }
-              : { name: `جمهور: ${name.trim()}`, channel, userIds: [...selected] },
+              : audienceMode === "BADGE"
+                ? {
+                    name: `جمهور الشارة: ${badges.find((badge) => badge.id === badgeId)?.name ?? name.trim()}`,
+                    channel,
+                    smartDefinition: {
+                      ...smartAudience,
+                      channel,
+                      filters: { ...smartAudience.filters, badgeIds: [badgeId] },
+                    },
+                  }
+                : { name: `جمهور: ${name.trim()}`, channel, userIds: [...selected] },
           ),
         });
         const listJson = await readApiJson(listRes, "تعذّر إنشاء قائمة الجمهور");
         if (!listJson.ok) throw new Error(String(listJson.error || "تعذّر إنشاء قائمة الجمهور"));
         audienceSegmentKey = String(listJson.audienceSegmentKey || "");
-        audienceCount = audienceMode === "SMART"
-          ? Number(listJson.matched ?? smartPreview?.matched ?? 0)
+        audienceCount = audienceMode === "SMART" || audienceMode === "BADGE"
+          ? Number(listJson.matched ?? activePreview?.matched ?? 0)
           : Number(listJson.added ?? selected.size);
       }
 
@@ -370,9 +452,10 @@ export function NewCampaignWizard() {
             <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="مثال: حملة رمضان — المتبرعون النشطون" />
           </div>
 
-          <div className="grid grid-cols-3 gap-2 rounded-xl border border-slate-200 bg-slate-50 p-1">
+          <div className="grid grid-cols-2 gap-2 rounded-xl border border-slate-200 bg-slate-50 p-1 md:grid-cols-4">
             {([
               ["SMART", "جمهور ذكي"],
+              ["BADGE", "الشارات"],
               ["SAVED", "قائمة محفوظة"],
               ["SPECIFIC", "أشخاص محددون"],
             ] as const).map(([mode, label]) => (
@@ -396,6 +479,36 @@ export function NewCampaignWizard() {
             />
           )}
 
+          {audienceMode === "BADGE" && (
+            <div className="space-y-4 rounded-xl border border-slate-200 bg-white p-4">
+              <div className="flex items-center gap-2">
+                <Tag className="h-4 w-4 text-brand" />
+                <div>
+                  <h3 className="text-sm font-semibold text-slate-900">جمهور من الشارات</h3>
+                  <p className="mt-1 text-xs text-slate-500">الشارات تُحتسب من خصائص وسلوك المتبرعين الحالي، والجمهور يُحل من الخادم وقت الإرسال.</p>
+                </div>
+              </div>
+              <select
+                value={badgeId}
+                onChange={(e) => setBadgeId(e.target.value)}
+                className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm"
+              >
+                <option value="">اختر شارة...</option>
+                {badges.map((badge) => (
+                  <option key={badge.id} value={badge.id}>{badge.name}</option>
+                ))}
+              </select>
+              {badgeId && (
+                <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
+                  <div className="rounded-lg bg-slate-50 p-3 text-xs"><span className="text-slate-500">مطابق</span><strong className="mt-1 block text-lg">{(badgePreview?.matched ?? 0).toLocaleString("en-US")}</strong></div>
+                  <div className="rounded-lg bg-emerald-50 p-3 text-xs"><span className="text-emerald-700">قابل للإرسال</span><strong className="mt-1 block text-lg text-emerald-800">{(badgePreview?.eligible ?? 0).toLocaleString("en-US")}</strong></div>
+                  <div className="rounded-lg bg-slate-50 p-3 text-xs"><span className="text-slate-500">بدون وسيلة اتصال</span><strong className="mt-1 block text-lg">{(badgePreview?.missingContact ?? 0).toLocaleString("en-US")}</strong></div>
+                  <div className="rounded-lg bg-slate-50 p-3 text-xs"><span className="text-slate-500">عدم تواصل</span><strong className="mt-1 block text-lg">{(badgePreview?.doNotContact ?? 0).toLocaleString("en-US")}</strong></div>
+                </div>
+              )}
+            </div>
+          )}
+
           {audienceMode === "SAVED" && (
             <div className="rounded-xl border border-slate-200 bg-white p-4">
               <label className="space-y-1.5 text-xs text-slate-600">
@@ -417,7 +530,7 @@ export function NewCampaignWizard() {
           )}
 
           {audienceMode === "SPECIFIC" && (
-            <SpecificDonorPicker selected={selected} onChange={setSelected} />
+            <DonorPicker channel={channel} selected={selected} onChange={setSelected} />
           )}
         </div>
       )}
@@ -533,33 +646,6 @@ export function NewCampaignWizard() {
 
           <section className="space-y-3 rounded-xl border border-slate-200 bg-white p-4">
             <div className="flex items-center gap-2">
-              <CalendarClock className="h-4 w-4 text-slate-500" />
-              <h4 className="text-sm font-semibold text-slate-900">توقف واستئناف مجدول</h4>
-            </div>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <label className="space-y-1 text-xs text-slate-600">
-                <span>إيقاف الإرسال عند</span>
-                <input
-                  type="datetime-local"
-                  onChange={(e) => setSendControls((current) => ({ ...current, scheduledStopAt: fromLocalInput(e.target.value) }))}
-                  className="h-10 w-full rounded-lg border border-slate-200 px-3"
-                  dir="ltr"
-                />
-              </label>
-              <label className="space-y-1 text-xs text-slate-600">
-                <span>استئناف تلقائي عند (اختياري)</span>
-                <input
-                  type="datetime-local"
-                  onChange={(e) => setSendControls((current) => ({ ...current, resumeAt: fromLocalInput(e.target.value) }))}
-                  className="h-10 w-full rounded-lg border border-slate-200 px-3"
-                  dir="ltr"
-                />
-              </label>
-            </div>
-          </section>
-
-          <section className="space-y-3 rounded-xl border border-slate-200 bg-white p-4">
-            <div className="flex items-center gap-2">
               <Moon className="h-4 w-4 text-slate-500" />
               <h4 className="text-sm font-semibold text-slate-900">ساعات عدم الإرسال</h4>
             </div>
@@ -569,13 +655,44 @@ export function NewCampaignWizard() {
                 checked={sendControls.quietHours.enabled}
                 onChange={(e) => setSendControls((current) => ({ ...current, quietHours: { ...current.quietHours, enabled: e.target.checked } }))}
               />
-              تفعيل Quiet Hours
+              تفعيل ساعات عدم الإرسال
             </label>
-            <div className="grid gap-3 sm:grid-cols-3">
-              <input type="time" value={sendControls.quietHours.start} onChange={(e) => setSendControls((current) => ({ ...current, quietHours: { ...current.quietHours, start: e.target.value } }))} className="h-10 rounded-lg border border-slate-200 px-3" />
-              <input type="time" value={sendControls.quietHours.end} onChange={(e) => setSendControls((current) => ({ ...current, quietHours: { ...current.quietHours, end: e.target.value } }))} className="h-10 rounded-lg border border-slate-200 px-3" />
-              <input value={sendControls.quietHours.timezone} onChange={(e) => setSendControls((current) => ({ ...current, quietHours: { ...current.quietHours, timezone: e.target.value } }))} className="h-10 rounded-lg border border-slate-200 px-3" dir="ltr" />
-            </div>
+            {sendControls.quietHours.enabled && (
+              <div className="space-y-3">
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setSendControls((current) => ({ ...current, quietHours: { ...current.quietHours, timezoneMode: "RECIPIENT" } }))}
+                    className={cn("rounded-lg border p-3 text-right text-xs", sendControls.quietHours.timezoneMode === "RECIPIENT" ? "border-brand bg-brand/5 ring-1 ring-brand/20" : "border-slate-200")}
+                  >
+                    <strong className="block">تلقائي حسب المتبرع</strong>
+                    <span className="mt-1 block text-[11px] text-slate-500">يحدد دولة الرقم/المتبرع ويطبق الساعات على توقيته المحلي.</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSendControls((current) => ({ ...current, quietHours: { ...current.quietHours, timezoneMode: "FIXED" } }))}
+                    className={cn("rounded-lg border p-3 text-right text-xs", sendControls.quietHours.timezoneMode === "FIXED" ? "border-brand bg-brand/5 ring-1 ring-brand/20" : "border-slate-200")}
+                  >
+                    <strong className="block">توقيت ثابت</strong>
+                    <span className="mt-1 block text-[11px] text-slate-500">استخدم منطقة زمنية واحدة لكل الجمهور.</span>
+                  </button>
+                </div>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <label className="space-y-1 text-xs text-slate-600"><span>من</span><input type="time" value={sendControls.quietHours.start} onChange={(e) => setSendControls((current) => ({ ...current, quietHours: { ...current.quietHours, start: e.target.value } }))} className="h-10 w-full rounded-lg border border-slate-200 px-3" /></label>
+                  <label className="space-y-1 text-xs text-slate-600"><span>إلى</span><input type="time" value={sendControls.quietHours.end} onChange={(e) => setSendControls((current) => ({ ...current, quietHours: { ...current.quietHours, end: e.target.value } }))} className="h-10 w-full rounded-lg border border-slate-200 px-3" /></label>
+                </div>
+                <label className="block space-y-1 text-xs text-slate-600">
+                  <span>{sendControls.quietHours.timezoneMode === "RECIPIENT" ? "التوقيت الاحتياطي عند تعذر تحديد الدولة" : "المنطقة الزمنية"}</span>
+                  <select
+                    value={sendControls.quietHours.timezone}
+                    onChange={(e) => setSendControls((current) => ({ ...current, quietHours: { ...current.quietHours, timezone: e.target.value } }))}
+                    className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm"
+                  >
+                    {TIMEZONE_OPTIONS.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+                  </select>
+                </label>
+              </div>
+            )}
           </section>
 
           <section className="space-y-3 rounded-xl border border-slate-200 bg-white p-4">
@@ -583,15 +700,23 @@ export function NewCampaignWizard() {
               <ShieldCheck className="h-4 w-4 text-slate-500" />
               <h4 className="text-sm font-semibold text-slate-900">الحد اليومي</h4>
             </div>
-            <input
-              type="number"
-              min={1}
-              max={1_000_000}
-              value={sendControls.dailyCap}
-              onChange={(e) => setSendControls((current) => ({ ...current, dailyCap: Math.max(1, Number(e.target.value) || 1) }))}
-              className="h-10 w-full max-w-sm rounded-lg border border-slate-200 px-3"
-              dir="ltr"
-            />
+            <div className="flex flex-wrap items-center gap-3">
+              <input
+                type="number"
+                min={1}
+                max={1_000_000}
+                value={sendControls.dailyCap}
+                onChange={(e) => {
+                  setDailyCapSource("FALLBACK");
+                  setSendControls((current) => ({ ...current, dailyCap: Math.max(1, Number(e.target.value) || 1) }));
+                }}
+                className="h-10 w-full max-w-sm rounded-lg border border-slate-200 px-3"
+                dir="ltr"
+              />
+              <span className={cn("rounded-full px-2 py-1 text-[11px]", dailyCapSource === "META" ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-600")}>
+                {dailyCapSource === "META" ? "مقروء تلقائيًا من Meta" : "قيمة احتياطية / تعديل يدوي"}
+              </span>
+            </div>
           </section>
         </div>
       )}
@@ -610,7 +735,7 @@ export function NewCampaignWizard() {
               <p className="mt-1 text-sm font-semibold text-slate-900">{name || "—"}</p>
               <p className="mt-2 text-xs text-slate-600">القناة: {CHANNEL_META[channel as keyof typeof CHANNEL_META]?.label ?? channel}</p>
               <p className="mt-1 text-xs text-slate-600">القالب: {chosenTemplate?.name ?? "—"}</p>
-              <p className="mt-1 text-xs text-slate-600">نوع الجمهور: {audienceMode === "SMART" ? "جمهور ذكي" : audienceMode === "SAVED" ? "قائمة محفوظة" : "أشخاص محددون"}</p>
+              <p className="mt-1 text-xs text-slate-600">نوع الجمهور: {audienceMode === "SMART" ? "جمهور ذكي" : audienceMode === "BADGE" ? "شارة" : audienceMode === "SAVED" ? "قائمة محفوظة" : "أشخاص محددون"}</p>
               <p className="mt-1 text-xs text-slate-600">Fallback: {LOCALE_LABELS[(smartAudience.fallbackLocale ?? "ar") as keyof typeof LOCALE_LABELS] ?? smartAudience.fallbackLocale ?? "ar"}</p>
             </section>
 
@@ -657,7 +782,7 @@ export function NewCampaignWizard() {
                 <p>Auto Speed: {sendControls.autoSpeed ? "مفعّل" : "متوقف"}</p>
                 <p>الأولوية: {sendControls.priority}</p>
                 <p>الحد اليومي: {sendControls.dailyCap.toLocaleString("en-US")}</p>
-                <p>Quiet Hours: {sendControls.quietHours.enabled ? `${sendControls.quietHours.start} — ${sendControls.quietHours.end}` : "غير مفعلة"}</p>
+                <p>ساعات عدم الإرسال: {sendControls.quietHours.enabled ? `${sendControls.quietHours.start} — ${sendControls.quietHours.end} (${sendControls.quietHours.timezoneMode === "RECIPIENT" ? "حسب المتبرع" : sendControls.quietHours.timezone})` : "غير مفعلة"}</p>
               </div>
             </section>
           )}
