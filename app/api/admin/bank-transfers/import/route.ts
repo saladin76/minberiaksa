@@ -11,6 +11,7 @@ import {
 } from "@/lib/bank-transfers/statement-parser";
 import { enhanceBankTransferRowsSmart } from "@/lib/bank-transfers/smart-enhancer";
 import { aiEnhanceBankRows, applyAiEnhancements } from "@/lib/bank-transfers/ai-extractor";
+import { ensureBankTransferIndexes } from "@/lib/bank-transfers/indexes";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -52,6 +53,8 @@ export async function POST(request: NextRequest) {
     const session = await getServerSession(authOptions);
     const denied = requireAdminOrDashboardPermission(session, "bankTransfers");
     if (denied) return denied;
+
+    await ensureBankTransferIndexes();
 
     const formData = await request.formData();
     const file = formData.get("file");
