@@ -26,7 +26,8 @@ import { normalizeDonationCurrencyCode } from "@/lib/exchange/convert-amount-in-
 import { getDonorCountryCodeForSnapshot } from "@/lib/donations/donor-country-code";
 import { dispatchDonationPaid, dispatchEvent } from "@/lib/events/dispatch";
 import { sendDonationFailedConversions } from "@/lib/tracking/donation-conversion-server";
-import { nextChargeForPlan, nextRetryAt } from "./recurring-schedule";
+import { isPrayerScheduleRule, nextChargeForPlan, nextRetryAt } from "./recurring-schedule";
+import { nextChargeForStoredPlan, nextPrayerChargeFromRule } from "./prayer-time-schedule";
 import { mintDonationAccessToken } from "@/lib/donations/access-token";
 
 /**
@@ -112,12 +113,12 @@ async function chargeFor(totalAmount: number, currency: string): Promise<{ amoun
  * a charge that succeeded on a retry hours later does not drag the next cycle
  * off that slot. Plans without a rule step by frequency, as before.
  */
-function nextCycleAfter(sub: { frequency: string; scheduleRule: unknown; timezone: string | null }, due: Date, now: Date): Date {
-  let next = nextChargeForPlan(sub, due);
+async function nextCycleAfter(sub: { frequency: string; scheduleRule: unknown; timezone: string | null }, due: Date, now: Date): Promise<Date> {
+  let next = await nextChargeForStoredPlan(sub, due);
   // Bounded: a daily plan two years behind is 730 steps, which is fine; the
   // cap only guards against a clock that is wildly wrong.
   for (let i = 0; i < 2000 && next.getTime() <= now.getTime(); i += 1) {
-    next = nextChargeForPlan(sub, next);
+    next = await nextChargeForStoredPlan(sub, next);
   }
   return next;
 }
@@ -174,6 +175,17 @@ async function chargeOne(sub: DueSubscription, now: Date, dryRun: boolean): Prom
   const orderId = albarakaRecurringOrderId(sub.id, due.toISOString(), attempt);
   const base: RecurringChargeOutcome = { subscriptionId: sub.id, donationId: null, result: "declined", amountUSD: null };
 
+  /* A prayer schedule is revalidated against the provider before any provider call.
+     Never charge earlier than the recalculated Dhuhr-based time. */
+  if (isPrayerScheduleRule(sub.scheduleRule)) {
+    if (sub.frequency !== "FRIDAY" || !sub.timezone) throw new Error("PRAYER_RULE_INVALID");
+    const dayBefore = new Date(due.getTime() - 7 * 86400_000);
+    const resolved = await nextPrayerChargeFromRule(sub.scheduleRule, dayBefore, sub.timezone);
+    if (resolved.getTime() > now.getTime()) {
+      if (!dryRun) await prisma.subscription.updateMany({ where: { id: sub.id, status: "ACTIVE", nextBillingDate: due }, data: { nextBillingDate: resolved } });
+      return { ...base, result: "dry_run", error: "Prayer time recalculated, not yet due" };
+    }
+  }
   // ── Never twice for one cycle ────────────────────────────────────────────
   const existing = await prisma.donation.findFirst({
     where: { subscriptionId: sub.id, providerOrderId: orderId },
@@ -285,7 +297,7 @@ async function chargeOne(sub: DueSubscription, now: Date, dryRun: boolean): Prom
   }
 
   // ── Settle ───────────────────────────────────────────────────────────────
-  const nextBillingDate = nextCycleAfter(sub, due, now);
+  const nextBillingDate = await nextCycleAfter(sub, due, now);
   await prisma.$transaction(async (tx) => {
     const fresh = await tx.donation.findUnique({ where: { id: donation.id }, include: { items: true, categoryItems: true } });
     if (!fresh || fresh.paidAt) return;
