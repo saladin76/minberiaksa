@@ -5083,3 +5083,52 @@ html[data-mia-drawer="open"] .mia-scope .mia-qb-sec { display: none !important; 
   .mia-head .mia-main-row img[src*="logo-horizontal"] { max-width: 80px !important; }
   .mia-head .mia-main-row .mia-header-search__toggle { width: 36px; height: 36px; }
 }
+
+/* All public phone routes retain the same navigation, including checkout and receipts.
+   Keep the global control unobstructed without changing desktop layout. */
+@media (max-width: 760px) {
+  .mia-scope { --mia-mobile-nav-h: 82px; }
+  .mia-scope main { padding-bottom: max(14px, env(safe-area-inset-bottom, 0px)); }
+  .mia-scope .mia-mobile-bottom-nav {
+    position: fixed !important;
+    inset-inline: 8px !important;
+    bottom: calc(8px + env(safe-area-inset-bottom, 0px)) !important;
+    z-index: 260 !important;
+    display: block !important;
+    visibility: visible !important;
+  }
+  .mia-scope .mia-mobile-bottom-nav__inner { width: 100%; max-width: 540px; margin-inline: auto; }
+  .mia-scope :is(.mia-qb-sec,.cg-launch-wrap,.mia-wa-fab) {
+    max-width: calc(100vw - 24px);
+  }
+  .mia-scope .mia-qb-sec {
+    bottom: calc(var(--mia-mobile-nav-h) + 6px + env(safe-area-inset-bottom, 0px)) !important;
+    z-index: 94 !important;
+  }
+  .mia-scope .cg-launch-wrap,
+  .mia-scope .mia-wa-fab {
+    bottom: calc(var(--mia-mobile-nav-h) + 18px + env(safe-area-inset-bottom, 0px)) !important;
+  }
+  .mia-scope:has(.mia-qb-sec) .cg-launch-wrap,
+  .mia-scope:has(.mia-qb-sec) .mia-wa-fab {
+    bottom: calc(var(--mia-mobile-nav-h) + 96px + env(safe-area-inset-bottom, 0px)) !important;
+  }
+}
+/* Drawers intentionally overlay the navigation; they do not remove it from
+   the shared shell, so it returns at exactly the same position on close. */
+@media (max-width: 760px) {
+  html[data-mia-drawer="open"] .mia-scope .mia-mobile-bottom-nav {
+    visibility: hidden !important;
+    pointer-events: none !important;
+  }
+}
+/* The original hero includes an almost opaque navy gradient; reduce it on
+   phones so valid CMS cover photography is actually visible. */
+@media (max-width: 760px) {
+  .mia-scope .mia-projects-page .proj-hero-stage > div[aria-hidden] > span[role="img"] + span {
+    background: linear-gradient(0deg,rgba(16,33,43,.67),rgba(16,33,43,.11) 85%) !important;
+  }
+  .mia-scope .mia-projects-page .pdc-card > span[role="img"] + span {
+    background: linear-gradient(0deg,rgba(16,33,43,.92) 1%,rgba(16,33,43,.43) 54%,rgba(16,33,43,.05) 95%) !important;
+  }
+}
