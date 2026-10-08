@@ -194,6 +194,8 @@ async function resolveSmartAudienceUserWhere(definition: SmartAudienceDefinition
 }
 
 type SmartUserRow = {
+  emailNotifications?: boolean;
+  smsNotifications?: boolean;
   id: string;
   name: string | null;
   email: string | null;
