@@ -275,7 +275,7 @@ export async function createDonation(input: CreateDonationInput): Promise<Create
          ≈49 TL was charged 1 TL. */
       amountsIn: "USD",
       type: orderType(input.items),
-      timezone: browserTimezone(),
+      timezone: orderSchedule(input.items)?.mode === "prayer" ? orderSchedule(input.items)?.timezone : browserTimezone(),
       ...(orderType(input.items) !== "ONE_TIME" && orderSchedule(input.items) ? { schedule: orderSchedule(input.items) } : {}),
       teamSupport: input.teamSupport > 0 ? input.teamSupport : 0,
       teamSupportRecurring: input.teamSupportRecurring,
