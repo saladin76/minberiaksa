@@ -5248,8 +5248,8 @@ html[data-mia-drawer="open"] .mia-scope .mia-qb-sec { display: none !important; 
   .mia-scope .mia-zakat-page .mia-zakat-result b[dir="ltr"] { max-width:100%; font-size:clamp(19px,5vw,29px) !important; overflow-wrap:anywhere; }
 }
 @media (max-width: 640px) {
-  .mia-scope :is(.mia-recurring-page,.mia-zakat-page,.mia-waqf-page) section:not(.mia-projects-hero) { padding-block:clamp(18px,5vw,30px) !important; }
-  .mia-scope :is(.mia-recurring-page,.mia-zakat-page,.mia-waqf-page) section > div { padding-inline:clamp(12px,4vw,18px) !important; }
+  .mia-scope :is(.mia-recurring-page,.mia-zakat-page,.mia-waqf-page) > section:not(#friday):not(#ibadan-banner) { padding-block:clamp(18px,5vw,30px) !important; }
+  .mia-scope :is(.mia-recurring-page,.mia-zakat-page,.mia-waqf-page) > section > div:not([data-aqsa-pattern]) { padding-inline:clamp(12px,4vw,18px) !important; }
   .mia-scope .mia-recurring-page #plan > div { padding-block:22px !important; gap:18px !important; }
   .mia-scope .mia-recurring-page #plan h1,
   .mia-scope .mia-zakat-page #zk-hero-grid h1,
@@ -5278,7 +5278,7 @@ html[data-mia-drawer="open"] .mia-scope .mia-qb-sec { display: none !important; 
   .mia-scope .mia-zakat-page .zk-masraf b { font-size:13px !important; }
   .mia-scope .mia-zakat-page .zk-masraf span { font-size:11px !important; overflow-wrap:anywhere; }
   .mia-scope .mia-zakat-page #zk-videos { grid-template-columns:minmax(0,1fr) !important; gap:12px !important; }
-  .mia-scope .mia-waqf-page #about > div { padding-top:24px !important; }
+  .mia-scope .mia-waqf-page #about > div:not([data-aqsa-pattern]) { padding-top:24px !important; }
   .mia-scope .mia-waqf-page .mia-waqf-picker { padding:15px !important; gap:14px !important; }
   .mia-scope .mia-waqf-page .mia-waqf-picker > div:first-child { min-width:0; padding-bottom:0 !important; }
   .mia-scope .mia-waqf-page #meter-picker > div:first-child > div { min-width:0; max-width:100%; }
