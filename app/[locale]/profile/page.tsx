@@ -11,7 +11,6 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
-import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Dialog,
@@ -19,16 +18,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import {
   Select,
   SelectContent,
@@ -42,17 +31,13 @@ import {
   Check,
   CheckCircle2,
   ChevronRight,
-  CreditCard,
-  Globe,
   HandHeart,
   Headphones,
   Loader2,
   LogOut,
   Mail,
   MapPin,
-  PauseCircle,
   Phone,
-  PlayCircle,
   Receipt,
   Repeat,
   Settings,
@@ -184,7 +169,6 @@ const ProfilePage = () => {
 
   const [selectedPeriod, setSelectedPeriod] = useState("all");
   const [paymentFilter, setPaymentFilter] = useState<"all" | "PAID" | "FAILED">("all");
-  const [isLoading, setIsLoading] = useState(false);
   const [isDownloading, setIsDownloading] = useState<string | null>(null);
   const [subscriptionSettingsDonation, setSubscriptionSettingsDonation] =
     useState<DonationForProfile | null>(null);
