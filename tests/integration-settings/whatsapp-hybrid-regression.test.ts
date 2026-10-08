@@ -114,6 +114,7 @@ test("PayFor success keeps donation notification dispatch alive after redirect",
 
 test("automatic donation dispatch is observable and recoverable after interruption", () => {
   const source = read("lib/events/dispatch.ts");
+
   assert.match(source, /DISPATCH_CLAIM_LEASE_MS/);
   assert.match(source, /state: "IN_PROGRESS"/);
   assert.match(source, /state: "COMPLETED"/);
@@ -274,16 +275,27 @@ test("Smart WhatsApp preserves the current consent surface without adding a new 
 });
 
 
-test("WhatsApp donor marketing no longer depends on internal opt-in", () => {
+test("campaign membership stays separate from consent and is rechecked before provider calls", () => {
   const audience = read("lib/communication/audience-service.ts");
+  const policy = read("lib/communication/campaign-audience-accounting.ts");
+  const executor = read("lib/communication/campaign-send-executor.ts");
+  const guard = read("lib/communication/campaign-recipient-guard.ts");
   const smart = read("lib/communication/smart-whatsapp-service.ts");
-  const pickerApi = read("app/api/communication/audience-candidates/route.ts");
   const dialog = read("components/dashboard/SmartWhatsappDialog.tsx");
   const retry = read("lib/communication/delivery-retry-service.ts");
 
-  assert.match(audience, /if \(!donor\.phone\) return "UNAVAILABLE";\s*return "ELIGIBLE";/);
+  // Replace the retired bulk-campaign phone-only expectation, not the
+  // unrelated one-to-one UI contract. Behavioral cases live in the audience suite.
+  assert.match(audience, /recipientExclusionReason\(donor, channel, profile\)/);
+  assert.match(policy, /channel === "WHATSAPP" \? preview\.matched : preview\.eligible/);
+  assert.match(policy, /profile\.whatsappOptIn !== true/);
+  assert.match(policy, /profile\?\.doNotContact === true/);
+  assert.match(guard, /prisma\.user\.findUnique/);
+  assert.match(guard, /CONSENT_CHECK_UNAVAILABLE/);
+  const checkAt = executor.indexOf("await checkCampaignRecipientBeforeSend");
+  const sendAt = executor.indexOf("await sendPreparedDelivery");
+  assert.ok(checkAt >= 0 && sendAt > checkAt, "live recipient check must precede the provider call");
   assert.doesNotMatch(smart, /WHATSAPP_MARKETING_OPT_IN_REQUIRED/);
-  assert.doesNotMatch(pickerApi, /لا توجد موافقة واتساب تسويقية/);
   assert.doesNotMatch(dialog, /تسجيل الموافقة/);
   assert.match(retry, /purpose !== "MARKETING" \|\| channel === "WHATSAPP"/);
 });
