@@ -122,7 +122,7 @@ export default function JerusalemPage({ verse, projects }: JerusalemPageProps) {
       </section>
 
       {/* ── Hero over the aerial view ─────────────────────────────────────── */}
-      <section style={{ position: "relative", background: "var(--deep)", overflow: "hidden" }}>
+      <section className="qd-mobile-hero" style={{ position: "relative", background: "var(--deep)", overflow: "hidden" }}>
         <div aria-hidden="true" className="qd-pattern qd-pattern--dark" />
         {/* eslint-disable-next-line @next/next/no-img-element -- sets the section height; not a fixed-size image */}
         <img src="/minbar/assets/quds-aerial.png" alt={t("aerialAlt")} style={{ display: "block", width: "100%", height: "auto" }} />
