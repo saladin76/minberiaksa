@@ -131,15 +131,16 @@ export async function settleAlbarakaDonation(
       });
       if (plan) {
         const paidAt = new Date();
+        const nextBillingDate = firstChargeForSettledPlan(plan, paidAt);
         await tx.subscription.update({
           where: { id: plan.id },
           data: {
-            status: "ACTIVE",
+            status: nextBillingDate ? "ACTIVE" : "PAUSED",
             provider: "ALBARAKA",
             lastBillingDate: paidAt,
-            nextBillingDate: firstChargeForSettledPlan(plan, paidAt),
+            nextBillingDate,
             chargeAttempts: 0,
-            lastChargeError: null,
+            lastChargeError: nextBillingDate ? null : "PRAYER_NEXT_CHARGE_REQUIRES_REVIEW",
           },
         });
       }
