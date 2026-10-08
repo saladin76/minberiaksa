@@ -143,10 +143,19 @@ export function normalizeTimezone(value: unknown, fallback = "UTC"): string {
 export type ScheduleRule =
   | { kind: "daily"; hour?: number; minute?: number }
   | { kind: "weekday"; weekday: 5; hour: number; minute?: number }
-  | { kind: "monthDay"; day: number; hour?: number; minute?: number };
+  | { kind: "monthDay"; day: number; hour?: number; minute?: number }
+  | PrayerScheduleRule;
+
+/** Friday before Dhuhr calculated in the donor-selected geographic location. */
+export type PrayerScheduleRule = { kind: "prayer"; weekday: 5; prayer: "Dhuhr"; latitude: number; longitude: number; method: 13; minutesBefore: 30 };
+export function isPrayerScheduleRule(value: unknown): value is PrayerScheduleRule {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const r = value as Record<string, unknown>;
+  return r.kind === "prayer" && r.weekday === 5 && r.prayer === "Dhuhr" && r.method === 13 && r.minutesBefore === 30 && typeof r.latitude === "number" && Number.isFinite(r.latitude) && Math.abs(r.latitude) <= 90 && typeof r.longitude === "number" && Number.isFinite(r.longitude) && Math.abs(r.longitude) <= 180;
+}
 
 /** What the donor chose on the recurring page: a day (monthly only) and a local time. */
-export interface RecurringScheduleChoice {
+export interface LocalRecurringScheduleChoice {
   /** 1–28, so every month has it. Monthly plans only. */
   dayOfMonth?: number;
   hour: number;
@@ -154,6 +163,7 @@ export interface RecurringScheduleChoice {
   /** Free text the donor attached to the schedule. Kept on the consent record. */
   notes?: string;
 }
+export type RecurringScheduleChoice = LocalRecurringScheduleChoice | { mode: "prayer"; prayer: "Dhuhr"; latitude: number; longitude: number; notes?: string };
 
 export const MAX_SCHEDULE_NOTES = 500;
 
@@ -171,6 +181,12 @@ export function parseScheduleChoice(
   if (value === undefined || value === null) return { ok: true, value: null };
   if (typeof value !== "object" || Array.isArray(value)) return { ok: false, error: "Invalid schedule" };
   const o = value as Record<string, unknown>;
+  if (o.mode === "prayer") {
+    if (o.prayer !== "Dhuhr" || typeof o.latitude !== "number" || !Number.isFinite(o.latitude) || Math.abs(o.latitude) > 90 || typeof o.longitude !== "number" || !Number.isFinite(o.longitude) || Math.abs(o.longitude) > 180 || o.dayOfMonth !== undefined || o.hour !== undefined || o.minute !== undefined) return { ok: false, error: "Invalid Friday prayer schedule or location" };
+    if (o.notes !== undefined && typeof o.notes !== "string") return { ok: false, error: "Invalid schedule notes" };
+    return { ok: true, value: { mode: "prayer", prayer: "Dhuhr", latitude: o.latitude, longitude: o.longitude, ...(typeof o.notes === "string" && o.notes.trim() ? { notes: o.notes.trim().slice(0, MAX_SCHEDULE_NOTES) } : {}) } };
+  }
+  if (o.mode !== undefined && o.mode !== "local") return { ok: false, error: "Invalid schedule mode" };
   if (!isIntIn(o.hour, 0, 23) || !isIntIn(o.minute, 0, 59)) return { ok: false, error: "Schedule time must be a valid hour (0–23) and minute (0–59)" };
   if (o.dayOfMonth !== undefined && o.dayOfMonth !== null && !isIntIn(o.dayOfMonth, 1, 28)) {
     return { ok: false, error: "Schedule day of month must be between 1 and 28" };
@@ -200,14 +216,19 @@ export function scheduleRuleFor(
   timezone: string,
   choice: RecurringScheduleChoice | null = null
 ): ScheduleRule {
+  if (choice?.mode === "prayer") {
+    if (frequency !== "FRIDAY") throw new Error("PRAYER_FREQUENCY_MISMATCH");
+    return { kind: "prayer", weekday: 5, prayer: "Dhuhr", latitude: choice.latitude, longitude: choice.longitude, method: 13, minutesBefore: 30 };
+  }
+  const local = choice && choice.mode !== "prayer" ? choice : null;
   const wall = wallClock(at, normalizeTimezone(timezone));
   switch (frequency) {
     case "DAILY":
-      return { kind: "daily", hour: choice?.hour ?? wall.hour, minute: choice?.minute ?? wall.minute };
+      return { kind: "daily", hour: local?.hour ?? wall.hour, minute: local?.minute ?? wall.minute };
     case "FRIDAY":
-      return { kind: "weekday", weekday: FRIDAY, hour: choice?.hour ?? FRIDAY_CHARGE_HOUR, minute: choice?.minute ?? 0 };
+      return { kind: "weekday", weekday: FRIDAY, hour: local?.hour ?? FRIDAY_CHARGE_HOUR, minute: local?.minute ?? 0 };
     case "MONTHLY":
-      return { kind: "monthDay", day: choice?.dayOfMonth ?? wall.day, hour: choice?.hour ?? wall.hour, minute: choice?.minute ?? wall.minute };
+      return { kind: "monthDay", day: local?.dayOfMonth ?? wall.day, hour: local?.hour ?? wall.hour, minute: local?.minute ?? wall.minute };
   }
 }
 
@@ -215,6 +236,7 @@ export function scheduleRuleFor(
 export function parseScheduleRule(value: unknown): ScheduleRule | null {
   if (!value || typeof value !== "object") return null;
   const o = value as Record<string, unknown>;
+  if (o.kind === "prayer") return isPrayerScheduleRule(value) ? value : null;
   const time = {
     ...(isIntIn(o.hour, 0, 23) ? { hour: o.hour } : {}),
     ...(isIntIn(o.minute, 0, 59) ? { minute: o.minute } : {}),
@@ -352,6 +374,7 @@ export function nextChargeAt(frequency: RecurringFrequency, from: Date, timezone
  */
 export function nextChargeFromRule(rule: ScheduleRule, from: Date, timezone: string): Date {
   const tz = normalizeTimezone(timezone);
+  if (rule.kind === "prayer") throw new Error("PRAYER_SCHEDULE_REQUIRES_ASYNC_RESOLUTION");
   if (rule.hour === undefined) return nextChargeAt(rule.kind === "daily" ? "DAILY" : "MONTHLY", from, tz);
   const at = { hour: rule.hour, minute: rule.minute ?? 0, second: 0 };
   const wall = wallClock(from, tz);
@@ -404,6 +427,7 @@ function samePeriod(rule: ScheduleRule, a: Date, b: Date, tz: string): boolean {
 export function firstChargeAfterCheckout(rule: ScheduleRule, paidAt: Date, timezone: string): Date {
   const tz = normalizeTimezone(timezone);
   let next = nextChargeFromRule(rule, paidAt, tz);
+  if (rule.kind === "prayer") throw new Error("PRAYER_SCHEDULE_REQUIRES_ASYNC_RESOLUTION");
   if (rule.hour === undefined) return next; // legacy rules already skip the current period
   for (let guard = 0; guard < 3 && samePeriod(rule, next, paidAt, tz); guard += 1) {
     next = nextChargeFromRule(rule, next, tz);
@@ -419,7 +443,7 @@ export function firstChargeAfterCheckout(rule: ScheduleRule, paidAt: Date, timez
 export function planRule(plan: { frequency: string; scheduleRule?: unknown }): ScheduleRule | null {
   if (!isRecurringFrequency(plan.frequency)) return null;
   const rule = parseScheduleRule(plan.scheduleRule);
-  return rule && rule.kind === RULE_KIND[plan.frequency] ? rule : null;
+  return rule && (rule.kind === RULE_KIND[plan.frequency] || (plan.frequency === "FRIDAY" && rule.kind === "prayer")) ? rule : null;
 }
 
 /**
@@ -430,6 +454,7 @@ export function planRule(plan: { frequency: string; scheduleRule?: unknown }): S
 export function nextChargeForPlan(plan: { frequency: string; scheduleRule?: unknown; timezone?: string | null }, from: Date): Date {
   const tz = normalizeTimezone(plan.timezone);
   const rule = planRule(plan);
+  if (rule?.kind === "prayer") throw new Error("PRAYER_SCHEDULE_REQUIRES_ASYNC_RESOLUTION");
   if (rule) return nextChargeFromRule(rule, from, tz);
   return nextChargeAt(isRecurringFrequency(plan.frequency) ? plan.frequency : "MONTHLY", from, tz);
 }
@@ -438,6 +463,7 @@ export function nextChargeForPlan(plan: { frequency: string; scheduleRule?: unkn
 export function firstChargeForPlan(plan: { frequency: string; scheduleRule?: unknown; timezone?: string | null }, paidAt: Date): Date {
   const tz = normalizeTimezone(plan.timezone);
   const rule = planRule(plan);
+  if (rule?.kind === "prayer") throw new Error("PRAYER_SCHEDULE_REQUIRES_ASYNC_RESOLUTION");
   if (rule) return firstChargeAfterCheckout(rule, paidAt, tz);
   return nextChargeAt(isRecurringFrequency(plan.frequency) ? plan.frequency : "MONTHLY", paidAt, tz);
 }
