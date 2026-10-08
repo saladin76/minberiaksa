@@ -8,7 +8,7 @@ import {
   writeAuditLog,
   auditActorFromDashboardSession,
 } from "@/lib/audit-log";
-import { nextChargeForPlan } from "@/lib/donations/recurring-schedule";
+import { nextChargeForStoredPlan } from "@/lib/donations/prayer-time-schedule";
 import {
   applyPlanStatusAtProvider,
   ProviderSyncError,
@@ -68,8 +68,24 @@ export async function PATCH(
       );
     }
 
-    // The provider first. If Stripe refuses, nothing local changes and the
-    // dashboard shows the failure instead of a status that is not true.
+    const data: {
+      status: SubscriptionStatus;
+      nextBillingDate?: Date;
+    } = { status: nextStatus };
+
+    if (nextStatus === "ACTIVE" && sub.status !== "ACTIVE") {
+      // Resolve before touching Stripe. Failing to fetch a Friday prayer time
+      // must never resume Stripe while the local plan is still paused.
+      try {
+        data.nextBillingDate = await nextChargeForStoredPlan(sub, new Date());
+      } catch {
+        return NextResponse.json(
+          { error: "The next charge time is unavailable. Try again later.", code: "SCHEDULE_UNAVAILABLE", providerConfirmed: false },
+          { status: 503 },
+        );
+      }
+    }
+
     let provider: ProviderResult;
     try {
       provider = await applyPlanStatusAtProvider(sub, nextStatus as PlanStatus);
@@ -77,23 +93,11 @@ export async function PATCH(
       if (err instanceof ProviderSyncError) {
         return NextResponse.json(
           { error: err.message, code: err.code, providerConfirmed: false },
-          { status: err.httpStatus }
+          { status: err.httpStatus },
         );
       }
       throw err;
     }
-    const data: {
-      status: SubscriptionStatus;
-      nextBillingDate?: Date;
-    } = { status: nextStatus };
-
-    if (nextStatus === "ACTIVE" && sub.status !== "ACTIVE") {
-      // Resume at the plan's next own slot (the donor's chosen day and time,
-      // in its zone). Stripe owns its plans' real cadence; this seeds the
-      // mirror so list filters work until the next paid invoice.
-      data.nextBillingDate = nextChargeForPlan(sub, new Date());
-    }
-
     await prisma.subscription.update({
       where: { id },
       data,
