@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { SubscriptionStatus } from "@prisma/client";
+import Stripe from "stripe";
+import { convertAmountInCurrencyToUsd } from "@/lib/exchange/convert-amount-in-currency-to-usd";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/options";
@@ -33,8 +35,10 @@ export async function PATCH(
 
     const body = await request.json().catch(() => ({}));
     const status = body?.status as string | undefined;
+    const loweringAmount = body?.amount !== undefined;
+    if (loweringAmount && status !== undefined) return NextResponse.json({ error: "Change either amount or status, not both" }, { status: 400 });
 
-    if (!["ACTIVE", "PAUSED", "CANCELLED"].includes(String(status))) {
+    if (!loweringAmount && !["ACTIVE", "PAUSED", "CANCELLED"].includes(String(status))) {
       return NextResponse.json(
         { error: "Invalid status; use ACTIVE, PAUSED or CANCELLED" },
         { status: 400 }
@@ -46,6 +50,14 @@ export async function PATCH(
       select: {
         id: true,
         status: true,
+        amount: true,
+        currency: true,
+        teamSupport: true,
+        coverFees: true,
+        nextBillingDate: true,
+        chargeAttempts: true,
+        items: { select: { id: true, amount: true, amountUSD: true } },
+        categoryItems: { select: { id: true, amount: true, amountUSD: true } },
         frequency: true,
         timezone: true,
         scheduleRule: true,
@@ -57,6 +69,89 @@ export async function PATCH(
 
     if (!sub) {
       return NextResponse.json({ error: "Subscription not found" }, { status: 404 });
+    }
+
+    if (loweringAmount) {
+      const amount = body.amount;
+      const evidence = typeof body.consentEvidence === "string" ? body.consentEvidence.trim() : "";
+      const proofType = body.consentMethod;
+      if (!Number.isFinite(amount) || amount < 1 || Math.round(amount * 100) !== amount * 100 || amount >= sub.amount ||
+          evidence.length < 12 || evidence.length > 2000 || !["PHONE", "EMAIL", "WHATSAPP", "SIGNED"].includes(proofType)) {
+        return NextResponse.json({ error: "Enter a lower amount of at least 1, and documented donor consent (method + reference)" }, { status: 400 });
+      }
+      if (sub.status !== "ACTIVE" && sub.status !== "PAUSED") {
+        return NextResponse.json({ error: "Only active or paused plans can be reduced" }, { status: 409 });
+      }
+      // Prevent editing a due/retrying charge while a scheduled worker might
+      // already have loaded the old amount. Defer the request for review.
+      if (!sub.nextBillingDate || sub.nextBillingDate.getTime() - Date.now() < 24 * 3600_000 || sub.chargeAttempts) {
+        return NextResponse.json({ error: "Billing is due soon, already pending, or under retry. Schedule a reduction after this cycle settles.", code: "BILLING_WINDOW_LOCKED" }, { status: 409 });
+      }
+      const factor = amount / sub.amount;
+      const newAmount = Math.round(amount * 100) / 100;
+      const usd = await convertAmountInCurrencyToUsd(newAmount, sub.currency);
+      // Preserve all existing projects/categories with proportional amounts.
+      const entries = [...sub.items.map((x) => ({ ...x, kind: "item" as const })),
+        ...sub.categoryItems.map((x) => ({ ...x, kind: "category" as const }))];
+      if (!entries.length) return NextResponse.json({ error: "Plan allocations are missing, review manually" }, { status: 409 });
+      const oldAllocTotal = entries.reduce((sum, entry) => sum + entry.amount, 0);
+      if (!(oldAllocTotal > 0)) return NextResponse.json({ error: "Plan allocations are invalid" }, { status: 409 });
+      const allocCents = Math.round(newAmount * 100);
+      let distributed = 0;
+      const allocations = entries.map((entry, index) => {
+        const cents = index === entries.length - 1 ? allocCents - distributed : Math.round(allocCents * entry.amount / oldAllocTotal);
+        distributed += cents;
+        return { ...entry, amount: cents / 100 };
+      });
+      if (allocations.some((x) => x.amount <= 0)) return NextResponse.json({ error: "The lower amount is too small for the current number of projects" }, { status: 400 });
+      const rail = sub.provider === "ALBARAKA" ? "ALBARAKA" : sub.provider === "PAYPAL" ? "PAYPAL" : "STRIPE";
+      if (rail === "STRIPE") {
+        const stripeId = sub.stripeSubscriptionId ?? sub.payforToken;
+        if (!stripeId || !process.env.STRIPE_SECRET_KEY) return NextResponse.json({ error: "Stripe subscription is not configured" }, { status: 503 });
+        try {
+          const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: "2026-03-25.dahlia" });
+          const live = await stripe.subscriptions.retrieve(stripeId);
+          if (live.status !== "active" || !live.items.data[0]) return NextResponse.json({ error: "Stripe subscription must be active for a reduction" }, { status: 409 });
+          const item = live.items.data[0];
+          const product = typeof item.price.product === "string" ? item.price.product : item.price.product.id;
+          const total = newAmount + sub.teamSupport + (sub.coverFees ? (newAmount + sub.teamSupport) * 0.03 : 0);
+          await stripe.subscriptions.update(stripeId, {
+            items: [{ id: item.id, price_data: { currency: item.price.currency, product, unit_amount: Math.round(total * 100), recurring: { interval: "month" } } }],
+            proration_behavior: "none",
+            payment_behavior: "error_if_incomplete",
+          });
+        } catch (err) {
+          console.error("[admin/subscriptions] Stripe repricing failed", err instanceof Error ? err.message : "unknown");
+          return NextResponse.json({ error: "The payment provider did not confirm the reduction" }, { status: 502 });
+        }
+      }
+      try {
+        await prisma.$transaction(async (tx) => {
+          const locked = await tx.subscription.updateMany({
+            where: { id: sub.id, amount: sub.amount, status: sub.status, nextBillingDate: sub.nextBillingDate, chargeAttempts: 0 },
+            data: { amount: newAmount, amountUSD: usd },
+          });
+          if (locked.count !== 1) throw new Error("PLAN_CHANGED_CONCURRENTLY");
+          for (const allocation of allocations) {
+            if (allocation.kind === "item") await tx.subscriptionItem.update({ where: { id: allocation.id }, data: { amount: allocation.amount, amountUSD: usd * allocation.amount / newAmount } });
+            else await tx.subscriptionCategoryItem.update({ where: { id: allocation.id }, data: { amount: allocation.amount, amountUSD: usd * allocation.amount / newAmount } });
+          }
+          await tx.auditLog.create({
+            data: {
+              actorId: session!.user!.id ?? undefined, actorName: session!.user!.name ?? undefined,
+              actorRole: session!.user!.role ?? "ADMIN", stream: "TEAM",
+              action: "SUBSCRIPTION_AMOUNT_REDUCED", entityType: "Subscription", entityId: sub.id,
+              messageAr: `تخفيض التبرع الدوري من ${sub.amount} إلى ${newAmount} ${sub.currency} بموافقة المتبرع`,
+              messageEn: `Recurring plan reduced ${sub.amount} -> ${newAmount} ${sub.currency} with documented donor consent`,
+              metadata: { oldAmount: sub.amount, newAmount, currency: sub.currency, rail, consentMethod: proofType, consentEvidence: evidence, nextBillingDate: sub.nextBillingDate.toISOString() },
+            },
+          });
+        });
+      } catch (err) {
+        console.error("[admin/subscriptions] post-provider reconciliation required", sub.id, err instanceof Error ? err.message : "unknown");
+        return NextResponse.json({ error: "Update needs reconciliation with payment provider; do not retry before checking Stripe and the audit log", code: "RECONCILE_REQUIRED" }, { status: 503 });
+      }
+      return NextResponse.json({ ok: true, amount: newAmount, currency: sub.currency, nextBillingDate: sub.nextBillingDate, provider: { rail, confirmed: true } });
     }
 
     const nextStatus = status as SubscriptionStatus;
