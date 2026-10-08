@@ -5,7 +5,8 @@ import Stripe from "stripe";
 import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 import { prisma } from "@/lib/prisma";
 import { applyPlanStatusAtProvider, ProviderSyncError, planRail } from "@/lib/donations/subscription-provider-control";
-import { firstChargeAfterCheckout, nextChargeForPlan, normalizeTimezone, parseScheduleRule, scheduleRuleFor, type RecurringFrequency } from "@/lib/donations/recurring-schedule";
+import { firstChargeAfterCheckout, normalizeTimezone, parseScheduleRule, scheduleRuleFor, type RecurringFrequency } from "@/lib/donations/recurring-schedule";
+import { nextChargeForStoredPlan } from "@/lib/donations/prayer-time-schedule";
 import { convertAmountInCurrencyToUsd } from "@/lib/exchange/convert-amount-in-currency-to-usd";
 import { writeAuditLog, auditActorFromSiteSession, auditStreamForRole } from "@/lib/audit-log";
 
@@ -68,7 +69,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
        the donor chose; only what the old rule never had comes from now. The
        current period counts as given, as it did before. */
     const old = parseScheduleRule(sub.scheduleRule);
-    const keep = old?.hour !== undefined
+    const keep = old && old.kind !== "prayer" && old.hour !== undefined
       ? { hour: old.hour, minute: old.minute ?? 0, ...(old.kind === "monthDay" && old.day <= 28 ? { dayOfMonth: old.day } : {}) }
       : null;
     const rule = scheduleRuleFor(input.frequency, now, tz, keep);
@@ -118,7 +119,11 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     data.status = input.status;
     // Resume at the plan's next own slot (its rule  possibly the one just set above).
     if (input.status === "ACTIVE") {
-      data.nextBillingDate = nextChargeForPlan({ frequency: data.frequency ?? sub.frequency, scheduleRule: data.scheduleRule ?? sub.scheduleRule, timezone: sub.timezone }, new Date());
+      try {
+        data.nextBillingDate = await nextChargeForStoredPlan({ frequency: data.frequency ?? sub.frequency, scheduleRule: data.scheduleRule ?? sub.scheduleRule, timezone: sub.timezone }, new Date());
+      } catch {
+        return NextResponse.json({ error: "Unable to resolve the next charge time; please try again later", code: "SCHEDULE_UNAVAILABLE" }, { status: 503 });
+      }
     }
     changes.push(`status ${sub.status} → ${input.status}`);
   }
