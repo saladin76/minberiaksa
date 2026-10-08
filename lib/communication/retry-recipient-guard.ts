@@ -3,21 +3,29 @@ import { recipientExclusionReason, type AudienceChannel } from "./campaign-audie
 import { normalizeCampaignContact } from "./campaign-contact-validation";
 
 export type RetryRecipientInput = {
+  id?: string;
   channel: string; purpose: string; campaignId: string | null;
   recipientUserId: string | null; recipientEmail: string | null; recipientPhone: string | null;
 };
-export type RetryRecipientCode = "NO_RECIPIENT" | "RECIPIENT_NOT_FOUND" | "RECIPIENT_CONTACT_CHANGED" | "INVALID_CONTACT" | "RECIPIENT_CHECK_UNAVAILABLE" | "CONSENT_BLOCKED";
+export type RetryRecipientCode = "NO_RECIPIENT" | "RECIPIENT_NOT_FOUND" | "RECIPIENT_CONTACT_CHANGED" | "INVALID_CONTACT" | "RECIPIENT_CHECK_UNAVAILABLE" | "CONSENT_BLOCKED" | "DELIVERY_OUTCOME_UNCERTAIN";
 export type RetryRecipientCheck = { ok: true; contact: string } | { ok: false; code: RetryRecipientCode };
 
-/** Recheck the live destination and preferences; no provider calls or writes. */
+/** Recheck live delivery evidence, destination and preferences without writes or sends. */
 export async function checkRetryRecipient(row: RetryRecipientInput, plannedContact?: string): Promise<RetryRecipientCheck> {
   const channel = row.channel as AudienceChannel;
   const stored = channel === "EMAIL" ? row.recipientEmail : row.recipientPhone;
   try {
+    if (row.id) {
+      const evidence = await prisma.communicationDelivery.findUnique({ where: { id: row.id }, select: { errorMessage: true } });
+      if (!evidence) return { ok: false, code: "RECIPIENT_CHECK_UNAVAILABLE" };
+      // A campaign executor may have lost the provider response. A FAILED row
+      // alone is not evidence that nothing arrived, so do not resend it blindly.
+      if (/^(DELIVERY_OUTCOME_UNCERTAIN|SEND_THREW|NETWORK_ERROR|TIMEOUT|HTTP_5\d\d)(?:\b|:)/.test(evidence.errorMessage ?? "")) {
+        return { ok: false, code: "DELIVERY_OUTCOME_UNCERTAIN" };
+      }
+    }
     if (!row.recipientUserId) {
       if (row.campaignId) return { ok: false, code: "RECIPIENT_CHECK_UNAVAILABLE" };
-      // Keep the existing ad-hoc/manual/test path. Campaigns cannot bypass their
-      // donor policy by dropping the donor reference from an old delivery row.
       const contact = normalizeCampaignContact(channel, stored);
       if (!contact) return { ok: false, code: stored ? "INVALID_CONTACT" : "NO_RECIPIENT" };
       if (plannedContact !== undefined && normalizeCampaignContact(channel, plannedContact) !== contact) return { ok: false, code: "RECIPIENT_CONTACT_CHANGED" };
@@ -53,7 +61,6 @@ export async function checkRetryRecipient(row: RetryRecipientInput, plannedConta
   }
 }
 
-/** Only proven pre-send rejections can release a retry claim automatically. */
 export function retryDefinitelyNotSent(reason: string): boolean {
   return reason.endsWith("_NOT_CONFIGURED") || reason.endsWith("_NOT_IMPLEMENTED") ||
     reason.startsWith("SENDER_MISSING_") || reason.includes("_SENDER_MISSING_") ||
