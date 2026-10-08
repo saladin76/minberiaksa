@@ -256,3 +256,17 @@ test("shared Ibadan and travel banners do not force headlines or CTA labels outs
   assert.match(css, /mia-campaign-banner-actions > \.mia-campaign-banner-button[\s\S]*white-space: normal !important/);
   assert.match(css, /friday-prices[\s\S]*grid-template-columns: repeat\(2,minmax\(0,1fr\)\)/);
 });
+
+test("recurring, zakat, and waqf layouts remain responsive without touching transaction logic", () => {
+  const css = read("styles/minbar/minbar.css");
+  const pages = [
+    ["components/minbar/recurring/RecurringPage.tsx", "mia-recurring-page"],
+    ["components/minbar/zakat/ZakatPage.tsx", "mia-zakat-page"],
+    ["components/minbar/waqf/WaqfPage.tsx", "mia-waqf-page"],
+  ];
+  for (const [path, name] of pages) assert.match(read(path), new RegExp(`className="${name}"`));
+  assert.match(css, /\.mia-recurring-page \.mia-recurring-amounts \{ display:grid !important/);
+  assert.match(css, /\.mia-zakat-page #zk-amounts \{ display:grid !important/);
+  assert.match(css, /\.mia-waqf-page \.mia-waqf-picker \{ padding:15px !important/);
+  assert.match(css, /\.mia-waqf-page #waqf-cert-preview\[data-open="1"\]/);
+});
