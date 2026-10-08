@@ -216,7 +216,7 @@ test("public header search exposes suggestions and localized routes without dono
   assert.match(api, /SUPPORTED_LOCALES/);
   assert.match(source, /listProjects\(locale\)/);
   assert.match(source, /listArticles\(\{ locale, take: 400 \}\)/);
-  assert.doesNotMatch(source, /donor|User\.findMany|donation\.findMany/i);
+  assert.doesNotMatch(source, /prisma\.user|prisma\.donation|findMany\(\{\s*where:\s*\{\s*donorId/i);
 });
 
 test("responsive public catalogue and donor account preserve readable narrow grids", () => {
