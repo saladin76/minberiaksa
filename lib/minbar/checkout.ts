@@ -261,6 +261,8 @@ export async function createDonation(input: CreateDonationInput): Promise<Create
   if (unmatched.length) throw new UnpayableItemsError(unmatched);
   if (items.length === 0 && categoryItems.length === 0 && waqfItems.length === 0) throw new Error("cart-empty");
 
+  const selectedSchedule = orderSchedule(input.items);
+  const selectedOrderType = orderType(input.items);
   const response = await fetch("/api/cart/payment", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -274,9 +276,9 @@ export async function createDonation(input: CreateDonationInput): Promise<Create
          rest and the team support at its rate. Sent raw, a $1 row shown as
          ≈49 TL was charged 1 TL. */
       amountsIn: "USD",
-      type: orderType(input.items),
-      timezone: orderSchedule(input.items)?.mode === "prayer" ? orderSchedule(input.items)?.timezone : browserTimezone(),
-      ...(orderType(input.items) !== "ONE_TIME" && orderSchedule(input.items) ? { schedule: orderSchedule(input.items) } : {}),
+      type: selectedOrderType,
+      timezone: selectedSchedule?.mode === "prayer" ? selectedSchedule.timezone : browserTimezone(),
+      ...(selectedOrderType !== "ONE_TIME" && selectedSchedule ? { schedule: selectedSchedule } : {}),
       teamSupport: input.teamSupport > 0 ? input.teamSupport : 0,
       teamSupportRecurring: input.teamSupportRecurring,
       /* Analytics only: marks an order whose basket went through the concierge. */
