@@ -5226,3 +5226,69 @@ html[data-mia-drawer="open"] .mia-scope .mia-qb-sec { display: none !important; 
   .mia-scope .mia-campaign-banner-actions { gap: 6px !important; }
   .mia-scope .mia-campaign-banner-actions > .mia-campaign-banner-button { font-size: 11px !important; }
 }
+
+/* Scoped donor landing layouts: recurring, zakat and waqf. No checkout logic. */
+@media (max-width: 900px) {
+  .mia-scope :is(.mia-recurring-page,.mia-zakat-page,.mia-waqf-page) { width:100%; min-width:0; max-width:100%; overflow-x:clip; }
+  .mia-scope :is(.mia-recurring-page,.mia-zakat-page,.mia-waqf-page) section > div { max-width:100%; box-sizing:border-box; }
+  .mia-scope :is(.mia-recurring-page,.mia-zakat-page,.mia-waqf-page) :is(h1,h2,h3,p,b,span) { overflow-wrap:break-word; }
+  .mia-scope .mia-recurring-page #rc-grid,
+  .mia-scope .mia-zakat-page #zk-hero-grid,
+  .mia-scope .mia-waqf-page :is(#wq-hero,#meter-picker) { grid-template-columns:minmax(0,1fr) !important; gap:18px !important; }
+  .mia-scope .mia-recurring-page .mia-responsive-video { min-height:0 !important; height:auto !important; aspect-ratio:16/9; }
+  .mia-scope .mia-recurring-page .mia-donation-builder { padding:clamp(14px,3vw,24px) !important; min-width:0; gap:17px !important; }
+  .mia-scope .mia-waqf-page .mia-waqf-picker { margin-top:20px !important; padding:20px !important; border-radius:14px; }
+  .mia-scope .mia-waqf-page #waqf-video-card { grid-template-columns:minmax(0,1fr) !important; }
+  .mia-scope .mia-waqf-page #wq-hero > span:last-child,
+  .mia-scope .mia-zakat-page #zk-hero-grid > span:last-child { justify-self:center !important; max-width:min(72%,310px) !important; }
+  .mia-scope .mia-zakat-page .mia-zakat-calculator { padding:clamp(14px,3vw,24px) !important; gap:17px !important; border-radius:15px !important; }
+  .mia-scope .mia-zakat-page #zk-quick-fields { grid-template-columns:repeat(2,minmax(0,1fr)) !important; gap:10px !important; }
+  .mia-scope .mia-zakat-page .mia-zakat-result { grid-template-columns:minmax(0,1fr) !important; padding:18px !important; gap:12px !important; }
+  .mia-scope .mia-zakat-page .mia-zakat-result > span { min-width:0; padding:0 !important; border:0 !important; }
+  .mia-scope .mia-zakat-page .mia-zakat-result b[dir="ltr"] { max-width:100%; font-size:clamp(19px,5vw,29px) !important; overflow-wrap:anywhere; }
+}
+@media (max-width: 640px) {
+  .mia-scope :is(.mia-recurring-page,.mia-zakat-page,.mia-waqf-page) section:not(.mia-projects-hero) { padding-block:clamp(18px,5vw,30px) !important; }
+  .mia-scope :is(.mia-recurring-page,.mia-zakat-page,.mia-waqf-page) section > div { padding-inline:clamp(12px,4vw,18px) !important; }
+  .mia-scope .mia-recurring-page #plan > div { padding-block:22px !important; gap:18px !important; }
+  .mia-scope .mia-recurring-page #plan h1,
+  .mia-scope .mia-zakat-page #zk-hero-grid h1,
+  .mia-scope .mia-waqf-page #wq-hero h1 { font-size:clamp(23px,6vw,30px) !important; line-height:1.45 !important; }
+  .mia-scope .mia-recurring-page .mia-recurring-amounts { display:grid !important; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px !important; }
+  .mia-scope .mia-recurring-page .mia-recurring-amounts > * { width:100% !important; min-width:0 !important; padding-inline:5px !important; font-size:clamp(11px,3vw,14px) !important; }
+  .mia-scope .mia-recurring-page .mia-recurring-amounts > input { grid-column:1/-1; font-size:16px !important; padding-inline:12px !important; }
+  .mia-scope .mia-recurring-page .rc-seg { min-width:0; padding-inline:3px !important; font-size:clamp(10px,2.8vw,13px) !important; white-space:normal !important; line-height:1.35 !important; gap:4px !important; }
+  .mia-scope .mia-recurring-page .mia-donation-summary { display:grid !important; grid-template-columns:36px minmax(0,1fr); align-items:center; padding:13px !important; gap:10px !important; }
+  .mia-scope .mia-recurring-page .mia-donation-summary > span:last-child { display:grid !important; gap:3px !important; justify-content:start !important; min-width:0; }
+  .mia-scope .mia-recurring-page .mia-donation-summary b { font-size:clamp(19px,5vw,24px) !important; }
+  .mia-scope .mia-recurring-page #rc-benefits,
+  .mia-scope .mia-recurring-page #rc-funds { grid-template-columns:minmax(0,1fr) !important; gap:12px !important; }
+  .mia-scope .mia-recurring-page #rc-benefits > *,
+  .mia-scope .mia-recurring-page #rc-funds > * { padding:16px !important; min-width:0; }
+  .mia-scope .mia-zakat-page #zk-hero-grid { padding-block:22px !important; gap:12px !important; }
+  .mia-scope .mia-zakat-page #zk-amounts { display:grid !important; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px !important; }
+  .mia-scope .mia-zakat-page #zk-amounts > * { min-width:0 !important; width:100% !important; padding-inline:8px !important; }
+  .mia-scope .mia-zakat-page #zk-amounts .zk-input { grid-column:1/-1; min-height:46px !important; padding-inline:12px !important; font-size:16px !important; }
+  .mia-scope .mia-zakat-page #zk-ctas { display:grid !important; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px !important; }
+  .mia-scope .mia-zakat-page #zk-ctas > button { min-width:0; width:100%; height:auto !important; min-height:48px !important; padding:10px 8px !important; white-space:normal !important; font-size:clamp(11px,3.2vw,14px) !important; }
+  .mia-scope .mia-zakat-page #zk-ctas > .zk-share { grid-column:1/-1; width:100%; }
+  .mia-scope .mia-zakat-page #zk-quick-fields { grid-template-columns:minmax(0,1fr) !important; }
+  .mia-scope .mia-zakat-page #masarif-grid { grid-template-columns:repeat(2,minmax(0,1fr)) !important; gap:9px !important; }
+  .mia-scope .mia-zakat-page .zk-masraf { min-width:0; padding:14px 11px !important; gap:9px !important; }
+  .mia-scope .mia-zakat-page .zk-masraf b { font-size:13px !important; }
+  .mia-scope .mia-zakat-page .zk-masraf span { font-size:11px !important; overflow-wrap:anywhere; }
+  .mia-scope .mia-zakat-page #zk-videos { grid-template-columns:minmax(0,1fr) !important; gap:12px !important; }
+  .mia-scope .mia-waqf-page #about > div { padding-top:24px !important; }
+  .mia-scope .mia-waqf-page .mia-waqf-picker { padding:15px !important; gap:14px !important; }
+  .mia-scope .mia-waqf-page .mia-waqf-picker > div:first-child { min-width:0; padding-bottom:0 !important; }
+  .mia-scope .mia-waqf-page #meter-picker > div:first-child > div { min-width:0; max-width:100%; }
+  .mia-scope .mia-waqf-page .wq-step { flex:0 0 44px; }
+  .mia-scope .mia-waqf-page #wq-facts { grid-template-columns:repeat(2,minmax(0,1fr)) !important; gap:9px !important; }
+  .mia-scope .mia-waqf-page #wq-aid { grid-template-columns:repeat(2,minmax(0,1fr)) !important; gap:9px !important; }
+  .mia-scope .mia-waqf-page :is(#wq-goals,#wq-parts,#wq-detail) { grid-template-columns:minmax(0,1fr) !important; gap:12px !important; }
+  .mia-scope .mia-waqf-page .wv-head { padding:19px !important; }
+  .mia-scope .mia-waqf-page :is(.wq-part,.wq-aid-card) { min-width:0; overflow-wrap:anywhere; }
+  .mia-scope .mia-waqf-page #waqf-cert-preview[data-open="1"] { box-sizing:border-box; width:100%; min-width:0; overflow-wrap:anywhere; }
+  .mia-scope .mia-waqf-page #waqf-cert-preview[data-open="1"] > div { box-sizing:border-box; min-width:0; }
+  .mia-scope .mia-waqf-page #waqf-cert-preview[data-open="1"] span { max-width:100%; overflow-wrap:anywhere; }
+}
