@@ -1,5 +1,6 @@
 import {
   recipientExclusionReason,
+  previewConsentForLegacyDonor,
   type AudienceChannel,
   type RecipientConsent,
   type RecipientExclusionReason,
@@ -12,6 +13,8 @@ export type AudienceAccountingRow = {
   phone: string | null;
   locale: string;
   countryCode: string | null;
+  emailNotifications?: boolean | null;
+  smsNotifications?: boolean | null;
   communicationProfile?: RecipientConsent | null;
 };
 
@@ -67,7 +70,7 @@ export async function summarizeCampaignAudience(
     signal?.throwIfAborted();
     if (previousId !== null && row.id <= previousId) throw new Error("AUDIENCE_CURSOR_NOT_ADVANCING");
     previousId = row.id;
-    const reason = recipientExclusionReason(row, channel, row.communicationProfile);
+    const reason = recipientExclusionReason(row, channel, previewConsentForLegacyDonor(row, channel, row.communicationProfile));
     result.matched += 1;
     result.languages[row.locale] = (result.languages[row.locale] ?? 0) + 1;
     const bucket = result.localeBreakdown[row.locale] ?? {
