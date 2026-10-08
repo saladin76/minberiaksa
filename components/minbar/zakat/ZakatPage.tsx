@@ -243,7 +243,7 @@ export default function ZakatPage({
   };
 
   return (
-    <div style={{ position: "relative" }}>
+    <div className="mia-zakat-page" style={{ position: "relative" }}>
       {/* ── Hero ─────────────────────────────────────────────────────────── */}
       <section style={{ position: "relative", background: "#fff", borderBottom: "1px solid var(--border)", overflow: "hidden" }}>
         <div aria-hidden="true" data-aqsa-pattern="" style={pattern(520)} />
@@ -264,7 +264,7 @@ export default function ZakatPage({
                     setAmount(value);
                     setHeroCustom("");
                   }}
-                  className="zk-amt"
+                  className="zk-amt mia-zakat-amount"
                   style={{ height: 46, padding: "0 22px", cursor: "pointer", fontFamily: "inherit", fontSize: 15, fontWeight: 800, borderRadius: 8, border: "1px solid var(--border)", background: "#fff", color: "var(--muted)", transition: "all .18s ease" }}
                 >
                   <span dir="ltr" style={{ unicodeBidi: "isolate" }}>
@@ -341,7 +341,7 @@ export default function ZakatPage({
       {/* ── Quick estimator ──────────────────────────────────────────────── */}
       <section id="calculator" style={{ background: "#fff", padding: "62px 0", borderBottom: "1px solid var(--border)" }}>
         <div style={{ maxWidth: 1240, margin: "0 auto", padding: "0 24px" }}>
-          <div className="zk-card" style={{ position: "relative", overflow: "hidden", borderRadius: 22, background: "linear-gradient(180deg, var(--ivory), #fff)", border: "1px solid var(--border)", boxShadow: "0 26px 60px rgba(16,33,43,.09)", padding: 34, display: "grid", gap: 26 }}>
+          <div className="zk-card mia-zakat-calculator" style={{ position: "relative", overflow: "hidden", borderRadius: 22, background: "linear-gradient(180deg, var(--ivory), #fff)", border: "1px solid var(--border)", boxShadow: "0 26px 60px rgba(16,33,43,.09)", padding: 34, display: "grid", gap: 26 }}>
             <span aria-hidden="true" style={{ position: "absolute", insetInline: 0, top: 0, height: 4, background: "linear-gradient(90deg, var(--green), var(--gold))" }} />
 
             <div style={{ display: "flex", alignItems: "end", justifyContent: "space-between", gap: 20, flexWrap: "wrap" }}>
@@ -411,7 +411,7 @@ export default function ZakatPage({
                   ))}
                 </div>
 
-                <div id="zk-result" style={{ position: "relative", overflow: "hidden", display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(0,1fr) auto", alignItems: "center", gap: 24, padding: "26px 28px", background: "linear-gradient(120deg, rgba(31,122,77,.1), rgba(211,154,39,.08))", border: "1px solid rgba(31,122,77,.3)", borderRadius: 18 }}>
+                <div id="zk-result" className="mia-zakat-result" style={{ position: "relative", overflow: "hidden", display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(0,1fr) auto", alignItems: "center", gap: 24, padding: "26px 28px", background: "linear-gradient(120deg, rgba(31,122,77,.1), rgba(211,154,39,.08))", border: "1px solid rgba(31,122,77,.3)", borderRadius: 18 }}>
                   <span aria-hidden="true" style={{ position: "absolute", insetInlineEnd: -50, top: -50, width: 180, height: 180, borderRadius: "50%", background: "radial-gradient(circle, rgba(211,154,39,.16), transparent 70%)", pointerEvents: "none" }} />
                   <span style={{ position: "relative", display: "grid", gap: 4 }}>
                     <span style={micro}>{t("netZakatWealth")}</span>
