@@ -1,4 +1,5 @@
 import test from "node:test";
+import { readFileSync } from "node:fs";
 import assert from "node:assert/strict";
 import {
   firstPrayerChargeAfterCheckout,
@@ -61,4 +62,23 @@ test("first instalment settlement never calls prayer provider and does not bill 
   assert.equal(firstChargeForSettledPlan(plan, new Date("2026-10-09T10:00:00Z"))?.toISOString(), "2026-10-16T09:45:00.000Z");
   assert.equal(firstChargeForSettledPlan({ ...plan, nextBillingDate: null }, new Date()), null);
   assert.equal(firstChargeForSettledPlan({ ...plan, timezone: "Invalid/Timezone" }, new Date()), null);
+});
+
+test("first payment settlement reads prayer plan data and pauses when no safe next charge", () => {
+  for (const file of ["lib/donations/albaraka-settlement.ts", "lib/donations/paypal-donation.ts"]) {
+    const source = readFileSync(file, "utf8");
+    assert.match(source, /nextBillingDate: true/);
+    assert.match(source, /firstChargeForSettledPlan\(plan, paidAt\)/);
+    assert.match(source, /status: nextBillingDate \? "ACTIVE" : "PAUSED"/);
+    assert.match(source, /PRAYER_NEXT_CHARGE_REQUIRES_REVIEW/);
+    assert.doesNotMatch(source, /nextBillingDate: firstChargeForPlan\(plan, paidAt\)/);
+  }
+});
+test("both donor and dashboard resume calculate the next prayer date before provider activation", () => {
+  for (const file of ["app/api/users/me/subscriptions/[id]/route.ts", "app/api/admin/subscriptions/[id]/route.ts"]) {
+    const source = readFileSync(file, "utf8");
+    const resolveAt = source.indexOf("await nextChargeForStoredPlan(");
+    const providerAt = source.indexOf("await applyPlanStatusAtProvider(");
+    assert.ok(resolveAt >= 0 && providerAt > resolveAt, `${file} must validate schedule BEFORE resuming provider`);
+  }
 });
