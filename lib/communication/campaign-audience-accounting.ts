@@ -18,6 +18,22 @@ export type RecipientExclusionReason =
   | "SMS_OPT_IN_REQUIRED"
   | "WHATSAPP_OPT_IN_REQUIRED";
 
+/**
+ * Apply the same legacy donor notification flags that ensureProfilesForUsers
+ * uses at send time, without writing records during preview. An existing
+ * communication profile always wins; WhatsApp consent is NEVER inferred.
+ */
+export function previewConsentForLegacyDonor(
+  donor: { email?: string | null; phone?: string | null; emailNotifications?: boolean | null; smsNotifications?: boolean | null },
+  channel: AudienceChannel,
+  profile?: RecipientConsent | null,
+): RecipientConsent | null {
+  if (profile) return profile;
+  if (channel === "EMAIL") return { emailOptIn: Boolean(donor.email) && donor.emailNotifications !== false };
+  if (channel === "SMS") return { smsOptIn: Boolean(donor.phone) && donor.smsNotifications !== false };
+  return null;
+}
+
 /** These are campaign-candidate checks, not a promise of delivery. */
 export function recipientExclusionReason(
   donor: { email?: string | null; phone?: string | null },
@@ -44,15 +60,16 @@ export type AudiencePreviewCounts = {
 };
 
 /**
- * Allows saving the selected audience as a draft. It does NOT authorize a send;
- * consent, contact validation, approval and provider gates still run at execution.
+ * The operator selects a database audience, not a pre-authorised subset.
+ * Selection never authorises a send; consent and contact are checked individually
+ * by the executor. This policy is identical for EMAIL, SMS and WHATSAPP.
  */
 export function campaignAudienceSelectionCount(
-  channel: string,
+  _channel: string,
   preview: AudiencePreviewCounts | null | undefined,
 ): number {
   if (!preview) return 0;
-  const value = channel === "WHATSAPP" ? preview.matched : preview.eligible;
+  const value = preview.matched;
   return Number.isSafeInteger(value) && value > 0 ? value : 0;
 }
 
