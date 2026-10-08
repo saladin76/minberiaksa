@@ -193,3 +193,35 @@ test("projects responsive fixes are page scoped and take precedence across phone
   assert.match(css, /@media \(max-width: 640px\)[\s\S]*\.mia-projects-page \.proj-grid \{ grid-template-columns: minmax\(0, 1fr\)/);
   assert.match(css, /\.mia-projects-page \.proj-arrow \{ display: none !important/);
 });
+
+test("mobile catalogue hero removes dead bands while preserving desktop markup", () => {
+  const hero = read("components/minbar/projects/ProjectsHero.tsx");
+  const css = read("styles/minbar/minbar.css");
+  assert.match(hero, /className="mia-projects-hero"/);
+  assert.match(css, /\.mia-projects-page \.mia-projects-hero \.proj-hero-stage \{/);
+  assert.match(css, /\.mia-projects-page \.proj-hero-stage > div\[aria-hidden\] > span\[role="img"\]/);
+});
+
+test("public header search exposes suggestions and localized routes without donor records", () => {
+  const header = read("components/minbar/shell/Header.tsx");
+  const control = read("components/minbar/shell/HeaderSearch.tsx");
+  const page = read("app/[locale]/search/page.tsx");
+  const api = read("app/api/minbar/search/route.ts");
+  const source = read("lib/minbar/public-search.ts");
+  assert.match(header, /<HeaderSearch \/>/);
+  assert.match(control, /aria-expanded=\{open\}/);
+  assert.match(control, /aria-controls="mia-header-search-panel"/);
+  assert.match(control, /AbortController/);
+  assert.match(page, /searchPublicContent/);
+  assert.match(api, /SUPPORTED_LOCALES/);
+  assert.match(source, /listProjects\(locale\)/);
+  assert.match(source, /listArticles\(\{ locale, take: 400 \}\)/);
+  assert.doesNotMatch(source, /donor|User\.findMany|donation\.findMany/i);
+});
+
+test("responsive public catalogue and donor account preserve readable narrow grids", () => {
+  const css = read("styles/minbar/minbar.css");
+  assert.match(css, /\.blog-layout \{ grid-template-columns: minmax\(0,1fr\) !important/);
+  assert.match(css, /\.mia-site-search-page__grid \{ grid-template-columns: minmax\(0,1fr\)/);
+  assert.match(css, /\.acc-page \.acc-stats \{ grid-template-columns: repeat\(3,minmax\(0,1fr\)\)/);
+});
