@@ -23,19 +23,6 @@ const ITEMS: readonly Item[] = [
   { route: "zakat", labelKey: "zakat", icon: "zakat" },
 ];
 
-const HIDDEN_ROUTES = new Set<MinbarRoute>([
-  "cart",
-  "checkout",
-  "donationSuccess",
-  "paymentFailed",
-  "paymentCancelled",
-  "paymentProcessing",
-  "paymentPending",
-  "receipt",
-  "waqfCertificate",
-  "thanksCertificate",
-]);
-
 function NavIcon({ name }: { name: Item["icon"] }) {
   const common = {
     width: 23,
@@ -123,10 +110,8 @@ export default function MobileBottomNav({ signedIn = false }: { signedIn?: boole
   const dir = localeDirection(locale);
   const current = routeForPathname(pathname);
 
-  if (current && HIDDEN_ROUTES.has(current)) return null;
-
   const activeRoute: MinbarRoute | null =
-    current === "projectDetail" ? "projects" : current;
+    current === "projectDetail" ? "projects" : current === "donationSuccess" ? "home" : current;
 
   return (
     <nav className="mia-mobile-bottom-nav" dir={dir} aria-label={label("menu")}>
