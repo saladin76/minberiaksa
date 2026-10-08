@@ -13,6 +13,8 @@ import {
   normalizeTimezone,
   wallClock,
   type PrayerScheduleRule,
+  firstChargeForPlan,
+  isPrayerScheduleRule,
 } from "./recurring-schedule";
 
 export const PRAYER_TIME_SOURCE = "AlAdhan/v1 method=13 (Diyanet)";
@@ -130,4 +132,42 @@ export async function nextChargeForStoredPlan(
     return nextPrayerChargeFromRule(plan.scheduleRule, from, validatedTimezone(plan.timezone || ""), fetcher);
   }
   return nextChargeForPlan(plan, from);
+}
+
+
+/**
+ * Settle a confirmed FIRST instalment without calling an external prayer API
+ * in the database transaction. Checkout already stored the verified next
+ * prayer charge. If the first payment is captured on that Friday, skip its
+ * remainder: it is the instalment the donor has JUST paid.
+ *
+ * Every returned prayer date is provisional: the renewal scheduler re-reads
+ * the actual Dhuhr time before contacting the provider. If the original
+ * verified date is missing, corrupt or too old, pause the plan for review,
+ * but NEVER roll back recording money the provider has already collected.
+ */
+export function firstChargeForSettledPlan(
+  plan: { frequency: string; scheduleRule?: unknown; timezone?: string | null; nextBillingDate?: Date | null },
+  paidAt: Date,
+): Date | null {
+  const candidate = plan.scheduleRule;
+  if (!(candidate && typeof candidate === "object" && (candidate as { kind?: unknown }).kind === "prayer")) {
+    return firstChargeForPlan(plan, paidAt);
+  }
+  if (!isPrayerScheduleRule(candidate) || plan.frequency !== "FRIDAY") return null;
+  const timezone = plan.timezone;
+  if (!timezone || normalizeTimezone(timezone, "") !== timezone) return null;
+  const due = plan.nextBillingDate;
+  if (!(due instanceof Date) || !Number.isFinite(due.getTime()) || !Number.isFinite(paidAt.getTime())) return null;
+  const settledWall = wallClock(paidAt, timezone);
+  let next = new Date(due.getTime());
+  if (wallClock(next, timezone).weekday !== FRIDAY) return null;
+  for (let i = 0; i < 520; i += 1) {
+    const nextWall = wallClock(next, timezone);
+    const alreadyPaidThisFriday = settledWall.weekday === FRIDAY &&
+      settledWall.year === nextWall.year && settledWall.month === nextWall.month && settledWall.day === nextWall.day;
+    if (next.getTime() > paidAt.getTime() && !alreadyPaidThisFriday) return next;
+    next = new Date(next.getTime() + 7 * 24 * 60 * 60 * 1000);
+  }
+  return null;
 }
