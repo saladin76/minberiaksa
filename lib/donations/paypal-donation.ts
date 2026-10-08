@@ -17,7 +17,7 @@ import {
   paypalVaultOf,
   type PayPalOrder,
 } from "@/lib/paypal";
-import { firstChargeForPlan } from "@/lib/donations/recurring-schedule";
+import { firstChargeForSettledPlan } from "@/lib/donations/prayer-time-schedule";
 import { dispatchDonationPaid, dispatchEvent } from "@/lib/events/dispatch";
 import { sendDonationFailedConversions } from "@/lib/tracking/donation-conversion-server";
 
@@ -295,7 +295,7 @@ export async function settlePayPalDonation(input: {
     if (fresh.subscriptionId) {
       const plan = await tx.subscription.findUnique({
         where: { id: fresh.subscriptionId },
-        select: { id: true, frequency: true, timezone: true, scheduleRule: true, lastBillingDate: true },
+        select: { id: true, frequency: true, timezone: true, scheduleRule: true, nextBillingDate: true, lastBillingDate: true },
       });
       if (plan && plan.lastBillingDate === null) {
         if (input.vault) {
@@ -308,7 +308,7 @@ export async function settlePayPalDonation(input: {
               paypalCustomerId: input.vault.customerId,
               lastBillingDate: paidAt,
               // The first slot of the plan's own rule after this payment.
-              nextBillingDate: firstChargeForPlan(plan, paidAt),
+              nextBillingDate: firstChargeForSettledPlan(plan, paidAt),
               chargeAttempts: 0,
               lastChargeError: null,
             },
