@@ -159,7 +159,7 @@ export default function AqsaPage({ verse, isra, projects, category = null }: Aqs
       </section>
 
       {/* ── Hero ──────────────────────────────────────────────────────────── */}
-      <section style={{ position: "relative", background: "#A8660C", overflow: "hidden" }}>
+      <section className="aq-mobile-hero" style={{ position: "relative", background: "#A8660C", overflow: "hidden" }}>
         {/* eslint-disable-next-line @next/next/no-img-element -- sets the section height; not a fixed-size image */}
         <img
           src={category?.heroImage || "/minbar/assets/aqsa-hero-3d.png"}

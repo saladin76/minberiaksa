@@ -4723,7 +4723,7 @@ html[data-mia-drawer="open"] .mia-scope .mia-qb-sec { display: none !important; 
     box-shadow: 0 8px 22px rgba(16,33,43,.055) !important;
   }
   .mia-scope #impact-metrics > *:nth-child(3) {
-    grid-column: 1 / -1;
+    grid-column: auto;
     min-height: 108px;
   }
   .mia-scope #impact-metrics b[dir="ltr"] {
@@ -5225,4 +5225,134 @@ html[data-mia-drawer="open"] .mia-scope .mia-qb-sec { display: none !important; 
   .mia-scope .mia-impact-stat > b[dir="ltr"] { font-size: clamp(24px,7vw,29px) !important; }
   .mia-scope .mia-campaign-banner-actions { gap: 6px !important; }
   .mia-scope .mia-campaign-banner-actions > .mia-campaign-banner-button { font-size: 11px !important; }
+}
+
+/* Mobile landmark sections: separate picture and copy in normal document flow.
+   The old absolute hero overlay expanded beyond the intrinsic image height. */
+@media (max-width: 900px) {
+  .mia-scope :is(.aq-mobile-hero,.qd-mobile-hero) {
+    display:flex !important;
+    flex-direction:column !important;
+    padding:0 !important;
+    overflow:hidden;
+    max-width:100%;
+  }
+  .mia-scope :is(.aq-mobile-hero,.qd-mobile-hero) > img {
+    display:block !important;
+    width:100% !important;
+    height:clamp(185px,52vw,360px) !important;
+    object-fit:cover !important;
+    object-position:center 38% !important;
+    flex:none;
+  }
+  .mia-scope .aq-mobile-hero > img { object-position:center 28% !important; }
+  .mia-scope :is(.aq-mobile-hero,.qd-mobile-hero) > div:last-child {
+    position:relative !important;
+    inset:auto !important;
+    width:100%;
+    min-width:0;
+    max-width:100%;
+    box-sizing:border-box;
+  }
+  .mia-scope :is(.aq-mobile-hero,.qd-mobile-hero) :is(.aq-hero,.qd-hero) {
+    width:100% !important; max-width:100%;
+    height:auto !important;
+    padding:0 !important; margin:0 !important;
+    display:block !important;
+  }
+  .mia-scope :is(.aq-mobile-hero,.qd-mobile-hero) :is(.aq-hero,.qd-hero) > div {
+    box-sizing:border-box; width:100%; min-width:0;
+    padding:clamp(18px,4vw,28px) !important;
+    margin:0 !important;
+    justify-items:stretch !important;
+    background:transparent !important;
+  }
+  .mia-scope .aq-mobile-hero { background:#A8660C !important; }
+  .mia-scope .qd-mobile-hero { background:var(--deep) !important; }
+  .mia-scope :is(.aq-mobile-hero,.qd-mobile-hero) h1 {
+    font-size:clamp(24px,5.8vw,36px) !important; line-height:1.4 !important;
+    margin:0 !important; max-width:100%; overflow-wrap:anywhere;
+  }
+  .mia-scope :is(.aq-mobile-hero,.qd-mobile-hero) p {
+    font-size:clamp(14px,3.5vw,17px) !important;
+    line-height:1.8 !important; max-width:100%;
+  }
+  .mia-scope :is(.aq-mobile-hero,.qd-mobile-hero) :is(.aq-hero,.qd-hero) > div > div:last-child {
+    display:grid !important; grid-template-columns:repeat(2,minmax(0,1fr));
+    width:100%; min-width:0; gap:9px !important;
+  }
+  .mia-scope :is(.aq-mobile-hero,.qd-mobile-hero) :is(.aq-hero,.qd-hero) > div > div:last-child > * {
+    min-width:0; width:100%; height:auto !important; min-height:48px;
+    white-space:normal !important; overflow-wrap:anywhere;
+    text-align:center; padding:10px 8px !important;
+    justify-content:center;
+  }
+}
+@media (max-width: 760px) {
+  /* A predictable fixed grid: one prominent figure and two equal secondary cards. */
+  .mia-scope .mia-impact-section .mia-impact-summary {
+    display:grid !important; grid-template-columns:repeat(2,minmax(0,1fr)) !important;
+    width:100%; padding:0 !important; margin:0 !important;
+    gap:10px !important; overflow:visible !important;
+  }
+  .mia-scope .mia-impact-section .mia-impact-summary > .mia-impact-stat {
+    grid-column:auto; width:100% !important; max-width:100% !important; min-width:0 !important;
+    padding:14px 12px !important; margin:0 !important;
+    min-height:120px; box-sizing:border-box;
+    border:1px solid var(--border) !important; border-radius:14px !important;
+    background:#fff !important;
+  }
+  .mia-scope .mia-impact-section .mia-impact-summary > .mia-impact-stat--featured {
+    grid-column:1/-1 !important; min-height:125px;
+  }
+  .mia-scope .mia-impact-section .mia-impact-stat > b[dir="ltr"] {
+    font-size:clamp(22px,6.4vw,35px) !important;
+    max-width:100%; white-space:nowrap; line-height:1.2;
+  }
+  .mia-scope .mia-impact-section .mia-impact-stat--featured > b[dir="ltr"] {
+    font-size:clamp(29px,8.1vw,41px) !important;
+  }
+  .mia-scope .mia-impact-section .mia-impact-stat > span {
+    max-width:100%; overflow-wrap:anywhere;
+    line-height:1.5 !important; font-size:12px !important;
+  }
+  .mia-scope .mia-impact-section .mia-impact-stat > span:last-child {
+    font-size:11px !important;
+  }
+  .mia-scope .mia-impact-section .mia-impact-sectors {
+    display:grid !important; grid-template-columns:repeat(2,minmax(0,1fr)) !important;
+    overflow:visible !important; gap:9px !important;
+  }
+  .mia-scope .mia-impact-section .mia-impact-sector {
+    width:100% !important; max-width:100% !important; min-width:0 !important;
+    box-sizing:border-box; padding:11px !important;
+  }
+  .mia-scope .mia-impact-section .mia-impact-sector-value {
+    font-size:clamp(17px,4.5vw,23px) !important; max-width:100%;
+  }
+  /* The assistant stays usable but stops permanently blanketing page content. */
+  .mia-scope .cg-launch-wrap[data-draggable="1"] {
+    inset-inline-start:auto !important; inset-inline-end:16px !important;
+    bottom:calc(var(--mia-mobile-nav-h,82px) + 15px + env(safe-area-inset-bottom,0px)) !important;
+  }
+  .mia-scope .cg-launch-wrap[data-draggable="1"] .cg-launcher {
+    width:52px !important; height:52px !important;
+    min-width:52px !important; max-width:52px !important;
+    padding:5px !important; gap:0 !important;
+    justify-content:center !important;
+    border-radius:50% !important;
+  }
+  .mia-scope .cg-launch-wrap[data-draggable="1"] .cg-launcher-icon {
+    width:42px !important; height:42px !important;
+    flex:0 0 42px;
+  }
+  .mia-scope .cg-launch-wrap[data-draggable="1"] :is(.cg-launcher-label,.cg-launcher-badge,.cg-teaser) {
+    display:none !important;
+  }
+  .mia-scope .cg-launch-wrap[data-draggable="1"] .cg-halo { width:52px; }
+}
+@media (max-width:380px) {
+  .mia-scope :is(.aq-mobile-hero,.qd-mobile-hero) :is(.aq-hero,.qd-hero) > div > div:last-child {
+    grid-template-columns:minmax(0,1fr);
+  }
 }

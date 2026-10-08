@@ -256,3 +256,21 @@ test("shared Ibadan and travel banners do not force headlines or CTA labels outs
   assert.match(css, /mia-campaign-banner-actions > \.mia-campaign-banner-button[\s\S]*white-space: normal !important/);
   assert.match(css, /friday-prices[\s\S]*grid-template-columns: repeat\(2,minmax\(0,1fr\)\)/);
 });
+
+test("mobile landmark hero overlays become in-flow content instead of covering a clipped image", () => {
+  const aqsa = read("components/minbar/aqsa/AqsaPage.tsx");
+  const jerusalem = read("components/minbar/jerusalem/JerusalemPage.tsx");
+  const css = read("styles/minbar/minbar.css");
+  assert.match(aqsa, /className="aq-mobile-hero"/);
+  assert.match(jerusalem, /className="qd-mobile-hero"/);
+  assert.match(css, /\.aq-mobile-hero,\.qd-mobile-hero\) > div:last-child[\s\S]*position:relative !important/);
+  assert.match(css, /\.aq-mobile-hero,\.qd-mobile-hero\) > img[\s\S]*object-fit:cover !important/);
+});
+test("phone impact statistics and assistant never turn into oversized clipped rails", () => {
+  const css = read("styles/minbar/minbar.css");
+  const concierge = read("components/minbar/concierge/ConciergeLauncher.tsx");
+  assert.match(css, /\.mia-impact-section \.mia-impact-summary[\s\S]*display:grid !important/);
+  assert.match(css, /\.mia-impact-section \.mia-impact-summary > \.mia-impact-stat--featured[\s\S]*grid-column:1\/-1 !important/);
+  assert.match(css, /\.cg-launch-wrap\[data-draggable="1"\] \.cg-launcher[\s\S]*width:52px !important/);
+  assert.match(concierge, /window\.matchMedia\("\(max-width: 760px\)"\)\.matches/);
+});

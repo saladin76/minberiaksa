@@ -13,7 +13,7 @@ import { useConciergeConfig } from "./useConciergeConfig";
 const SEEN_KEY = "mia_concierge_seen";
 const TEASER_KEY = "mia_concierge_teaser_done";
 const TEASER_VISIBLE_MS = 14_000;
-const MOBILE_POS_KEY = "mia_concierge_mobile_pos";
+const MOBILE_POS_KEY = "mia_concierge_mobile_pos_v2";
 
 function readFlag(storage: "local" | "session", key: string): boolean {
   try {
@@ -147,7 +147,7 @@ export default function ConciergeLauncher() {
      the delay set in the dashboard; it leaves by itself after a while. */
   const hiddenHere = !route || HIDDEN_ROUTES.has(route);
   useEffect(() => {
-    if (hiddenHere || open || !config.enabled || !config.teaser || readFlag("session", TEASER_KEY)) return;
+    if (hiddenHere || open || !config.enabled || !config.teaser || window.matchMedia("(max-width: 760px)").matches || readFlag("session", TEASER_KEY)) return;
     const show = window.setTimeout(() => setTeaserOpen(true), Math.max(0, config.teaserDelaySeconds) * 1000);
     return () => window.clearTimeout(show);
   }, [hiddenHere, open, config.enabled, config.teaser, config.teaserDelaySeconds]);
