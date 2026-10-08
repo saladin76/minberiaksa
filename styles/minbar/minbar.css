@@ -4852,3 +4852,106 @@ html[data-mia-drawer="open"] .mia-scope .mia-qb-sec { display: none !important; 
     min-height: 300px !important;
   }
 }
+
+
+/* Projects catalogue — phone/tablet viewport fix (2026-10-08).
+   Scoped to this page to leave the homepage and desktop untouched. */
+@media (max-width: 900px) {
+  .mia-scope .mia-projects-page { min-width: 0; width: 100%; max-width: 100%; overflow-x: clip; }
+  .mia-scope .mia-projects-page .proj-hero-stage {
+    height: clamp(232px, 48vw, 340px) !important;
+  }
+  .mia-scope .mia-projects-page .proj-hero-stage > div > div > div {
+    padding-inline: 56px !important;
+  }
+  .mia-scope .mia-projects-page .proj-hero-copy {
+    max-width: 100% !important; gap: 8px !important;
+  }
+  .mia-scope .mia-projects-page .proj-hero-copy h2 {
+    font-size: clamp(21px, 4.6vw, 30px) !important;
+    line-height: 1.4 !important;
+    text-wrap: balance;
+  }
+  .mia-scope .mia-projects-page #project-filters-section {
+    padding-block: 0 !important;
+  }
+  .mia-scope .mia-projects-page #project-filters-section > div {
+    padding: 14px 16px 8px !important;
+    gap: 0 !important;
+  }
+  .mia-scope .mia-projects-page .proj-filters-wrap {
+    width: 100%; min-width: 0; margin-inline: 0 !important;
+  }
+  .mia-scope .mia-projects-page #proj-filters {
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    justify-content: flex-start !important;
+    align-items: center;
+    gap: 8px !important;
+    overflow-x: auto !important;
+    overflow-y: hidden;
+    scrollbar-width: none;
+    overscroll-behavior-inline: contain;
+    -webkit-overflow-scrolling: touch;
+    scroll-snap-type: x proximity;
+    padding: 2px 3px 8px !important;
+    margin: 0 !important;
+    max-width: 100%;
+  }
+  .mia-scope .mia-projects-page #proj-filters::-webkit-scrollbar { display: none; }
+  .mia-scope .mia-projects-page #proj-filters > .proj-cat {
+    flex: 0 0 auto !important;
+    min-height: 44px !important; height: 44px !important;
+    padding: 0 14px !important;
+    scroll-snap-align: start;
+  }
+  .mia-scope .mia-projects-page #all {
+    padding: 6px 0 calc(24px + env(safe-area-inset-bottom, 0px)) !important;
+    overflow: visible !important;
+  }
+  .mia-scope .mia-projects-page #all > div {
+    padding-inline: 16px !important;
+    gap: 16px !important;
+    min-width: 0;
+  }
+  .mia-scope .mia-projects-page .proj-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 14px !important;
+    min-width: 0;
+  }
+  .mia-scope .mia-projects-page .proj-grid > * { min-width: 0; max-width: 100%; }
+}
+@media (max-width: 640px) {
+  .mia-scope .mia-projects-page .proj-hero-stage {
+    height: clamp(220px, 57vw, 290px) !important;
+  }
+  .mia-scope .mia-projects-page .proj-hero-stage > div > div > div {
+    padding-inline: 18px !important;
+  }
+  .mia-scope .mia-projects-page .proj-hero-copy h2 {
+    font-size: clamp(20px, 5.6vw, 26px) !important;
+    padding-inline: 27px;
+    max-width: 100%;
+  }
+  .mia-scope .mia-projects-page .proj-arrow { display: none !important; }
+  .mia-scope .mia-projects-page .proj-grid { grid-template-columns: minmax(0, 1fr) !important; gap: 14px !important; }
+  .mia-scope .mia-projects-page .pdc-card {
+    width: 100%; min-width: 0;
+    min-height: 410px !important;
+    margin: 0 !important;
+    transform: none;
+  }
+  .mia-scope .mia-projects-page .pdc-body {
+    padding: 16px !important;
+    gap: 10px !important;
+  }
+  .mia-scope .mia-projects-page .pdc-card .pdc-body b { overflow-wrap: anywhere; }
+  .mia-scope .mia-projects-page .proj-filters-wrap::after { display: none !important; }
+  /* The donation card content remains accessible above the global bottom bar. */
+  .mia-scope:has(.mia-projects-page) .mia-wa-fab {
+    bottom: calc(var(--mia-mobile-nav-h, 74px) + 22px + env(safe-area-inset-bottom, 0px)) !important;
+  }
+  .mia-scope:has(.mia-projects-page) .cg-launch-wrap[data-draggable="1"] {
+    bottom: calc(var(--mia-mobile-nav-h, 74px) + 78px + env(safe-area-inset-bottom, 0px)) !important;
+  }
+}

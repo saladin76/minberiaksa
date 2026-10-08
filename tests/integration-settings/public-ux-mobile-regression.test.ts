@@ -182,3 +182,14 @@ test("mobile impact, campaign banners and waqf use the refined layouts", () => {
   assert.match(css, /\.friday-body,[\s\S]*\.ibadan-body[\s\S]*min-height: 220px !important/);
   assert.match(css, /#waqf-areas[\s\S]*grid-template-columns: repeat\(2, minmax\(0,1fr\)\) !important/);
 });
+
+test("projects responsive fixes are page scoped and take precedence across phone/tablet breakpoints", () => {
+  const page = read("components/minbar/projects/ProjectsPage.tsx");
+  const css = read("styles/minbar/minbar.css");
+  assert.match(page, /className="mia-projects-page"/);
+  assert.match(page, /aria-pressed=\{category === c\.id\}/);
+  assert.match(css, /@media \(max-width: 900px\)[\s\S]*\.mia-projects-page #proj-filters \{[\s\S]*flex-wrap: nowrap !important/);
+  assert.match(css, /\.mia-projects-page #all \{[\s\S]*padding: 6px 0/);
+  assert.match(css, /@media \(max-width: 640px\)[\s\S]*\.mia-projects-page \.proj-grid \{ grid-template-columns: minmax\(0, 1fr\)/);
+  assert.match(css, /\.mia-projects-page \.proj-arrow \{ display: none !important/);
+});
