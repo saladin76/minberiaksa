@@ -223,11 +223,16 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
      day and time, in the browser's zone. Set in an effect: the date depends
      on "now", which the server render cannot share. */
   const schedule = orderSchedule(items);
-  const scheduleKey = schedule ? `${schedule.dayOfMonth ?? ""}@${schedule.hour}:${schedule.minute}` : "";
+  const prayerSchedule = schedule?.mode === "prayer";
+  const scheduleKey = schedule ? JSON.stringify(schedule) : "";
   const [nextChargeText, setNextChargeText] = useState<string | null>(null);
   useEffect(() => {
     if (!planFrequency) {
       setNextChargeText(null);
+      return;
+    }
+    if (schedule?.mode === "prayer") {
+      setNextChargeText("موعد متغير: قبل صلاة الجمعة بـ30 دقيقة وفق المدينة المختارة، ويؤكده الخادم قبل إنشاء الاشتراك.");
       return;
     }
     const tz = browserTimezone();
@@ -314,6 +319,10 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
   const onSubmit = async (event: FormEvent) => {
     event.preventDefault();
     if (submitting || !items.length) return;
+    if (prayerSchedule && method === "card" && gateway === "STRIPE") {
+      setError("الخصم المرتبط بوقت الصلاة يحتاج إلى طريقة دفع تدعم الجدولة الدقيقة. اختر PayPal إن كان متاحًا، أو عدّل التوقيت إلى ساعة ثابتة.");
+      return;
+    }
     if (belowMinimum) {
       setError(tGive("belowMinCheckout", { amount: minLabel }));
       return;
