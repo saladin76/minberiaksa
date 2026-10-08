@@ -142,7 +142,7 @@ export async function PATCH(
               action: "SUBSCRIPTION_AMOUNT_REDUCED", entityType: "Subscription", entityId: sub.id,
               messageAr: `تخفيض التبرع الدوري من ${sub.amount} إلى ${newAmount} ${sub.currency} بموافقة المتبرع`,
               messageEn: `Recurring plan reduced ${sub.amount} -> ${newAmount} ${sub.currency} with documented donor consent`,
-              metadata: { oldAmount: sub.amount, newAmount, currency: sub.currency, rail, consentMethod: proofType, consentEvidence: evidence, nextBillingDate: sub.nextBillingDate.toISOString() },
+              metadata: { oldAmount: sub.amount, newAmount, currency: sub.currency, rail, consentMethod: proofType, consentEvidence: evidence, nextBillingDate: sub.nextBillingDate?.toISOString() },
             },
           });
         });
