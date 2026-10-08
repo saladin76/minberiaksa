@@ -22,8 +22,7 @@ test("one-to-one WhatsApp preserves the 24h free-form path and separates Utility
   assert.match(source, /FREEFORM/);
   assert.match(source, /UTILITY/);
   assert.match(source, /MARKETING/);
-  // Current product behavior intentionally does not hard-block one-to-one
-  // marketing sends on the internal whatsappOptIn flag.
+  // This regression is scoped to the separate existing one-to-one flow.
   assert.doesNotMatch(source, /WHATSAPP_MARKETING_OPT_IN_REQUIRED/);
   assert.match(source, /UTILITY_TEMPLATE_FALLBACK/);
   assert.match(source, /MARKETING_TEMPLATE/);
@@ -43,7 +42,6 @@ test("smart WhatsApp remains an extension of the existing conversation and sende
 test("campaign sending keeps pause, quiet hours, daily cap, speed controls and resumable delivery", () => {
   const controls = read("lib/communication/campaign-send-controls.ts");
   const executor = read("lib/communication/campaign-send-executor.ts");
-
   assert.match(controls, /paused/);
   assert.match(controls, /quietHours/);
   assert.match(controls, /dailyCap/);
@@ -51,7 +49,6 @@ test("campaign sending keeps pause, quiet hours, daily cap, speed controls and r
   assert.match(controls, /BALANCED/);
   assert.match(controls, /FAST/);
   assert.match(controls, /MAX/);
-
   assert.match(executor, /sendProgress/);
   assert.match(executor, /sendLease/);
   assert.match(executor, /ALREADY_PROCESSED/);
@@ -78,12 +75,10 @@ test("dashboard keeps the simple operator-facing Smart WhatsApp flow", () => {
   assert.match(dialog, /Marketing/);
 });
 
-
 test("campaign progress updates preserve live send controls through compare-and-swap", () => {
   const store = read("lib/communication/campaign-metadata-store.ts");
   const executor = read("lib/communication/campaign-send-executor.ts");
   const controlsRoute = read("app/api/communication/campaigns/[id]/controls/route.ts");
-
   assert.match(store, /updatedAt/);
   assert.match(store, /updateMany/);
   assert.match(store, /expectedStatus/);
@@ -96,14 +91,12 @@ test("campaign progress updates preserve live send controls through compare-and-
 
 test("campaign resume lease is claimed atomically and cannot overwrite cancellation", () => {
   const executor = read("lib/communication/campaign-send-executor.ts");
-
   assert.match(executor, /leaseClaimed/);
   assert.match(executor, /leaseIsFresh\(currentLease\)/);
   assert.match(executor, /return null/);
   assert.match(executor, /expectedStatus: "SENDING"/);
   assert.match(executor, /never overwrite concurrent campaign cancellation|Concurrent/i);
 });
-
 
 test("PayFor success keeps donation notification dispatch alive after redirect", () => {
   const route = read("app/api/payfor/3dpay/ok/route.ts");
@@ -114,7 +107,6 @@ test("PayFor success keeps donation notification dispatch alive after redirect",
 
 test("automatic donation dispatch is observable and recoverable after interruption", () => {
   const source = read("lib/events/dispatch.ts");
-
   assert.match(source, /DISPATCH_CLAIM_LEASE_MS/);
   assert.match(source, /state: "IN_PROGRESS"/);
   assert.match(source, /state: "COMPLETED"/);
@@ -123,13 +115,11 @@ test("automatic donation dispatch is observable and recoverable after interrupti
   assert.match(source, /META_DIRECT_SEND_OR_TEMPLATE_REQUIRED|sendTriggerMessage/);
 });
 
-
 test("advanced campaign controls include auto speed, scheduled stop, priority, and emergency gating", () => {
   const controls = read("lib/communication/campaign-send-controls.ts");
   const route = read("app/api/communication/campaigns/[id]/controls/route.ts");
   const executor = read("lib/communication/campaign-send-executor.ts");
   const ui = read("app/(dashboard)/dashboard/communication/campaigns/_components/CampaignControlsDialog.tsx");
-
   assert.match(controls, /autoSpeedMode/);
   assert.match(controls, /scheduledStopAt/);
   assert.match(controls, /resumeAt/);
@@ -151,13 +141,11 @@ test("advanced campaign controls keep restart windows sane", () => {
   assert.match(route, /وقت الاستئناف يجب أن يكون بعد وقت التوقف/);
 });
 
-
 test("global campaign emergency stop is persisted, admin-only, and enforced before sends", () => {
   const schema = read("prisma/schema.prisma");
   const controls = read("lib/communication/campaign-send-controls.ts");
   const route = read("app/api/communication/campaigns/global-controls/route.ts");
   const actions = read("app/(dashboard)/dashboard/communication/campaigns/_components/CampaignRowActions.tsx");
-
   assert.match(schema, /model CommunicationGlobalControl/);
   assert.match(controls, /communicationGlobalControl\.findUnique/);
   assert.match(controls, /communicationGlobalControl\.upsert/);
@@ -168,11 +156,9 @@ test("global campaign emergency stop is persisted, admin-only, and enforced befo
   assert.match(actions, /SCHEDULED_STOP/);
 });
 
-
 test("WhatsApp campaign creation configures send controls before the campaign row is created", () => {
   const wizard = read("app/(dashboard)/dashboard/communication/campaigns/new/_components/NewCampaignWizard.tsx");
   const route = read("app/api/communication/campaigns/route.ts");
-
   assert.match(wizard, /"التحكم"/);
   assert.match(wizard, /التالي: إعداد الإرسال/);
   assert.match(wizard, /sendControls/);
@@ -189,7 +175,6 @@ test("campaign controls dialog stays scrollable and cannot bubble clicks into th
   assert.match(dialog, /onClick=\{\(event\) => event\.stopPropagation\(\)\}/);
   assert.match(dialog, /onPointerDown=\{\(event\) => event\.stopPropagation\(\)\}/);
 });
-
 
 test("WhatsApp inbox defaults to all conversations and remembers an available sender", () => {
   const inbox = read("app/(dashboard)/dashboard/communication/inbox/_components/WhatsappInbox.tsx");
@@ -230,17 +215,15 @@ test("campaign wizard never assumes an error response is JSON", () => {
   assert.doesNotMatch(wizard, /const json = await res\.json\(\)/);
 });
 
-
-test("campaign audience explains why a donor is unavailable and does not trust non-JSON responses", () => {
+test("campaign picker explains the shared eligibility policy without manufacturing consent", () => {
   const picker = read("app/(dashboard)/dashboard/communication/campaigns/new/_components/DonorPicker.tsx");
   const route = read("app/api/communication/audience-candidates/route.ts");
   assert.match(route, /eligibilityReason/);
-  // Preserve the current product rule: WhatsApp availability is phone/contact
-  // based here; the UI must not invent a marketing-consent rejection.
-  assert.doesNotMatch(route, /لا توجد موافقة واتساب تسويقية/);
-  assert.match(route, /if \(channel === "WHATSAPP"\) return null/);
-  assert.match(route, /لا توجد موافقة SMS/);
-  assert.match(route, /لا توجد موافقة بريد تسويقي/);
+  assert.match(route, /recipientExclusionReason\(donor, channel, profile\)/);
+  assert.match(route, /RECIPIENT_REASON_LABELS\[reason\]/);
+  assert.match(route, /campaignCandidateWhere\(base, channel, eligibility\)/);
+  assert.doesNotMatch(route, /if \(channel === "WHATSAPP"\) return null/);
+  assert.doesNotMatch(route, /ensureProfilesForUsers|setProfileConsent/);
   assert.match(picker, /eligibilityReason/);
   assert.match(picker, /async function readApiJson/);
   assert.doesNotMatch(picker, /const json = await res\.json\(\)/);
@@ -253,7 +236,6 @@ test("automatic-events list fails visibly instead of spinning forever", () => {
   assert.match(triggers, /إعادة المحاولة/);
 });
 
-
 test("campaign audience badge evaluation stays scoped to visible donors", () => {
   const badges = read("lib/badge-criteria.ts");
   assert.match(badges, /candidateUserIds\?: string\[\]/);
@@ -261,19 +243,15 @@ test("campaign audience badge evaluation stays scoped to visible donors", () => 
   assert.match(badges, /getUserIdsMatchingBadge\(badge\.criteria, userIds\)/);
 });
 
-
 test("Smart WhatsApp preserves the current consent surface without adding a new operator flow", () => {
   const route = read("app/api/dashboard/communication/whatsapp/smart-send/route.ts");
   const dialog = read("components/dashboard/SmartWhatsappDialog.tsx");
-  // The existing backend audit capability remains available, but this change
-  // must not introduce a new consent-management UI or hard sending gate.
   assert.match(route, /consentSchema/);
   assert.match(route, /dashboard-manual-whatsapp-confirmation/);
   assert.match(route, /setProfileConsent/);
   assert.doesNotMatch(dialog, /تسجيل الموافقة/);
   assert.doesNotMatch(dialog, /setMarketingConsent/);
 });
-
 
 test("campaign membership stays separate from consent and is rechecked before provider calls", () => {
   const audience = read("lib/communication/audience-service.ts");
@@ -283,9 +261,6 @@ test("campaign membership stays separate from consent and is rechecked before pr
   const smart = read("lib/communication/smart-whatsapp-service.ts");
   const dialog = read("components/dashboard/SmartWhatsappDialog.tsx");
   const retry = read("lib/communication/delivery-retry-service.ts");
-
-  // Replace the retired bulk-campaign phone-only expectation, not the
-  // unrelated one-to-one UI contract. Behavioral cases live in the audience suite.
   assert.match(audience, /recipientExclusionReason\(donor, channel, profile\)/);
   assert.match(policy, /channel === "WHATSAPP" \? preview\.matched : preview\.eligible/);
   assert.match(policy, /profile\.whatsappOptIn !== true/);
