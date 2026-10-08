@@ -83,7 +83,7 @@ test("guest checkout rejects an empty phone that is only a dial code", () => {
 test("recurring donation puts the plan builder before video on phones", () => {
   const page = read("components/minbar/recurring/RecurringPage.tsx");
   const css = read("styles/minbar/minbar.css");
-  assert.match(page, /className="rc-builder"/);
+  assert.match(page, /className="rc-builder(?: mia-donation-builder)?"/);
   assert.match(css, /#rc-grid \.rc-builder \{ order: 1; \}/);
   assert.match(css, /#rc-grid \.rc-video \{ order: 2; \}/);
 });
