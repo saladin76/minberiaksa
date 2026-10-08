@@ -4,7 +4,7 @@ import fs from "node:fs";
 import path from "node:path";
 import vm from "node:vm";
 import ts from "typescript";
-import { campaignAudienceSelectionCount, recipientExclusionReason, type AudienceChannel, type RecipientConsent } from "../../lib/communication/campaign-audience-accounting";
+import { campaignAudienceSelectionCount, previewConsentForLegacyDonor, recipientExclusionReason, type AudienceChannel, type RecipientConsent } from "../../lib/communication/campaign-audience-accounting";
 import { summarizeCampaignAudience, type AudienceAccountingRow } from "../../lib/communication/audience-preview-accounting";
 import { normalizeCampaignContact } from "../../lib/communication/campaign-contact-validation";
 
@@ -43,7 +43,8 @@ for (const channel of ["WHATSAPP", "EMAIL", "SMS"] as const) {
 test("draft membership never claims all selected contacts have permission to send", () => {
   const preview = { matched: 14842, eligible: 5182, missingContact: 9000, doNotContact: 660 };
   assert.equal(campaignAudienceSelectionCount("WHATSAPP", preview), 14842);
-  assert.equal(campaignAudienceSelectionCount("EMAIL", preview), 5182);
+  assert.equal(campaignAudienceSelectionCount("EMAIL", preview), 14842);
+  assert.equal(campaignAudienceSelectionCount("SMS", preview), 14842);
   assert.equal(campaignAudienceSelectionCount("WHATSAPP", null), 0);
   assert.equal(campaignAudienceSelectionCount("WHATSAPP", { ...preview, matched: NaN }), 0);
 });
@@ -136,3 +137,23 @@ for (const scenario of guardCases) {
     if (scenario.throws) assert.equal(result.unavailable, true);
   });
 }
+
+test("preview and bootstrap agree for missing legacy email/SMS profiles, never infer WhatsApp consent", () => {
+  const legacy = { email: "legacy@example.test", phone: "+905551112233", emailNotifications: true, smsNotifications: true };
+  assert.equal(recipientExclusionReason(legacy, "EMAIL", previewConsentForLegacyDonor(legacy, "EMAIL", null)), null);
+  assert.equal(recipientExclusionReason(legacy, "SMS", previewConsentForLegacyDonor(legacy, "SMS", null)), null);
+  assert.equal(recipientExclusionReason(legacy, "WHATSAPP", previewConsentForLegacyDonor(legacy, "WHATSAPP", null)), "NEEDS_CONSENT_REVIEW");
+  const legacyOptedOut = { ...legacy, emailNotifications: false };
+  assert.equal(recipientExclusionReason(legacyOptedOut, "EMAIL", previewConsentForLegacyDonor(legacyOptedOut, "EMAIL", null)), "EMAIL_OPT_IN_REQUIRED");
+  assert.equal(recipientExclusionReason(legacy, "EMAIL", previewConsentForLegacyDonor(legacy, "EMAIL", { doNotContact: true, emailOptIn: true })), "DO_NOT_CONTACT");
+});
+test("legacy email/SMS previews account for the whole matching audience instead of discarding non-profile donors", async () => {
+  const outcome = await summarizeCampaignAudience(rows([
+    row(1, { communicationProfile: null, emailNotifications: true }),
+    row(2, { communicationProfile: null, emailNotifications: false }),
+    row(3, { communicationProfile: allowed }),
+  ]), "EMAIL");
+  assert.equal(outcome.matched, 3);
+  assert.equal(outcome.eligible, 2);
+  assert.equal(outcome.needsReview, 1);
+});

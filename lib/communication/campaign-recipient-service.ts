@@ -134,7 +134,7 @@ export async function loadCampaignRecipients(
       members = page.members.map((member) => ({ cursorId: member.id, userId: member.id, name: member.name, email: member.email, phone: member.phone, locale: member.locale, country: member.countryCode }));
       nextCursor = page.nextCursor;
       exhausted = page.exhausted;
-      bootstrapLegacy = false;
+      bootstrapLegacy = true;
     } else {
       if (list.type === "SMART") throw new Error("SMART_AUDIENCE_DEFINITION_UNAVAILABLE");
       const page = await readCampaignListPage(listId, { limit, cursorId: cursor });

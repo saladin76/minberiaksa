@@ -102,7 +102,7 @@ test("Smart WhatsApp preserves the current consent surface without adding a new 
 });
 test("campaign membership stays separate from consent and is rechecked before provider calls", () => {
   requires("lib/communication/audience-service.ts", [/recipientExclusionReason\(donor, channel, profile\)/]);
-  requires("lib/communication/campaign-audience-accounting.ts", [/channel === "WHATSAPP" \? preview\.matched : preview\.eligible/, /profile\.whatsappOptIn !== true/, /profile\?\.doNotContact === true/]);
+  requires("lib/communication/campaign-audience-accounting.ts", [/const value = preview\.matched/, /profile\.whatsappOptIn !== true/, /profile\?\.doNotContact === true/]);
   requires("lib/communication/campaign-recipient-guard.ts", [/prisma\.user\.findUnique/, /CONSENT_CHECK_UNAVAILABLE/]);
   const executor = read(executorPath);
   const checkAt = executor.indexOf("await checkCampaignRecipientBeforeSend"), sendAt = executor.indexOf("await sendPreparedDelivery");

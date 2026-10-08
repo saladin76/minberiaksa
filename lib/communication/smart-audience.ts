@@ -194,6 +194,8 @@ async function resolveSmartAudienceUserWhere(definition: SmartAudienceDefinition
 }
 
 type SmartUserRow = {
+  emailNotifications?: boolean;
+  smsNotifications?: boolean;
   id: string;
   name: string | null;
   email: string | null;
@@ -264,7 +266,7 @@ export async function previewSmartAudience(
         where: { AND: [where, { id: { lte: last.id, ...(cursor ? { gt: cursor } : {}) } }] },
         select: {
           id: true, name: true, email: true, phone: true,
-          preferredLang: true, countryCode: true,
+          preferredLang: true, countryCode: true, emailNotifications: true, smsNotifications: true,
           communicationProfile: { select: { doNotContact: true, emailOptIn: true, smsOptIn: true, whatsappOptIn: true } },
         },
         orderBy: { id: "asc" },
@@ -274,6 +276,7 @@ export async function previewSmartAudience(
       for (const user of page) {
         yield {
           id: user.id, name: user.name, email: user.email, phone: user.phone,
+          emailNotifications: user.emailNotifications, smsNotifications: user.smsNotifications,
           countryCode: user.countryCode, communicationProfile: user.communicationProfile,
           locale: user.preferredLang && isValidLocale(user.preferredLang) ? user.preferredLang : DEFAULT_LOCALE,
         };
