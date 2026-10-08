@@ -299,21 +299,22 @@ export async function settlePayPalDonation(input: {
       });
       if (plan && plan.lastBillingDate === null) {
         if (input.vault) {
+          const nextBillingDate = firstChargeForSettledPlan(plan, paidAt);
           await tx.subscription.update({
             where: { id: plan.id },
             data: {
-              status: "ACTIVE",
+              status: nextBillingDate ? "ACTIVE" : "PAUSED",
               provider: "PAYPAL",
               paypalVaultId: input.vault.id,
               paypalCustomerId: input.vault.customerId,
               lastBillingDate: paidAt,
               // The first slot of the plan's own rule after this payment.
-              nextBillingDate: firstChargeForSettledPlan(plan, paidAt),
+              nextBillingDate,
               chargeAttempts: 0,
-              lastChargeError: null,
+              lastChargeError: nextBillingDate ? null : "PRAYER_NEXT_CHARGE_REQUIRES_REVIEW",
             },
           });
-          subscriptionActivated = true;
+          subscriptionActivated = nextBillingDate !== null;
         } else {
           console.error("[paypal] first instalment settled without a vaulted wallet", fresh.id);
           await tx.subscription.update({
