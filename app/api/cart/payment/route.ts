@@ -35,6 +35,7 @@ import {
   scheduleRuleFor,
 } from "@/lib/donations/recurring-schedule";
 import { parseMainGateway } from "@/lib/payment-gateway";
+import { firstPrayerChargeAfterCheckout } from "@/lib/donations/prayer-time-schedule";
 import { isAlbarakaConfigured, isAlbarakaRecurringEnabled } from "@/lib/albaraka";
 import { isPayPalConfigured, isPayPalRecurringEnabled } from "@/lib/paypal";
 import { mintDonationAccessToken } from "@/lib/donations/access-token";
@@ -250,6 +251,7 @@ export async function POST(request: NextRequest) {
     }
     const frequency = frequencyOfOrderType(type);
     const timezone = normalizeTimezone(timezoneIn);
+    if (scheduleIn && typeof scheduleIn === "object" && !Array.isArray(scheduleIn) && (scheduleIn as { mode?: unknown }).mode === "prayer" && timezone !== timezoneIn) return NextResponse.json({ error: "A valid donor timezone is required for prayer scheduling" }, { status: 400 });
     /* Never let a malformed schedule fall back to a different one silently:
        the donor would be charged on a day they did not pick. */
     const scheduleChoice = parseScheduleChoice(frequency ? scheduleIn : null);
@@ -612,6 +614,9 @@ export async function POST(request: NextRequest) {
          vaulted at the first instalment); a card plan's rail follows the
          cadence and the main gateway. */
       const rail = isPayPal ? ("PAYPAL" as const) : railForFrequency(frequency, parseMainGateway(settings?.mainGateway));
+      if (scheduleChoice.value?.mode === "prayer" && rail === "STRIPE") {
+        return NextResponse.json({ error: "Prayer-linked timing is not supported by Stripe subscriptions. Select a fixed time or another available payment method." }, { status: 400 });
+      }
       if (rail === "ALBARAKA" && !(isAlbarakaConfigured() && isAlbarakaRecurringEnabled())) {
         return NextResponse.json(
           { error: "Recurring donations at this frequency are not available at the moment" },
@@ -626,7 +631,15 @@ export async function POST(request: NextRequest) {
          `consentSnapshot` is never rewritten. */
       const now = new Date();
       const rule = scheduleRuleFor(frequency, now, timezone, scheduleChoice.value);
-      const nextBilling = firstChargeAfterCheckout(rule, now, timezone);
+      let nextBilling: Date;
+      try {
+        nextBilling = rule.kind === "prayer"
+          ? await firstPrayerChargeAfterCheckout(rule, now, timezone)
+          : firstChargeAfterCheckout(rule, now, timezone);
+      } catch (error) {
+        console.error("[recurring] prayer time resolution failed", error instanceof Error ? error.message : "unknown");
+        return NextResponse.json({ error: "Unable to calculate prayer time at the selected location. Please choose a fixed time or try again later." }, { status: 503 });
+      }
       const consent = consentSnapshotFor({
         frequency,
         amount: finalTotalAmount,
@@ -635,9 +648,13 @@ export async function POST(request: NextRequest) {
         rail,
         locale: validLocale,
         now,
-        rule,
+        rule: rule.kind === "prayer" ? undefined : rule,
         notes: scheduleChoice.value?.notes ?? null,
       });
+      if (rule.kind === "prayer") {
+        consent.schedule = rule;
+        consent.nextChargeAt = nextBilling.toISOString();
+      }
 
       const result = await prisma.$transaction(async (tx) => {
         const sub = await tx.subscription.create({
