@@ -26,7 +26,7 @@ import { normalizeDonationCurrencyCode } from "@/lib/exchange/convert-amount-in-
 import { getDonorCountryCodeForSnapshot } from "@/lib/donations/donor-country-code";
 import { dispatchDonationPaid, dispatchEvent } from "@/lib/events/dispatch";
 import { sendDonationFailedConversions } from "@/lib/tracking/donation-conversion-server";
-import { isPrayerScheduleRule, nextChargeForPlan, nextRetryAt } from "./recurring-schedule";
+import { isPrayerScheduleRule, nextRetryAt } from "./recurring-schedule";
 import { nextChargeForStoredPlan, nextPrayerChargeFromRule } from "./prayer-time-schedule";
 import { mintDonationAccessToken } from "@/lib/donations/access-token";
 
@@ -177,6 +177,7 @@ async function chargeOne(sub: DueSubscription, now: Date, dryRun: boolean): Prom
 
   /* A prayer schedule is revalidated against the provider before any provider call.
      Never charge earlier than the recalculated Dhuhr-based time. */
+  if (sub.scheduleRule && typeof sub.scheduleRule === "object" && (sub.scheduleRule as {kind?: unknown}).kind === "prayer" && !isPrayerScheduleRule(sub.scheduleRule)) throw new Error("PRAYER_RULE_INVALID");
   if (isPrayerScheduleRule(sub.scheduleRule)) {
     if (sub.frequency !== "FRIDAY" || !sub.timezone) throw new Error("PRAYER_RULE_INVALID");
     const dayBefore = new Date(due.getTime() - 7 * 86400_000);
@@ -194,6 +195,10 @@ async function chargeOne(sub: DueSubscription, now: Date, dryRun: boolean): Prom
   if (existing) {
     return { ...base, donationId: existing.id, result: "already_attempted" };
   }
+
+  // Calculate the next due date before ANY provider charge, so a prayer API outage
+  // cannot leave a charged instalment without a settled next-cycle checkpoint.
+  const nextBillingDateSafe = await nextCycleAfter(sub, due, now);
 
   // ── The card ─────────────────────────────────────────────────────────────
   const card = sub.paymentCard;
@@ -297,7 +302,7 @@ async function chargeOne(sub: DueSubscription, now: Date, dryRun: boolean): Prom
   }
 
   // ── Settle ───────────────────────────────────────────────────────────────
-  const nextBillingDate = await nextCycleAfter(sub, due, now);
+  const nextBillingDate = nextBillingDateSafe;
   await prisma.$transaction(async (tx) => {
     const fresh = await tx.donation.findUnique({ where: { id: donation.id }, include: { items: true, categoryItems: true } });
     if (!fresh || fresh.paidAt) return;
