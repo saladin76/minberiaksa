@@ -13,15 +13,15 @@ import { normalizeCampaignContact } from "../../lib/communication/campaign-conta
 function loadIsolated<T>(file: string, dependencies: Record<string, unknown>): T {
   const source = fs.readFileSync(path.join(process.cwd(), file), "utf8");
   const output = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
-  const module = { exports: {} };
+  const isolatedModule = { exports: {} };
   new vm.Script(output, { filename: file }).runInNewContext({
-    module, exports: module.exports,
+    module: isolatedModule, exports: isolatedModule.exports,
     require: (id: string) => {
       if (!(id in dependencies)) throw new Error(`Unexpected dependency: ${id}`);
       return dependencies[id];
     },
   });
-  return module.exports as T;
+  return isolatedModule.exports as T;
 }
 
 const allowed: RecipientConsent = { doNotContact: false, whatsappOptIn: true, emailOptIn: true, smsOptIn: true };
