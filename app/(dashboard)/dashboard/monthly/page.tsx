@@ -423,6 +423,11 @@ export default function MonthlySubscriptionsDashboardPage() {
   const [subsSortBy, setSubsSortBy] = useState<"date" | "amount">("date");
   const [subsSortOrder, setSubsSortOrder] = useState<"asc" | "desc">("desc");
   const [subsStatusUpdatingId, setSubsStatusUpdatingId] = useState<string | null>(null);
+  const [reducePlan, setReducePlan] = useState<SubscriptionRow | null>(null);
+  const [reduceAmount, setReduceAmount] = useState("");
+  const [reduceMethod, setReduceMethod] = useState<"PHONE" | "EMAIL" | "WHATSAPP" | "SIGNED">("PHONE");
+  const [reduceEvidence, setReduceEvidence] = useState("");
+  const [reduceBusy, setReduceBusy] = useState(false);
   const [providerChecks, setProviderChecks] = useState<
     Record<string, { loading: boolean; result?: { rail: string; providerStatus: string | null; providerPaused: boolean | null; inSync: boolean; error?: string } }>
   >({});
@@ -758,6 +763,33 @@ export default function MonthlySubscriptionsDashboardPage() {
       frequencyFilter,
     ]
   );
+
+  const submitSubscriptionReduction = useCallback(async () => {
+    if (!reducePlan || reduceBusy) return;
+    const amount = Number(reduceAmount);
+    if (!Number.isFinite(amount) || amount < 1 || amount >= reducePlan.amount || reduceEvidence.trim().length < 12) {
+      toast.error("أدخل مبلغًا أقل، مع إثبات موافقة المتبرع (12 حرفًا على الأقل)");
+      return;
+    }
+    setReduceBusy(true);
+    try {
+      const res = await axios.patch(`/api/admin/subscriptions/${reducePlan.id}`, {
+        amount, consentMethod: reduceMethod, consentEvidence: reduceEvidence.trim(),
+      });
+      if (!res.data?.ok) throw new Error("Reduction not confirmed");
+      toast.success("تم تخفيض المبلغ ابتداءً من الدورة القادمة وتوثيق موافقة المتبرع");
+      setReducePlan(null);
+      setReduceEvidence("");
+      setReduceAmount("");
+      setSubsPage(1);
+      await fetchSubscriptions(1, false);
+      void fetchStats();
+    } catch (error) {
+      toast.error(axios.isAxiosError(error) ? (error.response?.data?.error ?? "تعذّر التخفيض") : "تعذّر التخفيض");
+    } finally {
+      setReduceBusy(false);
+    }
+  }, [reducePlan, reduceBusy, reduceAmount, reduceMethod, reduceEvidence, fetchSubscriptions, fetchStats]);
 
   const handleSubscriptionStatusChange = useCallback(
     async (
@@ -2418,6 +2450,37 @@ export default function MonthlySubscriptionsDashboardPage() {
           unplaced={dayOfMonth.unplaced}
         />
 
+      {reducePlan && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4" role="presentation">
+          <div className="w-full max-w-md bg-white rounded-xl shadow-xl p-6 space-y-4 text-right" dir="rtl" role="dialog" aria-modal="true" aria-labelledby="reduce-sub-title">
+            <h3 id="reduce-sub-title" className="text-lg font-bold">تخفيض مبلغ التبرع الدوري</h3>
+            <p className="text-sm text-slate-600">المبلغ الحالي: {reducePlan.amount} {reducePlan.currency}. يبدأ المبلغ الجديد من دورة التجديد التالية، ولا يتم خصم مبلغ الآن.</p>
+            <label className="block text-sm font-medium">المبلغ الجديد ({reducePlan.currency})
+              <Input type="number" step="0.01" min="1" max={Math.max(1, reducePlan.amount - 0.01)} value={reduceAmount} onChange={e => setReduceAmount(e.target.value)} dir="ltr" />
+            </label>
+            <label className="block text-sm font-medium">طريقة توثيق موافقة المتبرع
+              <Select value={reduceMethod} onValueChange={v => setReduceMethod(v as typeof reduceMethod)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent dir="rtl">
+                  <SelectItem value="PHONE">مكالمة هاتفية</SelectItem>
+                  <SelectItem value="EMAIL">بريد إلكتروني</SelectItem>
+                  <SelectItem value="WHATSAPP">واتساب</SelectItem>
+                  <SelectItem value="SIGNED">موافقة مكتوبة موقعة</SelectItem>
+                </SelectContent>
+              </Select>
+            </label>
+            <label className="block text-sm font-medium">مرجع الموافقة وتاريخها
+              <textarea className="w-full border border-gray-200 rounded-lg p-3 text-sm min-h-24" maxLength={2000} value={reduceEvidence} onChange={e => setReduceEvidence(e.target.value)} placeholder="التاريخ، وصف الموافقة، ورقم المحادثة أو مرجع المستند" />
+            </label>
+            <p className="text-xs text-slate-500">لا يمكن تغيير مبلغ اشتراك يقترب موعد خصمه خلال 24 ساعة أو يخضع لمحاولة تحصيل جارية. الإلغاء يظل متاحًا عبر إدارة المؤسسة.</p>
+            <div className="flex gap-2">
+              <button type="button" className="bg-brand text-white rounded-lg px-4 py-2 text-sm disabled:opacity-50" disabled={reduceBusy} onClick={() => void submitSubscriptionReduction()}>{reduceBusy ? "جارٍ الحفظ…" : "تأكيد التخفيض"}</button>
+              <button type="button" className="bg-gray-100 rounded-lg px-4 py-2 text-sm" disabled={reduceBusy} onClick={() => setReducePlan(null)}>إغلاق</button>
+            </div>
+          </div>
+        </div>
+      )}
+
         {/* الاشتراكات  الجدول السفلي */}
         <section className="space-y-4">
           <h2 className="text-xs font-semibold text-slate-500 uppercase tracking-wider text-right">
@@ -2611,6 +2674,11 @@ export default function MonthlySubscriptionsDashboardPage() {
                             <span dir="ltr">
                               {formatMoney(s.amount, s.currency, s.amountUSD ?? undefined)}
                             </span>
+                            {(s.status === "ACTIVE" || s.status === "PAUSED") && (
+                              <button type="button" className="block mt-1 text-[11px] text-brand underline hover:text-brand/80" onClick={() => { setReducePlan(s); setReduceAmount(""); setReduceEvidence(""); }}>
+                                تخفيض مبلغ الاشتراك
+                              </button>
+                            )}
                             {/* Daily / Friday plans also show what they add up to in a month. */}
                             {s.frequency && s.frequency !== "MONTHLY" && s.monthlyEquivalentUSD != null && (
                               <span className="block text-[10px] font-normal text-slate-500">

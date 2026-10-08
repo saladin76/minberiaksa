@@ -198,7 +198,7 @@ export async function PUT(
     }
 
     const isAdmin = isRevenueDashboardUser(session);
-    const isOwner = session.user.id === currentDonation.donorId;
+    // Billing updates are institution-only, including the older donation-based endpoint.
 
     if (!currentDonation.subscriptionId) {
       return NextResponse.json(
@@ -248,16 +248,9 @@ export async function PUT(
       });
     }
 
-    if (!isAdmin && !isOwner) {
+    if (!isAdmin) {
       return NextResponse.json(
         { error: 'Forbidden' },
-        { status: 403 }
-      );
-    }
-
-    if (!isAdmin && isOwner && status === 'CANCELLED') {
-      return NextResponse.json(
-        { error: 'Only admin can cancel a subscription' },
         { status: 403 }
       );
     }

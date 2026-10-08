@@ -857,6 +857,11 @@ model Subscription {
   /// retry ladder (`RECURRING_RETRY_HOURS`); reset on every paid cycle.
   chargeAttempts  Int     @default(0)
   lastChargeError String?
+  /// Unique token held during an institution-initiated reprice across provider
+  /// and MongoDB. Fail closed until externally reconciled if a request crashes.
+  /// Optional for backwards-compatible MongoDB documents.
+  amountChangeLock String?
+  amountChangeStartedAt DateTime?
   /// `PAYPAL` plans: the PayPal wallet saved (vaulted) at the first
   /// instalment's capture. The scheduler charges later cycles against it
   /// (lib/donations/paypal-recurring.ts). Null on every other rail.
