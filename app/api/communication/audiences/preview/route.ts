@@ -18,7 +18,11 @@ export async function POST(request: NextRequest) {
 
   let body: Record<string, unknown>;
   try {
-    body = await request.json();
+    const input: unknown = await request.json();
+    if (!input || typeof input !== "object" || Array.isArray(input)) {
+      return NextResponse.json({ ok: false, error: "Invalid JSON object" }, { status: 400 });
+    }
+    body = input as Record<string, unknown>;
   } catch {
     return NextResponse.json({ ok: false, error: "Invalid JSON" }, { status: 400 });
   }
@@ -31,12 +35,14 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const definition = normalizeSmartAudienceDefinition(body.definition ?? body, channel);
-  const preview = await previewSmartAudience(definition, 50);
-
-  return NextResponse.json({
-    ok: true,
-    definition,
-    ...preview,
-  });
+  try {
+    const definition = normalizeSmartAudienceDefinition(body.definition ?? body, channel);
+    const preview = await previewSmartAudience(definition, 50, request.signal);
+    return NextResponse.json({ ok: true, definition, ...preview });
+  } catch {
+    return NextResponse.json(
+      { ok: false, error: "تعذّر حساب الجمهور. أعد المحاولة؛ لم يتم إرجاع أعداد ناقصة أو استبعاد أي سجل بسبب خطأ القراءة." },
+      { status: 503 },
+    );
+  }
 }

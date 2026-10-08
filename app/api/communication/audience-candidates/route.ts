@@ -5,326 +5,190 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 import { requireAdminOrDashboardPermission } from "@/lib/dashboard/api-auth";
 import { prisma } from "@/lib/prisma";
 import { donorChannelEligibility } from "@/lib/communication/audience-service";
+import { recipientExclusionReason, RECIPIENT_REASON_LABELS } from "@/lib/communication/campaign-audience-accounting";
+import { campaignCandidateWhere, candidatePagination } from "@/lib/communication/campaign-candidate-policy";
+import { readCampaignConsentUserIds } from "@/lib/communication/campaign-consent-reader";
 import { isCommunicationChannel } from "@/lib/communication/communication-runtime-types";
 import { getUserIdsMatchingBadge, getBadgeIdsByUser } from "@/lib/badge-criteria";
 import { resolveUserCountry } from "@/lib/dashboard/resolve-user-country";
 import { getCountryDisplayNameFromCode } from "@/lib/dashboard/country-display-name";
 import { isValidLocale, DEFAULT_LOCALE } from "@/lib/locales";
-import {
-  birthdateRangeForAges,
-  genderQueryValues,
-  parseAgeParam,
-  parseGenderParam,
-} from "@/lib/dashboard/user-demographics";
+import { birthdateRangeForAges, genderQueryValues, parseAgeParam, parseGenderParam } from "@/lib/dashboard/user-demographics";
 import { AUDIENCE_SELECTION_MAX } from "@/lib/communication/audience-limits";
-import { ensureProfilesForUsers } from "@/lib/communication/donor-communication-profile-service";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-/**
- * Donors as campaign candidates, for the audience step of the wizard.
- *
- * Deliberately not `/api/users?scope=donors`. That endpoint knows nothing about channels, and for
- * this screen the channel is the whole point: a donor with no phone is a perfectly good donor and a
- * dead SMS recipient. Selecting them there would produce a campaign whose real reach is a fraction
- * of the number shown, discovered only after sending. So each row carries its eligibility for the
- * campaign's channel, and the counts distinguish "matched your filter" from "can actually receive
- * this".
- *
- * WhatsApp donors with a valid phone are eligible unless explicitly marked do-not-contact.
- *
- * Country, badges and language mirror the المتبرعون table so the same audience can be reasoned
- * about the same way in both places. Facets (the filter dropdowns' options) are returned from here
- * rather than fetched separately, so the whole screen needs one permission  `messages`  instead
- * of also requiring `badges` just to populate a filter.
- */
-
-const PAGE_SIZE_MAX = 100;
-/** Shared with the list route and the member writer, so the picker cannot offer an
- *  unsaveable selection. See lib/communication/audience-limits.ts. */
+/** All matching donors remain selectable; readiness filtering is opt-in and read-only. */
 const SELECT_ALL_CEILING = AUDIENCE_SELECTION_MAX;
-
 const donorSelect = {
-  id: true,
-  name: true,
-  email: true,
-  phone: true,
-  image: true,
-  preferredLang: true,
-  country: true,
-  countryCode: true,
-  countryName: true,
+  id: true, name: true, email: true, phone: true, image: true, preferredLang: true,
+  country: true, countryCode: true, countryName: true,
+  communicationProfile: { select: { doNotContact: true, emailOptIn: true, smsOptIn: true, whatsappOptIn: true } },
 } satisfies Prisma.UserSelect;
-
 type DonorRow = Prisma.UserGetPayload<{ select: typeof donorSelect }>;
-
-/** Extra fields eligibility needs but the table never renders. */
-const eligibilitySelect = {
-  id: true,
-  email: true,
-  phone: true,
-  emailNotifications: true,
-  smsNotifications: true,
-} satisfies Prisma.UserSelect;
-
 type FilterInput = {
-  search?: string | null;
-  locale?: string | null;
-  country?: string | null;
-  badgeId?: string | null;
-  gender?: string | null;
-  minAge?: string | number | null;
-  maxAge?: string | number | null;
+  search?: string | null; locale?: string | null; country?: string | null;
+  badgeId?: string | null; gender?: string | null;
+  minAge?: string | number | null; maxAge?: string | number | null;
 };
 
+function reply(body: Record<string, unknown>, status = 200) {
+  return NextResponse.json(body, { status, headers: { "Cache-Control": "private, no-store" } });
+}
 function ageInput(value: string | number | null | undefined): number | null {
-  if (value === null || value === undefined) return null;
-  return parseAgeParam(typeof value === "number" ? String(value) : value);
+  return value === null || value === undefined ? null : parseAgeParam(String(value));
+}
+function parseFilters(value: unknown): FilterInput | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const raw = value as Record<string, unknown>;
+  const result: FilterInput = {};
+  for (const key of ["search", "locale", "country", "badgeId", "gender"] as const) {
+    const entry = raw[key];
+    if (entry === null || entry === undefined || entry === "") continue;
+    if (typeof entry !== "string" || entry.length > (key === "search" ? 200 : 100)) return null;
+    result[key] = entry.trim();
+  }
+  if (result.locale && result.locale !== "all" && !isValidLocale(result.locale)) return null;
+  if (result.country && result.country !== "all") {
+    if (!/^[a-z]{2}$/i.test(result.country)) return null;
+    result.country = result.country.toUpperCase();
+  }
+  if (result.badgeId && result.badgeId !== "all" && !/^[a-f0-9]{24}$/i.test(result.badgeId)) return null;
+  if (result.gender && result.gender !== "all" && !parseGenderParam(result.gender)) return null;
+  for (const key of ["minAge", "maxAge"] as const) {
+    const entry = raw[key];
+    if (entry === null || entry === undefined || entry === "") continue;
+    if (typeof entry !== "number" && typeof entry !== "string") return null;
+    const age = parseAgeParam(String(entry));
+    if (age === null) return null;
+    result[key] = age;
+  }
+  if (typeof result.minAge === "number" && typeof result.maxAge === "number" && result.minAge > result.maxAge) return null;
+  return result;
 }
 
-/**
- * Build the donor `where` for the current filters.
- *
- * Badge membership is computed, not stored  there is no User↔Badge row to join  so a badge filter
- * has to resolve to an id list first, exactly as the المتبرعون endpoint does. An empty result is
- * passed through as `id: { in: [] }` rather than dropped, otherwise "badge with no members" would
- * silently widen to "every donor".
- */
 async function buildWhere(f: FilterInput): Promise<Prisma.UserWhereInput> {
   const where: Prisma.UserWhereInput = { role: "DONOR" };
-
   if (f.locale && f.locale !== "all" && isValidLocale(f.locale)) where.preferredLang = f.locale;
   if (f.country && f.country !== "all") where.countryCode = f.country;
-
   const search = f.search?.trim();
-  if (search) {
-    where.OR = [
-      { name: { contains: search, mode: "insensitive" } },
-      { email: { contains: search, mode: "insensitive" } },
-      { phone: { contains: search } },
-    ];
-  }
-
-  // Gender is stored free-form (signup, complete-profile and the donation dialog
-  // each write it), so match every spelling rather than one canonical value.
+  if (search) where.OR = [
+    { name: { contains: search, mode: "insensitive" } },
+    { email: { contains: search, mode: "insensitive" } },
+    { phone: { contains: search } },
+  ];
   const gender = parseGenderParam(f.gender);
   if (gender) where.gender = { in: genderQueryValues(gender) };
-
-  // `birthdate` is an ISO "YYYY-MM-DD" string and ISO dates sort
-  // lexicographically, so an age range is a plain string range  no computed
-  // field needed. Donors with no birthdate fall out, which is what "aged 25-40"
-  // should mean for a targeted send.
   const birthdateRange = birthdateRangeForAges(ageInput(f.minAge), ageInput(f.maxAge));
   if (birthdateRange) where.birthdate = birthdateRange;
-
   if (f.badgeId && f.badgeId !== "all") {
     const badge = await prisma.badge.findUnique({ where: { id: f.badgeId }, select: { criteria: true } });
     where.id = { in: badge ? await getUserIdsMatchingBadge(badge.criteria) : [] };
   }
-
   return where;
 }
 
 type ConsentProfile = { doNotContact: boolean; emailOptIn: boolean; smsOptIn: boolean; whatsappOptIn: boolean };
-
 function eligibilityReason(
   donor: { email?: string | null; phone?: string | null },
   channel: "EMAIL" | "WHATSAPP" | "SMS",
   profile?: ConsentProfile | null,
 ): string | null {
-  if (profile?.doNotContact) return "التواصل موقوف لهذا المتبرع";
-  if (channel === "EMAIL" && !donor.email) return "لا يوجد بريد إلكتروني";
-  if ((channel === "WHATSAPP" || channel === "SMS") && !donor.phone) return "لا يوجد رقم هاتف";
-  if (channel === "WHATSAPP") return null;
-  if (!profile) return "لم تُراجع موافقة التواصل بعد";
-  if (channel === "EMAIL" && profile.emailOptIn !== true) return "لا توجد موافقة بريد تسويقي";
-  if (channel === "SMS" && profile.smsOptIn !== true) return "لا توجد موافقة SMS";
-  return null;
+  const reason = recipientExclusionReason(donor, channel, profile);
+  return reason === null ? null : RECIPIENT_REASON_LABELS[reason];
 }
-
-function channelEligibilityWhere(
+async function channelEligibilityWhere(
   base: Prisma.UserWhereInput,
   channel: "EMAIL" | "WHATSAPP" | "SMS",
   eligibility: string,
-): Prisma.UserWhereInput {
-  if (eligibility !== "eligible" && eligibility !== "ineligible") return base;
-
-  const eligibleGate: Prisma.UserWhereInput =
-    channel === "EMAIL"
-      ? {
-          email: { not: null },
-          OR: [
-            { communicationProfile: { is: { emailOptIn: true, doNotContact: false } } },
-            // Legacy donors without a profile are bootstrapped from the User
-            // notification flag by ensureProfilesForUsers().
-            { communicationProfile: { is: null }, emailNotifications: true },
-          ],
-        }
-      : channel === "SMS"
-        ? {
-            phone: { not: null },
-            OR: [
-              { communicationProfile: { is: { smsOptIn: true, doNotContact: false } } },
-              { communicationProfile: { is: null }, smsNotifications: true },
-            ],
-          }
-        : {
-            phone: { not: null },
-            OR: [
-              { communicationProfile: { is: null } },
-              { communicationProfile: { is: { doNotContact: false } } },
-            ],
-          };
-
-  // Apply channel eligibility before count/skip/take. Filtering rows after pagination
-  // made totals and page counts lie and could produce an empty page while valid donors
-  // existed later in the result set.
-  return eligibility === "eligible"
-    ? { AND: [base, eligibleGate] }
-    : { AND: [base, { NOT: eligibleGate }] };
-}
-
-async function eligibilityProfiles(userIds: string[]): Promise<Map<string, ConsentProfile>> {
-  if (userIds.length === 0) return new Map();
-  await ensureProfilesForUsers(userIds);
-  const rows = await prisma.donorCommunicationProfile
-    .findMany({
-      where: { userId: { in: userIds } },
-      select: { userId: true, whatsappOptIn: true, emailOptIn: true, smsOptIn: true, doNotContact: true },
-    })
-    .catch(() => []);
-  return new Map(rows.map((r) => [r.userId, r]));
+  signal?: AbortSignal,
+): Promise<Prisma.UserWhereInput> {
+  const ids = eligibility === "all" ? undefined : await readCampaignConsentUserIds(channel, signal);
+  return campaignCandidateWhere(base, channel, eligibility, ids);
 }
 
 export async function GET(request: NextRequest) {
   const session = await getServerSession(authOptions);
   const denied = requireAdminOrDashboardPermission(session, "messages");
   if (denied) return denied;
-
   const sp = request.nextUrl.searchParams;
   const channel = sp.get("channel");
-  if (!isCommunicationChannel(channel)) {
-    return NextResponse.json({ ok: false, error: "channel must be EMAIL, WHATSAPP or SMS" }, { status: 400 });
-  }
-
+  if (!isCommunicationChannel(channel)) return reply({ ok: false, error: "channel must be EMAIL, WHATSAPP or SMS" }, 400);
   const eligibilityFilter = sp.get("eligibility") || "all";
-  const page = Math.max(1, parseInt(sp.get("page") || "1"));
-  const limit = Math.min(PAGE_SIZE_MAX, Math.max(1, parseInt(sp.get("limit") || "25")));
-
-  const baseWhere = await buildWhere({
-    search: sp.get("search"),
-    locale: sp.get("locale"),
-    country: sp.get("country"),
-    badgeId: sp.get("badgeId"),
-    gender: sp.get("gender"),
-    minAge: sp.get("minAge"),
-    maxAge: sp.get("maxAge"),
+  if (!["all", "eligible", "ineligible"].includes(eligibilityFilter)) return reply({ ok: false, error: "Invalid eligibility filter" }, 400);
+  const pagination = candidatePagination(sp.get("page"), sp.get("limit"));
+  const filters = parseFilters({
+    search: sp.get("search"), locale: sp.get("locale"), country: sp.get("country"),
+    badgeId: sp.get("badgeId"), gender: sp.get("gender"), minAge: sp.get("minAge"), maxAge: sp.get("maxAge"),
   });
-  const where = channelEligibilityWhere(baseWhere, channel, eligibilityFilter);
-
-  const [total, rows, allBadges] = await Promise.all([
-    prisma.user.count({ where }),
-    prisma.user.findMany({
-      where,
-      select: { ...donorSelect, ...eligibilitySelect },
-      orderBy: { createdAt: "desc" },
-      skip: (page - 1) * limit,
-      take: limit,
-    }),
-    prisma.badge.findMany({
-      select: { id: true, name: true, color: true, criteria: true, translations: { select: { locale: true, name: true } } },
-      orderBy: { order: "asc" },
-    }),
-  ]);
-
-  const pageIds = rows.map((r) => r.id);
-  const [profiles, badgeIdsByUser] = await Promise.all([
-    eligibilityProfiles(pageIds),
-    pageIds.length ? getBadgeIdsByUser(pageIds, allBadges) : Promise.resolve(new Map<string, string[]>()),
-  ]);
-
-  const donors = rows.map((u) => {
-    const resolved = resolveUserCountry(u as DonorRow);
-    const profile = profiles.get(u.id) ?? null;
-    return {
-      id: u.id,
-      name: u.name,
-      email: u.email,
-      phone: u.phone,
-      image: u.image,
-      locale: u.preferredLang && isValidLocale(u.preferredLang) ? u.preferredLang : DEFAULT_LOCALE,
-      countryCode: resolved.code,
-      countryName: resolved.name,
-      badgeIds: badgeIdsByUser.get(u.id) ?? [],
-      eligibility: donorChannelEligibility(
-        { email: u.email, phone: u.phone, emailNotifications: u.emailNotifications, smsNotifications: u.smsNotifications },
-        channel,
-        profile,
-      ),
-      eligibilityReason: eligibilityReason({ email: u.email, phone: u.phone }, channel, profile),
-      canConfirmWhatsappOptIn: false,
-    };
-  });
-
-  // Facets are computed over ALL donors, not the current filter, so narrowing by one dimension
-  // never empties the other dropdowns and strands the operator with no way back.
-  const countryGroups = await prisma.user.groupBy({
-    by: ["countryCode"],
-    where: { role: "DONOR", countryCode: { not: null } },
-    _count: { id: true },
-  });
-  const countries = countryGroups
-    .filter((c): c is typeof c & { countryCode: string } => Boolean(c.countryCode))
-    .map((c) => ({ code: c.countryCode, name: getCountryDisplayNameFromCode(c.countryCode, "ar"), count: c._count.id }))
-    // Busiest first: with 70+ countries an alphabetical list buries the handful anyone uses.
-    .sort((a, b) => b.count - a.count);
-
-  return NextResponse.json({
-    ok: true,
-    donors,
-    pagination: { total, page, limit },
-    facets: {
-      countries,
-      badges: allBadges.map((b) => ({
-        id: b.id,
-        name: b.translations.find((t) => t.locale === "ar")?.name || b.name,
-        color: b.color,
-      })),
-    },
-  });
+  if (!pagination || !filters) return reply({ ok: false, error: "Invalid audience filters or pagination" }, 400);
+  const { page, limit } = pagination;
+  try {
+    const baseWhere = await buildWhere(filters);
+    const where = await channelEligibilityWhere(baseWhere, channel, eligibilityFilter, request.signal);
+    const [total, rows, allBadges] = await Promise.all([
+      prisma.user.count({ where }),
+      prisma.user.findMany({ where, select: donorSelect, orderBy: [{ createdAt: "desc" }, { id: "desc" }], skip: (page - 1) * limit, take: limit }),
+      prisma.badge.findMany({
+        select: { id: true, name: true, color: true, criteria: true, translations: { select: { locale: true, name: true } } },
+        orderBy: { order: "asc" },
+      }),
+    ]);
+    const pageIds = rows.map((row) => row.id);
+    const badgeIdsByUser = pageIds.length ? await getBadgeIdsByUser(pageIds, allBadges) : new Map<string, string[]>();
+    const donors = rows.map((user) => {
+      const resolved = resolveUserCountry(user as DonorRow);
+      const profile = user.communicationProfile;
+      return {
+        id: user.id, name: user.name, email: user.email, phone: user.phone, image: user.image,
+        locale: user.preferredLang && isValidLocale(user.preferredLang) ? user.preferredLang : DEFAULT_LOCALE,
+        countryCode: resolved.code, countryName: resolved.name, badgeIds: badgeIdsByUser.get(user.id) ?? [],
+        eligibility: donorChannelEligibility(user, channel, profile),
+        eligibilityReason: eligibilityReason(user, channel, profile),
+        canConfirmWhatsappOptIn: false,
+      };
+    });
+    const countryGroups = await prisma.user.groupBy({
+      by: ["countryCode"], where: { role: "DONOR", countryCode: { not: null } }, _count: { id: true },
+    });
+    const countries = countryGroups
+      .filter((country): country is typeof country & { countryCode: string } => Boolean(country.countryCode))
+      .map((country) => ({ code: country.countryCode, name: getCountryDisplayNameFromCode(country.countryCode, "ar"), count: country._count.id }))
+      .sort((a, b) => b.count - a.count);
+    return reply({
+      ok: true, donors, pagination: { total, page, limit },
+      facets: { countries, badges: allBadges.map((badge) => ({
+        id: badge.id, name: badge.translations.find((translation) => translation.locale === "ar")?.name || badge.name, color: badge.color,
+      })) },
+    });
+  } catch {
+    return reply({ ok: false, error: "تعذّر تحميل جمهور الحملة. أعد المحاولة؛ الأعداد غير متاحة وليست صفرًا." }, 503);
+  }
 }
 
-/**
- * Resolve the full id list for the current filter, so «تحديد كل النتائج» selects what the operator
- * sees rather than only the loaded page.
- *
- * A separate POST rather than an ever-growing page size: the answer can be thousands of ids and is
- * only ever needed at the moment of the click, not on every keystroke of the search box.
- */
+/** GET and select-all share the same filtering and order. */
 export async function POST(request: NextRequest) {
   const session = await getServerSession(authOptions);
   const denied = requireAdminOrDashboardPermission(session, "messages");
   if (denied) return denied;
-
-  let body: FilterInput & { channel?: string; eligibility?: string };
+  let body: unknown;
+  try { body = await request.json(); } catch { return reply({ ok: false, error: "Invalid JSON" }, 400); }
+  const filters = parseFilters(body);
+  if (!filters || !body || typeof body !== "object") return reply({ ok: false, error: "Invalid audience filters" }, 400);
+  const input = body as Record<string, unknown>;
+  const channel = input.channel;
+  if (!isCommunicationChannel(channel)) return reply({ ok: false, error: "channel must be EMAIL, WHATSAPP or SMS" }, 400);
+  const eligibilityFilter = input.eligibility ?? "all";
+  if (typeof eligibilityFilter !== "string" || !["all", "eligible", "ineligible"].includes(eligibilityFilter)) return reply({ ok: false, error: "Invalid eligibility filter" }, 400);
   try {
-    body = await request.json();
+    const baseWhere = await buildWhere(filters);
+    const where = await channelEligibilityWhere(baseWhere, channel, eligibilityFilter, request.signal);
+    const rows = await prisma.user.findMany({
+      where, select: { id: true }, orderBy: [{ createdAt: "desc" }, { id: "desc" }], take: SELECT_ALL_CEILING + 1,
+    });
+    return reply({ ok: true, ids: rows.slice(0, SELECT_ALL_CEILING).map((row) => row.id), truncated: rows.length > SELECT_ALL_CEILING });
   } catch {
-    return NextResponse.json({ ok: false, error: "Invalid JSON" }, { status: 400 });
+    return reply({ ok: false, error: "تعذّر تحديد جمهور الحملة. لم يتم اعتماد قائمة بديلة؛ أعد المحاولة." }, 503);
   }
-  const channel = body.channel;
-  if (!isCommunicationChannel(channel)) {
-    return NextResponse.json({ ok: false, error: "channel must be EMAIL, WHATSAPP or SMS" }, { status: 400 });
-  }
-
-  const baseWhere = await buildWhere(body);
-  const where = channelEligibilityWhere(baseWhere, channel, body.eligibility ?? "all");
-  const rows = await prisma.user.findMany({ where, select: { id: true }, take: SELECT_ALL_CEILING });
-
-  return NextResponse.json({
-    ok: true,
-    ids: rows.map((u) => u.id),
-    truncated: rows.length >= SELECT_ALL_CEILING,
-  });
 }

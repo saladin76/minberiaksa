@@ -12,6 +12,7 @@ import { cn } from "@/lib/utils";
 import { CHANNEL_META } from "../../_components/campaign-ui";
 import { SmartAudienceBuilder, type SmartAudienceDraft, type SmartAudiencePreview } from "./SmartAudienceBuilder";
 import { DonorPicker } from "./DonorPicker";
+import { campaignAudienceSelectionCount } from "@/lib/communication/campaign-audience-accounting";
 
 interface TemplateSummary {
   id: string;
@@ -164,6 +165,7 @@ export function NewCampaignWizard() {
   const [badges, setBadges] = React.useState<BadgeSummary[]>([]);
   const [badgeId, setBadgeId] = React.useState("");
   const [badgePreview, setBadgePreview] = React.useState<SmartAudiencePreview | null>(null);
+  const [badgePreviewError, setBadgePreviewError] = React.useState<string | null>(null);
   const [dailyCapSource, setDailyCapSource] = React.useState<"META" | "FALLBACK">("FALLBACK");
   const [smartAudience, setSmartAudience] = React.useState<SmartAudienceDraft>({
     version: 1,
@@ -243,10 +245,10 @@ export function NewCampaignWizard() {
   }, [channel]);
 
   React.useEffect(() => {
-    if (audienceMode !== "BADGE" || !badgeId || !channel) {
-      if (audienceMode !== "BADGE") setBadgePreview(null);
-      return;
-    }
+    setBadgePreview(null);
+    setBadgePreviewError(null);
+    if (audienceMode !== "BADGE" || !badgeId || !channel) return;
+    const controller = new AbortController();
     const definition: SmartAudienceDraft = {
       ...smartAudience,
       channel: channel as SmartAudienceDraft["channel"],
@@ -256,14 +258,24 @@ export function NewCampaignWizard() {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ channel, definition }),
+      signal: controller.signal,
     })
       .then((response) => readApiJson(response, "تعذر معاينة جمهور الشارة"))
-      .then((data) => setBadgePreview(data as unknown as SmartAudiencePreview))
-      .catch(() => setBadgePreview(null));
+      .then((data) => {
+        if (!controller.signal.aborted) setBadgePreview(data as unknown as SmartAudiencePreview);
+      })
+      .catch(() => {
+        if (controller.signal.aborted) return;
+        setBadgePreview(null);
+        setBadgePreviewError("تعذّر حساب جمهور الشارة. أعد المحاولة؛ الأعداد غير متاحة وليست صفرًا.");
+      });
+    return () => controller.abort();
   }, [audienceMode, badgeId, channel, smartAudience]);
 
-  const smartAudienceReady = audienceMode === "SMART" && (smartPreview?.eligible ?? 0) > 0;
-  const badgeAudienceReady = audienceMode === "BADGE" && Boolean(badgeId) && (badgePreview?.eligible ?? 0) > 0;
+  // Saving a draft is not permission to send. The runtime rechecks contact,
+  // consent, approval, template and provider gates for the selected audience.
+  const smartAudienceReady = audienceMode === "SMART" && campaignAudienceSelectionCount(channel, smartPreview) > 0;
+  const badgeAudienceReady = audienceMode === "BADGE" && Boolean(badgeId) && campaignAudienceSelectionCount(channel, badgePreview) > 0;
   const savedAudienceReady = audienceMode === "SAVED" && Boolean(savedListId);
   const specificAudienceReady = audienceMode === "SPECIFIC" && selected.size > 0;
   const audienceReady = smartAudienceReady || badgeAudienceReady || savedAudienceReady || specificAudienceReady;
@@ -274,8 +286,10 @@ export function NewCampaignWizard() {
     : audienceMode === "SAVED"
       ? (selectedSavedList?.membersCount ?? 0)
       : selected.size;
-  const reviewEligible = audienceMode === "SMART" || audienceMode === "BADGE" ? (activePreview?.eligible ?? 0) : reviewMatched;
-  const reviewLanguages = Object.entries(activePreview?.languages ?? {}).sort((a, b) => b[1] - a[1]);
+  const reviewEligible = audienceMode === "SMART" || audienceMode === "BADGE" ? (activePreview?.eligible ?? 0) : null;
+  const reviewLanguages = audienceMode === "SMART" || audienceMode === "BADGE"
+    ? Object.entries(activePreview?.languages ?? {}).sort((a, b) => b[1] - a[1])
+    : [];
 
   const create = async () => {
     if (!name.trim()) {
@@ -285,9 +299,9 @@ export function NewCampaignWizard() {
     if (!audienceReady) {
       toast.error(
         audienceMode === "SMART"
-          ? "لا يوجد مستلم مؤهل ضمن شروط الجمهور الحالية"
+          ? (channel === "WHATSAPP" ? "اختر جمهورًا مطابقًا وانتظر اكتمال المعاينة" : "لا يوجد مستلم مؤهل ضمن شروط الجمهور الحالية")
           : audienceMode === "BADGE"
-            ? "اختر شارة تحتوي على مستلمين مؤهلين"
+            ? (channel === "WHATSAPP" ? "اختر شارة تحتوي على جمهور وانتظر اكتمال المعاينة" : "اختر شارة تحتوي على مستلمين مؤهلين")
             : audienceMode === "SAVED"
               ? "اختر قائمة محفوظة"
               : "اختر متبرعًا واحدًا على الأقل",
@@ -495,7 +509,7 @@ export function NewCampaignWizard() {
                 <Tag className="h-4 w-4 text-brand" />
                 <div>
                   <h3 className="text-sm font-semibold text-slate-900">جمهور من الشارات</h3>
-                  <p className="mt-1 text-xs text-slate-500">الشارات تُحتسب من خصائص وسلوك المتبرعين الحالي، والجمهور يُحل من الخادم وقت الإرسال.</p>
+                  <p className="mt-1 text-xs text-slate-500" role={badgePreviewError ? "alert" : undefined}>{badgePreviewError ?? "تُحفظ كل السجلات المطابقة للشارة؛ الأهلية المبدئية لا تضمن التسليم وتُراجع عند التنفيذ."}</p>
                 </div>
               </div>
               <select
@@ -510,10 +524,10 @@ export function NewCampaignWizard() {
               </select>
               {badgeId && (
                 <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
-                  <div className="rounded-lg bg-slate-50 p-3 text-xs"><span className="text-slate-500">مطابق</span><strong className="mt-1 block text-lg">{(badgePreview?.matched ?? 0).toLocaleString("en-US")}</strong></div>
-                  <div className="rounded-lg bg-emerald-50 p-3 text-xs"><span className="text-emerald-700">قابل للإرسال</span><strong className="mt-1 block text-lg text-emerald-800">{(badgePreview?.eligible ?? 0).toLocaleString("en-US")}</strong></div>
-                  <div className="rounded-lg bg-slate-50 p-3 text-xs"><span className="text-slate-500">بدون وسيلة اتصال</span><strong className="mt-1 block text-lg">{(badgePreview?.missingContact ?? 0).toLocaleString("en-US")}</strong></div>
-                  <div className="rounded-lg bg-slate-50 p-3 text-xs"><span className="text-slate-500">عدم تواصل</span><strong className="mt-1 block text-lg">{(badgePreview?.doNotContact ?? 0).toLocaleString("en-US")}</strong></div>
+                  <div className="rounded-lg bg-slate-50 p-3 text-xs"><span className="text-slate-500">جمهور الحملة</span><strong className="mt-1 block text-lg">{badgePreview ? badgePreview.matched.toLocaleString("en-US") : "—"}</strong></div>
+                  <div className="rounded-lg bg-emerald-50 p-3 text-xs"><span className="text-emerald-700">مؤهل مبدئيًا</span><strong className="mt-1 block text-lg text-emerald-800">{badgePreview ? badgePreview.eligible.toLocaleString("en-US") : "—"}</strong></div>
+                  <div className="rounded-lg bg-slate-50 p-3 text-xs"><span className="text-slate-500">بدون وسيلة اتصال</span><strong className="mt-1 block text-lg">{badgePreview ? badgePreview.missingContact.toLocaleString("en-US") : "—"}</strong></div>
+                  <div className="rounded-lg bg-slate-50 p-3 text-xs" title={badgePreview ? `إيقاف التواصل: ${badgePreview.doNotContact}; مراجعة الموافقة: ${badgePreview.needsReview ?? 0}` : undefined}><span className="text-slate-500">تواصل موقوف / يحتاج مراجعة</span><strong className="mt-1 block text-lg">{badgePreview ? (badgePreview.doNotContact + (badgePreview.needsReview ?? 0)).toLocaleString("en-US") : "—"}</strong></div>
                 </div>
               )}
             </div>
@@ -736,7 +750,7 @@ export function NewCampaignWizard() {
         <div className="space-y-4">
           <div className="rounded-xl border border-brand/20 bg-brand-50/40 p-4">
             <h3 className="text-sm font-semibold text-slate-900">مراجعة الحملة قبل الإنشاء</h3>
-            <p className="mt-1 text-xs text-slate-500">لن يتم الإرسال الآن. سيتم إنشاء الحملة كمسودة للمراجعة والاعتماد.</p>
+            <p className="mt-1 text-xs text-slate-500">لن يتم الإرسال الآن. سيتم إنشاء الحملة كمسودة للمراجعة والاعتماد؛ حجم الجمهور لا يعني أن كل السجلات مؤهلة أو أن الرسائل سُلّمت.</p>
           </div>
 
           <div className="grid gap-3 md:grid-cols-2">
@@ -753,18 +767,18 @@ export function NewCampaignWizard() {
               <p className="text-[11px] text-slate-500">الجمهور</p>
               <div className="mt-2 grid grid-cols-2 gap-2">
                 <div className="rounded-lg bg-slate-50 p-3">
-                  <p className="text-[10px] text-slate-500">مطابق</p>
+                  <p className="text-[10px] text-slate-500">جمهور الحملة</p>
                   <p className="text-lg font-bold">{reviewMatched.toLocaleString("en-US")}</p>
                 </div>
                 <div className="rounded-lg bg-emerald-50 p-3">
-                  <p className="text-[10px] text-emerald-700">قابل للإرسال</p>
-                  <p className="text-lg font-bold text-emerald-800">{reviewEligible.toLocaleString("en-US")}</p>
+                  <p className="text-[10px] text-emerald-700">مؤهل مبدئيًا</p>
+                  <p className="text-lg font-bold text-emerald-800">{reviewEligible === null ? "يُفحص عند التنفيذ" : reviewEligible.toLocaleString("en-US")}</p>
                 </div>
               </div>
-              {audienceMode === "SMART" && (
+              {(audienceMode === "SMART" || audienceMode === "BADGE") && (
                 <div className="mt-2 space-y-1 text-[11px] text-slate-600">
-                  <p>بدون وسيلة اتصال: {(smartPreview?.missingContact ?? 0).toLocaleString("en-US")}</p>
-                  <p>عدم تواصل: {(smartPreview?.doNotContact ?? 0).toLocaleString("en-US")}</p>
+                  <p>بدون وسيلة اتصال: {(activePreview?.missingContact ?? 0).toLocaleString("en-US")}</p>
+                  <p>إيقاف التواصل: {(activePreview?.doNotContact ?? 0).toLocaleString("en-US")}؛ مراجعة الموافقة: {(activePreview?.needsReview ?? 0).toLocaleString("en-US")}</p>
                   <p>استثناءات يدوية: {(smartAudience.excludeUserIds?.length ?? 0).toLocaleString("en-US")}</p>
                 </div>
               )}

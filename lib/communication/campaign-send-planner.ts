@@ -11,9 +11,9 @@ export type SendPlan = {
   campaignId: string;
   channel: string | null;
   status: string | null;
-  /** Contacts in THIS batch (recipients + skipped). Bounded by `batchSize`. */
+  /** Contacts in this batch, including explicit skips. */
   total: number;
-  /** Contacts in the whole audience, across every batch  what a send confirmation should show. */
+  /** Full selected audience, not guaranteed delivery. */
   audienceTotal: number;
   eligible: number;
   skipped: number;
@@ -23,21 +23,14 @@ export type SendPlan = {
   senderReady: boolean;
   willSend: boolean;
   blocked?: string;
-  /** True when this page stopped short of the audience's end  another page follows. */
   truncated: boolean;
-  /** Where the next page starts; carried in the campaign's send progress between runs. */
   nextCursor: string | null;
-  /** True when this page reached the end of the audience. */
   exhausted: boolean;
   recipients: CampaignRecipient[];
   skippedList: { cursorId: string; userId: string; locale: string; reason: string }[];
 };
 
-/**
- * The plan for ONE batch. `cursor` continues a send that has already walked part of its audience;
- * the executor owns the cursor and persists it on the campaign between runs, so nothing here has to
- * know how many batches came before.
- */
+/** Build one page. The executor persists its cursor, including all-skipped pages. */
 export async function planCampaignSend(campaignId: string, opts: { batchSize?: number; cursor?: string | null } = {}): Promise<SendPlan> {
   const batchSize = Math.min(opts.batchSize ?? 200, 1000);
   const empty: SendPlan = {
@@ -52,24 +45,28 @@ export async function planCampaignSend(campaignId: string, opts: { batchSize?: n
   if (!campaign.templateGroupId) return { ...empty, blocked: "NO_TEMPLATE" };
   if (!isCommunicationChannel(campaign.channel)) return { ...empty, blocked: "INVALID_CHANNEL" };
   const channel: CommunicationChannelId = campaign.channel;
-  const gate = await evaluateCoverageGate(campaignId);
-  const coverage = { ok: gate.ok, undecided: gate.undecided };
-  if (!gate.ok) return { ...empty, coverage, blocked: "LANGUAGE_COVERAGE_INCOMPLETE" };
   const [{ recipients, skipped, truncated, nextCursor, exhausted }, audienceTotal] = await Promise.all([
     loadCampaignRecipients(channel, campaign.audienceSegmentKey, { limit: batchSize, cursor: opts.cursor ?? null }),
     countCampaignAudience(campaign.audienceSegmentKey),
   ]);
   const reasons: Record<string, number> = {};
   for (const item of skipped) reasons[item.reason] = (reasons[item.reason] ?? 0) + 1;
+  const batchLocaleCounts: Record<string, number> = {};
+  for (const recipient of recipients) batchLocaleCounts[recipient.locale] = (batchLocaleCounts[recipient.locale] ?? 0) + 1;
+  const gate = await evaluateCoverageGate(campaignId, batchLocaleCounts);
+  const coverage = { ok: gate.ok, undecided: gate.undecided };
   const partial: SendPlan = {
     ...empty, channel, coverage, truncated, nextCursor, exhausted, audienceTotal,
     total: recipients.length + skipped.length, eligible: recipients.length, skipped: skipped.length,
     reasons, recipients, skippedList: skipped,
   };
-  /* An empty page mid-walk is not a blocked campaign: the whole slice was ineligible and the next
-     page may not be. Only an empty FIRST page with nothing left to read means there is no audience. */
+  if (!gate.ok) return { ...partial, blocked: "LANGUAGE_COVERAGE_INCOMPLETE" };
+
   if (!recipients.length) {
-    if (!exhausted) return { ...partial, providerReady: true, senderReady: true, willSend: false };
+    // A final all-skipped page still needs to be archived. Previously it was
+    // treated as exhausted before the executor recorded its rows and reasons.
+    // No provider readiness is claimed and no provider call is needed for skips.
+    if (skipped.length > 0 || !exhausted) return { ...partial, willSend: false };
     return { ...partial, blocked: opts.cursor ? "AUDIENCE_EXHAUSTED" : "NO_ELIGIBLE_RECIPIENTS" };
   }
 

@@ -16,6 +16,7 @@ import Image from "next/image";
 import Spinner from "../components/ui/spinner";
 import { useTranslations, useLocale } from "next-intl";
 import { cn } from "@/lib/utils";
+import { localeDirection } from "@/lib/locales";
 import { resolveShareUnit, type ShareLabelsConfig } from "@/lib/campaign/share-labels";
 
 interface CartItem {
@@ -51,8 +52,8 @@ const CartSheet: React.FC<CartSheetProps> = ({
   onOpenDonationDialog,
 }) => {
   const t = useTranslations('CartSheet');
-  const locale = useLocale() as 'ar' | 'en' | 'fr';
-  const isRTL = locale === 'ar';
+  const locale = useLocale();
+  const isRTL = localeDirection(locale) === 'rtl';
   const router = useRouter();
   const [loadingItemId, setLoadingItemId] = useState<string | null>(null);
   const [removingItemId, setRemovingItemId] = useState<string | null>(null);

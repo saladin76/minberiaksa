@@ -79,3 +79,28 @@ test("legacy marketing routes have explicit redirects", () => {
     assert.match(config, new RegExp(legacy.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
   }
 });
+
+
+test("dashboard navigation permissions stay aligned with protected routes", () => {
+  assert.equal(pathToDashboardPermission("/dashboard/cart-settings"), "campaigns");
+  assert.equal(pathToDashboardPermission("/dashboard/telegram"), "platformConnectionsAdmin");
+  assert.equal(pathToDashboardPermission("/dashboard/archive/collections"), "archive");
+
+  const content = DASHBOARD_NAV_GROUPS.find((group) => group.group === "محتوى الموقع");
+  assert.equal(content?.items.find((item) => item.href === "/dashboard/cart-settings")?.key, "campaigns");
+
+  const connections = DASHBOARD_NAV_GROUPS.find((group) => group.group === "ربط المنصات والإرسال");
+  const telegram = connections?.items.find((item) => item.href === "/dashboard/telegram");
+  assert.equal(telegram?.key, "platformConnectionsAdmin");
+  assert.equal(telegram?.adminOnly, true);
+
+  const admin = DASHBOARD_NAV_GROUPS.find((group) => group.group === "الإدارة");
+  assert.equal(admin?.items.find((item) => item.href === "/dashboard/archive/collections")?.key, "archive");
+});
+
+test("Telegram dashboard has the same admin-only boundary as its setup API", () => {
+  const layout = readFileSync("app/(dashboard)/dashboard/telegram/layout.tsx", "utf8");
+  const api = readFileSync("app/api/telegram/setup/route.ts", "utf8");
+  assert.match(layout, /session\.user\.role !== "ADMIN"/);
+  assert.match(api, /requireAdminSession/);
+});

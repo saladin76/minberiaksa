@@ -115,6 +115,7 @@ const PATH_RULES: { prefix: string; key: DashboardPermissionKey }[] = [
   { prefix: "/dashboard/templates", key: "templates" },
   { prefix: "/dashboard/campaigns", key: "campaigns" },
   { prefix: "/dashboard/categories", key: "categories" },
+  { prefix: "/dashboard/cart-settings", key: "campaigns" },
   { prefix: "/dashboard/blog", key: "blog" },
   { prefix: "/dashboard/slides", key: "slides" },
   { prefix: "/dashboard/ticker", key: "ticker" },
@@ -140,6 +141,7 @@ const PATH_RULES: { prefix: string; key: DashboardPermissionKey }[] = [
   { prefix: "/dashboard/donations", key: "revenue" },
   { prefix: "/dashboard/general", key: "generalSettings" },
   { prefix: "/dashboard/ai-concierge", key: "aiConcierge" },
+  { prefix: "/dashboard/telegram", key: "platformConnectionsAdmin" },
   { prefix: "/dashboard", key: "revenue" },
 ];
 export function pathToDashboardPermission(pathname: string): DashboardPermissionKey | null {
