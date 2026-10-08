@@ -5,6 +5,7 @@ import {
   nextPrayerChargeFromRule,
   nextChargeForStoredPlan,
   prayerTimeForDate,
+  firstChargeForSettledPlan,
 } from "../../lib/donations/prayer-time-schedule";
 import { parseScheduleChoice, parseScheduleRule, scheduleRuleFor, firstChargeAfterCheckout } from "../../lib/donations/recurring-schedule";
 
@@ -50,4 +51,14 @@ test("prayer time fail-closed on provider errors, timezone mismatch, corrupt sav
 test("fixed-time recurring dates remain backward compatible", async () => {
   const now = new Date("2026-10-08T07:00:00Z");
   assert.equal((await nextChargeForStoredPlan({ frequency: "MONTHLY", timezone: "Europe/Istanbul", scheduleRule: { kind: "monthDay", day: 15, hour: 14, minute: 30 } }, now, fake)).toISOString(), "2026-10-15T11:30:00.000Z");
+});
+
+test("first instalment settlement never calls prayer provider and does not bill the same Friday twice", () => {
+  const pending = new Date("2026-10-09T09:45:00.000Z");
+  const plan = { frequency: "FRIDAY", timezone: "Europe/Istanbul", scheduleRule: rule, nextBillingDate: pending };
+  assert.equal(firstChargeForSettledPlan(plan, new Date("2026-10-08T08:00:00Z"))?.toISOString(), pending.toISOString());
+  assert.equal(firstChargeForSettledPlan(plan, new Date("2026-10-09T07:00:00Z"))?.toISOString(), "2026-10-16T09:45:00.000Z");
+  assert.equal(firstChargeForSettledPlan(plan, new Date("2026-10-09T10:00:00Z"))?.toISOString(), "2026-10-16T09:45:00.000Z");
+  assert.equal(firstChargeForSettledPlan({ ...plan, nextBillingDate: null }, new Date()), null);
+  assert.equal(firstChargeForSettledPlan({ ...plan, timezone: "Invalid/Timezone" }, new Date()), null);
 });
