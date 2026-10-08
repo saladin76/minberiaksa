@@ -226,15 +226,24 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
   const prayerSchedule = schedule?.mode === "prayer";
   const scheduleKey = schedule ? JSON.stringify(schedule) : "";
   const [nextChargeText, setNextChargeText] = useState<string | null>(null);
+  const [prayerPreviewReady, setPrayerPreviewReady] = useState(false);
   useEffect(() => {
     if (!planFrequency) {
+      setPrayerPreviewReady(false);
       setNextChargeText(null);
       return;
     }
     if (schedule?.mode === "prayer") {
-      setNextChargeText("موعد متغير: قبل صلاة الجمعة بـ30 دقيقة وفق المدينة المختارة، ويؤكده الخادم قبل إنشاء الاشتراك.");
-      return;
+      let active = true;
+      setPrayerPreviewReady(false);
+      setNextChargeText("جارٍ حساب موعد صلاة الجمعة من الخادم…");
+      void fetch("/api/recurring/prayer-preview", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ timezone: schedule.timezone, schedule }) })
+        .then(async (res) => { if (!res.ok) throw new Error("Prayer preview unavailable"); return res.json() as Promise<{ nextChargeAt?: string; timezone?: string }>; })
+        .then((data) => { if (!active) return; if (!data.nextChargeAt || !data.timezone) throw new Error("Invalid prayer preview"); setNextChargeText(new Intl.DateTimeFormat(locale, { dateStyle: "full", timeStyle: "short", timeZone: data.timezone }).format(new Date(data.nextChargeAt))); setPrayerPreviewReady(true); })
+        .catch(() => { if (active) { setNextChargeText("تعذر حساب وقت الصلاة لهذه المدينة. غيّر المدينة أو اختر ساعة ثابتة."); setPrayerPreviewReady(false); } });
+      return () => { active = false; };
     }
+    setPrayerPreviewReady(false);
     const tz = browserTimezone();
     const now = new Date();
     const next = firstChargeAfterCheckout(scheduleRuleFor(planFrequency, now, tz, schedule ?? null), now, tz);
@@ -319,6 +328,10 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
   const onSubmit = async (event: FormEvent) => {
     event.preventDefault();
     if (submitting || !items.length) return;
+    if (prayerSchedule && !prayerPreviewReady) {
+      setError("تعذر التأكد من موعد صلاة الجمعة. لا يمكن تأكيد هذا الاشتراك الآن.");
+      return;
+    }
     if (prayerSchedule && method === "card" && gateway === "STRIPE") {
       setError("الخصم المرتبط بوقت الصلاة يحتاج إلى طريقة دفع تدعم الجدولة الدقيقة. اختر PayPal إن كان متاحًا، أو عدّل التوقيت إلى ساعة ثابتة.");
       return;
