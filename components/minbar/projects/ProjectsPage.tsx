@@ -107,7 +107,7 @@ export default function ProjectsPage({ projects, slides }: ProjectsPageProps) {
   }, [hasMore, category]);
 
   return (
-    <div style={{ position: "relative" }}>
+    <div className="mia-projects-page" style={{ position: "relative" }}>
       <div
         aria-hidden="true"
         data-aqsa-pattern=""
@@ -181,6 +181,8 @@ export default function ProjectsPage({ projects, slides }: ProjectsPageProps) {
                   key={c.id}
                   type="button"
                   data-cat={category === c.id ? "1" : ""}
+                  aria-pressed={category === c.id}
+                  aria-controls="all"
                   onClick={() => {
                     setCategory(c.id);
                     setLimit(PAGE_SIZE);
