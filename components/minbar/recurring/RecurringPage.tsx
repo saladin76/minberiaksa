@@ -128,6 +128,10 @@ export default function RecurringPage({ projects }: RecurringPageProps) {
   const [custom, setCustom] = useState("");
   const [freq, setFreq] = useState<Exclude<CartFreqKey, "once">>("monthly");
   const [localTime, setLocalTime] = useState("14:30");
+  const [prayerTiming, setPrayerTiming] = useState(false);
+  const [prayerLocation, setPrayerLocation] = useState("41.0082,28.9784");
+  const [prayerZone, setPrayerZone] = useState("Europe/Istanbul");
+  const [locationError, setLocationError] = useState("");
   const [monthDay, setMonthDay] = useState(1);
   const [notes, setNotes] = useState("");
 
@@ -139,6 +143,12 @@ export default function RecurringPage({ projects }: RecurringPageProps) {
 
   const onDonate = () => {
     if (!(value > 0)) return;
+    const location = prayerLocation.split(",").map((n) => Number(n.trim()));
+    if (prayerTiming && (freq !== "friday" || location.length !== 2 || !Number.isFinite(location[0]) || !Number.isFinite(location[1]) || Math.abs(location[0]) > 90 || Math.abs(location[1]) > 180 || !prayerZone.trim())) {
+      setLocationError("حدد موقعًا وتوقيتًا صحيحين لحساب موعد صلاة الجمعة.");
+      return;
+    }
+    setLocationError("");
     addToCart({
       // A plan against a specific project carries its id; otherwise it is the
       // general recurring fund, named by its translated key.
@@ -151,7 +161,9 @@ export default function RecurringPage({ projects }: RecurringPageProps) {
       currency: "USD",
       ...("local" in given && given.local ? { local: given.local } : {}),
       // The chosen day and local time; the server builds the plan's rule from it.
-      schedule: scheduleOf(freq, monthDay, localTime, notes),
+      schedule: prayerTiming && freq === "friday"
+        ? { mode: "prayer", prayer: "Dhuhr", latitude: location[0], longitude: location[1], timezone: prayerZone, ...(notes.trim() ? { notes: notes.trim() } : {}) }
+        : scheduleOf(freq, monthDay, localTime, notes),
     });
     router.push(miaPath("cart", locale));
   };
@@ -346,6 +358,27 @@ export default function RecurringPage({ projects }: RecurringPageProps) {
                   </label>
                 ) : null}
 
+                {freq === "friday" ? (
+                  <label style={{ display: "flex", alignItems: "center", gap: 8, fontWeight: 800, fontSize: 13 }}>
+                    <input type="checkbox" checked={prayerTiming} onChange={(e) => setPrayerTiming(e.target.checked)} />
+                    {t("prayerTime")} — قبل أذان الظهر يوم الجمعة بـ30 دقيقة (حساب ديانت)
+                  </label>
+                ) : null}
+                {prayerTiming && freq === "friday" ? (
+                  <div style={{ display: "grid", gap: 8 }}>
+                    <label style={{ display: "grid", gap: 5 }}>
+                      <span style={{ fontSize: 12, fontWeight: 800 }}>المدينة / الإحداثيات</span>
+                      <select value={prayerLocation + "|" + prayerZone} onChange={(e) => { const [coords, zone] = e.target.value.split("|"); setPrayerLocation(coords); setPrayerZone(zone); }} style={{ padding: 10, border: "1px solid var(--border)", borderRadius: 8 }}>
+                        <option value="41.0082,28.9784|Europe/Istanbul">إسطنبول</option>
+                        <option value="31.7683,35.2137|Asia/Jerusalem">القدس</option>
+                        <option value="24.7136,46.6753|Asia/Riyadh">الرياض</option>
+                        <option value="30.0444,31.2357|Africa/Cairo">القاهرة</option>
+                      </select>
+                    </label>
+                    <span style={{ fontSize: 11, color: "var(--muted)" }}>وقت الخصم يتغير مع مواقيت الصلاة بالمدينة المحددة، وفق حساب ديانت. اختر المدينة الأقرب لموقعك.</span>
+                    {locationError ? <span role="alert" style={{ color: "var(--red)", fontSize: 12 }}>{locationError}</span> : null}
+                  </div>
+                ) : (
                 <div style={{ display: "grid", gap: 7 }}>
                   <span style={{ fontSize: 11, fontWeight: 800, color: "var(--muted)" }}>{t("timeOfDay")}</span>
                   <div style={{ display: "flex", alignItems: "center", gap: 10, height: 46, padding: "0 14px", background: "#fff", border: "1px solid var(--border)", borderRadius: 8 }}>
@@ -363,6 +396,7 @@ export default function RecurringPage({ projects }: RecurringPageProps) {
                     />
                   </div>
                 </div>
+                )}
               </div>
 
               <label style={{ display: "grid", gap: 7 }}>
