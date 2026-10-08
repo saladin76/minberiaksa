@@ -124,6 +124,7 @@ export async function nextChargeForStoredPlan(
   fetcher: typeof fetch = fetch
 ): Promise<Date> {
   const { isPrayerScheduleRule, nextChargeForPlan } = await import("./recurring-schedule");
+  if (plan.scheduleRule && typeof plan.scheduleRule === "object" && (plan.scheduleRule as { kind?: unknown }).kind === "prayer" && !isPrayerScheduleRule(plan.scheduleRule)) throw new Error("PRAYER_RULE_INVALID");
   if (isPrayerScheduleRule(plan.scheduleRule)) {
     if (plan.frequency !== "FRIDAY") throw new Error("PRAYER_FREQUENCY_MISMATCH");
     return nextPrayerChargeFromRule(plan.scheduleRule, from, validatedTimezone(plan.timezone || ""), fetcher);
