@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { SubscriptionStatus } from "@prisma/client";
 import Stripe from "stripe";
+import { randomUUID } from "node:crypto";
+import { planRail } from "@/lib/donations/subscription-provider-control";
 import { convertAmountInCurrencyToUsd } from "@/lib/exchange/convert-amount-in-currency-to-usd";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
@@ -56,6 +58,7 @@ export async function PATCH(
         coverFees: true,
         nextBillingDate: true,
         chargeAttempts: true,
+        amountChangeLock: true,
         items: { select: { id: true, amount: true, amountUSD: true } },
         categoryItems: { select: { id: true, amount: true, amountUSD: true } },
         frequency: true,
@@ -103,32 +106,51 @@ export async function PATCH(
         return { ...entry, amount: cents / 100 };
       });
       if (allocations.some((x) => x.amount <= 0)) return NextResponse.json({ error: "The lower amount is too small for the current number of projects" }, { status: 400 });
-      const rail = sub.provider === "ALBARAKA" ? "ALBARAKA" : sub.provider === "PAYPAL" ? "PAYPAL" : "STRIPE";
+      const rail = planRail(sub);
+      if (rail === "NONE") return NextResponse.json({ error: "Plan has no payment authorization" }, { status: 409 });
+      if (sub.amountChangeLock) return NextResponse.json({ error: "Previous change requires reconciliation", code: "RECONCILE_REQUIRED" }, { status: 409 });
+      const token = randomUUID();
+      const lock = await prisma.subscription.updateMany({
+        where: { id: sub.id, amount: sub.amount, status: sub.status, nextBillingDate: sub.nextBillingDate, chargeAttempts: 0, amountChangeLock: null },
+        data: { amountChangeLock: token, amountChangeStartedAt: new Date() },
+      });
+      if (lock.count !== 1) return NextResponse.json({ error: "Plan changed concurrently" }, { status: 409 });
+      const unlock = async () => { await prisma.subscription.updateMany({ where: { id: sub.id, amountChangeLock: token }, data: { amountChangeLock: null, amountChangeStartedAt: null } }); };
+      let providerUpdated = false;
       if (rail === "STRIPE") {
         const stripeId = sub.stripeSubscriptionId ?? sub.payforToken;
-        if (!stripeId || !process.env.STRIPE_SECRET_KEY) return NextResponse.json({ error: "Stripe subscription is not configured" }, { status: 503 });
+        if (!stripeId || !process.env.STRIPE_SECRET_KEY) { await unlock(); return NextResponse.json({ error: "Stripe subscription is not configured" }, { status: 503 }); }
         try {
           const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: "2026-03-25.dahlia" });
           const live = await stripe.subscriptions.retrieve(stripeId);
-          if (live.status !== "active" || !live.items.data[0]) return NextResponse.json({ error: "Stripe subscription must be active for a reduction" }, { status: 409 });
+          if (live.status !== "active" || live.pause_collection || live.items.data.length !== 1 || live.currency.toUpperCase() !== sub.currency.toUpperCase()) {
+            await unlock();
+            return NextResponse.json({ error: "Stripe billing state, currency or item count differs; reconciliation required" }, { status: 409 });
+          }
           const item = live.items.data[0];
+          const previousTotal = sub.amount + sub.teamSupport + (sub.coverFees ? (sub.amount + sub.teamSupport) * 0.03 : 0);
+          if (Math.abs((item.price.unit_amount ?? -99999) - Math.round(previousTotal * 100)) > 1 || item.price.recurring?.interval !== "month") {
+            await unlock();
+            return NextResponse.json({ error: "Stripe price differs from plan, or unsupported cadence", code: "RECONCILE_REQUIRED" }, { status: 409 });
+          }
           const product = typeof item.price.product === "string" ? item.price.product : item.price.product.id;
           const total = newAmount + sub.teamSupport + (sub.coverFees ? (newAmount + sub.teamSupport) * 0.03 : 0);
           await stripe.subscriptions.update(stripeId, {
             items: [{ id: item.id, price_data: { currency: item.price.currency, product, unit_amount: Math.round(total * 100), recurring: { interval: "month" } } }],
             proration_behavior: "none",
             payment_behavior: "error_if_incomplete",
-          });
+          }, { idempotencyKey: `reduce-${sub.id}-${token}` });
+          providerUpdated = true;
         } catch (err) {
           console.error("[admin/subscriptions] Stripe repricing failed", err instanceof Error ? err.message : "unknown");
-          return NextResponse.json({ error: "The payment provider did not confirm the reduction" }, { status: 502 });
+          return NextResponse.json({ error: "Provider result uncertain: reconcile before retrying", code: "RECONCILE_REQUIRED" }, { status: 503 });
         }
       }
       try {
         await prisma.$transaction(async (tx) => {
           const locked = await tx.subscription.updateMany({
-            where: { id: sub.id, amount: sub.amount, status: sub.status, nextBillingDate: sub.nextBillingDate, chargeAttempts: 0 },
-            data: { amount: newAmount, amountUSD: usd },
+            where: { id: sub.id, amount: sub.amount, status: sub.status, nextBillingDate: sub.nextBillingDate, chargeAttempts: 0, amountChangeLock: token },
+            data: { amount: newAmount, amountUSD: usd, amountChangeLock: null, amountChangeStartedAt: null },
           });
           if (locked.count !== 1) throw new Error("PLAN_CHANGED_CONCURRENTLY");
           for (const allocation of allocations) {
@@ -147,6 +169,7 @@ export async function PATCH(
           });
         });
       } catch (err) {
+        if (!providerUpdated) await unlock().catch(() => undefined);
         console.error("[admin/subscriptions] post-provider reconciliation required", sub.id, err instanceof Error ? err.message : "unknown");
         return NextResponse.json({ error: "Update needs reconciliation with payment provider; do not retry before checking Stripe and the audit log", code: "RECONCILE_REQUIRED" }, { status: 503 });
       }
