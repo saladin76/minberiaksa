@@ -270,3 +270,22 @@ test("recurring, zakat, and waqf layouts remain responsive without touching tran
   assert.match(css, /\.mia-waqf-page \.mia-waqf-picker \{ padding:15px !important/);
   assert.match(css, /\.mia-waqf-page #waqf-cert-preview\[data-open="1"\]/);
 });
+
+test("Al-Aqsa and Jerusalem mobile heroes use separate media and flow-based copy", () => {
+  const css = read("styles/minbar/minbar.css");
+  for (const path of ["components/minbar/aqsa/AqsaPage.tsx", "components/minbar/jerusalem/JerusalemPage.tsx"]) {
+    const page = read(path);
+    assert.match(page, /mia-story-hero__image/);
+    assert.match(page, /mia-story-hero__overlay/);
+    assert.match(page, /mia-story-hero__copy/);
+  }
+  assert.match(css, /mia-story-hero__overlay[\s\S]*position: relative !important/);
+  assert.match(css, /mia-story-hero__image[\s\S]*object-fit: cover !important/);
+});
+
+test("impact cards occupy one wide and two equally narrow rows and mobile assistant stays compact", () => {
+  const css = read("styles/minbar/minbar.css");
+  assert.doesNotMatch(css, /#impact-metrics > \*:nth-child\(3\)\s*\{\s*grid-column: 1 \/ -1/);
+  assert.match(css, /mia-impact-summary > \.mia-impact-stat--featured \{ grid-column: 1\/-1/);
+  assert.match(css, /cg-launch-wrap\[data-draggable="1"\] \.cg-launcher \{[\s\S]*width: 50px !important/);
+});
