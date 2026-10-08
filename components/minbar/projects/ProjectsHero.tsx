@@ -84,7 +84,7 @@ export default function ProjectsHero({ slides }: { slides: ProjectSlide[] }) {
   );
 
   return (
-    <section style={{ position: "relative", background: "var(--deep)", borderBottom: "1px solid rgba(211,154,39,.5)", overflow: "hidden" }}>
+    <section className="mia-projects-hero" style={{ position: "relative", background: "var(--deep)", borderBottom: "1px solid rgba(211,154,39,.5)", overflow: "hidden" }}>
       <div
         className="proj-hero-stage"
         role="group"
@@ -119,7 +119,7 @@ export default function ProjectsHero({ slides }: { slides: ProjectSlide[] }) {
               <span
                 role="img"
                 aria-label={slide.title}
-                style={{ position: "absolute", inset: 0, display: "block", backgroundImage: `url('${slide.image}')`, backgroundSize: "cover", backgroundPosition: "center" }}
+                style={{ position: "absolute", inset: 0, display: "block", backgroundImage: `url('${slide.image}')`, backgroundSize: "cover", backgroundPosition: "center", }}
               />
             ) : null}
             <span style={{ position: "absolute", inset: 0, background: "linear-gradient(-90deg, rgba(16,33,43,.94) 8%, rgba(16,33,43,.6) 56%, rgba(16,33,43,.25))", pointerEvents: "none" }} />

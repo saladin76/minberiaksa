@@ -14,6 +14,7 @@ import { useMinbarCartCount } from "@/hooks/useMinbarCart";
 import { CART_BUMP_EVENT, CART_TARGET_ATTR } from "@/lib/minbar/cart-feedback";
 import { useMinbarLabel } from "@/hooks/useMinbarLabel";
 import type { NavCategory } from "@/lib/minbar/categories";
+import HeaderSearch from "./HeaderSearch";
 
 /**
  * Site header  ported from `Minbar/Header.dc.html`.
@@ -468,6 +469,8 @@ export default function Header({
               marginInline: 4,
             }}
           />
+
+          <HeaderSearch />
 
           {/* Cart */}
           <Link
