@@ -111,7 +111,7 @@ export async function PATCH(
       if (sub.amountChangeLock) return NextResponse.json({ error: "Previous change requires reconciliation", code: "RECONCILE_REQUIRED" }, { status: 409 });
       const token = randomUUID();
       const lock = await prisma.subscription.updateMany({
-        where: { id: sub.id, amount: sub.amount, status: sub.status, nextBillingDate: sub.nextBillingDate, chargeAttempts: 0, amountChangeLock: null },
+        where: { id: sub.id, amount: sub.amount, status: sub.status, nextBillingDate: sub.nextBillingDate, chargeAttempts: 0, OR: [{ amountChangeLock: null }, { amountChangeLock: { isSet: false } }] },
         data: { amountChangeLock: token, amountChangeStartedAt: new Date() },
       });
       if (lock.count !== 1) return NextResponse.json({ error: "Plan changed concurrently" }, { status: 409 });
