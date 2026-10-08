@@ -148,10 +148,11 @@ test("mobile bottom navigation exposes the seven requested destinations", () => 
   assert.match(nav, /route: "zakat"/);
 });
 
-test("mobile bottom navigation stays out of payment flows and clears floating actions", () => {
+test("mobile bottom navigation persists through payment flows and clears floating actions", () => {
   const nav = read("components/minbar/shell/MobileBottomNav.tsx");
   const css = read("styles/minbar/minbar.css");
-  assert.match(nav, /"cart",[\s\S]*"checkout",[\s\S]*"donationSuccess"/);
+  assert.doesNotMatch(nav, /HIDDEN_ROUTES|return null/);
+  assert.match(css, /mia-mobile-bottom-nav[\s\S]*z-index: 260 !important/);
   assert.match(css, /--mia-mobile-nav-h: 74px/);
   assert.match(css, /cg-launch-wrap[\s\S]*var\(--mia-mobile-nav-h\)/);
   assert.match(css, /mia-wa-fab[\s\S]*var\(--mia-mobile-nav-h\)/);
@@ -224,4 +225,10 @@ test("responsive public catalogue and donor account preserve readable narrow gri
   assert.match(css, /\.blog-layout \{ grid-template-columns: minmax\(0,1fr\) !important/);
   assert.match(css, /\.mia-site-search-page__grid \{ grid-template-columns: minmax\(0,1fr\)/);
   assert.match(css, /\.acc-page \.acc-stats \{ grid-template-columns: repeat\(3,minmax\(0,1fr\)\)/);
+});
+
+test("mobile project hero keeps photography visible under a light overlay", () => {
+  const css = read("styles/minbar/minbar.css");
+  assert.match(css, /proj-hero-stage > div\[aria-hidden\] > span\[role="img"\] \+ span/);
+  assert.match(css, /rgba\(16,33,43,\.11\)/);
 });
