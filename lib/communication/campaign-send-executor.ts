@@ -19,7 +19,9 @@ import { computeFinalStatus, recomputeCampaignCounters } from "./campaign-counte
 import { type CommunicationChannelId, type CommunicationPurposeId } from "./communication-runtime-types";
 import { autoSpeedMode, campaignPriorityRank, campaignSendControls, evaluateCampaignSendControls, insideQuietHours, speedSettings, type CampaignSpeedMode, type CampaignSendControls } from "./campaign-send-controls";
 import { mergeCampaignMetadata, mutateCampaignMetadata } from "./campaign-metadata-store";
-import { normalizePhoneE164, phoneMatchVariants } from "./phone";
+import { phoneMatchVariants } from "./phone";
+import { normalizeCampaignContact } from "./campaign-contact-validation";
+import { checkCampaignRecipientBeforeSend } from "./campaign-recipient-guard";
 import { DEFAULT_LOCALE, isValidLocale, type SupportedLocale } from "@/lib/locales";
 import { recipientTimeZone } from "./recipient-timezone";
 
@@ -310,12 +312,8 @@ type Lease = { token: string; expiresAt: string; holder?: string | null };
 function bump(reasons: Record<string, number>, key: string) { reasons[key] = (reasons[key] ?? 0) + 1; }
 
 function normalizeRecipientContact(channel: CommunicationChannelId, email: string | null | undefined, phone: string | null | undefined): string | null {
-  if (channel === "EMAIL") {
-    const value = String(email ?? "").trim().toLowerCase();
-    return value ? `email:${value}` : null;
-  }
-  const canonical = normalizePhoneE164(phone);
-  return canonical ? `phone:${canonical}` : null;
+  const canonical = normalizeCampaignContact(channel, channel === "EMAIL" ? email : phone);
+  return canonical ? `${channel === "EMAIL" ? "email" : "phone"}:${canonical}` : null;
 }
 function metaOf(campaign: CommunicationCampaign) { return (campaign.metadata as Record<string, unknown> | null) ?? {}; }
 function coverageDecisions(campaign: CommunicationCampaign): Record<string, string> { return (metaOf(campaign).coverageDecisions ?? {}) as Record<string, string>; }
@@ -536,6 +534,11 @@ export async function executeCampaignSend(
     if (!leaseClaimed) return { ...base, blocked: "ALREADY_RUNNING" };
   }
 
+  // Planning totals describe a pending batch; execution totals count it once,
+  // after runBatch completes. Do not double-count the first batch or its skips.
+  base.total = 0;
+  base.reasons = {};
+
   /* ── Everything the batches share, resolved once ───────────────────── */
   const runtime = await getActiveCommunicationRuntimeBundle();
   const campaignName = campaign.name;
@@ -606,7 +609,7 @@ export async function executeCampaignSend(
             status: true,
             providerMessageId: true,
           },
-        }).catch(() => [])
+        })
       : [];
     const processedExisting = existing.filter(
       (delivery) => (delivery.status && PROCESSED_STATUSES.includes(delivery.status)) || !!delivery.providerMessageId,
@@ -699,7 +702,7 @@ export async function executeCampaignSend(
       const routed = resolveSenderFromSnapshot(senderSnapshot, { locale: recipient.locale, country: recipient.country, purpose });
       const sender = routed.ok ? routed.sender : null;
       const routingReason = routed.ok ? null : routed.reason;
-      const to = channel === "EMAIL" ? recipient.email ?? "" : recipient.phone ?? "";
+      let to = channel === "EMAIL" ? recipient.email ?? "" : recipient.phone ?? "";
       const decision = resolveProviderForSendWithRuntime(runtime, channel, sender, { country: recipient.country, phone: to });
       const provider = decision.canSend
         ? decision.providerId
@@ -800,6 +803,21 @@ export async function executeCampaignSend(
           }),
         });
       }
+
+      // Re-check current consent and destination immediately before sending.
+      // Deferred quiet-hours recipients use this same path, so an intervening
+      // unsubscribe or contact change cannot be bypassed by the queue.
+      const executionCheck = await checkCampaignRecipientBeforeSend(channel, recipient.userId, to);
+      if (!executionCheck.ok) {
+        await markDeliveryStatus(deliveryId, executionCheck.unavailable ? "FAILED" : "SKIPPED", {
+          errorMessage: executionCheck.reason,
+        });
+        if (executionCheck.unavailable) outcome.failed += 1;
+        else outcome.skipped += 1;
+        bump(outcome.reasons, executionCheck.reason);
+        return outcome;
+      }
+      to = executionCheck.contact;
 
       const result = await sendPreparedDelivery({
         channel,
