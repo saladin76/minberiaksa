@@ -5,7 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { albarakaIsoCode, type AlbarakaServiceResponse } from "@/lib/albaraka";
 import { sendDonationFailedConversions } from "@/lib/tracking/donation-conversion-server";
 import { dispatchDonationPaid, dispatchEvent } from "@/lib/events/dispatch";
-import { firstChargeForPlan } from "@/lib/donations/recurring-schedule";
+import { firstChargeForSettledPlan } from "@/lib/donations/prayer-time-schedule";
 
 /**
  * Settling an Albaraka charge, shared by the 2D sale (`/api/albaraka/3d/initiate`,
@@ -127,7 +127,7 @@ export async function settleAlbarakaDonation(
     if (fresh.subscriptionId) {
       const plan = await tx.subscription.findUnique({
         where: { id: fresh.subscriptionId },
-        select: { id: true, frequency: true, timezone: true, scheduleRule: true },
+        select: { id: true, frequency: true, timezone: true, scheduleRule: true, nextBillingDate: true },
       });
       if (plan) {
         const paidAt = new Date();
@@ -137,7 +137,7 @@ export async function settleAlbarakaDonation(
             status: "ACTIVE",
             provider: "ALBARAKA",
             lastBillingDate: paidAt,
-            nextBillingDate: firstChargeForPlan(plan, paidAt),
+            nextBillingDate: firstChargeForSettledPlan(plan, paidAt),
             chargeAttempts: 0,
             lastChargeError: null,
           },
