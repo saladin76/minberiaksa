@@ -232,3 +232,27 @@ test("mobile project hero keeps photography visible under a light overlay", () =
   assert.match(css, /proj-hero-stage > div\[aria-hidden\] > span\[role="img"\] \+ span/);
   assert.match(css, /rgba\(16,33,43,\.11\)/);
 });
+
+test("Jerusalem impact cards keep long totals in a full-width featured panel", () => {
+  const component = read("components/minbar/home/ImpactSections.tsx");
+  const css = read("styles/minbar/minbar.css");
+  assert.match(component, /mia-impact-stat--featured/);
+  assert.match(component, /mia-impact-sectors/);
+  assert.match(css, /mia-impact-summary > \.mia-impact-stat--featured \{ grid-column: 1\/-1/);
+  assert.match(css, /mia-impact-stat > b\[dir="ltr"\][\s\S]*white-space: nowrap/);
+  assert.match(css, /mia-impact-sectors > \.mia-impact-sector[\s\S]*min-width: 0/);
+});
+
+test("shared Ibadan and travel banners do not force headlines or CTA labels outside mobile viewport", () => {
+  const travel = read("components/minbar/banners/TravelBanner.tsx");
+  const ibadan = read("components/minbar/banners/IbadanBanner.tsx");
+  const css = read("styles/minbar/minbar.css");
+  for (const component of [travel, ibadan]) {
+    assert.match(component, /mia-campaign-banner-content/);
+    assert.match(component, /mia-campaign-banner-actions/);
+    assert.doesNotMatch(component, /whiteSpace: "nowrap", fontSize: "clamp\(18px,2vw,28px\)"/);
+  }
+  assert.match(css, /mia-campaign-banner-content h2[\s\S]*white-space: normal !important/);
+  assert.match(css, /mia-campaign-banner-actions > \.mia-campaign-banner-button[\s\S]*white-space: normal !important/);
+  assert.match(css, /friday-prices[\s\S]*grid-template-columns: repeat\(2,minmax\(0,1fr\)\)/);
+});
