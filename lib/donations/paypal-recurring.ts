@@ -19,7 +19,7 @@ import { dispatchDonationPaid, dispatchEvent } from "@/lib/events/dispatch";
 import { sendDonationFailedConversions } from "@/lib/tracking/donation-conversion-server";
 import { mintDonationAccessToken } from "@/lib/donations/access-token";
 import { settlePayPalDonation } from "@/lib/donations/paypal-donation";
-import { isPrayerScheduleRule, nextChargeForPlan, nextRetryAt } from "./recurring-schedule";
+import { isPrayerScheduleRule, nextRetryAt } from "./recurring-schedule";
 import { nextChargeForStoredPlan, nextPrayerChargeFromRule } from "./prayer-time-schedule";
 import type { RecurringChargeOutcome, RecurringChargeSummary } from "./albaraka-recurring";
 
@@ -115,6 +115,7 @@ async function chargeOne(sub: DueSubscription, now: Date, dryRun: boolean): Prom
 
   /* A prayer schedule is revalidated against the provider before any provider call.
      Never charge earlier than the recalculated Dhuhr-based time. */
+  if (sub.scheduleRule && typeof sub.scheduleRule === "object" && (sub.scheduleRule as {kind?: unknown}).kind === "prayer" && !isPrayerScheduleRule(sub.scheduleRule)) throw new Error("PRAYER_RULE_INVALID");
   if (isPrayerScheduleRule(sub.scheduleRule)) {
     if (sub.frequency !== "FRIDAY" || !sub.timezone) throw new Error("PRAYER_RULE_INVALID");
     const dayBefore = new Date(due.getTime() - 7 * 86400_000);
@@ -127,6 +128,10 @@ async function chargeOne(sub: DueSubscription, now: Date, dryRun: boolean): Prom
   // ── Never twice for one cycle ────────────────────────────────────────────
   const existing = await prisma.donation.findFirst({ where: { subscriptionId: sub.id, providerOrderId: key }, select: { id: true } });
   if (existing) return { ...base, donationId: existing.id, result: "already_attempted" };
+
+  // Reconcile the next cycle before charging a wallet; provider outages must
+  // never occur after a successful financial transaction.
+  const nextBillingDateSafe = await nextCycleAfter(sub, due, now);
 
   // ── Amounts, as every rail builds a renewal row ─────────────────────────
   const fees = (sub.amount + sub.teamSupport) * 0.03;
@@ -218,7 +223,7 @@ async function chargeOne(sub: DueSubscription, now: Date, dryRun: boolean): Prom
   });
   await prisma.subscription.update({
     where: { id: sub.id },
-    data: { status: "ACTIVE", lastBillingDate: now, nextBillingDate: await nextCycleAfter(sub, due, now), chargeAttempts: 0, lastChargeError: null },
+    data: { status: "ACTIVE", lastBillingDate: now, nextBillingDate: nextBillingDateSafe, chargeAttempts: 0, lastChargeError: null },
   });
 
   void dispatchDonationPaid(donation.id);
