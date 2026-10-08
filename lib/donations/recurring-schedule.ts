@@ -156,6 +156,7 @@ export function isPrayerScheduleRule(value: unknown): value is PrayerScheduleRul
 
 /** What the donor chose on the recurring page: a day (monthly only) and a local time. */
 export interface LocalRecurringScheduleChoice {
+  mode?: "local";
   /** 1–28, so every month has it. Monthly plans only. */
   dayOfMonth?: number;
   hour: number;
