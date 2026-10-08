@@ -170,7 +170,7 @@ export default function WaqfPage({ donorName }: WaqfPageProps) {
   });
 
   return (
-    <div style={{ position: "relative" }}>
+    <div className="mia-waqf-page" style={{ position: "relative" }}>
       {/* ── Hero + unit picker ───────────────────────────────────────────── */}
       <section id="about" style={{ position: "relative", background: "var(--ivory)", borderBottom: "1px solid var(--border)", overflow: "hidden" }}>
         <div aria-hidden="true" data-aqsa-pattern="" style={pattern(520)} />
@@ -185,7 +185,7 @@ export default function WaqfPage({ donorName }: WaqfPageProps) {
             </span>
           </div>
 
-          <div id="meter-picker" style={{ marginTop: 46, paddingBottom: 56, display: "grid", gridTemplateColumns: "minmax(0,1.15fr) minmax(0,.85fr)", gap: 40, alignItems: "start", paddingInline: 34, paddingTop: 34, background: "#fff", border: "1px solid var(--border)", borderInlineStart: "3px solid var(--gold)" }}>
+          <div id="meter-picker" className="mia-waqf-picker" style={{ marginTop: 46, paddingBottom: 56, display: "grid", gridTemplateColumns: "minmax(0,1.15fr) minmax(0,.85fr)", gap: 40, alignItems: "start", paddingInline: 34, paddingTop: 34, background: "#fff", border: "1px solid var(--border)", borderInlineStart: "3px solid var(--gold)" }}>
             <div style={{ display: "grid", gap: 16, paddingBottom: 34 }}>
               <b style={{ fontSize: 18 }}>{t("chooseUnit")}</b>
 
@@ -374,7 +374,7 @@ export default function WaqfPage({ donorName }: WaqfPageProps) {
       {/* ── Introductory film ────────────────────────────────────────────── */}
       <section id="video" style={{ background: "transparent", padding: "46px 0" }}>
         <div style={{ maxWidth: 1240, margin: "0 auto", padding: "0 24px" }}>
-          <div id="waqf-video-card" style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(0,1fr)", gap: 0, background: "var(--deep)", border: "1px solid rgba(211,154,39,.5)", borderRadius: 12, overflow: "hidden" }}>
+          <div id="waqf-video-card" className="mia-waqf-video" style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(0,1fr)", gap: 0, background: "var(--deep)", border: "1px solid rgba(211,154,39,.5)", borderRadius: 12, overflow: "hidden" }}>
             <div className="wv-head" style={{ position: "relative", display: "grid", gap: 14, alignContent: "center", padding: 40, justifyItems: "start" }}>
               <div aria-hidden="true" data-aqsa-pattern="" style={{ ...pattern(520), opacity: 0.09 }} />
               <h2 style={{ position: "relative", margin: 0, fontSize: "clamp(22px,2.4vw,32px)", lineHeight: 1.35, fontWeight: 900, color: "#fff" }}>{t("videoTitle")}</h2>
