@@ -84,6 +84,7 @@ interface DonationForProfile {
   /** DAILY | FRIDAY | MONTHLY on a plan; null on a one-time gift. */
   frequency?: string | null;
   nextBillingDate?: string | null;
+  planAmount?: number | null;
   createdAt: string;
   subscriptionStartedAt?: string;
   teamSupport?: number;
@@ -982,7 +983,7 @@ const ProfilePage = () => {
           <div className="space-y-6 pt-2">
             <div className="p-4 bg-[#A5243D]/5 border border-[#A5243D]/10 rounded-xl">
               <p className="text-lg font-semibold text-gray-900">
-                {formatDonationAmount(sub.totalAmount, sub.currency)}{" "}
+                {formatDonationAmount(sub.planAmount ?? sub.totalAmount, sub.currency)}{" "}
                 {t("subscriptions.perMonth")}
               </p>
               {sub.items?.map((item) => (
