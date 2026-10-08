@@ -4722,7 +4722,7 @@ html[data-mia-drawer="open"] .mia-scope .mia-qb-sec { display: none !important; 
     background: #fff !important;
     box-shadow: 0 8px 22px rgba(16,33,43,.055) !important;
   }
-  .mia-scope #impact-metrics > *:nth-child(3) {
+  .mia-scope #impact-metrics > .mia-impact-stat--featured {
     grid-column: 1 / -1;
     min-height: 108px;
   }
@@ -5291,4 +5291,81 @@ html[data-mia-drawer="open"] .mia-scope .mia-qb-sec { display: none !important; 
   .mia-scope .mia-waqf-page #waqf-cert-preview[data-open="1"] { box-sizing:border-box; width:100%; min-width:0; overflow-wrap:anywhere; }
   .mia-scope .mia-waqf-page #waqf-cert-preview[data-open="1"] > div { box-sizing:border-box; min-width:0; }
   .mia-scope .mia-waqf-page #waqf-cert-preview[data-open="1"] span { max-width:100%; overflow-wrap:anywhere; }
+}
+
+/* Fix mobile photo/content flow on Jerusalem and Al-Aqsa: section-level
+   padding cannot push the media away from its copy. */
+@media (max-width: 900px) {
+  .mia-scope :is(.aq-page,.qd-page) > .mia-story-hero {
+    display: flex !important;
+    flex-direction: column !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    overflow: hidden !important;
+  }
+  .mia-scope .mia-story-hero__image {
+    display: block !important;
+    flex: none !important;
+    width: 100% !important;
+    height: clamp(170px, 43vw, 330px) !important;
+    min-height: 0 !important;
+    max-height: 330px !important;
+    object-fit: cover !important;
+    object-position: center !important;
+    background: transparent !important;
+  }
+  .mia-scope .mia-story-hero--aqsa .mia-story-hero__image { object-fit: contain !important; object-position: center bottom !important; }
+  .mia-scope .mia-story-hero__overlay {
+    position: relative !important;
+    inset: auto !important;
+    display: block !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    box-sizing: border-box !important;
+  }
+  .mia-scope .mia-story-hero__inner {
+    display: grid !important;
+    grid-template-columns: minmax(0,1fr) !important;
+    width: 100% !important;
+    height: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+  .mia-scope .mia-story-hero__copy {
+    box-sizing: border-box !important;
+    display: grid !important;
+    gap: 13px !important;
+    padding: 22px clamp(16px,4vw,28px) 25px !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    background: transparent !important;
+  }
+  .mia-scope .mia-story-hero--jerusalem .mia-story-hero__overlay { background: var(--deep); }
+  .mia-scope .mia-story-hero--aqsa .mia-story-hero__overlay { background: #A8660C; }
+  .mia-scope .mia-story-hero__copy h1 { font-size: clamp(24px,5.6vw,33px) !important; line-height: 1.35 !important; overflow-wrap: anywhere; }
+  .mia-scope .mia-story-hero__copy p { max-width: 100% !important; font-size: clamp(13px,3.4vw,16px) !important; line-height: 1.7 !important; }
+  .mia-scope .mia-story-hero__copy > div:last-child { display:flex !important; flex-wrap: wrap !important; width:100%; gap:10px !important; }
+  .mia-scope .mia-story-hero__copy > div:last-child > * { flex: 1 1 175px !important; min-width:0 !important; white-space: normal !important; text-align:center !important; }
+}
+@media (max-width: 760px) {
+  /* The primary, high-volume impact card is full width, but the two remaining
+     stats share a row instead of leaving an empty opposing grid cell. */
+  .mia-scope .mia-impact-section .mia-impact-summary { grid-template-columns: repeat(2,minmax(0,1fr)) !important; gap: 10px !important; }
+  .mia-scope .mia-impact-section .mia-impact-summary > .mia-impact-stat { grid-column: auto !important; width:100% !important; min-width:0 !important; max-width:100% !important; min-height: 115px !important; padding: clamp(12px,3.2vw,16px) !important; }
+  .mia-scope .mia-impact-section .mia-impact-summary > .mia-impact-stat--featured { grid-column: 1/-1 !important; }
+  .mia-scope .mia-impact-section .mia-impact-summary > .mia-impact-stat b[dir="ltr"] { justify-self: start; max-width:100%; font-size:clamp(23px,6.4vw,34px) !important; }
+  .mia-scope .mia-impact-section .mia-impact-summary > .mia-impact-stat--featured b[dir="ltr"] { font-size:clamp(26px,7vw,37px) !important; }
+  /* Keep the giving assistant accessible without hiding actual section content. */
+  .mia-scope .cg-launch-wrap[data-draggable="1"] { inset-inline-end: 10px !important; }
+  .mia-scope .cg-launch-wrap[data-draggable="1"] .cg-launcher {
+    width: 50px !important; height: 50px !important; min-width:50px !important;
+    max-width: 50px !important; padding: 5px !important;
+    display: grid !important; place-items: center !important;
+    overflow:hidden !important; border-radius: 50% !important;
+  }
+  .mia-scope .cg-launch-wrap[data-draggable="1"] .cg-launcher-label,
+  .mia-scope .cg-launch-wrap[data-draggable="1"] .cg-launcher-badge { display:none !important; }
+  .mia-scope .cg-launch-wrap[data-draggable="1"] .cg-launcher-icon { width:38px !important; height:38px !important; flex-basis:38px !important; }
+  .mia-scope .cg-launch-wrap[data-draggable="1"] .cg-teaser { display:none !important; }
 }
