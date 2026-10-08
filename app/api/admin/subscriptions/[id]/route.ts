@@ -87,7 +87,6 @@ export async function PATCH(
       if (!sub.nextBillingDate || sub.nextBillingDate.getTime() - Date.now() < 24 * 3600_000 || sub.chargeAttempts) {
         return NextResponse.json({ error: "Billing is due soon, already pending, or under retry. Schedule a reduction after this cycle settles.", code: "BILLING_WINDOW_LOCKED" }, { status: 409 });
       }
-      const factor = amount / sub.amount;
       const newAmount = Math.round(amount * 100) / 100;
       const usd = await convertAmountInCurrencyToUsd(newAmount, sub.currency);
       // Preserve all existing projects/categories with proportional amounts.
