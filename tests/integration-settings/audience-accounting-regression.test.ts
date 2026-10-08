@@ -143,7 +143,8 @@ test("preview and bootstrap agree for missing legacy email/SMS profiles, never i
   assert.equal(recipientExclusionReason(legacy, "EMAIL", previewConsentForLegacyDonor(legacy, "EMAIL", null)), null);
   assert.equal(recipientExclusionReason(legacy, "SMS", previewConsentForLegacyDonor(legacy, "SMS", null)), null);
   assert.equal(recipientExclusionReason(legacy, "WHATSAPP", previewConsentForLegacyDonor(legacy, "WHATSAPP", null)), "NEEDS_CONSENT_REVIEW");
-  assert.equal(recipientExclusionReason({ ...legacy, emailNotifications: false }, "EMAIL", previewConsentForLegacyDonor({ ...legacy, emailNotifications: false }, "EMAIL", null)), "EMAIL_OPT_IN_REQUIRED");
+  const legacyOptedOut = { ...legacy, emailNotifications: false };
+  assert.equal(recipientExclusionReason(legacyOptedOut, "EMAIL", previewConsentForLegacyDonor(legacyOptedOut, "EMAIL", null)), "EMAIL_OPT_IN_REQUIRED");
   assert.equal(recipientExclusionReason(legacy, "EMAIL", previewConsentForLegacyDonor(legacy, "EMAIL", { doNotContact: true, emailOptIn: true })), "DO_NOT_CONTACT");
 });
 test("legacy email/SMS previews account for the whole matching audience instead of discarding non-profile donors", async () => {
