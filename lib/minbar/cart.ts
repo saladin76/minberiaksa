@@ -93,6 +93,8 @@ export type CartRecurringSchedule =
       mode: "prayer";
       dayOfMonth?: number;
       prayer: CartPrayerKey;
+      latitude?: number;
+      longitude?: number;
       notes?: string;
     };
 
@@ -218,7 +220,15 @@ function parseSchedule(value: unknown): CartRecurringSchedule | undefined {
       ? (raw.prayer as CartPrayerKey)
       : null;
     if (!prayer) return undefined;
-    return { mode: "prayer", prayer, ...(dayOfMonth ? { dayOfMonth } : {}), ...(notes ? { notes } : {}) };
+    const latitude = typeof raw.latitude === "number" && Number.isFinite(raw.latitude) && raw.latitude >= -90 && raw.latitude <= 90 ? raw.latitude : undefined;
+    const longitude = typeof raw.longitude === "number" && Number.isFinite(raw.longitude) && raw.longitude >= -180 && raw.longitude <= 180 ? raw.longitude : undefined;
+    return {
+      mode: "prayer",
+      prayer,
+      ...(dayOfMonth ? { dayOfMonth } : {}),
+      ...(latitude !== undefined && longitude !== undefined ? { latitude, longitude } : {}),
+      ...(notes ? { notes } : {}),
+    };
   }
 
   /* No mode is the v2 legacy local-time shape. */
