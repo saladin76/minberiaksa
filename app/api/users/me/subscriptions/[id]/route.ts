@@ -110,14 +110,8 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   }
 
   if (input.status && input.status !== sub.status) {
-    try {
-      await applyPlanStatusAtProvider(sub, input.status);
-    } catch (err) {
-      if (err instanceof ProviderSyncError) return NextResponse.json({ error: err.message, code: err.code }, { status: err.httpStatus });
-      throw err;
-    }
-    data.status = input.status;
-    // Resume at the plan's next own slot (its rule  possibly the one just set above).
+    // Resolve before touching the provider. A prayer API outage must not
+    // reactivate the external plan while our local row remains paused.
     if (input.status === "ACTIVE") {
       try {
         data.nextBillingDate = await nextChargeForStoredPlan({ frequency: data.frequency ?? sub.frequency, scheduleRule: data.scheduleRule ?? sub.scheduleRule, timezone: sub.timezone }, new Date());
@@ -125,6 +119,13 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
         return NextResponse.json({ error: "Unable to resolve the next charge time; please try again later", code: "SCHEDULE_UNAVAILABLE" }, { status: 503 });
       }
     }
+    try {
+      await applyPlanStatusAtProvider(sub, input.status);
+    } catch (err) {
+      if (err instanceof ProviderSyncError) return NextResponse.json({ error: err.message, code: err.code }, { status: err.httpStatus });
+      throw err;
+    }
+    data.status = input.status;
     changes.push(`status ${sub.status} → ${input.status}`);
   }
 
