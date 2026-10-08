@@ -159,16 +159,17 @@ export default function AqsaPage({ verse, isra, projects, category = null }: Aqs
       </section>
 
       {/* ── Hero ──────────────────────────────────────────────────────────── */}
-      <section style={{ position: "relative", background: "#A8660C", overflow: "hidden" }}>
+      <section className="mia-story-hero mia-story-hero--aqsa" style={{ position: "relative", background: "#A8660C", overflow: "hidden" }}>
         {/* eslint-disable-next-line @next/next/no-img-element -- sets the section height; not a fixed-size image */}
         <img
+          className="mia-story-hero__image"
           src={category?.heroImage || "/minbar/assets/aqsa-hero-3d.png"}
           alt={t("heroAlt")}
           style={{ display: "block", width: "100%", height: "clamp(360px, 46vw, 640px)", objectFit: "cover", objectPosition: "50% 22%" }}
         />
-        <div style={{ position: "absolute", inset: 0 }}>
-          <div className="aq-hero" style={{ maxWidth: 1240, height: "100%", margin: "0 auto", padding: "4% 24px 0", display: "grid", gridTemplateColumns: "minmax(0,52%) minmax(0,1fr)", alignContent: "start" }}>
-            <div style={{ display: "grid", gap: 12, justifyItems: "start", textAlign: "start" }}>
+        <div className="mia-story-hero__overlay" style={{ position: "absolute", inset: 0 }}>
+          <div className="aq-hero mia-story-hero__inner" style={{ maxWidth: 1240, height: "100%", margin: "0 auto", padding: "4% 24px 0", display: "grid", gridTemplateColumns: "minmax(0,52%) minmax(0,1fr)", alignContent: "start" }}>
+            <div className="mia-story-hero__copy" style={{ display: "grid", gap: 12, justifyItems: "start", textAlign: "start" }}>
               <h1 style={{ margin: 0, fontSize: "clamp(26px,3vw,44px)", lineHeight: 1.35, fontWeight: 900, color: "#fff", textShadow: "0 2px 20px rgba(70,40,4,.45)" }}>
                 {t("pageTitle")}
               </h1>

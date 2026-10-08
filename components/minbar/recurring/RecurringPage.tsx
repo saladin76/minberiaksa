@@ -195,7 +195,7 @@ export default function RecurringPage({ projects }: RecurringPageProps) {
   });
 
   return (
-    <div style={{ position: "relative" }}>
+    <div className="mia-recurring-page" style={{ position: "relative" }}>
       {/* ── Plan builder ─────────────────────────────────────────────────── */}
       <section id="plan" style={{ position: "relative", background: "var(--ivory)", borderBottom: "1px solid var(--border)", overflow: "hidden" }}>
         <div aria-hidden="true" data-aqsa-pattern="" style={pattern(520)} />
@@ -228,7 +228,7 @@ export default function RecurringPage({ projects }: RecurringPageProps) {
           </div>
 
           <div id="rc-grid" style={{ display: "grid", gridTemplateColumns: "minmax(0,.8fr) minmax(0,1.2fr)", gap: 26, alignItems: "stretch" }}>
-            <span className="rc-video" style={{ position: "relative", display: "block", background: "#000", borderRadius: 16, overflow: "hidden", minHeight: 420, boxShadow: "0 18px 44px rgba(16,33,43,.14)", transition: "box-shadow .25s ease, transform .25s ease" }}>
+            <span className="rc-video mia-responsive-video" style={{ position: "relative", display: "block", background: "#000", borderRadius: 16, overflow: "hidden", minHeight: 420, boxShadow: "0 18px 44px rgba(16,33,43,.14)", transition: "box-shadow .25s ease, transform .25s ease" }}>
               <iframe
                 src="https://www.youtube.com/embed/K65JuQ8Nz9g?si=TCfoRDQ9caOL53Wi"
                 title={t("whatIsIt")}
@@ -240,7 +240,7 @@ export default function RecurringPage({ projects }: RecurringPageProps) {
               />
             </span>
 
-            <div className="rc-builder" style={{ display: "grid", gap: 22, alignContent: "start", padding: 32, background: "#fff", border: "1px solid var(--border)", borderRadius: 16, boxShadow: "0 18px 44px rgba(16,33,43,.1)" }}>
+            <div className="rc-builder mia-donation-builder" style={{ display: "grid", gap: 22, alignContent: "start", padding: 32, background: "#fff", border: "1px solid var(--border)", borderRadius: 16, boxShadow: "0 18px 44px rgba(16,33,43,.1)" }}>
               {/* Step 1  fund */}
               <div style={{ display: "grid", gap: 9 }}>
                 <span style={stepLabel}>
@@ -269,7 +269,7 @@ export default function RecurringPage({ projects }: RecurringPageProps) {
                   {stepBadge(2)}
                   {t("setAmount")}
                 </span>
-                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                <div className="mia-recurring-amounts" style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                   {AMOUNTS.map((v) => (
                     <button
                       key={v}
@@ -377,7 +377,7 @@ export default function RecurringPage({ projects }: RecurringPageProps) {
                 />
               </label>
 
-              <div className="rc-plan-summary" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 14, padding: "16px 20px", background: "var(--sand)", borderRadius: 12 }}>
+              <div className="rc-plan-summary mia-donation-summary" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 14, padding: "16px 20px", background: "var(--sand)", borderRadius: 12 }}>
                 <span aria-hidden="true" style={{ flex: "0 0 auto", width: 36, height: 36, borderRadius: "50%", background: "#fff", display: "grid", placeItems: "center", color: "var(--gold)" }}>
                   <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
                     <path d="M12 21s-7.5-4.7-7.5-10A4.5 4.5 0 0 1 12 8a4.5 4.5 0 0 1 7.5 3c0 5.3-7.5 10-7.5 10Z" />
