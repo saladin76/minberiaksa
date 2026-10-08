@@ -221,7 +221,7 @@ export function scheduleRuleFor(
     if (frequency !== "FRIDAY") throw new Error("PRAYER_FREQUENCY_MISMATCH");
     return { kind: "prayer", weekday: 5, prayer: "Dhuhr", latitude: choice.latitude, longitude: choice.longitude, method: 13, minutesBefore: 30 };
   }
-  const local = choice && choice.mode !== "prayer" ? choice : null;
+  const local = choice ?? null;
   const wall = wallClock(at, normalizeTimezone(timezone));
   switch (frequency) {
     case "DAILY":
