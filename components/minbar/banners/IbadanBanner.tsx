@@ -64,20 +64,20 @@ export default function IbadanBanner() {
             </Link>
 
             <div
-              className="ibadan-content"
+              className="ibadan-content mia-campaign-banner-content"
               style={{ position: "relative", zIndex: 2, display: "grid", justifyItems: "start", textAlign: "start", gap: 14, marginInlineEnd: "auto", maxWidth: 620, padding: "34px 30px 28px 36px", minHeight: 340, alignContent: "end" }}
             >
-              <h2 style={{ margin: 0, whiteSpace: "nowrap", fontSize: "clamp(18px,2vw,28px)", lineHeight: 1.5, fontWeight: 900, letterSpacing: "-.01em", color: "#fff", textShadow: "0 2px 18px rgba(16,33,43,.55)" }}>
+              <h2 style={{ margin: 0, overflowWrap: "anywhere", fontSize: "clamp(18px,2vw,28px)", lineHeight: 1.5, fontWeight: 900, letterSpacing: "-.01em", color: "#fff", textShadow: "0 2px 18px rgba(16,33,43,.55)" }}>
                 {t("ibadanHeading1")}
                 <br />
                 {t("ibadanSubtitle")}
               </h2>
 
-              <div className="ibadan-ctas" style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 2 }}>
+              <div className="ibadan-ctas mia-campaign-banner-actions" style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 2 }}>
                 <Link
                   href={projectHref}
-                  className="ibadan-cta"
-                  style={{ display: "inline-flex", alignItems: "center", gap: 10, height: 46, padding: "0 24px", borderRadius: 8, background: "#A93428", color: "#fff", fontWeight: 900, fontSize: 14.5, whiteSpace: "nowrap", textDecoration: "none", boxShadow: "0 10px 26px rgba(169,52,40,.4)" }}
+                  className="ibadan-cta mia-campaign-banner-button"
+                  style={{ display: "inline-flex", alignItems: "center", gap: 10, height: 46, padding: "0 24px", borderRadius: 8, background: "#A93428", color: "#fff", fontWeight: 900, fontSize: 14.5, whiteSpace: "normal", textAlign: "center", overflowWrap: "anywhere", textDecoration: "none", boxShadow: "0 10px 26px rgba(169,52,40,.4)" }}
                 >
                   {tCommon("donate")}
                 </Link>

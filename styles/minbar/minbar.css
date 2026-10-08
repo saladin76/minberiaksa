@@ -5132,3 +5132,97 @@ html[data-mia-drawer="open"] .mia-scope .mia-qb-sec { display: none !important; 
     background: linear-gradient(0deg,rgba(16,33,43,.92) 1%,rgba(16,33,43,.43) 54%,rgba(16,33,43,.05) 95%) !important;
   }
 }
+
+/* Home mobile layout: the impact and campaign banners have their own
+   responsive geometry; never reuse carousel rail widths here. */
+@media (max-width: 760px) {
+  .mia-scope .mia-impact-section,
+  .mia-scope .mia-regions-section,
+  .mia-scope #friday,
+  .mia-scope #ibadan-banner { max-width: 100%; overflow-x: clip; }
+  .mia-scope .mia-impact-section > div,
+  .mia-scope .mia-regions-section > div,
+  .mia-scope #friday > div,
+  .mia-scope #ibadan-banner > div { width: 100%; min-width: 0; box-sizing: border-box; padding-inline: clamp(12px, 4vw, 20px) !important; }
+  .mia-scope .mia-impact-summary {
+    display: grid !important; grid-template-columns: repeat(2,minmax(0,1fr)) !important;
+    overflow: visible !important; gap: 10px !important; padding: 0 !important;
+    border: 0 !important;
+  }
+  .mia-scope .mia-impact-summary > .mia-impact-stat {
+    width: 100% !important; max-width: 100% !important; min-width: 0 !important;
+    display: flex !important; flex-direction: column; align-items: flex-start;
+    gap: 7px !important; box-sizing: border-box;
+    border: 1px solid var(--border) !important; border-radius: 14px !important;
+    background: #fff !important; padding: clamp(12px,3.5vw,17px) !important;
+    min-height: 122px; box-shadow: 0 6px 20px rgba(16,33,43,.05);
+  }
+  .mia-scope .mia-impact-summary > .mia-impact-stat--featured { grid-column: 1/-1; min-height: 116px; }
+  .mia-scope .mia-impact-stat > b[dir="ltr"] {
+    font-size: clamp(24px, 7.3vw, 38px) !important;
+    max-width: 100%; white-space: nowrap; letter-spacing: -.04em !important;
+    font-variant-numeric: tabular-nums; line-height: 1.16 !important;
+  }
+  .mia-scope .mia-impact-stat > span { max-width: 100%; overflow-wrap: anywhere; line-height: 1.45 !important; }
+  .mia-scope .mia-impact-sectors {
+    display: grid !important; grid-template-columns: repeat(2,minmax(0,1fr)) !important;
+    overflow: visible !important; padding: 0 !important; gap: 10px !important;
+  }
+  .mia-scope .mia-impact-sectors > .mia-impact-sector {
+    min-width: 0 !important; max-width: 100% !important; width: auto !important;
+    box-sizing: border-box; padding: 12px 10px !important; gap: 8px !important;
+  }
+  .mia-scope .mia-impact-sector > span { min-width: 0; max-width: 100%; overflow-wrap: anywhere; }
+  .mia-scope .mia-impact-sector-value {
+    max-width: 100%; min-width: 0; white-space: nowrap;
+    font-size: clamp(17px, 4.9vw, 24px) !important;
+    font-variant-numeric: tabular-nums; letter-spacing: -.04em !important;
+  }
+  .mia-scope #regions { display: grid !important; grid-template-columns: minmax(0,1fr) !important; overflow: visible !important; padding: 0 !important; gap: 12px !important; }
+  .mia-scope #regions > .mia-region-card { width: 100% !important; max-width: 100% !important; min-width: 0 !important; min-height: 210px !important; box-sizing: border-box; }
+  .mia-scope .mia-region-card__body { min-width: 0; padding: 22px 18px !important; overflow-wrap: anywhere; }
+  .mia-scope .mia-region-card__body > b { font-size: clamp(20px,5.5vw,26px) !important; line-height: 1.35 !important; }
+  .mia-scope .mia-region-card__body > span:not(.mia-region-card__cta) { line-height: 1.65 !important; font-size: 13px !important; }
+  .mia-scope .mia-region-card__cta { max-width: 100%; min-height: 44px; height: auto !important; padding: 10px 16px !important; white-space: normal; }
+  .mia-scope :is(.friday-wrap,.ibadan-wrap,.friday-body,.ibadan-body,.mia-campaign-banner-content) { min-width: 0; max-width: 100%; box-sizing: border-box; }
+  .mia-scope :is(.friday-body,.ibadan-body) { height: auto !important; min-height: 265px !important; aspect-ratio: auto !important; }
+  .mia-scope .mia-campaign-banner-content {
+    min-height: 265px !important; width: 100% !important; padding: 88px 14px 16px !important;
+    margin: 0 !important; justify-items: stretch !important; gap: 12px !important;
+  }
+  .mia-scope .mia-campaign-banner-content h2 {
+    min-width: 0; max-width: 100%; margin: 0 !important;
+    white-space: normal !important; overflow-wrap: anywhere;
+    line-height: 1.55 !important; font-size: clamp(16px,4.3vw,21px) !important;
+    text-align: center !important;
+  }
+  .mia-scope .mia-campaign-banner-actions {
+    display: grid !important; width: 100% !important; min-width: 0 !important;
+    grid-template-columns: repeat(2,minmax(0,1fr)); gap: 8px !important;
+    margin: 0 !important;
+  }
+  .mia-scope .mia-campaign-banner-actions > .mia-campaign-banner-button {
+    display: flex !important; width: 100% !important; max-width: 100% !important;
+    min-width: 0 !important; box-sizing: border-box;
+    height: auto !important; min-height: 46px !important; padding: 10px 8px !important;
+    font-size: clamp(11px,3.3vw,14px) !important; line-height: 1.4 !important;
+    text-align: center !important; white-space: normal !important;
+    overflow-wrap: anywhere; justify-content: center !important;
+  }
+  .mia-scope .friday-prices { inset-inline: 10px !important; inset-inline-end: auto !important;
+    top: 10px !important; width: calc(100% - 20px) !important;
+    display: grid !important; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 7px !important;
+  }
+  .mia-scope .friday-prices > span {
+    min-width: 0 !important; max-width: 100%; justify-content: center;
+    padding: 8px 6px !important; overflow: hidden;
+  }
+  .mia-scope .friday-prices b[dir="ltr"] { font-size: clamp(15px,4.3vw,20px) !important; min-width: 0; }
+  .mia-scope .ibadan-logo { width: clamp(82px,26vw,118px) !important; max-width: 35% !important; }
+}
+@media (max-width: 370px) {
+  .mia-scope .mia-impact-sector-value { font-size: 16px !important; }
+  .mia-scope .mia-impact-stat > b[dir="ltr"] { font-size: clamp(24px,7vw,29px) !important; }
+  .mia-scope .mia-campaign-banner-actions { gap: 6px !important; }
+  .mia-scope .mia-campaign-banner-actions > .mia-campaign-banner-button { font-size: 11px !important; }
+}
