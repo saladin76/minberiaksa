@@ -7,6 +7,7 @@ import { prisma } from "@/lib/prisma";
 import { donorChannelEligibility } from "@/lib/communication/audience-service";
 import { recipientExclusionReason, RECIPIENT_REASON_LABELS } from "@/lib/communication/campaign-audience-accounting";
 import { campaignCandidateWhere, candidatePagination } from "@/lib/communication/campaign-candidate-policy";
+import { readCampaignConsentUserIds } from "@/lib/communication/campaign-consent-reader";
 import { isCommunicationChannel } from "@/lib/communication/communication-runtime-types";
 import { getUserIdsMatchingBadge, getBadgeIdsByUser } from "@/lib/badge-criteria";
 import { resolveUserCountry } from "@/lib/dashboard/resolve-user-country";
@@ -18,11 +19,7 @@ import { AUDIENCE_SELECTION_MAX } from "@/lib/communication/audience-limits";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-/**
- * Candidate membership is separate from readiness. The default includes every
- * matching donor; explicit readiness filters use the same policy as campaign
- * execution. Neither GET nor select-all creates or updates a consent profile.
- */
+/** All matching donors remain selectable; readiness filtering is opt-in and read-only. */
 const SELECT_ALL_CEILING = AUDIENCE_SELECTION_MAX;
 const donorSelect = {
   id: true, name: true, email: true, phone: true, image: true, preferredLang: true,
@@ -87,7 +84,6 @@ async function buildWhere(f: FilterInput): Promise<Prisma.UserWhereInput> {
   if (birthdateRange) where.birthdate = birthdateRange;
   if (f.badgeId && f.badgeId !== "all") {
     const badge = await prisma.badge.findUnique({ where: { id: f.badgeId }, select: { criteria: true } });
-    // An empty badge must stay empty, never widen to all donors.
     where.id = { in: badge ? await getUserIdsMatchingBadge(badge.criteria) : [] };
   }
   return where;
@@ -102,12 +98,14 @@ function eligibilityReason(
   const reason = recipientExclusionReason(donor, channel, profile);
   return reason === null ? null : RECIPIENT_REASON_LABELS[reason];
 }
-function channelEligibilityWhere(
+async function channelEligibilityWhere(
   base: Prisma.UserWhereInput,
   channel: "EMAIL" | "WHATSAPP" | "SMS",
   eligibility: string,
-): Prisma.UserWhereInput {
-  return campaignCandidateWhere(base, channel, eligibility);
+  signal?: AbortSignal,
+): Promise<Prisma.UserWhereInput> {
+  const ids = eligibility === "all" ? undefined : await readCampaignConsentUserIds(channel, signal);
+  return campaignCandidateWhere(base, channel, eligibility, ids);
 }
 
 export async function GET(request: NextRequest) {
@@ -128,7 +126,7 @@ export async function GET(request: NextRequest) {
   const { page, limit } = pagination;
   try {
     const baseWhere = await buildWhere(filters);
-    const where = channelEligibilityWhere(baseWhere, channel, eligibilityFilter);
+    const where = await channelEligibilityWhere(baseWhere, channel, eligibilityFilter, request.signal);
     const [total, rows, allBadges] = await Promise.all([
       prisma.user.count({ where }),
       prisma.user.findMany({ where, select: donorSelect, orderBy: [{ createdAt: "desc" }, { id: "desc" }], skip: (page - 1) * limit, take: limit }),
@@ -165,12 +163,11 @@ export async function GET(request: NextRequest) {
       })) },
     });
   } catch {
-    // A failed read is not an empty audience, a consent decision or HTTP 200.
     return reply({ ok: false, error: "تعذّر تحميل جمهور الحملة. أعد المحاولة؛ الأعداد غير متاحة وليست صفرًا." }, 503);
   }
 }
 
-/** Select the same filtered population and order as GET, not just the visible page. */
+/** GET and select-all share the same filtering and order. */
 export async function POST(request: NextRequest) {
   const session = await getServerSession(authOptions);
   const denied = requireAdminOrDashboardPermission(session, "messages");
@@ -186,7 +183,7 @@ export async function POST(request: NextRequest) {
   if (typeof eligibilityFilter !== "string" || !["all", "eligible", "ineligible"].includes(eligibilityFilter)) return reply({ ok: false, error: "Invalid eligibility filter" }, 400);
   try {
     const baseWhere = await buildWhere(filters);
-    const where = channelEligibilityWhere(baseWhere, channel, eligibilityFilter);
+    const where = await channelEligibilityWhere(baseWhere, channel, eligibilityFilter, request.signal);
     const rows = await prisma.user.findMany({
       where, select: { id: true }, orderBy: [{ createdAt: "desc" }, { id: "desc" }], take: SELECT_ALL_CEILING + 1,
     });

@@ -2,35 +2,29 @@ import type { Prisma } from "@prisma/client";
 import type { AudienceChannel } from "./campaign-audience-accounting";
 
 /**
- * Database form of recipientExclusionReason for the campaign picker.
- * MongoDB distinguishes absent fields from null: spell out both sides of
- * each filter instead of negating a compound predicate that drops absences.
- * This is read-only; viewing or selecting an audience never creates consent.
+ * Apply optional readiness filtering BEFORE count and pagination. Profile IDs
+ * are resolved read-only using the shared policy, because required Prisma Bool
+ * fields cannot use MongoDB's isSet filter. Never cast an unsupported filter.
  */
 export function campaignCandidateWhere(
   base: Prisma.UserWhereInput,
   channel: AudienceChannel,
   eligibility: string,
+  consentingUserIds?: readonly string[],
 ): Prisma.UserWhereInput {
   if (eligibility !== "eligible" && eligibility !== "ineligible") return base;
+  if (!consentingUserIds) throw new Error("CAMPAIGN_ELIGIBILITY_NOT_RESOLVED");
   const contact = channel === "EMAIL" ? "email" : "phone";
-  const preference = channel === "EMAIL" ? "emailOptIn" : channel === "SMS" ? "smsOptIn" : "whatsappOptIn";
   const contactPresent: Prisma.UserWhereInput = {
     AND: [{ [contact]: { not: null } }, { [contact]: { not: "" } }],
   };
   const missingContact: Prisma.UserWhereInput = {
     OR: [{ [contact]: null }, { [contact]: "" }, { [contact]: { isSet: false } }],
   };
-  const approvedProfile: Prisma.DonorCommunicationProfileWhereInput = {
-    [preference]: true,
-    OR: [{ doNotContact: false }, { doNotContact: { isSet: false } }],
-  };
-  const blockedProfile: Prisma.DonorCommunicationProfileWhereInput = {
-    OR: [{ doNotContact: true }, { [preference]: false }, { [preference]: { isSet: false } }],
-  };
+  const ids = [...new Set(consentingUserIds)];
   const gate: Prisma.UserWhereInput = eligibility === "eligible"
-    ? { AND: [contactPresent, { communicationProfile: { is: approvedProfile } }] }
-    : { OR: [missingContact, { communicationProfile: { is: null } }, { communicationProfile: { is: blockedProfile } }] };
+    ? { AND: [contactPresent, { id: { in: ids } }] }
+    : { OR: [missingContact, { id: { notIn: ids } }] };
   return { AND: [base, gate] };
 }
 
