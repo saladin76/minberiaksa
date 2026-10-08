@@ -92,6 +92,7 @@ export type CartRecurringSchedule =
   | {
       mode: "prayer";
       prayer: CartPrayerKey;
+      timezone?: string;
       latitude?: number;
       longitude?: number;
       notes?: string;
@@ -224,6 +225,7 @@ function parseSchedule(value: unknown): CartRecurringSchedule | undefined {
     return {
       mode: "prayer",
       prayer,
+      ...(typeof raw.timezone === "string" && raw.timezone.length <= 64 ? { timezone: raw.timezone } : {}),
       ...(latitude !== undefined && longitude !== undefined ? { latitude, longitude } : {}),
       ...(notes ? { notes } : {}),
     };
