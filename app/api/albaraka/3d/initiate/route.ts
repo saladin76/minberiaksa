@@ -26,6 +26,7 @@ import {
 } from "@/lib/albaraka";
 import { failAlbarakaDonation, settleAlbarakaDonation } from "@/lib/donations/albaraka-settlement";
 import { parseMainGateway } from "@/lib/payment-gateway";
+import { donationFieldEmpty, donationWhereAll } from "@/lib/donations/mongo-null";
 import {
   convertAmountInCurrencyToTry,
   convertAmountInCurrencyToUsd,
@@ -329,16 +330,21 @@ export async function POST(req: NextRequest) {
        the request that flips it to "Processing" reaches the bank. The flag is
        cleared by settlement ("Success") or failure ("Failed"). */
     const claim = await prisma.donation.updateMany({
-      where: {
-        id: donation.id,
-        paidAt: null,
-        status: { not: "FAILED" },
-        OR: [
-          { providerTxnResult: { isSet: false } },
-          { providerTxnResult: null },
-          { providerTxnResult: { not: "Processing" } },
-        ],
-      },
+      /* `paidAt` is ABSENT, not null, on a fresh checkout row, and on MongoDB
+         `{ paidAt: null }` does not match a missing field  so this claim matched
+         nothing and EVERY Albaraka card payment was refused as "already in
+         progress" before the bank was asked. `donationFieldEmpty` matches both. */
+      where: donationWhereAll(
+        { id: donation.id, status: { not: "FAILED" } },
+        donationFieldEmpty("paidAt"),
+        {
+          OR: [
+            { providerTxnResult: { isSet: false } },
+            { providerTxnResult: null },
+            { providerTxnResult: { not: "Processing" } },
+          ],
+        }
+      ),
       data: {
         locale,
         provider: "ALBARAKA",

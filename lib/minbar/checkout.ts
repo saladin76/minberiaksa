@@ -366,7 +366,8 @@ export async function initiateBankPayment(
   });
 
   const payload = (await response.json().catch(() => null)) as (GatewayForm & { error?: string }) | null;
-  if (!response.ok || !payload?.actionUrl) throw new Error(payload?.error || "gateway-failed");
+  // A refusal (e.g. "Invalid card number") carries its reason to the form instead of "we are fixing it".
+  if (!response.ok || !payload?.actionUrl) throw new OrderRejectedError(payload?.error || "gateway-failed", response.status);
 
   return { actionUrl: payload.actionUrl, fields: payload.fields ?? {} };
 }

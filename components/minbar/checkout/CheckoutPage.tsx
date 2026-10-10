@@ -465,7 +465,7 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
          and the server's own reason for refusing it. */
       if (cause instanceof UnpayableItemsError) {
         setError(t("itemsUnavailable", { items: cause.items.map(resolveTitle).join("، ") }));
-      } else if (cause instanceof OrderRejectedError && cause.status >= 400 && cause.status < 500 && cause.message !== "order-failed") {
+      } else if (cause instanceof OrderRejectedError && cause.status >= 400 && cause.status < 500 && cause.message !== "order-failed" && cause.message !== "gateway-failed") {
         setError(cause.message);
       } else {
         setError(tSystem("techErrorLead"));
