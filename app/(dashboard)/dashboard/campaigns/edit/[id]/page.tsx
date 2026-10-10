@@ -1127,7 +1127,7 @@ export default function EditCampaignPage() {
                       </FormControl>
                       <SelectContent>
                         <SelectItem value="monthly">شهريًا (الافتراضي)</SelectItem>
-                        <SelectItem value="friday">كل جمعة</SelectItem>
+                        <SelectItem value="friday">أسبوعياً</SelectItem>
                         <SelectItem value="daily">يوميًا</SelectItem>
                         <SelectItem value="once">مرة واحدة</SelectItem>
                         <SelectItem value="none">بدون توصية</SelectItem>

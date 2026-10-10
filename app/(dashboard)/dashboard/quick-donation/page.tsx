@@ -48,7 +48,7 @@ import {
 const FREQ_LABEL: Record<CartFreqKey, string> = {
   once: "تبرع لمرة",
   daily: "يوميًا",
-  friday: "كل جمعة",
+  friday: "أسبوعياً",
   monthly: "شهريًا",
 };
 

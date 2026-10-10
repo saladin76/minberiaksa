@@ -153,7 +153,7 @@ const LEGACY_TYPES: Record<string, CartTypeKey> = {
 const LEGACY_FREQS: Record<string, CartFreqKey> = {
   "تبرع لمرة": "once",
   "تبرع يومي": "daily",
-  "تبرع كل جمعة": "friday",
+  "تبرع أسبوعياً": "friday",
   "تبرع شهري": "monthly",
 };
 

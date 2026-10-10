@@ -25,7 +25,7 @@ import {
  * Desktop: one row, fixed to the bottom of the viewport for the whole page, so
  * the choice stays one click away however far the visitor reads:
  *
- *   [ destination ▾ ] | تبرع لمرة  يوميًا  كل جمعة  شهريًا | $100 $300 $500 $700 [مبلغ مخصص] … US$300 [ تبرّع الآن ]
+ *   [ destination ▾ ] | تبرع لمرة  يوميًا  أسبوعياً  شهريًا | $100 $300 $500 $700 [مبلغ مخصص] … US$300 [ تبرّع الآن ]
  *
  *   · The destination is ONE select  the generic intentions first, then the
  *     projects the dashboard allows under a group heading. A real listbox

@@ -723,7 +723,7 @@ export async function POST(request: NextRequest) {
         actorName: donorName,
         actorRole,
         action: "DONATION_RECURRING_CHECKOUT_START",
-        messageAr: `${donorName ?? "متبرع"} بدأ عملية دفع تبرعًا ${frequency === "DAILY" ? "يوميًا" : frequency === "FRIDAY" ? "كل جمعة" : "شهريًا"} عبر السلة (≈ ${donationTotalUsd.toFixed(0)} USD لكل دورة)`,
+        messageAr: `${donorName ?? "متبرع"} بدأ عملية دفع تبرعًا ${frequency === "DAILY" ? "يوميًا" : frequency === "FRIDAY" ? "أسبوعياً" : "شهريًا"} عبر السلة (≈ ${donationTotalUsd.toFixed(0)} USD لكل دورة)`,
         entityType: "Donation",
         entityId: d.id,
         metadata: { amountUSD: donationTotalUsd, via: "cart_payment", status: "PENDING", provider: rail, frequency, timezone, nextChargeAt: consent.nextChargeAt },

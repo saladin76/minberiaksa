@@ -630,7 +630,7 @@
   "hi": "दान राशि"
  },
  "success.highlightNote": {
-  "ar": "تبرع كل جمعة · طرود غذائية لأهل غزة",
+  "ar": "تبرع أسبوعياً · طرود غذائية لأهل غزة",
   "en": "Weekly (Friday) donation · Food parcels for Gaza",
   "tr": "Her cuma bağışı · Gazze halkına gıda kolileri",
   "fr": "Don chaque vendredi · Colis alimentaires pour Gaza",
@@ -1029,7 +1029,7 @@
   "hi": "हर भुगतान की राशि"
  },
  "recurring.highlightNote": {
-  "ar": "كل جمعة · مشاريع القدس",
+  "ar": "أسبوعياً · مشاريع القدس",
   "en": "Every Friday · Al-Quds Projects",
   "tr": "Her Cuma · Kudüs Projeleri",
   "fr": "Chaque Vendredi · Projets D'Al-Qods",

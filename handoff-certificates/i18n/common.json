@@ -343,7 +343,7 @@
   "hi": "प्रतिदिन"
  },
  "everyFriday": {
-  "ar": "كل جمعة",
+  "ar": "أسبوعياً",
   "tr": "Her Cuma",
   "en": "Every Friday",
   "fr": "Chaque Vendredi",
@@ -807,7 +807,7 @@
   "hi": "प्रतिदिन"
  },
  "freqFriday": {
-  "ar": "تبرع كل جمعة",
+  "ar": "تبرع أسبوعياً",
   "tr": "Her Cuma Bağış",
   "en": "Every Friday",
   "fr": "Chaque Vendredi",
@@ -1185,7 +1185,7 @@
   "hi": "प्रतिदिन"
  },
  "freq_friday": {
-  "ar": "كل جمعة",
+  "ar": "أسبوعياً",
   "tr": "Her Cuma",
   "en": "Every Friday",
   "fr": "Chaque Vendredi",

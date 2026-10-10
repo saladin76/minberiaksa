@@ -36,7 +36,7 @@ import {
   subscriptionFrequencyWhere,
 } from "@/lib/dashboard/recurring-frequency-filter";
 
-const FREQUENCY_LABEL_AR = { DAILY: "يومي", FRIDAY: "كل جمعة", MONTHLY: "شهري" } as const;
+const FREQUENCY_LABEL_AR = { DAILY: "يومي", FRIDAY: "أسبوعياً", MONTHLY: "شهري" } as const;
 
 export async function GET(request: NextRequest) {
   try {

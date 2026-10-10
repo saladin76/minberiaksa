@@ -68,7 +68,7 @@ const M = {
     a_view_category: "عرض المشاريع",
     f_once: "لمرة واحدة",
     f_daily: "يومي",
-    f_friday: "كل جمعة",
+    f_friday: "أسبوعياً",
     f_monthly: "شهري",
     waqf_title: "وقف",
     zakat_title: "زكاة",

@@ -180,7 +180,7 @@ type RecurringFrequency = "DAILY" | "FRIDAY" | "MONTHLY";
 type FrequencyFilter = "all" | RecurringFrequency;
 
 const FREQUENCIES: RecurringFrequency[] = ["DAILY", "FRIDAY", "MONTHLY"];
-const FREQUENCY_LABEL_AR: Record<string, string> = { DAILY: "يومي", FRIDAY: "كل جمعة", MONTHLY: "شهري" };
+const FREQUENCY_LABEL_AR: Record<string, string> = { DAILY: "يومي", FRIDAY: "أسبوعياً", MONTHLY: "شهري" };
 /** One hue per cadence, reused by the cards, the stacked chart and the table badges. */
 const FREQUENCY_COLOR: Record<RecurringFrequency, string> = {
   DAILY: "#2c8b5d",
@@ -965,7 +965,7 @@ export default function MonthlySubscriptionsDashboardPage() {
                 </span>
               </>
             ) : (
-              "كل التبرعات المتكررة  اليومية، وكل جمعة، والشهرية: الإيرادات، دفعات التجديد، والحالة"
+              "كل التبرعات المتكررة  اليومية، وأسبوعياً، والشهرية: الإيرادات، دفعات التجديد، والحالة"
             )
           }
         />
@@ -1009,7 +1009,7 @@ export default function MonthlySubscriptionsDashboardPage() {
               eyebrow={`الإيراد الشهري المتكرر (MRR)${frequencyLabelSuffix}`}
               badge="شهريًا"
               value={formatMoney(Math.round(stats?.monthlyRecurringRevenue ?? 0))}
-              note="المكافئ الشهري للاشتراكات النشطة: اليومي × ٣٠٫٤، وكل جمعة × ٤٫٣٥، والشهري كما هو."
+              note="المكافئ الشهري للاشتراكات النشطة: اليومي × ٣٠٫٤، وأسبوعياً × ٤٫٣٥، والشهري كما هو."
             />
             {/* ARR is MRR×12  a projection of the current book, not money collected. The note
                 says so, because a figure this size sitting beside real revenue invites being
@@ -1050,7 +1050,7 @@ export default function MonthlySubscriptionsDashboardPage() {
                   <div className="mb-3 flex items-center justify-between gap-2">
                     <span className="flex items-center gap-2 text-sm font-semibold text-slate-900">
                       <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: FREQUENCY_COLOR[f] }} aria-hidden="true" />
-                      {f === "DAILY" ? "التبرعات اليومية" : f === "FRIDAY" ? "تبرعات كل جمعة" : "التبرعات الشهرية"}
+                      {f === "DAILY" ? "التبرعات اليومية" : f === "FRIDAY" ? "تبرعات أسبوعياً" : "التبرعات الشهرية"}
                     </span>
                     <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-semibold tabular-nums text-slate-600">
                       {row?.activeCount ?? 0} نشط
@@ -2848,7 +2848,7 @@ export default function MonthlySubscriptionsDashboardPage() {
         onOpenChange={setExportOpen}
         endpoint="/api/admin/monthly/export"
         title="تصدير تقرير التبرعات المتكررة"
-        description="يشمل التقرير الاشتراكات المتكررة (يومي، كل جمعة، شهري) ودفعاتها مع ملخص كامل وتفصيل لكل حملة من الأعلى إلى الأدنى."
+        description="يشمل التقرير الاشتراكات المتكررة (يومي، أسبوعياً، شهري) ودفعاتها مع ملخص كامل وتفصيل لكل حملة من الأعلى إلى الأدنى."
         defaults={(() => {
           const { start, end } = getDonationsDateRange(chartPeriod, dateFrom, dateTo);
           return {

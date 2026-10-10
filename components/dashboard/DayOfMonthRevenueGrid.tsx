@@ -149,8 +149,8 @@ export function DayOfMonthRevenueGrid({ collected, expected, loading, formatMone
             <span className="font-semibold text-slate-700">غير مشمول في الشبكة:</span>
             {unplacedWithPlans.map((u) => (
               <span key={u.frequency} className="tabular-nums">
-                {u.frequency === "DAILY" ? "يومي" : "كل جمعة"}: {u.count} اشتراك ·{" "}
-                {formatMoney(u.amountUSD)} {u.frequency === "DAILY" ? "كل يوم" : "كل جمعة"}
+                {u.frequency === "DAILY" ? "يومي" : "أسبوعياً"}: {u.count} اشتراك ·{" "}
+                {formatMoney(u.amountUSD)} {u.frequency === "DAILY" ? "كل يوم" : "أسبوعياً"}
               </span>
             ))}
           </div>

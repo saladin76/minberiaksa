@@ -46,7 +46,7 @@ test("amounts and currencies are read in Arabic, English and Turkish", () => {
 });
 
 test("frequencies", () => {
-  assert.equal(parseFrequency("عايز أتبرع كل جمعة"), "friday");
+  assert.equal(parseFrequency("عايز أتبرع أسبوعياً"), "friday");
   assert.equal(parseFrequency("كل شهر 50 دولار"), "monthly");
   assert.equal(parseFrequency("every day please"), "daily");
   assert.equal(parseFrequency("her cuma"), "friday");
@@ -59,7 +59,7 @@ test("intents", () => {
   assert.equal(parseIntent("عايز أطلع زكاة مالي"), "zakat");
   assert.equal(parseIntent("إيه أكتر حاجة محتاجة دعم؟"), "most_needed");
   assert.equal(parseIntent("عايز أعمل وقف"), "waqf");
-  assert.equal(parseIntent("عايز أتبرع كل جمعة"), "recurring");
+  assert.equal(parseIntent("عايز أتبرع أسبوعياً"), "recurring");
   assert.equal(parseIntent("I want to help with emergency relief in Gaza"), "relief");
   assert.equal(parseIntent("عايز أتبرع باسم أمي"), "gift");
   assert.equal(parseIntent("Zekâtımı vermek istiyorum"), "zakat");

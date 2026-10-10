@@ -500,12 +500,12 @@ class Component extends DCLogic {
       onCertName: (e) => this.setState({ certName: e.target.value }),
       recurringDone: s.recurringDone,
       /* الحالة تخزن المعرّف الخام (Enum)  التسمية تُشتق عند العرض */
-      recurringFreqLabel: ({ daily: this.tr("common", "daily", "يوميًا"), friday: this.tr("common", "everyFriday", "كل جمعة"), monthly: this.tr("common", "monthly", "شهريًا") })[s.recurringFreqLabel] || s.recurringFreqLabel,
+      recurringFreqLabel: ({ daily: this.tr("common", "daily", "يوميًا"), friday: this.tr("common", "everyFriday", "أسبوعياً"), monthly: this.tr("common", "monthly", "شهريًا") })[s.recurringFreqLabel] || s.recurringFreqLabel,
       showReview: s.showReview,
       showReviewStep: s.showReview && !s.recurringDone,
       freq: s.freq,
       /* التسمية المعروضة تُشتق من المعرّف  لا تُخزَّن مترجمة */
-      pickedFreqLabel: ({ daily: this.tr("common", "daily", "يوميًا"), friday: this.tr("common", "everyFriday", "كل جمعة"), monthly: this.tr("common", "monthly", "شهريًا") })[s.freq] || s.freq,
+      pickedFreqLabel: ({ daily: this.tr("common", "daily", "يوميًا"), friday: this.tr("common", "everyFriday", "أسبوعياً"), monthly: this.tr("common", "monthly", "شهريًا") })[s.freq] || s.freq,
       pickedAmount: s.pickedAmount,
       customAmount: s.customAmount,
       showAmounts: s.amountMode === "other",
@@ -521,7 +521,7 @@ class Component extends DCLogic {
       backToStep1: () => this.setState({ freq: null, amountMode: null, customAmount: "" }),
       /* المعرّف الثابت (daily/friday/monthly) هوية الحالة  Canonical Enum؛ التسمية ترجمة للعرض فقط */
       /* رقاقات متساوية بأيقونة صح عند الاختيار  تحديد ذهبي بنمط رقاقات الموقع */
-      freqs: [["daily", "daily", "يوميًا"], ["friday", "everyFriday", "كل جمعة"], ["monthly", "monthly", "شهريًا"]].map(([id, key, ar]) => ({
+      freqs: [["daily", "daily", "يوميًا"], ["friday", "everyFriday", "أسبوعياً"], ["monthly", "monthly", "شهريًا"]].map(([id, key, ar]) => ({
         label: this.tr("common", key, ar),
         on: s.freq === id ? "1" : "",
         style: {

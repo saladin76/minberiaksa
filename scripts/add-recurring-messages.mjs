@@ -27,7 +27,7 @@ const MESSAGES = {
     planScheduledLead: "حُفظت بطاقتك ولم يُخصم أي مبلغ بعد. أول خصم يوم {date}.",
     planActiveLead: "سيُخصم نفس المبلغ {cadence}. الخصم القادم: {date}.",
     cadenceDaily: "كل يوم",
-    cadenceFriday: "كل جمعة",
+    cadenceFriday: "أسبوعياً",
     cadenceMonthly: "كل شهر",
     stripeNotReady: "نموذج الدفع لم يكتمل تحميله بعد  حاول مرة أخرى بعد لحظات.",
   },

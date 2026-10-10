@@ -67,7 +67,7 @@ const STATUS_CLASS: Record<PlanStatus, string> = {
 
 const FREQUENCY_LABEL: Record<"DAILY" | "FRIDAY" | "MONTHLY", string> = {
   DAILY: "يومي",
-  FRIDAY: "كل جمعة",
+  FRIDAY: "أسبوعياً",
   MONTHLY: "شهري",
 };
 
