@@ -58,12 +58,38 @@ type Conversation = {
 
 type Media = { kind: string; mediaId: string | null; mimeType: string | null; filename: string | null; caption: string | null };
 
+type WhatsappPreview = {
+  header: {
+    type: "text" | "image" | "video" | "document" | "location";
+    text?: string | null;
+    mediaUrl?: string | null;
+    fileName?: string | null;
+    latitude?: number | null;
+    longitude?: number | null;
+    address?: string | null;
+    name?: string | null;
+  } | null;
+  body: string;
+  footerText: string | null;
+  buttons: Array<{
+    type: string;
+    text: string;
+    url?: string | null;
+    phoneNumber?: string | null;
+    payload?: string | null;
+    index: number;
+  }>;
+  providerTemplateName: string | null;
+  languageCode: string | null;
+};
+
 type TimelineItem = {
   kind: "inbound" | "outbound" | "status";
   at: string | null;
   text: string | null;
   status: string | null;
   media?: Media | null;
+  whatsappPreview?: WhatsappPreview | null;
 };
 
 type Detail = {
@@ -116,11 +142,13 @@ export function WhatsappInbox() {
   const [senderId, setSenderId] = useState<string>("");
   const [query, setQuery] = useState(initialQuery);
   const [loadingList, setLoadingList] = useState(true);
+  const [listError, setListError] = useState<string | null>(null);
 
   const [activeId, setActiveId] = useState<string | null>(null);
   const [detail, setDetail] = useState<Detail | null>(null);
   const [replyWindow, setReplyWindow] = useState<ReplyWindow | null>(null);
   const [loadingDetail, setLoadingDetail] = useState(false);
+  const [detailError, setDetailError] = useState<string | null>(null);
 
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
@@ -130,8 +158,9 @@ export function WhatsappInbox() {
   const senderSelectionReady = useRef(false);
   const timelineRef = useRef<HTMLDivElement | null>(null);
 
-  const loadList = useCallback(async () => {
-    setLoadingList(true);
+  const loadList = useCallback(async (silent = false) => {
+    if (!silent) setLoadingList(true);
+    setListError(null);
     try {
       const params = new URLSearchParams({ filter });
       if (senderId) params.set("senderId", senderId);
@@ -168,33 +197,51 @@ export function WhatsappInbox() {
             : nextConversations[0].id,
         );
       }
-    } catch {
-      setConversations([]);
+    } catch (error) {
+      setListError((error as Error).message || "تعذّر تحميل صندوق واتساب");
     } finally {
-      setLoadingList(false);
+      if (!silent) setLoadingList(false);
     }
   }, [filter, senderId, query]);
 
   useEffect(() => { void loadList(); }, [loadList]);
 
-  const loadDetail = useCallback(async (id: string) => {
-    setLoadingDetail(true);
-    setNotice(null);
+  // Keep an operational inbox fresh without forcing the team to click «تحديث».
+  // Silent polling preserves the current list on transient errors instead of
+  // turning a backend/network failure into a false empty state.
+  useEffect(() => {
+    const id = window.setInterval(() => {
+      if (document.visibilityState === "visible") void loadList(true);
+    }, 30_000);
+    return () => window.clearInterval(id);
+  }, [loadList]);
+
+  const loadDetail = useCallback(async (id: string, silent = false) => {
+    if (!silent) setLoadingDetail(true);
+    if (!silent) setNotice(null);
+    setDetailError(null);
     try {
       const res = await fetch(`/api/dashboard/communication/inbox/${encodeURIComponent(id)}`, { cache: "no-store" });
       const data = await res.json();
       if (!res.ok || !data.ok) throw new Error(data.error ?? "load failed");
       setDetail(data.conversation);
       setReplyWindow(data.replyWindow);
-    } catch {
-      setDetail(null);
-      setReplyWindow(null);
+    } catch (error) {
+      setDetailError((error as Error).message || "تعذّر تحميل المحادثة");
     } finally {
-      setLoadingDetail(false);
+      if (!silent) setLoadingDetail(false);
     }
   }, []);
 
   useEffect(() => { if (activeId) void loadDetail(activeId); }, [activeId, loadDetail]);
+
+  useEffect(() => {
+    if (!activeId) return;
+    const id = window.setInterval(() => {
+      if (document.visibilityState === "visible") void loadDetail(activeId, true);
+    }, 15_000);
+    return () => window.clearInterval(id);
+  }, [activeId, loadDetail]);
 
   /* Newest message in view when a conversation opens  the reason anyone opened it. */
   useEffect(() => {
@@ -314,9 +361,29 @@ export function WhatsappInbox() {
       <div className="grid min-h-[68vh] gap-4 xl:grid-cols-[minmax(20rem,23rem)_minmax(0,1fr)]">
         {/* ── Conversation list ─────────────────────────────────── */}
         <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+          {listError && conversations.length > 0 && (
+            <div className="border-b border-amber-200 bg-amber-50 px-3 py-2 text-[11px] font-medium text-amber-800">
+              تعذّر تحديث القائمة الآن؛ المعروض هو آخر بيانات ناجحة.
+            </div>
+          )}
           {loadingList ? (
             <div className="flex items-center justify-center py-16 text-slate-400">
               <Loader2 className="w-5 h-5 animate-spin" />
+            </div>
+          ) : listError && conversations.length === 0 ? (
+            <div className="p-5">
+              <EmptyState
+                variant="inline"
+                title="تعذّر تحميل المحادثات"
+                description={listError}
+              />
+              <button
+                type="button"
+                onClick={() => void loadList()}
+                className="mx-auto mt-3 block rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+              >
+                إعادة المحاولة
+              </button>
             </div>
           ) : conversations.length === 0 ? (
             <div className="p-5">
@@ -386,10 +453,26 @@ export function WhatsappInbox() {
             <div className="flex items-center justify-center py-20 text-slate-400">
               <Loader2 className="w-5 h-5 animate-spin" />
             </div>
+          ) : detailError && !detail ? (
+            <div className="p-5">
+              <EmptyState variant="inline" title="تعذّر تحميل المحادثة" description={detailError} />
+              <button
+                type="button"
+                onClick={() => activeId && void loadDetail(activeId)}
+                className="mx-auto mt-3 block rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+              >
+                إعادة المحاولة
+              </button>
+            </div>
           ) : !detail ? (
             <EmptyState variant="inline" title="تعذّر تحميل المحادثة" />
           ) : (
             <>
+              {detailError && (
+                <div className="border-b border-amber-200 bg-amber-50 px-4 py-2 text-[11px] font-medium text-amber-800">
+                  تعذّر تحديث المحادثة الآن؛ المعروض هو آخر بيانات ناجحة.
+                </div>
+              )}
               <div className="border-b border-slate-100 px-4 py-3">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="min-w-0">
@@ -485,8 +568,65 @@ export function WhatsappInbox() {
                             {mediaLabel(item.media)}
                           </p>
                         )}
+
+                        {!inbound && item.whatsappPreview?.header?.type === "image" && item.whatsappPreview.header.mediaUrl && (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={item.whatsappPreview.header.mediaUrl}
+                            alt={item.whatsappPreview.header.text ?? "WhatsApp header"}
+                            className="mb-2 max-h-64 w-full rounded-xl object-cover"
+                          />
+                        )}
+                        {!inbound && item.whatsappPreview?.header?.type === "video" && item.whatsappPreview.header.mediaUrl && (
+                          <video controls preload="metadata" className="mb-2 max-h-64 w-full rounded-xl">
+                            <source src={item.whatsappPreview.header.mediaUrl} />
+                          </video>
+                        )}
+                        {!inbound && item.whatsappPreview?.header?.type === "document" && (
+                          <div className="mb-2 flex items-center gap-2 rounded-lg border border-slate-200 bg-white/70 p-2 text-xs text-slate-600">
+                            <FileText className="h-4 w-4" />
+                            <span>{item.whatsappPreview.header.fileName || "ملف مرفق"}</span>
+                          </div>
+                        )}
+                        {!inbound && item.whatsappPreview?.header?.type === "location" && (
+                          <div className="mb-2 flex items-start gap-2 rounded-lg border border-slate-200 bg-white/70 p-2 text-xs text-slate-600">
+                            <MapPin className="mt-0.5 h-4 w-4 shrink-0" />
+                            <span>
+                              {item.whatsappPreview.header.name || item.whatsappPreview.header.address || "موقع"}
+                              {item.whatsappPreview.header.latitude != null && item.whatsappPreview.header.longitude != null
+                                ? ` · ${item.whatsappPreview.header.latitude}, ${item.whatsappPreview.header.longitude}`
+                                : ""}
+                            </span>
+                          </div>
+                        )}
+                        {!inbound && item.whatsappPreview?.header?.type === "text" && item.whatsappPreview.header.text && (
+                          <p className="mb-1.5 whitespace-pre-wrap break-words font-semibold">
+                            {item.whatsappPreview.header.text}
+                          </p>
+                        )}
+
                         {item.text && <p className="whitespace-pre-wrap break-words">{item.text}</p>}
-                        {!item.text && !item.media && <p className="text-slate-400">—</p>}
+                        {!item.text && !item.media && !item.whatsappPreview && <p className="text-slate-400">—</p>}
+
+                        {!inbound && item.whatsappPreview?.footerText && (
+                          <p className="mt-2 whitespace-pre-wrap break-words text-[11px] text-slate-500">
+                            {item.whatsappPreview.footerText}
+                          </p>
+                        )}
+                        {!inbound && item.whatsappPreview?.buttons?.length ? (
+                          <div className="mt-2 space-y-1 border-t border-emerald-200/70 pt-2">
+                            {item.whatsappPreview.buttons.map((button) => (
+                              <div
+                                key={button.index}
+                                className="flex items-center justify-center gap-1.5 rounded-lg bg-white/80 px-2 py-1.5 text-xs font-semibold text-emerald-700"
+                              >
+                                <Link2 className="h-3.5 w-3.5" />
+                                <span>{button.text || button.url || button.phoneNumber || "إجراء"}</span>
+                              </div>
+                            ))}
+                          </div>
+                        ) : null}
+
                         <p className="mt-1 text-[10px] text-slate-400">
                           {fmtFull(item.at)}
                           {!inbound && item.status ? ` · ${item.status}` : ""}
@@ -512,7 +652,11 @@ export function WhatsappInbox() {
                     {notice.text}
                   </p>
                 )}
-                {replyWindow?.open ? (
+                {detail.donor?.doNotContact ? (
+                  <div className="rounded-lg border border-rose-200 bg-rose-50 p-3 text-xs font-semibold text-rose-700">
+                    المتبرع مفعّل عليه «عدم التواصل». الإرسال متوقف حتى تُعدّل حالة التواصل.
+                  </div>
+                ) : replyWindow?.open ? (
                   <div className="flex items-end gap-2">
                     <textarea
                       value={draft}

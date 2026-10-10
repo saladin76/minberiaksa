@@ -29,24 +29,28 @@ export async function GET(request: NextRequest) {
       },
     });
 
-    // Map to add donation count to each campaign using prisma.count and surface
-    // the first category in the legacy `category` slot for old consumers.
-    const campaignsWithDonationCount = await Promise.all(prioritizedCampaigns.map(async (campaign) => {
-      // Counts only items whose parent donation actually settled. Without the `donation`
-      // relation filter this counted every item ever written for the campaign  including
-      // FAILED and abandoned-checkout rows, and 19 orphaned items whose donation was deleted
-      //  and published that inflated figure as the campaign's public donor count.
-      const donationCount = await prisma.donationItem.count({
-        where: {
-          campaignId: campaign.id,
-          donation: PAID_DONATION_FILTER,
-        },
-      });
-      return {
-        ...campaign,
-        category: campaign.categories?.[0] ?? null,
-        donationCount, // Add the donation count
-      };
+    // Load all donor counts in one aggregate query. The previous implementation ran
+    // one donationItem.count() per campaign, which created an N+1 query pattern and
+    // made this public endpoint disproportionately slow under even light concurrency.
+    const donationCounts = prioritizedCampaigns.length
+      ? await prisma.donationItem.groupBy({
+          by: ["campaignId"],
+          where: {
+            campaignId: { in: prioritizedCampaigns.map((campaign) => campaign.id) },
+            donation: PAID_DONATION_FILTER,
+          },
+          _count: { id: true },
+        })
+      : [];
+
+    const donationCountByCampaign = new Map(
+      donationCounts.map((row) => [row.campaignId, row._count.id]),
+    );
+
+    const campaignsWithDonationCount = prioritizedCampaigns.map((campaign) => ({
+      ...campaign,
+      category: campaign.categories?.[0] ?? null,
+      donationCount: donationCountByCampaign.get(campaign.id) ?? 0,
     }));
 
     return NextResponse.json(campaignsWithDonationCount || []);

@@ -359,9 +359,9 @@ export async function buildCampaignLinkPerformanceReport(query: CampaignLinkPerf
   const [links, donations] = await Promise.all([
     listCampaignLinks({ limit: query.limit, platform, status: query.status }),
     prisma.donation.findMany({
-      where: { createdAt: { gte: from, lte: to }, ...PAID_DONATION_FILTER },
+      where: { paidAt: { gte: from, lte: to }, ...PAID_DONATION_FILTER },
       select: { id: true, amount: true, amountUSD: true, currency: true, createdAt: true, paidAt: true, conversionEventsSentAt: true, attribution: true },
-      orderBy: { createdAt: "desc" },
+      orderBy: { paidAt: "desc" },
       take: 5000,
     }),
   ]);
@@ -503,7 +503,7 @@ export async function buildCampaignLinkPerformanceReport(query: CampaignLinkPerf
 
   return {
     ok: true,
-    range: { from: dateKey(from), to: dateKey(to), days: query.days, dateBasis: "createdAt" },
+    range: { from: dateKey(from), to: dateKey(to), days: query.days, dateBasis: "paidAt" },
     status: query.status,
     links: visibleRows,
     summary: {

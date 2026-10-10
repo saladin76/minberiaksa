@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { SUPPORTED_LOCALES, type SupportedLocale } from "@/lib/locales";
+import { SUPPORTED_LOCALES, isValidLocale, type SupportedLocale } from "@/lib/locales";
 import { MINBAR_LOCALE_SEO, MINBAR_OG_LOCALES } from "@/lib/seo-minbar.generated";
 
 export const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://www.minberiaksa.org").replace(/\/$/, "");
@@ -54,13 +54,14 @@ export const LOCALE_SEO: Record<Locale, LocaleSEO> = MINBAR_LOCALE_SEO;
 /** Build hreflang alternates for a given path (e.g. "/campaigns") */
 export function buildHreflang(path: string, currentLocale: string) {
   const normalizedPath = path === "/" ? "" : path;
+  const canonicalLocale: Locale = isValidLocale(currentLocale) ? currentLocale : "ar";
   const languages: Record<string, string> = {};
   for (const locale of LOCALES) {
     languages[locale] = `${SITE_URL}/${locale}${normalizedPath}`;
   }
   languages["x-default"] = `${SITE_URL}/ar${normalizedPath}`;
   return {
-    canonical: `${SITE_URL}/${currentLocale}${normalizedPath}`,
+    canonical: `${SITE_URL}/${canonicalLocale}${normalizedPath}`,
     languages,
   };
 }
@@ -185,7 +186,7 @@ export function buildPageMetadata(
   const description = clipSeoDescription(overrides.description, locale);
 
   return {
-    title: overrides.title,
+    title: { absolute: overrides.title },
     description,
     keywords: overrides.keywords ?? seo.keywords,
     alternates,
@@ -196,6 +197,9 @@ export function buildPageMetadata(
       url: alternates.canonical,
       siteName: seo.siteName,
       locale: OG_LOCALE_MAP[locale as Locale] ?? "en_US",
+      alternateLocale: LOCALES.filter((candidate) => candidate !== locale).map(
+        (candidate) => OG_LOCALE_MAP[candidate],
+      ),
       type: overrides.type ?? "website",
       images: [{ url: image, width: 1200, height: 630, alt: overrides.title }],
     },

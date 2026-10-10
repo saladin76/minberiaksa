@@ -41,12 +41,25 @@ if (enabled.length === 0) {
   process.exit(1);
 }
 
-// Files that must contain (mention) every enabled locale code as a quoted token.
-const COVERAGE_FILES = [
-  "app/[locale]/layout.tsx", // static rawLocaleMessages import map
-  "lib/marketing/locales-countries.ts", // marketing locale list (reordered)
-  "app/layout.tsx", // JSON-LD knowsLanguage / inLanguage
-  "scripts/audit-i18n-messages.mjs", // .mjs audit list
+// Files that must explicitly enumerate every locale because they cannot import
+// the TypeScript catalog at runtime.
+const EXPLICIT_COVERAGE_FILES = [
+  "scripts/audit-i18n-messages.mjs",
+];
+
+// Files that SHOULD derive from the central locale source rather than repeat all
+// 19 literals. Requiring literal codes here produced false failures precisely
+// after the code was improved to use SUPPORTED_LOCALES/LOCALES.
+const DERIVED_COVERAGE_FILES = [
+  { rel: "app/[locale]/layout.tsx", signals: ["SUPPORTED_LOCALES"] },
+  { rel: "app/layout.tsx", signals: ["LOCALES", "@/lib/seo"] },
+];
+
+// Marketing targeting is an intentionally narrower operational subset, not the
+// public routing catalog. Guard that it never invents an unsupported locale,
+// but do not force it to expose every public language.
+const INTENTIONAL_SUBSET_FILES = [
+  "lib/marketing/locales-countries.ts",
 ];
 
 const problems = [];
@@ -58,17 +71,46 @@ for (const code of enabled) {
   }
 }
 
-// 2) Coverage files must mention every enabled locale.
-for (const rel of COVERAGE_FILES) {
+// 2) Sources that cannot import the catalog must still enumerate every locale.
+for (const rel of EXPLICIT_COVERAGE_FILES) {
   const src = read(rel);
   if (src == null) {
     problems.push(`coverage file not found (update this script): ${rel}`);
     continue;
   }
   const missing = enabled.filter((code) => !new RegExp(`["']${code}["']`).test(src));
-  if (missing.length) {
-    problems.push(`${rel} is missing enabled locale(s): ${missing.join(", ")}`);
+  if (missing.length) problems.push(`${rel} is missing enabled locale(s): ${missing.join(", ")}`);
+}
+
+// 3) Import-capable files must prove they use the central source instead of a
+// duplicated hand-written locale list.
+for (const { rel, signals } of DERIVED_COVERAGE_FILES) {
+  const src = read(rel);
+  if (src == null) {
+    problems.push(`coverage file not found (update this script): ${rel}`);
+    continue;
   }
+  if (!signals.some((signal) => src.includes(signal))) {
+    problems.push(`${rel} does not derive locale coverage from the central catalog`);
+  }
+}
+
+// 4) Intentionally scoped locale subsets may be smaller, but every locale they
+// expose must belong to the public catalog.
+for (const rel of INTENTIONAL_SUBSET_FILES) {
+  const src = read(rel);
+  if (src == null) {
+    problems.push(`coverage file not found (update this script): ${rel}`);
+    continue;
+  }
+  const block = src.match(/SUPPORTED_MARKETING_LOCALES\s*=\s*\[([\s\S]*?)\]\s*as const/);
+  if (!block) {
+    problems.push(`${rel} has no parseable supported-locale subset`);
+    continue;
+  }
+  const subset = [...block[1].matchAll(/["']([a-z]{2})["']/g)].map((m) => m[1]);
+  const unsupported = subset.filter((code) => !enabled.includes(code));
+  if (unsupported.length) problems.push(`${rel} contains unsupported locale(s): ${unsupported.join(", ")}`);
 }
 
 // --- Report -------------------------------------------------------------------

@@ -1,10 +1,12 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
+import { cookies } from "next/headers";
 import DeferredGTM from "@/components/DeferredGTM";
 import MicrosoftClarity from "@/components/MicrosoftClarity";
 import EngagementInstrumentation from "@/components/EngagementInstrumentation";
 import { Analytics } from "@vercel/analytics/next";
 import { LOCALES, LOCALE_SEO, OG_IMAGE, OG_LOCALE_MAP, SITE_NAME, SITE_URL, buildHreflang, isProductionDeployment } from "@/lib/seo";
+import { isValidLocale, localeDirection } from "@/lib/locales";
 import "./[locale]/globals.css";
 import "@/styles/self-hosted-fonts.css";
 
@@ -64,10 +66,7 @@ export const metadata: Metadata = {
 
   /* The fallback for routes outside `[locale]` (the dashboard, error pages).
      Locale pages override all of this from the same generated source. */
-  title: {
-    default: LOCALE_SEO.ar.title,
-    template: LOCALE_SEO.ar.titleTemplate,
-  },
+  title: LOCALE_SEO.ar.title,
   description: LOCALE_SEO.ar.description,
 
   authors: [{ name: SITE_NAME, url: SITE }],
@@ -120,13 +119,22 @@ export const metadata: Metadata = {
   category: "charity",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  // proxy.ts writes NEXT_LOCALE onto the request before SSR. Reading it here
+  // makes the very first HTML document carry the right language/direction for
+  // crawlers and assistive technology; SyncHtmlDir still handles client-side
+  // navigation between locale prefixes without a full document reload.
+  const cookieStore = await cookies();
+  const rawLocale = cookieStore.get("NEXT_LOCALE")?.value ?? "ar";
+  const htmlLocale = isValidLocale(rawLocale) ? rawLocale : "ar";
+  const htmlDir = localeDirection(htmlLocale);
+
   return (
-    <html lang="ar" dir="rtl" suppressHydrationWarning>
+    <html lang={htmlLocale} dir={htmlDir} suppressHydrationWarning>
       <head>
         <meta name="geo.region" content="TR-34" />
         <meta name="geo.placename" content="İstanbul" />

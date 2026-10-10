@@ -187,7 +187,7 @@ export function RetryDialog({ open, channel, ids, days, onOpenChange, onFinished
             <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-brand-50 text-brand">
               <RefreshCw className={cn("h-4 w-4", phase === "running" && "animate-spin")} />
             </span>
-            {phase === "report" ? "نتيجة إعادة الإرسال" : "إعادة إرسال الرسائل"}
+            {phase === "report" ? "نتيجة إعادة الإرسال" : "إعادة محاولة الرسائل"}
           </DialogTitle>
         </DialogHeader>
 
@@ -299,13 +299,13 @@ function ConfirmStep({
         <div className="flex items-baseline gap-2">
           <span className="text-3xl font-bold tabular-nums text-slate-900">{count.toLocaleString("en-US")}</span>
           <span className="text-sm text-slate-600">
-            رسالة {channel === "EMAIL" ? "بريد" : channel === "WHATSAPP" ? "واتساب" : "نصية"} ستُرسل الآن
+            رسالة {channel === "EMAIL" ? "بريد" : channel === "WHATSAPP" ? "واتساب" : "نصية"} ستُراجع الآن
           </span>
         </div>
         {capped && (
           <p className="mt-1.5 text-[11px] leading-5 text-slate-500">
-            من أصل {preflight.eligible.toLocaleString("en-US")} رسالة قابلة لإعادة الإرسال خلال آخر {days} يومًا.
-            تُرسل على دفعات من {preflight.cap}  كرّر العملية لإكمال الباقي.
+            من أصل {preflight.eligible.toLocaleString("en-US")} محاولة متعثّرة خلال آخر {days} يومًا.
+            تُراجع على دفعات من {preflight.cap}؛ ويُرسل فقط ما زال صالحًا بعد إعادة فحص العنوان والموافقة والقالب وهوية المُرسل.
           </p>
         )}
       </div>

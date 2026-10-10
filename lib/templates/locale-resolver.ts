@@ -33,7 +33,8 @@ export function pickLocale(opts: {
  */
 export function resolveEmailVariant(
   template: { subject: string; document: unknown; translations?: unknown },
-  locale: SupportedLocale
+  locale: SupportedLocale,
+  fallbackLocale: SupportedLocale = DEFAULT_LOCALE,
 ): { subject: string; document: unknown; resolvedLocale: SupportedLocale } {
   const t = (template.translations ?? null) as EmailTranslations | null;
   if (locale !== DEFAULT_LOCALE && t && t[locale]) {
@@ -43,6 +44,16 @@ export function resolveEmailVariant(
       document: variant.document ?? template.document,
       resolvedLocale: variant.subject?.trim() || variant.document ? locale : DEFAULT_LOCALE,
     };
+  }
+  if (fallbackLocale !== DEFAULT_LOCALE && t && t[fallbackLocale]) {
+    const fallback = t[fallbackLocale]!;
+    if (fallback.subject?.trim() || fallback.document) {
+      return {
+        subject: fallback.subject?.trim() ? fallback.subject : template.subject,
+        document: fallback.document ?? template.document,
+        resolvedLocale: fallbackLocale,
+      };
+    }
   }
   return {
     subject: template.subject,
@@ -57,11 +68,15 @@ export function resolveEmailVariant(
  */
 export function resolveWhatsappBody(
   template: { body: string; translations?: unknown },
-  locale: SupportedLocale
+  locale: SupportedLocale,
+  fallbackLocale: SupportedLocale = DEFAULT_LOCALE,
 ): { body: string; resolvedLocale: SupportedLocale } {
   const t = (template.translations ?? null) as WhatsappTranslations | null;
   if (locale !== DEFAULT_LOCALE && t && t[locale]?.body?.trim()) {
     return { body: t[locale]!.body!, resolvedLocale: locale };
+  }
+  if (fallbackLocale !== DEFAULT_LOCALE && t && t[fallbackLocale]?.body?.trim()) {
+    return { body: t[fallbackLocale]!.body!, resolvedLocale: fallbackLocale };
   }
   return { body: template.body, resolvedLocale: DEFAULT_LOCALE };
 }

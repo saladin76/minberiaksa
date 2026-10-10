@@ -148,14 +148,14 @@ export function SmartWhatsappDialog({
       title: "رد مباشر",
       desc: "نص حر داخل نافذة 24 ساعة",
       icon: MessageCircle,
-      disabled: !ctx?.replyWindow.open,
+      disabled: Boolean(ctx?.doNotContact) || !ctx?.replyWindow.open,
     },
     {
       id: "UTILITY" as const,
       title: "رسالة خدمة",
       desc: ctx?.directSendEnabled ? "Direct Send · Utility + fallback" : "Utility Template fallback",
       icon: ShieldCheck,
-      disabled: Boolean(ctx && !ctx.directSendEnabled && ctx.utilityTemplates.length === 0),
+      disabled: Boolean(ctx?.doNotContact) || Boolean(ctx && !ctx.directSendEnabled && ctx.utilityTemplates.length === 0),
     },
     {
       id: "MARKETING" as const,
@@ -206,7 +206,7 @@ export function SmartWhatsappDialog({
 
               {ctx.doNotContact && (
                 <div className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700">
-                  المتبرع موقوف عن الرسائل الجديدة. يمكن فقط الرد على رسالة واردة أثناء نافذة 24 ساعة.
+                  المتبرع مفعّل عليه «عدم التواصل». الإرسال متوقف على كل مسارات واتساب حتى تُعدّل حالة التواصل.
                 </div>
               )}
               <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
@@ -326,6 +326,7 @@ export function SmartWhatsappDialog({
                     onClick={send}
                     disabled={
                       sending ||
+                      Boolean(ctx.doNotContact) ||
                       (mode === "FREEFORM" && !body.trim()) ||
                       (mode === "MARKETING" && !templateId) ||
                       (mode === "UTILITY" && ctx.directSendEnabled && !body.trim()) ||

@@ -165,6 +165,31 @@ export default function BankTransfersPage() {
       setBulkBusy(false);
     }
   }
+  async function bulkDelete() {
+    const ids = [...selectedIds];
+    if (!ids.length) return;
+    if (!window.confirm(`تأكيد حذف ${ids.length} عملية محددة؟`)) return;
+    setBulkBusy(true);
+    try {
+      const results = await Promise.allSettled(
+        ids.map((id) => axios.delete(`/api/admin/bank-transfers/transactions/${id}`).then(() => id)),
+      );
+      const deleted = new Set(
+        results
+          .filter((result): result is PromiseFulfilledResult<string> => result.status === "fulfilled")
+          .map((result) => result.value),
+      );
+      const failed = results.length - deleted.size;
+      setTransactions((prev) => prev.filter((tx) => !tx.id || !deleted.has(tx.id)));
+      setSelectedIds(new Set(ids.filter((id) => !deleted.has(id))));
+      if (failed === 0) toast.success(`تم حذف ${deleted.size} عملية`);
+      else toast.error(`تم حذف ${deleted.size} وتعذّر حذف ${failed}`);
+      void refreshBanksOnly();
+    } finally {
+      setBulkBusy(false);
+    }
+  }
+
   async function deleteTransaction(tx: ImportedTransaction) { if (!tx.id) return; if (!window.confirm(`تأكيد حذف عملية ${tx.donorName || "بدون اسم"} بقيمة ${money(tx.amount, tx.currency)}؟`)) return; setReviewingId(tx.id); try { await axios.delete(`/api/admin/bank-transfers/transactions/${tx.id}`); setTransactions((prev) => prev.filter((item) => item.id !== tx.id)); toast.success("تم حذف العملية"); void refreshBanksOnly(); } catch { toast.error("فشل حذف العملية"); } finally { setReviewingId(null); } }
   function applyFilters() { setPage(1); void loadTransactions(filters, 1); }
   function resetFilters() { setFilters(defaultFilters); setPage(1); void loadTransactions(defaultFilters, 1); }
@@ -532,6 +557,10 @@ export default function BankTransfersPage() {
             <div className="flex flex-wrap gap-2">
               <Button size="sm" className="bg-brand hover:bg-brand-dark" disabled={bulkBusy} onClick={() => bulkReview("APPROVED")}>اعتماد المحدد</Button>
               <Button size="sm" variant="outline" disabled={bulkBusy} onClick={() => bulkReview("IGNORED")}>استبعاد المحدد</Button>
+              <Button size="sm" variant="outline" className="border-rose-200 text-rose-700 hover:bg-rose-50 hover:text-rose-800" disabled={bulkBusy} onClick={bulkDelete}>
+                <Trash2 className="h-3.5 w-3.5" />
+                حذف المحدد
+              </Button>
               <Button size="sm" variant="ghost" disabled={bulkBusy} onClick={() => setSelectedIds(new Set())}>إلغاء التحديد</Button>
             </div>
           </div>

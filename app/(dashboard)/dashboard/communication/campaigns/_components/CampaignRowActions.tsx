@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { toast } from "react-hot-toast";
-import { Ban, Loader2, MoreHorizontal, Send, ShieldCheck, Settings2, Pause, Play } from "lucide-react";
+import { Archive, Ban, Loader2, MoreHorizontal, Send, ShieldCheck, Settings2, Pause, Play } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -73,7 +73,8 @@ export function CampaignRowActions({
   const canSend = campaign.status === "APPROVED";
   const canCancel = isPreSend(campaign.status);
   const canControl = campaign.channel === "WHATSAPP" && !["SENT", "FAILED", "CANCELLED", "ARCHIVED"].includes(campaign.status);
-  if (!canConfirm && !canSend && !canCancel && !canControl) return null;
+  const canArchive = ["SENT", "SENT_WITH_ISSUES", "FAILED", "BLOCKED", "CANCELLED"].includes(campaign.status);
+  if (!canConfirm && !canSend && !canCancel && !canControl && !canArchive) return null;
 
   const togglePause = async () => {
     const currentlyPaused = campaign.metadata?.sendControls?.paused === true;
@@ -127,6 +128,26 @@ export function CampaignRowActions({
       }
       setPlan(resolved);
       setConfirmOpen(true);
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const archive = async () => {
+    if (!window.confirm(`أرشفة الحملة «${campaign.name}»؟ ستختفي من القائمة النشطة مع الاحتفاظ بكل سجلات الإرسال والتقارير.`)) return;
+    setBusy(true);
+    try {
+      const res = await fetch(`/api/communication/campaigns/${campaign.id}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "ARCHIVE" }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok || !json.ok) throw new Error(json?.error || "تعذّرت أرشفة الحملة");
+      toast.success("تمت أرشفة الحملة");
+      onChanged();
     } catch (e) {
       toast.error((e as Error).message);
     } finally {
@@ -212,6 +233,12 @@ export function CampaignRowActions({
             <DropdownMenuItem onClick={() => transition("CANCEL")} className="text-rose-600 focus:text-rose-700">
               <Ban className="me-2 h-3.5 w-3.5" />
               إلغاء الحملة
+            </DropdownMenuItem>
+          )}
+          {canArchive && (
+            <DropdownMenuItem onClick={archive}>
+              <Archive className="me-2 h-3.5 w-3.5" />
+              أرشفة الحملة
             </DropdownMenuItem>
           )}
         </DropdownMenuContent>

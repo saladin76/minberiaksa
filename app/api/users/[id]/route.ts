@@ -50,6 +50,8 @@ export async function GET(
                 id: true,
                 status: true,
                 frequency: true,
+                amount: true,
+                currency: true,
                 nextBillingDate: true,
               },
             },
@@ -91,6 +93,7 @@ export async function GET(
         /** The plan's cadence  DAILY | FRIDAY | MONTHLY. `type` stays "MONTHLY" for every plan: it means "recurring" to every consumer. */
         frequency: type === 'MONTHLY' ? (sub?.frequency ?? 'MONTHLY') : null,
         nextBillingDate: type === 'MONTHLY' ? (sub?.nextBillingDate ?? null) : null,
+        planAmount: type === 'MONTHLY' ? (sub?.amount ?? null) : null,
       };
     };
 

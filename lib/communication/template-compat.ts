@@ -168,14 +168,15 @@ export async function renderChannelTemplate(
   channel: CommunicationChannelId,
   templateId: string,
   locale: SupportedLocale,
-  ctx?: TemplateContext | null
+  ctx?: TemplateContext | null,
+  fallbackLocale: SupportedLocale = DEFAULT_LOCALE,
 ): Promise<RenderedTemplate | null> {
   if (!process.env.DATABASE_URL) return null;
   try {
     if (channel === "WHATSAPP" || channel === "SMS") {
       const tpl = await findTextTemplate(channel, templateId);
       if (!tpl) return null;
-      const variant = resolveWhatsappBody(tpl, locale);
+      const variant = resolveWhatsappBody(tpl, locale, fallbackLocale);
       const preview = renderTemplatePreview(variant.body);
       return {
         channel,
@@ -190,7 +191,7 @@ export async function renderChannelTemplate(
     }
     const tpl = await prisma.emailTemplate.findUnique({ where: { id: templateId }, select: { name: true, subject: true, document: true, translations: true } });
     if (!tpl) return null;
-    const variant = resolveEmailVariant(tpl, locale);
+    const variant = resolveEmailVariant(tpl, locale, fallbackLocale);
     const subjectPreview = renderTemplatePreview(variant.subject);
     // Sample context for previews so the body is real HTML either way  an empty-looking preview
     // is what let the placeholder survive unnoticed.

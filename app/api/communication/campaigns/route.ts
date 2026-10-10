@@ -32,7 +32,8 @@ const sendControlsSchema = z.object({
     enabled: z.boolean(),
     start: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/),
     end: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/),
-    timezone: z.string().min(1).max(120),
+    timezoneMode: z.enum(["RECIPIENT", "FIXED"]).optional(),
+    timezone: z.string().max(120).nullable().optional(),
   }).optional(),
 }).superRefine((value, ctx) => {
   if (value.scheduledStopAt && value.resumeAt) {
@@ -55,6 +56,7 @@ const createSchema = z.object({
   templateGroupId: z.string().min(1).nullable().optional(),
   audienceSegmentKey: z.string().min(1).nullable().optional(),
   sendControls: sendControlsSchema.optional(),
+  fallbackLocale: z.string().min(2).max(10).optional(),
 });
 
 export async function GET(request: NextRequest) {
@@ -90,14 +92,17 @@ export async function POST(request: NextRequest) {
   }
   const parsed = createSchema.safeParse(payload);
   if (!parsed.success) {
-    return NextResponse.json({ ok: false, error: "Invalid payload", issues: parsed.error.flatten() }, { status: 400 });
+    const issue = parsed.error.issues[0];
+    const path = issue?.path?.length ? issue.path.join(".") : "payload";
+    const detail = issue?.message ? `${path}: ${issue.message}` : "بيانات الحملة غير صالحة";
+    return NextResponse.json({ ok: false, error: detail, issues: parsed.error.flatten() }, { status: 400 });
   }
 
-  const { sendControls, ...campaignInput } = parsed.data;
+  const { sendControls, fallbackLocale, ...campaignInput } = parsed.data;
   const result = await createCampaign(
     {
       ...campaignInput,
-      ...(sendControls ? { metadata: { sendControls } } : {}),
+      ...((sendControls || fallbackLocale) ? { metadata: { ...(sendControls ? { sendControls } : {}), ...(fallbackLocale ? { fallbackLocale } : {}) } } : {}),
     },
     auditActorFromDashboardSession(session!),
   );

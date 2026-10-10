@@ -5,6 +5,7 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 import { prisma } from "@/lib/prisma";
 import { requireAdminOrDashboardPermission } from "@/lib/dashboard/api-auth";
 import { RETRYABLE_STATUSES } from "@/lib/communication/communication-runtime-types";
+import { getActiveElasticEmailRuntimeConfig } from "@/lib/communication/runtime-config";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -91,6 +92,8 @@ export async function GET(request: NextRequest) {
       listTotal,
       byTemplate,
       retryableCount,
+      emailRuntime,
+      activeEmailSenderCount,
     ] = await Promise.all([
       prisma.communicationDelivery.count({ where: rangeWhere }),
       prisma.communicationDelivery.groupBy({ by: ["status"], where: rangeWhere, _count: { _all: true } }),
@@ -98,8 +101,9 @@ export async function GET(request: NextRequest) {
       prisma.communicationDelivery.count({ where: { ...rangeWhere, openedAt: { not: null } } }),
       prisma.communicationDelivery.count({ where: { ...rangeWhere, clickedAt: { not: null } } }),
       prisma.communicationDelivery.count({ where: { ...rangeWhere, status: { in: [...FAILED_STATUSES] } } }),
-      // Zero means no webhook event has EVER been stored  engagement metrics are blind, not zero.
-      prisma.communicationProviderEvent.count(),
+      // Email tracking is live only when an EMAIL provider event has actually arrived.
+      // WhatsApp events must never make the email dashboard claim its webhooks are working.
+      prisma.communicationProviderEvent.count({ where: { channel: CHANNEL } }),
       prisma.communicationDelivery.count({ where: { channel: CHANNEL } }),
       prisma.communicationDelivery.findMany({
         where: listWhere,
@@ -126,6 +130,15 @@ export async function GET(request: NextRequest) {
           ...rangeWhere,
           status: { in: [...RETRYABLE_STATUSES] },
           OR: [{ retriedAt: null }, { retriedAt: { isSet: false } }],
+        },
+      }),
+      getActiveElasticEmailRuntimeConfig(),
+      prisma.communicationSender.count({
+        where: {
+          channel: "EMAIL",
+          enabled: true,
+          status: "ACTIVE",
+          senderEmail: { not: null },
         },
       }),
     ]);
@@ -184,6 +197,14 @@ export async function GET(request: NextRequest) {
        */
       trackingLive: providerEventCount > 0,
       retryableCount,
+      provider: {
+        configured: emailRuntime.configured,
+        reason: emailRuntime.configured ? null : emailRuntime.reason,
+        missingFields: emailRuntime.configured ? [] : emailRuntime.missingFields,
+        senderReady:
+          activeEmailSenderCount > 0 ||
+          (emailRuntime.configured && Boolean(emailRuntime.values.senderEmail)),
+      },
       statusCounts,
       timeseries: [...buckets.values()].sort((a, b) => a.date.localeCompare(b.date)),
       topTemplates: byTemplate

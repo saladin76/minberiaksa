@@ -12,7 +12,6 @@ import { useMinbarMoney } from "@/hooks/useMinbarMoney";
 import TravelBanner from "@/components/minbar/banners/TravelBanner";
 import IbadanBanner from "@/components/minbar/banners/IbadanBanner";
 import { ArrowGlyph } from "@/components/minbar/home/TopSections";
-import { CategoryProgramme } from "@/components/minbar/categories/CategorySections";
 import type { CategoryPageContent } from "@/lib/minbar/category-page";
 
 /**
@@ -165,12 +164,11 @@ export default function ZakatPage({
   const router = useRouter();
   const t = useTranslations("zakat");
   const tCommon = useTranslations("common");
-  const { format, currency: selectedCurrency } = useMinbarMoney();
+  const { format, formatLocal, code: visitorCode } = useMinbarMoney();
 
   /* The hero's chips: the category's amounts when one is bound, under the
      same currency contract as its donation box  USD converted for display,
      unless the visitor's currency has a list of its own. */
-  const visitorCode = selectedCurrency && selectedCurrency !== "DEFAULT" ? selectedCurrency : "USD";
   const override = category && visitorCode !== "USD" ? category.suggestedByCurrency[visitorCode] : undefined;
   const quickAmounts = override?.length ? override : category?.suggestedAmounts.length ? category.suggestedAmounts : QUICK_AMOUNTS;
   const chipCurrency = override?.length ? visitorCode : "USD";
@@ -195,6 +193,7 @@ export default function ZakatPage({
   };
   const base = Math.max(0, num(values.cash) + num(values.gold) + num(values.trade) - num(values.debts));
   const due = base * ZAKAT_RATE;
+  const dueRounded = Math.round(due * 100) / 100;
   const heroAmount = heroCustom ? num(heroCustom) : amount;
   const heroCurrency = heroCustom ? visitorCode : chipCurrency;
 
@@ -232,8 +231,8 @@ export default function ZakatPage({
   };
 
   const onDonateCalculated = () => {
-    if (!(base > 0)) return;
-    addZakat(Math.round(due));
+    if (!(base > 0) || !(dueRounded > 0)) return;
+    addZakat(dueRounded, visitorCode);
     router.push(miaPath("cart", locale));
   };
 
@@ -244,7 +243,7 @@ export default function ZakatPage({
   };
 
   return (
-    <div style={{ position: "relative" }}>
+    <div className="mia-zakat-page" style={{ position: "relative" }}>
       {/* ── Hero ─────────────────────────────────────────────────────────── */}
       <section style={{ position: "relative", background: "#fff", borderBottom: "1px solid var(--border)", overflow: "hidden" }}>
         <div aria-hidden="true" data-aqsa-pattern="" style={pattern(520)} />
@@ -265,7 +264,7 @@ export default function ZakatPage({
                     setAmount(value);
                     setHeroCustom("");
                   }}
-                  className="zk-amt"
+                  className="zk-amt mia-zakat-amount"
                   style={{ height: 46, padding: "0 22px", cursor: "pointer", fontFamily: "inherit", fontSize: 15, fontWeight: 800, borderRadius: 8, border: "1px solid var(--border)", background: "#fff", color: "var(--muted)", transition: "all .18s ease" }}
                 >
                   <span dir="ltr" style={{ unicodeBidi: "isolate" }}>
@@ -342,7 +341,7 @@ export default function ZakatPage({
       {/* ── Quick estimator ──────────────────────────────────────────────── */}
       <section id="calculator" style={{ background: "#fff", padding: "62px 0", borderBottom: "1px solid var(--border)" }}>
         <div style={{ maxWidth: 1240, margin: "0 auto", padding: "0 24px" }}>
-          <div className="zk-card" style={{ position: "relative", overflow: "hidden", borderRadius: 22, background: "linear-gradient(180deg, var(--ivory), #fff)", border: "1px solid var(--border)", boxShadow: "0 26px 60px rgba(16,33,43,.09)", padding: 34, display: "grid", gap: 26 }}>
+          <div className="zk-card mia-zakat-calculator" style={{ position: "relative", overflow: "hidden", borderRadius: 22, background: "linear-gradient(180deg, var(--ivory), #fff)", border: "1px solid var(--border)", boxShadow: "0 26px 60px rgba(16,33,43,.09)", padding: 34, display: "grid", gap: 26 }}>
             <span aria-hidden="true" style={{ position: "absolute", insetInline: 0, top: 0, height: 4, background: "linear-gradient(90deg, var(--green), var(--gold))" }} />
 
             <div style={{ display: "flex", alignItems: "end", justifyContent: "space-between", gap: 20, flexWrap: "wrap" }}>
@@ -396,8 +395,8 @@ export default function ZakatPage({
                         <span style={{ fontSize: 13, fontWeight: 800, color: "var(--deep)" }}>{t(field.labelKey)}</span>
                       </span>
                       <span style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 0, background: "var(--ivory)", border: "1px solid var(--border)", borderRadius: 10, padding: "0 12px", boxSizing: "border-box" }}>
-                        <span dir="ltr" style={{ flex: "0 0 auto", color: "var(--muted)", fontWeight: 900, fontSize: 15 }}>
-                          $
+                        <span dir="ltr" style={{ flex: "0 0 auto", color: "var(--muted)", fontWeight: 900, fontSize: 13.5, unicodeBidi: "isolate" }}>
+                          {visitorCode}
                         </span>
                         <input
                           value={values[field.id] ?? ""}
@@ -412,7 +411,7 @@ export default function ZakatPage({
                   ))}
                 </div>
 
-                <div id="zk-result" style={{ position: "relative", overflow: "hidden", display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(0,1fr) auto", alignItems: "center", gap: 24, padding: "26px 28px", background: "linear-gradient(120deg, rgba(31,122,77,.1), rgba(211,154,39,.08))", border: "1px solid rgba(31,122,77,.3)", borderRadius: 18 }}>
+                <div id="zk-result" className="mia-zakat-result" style={{ position: "relative", overflow: "hidden", display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(0,1fr) auto", alignItems: "center", gap: 24, padding: "26px 28px", background: "linear-gradient(120deg, rgba(31,122,77,.1), rgba(211,154,39,.08))", border: "1px solid rgba(31,122,77,.3)", borderRadius: 18 }}>
                   <span aria-hidden="true" style={{ position: "absolute", insetInlineEnd: -50, top: -50, width: 180, height: 180, borderRadius: "50%", background: "radial-gradient(circle, rgba(211,154,39,.16), transparent 70%)", pointerEvents: "none" }} />
                   <span style={{ position: "relative", display: "grid", gap: 4 }}>
                     <span style={micro}>{t("netZakatWealth")}</span>
@@ -423,7 +422,7 @@ export default function ZakatPage({
                   <span style={{ position: "relative", display: "grid", gap: 4, paddingInlineStart: 24, borderInlineStart: "1px solid rgba(31,122,77,.28)" }}>
                     <span style={{ ...micro, color: "var(--green)" }}>{t("zakatDueLabel")}</span>
                     <b dir="ltr" style={{ fontSize: 32, color: "var(--green)", unicodeBidi: "isolate" }}>
-                      {format(due)}
+                      {formatLocal(dueRounded)}
                     </b>
                   </span>
                   <span style={{ position: "relative" }}>

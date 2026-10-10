@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { getRawTrackingSettings, trackingString } from "@/lib/tracking/tracking-settings";
+import { getRawTrackingSettings, trackingBoolean, trackingString } from "@/lib/tracking/tracking-settings";
 import { getSchedulerStatus, type SchedulerStatus } from "@/lib/communication/scheduler-status";
 import { getActiveCommunicationRuntimeBundle, getActiveMetaWebhookConfig } from "@/lib/communication/runtime-config";
 import { safeCountValue } from "@/lib/dashboard/safe-count";
@@ -16,13 +16,23 @@ export async function getTrackingReadiness(): Promise<TrackingReadiness> {
   const row = hasDb() ? await getRawTrackingSettings().catch(() => null) : null;
   const setting = (key: string) => !!trackingString(row, key);
   const metaPixel = setting("facebookPixelId") || env("META_PIXEL_ID");
-  const metaCapi = setting("facebookAccessToken") || env("META_ACCESS_TOKEN");
+  const metaCapi = metaPixel && (setting("facebookAccessToken") || env("META_ACCESS_TOKEN"));
   const tiktokPixel = setting("tiktokPixelId");
-  const tiktokApi = setting("tiktokAccessToken");
+  const tiktokApi = Boolean(
+    tiktokPixel &&
+    trackingBoolean(row, "tiktokEventsApiEnabled") &&
+    setting("tiktokAccessToken")
+  );
   const gaTag = setting("gaMeasurementId") || env("GA4_MEASUREMENT_ID");
-  const ga4Server = gaTag && (setting("gaApiSecret") || env("GA4_API_SECRET"));
-  const googleAds = setting("googleAdsConversionId");
+  const ga4Server = Boolean(gaTag && (setting("gaApiSecret") || env("GA4_API_SECRET")));
+  const googleAds = setting("googleAdsConversionId") && setting("googleAdsConversionLabel");
   const xPixel = setting("xPixelId");
+  const xApi = Boolean(
+    trackingBoolean(row, "xConversionsApiEnabled") &&
+    setting("xConversionEventId") &&
+    setting("xAccessToken") &&
+    setting("xAdAccountId")
+  );
   const status = (ok: boolean): ConnStatus => ok ? "READY" : "NEEDS_SETUP";
   const rows: PixelRow[] = [
     { key: "meta_pixel", label: "Meta Pixel", configured: metaPixel, browser: true, server: false, status: status(metaPixel) },
@@ -31,10 +41,20 @@ export async function getTrackingReadiness(): Promise<TrackingReadiness> {
     { key: "tiktok_api", label: "TikTok Events API", configured: tiktokApi, browser: false, server: true, status: status(tiktokApi) },
     { key: "google_tag", label: "Google Tag", configured: gaTag, browser: true, server: false, status: status(gaTag) },
     { key: "ga4", label: "GA4", configured: !!ga4Server, browser: true, server: true, status: status(!!ga4Server) },
-    { key: "google_ads", label: "Google Ads Conversion", configured: googleAds, browser: false, server: true, status: status(googleAds) },
+    { key: "google_ads", label: "Google Ads Conversion", configured: Boolean(googleAds), browser: true, server: false, status: status(Boolean(googleAds)) },
     { key: "x_pixel", label: "X Pixel", configured: xPixel, browser: true, server: false, status: status(xPixel) },
+    { key: "x_api", label: "X Conversions API", configured: xApi, browser: false, server: true, status: status(xApi) },
   ];
-  return { status: metaPixel && metaCapi ? "READY" : "NEEDS_SETUP", configuredCount: rows.filter((item) => item.configured).length, total: rows.length, rows };
+  return {
+    status: rows.some((item) => item.status === "FAILED")
+      ? "FAILED"
+      : rows.some((item) => item.configured)
+        ? "READY"
+        : "NEEDS_SETUP",
+    configuredCount: rows.filter((item) => item.configured).length,
+    total: rows.length,
+    rows,
+  };
 }
 
 const AD_PLATFORMS = [

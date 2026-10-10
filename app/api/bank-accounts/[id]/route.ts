@@ -129,8 +129,19 @@ export async function DELETE(
     const existing = await findBankAccountForAdmin(id);
     if (!existing) return NextResponse.json({ error: "Bank account not found" }, { status: 404 });
 
-    // Translations and currencies both cascade from the schema.
-    await prisma.bankAccount.delete({ where: { id } });
+    // Use deleteMany rather than delete for legacy Mongo rows that may contain malformed
+    // scalar values (for example a string createdAt where Prisma now expects DateTime).
+    // delete() decodes the deleted document and can fail *after* matching it; deleteMany()
+    // returns only a count. Remove children explicitly so cleanup stays deterministic even
+    // for old rows created before referential-action support was consistent.
+    const [, , deleted] = await prisma.$transaction([
+      prisma.bankAccountTranslation.deleteMany({ where: { bankAccountId: id } }),
+      prisma.bankAccountCurrency.deleteMany({ where: { bankAccountId: id } }),
+      prisma.bankAccount.deleteMany({ where: { id } }),
+    ]);
+    if (deleted.count === 0) {
+      return NextResponse.json({ error: "Bank account not found" }, { status: 404 });
+    }
 
     const actor = auditActorFromDashboardSession(session!);
     queueAuditLog({

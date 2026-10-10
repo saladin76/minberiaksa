@@ -11,7 +11,6 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
-import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Dialog,
@@ -19,16 +18,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import {
   Select,
   SelectContent,
@@ -42,17 +31,13 @@ import {
   Check,
   CheckCircle2,
   ChevronRight,
-  CreditCard,
-  Globe,
   HandHeart,
   Headphones,
   Loader2,
   LogOut,
   Mail,
   MapPin,
-  PauseCircle,
   Phone,
-  PlayCircle,
   Receipt,
   Repeat,
   Settings,
@@ -84,6 +69,7 @@ interface DonationForProfile {
   /** DAILY | FRIDAY | MONTHLY on a plan; null on a one-time gift. */
   frequency?: string | null;
   nextBillingDate?: string | null;
+  planAmount?: number | null;
   createdAt: string;
   subscriptionStartedAt?: string;
   teamSupport?: number;
@@ -183,11 +169,7 @@ const ProfilePage = () => {
 
   const [selectedPeriod, setSelectedPeriod] = useState("all");
   const [paymentFilter, setPaymentFilter] = useState<"all" | "PAID" | "FAILED">("all");
-  const [isLoading, setIsLoading] = useState(false);
   const [isDownloading, setIsDownloading] = useState<string | null>(null);
-  const [isPauseDialogOpen, setIsPauseDialogOpen] = useState(false);
-  const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
-  const [selectedDonation, setSelectedDonation] = useState<DonationForProfile | null>(null);
   const [subscriptionSettingsDonation, setSubscriptionSettingsDonation] =
     useState<DonationForProfile | null>(null);
   const [countryPickerOpen, setCountryPickerOpen] = useState(false);
@@ -273,74 +255,6 @@ const ProfilePage = () => {
   };
 
   // ─────────────────────────── donations / subscriptions ───────────────────
-
-  const handleToggleSubscription = (donation: DonationForProfile) => {
-    setSelectedDonation(donation);
-    setIsPauseDialogOpen(true);
-  };
-
-  const handleConfirmToggle = async () => {
-    if (!selectedDonation) return;
-    setIsLoading(true);
-    try {
-      const newStatus = selectedDonation.status === "ACTIVE" ? "PAUSED" : "ACTIVE";
-      const response = await axios.put(`/api/donations/${selectedDonation.id}`, {
-        status: newStatus,
-      });
-      const updated = response.data as DonationForProfile;
-      setUser((prev) => {
-        if (!prev || !prev.donations) return prev;
-        return {
-          ...prev,
-          donations: prev.donations.map((d) =>
-            d.id === selectedDonation.id ? { ...d, ...updated } : d
-          ),
-        };
-      });
-      if (subscriptionSettingsDonation?.id === selectedDonation.id) {
-        setSubscriptionSettingsDonation((prev) => (prev ? { ...prev, ...updated } : null));
-      }
-      toast.success(
-        newStatus === "ACTIVE"
-          ? t("toast.subscriptionActivated")
-          : t("toast.subscriptionPaused")
-      );
-    } catch {
-      toast.error(t("toast.subscriptionUpdateError"));
-    } finally {
-      setIsLoading(false);
-      setIsPauseDialogOpen(false);
-      setSelectedDonation(null);
-    }
-  };
-
-  const handleCancelSubscription = async () => {
-    if (!subscriptionSettingsDonation) return;
-    setIsLoading(true);
-    try {
-      const response = await axios.put(
-        `/api/donations/${subscriptionSettingsDonation.id}`,
-        { status: "CANCELLED" }
-      );
-      const updated = response.data as DonationForProfile;
-      setUser((prev) => {
-        if (!prev || !prev.donations) return prev;
-        return {
-          ...prev,
-          donations: prev.donations.map((d) =>
-            d.id === subscriptionSettingsDonation.id ? { ...d, ...updated } : d
-          ),
-        };
-      });
-      setSubscriptionSettingsDonation(null);
-      setIsCancelDialogOpen(false);
-      toast.success(t("toast.subscriptionCancelled"));
-    } catch {
-      toast.error(t("toast.subscriptionUpdateError"));
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const handleDownload = async (donationId: string) => {
     try {
@@ -1053,7 +967,7 @@ const ProfilePage = () => {
           <div className="space-y-6 pt-2">
             <div className="p-4 bg-[#A5243D]/5 border border-[#A5243D]/10 rounded-xl">
               <p className="text-lg font-semibold text-gray-900">
-                {formatDonationAmount(sub.totalAmount, sub.currency)}{" "}
+                {formatDonationAmount(sub.planAmount ?? sub.totalAmount, sub.currency)}{" "}
                 {t("subscriptions.perMonth")}
               </p>
               {sub.items?.map((item) => (
@@ -1062,29 +976,8 @@ const ProfilePage = () => {
                 </p>
               ))}
             </div>
+            <p className="text-sm text-gray-600">لخفض التبرع الدوري أو إيقاف الخصومات أو إلغائها، يُرجى التواصل مع المؤسسة عبر قسم الدعم. ويمكنك كذلك إلغاء تفويض الدفع مباشرة لدى مزوّد الدفع.</p>
             <div className="flex flex-wrap gap-2">
-              {sub.status !== "CANCELLED" && (
-                <Button
-                  variant={isActive ? "outline" : "default"}
-                  className="flex-1"
-                  onClick={() => handleToggleSubscription(sub)}
-                  disabled={isLoading}
-                >
-                  {isLoading ? (
-                    <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                  ) : isActive ? (
-                    <>
-                      <PauseCircle className="w-4 h-4 mr-2" />
-                      {t("subscriptions.pause")}
-                    </>
-                  ) : (
-                    <>
-                      <PlayCircle className="w-4 h-4 mr-2" />
-                      {t("subscriptions.resume")}
-                    </>
-                  )}
-                </Button>
-              )}
               <Button
                 variant="outline"
                 className="gap-2 border-[#A5243D]/40 text-[#A5243D] hover:bg-[#A5243D]/10"
@@ -1099,18 +992,7 @@ const ProfilePage = () => {
                 {t("receipts.downloadPdfShort")}
               </Button>
             </div>
-            {sub.status !== "CANCELLED" && (
-              <>
-                <Separator />
-                <Button
-                  variant="ghost"
-                  className="w-full text-red-600 hover:text-red-700 hover:bg-red-50"
-                  onClick={() => setIsCancelDialogOpen(true)}
-                >
-                  {t("subscriptions.cancelSubscription")}
-                </Button>
-              </>
-            )}
+
           </div>
         </DialogContent>
       </Dialog>
@@ -1288,60 +1170,6 @@ const ProfilePage = () => {
         currentCountryCode={user.countryCode}
         onSelect={handleCountrySelect}
       />
-
-      {/* Pause / resume dialog */}
-      <AlertDialog open={isPauseDialogOpen} onOpenChange={setIsPauseDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>
-              {selectedDonation?.status === "ACTIVE"
-                ? t("subscriptions.pauseSubscription")
-                : t("subscriptions.resume")}
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              {selectedDonation?.status === "ACTIVE"
-                ? t("pauseDialog.descriptionPause")
-                : t("pauseDialog.descriptionResume")}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>{t("deleteDialog.cancel")}</AlertDialogCancel>
-            <AlertDialogAction onClick={handleConfirmToggle} disabled={isLoading}>
-              {isLoading ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : selectedDonation?.status === "ACTIVE" ? (
-                t("subscriptions.pause")
-              ) : (
-                t("subscriptions.resume")
-              )}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* Cancel dialog */}
-      <AlertDialog open={isCancelDialogOpen} onOpenChange={setIsCancelDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>{t("subscriptions.cancelSubscription")}</AlertDialogTitle>
-            <AlertDialogDescription>{t("cancelDialog.description")}</AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>{t("deleteDialog.cancel")}</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleCancelSubscription}
-              disabled={isLoading}
-              className="bg-red-600 hover:bg-red-700"
-            >
-              {isLoading ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                t("subscriptions.cancel")
-              )}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
 
       {renderSubscriptionDialog()}
     </>

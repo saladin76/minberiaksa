@@ -88,7 +88,7 @@ export default function TravelBanner() {
             </div>
 
             <div
-              className="friday-content"
+              className="friday-content mia-campaign-banner-content"
               style={{
                 position: "relative",
                 zIndex: 2,
@@ -103,17 +103,17 @@ export default function TravelBanner() {
                 alignContent: "end",
               }}
             >
-              <h2 style={{ margin: 0, whiteSpace: "nowrap", fontSize: "clamp(18px,2vw,28px)", lineHeight: 1.5, fontWeight: 900, letterSpacing: "-.01em", color: "#fff", textShadow: "0 2px 18px rgba(16,33,43,.55)" }}>
+              <h2 style={{ margin: 0, overflowWrap: "anywhere", fontSize: "clamp(18px,2vw,28px)", lineHeight: 1.5, fontWeight: 900, letterSpacing: "-.01em", color: "#fff", textShadow: "0 2px 18px rgba(16,33,43,.55)" }}>
                 {t("fridayHeading1")}
                 <br />
                 {t("fridaySubtitle")}
               </h2>
 
-              <div className="friday-ctas" style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 2 }}>
+              <div className="friday-ctas mia-campaign-banner-actions" style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 2 }}>
                 <Link
                   href={href}
-                  className="friday-cta"
-                  style={{ position: "relative", display: "inline-flex", alignItems: "center", gap: 10, height: 46, padding: "0 24px", borderRadius: 8, background: "#A93428", color: "#fff", fontWeight: 900, fontSize: 14.5, whiteSpace: "nowrap", textDecoration: "none", boxShadow: "0 10px 26px rgba(169,52,40,.4)" }}
+                  className="friday-cta mia-campaign-banner-button"
+                  style={{ position: "relative", display: "inline-flex", alignItems: "center", gap: 10, height: 46, padding: "0 24px", borderRadius: 8, background: "#A93428", color: "#fff", fontWeight: 900, fontSize: 14.5, whiteSpace: "normal", textAlign: "center", overflowWrap: "anywhere", textDecoration: "none", boxShadow: "0 10px 26px rgba(169,52,40,.4)" }}
                 >
                   {t("donateBus")}
                   <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="mia-arrow-next">

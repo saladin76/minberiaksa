@@ -4,10 +4,10 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 import { requireAdminOrDashboardPermission } from "@/lib/dashboard/api-auth";
 import { prisma } from "@/lib/prisma";
 import { rawCommand } from "@/lib/prisma-raw-command";
+import { getRawTrackingSettings, trackingBoolean, trackingString } from "@/lib/tracking/tracking-settings";
 
 export const dynamic = "force-dynamic";
 
-const SETTINGS_COLLECTION = "TrackingSettings";
 const EVENTS_COLLECTION = "ConversionEvent";
 
 type Platform = "meta" | "ga4" | "google_ads" | "tiktok" | "x";
@@ -25,19 +25,8 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-function text(row: Record<string, unknown> | null, key: string): string | null {
-  const value = row?.[key];
-  return typeof value === "string" && value.trim() ? value.trim() : null;
-}
-
 function present(row: Record<string, unknown> | null, key: string): boolean {
-  return Boolean(text(row, key));
-}
-
-async function getSettings(): Promise<Record<string, unknown> | null> {
-  const result = await prisma.$runCommandRaw(rawCommand({ find: SETTINGS_COLLECTION, limit: 1, sort: { createdAt: 1 } }));
-  const batch = isRecord(result) && isRecord(result.cursor) && Array.isArray(result.cursor.firstBatch) ? result.cursor.firstBatch : [];
-  return (batch[0] as Record<string, unknown> | undefined) ?? null;
+  return Boolean(trackingString(row, key));
 }
 
 async function latestEvent(platform: EventPlatform, channel?: "browser" | "server") {
@@ -83,31 +72,52 @@ function eventSummary(event: Record<string, unknown> | null) {
   };
 }
 
-function buildDiagnostics(row: Record<string, unknown> | null, platform: Platform, browserFields: string[], serverFields: string[]) {
+function buildDiagnostics(
+  row: Record<string, unknown> | null,
+  platform: Platform,
+  browserFields: string[],
+  serverFields: string[],
+  serverEnabled: boolean | null = null,
+) {
   const browserMissing = browserFields.filter((field) => !present(row, field));
   const serverMissing = serverFields.filter((field) => !present(row, field));
+  const server = serverFields.length === 0
+    ? { state: "not_required", label: "غير مطلوب", missingFields: [] as string[] }
+    : serverEnabled === false
+      ? { state: "disabled", label: "غير مفعّل", missingFields: serverMissing }
+      : { ...status(serverMissing.length === 0, "جاهز"), missingFields: serverMissing };
   return {
     platform,
     browser: { ...status(browserMissing.length === 0, "جاهز"), missingFields: browserMissing },
-    server: serverFields.length === 0
-      ? { state: "not_required", label: "غير مطلوب", missingFields: [] as string[] }
-      : { ...status(serverMissing.length === 0, "جاهز"), missingFields: serverMissing },
+    server,
   };
 }
 
 export async function GET() {
   try {
     const session = await getServerSession(authOptions);
-    const denied = requireAdminOrDashboardPermission(session, "pixels");
+    const denied = requireAdminOrDashboardPermission(session, "platformConnections");
     if (denied) return denied;
 
-    const row = await getSettings();
+    const row = await getRawTrackingSettings();
     const base = {
-      meta: buildDiagnostics(row, "meta", ["facebookPixelId"], ["facebookAccessToken"]),
-      ga4: buildDiagnostics(row, "ga4", ["gaMeasurementId"], ["gaApiSecret"]),
+      meta: buildDiagnostics(row, "meta", ["facebookPixelId"], ["facebookPixelId", "facebookAccessToken"]),
+      ga4: buildDiagnostics(row, "ga4", ["gaMeasurementId"], ["gaMeasurementId", "gaApiSecret"]),
       google_ads: buildDiagnostics(row, "google_ads", ["googleAdsConversionId", "googleAdsConversionLabel"], []),
-      tiktok: buildDiagnostics(row, "tiktok", ["tiktokPixelId"], ["tiktokAccessToken"]),
-      x: buildDiagnostics(row, "x", ["xPixelId"], ["xAccessToken", "xAdAccountId"]),
+      tiktok: buildDiagnostics(
+        row,
+        "tiktok",
+        ["tiktokPixelId"],
+        ["tiktokPixelId", "tiktokAccessToken"],
+        trackingBoolean(row, "tiktokEventsApiEnabled"),
+      ),
+      x: buildDiagnostics(
+        row,
+        "x",
+        ["xPixelId"],
+        ["xConversionEventId", "xAccessToken", "xAdAccountId"],
+        trackingBoolean(row, "xConversionsApiEnabled"),
+      ),
     };
 
     const entries = await Promise.all((Object.keys(base) as Platform[]).map(async (platform) => {

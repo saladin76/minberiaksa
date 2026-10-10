@@ -107,7 +107,7 @@ export default function ProjectsPage({ projects, slides }: ProjectsPageProps) {
   }, [hasMore, category]);
 
   return (
-    <div style={{ position: "relative" }}>
+    <div className="mia-projects-page" style={{ position: "relative" }}>
       <div
         aria-hidden="true"
         data-aqsa-pattern=""
@@ -131,14 +131,15 @@ export default function ProjectsPage({ projects, slides }: ProjectsPageProps) {
 
       <ProjectsHero slides={slides} />
 
-      <section style={{ position: "relative", background: "var(--ivory)", overflow: "hidden" }}>
+      <section id="project-filters-section" style={{ position: "relative", background: "var(--ivory)", overflow: "hidden" }}>
         <div
           aria-hidden="true"
           data-aqsa-pattern=""
           style={{ position: "absolute", inset: 0, backgroundImage: "url('/minbar/assets/patterns/aqsa-white-pattern.webp')", backgroundRepeat: "repeat", backgroundSize: "520px 520px", opacity: 0.05, pointerEvents: "none" }}
         />
         <div style={{ position: "relative", maxWidth: 1240, margin: "0 auto", padding: "30px 24px 34px", display: "grid", gap: 18 }}>
-          <div className="mia-rail" id="proj-filters" style={{ display: "flex", gap: 10, flexWrap: "wrap", justifyContent: "center", paddingBottom: 4 }}>
+          <div className="proj-filters-wrap">
+            <div className="mia-rail" id="proj-filters" style={{ display: "flex", gap: 10, flexWrap: "wrap", justifyContent: "center", paddingBottom: 4 }}>
             {categories.map((c) => {
               const style = {
                 display: "inline-flex",
@@ -180,6 +181,8 @@ export default function ProjectsPage({ projects, slides }: ProjectsPageProps) {
                   key={c.id}
                   type="button"
                   data-cat={category === c.id ? "1" : ""}
+                  aria-pressed={category === c.id}
+                  aria-controls="all"
                   onClick={() => {
                     setCategory(c.id);
                     setLimit(PAGE_SIZE);
@@ -194,6 +197,7 @@ export default function ProjectsPage({ projects, slides }: ProjectsPageProps) {
                 </button>
               );
             })}
+            </div>
           </div>
         </div>
       </section>

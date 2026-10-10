@@ -9,7 +9,7 @@ import { integrationActorFromSession } from "@/lib/integration-settings/http";
 import { integrationSettingsService } from "@/lib/integration-settings/prisma-service";
 import { withActiveTestState, type SafeIntegrationProviderSnapshotWithTests } from "@/lib/integration-settings/safe-snapshot";
 import { getSchedulerStatus } from "@/lib/communication/scheduler-status";
-import { getOverview } from "@/lib/platform-connections/readiness";
+import { getWebhooksReadiness } from "@/lib/platform-connections/readiness";
 import { PageHeader, Card, CardHeader } from "../_components/ui";
 import { RecheckConnectionsButton } from "./_components/RecheckConnectionsButton";
 
@@ -94,8 +94,8 @@ export default async function HealthPage() {
   if (!access.allowed) redirect(access.redirectTo);
   const session = access.session;
   const actor = integrationActorFromSession(session);
-  const [{ webhooks }, scheduler, meta, elasticEmail, brevo, netgsm, cron] = await Promise.all([
-    getOverview(),
+  const [webhooks, scheduler, meta, elasticEmail, brevo, netgsm, cron] = await Promise.all([
+    getWebhooksReadiness(),
     getSchedulerStatus(),
     integrationSettingsService.getProviderSnapshot("META_WHATSAPP", actor).then(withActiveTestState),
     integrationSettingsService.getProviderSnapshot("ELASTIC_EMAIL", actor).then(withActiveTestState),

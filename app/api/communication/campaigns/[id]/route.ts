@@ -4,7 +4,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 import { requireAdminOrDashboardPermission } from "@/lib/dashboard/api-auth";
 import { auditActorFromDashboardSession } from "@/lib/audit-log";
-import { getCampaign, updateCampaign, deleteDraftCampaign } from "@/lib/communication/campaign-service";
+import { getCampaign, updateCampaign, deleteDraftCampaign, archiveCampaign } from "@/lib/communication/campaign-service";
 import { getRecipientBreakdown } from "@/lib/communication/campaign-recipient-service";
 import { listChannelTemplates } from "@/lib/communication/template-compat";
 import type { CommunicationChannelId } from "@/lib/communication/communication-runtime-types";
@@ -65,6 +65,28 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   }
 
   const result = await updateCampaign(id, parsed.data, auditActorFromDashboardSession(session!));
+  if (!result.ok) return NextResponse.json({ ok: false, error: result.error }, { status: result.status });
+  return NextResponse.json({ ok: true, campaign: result.data });
+}
+
+export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const session = await getServerSession(authOptions);
+  const denied = requireAdminOrDashboardPermission(session, "messages");
+  if (denied) return denied;
+  const { id } = await params;
+
+  let payload: unknown;
+  try {
+    payload = await request.json();
+  } catch {
+    return NextResponse.json({ ok: false, error: "Invalid JSON" }, { status: 400 });
+  }
+  const action = (payload as { action?: string } | null)?.action;
+  if (action !== "ARCHIVE") {
+    return NextResponse.json({ ok: false, error: "Unknown action" }, { status: 400 });
+  }
+
+  const result = await archiveCampaign(id, auditActorFromDashboardSession(session!));
   if (!result.ok) return NextResponse.json({ ok: false, error: result.error }, { status: result.status });
   return NextResponse.json({ ok: true, campaign: result.data });
 }

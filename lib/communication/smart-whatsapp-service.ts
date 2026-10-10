@@ -11,6 +11,7 @@ import { loadContextForDonation, loadContextsForUserIds, type TemplateContext } 
 import { renderChannelTemplate } from "./template-compat";
 import { resolveMetaTemplateMapping } from "./automatic-message-dispatcher";
 import { buildMetaComponents } from "./providers/meta-whatsapp/parameters";
+import { buildWhatsappRenderedPreview } from "./whatsapp-rendered-preview";
 import { isValidLocale, type SupportedLocale } from "@/lib/locales";
 import { writeAuditLog } from "@/lib/audit-log";
 import { touchProfileCommunication } from "./donor-communication-profile-service";
@@ -241,7 +242,16 @@ async function sendApprovedTemplateForDonor(args: {
     recipientPhone: args.ctx.phone,
     locale: args.locale,
     renderedBody: rendered.body,
-    variables: { snapshot: renderCtx } as never,
+    variables: {
+      snapshot: renderCtx,
+      whatsappPreview: buildWhatsappRenderedPreview({
+        componentsSchema: mapping.componentsSchema,
+        builtComponents: built.components,
+        fallbackBody: rendered.body,
+        providerTemplateName: mapping.name,
+        languageCode: mapping.language,
+      }),
+    } as never,
     senderId: args.sender.id,
     createdBy: args.actor?.actorId ?? null,
     status: "RENDERED",
@@ -309,6 +319,10 @@ export async function sendSmartWhatsapp(input: {
     ? (ctx.replyWindow.open ? "FREEFORM" : "UTILITY")
     : input.mode;
 
+  // A platform-level do-not-contact block applies to every outbound path,
+  // including free-form replies inside Meta's 24-hour window.
+  if (ctx.doNotContact) return { ok: false, reason: "DO_NOT_CONTACT" };
+
   if (mode === "FREEFORM") {
     if (!ctx.conversationId || !ctx.replyWindow.open) return { ok: false, reason: "REPLY_WINDOW_CLOSED" };
     if (!body) return { ok: false, reason: "EMPTY_BODY" };
@@ -317,8 +331,6 @@ export async function sendSmartWhatsapp(input: {
       ? { ok: true, transport: "FREEFORM", deliveryId: sent.deliveryId, providerMessageId: sent.providerMessageId }
       : sent;
   }
-
-  if (ctx.doNotContact) return { ok: false, reason: "DO_NOT_CONTACT" };
 
   const snapshot = await loadSenderRoutingSnapshot("WHATSAPP");
   const routed = resolveSenderFromSnapshot(snapshot, {

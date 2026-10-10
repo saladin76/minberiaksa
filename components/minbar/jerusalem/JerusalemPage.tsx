@@ -122,13 +122,13 @@ export default function JerusalemPage({ verse, projects }: JerusalemPageProps) {
       </section>
 
       {/* ── Hero over the aerial view ─────────────────────────────────────── */}
-      <section style={{ position: "relative", background: "var(--deep)", overflow: "hidden" }}>
+      <section className="mia-story-hero mia-story-hero--jerusalem" style={{ position: "relative", background: "var(--deep)", overflow: "hidden" }}>
         <div aria-hidden="true" className="qd-pattern qd-pattern--dark" />
         {/* eslint-disable-next-line @next/next/no-img-element -- sets the section height; not a fixed-size image */}
-        <img src="/minbar/assets/quds-aerial.png" alt={t("aerialAlt")} style={{ display: "block", width: "100%", height: "auto" }} />
-        <div style={{ position: "absolute", inset: 0 }}>
-          <div className="qd-hero" style={{ maxWidth: 1240, height: "100%", margin: "0 auto", padding: "4% 24px 0", display: "grid", gridTemplateColumns: "minmax(0,52%) minmax(0,1fr)", alignContent: "start" }}>
-            <div style={{ display: "inline-grid", justifySelf: "start", gap: 12, justifyItems: "start", padding: "16px 18px", background: "rgba(0,0,0,.42)" }}>
+        <img className="mia-story-hero__image" src="/minbar/assets/quds-aerial.png" alt={t("aerialAlt")} style={{ display: "block", width: "100%", height: "auto" }} />
+        <div className="mia-story-hero__overlay" style={{ position: "absolute", inset: 0 }}>
+          <div className="qd-hero mia-story-hero__inner" style={{ maxWidth: 1240, height: "100%", margin: "0 auto", padding: "4% 24px 0", display: "grid", gridTemplateColumns: "minmax(0,52%) minmax(0,1fr)", alignContent: "start" }}>
+            <div className="mia-story-hero__copy" style={{ display: "inline-grid", justifySelf: "start", gap: 12, justifyItems: "start", padding: "16px 18px", background: "rgba(0,0,0,.42)" }}>
               <h1 style={{ margin: 0, fontSize: "clamp(26px,3vw,44px)", lineHeight: 1.35, fontWeight: 900, color: "#fff", textShadow: "0 2px 20px rgba(0,0,0,.65)" }}>
                 {t("pageTitle")}
               </h1>

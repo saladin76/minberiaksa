@@ -46,12 +46,23 @@ interface Facets {
 
 const PAGE_SIZE = 25;
 
-async function readApiJson(response: Response, fallback: string): Promise<Record<string, any>> {
+type DonorApiJson = {
+  ok?: boolean;
+  error?: string;
+  message?: string;
+  donors?: DonorCandidate[];
+  pagination?: { total?: number };
+  facets?: Facets;
+  ids?: string[];
+  truncated?: boolean;
+};
+
+async function readApiJson(response: Response, fallback: string): Promise<DonorApiJson> {
   const text = await response.text();
-  let data: Record<string, any> = {};
+  let data: DonorApiJson = {};
   if (text) {
     try {
-      data = JSON.parse(text) as Record<string, any>;
+      data = JSON.parse(text) as DonorApiJson;
     } catch {
       throw new Error(response.ok ? fallback : `${fallback} (HTTP ${response.status})`);
     }
@@ -210,9 +221,10 @@ export function DonorPicker({
       });
       const json = await readApiJson(res, "تعذّر التحديد");
       if (!json.ok) throw new Error(String(json.error || "تعذّر التحديد"));
-      onChange(new Set([...selected, ...json.ids]));
+      const ids = json.ids ?? [];
+      onChange(new Set([...selected, ...ids]));
       if (json.truncated) toast("اكتفينا بأول ٥٠٠٠ متبرع مطابق.", { icon: "ℹ️" });
-      else toast.success(`تم تحديد ${json.ids.length} متبرعًا`);
+      else toast.success(`تم تحديد ${ids.length} متبرعًا`);
     } catch (e) {
       toast.error((e as Error).message);
     } finally {

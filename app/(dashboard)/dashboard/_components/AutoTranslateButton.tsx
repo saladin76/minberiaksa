@@ -23,7 +23,7 @@ import { SUPPORTED_LOCALES } from '@/lib/locales';
  * The checkbox opts into replacing everything.
  */
 
-export type TranslatedLocales = Record<string, { fields: Record<string, string>; richFields: Record<string, string> }>;
+export type TranslatedLocales = Record<string, { fields: Record<string, string>; richFields: Record<string, string>; warnings?: string[] }>;
 
 export function AutoTranslateButton({
   source,
@@ -33,6 +33,8 @@ export function AutoTranslateButton({
   onResult,
   size = 'sm',
   disabled,
+  sourceLocale = "ar",
+  policy = "STANDARD",
 }: {
   /** Arabic plain-text fields, by field name. */
   source: Record<string, string>;
@@ -46,6 +48,10 @@ export function AutoTranslateButton({
   onResult: (translations: TranslatedLocales, overwrite: boolean) => void;
   size?: 'sm' | 'default';
   disabled?: boolean;
+  /** Actual source language; Arabic remains the default for existing forms. */
+  sourceLocale?: string;
+  /** Protect religious/legal content from unsafe machine translation. */
+  policy?: "STANDARD" | "LEGAL_REVIEW_REQUIRED" | "RELIGIOUS_LOCKED" | "SEO";
 }) {
   const [busy, setBusy] = useState(false);
   const [overwrite, setOverwrite] = useState(false);
@@ -65,13 +71,19 @@ export function AutoTranslateButton({
         richFields: richSource ?? {},
         locales: targets,
         itemLabel,
+        sourceLocale,
+        policy,
       });
       const translations = (res.data?.translations ?? {}) as TranslatedLocales;
       const errors = (res.data?.errors ?? {}) as Record<string, string>;
       onResult(translations, overwrite);
       const done = Object.keys(translations).length;
       const failed = Object.keys(errors).length;
-      if (done) toast.success(`تمت ترجمة ${done} لغة${failed ? `  تعذّرت ${failed}` : ''}. راجع النصوص ثم احفظ.`);
+      const warnings = Object.values(translations).flatMap((translation) => translation.warnings ?? []);
+      if (done) {
+        toast.success(`تمت ترجمة ${done} لغة${failed ? `  تعذّرت ${failed}` : ""}. راجع النصوص ثم احفظ.`);
+        if (warnings.length) toast.error(`QA رفض ${warnings.length} حقلًا بسبب تغيّر متغير/رابط/رقم محمي.`);
+      }
       else toast.error(errorMessage(null, 'لم تُنتج الترجمة أي نص'));
     } catch (e) {
       toast.error(errorMessage(e, 'تعذّرت الترجمة التلقائية'));

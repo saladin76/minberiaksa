@@ -207,6 +207,7 @@ model User {
   cartItems     CartItem[]
   messages      Message[]
   creditCards   CreditCard[]
+  communicationProfile DonorCommunicationProfile?
 }
 
 /**
@@ -856,6 +857,11 @@ model Subscription {
   /// retry ladder (`RECURRING_RETRY_HOURS`); reset on every paid cycle.
   chargeAttempts  Int     @default(0)
   lastChargeError String?
+  /// Unique token held during an institution-initiated reprice across provider
+  /// and MongoDB. Fail closed until externally reconciled if a request crashes.
+  /// Optional for backwards-compatible MongoDB documents.
+  amountChangeLock String?
+  amountChangeStartedAt DateTime?
   /// `PAYPAL` plans: the PayPal wallet saved (vaulted) at the first
   /// instalment's capture. The scheduler charges later cycles against it
   /// (lib/donations/paypal-recurring.ts). Null on every other rail.
@@ -2209,6 +2215,7 @@ model SenderRoutingRule {
 model DonorCommunicationProfile {
   id                  String    @id @default(auto()) @map("_id") @db.ObjectId
   userId              String    @unique @db.ObjectId
+  user                User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   preferredLocale     String?
   countryCode         String?
   timezone            String?
@@ -2336,6 +2343,27 @@ model CommunicationDelivery {
   @@index([channel, status])
   @@index([recipientUserId])
   @@index([providerMessageId])
+}
+
+/// Durable queue for recipients temporarily held by recipient-local quiet hours.
+/// They have been scanned from the campaign audience, but not sent yet. The scheduler
+/// re-evaluates their local clock and sends them once their quiet window ends.
+model CommunicationCampaignDeferredRecipient {
+  id            String   @id @default(auto()) @map("_id") @db.ObjectId
+  campaignId    String   @db.ObjectId
+  cursorId      String
+  userId        String   @db.ObjectId
+  name          String?
+  email         String?
+  phone         String?
+  locale        String
+  country       String?
+  nextAttemptAt DateTime @default(now())
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([campaignId, cursorId])
+  @@index([campaignId, nextAttemptAt])
 }
 
 model CommunicationProviderEvent {

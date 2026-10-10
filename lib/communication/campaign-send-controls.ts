@@ -17,6 +17,7 @@ export type CampaignSendControls = {
     enabled: boolean;
     start: string; // HH:mm
     end: string;   // HH:mm
+    timezoneMode: "RECIPIENT" | "FIXED";
     timezone: string;
   };
 };
@@ -62,8 +63,10 @@ export function campaignSendControls(campaign: Pick<CommunicationCampaign, "meta
     const date = new Date(value);
     return Number.isNaN(date.getTime()) ? null : date.toISOString();
   };
-  const globalCap = positiveInt(process.env.COMMUNICATION_WHATSAPP_DAILY_CAP, 100_000);
-  const requestedCap = positiveInt(raw.dailyCap, globalCap);
+  const configuredGlobalCap = process.env.COMMUNICATION_WHATSAPP_DAILY_CAP
+    ? positiveInt(process.env.COMMUNICATION_WHATSAPP_DAILY_CAP, 100_000)
+    : null;
+  const requestedCap = positiveInt(raw.dailyCap, configuredGlobalCap ?? 100_000);
 
   return {
     paused: raw.paused === true,
@@ -72,12 +75,15 @@ export function campaignSendControls(campaign: Pick<CommunicationCampaign, "meta
     priority: ["LOW", "NORMAL", "HIGH", "URGENT"].includes(priority) ? priority : "NORMAL",
     scheduledStopAt: isoOrNull(raw.scheduledStopAt),
     resumeAt: isoOrNull(raw.resumeAt),
-    // Per-campaign controls may be stricter than the account tier, never looser.
-    dailyCap: Math.min(requestedCap, globalCap),
+    // An explicitly configured environment ceiling remains a hard safety cap. When there is no
+    // environment override, the campaign value can come directly from Meta's current account tier.
+    dailyCap: configuredGlobalCap ? Math.min(requestedCap, configuredGlobalCap) : requestedCap,
     quietHours: {
       enabled: quiet.enabled === true,
       start: hhmm(quiet.start, "00:00"),
       end: hhmm(quiet.end, "08:00"),
+      // Old campaigns had one fixed timezone. Preserve that behavior unless the new mode is explicit.
+      timezoneMode: quiet.timezoneMode === "RECIPIENT" ? "RECIPIENT" : "FIXED",
       timezone:
         typeof quiet.timezone === "string" && quiet.timezone.trim() && isValidTimeZone(quiet.timezone.trim())
           ? quiet.timezone.trim()
@@ -169,9 +175,10 @@ function parseMinutes(value: string): number {
   return hour * 60 + minute;
 }
 
-export function insideQuietHours(controls: CampaignSendControls, now = new Date()): boolean {
+export function insideQuietHours(controls: CampaignSendControls, now = new Date(), timeZoneOverride?: string): boolean {
   if (!controls.quietHours.enabled) return false;
-  const current = localMinutes(now, controls.quietHours.timezone);
+  const timeZone = timeZoneOverride || controls.quietHours.timezone;
+  const current = localMinutes(now, timeZone);
   if (current == null) return false;
   const start = parseMinutes(controls.quietHours.start);
   const end = parseMinutes(controls.quietHours.end);
@@ -199,7 +206,10 @@ export async function evaluateCampaignSendControls(
   if (await campaignEmergencyStopEnabled()) return { ok: false, controls, reason: "EMERGENCY_STOP", remainingDaily: null };
   if (controls.paused) return { ok: false, controls, reason: "PAUSED", remainingDaily: null };
   if (insideScheduledStop(controls)) return { ok: false, controls, reason: "SCHEDULED_STOP", remainingDaily: null };
-  if (insideQuietHours(controls)) return { ok: false, controls, reason: "QUIET_HOURS", remainingDaily: null };
+  // Recipient-local quiet hours are evaluated inside the send walk for each donor.
+  if (controls.quietHours.timezoneMode === "FIXED" && insideQuietHours(controls)) {
+    return { ok: false, controls, reason: "QUIET_HOURS", remainingDaily: null };
+  }
 
   if (campaign.channel === "WHATSAPP") {
     const used = await whatsappSentLast24Hours();

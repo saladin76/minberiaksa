@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { writeAuditLog } from "@/lib/audit-log";
 import type { EmailSuppressionReason } from "./providers/elastic-email/webhook-events";
 import { recordEmailSuppression, type GlobalEmailSuppressionReason } from "./email-suppression-store";
+import { ensureProfilesForUsers } from "./donor-communication-profile-service";
 
 /**
  * Turns an Elastic Email opt-out signal into an actual consent change.
@@ -69,22 +70,16 @@ export async function suppressEmailRecipient(
     });
     out.applied = true;
 
-    // The profile is the audience layer's source of truth; upsert because a
-    // donor who never opened the dashboard may not have one yet.
+    // Bootstrap a missing profile through the canonical profile service first so
+    // SMS/WhatsApp preferences are preserved from their own sources. An email
+    // unsubscribe or hard bounce must change email only; only a complaint sets
+    // the global do-not-contact flag.
+    await ensureProfilesForUsers([user.id]);
     await prisma.donorCommunicationProfile
-      .upsert({
+      .update({
         where: { userId: user.id },
-        create: {
-          userId: user.id,
+        data: {
           email: address,
-          emailOptIn: false,
-          smsOptIn: false,
-          whatsappOptIn: false,
-          doNotContact: isComplaint,
-          consentSource: `elastic-email:${reason}`,
-          lastConsentAt: new Date(),
-        },
-        update: {
           emailOptIn: false,
           ...(isComplaint ? { doNotContact: true } : {}),
           consentSource: `elastic-email:${reason}`,
@@ -92,7 +87,7 @@ export async function suppressEmailRecipient(
         },
       })
       .catch((error) => {
-        console.error("suppressEmailRecipient: profile upsert failed", error);
+        console.error("suppressEmailRecipient: profile update failed", error);
       });
 
     // Attributed to the donor, not to SYSTEM  the donor is who performed this,

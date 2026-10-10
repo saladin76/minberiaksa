@@ -65,6 +65,7 @@ const marketingRedirects = [
   ["/dashboard/marketing/performance", "/dashboard/marketing/attribution"],
   ["/dashboard/marketing/recommendations", "/dashboard/marketing/attribution"],
   ["/dashboard/platform-connections", "/dashboard/platform-connections/tracking"],
+  ["/dashboard/pixels", "/dashboard/platform-connections/tracking"],
   ["/dashboard/platform-connections/ad-accounts", "/dashboard/platform-connections/tracking"],
   ["/dashboard/platform-connections/webhooks", "/dashboard/platform-connections/communication"],
   ["/dashboard/platform-connections/logs", "/dashboard/platform-connections/health"],
@@ -139,30 +140,8 @@ const nextConfig: NextConfig = {
   devIndicators: { position: "bottom-right" },
   reactStrictMode: true,
   serverExternalPackages: ["@usewaypoint/email-builder"],
-  /* `@sparticuz/chromium` resolves its compressed browser archives dynamically, so Next's
-     file tracer cannot discover `bin/*.br` automatically. Do NOT attach Chromium to every API
-     function: the archive is large, and doing so multiplies deployment output size across hundreds
-     of serverless functions, making Vercel spend far longer in "Deploying outputs..." than in the
-     actual build. Keep the manual include only on routes that can render/download donation PDFs or
-     dispatch DONATION_PAID emails with PDF attachments. This is deliberately conservative: provider
-     callbacks, reconciliation/recurring jobs, manual bank-transfer confirmation and admin imports
-     are included alongside the direct receipt/certificate endpoints. */
-  outputFileTracingIncludes: {
-    // Chromium's compressed binaries are large. Keep them only on functions that can actually
-    // render a donation PDF or dispatch a DONATION_PAID email with PDF attachments. Broad globs
-    // duplicated the same browser archive across many unrelated functions and made Vercel spend
-    // ~15 minutes in "Deploying outputs..." after a ~3 minute build.
-    "/api/certificates/**/*": ["./node_modules/@sparticuz/chromium/bin/**"],
-    "/api/receipts/**/*": ["./node_modules/@sparticuz/chromium/bin/**"],
-    "/api/payfor/3dpay/ok": ["./node_modules/@sparticuz/chromium/bin/**"],
-    "/api/stripe/webhook": ["./node_modules/@sparticuz/chromium/bin/**"],
-    "/api/paypal/return": ["./node_modules/@sparticuz/chromium/bin/**"],
-    "/api/albaraka/3d/initiate": ["./node_modules/@sparticuz/chromium/bin/**"],
-    "/api/albaraka/3d/callback": ["./node_modules/@sparticuz/chromium/bin/**"],
-    "/api/admin/transfer-receipts/[id]": ["./node_modules/@sparticuz/chromium/bin/**"],
-    "/api/donations/[id]": ["./node_modules/@sparticuz/chromium/bin/**"],
-    "/api/cron/recurring-charges": ["./node_modules/@sparticuz/chromium/bin/**"],
-  },
+  /* Donation PDFs use @sparticuz/chromium-min + a remote browser pack.
+     The large browser archive is therefore absent from serverless outputs. */
   compiler: { removeConsole: process.env.NODE_ENV === "production" ? { exclude: ["error", "warn"] } : false },
   /* Preview and development deployments carry production canonicals and
      hreflang, which does not stop a crawler indexing the preview URL itself.
@@ -181,6 +160,11 @@ const nextConfig: NextConfig = {
   },
   async rewrites() {
     return [
+      /* Large, immutable public PDFs live in the pinned Git commit CDN rather than
+         every Vercel build output. Public URLs stay unchanged for users, database
+         rows and search engines while previews no longer upload ~90 MB each time. */
+      { source: "/minbar/reports/:path*", destination: "https://cdn.jsdelivr.net/gh/saladin76/minberiaksa@c58f7414e55f964462a37aa0979ba5723311ed2b/public/minbar/reports/:path*" },
+      { source: "/minbar/assets/books/isharat-altanzil.pdf", destination: "https://cdn.jsdelivr.net/gh/saladin76/minberiaksa@c58f7414e55f964462a37aa0979ba5723311ed2b/public/minbar/assets/books/isharat-altanzil.pdf" },
       { source: "/api/admin/subscriptions/chart", destination: "/api/admin/subscriptions/overview/chart" },
       { source: "/api/admin/subscriptions/stats", destination: "/api/admin/subscriptions/overview/stats" },
     ];
@@ -202,10 +186,14 @@ const nextConfig: NextConfig = {
   },
 };
 
-/* `export default`, not `module.exports`: this file uses ESM `import` at the top,
-   so Next loads it as a module and a CJS assignment is not its export. With that
-   assignment the next-intl plugin never applied, `i18n/request.ts` was never
-   registered, and every `getTranslations()` in a `generateMetadata()` threw
-   "Couldn't find next-intl config file"  which Next swallows, so each affected
-   page shipped with no <title> and no description at all. */
-export default withNextIntl(nextConfig);
+/* next-intl 3.x still injects the old `experimental.turbo` alias. Next 16 reads the
+   top-level `turbopack` alias above and warns about the legacy key on every build.
+   Keep the plugin for i18n registration, then remove only that obsolete duplicate. */
+const configured = withNextIntl(nextConfig) as NextConfig & {
+  experimental?: NextConfig["experimental"] & { turbo?: unknown };
+};
+if (configured.experimental && "turbo" in configured.experimental) {
+  delete configured.experimental.turbo;
+}
+
+export default configured;

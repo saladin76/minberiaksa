@@ -5,7 +5,7 @@
  * operations-guarded API (only booleans + missing key NAMES + a safe label leave this module).
  *
  * Final architecture: WhatsApp = Meta, Email = Elastic Email, SMS int'l = Brevo, SMS Turkey = Netgsm,
- * Brevo Email / Twilio / SendGrid = legacy disabled.
+ * Legacy providers are intentionally absent from this active readiness module.
  */
 
 const has = (k: string) => !!process.env[k]?.trim();
@@ -46,13 +46,6 @@ export function getNetgsmSmsConfig(): ProviderConfigStatus {
   const required = ["NETGSM_USERCODE", "NETGSM_PASSWORD", "NETGSM_HEADER"];
   const missing = missingOf(required);
   return { configured: missing.length === 0, missing, safeLabel: "Netgsm SMS" };
-}
-
-/** Legacy Twilio  kept for reference only; NEVER used by an active send path. */
-export function getLegacyTwilioConfig(): ProviderConfigStatus & { legacy: true; active: false } {
-  const required = ["TWILIO_ACCOUNT_SID", "TWILIO_AUTH_TOKEN"];
-  const missing = missingOf(required);
-  return { configured: missing.length === 0, missing, safeLabel: "Twilio (قديم)", legacy: true, active: false };
 }
 
 /** Optional default WhatsApp phone number id (multi-number routing prefers the sender's own id). */

@@ -202,19 +202,19 @@
   .mia-scope div[style*="gap: 7px"] > button[data-pick],
   .mia-scope div[style*="gap: 7px"] > button[data-chip],
   .mia-scope div[style*="gap: 7px"] > button[data-amt] {
-    flex: 1 1 0 !important; min-width: 0 !important; height: 36px !important;
+    flex: 1 1 0 !important; min-width: 0 !important; height: 44px !important;
     padding: 0 4px !important; font-size: 12.5px !important;
   }
   .mia-scope div[style*="gap: 7px"]:has(> button[data-pick]) > input,
   .mia-scope div[style*="gap: 7px"]:has(> button[data-chip]) > input,
   .mia-scope div[style*="gap: 7px"]:has(> button[data-amt]) > input {
     flex: 1.25 1 0 !important; min-width: 0 !important; max-width: none !important;
-    width: auto !important; height: 36px !important; font-size: 11.5px !important;
+    width: auto !important; height: 44px !important; font-size: 11.5px !important;
   }
   .mia-scope div[style*="gap: 7px"]:has(> button[data-pick]) ~ div > button[data-icon-action],
   .mia-scope div[style*="gap: 7px"]:has(> button[data-chip]) ~ div > button[data-icon-action],
   .mia-scope div[style*="gap: 7px"]:has(> button[data-amt]) ~ div > button[data-icon-action] {
-    width: 40px !important; height: 40px !important;
+    width: 44px !important; height: 44px !important;
   }
 }
 
@@ -411,10 +411,10 @@
  * the label, the gaps and the circles just tighten. */
 @media (max-width: 480px) {
   .mia-head .mia-locale-label { display: none; }
-  .mia-head .mia-locale-btn { padding-inline-end: 8px; gap: 4px; height: 38px !important; }
+  .mia-head .mia-locale-btn { padding-inline-end: 8px; gap: 4px; height: 44px !important; }
   .mia-head .mia-main-row { gap: 7px !important; padding-inline: 12px !important; }
   .mia-head .mia-main-row img[src*="logo-horizontal"] { height: 30px !important; max-width: 104px !important; }
-  .mia-head .mia-main-row .mia-circle { width: 38px !important; height: 38px !important; }
+  .mia-head .mia-main-row .mia-circle { width: 44px !important; height: 44px !important; }
   .mia-head .mia-main-row > span[aria-hidden="true"] { display: none; }
 }
 
@@ -1431,8 +1431,8 @@
   .mia-scope .mia-qb-group > b { font-size: 12px; font-weight: 900; color: var(--muted); }
   .mia-scope .mia-qb-sheet .mia-sel-trigger { min-height: 46px; border-radius: 10px; border-width: 1px; font-size: 14px; }
   .mia-scope .mia-qb-sheet .mia-qb-chips { flex-wrap: wrap; }
-  .mia-scope .mia-qb-sheet .mia-qb-chip { height: 40px; padding: 0 15px; font-size: 13.5px; }
-  .mia-scope .mia-qb-sheet .mia-qb-free { height: 40px; padding: 0 12px; font-size: 13.5px; border-style: dashed; border-color: rgba(211,154,39,.65); }
+  .mia-scope .mia-qb-sheet .mia-qb-chip { height: 44px; padding: 0 15px; font-size: 13.5px; }
+  .mia-scope .mia-qb-sheet .mia-qb-free { height: 44px; padding: 0 12px; font-size: 13.5px; border-style: dashed; border-color: rgba(211,154,39,.65); }
   .mia-scope .mia-qb-sheet .mia-qb-free[data-active="true"] { border-style: solid; border-color: var(--deep); }
   .mia-scope .mia-qb-sheet .mia-qb-free > input { width: 10ch; }
 
@@ -1453,7 +1453,7 @@
 }
 @media (max-width: 560px) {
   .mia-scope .mia-qb-sheet { padding-inline: 10px; }
-  .mia-scope .mia-qb-toggle { flex-basis: 40px; width: 40px; height: 40px; }
+  .mia-scope .mia-qb-toggle { flex-basis: 44px; width: 44px; height: 44px; }
   .mia-scope:has(.mia-qb-sec) { padding-bottom: 84px; }
 }
 
@@ -1846,7 +1846,7 @@
   .mia-scope .pd-hero-media:hover .pd-hero-nav, .mia-scope .pd-hero-nav:focus-visible { opacity: 1; }
 }
 @media (max-width: 560px) {
-  .mia-scope .pd-hero-nav { width: 34px; height: 34px; }
+  .mia-scope .pd-hero-nav { width: 44px; height: 44px; }
   .mia-scope .pd-hero-nav[data-side="prev"] { inset-inline-start: 8px; }
   .mia-scope .pd-hero-nav[data-side="next"] { inset-inline-end: 8px; }
   .mia-scope .pd-hero-nav svg { width: 14px; height: 14px; }
@@ -1862,6 +1862,12 @@
 
 @media (max-width: 980px) {
   .mia-scope #pd-top, .mia-scope #pd-body { grid-template-columns: minmax(0,1fr) !important; }
+  .mia-scope #pd-top > .pd-project-main { display: contents !important; }
+  .mia-scope #pd-top .pd-hero-media { order: 1; }
+  .mia-scope #pd-top .pd-project-summary { order: 2; }
+  .mia-scope #pd-top #pd-aside { order: 3; }
+  .mia-scope #pd-top .pd-project-video { order: 4; }
+  .mia-scope #pd-top > .pd-project-concierge { order: 5; }
   /* The donation panel stops being sticky once it is the full width  a
      full-width sticky block would cover the article as you scroll. */
   .mia-scope #pd-aside { position: static !important; }
@@ -1870,6 +1876,18 @@
 @media (max-width: 560px) {
   .mia-scope #pd-related { grid-template-columns: minmax(0,1fr) !important; }
   .mia-scope #pd-aside { padding: 18px !important; }
+  .mia-scope #pd-aside :is(button, input, select) { min-height: 44px; }
+}
+
+@media (max-width: 760px) {
+  .mia-scope #cart-team-support button,
+  .mia-scope #cart-team-support input,
+  .mia-scope .upsell-card button,
+  .mia-scope .upsell-card input {
+    min-height: 44px !important;
+    height: 44px !important;
+  }
+  .mia-scope .upsell-card .upsell-add { min-width: 44px !important; width: 44px !important; }
 }
 
 /* ─────────────────────────────────────────────────────────────────────────────
@@ -3419,6 +3437,12 @@ html.cg-open .mia-scope:has(.mia-qb-sec) { padding-bottom: 0; }
 .mia-scope .pdc-body input { cursor: text; }
 /* Three amount chips and the free field: one even row of four. */
 .mia-scope .pdc-amounts { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+@media (max-width: 760px) {
+  .mia-scope .pdc-amounts > button,
+  .mia-scope .pdc-amounts > .pdc-custom { min-height: 44px !important; height: 44px !important; }
+  .mia-scope .pdc-card .mia-card-cta { min-height: 44px !important; height: 44px !important; }
+  .mia-scope .pdc-card button[data-icon-action] { min-width: 44px !important; width: 44px !important; min-height: 44px !important; height: 44px !important; }
+}
 .mia-scope .pdc-custom::placeholder { color: rgba(255,255,255,.62); font-size: 11.5px; font-weight: 700; }
 
 /* No amount yet: the chips shake in a wave and light up gold. */
@@ -3796,14 +3820,20 @@ html.cg-open .mia-scope:has(.mia-qb-sec) { padding-bottom: 0; }
   }
   /* The drawer ends where its content does when that is shorter than the screen. */
   .mia-head .mia-pop--menu {
-    bottom: auto;
+    bottom: 0;
+    height: calc(100dvh - var(--mia-head-h, 64px));
     max-height: calc(100dvh - var(--mia-head-h, 64px)) !important;
+    overflow-y: auto !important;
     padding: 16px 16px calc(20px + env(safe-area-inset-bottom, 0px)) !important;
     gap: 16px 14px !important;
+    border-radius: 0 !important;
   }
   .mia-head .mia-pop--locale {
-    bottom: auto;
+    bottom: 0;
+    height: calc(100dvh - var(--mia-head-h, 64px));
     max-height: calc(100dvh - var(--mia-head-h, 64px)) !important;
+    overflow-y: auto !important;
+    border-radius: 0 !important;
   }
   /* Labels wrap instead of being cut ("القدس والبلدة القدي…"), and every row
      is a comfortable thumb target. */
@@ -3821,11 +3851,18 @@ html.cg-open .mia-scope:has(.mia-qb-sec) { padding-bottom: 0; }
   .mia-head .mia-pop--menu .mia-menu-cats { max-height: none; overflow: visible; grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .mia-head .mia-pop--locale button.mia-row { height: 44px; }
 }
+@media (max-width: 460px) {
+  .mia-head .mia-pop--menu,
+  .mia-head .mia-pop--locale { grid-template-columns: minmax(0, 1fr) !important; }
+  .mia-head .mia-pop--menu .mia-menu-cats { grid-template-columns: minmax(0, 1fr) !important; }
+  .mia-head .mia-pop--locale > div:first-child { border-inline-end: 0 !important; border-bottom: 1px solid rgba(16,33,43,.1); }
+}
 @keyframes mia-drawer-in { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: none; } }
 
 /* While a drawer is open the floating buttons step aside. */
 html[data-mia-drawer="open"] .mia-wa-fab,
-html[data-mia-drawer="open"] .mia-scope .cg-launch-wrap { display: none !important; }
+html[data-mia-drawer="open"] .mia-scope .cg-launch-wrap,
+html[data-mia-drawer="open"] .mia-scope .mia-qb-sec { display: none !important; }
 
 /* Floating buttons: on a phone the concierge pill becomes a round button the
    size of the WhatsApp one, so the two stop covering the page's own content.
@@ -3851,6 +3888,10 @@ html[data-mia-drawer="open"] .mia-scope .cg-launch-wrap { display: none !importa
   .mia-scope .cg-launcher-badge { display: none; }
   .mia-scope .cg-launch-wrap { inset-inline-end: 14px; bottom: calc(14px + env(safe-area-inset-bottom, 0px)); }
   .mia-wa-fab { inset-inline-start: 14px !important; bottom: calc(14px + env(safe-area-inset-bottom, 0px)) !important; }
+  .mia-scope:has(.mia-qb-sec) .cg-launch-wrap,
+  .mia-scope:has(.mia-qb-sec) .mia-wa-fab {
+    bottom: calc(92px + env(safe-area-inset-bottom, 0px)) !important;
+  }
 }
 
 /* Homepage FAQ. On one column the sticky aside slid over the questions as the
@@ -3896,15 +3937,29 @@ html[data-mia-drawer="open"] .mia-scope .cg-launch-wrap { display: none !importa
 
 /* Projects list: filter chips keep their size inside the sideways-scrolling
    row (they were shrinking until the labels overlapped). */
+.mia-scope .proj-filters-wrap { position: relative; min-width: 0; }
 .mia-scope #proj-filters > .proj-cat { flex: 0 0 auto; }
 @media (max-width: 560px) {
+  .mia-scope .proj-filters-wrap { margin-inline: -16px; }
+  .mia-scope .proj-filters-wrap::after {
+    content: "";
+    position: absolute;
+    inset-block: 0;
+    inset-inline-end: 0;
+    width: 34px;
+    pointer-events: none;
+    background: linear-gradient(to right, var(--ivory), rgba(255,253,248,0));
+  }
+  .mia-scope[dir="ltr"] .proj-filters-wrap::after {
+    background: linear-gradient(to left, var(--ivory), rgba(255,253,248,0));
+  }
   .mia-scope #proj-filters {
-    margin-inline: -16px;
-    padding-inline: 16px;
+    margin-inline: 0;
+    padding-inline: 16px 40px;
     scroll-padding-inline: 16px;
     scrollbar-width: none;
   }
-  .mia-scope #proj-filters > .proj-cat { height: 38px !important; padding: 0 14px !important; font-size: 13.5px !important; }
+  .mia-scope #proj-filters > .proj-cat { min-height: 44px !important; height: 44px !important; padding: 0 14px !important; font-size: 13.5px !important; }
   .mia-scope #all { padding: 26px 0 44px !important; }
   .mia-scope #all > div { padding-inline: 16px !important; }
 }
@@ -3924,4 +3979,1393 @@ html[data-mia-drawer="open"] .mia-scope .cg-launch-wrap { display: none !importa
   .mia-scope #pd-top, .mia-scope #pd-body { padding-inline: 16px !important; gap: 22px !important; }
   .mia-scope #pd-top h1 { font-size: 25px !important; }
   .mia-scope #pd-top p { font-size: 15.5px !important; line-height: 1.85 !important; }
+}
+
+
+/* ── Mobile donor-flow hardening: prevent horizontal drift, undersized taps,
+   and cramped transactional controls without changing the visual design. ── */
+@media (max-width: 760px) {
+  .mia-scope,
+  .mia-scope > * {
+    max-width: 100%;
+  }
+
+  .mia-scope :is(img, video, iframe, canvas, svg) {
+    max-width: 100%;
+  }
+
+  .mia-scope :is(#zk-hero-grid, #meter-picker, #rc-grid, #cart-grid, #pay-grid, #pd-top, #pd-body) {
+    min-width: 0 !important;
+  }
+
+  .mia-scope :is(#zk-hero-grid, #meter-picker, #rc-grid, #cart-grid, #pay-grid) > * {
+    min-width: 0 !important;
+    max-width: 100%;
+  }
+
+  /* Zakat: amount row may wrap but must never widen the viewport. */
+  .mia-scope #zk-amounts {
+    width: 100%;
+    min-width: 0;
+  }
+  .mia-scope #zk-amounts .zk-input {
+    flex: 1 1 130px;
+    width: auto !important;
+    min-width: 110px;
+    max-width: 100%;
+  }
+  .mia-scope #zk-ctas {
+    width: 100%;
+    min-width: 0;
+  }
+  .mia-scope #zk-ctas > button {
+    min-height: 44px !important;
+  }
+  .mia-scope #zk-result > * {
+    min-width: 0;
+  }
+
+  /* Waqf: all real interactive controls meet the 44px touch target. */
+  .mia-scope #meter-picker button,
+  .mia-scope #meter-picker input {
+    min-height: 44px;
+  }
+  .mia-scope #meter-picker .wq-step {
+    width: 44px !important;
+    height: 44px !important;
+  }
+  .mia-scope #meter-picker .wq-link {
+    min-height: 44px;
+    padding: 8px 0 !important;
+  }
+  .mia-scope #waqf-cert-toggle {
+    min-height: 44px !important;
+    height: 44px !important;
+  }
+  .mia-scope #meter-picker > * {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  /* Recurring: compact controls remain finger-sized and the summary wraps
+     instead of forcing sideways scrolling on narrow phones. */
+  .mia-scope #rc-grid button,
+  .mia-scope #rc-grid select,
+  .mia-scope #rc-grid input {
+    min-height: 44px;
+  }
+  .mia-scope #rc-grid .rc-seg {
+    height: 44px !important;
+    min-height: 44px !important;
+  }
+  .mia-scope #rc-grid select {
+    height: 44px !important;
+  }
+  .mia-scope .rc-plan-summary {
+    flex-wrap: wrap;
+  }
+  .mia-scope .rc-plan-summary > span:last-child {
+    min-width: 0;
+    flex-wrap: wrap;
+  }
+  .mia-scope .rc-plan-summary b {
+    overflow-wrap: anywhere;
+  }
+
+  /* Basket: the controls in rows and upsells previously regressed below the
+     44px rule because later selectors overrode the earlier mobile patch. */
+  .mia-scope .cart-row .cart-amt-btn,
+  .mia-scope .cart-row .cart-monthly,
+  .mia-scope .cart-row .c-del,
+  .mia-scope .cart-row .cart-ok,
+  .mia-scope .cart-row .cart-cancel,
+  .mia-scope .cart-row .cart-min-warn button {
+    min-height: 44px !important;
+  }
+  .mia-scope .cart-row .c-del,
+  .mia-scope .cart-row .cart-ok,
+  .mia-scope .cart-row .cart-cancel {
+    min-width: 44px !important;
+    width: 44px !important;
+    height: 44px !important;
+  }
+  .mia-scope .cart-row .cart-monthly {
+    height: 44px !important;
+  }
+  .mia-scope .cart-row .cart-amt-btn > span:first-child {
+    min-height: 44px !important;
+    height: 44px !important;
+  }
+  .mia-scope #upsell-rail > div button,
+  .mia-scope #upsell-rail > div input,
+  .mia-scope #cart-team-support button,
+  .mia-scope #cart-team-support input {
+    min-height: 44px !important;
+    height: 44px !important;
+  }
+  .mia-scope #upsell-rail .upsell-add {
+    min-width: 44px !important;
+    width: 44px !important;
+  }
+  .mia-scope #upsell-rail > div > div {
+    max-width: 100%;
+    flex-wrap: wrap !important;
+  }
+  .mia-scope #upsell-rail .upsell-custom-input {
+    flex: 1 1 110px !important;
+    width: auto !important;
+    min-width: 90px !important;
+  }
+  .mia-scope #cart-summary,
+  .mia-scope .cart-row,
+  .mia-scope #upsell-rail {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  /* Checkout: bank and payment controls no longer fall under 44px, and long
+     account identifiers remain inside the card instead of widening the page. */
+  .mia-scope #pay-methods .pay-method,
+  .mia-scope #pay-grid select,
+  .mia-scope #pay-grid .pay-copy-btn,
+  .mia-scope #pay-grid button[role="radio"] {
+    min-height: 44px !important;
+  }
+  .mia-scope #pay-grid .pay-copy-btn {
+    min-width: 44px !important;
+    width: 44px !important;
+    height: 44px !important;
+  }
+  .mia-scope #pay-grid button[role="radio"] {
+    height: 44px !important;
+  }
+  .mia-scope #pay-grid :is(input, select, textarea, button) {
+    max-width: 100%;
+  }
+  .mia-scope #pay-grid b[dir="ltr"],
+  .mia-scope #pay-grid span[dir="ltr"] {
+    max-width: 100%;
+  }
+  .mia-scope .pay-phone .pay-phone-field {
+    min-width: 0;
+    max-width: 100%;
+  }
+  .mia-scope .pay-phone .pay-phone-dropdown {
+    width: min(340px, calc(100vw - 32px));
+    max-width: calc(100vw - 32px);
+  }
+
+  /* Shared transactional rails should scroll internally only where intended. */
+  .mia-scope #cart-steps,
+  .mia-scope #pay-steps {
+    max-width: 100%;
+    overscroll-behavior-inline: contain;
+  }
+}
+
+@media (max-width: 480px) {
+  .mia-scope #zk-hero-grid,
+  .mia-scope #meter-picker,
+  .mia-scope #rc-grid,
+  .mia-scope #cart-grid,
+  .mia-scope #pay-grid {
+    padding-inline: 16px !important;
+  }
+
+  .mia-scope #meter-picker {
+    padding-inline: 16px !important;
+  }
+
+  .mia-scope .rc-plan-summary {
+    padding-inline: 14px !important;
+  }
+
+  .mia-scope #pay-methods > * {
+    flex: 1 1 100% !important;
+  }
+
+  .mia-scope .cart-row .c-ctl {
+    max-width: 100%;
+    flex-wrap: wrap;
+  }
+}
+
+
+/* ── Mobile donor-flow ordering: keep desktop unchanged. ── */
+@media (max-width: 760px) {
+  /* Recurring donation: the donor came to build a plan, so the builder comes
+     before the explanatory video on phones. */
+  .mia-scope #rc-grid .rc-builder { order: 1; }
+  .mia-scope #rc-grid .rc-video { order: 2; }
+
+  /* Checkout: show the donation summary before asking for donor/payment data.
+     Desktop keeps the original side-by-side sticky summary. */
+  .mia-scope #pay-grid #pay-summary {
+    order: 1;
+    position: static !important;
+    top: auto !important;
+  }
+  .mia-scope #pay-grid .pay-form { order: 2; }
+}
+
+
+/* ── Mobile homepage spacing + full-section visibility fixes. ── */
+@media (max-width: 768px) {
+  /* These sections are content, not carousels. Keep every card fully visible
+     on phones instead of clipping the next card off-screen. */
+  .mia-scope #path-steps,
+  .mia-scope #impact-metrics,
+  .mia-scope #sector-metrics,
+  .mia-scope #regions,
+  .mia-scope #waqf-areas,
+  .mia-scope #account-features {
+    display: grid !important;
+    overflow: visible !important;
+    scroll-snap-type: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  .mia-scope #path-steps,
+  .mia-scope #impact-metrics,
+  .mia-scope #regions,
+  .mia-scope #waqf-areas {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  .mia-scope #sector-metrics,
+  .mia-scope #account-features {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  .mia-scope #path-steps > *,
+  .mia-scope #impact-metrics > *,
+  .mia-scope #sector-metrics > *,
+  .mia-scope #regions > *,
+  .mia-scope #waqf-areas > *,
+  .mia-scope #account-features > * {
+    width: auto !important;
+    max-width: none !important;
+    min-width: 0 !important;
+    scroll-snap-align: none !important;
+  }
+
+  /* Restore full-width readable cards for the two sections that were styled
+     specifically as carousel cards by the later phone rail rule. */
+  .mia-scope #impact-metrics > * {
+    border-radius: 12px !important;
+    padding: 18px 16px !important;
+  }
+
+  .mia-scope #path-steps > * {
+    grid-template-columns: auto minmax(0,1fr) !important;
+    column-gap: 14px !important;
+    row-gap: 6px !important;
+    padding: 14px 0 !important;
+    border: 0 !important;
+    border-top: 1px solid var(--border) !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+  }
+  .mia-scope #path-steps > *:first-child { border-top: 0 !important; }
+  .mia-scope #path-steps > * > span:first-child {
+    grid-row: 1 / span 2 !important;
+    grid-column: 1 !important;
+  }
+  .mia-scope #path-steps > * > b,
+  .mia-scope #path-steps > * > span:last-child {
+    grid-column: 2 !important;
+  }
+
+  /* Tighten the large empty vertical bands visible around these homepage
+     blocks while preserving their visual hierarchy. */
+  .mia-scope #path,
+  .mia-scope #stats,
+  .mia-scope #waqf,
+  .mia-scope #monthly,
+  .mia-scope #account,
+  .mia-scope #regions-section {
+    padding-top: 28px !important;
+    padding-bottom: 28px !important;
+  }
+
+  .mia-scope #regions-section {
+    padding-bottom: 28px !important;
+  }
+
+  .mia-scope #account-grid,
+  .mia-scope #waqf-grid,
+  .mia-scope #monthly-grid {
+    gap: 22px !important;
+  }
+
+  .mia-scope #account-features,
+  .mia-scope #sector-metrics {
+    gap: 10px !important;
+  }
+
+  /* Projects catalogue: remove the dead band between filters and first card. */
+  .mia-scope #project-filters-section > div {
+    padding-top: 16px !important;
+    padding-bottom: 12px !important;
+  }
+  .mia-scope #all {
+    padding-top: 14px !important;
+  }
+  .mia-scope .proj-grid {
+    margin-top: 0 !important;
+  }
+}
+
+@media (max-width: 560px) {
+  .mia-scope #sector-metrics,
+  .mia-scope #account-features {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  .mia-scope #path,
+  .mia-scope #stats,
+  .mia-scope #waqf,
+  .mia-scope #monthly,
+  .mia-scope #account,
+  .mia-scope #regions-section {
+    padding-top: 22px !important;
+    padding-bottom: 22px !important;
+  }
+
+  .mia-scope #regions > * {
+    min-height: 220px !important;
+  }
+
+  .mia-scope #account-features > *,
+  .mia-scope #sector-metrics > * {
+    padding: 16px !important;
+  }
+
+  .mia-scope #project-filters-section > div {
+    padding-top: 12px !important;
+    padding-bottom: 8px !important;
+  }
+  .mia-scope #all {
+    padding-top: 10px !important;
+  }
+}
+
+
+/* ── Comprehensive mobile responsiveness pass: preserve page order/design,
+   but normalize spacing, stacking, visibility and motion on phones. ── */
+@media (max-width: 760px) {
+  /* Giving assistant: keep the full branded pill visible and draggable.
+     Dragging happens on the wrapper so the launcher's own float animation stays intact. */
+  .mia-scope .cg-launch-wrap[data-draggable="1"] {
+    inset-inline-end: 14px;
+    max-width: calc(100vw - 28px);
+    will-change: transform;
+    transition: transform .22s cubic-bezier(.22,.61,.36,1);
+    touch-action: none;
+  }
+  .mia-scope .cg-launch-wrap[data-draggable="1"] .cg-halo {
+    max-width: 100%;
+  }
+  .mia-scope .cg-launch-wrap[data-draggable="1"] .cg-launcher {
+    width: auto !important;
+    min-width: 0;
+    max-width: min(290px, calc(100vw - 28px));
+    height: 52px !important;
+    padding-inline: 7px 12px !important;
+    gap: 9px !important;
+    justify-content: flex-start !important;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+    cursor: grab;
+  }
+  .mia-scope .cg-launch-wrap[data-draggable="1"] .cg-launcher:active { cursor: grabbing; }
+  .mia-scope .cg-launch-wrap[data-draggable="1"] .cg-launcher-icon {
+    width: 38px !important;
+    height: 38px !important;
+    flex: 0 0 38px;
+  }
+  .mia-scope .cg-launch-wrap[data-draggable="1"] .cg-launcher-label {
+    position: static !important;
+    width: auto !important;
+    height: auto !important;
+    overflow: visible !important;
+    clip: auto !important;
+    white-space: nowrap;
+    font-size: 14px;
+  }
+  .mia-scope .cg-launch-wrap[data-draggable="1"] .cg-launcher-badge {
+    display: inline-flex !important;
+    flex: 0 0 auto;
+  }
+  .mia-scope .cg-launch-wrap[data-draggable="1"] .cg-teaser {
+    max-width: min(290px, calc(100vw - 28px));
+  }
+
+  /* Shared public-page containers: no section may be wider than the viewport. */
+  .mia-scope :is(.aq-page, .qd-page) {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: clip;
+  }
+  .mia-scope :is(.aq-page, .qd-page) section > div:not(.qd-pattern) {
+    min-width: 0;
+    max-width: 100%;
+  }
+  .mia-scope :is(.aq-page, .qd-page) :is(img, svg, video, iframe) {
+    max-width: 100%;
+    height: auto;
+  }
+
+  /* Long-form Jerusalem / Al-Aqsa pages: same content order, tighter and clearer. */
+  .mia-scope :is(.aq-page, .qd-page) section {
+    padding-top: 30px !important;
+    padding-bottom: 30px !important;
+  }
+  .mia-scope :is(.aq-page, .qd-page) .qd-two,
+  .mia-scope :is(.aq-page, .qd-page) .qd-map {
+    grid-template-columns: minmax(0,1fr) !important;
+    gap: 22px !important;
+    padding-inline: 16px !important;
+  }
+  .mia-scope :is(.aq-page, .qd-page) .qd-grid3,
+  .mia-scope :is(.aq-page, .qd-page) .qd-grid4,
+  .mia-scope :is(.aq-page, .qd-page) .qd-gates,
+  .mia-scope .aq-page .aq-virtues,
+  .mia-scope .aq-page .aq-timeline {
+    grid-template-columns: minmax(0,1fr) !important;
+    gap: 12px !important;
+  }
+  .mia-scope :is(.aq-page, .qd-page) .qd-facts {
+    grid-template-columns: repeat(2, minmax(0,1fr)) !important;
+    padding-inline: 16px !important;
+  }
+  .mia-scope :is(.aq-page, .qd-page) .qd-facts > div {
+    padding: 18px 12px !important;
+    min-width: 0;
+  }
+  .mia-scope :is(.aq-page, .qd-page) .qd-facts b {
+    font-size: clamp(22px, 7vw, 30px) !important;
+    overflow-wrap: anywhere;
+  }
+  .mia-scope :is(.aq-page, .qd-page) .qd-hero > div {
+    padding: 18px 16px !important;
+    gap: 10px !important;
+    width: 100%;
+    max-width: 100%;
+  }
+  .mia-scope :is(.aq-page, .qd-page) .qd-hero h1 {
+    font-size: clamp(26px, 8vw, 36px) !important;
+    line-height: 1.22 !important;
+  }
+  .mia-scope :is(.aq-page, .qd-page) .qd-hero p {
+    font-size: 14px !important;
+    line-height: 1.8 !important;
+  }
+  .mia-scope :is(.aq-page, .qd-page) .qd-hero a,
+  .mia-scope :is(.aq-page, .qd-page) .qd-hero button {
+    min-height: 44px;
+    white-space: normal !important;
+    text-align: center;
+  }
+  .mia-scope :is(.aq-page, .qd-page) .qd-map-side {
+    position: static !important;
+    top: auto !important;
+  }
+
+  /* Dense fact blocks remain readable without forcing horizontal overflow. */
+  .mia-scope .aq-page .aq-mnfacts {
+    grid-template-columns: repeat(2, minmax(0,1fr)) !important;
+    gap: 10px !important;
+  }
+  .mia-scope .aq-page .aq-mnfacts > div {
+    padding: 16px !important;
+    min-width: 0;
+  }
+  .mia-scope .aq-page .aq-timeline > div {
+    margin: 0 !important;
+    padding: 17px 16px !important;
+  }
+  .mia-scope :is(.aq-page, .qd-page) .qd-gates > * {
+    min-width: 0;
+    flex-wrap: wrap;
+  }
+
+  /* General public cards and headings: avoid edge collisions while retaining hierarchy. */
+  .mia-scope section > div[style*="max-width: 1240"] {
+    padding-inline: 16px !important;
+  }
+  .mia-scope h1,
+  .mia-scope h2 {
+    text-wrap: balance;
+  }
+  .mia-scope p,
+  .mia-scope li,
+  .mia-scope span {
+    text-wrap: pretty;
+  }
+
+  /* Buttons inside two-column CTA groups can wrap their labels instead of clipping. */
+  .mia-scope :is(.friday-ctas, .ibadan-ctas, #zk-ctas) > * {
+    min-width: 0;
+  }
+}
+
+@media (max-width: 480px) {
+  .mia-scope .cg-launch-wrap[data-draggable="1"] .cg-launcher {
+    max-width: calc(100vw - 24px);
+    height: 50px !important;
+    padding-inline: 6px 10px !important;
+    gap: 7px !important;
+  }
+  .mia-scope .cg-launch-wrap[data-draggable="1"] .cg-launcher-icon {
+    width: 36px !important;
+    height: 36px !important;
+    flex-basis: 36px;
+  }
+  .mia-scope .cg-launch-wrap[data-draggable="1"] .cg-launcher-label {
+    font-size: 13px;
+  }
+
+  .mia-scope :is(.aq-page, .qd-page) section {
+    padding-top: 24px !important;
+    padding-bottom: 24px !important;
+  }
+  .mia-scope :is(.aq-page, .qd-page) .qd-facts {
+    grid-template-columns: minmax(0,1fr) !important;
+  }
+  .mia-scope .aq-page .aq-mnfacts {
+    grid-template-columns: minmax(0,1fr) !important;
+  }
+  .mia-scope :is(.aq-page, .qd-page) .qd-hero > div > div:last-child,
+  .mia-scope :is(.aq-page, .qd-page) .qd-hero [style*="display: flex"][style*="gap: 10"] {
+    width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mia-scope .cg-launch-wrap[data-draggable="1"] {
+    transition: none;
+  }
+}
+
+
+/* ── Mobile bottom navigation ───────────────────────────────────────────── */
+.mia-mobile-bottom-nav { display: none; }
+
+@media (max-width: 760px) {
+  .mia-scope {
+    --mia-mobile-nav-h: 74px;
+    padding-bottom: calc(var(--mia-mobile-nav-h) + env(safe-area-inset-bottom, 0px));
+  }
+
+  .mia-mobile-bottom-nav {
+    position: fixed;
+    inset-inline: 10px;
+    bottom: calc(8px + env(safe-area-inset-bottom, 0px));
+    z-index: 120;
+    display: block;
+    pointer-events: none;
+  }
+
+  .mia-mobile-bottom-nav__inner {
+    pointer-events: auto;
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    align-items: end;
+    gap: 2px;
+    min-height: 62px;
+    padding: 7px 7px 6px;
+    border: 1px solid rgba(16,33,43,.08);
+    border-radius: 24px;
+    background: rgba(255,255,255,.96);
+    box-shadow: 0 12px 34px rgba(16,33,43,.18), 0 1px 0 rgba(255,255,255,.95) inset;
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+  }
+
+  .mia-mobile-bottom-nav__item {
+    position: relative;
+    display: grid;
+    place-items: center;
+    min-width: 0;
+    min-height: 48px;
+    border-radius: 17px;
+    color: #52616b;
+    text-decoration: none;
+    transition: color .18s ease, background .18s ease, transform .18s ease, box-shadow .18s ease;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .mia-mobile-bottom-nav__item:active {
+    transform: scale(.94);
+  }
+
+  .mia-mobile-bottom-nav__icon {
+    display: grid;
+    place-items: center;
+    width: 38px;
+    height: 38px;
+    border-radius: 14px;
+  }
+
+  .mia-mobile-bottom-nav__item.is-active {
+    color: var(--deep);
+    background: rgba(211,154,39,.13);
+  }
+
+  .mia-mobile-bottom-nav__item.is-active .mia-mobile-bottom-nav__icon {
+    color: var(--deep);
+  }
+
+  .mia-mobile-bottom-nav__item.is-home {
+    min-height: 56px;
+    margin-top: -11px;
+  }
+
+  .mia-mobile-bottom-nav__item.is-home .mia-mobile-bottom-nav__icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 17px;
+    color: #fff;
+    background: var(--deep);
+    box-shadow: 0 7px 18px rgba(16,33,43,.24);
+  }
+
+  .mia-mobile-bottom-nav__item.is-home.is-active .mia-mobile-bottom-nav__icon {
+    background: var(--gold);
+    color: var(--deep);
+    box-shadow: 0 8px 20px rgba(211,154,39,.28);
+  }
+
+  /* Floating actions rise above the nav instead of competing with it. */
+  .mia-scope .cg-launch-wrap {
+    bottom: calc(var(--mia-mobile-nav-h) + 16px + env(safe-area-inset-bottom, 0px)) !important;
+  }
+  .mia-scope .mia-wa-fab {
+    bottom: calc(var(--mia-mobile-nav-h) + 16px + env(safe-area-inset-bottom, 0px)) !important;
+  }
+
+  .mia-scope:has(.mia-qb-sec) .cg-launch-wrap,
+  .mia-scope:has(.mia-qb-sec) .mia-wa-fab {
+    bottom: calc(var(--mia-mobile-nav-h) + 94px + env(safe-area-inset-bottom, 0px)) !important;
+  }
+
+  html[data-mia-drawer="open"] .mia-mobile-bottom-nav {
+    display: none !important;
+  }
+}
+
+@media (max-width: 390px) {
+  .mia-mobile-bottom-nav {
+    inset-inline: 6px;
+  }
+  .mia-mobile-bottom-nav__inner {
+    gap: 0;
+    padding-inline: 4px;
+    border-radius: 21px;
+  }
+  .mia-mobile-bottom-nav__item {
+    min-height: 46px;
+  }
+  .mia-mobile-bottom-nav__icon {
+    width: 34px;
+    height: 34px;
+  }
+  .mia-mobile-bottom-nav__item.is-home .mia-mobile-bottom-nav__icon {
+    width: 46px;
+    height: 46px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mia-mobile-bottom-nav__item {
+    transition: none;
+  }
+}
+
+
+/* ── Homepage refinement: mobile hierarchy, impact, shared banners and waqf. ── */
+.mia-scope .mia-hero-actions--mobile { display: none; }
+
+@media (max-width: 560px) {
+  /* Intro film comes before the two conversion buttons on phones. */
+  .mia-scope .mia-hero-actions--desktop { display: none !important; }
+  .mia-scope .mia-hero-actions--mobile {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0,1fr));
+    gap: 10px;
+    width: 100%;
+    margin-top: -4px;
+  }
+
+  /* Impact: compact hierarchy instead of three oversized full-width blocks. */
+  .mia-scope #stats > div {
+    padding-inline: 16px !important;
+  }
+  .mia-scope #stats > div > div:first-child {
+    margin-bottom: 16px !important;
+    align-items: center !important;
+  }
+  .mia-scope #impact-metrics {
+    grid-template-columns: repeat(2, minmax(0,1fr)) !important;
+    gap: 10px !important;
+    border-top: 0 !important;
+  }
+  .mia-scope #impact-metrics > * {
+    min-height: 132px;
+    padding: 16px !important;
+    gap: 6px !important;
+    border: 1px solid var(--border) !important;
+    border-radius: 14px !important;
+    background: #fff !important;
+    box-shadow: 0 8px 22px rgba(16,33,43,.055) !important;
+  }
+  .mia-scope #impact-metrics > .mia-impact-stat--featured {
+    grid-column: 1 / -1;
+    min-height: 108px;
+  }
+  .mia-scope #impact-metrics b[dir="ltr"] {
+    font-size: clamp(27px, 8vw, 36px) !important;
+  }
+  .mia-scope #impact-metrics > * > span:nth-of-type(1) {
+    font-size: 13px !important;
+  }
+  .mia-scope #impact-metrics > * > span:nth-of-type(2) {
+    font-size: 11.5px !important;
+    line-height: 1.55 !important;
+  }
+
+  .mia-scope #sector-metrics {
+    grid-template-columns: repeat(2, minmax(0,1fr)) !important;
+    gap: 10px !important;
+    margin-top: 14px !important;
+  }
+  .mia-scope #sector-metrics > * {
+    min-height: 112px;
+    padding: 14px !important;
+    border-radius: 12px !important;
+    box-shadow: 0 6px 18px rgba(16,33,43,.045) !important;
+  }
+  .mia-scope #sector-metrics > * > span:first-child {
+    font-size: 11.5px !important;
+  }
+  .mia-scope #sector-metrics b[dir="ltr"] {
+    font-size: clamp(20px, 6vw, 26px) !important;
+  }
+
+  /* The two shared campaign banners keep identical proportions everywhere. */
+  .mia-scope #friday,
+  .mia-scope #ibadan-banner {
+    padding-bottom: 30px !important;
+  }
+  .mia-scope #friday > div,
+  .mia-scope #ibadan-banner > div {
+    padding-inline: 14px !important;
+  }
+  .mia-scope .friday-wrap,
+  .mia-scope .ibadan-wrap {
+    border-radius: 14px !important;
+    box-shadow: 0 12px 30px rgba(16,33,43,.12) !important;
+  }
+  .mia-scope .friday-body,
+  .mia-scope .ibadan-body {
+    min-height: 220px !important;
+    aspect-ratio: 16 / 7.7;
+  }
+  .mia-scope .friday-content,
+  .mia-scope .ibadan-content {
+    min-height: 220px !important;
+    padding: 16px 14px 14px !important;
+    gap: 9px !important;
+  }
+  .mia-scope #friday h2,
+  .mia-scope #ibadan-banner h2 {
+    font-size: clamp(14px, 4vw, 17px) !important;
+    line-height: 1.45 !important;
+  }
+  .mia-scope .ibadan-logo {
+    inset-inline-end: 10px !important;
+    top: 10px !important;
+    width: min(29vw, 122px) !important;
+    padding: 6px 8px !important;
+  }
+  .mia-scope .friday-ctas,
+  .mia-scope .ibadan-ctas {
+    margin-top: 0 !important;
+  }
+
+  /* Waqf: compact intro + balanced programme matrix instead of a long list. */
+  .mia-scope #waqf {
+    padding: 24px 0 !important;
+  }
+  .mia-scope #waqf > div:last-child {
+    padding-inline: 16px !important;
+  }
+  .mia-scope #waqf-grid {
+    grid-template-columns: minmax(0,1fr) !important;
+    gap: 18px !important;
+  }
+  .mia-scope #waqf-grid > div:first-child {
+    gap: 11px !important;
+    padding: 18px 16px;
+    border: 1px solid rgba(211,154,39,.24);
+    border-radius: 14px;
+    background: rgba(255,255,255,.62);
+    box-shadow: 0 8px 24px rgba(16,33,43,.045);
+  }
+  .mia-scope #waqf-grid > div:first-child h2 {
+    font-size: 26px !important;
+  }
+  .mia-scope #waqf-grid > div:first-child p {
+    font-size: 14px !important;
+    line-height: 1.75 !important;
+  }
+  .mia-scope #waqf-grid > div:first-child a {
+    width: 100%;
+    justify-content: center;
+    min-height: 46px;
+  }
+  .mia-scope #waqf-areas {
+    grid-template-columns: repeat(2, minmax(0,1fr)) !important;
+    gap: 9px !important;
+  }
+  .mia-scope #waqf-areas > * {
+    min-height: 68px !important;
+    padding: 12px 10px !important;
+    border-radius: 11px !important;
+    font-size: 12px !important;
+    line-height: 1.55 !important;
+    align-items: flex-start !important;
+    box-shadow: 0 5px 16px rgba(16,33,43,.04) !important;
+  }
+}
+
+@media (min-width: 561px) and (max-width: 900px) {
+  .mia-scope .friday-body,
+  .mia-scope .ibadan-body {
+    min-height: 300px !important;
+  }
+  .mia-scope .friday-content,
+  .mia-scope .ibadan-content {
+    min-height: 300px !important;
+  }
+}
+
+
+/* Projects catalogue — phone/tablet viewport fix (2026-10-08).
+   Scoped to this page to leave the homepage and desktop untouched. */
+@media (max-width: 900px) {
+  .mia-scope .mia-projects-page { min-width: 0; width: 100%; max-width: 100%; overflow-x: clip; }
+  .mia-scope .mia-projects-page .proj-hero-stage {
+    height: clamp(232px, 48vw, 340px) !important;
+  }
+  .mia-scope .mia-projects-page .proj-hero-stage > div > div > div {
+    padding-inline: 56px !important;
+  }
+  .mia-scope .mia-projects-page .proj-hero-copy {
+    max-width: 100% !important; gap: 8px !important;
+  }
+  .mia-scope .mia-projects-page .proj-hero-copy h2 {
+    font-size: clamp(21px, 4.6vw, 30px) !important;
+    line-height: 1.4 !important;
+    text-wrap: balance;
+  }
+  .mia-scope .mia-projects-page #project-filters-section {
+    padding-block: 0 !important;
+  }
+  .mia-scope .mia-projects-page #project-filters-section > div {
+    padding: 14px 16px 8px !important;
+    gap: 0 !important;
+  }
+  .mia-scope .mia-projects-page .proj-filters-wrap {
+    width: 100%; min-width: 0; margin-inline: 0 !important;
+  }
+  .mia-scope .mia-projects-page #proj-filters {
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    justify-content: flex-start !important;
+    align-items: center;
+    gap: 8px !important;
+    overflow-x: auto !important;
+    overflow-y: hidden;
+    scrollbar-width: none;
+    overscroll-behavior-inline: contain;
+    -webkit-overflow-scrolling: touch;
+    scroll-snap-type: x proximity;
+    padding: 2px 3px 8px !important;
+    margin: 0 !important;
+    max-width: 100%;
+  }
+  .mia-scope .mia-projects-page #proj-filters::-webkit-scrollbar { display: none; }
+  .mia-scope .mia-projects-page #proj-filters > .proj-cat {
+    flex: 0 0 auto !important;
+    min-height: 44px !important; height: 44px !important;
+    padding: 0 14px !important;
+    scroll-snap-align: start;
+  }
+  .mia-scope .mia-projects-page #all {
+    padding: 6px 0 calc(24px + env(safe-area-inset-bottom, 0px)) !important;
+    overflow: visible !important;
+  }
+  .mia-scope .mia-projects-page #all > div {
+    padding-inline: 16px !important;
+    gap: 16px !important;
+    min-width: 0;
+  }
+  .mia-scope .mia-projects-page .proj-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 14px !important;
+    min-width: 0;
+  }
+  .mia-scope .mia-projects-page .proj-grid > * { min-width: 0; max-width: 100%; }
+}
+@media (max-width: 640px) {
+  .mia-scope .mia-projects-page .proj-hero-stage {
+    height: clamp(220px, 57vw, 290px) !important;
+  }
+  .mia-scope .mia-projects-page .proj-hero-stage > div > div > div {
+    padding-inline: 18px !important;
+  }
+  .mia-scope .mia-projects-page .proj-hero-copy h2 {
+    font-size: clamp(20px, 5.6vw, 26px) !important;
+    padding-inline: 27px;
+    max-width: 100%;
+  }
+  .mia-scope .mia-projects-page .proj-arrow { display: none !important; }
+  .mia-scope .mia-projects-page .proj-grid { grid-template-columns: minmax(0, 1fr) !important; gap: 14px !important; }
+  .mia-scope .mia-projects-page .pdc-card {
+    width: 100%; min-width: 0;
+    min-height: 410px !important;
+    margin: 0 !important;
+    transform: none;
+  }
+  .mia-scope .mia-projects-page .pdc-body {
+    padding: 16px !important;
+    gap: 10px !important;
+  }
+  .mia-scope .mia-projects-page .pdc-card .pdc-body b { overflow-wrap: anywhere; }
+  .mia-scope .mia-projects-page .proj-filters-wrap::after { display: none !important; }
+  /* The donation card content remains accessible above the global bottom bar. */
+  .mia-scope:has(.mia-projects-page) .mia-wa-fab {
+    bottom: calc(var(--mia-mobile-nav-h, 74px) + 22px + env(safe-area-inset-bottom, 0px)) !important;
+  }
+  .mia-scope:has(.mia-projects-page) .cg-launch-wrap[data-draggable="1"] {
+    bottom: calc(var(--mia-mobile-nav-h, 74px) + 78px + env(safe-area-inset-bottom, 0px)) !important;
+  }
+}
+
+
+/* === Oct 2026 mobile visual audit: search + balanced public pages ========== */
+.mia-head .mia-header-search { position: relative; flex: 0 0 auto; z-index: 84; }
+.mia-head .mia-header-search__toggle {
+  display: grid; place-items: center; width: 42px; height: 42px;
+  border: 1px solid rgba(255,255,255,.36); border-radius: 50%;
+  background: rgba(255,255,255,.09); color: #fff; cursor: pointer;
+}
+.mia-head .mia-header-search__toggle:hover,
+.mia-head .mia-header-search__toggle[aria-expanded="true"] { border-color: #D39A27; background: rgba(255,255,255,.18); }
+.mia-head .mia-header-search__panel {
+  position: absolute; top: calc(100% + 17px); inset-inline-end: 0; z-index: 90;
+  width: min(450px, calc(100vw - 28px)); padding: 15px;
+  border-radius: 16px; border: 1px solid rgba(211,154,39,.28);
+  background: #fff; color: var(--deep); box-shadow: 0 22px 55px rgba(16,33,43,.24);
+}
+.mia-head .mia-header-search__form { display: grid; gap: 9px; }
+.mia-head .mia-header-search__form > label { font-size: 13px; font-weight: 900; color: var(--deep); }
+.mia-head .mia-header-search__input {
+  display: flex; align-items: center; gap: 9px; border-radius: 11px;
+  border: 1px solid rgba(16,33,43,.2); padding: 5px 6px 5px 12px; min-height: 48px;
+}
+.mia-head .mia-header-search__input:focus-within { border-color: var(--gold); box-shadow: 0 0 0 3px rgba(211,154,39,.12); }
+.mia-head .mia-header-search__input > span { display: grid; place-items: center; color: var(--gold-2); }
+.mia-head .mia-header-search__input > input { width: 100%; min-width: 0; flex: 1 1 auto; border: 0; outline: none; background: transparent; font-size: 14px; }
+.mia-head .mia-header-search__input > button {
+  flex: 0 0 auto; border: 0; border-radius: 8px; padding: 10px 15px;
+  min-height: 40px; color: #fff; background: var(--deep); cursor: pointer; font-weight: 800;
+}
+.mia-head .mia-header-search__input > button:disabled { opacity: .4; cursor: not-allowed; }
+.mia-head .mia-header-search__results { margin-top: 8px; display: grid; max-height: min(48dvh, 325px); overflow-y: auto; }
+.mia-head .mia-header-search__results > a { display: grid; gap: 2px; padding: 12px 9px; border-bottom: 1px solid var(--border); border-radius: 8px; }
+.mia-head .mia-header-search__results > a:hover,
+.mia-head .mia-header-search__results > a:focus-visible { background: var(--sand); }
+.mia-head .mia-header-search__results small { color: var(--gold-2); font-size: 11px; font-weight: 900; }
+.mia-head .mia-header-search__results b { color: var(--deep); font-size: 13.5px; line-height: 1.45; }
+.mia-head .mia-header-search__results p { color: var(--muted); padding: 13px 4px; font-size: 13px; margin: 0; }
+.mia-head .mia-header-search__all { display: block; width: 100%; border-radius: 9px; border: 0; background: var(--sand); color: var(--deep); min-height: 42px; font-weight: 900; margin-top: 8px; cursor: pointer; }
+.mia-scope .mia-site-search-page { min-height: 55vh; background: var(--ivory); padding: 48px 16px 70px; }
+.mia-scope .mia-site-search-page__inner { max-width: 1050px; margin-inline: auto; }
+.mia-scope .mia-site-search-page h1 { font-size: clamp(24px,3vw,36px); margin: 0 0 22px; }
+.mia-scope .mia-site-search-page__form { display: flex; gap: 8px; padding: 7px; background: white; border-radius: 14px; border: 1px solid var(--border); margin-bottom: 25px; }
+.mia-scope .mia-site-search-page__form input { width: 100%; flex: 1 1 auto; min-width: 0; padding: 12px; border: 0; outline: none; }
+.mia-scope .mia-site-search-page__form button { padding: 12px 22px; flex: 0 0 auto; background: var(--red); color: white; border: 0; border-radius: 10px; font-weight: 800; cursor: pointer; }
+.mia-scope .mia-site-search-page__grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 14px; }
+.mia-scope .mia-site-search-page__result { display: grid; grid-template-columns: 120px minmax(0,1fr); gap: 12px; padding: 9px; border: 1px solid var(--border); background: #fff; border-radius: 14px; min-width: 0; overflow: hidden; }
+.mia-scope .mia-site-search-page__image { display: block; width: 120px; aspect-ratio: 4/3; border-radius: 8px; overflow: hidden; background: var(--sand); }
+.mia-scope .mia-site-search-page__image > span { display: block; width: 100%; height: 100%; background-position: center; background-size: cover; }
+.mia-scope .mia-site-search-page__image--empty { background: linear-gradient(145deg,var(--sand),rgba(211,154,39,.21)); }
+.mia-scope .mia-site-search-page__copy { min-width: 0; display: grid; gap: 5px; align-content: center; }
+.mia-scope .mia-site-search-page__copy small { color: var(--gold-2); font-weight: 900; }
+.mia-scope .mia-site-search-page__copy b { color: var(--deep); line-height: 1.45; overflow-wrap: anywhere; }
+.mia-scope .mia-site-search-page__copy > span { font-size: 12px; color: var(--muted); line-height: 1.5; max-height: 3em; overflow: hidden; }
+
+@media (max-width: 900px) {
+  /* Correct the real catalogue's unused black space: no fixed media letterboxing. */
+  .mia-scope .mia-projects-page .mia-projects-hero { padding: 0 !important; margin: 0 !important; background: var(--deep); }
+  .mia-scope .mia-projects-page .mia-projects-hero .proj-hero-stage {
+    height: clamp(190px, 46vw, 320px) !important;
+    min-height: 0 !important; max-height: 320px !important;
+  }
+  .mia-scope .mia-projects-page .proj-hero-stage > div[aria-hidden] > span[role="img"] {
+    background-size: cover !important; background-position: center !important;
+  }
+  .mia-scope .mia-projects-page .proj-hero-stage > div[aria-hidden] > div { align-content: center !important; }
+  .mia-scope .mia-projects-page #project-filters-section { padding: 0 !important; }
+  .mia-scope .mia-projects-page #all { padding-top: 8px !important; }
+  .mia-scope :is(.acc-page,.blog-page,.news-page) { max-width: 100%; overflow-x: clip; }
+  .mia-scope .blog-layout { grid-template-columns: minmax(0,1fr) !important; gap: 18px !important; }
+  .mia-scope .blog-side { position: static !important; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 5px !important; }
+  .mia-scope .blog-side > b { grid-column: 1 / -1; }
+  .mia-scope .blog-grid { grid-template-columns: repeat(2,minmax(0,1fr)) !important; }
+  .mia-scope .acc-body { grid-template-columns: minmax(0,1fr) !important; gap: 20px !important; }
+  .mia-scope .acc-stats { gap: 9px !important; }
+}
+
+@media (max-width: 760px) {
+  .mia-head .mia-header-search__toggle { width: 44px; height: 44px; }
+  .mia-head .mia-header-search__panel {
+    position: fixed; inset-inline: 12px; width: auto; top: calc(var(--mia-head-h,64px) + 8px); max-height: calc(100dvh - var(--mia-head-h,64px) - 20px); overflow: auto;
+  }
+  .mia-scope .mia-site-search-page { padding: 28px 16px calc(110px + env(safe-area-inset-bottom, 0px)); }
+  .mia-scope .mia-site-search-page__grid { grid-template-columns: minmax(0,1fr); }
+  .mia-scope .blog-page section > div, .mia-scope .news-page section > div { max-width: 100%; padding-inline: 16px !important; }
+  .mia-scope .blog-grid { gap: 14px !important; }
+  .mia-scope .news-card { grid-template-columns: 120px minmax(0,1fr) !important; padding: 12px !important; gap: 12px !important; }
+  .mia-scope .acc-page section { padding-block: 22px !important; }
+  .mia-scope .acc-page .acc-stats { grid-template-columns: repeat(3,minmax(0,1fr)) !important; margin-top: 0 !important; }
+  .mia-scope .acc-page .acc-stats > * { padding: 12px 9px !important; min-width: 0; }
+  .mia-scope .acc-page .acc-stats > * b { font-size: clamp(17px,4.1vw,23px) !important; }
+  .mia-scope .acc-page :is(.acc-body,.acc-in) { min-width: 0; }
+  .mia-scope .acc-page :is(h1,h2,b) { overflow-wrap: anywhere; }
+  .mia-scope :is(.rc-page,.wq-page,.pd-page) :is(input,select,textarea,button) { max-width: 100%; }
+  .mia-scope #pd-top, .mia-scope #pd-body, .mia-scope #rc-grid, .mia-scope #waqf-grid { min-width: 0; max-width: 100%; }
+}
+
+@media (max-width: 560px) {
+  .mia-head .mia-main-row { gap: 5px !important; padding-inline: 9px !important; }
+  .mia-head .mia-main-row .mia-header-search__toggle { width: 40px; height: 40px; }
+  .mia-head .mia-main-row img[src*="logo-horizontal"] { max-width: 94px !important; }
+  .mia-scope .mia-projects-page .mia-projects-hero .proj-hero-stage { height: clamp(180px, 48vw, 215px) !important; }
+  .mia-scope .mia-projects-page .proj-hero-stage > div > div > div { padding-inline: 12px !important; }
+  .mia-scope .mia-projects-page .proj-hero-copy h2 { font-size: clamp(18px,5vw,24px) !important; max-width: 100%; }
+  .mia-scope .mia-projects-page #project-filters-section > div { padding-block: 10px 6px !important; }
+  .mia-scope .mia-projects-page #proj-filters { margin-block: 0 !important; padding-bottom: 3px !important; }
+  .mia-scope .mia-projects-page .pdc-card { min-height: 390px !important; }
+  .mia-scope .mia-projects-page .proj-grid { gap: 12px !important; }
+  .mia-scope .blog-side { grid-template-columns: repeat(2,minmax(0,1fr)); padding: 10px !important; }
+  .mia-scope .blog-side > button { height: auto !important; min-height: 44px; padding: 9px !important; font-size: 12px !important; }
+  .mia-scope .blog-grid { grid-template-columns: minmax(0,1fr) !important; }
+  .mia-scope .news-card { grid-template-columns: 98px minmax(0,1fr) !important; gap: 10px !important; padding: 10px !important; }
+  .mia-scope .news-card > span { max-width: 98px; }
+  .mia-scope .news-card b { line-height: 1.5; font-size: 13px !important; }
+  .mia-scope .acc-page .acc-stats { grid-template-columns: repeat(3,minmax(0,1fr)) !important; gap: 6px !important; padding-inline: 10px !important; }
+  .mia-scope .acc-page .acc-stats > * { display: grid !important; justify-items: center; text-align: center; padding: 13px 5px !important; }
+  .mia-scope .acc-page .acc-stats > * > span:last-child { text-align: center; }
+  .mia-scope .acc-page .acc-stats > * > span:last-child span { font-size: 10.5px !important; }
+  .mia-scope .mia-site-search-page__result { grid-template-columns: 88px minmax(0,1fr); gap: 9px; }
+  .mia-scope .mia-site-search-page__image { width: 88px; }
+  .mia-scope .mia-site-search-page__copy > span { display: none; }
+}
+
+@media (max-width: 365px) {
+  .mia-head .mia-main-row { gap: 3px !important; padding-inline: 5px !important; }
+  .mia-head .mia-main-row img[src*="logo-horizontal"] { max-width: 80px !important; }
+  .mia-head .mia-main-row .mia-header-search__toggle { width: 36px; height: 36px; }
+}
+
+/* All public phone routes retain the same navigation, including checkout and receipts.
+   Keep the global control unobstructed without changing desktop layout. */
+@media (max-width: 760px) {
+  .mia-scope { --mia-mobile-nav-h: 82px; }
+  .mia-scope main { padding-bottom: max(14px, env(safe-area-inset-bottom, 0px)); }
+  .mia-scope .mia-mobile-bottom-nav {
+    position: fixed !important;
+    inset-inline: 8px !important;
+    bottom: calc(8px + env(safe-area-inset-bottom, 0px)) !important;
+    z-index: 260 !important;
+    display: block !important;
+    visibility: visible !important;
+  }
+  .mia-scope .mia-mobile-bottom-nav__inner { width: 100%; max-width: 540px; margin-inline: auto; }
+  .mia-scope :is(.mia-qb-sec,.cg-launch-wrap,.mia-wa-fab) {
+    max-width: calc(100vw - 24px);
+  }
+  .mia-scope .mia-qb-sec {
+    bottom: calc(var(--mia-mobile-nav-h) + 6px + env(safe-area-inset-bottom, 0px)) !important;
+    z-index: 94 !important;
+  }
+  .mia-scope .cg-launch-wrap,
+  .mia-scope .mia-wa-fab {
+    bottom: calc(var(--mia-mobile-nav-h) + 18px + env(safe-area-inset-bottom, 0px)) !important;
+  }
+  .mia-scope:has(.mia-qb-sec) .cg-launch-wrap,
+  .mia-scope:has(.mia-qb-sec) .mia-wa-fab {
+    bottom: calc(var(--mia-mobile-nav-h) + 96px + env(safe-area-inset-bottom, 0px)) !important;
+  }
+}
+/* Drawers intentionally overlay the navigation; they do not remove it from
+   the shared shell, so it returns at exactly the same position on close. */
+@media (max-width: 760px) {
+  html[data-mia-drawer="open"] .mia-scope .mia-mobile-bottom-nav {
+    visibility: hidden !important;
+    pointer-events: none !important;
+  }
+}
+/* The original hero includes an almost opaque navy gradient; reduce it on
+   phones so valid CMS cover photography is actually visible. */
+@media (max-width: 760px) {
+  .mia-scope .mia-projects-page .proj-hero-stage > div[aria-hidden] > span[role="img"] + span {
+    background: linear-gradient(0deg,rgba(16,33,43,.67),rgba(16,33,43,.11) 85%) !important;
+  }
+  .mia-scope .mia-projects-page .pdc-card > span[role="img"] + span {
+    background: linear-gradient(0deg,rgba(16,33,43,.92) 1%,rgba(16,33,43,.43) 54%,rgba(16,33,43,.05) 95%) !important;
+  }
+}
+
+/* Home mobile layout: the impact and campaign banners have their own
+   responsive geometry; never reuse carousel rail widths here. */
+@media (max-width: 760px) {
+  .mia-scope .mia-impact-section,
+  .mia-scope .mia-regions-section,
+  .mia-scope #friday,
+  .mia-scope #ibadan-banner { max-width: 100%; overflow-x: clip; }
+  .mia-scope .mia-impact-section > div,
+  .mia-scope .mia-regions-section > div,
+  .mia-scope #friday > div,
+  .mia-scope #ibadan-banner > div { width: 100%; min-width: 0; box-sizing: border-box; padding-inline: clamp(12px, 4vw, 20px) !important; }
+  .mia-scope .mia-impact-summary {
+    display: grid !important; grid-template-columns: repeat(2,minmax(0,1fr)) !important;
+    overflow: visible !important; gap: 10px !important; padding: 0 !important;
+    border: 0 !important;
+  }
+  .mia-scope .mia-impact-summary > .mia-impact-stat {
+    width: 100% !important; max-width: 100% !important; min-width: 0 !important;
+    display: flex !important; flex-direction: column; align-items: flex-start;
+    gap: 7px !important; box-sizing: border-box;
+    border: 1px solid var(--border) !important; border-radius: 14px !important;
+    background: #fff !important; padding: clamp(12px,3.5vw,17px) !important;
+    min-height: 122px; box-shadow: 0 6px 20px rgba(16,33,43,.05);
+  }
+  .mia-scope .mia-impact-summary > .mia-impact-stat--featured { grid-column: 1/-1; min-height: 116px; }
+  .mia-scope .mia-impact-stat > b[dir="ltr"] {
+    font-size: clamp(24px, 7.3vw, 38px) !important;
+    max-width: 100%; white-space: nowrap; letter-spacing: -.04em !important;
+    font-variant-numeric: tabular-nums; line-height: 1.16 !important;
+  }
+  .mia-scope .mia-impact-stat > span { max-width: 100%; overflow-wrap: anywhere; line-height: 1.45 !important; }
+  .mia-scope .mia-impact-sectors {
+    display: grid !important; grid-template-columns: repeat(2,minmax(0,1fr)) !important;
+    overflow: visible !important; padding: 0 !important; gap: 10px !important;
+  }
+  .mia-scope .mia-impact-sectors > .mia-impact-sector {
+    min-width: 0 !important; max-width: 100% !important; width: auto !important;
+    box-sizing: border-box; padding: 12px 10px !important; gap: 8px !important;
+  }
+  .mia-scope .mia-impact-sector > span { min-width: 0; max-width: 100%; overflow-wrap: anywhere; }
+  .mia-scope .mia-impact-sector-value {
+    max-width: 100%; min-width: 0; white-space: nowrap;
+    font-size: clamp(17px, 4.9vw, 24px) !important;
+    font-variant-numeric: tabular-nums; letter-spacing: -.04em !important;
+  }
+  .mia-scope #regions { display: grid !important; grid-template-columns: minmax(0,1fr) !important; overflow: visible !important; padding: 0 !important; gap: 12px !important; }
+  .mia-scope #regions > .mia-region-card { width: 100% !important; max-width: 100% !important; min-width: 0 !important; min-height: 210px !important; box-sizing: border-box; }
+  .mia-scope .mia-region-card__body { min-width: 0; padding: 22px 18px !important; overflow-wrap: anywhere; }
+  .mia-scope .mia-region-card__body > b { font-size: clamp(20px,5.5vw,26px) !important; line-height: 1.35 !important; }
+  .mia-scope .mia-region-card__body > span:not(.mia-region-card__cta) { line-height: 1.65 !important; font-size: 13px !important; }
+  .mia-scope .mia-region-card__cta { max-width: 100%; min-height: 44px; height: auto !important; padding: 10px 16px !important; white-space: normal; }
+  .mia-scope :is(.friday-wrap,.ibadan-wrap,.friday-body,.ibadan-body,.mia-campaign-banner-content) { min-width: 0; max-width: 100%; box-sizing: border-box; }
+  .mia-scope :is(.friday-body,.ibadan-body) { height: auto !important; min-height: 265px !important; aspect-ratio: auto !important; }
+  .mia-scope .mia-campaign-banner-content {
+    min-height: 265px !important; width: 100% !important; padding: 88px 14px 16px !important;
+    margin: 0 !important; justify-items: stretch !important; gap: 12px !important;
+  }
+  .mia-scope .mia-campaign-banner-content h2 {
+    min-width: 0; max-width: 100%; margin: 0 !important;
+    white-space: normal !important; overflow-wrap: anywhere;
+    line-height: 1.55 !important; font-size: clamp(16px,4.3vw,21px) !important;
+    text-align: center !important;
+  }
+  .mia-scope .mia-campaign-banner-actions {
+    display: grid !important; width: 100% !important; min-width: 0 !important;
+    grid-template-columns: repeat(2,minmax(0,1fr)); gap: 8px !important;
+    margin: 0 !important;
+  }
+  .mia-scope .mia-campaign-banner-actions > .mia-campaign-banner-button {
+    display: flex !important; width: 100% !important; max-width: 100% !important;
+    min-width: 0 !important; box-sizing: border-box;
+    height: auto !important; min-height: 46px !important; padding: 10px 8px !important;
+    font-size: clamp(11px,3.3vw,14px) !important; line-height: 1.4 !important;
+    text-align: center !important; white-space: normal !important;
+    overflow-wrap: anywhere; justify-content: center !important;
+  }
+  .mia-scope .friday-prices { inset-inline: 10px !important; inset-inline-end: auto !important;
+    top: 10px !important; width: calc(100% - 20px) !important;
+    display: grid !important; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 7px !important;
+  }
+  .mia-scope .friday-prices > span {
+    min-width: 0 !important; max-width: 100%; justify-content: center;
+    padding: 8px 6px !important; overflow: hidden;
+  }
+  .mia-scope .friday-prices b[dir="ltr"] { font-size: clamp(15px,4.3vw,20px) !important; min-width: 0; }
+  .mia-scope .ibadan-logo { width: clamp(82px,26vw,118px) !important; max-width: 35% !important; }
+}
+@media (max-width: 370px) {
+  .mia-scope .mia-impact-sector-value { font-size: 16px !important; }
+  .mia-scope .mia-impact-stat > b[dir="ltr"] { font-size: clamp(24px,7vw,29px) !important; }
+  .mia-scope .mia-campaign-banner-actions { gap: 6px !important; }
+  .mia-scope .mia-campaign-banner-actions > .mia-campaign-banner-button { font-size: 11px !important; }
+}
+
+/* Scoped donor landing layouts: recurring, zakat and waqf. No checkout logic. */
+@media (max-width: 900px) {
+  .mia-scope :is(.mia-recurring-page,.mia-zakat-page,.mia-waqf-page) { width:100%; min-width:0; max-width:100%; overflow-x:clip; }
+  .mia-scope :is(.mia-recurring-page,.mia-zakat-page,.mia-waqf-page) section > div { max-width:100%; box-sizing:border-box; }
+  .mia-scope :is(.mia-recurring-page,.mia-zakat-page,.mia-waqf-page) :is(h1,h2,h3,p,b,span) { overflow-wrap:break-word; }
+  .mia-scope .mia-recurring-page #rc-grid,
+  .mia-scope .mia-zakat-page #zk-hero-grid,
+  .mia-scope .mia-waqf-page :is(#wq-hero,#meter-picker) { grid-template-columns:minmax(0,1fr) !important; gap:18px !important; }
+  .mia-scope .mia-recurring-page .mia-responsive-video { min-height:0 !important; height:auto !important; aspect-ratio:16/9; }
+  .mia-scope .mia-recurring-page .mia-donation-builder { padding:clamp(14px,3vw,24px) !important; min-width:0; gap:17px !important; }
+  .mia-scope .mia-waqf-page .mia-waqf-picker { margin-top:20px !important; padding:20px !important; border-radius:14px; }
+  .mia-scope .mia-waqf-page #waqf-video-card { grid-template-columns:minmax(0,1fr) !important; }
+  .mia-scope .mia-waqf-page #wq-hero > span:last-child,
+  .mia-scope .mia-zakat-page #zk-hero-grid > span:last-child { justify-self:center !important; max-width:min(72%,310px) !important; }
+  .mia-scope .mia-zakat-page .mia-zakat-calculator { padding:clamp(14px,3vw,24px) !important; gap:17px !important; border-radius:15px !important; }
+  .mia-scope .mia-zakat-page #zk-quick-fields { grid-template-columns:repeat(2,minmax(0,1fr)) !important; gap:10px !important; }
+  .mia-scope .mia-zakat-page .mia-zakat-result { grid-template-columns:minmax(0,1fr) !important; padding:18px !important; gap:12px !important; }
+  .mia-scope .mia-zakat-page .mia-zakat-result > span { min-width:0; padding:0 !important; border:0 !important; }
+  .mia-scope .mia-zakat-page .mia-zakat-result b[dir="ltr"] { max-width:100%; font-size:clamp(19px,5vw,29px) !important; overflow-wrap:anywhere; }
+}
+@media (max-width: 640px) {
+  .mia-scope :is(.mia-recurring-page,.mia-zakat-page,.mia-waqf-page) > section:not(#friday):not(#ibadan-banner) { padding-block:clamp(18px,5vw,30px) !important; }
+  .mia-scope :is(.mia-recurring-page,.mia-zakat-page,.mia-waqf-page) > section > div:not([data-aqsa-pattern]) { padding-inline:clamp(12px,4vw,18px) !important; }
+  .mia-scope .mia-recurring-page #plan > div { padding-block:22px !important; gap:18px !important; }
+  .mia-scope .mia-recurring-page #plan h1,
+  .mia-scope .mia-zakat-page #zk-hero-grid h1,
+  .mia-scope .mia-waqf-page #wq-hero h1 { font-size:clamp(23px,6vw,30px) !important; line-height:1.45 !important; }
+  .mia-scope .mia-recurring-page .mia-recurring-amounts { display:grid !important; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px !important; }
+  .mia-scope .mia-recurring-page .mia-recurring-amounts > * { width:100% !important; min-width:0 !important; padding-inline:5px !important; font-size:clamp(11px,3vw,14px) !important; }
+  .mia-scope .mia-recurring-page .mia-recurring-amounts > input { grid-column:1/-1; font-size:16px !important; padding-inline:12px !important; }
+  .mia-scope .mia-recurring-page .rc-seg { min-width:0; padding-inline:3px !important; font-size:clamp(10px,2.8vw,13px) !important; white-space:normal !important; line-height:1.35 !important; gap:4px !important; }
+  .mia-scope .mia-recurring-page .mia-donation-summary { display:grid !important; grid-template-columns:36px minmax(0,1fr); align-items:center; padding:13px !important; gap:10px !important; }
+  .mia-scope .mia-recurring-page .mia-donation-summary > span:last-child { display:grid !important; gap:3px !important; justify-content:start !important; min-width:0; }
+  .mia-scope .mia-recurring-page .mia-donation-summary b { font-size:clamp(19px,5vw,24px) !important; }
+  .mia-scope .mia-recurring-page #rc-benefits,
+  .mia-scope .mia-recurring-page #rc-funds { grid-template-columns:minmax(0,1fr) !important; gap:12px !important; }
+  .mia-scope .mia-recurring-page #rc-benefits > *,
+  .mia-scope .mia-recurring-page #rc-funds > * { padding:16px !important; min-width:0; }
+  .mia-scope .mia-zakat-page #zk-hero-grid { padding-block:22px !important; gap:12px !important; }
+  .mia-scope .mia-zakat-page #zk-amounts { display:grid !important; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px !important; }
+  .mia-scope .mia-zakat-page #zk-amounts > * { min-width:0 !important; width:100% !important; padding-inline:8px !important; }
+  .mia-scope .mia-zakat-page #zk-amounts .zk-input { grid-column:1/-1; min-height:46px !important; padding-inline:12px !important; font-size:16px !important; }
+  .mia-scope .mia-zakat-page #zk-ctas { display:grid !important; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px !important; }
+  .mia-scope .mia-zakat-page #zk-ctas > button { min-width:0; width:100%; height:auto !important; min-height:48px !important; padding:10px 8px !important; white-space:normal !important; font-size:clamp(11px,3.2vw,14px) !important; }
+  .mia-scope .mia-zakat-page #zk-ctas > .zk-share { grid-column:1/-1; width:100%; }
+  .mia-scope .mia-zakat-page #zk-quick-fields { grid-template-columns:minmax(0,1fr) !important; }
+  .mia-scope .mia-zakat-page #masarif-grid { grid-template-columns:repeat(2,minmax(0,1fr)) !important; gap:9px !important; }
+  .mia-scope .mia-zakat-page .zk-masraf { min-width:0; padding:14px 11px !important; gap:9px !important; }
+  .mia-scope .mia-zakat-page .zk-masraf b { font-size:13px !important; }
+  .mia-scope .mia-zakat-page .zk-masraf span { font-size:11px !important; overflow-wrap:anywhere; }
+  .mia-scope .mia-zakat-page #zk-videos { grid-template-columns:minmax(0,1fr) !important; gap:12px !important; }
+  .mia-scope .mia-waqf-page #about > div:not([data-aqsa-pattern]) { padding-top:24px !important; }
+  .mia-scope .mia-waqf-page .mia-waqf-picker { padding:15px !important; gap:14px !important; }
+  .mia-scope .mia-waqf-page .mia-waqf-picker > div:first-child { min-width:0; padding-bottom:0 !important; }
+  .mia-scope .mia-waqf-page #meter-picker > div:first-child > div { min-width:0; max-width:100%; }
+  .mia-scope .mia-waqf-page .wq-step { flex:0 0 44px; }
+  .mia-scope .mia-waqf-page #wq-facts { grid-template-columns:repeat(2,minmax(0,1fr)) !important; gap:9px !important; }
+  .mia-scope .mia-waqf-page #wq-aid { grid-template-columns:repeat(2,minmax(0,1fr)) !important; gap:9px !important; }
+  .mia-scope .mia-waqf-page :is(#wq-goals,#wq-parts,#wq-detail) { grid-template-columns:minmax(0,1fr) !important; gap:12px !important; }
+  .mia-scope .mia-waqf-page .wv-head { padding:19px !important; }
+  .mia-scope .mia-waqf-page :is(.wq-part,.wq-aid-card) { min-width:0; overflow-wrap:anywhere; }
+  .mia-scope .mia-waqf-page #waqf-cert-preview[data-open="1"] { box-sizing:border-box; width:100%; min-width:0; overflow-wrap:anywhere; }
+  .mia-scope .mia-waqf-page #waqf-cert-preview[data-open="1"] > div { box-sizing:border-box; min-width:0; }
+  .mia-scope .mia-waqf-page #waqf-cert-preview[data-open="1"] span { max-width:100%; overflow-wrap:anywhere; }
+}
+
+/* Fix mobile photo/content flow on Jerusalem and Al-Aqsa: section-level
+   padding cannot push the media away from its copy. */
+@media (max-width: 900px) {
+  .mia-scope :is(.aq-page,.qd-page) > .mia-story-hero {
+    display: flex !important;
+    flex-direction: column !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    overflow: hidden !important;
+  }
+  .mia-scope .mia-story-hero__image {
+    display: block !important;
+    flex: none !important;
+    width: 100% !important;
+    height: clamp(170px, 43vw, 330px) !important;
+    min-height: 0 !important;
+    max-height: 330px !important;
+    object-fit: cover !important;
+    object-position: center !important;
+    background: transparent !important;
+  }
+  .mia-scope .mia-story-hero--aqsa .mia-story-hero__image { object-fit: contain !important; object-position: center bottom !important; }
+  .mia-scope .mia-story-hero__overlay {
+    position: relative !important;
+    inset: auto !important;
+    display: block !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    box-sizing: border-box !important;
+  }
+  .mia-scope .mia-story-hero__inner {
+    display: grid !important;
+    grid-template-columns: minmax(0,1fr) !important;
+    width: 100% !important;
+    height: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+  .mia-scope .mia-story-hero__copy {
+    box-sizing: border-box !important;
+    display: grid !important;
+    gap: 13px !important;
+    padding: 22px clamp(16px,4vw,28px) 25px !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    background: transparent !important;
+  }
+  .mia-scope .mia-story-hero--jerusalem .mia-story-hero__overlay { background: var(--deep); }
+  .mia-scope .mia-story-hero--aqsa .mia-story-hero__overlay { background: #A8660C; }
+  .mia-scope .mia-story-hero__copy h1 { font-size: clamp(24px,5.6vw,33px) !important; line-height: 1.35 !important; overflow-wrap: anywhere; }
+  .mia-scope .mia-story-hero__copy p { max-width: 100% !important; font-size: clamp(13px,3.4vw,16px) !important; line-height: 1.7 !important; }
+  .mia-scope .mia-story-hero__copy > div:last-child { display:flex !important; flex-wrap: wrap !important; width:100%; gap:10px !important; }
+  .mia-scope .mia-story-hero__copy > div:last-child > * { flex: 1 1 175px !important; min-width:0 !important; white-space: normal !important; text-align:center !important; }
+}
+@media (max-width: 760px) {
+  /* The primary, high-volume impact card is full width, but the two remaining
+     stats share a row instead of leaving an empty opposing grid cell. */
+  .mia-scope .mia-impact-section .mia-impact-summary { grid-template-columns: repeat(2,minmax(0,1fr)) !important; gap: 10px !important; }
+  .mia-scope .mia-impact-section .mia-impact-summary > .mia-impact-stat { grid-column: auto !important; width:100% !important; min-width:0 !important; max-width:100% !important; min-height: 115px !important; padding: clamp(12px,3.2vw,16px) !important; }
+  .mia-scope .mia-impact-section .mia-impact-summary > .mia-impact-stat--featured { grid-column: 1/-1 !important; }
+  .mia-scope .mia-impact-section .mia-impact-summary > .mia-impact-stat b[dir="ltr"] { justify-self: start; max-width:100%; font-size:clamp(23px,6.4vw,34px) !important; }
+  .mia-scope .mia-impact-section .mia-impact-summary > .mia-impact-stat--featured b[dir="ltr"] { font-size:clamp(26px,7vw,37px) !important; }
+  /* Keep the giving assistant accessible without hiding actual section content. */
+  .mia-scope .cg-launch-wrap[data-draggable="1"] { inset-inline-end: 10px !important; }
+  .mia-scope .cg-launch-wrap[data-draggable="1"] .cg-launcher {
+    width: 50px !important; height: 50px !important; min-width:50px !important;
+    max-width: 50px !important; padding: 5px !important;
+    display: grid !important; place-items: center !important;
+    overflow:hidden !important; border-radius: 50% !important;
+  }
+  .mia-scope .cg-launch-wrap[data-draggable="1"] .cg-launcher-label,
+  .mia-scope .cg-launch-wrap[data-draggable="1"] .cg-launcher-badge { display:none !important; }
+  .mia-scope .cg-launch-wrap[data-draggable="1"] .cg-launcher-icon { width:38px !important; height:38px !important; flex-basis:38px !important; }
+  .mia-scope .cg-launch-wrap[data-draggable="1"] .cg-teaser { display:none !important; }
 }

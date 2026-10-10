@@ -12,6 +12,7 @@ import {
 } from "@/lib/communication/audience-list-service";
 import { COMMUNICATION_CHANNELS } from "@/lib/communication/communication-runtime-types";
 import { AUDIENCE_SELECTION_MAX } from "@/lib/communication/audience-limits";
+import { normalizeSmartAudienceDefinition, smartAudienceMetadata, countSmartAudience } from "@/lib/communication/smart-audience";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -20,7 +21,10 @@ const createSchema = z.object({
   name: z.string().min(1).max(160),
   description: z.string().max(500).nullable().optional(),
   channel: z.enum(COMMUNICATION_CHANNELS),
-  userIds: z.array(z.string().min(1)).min(1).max(AUDIENCE_SELECTION_MAX),
+  userIds: z.array(z.string().min(1)).min(1).max(AUDIENCE_SELECTION_MAX).optional(),
+  smartDefinition: z.unknown().optional(),
+}).refine((value) => Boolean(value.smartDefinition) !== Boolean(value.userIds?.length), {
+  message: "Provide either smartDefinition or userIds",
 });
 
 export async function GET() {
@@ -61,6 +65,31 @@ export async function POST(request: NextRequest) {
   }
 
   const actor = auditActorFromDashboardSession(session!);
+
+  if (parsed.data.smartDefinition) {
+    const definition = normalizeSmartAudienceDefinition(parsed.data.smartDefinition, parsed.data.channel);
+    const matched = await countSmartAudience(definition);
+    const created = await createAudienceList(
+      {
+        name: parsed.data.name,
+        description: parsed.data.description ?? null,
+        type: "SMART",
+        channels: [parsed.data.channel],
+        metadata: smartAudienceMetadata(definition, { lastMatchedCount: matched }),
+      },
+      actor,
+    );
+    if (!created.ok) return NextResponse.json({ ok: false, error: created.error }, { status: created.status });
+    return NextResponse.json({
+      ok: true,
+      listId: created.data.id,
+      added: 0,
+      matched,
+      audienceType: "SMART",
+      audienceSegmentKey: `${AUDIENCE_LIST_PREFIX}${created.data.id}`,
+    });
+  }
+
   const created = await createAudienceList(
     {
       name: parsed.data.name,
@@ -72,13 +101,14 @@ export async function POST(request: NextRequest) {
   );
   if (!created.ok) return NextResponse.json({ ok: false, error: created.error }, { status: created.status });
 
-  const added = await addDonorMembers(created.data.id, parsed.data.userIds, actor);
+  const added = await addDonorMembers(created.data.id, parsed.data.userIds ?? [], actor);
   if (!added.ok) return NextResponse.json({ ok: false, error: added.error }, { status: added.status });
 
   return NextResponse.json({
     ok: true,
     listId: created.data.id,
     added: added.data.added,
+    audienceType: "CUSTOM",
     audienceSegmentKey: `${AUDIENCE_LIST_PREFIX}${created.data.id}`,
   });
 }
