@@ -11,7 +11,7 @@ export type SummaryStat = {
   /** Optional delta, e.g. "+12.4%". Colour is chosen from `trend`. */
   delta?: string;
   trend?: "up" | "down" | "flat";
-  /** Short qualifier printed beside the value. Keep it to a couple of words. */
+  /** Short qualifier printed beside the value. Keep it to a couple of words1 */
   hint?: string;
 };
 

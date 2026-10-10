@@ -39,7 +39,7 @@ export const toDateString = (date: Date) => {
 
 export function getUrl() {
   if (process.env.NODE_ENV === "development") {
-    return process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+    return process.env.NEXT_PUBLIC_APP_URL || "http://176.53.96.235";
   } else {
     return process.env.NEXT_PUBLIC_WEB_URL || "https://ub.cafe";
   }
