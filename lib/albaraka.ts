@@ -532,10 +532,16 @@ export type AlbarakaRecurringConfig = AlbarakaConfig & {
 
 export function albarakaRecurringConfig(): AlbarakaRecurringConfig {
   const base = albarakaConfig();
+  /* A scheduled instalment is a non-3D sale, like the checkout's 2D sale, so
+     without a dedicated recurring terminal it runs on the 2D (non-3D) terminal
+     with that terminal's own key  never the 3D terminal, which refuses a sale
+     without 3D Secure. The first instalment is charged on the 2D terminal, so
+     the plan's later ones then go to the same terminal. */
   return {
     ...base,
-    terminalNo: process.env.ALBARAKA_RECURRING_TERMINAL_NO ?? base.terminalNo,
-    posnetId: process.env.ALBARAKA_RECURRING_POSNET_ID ?? base.posnetId,
+    terminalNo: process.env.ALBARAKA_RECURRING_TERMINAL_NO || process.env.ALBARAKA_2D_TERMINAL_NO || base.terminalNo,
+    posnetId: process.env.ALBARAKA_RECURRING_POSNET_ID || process.env.ALBARAKA_2D_POSNET_ID || base.posnetId,
+    encKey: process.env.ALBARAKA_RECURRING_ENC_KEY || process.env.ALBARAKA_2D_ENC_KEY || base.encKey,
     enabled: process.env.ALBARAKA_RECURRING_ENABLED === "1",
   };
 }
