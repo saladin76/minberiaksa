@@ -26,6 +26,7 @@ import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 import { listCategories, type NavCategory } from "@/lib/minbar/categories";
+import { listNavSuperCategories } from "@/lib/minbar/super-category";
 import "@/styles/minbar/minbar.css";
 import "@/styles/minbar/locale-fonts.css";
 
@@ -107,10 +108,12 @@ export default async function Rootlayout({
   // RTL too, and the previous `locale === "ar"` test silently rendered it LTR.
   const dir = localeDirection(locale);
   // Drives where the header's account icon points (`[AUTH-INTEGRATION]`).
-  // Categories feed the header's projects dropdown and the footer's band.
-  const [session, categories] = await Promise.all([
+  // Categories feed the header's projects dropdown and the footer's band; super
+  // categories join them in the dropdown only.
+  const [session, categories, superCategories] = await Promise.all([
     getServerSession(authOptions),
     listCategories(locale),
+    listNavSuperCategories(locale),
   ]);
   const navCategories: NavCategory[] = categories.map(({ id, href, name, image, projectCount }) => ({ id, href, name, image, projectCount }));
 
@@ -129,7 +132,7 @@ export default async function Rootlayout({
             <SessionProvider>
               <PreferredLangSync />
               <ScrollToTop />
-              <Header signedIn={!!session?.user} isAdmin={session?.user?.role === "ADMIN"} categories={navCategories} />
+              <Header signedIn={!!session?.user} isAdmin={session?.user?.role === "ADMIN"} categories={navCategories} superCategories={superCategories} />
               <MobileBottomNav signedIn={!!session?.user} />
               {/* No top padding here: the header renders its own spacer, sized
                   from its measured height, because that height changes with the

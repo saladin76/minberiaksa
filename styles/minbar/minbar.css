@@ -438,8 +438,10 @@
   margin-inline: auto;
   width: min(880px, calc(100% - 48px));
   z-index: 80;
-  display: grid;
-  grid-template-rows: auto minmax(0, 1fr);
+  /* A column so the head and the programmes strip keep their height and the
+     category grid takes what is left, scrolling on its own. */
+  display: flex;
+  flex-direction: column;
   max-height: min(560px, calc(100vh - 150px));
   background: #fff;
   color: #10212B;
@@ -451,6 +453,7 @@
 }
 @keyframes mia-cats-in { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
 .mia-head .mia-cats-pop__head {
+  flex: 0 0 auto;
   display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
   padding: 14px 18px;
   background: linear-gradient(180deg, #FFFDF8, #F7F2EA);
@@ -467,7 +470,39 @@
   transition: filter .15s ease, transform .15s ease;
 }
 .mia-head .mia-cats-pop__all:hover { filter: brightness(1.1); transform: translateY(-1px); }
+/* Super categories (programmes): a strip of cards above the category grid, each
+ * on its own accent colour so a programme reads as more than one more category. */
+.mia-head .mia-cats-pop__supers {
+  flex: 0 0 auto;
+  display: grid; gap: 8px;
+  padding: 12px 12px 4px;
+}
+.mia-head .mia-cats-pop__label {
+  display: flex; align-items: center; gap: 7px; padding-inline: 4px;
+  font-size: 11px; font-weight: 900; color: #8a5d16; letter-spacing: .06em;
+}
+.mia-head .mia-cats-pop__supers-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 8px;
+}
+.mia-head .mia-super-item {
+  display: flex; align-items: center; gap: 12px; min-width: 0;
+  padding: 10px 12px; border-radius: 14px;
+  background: var(--mia-super-accent, #7C2318); color: #fff; text-decoration: none;
+  box-shadow: inset 0 0 0 1px rgba(211, 154, 39, .45);
+  transition: filter .15s ease, transform .15s ease;
+}
+.mia-head .mia-super-item:hover,
+.mia-head .mia-super-item:focus-visible { filter: brightness(1.12); transform: translateY(-1px); outline: none; }
+.mia-head .mia-super-item__name {
+  flex: 1 1 auto; min-width: 0;
+  font-size: 14px; font-weight: 900; line-height: 1.4;
+  overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+}
 .mia-head .mia-cats-pop__grid {
+  flex: 1 1 auto;
+  min-height: 0;
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
   gap: 6px;

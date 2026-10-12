@@ -1,3 +1,4 @@
+import { unstable_cache } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { pickTranslation, translationLocaleWhere } from "@/lib/i18n/translation-fallback";
 import { listProjects, type MinbarProject } from "./projects";
@@ -134,6 +135,63 @@ export async function listSuperCategorySlugs(): Promise<string[]> {
     select: { slug: true },
   });
   return rows.map((r) => r.slug);
+}
+
+/** The slice the header's projects menu needs, kept small because it ships on every page. */
+export interface NavSuperCategory {
+  id: string;
+  href: string;
+  name: string;
+  /** The wordmark when there is one, else the hero picture, else empty. */
+  image: string;
+  accentColor: string;
+}
+
+async function readNavSuperCategories(locale: string): Promise<NavSuperCategory[]> {
+  const rows = await prisma.superCategory.findMany({
+    where: { isActive: true },
+    orderBy: { order: "asc" },
+    select: {
+      id: true,
+      slug: true,
+      title: true,
+      logoImage: true,
+      heroImage: true,
+      accentColor: true,
+      translations: {
+        where: translationLocaleWhere(locale),
+        take: 2,
+        select: { locale: true, title: true, logoImage: true },
+      },
+    },
+  });
+  return rows.map((row) => {
+    const t = pickTranslation(row.translations, locale);
+    return {
+      id: row.id,
+      href: `/${locale}/projects/${encodeURIComponent(row.slug)}`,
+      name: t?.title || row.title,
+      image: t?.logoImage || row.logoImage || row.heroImage || "",
+      accentColor: row.accentColor || DEFAULT_ACCENT,
+    };
+  });
+}
+
+/* Read by the layout on every page, so cached like the category index
+   (`lib/minbar/categories.ts`); a dashboard edit shows within five minutes. */
+const cachedNavSuperCategories = unstable_cache(readNavSuperCategories, ["minbar-super-categories"], {
+  revalidate: 300,
+  tags: ["minbar-super-categories"],
+});
+
+/** Every published super category for the header menu. Never throws  an empty list hides the section. */
+export async function listNavSuperCategories(locale: string): Promise<NavSuperCategory[]> {
+  try {
+    return await cachedNavSuperCategories(locale);
+  } catch (err) {
+    console.error("listNavSuperCategories failed:", err);
+    return [];
+  }
 }
 
 /**

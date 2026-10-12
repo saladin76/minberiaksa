@@ -14,6 +14,7 @@ import { useMinbarCartCount } from "@/hooks/useMinbarCart";
 import { CART_BUMP_EVENT, CART_TARGET_ATTR } from "@/lib/minbar/cart-feedback";
 import { useMinbarLabel } from "@/hooks/useMinbarLabel";
 import type { NavCategory } from "@/lib/minbar/categories";
+import type { NavSuperCategory } from "@/lib/minbar/super-category";
 import HeaderSearch from "./HeaderSearch";
 
 /**
@@ -125,6 +126,8 @@ export interface HeaderProps {
    * where the nav is hidden.
    */
   categories?: NavCategory[];
+  /** Published super categories (programmes), shown above the categories in both menus. */
+  superCategories?: NavSuperCategory[];
 }
 
 export default function Header({
@@ -134,6 +137,7 @@ export default function Header({
   signedIn = false,
   isAdmin = false,
   categories = [],
+  superCategories = [],
 }: HeaderProps) {
   const locale = useLocale();
   const dir = localeDirection(locale);
@@ -147,7 +151,9 @@ export default function Header({
   const [localeOpen, setLocaleOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [catsOpen, setCatsOpen] = useState(false);
-  const hasCats = categories.length > 0;
+  const hasSupers = superCategories.length > 0;
+  /* The projects item turns into a dropdown when it has anything to list. */
+  const hasCats = categories.length > 0 || hasSupers;
   const [currency, setCurrency] = useState("USD");
   const [showBack, setShowBack] = useState(false);
   const basket = useMinbarCartCount();
@@ -445,6 +451,31 @@ export default function Header({
                   </svg>
                 </Link>
               </div>
+              {hasSupers ? (
+                <div className="mia-cats-pop__supers">
+                  <span className="mia-cats-pop__label">
+                    <span aria-hidden="true" style={{ width: 6, height: 6, background: "#D39A27", transform: "rotate(45deg)" }} />
+                    {tCats("programmes")}
+                  </span>
+                  <div className="mia-cats-pop__supers-row">
+                    {superCategories.map((s) => (
+                      <Link
+                        key={s.id}
+                        href={s.href}
+                        onClick={() => setCatsOpen(false)}
+                        className="mia-super-item"
+                        style={{ "--mia-super-accent": s.accentColor } as React.CSSProperties}
+                      >
+                        <CategoryThumb image={s.image} size={42} contain />
+                        <b className="mia-super-item__name">{s.name}</b>
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#D39A27" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="mia-arrow-next" style={{ flex: "0 0 auto" }}>
+                          <path d="M14 6l-6 6 6 6" />
+                        </svg>
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
               <div className="mia-cats-pop__grid">
                 {categories.map((c) => (
                   <Link key={c.id} href={c.href} onClick={() => setCatsOpen(false)} className="mia-cats-item">
@@ -819,6 +850,12 @@ export default function Header({
                         {tCats("title")}
                       </span>
                       <div className="mia-menu-cats">
+                        {superCategories.map((s) => (
+                          <Link key={s.id} href={s.href} onClick={() => setMenuOpen(false)} className="mia-menu-link mia-menu-cat" style={{ fontWeight: 900 }}>
+                            <CategoryThumb image={s.image} size={26} contain />
+                            <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.name}</span>
+                          </Link>
+                        ))}
                         {categories.map((c) => (
                           <Link key={c.id} href={c.href} onClick={() => setMenuOpen(false)} className="mia-menu-link mia-menu-cat">
                             <CategoryThumb image={c.image} size={26} />
@@ -924,7 +961,7 @@ function GlobeIcon({ stroke = "#fff", size = 17 }: { stroke?: string; size?: num
  * category has none. The header ships on every page, so this deliberately does
  * not pull in `CategoryIcon` and its icon set.
  */
-function CategoryThumb({ image, size }: { image: string; size: number }) {
+function CategoryThumb({ image, size, contain = false }: { image: string; size: number; contain?: boolean }) {
   return (
     <span
       aria-hidden="true"
@@ -941,7 +978,7 @@ function CategoryThumb({ image, size }: { image: string; size: number }) {
       }}
     >
       {image ? (
-        <img src={image} alt="" loading="lazy" decoding="async" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+        <img src={image} alt="" loading="lazy" decoding="async" style={{ width: "100%", height: "100%", objectFit: contain ? "contain" : "cover", display: "block" }} />
       ) : (
         <span style={{ width: size / 4, height: size / 4, background: "#D39A27", transform: "rotate(45deg)" }} />
       )}
