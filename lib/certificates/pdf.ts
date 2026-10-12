@@ -1,6 +1,8 @@
 import "server-only";
 
-import { existsSync } from "node:fs";
+import { existsSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import type { Browser } from "puppeteer-core";
 
 /**
@@ -15,7 +17,10 @@ import type { Browser } from "puppeteer-core";
  *     the function bundle;
  *   - anywhere else, a Chrome/Edge/Chromium on the machine  set
  *     `PUPPETEER_EXECUTABLE_PATH` to pick one explicitly, otherwise the usual
- *     install locations are tried.
+ *     install locations are tried;
+ *   - on a Linux x64 server with none of those (the VPS), the same remote
+ *     pack as on Vercel, unpacked into the temp dir together with the shared
+ *     libraries it links against, so no system package has to be installed.
  *
  * One browser per process, launched on first use and reused; a crashed one is
  * relaunched on the next call.
@@ -85,6 +90,7 @@ async function launch(): Promise<Browser> {
 
   const executablePath = LOCAL_CANDIDATES.find((candidate): candidate is string => Boolean(candidate && existsSync(candidate)));
   if (!executablePath) {
+    if (process.platform === "linux" && process.arch === "x64") return launchRemotePack(puppeteer.default);
     throw new PdfRendererUnavailableError("no Chrome/Chromium found  set PUPPETEER_EXECUTABLE_PATH");
   }
   return puppeteer.default.launch({
@@ -93,6 +99,61 @@ async function launch(): Promise<Browser> {
     args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage", "--font-render-hinting=none"],
     defaultViewport: { width: 1280, height: 900, deviceScaleFactor: 1 },
   });
+}
+
+type Puppeteer = (typeof import("puppeteer-core"))["default"];
+
+/**
+ * The serverless Chromium on a plain Linux server. The pack unpacks the
+ * NSS/expat libraries the binary links against (`al2023.tar.br`) only when it
+ * believes it runs on Amazon Linux, so it is told so for the duration of the
+ * import and the unpacking. The environment it rewrites is put back
+ * afterwards, and the library path goes to the browser process alone.
+ */
+async function launchRemotePack(puppeteer: Puppeteer): Promise<Browser> {
+  const libDir = join(tmpdir(), "al2023", "lib");
+  const binary = join(tmpdir(), "chromium");
+  // A binary unpacked without its libraries would never start: unpack again.
+  if (existsSync(binary) && !existsSync(libDir)) rmSync(binary, { force: true });
+
+  const keys = ["AWS_LAMBDA_JS_RUNTIME", "LD_LIBRARY_PATH", "FONTCONFIG_PATH", "HOME"] as const;
+  const saved = keys.map((key) => [key, process.env[key]] as const);
+  let executablePath: string;
+  let args: string[];
+  try {
+    process.env.AWS_LAMBDA_JS_RUNTIME = "nodejs22.x";
+    const chromium = await import("@sparticuz/chromium-min");
+    executablePath = await chromium.default.executablePath(REMOTE_CHROMIUM_PACK);
+    args = chromium.default.args;
+  } catch (error) {
+    throw new PdfRendererUnavailableError(`could not fetch Chromium from ${REMOTE_CHROMIUM_PACK}: ${describe(error)}`);
+  } finally {
+    for (const [key, value] of saved) {
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
+    }
+  }
+
+  try {
+    return await puppeteer.launch({
+      args,
+      executablePath,
+      headless: true,
+      env: {
+        ...process.env,
+        LD_LIBRARY_PATH: [libDir, process.env.LD_LIBRARY_PATH].filter(Boolean).join(":"),
+        FONTCONFIG_PATH: join(tmpdir(), "fonts"),
+        HOME: process.env.HOME ?? tmpdir(),
+      },
+      defaultViewport: { width: 1280, height: 900, deviceScaleFactor: 1 },
+    });
+  } catch (error) {
+    throw new PdfRendererUnavailableError(`Chromium did not start: ${describe(error)}`);
+  }
+}
+
+function describe(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
 }
 
 async function getBrowser(): Promise<Browser> {
