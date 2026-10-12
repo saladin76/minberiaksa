@@ -28,6 +28,12 @@ import ViewAllLink from "./ViewAllLink";
  * homepage layout picks them: the three built-in conference recordings (the
  * default set) and any video filed under «فعالياتنا». The Turkish edition
  * plays the Turkish recording of the preacher's address. */
+/** A YouTube embed URL's still image, or "" for a playlist or another host. */
+function embedThumb(src: string): string {
+  const id = /\/embed\/([\w-]{11})(?:[?/]|$)/.exec(src || "")?.[1];
+  return id ? `https://i.ytimg.com/vi/${id}/hqdefault.jpg` : "";
+}
+
 export function EventsSection({ events }: { events: HomeEvent[] }) {
   const locale = useLocale();
   const t = useTranslations("homepage");
@@ -56,7 +62,16 @@ export function EventsSection({ events }: { events: HomeEvent[] }) {
               className="mia-lift"
               style={{ display: "grid", gridTemplateRows: "auto 1fr", background: "#fff", border: "1px solid var(--border)", borderRadius: 12, overflow: "hidden", boxShadow: "0 14px 40px rgba(16,33,43,.08)" }}
             >
-              <div style={{ position: "relative", width: "100%", aspectRatio: "16/9", background: "var(--navy)" }}>
+              {/* The video's thumbnail sits behind the lazy iframe, so a card
+                  that has not loaded yet shows the film's still, not a blank box. */}
+              <div
+                style={{
+                  position: "relative",
+                  width: "100%",
+                  aspectRatio: "16/9",
+                  background: embedThumb(card.src) ? `var(--navy) url(${embedThumb(card.src)}) center / cover no-repeat` : "var(--navy)",
+                }}
+              >
                 <iframe
                   src={card.src}
                   title={card.title}

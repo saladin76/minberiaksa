@@ -5436,3 +5436,42 @@ html[data-mia-drawer="open"] .mia-scope .mia-qb-sec { display: none !important; 
   .mia-scope .swiper-pagination-bullet { position: relative; }
   .mia-scope .swiper-pagination-bullet::after { content: ""; position: absolute; inset: -14px -6px; }
 }
+
+/* ── Recurring builder, every width (Oct 2026) ──────────────────────────────
+ * The grid stacks at 900px, but the builder only moved above the video under
+ * 760px, so tablets opened on a large video box with the form below the fold. */
+@media (max-width: 900px) {
+  .mia-scope #rc-grid .rc-builder { order: 1; }
+  .mia-scope #rc-grid .rc-video { order: 2; }
+}
+@media (max-width: 560px) {
+  /* Amount buttons were 11.7px text in 44px pills: read as fine print. */
+  .mia-scope .mia-recurring-page .mia-recurring-amounts > button { min-height: 46px; font-size: 15px !important; font-weight: 900; }
+  .mia-scope .mia-recurring-page .mia-recurring-amounts > input { min-height: 46px; }
+  /* One line per frequency tab: the label matters more than the icon. */
+  .mia-scope .mia-recurring-page .rc-seg { min-height: 46px; font-size: 13.5px !important; white-space: nowrap !important; }
+}
+@media (max-width: 380px) {
+  .mia-scope .mia-recurring-page .rc-seg svg { display: none; }
+  .mia-scope .mia-recurring-page .rc-seg { font-size: 12.5px !important; }
+}
+
+/* Payment forms (cart, checkout, recurring) at every width: the floating
+ * WhatsApp button and the assistant launcher with its teaser bubble sat on
+ * top of the main button on desktop too. The assistant stays on every other
+ * page; WhatsApp stays reachable from the footer. */
+html[data-mia-form="1"] .mia-wa-fab,
+html[data-mia-form="1"] .mia-scope .cg-launch-wrap { display: none !important; }
+
+/* Homepage hero on a phone: floating buttons step aside while the hero's own
+ * buttons are on screen (`useQuietFloatingButtonsWhileVisible`). */
+@media (max-width: 700px) {
+  html[data-mia-hero-cta="1"] .mia-wa-fab,
+  html[data-mia-hero-cta="1"] .mia-scope .cg-launch-wrap { display: none !important; }
+}
+
+/* Checkout donor fields: one per row on a phone. Two-across left the phone
+ * field (flag + dial code + number) and the email about 150px each. */
+@media (max-width: 560px) {
+  .mia-scope #pay-donor-fields { grid-template-columns: minmax(0, 1fr) !important; }
+}

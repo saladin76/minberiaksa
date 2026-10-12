@@ -632,7 +632,7 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
                 </>
               ) : null}
 
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(2,minmax(0,1fr))", gap: 14 }}>
+              <div id="pay-donor-fields" style={{ display: "grid", gridTemplateColumns: "repeat(2,minmax(0,1fr))", gap: 14 }}>
                 <label style={{ display: "grid", gap: 7 }}>
                   <span style={labelStyle}>{t("firstName")}</span>
                   <input value={firstName} onChange={(e) => setFirstName(e.target.value)} autoComplete="given-name" className="pay-field" style={fieldStyle} />
@@ -847,6 +847,8 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
                       name={cardName || `${firstName} ${lastName}`.trim()}
                       focused={cardFocus}
                       placeholders={{ name: "" }}
+                      // The library's own label is the English "valid thru" in every language.
+                      locale={{ valid: t("cardExpiry") }}
                     />
                   </div>
                   <div id="card-fields" style={{ display: "grid", gridTemplateColumns: "repeat(2,minmax(0,1fr))", gap: 14 }}>

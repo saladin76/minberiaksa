@@ -231,7 +231,9 @@ export default function RecurringPage({ projects }: RecurringPageProps) {
           </div>
 
           <div id="rc-grid" style={{ display: "grid", gridTemplateColumns: "minmax(0,.8fr) minmax(0,1.2fr)", gap: 26, alignItems: "stretch" }}>
-            <span className="rc-video mia-responsive-video" style={{ position: "relative", display: "block", background: "#000", borderRadius: 16, overflow: "hidden", minHeight: 420, boxShadow: "0 18px 44px rgba(16,33,43,.14)", transition: "box-shadow .25s ease, transform .25s ease" }}>
+            {/* The video's own thumbnail sits behind the lazy iframe, so the box
+                is never a bare black rectangle while YouTube loads. */}
+            <span className="rc-video mia-responsive-video" style={{ position: "relative", display: "block", background: "#10212B url(https://i.ytimg.com/vi/K65JuQ8Nz9g/hqdefault.jpg) center / cover no-repeat", borderRadius: 16, overflow: "hidden", minHeight: 420, boxShadow: "0 18px 44px rgba(16,33,43,.14)", transition: "box-shadow .25s ease, transform .25s ease" }}>
               <iframe
                 src="https://www.youtube.com/embed/K65JuQ8Nz9g?si=TCfoRDQ9caOL53Wi"
                 title={t("whatIsIt")}

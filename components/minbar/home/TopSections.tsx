@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useQuietFloatingButtonsWhileVisible } from "@/hooks/useQuietFloatingButtons";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { LOCALES } from "@/lib/locales";
 import StoryViewer, { type PublicStory } from "./StoryViewer";
@@ -250,6 +251,7 @@ export function heroPoster(locale: string): string {
 }
 
 export function Hero({ onPlayIntro }: { onPlayIntro: (embed: string) => void }) {
+  useQuietFloatingButtonsWhileVisible(".mia-hero-actions--mobile");
   const locale = useLocale();
   const t = useTranslations("homepage");
   const tCommon = useTranslations("common");
