@@ -1,4 +1,5 @@
 import "server-only";
+import { runAfterResponse } from "@/lib/events/after-response";
 
 import Stripe from "stripe";
 import { prisma } from "@/lib/prisma";
@@ -70,7 +71,7 @@ export async function reconcileStripeDonation(donationId: string): Promise<void>
       }
       finalized = true;
     });
-    if (finalized) void dispatchDonationPaid(donationId);
+    if (finalized) runAfterResponse(() => dispatchDonationPaid(donationId));
   } catch (err) {
     console.error("[donation reconcile] Finalize failed:", err);
   }

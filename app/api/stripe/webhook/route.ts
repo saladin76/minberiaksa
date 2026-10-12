@@ -1,3 +1,4 @@
+import { runAfterResponse } from "@/lib/events/after-response";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import Stripe from "stripe";
@@ -119,9 +120,9 @@ export async function POST(req: NextRequest) {
               });
             }
           });
-          void dispatchDonationPaid(donationId);
+          runAfterResponse(() => dispatchDonationPaid(donationId));
           if (isMonthly && subscriptionDbId) {
-            void dispatchEvent("SUBSCRIPTION_CREATED", { donationId });
+            runAfterResponse(() => dispatchEvent("SUBSCRIPTION_CREATED", { donationId }));
           }
         }
         break;
@@ -342,7 +343,7 @@ export async function POST(req: NextRequest) {
           select: { id: true },
         });
         if (paidForInvoice) {
-          void dispatchEvent("SUBSCRIPTION_PAYMENT", { donationId: paidForInvoice.id });
+          runAfterResponse(() => dispatchEvent("SUBSCRIPTION_PAYMENT", { donationId: paidForInvoice.id }));
         }
         break;
       }
@@ -455,7 +456,7 @@ export async function POST(req: NextRequest) {
             });
           }
         });
-        void dispatchDonationPaid(donationId);
+        runAfterResponse(() => dispatchDonationPaid(donationId));
         break;
       }
 
@@ -491,7 +492,7 @@ export async function POST(req: NextRequest) {
             providerRaw: intent as never,
           },
         });
-        void dispatchEvent("DONATION_FAILED", { donationId });
+        runAfterResponse(() => dispatchEvent("DONATION_FAILED", { donationId }));
         // Browser may have closed before /api/donations/:id/fail PATCH fired 
         // seed DonateFailed from here so the lookalike audience never misses a
         // failed Stripe Elements attempt.
@@ -523,7 +524,7 @@ export async function POST(req: NextRequest) {
             providerRaw: session as never,
           },
         });
-        void dispatchEvent("DONATION_FAILED", { donationId });
+        runAfterResponse(() => dispatchEvent("DONATION_FAILED", { donationId }));
         // Hosted Stripe Checkout expired/failed before payment  seed Meta
         // DonateFailed so the abandoned-checkout cohort feeds lookalikes.
         void sendDonationFailedConversions(donationId);
@@ -568,7 +569,7 @@ export async function POST(req: NextRequest) {
             where: { id: dbSubscription.id },
             data: { status: "CANCELLED" },
           });
-          void dispatchEvent("SUBSCRIPTION_CANCELLED", { userId: dbSubscription.donorId });
+          runAfterResponse(() => dispatchEvent("SUBSCRIPTION_CANCELLED", { userId: dbSubscription.donorId }));
         }
         break;
       }

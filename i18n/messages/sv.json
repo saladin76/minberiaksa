@@ -1823,7 +1823,11 @@
     "amountTooLow": "Minsta Donation är {min}",
     "selectProject": "Välj Ett Projekt",
     "nameRequired": "Ange Ditt Namn",
-    "acceptTerms": "Du Måste Godkänna Villkoren"
+    "acceptTerms": "Du Måste Godkänna Villkoren",
+    "invalidCardNumber": "Kortnumret är ogiltigt. Kontrollera det.",
+    "invalidCardExpiry": "Utgångsdatumet är ogiltigt eller har passerat.",
+    "invalidCardCvc": "Säkerhetskoden (CVC) är ogiltig.",
+    "tooManyPaymentAttempts": "För många betalningsförsök. Försök igen senare."
   },
   "waqf": {
     "chooseUnit": "Välj typ och antal för ditt bidrag",

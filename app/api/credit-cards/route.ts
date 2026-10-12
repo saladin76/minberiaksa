@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 import { prisma } from "@/lib/prisma";
-import { encryptCard, hashCvc, detectCardType, decryptCard } from "@/lib/card-crypto";
+import { encryptCard, detectCardType, decryptCard } from "@/lib/card-crypto";
 
 // GET /api/credit-cards  list user's saved cards (masked)
 export async function GET() {
@@ -62,7 +62,6 @@ export async function POST(req: NextRequest) {
 
   const cardType = detectCardType(clean);
   const encryptedNumber = encryptCard(clean);
-  const hashedCvc = await hashCvc(cvc);
 
   // Check for duplicate (same last 8 digits + expiry is a good proxy)
   const last8 = clean.slice(-8);
@@ -96,7 +95,8 @@ export async function POST(req: NextRequest) {
       cardNumber: encryptedNumber,
       cardType,
       expiryDate,
-      cvc: hashedCvc,
+      // PCI DSS 3.3.1: the security code is checked for presence only and never kept.
+      cvc: "",
       cardholderName: cardholderName?.trim() || null,
       nickname: nickname?.trim() || null,
       isDefault,

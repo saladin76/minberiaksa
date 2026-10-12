@@ -1,5 +1,7 @@
 "use client";
 
+import { useQuietFloatingButtons } from "@/hooks/useQuietFloatingButtons";
+import { decimalAmount } from "@/lib/minbar/numeric-input";
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
@@ -76,6 +78,7 @@ const TYPE_LABEL: Record<string, string> = {
 };
 
 export default function CartPage({ projects, categories }: { projects: MinbarProject[]; categories: MinbarCategoryTitle[] }) {
+  useQuietFloatingButtons();
   const locale = useLocale();
   const t = useTranslations("cart");
   const tCommon = useTranslations("common");
@@ -458,7 +461,7 @@ export default function CartPage({ projects, categories }: { projects: MinbarPro
                           <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
                             <input
                               value={draft}
-                              onChange={(e) => setDraft(e.target.value.replace(/[^0-9.]/g, ""))}
+                              onChange={(e) => setDraft(decimalAmount(e.target.value))}
                               onKeyDown={(e) => {
                                 if (e.key === "Enter") commitEdit(index);
                                 if (e.key === "Escape") setEditing(null);
@@ -596,7 +599,7 @@ export default function CartPage({ projects, categories }: { projects: MinbarPro
                         ))}
                         <input
                           value={customUpsell[suggestion.id] ?? ""}
-                          onChange={(e) => setCustomUpsell((c) => ({ ...c, [suggestion.id]: e.target.value.replace(/[^0-9]/g, "") }))}
+                          onChange={(e) => setCustomUpsell((c) => ({ ...c, [suggestion.id]: decimalAmount(e.target.value) }))}
                           inputMode="decimal"
                           placeholder={t("suggestedAmount")}
                           aria-label={t("suggestedAmount")}
@@ -740,7 +743,7 @@ export default function CartPage({ projects, categories }: { projects: MinbarPro
                     <input
                       value={customTeam}
                       onChange={(e) => {
-                        const next = e.target.value.replace(/[^0-9.]/g, "");
+                        const next = decimalAmount(e.target.value);
                         setCustomTeam(next);
                         const n = Number(next);
                         if (n > 0) {

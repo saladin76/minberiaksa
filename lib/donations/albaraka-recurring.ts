@@ -1,4 +1,5 @@
 import "server-only";
+import { runAfterResponse } from "@/lib/events/after-response";
 
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
@@ -7,15 +8,19 @@ import {
   albarakaChargeCurrency,
   albarakaCurrencyCode,
   albarakaExpiryFromStored,
+  albarakaInquireSale,
   albarakaMinorUnits,
+  albarakaReverseSale,
   albarakaRecurringConfig,
   albarakaRecurringOrderId,
   albarakaService,
   buildAlbarakaRecurringSale,
   isAlbarakaApproved,
   isAlbarakaRecurringEnabled,
+  isAlbarakaTransportFailure,
   isStoredCardExpired,
   type AlbarakaCurrencyCode,
+  type AlbarakaServiceResponse,
 } from "@/lib/albaraka";
 import {
   convertAmountInCurrencyToTry,
@@ -191,7 +196,7 @@ async function chargeOne(sub: DueSubscription, now: Date, dryRun: boolean): Prom
         where: { id: sub.id },
         data: { status: "PAYMENT_FAILED", chargeAttempts: attempt, lastChargeError: card ? "Stored card has expired" : "No stored card" },
       });
-      void dispatchEvent("SUBSCRIPTION_CANCELLED", { userId: sub.donorId });
+      runAfterResponse(() => dispatchEvent("SUBSCRIPTION_CANCELLED", { userId: sub.donorId }));
     }
     return { ...base, result: "card_expired", error: card ? "card expired" : "no card" };
   }
@@ -261,11 +266,29 @@ async function chargeOne(sub: DueSubscription, now: Date, dryRun: boolean): Prom
     cfg
   );
 
-  let sale;
+  let sale: AlbarakaServiceResponse | null = null;
+  let transportError: unknown = null;
   try {
     sale = await albarakaService("Sale", body, { correlationId: orderId, config: cfg });
   } catch (err) {
-    return await recordFailure(sub, donation.id, attempt, now, "Bank unreachable", "Unknown", amountUSD, err);
+    transportError = err;
+  }
+
+  /* No readable answer: the card may or may not have been charged. Retrying
+     blindly would be a new order id the bank's duplicate check cannot catch, so
+     the bank is asked about this order first — as the checkout does. */
+  if (transportError || isAlbarakaTransportFailure(sale)) {
+    const resolved = await resolveUnknownRecurringSale(orderId, cfg, transportError ?? sale);
+    if (resolved.state === "approved") {
+      sale = resolved.sale;
+    } else if (resolved.state === "not_charged") {
+      return await recordFailure(sub, donation.id, attempt, now, resolved.reason, "Failed", amountUSD, transportError ?? undefined);
+    } else {
+      return await holdUnresolved(sub, donation.id, orderId, resolved.reason, amountUSD);
+    }
+  }
+  if (!sale) {
+    return await recordFailure(sub, donation.id, attempt, now, "Bank unreachable", "Unknown", amountUSD, transportError ?? undefined);
   }
 
   const responseCode = sale.ServiceResponseData?.ResponseCode ?? "";
@@ -317,9 +340,74 @@ async function chargeOne(sub: DueSubscription, now: Date, dryRun: boolean): Prom
     });
   });
 
-  void dispatchDonationPaid(donation.id);
-  void dispatchEvent("SUBSCRIPTION_PAYMENT", { donationId: donation.id });
+  runAfterResponse(() => dispatchDonationPaid(donation.id));
+  runAfterResponse(() => dispatchEvent("SUBSCRIPTION_PAYMENT", { donationId: donation.id }));
   return { ...base, donationId: donation.id, result: "charged", amountUSD };
+}
+
+type UnknownSaleResolution =
+  | { state: "approved"; sale: AlbarakaServiceResponse }
+  | { state: "not_charged"; reason: string }
+  | { state: "unresolved"; reason: string };
+
+/**
+ * A /Sale whose answer never arrived. The bank is asked by order id (/Agreement):
+ * an approved sale is settled as normal, no record means nothing was taken. If
+ * the bank cannot say, the order is voided (same-day /Reverse); only a confirmed
+ * void counts as "not charged". Anything else is left unresolved for staff.
+ */
+async function resolveUnknownRecurringSale(
+  orderId: string,
+  cfg: ReturnType<typeof albarakaRecurringConfig>,
+  cause: unknown
+): Promise<UnknownSaleResolution> {
+  console.error("[albaraka-recurring] no readable answer, inquiring", { orderId, cause: String(cause) });
+  const inquiry = await albarakaInquireSale(orderId, cfg);
+  if (inquiry.state === "approved") {
+    return {
+      state: "approved",
+      sale: {
+        ServiceResponseData: { ResponseCode: "00", ResponseDescription: "Approved (recovered by status inquiry)" },
+        AuthCode: inquiry.authCode,
+        ReferenceCode: null,
+      } as AlbarakaServiceResponse,
+    };
+  }
+  if (inquiry.state === "absent") {
+    return { state: "not_charged", reason: "Bank unreachable; the bank has no record of the sale" };
+  }
+  const reverse = await albarakaReverseSale(orderId, cfg);
+  if (isAlbarakaApproved(reverse)) {
+    return { state: "not_charged", reason: "Bank unreachable; the uncertain sale was voided" };
+  }
+  return { state: "unresolved", reason: `Outcome unknown and void not confirmed; check order ${orderId} in the merchant panel` };
+}
+
+/**
+ * The bank could not say whether the card was charged and the void was not
+ * confirmed. Charging again could bill the donor twice, so the plan is paused
+ * (the scheduler only charges ACTIVE plans) until staff check the order in the
+ * merchant panel and resume it. The donor is not told the plan was cancelled.
+ */
+async function holdUnresolved(
+  sub: DueSubscription,
+  donationId: string,
+  orderId: string,
+  reason: string,
+  amountUSD: number | null
+): Promise<RecurringChargeOutcome> {
+  console.error("[albaraka-recurring] unresolved sale, plan paused", { subscriptionId: sub.id, orderId });
+  await prisma.$transaction([
+    prisma.donation.update({
+      where: { id: donationId },
+      data: { status: "FAILED", providerTxnResult: "Unknown", providerErrorMessage: reason.slice(0, 500) },
+    }),
+    prisma.subscription.update({
+      where: { id: sub.id },
+      data: { status: "PAUSED", lastChargeError: reason.slice(0, 300) },
+    }),
+  ]);
+  return { subscriptionId: sub.id, donationId, result: "unreachable", amountUSD, error: reason };
 }
 
 /**
@@ -358,9 +446,9 @@ async function recordFailure(
     }),
   ]);
 
-  void dispatchEvent("DONATION_FAILED", { donationId });
+  runAfterResponse(() => dispatchEvent("DONATION_FAILED", { donationId }));
   void sendDonationFailedConversions(donationId);
-  if (!retryAt) void dispatchEvent("SUBSCRIPTION_CANCELLED", { userId: sub.donorId });
+  if (!retryAt) runAfterResponse(() => dispatchEvent("SUBSCRIPTION_CANCELLED", { userId: sub.donorId }));
 
   return {
     subscriptionId: sub.id,

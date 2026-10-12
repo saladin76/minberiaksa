@@ -1,5 +1,6 @@
 "use client";
 
+import { decimalAmount, parseAmount } from "@/lib/minbar/numeric-input";
 import { useMemo, useState, type CSSProperties, type ReactElement } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { Button } from "@/components/minbar/ds";
@@ -111,7 +112,7 @@ export default function ZakatCalculator({ rates, guidePdfHref, whatsappNumber = 
 
   /** Tolerant parse: an empty or malformed field contributes zero, not NaN. */
   const num = (x: string | undefined) => {
-    const v = Number.parseFloat(String(x ?? "").replace(/[^0-9.]/g, ""));
+    const v = parseAmount(x);
     return Number.isFinite(v) ? v : 0;
   };
   const n = (key: string) => num(values[key]);
@@ -140,7 +141,7 @@ export default function ZakatCalculator({ rates, guidePdfHref, whatsappNumber = 
   const aboveNisab = totals.nisab > 0 && totals.net >= totals.nisab;
 
   const setField = (key: string, raw: string) =>
-    setValues((v) => ({ ...v, [key]: raw.replace(/[^0-9.]/g, "") }));
+    setValues((v) => ({ ...v, [key]: decimalAmount(raw, 12) }));
 
   const groups: Array<{ id: string; icon: keyof typeof GROUP_ICONS; titleKey: string; hintKey: string; accent: string; total: number; fields: readonly string[]; unitKey?: string }> = [
     { id: "wallet", icon: "wallet", titleKey: "grpWallet", hintKey: "grpWalletSub", accent: "var(--deep)", total: totals.cash, fields: FIELDS.cash },
@@ -195,7 +196,7 @@ export default function ZakatCalculator({ rates, guidePdfHref, whatsappNumber = 
             <input
               value={mode === "gold" ? goldRate : silverRate}
               onChange={(e) => {
-                const val = e.target.value.replace(/[^0-9.]/g, "");
+                const val = decimalAmount(e.target.value, 12);
                 if (mode === "gold") setGoldRate(val);
                 else setSilverRate(val);
               }}

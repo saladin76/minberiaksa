@@ -1,4 +1,5 @@
 import "server-only";
+import { runAfterResponse } from "@/lib/events/after-response";
 
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
@@ -172,7 +173,22 @@ async function chargeOne(sub: DueSubscription, now: Date, dryRun: boolean): Prom
     }
   } catch (err) {
     const unknownOutcome = !(err instanceof PayPalError) || err.status >= 500;
-    return await recordFailure(sub, donation.id, attempt, now, err instanceof Error ? err.message : "PayPal charge failed", unknownOutcome ? "Unknown" : "Failed", amountUSD, err);
+    if (!unknownOutcome) {
+      return await recordFailure(sub, donation.id, attempt, now, err instanceof Error ? err.message : "PayPal charge failed", "Failed", amountUSD, err);
+    }
+    /* A timeout or 5xx: PayPal may have charged. Replaying the same request id
+       returns the order it already made instead of charging again, so ask once
+       that way; if that also fails, the plan is paused rather than retried with
+       a fresh key that PayPal would treat as a new charge. */
+    console.error("[paypal-recurring] unknown outcome, replaying request id", sub.id, err instanceof PayPalError ? err.body : err);
+    try {
+      order = await chargePayPalVault({ vaultId: sub.paypalVaultId as string, customId: donation.id, value: charge.value, currency: charge.currency, requestId: key });
+      if (order.status === "APPROVED" || order.status === "CREATED") {
+        order = await capturePayPalOrder(order.id, `${key}-capture`);
+      }
+    } catch (replayErr) {
+      return await holdUnresolved(sub, donation.id, `PayPal outcome unknown for ${key}; check the PayPal dashboard before resuming`, amountUSD, replayErr);
+    }
   }
 
   // ── Verify ───────────────────────────────────────────────────────────────
@@ -189,6 +205,12 @@ async function chargeOne(sub: DueSubscription, now: Date, dryRun: boolean): Prom
           : !paypalAmountsMatch(capture.amount?.value, charge.value)
             ? `PayPal amount mismatch (expected ${charge.value}, got ${capture.amount?.value})`
             : null;
+  /* Money that was (or may yet be) taken must not be charged again: a capture
+     PayPal holds for review (PENDING), or a COMPLETED capture that fails our
+     checks. Both pause the plan for staff instead of climbing the retry ladder. */
+  if (problem && capture && (capture.status === "PENDING" || capture.status === "COMPLETED")) {
+    return await holdUnresolved(sub, donation.id, `${problem}; capture ${capture.id} — check PayPal before resuming`, amountUSD, undefined, audit);
+  }
   if (problem || !capture?.amount) {
     return await recordFailure(sub, donation.id, attempt, now, problem ?? "PayPal returned no capture", "Failed", amountUSD, undefined, audit);
   }
@@ -209,9 +231,47 @@ async function chargeOne(sub: DueSubscription, now: Date, dryRun: boolean): Prom
     data: { status: "ACTIVE", lastBillingDate: now, nextBillingDate: nextCycleAfter(sub, due, now), chargeAttempts: 0, lastChargeError: null },
   });
 
-  void dispatchDonationPaid(donation.id);
-  void dispatchEvent("SUBSCRIPTION_PAYMENT", { donationId: donation.id });
+  runAfterResponse(() => dispatchDonationPaid(donation.id));
+  runAfterResponse(() => dispatchEvent("SUBSCRIPTION_PAYMENT", { donationId: donation.id }));
   return { ...base, donationId: donation.id, result: "charged", amountUSD };
+}
+
+/**
+ * PayPal may have taken the money but the charge cannot be confirmed. Charging
+ * again could bill the donor twice, so the plan is paused (the scheduler only
+ * charges ACTIVE plans) until staff check PayPal and resume it. The row stays
+ * unpaid with the reason; the donor is not told the plan was cancelled.
+ */
+async function holdUnresolved(
+  sub: DueSubscription,
+  donationId: string,
+  reason: string,
+  amountUSD: number | null,
+  err?: unknown,
+  audit?: Record<string, unknown>
+): Promise<RecurringChargeOutcome> {
+  console.error("[paypal-recurring] unresolved charge, plan paused", sub.id, reason, err instanceof PayPalError ? err.body : err ?? "");
+  const current = audit ? await prisma.donation.findUnique({ where: { id: donationId }, select: { providerRaw: true } }) : null;
+  const currentRaw =
+    current?.providerRaw && typeof current.providerRaw === "object" && !Array.isArray(current.providerRaw)
+      ? (current.providerRaw as Record<string, unknown>)
+      : {};
+  await prisma.$transaction([
+    prisma.donation.update({
+      where: { id: donationId },
+      data: {
+        status: "FAILED",
+        providerTxnResult: "Unknown",
+        providerErrorMessage: reason.slice(0, 500),
+        ...(audit ? { providerRaw: { ...currentRaw, ...audit } as Prisma.InputJsonValue } : {}),
+      },
+    }),
+    prisma.subscription.update({
+      where: { id: sub.id },
+      data: { status: "PAUSED", lastChargeError: reason.slice(0, 300) },
+    }),
+  ]);
+  return { subscriptionId: sub.id, donationId, result: "unreachable", amountUSD, error: reason };
 }
 
 async function recordFailure(
@@ -251,9 +311,9 @@ async function recordFailure(
     }),
   ]);
 
-  void dispatchEvent("DONATION_FAILED", { donationId });
+  runAfterResponse(() => dispatchEvent("DONATION_FAILED", { donationId }));
   void sendDonationFailedConversions(donationId);
-  if (!retryAt) void dispatchEvent("SUBSCRIPTION_CANCELLED", { userId: sub.donorId });
+  if (!retryAt) runAfterResponse(() => dispatchEvent("SUBSCRIPTION_CANCELLED", { userId: sub.donorId }));
 
   return { subscriptionId: sub.id, donationId, result: txnResult === "Unknown" ? "unreachable" : "declined", amountUSD, error: reason };
 }

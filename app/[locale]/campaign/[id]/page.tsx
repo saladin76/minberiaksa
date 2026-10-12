@@ -1,8 +1,10 @@
 import { notFound, permanentRedirect } from "next/navigation";
 import { getProject } from "@/lib/minbar/projects";
+import { withIncomingQuery, type IncomingSearchParams } from "@/lib/minbar/redirect-query";
 
 interface Props {
   params: Promise<{ id: string; locale: string }>;
+  searchParams: Promise<IncomingSearchParams>;
 }
 
 /**
@@ -16,13 +18,14 @@ interface Props {
  * the old surface. Resolve only an active/non-deleted project, then issue a
  * permanent redirect to the modern project detail page.
  */
-export default async function LegacyCampaignRedirect({ params }: Props) {
-  const { id, locale } = await params;
+export default async function LegacyCampaignRedirect({ params, searchParams }: Props) {
+  const [{ id, locale }, query] = await Promise.all([params, searchParams]);
   const project = await getProject(decodeURIComponent(id), locale);
 
   if (!project) notFound();
 
+  // The query rides along: old ad links carry utm_* / gclid / fbclid.
   permanentRedirect(
-    `/${locale}/projects/${encodeURIComponent(project.slug)}`
+    withIncomingQuery(`/${locale}/projects/${encodeURIComponent(project.slug)}`, query)
   );
 }

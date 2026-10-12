@@ -4,6 +4,7 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 import { prisma } from "@/lib/prisma";
 import { withDonationToken } from "@/lib/donations/access-token";
 import Stripe from "stripe";
+import { toStripeMinorUnits } from "@/lib/stripe-amount";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: "2026-03-25.dahlia",
@@ -63,7 +64,7 @@ export async function POST(req: NextRequest) {
     // Stripe amount must be in smallest currency unit (cents/kuruş/etc.)
     // For currencies without decimals (e.g. some), multiply by 100 as well.
     const currency = (donation.currency || "USD").toLowerCase();
-    const amountInSmallestUnit = Math.round(donation.totalAmount * 100);
+    const amountInSmallestUnit = toStripeMinorUnits(donation.totalAmount, currency);
 
     const isMonthly = Boolean(donation.subscriptionId);
 

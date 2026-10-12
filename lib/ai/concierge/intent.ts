@@ -222,7 +222,6 @@ const CURRENCY_NAMES: Array<[RegExp, string]> = [
   [/\bbhd\b|دينار\s*بحريني|bahrain/i, "BHD"],
   [/\bomr\b|ريال\s*عماني|oman/i, "OMR"],
   [/\bjod\b|دينار\s*أردني|دينار\s*اردني|jordan/i, "JOD"],
-  [/\bmad\b|درهم\s*مغربي|morocc/i, "MAD"],
 ];
 
 const CHANGE_WORDS = /غير|غيّر|حول|حوّل|بدل|بدّل|اجعل|خلي|خليها|عايز.*(يكون|تكون)|عدل|عدّل|switch|change|set|make|use|turn|değiştir|yap|kullan|change|mets|passe|ändere|stell|cambia|pon|ubah|ganti|بدلو|تبدیل/i;

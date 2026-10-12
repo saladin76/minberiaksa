@@ -204,13 +204,15 @@ export default function RestorationPage({ projects, restored, goal }: Restoratio
 
       {/* ── Completed work ────────────────────────────────────────────────── */}
       <section style={{ position: "relative", zIndex: 1, padding: "0 0 56px" }}>
-        <div style={{ ...SECTION, display: "grid", gap: 20 }}>
+        {/* minmax(0,1fr): a grid track sizes to its widest child by default, and
+            the rail is a long strip of photos, so it stretched the page sideways. */}
+        <div style={{ ...SECTION, display: "grid", gridTemplateColumns: "minmax(0, 1fr)", gap: 20 }}>
           <b style={{ fontSize: "clamp(21px,2vw,27px)", fontWeight: 900 }}>{t("restAchievements")}</b>
           <Rail step={340} prevLabel={t("restAchievements")} nextLabel={t("restAchievements")}>
             {gallery.map((photo, index) => (
               <span
-                key={photo}
-                style={{ flex: "0 0 320px", position: "relative", display: "block", aspectRatio: "4/3", borderRadius: 12, overflow: "hidden", background: "var(--sand)" }}
+                key={`${index}-${photo}`}
+                style={{ flex: "0 0 min(320px, 82vw)", position: "relative", display: "block", aspectRatio: "4/3", borderRadius: 12, overflow: "hidden", background: "var(--sand)" }}
               >
                 {/* eslint-disable-next-line @next/next/no-img-element -- Drive-hosted, outside the configured image domains */}
                 <img

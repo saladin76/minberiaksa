@@ -2855,7 +2855,11 @@
     "amountTooLow": "Minimum Bağış Tutarı {min}",
     "selectProject": "Bir Proje Seçin",
     "nameRequired": "Adınızı Girin",
-    "acceptTerms": "Şartlar ve Koşulları Kabul Etmelisiniz"
+    "acceptTerms": "Şartlar ve Koşulları Kabul Etmelisiniz",
+    "invalidCardNumber": "Kart numarası geçersiz, lütfen kontrol edin.",
+    "invalidCardExpiry": "Son kullanma tarihi geçersiz veya geçmiş.",
+    "invalidCardCvc": "Güvenlik kodu (CVC) geçersiz.",
+    "tooManyPaymentAttempts": "Çok fazla ödeme denemesi. Lütfen daha sonra tekrar deneyin."
   },
   "waqf": {
     "chooseUnit": "Katkı Türünüzü ve Adedini Seçin",

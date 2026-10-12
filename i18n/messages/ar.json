@@ -2853,7 +2853,11 @@
     "amountTooLow": "الحد الأدنى للتبرع {min}",
     "selectProject": "اختر مشروعًا",
     "nameRequired": "أدخل الاسم",
-    "acceptTerms": "يجب الموافقة على الشروط والأحكام"
+    "acceptTerms": "يجب الموافقة على الشروط والأحكام",
+    "invalidCardNumber": "رقم البطاقة غير صحيح، يرجى التحقق منه",
+    "invalidCardExpiry": "تاريخ انتهاء البطاقة غير صحيح أو منتهٍ",
+    "invalidCardCvc": "رمز الأمان (CVC) غير صحيح",
+    "tooManyPaymentAttempts": "محاولات دفع كثيرة، يرجى المحاولة لاحقًا"
   },
   "waqf": {
     "chooseUnit": "اختر نوع مساهمتك وعددها",

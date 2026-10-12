@@ -26,13 +26,14 @@ import {
 } from "@/lib/albaraka";
 import { failAlbarakaDonation, settleAlbarakaDonation } from "@/lib/donations/albaraka-settlement";
 import { parseMainGateway } from "@/lib/payment-gateway";
+import { checkCardAttempt } from "@/lib/security/card-attempts";
 import { donationFieldEmpty, donationWhereAll } from "@/lib/donations/mongo-null";
 import {
   convertAmountInCurrencyToTry,
   convertAmountInCurrencyToUsd,
   getUsdBaseRatesForServer,
 } from "@/lib/exchange/rates-service";
-import { decryptCard, detectCardType, encryptCard, hashCvc } from "@/lib/card-crypto";
+import { decryptCard, detectCardType, encryptCard } from "@/lib/card-crypto";
 
 /**
  * POST /api/albaraka/3d/initiate
@@ -308,22 +309,33 @@ export async function POST(req: NextRequest) {
 
     if (!cardNo || !expiredDate || !cvv) {
       return NextResponse.json(
-        { error: "Card number, expiry and security code are required" },
+        { error: "Card number, expiry and security code are required", code: "CARD_REQUIRED" },
         { status: 400 }
       );
     }
     // Caught here rather than spent as a bank decline (and a FAILED donation).
     if (!isValidCardNumber(cardNo)) {
-      return NextResponse.json({ error: "Invalid card number" }, { status: 400 });
+      return NextResponse.json({ error: "Invalid card number", code: "INVALID_CARD_NUMBER" }, { status: 400 });
     }
     if (!isValidBankExpiry(expiredDate)) {
-      return NextResponse.json({ error: "Card expiry date is invalid or in the past" }, { status: 400 });
+      return NextResponse.json({ error: "Card expiry date is invalid or in the past", code: "INVALID_CARD_EXPIRY" }, { status: 400 });
     }
     if (!/^\d{3,4}$/.test(cvv)) {
-      return NextResponse.json({ error: "Invalid security code" }, { status: 400 });
+      return NextResponse.json({ error: "Invalid security code", code: "INVALID_CARD_CVC" }, { status: 400 });
     }
     // CardInformationData.CardHolderName is max 50 characters.
     cardHolderName = cardHolderName.replace(/\s+/g, " ").slice(0, 50);
+
+    /* Card-testing brakes, before the claim so a refused attempt leaves the
+       donation untouched and the donor can retry once the window passes. */
+    const attempt = await checkCardAttempt(req.headers, cardNo, "ALBARAKA");
+    if (!attempt.ok) {
+      console.warn("[Albaraka] card attempt refused", { donationId: donation.id, reason: attempt.reason });
+      return NextResponse.json(
+        { error: "Too many payment attempts. Please try again later.", code: "TOO_MANY_ATTEMPTS" },
+        { status: 429, headers: { "Retry-After": String(attempt.retryAfterSeconds) } }
+      );
+    }
 
     /* Claim the donation for this attempt, atomically. A double-click or a
        retried request must not send a second /Sale for the same donation: only
@@ -387,7 +399,8 @@ export async function POST(req: NextRequest) {
           cardType: detectCardType(cardNo),
           // Stored MM/YY like the rest; the bank's YYMM is derived on each charge.
           expiryDate: `${expiredDate.slice(2, 4)}/${expiredDate.slice(0, 2)}`,
-          cvc: await hashCvc(cvv),
+          // PCI DSS 3.3.1: the security code is never kept, not even hashed.
+          cvc: "",
           cardholderName: cardHolderName || null,
           nickname: "recurring",
         },

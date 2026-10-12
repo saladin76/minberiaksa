@@ -2855,7 +2855,11 @@
     "amountTooLow": "Donasi Minimum Adalah {min}",
     "selectProject": "Pilih Proyek",
     "nameRequired": "Masukkan Nama Anda",
-    "acceptTerms": "Anda harus menyetujui syarat dan ketentuan"
+    "acceptTerms": "Anda harus menyetujui syarat dan ketentuan",
+    "invalidCardNumber": "Nomor kartu tidak valid. Silakan periksa kembali.",
+    "invalidCardExpiry": "Tanggal kedaluwarsa tidak valid atau sudah lewat.",
+    "invalidCardCvc": "Kode keamanan (CVC) tidak valid.",
+    "tooManyPaymentAttempts": "Terlalu banyak percobaan pembayaran. Silakan coba lagi nanti."
   },
   "waqf": {
     "chooseUnit": "Pilih jenis dan jumlah kontribusi Anda",

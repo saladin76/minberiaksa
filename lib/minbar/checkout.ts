@@ -204,7 +204,8 @@ export class UnpayableItemsError extends Error {
 
 /** The order API refused the order; `message` is its reason. */
 export class OrderRejectedError extends Error {
-  constructor(message: string, readonly status: number) {
+  /** `code` is the server's machine-readable reason, when it sends one. */
+  constructor(message: string, readonly status: number, readonly code?: string) {
     super(message);
   }
 }
@@ -365,9 +366,11 @@ export async function initiateBankPayment(
     }),
   });
 
-  const payload = (await response.json().catch(() => null)) as (GatewayForm & { error?: string }) | null;
+  const payload = (await response.json().catch(() => null)) as (GatewayForm & { error?: string; code?: string }) | null;
   // A refusal (e.g. "Invalid card number") carries its reason to the form instead of "we are fixing it".
-  if (!response.ok || !payload?.actionUrl) throw new OrderRejectedError(payload?.error || "gateway-failed", response.status);
+  if (!response.ok || !payload?.actionUrl) {
+    throw new OrderRejectedError(payload?.error || "gateway-failed", response.status, payload?.code);
+  }
 
   return { actionUrl: payload.actionUrl, fields: payload.fields ?? {} };
 }

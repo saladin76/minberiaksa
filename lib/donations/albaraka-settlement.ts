@@ -1,4 +1,5 @@
 import "server-only";
+import { runAfterResponse } from "@/lib/events/after-response";
 
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
@@ -50,7 +51,7 @@ export async function failAlbarakaDonation(
         providerRaw: asJson({ ...rawObject(donation.providerRaw), ...extra }),
       },
     });
-    void dispatchEvent("DONATION_FAILED", { donationId });
+    runAfterResponse(() => dispatchEvent("DONATION_FAILED", { donationId }));
     // Seed Meta with the failed attempt; the browser pixel sends the matching
     // DonateFailed hit with the same `${donationId}_failed` event id.
     void sendDonationFailedConversions(donationId);
@@ -150,8 +151,8 @@ export async function settleAlbarakaDonation(
   });
 
   if (newlyPaid) {
-    void dispatchDonationPaid(donationId);
-    if (subscriptionId) void dispatchEvent("SUBSCRIPTION_CREATED", { donationId });
+    runAfterResponse(() => dispatchDonationPaid(donationId));
+    if (subscriptionId) runAfterResponse(() => dispatchEvent("SUBSCRIPTION_CREATED", { donationId }));
   }
   return settled;
 }

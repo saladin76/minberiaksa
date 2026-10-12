@@ -83,6 +83,14 @@ export default function proxy(req: NextRequest) {
     }
   }
 
+  // A cookie left over from a currency that has since been dropped (e.g. MAD)
+  // falls back to USD instead of pricing the site in a code we no longer offer.
+  const savedCurrency = req.cookies.get('currency')?.value;
+  if (!normalized && savedCurrency && !ALLOWED_URL_CURRENCIES.has(savedCurrency.toUpperCase())) {
+    normalized = 'USD';
+    req.cookies.set('currency', normalized);
+  }
+
   // First-visit geo detection: when there's no `?currency=` and no existing
   // cookie, pick a currency based on the visitor's country from edge headers.
   // Never overrides an explicit choice (cookie already set or URL param given).

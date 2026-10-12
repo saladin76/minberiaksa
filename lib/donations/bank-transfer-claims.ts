@@ -1,4 +1,5 @@
 import "server-only";
+import { runAfterResponse } from "@/lib/events/after-response";
 
 import { randomBytes } from "node:crypto";
 import type { BankTransferClaim, Prisma } from "@prisma/client";
@@ -318,7 +319,7 @@ export async function confirmBankTransferClaim(claimId: string, actor: ClaimActo
 
   /* The same pipeline a card payment runs: DONATION_PAID triggers (the
      official receipt email), Telegram, server conversions, FIRST_DONATION. */
-  void dispatchDonationPaid(updated.donationId);
+  runAfterResponse(() => dispatchDonationPaid(updated.donationId));
   void sendBankTransferEmail("CONFIRMED", updated, { locale: updated.donation.locale ?? updated.donation.donor.preferredLang ?? "en", origin: opts.origin });
 
   return { ok: true, claim: updated };

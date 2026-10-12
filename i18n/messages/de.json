@@ -2855,7 +2855,11 @@
     "amountTooLow": "Die Mindestspende Beträgt {min}",
     "selectProject": "Wählen Sie Ein Projekt",
     "nameRequired": "Geben Sie Ihren Namen Ein",
-    "acceptTerms": "Sie Müssen die Bedingungen Akzeptieren"
+    "acceptTerms": "Sie Müssen die Bedingungen Akzeptieren",
+    "invalidCardNumber": "Die Kartennummer ist ungültig. Bitte prüfen Sie sie.",
+    "invalidCardExpiry": "Das Ablaufdatum ist ungültig oder abgelaufen.",
+    "invalidCardCvc": "Der Sicherheitscode (CVC) ist ungültig.",
+    "tooManyPaymentAttempts": "Zu viele Zahlungsversuche. Bitte versuchen Sie es später erneut."
   },
   "waqf": {
     "chooseUnit": "Wählen Sie Art und Anzahl Ihres Beitrags",

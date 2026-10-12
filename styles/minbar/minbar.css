@@ -5404,3 +5404,35 @@ html[data-mia-drawer="open"] .mia-scope .mia-qb-sec { display: none !important; 
   .mia-scope .cg-launch-wrap[data-draggable="1"] .cg-launcher-icon { width:38px !important; height:38px !important; flex-basis:38px !important; }
   .mia-scope .cg-launch-wrap[data-draggable="1"] .cg-teaser { display:none !important; }
 }
+
+/* Form controls never wider than their column. A <select> sizes itself to its
+ * longest option, and inside an auto-sized grid track that pushed the
+ * recurring form (and anything built the same way) past both screen edges. */
+.mia-scope :is(select, input, textarea) { max-width: 100%; }
+.mia-scope .mia-donation-builder { grid-template-columns: minmax(0, 1fr); }
+.mia-scope .mia-donation-builder > * { min-width: 0; }
+/* `contain: inline-size` stops a select's longest option from setting the
+ * width of every auto-sized grid track around it; it then fills its column. */
+.mia-scope .mia-donation-builder select { contain: inline-size; width: 100%; box-sizing: border-box; }
+
+/* Cart and checkout on a phone: the floating WhatsApp and assistant buttons
+ * covered amount chips and form fields there (`useQuietFloatingButtons`). */
+@media (max-width: 700px) {
+  html[data-mia-form="1"] .mia-wa-fab,
+  html[data-mia-form="1"] .mia-scope .cg-launch-wrap { display: none !important; }
+}
+
+/* Phone tap targets and legibility (UX sweep, Oct 2026). Links that sat at
+ * 20–28px tall are grown to the 44px touch minimum without changing how they
+ * look; text that had shrunk to 8–8.5px is held at 10px. */
+@media (max-width: 700px) {
+  .mia-scope .fcol-links a { display: flex; align-items: center; min-height: 44px; }
+  .mia-scope .cart-add-another { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; }
+  .mia-scope .mia-verse-link { min-height: 40px; }
+  .mia-scope .mia-story-badge { font-size: 10px; }
+  .mia-scope .friday-prices span span,
+  .mia-scope .mia-bn-chip span { font-size: 10px !important; }
+  /* Carousel dots stay 10px wide visually but get a finger-sized hit area. */
+  .mia-scope .swiper-pagination-bullet { position: relative; }
+  .mia-scope .swiper-pagination-bullet::after { content: ""; position: absolute; inset: -14px -6px; }
+}

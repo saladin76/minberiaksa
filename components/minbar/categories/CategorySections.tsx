@@ -1,5 +1,6 @@
 "use client";
 
+import { decimalAmount } from "@/lib/minbar/numeric-input";
 import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { miaPath } from "@/lib/minbar/routes";
@@ -240,7 +241,7 @@ export function CategoryDonateBox({ page, typeKey = "project" }: { page: Categor
             ))}
             <input
               value={custom}
-              onChange={(e) => setCustom(e.target.value.replace(/[^0-9]/g, "").slice(0, 7))}
+              onChange={(e) => setCustom(decimalAmount(e.target.value))}
               inputMode="decimal"
               placeholder={t("customAmount")}
               aria-label={t("customAmount")}

@@ -1823,7 +1823,11 @@
     "amountTooLow": "Donacioni Minimal Është {min}",
     "selectProject": "Zgjidhni Një Projekt",
     "nameRequired": "Shkruani Emrin Tuaj",
-    "acceptTerms": "Duhet të Pranoni Kushtet"
+    "acceptTerms": "Duhet të Pranoni Kushtet",
+    "invalidCardNumber": "Numri i kartës nuk është i vlefshëm. Ju lutem kontrollojeni.",
+    "invalidCardExpiry": "Data e skadimit është e pavlefshme ose ka kaluar.",
+    "invalidCardCvc": "Kodi i sigurisë (CVC) nuk është i vlefshëm.",
+    "tooManyPaymentAttempts": "Shumë përpjekje pagese. Ju lutem provoni më vonë."
   },
   "waqf": {
     "chooseUnit": "Zgjidhni tipin dhe numrin e kontributit",

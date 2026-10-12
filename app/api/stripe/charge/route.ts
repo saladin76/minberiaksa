@@ -4,6 +4,7 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 import { prisma } from "@/lib/prisma";
 import Stripe from "stripe";
 import { firstChargeForPlan, normalizeTimezone, type RecurringFrequency } from "@/lib/donations/recurring-schedule";
+import { toStripeMinorUnits } from "@/lib/stripe-amount";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: "2026-03-25.dahlia",
@@ -77,7 +78,7 @@ export async function POST(req: NextRequest) {
 
     const locale = (body.locale ?? donation.locale ?? "en").toLowerCase();
     const currency = (donation.currency || "USD").toLowerCase();
-    const amountInSmallestUnit = Math.round(donation.totalAmount * 100);
+    const amountInSmallestUnit = toStripeMinorUnits(donation.totalAmount, currency);
 
     const campaignNames = donation.items.map((i) => i.campaign.title).join(", ");
     const categoryNames = donation.categoryItems.map((i) => i.category.name).join(", ");
@@ -142,7 +143,7 @@ export async function POST(req: NextRequest) {
        the first invoice as a one-off line. */
     const planFees = (plan.amount + plan.teamSupport) * 0.03;
     const planTotal = plan.amount + plan.teamSupport + (plan.coverFees ? planFees : 0);
-    const recurringInSmallestUnit = Math.round(planTotal * 100);
+    const recurringInSmallestUnit = toStripeMinorUnits(planTotal, currency);
 
     /* The plan bills on the donor's chosen day and time, not on the day they
        checked out. Stripe cannot anchor a monthly cycle further out than its

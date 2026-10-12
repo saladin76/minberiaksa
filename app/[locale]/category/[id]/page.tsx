@@ -17,9 +17,11 @@ import { miaPath, type MinbarRoute } from "@/lib/minbar/routes";
 import MinbarMessages from "@/components/minbar/MinbarMessages";
 import CategoryLandingPage from "@/components/minbar/categories/CategoryLandingPage";
 import PageBanners from "@/components/minbar/banners/PageBanners";
+import { withIncomingQuery, type IncomingSearchParams } from "@/lib/minbar/redirect-query";
 
 interface Props {
   params: Promise<{ id: string; locale: string }>;
+  searchParams: Promise<IncomingSearchParams>;
 }
 
 /** The page's own namespaces, on top of the shell bundle. */
@@ -132,8 +134,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
  * (`PRODUCTION_SEO_CONTRACT.md`). This replaced a client-side list that fetched
  * the category and its campaigns after hydration.
  */
-export default async function CategoryPage({ params }: Props) {
-  const { id, locale } = await params;
+export default async function CategoryPage({ params, searchParams }: Props) {
+  const [{ id, locale }, query] = await Promise.all([params, searchParams]);
 
   // Redirect to the canonical per-locale slug when the URL doesn't match 
   // e.g. after a language switch keeps the previous locale's slug, or when
@@ -153,11 +155,12 @@ export default async function CategoryPage({ params }: Props) {
       const template = pageTemplate(category.pageTemplate);
       /* Localised slugs are Arabic in Arabic, and a `Location` header must be
          ASCII, so the path is encoded segment by segment. */
-      if (template) redirect(encodeURI(miaPath(TEMPLATE_ROUTES[template], locale)));
+      // Both redirects keep the query: ad links carry utm_* / gclid / fbclid.
+      if (template) redirect(withIncomingQuery(encodeURI(miaPath(TEMPLATE_ROUTES[template], locale)), query));
 
       const canonical = pickLocaleSlug(category.slug, category.translations, locale) ?? category.id;
       if (id !== canonical && (isObjectId(id) || id !== category.id)) {
-        redirect(`/${locale}/category/${encodeURIComponent(canonical)}`);
+        redirect(withIncomingQuery(`/${locale}/category/${encodeURIComponent(canonical)}`, query));
       }
     }
   } catch (err) {

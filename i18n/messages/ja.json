@@ -1823,7 +1823,11 @@
     "amountTooLow": "金額が少なすぎます（最低{min}）",
     "selectProject": "プロジェクトを選択してください",
     "nameRequired": "お名前を入力してください",
-    "acceptTerms": "続けるには規約に同意してください"
+    "acceptTerms": "続けるには規約に同意してください",
+    "invalidCardNumber": "カード番号が無効です。ご確認ください。",
+    "invalidCardExpiry": "有効期限が無効か、すでに過ぎています。",
+    "invalidCardCvc": "セキュリティコード（CVC）が無効です。",
+    "tooManyPaymentAttempts": "支払いの試行回数が多すぎます。しばらくしてから再度お試しください。"
   },
   "waqf": {
     "chooseUnit": "単位を選ぶ",

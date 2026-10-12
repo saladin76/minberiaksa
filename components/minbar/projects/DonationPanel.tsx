@@ -1,5 +1,6 @@
 "use client";
 
+import { decimalAmount, digitsOnly } from "@/lib/minbar/numeric-input";
 import { useState, type CSSProperties } from "react";
 import { useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
@@ -290,7 +291,7 @@ export default function DonationPanel({ project, donorCount = 0 }: { project: Mi
         <input
           value={custom}
           /* Whole shares only; a count has no leading zero. */
-          onChange={(e) => setCustom(shares ? e.target.value.replace(/[^0-9]/g, "").replace(/^0+/, "").slice(0, 6) : e.target.value.replace(/[^0-9]/g, ""))}
+          onChange={(e) => setCustom(shares ? digitsOnly(e.target.value).replace(/^0+/, "").slice(0, 6) : decimalAmount(e.target.value))}
           inputMode={shares ? "numeric" : "decimal"}
           placeholder={shares ? tShares("customCountPh") : tCart("customAmountPh")}
           aria-label={shares ? tShares("customCountPh") : tCart("customAmountPh")}

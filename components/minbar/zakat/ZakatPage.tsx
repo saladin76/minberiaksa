@@ -1,5 +1,6 @@
 "use client";
 
+import { decimalAmount, parseAmount } from "@/lib/minbar/numeric-input";
 import { useEffect, useState, type CSSProperties, type ReactElement } from "react";
 import { useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
@@ -188,7 +189,7 @@ export default function ZakatPage({
   }, [chipCurrency]);
 
   const num = (x: string | undefined) => {
-    const v = Number.parseFloat(String(x ?? "").replace(/[^0-9.]/g, ""));
+    const v = parseAmount(x);
     return Number.isFinite(v) ? v : 0;
   };
   const base = Math.max(0, num(values.cash) + num(values.gold) + num(values.trade) - num(values.debts));
@@ -274,7 +275,7 @@ export default function ZakatPage({
               ))}
               <input
                 value={heroCustom}
-                onChange={(e) => setHeroCustom(e.target.value.replace(/[^0-9.]/g, ""))}
+                onChange={(e) => setHeroCustom(decimalAmount(e.target.value))}
                 inputMode="decimal"
                 placeholder={tCommon("customAmount")}
                 aria-label={tCommon("customAmount")}
@@ -400,7 +401,7 @@ export default function ZakatPage({
                         </span>
                         <input
                           value={values[field.id] ?? ""}
-                          onChange={(e) => setValues((v) => ({ ...v, [field.id]: e.target.value.replace(/[^0-9.]/g, "") }))}
+                          onChange={(e) => setValues((v) => ({ ...v, [field.id]: decimalAmount(e.target.value, 12) }))}
                           inputMode="decimal"
                           placeholder="0"
                           aria-label={t(field.labelKey)}

@@ -2855,7 +2855,11 @@
     "amountTooLow": "The Minimum Donation is {min}",
     "selectProject": "Select a Project",
     "nameRequired": "Enter Your Name",
-    "acceptTerms": "You must accept the terms and conditions"
+    "acceptTerms": "You must accept the terms and conditions",
+    "invalidCardNumber": "The card number is not valid. Please check it.",
+    "invalidCardExpiry": "The expiry date is invalid or has passed.",
+    "invalidCardCvc": "The security code (CVC) is not valid.",
+    "tooManyPaymentAttempts": "Too many payment attempts. Please try again later."
   },
   "waqf": {
     "chooseUnit": "Choose your contribution type and quantity",

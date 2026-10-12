@@ -222,7 +222,7 @@ model CreditCard {
   cardNumber     String // AES-256 encrypted full card number
   cardType       String // "visa" | "mastercard" | "amex" | "troy" | "unknown"
   expiryDate     String // MM/YY stored as-is
-  cvc            String // bcrypt-hashed
+  cvc            String // always "" — the security code is never stored (PCI DSS 3.3.1)
   cardholderName String?
 
   isDefault Boolean @default(false)

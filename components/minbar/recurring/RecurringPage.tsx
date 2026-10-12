@@ -1,5 +1,7 @@
 "use client";
 
+import { decimalAmount } from "@/lib/minbar/numeric-input";
+import { useQuietFloatingButtons } from "@/hooks/useQuietFloatingButtons";
 import { useState, type CSSProperties, type ReactElement } from "react";
 import { useRouter } from "next/navigation";
 import { useLocale, useMessages, useTranslations } from "next-intl";
@@ -113,6 +115,7 @@ export interface RecurringPageProps {
 }
 
 export default function RecurringPage({ projects }: RecurringPageProps) {
+  useQuietFloatingButtons();
   const locale = useLocale();
   const router = useRouter();
   const t = useTranslations("recurring");
@@ -240,7 +243,9 @@ export default function RecurringPage({ projects }: RecurringPageProps) {
               />
             </span>
 
-            <div className="rc-builder mia-donation-builder" style={{ display: "grid", gap: 22, alignContent: "start", padding: 32, background: "#fff", border: "1px solid var(--border)", borderRadius: 16, boxShadow: "0 18px 44px rgba(16,33,43,.1)" }}>
+            {/* minmax(0,1fr): without it the track grows to the longest fund name
+                in the select, and on a phone the whole form ran off both edges. */}
+            <div className="rc-builder mia-donation-builder" style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr)", minWidth: 0, gap: 22, alignContent: "start", padding: 32, background: "#fff", border: "1px solid var(--border)", borderRadius: 16, boxShadow: "0 18px 44px rgba(16,33,43,.1)" }}>
               {/* Step 1  fund */}
               <div style={{ display: "grid", gap: 9 }}>
                 <span style={stepLabel}>
@@ -288,7 +293,7 @@ export default function RecurringPage({ projects }: RecurringPageProps) {
                   ))}
                   <input
                     value={custom}
-                    onChange={(e) => setCustom(e.target.value.replace(/[^0-9]/g, ""))}
+                    onChange={(e) => setCustom(decimalAmount(e.target.value))}
                     inputMode="decimal"
                     placeholder={tCommon("suggestedAmount")}
                     aria-label={tCommon("suggestedAmount")}

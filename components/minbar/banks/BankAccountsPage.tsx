@@ -1,5 +1,6 @@
 "use client";
 
+import { decimalAmount, parseAmount } from "@/lib/minbar/numeric-input";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
@@ -48,7 +49,7 @@ export default function BankAccountsPage({ banks }: { banks: readonly MinbarBank
 
   /** Records the intended transfer so the finance team can match it. */
   const onConfirm = () => {
-    const value = Number(amount.replace(/[^0-9.]/g, ""));
+    const value = parseAmount(amount);
     if (!(value > 0)) return;
     /* Typed in the donor's own currency, and kept exactly as typed. */
     const given = fromLocal(value);
@@ -119,7 +120,7 @@ export default function BankAccountsPage({ banks }: { banks: readonly MinbarBank
                 <span style={{ display: "grid", placeItems: "center", width: 34, background: "var(--sand)", color: "var(--muted)", fontSize: 13, fontWeight: 900 }}>$</span>
                 <input
                   value={amount}
-                  onChange={(e) => setAmount(e.target.value.replace(/[^0-9.]/g, ""))}
+                  onChange={(e) => setAmount(decimalAmount(e.target.value))}
                   inputMode="decimal"
                   placeholder={tCommon("amount")}
                   aria-label={tCommon("amount")}

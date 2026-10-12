@@ -11,6 +11,7 @@ import {
 } from "@/lib/exchange/convert-amount-in-currency-to-usd";
 import { getDonorCountryCodeForSnapshot } from "@/lib/donations/donor-country-code";
 import { mintDonationAccessToken } from "@/lib/donations/access-token";
+import { toStripeMinorUnits } from "@/lib/stripe-amount";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: "2026-03-25.dahlia",
@@ -66,7 +67,7 @@ export async function POST(req: NextRequest) {
     const fees = (totalAmount + teamSupport) * 0.03;
     const finalTotal = totalAmount + teamSupport + (coverFees ? fees : 0);
     const stripeCurrency = String(currency).toLowerCase();
-    const stripeAmount = Math.round(finalTotal * 100);
+    const stripeAmount = toStripeMinorUnits(finalTotal, stripeCurrency);
 
     // Referral
     let referralId: string | null = null;

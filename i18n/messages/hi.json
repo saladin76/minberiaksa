@@ -1823,7 +1823,11 @@
     "amountTooLow": "राशि बहुत कम है  न्यूनतम {min}",
     "selectProject": "परियोजना चुनें",
     "nameRequired": "अपना नाम दर्ज करें",
-    "acceptTerms": "आगे बढ़ने के लिए शर्तें स्वीकार करें"
+    "acceptTerms": "आगे बढ़ने के लिए शर्तें स्वीकार करें",
+    "invalidCardNumber": "कार्ड नंबर मान्य नहीं है। कृपया जाँच करें।",
+    "invalidCardExpiry": "समाप्ति तिथि अमान्य है या बीत चुकी है।",
+    "invalidCardCvc": "सुरक्षा कोड (CVC) मान्य नहीं है।",
+    "tooManyPaymentAttempts": "भुगतान के बहुत अधिक प्रयास। कृपया बाद में पुनः प्रयास करें।"
   },
   "waqf": {
     "chooseUnit": "इकाई चुनें",

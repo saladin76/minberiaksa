@@ -1823,7 +1823,11 @@
     "amountTooLow": "Jumlah terlalu rendah  sekurang-kurangnya {min}",
     "selectProject": "Pilih Satu Projek",
     "nameRequired": "Sila Masukkan Nama Anda",
-    "acceptTerms": "Terima Terma Untuk Meneruskan"
+    "acceptTerms": "Terima Terma Untuk Meneruskan",
+    "invalidCardNumber": "Nombor kad tidak sah. Sila semak semula.",
+    "invalidCardExpiry": "Tarikh luput tidak sah atau telah berlalu.",
+    "invalidCardCvc": "Kod keselamatan (CVC) tidak sah.",
+    "tooManyPaymentAttempts": "Terlalu banyak cubaan pembayaran. Sila cuba lagi kemudian."
   },
   "waqf": {
     "chooseUnit": "Pilih Unit",

@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import Stripe from "stripe";
 import { getDonorCountryCodeForSnapshot } from "@/lib/donations/donor-country-code";
 import { mintDonationAccessToken } from "@/lib/donations/access-token";
+import { toStripeMinorUnits } from "@/lib/stripe-amount";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: "2026-03-25.dahlia",
@@ -49,7 +50,7 @@ export async function POST(req: NextRequest) {
 
     const locale = (body.locale ?? donation.locale ?? "en").toLowerCase();
     const currency = (donation.currency || "USD").toLowerCase();
-    const amountInSmallestUnit = Math.round(donation.totalAmount * 100);
+    const amountInSmallestUnit = toStripeMinorUnits(donation.totalAmount, currency);
 
     const campaignNames = donation.items.map((i) => i.campaign.title).join(", ");
     const categoryNames = donation.categoryItems.map((i) => i.category.name).join(", ");

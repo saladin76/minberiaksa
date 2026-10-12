@@ -1,5 +1,17 @@
 "use client";
 
+import { useQuietFloatingButtons } from "@/hooks/useQuietFloatingButtons";
+import { digitsOnly } from "@/lib/minbar/numeric-input";
+import { checkCardFields } from "@/lib/minbar/card-validation";
+
+/** Server refusal codes (`app/api/albaraka/3d/initiate`) → `validation` messages. */
+const CARD_ERROR_KEYS: Record<string, string> = {
+  CARD_REQUIRED: "required",
+  INVALID_CARD_NUMBER: "invalidCardNumber",
+  INVALID_CARD_EXPIRY: "invalidCardExpiry",
+  INVALID_CARD_CVC: "invalidCardCvc",
+  TOO_MANY_ATTEMPTS: "tooManyPaymentAttempts",
+};
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -84,6 +96,7 @@ export interface CheckoutPageProps {
 }
 
 export default function CheckoutPage({ projects, projectAliases, categories, banks, donor, defaultCountry }: CheckoutPageProps) {
+  useQuietFloatingButtons();
   const locale = useLocale();
   const t = useTranslations("cart");
   const tCommon = useTranslations("common");
@@ -320,7 +333,7 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
     }
 
     const signedIn = Boolean(session?.user);
-    const phoneDigits = phone.replace(/\D/g, "");
+    const phoneDigits = digitsOnly(phone);
     if (!signedIn && (!firstName.trim() || !email.trim() || phoneDigits.length < 7)) {
       setError(tValidation("required"));
       return;
@@ -341,6 +354,13 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
       } else if (needsOwnCardForm && (!cardNumber.trim() || !cardExpiry.trim() || !cardCvc.trim())) {
         setError(tValidation("required"));
         return;
+      } else if (needsOwnCardForm) {
+        // Caught here, before the order exists, so a typo leaves no FAILED row.
+        const cardError = checkCardFields(cardNumber, cardExpiry, cardCvc);
+        if (cardError) {
+          setError(tValidation(cardError));
+          return;
+        }
       }
     }
 
@@ -464,8 +484,12 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
       /* Say what actually went wrong. Every failure used to read "we are
          fixing the problem", which hid both a basket the order cannot carry
          and the server's own reason for refusing it. */
+      const knownCode = cause instanceof OrderRejectedError ? CARD_ERROR_KEYS[cause.code ?? ""] : undefined;
       if (cause instanceof UnpayableItemsError) {
         setError(t("itemsUnavailable", { items: cause.items.map(resolveTitle).join("، ") }));
+      } else if (knownCode) {
+        // The server's reason, in the donor's language rather than its English text.
+        setError(tValidation(knownCode));
       } else if (cause instanceof OrderRejectedError && cause.status >= 400 && cause.status < 500 && cause.message !== "order-failed" && cause.message !== "gateway-failed") {
         setError(cause.message);
       } else {
@@ -830,7 +854,7 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
                       <span style={{ fontSize: 12, fontWeight: 800, color: "var(--muted)" }}>{t("cardNumber")}</span>
                       <input
                         value={cardNumber}
-                        onChange={(e) => setCardNumber(e.target.value.replace(/[^0-9]/g, "").slice(0, 19))}
+                        onChange={(e) => setCardNumber(digitsOnly(e.target.value, 19))}
                         onFocus={() => setCardFocus("number")}
                         inputMode="numeric"
                         autoComplete="cc-number"
@@ -845,7 +869,7 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
                       <input
                         value={cardExpiry}
                         onChange={(e) => {
-                          const digits = e.target.value.replace(/[^0-9]/g, "").slice(0, 4);
+                          const digits = digitsOnly(e.target.value, 4);
                           setCardExpiry(digits.length > 2 ? `${digits.slice(0, 2)}/${digits.slice(2)}` : digits);
                         }}
                         onFocus={() => setCardFocus("expiry")}
@@ -861,7 +885,7 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
                       <span style={{ fontSize: 12, fontWeight: 800, color: "var(--muted)" }}>CVC</span>
                       <input
                         value={cardCvc}
-                        onChange={(e) => setCardCvc(e.target.value.replace(/[^0-9]/g, "").slice(0, 4))}
+                        onChange={(e) => setCardCvc(digitsOnly(e.target.value, 4))}
                         onFocus={() => setCardFocus("cvc")}
                         onBlur={() => setCardFocus(undefined)}
                         inputMode="numeric"
@@ -896,16 +920,21 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
               >
                 <b style={{ fontStyle: "italic", fontWeight: 900, color: "#253B80", letterSpacing: "-.02em" }}>PayPal</b>
                 <span aria-hidden="true" style={{ width: 1, height: 20, background: "rgba(16,33,43,.2)" }} />
-                {t("ctaComplete")}
+                {submitting ? tSystem("processing") : <>{t("ctaComplete")} · <bdi>{totalLabel}</bdi></>}
               </button>
             ) : (
               <button
                 type="submit"
                 disabled={submitting || !items.length || belowMinimum || (method === "card" && cardRailUnavailable)}
                 className="mia-card-cta"
-                style={{ width: "100%", height: 52, border: 0, borderRadius: 8, background: "var(--red)", color: "#fff", fontFamily: "inherit", fontWeight: 900, fontSize: 16, cursor: "pointer", boxShadow: "var(--shadow-cta)", transition: "filter .18s ease" }}
+                aria-busy={submitting}
+                style={{ width: "100%", minHeight: 52, padding: "8px 14px", border: 0, borderRadius: 8, background: "var(--red)", color: "#fff", fontFamily: "inherit", fontWeight: 900, fontSize: 16, cursor: submitting ? "progress" : "pointer", opacity: submitting ? 0.85 : 1, boxShadow: "var(--shadow-cta)", transition: "filter .18s ease" }}
               >
-                {method === "bank" ? t("ctaBankContinue") : t("ctaComplete")}
+                {/* The amount sits on the button: on a phone the summary is above
+                    the form, so this is the last place the donor sees it. */}
+                {submitting
+                  ? tSystem("processing")
+                  : <>{method === "bank" ? t("ctaBankContinue") : t("ctaComplete")} · <bdi>{totalLabel}</bdi></>}
               </button>
             )}
 

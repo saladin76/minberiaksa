@@ -1,3 +1,4 @@
+import { runAfterResponse } from "@/lib/events/after-response";
 import { NextRequest, NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
@@ -43,7 +44,7 @@ export async function POST(req: NextRequest) {
           providerRaw: mergePayForProviderRaw(donation.providerRaw, raw) as Prisma.InputJsonValue,
         },
       });
-      void dispatchEvent("DONATION_FAILED", { donationId });
+      runAfterResponse(() => dispatchEvent("DONATION_FAILED", { donationId }));
       // Seed Meta with the failed attempt so lookalike audiences can include
       // donors-who-tried. Browser pixel fires the matching DonateFailed hit
       // with event_id `${donationId}_failed`  same id here for dedup.

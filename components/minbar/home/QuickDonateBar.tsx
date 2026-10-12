@@ -1,5 +1,6 @@
 "use client";
 
+import { decimalAmount } from "@/lib/minbar/numeric-input";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
@@ -278,7 +279,7 @@ export default function QuickDonateBar({ config, projects }: { config: QuickDona
           <small dir="ltr">{symbol}</small>
           <input
             value={custom}
-            onChange={(e) => setCustom(e.target.value.replace(/[^0-9]/g, "").slice(0, 7))}
+            onChange={(e) => setCustom(decimalAmount(e.target.value))}
             inputMode="numeric"
             placeholder={t("freeAmount")}
             aria-label={t("freeAmount")}

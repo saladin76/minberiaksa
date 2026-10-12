@@ -1,5 +1,6 @@
 "use client";
 
+import { decimalAmount } from "@/lib/minbar/numeric-input";
 import { useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { usePathname, useRouter } from "next/navigation";
@@ -481,7 +482,7 @@ function Configurator({ block, onAdd, onAction, busy }: { block: Extract<Concier
         ))}
         <input
           value={custom}
-          onChange={(e) => setCustom(e.target.value.replace(/[^0-9.]/g, ""))}
+          onChange={(e) => setCustom(decimalAmount(e.target.value))}
           inputMode="decimal"
           dir="ltr"
           placeholder={tCommon("customAmount")}

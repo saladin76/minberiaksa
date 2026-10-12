@@ -2855,7 +2855,11 @@
     "amountTooLow": "Le don minimum est de {min}",
     "selectProject": "Sélectionnez un Projet",
     "nameRequired": "Saisissez Votre Nom",
-    "acceptTerms": "Vous devez accepter les conditions générales"
+    "acceptTerms": "Vous devez accepter les conditions générales",
+    "invalidCardNumber": "Le numéro de carte n'est pas valide. Veuillez le vérifier.",
+    "invalidCardExpiry": "La date d'expiration est invalide ou dépassée.",
+    "invalidCardCvc": "Le code de sécurité (CVC) n'est pas valide.",
+    "tooManyPaymentAttempts": "Trop de tentatives de paiement. Veuillez réessayer plus tard."
   },
   "waqf": {
     "chooseUnit": "Choisissez le type et le nombre de parts",

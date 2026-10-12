@@ -1823,7 +1823,11 @@
     "amountTooLow": "Beløpet er for lavt  minst {min}",
     "selectProject": "Velg et Prosjekt",
     "nameRequired": "Skriv Inn Navnet Ditt",
-    "acceptTerms": "Godta Vilkårene for å Fortsette"
+    "acceptTerms": "Godta Vilkårene for å Fortsette",
+    "invalidCardNumber": "Kortnummeret er ugyldig. Sjekk det.",
+    "invalidCardExpiry": "Utløpsdatoen er ugyldig eller passert.",
+    "invalidCardCvc": "Sikkerhetskoden (CVC) er ugyldig.",
+    "tooManyPaymentAttempts": "For mange betalingsforsøk. Prøv igjen senere."
   },
   "waqf": {
     "chooseUnit": "Velg Enhet",

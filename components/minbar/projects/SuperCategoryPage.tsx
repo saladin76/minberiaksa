@@ -222,7 +222,7 @@ function Block({
                 href={block.linkUrl}
                 target={block.linkUrl.startsWith("http") ? "_blank" : undefined}
                 rel={block.linkUrl.startsWith("http") ? "noopener noreferrer" : undefined}
-                style={{ width: "fit-content", fontSize: 13.5, fontWeight: 900, color: "#A93428" }}
+                style={{ width: "fit-content", minHeight: 44, display: "inline-flex", alignItems: "center", gap: 6, fontSize: 13.5, fontWeight: 900, color: "#A93428" }}
               >
                 {block.linkLabel} <span aria-hidden="true">{arrow}</span>
               </a>

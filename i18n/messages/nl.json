@@ -1823,7 +1823,11 @@
     "amountTooLow": "De Minimale Donatie is {min}",
     "selectProject": "Selecteer een Project",
     "nameRequired": "Voer uw Naam in",
-    "acceptTerms": "U Moet de Voorwaarden Accepteren"
+    "acceptTerms": "U Moet de Voorwaarden Accepteren",
+    "invalidCardNumber": "Het kaartnummer is ongeldig. Controleer het.",
+    "invalidCardExpiry": "De vervaldatum is ongeldig of verstreken.",
+    "invalidCardCvc": "De beveiligingscode (CVC) is ongeldig.",
+    "tooManyPaymentAttempts": "Te veel betaalpogingen. Probeer het later opnieuw."
   },
   "waqf": {
     "chooseUnit": "Kies het type en aantal van uw bijdrage",

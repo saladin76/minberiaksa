@@ -1,5 +1,6 @@
 "use client";
 
+import { decimalAmount, digitsOnly } from "@/lib/minbar/numeric-input";
 import { useCallback, useState, type CSSProperties } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -314,7 +315,7 @@ export default function ProjectDonateCard({ project, width, tag }: ProjectDonate
           ))}
           <input
             value={custom}
-            onChange={(e) => setCustom(shares ? e.target.value.replace(/[^0-9]/g, "").replace(/^0+/, "").slice(0, 6) : e.target.value.replace(/[^0-9]/g, ""))}
+            onChange={(e) => setCustom(shares ? digitsOnly(e.target.value).replace(/^0+/, "").slice(0, 6) : decimalAmount(e.target.value))}
             inputMode={shares ? "numeric" : "decimal"}
             /* The card's own short word: the cell is a quarter of the row. */
             placeholder={shares ? tGive("otherCount") : tGive("otherAmount")}

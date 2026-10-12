@@ -1,4 +1,5 @@
 import "server-only";
+import { runAfterResponse } from "@/lib/events/after-response";
 
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
@@ -225,8 +226,8 @@ async function verifyAndSettle(donationId: string, order: PayPalOrder, snapshot:
   if (!settled.ok) return { kind: "failed", reason: "Donation not found" };
 
   if (!settled.alreadyPaid) {
-    void dispatchDonationPaid(donationId);
-    if (settled.subscriptionActivated) void dispatchEvent("SUBSCRIPTION_CREATED", { donationId });
+    runAfterResponse(() => dispatchDonationPaid(donationId));
+    if (settled.subscriptionActivated) runAfterResponse(() => dispatchEvent("SUBSCRIPTION_CREATED", { donationId }));
   }
   return { kind: "paid", accessToken: settled.accessToken };
 }
@@ -353,7 +354,7 @@ async function failDonation(donationId: string, reason: string, extra: Record<st
         providerRaw: { ...providerRawObject(donation.providerRaw), ...extra } as Prisma.InputJsonValue,
       },
     });
-    void dispatchEvent("DONATION_FAILED", { donationId });
+    runAfterResponse(() => dispatchEvent("DONATION_FAILED", { donationId }));
     void sendDonationFailedConversions(donationId);
   }
   /* A plan whose first instalment never settled was never started. */

@@ -1,5 +1,4 @@
 import crypto from "crypto";
-import bcrypt from "bcryptjs";
 
 const ALGO = "aes-256-cbc";
 
@@ -21,14 +20,6 @@ export function decryptCard(stored: string): string {
   const data = Buffer.from(dataHex, "hex");
   const decipher = crypto.createDecipheriv(ALGO, getKey(), iv);
   return Buffer.concat([decipher.update(data), decipher.final()]).toString("utf8");
-}
-
-export async function hashCvc(cvc: string): Promise<string> {
-  return bcrypt.hash(cvc, 10);
-}
-
-export async function verifyCvc(cvc: string, hash: string): Promise<boolean> {
-  return bcrypt.compare(cvc, hash);
 }
 
 /** Detect card brand from first digit / BIN */

@@ -1823,7 +1823,11 @@
     "amountTooLow": "La Donazione Minima è {min}",
     "selectProject": "Seleziona un Progetto",
     "nameRequired": "Inserisci il Tuo Nome",
-    "acceptTerms": "Devi accettare i termini e le condizioni"
+    "acceptTerms": "Devi accettare i termini e le condizioni",
+    "invalidCardNumber": "Il numero della carta non è valido. Controllalo.",
+    "invalidCardExpiry": "La data di scadenza non è valida o è già passata.",
+    "invalidCardCvc": "Il codice di sicurezza (CVC) non è valido.",
+    "tooManyPaymentAttempts": "Troppi tentativi di pagamento. Riprova più tardi."
   },
   "waqf": {
     "chooseUnit": "Scegli tipo e quantità del tuo contributo",

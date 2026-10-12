@@ -1823,7 +1823,11 @@
     "amountTooLow": "金额过低（最低 {min}）",
     "selectProject": "请选择项目",
     "nameRequired": "请输入姓名",
-    "acceptTerms": "请接受条款以继续"
+    "acceptTerms": "请接受条款以继续",
+    "invalidCardNumber": "卡号无效，请检查。",
+    "invalidCardExpiry": "有效期无效或已过期。",
+    "invalidCardCvc": "安全码（CVC）无效。",
+    "tooManyPaymentAttempts": "付款尝试次数过多，请稍后再试。"
   },
   "waqf": {
     "chooseUnit": "选择单位",
