@@ -2546,7 +2546,39 @@ html.cg-open .mia-scope:has(.mia-qb-sec) { padding-bottom: 0; }
  * ───────────────────────────────────────────────────────────────────────────── */
 
 .mia-scope .rc-video:hover { transform: translateY(-3px); box-shadow: 0 26px 56px rgba(16,33,43,.2); }
-.mia-scope .rc-select:hover { border-color: var(--gold); }
+
+/* The fund and day selects: the site's Radix listbox (`.mia-sel-*`), sized to
+   the builder. The fund list shows each project's cover, title and region; on
+   a phone the list is the trigger's width and the titles wrap instead of
+   pushing the card wider. */
+.mia-scope .rc-sel-trigger { background: var(--ivory); border-width: 1px; border-radius: 12px; }
+.mia-scope .rc-sel-trigger.rc-sel-fund { min-height: 62px; padding-block: 8px; padding-inline: 10px 14px; font-size: 15px; }
+.mia-scope .rc-sel-trigger.rc-sel-day { min-height: 44px; background: #fff; border-radius: 9px; font-size: 14px; }
+.mia-scope .rc-sel-trigger[data-disabled] { opacity: .6; cursor: not-allowed; }
+.rc-sel-content.rc-sel-fund { max-height: min(var(--radix-select-content-available-height), 420px); }
+.rc-sel-content.rc-sel-fund .mia-sel-item { min-height: 58px; padding-block: 7px; }
+.rc-sel-content.rc-sel-day { min-width: 0; }
+.rc-sel-content.rc-sel-day .mia-sel-viewport { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
+.rc-sel-content.rc-sel-day .mia-sel-item { justify-content: center; min-height: 38px; padding: 0 !important; text-align: center; font-variant-numeric: tabular-nums; }
+.rc-sel-content.rc-sel-day .mia-sel-item[data-state="checked"] { background: var(--gold); color: #fff; }
+.rc-sel-content.rc-sel-day .mia-sel-check { display: none; }
+.rc-sel-project { display: flex; align-items: center; gap: 12px; min-width: 0; text-align: start; }
+.rc-sel-thumb {
+  flex: 0 0 auto; width: 44px; height: 44px; border-radius: 10px;
+  background: var(--sand) url('/minbar/assets/patterns/aqsa-white-pattern.webp') center / cover no-repeat;
+  box-shadow: inset 0 0 0 1px rgba(16,33,43,.06);
+}
+.rc-sel-thumb[style] { background-size: cover; background-position: center; }
+.rc-sel-name { display: grid; gap: 2px; min-width: 0; }
+.rc-sel-title { font-weight: 900; color: var(--deep); line-height: 1.4; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; white-space: normal; }
+.rc-sel-meta { font-size: 11.5px; font-weight: 800; color: var(--gold-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mia-scope .rc-sel-trigger .rc-sel-title { -webkit-line-clamp: 1; }
+@media (max-width: 560px) {
+  .mia-scope .rc-sel-trigger.rc-sel-fund { min-height: 56px; font-size: 14px; }
+  .rc-sel-thumb { width: 38px; height: 38px; border-radius: 9px; }
+  .rc-sel-content.rc-sel-fund .mia-sel-item { min-height: 52px; }
+  .rc-sel-content.rc-sel-day .mia-sel-item { min-height: 40px; }
+}
 .mia-scope .rc-amt:hover { border-color: var(--gold); transform: translateY(-2px); box-shadow: 0 6px 14px rgba(211,154,39,.18); }
 .mia-scope .rc-input:focus { outline: 0; border-color: var(--gold); box-shadow: 0 0 0 3px rgba(211,154,39,.18); }
 .mia-scope .rc-seg:hover { color: var(--deep); }

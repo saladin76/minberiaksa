@@ -2,10 +2,12 @@
 
 import { decimalAmount } from "@/lib/minbar/numeric-input";
 import { useQuietFloatingButtons } from "@/hooks/useQuietFloatingButtons";
-import { useState, type CSSProperties, type ReactElement } from "react";
+import { useState, type CSSProperties, type ReactElement, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { useLocale, useMessages, useTranslations } from "next-intl";
+import * as SelectPrimitive from "@radix-ui/react-select";
 import { Button } from "@/components/minbar/ds";
+import { LOCALES } from "@/lib/locales";
 import { miaPath } from "@/lib/minbar/routes";
 import { addToCart, type CartFreqKey, type CartRecurringSchedule } from "@/lib/minbar/cart";
 import { verseBlock } from "@/lib/minbar/quran";
@@ -126,7 +128,9 @@ export default function RecurringPage({ projects }: RecurringPageProps) {
   const messages = useMessages() as { quran?: Record<string, { ar?: string; label?: string; t?: string }> };
   const verse = verseBlock(messages.quran ?? {}, "baqarah_261", locale);
 
-  const [projectSlug, setProjectSlug] = useState<string | null>(null);
+  const dir = (LOCALES as Record<string, { direction?: "rtl" | "ltr" }>)[locale]?.direction ?? "rtl";
+  // Every option is a real project; the first one is chosen until the donor picks another.
+  const [projectSlug, setProjectSlug] = useState<string | null>(projects[0]?.slug ?? null);
   const [amount, setAmount] = useState(100);
   const [custom, setCustom] = useState("");
   const [freq, setFreq] = useState<Exclude<CartFreqKey, "once">>("monthly");
@@ -141,13 +145,10 @@ export default function RecurringPage({ projects }: RecurringPageProps) {
   const selectedProject = projects.find((p) => p.slug === projectSlug) ?? null;
 
   const onDonate = () => {
-    if (!(value > 0)) return;
+    if (!(value > 0) || !selectedProject) return;
     addToCart({
-      // A plan against a specific project carries its id; otherwise it is the
-      // general recurring fund, named by its translated key.
-      projectId: selectedProject?.slug,
-      titleKey: selectedProject ? undefined : "whereNeedGreatest",
-      title: selectedProject?.title,
+      projectId: selectedProject.slug,
+      title: selectedProject.title,
       typeKey: "recurring",
       freqKey: freq,
       amount: value,
@@ -254,20 +255,20 @@ export default function RecurringPage({ projects }: RecurringPageProps) {
                   {stepBadge(1)}
                   {t("chooseFund")}
                 </span>
-                <select
-                  value={projectSlug ?? ""}
-                  onChange={(e) => setProjectSlug(e.target.value || null)}
-                  aria-label={t("chooseFund")}
-                  className="rc-select"
-                  style={{ minHeight: 50, border: "1px solid var(--border)", borderRadius: 10, padding: "0 14px", fontFamily: "inherit", fontSize: 15, fontWeight: 800, color: "var(--deep)", background: "var(--ivory)", cursor: "pointer", transition: "border-color .18s ease" }}
-                >
-                  <option value="">{tCommon("whereNeedGreatest")}</option>
-                  {projects.map((project) => (
-                    <option key={project.slug} value={project.slug}>
-                      {project.title}
-                    </option>
-                  ))}
-                </select>
+                <PlanSelect
+                  value={projectSlug ?? undefined}
+                  onChange={setProjectSlug}
+                  label={t("chooseFund")}
+                  dir={dir}
+                  variant="fund"
+                  disabled={!projects.length}
+                  display={selectedProject ? <ProjectOption title={selectedProject.title} image={selectedProject.image} /> : t("chooseFund")}
+                  options={projects.map((project) => ({
+                    value: project.slug,
+                    text: project.title,
+                    content: <ProjectOption title={project.title} image={project.image} meta={project.regionLabel} />,
+                  }))}
+                />
               </div>
 
               {/* Step 2  amount */}
@@ -337,20 +338,18 @@ export default function RecurringPage({ projects }: RecurringPageProps) {
                 </div>
 
                 {freq === "monthly" ? (
-                  <label style={{ display: "grid", gap: 6 }}>
+                  <div style={{ display: "grid", gap: 6 }}>
                     <span style={{ fontSize: 11, fontWeight: 800, color: "var(--muted)" }}>{t("dayOfMonth")}</span>
-                    <select
-                      value={monthDay}
-                      onChange={(e) => setMonthDay(Number(e.target.value))}
-                      style={{ width: "100%", minWidth: 0, boxSizing: "border-box", height: 40, border: "1px solid var(--border)", borderRadius: 8, background: "#fff", padding: "0 14px", fontFamily: "inherit", fontWeight: 800, fontSize: 13.5, color: "var(--deep)", cursor: "pointer" }}
-                    >
-                      {MONTH_DAYS.map((d) => (
-                        <option key={d} value={d}>
-                          {formatNumber(d)}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
+                    <PlanSelect
+                      value={String(monthDay)}
+                      onChange={(v) => setMonthDay(Number(v))}
+                      label={t("dayOfMonth")}
+                      dir={dir}
+                      variant="day"
+                      display={formatNumber(monthDay)}
+                      options={MONTH_DAYS.map((d) => ({ value: String(d), text: formatNumber(d), content: formatNumber(d) }))}
+                    />
+                  </div>
                 ) : null}
 
                 <div style={{ display: "grid", gap: 7 }}>
@@ -400,7 +399,7 @@ export default function RecurringPage({ projects }: RecurringPageProps) {
                 </span>
               </div>
 
-              <Button variant="primary" size="lg" full onClick={onDonate} style={{ height: 54 }}>
+              <Button variant="primary" size="lg" full onClick={onDonate} disabled={!selectedProject} style={{ height: 54 }}>
                 {t("createPlan")}
               </Button>
 
@@ -495,6 +494,85 @@ export default function RecurringPage({ projects }: RecurringPageProps) {
         </div>
       </section>
     </div>
+  );
+}
+
+interface PlanSelectOption {
+  value: string;
+  /** Plain text for type-ahead and the screen-reader value. */
+  text: string;
+  content: ReactNode;
+}
+
+/**
+ * The form's listbox: the site's Radix Select (`mia-sel-*`, as in the quick
+ * donate bar), portaled so the list is never clipped by the builder card. It
+ * carries `mia-scope` itself to keep the site's tokens and fonts outside the
+ * page tree, and takes the trigger's width so it fits a phone screen.
+ */
+function PlanSelect({
+  value,
+  onChange,
+  label,
+  dir,
+  variant,
+  display,
+  options,
+  disabled,
+}: {
+  value: string | undefined;
+  onChange: (value: string) => void;
+  label: string;
+  dir: "rtl" | "ltr";
+  variant: "fund" | "day";
+  display: ReactNode;
+  options: PlanSelectOption[];
+  disabled?: boolean;
+}) {
+  return (
+    <SelectPrimitive.Root value={value} onValueChange={onChange} dir={dir} disabled={disabled}>
+      <SelectPrimitive.Trigger className={`mia-sel-trigger rc-sel-trigger rc-sel-${variant}`} aria-label={label}>
+        <SelectPrimitive.Value>{display}</SelectPrimitive.Value>
+        <SelectPrimitive.Icon className="mia-sel-icon">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="m6 9 6 6 6-6" />
+          </svg>
+        </SelectPrimitive.Icon>
+      </SelectPrimitive.Trigger>
+      <SelectPrimitive.Portal>
+        <SelectPrimitive.Content className={`mia-scope mia-sel-content rc-sel-content rc-sel-${variant}`} dir={dir} position="popper" sideOffset={6} collisionPadding={12}>
+          <SelectPrimitive.ScrollUpButton className="mia-sel-scroll" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="m6 15 6-6 6 6" /></svg>
+          </SelectPrimitive.ScrollUpButton>
+          <SelectPrimitive.Viewport className="mia-sel-viewport">
+            {options.map((option) => (
+              <SelectPrimitive.Item key={option.value} value={option.value} textValue={option.text} className="mia-sel-item">
+                <SelectPrimitive.ItemText>{option.content}</SelectPrimitive.ItemText>
+                <SelectPrimitive.ItemIndicator className="mia-sel-check">
+                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="m5 12 5 5L20 7" /></svg>
+                </SelectPrimitive.ItemIndicator>
+              </SelectPrimitive.Item>
+            ))}
+          </SelectPrimitive.Viewport>
+          <SelectPrimitive.ScrollDownButton className="mia-sel-scroll" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6" /></svg>
+          </SelectPrimitive.ScrollDownButton>
+        </SelectPrimitive.Content>
+      </SelectPrimitive.Portal>
+    </SelectPrimitive.Root>
+  );
+}
+
+/** A project in the fund list: its cover, its title, and where it is. */
+function ProjectOption({ title, image, meta }: { title: string; image: string | null; meta?: string | null }) {
+  return (
+    <span className="rc-sel-project">
+      <span className="rc-sel-thumb" aria-hidden="true" style={image ? { backgroundImage: `url("${image}")` } : undefined} />
+      <span className="rc-sel-name">
+        <span className="rc-sel-title">{title}</span>
+        {meta ? <span className="rc-sel-meta">{meta}</span> : null}
+      </span>
+    </span>
   );
 }
 
