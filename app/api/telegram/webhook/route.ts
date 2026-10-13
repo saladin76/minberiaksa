@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getTelegramConfig } from "@/lib/telegram/config";
+import { adoptMigratedChat, getTelegramConfig } from "@/lib/telegram/config";
 import { dispatchTelegramCommand } from "@/lib/telegram/commands";
 
 // Bump the Node serverless time budget so cold-start + Prisma connect + a few
@@ -71,6 +71,14 @@ export async function POST(req: NextRequest) {
   const entities = Array.isArray(message.entities)
     ? (message.entities as Array<{ type?: string; offset?: number; length?: number }>)
     : null;
+
+  // The service message Telegram posts in a group just upgraded to a
+  // supergroup: carry the old chat's role over to the new id.
+  const migratedFrom = message.migrate_from_chat_id;
+  if (chat?.id != null && (typeof migratedFrom === "number" || typeof migratedFrom === "string")) {
+    adoptMigratedChat(String(migratedFrom), String(chat.id));
+    return NextResponse.json({ ok: true });
+  }
 
   if (!chat?.id || !text) return NextResponse.json({ ok: true });
 

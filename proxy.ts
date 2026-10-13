@@ -17,6 +17,12 @@ const intl = createIntlMiddleware({
   locales: LOCALES,
   defaultLocale: DEFAULT_LOCALE,
   localePrefix: 'always',
+  // No hreflang `Link` response header. It lists the URL in every locale, and
+  // with a long Arabic project slug (percent-encoded, ×19 locales) the headers
+  // outgrew nginx's 4 KB proxy buffer: nginx answered 502 for exactly those
+  // projects. Every page already carries the same alternates as
+  // <link rel="alternate" hreflang> tags in its HTML (generateMetadata).
+  alternateLinks: false,
 });
 
 const CURRENCY_COOKIE_MAX_AGE = 60 * 60 * 24 * 365; // 1 year

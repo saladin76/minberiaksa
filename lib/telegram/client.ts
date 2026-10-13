@@ -1,10 +1,11 @@
-import { getTelegramConfig } from "./config";
+import { adoptMigratedChat, getTelegramConfig } from "./config";
 
 interface TelegramApiResponse<T> {
   ok: boolean;
   result?: T;
   description?: string;
   error_code?: number;
+  parameters?: { migrate_to_chat_id?: number; retry_after?: number };
 }
 
 async function call<T>(method: string, payload: Record<string, unknown>): Promise<TelegramApiResponse<T>> {
@@ -22,6 +23,12 @@ async function call<T>(method: string, payload: Record<string, unknown>): Promis
       signal: AbortSignal.timeout(10_000),
     });
     const data = (await res.json()) as TelegramApiResponse<T>;
+    // The group was upgraded to a supergroup: switch to its new id and resend.
+    const migratedTo = data.parameters?.migrate_to_chat_id;
+    if (!data.ok && migratedTo != null && payload.chat_id != null && String(payload.chat_id) !== String(migratedTo)) {
+      adoptMigratedChat(String(payload.chat_id), String(migratedTo));
+      return call<T>(method, { ...payload, chat_id: migratedTo });
+    }
     if (!data.ok) {
       console.warn(`[telegram] ${method} failed:`, data.description, data.error_code);
     }

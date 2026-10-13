@@ -51,6 +51,24 @@ export function getTelegramConfig(): TelegramConfig | null {
   return cached;
 }
 
+/**
+ * A group that Telegram upgraded to a supergroup gets a new id; the old one
+ * answers every send with "group chat was upgraded to a supergroup chat" and
+ * the new id in `parameters.migrate_to_chat_id`. Adopt it for the life of
+ * the process  as the notifications chat if it was that one, and as a chat
+ * allowed to send commands  and say loudly which env value to update so the
+ * next restart starts with the right id.
+ */
+export function adoptMigratedChat(oldId: string, newId: string): void {
+  const cfg = getTelegramConfig();
+  if (!cfg) return;
+  if (cfg.notificationsChatId === oldId) cfg.notificationsChatId = newId;
+  if (cfg.allowedChatIds.has(oldId)) cfg.allowedChatIds.add(newId);
+  console.error(
+    `[telegram] chat ${oldId} became supergroup ${newId}. Set TELEGRAM_NOTIFICATIONS_CHAT_ID=${newId} (and update TELEGRAM_ALLOWED_CHAT_IDS if it lists ${oldId}), then restart.`
+  );
+}
+
 /** Reset the cached config (useful in tests / hot-reload). */
 export function resetTelegramConfig(): void {
   cached = null;

@@ -38,7 +38,7 @@ async function resolveNextAuthParams(
 
 export async function GET(
   req: NextRequest,
-  ctx: { params?: NextAuthCatchAll | Promise<NextAuthCatchAll> }
+  ctx: { params: Promise<NextAuthCatchAll> }
 ) {
   const params = await resolveNextAuthParams(req, ctx);
   return nextAuth(req, { params } as { params: NextAuthCatchAll });
@@ -46,7 +46,7 @@ export async function GET(
 
 export async function POST(
   req: NextRequest,
-  ctx: { params?: NextAuthCatchAll | Promise<NextAuthCatchAll> }
+  ctx: { params: Promise<NextAuthCatchAll> }
 ) {
   const params = await resolveNextAuthParams(req, ctx);
   return nextAuth(req, { params } as { params: NextAuthCatchAll });

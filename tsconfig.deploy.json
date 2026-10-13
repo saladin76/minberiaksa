@@ -1,0 +1,32 @@
+{
+  // Used only by `scripts/deploy-vps.sh`, which builds into .next-build while the
+  // live server keeps .next (next.config.ts sets typescript.tsconfigPath to this
+  // file when NEXT_DIST_DIR is set). The main tsconfig lists .next/types; keeping
+  // both type folders in one program made the old and new route lists collide.
+  "extends": "./tsconfig.json",
+  "include": [
+    "next-env.d.ts",
+    "**/*.ts",
+    "**/*.tsx",
+    ".next-build/types/**/*.ts",
+    ".next-build/dev/types/**/*.ts",
+    "next.config.ts"
+  ],
+  // Repeated from tsconfig.json: Next reads this file without merging the base exclude list.
+  "exclude": [
+    "node_modules",
+    // Git-ignored local copies of other projects; absent on the server.
+    "gozbebekleri",
+    "Minbar",
+    "tmp",
+    "e2e",
+    "components/ui/toast.tsx",
+    "components/ui/toaster.tsx",
+    "components/ui/calendar.tsx",
+    "components/ui/slider.tsx",
+    "lib/blog/pages",
+    "app/[locale]/blog/_components/_components",
+    "app/[locale]/blog/_components/wysiwyg/BlogEditorAR.jsx",
+    "app/[locale]/_components/homepage"
+  ]
+}

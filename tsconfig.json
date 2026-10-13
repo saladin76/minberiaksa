@@ -35,8 +35,9 @@
     "**/*.ts",
     "**/*.tsx",
     ".next/types/**/*.ts",
-    ".next/dev/types/**/*.ts"
-, "next.config.ts"  ],
+    ".next/dev/types/**/*.ts",
+    "next.config.ts"
+  ],
   "exclude": [
     "node_modules",
     // /tmp is git-ignored scratch (patch scripts, screenshots, half-finished component copies kept

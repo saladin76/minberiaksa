@@ -93,6 +93,11 @@ const blogCategoryRedirects = [
 ] as const;
 
 const nextConfig: NextConfig = {
+  /* `scripts/deploy-vps.sh` builds into a separate folder (NEXT_DIST_DIR) while
+     the live server keeps reading `.next`, then swaps the two. Building over the
+     `.next` a running server reads left it serving half of each build: missing
+     Prisma modules, "client reference manifest does not exist", no 500 page. */
+  ...(process.env.NEXT_DIST_DIR ? { distDir: process.env.NEXT_DIST_DIR } : {}),
   experimental: {
     optimizePackageImports: ["lucide-react", "framer-motion", "motion", "@radix-ui/react-icons", "date-fns", "react-use"],
     optimizeCss: true,
@@ -136,7 +141,11 @@ const nextConfig: NextConfig = {
   /* Type errors fail the build. This was `true` while the repo carried 163 of them; it now carries
      none (see `npm run typecheck:baseline`, whose baseline file is empty), so a new error is a broken
      build rather than a warning nobody reads. */
-  typescript: { ignoreBuildErrors: false },
+  typescript: {
+    ignoreBuildErrors: false,
+    // The side-build checks against its own route types only (tsconfig.deploy.json).
+    ...(process.env.NEXT_DIST_DIR ? { tsconfigPath: "tsconfig.deploy.json" } : {}),
+  },
   devIndicators: { position: "bottom-right" },
   reactStrictMode: true,
   serverExternalPackages: ["@usewaypoint/email-builder"],

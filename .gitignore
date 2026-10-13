@@ -59,3 +59,5 @@ next-env.d.ts
 
 # Playwright output (reports, traces, screenshots)
 e2e/.artifacts/
+/.next-build/
+/.next-previous/
