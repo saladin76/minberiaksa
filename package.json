@@ -31,6 +31,7 @@
     "backfill:slugs": "tsx prisma/backfill-slugs.ts",
     "seed:banners": "tsx prisma/seed/seed-banners.ts",
     "backfill:donation-countries": "tsx scripts/backfill-donation-donor-country.ts",
+    "backfill:user-verified": "tsx scripts/backfill-user-verified-at.ts",
     "backfill:monthly-paid": "tsx scripts/backfill-stripe-monthly-paid.ts",
     "exchange-rates:refresh": "tsx scripts/refresh-exchange-rates.ts",
     "cleanup:orphan-donation-items": "tsx scripts/cleanup-orphan-donation-items.ts",

@@ -556,7 +556,8 @@
     "genderLabel": "الجنس",
     "genderMale": "ذكر",
     "genderFemale": "أنثى",
-    "genderPreferNotToSay": "أفضل عدم الإفصاح"
+    "genderPreferNotToSay": "أفضل عدم الإفصاح",
+    "noPasswordYet": "لديك حساب لدينا بهذا البريد لكن دون كلمة مرور بعد. أكمل التسجيل بالبريد نفسه لتعيين كلمة مرور، أو ادخل عبر Google."
   },
   "SharePopup": {
     "shareCampaign": "شارك المشروع مع الآخرين",

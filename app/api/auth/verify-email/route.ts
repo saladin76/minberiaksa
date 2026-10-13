@@ -4,6 +4,17 @@ import { prisma } from "@/lib/prisma";
 import { verifyToken, createAutoSignInToken } from "@/lib/otp";
 import { dispatchEvent } from "@/lib/events/dispatch";
 import { isValidLocale } from "@/lib/locales";
+import { completionData, findUserByEmail, type AccountClaim } from "@/lib/users/account-claim";
+
+function parseClaim(payload: string | null): AccountClaim | null {
+  if (!payload) return null;
+  try {
+    const value = JSON.parse(payload) as Partial<AccountClaim>;
+    return typeof value.passwordHash === "string" && typeof value.name === "string" ? (value as AccountClaim) : null;
+  } catch {
+    return null;
+  }
+}
 
 export async function GET(req: NextRequest) {
   const { searchParams } = req.nextUrl;
@@ -34,10 +45,23 @@ export async function GET(req: NextRequest) {
     return errorRedirect(result.error === "EXPIRED" ? "expired" : "invalid");
   }
 
-  // Mark email as verified  capture id for the event dispatch
+  const user = await findUserByEmail(normalizedEmail);
+  if (!user) return errorRedirect("invalid");
+
+  // Mark email as verified  capture id for the event dispatch. A claim of an
+  // imported account (`register`) is applied now that the inbox's owner has
+  // clicked: the password is set if the account still has none, and the
+  // details they typed fill only the fields that are empty.
+  const data: Record<string, unknown> = { emailVerified: new Date() };
+  const claim = parseClaim(result.payload);
+  if (claim) {
+    Object.assign(data, completionData(user, { name: claim.name, phone: claim.phone, birthdate: claim.birthdate, gender: claim.gender }));
+    if (!user.password) data.password = claim.passwordHash;
+  }
+  if (!user.verifiedAt) data.verifiedAt = new Date();
   const verifiedUser = await prisma.user.update({
-    where: { email: normalizedEmail },
-    data: { emailVerified: new Date() },
+    where: { id: user.id },
+    data,
     select: { id: true },
   });
   runAfterResponse(() => dispatchEvent("USER_REGISTERED", { userId: verifiedUser.id }));

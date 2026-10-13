@@ -204,6 +204,7 @@ export async function GET(request: NextRequest) {
       birthdate: true,
       createdAt: true,
       updatedAt: true,
+      verifiedAt: true,
       _count: { select: { donations: true } },
     } as const;
 

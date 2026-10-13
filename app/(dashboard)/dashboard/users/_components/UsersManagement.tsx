@@ -35,6 +35,7 @@ import {
   UserCircle,
   Mail,
   MessageCircle,
+  BadgeCheck,
 } from "lucide-react";
 import { SendTemplateDialog, type SendTarget } from "@/components/dashboard/SendTemplateDialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -591,7 +592,21 @@ export default function UsersManagement({ scope }: { scope: Scope }) {
                                 </AvatarFallback>
                               </Avatar>
                               <div className="min-w-0">
-                                <p className="truncate text-[13px] font-medium text-slate-900">{u.name ?? "بلا اسم"}</p>
+                                {/* The check marks a donor who has used this site themselves 
+                                    signed in, verified their email or given through checkout.
+                                    Donors imported from the old site who have not come back yet
+                                    show without it. */}
+                                <p className="flex min-w-0 items-center gap-1 text-[13px] font-medium text-slate-900">
+                                  <span className="truncate">{u.name ?? "بلا اسم"}</span>
+                                  {u.verifiedAt ? (
+                                    <BadgeCheck
+                                      className="h-3.5 w-3.5 shrink-0 fill-sky-500 text-white"
+                                      aria-label="حساب مُفعّل"
+                                    >
+                                      <title>{`حساب مُفعّل منذ ${new Date(u.verifiedAt).toLocaleDateString("ar-EG", { dateStyle: "medium" })}`}</title>
+                                    </BadgeCheck>
+                                  ) : null}
+                                </p>
                                 <p className="truncate text-[11px] text-slate-500" title={u.email ?? undefined}>
                                   {u.email ?? u.phone ?? "—"}
                                 </p>

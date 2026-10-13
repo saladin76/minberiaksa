@@ -556,7 +556,8 @@
     "genderLabel": "Jenis Kelamin",
     "genderMale": "Laki-laki",
     "genderFemale": "Perempuan",
-    "genderPreferNotToSay": "Tidak ingin menyebutkan"
+    "genderPreferNotToSay": "Tidak ingin menyebutkan",
+    "noPasswordYet": "Anda sudah memiliki akun dengan email ini, tetapi belum ada kata sandi. Daftar dengan email yang sama untuk membuatnya, atau lanjutkan dengan Google."
   },
   "SharePopup": {
     "shareCampaign": "Bagikan proyek ini kepada orang lain",

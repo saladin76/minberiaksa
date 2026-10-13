@@ -1,5 +1,6 @@
 import type { PrismaClient } from "@prisma/client";
 import { countryCodeFromPhone } from "@/lib/donations/donor-country-code";
+import { findUserByEmail } from "./account-claim";
 
 export interface GuestPayload {
   firstName?: string | null;
@@ -68,20 +69,11 @@ export async function resolveGuestDonor(
   const birthdate = normalizeBirthdate(guest.birthdate);
   const gender = normalizeGender(guest.gender);
 
+  /* A donor imported from the old site who gives again is matched here  by
+     email whatever its case (`findUserByEmail`), else by phone  so the gift
+     lands on their existing record and what they typed completes it. */
   if (email) {
-    const existing = await prisma.user.findUnique({
-      where: { email },
-      select: {
-        id: true,
-        name: true,
-        phone: true,
-        countryCode: true,
-        city: true,
-        region: true,
-        birthdate: true,
-        gender: true,
-      },
-    });
+    const existing = await findUserByEmail(email);
     if (existing) {
       await backfillExistingUser(prisma, existing.id, existing, {
         name,
@@ -109,6 +101,7 @@ export async function resolveGuestDonor(
         region: true,
         birthdate: true,
         gender: true,
+        verifiedAt: true,
       },
       orderBy: { createdAt: "asc" },
       take: 10,
@@ -139,6 +132,7 @@ export async function resolveGuestDonor(
       birthdate: birthdate ?? undefined,
       gender: gender ?? undefined,
       preferredLang: opts.preferredLang ?? undefined,
+      verifiedAt: new Date(),
     },
     select: { id: true, name: true },
   });
@@ -155,6 +149,7 @@ type ExistingShape = {
   region?: string | null;
   birthdate?: string | null;
   gender?: string | null;
+  verifiedAt?: Date | null;
 };
 
 type IncomingShape = {
@@ -183,6 +178,9 @@ async function backfillExistingUser(
   if (!existing.region && incoming.region) data.region = incoming.region;
   if (!existing.birthdate && incoming.birthdate) data.birthdate = incoming.birthdate;
   if (!existing.gender && incoming.gender) data.gender = incoming.gender;
+  // Giving through checkout is coming back: the dashboard stops showing them
+  // as an untouched import.
+  if (!existing.verifiedAt) data.verifiedAt = new Date();
   if (Object.keys(data).length === 0) return;
   await prisma.user.update({ where: { id: userId }, data });
 }

@@ -556,7 +556,8 @@
     "genderLabel": "Geschlecht",
     "genderMale": "Männlich",
     "genderFemale": "Weiblich",
-    "genderPreferNotToSay": "Keine Angabe"
+    "genderPreferNotToSay": "Keine Angabe",
+    "noPasswordYet": "Sie haben bereits ein Konto mit dieser E-Mail, aber noch kein Passwort. Registrieren Sie sich mit derselben E-Mail, um eines festzulegen, oder fahren Sie mit Google fort."
   },
   "SharePopup": {
     "shareCampaign": "Projekt mit anderen teilen",

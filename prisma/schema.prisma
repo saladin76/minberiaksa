@@ -153,6 +153,10 @@ model OtpCode {
   expiresAt DateTime
   attempts  Int      @default(0)
   used      Boolean  @default(false)
+  /// JSON the token carries until it is used  e.g. the password hash and
+  /// details a donor entered to claim an imported account, applied only
+  /// once they prove they own the email.
+  payload   String?
   createdAt DateTime @default(now())
 
   @@index([email, purpose])
@@ -179,6 +183,11 @@ model User {
   birthdate             String?
   gender                String?
   profileCompletionSeen Boolean   @default(false)
+  /// When this person first used this site themselves  signed in, verified
+  /// their email, or gave through checkout. Null for donors imported from the
+  /// previous site who have not come back yet; the dashboard's users list
+  /// marks everyone else with a check.
+  verifiedAt            DateTime?
   role                  Role      @default(DONOR)
   preferredLang         String? // locale from first donation (ar, en, fr) for emails/SMS
 

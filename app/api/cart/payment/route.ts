@@ -18,6 +18,7 @@ import {
   normalizeDonorCountryCode,
 } from "@/lib/donations/donor-country-code";
 import { resolveGuestDonor } from "@/lib/users/resolve-guest-donor";
+import { completionData } from "@/lib/users/account-claim";
 import { createBankTransferClaim } from "@/lib/donations/bank-transfer-claims";
 import { BANK_TRANSFER_PROVIDER } from "@/lib/donations/bank-transfer-shared";
 import { listBankAccounts } from "@/lib/minbar/cms";
@@ -369,6 +370,27 @@ export async function POST(request: NextRequest) {
     if (session?.user?.id) {
       donorId = session.user.id;
       donorName = session.user.name ?? null;
+      /* The form also carries what a signed-in donor typed. It completes their
+         own record  most were imported from the old site with gaps, a phone
+         or a surname missing  and never replaces a field already filled. The
+         account's email is theirs and is not touched. */
+      if (guest) {
+        const me = await prisma.user.findUnique({
+          where: { id: donorId },
+          select: { name: true, phone: true, countryCode: true, verifiedAt: true },
+        });
+        if (me) {
+          const typedName = [guest.firstName, guest.lastName].filter(Boolean).join(" ").trim();
+          const typedPhone = typeof guest.phone === "string" && guest.phone.replace(/D/g, "").length >= 7 ? guest.phone : null;
+          const data = completionData(me, {
+            name: typedName || null,
+            phone: typedPhone,
+            countryCode: normalizeDonorCountryCode(guest.countryCode) ?? countryCodeFromPhone(typedPhone ?? undefined) ?? null,
+          });
+          if (Object.keys(data).length) await prisma.user.update({ where: { id: donorId }, data });
+          donorName = donorName ?? (me.name || typedName || null);
+        }
+      }
     } else if (guest) {
       const guestPhone = guest.phone || undefined;
       const guestCountry =

@@ -556,7 +556,8 @@
     "genderLabel": "Genre",
     "genderMale": "Homme",
     "genderFemale": "Femme",
-    "genderPreferNotToSay": "Je préfère ne pas le préciser"
+    "genderPreferNotToSay": "Je préfère ne pas le préciser",
+    "noPasswordYet": "Vous avez déjà un compte avec cet e-mail, mais pas encore de mot de passe. Inscrivez-vous avec le même e-mail pour en définir un, ou continuez avec Google."
   },
   "SharePopup": {
     "shareCampaign": "Partager le projet avec d'autres",

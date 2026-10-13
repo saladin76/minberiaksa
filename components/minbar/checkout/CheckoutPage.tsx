@@ -393,9 +393,9 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
           method === "bank" && selectedBank
             ? { slug: selectedBank.id, currency: chosenBankCurrency ?? currency }
             : null,
-        guest: signedIn
-          ? null
-          : { firstName: firstName.trim(), lastName: lastName.trim(), email: email.trim(), phone: phone.trim() },
+        /* Sent for a signed-in donor too: the server uses it to fill the gaps
+           in their own profile (an imported account often lacks a phone). */
+        guest: { firstName: firstName.trim(), lastName: lastName.trim(), email: email.trim(), phone: phone.trim() },
       });
       donationId = donation.id;
 

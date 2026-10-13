@@ -19,6 +19,8 @@ export interface UserProfileCardData {
   birthdate: string | null;
   createdAt: string;
   updatedAt: string;
+  /** Set once the person used this site themselves; null for an untouched import from the old site. */
+  verifiedAt?: string | null;
   totalDonationsCount: number;
   totalDonatedAmount: number;
   totalDonatedAmountUSD: number;

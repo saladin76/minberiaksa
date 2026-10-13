@@ -556,7 +556,8 @@
     "genderLabel": "Cinsiyet",
     "genderMale": "Erkek",
     "genderFemale": "Kadın",
-    "genderPreferNotToSay": "Belirtmek istemiyorum"
+    "genderPreferNotToSay": "Belirtmek istemiyorum",
+    "noPasswordYet": "Bu e-posta ile zaten bir hesabınız var ancak henüz şifreniz yok. Şifre belirlemek için aynı e-posta ile kayıt olun veya Google ile devam edin."
   },
   "SharePopup": {
     "shareCampaign": "Projeyi Başkalarıyla Paylaş",

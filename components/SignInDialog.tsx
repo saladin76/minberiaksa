@@ -193,6 +193,13 @@ export function SignInPanel({
         try { track("signin_success", { method: "credentials", locale }); } catch {}
         onAuthenticated?.();
         onClose();
+      } else if (res?.error === "NO_PASSWORD") {
+        // An account imported from the old site, or one made with Google:
+        // signing up with this email sets its password once the email is
+        // confirmed, and keeps the donor's history.
+        try { track("signin_blocked", { method: "credentials", reason: "no_password", locale }); } catch {}
+        setAuthMode("signup");
+        setError(t("noPasswordYet"));
       } else if (res?.error === "EMAIL_NOT_VERIFIED") {
         try { track("signin_blocked", { method: "credentials", reason: "email_not_verified", locale }); } catch {}
         // Resend verification link and go to inbox screen
