@@ -455,9 +455,9 @@ const CartPaymentDialog = ({
       let geoRegion: string | undefined;
       if (useGuestCheckout) {
         try {
-          const cached = typeof window !== "undefined" ? localStorage.getItem("ipapi_cache") : null;
+          const cached = typeof window !== "undefined" ? localStorage.getItem("ipapi_cache_v2") : null;
           const cacheData = cached ? JSON.parse(cached) as { data?: { country_code?: string; city?: string; region?: string }; ts?: number } : null;
-          const isValid = cacheData && cacheData.ts && Date.now() - cacheData.ts < 86400000;
+          const isValid = cacheData && cacheData.ts && Date.now() - cacheData.ts < 21600000;
           if (isValid && cacheData.data) {
             geoCountryCode = cacheData.data.country_code?.toLowerCase();
             geoCity = cacheData.data.city;
@@ -481,7 +481,7 @@ const CartPaymentDialog = ({
             geoCity = geo.city;
             geoRegion = geo.region;
             if (typeof window !== "undefined" && geo.country_code) {
-              localStorage.setItem("ipapi_cache", JSON.stringify({ data: geo, ts: Date.now() }));
+              localStorage.setItem("ipapi_cache_v2", JSON.stringify({ data: geo, ts: Date.now() }));
             }
           }
         } catch { /* geo is optional */ }

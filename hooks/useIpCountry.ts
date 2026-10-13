@@ -2,8 +2,11 @@
 
 import { useState, useEffect } from "react";
 
-const CACHE_KEY = "ip_country_code";
-const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
+/* v2: answers stored before the geo endpoint stopped being CDN-cached may be
+   another visitor's country, so they are dropped rather than trusted. */
+const CACHE_KEY = "ip_country_code_v2";
+const STALE_KEYS = ["ip_country_code", "ipapi_cache"]; // the dialogs now use "ipapi_cache_v2"
+const CACHE_TTL_MS = 6 * 60 * 60 * 1000; // 6 hours  people travel, VPNs switch
 
 interface CacheEntry {
   code: string;
@@ -15,6 +18,7 @@ let pendingFetch: Promise<string> | null = null;
 
 function readCache(): string | null {
   try {
+    for (const key of STALE_KEYS) localStorage.removeItem(key);
     const raw = localStorage.getItem(CACHE_KEY);
     if (!raw) return null;
     const entry: CacheEntry = JSON.parse(raw);
@@ -46,7 +50,7 @@ async function fetchCountryCode(fallback: string): Promise<string> {
 
 /**
  * Returns the user's ISO 3166-1 alpha-2 country code (lowercase) detected from IP.
- * Result is cached in localStorage for 24 h. Falls back to `fallback` (default "tr").
+ * Result is cached in localStorage for 6 h. Falls back to `fallback` (default "tr").
  * Safe to call from multiple components  only one HTTP request is made per session.
  */
 export function useIpCountry(fallback = "tr"): string {

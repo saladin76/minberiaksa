@@ -1,20 +1,12 @@
 import type { NextRequest } from "next/server";
 import { countryNameFromIsoCode } from "@/lib/geo/intl-country-name";
+import { lookupIpGeo } from "@/lib/geo/ip-lookup";
 
 export type ResolvedUserGeo = {
   countryCode: string;
   countryName: string;
   region: string | null;
   city: string | null;
-};
-
-type IpapiJson = {
-  country_code?: string;
-  country_name?: string;
-  region?: string;
-  city?: string;
-  error?: boolean;
-  reason?: string;
 };
 
 /** Normalize IPv4-mapped IPv6 (::ffff:127.0.0.1 → 127.0.0.1) */
@@ -24,19 +16,32 @@ export function normalizeClientIp(ip: string): string {
   return t;
 }
 
-/** First public IPv4/IPv6 from common proxy headers */
+/**
+ * The visitor's public IP, from the header the proxy in front of us sets
+ * itself rather than one the browser can send:
+ *
+ *   1. `cf-connecting-ip`  Cloudflare, when the site is behind it;
+ *   2. `x-real-ip`  nginx on the VPS (`proxy_set_header X-Real-IP
+ *      $remote_addr`), and Vercel, which sets it to the client;
+ *   3. `x-forwarded-for`, read from the RIGHT: each proxy appends the
+ *      address it saw, so the left end is whatever the client claimed and the
+ *      first public address from the right is the one our own proxy saw.
+ *
+ * Reading X-Forwarded-For from the left, as this did, took a value any
+ * browser or upstream proxy can put there.
+ */
 export function getClientIp(request: NextRequest): string | null {
+  const cf = request.headers.get("cf-connecting-ip")?.trim();
+  if (cf && !isNonRoutableOrLocalIp(cf)) return normalizeClientIp(cf);
+  const real = request.headers.get("x-real-ip")?.trim();
+  if (real && !isNonRoutableOrLocalIp(real)) return normalizeClientIp(real);
   const forwarded = request.headers.get("x-forwarded-for");
   if (forwarded) {
-    for (const part of forwarded.split(",")) {
-      const ip = normalizeClientIp(part);
-      if (ip) return ip;
+    const hops = forwarded.split(",").map(normalizeClientIp).filter(Boolean);
+    for (let i = hops.length - 1; i >= 0; i -= 1) {
+      if (!isNonRoutableOrLocalIp(hops[i])) return hops[i];
     }
   }
-  const real = request.headers.get("x-real-ip")?.trim();
-  if (real) return normalizeClientIp(real);
-  const cf = request.headers.get("cf-connecting-ip")?.trim();
-  if (cf) return normalizeClientIp(cf);
   return null;
 }
 
@@ -51,38 +56,20 @@ function isNonRoutableOrLocalIp(ip: string): boolean {
     if (!Number.isNaN(second) && second >= 16 && second <= 31) return true;
   }
   if (n.startsWith("fc") || n.startsWith("fd")) return true;
+  if (n.startsWith("fe80:") || n.startsWith("169.254.") || n.startsWith("0.")) return true;
+  // Carrier-grade NAT (100.64.0.0/10): a mobile carrier's internal address.
+  if (n.startsWith("100.")) {
+    const second = Number(n.split(".")[1]);
+    if (!Number.isNaN(second) && second >= 64 && second <= 127) return true;
+  }
   return false;
 }
 
-function parseIpapiPayload(data: IpapiJson): ResolvedUserGeo | null {
-  if (data?.error) return null;
-  const code = typeof data.country_code === "string" ? data.country_code.trim().toUpperCase() : "";
-  if (!/^[A-Z]{2}$/.test(code) || code === "XX") return null;
-  const name =
-    typeof data.country_name === "string" && data.country_name.trim()
-      ? data.country_name.trim()
-      : countryNameFromIsoCode(code);
-  const region =
-    typeof data.region === "string" && data.region.trim() ? data.region.trim() : null;
-  const city = typeof data.city === "string" && data.city.trim() ? data.city.trim() : null;
-  return { countryCode: code, countryName: name, region, city };
-}
-
+/** Several IP databases, majority vote (`ip-lookup.ts`). */
 async function lookupGeoByIp(ip: string): Promise<ResolvedUserGeo | null> {
   if (isNonRoutableOrLocalIp(ip)) return null;
-  try {
-    const path = encodeURIComponent(normalizeClientIp(ip));
-    const res = await fetch(`https://ipapi.co/${path}/json/`, {
-      cache: "no-store",
-      signal: AbortSignal.timeout(6000),
-      headers: { Accept: "application/json" },
-    });
-    if (!res.ok) return null;
-    const data = (await res.json()) as IpapiJson;
-    return parseIpapiPayload(data);
-  } catch {
-    return null;
-  }
+  const geo = await lookupIpGeo(normalizeClientIp(ip));
+  return geo ? { ...geo, countryName: countryNameFromIsoCode(geo.countryCode) } : null;
 }
 
 function geoFromVercelHeaders(request: NextRequest): ResolvedUserGeo | null {
@@ -110,7 +97,9 @@ function geoFromCfCountryCode(request: NextRequest): ResolvedUserGeo | null {
 }
 
 /**
- * Country name + ISO code + optional city/region from edge headers or IP lookup (ipapi).
+ * Country name + ISO code + optional city/region: the CDN's own geolocation
+ * when the site runs behind one (Vercel, Cloudflare), else the client IP
+ * looked up in several databases.
  */
 export async function resolveGeoFromRequest(
   request: NextRequest

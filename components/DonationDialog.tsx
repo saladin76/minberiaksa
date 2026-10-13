@@ -1996,7 +1996,7 @@ const DonationDialog = ({
         try {
           const cached =
             typeof window !== "undefined"
-              ? localStorage.getItem("ipapi_cache")
+              ? localStorage.getItem("ipapi_cache_v2")
               : null;
           const cacheData = cached
             ? (JSON.parse(cached) as {
@@ -2009,7 +2009,7 @@ const DonationDialog = ({
               })
             : null;
           const isValid =
-            cacheData && cacheData.ts && Date.now() - cacheData.ts < 86400000;
+            cacheData && cacheData.ts && Date.now() - cacheData.ts < 21600000;
           if (isValid && cacheData.data) {
             geoCountryCode = cacheData.data.country_code?.toLowerCase();
             geoCity = cacheData.data.city;
@@ -2042,7 +2042,7 @@ const DonationDialog = ({
             geoRegion = geo.region;
             if (typeof window !== "undefined" && geo.country_code) {
               localStorage.setItem(
-                "ipapi_cache",
+                "ipapi_cache_v2",
                 JSON.stringify({ data: geo, ts: Date.now() }),
               );
             }

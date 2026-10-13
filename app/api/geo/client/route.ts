@@ -5,7 +5,7 @@
  * country name + region + city using (in order):
  *   1. Vercel edge headers (x-vercel-ip-country / -city / -country-region)
  *   2. Cloudflare's cf-ipcountry
- *   3. An ipapi.co server-side IP lookup
+ *   3. The client IP looked up in several databases (`lib/geo/ip-lookup.ts`)
  *
  * This replaces the four-place pattern of `fetch("https://ipapi.co/json/")`
  * from the browser, which:
@@ -14,8 +14,12 @@
  *   • leaked the visitor's IP to a third party from every donation flow
  *   • added a ~500 ms blocking step before the donation request itself
  *
- * Response is cached for 1 hour at the edge so repeat visits don't re-hit
- * ipapi from our server.
+ * The answer is about one visitor, so it is never stored in a shared cache.
+ * It used to be sent `public, s-maxage=3600`: the CDN keys its cache by URL,
+ * not by IP, so the first visitor's country was handed to everyone else for
+ * an hour  a donor in Palestine was told Yemen because someone in Yemen had
+ * asked first. Repeat lookups are absorbed by the per-IP memory cache in
+ * `lib/geo/ip-lookup.ts` instead.
  */
 
 import { NextResponse, type NextRequest } from "next/server";
@@ -30,12 +34,7 @@ export async function GET(request: NextRequest) {
       { ok: false, reason: "no_geo" },
       {
         status: 200,
-        headers: {
-          // Short cache even on miss  IP→country lookups don't change second
-          // to second and we don't want to retry through the failure path on
-          // every page transition.
-          "Cache-Control": "public, max-age=300, s-maxage=300",
-        },
+        headers: { "Cache-Control": "private, no-store" },
       }
     );
   }
@@ -50,11 +49,8 @@ export async function GET(request: NextRequest) {
     },
     {
       status: 200,
-      headers: {
-        // Edge-cached per-IP via the upstream CDN. Vercel/CF route requests by
-        // IP, so the cached entries naturally segment by visitor location.
-        "Cache-Control": "public, max-age=3600, s-maxage=3600",
-      },
+      // This browser only: never a CDN or proxy cache (see above).
+      headers: { "Cache-Control": "private, max-age=600" },
     }
   );
 }
