@@ -70,11 +70,11 @@ export type MinbarRoute =
 /** Canonical slug per page, relative to `/{locale}`. */
 export const SLUGS: Record<MinbarRoute, string> = {
   home: "",
-  projects: "projects",
-  projectDetail: "projects",
-  zakat: "zakat",
+  projects: "bagislar",
+  projectDetail: "bagislar",
+  zakat: "pay-zakat-to-palestine",
   zakatCalculator: "zakat-calculator",
-  waqf: "waqf",
+  waqf: "msharya-alqds-alwqfy",
   recurring: "recurring-donation",
   aqsa: "al-aqsa-mosque",
   jerusalem: "al-quds-and-the-old-city",
@@ -109,8 +109,8 @@ export const SLUGS: Record<MinbarRoute, string> = {
   receipt: "receipt",
   waqfCertificate: "certificates/waqf",
   thanksCertificate: "certificates/thanks",
-  restorationProject: "projects/al-quds-home-restoration",
-  ibadanProject: "projects/ibadan-lana",
+  restorationProject: "bagislar/al-quds-home-restoration",
+  ibadanProject: "bagislar/ibadan-lana",
   terms: "terms",
   privacy: "privacy",
   donationPolicy: "donation-policy",
@@ -155,6 +155,15 @@ export const LEGACY_SLUGS: Partial<Record<SupportedLocale, Partial<Record<Minbar
     cart: "السلة",
     checkout: "بيانات-الدفع",
     account: "حساب-المتبرع",
+  },
+  /* Until October 2026 every locale used these English slugs. The redirect
+     is locale-independent, so listing them once covers /ar/projects,
+     /fr/zakat and the rest. */
+  en: {
+    projects: "projects",
+    projectDetail: "projects",
+    zakat: "zakat",
+    waqf: "waqf",
   },
 };
 
@@ -210,7 +219,7 @@ export const QUICK_DONATE_ROUTES: ReadonlySet<MinbarRoute> = new Set<MinbarRoute
 /**
  * The page a pathname belongs to, or `null` for one outside the map (a
  * dashboard or API path, a category page, a 404). The longest matching slug
- * wins, so `/projects/x` is `projectDetail` and `/projects` is `projects`.
+ * wins, so `/bagislar/x` is `projectDetail` and `/bagislar` is `projects`.
  * Locale slugs are tried for the pathname's own locale before the canonical
  * ones  a locale may give a page its own slug (`slugFor`).
  */

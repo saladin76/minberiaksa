@@ -101,8 +101,8 @@ export function resolveStoryCta(cta: StoryCta | null, locale: string, lookups: S
 /**
  * A site-relative href gets the locale in front of it, and when its first
  * segment is one of the site's page slugs it is routed through `miaPath`, so
- * a page's slug stays the route map's business: "/projects#gaza" becomes
- * "/ar/projects#gaza" for an Arabic visitor and "/fr/projects#gaza" for a
+ * a page's slug stays the route map's business: "/bagislar#gaza" becomes
+ * "/ar/bagislar#gaza" for an Arabic visitor and "/fr/bagislar#gaza" for a
  * French one, anchor intact. A path that already carries a locale, or anything
  * absolute, is left alone. This is what the old `linkUrl` field could never do.
  */

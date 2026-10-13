@@ -1711,7 +1711,8 @@
     "investmentLead": "Regelmatig geven dat Palestina bereikt: een gezegend land, een geduldig volk, een onafgebroken wake. U kiest bedrag en frequentie; wij brengen het naar gedocumenteerde, gevolgde projecten.",
     "amountPerX": "Bedrag ({freq})",
     "privacyNote": "Uw gegevens zijn veilig en worden niet met derden gedeeld. Neem contact met ons op om uw periodieke gift te wijzigen of te stoppen.",
-    "whatIsText": "Periodiek geven betekent een klein deel van het maandinkomen bestemmen als doorlopende gift die projecten steunt voor onze mensen in Palestina: noodhulp, Zakat, kleding, voedsel en steun aan volharding waar de nood is."
+    "whatIsText": "Periodiek geven betekent een klein deel van het maandinkomen bestemmen als doorlopende gift die projecten steunt voor onze mensen in Palestina: noodhulp, Zakat, kleding, voedsel en steun aan volharding waar de nood is.",
+    "amountPlaceholder": "Bedrag invoeren"
   },
   "system": {
     "loading": "Laden",

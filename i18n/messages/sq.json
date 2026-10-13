@@ -1711,7 +1711,8 @@
     "investmentLead": "Dhurim i rregullt që arrin në Palestinë: një tokë e bekuar, një popull i durueshëm dhe një ribat i pandërprerë. Vlerën dhe frekuencën i zgjidhni ju; ne e përcjellim në projekte të dokumentuara dhe të monitoruara.",
     "amountPerX": "Vlera ({freq})",
     "privacyNote": "Të dhënat tuaja janë të sigurta dhe nuk ndahen me palë të treta. Për të ndryshuar ose ndalur dhurimin e përsëritur, kontaktoni me ne.",
-    "whatIsText": "Dhurimi i përsëritur nënkupton ndarjen e një pjese të vogël të të ardhurave mujore si Sadaka e vazhdueshme që mbështet projekte në shërbim të njerëzve tanë në Palestinë: ndihmë, Zekat, veshmbathje, ushqim dhe mbështetje të qëndresës kudo ku ka nevojë."
+    "whatIsText": "Dhurimi i përsëritur nënkupton ndarjen e një pjese të vogël të të ardhurave mujore si Sadaka e vazhdueshme që mbështet projekte në shërbim të njerëzve tanë në Palestinë: ndihmë, Zekat, veshmbathje, ushqim dhe mbështetje të qëndresës kudo ku ka nevojë.",
+    "amountPlaceholder": "Shkruani shumën"
   },
   "system": {
     "loading": "Po Ngarkohet",

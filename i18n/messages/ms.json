@@ -1711,7 +1711,8 @@
     "investmentLead": "Pemberian tetap memberi masjid dan kota sokongan yang boleh dirancang.",
     "amountPerX": "Jumlah ({freq})",
     "privacyNote": "Anda boleh ubah atau hentikan pelan pada bila-bila masa.",
-    "whatIsText": "Jumlah tetap ditolak menurut kekerapan pilihan anda dan disalurkan ke dana yang disahkan."
+    "whatIsText": "Jumlah tetap ditolak menurut kekerapan pilihan anda dan disalurkan ke dana yang disahkan.",
+    "amountPlaceholder": "Masukkan jumlah"
   },
   "system": {
     "loading": "Memuatkan …",

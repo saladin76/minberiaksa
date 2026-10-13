@@ -2743,7 +2743,8 @@
     "investmentLead": "Una entrega periódica que llega a Palestina: una tierra bendita, un pueblo paciente, una vigilia que no cesa. Tú eliges el importe y la periodicidad; nosotros lo llevamos a proyectos documentados y seguidos.",
     "amountPerX": "Importe ({freq})",
     "privacyNote": "Tus datos están seguros y no se comparten con terceros. Para modificar o detener tu donación periódica, contáctanos.",
-    "whatIsText": "La donación periódica consiste en reservar una pequeña parte del ingreso mensual como limosna continua que sostiene proyectos al servicio de nuestra gente en Palestina: socorro, Zakat, vestido, alimento y apoyo a la resistencia donde haya necesidad."
+    "whatIsText": "La donación periódica consiste en reservar una pequeña parte del ingreso mensual como limosna continua que sostiene proyectos al servicio de nuestra gente en Palestina: socorro, Zakat, vestido, alimento y apoyo a la resistencia donde haya necesidad.",
+    "amountPlaceholder": "Introducir cantidad"
   },
   "system": {
     "loading": "Cargando",

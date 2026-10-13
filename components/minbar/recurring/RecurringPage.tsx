@@ -298,8 +298,8 @@ export default function RecurringPage({ projects }: RecurringPageProps) {
                     value={custom}
                     onChange={(e) => setCustom(decimalAmount(e.target.value))}
                     inputMode="decimal"
-                    placeholder={tCommon("suggestedAmount")}
-                    aria-label={tCommon("suggestedAmount")}
+                    placeholder={t("amountPlaceholder")}
+                    aria-label={t("amountPlaceholder")}
                     className="rc-input"
                     style={{ width: 110, minWidth: 0, height: 44, padding: "0 14px", boxSizing: "border-box", border: `1px solid ${custom ? "var(--gold)" : "var(--border)"}`, borderRadius: 999, background: "#fff", color: "var(--deep)", fontFamily: "inherit", fontSize: 15, fontWeight: 800 }}
                   />

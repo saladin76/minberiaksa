@@ -1,5 +1,6 @@
 import { notFound, permanentRedirect } from "next/navigation";
 import { getProject } from "@/lib/minbar/projects";
+import { miaPath } from "@/lib/minbar/routes";
 import { withIncomingQuery, type IncomingSearchParams } from "@/lib/minbar/redirect-query";
 
 interface Props {
@@ -11,7 +12,7 @@ interface Props {
  * Legacy campaign URL.
  *
  * Public projects now have one canonical route only:
- *   /{locale}/projects/{localizedSlug}
+ *   /{locale}/bagislar/{localizedSlug}
  *
  * Keeping a second renderer under /campaign created duplicate indexable pages,
  * split SEO authority, and allowed disabled projects to remain reachable through
@@ -26,6 +27,6 @@ export default async function LegacyCampaignRedirect({ params, searchParams }: P
 
   // The query rides along: old ad links carry utm_* / gclid / fbclid.
   permanentRedirect(
-    withIncomingQuery(`/${locale}/projects/${encodeURIComponent(project.slug)}`, query)
+    withIncomingQuery(miaPath("projectDetail", locale, encodeURIComponent(project.slug)), query)
   );
 }

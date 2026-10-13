@@ -67,6 +67,7 @@ import {
 import { format } from 'date-fns';
 import { ar } from 'date-fns/locale';
 import { useRouter } from 'next/navigation';
+import { miaPath } from '@/lib/minbar/routes';
 import { toast } from 'react-hot-toast';
 import { CampaignReorderDialog } from './_components/CampaignReorderDialog';
 import { DashboardLocaleSwitcher } from '../_components/DashboardLocaleSwitcher';
@@ -428,7 +429,7 @@ export default function CampaignsPage() {
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuLabel>إجراءات</DropdownMenuLabel>
-                          <DropdownMenuItem onClick={() => router.push(`/${locale}/projects/${campaign.slug || campaign.id}`)}>
+                          <DropdownMenuItem onClick={() => router.push(miaPath("projectDetail", locale, campaign.slug || campaign.id))}>
                             <Eye className="w-4 h-4 ml-2" /> عرض
                           </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => router.push(`/dashboard/campaigns/edit/${campaign.id}`)}>

@@ -1711,7 +1711,8 @@
     "investmentLead": "Regelbundet givande som når Palestina: ett välsignat land, ett tåligt folk och en obruten vakt. Du väljer belopp och frekvens; vi ser till att det når dokumenterade och uppföljda projekt.",
     "amountPerX": "Belopp ({freq})",
     "privacyNote": "Dina uppgifter är trygga och delas inte med tredje part. Kontakta oss för att ändra eller avsluta din återkommande gåva.",
-    "whatIsText": "Återkommande givande innebär att avsätta en liten del av månadsinkomsten som en fortlöpande gåva till projekt i vårt folks tjänst i Palestina: nödhjälp, Zakat, kläder, mat och stöd till ståndaktighet där behovet finns."
+    "whatIsText": "Återkommande givande innebär att avsätta en liten del av månadsinkomsten som en fortlöpande gåva till projekt i vårt folks tjänst i Palestina: nödhjälp, Zakat, kläder, mat och stöd till ståndaktighet där behovet finns.",
+    "amountPlaceholder": "Ange belopp"
   },
   "system": {
     "loading": "Laddar",

@@ -1711,7 +1711,8 @@
     "investmentLead": "安定した支えが、モスクと都市の計画を可能にします。",
     "amountPerX": "金額（{freq}）",
     "privacyNote": "プランはいつでも変更・停止できます。",
-    "whatIsText": "お選びの頻度で一定額をお引き落とし、承認済み基金に充てます。"
+    "whatIsText": "お選びの頻度で一定額をお引き落とし、承認済み基金に充てます。",
+    "amountPlaceholder": "金額を入力"
   },
   "system": {
     "loading": "読み込み中 …",

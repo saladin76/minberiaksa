@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { pickTranslation, translationLocaleWhere } from "@/lib/i18n/translation-fallback";
 import { listProjects, type MinbarProject } from "./projects";
 import { listArticles, type MinbarArticle } from "./posts";
+import { miaPath } from "./routes";
 import {
   listBooklets,
   listCourses,
@@ -169,7 +170,7 @@ async function readNavSuperCategories(locale: string): Promise<NavSuperCategory[
     const t = pickTranslation(row.translations, locale);
     return {
       id: row.id,
-      href: `/${locale}/projects/${encodeURIComponent(row.slug)}`,
+      href: miaPath("projectDetail", locale, encodeURIComponent(row.slug)),
       name: t?.title || row.title,
       image: t?.logoImage || row.logoImage || row.heroImage || "",
       accentColor: row.accentColor || DEFAULT_ACCENT,

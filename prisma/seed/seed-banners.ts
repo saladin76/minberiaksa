@@ -43,7 +43,7 @@ const PLACEMENTS = [placementKey("aqsa", "bottom")];
 /** The campaign the travel banner sells, in `seed-data.json` terms. */
 const TRAVEL_CAMPAIGN_SLUG = "al-quds-friday-transport";
 /** The 'Ibādan programme page  `SLUGS.ibadanProject` in `lib/minbar/routes.ts`. */
-const IBADAN_URL = "/projects/ibadan-lana";
+const IBADAN_URL = "/bagislar/ibadan-lana";
 
 type Copy = { title: string; description: string; kicker: string; ctaLabel: string; ctaSecondaryLabel: string; amountLabels: string[] };
 

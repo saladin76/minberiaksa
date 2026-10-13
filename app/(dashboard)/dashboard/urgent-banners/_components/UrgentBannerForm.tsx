@@ -314,7 +314,7 @@ export function UrgentBannerForm({
           </div>
           <label className="space-y-1.5">
             <span className="text-xs font-semibold text-slate-600">رابط الزر الرئيسي</span>
-            <Input dir="ltr" placeholder="/projects/gaza-emergency" value={values.ctaUrl} onChange={(e) => set('ctaUrl', e.target.value)} />
+            <Input dir="ltr" placeholder="/bagislar/gaza-emergency" value={values.ctaUrl} onChange={(e) => set('ctaUrl', e.target.value)} />
             <span className="block text-[11px] text-slate-500">رابط نسبي يُسبق بلغة الزائر تلقائيًا، أو رابط كامل.</span>
           </label>
           <label className="space-y-1.5">

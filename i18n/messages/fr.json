@@ -2743,7 +2743,8 @@
     "investmentLead": "Un don régulier qui parvient à la Palestine : une terre bénie, un peuple patient, une veille ininterrompue. Vous choisissez le montant et la fréquence ; nous l'acheminons vers des projets documentés et suivis.",
     "amountPerX": "Montant ({freq})",
     "privacyNote": "Vos données sont protégées et ne sont jamais partagées avec des tiers. Pour modifier ou arrêter votre don régulier, contactez-nous.",
-    "whatIsText": "Le don régulier consiste à réserver une petite part de son revenu mensuel comme aumône continue au service de nos frères en Palestine : secours, Zakat, habillement, nourriture et soutien à la résistance partout où le besoin existe."
+    "whatIsText": "Le don régulier consiste à réserver une petite part de son revenu mensuel comme aumône continue au service de nos frères en Palestine : secours, Zakat, habillement, nourriture et soutien à la résistance partout où le besoin existe.",
+    "amountPlaceholder": "Saisir le montant"
   },
   "system": {
     "loading": "Chargement",

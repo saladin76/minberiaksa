@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { localeDirection } from "@/lib/locales";
+import { miaPath } from "@/lib/minbar/routes";
 import type { MinbarProject } from "@/lib/minbar/projects";
 import ProjectDonateCard from "@/components/minbar/ProjectDonateCard";
 import { NoResults } from "@/components/minbar/states/ContentStates";
@@ -162,10 +163,10 @@ export default function ProjectsPage({ projects, slides }: ProjectsPageProps) {
 
               if (c.kind === "link") {
                 const href =
-                  c.route === "zakat" ? `/${locale}/zakat`
-                    : c.route === "waqf" ? `/${locale}/waqf`
-                      : c.route === "ibadan" ? `/${locale}/projects/ibadan-lana`
-                        : `/${locale}/projects/al-quds-home-restoration`;
+                  c.route === "zakat" ? miaPath("zakat", locale)
+                    : c.route === "waqf" ? miaPath("waqf", locale)
+                      : c.route === "ibadan" ? miaPath("ibadanProject", locale)
+                        : miaPath("restorationProject", locale);
                 return (
                   <a key={c.id} href={href} className="proj-cat" style={style}>
                     <span style={{ display: "inline-flex", width: 15, height: 15 }}>

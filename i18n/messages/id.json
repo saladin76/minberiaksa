@@ -2743,7 +2743,8 @@
     "investmentLead": "Pemberian teratur yang sampai ke Palestina: tanah yang diberkati, rakyat yang sabar, dan ribat yang tak terputus. Anda memilih jumlah dan frekuensinya; kami menyalurkannya ke proyek terdokumentasi dan terpantau.",
     "amountPerX": "Jumlah ({freq})",
     "privacyNote": "Data Anda aman dan tidak dibagikan kepada pihak ketiga. Untuk mengubah atau menghentikan donasi berkala, hubungi kami.",
-    "whatIsText": "Donasi berkala berarti menyisihkan sebagian kecil penghasilan bulanan sebagai sedekah berkelanjutan yang mendukung proyek untuk warga kita di Palestina: bantuan, Zakat, sandang, pangan, dan dukungan ketahanan di setiap tempat yang membutuhkan."
+    "whatIsText": "Donasi berkala berarti menyisihkan sebagian kecil penghasilan bulanan sebagai sedekah berkelanjutan yang mendukung proyek untuk warga kita di Palestina: bantuan, Zakat, sandang, pangan, dan dukungan ketahanan di setiap tempat yang membutuhkan.",
+    "amountPlaceholder": "Masukkan jumlah"
   },
   "system": {
     "loading": "Memuat",

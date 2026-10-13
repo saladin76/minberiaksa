@@ -2743,7 +2743,8 @@
     "investmentLead": "Regelmäßiges Geben, das Palästina erreicht: ein gesegnetes Land, ein geduldiges Volk, eine ununterbrochene Wacht. Sie wählen Betrag und Häufigkeit; wir bringen es zu dokumentierten, begleiteten Projekten.",
     "amountPerX": "Betrag ({freq})",
     "privacyNote": "Ihre Daten sind sicher und werden nicht an Dritte weitergegeben. Um Ihre Dauerspende zu ändern oder zu beenden, kontaktieren Sie uns.",
-    "whatIsText": "Regelmäßiges Geben bedeutet, einen kleinen Teil des monatlichen Einkommens als fortlaufende Spende zu widmen, die Projekte für unsere Menschen in Palästina trägt: Nothilfe, Zakat, Kleidung, Nahrung und Unterstützung der Standhaftigkeit überall, wo Not ist."
+    "whatIsText": "Regelmäßiges Geben bedeutet, einen kleinen Teil des monatlichen Einkommens als fortlaufende Spende zu widmen, die Projekte für unsere Menschen in Palästina trägt: Nothilfe, Zakat, Kleidung, Nahrung und Unterstützung der Standhaftigkeit überall, wo Not ist.",
+    "amountPlaceholder": "Betrag eingeben"
   },
   "system": {
     "loading": "Wird Geladen",

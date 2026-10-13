@@ -73,13 +73,13 @@ export default function SignIn() {
                 <GoogleSignInButton callbackUrl="/" locale={locale} />
               </div>
 
-              <button
+              {/* <button
                 onClick={() => signIn('facebook', { callbackUrl: '/' })}
                 className="w-full flex items-center justify-center gap-3 px-4 py-3 border border-transparent rounded-lg text-sm font-semibold text-white bg-[#1877F2] hover:bg-[#1874EA] transition-colors shadow-sm"
               >
                 <Image src="/facebook.svg" alt="Facebook" width={20} height={20} />
                 {labels.facebook}
-              </button>
+              </button> */}
             </div>
 
             <div className="mt-6 flex items-center gap-3">

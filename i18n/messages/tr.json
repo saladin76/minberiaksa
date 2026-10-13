@@ -2743,7 +2743,8 @@
     "investmentLead": "Filistin'e ulaşan düzenli bir veriş: mübarek bir toprak, sabırlı bir halk ve kesilmeyen bir ribât. Tutarı ve sıklığı siz seçersiniz; belgelenmiş ve takip edilen projelere ulaştırmayı biz üstlenir.",
     "amountPerX": "Tutar ({freq})",
     "privacyNote": "Verileriniz güvende olup hiçbir üçüncü tarafla paylaşılmaz. Düzenli bağışınızı değiştirmek veya durdurmak için bizimle iletişime geçin.",
-    "whatIsText": "Düzenli bağış fikri, aylık gelirin küçük bir kısmını Filistin'deki kardeşlerimize hizmet eden projelere  yardım, zekât, giydirme, doyurma ve her muhtaç bölgede direnişe destek  sürekli bir sadaka olarak ayırmaya dayanır."
+    "whatIsText": "Düzenli bağış fikri, aylık gelirin küçük bir kısmını Filistin'deki kardeşlerimize hizmet eden projelere  yardım, zekât, giydirme, doyurma ve her muhtaç bölgede direnişe destek  sürekli bir sadaka olarak ayırmaya dayanır.",
+    "amountPlaceholder": "Tutar girin"
   },
   "system": {
     "loading": "Yükleniyor",

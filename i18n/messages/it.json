@@ -1711,7 +1711,8 @@
     "investmentLead": "Un dono regolare che arriva in Palestina: una terra benedetta, un popolo paziente, una veglia ininterrotta. Scegli importo e frequenza; noi lo portiamo a progetti documentati e monitorati.",
     "amountPerX": "Importo ({freq})",
     "privacyNote": "I tuoi dati sono al sicuro e non sono condivisi con terzi. Per modificare o interrompere la donazione ricorrente, contattaci.",
-    "whatIsText": "La donazione ricorrente consiste nel destinare una piccola parte del reddito mensile come elemosina continua a sostegno di progetti a servizio della nostra gente in Palestina: soccorso, Zakat, vestiario, cibo e sostegno alla resistenza dove c'è bisogno."
+    "whatIsText": "La donazione ricorrente consiste nel destinare una piccola parte del reddito mensile come elemosina continua a sostegno di progetti a servizio della nostra gente in Palestina: soccorso, Zakat, vestiario, cibo e sostegno alla resistenza dove c'è bisogno.",
+    "amountPlaceholder": "Inserisci importo"
   },
   "system": {
     "loading": "Caricamento",

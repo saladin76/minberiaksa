@@ -255,7 +255,7 @@ export function StorySlidesEditor({
                     </SelectContent>
                   </Select>
                 ) : row.ctaKind === 'URL' ? (
-                  <Input dir="ltr" placeholder="/projects#gaza أو https://…" value={row.ctaValue} onChange={(e) => update(i, { ctaValue: e.target.value })} />
+                  <Input dir="ltr" placeholder="/bagislar#gaza أو https://…" value={row.ctaValue} onChange={(e) => update(i, { ctaValue: e.target.value })} />
                 ) : (
                   <div className="text-xs text-slate-400 self-center">الزر ينقل الزائر بلغته الحالية تلقائيًا.</div>
                 )}
@@ -266,7 +266,7 @@ export function StorySlidesEditor({
                   <Input placeholder="تبرّع الآن" value={row.ctaLabel} onChange={(e) => update(i, { ctaLabel: e.target.value })} />
                   <span className="block text-[11px] text-slate-500">
                     {row.ctaKind === 'URL'
-                      ? 'رابط داخلي مثل /projects#gaza يُحوَّل تلقائيًا إلى لغة الزائر؛ الروابط الخارجية تبقى كما هي.'
+                      ? 'رابط داخلي مثل /bagislar#gaza يُحوَّل تلقائيًا إلى لغة الزائر؛ الروابط الخارجية تبقى كما هي.'
                       : 'يُحلّ الرابط لكل زائر بلغته: المشروع بمعرّفه المترجم، والصفحة بمسارها المحلي.'}
                   </span>
                 </label>

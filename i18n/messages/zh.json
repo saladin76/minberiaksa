@@ -1711,7 +1711,8 @@
     "investmentLead": "稳定的给予，让清真寺与城市得以规划。",
     "amountPerX": "金额（{freq}）",
     "privacyNote": "您可随时修改或停止该计划。",
-    "whatIsText": "按您选定的频率自动扣取固定金额，用于经审定的基金。"
+    "whatIsText": "按您选定的频率自动扣取固定金额，用于经审定的基金。",
+    "amountPlaceholder": "输入金额"
   },
   "system": {
     "loading": "加载中 …",

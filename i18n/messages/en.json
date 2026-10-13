@@ -2743,7 +2743,8 @@
     "investmentLead": "Regular giving that reaches Palestine: a blessed land, a patient people, an unbroken watch. You choose the amount and frequency; we see it through to documented, monitored projects.",
     "amountPerX": "Amount ({freq})",
     "privacyNote": "Your data is secure and never shared with third parties. To change or stop your recurring gift, contact us.",
-    "whatIsText": "Recurring giving means setting aside a small part of your monthly income as an ongoing charity that supports projects serving our people in Palestine: relief, Zakat, clothing, food, and support for steadfastness wherever the need is."
+    "whatIsText": "Recurring giving means setting aside a small part of your monthly income as an ongoing charity that supports projects serving our people in Palestine: relief, Zakat, clothing, food, and support for steadfastness wherever the need is.",
+    "amountPlaceholder": "Enter amount"
   },
   "system": {
     "loading": "Loading",

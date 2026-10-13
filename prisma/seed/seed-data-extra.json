@@ -36,7 +36,7 @@
           "mediaUrl": "https://drive.google.com/thumbnail?id=1cuaNUr0YAgACFmRPN4PqRe7NqQa8Dn1n&sz=w1600",
           "durationSeconds": 5,
           "ctaKind": "URL",
-          "ctaValue": "/projects#gaza"
+          "ctaValue": "/bagislar#gaza"
         }
       ]
     },
@@ -111,7 +111,7 @@
           "mediaUrl": "https://drive.google.com/thumbnail?id=16D72JzXMHbp72ZJCHHFWLjUYrmUX4ta1&sz=w1600",
           "durationSeconds": 5,
           "ctaKind": "URL",
-          "ctaValue": "/projects#iftar"
+          "ctaValue": "/bagislar#iftar"
         }
       ]
     },

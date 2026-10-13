@@ -2743,7 +2743,8 @@
     "investmentLead": "Uma dádiva regular que chega à Palestina: uma terra abençoada, um povo paciente, uma vigília que não cessa. Escolhe o valor e a periodicidade; nós encaminhamo-la para projetos documentados e acompanhados.",
     "amountPerX": "Valor ({freq})",
     "privacyNote": "Os seus dados estão seguros e não são partilhados com terceiros. Para alterar ou parar o seu donativo regular, contacte-nos.",
-    "whatIsText": "O donativo regular consiste em reservar uma pequena parte do rendimento mensal como caridade contínua que sustenta projetos ao serviço do nosso povo na Palestina: socorro, Zakat, vestuário, alimento e apoio à resistência onde houver necessidade."
+    "whatIsText": "O donativo regular consiste em reservar uma pequena parte do rendimento mensal como caridade contínua que sustenta projetos ao serviço do nosso povo na Palestina: socorro, Zakat, vestuário, alimento e apoio à resistência onde houver necessidade.",
+    "amountPlaceholder": "Inserir valor"
   },
   "system": {
     "loading": "A Carregar",

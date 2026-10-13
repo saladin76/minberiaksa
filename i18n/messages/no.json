@@ -1711,7 +1711,8 @@
     "investmentLead": "Et jevnt bidrag som gir moskeen og byen forutsigbar støtte.",
     "amountPerX": "Beløp ({freq})",
     "privacyNote": "Du kan endre eller avslutte planen når som helst.",
-    "whatIsText": "Et fast beløp trekkes med den hyppigheten du velger, og går til et godkjent fond."
+    "whatIsText": "Et fast beløp trekkes med den hyppigheten du velger, og går til et godkjent fond.",
+    "amountPlaceholder": "Skriv inn beløp"
   },
   "system": {
     "loading": "Laster …",
