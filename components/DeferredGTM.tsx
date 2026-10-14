@@ -3,7 +3,12 @@
 import { useEffect } from "react";
 
 const GTM_ID = "GTM-MMNBQQWB";
-const IDLE_DELAY_MS = 6000;
+/* Fallback for a visitor who neither scrolls, taps nor types: this long after
+   `load`. Almost everyone triggers GTM sooner by interacting. The trade-off is
+   explicit: a lower value records more of the visitors who leave untouched,
+   and puts the container's ~3 s of tag script back into the window PageSpeed
+   measures (Total Blocking Time). */
+const IDLE_DELAY_MS = 15000;
 const CONVERSION_PATH_RE = /\/(success|donation-failed)(\/|$)/;
 
 function isConversionPage(): boolean {
@@ -19,7 +24,8 @@ export default function DeferredGTM() {
 
     const cleanup = () => {
       if (timeoutId !== null) clearTimeout(timeoutId);
-      window.removeEventListener("scroll", loadGtm);
+      window.removeEventListener("load", startFallback);
+      window.removeEventListener("wheel", loadGtm);
       window.removeEventListener("pointerdown", loadGtm);
       window.removeEventListener("keydown", loadGtm);
       window.removeEventListener("touchstart", loadGtm);
@@ -50,8 +56,20 @@ export default function DeferredGTM() {
       return cleanup;
     }
 
-    timeoutId = setTimeout(loadGtm, IDLE_DELAY_MS);
-    window.addEventListener("scroll", loadGtm, { passive: true, once: true });
+    // The fallback for a visitor who never scrolls or taps counts from the
+    // page's `load`, not from mount. From mount it fired while a slow phone was
+    // still loading the page, and the container's tags (GA4, Ads, Meta, TikTok:
+    // ~1.2 MB, ~3 s of script) competed with the page's own first render.
+    // A declaration, so `cleanup` (which can run first, from a conversion page) can name it.
+    function startFallback() {
+      timeoutId = setTimeout(loadGtm, IDLE_DELAY_MS);
+    }
+    if (document.readyState === "complete") startFallback();
+    else window.addEventListener("load", startFallback, { once: true });
+    // Not `scroll`: it also fires for scrolls the page makes itself (scroll
+    // restoration, ScrollToTop), which loaded GTM ~3 s in with no visitor input.
+    // A visitor scrolls with a wheel, a touch or a key, all listened for here.
+    window.addEventListener("wheel", loadGtm, { passive: true, once: true });
     window.addEventListener("pointerdown", loadGtm, { once: true });
     window.addEventListener("keydown", loadGtm, { once: true });
     window.addEventListener("touchstart", loadGtm, { passive: true, once: true });

@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
+import { preload } from "react-dom";
 import type { Metadata } from "next";
-import { LOCALES, LOCALE_SEO, OG_LOCALE_MAP, OG_IMAGE, SITE_URL, buildHreflang } from "@/lib/seo";
+import { LOCALES, LOCALE_SEO, OG_LOCALE_MAP, OG_IMAGE, SITE_URL, buildHreflang, isVercelDeployment } from "@/lib/seo";
 import type { Locale } from "@/lib/seo";
 import { Suspense } from "react";
 import { getServerSession } from "next-auth";
@@ -22,7 +23,6 @@ import SyncHtmlDir from "@/components/SyncHtmlDir";
 import ScrollToTop from "@/components/minbar/ScrollToTop";
 import { MarketingRuntime } from "@/components/MarketingRuntime";
 import { CurrencyProvider } from "@/context/CurrencyContext";
-import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 import { listCategories, type NavCategory } from "@/lib/minbar/categories";
@@ -32,6 +32,23 @@ import "@/styles/minbar/locale-fonts.css";
 
 // Valid public locales derive from the single source of truth (enabled set).
 const VALID_LOCALES = SUPPORTED_LOCALES;
+
+/* Fetched from the first bytes of the document rather than once the CSS has
+   been parsed. The pattern tile is the hero's (and the header's) background,
+   which PageSpeed picks as the Largest Contentful Paint element; the text face
+   arriving late re-flowed the hero (CLS "web font loaded"). Font file names are
+   from `styles/self-hosted-fonts.css`, written by scripts/vendor-google-fonts.mjs
+   update them together. */
+const PATTERN_TILE = "/minbar/assets/patterns/aqsa-white-pattern.webp";
+const RTL_TEXT_FONTS = ["/fonts/cairo/cairo-200-1000-arabic-714d40cf.woff2", "/fonts/cairo/cairo-200-1000-latin-caa2f572.woff2"];
+const LTR_TEXT_FONTS = ["/fonts/montserrat/montserrat-100-900-latin-a5ec5492.woff2"];
+
+/** The non-Latin faces `styles/minbar/locale-fonts.css` names, one per locale that needs one. */
+const LOCALE_FONT_STYLESHEETS: Partial<Record<string, string>> = {
+  ja: "https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700;900&display=swap",
+  zh: "https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;700;900&display=swap",
+  hi: "https://fonts.googleapis.com/css2?family=Noto+Sans+Devanagari:wght@400;700;900&display=swap",
+};
 
 /**
  * A first path segment that is not a locale is NOT a page in Arabic.
@@ -116,9 +133,17 @@ export default async function Rootlayout({
     listNavSuperCategories(locale),
   ]);
   const navCategories: NavCategory[] = categories.map(({ id, href, name, image, projectCount }) => ({ id, href, name, image, projectCount }));
+  const localeFont = LOCALE_FONT_STYLESHEETS[locale];
+
+  preload(PATTERN_TILE, { as: "image", fetchPriority: "high" });
+  for (const font of dir === "rtl" ? RTL_TEXT_FONTS : LTR_TEXT_FONTS) {
+    preload(font, { as: "font", type: "font/woff2", crossOrigin: "anonymous" });
+  }
 
   return (
     <IntlProviderClient locale={locale} messages={messages}>
+      {/* React hoists a stylesheet link with `precedence` into <head>. */}
+      {localeFont ? <link rel="stylesheet" href={localeFont} precedence="default" /> : null}
       <SyncHtmlDir locale={locale} />
       <MarketingRuntime>
         {/* `mia-scope` is what confines the Minbar design tokens to the public
@@ -149,8 +174,9 @@ export default async function Rootlayout({
               <Toaster position="top-center" />
             </SessionProvider>
           </CurrencyProvider>
-          <Analytics />
-          <SpeedInsights />
+          {/* Analytics is mounted once, in the root layout. Both are Vercel-only:
+              on the VPS their scripts 404 and log console errors. */}
+          {isVercelDeployment() ? <SpeedInsights /> : null}
         </div>
       </MarketingRuntime>
     </IntlProviderClient>

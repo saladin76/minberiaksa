@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
 import { miaPath } from "@/lib/minbar/routes";
+import { imageUrl } from "@/lib/minbar/image-url";
 
 /**
  * The zakat band  ported from `Minbar/بنر الزكاة.dc.html`, a shared banner
@@ -53,9 +54,13 @@ export default function ZakatBanner() {
             }}
           />
           <img
-            src="/minbar/assets/aqsa-dome-line.png"
+            src={imageUrl("/minbar/assets/aqsa-dome-line.png", 180)}
             alt=""
             aria-hidden="true"
+            width={940}
+            height={376}
+            loading="lazy"
+            decoding="async"
             style={{ position: "absolute", insetInlineStart: -26, bottom: -26, width: 180, height: "auto", opacity: 0.14, pointerEvents: "none" }}
           />
 

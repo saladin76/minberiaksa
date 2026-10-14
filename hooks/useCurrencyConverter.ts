@@ -6,6 +6,22 @@ const CACHE_KEY = "cachedExchangeRates";
 /** Slightly under 1h so we pick up server hourly refresh without extra third-party API calls. */
 const CACHE_DURATION = 50 * 60 * 1000;
 
+/* Every price on a page asks for the selected currency, and js-cookie re-parses
+   the whole cookie string (tracking cookies included) on each call  the
+   homepage profile showed ~0.2 s in that parser. The parse is redone only when
+   `document.cookie` itself has changed, so a new selection is still seen at once. */
+let lastCookieString: string | null = null;
+let lastSelectedCurrency = "DEFAULT";
+function readSelectedCurrency(): string {
+  if (typeof document === "undefined") return Cookies.get("currency") || "DEFAULT";
+  const raw = document.cookie;
+  if (raw !== lastCookieString) {
+    lastCookieString = raw;
+    lastSelectedCurrency = Cookies.get("currency") || "DEFAULT";
+  }
+  return lastSelectedCurrency;
+}
+
 const useCurrencyConverter = () => {
   const [exchangeRates, setExchangeRates] = useState<{ [key: string]: number } | null>(null);
   const [loading, setLoading] = useState(true);
@@ -60,7 +76,7 @@ const useCurrencyConverter = () => {
     return () => window.removeEventListener(CURRENCY_COOKIE_UPDATED_EVENT, onUpdate);
   }, []);
 
-  const getSelectedCurrency = () => Cookies.get("currency") || "DEFAULT";
+  const getSelectedCurrency = readSelectedCurrency;
 
   const convertToCurrency = (value: number) => {
     const currency = getSelectedCurrency();

@@ -261,8 +261,12 @@
  * ───────────────────────────────────────────────────────────────────────────── */
 
 /* Space reserved under the fixed header. The height is written by the header's
- * own ResizeObserver; this is only the pre-measurement value. */
-.mia-head-spacer { height: 106px; }
+ * own ResizeObserver; this is only the pre-measurement value  and it has to be
+ * the real one. It was 106px against a 69–71px header, so hydration pulled the
+ * whole page up ~36px (PageSpeed: CLS on `main`). Re-measure if the header's
+ * rows change. */
+.mia-head-spacer { height: 71px; }
+@media (max-width: 480px) { .mia-head-spacer { height: 69px; } }
 
 .mia-head {
   position: fixed;
@@ -717,15 +721,19 @@
 .mia-foot .social-ic:hover { transform: translateY(-3px); border-color: #D39A27; background: rgba(211, 154, 39, .1); }
 
 .mia-wa-fab {
+  box-shadow: 0 12px 24px rgba(31, 122, 77, .3);
   transition: transform .2s cubic-bezier(.22, .61, .36, 1), box-shadow .2s ease;
+}
+/* The pulse ring is its own layer fading in and out. Animating the button's
+   box-shadow repainted it every frame (PageSpeed: non-composited animation). */
+.mia-wa-fab::after {
+  content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+  box-shadow: 0 0 0 8px rgba(31, 122, 77, .12); opacity: 0;
   animation: mia-wa-pulse 2.6s ease-in-out infinite;
 }
 .mia-wa-fab:hover { transform: translateY(-3px) scale(1.05); box-shadow: 0 16px 30px rgba(31, 122, 77, .4); }
-@keyframes mia-wa-pulse {
-  0%, 100% { box-shadow: 0 12px 24px rgba(31, 122, 77, .3); }
-  50% { box-shadow: 0 12px 24px rgba(31, 122, 77, .3), 0 0 0 8px rgba(31, 122, 77, .12); }
-}
-@media (prefers-reduced-motion: reduce) { .mia-wa-fab { animation: none; } }
+@keyframes mia-wa-pulse { 0%, 100% { opacity: 0; } 50% { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .mia-wa-fab::after { animation: none; } }
 
 .mia-foot .fcol-head {
   display: flex; align-items: center; justify-content: space-between; gap: 10px;
@@ -1083,8 +1091,19 @@
   display: grid; grid-template-columns: minmax(0, 1.12fr) minmax(320px, .88fr);
   gap: 36px; align-items: center; padding: 30px 0 26px;
 }
-.mia-scope .mia-hero-copy { display: grid; gap: 18px; justify-items: start; min-width: 0; animation: mia-in .7s cubic-bezier(.22,.61,.36,1) both; }
-.mia-scope .mia-hero-media { position: relative; display: grid; min-width: 0; animation: mia-in .7s .12s cubic-bezier(.22,.61,.36,1) both; }
+/* The hero rises in without fading: an element that starts at opacity 0 is not
+   a Largest Contentful Paint candidate until it is visible, so the old fade-in
+   left PageSpeed with no LCP at all (NO_LCP) or a late one. */
+/* Homepage sections below the hero are rendered when they near the viewport.
+   Until then the browser skips their style, layout and paint, and does not
+   fetch their background photographs (CSS backgrounds have no loading="lazy").
+   `auto` in the intrinsic size keeps each section's real height once seen, so
+   scrolling back up does not jump. */
+.mia-scope .mia-home > section:not(.mia-hero) { content-visibility: auto; contain-intrinsic-size: auto 640px; }
+
+@keyframes mia-hero-rise { from { transform: translateY(14px); } to { transform: none; } }
+.mia-scope .mia-hero-copy { display: grid; gap: 18px; justify-items: start; min-width: 0; animation: mia-hero-rise .7s cubic-bezier(.22,.61,.36,1) both; }
+.mia-scope .mia-hero-media { position: relative; display: grid; min-width: 0; animation: mia-hero-rise .7s .12s cubic-bezier(.22,.61,.36,1) both; }
 
 .mia-scope .mia-hero-eyebrow {
   display: inline-flex; align-items: center; gap: 9px;

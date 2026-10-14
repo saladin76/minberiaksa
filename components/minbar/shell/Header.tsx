@@ -16,6 +16,7 @@ import { useMinbarLabel } from "@/hooks/useMinbarLabel";
 import type { NavCategory } from "@/lib/minbar/categories";
 import type { NavSuperCategory } from "@/lib/minbar/super-category";
 import HeaderSearch from "./HeaderSearch";
+import { imageUrl } from "@/lib/minbar/image-url";
 
 /**
  * Site header  ported from `Minbar/Header.dc.html`.
@@ -210,10 +211,12 @@ export default function Header({
         document.documentElement.style.setProperty("--mia-head-h", `${next}px`);
       });
     };
-    sync();
-
+    // A ResizeObserver delivers its first entry on `observe()`, after the
+    // browser's own layout pass. Measuring synchronously here as well forced a
+    // layout in the middle of hydration (PageSpeed: ~200 ms forced reflow).
     const observer = typeof ResizeObserver !== "undefined" ? new ResizeObserver(sync) : null;
-    observer?.observe(head);
+    if (observer) observer.observe(head);
+    else sync();
     window.addEventListener("resize", sync);
     return () => {
       observer?.disconnect();
@@ -347,8 +350,10 @@ export default function Header({
               }}
             >
               <img
-                src="/minbar/assets/logo-horizontal.png"
+                src={imageUrl("/minbar/assets/logo-horizontal.png", 156)}
                 alt={tCommon("orgOfficialName")}
+                width={156}
+                height={38}
                 style={{ height: 38, width: "auto", maxWidth: 150, objectFit: "contain", display: "block" }}
               />
             </span>

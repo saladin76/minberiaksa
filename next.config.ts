@@ -92,6 +92,34 @@ const blogCategoryRedirects = [
   ["الأيتام-وحماية-الطفل", "الأيتام-والتكافل"],
 ] as const;
 
+/* Mirrors `isProductionDeployment()` in lib/seo.ts (this file cannot use the
+   `@/` alias): Vercel production, or any production build off Vercel (the VPS)
+   unless SITE_INDEXING=off. Keying on VERCEL_ENV alone sent `noindex` from the
+   VPS, which has no Vercel variables. */
+function isIndexableDeployment(): boolean {
+  if (process.env.SITE_INDEXING === "off") return false;
+  if (process.env.VERCEL) return process.env.VERCEL_ENV === "production";
+  return process.env.NODE_ENV === "production";
+}
+
+/* About 120 days: long enough for Lighthouse's cache audit to treat it as
+   efficient, short enough that an image replaced in place still turns over. */
+const ASSET_CACHE = { key: "Cache-Control", value: "public, max-age=10368000, stale-while-revalidate=86400" };
+const IMMUTABLE_CACHE = { key: "Cache-Control", value: "public, max-age=31536000, immutable" };
+
+/* Baseline hardening. No script-src CSP: GTM, Clarity, Contentsquare, Meta,
+   TikTok, Stripe and PayPal would all need allow-listing first. COOP keeps
+   popups allowed for the PayPal and Google sign-in windows. */
+const SECURITY_HEADERS = [
+  { key: "Strict-Transport-Security", value: "max-age=31536000" },
+  { key: "X-Content-Type-Options", value: "nosniff" },
+  { key: "X-Frame-Options", value: "SAMEORIGIN" },
+  { key: "Content-Security-Policy", value: "frame-ancestors 'self'; base-uri 'self'; object-src 'none'" },
+  { key: "Cross-Origin-Opener-Policy", value: "same-origin-allow-popups" },
+  { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+  { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(), browsing-topics=()" },
+];
+
 const nextConfig: NextConfig = {
   /* `scripts/deploy-vps.sh` builds into a separate folder (NEXT_DIST_DIR) while
      the live server keeps reading `.next`, then swaps the two. Building over the
@@ -114,7 +142,8 @@ const nextConfig: NextConfig = {
   },
   images: {
     formats: ["image/avif", "image/webp"],
-    minimumCacheTTL: 2592000,
+    // ~120 days, matching ASSET_CACHE: 30 days still counts as a short cache lifetime in Lighthouse.
+    minimumCacheTTL: 10368000,
     deviceSizes: [640, 750, 828, 1080, 1200, 1920],
     imageSizes: [16, 32, 64, 96, 128, 256, 384],
     remotePatterns: [
@@ -159,12 +188,23 @@ const nextConfig: NextConfig = {
      and the root layout's metadata say the same for the crawlers that read
      those instead. */
   async headers() {
-    if (process.env.VERCEL_ENV === "production") return [];
     return [
       {
         source: "/:path*",
-        headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow" }],
+        headers: [
+          ...(isIndexableDeployment() ? [] : [{ key: "X-Robots-Tag", value: "noindex, nofollow" }]),
+          ...SECURITY_HEADERS,
+        ],
       },
+      /* `/public` files are served with `max-age=0` by default, so every visit
+         re-downloaded the logo, the pattern tile and every font. Fonts and the
+         hero stills are named per version and never change in place; the other
+         images change rarely, and a replaced one should get a new file name. */
+      { source: "/fonts/:path*", headers: [IMMUTABLE_CACHE] },
+      { source: "/minbar/assets/hero/:path*", headers: [IMMUTABLE_CACHE] },
+      { source: "/minbar/assets/:path*", headers: [ASSET_CACHE] },
+      { source: "/assets/:path*", headers: [ASSET_CACHE] },
+      { source: "/:file(.+\\.(?:png|jpe?g|webp|avif|svg|ico))", headers: [ASSET_CACHE] },
     ];
   },
   async rewrites() {
@@ -180,6 +220,14 @@ const nextConfig: NextConfig = {
   },
   async redirects() {
     return [
+      /* One host. `www` served the same pages as the bare domain, so every page
+         existed twice for crawlers; canonicals name the bare domain (lib/seo.ts). */
+      {
+        source: "/:path*",
+        has: [{ type: "host" as const, value: "www.minberiaksa.org" }],
+        destination: "https://minberiaksa.org/:path*",
+        permanent: true,
+      },
       ...marketingRedirects.map(([source, destination]) => ({ source, destination, permanent: false })),
       ...blogCategoryRedirects.map(([from, to]) => ({
         source: `/:locale/blog/category/${from}`,

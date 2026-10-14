@@ -5,6 +5,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { miaPath } from "@/lib/minbar/routes";
 import { IMG } from "@/lib/minbar/content/media";
 import { useMinbarMoney } from "@/hooks/useMinbarMoney";
+import { cssImage } from "@/lib/minbar/image-url";
 
 /**
  * "Journey to Al-Aqsa" (شدّ الرحال)  coaches carrying worshippers to the
@@ -53,7 +54,7 @@ export default function TravelBanner() {
                 position: "absolute",
                 inset: 0,
                 display: "block",
-                backgroundImage: `url('${IMG.minber}')`,
+                backgroundImage: cssImage(IMG.minber, 620),
                 backgroundSize: "cover",
                 backgroundPosition: "center",
                 filter: "grayscale(1) contrast(1.06)",

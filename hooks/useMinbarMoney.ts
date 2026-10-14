@@ -3,7 +3,7 @@
 import { useCallback } from "react";
 import { useLocale } from "next-intl";
 import { useCurrency } from "@/context/CurrencyContext";
-import { currencySymbol, formatMoney } from "@/lib/minbar/money";
+import { cachedNumberFormat, currencySymbol, formatMoney } from "@/lib/minbar/money";
 
 /**
  * Formats a USD figure in the visitor's selected currency.
@@ -47,7 +47,7 @@ export function useMinbarMoney() {
   const formatNumber = useCallback(
     (value: number, options?: Intl.NumberFormatOptions) => {
       try {
-        return new Intl.NumberFormat(locale, options).format(value);
+        return cachedNumberFormat(locale, options).format(value);
       } catch {
         return String(value);
       }

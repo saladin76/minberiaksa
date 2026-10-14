@@ -9,6 +9,7 @@ import { ORG } from "@/lib/minbar/org";
 import { useMinbarLabel } from "@/hooks/useMinbarLabel";
 import SocialIcon, { type SocialIconName } from "./SocialIcon";
 import type { NavCategory } from "@/lib/minbar/categories";
+import { imageSrcSet, imageUrl } from "@/lib/minbar/image-url";
 
 /**
  * Site footer  ported from `Minbar/Footer.dc.html`.
@@ -170,7 +171,9 @@ export default function Footer({
         style={{ position: "relative", isolation: "isolate", overflow: "hidden", background: "#10212B", color: "#fff", fontFamily: "var(--font-ar)" }}
       >
         <img
-          src={closingImage}
+          src={imageUrl(closingImage, 960)}
+          srcSet={imageSrcSet(closingImage)}
+          sizes="100vw"
           alt={tCommon("oldCityViewAlt")}
           loading="lazy"
           decoding="async"
@@ -206,8 +209,12 @@ export default function Footer({
             {/* The wordmark is dark on transparent; it sits on a small ivory plate. */}
             <span style={{ display: "inline-block", justifySelf: "start", padding: "6px 12px", background: "rgba(255,253,248,.96)", borderRadius: 12, boxShadow: "0 10px 30px rgba(0,0,0,.25)" }}>
               <img
-                src="/minbar/assets/logo-horizontal.png"
+                src={imageUrl("/minbar/assets/logo-horizontal.png", 210)}
                 alt={name}
+                width={210}
+                height={56}
+                loading="lazy"
+                decoding="async"
                 style={{
                   display: "block",
                   height: 56,

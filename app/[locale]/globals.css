@@ -2,7 +2,12 @@
 @tailwind components;
 @tailwind utilities;
 
-* {
+/* Smooth in-page anchor jumps. On the root only: `* { scroll-behavior: smooth }`
+   made every scroll container animate its own initial positioning (the RTL
+   rails), and Chrome then recorded no Largest Contentful Paint for the
+   homepage at all  PageSpeed's NO_LCP. Script-driven scrolls pass
+   `behavior: "smooth"` themselves. */
+html {
   scroll-behavior: smooth;
 }
 

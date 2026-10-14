@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useLocale, useMessages, useTranslations } from "next-intl";
 import { miaPath } from "@/lib/minbar/routes";
 import { verseBlock } from "@/lib/minbar/quran";
+import { imageSrcSet, imageUrl } from "@/lib/minbar/image-url";
 
 /**
  * "'Ibādan Lanā" (عبادًا لنا)  the programme raising a Qur'anic generation to
@@ -49,7 +50,13 @@ export default function IbadanBanner() {
 
           <div className="ibadan-body" style={{ position: "relative", minHeight: 340 }}>
             <img
-              src="/minbar/assets/ibadan-hero.jpg"
+              src={imageUrl("/minbar/assets/ibadan-hero.jpg", 600)}
+              srcSet={imageSrcSet("/minbar/assets/ibadan-hero.jpg", [640, 828, 1200])}
+              sizes="(max-width: 1240px) 100vw, 1192px"
+              width={1493}
+              height={704}
+              loading="lazy"
+              decoding="async"
               alt={t("ibadanSubtitle")}
               style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", objectPosition: "center 32%" }}
             />
@@ -60,7 +67,7 @@ export default function IbadanBanner() {
               className="ibadan-logo"
               style={{ position: "absolute", insetInlineEnd: 18, top: 18, zIndex: 3, display: "grid", placeItems: "center", width: "min(26vw, 140px)", padding: "8px 12px", background: "rgba(255,255,255,.95)", borderRadius: 10, boxShadow: "0 12px 30px rgba(16,33,43,.28)" }}
             >
-              <img src={logo} alt={t("ibadanHeading1")} style={{ maxWidth: "100%", height: "auto", objectFit: "contain" }} />
+              <img src={imageUrl(logo, 140)} alt={t("ibadanHeading1")} width={locale === "ar" ? 969 : 1080} height={locale === "ar" ? 504 : 514} loading="lazy" decoding="async" style={{ maxWidth: "100%", height: "auto", objectFit: "contain" }} />
             </Link>
 
             <div

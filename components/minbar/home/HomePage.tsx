@@ -75,7 +75,7 @@ export default function HomePage({
   };
 
   return (
-    <div style={{ position: "relative" }}>
+    <div className="mia-home" style={{ position: "relative" }}>
       {/* Page-wide ornament wash, behind everything and never interactive. */}
       <div
         aria-hidden="true"

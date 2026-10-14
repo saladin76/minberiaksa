@@ -5,8 +5,9 @@ import DeferredGTM from "@/components/DeferredGTM";
 import MicrosoftClarity from "@/components/MicrosoftClarity";
 import EngagementInstrumentation from "@/components/EngagementInstrumentation";
 import { Analytics } from "@vercel/analytics/next";
-import { LOCALES, LOCALE_SEO, OG_IMAGE, OG_LOCALE_MAP, SITE_NAME, SITE_URL, buildHreflang, isProductionDeployment } from "@/lib/seo";
+import { LOCALES, LOCALE_SEO, OG_IMAGE, OG_LOCALE_MAP, SITE_NAME, SITE_URL, buildHreflang, isProductionDeployment, isVercelDeployment } from "@/lib/seo";
 import { isValidLocale, localeDirection } from "@/lib/locales";
+import Script from "next/script";
 import "./[locale]/globals.css";
 import "@/styles/self-hosted-fonts.css";
 
@@ -143,9 +144,10 @@ export default async function RootLayout({
 
         <link rel="preconnect" href="https://res.cloudinary.com" />
         <link rel="dns-prefetch" href="https://i.ibb.co" />
-        <link rel="preload" href="/bg.webp" as="image" type="image/webp" />
+        {/* No global image preload: `/bg.webp` was preloaded on every page for a
+            legacy homepage that is no longer rendered, competing with each
+            page's real LCP image for bandwidth. */}
 
-        <script src="https://t.contentsquare.net/uxa/e81365186c19c.js" async />
       </head>
       <body className="font-arabic antialiased" style={SITE_FONT_VARIABLES}>
         <noscript>
@@ -162,7 +164,11 @@ export default async function RootLayout({
           <EngagementInstrumentation />
         </Suspense>
         <DeferredGTM />
-        <Analytics />
+        {/* Vercel-only: on the VPS `/_vercel/insights/script.js` is a 404 and a console error. */}
+        {isVercelDeployment() ? <Analytics /> : null}
+        {/* Contentsquare after the page has loaded, in idle time: in <head> it
+            ran ~0.6 s of script during the page's own first paint. */}
+        <Script src="https://t.contentsquare.net/uxa/e81365186c19c.js" strategy="lazyOnload" />
       </body>
     </html>
   );

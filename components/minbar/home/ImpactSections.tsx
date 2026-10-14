@@ -8,6 +8,7 @@ import { miaPath } from "@/lib/minbar/routes";
 import ViewAllLink from "./ViewAllLink";
 import { useMinbarMoney } from "@/hooks/useMinbarMoney";
 import type { MinbarProject } from "@/lib/minbar/projects";
+import { cssImage } from "@/lib/minbar/image-url";
 
 /**
  * "How your donation arrives", the impact figures, and the urgent-projects rail.
@@ -49,7 +50,7 @@ export function PathSection() {
               }}
             >
               <span style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                <span style={{ fontSize: 34, fontWeight: 900, color: "var(--gold)", lineHeight: 1.15 }}>{step.num}</span>
+                <span style={{ fontSize: 34, fontWeight: 900, color: "var(--gold-2)", lineHeight: 1.15 }}>{step.num}</span>
                 <span style={{ flex: "1 1 auto", height: 1, background: "var(--border)" }} />
               </span>
               <b style={{ fontSize: 20, lineHeight: 1.35 }}>{step.title}</b>
@@ -83,7 +84,7 @@ export function ImpactSection() {
 
   const metrics = [
     { value: formatNumber(3_026_088), label: tAch("bigServices"), note: tAch("noteServices"), color: "var(--deep)", featured: true },
-    { value: formatNumber(936), label: tAch("bigProjects"), note: tAch("yearsTitle"), color: "var(--gold)", featured: false },
+    { value: formatNumber(936), label: tAch("bigProjects"), note: tAch("yearsTitle"), color: "var(--gold-2)", featured: false },
     {
       value: formatNumber(6),
       label: tAch("sectorsLabel"),
@@ -229,7 +230,7 @@ export function RegionCards({ images }: { images: { quds: string; aqsa: string; 
              the top, the button pinned to the foot  so the three buttons sit
              on one line however long each card's copy runs. */
           <Link key={card.title} href={card.href} className="mia-region-card" style={{ position: "relative", display: "flex", flexDirection: "column", minHeight: 260, overflow: "hidden", background: "var(--deep)", borderRadius: 14, boxShadow: "0 12px 28px rgba(16,33,43,.12)" }}>
-            <span role="img" aria-label={card.title} style={{ position: "absolute", inset: 0, display: "block", backgroundImage: `url('${card.image}')`, backgroundSize: "cover", backgroundPosition: "center" }} />
+            <span role="img" aria-label={card.title} style={{ position: "absolute", inset: 0, display: "block", backgroundImage: cssImage(card.image, 420), backgroundSize: "cover", backgroundPosition: "center" }} />
             <span style={{ position: "absolute", inset: 0, background: card.overlay }} />
             <span className="mia-region-card__body" style={{ position: "relative", flex: "1 1 auto", display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 12, padding: 32 }}>
               <b style={{ color: "#fff", fontSize: "clamp(24px,2.4vw,32px)", fontWeight: 900, lineHeight: 1.25 }}>{card.title}</b>

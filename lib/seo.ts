@@ -2,15 +2,31 @@ import type { Metadata } from "next";
 import { SUPPORTED_LOCALES, isValidLocale, type SupportedLocale } from "@/lib/locales";
 import { MINBAR_LOCALE_SEO, MINBAR_OG_LOCALES } from "@/lib/seo-minbar.generated";
 
-export const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://www.minberiaksa.org").replace(/\/$/, "");
+/* The bare domain is the one the site is served, signed in (NEXTAUTH_URL) and
+   tested on; `www` 301s to it (next.config.ts). Canonicals and hreflang used to
+   name `www`, which PageSpeed read as a page whose canonical points at another
+   hreflang location. */
+export const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://minberiaksa.org").replace(/\/$/, "");
 
 /**
  * Only the production deployment is meant to be found. Preview and
  * development deployments say noindex three ways  the `X-Robots-Tag` header
  * in `next.config.ts`, `app/robots.ts`, and the root layout's metadata  and
  * all three key off this (`DEPLOYED_VS_DESIGN_AUDIT.md` § P1.1).
+ *
+ * On Vercel, `VERCEL_ENV` tells production from previews. The VPS has no
+ * Vercel variables at all, and this used to read that as "not production", so
+ * the live site told every crawler noindex. Off Vercel a production build is
+ * production, unless `SITE_INDEXING=off` says otherwise (a staging server).
  */
-export const isProductionDeployment = (): boolean => process.env.VERCEL_ENV === "production";
+export const isProductionDeployment = (): boolean => {
+  if (process.env.SITE_INDEXING === "off") return false;
+  if (process.env.VERCEL) return process.env.VERCEL_ENV === "production";
+  return process.env.NODE_ENV === "production";
+};
+
+/** Vercel Analytics / Speed Insights only exist on Vercel; elsewhere their scripts 404. */
+export const isVercelDeployment = (): boolean => Boolean(process.env.VERCEL);
 export const SITE_NAME = "Minberiaksa";
 export const OG_IMAGE = `${SITE_URL}/og-image.jpg`;
 

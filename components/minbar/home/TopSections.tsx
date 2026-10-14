@@ -12,6 +12,7 @@ import { verseBlock } from "@/lib/minbar/quran";
 import { IMG } from "@/lib/minbar/content/media";
 import { introVideoId } from "@/lib/minbar/content/catalog";
 import { youtubeEmbed } from "@/lib/minbar/content/media";
+import { cssImage, imageUrl } from "@/lib/minbar/image-url";
 
 /**
  * The top of the homepage  ported from `Minbar/الصفحة الرئيسية.dc.html`:
@@ -160,7 +161,7 @@ export function StoriesRail() {
             <>
               <span className="mia-story-ring" data-new={story.isNew ? "true" : "false"}>
                 <span className="mia-story-disc">
-                  <span role="img" aria-label={story.label} className="mia-story-img" style={{ backgroundImage: `url('${story.image}')` }} />
+                  <span role="img" aria-label={story.label} className="mia-story-img" style={{ backgroundImage: cssImage(story.image, 64) }} />
                 </span>
                 {story.isNew ? <span className="mia-story-badge">{tCommon("newBadge")}</span> : null}
               </span>
@@ -263,7 +264,7 @@ export function Hero({ onPlayIntro }: { onPlayIntro: (embed: string) => void }) 
       <div aria-hidden="true" className="mia-hero-glow" />
       <div aria-hidden="true" data-aqsa-pattern="" className="mia-hero-pattern" />
       {/* eslint-disable-next-line @next/next/no-img-element -- decorative asset in /public */}
-      <img aria-hidden="true" src="/minbar/assets/aqsa-dome-line.png" alt="" className="mia-hero-dome" />
+      <img aria-hidden="true" src={imageUrl("/minbar/assets/aqsa-dome-line.png", 300)} alt="" className="mia-hero-dome" width={940} height={376} decoding="async" fetchPriority="low" />
 
       <div className="mia-hero-wrap">
         <StoriesRail />
@@ -308,10 +309,9 @@ export function Hero({ onPlayIntro }: { onPlayIntro: (embed: string) => void }) 
                 type="button"
                 className="mia-hero-card"
                 onClick={() => onPlayIntro(youtubeEmbed(introVideoId(locale), { autoplay: true }))}
-                aria-label={t("videoTitle")}
               >
                 {/* eslint-disable-next-line @next/next/no-img-element -- the poster is a local, per-edition frame */}
-                <img src={poster} alt={t("videoAlt")} className="mia-hero-poster" width={1280} height={720} decoding="async" fetchPriority="high" />
+                <img src={poster} alt="" className="mia-hero-poster" width={1280} height={720} decoding="async" fetchPriority="high" />
                 <span aria-hidden="true" className="mia-hero-shade" />
 
                 <span className="mia-hero-chip">

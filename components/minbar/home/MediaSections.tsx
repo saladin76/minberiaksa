@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
 import Rail from "@/components/minbar/Rail";
@@ -11,6 +12,7 @@ import type { HomeEvent } from "@/lib/minbar/home-layout-read";
 import type { BuiltinEventId } from "@/lib/minbar/home-layout";
 import { ArrowGlyph } from "./TopSections";
 import ViewAllLink from "./ViewAllLink";
+import { cssImage } from "@/lib/minbar/image-url";
 
 /**
  * Homepage media sections  events, the endorsement and achievement reels, the
@@ -31,7 +33,65 @@ import ViewAllLink from "./ViewAllLink";
 /** A YouTube embed URL's still image, or "" for a playlist or another host. */
 function embedThumb(src: string): string {
   const id = /\/embed\/([\w-]{11})(?:[?/]|$)/.exec(src || "")?.[1];
-  return id ? `https://i.ytimg.com/vi/${id}/hqdefault.jpg` : "";
+  // `videoseries` (a playlist embed) is also eleven characters; it has no still.
+  return id && id !== "videoseries" ? `https://i.ytimg.com/vi/${id}/hqdefault.jpg` : "";
+}
+
+/** `src` with autoplay on, for an embed the visitor has just asked to play. */
+function withAutoplay(src: string): string {
+  try {
+    const url = new URL(src);
+    url.searchParams.set("autoplay", "1");
+    return url.toString();
+  } catch {
+    return src;
+  }
+}
+
+/**
+ * The recording's still and a play button until the visitor presses it; only
+ * then the YouTube player. Three players embedded up front cost the homepage
+ * ~1.5 MB of YouTube script, its fonts and its cookies before anyone pressed
+ * play  PageSpeed's largest JavaScript and third-party-cookie findings.
+ */
+function EventVideo({ src, title, playLabel }: { src: string; title: string; playLabel: string }) {
+  const [playing, setPlaying] = useState(false);
+  const thumb = embedThumb(src);
+
+  return (
+    <div
+      style={{
+        position: "relative",
+        width: "100%",
+        aspectRatio: "16/9",
+        background: thumb ? `var(--navy) url(${thumb}) center / cover no-repeat` : "var(--navy)",
+      }}
+    >
+      {playing ? (
+        <iframe
+          src={withAutoplay(src)}
+          title={title}
+          style={{ position: "absolute", inset: 0, width: "100%", height: "100%", border: 0 }}
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+          referrerPolicy="strict-origin-when-cross-origin"
+          allowFullScreen
+        />
+      ) : (
+        <button
+          type="button"
+          onClick={() => setPlaying(true)}
+          aria-label={`${playLabel}: ${title}`}
+          style={{ position: "absolute", inset: 0, display: "grid", placeItems: "center", width: "100%", height: "100%", padding: 0, border: 0, background: "linear-gradient(to top, rgba(16,33,43,.45), rgba(16,33,43,.05) 60%)", cursor: "pointer" }}
+        >
+          <span aria-hidden="true" style={{ display: "grid", placeItems: "center", width: 60, height: 60, borderRadius: "50%", background: "rgba(255,253,248,.94)", color: "var(--red)", boxShadow: "0 8px 22px rgba(0,0,0,.28)" }}>
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor" aria-hidden="true">
+              <path d="M8 5.5v13l11-6.5-11-6.5Z" />
+            </svg>
+          </span>
+        </button>
+      )}
+    </div>
+  );
 }
 
 export function EventsSection({ events }: { events: HomeEvent[] }) {
@@ -62,26 +122,7 @@ export function EventsSection({ events }: { events: HomeEvent[] }) {
               className="mia-lift"
               style={{ display: "grid", gridTemplateRows: "auto 1fr", background: "#fff", border: "1px solid var(--border)", borderRadius: 12, overflow: "hidden", boxShadow: "0 14px 40px rgba(16,33,43,.08)" }}
             >
-              {/* The video's thumbnail sits behind the lazy iframe, so a card
-                  that has not loaded yet shows the film's still, not a blank box. */}
-              <div
-                style={{
-                  position: "relative",
-                  width: "100%",
-                  aspectRatio: "16/9",
-                  background: embedThumb(card.src) ? `var(--navy) url(${embedThumb(card.src)}) center / cover no-repeat` : "var(--navy)",
-                }}
-              >
-                <iframe
-                  src={card.src}
-                  title={card.title}
-                  loading="lazy"
-                  style={{ position: "absolute", inset: 0, width: "100%", height: "100%", border: 0 }}
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                  referrerPolicy="strict-origin-when-cross-origin"
-                  allowFullScreen
-                />
-              </div>
+              <EventVideo src={card.src} title={card.title} playLabel={t("watch")} />
               <div style={{ display: "grid", padding: "16px 20px 18px" }}>
                 <b style={{ fontSize: "clamp(15.5px,1.5vw,18px)", fontWeight: 900, lineHeight: 1.6 }}>{card.title}</b>
               </div>
@@ -147,7 +188,7 @@ function ReelRail({
               <span
                 role="img"
                 aria-label={label}
-                style={{ position: "absolute", inset: 0, display: "block", backgroundImage: `url('${image}')`, backgroundSize: "cover", backgroundPosition: "center" }}
+                style={{ position: "absolute", inset: 0, display: "block", backgroundImage: cssImage(image, 232), backgroundSize: "cover", backgroundPosition: "center" }}
               />
             ) : null}
             <span style={{ position: "absolute", inset: 0, background: "linear-gradient(0deg, rgba(16,33,43,.94) 8%, rgba(16,33,43,.55) 44%, rgba(16,33,43,.05) 74%)" }} />
@@ -292,7 +333,7 @@ export function ProgramsRail({ playlists }: { playlists: CmsPlaylist[] }) {
                   style={{
                     position: "absolute",
                     inset: 0,
-                    backgroundImage: `url('${program.coverImage || program.episodes[0]?.thumbnail || youtubeThumb(program.episodes[0]?.youtubeId ?? "")}')`,
+                    backgroundImage: cssImage(program.coverImage || program.episodes[0]?.thumbnail || youtubeThumb(program.episodes[0]?.youtubeId ?? ""), 285),
                     backgroundSize: "cover",
                     backgroundPosition: "center",
                   }}
@@ -340,7 +381,7 @@ export function CoursesRail({ onPlay, courses }: { onPlay: (embed: string) => vo
             const cover = course.coverImage || (course.introVideoId ? youtubeThumb(course.introVideoId) : "");
             const inner = (
               <span style={{ position: "relative", display: "block", width: "100%", aspectRatio: "16/9", borderRadius: 10, overflow: "hidden", background: "var(--navy)", boxShadow: "0 12px 30px rgba(16,33,43,.12)" }}>
-                <span role="img" aria-label={label} style={{ position: "absolute", inset: 0, backgroundImage: `url('${cover}')`, backgroundSize: "cover", backgroundPosition: "center" }} />
+                <span role="img" aria-label={label} style={{ position: "absolute", inset: 0, backgroundImage: cssImage(cover, 285), backgroundSize: "cover", backgroundPosition: "center" }} />
                 <span aria-hidden="true" style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(16,33,43,.55), transparent 60%)" }} />
                 <b style={{ position: "absolute", insetInlineStart: 12, bottom: 10, color: "#fff", fontSize: 14.5, fontWeight: 900, textShadow: "0 1px 8px rgba(16,33,43,.6)" }}>{label}</b>
               </span>

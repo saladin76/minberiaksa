@@ -15,6 +15,7 @@ import { useMinbarMoney } from "@/hooks/useMinbarMoney";
 import { shareProgress, useShareWording } from "@/hooks/useShareWording";
 import { useProjectPricing } from "@/hooks/useProjectPricing";
 import { useDonationAmount } from "@/hooks/useDonationAmount";
+import { cssImage } from "@/lib/minbar/image-url";
 
 /**
  * The site's project card  a full-bleed field photograph under a dark scrim,
@@ -210,7 +211,7 @@ export default function ProjectDonateCard({ project, width, tag }: ProjectDonate
             position: "absolute",
             inset: 0,
             display: "block",
-            backgroundImage: `url('${project.image}')`,
+            backgroundImage: cssImage(project.image, 360),
             backgroundSize: "cover",
             backgroundPosition: "center",
           }}

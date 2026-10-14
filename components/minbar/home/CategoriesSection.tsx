@@ -8,6 +8,7 @@ import { miaPath } from "@/lib/minbar/routes";
 import type { MinbarCategory } from "@/lib/minbar/categories";
 import ViewAllLink from "./ViewAllLink";
 import { ArrowGlyph } from "./TopSections";
+import { cssImage } from "@/lib/minbar/image-url";
 
 /**
  * Every project category as a grid of picture cards, placed under the urgent
@@ -73,7 +74,7 @@ export default function CategoriesSection({ categories }: { categories: MinbarCa
               style={index >= INITIAL_VISIBLE ? { animationDelay: `${Math.min(index - INITIAL_VISIBLE, 8) * 45}ms` } : undefined}
             >
               {c.image ? (
-                <span className="mia-cat-card__media" style={{ backgroundImage: `url('${c.image}')` }} />
+                <span className="mia-cat-card__media" style={{ backgroundImage: cssImage(c.image, 400) }} />
               ) : (
                 <span className="mia-cat-card__media mia-cat-card__media--pattern" />
               )}

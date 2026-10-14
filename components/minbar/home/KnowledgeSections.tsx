@@ -8,6 +8,7 @@ import type { MinbarArticle } from "@/lib/minbar/posts";
 import type { CmsFaq } from "@/lib/minbar/cms";
 import { ArrowGlyph } from "./TopSections";
 import ViewAllLink from "./ViewAllLink";
+import { cssImage } from "@/lib/minbar/image-url";
 
 /**
  * The knowledge end of the homepage  articles, news and the FAQ. Ported from
@@ -44,7 +45,7 @@ export function ArticlesSection({ articles }: { articles: MinbarArticle[] }) {
             >
               <span style={{ position: "relative", display: "block", aspectRatio: "3 / 2", background: "var(--deep)", overflow: "hidden" }}>
                 {article.cover ? (
-                  <span role="img" aria-label={article.title} style={{ position: "absolute", inset: 0, display: "block", backgroundImage: `url('${article.cover}')`, backgroundSize: "cover", backgroundPosition: "center" }} />
+                  <span role="img" aria-label={article.title} style={{ position: "absolute", inset: 0, display: "block", backgroundImage: cssImage(article.cover, 400), backgroundSize: "cover", backgroundPosition: "center" }} />
                 ) : null}
                 <span style={{ position: "absolute", inset: 0, background: "linear-gradient(0deg, rgba(16,33,43,.42), transparent 55%)" }} />
                 {article.category ? (
@@ -106,7 +107,7 @@ export function NewsSection({ news }: { news: MinbarArticle[] }) {
         <div id="news-grid" style={{ display: "grid", gridTemplateColumns: rest.length ? "minmax(0,1.4fr) minmax(0,1fr)" : "minmax(0,1fr)", gap: 22, alignItems: "start" }}>
           <Link href={articleHref(lead)} style={{ position: "relative", display: "block", minHeight: 340, borderRadius: 14, overflow: "hidden", background: "var(--deep)" }}>
             {lead.cover ? (
-              <span role="img" aria-label={lead.title} style={{ position: "absolute", inset: 0, display: "block", backgroundImage: `url('${lead.cover}')`, backgroundSize: "cover", backgroundPosition: "center" }} />
+              <span role="img" aria-label={lead.title} style={{ position: "absolute", inset: 0, display: "block", backgroundImage: cssImage(lead.cover, 620), backgroundSize: "cover", backgroundPosition: "center" }} />
             ) : null}
             <span style={{ position: "absolute", inset: 0, background: "linear-gradient(0deg, rgba(16,33,43,.92) 6%, rgba(16,33,43,.35) 52%, transparent 82%)" }} />
             <span style={{ position: "absolute", insetInline: 24, bottom: 24, display: "grid", gap: 10 }}>
@@ -133,7 +134,7 @@ export function NewsSection({ news }: { news: MinbarArticle[] }) {
                 >
                   <span style={{ position: "relative", display: "block", aspectRatio: "4 / 3", borderRadius: 10, overflow: "hidden", background: "var(--deep)" }}>
                     {item.cover ? (
-                      <span role="img" aria-label={item.title} style={{ position: "absolute", inset: 0, display: "block", backgroundImage: `url('${item.cover}')`, backgroundSize: "cover", backgroundPosition: "center" }} />
+                      <span role="img" aria-label={item.title} style={{ position: "absolute", inset: 0, display: "block", backgroundImage: cssImage(item.cover, 160), backgroundSize: "cover", backgroundPosition: "center" }} />
                     ) : null}
                   </span>
                   <span style={{ display: "grid", gap: 8, minWidth: 0 }}>

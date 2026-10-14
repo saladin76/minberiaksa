@@ -1,6 +1,7 @@
 import type { CSSProperties, ReactNode } from "react";
 import Badge from "./Badge";
 import Button from "./Button";
+import { imageUrl } from "@/lib/minbar/image-url";
 
 /**
  * Card primitives ported from the design-system bundle
@@ -157,8 +158,10 @@ export function ProjectCard({
       <div style={{ position: "relative", minHeight: featured ? "100%" : 210, background: "var(--deep)" }}>
         {image ? (
           <img
-            src={image}
+            src={imageUrl(image, featured ? 640 : 400)}
             alt=""
+            loading="lazy"
+            decoding="async"
             style={{ width: "100%", height: "100%", objectFit: "cover", minHeight: featured ? 300 : 210 }}
           />
         ) : null}

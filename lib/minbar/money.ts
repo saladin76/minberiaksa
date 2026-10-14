@@ -28,6 +28,25 @@ export function currencySymbol(code: string): string {
   return SYMBOLS[code.toUpperCase()] ?? code;
 }
 
+/**
+ * `Intl.NumberFormat` instances, reused. Building one is far slower than using
+ * one, and every price on a page used to build its own on every render: the
+ * homepage profile showed ~0.2 s of main thread in formatter construction.
+ * Keys are locale × options, a handful of combinations per visit.
+ */
+const FORMATTERS = new Map<string, Intl.NumberFormat>();
+
+export function cachedNumberFormat(locale: string, options: Intl.NumberFormatOptions = {}): Intl.NumberFormat {
+  const key = `${locale}|${JSON.stringify(options)}`;
+  let formatter = FORMATTERS.get(key);
+  if (!formatter) {
+    formatter = new Intl.NumberFormat(locale, options);
+    if (FORMATTERS.size > 200) FORMATTERS.clear();
+    FORMATTERS.set(key, formatter);
+  }
+  return formatter;
+}
+
 export function formatMoney(
   value: number,
   currency: string,
@@ -36,7 +55,7 @@ export function formatMoney(
 ): string {
   const code = currency.toUpperCase();
   try {
-    const formatter = new Intl.NumberFormat(locale, {
+    const formatter = cachedNumberFormat(locale, {
       style: "currency",
       currency: code,
       currencyDisplay: "narrowSymbol",
