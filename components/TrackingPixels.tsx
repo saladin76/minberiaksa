@@ -2,6 +2,7 @@
 
 import React, { useEffect, useRef, createContext, useContext, useCallback, useState } from "react";
 import { track as vercelTrack } from "@vercel/analytics";
+import { whenMarketingAllowed } from "@/lib/tracking/marketing-gate";
 import {
   generateEventId,
   metaDonationEventId,
@@ -282,25 +283,24 @@ export default function TrackingPixels({ children }: { children: React.ReactNode
 
   // ── Load pixel config ───────────────────────────────────────────────────────
   // Defer the config fetch + script injection until either the user interacts with the
-  // page or 6 s have elapsed. Ad/marketing pixels (FB ~226KiB, TikTok, X) used to
+  // page or the shared marketing gate times out (lib/tracking/marketing-gate.ts).
+  // Ad/marketing pixels (FB ~226KiB, TikTok, X) used to
   // compete with the LCP image for bandwidth and ate ~700 ms of TBT during the first
   // second; the interaction-or-long-idle gate moves all of that off the critical path
   // (Lighthouse never interacts so it never sees them) while still firing well before
   // any real user can convert.
   //
   // EXCEPTION: /success/[id] is a conversion page  we need fbq ready immediately so
-  // `trackDonate` can fire the Meta "Donate" event without waiting for scroll or 6 s
-  // idle. Donors often arrive there post-redirect and may close the tab quickly.
+  // `trackDonate` can fire the Meta "Donate" event without waiting for the marketing
+  // gate. Donors often arrive there post-redirect and may close the tab quickly.
   useEffect(() => {
     if (typeof window === "undefined") return;
 
     let fired = false;
-    let timeoutId: ReturnType<typeof setTimeout> | null = null;
 
     const load = () => {
       if (fired) return;
       fired = true;
-      cleanup();
 
       fetch("/api/tracking/config")
         .then((r) => r.json())
@@ -317,29 +317,17 @@ export default function TrackingPixels({ children }: { children: React.ReactNode
         .catch(() => setConfig(null));
     };
 
-    const cleanup = () => {
-      if (timeoutId !== null) clearTimeout(timeoutId);
-      window.removeEventListener("scroll", load);
-      window.removeEventListener("pointerdown", load);
-      window.removeEventListener("keydown", load);
-      window.removeEventListener("touchstart", load);
-    };
-
     // Fire-now path for conversion pages. The match is locale-agnostic  any
     // pathname segment "/success/<id>" qualifies.
     const isConversionPage = /\/success\/[^/]+/.test(window.location.pathname);
     if (isConversionPage) {
       load();
-      return cleanup;
+      return;
     }
 
-    timeoutId = setTimeout(load, 6000);
-    window.addEventListener("scroll", load, { passive: true, once: true });
-    window.addEventListener("pointerdown", load, { once: true });
-    window.addEventListener("keydown", load, { once: true });
-    window.addEventListener("touchstart", load, { passive: true, once: true });
-
-    return cleanup;
+    // Everything else waits for the shared marketing gate: the first real
+    // interaction, or shortly after `load` (lib/tracking/marketing-gate.ts).
+    return whenMarketingAllowed(load);
   }, []);
 
   // ── Inject pixel scripts once config is ready ────────────────────────────────

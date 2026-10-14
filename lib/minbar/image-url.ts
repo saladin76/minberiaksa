@@ -27,20 +27,30 @@ const OPTIMIZER_QUALITY = 75;
 const CLOUDINARY_UPLOAD_RE = /^(https:\/\/res\.cloudinary\.com\/[^/]+\/image\/upload\/)(.*)$/;
 const DRIVE_THUMB_RE = /^https:\/\/drive\.google\.com\/thumbnail\?id=([\w-]+)/;
 const LH3_RE = /^https:\/\/lh3\.googleusercontent\.com\/d\/([\w-]+)(?:=[\w-]*)?$/;
+const YOUTUBE_THUMB_RE = /^https:\/\/(?:img\.youtube\.com|i\.ytimg\.com)\/vi\/([\w-]{11})\/(\w+\.jpg)$/;
 const PASSTHROUGH_EXT_RE = /\.(svg|gif)(\?|#|$)/i;
 
-function optimizerWidth(cssWidth: number): number {
-  const target = Math.ceil(cssWidth * 2);
-  return OPTIMIZER_WIDTHS.find((w) => w >= target) ?? OPTIMIZER_WIDTHS[OPTIMIZER_WIDTHS.length - 1];
+/** The smallest width `images.deviceSizes`/`imageSizes` allow that is at least `px`. */
+function optimizerFit(px: number): number {
+  return OPTIMIZER_WIDTHS.find((w) => w >= px) ?? OPTIMIZER_WIDTHS[OPTIMIZER_WIDTHS.length - 1];
 }
 
-/** `src` resized to exactly `width` pixels, or `null` when it cannot be resized. */
+/** Pixels needed to draw `cssWidth` sharply on a 2x screen. */
+function targetWidth(cssWidth: number): number {
+  return Math.ceil(cssWidth * 2);
+}
+
+/**
+ * `src` resized to at least `width` pixels, or `null` when it cannot be resized.
+ * Drive takes any width; Cloudinary, YouTube stills and local files round up to
+ * the optimizer's list, so each image has a handful of cached variants.
+ */
 function resized(url: string, width: number): string | null {
   const cloudinary = url.match(CLOUDINARY_UPLOAD_RE);
   if (cloudinary) {
     // Already carries an automatic-format transformation  leave it alone.
     if (/(^|[,/])f_auto([,/]|$)/.test(cloudinary[2])) return null;
-    return `${cloudinary[1]}f_auto,q_auto,c_limit,w_${width}/${cloudinary[2]}`;
+    return `${cloudinary[1]}f_auto,q_auto,c_limit,w_${optimizerFit(width)}/${cloudinary[2]}`;
   }
 
   // Drive thumbnails redirect to lh3.googleusercontent.com (and set a Google
@@ -50,8 +60,18 @@ function resized(url: string, width: number): string | null {
   // `-rw` asks the image host for WebP (about a third smaller than its JPEG).
   if (driveId) return `https://lh3.googleusercontent.com/d/${driveId}=w${width}-rw`;
 
+  // YouTube stills are JPEGs cached for two hours. Through the optimizer
+  // (`img.youtube.com` is in `images.remotePatterns`) they are AVIF/WebP and
+  // cached like every other image.
+  const yt = url.match(YOUTUBE_THUMB_RE);
+  // `videoseries` (a playlist) is also eleven characters and has no still.
+  if (yt && yt[1] !== "videoseries") {
+    const still = `https://img.youtube.com/vi/${yt[1]}/${yt[2]}`;
+    return `/_next/image?url=${encodeURIComponent(still)}&w=${optimizerFit(width)}&q=${OPTIMIZER_QUALITY}`;
+  }
+
   if (url.startsWith("/") && !url.startsWith("//") && !url.startsWith("/_next/") && !PASSTHROUGH_EXT_RE.test(url)) {
-    return `/_next/image?url=${encodeURIComponent(url)}&w=${width}&q=${OPTIMIZER_QUALITY}`;
+    return `/_next/image?url=${encodeURIComponent(url)}&w=${optimizerFit(width)}&q=${OPTIMIZER_QUALITY}`;
   }
 
   return null;
@@ -60,7 +80,7 @@ function resized(url: string, width: number): string | null {
 export function imageUrl(src: string | null | undefined, width: number): string {
   if (!src) return "";
   const url = src.trim();
-  return resized(url, optimizerWidth(width)) ?? url;
+  return resized(url, targetWidth(width)) ?? url;
 }
 
 /**

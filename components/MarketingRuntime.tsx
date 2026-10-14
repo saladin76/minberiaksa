@@ -3,7 +3,6 @@
 import React from "react";
 import TrackingPixels from "@/components/TrackingPixels";
 import { AttributionCapture } from "@/components/AttributionCapture";
-import { TrackingPixelBootstrap } from "@/components/TrackingPixelBootstrap";
 import { RoutePageViewTracker } from "@/components/RoutePageViewTracker";
 import { SuccessFinalConversionTracker } from "@/components/SuccessFinalConversionTracker";
 import ReferralTracker from "@/components/ReferralTracker";
@@ -17,7 +16,7 @@ import ReferralTracker from "@/components/ReferralTracker";
  *
  * Ownership map:
  * - TrackingPixels: canonical browser pixel loader + tracking context.
- * - TrackingPixelBootstrap: eagerly opens the existing TrackingPixels load gate.
+ * - Marketing scripts load through one gate (lib/tracking/marketing-gate.ts).
  * - RoutePageViewTracker: client-side route-change PageView only.
  * - SuccessFinalConversionTracker: final browser conversions on /success/:id.
  * - AttributionCapture: UTM/click-id persistence.
@@ -26,7 +25,6 @@ import ReferralTracker from "@/components/ReferralTracker";
 export function MarketingRuntime({ children }: { children: React.ReactNode }) {
   return (
     <TrackingPixels>
-      <TrackingPixelBootstrap />
       <RoutePageViewTracker />
       <SuccessFinalConversionTracker />
       <AttributionCapture />

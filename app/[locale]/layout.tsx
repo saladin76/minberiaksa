@@ -167,7 +167,10 @@ export default async function Rootlayout({
               {/* The tagline is the footer's one string from the `homepage`
                   namespace. Passing it in keeps a 10KB bundle out of the shell
                   for the sake of a single sentence. */}
-              <MinbarFooter tagline={tagline} categories={navCategories} />
+              {/* Hydrated in its own task, after the page above it. */}
+              <Suspense fallback={null}>
+                <MinbarFooter tagline={tagline} categories={navCategories} />
+              </Suspense>
               <QuickDonate />
               <ConciergeLauncher />
               <CartReminder />

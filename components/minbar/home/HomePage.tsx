@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, type ReactNode } from "react";
+import { Suspense, type ReactNode } from "react";
 import VideoModal, { useVideoModal } from "@/components/minbar/VideoModal";
 import { IMG } from "@/lib/minbar/content/media";
 import type { MinbarProject } from "@/lib/minbar/projects";
@@ -96,7 +96,11 @@ export default function HomePage({
       {/* Sticky under the header from here on  the design places it right under the hero. */}
       <QuickDonateBar config={quick.config} projects={quick.projects} />
       {sections.map((id) => (
-        <Fragment key={id}>{render[id]()}</Fragment>
+        /* Each section is its own Suspense boundary, so React hydrates it in
+           its own task and yields to the browser in between. One boundary made
+           the whole homepage a single long hydration task (PageSpeed: TBT).
+           Nothing suspends: the server HTML shows as-is, no fallback. */
+        <Suspense key={id} fallback={null}>{render[id]()}</Suspense>
       ))}
 
       <VideoModal embed={video.embed} onClose={video.close} />

@@ -7,7 +7,7 @@ import EngagementInstrumentation from "@/components/EngagementInstrumentation";
 import { Analytics } from "@vercel/analytics/next";
 import { LOCALES, LOCALE_SEO, OG_IMAGE, OG_LOCALE_MAP, SITE_NAME, SITE_URL, buildHreflang, isProductionDeployment, isVercelDeployment } from "@/lib/seo";
 import { isValidLocale, localeDirection } from "@/lib/locales";
-import Script from "next/script";
+import DeferredContentsquare from "@/components/DeferredContentsquare";
 import "./[locale]/globals.css";
 import "@/styles/self-hosted-fonts.css";
 
@@ -142,7 +142,9 @@ export default async function RootLayout({
         <meta name="classification" content="charity, humanitarian, nonprofit" />
         <meta name="rating" content="general" />
 
-        <link rel="preconnect" href="https://res.cloudinary.com" />
+        {/* dns-prefetch, not preconnect: Cloudinary images sit below the fold, and an
+            unused early connection is flagged by PageSpeed. */}
+        <link rel="dns-prefetch" href="https://res.cloudinary.com" />
         <link rel="dns-prefetch" href="https://i.ibb.co" />
         {/* No global image preload: `/bg.webp` was preloaded on every page for a
             legacy homepage that is no longer rendered, competing with each
@@ -166,9 +168,7 @@ export default async function RootLayout({
         <DeferredGTM />
         {/* Vercel-only: on the VPS `/_vercel/insights/script.js` is a 404 and a console error. */}
         {isVercelDeployment() ? <Analytics /> : null}
-        {/* Contentsquare after the page has loaded, in idle time: in <head> it
-            ran ~0.6 s of script during the page's own first paint. */}
-        <Script src="https://t.contentsquare.net/uxa/e81365186c19c.js" strategy="lazyOnload" />
+        <DeferredContentsquare />
       </body>
     </html>
   );

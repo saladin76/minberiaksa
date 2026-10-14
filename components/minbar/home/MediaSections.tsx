@@ -64,7 +64,7 @@ function EventVideo({ src, title, playLabel }: { src: string; title: string; pla
         position: "relative",
         width: "100%",
         aspectRatio: "16/9",
-        background: thumb ? `var(--navy) url(${thumb}) center / cover no-repeat` : "var(--navy)",
+        background: thumb ? `var(--navy) ${cssImage(thumb, 400)} center / cover no-repeat` : "var(--navy)",
       }}
     >
       {playing ? (

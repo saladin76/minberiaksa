@@ -16,7 +16,7 @@ import { useMinbarLabel } from "@/hooks/useMinbarLabel";
 import type { NavCategory } from "@/lib/minbar/categories";
 import type { NavSuperCategory } from "@/lib/minbar/super-category";
 import HeaderSearch from "./HeaderSearch";
-import { imageUrl } from "@/lib/minbar/image-url";
+import { imageSrcSet, imageUrl } from "@/lib/minbar/image-url";
 
 /**
  * Site header  ported from `Minbar/Header.dc.html`.
@@ -351,6 +351,8 @@ export default function Header({
             >
               <img
                 src={imageUrl("/minbar/assets/logo-horizontal.png", 156)}
+                srcSet={imageSrcSet("/minbar/assets/logo-horizontal.png", [256, 384])}
+                sizes="(max-width: 480px) 104px, 156px"
                 alt={tCommon("orgOfficialName")}
                 width={156}
                 height={38}
