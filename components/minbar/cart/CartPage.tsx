@@ -6,6 +6,7 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react"
 import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
 import { Button } from "@/components/minbar/ds";
+import { CheckoutSteps, type CheckoutStep } from "@/components/minbar/cart/CheckoutSteps";
 import { miaPath } from "@/lib/minbar/routes";
 import { useMinbarCart } from "@/hooks/useMinbarCart";
 import { useMinbarMoney } from "@/hooks/useMinbarMoney";
@@ -341,62 +342,19 @@ export default function CartPage({ projects, categories }: { projects: MinbarPro
       }))
     : SUGGESTIONS.map((s) => ({ id: s.id, label: t(s.key), amounts: s.amounts, localAmounts: false, add: (amount: number, typed?: boolean) => addSuggestion(s.id, s.key, amount, Boolean(typed)) }));
 
-  const steps = [
-    { n: 1, label: t("stepCart"), href: miaPath("cart", locale), current: true },
-    { n: 2, label: t("stepDetails"), href: miaPath("checkout", locale), current: false },
-    { n: 3, label: t("stepConfirm"), href: miaPath("checkout", locale), current: false },
+  /* The donor can move on once the basket is payable. Confirmation comes
+     after paying, so it is never a jump from here. */
+  const canCheckout = hydrated && items.length > 0 && !belowMinimum;
+  const steps: CheckoutStep[] = [
+    { n: 1, label: t("stepCart"), current: true, enabled: true },
+    { n: 2, label: t("stepDetails"), href: miaPath("checkout", locale), current: false, enabled: canCheckout },
+    { n: 3, label: t("stepConfirm"), current: false, enabled: false },
   ];
 
   return (
     <div style={{ position: "relative" }}>
       <section style={{ padding: "16px 0 6px" }}>
-        <div id="cart-steps" style={{ maxWidth: 1240, margin: "0 auto", padding: "0 24px", display: "flex", alignItems: "center", gap: 10, flexWrap: "nowrap", minWidth: 0 }}>
-          {steps.map((step, i) => (
-            <span key={step.n} style={{ display: "contents" }}>
-              <Link
-                href={step.href}
-                className="cart-step"
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 9,
-                  padding: "8px 14px",
-                  borderRadius: 999,
-                  border: `1px solid ${step.current ? "var(--gold)" : "var(--border)"}`,
-                  background: step.current ? "#fff" : "transparent",
-                  color: step.current ? "var(--deep)" : "var(--muted)",
-                  fontSize: 13,
-                  fontWeight: 800,
-                  whiteSpace: "nowrap",
-                  transition: "border-color .18s ease",
-                }}
-              >
-                <span
-                  className="cart-step-n"
-                  style={{
-                    display: "grid",
-                    placeItems: "center",
-                    flexShrink: 0,
-                    width: 22,
-                    height: 22,
-                    aspectRatio: "1",
-                    borderRadius: "50%",
-                    background: step.current ? "var(--gold)" : "var(--border)",
-                    color: step.current ? "#10212B" : "var(--muted)",
-                    fontSize: 12,
-                    fontWeight: 900,
-                  }}
-                >
-                  {step.n}
-                </span>
-                {step.label}
-              </Link>
-              {i < steps.length - 1 ? (
-                <span aria-hidden="true" className="cart-step-line" style={{ flex: "1 1 24px", maxWidth: 60, height: 1, background: "var(--border)" }} />
-              ) : null}
-            </span>
-          ))}
-        </div>
+        <CheckoutSteps id="cart-steps" steps={steps} />
       </section>
 
       <section style={{ padding: "16px 0 14px" }}>

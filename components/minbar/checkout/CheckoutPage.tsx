@@ -21,6 +21,7 @@ import { Elements } from "@stripe/react-stripe-js";
 import { getStripePromise } from "@/lib/stripe-client";
 import { StripePaymentStep, type StripePaymentHandle } from "@/components/StripePaymentStep";
 import { miaPath } from "@/lib/minbar/routes";
+import { CheckoutSteps, type CheckoutStep } from "@/components/minbar/cart/CheckoutSteps";
 import { useMinbarCart } from "@/hooks/useMinbarCart";
 import { useMinbarMoney } from "@/hooks/useMinbarMoney";
 import { useDonationAmount, useHealLegacyRows } from "@/hooks/useDonationAmount";
@@ -131,6 +132,7 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
      is what the submit calls. `stripeReady` gates the button the way the raw
      fields gate the bank rails. */
   const stripeRef = useRef<StripePaymentHandle>(null);
+  const formRef = useRef<HTMLFormElement>(null);
   const [stripeReady, setStripeReady] = useState(false);
   const onStripeReady = useCallback((ready: boolean) => setStripeReady(ready), []);
   const tRecurring = useTranslations("Recurring");
@@ -499,10 +501,22 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
     }
   };
 
-  const steps = [
-    { n: 1, label: t("stepCart"), href: miaPath("cart", locale), current: false },
-    { n: 2, label: t("stepDetails"), href: miaPath("checkout", locale), current: true },
-    { n: 3, label: t("stepConfirm"), href: miaPath("checkout", locale), current: false },
+  /* Confirmation is the page after paying, so stepping to it submits the form
+     exactly as the pay button does. It is offered only once nothing the
+     submit handler checks would stop it. */
+  const detailsComplete =
+    Boolean(session?.user) || (firstName.trim() !== "" && email.trim() !== "" && digitsOnly(phone).length >= 7);
+  const paymentComplete =
+    method !== "card" ||
+    (!cardRailUnavailable &&
+      (gateway === "STRIPE"
+        ? stripeReady
+        : !needsOwnCardForm || checkCardFields(cardNumber, cardExpiry, cardCvc) === null));
+  const canConfirm = hydrated && items.length > 0 && !belowMinimum && !submitting && detailsComplete && paymentComplete;
+  const steps: CheckoutStep[] = [
+    { n: 1, label: t("stepCart"), href: miaPath("cart", locale), current: false, enabled: true },
+    { n: 2, label: t("stepDetails"), current: true, enabled: true },
+    { n: 3, label: t("stepConfirm"), current: false, enabled: canConfirm, onSelect: () => formRef.current?.requestSubmit() },
   ];
 
   const methods: ReadonlyArray<{ id: PaymentMethod; label: string; short: string; icon: React.ReactElement }> = [
@@ -561,40 +575,12 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
   return (
     <div style={{ position: "relative" }}>
       <section style={{ padding: "0 0 18px", paddingTop: 44 }}>
-        <div id="pay-steps" style={{ maxWidth: 1240, margin: "0 auto", padding: "0 24px", display: "flex", alignItems: "center", gap: 10, flexWrap: "nowrap", minWidth: 0 }}>
-          {steps.map((step, i) => (
-            <span key={step.n} style={{ display: "contents" }}>
-              <Link
-                href={step.href}
-                className="cart-step"
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 9,
-                  padding: "8px 14px",
-                  borderRadius: 999,
-                  border: `1px solid ${step.current ? "var(--gold)" : "var(--border)"}`,
-                  background: step.current ? "#fff" : "transparent",
-                  color: step.current ? "var(--deep)" : "var(--muted)",
-                  fontSize: 13,
-                  fontWeight: 800,
-                  whiteSpace: "nowrap",
-                }}
-              >
-                <span className="cart-step-n" style={{ display: "grid", placeItems: "center", flexShrink: 0, width: 22, height: 22, aspectRatio: "1", borderRadius: "50%", background: step.current ? "var(--gold)" : "var(--border)", color: step.current ? "#10212B" : "var(--muted)", fontSize: 12, fontWeight: 900 }}>
-                  {step.n}
-                </span>
-                {step.label}
-              </Link>
-              {i < steps.length - 1 ? <span aria-hidden="true" className="cart-step-line" style={{ flex: "1 1 24px", maxWidth: 60, height: 1, background: "var(--border)" }} /> : null}
-            </span>
-          ))}
-        </div>
+        <CheckoutSteps id="pay-steps" steps={steps} />
       </section>
 
       <section style={{ padding: "0 0 64px" }}>
         <div id="pay-grid" style={{ maxWidth: 1240, margin: "0 auto", padding: "0 24px", display: "grid", gridTemplateColumns: "minmax(0,1.15fr) minmax(0,.85fr)", gap: 40, alignItems: "start" }}>
-          <form className="pay-form" style={{ display: "grid", gap: 22 }} onSubmit={onSubmit} noValidate>
+          <form ref={formRef} className="pay-form" style={{ display: "grid", gap: 22 }} onSubmit={onSubmit} noValidate>
             {/* ── Donor details ──────────────────────────────────────────── */}
             <div className="pay-card" style={cardBox}>
               <h2 style={headingStyle}>

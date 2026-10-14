@@ -2346,7 +2346,7 @@ html.cg-open .mia-scope:has(.mia-qb-sec) { padding-bottom: 0; }
   .mia-scope .cg-launcher, .mia-scope .cg-sheet, .mia-scope .cg-backdrop, .mia-scope .cg-confirm, .mia-scope .cg-thinking-orb, .mia-scope .cg-thinking-orb::before, .mia-scope .cg-thinking-line { animation: none; transition: none; }
 }
 
-.mia-scope .cart-step:hover { border-color: var(--gold); }
+.mia-scope .cart-step:not(.is-static):hover { border-color: var(--gold); }
 .mia-scope .cart-amt-btn:hover { border-color: var(--gold); box-shadow: 0 4px 14px rgba(211,154,39,.22); transform: translateY(-1px); }
 .mia-scope .cart-monthly:hover { border-color: var(--gold); }
 .mia-scope .cart-ok:hover { transform: translateY(-2px); background: rgba(31,122,77,.16); }
