@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { unstable_cache } from "next/cache";
 import { getServerSession } from "next-auth";
 import { LOCALE_SEO, buildPageMetadata, SITE_URL } from "@/lib/seo";
 import type { Locale } from "@/lib/seo";
@@ -16,6 +17,30 @@ import PageBanners from "@/components/minbar/banners/PageBanners";
  * and the 'Ibādan Lanā banner's Al-Isra 5).
  */
 const NAMESPACES = ["homepage", "achievements", "quran"] as const;
+
+/**
+ * Everything the homepage shows except the visitor's session, read together
+ * and cached per locale for a minute. Uncached, these ~15 MongoDB queries ran
+ * on every visit and kept the server ~1.7 s from sending the first byte
+ * (PageSpeed: LCP breakdown, "time to first byte"). Dashboard edits, raised
+ * amounts and new posts show within 60 s. All of it is plain JSON (strings,
+ * numbers), which `unstable_cache` requires.
+ */
+const cachedHomeData = unstable_cache(
+  async (locale: string) => {
+    const projectsRead = listProjects(locale);
+    const layoutRead = readHomeLayout();
+    const [, quick, layout, lists] = await Promise.all([
+      projectsRead,
+      readQuickDonation(),
+      layoutRead,
+      layoutRead.then((l) => resolveHomeLists(locale, l, projectsRead)),
+    ]);
+    return { quick, layout, lists };
+  },
+  ["minbar-home-data"],
+  { revalidate: 60, tags: ["minbar-home"] }
+);
 
 interface Props {
   params: Promise<{ locale: string }>;
@@ -50,14 +75,9 @@ export default async function Home({ params }: Props) {
   // dashboard's homepage layout (`lib/minbar/home-layout.ts`); its defaults are
   // the approved design. The quick-donation select lists whatever its own
   // settings allow, which may be every project.
-  const projectsRead = listProjects(locale);
-  const layoutRead = readHomeLayout();
-  const [allProjects, quick, session, layout, lists] = await Promise.all([
-    projectsRead,
-    readQuickDonation(),
+  const [{ quick, layout, lists }, session] = await Promise.all([
+    cachedHomeData(locale),
     getServerSession(authOptions),
-    layoutRead,
-    layoutRead.then((l) => resolveHomeLists(locale, l, projectsRead)),
   ]);
 
   const organisationSchema = {
@@ -82,7 +102,11 @@ export default async function Home({ params }: Props) {
         <HomePage
           sections={visibleSections(layout)}
           lists={lists}
-          quick={{ config: quick, projects: allProjects }}
+          /* QuickDonateBar's markup is commented out, so it renders nothing, yet
+             every project was serialized into the page for it (~90 KB, a third
+             of the inline payload, parsed during hydration). Pass `allProjects`
+             again when the bar is restored. */
+          quick={{ config: quick, projects: [] }}
           banners={{
             top: <PageBanners locale={locale} page="home" slot="top" />,
             middle: <PageBanners locale={locale} page="home" slot="middle" />,

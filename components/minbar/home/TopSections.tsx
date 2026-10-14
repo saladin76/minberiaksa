@@ -257,6 +257,9 @@ export function Hero({ onPlayIntro }: { onPlayIntro: (embed: string) => void }) 
   const t = useTranslations("homepage");
   const tCommon = useTranslations("common");
   const poster = heroPoster(locale);
+  // Each still has a 768px copy beside it for phones, where the card is ~380px
+  // wide and the poster is the Largest Contentful Paint.
+  const posterSmall = poster.replace(/\.webp$/, "-768.webp");
 
   return (
     <section id="hero" className="mia-hero">
@@ -311,7 +314,7 @@ export function Hero({ onPlayIntro }: { onPlayIntro: (embed: string) => void }) 
                 onClick={() => onPlayIntro(youtubeEmbed(introVideoId(locale), { autoplay: true }))}
               >
                 {/* eslint-disable-next-line @next/next/no-img-element -- the poster is a local, per-edition frame */}
-                <img src={poster} alt="" className="mia-hero-poster" width={1280} height={720} decoding="async" fetchPriority="high" />
+                <img src={poster} srcSet={`${posterSmall} 768w, ${poster} 1280w`} sizes="(max-width: 900px) calc(100vw - 32px), 600px" alt="" className="mia-hero-poster" width={1280} height={720} decoding="async" fetchPriority="high" />
                 <span aria-hidden="true" className="mia-hero-shade" />
 
                 <span className="mia-hero-chip">

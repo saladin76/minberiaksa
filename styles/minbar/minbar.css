@@ -1101,6 +1101,15 @@
    scrolling back up does not jump. */
 .mia-scope .mia-home > section:not(.mia-hero) { content-visibility: auto; contain-intrinsic-size: auto 640px; }
 
+/* On a phone the hero's pattern (4.5% opacity) and the page-wide wash behind it
+   (8.5%) are barely visible, but as the largest backgrounds on screen Chrome
+   took the first one as the Largest Contentful Paint, arriving ~1 s after the
+   text. Without them the LCP is the hero poster, painted with the headline. */
+@media (max-width: 760px) {
+  .mia-scope .mia-hero-pattern,
+  .mia-scope .mia-home > [data-aqsa-pattern] { display: none; }
+}
+
 @keyframes mia-hero-rise { from { transform: translateY(14px); } to { transform: none; } }
 .mia-scope .mia-hero-copy { display: grid; gap: 18px; justify-items: start; min-width: 0; animation: mia-hero-rise .7s cubic-bezier(.22,.61,.36,1) both; }
 .mia-scope .mia-hero-media { position: relative; display: grid; min-width: 0; animation: mia-hero-rise .7s .12s cubic-bezier(.22,.61,.36,1) both; }

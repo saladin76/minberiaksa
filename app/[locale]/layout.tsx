@@ -135,7 +135,8 @@ export default async function Rootlayout({
   const navCategories: NavCategory[] = categories.map(({ id, href, name, image, projectCount }) => ({ id, href, name, image, projectCount }));
   const localeFont = LOCALE_FONT_STYLESHEETS[locale];
 
-  preload(PATTERN_TILE, { as: "image", fetchPriority: "high" });
+  // Phones hide the hero pattern (styles/minbar/minbar.css), so only wider screens need it early.
+  preload(PATTERN_TILE, { as: "image", fetchPriority: "high", media: "(min-width: 761px)" });
   for (const font of dir === "rtl" ? RTL_TEXT_FONTS : LTR_TEXT_FONTS) {
     preload(font, { as: "font", type: "font/woff2", crossOrigin: "anonymous" });
   }

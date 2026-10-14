@@ -1,3 +1,4 @@
+import { unstable_cache } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { pickTranslation, translationLocaleWhere } from "@/lib/i18n/translation-fallback";
 import { miaPath } from "@/lib/minbar/routes";
@@ -66,7 +67,7 @@ export function localizeHref(url: string, locale: string): string {
   return `/${locale}${path}`;
 }
 
-export async function listBanners(locale: string, page: string, slot: BannerSlotKey): Promise<SiteBanner[]> {
+async function readBanners(locale: string, page: string, slot: BannerSlotKey): Promise<SiteBanner[]> {
   const keys = [placementKey(page, slot), placementKey("all", slot)];
   const now = Date.now();
   let rows;
@@ -128,4 +129,19 @@ export async function listBanners(locale: string, page: string, slot: BannerSlot
       chips: b.suggestedAmounts.map((usd, i) => ({ usd, label: labels[i] ?? "" })),
     };
   });
+}
+
+/* Every page renders up to three banner slots, each two queries, on every
+   request. Cached for a minute: an editor's change, or a schedule window
+   opening or closing, shows within 60 s. */
+const cachedBanners = unstable_cache(readBanners, ["minbar-banners"], { revalidate: 60, tags: ["minbar-banners"] });
+
+/** The live banners for one page slot, in priority order. Never throws  an empty list renders nothing. */
+export async function listBanners(locale: string, page: string, slot: BannerSlotKey): Promise<SiteBanner[]> {
+  try {
+    return await cachedBanners(locale, page, slot);
+  } catch (e) {
+    console.error("listBanners:", e);
+    return [];
+  }
 }
