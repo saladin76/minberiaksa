@@ -505,10 +505,11 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
     { n: 3, label: t("stepConfirm"), href: miaPath("checkout", locale), current: false },
   ];
 
-  const methods: ReadonlyArray<{ id: PaymentMethod; label: string; icon: React.ReactElement }> = [
+  const methods: ReadonlyArray<{ id: PaymentMethod; label: string; short: string; icon: React.ReactElement }> = [
     {
       id: "card",
       label: t("creditCard"),
+      short: t("creditCardShort"),
       icon: (
         <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
           <rect x="3" y="5.5" width="18" height="13" rx="2" />
@@ -520,6 +521,7 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
       id: "paypal",
       // A brand name  Latin in every language.
       label: "PayPal",
+      short: "PayPal",
       icon: (
         <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
           <path d="M6 20 8 4h6.5a3.5 3.5 0 0 1 0 7H9" />
@@ -530,6 +532,7 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
     {
       id: "bank",
       label: t("bankTransfer"),
+      short: t("bankTransferShort"),
       icon: (
         <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
           <path d="M3 21h18M5 21V10M10 21V10M14 21V10M19 21V10M12 3 21 8H3Z" />
@@ -578,12 +581,12 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
                   whiteSpace: "nowrap",
                 }}
               >
-                <span style={{ display: "grid", placeItems: "center", width: 22, height: 22, borderRadius: "50%", background: step.current ? "var(--gold)" : "var(--border)", color: step.current ? "#10212B" : "var(--muted)", fontSize: 12, fontWeight: 900 }}>
+                <span className="cart-step-n" style={{ display: "grid", placeItems: "center", flexShrink: 0, width: 22, height: 22, aspectRatio: "1", borderRadius: "50%", background: step.current ? "var(--gold)" : "var(--border)", color: step.current ? "#10212B" : "var(--muted)", fontSize: 12, fontWeight: 900 }}>
                   {step.n}
                 </span>
                 {step.label}
               </Link>
-              {i < steps.length - 1 ? <span aria-hidden="true" style={{ flex: "1 1 24px", maxWidth: 60, height: 1, background: "var(--border)" }} /> : null}
+              {i < steps.length - 1 ? <span aria-hidden="true" className="cart-step-line" style={{ flex: "1 1 24px", maxWidth: 60, height: 1, background: "var(--border)" }} /> : null}
             </span>
           ))}
         </div>
@@ -606,7 +609,9 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
 
               {!donor ? (
                 <>
-                  <div id="pay-social" style={{ display: "grid", gridTemplateColumns: "repeat(2,minmax(0,1fr))", gap: 10 }}>
+                  {/* One column while the Facebook button below is commented out; back to
+                      "repeat(2,minmax(0,1fr))" when it returns. */}
+                  <div id="pay-social" style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr)", gap: 10 }}>
                     <button type="button" onClick={() => signIn("google")} className="pay-social-btn" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 9, height: 48, border: "1.5px solid var(--border)", borderRadius: 10, background: "#fff", fontFamily: "inherit", fontSize: 14, fontWeight: 800, color: "var(--deep)", cursor: "pointer", transition: "border-color .18s ease, box-shadow .18s ease, transform .18s ease" }}>
                       <svg viewBox="0 0 24 24" width="19" height="19" aria-hidden="true">
                         <path fill="#4285F4" d="M23.5 12.27c0-.85-.08-1.66-.22-2.45H12v4.64h6.45a5.52 5.52 0 0 1-2.39 3.62v3h3.87c2.26-2.09 3.57-5.17 3.57-8.81Z" />
@@ -616,12 +621,14 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
                       </svg>
                       Google
                     </button>
+                    {/* Facebook sign-in is disabled for now.
                     <button type="button" onClick={() => signIn("facebook")} className="pay-social-btn pay-social-btn--fb" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 9, height: 48, border: 0, borderRadius: 10, background: "#1877F2", fontFamily: "inherit", fontSize: 14, fontWeight: 800, color: "#fff", cursor: "pointer", transition: "filter .18s ease, box-shadow .18s ease, transform .18s ease" }}>
                       <svg viewBox="0 0 24 24" width="19" height="19" fill="#fff" aria-hidden="true">
                         <path d="M13.5 21v-7.6h2.6l.4-3h-3v-1.9c0-.87.24-1.46 1.5-1.46h1.6V4.3c-.28-.04-1.23-.12-2.34-.12-2.32 0-3.9 1.4-3.9 4V10.4H7.4v3h2.9V21h3.2Z" />
                       </svg>
                       Facebook
                     </button>
+                    */}
                   </div>
                   <span style={{ textAlign: "center", fontSize: 12, fontWeight: 700, color: "var(--muted)", lineHeight: 1.7 }}>{t("socialAutofillNote")}</span>
                   <div style={{ display: "flex", alignItems: "center", gap: 10, color: "var(--muted)", fontSize: 11.5, fontWeight: 700 }}>
@@ -713,7 +720,9 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
                     <span aria-hidden="true" style={{ flex: "0 0 auto", color: "var(--muted)" }}>
                       {m.icon}
                     </span>
-                    <span style={{ fontWeight: 800, fontSize: 13.5, whiteSpace: "nowrap" }}>{m.label}</span>
+                    {/* One word on phones so all three fit on a single row. */}
+                    <span className="pay-method-label" style={{ fontWeight: 800, fontSize: 13.5, whiteSpace: "nowrap" }}>{m.label}</span>
+                    <span className="pay-method-short" style={{ fontWeight: 800, fontSize: 13.5, whiteSpace: "nowrap" }}>{m.short}</span>
                   </button>
                 ))}
               </div>

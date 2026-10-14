@@ -372,11 +372,14 @@ export default function CartPage({ projects, categories }: { projects: MinbarPro
                 }}
               >
                 <span
+                  className="cart-step-n"
                   style={{
                     display: "grid",
                     placeItems: "center",
+                    flexShrink: 0,
                     width: 22,
                     height: 22,
+                    aspectRatio: "1",
                     borderRadius: "50%",
                     background: step.current ? "var(--gold)" : "var(--border)",
                     color: step.current ? "#10212B" : "var(--muted)",
@@ -389,7 +392,7 @@ export default function CartPage({ projects, categories }: { projects: MinbarPro
                 {step.label}
               </Link>
               {i < steps.length - 1 ? (
-                <span aria-hidden="true" style={{ flex: "1 1 24px", maxWidth: 60, height: 1, background: "var(--border)" }} />
+                <span aria-hidden="true" className="cart-step-line" style={{ flex: "1 1 24px", maxWidth: 60, height: 1, background: "var(--border)" }} />
               ) : null}
             </span>
           ))}

@@ -150,6 +150,9 @@ export default function Header({
   const pathname = usePathname();
 
   const [localeOpen, setLocaleOpen] = useState(false);
+  /* The desktop pill opens both lists side by side; on a phone the language
+     and the currency each have their own labelled button and open only theirs. */
+  const [localePanel, setLocalePanel] = useState<"both" | "language" | "currency">("both");
   const [menuOpen, setMenuOpen] = useState(false);
   const hasSupers = superCategories.length > 0;
   /* The "all pages" menu lists categories and programmes when there are any. */
@@ -314,6 +317,11 @@ export default function Header({
   };
 
   const currentLocaleMeta = LOCALES[locale as keyof typeof LOCALES] ?? LOCALES.ar;
+  /* Signed-in donors go straight to their account; everyone else lands on
+     sign-in and is returned there afterwards. */
+  const accountHref = signedIn
+    ? miaPath("account", locale)
+    : `/auth/signin?callbackUrl=${encodeURIComponent(miaPath("account", locale))}`;
   const localeA11yLabel = `${tNav("language")} · ${tNav("currency")}`;
 
   const rowClass = "mia-row";
@@ -477,10 +485,10 @@ export default function Header({
           {/* Account  signed-in donors go straight to their account, everyone
               else lands on sign-in and is returned here afterwards. */}
           <Link
-            href={signedIn ? miaPath("account", locale) : `/auth/signin?callbackUrl=${encodeURIComponent(miaPath("account", locale))}`}
+            href={accountHref}
             title={tNav("account")}
             aria-label={tNav("account")}
-            className="mia-circle mia-circle--account"
+            className="mia-circle mia-circle--account mia-desk-only"
             style={{
               position: "relative",
               flex: "0 0 auto",
@@ -511,13 +519,14 @@ export default function Header({
               <button
                 type="button"
                 onClick={() => {
-                  setLocaleOpen((v) => !v);
+                  setLocalePanel("both");
+                  setLocaleOpen((v) => !(v && localePanel === "both"));
                   setMenuOpen(false);
                 }}
                 title={localeA11yLabel}
                 aria-label={localeA11yLabel}
-                aria-expanded={localeOpen}
-                className="mia-locale-btn mia-pill"
+                aria-expanded={localeOpen && localePanel === "both"}
+                className="mia-locale-btn mia-pill mia-desk-only"
                 style={{
                   display: "inline-flex",
                   alignItems: "center",
@@ -562,12 +571,49 @@ export default function Header({
                 </span>
               </button>
 
+              {/* Phones: the language and the currency as two buttons that say
+                  what is chosen ("العربية", "$ USD"), each opening its own list. */}
+              <div className="mia-phone-only mia-phone-pills">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setLocalePanel("language");
+                    setLocaleOpen((v) => !(v && localePanel === "language"));
+                    setMenuOpen(false);
+                  }}
+                  aria-label={`${tNav("language")}: ${currentLocaleMeta.nativeLabel}`}
+                  aria-expanded={localeOpen && localePanel === "language"}
+                  className="mia-phone-pill"
+                >
+                  <GlobeIcon size={15} />
+                  <span className="mia-phone-pill__value" dir={currentLocaleMeta.direction}>{currentLocaleMeta.nativeLabel}</span>
+                  <ChevronIcon />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setLocalePanel("currency");
+                    setLocaleOpen((v) => !(v && localePanel === "currency"));
+                    setMenuOpen(false);
+                  }}
+                  aria-label={`${tNav("currency")}: ${currency}`}
+                  aria-expanded={localeOpen && localePanel === "currency"}
+                  className="mia-phone-pill"
+                >
+                  <span className="mia-phone-pill__value" dir="ltr">
+                    <b>{CURRENCY_SYMBOLS[currency] ?? "$"}</b> {currency}
+                  </span>
+                  <ChevronIcon />
+                </button>
+              </div>
+
               {localeOpen ? (
-                <div className="mia-pop mia-pop--locale">
+                <div className="mia-pop mia-pop--locale" data-panel={localePanel}>
+                  {localePanel !== "currency" ? (
                   <div
                     style={{
                       padding: 16,
-                      borderInlineEnd: "1px solid rgba(16,33,43,.1)",
+                      borderInlineEnd: localePanel === "both" ? "1px solid rgba(16,33,43,.1)" : 0,
                       minWidth: 0,
                       display: "grid",
                       gap: 10,
@@ -609,7 +655,9 @@ export default function Header({
                       })}
                     </div>
                   </div>
+                  ) : null}
 
+                  {localePanel !== "language" ? (
                   <div style={{ padding: 16, minWidth: 0, display: "grid", gap: 10, alignContent: "start" }}>
                     <span style={popTitleStyle}>
                       <CurrencyIcon />
@@ -641,6 +689,7 @@ export default function Header({
                       })}
                     </div>
                   </div>
+                  ) : null}
                 </div>
               ) : null}
             </div>
@@ -656,7 +705,7 @@ export default function Header({
                 title={tNav("menu")}
                 aria-label={tNav("menu")}
                 aria-expanded={menuOpen}
-                className="mia-circle"
+                className="mia-circle mia-menu-btn"
                 style={{
                   display: "grid",
                   placeItems: "center",
@@ -669,7 +718,10 @@ export default function Header({
                   transition: "all .18s ease",
                 }}
               >
-                <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <svg className="mia-phone-only" viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+                  {menuOpen ? <path d="M6 6l12 12M18 6 6 18" /> : <path d="M4 7h16M4 12h16M4 17h16" />}
+                </svg>
+                <svg className="mia-desk-only" viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                   <rect x="3.5" y="3.5" width="7" height="7" rx="1.4" />
                   <rect x="13.5" y="3.5" width="7" height="7" rx="1.4" />
                   <rect x="3.5" y="13.5" width="7" height="7" rx="1.4" />
@@ -679,6 +731,20 @@ export default function Header({
 
               {menuOpen ? (
                 <div className="mia-pop mia-pop--menu">
+                  {/* Phones: the header row keeps only the cart, language and
+                      currency, so search and the account live here. */}
+                  <div className="mia-phone-only mia-menu-phone-tools">
+                    <HeaderSearch variant="inline" onNavigate={() => setMenuOpen(false)} />
+                    <Link href={accountHref} onClick={() => setMenuOpen(false)} className="mia-menu-account">
+                      <span className="mia-menu-account__icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round">
+                          <circle cx="12" cy="8.5" r="3.6" />
+                          <path d="M4.5 19.5a7.5 7.5 0 0 1 15 0" />
+                        </svg>
+                      </span>
+                      <span>{tNav("account")}</span>
+                    </Link>
+                  </div>
                   <Link
                     href={miaPath("home", locale)}
                     onClick={() => setMenuOpen(false)}
@@ -896,6 +962,14 @@ function CurrencyIcon() {
     <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#D39A27" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
       <circle cx="12" cy="12" r="8.5" />
       <path d="M9.5 9a2.5 2.5 0 0 1 5 0c0 1.8-2.5 2.2-2.5 4M12 16.5h.01" />
+    </svg>
+  );
+}
+
+function ChevronIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ flex: "0 0 auto", opacity: 0.8 }}>
+      <path d="m6 9 6 6 6-6" />
     </svg>
   );
 }

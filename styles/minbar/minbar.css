@@ -378,6 +378,10 @@
   display: grid;
   grid-template-columns: 1.2fr 1fr;
 }
+/* Opened from a phone pill: only the language or only the currency list. */
+.mia-head .mia-pop--locale:not([data-panel="both"]) { grid-template-columns: minmax(0, 1fr); }
+/* The drawer scrolls as a whole, so the list inside it need not (its 300px cap is inline). */
+.mia-head .mia-pop--locale:not([data-panel="both"]) > div > div:last-child { max-height: none !important; }
 .mia-head .mia-pop--menu {
   width: min(400px, calc(100vw - 32px));
   overflow-y: auto;
@@ -2435,6 +2439,7 @@ html.cg-open .mia-scope:has(.mia-qb-sec) { padding-bottom: 0; }
 .mia-scope .pay-method:hover { border-color: var(--gold); }
 .mia-scope .pay-method[data-pick="1"] { border-color: var(--gold) !important; background: var(--sand) !important; box-shadow: 0 4px 14px rgba(211,154,39,.18); }
 .mia-scope .pay-method[data-pick="1"] span { color: var(--deep) !important; }
+.mia-scope .pay-method .pay-method-short { display: none; }
 .mia-scope .pay-copy-btn:hover { border-color: var(--gold); background: var(--sand); }
 .mia-scope .pay-paypal:hover { filter: brightness(1.05); transform: translateY(-1px); }
 
@@ -2447,8 +2452,11 @@ html.cg-open .mia-scope:has(.mia-qb-sec) { padding-bottom: 0; }
   .mia-scope #pay-steps { overflow-x: auto; }
   .mia-scope .pay-card { padding: 18px !important; }
   .mia-scope #pay-social { grid-template-columns: minmax(0,1fr) !important; }
-  .mia-scope #pay-methods { flex-wrap: wrap; }
-  .mia-scope #pay-methods > * { flex: 1 1 calc(50% - 5px) !important; }
+  /* All methods stay on one row, each named in a single word. */
+  .mia-scope #pay-methods { gap: 8px !important; }
+  .mia-scope #pay-methods > * { flex: 1 1 0 !important; min-width: 0; padding: 0 6px !important; gap: 6px !important; }
+  .mia-scope #pay-methods .pay-method-label { display: none; }
+  .mia-scope #pay-methods .pay-method-short { display: inline; overflow: hidden; text-overflow: ellipsis; font-size: 13px !important; }
   .mia-scope #card-fields { grid-template-columns: minmax(0,1fr) !important; }
   /* The receipt upload form on the transfer status page shares this grid. */
   .mia-scope .tr-fields { grid-template-columns: minmax(0,1fr) !important; }
@@ -4275,13 +4283,45 @@ html[data-mia-drawer="open"] .mia-scope .mia-qb-sec { display: none !important; 
     padding-inline: 14px !important;
   }
 
-  .mia-scope #pay-methods > * {
-    flex: 1 1 100% !important;
-  }
-
   .mia-scope .cart-row .c-ctl {
     max-width: 100%;
     flex-wrap: wrap;
+  }
+
+  /* Cart/checkout step rail: three compact pills on one row, connectors
+     absorb the slack. Inline styles set the desktop size, hence !important. */
+  .mia-scope #cart-steps,
+  .mia-scope #pay-steps {
+    padding-inline: 16px !important;
+    gap: 6px !important;
+    justify-content: space-between;
+  }
+  .mia-scope #cart-steps .cart-step,
+  .mia-scope #pay-steps .cart-step {
+    gap: 6px !important;
+    padding: 6px 10px !important;
+    font-size: 12px !important;
+    flex: 0 1 auto;
+    min-width: 0;
+  }
+  .mia-scope #cart-steps .cart-step-line,
+  .mia-scope #pay-steps .cart-step-line {
+    flex: 1 1 6px !important;
+    min-width: 6px;
+  }
+}
+
+@media (max-width: 360px) {
+  .mia-scope #cart-steps .cart-step,
+  .mia-scope #pay-steps .cart-step {
+    padding: 5px 8px !important;
+    font-size: 11.5px !important;
+  }
+  .mia-scope #cart-steps .cart-step-n,
+  .mia-scope #pay-steps .cart-step-n {
+    width: 20px !important;
+    height: 20px !important;
+    font-size: 11px !important;
   }
 }
 
@@ -5089,6 +5129,57 @@ html[data-mia-drawer="open"] .mia-scope .mia-qb-sec { display: none !important; 
 .mia-head .mia-header-search__results b { color: var(--deep); font-size: 13.5px; line-height: 1.45; }
 .mia-head .mia-header-search__results p { color: var(--muted); padding: 13px 4px; font-size: 13px; margin: 0; }
 .mia-head .mia-header-search__all { display: block; width: 100%; border-radius: 9px; border: 0; background: var(--sand); color: var(--deep); min-height: 42px; font-weight: 900; margin-top: 8px; cursor: pointer; }
+
+/* ── Phone header ─────────────────────────────────────────────────────────────
+ * Up to 700px the header row holds only the logo, the cart, the language and
+ * the currency (each a pill naming the current choice) and a burger. Search and
+ * the account move to the top of the burger menu. `mia-desk-only` /
+ * `mia-phone-only` switch the two layouts; the desktop pieces carry inline
+ * `display`, hence `!important`. */
+.mia-head .mia-phone-only { display: none !important; }
+@media (max-width: 700px) {
+  .mia-head .mia-desk-only,
+  .mia-head .mia-main-row > .mia-header-search,
+  .mia-head .mia-main-row > span[aria-hidden="true"] { display: none !important; }
+  .mia-head svg.mia-phone-only { display: block !important; }
+  .mia-head .mia-phone-pills { display: flex !important; align-items: center; gap: 6px; }
+  .mia-head .mia-menu-phone-tools { display: grid !important; }
+}
+.mia-head .mia-phone-pill {
+  display: inline-flex; align-items: center; gap: 5px;
+  height: 40px; padding: 0 10px; border-radius: 999px;
+  border: 1px solid rgba(255,255,255,.42); background: rgba(255,255,255,.12);
+  color: #fff; font: inherit; font-size: 12.5px; font-weight: 800; line-height: 1;
+  white-space: nowrap; cursor: pointer; transition: background .18s ease, border-color .18s ease;
+}
+.mia-head .mia-phone-pill[aria-expanded="true"] { border-color: #D39A27; background: rgba(255,255,255,.22); }
+.mia-head .mia-phone-pill__value { max-width: 76px; overflow: hidden; text-overflow: ellipsis; unicode-bidi: isolate; }
+.mia-head .mia-phone-pill__value b { color: #F4DEAB; font-weight: 900; }
+@media (max-width: 380px) {
+  .mia-head .mia-phone-pill { padding: 0 8px; gap: 4px; font-size: 12px; }
+  .mia-head .mia-phone-pill > svg:first-child:not(:last-child) { display: none; }
+  .mia-head .mia-phone-pill__value { max-width: 62px; }
+  .mia-head .mia-main-row img[src*="logo-horizontal"] { max-width: 84px !important; }
+}
+
+/* Search and the account, first in the phone menu. */
+.mia-head .mia-menu-phone-tools {
+  grid-column: 1 / -1; gap: 10px; padding-bottom: 14px;
+  border-bottom: 1px solid rgba(16,33,43,.1);
+}
+.mia-head .mia-header-search--inline { z-index: auto; }
+.mia-head .mia-header-search--inline .mia-header-search__panel {
+  position: static; width: auto; padding: 0; border: 0; border-radius: 0; box-shadow: none; background: transparent;
+}
+.mia-head .mia-menu-account {
+  display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 8px 12px;
+  border-radius: 12px; border: 1px solid rgba(211,154,39,.45); background: #FFFDF8;
+  color: #10212B; font-size: 14.5px; font-weight: 900; text-decoration: none;
+}
+.mia-head .mia-menu-account__icon {
+  display: grid; place-items: center; width: 32px; height: 32px; border-radius: 50%;
+  background: rgba(211,154,39,.16); color: #8a5d16; flex: 0 0 auto;
+}
 .mia-scope .mia-site-search-page { min-height: 55vh; background: var(--ivory); padding: 48px 16px 70px; }
 .mia-scope .mia-site-search-page__inner { max-width: 1050px; margin-inline: auto; }
 .mia-scope .mia-site-search-page h1 { font-size: clamp(24px,3vw,36px); margin: 0 0 22px; }

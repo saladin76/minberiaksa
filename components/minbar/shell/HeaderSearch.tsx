@@ -8,12 +8,19 @@ import { localeDirection } from "@/lib/locales";
 import type { PublicSearchItem } from "@/lib/minbar/public-search";
 
 const magnifier = <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.7" /><path d="m16 16 5 5" /></svg>;
-export default function HeaderSearch() {
+/**
+ * The site search. `toggle` (default) is the header's magnifier button with a
+ * dropdown panel; `inline` is the same form and results always shown, for the
+ * phone menu drawer, which calls `onNavigate` so it can close itself.
+ */
+export default function HeaderSearch({ variant = "toggle", onNavigate }: { variant?: "toggle" | "inline"; onNavigate?: () => void } = {}) {
+  const inline = variant === "inline";
   const locale = useLocale();
   const router = useRouter();
   const direction = localeDirection(locale);
   const isArabic = locale === "ar";
-  const [open, setOpen] = useState(false);
+  const [openState, setOpen] = useState(false);
+  const open = inline || openState;
   const [query, setQuery] = useState("");
   const [items, setItems] = useState<PublicSearchItem[]>([]);
   const [loading, setLoading] = useState(false);
@@ -21,7 +28,9 @@ export default function HeaderSearch() {
   const wrapRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   useEffect(() => {
-    if (!open) return;
+    // Inline lives in an already-open drawer: no auto-focus (it would raise the
+    // phone keyboard over the menu) and no click-outside closing.
+    if (!open || inline) return;
     inputRef.current?.focus();
     const onDown = (event: PointerEvent) => {
       if (wrapRef.current && !wrapRef.current.contains(event.target as Node)) setOpen(false);
@@ -30,7 +39,7 @@ export default function HeaderSearch() {
     document.addEventListener("pointerdown", onDown);
     document.addEventListener("keydown", onKey);
     return () => { document.removeEventListener("pointerdown", onDown); document.removeEventListener("keydown", onKey); };
-  }, [open]);
+  }, [open, inline]);
   useEffect(() => {
     if (!open || query.trim().length < 2) return;
     const abort = new AbortController();
@@ -49,17 +58,18 @@ export default function HeaderSearch() {
   const submit = () => {
     if (short) return;
     setOpen(false);
+    onNavigate?.();
     router.push(`/${locale}/search?q=${encodeURIComponent(query.trim().slice(0, 90))}`);
   };
-  return <div className="mia-header-search" ref={wrapRef} dir={direction}>
-    <button type="button" className="mia-header-search__toggle" aria-expanded={open} aria-controls="mia-header-search-panel" aria-label={isArabic ? "البحث في الموقع" : "Search site"} title={isArabic ? "بحث" : "Search"} onClick={() => setOpen(v => !v)}>{magnifier}</button>
-    {open && <div className="mia-header-search__panel" id="mia-header-search-panel">
+  return <div className={inline ? "mia-header-search mia-header-search--inline" : "mia-header-search"} ref={wrapRef} dir={direction}>
+    {!inline && <button type="button" className="mia-header-search__toggle" aria-expanded={open} aria-controls="mia-header-search-panel" aria-label={isArabic ? "البحث في الموقع" : "Search site"} title={isArabic ? "بحث" : "Search"} onClick={() => setOpen(v => !v)}>{magnifier}</button>}
+    {open && <div className="mia-header-search__panel" id={inline ? undefined : "mia-header-search-panel"}>
       <form role="search" onSubmit={event => { event.preventDefault(); submit(); }} className="mia-header-search__form">
-        <label htmlFor="mia-header-query">{isArabic ? "ابحث عن مشروع أو مقال أو خبر" : "Search projects, articles and news"}</label>
-        <div className="mia-header-search__input"><span aria-hidden="true">{magnifier}</span><input id="mia-header-query" ref={inputRef} value={query} maxLength={90} onChange={event => { setQuery(event.target.value); setItems([]); }} autoComplete="off" placeholder={isArabic ? "اكتب ما تبحث عنه..." : "What are you looking for?"}/><button disabled={short} type="submit">{isArabic ? "بحث" : "Search"}</button></div>
+        <label htmlFor={inline ? "mia-menu-query" : "mia-header-query"}>{isArabic ? "ابحث عن مشروع أو مقال أو خبر" : "Search projects, articles and news"}</label>
+        <div className="mia-header-search__input"><span aria-hidden="true">{magnifier}</span><input id={inline ? "mia-menu-query" : "mia-header-query"} ref={inputRef} value={query} maxLength={90} onChange={event => { setQuery(event.target.value); setItems([]); }} autoComplete="off" placeholder={isArabic ? "اكتب ما تبحث عنه..." : "What are you looking for?"}/><button disabled={short} type="submit">{isArabic ? "بحث" : "Search"}</button></div>
       </form>
       <div className="mia-header-search__results" aria-live="polite">
-        {!short && loading ? <p>{isArabic ? "جارٍ البحث..." : "Searching..."}</p> : failed ? <p>{isArabic ? "تعذر البحث مؤقتًا" : "Search unavailable"}</p> : !short && !loading && !items.length ? <p>{isArabic ? "لا توجد نتائج. جرّب كلمة أخرى." : "No results. Try another term."}</p> : items.map(item => <Link key={item.id} href={item.href} onClick={() => setOpen(false)}><small>{item.type === "project" ? (isArabic ? "مشروع" : "Project") : item.type === "news" ? (isArabic ? "خبر" : "News") : (isArabic ? "مقال" : "Article")}</small><b>{item.title}</b></Link>)}
+        {!short && loading ? <p>{isArabic ? "جارٍ البحث..." : "Searching..."}</p> : failed ? <p>{isArabic ? "تعذر البحث مؤقتًا" : "Search unavailable"}</p> : !short && !loading && !items.length ? <p>{isArabic ? "لا توجد نتائج. جرّب كلمة أخرى." : "No results. Try another term."}</p> : items.map(item => <Link key={item.id} href={item.href} onClick={() => { setOpen(false); onNavigate?.(); }}><small>{item.type === "project" ? (isArabic ? "مشروع" : "Project") : item.type === "news" ? (isArabic ? "خبر" : "News") : (isArabic ? "مقال" : "Article")}</small><b>{item.title}</b></Link>)}
       </div>
       {!short && <button className="mia-header-search__all" type="button" onClick={submit}>{isArabic ? "عرض كل النتائج" : "View all results"}</button>}
     </div>}
