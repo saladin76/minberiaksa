@@ -250,7 +250,10 @@ export async function createOrUpdateCampaignLink(input: CampaignLinkInput): Prom
     query: { $or: [{ urlHash: payload.urlHash }, { url: payload.url }] },
     update: {
       $set: { ...payload, status: "ACTIVE", updatedAt: now },
-      $setOnInsert: { createdAt: now, saveCount: 0 },
+      // Not `saveCount` here as well: MongoDB refuses two operators on one path
+      // (ConflictingUpdateOperators), so every save failed. `$inc` on a new
+      // document starts the count at 1.
+      $setOnInsert: { createdAt: now },
       $inc: { saveCount: 1 },
     },
     upsert: true,

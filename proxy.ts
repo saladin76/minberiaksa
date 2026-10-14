@@ -46,6 +46,14 @@ function countryFromHeaders(req: NextRequest): string | null {
 export default function proxy(req: NextRequest) {
   const pathname = req.nextUrl.pathname;
 
+  // The app defines no Server Actions, so a `Next-Action` header is always a
+  // scanner probing for RSC exploits. Answered here, it no longer reaches Next,
+  // which logged every probe as "The Server Reference ID did not match the
+  // expected format". Remove this if a Server Action is ever added.
+  if (req.headers.has('next-action')) {
+    return new NextResponse(null, { status: 400 });
+  }
+
   // Locale-less URL (e.g. a share link generated with auto-locale): pick a
   // locale from the visitor's country and redirect. URLs that already include
   // a locale prefix are left alone so explicit choices are never overridden.

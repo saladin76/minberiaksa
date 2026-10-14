@@ -7,6 +7,18 @@
  */
 
 /**
+ * A stored or requested currency code, upper-cased. Empty and `DEFAULT` mean USD:
+ * `DEFAULT` is the currency cookie's "nothing chosen" value, and it reached
+ * donation rows as their currency. Converting `DEFAULT` threw "Missing USD-base
+ * rate for DEFAULT or TRY", which failed every Albaraka card payment from a
+ * visitor who had never picked a currency.
+ */
+export function normalizeCurrencyCode(currency: string | null | undefined): string {
+  const c = String(currency || "").trim().toUpperCase();
+  return !c || c === "DEFAULT" ? "USD" : c;
+}
+
+/**
  * Any supported currency → USD.
  *
  * The rate table is USD-based, so this is a single division: the round-trip
@@ -18,9 +30,7 @@ export function convertAmountInCurrencyToUsd(
   fromCurrency: string,
   rates: Record<string, number>
 ): number {
-  const from = String(fromCurrency || "USD")
-    .trim()
-    .toUpperCase();
+  const from = normalizeCurrencyCode(fromCurrency);
   if (from === "USD") return amount;
   const rFrom = rates[from];
   if (!rFrom || rFrom <= 0) {
@@ -34,9 +44,7 @@ export function convertAmountInCurrencyToTry(
   fromCurrency: string,
   rates: Record<string, number>
 ): number {
-  const from = String(fromCurrency || "USD")
-    .trim()
-    .toUpperCase();
+  const from = normalizeCurrencyCode(fromCurrency);
   if (from === "TRY") return amount;
   const rFrom = rates[from];
   const rTry = rates.TRY;

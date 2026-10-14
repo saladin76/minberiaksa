@@ -33,6 +33,7 @@ import {
   convertAmountInCurrencyToUsd,
   getUsdBaseRatesForServer,
 } from "@/lib/exchange/rates-service";
+import { normalizeCurrencyCode } from "@/lib/exchange/convert";
 import { decryptCard, detectCardType, encryptCard } from "@/lib/card-crypto";
 
 /**
@@ -227,7 +228,8 @@ export async function POST(req: NextRequest) {
        always converts. ALBARAKA_CHARGE_CURRENCY decides what to; see
        `albarakaChargeCurrency`. Whichever branch runs, the donation row keeps its
        own currency  this only changes what the bank is asked to charge. */
-    const donationCurrency = String(donation.currency || "TRY").toUpperCase();
+    // `DEFAULT` (no currency chosen) is USD; see normalizeCurrencyCode.
+    const donationCurrency = donation.currency ? normalizeCurrencyCode(donation.currency) : "TRY";
     const policy = albarakaChargeCurrency();
 
     let chargeAmount: number;

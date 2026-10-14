@@ -308,7 +308,9 @@ export async function POST(request: NextRequest) {
        send amounts already in `currency` (no `amountsIn`) are taken as they
        are. */
     const amountsInUsd = amountsIn === "USD";
-    const currency: string = requestedCurrency;
+    // Stored on the donation as given here; `DEFAULT` (no currency chosen) is USD,
+    // and a stored `DEFAULT` broke the card gateways that convert it later.
+    const currency: string = normalizeDonationCurrencyCode(requestedCurrency);
     const chargeCode = normalizeDonationCurrencyCode(currency);
     let usdToCharge = 1;
     let rates: Record<string, number> = {};

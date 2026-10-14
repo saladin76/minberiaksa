@@ -4,13 +4,10 @@
  */
 
 import { getUsdBaseRatesForServer } from "@/lib/exchange/rates-service";
+import { normalizeCurrencyCode } from "@/lib/exchange/convert";
 
 export function normalizeDonationCurrencyCode(currency: string): string {
-  const c = String(currency || "")
-    .trim()
-    .toUpperCase();
-  if (!c || c === "DEFAULT") return "USD";
-  return c;
+  return normalizeCurrencyCode(currency);
 }
 
 /**
