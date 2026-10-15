@@ -2,6 +2,7 @@
 
 import { Calendar, Edit3, ImageOff, Mail, PlayCircle, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { dt } from "@/lib/dashboard/i18n";
 
 /**
  * One project update in the campaign editor: its photo or video on top, then
@@ -62,7 +63,7 @@ export function UpdateCard({
         ) : (
           <div className="flex h-full w-full flex-col items-center justify-center gap-1.5 text-slate-400">
             <ImageOff className="h-7 w-7" />
-            <span className="text-xs">بدون صورة أو فيديو</span>
+            <span className="text-xs">{dt("بدون صورة أو فيديو")}</span>
           </div>
         )}
         {video && !(uploaded && !update.image) ? (
@@ -73,8 +74,7 @@ export function UpdateCard({
             className="absolute bottom-2 start-2 inline-flex items-center gap-1 rounded-full bg-black/70 px-2.5 py-1 text-[11px] font-semibold text-white backdrop-blur hover:bg-black/80"
           >
             <PlayCircle className="h-3.5 w-3.5" />
-            فيديو
-          </a>
+            {dt("فيديو")}</a>
         ) : null}
       </div>
 
@@ -92,13 +92,12 @@ export function UpdateCard({
             variant="outline"
             size="sm"
             onClick={onSend}
-            title="إرسال التحديث كحملة بريد لمتبرعي المشروع"
+            title={dt("إرسال التحديث كحملة بريد لمتبرعي المشروع")}
             className="flex-1 gap-1.5 border-emerald-200 text-emerald-700 hover:bg-emerald-50 hover:text-emerald-800"
           >
             <Mail className="h-4 w-4" />
-            إرسال للمتبرعين
-          </Button>
-          <Button type="button" variant="ghost" size="icon" onClick={onEdit} title="تعديل" aria-label="تعديل التحديث" className="h-9 w-9 text-slate-600">
+            {dt("إرسال للمتبرعين")}</Button>
+          <Button type="button" variant="ghost" size="icon" onClick={onEdit} title={dt("تعديل")} aria-label={dt("تعديل التحديث")} className="h-9 w-9 text-slate-600">
             <Edit3 className="h-4 w-4" />
           </Button>
           <Button
@@ -106,8 +105,8 @@ export function UpdateCard({
             variant="ghost"
             size="icon"
             onClick={onDelete}
-            title="حذف"
-            aria-label="حذف التحديث"
+            title={dt("حذف")}
+            aria-label={dt("حذف التحديث")}
             className="h-9 w-9 text-red-600 hover:bg-red-50 hover:text-red-700"
           >
             <Trash2 className="h-4 w-4" />

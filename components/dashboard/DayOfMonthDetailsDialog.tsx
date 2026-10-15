@@ -10,6 +10,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { EmptyState } from "@/components/dashboard/EmptyState";
+import { dashDir, dt } from "@/lib/dashboard/i18n";
 
 export type DayOfMonthMode = "collected" | "expected";
 
@@ -52,10 +53,10 @@ type Props = {
 };
 
 const STATUS_LABEL: Record<PlanStatus, string> = {
-  ACTIVE: "نشط",
-  PAUSED: "موقوف",
-  CANCELLED: "ملغى",
-  PAYMENT_FAILED: "تعذّر الخصم",
+  get ACTIVE() { return dt("نشط"); },
+  get PAUSED() { return dt("موقوف"); },
+  get CANCELLED() { return dt("ملغى"); },
+  get PAYMENT_FAILED() { return dt("تعذّر الخصم"); },
 };
 
 const STATUS_CLASS: Record<PlanStatus, string> = {
@@ -66,9 +67,9 @@ const STATUS_CLASS: Record<PlanStatus, string> = {
 };
 
 const FREQUENCY_LABEL: Record<"DAILY" | "FRIDAY" | "MONTHLY", string> = {
-  DAILY: "يومي",
-  FRIDAY: "أسبوعياً",
-  MONTHLY: "شهري",
+  get DAILY() { return dt("يومي"); },
+  get FRIDAY() { return dt("أسبوعياً"); },
+  get MONTHLY() { return dt("شهري"); },
 };
 
 /**
@@ -124,7 +125,7 @@ export function DayOfMonthDetailsDialog({ day, mode, filters, formatMoney, onClo
     fetch(`/api/admin/subscriptions/overview/day-of-month/details?${params}`)
       .then(async (res) => {
         const data = await res.json();
-        if (!res.ok) throw new Error(data?.error || "تعذّر تحميل التفاصيل");
+        if (!res.ok) throw new Error(data?.error || dt("تعذّر تحميل التفاصيل"));
         return data;
       })
       .then((data) => {
@@ -149,25 +150,25 @@ export function DayOfMonthDetailsDialog({ day, mode, filters, formatMoney, onClo
   return (
     <Dialog open={day != null} onOpenChange={(open) => !open && onClose()}>
       <DialogContent
-        dir="rtl"
+        dir={dashDir()}
         className="max-w-5xl max-h-[85vh] overflow-hidden flex flex-col p-0 gap-0"
       >
-        <DialogHeader className="px-5 py-4 border-b border-slate-100 text-right space-y-1">
+        <DialogHeader className="px-5 py-4 border-b border-slate-100 text-start space-y-1">
           <DialogTitle className="flex items-center gap-2.5 text-base font-semibold text-slate-900">
             <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-50 text-brand shrink-0">
               <CalendarRange className="h-4 w-4" />
             </span>
             {isCollected
-              ? `ما تم تحصيله في اليوم ${day} من كل شهر`
-              : `الاشتراكات التي تتجدّد في اليوم ${day} من كل شهر`}
+              ? dt("ما تم تحصيله في اليوم {0} من كل شهر", [day])
+              : dt("الاشتراكات التي تتجدّد في اليوم {0} من كل شهر", [day])}
           </DialogTitle>
           {totals && !loading ? (
             <div className="flex flex-wrap gap-4 pt-1.5">
               <span className="text-[11px] text-slate-500">
-                العدد: <b className="text-slate-900 tabular-nums">{totals.count}</b>
+                {dt("العدد: ")}<b className="text-slate-900 tabular-nums">{totals.count}</b>
               </span>
               <span className="text-[11px] text-slate-500">
-                الإجمالي:{" "}
+                {dt("الإجمالي: ")}
                 <b className="text-slate-900 tabular-nums">{formatMoney(totals.amountUSD)}</b>
               </span>
             </div>
@@ -180,38 +181,34 @@ export function DayOfMonthDetailsDialog({ day, mode, filters, formatMoney, onClo
               <Loader2 className="w-7 h-7 animate-spin mx-auto text-brand" />
             </div>
           ) : error ? (
-            <EmptyState title="تعذّر تحميل التفاصيل" description={error} className="m-5" />
+            <EmptyState title={dt("تعذّر تحميل التفاصيل")} description={error} className="m-5" />
           ) : rows.length === 0 ? (
             <EmptyState
-              title="لا توجد بيانات لهذا اليوم"
+              title={dt("لا توجد بيانات لهذا اليوم")}
               description={
                 isCollected
-                  ? "لم تُسدَّد أي دفعة شهرية في هذا اليوم من أي شهر."
-                  : "لا يوجد اشتراك نشط مجدول للتجديد في هذا اليوم."
+                  ? dt("لم تُسدَّد أي دفعة شهرية في هذا اليوم من أي شهر.")
+                  : dt("لا يوجد اشتراك نشط مجدول للتجديد في هذا اليوم.")
               }
               className="m-5"
             />
           ) : (
-            <table className="w-full text-xs text-right leading-snug">
+            <table className="w-full text-xs text-start leading-snug">
               <thead className="sticky top-0 z-10">
                 <tr className="border-b border-slate-200 bg-slate-50/95 backdrop-blur">
-                  <th className="text-right py-3 px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
-                    المشترك
+                  <th className="text-start py-3 px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                    {dt("المشترك")}</th>
+                  <th className="text-start py-3 px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500 whitespace-nowrap">
+                    {isCollected ? dt("المبلغ") : dt("المبلغ الشهري")}
                   </th>
-                  <th className="text-right py-3 px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500 whitespace-nowrap">
-                    {isCollected ? "المبلغ" : "المبلغ الشهري"}
-                  </th>
-                  <th className="text-right py-3 px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
-                    الحالة
-                  </th>
-                  <th className="text-right py-3 px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500 max-w-[200px]">
-                    المشروع / الفئة
-                  </th>
-                  <th className="text-right py-3 px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
-                    الإحالة
-                  </th>
-                  <th className="text-right py-3 px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500 whitespace-nowrap">
-                    {isCollected ? "تاريخ الدفع" : "الدفعة القادمة"}
+                  <th className="text-start py-3 px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                    {dt("الحالة")}</th>
+                  <th className="text-start py-3 px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500 max-w-[200px]">
+                    {dt("المشروع / الفئة")}</th>
+                  <th className="text-start py-3 px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                    {dt("الإحالة")}</th>
+                  <th className="text-start py-3 px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500 whitespace-nowrap">
+                    {isCollected ? dt("تاريخ الدفع") : dt("الدفعة القادمة")}
                   </th>
                 </tr>
               </thead>
@@ -252,12 +249,12 @@ export function DayOfMonthDetailsDialog({ day, mode, filters, formatMoney, onClo
                     </td>
                     <td className="py-2.5 px-3 text-slate-600 max-w-[200px]">
                       {r.campaigns.length > 0 ? (
-                        <span className="block truncate" title={r.campaigns.map((c) => c.title).join("، ")}>
-                          {r.campaigns.map((c) => c.title).join("، ")}
+                        <span className="block truncate" title={r.campaigns.map((c) => c.title).join(dt("، "))}>
+                          {r.campaigns.map((c) => c.title).join(dt("، "))}
                         </span>
                       ) : r.categories.length > 0 ? (
-                        <span className="block truncate" title={r.categories.map((c) => c.name).join("، ")}>
-                          فئة: {r.categories.map((c) => c.name).join("، ")}
+                        <span className="block truncate" title={r.categories.map((c) => c.name).join(dt("، "))}>
+                          {dt("فئة: ")}{r.categories.map((c) => c.name).join(dt("، "))}
                         </span>
                       ) : (
                         <span className="text-slate-400">—</span>

@@ -16,6 +16,7 @@ import {
 import { errorMessage } from '@/lib/dashboard/client-error-message';
 import { LOCALES } from '@/lib/locales';
 import { SortableTable, useReorder } from '../_components/SortableTable';
+import { dt, dtx } from "@/lib/dashboard/i18n";
 
 interface BankRow {
   id: string;
@@ -52,8 +53,8 @@ export default function BankAccountsPage() {
       const detail = (e as { response?: { data?: { detail?: unknown } } })?.response?.data?.detail;
       toast.error(
         typeof detail === 'string' && detail
-          ? `تعذّر تحميل الحسابات البنكية: ${detail}`
-          : errorMessage(e, 'تعذّر تحميل الحسابات البنكية')
+          ? dt("تعذّر تحميل الحسابات البنكية: {0}", [detail])
+          : errorMessage(e, dt("تعذّر تحميل الحسابات البنكية"))
       );
     } finally {
       setLoading(false);
@@ -66,7 +67,7 @@ export default function BankAccountsPage() {
     rows,
     setRows,
     useCallback(async (payload) => { await axios.post('/api/bank-accounts/reorder', { bankAccounts: payload }); }, []),
-    useCallback((e: unknown) => { toast.error(errorMessage(e, 'تعذّر حفظ الترتيب')); fetchRows(); }, [fetchRows]),
+    useCallback((e: unknown) => { toast.error(errorMessage(e, dt("تعذّر حفظ الترتيب"))); fetchRows(); }, [fetchRows]),
   );
 
   const toggleActive = async (row: BankRow, next: boolean) => {
@@ -75,7 +76,7 @@ export default function BankAccountsPage() {
       await axios.put(`/api/bank-accounts/${row.id}`, { isActive: next });
       setRows((prev) => prev.map((r) => (r.id === row.id ? { ...r, isActive: next } : r)));
     } catch (e) {
-      toast.error(errorMessage(e, 'تعذّر تغيير الحالة'));
+      toast.error(errorMessage(e, dt("تعذّر تغيير الحالة")));
     } finally {
       setTogglingId(null);
     }
@@ -87,10 +88,10 @@ export default function BankAccountsPage() {
     try {
       await axios.delete(`/api/bank-accounts/${deleteTarget.id}`);
       setRows((prev) => prev.filter((r) => r.id !== deleteTarget.id));
-      toast.success('تم حذف الحساب البنكي');
+      toast.success(dt("تم حذف الحساب البنكي"));
       setDeleteTarget(null);
     } catch (e) {
-      toast.error(errorMessage(e, 'تعذّر حذف الحساب البنكي'));
+      toast.error(errorMessage(e, dt("تعذّر حذف الحساب البنكي")));
     } finally {
       setDeleting(false);
     }
@@ -108,27 +109,24 @@ export default function BankAccountsPage() {
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <h1 className="text-lg font-bold">الحسابات البنكية</h1>
+          <h1 className="text-lg font-bold">{dt("الحسابات البنكية")}</h1>
           <p className="text-xs text-slate-500">
-            وجهات التحويل البنكي المنشورة للمتبرعين. يمكن قصر كل حساب على لغات بعينها.
-          </p>
+            {dt("وجهات التحويل البنكي المنشورة للمتبرعين. يمكن قصر كل حساب على لغات بعينها.")}</p>
         </div>
         <Button onClick={() => router.push('/dashboard/bank-accounts/new')}>
-          <Plus className="w-4 h-4 ml-1" />
-          حساب جديد
-        </Button>
+          <Plus className="w-4 h-4 me-1" />
+          {dt("حساب جديد")}</Button>
       </div>
 
       {rows.length === 0 ? (
         <EmptyState
           icon={Landmark}
-          title="لا توجد حسابات بنكية"
-          description="أضف الحسابات من المستندات الرسمية لتظهر في صفحة التحويل البنكي."
+          title={dt("لا توجد حسابات بنكية")}
+          description={dt("أضف الحسابات من المستندات الرسمية لتظهر في صفحة التحويل البنكي.")}
           action={
             <Button onClick={() => router.push('/dashboard/bank-accounts/new')}>
-              <Plus className="w-4 h-4 ml-1" />
-              حساب جديد
-            </Button>
+              <Plus className="w-4 h-4 me-1" />
+              {dt("حساب جديد")}</Button>
           }
         />
       ) : (
@@ -141,7 +139,7 @@ export default function BankAccountsPage() {
           isDimmed={(r) => !r.isActive}
           columns={[
             {
-              header: 'البنك',
+              header: dt("البنك"),
               cell: (r) => (
                 <div className="flex items-center gap-2">
                   {r.logo ? (
@@ -156,7 +154,7 @@ export default function BankAccountsPage() {
                     <div className="font-semibold flex items-center gap-2">
                       {r.name}
                       {r.incomplete ? (
-                        <Badge variant="destructive" className="text-[10px] px-1.5 py-0">بيانات ناقصة</Badge>
+                        <Badge variant="destructive" className="text-[10px] px-1.5 py-0">{dt("بيانات ناقصة")}</Badge>
                       ) : null}
                     </div>
                     <div className="text-xs text-slate-500">{r.holder}{r.branch ? ` · ${r.branch}` : ''}</div>
@@ -165,7 +163,7 @@ export default function BankAccountsPage() {
               ),
             },
             {
-              header: 'العملات',
+              header: dt("العملات"),
               cell: (r) => (
                 <div className="flex flex-wrap gap-1">
                   {r.currencyCodes.map((c) => (
@@ -175,10 +173,10 @@ export default function BankAccountsPage() {
               ),
             },
             {
-              header: 'اللغات',
+              header: dt("اللغات"),
               cell: (r) =>
                 r.locales.length === 0 ? (
-                  <span className="text-xs text-slate-500">كل اللغات</span>
+                  <span className="text-xs text-slate-500">{dt("كل اللغات")}</span>
                 ) : (
                   <div className="flex flex-wrap gap-1">
                     {r.locales.map((l) => (
@@ -189,9 +187,9 @@ export default function BankAccountsPage() {
                   </div>
                 ),
             },
-            { header: 'الترجمات', cell: (r) => <span className="text-xs text-slate-600">{r.translationCount}</span> },
+            { header: dt("الترجمات"), cell: (r) => <span className="text-xs text-slate-600">{r.translationCount}</span> },
             {
-              header: 'مفعّل',
+              header: dt("مفعّل"),
               cell: (r) => (
                 <Switch checked={r.isActive} disabled={togglingId === r.id} onCheckedChange={(v) => toggleActive(r, v)} />
               ),
@@ -217,17 +215,15 @@ export default function BankAccountsPage() {
       <AlertDialog open={!!deleteTarget} onOpenChange={(o) => !o && setDeleteTarget(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>حذف الحساب البنكي</AlertDialogTitle>
+            <AlertDialogTitle>{dt("حذف الحساب البنكي")}</AlertDialogTitle>
             <AlertDialogDescription>
-              سيتم حذف «{deleteTarget?.name}» بكل عملاته وترجماته نهائيًا، ولن يظهر للمتبرعين بعدها.
-            </AlertDialogDescription>
+              {dtx("سيتم حذف «{0}» بكل عملاته وترجماته نهائيًا، ولن يظهر للمتبرعين بعدها.", [deleteTarget?.name])}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={deleting}>إلغاء</AlertDialogCancel>
+            <AlertDialogCancel disabled={deleting}>{dt("إلغاء")}</AlertDialogCancel>
             <AlertDialogAction onClick={confirmDelete} disabled={deleting}>
-              {deleting && <Loader2 className="w-4 h-4 animate-spin ml-2" />}
-              حذف
-            </AlertDialogAction>
+              {deleting && <Loader2 className="w-4 h-4 animate-spin me-2" />}
+              {dt("حذف")}</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

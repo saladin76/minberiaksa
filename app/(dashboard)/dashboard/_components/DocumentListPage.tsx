@@ -20,6 +20,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { errorMessage } from '@/lib/dashboard/client-error-message';
 import type { DocumentSectionCopy } from './DocumentForm';
+import { dt, dtx } from "@/lib/dashboard/i18n";
 
 /**
  * The shared listing for the two document sections, reports and booklets.
@@ -121,7 +122,7 @@ export function DocumentListPage({
       /* Surfaced rather than logged only: a failed load and "nothing yet"
          otherwise render identically and nothing says which happened. */
       console.error(e);
-      toast.error(errorMessage(e, `تعذّر تحميل ${copy.section}`));
+      toast.error(errorMessage(e, dt("تعذّر تحميل {0}", [copy.section])));
     } finally {
       setLoading(false);
     }
@@ -150,7 +151,7 @@ export function DocumentListPage({
     try {
       await axios.post(`${copy.endpoint}/reorder`, { [reorderKey]: payload });
     } catch (e) {
-      toast.error(errorMessage(e, 'تعذّر حفظ الترتيب'));
+      toast.error(errorMessage(e, dt("تعذّر حفظ الترتيب")));
       fetchRows();
     }
   }, [copy.endpoint, reorderKey, fetchRows]);
@@ -164,7 +165,7 @@ export function DocumentListPage({
       await axios.put(`${copy.endpoint}/${row.id}`, { isPublished: next });
       setRows((prev) => prev.map((r) => (r.id === row.id ? { ...r, isPublished: next } : r)));
     } catch (e) {
-      toast.error(errorMessage(e, 'تعذّر تغيير الحالة'));
+      toast.error(errorMessage(e, dt("تعذّر تغيير الحالة")));
     } finally {
       setTogglingId(null);
     }
@@ -176,10 +177,10 @@ export function DocumentListPage({
     try {
       await axios.delete(`${copy.endpoint}/${deleteTarget.id}`);
       setRows((prev) => prev.filter((r) => r.id !== deleteTarget.id));
-      toast.success(`تم حذف ${copy.singular}`);
+      toast.success(dt("تم حذف {0}", [copy.singular]));
       setDeleteTarget(null);
     } catch (e) {
-      toast.error(errorMessage(e, `تعذّر حذف ${copy.singular}`));
+      toast.error(errorMessage(e, dt("تعذّر حذف {0}", [copy.singular])));
     } finally {
       setDeleting(false);
     }
@@ -202,21 +203,19 @@ export function DocumentListPage({
             <p className="text-xs text-slate-500">{description}</p>
           </div>
           <Button onClick={() => router.push(`${copy.basePath}/new`)}>
-            <Plus className="w-4 h-4 ml-1" />
-            {copy.singular} جديد
-          </Button>
+            <Plus className="w-4 h-4 me-1" />
+            {dtx("{0} جديد", [copy.singular])}</Button>
         </div>
 
         {rows.length === 0 ? (
           <EmptyState
             icon={FileText}
-            title={`لا توجد ${copy.section}`}
+            title={dt("لا توجد {0}", [copy.section])}
             description={emptyDescription}
             action={
               <Button onClick={() => router.push(`${copy.basePath}/new`)}>
-                <Plus className="w-4 h-4 ml-1" />
-                {copy.singular} جديد
-              </Button>
+                <Plus className="w-4 h-4 me-1" />
+                {dtx("{0} جديد", [copy.singular])}</Button>
             }
           />
         ) : (
@@ -225,12 +224,12 @@ export function DocumentListPage({
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-12" />
-                  <TableHead>الغلاف</TableHead>
-                  <TableHead>العنوان</TableHead>
-                  {copy.showYear ? <TableHead>السنة</TableHead> : null}
-                  <TableHead>الملف</TableHead>
-                  <TableHead>الترجمات</TableHead>
-                  <TableHead>منشور</TableHead>
+                  <TableHead>{dt("الغلاف")}</TableHead>
+                  <TableHead>{dt("العنوان")}</TableHead>
+                  {copy.showYear ? <TableHead>{dt("السنة")}</TableHead> : null}
+                  <TableHead>{dt("الملف")}</TableHead>
+                  <TableHead>{dt("الترجمات")}</TableHead>
+                  <TableHead>{dt("منشور")}</TableHead>
                   <TableHead className="w-24" />
                 </TableRow>
               </TableHeader>
@@ -267,8 +266,7 @@ export function DocumentListPage({
                         rel="noopener noreferrer"
                         className="inline-flex items-center gap-1 text-xs text-blue-600 underline"
                       >
-                        فتح
-                        <ExternalLink className="w-3 h-3" />
+                        {dt("فتح")}<ExternalLink className="w-3 h-3" />
                       </a>
                     </TableCell>
                     <TableCell className="text-xs text-slate-600">{row.translationCount}</TableCell>
@@ -303,17 +301,15 @@ export function DocumentListPage({
         <AlertDialog open={!!deleteTarget} onOpenChange={(o) => !o && setDeleteTarget(null)}>
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle>حذف {copy.singular}</AlertDialogTitle>
+              <AlertDialogTitle>{dtx("حذف {0}", [copy.singular])}</AlertDialogTitle>
               <AlertDialogDescription>
-                سيتم حذف «{deleteTarget?.title}» وكل ترجماته نهائيًا.
-              </AlertDialogDescription>
+                {dtx("سيتم حذف «{0}» وكل ترجماته نهائيًا.", [deleteTarget?.title])}</AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel disabled={deleting}>إلغاء</AlertDialogCancel>
+              <AlertDialogCancel disabled={deleting}>{dt("إلغاء")}</AlertDialogCancel>
               <AlertDialogAction onClick={confirmDelete} disabled={deleting}>
-                {deleting && <Loader2 className="w-4 h-4 animate-spin ml-2" />}
-                حذف
-              </AlertDialogAction>
+                {deleting && <Loader2 className="w-4 h-4 animate-spin me-2" />}
+                {dt("حذف")}</AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>

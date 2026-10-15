@@ -47,6 +47,7 @@ import { ReorderDialog } from './_components/ReorderDialog';
 import { DashboardLocaleSwitcher } from '../_components/DashboardLocaleSwitcher';
 import { CategoryCampaignPriorityDialog } from './_components/CategoryCampaignPriorityDialog';
 import { ContentLocalizationAuditCard } from '../_components/ContentLocalizationAuditCard';
+import { dashDir, dt, dtx } from "@/lib/dashboard/i18n";
 
 interface Category {
   id: string;
@@ -134,7 +135,7 @@ export default function CategoriesPage() {
       setCategories(normalized);
     } catch (error) {
       console.error('Error fetching categories:', error);
-      toast.error('فشل في تحميل الحملات');
+      toast.error(dt("فشل في تحميل الحملات"));
     } finally {
       setLoading(false);
     }
@@ -149,12 +150,12 @@ export default function CategoriesPage() {
       setCategories(prev => prev.map(c => c.id === category.id ? { ...c, isActive: nextActive } : c));
       toast.success(
         nextActive
-          ? `تم تفعيل الحملة وتفعيل ${cascaded} مشروع تابع`
-          : `تم تعطيل الحملة وتعطيل ${cascaded} مشروع تابع`
+          ? dt("تم تفعيل الحملة وتفعيل {0} مشروع تابع", [cascaded])
+          : dt("تم تعطيل الحملة وتعطيل {0} مشروع تابع", [cascaded])
       );
     } catch (err: any) {
-      const msg = axios.isAxiosError(err) ? err.response?.data?.error || err.message : 'تعذّر تحديث حالة الحملة';
-      toast.error(typeof msg === 'string' ? msg : 'تعذّر تحديث حالة الحملة');
+      const msg = axios.isAxiosError(err) ? err.response?.data?.error || err.message : dt("تعذّر تحديث حالة الحملة");
+      toast.error(typeof msg === 'string' ? msg : dt("تعذّر تحديث حالة الحملة"));
     } finally {
       setActionLoading(null);
     }
@@ -164,11 +165,11 @@ export default function CategoriesPage() {
     const count = (category as any).campaignCount ?? category.campaigns.length;
     setConfirmDialog({
       open: true,
-      title: 'تعطيل الحملة',
+      title: dt("تعطيل الحملة"),
       description: count > 0
-        ? `سيتم نقل التصنيف "${category.name}" إلى الأرشيف وإخفاؤه من قوائم التصنيفات العامة. المشاريع التابعة له (${count} مشروع) ستبقى منشورة ولن تتغير حالتها.`
-        : `سيتم نقل التصنيف "${category.name}" إلى الأرشيف وإخفاؤه من قوائم التصنيفات العامة.`,
-      actionLabel: 'تعطيل',
+        ? dt("سيتم نقل التصنيف \"{0}\" إلى الأرشيف وإخفاؤه من قوائم التصنيفات العامة. المشاريع التابعة له ({1} مشروع) ستبقى منشورة ولن تتغير حالتها.", [category.name, count])
+        : dt("سيتم نقل التصنيف \"{0}\" إلى الأرشيف وإخفاؤه من قوائم التصنيفات العامة.", [category.name]),
+      actionLabel: dt("تعطيل"),
       actionClassName: 'bg-amber-600 hover:bg-amber-700 text-white',
       onConfirm: () => setActive(category, false),
     });
@@ -178,11 +179,11 @@ export default function CategoriesPage() {
     const count = (category as any).campaignCount ?? category.campaigns.length;
     setConfirmDialog({
       open: true,
-      title: 'إعادة تفعيل الحملة',
+      title: dt("إعادة تفعيل الحملة"),
       description: count > 0
-        ? `سيتم إعادة التصنيف "${category.name}" إلى قوائم التصنيفات العامة. المشاريع التابعة له (${count} مشروع) لن تتغير حالتها.`
-        : `سيتم إعادة التصنيف "${category.name}" إلى قوائم التصنيفات العامة.`,
-      actionLabel: 'تفعيل',
+        ? dt("سيتم إعادة التصنيف \"{0}\" إلى قوائم التصنيفات العامة. المشاريع التابعة له ({1} مشروع) لن تتغير حالتها.", [category.name, count])
+        : dt("سيتم إعادة التصنيف \"{0}\" إلى قوائم التصنيفات العامة.", [category.name]),
+      actionLabel: dt("تفعيل"),
       actionClassName: 'bg-emerald-600 hover:bg-emerald-700 text-white',
       onConfirm: () => setActive(category, true),
     });
@@ -200,26 +201,26 @@ export default function CategoriesPage() {
   const handleDelete = async (category: Category) => {
     const count = (category as any).campaignCount ?? (category.campaigns?.length ?? 0);
     if (count > 0) {
-      toast.error('لا يمكن حذف حملة تحتوي على مشاريع');
+      toast.error(dt("لا يمكن حذف حملة تحتوي على مشاريع"));
       return;
     }
     setCategoryToDelete(category);
   };
 
   const handleBulkDelete = async () => {
-    if (!window.confirm(`هل أنت متأكد من حذف ${selectedCategories.length} حملة؟`)) return;
+    if (!window.confirm(dt("هل أنت متأكد من حذف {0} حملة؟", [selectedCategories.length]))) return;
     
     setDeleteLoading(true);
     try {
       await Promise.all(
         selectedCategories.map(id => axios.delete(`/api/categories/${id}`))
       );
-      toast.success('تم حذف الحملات المحددة بنجاح');
+      toast.success(dt("تم حذف الحملات المحددة بنجاح"));
       fetchCategories();
       setSelectedCategories([]);
     } catch (error) {
       console.error('Error deleting categories:', error);
-      toast.error('فشل في حذف الحملات');
+      toast.error(dt("فشل في حذف الحملات"));
     } finally {
       setDeleteLoading(false);
     }
@@ -231,11 +232,12 @@ export default function CategoriesPage() {
     setDeleteLoading(true);
     try {
       await axios.delete(`/api/categories/${categoryToDelete.id}`);
-      toast.success('تم حذف الحملة بنجاح');
+      toast.success(dt("تم حذف الحملة بنجاح"));
       fetchCategories();
     } catch (error) {
       console.error('Error deleting category:', error);
-      toast.error('فشل في حذف الحملة');
+      // The count above skips archived/deleted campaigns; the server still refuses while any remain.
+      toast.error(axios.isAxiosError(error) && error.response?.status === 400 ? dt("لا يمكن حذف حملة تحتوي على مشاريع") : dt("فشل في حذف الحملة"));
     } finally {
       setDeleteLoading(false);
       setCategoryToDelete(null);
@@ -312,8 +314,8 @@ export default function CategoriesPage() {
   return (
     <div>
       <PageHeader
-        title="الحملات"
-        description="إدارة الحملات ومشاريعها"
+        title={dt("الحملات")}
+        description={dt("إدارة الحملات ومشاريعها")}
         icon={Globe}
         actions={
           <>
@@ -325,8 +327,7 @@ export default function CategoriesPage() {
                 className="gap-2"
               >
                 {deleteLoading && <Loader2 className="w-4 h-4 animate-spin" />}
-                حذف ({selectedCategories.length})
-              </Button>
+                {dtx("حذف ({0})", [selectedCategories.length])}</Button>
             )}
             <DashboardLocaleSwitcher value={locale} onChange={setLocale} className="h-10 w-[190px]" />
             <ReorderDialog categories={categories} onReorder={fetchCategories} />
@@ -336,8 +337,7 @@ export default function CategoriesPage() {
               onClick={() => setArchiveOpen(true)}
             >
               <Archive className="w-4 h-4" />
-              أرشيف التصنيفات
-              {archivedCategories.length > 0 && (
+              {dt("أرشيف التصنيفات")}{archivedCategories.length > 0 && (
                 <span className="bg-amber-100 text-amber-700 text-xs font-bold px-1.5 py-0.5 rounded-full">
                   {archivedCategories.length}
                 </span>
@@ -348,8 +348,7 @@ export default function CategoriesPage() {
               className="bg-brand hover:bg-brand-dark gap-2"
             >
               <Plus className="w-4 h-4" />
-              حملة جديدة
-            </Button>
+              {dt("حملة جديدة")}</Button>
           </>
         }
       />
@@ -361,19 +360,19 @@ export default function CategoriesPage() {
       <FilterBar
         searchValue={searchQuery}
         onSearchChange={setSearchQuery}
-        searchPlaceholder="ابحث عن حملة..."
+        searchPlaceholder={dt("ابحث عن حملة...")}
       >
         <Select
           value={campaignsFilter}
           onValueChange={(value: 'all' | 'with' | 'without') => setCampaignsFilter(value)}
         >
           <SelectTrigger className="h-9 w-full sm:w-[180px]">
-            <SelectValue placeholder="المشاريع" />
+            <SelectValue placeholder={dt("المشاريع")} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">جميع الحملات</SelectItem>
-            <SelectItem value="with">حملات بها مشاريع</SelectItem>
-            <SelectItem value="without">حملات بدون مشاريع</SelectItem>
+            <SelectItem value="all">{dt("جميع الحملات")}</SelectItem>
+            <SelectItem value="with">{dt("حملات بها مشاريع")}</SelectItem>
+            <SelectItem value="without">{dt("حملات بدون مشاريع")}</SelectItem>
           </SelectContent>
         </Select>
       </FilterBar>
@@ -395,14 +394,13 @@ export default function CategoriesPage() {
                 onClick={() => handleSort('name')}
               >
                 <div className="flex items-center gap-2">
-                  اسم الحملة
-                  <ArrowUpDown className="w-4 h-4" />
+                  {dt("اسم الحملة")}<ArrowUpDown className="w-4 h-4" />
                 </div>
               </TableHead>
-              <TableHead className="text-start">الوصف</TableHead>
-              <TableHead className="text-start">عدد المشاريع</TableHead>
-              <TableHead className="text-start">الصورة</TableHead>
-              <TableHead className="text-center">الإجراءات</TableHead>
+              <TableHead className="text-start">{dt("الوصف")}</TableHead>
+              <TableHead className="text-start">{dt("عدد المشاريع")}</TableHead>
+              <TableHead className="text-start">{dt("الصورة")}</TableHead>
+              <TableHead className="text-center">{dt("الإجراءات")}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -418,7 +416,7 @@ export default function CategoriesPage() {
                 />
               </TableCell>
               <TableCell className="font-medium">{category.name}</TableCell>
-                <TableCell className='max-w-[300px] truncate pl-12'>{category.description || 'لا يوجد وصف'}</TableCell>
+                <TableCell className='max-w-[300px] truncate pe-12'>{category.description || dt("لا يوجد وصف")}</TableCell>
                 <TableCell>{(category as any).campaignCount ?? 0}</TableCell>
                 <TableCell>
                   {category.image ? (
@@ -428,7 +426,7 @@ export default function CategoriesPage() {
                       className="w-10 h-10 rounded-lg object-cover"
                     />
                   ) : (
-                    'لا توجد صورة'
+                    dt("لا توجد صورة")
                   )}
                 </TableCell>
                 <TableCell>
@@ -438,7 +436,7 @@ export default function CategoriesPage() {
                       size="icon"
                       onClick={() => setPriorityDialog({ id: category.id, name: category.name })}
                       className="text-amber-600 hover:bg-amber-50"
-                      title="أولويات المشاريع داخل الحملة"
+                      title={dt("أولويات المشاريع داخل الحملة")}
                     >
                       <Crown className="w-4 h-4" />
                     </Button>
@@ -456,7 +454,7 @@ export default function CategoriesPage() {
                       onClick={() => handleDeactivate(category)}
                       className="text-amber-600 hover:bg-amber-50"
                       disabled={actionLoading === category.id}
-                      title="أرشفة التصنيف دون تعطيل المشاريع"
+                      title={dt("أرشفة التصنيف دون تعطيل المشاريع")}
                     >
                       {actionLoading === category.id
                         ? <Loader2 className="w-4 h-4 animate-spin" />
@@ -482,18 +480,17 @@ export default function CategoriesPage() {
                   <EmptyState
                     variant="inline"
                     icon={Globe}
-                    title="لا توجد حملات"
+                    title={dt("لا توجد حملات")}
                     description={searchQuery || campaignsFilter !== 'all'
-                      ? "لا توجد حملة تطابق التصفية الحالية."
-                      : "الحملات تجمع المشاريع تحت مظلة واحدة. أنشئ أول حملة للبدء."}
+                      ? dt("لا توجد حملة تطابق التصفية الحالية.")
+                      : dt("الحملات تجمع المشاريع تحت مظلة واحدة. أنشئ أول حملة للبدء.")}
                     action={
                       <Button
                         onClick={() => router.push('/dashboard/categories/new')}
                         className="bg-brand hover:bg-brand-dark gap-2"
                       >
                         <Plus className="w-4 h-4" />
-                        إضافة حملة جديدة
-                      </Button>
+                        {dt("إضافة حملة جديدة")}</Button>
                     }
                   />
                 </TableCell>
@@ -512,10 +509,9 @@ export default function CategoriesPage() {
                 onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
                 disabled={currentPage === 1}
               >
-                السابق
-              </Button>
+                {dt("السابق")}</Button>
               <span className="text-sm text-gray-600">
-                صفحة {currentPage} من {totalPages}
+                {dtx("صفحة {0} من {1}", [currentPage, totalPages])}
               </span>
               <Button
                 variant="outline"
@@ -523,11 +519,10 @@ export default function CategoriesPage() {
                 onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
                 disabled={currentPage === totalPages}
               >
-                التالي
-              </Button>
+                {dt("التالي")}</Button>
             </div>
             <div className="text-sm text-gray-600">
-              إجمالي النتائج: {sortedCategories.length}
+              {dtx("إجمالي النتائج: {0}", [sortedCategories.length])}
             </div>
           </div>
         )}
@@ -544,21 +539,20 @@ export default function CategoriesPage() {
 
       {/* ── Archive viewer ── */}
       <Dialog open={archiveOpen} onOpenChange={setArchiveOpen}>
-        <DialogContent className="max-w-3xl w-full max-h-[80vh] flex flex-col" dir="rtl">
+        <DialogContent className="max-w-3xl w-full max-h-[80vh] flex flex-col" dir={dashDir()}>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-amber-700">
               <Archive className="w-5 h-5" />
-              أرشيف الحملات المعطّلة ({archivedCategories.length})
-            </DialogTitle>
+              {dtx("أرشيف الحملات المعطّلة ({0})", [archivedCategories.length])}</DialogTitle>
           </DialogHeader>
 
           <div className="relative mb-3">
-            <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+            <Search className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
             <Input
-              placeholder="بحث في الأرشيف..."
+              placeholder={dt("بحث في الأرشيف...")}
               value={archiveSearch}
               onChange={e => setArchiveSearch(e.target.value)}
-              className="pr-10"
+              className="ps-10"
             />
           </div>
 
@@ -566,17 +560,16 @@ export default function CategoriesPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="text-right">اسم الحملة</TableHead>
-                  <TableHead className="text-right">عدد المشاريع</TableHead>
-                  <TableHead className="text-center w-40">إجراء</TableHead>
+                  <TableHead className="text-start">{dt("اسم الحملة")}</TableHead>
+                  <TableHead className="text-start">{dt("عدد المشاريع")}</TableHead>
+                  <TableHead className="text-center w-40">{dt("إجراء")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredArchive.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={3} className="text-center py-10 text-muted-foreground">
-                      لا توجد حملات في الأرشيف
-                    </TableCell>
+                      {dt("لا توجد حملات في الأرشيف")}</TableCell>
                   </TableRow>
                 ) : filteredArchive.map(category => (
                   <TableRow key={category.id}>
@@ -593,8 +586,7 @@ export default function CategoriesPage() {
                         {actionLoading === category.id
                           ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
                           : <RotateCcw className="w-3.5 h-3.5" />}
-                        إعادة تفعيل
-                      </Button>
+                        {dt("إعادة تفعيل")}</Button>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -609,13 +601,13 @@ export default function CategoriesPage() {
         open={confirmDialog.open}
         onOpenChange={open => setConfirmDialog(d => ({ ...d, open }))}
       >
-        <AlertDialogContent dir="rtl">
+        <AlertDialogContent dir={dashDir()}>
           <AlertDialogHeader>
             <AlertDialogTitle>{confirmDialog.title}</AlertDialogTitle>
             <AlertDialogDescription>{confirmDialog.description}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="flex-row-reverse gap-2">
-            <AlertDialogCancel>إلغاء</AlertDialogCancel>
+            <AlertDialogCancel>{dt("إلغاء")}</AlertDialogCancel>
             <AlertDialogAction
               className={confirmDialog.actionClassName}
               onClick={() => {
@@ -635,21 +627,19 @@ export default function CategoriesPage() {
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>هل أنت متأكد من حذف هذه الحملة؟</AlertDialogTitle>
+            <AlertDialogTitle>{dt("هل أنت متأكد من حذف هذه الحملة؟")}</AlertDialogTitle>
             <AlertDialogDescription>
-              سيتم حذف الحملة نهائياً ولا يمكن التراجع عن هذا الإجراء.
-            </AlertDialogDescription>
+              {dt("سيتم حذف الحملة نهائياً ولا يمكن التراجع عن هذا الإجراء.")}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>إلغاء</AlertDialogCancel>
+            <AlertDialogCancel>{dt("إلغاء")}</AlertDialogCancel>
             <AlertDialogAction
               onClick={confirmDelete}
               className="bg-red-600 hover:bg-red-700 gap-2"
               disabled={deleteLoading}
             >
               {deleteLoading && <Loader2 className="w-4 h-4 animate-spin" />}
-              حذف
-            </AlertDialogAction>
+              {dt("حذف")}</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

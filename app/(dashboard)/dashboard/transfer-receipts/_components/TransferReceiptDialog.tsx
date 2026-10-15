@@ -57,6 +57,7 @@ import {
   relativeTime,
   usd,
 } from "./status";
+import { dashDir, dt, dtx } from "@/lib/dashboard/i18n";
 
 export type ReviewAction =
   | { action: "confirm"; adminNote?: string | null }
@@ -106,7 +107,7 @@ export function TransferReceiptDialog({
       await navigator.clipboard.writeText(value);
       toast.success(label);
     } catch {
-      toast.error("تعذّر النسخ");
+      toast.error(dt("تعذّر النسخ"));
     }
   }, []);
 
@@ -136,7 +137,7 @@ export function TransferReceiptDialog({
     <Dialog open onOpenChange={(open) => !open && onClose()}>
       <DialogContent
         hideCloseButton
-        dir="rtl"
+        dir={dashDir()}
         className="flex max-h-[92vh] w-[calc(100%-2rem)] max-w-6xl flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white p-0 shadow-2xl"
       >
         {/* ── Header ─────────────────────────────────────────────────── */}
@@ -146,21 +147,20 @@ export function TransferReceiptDialog({
           </span>
           <div className="min-w-0 flex-1">
             <DialogTitle className="flex flex-wrap items-center gap-2 text-[15px] font-bold text-slate-900">
-              إيصال تحويل بنكي
-              <span className={cn("inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[11px] font-semibold", CLAIM_STATUS_PILL[claim.status])}>
+              {dt("إيصال تحويل بنكي")}<span className={cn("inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[11px] font-semibold", CLAIM_STATUS_PILL[claim.status])}>
                 <span className={cn("h-1.5 w-1.5 rounded-full", CLAIM_STATUS_DOT[claim.status])} />
                 {CLAIM_STATUS_LABELS[claim.status]}
               </span>
               {claim.submissionCount > 1 && (
                 <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[11px] font-medium text-slate-600">
                   <RotateCcw className="h-3 w-3" />
-                  المحاولة {claim.submissionCount} من {claim.maxSubmissions}
+                  {dtx("المحاولة {0} من {1}", [claim.submissionCount, claim.maxSubmissions])}
                 </span>
               )}
             </DialogTitle>
             <DialogDescription className="mt-0.5 text-[12px] leading-5 text-slate-500">{CLAIM_STATUS_HINTS[claim.status]}</DialogDescription>
           </div>
-          <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0 rounded-full text-slate-500" onClick={onClose} aria-label="إغلاق">
+          <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0 rounded-full text-slate-500" onClick={onClose} aria-label={dt("إغلاق")}>
             <X className="h-4 w-4" />
           </Button>
         </header>
@@ -172,27 +172,25 @@ export function TransferReceiptDialog({
             <div className="relative flex min-h-0 flex-1 items-center justify-center overflow-hidden p-3">
               {file ? (
                 file.isImage ? (
-                  <button type="button" onClick={() => setZoom(true)} className="group relative max-h-full max-w-full focus:outline-none" title="تكبير">
+                  <button type="button" onClick={() => setZoom(true)} className="group relative max-h-full max-w-full focus:outline-none" title={dt("تكبير")}>
                     <img src={file.url} alt={file.fileName} className="max-h-[52vh] w-auto max-w-full rounded-lg border border-slate-200 bg-white object-contain shadow-sm lg:max-h-[60vh]" />
                     <span className="absolute bottom-2 end-2 inline-flex items-center gap-1 rounded-full bg-slate-900/80 px-2 py-1 text-[11px] font-medium text-white opacity-0 transition-opacity group-hover:opacity-100">
                       <ZoomIn className="h-3 w-3" />
-                      تكبير
-                    </span>
+                      {dt("تكبير")}</span>
                   </button>
                 ) : (
                   <div className="flex h-full w-full flex-col">
                     <iframe src={`${file.url}#toolbar=0`} title={file.fileName} className="min-h-[300px] flex-1 rounded-lg border border-slate-200 bg-white lg:min-h-[52vh]" />
                     <a href={file.url} target="_blank" rel="noopener noreferrer" className="mt-2 inline-flex items-center justify-center gap-1.5 self-center rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-[12px] font-medium text-slate-700 hover:bg-slate-100">
                       <FileText className="h-3.5 w-3.5" />
-                      فتح ملف PDF في تبويب جديد
-                    </a>
+                      {dt("فتح ملف PDF في تبويب جديد")}</a>
                   </div>
                 )
               ) : (
                 <div className="flex flex-col items-center gap-2 text-slate-400">
                   <FileText className="h-10 w-10" />
-                  <p className="text-sm font-medium text-slate-600">لم يرفع المتبرع إيصالًا بعد</p>
-                  <p className="max-w-xs text-center text-[12px] leading-5">إن ظهر التحويل في كشف الحساب يمكن تأكيده من هنا مباشرة دون انتظار الإيصال.</p>
+                  <p className="text-sm font-medium text-slate-600">{dt("لم يرفع المتبرع إيصالًا بعد")}</p>
+                  <p className="max-w-xs text-center text-[12px] leading-5">{dt("إن ظهر التحويل في كشف الحساب يمكن تأكيده من هنا مباشرة دون انتظار الإيصال.")}</p>
                 </div>
               )}
             </div>
@@ -216,15 +214,14 @@ export function TransferReceiptDialog({
                     )}
                     <span className="min-w-0">
                       <span className="block max-w-[140px] truncate text-[11.5px] font-semibold text-slate-800" dir="ltr">{f.fileName}</span>
-                      <span className="block text-[10.5px] text-slate-500">الإرسال {f.submission} · {formatBytes(f.bytes)} · {relativeTime(f.uploadedAt)}</span>
+                      <span className="block text-[10.5px] text-slate-500">{dtx("الإرسال {0} · {1} · {2}", [f.submission, formatBytes(f.bytes), relativeTime(f.uploadedAt)])}</span>
                     </span>
                   </button>
                 ))}
                 {file && (
-                  <a href={file.url} target="_blank" rel="noopener noreferrer" className="ms-auto inline-flex shrink-0 items-center gap-1 rounded-lg px-2 py-1.5 text-[11.5px] font-medium text-slate-600 hover:bg-slate-100" title="فتح الملف الأصلي">
+                  <a href={file.url} target="_blank" rel="noopener noreferrer" className="ms-auto inline-flex shrink-0 items-center gap-1 rounded-lg px-2 py-1.5 text-[11.5px] font-medium text-slate-600 hover:bg-slate-100" title={dt("فتح الملف الأصلي")}>
                     <ExternalLink className="h-3.5 w-3.5" />
-                    الأصل
-                  </a>
+                    {dt("الأصل")}</a>
                 )}
               </div>
             )}
@@ -234,7 +231,7 @@ export function TransferReceiptDialog({
           <section className="flex min-h-0 flex-col gap-4 overflow-y-auto p-5">
             {/* Amount  the one number the receipt must show. */}
             <div className="rounded-xl border border-slate-200 bg-gradient-to-br from-white to-slate-50 p-4">
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">المبلغ المتوقع في الإيصال</p>
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">{dt("المبلغ المتوقع في الإيصال")}</p>
               <div className="mt-1 flex flex-wrap items-baseline gap-x-3 gap-y-1">
                 <p className="text-[28px] font-bold leading-tight tabular-nums text-slate-900" dir="ltr">{money(claim.donation.totalAmount, claim.donation.currency)}</p>
                 {claim.donation.currency !== "USD" && usd(claim.donation.amountUSD) && <p className="text-[13px] tabular-nums text-slate-500" dir="ltr">{usd(claim.donation.amountUSD)}</p>}
@@ -243,39 +240,38 @@ export function TransferReceiptDialog({
                 {claim.bankName ? (
                   <span className="inline-flex items-center gap-1.5"><Landmark className="h-3.5 w-3.5 text-slate-400" />{claim.bankName}{claim.bankCurrency && <span dir="ltr" className="rounded bg-slate-100 px-1.5 font-semibold text-slate-700">{claim.bankCurrency}</span>}</span>
                 ) : (
-                  <span className="inline-flex items-center gap-1.5 text-slate-400"><Landmark className="h-3.5 w-3.5" />لم يُحدَّد الحساب البنكي</span>
+                  <span className="inline-flex items-center gap-1.5 text-slate-400"><Landmark className="h-3.5 w-3.5" />{dt("لم يُحدَّد الحساب البنكي")}</span>
                 )}
-                <span className="inline-flex items-center gap-1.5"><CalendarDays className="h-3.5 w-3.5 text-slate-400" />أُنشئ الطلب {absoluteDate(claim.createdAt)}</span>
+                <span className="inline-flex items-center gap-1.5"><CalendarDays className="h-3.5 w-3.5 text-slate-400" />{dtx("أُنشئ الطلب {0}", [absoluteDate(claim.createdAt)])}</span>
               </div>
               {(claim.donation.teamSupport > 0 || claim.donation.fees > 0) && (
                 <p className="mt-2 text-[11.5px] text-slate-500">
-                  التبرع {money(claim.donation.amount, claim.donation.currency)}
-                  {claim.donation.teamSupport > 0 && ` + دعم الفريق ${money(claim.donation.teamSupport, claim.donation.currency)}`}
-                  {claim.donation.fees > 0 && ` + رسوم ${money(claim.donation.fees, claim.donation.currency)}`}
+                  {dtx("التبرع {0}", [money(claim.donation.amount, claim.donation.currency)])}
+                  {claim.donation.teamSupport > 0 && dt(" + دعم الفريق {0}", [money(claim.donation.teamSupport, claim.donation.currency)])}
+                  {claim.donation.fees > 0 && dt(" + رسوم {0}", [money(claim.donation.fees, claim.donation.currency)])}
                 </p>
               )}
             </div>
 
             {/* What the donor said about the transfer. */}
-            <Block title="بيانات التحويل كما أدخلها المتبرع" icon={MessageSquareText}>
-              <Row icon={UserRound} label="الاسم على التحويل" value={claim.senderName} />
-              <Row icon={CalendarDays} label="تاريخ التحويل" value={claim.transferDate ? dateOnly(claim.transferDate) : null} />
-              <Row icon={Hash} label="المرجع / رقم الإيصال" value={claim.transferReference} ltr copyable onCopy={copy} />
+            <Block title={dt("بيانات التحويل كما أدخلها المتبرع")} icon={MessageSquareText}>
+              <Row icon={UserRound} label={dt("الاسم على التحويل")} value={claim.senderName} />
+              <Row icon={CalendarDays} label={dt("تاريخ التحويل")} value={claim.transferDate ? dateOnly(claim.transferDate) : null} />
+              <Row icon={Hash} label={dt("المرجع / رقم الإيصال")} value={claim.transferReference} ltr copyable onCopy={copy} />
               {claim.donorNote && (
                 <div className="rounded-lg border border-amber-100 bg-amber-50/60 px-3 py-2 text-[12.5px] leading-5 text-slate-700">
-                  <span className="mb-0.5 block text-[10.5px] font-semibold text-amber-700">ملاحظة المتبرع</span>
+                  <span className="mb-0.5 block text-[10.5px] font-semibold text-amber-700">{dt("ملاحظة المتبرع")}</span>
                   {claim.donorNote}
                 </div>
               )}
-              {claim.receiptSubmittedAt && <p className="text-[11px] text-slate-400">رُفع الإيصال {absoluteDate(claim.receiptSubmittedAt)}</p>}
+              {claim.receiptSubmittedAt && <p className="text-[11px] text-slate-400">{dtx("رُفع الإيصال {0}", [absoluteDate(claim.receiptSubmittedAt)])}</p>}
             </Block>
 
             {/* Who. */}
-            <Block title="المتبرع" icon={UserRound} action={
+            <Block title={dt("المتبرع")} icon={UserRound} action={
               <Button variant="ghost" size="sm" className="h-7 gap-1 px-2 text-[11.5px]" onClick={() => openUserProfile(claim.donor.id)}>
                 <ExternalLink className="h-3 w-3" />
-                الملف الكامل
-              </Button>
+                {dt("الملف الكامل")}</Button>
             }>
               <div className="flex items-center gap-3">
                 <Avatar className="h-10 w-10 rounded-full ring-2 ring-white shadow-sm">
@@ -283,62 +279,60 @@ export function TransferReceiptDialog({
                   <AvatarFallback className="rounded-full bg-gradient-to-br from-brand-400 to-brand-700 text-sm font-semibold text-white">{initial}</AvatarFallback>
                 </Avatar>
                 <div className="min-w-0">
-                  <p className="truncate text-[14px] font-bold text-slate-900">{claim.donor.name || "متبرع بلا اسم"}</p>
-                  <p className="text-[11.5px] text-slate-500">عضو منذ {dateOnly(claim.donor.memberSince)}</p>
+                  <p className="truncate text-[14px] font-bold text-slate-900">{claim.donor.name || dt("متبرع بلا اسم")}</p>
+                  <p className="text-[11.5px] text-slate-500">{dtx("عضو منذ {0}", [dateOnly(claim.donor.memberSince)])}</p>
                 </div>
               </div>
-              <Row icon={Mail} label="البريد" value={claim.donor.email} ltr copyable onCopy={copy} href={claim.donor.email ? `mailto:${claim.donor.email}` : undefined} />
-              <Row icon={Phone} label="الهاتف" value={claim.donor.phone} ltr copyable onCopy={copy} href={claim.donor.phone ? `https://wa.me/${claim.donor.phone.replace(/[^\d]/g, "")}` : undefined} />
-              <Row icon={Globe} label="الدولة / اللغة" value={[claim.donor.countryName ?? claim.donation.donorCountryCode, claim.donation.locale ? LOCALE_LABELS[claim.donation.locale as keyof typeof LOCALE_LABELS] ?? claim.donation.locale : null].filter(Boolean).join(" · ") || null} />
+              <Row icon={Mail} label={dt("البريد")} value={claim.donor.email} ltr copyable onCopy={copy} href={claim.donor.email ? `mailto:${claim.donor.email}` : undefined} />
+              <Row icon={Phone} label={dt("الهاتف")} value={claim.donor.phone} ltr copyable onCopy={copy} href={claim.donor.phone ? `https://wa.me/${claim.donor.phone.replace(/[^\d]/g, "")}` : undefined} />
+              <Row icon={Globe} label={dt("الدولة / اللغة")} value={[claim.donor.countryName ?? claim.donation.donorCountryCode, claim.donation.locale ? LOCALE_LABELS[claim.donation.locale as keyof typeof LOCALE_LABELS] ?? claim.donation.locale : null].filter(Boolean).join(" · ") || null} />
             </Block>
 
             {/* What for. */}
-            <Block title="وجهة التبرع" icon={Receipt}>
+            <Block title={dt("وجهة التبرع")} icon={Receipt}>
               <ul className="divide-y divide-slate-100">
                 {claim.donation.lines.map((line) => (
                   <li key={`${line.kind}-${line.id}`} className="flex items-center gap-3 py-2">
                     {line.image ? <img src={line.image} alt="" className="h-9 w-9 rounded-md object-cover" /> : <span className="h-9 w-9 rounded-md bg-slate-100" />}
                     <span className="min-w-0 flex-1">
                       <span className="block truncate text-[13px] font-medium text-slate-800">{line.title}</span>
-                      <span className="text-[10.5px] text-slate-400">{line.kind === "campaign" ? "مشروع" : "حملة / تصنيف"}</span>
+                      <span className="text-[10.5px] text-slate-400">{line.kind === "campaign" ? dt("مشروع") : dt("حملة / تصنيف")}</span>
                     </span>
                     <span className="text-[13px] font-semibold tabular-nums text-slate-900" dir="ltr">{money(line.amount, claim.donation.currency)}</span>
                   </li>
                 ))}
-                {claim.donation.lines.length === 0 && <li className="py-2 text-[12px] text-slate-400">لا توجد بنود</li>}
+                {claim.donation.lines.length === 0 && <li className="py-2 text-[12px] text-slate-400">{dt("لا توجد بنود")}</li>}
               </ul>
-              <Row icon={Hash} label="رقم الطلب" value={claim.donationId} ltr copyable onCopy={copy} mono />
-              <Row icon={Link2} label="صفحة المتبرع" value={donorPage} ltr copyable onCopy={copy} href={donorPage} truncate />
+              <Row icon={Hash} label={dt("رقم الطلب")} value={claim.donationId} ltr copyable onCopy={copy} mono />
+              <Row icon={Link2} label={dt("صفحة المتبرع")} value={donorPage} ltr copyable onCopy={copy} href={donorPage} truncate />
             </Block>
 
             {/* Decision trail. */}
             {(claim.reviewedAt || claim.rejectionReason) && (
-              <Block title="سجل المراجعة" icon={ShieldCheck}>
-                {claim.reviewedAt && <p className="text-[12.5px] text-slate-700">{claim.status === "CONFIRMED" ? "أكّده" : "رفضه"} <b>{claim.reviewedByName ?? "—"}</b> {absoluteDate(claim.reviewedAt)}</p>}
+              <Block title={dt("سجل المراجعة")} icon={ShieldCheck}>
+                {claim.reviewedAt && <p className="text-[12.5px] text-slate-700">{claim.status === "CONFIRMED" ? dt("أكّده") : dt("رفضه")} <b>{claim.reviewedByName ?? "—"}</b> {absoluteDate(claim.reviewedAt)}</p>}
                 {claim.rejectionReason && (
                   <div className="rounded-lg border border-rose-100 bg-rose-50/70 px-3 py-2 text-[12.5px] leading-5 text-rose-800">
-                    <span className="mb-0.5 block text-[10.5px] font-semibold">سبب الرفض المُرسل للمتبرع</span>
+                    <span className="mb-0.5 block text-[10.5px] font-semibold">{dt("سبب الرفض المُرسل للمتبرع")}</span>
                     {claim.rejectionReason}
                   </div>
                 )}
-                {claim.status === "REJECTED" && <p className="text-[11.5px] text-slate-500">{remaining > 0 ? `يمكن للمتبرع رفع الإيصال ${remaining} ${remaining === 1 ? "مرة" : "مرات"} أخرى.` : "استُنفدت محاولات الرفع  المتابعة يدويًا مع المتبرع."}</p>}
+                {claim.status === "REJECTED" && <p className="text-[11.5px] text-slate-500">{remaining > 0 ? dt("يمكن للمتبرع رفع الإيصال {0} {1} أخرى.", [remaining, remaining === 1 ? dt("مرة") : dt("مرات")]) : dt("استُنفدت محاولات الرفع  المتابعة يدويًا مع المتبرع.")}</p>}
                 {claim.status === "CONFIRMED" && claim.donation.paidAt && (
                   <a href={`/api/donations/${claim.donationId}/receipt?locale=ar`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-[12px] font-medium text-brand hover:underline">
                     <FileText className="h-3.5 w-3.5" />
-                    الإيصال الرسمي (PDF)
-                  </a>
+                    {dt("الإيصال الرسمي (PDF)")}</a>
                 )}
               </Block>
             )}
 
             {/* Internal note. */}
-            <Block title="ملاحظة داخلية" icon={StickyNote} hint="لا تظهر للمتبرع">
-              <Textarea value={note} onChange={(e) => setNote(e.target.value.slice(0, 1000))} placeholder="رقم العملية في كشف الحساب، من تحقق منه، أي شيء يفيد المراجع التالي…" rows={2} className="text-[13px]" />
+            <Block title={dt("ملاحظة داخلية")} icon={StickyNote} hint={dt("لا تظهر للمتبرع")}>
+              <Textarea value={note} onChange={(e) => setNote(e.target.value.slice(0, 1000))} placeholder={dt("رقم العملية في كشف الحساب، من تحقق منه، أي شيء يفيد المراجع التالي…")} rows={2} className="text-[13px]" />
               {noteDirty && (
                 <Button variant="outline" size="sm" className="gap-1.5 self-start" disabled={busy !== null} onClick={() => run({ action: "note", adminNote: note.trim() || null })}>
                   {busy === "note" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
-                  حفظ الملاحظة
-                </Button>
+                  {dt("حفظ الملاحظة")}</Button>
               )}
             </Block>
           </section>
@@ -348,23 +342,21 @@ export function TransferReceiptDialog({
         <footer className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-t border-slate-200 bg-slate-50 px-5 py-3">
           <p className="text-[11.5px] text-slate-500">
             {decided
-              ? "تم الاعتماد: التبرع محسوب في الإجماليات وأُرسل الإيصال الرسمي."
+              ? dt("تم الاعتماد: التبرع محسوب في الإجماليات وأُرسل الإيصال الرسمي.")
               : claim.status === "REJECTED"
-                ? "مرفوض حاليًا. يمكن التأكيد إن ظهر التحويل لاحقًا في كشف الحساب."
-                : "التأكيد يحتسب التبرع فورًا في الإيرادات وإجماليات المشاريع ويُرسل الإيصال للمتبرع."}
+                ? dt("مرفوض حاليًا. يمكن التأكيد إن ظهر التحويل لاحقًا في كشف الحساب.")
+                : dt("التأكيد يحتسب التبرع فورًا في الإيرادات وإجماليات المشاريع ويُرسل الإيصال للمتبرع.")}
           </p>
           {!decided && (
             <div className="flex items-center gap-2">
               {claim.status !== "REJECTED" && (
                 <Button variant="outline" className="gap-1.5 border-rose-200 text-rose-700 hover:bg-rose-50" disabled={busy !== null} onClick={() => setRejectOpen(true)}>
                   <Ban className="h-4 w-4" />
-                  رفض
-                </Button>
+                  {dt("رفض")}</Button>
               )}
               <Button className="gap-1.5 bg-emerald-600 text-white hover:bg-emerald-700" disabled={busy !== null} onClick={() => setConfirmOpen(true)}>
                 {busy === "confirm" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
-                تأكيد التحويل
-              </Button>
+                {dt("تأكيد التحويل")}</Button>
             </div>
           )}
         </footer>
@@ -376,7 +368,7 @@ export function TransferReceiptDialog({
           <DialogContent hideCloseButton className="max-h-[96vh] w-[calc(100%-1rem)] max-w-[96vw] overflow-auto rounded-xl bg-black/95 p-2">
             <DialogTitle className="sr-only">{file.fileName}</DialogTitle>
             <img src={file.url} alt={file.fileName} className="mx-auto h-auto w-auto max-w-full" />
-            <Button variant="secondary" size="sm" className="absolute end-3 top-3 rounded-full" onClick={() => setZoom(false)} aria-label="إغلاق">
+            <Button variant="secondary" size="sm" className="absolute end-3 top-3 rounded-full" onClick={() => setZoom(false)} aria-label={dt("إغلاق")}>
               <X className="h-4 w-4" />
             </Button>
           </DialogContent>
@@ -385,12 +377,11 @@ export function TransferReceiptDialog({
 
       {/* Confirm */}
       <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
-        <AlertDialogContent dir="rtl">
+        <AlertDialogContent dir={dashDir()}>
           <AlertDialogHeader>
-            <AlertDialogTitle>تأكيد التحويل البنكي؟</AlertDialogTitle>
+            <AlertDialogTitle>{dt("تأكيد التحويل البنكي؟")}</AlertDialogTitle>
             <AlertDialogDescription className="leading-6">
-              سيُسجَّل تبرع <b dir="ltr">{money(claim.donation.totalAmount, claim.donation.currency)}</b> من <b>{claim.donor.name || "المتبرع"}</b> كتبرع ناجح: يُحتسب في الإيرادات وإجماليات المشاريع وملف المتبرع، ويُرسل الإيصال الرسمي إلى بريده. تأكد أولًا أن المبلغ ظهر فعلًا في كشف الحساب.
-            </AlertDialogDescription>
+              {dt("سيُسجَّل تبرع ")}<b dir="ltr">{money(claim.donation.totalAmount, claim.donation.currency)}</b> {dt(" من ")}<b>{claim.donor.name || dt("المتبرع")}</b> {dt(" كتبرع ناجح: يُحتسب في الإيرادات وإجماليات المشاريع وملف المتبرع، ويُرسل الإيصال الرسمي إلى بريده. تأكد أولًا أن المبلغ ظهر فعلًا في كشف الحساب.")}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="gap-2 sm:justify-start">
             <AlertDialogAction
@@ -401,21 +392,19 @@ export function TransferReceiptDialog({
                 void run({ action: "confirm", adminNote: noteDirty ? note.trim() || null : undefined });
               }}
             >
-              نعم، المبلغ وصل  تأكيد
-            </AlertDialogAction>
-            <AlertDialogCancel>رجوع</AlertDialogCancel>
+              {dt("نعم، المبلغ وصل  تأكيد")}</AlertDialogAction>
+            <AlertDialogCancel>{dt("رجوع")}</AlertDialogCancel>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
 
       {/* Reject */}
       <AlertDialog open={rejectOpen} onOpenChange={setRejectOpen}>
-        <AlertDialogContent dir="rtl" className="max-w-lg">
+        <AlertDialogContent dir={dashDir()} className="max-w-lg">
           <AlertDialogHeader>
-            <AlertDialogTitle>رفض الإيصال</AlertDialogTitle>
+            <AlertDialogTitle>{dt("رفض الإيصال")}</AlertDialogTitle>
             <AlertDialogDescription className="leading-6">
-              يُرسل السبب إلى المتبرع بالبريد ويظهر له في صفحة التبرع، ويمكنه رفع إيصال آخر ({remaining > 0 ? `${remaining} ${remaining === 1 ? "محاولة متبقية" : "محاولات متبقية"}` : "لا محاولات متبقية"}). اكتب سببًا يساعده على التصحيح.
-            </AlertDialogDescription>
+              {dt("يُرسل السبب إلى المتبرع بالبريد ويظهر له في صفحة التبرع، ويمكنه رفع إيصال آخر (")}{remaining > 0 ? `${remaining} ${remaining === 1 ? dt("محاولة متبقية") : dt("محاولات متبقية")}` : dt("لا محاولات متبقية")}{dt("). اكتب سببًا يساعده على التصحيح.")}</AlertDialogDescription>
           </AlertDialogHeader>
           <div className="flex flex-wrap gap-1.5">
             {REJECTION_PRESETS.map((preset) => (
@@ -424,7 +413,7 @@ export function TransferReceiptDialog({
               </button>
             ))}
           </div>
-          <Textarea value={reason} onChange={(e) => setReason(e.target.value.slice(0, 600))} placeholder="سبب الرفض كما سيقرؤه المتبرع…" rows={3} className="text-[13px]" autoFocus />
+          <Textarea value={reason} onChange={(e) => setReason(e.target.value.slice(0, 600))} placeholder={dt("سبب الرفض كما سيقرؤه المتبرع…")} rows={3} className="text-[13px]" autoFocus />
           <AlertDialogFooter className="gap-2 sm:justify-start">
             <AlertDialogAction
               className="bg-rose-600 hover:bg-rose-700"
@@ -436,9 +425,8 @@ export function TransferReceiptDialog({
                 void run({ action: "reject", reason: reason.trim(), adminNote: noteDirty ? note.trim() || null : undefined });
               }}
             >
-              رفض وإبلاغ المتبرع
-            </AlertDialogAction>
-            <AlertDialogCancel>رجوع</AlertDialogCancel>
+              {dt("رفض وإبلاغ المتبرع")}</AlertDialogAction>
+            <AlertDialogCancel>{dt("رجوع")}</AlertDialogCancel>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -496,7 +484,7 @@ function Row({
         ) : value}
       </span>
       {copyable && !empty && onCopy && (
-        <button type="button" onClick={() => onCopy(value!, `تم نسخ ${label}`)} className="shrink-0 rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700" aria-label={`نسخ ${label}`}>
+        <button type="button" onClick={() => onCopy(value!, dt("تم نسخ {0}", [label]))} className="shrink-0 rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700" aria-label={dt("نسخ {0}", [label])}>
           <Copy className="h-3.5 w-3.5" />
         </button>
       )}

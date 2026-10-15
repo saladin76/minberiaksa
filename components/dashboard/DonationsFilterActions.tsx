@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Download, Plus, UploadCloud } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { dt } from "@/lib/dashboard/i18n";
 
 /**
  * The three actions that sit next to every «تصفية النتائج» header.
@@ -38,20 +39,17 @@ export function DonationsFilterActions({
       {canEditDonations && (
         <button type="button" onClick={onCreateDonation} className={ACTION_CLASS}>
           <Plus className={ICON_CLASS} />
-          تبرع جديد
-        </button>
+          {dt("تبرع جديد")}</button>
       )}
       {canEditDonations && (
         <Link href="/dashboard/users/donors/bulk-import" className={ACTION_CLASS}>
           <UploadCloud className={ICON_CLASS} />
-          استيراد التبرعات
-        </Link>
+          {dt("استيراد التبرعات")}</Link>
       )}
       {canExportReports && (
         <button type="button" onClick={onExportReport} className={ACTION_CLASS}>
           <Download className={ICON_CLASS} />
-          تصدير التقرير
-        </button>
+          {dt("تصدير التقرير")}</button>
       )}
     </div>
   );

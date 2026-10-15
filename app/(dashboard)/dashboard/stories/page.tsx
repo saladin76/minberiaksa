@@ -20,6 +20,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { errorMessage } from '@/lib/dashboard/client-error-message';
+import { dashIntl, dt, dtx } from "@/lib/dashboard/i18n";
 
 interface Story {
   id: string;
@@ -93,15 +94,15 @@ function DraggableStoryRow({
 
 /** Why a story is or is not on the site right now. */
 function StatusBadge({ story }: { story: Story }) {
-  if (!story.isActive) return <Badge variant="secondary">معطّلة</Badge>;
-  if (story.expired) return <Badge variant="destructive">منتهية</Badge>;
-  if (story.pending) return <Badge variant="outline">مجدولة</Badge>;
-  return <Badge className="bg-emerald-600 hover:bg-emerald-600">ظاهرة</Badge>;
+  if (!story.isActive) return <Badge variant="secondary">{dt("معطّلة")}</Badge>;
+  if (story.expired) return <Badge variant="destructive">{dt("منتهية")}</Badge>;
+  if (story.pending) return <Badge variant="outline">{dt("مجدولة")}</Badge>;
+  return <Badge className="bg-emerald-600 hover:bg-emerald-600">{dt("ظاهرة")}</Badge>;
 }
 
 function formatWindow(story: Story): string {
-  if (!story.endsAt) return 'غير محدودة';
-  return new Date(story.endsAt).toLocaleString('ar', { dateStyle: 'short', timeStyle: 'short' });
+  if (!story.endsAt) return dt("غير محدودة");
+  return new Date(story.endsAt).toLocaleString(dashIntl("ar"), { dateStyle: 'short', timeStyle: 'short' });
 }
 
 export default function StoriesPage() {
@@ -125,7 +126,7 @@ export default function StoriesPage() {
       /* Surfaced rather than logged only: a failed load and "no stories yet"
          otherwise render identically and nothing says which happened. */
       console.error(e);
-      toast.error(errorMessage(e, 'تعذّر تحميل القصص'));
+      toast.error(errorMessage(e, dt("تعذّر تحميل القصص")));
     } finally {
       setLoading(false);
     }
@@ -154,7 +155,7 @@ export default function StoriesPage() {
     try {
       await axios.post('/api/stories/reorder', { stories: payload });
     } catch (e) {
-      toast.error(errorMessage(e, 'تعذّر حفظ الترتيب'));
+      toast.error(errorMessage(e, dt("تعذّر حفظ الترتيب")));
       fetchStories();
     }
   }, [fetchStories]);
@@ -168,7 +169,7 @@ export default function StoriesPage() {
       await axios.put(`/api/stories/${story.id}`, { isActive: next });
       setStories((prev) => prev.map((s) => (s.id === story.id ? { ...s, isActive: next } : s)));
     } catch (e) {
-      toast.error(errorMessage(e, 'تعذّر تغيير الحالة'));
+      toast.error(errorMessage(e, dt("تعذّر تغيير الحالة")));
     } finally {
       setTogglingId(null);
     }
@@ -180,10 +181,10 @@ export default function StoriesPage() {
     try {
       await axios.delete(`/api/stories/${deleteTarget.id}`);
       setStories((prev) => prev.filter((s) => s.id !== deleteTarget.id));
-      toast.success('تم حذف القصة');
+      toast.success(dt("تم حذف القصة"));
       setDeleteTarget(null);
     } catch (e) {
-      toast.error(errorMessage(e, 'تعذّر حذف القصة'));
+      toast.error(errorMessage(e, dt("تعذّر حذف القصة")));
     } finally {
       setDeleting(false);
     }
@@ -202,27 +203,24 @@ export default function StoriesPage() {
       <div className="space-y-4">
         <div className="flex items-center justify-between gap-3">
           <div>
-            <h1 className="text-lg font-bold">شريط القصص</h1>
+            <h1 className="text-lg font-bold">{dt("شريط القصص")}</h1>
             <p className="text-xs text-slate-500">
-              يظهر في أعلى الصفحة الرئيسية ويُفتح كقصص إنستغرام. القصة تختفي تلقائيًا عند انتهاء مدتها.
-            </p>
+              {dt("يظهر في أعلى الصفحة الرئيسية ويُفتح كقصص إنستغرام. القصة تختفي تلقائيًا عند انتهاء مدتها.")}</p>
           </div>
           <Button onClick={() => router.push('/dashboard/stories/new')}>
-            <Plus className="w-4 h-4 ml-1" />
-            قصة جديدة
-          </Button>
+            <Plus className="w-4 h-4 me-1" />
+            {dt("قصة جديدة")}</Button>
         </div>
 
         {stories.length === 0 ? (
           <EmptyState
             icon={ImageIcon}
-            title="لا توجد قصص"
-            description="أضف أول قصة لتظهر في أعلى الصفحة الرئيسية."
+            title={dt("لا توجد قصص")}
+            description={dt("أضف أول قصة لتظهر في أعلى الصفحة الرئيسية.")}
             action={
               <Button onClick={() => router.push('/dashboard/stories/new')}>
-                <Plus className="w-4 h-4 ml-1" />
-                قصة جديدة
-              </Button>
+                <Plus className="w-4 h-4 me-1" />
+                {dt("قصة جديدة")}</Button>
             }
           />
         ) : (
@@ -231,13 +229,13 @@ export default function StoriesPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-12" />
-                  <TableHead>الصورة</TableHead>
-                  <TableHead>العنوان</TableHead>
-                  <TableHead>الشرائح</TableHead>
-                  <TableHead>الحالة</TableHead>
-                  <TableHead>تنتهي</TableHead>
-                  <TableHead>الترجمات</TableHead>
-                  <TableHead>مفعّلة</TableHead>
+                  <TableHead>{dt("الصورة")}</TableHead>
+                  <TableHead>{dt("العنوان")}</TableHead>
+                  <TableHead>{dt("الشرائح")}</TableHead>
+                  <TableHead>{dt("الحالة")}</TableHead>
+                  <TableHead>{dt("تنتهي")}</TableHead>
+                  <TableHead>{dt("الترجمات")}</TableHead>
+                  <TableHead>{dt("مفعّلة")}</TableHead>
                   <TableHead className="w-24" />
                 </TableRow>
               </TableHeader>
@@ -293,17 +291,15 @@ export default function StoriesPage() {
         <AlertDialog open={!!deleteTarget} onOpenChange={(o) => !o && setDeleteTarget(null)}>
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle>حذف القصة</AlertDialogTitle>
+              <AlertDialogTitle>{dt("حذف القصة")}</AlertDialogTitle>
               <AlertDialogDescription>
-                سيتم حذف «{deleteTarget?.title}» بشرائحها وكل ترجماتها نهائيًا.
-              </AlertDialogDescription>
+                {dtx("سيتم حذف «{0}» بشرائحها وكل ترجماتها نهائيًا.", [deleteTarget?.title])}</AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel disabled={deleting}>إلغاء</AlertDialogCancel>
+              <AlertDialogCancel disabled={deleting}>{dt("إلغاء")}</AlertDialogCancel>
               <AlertDialogAction onClick={confirmDelete} disabled={deleting}>
-                {deleting && <Loader2 className="w-4 h-4 animate-spin ml-2" />}
-                حذف
-              </AlertDialogAction>
+                {deleting && <Loader2 className="w-4 h-4 animate-spin me-2" />}
+                {dt("حذف")}</AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>

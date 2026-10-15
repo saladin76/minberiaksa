@@ -12,6 +12,7 @@ import {
   emptyVideo,
   type VideoFormValues,
 } from '../../_components/VideoForm';
+import { dt } from "@/lib/dashboard/i18n";
 
 export default function EditVideoPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -44,7 +45,7 @@ export default function EditVideoPage({ params }: { params: Promise<{ id: string
       .catch((e) => {
         if (!live) return;
         setMissing(true);
-        toast.error(errorMessage(e, 'تعذّر تحميل الفيديو'));
+        toast.error(errorMessage(e, dt("تعذّر تحميل الفيديو")));
       });
     return () => {
       live = false;
@@ -52,7 +53,7 @@ export default function EditVideoPage({ params }: { params: Promise<{ id: string
   }, [id]);
 
   if (missing) {
-    return <p className="py-24 text-center text-sm text-slate-500">الفيديو غير موجود.</p>;
+    return <p className="py-24 text-center text-sm text-slate-500">{dt("الفيديو غير موجود.")}</p>;
   }
 
   if (!initial) {

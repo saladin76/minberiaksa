@@ -33,6 +33,7 @@ import {
 } from "@/lib/tracking/tracking-event-contract";
 import type { Recommendation } from "@/lib/ads/recommendations";
 import { cn } from "@/lib/utils";
+import { dt, dtx } from "@/lib/dashboard/i18n";
 
 interface OverviewBreakdownRow {
   key: string;
@@ -99,37 +100,37 @@ const REVENUE_STATUS_CARDS: {
 }[] = [
   {
     key: "verified",
-    title: "إيرادات إعلانية مؤكدة",
+    get title() { return dt("إيرادات إعلانية مؤكدة"); },
     bg: "bg-emerald-50 border-emerald-200",
     text: "text-emerald-700",
   },
   {
     key: "strong",
-    title: "إيرادات تتبع قوي",
+    get title() { return dt("إيرادات تتبع قوي"); },
     bg: "bg-teal-50 border-teal-200",
     text: "text-teal-700",
   },
   {
     key: "likely_paid",
-    title: "إيرادات إعلانية مرجّحة",
+    get title() { return dt("إيرادات إعلانية مرجّحة"); },
     bg: "bg-lime-50 border-lime-200",
     text: "text-lime-700",
   },
   {
     key: "utm_only",
-    title: "إيرادات UTM فقط",
+    get title() { return dt("إيرادات UTM فقط"); },
     bg: "bg-amber-50 border-amber-200",
     text: "text-amber-700",
   },
   {
     key: "organic",
-    title: "إيرادات غير إعلانية",
+    get title() { return dt("إيرادات غير إعلانية"); },
     bg: "bg-slate-50 border-slate-200",
     text: "text-slate-700",
   },
   {
     key: "direct",
-    title: "إيرادات مباشرة",
+    get title() { return dt("إيرادات مباشرة"); },
     bg: "bg-slate-50 border-slate-200",
     text: "text-slate-700",
   },
@@ -190,11 +191,11 @@ function TopCard({
           ) : null}
           <div className="flex items-baseline justify-between mt-1">
             <span className="text-sm text-slate-700 font-medium">{fmtMoney(row.revenueUSD)}</span>
-            <span className="text-[11px] text-slate-500">{row.paidCount} تبرع</span>
+            <span className="text-[11px] text-slate-500">{dtx("{0} تبرع", [row.paidCount])}</span>
           </div>
         </>
       ) : (
-        <p className="text-sm text-slate-400">لا توجد بيانات</p>
+        <p className="text-sm text-slate-400">{dt("لا توجد بيانات")}</p>
       )}
     </div>
   );
@@ -209,8 +210,7 @@ function StatusDistribution({
   if (total === 0) {
     return (
       <p className="text-sm text-slate-400 text-center py-4">
-        لا توجد تبرعات في الفترة المختارة
-      </p>
+        {dt("لا توجد تبرعات في الفترة المختارة")}</p>
     );
   }
   return (
@@ -228,7 +228,7 @@ function StatusDistribution({
           <div key={k} className="flex items-center gap-2 text-xs">
             <span className={cn("inline-block w-2.5 h-2.5 rounded-full", STATUS_COLOR[k])} />
             <span className="text-slate-700">{ATTRIBUTION_STATUS_LABEL_AR[k]}</span>
-            <span className="text-slate-500 ml-auto">{dist[k] ?? 0}</span>
+            <span className="text-slate-500 me-auto">{dist[k] ?? 0}</span>
           </div>
         ))}
       </div>
@@ -263,7 +263,7 @@ function RecommendationCard({ rec }: { rec: Recommendation }) {
       </div>
       {rec.target ? (
         <div className="rounded-md bg-white/60 border border-white/40 px-2 py-1 text-[11px] text-slate-700 truncate" title={rec.target.label}>
-          <span className="text-slate-500">الهدف:</span> {rec.target.label}
+          <span className="text-slate-500">{dt("الهدف:")}</span> {rec.target.label}
         </div>
       ) : null}
       {rec.metrics && rec.metrics.length > 0 ? (
@@ -301,7 +301,7 @@ export function OverviewTab({ filterQs }: Props) {
         if (cancelled) return;
         setError(
           (e?.response?.data?.error as string | undefined) ??
-            "تعذر تحميل النظرة العامة للإعلانات"
+            dt("تعذر تحميل النظرة العامة للإعلانات")
         );
       })
       .finally(() => {
@@ -315,8 +315,7 @@ export function OverviewTab({ filterQs }: Props) {
   if (loading) {
     return (
       <div className="rounded-xl border border-border bg-white p-6 flex items-center justify-center gap-2 text-sm text-slate-500">
-        <Loader2 className="w-4 h-4 animate-spin" /> جاري تحميل النظرة العامة…
-      </div>
+        <Loader2 className="w-4 h-4 animate-spin" /> {dt(" جاري تحميل النظرة العامة…")}</div>
     );
   }
   if (error) {
@@ -337,47 +336,44 @@ export function OverviewTab({ filterQs }: Props) {
       <div className="rounded-xl border border-sky-200 bg-sky-50 p-3 flex items-start gap-2">
         <Info className="w-4 h-4 text-sky-600 mt-0.5 shrink-0" />
         <p className="text-[12px] text-sky-900 leading-relaxed">
-          تعتمد هذه الأرقام على التبرعات المدفوعة فعليًا داخل الموقع وبيانات
-          UTM/click IDs/GA4. قد تختلف عن أرقام منصات الإعلانات بسبب attribution
-          windows وview-through وmodeled conversions.
-        </p>
+          {dt("تعتمد هذه الأرقام على التبرعات المدفوعة فعليًا داخل الموقع وبيانات UTM/click IDs/GA4. قد تختلف عن أرقام منصات الإعلانات بسبب attribution windows وview-through وmodeled conversions.")}</p>
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
         <StatsMetricCard
-          title="إيرادات الإعلانات"
+          title={dt("إيرادات الإعلانات")}
           value={data.adRevenueUSD}
           icon={Megaphone}
           accent="emerald"
           format="money"
-          subtitle={`${data.paidAdCount} تبرع مدفوع`}
+          subtitle={dt("{0} تبرع مدفوع", [data.paidAdCount])}
         />
         <StatsMetricCard
-          title="إيرادات غير إعلانية"
+          title={dt("إيرادات غير إعلانية")}
           value={data.organicRevenueUSD}
           icon={Globe2}
           accent="slate"
           format="money"
-          subtitle={`${data.paidOrganicCount} تبرع مدفوع`}
+          subtitle={dt("{0} تبرع مدفوع", [data.paidOrganicCount])}
         />
         <StatsMetricCard
-          title="إجمالي الإيرادات"
+          title={dt("إجمالي الإيرادات")}
           value={data.totalRevenueUSD}
           icon={DollarSign}
           accent="blue"
           format="money"
-          subtitle="مجموع المدفوع في الفترة"
+          subtitle={dt("مجموع المدفوع في الفترة")}
         />
         <StatsMetricCard
-          title="حصة الإعلانات من الإيراد"
+          title={dt("حصة الإعلانات من الإيراد")}
           value={data.adShare * 100}
           icon={Activity}
           accent="violet"
           format="percent"
-          subtitle="نسبة إيرادات الإعلانات إلى الإجمالي"
+          subtitle={dt("نسبة إيرادات الإعلانات إلى الإجمالي")}
         />
         <StatsMetricCard
-          title="سلامة التتبع"
+          title={dt("سلامة التتبع")}
           value={data.trackingHealthPct * 100}
           icon={ShieldCheck}
           accent={
@@ -388,38 +384,37 @@ export function OverviewTab({ filterQs }: Props) {
               : "rose"
           }
           format="percent"
-          subtitle={`${data.trackingErrorCount} تبرع به مشكلة تتبع`}
+          subtitle={dt("{0} تبرع به مشكلة تتبع", [data.trackingErrorCount])}
         />
         <StatsMetricCard
-          title="محاولات فاشلة"
+          title={dt("محاولات فاشلة")}
           value={data.failedCount}
           icon={AlertTriangle}
           accent="rose"
           format="number"
-          subtitle="جميع المحاولات الفاشلة في الفترة"
+          subtitle={dt("جميع المحاولات الفاشلة في الفترة")}
         />
         <StatsMetricCard
-          title="متبرعون جدد من الإعلانات"
+          title={dt("متبرعون جدد من الإعلانات")}
           value={data.newDonorsFromAds}
           icon={UserPlus}
           accent="indigo"
           format="number"
-          subtitle="أول تبرع لهم في الفترة + إعلان"
+          subtitle={dt("أول تبرع لهم في الفترة + إعلان")}
         />
         <StatsMetricCard
-          title="متبرعون جدد عضوي"
+          title={dt("متبرعون جدد عضوي")}
           value={data.newDonorsOrganic}
           icon={Repeat}
           accent="teal"
           format="number"
-          subtitle="أول تبرع لهم بدون إعلان"
+          subtitle={dt("أول تبرع لهم بدون إعلان")}
         />
       </div>
 
       <div className="rounded-xl border border-border bg-white p-4 shadow-sm">
         <h3 className="text-sm font-semibold text-slate-700 mb-3">
-          توزيع الإيرادات حسب جودة الإسناد
-        </h3>
+          {dt("توزيع الإيرادات حسب جودة الإسناد")}</h3>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
           {REVENUE_STATUS_CARDS.map((c) => (
             <div key={c.key} className={cn("rounded-lg border p-3", c.bg)}>
@@ -428,8 +423,7 @@ export function OverviewTab({ filterQs }: Props) {
                 {fmtMoney(data.revenueByStatus[c.key] ?? 0)}
               </p>
               <p className="text-[10px] text-slate-500 mt-0.5">
-                {data.statusDistribution[c.key] ?? 0} تبرع
-              </p>
+                {dtx("{0} تبرع", [data.statusDistribution[c.key] ?? 0])}</p>
             </div>
           ))}
         </div>
@@ -437,14 +431,14 @@ export function OverviewTab({ filterQs }: Props) {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         <TopCard
-          title={`أفضل منصة${topPlatformLabel ? `  ${topPlatformLabel}` : ""}`}
+          title={dt("أفضل منصة{0}", [topPlatformLabel ? `  ${topPlatformLabel}` : ""])}
           row={data.topPlatform}
           icon={Trophy}
         />
-        <TopCard title="أفضل حملة" row={data.topCampaign} icon={Trophy} />
-        <TopCard title="أفضل إعلان" row={data.topAd} icon={Trophy} />
+        <TopCard title={dt("أفضل حملة")} row={data.topCampaign} icon={Trophy} />
+        <TopCard title={dt("أفضل إعلان")} row={data.topAd} icon={Trophy} />
         <TopCard
-          title="أعلى دولة (حسب جنسية المتبرع)"
+          title={dt("أعلى دولة (حسب جنسية المتبرع)")}
           row={data.topCountry}
           icon={Trophy}
         />
@@ -452,8 +446,7 @@ export function OverviewTab({ filterQs }: Props) {
 
       <div className="rounded-xl border border-border bg-white p-4 shadow-sm">
         <h3 className="text-sm font-semibold text-slate-700 mb-3">
-          توزيع حالة التتبع على التبرعات المدفوعة
-        </h3>
+          {dt("توزيع حالة التتبع على التبرعات المدفوعة")}</h3>
         <StatusDistribution dist={data.statusDistribution} />
       </div>
 
@@ -461,11 +454,9 @@ export function OverviewTab({ filterQs }: Props) {
         <div className="rounded-xl border border-border bg-white p-4 shadow-sm">
           <div className="flex items-center gap-2 mb-3">
             <Sparkles className="w-4 h-4 text-violet-600" />
-            <h3 className="text-sm font-semibold text-slate-700">توصيات سريعة</h3>
-            <span className="text-[10px] text-slate-500 mr-auto">
-              مستندة فقط إلى بيانات الموقع  لا تحوي بيانات إنفاق من منصات
-              الإعلان
-            </span>
+            <h3 className="text-sm font-semibold text-slate-700">{dt("توصيات سريعة")}</h3>
+            <span className="text-[10px] text-slate-500 ms-auto">
+              {dt("مستندة فقط إلى بيانات الموقع  لا تحوي بيانات إنفاق من منصات الإعلان")}</span>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
             {data.recommendations.map((r) => (
@@ -477,9 +468,7 @@ export function OverviewTab({ filterQs }: Props) {
         <div className="rounded-xl border border-border bg-white p-4 shadow-sm flex items-start gap-2">
           <AlertCircle className="w-4 h-4 text-slate-400 mt-0.5" />
           <p className="text-[12px] text-slate-500">
-            لا توجد توصيات تلقائية في الفترة الحالية  أضف فترة أوسع أو فعل
-            تتبع أقوى للحصول على اقتراحات.
-          </p>
+            {dt("لا توجد توصيات تلقائية في الفترة الحالية  أضف فترة أوسع أو فعل تتبع أقوى للحصول على اقتراحات.")}</p>
         </div>
       )}
     </div>

@@ -24,6 +24,7 @@ import { CategoryIconPicker } from './CategoryIconPicker';
 import { iconLabel } from './category-icon-catalog';
 import { parseCategoryIcon } from '@/components/CategoryIcon';
 import { CategoryCardIcon, isLegacyCardIcon } from '@/components/minbar/categories/CategoryCardIcon';
+import { dashIntl, dt } from "@/lib/dashboard/i18n";
 
 /**
  * The landing page a category owns, as the dashboard edits it.
@@ -40,24 +41,24 @@ import { CategoryCardIcon, isLegacyCardIcon } from '@/components/minbar/categori
  */
 
 export const CATEGORY_VALUE_TRANSLATION_FIELDS: readonly TranslationField[] = [
-  { name: 'label', label: 'النص' },
+  { name: 'label', get label() { return dt("النص"); } },
 ];
 
 export const CATEGORY_CARD_TRANSLATION_FIELDS: readonly TranslationField[] = [
-  { name: 'title', label: 'العنوان' },
-  { name: 'body', label: 'النص', multiline: true },
+  { name: 'title', get label() { return dt("العنوان"); } },
+  { name: 'body', get label() { return dt("النص"); }, multiline: true },
 ];
 
 /** The cards' original eight drawn glyphs  mirrors `CATEGORY_CARD_ICON_KEYS` on the write side. */
 export const CARD_ICON_LABELS: Record<string, string> = {
-  alert: 'تنبيه / خطر',
-  home: 'منزل',
-  heart: 'قلب / أثر',
-  hands: 'أيادٍ / تكافل',
-  book: 'كتاب / تعليم',
-  shield: 'حماية',
-  water: 'ماء',
-  users: 'أسرة / مجتمع',
+  get alert() { return dt("تنبيه / خطر"); },
+  get home() { return dt("منزل"); },
+  get heart() { return dt("قلب / أثر"); },
+  get hands() { return dt("أيادٍ / تكافل"); },
+  get book() { return dt("كتاب / تعليم"); },
+  get shield() { return dt("حماية"); },
+  get water() { return dt("ماء"); },
+  get users() { return dt("أسرة / مجتمع"); },
 };
 
 /** What to call a card's icon  a drawn glyph, a catalogue icon, or a flag. */
@@ -66,9 +67,9 @@ function cardIconLabel(icon: string): string {
   const parsed = parseCategoryIcon(icon);
   if (parsed.kind === 'flag') {
     try {
-      return `علم ${new Intl.DisplayNames(['ar'], { type: 'region' }).of(parsed.countryCode) ?? parsed.countryCode}`;
+      return dt("علم {0}", [new Intl.DisplayNames([dashIntl('ar')], { type: 'region' }).of(parsed.countryCode) ?? parsed.countryCode]);
     } catch {
-      return `علم ${parsed.countryCode}`;
+      return dt("علم {0}", [parsed.countryCode]);
     }
   }
   return iconLabel(parsed.name);
@@ -202,7 +203,7 @@ export function CategoryPageSection({
         const all = (res.data?.VIDEO ?? []) as Array<ContentOption & { hint?: string }>;
         setAchievementOptions(all.filter((v) => v.hint === 'ACHIEVEMENT'));
       })
-      .catch((e) => { if (live) toast.error(errorMessage(e, 'تعذّر تحميل قائمة الفيديوهات')); });
+      .catch((e) => { if (live) toast.error(errorMessage(e, dt("تعذّر تحميل قائمة الفيديوهات"))); });
     return () => { live = false; };
   }, []);
 
@@ -231,82 +232,77 @@ export function CategoryPageSection({
       {/* ── Hero & figures ───────────────────────────────────────────── */}
       <Card className="space-y-4 p-6">
         <div>
-          <h2 className="text-sm font-bold">صفحة الحملة  الواجهة والأرقام</h2>
+          <h2 className="text-sm font-bold">{dt("صفحة الحملة  الواجهة والأرقام")}</h2>
           <p className="text-xs text-slate-500">
-            تُنشر كل حملة كصفحة مشروع كاملة. النصوص المترجمة (المقدمة، عناوين الأقسام، وصف الأرقام) في تبويبات
-            اللغات بالأعلى؛ هنا بنية الصفحة. كل جزء اختياري  الحملة بلا أي منها تظهر بواجهتها ومشاريعها.
-          </p>
+            {dt("تُنشر كل حملة كصفحة مشروع كاملة. النصوص المترجمة (المقدمة، عناوين الأقسام، وصف الأرقام) في تبويبات اللغات بالأعلى؛ هنا بنية الصفحة. كل جزء اختياري  الحملة بلا أي منها تظهر بواجهتها ومشاريعها.")}</p>
         </div>
 
         {/* A category may be published as one of the site's own pages instead
             of the generic landing page; everything below still applies  the
             page folds it in where it belongs. */}
         <div className="space-y-1.5">
-          <span className="text-xs font-semibold text-slate-600">الصفحة التي تُنشر بها الحملة</span>
+          <span className="text-xs font-semibold text-slate-600">{dt("الصفحة التي تُنشر بها الحملة")}</span>
           <Select value={values.pageTemplate || 'own'} onValueChange={(v) => set('pageTemplate', v === 'own' ? '' : v)}>
             <SelectTrigger><SelectValue /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="own">صفحة الحملة التلقائية</SelectItem>
-              <SelectItem value="aqsa">صفحة المسجد الأقصى الثابتة</SelectItem>
-              <SelectItem value="zakat">صفحة الزكاة الثابتة</SelectItem>
+              <SelectItem value="own">{dt("صفحة الحملة التلقائية")}</SelectItem>
+              <SelectItem value="aqsa">{dt("صفحة المسجد الأقصى الثابتة")}</SelectItem>
+              <SelectItem value="zakat">{dt("صفحة الزكاة الثابتة")}</SelectItem>
             </SelectContent>
           </Select>
           <span className="block text-[11px] text-slate-500">
             {values.pageTemplate
-              ? 'رابط الحملة يحوّل إلى هذه الصفحة، وتظهر فيها مشاريعها كلها وكل ما تضبطه هنا: الأرقام والقيم وصندوق التبرع والبطاقات والإنجازات، كلٌّ في مكانه. صورة الواجهة ومقدمتها وزرّها تحل محل صورة الصفحة ومقدمتها.'
-              : 'الافتراضي: صفحة مستقلة بالشكل الموحّد. اختر صفحة ثابتة لتُدمج الحملة فيها بدل ذلك.'}
+              ? dt("رابط الحملة يحوّل إلى هذه الصفحة، وتظهر فيها مشاريعها كلها وكل ما تضبطه هنا: الأرقام والقيم وصندوق التبرع والبطاقات والإنجازات، كلٌّ في مكانه. صورة الواجهة ومقدمتها وزرّها تحل محل صورة الصفحة ومقدمتها.")
+              : dt("الافتراضي: صفحة مستقلة بالشكل الموحّد. اختر صفحة ثابتة لتُدمج الحملة فيها بدل ذلك.")}
           </span>
         </div>
 
         <div className="grid gap-4 md:grid-cols-2">
           <ImageUploadField
-            label="صورة الواجهة (عريضة، خلف العنوان)"
+            label={dt("صورة الواجهة (عريضة، خلف العنوان)")}
             value={values.heroImage}
             onChange={(url) => set('heroImage', url)}
             previewClass="w-56 h-32"
           />
           <label className="space-y-1.5">
-            <span className="text-xs font-semibold text-slate-600">فيديو الواجهة (رابط يوتيوب أو معرّف)</span>
+            <span className="text-xs font-semibold text-slate-600">{dt("فيديو الواجهة (رابط يوتيوب أو معرّف)")}</span>
             <Input dir="ltr" placeholder="https://www.youtube.com/watch?v=..." value={values.heroVideoUrl} onChange={(e) => set('heroVideoUrl', e.target.value)} />
-            <span className="block text-[11px] text-slate-500">يظهر بجانب العنوان في الواجهة. اتركه فارغًا ليأخذ النص العرض كاملًا.</span>
+            <span className="block text-[11px] text-slate-500">{dt("يظهر بجانب العنوان في الواجهة. اتركه فارغًا ليأخذ النص العرض كاملًا.")}</span>
           </label>
         </div>
 
         <div className="grid gap-4 md:grid-cols-2">
           <label className="space-y-1.5">
-            <span className="text-xs font-semibold text-slate-600">الرقم المُنجز</span>
+            <span className="text-xs font-semibold text-slate-600">{dt("الرقم المُنجز")}</span>
             <Input dir="ltr" inputMode="numeric" placeholder="45" value={values.statDoneValue} onChange={(e) => set('statDoneValue', e.target.value.replace(/[^0-9]/g, ''))} />
           </label>
           <label className="space-y-1.5">
-            <span className="text-xs font-semibold text-slate-600">رقم الهدف</span>
+            <span className="text-xs font-semibold text-slate-600">{dt("رقم الهدف")}</span>
             <Input dir="ltr" inputMode="numeric" placeholder="100" value={values.statGoalValue} onChange={(e) => set('statGoalValue', e.target.value.replace(/[^0-9]/g, ''))} />
           </label>
         </div>
         <p className="text-[11px] text-slate-500">
-          شريط التقدم تحت الرقمين يُحسب منهما. اترك الهدف فارغًا ليختفي شريط الأرقام كله. وصف كل رقم يُكتب في تبويبات اللغات.
-        </p>
+          {dt("شريط التقدم تحت الرقمين يُحسب منهما. اترك الهدف فارغًا ليختفي شريط الأرقام كله. وصف كل رقم يُكتب في تبويبات اللغات.")}</p>
       </Card>
 
       {/* ── The donation box ─────────────────────────────────────────── */}
       <Card className="space-y-4 p-6">
         <div>
-          <h2 className="text-sm font-bold">صندوق التبرع</h2>
+          <h2 className="text-sm font-bold">{dt("صندوق التبرع")}</h2>
           <p className="text-xs text-slate-500">
-            يوجّه الصندوق تبرعه إمّا إلى الحملة نفسها  فيُسجَّل التبرع عليها مباشرة  أو إلى مشروع واحد من مشاريعها.
-            «تلقائي» يختار أول مشروع بحسب الأولوية.
-          </p>
+            {dt("يوجّه الصندوق تبرعه إمّا إلى الحملة نفسها  فيُسجَّل التبرع عليها مباشرة  أو إلى مشروع واحد من مشاريعها. «تلقائي» يختار أول مشروع بحسب الأولوية.")}</p>
         </div>
         <div className="grid gap-4 md:grid-cols-2">
           <div className="space-y-1.5">
-            <span className="text-xs font-semibold text-slate-600">وجهة التبرع</span>
+            <span className="text-xs font-semibold text-slate-600">{dt("وجهة التبرع")}</span>
             <Select
               value={values.donateTarget || 'auto'}
               onValueChange={(v) => set('donateTarget', v === 'auto' ? '' : v)}
             >
-              <SelectTrigger><SelectValue placeholder="تلقائي" /></SelectTrigger>
+              <SelectTrigger><SelectValue placeholder={dt("تلقائي")} /></SelectTrigger>
               <SelectContent>
-                <SelectItem value={DONATE_TO_CATEGORY}>الحملة نفسها  لا مشروعًا بعينه</SelectItem>
-                <SelectItem value="auto">تلقائي  أول مشروع بحسب الأولوية</SelectItem>
+                <SelectItem value={DONATE_TO_CATEGORY}>{dt("الحملة نفسها  لا مشروعًا بعينه")}</SelectItem>
+                <SelectItem value="auto">{dt("تلقائي  أول مشروع بحسب الأولوية")}</SelectItem>
                 {campaignOptions.map((c) => (
                   <SelectItem key={c.id} value={c.id}>{c.title}</SelectItem>
                 ))}
@@ -314,11 +310,10 @@ export function CategoryPageSection({
             </Select>
           </div>
           <label className="space-y-1.5">
-            <span className="text-xs font-semibold text-slate-600">المبالغ المقترحة (جميع العملات)</span>
+            <span className="text-xs font-semibold text-slate-600">{dt("المبالغ المقترحة (جميع العملات)")}</span>
             <Input dir="ltr" placeholder="100, 200, 300, 500, 700" value={values.suggestedAmounts} onChange={(e) => set('suggestedAmounts', e.target.value)} />
             <span className="block text-[11px] text-slate-500">
-              بالدولار، مفصولة بفاصلة؛ تُعرض محوَّلة إلى عملة الزائر ما لم تُضف استثناءً أدناه. اتركها فارغة لاستخدام مبالغ الموقع الافتراضية.
-            </span>
+              {dt("بالدولار، مفصولة بفاصلة؛ تُعرض محوَّلة إلى عملة الزائر ما لم تُضف استثناءً أدناه. اتركها فارغة لاستخدام مبالغ الموقع الافتراضية.")}</span>
           </label>
         </div>
 
@@ -326,20 +321,19 @@ export function CategoryPageSection({
             suggested donations, so an editor who knows one knows the other. */}
         <div className="space-y-2">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <span className="text-xs font-semibold text-slate-600">استثناءات حسب العملة (اختياري)</span>
+            <span className="text-xs font-semibold text-slate-600">{dt("استثناءات حسب العملة (اختياري)")}</span>
             <Button type="button" variant="outline" size="sm" onClick={() => set('suggestedByCurrency', [...values.suggestedByCurrency, currencyAmountsRow()])}>
-              <Plus className="ml-1 h-4 w-4" />
-              إضافة عملة
-            </Button>
+              <Plus className="me-1 h-4 w-4" />
+              {dt("إضافة عملة")}</Button>
           </div>
           {values.suggestedByCurrency.length === 0 ? (
-            <p className="text-[11px] text-slate-500">بدون استثناءات، تُطبّق المبالغ أعلاه على كل العملات.</p>
+            <p className="text-[11px] text-slate-500">{dt("بدون استثناءات، تُطبّق المبالغ أعلاه على كل العملات.")}</p>
           ) : (
             <div className="space-y-3">
               {values.suggestedByCurrency.map((row) => (
                 <div key={row.id} className="flex flex-col gap-2 rounded-lg border p-3 sm:flex-row sm:items-end">
                   <div className="min-w-[140px] flex-1 space-y-1">
-                    <span className="text-[11px] text-slate-500">العملة</span>
+                    <span className="text-[11px] text-slate-500">{dt("العملة")}</span>
                     <Select value={row.currency} onValueChange={(v) => setCurrencyRow(row.id, { currency: v })}>
                       <SelectTrigger dir="ltr"><SelectValue /></SelectTrigger>
                       <SelectContent>
@@ -350,8 +344,8 @@ export function CategoryPageSection({
                     </Select>
                   </div>
                   <label className="flex-[2] space-y-1">
-                    <span className="text-[11px] text-slate-500">المبالغ لهذه العملة (كما تُعرض، بلا تحويل)</span>
-                    <Input dir="ltr" className="font-mono" placeholder="مثال: 50, 100, 200" value={row.amountsStr} onChange={(e) => setCurrencyRow(row.id, { amountsStr: e.target.value })} />
+                    <span className="text-[11px] text-slate-500">{dt("المبالغ لهذه العملة (كما تُعرض، بلا تحويل)")}</span>
+                    <Input dir="ltr" className="font-mono" placeholder={dt("مثال: 50, 100, 200")} value={row.amountsStr} onChange={(e) => setCurrencyRow(row.id, { amountsStr: e.target.value })} />
                   </label>
                   <Button
                     type="button"
@@ -359,7 +353,7 @@ export function CategoryPageSection({
                     size="icon"
                     className="shrink-0"
                     onClick={() => set('suggestedByCurrency', values.suggestedByCurrency.filter((r) => r.id !== row.id))}
-                    aria-label="حذف الصف"
+                    aria-label={dt("حذف الصف")}
                   >
                     <Trash2 className="h-4 w-4 text-red-600" />
                   </Button>
@@ -374,8 +368,8 @@ export function CategoryPageSection({
       <Card className="space-y-3 p-6">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-sm font-bold">قيم الحملة</h2>
-            <p className="text-xs text-slate-500">عبارات قصيرة تظهر في شريط مربعات أعلى المشاريع. الأفضل خمس أو أقل.</p>
+            <h2 className="text-sm font-bold">{dt("قيم الحملة")}</h2>
+            <p className="text-xs text-slate-500">{dt("عبارات قصيرة تظهر في شريط مربعات أعلى المشاريع. الأفضل خمس أو أقل.")}</p>
           </div>
           <Badge variant="outline">{values.values.length}</Badge>
         </div>
@@ -384,19 +378,19 @@ export function CategoryPageSection({
           <div key={index} className="space-y-2 rounded-lg border p-3">
             <div className="flex items-center gap-2">
               <Badge variant="outline">{index + 1}</Badge>
-              <Input className="h-8 flex-1 text-xs" placeholder="نحمي الوجود ونعزز الصمود" value={row.label} onChange={(e) => setValueRow(index, { label: e.target.value })} />
-              <Button type="button" variant="ghost" size="icon" className="h-7 w-7" onClick={() => set('values', move(values.values, index, -1))} aria-label="أعلى">
+              <Input className="h-8 flex-1 text-xs" placeholder={dt("نحمي الوجود ونعزز الصمود")} value={row.label} onChange={(e) => setValueRow(index, { label: e.target.value })} />
+              <Button type="button" variant="ghost" size="icon" className="h-7 w-7" onClick={() => set('values', move(values.values, index, -1))} aria-label={dt("أعلى")}>
                 <ChevronUp className="h-4 w-4" />
               </Button>
-              <Button type="button" variant="ghost" size="icon" className="h-7 w-7" onClick={() => set('values', move(values.values, index, 1))} aria-label="أسفل">
+              <Button type="button" variant="ghost" size="icon" className="h-7 w-7" onClick={() => set('values', move(values.values, index, 1))} aria-label={dt("أسفل")}>
                 <ChevronDown className="h-4 w-4" />
               </Button>
-              <Button type="button" variant="ghost" size="icon" className="h-7 w-7" onClick={() => set('values', values.values.filter((_, i) => i !== index))} aria-label="حذف">
+              <Button type="button" variant="ghost" size="icon" className="h-7 w-7" onClick={() => set('values', values.values.filter((_, i) => i !== index))} aria-label={dt("حذف")}>
                 <Trash2 className="h-4 w-4 text-red-600" />
               </Button>
             </div>
             <details className="rounded border bg-slate-50/60 p-2">
-              <summary className="cursor-pointer text-[11px] font-bold text-slate-600">ترجمات هذه العبارة</summary>
+              <summary className="cursor-pointer text-[11px] font-bold text-slate-600">{dt("ترجمات هذه العبارة")}</summary>
               <div className="pt-2">
                 <ContentTranslationTabs
                   fields={CATEGORY_VALUE_TRANSLATION_FIELDS}
@@ -412,17 +406,16 @@ export function CategoryPageSection({
         ))}
 
         <Button type="button" variant="outline" size="sm" onClick={() => set('values', [...values.values, emptyCategoryValue()])}>
-          <Plus className="ml-1 h-4 w-4" />
-          إضافة قيمة
-        </Button>
+          <Plus className="me-1 h-4 w-4" />
+          {dt("إضافة قيمة")}</Button>
       </Card>
 
       {/* ── The explanatory cards ────────────────────────────────────── */}
       <Card className="space-y-3 p-6">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-sm font-bold">بطاقات التعريف</h2>
-            <p className="text-xs text-slate-500">ثلاث بطاقات أسفل الصفحة  لماذا، وماذا نفعل، والأثر. لكل واحدة أيقونة مرسومة.</p>
+            <h2 className="text-sm font-bold">{dt("بطاقات التعريف")}</h2>
+            <p className="text-xs text-slate-500">{dt("ثلاث بطاقات أسفل الصفحة  لماذا، وماذا نفعل، والأثر. لكل واحدة أيقونة مرسومة.")}</p>
           </div>
           <Badge variant="outline">{values.infoCards.length}</Badge>
         </div>
@@ -437,23 +430,23 @@ export function CategoryPageSection({
                 </span>
                 {cardIconLabel(row.icon)}
               </span>
-              <Button type="button" variant="ghost" size="icon" className="h-7 w-7" onClick={() => set('infoCards', move(values.infoCards, index, -1))} aria-label="أعلى">
+              <Button type="button" variant="ghost" size="icon" className="h-7 w-7" onClick={() => set('infoCards', move(values.infoCards, index, -1))} aria-label={dt("أعلى")}>
                 <ChevronUp className="h-4 w-4" />
               </Button>
-              <Button type="button" variant="ghost" size="icon" className="h-7 w-7" onClick={() => set('infoCards', move(values.infoCards, index, 1))} aria-label="أسفل">
+              <Button type="button" variant="ghost" size="icon" className="h-7 w-7" onClick={() => set('infoCards', move(values.infoCards, index, 1))} aria-label={dt("أسفل")}>
                 <ChevronDown className="h-4 w-4" />
               </Button>
-              <Button type="button" variant="ghost" size="icon" className="h-7 w-7" onClick={() => set('infoCards', values.infoCards.filter((_, i) => i !== index))} aria-label="حذف">
+              <Button type="button" variant="ghost" size="icon" className="h-7 w-7" onClick={() => set('infoCards', values.infoCards.filter((_, i) => i !== index))} aria-label={dt("حذف")}>
                 <Trash2 className="h-4 w-4 text-red-600" />
               </Button>
             </div>
-            <Input className="h-8 text-xs" placeholder="لماذا هذه الحملة؟" value={row.title} onChange={(e) => setCardRow(index, { title: e.target.value })} />
-            <Textarea rows={3} className="text-xs" placeholder="نص البطاقة…" value={row.body} onChange={(e) => setCardRow(index, { body: e.target.value })} />
+            <Input className="h-8 text-xs" placeholder={dt("لماذا هذه الحملة؟")} value={row.title} onChange={(e) => setCardRow(index, { title: e.target.value })} />
+            <Textarea rows={3} className="text-xs" placeholder={dt("نص البطاقة…")} value={row.body} onChange={(e) => setCardRow(index, { body: e.target.value })} />
             {/* The same picker as the category's own icon, so a card can carry
                 any of its icons or a flag. The first eight drawn glyphs stay
                 available above for the cards that already use them. */}
             <details className="rounded border bg-slate-50/60 p-2">
-              <summary className="cursor-pointer text-[11px] font-bold text-slate-600">تغيير الأيقونة</summary>
+              <summary className="cursor-pointer text-[11px] font-bold text-slate-600">{dt("تغيير الأيقونة")}</summary>
               <div className="space-y-2 pt-2">
                 <div className="flex flex-wrap gap-1.5">
                   {Object.entries(CARD_ICON_LABELS).map(([value, label]) => (
@@ -477,7 +470,7 @@ export function CategoryPageSection({
               </div>
             </details>
             <details className="rounded border bg-slate-50/60 p-2">
-              <summary className="cursor-pointer text-[11px] font-bold text-slate-600">ترجمات هذه البطاقة</summary>
+              <summary className="cursor-pointer text-[11px] font-bold text-slate-600">{dt("ترجمات هذه البطاقة")}</summary>
               <div className="pt-2">
                 <ContentTranslationTabs
                   fields={CATEGORY_CARD_TRANSLATION_FIELDS}
@@ -493,23 +486,20 @@ export function CategoryPageSection({
         ))}
 
         <Button type="button" variant="outline" size="sm" onClick={() => set('infoCards', [...values.infoCards, emptyCategoryCard()])}>
-          <Plus className="ml-1 h-4 w-4" />
-          إضافة بطاقة
-        </Button>
+          <Plus className="me-1 h-4 w-4" />
+          {dt("إضافة بطاقة")}</Button>
       </Card>
 
       {/* ── Achievements ─────────────────────────────────────────────── */}
       <Card className="space-y-3 p-6">
         <div>
-          <h2 className="text-sm font-bold">الإنجازات بالفيديو</h2>
+          <h2 className="text-sm font-bold">{dt("الإنجازات بالفيديو")}</h2>
           <p className="text-xs text-slate-500">
-            من مكتبة الفيديوهات  نوع «الإنجازات». تظهر في شريط أسفل الصفحة بالترتيب المحدد هنا، بنفس شكل شريط الإنجازات
-            في الصفحة الرئيسية. فيديو يُحذف أو يُخفى يسقط من الشريط تلقائيًا.
-          </p>
+            {dt("من مكتبة الفيديوهات  نوع «الإنجازات». تظهر في شريط أسفل الصفحة بالترتيب المحدد هنا، بنفس شكل شريط الإنجازات في الصفحة الرئيسية. فيديو يُحذف أو يُخفى يسقط من الشريط تلقائيًا.")}</p>
         </div>
         <ContentPicker
-          label="الفيديوهات"
-          description="اختر ما يخص هذه الحملة."
+          label={dt("الفيديوهات")}
+          description={dt("اختر ما يخص هذه الحملة.")}
           options={achievementOptions}
           value={values.achievementVideoIds}
           onChange={(next) => set('achievementVideoIds', next)}

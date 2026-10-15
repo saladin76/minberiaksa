@@ -4,8 +4,9 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 import { resolveDashboardPageAccess } from "@/lib/dashboard/page-access";
 import { userHasDashboardPermission } from "@/lib/dashboard/permissions";
 import ConversionEventsPanel from "./_components/ConversionEventsPanel";
+import { dashDir, dt } from "@/lib/dashboard/i18n";
 
-export const metadata = { title: "التتبع والتحويلات | لوحة التحكم" };
+export const metadata = { get title() { return dt("التتبع والتحويلات | لوحة التحكم"); } };
 export const dynamic = "force-dynamic";
 
 /**
@@ -17,7 +18,7 @@ export default async function MarketingTrackingPage() {
   if (!access.allowed) redirect(access.redirectTo);
 
   return (
-    <main className="p-4 sm:p-6" dir="rtl">
+    <main className="p-4 sm:p-6" dir={dashDir()}>
       <ConversionEventsPanel canRetry={userHasDashboardPermission(access.session.user, "platformConnectionsTest")} />
     </main>
   );

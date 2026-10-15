@@ -8,35 +8,36 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "react-hot-toast";
 import { errorMessage } from "@/lib/dashboard/client-error-message";
+import { dashDir, dt, dtx } from "@/lib/dashboard/i18n";
 
 const LOCALE_LABELS: Record<string, string> = {
-  ar: "العربية",
-  en: "الإنجليزية",
-  fr: "الفرنسية",
-  tr: "التركية",
-  id: "الإندونيسية",
-  pt: "البرتغالية",
-  es: "الإسبانية",
-  de: "الألمانية",
-  ur: "الأردية",
-  sq: "الألبانية",
-  it: "الإيطالية",
-  nl: "الهولندية",
-  sv: "السويدية",
-  no: "النرويجية",
-  da: "الدنماركية",
-  ms: "الملايوية",
-  ja: "اليابانية",
-  zh: "الصينية",
-  hi: "الهندية",
+  get ar() { return dt("العربية"); },
+  get en() { return dt("الإنجليزية"); },
+  get fr() { return dt("الفرنسية"); },
+  get tr() { return dt("التركية"); },
+  get id() { return dt("الإندونيسية"); },
+  get pt() { return dt("البرتغالية"); },
+  get es() { return dt("الإسبانية"); },
+  get de() { return dt("الألمانية"); },
+  get ur() { return dt("الأردية"); },
+  get sq() { return dt("الألبانية"); },
+  get it() { return dt("الإيطالية"); },
+  get nl() { return dt("الهولندية"); },
+  get sv() { return dt("السويدية"); },
+  get no() { return dt("النرويجية"); },
+  get da() { return dt("الدنماركية"); },
+  get ms() { return dt("الملايوية"); },
+  get ja() { return dt("اليابانية"); },
+  get zh() { return dt("الصينية"); },
+  get hi() { return dt("الهندية"); },
 };
 
 const FIELD_LABELS: Record<string, string> = {
-  title: "العنوان",
-  name: "الاسم",
-  description: "الوصف",
-  content: "المحتوى",
-  buttonText: "نص الزر",
+  get title() { return dt("العنوان"); },
+  get name() { return dt("الاسم"); },
+  get description() { return dt("الوصف"); },
+  get content() { return dt("المحتوى"); },
+  get buttonText() { return dt("نص الزر"); },
 };
 
 type Section = "campaigns" | "categories" | "blog" | "slides";
@@ -144,7 +145,7 @@ export function ContentLocalizationPreviewDialog({
       });
       adoptRows(response.data?.rows || []);
     } catch (error) {
-      toast.error(errorMessage(error, "تعذر تجهيز المعاينة"));
+      toast.error(errorMessage(error, dt("تعذر تجهيز المعاينة")));
     } finally {
       setLoading(false);
     }
@@ -160,9 +161,9 @@ export function ContentLocalizationPreviewDialog({
         limit: 8,
       });
       adoptRows(response.data?.rows || []);
-      toast.success("تم تجهيز الاقتراحات  راجعها ثم اضغط حفظ");
+      toast.success(dt("تم تجهيز الاقتراحات  راجعها ثم اضغط حفظ"));
     } catch (error) {
-      toast.error(errorMessage(error, "تعذر توليد المعاينة"));
+      toast.error(errorMessage(error, dt("تعذر توليد المعاينة")));
     } finally {
       setGenerating(false);
     }
@@ -187,7 +188,7 @@ export function ContentLocalizationPreviewDialog({
       .filter((item) => Object.keys(item.fields).length > 0);
 
     if (items.length === 0) {
-      toast("لا توجد تغييرات للحفظ");
+      toast(dt("لا توجد تغييرات للحفظ"));
       return;
     }
 
@@ -200,10 +201,10 @@ export function ContentLocalizationPreviewDialog({
         items,
       });
       adoptRows(response.data?.rows || []);
-      toast.success(`تم حفظ ${response.data?.applied ?? items.length} عنصر في ${LOCALE_LABELS[locale]}`);
+      toast.success(dt("تم حفظ {0} عنصر في {1}", [response.data?.applied ?? items.length, LOCALE_LABELS[locale]]));
       onSaved?.();
     } catch (error) {
-      toast.error(errorMessage(error, "تعذر حفظ التعديلات"));
+      toast.error(errorMessage(error, dt("تعذر حفظ التعديلات")));
     } finally {
       setSavingKey(null);
     }
@@ -220,24 +221,20 @@ export function ContentLocalizationPreviewDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] max-w-6xl overflow-y-auto" dir="rtl">
+      <DialogContent className="max-h-[90vh] max-w-6xl overflow-y-auto" dir={dashDir()}>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Sparkles className="h-5 w-5 text-brand" />
-            مراجعة النصوص والترجمات
-          </DialogTitle>
+            {dt("مراجعة النصوص والترجمات")}</DialogTitle>
         </DialogHeader>
 
         <div className="rounded-lg border border-sky-200 bg-sky-50 p-3 text-sm text-sky-900">
           <div className="flex items-start gap-2">
             <Info className="mt-0.5 h-4 w-4 shrink-0" />
             <div>
-              <p className="font-bold">التعديلات تُحفظ مباشرة</p>
+              <p className="font-bold">{dt("التعديلات تُحفظ مباشرة")}</p>
               <p className="mt-1 leading-6">
-                عدّل النص المقترح ثم اضغط حفظ ليُخزَّن في لغة {LOCALE_LABELS[locale]}. اختيار
-                العربية يعني التعديل على النص الأصلي نفسه. محتوى المقالات المنسّق يُعرض للقراءة
-                فقط ويُحرَّر من محرر المقال.
-              </p>
+                {dtx("عدّل النص المقترح ثم اضغط حفظ ليُخزَّن في لغة {0}. اختيار العربية يعني التعديل على النص الأصلي نفسه. محتوى المقالات المنسّق يُعرض للقراءة فقط ويُحرَّر من محرر المقال.", [LOCALE_LABELS[locale]])}</p>
             </div>
           </div>
         </div>
@@ -255,9 +252,8 @@ export function ContentLocalizationPreviewDialog({
           </Select>
           <div className="flex flex-wrap gap-2">
             <Button variant="outline" onClick={loadRows} disabled={busy || saving}>
-              {loading ? <Loader2 className="ml-2 h-4 w-4 animate-spin" /> : null}
-              تحديث المعاينة
-            </Button>
+              {loading ? <Loader2 className="me-2 h-4 w-4 animate-spin" /> : null}
+              {dt("تحديث المعاينة")}</Button>
             <Button
               variant="outline"
               onClick={generatePreview}
@@ -265,28 +261,24 @@ export function ContentLocalizationPreviewDialog({
               className="gap-2 border-purple-300 text-purple-700 hover:bg-purple-50"
             >
               {generating ? <Loader2 className="h-4 w-4 animate-spin" /> : <WandSparkles className="h-4 w-4" />}
-              توليد ترجمة احترافية
-            </Button>
+              {dt("توليد ترجمة احترافية")}</Button>
             <Button
               onClick={() => saveRows(dirtyRows, "__all__")}
               disabled={busy || saving || dirtyRows.length === 0}
               className="gap-2"
             >
               {savingKey === "__all__" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-              حفظ الكل ({dirtyRows.length})
-            </Button>
+              {dtx("حفظ الكل ({0})", [dirtyRows.length])}</Button>
           </div>
         </div>
 
         {busy ? (
           <div className="flex items-center justify-center py-12 text-muted-foreground">
-            <Loader2 className="ml-2 h-5 w-5 animate-spin" />
-            جاري تجهيز المعاينة…
-          </div>
+            <Loader2 className="me-2 h-5 w-5 animate-spin" />
+            {dt("جاري تجهيز المعاينة…")}</div>
         ) : rows.length === 0 ? (
           <div className="rounded-lg border bg-emerald-50 p-6 text-center text-emerald-700">
-            لا توجد عناصر ناقصة في هذه الدفعة.
-          </div>
+            {dt("لا توجد عناصر ناقصة في هذه الدفعة.")}</div>
         ) : (
           <div className="space-y-4">
             {rows.map((row) => {
@@ -305,8 +297,7 @@ export function ContentLocalizationPreviewDialog({
                     <div className="flex items-center gap-2">
                       {(row.missingFields.length > 0 || row.emptyFields.length > 0 || row.identicalToArabicFields.length > 0) && (
                         <span className="inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2 py-1 text-xs text-amber-700">
-                          <AlertTriangle className="h-3.5 w-3.5" /> يحتاج مراجعة
-                        </span>
+                          <AlertTriangle className="h-3.5 w-3.5" /> {dt(" يحتاج مراجعة")}</span>
                       )}
                       <Button
                         size="sm"
@@ -316,8 +307,7 @@ export function ContentLocalizationPreviewDialog({
                         disabled={saving || !rowDirty}
                       >
                         {savingKey === key ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
-                        حفظ
-                      </Button>
+                        {dt("حفظ")}</Button>
                     </div>
                   </div>
 
@@ -333,12 +323,12 @@ export function ContentLocalizationPreviewDialog({
                       return (
                         <div key={field} className="grid gap-2 lg:grid-cols-2">
                           <div className="rounded-lg border bg-slate-50 p-3">
-                            <p className="mb-1 text-xs font-medium text-muted-foreground">العربي الأصلي · {FIELD_LABELS[field] || field}</p>
+                            <p className="mb-1 text-xs font-medium text-muted-foreground">{dtx("العربي الأصلي · {0}", [FIELD_LABELS[field] || field])}</p>
                             <p className="whitespace-pre-wrap text-sm leading-7">{plainText(row.sourceArabic[field]) || "—"}</p>
                           </div>
                           <div className="rounded-lg border bg-white p-3">
                             <p className="mb-1 text-xs font-medium text-muted-foreground">
-                              {isEditable ? "النص المحفوظ · " : "للقراءة فقط · "}{FIELD_LABELS[field] || field}
+                              {isEditable ? dt("النص المحفوظ · ") : dt("للقراءة فقط · ")}{FIELD_LABELS[field] || field}
                             </p>
                             {isEditable ? (
                               <textarea

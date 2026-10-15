@@ -1,6 +1,7 @@
 "use client";
 
 import type { ArchiveRefs } from "./archiveUploadedFileTypes";
+import { dt } from "@/lib/dashboard/i18n";
 
 type Props = {
   refs: ArchiveRefs;
@@ -25,13 +26,13 @@ export function ArchiveReferenceSelects({ refs, collectionId, projectId, onColle
         }}
         className={inputClass}
       >
-        <option value="">بدون مجموعة</option>
+        <option value="">{dt("بدون مجموعة")}</option>
         {refs.collections.map((collection) => (
           <option key={collection.id} value={collection.id}>{collection.name}</option>
         ))}
       </select>
       <select value={projectId} onChange={(event) => onProjectChange(event.target.value)} className={inputClass}>
-        <option value="">بدون مشروع</option>
+        <option value="">{dt("بدون مشروع")}</option>
         {projects.map((project) => (
           <option key={project.id} value={project.id}>{project.title}</option>
         ))}

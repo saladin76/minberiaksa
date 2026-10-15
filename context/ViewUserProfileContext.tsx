@@ -6,6 +6,7 @@ import { toast } from "react-hot-toast";
 import { ViewUserProfileDialog } from "@/components/dashboard/ViewUserProfileDialog";
 import type { UserProfileCardData } from "@/lib/dashboard/user-profile-card";
 import type { ViewUserBadgeOption } from "@/components/dashboard/ViewUserProfileDialog";
+import { dt } from "@/lib/dashboard/i18n";
 
 function mapApiUserToProfileCard(data: unknown): UserProfileCardData | null {
   if (!data || typeof data !== "object") return null;
@@ -101,7 +102,7 @@ export function ViewUserProfileProvider({ children }: { children: React.ReactNod
       const res = await axios.get(`/api/users/${userId}`);
       const mapped = mapApiUserToProfileCard(res.data?.user);
       if (!mapped) {
-        toast.error("تعذر تحميل بيانات المستخدم");
+        toast.error(dt("تعذر تحميل بيانات المستخدم"));
         setOpen(false);
         setUser(null);
         setLoading(false);
@@ -109,7 +110,7 @@ export function ViewUserProfileProvider({ children }: { children: React.ReactNod
       }
       setUser(mapped);
     } catch {
-      toast.error("فشل تحميل ملف المستخدم");
+      toast.error(dt("فشل تحميل ملف المستخدم"));
       setOpen(false);
       setUser(null);
     } finally {

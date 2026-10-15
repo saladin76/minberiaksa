@@ -22,6 +22,7 @@ import {
   type UploadedFile,
 } from "./archiveUploadedFileTypes";
 import { uploadArchiveFile } from "./archiveUploadClient";
+import { dashDir, dt, dtx } from "@/lib/dashboard/i18n";
 
 type Props = {
   category: Category;
@@ -80,7 +81,7 @@ export function ArchiveUploadedFilesManager({ category, title, description }: Pr
     const result = await response.json().catch(() => null);
     setLoading(false);
     if (!response.ok || !result?.ok) {
-      setFeedback({ tone: "error", message: result?.error || result?.message || "تعذر تحميل الملفات" });
+      setFeedback({ tone: "error", message: result?.error || result?.message || dt("تعذر تحميل الملفات") });
       return;
     }
     setFiles(result.files ?? []);
@@ -94,7 +95,7 @@ export function ArchiveUploadedFilesManager({ category, title, description }: Pr
   async function upload() {
     const file = fileRef.current?.files?.[0];
     if (!file || saving) {
-      setFeedback({ tone: "error", message: "اختر ملف PDF أو Excel أولًا." });
+      setFeedback({ tone: "error", message: dt("اختر ملف PDF أو Excel أولًا.") });
       return;
     }
 
@@ -111,7 +112,7 @@ export function ArchiveUploadedFilesManager({ category, title, description }: Pr
         linkedProjectId,
         onProgress: setProgress,
       });
-      setFeedback({ tone: "success", message: "تم رفع الملف" });
+      setFeedback({ tone: "success", message: dt("تم رفع الملف") });
       setFileTitle("");
       setNotes("");
       setLinkedCollectionId("");
@@ -119,7 +120,7 @@ export function ArchiveUploadedFilesManager({ category, title, description }: Pr
       if (fileRef.current) fileRef.current.value = "";
       await loadFiles();
     } catch (error) {
-      setFeedback({ tone: "error", message: error instanceof Error ? error.message : "تعذر رفع الملف" });
+      setFeedback({ tone: "error", message: error instanceof Error ? error.message : dt("تعذر رفع الملف") });
     } finally {
       setSaving(false);
     }
@@ -146,10 +147,10 @@ export function ArchiveUploadedFilesManager({ category, title, description }: Pr
     });
     const result = await response.json().catch(() => null);
     if (!response.ok || !result?.ok) {
-      setFeedback({ tone: "error", message: result?.error || result?.message || "تعذر حفظ التعديل" });
+      setFeedback({ tone: "error", message: result?.error || result?.message || dt("تعذر حفظ التعديل") });
       return;
     }
-    setFeedback({ tone: "success", message: "تم حفظ التعديل" });
+    setFeedback({ tone: "success", message: dt("تم حفظ التعديل") });
     setEditingId(null);
     await loadFiles();
   }
@@ -162,7 +163,7 @@ export function ArchiveUploadedFilesManager({ category, title, description }: Pr
     const result = await response.json().catch(() => null);
     setAnalyzingId(null);
     if (!response.ok || !result?.ok) {
-      setFeedback({ tone: "error", message: result?.error || result?.message || "تعذر تحليل الملف" });
+      setFeedback({ tone: "error", message: result?.error || result?.message || dt("تعذر تحليل الملف") });
       return;
     }
     // Say which kind of analysis ran: without an AI key it is a local guess from the file name.
@@ -170,8 +171,8 @@ export function ArchiveUploadedFilesManager({ category, title, description }: Pr
     setFeedback({
       tone: "success",
       message: aiUsed
-        ? "تم التحليل بالذكاء الاصطناعي (من بيانات الملف فقط، لا من محتواه)  راجع الاقتراح قبل استخدامه"
-        : "اقتراح أولي من اسم الملف وبياناته فقط  لم يُستخدم الذكاء الاصطناعي",
+        ? dt("تم التحليل بالذكاء الاصطناعي (من بيانات الملف فقط، لا من محتواه)  راجع الاقتراح قبل استخدامه")
+        : dt("اقتراح أولي من اسم الملف وبياناته فقط  لم يُستخدم الذكاء الاصطناعي"),
     });
     await loadFiles();
   }
@@ -188,52 +189,51 @@ export function ArchiveUploadedFilesManager({ category, title, description }: Pr
     const result = await response.json().catch(() => null);
     setActivityLoadingId(null);
     if (!response.ok || !result?.ok) {
-      setFeedback({ tone: "error", message: result?.error || result?.message || "تعذر تحميل سجل النشاط" });
+      setFeedback({ tone: "error", message: result?.error || result?.message || dt("تعذر تحميل سجل النشاط") });
       return;
     }
     setActivity((current) => ({ ...current, [id]: result.activity ?? [] }));
   }
 
   async function removeFile(id: string) {
-    if (!window.confirm("هل تريد حذف هذا الملف؟")) return;
+    if (!window.confirm(dt("هل تريد حذف هذا الملف؟"))) return;
     const response = await fetch(`/api/admin/archive/uploaded-files/${id}`, { method: "DELETE" });
     const result = await response.json().catch(() => null);
     if (!response.ok || !result?.ok) {
-      setFeedback({ tone: "error", message: result?.error || result?.message || "تعذر حذف الملف" });
+      setFeedback({ tone: "error", message: result?.error || result?.message || dt("تعذر حذف الملف") });
       return;
     }
-    setFeedback({ tone: "success", message: "تم حذف الملف" });
+    setFeedback({ tone: "success", message: dt("تم حذف الملف") });
     await loadFiles();
   }
 
   return (
-    <main className="min-h-screen bg-[#FFFDF8] p-4 text-slate-950 sm:p-6" dir="rtl">
+    <main className="min-h-screen bg-[#FFFDF8] p-4 text-slate-950 sm:p-6" dir={dashDir()}>
       <section className="rounded-2xl border bg-white p-5 shadow-sm">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div>
-            <p className="text-xs font-black text-brand">الأرشيف</p>
+            <p className="text-xs font-black text-brand">{dt("الأرشيف")}</p>
             <h1 className="mt-2 text-xl sm:text-2xl font-bold tracking-tight">{title}</h1>
             <p className="mt-2 max-w-3xl text-sm leading-7 text-slate-600">{description}</p>
           </div>
           <Link href="/dashboard/archive" className="inline-flex h-9 items-center rounded-md border bg-white px-3 text-sm font-bold text-slate-800 hover:border-brand hover:text-brand">
-            الرجوع للأرشيف
-          </Link>
+            {dt("الرجوع للأرشيف")}</Link>
         </div>
       </section>
 
       <section className="mt-4 rounded-xl border bg-white shadow-sm">
         <div className="border-b p-4">
-          <h2 className="text-base font-black text-slate-950">رفع ملف جديد</h2>
-          <p className="mt-1 text-xs leading-5 text-slate-600">اختر ملف PDF أو Excel من جهازك. يمكنك ربط الملف بمجموعة أو مشروع.</p>
+          <h2 className="text-base font-black text-slate-950">{dt("رفع ملف جديد")}</h2>
+          <p className="mt-1 text-xs leading-5 text-slate-600">{dt("اختر ملف PDF أو Excel من جهازك. يمكنك ربط الملف بمجموعة أو مشروع.")}</p>
         </div>
         <div className="grid gap-3 p-4 xl:grid-cols-[1fr_1fr_1.5fr_1.4fr_auto]">
-          <input value={fileTitle} onChange={(event) => setFileTitle(event.target.value)} placeholder="اسم الملف" className="h-9 rounded-md border px-3 text-sm outline-none focus:border-brand" />
-          <input value={notes} onChange={(event) => setNotes(event.target.value)} placeholder="ملاحظات" className="h-9 rounded-md border px-3 text-sm outline-none focus:border-brand" />
+          <input value={fileTitle} onChange={(event) => setFileTitle(event.target.value)} placeholder={dt("اسم الملف")} className="h-9 rounded-md border px-3 text-sm outline-none focus:border-brand" />
+          <input value={notes} onChange={(event) => setNotes(event.target.value)} placeholder={dt("ملاحظات")} className="h-9 rounded-md border px-3 text-sm outline-none focus:border-brand" />
           <ArchiveReferenceSelects refs={archiveRefs} collectionId={linkedCollectionId} projectId={linkedProjectId} onCollectionChange={setLinkedCollectionId} onProjectChange={setLinkedProjectId} />
-          <input ref={fileRef} type="file" accept=".pdf,.xls,.xlsx,application/pdf,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" className="h-9 rounded-md border bg-white px-2 py-1.5 text-sm file:ml-2 file:rounded file:border-0 file:bg-slate-100 file:px-2 file:py-1 file:text-xs file:font-bold file:text-slate-700" />
+          <input ref={fileRef} type="file" accept=".pdf,.xls,.xlsx,application/pdf,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" className="h-9 rounded-md border bg-white px-2 py-1.5 text-sm file:me-2 file:rounded file:border-0 file:bg-slate-100 file:px-2 file:py-1 file:text-xs file:font-bold file:text-slate-700" />
           <Button type="button" onClick={upload} disabled={saving} className="h-9 gap-2 font-bold">
             {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-            {saving ? `${progress}%` : "رفع"}
+            {saving ? `${progress}%` : dt("رفع")}
           </Button>
         </div>
         {saving ? <div className="mx-4 mb-4 h-2 overflow-hidden rounded-full bg-slate-100"><div className="h-full bg-brand transition-all" style={{ width: `${progress}%` }} /></div> : null}
@@ -248,52 +248,52 @@ export function ArchiveUploadedFilesManager({ category, title, description }: Pr
       <section className="mt-4 rounded-xl border bg-white shadow-sm">
         <div className="flex flex-col gap-3 border-b p-4 xl:flex-row xl:items-end xl:justify-between">
           <div>
-            <h2 className="text-base font-black text-slate-950">الملفات</h2>
-            <p className="mt-1 text-xs text-slate-600">إجمالي الملفات: {filteredFiles.length} من {files.length}</p>
+            <h2 className="text-base font-black text-slate-950">{dt("الملفات")}</h2>
+            <p className="mt-1 text-xs text-slate-600">{dtx("إجمالي الملفات: {0} من {1}", [filteredFiles.length, files.length])}</p>
           </div>
           <div className="grid gap-2 md:grid-cols-[1.4fr_0.8fr_1fr_1fr] xl:min-w-[720px]">
             <label className="relative block">
-              <Search className="absolute right-2 top-2.5 h-4 w-4 text-slate-400" />
-              <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="بحث باسم الملف أو الملاحظات" className="h-9 w-full rounded-md border bg-white pr-8 pl-3 text-sm outline-none focus:border-brand" />
+              <Search className="absolute start-2 top-2.5 h-4 w-4 text-slate-400" />
+              <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder={dt("بحث باسم الملف أو الملاحظات")} className="h-9 w-full rounded-md border bg-white ps-8 pe-3 text-sm outline-none focus:border-brand" />
             </label>
             <select value={typeFilter} onChange={(event) => setTypeFilter(event.target.value)} className="h-9 rounded-md border bg-white px-2 text-sm outline-none focus:border-brand">
-              <option value="ALL">كل الأنواع</option>
+              <option value="ALL">{dt("كل الأنواع")}</option>
               <option value="pdf">PDF</option>
               <option value="xls">XLS</option>
               <option value="xlsx">XLSX</option>
             </select>
             <select value={categoryFilter} onChange={(event) => setCategoryFilter(event.target.value)} className="h-9 rounded-md border bg-white px-2 text-sm outline-none focus:border-brand">
-              <option value="ALL">كل التصنيفات</option>
+              <option value="ALL">{dt("كل التصنيفات")}</option>
               {categoryOptions.map((option) => <option key={option} value={option}>{option}</option>)}
             </select>
             <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} className="h-9 rounded-md border bg-white px-2 text-sm outline-none focus:border-brand">
-              <option value="ALL">كل الحالات</option>
+              <option value="ALL">{dt("كل الحالات")}</option>
               {reviewStatuses.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
             </select>
           </div>
         </div>
         <div className="overflow-x-auto p-4">
           {loading ? (
-            <p className="rounded-lg border bg-slate-50 p-4 text-sm text-slate-600">جاري تحميل الملفات...</p>
+            <p className="rounded-lg border bg-slate-50 p-4 text-sm text-slate-600">{dt("جاري تحميل الملفات...")}</p>
           ) : filteredFiles.length === 0 ? (
             <EmptyState
               icon={FileSearch}
-              title="لا توجد ملفات مطابقة"
-              description="لا يوجد ملف يطابق البحث أو التصفية الحالية. جرّب مصطلحًا أوسع أو غيّر التصنيف."
+              title={dt("لا توجد ملفات مطابقة")}
+              description={dt("لا يوجد ملف يطابق البحث أو التصفية الحالية. جرّب مصطلحًا أوسع أو غيّر التصنيف.")}
             />
           ) : (
             <table className="w-full min-w-[1320px] text-sm">
               <thead className="bg-slate-50 text-xs text-slate-500">
                 <tr>
-                  <th className="p-3 text-right">اسم الملف</th>
-                  <th className="p-3 text-right">النوع</th>
-                  <th className="p-3 text-right">التصنيف</th>
-                  <th className="p-3 text-right">الحالة</th>
-                  <th className="p-3 text-right">مرتبط بـ</th>
-                  <th className="p-3 text-right">الحجم</th>
-                  <th className="p-3 text-right">التخزين</th>
-                  <th className="p-3 text-right">تاريخ الرفع</th>
-                  <th className="p-3 text-right">الإجراءات</th>
+                  <th className="p-3 text-start">{dt("اسم الملف")}</th>
+                  <th className="p-3 text-start">{dt("النوع")}</th>
+                  <th className="p-3 text-start">{dt("التصنيف")}</th>
+                  <th className="p-3 text-start">{dt("الحالة")}</th>
+                  <th className="p-3 text-start">{dt("مرتبط بـ")}</th>
+                  <th className="p-3 text-start">{dt("الحجم")}</th>
+                  <th className="p-3 text-start">{dt("التخزين")}</th>
+                  <th className="p-3 text-start">{dt("تاريخ الرفع")}</th>
+                  <th className="p-3 text-start">{dt("الإجراءات")}</th>
                 </tr>
               </thead>
               <tbody className="divide-y">
@@ -306,7 +306,7 @@ export function ArchiveUploadedFilesManager({ category, title, description }: Pr
                         {isEditing ? (
                           <div className="grid gap-2">
                             <input value={draft.title} onChange={(event) => setDraft((current) => ({ ...current, title: event.target.value }))} className="h-8 rounded-md border px-2 text-xs outline-none focus:border-brand" />
-                            <input value={draft.notes} onChange={(event) => setDraft((current) => ({ ...current, notes: event.target.value }))} placeholder="ملاحظات" className="h-8 rounded-md border px-2 text-xs outline-none focus:border-brand" />
+                            <input value={draft.notes} onChange={(event) => setDraft((current) => ({ ...current, notes: event.target.value }))} placeholder={dt("ملاحظات")} className="h-8 rounded-md border px-2 text-xs outline-none focus:border-brand" />
                           </div>
                         ) : (
                           <>
@@ -324,7 +324,7 @@ export function ArchiveUploadedFilesManager({ category, title, description }: Pr
                           <select value={draft.fileCategory} onChange={(event) => setDraft((current) => ({ ...current, fileCategory: event.target.value }))} className="h-8 rounded-md border bg-white px-2 text-xs outline-none focus:border-brand">
                             {categoryOptions.map((option) => <option key={option} value={option}>{option}</option>)}
                           </select>
-                        ) : <Badge>{file.fileCategory || "عام"}</Badge>}
+                        ) : <Badge>{file.fileCategory || dt("عام")}</Badge>}
                       </td>
                       <td className="p-3 text-slate-700">
                         {isEditing ? (
@@ -345,7 +345,7 @@ export function ArchiveUploadedFilesManager({ category, title, description }: Pr
                           />
                         ) : (
                           <div className="space-y-1 text-xs">
-                            <p>{file.linkedCollectionName || "بدون مجموعة"}</p>
+                            <p>{file.linkedCollectionName || dt("بدون مجموعة")}</p>
                             {file.linkedProjectName ? <p className="font-bold text-brand">{file.linkedProjectName}</p> : null}
                           </div>
                         )}
@@ -357,15 +357,15 @@ export function ArchiveUploadedFilesManager({ category, title, description }: Pr
                         <div className="flex flex-wrap gap-2">
                           {isEditing ? (
                             <>
-                              <ActionButton onClick={() => void saveEdit(file.id)} icon={<Save className="h-3.5 w-3.5" />} label="حفظ" />
+                              <ActionButton onClick={() => void saveEdit(file.id)} icon={<Save className="h-3.5 w-3.5" />} label={dt("حفظ")} />
                               <IconButton onClick={() => setEditingId(null)} icon={<X className="h-3.5 w-3.5" />} />
                             </>
                           ) : (
                             <>
-                              <ActionButton disabled={Boolean(analyzingId)} onClick={() => void analyzeFile(file.id)} icon={isAnalyzing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />} label="تحليل" />
-                              <ActionButton onClick={() => void toggleActivity(file.id)} icon={<Clock3 className="h-3.5 w-3.5" />} label="نشاط" />
-                              <ActionButton onClick={() => startEdit(file)} icon={<Edit3 className="h-3.5 w-3.5" />} label="تعديل" />
-                              <a href={`/api/admin/archive/uploaded-files/${file.id}/download`} className="inline-flex h-8 items-center gap-1.5 rounded-md border bg-white px-3 text-xs font-bold text-slate-800 hover:border-brand hover:text-brand"><Download className="h-3.5 w-3.5" /> تنزيل</a>
+                              <ActionButton disabled={Boolean(analyzingId)} onClick={() => void analyzeFile(file.id)} icon={isAnalyzing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />} label={dt("تحليل")} />
+                              <ActionButton onClick={() => void toggleActivity(file.id)} icon={<Clock3 className="h-3.5 w-3.5" />} label={dt("نشاط")} />
+                              <ActionButton onClick={() => startEdit(file)} icon={<Edit3 className="h-3.5 w-3.5" />} label={dt("تعديل")} />
+                              <a href={`/api/admin/archive/uploaded-files/${file.id}/download`} className="inline-flex h-8 items-center gap-1.5 rounded-md border bg-white px-3 text-xs font-bold text-slate-800 hover:border-brand hover:text-brand"><Download className="h-3.5 w-3.5" /> {dt(" تنزيل")}</a>
                               <IconButton danger onClick={() => void removeFile(file.id)} icon={<Trash2 className="h-3.5 w-3.5" />} />
                             </>
                           )}
@@ -399,14 +399,14 @@ function AnalysisBox({ analysis, analyzedAt }: { analysis: FileAnalysis; analyze
   return (
     <div className="mt-3 rounded-lg border bg-slate-50 p-3 text-xs leading-6 text-slate-700">
       <div className="flex flex-wrap items-center gap-2">
-        <span className="rounded-md bg-white px-2 py-1 font-black text-brand ring-1 ring-slate-200">تحليل الملف</span>
-        <span className="rounded-md bg-white px-2 py-1 font-bold text-slate-500 ring-1 ring-slate-200">{analysis.confidence === "ai_assisted" ? "مدعوم بالذكاء" : "اعتمادًا على بيانات الملف"}</span>
+        <span className="rounded-md bg-white px-2 py-1 font-black text-brand ring-1 ring-slate-200">{dt("تحليل الملف")}</span>
+        <span className="rounded-md bg-white px-2 py-1 font-bold text-slate-500 ring-1 ring-slate-200">{analysis.confidence === "ai_assisted" ? dt("مدعوم بالذكاء") : dt("اعتمادًا على بيانات الملف")}</span>
         {analyzedAt ? <span className="text-[11px] text-slate-400">{formatArchiveDate(analyzedAt)}</span> : null}
       </div>
       <p className="mt-2 font-semibold text-slate-800">{analysis.summary}</p>
-      <p className="mt-1"><span className="font-bold">الاستخدام المقترح:</span> {analysis.suggestedUse}</p>
+      <p className="mt-1"><span className="font-bold">{dt("الاستخدام المقترح:")}</span> {analysis.suggestedUse}</p>
       {analysis.keywords?.length ? <div className="mt-2 flex flex-wrap gap-1.5">{analysis.keywords.map((keyword) => <span key={keyword} className="rounded bg-white px-2 py-0.5 text-[11px] font-bold text-slate-600 ring-1 ring-slate-200">{keyword}</span>)}</div> : null}
-      {analysis.teamNotes?.length ? <ul className="mt-2 list-disc space-y-1 pr-5">{analysis.teamNotes.map((note) => <li key={note}>{note}</li>)}</ul> : null}
+      {analysis.teamNotes?.length ? <ul className="mt-2 list-disc space-y-1 ps-5">{analysis.teamNotes.map((note) => <li key={note}>{note}</li>)}</ul> : null}
     </div>
   );
 }

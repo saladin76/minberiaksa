@@ -7,6 +7,7 @@ import { authOptions } from "../../auth/[...nextauth]/options";
 import { resolveReferralId } from "@/lib/referral-server";
 import { userHasDashboardPermission } from "@/lib/dashboard/permissions";
 import { inferLocaleFromRequest } from "@/lib/preferred-lang";
+import { sanitizeDonationAttribution } from "@/lib/attribution/sanitize";
 import { writeAuditLog, auditStreamForRole } from "@/lib/audit-log";
 import {
   convertAmountInCurrencyToUsd,
@@ -191,8 +192,22 @@ export async function POST(request: NextRequest) {
     } = body;
     const concierge = parseConciergeMarker(conciergeIn);
     const conciergeTouch = parseConciergeTouch(conciergeTouchIn);
-    const conciergeAttribution = concierge || conciergeTouch
+    /* Where the donor came from (UTM, click ids, landing page) as the browser
+       recorded it, whitelisted the same way as `POST /api/donations`. The
+       dashboard's "مصدر التبرع" column and the ad conversion events read it. */
+    const forwardedFor = request.headers.get("x-forwarded-for");
+    const clientIp = forwardedFor?.split(",")[0]?.trim() || request.headers.get("x-real-ip") || undefined;
+    const userAgent = request.headers.get("user-agent")?.slice(0, 500) || undefined;
+    const adAttribution = sanitizeDonationAttribution({
+      ...(body.attribution && typeof body.attribution === "object" && !Array.isArray(body.attribution)
+        ? (body.attribution as Record<string, unknown>)
+        : {}),
+      ...(userAgent ? { user_agent: userAgent } : {}),
+      ...(clientIp ? { client_ip: clientIp } : {}),
+    }) as Record<string, unknown> | undefined;
+    const donationAttribution = concierge || conciergeTouch || adAttribution
       ? ({
+          ...(adAttribution ?? {}),
           ...(concierge ? { ai_concierge: { ...concierge, source: "ai_concierge", at: new Date().toISOString() } } : {}),
           ...(conciergeTouch ? { ai_concierge_touch: conciergeTouch } : {}),
         } as Prisma.InputJsonValue)
@@ -711,7 +726,7 @@ export async function POST(request: NextRequest) {
             paymentMethod,
             ...(isPayPal ? { provider: "PAYPAL" } : {}),
             cardDetails: null,
-            ...(conciergeAttribution ? { attribution: conciergeAttribution } : {}),
+            ...(donationAttribution ? { attribution: donationAttribution } : {}),
             ...campaignLines,
             ...categoryLines,
             ...waqfLines,
@@ -796,7 +811,7 @@ export async function POST(request: NextRequest) {
             : isPayPal
               ? { provider: "PAYPAL" }
               : {}),
-          ...(conciergeAttribution ? { attribution: conciergeAttribution } : {}),
+          ...(donationAttribution ? { attribution: donationAttribution } : {}),
           ...campaignLines,
           ...categoryLines,
           ...waqfLines,

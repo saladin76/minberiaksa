@@ -16,6 +16,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { dt } from "@/lib/dashboard/i18n";
 
 /**
  * The unread pill. Brand blue rather than the usual notification red  this is "there is work
@@ -88,7 +89,7 @@ export function DashboardSidebar({
     <aside
       ref={asideRef}
       id="dashboard-sidebar"
-      aria-label="التنقل الرئيسي"
+      aria-label={dt("التنقل الرئيسي")}
       className={cn(
         'fixed top-0 z-40 h-full w-[268px] flex flex-col transition-transform duration-300 ease-out',
         'bg-white border-slate-200',
@@ -105,7 +106,7 @@ export function DashboardSidebar({
         <button
           type="button"
           onClick={onClose}
-          aria-label="إغلاق القائمة"
+          aria-label={dt("إغلاق القائمة")}
           className="lg:hidden w-8 h-8 flex items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100"
         >
           <X className="w-4 h-4" />
@@ -120,7 +121,7 @@ export function DashboardSidebar({
           className="w-full flex items-center gap-2 px-3 h-9 rounded-lg border border-slate-200 bg-slate-50 text-slate-500 text-[13px] hover:bg-slate-100 hover:border-slate-300 transition-colors"
         >
           <Search className="w-3.5 h-3.5 shrink-0" />
-          <span className="flex-1 text-start">بحث سريع…</span>
+          <span className="flex-1 text-start">{dt("بحث سريع…")}</span>
           <kbd className="hidden sm:inline-flex items-center gap-0.5 px-1.5 h-5 rounded border border-slate-300 bg-white text-[10px] font-sans text-slate-400">
             Ctrl K
           </kbd>
@@ -145,7 +146,7 @@ export function DashboardSidebar({
               >
                 <span className="truncate">{section.group}</span>
                 <span className="flex items-center gap-1.5 shrink-0">
-                  {groupCount > 0 && <NavCountBadge count={groupCount} label="عنصر غير مقروء" />}
+                  {groupCount > 0 && <NavCountBadge count={groupCount} label={dt("عنصر غير مقروء")} />}
                   <ChevronDown className={cn('w-3.5 h-3.5 transition-transform', collapsed && '-rotate-90')} />
                 </span>
               </button>
@@ -196,7 +197,7 @@ export function DashboardSidebar({
                             {item.title}
                           </span>
                         </span>
-                        {count > 0 && <NavCountBadge count={count} label="رسالة غير مقروءة" />}
+                        {count > 0 && <NavCountBadge count={count} label={dt("رسالة غير مقروءة")} />}
                       </Link>
                     );
                   })}
@@ -228,10 +229,10 @@ export function DashboardSidebar({
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem asChild>
-              <Link href="/" target="_blank" className="cursor-pointer">عرض الموقع</Link>
+              <Link href="/" target="_blank" className="cursor-pointer">{dt("عرض الموقع")}</Link>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
-              <Link href="/dashboard/users/team" className="cursor-pointer">الفريق والصلاحيات</Link>
+              <Link href="/dashboard/users/team" className="cursor-pointer">{dt("الفريق والصلاحيات")}</Link>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem
@@ -239,8 +240,7 @@ export function DashboardSidebar({
               className="cursor-pointer text-red-600 focus:text-red-600"
             >
               <LogOut className="w-4 h-4" />
-              تسجيل الخروج
-            </DropdownMenuItem>
+              {dt("تسجيل الخروج")}</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>

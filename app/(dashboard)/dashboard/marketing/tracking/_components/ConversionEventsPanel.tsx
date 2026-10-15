@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { dashDir, dashIntl, dt, dtx } from "@/lib/dashboard/i18n";
 
 type ConversionEventRow = {
   _id?: { $oid?: string } | string;
@@ -56,7 +57,7 @@ function rawDate(value: ConversionEventRow["createdAt"] | ConversionEventRow["se
 function renderDate(value: ConversionEventRow["createdAt"]) {
   const d = rawDate(value);
   if (!d) return "—";
-  return d.toLocaleString("ar", { dateStyle: "short", timeStyle: "short" });
+  return d.toLocaleString(dashIntl("ar"), { dateStyle: "short", timeStyle: "short" });
 }
 
 function rowKey(row: ConversionEventRow, index: number) {
@@ -65,17 +66,17 @@ function rowKey(row: ConversionEventRow, index: number) {
 }
 
 function sourceLabel(source: string | null) {
-  if (source === "ConversionEvent") return "المصدر الأساسي: ConversionEvent";
-  if (source === "auditLogFallback") return "المصدر الاحتياطي: auditLog";
-  return "المصدر: غير محدد";
+  if (source === "ConversionEvent") return dt("المصدر الأساسي: ConversionEvent");
+  if (source === "auditLogFallback") return dt("المصدر الاحتياطي: auditLog");
+  return dt("المصدر: غير محدد");
 }
 
 function statusLabel(status?: string) {
-  if (status === "SENT") return "تم الإرسال";
-  if (status === "FAILED") return "فشل";
-  if (status === "SKIPPED") return "تم التخطي";
-  if (status === "PENDING") return "قيد الانتظار";
-  return status || "غير محدد";
+  if (status === "SENT") return dt("تم الإرسال");
+  if (status === "FAILED") return dt("فشل");
+  if (status === "SKIPPED") return dt("تم التخطي");
+  if (status === "PENDING") return dt("قيد الانتظار");
+  return status || dt("غير محدد");
 }
 
 function statusClass(status?: string) {
@@ -98,7 +99,7 @@ function timelineHref(donationId: string) {
 function groupByDonation(events: ConversionEventRow[]): DonationTimeline[] {
   const groups = new Map<string, ConversionEventRow[]>();
   events.forEach((event, index) => {
-    const key = event.donationId?.trim() || `بدون تبرع #${index + 1}`;
+    const key = event.donationId?.trim() || dt("بدون تبرع #{0}", [index + 1]);
     const current = groups.get(key) ?? [];
     current.push(event);
     groups.set(key, current);
@@ -170,7 +171,7 @@ export default function ConversionEventsPanel({ canRetry = false }: { canRetry?:
       setRawTotal(data.rawTotal || data.total || 0);
       setSource(data.source || null);
     } catch {
-      toast.error("تعذر تحميل أحداث التحويل");
+      toast.error(dt("تعذر تحميل أحداث التحويل"));
       setEvents([]);
       setTotal(0);
       setRawTotal(0);
@@ -193,12 +194,12 @@ export default function ConversionEventsPanel({ canRetry = false }: { canRetry?:
       });
       const data = (await res.json().catch(() => ({}))) as { ok?: boolean; result?: { ok?: boolean; skipped?: boolean; reason?: string; error?: string } };
       if (!res.ok || data.ok === false) throw new Error(data.result?.error || "retry failed");
-      if (data.result?.ok) toast.success("تمت إعادة إرسال التحويل بنجاح");
-      else if (data.result?.skipped) toast(`تمت المحاولة لكن تم التخطي: ${data.result.reason ?? "غير محدد"}`);
-      else toast.error(`فشلت إعادة المحاولة: ${data.result?.error ?? data.result?.reason ?? "غير محدد"}`);
+      if (data.result?.ok) toast.success(dt("تمت إعادة إرسال التحويل بنجاح"));
+      else if (data.result?.skipped) toast(dt("تمت المحاولة لكن تم التخطي: {0}", [data.result.reason ?? dt("غير محدد")]));
+      else toast.error(dt("فشلت إعادة المحاولة: {0}", [data.result?.error ?? data.result?.reason ?? dt("غير محدد")]));
       await load();
     } catch {
-      toast.error("فشلت إعادة محاولة التحويل");
+      toast.error(dt("فشلت إعادة محاولة التحويل"));
     } finally {
       setRetryingDonationId(null);
     }
@@ -211,51 +212,51 @@ export default function ConversionEventsPanel({ canRetry = false }: { canRetry?:
     return acc;
   }, {}), [events]);
 
-  return <div className="space-y-5 p-4 sm:p-6" dir="rtl">
+  return <div className="space-y-5 p-4 sm:p-6" dir={dashDir()}>
     <div className="flex flex-wrap items-start justify-between gap-3">
       <div>
-        <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">أحداث التحويل</h1>
-        <p className="mt-1 text-sm text-slate-500">سجل ConversionEvent الموحد لفحص إرسال التحويلات حسب المنصة والقناة والحالة، مع Timeline لكل تبرع.</p>
+        <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">{dt("أحداث التحويل")}</h1>
+        <p className="mt-1 text-sm text-slate-500">{dt("سجل ConversionEvent الموحد لفحص إرسال التحويلات حسب المنصة والقناة والحالة، مع Timeline لكل تبرع.")}</p>
       </div>
-      <Button onClick={load} variant="outline" className="gap-2"><RefreshCw className="h-4 w-4" />تحديث</Button>
+      <Button onClick={load} variant="outline" className="gap-2"><RefreshCw className="h-4 w-4" />{dt("تحديث")}</Button>
     </div>
 
     <Card>
       <CardHeader>
-        <CardTitle>الفلاتر</CardTitle>
-        <CardDescription>اعرض آخر أحداث التحويل أو ابحث برقم التبرع أو event id أو الخطأ.</CardDescription>
+        <CardTitle>{dt("الفلاتر")}</CardTitle>
+        <CardDescription>{dt("اعرض آخر أحداث التحويل أو ابحث برقم التبرع أو event id أو الخطأ.")}</CardDescription>
       </CardHeader>
       <CardContent className="grid grid-cols-1 gap-3 md:grid-cols-6">
-        <Select value={platform} onValueChange={setPlatform}><SelectTrigger><SelectValue placeholder="المنصة" /></SelectTrigger><SelectContent><SelectItem value="all">كل المنصات</SelectItem><SelectItem value="META">Meta</SelectItem><SelectItem value="GA4">GA4</SelectItem><SelectItem value="GOOGLE_ADS">Google Ads</SelectItem><SelectItem value="TIKTOK">TikTok</SelectItem><SelectItem value="X">X</SelectItem><SelectItem value="VERCEL">Vercel</SelectItem></SelectContent></Select>
-        <Select value={channel} onValueChange={setChannel}><SelectTrigger><SelectValue placeholder="القناة" /></SelectTrigger><SelectContent><SelectItem value="all">كل القنوات</SelectItem><SelectItem value="server">Server</SelectItem><SelectItem value="browser">Browser</SelectItem></SelectContent></Select>
-        <Select value={status} onValueChange={setStatus}><SelectTrigger><SelectValue placeholder="الحالة" /></SelectTrigger><SelectContent><SelectItem value="all">كل الحالات</SelectItem><SelectItem value="SENT">SENT</SelectItem><SelectItem value="FAILED">FAILED</SelectItem><SelectItem value="SKIPPED">SKIPPED</SelectItem><SelectItem value="PENDING">PENDING</SelectItem></SelectContent></Select>
-        <Select value={days} onValueChange={setDays}><SelectTrigger><SelectValue placeholder="الفترة" /></SelectTrigger><SelectContent><SelectItem value="1">آخر يوم</SelectItem><SelectItem value="7">آخر 7 أيام</SelectItem><SelectItem value="30">آخر 30 يوم</SelectItem><SelectItem value="90">آخر 90 يوم</SelectItem></SelectContent></Select>
-        <Select value={view} onValueChange={(value) => setView(value as "timeline" | "table")}><SelectTrigger><SelectValue placeholder="العرض" /></SelectTrigger><SelectContent><SelectItem value="timeline">Timeline التبرع</SelectItem><SelectItem value="table">جدول فني</SelectItem></SelectContent></Select>
-        <div className="relative"><Search className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" /><Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="بحث..." className="pr-9" /></div>
+        <Select value={platform} onValueChange={setPlatform}><SelectTrigger><SelectValue placeholder={dt("المنصة")} /></SelectTrigger><SelectContent><SelectItem value="all">{dt("كل المنصات")}</SelectItem><SelectItem value="META">Meta</SelectItem><SelectItem value="GA4">GA4</SelectItem><SelectItem value="GOOGLE_ADS">Google Ads</SelectItem><SelectItem value="TIKTOK">TikTok</SelectItem><SelectItem value="X">X</SelectItem><SelectItem value="VERCEL">Vercel</SelectItem></SelectContent></Select>
+        <Select value={channel} onValueChange={setChannel}><SelectTrigger><SelectValue placeholder={dt("القناة")} /></SelectTrigger><SelectContent><SelectItem value="all">{dt("كل القنوات")}</SelectItem><SelectItem value="server">Server</SelectItem><SelectItem value="browser">Browser</SelectItem></SelectContent></Select>
+        <Select value={status} onValueChange={setStatus}><SelectTrigger><SelectValue placeholder={dt("الحالة")} /></SelectTrigger><SelectContent><SelectItem value="all">{dt("كل الحالات")}</SelectItem><SelectItem value="SENT">SENT</SelectItem><SelectItem value="FAILED">FAILED</SelectItem><SelectItem value="SKIPPED">SKIPPED</SelectItem><SelectItem value="PENDING">PENDING</SelectItem></SelectContent></Select>
+        <Select value={days} onValueChange={setDays}><SelectTrigger><SelectValue placeholder={dt("الفترة")} /></SelectTrigger><SelectContent><SelectItem value="1">{dt("آخر يوم")}</SelectItem><SelectItem value="7">{dt("آخر 7 أيام")}</SelectItem><SelectItem value="30">{dt("آخر 30 يوم")}</SelectItem><SelectItem value="90">{dt("آخر 90 يوم")}</SelectItem></SelectContent></Select>
+        <Select value={view} onValueChange={(value) => setView(value as "timeline" | "table")}><SelectTrigger><SelectValue placeholder={dt("العرض")} /></SelectTrigger><SelectContent><SelectItem value="timeline">{dt("Timeline التبرع")}</SelectItem><SelectItem value="table">{dt("جدول فني")}</SelectItem></SelectContent></Select>
+        <div className="relative"><Search className="pointer-events-none absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" /><Input value={q} onChange={(e) => setQ(e.target.value)} placeholder={dt("بحث...")} className="ps-9" /></div>
       </CardContent>
     </Card>
 
     <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
-      <Card><CardContent className="p-4"><div className="text-xs text-slate-500">إجمالي الأحداث</div><div className="mt-1 text-2xl font-black">{total}</div></CardContent></Card>
-      <Card><CardContent className="p-4"><div className="text-xs text-slate-500">تبرعات لها Timeline</div><div className="mt-1 text-2xl font-black">{timelines.length}</div></CardContent></Card>
-      <Card><CardContent className="p-4"><div className="text-xs text-slate-500">تم الإرسال</div><div className="mt-1 text-2xl font-black text-emerald-700">{statusCounts.SENT || 0}</div></CardContent></Card>
-      <Card><CardContent className="p-4"><div className="text-xs text-slate-500">فشل / تخطي</div><div className="mt-1 text-2xl font-black text-rose-700">{(statusCounts.FAILED || 0) + (statusCounts.SKIPPED || 0)}</div></CardContent></Card>
+      <Card><CardContent className="p-4"><div className="text-xs text-slate-500">{dt("إجمالي الأحداث")}</div><div className="mt-1 text-2xl font-black">{total}</div></CardContent></Card>
+      <Card><CardContent className="p-4"><div className="text-xs text-slate-500">{dt("تبرعات لها Timeline")}</div><div className="mt-1 text-2xl font-black">{timelines.length}</div></CardContent></Card>
+      <Card><CardContent className="p-4"><div className="text-xs text-slate-500">{dt("تم الإرسال")}</div><div className="mt-1 text-2xl font-black text-emerald-700">{statusCounts.SENT || 0}</div></CardContent></Card>
+      <Card><CardContent className="p-4"><div className="text-xs text-slate-500">{dt("فشل / تخطي")}</div><div className="mt-1 text-2xl font-black text-rose-700">{(statusCounts.FAILED || 0) + (statusCounts.SKIPPED || 0)}</div></CardContent></Card>
     </div>
 
     <Card>
       <CardHeader>
-        <CardTitle>{view === "timeline" ? "Timeline التبرعات" : "السجل الفني"}</CardTitle>
+        <CardTitle>{view === "timeline" ? dt("Timeline التبرعات") : dt("السجل الفني")}</CardTitle>
         <CardDescription>
-          إجمالي مطابق للفلاتر: {total}
-          {rawTotal > total ? ` من أصل ${rawTotal} سجل خام بعد الدمج` : ""}
+          {dtx("إجمالي مطابق للفلاتر: {0}", [total])}
+          {rawTotal > total ? dt(" من أصل {0} سجل خام بعد الدمج", [rawTotal]) : ""}
           {source ? `  ${sourceLabel(source)}` : ""}
         </CardDescription>
       </CardHeader>
       <CardContent>
-        {source === "auditLogFallback" ? <div className="mb-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">هذه النتائج من سجل التدقيق الاحتياطي. الأحداث الجديدة بعد آخر تحديث يجب أن تظهر من المصدر الأساسي ConversionEvent.</div> : null}
-        {source === "ConversionEvent" ? <div className="mb-3 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">النتائج الحالية من المصدر الأساسي ConversionEvent.</div> : null}
+        {source === "auditLogFallback" ? <div className="mb-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">{dt("هذه النتائج من سجل التدقيق الاحتياطي. الأحداث الجديدة بعد آخر تحديث يجب أن تظهر من المصدر الأساسي ConversionEvent.")}</div> : null}
+        {source === "ConversionEvent" ? <div className="mb-3 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">{dt("النتائج الحالية من المصدر الأساسي ConversionEvent.")}</div> : null}
         {loading ? <div className="flex min-h-[18rem] items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-brand" /></div> : view === "timeline" ? <div className="space-y-3">
-          {timelines.length === 0 ? <EmptyState icon={Activity} title="لا توجد أحداث مطابقة" description="لا يوجد حدث تحويل يطابق التصفية الحالية. جرّب توسيع النطاق الزمني أو تغيير نوع الحدث." /> :timelines.map((timeline) => <div key={timeline.key} className="rounded-xl border bg-white p-4">
+          {timelines.length === 0 ? <EmptyState icon={Activity} title={dt("لا توجد أحداث مطابقة")} description={dt("لا يوجد حدث تحويل يطابق التصفية الحالية. جرّب توسيع النطاق الزمني أو تغيير نوع الحدث.")} /> :timelines.map((timeline) => <div key={timeline.key} className="rounded-xl border bg-white p-4">
             <div className="flex flex-wrap items-start justify-between gap-3 border-b pb-3">
               <div>
                 <div className="text-xs text-slate-500">Donation ID</div>
@@ -264,11 +265,10 @@ export default function ConversionEventsPanel({ canRetry = false }: { canRetry?:
               <div className="text-sm text-slate-600">{timeline.amountLabel}</div>
               <div className="text-sm text-slate-600">{timeline.platforms.length ? timeline.platforms.join(" · ") : "—"}</div>
               <div className="text-xs text-slate-500">{statusSummary(timeline.statuses)}</div>
-              {timeline.donationId !== "—" ? <Link href={timelineHref(timeline.donationId)} className="inline-flex items-center rounded-md border px-3 py-2 text-xs font-bold text-brand hover:bg-slate-50">فتح Timeline</Link> : null}
+              {timeline.donationId !== "—" ? <Link href={timelineHref(timeline.donationId)} className="inline-flex items-center rounded-md border px-3 py-2 text-xs font-bold text-brand hover:bg-slate-50">{dt("فتح Timeline")}</Link> : null}
 {canRetry ? <Button size="sm" variant="outline" disabled={!timeline.canRetry || retryingDonationId === timeline.donationId} onClick={() => retryDonation(timeline.donationId)} className="gap-2">
                 {retryingDonationId === timeline.donationId ? <Loader2 className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-3 w-3" />}
-                إعادة المحاولة
-              </Button> : null}
+                {dt("إعادة المحاولة")}</Button> : null}
             </div>
             <div className="mt-3 space-y-2">
               {timeline.events.map((row, index) => <div key={rowKey(row, index)} className="grid grid-cols-1 gap-2 rounded-lg bg-slate-50 px-3 py-2 text-sm md:grid-cols-[9rem_7rem_7rem_1fr_8rem_1fr]">
@@ -285,21 +285,21 @@ export default function ConversionEventsPanel({ canRetry = false }: { canRetry?:
           <table className="w-full text-sm">
             <thead className="bg-slate-50 text-xs text-slate-500">
               <tr>
-                <th className="px-3 py-2 text-right">التاريخ</th>
-                <th className="px-3 py-2 text-right">المنصة</th>
-                <th className="px-3 py-2 text-right">القناة</th>
-                <th className="px-3 py-2 text-right">الحدث</th>
-                <th className="px-3 py-2 text-right">الحالة</th>
-                <th className="px-3 py-2 text-right">المبلغ</th>
-                <th className="px-3 py-2 text-right">محاولات</th>
-                <th className="px-3 py-2 text-right">Donation ID</th>
-                <th className="px-3 py-2 text-right">Event ID</th>
-                <th className="px-3 py-2 text-right">خطأ</th>
-                <th className="px-3 py-2 text-right">Timeline</th>
+                <th className="px-3 py-2 text-start">{dt("التاريخ")}</th>
+                <th className="px-3 py-2 text-start">{dt("المنصة")}</th>
+                <th className="px-3 py-2 text-start">{dt("القناة")}</th>
+                <th className="px-3 py-2 text-start">{dt("الحدث")}</th>
+                <th className="px-3 py-2 text-start">{dt("الحالة")}</th>
+                <th className="px-3 py-2 text-start">{dt("المبلغ")}</th>
+                <th className="px-3 py-2 text-start">{dt("محاولات")}</th>
+                <th className="px-3 py-2 text-start">Donation ID</th>
+                <th className="px-3 py-2 text-start">Event ID</th>
+                <th className="px-3 py-2 text-start">{dt("خطأ")}</th>
+                <th className="px-3 py-2 text-start">Timeline</th>
               </tr>
             </thead>
             <tbody>
-              {events.length === 0 ? <tr><td colSpan={11} className="p-0"><EmptyState variant="inline" icon={Activity} title="لا توجد أحداث مطابقة" description="لا يوجد حدث تحويل يطابق التصفية الحالية." /></td></tr> :events.map((row, index) => <tr key={rowKey(row, index)} className="border-t">
+              {events.length === 0 ? <tr><td colSpan={11} className="p-0"><EmptyState variant="inline" icon={Activity} title={dt("لا توجد أحداث مطابقة")} description={dt("لا يوجد حدث تحويل يطابق التصفية الحالية.")} /></td></tr> :events.map((row, index) => <tr key={rowKey(row, index)} className="border-t">
                 <td className="whitespace-nowrap px-3 py-2">{renderDate(row.createdAt)}</td>
                 <td className="px-3 py-2 font-semibold">{row.platform ?? "—"}</td>
                 <td className="px-3 py-2">{row.channel ?? "—"}</td>
@@ -310,7 +310,7 @@ export default function ConversionEventsPanel({ canRetry = false }: { canRetry?:
                 <td className="max-w-[13rem] truncate px-3 py-2 font-mono text-xs">{row.donationId ?? "—"}</td>
                 <td className="max-w-[16rem] truncate px-3 py-2 font-mono text-xs">{row.eventId ?? "—"}</td>
                 <td className="max-w-[20rem] truncate px-3 py-2 text-xs text-rose-700">{row.error ?? "—"}</td>
-                <td className="px-3 py-2">{row.donationId ? <Link href={timelineHref(row.donationId)} className="text-xs font-bold text-brand hover:underline">فتح</Link> : "—"}</td>
+                <td className="px-3 py-2">{row.donationId ? <Link href={timelineHref(row.donationId)} className="text-xs font-bold text-brand hover:underline">{dt("فتح")}</Link> : "—"}</td>
               </tr>)}
             </tbody>
           </table>

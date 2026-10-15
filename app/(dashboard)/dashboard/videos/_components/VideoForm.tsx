@@ -22,18 +22,19 @@ import {
   type TranslationField,
   type TranslationMap,
 } from '../../_components/ContentTranslationTabs';
+import { dt, dtx } from "@/lib/dashboard/i18n";
 
 /** Videos translate their title only. */
 export const VIDEO_TRANSLATION_FIELDS: readonly TranslationField[] = [
-  { name: 'title', label: 'العنوان' },
+  { name: 'title', get label() { return dt("العنوان"); } },
 ];
 
 /** Mirrors the VideoType enum; the label is what the section is called on the site. */
 export const VIDEO_TYPE_LABELS: Record<string, string> = {
-  ACHIEVEMENT: 'إنجازاتنا',
-  ENDORSEMENT: 'تزكياتنا',
-  FIELD: 'من الميدان',
-  EVENT: 'فعالياتنا',
+  get ACHIEVEMENT() { return dt("إنجازاتنا"); },
+  get ENDORSEMENT() { return dt("تزكياتنا"); },
+  get FIELD() { return dt("من الميدان"); },
+  get EVENT() { return dt("فعالياتنا"); },
 };
 
 export interface VideoFormValues {
@@ -109,7 +110,7 @@ export function VideoForm({
       const res = await axios.post('/api/upload', fd);
       set('thumbnail', res.data.url);
     } catch (err) {
-      toast.error(errorMessage(err, 'تعذّر رفع الصورة'));
+      toast.error(errorMessage(err, dt("تعذّر رفع الصورة")));
     } finally {
       setUploading(false);
       e.target.value = '';
@@ -118,12 +119,12 @@ export function VideoForm({
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!values.title.trim()) return toast.error('العنوان بالعربية مطلوب');
-    if (!values.slug.trim()) return toast.error('المعرّف (slug) مطلوب');
+    if (!values.title.trim()) return toast.error(dt("العنوان بالعربية مطلوب"));
+    if (!values.slug.trim()) return toast.error(dt("المعرّف (slug) مطلوب"));
     /* Matches the API rule: a video with neither an id nor a URL renders as an
        empty frame, so catch it here before a round trip. */
     if (!values.youtubeId.trim() && !values.url.trim()) {
-      return toast.error('أدخل معرّف يوتيوب أو رابط الفيديو');
+      return toast.error(dt("أدخل معرّف يوتيوب أو رابط الفيديو"));
     }
 
     setSaving(true);
@@ -145,15 +146,15 @@ export function VideoForm({
 
       if (mode === 'create') {
         await axios.post('/api/videos', payload);
-        toast.success('تم إنشاء الفيديو');
+        toast.success(dt("تم إنشاء الفيديو"));
       } else {
         await axios.put(`/api/videos/${videoId}`, payload);
-        toast.success('تم حفظ الفيديو');
+        toast.success(dt("تم حفظ الفيديو"));
       }
       router.push('/dashboard/videos');
       router.refresh();
     } catch (err) {
-      toast.error(errorMessage(err, mode === 'create' ? 'فشل في الإنشاء' : 'فشل في الحفظ'));
+      toast.error(errorMessage(err, mode === 'create' ? dt("فشل في الإنشاء") : dt("فشل في الحفظ")));
     } finally {
       setSaving(false);
     }
@@ -165,25 +166,24 @@ export function VideoForm({
     <form onSubmit={onSubmit} className="space-y-4">
       <div className="flex items-center gap-3">
         <Button type="button" variant="ghost" size="sm" onClick={() => router.push('/dashboard/videos')}>
-          <ArrowRight className="w-4 h-4 ml-1" />
-          رجوع
-        </Button>
-        <h1 className="text-lg font-bold">{mode === 'create' ? 'فيديو جديد' : 'تعديل الفيديو'}</h1>
+          <ArrowRight className="w-4 h-4 me-1" />
+          {dt("رجوع")}</Button>
+        <h1 className="text-lg font-bold">{mode === 'create' ? dt("فيديو جديد") : dt("تعديل الفيديو")}</h1>
       </div>
 
       <Card className="p-4 space-y-4">
         <div className="grid gap-4 md:grid-cols-2">
           <label className="space-y-1.5">
-            <span className="text-xs font-semibold text-slate-600">العنوان (بالعربية) *</span>
+            <span className="text-xs font-semibold text-slate-600">{dt("العنوان (بالعربية) *")}</span>
             <Input value={values.title} onChange={(e) => set('title', e.target.value)} />
           </label>
           <label className="space-y-1.5">
-            <span className="text-xs font-semibold text-slate-600">المعرّف (slug) *</span>
+            <span className="text-xs font-semibold text-slate-600">{dt("المعرّف (slug) *")}</span>
             <Input dir="ltr" value={values.slug} onChange={(e) => set('slug', e.target.value)} />
           </label>
 
           <div className="space-y-1.5">
-            <span className="text-xs font-semibold text-slate-600">القسم *</span>
+            <span className="text-xs font-semibold text-slate-600">{dt("القسم *")}</span>
             <Select value={values.type} onValueChange={(v) => set('type', v)}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
@@ -195,7 +195,7 @@ export function VideoForm({
           </div>
 
           <label className="space-y-1.5">
-            <span className="text-xs font-semibold text-slate-600">مفتاح المنطقة</span>
+            <span className="text-xs font-semibold text-slate-600">{dt("مفتاح المنطقة")}</span>
             <Input
               dir="ltr"
               placeholder="gaza"
@@ -205,7 +205,7 @@ export function VideoForm({
           </label>
 
           <label className="space-y-1.5">
-            <span className="text-xs font-semibold text-slate-600">معرّف يوتيوب</span>
+            <span className="text-xs font-semibold text-slate-600">{dt("معرّف يوتيوب")}</span>
             <Input
               dir="ltr"
               placeholder="dQw4w9WgXcQ"
@@ -214,7 +214,7 @@ export function VideoForm({
             />
           </label>
           <label className="space-y-1.5">
-            <span className="text-xs font-semibold text-slate-600">رابط الفيديو</span>
+            <span className="text-xs font-semibold text-slate-600">{dt("رابط الفيديو")}</span>
             <Input
               dir="ltr"
               placeholder="https://youtu.be/..."
@@ -223,7 +223,7 @@ export function VideoForm({
             />
           </label>
           <label className="space-y-1.5">
-            <span className="text-xs font-semibold text-slate-600">يبدأ من (ثانية)</span>
+            <span className="text-xs font-semibold text-slate-600">{dt("يبدأ من (ثانية)")}</span>
             <Input
               dir="ltr"
               type="number"
@@ -235,11 +235,10 @@ export function VideoForm({
         </div>
 
         <p className="text-xs text-slate-500">
-          أدخل معرّف يوتيوب أو رابطًا  أحدهما مطلوب على الأقل.
-        </p>
+          {dt("أدخل معرّف يوتيوب أو رابطًا  أحدهما مطلوب على الأقل.")}</p>
 
         <div className="space-y-1.5">
-          <span className="text-xs font-semibold text-slate-600">صورة مصغّرة</span>
+          <span className="text-xs font-semibold text-slate-600">{dt("صورة مصغّرة")}</span>
           {values.thumbnail ? (
             <div className="relative w-40">
               {/* Sources include Drive thumbnails and YouTube stills, which
@@ -249,7 +248,7 @@ export function VideoForm({
               <button
                 type="button"
                 onClick={() => set('thumbnail', '')}
-                className="absolute top-1 right-1 p-1 bg-red-500 text-white rounded"
+                className="absolute top-1 start-1 p-1 bg-red-500 text-white rounded"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -257,17 +256,16 @@ export function VideoForm({
           ) : (
             <label className="flex items-center gap-2 w-fit px-3 py-2 border rounded-lg cursor-pointer hover:bg-slate-50">
               {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
-              <span className="text-sm">رفع صورة</span>
+              <span className="text-sm">{dt("رفع صورة")}</span>
               <input type="file" accept="image/*" className="hidden" onChange={uploadThumb} />
             </label>
           )}
         </div>
 
         <div className="space-y-1.5">
-          <span className="text-xs font-semibold text-slate-600">اللغات التي يظهر فيها</span>
+          <span className="text-xs font-semibold text-slate-600">{dt("اللغات التي يظهر فيها")}</span>
           <p className="text-xs text-slate-500">
-            اتركها فارغة ليظهر في كل اللغات. حدّد لغات لقصره عليها  مثل التزكيات التركية.
-          </p>
+            {dt("اتركها فارغة ليظهر في كل اللغات. حدّد لغات لقصره عليها  مثل التزكيات التركية.")}</p>
           <div className="flex flex-wrap gap-1.5 pt-1">
             {SUPPORTED_LOCALES.map((locale) => {
               const on = values.localeFilter.includes(locale);
@@ -292,19 +290,19 @@ export function VideoForm({
         <div className="flex flex-wrap items-center gap-6">
           <label className="flex items-center gap-2">
             <Switch checked={values.showOnHome} onCheckedChange={(v) => set('showOnHome', v)} />
-            <span className="text-sm">يظهر في الصفحة الرئيسية</span>
+            <span className="text-sm">{dt("يظهر في الصفحة الرئيسية")}</span>
           </label>
           <label className="flex items-center gap-2">
             <Switch checked={values.isActive} onCheckedChange={(v) => set('isActive', v)} />
-            <span className="text-sm">مفعّل</span>
+            <span className="text-sm">{dt("مفعّل")}</span>
           </label>
         </div>
       </Card>
 
       <Card className="p-4 space-y-3">
         <div className="flex items-center justify-between">
-          <h2 className="text-sm font-bold">الترجمات</h2>
-          <span className="text-xs text-slate-500">{translated} لغة مترجمة</span>
+          <h2 className="text-sm font-bold">{dt("الترجمات")}</h2>
+          <span className="text-xs text-slate-500">{dtx("{0} لغة مترجمة", [translated])}</span>
         </div>
         <ContentTranslationTabs
           fields={VIDEO_TRANSLATION_FIELDS}
@@ -318,12 +316,11 @@ export function VideoForm({
 
       <div className="flex gap-2">
         <Button type="submit" disabled={saving}>
-          {saving && <Loader2 className="w-4 h-4 animate-spin ml-2" />}
-          {mode === 'create' ? 'إنشاء' : 'حفظ'}
+          {saving && <Loader2 className="w-4 h-4 animate-spin me-2" />}
+          {mode === 'create' ? dt("إنشاء") : dt("حفظ")}
         </Button>
         <Button type="button" variant="outline" onClick={() => router.push('/dashboard/videos')}>
-          إلغاء
-        </Button>
+          {dt("إلغاء")}</Button>
       </div>
     </form>
   );

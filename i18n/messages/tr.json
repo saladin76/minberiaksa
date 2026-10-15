@@ -3493,5 +3493,14 @@
     "chooseFirst": "Önce bağış şeklinizi seçin",
     "otherAmount": "Diğer",
     "otherCount": "Diğer"
+  },
+  "CategoryLanding": {
+    "heroLead": "{org} — {name} projeleri.",
+    "ctaLabel": "Projelere göz at",
+    "projectsTitle": "{name} Projeleri",
+    "donateTitle": "Destek Ol: {name}",
+    "achievementsTitle": "Başarılarımız: {name}",
+    "statDoneLabel": "Tamamlanan",
+    "statGoalLabel": "Hedef"
   }
 }

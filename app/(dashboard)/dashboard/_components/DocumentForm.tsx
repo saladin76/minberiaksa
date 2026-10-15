@@ -20,6 +20,7 @@ import {
   type TranslationField,
   type TranslationMap,
 } from './ContentTranslationTabs';
+import { dt, dtx } from "@/lib/dashboard/i18n";
 
 /**
  * The shared editor for the two document sections, reports and booklets.
@@ -30,8 +31,8 @@ import {
  */
 
 export const DOCUMENT_TRANSLATION_FIELDS: readonly TranslationField[] = [
-  { name: 'title', label: 'العنوان' },
-  { name: 'description', label: 'الوصف', multiline: true },
+  { name: 'title', get label() { return dt("العنوان"); } },
+  { name: 'description', get label() { return dt("الوصف"); }, multiline: true },
 ];
 
 export interface DocumentFormValues {
@@ -110,7 +111,7 @@ export function DocumentForm({
       const res = await axios.post('/api/upload', fd);
       set('coverImage', res.data.url);
     } catch (err) {
-      toast.error(errorMessage(err, 'تعذّر رفع الصورة'));
+      toast.error(errorMessage(err, dt("تعذّر رفع الصورة")));
     } finally {
       setUploadingCover(false);
       e.target.value = '';
@@ -134,9 +135,9 @@ export function DocumentForm({
       fd.append('file', file);
       const res = await axios.post('/api/upload/document', fd);
       set('fileUrl', res.data.url);
-      toast.success('تم رفع الملف');
+      toast.success(dt("تم رفع الملف"));
     } catch (err) {
-      toast.error(errorMessage(err, 'تعذّر رفع الملف'));
+      toast.error(errorMessage(err, dt("تعذّر رفع الملف")));
     } finally {
       setUploadingFile(false);
       e.target.value = '';
@@ -145,9 +146,9 @@ export function DocumentForm({
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!values.title.trim()) return toast.error('العنوان بالعربية مطلوب');
-    if (!values.slug.trim()) return toast.error('المعرّف (slug) مطلوب');
-    if (!values.fileUrl.trim()) return toast.error('ملف PDF مطلوب');
+    if (!values.title.trim()) return toast.error(dt("العنوان بالعربية مطلوب"));
+    if (!values.slug.trim()) return toast.error(dt("المعرّف (slug) مطلوب"));
+    if (!values.fileUrl.trim()) return toast.error(dt("ملف PDF مطلوب"));
 
     setSaving(true);
     try {
@@ -164,15 +165,15 @@ export function DocumentForm({
 
       if (mode === 'create') {
         await axios.post(copy.endpoint, payload);
-        toast.success(`تم إنشاء ${copy.singular}`);
+        toast.success(dt("تم إنشاء {0}", [copy.singular]));
       } else {
         await axios.put(`${copy.endpoint}/${documentId}`, payload);
-        toast.success(`تم حفظ ${copy.singular}`);
+        toast.success(dt("تم حفظ {0}", [copy.singular]));
       }
       router.push(copy.basePath);
       router.refresh();
     } catch (err) {
-      toast.error(errorMessage(err, mode === 'create' ? 'فشل في الإنشاء' : 'فشل في الحفظ'));
+      toast.error(errorMessage(err, mode === 'create' ? dt("فشل في الإنشاء") : dt("فشل في الحفظ")));
     } finally {
       setSaving(false);
     }
@@ -184,33 +185,32 @@ export function DocumentForm({
     <form onSubmit={onSubmit} className="space-y-4">
       <div className="flex items-center gap-3">
         <Button type="button" variant="ghost" size="sm" onClick={() => router.push(copy.basePath)}>
-          <ArrowRight className="w-4 h-4 ml-1" />
-          رجوع
-        </Button>
+          <ArrowRight className="w-4 h-4 me-1" />
+          {dt("رجوع")}</Button>
         <h1 className="text-lg font-bold">
-          {mode === 'create' ? `${copy.singular} جديد` : `تعديل ${copy.singular}`}
+          {mode === 'create' ? dt("{0} جديد", [copy.singular]) : dt("تعديل {0}", [copy.singular])}
         </h1>
       </div>
 
       <Card className="p-4 space-y-4">
         <div className="grid gap-4 md:grid-cols-2">
           <label className="space-y-1.5">
-            <span className="text-xs font-semibold text-slate-600">العنوان (بالعربية) *</span>
+            <span className="text-xs font-semibold text-slate-600">{dt("العنوان (بالعربية) *")}</span>
             <Input value={values.title} onChange={(e) => set('title', e.target.value)} />
           </label>
           <label className="space-y-1.5">
-            <span className="text-xs font-semibold text-slate-600">المعرّف (slug) *</span>
+            <span className="text-xs font-semibold text-slate-600">{dt("المعرّف (slug) *")}</span>
             <Input dir="ltr" value={values.slug} onChange={(e) => set('slug', e.target.value)} />
           </label>
           {!copy.showYear ? (
             <label className="space-y-1.5">
-              <span className="text-xs font-semibold text-slate-600">المؤلف</span>
+              <span className="text-xs font-semibold text-slate-600">{dt("المؤلف")}</span>
               <Input value={values.author} onChange={(e) => set('author', e.target.value)} />
             </label>
           ) : null}
           {copy.showYear ? (
             <label className="space-y-1.5">
-              <span className="text-xs font-semibold text-slate-600">السنة</span>
+              <span className="text-xs font-semibold text-slate-600">{dt("السنة")}</span>
               <Input
                 dir="ltr"
                 type="number"
@@ -223,7 +223,7 @@ export function DocumentForm({
             </label>
           ) : null}
           <label className="space-y-1.5 md:col-span-2">
-            <span className="text-xs font-semibold text-slate-600">الوصف (بالعربية)</span>
+            <span className="text-xs font-semibold text-slate-600">{dt("الوصف (بالعربية)")}</span>
             <Textarea
               rows={3}
               value={values.description}
@@ -233,7 +233,7 @@ export function DocumentForm({
         </div>
 
         <div className="space-y-1.5">
-          <span className="text-xs font-semibold text-slate-600">ملف PDF *</span>
+          <span className="text-xs font-semibold text-slate-600">{dt("ملف PDF *")}</span>
           {values.fileUrl ? (
             <div className="flex items-center gap-2 rounded-lg border p-2 w-fit">
               <FileText className="w-4 h-4 text-slate-500" />
@@ -258,14 +258,14 @@ export function DocumentForm({
             <div className="space-y-2">
               <label className="flex items-center gap-2 w-fit px-3 py-2 border rounded-lg cursor-pointer hover:bg-slate-50">
                 {uploadingFile ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
-                <span className="text-sm">رفع ملف PDF</span>
+                <span className="text-sm">{dt("رفع ملف PDF")}</span>
                 <input type="file" accept="application/pdf" className="hidden" onChange={uploadFile} />
               </label>
               {/* A URL field alongside the upload: some documents already live
                   on Drive or another host and need no second copy. */}
               <Input
                 dir="ltr"
-                placeholder="أو الصق رابط الملف"
+                placeholder={dt("أو الصق رابط الملف")}
                 value={values.fileUrl}
                 onChange={(e) => set('fileUrl', e.target.value)}
               />
@@ -274,7 +274,7 @@ export function DocumentForm({
         </div>
 
         <div className="space-y-1.5">
-          <span className="text-xs font-semibold text-slate-600">صورة الغلاف</span>
+          <span className="text-xs font-semibold text-slate-600">{dt("صورة الغلاف")}</span>
           {values.coverImage ? (
             <div className="relative w-32">
               {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -282,7 +282,7 @@ export function DocumentForm({
               <button
                 type="button"
                 onClick={() => set('coverImage', '')}
-                className="absolute top-1 right-1 p-1 bg-red-500 text-white rounded"
+                className="absolute top-1 start-1 p-1 bg-red-500 text-white rounded"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -290,7 +290,7 @@ export function DocumentForm({
           ) : (
             <label className="flex items-center gap-2 w-fit px-3 py-2 border rounded-lg cursor-pointer hover:bg-slate-50">
               {uploadingCover ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
-              <span className="text-sm">رفع صورة</span>
+              <span className="text-sm">{dt("رفع صورة")}</span>
               <input type="file" accept="image/*" className="hidden" onChange={uploadCover} />
             </label>
           )}
@@ -298,14 +298,14 @@ export function DocumentForm({
 
         <label className="flex items-center gap-2">
           <Switch checked={values.isPublished} onCheckedChange={(v) => set('isPublished', v)} />
-          <span className="text-sm">منشور</span>
+          <span className="text-sm">{dt("منشور")}</span>
         </label>
       </Card>
 
       <Card className="p-4 space-y-3">
         <div className="flex items-center justify-between">
-          <h2 className="text-sm font-bold">الترجمات</h2>
-          <span className="text-xs text-slate-500">{translated} لغة مترجمة</span>
+          <h2 className="text-sm font-bold">{dt("الترجمات")}</h2>
+          <span className="text-xs text-slate-500">{dtx("{0} لغة مترجمة", [translated])}</span>
         </div>
         <ContentTranslationTabs
           fields={DOCUMENT_TRANSLATION_FIELDS}
@@ -319,12 +319,11 @@ export function DocumentForm({
 
       <div className="flex gap-2">
         <Button type="submit" disabled={saving}>
-          {saving && <Loader2 className="w-4 h-4 animate-spin ml-2" />}
-          {mode === 'create' ? 'إنشاء' : 'حفظ'}
+          {saving && <Loader2 className="w-4 h-4 animate-spin me-2" />}
+          {mode === 'create' ? dt("إنشاء") : dt("حفظ")}
         </Button>
         <Button type="button" variant="outline" onClick={() => router.push(copy.basePath)}>
-          إلغاء
-        </Button>
+          {dt("إلغاء")}</Button>
       </div>
     </form>
   );

@@ -6,6 +6,7 @@ import { toast } from "react-hot-toast";
 import { Button } from "@/components/ui/button";
 import { Loader2, Plus, Pencil, Trash2 } from "lucide-react";
 import { EmailTemplateEditorDialog } from "./EmailTemplateEditorDialog";
+import { dashIntl, dt } from "@/lib/dashboard/i18n";
 
 interface EmailTemplateRow {
   id: string;
@@ -33,7 +34,7 @@ export function EmailTemplateList() {
       const res = await axios.get("/api/templates/email");
       setTemplates(res.data?.templates ?? []);
     } catch {
-      toast.error("فشل في تحميل القوالب");
+      toast.error(dt("فشل في تحميل القوالب"));
     } finally {
       setLoading(false);
     }
@@ -50,43 +51,42 @@ export function EmailTemplateList() {
   });
 
   const handleDelete = async (id: string) => {
-    if (!window.confirm("هل تريد حذف هذا القالب؟")) return;
+    if (!window.confirm(dt("هل تريد حذف هذا القالب؟"))) return;
     try {
       await axios.delete(`/api/templates/email/${id}`);
-      toast.success("تم الحذف");
+      toast.success(dt("تم الحذف"));
       fetchAll();
     } catch {
-      toast.error("فشل الحذف");
+      toast.error(dt("فشل الحذف"));
     }
   };
 
   return (
     <div className="space-y-4">
       <div className="inline-flex rounded-lg border border-slate-200 bg-slate-50 p-1">
-        <button type="button" onClick={() => setSection("CAMPAIGN")} className={`rounded-md px-3 py-1.5 text-xs font-medium ${section === "CAMPAIGN" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500"}`}>الحملات التسويقية</button>
-        <button type="button" onClick={() => setSection("SYSTEM")} className={`rounded-md px-3 py-1.5 text-xs font-medium ${section === "SYSTEM" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500"}`}>التلقائية والتوثيق</button>
+        <button type="button" onClick={() => setSection("CAMPAIGN")} className={`rounded-md px-3 py-1.5 text-xs font-medium ${section === "CAMPAIGN" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500"}`}>{dt("الحملات التسويقية")}</button>
+        <button type="button" onClick={() => setSection("SYSTEM")} className={`rounded-md px-3 py-1.5 text-xs font-medium ${section === "SYSTEM" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500"}`}>{dt("التلقائية والتوثيق")}</button>
       </div>
       <div className="flex justify-between items-center">
         <p className="text-xs text-muted-foreground">
-          {loading ? "…" : `${visibleTemplates.length} قالب بريد`}
+          {loading ? "…" : dt("{0} قالب بريد", [visibleTemplates.length])}
         </p>
         <Button
           size="sm"
           onClick={() => setEditor({ open: true, id: null })}
           className="gap-2 bg-brand hover:bg-brand/90"
         >
-          <Plus className="w-4 h-4" /> قالب جديد
-        </Button>
+          <Plus className="w-4 h-4" /> {dt(" قالب جديد")}</Button>
       </div>
 
       <div className="rounded-lg border border-border overflow-hidden">
-        <table className="w-full text-sm text-right">
+        <table className="w-full text-sm text-start">
           <thead>
             <tr className="border-b border-slate-200 bg-slate-50/80">
-              <th className="text-right py-3 px-4 font-semibold text-slate-700">الاسم</th>
-              <th className="text-right py-3 px-4 font-semibold text-slate-700">الموضوع</th>
-              <th className="text-right py-3 px-4 font-semibold text-slate-700">آخر تحديث</th>
-              <th className="text-left py-3 px-4 font-semibold text-slate-700">الإجراءات</th>
+              <th className="text-start py-3 px-4 font-semibold text-slate-700">{dt("الاسم")}</th>
+              <th className="text-start py-3 px-4 font-semibold text-slate-700">{dt("الموضوع")}</th>
+              <th className="text-start py-3 px-4 font-semibold text-slate-700">{dt("آخر تحديث")}</th>
+              <th className="text-end py-3 px-4 font-semibold text-slate-700">{dt("الإجراءات")}</th>
             </tr>
           </thead>
           <tbody>
@@ -99,8 +99,7 @@ export function EmailTemplateList() {
             ) : visibleTemplates.length === 0 ? (
               <tr>
                 <td colSpan={4} className="py-12 text-center text-slate-500">
-                  لا توجد قوالب بعد  اضغط «قالب جديد» للبدء
-                </td>
+                  {dt("لا توجد قوالب بعد  اضغط «قالب جديد» للبدء")}</td>
               </tr>
             ) : (
               visibleTemplates.map((t) => (
@@ -110,25 +109,23 @@ export function EmailTemplateList() {
                     {t.subject}
                   </td>
                   <td className="py-3 px-4 text-slate-500">
-                    {new Date(t.updatedAt).toLocaleDateString("ar-EG", { dateStyle: "medium" })}
+                    {new Date(t.updatedAt).toLocaleDateString(dashIntl("ar-EG"), { dateStyle: "medium" })}
                   </td>
-                  <td className="py-3 px-4 text-left">
+                  <td className="py-3 px-4 text-end">
                     <div className="flex justify-end gap-2">
                       <Button
                         size="sm"
                         variant="outline"
                         onClick={() => setEditor({ open: true, id: t.id })}
                       >
-                        <Pencil className="w-3.5 h-3.5 me-1" /> تعديل
-                      </Button>
+                        <Pencil className="w-3.5 h-3.5 me-1" /> {dt(" تعديل")}</Button>
                       <Button
                         size="sm"
                         variant="outline"
                         onClick={() => handleDelete(t.id)}
                         className="text-red-600 hover:text-red-700"
                       >
-                        <Trash2 className="w-3.5 h-3.5 me-1" /> حذف
-                      </Button>
+                        <Trash2 className="w-3.5 h-3.5 me-1" /> {dt(" حذف")}</Button>
                     </div>
                   </td>
                 </tr>

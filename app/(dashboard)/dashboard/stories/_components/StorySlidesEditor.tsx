@@ -18,6 +18,7 @@ import {
   type TranslationField,
   type TranslationMap,
 } from '../../_components/ContentTranslationTabs';
+import { dt, dtx } from "@/lib/dashboard/i18n";
 
 /**
  * The slides inside one story  what a visitor sees full-screen after tapping
@@ -36,18 +37,18 @@ import {
  */
 
 export const SLIDE_TRANSLATION_FIELDS: readonly TranslationField[] = [
-  { name: 'caption', label: 'النص', multiline: true },
-  { name: 'ctaLabel', label: 'نص الزر' },
+  { name: 'caption', get label() { return dt("النص"); }, multiline: true },
+  { name: 'ctaLabel', get label() { return dt("نص الزر"); } },
 ];
 
 /** Radix Select refuses an empty-string item value, so "none" is a sentinel. */
 const NO_CTA = '__none__';
 
 export const CTA_KIND_LABELS: Record<string, string> = {
-  PAGE: 'صفحة في الموقع',
-  CAMPAIGN: 'مشروع',
-  POST: 'مقال',
-  URL: 'رابط',
+  get PAGE() { return dt("صفحة في الموقع"); },
+  get CAMPAIGN() { return dt("مشروع"); },
+  get POST() { return dt("مقال"); },
+  get URL() { return dt("رابط"); },
 };
 
 export interface SlideRow {
@@ -151,7 +152,7 @@ export function StorySlidesEditor({
   return (
     <div className="space-y-3">
       {rows.length === 0 ? (
-        <p className="text-xs text-slate-500">لا توجد شرائح بعد. القصة تحتاج شريحة واحدة على الأقل.</p>
+        <p className="text-xs text-slate-500">{dt("لا توجد شرائح بعد. القصة تحتاج شريحة واحدة على الأقل.")}</p>
       ) : null}
 
       {rows.map((row, i) => {
@@ -159,7 +160,7 @@ export function StorySlidesEditor({
         return (
           <div key={row.id ?? `new-${i}`} className="rounded-lg border p-3 space-y-3 bg-slate-50/50">
             <div className="flex items-center justify-between gap-2">
-              <span className="text-xs font-semibold text-slate-500">شريحة #{i + 1}</span>
+              <span className="text-xs font-semibold text-slate-500">{dtx("شريحة #{0}", [i + 1])}</span>
               <div className="flex items-center gap-1">
                 <Button type="button" variant="ghost" size="icon" onClick={() => swap(i, i - 1)} disabled={i === 0}>
                   <ArrowUp className="w-4 h-4" />
@@ -175,19 +176,19 @@ export function StorySlidesEditor({
 
             <div className="grid gap-3 md:grid-cols-[10rem_minmax(0,1fr)_8rem]">
               <div className="space-y-1">
-                <span className="text-[11px] font-semibold text-slate-600">النوع</span>
+                <span className="text-[11px] font-semibold text-slate-600">{dt("النوع")}</span>
                 <Select value={row.mediaType} onValueChange={(v) => update(i, { mediaType: v as SlideRow['mediaType'], mediaUrl: '' })}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="IMAGE">صورة</SelectItem>
-                    <SelectItem value="VIDEO">فيديو</SelectItem>
+                    <SelectItem value="IMAGE">{dt("صورة")}</SelectItem>
+                    <SelectItem value="VIDEO">{dt("فيديو")}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
               {row.mediaType === 'IMAGE' ? (
                 <ImageUploadField
-                  label="الصورة"
+                  label={dt("الصورة")}
                   required
                   value={row.mediaUrl}
                   onChange={(url) => update(i, { mediaUrl: url })}
@@ -195,32 +196,32 @@ export function StorySlidesEditor({
                 />
               ) : (
                 <label className="space-y-1">
-                  <span className="text-[11px] font-semibold text-slate-600">رابط الفيديو (mp4) *</span>
+                  <span className="text-[11px] font-semibold text-slate-600">{dt("رابط الفيديو (mp4) *")}</span>
                   <Input dir="ltr" placeholder="https://…/clip.mp4" value={row.mediaUrl} onChange={(e) => update(i, { mediaUrl: e.target.value })} />
-                  <span className="block text-[11px] text-slate-500">يُعرض حتى نهايته؛ الأفضل أن يكون عموديًا وقصيرًا.</span>
+                  <span className="block text-[11px] text-slate-500">{dt("يُعرض حتى نهايته؛ الأفضل أن يكون عموديًا وقصيرًا.")}</span>
                 </label>
               )}
 
               {row.mediaType === 'IMAGE' ? (
                 <label className="space-y-1">
-                  <span className="text-[11px] font-semibold text-slate-600">المدة (ثانية)</span>
+                  <span className="text-[11px] font-semibold text-slate-600">{dt("المدة (ثانية)")}</span>
                   <Input dir="ltr" type="number" min={1} max={60} value={row.durationSeconds} onChange={(e) => update(i, { durationSeconds: e.target.value })} />
                 </label>
               ) : <div />}
             </div>
 
             <label className="block space-y-1">
-              <span className="text-[11px] font-semibold text-slate-600">النص (بالعربية)</span>
+              <span className="text-[11px] font-semibold text-slate-600">{dt("النص (بالعربية)")}</span>
               <Textarea rows={2} value={row.caption} onChange={(e) => update(i, { caption: e.target.value })} />
             </label>
 
             <div className="rounded-md border bg-white p-3 space-y-2">
-              <p className="text-[11px] font-semibold text-slate-600">زر الانتقال</p>
+              <p className="text-[11px] font-semibold text-slate-600">{dt("زر الانتقال")}</p>
               <div className="grid gap-2 md:grid-cols-[10rem_minmax(0,1fr)]">
                 <Select value={row.ctaKind || NO_CTA} onValueChange={(v) => setKind(i, v)}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value={NO_CTA}>— بدون زر </SelectItem>
+                    <SelectItem value={NO_CTA}>{dt("— بدون زر ")}</SelectItem>
                     {Object.entries(CTA_KIND_LABELS).map(([k, label]) => (
                       <SelectItem key={k} value={k}>{label}</SelectItem>
                     ))}
@@ -229,7 +230,7 @@ export function StorySlidesEditor({
 
                 {row.ctaKind === 'PAGE' ? (
                   <Select value={row.ctaValue || undefined} onValueChange={(v) => update(i, { ctaValue: v })}>
-                    <SelectTrigger><SelectValue placeholder="اختر صفحة" /></SelectTrigger>
+                    <SelectTrigger><SelectValue placeholder={dt("اختر صفحة")} /></SelectTrigger>
                     <SelectContent>
                       {STORY_PAGE_TARGETS.map((p) => (
                         <SelectItem key={p.key} value={p.key}>{p.label}</SelectItem>
@@ -238,7 +239,7 @@ export function StorySlidesEditor({
                   </Select>
                 ) : row.ctaKind === 'CAMPAIGN' ? (
                   <Select value={row.ctaValue || undefined} onValueChange={(v) => update(i, { ctaValue: v })}>
-                    <SelectTrigger><SelectValue placeholder={options.loadingCampaigns ? 'جارٍ التحميل…' : 'اختر مشروعًا'} /></SelectTrigger>
+                    <SelectTrigger><SelectValue placeholder={options.loadingCampaigns ? dt("جارٍ التحميل…") : dt("اختر مشروعًا")} /></SelectTrigger>
                     <SelectContent>
                       {options.campaigns.map((c) => (
                         <SelectItem key={c.id} value={c.id}>{c.title}</SelectItem>
@@ -247,7 +248,7 @@ export function StorySlidesEditor({
                   </Select>
                 ) : row.ctaKind === 'POST' ? (
                   <Select value={row.ctaValue || undefined} onValueChange={(v) => update(i, { ctaValue: v })}>
-                    <SelectTrigger><SelectValue placeholder={options.loadingPosts ? 'جارٍ التحميل…' : 'اختر مقالًا'} /></SelectTrigger>
+                    <SelectTrigger><SelectValue placeholder={options.loadingPosts ? dt("جارٍ التحميل…") : dt("اختر مقالًا")} /></SelectTrigger>
                     <SelectContent>
                       {options.posts.map((p) => (
                         <SelectItem key={p.id} value={p.id}>{p.title}</SelectItem>
@@ -255,19 +256,19 @@ export function StorySlidesEditor({
                     </SelectContent>
                   </Select>
                 ) : row.ctaKind === 'URL' ? (
-                  <Input dir="ltr" placeholder="/bagislar#gaza أو https://…" value={row.ctaValue} onChange={(e) => update(i, { ctaValue: e.target.value })} />
+                  <Input dir="ltr" placeholder={dt("/bagislar#gaza أو https://…")} value={row.ctaValue} onChange={(e) => update(i, { ctaValue: e.target.value })} />
                 ) : (
-                  <div className="text-xs text-slate-400 self-center">الزر ينقل الزائر بلغته الحالية تلقائيًا.</div>
+                  <div className="text-xs text-slate-400 self-center">{dt("الزر ينقل الزائر بلغته الحالية تلقائيًا.")}</div>
                 )}
               </div>
               {row.ctaKind ? (
                 <label className="block space-y-1">
-                  <span className="text-[11px] font-semibold text-slate-600">نص الزر (بالعربية)</span>
-                  <Input placeholder="تبرّع الآن" value={row.ctaLabel} onChange={(e) => update(i, { ctaLabel: e.target.value })} />
+                  <span className="text-[11px] font-semibold text-slate-600">{dt("نص الزر (بالعربية)")}</span>
+                  <Input placeholder={dt("تبرّع الآن")} value={row.ctaLabel} onChange={(e) => update(i, { ctaLabel: e.target.value })} />
                   <span className="block text-[11px] text-slate-500">
                     {row.ctaKind === 'URL'
-                      ? 'رابط داخلي مثل /bagislar#gaza يُحوَّل تلقائيًا إلى لغة الزائر؛ الروابط الخارجية تبقى كما هي.'
-                      : 'يُحلّ الرابط لكل زائر بلغته: المشروع بمعرّفه المترجم، والصفحة بمسارها المحلي.'}
+                      ? dt("رابط داخلي مثل /bagislar#gaza يُحوَّل تلقائيًا إلى لغة الزائر؛ الروابط الخارجية تبقى كما هي.")
+                      : dt("يُحلّ الرابط لكل زائر بلغته: المشروع بمعرّفه المترجم، والصفحة بمسارها المحلي.")}
                   </span>
                 </label>
               ) : null}
@@ -281,9 +282,8 @@ export function StorySlidesEditor({
                 className="h-7 px-2 text-xs"
                 onClick={() => setOpenTranslations((p) => ({ ...p, [i]: !p[i] }))}
               >
-                <Languages className="w-3.5 h-3.5 ml-1" />
-                ترجمات النص والزر
-                <span className="mr-1.5 text-[10px] text-slate-400">{translated} لغة</span>
+                <Languages className="w-3.5 h-3.5 me-1" />
+                {dt("ترجمات النص والزر")}<span className="ms-1.5 text-[10px] text-slate-400">{dtx("{0} لغة", [translated])}</span>
               </Button>
               {openTranslations[i] ? (
                 <ContentTranslationTabs
@@ -301,9 +301,8 @@ export function StorySlidesEditor({
       })}
 
       <Button type="button" variant="outline" size="sm" onClick={() => onChange([...rows, emptySlide()])}>
-        <Plus className="w-4 h-4 ml-1" />
-        إضافة شريحة
-      </Button>
+        <Plus className="w-4 h-4 me-1" />
+        {dt("إضافة شريحة")}</Button>
     </div>
   );
 }

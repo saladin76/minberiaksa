@@ -17,6 +17,7 @@ import type { AdminClaimView } from "@/lib/donations/bank-transfer-serializers";
 import { CLAIM_STATUS_LABELS, type ClaimStatus } from "./status";
 import { TransferReceiptCard } from "./TransferReceiptCard";
 import { TransferReceiptDialog, type ReviewAction } from "./TransferReceiptDialog";
+import { dashDir, dt, dtx } from "@/lib/dashboard/i18n";
 
 const PAGE_SIZE = 24;
 
@@ -27,11 +28,11 @@ type Counts = Record<StatusFilter, number>;
 const EMPTY_COUNTS: Counts = { all: 0, UNDER_REVIEW: 0, AWAITING_RECEIPT: 0, REJECTED: 0, CONFIRMED: 0 };
 
 const STATUS_TABS: { value: StatusFilter; label: string }[] = [
-  { value: "UNDER_REVIEW", label: CLAIM_STATUS_LABELS.UNDER_REVIEW },
-  { value: "AWAITING_RECEIPT", label: CLAIM_STATUS_LABELS.AWAITING_RECEIPT },
-  { value: "REJECTED", label: CLAIM_STATUS_LABELS.REJECTED },
-  { value: "CONFIRMED", label: CLAIM_STATUS_LABELS.CONFIRMED },
-  { value: "all", label: "الكل" },
+  { value: "UNDER_REVIEW", get label() { return CLAIM_STATUS_LABELS.UNDER_REVIEW; } },
+  { value: "AWAITING_RECEIPT", get label() { return CLAIM_STATUS_LABELS.AWAITING_RECEIPT; } },
+  { value: "REJECTED", get label() { return CLAIM_STATUS_LABELS.REJECTED; } },
+  { value: "CONFIRMED", get label() { return CLAIM_STATUS_LABELS.CONFIRMED; } },
+  { value: "all", get label() { return dt("الكل"); } },
 ];
 
 const DEFAULTS = { status: "UNDER_REVIEW" as StatusFilter, currency: "all", bank: "all", sort: "priority" as SortValue, from: "", to: "" };
@@ -107,7 +108,7 @@ export function TransferReceiptsView() {
         if (typeof res.data?.counts?.UNDER_REVIEW === "number") emitTransferReceiptsPending({ count: res.data.counts.UNDER_REVIEW });
       } catch (err) {
         console.error("Error fetching transfer receipts:", err);
-        toast.error("فشل تحميل إيصالات التحويل");
+        toast.error(dt("فشل تحميل إيصالات التحويل"));
       } finally {
         setLoading(false);
         setLoadingMore(false);
@@ -137,7 +138,7 @@ export function TransferReceiptsView() {
         setExtraClaim(res.data.claim);
         setSelectedId(res.data.claim.id);
       } catch {
-        if (!cancelled) toast.error("لم يُعثر على هذا الإيصال");
+        if (!cancelled) toast.error(dt("لم يُعثر على هذا الإيصال"));
       }
     })();
     return () => {
@@ -176,12 +177,12 @@ export function TransferReceiptsView() {
           const delta = (updated.status === "UNDER_REVIEW" ? 1 : 0) - (before.status === "UNDER_REVIEW" ? 1 : 0);
           if (delta) emitTransferReceiptsPending({ delta });
         }
-        if (input.action === "confirm") toast.success("تم تأكيد التحويل واحتساب التبرع");
-        else if (input.action === "reject") toast.success("تم رفض الإيصال وإبلاغ المتبرع");
-        else toast.success("تم حفظ الملاحظة");
+        if (input.action === "confirm") toast.success(dt("تم تأكيد التحويل واحتساب التبرع"));
+        else if (input.action === "reject") toast.success(dt("تم رفض الإيصال وإبلاغ المتبرع"));
+        else toast.success(dt("تم حفظ الملاحظة"));
       } catch (err) {
         const code = axios.isAxiosError(err) ? err.response?.data?.error : null;
-        toast.error(code === "ALREADY_CONFIRMED" ? "هذا التحويل مؤكد بالفعل" : code === "REASON_REQUIRED" ? "اكتب سبب الرفض" : "تعذّر تنفيذ الإجراء");
+        toast.error(code === "ALREADY_CONFIRMED" ? dt("هذا التحويل مؤكد بالفعل") : code === "REASON_REQUIRED" ? dt("اكتب سبب الرفض") : dt("تعذّر تنفيذ الإجراء"));
         throw err;
       }
     },
@@ -189,10 +190,10 @@ export function TransferReceiptsView() {
   );
 
   const activeFilters = [
-    search && { key: "search", label: `بحث: ${search}`, clear: () => setSearchInput("") },
-    currency !== "all" && { key: "currency", label: `العملة: ${currency}`, clear: () => setCurrency("all") },
-    bank !== "all" && { key: "bank", label: `البنك: ${banks.find((b) => b.slug === bank)?.name ?? bank}`, clear: () => setBank("all") },
-    (from || to) && { key: "dates", label: `التاريخ: ${from || "…"} → ${to || "…"}`, clear: () => { setFrom(""); setTo(""); } },
+    search && { key: "search", label: dt("بحث: {0}", [search]), clear: () => setSearchInput("") },
+    currency !== "all" && { key: "currency", label: dt("العملة: {0}", [currency]), clear: () => setCurrency("all") },
+    bank !== "all" && { key: "bank", label: dt("البنك: {0}", [banks.find((b) => b.slug === bank)?.name ?? bank]), clear: () => setBank("all") },
+    (from || to) && { key: "dates", label: dt("التاريخ: {0} → {1}", [from || "…", to || "…"]), clear: () => { setFrom(""); setTo(""); } },
   ].filter(Boolean) as { key: string; label: string; clear: () => void }[];
 
   const resetAll = () => {
@@ -209,23 +210,23 @@ export function TransferReceiptsView() {
   const fmtUsd = (n: number | undefined) => `$${Math.round(n ?? 0).toLocaleString("en")}`;
 
   return (
-    <div dir="rtl">
+    <div dir={dashDir()}>
       <MetricSummaryBand
-        eyebrow="بانتظار قرار مالي"
+        eyebrow={dt("بانتظار قرار مالي")}
         value={String(counts.UNDER_REVIEW)}
-        badge="إيصالات مرفوعة"
-        note="إيصالات رفعها المتبرعون ولم تُطابَق بعد. لا تُحتسب في الإيرادات حتى تأكيدها."
+        badge={dt("إيصالات مرفوعة")}
+        note={dt("إيصالات رفعها المتبرعون ولم تُطابَق بعد. لا تُحتسب في الإيرادات حتى تأكيدها.")}
         icon={Hourglass}
         stats={[
-          { label: "قيمة ما ينتظر المراجعة", value: fmtUsd(usdByStatus.UNDER_REVIEW), icon: Receipt, hint: "USD" },
-          { label: "بانتظار الإيصال", value: String(counts.AWAITING_RECEIPT), icon: Inbox },
-          { label: "مؤكدة", value: String(counts.CONFIRMED), icon: CheckCircle2, hint: fmtUsd(usdByStatus.CONFIRMED) },
-          { label: "مرفوضة", value: String(counts.REJECTED), icon: Ban },
+          { label: dt("قيمة ما ينتظر المراجعة"), value: fmtUsd(usdByStatus.UNDER_REVIEW), icon: Receipt, hint: "USD" },
+          { label: dt("بانتظار الإيصال"), value: String(counts.AWAITING_RECEIPT), icon: Inbox },
+          { label: dt("مؤكدة"), value: String(counts.CONFIRMED), icon: CheckCircle2, hint: fmtUsd(usdByStatus.CONFIRMED) },
+          { label: dt("مرفوضة"), value: String(counts.REJECTED), icon: Ban },
         ]}
         className="mb-4"
       />
 
-      <div role="tablist" aria-label="حالة الإيصال" className="mb-3 flex w-full gap-1 overflow-x-auto rounded-xl border border-slate-200 bg-white p-1 shadow-sm">
+      <div role="tablist" aria-label={dt("حالة الإيصال")} className="mb-3 flex w-full gap-1 overflow-x-auto rounded-xl border border-slate-200 bg-white p-1 shadow-sm">
         {STATUS_TABS.map((tab) => {
           const active = status === tab.value;
           const count = counts[tab.value];
@@ -254,56 +255,56 @@ export function TransferReceiptsView() {
       <FilterBar
         searchValue={searchInput}
         onSearchChange={setSearchInput}
-        searchPlaceholder="اسم المتبرع، البريد، الهاتف، المرجع أو رقم الطلب…"
+        searchPlaceholder={dt("اسم المتبرع، البريد، الهاتف، المرجع أو رقم الطلب…")}
         actions={
           <Button variant="outline" size="sm" className="gap-1.5" onClick={() => fetchClaims(1, false)} disabled={loading}>
             <RefreshCw className={cn("h-3.5 w-3.5", loading && "animate-spin")} />
-            <span className="hidden sm:inline">تحديث</span>
+            <span className="hidden sm:inline">{dt("تحديث")}</span>
           </Button>
         }
       >
-        <FilterSelect value={currency} onValueChange={setCurrency} label="تصفية بالعملة">
-          <SelectItem value="all" className="text-xs">كل العملات</SelectItem>
+        <FilterSelect value={currency} onValueChange={setCurrency} label={dt("تصفية بالعملة")}>
+          <SelectItem value="all" className="text-xs">{dt("كل العملات")}</SelectItem>
           {currencies.map((c) => (
             <SelectItem key={c} value={c} className="text-xs">{c}</SelectItem>
           ))}
         </FilterSelect>
-        <FilterSelect value={bank} onValueChange={setBank} label="تصفية بالبنك">
-          <SelectItem value="all" className="text-xs">كل البنوك</SelectItem>
+        <FilterSelect value={bank} onValueChange={setBank} label={dt("تصفية بالبنك")}>
+          <SelectItem value="all" className="text-xs">{dt("كل البنوك")}</SelectItem>
           {banks.map((b) => (
             <SelectItem key={b.slug} value={b.slug} className="text-xs">{b.name}</SelectItem>
           ))}
         </FilterSelect>
-        <Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} aria-label="من تاريخ" className="h-9 flex-1 rounded-lg border-slate-200 bg-slate-50 text-xs sm:flex-none sm:basis-[9rem]" />
-        <Input type="date" value={to} onChange={(e) => setTo(e.target.value)} aria-label="إلى تاريخ" className="h-9 flex-1 rounded-lg border-slate-200 bg-slate-50 text-xs sm:flex-none sm:basis-[9rem]" />
-        <FilterSelect value={sort} onValueChange={(v) => setSort(v as SortValue)} label="الترتيب" className="sm:basis-[12rem]">
-          <SelectItem value="priority" className="text-xs">الأولوية: الأطول انتظارًا</SelectItem>
-          <SelectItem value="newest" className="text-xs">الأحدث أولًا</SelectItem>
-          <SelectItem value="oldest" className="text-xs">الأقدم أولًا</SelectItem>
-          <SelectItem value="amountDesc" className="text-xs">الأعلى مبلغًا</SelectItem>
-          <SelectItem value="amountAsc" className="text-xs">الأقل مبلغًا</SelectItem>
+        <Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} aria-label={dt("من تاريخ")} className="h-9 flex-1 rounded-lg border-slate-200 bg-slate-50 text-xs sm:flex-none sm:basis-[9rem]" />
+        <Input type="date" value={to} onChange={(e) => setTo(e.target.value)} aria-label={dt("إلى تاريخ")} className="h-9 flex-1 rounded-lg border-slate-200 bg-slate-50 text-xs sm:flex-none sm:basis-[9rem]" />
+        <FilterSelect value={sort} onValueChange={(v) => setSort(v as SortValue)} label={dt("الترتيب")} className="sm:basis-[12rem]">
+          <SelectItem value="priority" className="text-xs">{dt("الأولوية: الأطول انتظارًا")}</SelectItem>
+          <SelectItem value="newest" className="text-xs">{dt("الأحدث أولًا")}</SelectItem>
+          <SelectItem value="oldest" className="text-xs">{dt("الأقدم أولًا")}</SelectItem>
+          <SelectItem value="amountDesc" className="text-xs">{dt("الأعلى مبلغًا")}</SelectItem>
+          <SelectItem value="amountAsc" className="text-xs">{dt("الأقل مبلغًا")}</SelectItem>
         </FilterSelect>
       </FilterBar>
 
       {activeFilters.length > 0 && (
         <div className="mb-4 flex flex-wrap items-center gap-1.5">
-          <span className="text-[11px] font-medium text-slate-500">التصفية النشطة:</span>
+          <span className="text-[11px] font-medium text-slate-500">{dt("التصفية النشطة:")}</span>
           {activeFilters.map((f) => (
             <button key={f.key} type="button" onClick={f.clear} className="inline-flex max-w-full items-center gap-1 rounded-full border border-brand-200 bg-brand-50 px-2 py-0.5 text-[11px] text-brand-700 transition-colors hover:bg-brand-100">
               <span className="truncate">{f.label}</span>
               <X className="h-3 w-3 shrink-0" />
             </button>
           ))}
-          <button type="button" onClick={resetAll} className="text-[11px] text-slate-500 underline underline-offset-2 hover:text-slate-800">مسح الكل</button>
+          <button type="button" onClick={resetAll} className="text-[11px] text-slate-500 underline underline-offset-2 hover:text-slate-800">{dt("مسح الكل")}</button>
         </div>
       )}
 
       <div className="mb-3 flex items-center justify-between gap-2">
         <h2 className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-slate-500">
           <ArrowDownWideNarrow className="h-3.5 w-3.5" />
-          {loading ? "جاري التحميل…" : `${total} إيصال`}
+          {loading ? dt("جاري التحميل…") : dt("{0} إيصال", [total])}
         </h2>
-        {!loading && claims.length > 0 && <span className="text-[11px] text-slate-400">معروض {claims.length} من {total}</span>}
+        {!loading && claims.length > 0 && <span className="text-[11px] text-slate-400">{dtx("معروض {0} من {1}", [claims.length, total])}</span>}
       </div>
 
       {loading ? (
@@ -317,23 +318,23 @@ export function TransferReceiptsView() {
           icon={Receipt}
           title={
             status === "UNDER_REVIEW"
-              ? "لا شيء بانتظار المراجعة  كل الإيصالات تمت معالجتها"
+              ? dt("لا شيء بانتظار المراجعة  كل الإيصالات تمت معالجتها")
               : status === "AWAITING_RECEIPT"
-                ? "لا توجد طلبات بانتظار إيصال"
+                ? dt("لا توجد طلبات بانتظار إيصال")
                 : status === "REJECTED"
-                  ? "لا توجد إيصالات مرفوضة"
+                  ? dt("لا توجد إيصالات مرفوضة")
                   : status === "CONFIRMED"
-                    ? "لم يُؤكَّد أي تحويل بعد"
+                    ? dt("لم يُؤكَّد أي تحويل بعد")
                     : activeFilters.length > 0
-                      ? "لا توجد إيصالات مطابقة"
-                      : "لا توجد تحويلات بنكية بعد"
+                      ? dt("لا توجد إيصالات مطابقة")
+                      : dt("لا توجد تحويلات بنكية بعد")
           }
           description={
             activeFilters.length > 0 || status !== "all"
-              ? "جرّب تبويبًا آخر أو وسّع التصفية لعرض كل الإيصالات."
-              : "عندما يختار متبرع «التحويل البنكي» عند الدفع ويرفع إيصاله، يظهر هنا لمطابقته مع كشف الحساب."
+              ? dt("جرّب تبويبًا آخر أو وسّع التصفية لعرض كل الإيصالات.")
+              : dt("عندما يختار متبرع «التحويل البنكي» عند الدفع ويرفع إيصاله، يظهر هنا لمطابقته مع كشف الحساب.")
           }
-          action={activeFilters.length > 0 || status !== "all" ? <Button variant="outline" size="sm" onClick={() => { resetAll(); setStatus("all"); }}>عرض كل الإيصالات</Button> : undefined}
+          action={activeFilters.length > 0 || status !== "all" ? <Button variant="outline" size="sm" onClick={() => { resetAll(); setStatus("all"); }}>{dt("عرض كل الإيصالات")}</Button> : undefined}
         />
       ) : (
         <>
@@ -346,8 +347,7 @@ export function TransferReceiptsView() {
             <div className="mt-5 text-center">
               <Button variant="outline" onClick={loadMore} disabled={loadingMore} className="gap-2">
                 {loadingMore ? <Loader2 className="h-4 w-4 animate-spin" /> : <Receipt className="h-4 w-4" />}
-                تحميل المزيد
-              </Button>
+                {dt("تحميل المزيد")}</Button>
             </div>
           )}
         </>

@@ -29,23 +29,24 @@ import {
 } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Loader2, ArrowLeft, X, Upload } from 'lucide-react';
+import { dt } from "@/lib/dashboard/i18n";
 
 const formSchema = z.object({
   title: z.string()
-    .min(1, 'العنوان مطلوب')
-    .max(100, 'العنوان طويل جداً'),
+    .min(1, dt("العنوان مطلوب"))
+    .max(100, dt("العنوان طويل جداً")),
   description: z.string()
-    .min(1, 'الوصف مطلوب')
-    .max(10000, 'الوصف طويل جداً'),
+    .min(1, dt("الوصف مطلوب"))
+    .max(10000, dt("الوصف طويل جداً")),
   targetAmount: z.number()
-    .min(1, 'المبلغ المستهدف ($) مطلوب')
-    .max(1000000, 'المبلغ المستهدف ($) كبير جداً'),
+    .min(1, dt("المبلغ المستهدف ($) مطلوب"))
+    .max(1000000, dt("المبلغ المستهدف ($) كبير جداً")),
   categoryId: z.string()
-    .min(1, 'الحملة مطلوب'),
+    .min(1, dt("الحملة مطلوب")),
   isActive: z.boolean(),
   images: z.array(z.string())
-    .min(1, 'صورة واحدة على الأقل مطلوبة')
-    .max(5, 'الحد الأقصى 5 صور'),
+    .min(1, dt("صورة واحدة على الأقل مطلوبة"))
+    .max(5, dt("الحد الأقصى 5 صور")),
   videoUrl: z.string().optional(),
 });
 
@@ -83,7 +84,7 @@ export default function NewCampaignPage() {
         setCategories(response.data);
       } catch (error) {
         console.error('Error fetching categories:', error);
-        toast.error('فشل في تحميل الحملات');
+        toast.error(dt("فشل في تحميل الحملات"));
       } finally {
         setLoading(false);
       }
@@ -96,11 +97,11 @@ export default function NewCampaignPage() {
     setSaving(true);
     try {
       await axios.post('/api/campaigns', values);
-      toast.success('تم إنشاء المشروع بنجاح');
+      toast.success(dt("تم إنشاء المشروع بنجاح"));
       router.push('/dashboard/campaigns');
     } catch (error) {
       console.error('Error creating campaign:', error);
-      toast.error('فشل في إنشاء المشروع');
+      toast.error(dt("فشل في إنشاء المشروع"));
     } finally {
       setSaving(false);
     }
@@ -112,7 +113,7 @@ export default function NewCampaignPage() {
 
     const currentImages = form.getValues('images');
     if (currentImages.length + files.length > 5) {
-      toast.error('الحد الأقصى 5 صور');
+      toast.error(dt("الحد الأقصى 5 صور"));
       return;
     }
 
@@ -133,9 +134,9 @@ export default function NewCampaignPage() {
     try {
       const uploadedUrls = await Promise.all(uploadPromises);
       form.setValue('images', [...currentImages, ...uploadedUrls]);
-      toast.success('تم رفع الصور بنجاح');
+      toast.success(dt("تم رفع الصور بنجاح"));
     } catch (error) {
-      toast.error('فشل في رفع الصور');
+      toast.error(dt("فشل في رفع الصور"));
     } finally {
       setUploadingImage(false);
     }
@@ -155,10 +156,10 @@ export default function NewCampaignPage() {
       
       const newImages = currentImages.filter((_, i) => i !== index);
       form.setValue('images', newImages);
-      toast.success('تم حذف الصورة بنجاح');
+      toast.success(dt("تم حذف الصورة بنجاح"));
     } catch (error) {
       console.error('Error removing image:', error);
-      toast.error('فشل في حذف الصورة');
+      toast.error(dt("فشل في حذف الصورة"));
     }
   };
 
@@ -174,8 +175,8 @@ export default function NewCampaignPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">إنشاء مشروع جديدة</h1>
-          <p className="text-gray-600">قم بإدخال معلومات المشروع</p>
+          <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">{dt("إنشاء مشروع جديدة")}</h1>
+          <p className="text-gray-600">{dt("قم بإدخال معلومات المشروع")}</p>
         </div>
         <Button
           variant="outline"
@@ -183,15 +184,14 @@ export default function NewCampaignPage() {
           className="gap-2"
         >
           <ArrowLeft className="w-4 h-4" />
-          العودة
-        </Button>
+          {dt("العودة")}</Button>
       </div>
 
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
           {/* Basic Information */}
           <Card className="p-6">
-            <h2 className="text-lg font-semibold mb-4">المعلومات الأساسية</h2>
+            <h2 className="text-lg font-semibold mb-4">{dt("المعلومات الأساسية")}</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Title */}
               <FormField
@@ -199,9 +199,9 @@ export default function NewCampaignPage() {
                 name="title"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>عنوان المشروع</FormLabel>
+                    <FormLabel>{dt("عنوان المشروع")}</FormLabel>
                     <FormControl>
-                      <Input {...field} placeholder="أدخل عنوان المشروع" />
+                      <Input {...field} placeholder={dt("أدخل عنوان المشروع")} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -214,14 +214,14 @@ export default function NewCampaignPage() {
                 name="categoryId"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>الحملة</FormLabel>
+                    <FormLabel>{dt("الحملة")}</FormLabel>
                     <Select
                       value={field.value}
                       onValueChange={field.onChange}
                     >
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder="اختر الحملة" />
+                          <SelectValue placeholder={dt("اختر الحملة")} />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
@@ -243,13 +243,13 @@ export default function NewCampaignPage() {
                 name="targetAmount"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>المبلغ المستهدف ($)</FormLabel>
+                    <FormLabel>{dt("المبلغ المستهدف ($)")}</FormLabel>
                     <FormControl>
                       <Input
                         type="number"
                         {...field}
                         onChange={(e) => field.onChange(parseFloat(e.target.value))}
-                        placeholder="أدخل المبلغ المستهدف ($)"
+                        placeholder={dt("أدخل المبلغ المستهدف ($)")}
                       />
                     </FormControl>
                     <FormMessage />
@@ -263,11 +263,11 @@ export default function NewCampaignPage() {
                 name="videoUrl"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>رابط الفيديو (اختياري)</FormLabel>
+                    <FormLabel>{dt("رابط الفيديو (اختياري)")}</FormLabel>
                     <FormControl>
                       <Input
                         {...field}
-                        placeholder="أدخل رابط الفيديو (YouTube أو Facebook)"
+                        placeholder={dt("أدخل رابط الفيديو (YouTube أو Facebook)")}
                       />
                     </FormControl>
                     <FormMessage />
@@ -284,18 +284,17 @@ export default function NewCampaignPage() {
               name="description"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>وصف المشروع</FormLabel>
+                  <FormLabel>{dt("وصف المشروع")}</FormLabel>
                   <FormControl>
                     <Textarea
-                      placeholder="اكتب وصفاً تفصيلياً للمشروع..."
+                      placeholder={dt("اكتب وصفاً تفصيلياً للمشروع...")}
                       className="min-h-[300px] resize-y"
                       {...field}
                     />
                   </FormControl>
                   <FormMessage />
                   <FormDescription>
-                    يمكنك كتابة وصف تفصيلي للمشروع. يدعم النص العربي والإنجليزي.
-                  </FormDescription>
+                    {dt("يمكنك كتابة وصف تفصيلي للمشروع. يدعم النص العربي والإنجليزي.")}</FormDescription>
                 </FormItem>
               )}
             />
@@ -308,7 +307,7 @@ export default function NewCampaignPage() {
               name="images"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>صور المشروع</FormLabel>
+                  <FormLabel>{dt("صور المشروع")}</FormLabel>
                   <FormControl>
                     <div className="space-y-4">
                       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
@@ -316,13 +315,13 @@ export default function NewCampaignPage() {
                           <div key={index} className="relative group">
                             <img
                               src={url}
-                              alt={`صورة ${index + 1}`}
+                              alt={dt("صورة {0}", [index + 1])}
                               className="w-full h-32 object-cover rounded-lg"
                             />
                             <button
                               type="button"
                               onClick={() => removeImage(index)}
-                              className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                              className="absolute top-2 start-2 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
                             >
                               <X className="w-4 h-4" />
                             </button>
@@ -349,8 +348,7 @@ export default function NewCampaignPage() {
                                 <>
                                   <Upload className="w-6 h-6 text-gray-400" />
                                   <span className="mt-2 text-sm text-gray-500">
-                                    اضغط لإضافة صور
-                                  </span>
+                                    {dt("اضغط لإضافة صور")}</span>
                                 </>
                               )}
                             </label>
@@ -358,8 +356,7 @@ export default function NewCampaignPage() {
                         )}
                       </div>
                       <FormDescription>
-                        يمكنك رفع حتى 5 صور للمشروع. الصورة الأولى ستكون الصورة الرئيسية.
-                      </FormDescription>
+                        {dt("يمكنك رفع حتى 5 صور للمشروع. الصورة الأولى ستكون الصورة الرئيسية.")}</FormDescription>
                     </div>
                   </FormControl>
                   <FormMessage />
@@ -376,10 +373,9 @@ export default function NewCampaignPage() {
               render={({ field }) => (
                 <FormItem className="flex items-center justify-between">
                   <div>
-                    <FormLabel>حالة المشروع</FormLabel>
+                    <FormLabel>{dt("حالة المشروع")}</FormLabel>
                     <FormDescription>
-                      تحديد ما إذا كانت المشروع نشطة أم لا
-                    </FormDescription>
+                      {dt("تحديد ما إذا كانت المشروع نشطة أم لا")}</FormDescription>
                   </div>
                   <FormControl>
                     <Switch
@@ -399,16 +395,14 @@ export default function NewCampaignPage() {
               variant="outline"
               onClick={() => router.push('/dashboard/campaigns')}
             >
-              إلغاء
-            </Button>
+              {dt("إلغاء")}</Button>
             <Button
               type="submit"
               className="bg-brand hover:bg-brand-dark"
               disabled={saving}
             >
-              {saving && <Loader2 className="w-4 h-4 ml-2 animate-spin" />}
-              إنشاء المشروع
-            </Button>
+              {saving && <Loader2 className="w-4 h-4 me-2 animate-spin" />}
+              {dt("إنشاء المشروع")}</Button>
           </div>
         </form>
       </Form>

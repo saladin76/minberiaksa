@@ -6,6 +6,7 @@ import { AlertTriangle, FileText, ImageOff, Landmark, Paperclip, RotateCcw, Cloc
 import { cn } from "@/lib/utils";
 import type { AdminClaimView } from "@/lib/donations/bank-transfer-serializers";
 import { CLAIM_STATUS_DOT, CLAIM_STATUS_LABELS, CLAIM_STATUS_PILL, money, relativeTime, usd, waitingDays } from "./status";
+import { dashIntl, dt, dtx } from "@/lib/dashboard/i18n";
 
 /**
  * One claim in the queue. Reads in the order a reviewer needs it: who, how
@@ -41,7 +42,7 @@ export function TransferReceiptCard({ claim, onOpen }: { claim: AdminClaimView; 
         ) : (
           <div className="flex h-full w-full flex-col items-center justify-center gap-2 text-slate-400">
             <ImageOff className="h-8 w-8" />
-            <span className="text-xs">لم يُرفع إيصال بعد</span>
+            <span className="text-xs">{dt("لم يُرفع إيصال بعد")}</span>
           </div>
         )}
 
@@ -57,9 +58,9 @@ export function TransferReceiptCard({ claim, onOpen }: { claim: AdminClaimView; 
           </span>
         )}
         {claim.submissionCount > 1 && (
-          <span className="absolute bottom-2 end-2 inline-flex items-center gap-1 rounded-full bg-white/95 px-2 py-0.5 text-[11px] font-semibold text-slate-700" title="أُعيد رفع الإيصال بعد رفض">
+          <span className="absolute bottom-2 end-2 inline-flex items-center gap-1 rounded-full bg-white/95 px-2 py-0.5 text-[11px] font-semibold text-slate-700" title={dt("أُعيد رفع الإيصال بعد رفض")}>
             <RotateCcw className="h-3 w-3" />
-            المحاولة {claim.submissionCount}
+            {dtx("المحاولة {0}", [claim.submissionCount])}
           </span>
         )}
       </button>
@@ -71,7 +72,7 @@ export function TransferReceiptCard({ claim, onOpen }: { claim: AdminClaimView; 
             <AvatarFallback className="rounded-full bg-gradient-to-br from-brand-400 to-brand-700 text-sm font-semibold text-white">{initial}</AvatarFallback>
           </Avatar>
           <div className="min-w-0 flex-1">
-            <p className="truncate text-[14px] font-bold text-slate-900">{claim.donor.name || "متبرع بلا اسم"}</p>
+            <p className="truncate text-[14px] font-bold text-slate-900">{claim.donor.name || dt("متبرع بلا اسم")}</p>
             <p className="truncate text-[12px] text-slate-500" dir="ltr">{claim.donor.email ?? claim.donor.phone ?? "—"}</p>
           </div>
           <div className="text-end">
@@ -83,8 +84,8 @@ export function TransferReceiptCard({ claim, onOpen }: { claim: AdminClaimView; 
         </div>
 
         {lines.length > 0 && (
-          <p className="line-clamp-2 text-[12.5px] leading-5 text-slate-600" title={lines.join("، ")}>
-            {lines.join("، ")}
+          <p className="line-clamp-2 text-[12.5px] leading-5 text-slate-600" title={lines.join(dt("، "))}>
+            {lines.join(dt("، "))}
           </p>
         )}
 
@@ -96,14 +97,14 @@ export function TransferReceiptCard({ claim, onOpen }: { claim: AdminClaimView; 
               {claim.bankCurrency && <span className="text-slate-400" dir="ltr">· {claim.bankCurrency}</span>}
             </span>
           )}
-          <span className={cn("inline-flex items-center gap-1", urgent && "font-semibold text-amber-700")} title={new Date(waitedSince).toLocaleString("ar-EG")}>
+          <span className={cn("inline-flex items-center gap-1", urgent && "font-semibold text-amber-700")} title={new Date(waitedSince).toLocaleString(dashIntl("ar-EG"))}>
             {urgent ? <AlertTriangle className="h-3 w-3" /> : <Clock3 className="h-3 w-3" />}
-            {claim.status === "UNDER_REVIEW" ? `رُفع ${relativeTime(waitedSince)}` : `أُنشئ ${relativeTime(waitedSince)}`}
+            {claim.status === "UNDER_REVIEW" ? dt("رُفع {0}", [relativeTime(waitedSince)]) : dt("أُنشئ {0}", [relativeTime(waitedSince)])}
           </span>
         </div>
 
         <Button size="sm" variant={claim.status === "UNDER_REVIEW" ? "default" : "outline"} className="w-full" onClick={onOpen}>
-          {claim.status === "UNDER_REVIEW" ? "مراجعة الإيصال" : "عرض التفاصيل"}
+          {claim.status === "UNDER_REVIEW" ? dt("مراجعة الإيصال") : dt("عرض التفاصيل")}
         </Button>
       </div>
     </article>

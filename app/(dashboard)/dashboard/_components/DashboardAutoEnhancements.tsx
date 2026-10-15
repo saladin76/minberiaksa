@@ -7,6 +7,7 @@ import { SaveStatusNotice, type SaveStatusState } from "./SaveStatusNotice";
 import { SmartSeoWorkbenchCard } from "./SmartSeoWorkbenchCard";
 import { SeoTextImproverCard } from "./SeoTextImproverCard";
 import { SUPPORTED_LOCALES, type SupportedLocale } from "@/lib/locales";
+import { dt } from "@/lib/dashboard/i18n";
 
 type LocaleCode = SupportedLocale;
 type SeoContentType = "campaign" | "category" | "blog";
@@ -41,6 +42,8 @@ const localeByLabel: Record<string, LocaleCode> = {
   Español: "es",
   Deutsch: "de",
 };
+/* The Arabic tab is labelled in the interface language. */
+localeByLabel[dt("العربية")] = "ar";
 
 const supportedLocales: LocaleCode[] = [...SUPPORTED_LOCALES];
 
@@ -186,7 +189,7 @@ function readProjectSeoSnapshot() {
   const editor = activePanel?.querySelector(".ProseMirror") as HTMLElement | null;
   const title = titleInput?.value || "";
   const description = editor?.innerText || "";
-  const imageCount = Math.max(0, document.querySelectorAll('img[alt^="صورة "]').length);
+  const imageCount = Math.max(0, document.querySelectorAll(`img[alt^="صورة "], img[alt^="${dt("صورة {0}", [""])}"]`).length);
   return { locale, title, description, imageCount };
 }
 
@@ -263,14 +266,14 @@ function statusForPath(pathname: string, detail: SaveEventDetail): SaveStatusSta
   const isBlog = pathname.includes("/dashboard/blog");
   if (!isProject && !isCategory && !isBlog) return null;
 
-  const label = isProject ? "المشروع" : isCategory ? "الحملة" : "المقال";
+  const label = isProject ? dt("المشروع") : isCategory ? dt("الحملة") : dt("المقال");
   if (detail.phase === "start") {
-    return { type: "saving", message: `جاري حفظ ${label}...`, detail: "لا تغادر الصفحة حتى يكتمل الحفظ" };
+    return { type: "saving", message: dt("جاري حفظ {0}...", [label]), detail: dt("لا تغادر الصفحة حتى يكتمل الحفظ") };
   }
   if (detail.phase === "success") {
-    return { type: "success", message: `تم تحديث ${label} بنجاح`, detail: "أنت ما زلت داخل صفحة التعديل" };
+    return { type: "success", message: dt("تم تحديث {0} بنجاح", [label]), detail: dt("أنت ما زلت داخل صفحة التعديل") };
   }
-  return { type: "error", message: `فشل تحديث ${label}`, detail: detail.status ? `رمز الخطأ: ${detail.status}` : "راجع البيانات ثم حاول مرة أخرى" };
+  return { type: "error", message: dt("فشل تحديث {0}", [label]), detail: detail.status ? dt("رمز الخطأ: {0}", [detail.status]) : dt("راجع البيانات ثم حاول مرة أخرى") };
 }
 
 export function DashboardAutoEnhancements() {

@@ -88,10 +88,12 @@ import {
 } from "@/components/dashboard/DashboardPieLegend";
 import { useViewUserProfile } from "@/context/ViewUserProfileContext";
 import DonationDetailsDialog, { type DonationDetailsTarget } from "@/components/dashboard/DonationDetailsDialog";
+import { DonationGatewayBadge } from "@/components/dashboard/DonationGatewayBadge";
 import { ExportReportDialog, EXPORT_DEFAULTS, type ExportFormState } from "@/components/dashboard/ExportReportDialog";
 import { useDonationActions } from "@/components/dashboard/donations/useDonationActions";
 import { userCanEditDonations, userCanExportReports } from "@/lib/dashboard/permissions";
 import { useSession } from "next-auth/react";
+import { dashDir, dashIntl, dt, dtx } from "@/lib/dashboard/i18n";
 
 interface ChartDataPoint {
   date: string;
@@ -211,13 +213,13 @@ type ChartMetric = "amount" | "teamSupport" | "fees";
 type StatCardSet = "revenue" | "overview" | "breakdown";
 
 const PERIOD_LABELS: Record<ChartPeriod, string> = {
-  day: "اليوم",
-  yesterday: "أمس",
-  week: "أسبوع",
-  month: "شهر",
-  year: "سنة",
-  all: "كل الوقت",
-  custom: "مخصص",
+  get day() { return dt("اليوم"); },
+  get yesterday() { return dt("أمس"); },
+  get week() { return dt("أسبوع"); },
+  get month() { return dt("شهر"); },
+  get year() { return dt("سنة"); },
+  get all() { return dt("كل الوقت"); },
+  get custom() { return dt("مخصص"); },
 };
 
 // Was a local block of raw hex duplicated verbatim in monthly/page.tsx and built on a generic
@@ -246,7 +248,7 @@ function getDonationsDateRange(
 
 export default function DashboardPage() {
   const locale = useLocale() as string;
-  const thisMonthRevenueTitle = `إيرادات شهر ${formatIstanbulCalendarMonthLong(new Date(), locale || "ar")}`;
+  const thisMonthRevenueTitle = dt("إيرادات شهر {0}", [formatIstanbulCalendarMonthLong(new Date(), locale || "ar")]);
   const searchParams = useSearchParams();
   const { convertToCurrency, getSelectedCurrency } = useCurrency();
 
@@ -436,7 +438,7 @@ export default function DashboardPage() {
         );
         const data = await res.json();
         if (!res.ok) {
-          toast.error(typeof data?.error === "string" ? data.error : "فشل البحث عن المستخدمين");
+          toast.error(typeof data?.error === "string" ? data.error : dt("فشل البحث عن المستخدمين"));
           setUsers([]);
           return;
         }
@@ -500,7 +502,7 @@ export default function DashboardPage() {
       setChartData(Array.isArray(response.data) ? response.data : []);
     } catch (error) {
       console.error("Error fetching chart data:", error);
-      toast.error("فشل في تحميل بيانات التبرعات");
+      toast.error(dt("فشل في تحميل بيانات التبرعات"));
       setChartData([]);
     } finally {
       setChartLoading(false);
@@ -528,14 +530,14 @@ export default function DashboardPage() {
       const response = await fetch(`/api/admin/stats?${params}`);
       const data = await response.json();
       if (!response.ok) {
-        const message = data?.details || data?.error || "فشل في تحميل إحصائيات لوحة التحكم";
+        const message = data?.details || data?.error || dt("فشل في تحميل إحصائيات لوحة التحكم");
         toast.error(message);
         return;
       }
       setStats(data);
     } catch (error) {
       console.error("Error fetching stats:", error);
-      toast.error("فشل في تحميل إحصائيات لوحة التحكم");
+      toast.error(dt("فشل في تحميل إحصائيات لوحة التحكم"));
     } finally {
       setLoading(false);
     }
@@ -569,7 +571,7 @@ export default function DashboardPage() {
         const res = await fetch(`/api/donations?${params}`);
         const data = await res.json();
         if (!res.ok) {
-          toast.error(data?.error || "فشل في تحميل التبرعات");
+          toast.error(data?.error || dt("فشل في تحميل التبرعات"));
           return;
         }
         const list = Array.isArray(data.donations) ? data.donations : [];
@@ -577,7 +579,7 @@ export default function DashboardPage() {
         setDonationsTotal(data.pagination?.total ?? 0);
       } catch (error) {
         console.error("Error fetching donations:", error);
-        toast.error("فشل في تحميل التبرعات");
+        toast.error(dt("فشل في تحميل التبرعات"));
       } finally {
         setDonationsLoading(false);
         setDonationsFetchedOnce(true);
@@ -697,7 +699,7 @@ export default function DashboardPage() {
   );
   const exportLocaleOptions = useMemo(
     () => [
-      { value: "ar", label: "العربية" },
+      { value: "ar", label: dt("العربية") },
       { value: "en", label: "English" },
       { value: "tr", label: "Türkçe" },
       { value: "fr", label: "Français" },
@@ -717,13 +719,13 @@ export default function DashboardPage() {
   const monthlyTotal = stats?.monthlyTotalAmount ?? 0;
   const revenueSplitData = [
     {
-      name: "مشاريع",
+      name: dt("مشاريع"),
       value: stats?.campaignDonationsTotal ?? 0,
       count: stats?.campaignDonationsCount ?? 0,
       color: "#025EB8",
     },
     {
-      name: "فئات",
+      name: dt("فئات"),
       value: stats?.categoryDonationsTotal ?? 0,
       count: stats?.categoryDonationsCount ?? 0,
       color: "#FA5D17",
@@ -732,13 +734,13 @@ export default function DashboardPage() {
 
   const typeSplitData = [
     {
-      name: "مرة واحدة",
+      name: dt("مرة واحدة"),
       value: oneTimeTotal,
       count: stats?.oneTimeCount ?? 0,
       color: "#025EB8",
     },
     {
-      name: "شهرية",
+      name: dt("شهرية"),
       value: monthlyTotal,
       count: stats?.monthlyCount ?? 0,
       color: "#7C3AED",
@@ -747,13 +749,13 @@ export default function DashboardPage() {
 
   const paidFailedSplitData = [
     {
-      name: "مدفوعة",
+      name: dt("مدفوعة"),
       value: stats?.totalAmount ?? 0,
       count: stats?.paidCount ?? 0,
       color: "#10B981",
     },
     {
-      name: "فاشلة",
+      name: dt("فاشلة"),
       value: stats?.failedTotalAmount ?? 0,
       count: stats?.failedCount ?? 0,
       color: "#F43F5E",
@@ -761,23 +763,23 @@ export default function DashboardPage() {
   ].filter((d) => d.value > 0 || d.count > 0);
 
   return (
-    <div className="min-h-0" dir="rtl">
+    <div className="min-h-0" dir={dashDir()}>
       <div className="space-y-6 sm:space-y-8 p-0 sm:p-4 md:p-6 lg:p-8 max-w-[1600px] mx-auto">
         <PageHeader
-          title="تحليل الإيرادات"
+          title={dt("تحليل الإيرادات")}
           icon={LayoutDashboard}
           description={
             searchParams.get("userId") ? (
               <>
-                عرض تبرعات:{" "}
+                {dt("عرض تبرعات: ")}
                 <span className="font-medium text-slate-900 whitespace-normal break-words">
                   {users.find((u) => u.id === searchParams.get("userId"))?.name ||
                     users.find((u) => u.id === searchParams.get("userId"))?.email ||
-                    "جاري التحميل..."}
+                    dt("جاري التحميل...")}
                 </span>
               </>
             ) : (
-              "نظرة شاملة على الإيرادات، التبرعات والتحليلات"
+              dt("نظرة شاملة على الإيرادات، التبرعات والتحليلات")
             )
           }
         />
@@ -791,36 +793,36 @@ export default function DashboardPage() {
         {!searchParams.get("userId") && (
           <MetricSummaryBand
             icon={Wallet}
-            eyebrow="إجمالي الإيرادات الناجحة"
-            badge="كل الوقت"
+            eyebrow={dt("إجمالي الإيرادات الناجحة")}
+            badge={dt("كل الوقت")}
             value={formatInSelectedCurrency(
               stats?.paidRevenueAllTimeUnfiltered ??
                 stats?.allTimeRevenue ??
                 stats?.totalAmount ??
                 0,
             )}
-            note="لا تتأثر هذه القيمة ولا البطاقات المجاورة بالفترة أو التصفية المختارة أدناه."
+            note={dt("لا تتأثر هذه القيمة ولا البطاقات المجاورة بالفترة أو التصفية المختارة أدناه.")}
             stats={[
               // No hints here: the badge already says كل الوقت, and "اشتراك نشط" would have
               // repeated the stat sitting right next to it. In a single-row band every extra
               // word is height the charts below lose.
               {
-                label: "التبرعات الشهرية المتكررة",
+                label: dt("التبرعات الشهرية المتكررة"),
                 icon: Repeat,
                 value: formatInSelectedCurrency(stats?.monthlyRecurringRevenueUnfiltered ?? 0),
               },
               {
-                label: "عدد التبرعات الناجحة",
+                label: dt("عدد التبرعات الناجحة"),
                 icon: HandCoins,
                 value: (stats?.paidCountAllTimeUnfiltered ?? 0).toLocaleString("en-US"),
               },
               {
-                label: "اشتراكات نشطة",
+                label: dt("اشتراكات نشطة"),
                 icon: Landmark,
                 value: (stats?.activeMonthlyCountUnfiltered ?? 0).toLocaleString("en-US"),
               },
               {
-                label: "إجمالي المستخدمين",
+                label: dt("إجمالي المستخدمين"),
                 icon: Users,
                 value: (stats?.totalUsers ?? 0).toLocaleString("en-US"),
               },
@@ -838,8 +840,8 @@ export default function DashboardPage() {
                 <PieChartIcon className="h-[18px] w-[18px]" />
               </span>
               <div className="min-w-0">
-                <h2 className="text-[15px] font-semibold leading-tight text-slate-900">المؤشرات</h2>
-                <p className="text-xs text-slate-500">محسوبة حسب الفترة والتصفية المختارة</p>
+                <h2 className="text-[15px] font-semibold leading-tight text-slate-900">{dt("المؤشرات")}</h2>
+                <p className="text-xs text-slate-500">{dt("محسوبة حسب الفترة والتصفية المختارة")}</p>
               </div>
             </div>
             <Tabs
@@ -847,25 +849,22 @@ export default function DashboardPage() {
               onValueChange={(v) => setStatCardSet(v as StatCardSet)}
               className="w-auto"
             >
-              <TabsList className="bg-muted p-1 rounded-lg h-9" dir="rtl">
+              <TabsList className="bg-muted p-1 rounded-lg h-9" dir={dashDir()}>
                 <TabsTrigger
                   value="revenue"
                   className="text-xs px-3 data-[state=active]:bg-card data-[state=active]:shadow-sm"
                 >
-                  الإيرادات
-                </TabsTrigger>
+                  {dt("الإيرادات")}</TabsTrigger>
                 <TabsTrigger
                   value="overview"
                   className="text-xs px-3 data-[state=active]:bg-card data-[state=active]:shadow-sm"
                 >
-                  نظرة عامة
-                </TabsTrigger>
+                  {dt("نظرة عامة")}</TabsTrigger>
                 <TabsTrigger
                   value="breakdown"
                   className="text-xs px-3 data-[state=active]:bg-card data-[state=active]:shadow-sm"
                 >
-                  تفصيل التبرعات
-                </TabsTrigger>
+                  {dt("تفصيل التبرعات")}</TabsTrigger>
               </TabsList>
             </Tabs>
           </div>
@@ -880,46 +879,46 @@ export default function DashboardPage() {
                   accent="emerald"
                   format="money"
                   variant="hero"
-                  subtitle="دفعات ناجحة في الشهر الحالي (UTC)"
+                  subtitle={dt("دفعات ناجحة في الشهر الحالي (UTC)")}
                 />
                 <StatsMetricCard
                   compact
-                  title={`إيرادات ناجحة (${chartFilterPeriodLabelAr})`}
+                  title={dt("إيرادات ناجحة ({0})", [chartFilterPeriodLabelAr])}
                   bankTransfers={false}
                   value={stats?.totalAmount ?? 0}
                   icon={DollarSign}
                   accent="emerald"
                   format="money"
-                  subtitle="مجموع التبرعات المدفوعة فقط  حسب الفترة والتصفية أعلاه"
+                  subtitle={dt("مجموع التبرعات المدفوعة فقط  حسب الفترة والتصفية أعلاه")}
                 />
                 <StatsMetricCard
                   compact
-                  title={`متوسط التبرع (${chartFilterPeriodLabelAr})`}
+                  title={dt("متوسط التبرع ({0})", [chartFilterPeriodLabelAr])}
                   bankTransfers={false}
                   value={(stats?.paidCount ?? 0) > 0 ? (stats?.totalAmount ?? 0) / (stats?.paidCount ?? 1) : 0}
                   icon={HandCoins}
                   accent="sky"
                   format="money"
-                  subtitle={`${formatMoney(stats?.totalAmount ?? 0, undefined, undefined, true)} ÷ ${(stats?.paidCount ?? 0).toLocaleString("en-US")} تبرع ناجح`}
+                  subtitle={dt("{0} ÷ {1} تبرع ناجح", [formatMoney(stats?.totalAmount ?? 0, undefined, undefined, true), (stats?.paidCount ?? 0).toLocaleString("en-US")])}
                 />
                 <BankTransfersCard icon={DollarSign} />
                 <StatsMetricCard
                   compact
-                  title="إيرادات شهرية متكررة (MRR)"
+                  title={dt("إيرادات شهرية متكررة (MRR)")}
                   value={stats?.monthlyRecurringRevenue ?? 0}
                   icon={Repeat}
                   accent="emerald"
                   format="money"
-                  subtitle="اشتراكات نشطة  مبالغ مخططة"
+                  subtitle={dt("اشتراكات نشطة  مبالغ مخططة")}
                 />
                 <StatsMetricCard
                   compact
-                  title="دعم الفريق"
+                  title={dt("دعم الفريق")}
                   value={stats?.teamSupportTotal ?? 0}
                   icon={HandCoins}
                   accent="amber"
                   format="money"
-                  subtitle={`من التبرعات الناجحة (${chartFilterPeriodLabelAr})`}
+                  subtitle={dt("من التبرعات الناجحة ({0})", [chartFilterPeriodLabelAr])}
                 />
                 {/* <StatsMetricCard
                   compact
@@ -932,15 +931,15 @@ export default function DashboardPage() {
                 /> */}
                 <StatsMetricCard
                   compact
-                  title="تبرعات ناجحة"
+                  title={dt("تبرعات ناجحة")}
                   value={stats?.paidCount ?? 0}
                   icon={Receipt}
                   accent="teal"
-                  subtitle={`إجمالي مبالغ ناجحة: ${formatMoney(stats?.totalAmount ?? 0, undefined, undefined, true)}`}
+                  subtitle={dt("إجمالي مبالغ ناجحة: {0}", [formatMoney(stats?.totalAmount ?? 0, undefined, undefined, true)])}
                 />
                 <StatsMetricCard
                   compact
-                  title="تبرعات فاشلة"
+                  title={dt("تبرعات فاشلة")}
                   value={stats?.failedCount ?? 0}
                   icon={Receipt}
                   accent="orange"
@@ -952,21 +951,21 @@ export default function DashboardPage() {
               <>
                 <StatsMetricCard
                   compact
-                  title="المشاريع"
+                  title={dt("المشاريع")}
                   value={stats?.totalCampaigns ?? 0}
                   icon={Heart}
                   accent="teal"
                 />
                 <StatsMetricCard
                   compact
-                  title="الفئات"
+                  title={dt("الفئات")}
                   value={stats?.totalCategories ?? 0}
                   icon={FolderTree}
                   accent="indigo"
                 />
                 <StatsMetricCard
                   compact
-                  title="المستخدمين"
+                  title={dt("المستخدمين")}
                   value={stats?.totalUsers ?? 0}
                   icon={Users}
                   accent="amber"
@@ -984,41 +983,41 @@ export default function DashboardPage() {
               <>
                 <StatsMetricCard
                   compact
-                  title="مرة واحدة (عدد)"
+                  title={dt("مرة واحدة (عدد)")}
                   value={stats?.oneTimeAllCount ?? 0}
                   icon={Receipt}
                   accent="blue"
-                  subtitle={`ناجح: ${stats?.oneTimeCount ?? 0}`}
+                  subtitle={dt("ناجح: {0}", [stats?.oneTimeCount ?? 0])}
                 />
                 <StatsMetricCard
                   compact
-                  title="شهرية (عدد)"
+                  title={dt("شهرية (عدد)")}
                   value={stats?.monthlyAllCount ?? 0}
                   icon={Repeat}
                   accent="violet"
-                  subtitle={`ناجح: ${stats?.monthlyCount ?? 0}`}
+                  subtitle={dt("ناجح: {0}", [stats?.monthlyCount ?? 0])}
                 />
                 <StatsMetricCard
                   compact
-                  title="التبرعات الشهرية الناشطة"
+                  title={dt("التبرعات الشهرية الناشطة")}
                   value={stats?.activeMonthlyAmountUSD ?? 0}
                   icon={Repeat}
                   accent="teal"
                   format="money"
-                  subtitle={`عدد: ${stats?.activeMonthlyCount ?? 0}`}
+                  subtitle={dt("عدد: {0}", [stats?.activeMonthlyCount ?? 0])}
                 />
                 <StatsMetricCard
                   compact
-                  title="التبرعات الشهرية المتوقفة"
+                  title={dt("التبرعات الشهرية المتوقفة")}
                   value={stats?.monthlyStoppedAmountUSD ?? 0}
                   icon={Repeat}
                   accent="indigo"
                   format="money"
-                  subtitle={`عدد: ${stats?.monthlyStoppedCount ?? 0}`}
+                  subtitle={dt("عدد: {0}", [stats?.monthlyStoppedCount ?? 0])}
                 />
                 <StatsMetricCard
                   compact
-                  title="تبرعات مقبولة"
+                  title={dt("تبرعات مقبولة")}
                   value={stats?.paidCount ?? 0}
                   icon={Receipt}
                   accent="teal"
@@ -1034,10 +1033,10 @@ export default function DashboardPage() {
         <section className="space-y-4">
           <Card className="border-border shadow-sm">
             <CardContent className="pt-6">
-              <Tabs defaultValue="time-series" className="w-full" dir="rtl">
+              <Tabs defaultValue="time-series" className="w-full" dir={dashDir()}>
 
 
-                <TabsContent value="time-series" className="mt-0" dir="rtl">
+                <TabsContent value="time-series" className="mt-0" dir={dashDir()}>
                   <div className="h-[400px] w-full">
                     {chartLoading ? (
                       <div className="h-full flex items-center justify-center bg-slate-50 rounded-lg">
@@ -1097,7 +1096,7 @@ export default function DashboardPage() {
                                 return (
                                   <div className="rounded-lg border border-border bg-card px-3 py-2 shadow-sm">
                                     <p className="text-sm font-medium text-slate-700 mb-1.5">
-                                      {label ? formatIstanbulDateKeyLabel(String(label), "ar-EG", { weekday: "long", year: "numeric", month: "long", day: "numeric" }) : ""}
+                                      {label ? formatIstanbulDateKeyLabel(String(label), dashIntl("ar-EG"), { weekday: "long", year: "numeric", month: "long", day: "numeric" }) : ""}
                                     </p>
                                     {payload.map((entry) => {
                                       const dataKey = (entry as { dataKey?: string }).dataKey ?? entry.name;
@@ -1111,10 +1110,10 @@ export default function DashboardPage() {
                                     {point != null && (
                                       <>
                                         <p className="text-sm font-medium text-slate-700 mt-1.5 pt-1 border-t border-slate-100">
-                                          الإجمالي: {formatInSelectedCurrency(Number(point.amountUSD ?? 0), true)}
+                                          {dtx("الإجمالي: {0}", [formatInSelectedCurrency(Number(point.amountUSD ?? 0), true)])}
                                         </p>
                                         <p className="text-sm text-slate-500 mt-0.5">
-                                          عدد التبرعات: {Math.round(Number(point.count))}
+                                          {dtx("عدد التبرعات: {0}", [Math.round(Number(point.count))])}
                                         </p>
                                       </>
                                     )}
@@ -1198,9 +1197,9 @@ export default function DashboardPage() {
                               }
                               formatter={(value: number, name: string) => {
                                 if (name === "count" || name === "عدد التبرعات") return [String(Math.round(Number(value))), "عدد التبرعات"];
-                                if (chartMetric === "teamSupport") return [formatInSelectedCurrency(Number(value), true), "دعم الفريق"];
-                                if (chartMetric === "fees") return [formatInSelectedCurrency(Number(value), true), "الرسوم"];
-                                return [String(Math.round(Number(value))), "العدد"];
+                                if (chartMetric === "teamSupport") return [formatInSelectedCurrency(Number(value), true), dt("دعم الفريق")];
+                                if (chartMetric === "fees") return [formatInSelectedCurrency(Number(value), true), dt("الرسوم")];
+                                return [String(Math.round(Number(value))), dt("العدد")];
                               }}
                             />
                             <Legend />
@@ -1272,10 +1271,10 @@ export default function DashboardPage() {
                             }
                             formatter={(value: number, name: string) => {
                               if (name === "count" || name === "عدد التبرعات") return [String(Math.round(Number(value))), "عدد التبرعات"];
-                              if (chartMetric === "amount") return [formatInSelectedCurrency(Number(value), true), "المبلغ"];
-                              if (chartMetric === "teamSupport") return [formatInSelectedCurrency(Number(value), true), "دعم الفريق"];
-                              if (chartMetric === "fees") return [formatInSelectedCurrency(Number(value), true), "الرسوم"];
-                              return [String(Math.round(Number(value))), "العدد"];
+                              if (chartMetric === "amount") return [formatInSelectedCurrency(Number(value), true), dt("المبلغ")];
+                              if (chartMetric === "teamSupport") return [formatInSelectedCurrency(Number(value), true), dt("دعم الفريق")];
+                              if (chartMetric === "fees") return [formatInSelectedCurrency(Number(value), true), dt("الرسوم")];
+                              return [String(Math.round(Number(value))), dt("العدد")];
                             }}
                           />
                           <Legend />
@@ -1359,10 +1358,10 @@ export default function DashboardPage() {
                             }
                             formatter={(value: number, name: string) => {
                               if (name === "count" || name === "عدد التبرعات") return [String(Math.round(Number(value))), "عدد التبرعات"];
-                              if (chartMetric === "amount") return [formatInSelectedCurrency(Number(value), true), "المبلغ"];
-                              if (chartMetric === "teamSupport") return [formatInSelectedCurrency(Number(value), true), "دعم الفريق"];
-                              if (chartMetric === "fees") return [formatInSelectedCurrency(Number(value), true), "الرسوم"];
-                              return [String(Math.round(Number(value))), "العدد"];
+                              if (chartMetric === "amount") return [formatInSelectedCurrency(Number(value), true), dt("المبلغ")];
+                              if (chartMetric === "teamSupport") return [formatInSelectedCurrency(Number(value), true), dt("دعم الفريق")];
+                              if (chartMetric === "fees") return [formatInSelectedCurrency(Number(value), true), dt("الرسوم")];
+                              return [String(Math.round(Number(value))), dt("العدد")];
                             }}
                           />
                           <Legend />
@@ -1409,27 +1408,24 @@ export default function DashboardPage() {
                   </div>
                 </TabsContent>
 
-                <TabsContent value="split" className="mt-0" dir="rtl">
-                  <Tabs defaultValue="paid-failed" className="w-full" dir="rtl">
+                <TabsContent value="split" className="mt-0" dir={dashDir()}>
+                  <Tabs defaultValue="paid-failed" className="w-full" dir={dashDir()}>
                     <TabsList className="bg-slate-100 p-1 rounded-lg mb-4 inline-flex flex-row-reverse">
                       <TabsTrigger
                         value="campaign-category"
                         className="data-[state=active]:bg-card data-[state=active]:shadow-sm text-sm"
                       >
-                        مشاريع vs فئات
-                      </TabsTrigger>
+                        {dt("مشاريع vs فئات")}</TabsTrigger>
                       <TabsTrigger
                         value="one-time-monthly"
                         className="data-[state=active]:bg-card data-[state=active]:shadow-sm text-sm"
                       >
-                        مرة واحدة vs شهرية
-                      </TabsTrigger>
+                        {dt("مرة واحدة vs شهرية")}</TabsTrigger>
                       <TabsTrigger
                         value="paid-failed"
                         className="data-[state=active]:bg-card data-[state=active]:shadow-sm text-sm"
                       >
-                        مقبول vs فاشل
-                      </TabsTrigger>
+                        {dt("مقبول vs فاشل")}</TabsTrigger>
                     </TabsList>
                     <TabsContent value="campaign-category" className="mt-0">
                       <div className="h-[340px] w-full flex items-center justify-center">
@@ -1455,8 +1451,8 @@ export default function DashboardPage() {
                                 formatter={(value: number, _name: string, props: { payload?: { count?: number } }) => {
                                   const count = props?.payload?.count ?? 0;
                                   return [
-                                    `${formatMoney(Number(value), undefined, undefined, true)}  عدد: ${count}`,
-                                    "المبلغ / العدد",
+                                    dt("{0}  عدد: {1}", [formatMoney(Number(value), undefined, undefined, true), count]),
+                                    dt("المبلغ / العدد"),
                                   ];
                                 }}
                               />
@@ -1464,11 +1460,11 @@ export default function DashboardPage() {
                             </PieChart>
                           </ResponsiveContainer>
                         ) : (
-                          <p className="text-slate-500">لا توجد بيانات</p>
+                          <p className="text-slate-500">{dt("لا توجد بيانات")}</p>
                         )}
                       </div>
                     </TabsContent>
-                    <TabsContent value="one-time-monthly" className="mt-0" dir="rtl">
+                    <TabsContent value="one-time-monthly" className="mt-0" dir={dashDir()}>
                       <div className="h-[340px] w-full flex items-center justify-center">
                         {typeSplitData.length > 0 ? (
                           <ResponsiveContainer width="100%" height="100%">
@@ -1492,8 +1488,8 @@ export default function DashboardPage() {
                                 formatter={(value: number, _name: string, props: { payload?: { count?: number } }) => {
                                   const count = props?.payload?.count ?? 0;
                                   return [
-                                    `${formatMoney(Number(value), undefined, undefined, true)}  عدد: ${count}`,
-                                    "المبلغ / العدد",
+                                    dt("{0}  عدد: {1}", [formatMoney(Number(value), undefined, undefined, true), count]),
+                                    dt("المبلغ / العدد"),
                                   ];
                                 }}
                               />
@@ -1501,11 +1497,11 @@ export default function DashboardPage() {
                             </PieChart>
                           </ResponsiveContainer>
                         ) : (
-                          <p className="text-slate-500">لا توجد بيانات</p>
+                          <p className="text-slate-500">{dt("لا توجد بيانات")}</p>
                         )}
                       </div>
                     </TabsContent>
-                    <TabsContent value="paid-failed" className="mt-0" dir="rtl">
+                    <TabsContent value="paid-failed" className="mt-0" dir={dashDir()}>
                       <div className="h-[340px] w-full flex items-center justify-center">
                         {paidFailedSplitData.length > 0 ? (
                           <ResponsiveContainer width="100%" height="100%">
@@ -1529,8 +1525,8 @@ export default function DashboardPage() {
                                 formatter={(value: number, _name: string, props: { payload?: { value?: number; count?: number } }) => {
                                   const amount = props?.payload?.value ?? 0;
                                   return [
-                                    `عدد: ${value}${amount > 0 ? `  ${formatMoney(Number(amount), undefined, undefined, true)}` : ""}`,
-                                    "التبرعات",
+                                    dt("عدد: {0}{1}", [value, amount > 0 ? `  ${formatMoney(Number(amount), undefined, undefined, true)}` : ""]),
+                                    dt("التبرعات"),
                                   ];
                                 }}
                               />
@@ -1538,7 +1534,7 @@ export default function DashboardPage() {
                             </PieChart>
                           </ResponsiveContainer>
                         ) : (
-                          <p className="text-slate-500">لا توجد بيانات</p>
+                          <p className="text-slate-500">{dt("لا توجد بيانات")}</p>
                         )}
                       </div>
                     </TabsContent>
@@ -1551,15 +1547,13 @@ export default function DashboardPage() {
                       className="data-[state=active]:bg-card data-[state=active]:shadow-sm gap-2"
                     >
                       <PieChartIcon className="w-4 h-4" />
-                      توزيع الإيرادات
-                    </TabsTrigger>
+                      {dt("توزيع الإيرادات")}</TabsTrigger>
                     <TabsTrigger
                       value="time-series"
                       className="data-[state=active]:bg-card data-[state=active]:shadow-sm gap-2"
                     >
                       <BarChart3 className="w-4 h-4" />
-                      التبرعات عبر الزمن
-                    </TabsTrigger>
+                      {dt("التبرعات عبر الزمن")}</TabsTrigger>
                   </TabsList>
                   {chartView === "bar" && chartMetric === "amount" && (
                     <button
@@ -1573,7 +1567,7 @@ export default function DashboardPage() {
                       )}
                     >
                       <span className="w-2.5 h-2.5 rounded-full inline-block" style={{ backgroundColor: showFailed ? "#F43F5E" : "#94A3B8" }} />
-                      {showFailed ? "إخفاء الفاشلة" : "إظهار الفاشلة"}
+                      {showFailed ? dt("إخفاء الفاشلة") : dt("إظهار الفاشلة")}
                     </button>
                   )}
                 </div>
@@ -1587,7 +1581,7 @@ export default function DashboardPage() {
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between flex-row-reverse">
               <CardTitle className="text-sm font-semibold text-slate-700 flex items-center gap-2 justify-end">
                 <Search className="w-4 h-4 shrink-0" />
-                <span>تصفية النتائج</span>
+                <span>{dt("تصفية النتائج")}</span>
               </CardTitle>
               <DonationsFilterActions
                 canEditDonations={canEditDonations}
@@ -1597,7 +1591,7 @@ export default function DashboardPage() {
               />
             </div>
           </CardHeader>
-          <CardContent className="pt-0 space-y-4" dir="rtl">
+          <CardContent className="pt-0 space-y-4" dir={dashDir()}>
             {/* Time span lives with the other filters rather than in a sticky bar of its own:
                 one place to change what the page is showing, instead of two controls in two
                 locations writing the same scope. */}
@@ -1629,19 +1623,19 @@ export default function DashboardPage() {
               activeFilters={[
                 selectedCategory !== "all" && {
                   id: "category",
-                  label: "الحملة",
+                  label: dt("الحملة"),
                   value: categories.find((c) => c.id === selectedCategory)?.name ?? selectedCategory,
                   onClear: () => setSelectedCategory("all"),
                 },
                 selectedCampaign !== "all" && {
                   id: "campaign",
-                  label: "المشروع",
+                  label: dt("المشروع"),
                   value: campaigns.find((c) => c.id === selectedCampaign)?.title ?? selectedCampaign,
                   onClear: () => setSelectedCampaign("all"),
                 },
                 selectedUserId !== "all" && {
                   id: "donor",
-                  label: "المتبرع",
+                  label: dt("المتبرع"),
                   value:
                     users.find((u) => u.id === selectedUserId)?.name ||
                     users.find((u) => u.id === selectedUserId)?.email ||
@@ -1665,16 +1659,15 @@ export default function DashboardPage() {
 
 
   {/* Category */}
-  <div className="space-y-1 text-right">
+  <div className="space-y-1 text-start">
     <label className="text-[11px] font-semibold text-slate-600">
-      الفئة
-    </label>
+      {dt("الفئة")}</label>
     <Select value={selectedCategory} onValueChange={setSelectedCategory}>
       <SelectTrigger className="w-full h-10 px-3 text-[13px] rounded-lg border-slate-200 bg-white shadow-sm transition-colors hover:border-slate-300 focus:border-brand focus:ring-2 focus:ring-brand/15">
-        <SelectValue placeholder="اختر الفئة" />
+        <SelectValue placeholder={dt("اختر الفئة")} />
       </SelectTrigger>
       <SelectContent>
-        <SelectItem value="all" className="text-xs">جميع الفئات</SelectItem>
+        <SelectItem value="all" className="text-xs">{dt("جميع الفئات")}</SelectItem>
         {categories.map((c) => (
           <SelectItem key={c.id} value={c.id} className="text-xs">
             {c.name}
@@ -1685,24 +1678,23 @@ export default function DashboardPage() {
   </div>
 
   {/* Campaign */}
-  <div className="space-y-1 text-right">
+  <div className="space-y-1 text-start">
     <label className="text-[11px] font-semibold text-slate-600">
-      المشروع
-    </label>
+      {dt("المشروع")}</label>
     <Select value={selectedCampaign} onValueChange={setSelectedCampaign}>
       <SelectTrigger className="w-full h-10 px-3 text-[13px] rounded-lg border-slate-200 bg-white shadow-sm transition-colors hover:border-slate-300 focus:border-brand focus:ring-2 focus:ring-brand/15">
-        <SelectValue placeholder="اختر المشروع" />
+        <SelectValue placeholder={dt("اختر المشروع")} />
       </SelectTrigger>
       <SelectContent>
         <div className="p-2 border-b border-slate-100">
           <Input
-            placeholder="بحث..."
+            placeholder={dt("بحث...")}
             value={searchCampaign}
             onChange={(e) => setSearchCampaign(e.target.value)}
             className="w-full h-8 text-xs"
           />
         </div>
-        <SelectItem value="all" className="text-xs">جميع المشاريع</SelectItem>
+        <SelectItem value="all" className="text-xs">{dt("جميع المشاريع")}</SelectItem>
         {campaigns
           .filter((c) => {
             const ids = c.categoryIds ?? (c.categoryId ? [c.categoryId] : []);
@@ -1721,10 +1713,9 @@ export default function DashboardPage() {
 
   {/* User  hidden when viewing a specific user via link (?userId=...) */}
   {!searchParams.get("userId") && (
-    <div className="space-y-1 text-right">
+    <div className="space-y-1 text-start">
       <label className="text-[11px] font-semibold text-slate-600">
-        المستخدم
-      </label>
+        {dt("المستخدم")}</label>
       <Select
         value={selectedUserId}
         onValueChange={(v) => {
@@ -1737,12 +1728,12 @@ export default function DashboardPage() {
         }}
       >
         <SelectTrigger className="w-full h-10 px-3 text-[13px] rounded-lg border-slate-200 bg-white shadow-sm transition-colors hover:border-slate-300 focus:border-brand focus:ring-2 focus:ring-brand/15">
-          <SelectValue placeholder="اختر المستخدم" />
+          <SelectValue placeholder={dt("اختر المستخدم")} />
         </SelectTrigger>
         <SelectContent>
           <div className="p-2 border-b border-slate-100 flex gap-1.5 flex-row-reverse items-center">
             <Input
-              placeholder="بحث… ثم Enter أو زر البحث"
+              placeholder={dt("بحث… ثم Enter أو زر البحث")}
               value={usersSearchInput}
               onChange={(e) => setUsersSearchInput(e.target.value)}
               onKeyDown={(e) => {
@@ -1755,7 +1746,7 @@ export default function DashboardPage() {
             />
             <button
               type="button"
-              title="بحث"
+              title={dt("بحث")}
               disabled={usersSearchLoading}
               onClick={(e) => {
                 e.preventDefault();
@@ -1771,7 +1762,7 @@ export default function DashboardPage() {
               )}
             </button>
           </div>
-          <SelectItem value="all" className="text-xs">الكل</SelectItem>
+          <SelectItem value="all" className="text-xs">{dt("الكل")}</SelectItem>
           {users.map((u) => (
             <SelectItem key={u.id} value={u.id} className="text-xs">
               {u.name || u.email}
@@ -1783,54 +1774,51 @@ export default function DashboardPage() {
   )}
 
   {/* Chart Metric */}
-  <div className="space-y-1 text-right">
+  <div className="space-y-1 text-start">
     <label className="text-[11px] font-semibold text-slate-600">
-      القيمة
-    </label>
+      {dt("القيمة")}</label>
     <Select value={chartMetric} onValueChange={(v) => setChartMetric(v as ChartMetric)}>
       <SelectTrigger className="w-full h-10 px-3 text-[13px] rounded-lg border-slate-200 bg-white shadow-sm transition-colors hover:border-slate-300 focus:border-brand focus:ring-2 focus:ring-brand/15">
-        <SelectValue placeholder="اختر القيمة" />
+        <SelectValue placeholder={dt("اختر القيمة")} />
       </SelectTrigger>
       <SelectContent>
-        <SelectItem value="amount" className="text-xs">المبلغ</SelectItem>
-        <SelectItem value="teamSupport" className="text-xs">دعم الفريق</SelectItem>
-        <SelectItem value="fees" className="text-xs">الرسوم</SelectItem>
+        <SelectItem value="amount" className="text-xs">{dt("المبلغ")}</SelectItem>
+        <SelectItem value="teamSupport" className="text-xs">{dt("دعم الفريق")}</SelectItem>
+        <SelectItem value="fees" className="text-xs">{dt("الرسوم")}</SelectItem>
       </SelectContent>
     </Select>
   </div>
 
   {/* Chart Type */}
-  <div className="space-y-1 text-right">
+  <div className="space-y-1 text-start">
     <label className="text-[11px] font-semibold text-slate-600">
-      نوع الرسم
-    </label>
+      {dt("نوع الرسم")}</label>
     <Select value={chartView} onValueChange={(v) => setChartView(v as ChartViewType)}>
       <SelectTrigger className="w-full h-10 px-3 text-[13px] rounded-lg border-slate-200 bg-white shadow-sm transition-colors hover:border-slate-300 focus:border-brand focus:ring-2 focus:ring-brand/15">
-        <SelectValue placeholder="اختر النوع" />
+        <SelectValue placeholder={dt("اختر النوع")} />
       </SelectTrigger>
       <SelectContent>
-        <SelectItem value="bar" className="text-xs">أعمدة</SelectItem>
-        <SelectItem value="line" className="text-xs">خط</SelectItem>
-        <SelectItem value="area" className="text-xs">منطقة</SelectItem>
+        <SelectItem value="bar" className="text-xs">{dt("أعمدة")}</SelectItem>
+        <SelectItem value="line" className="text-xs">{dt("خط")}</SelectItem>
+        <SelectItem value="area" className="text-xs">{dt("منطقة")}</SelectItem>
       </SelectContent>
     </Select>
   </div>
 
   {/* Site language (donation row locale) */}
-  <div className="space-y-1 text-right">
+  <div className="space-y-1 text-start">
     <label className="text-[11px] font-semibold text-slate-600">
-      لغة الموقع (التبرع)
-    </label>
+      {dt("لغة الموقع (التبرع)")}</label>
     <Select
       value={donationLocaleFilter}
       onValueChange={(v) => setDonationLocaleFilter(v as typeof donationLocaleFilter)}
     >
       <SelectTrigger className="w-full h-10 px-3 text-[13px] rounded-lg border-slate-200 bg-white shadow-sm transition-colors hover:border-slate-300 focus:border-brand focus:ring-2 focus:ring-brand/15">
-        <SelectValue placeholder="اللغة" />
+        <SelectValue placeholder={dt("اللغة")} />
       </SelectTrigger>
       <SelectContent>
-        <SelectItem value="all" className="text-xs">كل اللغات</SelectItem>
-        <SelectItem value="ar" className="text-xs">العربية</SelectItem>
+        <SelectItem value="all" className="text-xs">{dt("كل اللغات")}</SelectItem>
+        <SelectItem value="ar" className="text-xs">{dt("العربية")}</SelectItem>
         <SelectItem value="en" className="text-xs">English</SelectItem>
         <SelectItem value="fr" className="text-xs">Français</SelectItem>
         <SelectItem value="tr" className="text-xs">Türkçe</SelectItem>
@@ -1838,25 +1826,24 @@ export default function DashboardPage() {
         <SelectItem value="pt" className="text-xs">Português</SelectItem>
         <SelectItem value="es" className="text-xs">Español</SelectItem>
         <SelectItem value="de" className="text-xs">Deutsch</SelectItem>
-        <SelectItem value="__unset" className="text-xs">غير محدد</SelectItem>
+        <SelectItem value="__unset" className="text-xs">{dt("غير محدد")}</SelectItem>
       </SelectContent>
     </Select>
   </div>
 
   {/* Donor country */}
-  <div className="space-y-1 text-right">
+  <div className="space-y-1 text-start">
     <label className="text-[11px] font-semibold text-slate-600">
-      الدولة
-    </label>
+      {dt("الدولة")}</label>
     <Select
       value={donationCountryFilter}
       onValueChange={(v) => setDonationCountryFilter(v)}
     >
       <SelectTrigger className="w-full h-10 px-3 text-[13px] rounded-lg border-slate-200 bg-white shadow-sm transition-colors hover:border-slate-300 focus:border-brand focus:ring-2 focus:ring-brand/15">
-        <SelectValue placeholder="الدولة" />
+        <SelectValue placeholder={dt("الدولة")} />
       </SelectTrigger>
       <SelectContent>
-        <SelectItem value="all" className="text-xs">كل الدول</SelectItem>
+        <SelectItem value="all" className="text-xs">{dt("كل الدول")}</SelectItem>
         {countryOptions.map((c) => (
           <SelectItem key={c.code} value={c.code} className="text-xs">
             {getCountryDisplayNameFromCode(c.code, locale || "ar")} ({c.count})
@@ -1864,43 +1851,40 @@ export default function DashboardPage() {
         ))}
         {countryUnsetCount > 0 && (
           <SelectItem value="__unset" className="text-xs">
-            غير محدد ({countryUnsetCount})
-          </SelectItem>
+            {dtx("غير محدد ({0})", [countryUnsetCount])}</SelectItem>
         )}
       </SelectContent>
     </Select>
   </div>
 
   {/* Donation Status Filter */}
-  <div className="space-y-1 text-right">
+  <div className="space-y-1 text-start">
     <label className="text-[11px] font-semibold text-slate-600">
-      حالة التبرع
-    </label>
+      {dt("حالة التبرع")}</label>
     <Select value={donationsStatusFilter} onValueChange={(v) => setDonationsStatusFilter(v as typeof donationsStatusFilter)}>
       <SelectTrigger className="w-full h-10 px-3 text-[13px] rounded-lg border-slate-200 bg-white shadow-sm transition-colors hover:border-slate-300 focus:border-brand focus:ring-2 focus:ring-brand/15">
-        <SelectValue placeholder="الحالة" />
+        <SelectValue placeholder={dt("الحالة")} />
       </SelectTrigger>
       <SelectContent>
-        <SelectItem value="all" className="text-xs">كل الحالات</SelectItem>
-        <SelectItem value="PAID" className="text-xs">ناجح</SelectItem>
-        <SelectItem value="FAILED" className="text-xs">فاشل</SelectItem>
+        <SelectItem value="all" className="text-xs">{dt("كل الحالات")}</SelectItem>
+        <SelectItem value="PAID" className="text-xs">{dt("ناجح")}</SelectItem>
+        <SelectItem value="FAILED" className="text-xs">{dt("فاشل")}</SelectItem>
       </SelectContent>
     </Select>
   </div>
 
   {/* Donation Type Filter (ONE_TIME / MONTHLY) */}
-  <div className="space-y-1 text-right">
+  <div className="space-y-1 text-start">
     <label className="text-[11px] font-semibold text-slate-600">
-      نوع التبرع
-    </label>
+      {dt("نوع التبرع")}</label>
     <Select value={donationsTypeFilter} onValueChange={(v) => setDonationsTypeFilter(v as typeof donationsTypeFilter)}>
       <SelectTrigger className="w-full h-10 px-3 text-[13px] rounded-lg border-slate-200 bg-white shadow-sm transition-colors hover:border-slate-300 focus:border-brand focus:ring-2 focus:ring-brand/15">
-        <SelectValue placeholder="النوع" />
+        <SelectValue placeholder={dt("النوع")} />
       </SelectTrigger>
       <SelectContent>
-        <SelectItem value="all" className="text-xs">كل الأنواع</SelectItem>
-        <SelectItem value="ONE_TIME" className="text-xs">لمرة واحدة</SelectItem>
-        <SelectItem value="MONTHLY" className="text-xs">شهري</SelectItem>
+        <SelectItem value="all" className="text-xs">{dt("كل الأنواع")}</SelectItem>
+        <SelectItem value="ONE_TIME" className="text-xs">{dt("لمرة واحدة")}</SelectItem>
+        <SelectItem value="MONTHLY" className="text-xs">{dt("شهري")}</SelectItem>
       </SelectContent>
     </Select>
   </div>
@@ -1915,16 +1899,14 @@ export default function DashboardPage() {
 
         {/* التبرعات */}
         <section className="space-y-4">
-          <h2 className="text-xs font-semibold text-slate-500 uppercase tracking-wider text-right">
-            التبرعات
-          </h2>
+          <h2 className="text-xs font-semibold text-slate-500 uppercase tracking-wider text-start">
+            {dt("التبرعات")}</h2>
           <Card className="border-border shadow-sm">
             <CardHeader className="border-b border-slate-100 py-4">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 flex-row-reverse">
-                <div className="text-right space-y-1">
+                <div className="text-start space-y-1">
                   <CardTitle className="text-base font-semibold text-slate-900">
-                    أحدث التبرعات
-                  </CardTitle>
+                    {dt("أحدث التبرعات")}</CardTitle>
                 </div>
                 <div className="flex flex-col sm:flex-row gap-2 sm:items-center shrink-0">
                 <DonorSearchInput
@@ -1940,57 +1922,46 @@ export default function DashboardPage() {
                     setDonationsSortOrder(order);
                   }}
                 >
-                  <SelectTrigger className="w-full sm:w-[200px] h-9 border-slate-200 bg-slate-50/50" dir="rtl">
-                    <SelectValue placeholder="ترتيب" />
+                  <SelectTrigger className="w-full sm:w-[200px] h-9 border-slate-200 bg-slate-50/50" dir={dashDir()}>
+                    <SelectValue placeholder={dt("ترتيب")} />
                   </SelectTrigger>
-                  <SelectContent dir="rtl">
-                    <SelectItem value="date-desc">الأحدث أولاً</SelectItem>
-                    <SelectItem value="date-asc">الأقدم أولاً</SelectItem>
-                    <SelectItem value="amount-desc">الأعلى مبلغاً</SelectItem>
-                    <SelectItem value="amount-asc">الأقل مبلغاً</SelectItem>
+                  <SelectContent dir={dashDir()}>
+                    <SelectItem value="date-desc">{dt("الأحدث أولاً")}</SelectItem>
+                    <SelectItem value="date-asc">{dt("الأقدم أولاً")}</SelectItem>
+                    <SelectItem value="amount-desc">{dt("الأعلى مبلغاً")}</SelectItem>
+                    <SelectItem value="amount-asc">{dt("الأقل مبلغاً")}</SelectItem>
                   </SelectContent>
                 </Select>
                 </div>
               </div>
             </CardHeader>
             <CardContent className="p-0">
-              <div className="overflow-x-auto" dir="rtl">
-                <table className="w-full text-xs text-right leading-snug">
+              <div className="overflow-x-auto" dir={dashDir()}>
+                <table className="w-full text-xs text-start leading-snug">
                   <thead>
                     <tr className="border-b border-slate-200 bg-slate-50">
-                      <th className="text-right py-3 px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
-                        المتبرع
-                      </th>
-                      <th className="text-right py-3 px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500 min-w-[100px] max-w-[130px]">
-                        الدولة
-                      </th>
-                      <th className="text-right py-3 px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500 whitespace-nowrap">
-                        التبرع
-                      </th>
-                      <th className="text-right py-3 px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
-                        الحالة
-                      </th>
-                      <th className="text-right py-3 px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
-                        البوابة
-                      </th>
-                      <th className="text-right py-3 px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500 whitespace-nowrap">
-                        دعم الفريق
-                      </th>
-                      <th className="text-right py-3 px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
-                        النوع
-                      </th>
-                      <th className="text-right py-3 px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
-                        الإحالة
-                      </th>
-                      <th className="text-right py-3 px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500 whitespace-nowrap">
-                        مصدر التبرع
-                      </th>
-                      <th className="text-right py-3 px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500 max-w-[110px]">
-                        المشروع / الفئة
-                      </th>
-                      <th className="text-right py-3 px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500 whitespace-nowrap">
-                        التاريخ
-                      </th>
+                      <th className="text-start py-3 px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                        {dt("المتبرع")}</th>
+                      <th className="text-start py-3 px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500 min-w-[100px] max-w-[130px]">
+                        {dt("الدولة")}</th>
+                      <th className="text-start py-3 px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500 whitespace-nowrap">
+                        {dt("التبرع")}</th>
+                      <th className="text-start py-3 px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                        {dt("الحالة")}</th>
+                      <th className="text-start py-3 px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                        {dt("البوابة")}</th>
+                      <th className="text-start py-3 px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500 whitespace-nowrap">
+                        {dt("دعم الفريق")}</th>
+                      <th className="text-start py-3 px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                        {dt("النوع")}</th>
+                      <th className="text-start py-3 px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                        {dt("الإحالة")}</th>
+                      <th className="text-start py-3 px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500 whitespace-nowrap">
+                        {dt("مصدر التبرع")}</th>
+                      <th className="text-start py-3 px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500 max-w-[110px]">
+                        {dt("المشروع / الفئة")}</th>
+                      <th className="text-start py-3 px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500 whitespace-nowrap">
+                        {dt("التاريخ")}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -2003,14 +1974,12 @@ export default function DashboardPage() {
                     ) : !donationsFetchedOnce ? (
                       <tr>
                         <td colSpan={11} className="py-12 text-center text-slate-500">
-                          جاري التحميل...
-                        </td>
+                          {dt("جاري التحميل...")}</td>
                       </tr>
                     ) : donations.length === 0 ? (
                       <tr>
                         <td colSpan={11} className="py-12 text-center text-slate-500">
-                          لا توجد تبرعات تطابق التصفية
-                        </td>
+                          {dt("لا توجد تبرعات تطابق التصفية")}</td>
                       </tr>
                     ) : (
                       donations.map((d) => (
@@ -2023,7 +1992,7 @@ export default function DashboardPage() {
                             <button
                               type="button"
                               onClick={() => d.donor?.id && openUserProfile(d.donor.id)}
-                              className="text-right w-full max-w-[200px] rounded-md -mx-0.5 px-0.5 py-0 hover:bg-slate-100/80 transition-colors cursor-pointer border-0 bg-transparent"
+                              className="text-start w-full max-w-[200px] rounded-md -mx-0.5 px-0.5 py-0 hover:bg-slate-100/80 transition-colors cursor-pointer border-0 bg-transparent"
                             >
                               <p className="font-medium text-slate-900">
                                 {d.donor?.name || "—"}
@@ -2038,7 +2007,7 @@ export default function DashboardPage() {
                           <td className="py-2.5 px-3 align-middle max-w-[130px]">
                             <DonationTableCountryColumn countryCode={d.donorCountryCode} />
                           </td>
-                          <td className="py-2.5 px-3 font-medium text-slate-800" dir="rtl">
+                          <td className="py-2.5 px-3 font-medium text-slate-800" dir={dashDir()}>
                             <span dir="ltr">
                               {formatMoney(donationDisplayTotalLocal(d), d.currency, d.amountUSD ?? undefined)}
                             </span>
@@ -2049,10 +2018,9 @@ export default function DashboardPage() {
                                 type="button"
                                 onClick={() => openDonationDetails("error", d)}
                                 className="inline-block px-1.5 py-px rounded-full text-[11px] font-medium bg-red-100 text-red-700 hover:bg-red-200 transition-colors cursor-pointer"
-                                title="عرض رسالة الخطأ من بوابة الدفع"
+                                title={dt("عرض رسالة الخطأ من بوابة الدفع")}
                               >
-                                فاشل
-                              </button>
+                                {dt("فاشل")}</button>
                             ) : (
                               <span
                                 className={cn(
@@ -2061,66 +2029,20 @@ export default function DashboardPage() {
                                     ? "bg-green-100 text-green-700"
                                     : "bg-amber-100 text-amber-700"
                                 )}
-                                title={d.status === "PAID" && !d.paidAt && d.type !== "MONTHLY" ? "تم بدء الدفع ولم يؤكده مزود الدفع بعد  لا يُحتسب في الإيرادات" : undefined}
+                                title={d.status === "PAID" && !d.paidAt && d.type !== "MONTHLY" ? dt("تم بدء الدفع ولم يؤكده مزود الدفع بعد  لا يُحتسب في الإيرادات") : undefined}
                               >
                                 {d.status === "PAID"
                                   ? (d.paidAt || d.type === "MONTHLY")
-                                    ? "ناجح"
-                                    : "قيد التأكيد"
-                                  : "معلق"}
+                                    ? dt("ناجح")
+                                    : dt("قيد التأكيد")
+                                  : dt("معلق")}
                               </span>
                             )}
                           </td>
                           <td className="py-2.5 px-3">
-                            {d.provider === "STRIPE" || d.provider === "PAYFOR" ? (
-                              <button
-                                type="button"
-                                onClick={() => openDonationDetails("payment", d)}
-                                className="inline-flex items-center rounded hover:opacity-80 hover:scale-[1.03] active:scale-95 transition-all"
-                                title="عرض تفاصيل بوابة الدفع"
-                              >
-                                {d.provider === "STRIPE" ? (
-                                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-semibold bg-[#635bff]/10 text-[#635bff]">
-                                    Stripe
-                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M13.976 9.15c-2.172-.806-3.356-1.426-3.356-2.409 0-.831.683-1.305 1.901-1.305 2.227 0 4.515.858 6.09 1.631l.89-5.494C18.252.975 15.697 0 12.165 0 9.667 0 7.589.654 6.104 1.872 4.56 3.147 3.757 4.992 3.757 7.218c0 4.039 2.467 5.76 6.476 7.219 2.585.92 3.445 1.574 3.445 2.583 0 .98-.84 1.545-2.354 1.545-1.875 0-4.965-.921-6.99-2.109l-.9 5.555C5.175 22.99 8.385 24 11.714 24c2.641 0 4.843-.624 6.328-1.813 1.664-1.305 2.525-3.236 2.525-5.732 0-4.128-2.524-5.851-6.591-7.305z"/></svg>
-                                  </span>
-                                ) : (
-                                  <span className="inline-flex items-center">
-                                    <img
-                                      src="/ziraat.jpg"
-                                      alt="PayFor"
-                                      className="h-8 w-auto max-w-[72px] object-contain rounded"
-                                    />
-                                  </span>
-                                )}
-                              </button>
-                            ) : d.provider === "BANK_TRANSFER" ? (
-                              /* Two origins share the provider: a line imported from
-                                 the bank's statement, or a receipt a donor uploaded at
-                                 checkout. Only the latter has a review to open. */
-                              d.paymentMethod === "BANK_TRANSFER" ? (
-                                <Link
-                                  href={`/dashboard/transfer-receipts?claim=${d.id}`}
-                                  className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-semibold bg-brand/10 text-brand hover:bg-brand/20 transition-colors"
-                                  title={d.paidAt ? "تحويل بنكي مؤكد  فتح الإيصال" : "تحويل بنكي بانتظار مطابقة الإيصال  فتح المراجعة"}
-                                >
-                                  <Landmark className="w-3 h-3" />
-                                  تحويل بنكي
-                                </Link>
-                              ) : (
-                                <span
-                                  className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-semibold bg-brand/10 text-brand"
-                                  title="تبرع عبر تحويل بنكي  مستورد من كشف الحساب"
-                                >
-                                  <Landmark className="w-3 h-3" />
-                                  تحويل بنكي
-                                </span>
-                              )
-                            ) : (
-                              <span className="text-slate-400 text-xs">—</span>
-                            )}
+                            <DonationGatewayBadge donation={d} onOpen={() => openDonationDetails("payment", d)} />
                           </td>
-                          <td className="py-2.5 px-3 font-medium text-slate-800" dir="rtl">
+                          <td className="py-2.5 px-3 font-medium text-slate-800" dir={dashDir()}>
                             {(d.teamSupport ?? 0) > 0 ? (
                               <span dir="ltr">
                                 {formatMoney(d.teamSupport ?? 0, d.currency, (d.totalAmount && (d.amountUSD != null)) ? ((d.teamSupport ?? 0) / d.totalAmount) * d.amountUSD : undefined)}
@@ -2140,16 +2062,16 @@ export default function DashboardPage() {
                               title={
                                 d.type === "MONTHLY"
                                   ? d.isRecurringCharge
-                                    ? "خصم تلقائي متكرر  تم دون أي إجراء من المتبرع"
-                                    : "أول دفعة عند إنشاء الاشتراك"
+                                    ? dt("خصم تلقائي متكرر  تم دون أي إجراء من المتبرع")
+                                    : dt("أول دفعة عند إنشاء الاشتراك")
                                   : undefined
                               }
                             >
                               {d.type === "MONTHLY"
                                 ? d.isRecurringCharge
-                                  ? `تجديد تلقائي${d.subscriptionCycle ? ` #${d.subscriptionCycle}` : ""}`
-                                  : "شهري  أول دفعة"
-                                : "مرة واحدة"}
+                                  ? dt("تجديد تلقائي{0}", [d.subscriptionCycle ? ` #${d.subscriptionCycle}` : ""])
+                                  : dt("شهري  أول دفعة")
+                                : dt("مرة واحدة")}
                             </span>
                           </td>
                           <td className="py-2.5 px-3 align-middle">
@@ -2168,8 +2090,8 @@ export default function DashboardPage() {
                             <button
                               type="button"
                               onClick={() => openDonationDetails("attribution", d)}
-                              className="inline-flex max-w-full text-right rounded-md hover:opacity-80 transition-opacity cursor-pointer bg-transparent border-0 p-0"
-                              title="عرض تفاصيل الإسناد الإعلاني"
+                              className="inline-flex max-w-full text-start rounded-md hover:opacity-80 transition-opacity cursor-pointer bg-transparent border-0 p-0"
+                              title={dt("عرض تفاصيل الإسناد الإعلاني")}
                             >
                               <DonationSourceBadge
                                 attribution={d.attribution}
@@ -2208,7 +2130,7 @@ export default function DashboardPage() {
                               (() => {
                                 const first = d.categories[0];
                                 const more = d.categories.length - 1;
-                                const fullList = "فئة: " + d.categories.map((c) => c.name).join(", ");
+                                const fullList = dt("فئة: {0}", [d.categories.map((c) => c.name).join(", ")]);
                                 return (
                                   <div className="flex items-center gap-1 max-w-[110px]">
                                     <Link
@@ -2218,7 +2140,7 @@ export default function DashboardPage() {
                                       title={fullList}
                                       className="truncate text-slate-700 hover:text-brand hover:underline"
                                     >
-                                      فئة: {first.name}
+                                      {dtx("فئة: {0}", [first.name])}
                                     </Link>
                                     {more > 0 && (
                                       <span className="shrink-0 text-[10px] text-slate-400" title={fullList}>
@@ -2269,14 +2191,12 @@ export default function DashboardPage() {
                     ) : (
                       <ChevronDown className="w-4 h-4 rotate-180" />
                     )}
-                    عرض المزيد
-                  </button>
+                    {dt("عرض المزيد")}</button>
                 </div>
               )}
               {donationsTotal > 0 && (
-                <p className="text-xs text-slate-500 px-4 py-2 border-t border-slate-100 text-right">
-                  عرض {donations.length} من {donationsTotal} تبرع
-                </p>
+                <p className="text-xs text-slate-500 px-4 py-2 border-t border-slate-100 text-start">
+                  {dtx("عرض {0} من {1} تبرع", [donations.length, donationsTotal])}</p>
               )}
             </CardContent>
           </Card>
@@ -2293,8 +2213,8 @@ export default function DashboardPage() {
         open={exportOpen}
         onOpenChange={setExportOpen}
         endpoint="/api/admin/donations/export"
-        title="تصدير تقرير التبرعات"
-        description="اضبط المعايير قبل التصدير. سيشمل التقرير قائمة كاملة بكل العمليات بالإضافة إلى ملخص شامل."
+        title={dt("تصدير تقرير التبرعات")}
+        description={dt("اضبط المعايير قبل التصدير. سيشمل التقرير قائمة كاملة بكل العمليات بالإضافة إلى ملخص شامل.")}
         defaults={exportDefaults}
         options={{
           categories: exportCategoryOptions,
@@ -2321,7 +2241,7 @@ export default function DashboardPage() {
 
 function LoadingSkeleton() {
   return (
-    <div className="space-y-6 max-w-[1600px] mx-auto" dir="rtl">
+    <div className="space-y-6 max-w-[1600px] mx-auto" dir={dashDir()}>
       <div className="h-16 rounded-lg bg-slate-200 animate-pulse" />
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
         {[1, 2, 3, 4, 5].map((i) => (

@@ -19,6 +19,7 @@
  */
 
 import ExcelJS from "exceljs";
+import { dashIntl, dt } from "@/lib/dashboard/i18n";
 
 // ─── Public types ─────────────────────────────────────────────────────────────
 
@@ -28,9 +29,9 @@ export type ExportFormat = "xlsx" | "csv";
 export type ExportRecurringFrequency = "DAILY" | "FRIDAY" | "MONTHLY";
 
 const FREQUENCY_LABEL_AR: Record<ExportRecurringFrequency, string> = {
-  DAILY: "يومي",
-  FRIDAY: "أسبوعياً",
-  MONTHLY: "شهري",
+  get DAILY() { return dt("يومي"); },
+  get FRIDAY() { return dt("أسبوعياً"); },
+  get MONTHLY() { return dt("شهري"); },
 };
 
 export interface DonationExportRow {
@@ -142,64 +143,64 @@ interface ColSpec<T> {
 }
 
 const DONATION_COLUMNS: ColSpec<DonationExportRow>[] = [
-  { key: "id", header: "رقم العملية", width: 26, value: (r) => r.id },
-  { key: "status", header: "الحالة", width: 10, align: "center", value: (r) => r.status },
-  { key: "type", header: "النوع", width: 12, align: "center", value: (r) =>
+  { key: "id", get header() { return dt("رقم العملية"); }, width: 26, value: (r) => r.id },
+  { key: "status", get header() { return dt("الحالة"); }, width: 10, align: "center", value: (r) => r.status },
+  { key: "type", get header() { return dt("النوع"); }, width: 12, align: "center", value: (r) =>
     r.type !== "MONTHLY"
-      ? "لمرة واحدة"
+      ? dt("لمرة واحدة")
       : r.frequency
-        ? `متكرر  ${FREQUENCY_LABEL_AR[r.frequency]}`
-        : "متكرر" },
-  { key: "createdAt", header: "تاريخ الإنشاء", width: 19, numFmt: "yyyy-mm-dd hh:mm", value: (r) => r.createdAt },
-  { key: "paidAt", header: "تاريخ الدفع", width: 19, numFmt: "yyyy-mm-dd hh:mm", value: (r) => r.paidAt },
-  { key: "donorName", header: "اسم المتبرع", width: 24, value: (r) => r.donor.name ?? "" },
-  { key: "donorEmail", header: "بريد المتبرع", width: 28, value: (r) => r.donor.email ?? "" },
-  { key: "donorPhone", header: "هاتف المتبرع", width: 18, value: (r) => r.donor.phone ?? "" },
-  { key: "country", header: "الدولة", width: 10, align: "center", value: (r) => (r.donorCountryCode ?? r.donor.countryCode ?? "").toString().toUpperCase() },
-  { key: "locale", header: "اللغة", width: 8, align: "center", value: (r) => r.locale ?? "" },
-  { key: "currency", header: "العملة", width: 10, align: "center", value: (r) => r.currency },
-  { key: "amount", header: "مبلغ التبرع", width: 14, align: "right", numFmt: "#,##0.00", value: (r) => r.amount },
-  { key: "teamSupport", header: "دعم الفريق", width: 14, align: "right", numFmt: "#,##0.00", value: (r) => r.teamSupport },
-  { key: "fees", header: "رسوم المعالجة", width: 14, align: "right", numFmt: "#,##0.00", value: (r) => r.fees },
-  { key: "totalAmount", header: "الإجمالي المدفوع", width: 16, align: "right", numFmt: "#,##0.00", value: (r) => r.totalAmount },
-  { key: "amountUSD", header: "بالدولار (USD)", width: 14, align: "right", numFmt: "#,##0.00", value: (r) => r.amountUSD },
-  { key: "coverFees", header: "غطى الرسوم", width: 12, align: "center", value: (r) => (r.coverFees ? "نعم" : "لا") },
-  { key: "campaigns", header: "الحملات", width: 36, value: (r) => r.campaigns.map((c) => c.title).join("؛ ") },
-  { key: "categories", header: "الأقسام", width: 28, value: (r) => r.categories.map((c) => c.name).join("؛ ") },
-  { key: "referralCode", header: "رمز الإحالة", width: 14, align: "center", value: (r) => r.referral?.code ?? "" },
-  { key: "referralName", header: "اسم الإحالة", width: 24, value: (r) => r.referral?.name ?? "" },
-  { key: "paymentMethod", header: "وسيلة الدفع", width: 14, align: "center", value: (r) => r.paymentMethod ?? "" },
-  { key: "provider", header: "بوابة الدفع", width: 14, align: "center", value: (r) => r.provider ?? "" },
-  { key: "providerOrderId", header: "مرجع البوابة", width: 24, value: (r) => r.providerOrderId ?? "" },
-  { key: "providerErrorMessage", header: "سبب الفشل", width: 30, value: (r) => r.providerErrorMessage ?? "" },
-  { key: "subscriptionId", header: "رقم الاشتراك", width: 26, value: (r) => r.subscriptionId ?? "" },
-  { key: "comment", header: "ملاحظة", width: 28, value: (r) => r.comment ?? "" },
+        ? dt("متكرر  {0}", [FREQUENCY_LABEL_AR[r.frequency]])
+        : dt("متكرر") },
+  { key: "createdAt", get header() { return dt("تاريخ الإنشاء"); }, width: 19, numFmt: "yyyy-mm-dd hh:mm", value: (r) => r.createdAt },
+  { key: "paidAt", get header() { return dt("تاريخ الدفع"); }, width: 19, numFmt: "yyyy-mm-dd hh:mm", value: (r) => r.paidAt },
+  { key: "donorName", get header() { return dt("اسم المتبرع"); }, width: 24, value: (r) => r.donor.name ?? "" },
+  { key: "donorEmail", get header() { return dt("بريد المتبرع"); }, width: 28, value: (r) => r.donor.email ?? "" },
+  { key: "donorPhone", get header() { return dt("هاتف المتبرع"); }, width: 18, value: (r) => r.donor.phone ?? "" },
+  { key: "country", get header() { return dt("الدولة"); }, width: 10, align: "center", value: (r) => (r.donorCountryCode ?? r.donor.countryCode ?? "").toString().toUpperCase() },
+  { key: "locale", get header() { return dt("اللغة"); }, width: 8, align: "center", value: (r) => r.locale ?? "" },
+  { key: "currency", get header() { return dt("العملة"); }, width: 10, align: "center", value: (r) => r.currency },
+  { key: "amount", get header() { return dt("مبلغ التبرع"); }, width: 14, align: "right", numFmt: "#,##0.00", value: (r) => r.amount },
+  { key: "teamSupport", get header() { return dt("دعم الفريق"); }, width: 14, align: "right", numFmt: "#,##0.00", value: (r) => r.teamSupport },
+  { key: "fees", get header() { return dt("رسوم المعالجة"); }, width: 14, align: "right", numFmt: "#,##0.00", value: (r) => r.fees },
+  { key: "totalAmount", get header() { return dt("الإجمالي المدفوع"); }, width: 16, align: "right", numFmt: "#,##0.00", value: (r) => r.totalAmount },
+  { key: "amountUSD", get header() { return dt("بالدولار (USD)"); }, width: 14, align: "right", numFmt: "#,##0.00", value: (r) => r.amountUSD },
+  { key: "coverFees", get header() { return dt("غطى الرسوم"); }, width: 12, align: "center", value: (r) => (r.coverFees ? dt("نعم") : dt("لا")) },
+  { key: "campaigns", get header() { return dt("الحملات"); }, width: 36, value: (r) => r.campaigns.map((c) => c.title).join(dt("؛ ")) },
+  { key: "categories", get header() { return dt("الأقسام"); }, width: 28, value: (r) => r.categories.map((c) => c.name).join(dt("؛ ")) },
+  { key: "referralCode", get header() { return dt("رمز الإحالة"); }, width: 14, align: "center", value: (r) => r.referral?.code ?? "" },
+  { key: "referralName", get header() { return dt("اسم الإحالة"); }, width: 24, value: (r) => r.referral?.name ?? "" },
+  { key: "paymentMethod", get header() { return dt("وسيلة الدفع"); }, width: 14, align: "center", value: (r) => r.paymentMethod ?? "" },
+  { key: "provider", get header() { return dt("بوابة الدفع"); }, width: 14, align: "center", value: (r) => r.provider ?? "" },
+  { key: "providerOrderId", get header() { return dt("مرجع البوابة"); }, width: 24, value: (r) => r.providerOrderId ?? "" },
+  { key: "providerErrorMessage", get header() { return dt("سبب الفشل"); }, width: 30, value: (r) => r.providerErrorMessage ?? "" },
+  { key: "subscriptionId", get header() { return dt("رقم الاشتراك"); }, width: 26, value: (r) => r.subscriptionId ?? "" },
+  { key: "comment", get header() { return dt("ملاحظة"); }, width: 28, value: (r) => r.comment ?? "" },
 ];
 
 const SUBSCRIPTION_COLUMNS: ColSpec<SubscriptionExportRow>[] = [
-  { key: "id", header: "رقم الاشتراك", width: 26, value: (r) => r.id },
-  { key: "status", header: "الحالة", width: 12, align: "center", value: (r) => r.status === "ACTIVE" ? "نشط" : r.status === "PAUSED" ? "متوقف" : r.status === "PAYMENT_FAILED" ? "تعذّر الخصم" : "ملغي" },
-  { key: "frequency", header: "الدورية", width: 12, align: "center", value: (r) => FREQUENCY_LABEL_AR[r.frequency ?? "MONTHLY"] },
-  { key: "donorName", header: "اسم المتبرع", width: 24, value: (r) => r.donor.name ?? "" },
-  { key: "donorEmail", header: "بريد المتبرع", width: 28, value: (r) => r.donor.email ?? "" },
-  { key: "donorPhone", header: "هاتف المتبرع", width: 18, value: (r) => r.donor.phone ?? "" },
-  { key: "country", header: "الدولة", width: 10, align: "center", value: (r) => (r.donor.countryCode ?? "").toString().toUpperCase() },
-  { key: "currency", header: "العملة", width: 10, align: "center", value: (r) => r.currency },
-  { key: "amount", header: "قيمة الدورة", width: 14, align: "right", numFmt: "#,##0.00", value: (r) => r.amount },
-  { key: "teamSupport", header: "دعم الفريق", width: 14, align: "right", numFmt: "#,##0.00", value: (r) => r.teamSupport },
-  { key: "amountUSD", header: "بالدولار (USD)", width: 14, align: "right", numFmt: "#,##0.00", value: (r) => r.amountUSD },
-  { key: "monthlyEquivalentUSD", header: "المكافئ الشهري (USD)", width: 18, align: "right", numFmt: "#,##0.00", value: (r) => r.monthlyEquivalentUSD ?? null },
-  { key: "totalChargesCount", header: "عدد الدفعات الناجحة", width: 18, align: "center", numFmt: "#,##0", value: (r) => r.totalChargesCount },
-  { key: "totalChargesAmount", header: "إجمالي الدفعات (محلي)", width: 18, align: "right", numFmt: "#,##0.00", value: (r) => r.totalChargesAmount },
-  { key: "totalChargesAmountUSD", header: "إجمالي الدفعات (USD)", width: 18, align: "right", numFmt: "#,##0.00", value: (r) => r.totalChargesAmountUSD },
-  { key: "paymentMethod", header: "وسيلة الدفع", width: 14, align: "center", value: (r) => r.paymentMethod ?? "" },
-  { key: "createdAt", header: "تاريخ الإنشاء", width: 19, numFmt: "yyyy-mm-dd hh:mm", value: (r) => r.createdAt },
-  { key: "lastBillingDate", header: "آخر دفعة", width: 19, numFmt: "yyyy-mm-dd hh:mm", value: (r) => r.lastBillingDate },
-  { key: "nextBillingDate", header: "الدفعة القادمة", width: 19, numFmt: "yyyy-mm-dd hh:mm", value: (r) => r.nextBillingDate },
-  { key: "campaigns", header: "الحملات", width: 36, value: (r) => r.campaigns.map((c) => c.title).join("؛ ") },
-  { key: "categories", header: "الأقسام", width: 28, value: (r) => r.categories.map((c) => c.name).join("؛ ") },
-  { key: "referralCode", header: "رمز الإحالة", width: 14, align: "center", value: (r) => r.referral?.code ?? "" },
-  { key: "referralName", header: "اسم الإحالة", width: 24, value: (r) => r.referral?.name ?? "" },
+  { key: "id", get header() { return dt("رقم الاشتراك"); }, width: 26, value: (r) => r.id },
+  { key: "status", get header() { return dt("الحالة"); }, width: 12, align: "center", value: (r) => r.status === "ACTIVE" ? dt("نشط") : r.status === "PAUSED" ? dt("متوقف") : r.status === "PAYMENT_FAILED" ? dt("تعذّر الخصم") : dt("ملغي") },
+  { key: "frequency", get header() { return dt("الدورية"); }, width: 12, align: "center", value: (r) => FREQUENCY_LABEL_AR[r.frequency ?? "MONTHLY"] },
+  { key: "donorName", get header() { return dt("اسم المتبرع"); }, width: 24, value: (r) => r.donor.name ?? "" },
+  { key: "donorEmail", get header() { return dt("بريد المتبرع"); }, width: 28, value: (r) => r.donor.email ?? "" },
+  { key: "donorPhone", get header() { return dt("هاتف المتبرع"); }, width: 18, value: (r) => r.donor.phone ?? "" },
+  { key: "country", get header() { return dt("الدولة"); }, width: 10, align: "center", value: (r) => (r.donor.countryCode ?? "").toString().toUpperCase() },
+  { key: "currency", get header() { return dt("العملة"); }, width: 10, align: "center", value: (r) => r.currency },
+  { key: "amount", get header() { return dt("قيمة الدورة"); }, width: 14, align: "right", numFmt: "#,##0.00", value: (r) => r.amount },
+  { key: "teamSupport", get header() { return dt("دعم الفريق"); }, width: 14, align: "right", numFmt: "#,##0.00", value: (r) => r.teamSupport },
+  { key: "amountUSD", get header() { return dt("بالدولار (USD)"); }, width: 14, align: "right", numFmt: "#,##0.00", value: (r) => r.amountUSD },
+  { key: "monthlyEquivalentUSD", get header() { return dt("المكافئ الشهري (USD)"); }, width: 18, align: "right", numFmt: "#,##0.00", value: (r) => r.monthlyEquivalentUSD ?? null },
+  { key: "totalChargesCount", get header() { return dt("عدد الدفعات الناجحة"); }, width: 18, align: "center", numFmt: "#,##0", value: (r) => r.totalChargesCount },
+  { key: "totalChargesAmount", get header() { return dt("إجمالي الدفعات (محلي)"); }, width: 18, align: "right", numFmt: "#,##0.00", value: (r) => r.totalChargesAmount },
+  { key: "totalChargesAmountUSD", get header() { return dt("إجمالي الدفعات (USD)"); }, width: 18, align: "right", numFmt: "#,##0.00", value: (r) => r.totalChargesAmountUSD },
+  { key: "paymentMethod", get header() { return dt("وسيلة الدفع"); }, width: 14, align: "center", value: (r) => r.paymentMethod ?? "" },
+  { key: "createdAt", get header() { return dt("تاريخ الإنشاء"); }, width: 19, numFmt: "yyyy-mm-dd hh:mm", value: (r) => r.createdAt },
+  { key: "lastBillingDate", get header() { return dt("آخر دفعة"); }, width: 19, numFmt: "yyyy-mm-dd hh:mm", value: (r) => r.lastBillingDate },
+  { key: "nextBillingDate", get header() { return dt("الدفعة القادمة"); }, width: 19, numFmt: "yyyy-mm-dd hh:mm", value: (r) => r.nextBillingDate },
+  { key: "campaigns", get header() { return dt("الحملات"); }, width: 36, value: (r) => r.campaigns.map((c) => c.title).join(dt("؛ ")) },
+  { key: "categories", get header() { return dt("الأقسام"); }, width: 28, value: (r) => r.categories.map((c) => c.name).join(dt("؛ ")) },
+  { key: "referralCode", get header() { return dt("رمز الإحالة"); }, width: 14, align: "center", value: (r) => r.referral?.code ?? "" },
+  { key: "referralName", get header() { return dt("اسم الإحالة"); }, width: 24, value: (r) => r.referral?.name ?? "" },
 ];
 
 // ─── Aggregation ──────────────────────────────────────────────────────────────
@@ -338,7 +339,7 @@ function aggregate(rows: DonationExportRow[]): Aggregates {
     ];
     if (allTargets.length === 0) {
       // unattributed  bucket under "غير محدد"
-      allTargets.push({ kind: "campaign", id: "_unassigned", label: "غير محدد" });
+      allTargets.push({ kind: "campaign", id: "_unassigned", label: dt("غير محدد") });
     }
     const portion = 1 / allTargets.length;
     for (const tgt of allTargets) {
@@ -362,7 +363,7 @@ function aggregate(rows: DonationExportRow[]): Aggregates {
     const countryKey = (r.donorCountryCode || r.donor.countryCode || "_unknown").toUpperCase();
     const countryBucket = perCountryMap.get(countryKey) ?? {
       key: countryKey,
-      label: countryKey === "_UNKNOWN" ? "غير محدد" : countryKey,
+      label: countryKey === "_UNKNOWN" ? dt("غير محدد") : countryKey,
       count: 0,
       donationAmount: 0,
       teamSupport: 0,
@@ -378,7 +379,7 @@ function aggregate(rows: DonationExportRow[]): Aggregates {
     const locKey = r.locale || "_unknown";
     const locBucket = perLocaleMap.get(locKey) ?? {
       key: locKey,
-      label: locKey === "_unknown" ? "غير محدد" : locKey,
+      label: locKey === "_unknown" ? dt("غير محدد") : locKey,
       count: 0,
       donationAmount: 0,
       teamSupport: 0,
@@ -394,7 +395,7 @@ function aggregate(rows: DonationExportRow[]): Aggregates {
     const provKey = r.provider || "_unknown";
     const provBucket = perProviderMap.get(provKey) ?? {
       key: provKey,
-      label: provKey === "_unknown" ? "غير محدد" : provKey,
+      label: provKey === "_unknown" ? dt("غير محدد") : provKey,
       count: 0,
       donationAmount: 0,
       teamSupport: 0,
@@ -410,7 +411,7 @@ function aggregate(rows: DonationExportRow[]): Aggregates {
     const pmKey = r.paymentMethod || "_unknown";
     const pmBucket = perPaymentMap.get(pmKey) ?? {
       key: pmKey,
-      label: pmKey === "_unknown" ? "غير محدد" : pmKey,
+      label: pmKey === "_unknown" ? dt("غير محدد") : pmKey,
       count: 0,
       donationAmount: 0,
       teamSupport: 0,
@@ -424,7 +425,7 @@ function aggregate(rows: DonationExportRow[]): Aggregates {
 
     // Per-referral
     const refKey = r.referral?.code ?? r.referral?.id ?? "_direct";
-    const refLabel = r.referral?.name || r.referral?.code || (refKey === "_direct" ? "بدون إحالة" : refKey);
+    const refLabel = r.referral?.name || r.referral?.code || (refKey === "_direct" ? dt("بدون إحالة") : refKey);
     const refBucket = perReferralMap.get(refKey) ?? {
       key: refKey,
       label: refLabel,
@@ -538,7 +539,7 @@ function addCoverSheet(
   input: DonationExportInput,
   agg: Aggregates
 ) {
-  const sheet = wb.addWorksheet("ملخص التقرير", { views: [{ rightToLeft: true, state: "normal" }] });
+  const sheet = wb.addWorksheet(dt("ملخص التقرير"), { views: [{ rightToLeft: true, state: "normal" }] });
 
   sheet.mergeCells("A1:E1");
   const titleCell = sheet.getCell("A1");
@@ -557,7 +558,7 @@ function addCoverSheet(
 
   sheet.mergeCells("A3:E3");
   const meta = sheet.getCell("A3");
-  meta.value = `أُنشئ في: ${new Date().toLocaleString("ar-EG", { timeZone: "UTC" })} (UTC)`;
+  meta.value = dt("أُنشئ في: {0} (UTC)", [new Date().toLocaleString(dashIntl("ar-EG"), { timeZone: "UTC" })]);
   meta.font = { size: 10, color: { argb: "FF64748B" } };
   meta.alignment = { horizontal: "right", indent: 1 };
 
@@ -567,7 +568,7 @@ function addCoverSheet(
   if (input.filters.length > 0) {
     sheet.mergeCells(`A${row}:E${row}`);
     const banner = sheet.getCell(`A${row}`);
-    banner.value = "المعايير المطبقة";
+    banner.value = dt("المعايير المطبقة");
     styleSectionBanner(sheet.getRow(row));
     row += 1;
     for (const f of input.filters) {
@@ -583,22 +584,22 @@ function addCoverSheet(
 
   // KPI grid
   sheet.mergeCells(`A${row}:E${row}`);
-  sheet.getCell(`A${row}`).value = "المؤشرات الرئيسية";
+  sheet.getCell(`A${row}`).value = dt("المؤشرات الرئيسية");
   styleSectionBanner(sheet.getRow(row));
   row += 1;
 
   const kpis: [string, number | string, string?][] = [
-    ["إجمالي عدد العمليات", agg.totalCount],
-    ["العمليات الناجحة", agg.paidCount],
-    ["العمليات الفاشلة", agg.failedCount],
-    ["لمرة واحدة", agg.oneTimeCount],
-    ["متكرر", agg.monthlyCount],
-    ["متبرعين فريدين", agg.uniqueDonors],
-    ["إجمالي التبرعات (USD)", fmtMoney(agg.totalAmountUSD), "$"],
-    ["إجمالي دعم الفريق (USD)", fmtMoney(agg.totalTeamSupportUSD), "$"],
-    ["إجمالي الرسوم (USD)", fmtMoney(agg.totalFeesUSD), "$"],
-    ["إجمالي المبالغ المحصلة (USD)", fmtMoney(agg.totalChargedUSD), "$"],
-    ["قيمة العمليات الفاشلة (USD)", fmtMoney(agg.failedAmountUSD), "$"],
+    [dt("إجمالي عدد العمليات"), agg.totalCount],
+    [dt("العمليات الناجحة"), agg.paidCount],
+    [dt("العمليات الفاشلة"), agg.failedCount],
+    [dt("لمرة واحدة"), agg.oneTimeCount],
+    [dt("متكرر"), agg.monthlyCount],
+    [dt("متبرعين فريدين"), agg.uniqueDonors],
+    [dt("إجمالي التبرعات (USD)"), fmtMoney(agg.totalAmountUSD), "$"],
+    [dt("إجمالي دعم الفريق (USD)"), fmtMoney(agg.totalTeamSupportUSD), "$"],
+    [dt("إجمالي الرسوم (USD)"), fmtMoney(agg.totalFeesUSD), "$"],
+    [dt("إجمالي المبالغ المحصلة (USD)"), fmtMoney(agg.totalChargedUSD), "$"],
+    [dt("قيمة العمليات الفاشلة (USD)"), fmtMoney(agg.failedAmountUSD), "$"],
   ];
   for (const [label, val, sym] of kpis) {
     sheet.getCell(`A${row}`).value = label;
@@ -619,8 +620,8 @@ function addCoverSheet(
   row = addBreakdownTable(
     sheet,
     row,
-    "تفصيل حسب العملة",
-    ["العملة", "العدد", "مبلغ التبرع (محلي)", "دعم الفريق (محلي)", "الرسوم (محلي)", "إجمالي محصل (محلي)", "بالدولار (USD)"],
+    dt("تفصيل حسب العملة"),
+    [dt("العملة"), dt("العدد"), dt("مبلغ التبرع (محلي)"), dt("دعم الفريق (محلي)"), dt("الرسوم (محلي)"), dt("إجمالي محصل (محلي)"), dt("بالدولار (USD)")],
     agg.perCurrency.map((c) => [
       c.currency,
       c.count,
@@ -635,8 +636,8 @@ function addCoverSheet(
   row = addBreakdownTable(
     sheet,
     row,
-    "تفصيل حسب الحملة (الأعلى أولًا)",
-    ["الحملة", "العدد", "مبلغ التبرع (USD)", "دعم الفريق (USD)", "إجمالي (USD)"],
+    dt("تفصيل حسب الحملة (الأعلى أولًا)"),
+    [dt("الحملة"), dt("العدد"), dt("مبلغ التبرع (USD)"), dt("دعم الفريق (USD)"), dt("إجمالي (USD)")],
     agg.perCampaign.map((b) => [
       b.label,
       Math.round(b.count * 100) / 100,
@@ -650,8 +651,8 @@ function addCoverSheet(
   row = addBreakdownTable(
     sheet,
     row,
-    "تفصيل حسب القسم (الأعلى أولًا)",
-    ["القسم", "العدد", "مبلغ التبرع (USD)", "دعم الفريق (USD)", "إجمالي (USD)"],
+    dt("تفصيل حسب القسم (الأعلى أولًا)"),
+    [dt("القسم"), dt("العدد"), dt("مبلغ التبرع (USD)"), dt("دعم الفريق (USD)"), dt("إجمالي (USD)")],
     agg.perCategory.map((b) => [
       b.label,
       Math.round(b.count * 100) / 100,
@@ -664,8 +665,8 @@ function addCoverSheet(
   row = addBreakdownTable(
     sheet,
     row,
-    "تفصيل حسب الدولة",
-    ["الدولة", "العدد", "مبلغ التبرع (USD)", "دعم الفريق (USD)", "إجمالي (USD)"],
+    dt("تفصيل حسب الدولة"),
+    [dt("الدولة"), dt("العدد"), dt("مبلغ التبرع (USD)"), dt("دعم الفريق (USD)"), dt("إجمالي (USD)")],
     agg.perCountry.map((b) => [
       b.label,
       b.count,
@@ -678,8 +679,8 @@ function addCoverSheet(
   row = addBreakdownTable(
     sheet,
     row,
-    "تفصيل حسب الإحالة",
-    ["الإحالة", "العدد", "مبلغ التبرع (USD)", "دعم الفريق (USD)", "إجمالي (USD)"],
+    dt("تفصيل حسب الإحالة"),
+    [dt("الإحالة"), dt("العدد"), dt("مبلغ التبرع (USD)"), dt("دعم الفريق (USD)"), dt("إجمالي (USD)")],
     agg.perReferral.map((b) => [
       b.label,
       b.count,
@@ -692,8 +693,8 @@ function addCoverSheet(
   row = addBreakdownTable(
     sheet,
     row,
-    "تفصيل حسب اللغة",
-    ["اللغة", "العدد", "مبلغ التبرع (USD)", "دعم الفريق (USD)", "إجمالي (USD)"],
+    dt("تفصيل حسب اللغة"),
+    [dt("اللغة"), dt("العدد"), dt("مبلغ التبرع (USD)"), dt("دعم الفريق (USD)"), dt("إجمالي (USD)")],
     agg.perLocale.map((b) => [
       b.label,
       b.count,
@@ -706,24 +707,24 @@ function addCoverSheet(
   row = addBreakdownTable(
     sheet,
     row,
-    "تفصيل حسب بوابة الدفع",
-    ["البوابة", "العدد", "إجمالي (USD)"],
+    dt("تفصيل حسب بوابة الدفع"),
+    [dt("البوابة"), dt("العدد"), dt("إجمالي (USD)")],
     agg.perProvider.map((b) => [b.label, b.count, fmtMoney(b.amountUSD)])
   );
 
   row = addBreakdownTable(
     sheet,
     row,
-    "تفصيل حسب وسيلة الدفع",
-    ["الوسيلة", "العدد", "إجمالي (USD)"],
+    dt("تفصيل حسب وسيلة الدفع"),
+    [dt("الوسيلة"), dt("العدد"), dt("إجمالي (USD)")],
     agg.perPaymentMethod.map((b) => [b.label, b.count, fmtMoney(b.amountUSD)])
   );
 
   row = addBreakdownTable(
     sheet,
     row,
-    "تفصيل حسب الحالة",
-    ["الحالة", "العدد", "إجمالي (USD)"],
+    dt("تفصيل حسب الحالة"),
+    [dt("الحالة"), dt("العدد"), dt("إجمالي (USD)")],
     agg.perStatus.map((b) => [b.label, b.count, fmtMoney(b.amountUSD)])
   );
 
@@ -786,7 +787,7 @@ function addBreakdownTable(
   // Totals
   if (rows.length > 1) {
     const totalsRow = sheet.getRow(r);
-    totalsRow.getCell(1).value = "الإجمالي";
+    totalsRow.getCell(1).value = dt("الإجمالي");
     for (let col = 2; col <= headers.length; col++) {
       // Sum numeric columns only
       const sample = rows[0][col - 1];
@@ -803,7 +804,7 @@ function addBreakdownTable(
 }
 
 function addDonationsSheet(wb: ExcelJS.Workbook, rows: DonationExportRow[]) {
-  const sheet = wb.addWorksheet("التبرعات", {
+  const sheet = wb.addWorksheet(dt("التبرعات"), {
     views: [{ rightToLeft: true, state: "frozen", ySplit: 1 }],
   });
 
@@ -835,7 +836,7 @@ function addDonationsSheet(wb: ExcelJS.Workbook, rows: DonationExportRow[]) {
 
     // Totals row
     const totalsRow = sheet.getRow(rows.length + 2);
-    totalsRow.getCell(1).value = "الإجمالي";
+    totalsRow.getCell(1).value = dt("الإجمالي");
     DONATION_COLUMNS.forEach((col, idx) => {
       const colLetter = excelCol(idx + 1);
       if (col.key === "amount" || col.key === "teamSupport" || col.key === "fees" || col.key === "totalAmount" || col.key === "amountUSD") {
@@ -855,7 +856,7 @@ function addDonationsSheet(wb: ExcelJS.Workbook, rows: DonationExportRow[]) {
 }
 
 function addSubscriptionsSheet(wb: ExcelJS.Workbook, rows: SubscriptionExportRow[]) {
-  const sheet = wb.addWorksheet("الاشتراكات", {
+  const sheet = wb.addWorksheet(dt("الاشتراكات"), {
     views: [{ rightToLeft: true, state: "frozen", ySplit: 1 }],
   });
 
@@ -886,7 +887,7 @@ function addSubscriptionsSheet(wb: ExcelJS.Workbook, rows: SubscriptionExportRow
     applyZebra(sheet, 2, rows.length + 1);
 
     const totalsRow = sheet.getRow(rows.length + 2);
-    totalsRow.getCell(1).value = "الإجمالي";
+    totalsRow.getCell(1).value = dt("الإجمالي");
     SUBSCRIPTION_COLUMNS.forEach((col, idx) => {
       const colLetter = excelCol(idx + 1);
       if (
@@ -956,7 +957,7 @@ function buildCsv(input: DonationExportInput): Buffer {
   if (input.subtitle) lines.push(`# ${input.subtitle}`);
   lines.push(`# generated at: ${new Date().toISOString()}`);
   if (input.filters.length > 0) {
-    lines.push("# المعايير المطبقة:");
+    lines.push(dt("# المعايير المطبقة:"));
     for (const f of input.filters) lines.push(`# ${f.label}: ${f.value}`);
   }
   lines.push("");
@@ -970,7 +971,7 @@ function buildCsv(input: DonationExportInput): Buffer {
 
   // Subscriptions (optional)
   if (input.subscriptions && input.subscriptions.length > 0) {
-    lines.push(`# الاشتراكات (${input.subscriptions.length})`);
+    lines.push(dt("# الاشتراكات ({0})", [input.subscriptions.length]));
     lines.push(SUBSCRIPTION_COLUMNS.map((c) => csvEscape(c.header)).join(","));
     for (const r of input.subscriptions) {
       lines.push(SUBSCRIPTION_COLUMNS.map((c) => csvEscape(c.value(r))).join(","));
@@ -980,19 +981,19 @@ function buildCsv(input: DonationExportInput): Buffer {
 
   // Summary
   const agg = aggregate(input.donations);
-  lines.push("# ===== الملخص =====");
+  lines.push(dt("# ===== الملخص ====="));
   const kpis: [string, number | string][] = [
-    ["إجمالي عدد العمليات", agg.totalCount],
-    ["العمليات الناجحة", agg.paidCount],
-    ["العمليات الفاشلة", agg.failedCount],
-    ["لمرة واحدة", agg.oneTimeCount],
-    ["متكرر", agg.monthlyCount],
-    ["متبرعين فريدين", agg.uniqueDonors],
-    ["إجمالي التبرعات (USD)", fmtMoney(agg.totalAmountUSD)],
-    ["إجمالي دعم الفريق (USD)", fmtMoney(agg.totalTeamSupportUSD)],
-    ["إجمالي الرسوم (USD)", fmtMoney(agg.totalFeesUSD)],
-    ["إجمالي المبالغ المحصلة (USD)", fmtMoney(agg.totalChargedUSD)],
-    ["قيمة العمليات الفاشلة (USD)", fmtMoney(agg.failedAmountUSD)],
+    [dt("إجمالي عدد العمليات"), agg.totalCount],
+    [dt("العمليات الناجحة"), agg.paidCount],
+    [dt("العمليات الفاشلة"), agg.failedCount],
+    [dt("لمرة واحدة"), agg.oneTimeCount],
+    [dt("متكرر"), agg.monthlyCount],
+    [dt("متبرعين فريدين"), agg.uniqueDonors],
+    [dt("إجمالي التبرعات (USD)"), fmtMoney(agg.totalAmountUSD)],
+    [dt("إجمالي دعم الفريق (USD)"), fmtMoney(agg.totalTeamSupportUSD)],
+    [dt("إجمالي الرسوم (USD)"), fmtMoney(agg.totalFeesUSD)],
+    [dt("إجمالي المبالغ المحصلة (USD)"), fmtMoney(agg.totalChargedUSD)],
+    [dt("قيمة العمليات الفاشلة (USD)"), fmtMoney(agg.failedAmountUSD)],
   ];
   for (const [k, v] of kpis) lines.push(`${csvEscape(k)},${csvEscape(v)}`);
 
@@ -1005,8 +1006,8 @@ function buildCsv(input: DonationExportInput): Buffer {
   };
 
   appendBreakdown(
-    "حسب العملة",
-    ["العملة", "العدد", "مبلغ التبرع (محلي)", "دعم الفريق (محلي)", "الرسوم (محلي)", "إجمالي محصل (محلي)", "بالدولار (USD)"],
+    dt("حسب العملة"),
+    [dt("العملة"), dt("العدد"), dt("مبلغ التبرع (محلي)"), dt("دعم الفريق (محلي)"), dt("الرسوم (محلي)"), dt("إجمالي محصل (محلي)"), dt("بالدولار (USD)")],
     agg.perCurrency.map((c) => [
       c.currency,
       c.count,
@@ -1018,43 +1019,43 @@ function buildCsv(input: DonationExportInput): Buffer {
     ])
   );
   appendBreakdown(
-    "حسب الحملة (الأعلى أولًا)",
-    ["الحملة", "العدد", "مبلغ التبرع (USD)", "دعم الفريق (USD)", "إجمالي (USD)"],
+    dt("حسب الحملة (الأعلى أولًا)"),
+    [dt("الحملة"), dt("العدد"), dt("مبلغ التبرع (USD)"), dt("دعم الفريق (USD)"), dt("إجمالي (USD)")],
     agg.perCampaign.map((b) => [b.label, Math.round(b.count * 100) / 100, fmtMoney(b.donationAmount), fmtMoney(b.teamSupport), fmtMoney(b.amountUSD)])
   );
   appendBreakdown(
-    "حسب القسم (الأعلى أولًا)",
-    ["القسم", "العدد", "مبلغ التبرع (USD)", "دعم الفريق (USD)", "إجمالي (USD)"],
+    dt("حسب القسم (الأعلى أولًا)"),
+    [dt("القسم"), dt("العدد"), dt("مبلغ التبرع (USD)"), dt("دعم الفريق (USD)"), dt("إجمالي (USD)")],
     agg.perCategory.map((b) => [b.label, Math.round(b.count * 100) / 100, fmtMoney(b.donationAmount), fmtMoney(b.teamSupport), fmtMoney(b.amountUSD)])
   );
   appendBreakdown(
-    "حسب الدولة",
-    ["الدولة", "العدد", "مبلغ التبرع (USD)", "دعم الفريق (USD)", "إجمالي (USD)"],
+    dt("حسب الدولة"),
+    [dt("الدولة"), dt("العدد"), dt("مبلغ التبرع (USD)"), dt("دعم الفريق (USD)"), dt("إجمالي (USD)")],
     agg.perCountry.map((b) => [b.label, b.count, fmtMoney(b.donationAmount), fmtMoney(b.teamSupport), fmtMoney(b.amountUSD)])
   );
   appendBreakdown(
-    "حسب الإحالة",
-    ["الإحالة", "العدد", "مبلغ التبرع (USD)", "دعم الفريق (USD)", "إجمالي (USD)"],
+    dt("حسب الإحالة"),
+    [dt("الإحالة"), dt("العدد"), dt("مبلغ التبرع (USD)"), dt("دعم الفريق (USD)"), dt("إجمالي (USD)")],
     agg.perReferral.map((b) => [b.label, b.count, fmtMoney(b.donationAmount), fmtMoney(b.teamSupport), fmtMoney(b.amountUSD)])
   );
   appendBreakdown(
-    "حسب اللغة",
-    ["اللغة", "العدد", "مبلغ التبرع (USD)", "دعم الفريق (USD)", "إجمالي (USD)"],
+    dt("حسب اللغة"),
+    [dt("اللغة"), dt("العدد"), dt("مبلغ التبرع (USD)"), dt("دعم الفريق (USD)"), dt("إجمالي (USD)")],
     agg.perLocale.map((b) => [b.label, b.count, fmtMoney(b.donationAmount), fmtMoney(b.teamSupport), fmtMoney(b.amountUSD)])
   );
   appendBreakdown(
-    "حسب بوابة الدفع",
-    ["البوابة", "العدد", "إجمالي (USD)"],
+    dt("حسب بوابة الدفع"),
+    [dt("البوابة"), dt("العدد"), dt("إجمالي (USD)")],
     agg.perProvider.map((b) => [b.label, b.count, fmtMoney(b.amountUSD)])
   );
   appendBreakdown(
-    "حسب وسيلة الدفع",
-    ["الوسيلة", "العدد", "إجمالي (USD)"],
+    dt("حسب وسيلة الدفع"),
+    [dt("الوسيلة"), dt("العدد"), dt("إجمالي (USD)")],
     agg.perPaymentMethod.map((b) => [b.label, b.count, fmtMoney(b.amountUSD)])
   );
   appendBreakdown(
-    "حسب الحالة",
-    ["الحالة", "العدد", "إجمالي (USD)"],
+    dt("حسب الحالة"),
+    [dt("الحالة"), dt("العدد"), dt("إجمالي (USD)")],
     agg.perStatus.map((b) => [b.label, b.count, fmtMoney(b.amountUSD)])
   );
 
@@ -1074,7 +1075,8 @@ function asciiSlugFor(title: string): string {
     "تقرير التبرعات المتكررة": "recurring-donations-report",
     "تقرير الإحالة": "referral-report",
   };
-  if (map[title]) return map[title];
+  /* The title arrives in the interface language. */
+  for (const [arabic, slug] of Object.entries(map)) if (title === arabic || title === dt(arabic)) return slug;
   // Last resort: keep only ASCII characters, collapse the rest.
   const ascii = title.replace(/[^a-zA-Z0-9._-]+/g, "-").replace(/^-+|-+$/g, "");
   return ascii || "report";

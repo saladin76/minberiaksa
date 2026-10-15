@@ -24,6 +24,7 @@ import type {
   PreviewHeader,
   PreviewVariable,
 } from "./WhatsappTemplatePreview";
+import { dashIntl, dt, dtx } from "@/lib/dashboard/i18n";
 
 interface WhatsappTemplateRow {
   id: string;
@@ -88,15 +89,15 @@ const APPROVAL_PILL: Record<string, string> = {
 };
 
 const APPROVAL_LABEL: Record<string, string> = {
-  approved: "معتمد",
-  in_review: "قيد المراجعة",
-  pending: "قيد المراجعة",
-  rejected: "مرفوض",
-  paused: "موقوف مؤقتًا",
-  disabled: "معطّل",
-  in_appeal: "قيد الاستئناف",
-  missing_in_waba: "غير متاح في كل الحسابات",
-  unknown: "غير معروف",
+  get approved() { return dt("معتمد"); },
+  get in_review() { return dt("قيد المراجعة"); },
+  get pending() { return dt("قيد المراجعة"); },
+  get rejected() { return dt("مرفوض"); },
+  get paused() { return dt("موقوف مؤقتًا"); },
+  get disabled() { return dt("معطّل"); },
+  get in_appeal() { return dt("قيد الاستئناف"); },
+  get missing_in_waba() { return dt("غير متاح في كل الحسابات"); },
+  get unknown() { return dt("غير معروف"); },
 };
 
 export function WhatsappTemplateList() {
@@ -124,7 +125,7 @@ export function WhatsappTemplateList() {
       setTemplates(res.data?.templates ?? []);
       setDirectSendEnabled(res.data?.directSendEnabled === true);
     } catch {
-      toast.error("فشل في تحميل القوالب");
+      toast.error(dt("فشل في تحميل القوالب"));
     } finally {
       setLoading(false);
     }
@@ -155,13 +156,13 @@ export function WhatsappTemplateList() {
       const summary = res.data?.summary;
       toast.success(
         summary
-          ? `تم تحديث حالات Meta: ${summary.matchedTemplates ?? 0} قالب، ${summary.variantsUpserted ?? 0} نسخة لغة/WABA.`
-          : "تم تحديث حالات Meta.",
+          ? dt("تم تحديث حالات Meta: {0} قالب، {1} نسخة لغة/WABA.", [summary.matchedTemplates ?? 0, summary.variantsUpserted ?? 0])
+          : dt("تم تحديث حالات Meta."),
       );
       await fetchAll();
     } catch (error) {
       const data = (error as { response?: { data?: { error?: string; detail?: string } } }).response?.data;
-      toast.error([data?.error, data?.detail].filter(Boolean).join(" — ") || "فشل تحديث حالات Meta");
+      toast.error([data?.error, data?.detail].filter(Boolean).join(" — ") || dt("فشل تحديث حالات Meta"));
     } finally {
       setSyncingMeta(false);
     }
@@ -183,7 +184,7 @@ export function WhatsappTemplateList() {
         toast.error(res.data.messageAr);
       }
     } catch {
-      toast.error("فشل استيراد قوالب Twilio");
+      toast.error(dt("فشل استيراد قوالب Twilio"));
     } finally {
       setImporting(false);
     }
@@ -191,28 +192,28 @@ export function WhatsappTemplateList() {
 
   const handleArchive = async (template: WhatsappTemplateRow, action: "ARCHIVE" | "RESTORE") => {
     const prompt = action === "ARCHIVE"
-      ? `أرشفة «${template.name}»؟ سيختفي من اختيارات الإرسال الجديدة مع بقاء السجل والتاريخ محفوظين.`
-      : `استعادة «${template.name}» من الأرشيف؟`;
+      ? dt("أرشفة «{0}»؟ سيختفي من اختيارات الإرسال الجديدة مع بقاء السجل والتاريخ محفوظين.", [template.name])
+      : dt("استعادة «{0}» من الأرشيف؟", [template.name]);
     if (!window.confirm(prompt)) return;
     try {
       const res = await axios.post(`/api/templates/whatsapp/${template.id}/archive`, { action });
-      if (!res.data?.ok) throw new Error(res.data?.error || "تعذّر تحديث القالب");
-      toast.success(action === "ARCHIVE" ? "تمت أرشفة القالب" : "تمت استعادة القالب");
+      if (!res.data?.ok) throw new Error(res.data?.error || dt("تعذّر تحديث القالب"));
+      toast.success(action === "ARCHIVE" ? dt("تمت أرشفة القالب") : dt("تمت استعادة القالب"));
       await fetchAll();
     } catch (error) {
       const data = (error as { response?: { data?: { error?: string } } }).response?.data;
-      toast.error(data?.error || (error as Error).message || "تعذّر تحديث القالب");
+      toast.error(data?.error || (error as Error).message || dt("تعذّر تحديث القالب"));
     }
   };
 
   const handleDelete = async (id: string) => {
-    if (!window.confirm("هل تريد حذف هذا القالب؟")) return;
+    if (!window.confirm(dt("هل تريد حذف هذا القالب؟"))) return;
     try {
       await axios.delete(`/api/templates/whatsapp/${id}`);
-      toast.success("تم الحذف");
+      toast.success(dt("تم الحذف"));
       fetchAll();
     } catch {
-      toast.error("فشل الحذف");
+      toast.error(dt("فشل الحذف"));
     }
   };
 
@@ -220,13 +221,13 @@ export function WhatsappTemplateList() {
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="inline-flex rounded-lg border border-slate-200 bg-slate-50 p-1">
-          <button type="button" onClick={() => setSection("CAMPAIGN")} className={`rounded-md px-3 py-1.5 text-xs font-medium ${section === "CAMPAIGN" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500"}`}>الحملات التسويقية</button>
-          <button type="button" onClick={() => setSection("SYSTEM")} className={`rounded-md px-3 py-1.5 text-xs font-medium ${section === "SYSTEM" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500"}`}>التلقائية والتوثيق</button>
+          <button type="button" onClick={() => setSection("CAMPAIGN")} className={`rounded-md px-3 py-1.5 text-xs font-medium ${section === "CAMPAIGN" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500"}`}>{dt("الحملات التسويقية")}</button>
+          <button type="button" onClick={() => setSection("SYSTEM")} className={`rounded-md px-3 py-1.5 text-xs font-medium ${section === "SYSTEM" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500"}`}>{dt("التلقائية والتوثيق")}</button>
         </div>
         <div className="inline-flex rounded-lg border border-slate-200 bg-white p-1">
-          <button type="button" onClick={() => setArchiveView("ACTIVE")} className={`rounded-md px-3 py-1.5 text-xs font-medium ${archiveView === "ACTIVE" ? "bg-slate-900 text-white shadow-sm" : "text-slate-500"}`}>النشطة</button>
+          <button type="button" onClick={() => setArchiveView("ACTIVE")} className={`rounded-md px-3 py-1.5 text-xs font-medium ${archiveView === "ACTIVE" ? "bg-slate-900 text-white shadow-sm" : "text-slate-500"}`}>{dt("النشطة")}</button>
           <button type="button" onClick={() => setArchiveView("ARCHIVED")} className={`rounded-md px-3 py-1.5 text-xs font-medium ${archiveView === "ARCHIVED" ? "bg-slate-900 text-white shadow-sm" : "text-slate-500"}`}>
-            الأرشيف {archivedCount > 0 ? `(${archivedCount})` : ""}
+            {dtx("الأرشيف {0}", [archivedCount > 0 ? `(${archivedCount})` : ""])}
           </button>
         </div>
       </div>
@@ -238,22 +239,21 @@ export function WhatsappTemplateList() {
             : "border-slate-200 bg-slate-50 text-slate-600",
         )}>
           <span className="font-semibold">
-            {directSendEnabled ? "Direct Send مفعّل للرسائل التلقائية." : "Direct Send Beta غير مفعّل بعد."}
+            {directSendEnabled ? dt("Direct Send مفعّل للرسائل التلقائية.") : dt("Direct Send Beta غير مفعّل بعد.")}
           </span>{" "}
           {directSendEnabled
-            ? "رسائل Utility/Auth التلقائية تحاول Direct Send أولًا، وتبقى قوالب Meta الحالية مسار fallback آمنًا إذا تعذر الإرسال المباشر."
-            : "القوالب المعتمدة الحالية تظل مسار الإرسال الأساسي. عند تفعيل Direct Send لن نحذفها؛ ستبقى fallback للموثوقية."}
+            ? dt("رسائل Utility/Auth التلقائية تحاول Direct Send أولًا، وتبقى قوالب Meta الحالية مسار fallback آمنًا إذا تعذر الإرسال المباشر.")
+            : dt("القوالب المعتمدة الحالية تظل مسار الإرسال الأساسي. عند تفعيل Direct Send لن نحذفها؛ ستبقى fallback للموثوقية.")}
         </div>
       )}
       <div className="flex justify-between items-center flex-wrap gap-2">
         <div className="flex items-center gap-2 flex-wrap">
           <p className="text-xs text-muted-foreground">
-            {loading ? "…" : `${visibleTemplates.length} قالب واتساب`}
+            {loading ? "…" : dt("{0} قالب واتساب", [visibleTemplates.length])}
           </p>
           {templates.some((t) => t.provider === "TWILIO") ? (
             <span className="inline-flex items-center px-2 py-0.5 rounded-full border border-slate-200 bg-slate-50 text-[10px] text-slate-600">
-              {templates.filter((t) => t.provider === "TWILIO").length} من Twilio
-            </span>
+              {templates.filter((t) => t.provider === "TWILIO").length} {dt(" من Twilio")}</span>
           ) : null}
         </div>
         <div className="flex items-center gap-2">
@@ -263,28 +263,25 @@ export function WhatsappTemplateList() {
             onClick={handleMetaSync}
             disabled={syncingMeta}
             className="gap-2"
-            title="جلب أحدث حالات اعتماد القوالب من Meta"
+            title={dt("جلب أحدث حالات اعتماد القوالب من Meta")}
           >
             {syncingMeta ? <Loader2 className="w-4 h-4 animate-spin" /> : <DownloadCloud className="w-4 h-4" />}
-            تحديث من Meta
-          </Button>
+            {dt("تحديث من Meta")}</Button>
           <Button
             size="sm"
             variant="outline"
             onClick={fetchAll}
             disabled={loading}
             className="gap-2"
-            title="إعادة التحميل من قاعدة البيانات"
+            title={dt("إعادة التحميل من قاعدة البيانات")}
           >
-            <RefreshCw className="w-4 h-4" /> تحديث
-          </Button>
+            <RefreshCw className="w-4 h-4" /> {dt(" تحديث")}</Button>
           <Button
             size="sm"
             onClick={() => setEditor({ open: true, id: null })}
             className="gap-2 bg-[#25D366] hover:bg-[#25D366]/90"
           >
-            <Plus className="w-4 h-4" /> قالب جديد
-          </Button>
+            <Plus className="w-4 h-4" /> {dt(" قالب جديد")}</Button>
         </div>
       </div>
 
@@ -309,24 +306,22 @@ export function WhatsappTemplateList() {
             ) : null}
             {importStatus.status === "missing_config" ? (
               <p className="text-[11px] mt-1 opacity-80">
-                أضف TWILIO_ACCOUNT_SID و TWILIO_AUTH_TOKEN في إعدادات البيئة ثم
-                أعِد المحاولة. لن يتم تخزين هذه القيم في سجل التدقيق.
-              </p>
+                {dt("أضف TWILIO_ACCOUNT_SID و TWILIO_AUTH_TOKEN في إعدادات البيئة ثم أعِد المحاولة. لن يتم تخزين هذه القيم في سجل التدقيق.")}</p>
             ) : null}
           </div>
         </div>
       ) : null}
 
       <div className="rounded-lg border border-border overflow-hidden">
-        <table className="w-full text-sm text-right">
+        <table className="w-full text-sm text-start">
           <thead>
             <tr className="border-b border-slate-200 bg-slate-50/80">
-              <th className="text-right py-3 px-4 font-semibold text-slate-700">الاسم</th>
-              <th className="text-right py-3 px-4 font-semibold text-slate-700">النوع</th>
-              <th className="text-right py-3 px-4 font-semibold text-slate-700">الحالة</th>
-              <th className="text-right py-3 px-4 font-semibold text-slate-700">المحتوى</th>
-              <th className="text-right py-3 px-4 font-semibold text-slate-700">آخر تحديث</th>
-              <th className="text-left py-3 px-4 font-semibold text-slate-700">الإجراءات</th>
+              <th className="text-start py-3 px-4 font-semibold text-slate-700">{dt("الاسم")}</th>
+              <th className="text-start py-3 px-4 font-semibold text-slate-700">{dt("النوع")}</th>
+              <th className="text-start py-3 px-4 font-semibold text-slate-700">{dt("الحالة")}</th>
+              <th className="text-start py-3 px-4 font-semibold text-slate-700">{dt("المحتوى")}</th>
+              <th className="text-start py-3 px-4 font-semibold text-slate-700">{dt("آخر تحديث")}</th>
+              <th className="text-end py-3 px-4 font-semibold text-slate-700">{dt("الإجراءات")}</th>
             </tr>
           </thead>
           <tbody>
@@ -339,15 +334,14 @@ export function WhatsappTemplateList() {
             ) : visibleTemplates.length === 0 ? (
               <tr>
                 <td colSpan={6} className="py-12 text-center text-slate-500">
-                  لا توجد قوالب بعد  اضغط «قالب جديد» للبدء
-                </td>
+                  {dt("لا توجد قوالب بعد  اضغط «قالب جديد» للبدء")}</td>
               </tr>
             ) : (
               visibleTemplates.map((t) => {
                 const mappedStatus = t.internalApprovalStatus ?? t.providerApprovalStatus ?? t.approvalStatus ?? "UNKNOWN";
                 const approvalKey = mappedStatus.toLowerCase();
                 const approvalClass = APPROVAL_PILL[approvalKey];
-                const approvalLabel = t.approvalLabelAr ?? t.approvalStatus ?? "غير معروف";
+                const approvalLabel = t.approvalLabelAr ?? t.approvalStatus ?? dt("غير معروف");
                 const requestedCategory = String(t.category ?? t.purpose ?? "").toUpperCase();
                 const providerCategories = [...new Set((t.variants ?? []).flatMap((variant) =>
                   (variant.providerCategories?.length ? variant.providerCategories : variant.category ? [variant.category] : [])
@@ -373,7 +367,7 @@ export function WhatsappTemplateList() {
                     <td className="py-3 px-4">
                       <div className="flex items-center gap-1.5 flex-wrap">
                         <span className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[10px] font-semibold text-slate-700">
-                          منصتنا: {String(t.category ?? t.purpose ?? t.templateType ?? "—").toUpperCase()}
+                          {dtx("منصتنا: {0}", [String(t.category ?? t.purpose ?? t.templateType ?? "—").toUpperCase()])}
                         </span>
                         {t.provider === "TWILIO" ? (
                           <span className="inline-flex items-center px-2 py-0.5 rounded-full border border-slate-200 bg-slate-50 text-slate-600 text-[10px]">
@@ -394,8 +388,7 @@ export function WhatsappTemplateList() {
                           <div className="min-w-[340px] max-w-[520px] space-y-2">
                             <div className="flex flex-wrap items-center gap-1.5">
                               <span className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[10px] font-semibold text-slate-700">
-                                {variants.length} لغة
-                              </span>
+                                {dtx("{0} لغة", [variants.length])}</span>
                               {providerCategories.length === 1 && (
                                 <span className="inline-flex items-center rounded-full border border-sky-200 bg-sky-50 px-2 py-0.5 text-[10px] font-medium text-sky-700">
                                   Meta: {providerCategories[0]}
@@ -403,28 +396,23 @@ export function WhatsappTemplateList() {
                               )}
                               {providerCategories.length > 1 && (
                                 <span className="inline-flex items-center rounded-full border border-sky-200 bg-sky-50 px-2 py-0.5 text-[10px] font-medium text-sky-700">
-                                  Meta: تصنيفات متعددة
-                                </span>
+                                  {dt("Meta: تصنيفات متعددة")}</span>
                               )}
                               {recategorized.length > 0 && (
-                                <span className="inline-flex items-center rounded-full border border-orange-200 bg-orange-50 px-2 py-0.5 text-[10px] font-semibold text-orange-700" title="Meta أعادت تصنيف لغة أو أكثر عن التصنيف المطلوب من المنصة">
-                                  ⚠ أعادت Meta تصنيف {recategorized.length} لغة
-                                </span>
+                                <span className="inline-flex items-center rounded-full border border-orange-200 bg-orange-50 px-2 py-0.5 text-[10px] font-semibold text-orange-700" title={dt("Meta أعادت تصنيف لغة أو أكثر عن التصنيف المطلوب من المنصة")}>
+                                  {dtx("⚠ أعادت Meta تصنيف {0} لغة", [recategorized.length])}</span>
                               )}
                               {approvedCount > 0 && (
                                 <span className="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] font-medium text-emerald-700">
-                                  {approvedCount} معتمد
-                                </span>
+                                  {dtx("{0} معتمد", [approvedCount])}</span>
                               )}
                               {reviewCount > 0 && (
                                 <span className="inline-flex items-center rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[10px] font-medium text-amber-700">
-                                  {reviewCount} قيد المراجعة
-                                </span>
+                                  {dtx("{0} قيد المراجعة", [reviewCount])}</span>
                               )}
                               {issueCount > 0 && (
                                 <span className="inline-flex items-center rounded-full border border-rose-200 bg-rose-50 px-2 py-0.5 text-[10px] font-medium text-rose-700">
-                                  {issueCount} يحتاج انتباه
-                                </span>
+                                  {dtx("{0} يحتاج انتباه", [issueCount])}</span>
                               )}
                             </div>
                             <div className="flex flex-wrap items-center gap-1">
@@ -446,7 +434,7 @@ export function WhatsappTemplateList() {
                                       language,
                                       APPROVAL_LABEL[statusKey] ?? APPROVAL_LABEL.unknown,
                                       variantCategories.length ? `Meta: ${variantCategories.join(" / ")}` : null,
-                                      categoryMismatch ? `المطلوب: ${requestedCategory}` : null,
+                                      categoryMismatch ? dt("المطلوب: {0}", [requestedCategory]) : null,
                                       variant.rejectionReason,
                                     ].filter(Boolean).join(" — ")}
                                   >
@@ -459,7 +447,7 @@ export function WhatsappTemplateList() {
                               })}
                             </div>
                             <div className="text-[9px] text-slate-400" title={t.approvalReason ?? undefined}>
-                              الحالة الإجمالية: {approvalLabel}
+                              {dtx("الحالة الإجمالية: {0}", [approvalLabel])}
                             </div>
                           </div>
                         );
@@ -474,7 +462,7 @@ export function WhatsappTemplateList() {
                           {approvalLabel}
                         </span>
                       ) : (
-                        <span className="text-slate-400 text-[10px]">محلي</span>
+                        <span className="text-slate-400 text-[10px]">{dt("محلي")}</span>
                       )}
                     </td>
                     <td className="py-3 px-4 text-slate-600 max-w-[300px]" title={t.body}>
@@ -483,25 +471,23 @@ export function WhatsappTemplateList() {
                       </div>
                     </td>
                     <td className="py-3 px-4 text-slate-500">
-                      {new Date(t.updatedAt).toLocaleDateString("ar-EG", { dateStyle: "medium" })}
+                      {new Date(t.updatedAt).toLocaleDateString(dashIntl("ar-EG"), { dateStyle: "medium" })}
                     </td>
-                    <td className="py-3 px-4 text-left">
+                    <td className="py-3 px-4 text-end">
                       <div className="flex justify-end gap-2 flex-wrap">
                         <Button
                           size="sm"
                           variant="outline"
                           onClick={() => setPreview({ open: true, template: t })}
-                          title="عرض القالب"
+                          title={dt("عرض القالب")}
                         >
-                          <Eye className="w-3.5 h-3.5 me-1" /> عرض
-                        </Button>
+                          <Eye className="w-3.5 h-3.5 me-1" /> {dt(" عرض")}</Button>
                         <Button
                           size="sm"
                           variant="outline"
                           onClick={() => setEditor({ open: true, id: t.id })}
                         >
-                          <Pencil className="w-3.5 h-3.5 me-1" /> تعديل
-                        </Button>
+                          <Pencil className="w-3.5 h-3.5 me-1" /> {dt(" تعديل")}</Button>
                         {archiveView === "ACTIVE" ? (
                           <Button
                             size="sm"
@@ -509,8 +495,7 @@ export function WhatsappTemplateList() {
                             onClick={() => void handleArchive(t, "ARCHIVE")}
                             className="text-slate-700 hover:text-slate-900"
                           >
-                            <Archive className="w-3.5 h-3.5 me-1" /> أرشف
-                          </Button>
+                            <Archive className="w-3.5 h-3.5 me-1" /> {dt(" أرشف")}</Button>
                         ) : (
                           <Button
                             size="sm"
@@ -518,8 +503,7 @@ export function WhatsappTemplateList() {
                             onClick={() => void handleArchive(t, "RESTORE")}
                             className="text-emerald-700 hover:text-emerald-800"
                           >
-                            <ArchiveRestore className="w-3.5 h-3.5 me-1" /> استعادة
-                          </Button>
+                            <ArchiveRestore className="w-3.5 h-3.5 me-1" /> {dt(" استعادة")}</Button>
                         )}
                         {archiveView === "ACTIVE" && (
                           <Button
@@ -528,8 +512,7 @@ export function WhatsappTemplateList() {
                             onClick={() => handleDelete(t.id)}
                             className="text-red-600 hover:text-red-700"
                           >
-                            <Trash2 className="w-3.5 h-3.5 me-1" /> حذف
-                          </Button>
+                            <Trash2 className="w-3.5 h-3.5 me-1" /> {dt(" حذف")}</Button>
                         )}
                       </div>
                     </td>

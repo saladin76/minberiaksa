@@ -11,6 +11,7 @@ import {
   type InboxStatus,
 } from "@/lib/messages/inbox-status";
 import type { InboundMessage } from "./inbound-types";
+import { dt, dtx } from "@/lib/dashboard/i18n";
 
 /**
  * The three triage states, as one chip.
@@ -84,10 +85,10 @@ export function WaitingBadge({ message, className }: { message: InboundMessage; 
           : "border-amber-200 bg-amber-50 text-amber-700",
         className,
       )}
-      title={urgency === "overdue" ? "تجاوزت ٣ أيام بلا رد" : "تجاوزت ٢٤ ساعة بلا رد"}
+      title={urgency === "overdue" ? dt("تجاوزت ٣ أيام بلا رد") : dt("تجاوزت ٢٤ ساعة بلا رد")}
     >
       <Clock className="h-3 w-3" aria-hidden />
-      بانتظار الرد {waitedLabel(message.createdAt)}
+      {dtx("بانتظار الرد {0}", [waitedLabel(message.createdAt)])}
     </span>
   );
 }

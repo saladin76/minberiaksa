@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Check, ChevronDown, Loader2, Pencil, Plus, RefreshCw, Route, Search, Send, ShieldCheck, Star, Trash2, TriangleAlert, X } from "lucide-react";
 import { EmptyState } from "@/components/dashboard/EmptyState";
 import { cn } from "@/lib/utils";
+import { dashDir, dt, dtList, dtx } from "@/lib/dashboard/i18n";
 
 /**
  * Senders and routing rules.
@@ -25,15 +26,15 @@ const CHANNELS = ["WHATSAPP", "EMAIL", "SMS"] as const;
 const PURPOSES = ["TRANSACTIONAL", "MARKETING", "UTILITY", "AUTHENTICATION"] as const;
 
 const SUPPORTED_LANGUAGES = [
-  ["ar", "العربية"], ["tr", "Türkçe"], ["en", "English"], ["fr", "Français"], ["de", "Deutsch"],
-  ["es", "Español"], ["id", "Bahasa Indonesia"], ["pt", "Português"], ["ur", "اردو"], ["sq", "Shqip"],
+  dtList(["ar", "العربية"]), ["tr", "Türkçe"], ["en", "English"], ["fr", "Français"], ["de", "Deutsch"],
+  ["es", "Español"], ["id", "Bahasa Indonesia"], ["pt", "Português"], dtList(["ur", "اردو"]), ["sq", "Shqip"],
   ["it", "Italiano"], ["nl", "Nederlands"], ["sv", "Svenska"], ["no", "Norsk"], ["da", "Dansk"],
   ["ms", "Bahasa Melayu"], ["ja", "日本語"], ["zh", "中文"], ["hi", "हिंदी"],
 ] as const;
 
-const CHANNEL_LABELS: Record<string, string> = { WHATSAPP: "واتساب", EMAIL: "بريد", SMS: "رسائل نصية" };
+const CHANNEL_LABELS: Record<string, string> = { get WHATSAPP() { return dt("واتساب"); }, get EMAIL() { return dt("بريد"); }, get SMS() { return dt("رسائل نصية"); } };
 const PURPOSE_LABELS: Record<string, string> = {
-  TRANSACTIONAL: "معاملات", MARKETING: "تسويق", UTILITY: "خدمي", AUTHENTICATION: "توثيق",
+  get TRANSACTIONAL() { return dt("معاملات"); }, get MARKETING() { return dt("تسويق"); }, get UTILITY() { return dt("خدمي"); }, get AUTHENTICATION() { return dt("توثيق"); },
 };
 
 type Sender = {
@@ -97,10 +98,10 @@ type Preview =
   | { wouldSend: false; reason: string };
 
 const MATCHED_BY_LABELS: Record<string, string> = {
-  rule: "بقاعدة توجيه صريحة",
-  capability: "بمطابقة قدرات المُرسِل",
-  default: "بالمُرسِل الافتراضي للقناة",
-  "runtime-default": "بإعداد البيئة (لا يوجد مُرسِل مُسجَّل لهذه القناة)",
+  get rule() { return dt("بقاعدة توجيه صريحة"); },
+  get capability() { return dt("بمطابقة قدرات المُرسِل"); },
+  get default() { return dt("بالمُرسِل الافتراضي للقناة"); },
+  get "runtime-default"() { return dt("بإعداد البيئة (لا يوجد مُرسِل مُسجَّل لهذه القناة)"); },
 };
 
 function senderIdentity(sender: Sender): string {
@@ -187,8 +188,8 @@ export function SenderRoutingManager() {
         body: JSON.stringify(patch),
       });
       const body = await res.json().catch(() => ({}));
-      if (!res.ok) { setNotice({ tone: "error", text: body.error ?? "تعذّر الحفظ." }); return; }
-      setNotice({ tone: "ok", text: "حُفظ." });
+      if (!res.ok) { setNotice({ tone: "error", text: body.error ?? dt("تعذّر الحفظ.") }); return; }
+      setNotice({ tone: "ok", text: dt("حُفظ.") });
       await load();
     } finally {
       setBusy(null);
@@ -197,7 +198,7 @@ export function SenderRoutingManager() {
 
   const removeSender = useCallback(async (sender: Sender) => {
     const confirmed = window.confirm(
-      `هل أنت متأكد من حذف المُرسِل «${sender.displayName || sender.name}»؟\n\nإذا كان مستخدمًا في قواعد التوجيه أو سجل الإرسال فسيمنع النظام الحذف حفاظًا على البيانات.`
+      dt("هل أنت متأكد من حذف المُرسِل «{0}»؟\n\nإذا كان مستخدمًا في قواعد التوجيه أو سجل الإرسال فسيمنع النظام الحذف حفاظًا على البيانات.", [sender.displayName || sender.name])
     );
     if (!confirmed) return;
 
@@ -207,11 +208,11 @@ export function SenderRoutingManager() {
       const res = await fetch(`/api/dashboard/communication/senders/${sender.id}`, { method: "DELETE" });
       const body = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setNotice({ tone: "error", text: body.error ?? "تعذّر حذف المُرسِل." });
+        setNotice({ tone: "error", text: body.error ?? dt("تعذّر حذف المُرسِل.") });
         return;
       }
       setEditingSenderId((current) => current === sender.id ? null : current);
-      setNotice({ tone: "ok", text: "تم حذف المُرسِل." });
+      setNotice({ tone: "ok", text: dt("تم حذف المُرسِل.") });
       await load();
     } finally {
       setBusy(null);
@@ -219,8 +220,8 @@ export function SenderRoutingManager() {
   }, [load]);
 
   const removeRuleGroup = useCallback(async (group: RuleGroup) => {
-    const label = group.locales.length ? group.locales.join("، ") : "كل اللغات";
-    const confirmed = window.confirm(`هل تريد حذف قاعدة التوجيه لهذه اللغات: ${label}؟`);
+    const label = group.locales.length ? group.locales.join(dt("، ")) : dt("كل اللغات");
+    const confirmed = window.confirm(dt("هل تريد حذف قاعدة التوجيه لهذه اللغات: {0}؟", [label]));
     if (!confirmed) return;
 
     const busyKey = `rule-group:${group.key}`;
@@ -231,13 +232,13 @@ export function SenderRoutingManager() {
         const res = await fetch(`/api/dashboard/communication/routing-rules/${member.id}`, { method: "DELETE" });
         const body = await res.json().catch(() => ({}));
         if (!res.ok) {
-          setNotice({ tone: "error", text: body.error ?? "تعذّر حذف مجموعة قواعد التوجيه بالكامل." });
+          setNotice({ tone: "error", text: body.error ?? dt("تعذّر حذف مجموعة قواعد التوجيه بالكامل.") });
           await load();
           return;
         }
       }
       setEditingRuleId(null);
-      setNotice({ tone: "ok", text: "تم حذف قاعدة التوجيه بكل لغاتها." });
+      setNotice({ tone: "ok", text: dt("تم حذف قاعدة التوجيه بكل لغاتها.") });
       await load();
     } finally {
       setBusy(null);
@@ -259,13 +260,12 @@ export function SenderRoutingManager() {
   );
 
   return (
-    <section dir="rtl" className="mt-8">
+    <section dir={dashDir()} className="mt-8">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 className="text-lg font-bold text-slate-900">المُرسِلون والتوجيه</h2>
+          <h2 className="text-lg font-bold text-slate-900">{dt("المُرسِلون والتوجيه")}</h2>
           <p className="mt-0.5 text-sm text-slate-500">
-            أرقام الأعمال وهويات الإرسال، وقواعد اختيار المُرسِل حسب اللغة والدولة والغرض.
-          </p>
+            {dt("أرقام الأعمال وهويات الإرسال، وقواعد اختيار المُرسِل حسب اللغة والدولة والغرض.")}</p>
         </div>
         <div className="flex items-center gap-2">
           <button
@@ -273,15 +273,13 @@ export function SenderRoutingManager() {
             onClick={() => void load()}
             className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
           >
-            <RefreshCw className={cn("w-4 h-4", loading && "animate-spin")} /> تحديث
-          </button>
+            <RefreshCw className={cn("w-4 h-4", loading && "animate-spin")} /> {dt(" تحديث")}</button>
           <button
             type="button"
             onClick={() => setShowSenderForm((v) => !v)}
             className="inline-flex items-center gap-1.5 rounded-lg bg-brand px-3 py-1.5 text-sm font-semibold text-white"
           >
-            <Plus className="w-4 h-4" /> مُرسِل جديد
-          </button>
+            <Plus className="w-4 h-4" /> {dt(" مُرسِل جديد")}</button>
         </div>
       </div>
 
@@ -302,7 +300,7 @@ export function SenderRoutingManager() {
       {loading && !data ? (
         <div className="flex items-center justify-center py-12 text-slate-400"><Loader2 className="w-5 h-5 animate-spin" /></div>
       ) : !data ? (
-        <EmptyState variant="inline" title="تعذّر تحميل المُرسِلين" />
+        <EmptyState variant="inline" title={dt("تعذّر تحميل المُرسِلين")} />
       ) : (
         <div className="space-y-6">
           {CHANNELS.map((channel) => {
@@ -320,17 +318,16 @@ export function SenderRoutingManager() {
                       envDefault ? "border-slate-200 bg-slate-50 text-slate-600" : "border-amber-200 bg-amber-50 text-amber-700",
                     )}>
                       {envDefault ? <ShieldCheck className="w-3 h-3" /> : <TriangleAlert className="w-3 h-3" />}
-                      {envDefault ? "يُستخدم إعداد البيئة" : "لا مُرسِل ولا إعداد بيئة  القناة صامتة"}
+                      {envDefault ? dt("يُستخدم إعداد البيئة") : dt("لا مُرسِل ولا إعداد بيئة  القناة صامتة")}
                     </span>
                   ) : (
-                    <span className="text-[11px] text-slate-500">{senders.length} مُرسِل</span>
+                    <span className="text-[11px] text-slate-500">{dtx("{0} مُرسِل", [senders.length])}</span>
                   )}
                 </div>
 
                 {senders.length === 0 ? (
                   <p className="px-4 py-4 text-xs text-slate-500">
-                    لا يوجد مُرسِل مُسجَّل لهذه القناة. عند إضافة أول مُرسِل يتوقّف استخدام إعداد البيئة ويصبح التوجيه هو المُحدِّد.
-                  </p>
+                    {dt("لا يوجد مُرسِل مُسجَّل لهذه القناة. عند إضافة أول مُرسِل يتوقّف استخدام إعداد البيئة ويصبح التوجيه هو المُحدِّد.")}</p>
                 ) : (
                   <ul className="divide-y divide-slate-100">
                     {senders.map((sender) => (
@@ -344,16 +341,16 @@ export function SenderRoutingManager() {
                             <p className="text-xs text-slate-500">
                               {senderIdentity(sender)} · {sender.provider}
                               {sender.channel === "WHATSAPP" && !sender.hasPhoneNumberId && (
-                                <span className="text-rose-600"> · بلا معرّف رقم من Meta</span>
+                                <span className="text-rose-600"> {dt(" · بلا معرّف رقم من Meta")}</span>
                               )}
                             </p>
                             <p className="mt-1 text-[11px] text-slate-400">
-                              {sender.supportedLocales.length ? `لغات: ${sender.supportedLocales.join(", ")}` : "كل اللغات"}
+                              {sender.supportedLocales.length ? dt("لغات: {0}", [sender.supportedLocales.join(", ")]) : dt("كل اللغات")}
                               {" · "}
-                              {sender.supportedCountries.length ? `دول: ${sender.supportedCountries.join(", ")}` : "كل الدول"}
+                              {sender.supportedCountries.length ? dt("دول: {0}", [sender.supportedCountries.join(", ")]) : dt("كل الدول")}
                               {" · "}
-                              {sender.supportedPurposes.length ? sender.supportedPurposes.map((p) => PURPOSE_LABELS[p] ?? p).join(", ") : "كل الأغراض"}
-                              {" · "}أولوية {sender.priority}
+                              {sender.supportedPurposes.length ? sender.supportedPurposes.map((p) => PURPOSE_LABELS[p] ?? p).join(", ") : dt("كل الأغراض")}
+                              {dtx(" · أولوية {0}", [sender.priority])}
                             </p>
                           </div>
                           <div className="flex items-center gap-1.5">
@@ -363,7 +360,7 @@ export function SenderRoutingManager() {
                                 : sender.status === "NEEDS_ATTENTION" ? "border-amber-200 bg-amber-50 text-amber-700"
                                 : "border-slate-200 bg-slate-50 text-slate-500",
                             )}>
-                              {sender.enabled ? (sender.status === "ACTIVE" ? "نشط" : sender.status === "NEEDS_ATTENTION" ? "يحتاج انتباهًا" : sender.status) : "معطّل"}
+                              {sender.enabled ? (sender.status === "ACTIVE" ? dt("نشط") : sender.status === "NEEDS_ATTENTION" ? dt("يحتاج انتباهًا") : sender.status) : dt("معطّل")}
                             </span>
                             <button
                               type="button"
@@ -371,7 +368,7 @@ export function SenderRoutingManager() {
                               onClick={() => void patchSender(sender.id, { enabled: !sender.enabled })}
                               className="rounded-lg border border-slate-200 px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-40"
                             >
-                              {sender.enabled ? "تعطيل" : "تفعيل"}
+                              {sender.enabled ? dt("تعطيل") : dt("تفعيل")}
                             </button>
                             {sender.channel === "WHATSAPP" && (
                               <button
@@ -384,11 +381,11 @@ export function SenderRoutingManager() {
                                     const res = await fetch(`/api/dashboard/communication/senders/${sender.id}/verify`, { method: "POST" });
                                     const body = await res.json().catch(() => ({}));
                                     if (!res.ok) {
-                                      setNotice({ tone: "error", text: body.error ?? "فشل التحقق من Meta." });
+                                      setNotice({ tone: "error", text: body.error ?? dt("فشل التحقق من Meta.") });
                                       await load();
                                       return;
                                     }
-                                    setNotice({ tone: "ok", text: "تم التحقق من الرقم وWABA عبر Meta وتفعيل المُرسِل." });
+                                    setNotice({ tone: "ok", text: dt("تم التحقق من الرقم وWABA عبر Meta وتفعيل المُرسِل.") });
                                     await load();
                                   } finally {
                                     setBusy(null);
@@ -396,8 +393,7 @@ export function SenderRoutingManager() {
                                 })()}
                                 className="rounded-lg border border-sky-200 px-2 py-1 text-xs font-medium text-sky-700 hover:bg-sky-50 disabled:opacity-40"
                               >
-                                تحقق من Meta
-                              </button>
+                                {dt("تحقق من Meta")}</button>
                             )}
                             <button
                               type="button"
@@ -405,16 +401,14 @@ export function SenderRoutingManager() {
                               onClick={() => setEditingSenderId((current) => current === sender.id ? null : sender.id)}
                               className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-40"
                             >
-                              <Pencil className="h-3.5 w-3.5" /> تعديل
-                            </button>
+                              <Pencil className="h-3.5 w-3.5" /> {dt(" تعديل")}</button>
                             <button
                               type="button"
                               disabled={busy === sender.id}
                               onClick={() => void removeSender(sender)}
                               className="inline-flex items-center gap-1 rounded-lg border border-rose-200 px-2 py-1 text-xs font-medium text-rose-700 hover:bg-rose-50 disabled:opacity-40"
                             >
-                              <Trash2 className="h-3.5 w-3.5" /> حذف
-                            </button>
+                              <Trash2 className="h-3.5 w-3.5" /> {dt(" حذف")}</button>
                             {!sender.isDefault && (
                               <button
                                 type="button"
@@ -422,8 +416,7 @@ export function SenderRoutingManager() {
                                 onClick={() => void patchSender(sender.id, { makeDefault: true })}
                                 className="rounded-lg border border-slate-200 px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-40"
                               >
-                                اجعله الافتراضي
-                              </button>
+                                {dt("اجعله الافتراضي")}</button>
                             )}
                           </div>
                         </div>
@@ -449,29 +442,26 @@ export function SenderRoutingManager() {
           <div className="rounded-xl border border-slate-200 bg-white overflow-hidden">
             <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 px-4 py-2.5">
               <h3 className="inline-flex items-center gap-1.5 text-sm font-bold text-slate-900">
-                <Route className="w-4 h-4 text-brand" /> قواعد التوجيه
-              </h3>
+                <Route className="w-4 h-4 text-brand" /> {dt(" قواعد التوجيه")}</h3>
               <button
                 type="button"
                 onClick={() => setShowRuleForm((v) => !v)}
                 className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-2.5 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-50"
               >
-                <Plus className="w-3.5 h-3.5" /> قاعدة جديدة
-              </button>
+                <Plus className="w-3.5 h-3.5" /> {dt(" قاعدة جديدة")}</button>
             </div>
             {showRuleForm && <RuleForm senders={data.senders} onCancel={() => setShowRuleForm(false)} onDone={async () => { setShowRuleForm(false); await load(); }} />}
             {groupedRules.length === 0 ? (
               <p className="px-4 py-4 text-xs text-slate-500">
-                لا قواعد  يُختار المُرسِل بمطابقة قدراته ثم بالمُرسِل الافتراضي للقناة.
-              </p>
+                {dt("لا قواعد  يُختار المُرسِل بمطابقة قدراته ثم بالمُرسِل الافتراضي للقناة.")}</p>
             ) : (
               <ul className="divide-y divide-slate-100">
                 {groupedRules.map((group) => {
                   const rule = group.representative;
                   const busyKey = `rule-group:${group.key}`;
                   const languageLabel = group.locales.length
-                    ? `لغات ${group.locales.join("، ")}`
-                    : "كل اللغات";
+                    ? dt("لغات {0}", [group.locales.join(dt("، "))])
+                    : dt("كل اللغات");
                   return (
                     <li key={group.key} className="flex flex-wrap items-center justify-between gap-2 px-4 py-2.5">
                       <p className="text-sm text-slate-800">
@@ -479,15 +469,15 @@ export function SenderRoutingManager() {
                         {" · "}
                         {languageLabel}
                         {" · "}
-                        {rule.country ? `دولة ${rule.country}` : "أي دولة"}
+                        {rule.country ? dt("دولة {0}", [rule.country]) : dt("أي دولة")}
                         {" · "}
-                        {rule.purpose ? PURPOSE_LABELS[rule.purpose] ?? rule.purpose : "أي غرض"}
+                        {rule.purpose ? PURPOSE_LABELS[rule.purpose] ?? rule.purpose : dt("أي غرض")}
                         {" → "}
                         <span className="font-semibold">{senderName(rule.senderId)}</span>
-                        {rule.fallbackSenderId && <span className="text-slate-500"> (بديل: {senderName(rule.fallbackSenderId)})</span>}
+                        {rule.fallbackSenderId && <span className="text-slate-500"> {dtx(" (بديل: {0})", [senderName(rule.fallbackSenderId)])}</span>}
                       </p>
                       <div className="flex items-center gap-2">
-                        <span className="text-[11px] text-slate-400">أولوية {rule.priority}</span>
+                        <span className="text-[11px] text-slate-400">{dtx("أولوية {0}", [rule.priority])}</span>
                         <button
                           type="button"
                           disabled={busy === busyKey}
@@ -503,7 +493,7 @@ export function SenderRoutingManager() {
                                 });
                                 const body = await res.json().catch(() => ({}));
                                 if (!res.ok) {
-                                  setNotice({ tone: "error", text: body.error ?? "تعذّر تحديث مجموعة قواعد التوجيه." });
+                                  setNotice({ tone: "error", text: body.error ?? dt("تعذّر تحديث مجموعة قواعد التوجيه.") });
                                   await load();
                                   return;
                                 }
@@ -518,7 +508,7 @@ export function SenderRoutingManager() {
                             rule.enabled ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-slate-200 bg-slate-50 text-slate-500",
                           )}
                         >
-                          {rule.enabled ? "مفعّلة" : "معطّلة"}
+                          {rule.enabled ? dt("مفعّلة") : dt("معطّلة")}
                         </button>
                         <button
                           type="button"
@@ -526,16 +516,14 @@ export function SenderRoutingManager() {
                           onClick={() => setEditingRuleId((current) => current === rule.id ? null : rule.id)}
                           className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-2 py-0.5 text-[11px] font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-40"
                         >
-                          <Pencil className="h-3 w-3" /> تعديل
-                        </button>
+                          <Pencil className="h-3 w-3" /> {dt(" تعديل")}</button>
                         <button
                           type="button"
                           disabled={busy === busyKey}
                           onClick={() => void removeRuleGroup(group)}
                           className="inline-flex items-center gap-1 rounded-lg border border-rose-200 px-2 py-0.5 text-[11px] font-semibold text-rose-700 hover:bg-rose-50 disabled:opacity-40"
                         >
-                          <Trash2 className="h-3 w-3" /> حذف
-                        </button>
+                          <Trash2 className="h-3 w-3" /> {dt(" حذف")}</button>
                       </div>
                       {editingRuleId === rule.id && (
                         <div className="basis-full border-t border-slate-100 pt-3">
@@ -571,10 +559,10 @@ function LanguageMultiSelect({ value, onChange }: { value: string[]; onChange: (
   );
   const selectedLabels = SUPPORTED_LANGUAGES.filter(([code]) => value.includes(code)).map(([, label]) => label);
   const summary = selectedLabels.length === 0
-    ? "كل اللغات"
+    ? dt("كل اللغات")
     : selectedLabels.length <= 3
-      ? selectedLabels.join("، ")
-      : `${selectedLabels.slice(0, 3).join("، ")} +${selectedLabels.length - 3}`;
+      ? selectedLabels.join(dt("، "))
+      : `${selectedLabels.slice(0, 3).join(dt("، "))} +${selectedLabels.length - 3}`;
 
   return (
     <div className="relative">
@@ -596,7 +584,7 @@ function LanguageMultiSelect({ value, onChange }: { value: string[]; onChange: (
               autoFocus
               value={query}
               onChange={(event) => setQuery(event.target.value)}
-              placeholder="ابحث عن لغة أو كود..."
+              placeholder={dt("ابحث عن لغة أو كود...")}
               className="h-9 min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-slate-400"
             />
             {query && (
@@ -626,16 +614,14 @@ function LanguageMultiSelect({ value, onChange }: { value: string[]; onChange: (
                 </button>
               );
             })}
-            {options.length === 0 && <p className="px-2 py-3 text-center text-xs text-slate-400">لا توجد نتائج.</p>}
+            {options.length === 0 && <p className="px-2 py-3 text-center text-xs text-slate-400">{dt("لا توجد نتائج.")}</p>}
           </div>
 
           <div className="mt-2 flex items-center justify-between border-t border-slate-100 pt-2">
             <button type="button" onClick={() => onChange([])} className="text-xs font-semibold text-slate-500 hover:text-slate-800">
-              مسح الكل = كل اللغات
-            </button>
+              {dt("مسح الكل = كل اللغات")}</button>
             <button type="button" onClick={() => setOpen(false)} className="rounded-lg bg-slate-900 px-2.5 py-1 text-xs font-semibold text-white">
-              تم
-            </button>
+              {dt("تم")}</button>
           </div>
         </div>
       )}
@@ -717,7 +703,7 @@ function SenderForm({
       );
       const body = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError(body.error ?? (editing ? "تعذّر حفظ التعديلات." : "تعذّر إنشاء المُرسِل."));
+        setError(body.error ?? (editing ? dt("تعذّر حفظ التعديلات.") : dt("تعذّر إنشاء المُرسِل.")));
         return;
       }
       await onDone();
@@ -737,18 +723,17 @@ function SenderForm({
     )}>
       <div className="mb-3 flex items-center justify-between gap-2">
         <div>
-          <p className="text-sm font-bold text-slate-900">{editing ? "تعديل المُرسِل" : "إضافة مُرسِل جديد"}</p>
-          {editing && <p className="mt-0.5 text-xs text-slate-500">القناة والمزوّد ثابتان حفاظًا على سجل الرسائل والتوجيه.</p>}
+          <p className="text-sm font-bold text-slate-900">{editing ? dt("تعديل المُرسِل") : dt("إضافة مُرسِل جديد")}</p>
+          {editing && <p className="mt-0.5 text-xs text-slate-500">{dt("القناة والمزوّد ثابتان حفاظًا على سجل الرسائل والتوجيه.")}</p>}
         </div>
-        <button type="button" onClick={onCancel} className="rounded-lg p-1.5 text-slate-400 hover:bg-white hover:text-slate-700" aria-label="إغلاق">
+        <button type="button" onClick={onCancel} className="rounded-lg p-1.5 text-slate-400 hover:bg-white hover:text-slate-700" aria-label={dt("إغلاق")}>
           <X className="h-4 w-4" />
         </button>
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         <label className="text-xs font-semibold text-slate-600">
-          القناة
-          <select
+          {dt("القناة")}<select
             value={channel}
             disabled={editing}
             onChange={(e) => setChannel(e.target.value as typeof channel)}
@@ -758,12 +743,10 @@ function SenderForm({
           </select>
         </label>
         <label className="text-xs font-semibold text-slate-600">
-          الاسم الداخلي
-          <input value={form.name} onChange={set("name")} placeholder="الرقم التسويقي" className={cn(field, "mt-1")} />
+          {dt("الاسم الداخلي")}<input value={form.name} onChange={set("name")} placeholder={dt("الرقم التسويقي")} className={cn(field, "mt-1")} />
         </label>
         <label className="text-xs font-semibold text-slate-600">
-          الاسم الظاهر
-          <input value={form.displayName} onChange={set("displayName")} className={cn(field, "mt-1")} />
+          {dt("الاسم الظاهر")}<input value={form.displayName} onChange={set("displayName")} className={cn(field, "mt-1")} />
         </label>
 
         {channel === "WHATSAPP" && (
@@ -772,15 +755,14 @@ function SenderForm({
               <>
                 <div className="sm:col-span-2 lg:col-span-3 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2">
                   <p className="text-xs font-semibold text-emerald-800">
-                    حساب الأعمال الرئيسي: {metaAssets.businessPortfolio.name || "Meta Business Portfolio"}
+                    {dtx("حساب الأعمال الرئيسي: {0}", [metaAssets.businessPortfolio.name || "Meta Business Portfolio"])}
                   </p>
                   <p className="mt-0.5 text-[11px] text-emerald-700" dir="ltr">
                     Business Portfolio ID: {metaAssets.businessPortfolio.id}
                   </p>
                 </div>
                 <label className="text-xs font-semibold text-slate-600">
-                  حساب WhatsApp Business (WABA)
-                  <select
+                  {dt("حساب WhatsApp Business (WABA)")}<select
                     value={form.businessAccountId}
                     onChange={(event) => {
                       const businessAccountId = event.target.value;
@@ -796,17 +778,16 @@ function SenderForm({
                     }}
                     className={cn(field, "mt-1")}
                   >
-                    <option value="">اختر WABA من حساب الأعمال الرئيسي…</option>
+                    <option value="">{dt("اختر WABA من حساب الأعمال الرئيسي…")}</option>
                     {metaAssets.wabas.map((waba) => (
                       <option key={waba.id} value={waba.id}>
-                        {waba.name || waba.id} — {waba.relationship === "OWNED" ? "مملوك" : "مشارك"}
+                        {waba.name || waba.id} — {waba.relationship === "OWNED" ? dt("مملوك") : dt("مشارك")}
                       </option>
                     ))}
                   </select>
                 </label>
                 <label className="text-xs font-semibold text-slate-600">
-                  رقم واتساب من WABA
-                  <select
+                  {dt("رقم واتساب من WABA")}<select
                     value={form.phoneNumberId}
                     disabled={!selectedWaba}
                     onChange={(event) => {
@@ -821,7 +802,7 @@ function SenderForm({
                     }}
                     className={cn(field, "mt-1 disabled:bg-slate-100")}
                   >
-                    <option value="">اختر الرقم…</option>
+                    <option value="">{dt("اختر الرقم…")}</option>
                     {(selectedWaba?.phones ?? []).map((phone) => (
                       <option key={phone.id} value={phone.id}>
                         {phone.displayPhoneNumber || phone.id}{phone.verifiedName ? ` — ${phone.verifiedName}` : ""}
@@ -830,65 +811,57 @@ function SenderForm({
                   </select>
                 </label>
                 <label className="text-xs font-semibold text-slate-600">
-                  الرقم كما يظهر
-                  <input value={form.displayPhoneNumber} readOnly className={cn(field, "mt-1 bg-slate-100")} />
+                  {dt("الرقم كما يظهر")}<input value={form.displayPhoneNumber} readOnly className={cn(field, "mt-1 bg-slate-100")} />
                 </label>
                 {selectedPhone?.qualityRating && (
                   <p className="text-[11px] text-slate-500 sm:col-span-2 lg:col-span-3">
-                    جودة الرقم في Meta: <span className="font-semibold">{selectedPhone.qualityRating}</span>
+                    {dt("جودة الرقم في Meta: ")}<span className="font-semibold">{selectedPhone.qualityRating}</span>
                   </p>
                 )}
               </>
             ) : (
               <>
                 <label className="text-xs font-semibold text-slate-600">
-                  Phone Number ID في Meta
-                  <input inputMode="numeric" value={form.phoneNumberId} onChange={set("phoneNumberId")} className={cn(field, "mt-1")} />
+                  {dt("Phone Number ID في Meta")}<input inputMode="numeric" value={form.phoneNumberId} onChange={set("phoneNumberId")} className={cn(field, "mt-1")} />
                 </label>
                 <label className="text-xs font-semibold text-slate-600">
-                  الرقم كما يظهر
-                  <input value={form.displayPhoneNumber} onChange={set("displayPhoneNumber")} placeholder="+90…" className={cn(field, "mt-1")} />
+                  {dt("الرقم كما يظهر")}<input value={form.displayPhoneNumber} onChange={set("displayPhoneNumber")} placeholder="+90…" className={cn(field, "mt-1")} />
                 </label>
                 <label className="text-xs font-semibold text-slate-600">
                   WABA ID
                   <input inputMode="numeric" value={form.businessAccountId} onChange={set("businessAccountId")} className={cn(field, "mt-1")} />
                 </label>
                 <p className="text-[11px] text-amber-700 sm:col-span-2 lg:col-span-3">
-                  لم يتم اكتشاف أصول Meta تلقائيًا. أكمل إعداد Business Portfolio المركزي ثم أعد تحميل الصفحة.
-                </p>
+                  {dt("لم يتم اكتشاف أصول Meta تلقائيًا. أكمل إعداد Business Portfolio المركزي ثم أعد تحميل الصفحة.")}</p>
               </>
             )}
           </>
         )}
         {channel === "EMAIL" && (
           <label className="text-xs font-semibold text-slate-600">
-            بريد المُرسِل
-            <input value={form.senderEmail} onChange={set("senderEmail")} className={cn(field, "mt-1")} />
+            {dt("بريد المُرسِل")}<input value={form.senderEmail} onChange={set("senderEmail")} className={cn(field, "mt-1")} />
           </label>
         )}
         {channel === "SMS" && (
           <label className="text-xs font-semibold text-slate-600">
-            ترويسة الرسائل
-            <input value={form.smsSender} onChange={set("smsSender")} className={cn(field, "mt-1")} />
+            {dt("ترويسة الرسائل")}<input value={form.smsSender} onChange={set("smsSender")} className={cn(field, "mt-1")} />
           </label>
         )}
 
         <div className="text-xs font-semibold text-slate-600 sm:col-span-2 lg:col-span-2">
-          <p className="mb-1">اللغات المدعومة <span className="font-normal text-slate-400">(لا اختيار = كل اللغات)</span></p>
+          <p className="mb-1">{dt("اللغات المدعومة ")}<span className="font-normal text-slate-400">{dt("(لا اختيار = كل اللغات)")}</span></p>
           <LanguageMultiSelect value={locales} onChange={setLocales} />
         </div>
         <label className="text-xs font-semibold text-slate-600">
-          الدول المدعومة (فراغ = الكل)
-          <input value={form.supportedCountries} onChange={set("supportedCountries")} placeholder="TR, SA" className={cn(field, "mt-1")} />
+          {dt("الدول المدعومة (فراغ = الكل)")}<input value={form.supportedCountries} onChange={set("supportedCountries")} placeholder="TR, SA" className={cn(field, "mt-1")} />
         </label>
         <label className="text-xs font-semibold text-slate-600">
-          الأولوية (الأصغر أولًا)
-          <input inputMode="numeric" value={form.priority} onChange={set("priority")} className={cn(field, "mt-1")} />
+          {dt("الأولوية (الأصغر أولًا)")}<input inputMode="numeric" value={form.priority} onChange={set("priority")} className={cn(field, "mt-1")} />
         </label>
       </div>
 
       <div className="mt-3">
-        <p className="text-xs font-semibold text-slate-600">الأغراض المدعومة (بدون اختيار = الكل)</p>
+        <p className="text-xs font-semibold text-slate-600">{dt("الأغراض المدعومة (بدون اختيار = الكل)")}</p>
         <div className="mt-1 flex flex-wrap gap-1.5">
           {PURPOSES.map((purpose) => (
             <button
@@ -907,7 +880,7 @@ function SenderForm({
       </div>
 
       {missingWhatsappIdentity && (
-        <p className="mt-2 text-xs text-amber-700">رقم واتساب يحتاج Phone Number ID وWABA ID والرقم الظاهر قبل الحفظ.</p>
+        <p className="mt-2 text-xs text-amber-700">{dt("رقم واتساب يحتاج Phone Number ID وWABA ID والرقم الظاهر قبل الحفظ.")}</p>
       )}
       {error && <p className="mt-2 text-xs font-medium text-rose-700">{error}</p>}
 
@@ -919,7 +892,7 @@ function SenderForm({
           className="inline-flex items-center gap-1.5 rounded-lg bg-brand px-3 py-1.5 text-sm font-semibold text-white disabled:opacity-40"
         >
           {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : editing ? <Check className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
-          {editing ? "حفظ التعديلات" : "حفظ المُرسِل"}
+          {editing ? dt("حفظ التعديلات") : dt("حفظ المُرسِل")}
         </button>
         <button
           type="button"
@@ -927,8 +900,7 @@ function SenderForm({
           onClick={onCancel}
           className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-40"
         >
-          إلغاء
-        </button>
+          {dt("إلغاء")}</button>
       </div>
     </div>
   );
@@ -996,7 +968,7 @@ function RuleForm({
             });
             const updateBody = await update.json().catch(() => ({}));
             if (!update.ok) {
-              setError(updateBody.error ?? `تعذّر تحديث قاعدة اللغة ${locale ?? "العامة"}.`);
+              setError(updateBody.error ?? dt("تعذّر تحديث قاعدة اللغة {0}.", [locale ?? dt("العامة")]));
               return;
             }
             continue;
@@ -1014,7 +986,7 @@ function RuleForm({
           });
           const createBody = await create.json().catch(() => ({}));
           if (!create.ok) {
-            setError(createBody.error ?? `تعذّر إنشاء قاعدة اللغة ${locale ?? "العامة"}.`);
+            setError(createBody.error ?? dt("تعذّر إنشاء قاعدة اللغة {0}.", [locale ?? dt("العامة")]));
             return;
           }
         }
@@ -1027,7 +999,7 @@ function RuleForm({
           const remove = await fetch(`/api/dashboard/communication/routing-rules/${member.id}`, { method: "DELETE" });
           const removeBody = await remove.json().catch(() => ({}));
           if (!remove.ok) {
-            setError(removeBody.error ?? `حُفظت اللغات الجديدة لكن تعذّر حذف قاعدة اللغة ${member.locale ?? "العامة"}.`);
+            setError(removeBody.error ?? dt("حُفظت اللغات الجديدة لكن تعذّر حذف قاعدة اللغة {0}.", [member.locale ?? dt("العامة")]));
             return;
           }
         }
@@ -1045,7 +1017,7 @@ function RuleForm({
           });
           const createBody = await create.json().catch(() => ({}));
           if (!create.ok) {
-            setError(createBody.error ?? `تعذّر إنشاء قاعدة اللغة ${locale ?? "العامة"}.`);
+            setError(createBody.error ?? dt("تعذّر إنشاء قاعدة اللغة {0}.", [locale ?? dt("العامة")]));
             return;
           }
         }
@@ -1062,15 +1034,14 @@ function RuleForm({
   return (
     <div className={cn("p-4", editing ? "rounded-xl border border-slate-200 bg-slate-50/70" : "border-b border-slate-100 bg-slate-50/60")}>
       <div className="mb-3 flex items-center justify-between gap-2">
-        <p className="text-sm font-bold text-slate-900">{editing ? "تعديل قاعدة التوجيه" : "إضافة قاعدة توجيه"}</p>
-        <button type="button" onClick={onCancel} className="rounded-lg p-1.5 text-slate-400 hover:bg-white hover:text-slate-700" aria-label="إغلاق">
+        <p className="text-sm font-bold text-slate-900">{editing ? dt("تعديل قاعدة التوجيه") : dt("إضافة قاعدة توجيه")}</p>
+        <button type="button" onClick={onCancel} className="rounded-lg p-1.5 text-slate-400 hover:bg-white hover:text-slate-700" aria-label={dt("إغلاق")}>
           <X className="h-4 w-4" />
         </button>
       </div>
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <label className="text-xs font-semibold text-slate-600">
-          القناة
-          <select
+          {dt("القناة")}<select
             value={form.channel}
             disabled={editing}
             onChange={(e) => setForm((f) => ({ ...f, channel: e.target.value, senderId: "", fallbackSenderId: "" }))}
@@ -1080,45 +1051,38 @@ function RuleForm({
           </select>
         </label>
         <label className="text-xs font-semibold text-slate-600">
-          اللغات (بدون اختيار = أي لغة)
-          <div className="mt-1">
+          {dt("اللغات (بدون اختيار = أي لغة)")}<div className="mt-1">
             <LanguageMultiSelect
               value={form.locales}
               onChange={(locales) => setForm((f) => ({ ...f, locales }))}
             />
           </div>
           <span className="mt-1 block text-[10px] font-normal text-slate-400">
-            تُعرض اللغات كقاعدة واحدة، ويحافظ النظام داخليًا على صف مستقل لكل لغة لضمان توجيه دقيق.
-          </span>
+            {dt("تُعرض اللغات كقاعدة واحدة، ويحافظ النظام داخليًا على صف مستقل لكل لغة لضمان توجيه دقيق.")}</span>
         </label>
         <label className="text-xs font-semibold text-slate-600">
-          الدولة (فراغ = أي)
-          <input value={form.country} onChange={(e) => setForm((f) => ({ ...f, country: e.target.value }))} placeholder="TR" className={cn(field, "mt-1")} />
+          {dt("الدولة (فراغ = أي)")}<input value={form.country} onChange={(e) => setForm((f) => ({ ...f, country: e.target.value }))} placeholder="TR" className={cn(field, "mt-1")} />
         </label>
         <label className="text-xs font-semibold text-slate-600">
-          الغرض (فراغ = أي)
-          <select value={form.purpose} onChange={(e) => setForm((f) => ({ ...f, purpose: e.target.value }))} className={cn(field, "mt-1")}>
-            <option value="">أي غرض</option>
+          {dt("الغرض (فراغ = أي)")}<select value={form.purpose} onChange={(e) => setForm((f) => ({ ...f, purpose: e.target.value }))} className={cn(field, "mt-1")}>
+            <option value="">{dt("أي غرض")}</option>
             {PURPOSES.map((p) => <option key={p} value={p}>{PURPOSE_LABELS[p]}</option>)}
           </select>
         </label>
         <label className="text-xs font-semibold text-slate-600">
-          المُرسِل
-          <select value={form.senderId} onChange={(e) => setForm((f) => ({ ...f, senderId: e.target.value }))} className={cn(field, "mt-1")}>
-            <option value="">اختر…</option>
+          {dt("المُرسِل")}<select value={form.senderId} onChange={(e) => setForm((f) => ({ ...f, senderId: e.target.value }))} className={cn(field, "mt-1")}>
+            <option value="">{dt("اختر…")}</option>
             {options.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
           </select>
         </label>
         <label className="text-xs font-semibold text-slate-600">
-          البديل عند تعذّره
-          <select value={form.fallbackSenderId} onChange={(e) => setForm((f) => ({ ...f, fallbackSenderId: e.target.value }))} className={cn(field, "mt-1")}>
-            <option value="">لا شيء</option>
+          {dt("البديل عند تعذّره")}<select value={form.fallbackSenderId} onChange={(e) => setForm((f) => ({ ...f, fallbackSenderId: e.target.value }))} className={cn(field, "mt-1")}>
+            <option value="">{dt("لا شيء")}</option>
             {options.filter((s) => s.id !== form.senderId).map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
           </select>
         </label>
         <label className="text-xs font-semibold text-slate-600">
-          الأولوية
-          <input inputMode="numeric" value={form.priority} onChange={(e) => setForm((f) => ({ ...f, priority: e.target.value }))} className={cn(field, "mt-1")} />
+          {dt("الأولوية")}<input inputMode="numeric" value={form.priority} onChange={(e) => setForm((f) => ({ ...f, priority: e.target.value }))} className={cn(field, "mt-1")} />
         </label>
       </div>
       {error && <p className="mt-2 text-xs font-medium text-rose-700">{error}</p>}
@@ -1130,11 +1094,10 @@ function RuleForm({
           className="inline-flex items-center gap-1.5 rounded-lg bg-brand px-3 py-1.5 text-sm font-semibold text-white disabled:opacity-40"
         >
           {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : editing ? <Check className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
-          {editing ? "حفظ التعديلات" : "حفظ القاعدة"}
+          {editing ? dt("حفظ التعديلات") : dt("حفظ القاعدة")}
         </button>
         <button type="button" disabled={saving} onClick={onCancel} className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-40">
-          إلغاء
-        </button>
+          {dt("إلغاء")}</button>
       </div>
     </div>
   );
@@ -1165,20 +1128,18 @@ function RoutingPreview() {
   return (
     <div className="rounded-xl border border-slate-200 bg-white p-4">
       <h3 className="inline-flex items-center gap-1.5 text-sm font-bold text-slate-900">
-        <Send className="w-4 h-4 text-brand" /> اختبار التوجيه
-      </h3>
+        <Send className="w-4 h-4 text-brand" /> {dt(" اختبار التوجيه")}</h3>
       <p className="mt-0.5 text-xs text-slate-500">
-        أيّ مُرسِل سيخدم مستلمًا بهذه الصفات؟ الجواب من نفس المُحلِّل الذي يستخدمه الإرسال الفعلي.
-      </p>
+        {dt("أيّ مُرسِل سيخدم مستلمًا بهذه الصفات؟ الجواب من نفس المُحلِّل الذي يستخدمه الإرسال الفعلي.")}</p>
       <div className="mt-3 flex flex-wrap items-end gap-2">
         <select value={form.channel} onChange={(e) => setForm((f) => ({ ...f, channel: e.target.value }))} className={field}>
           {CHANNELS.map((c) => <option key={c} value={c}>{CHANNEL_LABELS[c]}</option>)}
         </select>
         <select value={form.locale} onChange={(e) => setForm((f) => ({ ...f, locale: e.target.value }))} className={cn(field, "min-w-40")}>
-          <option value="">أي لغة</option>
+          <option value="">{dt("أي لغة")}</option>
           {SUPPORTED_LANGUAGES.map(([code, label]) => <option key={code} value={code}>{label} — {code}</option>)}
         </select>
-        <input value={form.country} onChange={(e) => setForm((f) => ({ ...f, country: e.target.value }))} placeholder="الدولة" className={cn(field, "w-24")} />
+        <input value={form.country} onChange={(e) => setForm((f) => ({ ...f, country: e.target.value }))} placeholder={dt("الدولة")} className={cn(field, "w-24")} />
         <select value={form.purpose} onChange={(e) => setForm((f) => ({ ...f, purpose: e.target.value }))} className={field}>
           {PURPOSES.map((p) => <option key={p} value={p}>{PURPOSE_LABELS[p]}</option>)}
         </select>
@@ -1187,14 +1148,13 @@ function RoutingPreview() {
           onClick={() => void run()}
           className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
         >
-          {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />} اختبر
-        </button>
+          {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />} {dt(" اختبر")}</button>
       </div>
 
       {result && (
         result.wouldSend ? (
           <p className="mt-3 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
-            سيُرسَل من{" "}
+            {dt("سيُرسَل من ")}
             <span className="font-semibold">
               {result.sender.displayPhoneNumber || result.sender.senderEmail || result.sender.smsSender || result.sender.provider || "—"}
             </span>
@@ -1203,8 +1163,7 @@ function RoutingPreview() {
         ) : (
           <p className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
             <TriangleAlert className="inline w-4 h-4 me-1" />
-            لن يُرسَل إلى هذا المستلم  {result.reason}. هذا قرار نهائي: لا يوجد بديل من إعداد البيئة يتجاوزه.
-          </p>
+            {dtx("لن يُرسَل إلى هذا المستلم  {0}. هذا قرار نهائي: لا يوجد بديل من إعداد البيئة يتجاوزه.", [result.reason])}</p>
         )
       )}
     </div>

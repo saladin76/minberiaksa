@@ -65,7 +65,7 @@ import {
   Heart,
 } from 'lucide-react';
 import { format } from 'date-fns';
-import { ar } from 'date-fns/locale';
+import { dashDateLocale } from '@/lib/dashboard/i18n/date-fns';
 import { useRouter } from 'next/navigation';
 import { miaPath } from '@/lib/minbar/routes';
 import { toast } from 'react-hot-toast';
@@ -73,6 +73,7 @@ import { CampaignReorderDialog } from './_components/CampaignReorderDialog';
 import { DashboardLocaleSwitcher } from '../_components/DashboardLocaleSwitcher';
 import { ContentLocalizationAuditCard } from '../_components/ContentLocalizationAuditCard';
 import { computeCampaignProgressPercent, showCampaignProgress } from '@/lib/campaign/campaign-modes';
+import { dashDir, dt, dtx } from "@/lib/dashboard/i18n";
 
 interface Campaign {
   goalType: string;
@@ -161,10 +162,10 @@ export default function CampaignsPage() {
     try {
       await axios.put(`/api/campaigns/${id}`, { isActive: nextActive });
       setCampaigns(prev => prev.map(c => c.id === id ? { ...c, isActive: nextActive } : c));
-      toast.success(nextActive ? 'تم تفعيل المشروع' : 'تم تعطيل المشروع');
+      toast.success(nextActive ? dt("تم تفعيل المشروع") : dt("تم تعطيل المشروع"));
     } catch (err: any) {
-      const msg = axios.isAxiosError(err) ? err.response?.data?.error || err.message : 'تعذّر تحديث حالة المشروع';
-      toast.error(typeof msg === 'string' ? msg : 'تعذّر تحديث حالة المشروع');
+      const msg = axios.isAxiosError(err) ? err.response?.data?.error || err.message : dt("تعذّر تحديث حالة المشروع");
+      toast.error(typeof msg === 'string' ? msg : dt("تعذّر تحديث حالة المشروع"));
     } finally {
       setActionLoading(null);
     }
@@ -173,9 +174,9 @@ export default function CampaignsPage() {
   const handleDeactivate = (campaign: Campaign) => {
     setConfirmDialog({
       open: true,
-      title: 'تعطيل المشروع',
-      description: `سيتم إخفاء مشروع "${campaign.title}" من الموقع ونقله إلى الأرشيف. يمكنك إعادة تفعيله في أي وقت.`,
-      actionLabel: 'تعطيل',
+      title: dt("تعطيل المشروع"),
+      description: dt("سيتم إخفاء مشروع \"{0}\" من الموقع ونقله إلى الأرشيف. يمكنك إعادة تفعيله في أي وقت.", [campaign.title]),
+      actionLabel: dt("تعطيل"),
       actionClassName: 'bg-amber-600 hover:bg-amber-700 text-white',
       onConfirm: () => setActive(campaign.id, false),
     });
@@ -184,9 +185,9 @@ export default function CampaignsPage() {
   const handleReactivate = (campaign: Campaign) => {
     setConfirmDialog({
       open: true,
-      title: 'إعادة تفعيل المشروع',
-      description: `سيتم نشر مشروع "${campaign.title}" على الموقع مجدداً.`,
-      actionLabel: 'تفعيل',
+      title: dt("إعادة تفعيل المشروع"),
+      description: dt("سيتم نشر مشروع \"{0}\" على الموقع مجدداً.", [campaign.title]),
+      actionLabel: dt("تفعيل"),
       actionClassName: 'bg-emerald-600 hover:bg-emerald-700 text-white',
       onConfirm: () => setActive(campaign.id, true),
     });
@@ -201,10 +202,10 @@ export default function CampaignsPage() {
     try {
       await axios.delete(`/api/campaigns/${id}`);
       setCampaigns(prev => prev.filter(c => c.id !== id));
-      toast.success('تم حذف المشروع (مع الحفاظ على بيانات التبرعات)');
+      toast.success(dt("تم حذف المشروع (مع الحفاظ على بيانات التبرعات)"));
     } catch (err: any) {
-      const msg = axios.isAxiosError(err) ? err.response?.data?.error || err.message : 'تعذّر حذف المشروع';
-      toast.error(typeof msg === 'string' ? msg : 'تعذّر حذف المشروع');
+      const msg = axios.isAxiosError(err) ? err.response?.data?.error || err.message : dt("تعذّر حذف المشروع");
+      toast.error(typeof msg === 'string' ? msg : dt("تعذّر حذف المشروع"));
     } finally {
       setActionLoading(null);
     }
@@ -213,9 +214,9 @@ export default function CampaignsPage() {
   const handleDelete = (campaign: Campaign) => {
     setConfirmDialog({
       open: true,
-      title: 'حذف المشروع',
-      description: `سيتم حذف مشروع "${campaign.title}" من الموقع ولن يظهر في أي قائمة. ستبقى تبرعاته السابقة وسجلاتها كما هي للمراجعة، لكن لن يمكن استعادة المشروع من الواجهة لاحقاً.`,
-      actionLabel: 'حذف نهائي',
+      title: dt("حذف المشروع"),
+      description: dt("سيتم حذف مشروع \"{0}\" من الموقع ولن يظهر في أي قائمة. ستبقى تبرعاته السابقة وسجلاتها كما هي للمراجعة، لكن لن يمكن استعادة المشروع من الواجهة لاحقاً.", [campaign.title]),
+      actionLabel: dt("حذف نهائي"),
       actionClassName: 'bg-red-600 hover:bg-red-700 text-white',
       onConfirm: () => softDelete(campaign.id),
     });
@@ -268,7 +269,7 @@ export default function CampaignsPage() {
       return [
         c.title, names, c.targetAmount, c.currentAmount,
         c.isActive ? 'Active' : 'Inactive',
-        format(new Date(c.createdAt), 'PPP', { locale: ar }),
+        format(new Date(c.createdAt), 'PPP', { locale: dashDateLocale() }),
       ];
     });
     const csv = [headers, ...rows].map(r => r.join(',')).join('\n');
@@ -284,19 +285,17 @@ export default function CampaignsPage() {
   return (
     <div>
       <PageHeader
-        title="المشاريع"
-        description="إدارة مشاريع التبرع"
+        title={dt("المشاريع")}
+        description={dt("إدارة مشاريع التبرع")}
         icon={Heart}
         actions={
           <>
             <Button onClick={() => window.location.href = '/dashboard/campaigns/new'} className="bg-brand hover:bg-brand-dark gap-2">
               <Plus className="w-4 h-4" />
-              إنشاء مشروع جديد
-            </Button>
+              {dt("إنشاء مشروع جديد")}</Button>
             <Button variant="outline" className="gap-2 border-amber-300 text-amber-700 hover:bg-amber-50" onClick={() => setArchiveOpen(true)}>
               <Archive className="w-4 h-4" />
-              أرشيف المشاريع
-              {archivedCampaigns.length > 0 && (
+              {dt("أرشيف المشاريع")}{archivedCampaigns.length > 0 && (
                 <span className="bg-amber-100 text-amber-700 text-xs font-bold px-1.5 py-0.5 rounded-full">
                   {archivedCampaigns.length}
                 </span>
@@ -314,28 +313,27 @@ export default function CampaignsPage() {
       <FilterBar
         searchValue={searchQuery}
         onSearchChange={setSearchQuery}
-        searchPlaceholder="البحث في المشاريع..."
+        searchPlaceholder={dt("البحث في المشاريع...")}
         actions={
           <Button variant="outline" size="sm" className="gap-2" onClick={exportToCSV}>
             <Download className="w-4 h-4" />
-            تصدير CSV
-          </Button>
+            {dt("تصدير CSV")}</Button>
         }
       >
         <DashboardLocaleSwitcher value={locale} onChange={setLocale} className="h-9 w-full sm:w-[190px]" />
         <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-          <SelectTrigger className="h-9 w-full sm:w-[180px]"><SelectValue placeholder="جميع الحملات" /></SelectTrigger>
+          <SelectTrigger className="h-9 w-full sm:w-[180px]"><SelectValue placeholder={dt("جميع الحملات")} /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">جميع الحملات</SelectItem>
+            <SelectItem value="all">{dt("جميع الحملات")}</SelectItem>
             {categories.map(cat => <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>)}
           </SelectContent>
         </Select>
         <Select value={progressFilter} onValueChange={(v: any) => setProgressFilter(v)}>
-          <SelectTrigger className="h-9 w-full sm:w-[180px]"><SelectValue placeholder="التقدم" /></SelectTrigger>
+          <SelectTrigger className="h-9 w-full sm:w-[180px]"><SelectValue placeholder={dt("التقدم")} /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">جميع المشاريع</SelectItem>
-            <SelectItem value="completed">مكتملة</SelectItem>
-            <SelectItem value="ongoing">جارية</SelectItem>
+            <SelectItem value="all">{dt("جميع المشاريع")}</SelectItem>
+            <SelectItem value="completed">{dt("مكتملة")}</SelectItem>
+            <SelectItem value="ongoing">{dt("جارية")}</SelectItem>
           </SelectContent>
         </Select>
       </FilterBar>
@@ -346,25 +344,25 @@ export default function CampaignsPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="text-right">
+                <TableHead className="text-start">
                   <Button variant="ghost" onClick={() => handleSort('title')} className="hover:bg-transparent p-0 font-bold">
-                    عنوان المشروع <ArrowUpDown className="mr-2 h-4 w-4" />
+                    {dt("عنوان المشروع ")}<ArrowUpDown className="ms-2 h-4 w-4" />
                   </Button>
                 </TableHead>
-                <TableHead className="text-right">الحملة</TableHead>
-                <TableHead className="text-right">
+                <TableHead className="text-start">{dt("الحملة")}</TableHead>
+                <TableHead className="text-start">
                   <Button variant="ghost" onClick={() => handleSort('targetAmount')} className="hover:bg-transparent p-0 font-bold">
-                    المبلغ المستهدف ($) <ArrowUpDown className="mr-2 h-4 w-4" />
+                    {dt("المبلغ المستهدف ($) ")}<ArrowUpDown className="ms-2 h-4 w-4" />
                   </Button>
                 </TableHead>
-                <TableHead className="text-right">المبلغ الحالي</TableHead>
-                <TableHead className="text-right">التقدم</TableHead>
-                <TableHead className="text-right">
+                <TableHead className="text-start">{dt("المبلغ الحالي")}</TableHead>
+                <TableHead className="text-start">{dt("التقدم")}</TableHead>
+                <TableHead className="text-start">
                   <Button variant="ghost" onClick={() => handleSort('createdAt')} className="hover:bg-transparent p-0 font-bold">
-                    التاريخ <ArrowUpDown className="mr-2 h-4 w-4" />
+                    {dt("التاريخ ")}<ArrowUpDown className="ms-2 h-4 w-4" />
                   </Button>
                 </TableHead>
-                <TableHead className="text-center">الإجراءات</TableHead>
+                <TableHead className="text-center">{dt("الإجراءات")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -374,15 +372,14 @@ export default function CampaignsPage() {
                     <EmptyState
                       variant="inline"
                       icon={Heart}
-                      title="لا توجد مشاريع نشطة"
+                      title={dt("لا توجد مشاريع نشطة")}
                       description={searchQuery || selectedCategory !== 'all' || progressFilter !== 'all'
-                        ? "لا يوجد مشروع يطابق التصفية الحالية. جرّب توسيع نطاق البحث."
-                        : "ابدأ بإنشاء أول مشروع تبرع ليظهر على الموقع."}
+                        ? dt("لا يوجد مشروع يطابق التصفية الحالية. جرّب توسيع نطاق البحث.")
+                        : dt("ابدأ بإنشاء أول مشروع تبرع ليظهر على الموقع.")}
                       action={
                         <Button onClick={() => window.location.href = '/dashboard/campaigns/new'} className="bg-brand hover:bg-brand-dark gap-2">
                           <Plus className="w-4 h-4" />
-                          إنشاء مشروع جديد
-                        </Button>
+                          {dt("إنشاء مشروع جديد")}</Button>
                       }
                     />
                   </TableCell>
@@ -418,7 +415,7 @@ export default function CampaignsPage() {
                       );
                     })()}
                   </TableCell>
-                  <TableCell>{format(new Date(campaign.createdAt), 'PPP', { locale: ar })}</TableCell>
+                  <TableCell>{format(new Date(campaign.createdAt), 'PPP', { locale: dashDateLocale() })}</TableCell>
                   <TableCell>
                     <div className="flex justify-center">
                       <DropdownMenu>
@@ -428,13 +425,11 @@ export default function CampaignsPage() {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuLabel>إجراءات</DropdownMenuLabel>
+                          <DropdownMenuLabel>{dt("إجراءات")}</DropdownMenuLabel>
                           <DropdownMenuItem onClick={() => router.push(miaPath("projectDetail", locale, campaign.slug || campaign.id))}>
-                            <Eye className="w-4 h-4 ml-2" /> عرض
-                          </DropdownMenuItem>
+                            <Eye className="w-4 h-4 me-2" /> {dt(" عرض")}</DropdownMenuItem>
                           <DropdownMenuItem onClick={() => router.push(`/dashboard/campaigns/edit/${campaign.id}`)}>
-                            <Edit className="w-4 h-4 ml-2" /> تعديل
-                          </DropdownMenuItem>
+                            <Edit className="w-4 h-4 me-2" /> {dt(" تعديل")}</DropdownMenuItem>
                           <DropdownMenuSeparator />
                           <DropdownMenuItem
                             className="text-amber-600 focus:text-amber-600 focus:bg-amber-50"
@@ -442,20 +437,18 @@ export default function CampaignsPage() {
                             onClick={() => handleDeactivate(campaign)}
                           >
                             {actionLoading === campaign.id
-                              ? <Loader2 className="w-4 h-4 ml-2 animate-spin" />
-                              : <PowerOff className="w-4 h-4 ml-2" />}
-                            تعطيل
-                          </DropdownMenuItem>
+                              ? <Loader2 className="w-4 h-4 me-2 animate-spin" />
+                              : <PowerOff className="w-4 h-4 me-2" />}
+                            {dt("تعطيل")}</DropdownMenuItem>
                           <DropdownMenuItem
                             className="text-red-600 focus:text-red-600 focus:bg-red-50"
                             disabled={actionLoading === campaign.id}
                             onClick={() => handleDelete(campaign)}
                           >
                             {actionLoading === campaign.id
-                              ? <Loader2 className="w-4 h-4 ml-2 animate-spin" />
-                              : <Trash2 className="w-4 h-4 ml-2" />}
-                            حذف
-                          </DropdownMenuItem>
+                              ? <Loader2 className="w-4 h-4 me-2 animate-spin" />
+                              : <Trash2 className="w-4 h-4 me-2" />}
+                            {dt("حذف")}</DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </div>
@@ -469,53 +462,51 @@ export default function CampaignsPage() {
         {/* Pagination */}
         <div className="flex flex-col gap-3 sm:flex-row items-center justify-between p-3 sm:p-4 border-t border-border">
           <div className="text-sm text-muted-foreground order-2 sm:order-1">
-            {filteredCampaigns.length === 0 ? '0' : `${(page - 1) * itemsPerPage + 1} – ${Math.min(page * itemsPerPage, filteredCampaigns.length)}`} من {filteredCampaigns.length}
+            {dtx("{0} من {1}", [filteredCampaigns.length === 0 ? '0' : `${(page - 1) * itemsPerPage + 1} – ${Math.min(page * itemsPerPage, filteredCampaigns.length)}`, filteredCampaigns.length])}
           </div>
           <div className="flex gap-2 order-1 sm:order-2">
-            <Button variant="outline" size="sm" onClick={() => setPage(p => p - 1)} disabled={page === 1}>السابق</Button>
-            <Button variant="outline" size="sm" onClick={() => setPage(p => p + 1)} disabled={page * itemsPerPage >= filteredCampaigns.length}>التالي</Button>
+            <Button variant="outline" size="sm" onClick={() => setPage(p => p - 1)} disabled={page === 1}>{dt("السابق")}</Button>
+            <Button variant="outline" size="sm" onClick={() => setPage(p => p + 1)} disabled={page * itemsPerPage >= filteredCampaigns.length}>{dt("التالي")}</Button>
           </div>
         </div>
       </Card>
 
       {/* ── Archive dialog ── */}
       <Dialog open={archiveOpen} onOpenChange={setArchiveOpen}>
-        <DialogContent className="max-w-3xl w-full max-h-[80vh] flex flex-col" dir="rtl">
+        <DialogContent className="max-w-3xl w-full max-h-[80vh] flex flex-col" dir={dashDir()}>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-amber-700">
               <Archive className="w-5 h-5" />
-              أرشيف المشاريع المعطّلة ({archivedCampaigns.length})
-            </DialogTitle>
+              {dtx("أرشيف المشاريع المعطّلة ({0})", [archivedCampaigns.length])}</DialogTitle>
           </DialogHeader>
 
           <div className="relative mb-3">
-            <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
-            <Input placeholder="بحث في الأرشيف..." value={archiveSearch} onChange={e => setArchiveSearch(e.target.value)} className="pr-10" />
+            <Search className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+            <Input placeholder={dt("بحث في الأرشيف...")} value={archiveSearch} onChange={e => setArchiveSearch(e.target.value)} className="ps-10" />
           </div>
 
           <div className="overflow-y-auto flex-1 rounded-lg border border-border">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="text-right">عنوان المشروع</TableHead>
-                  <TableHead className="text-right">الحملة</TableHead>
-                  <TableHead className="text-right">التاريخ</TableHead>
-                  <TableHead className="text-center w-32">إجراء</TableHead>
+                  <TableHead className="text-start">{dt("عنوان المشروع")}</TableHead>
+                  <TableHead className="text-start">{dt("الحملة")}</TableHead>
+                  <TableHead className="text-start">{dt("التاريخ")}</TableHead>
+                  <TableHead className="text-center w-32">{dt("إجراء")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredArchive.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={4} className="text-center py-10 text-muted-foreground">
-                      لا توجد مشاريع في الأرشيف
-                    </TableCell>
+                      {dt("لا توجد مشاريع في الأرشيف")}</TableCell>
                   </TableRow>
                 ) : filteredArchive.map(campaign => (
                   <TableRow key={campaign.id}>
                     <TableCell className="font-medium">{campaign.title}</TableCell>
                     <TableCell>{(campaign.categories ?? (campaign.category ? [campaign.category] : [])).map((c) => c.name).join(' • ') || '—'}</TableCell>
                     <TableCell className="text-sm text-muted-foreground">
-                      {format(new Date(campaign.createdAt), 'PP', { locale: ar })}
+                      {format(new Date(campaign.createdAt), 'PP', { locale: dashDateLocale() })}
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-1.5 justify-center">
@@ -529,19 +520,17 @@ export default function CampaignsPage() {
                           {actionLoading === campaign.id
                             ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
                             : <RotateCcw className="w-3.5 h-3.5" />}
-                          إعادة تفعيل
-                        </Button>
+                          {dt("إعادة تفعيل")}</Button>
                         <Button
                           size="sm"
                           variant="outline"
                           className="gap-1.5 border-red-300 text-red-700 hover:bg-red-50 h-8"
                           disabled={actionLoading === campaign.id}
                           onClick={() => handleDelete(campaign)}
-                          title="حذف نهائي مع الاحتفاظ بسجل التبرعات"
+                          title={dt("حذف نهائي مع الاحتفاظ بسجل التبرعات")}
                         >
                           <Trash2 className="w-3.5 h-3.5" />
-                          حذف
-                        </Button>
+                          {dt("حذف")}</Button>
                       </div>
                     </TableCell>
                   </TableRow>
@@ -554,13 +543,13 @@ export default function CampaignsPage() {
 
       {/* ── Confirm dialog ── */}
       <AlertDialog open={confirmDialog.open} onOpenChange={open => setConfirmDialog(d => ({ ...d, open }))}>
-        <AlertDialogContent dir="rtl">
+        <AlertDialogContent dir={dashDir()}>
           <AlertDialogHeader>
             <AlertDialogTitle>{confirmDialog.title}</AlertDialogTitle>
             <AlertDialogDescription>{confirmDialog.description}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="flex-row-reverse gap-2">
-            <AlertDialogCancel>إلغاء</AlertDialogCancel>
+            <AlertDialogCancel>{dt("إلغاء")}</AlertDialogCancel>
             <AlertDialogAction
               className={confirmDialog.actionClassName}
               onClick={() => {

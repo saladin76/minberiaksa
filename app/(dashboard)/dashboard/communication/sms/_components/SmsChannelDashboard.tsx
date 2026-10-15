@@ -24,6 +24,7 @@ import { DeliveryPreviewSheet } from "../../_shared/DeliveryPreviewSheet";
 import { RetryDialog } from "../../_shared/RetryDialog";
 import { useCampaignScope, CampaignScopeBanner } from "../../_shared/CampaignScope";
 import { cn } from "@/lib/utils";
+import { dashDir, dt, dtx } from "@/lib/dashboard/i18n";
 
 export type SmsRow = {
   id: string;
@@ -70,24 +71,24 @@ type Payload = {
 };
 
 const PERIODS = [
-  { value: 7, label: "٧ أيام" },
-  { value: 30, label: "٣٠ يومًا" },
-  { value: 90, label: "٩٠ يومًا" },
-  { value: 365, label: "سنة" },
+  { value: 7, get label() { return dt("٧ أيام"); } },
+  { value: 30, get label() { return dt("٣٠ يومًا"); } },
+  { value: 90, get label() { return dt("٩٠ يومًا"); } },
+  { value: 365, get label() { return dt("سنة"); } },
 ];
 
 const STATUS_FILTERS = [
-  { value: "all", label: "الكل" },
-  { value: "SENT", label: "مُرسل" },
-  { value: "delivered", label: "وصل" },
-  { value: "failed", label: "فاشل" },
-  { value: "SKIPPED", label: "متخطّى" },
+  { value: "all", get label() { return dt("الكل"); } },
+  { value: "SENT", get label() { return dt("مُرسل"); } },
+  { value: "delivered", get label() { return dt("وصل"); } },
+  { value: "failed", get label() { return dt("فاشل"); } },
+  { value: "SKIPPED", get label() { return dt("متخطّى"); } },
 ];
 
 const PROVIDER_LABELS: Record<string, string> = {
-  NETGSM_SMS: "Netgsm (تركيا)",
-  BREVO_SMS: "Brevo (دولي)",
-  NETGSM: "Netgsm (تركيا)",
+  get NETGSM_SMS() { return dt("Netgsm (تركيا)"); },
+  get BREVO_SMS() { return dt("Brevo (دولي)"); },
+  get NETGSM() { return dt("Netgsm (تركيا)"); },
 };
 
 /**
@@ -96,8 +97,8 @@ const PROVIDER_LABELS: Record<string, string> = {
  */
 export function buildStages(row: StageSource): JourneyStage[] {
   return [
-    { key: "sent", label: "أُرسل", at: row.sentAt ?? row.createdAt, icon: Send, local: true },
-    { key: "delivered", label: "وصل", at: row.deliveredAt, icon: Check },
+    { key: "sent", label: dt("أُرسل"), at: row.sentAt ?? row.createdAt, icon: Send, local: true },
+    { key: "delivered", label: dt("وصل"), at: row.deliveredAt, icon: Check },
   ];
 }
 
@@ -113,14 +114,14 @@ function RoutingCard({ routing }: { routing: Payload["routing"] }) {
     {
       key: "netgsm",
       icon: Flag,
-      title: "أرقام تركيا (+90)",
+      title: dt("أرقام تركيا (+90)"),
       provider: "Netgsm",
       state: routing.netgsm,
     },
     {
       key: "brevo",
       icon: Globe,
-      title: "الأرقام الدولية",
+      title: dt("الأرقام الدولية"),
       provider: "Brevo SMS",
       state: routing.brevoSms,
     },
@@ -129,7 +130,7 @@ function RoutingCard({ routing }: { routing: Payload["routing"] }) {
   return (
     <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
       <div className="mb-3 flex items-center justify-between gap-2">
-        <h2 className="text-[13px] font-semibold text-slate-900">توجيه الإرسال</h2>
+        <h2 className="text-[13px] font-semibold text-slate-900">{dt("توجيه الإرسال")}</h2>
         <span
           className={cn(
             "rounded-full border px-2 py-0.5 text-[10px] font-bold",
@@ -138,7 +139,7 @@ function RoutingCard({ routing }: { routing: Payload["routing"] }) {
               : "border-amber-200 bg-amber-50 text-amber-700",
           )}
         >
-          {routing.anyConfigured ? "يمكن الإرسال" : "لا يمكن الإرسال"}
+          {routing.anyConfigured ? dt("يمكن الإرسال") : dt("لا يمكن الإرسال")}
         </span>
       </div>
 
@@ -154,8 +155,8 @@ function RoutingCard({ routing }: { routing: Payload["routing"] }) {
                 </p>
                 <p className="mt-0.5 text-[11px] leading-4 text-slate-500">
                   {route.state.configured
-                    ? "مُعدّ بالكامل."
-                    : `غير مكتمل${route.state.missingFields.length ? `  ناقص: ${route.state.missingFields.join("، ")}` : ""}.`}
+                    ? dt("مُعدّ بالكامل.")
+                    : dt("غير مكتمل{0}.", [route.state.missingFields.length ? dt("  ناقص: {0}", [route.state.missingFields.join(dt("، "))]) : ""])}
                 </p>
               </div>
             </div>
@@ -182,8 +183,7 @@ function RoutingCard({ routing }: { routing: Payload["routing"] }) {
         href="/dashboard/platform-connections/communication"
         className="mt-3 inline-block text-[11px] font-semibold text-brand hover:underline"
       >
-        إعدادات المزوّدين ←
-      </Link>
+        {dt("إعدادات المزوّدين ←")}</Link>
     </section>
   );
 }
@@ -201,14 +201,13 @@ function SegmentsCard({ segments }: { segments: Payload["segments"] }) {
   return (
     <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
       <div className="mb-3 flex items-center justify-between gap-2">
-        <h2 className="text-[13px] font-semibold text-slate-900">المقاطع المحتسبة</h2>
+        <h2 className="text-[13px] font-semibold text-slate-900">{dt("المقاطع المحتسبة")}</h2>
         <Layers className="h-4 w-4 text-slate-300" />
       </div>
 
       {segments.messages === 0 ? (
         <p className="text-[11px] leading-5 text-slate-500">
-          لا توجد رسائل مُرسلة في هذه الفترة لحساب مقاطعها.
-        </p>
+          {dt("لا توجد رسائل مُرسلة في هذه الفترة لحساب مقاطعها.")}</p>
       ) : (
         <>
           <div className="flex items-baseline gap-2">
@@ -216,20 +215,18 @@ function SegmentsCard({ segments }: { segments: Payload["segments"] }) {
               {segments.segments.toLocaleString("en-US")}
             </span>
             <span className="text-xs text-slate-500">
-              مقطع من {segments.messages.toLocaleString("en-US")} رسالة
-            </span>
+              {dtx("مقطع من {0} رسالة", [segments.messages.toLocaleString("en-US")])}</span>
           </div>
           <p className="mt-1 text-[11px] text-slate-500">
-            بمعدّل {segments.avgSegments} مقطع لكل رسالة  والفوترة تتم بالمقطع، لا بالرسالة.
-          </p>
+            {dtx("بمعدّل {0} مقطع لكل رسالة  والفوترة تتم بالمقطع، لا بالرسالة.", [segments.avgSegments])}</p>
 
           <div className="mt-3 space-y-1.5 border-t border-slate-100 pt-3">
             <div className="flex items-center justify-between gap-2 text-[11px]">
-              <span className="text-slate-600">عربي / يونيكود (٧٠ حرفًا للمقطع)</span>
+              <span className="text-slate-600">{dt("عربي / يونيكود (٧٠ حرفًا للمقطع)")}</span>
               <span className="font-bold tabular-nums text-slate-800">{segments.ucs2Messages}</span>
             </div>
             <div className="flex items-center justify-between gap-2 text-[11px]">
-              <span className="text-slate-600">لاتيني (١٦٠ حرفًا للمقطع)</span>
+              <span className="text-slate-600">{dt("لاتيني (١٦٠ حرفًا للمقطع)")}</span>
               <span className="font-bold tabular-nums text-slate-800">{segments.gsm7Messages}</span>
             </div>
           </div>
@@ -238,9 +235,7 @@ function SegmentsCard({ segments }: { segments: Payload["segments"] }) {
 
       {ucs2Share >= 50 && (
         <p className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-2 text-[10px] leading-4 text-amber-900">
-          {ucs2Share}٪ من الرسائل بالعربية  الحرف العربي خارج أبجدية GSM، فيتحوّل المقطع إلى ٧٠ حرفًا
-          بدل ١٦٠. رسالة من ٩٠ حرفًا عربيًا تُحتسب مقطعين.
-        </p>
+          {dtx("{0}٪ من الرسائل بالعربية  الحرف العربي خارج أبجدية GSM، فيتحوّل المقطع إلى ٧٠ حرفًا بدل ١٦٠. رسالة من ٩٠ حرفًا عربيًا تُحتسب مقطعين.", [ucs2Share])}</p>
       )}
     </section>
   );
@@ -270,7 +265,7 @@ export function SmsChannelDashboard() {
       if (campaignId) params.set("campaign", campaignId);
       const res = await fetch(`/api/dashboard/communication/sms?${params}`, { cache: "no-store" });
       const json = await res.json();
-      if (!res.ok || !json.ok) throw new Error(json?.error || "تعذّر تحميل البيانات");
+      if (!res.ok || !json.ok) throw new Error(json?.error || dt("تعذّر تحميل البيانات"));
       setData(json);
     } catch (e) {
       setError((e as Error).message);
@@ -297,12 +292,12 @@ export function SmsChannelDashboard() {
   const canRetry = Boolean(data?.routing.anyConfigured);
 
   return (
-    <div className="min-h-0" dir="rtl">
+    <div className="min-h-0" dir={dashDir()}>
       <div className="mx-auto max-w-[1600px] space-y-4">
         <PageHeader
-          eyebrow="التواصل"
-          title="الرسائل النصية"
-          description="كل رسالة SMS صادرة، ووجهتها ومزوّدها وتكلفتها بالمقاطع  والوصول والفشل."
+          eyebrow={dt("التواصل")}
+          title={dt("الرسائل النصية")}
+          description={dt("كل رسالة SMS صادرة، ووجهتها ومزوّدها وتكلفتها بالمقاطع  والوصول والفشل.")}
           icon={MessageSquare}
           actions={
             <div className="flex items-center gap-2">
@@ -311,12 +306,11 @@ export function SmsChannelDashboard() {
                   type="button"
                   onClick={() => canRetry && setRetryIds(null)}
                   disabled={loading || !canRetry}
-                  title={canRetry ? undefined : "لا يوجد مزوّد SMS مُعدّ  إعادة الإرسال ستُرفض."}
+                  title={canRetry ? undefined : dt("لا يوجد مزوّد SMS مُعدّ  إعادة الإرسال ستُرفض.")}
                   className="inline-flex h-9 items-center gap-2 rounded-lg bg-brand px-3 text-xs font-semibold text-white transition hover:bg-brand/90 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   <Send className="h-3.5 w-3.5" />
-                  إعادة إرسال المتعثّرة
-                  <span className="rounded-md bg-white/20 px-1.5 py-0.5 text-[10px] tabular-nums">
+                  {dt("إعادة إرسال المتعثّرة")}<span className="rounded-md bg-white/20 px-1.5 py-0.5 text-[10px] tabular-nums">
                     {data!.retryableCount.toLocaleString("en-US")}
                   </span>
                 </button>
@@ -328,8 +322,7 @@ export function SmsChannelDashboard() {
                 className="inline-flex h-9 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 transition hover:border-brand hover:text-brand disabled:opacity-50"
               >
                 <RefreshCw className={cn("h-3.5 w-3.5", loading && "animate-spin")} />
-                تحديث
-              </button>
+                {dt("تحديث")}</button>
             </div>
           }
         />
@@ -341,37 +334,33 @@ export function SmsChannelDashboard() {
             integration that was never wired to fire. */}
         {neverSent && data && (
           <TrackingBanner>
-            <b>لم تُرسل أي رسالة نصية من المنصة بعد.</b>{" "}
+            <b>{dt("لم تُرسل أي رسالة نصية من المنصة بعد.")}</b>{" "}
             {!data.triggersSupported && (
               <>
-                الرسائل التلقائية (إيصالات التبرّع وغيرها) تدعم البريد وواتساب فقط  لا يمكن لأي
-                مُشغِّل أن يرسل SMS. الإرسال عبر هذه القناة متاح لحملات التواصل فقط، وهي لا تملك
-                واجهة في لوحة التحكم بعد.{" "}
+                {dt("الرسائل التلقائية (إيصالات التبرّع وغيرها) تدعم البريد وواتساب فقط  لا يمكن لأي مُشغِّل أن يرسل SMS. الإرسال عبر هذه القناة متاح لحملات التواصل فقط، وهي لا تملك واجهة في لوحة التحكم بعد. ")}
               </>
             )}
-            {!data.routing.anyConfigured && "كما أنه لا يوجد مزوّد SMS مُعدّ بعد."}
+            {!data.routing.anyConfigured && dt("كما أنه لا يوجد مزوّد SMS مُعدّ بعد.")}
           </TrackingBanner>
         )}
 
         {data && !neverSent && !trackingLive && (
           <TrackingBanner>
-            <b>تقارير التسليم غير مُفعّلة.</b> لم يصل أي إشعار تسليم من المزوّد، لذلك تظهر «وصلت»
-            فارغة  وهذا يعني «لا توجد بيانات»، وليس «لم تصل».
-          </TrackingBanner>
+            <b>{dt("تقارير التسليم غير مُفعّلة.")}</b> {dt(" لم يصل أي إشعار تسليم من المزوّد، لذلك تظهر «وصلت» فارغة  وهذا يعني «لا توجد بيانات»، وليس «لم تصل».")}</TrackingBanner>
         )}
 
         {summary && (
           <MetricSummaryBand
             icon={MessageSquare}
-            eyebrow="الرسائل النصية المرسلة"
-            badge={`آخر ${days} يومًا`}
+            eyebrow={dt("الرسائل النصية المرسلة")}
+            badge={dt("آخر {0} يومًا", [days])}
             value={summary.attempted.toLocaleString("en-US")}
-            note="عدد الرسائل التي قبلها مزوّد SMS خلال الفترة. الفوترة تتم بالمقاطع  راجع بطاقة المقاطع."
+            note={dt("عدد الرسائل التي قبلها مزوّد SMS خلال الفترة. الفوترة تتم بالمقاطع  راجع بطاقة المقاطع.")}
             stats={[
-              { label: "وصلت", icon: Check, value: trackingLive ? summary.delivered.toLocaleString("en-US") : "—", hint: trackingLive ? `${summary.deliveredRate}%` : undefined },
-              { label: "المقاطع", icon: Layers, value: (data?.segments.segments ?? 0).toLocaleString("en-US") },
-              { label: "فشلت", icon: TriangleAlert, value: summary.failed.toLocaleString("en-US"), hint: `${summary.failedRate}%` },
-              { label: "متخطّاة", icon: SlashIcon, value: summary.skipped.toLocaleString("en-US") },
+              { label: dt("وصلت"), icon: Check, value: trackingLive ? summary.delivered.toLocaleString("en-US") : "—", hint: trackingLive ? `${summary.deliveredRate}%` : undefined },
+              { label: dt("المقاطع"), icon: Layers, value: (data?.segments.segments ?? 0).toLocaleString("en-US") },
+              { label: dt("فشلت"), icon: TriangleAlert, value: summary.failed.toLocaleString("en-US"), hint: `${summary.failedRate}%` },
+              { label: dt("متخطّاة"), icon: SlashIcon, value: summary.skipped.toLocaleString("en-US") },
             ]}
           />
         )}
@@ -379,7 +368,7 @@ export function SmsChannelDashboard() {
         <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
           <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
             <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-              <h2 className="text-[13px] font-semibold text-slate-900">حركة الإرسال</h2>
+              <h2 className="text-[13px] font-semibold text-slate-900">{dt("حركة الإرسال")}</h2>
               <SegmentedControl options={PERIODS} value={days} onChange={setDays} />
             </div>
 
@@ -387,8 +376,8 @@ export function SmsChannelDashboard() {
               <div className="h-[220px] animate-pulse rounded-lg bg-slate-50" />
             ) : chartData.length === 0 ? (
               <EmptyState
-                title="لا توجد رسائل في هذه الفترة"
-                description={neverSent ? "لم تُرسل رسائل نصية بعد." : "جرّب فترة أطول."}
+                title={dt("لا توجد رسائل في هذه الفترة")}
+                description={neverSent ? dt("لم تُرسل رسائل نصية بعد.") : dt("جرّب فترة أطول.")}
                 variant="inline"
               />
             ) : (
@@ -422,10 +411,10 @@ export function SmsChannelDashboard() {
             {summary && !neverSent && (
               <FunnelCard
                 trackingLive={trackingLive}
-                caption="من إجمالي المقبول"
+                caption={dt("من إجمالي المقبول")}
                 steps={[
-                  { label: "مقبول لدى المزود", value: summary.attempted, pct: 100, tone: CHART_THEME.primary, always: true },
-                  { label: "وصل للهاتف", value: summary.delivered, pct: summary.deliveredRate, tone: CHART_STATUS.success },
+                  { label: dt("مقبول لدى المزود"), value: summary.attempted, pct: 100, tone: CHART_THEME.primary, always: true },
+                  { label: dt("وصل للهاتف"), value: summary.delivered, pct: summary.deliveredRate, tone: CHART_STATUS.success },
                 ]}
               />
             )}
@@ -434,7 +423,7 @@ export function SmsChannelDashboard() {
 
         <section className="rounded-2xl border border-slate-200 bg-white shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
           <div className="flex flex-wrap items-center gap-2 border-b border-slate-100 px-4 py-3">
-            <h2 className="text-[13px] font-semibold text-slate-900">سجل الرسائل</h2>
+            <h2 className="text-[13px] font-semibold text-slate-900">{dt("سجل الرسائل")}</h2>
             <div className="ms-auto flex flex-wrap items-center gap-2">
               <SegmentedControl options={STATUS_FILTERS} value={status} onChange={setStatus} />
               <form onSubmit={(e) => { e.preventDefault(); setSearch(searchInput.trim()); }} className="relative">
@@ -442,7 +431,7 @@ export function SmsChannelDashboard() {
                 <input
                   value={searchInput}
                   onChange={(e) => setSearchInput(e.target.value)}
-                  placeholder="بحث بالرقم أو النص…"
+                  placeholder={dt("بحث بالرقم أو النص…")}
                   className="h-8 w-56 rounded-lg border border-slate-200 bg-white pe-8 ps-3 text-xs text-slate-700 outline-none transition focus:border-brand"
                 />
               </form>
@@ -450,7 +439,7 @@ export function SmsChannelDashboard() {
           </div>
 
           {error ? (
-            <EmptyState title="تعذّر التحميل" description={error} className="m-4" />
+            <EmptyState title={dt("تعذّر التحميل")} description={error} className="m-4" />
           ) : loading && !data ? (
             <div className="space-y-2 p-4">
               {Array.from({ length: 6 }).map((_, i) => (
@@ -459,8 +448,8 @@ export function SmsChannelDashboard() {
             </div>
           ) : !data?.rows.length ? (
             <EmptyState
-              title="لا توجد رسائل"
-              description={neverSent ? "لم تُرسل أي رسالة نصية من المنصة بعد." : "لا توجد رسائل مطابقة لهذه التصفية."}
+              title={dt("لا توجد رسائل")}
+              description={neverSent ? dt("لم تُرسل أي رسالة نصية من المنصة بعد.") : dt("لا توجد رسائل مطابقة لهذه التصفية.")}
               icon={Inbox}
               className="m-4"
             />
@@ -468,21 +457,21 @@ export function SmsChannelDashboard() {
             <>
               <div className="overflow-x-auto">
                 {/* Same width discipline as the other two tables: only the message column is greedy. */}
-                <table className="w-full text-right text-xs">
+                <table className="w-full text-start text-xs">
                   <thead>
                     <tr className="border-b border-slate-100 bg-slate-50/60 text-[11px] font-semibold text-slate-500">
-                      <th className="whitespace-nowrap px-3 py-2.5 text-right">المستلم</th>
-                      <th className="w-full max-w-0 px-3 py-2.5 text-right">النص / القالب</th>
-                      <th className="whitespace-nowrap px-3 py-2.5 text-right">المقاطع</th>
-                      <th className="whitespace-nowrap px-3 py-2.5 text-right">الحالة</th>
-                      <th className="whitespace-nowrap px-3 py-2.5 text-right">المزوّد</th>
-                      <th className="whitespace-nowrap px-3 py-2.5 text-right">التاريخ</th>
+                      <th className="whitespace-nowrap px-3 py-2.5 text-start">{dt("المستلم")}</th>
+                      <th className="w-full max-w-0 px-3 py-2.5 text-start">{dt("النص / القالب")}</th>
+                      <th className="whitespace-nowrap px-3 py-2.5 text-start">{dt("المقاطع")}</th>
+                      <th className="whitespace-nowrap px-3 py-2.5 text-start">{dt("الحالة")}</th>
+                      <th className="whitespace-nowrap px-3 py-2.5 text-start">{dt("المزوّد")}</th>
+                      <th className="whitespace-nowrap px-3 py-2.5 text-start">{dt("التاريخ")}</th>
                       <th className="w-px px-3 py-2.5" />
                     </tr>
                   </thead>
                   <tbody>
                     {data.rows.map((row) => {
-                      const dt = fmtDateTime(row.createdAt);
+                      const stamp = fmtDateTime(row.createdAt);
                       const seg = segmentSms(row.renderedBody);
                       return (
                         <tr
@@ -509,7 +498,7 @@ export function SmsChannelDashboard() {
                           <td className="whitespace-nowrap px-3 py-2.5 align-middle">
                             {/* Segments, not characters: this is the number the invoice uses. */}
                             <span
-                              title={`${seg.units} ${seg.encoding === "UCS2" ? "حرفًا (يونيكود، ٧٠ للمقطع)" : "حرفًا (GSM، ١٦٠ للمقطع)"}`}
+                              title={`${seg.units} ${seg.encoding === "UCS2" ? dt("حرفًا (يونيكود، ٧٠ للمقطع)") : dt("حرفًا (GSM، ١٦٠ للمقطع)")}`}
                               className={cn(
                                 "inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-[10px] font-bold tabular-nums",
                                 seg.segments > 1
@@ -537,8 +526,8 @@ export function SmsChannelDashboard() {
                           </td>
                           <td className="whitespace-nowrap px-3 py-2.5 align-middle tabular-nums text-slate-600">
                             <div className="flex flex-col leading-tight">
-                              <span>{dt?.date}</span>
-                              <span className="text-[10px] text-slate-400" dir="ltr">{dt?.time}</span>
+                              <span>{stamp?.date}</span>
+                              <span className="text-[10px] text-slate-400" dir="ltr">{stamp?.time}</span>
                             </div>
                           </td>
                           <td className="w-px whitespace-nowrap px-3 py-2.5 align-middle">
@@ -557,7 +546,7 @@ export function SmsChannelDashboard() {
 
               <div className="flex items-center justify-between gap-3 border-t border-slate-100 px-4 py-2.5">
                 <span className="text-[11px] text-slate-500">
-                  {data.pagination.total.toLocaleString("en-US")} رسالة · صفحة {data.pagination.page} من {data.pagination.pages}
+                  {dtx("{0} رسالة · صفحة {1} من {2}", [data.pagination.total.toLocaleString("en-US"), data.pagination.page, data.pagination.pages])}
                 </span>
                 <div className="flex gap-1">
                   <button
@@ -565,7 +554,7 @@ export function SmsChannelDashboard() {
                     disabled={page <= 1 || loading}
                     onClick={() => setPage((p) => Math.max(1, p - 1))}
                     className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-slate-200 text-slate-500 transition hover:border-brand hover:text-brand disabled:opacity-40"
-                    aria-label="السابق"
+                    aria-label={dt("السابق")}
                   >
                     <ChevronRight className="h-3.5 w-3.5" />
                   </button>
@@ -574,7 +563,7 @@ export function SmsChannelDashboard() {
                     disabled={page >= data.pagination.pages || loading}
                     onClick={() => setPage((p) => p + 1)}
                     className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-slate-200 text-slate-500 transition hover:border-brand hover:text-brand disabled:opacity-40"
-                    aria-label="التالي"
+                    aria-label={dt("التالي")}
                   >
                     <ChevronLeft className="h-3.5 w-3.5" />
                   </button>
@@ -586,8 +575,7 @@ export function SmsChannelDashboard() {
 
         {loading && data && (
           <div className="pointer-events-none fixed bottom-4 start-4 z-50 flex items-center gap-2 rounded-full bg-slate-900/90 px-3 py-1.5 text-[11px] font-semibold text-white">
-            <Loader2 className="h-3 w-3 animate-spin" /> جاري التحديث
-          </div>
+            <Loader2 className="h-3 w-3 animate-spin" /> {dt(" جاري التحديث")}</div>
         )}
       </div>
 

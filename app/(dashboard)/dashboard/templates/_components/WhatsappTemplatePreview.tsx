@@ -12,6 +12,7 @@ import {
   Reply,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { dashDir, dashIntl, dt, dtx } from "@/lib/dashboard/i18n";
 
 export interface PreviewHeader {
   type: "text" | "image" | "video" | "document" | "location";
@@ -125,7 +126,7 @@ function MediaHeader({ header }: { header: PreviewHeader }) {
       <div className="relative aspect-video rounded-md overflow-hidden bg-slate-900 mb-2 flex items-center justify-center">
         <Video className="w-10 h-10 text-white/70" />
         {header.fileName ? (
-          <span className="absolute bottom-1.5 left-1.5 right-1.5 text-[10px] text-white/80 truncate">
+          <span className="absolute bottom-1.5 end-1.5 start-1.5 text-[10px] text-white/80 truncate">
             {header.fileName}
           </span>
         ) : null}
@@ -138,7 +139,7 @@ function MediaHeader({ header }: { header: PreviewHeader }) {
         <FileText className="w-5 h-5 text-slate-500" />
         <div className="min-w-0 flex-1">
           <p className="text-xs font-medium text-slate-800 truncate">
-            {header.fileName ?? "ملف مرفق"}
+            {header.fileName ?? dt("ملف مرفق")}
           </p>
           {header.mimeType ? (
             <p className="text-[10px] text-slate-500 truncate">{header.mimeType}</p>
@@ -153,7 +154,7 @@ function MediaHeader({ header }: { header: PreviewHeader }) {
         <MapPin className="w-5 h-5 text-slate-500" />
         <div className="min-w-0 flex-1">
           <p className="text-xs font-medium text-slate-800 truncate">
-            {header.address ?? header.text ?? "موقع"}
+            {header.address ?? header.text ?? dt("موقع")}
           </p>
           {header.latitude != null && header.longitude != null ? (
             <p className="text-[10px] text-slate-500 truncate">
@@ -194,7 +195,7 @@ export function WhatsappTemplatePreview(props: WhatsappTemplatePreviewProps) {
     APPROVAL_PILL[approvalKey] ?? APPROVAL_PILL.unknown;
 
   return (
-    <div className="space-y-3" dir="rtl">
+    <div className="space-y-3" dir={dashDir()}>
       <div className="flex flex-wrap items-center gap-2 text-[11px]">
         <span className="font-semibold text-slate-900 text-sm">{name}</span>
         {approvalStatus ? (
@@ -228,8 +229,8 @@ export function WhatsappTemplatePreview(props: WhatsappTemplatePreviewProps) {
       </div>
 
       {/* WhatsApp bubble */}
-      <div className="max-w-md ml-auto mr-0">
-        <div className="rounded-2xl rounded-tr-md bg-[#DCF8C6] border border-emerald-100 p-3 shadow-sm">
+      <div className="max-w-md me-auto ms-0">
+        <div className="rounded-2xl rounded-ss-md bg-[#DCF8C6] border border-emerald-100 p-3 shadow-sm">
           {header ? <MediaHeader header={header} /> : null}
           <div className="text-[13px] text-slate-900 whitespace-pre-wrap leading-relaxed">
             {renderBodyWithVariables(body)}
@@ -276,26 +277,23 @@ export function WhatsappTemplatePreview(props: WhatsappTemplatePreviewProps) {
       {variables && variables.length > 0 ? (
         <div className="rounded-lg border border-slate-200 bg-white p-3">
           <h4 className="text-[11px] font-semibold text-slate-700 mb-2">
-            المتغيرات
-          </h4>
+            {dt("المتغيرات")}</h4>
           <ul className="space-y-1">
             {variables.map((v) => (
               <li key={v.key} className="flex items-center gap-2 text-[11px]">
                 <span className="font-mono text-emerald-700">{`{{${v.key}}}`}</span>
                 <span className="text-slate-500">
-                  {v.mapping ? `→ ${v.mapping}` : "بدون ربط معروف"}
+                  {v.mapping ? `→ ${v.mapping}` : dt("بدون ربط معروف")}
                 </span>
-                <span className="text-slate-400 mr-auto truncate">
+                <span className="text-slate-400 ms-auto truncate">
                   {v.exampleValue ?? "—"}
                 </span>
                 {v.validationStatus === "missing_example" ? (
                   <span className="px-1.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200">
-                    بدون مثال
-                  </span>
+                    {dt("بدون مثال")}</span>
                 ) : v.validationStatus === "unknown_mapping" ? (
                   <span className="px-1.5 rounded-full bg-slate-50 text-slate-600 border border-slate-200">
-                    ربط غير محدد
-                  </span>
+                    {dt("ربط غير محدد")}</span>
                 ) : null}
               </li>
             ))}
@@ -305,7 +303,7 @@ export function WhatsappTemplatePreview(props: WhatsappTemplatePreviewProps) {
 
       {lastImportedAt ? (
         <p className="text-[10px] text-slate-500">
-          آخر استيراد: {new Date(lastImportedAt).toLocaleString("ar-EG")}
+          {dtx("آخر استيراد: {0}", [new Date(lastImportedAt).toLocaleString(dashIntl("ar-EG"))])}
         </p>
       ) : null}
     </div>

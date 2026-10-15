@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Loader2, Plus, Settings2, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { readArchiveProjectOptions, saveArchiveProjectOptions, type ArchiveProjectOptions } from "./archiveProjectOptions";
+import { dt } from "@/lib/dashboard/i18n";
 
 type OptionKey = keyof ArchiveProjectOptions;
 
@@ -16,11 +17,11 @@ type OptionGroup = {
 type Feedback = { tone: "success" | "error"; message: string } | null;
 
 const GROUPS: OptionGroup[] = [
-  { key: "years", title: "السنوات", placeholder: "مثال: 2027" },
-  { key: "countries", title: "البلدان", placeholder: "مثال: مصر" },
-  { key: "cities", title: "المدن", placeholder: "مثال: خان يونس" },
-  { key: "themes", title: "التصنيفات", placeholder: "مثال: غذاء" },
-  { key: "projectTypes", title: "أنواع المشاريع", placeholder: "مثال: مشروع رمضاني" },
+  { key: "years", get title() { return dt("السنوات"); }, get placeholder() { return dt("مثال: 2027"); } },
+  { key: "countries", get title() { return dt("البلدان"); }, get placeholder() { return dt("مثال: مصر"); } },
+  { key: "cities", get title() { return dt("المدن"); }, get placeholder() { return dt("مثال: خان يونس"); } },
+  { key: "themes", get title() { return dt("التصنيفات"); }, get placeholder() { return dt("مثال: غذاء"); } },
+  { key: "projectTypes", get title() { return dt("أنواع المشاريع"); }, get placeholder() { return dt("مثال: مشروع رمضاني"); } },
 ];
 
 export function ArchiveProjectOptionsPanel() {
@@ -48,9 +49,9 @@ export function ArchiveProjectOptionsPanel() {
     try {
       const saved = await saveArchiveProjectOptions(next);
       setOptions(saved);
-      setFeedback({ tone: "success", message: "تم حفظ الخيارات للفريق" });
+      setFeedback({ tone: "success", message: dt("تم حفظ الخيارات للفريق") });
     } catch (error) {
-      setFeedback({ tone: "error", message: error instanceof Error ? error.message : "تعذر حفظ الخيارات" });
+      setFeedback({ tone: "error", message: error instanceof Error ? error.message : dt("تعذر حفظ الخيارات") });
     } finally {
       setSavingKey(null);
     }
@@ -82,9 +83,9 @@ export function ArchiveProjectOptionsPanel() {
       <div className="border-b p-4">
         <div className="flex items-center gap-2">
           <Settings2 className="h-4 w-4 text-brand" />
-          <h2 className="text-base font-black text-slate-950">إعدادات خيارات المشاريع</h2>
+          <h2 className="text-base font-black text-slate-950">{dt("إعدادات خيارات المشاريع")}</h2>
         </div>
-        <p className="mt-1 text-xs leading-5 text-slate-600">أضف القيم التي تريد ظهورها في نماذج إضافة وتعديل المشاريع لكل أعضاء الفريق.</p>
+        <p className="mt-1 text-xs leading-5 text-slate-600">{dt("أضف القيم التي تريد ظهورها في نماذج إضافة وتعديل المشاريع لكل أعضاء الفريق.")}</p>
         {feedback ? <p className={`mt-2 rounded-md border px-3 py-2 text-xs font-semibold ${feedback.tone === "success" ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-rose-200 bg-rose-50 text-rose-700"}`}>{feedback.message}</p> : null}
       </div>
       <div className="grid gap-3 p-4 lg:grid-cols-5">
@@ -117,7 +118,7 @@ export function ArchiveProjectOptionsPanel() {
                   onClick={() => removeOption(group.key, option)}
                   disabled={Boolean(savingKey)}
                   className="inline-flex items-center gap-1 rounded-md border bg-white px-2 py-1 text-[11px] font-bold text-slate-700 transition hover:border-rose-200 hover:text-rose-700 disabled:opacity-60"
-                  title="حذف الخيار"
+                  title={dt("حذف الخيار")}
                 >
                   {option}
                   <Trash2 className="h-3 w-3" />

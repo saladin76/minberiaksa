@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { ExternalLink, Layers3 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { dt } from "@/lib/dashboard/i18n";
 
 type FeedbackState = {
   tone: "success" | "error";
@@ -25,7 +26,7 @@ export function ArchiveAssetContentItemAction({ assetId, fileName, disabled = fa
 
   async function createContentItem() {
     if (disabled || saving) return;
-    const confirmed = window.confirm(`إنشاء عنصر محتوى من هذه المادة: ${fileName}؟`);
+    const confirmed = window.confirm(dt("إنشاء عنصر محتوى من هذه المادة: {0}؟", [fileName]));
     if (!confirmed) return;
 
     setSaving(true);
@@ -38,11 +39,11 @@ export function ArchiveAssetContentItemAction({ assetId, fileName, disabled = fa
     setSaving(false);
 
     if (!response.ok || !result?.ok) {
-      setFeedback({ tone: "error", message: result?.error || result?.message || "تعذر إنشاء عنصر المحتوى" });
+      setFeedback({ tone: "error", message: result?.error || result?.message || dt("تعذر إنشاء عنصر المحتوى") });
       return;
     }
 
-    setFeedback({ tone: "success", message: result?.message || "تم إنشاء عنصر محتوى من المادة" });
+    setFeedback({ tone: "success", message: result?.message || dt("تم إنشاء عنصر محتوى من المادة") });
     router.refresh();
   }
 
@@ -50,15 +51,14 @@ export function ArchiveAssetContentItemAction({ assetId, fileName, disabled = fa
     <div className="rounded-md border bg-slate-50 p-3">
       <div className="flex flex-wrap items-center gap-2">
         <Button type="button" size="sm" variant="outline" disabled={disabled || saving} onClick={createContentItem} className="gap-2 font-bold">
-          <Layers3 className="h-4 w-4" /> {saving ? "جاري الإنشاء" : "إنشاء عنصر محتوى"}
+          <Layers3 className="h-4 w-4" /> {saving ? dt("جاري الإنشاء") : dt("إنشاء عنصر محتوى")}
         </Button>
         {/* The "فتح إدارة المحتوى" link pointed at /dashboard/operations/content, removed with
             التشغيل. Creation still works; the feedback line below is now the whole result. */}
       </div>
       {disabled && disabledReason ? <p className="mt-2 text-xs font-semibold text-slate-500">{disabledReason}</p> : null}
       <p className="mt-2 text-xs font-semibold text-amber-700">
-        تجريبي: يُحفظ عنصر المحتوى كمقترح فقط، ولا يُنشر ولا توجد حاليًا صفحة لإدارته.
-      </p>
+        {dt("تجريبي: يُحفظ عنصر المحتوى كمقترح فقط، ولا يُنشر ولا توجد حاليًا صفحة لإدارته.")}</p>
       {feedback ? (
         <p className={`mt-2 rounded-md border px-3 py-2 text-xs font-semibold ${feedback.tone === "success" ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-rose-200 bg-rose-50 text-rose-700"}`}>
           {feedback.message}

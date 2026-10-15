@@ -4,6 +4,7 @@ import * as React from "react";
 import { Search } from "lucide-react";
 import { VARIABLE_CATALOG } from "@/lib/templates/variables";
 import { cn } from "@/lib/utils";
+import { dt } from "@/lib/dashboard/i18n";
 
 /**
  * The `{{token}}` palette, shared by the WhatsApp and SMS editors.
@@ -40,15 +41,15 @@ export function VariablePicker({
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="ابحث في المتغيّرات…"
+          placeholder={dt("ابحث في المتغيّرات…")}
           className="min-w-0 flex-1 bg-transparent text-[11px] text-slate-700 outline-none placeholder:text-slate-400"
         />
-        <span className="shrink-0 text-[10px] text-slate-400">اضغط للإدراج</span>
+        <span className="shrink-0 text-[10px] text-slate-400">{dt("اضغط للإدراج")}</span>
       </div>
 
       <div className="max-h-40 space-y-2 overflow-y-auto overscroll-contain p-2">
         {groups.length === 0 ? (
-          <p className="py-3 text-center text-[11px] text-slate-400">لا يوجد متغيّر مطابق</p>
+          <p className="py-3 text-center text-[11px] text-slate-400">{dt("لا يوجد متغيّر مطابق")}</p>
         ) : (
           groups.map((g) => (
             <div key={g.group}>

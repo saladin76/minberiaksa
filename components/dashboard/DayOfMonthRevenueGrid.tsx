@@ -6,6 +6,7 @@ import {
   DayOfMonthDetailsDialog,
   type DayOfMonthDetailFilters,
 } from "@/components/dashboard/DayOfMonthDetailsDialog";
+import { dashDir, dt, dtx } from "@/lib/dashboard/i18n";
 
 export type DayOfMonthPoint = {
   /** 1..31 */
@@ -93,7 +94,7 @@ export function DayOfMonthRevenueGrid({ collected, expected, loading, formatMone
 
   return (
     <section
-      dir="rtl"
+      dir={dashDir()}
       className="rounded-2xl border border-slate-200 bg-white shadow-[0_1px_2px_rgba(16,24,40,0.04)]"
     >
       <header className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-100 px-4 py-3.5">
@@ -102,11 +103,11 @@ export function DayOfMonthRevenueGrid({ collected, expected, loading, formatMone
             <CalendarRange className="h-[18px] w-[18px]" />
           </span>
           <div>
-            <h2 className="text-[15px] font-semibold leading-tight text-slate-900">الوارد حسب يوم الشهر</h2>
+            <h2 className="text-[15px] font-semibold leading-tight text-slate-900">{dt("الوارد حسب يوم الشهر")}</h2>
             <p className="text-xs text-slate-500">
               {mode === "collected"
-                ? "إجمالي ما تم تحصيله فعليًا في كل يوم من الشهر، مجمّعًا عبر كل الشهور"
-                : "ما تجدّده الاشتراكات الشهرية النشطة في كل يوم من الشهر (دورة شهرية واحدة)"}
+                ? dt("إجمالي ما تم تحصيله فعليًا في كل يوم من الشهر، مجمّعًا عبر كل الشهور")
+                : dt("ما تجدّده الاشتراكات الشهرية النشطة في كل يوم من الشهر (دورة شهرية واحدة)")}
             </p>
           </div>
         </div>
@@ -115,8 +116,8 @@ export function DayOfMonthRevenueGrid({ collected, expected, loading, formatMone
             <div className="flex rounded-lg border border-slate-200 bg-slate-50 p-0.5">
             {(
               [
-                { key: "expected" as const, label: "المتوقع" },
-                { key: "collected" as const, label: "المحصّل" },
+                { key: "expected" as const, label: dt("المتوقع") },
+                { key: "collected" as const, label: dt("المحصّل") },
               ]
             ).map((opt) => (
               <button
@@ -133,7 +134,7 @@ export function DayOfMonthRevenueGrid({ collected, expected, loading, formatMone
             ))}
           </div>
           <div className="text-end">
-            <p className="text-[11px] text-slate-500">{mode === "collected" ? "إجمالي المحصّل" : "المتوقع شهريًا (الاشتراكات الشهرية)"}</p>
+            <p className="text-[11px] text-slate-500">{mode === "collected" ? dt("إجمالي المحصّل") : dt("المتوقع شهريًا (الاشتراكات الشهرية)")}</p>
             <p className="text-xl font-bold tabular-nums text-slate-900">{formatMoney(stats.total)}</p>
           </div>
         
@@ -146,11 +147,10 @@ export function DayOfMonthRevenueGrid({ collected, expected, loading, formatMone
             letting the expected total read as the whole recurring book. */}
         {mode === "expected" && unplacedWithPlans.length > 0 && (
           <div className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-1 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-[11px] text-slate-600">
-            <span className="font-semibold text-slate-700">غير مشمول في الشبكة:</span>
+            <span className="font-semibold text-slate-700">{dt("غير مشمول في الشبكة:")}</span>
             {unplacedWithPlans.map((u) => (
               <span key={u.frequency} className="tabular-nums">
-                {u.frequency === "DAILY" ? "يومي" : "أسبوعياً"}: {u.count} اشتراك ·{" "}
-                {formatMoney(u.amountUSD)} {u.frequency === "DAILY" ? "كل يوم" : "أسبوعياً"}
+                {u.frequency === "DAILY" ? dt("يومي") : dt("أسبوعياً")}{dtx(": {0} اشتراك · {1} ", [u.count, formatMoney(u.amountUSD)])}{u.frequency === "DAILY" ? dt("كل يوم") : dt("أسبوعياً")}
               </span>
             ))}
           </div>
@@ -171,9 +171,9 @@ export function DayOfMonthRevenueGrid({ collected, expected, loading, formatMone
                   // opening a dialog that can only say "no data".
                   disabled={amount <= 0}
                   onClick={() => setOpenDay(d.day)}
-                  aria-label={`عرض تفاصيل اليوم ${d.day} من الشهر`}
-                  title={amount > 0 ? "اضغط لعرض التفاصيل" : undefined}
-                  className={`flex h-[74px] w-full flex-col justify-between rounded-lg p-2 text-right transition-transform duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-1 ${
+                  aria-label={dt("عرض تفاصيل اليوم {0} من الشهر", [d.day])}
+                  title={amount > 0 ? dt("اضغط لعرض التفاصيل") : undefined}
+                  className={`flex h-[74px] w-full flex-col justify-between rounded-lg p-2 text-start transition-transform duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-1 ${
                     amount > 0 ? "cursor-pointer group-hover:-translate-y-0.5" : "cursor-default"
                   } ${isPeak ? "ring-2 ring-brand ring-offset-1" : ""}`}
                   style={{ backgroundColor: tone.bg, color: tone.ink }}
@@ -183,24 +183,23 @@ export function DayOfMonthRevenueGrid({ collected, expected, loading, formatMone
                     {amount > 0 ? formatMoney(amount) : "—"}
                   </span>
                   <span className="text-[10px] tabular-nums opacity-65">
-                    {d.count > 0 ? (mode === "collected" ? `${d.count} تبرع` : `${d.count} اشتراك`) : ""}
+                    {d.count > 0 ? (mode === "collected" ? dt("{0} تبرع", [d.count]) : dt("{0} اشتراك", [d.count])) : ""}
                   </span>
                 </button>
 
                 {amount > 0 && (
-                  <div className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-1.5 hidden w-max max-w-[220px] -translate-x-1/2 rounded-lg bg-slate-900 px-2.5 py-1.5 text-[11px] leading-snug text-white shadow-lg group-hover:block">
-                    <p className="font-semibold">اليوم {d.day} من كل شهر</p>
+                  <div className="pointer-events-none absolute bottom-full end-1/2 z-20 mb-1.5 hidden w-max max-w-[220px] -translate-x-1/2 rounded-lg bg-slate-900 px-2.5 py-1.5 text-[11px] leading-snug text-white shadow-lg group-hover:block">
+                    <p className="font-semibold">{dtx("اليوم {0} من كل شهر", [d.day])}</p>
                     <p className="tabular-nums text-slate-200">{formatMoney(amount)}</p>
                     {mode === "collected" ? (
                       <p className="tabular-nums text-slate-400">
-                        {d.count} تبرع
-                        {d.monthsObserved ? ` · عبر ${d.monthsObserved} شهر` : ""}
+                        {dtx("{0} تبرع", [d.count])}{d.monthsObserved ? dt(" · عبر {0} شهر", [d.monthsObserved]) : ""}
                         {perMonth !== null && d.monthsObserved && d.monthsObserved > 1
-                          ? ` · ${formatMoney(perMonth)} شهريًا`
+                          ? dt(" · {0} شهريًا", [formatMoney(perMonth)])
                           : ""}
                       </p>
                     ) : (
-                      <p className="tabular-nums text-slate-400">{d.count} اشتراك نشط</p>
+                      <p className="tabular-nums text-slate-400">{dtx("{0} اشتراك نشط", [d.count])}</p>
                     )}
                   </div>
                 )}
@@ -211,7 +210,7 @@ export function DayOfMonthRevenueGrid({ collected, expected, loading, formatMone
 
         <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-3">
           <div className="flex items-center gap-2">
-            <span className="text-[11px] text-slate-500">أقل</span>
+            <span className="text-[11px] text-slate-500">{dt("أقل")}</span>
             <div className="flex gap-0.5">
               {RAMP.slice(1).map((tone) => (
                 <span
@@ -222,15 +221,15 @@ export function DayOfMonthRevenueGrid({ collected, expected, loading, formatMone
                 />
               ))}
             </div>
-            <span className="text-[11px] text-slate-500">أعلى</span>
+            <span className="text-[11px] text-slate-500">{dt("أعلى")}</span>
           </div>
           <p className="flex items-center gap-1.5 text-[11px] text-slate-500">
             <Info className="h-3.5 w-3.5 shrink-0" />
             <span>
               {mode === "collected"
-                ? "أيام دخول المال فعليًا من كل الاشتراكات المتكررة، مجمّعة عبر الشهور."
-                : "محسوب من تاريخ التجديد القادم للاشتراكات الشهرية النشطة."}{" "}
-              <b className="font-semibold text-slate-600">اضغط أي يوم لعرض تفاصيله.</b>
+                ? dt("أيام دخول المال فعليًا من كل الاشتراكات المتكررة، مجمّعة عبر الشهور.")
+                : dt("محسوب من تاريخ التجديد القادم للاشتراكات الشهرية النشطة.")}{" "}
+              <b className="font-semibold text-slate-600">{dt("اضغط أي يوم لعرض تفاصيله.")}</b>
             </span>
           </p>
         </div>

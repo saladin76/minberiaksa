@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import { inboxStatusOf, replyUrgency } from "@/lib/messages/inbox-status";
 import { type InboundMessage, senderOf, relativeTime, absoluteDate } from "./inbound-types";
 import { InboundStatusPill, WaitingBadge } from "./InboundStatusPill";
+import { dt } from "@/lib/dashboard/i18n";
 
 /**
  * One inbound message, as a card.
@@ -53,7 +54,7 @@ export function InboundMessageCard({
         unread ? "border-brand-200 bg-white shadow-sm" : "border-slate-200 bg-white",
         replied && "opacity-90 hover:opacity-100",
       )}
-      aria-label={`عرض رسالة من ${sender.displayName}`}
+      aria-label={dt("عرض رسالة من {0}", [sender.displayName])}
     >
       {/* Leading rail. `start-0` rather than left/right so it follows the RTL shell. */}
       {(unread || urgency !== "none") && (
@@ -95,20 +96,20 @@ export function InboundMessageCard({
             )}
           >
             {sender.isRegistered ? (
-              <UserCheck className="h-3.5 w-3.5 shrink-0 text-brand" aria-label="مستخدم مسجل" />
+              <UserCheck className="h-3.5 w-3.5 shrink-0 text-brand" aria-label={dt("مستخدم مسجل")} />
             ) : (
-              <UserRound className="h-3.5 w-3.5 shrink-0 text-slate-400" aria-label="زائر" />
+              <UserRound className="h-3.5 w-3.5 shrink-0 text-slate-400" aria-label={dt("زائر")} />
             )}
             <span className="truncate">{sender.displayName}</span>
           </p>
           <p className="truncate text-[11px] text-slate-500" title={sender.email ?? undefined}>
-            {sender.email ?? "بلا بريد"}
+            {sender.email ?? dt("بلا بريد")}
           </p>
         </div>
 
         <span
           className="inline-flex shrink-0 items-center gap-1 rounded-md border border-slate-200 bg-slate-50 px-1.5 py-0.5 text-[10px] text-slate-600"
-          title={`لغة الرسالة: ${localeLabel}`}
+          title={dt("لغة الرسالة: {0}", [localeLabel])}
         >
           <Globe className="h-3 w-3" />
           {localeLabel}
@@ -121,19 +122,18 @@ export function InboundMessageCard({
             {subjectLabel(message.subject, locale)}
           </span>
           {message.source === "AI_CHAT" && (
-            <span className="inline-flex shrink-0 items-center rounded-full border border-violet-200 bg-violet-50 px-2 py-0.5 text-[10px] font-medium text-violet-700" title="أُرسلت من محادثة مساعد العطاء">
-              مع محادثة الذكاء الاصطناعي
-            </span>
+            <span className="inline-flex shrink-0 items-center rounded-full border border-violet-200 bg-violet-50 px-2 py-0.5 text-[10px] font-medium text-violet-700" title={dt("أُرسلت من محادثة مساعد العطاء")}>
+              {dt("مع محادثة الذكاء الاصطناعي")}</span>
           )}
           {/* A reachable number is a reason to open this one first  it means a reply can go out
               on WhatsApp rather than into an inbox that may never be checked. */}
           {message.phone && (
             <span
               className="inline-flex shrink-0 items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] font-medium text-emerald-700"
-              title={message.whatsapp ? "يمكن الرد عبر واتساب" : "رقم متاح للتواصل"}
+              title={message.whatsapp ? dt("يمكن الرد عبر واتساب") : dt("رقم متاح للتواصل")}
             >
               <Phone className="h-3 w-3" />
-              {message.whatsapp ? "واتساب" : "هاتف"}
+              {message.whatsapp ? dt("واتساب") : dt("هاتف")}
             </span>
           )}
         </div>

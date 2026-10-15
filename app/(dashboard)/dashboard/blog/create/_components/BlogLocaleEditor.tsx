@@ -42,6 +42,7 @@ import { defaultEditorContent } from "@/app/[locale]/blog/_components/wysiwyg/de
 import { SmartSeoAuditCard } from "../../../_components/SmartSeoAuditCard";
 import { SaveStatusNotice, type SaveStatusState } from "../../../_components/SaveStatusNotice";
 import { contentToTiptapDocument, hasMeaningfulContent } from "@/lib/blog/rich-text";
+import { dashDir, dt } from "@/lib/dashboard/i18n";
 
 const schemaFor = (locale: string) =>
   locale === "en"
@@ -65,16 +66,16 @@ const schemaFor = (locale: string) =>
       });
 
 const config = {
-  save: "حفظ",
-  cancel: "إلغاء",
-  success: "تم تحديث الترجمة بنجاح",
-  error: "فشل تحديث الترجمة",
-  pleaseWait: "برجاء الانتظار ...",
-  generalTitle: "محتوى الترجمة",
-  generalDescription: "عدّل العنوان والوصف والمحتوى لهذه اللغة",
-  titleLabel: "العنوان",
-  descriptionLabel: "الوصف المختصر",
-  imageLabel: "رابط الصورة",
+  get save() { return dt("حفظ"); },
+  get cancel() { return dt("إلغاء"); },
+  get success() { return dt("تم تحديث الترجمة بنجاح"); },
+  get error() { return dt("فشل تحديث الترجمة"); },
+  get pleaseWait() { return dt("برجاء الانتظار ..."); },
+  get generalTitle() { return dt("محتوى الترجمة"); },
+  get generalDescription() { return dt("عدّل العنوان والوصف والمحتوى لهذه اللغة"); },
+  get titleLabel() { return dt("العنوان"); },
+  get descriptionLabel() { return dt("الوصف المختصر"); },
+  get imageLabel() { return dt("رابط الصورة"); },
 };
 
 type Locale = TranslationLocale;
@@ -141,10 +142,10 @@ export default function BlogLocaleEditor({ post, locale }: BlogLocaleEditorProps
       formData.append("file", file);
       const response = await axios.post("/api/upload", formData);
       form.setValue("image", response.data?.url ?? "");
-      toast.success("تم رفع الصورة بنجاح");
+      toast.success(dt("تم رفع الصورة بنجاح"));
     } catch (err) {
       console.error("Image upload error:", err);
-      toast.error("فشل رفع الصورة");
+      toast.error(dt("فشل رفع الصورة"));
     } finally {
       setUploadingImage(false);
     }
@@ -163,13 +164,13 @@ export default function BlogLocaleEditor({ post, locale }: BlogLocaleEditorProps
   const onSubmit = async (data: z.infer<typeof schema>) => {
     if (locale === "en" && isContentEmpty(content)) {
       const message = "English content is required";
-      setSaveStatus({ type: "error", message, detail: "لم يتم حفظ الترجمة" });
+      setSaveStatus({ type: "error", message, detail: dt("لم يتم حفظ الترجمة") });
       toast.error(message);
       return;
     }
     setShowLoadingAlert(true);
     setIsSaving(true);
-    setSaveStatus({ type: "saving", message: "جاري حفظ الترجمة...", detail: "سيتم تحديث هذه اللغة فقط" });
+    setSaveStatus({ type: "saving", message: dt("جاري حفظ الترجمة..."), detail: dt("سيتم تحديث هذه اللغة فقط") });
     try {
       await axios.patch(`/api/posts/${post.id}`, {
         translations: {
@@ -185,13 +186,13 @@ export default function BlogLocaleEditor({ post, locale }: BlogLocaleEditorProps
           },
         },
       });
-      setSaveStatus({ type: "success", message: "تم تحديث الترجمة بنجاح", detail: "أنت ما زلت داخل صفحة التعديل" });
+      setSaveStatus({ type: "success", message: dt("تم تحديث الترجمة بنجاح"), detail: dt("أنت ما زلت داخل صفحة التعديل") });
       toast.success(config.success);
       router.refresh();
     } catch (err: any) {
       console.error("Post translation update error:", err);
       const message = err?.response?.data?.error || config.error;
-      setSaveStatus({ type: "error", message, detail: "راجع البيانات ثم حاول مرة أخرى" });
+      setSaveStatus({ type: "error", message, detail: dt("راجع البيانات ثم حاول مرة أخرى") });
       toast.error(message);
     } finally {
       setIsSaving(false);
@@ -200,8 +201,8 @@ export default function BlogLocaleEditor({ post, locale }: BlogLocaleEditorProps
   };
 
   const onInvalid = () => {
-    const message = "راجع الحقول المطلوبة قبل الحفظ";
-    setSaveStatus({ type: "error", message, detail: "لم يتم إرسال البيانات للحفظ" });
+    const message = dt("راجع الحقول المطلوبة قبل الحفظ");
+    setSaveStatus({ type: "error", message, detail: dt("لم يتم إرسال البيانات للحفظ") });
     toast.error(message);
   };
 
@@ -217,17 +218,17 @@ export default function BlogLocaleEditor({ post, locale }: BlogLocaleEditorProps
           }}
           className="space-y-6"
         >
-          <div className="mb-2" dir="rtl">
+          <div className="mb-2" dir={dashDir()}>
             <SaveStatusNotice status={saveStatus} />
           </div>
 
           <Card className="">
-            <CardHeader dir="rtl">
+            <CardHeader dir={dashDir()}>
               <CardTitle>{config.generalTitle}</CardTitle>
               <CardDescription>{config.generalDescription}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="rounded-lg border border-purple-200 bg-purple-50/50 p-3" dir="rtl">
+              <div className="rounded-lg border border-purple-200 bg-purple-50/50 p-3" dir={dashDir()}>
                 <AutoTranslateButton
                   source={{ title: post.title ?? "", description: post.description ?? "" }}
                   richSource={{ content: post.content ?? "" }}
@@ -241,7 +242,7 @@ export default function BlogLocaleEditor({ post, locale }: BlogLocaleEditorProps
                     if (t.richFields.content && (overwrite || !content)) { setContent(t.richFields.content); setEditorKey((k) => k + 1); }
                   }}
                 />
-                <p className="mt-2 text-[11px] text-slate-600">تُترجم هذه اللغة وحدها من النص العربي المحفوظ للمقال، ثم احفظها بزر الحفظ أدناه.</p>
+                <p className="mt-2 text-[11px] text-slate-600">{dt("تُترجم هذه اللغة وحدها من النص العربي المحفوظ للمقال، ثم احفظها بزر الحفظ أدناه.")}</p>
               </div>
               <FormField
                 control={form.control}
@@ -319,7 +320,7 @@ export default function BlogLocaleEditor({ post, locale }: BlogLocaleEditorProps
                             <button
                               type="button"
                               onClick={removeImage}
-                              className="absolute top-2 right-2 p-1.5 bg-red-600 text-white rounded-full hover:bg-red-700 transition-colors opacity-0 group-hover:opacity-100"
+                              className="absolute top-2 start-2 p-1.5 bg-red-600 text-white rounded-full hover:bg-red-700 transition-colors opacity-0 group-hover:opacity-100"
                             >
                               <X className="w-4 h-4" />
                             </button>
@@ -343,7 +344,7 @@ export default function BlogLocaleEditor({ post, locale }: BlogLocaleEditorProps
                               ) : (
                                 <>
                                   <Upload className="w-6 h-6 text-gray-400" />
-                                  <span className="mt-2 text-sm text-gray-500">اضغط لرفع الصورة</span>
+                                  <span className="mt-2 text-sm text-gray-500">{dt("اضغط لرفع الصورة")}</span>
                                 </>
                               )}
                             </label>
@@ -373,9 +374,9 @@ export default function BlogLocaleEditor({ post, locale }: BlogLocaleEditorProps
           />
 
           <Card className="">
-            <CardHeader dir="rtl">
-              <CardTitle>المحتوى</CardTitle>
-              <CardDescription>محتوى المقال بهذه اللغة</CardDescription>
+            <CardHeader dir={dashDir()}>
+              <CardTitle>{dt("المحتوى")}</CardTitle>
+              <CardDescription>{dt("محتوى المقال بهذه اللغة")}</CardDescription>
             </CardHeader>
             <CardContent>
               <WysiwygEditor
@@ -397,7 +398,7 @@ export default function BlogLocaleEditor({ post, locale }: BlogLocaleEditorProps
               className="!bg-gray-900 px-10 !text-white hover:!bg-gray-800"
               disabled={isSaving}
             >
-              {isSaving && <SpinnerIcon className="w-4 h-4 ml-2 animate-spin" />}
+              {isSaving && <SpinnerIcon className="w-4 h-4 me-2 animate-spin" />}
               {config.save}
             </Button>
             <Button

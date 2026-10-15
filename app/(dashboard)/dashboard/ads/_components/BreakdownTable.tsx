@@ -11,6 +11,7 @@ import {
 } from "@/lib/attribution/detect-source";
 import { getCountryDisplayNameFromCode } from "@/lib/dashboard/country-display-name";
 import type { BreakdownDimension } from "@/lib/attribution/aggregate";
+import { dashDir, dashIntl, dt, dtx } from "@/lib/dashboard/i18n";
 
 interface BreakdownRow {
   key: string;
@@ -118,13 +119,13 @@ function PlatformPill({ platform }: { platform: AdPlatform | null }) {
 
 function NameIdCell({ row, dimension }: { row: BreakdownRow; dimension: BreakdownDimension }) {
   if (dimension === "country") {
-    if (row.key === "__unset") return <span className="text-slate-400">غير محدد</span>;
+    if (row.key === "__unset") return <span className="text-slate-400">{dt("غير محدد")}</span>;
     return (
       <span className="inline-flex items-center gap-1.5">
         {/^[A-Z]{2}$/.test(row.key) ? (
           <ReactCountryFlag countryCode={row.key} svg style={{ width: "1.1em", height: "1.1em" }} />
         ) : null}
-        <span>{getCountryDisplayNameFromCode(row.key, "ar") ?? row.label}</span>
+        <span>{getCountryDisplayNameFromCode(row.key, dashIntl("ar")) ?? row.label}</span>
         <span className="text-[10px] text-slate-400">({row.key})</span>
       </span>
     );
@@ -136,7 +137,7 @@ function NameIdCell({ row, dimension }: { row: BreakdownRow; dimension: Breakdow
     return (
       <div className="flex flex-col items-start gap-0.5 min-w-0">
         <span className="font-medium text-slate-900 truncate max-w-[260px]" title={name ?? id ?? row.label}>
-          {name ?? (dimension === "campaign" ? "حملة بدون اسم" : dimension === "adset" ? "مجموعة بدون اسم" : "إعلان بدون اسم")}
+          {name ?? (dimension === "campaign" ? dt("حملة بدون اسم") : dimension === "adset" ? dt("مجموعة بدون اسم") : dt("إعلان بدون اسم"))}
         </span>
         <span className="font-mono text-[10px] text-slate-500 truncate max-w-[260px]">
           ID: {showId ? id : "—"}
@@ -180,7 +181,7 @@ export function BreakdownTable({ filterQs, dimension, entityHeader, emptyHint }:
       .catch((e) => {
         if (cancelled) return;
         setError(
-          (e?.response?.data?.error as string | undefined) ?? "تعذر تحميل التحليل التفصيلي"
+          (e?.response?.data?.error as string | undefined) ?? dt("تعذر تحميل التحليل التفصيلي")
         );
       })
       .finally(() => {
@@ -224,8 +225,7 @@ export function BreakdownTable({ filterQs, dimension, entityHeader, emptyHint }:
   if (loading) {
     return (
       <div className="rounded-xl border border-border bg-white p-6 flex items-center justify-center gap-2 text-sm text-slate-500">
-        <Loader2 className="w-4 h-4 animate-spin" /> جاري التحميل…
-      </div>
+        <Loader2 className="w-4 h-4 animate-spin" /> {dt(" جاري التحميل…")}</div>
     );
   }
   if (error) {
@@ -238,20 +238,20 @@ export function BreakdownTable({ filterQs, dimension, entityHeader, emptyHint }:
 
   const searchBar = (
     <div className="relative w-full sm:max-w-sm">
-      <Search className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+      <Search className="absolute start-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
       <input
         type="text"
         value={searchInput}
         onChange={(e) => setSearchInput(e.target.value)}
-        placeholder={`ابحث في ${entityHeader}…`}
-        className="w-full h-9 pr-8 pl-8 text-xs rounded-lg border border-slate-200 bg-slate-50 text-slate-800 focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
+        placeholder={dt("ابحث في {0}…", [entityHeader])}
+        className="w-full h-9 ps-8 pe-8 text-xs rounded-lg border border-slate-200 bg-slate-50 text-slate-800 focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
       />
       {searchInput && (
         <button
           type="button"
           onClick={() => setSearchInput("")}
-          className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700"
-          aria-label="مسح البحث"
+          className="absolute end-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700"
+          aria-label={dt("مسح البحث")}
         >
           <X className="w-3.5 h-3.5" />
         </button>
@@ -264,14 +264,14 @@ export function BreakdownTable({ filterQs, dimension, entityHeader, emptyHint }:
       <div className="space-y-3">
         {searchBar}
         <div className="rounded-xl border border-border bg-white p-8 text-center text-sm text-slate-500">
-          {emptyHint ?? "لا توجد بيانات في الفترة المختارة"}
+          {emptyHint ?? dt("لا توجد بيانات في الفترة المختارة")}
         </div>
       </div>
     );
   }
 
   const SortableHead = ({ k, children }: { k: SortKey; children: React.ReactNode }) => (
-    <th className="text-right py-2 px-3 font-semibold text-slate-700 whitespace-nowrap">
+    <th className="text-start py-2 px-3 font-semibold text-slate-700 whitespace-nowrap">
       <button
         type="button"
         onClick={() => toggleSort(k)}
@@ -292,54 +292,51 @@ export function BreakdownTable({ filterQs, dimension, entityHeader, emptyHint }:
         {searchBar}
         <span className="text-[11px] text-slate-500">
           {search
-            ? `${sortedRows.length} نتيجة من ${rows?.length ?? 0}`
-            : `${sortedRows.length} ${sortedRows.length === 1 ? "صف" : "صفًا"}`}
+            ? dt("{0} نتيجة من {1}", [sortedRows.length, rows?.length ?? 0])
+            : `${sortedRows.length} ${sortedRows.length === 1 ? dt("صف") : dt("صفًا")}`}
         </span>
       </div>
       {sortedRows.length === 0 ? (
         <div className="rounded-xl border border-border bg-white p-8 text-center text-sm text-slate-500">
-          لا توجد نتائج تطابق &laquo;{search}&raquo;
-        </div>
+          {dtx("لا توجد نتائج تطابق &laquo;{0}&raquo;", [search])}</div>
       ) : (
         <div className="rounded-xl border border-border bg-white shadow-sm overflow-hidden">
-          <div className="overflow-x-auto" dir="rtl">
-            <table className="w-full text-xs text-right">
+          <div className="overflow-x-auto" dir={dashDir()}>
+            <table className="w-full text-xs text-start">
               <thead className="bg-slate-50/80 border-b border-slate-200">
                 <tr>
-                  <th className="text-right py-2 px-3 font-semibold text-slate-700">{entityHeader}</th>
+                  <th className="text-start py-2 px-3 font-semibold text-slate-700">{entityHeader}</th>
                   {!isCountry && dimension !== "platform" && (
-                    <th className="text-right py-2 px-3 font-semibold text-slate-700">المنصة</th>
+                    <th className="text-start py-2 px-3 font-semibold text-slate-700">{dt("المنصة")}</th>
                   )}
                   {isCountry && (
                     <>
-                      <th className="text-right py-2 px-3 font-semibold text-slate-700">أفضل منصة</th>
-                      <th className="text-right py-2 px-3 font-semibold text-slate-700">أفضل موضع</th>
-                      <th className="text-right py-2 px-3 font-semibold text-slate-700">أفضل حملة</th>
-                      <th className="text-right py-2 px-3 font-semibold text-slate-700">أفضل إعلان</th>
+                      <th className="text-start py-2 px-3 font-semibold text-slate-700">{dt("أفضل منصة")}</th>
+                      <th className="text-start py-2 px-3 font-semibold text-slate-700">{dt("أفضل موضع")}</th>
+                      <th className="text-start py-2 px-3 font-semibold text-slate-700">{dt("أفضل حملة")}</th>
+                      <th className="text-start py-2 px-3 font-semibold text-slate-700">{dt("أفضل إعلان")}</th>
                     </>
                   )}
-                  <SortableHead k="revenueUSD">الإيرادات</SortableHead>
+                  <SortableHead k="revenueUSD">{dt("الإيرادات")}</SortableHead>
                   {(isCountry || isPlacement) && (
-                    <SortableHead k="revenueShare">حصة الإيرادات</SortableHead>
+                    <SortableHead k="revenueShare">{dt("حصة الإيرادات")}</SortableHead>
                   )}
-                  <SortableHead k="paidCount">تبرعات مدفوعة</SortableHead>
+                  <SortableHead k="paidCount">{dt("تبرعات مدفوعة")}</SortableHead>
                   {isPlacement && (
-                    <th className="text-right py-2 px-3 font-semibold text-slate-700 whitespace-nowrap">
-                      حصة التبرعات
-                    </th>
+                    <th className="text-start py-2 px-3 font-semibold text-slate-700 whitespace-nowrap">
+                      {dt("حصة التبرعات")}</th>
                   )}
-                  <SortableHead k="failedCount">محاولات فاشلة</SortableHead>
-                  <SortableHead k="avgDonationUSD">متوسط التبرع</SortableHead>
-                  <SortableHead k="paymentSuccessRate">معدل النجاح</SortableHead>
-                  <SortableHead k="trackingHealthPct">سلامة التتبع</SortableHead>
+                  <SortableHead k="failedCount">{dt("محاولات فاشلة")}</SortableHead>
+                  <SortableHead k="avgDonationUSD">{dt("متوسط التبرع")}</SortableHead>
+                  <SortableHead k="paymentSuccessRate">{dt("معدل النجاح")}</SortableHead>
+                  <SortableHead k="trackingHealthPct">{dt("سلامة التتبع")}</SortableHead>
                   {isCountry && (
-                    <th className="text-right py-2 px-3 font-semibold text-slate-700 whitespace-nowrap">
-                      حصة الإعلانات
-                    </th>
+                    <th className="text-start py-2 px-3 font-semibold text-slate-700 whitespace-nowrap">
+                      {dt("حصة الإعلانات")}</th>
                   )}
-                  <SortableHead k="uniqueDonors">متبرعون</SortableHead>
-                  <SortableHead k="newDonors">جدد</SortableHead>
-                  {isPlacement && <SortableHead k="returningDonors">عائدون</SortableHead>}
+                  <SortableHead k="uniqueDonors">{dt("متبرعون")}</SortableHead>
+                  <SortableHead k="newDonors">{dt("جدد")}</SortableHead>
+                  {isPlacement && <SortableHead k="returningDonors">{dt("عائدون")}</SortableHead>}
                 </tr>
               </thead>
               <tbody>

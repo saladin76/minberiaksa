@@ -8,6 +8,7 @@ import BlogEditor from "@/app/[locale]/blog/_components/BlogEditor";
 import BlogLocaleEditor from "./BlogLocaleEditor";
 import BlogLocaleBufferEditor from "./BlogLocaleBufferEditor";
 import { CreateTranslationsProvider } from "./CreateTranslationsContext";
+import { dashDir, dtx } from "@/lib/dashboard/i18n";
 
 interface LanguageTabsProps {
   post: {
@@ -62,7 +63,7 @@ export default function LanguageTabs({ post, categories, campaignOptions = [], m
 
   const flag = (code: string) => <ReactCountryFlag countryCode={localeFlag(code)} svg style={{ width: '1.2em', height: '1.2em' }} />;
   const localeTabs = [
-    { value: "ar", label: <>{flag("ar")} العربية</>, required: true, has: false },
+    { value: "ar", label: <>{dtx("{0} العربية", [flag("ar")])}</>, required: true, has: false },
     ...TRANSLATION_LOCALES.map((code) => ({
       value: code,
       label: <>{flag(code)} {localeNativeLabel(code)}</>,
@@ -73,7 +74,7 @@ export default function LanguageTabs({ post, categories, campaignOptions = [], m
 
   const tabsTree = (
     <Tabs defaultValue="ar" className="w-full">
-      <TabsList className="flex flex-wrap gap-1 mb-6" dir="rtl">
+      <TabsList className="flex flex-wrap gap-1 mb-6" dir={dashDir()}>
         {localeTabs.map(({ value, label, required, has }) => (
           <TabsTrigger key={value} value={value} className="gap-2 px-4">
             {label}

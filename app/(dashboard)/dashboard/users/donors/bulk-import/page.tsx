@@ -4,6 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import { UploadCloud, Loader2, ArrowLeft, CheckCircle2, AlertTriangle, FileSpreadsheet } from "lucide-react";
 import type { ImportRowInput } from "@/lib/donations/bulk-import";
+import { dashDir, dashIntl, dt, dtx } from "@/lib/dashboard/i18n";
 
 type PreviewRow = {
   rowNumber: number;
@@ -73,23 +74,23 @@ function newRunId() {
 
 /** POST JSON, retrying transient failures (network, 5xx, timeouts) with backoff. 4xx is final. */
 async function postJson<T>(url: string, body: unknown, attempts = 4): Promise<T> {
-  let lastError = "تعذّر الاتصال بالخادم.";
+  let lastError = dt("تعذّر الاتصال بالخادم.");
   for (let attempt = 0; attempt < attempts; attempt += 1) {
     if (attempt > 0) await new Promise((r) => setTimeout(r, 1000 * 2 ** (attempt - 1)));
     try {
       const res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
       const j = await res.json().catch(() => null);
       if (res.ok) return j as T;
-      lastError = j?.error ?? `خطأ من الخادم (${res.status}).`;
+      lastError = j?.error ?? dt("خطأ من الخادم ({0}).", [res.status]);
       if (res.status < 500 && res.status !== 408 && res.status !== 429) break;
     } catch {
-      lastError = "تعذّر الاتصال بالخادم.";
+      lastError = dt("تعذّر الاتصال بالخادم.");
     }
   }
   throw new Error(lastError);
 }
-const num = (n: number) => n.toLocaleString("ar");
-const fmtDate = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString("ar", { year: "numeric", month: "2-digit", day: "2-digit" }) : "—");
+const num = (n: number) => n.toLocaleString(dashIntl("ar"));
+const fmtDate = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString(dashIntl("ar"), { year: "numeric", month: "2-digit", day: "2-digit" }) : "—");
 
 function Stat({ label, value, tone }: { label: string; value: string; tone?: "ok" | "warn" | "bad" }) {
   const color = tone === "ok" ? "text-emerald-700" : tone === "warn" ? "text-amber-700" : tone === "bad" ? "text-rose-700" : "text-slate-900";
@@ -126,15 +127,15 @@ export default function BulkDonationImportPage() {
   async function runPreview() {
     if (!file) return;
     reset();
-    if (file.size > MAX_FILE_BYTES) { setError("حجم الملف كبير جدًا (الحد 100MB). قسّمه إلى ملفين."); return; }
+    if (file.size > MAX_FILE_BYTES) { setError(dt("حجم الملف كبير جدًا (الحد 100MB). قسّمه إلى ملفين.")); return; }
     setBusy("preview");
     try {
-      setProgress({ done: 0, total: 0, label: "جارٍ قراءة الملف…" });
+      setProgress({ done: 0, total: 0, label: dt("جارٍ قراءة الملف…") });
       // Let the label paint before the (synchronous) parse occupies the main thread.
       await new Promise((r) => setTimeout(r, 30));
       const { parseDonationImportBuffer, toImportRowInput } = await import("@/lib/donations/bulk-import");
       const parsed = parseDonationImportBuffer(await file.arrayBuffer());
-      if (parsed.totalRows === 0) { setError(parsed.warnings[0] ?? "لا توجد صفوف قابلة للاستيراد في الملف."); return; }
+      if (parsed.totalRows === 0) { setError(parsed.warnings[0] ?? dt("لا توجد صفوف قابلة للاستيراد في الملف.")); return; }
 
       const valid = parsed.rows.filter((r) => r.valid);
       const emails = [...new Set(valid.map((r) => r.email).filter(Boolean) as string[])];
@@ -142,7 +143,7 @@ export default function BulkDonationImportPage() {
       // Donor dedup by email only. Donations are NOT deduped  every valid row (incl. repeats) imports.
       const existing = new Set<string>();
       for (let i = 0; i < emails.length; i += EMAIL_BATCH) {
-        setProgress({ done: i, total: emails.length, label: "التحقق من المتبرعين الحاليين…" });
+        setProgress({ done: i, total: emails.length, label: dt("التحقق من المتبرعين الحاليين…") });
         const j = await postJson<{ existing: string[] }>(`${API}/preview`, { emails: emails.slice(i, i + EMAIL_BATCH) });
         for (const e of j.existing) existing.add(e);
       }
@@ -192,7 +193,7 @@ export default function BulkDonationImportPage() {
         sampleTruncated: parsed.rows.length > SAMPLE_LIMIT,
       });
     } catch (e) {
-      setError(e instanceof Error && e.message ? e.message : "تعذّرت قراءة الملف. تأكد أنه Excel (.xlsx) أو CSV صالح.");
+      setError(e instanceof Error && e.message ? e.message : dt("تعذّرت قراءة الملف. تأكد أنه Excel (.xlsx) أو CSV صالح."));
     } finally {
       setBusy(null);
       setProgress(null);
@@ -202,12 +203,12 @@ export default function BulkDonationImportPage() {
   async function runImport(resume = false) {
     const state = importRef.current;
     if (!state || !preview) return;
-    if (!resume && !window.confirm(`سيتم إنشاء ${preview.summary.newlyImportable} تبرع و ${preview.summary.newDonors} متبرع جديد. متابعة؟`)) return;
+    if (!resume && !window.confirm(dt("سيتم إنشاء {0} تبرع و {1} متبرع جديد. متابعة؟", [preview.summary.newlyImportable, preview.summary.newDonors]))) return;
     setBusy("commit"); setError(null); setCanResume(false);
     try {
       // Batches run in order; each is retried, and retries of the same run are idempotent on the server.
       while (state.nextIndex < state.rows.length) {
-        setProgress({ done: state.nextIndex, total: state.rows.length, label: "جارٍ الاستيراد…" });
+        setProgress({ done: state.nextIndex, total: state.rows.length, label: dt("جارٍ الاستيراد…") });
         const batch = state.rows.slice(state.nextIndex, state.nextIndex + IMPORT_BATCH);
         const j = await postJson<BatchResponse>(`${API}/commit`, { runId: state.runId, rows: batch });
         state.totals.createdDonations += j.createdDonations + j.alreadyImported;
@@ -216,7 +217,7 @@ export default function BulkDonationImportPage() {
         state.totals.skippedRows += j.rejected + j.unresolved;
         state.nextIndex += batch.length;
       }
-      setProgress({ done: state.rows.length, total: state.rows.length, label: "جارٍ إنهاء الاستيراد…" });
+      setProgress({ done: state.rows.length, total: state.rows.length, label: dt("جارٍ إنهاء الاستيراد…") });
       const fin = await postJson<{ createdDonations: number }>(`${API}/commit`, {
         runId: state.runId,
         finalize: { fileHash: state.fileHash, totalRows: state.totalRows, validRows: state.validRows, createdDonors: state.totals.createdDonors, skippedRows: state.totals.skippedRows },
@@ -226,7 +227,7 @@ export default function BulkDonationImportPage() {
       importRef.current = null;
     } catch (e) {
       const done = state.nextIndex;
-      setError(`${e instanceof Error ? e.message : "تعذّر الاستيراد."}  تم استيراد ${num(done)} من ${num(state.rows.length)} صف. اضغط «متابعة الاستيراد» لإكمال الباقي دون تكرار.`);
+      setError(dt("{0}  تم استيراد {1} من {2} صف. اضغط «متابعة الاستيراد» لإكمال الباقي دون تكرار.", [e instanceof Error ? e.message : dt("تعذّر الاستيراد."), num(done), num(state.rows.length)]));
       setCanResume(true);
     } finally {
       setBusy(null);
@@ -237,19 +238,18 @@ export default function BulkDonationImportPage() {
   const s = preview?.summary;
 
   return (
-    <main className="mx-auto max-w-5xl space-y-5" dir="rtl">
+    <main className="mx-auto max-w-5xl space-y-5" dir={dashDir()}>
       {/* Compact header */}
       <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <p className="text-xs font-bold text-brand">المتبرعون / توريد بالجملة</p>
-            <h1 className="mt-1 text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">توريد التبرعات من Excel / CSV</h1>
+            <p className="text-xs font-bold text-brand">{dt("المتبرعون / توريد بالجملة")}</p>
+            <h1 className="mt-1 text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">{dt("توريد التبرعات من Excel / CSV")}</h1>
             <p className="mt-1.5 max-w-2xl text-sm leading-6 text-slate-600">
-              ارفع ملف مبيعات (مثل تصدير PayFor) لإنشاء تبرعات مرتبطة بالمتبرعين عبر البريد الإلكتروني. تُعرض معاينة قبل الحفظ، ولا يُرسل أي إشعار.
-            </p>
+              {dt("ارفع ملف مبيعات (مثل تصدير PayFor) لإنشاء تبرعات مرتبطة بالمتبرعين عبر البريد الإلكتروني. تُعرض معاينة قبل الحفظ، ولا يُرسل أي إشعار.")}</p>
           </div>
           <Link href="/dashboard/users/donors" className="inline-flex h-9 shrink-0 items-center gap-2 rounded-md border border-slate-300 bg-white px-4 text-sm font-bold text-slate-700 transition hover:border-brand/50 hover:text-brand">
-            العودة للمتبرعين <ArrowLeft className="h-4 w-4" />
+            {dt("العودة للمتبرعين ")}<ArrowLeft className="h-4 w-4" />
           </Link>
         </div>
       </section>
@@ -259,17 +259,15 @@ export default function BulkDonationImportPage() {
         <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed border-slate-300 bg-slate-50 p-8 text-center">
           <FileSpreadsheet className="h-8 w-8 text-brand" />
           <div>
-            <p className="text-sm font-bold text-slate-800">{file ? file.name : "اختر ملف Excel (.xlsx) أو CSV"}</p>
-            <p className="mt-1 text-xs text-slate-500">الأعمدة المدعومة: EPOSTA، AD SOYAD، TELEFON، SEPET، TOPLAM، PARA BİRİMİ، USD HALİ، DURUM، TARİH SAAT، ÜLKE، SİTE DİL …</p>
+            <p className="text-sm font-bold text-slate-800">{file ? file.name : dt("اختر ملف Excel (.xlsx) أو CSV")}</p>
+            <p className="mt-1 text-xs text-slate-500">{dt("الأعمدة المدعومة: EPOSTA، AD SOYAD، TELEFON، SEPET، TOPLAM، PARA BİRİMİ، USD HALİ، DURUM، TARİH SAAT، ÜLKE، SİTE DİL …")}</p>
           </div>
           <input ref={inputRef} type="file" accept=".xlsx,.xls,.csv,text/csv" className="hidden" onChange={(e) => onPick(e.target.files?.[0] ?? null)} />
           <div className="flex flex-wrap justify-center gap-2">
             <button type="button" onClick={() => inputRef.current?.click()} className="inline-flex h-10 items-center gap-2 rounded-md border border-slate-300 bg-white px-4 text-sm font-bold text-slate-700 hover:border-brand/50 hover:text-brand">
-              <UploadCloud className="h-4 w-4" /> اختيار ملف
-            </button>
+              <UploadCloud className="h-4 w-4" /> {dt(" اختيار ملف")}</button>
             <button type="button" disabled={!file || busy !== null} onClick={runPreview} className="inline-flex h-10 items-center gap-2 rounded-md bg-brand px-4 text-sm font-bold text-white hover:bg-brand-700 disabled:opacity-40">
-              {busy === "preview" ? <Loader2 className="h-4 w-4 animate-spin" /> : null} معاينة الملف
-            </button>
+              {busy === "preview" ? <Loader2 className="h-4 w-4 animate-spin" /> : null} {dt(" معاينة الملف")}</button>
           </div>
         </div>
         {progress ? (
@@ -290,8 +288,7 @@ export default function BulkDonationImportPage() {
             <AlertTriangle className="h-4 w-4 shrink-0" /> <span className="flex-1">{error}</span>
             {canResume ? (
               <button type="button" disabled={busy !== null} onClick={() => runImport(true)} className="inline-flex h-8 items-center gap-2 rounded-md bg-emerald-600 px-3 text-xs font-bold text-white hover:bg-emerald-700 disabled:opacity-40">
-                متابعة الاستيراد
-              </button>
+                {dt("متابعة الاستيراد")}</button>
             ) : null}
           </div>
         ) : null}
@@ -301,13 +298,13 @@ export default function BulkDonationImportPage() {
       {s ? (
         <>
           <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            <Stat label="صفوف صالحة" value={num(s.validRows)} tone="ok" />
-            <Stat label="ستُضاف كلها" value={num(s.newlyImportable)} tone="ok" />
-            <Stat label="متبرعون جدد" value={num(s.newDonors)} />
-            <Stat label="إجمالي المبلغ (USD) الناجح" value={`$${num(s.totalUsdPaidNew)}`} tone="ok" />
-            <Stat label="ناجحة" value={num(s.paid)} tone="ok" />
-            <Stat label="فاشلة" value={num(s.failed)} tone={s.failed > 0 ? "warn" : undefined} />
-            <Stat label="صفوف غير صالحة" value={num(s.invalidRows)} tone={s.invalidRows > 0 ? "bad" : undefined} />
+            <Stat label={dt("صفوف صالحة")} value={num(s.validRows)} tone="ok" />
+            <Stat label={dt("ستُضاف كلها")} value={num(s.newlyImportable)} tone="ok" />
+            <Stat label={dt("متبرعون جدد")} value={num(s.newDonors)} />
+            <Stat label={dt("إجمالي المبلغ (USD) الناجح")} value={`$${num(s.totalUsdPaidNew)}`} tone="ok" />
+            <Stat label={dt("ناجحة")} value={num(s.paid)} tone="ok" />
+            <Stat label={dt("فاشلة")} value={num(s.failed)} tone={s.failed > 0 ? "warn" : undefined} />
+            <Stat label={dt("صفوف غير صالحة")} value={num(s.invalidRows)} tone={s.invalidRows > 0 ? "bad" : undefined} />
           </section>
 
           {preview!.warnings.length > 0 ? (
@@ -318,25 +315,24 @@ export default function BulkDonationImportPage() {
 
           <section className="rounded-xl border border-slate-200 bg-white shadow-sm">
             <div className="flex items-center justify-between border-b p-4">
-              <h2 className="text-sm font-black text-slate-800">معاينة الصفوف {preview!.sampleTruncated ? "(أول 500 صف)" : ""}</h2>
+              <h2 className="text-sm font-black text-slate-800">{dt("معاينة الصفوف ")}{preview!.sampleTruncated ? dt("(أول 500 صف)") : ""}</h2>
               <button type="button" disabled={s.newlyImportable === 0 || busy !== null || canResume || !!result} onClick={() => runImport()}className="inline-flex h-9 items-center gap-2 rounded-md bg-emerald-600 px-4 text-sm font-bold text-white hover:bg-emerald-700 disabled:opacity-40">
-                {busy === "commit" ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />} استيراد {num(s.newlyImportable)} تبرع
-              </button>
+                {busy === "commit" ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />} {dtx(" استيراد {0} تبرع", [num(s.newlyImportable)])}</button>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full min-w-[52rem] text-sm">
                 <thead className="border-b bg-slate-50 text-xs text-slate-500">
                   <tr>
-                    <th className="p-2.5 text-right font-semibold">#</th>
-                    <th className="p-2.5 text-right font-semibold">الاسم</th>
-                    <th className="p-2.5 text-right font-semibold">البريد</th>
-                    <th className="p-2.5 text-right font-semibold">السلة</th>
-                    <th className="p-2.5 text-center font-semibold">المبلغ</th>
+                    <th className="p-2.5 text-start font-semibold">#</th>
+                    <th className="p-2.5 text-start font-semibold">{dt("الاسم")}</th>
+                    <th className="p-2.5 text-start font-semibold">{dt("البريد")}</th>
+                    <th className="p-2.5 text-start font-semibold">{dt("السلة")}</th>
+                    <th className="p-2.5 text-center font-semibold">{dt("المبلغ")}</th>
                     <th className="p-2.5 text-center font-semibold">USD</th>
-                    <th className="p-2.5 text-center font-semibold">الحالة</th>
-                    <th className="p-2.5 text-center font-semibold">الدولة</th>
-                    <th className="p-2.5 text-center font-semibold">التاريخ</th>
-                    <th className="p-2.5 text-center font-semibold">ملاحظة</th>
+                    <th className="p-2.5 text-center font-semibold">{dt("الحالة")}</th>
+                    <th className="p-2.5 text-center font-semibold">{dt("الدولة")}</th>
+                    <th className="p-2.5 text-center font-semibold">{dt("التاريخ")}</th>
+                    <th className="p-2.5 text-center font-semibold">{dt("ملاحظة")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -344,18 +340,18 @@ export default function BulkDonationImportPage() {
                     <tr key={r.rowNumber} className={`border-b last:border-0 ${!r.valid ? "bg-rose-50/40" : ""}`}>
                       <td className="p-2.5 text-slate-400">{r.rowNumber}</td>
                       <td className="p-2.5 font-semibold text-slate-800">{r.name ?? "—"}</td>
-                      <td className="p-2.5 text-slate-600" dir="ltr">{r.email ?? "—"}{r.isNewDonor && r.valid ? <span className="ms-1 rounded bg-blue-50 px-1 text-[10px] font-bold text-brand">جديد</span> : null}</td>
+                      <td className="p-2.5 text-slate-600" dir="ltr">{r.email ?? "—"}{r.isNewDonor && r.valid ? <span className="ms-1 rounded bg-blue-50 px-1 text-[10px] font-bold text-brand">{dt("جديد")}</span> : null}</td>
                       <td className="p-2.5 text-slate-600">{r.basket ?? "—"}</td>
                       <td className="p-2.5 text-center text-slate-700" dir="ltr">{r.amount ?? "—"} {r.currency}</td>
                       <td className="p-2.5 text-center text-slate-700" dir="ltr">{r.amountUSD ?? "—"}</td>
                       <td className="p-2.5 text-center">
-                        <span className={`rounded px-1.5 py-0.5 text-[11px] font-bold ${r.status === "PAID" ? "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-700"}`}>{r.status === "PAID" ? "ناجح" : "فاشل"}</span>
+                        <span className={`rounded px-1.5 py-0.5 text-[11px] font-bold ${r.status === "PAID" ? "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-700"}`}>{r.status === "PAID" ? dt("ناجح") : dt("فاشل")}</span>
                       </td>
                       <td className="p-2.5 text-center text-slate-600">{r.country ?? "—"}{r.countryCode ? ` (${r.countryCode})` : ""}</td>
                       <td className="p-2.5 text-center text-slate-500" dir="ltr">{fmtDate(r.createdAtISO)}</td>
                       <td className="p-2.5 text-center text-[11px]">
-                        {!r.valid ? <span className="font-semibold text-rose-600">{r.issues.join("، ")}</span>
-                          : <span className="text-emerald-600">جاهز</span>}
+                        {!r.valid ? <span className="font-semibold text-rose-600">{r.issues.join(dt("، "))}</span>
+                          : <span className="text-emerald-600">{dt("جاهز")}</span>}
                       </td>
                     </tr>
                   ))}
@@ -369,16 +365,16 @@ export default function BulkDonationImportPage() {
       {/* Result */}
       {result ? (
         <section className="rounded-xl border border-emerald-200 bg-emerald-50 p-5 shadow-sm">
-          <p className="flex items-center gap-2 text-base font-black text-emerald-800"><CheckCircle2 className="h-5 w-5" /> تم الاستيراد بنجاح</p>
+          <p className="flex items-center gap-2 text-base font-black text-emerald-800"><CheckCircle2 className="h-5 w-5" /> {dt(" تم الاستيراد بنجاح")}</p>
           <div className="mt-3 grid gap-2 text-sm text-emerald-900 sm:grid-cols-2">
-            <p>تبرعات أُنشئت: <b>{num(result.createdDonations)}</b></p>
-            <p>متبرعون جدد: <b>{num(result.createdDonors)}</b></p>
-            <p>مرتبطة بمتبرعين حاليين: <b>{num(result.linkedExistingDonors)}</b></p>
+            <p>{dt("تبرعات أُنشئت: ")}<b>{num(result.createdDonations)}</b></p>
+            <p>{dt("متبرعون جدد: ")}<b>{num(result.createdDonors)}</b></p>
+            <p>{dt("مرتبطة بمتبرعين حاليين: ")}<b>{num(result.linkedExistingDonors)}</b></p>
           </div>
-          {result.skippedRows > 0 ? <p className="mt-2 text-xs font-semibold text-amber-700">تم تخطّي {num(result.skippedRows)} صف لم يجتز التحقق على الخادم.</p> : null}
+          {result.skippedRows > 0 ? <p className="mt-2 text-xs font-semibold text-amber-700">{dtx("تم تخطّي {0} صف لم يجتز التحقق على الخادم.", [num(result.skippedRows)])}</p> : null}
           <div className="mt-4 flex gap-2">
-            <Link href="/dashboard/users/donors" className="inline-flex h-9 items-center gap-2 rounded-md bg-brand px-4 text-sm font-bold text-white hover:bg-brand-700">عرض المتبرعين</Link>
-            <button type="button" onClick={() => { onPick(null); if (inputRef.current) inputRef.current.value = ""; }} className="inline-flex h-9 items-center gap-2 rounded-md border border-slate-300 bg-white px-4 text-sm font-bold text-slate-700">استيراد ملف آخر</button>
+            <Link href="/dashboard/users/donors" className="inline-flex h-9 items-center gap-2 rounded-md bg-brand px-4 text-sm font-bold text-white hover:bg-brand-700">{dt("عرض المتبرعين")}</Link>
+            <button type="button" onClick={() => { onPick(null); if (inputRef.current) inputRef.current.value = ""; }} className="inline-flex h-9 items-center gap-2 rounded-md border border-slate-300 bg-white px-4 text-sm font-bold text-slate-700">{dt("استيراد ملف آخر")}</button>
           </div>
         </section>
       ) : null}

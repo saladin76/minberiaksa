@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Loader2, Search, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import { dashDir, dt } from "@/lib/dashboard/i18n";
 
 type Props = {
   /** The search term currently APPLIED to the list (not the draft in the box). */
@@ -33,7 +34,7 @@ export function DonorSearchInput({
   value,
   onCommit,
   loading = false,
-  placeholder = "بحث بالاسم أو البريد الإلكتروني…",
+  placeholder = dt("بحث بالاسم أو البريد الإلكتروني…"),
   className,
 }: Props) {
   const [draft, setDraft] = useState(value);
@@ -57,13 +58,13 @@ export function DonorSearchInput({
   const showClear = draft.length > 0 || value.length > 0;
 
   return (
-    <div className={cn("relative w-full sm:w-[260px]", className)} dir="rtl">
+    <div className={cn("relative w-full sm:w-[260px]", className)} dir={dashDir()}>
       <button
         type="button"
-        title="بحث"
+        title={dt("بحث")}
         onMouseDown={(e) => e.preventDefault()}
         onClick={commit}
-        className="absolute right-2 top-1/2 -translate-y-1/2 h-6 w-6 inline-flex items-center justify-center rounded-md text-brand hover:bg-brand/10 disabled:opacity-50"
+        className="absolute start-2 top-1/2 -translate-y-1/2 h-6 w-6 inline-flex items-center justify-center rounded-md text-brand hover:bg-brand/10 disabled:opacity-50"
         disabled={loading}
       >
         {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Search className="w-3.5 h-3.5" />}
@@ -85,16 +86,16 @@ export function DonorSearchInput({
         onBlur={commit}
         placeholder={placeholder}
         aria-label={placeholder}
-        className="h-9 text-xs rounded-lg border-slate-200 bg-slate-50/50 pr-9 pl-8"
+        className="h-9 text-xs rounded-lg border-slate-200 bg-slate-50/50 ps-9 pe-8"
       />
 
       {showClear && (
         <button
           type="button"
-          title="مسح البحث"
+          title={dt("مسح البحث")}
           onMouseDown={(e) => e.preventDefault()}
           onClick={clear}
-          className="absolute left-2 top-1/2 -translate-y-1/2 h-6 w-6 inline-flex items-center justify-center rounded-md text-slate-400 hover:text-slate-700 hover:bg-slate-100"
+          className="absolute end-2 top-1/2 -translate-y-1/2 h-6 w-6 inline-flex items-center justify-center rounded-md text-slate-400 hover:text-slate-700 hover:bg-slate-100"
         >
           <X className="w-3.5 h-3.5" />
         </button>

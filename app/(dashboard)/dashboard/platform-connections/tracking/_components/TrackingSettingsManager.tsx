@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { dashDir, dashIntl, dt } from "@/lib/dashboard/i18n";
 
 type Platform = "meta" | "ga4" | "google_ads" | "tiktok" | "x";
 type SecretKey = "facebookAccessToken" | "gaApiSecret" | "tiktokAccessToken" | "xAccessToken";
@@ -108,7 +109,7 @@ const eventRows = [
 
 function txt(v: string | null | undefined) { return v ?? ""; }
 function fieldList(fields: string[]) { return fields.length ? fields.join(", ") : "—"; }
-function shortDate(value?: string | null) { return value ? new Date(value).toLocaleString("ar-EG") : "—"; }
+function shortDate(value?: string | null) { return value ? new Date(value).toLocaleString(dashIntl("ar-EG")) : "—"; }
 
 function Field({ label, value, onChange, placeholder, disabled = false }: { label: string; value: string; onChange: (v: string) => void; placeholder?: string; disabled?: boolean }) {
   return <div className="space-y-1.5"><Label className="text-xs text-slate-600">{label}</Label><Input disabled={disabled} className="font-mono text-xs" value={value} placeholder={placeholder} onChange={(e) => onChange(e.target.value)} /></div>;
@@ -140,11 +141,11 @@ export default function TrackingSettingsManager({ canManage, canTest }: { canMan
   const [lastTest, setLastTest] = useState<Partial<Record<Platform, string>>>({});
 
   const status = useMemo(() => ({
-    meta: !settings.facebookPixelId && !settings.facebookAccessTokenPresent ? "غير مفعّل" : settings.facebookPixelId && settings.facebookAccessTokenPresent ? "مُعدّ" : "إعدادات ناقصة",
-    ga4: !settings.gaMeasurementId && !settings.gaApiSecretPresent ? "غير مفعّل" : settings.gaMeasurementId && settings.gaApiSecretPresent ? "مُعدّ" : "إعدادات ناقصة",
-    google_ads: !settings.googleAdsConversionId && !settings.googleAdsConversionLabel ? "غير مفعّل" : settings.googleAdsConversionId && settings.googleAdsConversionLabel ? "مُعدّ" : "إعدادات ناقصة",
-    tiktok: !settings.tiktokPixelId && !settings.tiktokAccessTokenPresent ? "غير مفعّل" : settings.tiktokPixelId && settings.tiktokAccessTokenPresent ? "مُعدّ" : "إعدادات ناقصة",
-    x: !settings.xPixelId && !settings.xConversionEventId && !settings.xAccessTokenPresent ? "غير مفعّل" : (settings.xPixelId || settings.xConversionEventId) && settings.xAccessTokenPresent && settings.xAdAccountId ? "مُعدّ" : "إعدادات ناقصة",
+    meta: !settings.facebookPixelId && !settings.facebookAccessTokenPresent ? "غير مفعّل" : settings.facebookPixelId && settings.facebookAccessTokenPresent ? "مُعدّ" : dt("إعدادات ناقصة"),
+    ga4: !settings.gaMeasurementId && !settings.gaApiSecretPresent ? "غير مفعّل" : settings.gaMeasurementId && settings.gaApiSecretPresent ? "مُعدّ" : dt("إعدادات ناقصة"),
+    google_ads: !settings.googleAdsConversionId && !settings.googleAdsConversionLabel ? "غير مفعّل" : settings.googleAdsConversionId && settings.googleAdsConversionLabel ? "مُعدّ" : dt("إعدادات ناقصة"),
+    tiktok: !settings.tiktokPixelId && !settings.tiktokAccessTokenPresent ? "غير مفعّل" : settings.tiktokPixelId && settings.tiktokAccessTokenPresent ? "مُعدّ" : dt("إعدادات ناقصة"),
+    x: !settings.xPixelId && !settings.xConversionEventId && !settings.xAccessTokenPresent ? "غير مفعّل" : (settings.xPixelId || settings.xConversionEventId) && settings.xAccessTokenPresent && settings.xAdAccountId ? "مُعدّ" : dt("إعدادات ناقصة"),
   }), [settings]);
 
   const loadDiagnostics = useCallback(async () => {
@@ -152,7 +153,7 @@ export default function TrackingSettingsManager({ canManage, canTest }: { canMan
     try {
       const res = await axios.get<{ ok: boolean; diagnostics: Diagnostics }>("/api/admin/tracking/diagnostics");
       if (res.data.ok) setDiagnostics(res.data.diagnostics ?? {});
-    } catch { toast.error("فشل تحميل تشخيص التتبع"); }
+    } catch { toast.error(dt("فشل تحميل تشخيص التتبع")); }
     finally { setRefreshingDiagnostics(false); }
   }, []);
 
@@ -161,7 +162,7 @@ export default function TrackingSettingsManager({ canManage, canTest }: { canMan
       const res = await axios.get<Partial<Settings>>("/api/admin/tracking");
       setSettings({ ...defaults, ...res.data, metaDonateEventName: res.data.metaDonateEventName ?? "Donate" });
       await loadDiagnostics();
-    } catch { toast.error("فشل تحميل إعدادات التتبع"); }
+    } catch { toast.error(dt("فشل تحميل إعدادات التتبع")); }
     finally { setLoading(false); }
   }, [loadDiagnostics]);
 
@@ -171,12 +172,12 @@ export default function TrackingSettingsManager({ canManage, canTest }: { canMan
 
   function secretField(key: SecretKey, label: string) {
     const isPresent = Boolean(settings[presence[key]]);
-    return <div className="space-y-1.5"><Label className="text-xs text-slate-600">{label}</Label><Input type="password" disabled={!canManage} className="font-mono text-xs" value={secrets[key]} placeholder={isPresent ? "محفوظ  اتركه فارغًا للإبقاء عليه" : "أدخل السر"} onChange={(e) => setSecrets((s) => ({ ...s, [key]: e.target.value }))} />{isPresent ? <label className="flex items-center gap-2 text-[11px] text-rose-600"><input type="checkbox" disabled={!canManage} checked={clearSecrets[key]} onChange={(e) => setClearSecrets((s) => ({ ...s, [key]: e.target.checked }))} />مسح السر المحفوظ</label> : null}</div>;
+    return <div className="space-y-1.5"><Label className="text-xs text-slate-600">{label}</Label><Input type="password" disabled={!canManage} className="font-mono text-xs" value={secrets[key]} placeholder={isPresent ? dt("محفوظ  اتركه فارغًا للإبقاء عليه") : dt("أدخل السر")} onChange={(e) => setSecrets((s) => ({ ...s, [key]: e.target.value }))} />{isPresent ? <label className="flex items-center gap-2 text-[11px] text-rose-600"><input type="checkbox" disabled={!canManage} checked={clearSecrets[key]} onChange={(e) => setClearSecrets((s) => ({ ...s, [key]: e.target.checked }))} />{dt("مسح السر المحفوظ")}</label> : null}</div>;
   }
 
   async function save() {
     // Pixel/tag ids and API tokens drive live conversion tracking for every donation.
-    if (!window.confirm("سيؤثر هذا الحفظ على تتبع التحويلات الفعلي لكل التبرعات الجديدة (معرّفات البكسل والمفاتيح). هل تريد المتابعة؟")) return;
+    if (!window.confirm(dt("سيؤثر هذا الحفظ على تتبع التحويلات الفعلي لكل التبرعات الجديدة (معرّفات البكسل والمفاتيح). هل تريد المتابعة؟"))) return;
     setSaving(true);
     try {
       const payload: Record<string, unknown> = { ...settings };
@@ -191,8 +192,8 @@ export default function TrackingSettingsManager({ canManage, canTest }: { canMan
       setSecrets({ facebookAccessToken: "", gaApiSecret: "", tiktokAccessToken: "", xAccessToken: "" });
       setClearSecrets({ facebookAccessToken: false, gaApiSecret: false, tiktokAccessToken: false, xAccessToken: false });
       await loadDiagnostics();
-      toast.success("تم حفظ إعدادات التتبع بنجاح");
-    } catch { toast.error("فشل حفظ الإعدادات"); }
+      toast.success(dt("تم حفظ إعدادات التتبع بنجاح"));
+    } catch { toast.error(dt("فشل حفظ الإعدادات")); }
     finally { setSaving(false); }
   }
 
@@ -200,11 +201,11 @@ export default function TrackingSettingsManager({ canManage, canTest }: { canMan
     setTesting(platform);
     try {
       const res = await axios.post<{ message: string; status: string }>("/api/admin/tracking/test", { platform });
-      setLastTest((s) => ({ ...s, [platform]: `${res.data.message}  ${new Date().toLocaleString("ar-EG")}` }));
+      setLastTest((s) => ({ ...s, [platform]: `${res.data.message}  ${new Date().toLocaleString(dashIntl("ar-EG"))}` }));
       res.data.status === "success" ? toast.success(res.data.message) : toast(res.data.message);
       await loadDiagnostics();
     } catch (e) {
-      const message = axios.isAxiosError(e) && typeof e.response?.data?.message === "string" ? e.response.data.message : "فشل اختبار التتبع";
+      const message = axios.isAxiosError(e) && typeof e.response?.data?.message === "string" ? e.response.data.message : dt("فشل اختبار التتبع");
       setLastTest((s) => ({ ...s, [platform]: message }));
       toast.error(message);
     } finally { setTesting(null); }
@@ -223,28 +224,28 @@ export default function TrackingSettingsManager({ canManage, canTest }: { canMan
         <span>Last sent/update: {shortDate(latest?.updatedAt)}</span>
         <span className="md:col-span-2">Last error: {latest?.error ?? "—"}</span>
       </div>
-      <div className="mt-2 border-t pt-2">آخر اختبار: {lastTest[platform] ?? "لم يتم اختباره"}</div>
+      <div className="mt-2 border-t pt-2">{dt("آخر اختبار: ")}{lastTest[platform] ?? dt("لم يتم اختباره")}</div>
     </div>;
   }
 
   if (loading) return <div className="flex min-h-[200px] items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>;
 
-  return <div className="space-y-6" dir="rtl">
-<div className="flex flex-wrap items-start justify-between gap-3"><div><h1 className="text-xl sm:text-2xl font-bold tracking-tight">إعدادات البكسلات والتتبع</h1><p className="mt-1 text-muted-foreground">إدارة معرفات البكسل وواجهات التحويل من الخادم، واختبار جاهزية التتبع لكل منصة.</p></div><Button variant="outline" onClick={loadDiagnostics} disabled={refreshingDiagnostics} className="gap-2">{refreshingDiagnostics ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}تحديث التشخيص</Button></div>
+  return <div className="space-y-6" dir={dashDir()}>
+<div className="flex flex-wrap items-start justify-between gap-3"><div><h1 className="text-xl sm:text-2xl font-bold tracking-tight">{dt("إعدادات البكسلات والتتبع")}</h1><p className="mt-1 text-muted-foreground">{dt("إدارة معرفات البكسل وواجهات التحويل من الخادم، واختبار جاهزية التتبع لكل منصة.")}</p></div><Button variant="outline" onClick={loadDiagnostics} disabled={refreshingDiagnostics} className="gap-2">{refreshingDiagnostics ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}{dt("تحديث التشخيص")}</Button></div>
     <div className="grid gap-3 md:grid-cols-5"><Status label="Meta" status={status.meta} /><Status label="GA4" status={status.ga4} /><Status label="Google Ads" status={status.google_ads} /><Status label="TikTok" status={status.tiktok} /><Status label="X" status={status.x} /></div>
 
-    <PlatformCard canTest={canTest} title="فيسبوك / Meta" desc="Pixel + Conversion API" platform="meta" testing={testing} test={test}><Field disabled={!canManage} label="Pixel ID" value={txt(settings.facebookPixelId)} onChange={(v) => set("facebookPixelId", v || null)} /><Field disabled={!canManage} label="Dataset ID اختياري" value={txt(settings.metaDatasetId)} onChange={(v) => set("metaDatasetId", v || null)} />{secretField("facebookAccessToken", "Conversion API Access Token")}<Field disabled={!canManage} label="Test Event Code" value={txt(settings.facebookTestEventCode)} onChange={(v) => set("facebookTestEventCode", v || null)} /><Field disabled={!canManage} label="Donate Event Name" value={txt(settings.metaDonateEventName)} onChange={(v) => set("metaDonateEventName", v || "Donate")} /><TestBox platform="meta" /></PlatformCard>
-    <PlatformCard canTest={canTest} title="Google Analytics 4" desc="Measurement Protocol" platform="ga4" testing={testing} test={test}><Field disabled={!canManage} label="Measurement ID" value={txt(settings.gaMeasurementId)} onChange={(v) => set("gaMeasurementId", v || null)} />{secretField("gaApiSecret", "API Secret")}<Field disabled={!canManage} label="Property ID اختياري" value={txt(settings.gaPropertyId)} onChange={(v) => set("gaPropertyId", v || null)} /><Field disabled={!canManage} label="Stream ID اختياري" value={txt(settings.gaStreamId)} onChange={(v) => set("gaStreamId", v || null)} /><Toggle disabled={!canManage} label="Debug Mode" checked={settings.gaDebugMode} onChange={(v) => set("gaDebugMode", v)} /><TestBox platform="ga4" /></PlatformCard>
-    <PlatformCard canTest={canTest} title="Google Ads  Enhanced Conversions" desc="Conversions settings" platform="google_ads" testing={testing} test={test}><Field disabled={!canManage} label="Conversion ID" value={txt(settings.googleAdsConversionId)} onChange={(v) => set("googleAdsConversionId", v || null)} /><Field disabled={!canManage} label="Conversion Label" value={txt(settings.googleAdsConversionLabel)} onChange={(v) => set("googleAdsConversionLabel", v || null)} /><Field disabled={!canManage} label="Customer ID اختياري" value={txt(settings.googleAdsCustomerId)} onChange={(v) => set("googleAdsCustomerId", v || null)} /><Field disabled={!canManage} label="Conversion Action ID اختياري" value={txt(settings.googleAdsConversionActionId)} onChange={(v) => set("googleAdsConversionActionId", v || null)} /><Toggle disabled={!canManage} label="Enhanced Conversions Enabled" checked={settings.googleAdsEnhancedConversionsEnabled} onChange={(v) => set("googleAdsEnhancedConversionsEnabled", v)} /><TestBox platform="google_ads" /></PlatformCard>
-    <PlatformCard canTest={canTest} title="TikTok Pixel + Events API" desc="Pixel and server events" platform="tiktok" testing={testing} test={test}><Field disabled={!canManage} label="Pixel Code" value={txt(settings.tiktokPixelId)} onChange={(v) => set("tiktokPixelId", v || null)} />{secretField("tiktokAccessToken", "Access Token")}<Field disabled={!canManage} label="Advertiser ID اختياري" value={txt(settings.tiktokAdvertiserId)} onChange={(v) => set("tiktokAdvertiserId", v || null)} /><Field disabled={!canManage} label="Test Event Code اختياري" value={txt(settings.tiktokTestEventCode)} onChange={(v) => set("tiktokTestEventCode", v || null)} /><Toggle disabled={!canManage} label="Events API Enabled" checked={settings.tiktokEventsApiEnabled} onChange={(v) => set("tiktokEventsApiEnabled", v)} /><TestBox platform="tiktok" /></PlatformCard>
+    <PlatformCard canTest={canTest} title={dt("فيسبوك / Meta")} desc="Pixel + Conversion API" platform="meta" testing={testing} test={test}><Field disabled={!canManage} label="Pixel ID" value={txt(settings.facebookPixelId)} onChange={(v) => set("facebookPixelId", v || null)} /><Field disabled={!canManage} label={dt("Dataset ID اختياري")} value={txt(settings.metaDatasetId)} onChange={(v) => set("metaDatasetId", v || null)} />{secretField("facebookAccessToken", "Conversion API Access Token")}<Field disabled={!canManage} label="Test Event Code" value={txt(settings.facebookTestEventCode)} onChange={(v) => set("facebookTestEventCode", v || null)} /><Field disabled={!canManage} label="Donate Event Name" value={txt(settings.metaDonateEventName)} onChange={(v) => set("metaDonateEventName", v || "Donate")} /><TestBox platform="meta" /></PlatformCard>
+    <PlatformCard canTest={canTest} title="Google Analytics 4" desc="Measurement Protocol" platform="ga4" testing={testing} test={test}><Field disabled={!canManage} label="Measurement ID" value={txt(settings.gaMeasurementId)} onChange={(v) => set("gaMeasurementId", v || null)} />{secretField("gaApiSecret", "API Secret")}<Field disabled={!canManage} label={dt("Property ID اختياري")} value={txt(settings.gaPropertyId)} onChange={(v) => set("gaPropertyId", v || null)} /><Field disabled={!canManage} label={dt("Stream ID اختياري")} value={txt(settings.gaStreamId)} onChange={(v) => set("gaStreamId", v || null)} /><Toggle disabled={!canManage} label="Debug Mode" checked={settings.gaDebugMode} onChange={(v) => set("gaDebugMode", v)} /><TestBox platform="ga4" /></PlatformCard>
+    <PlatformCard canTest={canTest} title="Google Ads  Enhanced Conversions" desc="Conversions settings" platform="google_ads" testing={testing} test={test}><Field disabled={!canManage} label="Conversion ID" value={txt(settings.googleAdsConversionId)} onChange={(v) => set("googleAdsConversionId", v || null)} /><Field disabled={!canManage} label="Conversion Label" value={txt(settings.googleAdsConversionLabel)} onChange={(v) => set("googleAdsConversionLabel", v || null)} /><Field disabled={!canManage} label={dt("Customer ID اختياري")} value={txt(settings.googleAdsCustomerId)} onChange={(v) => set("googleAdsCustomerId", v || null)} /><Field disabled={!canManage} label={dt("Conversion Action ID اختياري")} value={txt(settings.googleAdsConversionActionId)} onChange={(v) => set("googleAdsConversionActionId", v || null)} /><Toggle disabled={!canManage} label="Enhanced Conversions Enabled" checked={settings.googleAdsEnhancedConversionsEnabled} onChange={(v) => set("googleAdsEnhancedConversionsEnabled", v)} /><TestBox platform="google_ads" /></PlatformCard>
+    <PlatformCard canTest={canTest} title="TikTok Pixel + Events API" desc="Pixel and server events" platform="tiktok" testing={testing} test={test}><Field disabled={!canManage} label="Pixel Code" value={txt(settings.tiktokPixelId)} onChange={(v) => set("tiktokPixelId", v || null)} />{secretField("tiktokAccessToken", "Access Token")}<Field disabled={!canManage} label={dt("Advertiser ID اختياري")} value={txt(settings.tiktokAdvertiserId)} onChange={(v) => set("tiktokAdvertiserId", v || null)} /><Field disabled={!canManage} label={dt("Test Event Code اختياري")} value={txt(settings.tiktokTestEventCode)} onChange={(v) => set("tiktokTestEventCode", v || null)} /><Toggle disabled={!canManage} label="Events API Enabled" checked={settings.tiktokEventsApiEnabled} onChange={(v) => set("tiktokEventsApiEnabled", v)} /><TestBox platform="tiktok" /></PlatformCard>
     <PlatformCard canTest={canTest} title="X / Twitter Ads" desc="X Pixel and Conversions API" platform="x" testing={testing} test={test}><Field disabled={!canManage} label="X Pixel ID" value={txt(settings.xPixelId)} onChange={(v) => set("xPixelId", v || null)} /><Field disabled={!canManage} label="X Conversion Event ID" value={txt(settings.xConversionEventId)} onChange={(v) => set("xConversionEventId", v || null)} />{secretField("xAccessToken", "X Access Token")}<Field disabled={!canManage} label="X Ad Account ID" value={txt(settings.xAdAccountId)} onChange={(v) => set("xAdAccountId", v || null)} /><Toggle disabled={!canManage} label="X Conversions API Enabled" checked={settings.xConversionsApiEnabled} onChange={(v) => set("xConversionsApiEnabled", v)} /><TestBox platform="x" /></PlatformCard>
 
-    <Card><CardHeader><CardTitle>خريطة الأحداث</CardTitle><CardDescription>ربط أحداث الموقع بأسماء الأحداث داخل المنصات.</CardDescription></CardHeader><CardContent className="overflow-x-auto"><table className="min-w-full text-right text-xs"><thead className="border-b bg-slate-50"><tr>{["Website Event", "Meta", "GA4", "Google Ads", "TikTok", "X"].map((h) => <th className="p-2" key={h}>{h}</th>)}</tr></thead><tbody>{eventRows.map((r) => <tr key={r[0]} className="border-b last:border-0">{r.map((c, i) => <td key={`${r[0]}-${i}`} className="p-2 font-mono">{c}</td>)}</tr>)}</tbody></table></CardContent></Card>
-    {canManage ? <div className="sticky bottom-4 z-10 flex justify-end"><Button onClick={save} disabled={saving} className="gap-2 shadow-lg">{saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}حفظ الإعدادات</Button></div> : null}
+    <Card><CardHeader><CardTitle>{dt("خريطة الأحداث")}</CardTitle><CardDescription>{dt("ربط أحداث الموقع بأسماء الأحداث داخل المنصات.")}</CardDescription></CardHeader><CardContent className="overflow-x-auto"><table className="min-w-full text-start text-xs"><thead className="border-b bg-slate-50"><tr>{["Website Event", "Meta", "GA4", "Google Ads", "TikTok", "X"].map((h) => <th className="p-2" key={h}>{h}</th>)}</tr></thead><tbody>{eventRows.map((r) => <tr key={r[0]} className="border-b last:border-0">{r.map((c, i) => <td key={`${r[0]}-${i}`} className="p-2 font-mono">{c}</td>)}</tr>)}</tbody></table></CardContent></Card>
+    {canManage ? <div className="sticky bottom-4 z-10 flex justify-end"><Button onClick={save} disabled={saving} className="gap-2 shadow-lg">{saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}{dt("حفظ الإعدادات")}</Button></div> : null}
   </div>;
 }
 
 function PlatformCard({ title, desc, platform, testing, test, children, canTest }: { title: string; desc: string; platform: Platform; testing: Platform | null; test: (p: Platform) => void; children: React.ReactNode; canTest: boolean }) {
   const sendsRealTest = platform === "meta" || platform === "ga4";
-  return <Card><CardHeader><CardTitle>{title}</CardTitle><CardDescription>{desc}</CardDescription></CardHeader><CardContent className="space-y-4"><div className="grid gap-3 md:grid-cols-2">{children}</div>{canTest ? <Button onClick={() => test(platform)} disabled={testing === platform} className="gap-2"><TestTube2 className="h-4 w-4" />{testing === platform ? "جاري الاختبار..." : sendsRealTest ? "إرسال حدث اختبار" : "فحص جاهزية الإعدادات"}</Button> : null}</CardContent></Card>;
+  return <Card><CardHeader><CardTitle>{title}</CardTitle><CardDescription>{desc}</CardDescription></CardHeader><CardContent className="space-y-4"><div className="grid gap-3 md:grid-cols-2">{children}</div>{canTest ? <Button onClick={() => test(platform)} disabled={testing === platform} className="gap-2"><TestTube2 className="h-4 w-4" />{testing === platform ? dt("جاري الاختبار...") : sendsRealTest ? dt("إرسال حدث اختبار") : dt("فحص جاهزية الإعدادات")}</Button> : null}</CardContent></Card>;
 }

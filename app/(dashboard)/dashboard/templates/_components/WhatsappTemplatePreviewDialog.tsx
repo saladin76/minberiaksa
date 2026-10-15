@@ -18,6 +18,7 @@ import {
   type PreviewVariable,
 } from "./WhatsappTemplatePreview";
 import type { TemplateRecommendation } from "@/lib/messaging/whatsapp-template-recommendations";
+import { dashDir, dt } from "@/lib/dashboard/i18n";
 
 interface PerformancePayload {
   template: {
@@ -100,7 +101,7 @@ export function WhatsappTemplatePreviewDialog({ template, open, onOpenChange }: 
       .catch((e) => {
         if (cancelled) return;
         setError(
-          (e?.response?.data?.error as string | undefined) ?? "تعذر تحميل الأداء"
+          (e?.response?.data?.error as string | undefined) ?? dt("تعذر تحميل الأداء")
         );
       })
       .finally(() => {
@@ -115,12 +116,11 @@ export function WhatsappTemplatePreviewDialog({ template, open, onOpenChange }: 
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="left" className="w-full sm:max-w-[640px] overflow-y-auto" dir="rtl">
-        <SheetHeader className="text-right">
-          <SheetTitle>معاينة قالب واتساب</SheetTitle>
+      <SheetContent side="left" className="w-full sm:max-w-[640px] overflow-y-auto" dir={dashDir()}>
+        <SheetHeader className="text-start">
+          <SheetTitle>{dt("معاينة قالب واتساب")}</SheetTitle>
           <SheetDescription>
-            معاينة كاملة + أداء + توصيات جودة لهذا القالب.
-          </SheetDescription>
+            {dt("معاينة كاملة + أداء + توصيات جودة لهذا القالب.")}</SheetDescription>
         </SheetHeader>
 
         <div className="mt-4 space-y-4">
@@ -142,34 +142,33 @@ export function WhatsappTemplatePreviewDialog({ template, open, onOpenChange }: 
           <div className="rounded-lg border border-slate-200 bg-white p-3">
             <div className="flex items-center gap-2 mb-2">
               <Activity className="w-4 h-4 text-slate-500" />
-              <h3 className="text-xs font-semibold text-slate-800">أداء القالب</h3>
+              <h3 className="text-xs font-semibold text-slate-800">{dt("أداء القالب")}</h3>
             </div>
             {loading ? (
               <div className="flex items-center justify-center gap-2 py-6 text-slate-500 text-sm">
-                <Loader2 className="w-4 h-4 animate-spin" /> جاري التحميل…
-              </div>
+                <Loader2 className="w-4 h-4 animate-spin" /> {dt(" جاري التحميل…")}</div>
             ) : error ? (
               <div className="rounded-md border border-rose-200 bg-rose-50 p-2 text-xs text-rose-700">
                 {error}
               </div>
             ) : perf ? (
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[11px]">
-                <Stat label="مُرسل" value={String(perf.performance.sent)} />
-                <Stat label="مُسلَّم" value={String(perf.performance.delivered)} />
-                <Stat label="فشل" value={String(perf.performance.failed)} />
+                <Stat label={dt("مُرسل")} value={String(perf.performance.sent)} />
+                <Stat label={dt("مُسلَّم")} value={String(perf.performance.delivered)} />
+                <Stat label={dt("فشل")} value={String(perf.performance.failed)} />
                 <Stat
-                  label="نسبة الفشل"
+                  label={dt("نسبة الفشل")}
                   value={fmtPct(perf.performance.failureRate)}
                   tone={perf.performance.failureRate >= 0.2 ? "warn" : undefined}
                 />
-                <Stat label="تبرعات" value={String(perf.performance.donations)} />
-                <Stat label="إيراد (USD)" value={fmtMoney(perf.performance.revenueUSD)} tone="positive" />
+                <Stat label={dt("تبرعات")} value={String(perf.performance.donations)} />
+                <Stat label={dt("إيراد (USD)")} value={fmtMoney(perf.performance.revenueUSD)} tone="positive" />
                 <Stat
-                  label="إيراد/رسالة"
+                  label={dt("إيراد/رسالة")}
                   value={fmtMoney(perf.performance.revenuePerMessage)}
                 />
                 <Stat
-                  label="نقر→تبرع"
+                  label={dt("نقر→تبرع")}
                   value={fmtPct(perf.performance.clickToDonationRate)}
                 />
               </div>
@@ -178,7 +177,7 @@ export function WhatsappTemplatePreviewDialog({ template, open, onOpenChange }: 
               <div className="flex items-center gap-2 mt-2 text-[11px] text-slate-600">
                 {perf.bestCountry ? (
                   <span>
-                    أفضل دولة:{" "}
+                    {dt("أفضل دولة: ")}
                     <span className="font-medium text-slate-800">
                       {perf.bestCountry.key}
                     </span>{" "}
@@ -187,7 +186,7 @@ export function WhatsappTemplatePreviewDialog({ template, open, onOpenChange }: 
                 ) : null}
                 {perf.bestLanguage ? (
                   <span>
-                    أفضل لغة:{" "}
+                    {dt("أفضل لغة: ")}
                     <span className="font-medium text-slate-800">
                       {perf.bestLanguage.key}
                     </span>{" "}
@@ -202,7 +201,7 @@ export function WhatsappTemplatePreviewDialog({ template, open, onOpenChange }: 
             <div className="rounded-lg border border-slate-200 bg-white p-3">
               <div className="flex items-center gap-2 mb-2">
                 <Sparkles className="w-4 h-4 text-violet-600" />
-                <h3 className="text-xs font-semibold text-slate-800">توصيات</h3>
+                <h3 className="text-xs font-semibold text-slate-800">{dt("توصيات")}</h3>
               </div>
               <ul className="space-y-2">
                 {perf.recommendations.map((r) => (

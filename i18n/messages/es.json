@@ -3493,5 +3493,14 @@
     "yourDonation": "Tu donación",
     "fileTooLarge": "El archivo ocupa {size}; el máximo permitido es {max}. Comprime la foto o expórtala como PDF e inténtalo de nuevo.",
     "uploadFailed": "La carga no se completó. Comprueba tu conexión e inténtalo de nuevo."
+  },
+  "CategoryLanding": {
+    "heroLead": "Los proyectos de la {org}: {name}.",
+    "ctaLabel": "Ver proyectos",
+    "projectsTitle": "Proyectos: {name}",
+    "donateTitle": "Apoya: {name}",
+    "achievementsTitle": "Nuestros logros: {name}",
+    "statDoneLabel": "Completado",
+    "statGoalLabel": "Meta"
   }
 }

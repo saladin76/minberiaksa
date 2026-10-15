@@ -1,6 +1,7 @@
 'use client';
 
 import { LOCALES, SUPPORTED_LOCALES } from '@/lib/locales';
+import { dt } from "@/lib/dashboard/i18n";
 
 /**
  * A locale allow-list picker for content that is scoped to some languages.
@@ -49,8 +50,7 @@ export function LocaleChips({
             onClick={() => onChange([])}
             className="px-2.5 py-1 rounded-full text-xs text-slate-500 underline"
           >
-            كل اللغات
-          </button>
+            {dt("كل اللغات")}</button>
         ) : null}
       </div>
     </div>

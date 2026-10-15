@@ -3,6 +3,7 @@
 import { useMemo, type ReactNode } from "react";
 import { CalendarDays, RotateCcw, X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { dt } from "@/lib/dashboard/i18n";
 
 export type PeriodOption<T extends string = string> = { value: T; label: string };
 
@@ -66,13 +67,13 @@ export function DashboardFilterBar<T extends string>({
         "rounded-2xl border border-slate-200 bg-white p-3 shadow-[0_1px_2px_rgba(16,24,40,0.04)] sm:p-4",
         className,
       )}
-      aria-label="تصفية البيانات"
+      aria-label={dt("تصفية البيانات")}
     >
       <div className="flex flex-wrap items-center gap-3">
         {/* Segmented period control  every option visible at once. */}
         <div
           role="group"
-          aria-label="الفترة الزمنية"
+          aria-label={dt("الفترة الزمنية")}
           className="inline-flex shrink-0 items-center gap-0.5 rounded-xl border border-slate-200 bg-slate-50 p-1"
         >
           {periods.map((option) => {
@@ -103,7 +104,7 @@ export function DashboardFilterBar<T extends string>({
               type="date"
               value={dateFrom ?? ""}
               onChange={(e) => onDateFromChange?.(e.target.value)}
-              aria-label="من تاريخ"
+              aria-label={dt("من تاريخ")}
               className="h-7 w-[130px] rounded-md border-0 bg-transparent px-1 text-[13px] text-slate-800 outline-none focus:ring-0"
             />
             <span className="text-slate-300" aria-hidden>—</span>
@@ -111,7 +112,7 @@ export function DashboardFilterBar<T extends string>({
               type="date"
               value={dateTo ?? ""}
               onChange={(e) => onDateToChange?.(e.target.value)}
-              aria-label="إلى تاريخ"
+              aria-label={dt("إلى تاريخ")}
               className="h-7 w-[130px] rounded-md border-0 bg-transparent px-1 text-[13px] text-slate-800 outline-none focus:ring-0"
             />
           </div>
@@ -125,8 +126,7 @@ export function DashboardFilterBar<T extends string>({
       {chips.length > 0 && (
         <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-slate-100 pt-3">
           <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
-            عوامل التصفية
-          </span>
+            {dt("عوامل التصفية")}</span>
           {chips.map((chip) => (
             <span
               key={chip.id}
@@ -137,7 +137,7 @@ export function DashboardFilterBar<T extends string>({
               <button
                 type="button"
                 onClick={chip.onClear}
-                aria-label={`إزالة تصفية ${chip.label}`}
+                aria-label={dt("إزالة تصفية {0}", [chip.label])}
                 className="flex h-4 w-4 items-center justify-center rounded-full text-brand-700/60 transition-colors hover:bg-brand-200 hover:text-brand-800"
               >
                 <X className="h-3 w-3" />
@@ -151,8 +151,7 @@ export function DashboardFilterBar<T extends string>({
               className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[12px] font-medium text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-800"
             >
               <RotateCcw className="h-3 w-3" />
-              مسح الكل
-            </button>
+              {dt("مسح الكل")}</button>
           )}
         </div>
       )}

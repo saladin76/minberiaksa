@@ -3,9 +3,10 @@ import { getRawTrackingSettings, trackingBoolean, trackingString } from "@/lib/t
 import { getSchedulerStatus, type SchedulerStatus } from "@/lib/communication/scheduler-status";
 import { getActiveCommunicationRuntimeBundle, getActiveMetaWebhookConfig } from "@/lib/communication/runtime-config";
 import { safeCountValue } from "@/lib/dashboard/safe-count";
+import { dt } from "@/lib/dashboard/i18n";
 
 export type ConnStatus = "READY" | "NEEDS_SETUP" | "FAILED" | "DISABLED";
-export const STATUS_LABEL: Record<ConnStatus, string> = { READY: "جاهز", NEEDS_SETUP: "يحتاج إعداد", FAILED: "فشل آخر اختبار", DISABLED: "غير مفعّل" };
+export const STATUS_LABEL: Record<ConnStatus, string> = { get READY() { return dt("جاهز"); }, get NEEDS_SETUP() { return dt("يحتاج إعداد"); }, get FAILED() { return dt("فشل آخر اختبار"); }, get DISABLED() { return dt("غير مفعّل"); } };
 export const STATUS_CLASS: Record<ConnStatus, string> = { READY: "border-emerald-200 bg-emerald-50 text-emerald-700", NEEDS_SETUP: "border-amber-200 bg-amber-50 text-amber-700", FAILED: "border-rose-200 bg-rose-50 text-rose-700", DISABLED: "border-slate-200 bg-slate-100 text-slate-600" };
 const env = (key: string) => !!process.env[key]?.trim();
 const hasDb = () => !!process.env.DATABASE_URL;
@@ -151,14 +152,14 @@ export async function getOverview() {
   const [tracking, ads, comm, webhooks] = await Promise.all([getTrackingReadiness(), getAdAccountsReadiness(), getCommunicationReadiness(), getWebhooksReadiness()]);
   const issues: OverviewIssue[] = [];
   const base = "/dashboard/platform-connections";
-  if (!tracking.rows.find((item) => item.key === "meta_pixel")?.configured) issues.push({ title: "بكسل ميتا غير مُعد", severity: "NEEDS_SETUP", href: `${base}/tracking`, action: "إعداد" });
-  if (!tracking.rows.find((item) => item.key === "meta_capi")?.configured) issues.push({ title: "Meta Conversions API غير مُعد", severity: "NEEDS_SETUP", href: `${base}/tracking`, action: "إعداد" });
+  if (!tracking.rows.find((item) => item.key === "meta_pixel")?.configured) issues.push({ title: dt("بكسل ميتا غير مُعد"), severity: "NEEDS_SETUP", href: `${base}/tracking`, action: dt("إعداد") });
+  if (!tracking.rows.find((item) => item.key === "meta_capi")?.configured) issues.push({ title: dt("Meta Conversions API غير مُعد"), severity: "NEEDS_SETUP", href: `${base}/tracking`, action: dt("إعداد") });
   // The dedicated الحسابات الإعلانية page was removed, so ad-account issues point at فحص الاتصال.
-  for (const account of ads.rows) if (account.status === "FAILED") issues.push({ title: `فشل آخر مزامنة: ${account.label}`, severity: "FAILED", href: `${base}/health`, action: "مراجعة" });
-  if (!ads.connectedCount) issues.push({ title: "لا توجد حسابات إعلانية مربوطة", severity: "NEEDS_SETUP", href: `${base}/health`, action: "ربط" });
-  if (comm.whatsapp.status !== "READY") issues.push({ title: "إعداد واتساب غير مكتمل", severity: comm.whatsapp.status, href: `${base}/communication`, action: "إعداد" });
-  if (comm.whatsapp.sendersMissingNumber > 0) issues.push({ title: "يوجد مُرسِل واتساب بلا رقم مُعرّف", severity: "NEEDS_SETUP", href: `${base}/communication`, action: "مراجعة" });
-  if (!webhooks.signatureConfigured) issues.push({ title: "توقيع Webhook غير مفعّل", severity: webhooks.status, href: `${base}/communication`, action: "تأمين" });
-  if (comm.sms.status !== "READY") issues.push({ title: "إعداد SMS غير مكتمل", severity: comm.sms.status, href: `${base}/communication`, action: "تفاصيل" });
+  for (const account of ads.rows) if (account.status === "FAILED") issues.push({ title: dt("فشل آخر مزامنة: {0}", [account.label]), severity: "FAILED", href: `${base}/health`, action: dt("مراجعة") });
+  if (!ads.connectedCount) issues.push({ title: dt("لا توجد حسابات إعلانية مربوطة"), severity: "NEEDS_SETUP", href: `${base}/health`, action: dt("ربط") });
+  if (comm.whatsapp.status !== "READY") issues.push({ title: dt("إعداد واتساب غير مكتمل"), severity: comm.whatsapp.status, href: `${base}/communication`, action: dt("إعداد") });
+  if (comm.whatsapp.sendersMissingNumber > 0) issues.push({ title: dt("يوجد مُرسِل واتساب بلا رقم مُعرّف"), severity: "NEEDS_SETUP", href: `${base}/communication`, action: dt("مراجعة") });
+  if (!webhooks.signatureConfigured) issues.push({ title: dt("توقيع Webhook غير مفعّل"), severity: webhooks.status, href: `${base}/communication`, action: dt("تأمين") });
+  if (comm.sms.status !== "READY") issues.push({ title: dt("إعداد SMS غير مكتمل"), severity: comm.sms.status, href: `${base}/communication`, action: dt("تفاصيل") });
   return { tracking, ads, comm, webhooks, issues: issues.slice(0, 6) };
 }

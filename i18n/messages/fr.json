@@ -3493,5 +3493,14 @@
     "title": "Faites de votre don une charité qui ne s'arrête jamais",
     "toastCta": "Compléter la donation",
     "toastTitle": "Ajouté à votre panier ✓"
+  },
+  "CategoryLanding": {
+    "heroLead": "Les projets de la {org} : {name}.",
+    "ctaLabel": "Parcourir les projets",
+    "projectsTitle": "Projets : {name}",
+    "donateTitle": "Soutenir : {name}",
+    "achievementsTitle": "Nos réalisations : {name}",
+    "statDoneLabel": "Réalisé",
+    "statGoalLabel": "Objectif"
   }
 }

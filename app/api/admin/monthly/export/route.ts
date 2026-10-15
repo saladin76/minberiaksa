@@ -35,10 +35,13 @@ import {
   parseFrequencyParam,
   subscriptionFrequencyWhere,
 } from "@/lib/dashboard/recurring-frequency-filter";
+import { DASH_LOCALE_COOKIE, dt, parseDashLocale, setDashLocale } from "@/lib/dashboard/i18n";
 
-const FREQUENCY_LABEL_AR = { DAILY: "يومي", FRIDAY: "أسبوعياً", MONTHLY: "شهري" } as const;
+const FREQUENCY_LABEL_AR = { get DAILY() { return dt("يومي"); }, get FRIDAY() { return dt("أسبوعياً"); }, get MONTHLY() { return dt("شهري"); } } as const;
 
 export async function GET(request: NextRequest) {
+  // Sheet names, headers and labels in the dashboard's interface language.
+  setDashLocale(parseDashLocale(request.cookies.get(DASH_LOCALE_COOKIE)?.value));
   try {
     const session = await getServerSession(authOptions);
     const denied = requireAdminOrDashboardPermission(session, "monthly");
@@ -223,26 +226,26 @@ export async function GET(request: NextRequest) {
 
     const filters: ExportFilterDescriptor[] = [];
     filters.push({
-      label: "الفترة",
-      value: startParam || endParam ? `${startParam ?? "—"} → ${endParam ?? "—"}` : "كل الوقت",
+      label: dt("الفترة"),
+      value: startParam || endParam ? `${startParam ?? "—"} → ${endParam ?? "—"}` : dt("كل الوقت"),
     });
-    if (categoryId && categoryId !== "all") filters.push({ label: "القسم", value: categoryId });
-    if (campaignId && campaignId !== "all") filters.push({ label: "الحملة", value: campaignId });
-    if (userId && userId !== "all") filters.push({ label: "المتبرع", value: userId });
-    if (status && status !== "all") filters.push({ label: "حالة التبرع", value: status });
-    if (subStatusRaw && subStatusRaw !== "ALL") filters.push({ label: "حالة الاشتراك", value: subStatusRaw });
-    filters.push({ label: "الدورية", value: frequency ? FREQUENCY_LABEL_AR[frequency] : "كل الدوريات" });
-    if (locale && locale !== "all") filters.push({ label: "اللغة", value: locale });
-    if (country && country !== "all") filters.push({ label: "الدولة", value: country });
-    filters.push({ label: "عدد التبرعات", value: String(donationRows.length) });
-    filters.push({ label: "عدد الاشتراكات", value: String(subRows.length) });
+    if (categoryId && categoryId !== "all") filters.push({ label: dt("القسم"), value: categoryId });
+    if (campaignId && campaignId !== "all") filters.push({ label: dt("الحملة"), value: campaignId });
+    if (userId && userId !== "all") filters.push({ label: dt("المتبرع"), value: userId });
+    if (status && status !== "all") filters.push({ label: dt("حالة التبرع"), value: status });
+    if (subStatusRaw && subStatusRaw !== "ALL") filters.push({ label: dt("حالة الاشتراك"), value: subStatusRaw });
+    filters.push({ label: dt("الدورية"), value: frequency ? FREQUENCY_LABEL_AR[frequency] : dt("كل الدوريات") });
+    if (locale && locale !== "all") filters.push({ label: dt("اللغة"), value: locale });
+    if (country && country !== "all") filters.push({ label: dt("الدولة"), value: country });
+    filters.push({ label: dt("عدد التبرعات"), value: String(donationRows.length) });
+    filters.push({ label: dt("عدد الاشتراكات"), value: String(subRows.length) });
 
     const out = await buildDonationExport({
       format,
-      title: "تقرير التبرعات المتكررة",
+      title: dt("تقرير التبرعات المتكررة"),
       subtitle: startParam || endParam
-        ? `الفترة: ${startParam ?? "—"} → ${endParam ?? "—"}`
-        : "الفترة: كل الوقت",
+        ? dt("الفترة: {0} → {1}", [startParam ?? "—", endParam ?? "—"])
+        : dt("الفترة: كل الوقت"),
       filters,
       donations: exportDonations,
       subscriptions: exportSubscriptions,

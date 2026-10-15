@@ -13,6 +13,7 @@ import {
   type DocumentFormValues,
   type DocumentSectionCopy,
 } from './DocumentForm';
+import { dt, dtx } from "@/lib/dashboard/i18n";
 
 /** Shared edit screen for the two document sections, reports and booklets. */
 export function DocumentEditPage({ id, copy }: { id: string; copy: DocumentSectionCopy }) {
@@ -42,7 +43,7 @@ export function DocumentEditPage({ id, copy }: { id: string; copy: DocumentSecti
       .catch((e) => {
         if (!live) return;
         setMissing(true);
-        toast.error(errorMessage(e, `تعذّر تحميل ${copy.singular}`));
+        toast.error(errorMessage(e, dt("تعذّر تحميل {0}", [copy.singular])));
       });
     return () => {
       live = false;
@@ -50,7 +51,7 @@ export function DocumentEditPage({ id, copy }: { id: string; copy: DocumentSecti
   }, [id, copy.endpoint, copy.singular]);
 
   if (missing) {
-    return <p className="py-24 text-center text-sm text-slate-500">{copy.singular} غير موجود.</p>;
+    return <p className="py-24 text-center text-sm text-slate-500">{dtx("{0} غير موجود.", [copy.singular])}</p>;
   }
 
   if (!initial) {

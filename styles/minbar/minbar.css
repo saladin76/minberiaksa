@@ -5626,3 +5626,53 @@ html[data-mia-form="1"] .mia-scope .cg-launch-wrap { display: none !important; }
 @media (max-width: 560px) {
   .mia-scope #pay-donor-fields { grid-template-columns: minmax(0, 1fr) !important; }
 }
+
+/* Category landing page (`/{locale}/category/{slug}`) at every width — the
+ * same breakpoints as the projects catalogue: three cards on desktop, two on
+ * a tablet, one on a phone. The section ids are shared with the host pages
+ * that fold a category in (mosque, zakat), so those get the same reflow. */
+@media (max-width: 1100px) {
+  .mia-scope #cat-projects-grid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+  .mia-scope #cat-values { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)) !important; }
+}
+@media (max-width: 900px) {
+  .mia-scope .cat-page { min-width: 0; width: 100%; max-width: 100%; overflow-x: clip; }
+  .mia-scope .cat-page .cat-hero {
+    grid-template-columns: minmax(0, 1fr) !important;
+    padding: 112px 16px 44px !important;
+    gap: 22px !important;
+  }
+  .mia-scope .cat-page .cat-hero-box { max-width: 100% !important; justify-self: stretch !important; padding: 20px 18px !important; }
+  .mia-scope .cat-page .cat-hero-box p { font-size: 15px !important; line-height: 1.85 !important; }
+  .mia-scope .cat-page #category-projects,
+  .mia-scope .cat-page #category-donate { padding-block: 28px 36px !important; }
+  .mia-scope .cat-page section > div { padding-inline: 16px !important; }
+  .mia-scope #cat-projects-grid { gap: 14px !important; min-width: 0; }
+  .mia-scope #cat-projects-grid > * { min-width: 0; max-width: 100%; }
+  .mia-scope #cat-cards { grid-template-columns: minmax(0, 1fr) !important; gap: 12px !important; }
+  .mia-scope #cat-amounts { grid-template-columns: repeat(4, minmax(0, 1fr)) !important; }
+  .mia-scope #cat-donate-box { padding: 20px 18px !important; }
+}
+@media (max-width: 640px) {
+  .mia-scope .cat-page .cat-hero { padding: 96px 12px 28px !important; }
+  .mia-scope .cat-page .cat-hero-box h1 { font-size: clamp(24px, 7vw, 30px) !important; }
+  .mia-scope .cat-page .cat-hero-box > div { width: 100%; }
+  .mia-scope .cat-page .cat-hero-box > div > a { flex: 1 1 0; justify-content: center; min-width: 0; height: 48px !important; padding: 0 14px !important; }
+  .mia-scope #cat-projects-grid { grid-template-columns: minmax(0, 1fr) !important; gap: 12px !important; }
+  .mia-scope #cat-projects-grid .pdc-card { width: 100%; min-width: 0; margin: 0 !important; transform: none; }
+  .mia-scope #cat-projects-grid .pdc-card .pdc-body b { overflow-wrap: anywhere; }
+  .mia-scope #cat-values { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; gap: 8px !important; }
+  .mia-scope #cat-values > .cat-value { min-height: 64px !important; padding: 10px 8px !important; }
+  /* Frequencies scroll sideways instead of overflowing the box. */
+  .mia-scope #cat-freqs { width: 100% !important; overflow-x: auto; scrollbar-width: none; }
+  .mia-scope #cat-freqs::-webkit-scrollbar { display: none; }
+  .mia-scope #cat-freqs > button { flex: 1 0 auto; }
+  .mia-scope #cat-amounts { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; }
+  .mia-scope #cat-amounts > input { grid-column: 1 / -1; height: 44px !important; }
+  .mia-scope #cat-amounts > button { height: 42px !important; padding: 0 6px !important; }
+  /* Total on its own row, then the two buttons sharing the width. */
+  .mia-scope #cat-donate-actions { flex-direction: column; align-items: stretch !important; }
+  .mia-scope #cat-donate-actions > b { text-align: center; }
+  .mia-scope #cat-donate-actions > div > * { flex: 1 1 0; justify-content: center; min-width: 0; }
+  .mia-scope .cat-page .cat-stats { gap: 10px !important; }
+}

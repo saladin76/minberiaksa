@@ -19,10 +19,11 @@ import {
   type TranslationMap,
 } from '../../_components/ContentTranslationTabs';
 import { StorySlidesEditor, type SlideRow } from './StorySlidesEditor';
+import { dt, dtx } from "@/lib/dashboard/i18n";
 
 /** Stories translate their title only. */
 export const STORY_TRANSLATION_FIELDS: readonly TranslationField[] = [
-  { name: 'title', label: 'العنوان' },
+  { name: 'title', get label() { return dt("العنوان"); } },
 ];
 
 export interface StoryFormValues {
@@ -97,7 +98,7 @@ export function StoryForm({
       const res = await axios.post('/api/upload', fd);
       set('image', res.data.url);
     } catch (err) {
-      toast.error(errorMessage(err, 'تعذّر رفع الصورة'));
+      toast.error(errorMessage(err, dt("تعذّر رفع الصورة")));
     } finally {
       setUploading(false);
       e.target.value = '';
@@ -106,10 +107,10 @@ export function StoryForm({
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!values.title.trim()) return toast.error('العنوان بالعربية مطلوب');
-    if (!values.slug.trim()) return toast.error('المعرّف (slug) مطلوب');
-    if (!values.image.trim()) return toast.error('صورة الغلاف مطلوبة');
-    if (!values.slides.some((sl) => sl.mediaUrl.trim())) return toast.error('أضف شريحة واحدة على الأقل');
+    if (!values.title.trim()) return toast.error(dt("العنوان بالعربية مطلوب"));
+    if (!values.slug.trim()) return toast.error(dt("المعرّف (slug) مطلوب"));
+    if (!values.image.trim()) return toast.error(dt("صورة الغلاف مطلوبة"));
+    if (!values.slides.some((sl) => sl.mediaUrl.trim())) return toast.error(dt("أضف شريحة واحدة على الأقل"));
 
     setSaving(true);
     try {
@@ -141,15 +142,15 @@ export function StoryForm({
 
       if (mode === 'create') {
         await axios.post('/api/stories', payload);
-        toast.success('تم إنشاء القصة');
+        toast.success(dt("تم إنشاء القصة"));
       } else {
         await axios.put(`/api/stories/${storyId}`, payload);
-        toast.success('تم حفظ القصة');
+        toast.success(dt("تم حفظ القصة"));
       }
       router.push('/dashboard/stories');
       router.refresh();
     } catch (err) {
-      toast.error(errorMessage(err, mode === 'create' ? 'فشل في الإنشاء' : 'فشل في الحفظ'));
+      toast.error(errorMessage(err, mode === 'create' ? dt("فشل في الإنشاء") : dt("فشل في الحفظ")));
     } finally {
       setSaving(false);
     }
@@ -161,26 +162,25 @@ export function StoryForm({
     <form onSubmit={onSubmit} className="space-y-4">
       <div className="flex items-center gap-3">
         <Button type="button" variant="ghost" size="sm" onClick={() => router.push('/dashboard/stories')}>
-          <ArrowRight className="w-4 h-4 ml-1" />
-          رجوع
-        </Button>
-        <h1 className="text-lg font-bold">{mode === 'create' ? 'قصة جديدة' : 'تعديل القصة'}</h1>
+          <ArrowRight className="w-4 h-4 me-1" />
+          {dt("رجوع")}</Button>
+        <h1 className="text-lg font-bold">{mode === 'create' ? dt("قصة جديدة") : dt("تعديل القصة")}</h1>
       </div>
 
       <Card className="p-4 space-y-4">
         <div className="grid gap-4 md:grid-cols-2">
           <label className="space-y-1.5">
-            <span className="text-xs font-semibold text-slate-600">العنوان (بالعربية) *</span>
+            <span className="text-xs font-semibold text-slate-600">{dt("العنوان (بالعربية) *")}</span>
             <Input value={values.title} onChange={(e) => set('title', e.target.value)} />
           </label>
           <label className="space-y-1.5">
-            <span className="text-xs font-semibold text-slate-600">المعرّف (slug) *</span>
+            <span className="text-xs font-semibold text-slate-600">{dt("المعرّف (slug) *")}</span>
             <Input dir="ltr" value={values.slug} onChange={(e) => set('slug', e.target.value)} />
           </label>
         </div>
 
         <div className="space-y-1.5">
-          <span className="text-xs font-semibold text-slate-600">صورة الغلاف (الدائرة في الشريط) *</span>
+          <span className="text-xs font-semibold text-slate-600">{dt("صورة الغلاف (الدائرة في الشريط) *")}</span>
           {values.image ? (
             <div className="relative w-40">
               {/* Sources include Google Drive thumbnails, which next/image would
@@ -190,7 +190,7 @@ export function StoryForm({
               <button
                 type="button"
                 onClick={() => set('image', '')}
-                className="absolute top-1 right-1 p-1 bg-red-500 text-white rounded"
+                className="absolute top-1 start-1 p-1 bg-red-500 text-white rounded"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -198,7 +198,7 @@ export function StoryForm({
           ) : (
             <label className="flex items-center gap-2 w-fit px-3 py-2 border rounded-lg cursor-pointer hover:bg-slate-50">
               {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
-              <span className="text-sm">رفع صورة</span>
+              <span className="text-sm">{dt("رفع صورة")}</span>
               <input type="file" accept="image/*" className="hidden" onChange={uploadImage} />
             </label>
           )}
@@ -206,7 +206,7 @@ export function StoryForm({
 
         <div className="grid gap-4 md:grid-cols-2">
           <label className="space-y-1.5">
-            <span className="text-xs font-semibold text-slate-600">يبدأ في</span>
+            <span className="text-xs font-semibold text-slate-600">{dt("يبدأ في")}</span>
             <Input
               type="datetime-local"
               value={toLocalInput(values.startsAt)}
@@ -214,7 +214,7 @@ export function StoryForm({
             />
           </label>
           <label className="space-y-1.5">
-            <span className="text-xs font-semibold text-slate-600">ينتهي في</span>
+            <span className="text-xs font-semibold text-slate-600">{dt("ينتهي في")}</span>
             <Input
               type="datetime-local"
               disabled={unlimited}
@@ -227,33 +227,31 @@ export function StoryForm({
         <div className="flex flex-wrap items-center gap-6">
           <label className="flex items-center gap-2">
             <Switch checked={unlimited} onCheckedChange={setUnlimited} />
-            <span className="text-sm">مدة غير محدودة</span>
+            <span className="text-sm">{dt("مدة غير محدودة")}</span>
             <span className="text-xs text-slate-500">
-              (الافتراضي عند الإنشاء: ٢٤ ساعة)
-            </span>
+              {dt("(الافتراضي عند الإنشاء: ٢٤ ساعة)")}</span>
           </label>
           <label className="flex items-center gap-2">
             <Switch checked={values.isActive} onCheckedChange={(v) => set('isActive', v)} />
-            <span className="text-sm">مفعّلة</span>
+            <span className="text-sm">{dt("مفعّلة")}</span>
           </label>
         </div>
       </Card>
 
       <Card className="p-4 space-y-3">
         <div className="flex items-center justify-between">
-          <h2 className="text-sm font-bold">الشرائح</h2>
-          <span className="text-xs text-slate-500">{values.slides.length} شريحة</span>
+          <h2 className="text-sm font-bold">{dt("الشرائح")}</h2>
+          <span className="text-xs text-slate-500">{dtx("{0} شريحة", [values.slides.length])}</span>
         </div>
         <p className="text-xs text-slate-500">
-          ما يراه الزائر بعد الضغط على الدائرة، شريحة بعد شريحة كما في إنستغرام. لكل شريحة صورة أو فيديو ونص وزر اختياريان.
-        </p>
+          {dt("ما يراه الزائر بعد الضغط على الدائرة، شريحة بعد شريحة كما في إنستغرام. لكل شريحة صورة أو فيديو ونص وزر اختياريان.")}</p>
         <StorySlidesEditor rows={values.slides} onChange={(next) => set('slides', next)} />
       </Card>
 
       <Card className="p-4 space-y-3">
         <div className="flex items-center justify-between">
-          <h2 className="text-sm font-bold">ترجمات العنوان</h2>
-          <span className="text-xs text-slate-500">{translated} لغة مترجمة</span>
+          <h2 className="text-sm font-bold">{dt("ترجمات العنوان")}</h2>
+          <span className="text-xs text-slate-500">{dtx("{0} لغة مترجمة", [translated])}</span>
         </div>
         <ContentTranslationTabs
           fields={STORY_TRANSLATION_FIELDS}
@@ -267,12 +265,11 @@ export function StoryForm({
 
       <div className="flex gap-2">
         <Button type="submit" disabled={saving}>
-          {saving && <Loader2 className="w-4 h-4 animate-spin ml-2" />}
-          {mode === 'create' ? 'إنشاء' : 'حفظ'}
+          {saving && <Loader2 className="w-4 h-4 animate-spin me-2" />}
+          {mode === 'create' ? dt("إنشاء") : dt("حفظ")}
         </Button>
         <Button type="button" variant="outline" onClick={() => router.push('/dashboard/stories')}>
-          إلغاء
-        </Button>
+          {dt("إلغاء")}</Button>
       </div>
     </form>
   );

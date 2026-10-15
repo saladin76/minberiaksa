@@ -5,16 +5,17 @@ import { useEffect, useMemo, useState } from "react";
 import { Loader2, RotateCcw, Save, Settings2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DEFAULT_ARCHIVE_PROJECT_OPTIONS, saveArchiveProjectOptions, useArchiveProjectOptions, type ArchiveProjectOptions } from "./archiveProjectOptions";
+import { dashDir, dt } from "@/lib/dashboard/i18n";
 
 type OptionKey = keyof ArchiveProjectOptions;
 type Feedback = { tone: "success" | "error"; message: string } | null;
 
 const fields: { key: OptionKey; title: string; hint: string }[] = [
-  { key: "years", title: "السنوات", hint: "كل سنة في سطر منفصل." },
-  { key: "countries", title: "البلاد", hint: "البلاد المتاحة عند إضافة مشروع." },
-  { key: "cities", title: "المدن", hint: "المدن أو المناطق المستخدمة كثيرًا." },
-  { key: "themes", title: "التصنيفات", hint: "مثل مياه، طرود، كفالات، زكاة." },
-  { key: "projectTypes", title: "أنواع المشاريع", hint: "مثل إغاثة طارئة أو مشروع موسمي." },
+  { key: "years", get title() { return dt("السنوات"); }, get hint() { return dt("كل سنة في سطر منفصل."); } },
+  { key: "countries", get title() { return dt("البلاد"); }, get hint() { return dt("البلاد المتاحة عند إضافة مشروع."); } },
+  { key: "cities", get title() { return dt("المدن"); }, get hint() { return dt("المدن أو المناطق المستخدمة كثيرًا."); } },
+  { key: "themes", get title() { return dt("التصنيفات"); }, get hint() { return dt("مثل مياه، طرود، كفالات، زكاة."); } },
+  { key: "projectTypes", get title() { return dt("أنواع المشاريع"); }, get hint() { return dt("مثل إغاثة طارئة أو مشروع موسمي."); } },
 ];
 
 export function ArchiveProjectOptionsSettings() {
@@ -36,9 +37,9 @@ export function ArchiveProjectOptionsSettings() {
     try {
       const saved = await saveArchiveProjectOptions(draft);
       setDraft(saved);
-      setFeedback({ tone: "success", message: "تم حفظ إعدادات خيارات المشاريع." });
+      setFeedback({ tone: "success", message: dt("تم حفظ إعدادات خيارات المشاريع.") });
     } catch (error) {
-      setFeedback({ tone: "error", message: error instanceof Error ? error.message : "تعذر حفظ الإعدادات" });
+      setFeedback({ tone: "error", message: error instanceof Error ? error.message : dt("تعذر حفظ الإعدادات") });
     } finally {
       setSaving(false);
     }
@@ -50,27 +51,23 @@ export function ArchiveProjectOptionsSettings() {
   }
 
   return (
-    <main className="min-h-screen bg-[#FFFDF8] p-4 text-slate-950 sm:p-6" dir="rtl">
+    <main className="min-h-screen bg-[#FFFDF8] p-4 text-slate-950 sm:p-6" dir={dashDir()}>
       <section className="rounded-2xl border bg-white p-5 shadow-sm">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div>
-            <p className="text-xs font-black text-brand">الأرشيف</p>
-            <h1 className="mt-2 text-xl sm:text-2xl font-bold tracking-tight">إعدادات خيارات المشاريع</h1>
+            <p className="text-xs font-black text-brand">{dt("الأرشيف")}</p>
+            <h1 className="mt-2 text-xl sm:text-2xl font-bold tracking-tight">{dt("إعدادات خيارات المشاريع")}</h1>
             <p className="mt-2 max-w-3xl text-sm leading-7 text-slate-600">
-              هنا يتم تنظيم القوائم التي تظهر عند إضافة أو تعديل مشروع داخل الأرشيف، مثل السنوات والمدن والتصنيفات.
-            </p>
+              {dt("هنا يتم تنظيم القوائم التي تظهر عند إضافة أو تعديل مشروع داخل الأرشيف، مثل السنوات والمدن والتصنيفات.")}</p>
           </div>
           <div className="flex flex-wrap gap-2">
             <Link href="/dashboard/archive" className="inline-flex h-9 items-center rounded-md border bg-white px-3 text-sm font-bold text-slate-800 hover:border-brand hover:text-brand">
-              الرجوع للأرشيف
-            </Link>
+              {dt("الرجوع للأرشيف")}</Link>
             <Button type="button" variant="outline" onClick={reset} disabled={saving} className="h-9 gap-2 font-bold">
-              <RotateCcw className="h-4 w-4" /> استرجاع الافتراضي
-            </Button>
+              <RotateCcw className="h-4 w-4" /> {dt(" استرجاع الافتراضي")}</Button>
             <Button type="button" onClick={save} disabled={saving} className="h-9 gap-2 font-bold">
               {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-              حفظ الإعدادات
-            </Button>
+              {dt("حفظ الإعدادات")}</Button>
           </div>
         </div>
       </section>

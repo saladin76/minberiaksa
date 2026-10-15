@@ -13,6 +13,7 @@ import {
   emptyPlaylist,
   type PlaylistFormValues,
 } from '../../_components/PlaylistForm';
+import { dt } from "@/lib/dashboard/i18n";
 
 type ApiVideo = {
   id: string; youtubeId: string; url: string; thumbnail: string | null;
@@ -55,7 +56,7 @@ export default function EditPlaylistPage({ params }: { params: Promise<{ id: str
       .catch((e) => {
         if (!live) return;
         setMissing(true);
-        toast.error(errorMessage(e, 'تعذّر تحميل قائمة التشغيل'));
+        toast.error(errorMessage(e, dt("تعذّر تحميل قائمة التشغيل")));
       });
     return () => {
       live = false;
@@ -63,7 +64,7 @@ export default function EditPlaylistPage({ params }: { params: Promise<{ id: str
   }, [id]);
 
   if (missing) {
-    return <p className="py-24 text-center text-sm text-slate-500">قائمة التشغيل غير موجودة.</p>;
+    return <p className="py-24 text-center text-sm text-slate-500">{dt("قائمة التشغيل غير موجودة.")}</p>;
   }
 
   if (!initial) {

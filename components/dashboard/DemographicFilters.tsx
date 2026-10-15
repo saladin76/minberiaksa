@@ -4,6 +4,7 @@ import * as React from "react";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { GENDER_LABEL_AR, type NormalizedGender } from "@/lib/dashboard/user-demographics";
 import { cn } from "@/lib/utils";
+import { dt } from "@/lib/dashboard/i18n";
 
 /**
  * Gender + age-range filters, shared by المتبرعون and the campaign audience
@@ -18,12 +19,12 @@ import { cn } from "@/lib/utils";
 export type AgeBracket = "all" | "u25" | "25-34" | "35-44" | "45-54" | "55p";
 
 export const AGE_BRACKETS: { value: AgeBracket; label: string; min: number | null; max: number | null }[] = [
-  { value: "all", label: "كل الأعمار", min: null, max: null },
-  { value: "u25", label: "أقل من ٢٥", min: null, max: 24 },
-  { value: "25-34", label: "٢٥ – ٣٤", min: 25, max: 34 },
-  { value: "35-44", label: "٣٥ – ٤٤", min: 35, max: 44 },
-  { value: "45-54", label: "٤٥ – ٥٤", min: 45, max: 54 },
-  { value: "55p", label: "٥٥ فأكثر", min: 55, max: null },
+  { value: "all", get label() { return dt("كل الأعمار"); }, min: null, max: null },
+  { value: "u25", get label() { return dt("أقل من ٢٥"); }, min: null, max: 24 },
+  { value: "25-34", get label() { return dt("٢٥ – ٣٤"); }, min: 25, max: 34 },
+  { value: "35-44", get label() { return dt("٣٥ – ٤٤"); }, min: 35, max: 44 },
+  { value: "45-54", get label() { return dt("٤٥ – ٥٤"); }, min: 45, max: 54 },
+  { value: "55p", get label() { return dt("٥٥ فأكثر"); }, min: 55, max: null },
 ];
 
 const BRACKET_BY_VALUE = new Map(AGE_BRACKETS.map((b) => [b.value, b]));
@@ -53,7 +54,7 @@ export function ageBracketBody(value: AgeBracket): { minAge?: number; maxAge?: n
 export type GenderFilterValue = "all" | NormalizedGender;
 
 export function genderFilterLabel(value: GenderFilterValue): string {
-  return value === "all" ? "كل الأنواع" : GENDER_LABEL_AR[value];
+  return value === "all" ? dt("كل الأنواع") : GENDER_LABEL_AR[value];
 }
 
 export function GenderFilterSelect({
@@ -67,11 +68,11 @@ export function GenderFilterSelect({
 }) {
   return (
     <Select value={value} onValueChange={(v) => onChange(v as GenderFilterValue)}>
-      <SelectTrigger aria-label="تصفية بالجنس" className={cn(className)}>
+      <SelectTrigger aria-label={dt("تصفية بالجنس")} className={cn(className)}>
         <SelectValue />
       </SelectTrigger>
       <SelectContent>
-        <SelectItem value="all" className="text-xs">كل الأنواع</SelectItem>
+        <SelectItem value="all" className="text-xs">{dt("كل الأنواع")}</SelectItem>
         <SelectItem value="male" className="text-xs">{GENDER_LABEL_AR.male}</SelectItem>
         <SelectItem value="female" className="text-xs">{GENDER_LABEL_AR.female}</SelectItem>
         <SelectItem value="undisclosed" className="text-xs">{GENDER_LABEL_AR.undisclosed}</SelectItem>
@@ -91,7 +92,7 @@ export function AgeFilterSelect({
 }) {
   return (
     <Select value={value} onValueChange={(v) => onChange(v as AgeBracket)}>
-      <SelectTrigger aria-label="تصفية بالعمر" className={cn(className)}>
+      <SelectTrigger aria-label={dt("تصفية بالعمر")} className={cn(className)}>
         <SelectValue />
       </SelectTrigger>
       <SelectContent>

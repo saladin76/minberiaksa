@@ -17,7 +17,13 @@ import {
   generateUniqueLocaleSlug,
   normalizeUserSlug,
 } from "@/lib/slug";
-import { CATEGORY_ACTIVE_OR_UNSET } from "@/lib/campaign/soft-delete-filter";
+import { CATEGORY_ACTIVE_OR_UNSET, NOT_SOFT_DELETED } from "@/lib/campaign/soft-delete-filter";
+
+/* Campaigns a category count reflects: neither soft-deleted nor archived
+   (isActive false). */
+const LIVE_CAMPAIGN = {
+  AND: [NOT_SOFT_DELETED, { isActive: true }],
+};
 
 // GET: supports locale-aware translations, search, cursor pagination, optional counts, and sorting
 export async function GET(request: NextRequest) {
@@ -65,7 +71,7 @@ export async function GET(request: NextRequest) {
           select: { locale: true, name: true, description: true, slug: true }
         },
         ...(includeCounts
-          ? { _count: { select: { campaigns: activeCounts ? { where: { isActive: true } } : true } } }
+          ? { _count: { select: { campaigns: { where: LIVE_CAMPAIGN } } } }
           : {})
       }
     });

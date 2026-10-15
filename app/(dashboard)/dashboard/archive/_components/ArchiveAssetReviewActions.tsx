@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { CheckCircle2, ClipboardCheck, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { dt, dtx } from "@/lib/dashboard/i18n";
 
 type ActionKey = "marketing" | "documentation" | "reject";
 
@@ -57,7 +58,7 @@ export function ArchiveAssetReviewActions({
     setPendingAction(null);
 
     if (!response.ok || !result?.ok) {
-      setFeedback({ tone: "error", message: result?.error || result?.message || "تعذر حفظ المراجعة" });
+      setFeedback({ tone: "error", message: result?.error || result?.message || dt("تعذر حفظ المراجعة") });
       return;
     }
 
@@ -66,8 +67,8 @@ export function ArchiveAssetReviewActions({
   }
 
   const marketingConfirm = hasSafetyFlag
-    ? `هذه المادة تحتاج مراجعة دقيقة: ${fileName}. هل تريد اعتمادها للتسويق؟`
-    : `اعتماد هذه المادة للتسويق: ${fileName}؟`;
+    ? dt("هذه المادة تحتاج مراجعة دقيقة: {0}. هل تريد اعتمادها للتسويق؟", [fileName])
+    : dt("اعتماد هذه المادة للتسويق: {0}؟", [fileName]);
 
   return (
     <div className="rounded-md border bg-white p-3">
@@ -77,34 +78,34 @@ export function ArchiveAssetReviewActions({
           size="sm"
           variant="outline"
           disabled={Boolean(pendingAction) || marketingApproved || humanReviewStatus === "REJECTED"}
-          onClick={() => submitReview({ key: "marketing", endpoint: "approve-marketing", successMessage: "تم اعتماد المادة للتسويق", confirmMessage: marketingConfirm })}
+          onClick={() => submitReview({ key: "marketing", endpoint: "approve-marketing", successMessage: dt("تم اعتماد المادة للتسويق"), confirmMessage: marketingConfirm })}
           className="gap-2 font-bold"
         >
-          <CheckCircle2 className="h-4 w-4" /> {pendingAction === "marketing" ? "جاري الاعتماد" : "اعتماد للتسويق"}
+          <CheckCircle2 className="h-4 w-4" /> {pendingAction === "marketing" ? dt("جاري الاعتماد") : dt("اعتماد للتسويق")}
         </Button>
         <Button
           type="button"
           size="sm"
           variant="outline"
           disabled={Boolean(pendingAction) || documentationApproved || humanReviewStatus === "REJECTED"}
-          onClick={() => submitReview({ key: "documentation", endpoint: "approve-documentation", successMessage: "تم اعتماد المادة للتوثيق" })}
+          onClick={() => submitReview({ key: "documentation", endpoint: "approve-documentation", successMessage: dt("تم اعتماد المادة للتوثيق") })}
           className="gap-2 font-bold"
         >
-          <ClipboardCheck className="h-4 w-4" /> {pendingAction === "documentation" ? "جاري الحفظ" : "اعتماد للتوثيق"}
+          <ClipboardCheck className="h-4 w-4" /> {pendingAction === "documentation" ? dt("جاري الحفظ") : dt("اعتماد للتوثيق")}
         </Button>
         <Button
           type="button"
           size="sm"
           variant="outline"
           disabled={Boolean(pendingAction) || humanReviewStatus === "REJECTED"}
-          onClick={() => submitReview({ key: "reject", endpoint: "reject", successMessage: "تم رفض المادة", confirmMessage: `رفض هذه المادة: ${fileName}؟` })}
+          onClick={() => submitReview({ key: "reject", endpoint: "reject", successMessage: dt("تم رفض المادة"), confirmMessage: dt("رفض هذه المادة: {0}؟", [fileName]) })}
           className="gap-2 border-rose-200 font-bold text-rose-700 hover:bg-rose-50 hover:text-rose-800"
         >
-          <XCircle className="h-4 w-4" /> {pendingAction === "reject" ? "جاري الرفض" : "رفض"}
+          <XCircle className="h-4 w-4" /> {pendingAction === "reject" ? dt("جاري الرفض") : dt("رفض")}
         </Button>
       </div>
-      <p className="mt-2 text-xs font-semibold text-slate-500">الحالة الحالية: {statusLabel(humanReviewStatus, marketingApproved, documentationApproved)}</p>
-      {hasSafetyFlag ? <p className="mt-2 rounded-md bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-700">هذه المادة تحتاج مراجعة بشرية دقيقة قبل استخدامها.</p> : null}
+      <p className="mt-2 text-xs font-semibold text-slate-500">{dtx("الحالة الحالية: {0}", [statusLabel(humanReviewStatus, marketingApproved, documentationApproved)])}</p>
+      {hasSafetyFlag ? <p className="mt-2 rounded-md bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-700">{dt("هذه المادة تحتاج مراجعة بشرية دقيقة قبل استخدامها.")}</p> : null}
       {feedback ? (
         <p className={`mt-2 rounded-md border px-3 py-2 text-xs font-semibold ${feedback.tone === "success" ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-rose-200 bg-rose-50 text-rose-700"}`}>
           {feedback.message}
@@ -115,9 +116,9 @@ export function ArchiveAssetReviewActions({
 }
 
 function statusLabel(status: Props["humanReviewStatus"], marketingApproved: boolean, documentationApproved: boolean) {
-  if (status === "REJECTED") return "مرفوض";
-  if (marketingApproved) return "معتمد للتسويق";
-  if (documentationApproved || status === "DOCUMENTATION_ONLY") return "معتمد للتوثيق فقط";
-  if (status === "APPROVED") return "تمت المراجعة";
-  return "بانتظار المراجعة";
+  if (status === "REJECTED") return dt("مرفوض");
+  if (marketingApproved) return dt("معتمد للتسويق");
+  if (documentationApproved || status === "DOCUMENTATION_ONLY") return dt("معتمد للتوثيق فقط");
+  if (status === "APPROVED") return dt("تمت المراجعة");
+  return dt("بانتظار المراجعة");
 }

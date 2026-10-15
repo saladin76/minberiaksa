@@ -3,6 +3,7 @@
 import { Sparkles } from "lucide-react";
 import { ConciergeShell } from "./_components/ConciergeShell";
 import { OverviewView } from "./_components/OverviewView";
+import { dt } from "@/lib/dashboard/i18n";
 
 /**
  * مساعد العطاء  performance: how many visitors use the donation concierge,
@@ -11,9 +12,9 @@ import { OverviewView } from "./_components/OverviewView";
 export default function AiConciergeOverviewPage() {
   return (
     <ConciergeShell
-      title="أداء مساعد العطاء"
+      title={dt("أداء مساعد العطاء")}
       icon={Sparkles}
-      description="كم زائرًا استخدم المساعد، إلى أين وصلوا، وكم تبرعًا جاء بفضله  مباشرة أو لاحقًا."
+      description={dt("كم زائرًا استخدم المساعد، إلى أين وصلوا، وكم تبرعًا جاء بفضله  مباشرة أو لاحقًا.")}
     >
       <OverviewView />
     </ConciergeShell>

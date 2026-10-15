@@ -3493,5 +3493,14 @@
     "yourDonation": "Donasi Anda",
     "fileTooLarge": "Ukuran file adalah {size}; batas maksimumnya {max}. Kompres foto atau ekspor sebagai PDF lalu coba lagi.",
     "uploadFailed": "Unggahan tidak berhasil. Periksa koneksi Anda lalu coba lagi."
+  },
+  "CategoryLanding": {
+    "heroLead": "Proyek {org} di {name}.",
+    "ctaLabel": "Lihat proyek",
+    "projectsTitle": "Proyek {name}",
+    "donateTitle": "Dukung {name}",
+    "achievementsTitle": "Pencapaian kami di {name}",
+    "statDoneLabel": "Selesai",
+    "statGoalLabel": "Target"
   }
 }

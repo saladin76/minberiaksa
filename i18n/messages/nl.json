@@ -2447,5 +2447,14 @@
     "givenSoFar": "Tot nu toe {count} {unit} gegeven",
     "chooseCount": "Kies het aantal {unit}",
     "customCountPh": "Ander aantal"
+  },
+  "CategoryLanding": {
+    "heroLead": "{org} – projecten: {name}.",
+    "ctaLabel": "Bekijk projecten",
+    "projectsTitle": "Projecten: {name}",
+    "donateTitle": "Steun {name}",
+    "achievementsTitle": "Onze resultaten: {name}",
+    "statDoneLabel": "Voltooid",
+    "statGoalLabel": "Doel"
   }
 }

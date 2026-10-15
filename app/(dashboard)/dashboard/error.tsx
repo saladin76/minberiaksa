@@ -3,6 +3,7 @@
 import { useEffect } from 'react';
 import Link from 'next/link';
 import { AlertTriangle, RotateCw, Home } from 'lucide-react';
+import { dt, dtx } from "@/lib/dashboard/i18n";
 
 /**
  * Route-level error boundary for the whole dashboard tree.
@@ -30,15 +31,13 @@ export default function DashboardError({
           <AlertTriangle className="w-6 h-6" />
         </span>
 
-        <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">تعذّر عرض هذه الصفحة</h1>
+        <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">{dt("تعذّر عرض هذه الصفحة")}</h1>
         <p className="mt-2 text-sm text-slate-500 leading-6">
-          حدث خطأ غير متوقع أثناء تحميل محتوى الصفحة. بقية لوحة التحكم تعمل بشكل طبيعي،
-          ويمكنك إعادة المحاولة أو الانتقال لصفحة أخرى.
-        </p>
+          {dt("حدث خطأ غير متوقع أثناء تحميل محتوى الصفحة. بقية لوحة التحكم تعمل بشكل طبيعي، ويمكنك إعادة المحاولة أو الانتقال لصفحة أخرى.")}</p>
 
         {error?.digest && (
           <p className="mt-3 text-[11px] text-slate-400 font-mono" dir="ltr">
-            رمز الخطأ: {error.digest}
+            {dtx("رمز الخطأ: {0}", [error.digest])}
           </p>
         )}
 
@@ -49,15 +48,13 @@ export default function DashboardError({
             className="inline-flex items-center gap-2 h-9 px-4 rounded-lg bg-brand text-white text-sm font-medium hover:bg-brand-dark transition-colors"
           >
             <RotateCw className="w-4 h-4" />
-            إعادة المحاولة
-          </button>
+            {dt("إعادة المحاولة")}</button>
           <Link
             href="/dashboard"
             className="inline-flex items-center gap-2 h-9 px-4 rounded-lg border border-slate-200 bg-white text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors"
           >
             <Home className="w-4 h-4" />
-            اللوحة الرئيسية
-          </Link>
+            {dt("اللوحة الرئيسية")}</Link>
         </div>
       </div>
     </div>

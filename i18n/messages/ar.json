@@ -3491,5 +3491,14 @@
     "otherAmount": "مبلغ آخر",
     "otherCount": "عدد آخر",
     "hadithMeaning": "«أحبُّ الأعمال إلى الله أدومُها وإن قلَّ.»"
+  },
+  "CategoryLanding": {
+    "heroLead": "مشاريع {org} في {name}.",
+    "ctaLabel": "تصفّح المشاريع",
+    "projectsTitle": "مشاريع {name}",
+    "donateTitle": "ساهم في {name}",
+    "achievementsTitle": "إنجازاتنا في {name}",
+    "statDoneLabel": "المنجز",
+    "statGoalLabel": "الهدف"
   }
 }

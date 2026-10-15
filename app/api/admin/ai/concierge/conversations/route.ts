@@ -7,6 +7,7 @@ import { parseConciergeRange } from "@/lib/ai/concierge/analytics";
 import { loadConciergeSettings } from "@/lib/ai/concierge/settings";
 import { conversationWhere, donationsBySession, parseConversationFilters } from "@/lib/ai/concierge/conversations";
 
+import { DASH_LOCALE_COOKIE, dt, parseDashLocale, setDashLocale } from "@/lib/dashboard/i18n";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
@@ -25,6 +26,8 @@ function csvCell(v: unknown): string {
 }
 
 export async function GET(request: NextRequest) {
+  // Column headers and labels in the dashboard's interface language.
+  setDashLocale(parseDashLocale(request.cookies.get(DASH_LOCALE_COOKIE)?.value));
   const session = await getServerSession(authOptions);
   const denied = requireAdminOrDashboardPermission(session, "aiConcierge");
   if (denied) return denied;
@@ -107,7 +110,7 @@ export async function GET(request: NextRequest) {
       const header = ["started_at", "last_message_at", "locale", "donor", "email", "first_page", "turns", "visitor_messages", "intents", "needs_human", "fallbacks", "donation", "donation_usd", "first_message", "transcript"];
       const lines = [header.join(",")];
       for (const [i, it] of items.entries()) {
-        const transcript = rows[i].turns.map((t) => `${t.role === "user" ? "زائر" : "المساعد"}: ${t.text}`).join(" | ");
+        const transcript = rows[i].turns.map((t) => dt("{0}: {1}", [t.role === "user" ? dt("زائر") : dt("المساعد"), t.text])).join(" | ");
         lines.push(
           [it.startedAt, it.lastMessageAt, it.locale, it.user?.name ?? "", it.user?.email ?? "", it.firstRoute ?? "", it.turnCount, it.userMessageCount, it.intents.join(" "), it.needsHuman ? "yes" : "", it.fallbackCount, it.donation?.kind ?? "", it.donation?.usd ?? "", it.preview ?? "", transcript]
             .map(csvCell)

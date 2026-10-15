@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { LOCALE_OPTIONS } from "@/lib/locales";
+import { dashDir, dt, dtx } from "@/lib/dashboard/i18n";
 
 type Currency = "USD" | "TRY" | "EUR" | string;
 type DonorLocale = string;
@@ -24,9 +25,9 @@ type PreviewResponse = { fileName: string; bankId: string | null; currency: Curr
 
 /** Where the importer read the money from  shown so a wrong column is caught before committing. */
 function amountColumnLabel(info: AmountColumnInfo | undefined) {
-  if (!info || info.source === "none") return { text: "لم يُحدَّد عمود المبلغ", tone: "bad" as const };
-  if (info.source === "detected") return { text: "عمود المبلغ: مُستنتَج من البيانات", tone: "warn" as const };
-  return { text: `عمود المبلغ: ${info.header ?? "—"}`, tone: "good" as const };
+  if (!info || info.source === "none") return { text: dt("لم يُحدَّد عمود المبلغ"), tone: "bad" as const };
+  if (info.source === "detected") return { text: dt("عمود المبلغ: مُستنتَج من البيانات"), tone: "warn" as const };
+  return { text: dt("عمود المبلغ: {0}", [info.header ?? "—"]), tone: "good" as const };
 }
 type ImportedTransaction = { id: string | null; bankId: string | null; bankIban: string | null; transactionDate: string | null; donorName: string | null; description: string; amount: number | null; currency: string; donorLocale: string; transferMethod: string; suggestedProject: string; finalProject?: string | null; campaignId?: string | null; donorContact?: string | null; donationId?: string | null; confidence: string; reference: string | null; status: TransactionStatus; reviewedByName?: string | null; approvedAt?: string | null; ignoredAt?: string | null; createdAt: string | null };
 type FormState = { nameAr: string; nameEn: string; nameTr: string; accountName: string; ibanLast4: string; currency: Currency };
@@ -38,16 +39,16 @@ type Filters = { q: string; status: string; bankId: string; currency: string; do
 
 const emptyForm: FormState = { nameAr: "", nameEn: "", nameTr: "", accountName: "", ibanLast4: "", currency: "USD" };
 const defaultFilters: Filters = { q: "", status: "all", bankId: "all", currency: "all", donorLocale: "all", dateFrom: "", dateTo: "", amountMin: "", amountMax: "", sortBy: "createdAt", sortDir: "desc", limit: "50" };
-const currencyLabels: Record<string, string> = { USD: "دولار USD", TRY: "ليرة تركية TRY", EUR: "يورو EUR" };
+const currencyLabels: Record<string, string> = { get USD() { return dt("دولار USD"); }, get TRY() { return dt("ليرة تركية TRY"); }, get EUR() { return dt("يورو EUR"); } };
 // All site languages, from the single locale source  this used to be a local
 // list of 8, so donors in the other 11 languages could not be recorded.
 const localeLabels: Record<string, string> = Object.fromEntries(LOCALE_OPTIONS.map((o) => [o.code, o.label]));
 
 function money(n?: number | null, c?: string) { return `${(n ?? 0).toLocaleString(undefined, { maximumFractionDigits: 2 })} ${c ?? ""}`; }
-function statusLabel(status: TransactionStatus) { if (status === "APPROVED" || status === "IMPORTED") return "معتمد"; if (status === "IGNORED") return "مستبعد"; if (status === "DELETED") return "محذوف"; return "تحتاج مراجعة"; }
+function statusLabel(status: TransactionStatus) { if (status === "APPROVED" || status === "IMPORTED") return dt("معتمد"); if (status === "IGNORED") return dt("مستبعد"); if (status === "DELETED") return dt("محذوف"); return dt("تحتاج مراجعة"); }
 function statusClass(status: TransactionStatus) { if (status === "APPROVED" || status === "IMPORTED") return "border-emerald-200 bg-emerald-50 text-emerald-700"; if (status === "IGNORED" || status === "DELETED") return "border-slate-200 bg-slate-50 text-slate-600"; return "border-amber-200 bg-amber-50 text-amber-700"; }
 function previewRowKey(row: PreviewRow) { return row.transactionHash ?? `${row.rowNumber}-${row.description}`; }
-function editFor(tx: ImportedTransaction): EditState { return { donorName: tx.donorName ?? "", donorLocale: tx.donorLocale || "ar", finalProject: tx.finalProject || tx.suggestedProject || "تبرع عام", campaignId: tx.campaignId ?? "", donorContact: tx.donorContact ?? "" }; }
+function editFor(tx: ImportedTransaction): EditState { return { donorName: tx.donorName ?? "", donorLocale: tx.donorLocale || "ar", finalProject: tx.finalProject || tx.suggestedProject || dt("تبرع عام"), campaignId: tx.campaignId ?? "", donorContact: tx.donorContact ?? "" }; }
 function apiError(e: unknown, fallback: string) { return axios.isAxiosError(e) && typeof e.response?.data?.error === "string" ? e.response.data.error : fallback; }
 
 export default function BankTransfersPage() {
@@ -109,15 +110,15 @@ export default function BankTransfersPage() {
   }
 
   function initEdits(rows: ImportedTransaction[]) { const next: Record<string, EditState> = {}; rows.forEach((tx) => { if (!tx.id) return; next[tx.id] = editFor(tx); }); setEdits(next); }
-  async function loadInitial() { setLoading(true); try { const banksRes = await axios.get<{ banks: Bank[]; supportedCurrencies: Currency[] }>("/api/admin/bank-transfers/banks"); setBanks(banksRes.data.banks ?? []); setSupportedCurrencies(banksRes.data.supportedCurrencies ?? ["USD", "TRY", "EUR"]); await loadTransactions(defaultFilters, 1); } catch { toast.error("فشل تحميل بيانات التحويلات البنكية"); } finally { setLoading(false); } }
-  async function loadTransactions(nextFilters = filters, nextPage = page) { setTransactionsLoading(true); try { const query = buildQuery(nextFilters, nextPage); const txRes = await axios.get<{ transactions: ImportedTransaction[]; page: number; totalPages: number; total: number }>(`/api/admin/bank-transfers/transactions?${query}`); const rows = txRes.data.transactions ?? []; setTransactions(rows); setPage(txRes.data.page ?? nextPage); setTotalPages(txRes.data.totalPages ?? 1); setTotal(txRes.data.total ?? rows.length); initEdits(rows); } catch { toast.error("فشل تحميل العمليات البنكية"); } finally { setTransactionsLoading(false); } }
+  async function loadInitial() { setLoading(true); try { const banksRes = await axios.get<{ banks: Bank[]; supportedCurrencies: Currency[] }>("/api/admin/bank-transfers/banks"); setBanks(banksRes.data.banks ?? []); setSupportedCurrencies(banksRes.data.supportedCurrencies ?? ["USD", "TRY", "EUR"]); await loadTransactions(defaultFilters, 1); } catch { toast.error(dt("فشل تحميل بيانات التحويلات البنكية")); } finally { setLoading(false); } }
+  async function loadTransactions(nextFilters = filters, nextPage = page) { setTransactionsLoading(true); try { const query = buildQuery(nextFilters, nextPage); const txRes = await axios.get<{ transactions: ImportedTransaction[]; page: number; totalPages: number; total: number }>(`/api/admin/bank-transfers/transactions?${query}`); const rows = txRes.data.transactions ?? []; setTransactions(rows); setPage(txRes.data.page ?? nextPage); setTotalPages(txRes.data.totalPages ?? 1); setTotal(txRes.data.total ?? rows.length); initEdits(rows); } catch { toast.error(dt("فشل تحميل العمليات البنكية")); } finally { setTransactionsLoading(false); } }
   async function refreshBanksOnly() { try { const res = await axios.get<{ banks: Bank[]; supportedCurrencies: Currency[] }>("/api/admin/bank-transfers/banks"); setBanks(res.data.banks ?? []); setSupportedCurrencies(res.data.supportedCurrencies ?? supportedCurrencies); } catch {} }
-  async function addBank() { if (!form.nameAr.trim()) return toast.error("اسم البنك بالعربية مطلوب"); setSaving(true); try { const res = await axios.post<{ banks: Bank[]; supportedCurrencies: Currency[] }>("/api/admin/bank-transfers/banks", { ...form, nameAr: form.nameAr.trim(), nameEn: form.nameEn.trim() || null, nameTr: form.nameTr.trim() || null, accountName: form.accountName.trim() || null, ibanLast4: form.ibanLast4.trim() || null }); setBanks(res.data.banks ?? []); setSupportedCurrencies(res.data.supportedCurrencies ?? supportedCurrencies); setForm(emptyForm); toast.success("تم إضافة البنك بنجاح"); } catch { toast.error("فشل إضافة البنك"); } finally { setSaving(false); } }
+  async function addBank() { if (!form.nameAr.trim()) return toast.error(dt("اسم البنك بالعربية مطلوب")); setSaving(true); try { const res = await axios.post<{ banks: Bank[]; supportedCurrencies: Currency[] }>("/api/admin/bank-transfers/banks", { ...form, nameAr: form.nameAr.trim(), nameEn: form.nameEn.trim() || null, nameTr: form.nameTr.trim() || null, accountName: form.accountName.trim() || null, ibanLast4: form.ibanLast4.trim() || null }); setBanks(res.data.banks ?? []); setSupportedCurrencies(res.data.supportedCurrencies ?? supportedCurrencies); setForm(emptyForm); toast.success(dt("تم إضافة البنك بنجاح")); } catch { toast.error(dt("فشل إضافة البنك")); } finally { setSaving(false); } }
   function onFileChange(event: ChangeEvent<HTMLInputElement>) { setStatementFile(event.target.files?.[0] ?? null); setPreview(null); setExcludedPreviewHashes(new Set()); }
   function buildFormData() { if (!statementFile || !selectedBank) return null; const fd = new FormData(); fd.append("file", statementFile); fd.append("bankId", selectedBank.id ?? selectedBank.code ?? ""); fd.append("currency", statementCurrency); fd.append("donorLocale", donorLocale); fd.append("excludedHashes", JSON.stringify([...excludedPreviewHashes])); return fd; }
-  async function parsePreview() { const fd = buildFormData(); if (!fd) return toast.error("اختر البنك والملف أولًا"); setParsing(true); try { const res = await axios.post<PreviewResponse>("/api/admin/bank-transfers/preview", fd); setPreview(res.data); setExcludedPreviewHashes(new Set()); if (res.data.warning) toast(res.data.warning); toast.success(`تمت قراءة ${res.data.rowCount} صف`); } catch (e) { toast.error(axios.isAxiosError(e) && typeof e.response?.data?.error === "string" ? e.response.data.error : "فشل قراءة الملف"); } finally { setParsing(false); } }
-  async function importStatement() { const fd = buildFormData(); if (!fd) return toast.error("اختر البنك والملف أولًا"); setImporting(true); try { const res = await axios.post<{ importedCount: number; duplicateCount: number; excludedCount?: number; warning: string | null }>("/api/admin/bank-transfers/import", fd); if (res.data.warning) toast(res.data.warning); toast.success(`تم إدخال ${res.data.importedCount} عملية للمراجعة، وتجاهل ${res.data.duplicateCount} مكررة، واستبعاد ${res.data.excludedCount ?? excludedPreviewHashes.size}`); setPreview(null); setExcludedPreviewHashes(new Set()); setStatementFile(null); await loadTransactions(filters, 1); await refreshBanksOnly(); } catch (e) { toast.error(axios.isAxiosError(e) && typeof e.response?.data?.error === "string" ? e.response.data.error : "فشل إدخال العمليات"); } finally { setImporting(false); } }
-  function removePreviewRow(row: PreviewRow) { if (!row.transactionHash) return toast.error("لا يمكن حذف هذا الصف من الاستيراد لأنه لا يملك بصمة عملية واضحة"); setExcludedPreviewHashes((prev) => new Set([...prev, row.transactionHash!])); toast.success("تم حذف الصف من المعاينة"); }
+  async function parsePreview() { const fd = buildFormData(); if (!fd) return toast.error(dt("اختر البنك والملف أولًا")); setParsing(true); try { const res = await axios.post<PreviewResponse>("/api/admin/bank-transfers/preview", fd); setPreview(res.data); setExcludedPreviewHashes(new Set()); if (res.data.warning) toast(res.data.warning); toast.success(dt("تمت قراءة {0} صف", [res.data.rowCount])); } catch (e) { toast.error(axios.isAxiosError(e) && typeof e.response?.data?.error === "string" ? e.response.data.error : dt("فشل قراءة الملف")); } finally { setParsing(false); } }
+  async function importStatement() { const fd = buildFormData(); if (!fd) return toast.error(dt("اختر البنك والملف أولًا")); setImporting(true); try { const res = await axios.post<{ importedCount: number; duplicateCount: number; excludedCount?: number; warning: string | null }>("/api/admin/bank-transfers/import", fd); if (res.data.warning) toast(res.data.warning); toast.success(dt("تم إدخال {0} عملية للمراجعة، وتجاهل {1} مكررة، واستبعاد {2}", [res.data.importedCount, res.data.duplicateCount, res.data.excludedCount ?? excludedPreviewHashes.size])); setPreview(null); setExcludedPreviewHashes(new Set()); setStatementFile(null); await loadTransactions(filters, 1); await refreshBanksOnly(); } catch (e) { toast.error(axios.isAxiosError(e) && typeof e.response?.data?.error === "string" ? e.response.data.error : dt("فشل إدخال العمليات")); } finally { setImporting(false); } }
+  function removePreviewRow(row: PreviewRow) { if (!row.transactionHash) return toast.error(dt("لا يمكن حذف هذا الصف من الاستيراد لأنه لا يملك بصمة عملية واضحة")); setExcludedPreviewHashes((prev) => new Set([...prev, row.transactionHash!])); toast.success(dt("تم حذف الصف من المعاينة")); }
   function setEdit(id: string, patch: Partial<EditState>) { setEdits((prev) => ({ ...prev, [id]: { ...prev[id], ...patch } })); }
   function toggleSelected(id: string) { setSelectedIds((prev) => { const next = new Set(prev); if (next.has(id)) next.delete(id); else next.add(id); return next; }); }
   function toggleSelectAll() { setSelectedIds((prev) => { const next = new Set(prev); if (allVisibleSelected) visibleIds.forEach((id) => next.delete(id)); else visibleIds.forEach((id) => next.add(id)); return next; }); }
@@ -129,10 +130,10 @@ export default function BankTransfersPage() {
       const res = await axios.patch<{ ok: boolean; donationId: string | null }>(`/api/admin/bank-transfers/transactions/${tx.id}`, { ...edit, campaignId: edit.campaignId || null, donorContact: edit.donorContact || null, status });
       const updated = { ...tx, ...edit, status, finalProject: edit.finalProject, donationId: res.data.donationId ?? tx.donationId ?? null };
       setTransactions((prev) => prev.map((item) => item.id === tx.id ? updated : item));
-      toast.success(status === "APPROVED" ? (edit.campaignId ? "تم اعتماد العملية وإضافتها لإجمالي المشروع" : "تم اعتماد العملية كتبرع عام") : status === "IGNORED" ? "تم استبعاد العملية" : "تم حفظ التعديل");
+      toast.success(status === "APPROVED" ? (edit.campaignId ? dt("تم اعتماد العملية وإضافتها لإجمالي المشروع") : dt("تم اعتماد العملية كتبرع عام")) : status === "IGNORED" ? dt("تم استبعاد العملية") : dt("تم حفظ التعديل"));
       if (status === "APPROVED") void refreshBanksOnly();
     } catch (e) {
-      toast.error(apiError(e, "فشل تحديث العملية"));
+      toast.error(apiError(e, dt("فشل تحديث العملية")));
     } finally {
       setReviewingId(null);
     }
@@ -155,10 +156,10 @@ export default function BankTransfersPage() {
       const failed = results.length - done.size;
       setTransactions((prev) => prev.map((tx) => tx.id && done.has(tx.id) ? { ...tx, status } : tx));
       setSelectedIds(new Set(ids.filter((id) => !done.has(id))));
-      if (failed === 0) toast.success(status === "APPROVED" ? "تم اعتماد العمليات المحددة" : status === "IGNORED" ? "تم استبعاد العمليات المحددة" : "تم حفظ المحدد للمراجعة");
+      if (failed === 0) toast.success(status === "APPROVED" ? dt("تم اعتماد العمليات المحددة") : status === "IGNORED" ? dt("تم استبعاد العمليات المحددة") : dt("تم حفظ المحدد للمراجعة"));
       else {
         const firstError = results.find((r): r is PromiseRejectedResult => r.status === "rejected");
-        toast.error(`تم تنفيذ ${done.size} وتعذّر ${failed}${firstError ? `  ${apiError(firstError.reason, "")}` : ""}. العمليات التي تعذّرت بقيت محددة.`);
+        toast.error(dt("تم تنفيذ {0} وتعذّر {1}{2}. العمليات التي تعذّرت بقيت محددة.", [done.size, failed, firstError ? `  ${apiError(firstError.reason, "")}` : ""]));
       }
       void refreshBanksOnly();
     } finally {
@@ -168,7 +169,7 @@ export default function BankTransfersPage() {
   async function bulkDelete() {
     const ids = [...selectedIds];
     if (!ids.length) return;
-    if (!window.confirm(`تأكيد حذف ${ids.length} عملية محددة؟`)) return;
+    if (!window.confirm(dt("تأكيد حذف {0} عملية محددة؟", [ids.length]))) return;
     setBulkBusy(true);
     try {
       const results = await Promise.allSettled(
@@ -182,15 +183,15 @@ export default function BankTransfersPage() {
       const failed = results.length - deleted.size;
       setTransactions((prev) => prev.filter((tx) => !tx.id || !deleted.has(tx.id)));
       setSelectedIds(new Set(ids.filter((id) => !deleted.has(id))));
-      if (failed === 0) toast.success(`تم حذف ${deleted.size} عملية`);
-      else toast.error(`تم حذف ${deleted.size} وتعذّر حذف ${failed}`);
+      if (failed === 0) toast.success(dt("تم حذف {0} عملية", [deleted.size]));
+      else toast.error(dt("تم حذف {0} وتعذّر حذف {1}", [deleted.size, failed]));
       void refreshBanksOnly();
     } finally {
       setBulkBusy(false);
     }
   }
 
-  async function deleteTransaction(tx: ImportedTransaction) { if (!tx.id) return; if (!window.confirm(`تأكيد حذف عملية ${tx.donorName || "بدون اسم"} بقيمة ${money(tx.amount, tx.currency)}؟`)) return; setReviewingId(tx.id); try { await axios.delete(`/api/admin/bank-transfers/transactions/${tx.id}`); setTransactions((prev) => prev.filter((item) => item.id !== tx.id)); toast.success("تم حذف العملية"); void refreshBanksOnly(); } catch { toast.error("فشل حذف العملية"); } finally { setReviewingId(null); } }
+  async function deleteTransaction(tx: ImportedTransaction) { if (!tx.id) return; if (!window.confirm(dt("تأكيد حذف عملية {0} بقيمة {1}؟", [tx.donorName || dt("بدون اسم"), money(tx.amount, tx.currency)]))) return; setReviewingId(tx.id); try { await axios.delete(`/api/admin/bank-transfers/transactions/${tx.id}`); setTransactions((prev) => prev.filter((item) => item.id !== tx.id)); toast.success(dt("تم حذف العملية")); void refreshBanksOnly(); } catch { toast.error(dt("فشل حذف العملية")); } finally { setReviewingId(null); } }
   function applyFilters() { setPage(1); void loadTransactions(filters, 1); }
   function resetFilters() { setFilters(defaultFilters); setPage(1); void loadTransactions(defaultFilters, 1); }
 
@@ -211,25 +212,23 @@ export default function BankTransfersPage() {
   ].filter(Boolean).length;
 
   return (
-    <div className="space-y-5" dir="rtl">
+    <div className="space-y-5" dir={dashDir()}>
       <PageHeader
-        eyebrow="الإدارة المالية"
-        title="التحويلات البنكية"
-        description="ارفع كشف الحساب، راجع العمليات المقروءة، ثم اعتمد ما يجب احتسابه في الإجماليات."
+        eyebrow={dt("الإدارة المالية")}
+        title={dt("التحويلات البنكية")}
+        description={dt("ارفع كشف الحساب، راجع العمليات المقروءة، ثم اعتمد ما يجب احتسابه في الإجماليات.")}
         icon={Landmark}
         actions={
           <>
             <Button variant="outline" className="gap-2" onClick={() => loadTransactions(filters, page)} disabled={transactionsLoading}>
               <RefreshCw className={`h-4 w-4 ${transactionsLoading ? "animate-spin" : ""}`} />
-              تحديث
-            </Button>
+              {dt("تحديث")}</Button>
             <a
               className="inline-flex h-9 items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50"
               href={`/api/admin/bank-transfers/export?${currentQuery}`}
             >
               <Download className="h-4 w-4" />
-              تصدير Excel
-            </a>
+              {dt("تصدير Excel")}</a>
           </>
         }
       />
@@ -237,13 +236,13 @@ export default function BankTransfersPage() {
       {/* Work-waiting is the number that decides whether this page needs attention today, so it
           leads. The remaining counts are context, not peers. */}
       <MetricSummaryBand
-        eyebrow="عمليات تنتظر المراجعة"
+        eyebrow={dt("عمليات تنتظر المراجعة")}
         value={String(pendingCount)}
-        note={`من إجمالي ${total.toLocaleString("en-US")} عملية مطابقة للتصفية الحالية.`}
+        note={dt("من إجمالي {0} عملية مطابقة للتصفية الحالية.", [total.toLocaleString("en-US")])}
         stats={[
-          { label: "معتمد في الصفحة", value: String(approvedCount) },
-          { label: "مستبعد في الصفحة", value: String(ignoredCount) },
-          { label: "البنوك النشطة", value: String(activeBanks.length) },
+          { label: dt("معتمد في الصفحة"), value: String(approvedCount) },
+          { label: dt("مستبعد في الصفحة"), value: String(ignoredCount) },
+          { label: dt("البنوك النشطة"), value: String(activeBanks.length) },
         ]}
       />
 
@@ -258,8 +257,8 @@ export default function BankTransfersPage() {
               <Upload className="h-[18px] w-[18px]" />
             </span>
             <div>
-              <h2 className="text-[15px] font-semibold leading-tight text-slate-900">استيراد كشف حساب</h2>
-              <p className="text-xs text-slate-500">الوارد فقط يدخل للمراجعة، والمكرر يُتجاهل تلقائيًا.</p>
+              <h2 className="text-[15px] font-semibold leading-tight text-slate-900">{dt("استيراد كشف حساب")}</h2>
+              <p className="text-xs text-slate-500">{dt("الوارد فقط يدخل للمراجعة، والمكرر يُتجاهل تلقائيًا.")}</p>
             </div>
           </div>
           {statementFile && (
@@ -273,7 +272,7 @@ export default function BankTransfersPage() {
         <div className="grid gap-4 p-4 lg:grid-cols-[minmax(0,1fr)_auto]">
           <div className="grid gap-3 sm:grid-cols-3">
             <div className="space-y-1.5">
-              <Label className="text-[11px] font-semibold text-slate-600">البنك</Label>
+              <Label className="text-[11px] font-semibold text-slate-600">{dt("البنك")}</Label>
               <Select
                 value={selectedBankId}
                 onValueChange={(v) => {
@@ -282,7 +281,7 @@ export default function BankTransfersPage() {
                   if (bank) setStatementCurrency(bank.currency);
                 }}
               >
-                <SelectTrigger className="h-10 text-[13px]"><SelectValue placeholder="اختر البنك" /></SelectTrigger>
+                <SelectTrigger className="h-10 text-[13px]"><SelectValue placeholder={dt("اختر البنك")} /></SelectTrigger>
                 <SelectContent>
                   {activeBanks.map((bank) => (
                     <SelectItem key={bank.id ?? bank.code ?? bank.nameAr} value={bank.id ?? bank.code ?? bank.nameAr}>
@@ -294,7 +293,7 @@ export default function BankTransfersPage() {
             </div>
 
             <div className="space-y-1.5">
-              <Label className="text-[11px] font-semibold text-slate-600">العملة</Label>
+              <Label className="text-[11px] font-semibold text-slate-600">{dt("العملة")}</Label>
               <Select value={statementCurrency} onValueChange={(v) => setStatementCurrency(v)}>
                 <SelectTrigger className="h-10 text-[13px]"><SelectValue /></SelectTrigger>
                 <SelectContent>
@@ -304,7 +303,7 @@ export default function BankTransfersPage() {
             </div>
 
             <div className="space-y-1.5">
-              <Label className="text-[11px] font-semibold text-slate-600">لغة المتبرعين</Label>
+              <Label className="text-[11px] font-semibold text-slate-600">{dt("لغة المتبرعين")}</Label>
               <Select value={donorLocale} onValueChange={(v) => setDonorLocale(v)}>
                 <SelectTrigger className="h-10 text-[13px]"><SelectValue /></SelectTrigger>
                 <SelectContent>
@@ -320,9 +319,9 @@ export default function BankTransfersPage() {
                 </span>
                 <span className="min-w-0 flex-1">
                   <span className="block text-[13px] font-semibold text-slate-800">
-                    {statementFile ? statementFile.name : "اختر ملف كشف الحساب"}
+                    {statementFile ? statementFile.name : dt("اختر ملف كشف الحساب")}
                   </span>
-                  <span className="block text-[11px] text-slate-500">Excel أو CSV أو PDF</span>
+                  <span className="block text-[11px] text-slate-500">{dt("Excel أو CSV أو PDF")}</span>
                 </span>
                 <input
                   type="file"
@@ -337,12 +336,10 @@ export default function BankTransfersPage() {
           <div className="flex flex-row gap-2 lg:flex-col lg:justify-end">
             <Button variant="outline" className="gap-2" onClick={parsePreview} disabled={parsing || !statementFile}>
               {parsing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
-              معاينة
-            </Button>
+              {dt("معاينة")}</Button>
             <Button className="gap-2 bg-brand hover:bg-brand-dark" onClick={importStatement} disabled={importing || !statementFile}>
               {importing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-              إدخال للمراجعة
-            </Button>
+              {dt("إدخال للمراجعة")}</Button>
           </div>
         </div>
 
@@ -352,10 +349,10 @@ export default function BankTransfersPage() {
             <div className="mb-3 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-600">
               <span className="flex flex-wrap items-center gap-2">
                 <span>
-                  {preview.fileName} • IBAN: {preview.bankIban ?? "لم يتم التقاطه"} • المعروض{" "}
-                  <b className="tabular-nums text-slate-900">{visiblePreviewRows.length}</b> من{" "}
+                  {preview.fileName} • IBAN: {preview.bankIban ?? dt("لم يتم التقاطه")} {dt(" • المعروض ")}
+                  <b className="tabular-nums text-slate-900">{visiblePreviewRows.length}</b> {dt(" من ")}
                   <b className="tabular-nums text-slate-900">{preview.rowCount}</b>
-                  {excludedPreviewHashes.size > 0 && <> • محذوف <b className="tabular-nums">{excludedPreviewHashes.size}</b></>}
+                  {excludedPreviewHashes.size > 0 && <> {dt(" • محذوف ")}<b className="tabular-nums">{excludedPreviewHashes.size}</b></>}
                 </span>
                 {preview.parser === "spreadsheet" && (() => {
                   const label = amountColumnLabel(preview.amountColumn);
@@ -376,8 +373,7 @@ export default function BankTransfersPage() {
               </span>
               {excludedPreviewHashes.size > 0 && (
                 <Button size="sm" variant="outline" onClick={() => setExcludedPreviewHashes(new Set())}>
-                  إعادة الصفوف المحذوفة
-                </Button>
+                  {dt("إعادة الصفوف المحذوفة")}</Button>
               )}
             </div>
 
@@ -388,10 +384,10 @@ export default function BankTransfersPage() {
             )}
 
             <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
-              <table className="min-w-full text-right text-xs">
+              <table className="min-w-full text-start text-xs">
                 <thead className="bg-slate-50">
                   <tr className="border-b border-slate-200">
-                    {["#", "التاريخ", "الاسم", "الوصف", "القيمة", "الاتجاه", "المشروع", ""].map((h) => (
+                    {["#", dt("التاريخ"), dt("الاسم"), dt("الوصف"), dt("القيمة"), dt("الاتجاه"), dt("المشروع"), ""].map((h) => (
                       <th key={h} className="px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wider text-slate-500">{h}</th>
                     ))}
                   </tr>
@@ -404,7 +400,7 @@ export default function BankTransfersPage() {
                       <td className="px-3 py-2.5 font-medium text-slate-800">{row.donorName ?? "—"}</td>
                       <td className="min-w-72 px-3 py-2.5 text-slate-500">{row.description}</td>
                       <td className="px-3 py-2.5 font-mono tabular-nums whitespace-nowrap">{row.amount === null ? "—" : money(row.amount, row.currency)}</td>
-                      <td className="px-3 py-2.5">{row.direction === "CREDIT" ? "وارد" : row.direction === "DEBIT" ? "صادر" : "غير محدد"}</td>
+                      <td className="px-3 py-2.5">{row.direction === "CREDIT" ? dt("وارد") : row.direction === "DEBIT" ? dt("صادر") : dt("غير محدد")}</td>
                       <td className="px-3 py-2.5">{row.suggestedProject}</td>
                       <td className="px-3 py-2.5">
                         <Button size="sm" variant="ghost" className="text-rose-600 hover:text-rose-700" onClick={() => removePreviewRow(row)}>
@@ -419,8 +415,8 @@ export default function BankTransfersPage() {
                         <EmptyState
                           variant="inline"
                           icon={FileText}
-                          title="لا توجد صفوف معروضة"
-                          description="حُذفت كل الصفوف من المعاينة. استخدم «إعادة الصفوف المحذوفة» لاستعادتها."
+                          title={dt("لا توجد صفوف معروضة")}
+                          description={dt("حُذفت كل الصفوف من المعاينة. استخدم «إعادة الصفوف المحذوفة» لاستعادتها.")}
                         />
                       </td>
                     </tr>
@@ -440,15 +436,14 @@ export default function BankTransfersPage() {
               <CheckCircle2 className="h-[18px] w-[18px]" />
             </span>
             <div>
-              <h2 className="text-[15px] font-semibold leading-tight text-slate-900">مراجعة العمليات</h2>
+              <h2 className="text-[15px] font-semibold leading-tight text-slate-900">{dt("مراجعة العمليات")}</h2>
               <p className="text-xs text-slate-500">
-                {transactionsLoading ? "جاري تطبيق الفلاتر…" : "عدّل البيانات ثم اعتمد ما يجب احتسابه في الإجماليات."}
+                {transactionsLoading ? dt("جاري تطبيق الفلاتر…") : dt("عدّل البيانات ثم اعتمد ما يجب احتسابه في الإجماليات.")}
               </p>
             </div>
           </div>
           <span className="text-xs tabular-nums text-slate-500">
-            صفحة {page} من {totalPages} • {total.toLocaleString("en-US")} نتيجة
-          </span>
+            {dtx("صفحة {0} من {1} • {2} نتيجة", [page, totalPages, total.toLocaleString("en-US")])}</span>
         </header>
 
         {/* Filters, horizontal. Previously ten controls stacked inside a narrow column. */}
@@ -457,7 +452,7 @@ export default function BankTransfersPage() {
             <div className="relative min-w-[220px] flex-1">
               <Search className="pointer-events-none absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
               <Input
-                placeholder="بحث باسم أو وصف أو مرجع"
+                placeholder={dt("بحث باسم أو وصف أو مرجع")}
                 value={filters.q}
                 onChange={(e) => setFilters((f) => ({ ...f, q: e.target.value }))}
                 onKeyDown={(e) => { if (e.key === "Enter") applyFilters(); }}
@@ -466,20 +461,20 @@ export default function BankTransfersPage() {
             </div>
 
             <Select value={filters.status} onValueChange={(v) => setFilters((f) => ({ ...f, status: v }))}>
-              <SelectTrigger className="h-10 w-[150px] text-[13px]"><SelectValue placeholder="الحالة" /></SelectTrigger>
+              <SelectTrigger className="h-10 w-[150px] text-[13px]"><SelectValue placeholder={dt("الحالة")} /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">كل الحالات</SelectItem>
-                <SelectItem value="PENDING_REVIEW">تحتاج مراجعة</SelectItem>
-                <SelectItem value="APPROVED">معتمد</SelectItem>
-                <SelectItem value="IMPORTED">مستورد/معتمد</SelectItem>
-                <SelectItem value="IGNORED">مستبعد</SelectItem>
+                <SelectItem value="all">{dt("كل الحالات")}</SelectItem>
+                <SelectItem value="PENDING_REVIEW">{dt("تحتاج مراجعة")}</SelectItem>
+                <SelectItem value="APPROVED">{dt("معتمد")}</SelectItem>
+                <SelectItem value="IMPORTED">{dt("مستورد/معتمد")}</SelectItem>
+                <SelectItem value="IGNORED">{dt("مستبعد")}</SelectItem>
               </SelectContent>
             </Select>
 
             <Select value={filters.bankId} onValueChange={(v) => setFilters((f) => ({ ...f, bankId: v }))}>
-              <SelectTrigger className="h-10 w-[150px] text-[13px]"><SelectValue placeholder="البنك" /></SelectTrigger>
+              <SelectTrigger className="h-10 w-[150px] text-[13px]"><SelectValue placeholder={dt("البنك")} /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">كل البنوك</SelectItem>
+                <SelectItem value="all">{dt("كل البنوك")}</SelectItem>
                 {activeBanks.map((bank) => (
                   <SelectItem key={bank.id ?? bank.code ?? bank.nameAr} value={bank.id ?? bank.code ?? bank.nameAr}>{bank.nameAr}</SelectItem>
                 ))}
@@ -487,40 +482,39 @@ export default function BankTransfersPage() {
             </Select>
 
             <Select value={filters.currency} onValueChange={(v) => setFilters((f) => ({ ...f, currency: v }))}>
-              <SelectTrigger className="h-10 w-[140px] text-[13px]"><SelectValue placeholder="العملة" /></SelectTrigger>
+              <SelectTrigger className="h-10 w-[140px] text-[13px]"><SelectValue placeholder={dt("العملة")} /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">كل العملات</SelectItem>
+                <SelectItem value="all">{dt("كل العملات")}</SelectItem>
                 {supportedCurrencies.map((c) => <SelectItem key={c} value={c}>{currencyLabels[c] ?? c}</SelectItem>)}
               </SelectContent>
             </Select>
 
             <details className="group relative">
               <summary className="inline-flex h-10 cursor-pointer list-none items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 text-[13px] font-medium text-slate-700 transition-colors hover:border-slate-300">
-                تصفية متقدمة
-                {filterCount > 0 && (
+                {dt("تصفية متقدمة")}{filterCount > 0 && (
                   <span className="rounded-full bg-brand px-1.5 text-[10px] font-bold text-white tabular-nums">{filterCount}</span>
                 )}
               </summary>
               <div className="absolute end-0 z-20 mt-2 w-[320px] rounded-xl border border-slate-200 bg-white p-3 shadow-lg">
                 <div className="grid grid-cols-2 gap-2">
                   <div className="space-y-1">
-                    <Label className="text-[11px] font-semibold text-slate-600">من تاريخ</Label>
+                    <Label className="text-[11px] font-semibold text-slate-600">{dt("من تاريخ")}</Label>
                     <Input type="date" value={filters.dateFrom} onChange={(e) => setFilters((f) => ({ ...f, dateFrom: e.target.value }))} className="h-9 text-[13px]" />
                   </div>
                   <div className="space-y-1">
-                    <Label className="text-[11px] font-semibold text-slate-600">إلى تاريخ</Label>
+                    <Label className="text-[11px] font-semibold text-slate-600">{dt("إلى تاريخ")}</Label>
                     <Input type="date" value={filters.dateTo} onChange={(e) => setFilters((f) => ({ ...f, dateTo: e.target.value }))} className="h-9 text-[13px]" />
                   </div>
                   <div className="space-y-1">
-                    <Label className="text-[11px] font-semibold text-slate-600">قيمة من</Label>
+                    <Label className="text-[11px] font-semibold text-slate-600">{dt("قيمة من")}</Label>
                     <Input value={filters.amountMin} onChange={(e) => setFilters((f) => ({ ...f, amountMin: e.target.value }))} className="h-9 text-[13px]" />
                   </div>
                   <div className="space-y-1">
-                    <Label className="text-[11px] font-semibold text-slate-600">قيمة إلى</Label>
+                    <Label className="text-[11px] font-semibold text-slate-600">{dt("قيمة إلى")}</Label>
                     <Input value={filters.amountMax} onChange={(e) => setFilters((f) => ({ ...f, amountMax: e.target.value }))} className="h-9 text-[13px]" />
                   </div>
                   <div className="space-y-1">
-                    <Label className="text-[11px] font-semibold text-slate-600">لكل صفحة</Label>
+                    <Label className="text-[11px] font-semibold text-slate-600">{dt("لكل صفحة")}</Label>
                     <Select value={filters.limit} onValueChange={(v) => setFilters((f) => ({ ...f, limit: v }))}>
                       <SelectTrigger className="h-9 text-[13px]"><SelectValue /></SelectTrigger>
                       <SelectContent>
@@ -529,12 +523,12 @@ export default function BankTransfersPage() {
                     </Select>
                   </div>
                   <div className="space-y-1">
-                    <Label className="text-[11px] font-semibold text-slate-600">الترتيب</Label>
+                    <Label className="text-[11px] font-semibold text-slate-600">{dt("الترتيب")}</Label>
                     <Select value={filters.sortDir} onValueChange={(v) => setFilters((f) => ({ ...f, sortDir: v }))}>
                       <SelectTrigger className="h-9 text-[13px]"><SelectValue /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="desc">الأحدث/الأكبر</SelectItem>
-                        <SelectItem value="asc">الأقدم/الأصغر</SelectItem>
+                        <SelectItem value="desc">{dt("الأحدث/الأكبر")}</SelectItem>
+                        <SelectItem value="asc">{dt("الأقدم/الأصغر")}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -544,36 +538,34 @@ export default function BankTransfersPage() {
 
             <Button className="h-10 gap-2 bg-brand hover:bg-brand-dark" onClick={applyFilters} disabled={transactionsLoading}>
               {transactionsLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
-              تطبيق
-            </Button>
-            <Button variant="ghost" className="h-10" onClick={resetFilters}>ضبط</Button>
+              {dt("تطبيق")}</Button>
+            <Button variant="ghost" className="h-10" onClick={resetFilters}>{dt("ضبط")}</Button>
           </div>
         </div>
 
         {/* Bulk bar only exists when a selection exists  no dead controls on screen. */}
         {selectedIds.size > 0 && (
           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-brand-200 bg-brand-50 px-4 py-2.5">
-            <span className="text-[13px] font-medium text-brand-800">تم تحديد {selectedIds.size} عملية</span>
+            <span className="text-[13px] font-medium text-brand-800">{dtx("تم تحديد {0} عملية", [selectedIds.size])}</span>
             <div className="flex flex-wrap gap-2">
-              <Button size="sm" className="bg-brand hover:bg-brand-dark" disabled={bulkBusy} onClick={() => bulkReview("APPROVED")}>اعتماد المحدد</Button>
-              <Button size="sm" variant="outline" disabled={bulkBusy} onClick={() => bulkReview("IGNORED")}>استبعاد المحدد</Button>
+              <Button size="sm" className="bg-brand hover:bg-brand-dark" disabled={bulkBusy} onClick={() => bulkReview("APPROVED")}>{dt("اعتماد المحدد")}</Button>
+              <Button size="sm" variant="outline" disabled={bulkBusy} onClick={() => bulkReview("IGNORED")}>{dt("استبعاد المحدد")}</Button>
               <Button size="sm" variant="outline" className="border-rose-200 text-rose-700 hover:bg-rose-50 hover:text-rose-800" disabled={bulkBusy} onClick={bulkDelete}>
                 <Trash2 className="h-3.5 w-3.5" />
-                حذف المحدد
-              </Button>
-              <Button size="sm" variant="ghost" disabled={bulkBusy} onClick={() => setSelectedIds(new Set())}>إلغاء التحديد</Button>
+                {dt("حذف المحدد")}</Button>
+              <Button size="sm" variant="ghost" disabled={bulkBusy} onClick={() => setSelectedIds(new Set())}>{dt("إلغاء التحديد")}</Button>
             </div>
           </div>
         )}
 
         <div className="overflow-x-auto">
-          <table className="min-w-full text-right text-xs">
+          <table className="min-w-full text-start text-xs">
             <thead className="bg-slate-50">
               <tr className="border-b border-slate-200">
                 <th className="w-10 px-3 py-3">
-                  <input type="checkbox" checked={allVisibleSelected} onChange={toggleSelectAll} aria-label="تحديد الكل" />
+                  <input type="checkbox" checked={allVisibleSelected} onChange={toggleSelectAll} aria-label={dt("تحديد الكل")} />
                 </th>
-                {["الحالة", "التاريخ", "الاسم", "البنك", "القيمة", "اللغة", "المشروع", "الوصف", "إجراءات"].map((h) => (
+                {[dt("الحالة"), dt("التاريخ"), dt("الاسم"), dt("البنك"), dt("القيمة"), dt("اللغة"), dt("المشروع"), dt("الوصف"), dt("إجراءات")].map((h) => (
                   <th key={h} className="px-3 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">{h}</th>
                 ))}
               </tr>
@@ -595,8 +587,8 @@ export default function BankTransfersPage() {
                       <Input
                         className="mt-1 h-8 text-[11px]"
                         dir="ltr"
-                        placeholder="بريد أو هاتف متبرع موجود (اختياري)"
-                        title="يُربط التحويل بمتبرع موجود فقط عند تطابق البريد أو الهاتف تمامًا. بدونه يُنشأ متبرع جديد  لا يتم الدمج بالاسم."
+                        placeholder={dt("بريد أو هاتف متبرع موجود (اختياري)")}
+                        title={dt("يُربط التحويل بمتبرع موجود فقط عند تطابق البريد أو الهاتف تمامًا. بدونه يُنشأ متبرع جديد  لا يتم الدمج بالاسم.")}
                         value={edit?.donorContact ?? ""}
                         disabled={Boolean(tx.donationId)}
                         onChange={(e) => tx.id && setEdit(tx.id, { donorContact: e.target.value })}
@@ -620,13 +612,13 @@ export default function BankTransfersPage() {
                       >
                         <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
                         <SelectContent>
-                          <SelectItem value={GENERAL_DONATION}>تبرع عام (بدون مشروع)</SelectItem>
+                          <SelectItem value={GENERAL_DONATION}>{dt("تبرع عام (بدون مشروع)")}</SelectItem>
                           {campaigns.map((c) => <SelectItem key={c.id} value={c.id}>{c.title}</SelectItem>)}
                         </SelectContent>
                       </Select>
                       <Input
                         className="mt-1 h-8 text-[11px]"
-                        placeholder="ملاحظة (للمرجع فقط)"
+                        placeholder={dt("ملاحظة (للمرجع فقط)")}
                         value={edit?.finalProject ?? tx.finalProject ?? tx.suggestedProject ?? ""}
                         onChange={(e) => tx.id && setEdit(tx.id, { finalProject: e.target.value })}
                       />
@@ -638,7 +630,7 @@ export default function BankTransfersPage() {
                     <td className="px-3 py-3">
                       {tx.id && (
                         <div className="flex flex-wrap gap-1">
-                          <Button size="sm" variant="outline" disabled={reviewingId === tx.id} onClick={() => reviewTransaction(tx, "PENDING_REVIEW")}>حفظ</Button>
+                          <Button size="sm" variant="outline" disabled={reviewingId === tx.id} onClick={() => reviewTransaction(tx, "PENDING_REVIEW")}>{dt("حفظ")}</Button>
                           <Button size="sm" className="bg-brand hover:bg-brand-dark" disabled={reviewingId === tx.id} onClick={() => reviewTransaction(tx, "APPROVED")}>
                             <CheckCircle2 className="h-3.5 w-3.5" />
                           </Button>
@@ -660,9 +652,9 @@ export default function BankTransfersPage() {
                     <EmptyState
                       variant="inline"
                       icon={Search}
-                      title="لا توجد عمليات مطابقة"
-                      description="لا توجد عملية تطابق الفلاتر الحالية. جرّب توسيع النطاق الزمني أو اختيار «كل الحالات»."
-                      action={<Button size="sm" variant="outline" onClick={resetFilters}>إعادة ضبط الفلاتر</Button>}
+                      title={dt("لا توجد عمليات مطابقة")}
+                      description={dt("لا توجد عملية تطابق الفلاتر الحالية. جرّب توسيع النطاق الزمني أو اختيار «كل الحالات».")}
+                      action={<Button size="sm" variant="outline" onClick={resetFilters}>{dt("إعادة ضبط الفلاتر")}</Button>}
                     />
                   </td>
                 </tr>
@@ -672,10 +664,10 @@ export default function BankTransfersPage() {
         </div>
 
         <div className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 px-4 py-3 text-[13px] text-slate-600">
-          <span className="tabular-nums">صفحة {page} من {totalPages}</span>
+          <span className="tabular-nums">{dtx("صفحة {0} من {1}", [page, totalPages])}</span>
           <div className="flex gap-2">
-            <Button variant="outline" size="sm" disabled={page <= 1 || transactionsLoading} onClick={() => { const next = page - 1; setPage(next); void loadTransactions(filters, next); }}>السابق</Button>
-            <Button variant="outline" size="sm" disabled={page >= totalPages || transactionsLoading} onClick={() => { const next = page + 1; setPage(next); void loadTransactions(filters, next); }}>التالي</Button>
+            <Button variant="outline" size="sm" disabled={page <= 1 || transactionsLoading} onClick={() => { const next = page - 1; setPage(next); void loadTransactions(filters, next); }}>{dt("السابق")}</Button>
+            <Button variant="outline" size="sm" disabled={page >= totalPages || transactionsLoading} onClick={() => { const next = page + 1; setPage(next); void loadTransactions(filters, next); }}>{dt("التالي")}</Button>
           </div>
         </div>
       </section>
@@ -689,8 +681,8 @@ export default function BankTransfersPage() {
               <Building2 className="h-[18px] w-[18px]" />
             </span>
             <div>
-              <h2 className="text-[15px] font-semibold leading-tight text-slate-900">الحسابات البنكية</h2>
-              <p className="text-xs text-slate-500">{activeBanks.length} حساب نشط • إجماليات وإضافة حساب جديد</p>
+              <h2 className="text-[15px] font-semibold leading-tight text-slate-900">{dt("الحسابات البنكية")}</h2>
+              <p className="text-xs text-slate-500">{dtx("{0} حساب نشط • إجماليات وإضافة حساب جديد", [activeBanks.length])}</p>
             </div>
           </div>
           <span className="text-xs font-medium text-brand transition-transform group-open:rotate-180">▾</span>
@@ -705,15 +697,15 @@ export default function BankTransfersPage() {
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <p className="truncate text-[15px] font-semibold text-slate-900">{bank.nameAr}</p>
-                      <p className="truncate text-xs text-slate-500">{bank.nameTr || bank.nameEn || bank.code || "حساب بنكي"}</p>
+                      <p className="truncate text-xs text-slate-500">{bank.nameTr || bank.nameEn || bank.code || dt("حساب بنكي")}</p>
                     </div>
                     <span className="rounded-lg bg-brand-50 p-2 text-brand"><Building2 className="h-4 w-4" /></span>
                   </div>
                   <div className="mt-3 grid grid-cols-3 gap-2">
                     {[
-                      { label: "دولار", value: money(s.totals.USD, "USD") },
-                      { label: "ليرة", value: money(s.totals.TRY, "TRY") },
-                      { label: "عمليات", value: String(s.operationCount) },
+                      { label: dt("دولار"), value: money(s.totals.USD, "USD") },
+                      { label: dt("ليرة"), value: money(s.totals.TRY, "TRY") },
+                      { label: dt("عمليات"), value: String(s.operationCount) },
                     ].map((cell) => (
                       <div key={cell.label} className="rounded-lg bg-slate-50 p-2.5">
                         <p className="text-[10px] text-slate-500">{cell.label}</p>
@@ -721,7 +713,7 @@ export default function BankTransfersPage() {
                       </div>
                     ))}
                   </div>
-                  <p className="mt-2 text-[11px] text-slate-400">العملة الافتراضية: <span className="font-mono">{bank.currency}</span></p>
+                  <p className="mt-2 text-[11px] text-slate-400">{dt("العملة الافتراضية: ")}<span className="font-mono">{bank.currency}</span></p>
                 </div>
               );
             })}
@@ -730,25 +722,24 @@ export default function BankTransfersPage() {
           <div className="rounded-xl border border-dashed border-slate-300 p-4">
             <div className="mb-3 flex items-center gap-2">
               <Plus className="h-4 w-4 text-slate-400" />
-              <h3 className="text-[13px] font-semibold text-slate-800">إضافة حساب بنكي جديد</h3>
+              <h3 className="text-[13px] font-semibold text-slate-800">{dt("إضافة حساب بنكي جديد")}</h3>
             </div>
             <div className="grid gap-2 sm:grid-cols-3">
-              <Input placeholder="اسم البنك بالعربية" value={form.nameAr} onChange={(e) => setForm((f) => ({ ...f, nameAr: e.target.value }))} className="h-10 text-[13px]" />
+              <Input placeholder={dt("اسم البنك بالعربية")} value={form.nameAr} onChange={(e) => setForm((f) => ({ ...f, nameAr: e.target.value }))} className="h-10 text-[13px]" />
               <Select value={form.currency} onValueChange={(v) => setForm((f) => ({ ...f, currency: v }))}>
                 <SelectTrigger className="h-10 text-[13px]"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {supportedCurrencies.map((c) => <SelectItem key={c} value={c}>{currencyLabels[c] ?? c}</SelectItem>)}
                 </SelectContent>
               </Select>
-              <Input placeholder="الاسم بالتركية" value={form.nameTr} onChange={(e) => setForm((f) => ({ ...f, nameTr: e.target.value }))} className="h-10 text-[13px]" />
-              <Input placeholder="الاسم بالإنجليزية" value={form.nameEn} onChange={(e) => setForm((f) => ({ ...f, nameEn: e.target.value }))} className="h-10 text-[13px]" />
-              <Input placeholder="اسم الحساب" value={form.accountName} onChange={(e) => setForm((f) => ({ ...f, accountName: e.target.value }))} className="h-10 text-[13px]" />
-              <Input placeholder="آخر 4 من IBAN" value={form.ibanLast4} onChange={(e) => setForm((f) => ({ ...f, ibanLast4: e.target.value }))} className="h-10 text-[13px]" />
+              <Input placeholder={dt("الاسم بالتركية")} value={form.nameTr} onChange={(e) => setForm((f) => ({ ...f, nameTr: e.target.value }))} className="h-10 text-[13px]" />
+              <Input placeholder={dt("الاسم بالإنجليزية")} value={form.nameEn} onChange={(e) => setForm((f) => ({ ...f, nameEn: e.target.value }))} className="h-10 text-[13px]" />
+              <Input placeholder={dt("اسم الحساب")} value={form.accountName} onChange={(e) => setForm((f) => ({ ...f, accountName: e.target.value }))} className="h-10 text-[13px]" />
+              <Input placeholder={dt("آخر 4 من IBAN")} value={form.ibanLast4} onChange={(e) => setForm((f) => ({ ...f, ibanLast4: e.target.value }))} className="h-10 text-[13px]" />
             </div>
             <Button className="mt-3 gap-2 bg-brand hover:bg-brand-dark" onClick={addBank} disabled={saving}>
               {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
-              إضافة البنك
-            </Button>
+              {dt("إضافة البنك")}</Button>
           </div>
         </div>
       </details>

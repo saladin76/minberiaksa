@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { dt } from "@/lib/dashboard/i18n";
 
 export type SubNavItem = {
   label: string;
@@ -32,7 +33,7 @@ export function SubNav({ items, className }: { items: SubNavItem[]; className?: 
 
   return (
     <nav
-      aria-label="التنقل داخل القسم"
+      aria-label={dt("التنقل داخل القسم")}
       className={cn("mb-5 -mx-1 overflow-x-auto scrollbar-none", className)}
     >
       <div className="flex min-w-max items-center gap-1 px-1">

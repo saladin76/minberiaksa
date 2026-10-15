@@ -48,6 +48,7 @@ import { useSession } from "next-auth/react";
 import { PhoneInput } from "react-international-phone";
 import "react-international-phone/style.css";
 import { useIpCountry } from "@/hooks/useIpCountry";
+import { getDonationAttributionPayload } from "@/lib/attribution/client-payload";
 
 const CART_CHECKOUT_RESUME_KEY = "alafiya:cart-checkout-resume:v1";
 const CHECKOUT_RESUME_TTL_MS = 30 * 60 * 1000;
@@ -501,6 +502,7 @@ const CartPaymentDialog = ({
 
       const basePayload: Record<string, unknown> = {
         items,
+        attribution: getDonationAttributionPayload(),
         currency: getCurrency(),
         teamSupport: teamSupport ?? 0,
         coverFees,

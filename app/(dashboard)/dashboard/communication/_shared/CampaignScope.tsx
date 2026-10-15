@@ -4,6 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Megaphone, X } from "lucide-react";
+import { dt } from "@/lib/dashboard/i18n";
 
 /**
  * Campaign scoping for the three channel pages.
@@ -59,17 +60,14 @@ export function CampaignScopeBanner({
     <div className="flex flex-wrap items-center gap-2 rounded-xl border border-brand-200 bg-brand-50 px-3 py-2.5">
       <Megaphone className="h-4 w-4 shrink-0 text-brand" />
       <p className="min-w-0 flex-1 text-[13px] text-brand-900">
-        هذه الصفحة مُصفّاة على حملة{" "}
-        <b className="font-semibold">{campaignName ?? campaignId}</b>  الأرقام والرسوم والقائمة
-        أدناه تخصّ هذه الحملة وحدها، بلا حدّ زمني.
-      </p>
+        {dt("هذه الصفحة مُصفّاة على حملة ")}
+        <b className="font-semibold">{campaignName ?? campaignId}</b>  {dt("  الأرقام والرسوم والقائمة أدناه تخصّ هذه الحملة وحدها، بلا حدّ زمني.")}</p>
       <Link
         href={clearHref}
         className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-brand-200 bg-white px-2 py-1 text-[11px] font-medium text-brand-700 transition-colors hover:bg-brand-100"
       >
         <X className="h-3 w-3" />
-        عرض كل الرسائل
-      </Link>
+        {dt("عرض كل الرسائل")}</Link>
     </div>
   );
 }

@@ -1,3 +1,4 @@
+import { dt } from "@/lib/dashboard/i18n";
 type Category = "MARKETING" | "DOCUMENTS";
 
 const CLIENT_CHUNK_BYTES = 1_500_000;
@@ -24,7 +25,7 @@ export async function uploadArchiveFile({ category, title, notes, file, linkedCo
     formData.set("file", file);
     const response = await fetch("/api/admin/archive/uploaded-files", { method: "POST", body: formData });
     const result = await response.json().catch(() => null);
-    if (!response.ok || !result?.ok) throw new Error(result?.error || result?.message || "تعذر رفع الملف");
+    if (!response.ok || !result?.ok) throw new Error(result?.error || result?.message || dt("تعذر رفع الملف"));
     onProgress?.(100);
     return result;
   }
@@ -47,7 +48,7 @@ export async function uploadArchiveFile({ category, title, notes, file, linkedCo
   });
   const startResult = await startResponse.json().catch(() => null);
   if (!startResponse.ok || !startResult?.ok || !startResult.uploadId) {
-    throw new Error(startResult?.error || startResult?.message || "تعذر بدء رفع الملف");
+    throw new Error(startResult?.error || startResult?.message || dt("تعذر بدء رفع الملف"));
   }
 
   const uploadId = startResult.uploadId as string;
@@ -63,7 +64,7 @@ export async function uploadArchiveFile({ category, title, notes, file, linkedCo
     const chunkResponse = await fetch(`/api/admin/archive/uploaded-files/${encodeURIComponent(uploadId)}/chunk`, { method: "POST", body: formData });
     const chunkResult = await chunkResponse.json().catch(() => null);
     if (!chunkResponse.ok || !chunkResult?.ok) {
-      throw new Error(chunkResult?.error || chunkResult?.message || `تعذر رفع الجزء ${index + 1}`);
+      throw new Error(chunkResult?.error || chunkResult?.message || dt("تعذر رفع الجزء {0}", [index + 1]));
     }
     onProgress?.(Math.round(((index + 1) / totalChunks) * 95));
   }
@@ -71,7 +72,7 @@ export async function uploadArchiveFile({ category, title, notes, file, linkedCo
   const completeResponse = await fetch(`/api/admin/archive/uploaded-files/${encodeURIComponent(uploadId)}/complete`, { method: "POST" });
   const completeResult = await completeResponse.json().catch(() => null);
   if (!completeResponse.ok || !completeResult?.ok) {
-    throw new Error(completeResult?.error || completeResult?.message || "تعذر إنهاء رفع الملف");
+    throw new Error(completeResult?.error || completeResult?.message || dt("تعذر إنهاء رفع الملف"));
   }
   onProgress?.(100);
   return completeResult;

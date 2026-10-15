@@ -1,5 +1,6 @@
 import type { LucideIcon } from "lucide-react";
 import { Mail, MessageCircle, MessageSquare } from "lucide-react";
+import { dt } from "@/lib/dashboard/i18n";
 
 /** One campaign row as the API returns it (a raw `CommunicationCampaign`). */
 export interface CampaignRow {
@@ -41,21 +42,21 @@ export const CHANNEL_META: Record<
   { label: string; icon: LucideIcon; href: string; tile: string; dot: string }
 > = {
   EMAIL: {
-    label: "البريد الإلكتروني",
+    get label() { return dt("البريد الإلكتروني"); },
     icon: Mail,
     href: "/dashboard/communication/email",
     tile: "bg-brand/10 text-brand",
     dot: "bg-brand",
   },
   WHATSAPP: {
-    label: "واتساب",
+    get label() { return dt("واتساب"); },
     icon: MessageCircle,
     href: "/dashboard/communication/whatsapp",
     tile: "bg-[#25D366]/10 text-[#128C7E]",
     dot: "bg-[#25D366]",
   },
   SMS: {
-    label: "الرسائل النصية",
+    get label() { return dt("الرسائل النصية"); },
     icon: MessageSquare,
     href: "/dashboard/communication/sms",
     tile: "bg-brand-orange/10 text-brand-orange-700",
@@ -71,15 +72,15 @@ export const CHANNEL_META: Record<
  * campaign has gone out, and colour answers it before the label is read.
  */
 export const STATUS_META: Record<string, { label: string; tone: string }> = {
-  DRAFT: { label: "مسودة", tone: "border-slate-200 bg-slate-50 text-slate-600" },
-  REVIEW: { label: "قيد المراجعة", tone: "border-sky-200 bg-sky-50 text-sky-700" },
-  APPROVED: { label: "معتمدة", tone: "border-violet-200 bg-violet-50 text-violet-700" },
-  SCHEDULED: { label: "مجدولة", tone: "border-amber-200 bg-amber-50 text-amber-700" },
-  SENDING: { label: "جاري الإرسال", tone: "border-amber-200 bg-amber-50 text-amber-700" },
-  SENT: { label: "تم الإرسال", tone: "border-emerald-200 bg-emerald-50 text-emerald-700" },
-  CANCELLED: { label: "ملغاة", tone: "border-slate-200 bg-slate-100 text-slate-500" },
-  FAILED: { label: "فشلت", tone: "border-rose-200 bg-rose-50 text-rose-700" },
-  ARCHIVED: { label: "مؤرشفة", tone: "border-slate-200 bg-slate-100 text-slate-500" },
+  DRAFT: { get label() { return dt("مسودة"); }, tone: "border-slate-200 bg-slate-50 text-slate-600" },
+  REVIEW: { get label() { return dt("قيد المراجعة"); }, tone: "border-sky-200 bg-sky-50 text-sky-700" },
+  APPROVED: { get label() { return dt("معتمدة"); }, tone: "border-violet-200 bg-violet-50 text-violet-700" },
+  SCHEDULED: { get label() { return dt("مجدولة"); }, tone: "border-amber-200 bg-amber-50 text-amber-700" },
+  SENDING: { get label() { return dt("جاري الإرسال"); }, tone: "border-amber-200 bg-amber-50 text-amber-700" },
+  SENT: { get label() { return dt("تم الإرسال"); }, tone: "border-emerald-200 bg-emerald-50 text-emerald-700" },
+  CANCELLED: { get label() { return dt("ملغاة"); }, tone: "border-slate-200 bg-slate-100 text-slate-500" },
+  FAILED: { get label() { return dt("فشلت"); }, tone: "border-rose-200 bg-rose-50 text-rose-700" },
+  ARCHIVED: { get label() { return dt("مؤرشفة"); }, tone: "border-slate-200 bg-slate-100 text-slate-500" },
 };
 
 export const statusMeta = (s: string) => STATUS_META[s] ?? STATUS_META.DRAFT;
@@ -97,9 +98,9 @@ export const isPreSend = (status: string) => ["DRAFT", "REVIEW", "APPROVED", "SC
  * `ar` reaches 840 donors here, which is nothing like a list someone assembled by hand.
  */
 export function audienceLabel(key: string | null, localeLabels: Record<string, string>): string {
-  if (!key) return "بلا جمهور";
-  if (key.startsWith("list:")) return "قائمة مخصّصة";
-  return `كل المتبرعين  ${localeLabels[key] ?? key}`;
+  if (!key) return dt("بلا جمهور");
+  if (key.startsWith("list:")) return dt("قائمة مخصّصة");
+  return dt("كل المتبرعين  {0}", [localeLabels[key] ?? key]);
 }
 
 /** Campaigns with real send history worth linking through to the channel report. */

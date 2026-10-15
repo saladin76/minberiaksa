@@ -10,6 +10,7 @@ import { DashboardLocaleSwitcher } from "../_components/DashboardLocaleSwitcher"
 import { useLocale } from "next-intl"
 import { ContentLocalizationAuditCard } from "../_components/ContentLocalizationAuditCard"
 import { BlogHealthCard } from "./_components/BlogHealthCard"
+import { dt } from "@/lib/dashboard/i18n";
 
 export default function BooksManagement() {
   const locale = useLocale() as string
@@ -26,8 +27,8 @@ export default function BooksManagement() {
     } catch (error) {
       console.error("Error fetching posts:", error)
       toast({
-        title: "خطأ",
-        description: "فشل تحميل المقالات. يرجى المحاولة مرة أخرى.",
+        title: dt("خطأ"),
+        description: dt("فشل تحميل المقالات. يرجى المحاولة مرة أخرى."),
         variant: "destructive",
       })
     }
@@ -41,15 +42,15 @@ export default function BooksManagement() {
     try {
       await axios.delete(`/api/posts/${id}`)
       toast({
-        title: "تم الحذف",
-        description: "تم حذف المقال بنجاح.",
+        title: dt("تم الحذف"),
+        description: dt("تم حذف المقال بنجاح."),
       })
       setBlogs((prev) => prev.filter((b) => b.id !== id))
     } catch (error) {
       console.error("Error deleting post:", error)
       toast({
-        title: "خطأ",
-        description: "فشل حذف المقال. تأكد أنك مسجل كمسؤول.",
+        title: dt("خطأ"),
+        description: dt("فشل حذف المقال. تأكد أنك مسجل كمسؤول."),
         variant: "destructive",
       })
       throw error
@@ -69,7 +70,7 @@ export default function BooksManagement() {
       <Card className="p-8">
         <CardHeader>
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <CardTitle>إدارة المقالات</CardTitle>
+            <CardTitle>{dt("إدارة المقالات")}</CardTitle>
             <DashboardLocaleSwitcher value={activeLocale} onChange={setActiveLocale} />
           </div>
         </CardHeader>
@@ -78,9 +79,9 @@ export default function BooksManagement() {
             createLink="/dashboard/blog/create"
             columns={columns}
             data={blogs}
-            searchPlaceholder="ابحث في المقالات ..."
-            createLabel="مقال جديد"
-            noResultsLabel="لا يوجد مقال"
+            searchPlaceholder={dt("ابحث في المقالات ...")}
+            createLabel={dt("مقال جديد")}
+            noResultsLabel={dt("لا يوجد مقال")}
           />
         </CardContent>
       </Card>

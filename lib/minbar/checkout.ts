@@ -3,6 +3,7 @@ import { lineLocal, type LocalAmount } from "@/lib/minbar/donation-amount";
 import type { MinbarProject } from "./projects";
 import { orderTypeForItems, type OrderType } from "@/lib/donations/recurring-schedule";
 import { readConciergeAssisted, readConciergeTouched } from "@/lib/ai/concierge/client";
+import { getDonationAttributionPayload } from "@/lib/attribution/client-payload";
 
 /**
  * The Minbar checkout's payment driver.
@@ -284,6 +285,9 @@ export async function createDonation(input: CreateDonationInput): Promise<Create
       ...(conciergeMarker() ? { concierge: conciergeMarker() } : {}),
       /* Analytics only: this browser talked to the concierge before (indirect influence). */
       ...(readConciergeTouched() ? { conciergeTouch: readConciergeTouched() } : {}),
+      /* Where the donor came from (UTM, click ids, landing page), kept in
+         cookies by `AttributionCapture`. Feeds the dashboard's "مصدر التبرع". */
+      attribution: getDonationAttributionPayload(),
       paymentMethod: input.method,
       locale: input.locale,
       ...(input.referralCode ? { referralCode: input.referralCode } : {}),

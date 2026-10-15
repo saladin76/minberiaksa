@@ -12,8 +12,9 @@ import { getSchedulerStatus } from "@/lib/communication/scheduler-status";
 import { getWebhooksReadiness } from "@/lib/platform-connections/readiness";
 import { PageHeader, Card, CardHeader } from "../_components/ui";
 import { RecheckConnectionsButton } from "./_components/RecheckConnectionsButton";
+import { dashDir, dashIntl, dt } from "@/lib/dashboard/i18n";
 
-export const metadata = { title: "فحص الاتصال | ربط المنصات والإرسال" };
+export const metadata = { get title() { return dt("فحص الاتصال | ربط المنصات والإرسال"); } };
 export const dynamic = "force-dynamic";
 const BASE = "/dashboard/platform-connections";
 
@@ -25,11 +26,11 @@ const BASE = "/dashboard/platform-connections";
  */
 type HealthState = "VERIFIED" | "CONFIGURED" | "NEEDS_SETUP" | "FAILED" | "DISABLED";
 const HEALTH_LABEL: Record<HealthState, string> = {
-  VERIFIED: "تم التحقق باختبار اتصال",
-  CONFIGURED: "مُعدّ  لم يُختبر",
-  NEEDS_SETUP: "يحتاج إعداد",
-  FAILED: "فشل آخر اختبار",
-  DISABLED: "غير مفعّل",
+  get VERIFIED() { return dt("تم التحقق باختبار اتصال"); },
+  get CONFIGURED() { return dt("مُعدّ  لم يُختبر"); },
+  get NEEDS_SETUP() { return dt("يحتاج إعداد"); },
+  get FAILED() { return dt("فشل آخر اختبار"); },
+  get DISABLED() { return dt("غير مفعّل"); },
 };
 
 function providerState(snapshot: SafeIntegrationProviderSnapshotWithTests): HealthState {
@@ -40,11 +41,11 @@ function providerState(snapshot: SafeIntegrationProviderSnapshotWithTests): Heal
 }
 
 function providerEvidence(state: HealthState): string {
-  if (state === "VERIFIED") return "آخر اختبار اتصال بالمزوّد نجح. هذا لا يثبت وصول الرسائل  راجع سجل الإرسال.";
-  if (state === "CONFIGURED") return "الإعدادات موجودة فقط؛ لم يُجرَ اختبار اتصال بعد. استخدم «إعادة الفحص».";
-  if (state === "FAILED") return "آخر اختبار اتصال فشل.";
-  if (state === "DISABLED") return "المزوّد غير مفعّل.";
-  return "الإعدادات ناقصة.";
+  if (state === "VERIFIED") return dt("آخر اختبار اتصال بالمزوّد نجح. هذا لا يثبت وصول الرسائل  راجع سجل الإرسال.");
+  if (state === "CONFIGURED") return dt("الإعدادات موجودة فقط؛ لم يُجرَ اختبار اتصال بعد. استخدم «إعادة الفحص».");
+  if (state === "FAILED") return dt("آخر اختبار اتصال فشل.");
+  if (state === "DISABLED") return dt("المزوّد غير مفعّل.");
+  return dt("الإعدادات ناقصة.");
 }
 
 function CheckIcon({ state }: { state: HealthState }) {
@@ -65,7 +66,7 @@ type Check = {
   href: string;
 };
 
-function CheckRow({ label, state, detail, evidence, lastTest, lastTestLabel = "آخر فحص", href }: Check) {
+function CheckRow({ label, state, detail, evidence, lastTest, lastTestLabel = dt("آخر فحص"), href }: Check) {
   return (
     <div className="flex flex-col gap-3 border-b p-4 last:border-0 sm:flex-row sm:items-center sm:justify-between">
       <div className="flex items-start gap-3">
@@ -76,14 +77,14 @@ function CheckRow({ label, state, detail, evidence, lastTest, lastTestLabel = "�
           <p className="mt-1 text-[11px] font-semibold text-slate-600">{evidence}</p>
           {lastTest ? (
             <p className="mt-1 text-[11px] text-slate-400">
-              {lastTestLabel}: {new Date(lastTest).toLocaleString("ar")}
+              {lastTestLabel}: {new Date(lastTest).toLocaleString(dashIntl("ar"))}
             </p>
           ) : null}
         </div>
       </div>
       <div className="flex items-center gap-3">
         <span className="text-xs font-bold text-slate-500">{HEALTH_LABEL[state]}</span>
-        <Link href={href} className="text-xs font-bold text-brand">فتح</Link>
+        <Link href={href} className="text-xs font-bold text-brand">{dt("فتح")}</Link>
       </div>
     </div>
   );
@@ -126,17 +127,17 @@ export default async function HealthPage() {
     !webhooks.signatureConfigured ? "NEEDS_SETUP" : webhooks.lastWebhookAt ? "VERIFIED" : "CONFIGURED";
 
   const checks: Check[] = [
-    providerRow("Meta WhatsApp", meta, "التكوين العامل لحساب Meta ورقم واتساب."),
-    providerRow("Elastic Email", elasticEmail, "التكوين العامل للحساب ونطاق بريد المرسل دون إرسال."),
-    providerRow("Brevo SMS", brevo, "التكوين العامل لـSMS الدولي دون إرسال."),
-    providerRow("Netgsm SMS", netgsm, "التكوين العامل لحساب Netgsm."),
+    providerRow("Meta WhatsApp", meta, dt("التكوين العامل لحساب Meta ورقم واتساب.")),
+    providerRow("Elastic Email", elasticEmail, dt("التكوين العامل للحساب ونطاق بريد المرسل دون إرسال.")),
+    providerRow("Brevo SMS", brevo, dt("التكوين العامل لـSMS الدولي دون إرسال.")),
+    providerRow("Netgsm SMS", netgsm, dt("التكوين العامل لحساب Netgsm.")),
     {
       label: "Cron",
       state: cronState,
-      detail: scheduler.configured ? "حماية Route مضبوطة داخل Vercel." : "CRON_SECRET يحتاج إعدادًا داخل Vercel.",
+      detail: scheduler.configured ? dt("حماية Route مضبوطة داخل Vercel.") : dt("CRON_SECRET يحتاج إعدادًا داخل Vercel."),
       evidence:
-        cronState === "VERIFIED" ? "آخر اختبار للجدولة نجح."
-        : cronState === "CONFIGURED" ? "السر مضبوط؛ لم يُختبر تشغيل الجدولة."
+        cronState === "VERIFIED" ? dt("آخر اختبار للجدولة نجح.")
+        : cronState === "CONFIGURED" ? dt("السر مضبوط؛ لم يُختبر تشغيل الجدولة.")
         : providerEvidence(cronState),
       lastTest: cron.activeTest.lastTestAt,
       href: `${BASE}/communication`,
@@ -144,13 +145,13 @@ export default async function HealthPage() {
     {
       label: "Webhooks",
       state: webhookState,
-      detail: webhooks.signatureConfigured ? "توقيع Webhook مُفعّل." : "توقيع Webhook يحتاج إعدادًا.",
+      detail: webhooks.signatureConfigured ? dt("توقيع Webhook مُفعّل.") : dt("توقيع Webhook يحتاج إعدادًا."),
       evidence:
-        webhookState === "VERIFIED" ? "استُلم Webhook فعلي من المزوّد."
-        : webhookState === "CONFIGURED" ? "التوقيع مضبوط، لكن لم يُستلم أي Webhook بعد."
-        : "الإعداد ناقص.",
+        webhookState === "VERIFIED" ? dt("استُلم Webhook فعلي من المزوّد.")
+        : webhookState === "CONFIGURED" ? dt("التوقيع مضبوط، لكن لم يُستلم أي Webhook بعد.")
+        : dt("الإعداد ناقص."),
       lastTest: webhooks.lastWebhookAt,
-      lastTestLabel: "آخر Webhook مستلم",
+      lastTestLabel: dt("آخر Webhook مستلم"),
       href: `${BASE}/communication`,
     },
   ];
@@ -159,24 +160,22 @@ export default async function HealthPage() {
   const canTest = userHasDashboardPermission(session.user, "platformConnectionsTest");
 
   return (
-    <main className="space-y-5 p-4 sm:p-6" dir="rtl">
+    <main className="space-y-5 p-4 sm:p-6" dir={dashDir()}>
       <PageHeader
-        eyebrow="ربط المنصات والإرسال / فحص الاتصال"
-        title="فحص الاتصال"
-        subtitle="يعرض آخر نتائج الفحص الآمنة فقط، دون إرسال رسائل أو تشغيل حملات."
+        eyebrow={dt("ربط المنصات والإرسال / فحص الاتصال")}
+        title={dt("فحص الاتصال")}
+        subtitle={dt("يعرض آخر نتائج الفحص الآمنة فقط، دون إرسال رسائل أو تشغيل حملات.")}
         actions={canTest ? <RecheckConnectionsButton providers={["META_WHATSAPP", "ELASTIC_EMAIL", "BREVO", "NETGSM", "SYSTEM"]} /> : undefined}
       />
       <Card>
         <CardHeader
-          title="نتيجة الفحص"
-          description={`${verifiedCount} من ${checks.length} تم التحقق منها باختبار، و${configuredCount} مُعدّة دون اختبار.`}
+          title={dt("نتيجة الفحص")}
+          description={dt("{0} من {1} تم التحقق منها باختبار، و{2} مُعدّة دون اختبار.", [verifiedCount, checks.length, configuredCount])}
         />
         <div>{checks.map((item) => <CheckRow key={item.label} {...item} />)}</div>
       </Card>
       <p className="text-xs leading-6 text-slate-500">
-        «مُعدّ» يعني أن الإعدادات موجودة فقط. «تم التحقق» يعني أن اختبار اتصال حقيقيًا بالمزوّد نجح، ولا يثبت وصول
-        الرسائل للمستلمين. إعادة الفحص إجراء صريح ولا تعتمد تغييرات ولا ترسل رسائل.
-      </p>
+        {dt("«مُعدّ» يعني أن الإعدادات موجودة فقط. «تم التحقق» يعني أن اختبار اتصال حقيقيًا بالمزوّد نجح، ولا يثبت وصول الرسائل للمستلمين. إعادة الفحص إجراء صريح ولا تعتمد تغييرات ولا ترسل رسائل.")}</p>
     </main>
   );
 }

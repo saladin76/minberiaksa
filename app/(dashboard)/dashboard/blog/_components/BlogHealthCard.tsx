@@ -5,6 +5,7 @@ import axios from "axios";
 import { RefreshCw } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { dashIntl, dt, dtx } from "@/lib/dashboard/i18n";
 
 type BlogHealth = {
   total: number;
@@ -33,7 +34,7 @@ export function BlogHealthCard() {
       const res = await axios.get<BlogHealth>("/api/admin/blog/health");
       setData(res.data);
     } catch {
-      setError("تعذّر قراءة حالة المدونة من قاعدة البيانات");
+      setError(dt("تعذّر قراءة حالة المدونة من قاعدة البيانات"));
     } finally {
       setLoading(false);
     }
@@ -44,26 +45,24 @@ export function BlogHealthCard() {
   }, []);
 
   const metrics: Array<{ label: string; value: number | undefined; warn?: boolean }> = [
-    { label: "إجمالي المقالات", value: data?.total },
-    { label: "منشورة", value: data?.published },
-    { label: "بدون نص (العربية)", value: data?.emptyBody, warn: (data?.emptyBody ?? 0) > 0 },
-    { label: "بدون صورة", value: data?.missingImage, warn: (data?.missingImage ?? 0) > 0 },
-    { label: "ترجمات محفوظة", value: data?.translations },
-    { label: "ترجمات بدون نص", value: data?.emptyTranslationBody, warn: (data?.emptyTranslationBody ?? 0) > 0 },
+    { label: dt("إجمالي المقالات"), value: data?.total },
+    { label: dt("منشورة"), value: data?.published },
+    { label: dt("بدون نص (العربية)"), value: data?.emptyBody, warn: (data?.emptyBody ?? 0) > 0 },
+    { label: dt("بدون صورة"), value: data?.missingImage, warn: (data?.missingImage ?? 0) > 0 },
+    { label: dt("ترجمات محفوظة"), value: data?.translations },
+    { label: dt("ترجمات بدون نص"), value: data?.emptyTranslationBody, warn: (data?.emptyTranslationBody ?? 0) > 0 },
   ];
 
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between gap-3 space-y-0">
         <div>
-          <CardTitle className="text-base">حالة المدونة في قاعدة البيانات الفعلية</CardTitle>
+          <CardTitle className="text-base">{dt("حالة المدونة في قاعدة البيانات الفعلية")}</CardTitle>
           <p className="mt-1 text-xs text-slate-500">
-            أرقام حيّة من قاعدة بيانات هذا الموقع. رفع ملف استيراد إلى المستودع لا يعني أن قاعدة الإنتاج تحدّثت  تحقق من هنا.
-          </p>
+            {dt("أرقام حيّة من قاعدة بيانات هذا الموقع. رفع ملف استيراد إلى المستودع لا يعني أن قاعدة الإنتاج تحدّثت  تحقق من هنا.")}</p>
         </div>
         <Button type="button" size="sm" variant="outline" onClick={() => void load()} disabled={loading} className="gap-1.5">
-          <RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} /> تحديث
-        </Button>
+          <RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} /> {dt(" تحديث")}</Button>
       </CardHeader>
       <CardContent>
         {error ? <p className="text-sm text-rose-600">{error}</p> : null}
@@ -77,8 +76,7 @@ export function BlogHealthCard() {
         </div>
         {data ? (
           <p className="mt-3 text-[11px] text-slate-500">
-            آخر تعديل على مقال: {data.lastUpdatedAt ? new Date(data.lastUpdatedAt).toLocaleString("ar") : "—"} · وقت الفحص:{" "}
-            {new Date(data.checkedAt).toLocaleString("ar")}
+            {dtx("آخر تعديل على مقال: {0} · وقت الفحص: {1}", [data.lastUpdatedAt ? new Date(data.lastUpdatedAt).toLocaleString(dashIntl("ar")) : "—", new Date(data.checkedAt).toLocaleString(dashIntl("ar"))])}
           </p>
         ) : null}
       </CardContent>

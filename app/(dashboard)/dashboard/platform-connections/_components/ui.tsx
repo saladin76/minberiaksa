@@ -2,12 +2,13 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { ArrowLeft } from "lucide-react";
 import { STATUS_CLASS, STATUS_LABEL, type ConnStatus } from "@/lib/platform-connections/readiness";
+import { dashIntl, dt, dtx } from "@/lib/dashboard/i18n";
 
 export function fmtDate(iso: string | null | undefined): string {
   if (!iso) return "—";
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "—";
-  return d.toLocaleString("ar");
+  return d.toLocaleString(dashIntl("ar"));
 }
 
 export function StatusBadge({ status }: { status: ConnStatus }) {
@@ -24,7 +25,7 @@ export function PageHeader({
   // Defaulted to the ربط المنصات overview until that page was removed. There is no hub to go back
   // to now, so the back link is opt-in: pass a backHref explicitly if a page needs one.
   backHref = null,
-  backLabel = "رجوع",
+  backLabel = dt("رجوع"),
 }: {
   eyebrow?: string;
   title: string;
@@ -109,7 +110,7 @@ export function StatusCard({
         <StatusBadge status={status} />
       </div>
       {detail ? <div className="mt-2 space-y-0.5 text-xs text-slate-500">{detail}</div> : null}
-      {lastCheck ? <p className="mt-2 text-[11px] text-slate-400">آخر فحص: {fmtDate(lastCheck)}</p> : null}
+      {lastCheck ? <p className="mt-2 text-[11px] text-slate-400">{dtx("آخر فحص: {0}", [fmtDate(lastCheck)])}</p> : null}
       <Link href={actionHref} className="mt-auto pt-3 inline-block text-xs font-bold text-brand hover:underline">{actionLabel} ←</Link>
     </div>
   );
@@ -118,8 +119,7 @@ export function StatusCard({
 export function EnvOnlyNote() {
   return (
     <p className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs leading-6 text-slate-500">
-      يتم ضبط هذا الربط من إعدادات السيرفر حاليًا.
-    </p>
+      {dt("يتم ضبط هذا الربط من إعدادات السيرفر حاليًا.")}</p>
   );
 }
 

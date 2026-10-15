@@ -15,6 +15,7 @@ import { Zap } from "lucide-react";
 import { TemplateDialogShell, FieldLabel } from "./TemplateDialogShell";
 import { EVENT_CATALOG, DEFAULT_COOLDOWN_DAYS, DEFAULT_LAPSE_DAYS } from "@/lib/events/catalog";
 import type { MessageTriggerEvent } from "@/lib/events/dispatch";
+import { dt } from "@/lib/dashboard/i18n";
 
 interface Props {
   open: boolean;
@@ -57,7 +58,7 @@ export function TriggerEditorDialog({ open, onOpenChange }: Props) {
         setWhatsappTemplates(wa);
         setSmsTemplates(sms);
       })
-      .catch(() => toast.error("فشل تحميل القوالب"))
+      .catch(() => toast.error(dt("فشل تحميل القوالب")))
       .finally(() => setLoading(false));
   }, [open]);
 
@@ -76,11 +77,11 @@ export function TriggerEditorDialog({ open, onOpenChange }: Props) {
 
   const save = async () => {
     if (!event || !templateId) {
-      toast.error("اختر الحدث والقالب");
+      toast.error(dt("اختر الحدث والقالب"));
       return;
     }
     if (!timingValid) {
-      toast.error("أدخل عدد أيام صحيح");
+      toast.error(dt("أدخل عدد أيام صحيح"));
       return;
     }
     setSaving(true);
@@ -91,11 +92,11 @@ export function TriggerEditorDialog({ open, onOpenChange }: Props) {
         templateId,
         ...(isScheduled ? { lapseDays: lapseValue, cooldownDays: cooldownValue } : {}),
       });
-      toast.success("تم إضافة الحدث");
+      toast.success(dt("تم إضافة الحدث"));
       onOpenChange(false);
     } catch (err) {
       const e = err as { response?: { data?: { error?: string } } };
-      toast.error(e.response?.data?.error || "فشل الحفظ");
+      toast.error(e.response?.data?.error || dt("فشل الحفظ"));
     } finally {
       setSaving(false);
     }
@@ -105,8 +106,8 @@ export function TriggerEditorDialog({ open, onOpenChange }: Props) {
     <TemplateDialogShell
       open={open}
       onOpenChange={onOpenChange}
-      title="حدث تلقائي جديد"
-      subtitle="اربط حدثًا في النظام بقالب موجود  سيُرسل تلقائيًا للمتبرع المعني عند وقوع الحدث."
+      title={dt("حدث تلقائي جديد")}
+      subtitle={dt("اربط حدثًا في النظام بقالب موجود  سيُرسل تلقائيًا للمتبرع المعني عند وقوع الحدث.")}
       icon={<Zap className="h-4 w-4" />}
       size="sm"
       loading={loading}
@@ -117,10 +118,10 @@ export function TriggerEditorDialog({ open, onOpenChange }: Props) {
     >
       <div className="space-y-4">
         <div className="space-y-1.5">
-          <FieldLabel>الحدث</FieldLabel>
+          <FieldLabel>{dt("الحدث")}</FieldLabel>
           <Select value={event} onValueChange={(v) => setEvent(v as MessageTriggerEvent)}>
             <SelectTrigger className="w-full">
-              <SelectValue placeholder="اختر الحدث" />
+              <SelectValue placeholder={dt("اختر الحدث")} />
             </SelectTrigger>
             <SelectContent>
               {EVENT_CATALOG.map((e) => (
@@ -135,10 +136,8 @@ export function TriggerEditorDialog({ open, onOpenChange }: Props) {
               <p className="text-[11px] leading-relaxed text-slate-600">{eventDef.description}</p>
               {eventDef.hasDonation && (
                 <p className="mt-1 flex flex-wrap items-center gap-1 text-[11px] text-brand">
-                  ✓ متاح لهذا الحدث
-                  <code className="break-all rounded bg-brand/10 px-1 font-mono">{"{{donation.*}}"}</code>
-                  و
-                  <code className="break-all rounded bg-brand/10 px-1 font-mono">{"{{#donation.items}}"}</code>
+                  {dt("✓ متاح لهذا الحدث")}<code className="break-all rounded bg-brand/10 px-1 font-mono">{"{{donation.*}}"}</code>
+                  {dt("و")}<code className="break-all rounded bg-brand/10 px-1 font-mono">{"{{#donation.items}}"}</code>
                 </p>
               )}
             </div>
@@ -148,45 +147,44 @@ export function TriggerEditorDialog({ open, onOpenChange }: Props) {
         {isScheduled && (
           <div className="space-y-3 rounded-lg border border-amber-200 bg-amber-50/60 p-3">
             <p className="text-[11px] leading-relaxed text-amber-900">
-              هذا حدث مجدول  يُفحص يوميًا بدل أن يُطلق فورًا. يُرسل للمتبرّع الذي مضى على آخر تبرّع ناجح له المدة أدناه.
-            </p>
+              {dt("هذا حدث مجدول  يُفحص يوميًا بدل أن يُطلق فورًا. يُرسل للمتبرّع الذي مضى على آخر تبرّع ناجح له المدة أدناه.")}</p>
             {/* Was grid-cols-2 unconditionally, which squeezed two number inputs plus their
                 Arabic labels into a narrow dialog on phones. */}
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div className="min-w-0 space-y-1.5">
-                <FieldLabel>يُرسل بعد (يوم)</FieldLabel>
-                <Input type="number" min={1} max={3650} value={lapseDays} onChange={(e) => setLapseDays(e.target.value)} className="text-right" />
+                <FieldLabel>{dt("يُرسل بعد (يوم)")}</FieldLabel>
+                <Input type="number" min={1} max={3650} value={lapseDays} onChange={(e) => setLapseDays(e.target.value)} className="text-start" />
               </div>
               <div className="min-w-0 space-y-1.5">
-                <FieldLabel>لا يتكرّر قبل (يوم)</FieldLabel>
-                <Input type="number" min={1} max={3650} value={cooldownDays} onChange={(e) => setCooldownDays(e.target.value)} className="text-right" />
+                <FieldLabel>{dt("لا يتكرّر قبل (يوم)")}</FieldLabel>
+                <Input type="number" min={1} max={3650} value={cooldownDays} onChange={(e) => setCooldownDays(e.target.value)} className="text-start" />
               </div>
             </div>
-            {!timingValid && <p className="text-[11px] text-red-600">أدخل عددًا صحيحًا لا يقل عن ١ في الحقلين.</p>}
+            {!timingValid && <p className="text-[11px] text-red-600">{dt("أدخل عددًا صحيحًا لا يقل عن ١ في الحقلين.")}</p>}
           </div>
         )}
 
         <div className="space-y-1.5">
-          <FieldLabel>القناة</FieldLabel>
+          <FieldLabel>{dt("القناة")}</FieldLabel>
           <Select value={channel} onValueChange={(v) => setChannel(v as "EMAIL" | "WHATSAPP" | "SMS")}>
             <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="EMAIL">بريد إلكتروني</SelectItem>
-              <SelectItem value="WHATSAPP">واتساب</SelectItem>
-              <SelectItem value="SMS">رسالة نصية SMS</SelectItem>
+              <SelectItem value="EMAIL">{dt("بريد إلكتروني")}</SelectItem>
+              <SelectItem value="WHATSAPP">{dt("واتساب")}</SelectItem>
+              <SelectItem value="SMS">{dt("رسالة نصية SMS")}</SelectItem>
             </SelectContent>
           </Select>
         </div>
 
         <div className="space-y-1.5">
-          <FieldLabel>القالب</FieldLabel>
+          <FieldLabel>{dt("القالب")}</FieldLabel>
           <Select value={templateId} onValueChange={setTemplateId}>
             <SelectTrigger className="w-full">
               <SelectValue
                 placeholder={
                   templates.length === 0
-                    ? "لا توجد قوالب  أنشئ قالبًا للقناة أولًا"
-                    : "اختر قالبًا"
+                    ? dt("لا توجد قوالب  أنشئ قالبًا للقناة أولًا")
+                    : dt("اختر قالبًا")
                 }
               />
             </SelectTrigger>

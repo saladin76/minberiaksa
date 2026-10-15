@@ -24,11 +24,14 @@ import {
   type ExportFormat,
 } from "@/lib/dashboard/donation-export";
 import { istanbulDateKeysToUtcRange } from "@/lib/admin/istanbul-calendar";
+import { DASH_LOCALE_COOKIE, dt, parseDashLocale, setDashLocale } from "@/lib/dashboard/i18n";
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  // Sheet names, headers and labels in the dashboard's interface language.
+  setDashLocale(parseDashLocale(request.cookies.get(DASH_LOCALE_COOKIE)?.value));
   try {
     const session = await getServerSession(authOptions);
     const denied = requireAdminOrDashboardPermission(session, "referrals");
@@ -219,28 +222,28 @@ export async function GET(
     });
 
     const filters: ExportFilterDescriptor[] = [];
-    filters.push({ label: "رمز الإحالة", value: referral.code });
-    if (referral.name) filters.push({ label: "اسم الإحالة", value: referral.name });
+    filters.push({ label: dt("رمز الإحالة"), value: referral.code });
+    if (referral.name) filters.push({ label: dt("اسم الإحالة"), value: referral.name });
     filters.push({
-      label: "الفترة",
-      value: startParam || endParam ? `${startParam ?? "—"} → ${endParam ?? "—"}` : "كل الوقت",
+      label: dt("الفترة"),
+      value: startParam || endParam ? `${startParam ?? "—"} → ${endParam ?? "—"}` : dt("كل الوقت"),
     });
-    if (categoryId && categoryId !== "all") filters.push({ label: "القسم", value: categoryId });
-    if (campaignId && campaignId !== "all") filters.push({ label: "الحملة", value: campaignId });
-    if (status && status !== "all") filters.push({ label: "الحالة", value: status });
-    if (locale && locale !== "all") filters.push({ label: "اللغة", value: locale });
-    if (country && country !== "all") filters.push({ label: "الدولة", value: country });
-    if (subscriptionOnly) filters.push({ label: "الاشتراكات فقط", value: "نعم" });
-    filters.push({ label: "عدد التبرعات", value: String(rows.length) });
-    filters.push({ label: "عدد الاشتراكات", value: String(subRows.length) });
+    if (categoryId && categoryId !== "all") filters.push({ label: dt("القسم"), value: categoryId });
+    if (campaignId && campaignId !== "all") filters.push({ label: dt("الحملة"), value: campaignId });
+    if (status && status !== "all") filters.push({ label: dt("الحالة"), value: status });
+    if (locale && locale !== "all") filters.push({ label: dt("اللغة"), value: locale });
+    if (country && country !== "all") filters.push({ label: dt("الدولة"), value: country });
+    if (subscriptionOnly) filters.push({ label: dt("الاشتراكات فقط"), value: dt("نعم") });
+    filters.push({ label: dt("عدد التبرعات"), value: String(rows.length) });
+    filters.push({ label: dt("عدد الاشتراكات"), value: String(subRows.length) });
 
     const subtitle = referral.name
-      ? `الإحالة: ${referral.code}  ${referral.name}`
-      : `الإحالة: ${referral.code}`;
+      ? dt("الإحالة: {0}  {1}", [referral.code, referral.name])
+      : dt("الإحالة: {0}", [referral.code]);
 
     const out = await buildDonationExport({
       format,
-      title: "تقرير الإحالة",
+      title: dt("تقرير الإحالة"),
       subtitle,
       filters,
       donations: exportDonations,

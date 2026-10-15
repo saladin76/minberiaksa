@@ -23,6 +23,7 @@ import { DeliveryPreviewSheet } from "../../_shared/DeliveryPreviewSheet";
 import { RetryDialog } from "../../_shared/RetryDialog";
 import { useCampaignScope, CampaignScopeBanner } from "../../_shared/CampaignScope";
 import { cn } from "@/lib/utils";
+import { dashDir, dt, dtx } from "@/lib/dashboard/i18n";
 
 export type WhatsappRow = {
   id: string;
@@ -73,36 +74,36 @@ type Payload = {
 };
 
 const PERIODS = [
-  { value: 7, label: "٧ أيام" },
-  { value: 30, label: "٣٠ يومًا" },
-  { value: 90, label: "٩٠ يومًا" },
-  { value: 365, label: "سنة" },
+  { value: 7, get label() { return dt("٧ أيام"); } },
+  { value: 30, get label() { return dt("٣٠ يومًا"); } },
+  { value: 90, get label() { return dt("٩٠ يومًا"); } },
+  { value: 365, get label() { return dt("سنة"); } },
 ];
 
 const STATUS_FILTERS = [
-  { value: "all", label: "الكل" },
-  { value: "SENT", label: "مُرسل" },
-  { value: "read", label: "مقروء" },
-  { value: "replied", label: "بردّ" },
-  { value: "failed", label: "فاشل" },
-  { value: "SKIPPED", label: "متخطّى" },
+  { value: "all", get label() { return dt("الكل"); } },
+  { value: "SENT", get label() { return dt("مُرسل"); } },
+  { value: "read", get label() { return dt("مقروء"); } },
+  { value: "replied", get label() { return dt("بردّ"); } },
+  { value: "failed", get label() { return dt("فاشل"); } },
+  { value: "SKIPPED", get label() { return dt("متخطّى"); } },
 ];
 
 const TEMPLATE_STATE_STYLE: Record<string, { label: string; className: string }> = {
-  READY: { label: "جاهز للإرسال", className: "border-emerald-200 bg-emerald-50 text-emerald-700" },
-  PARTIAL: { label: "جاهز على بعض الأرقام", className: "border-amber-200 bg-amber-50 text-amber-700" },
-  NOT_REGISTERED: { label: "غير مسجّل لدى Meta", className: "border-amber-200 bg-amber-50 text-amber-700" },
-  PENDING: { label: "بانتظار الموافقة", className: "border-sky-200 bg-sky-50 text-sky-700" },
-  REJECTED: { label: "مرفوض", className: "border-rose-200 bg-rose-50 text-rose-700" },
+  READY: { get label() { return dt("جاهز للإرسال"); }, className: "border-emerald-200 bg-emerald-50 text-emerald-700" },
+  PARTIAL: { get label() { return dt("جاهز على بعض الأرقام"); }, className: "border-amber-200 bg-amber-50 text-amber-700" },
+  NOT_REGISTERED: { get label() { return dt("غير مسجّل لدى Meta"); }, className: "border-amber-200 bg-amber-50 text-amber-700" },
+  PENDING: { get label() { return dt("بانتظار الموافقة"); }, className: "border-sky-200 bg-sky-50 text-sky-700" },
+  REJECTED: { get label() { return dt("مرفوض"); }, className: "border-rose-200 bg-rose-50 text-rose-700" },
 };
 
 export function buildStages(row: StageSource): JourneyStage[] {
   return [
     // `sent` is our own record of handing the message over  never an "unknown".
-    { key: "sent", label: "أُرسل", at: row.sentAt ?? row.createdAt, icon: Send, local: true },
-    { key: "delivered", label: "وصل", at: row.deliveredAt, icon: Check },
-    { key: "read", label: "قُرئ", at: row.readAt ?? null, icon: CheckCheck },
-    { key: "replied", label: "ردّ", at: row.repliedAt ?? null, icon: Reply },
+    { key: "sent", label: dt("أُرسل"), at: row.sentAt ?? row.createdAt, icon: Send, local: true },
+    { key: "delivered", label: dt("وصل"), at: row.deliveredAt, icon: Check },
+    { key: "read", label: dt("قُرئ"), at: row.readAt ?? null, icon: CheckCheck },
+    { key: "replied", label: dt("ردّ"), at: row.repliedAt ?? null, icon: Reply },
   ];
 }
 
@@ -133,13 +134,13 @@ function ReadinessCard({ provider, templates, onSynced }: { provider: Payload["p
       const res = await fetch("/api/dashboard/communication/whatsapp/templates/sync", { method: "POST" });
       const body = await res.json().catch(() => ({}));
       if (!res.ok || !body.ok) {
-        setSyncNote(`تعذّرت المزامنة: ${body.error ?? "خطأ غير معروف"}`);
+        setSyncNote(dt("تعذّرت المزامنة: {0}", [body.error ?? dt("خطأ غير معروف")]));
         return;
       }
       const s = body.summary as { variantsUpserted: number; matchedTemplates: number; unmatchedNames: string[] };
       setSyncNote(
-        `${s.variantsUpserted} نسخة لغوية عبر ${s.matchedTemplates} قالبًا` +
-        (s.unmatchedNames.length ? ` · ${s.unmatchedNames.length} قالبًا لدى Meta بلا مقابل محلي` : ""),
+        dt("{0} نسخة لغوية عبر {1} قالبًا", [s.variantsUpserted, s.matchedTemplates]) +
+        (s.unmatchedNames.length ? dt(" · {0} قالبًا لدى Meta بلا مقابل محلي", [s.unmatchedNames.length]) : ""),
       );
       onSynced();
     } finally {
@@ -150,14 +151,14 @@ function ReadinessCard({ provider, templates, onSynced }: { provider: Payload["p
   return (
     <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
       <div className="mb-3 flex items-center justify-between gap-2">
-        <h2 className="text-[13px] font-semibold text-slate-900">جاهزية القناة</h2>
+        <h2 className="text-[13px] font-semibold text-slate-900">{dt("جاهزية القناة")}</h2>
         <span
           className={cn(
             "rounded-full border px-2 py-0.5 text-[10px] font-bold",
             canSend ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-amber-200 bg-amber-50 text-amber-700",
           )}
         >
-          {canSend ? "يمكن الإرسال" : "لا يمكن الإرسال"}
+          {canSend ? dt("يمكن الإرسال") : dt("لا يمكن الإرسال")}
         </span>
       </div>
 
@@ -165,11 +166,11 @@ function ReadinessCard({ provider, templates, onSynced }: { provider: Payload["p
         <div className="flex items-start gap-2.5 rounded-lg border border-slate-100 bg-slate-50 px-3 py-2.5">
           <Plug className={cn("mt-0.5 h-4 w-4 shrink-0", provider.configured ? "text-emerald-600" : "text-amber-600")} />
           <div className="min-w-0 flex-1">
-            <p className="text-[11px] font-semibold text-slate-800">اتصال Meta WhatsApp</p>
+            <p className="text-[11px] font-semibold text-slate-800">{dt("اتصال Meta WhatsApp")}</p>
             <p className="mt-0.5 text-[11px] leading-4 text-slate-500">
               {provider.configured
-                ? "مُعدّ بالكامل."
-                : `غير مكتمل${provider.missingFields.length ? `  ناقص: ${provider.missingFields.join("، ")}` : ""}.`}
+                ? dt("مُعدّ بالكامل.")
+                : dt("غير مكتمل{0}.", [provider.missingFields.length ? dt("  ناقص: {0}", [provider.missingFields.join(dt("، "))]) : ""])}
             </p>
           </div>
         </div>
@@ -177,11 +178,11 @@ function ReadinessCard({ provider, templates, onSynced }: { provider: Payload["p
         <div className="flex items-start gap-2.5 rounded-lg border border-slate-100 bg-slate-50 px-3 py-2.5">
           <FileCheck2 className={cn("mt-0.5 h-4 w-4 shrink-0", templates.ready > 0 ? "text-emerald-600" : "text-amber-600")} />
           <div className="min-w-0 flex-1">
-            <p className="text-[11px] font-semibold text-slate-800">قوالب معتمدة من Meta</p>
+            <p className="text-[11px] font-semibold text-slate-800">{dt("قوالب معتمدة من Meta")}</p>
             <p className="mt-0.5 text-[11px] leading-4 text-slate-500">
               {templates.ready > 0
-                ? `${templates.ready} من ${templates.total} قالب جاهز للإرسال.`
-                : `لا يوجد قالب معتمد (${templates.total} قالب محفوظ). الرسائل التي تبدأ من المنصة تتطلّب قالبًا معتمدًا من Meta.`}
+                ? dt("{0} من {1} قالب جاهز للإرسال.", [templates.ready, templates.total])
+                : dt("لا يوجد قالب معتمد ({0} قالب محفوظ). الرسائل التي تبدأ من المنصة تتطلّب قالبًا معتمدًا من Meta.", [templates.total])}
             </p>
           </div>
         </div>
@@ -195,10 +196,9 @@ function ReadinessCard({ provider, templates, onSynced }: { provider: Payload["p
           className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-40"
         >
           <RefreshCw className={cn("h-3.5 w-3.5", syncing && "animate-spin")} />
-          مزامنة القوالب من Meta
-        </button>
+          {dt("مزامنة القوالب من Meta")}</button>
         <span className="text-[10px] text-slate-400">
-          {lastSyncedAt ? `آخر مزامنة ${fmtDateTime(lastSyncedAt)?.date ?? ""}` : "لم تُزامَن القوالب بعد  الجاهزية تُقرأ من Meta."}
+          {lastSyncedAt ? dt("آخر مزامنة {0}", [fmtDateTime(lastSyncedAt)?.date ?? ""]) : dt("لم تُزامَن القوالب بعد  الجاهزية تُقرأ من Meta.")}
         </span>
       </div>
       {syncNote && <p className="mt-1 text-[11px] font-medium text-slate-600">{syncNote}</p>}
@@ -216,10 +216,10 @@ function ReadinessCard({ provider, templates, onSynced }: { provider: Payload["p
                       the campaign builder is constrained by. */}
                   <span className="block text-[10px] text-slate-400">
                     {t.approvedLanguages.length
-                      ? `لغات معتمدة: ${t.approvedLanguages.join(", ")}`
+                      ? dt("لغات معتمدة: {0}", [t.approvedLanguages.join(", ")])
                       : t.rejectionReason
-                        ? `سبب الرفض: ${t.rejectionReason}`
-                        : "لا لغة معتمدة"}
+                        ? dt("سبب الرفض: {0}", [t.rejectionReason])
+                        : dt("لا لغة معتمدة")}
                   </span>
                 </span>
                 <span className={cn("shrink-0 rounded-md border px-1.5 py-0.5 text-[10px] font-semibold", style.className)}>
@@ -232,8 +232,7 @@ function ReadinessCard({ provider, templates, onSynced }: { provider: Payload["p
             href="/dashboard/templates"
             className="mt-1 inline-block text-[11px] font-semibold text-brand hover:underline"
           >
-            إدارة القوالب ←
-          </Link>
+            {dt("إدارة القوالب ←")}</Link>
         </div>
       )}
     </section>
@@ -265,7 +264,7 @@ export function WhatsappChannelDashboard() {
       if (campaignId) params.set("campaign", campaignId);
       const res = await fetch(`/api/dashboard/communication/whatsapp?${params}`, { cache: "no-store" });
       const json = await res.json();
-      if (!res.ok || !json.ok) throw new Error(json?.error || "تعذّر تحميل البيانات");
+      if (!res.ok || !json.ok) throw new Error(json?.error || dt("تعذّر تحميل البيانات"));
       setData(json);
     } catch (e) {
       setError((e as Error).message);
@@ -290,10 +289,10 @@ export function WhatsappChannelDashboard() {
 
   const funnelSteps = summary
     ? [
-        { label: "مقبول لدى المزود", value: summary.attempted, pct: 100, tone: CHART_THEME.primary, always: true },
-        { label: "وصل", value: summary.delivered, pct: summary.deliveredRate, tone: CHART_STATUS.info },
-        { label: "قُرئ", value: summary.read, pct: summary.readRate, tone: CHART_STATUS.success },
-        { label: "ردّ", value: summary.replied, pct: summary.repliedRate, tone: CHART_THEME.secondary },
+        { label: dt("مقبول لدى المزود"), value: summary.attempted, pct: 100, tone: CHART_THEME.primary, always: true },
+        { label: dt("وصل"), value: summary.delivered, pct: summary.deliveredRate, tone: CHART_STATUS.info },
+        { label: dt("قُرئ"), value: summary.read, pct: summary.readRate, tone: CHART_STATUS.success },
+        { label: dt("ردّ"), value: summary.replied, pct: summary.repliedRate, tone: CHART_THEME.secondary },
       ]
     : [];
 
@@ -304,18 +303,18 @@ export function WhatsappChannelDashboard() {
   const retryBlockedReason = !data
     ? null
     : !data.provider.configured
-      ? "اتصال Meta غير مكتمل  أكمل الإعداد أولًا."
+      ? dt("اتصال Meta غير مكتمل  أكمل الإعداد أولًا.")
       : data.templates.ready === 0
-        ? "لا يوجد قالب معتمد من Meta  إعادة الإرسال ستُرفض."
+        ? dt("لا يوجد قالب معتمد من Meta  إعادة الإرسال ستُرفض.")
         : null;
 
   return (
-    <div className="min-h-0" dir="rtl">
+    <div className="min-h-0" dir={dashDir()}>
       <div className="mx-auto max-w-[1600px] space-y-4">
         <PageHeader
-          eyebrow="التواصل"
-          title="واتساب"
-          description="كل رسالة واتساب صادرة، وما حدث لها بعد الإرسال  الوصول والقراءة والردّ والفشل."
+          eyebrow={dt("التواصل")}
+          title={dt("واتساب")}
+          description={dt("كل رسالة واتساب صادرة، وما حدث لها بعد الإرسال  الوصول والقراءة والردّ والفشل.")}
           icon={MessageCircle}
           actions={
             <div className="flex items-center gap-2">
@@ -331,8 +330,7 @@ export function WhatsappChannelDashboard() {
                   className="inline-flex h-9 items-center gap-2 rounded-lg bg-brand px-3 text-xs font-semibold text-white transition hover:bg-brand/90 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   <Send className="h-3.5 w-3.5" />
-                  إعادة محاولة المتعثّرة
-                  <span className="rounded-md bg-white/20 px-1.5 py-0.5 text-[10px] tabular-nums">
+                  {dt("إعادة محاولة المتعثّرة")}<span className="rounded-md bg-white/20 px-1.5 py-0.5 text-[10px] tabular-nums">
                     {data!.retryableCount.toLocaleString("en-US")}
                   </span>
                 </button>
@@ -344,8 +342,7 @@ export function WhatsappChannelDashboard() {
                 className="inline-flex h-9 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 transition hover:border-brand hover:text-brand disabled:opacity-50"
               >
                 <RefreshCw className={cn("h-3.5 w-3.5", loading && "animate-spin")} />
-                تحديث
-              </button>
+                {dt("تحديث")}</button>
             </div>
           }
         />
@@ -356,28 +353,28 @@ export function WhatsappChannelDashboard() {
             before showing a wall of zeroes that invites the wrong conclusion. */}
         {neverSent && (
           <TrackingBanner>
-            <b>لم تُرسل أي رسالة واتساب من المنصة بعد.</b>{" "}
+            <b>{dt("لم تُرسل أي رسالة واتساب من المنصة بعد.")}</b>{" "}
             {data?.provider.configured === false
-              ? "اتصال Meta غير مكتمل."
+              ? dt("اتصال Meta غير مكتمل.")
               : data && data.templates.ready === 0
-                ? "الاتصال مُعدّ، لكن لا يوجد قالب معتمد من Meta  والرسائل التي تبدأ من المنصة تتطلّب قالبًا معتمدًا."
-                : "راجع جاهزية القناة بالأسفل."}
+                ? dt("الاتصال مُعدّ، لكن لا يوجد قالب معتمد من Meta  والرسائل التي تبدأ من المنصة تتطلّب قالبًا معتمدًا.")
+                : dt("راجع جاهزية القناة بالأسفل.")}
           </TrackingBanner>
         )}
 
         {summary && (
           <MetricSummaryBand
             icon={MessageCircle}
-            eyebrow="رسائل واتساب المرسلة"
-            badge={`آخر ${days} يومًا`}
+            eyebrow={dt("رسائل واتساب المرسلة")}
+            badge={dt("آخر {0} يومًا", [days])}
             value={summary.attempted.toLocaleString("en-US")}
-            note="عدد الرسائل التي قبلها مزوّد واتساب خلال الفترة. الرسائل المتخطّاة غير محسوبة هنا."
+            note={dt("عدد الرسائل التي قبلها مزوّد واتساب خلال الفترة. الرسائل المتخطّاة غير محسوبة هنا.")}
             stats={[
-              { label: "وصلت", icon: Check, value: trackingLive ? summary.delivered.toLocaleString("en-US") : "—" },
-              { label: "قُرئت", icon: CheckCheck, value: trackingLive ? summary.read.toLocaleString("en-US") : "—", hint: trackingLive ? `${summary.readRate}%` : undefined },
-              { label: "ردّوا", icon: Reply, value: trackingLive ? summary.replied.toLocaleString("en-US") : "—", hint: trackingLive ? `${summary.repliedRate}%` : undefined },
-              { label: "فشلت", icon: TriangleAlert, value: summary.failed.toLocaleString("en-US"), hint: `${summary.failedRate}%` },
-              { label: "متخطّاة", icon: SlashIcon, value: summary.skipped.toLocaleString("en-US") },
+              { label: dt("وصلت"), icon: Check, value: trackingLive ? summary.delivered.toLocaleString("en-US") : "—" },
+              { label: dt("قُرئت"), icon: CheckCheck, value: trackingLive ? summary.read.toLocaleString("en-US") : "—", hint: trackingLive ? `${summary.readRate}%` : undefined },
+              { label: dt("ردّوا"), icon: Reply, value: trackingLive ? summary.replied.toLocaleString("en-US") : "—", hint: trackingLive ? `${summary.repliedRate}%` : undefined },
+              { label: dt("فشلت"), icon: TriangleAlert, value: summary.failed.toLocaleString("en-US"), hint: `${summary.failedRate}%` },
+              { label: dt("متخطّاة"), icon: SlashIcon, value: summary.skipped.toLocaleString("en-US") },
             ]}
           />
         )}
@@ -385,7 +382,7 @@ export function WhatsappChannelDashboard() {
         <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
           <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
             <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-              <h2 className="text-[13px] font-semibold text-slate-900">حركة الإرسال</h2>
+              <h2 className="text-[13px] font-semibold text-slate-900">{dt("حركة الإرسال")}</h2>
               <SegmentedControl options={PERIODS} value={days} onChange={setDays} />
             </div>
 
@@ -393,8 +390,8 @@ export function WhatsappChannelDashboard() {
               <div className="h-[220px] animate-pulse rounded-lg bg-slate-50" />
             ) : chartData.length === 0 ? (
               <EmptyState
-                title="لا توجد رسائل في هذه الفترة"
-                description={neverSent ? "لم تُرسل رسائل واتساب بعد." : "جرّب فترة أطول."}
+                title={dt("لا توجد رسائل في هذه الفترة")}
+                description={neverSent ? dt("لم تُرسل رسائل واتساب بعد.") : dt("جرّب فترة أطول.")}
                 variant="inline"
               />
             ) : (
@@ -428,7 +425,7 @@ export function WhatsappChannelDashboard() {
 
         <section className="rounded-2xl border border-slate-200 bg-white shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
           <div className="flex flex-wrap items-center gap-2 border-b border-slate-100 px-4 py-3">
-            <h2 className="text-[13px] font-semibold text-slate-900">سجل الرسائل</h2>
+            <h2 className="text-[13px] font-semibold text-slate-900">{dt("سجل الرسائل")}</h2>
             <div className="ms-auto flex flex-wrap items-center gap-2">
               <SegmentedControl options={STATUS_FILTERS} value={status} onChange={setStatus} />
               <form onSubmit={(e) => { e.preventDefault(); setSearch(searchInput.trim()); }} className="relative">
@@ -436,7 +433,7 @@ export function WhatsappChannelDashboard() {
                 <input
                   value={searchInput}
                   onChange={(e) => setSearchInput(e.target.value)}
-                  placeholder="بحث بالرقم أو القالب…"
+                  placeholder={dt("بحث بالرقم أو القالب…")}
                   className="h-8 w-56 rounded-lg border border-slate-200 bg-white pe-8 ps-3 text-xs text-slate-700 outline-none transition focus:border-brand"
                 />
               </form>
@@ -444,7 +441,7 @@ export function WhatsappChannelDashboard() {
           </div>
 
           {error ? (
-            <EmptyState title="تعذّر التحميل" description={error} className="m-4" />
+            <EmptyState title={dt("تعذّر التحميل")} description={error} className="m-4" />
           ) : loading && !data ? (
             <div className="space-y-2 p-4">
               {Array.from({ length: 6 }).map((_, i) => (
@@ -453,8 +450,8 @@ export function WhatsappChannelDashboard() {
             </div>
           ) : !data?.rows.length ? (
             <EmptyState
-              title="لا توجد رسائل"
-              description={neverSent ? "لم تُرسل أي رسالة واتساب من المنصة بعد." : "لا توجد رسائل مطابقة لهذه التصفية."}
+              title={dt("لا توجد رسائل")}
+              description={neverSent ? dt("لم تُرسل أي رسالة واتساب من المنصة بعد.") : dt("لا توجد رسائل مطابقة لهذه التصفية.")}
               icon={Inbox}
               className="m-4"
             />
@@ -463,14 +460,14 @@ export function WhatsappChannelDashboard() {
               <div className="overflow-x-auto">
                 {/* Explicit widths  see the note on the email table: only the message column is
                     greedy, so nothing pads out the space beside the action buttons. */}
-                <table className="w-full text-right text-xs">
+                <table className="w-full text-start text-xs">
                   <thead>
                     <tr className="border-b border-slate-100 bg-slate-50/60 text-[11px] font-semibold text-slate-500">
-                      <th className="whitespace-nowrap px-3 py-2.5 text-right">المستلم</th>
-                      <th className="w-full max-w-0 px-3 py-2.5 text-right">القالب / النص</th>
-                      <th className="whitespace-nowrap px-3 py-2.5 text-right">الحالة</th>
-                      <th className="whitespace-nowrap px-3 py-2.5 text-right">المصدر</th>
-                      <th className="whitespace-nowrap px-3 py-2.5 text-right">التاريخ</th>
+                      <th className="whitespace-nowrap px-3 py-2.5 text-start">{dt("المستلم")}</th>
+                      <th className="w-full max-w-0 px-3 py-2.5 text-start">{dt("القالب / النص")}</th>
+                      <th className="whitespace-nowrap px-3 py-2.5 text-start">{dt("الحالة")}</th>
+                      <th className="whitespace-nowrap px-3 py-2.5 text-start">{dt("المصدر")}</th>
+                      <th className="whitespace-nowrap px-3 py-2.5 text-start">{dt("التاريخ")}</th>
                       <th className="w-px px-3 py-2.5" />
                     </tr>
                   </thead>
@@ -533,7 +530,7 @@ export function WhatsappChannelDashboard() {
 
               <div className="flex items-center justify-between gap-3 border-t border-slate-100 px-4 py-2.5">
                 <span className="text-[11px] text-slate-500">
-                  {data.pagination.total.toLocaleString("en-US")} رسالة · صفحة {data.pagination.page} من {data.pagination.pages}
+                  {dtx("{0} رسالة · صفحة {1} من {2}", [data.pagination.total.toLocaleString("en-US"), data.pagination.page, data.pagination.pages])}
                 </span>
                 <div className="flex gap-1">
                   <button
@@ -541,7 +538,7 @@ export function WhatsappChannelDashboard() {
                     disabled={page <= 1 || loading}
                     onClick={() => setPage((p) => Math.max(1, p - 1))}
                     className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-slate-200 text-slate-500 transition hover:border-brand hover:text-brand disabled:opacity-40"
-                    aria-label="السابق"
+                    aria-label={dt("السابق")}
                   >
                     <ChevronRight className="h-3.5 w-3.5" />
                   </button>
@@ -550,7 +547,7 @@ export function WhatsappChannelDashboard() {
                     disabled={page >= data.pagination.pages || loading}
                     onClick={() => setPage((p) => p + 1)}
                     className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-slate-200 text-slate-500 transition hover:border-brand hover:text-brand disabled:opacity-40"
-                    aria-label="التالي"
+                    aria-label={dt("التالي")}
                   >
                     <ChevronLeft className="h-3.5 w-3.5" />
                   </button>
@@ -562,8 +559,7 @@ export function WhatsappChannelDashboard() {
 
         {loading && data && (
           <div className="pointer-events-none fixed bottom-4 start-4 z-50 flex items-center gap-2 rounded-full bg-slate-900/90 px-3 py-1.5 text-[11px] font-semibold text-white">
-            <Loader2 className="h-3 w-3 animate-spin" /> جاري التحديث
-          </div>
+            <Loader2 className="h-3 w-3 animate-spin" /> {dt(" جاري التحديث")}</div>
         )}
       </div>
 

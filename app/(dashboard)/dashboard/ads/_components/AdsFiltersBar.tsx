@@ -8,15 +8,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { dt } from "@/lib/dashboard/i18n";
 
 export type AdsChartPeriod = "day" | "week" | "month" | "all" | "custom";
 
 const PERIOD_LABELS: Record<AdsChartPeriod, string> = {
-  day: "آخر يوم",
-  week: "آخر أسبوع",
-  month: "آخر شهر",
-  all: "كل الوقت",
-  custom: "مخصص",
+  get day() { return dt("آخر يوم"); },
+  get week() { return dt("آخر أسبوع"); },
+  get month() { return dt("آخر شهر"); },
+  get all() { return dt("كل الوقت"); },
+  get custom() { return dt("مخصص"); },
 };
 
 interface Props {
@@ -39,7 +40,7 @@ export function AdsFiltersBar({
   return (
     <div className="flex flex-wrap items-end gap-3">
       <div className="flex flex-col gap-1">
-        <label className="text-[11px] font-medium text-slate-500">الفترة</label>
+        <label className="text-[11px] font-medium text-slate-500">{dt("الفترة")}</label>
         <Select
           value={period === "custom" || (dateFrom && dateTo) ? "custom" : period}
           onValueChange={(v) => onPeriodChange(v as AdsChartPeriod)}
@@ -59,7 +60,7 @@ export function AdsFiltersBar({
       {period === "custom" && (
         <>
           <div className="flex flex-col gap-1">
-            <label className="text-[11px] font-medium text-slate-500">من</label>
+            <label className="text-[11px] font-medium text-slate-500">{dt("من")}</label>
             <input
               type="date"
               value={dateFrom}
@@ -68,7 +69,7 @@ export function AdsFiltersBar({
             />
           </div>
           <div className="flex flex-col gap-1">
-            <label className="text-[11px] font-medium text-slate-500">إلى</label>
+            <label className="text-[11px] font-medium text-slate-500">{dt("إلى")}</label>
             <input
               type="date"
               value={dateTo}

@@ -14,6 +14,7 @@ import {
   type HomeSectionKind,
 } from "@/lib/minbar/home-layout";
 import { useDragReorder } from "./reorder";
+import { dt } from "@/lib/dashboard/i18n";
 
 const KIND_ICON: Record<HomeSectionKind, typeof ListOrdered> = {
   list: ListOrdered,
@@ -23,17 +24,17 @@ const KIND_ICON: Record<HomeSectionKind, typeof ListOrdered> = {
 
 /** One line saying how a list picks its items, for the row under the section's name. */
 export function listSummary(config: HomeListConfig): string {
-  if (!config.show) return "مخفي";
-  const count = config.limit === 0 ? "الكل" : String(config.limit);
-  if (config.mode === "manual") return `يدوي · ${config.ids.length} عنصر`;
-  if (config.mode === "pinned") return `${config.ids.length} مثبّت + ${HOME_SORT_LABELS[config.sort]} · ${count}`;
+  if (!config.show) return dt("مخفي");
+  const count = config.limit === 0 ? dt("الكل") : String(config.limit);
+  if (config.mode === "manual") return dt("يدوي · {0} عنصر", [config.ids.length]);
+  if (config.mode === "pinned") return dt("{0} مثبّت + {1} · {2}", [config.ids.length, HOME_SORT_LABELS[config.sort], count]);
   return `${HOME_SORT_LABELS[config.sort]} · ${count}`;
 }
 
 function sectionSummary(id: HomeSectionId, layout: HomeLayoutConfig): string {
   const meta = HOME_SECTIONS[id];
-  if (meta.kind === "banners") return "من صفحة البانرات";
-  if (meta.kind === "static") return "قسم ثابت التصميم";
+  if (meta.kind === "banners") return dt("من صفحة البانرات");
+  if (meta.kind === "static") return dt("قسم ثابت التصميم");
   return meta.lists
     .map((listId) => (meta.lists.length > 1 ? `${HOME_LISTS[listId].label}: ${listSummary(layout.lists[listId])}` : listSummary(layout.lists[listId])))
     .join(" — ");
@@ -49,8 +50,7 @@ function LockedRow({ title, hint, href }: { title: string; hint: string; href?: 
       </span>
       {href && (
         <Link href={href} className="shrink-0 text-xs font-medium text-primary hover:underline">
-          إعداداته
-        </Link>
+          {dt("إعداداته")}</Link>
       )}
     </div>
   );
@@ -74,8 +74,8 @@ export function SectionList({
 
   return (
     <div className="space-y-2">
-      <LockedRow title="الواجهة الرئيسية" hint="أعلى الصفحة دائمًا · القصص والفيديو التعريفي" />
-      <LockedRow title="التبرع السريع" hint="مثبّت تحت الواجهة بحسب التصميم" href="/dashboard/quick-donation" />
+      <LockedRow title={dt("الواجهة الرئيسية")} hint={dt("أعلى الصفحة دائمًا · القصص والفيديو التعريفي")} />
+      <LockedRow title={dt("التبرع السريع")} hint={dt("مثبّت تحت الواجهة بحسب التصميم")} href="/dashboard/quick-donation" />
 
       <ol className="space-y-1.5 pt-1">
         {layout.sections.map((section, index) => {
@@ -96,19 +96,19 @@ export function SectionList({
                 <Icon className={`h-4 w-4 shrink-0 ${active ? "text-primary" : "text-muted-foreground"}`} />
                 <span className="min-w-0 flex-1">
                   <span className={`block truncate text-sm font-medium ${section.enabled ? "" : "line-through"}`}>{meta.label}</span>
-                  <span className="block truncate text-xs text-muted-foreground">{section.enabled ? sectionSummary(section.id, layout) : "مخفي من الصفحة"}</span>
+                  <span className="block truncate text-xs text-muted-foreground">{section.enabled ? sectionSummary(section.id, layout) : dt("مخفي من الصفحة")}</span>
                 </span>
                 <ChevronLeft className={`h-4 w-4 shrink-0 ${active ? "text-primary" : "text-transparent group-hover:text-muted-foreground"}`} />
               </button>
               <div className="flex shrink-0 items-center">
-                <Button type="button" size="icon" variant="ghost" className="h-7 w-7" disabled={index === 0} onClick={() => onMove(index, index - 1)} aria-label={`نقل «${meta.label}» لأعلى`}>
+                <Button type="button" size="icon" variant="ghost" className="h-7 w-7" disabled={index === 0} onClick={() => onMove(index, index - 1)} aria-label={dt("نقل «{0}» لأعلى", [meta.label])}>
                   <ArrowUp className="h-3.5 w-3.5" />
                 </Button>
-                <Button type="button" size="icon" variant="ghost" className="h-7 w-7" disabled={index === last} onClick={() => onMove(index, index + 1)} aria-label={`نقل «${meta.label}» لأسفل`}>
+                <Button type="button" size="icon" variant="ghost" className="h-7 w-7" disabled={index === last} onClick={() => onMove(index, index + 1)} aria-label={dt("نقل «{0}» لأسفل", [meta.label])}>
                   <ArrowDown className="h-3.5 w-3.5" />
                 </Button>
               </div>
-              <Switch checked={section.enabled} onCheckedChange={(v) => onToggle(section.id, v)} aria-label={`إظهار «${meta.label}»`} />
+              <Switch checked={section.enabled} onCheckedChange={(v) => onToggle(section.id, v)} aria-label={dt("إظهار «{0}»", [meta.label])} />
             </li>
           );
         })}

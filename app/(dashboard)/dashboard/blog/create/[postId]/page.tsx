@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { loadBlogEditEditorData } from "@/lib/blog/admin-editor-data";
 import LanguageTabs from "../_components/LanguageTabs";
+import { dt } from "@/lib/dashboard/i18n";
 
 export const revalidate = 0;
 
@@ -101,8 +102,7 @@ export default async function PostEditorPage({
       <Card className="w-full mx-auto shadow-lg">
         <CardHeader className="bg-gray-50 border-b border-gray-200 py-6 px-6">
           <CardTitle className="text-2xl font-bold text-gray-800">
-            تحرير المقال
-          </CardTitle>
+            {dt("تحرير المقال")}</CardTitle>
         </CardHeader>
         <CardContent className="p-6">
           <LanguageTabs

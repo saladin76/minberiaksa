@@ -26,26 +26,22 @@ import { PageHeader } from "@/components/dashboard/PageHeader";
 import { cn } from "@/lib/utils";
 import type { BadgeCriteriaType } from "@/lib/badge-criteria";
 import { LOCALE_OPTIONS } from "@/lib/locales";
+import { dashDir, dt } from "@/lib/dashboard/i18n";
 
 const CRITERIA_TYPES: { value: BadgeCriteriaType; label: string }[] = [
-  { value: "TOTAL_LAST_N_MONTHS", label: "مجموع التبرع في آخر فترة" },
-  { value: "ANY_SPAN_N_MONTHS", label: "أي فترة متتالية" },
-  { value: "MONTHLY_ACTIVE_RANGE", label: "اشتراك شهري نشط" },
-  { value: "TOTAL_LIFETIME", label: "إجمالي التبرعات" },
-  { value: "DONATION_COUNT_MIN", label: "عدد مرات التبرع" },
+  { value: "TOTAL_LAST_N_MONTHS", get label() { return dt("مجموع التبرع في آخر فترة"); } },
+  { value: "ANY_SPAN_N_MONTHS", get label() { return dt("أي فترة متتالية"); } },
+  { value: "MONTHLY_ACTIVE_RANGE", get label() { return dt("اشتراك شهري نشط"); } },
+  { value: "TOTAL_LIFETIME", get label() { return dt("إجمالي التبرعات"); } },
+  { value: "DONATION_COUNT_MIN", get label() { return dt("عدد مرات التبرع"); } },
 ];
 
 const CRITERIA_EXPLANATIONS: Record<BadgeCriteriaType, string> = {
-  TOTAL_LAST_N_MONTHS:
-    "يُمنح الشارة لمن بلغ مجموع تبرعاته في آخر عدد من الأشهر (من اليوم للوراء) مبلغاً تحددّه أنت.",
-  ANY_SPAN_N_MONTHS:
-    "يُمنح الشارة لمن وُجدت في سجله فترة متتالية من أشهر (أي وقت) بلغ فيها مجموع تبرعاته مبلغاً تحددّه.",
-  MONTHLY_ACTIVE_RANGE:
-    "يُمنح الشارة لمن لديه اشتراك شهري مستمر حالياً وقيمة اشتراكه الشهري بين مبلغين تحددّهما (من وإلى).",
-  TOTAL_LIFETIME:
-    "يُمنح الشارة لمن بلغ إجمالي كل ما تبرع به منذ تسجيله مبلغاً تحددّه.",
-  DONATION_COUNT_MIN:
-    "يُمنح الشارة لمن بلغ عدد مرات تبرعه (بغض النظر عن المبلغ) عددا تحددّه.",
+  get TOTAL_LAST_N_MONTHS() { return dt("يُمنح الشارة لمن بلغ مجموع تبرعاته في آخر عدد من الأشهر (من اليوم للوراء) مبلغاً تحددّه أنت."); },
+  get ANY_SPAN_N_MONTHS() { return dt("يُمنح الشارة لمن وُجدت في سجله فترة متتالية من أشهر (أي وقت) بلغ فيها مجموع تبرعاته مبلغاً تحددّه."); },
+  get MONTHLY_ACTIVE_RANGE() { return dt("يُمنح الشارة لمن لديه اشتراك شهري مستمر حالياً وقيمة اشتراكه الشهري بين مبلغين تحددّهما (من وإلى)."); },
+  get TOTAL_LIFETIME() { return dt("يُمنح الشارة لمن بلغ إجمالي كل ما تبرع به منذ تسجيله مبلغاً تحددّه."); },
+  get DONATION_COUNT_MIN() { return dt("يُمنح الشارة لمن بلغ عدد مرات تبرعه (بغض النظر عن المبلغ) عددا تحددّه."); },
 };
 
 const LOCALES = LOCALE_OPTIONS;
@@ -81,15 +77,15 @@ const defaultCriteria = (): BadgeForm["criteria"] => ({
 function criteriaSummary(c: BadgeForm["criteria"]): string {
   switch (c.type) {
     case "TOTAL_LAST_N_MONTHS":
-      return `آخر ${c.months ?? 0} شهر من اليوم، مبلغ ${c.amountMinUSD ?? 0} دولار أو أكثر`;
+      return dt("آخر {0} شهر من اليوم، مبلغ {1} دولار أو أكثر", [c.months ?? 0, c.amountMinUSD ?? 0]);
     case "ANY_SPAN_N_MONTHS":
-      return `أي ${c.months ?? 0} شهر متتالية، مبلغ ${c.amountMinUSD ?? 0} دولار أو أكثر`;
+      return dt("أي {0} شهر متتالية، مبلغ {1} دولار أو أكثر", [c.months ?? 0, c.amountMinUSD ?? 0]);
     case "MONTHLY_ACTIVE_RANGE":
-      return `اشتراك شهري نشط بين ${c.amountMinUSD ?? 0} و ${c.amountMaxUSD ?? "—"} دولار`;
+      return dt("اشتراك شهري نشط بين {0} و {1} دولار", [c.amountMinUSD ?? 0, c.amountMaxUSD ?? "—"]);
     case "TOTAL_LIFETIME":
-      return `إجمالي التبرعات مدى الحياة ${c.amountMinUSD ?? 0} دولار أو أكثر`;
+      return dt("إجمالي التبرعات مدى الحياة {0} دولار أو أكثر", [c.amountMinUSD ?? 0]);
     case "DONATION_COUNT_MIN":
-      return `عدد التبرعات ${c.count ?? 0} مرة أو أكثر`;
+      return dt("عدد التبرعات {0} مرة أو أكثر", [c.count ?? 0]);
     default:
       return "";
   }
@@ -115,7 +111,7 @@ export default function BadgesPage() {
       setBadges(res.data?.badges ?? []);
     } catch (err) {
       console.error(err);
-      toast.error("فشل في تحميل الشارات");
+      toast.error(dt("فشل في تحميل الشارات"));
     } finally {
       setLoading(false);
     }
@@ -159,13 +155,13 @@ export default function BadgesPage() {
       });
       setDialogOpen(true);
     } catch (err) {
-      toast.error("فشل في تحميل الشارة");
+      toast.error(dt("فشل في تحميل الشارة"));
     }
   };
 
   const handleSave = async () => {
     if (!form.name.trim()) {
-      toast.error("الاسم مطلوب");
+      toast.error(dt("الاسم مطلوب"));
       return;
     }
     setSaving(true);
@@ -184,47 +180,46 @@ export default function BadgesPage() {
       };
       if (editingId) {
         await axios.put(`/api/admin/badges/${editingId}`, payload);
-        toast.success("تم تحديث الشارة");
+        toast.success(dt("تم تحديث الشارة"));
       } else {
         await axios.post("/api/admin/badges", payload);
-        toast.success("تم إنشاء الشارة");
+        toast.success(dt("تم إنشاء الشارة"));
       }
       setDialogOpen(false);
       loadBadges();
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error;
-      toast.error(msg || "فشل في الحفظ");
+      toast.error(msg || dt("فشل في الحفظ"));
     } finally {
       setSaving(false);
     }
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("حذف هذه الشارة؟")) return;
+    if (!confirm(dt("حذف هذه الشارة؟"))) return;
     setDeletingId(id);
     try {
       await axios.delete(`/api/admin/badges/${id}`);
-      toast.success("تم حذف الشارة");
+      toast.success(dt("تم حذف الشارة"));
       loadBadges();
     } catch (err) {
-      toast.error("فشل في الحذف");
+      toast.error(dt("فشل في الحذف"));
     } finally {
       setDeletingId(null);
     }
   };
 
   return (
-    <div className="min-h-0" dir="rtl">
+    <div className="min-h-0" dir={dashDir()}>
       <div className="space-y-6 max-w-[1200px] mx-auto">
         <PageHeader
-          title="الشارات (مجموعات المستخدمين)"
-          description="إنشاء وتعديل شارات حسب معايير التبرع (مبلغ، فترة، عدد)"
+          title={dt("الشارات (مجموعات المستخدمين)")}
+          description={dt("إنشاء وتعديل شارات حسب معايير التبرع (مبلغ، فترة، عدد)")}
           icon={Award}
           actions={
             <Button onClick={openCreate} className="gap-2">
               <Plus className="w-4 h-4" />
-              شارة جديدة
-            </Button>
+              {dt("شارة جديدة")}</Button>
           }
         />
 
@@ -235,8 +230,7 @@ export default function BadgesPage() {
         ) : badges.length === 0 ? (
           <Card>
             <CardContent className="py-12 text-center text-muted-foreground">
-              لا توجد شارات. انقر &quot;شارة جديدة&quot; لإنشاء أول شارة.
-            </CardContent>
+              {dt("لا توجد شارات. انقر \"شارة جديدة\" لإنشاء أول شارة.")}</CardContent>
           </Card>
         ) : (
           <div className="grid gap-4">
@@ -265,8 +259,7 @@ export default function BadgesPage() {
                       className="gap-1"
                     >
                       <Pencil className="w-3 h-3" />
-                      تعديل
-                    </Button>
+                      {dt("تعديل")}</Button>
                     <Button
                       variant="outline"
                       size="sm"
@@ -279,8 +272,7 @@ export default function BadgesPage() {
                       ) : (
                         <Trash2 className="w-3 h-3" />
                       )}
-                      حذف
-                    </Button>
+                      {dt("حذف")}</Button>
                   </div>
                 </CardContent>
               </Card>
@@ -290,21 +282,21 @@ export default function BadgesPage() {
       </div>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto" dir="rtl">
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto" dir={dashDir()}>
           <DialogHeader>
-            <DialogTitle>{editingId ? "تعديل الشارة" : "شارة جديدة"}</DialogTitle>
+            <DialogTitle>{editingId ? dt("تعديل الشارة") : dt("شارة جديدة")}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label>الاسم (افتراضي)</Label>
+              <Label>{dt("الاسم (افتراضي)")}</Label>
               <Input
                 value={form.name}
                 onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-                placeholder="مثال: متبرعو ألف دولار"
+                placeholder={dt("مثال: متبرعو ألف دولار")}
               />
             </div>
             <div className="space-y-2">
-              <Label>اللون</Label>
+              <Label>{dt("اللون")}</Label>
               <div className="flex items-center gap-2">
                 <input
                   type="color"
@@ -320,7 +312,7 @@ export default function BadgesPage() {
               </div>
             </div>
             <div className="space-y-2">
-              <Label>نوع المعيار</Label>
+              <Label>{dt("نوع المعيار")}</Label>
               <Select
                 value={form.criteria.type}
                 onValueChange={(v) =>
@@ -349,7 +341,7 @@ export default function BadgesPage() {
               form.criteria.type === "ANY_SPAN_N_MONTHS") && (
               <>
                 <div className="space-y-2">
-                  <Label>الحد الأدنى للمبلغ (USD)</Label>
+                  <Label>{dt("الحد الأدنى للمبلغ (USD)")}</Label>
                   <Input
                     type="number"
                     min={0}
@@ -368,7 +360,7 @@ export default function BadgesPage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>عدد الأشهر</Label>
+                  <Label>{dt("عدد الأشهر")}</Label>
                   <Input
                     type="number"
                     min={1}
@@ -390,7 +382,7 @@ export default function BadgesPage() {
             {form.criteria.type === "MONTHLY_ACTIVE_RANGE" && (
               <>
                 <div className="space-y-2">
-                  <Label>الحد الأدنى للمبلغ (USD)</Label>
+                  <Label>{dt("الحد الأدنى للمبلغ (USD)")}</Label>
                   <Input
                     type="number"
                     min={0}
@@ -408,7 +400,7 @@ export default function BadgesPage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>الحد الأقصى للمبلغ (USD)</Label>
+                  <Label>{dt("الحد الأقصى للمبلغ (USD)")}</Label>
                   <Input
                     type="number"
                     min={0}
@@ -429,7 +421,7 @@ export default function BadgesPage() {
             )}
             {form.criteria.type === "TOTAL_LIFETIME" && (
               <div className="space-y-2">
-                <Label>الحد الأدنى للمبلغ (USD)</Label>
+                <Label>{dt("الحد الأدنى للمبلغ (USD)")}</Label>
                 <Input
                   type="number"
                   min={0}
@@ -449,7 +441,7 @@ export default function BadgesPage() {
             )}
             {form.criteria.type === "DONATION_COUNT_MIN" && (
               <div className="space-y-2">
-                <Label>الحد الأدنى لعدد التبرعات</Label>
+                <Label>{dt("الحد الأدنى لعدد التبرعات")}</Label>
                 <Input
                   type="number"
                   min={0}
@@ -469,7 +461,7 @@ export default function BadgesPage() {
             )}
 
             <div className="border-t pt-4">
-              <Label className="mb-2 block">الترجمات (اختياري)</Label>
+              <Label className="mb-2 block">{dt("الترجمات (اختياري)")}</Label>
               <div className="space-y-2">
                 {LOCALES.map((loc) => (
                   <div key={loc.code} className="flex items-center gap-2">
@@ -485,7 +477,7 @@ export default function BadgesPage() {
                           },
                         }))
                       }
-                      placeholder={form.name || `الاسم بـ ${loc.label}`}
+                      placeholder={form.name || dt("الاسم بـ {0}", [loc.label])}
                       className="flex-1"
                     />
                   </div>
@@ -495,11 +487,10 @@ export default function BadgesPage() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>
-              إلغاء
-            </Button>
+              {dt("إلغاء")}</Button>
             <Button onClick={handleSave} disabled={saving}>
               {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-              {editingId ? "حفظ التغييرات" : "إنشاء"}
+              {editingId ? dt("حفظ التغييرات") : dt("إنشاء")}
             </Button>
           </DialogFooter>
         </DialogContent>

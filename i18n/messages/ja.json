@@ -2447,5 +2447,14 @@
     "givenSoFar": "これまでに{count}{unit}寄付されました",
     "chooseCount": "{unit}数を選択",
     "customCountPh": "その他の口数"
+  },
+  "CategoryLanding": {
+    "heroLead": "{name}における{org}のプロジェクト。",
+    "ctaLabel": "プロジェクトを見る",
+    "projectsTitle": "{name}のプロジェクト",
+    "donateTitle": "{name}を支援する",
+    "achievementsTitle": "{name}での私たちの成果",
+    "statDoneLabel": "完了",
+    "statGoalLabel": "目標"
   }
 }

@@ -20,6 +20,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { errorMessage } from '@/lib/dashboard/client-error-message';
+import { dt, dtx } from "@/lib/dashboard/i18n";
 
 interface FaqRow {
   id: string;
@@ -101,7 +102,7 @@ export default function FaqsPage() {
       /* Surfaced rather than logged only: a failed load and "nothing yet"
          otherwise render identically and nothing says which happened. */
       console.error(e);
-      toast.error(errorMessage(e, 'تعذّر تحميل الأسئلة'));
+      toast.error(errorMessage(e, dt("تعذّر تحميل الأسئلة")));
     } finally {
       setLoading(false);
     }
@@ -130,7 +131,7 @@ export default function FaqsPage() {
     try {
       await axios.post('/api/faqs/reorder', { faqs: payload });
     } catch (e) {
-      toast.error(errorMessage(e, 'تعذّر حفظ الترتيب'));
+      toast.error(errorMessage(e, dt("تعذّر حفظ الترتيب")));
       fetchFaqs();
     }
   }, [fetchFaqs]);
@@ -144,7 +145,7 @@ export default function FaqsPage() {
       await axios.put(`/api/faqs/${faq.id}`, { isActive: next });
       setFaqs((prev) => prev.map((f) => (f.id === faq.id ? { ...f, isActive: next } : f)));
     } catch (e) {
-      toast.error(errorMessage(e, 'تعذّر تغيير الحالة'));
+      toast.error(errorMessage(e, dt("تعذّر تغيير الحالة")));
     } finally {
       setTogglingId(null);
     }
@@ -156,10 +157,10 @@ export default function FaqsPage() {
     try {
       await axios.delete(`/api/faqs/${deleteTarget.id}`);
       setFaqs((prev) => prev.filter((f) => f.id !== deleteTarget.id));
-      toast.success('تم حذف السؤال');
+      toast.success(dt("تم حذف السؤال"));
       setDeleteTarget(null);
     } catch (e) {
-      toast.error(errorMessage(e, 'تعذّر حذف السؤال'));
+      toast.error(errorMessage(e, dt("تعذّر حذف السؤال")));
     } finally {
       setDeleting(false);
     }
@@ -178,27 +179,24 @@ export default function FaqsPage() {
       <div className="space-y-4">
         <div className="flex items-center justify-between gap-3">
           <div>
-            <h1 className="text-lg font-bold">الأسئلة الشائعة</h1>
+            <h1 className="text-lg font-bold">{dt("الأسئلة الشائعة")}</h1>
             <p className="text-xs text-slate-500">
-              السؤال بلا صفحة محددة يظهر في كل الصفحات التي تعرض الأسئلة الشائعة.
-            </p>
+              {dt("السؤال بلا صفحة محددة يظهر في كل الصفحات التي تعرض الأسئلة الشائعة.")}</p>
           </div>
           <Button onClick={() => router.push('/dashboard/faqs/new')}>
-            <Plus className="w-4 h-4 ml-1" />
-            سؤال جديد
-          </Button>
+            <Plus className="w-4 h-4 me-1" />
+            {dt("سؤال جديد")}</Button>
         </div>
 
         {faqs.length === 0 ? (
           <EmptyState
             icon={HelpCircle}
-            title="لا توجد أسئلة"
-            description="أضف أول سؤال ليظهر في قسم الأسئلة الشائعة."
+            title={dt("لا توجد أسئلة")}
+            description={dt("أضف أول سؤال ليظهر في قسم الأسئلة الشائعة.")}
             action={
               <Button onClick={() => router.push('/dashboard/faqs/new')}>
-                <Plus className="w-4 h-4 ml-1" />
-                سؤال جديد
-              </Button>
+                <Plus className="w-4 h-4 me-1" />
+                {dt("سؤال جديد")}</Button>
             }
           />
         ) : (
@@ -207,10 +205,10 @@ export default function FaqsPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-12" />
-                  <TableHead>السؤال</TableHead>
-                  <TableHead>الصفحة</TableHead>
-                  <TableHead>الترجمات</TableHead>
-                  <TableHead>مفعّل</TableHead>
+                  <TableHead>{dt("السؤال")}</TableHead>
+                  <TableHead>{dt("الصفحة")}</TableHead>
+                  <TableHead>{dt("الترجمات")}</TableHead>
+                  <TableHead>{dt("مفعّل")}</TableHead>
                   <TableHead className="w-24" />
                 </TableRow>
               </TableHeader>
@@ -231,7 +229,7 @@ export default function FaqsPage() {
                       {faq.page ? (
                         <Badge variant="outline" className="text-[10px]" >{faq.page}</Badge>
                       ) : (
-                        <span className="text-xs text-slate-500">كل الصفحات</span>
+                        <span className="text-xs text-slate-500">{dt("كل الصفحات")}</span>
                       )}
                     </TableCell>
                     <TableCell className="text-xs text-slate-600">{faq.translationCount}</TableCell>
@@ -266,17 +264,15 @@ export default function FaqsPage() {
         <AlertDialog open={!!deleteTarget} onOpenChange={(o) => !o && setDeleteTarget(null)}>
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle>حذف السؤال</AlertDialogTitle>
+              <AlertDialogTitle>{dt("حذف السؤال")}</AlertDialogTitle>
               <AlertDialogDescription>
-                سيتم حذف «{deleteTarget?.question}» وكل ترجماته نهائيًا.
-              </AlertDialogDescription>
+                {dtx("سيتم حذف «{0}» وكل ترجماته نهائيًا.", [deleteTarget?.question])}</AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel disabled={deleting}>إلغاء</AlertDialogCancel>
+              <AlertDialogCancel disabled={deleting}>{dt("إلغاء")}</AlertDialogCancel>
               <AlertDialogAction onClick={confirmDelete} disabled={deleting}>
-                {deleting && <Loader2 className="w-4 h-4 animate-spin ml-2" />}
-                حذف
-              </AlertDialogAction>
+                {deleting && <Loader2 className="w-4 h-4 animate-spin me-2" />}
+                {dt("حذف")}</AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>

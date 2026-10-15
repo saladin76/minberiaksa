@@ -5,6 +5,7 @@ import { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useCurrency } from "@/context/CurrencyContext";
 import { DASHBOARD_DISPLAY_SYMBOLS } from "@/lib/dashboard/format-dashboard-money";
+import { dt, dtx } from "@/lib/dashboard/i18n";
 
 type Accent = "emerald" | "teal" | "amber" | "orange" | "violet" | "indigo" | "slate" | "blue" | "rose" | "sky";
 // Flat, saturated accents: a -100 icon badge with a -600 icon and a full-strength rail. The
@@ -39,7 +40,7 @@ function formatSelectedCurrency(value: number, currency: string) {
 }
 function currencyBreakdown(totals?: Record<string, number>) {
   const entries = Object.entries(totals ?? {}).filter(([, value]) => typeof value === "number" && value > 0);
-  if (!entries.length) return "لا توجد حوالات معتمدة بعد";
+  if (!entries.length) return dt("لا توجد حوالات معتمدة بعد");
   return entries.map(([currency, amount]) => formatCurrency(amount, currency)).join(" • ");
 }
 
@@ -67,7 +68,7 @@ export function StatsMetricCard({ title, value, icon: Icon, accent = "slate", fo
   const bankUsd = bankSummary?.totalUsd ?? bankSummary?.totals?.USD ?? 0;
   const bankDisplayValue = selectedCurrency === "DEFAULT" ? bankUsd : (convertToCurrency(bankUsd)?.convertedValue ?? bankUsd);
   const displayedValue = shouldShowBankTransfers && format === "money" ? value + bankDisplayValue : value;
-  const displayedSubtitle = shouldShowBankTransfers ? `الموقع: ${formatSelectedCurrency(value, selectedCode)} • البنوك: ${formatSelectedCurrency(bankDisplayValue, selectedCode)}` : subtitle;
+  const displayedSubtitle = shouldShowBankTransfers ? dt("الموقع: {0} • البنوك: {1}", [formatSelectedCurrency(value, selectedCode), formatSelectedCurrency(bankDisplayValue, selectedCode)]) : subtitle;
 
   // Presentation rebuilt for legibility. The previous card gave the LABEL more visual weight
   // than the NUMBER (11px label vs 16px value), so a wall of 17 of these read as grey noise.
@@ -93,7 +94,7 @@ export function StatsMetricCard({ title, value, icon: Icon, accent = "slate", fo
           "min-w-0 flex-1 font-semibold leading-snug text-slate-600",
           compact ? "text-[11.5px]" : "text-xs",
         )}>
-          {shouldShowBankTransfers ? "إجمالي الإيرادات: الموقع + الحسابات البنكية" : title}
+          {shouldShowBankTransfers ? dt("إجمالي الإيرادات: الموقع + الحسابات البنكية") : title}
         </p>
         <span className={cn("shrink-0 rounded-lg p-1.5", colors.tile)}>
           <Icon className={compact ? "w-4 h-4" : "w-[18px] h-[18px]"} />
@@ -138,14 +139,14 @@ function BankTransfersCardView({ icon: Icon, summary, displayValue, currencyCode
     <div className={CARD_SHELL}>
       <span className={cn("absolute inset-y-0 start-0 w-1", ACCENT_CLASSES.blue.rail)} aria-hidden />
       <div className="flex items-start justify-between gap-3 min-w-0">
-        <p className="min-w-0 flex-1 text-xs font-semibold leading-snug text-slate-600">الحوالات البنكية</p>
+        <p className="min-w-0 flex-1 text-xs font-semibold leading-snug text-slate-600">{dt("الحوالات البنكية")}</p>
         <span className={cn("shrink-0 rounded-lg p-1.5", ACCENT_CLASSES.blue.tile)}><Icon className="w-[18px] h-[18px]" /></span>
       </div>
       <p className="mt-2 text-2xl font-bold leading-8 tabular-nums tracking-tight text-slate-900">
         {formatSelectedCurrency(displayValue, currencyCode)}
       </p>
       <p className="mt-1 truncate text-[11px] leading-tight text-slate-500">
-        الأصل: {currencyBreakdown(summary?.totals)} • معتمد: {summary?.approvedCount ?? 0} • مراجعة: {summary?.pendingCount ?? 0}
+        {dtx("الأصل: {0} • معتمد: {1} • مراجعة: {2}", [currencyBreakdown(summary?.totals), summary?.approvedCount ?? 0, summary?.pendingCount ?? 0])}
       </p>
     </div>
   );

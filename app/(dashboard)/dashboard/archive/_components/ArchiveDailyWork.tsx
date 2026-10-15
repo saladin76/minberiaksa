@@ -4,14 +4,15 @@ import { Clock, Tags, Megaphone, ShieldAlert, FileText, Image as ImageIcon, Vide
 import { EmptyState } from "@/components/dashboard/EmptyState";
 import type { ArchiveAsset, ArchiveProject, ArchiveSnapshot } from "@/lib/archive/archive-types";
 import { ArchiveAssetUseInContent } from "./ArchiveAssetUseInContent";
+import { dashIntl, dt, dtx } from "@/lib/dashboard/i18n";
 
 export type ArchiveWorkKey = "latest" | "classify" | "marketing" | "rights";
 
 const WORK_LABELS: Record<ArchiveWorkKey, { label: string; caption: string; icon: typeof Clock; tone: string }> = {
-  latest: { label: "أحدث الملفات", caption: "آخر ما أُضيف للأرشيف", icon: Clock, tone: "text-slate-600" },
-  classify: { label: "ملفات تحتاج تصنيف", caption: "بانتظار المراجعة والتصنيف", icon: Tags, tone: "text-amber-600" },
-  marketing: { label: "ملفات جاهزة للتسويق", caption: "معتمدة وقابلة للاستخدام", icon: Megaphone, tone: "text-emerald-600" },
-  rights: { label: "بدون حقوق استخدام واضحة", caption: "تحتاج مراجعة الخصوصية والحقوق", icon: ShieldAlert, tone: "text-rose-600" },
+  latest: { get label() { return dt("أحدث الملفات"); }, get caption() { return dt("آخر ما أُضيف للأرشيف"); }, icon: Clock, tone: "text-slate-600" },
+  classify: { get label() { return dt("ملفات تحتاج تصنيف"); }, get caption() { return dt("بانتظار المراجعة والتصنيف"); }, icon: Tags, tone: "text-amber-600" },
+  marketing: { get label() { return dt("ملفات جاهزة للتسويق"); }, get caption() { return dt("معتمدة وقابلة للاستخدام"); }, icon: Megaphone, tone: "text-emerald-600" },
+  rights: { get label() { return dt("بدون حقوق استخدام واضحة"); }, get caption() { return dt("تحتاج مراجعة الخصوصية والحقوق"); }, icon: ShieldAlert, tone: "text-rose-600" },
 };
 
 const WORK_ORDER: ArchiveWorkKey[] = ["latest", "classify", "marketing", "rights"];
@@ -38,16 +39,16 @@ function bucketAssets(assets: ArchiveAsset[], work: ArchiveWorkKey): ArchiveAsse
 }
 
 function usageBadge(a: ArchiveAsset): { label: string; cls: string } {
-  if (a.recommendedUse === "DO_NOT_USE") return { label: "غير قابلة للاستخدام", cls: "border-rose-200 bg-rose-50 text-rose-700" };
-  if (a.isSensitive || a.needsBlur) return { label: "حقوق غير واضحة", cls: "border-rose-200 bg-rose-50 text-rose-700" };
-  if (a.marketingApproved) return { label: "جاهزة للتسويق", cls: "border-emerald-200 bg-emerald-50 text-emerald-700" };
-  if (a.humanReviewStatus === "DOCUMENTATION_ONLY" || a.documentationApproved) return { label: "للتوثيق فقط", cls: "border-slate-200 bg-slate-100 text-slate-600" };
-  if (a.humanReviewStatus === "PENDING") return { label: "تحتاج تصنيف", cls: "border-amber-200 bg-amber-50 text-amber-700" };
-  if (a.humanReviewStatus === "REJECTED") return { label: "مرفوضة", cls: "border-rose-200 bg-rose-50 text-rose-700" };
-  return { label: "قيد المراجعة", cls: "border-slate-200 bg-slate-50 text-slate-600" };
+  if (a.recommendedUse === "DO_NOT_USE") return { label: dt("غير قابلة للاستخدام"), cls: "border-rose-200 bg-rose-50 text-rose-700" };
+  if (a.isSensitive || a.needsBlur) return { label: dt("حقوق غير واضحة"), cls: "border-rose-200 bg-rose-50 text-rose-700" };
+  if (a.marketingApproved) return { label: dt("جاهزة للتسويق"), cls: "border-emerald-200 bg-emerald-50 text-emerald-700" };
+  if (a.humanReviewStatus === "DOCUMENTATION_ONLY" || a.documentationApproved) return { label: dt("للتوثيق فقط"), cls: "border-slate-200 bg-slate-100 text-slate-600" };
+  if (a.humanReviewStatus === "PENDING") return { label: dt("تحتاج تصنيف"), cls: "border-amber-200 bg-amber-50 text-amber-700" };
+  if (a.humanReviewStatus === "REJECTED") return { label: dt("مرفوضة"), cls: "border-rose-200 bg-rose-50 text-rose-700" };
+  return { label: dt("قيد المراجعة"), cls: "border-slate-200 bg-slate-50 text-slate-600" };
 }
 
-const TYPE_LABEL: Record<ArchiveAsset["fileType"], string> = { IMAGE: "صورة", VIDEO: "فيديو", DOCUMENT: "مستند", FOLDER: "مجلد", OTHER: "ملف" };
+const TYPE_LABEL: Record<ArchiveAsset["fileType"], string> = { get IMAGE() { return dt("صورة"); }, get VIDEO() { return dt("فيديو"); }, get DOCUMENT() { return dt("مستند"); }, get FOLDER() { return dt("مجلد"); }, get OTHER() { return dt("ملف"); } };
 function TypeIcon({ type }: { type: ArchiveAsset["fileType"] }) {
   if (type === "IMAGE") return <ImageIcon className="h-4 w-4 text-slate-400" />;
   if (type === "VIDEO") return <Video className="h-4 w-4 text-slate-400" />;
@@ -89,7 +90,7 @@ export function ArchiveDailyWork({ snapshot, work = "latest" }: { snapshot: Arch
                 <span className={`text-xs font-bold text-slate-500`}>{meta.label}</span>
                 <Icon className={`h-4 w-4 ${meta.tone}`} />
               </div>
-              <p className="mt-2 text-2xl font-black text-slate-950">{counts[key].toLocaleString("ar")}</p>
+              <p className="mt-2 text-2xl font-black text-slate-950">{counts[key].toLocaleString(dashIntl("ar"))}</p>
               <p className="mt-0.5 text-[11px] text-slate-400">{meta.caption}</p>
             </Link>
           );
@@ -103,19 +104,19 @@ export function ArchiveDailyWork({ snapshot, work = "latest" }: { snapshot: Arch
             <h2 className="text-base font-black text-slate-950">{activeMeta.label}</h2>
             <p className="mt-0.5 text-xs text-slate-500">{activeMeta.caption}</p>
           </div>
-          <Link href="/dashboard/archive/marketing-picks" className="text-xs font-bold text-brand hover:underline">مختارات التسويق</Link>
+          <Link href="/dashboard/archive/marketing-picks" className="text-xs font-bold text-brand hover:underline">{dt("مختارات التسويق")}</Link>
         </div>
 
         {active.length === 0 ? (
           <EmptyState
             variant="inline"
             icon={FileText}
-            title="لا توجد ملفات في هذه القائمة بعد"
-            description="ارفع ملفًا ليظهر ضمن عمل اليوم."
+            title={dt("لا توجد ملفات في هذه القائمة بعد")}
+            description={dt("ارفع ملفًا ليظهر ضمن عمل اليوم.")}
             action={
               // Was "/dashboard/archive/marketing-files", which next.config.ts redirects to
               // this same URL  one wasted hop. Points at the canonical destination now.
-              <Link href="/dashboard/archive/assets?category=MARKETING" className="inline-flex h-9 items-center rounded-md bg-brand px-4 text-xs font-bold text-white hover:bg-brand-dark">رفع ملف</Link>
+              <Link href="/dashboard/archive/assets?category=MARKETING" className="inline-flex h-9 items-center rounded-md bg-brand px-4 text-xs font-bold text-white hover:bg-brand-dark">{dt("رفع ملف")}</Link>
             }
           />
         ) : (
@@ -146,24 +147,24 @@ export function ArchiveDailyWork({ snapshot, work = "latest" }: { snapshot: Arch
                       </span>
                     </div>
                     <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1 text-xs text-slate-500">
-                      {project ? <span>المشروع: <b className="font-semibold text-slate-700">{project.title}</b></span> : null}
-                      {project?.country ? <span>الدولة: <b className="font-semibold text-slate-700">{project.country}</b></span> : null}
-                      {project?.theme ? <span>المحور/اللغة: <b className="font-semibold text-slate-700">{project.theme}</b></span> : null}
+                      {project ? <span>{dt("المشروع: ")}<b className="font-semibold text-slate-700">{project.title}</b></span> : null}
+                      {project?.country ? <span>{dt("الدولة: ")}<b className="font-semibold text-slate-700">{project.country}</b></span> : null}
+                      {project?.theme ? <span>{dt("المحور/اللغة: ")}<b className="font-semibold text-slate-700">{project.theme}</b></span> : null}
                     </div>
 
                     {/* Advanced metadata hidden in details */}
                     <details className="mt-2 text-xs text-slate-500">
-                      <summary className="cursor-pointer select-none font-semibold text-slate-500 hover:text-slate-700">تفاصيل إضافية</summary>
+                      <summary className="cursor-pointer select-none font-semibold text-slate-500 hover:text-slate-700">{dt("تفاصيل إضافية")}</summary>
                       <div className="mt-2 grid gap-1.5 rounded-lg bg-slate-50 p-3">
                         {asset.aiSummary ? <p className="leading-6 text-slate-600">{asset.aiSummary}</p> : null}
-                        {asset.aiWarnings ? <p className="leading-6 text-amber-700">تنبيه: {asset.aiWarnings}</p> : null}
+                        {asset.aiWarnings ? <p className="leading-6 text-amber-700">{dtx("تنبيه: {0}", [asset.aiWarnings])}</p> : null}
                         <div className="flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-slate-500">
-                          <span>جودة: {asset.qualityScore}</span>
-                          <span>وضوح: {asset.clarityScore}</span>
-                          <span>تأثير: {asset.emotionScore}</span>
-                          {asset.tags.length ? <span>وسوم: {asset.tags.join("، ")}</span> : null}
+                          <span>{dtx("جودة: {0}", [asset.qualityScore])}</span>
+                          <span>{dtx("وضوح: {0}", [asset.clarityScore])}</span>
+                          <span>{dtx("تأثير: {0}", [asset.emotionScore])}</span>
+                          {asset.tags.length ? <span>{dt("وسوم: ")}{asset.tags.join(dt("، "))}</span> : null}
                         </div>
-                        {asset.webViewLink ? <a href={asset.webViewLink} target="_blank" rel="noreferrer" className="font-bold text-brand hover:underline">فتح الملف الأصلي</a> : null}
+                        {asset.webViewLink ? <a href={asset.webViewLink} target="_blank" rel="noreferrer" className="font-bold text-brand hover:underline">{dt("فتح الملف الأصلي")}</a> : null}
                       </div>
                     </details>
                   </div>
@@ -174,7 +175,7 @@ export function ArchiveDailyWork({ snapshot, work = "latest" }: { snapshot: Arch
                     {canUse ? (
                       <ArchiveAssetUseInContent assetId={asset.id} fileName={asset.fileName} />
                     ) : (
-                      <span className="text-[11px] font-semibold text-slate-400">راجع الحقوق قبل الاستخدام</span>
+                      <span className="text-[11px] font-semibold text-slate-400">{dt("راجع الحقوق قبل الاستخدام")}</span>
                     )}
                   </div>
                 </li>
@@ -191,11 +192,9 @@ export function ArchivePrimaryCtas(): ReactNode {
   return (
     <div className="flex flex-wrap gap-2">
       <Link href="/dashboard/archive/marketing-files" className="inline-flex h-9 items-center gap-2 rounded-md bg-brand px-4 text-sm font-bold text-white shadow-sm transition hover:bg-brand-700">
-        رفع ملف
-      </Link>
+        {dt("رفع ملف")}</Link>
       <Link href="/dashboard/archive?work=latest#new-collection" className="inline-flex h-9 items-center gap-2 rounded-md border border-slate-300 bg-white px-4 text-sm font-bold text-slate-800 transition hover:border-brand hover:text-brand">
-        إنشاء مجموعة
-      </Link>
+        {dt("إنشاء مجموعة")}</Link>
     </div>
   );
 }

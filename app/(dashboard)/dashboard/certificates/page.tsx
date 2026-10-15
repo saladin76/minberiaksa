@@ -24,6 +24,7 @@ import {
   type CertificateTemplateId,
   type ReceiptOrgData,
 } from "@/lib/certificates/copy-defaults";
+import { dashIntl, dt, dtx } from "@/lib/dashboard/i18n";
 
 /**
  * The wording on the three documents  thank-you certificate, waqf
@@ -40,9 +41,9 @@ import {
 type FieldDef = { name: string; label: string; i18nKey: string | null; multiline?: boolean };
 
 const TEMPLATES: ReadonlyArray<{ id: CertificateTemplateId; title: string; hint: string; fields: readonly FieldDef[] }> = [
-  { id: "thanks", title: "شهادة الشكر", hint: "تُصدر لكل تبرع مؤكد  النسخة العرضية هي المعتمدة وتُرسل بالبريد.", fields: THANKS_FIELDS },
-  { id: "waqf", title: "شهادة الوقف", hint: "تُصدر لكل سهم/متر وقفي في الطلب. نصوص الإنجليزية والتركية معتمدة حرفيًا من الشهادات المطبوعة  لا تُعاد صياغتها.", fields: WAQF_FIELDS },
-  { id: "receipt", title: "إيصال التبرع", hint: "المستند المحاسبي: بلا شعارات ولا عبارات وجدانية. يُصدر بلغة المتبرع وبنسخة تركية.", fields: RECEIPT_FIELDS },
+  { id: "thanks", get title() { return dt("شهادة الشكر"); }, get hint() { return dt("تُصدر لكل تبرع مؤكد  النسخة العرضية هي المعتمدة وتُرسل بالبريد."); }, fields: THANKS_FIELDS },
+  { id: "waqf", get title() { return dt("شهادة الوقف"); }, get hint() { return dt("تُصدر لكل سهم/متر وقفي في الطلب. نصوص الإنجليزية والتركية معتمدة حرفيًا من الشهادات المطبوعة  لا تُعاد صياغتها."); }, fields: WAQF_FIELDS },
+  { id: "receipt", get title() { return dt("إيصال التبرع"); }, get hint() { return dt("المستند المحاسبي: بلا شعارات ولا عبارات وجدانية. يُصدر بلغة المتبرع وبنسخة تركية."); }, fields: RECEIPT_FIELDS },
 ];
 
 type Defaults = Record<string, Record<string, Record<string, string>>>;
@@ -68,7 +69,7 @@ export default function CertificateCopyPage() {
       setDefaults(res.data.defaults ?? {});
       setUpdatedAt(res.data.updatedAt ?? null);
     } catch (e) {
-      toast({ title: "خطأ", description: errorMessage(e, "تعذّر تحميل نصوص الشهادات"), variant: "destructive" });
+      toast({ title: dt("خطأ"), description: errorMessage(e, dt("تعذّر تحميل نصوص الشهادات")), variant: "destructive" });
     } finally {
       setLoading(false);
     }
@@ -85,9 +86,9 @@ export default function CertificateCopyPage() {
       const res = await axios.put("/api/certificates/copy", { overrides });
       setOverrides(res.data.overrides ?? {});
       setUpdatedAt(res.data.updatedAt ?? null);
-      toast({ title: "تم الحفظ", description: "نصوص الشهادات محفوظة وتُطبَّق على كل مستند يُصدر من الآن." });
+      toast({ title: dt("تم الحفظ"), description: dt("نصوص الشهادات محفوظة وتُطبَّق على كل مستند يُصدر من الآن.") });
     } catch (e) {
-      toast({ title: "خطأ", description: errorMessage(e, "تعذّر الحفظ"), variant: "destructive" });
+      toast({ title: dt("خطأ"), description: errorMessage(e, dt("تعذّر الحفظ")), variant: "destructive" });
     } finally {
       setSaving(false);
     }
@@ -124,22 +125,20 @@ export default function CertificateCopyPage() {
   return (
     <div className="space-y-5">
       <PageHeader
-        title="نصوص الشهادات والإيصال"
-        description="الصياغة التي تُطبع على شهادة الشكر وشهادة الوقف وإيصال التبرع، لكل قالب ولكل لغة. الفارغ يعني النص الافتراضي من حزمة الترجمة."
+        title={dt("نصوص الشهادات والإيصال")}
+        description={dt("الصياغة التي تُطبع على شهادة الشكر وشهادة الوقف وإيصال التبرع، لكل قالب ولكل لغة. الفارغ يعني النص الافتراضي من حزمة الترجمة.")}
         icon={Award}
         actions={
           <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" onClick={() => void load()} disabled={loading}>
-              <RefreshCw className="ml-1 h-4 w-4" /> تحديث
-            </Button>
+              <RefreshCw className="me-1 h-4 w-4" /> {dt(" تحديث")}</Button>
             <Button size="sm" onClick={() => void save()} disabled={saving || loading}>
-              {saving ? <Loader2 className="ml-1 h-4 w-4 animate-spin" /> : <Save className="ml-1 h-4 w-4" />} حفظ
-            </Button>
+              {saving ? <Loader2 className="me-1 h-4 w-4 animate-spin" /> : <Save className="me-1 h-4 w-4" />} {dt(" حفظ")}</Button>
           </div>
         }
       />
 
-      {updatedAt ? <p className="text-xs text-muted-foreground">آخر حفظ: {new Date(updatedAt).toLocaleString("ar-EG")}</p> : null}
+      {updatedAt ? <p className="text-xs text-muted-foreground">{dtx("آخر حفظ: {0}", [new Date(updatedAt).toLocaleString(dashIntl("ar-EG"))])}</p> : null}
 
       <Tabs value={template} onValueChange={(v) => setTemplate(v as CertificateTemplateId)}>
         <TabsList>
@@ -157,19 +156,18 @@ export default function CertificateCopyPage() {
       {template === "receipt" ? (
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">بيانات المؤسسة الرسمية</CardTitle>
+            <CardTitle className="text-base">{dt("بيانات المؤسسة الرسمية")}</CardTitle>
             <CardDescription>
-              تُطبع بالحروف اللاتينية كما في السجل التركي، في كل اللغات  لا تُترجم.
-              {!isAdmin && " هذه بيانات إيصال مالي رسمي ولا يعدّلها إلا المدير."}
+              {dt("تُطبع بالحروف اللاتينية كما في السجل التركي، في كل اللغات  لا تُترجم.")}{!isAdmin && dt(" هذه بيانات إيصال مالي رسمي ولا يعدّلها إلا المدير.")}
             </CardDescription>
           </CardHeader>
           <CardContent className="grid gap-3 md:grid-cols-2">
             {(
               [
-                ["orgLegalName", "الاسم القانوني"],
-                ["taxNo", "الرقم الضريبي"],
-                ["orgAddress", "العنوان"],
-                ["orgContact", "البريد / التواصل"],
+                ["orgLegalName", dt("الاسم القانوني")],
+                ["taxNo", dt("الرقم الضريبي")],
+                ["orgAddress", dt("العنوان")],
+                ["orgContact", dt("البريد / التواصل")],
               ] as Array<[keyof ReceiptOrgData, string]>
             ).map(([key, label]) => (
               <div key={key} className="space-y-1">
@@ -183,12 +181,12 @@ export default function CertificateCopyPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">{current.title}  حسب اللغة</CardTitle>
-          <CardDescription>اختر اللغة ثم عدّل الحقول. يظهر النص الافتراضي كتلميح داخل كل حقل.</CardDescription>
+          <CardTitle className="text-base">{dtx("{0}  حسب اللغة", [current.title])}</CardTitle>
+          <CardDescription>{dt("اختر اللغة ثم عدّل الحقول. يظهر النص الافتراضي كتلميح داخل كل حقل.")}</CardDescription>
         </CardHeader>
         <CardContent>
           {loading ? (
-            <div className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> جارٍ التحميل…</div>
+            <div className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> {dt(" جارٍ التحميل…")}</div>
           ) : (
             <Tabs value={locale} onValueChange={setLocale}>
               <TabsList className="flex h-auto flex-wrap justify-start">
@@ -211,7 +209,7 @@ export default function CertificateCopyPage() {
                       <div key={field.name} className="space-y-1">
                         <Label className="flex items-center justify-between gap-2">
                           <span>{field.label}</span>
-                          {value ? <span className="text-[11px] font-normal text-amber-700">معدّل</span> : <span className="text-[11px] font-normal text-muted-foreground">الافتراضي</span>}
+                          {value ? <span className="text-[11px] font-normal text-amber-700">{dt("معدّل")}</span> : <span className="text-[11px] font-normal text-muted-foreground">{dt("الافتراضي")}</span>}
                         </Label>
                         {field.multiline ? (
                           <Textarea rows={4} value={value} onChange={(e) => setValue(template, loc, field.name, e.target.value)} placeholder={placeholder} />
@@ -229,7 +227,7 @@ export default function CertificateCopyPage() {
       </Card>
 
       <p className="text-xs text-muted-foreground">
-        الآيات القرآنية على شهادة الشكر ثابتة من حزمة <code>quran</code> ولا تُعدَّل من هنا. تخطيط شهادة الشكر الطولي متاح للمشرف من صفحة الشهادة بإضافة <code>?layout=portrait</code>{" "}
+        {dt("الآيات القرآنية على شهادة الشكر ثابتة من حزمة ")}<code>quran</code> {dt(" ولا تُعدَّل من هنا. تخطيط شهادة الشكر الطولي متاح للمشرف من صفحة الشهادة بإضافة ")}<code>?layout=portrait</code>{" "}
         <ExternalLink className="inline h-3 w-3" />
       </p>
     </div>

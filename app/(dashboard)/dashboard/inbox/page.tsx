@@ -3,6 +3,7 @@
 import { Inbox } from "lucide-react";
 import { PageHeader } from "@/components/dashboard/PageHeader";
 import { InboundMessagesView } from "./_components/InboundMessagesView";
+import { dashDir, dt } from "@/lib/dashboard/i18n";
 
 /**
  * الرسائل الواردة  visitor messages from the site's contact form.
@@ -15,12 +16,12 @@ import { InboundMessagesView } from "./_components/InboundMessagesView";
  */
 export default function InboxPage() {
   return (
-    <div className="min-h-0" dir="rtl">
+    <div className="min-h-0" dir={dashDir()}>
       <div className="mx-auto max-w-[1600px]">
         <PageHeader
-          eyebrow="التواصل"
-          title="الرسائل الواردة"
-          description="رسائل الزوار والمستخدمين المُرسلة من نموذج «أرسل لنا رسالة» في تذييل الموقع."
+          eyebrow={dt("التواصل")}
+          title={dt("الرسائل الواردة")}
+          description={dt("رسائل الزوار والمستخدمين المُرسلة من نموذج «أرسل لنا رسالة» في تذييل الموقع.")}
           icon={Inbox}
         />
         <InboundMessagesView />

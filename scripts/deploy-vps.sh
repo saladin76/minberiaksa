@@ -40,4 +40,8 @@ mv .next-build .next
 echo "▶ reloading pm2 app '$APP'"
 pm2 reload "$APP" --update-env || pm2 restart "$APP" --update-env
 
+# vercel.json crons never fire off Vercel; schedule them in this crontab.
+echo "▶ installing crons"
+bash scripts/vps-cron-install.sh
+
 echo "✓ deployed $(git rev-parse --short HEAD). Roll back: mv .next .next-broken && mv .next-previous .next && pm2 reload $APP"

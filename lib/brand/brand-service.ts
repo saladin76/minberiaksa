@@ -16,17 +16,18 @@ import type {
   BrandProfile,
   BrandReadinessAlert,
 } from "./brand-types";
+import { dt } from "@/lib/dashboard/i18n";
 
 // Team-facing brand guide tabs (Arabic). "المؤسسات" (organizations) is intentionally NOT listed  it
 // was removed from the user-facing Brand Center; the /dashboard/brand/organizations route redirects.
 export const BRAND_CENTER_TABS: BrandCenterTab[] = [
-  { key: "overview", title: "دليل الهوية", href: "/dashboard/brand" },
-  { key: "assets", title: "الأصول والشعارات", href: "/dashboard/brand/assets" },
-  { key: "colors", title: "الألوان", href: "/dashboard/brand/colors" },
-  { key: "typography", title: "الخطوط", href: "/dashboard/brand/typography" },
-  { key: "voice", title: "نبرة الخطاب", href: "/dashboard/brand/voice" },
-  { key: "frameworks", title: "قوالب الرسائل", href: "/dashboard/brand/frameworks" },
-  { key: "downloads", title: "التنزيلات", href: "/dashboard/brand/downloads" },
+  { key: "overview", get title() { return dt("دليل الهوية"); }, href: "/dashboard/brand" },
+  { key: "assets", get title() { return dt("الأصول والشعارات"); }, href: "/dashboard/brand/assets" },
+  { key: "colors", get title() { return dt("الألوان"); }, href: "/dashboard/brand/colors" },
+  { key: "typography", get title() { return dt("الخطوط"); }, href: "/dashboard/brand/typography" },
+  { key: "voice", get title() { return dt("نبرة الخطاب"); }, href: "/dashboard/brand/voice" },
+  { key: "frameworks", get title() { return dt("قوالب الرسائل"); }, href: "/dashboard/brand/frameworks" },
+  { key: "downloads", get title() { return dt("التنزيلات"); }, href: "/dashboard/brand/downloads" },
 ];
 
 const nextModels = [
@@ -51,10 +52,10 @@ function buildDownloads(profile: BrandProfile, assets: BrandAsset[]): BrandDownl
   return [
     {
       id: `${profile.id}_profile_download`,
-      title: `${profile.name}  ملف الهوية`,
+      title: dt("{0}  ملف الهوية", [profile.name]),
       type: "PROFILE",
       url: null,
-      note: "ملخص الهوية جاهز؛ يُنشأ ملف التصدير/التحميل بعد اعتماد بيانات الهوية.",
+      note: dt("ملخص الهوية جاهز؛ يُنشأ ملف التصدير/التحميل بعد اعتماد بيانات الهوية."),
       ready: false,
     },
     ...profileAssets.map((asset) => ({
@@ -80,8 +81,8 @@ function buildAlerts(repository: BrandRepositorySnapshot, profile: BrandProfile)
     alerts.push({
       id: `${profile.id}_missing_logo`,
       severity: "warning",
-      title: "الشعار الأساسي يحتاج اعتماد",
-      detail: "ارفع أو اربط ملف الشعار المعتمد قبل تفعيل التنزيلات العامة.",
+      title: dt("الشعار الأساسي يحتاج اعتماد"),
+      detail: dt("ارفع أو اربط ملف الشعار المعتمد قبل تفعيل التنزيلات العامة."),
     });
   }
 
@@ -89,8 +90,8 @@ function buildAlerts(repository: BrandRepositorySnapshot, profile: BrandProfile)
     alerts.push({
       id: `${profile.id}_missing_cta_color`,
       severity: "warning",
-      title: "لون زر التبرع غير محدد",
-      detail: "حدّد لونًا واضحًا لزر التبرع في الصفحات الموجّهة للمتبرعين.",
+      title: dt("لون زر التبرع غير محدد"),
+      detail: dt("حدّد لونًا واضحًا لزر التبرع في الصفحات الموجّهة للمتبرعين."),
     });
   }
 
@@ -98,8 +99,8 @@ function buildAlerts(repository: BrandRepositorySnapshot, profile: BrandProfile)
     alerts.push({
       id: `${profile.id}_missing_zakat_framework`,
       severity: "info",
-      title: "إطار الزكاة غير مكتمل",
-      detail: "أضف قالب رسائل للزكاة قبل كتابة أو مراجعة محتوى الزكاة.",
+      title: dt("إطار الزكاة غير مكتمل"),
+      detail: dt("أضف قالب رسائل للزكاة قبل كتابة أو مراجعة محتوى الزكاة."),
     });
   }
 
@@ -107,8 +108,8 @@ function buildAlerts(repository: BrandRepositorySnapshot, profile: BrandProfile)
     alerts.push({
       id: `${profile.id}_missing_tr_rules`,
       severity: "info",
-      title: "قواعد الكتابة التركية تحتاج توسّعًا",
-      detail: "أضف أمثلة نبرة تركية قبل الترجمة أو إرسال رسائل إعادة التفعيل.",
+      title: dt("قواعد الكتابة التركية تحتاج توسّعًا"),
+      detail: dt("أضف أمثلة نبرة تركية قبل الترجمة أو إرسال رسائل إعادة التفعيل."),
     });
   }
 

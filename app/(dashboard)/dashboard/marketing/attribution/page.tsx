@@ -5,8 +5,9 @@ import { resolveDashboardPageAccess } from "@/lib/dashboard/page-access";
 import { userHasDashboardPermission } from "@/lib/dashboard/permissions";
 import TrackingLinkBuilder from "./_components/TrackingLinkBuilder";
 import CampaignLinksPanel from "./_components/CampaignLinksPanel";
+import { dashDir, dt } from "@/lib/dashboard/i18n";
 
-export const metadata = { title: "الروابط والإسناد | لوحة التحكم" };
+export const metadata = { get title() { return dt("الروابط والإسناد | لوحة التحكم"); } };
 export const dynamic = "force-dynamic";
 
 /**
@@ -18,7 +19,7 @@ export default async function MarketingAttributionPage() {
   if (!access.allowed) redirect(access.redirectTo);
 
   return (
-    <main className="space-y-8 p-4 sm:p-6" dir="rtl">
+    <main className="space-y-8 p-4 sm:p-6" dir={dashDir()}>
       <section id="builder" className="rounded-2xl border border-slate-200 bg-white">
         <TrackingLinkBuilder />
       </section>

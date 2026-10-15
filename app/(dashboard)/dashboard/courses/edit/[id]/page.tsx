@@ -13,6 +13,7 @@ import {
   emptyCourse,
   type CourseFormValues,
 } from '../../_components/CourseForm';
+import { dt } from "@/lib/dashboard/i18n";
 
 type ApiVideo = { id: string; youtubeId: string; url: string; thumbnail: string | null; title: string | null };
 
@@ -58,7 +59,7 @@ export default function EditCoursePage({ params }: { params: Promise<{ id: strin
       .catch((e) => {
         if (!live) return;
         setMissing(true);
-        toast.error(errorMessage(e, 'تعذّر تحميل الدورة'));
+        toast.error(errorMessage(e, dt("تعذّر تحميل الدورة")));
       });
     return () => {
       live = false;
@@ -66,7 +67,7 @@ export default function EditCoursePage({ params }: { params: Promise<{ id: strin
   }, [id]);
 
   if (missing) {
-    return <p className="py-24 text-center text-sm text-slate-500">الدورة غير موجودة.</p>;
+    return <p className="py-24 text-center text-sm text-slate-500">{dt("الدورة غير موجودة.")}</p>;
   }
 
   if (!initial) {

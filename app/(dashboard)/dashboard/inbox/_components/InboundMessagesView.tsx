@@ -28,6 +28,7 @@ import {
 import { InboundMessageCard } from "./InboundMessageCard";
 import { InboundMessageDialog, type TriageAction } from "./InboundMessageDialog";
 import type { InboundMessage, InboxCounts } from "./inbound-types";
+import { dashDir, dt, dtx } from "@/lib/dashboard/i18n";
 
 const PAGE_SIZE = 12;
 
@@ -46,7 +47,7 @@ const DEFAULTS = {
 const EMPTY_COUNTS: InboxCounts = { all: 0, unread: 0, pending: 0, replied: 0 };
 
 const STATUS_TABS: { value: StatusFilter; label: string; countKey: keyof InboxCounts }[] = [
-  { value: "all", label: "الكل", countKey: "all" },
+  { value: "all", get label() { return dt("الكل"); }, countKey: "all" },
   { value: "unread", label: INBOX_STATUS_LABELS.unread, countKey: "unread" },
   { value: "pending", label: INBOX_STATUS_LABELS.pending, countKey: "pending" },
   { value: "replied", label: INBOX_STATUS_LABELS.replied, countKey: "replied" },
@@ -133,7 +134,7 @@ export function InboundMessagesView() {
         setCounts(res.data?.counts ?? EMPTY_COUNTS);
       } catch (err) {
         console.error("Error fetching messages:", err);
-        toast.error("فشل في تحميل الرسائل");
+        toast.error(dt("فشل في تحميل الرسائل"));
       } finally {
         setLoading(false);
         setLoadingMore(false);
@@ -194,7 +195,7 @@ export function InboundMessagesView() {
         emitInboxUnreadDelta(unreadDelta);
       } catch (err) {
         console.error("Error updating message:", err);
-        toast.error("تعذّر تحديث حالة الرسالة");
+        toast.error(dt("تعذّر تحديث حالة الرسالة"));
       }
     },
     [messages],
@@ -216,20 +217,20 @@ export function InboundMessagesView() {
    * empty result read as "there are no messages" rather than "you filtered them all out".
    */
   const activeFilters = [
-    search && { key: "search", label: `بحث: ${search}`, clear: () => setSearchInput("") },
+    search && { key: "search", label: dt("بحث: {0}", [search]), clear: () => setSearchInput("") },
     localeFilter !== "all" && {
       key: "locale",
-      label: `اللغة: ${LOCALE_LABELS[localeFilter as keyof typeof LOCALE_LABELS] ?? localeFilter}`,
+      label: dt("اللغة: {0}", [LOCALE_LABELS[localeFilter as keyof typeof LOCALE_LABELS] ?? localeFilter]),
       clear: () => setLocaleFilter("all"),
     },
     hasUserFilter !== "all" && {
       key: "hasUser",
-      label: hasUserFilter === "yes" ? "مستخدم مسجل" : "زائر",
+      label: hasUserFilter === "yes" ? dt("مستخدم مسجل") : dt("زائر"),
       clear: () => setHasUserFilter("all"),
     },
     subjectFilter !== "all" && {
       key: "subject",
-      label: `النوع: ${subjectLabel(subjectFilter as MessageSubject, locale)}`,
+      label: dt("النوع: {0}", [subjectLabel(subjectFilter as MessageSubject, locale)]),
       clear: () => setSubjectFilter("all"),
     },
   ].filter(Boolean) as { key: string; label: string; clear: () => void }[];
@@ -244,7 +245,7 @@ export function InboundMessagesView() {
   };
 
   return (
-    <div dir="rtl">
+    <div dir={dashDir()}>
       {/*
         Triage tabs, above the filter bar rather than inside it: "what still needs me" is the
         question this page exists to answer, and the counts answer it before anything is read.
@@ -253,7 +254,7 @@ export function InboundMessagesView() {
       */}
       <div
         role="tablist"
-        aria-label="حالة الرسائل"
+        aria-label={dt("حالة الرسائل")}
         className="mb-3 flex w-full gap-1 overflow-x-auto rounded-xl border border-slate-200 bg-white p-1 shadow-sm"
       >
         {STATUS_TABS.map((tab) => {
@@ -294,7 +295,7 @@ export function InboundMessagesView() {
       <FilterBar
         searchValue={searchInput}
         onSearchChange={setSearchInput}
-        searchPlaceholder="ابحث في نص الرسائل…"
+        searchPlaceholder={dt("ابحث في نص الرسائل…")}
         actions={
           <Button
             variant="outline"
@@ -304,28 +305,28 @@ export function InboundMessagesView() {
             disabled={loading}
           >
             <RefreshCw className={cn("h-3.5 w-3.5", loading && "animate-spin")} />
-            <span className="hidden sm:inline">تحديث</span>
+            <span className="hidden sm:inline">{dt("تحديث")}</span>
           </Button>
         }
       >
         {/* `flex-1 basis-[9.5rem]` per select: they share a row on desktop and reflow to two
             per row on a phone, instead of the old seven-column grid that stacked to a
             full-width column each. */}
-        <FilterSelect value={localeFilter} onValueChange={setLocaleFilter} label="تصفية باللغة">
-          <SelectItem value="all" className="text-xs">كل اللغات</SelectItem>
+        <FilterSelect value={localeFilter} onValueChange={setLocaleFilter} label={dt("تصفية باللغة")}>
+          <SelectItem value="all" className="text-xs">{dt("كل اللغات")}</SelectItem>
           {Object.entries(LOCALE_LABELS).map(([code, label]) => (
             <SelectItem key={code} value={code} className="text-xs">{label}</SelectItem>
           ))}
         </FilterSelect>
 
-        <FilterSelect value={hasUserFilter} onValueChange={setHasUserFilter} label="تصفية بنوع المرسل">
-          <SelectItem value="all" className="text-xs">كل المرسلين</SelectItem>
-          <SelectItem value="yes" className="text-xs">مستخدم مسجل</SelectItem>
-          <SelectItem value="no" className="text-xs">زائر</SelectItem>
+        <FilterSelect value={hasUserFilter} onValueChange={setHasUserFilter} label={dt("تصفية بنوع المرسل")}>
+          <SelectItem value="all" className="text-xs">{dt("كل المرسلين")}</SelectItem>
+          <SelectItem value="yes" className="text-xs">{dt("مستخدم مسجل")}</SelectItem>
+          <SelectItem value="no" className="text-xs">{dt("زائر")}</SelectItem>
         </FilterSelect>
 
-        <FilterSelect value={subjectFilter} onValueChange={setSubjectFilter} label="تصفية بالنوع">
-          <SelectItem value="all" className="text-xs">كل الأنواع</SelectItem>
+        <FilterSelect value={subjectFilter} onValueChange={setSubjectFilter} label={dt("تصفية بالنوع")}>
+          <SelectItem value="all" className="text-xs">{dt("كل الأنواع")}</SelectItem>
           {MESSAGE_SUBJECTS.map((s) => (
             <SelectItem key={s} value={s} className="text-xs">{subjectLabel(s, locale)}</SelectItem>
           ))}
@@ -336,22 +337,22 @@ export function InboundMessagesView() {
         <FilterSelect
           value={sort}
           onValueChange={(v) => setSort(v as SortValue)}
-          label="الترتيب"
+          label={dt("الترتيب")}
           className="sm:basis-[13rem]"
         >
           {/* Default. Unanswered first, longest-waiting at the top  the order you would work
               the inbox in, rather than the order it happened to arrive in. */}
-          <SelectItem value="priority" className="text-xs">الأولوية: الأطول انتظارًا</SelectItem>
-          <SelectItem value="createdAt:desc" className="text-xs">الأحدث أولًا</SelectItem>
-          <SelectItem value="createdAt:asc" className="text-xs">الأقدم أولًا</SelectItem>
-          <SelectItem value="body:asc" className="text-xs">النص (أ→ي)</SelectItem>
-          <SelectItem value="body:desc" className="text-xs">النص (ي→أ)</SelectItem>
+          <SelectItem value="priority" className="text-xs">{dt("الأولوية: الأطول انتظارًا")}</SelectItem>
+          <SelectItem value="createdAt:desc" className="text-xs">{dt("الأحدث أولًا")}</SelectItem>
+          <SelectItem value="createdAt:asc" className="text-xs">{dt("الأقدم أولًا")}</SelectItem>
+          <SelectItem value="body:asc" className="text-xs">{dt("النص (أ→ي)")}</SelectItem>
+          <SelectItem value="body:desc" className="text-xs">{dt("النص (ي→أ)")}</SelectItem>
         </FilterSelect>
       </FilterBar>
 
       {activeFilters.length > 0 && (
         <div className="mb-4 flex flex-wrap items-center gap-1.5">
-          <span className="text-[11px] font-medium text-slate-500">التصفية النشطة:</span>
+          <span className="text-[11px] font-medium text-slate-500">{dt("التصفية النشطة:")}</span>
           {activeFilters.map((f) => (
             <button
               key={f.key}
@@ -368,19 +369,18 @@ export function InboundMessagesView() {
             onClick={resetAll}
             className="text-[11px] text-slate-500 underline underline-offset-2 hover:text-slate-800"
           >
-            مسح الكل
-          </button>
+            {dt("مسح الكل")}</button>
         </div>
       )}
 
       <div className="mb-3 flex items-center justify-between gap-2">
         <h2 className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-slate-500">
           <ArrowDownWideNarrow className="h-3.5 w-3.5" />
-          {loading ? "جاري التحميل…" : `${total} رسالة`}
+          {loading ? dt("جاري التحميل…") : dt("{0} رسالة", [total])}
         </h2>
         {!loading && messages.length > 0 && (
           <span className="text-[11px] text-slate-400">
-            معروض {messages.length} من {total}
+            {dtx("معروض {0} من {1}", [messages.length, total])}
           </span>
         )}
       </div>
@@ -396,23 +396,22 @@ export function InboundMessagesView() {
           icon={Inbox}
           title={
             statusFilter === "replied"
-              ? "لم يتم الرد على أي رسالة بعد"
+              ? dt("لم يتم الرد على أي رسالة بعد")
               : statusFilter !== "all"
-                ? "لا شيء هنا  كل الرسائل تمت معالجتها"
+                ? dt("لا شيء هنا  كل الرسائل تمت معالجتها")
                 : activeFilters.length > 0
-                  ? "لا توجد رسائل مطابقة"
-                  : "لا توجد رسائل واردة بعد"
+                  ? dt("لا توجد رسائل مطابقة")
+                  : dt("لا توجد رسائل واردة بعد")
           }
           description={
             statusFilter !== "all" || activeFilters.length > 0
-              ? "جرّب تبويبًا آخر أو وسّع التصفية لعرض كل الرسائل."
-              : "ستظهر هنا رسائل الزوار والمستخدمين المُرسلة من نموذج «أرسل لنا رسالة» في تذييل الموقع."
+              ? dt("جرّب تبويبًا آخر أو وسّع التصفية لعرض كل الرسائل.")
+              : dt("ستظهر هنا رسائل الزوار والمستخدمين المُرسلة من نموذج «أرسل لنا رسالة» في تذييل الموقع.")
           }
           action={
             statusFilter !== "all" || activeFilters.length > 0 ? (
               <Button variant="outline" size="sm" onClick={resetAll}>
-                عرض كل الرسائل
-              </Button>
+                {dt("عرض كل الرسائل")}</Button>
             ) : undefined
           }
         />
@@ -428,8 +427,7 @@ export function InboundMessagesView() {
             <div className="mt-5 text-center">
               <Button variant="outline" onClick={loadMore} disabled={loadingMore} className="gap-2">
                 {loadingMore ? <Loader2 className="h-4 w-4 animate-spin" /> : <Inbox className="h-4 w-4" />}
-                تحميل المزيد
-              </Button>
+                {dt("تحميل المزيد")}</Button>
             </div>
           )}
         </>

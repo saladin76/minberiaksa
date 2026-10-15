@@ -27,6 +27,7 @@ import {
   type SuggestedDonationsConfig,
 } from "@/lib/campaign/suggested-donations";
 import { SUPPORTED_CURRENCY_OPTIONS } from "@/lib/supported-currencies";
+import { dashDir, dt, dtx } from "@/lib/dashboard/i18n";
 
 type Row = { id: string; currency: string; amountsStr: string };
 
@@ -113,11 +114,10 @@ export const SuggestedDonationsSection = forwardRef<
   };
 
   return (
-    <div className="space-y-4 md:col-span-2" dir="rtl">
+    <div className="space-y-4 md:col-span-2" dir={dashDir()}>
       <div>
         <Label htmlFor="suggested-amounts-default">
-          مبالغ التبرع المقترحة (جميع العملات)
-        </Label>
+          {dt("مبالغ التبرع المقترحة (جميع العملات)")}</Label>
         <Input
           id="suggested-amounts-default"
           className="mt-1.5 font-mono text-left"
@@ -127,13 +127,11 @@ export const SuggestedDonationsSection = forwardRef<
           placeholder={DEFAULT_SUGGESTED_DONATION_AMOUNTS.join(", ")}
         />
         <p className="text-sm text-muted-foreground mt-1.5">
-          أرقام مفصولة بفاصلة أو مسافة. تُستخدم لكل العملات ما لم تضف استثناءً
-          أدناه. تظهر كلها في صفحة المشروع.
-        </p>
+          {dt("أرقام مفصولة بفاصلة أو مسافة. تُستخدم لكل العملات ما لم تضف استثناءً أدناه. تظهر كلها في صفحة المشروع.")}</p>
       </div>
 
       <div className="space-y-2 rounded-lg border border-border p-4 bg-muted/30">
-        <Label>المبالغ الظاهرة على بطاقة المشروع (حتى {MAX_CARD_AMOUNTS})</Label>
+        <Label>{dtx("المبالغ الظاهرة على بطاقة المشروع (حتى {0})", [MAX_CARD_AMOUNTS])}</Label>
         <div className="flex flex-wrap gap-2" dir="ltr">
           {listed.map((value) => {
             const on = cardAmounts.includes(value);
@@ -158,24 +156,19 @@ export const SuggestedDonationsSection = forwardRef<
           })}
         </div>
         <p className="text-xs text-muted-foreground">
-          اختر حتى {MAX_CARD_AMOUNTS} مبالغ من القائمة أعلاه لتظهر على البطاقة بجانب خانة «مبلغ مخصص»، وتبقى
-          البقية في صفحة المشروع. بدون اختيار تُعرض {DEFAULT_CARD_DONATION_AMOUNTS.join("، ")} دولار. عند وجود
-          استثناء لعملة المتبرع تُعرض أول ثلاثة مبالغ منه.
-        </p>
+          {dtx("اختر حتى {0} مبالغ من القائمة أعلاه لتظهر على البطاقة بجانب خانة «مبلغ مخصص»، وتبقى البقية في صفحة المشروع. بدون اختيار تُعرض ", [MAX_CARD_AMOUNTS])}{DEFAULT_CARD_DONATION_AMOUNTS.join(dt("، "))} {dt(" دولار. عند وجود استثناء لعملة المتبرع تُعرض أول ثلاثة مبالغ منه.")}</p>
       </div>
 
       <div className="space-y-2">
         <div className="flex items-center justify-between gap-2 flex-wrap">
-          <Label>استثناءات حسب العملة (اختياري)</Label>
+          <Label>{dt("استثناءات حسب العملة (اختياري)")}</Label>
           <Button type="button" variant="outline" size="sm" onClick={addRow} className="gap-1">
             <Plus className="w-4 h-4" />
-            إضافة عملة
-          </Button>
+            {dt("إضافة عملة")}</Button>
         </div>
         {rows.length === 0 ? (
           <p className="text-sm text-muted-foreground">
-            بدون استثناءات، تُطبّق القيم أعلاه على USD وEUR وجميع العملات الأخرى.
-          </p>
+            {dt("بدون استثناءات، تُطبّق القيم أعلاه على USD وEUR وجميع العملات الأخرى.")}</p>
         ) : (
           <div className="space-y-3">
             {rows.map((row) => (
@@ -184,7 +177,7 @@ export const SuggestedDonationsSection = forwardRef<
                 className="flex flex-col sm:flex-row gap-2 sm:items-end border rounded-lg p-3"
               >
                 <div className="flex-1 min-w-[140px]">
-                  <Label className="text-xs text-muted-foreground">العملة</Label>
+                  <Label className="text-xs text-muted-foreground">{dt("العملة")}</Label>
                   <Select
                     value={row.currency}
                     onValueChange={(v) => updateRow(row.id, { currency: v })}
@@ -202,7 +195,7 @@ export const SuggestedDonationsSection = forwardRef<
                   </Select>
                 </div>
                 <div className="flex-[2]">
-                  <Label className="text-xs text-muted-foreground">المبالغ لهذه العملة</Label>
+                  <Label className="text-xs text-muted-foreground">{dt("المبالغ لهذه العملة")}</Label>
                   <Input
                     className="mt-1 font-mono text-left"
                     dir="ltr"
@@ -210,7 +203,7 @@ export const SuggestedDonationsSection = forwardRef<
                     onChange={(e) =>
                       updateRow(row.id, { amountsStr: e.target.value })
                     }
-                    placeholder="مثال: 50, 100, 200"
+                    placeholder={dt("مثال: 50, 100, 200")}
                   />
                 </div>
                 <Button
@@ -219,7 +212,7 @@ export const SuggestedDonationsSection = forwardRef<
                   size="icon"
                   className="shrink-0 text-destructive"
                   onClick={() => removeRow(row.id)}
-                  aria-label="حذف الصف"
+                  aria-label={dt("حذف الصف")}
                 >
                   <Trash2 className="w-4 h-4" />
                 </Button>

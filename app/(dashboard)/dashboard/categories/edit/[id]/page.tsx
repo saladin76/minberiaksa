@@ -43,20 +43,21 @@ import type { SupportedLocale } from '@/lib/locales';
 import { CategoryIconPicker } from '../../_components/CategoryIconPicker';
 import { SmartSeoWorkbenchCard } from '../../../_components/SmartSeoWorkbenchCard';
 import { SaveStatusNotice, type SaveStatusState } from '../../../_components/SaveStatusNotice';
+import { dt } from "@/lib/dashboard/i18n";
 
 const LOCALE_FIELDS: readonly LocaleFormField[] = [
-  { name: 'name', label: 'اسم الحملة', maxLength: 50 },
-  { name: 'description', label: 'الوصف', multiline: true, maxLength: 500 },
+  { name: 'name', get label() { return dt("اسم الحملة"); }, maxLength: 50 },
+  { name: 'description', get label() { return dt("الوصف"); }, multiline: true, maxLength: 500 },
   /* The landing page's own copy. Translated like the rest, so the auto-translate
      button fills the whole page in one press. */
-  { name: 'heroLead', label: 'مقدمة الصفحة', multiline: true },
-  { name: 'ctaLabel', label: 'زر الواجهة' },
-  { name: 'statDoneLabel', label: 'وصف الرقم المُنجز' },
-  { name: 'statGoalLabel', label: 'وصف رقم الهدف' },
-  { name: 'projectsTitle', label: 'عنوان قسم المشاريع' },
-  { name: 'donateTitle', label: 'عنوان صندوق التبرع' },
-  { name: 'donateNote', label: 'ملاحظة صندوق التبرع' },
-  { name: 'achievementsTitle', label: 'عنوان قسم الإنجازات' },
+  { name: 'heroLead', get label() { return dt("مقدمة الصفحة"); }, multiline: true },
+  { name: 'ctaLabel', get label() { return dt("زر الواجهة"); } },
+  { name: 'statDoneLabel', get label() { return dt("وصف الرقم المُنجز"); } },
+  { name: 'statGoalLabel', get label() { return dt("وصف رقم الهدف"); } },
+  { name: 'projectsTitle', get label() { return dt("عنوان قسم المشاريع"); } },
+  { name: 'donateTitle', get label() { return dt("عنوان صندوق التبرع"); } },
+  { name: 'donateNote', get label() { return dt("ملاحظة صندوق التبرع"); } },
+  { name: 'achievementsTitle', get label() { return dt("عنوان قسم الإنجازات"); } },
 ];
 const LOCALE_FIELD_NAMES = ['name', 'description', 'heroLead', 'ctaLabel', 'statDoneLabel', 'statGoalLabel', 'projectsTitle', 'donateTitle', 'donateNote', 'achievementsTitle'] as const;
 type LocaleShape = { [K in `${(typeof LOCALE_FIELD_NAMES)[number]}_${TranslationLocale}`]: z.ZodOptional<z.ZodString> };
@@ -68,8 +69,8 @@ const LOCALE_SHAPE = Object.fromEntries(
 ) as LocaleShape;
 
 const formSchema = z.object({
-  name: z.string().min(1, 'اسم الحملة مطلوب').max(50, 'اسم الحملة طويل جداً'),
-  description: z.string().max(500, 'الوصف طويل جداً').optional(),
+  name: z.string().min(1, dt("اسم الحملة مطلوب")).max(50, dt("اسم الحملة طويل جداً")),
+  description: z.string().max(500, dt("الوصف طويل جداً")).optional(),
   image: z.string().optional(),
   icon: z.string().optional(),
   order: z.number().optional(),
@@ -147,7 +148,7 @@ export default function EditCategoryPage() {
         });
       } catch (error) {
         console.error('Error fetching category:', error);
-        toast.error('فشل في تحميل بيانات الحملة');
+        toast.error(dt("فشل في تحميل بيانات الحملة"));
         router.push('/dashboard/categories');
       } finally {
         setLoading(false);
@@ -173,7 +174,7 @@ export default function EditCategoryPage() {
 
   const onSubmit = async (values: FormValues) => {
     setSaving(true);
-    setSaveStatus({ type: 'saving', message: 'جاري حفظ تحديثات الحملة...', detail: 'لا تغادر الصفحة حتى يكتمل الحفظ' });
+    setSaveStatus({ type: 'saving', message: dt("جاري حفظ تحديثات الحملة..."), detail: dt("لا تغادر الصفحة حتى يكتمل الحفظ") });
     try {
       await axios.put(`/api/categories/${params.id}`, {
         name: values.name,
@@ -194,13 +195,13 @@ export default function EditCategoryPage() {
         infoCards: page.infoCards.filter((c) => c.title.trim()),
         translations: collectLocaleTranslations(values, LOCALE_FIELDS),
       });
-      setSaveStatus({ type: 'success', message: 'تم تحديث الحملة بنجاح', detail: 'أنت ما زلت داخل صفحة التعديل' });
-      toast.success('تم تحديث الحملة بنجاح');
+      setSaveStatus({ type: 'success', message: dt("تم تحديث الحملة بنجاح"), detail: dt("أنت ما زلت داخل صفحة التعديل") });
+      toast.success(dt("تم تحديث الحملة بنجاح"));
       router.refresh();
     } catch (error: any) {
       console.error('Error updating category:', error);
-      const message = error?.response?.data?.error || 'فشل في تحديث الحملة';
-      setSaveStatus({ type: 'error', message, detail: 'راجع البيانات ثم حاول مرة أخرى' });
+      const message = error?.response?.data?.error || dt("فشل في تحديث الحملة");
+      setSaveStatus({ type: 'error', message, detail: dt("راجع البيانات ثم حاول مرة أخرى") });
       toast.error(message);
     } finally {
       setSaving(false);
@@ -208,8 +209,8 @@ export default function EditCategoryPage() {
   };
 
   const onInvalid = () => {
-    const message = 'راجع الحقول المطلوبة أو الحقول التي تجاوزت الحد المسموح';
-    setSaveStatus({ type: 'error', message, detail: 'لم يتم إرسال البيانات للحفظ' });
+    const message = dt("راجع الحقول المطلوبة أو الحقول التي تجاوزت الحد المسموح");
+    setSaveStatus({ type: 'error', message, detail: dt("لم يتم إرسال البيانات للحفظ") });
     toast.error(message, { duration: 9000 });
   };
 
@@ -224,10 +225,10 @@ export default function EditCategoryPage() {
     try {
       const response = await axios.post('/api/upload', formData);
       form.setValue('image', response.data.url);
-      toast.success('تم رفع الصورة بنجاح');
+      toast.success(dt("تم رفع الصورة بنجاح"));
     } catch (error) {
       console.error('Error uploading image:', error);
-      toast.error('فشل في رفع الصورة');
+      toast.error(dt("فشل في رفع الصورة"));
     } finally {
       setUploadingImage(false);
     }
@@ -241,10 +242,10 @@ export default function EditCategoryPage() {
       const publicId = imageUrl.split('/').slice(-1)[0].split('.')[0];
       if (publicId) await axios.delete(`/api/upload?publicId=${publicId}`);
       form.setValue('image', '');
-      toast.success('تم حذف الصورة بنجاح');
+      toast.success(dt("تم حذف الصورة بنجاح"));
     } catch (error) {
       console.error('Error removing image:', error);
-      toast.error('فشل في حذف الصورة');
+      toast.error(dt("فشل في حذف الصورة"));
     }
   };
 
@@ -274,14 +275,13 @@ export default function EditCategoryPage() {
     <div className="space-y-6">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">تعديل الحملة</h1>
-          <p className="text-gray-600">قم بتحديث معلومات الحملة</p>
+          <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">{dt("تعديل الحملة")}</h1>
+          <p className="text-gray-600">{dt("قم بتحديث معلومات الحملة")}</p>
           <SaveStatusNotice status={saveStatus} />
         </div>
         <Button variant="outline" onClick={() => router.push('/dashboard/categories')} className="gap-2">
           <ArrowLeft className="w-4 h-4" />
-          العودة
-        </Button>
+          {dt("العودة")}</Button>
       </div>
 
       <Form {...form}>
@@ -294,8 +294,8 @@ export default function EditCategoryPage() {
             onValueChange={(value) => setActiveLocale(value as SeoLocale)}
             arabic={
               <LocaleCard>
-                <FormField control={form.control} name="name" render={({ field }) => (<FormItem><FormLabel>اسم الحملة</FormLabel><FormControl><Input {...field} placeholder="أدخل اسم الحملة" /></FormControl><FormMessage /></FormItem>)} />
-                <FormField control={form.control} name="description" render={({ field }) => (<FormItem><FormLabel>وصف الحملة</FormLabel><FormControl><Textarea placeholder="اكتب وصفاً للحملة..." className="resize-y" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                <FormField control={form.control} name="name" render={({ field }) => (<FormItem><FormLabel>{dt("اسم الحملة")}</FormLabel><FormControl><Input {...field} placeholder={dt("أدخل اسم الحملة")} /></FormControl><FormMessage /></FormItem>)} />
+                <FormField control={form.control} name="description" render={({ field }) => (<FormItem><FormLabel>{dt("وصف الحملة")}</FormLabel><FormControl><Textarea placeholder={dt("اكتب وصفاً للحملة...")} className="resize-y" {...field} /></FormControl><FormMessage /></FormItem>)} />
               </LocaleCard>
             }
             extra={(locale) =>
@@ -307,9 +307,9 @@ export default function EditCategoryPage() {
 
           <CategoryPageSection values={page} onChange={setPage} campaignOptions={campaignOptions} />
 
-          <Card className="p-6"><div className="grid gap-6"><FormField control={form.control} name="image" render={({ field }) => (<FormItem><FormLabel>صورة الحملة</FormLabel><FormControl><div className="space-y-4">{field.value ? (<div className="relative w-40 h-40"><img src={field.value} alt="Category" className="w-full h-full object-cover rounded-lg" /><button type="button" onClick={removeImage} className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"><X className="w-4 h-4" /></button></div>) : (<div className="relative"><input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" id="image" disabled={uploadingImage} /><label htmlFor="image" className="flex flex-col items-center justify-center w-40 h-40 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-brand transition-colors">{uploadingImage ? (<Loader2 className="w-6 h-6 animate-spin text-brand" />) : (<><Upload className="w-6 h-6 text-gray-400" /><span className="mt-2 text-sm text-gray-500">اضغط لإضافة صورة</span></>)}</label></div>)}</div></FormControl><FormDescription>يمكنك رفع صورة واحدة للحملة.<br /><span className="text-amber-700">الحجم المُوصى به: <strong>1200×800 px</strong> (نسبة 3:2)، صيغة JPG أو PNG، حجم الملف لا يزيد عن 2MB.</span></FormDescription><FormMessage /></FormItem>)} /><FormField control={form.control} name="icon" render={({ field }) => (<FormItem><FormLabel>أيقونة الحملة</FormLabel><FormControl><CategoryIconPicker value={field.value} onChange={field.onChange} /></FormControl><FormDescription>اختر أيقونة جاهزة أو علم أي دولة.</FormDescription><FormMessage /></FormItem>)} /></div></Card>
+          <Card className="p-6"><div className="grid gap-6"><FormField control={form.control} name="image" render={({ field }) => (<FormItem><FormLabel>{dt("صورة الحملة")}</FormLabel><FormControl><div className="space-y-4">{field.value ? (<div className="relative w-40 h-40"><img src={field.value} alt="Category" className="w-full h-full object-cover rounded-lg" /><button type="button" onClick={removeImage} className="absolute top-2 start-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"><X className="w-4 h-4" /></button></div>) : (<div className="relative"><input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" id="image" disabled={uploadingImage} /><label htmlFor="image" className="flex flex-col items-center justify-center w-40 h-40 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-brand transition-colors">{uploadingImage ? (<Loader2 className="w-6 h-6 animate-spin text-brand" />) : (<><Upload className="w-6 h-6 text-gray-400" /><span className="mt-2 text-sm text-gray-500">{dt("اضغط لإضافة صورة")}</span></>)}</label></div>)}</div></FormControl><FormDescription>{dt("يمكنك رفع صورة واحدة للحملة.")}<br /><span className="text-amber-700">{dt("الحجم المُوصى به: ")}<strong>1200×800 px</strong> {dt(" (نسبة 3:2)، صيغة JPG أو PNG، حجم الملف لا يزيد عن 2MB.")}</span></FormDescription><FormMessage /></FormItem>)} /><FormField control={form.control} name="icon" render={({ field }) => (<FormItem><FormLabel>{dt("أيقونة الحملة")}</FormLabel><FormControl><CategoryIconPicker value={field.value} onChange={field.onChange} /></FormControl><FormDescription>{dt("اختر أيقونة جاهزة أو علم أي دولة.")}</FormDescription><FormMessage /></FormItem>)} /></div></Card>
 
-          <div className="flex justify-end gap-4"><Button type="button" variant="outline" onClick={() => router.push('/dashboard/categories')}>إلغاء</Button><Button type="submit" className="bg-brand hover:bg-brand-dark" disabled={saving}>{saving && <Loader2 className="w-4 h-4 ml-2 animate-spin" />}حفظ التغييرات</Button></div>
+          <div className="flex justify-end gap-4"><Button type="button" variant="outline" onClick={() => router.push('/dashboard/categories')}>{dt("إلغاء")}</Button><Button type="submit" className="bg-brand hover:bg-brand-dark" disabled={saving}>{saving && <Loader2 className="w-4 h-4 me-2 animate-spin" />}{dt("حفظ التغييرات")}</Button></div>
         </form>
       </Form>
     </div>

@@ -12,6 +12,7 @@ import { EmptyState } from "@/components/dashboard/EmptyState";
 import { SegmentedControl, fmtDateTime, fmtFull } from "../../_shared/channel-ui";
 import { cn } from "@/lib/utils";
 import { SmartWhatsappDialog } from "@/components/dashboard/SmartWhatsappDialog";
+import { dashDir, dt, dtx } from "@/lib/dashboard/i18n";
 
 /**
  * The WhatsApp inbox.
@@ -106,9 +107,9 @@ type Detail = {
 type ReplyWindow = { open: boolean; lastInboundAt: string | null; remainingMs: number; lastInboundMessageId: string | null };
 
 const FILTERS = [
-  { value: "needsReply", label: "بانتظار ردّ" },
-  { value: "unresolved", label: "غير مرتبطة" },
-  { value: "all", label: "الكل" },
+  { value: "needsReply", get label() { return dt("بانتظار ردّ"); } },
+  { value: "unresolved", get label() { return dt("غير مرتبطة"); } },
+  { value: "all", get label() { return dt("الكل"); } },
 ];
 
 const MEDIA_ICONS: Record<string, typeof ImageIcon> = {
@@ -117,7 +118,7 @@ const MEDIA_ICONS: Record<string, typeof ImageIcon> = {
 
 function mediaLabel(media: Media): string {
   const names: Record<string, string> = {
-    image: "صورة", video: "مقطع مرئي", audio: "رسالة صوتية", document: "ملف", sticker: "ملصق",
+    image: dt("صورة"), video: dt("مقطع مرئي"), audio: dt("رسالة صوتية"), document: dt("ملف"), sticker: dt("ملصق"),
   };
   const base = names[media.kind] ?? media.kind;
   return media.filename ? `${base}  ${media.filename}` : base;
@@ -125,11 +126,11 @@ function mediaLabel(media: Media): string {
 
 /** "٤ ساعات" left in the window, or how long ago it closed. */
 function windowText(window: ReplyWindow): string {
-  if (!window.lastInboundAt) return "لم يُرسل المتبرع أي رسالة بعد  الردّ يتطلّب قالبًا معتمدًا.";
-  if (!window.open) return `انتهت نافذة الردّ الحر (آخر رسالة من المتبرع ${fmtFull(window.lastInboundAt)})  استخدم قالبًا معتمدًا.`;
+  if (!window.lastInboundAt) return dt("لم يُرسل المتبرع أي رسالة بعد  الردّ يتطلّب قالبًا معتمدًا.");
+  if (!window.open) return dt("انتهت نافذة الردّ الحر (آخر رسالة من المتبرع {0})  استخدم قالبًا معتمدًا.", [fmtFull(window.lastInboundAt)]);
   const hours = Math.floor(window.remainingMs / 3_600_000);
   const minutes = Math.floor((window.remainingMs % 3_600_000) / 60_000);
-  return hours > 0 ? `يمكن الردّ بنص حر خلال ${hours} ساعة و${minutes} دقيقة.` : `يمكن الردّ بنص حر خلال ${minutes} دقيقة.`;
+  return hours > 0 ? dt("يمكن الردّ بنص حر خلال {0} ساعة و{1} دقيقة.", [hours, minutes]) : dt("يمكن الردّ بنص حر خلال {0} دقيقة.", [minutes]);
 }
 
 export function WhatsappInbox() {
@@ -198,7 +199,7 @@ export function WhatsappInbox() {
         );
       }
     } catch (error) {
-      setListError((error as Error).message || "تعذّر تحميل صندوق واتساب");
+      setListError((error as Error).message || dt("تعذّر تحميل صندوق واتساب"));
     } finally {
       if (!silent) setLoadingList(false);
     }
@@ -227,7 +228,7 @@ export function WhatsappInbox() {
       setDetail(data.conversation);
       setReplyWindow(data.replyWindow);
     } catch (error) {
-      setDetailError((error as Error).message || "تعذّر تحميل المحادثة");
+      setDetailError((error as Error).message || dt("تعذّر تحميل المحادثة"));
     } finally {
       if (!silent) setLoadingDetail(false);
     }
@@ -257,10 +258,10 @@ export function WhatsappInbox() {
       body: JSON.stringify({ action }),
     });
     if (res.ok) {
-      setNotice({ tone: "ok", text: action === "handled" ? "تم وسمها كمُعالَجة." : action === "followup" ? "سُجّل طلب المتابعة." : "سُجّل طلب الربط بمتبرع." });
+      setNotice({ tone: "ok", text: action === "handled" ? dt("تم وسمها كمُعالَجة.") : action === "followup" ? dt("سُجّل طلب المتابعة.") : dt("سُجّل طلب الربط بمتبرع.") });
       void loadList();
     } else {
-      setNotice({ tone: "error", text: "تعذّر تنفيذ الإجراء." });
+      setNotice({ tone: "error", text: dt("تعذّر تنفيذ الإجراء.") });
     }
   }, [activeId, loadList]);
 
@@ -281,13 +282,13 @@ export function WhatsappInbox() {
         setNotice({
           tone: "error",
           text: data.error === "REPLY_WINDOW_CLOSED"
-            ? "انتهت نافذة الردّ الحر قبل الإرسال  استخدم قالبًا معتمدًا."
-            : `تعذّر الإرسال: ${data.error ?? "خطأ غير معروف"}`,
+            ? dt("انتهت نافذة الردّ الحر قبل الإرسال  استخدم قالبًا معتمدًا.")
+            : dt("تعذّر الإرسال: {0}", [data.error ?? dt("خطأ غير معروف")]),
         });
         return;
       }
       setDraft("");
-      setNotice({ tone: "ok", text: "أُرسل الردّ." });
+      setNotice({ tone: "ok", text: dt("أُرسل الردّ.") });
       await loadDetail(activeId);
       void loadList();
     } finally {
@@ -296,16 +297,16 @@ export function WhatsappInbox() {
   }, [activeId, draft, loadDetail, loadList]);
 
   const senderOptions = useMemo(
-    () => [{ value: "", label: "كل الأرقام" }, ...senders.map((s) => ({ value: s.id, label: s.phone ? `${s.name} · ${s.phone}` : s.name }))],
+    () => [{ value: "", label: dt("كل الأرقام") }, ...senders.map((s) => ({ value: s.id, label: s.phone ? `${s.name} · ${s.phone}` : s.name }))],
     [senders],
   );
 
   return (
-    <div dir="rtl">
+    <div dir={dashDir()}>
       <PageHeader
-        eyebrow="التواصل"
-        title="صندوق واتساب"
-        description="ردود المتبرعين على رسائل واتساب، مجمّعة لكل رقم عمل على حدة."
+        eyebrow={dt("التواصل")}
+        title={dt("صندوق واتساب")}
+        description={dt("ردود المتبرعين على رسائل واتساب، مجمّعة لكل رقم عمل على حدة.")}
         icon={MessageCircle}
         actions={
           <button
@@ -314,8 +315,7 @@ export function WhatsappInbox() {
             className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
           >
             <RefreshCw className={cn("w-4 h-4", loadingList && "animate-spin")} />
-            تحديث
-          </button>
+            {dt("تحديث")}</button>
         }
       />
 
@@ -341,19 +341,19 @@ export function WhatsappInbox() {
           {senderOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
         </select>
         <div className="relative">
-          <Search className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+          <Search className="pointer-events-none absolute start-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="رقم، اسم، أو نصّ رسالة"
-            className="w-64 rounded-lg border border-slate-200 bg-white py-1.5 pr-8 pl-3 text-sm text-slate-700 placeholder:text-slate-400"
+            placeholder={dt("رقم، اسم، أو نصّ رسالة")}
+            className="w-64 rounded-lg border border-slate-200 bg-white py-1.5 ps-8 pe-3 text-sm text-slate-700 placeholder:text-slate-400"
           />
         </div>
         <span className={cn(
           "rounded-full border px-2.5 py-1 text-xs font-medium",
           needsReply > 0 ? "border-amber-200 bg-amber-50 text-amber-700" : "border-emerald-200 bg-emerald-50 text-emerald-700",
         )}>
-          {needsReply > 0 ? `${needsReply} محادثة بانتظار ردّ` : "لا شيء بانتظار ردّ"}
+          {needsReply > 0 ? dt("{0} محادثة بانتظار ردّ", [needsReply]) : dt("لا شيء بانتظار ردّ")}
         </span>
         </div>
       </div>
@@ -363,8 +363,7 @@ export function WhatsappInbox() {
         <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
           {listError && conversations.length > 0 && (
             <div className="border-b border-amber-200 bg-amber-50 px-3 py-2 text-[11px] font-medium text-amber-800">
-              تعذّر تحديث القائمة الآن؛ المعروض هو آخر بيانات ناجحة.
-            </div>
+              {dt("تعذّر تحديث القائمة الآن؛ المعروض هو آخر بيانات ناجحة.")}</div>
           )}
           {loadingList ? (
             <div className="flex items-center justify-center py-16 text-slate-400">
@@ -374,7 +373,7 @@ export function WhatsappInbox() {
             <div className="p-5">
               <EmptyState
                 variant="inline"
-                title="تعذّر تحميل المحادثات"
+                title={dt("تعذّر تحميل المحادثات")}
                 description={listError}
               />
               <button
@@ -382,15 +381,14 @@ export function WhatsappInbox() {
                 onClick={() => void loadList()}
                 className="mx-auto mt-3 block rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
               >
-                إعادة المحاولة
-              </button>
+                {dt("إعادة المحاولة")}</button>
             </div>
           ) : conversations.length === 0 ? (
             <div className="p-5">
               <EmptyState
                 variant="inline"
-                title="لا توجد محادثات"
-                description={filter === "needsReply" ? "لا توجد محادثات بانتظار الرد حاليًا." : "لم تصل أي محادثات مطابقة لهذا الفلتر."}
+                title={dt("لا توجد محادثات")}
+                description={filter === "needsReply" ? dt("لا توجد محادثات بانتظار الرد حاليًا.") : dt("لم تصل أي محادثات مطابقة لهذا الفلتر.")}
               />
               {filter !== "all" && (
                 <button
@@ -398,8 +396,7 @@ export function WhatsappInbox() {
                   onClick={() => setFilter("all")}
                   className="mx-auto mt-3 block rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
                 >
-                  عرض كل المحادثات
-                </button>
+                  {dt("عرض كل المحادثات")}</button>
               )}
             </div>
           ) : (
@@ -412,29 +409,27 @@ export function WhatsappInbox() {
                       type="button"
                       onClick={() => setActiveId(c.id)}
                       className={cn(
-                        "relative w-full px-3 py-3.5 text-right transition-colors hover:bg-slate-50",
+                        "relative w-full px-3 py-3.5 text-start transition-colors hover:bg-slate-50",
                         activeId === c.id && "bg-emerald-50/70",
                       )}
                     >
-                      {activeId === c.id && <span className="absolute inset-y-2 right-0 w-1 rounded-l-full bg-emerald-500" />}
+                      {activeId === c.id && <span className="absolute inset-y-2 start-0 w-1 rounded-e-full bg-emerald-500" />}
                       <div className="flex items-center justify-between gap-2">
                         <span className="text-sm font-semibold text-slate-900 truncate">
                           {c.donor?.name || c.phone}
                         </span>
                         {c.needsReply && (
                           <span className="shrink-0 rounded-full bg-amber-50 border border-amber-200 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700">
-                            بانتظار ردّ
-                          </span>
+                            {dt("بانتظار ردّ")}</span>
                         )}
                       </div>
                       <p className="mt-0.5 text-xs text-slate-500 truncate">{c.lastInboundText || "—"}</p>
                       <div className="mt-1 flex items-center gap-2 text-[11px] text-slate-400">
                         {at && <span>{at.date} · {at.time}</span>}
-                        {c.sender?.phone && <span className="truncate">عبر {c.sender.phone}</span>}
+                        {c.sender?.phone && <span className="truncate">{dtx("عبر {0}", [c.sender.phone])}</span>}
                         {c.unresolved && (
                           <span className="inline-flex items-center gap-0.5 text-slate-400">
-                            <UserX className="w-3 h-3" /> غير مرتبطة
-                          </span>
+                            <UserX className="w-3 h-3" /> {dt(" غير مرتبطة")}</span>
                         )}
                       </div>
                     </button>
@@ -448,30 +443,28 @@ export function WhatsappInbox() {
         {/* ── Thread ─────────────────────────────────────────────── */}
         <div className="flex min-h-[68vh] flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
           {!activeId ? (
-            <EmptyState variant="inline" title="اختر محادثة" description="ستظهر الرسائل وملف المتبرع هنا." />
+            <EmptyState variant="inline" title={dt("اختر محادثة")} description={dt("ستظهر الرسائل وملف المتبرع هنا.")} />
           ) : loadingDetail && !detail ? (
             <div className="flex items-center justify-center py-20 text-slate-400">
               <Loader2 className="w-5 h-5 animate-spin" />
             </div>
           ) : detailError && !detail ? (
             <div className="p-5">
-              <EmptyState variant="inline" title="تعذّر تحميل المحادثة" description={detailError} />
+              <EmptyState variant="inline" title={dt("تعذّر تحميل المحادثة")} description={detailError} />
               <button
                 type="button"
                 onClick={() => activeId && void loadDetail(activeId)}
                 className="mx-auto mt-3 block rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
               >
-                إعادة المحاولة
-              </button>
+                {dt("إعادة المحاولة")}</button>
             </div>
           ) : !detail ? (
-            <EmptyState variant="inline" title="تعذّر تحميل المحادثة" />
+            <EmptyState variant="inline" title={dt("تعذّر تحميل المحادثة")} />
           ) : (
             <>
               {detailError && (
                 <div className="border-b border-amber-200 bg-amber-50 px-4 py-2 text-[11px] font-medium text-amber-800">
-                  تعذّر تحديث المحادثة الآن؛ المعروض هو آخر بيانات ناجحة.
-                </div>
+                  {dt("تعذّر تحديث المحادثة الآن؛ المعروض هو آخر بيانات ناجحة.")}</div>
               )}
               <div className="border-b border-slate-100 px-4 py-3">
                 <div className="flex flex-wrap items-center justify-between gap-2">
@@ -481,7 +474,7 @@ export function WhatsappInbox() {
                     </p>
                     <p className="text-xs text-slate-500">
                       {detail.phone}
-                      {detail.sender?.phone ? ` · عبر ${detail.sender.phone}` : ""}
+                      {detail.sender?.phone ? dt(" · عبر {0}", [detail.sender.phone]) : ""}
                     </p>
                   </div>
                   <div className="flex items-center gap-1.5">
@@ -492,31 +485,26 @@ export function WhatsappInbox() {
                         href={`/dashboard/users/donors?q=${encodeURIComponent(detail.donor.email || detail.phone)}`}
                         className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50"
                       >
-                        <UserRound className="w-3.5 h-3.5" /> في قائمة المتبرعين
-                      </Link>
+                        <UserRound className="w-3.5 h-3.5" /> {dt(" في قائمة المتبرعين")}</Link>
                     )}
                     <button type="button" onClick={() => void act("handled")} className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50">
-                      <Check className="w-3.5 h-3.5" /> مُعالَجة
-                    </button>
+                      <Check className="w-3.5 h-3.5" /> {dt(" مُعالَجة")}</button>
                     <button type="button" onClick={() => void act("followup")} className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50">
-                      <Flag className="w-3.5 h-3.5" /> متابعة
-                    </button>
+                      <Flag className="w-3.5 h-3.5" /> {dt(" متابعة")}</button>
                     {detail.unresolved && (
                       <button type="button" onClick={() => void act("link")} className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50">
-                        <Link2 className="w-3.5 h-3.5" /> ربط بمتبرع
-                      </button>
+                        <Link2 className="w-3.5 h-3.5" /> {dt(" ربط بمتبرع")}</button>
                     )}
                   </div>
                 </div>
                 {detail.donor && (
                   <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] text-slate-500">
-                    {detail.donor.totalDonations != null && <span>{detail.donor.totalDonations} تبرعًا</span>}
-                    {detail.donor.lastDonationAt && <span>آخر تبرع {fmtFull(detail.donor.lastDonationAt)}</span>}
-                    {detail.donor.locale && <span>اللغة {detail.donor.locale}</span>}
+                    {detail.donor.totalDonations != null && <span>{dtx("{0} تبرعًا", [detail.donor.totalDonations])}</span>}
+                    {detail.donor.lastDonationAt && <span>{dtx("آخر تبرع {0}", [fmtFull(detail.donor.lastDonationAt)])}</span>}
+                    {detail.donor.locale && <span>{dtx("اللغة {0}", [detail.donor.locale])}</span>}
                     {detail.donor.doNotContact && (
                       <span className="rounded-full border border-rose-200 bg-rose-50 px-1.5 py-0.5 font-semibold text-rose-700">
-                        ممنوع التواصل
-                      </span>
+                        {dt("ممنوع التواصل")}</span>
                     )}
                   </div>
                 )}
@@ -539,8 +527,7 @@ export function WhatsappInbox() {
                     }}
                     className="mx-auto block rounded-lg border border-slate-200 bg-white px-3 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50"
                   >
-                    تحميل رسائل أقدم
-                  </button>
+                    {dt("تحميل رسائل أقدم")}</button>
                 )}
                 {detail.timeline.map((item, index) => {
                   if (item.kind === "status") {
@@ -585,14 +572,14 @@ export function WhatsappInbox() {
                         {!inbound && item.whatsappPreview?.header?.type === "document" && (
                           <div className="mb-2 flex items-center gap-2 rounded-lg border border-slate-200 bg-white/70 p-2 text-xs text-slate-600">
                             <FileText className="h-4 w-4" />
-                            <span>{item.whatsappPreview.header.fileName || "ملف مرفق"}</span>
+                            <span>{item.whatsappPreview.header.fileName || dt("ملف مرفق")}</span>
                           </div>
                         )}
                         {!inbound && item.whatsappPreview?.header?.type === "location" && (
                           <div className="mb-2 flex items-start gap-2 rounded-lg border border-slate-200 bg-white/70 p-2 text-xs text-slate-600">
                             <MapPin className="mt-0.5 h-4 w-4 shrink-0" />
                             <span>
-                              {item.whatsappPreview.header.name || item.whatsappPreview.header.address || "موقع"}
+                              {item.whatsappPreview.header.name || item.whatsappPreview.header.address || dt("موقع")}
                               {item.whatsappPreview.header.latitude != null && item.whatsappPreview.header.longitude != null
                                 ? ` · ${item.whatsappPreview.header.latitude}, ${item.whatsappPreview.header.longitude}`
                                 : ""}
@@ -621,7 +608,7 @@ export function WhatsappInbox() {
                                 className="flex items-center justify-center gap-1.5 rounded-lg bg-white/80 px-2 py-1.5 text-xs font-semibold text-emerald-700"
                               >
                                 <Link2 className="h-3.5 w-3.5" />
-                                <span>{button.text || button.url || button.phoneNumber || "إجراء"}</span>
+                                <span>{button.text || button.url || button.phoneNumber || dt("إجراء")}</span>
                               </div>
                             ))}
                           </div>
@@ -654,8 +641,7 @@ export function WhatsappInbox() {
                 )}
                 {detail.donor?.doNotContact ? (
                   <div className="rounded-lg border border-rose-200 bg-rose-50 p-3 text-xs font-semibold text-rose-700">
-                    المتبرع مفعّل عليه «عدم التواصل». الإرسال متوقف حتى تُعدّل حالة التواصل.
-                  </div>
+                    {dt("المتبرع مفعّل عليه «عدم التواصل». الإرسال متوقف حتى تُعدّل حالة التواصل.")}</div>
                 ) : replyWindow?.open ? (
                   <div className="flex items-end gap-2">
                     <textarea
@@ -663,7 +649,7 @@ export function WhatsappInbox() {
                       onChange={(e) => setDraft(e.target.value)}
                       disabled={sending}
                       rows={2}
-                      placeholder="اكتب ردًّا…"
+                      placeholder={dt("اكتب ردًّا…")}
                       className="flex-1 resize-none rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-800 placeholder:text-slate-400"
                     />
                     <button
@@ -673,14 +659,13 @@ export function WhatsappInbox() {
                       className="inline-flex items-center gap-1.5 rounded-lg bg-brand px-3 py-2 text-sm font-semibold text-white disabled:opacity-40"
                     >
                       {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-                      إرسال
-                    </button>
+                      {dt("إرسال")}</button>
                   </div>
                 ) : detail.donor?.userId ? (
                   <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3">
                     <div>
-                      <p className="text-xs font-semibold text-amber-800">نافذة الرد الحر مغلقة</p>
-                      <p className="mt-1 text-[11px] text-amber-700">يمكن إرسال رسالة خدمة عبر Direct Send أو اختيار قالب Marketing معتمد.</p>
+                      <p className="text-xs font-semibold text-amber-800">{dt("نافذة الرد الحر مغلقة")}</p>
+                      <p className="mt-1 text-[11px] text-amber-700">{dt("يمكن إرسال رسالة خدمة عبر Direct Send أو اختيار قالب Marketing معتمد.")}</p>
                     </div>
                     <div className="flex flex-wrap items-center gap-2">
                       <button
@@ -692,8 +677,7 @@ export function WhatsappInbox() {
                         className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-200 bg-white px-3 py-2 text-xs font-semibold text-emerald-700 hover:bg-emerald-50"
                       >
                         <MessageCircle className="h-4 w-4" />
-                        إرسال قالب تحية
-                      </button>
+                        {dt("إرسال قالب تحية")}</button>
                       <button
                         type="button"
                         onClick={() => {
@@ -703,14 +687,12 @@ export function WhatsappInbox() {
                         className="inline-flex items-center gap-1.5 rounded-lg bg-[#25D366] px-3 py-2 text-xs font-semibold text-white hover:bg-[#20bd5a]"
                       >
                         <Send className="h-4 w-4" />
-                        خيارات الإرسال
-                      </button>
+                        {dt("خيارات الإرسال")}</button>
                     </div>
                   </div>
                 ) : (
                   <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs text-slate-500">
-                    اربط المحادثة بمتبرع أولًا لاستخدام Direct Send أو القوالب التسويقية.
-                  </div>
+                    {dt("اربط المحادثة بمتبرع أولًا لاستخدام Direct Send أو القوالب التسويقية.")}</div>
                 )}
               </div>
             </>

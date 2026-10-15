@@ -2447,5 +2447,14 @@
     "givenSoFar": "{count} {unit} donate finora",
     "chooseCount": "Scegli il numero di {unit}",
     "customCountPh": "Altro numero"
+  },
+  "CategoryLanding": {
+    "heroLead": "I progetti della {org}: {name}.",
+    "ctaLabel": "Sfoglia i progetti",
+    "projectsTitle": "Progetti: {name}",
+    "donateTitle": "Sostieni: {name}",
+    "achievementsTitle": "I nostri risultati: {name}",
+    "statDoneLabel": "Completati",
+    "statGoalLabel": "Obiettivo"
   }
 }

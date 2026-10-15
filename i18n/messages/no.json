@@ -2447,5 +2447,14 @@
     "givenSoFar": "{count} {unit} gitt så langt",
     "chooseCount": "Velg antall {unit}",
     "customCountPh": "Annet antall"
+  },
+  "CategoryLanding": {
+    "heroLead": "{org} – prosjekter: {name}.",
+    "ctaLabel": "Se prosjekter",
+    "projectsTitle": "Prosjekter: {name}",
+    "donateTitle": "Støtt {name}",
+    "achievementsTitle": "Våre resultater: {name}",
+    "statDoneLabel": "Fullført",
+    "statGoalLabel": "Mål"
   }
 }

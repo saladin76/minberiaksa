@@ -1,4 +1,5 @@
 "use client";
+import { dashIntl, dt } from "@/lib/dashboard/i18n";
 
 export type ArchiveFileActivityItem = {
   id: string;
@@ -15,11 +16,11 @@ type Props = {
 export function ArchiveFileActivityPanel({ items, loading }: Props) {
   return (
     <div className="mt-3 rounded-lg border bg-white p-3 text-xs text-slate-600">
-      <p className="mb-2 font-black text-slate-800">سجل النشاط</p>
+      <p className="mb-2 font-black text-slate-800">{dt("سجل النشاط")}</p>
       {loading ? (
-        <p>جاري تحميل سجل النشاط...</p>
+        <p>{dt("جاري تحميل سجل النشاط...")}</p>
       ) : items.length === 0 ? (
-        <p>لا يوجد نشاط مسجل لهذا الملف.</p>
+        <p>{dt("لا يوجد نشاط مسجل لهذا الملف.")}</p>
       ) : (
         <div className="space-y-2">
           {items.map((item) => (
@@ -35,5 +36,5 @@ export function ArchiveFileActivityPanel({ items, loading }: Props) {
 }
 
 function formatDate(value: string) {
-  return new Intl.DateTimeFormat("ar", { dateStyle: "medium", timeStyle: "short" }).format(new Date(value));
+  return new Intl.DateTimeFormat(dashIntl("ar"), { dateStyle: "medium", timeStyle: "short" }).format(new Date(value));
 }

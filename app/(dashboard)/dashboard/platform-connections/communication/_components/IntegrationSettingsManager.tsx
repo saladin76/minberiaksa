@@ -5,6 +5,7 @@ import { ProviderFieldsPanel } from "./ProviderFieldsPanel";
 import { Banner } from "./panel-ui";
 import type { IntegrationUiPermissions, IntegrationUiSnapshot, SchedulerUiStatus } from "./model";
 import { useIntegrationSettings } from "./useIntegrationSettings";
+import { dt } from "@/lib/dashboard/i18n";
 
 export function IntegrationSettingsManager({ initialProviders, permissions, scheduler }: {
   initialProviders: IntegrationUiSnapshot[];
@@ -22,8 +23,8 @@ export function IntegrationSettingsManager({ initialProviders, permissions, sche
         <Banner
           tone="pending"
           role="alert"
-          title="يجب إضافة مفتاح تشفير إعدادات التكاملات إلى إعدادات السيرفر قبل حفظ البيانات السرية."
-          meta="إعداد أولي يُنفذ مرة واحدة فقط. لا يمكن إدخال المفتاح أو توليده أو عرضه من هذه الصفحة."
+          title={dt("يجب إضافة مفتاح تشفير إعدادات التكاملات إلى إعدادات السيرفر قبل حفظ البيانات السرية.")}
+          meta={dt("إعداد أولي يُنفذ مرة واحدة فقط. لا يمكن إدخال المفتاح أو توليده أو عرضه من هذه الصفحة.")}
         >
           <code className="inline-block rounded-md border border-amber-200 bg-white px-2 py-1 text-xs" dir="ltr">
             INTEGRATION_SETTINGS_ENCRYPTION_KEY

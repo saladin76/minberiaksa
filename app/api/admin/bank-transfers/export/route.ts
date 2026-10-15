@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { requireAdminOrDashboardPermission } from "@/lib/dashboard/api-auth";
 import { rawCommand } from "@/lib/prisma-raw-command";
 
+import { DASH_LOCALE_COOKIE, dt, parseDashLocale, setDashLocale } from "@/lib/dashboard/i18n";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
@@ -83,6 +84,8 @@ function buildFilter(url: URL) {
 }
 
 export async function GET(request: NextRequest) {
+  // Column headers and labels in the dashboard's interface language.
+  setDashLocale(parseDashLocale(request.cookies.get(DASH_LOCALE_COOKIE)?.value));
   try {
     const session = await getServerSession(authOptions);
     const denied = requireAdminOrDashboardPermission(session, "bankTransfers");
@@ -107,18 +110,18 @@ export async function GET(request: NextRequest) {
 
     const XLSX = await import("xlsx");
     const sheetRows = rows.map((row) => ({
-      "تاريخ العملية": text(row.transactionDate),
-      "اسم المتبرع": text(row.donorName),
-      "القيمة": typeof row.amount === "number" ? row.amount : text(row.amount),
-      "العملة": text(row.currency),
-      "لغة المتبرع": text(row.donorLocale),
-      "البنك": text(row.bankId),
+      [dt("تاريخ العملية")]: text(row.transactionDate),
+      [dt("اسم المتبرع")]: text(row.donorName),
+      [dt("القيمة")]: typeof row.amount === "number" ? row.amount : text(row.amount),
+      [dt("العملة")]: text(row.currency),
+      [dt("لغة المتبرع")]: text(row.donorLocale),
+      [dt("البنك")]: text(row.bankId),
       "IBAN": text(row.bankIban),
-      "الحالة": text(row.status),
-      "المشروع": text(row.finalProject ?? row.suggestedProject ?? "تبرع عام"),
-      "المرجع": text(row.reference),
-      "الوصف": text(row.description),
-      "تاريخ الإدخال": mongoDate(row.createdAt),
+      [dt("الحالة")]: text(row.status),
+      [dt("المشروع")]: text(row.finalProject ?? row.suggestedProject ?? dt("تبرع عام")),
+      [dt("المرجع")]: text(row.reference),
+      [dt("الوصف")]: text(row.description),
+      [dt("تاريخ الإدخال")]: mongoDate(row.createdAt),
     }));
     const worksheet = XLSX.utils.json_to_sheet(sheetRows);
     worksheet["!cols"] = [

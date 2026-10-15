@@ -33,6 +33,7 @@ import {
   emptyTranslations,
   type TranslationMap,
 } from "../_components/ContentTranslationTabs";
+import { dashDir, dt, dtx } from "@/lib/dashboard/i18n";
 
 /**
  * The homepage quick-donation card and its dock, end to end: whether it shows,
@@ -46,20 +47,20 @@ import {
  */
 
 const FREQ_LABEL: Record<CartFreqKey, string> = {
-  once: "تبرع لمرة",
-  daily: "يوميًا",
-  friday: "أسبوعياً",
-  monthly: "شهريًا",
+  get once() { return dt("تبرع لمرة"); },
+  get daily() { return dt("يوميًا"); },
+  get friday() { return dt("أسبوعياً"); },
+  get monthly() { return dt("شهريًا"); },
 };
 
 const GENERIC_LABEL: Record<QuickGenericDestination, string> = {
-  "where-needed": "حيث الحاجة أشد",
-  zakat: "الزكاة",
-  waqf: "الوقف",
-  "gaza-relief": "إغاثة غزة",
+  get "where-needed"() { return dt("حيث الحاجة أشد"); },
+  get zakat() { return dt("الزكاة"); },
+  get waqf() { return dt("الوقف"); },
+  get "gaza-relief"() { return dt("إغاثة غزة"); },
 };
 
-const TITLE_FIELDS = [{ name: "title", label: "عنوان البطاقة" }] as const;
+const TITLE_FIELDS = [{ name: "title", get label() { return dt("عنوان البطاقة"); } }] as const;
 
 type CurrencyRow = { id: string; currency: string; amountsStr: string };
 const rowId = () => `${Date.now()}-${Math.random().toString(36).slice(2)}`;
@@ -129,7 +130,7 @@ export default function QuickDonationSettingsPage() {
       const res = await axios.get("/api/quick-donation");
       hydrate(res.data.config as QuickDonationConfig);
     } catch (e) {
-      toast({ title: "خطأ", description: errorMessage(e, "تعذّر تحميل الإعدادات"), variant: "destructive" });
+      toast({ title: dt("خطأ"), description: errorMessage(e, dt("تعذّر تحميل الإعدادات")), variant: "destructive" });
     } finally {
       setLoading(false);
     }
@@ -184,7 +185,7 @@ export default function QuickDonationSettingsPage() {
 
   const save = async () => {
     if (amounts.length < QUICK_MIN_AMOUNTS) {
-      return toast({ title: "المبالغ", description: `أدخل ${QUICK_MIN_AMOUNTS} مبالغ على الأقل`, variant: "destructive" });
+      return toast({ title: dt("المبالغ"), description: dt("أدخل {0} مبالغ على الأقل", [QUICK_MIN_AMOUNTS]), variant: "destructive" });
     }
     const byCurrency: Record<string, number[]> = {};
     for (const r of rows) {
@@ -203,9 +204,9 @@ export default function QuickDonationSettingsPage() {
     try {
       const res = await axios.put("/api/quick-donation", { config: payload });
       hydrate(res.data.config as QuickDonationConfig);
-      toast({ title: "تم الحفظ", description: "تُطبَّق الإعدادات على الصفحة الرئيسية فورًا" });
+      toast({ title: dt("تم الحفظ"), description: dt("تُطبَّق الإعدادات على الصفحة الرئيسية فورًا") });
     } catch (e) {
-      toast({ title: "لم يُحفظ", description: errorMessage(e, "تعذّر حفظ الإعدادات"), variant: "destructive" });
+      toast({ title: dt("لم يُحفظ"), description: errorMessage(e, dt("تعذّر حفظ الإعدادات")), variant: "destructive" });
     } finally {
       setSaving(false);
     }
@@ -220,27 +221,24 @@ export default function QuickDonationSettingsPage() {
   }
 
   return (
-    <div className="max-w-5xl mx-auto space-y-6" dir="rtl">
+    <div className="max-w-5xl mx-auto space-y-6" dir={dashDir()}>
       <PageHeader
-        title="التبرع السريع"
-        description="بطاقة التبرع السريع في الصفحة الرئيسية والشريط الذي يتبعها  المبالغ، التكرار، الوجهات، والعنوان"
+        title={dt("التبرع السريع")}
+        description={dt("بطاقة التبرع السريع في الصفحة الرئيسية والشريط الذي يتبعها  المبالغ، التكرار، الوجهات، والعنوان")}
         icon={HeartHandshake}
         actions={
           <>
             <Button variant="outline" asChild>
               <a href="/ar#quick" target="_blank" rel="noreferrer">
                 <ExternalLink className="h-4 w-4 ms-2" />
-                عرض في الموقع
-              </a>
+                {dt("عرض في الموقع")}</a>
             </Button>
             <Button variant="outline" onClick={load} disabled={saving}>
               <RefreshCw className="h-4 w-4 ms-2" />
-              تحديث
-            </Button>
+              {dt("تحديث")}</Button>
             <Button onClick={save} disabled={saving}>
               {saving ? <Loader2 className="h-4 w-4 ms-2 animate-spin" /> : <Save className="h-4 w-4 ms-2" />}
-              حفظ الإعدادات
-            </Button>
+              {dt("حفظ الإعدادات")}</Button>
           </>
         }
       />
@@ -248,28 +246,27 @@ export default function QuickDonationSettingsPage() {
       {/* ── Where it shows ─────────────────────────────────────────────── */}
       <Card>
         <CardHeader>
-          <CardTitle>الظهور</CardTitle>
-          <CardDescription>البطاقة في الصفحة، والشريط الذي يظهر أسفل الشاشة بعد تجاوزها</CardDescription>
+          <CardTitle>{dt("الظهور")}</CardTitle>
+          <CardDescription>{dt("البطاقة في الصفحة، والشريط الذي يظهر أسفل الشاشة بعد تجاوزها")}</CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4 sm:grid-cols-3">
-          <ToggleRow label="إظهار البطاقة" hint="إيقافها يخفي البطاقة والشريط معًا" checked={config.enabled} onChange={(v) => set("enabled", v)} />
-          <ToggleRow label="الشريط على الحاسوب" hint="شريط عائم أسفل الشاشة" checked={config.dockDesktop} onChange={(v) => set("dockDesktop", v)} disabled={!config.enabled} />
-          <ToggleRow label="الشريط على الجوال" hint="شريط ثابت أسفل الشاشة" checked={config.dockMobile} onChange={(v) => set("dockMobile", v)} disabled={!config.enabled} />
+          <ToggleRow label={dt("إظهار البطاقة")} hint={dt("إيقافها يخفي البطاقة والشريط معًا")} checked={config.enabled} onChange={(v) => set("enabled", v)} />
+          <ToggleRow label={dt("الشريط على الحاسوب")} hint={dt("شريط عائم أسفل الشاشة")} checked={config.dockDesktop} onChange={(v) => set("dockDesktop", v)} disabled={!config.enabled} />
+          <ToggleRow label={dt("الشريط على الجوال")} hint={dt("شريط ثابت أسفل الشاشة")} checked={config.dockMobile} onChange={(v) => set("dockMobile", v)} disabled={!config.enabled} />
         </CardContent>
       </Card>
 
       {/* ── Amounts ─────────────────────────────────────────────────────── */}
       <Card>
         <CardHeader>
-          <CardTitle>المبالغ المقترحة</CardTitle>
+          <CardTitle>{dt("المبالغ المقترحة")}</CardTitle>
           <CardDescription>
-            من {QUICK_MIN_AMOUNTS} إلى {QUICK_MAX_AMOUNTS} مبالغ بالدولار. تُحوَّل تلقائيًا لعملة الزائر ما لم تضف قيمًا خاصة بعملته أدناه.
-          </CardDescription>
+            {dtx("من {0} إلى {1} مبالغ بالدولار. تُحوَّل تلقائيًا لعملة الزائر ما لم تضف قيمًا خاصة بعملته أدناه.", [QUICK_MIN_AMOUNTS, QUICK_MAX_AMOUNTS])}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-5">
           <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_220px]">
             <div>
-              <Label htmlFor="qd-amounts">المبالغ (USD)</Label>
+              <Label htmlFor="qd-amounts">{dt("المبالغ (USD)")}</Label>
               <Input
                 id="qd-amounts"
                 className="mt-1.5 font-mono text-left"
@@ -279,12 +276,12 @@ export default function QuickDonationSettingsPage() {
                 placeholder="100, 300, 500, 700"
               />
               <p className="text-xs text-muted-foreground mt-1.5">
-                أرقام مفصولة بفاصلة أو مسافة · {amounts.length} من {QUICK_MAX_AMOUNTS}
-                {amounts.length < QUICK_MIN_AMOUNTS ? "  أضف المزيد" : ""}
+                {dtx("أرقام مفصولة بفاصلة أو مسافة · {0} من {1}", [amounts.length, QUICK_MAX_AMOUNTS])}
+                {amounts.length < QUICK_MIN_AMOUNTS ? dt("  أضف المزيد") : ""}
               </p>
             </div>
             <div>
-              <Label>المبلغ المقترح</Label>
+              <Label>{dt("المبلغ المقترح")}</Label>
               <Select value={String(suggestedIndex)} onValueChange={(v) => set("suggestedIndex", Number(v))} disabled={!amounts.length}>
                 <SelectTrigger className="mt-1.5">
                   <SelectValue placeholder="—" />
@@ -297,33 +294,31 @@ export default function QuickDonationSettingsPage() {
                   ))}
                 </SelectContent>
               </Select>
-              <p className="text-xs text-muted-foreground mt-1.5">يُعلَّم «مبلغ مقترح» ويكون محددًا مسبقًا</p>
+              <p className="text-xs text-muted-foreground mt-1.5">{dt("يُعلَّم «مبلغ مقترح» ويكون محددًا مسبقًا")}</p>
             </div>
           </div>
 
-          <ToggleRow label="حقل «مبلغ آخر»" hint="يسمح للزائر بكتابة مبلغ حر" checked={config.allowCustomAmount} onChange={(v) => set("allowCustomAmount", v)} />
+          <ToggleRow label={dt("حقل «مبلغ آخر»")} hint={dt("يسمح للزائر بكتابة مبلغ حر")} checked={config.allowCustomAmount} onChange={(v) => set("allowCustomAmount", v)} />
 
           <div className="space-y-2 pt-1">
             <div className="flex items-center justify-between gap-2 flex-wrap">
               <div>
-                <Label>قيم خاصة حسب العملة (اختياري)</Label>
+                <Label>{dt("قيم خاصة حسب العملة (اختياري)")}</Label>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  تظهر للزائر الذي اختار هذه العملة بدل القيم المحوَّلة، وتُضاف للسلة بها.
-                </p>
+                  {dt("تظهر للزائر الذي اختار هذه العملة بدل القيم المحوَّلة، وتُضاف للسلة بها.")}</p>
               </div>
               <Button type="button" variant="outline" size="sm" onClick={() => setRows((p) => [...p, { id: rowId(), currency: "EUR", amountsStr: "" }])} className="gap-1">
                 <Plus className="w-4 h-4" />
-                إضافة عملة
-              </Button>
+                {dt("إضافة عملة")}</Button>
             </div>
             {rows.length === 0 ? (
-              <p className="text-sm text-muted-foreground">بدون استثناءات: القيم بالدولار تُحوَّل إلى كل العملات.</p>
+              <p className="text-sm text-muted-foreground">{dt("بدون استثناءات: القيم بالدولار تُحوَّل إلى كل العملات.")}</p>
             ) : (
               <div className="space-y-3">
                 {rows.map((row) => (
                   <div key={row.id} className="flex flex-col sm:flex-row gap-2 sm:items-end border rounded-lg p-3">
                     <div className="flex-1 min-w-[140px]">
-                      <Label className="text-xs text-muted-foreground">العملة</Label>
+                      <Label className="text-xs text-muted-foreground">{dt("العملة")}</Label>
                       <Select value={row.currency} onValueChange={(v) => setRows((p) => p.map((r) => (r.id === row.id ? { ...r, currency: v } : r)))}>
                         <SelectTrigger className="mt-1" dir="ltr">
                           <SelectValue />
@@ -338,16 +333,16 @@ export default function QuickDonationSettingsPage() {
                       </Select>
                     </div>
                     <div className="flex-[2]">
-                      <Label className="text-xs text-muted-foreground">المبالغ لهذه العملة</Label>
+                      <Label className="text-xs text-muted-foreground">{dt("المبالغ لهذه العملة")}</Label>
                       <Input
                         className="mt-1 font-mono text-left"
                         dir="ltr"
                         value={row.amountsStr}
                         onChange={(e) => setRows((p) => p.map((r) => (r.id === row.id ? { ...r, amountsStr: e.target.value } : r)))}
-                        placeholder="مثال: 50, 100, 200, 500"
+                        placeholder={dt("مثال: 50, 100, 200, 500")}
                       />
                     </div>
-                    <Button type="button" variant="ghost" size="icon" className="shrink-0 text-destructive" onClick={() => setRows((p) => p.filter((r) => r.id !== row.id))} aria-label="حذف الصف">
+                    <Button type="button" variant="ghost" size="icon" className="shrink-0 text-destructive" onClick={() => setRows((p) => p.filter((r) => r.id !== row.id))} aria-label={dt("حذف الصف")}>
                       <Trash2 className="w-4 h-4" />
                     </Button>
                   </div>
@@ -361,8 +356,8 @@ export default function QuickDonationSettingsPage() {
       {/* ── Frequency ───────────────────────────────────────────────────── */}
       <Card>
         <CardHeader>
-          <CardTitle>التكرار</CardTitle>
-          <CardDescription>الخيارات الظاهرة على شريط التكرار، وأيها يكون محددًا عند فتح الصفحة</CardDescription>
+          <CardTitle>{dt("التكرار")}</CardTitle>
+          <CardDescription>{dt("الخيارات الظاهرة على شريط التكرار، وأيها يكون محددًا عند فتح الصفحة")}</CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4 md:grid-cols-[minmax(0,1fr)_220px]">
           <div className="flex flex-wrap gap-2">
@@ -371,7 +366,7 @@ export default function QuickDonationSettingsPage() {
             ))}
           </div>
           <div>
-            <Label>الافتراضي</Label>
+            <Label>{dt("الافتراضي")}</Label>
             <Select value={config.defaultFrequency} onValueChange={(v) => set("defaultFrequency", v as CartFreqKey)}>
               <SelectTrigger className="mt-1.5">
                 <SelectValue />
@@ -391,12 +386,12 @@ export default function QuickDonationSettingsPage() {
       {/* ── Destinations ─────────────────────────────────────────────────── */}
       <Card>
         <CardHeader>
-          <CardTitle>الوجهات في القائمة</CardTitle>
-          <CardDescription>ما يظهر في قائمة «المشروع أو النية»: النوايا العامة أولًا، ثم المشاريع</CardDescription>
+          <CardTitle>{dt("الوجهات في القائمة")}</CardTitle>
+          <CardDescription>{dt("ما يظهر في قائمة «المشروع أو النية»: النوايا العامة أولًا، ثم المشاريع")}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-5">
           <div>
-            <Label className="mb-2 block">النوايا العامة</Label>
+            <Label className="mb-2 block">{dt("النوايا العامة")}</Label>
             <div className="flex flex-wrap gap-2">
               {QUICK_GENERIC_DESTINATIONS.map((g) => (
                 <CheckChip key={g} label={GENERIC_LABEL[g]} checked={shownGeneric.includes(g)} onChange={(v) => toggleGeneric(g, v)} />
@@ -406,29 +401,29 @@ export default function QuickDonationSettingsPage() {
 
           <div className="grid gap-4 md:grid-cols-[220px_minmax(0,1fr)]">
             <div>
-              <Label>المشاريع</Label>
+              <Label>{dt("المشاريع")}</Label>
               <Select value={config.projectsMode} onValueChange={(v) => set("projectsMode", v as QuickProjectsMode)}>
                 <SelectTrigger className="mt-1.5">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">كل المشاريع النشطة</SelectItem>
-                  <SelectItem value="selected">مشاريع محددة</SelectItem>
-                  <SelectItem value="none">بدون مشاريع</SelectItem>
+                  <SelectItem value="all">{dt("كل المشاريع النشطة")}</SelectItem>
+                  <SelectItem value="selected">{dt("مشاريع محددة")}</SelectItem>
+                  <SelectItem value="none">{dt("بدون مشاريع")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div>
-              <Label>الوجهة الافتراضية</Label>
+              <Label>{dt("الوجهة الافتراضية")}</Label>
               <Select value={config.defaultDestination || "__first__"} onValueChange={(v) => set("defaultDestination", v === "__first__" ? "" : v)}>
                 <SelectTrigger className="mt-1.5">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="__first__">أول خيار في القائمة</SelectItem>
+                  <SelectItem value="__first__">{dt("أول خيار في القائمة")}</SelectItem>
                   {destinationOptions.map((o) => (
                     <SelectItem key={o.id} value={o.id}>
-                      {o.project ? `مشروع: ${o.label}` : o.label}
+                      {o.project ? dt("مشروع: {0}", [o.label]) : o.label}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -440,20 +435,19 @@ export default function QuickDonationSettingsPage() {
             <div className="space-y-2">
               <div className="flex items-center justify-between gap-2 flex-wrap">
                 <Label>
-                  المشاريع المحددة <span className="text-muted-foreground font-normal">({config.projectIds.length})</span>
+                  {dt("المشاريع المحددة ")}<span className="text-muted-foreground font-normal">({config.projectIds.length})</span>
                 </Label>
                 <div className="relative w-full sm:w-64">
                   <Search className="absolute top-1/2 -translate-y-1/2 end-2.5 w-3.5 h-3.5 text-slate-400" />
-                  <Input value={projectQuery} onChange={(e) => setProjectQuery(e.target.value)} placeholder="بحث باسم المشروع…" className="pe-8" />
+                  <Input value={projectQuery} onChange={(e) => setProjectQuery(e.target.value)} placeholder={dt("بحث باسم المشروع…")} className="pe-8" />
                 </div>
               </div>
               <div className="max-h-72 overflow-y-auto rounded-lg border divide-y">
                 {campaignsLoading ? (
                   <div className="p-4 text-sm text-muted-foreground flex items-center gap-2">
-                    <Loader2 className="w-4 h-4 animate-spin" /> جارٍ تحميل المشاريع…
-                  </div>
+                    <Loader2 className="w-4 h-4 animate-spin" /> {dt(" جارٍ تحميل المشاريع…")}</div>
                 ) : filteredCampaigns.length === 0 ? (
-                  <div className="p-4 text-sm text-muted-foreground">لا مشاريع مطابقة</div>
+                  <div className="p-4 text-sm text-muted-foreground">{dt("لا مشاريع مطابقة")}</div>
                 ) : (
                   filteredCampaigns.map((c) => {
                     const on = config.projectIds.includes(c.id);
@@ -461,13 +455,13 @@ export default function QuickDonationSettingsPage() {
                       <label key={c.id} className="flex items-center gap-3 px-3 py-2 text-sm cursor-pointer hover:bg-slate-50">
                         <Checkbox checked={on} onCheckedChange={(v) => toggleProject(c.id, v === true)} />
                         <span className="flex-1 min-w-0 truncate">{c.title}</span>
-                        {!c.isActive && <Badge variant="outline" className="text-[10px]">غير نشط</Badge>}
+                        {!c.isActive && <Badge variant="outline" className="text-[10px]">{dt("غير نشط")}</Badge>}
                       </label>
                     );
                   })
                 )}
               </div>
-              <p className="text-xs text-muted-foreground">تظهر المشاريع بالترتيب المعتاد للموقع. المشروع غير النشط لا يظهر للزائر وإن كان محددًا.</p>
+              <p className="text-xs text-muted-foreground">{dt("تظهر المشاريع بالترتيب المعتاد للموقع. المشروع غير النشط لا يظهر للزائر وإن كان محددًا.")}</p>
             </div>
           )}
         </CardContent>
@@ -476,13 +470,13 @@ export default function QuickDonationSettingsPage() {
       {/* ── Title ───────────────────────────────────────────────────────── */}
       <Card>
         <CardHeader>
-          <CardTitle>العنوان</CardTitle>
-          <CardDescription>اتركه فارغًا ليُستخدم النص الافتراضي للموقع بكل اللغات («التبرع السريع»)</CardDescription>
+          <CardTitle>{dt("العنوان")}</CardTitle>
+          <CardDescription>{dt("اتركه فارغًا ليُستخدم النص الافتراضي للموقع بكل اللغات («التبرع السريع»)")}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div>
-            <Label htmlFor="qd-title-ar">العنوان بالعربية</Label>
-            <Input id="qd-title-ar" className="mt-1.5" value={titleAr} onChange={(e) => setTitleAr(e.target.value)} placeholder="التبرع السريع" maxLength={80} />
+            <Label htmlFor="qd-title-ar">{dt("العنوان بالعربية")}</Label>
+            <Input id="qd-title-ar" className="mt-1.5" value={titleAr} onChange={(e) => setTitleAr(e.target.value)} placeholder={dt("التبرع السريع")} maxLength={80} />
           </div>
           <ContentTranslationTabs fields={TITLE_FIELDS} value={titles} onChange={setTitles} requiredField="title" />
         </CardContent>
@@ -491,8 +485,7 @@ export default function QuickDonationSettingsPage() {
       <div className="flex justify-end pb-6">
         <Button onClick={save} disabled={saving} size="lg">
           {saving ? <Loader2 className="h-4 w-4 ms-2 animate-spin" /> : <Save className="h-4 w-4 ms-2" />}
-          حفظ الإعدادات
-        </Button>
+          {dt("حفظ الإعدادات")}</Button>
       </div>
     </div>
   );

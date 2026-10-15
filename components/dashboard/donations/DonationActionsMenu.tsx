@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { Pencil, Trash2 } from "lucide-react";
+import { dashDir, dt } from "@/lib/dashboard/i18n";
 
 interface Props {
   x: number;
@@ -49,9 +50,9 @@ export function DonationActionsMenu({ x, y, onEdit, onDelete, onClose }: Props) 
     <div
       ref={ref}
       role="menu"
-      dir="rtl"
+      dir={dashDir()}
       style={{ top, left, width }}
-      className="fixed z-[80] rounded-lg border border-slate-200 bg-white py-1 shadow-xl ring-1 ring-black/5 text-right"
+      className="fixed z-[80] rounded-lg border border-slate-200 bg-white py-1 shadow-xl ring-1 ring-black/5 text-start"
     >
       <button
         type="button"
@@ -62,7 +63,7 @@ export function DonationActionsMenu({ x, y, onEdit, onDelete, onClose }: Props) 
         }}
         className="flex w-full items-center justify-end gap-2 px-3 py-2 text-xs text-slate-700 hover:bg-slate-100"
       >
-        <span>تعديل التبرع</span>
+        <span>{dt("تعديل التبرع")}</span>
         <Pencil className="h-3.5 w-3.5 text-slate-500" />
       </button>
       <div className="my-1 border-t border-slate-100" />
@@ -75,7 +76,7 @@ export function DonationActionsMenu({ x, y, onEdit, onDelete, onClose }: Props) 
         }}
         className="flex w-full items-center justify-end gap-2 px-3 py-2 text-xs text-rose-700 hover:bg-rose-50"
       >
-        <span>حذف التبرع</span>
+        <span>{dt("حذف التبرع")}</span>
         <Trash2 className="h-3.5 w-3.5" />
       </button>
     </div>

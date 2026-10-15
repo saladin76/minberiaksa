@@ -30,6 +30,7 @@ import {
 } from "@/lib/messages/inbox-status";
 import { type InboundMessage, senderOf, absoluteDate, relativeTime } from "./inbound-types";
 import { InboundStatusPill, WaitingBadge } from "./InboundStatusPill";
+import { dashDir, dt, dtx } from "@/lib/dashboard/i18n";
 
 export type TriageAction = "read" | "unread" | "replied" | "unreplied";
 
@@ -64,7 +65,7 @@ export function InboundMessageDialog({
       await navigator.clipboard.writeText(value);
       toast.success(label);
     } catch {
-      toast.error("تعذّر النسخ");
+      toast.error(dt("تعذّر النسخ"));
     }
   }, []);
 
@@ -85,11 +86,11 @@ export function InboundMessageDialog({
 
   const sender = senderOf(message);
   const localeLabel = LOCALE_LABELS[message.locale as keyof typeof LOCALE_LABELS] ?? message.locale;
-  const replySubject = `رد على رسالتك  ${subjectLabel(message.subject, locale)}`;
-  const whatsappText = `مرحبًا ${sender.name ?? ""}، نتواصل معك بخصوص رسالتك «${subjectLabel(
+  const replySubject = dt("رد على رسالتك  {0}", [subjectLabel(message.subject, locale)]);
+  const whatsappText = dt("مرحبًا {0}، نتواصل معك بخصوص رسالتك «{1}».", [sender.name ?? "", subjectLabel(
     message.subject,
     locale,
-  )}».`.replace(/\s+،/, "،");
+  )]).replace(/\s+،/, "،");
   const status = inboxStatusOf(message);
   const replied = status === "replied";
 
@@ -97,7 +98,7 @@ export function InboundMessageDialog({
     <Dialog open onOpenChange={(open) => !open && onClose()}>
       <DialogContent
         hideCloseButton
-        dir="rtl"
+        dir={dashDir()}
         className="flex max-h-[88vh] w-[calc(100%-2rem)] max-w-lg flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white p-0 shadow-2xl"
       >
         <header className="flex shrink-0 items-start gap-3 border-b border-slate-200 p-4">
@@ -125,7 +126,7 @@ export function InboundMessageDialog({
               <span className="truncate">{sender.displayName}</span>
             </DialogTitle>
             <DialogDescription className="truncate text-xs text-slate-500">
-              {sender.email ?? "بلا بريد"}
+              {sender.email ?? dt("بلا بريد")}
             </DialogDescription>
             <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
               <InboundStatusPill message={message} showChannel />
@@ -134,9 +135,8 @@ export function InboundMessageDialog({
                 {subjectLabel(message.subject, locale)}
               </span>
               {message.source === "AI_CHAT" && (
-                <span className="inline-flex items-center rounded-full border border-violet-200 bg-violet-50 px-2 py-0.5 text-[10px] font-medium text-violet-700" title="أُرسلت من محادثة مساعد العطاء">
-                  مع محادثة الذكاء الاصطناعي
-                </span>
+                <span className="inline-flex items-center rounded-full border border-violet-200 bg-violet-50 px-2 py-0.5 text-[10px] font-medium text-violet-700" title={dt("أُرسلت من محادثة مساعد العطاء")}>
+                  {dt("مع محادثة الذكاء الاصطناعي")}</span>
               )}
               <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[10px] text-slate-600">
                 <Globe className="h-3 w-3" />
@@ -152,7 +152,7 @@ export function InboundMessageDialog({
           <button
             type="button"
             onClick={onClose}
-            aria-label="إغلاق"
+            aria-label={dt("إغلاق")}
             className="-me-1 shrink-0 rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
           >
             <X className="h-4 w-4" />
@@ -174,9 +174,9 @@ export function InboundMessageDialog({
               </span>
               <button
                 type="button"
-                onClick={() => copy(message.phone!, "تم نسخ الرقم")}
+                onClick={() => copy(message.phone!, dt("تم نسخ الرقم"))}
                 className="shrink-0 rounded-md p-1 text-slate-400 transition-colors hover:bg-slate-200 hover:text-slate-700"
-                aria-label="نسخ رقم الهاتف"
+                aria-label={dt("نسخ رقم الهاتف")}
               >
                 <Copy className="h-3.5 w-3.5" />
               </button>
@@ -188,9 +188,7 @@ export function InboundMessageDialog({
           <div className="flex shrink-0 items-center gap-2 border-t border-emerald-100 bg-emerald-50/70 px-4 py-2 text-[12px] text-emerald-800">
             <Check className="h-3.5 w-3.5 shrink-0" />
             <span className="min-w-0 flex-1 truncate">
-              تم الرد {message.repliedVia ? REPLY_CHANNEL_LABELS[message.repliedVia] : ""}
-              {message.repliedByName ? `  ${message.repliedByName}` : ""}
-              {message.repliedAt ? ` · ${relativeTime(message.repliedAt)}` : ""}
+              {dtx("تم الرد {0}{1}{2}", [message.repliedVia ? REPLY_CHANNEL_LABELS[message.repliedVia] : "", message.repliedByName ? `  ${message.repliedByName}` : "", message.repliedAt ? ` · ${relativeTime(message.repliedAt)}` : ""])}
             </span>
             <button
               type="button"
@@ -199,8 +197,7 @@ export function InboundMessageDialog({
               className="inline-flex shrink-0 items-center gap-1 rounded-md px-1.5 py-1 text-[11px] font-medium text-emerald-700 underline underline-offset-2 transition-colors hover:text-emerald-900 disabled:opacity-50"
             >
               {busy === "unreplied" ? <Loader2 className="h-3 w-3 animate-spin" /> : <RotateCcw className="h-3 w-3" />}
-              تراجع
-            </button>
+              {dt("تراجع")}</button>
           </div>
         )}
 
@@ -222,8 +219,7 @@ export function InboundMessageDialog({
                 ) : (
                   <Check className="h-3.5 w-3.5" />
                 )}
-                تحديد كمردود عليه
-              </Button>
+                {dt("تحديد كمردود عليه")}</Button>
               {/* The counterpart to opening a message marking it seen: a way to put one back on
                   the pile after skimming it, instead of it silently leaving the badge. */}
               {message.readAt && (
@@ -233,8 +229,7 @@ export function InboundMessageDialog({
                   disabled={busy !== null}
                   className="text-[11px] text-slate-500 underline underline-offset-2 transition-colors hover:text-slate-800 disabled:opacity-50"
                 >
-                  تحديد كغير مقروءة
-                </button>
+                  {dt("تحديد كغير مقروءة")}</button>
               )}
             </div>
           )}
@@ -246,8 +241,7 @@ export function InboundMessageDialog({
                 onClick={() => run(message.id, "replied", "EMAIL")}
               >
                 <Reply className="h-3.5 w-3.5" />
-                رد بالبريد
-              </a>
+                {dt("رد بالبريد")}</a>
             </Button>
           )}
 
@@ -260,8 +254,7 @@ export function InboundMessageDialog({
                 onClick={() => run(message.id, "replied", "WHATSAPP")}
               >
                 <MessageCircle className="h-3.5 w-3.5" />
-                رد واتساب
-              </a>
+                {dt("رد واتساب")}</a>
             </Button>
           ) : (
             // A number we could not resolve to E.164 would produce a wa.me link to nobody, so
@@ -271,17 +264,16 @@ export function InboundMessageDialog({
                 size="sm"
                 variant="outline"
                 className="gap-1.5"
-                onClick={() => copy(message.phone!, "تم نسخ الرقم")}
-                title="الرقم غير مكتوب بصيغة دولية، لذا لا يمكن فتح واتساب مباشرة"
+                onClick={() => copy(message.phone!, dt("تم نسخ الرقم"))}
+                title={dt("الرقم غير مكتوب بصيغة دولية، لذا لا يمكن فتح واتساب مباشرة")}
               >
                 <Copy className="h-3.5 w-3.5" />
-                نسخ الرقم
-              </Button>
+                {dt("نسخ الرقم")}</Button>
             )
           )}
 
           {!sender.email && !message.phone && (
-            <span className="text-[12px] text-slate-500">لا توجد وسيلة تواصل مع هذا المرسل</span>
+            <span className="text-[12px] text-slate-500">{dt("لا توجد وسيلة تواصل مع هذا المرسل")}</span>
           )}
         </footer>
       </DialogContent>

@@ -1,4 +1,5 @@
 import type { BankTransferClaimStatus } from "@prisma/client";
+import { dashIntl, dt } from "@/lib/dashboard/i18n";
 
 /**
  * The finance queue's vocabulary  one place for the label, the tone and the
@@ -9,17 +10,17 @@ import type { BankTransferClaimStatus } from "@prisma/client";
 export type ClaimStatus = BankTransferClaimStatus;
 
 export const CLAIM_STATUS_LABELS: Record<ClaimStatus, string> = {
-  UNDER_REVIEW: "بانتظار المراجعة",
-  AWAITING_RECEIPT: "بانتظار الإيصال",
-  REJECTED: "مرفوض",
-  CONFIRMED: "مؤكد",
+  get UNDER_REVIEW() { return dt("بانتظار المراجعة"); },
+  get AWAITING_RECEIPT() { return dt("بانتظار الإيصال"); },
+  get REJECTED() { return dt("مرفوض"); },
+  get CONFIRMED() { return dt("مؤكد"); },
 };
 
 export const CLAIM_STATUS_HINTS: Record<ClaimStatus, string> = {
-  UNDER_REVIEW: "رفع المتبرع إيصالًا ويحتاج إلى قرار: طابقه مع كشف الحساب ثم أكّد أو ارفض.",
-  AWAITING_RECEIPT: "سجّل المتبرع الطلب واختار التحويل البنكي ولم يرفع إيصالًا بعد.",
-  REJECTED: "رُفض الإيصال وأُبلغ المتبرع بالسبب. يمكنه رفع إيصال آخر ما دامت المحاولات متاحة.",
-  CONFIRMED: "طُوبق التحويل واحتُسب التبرع في الإجماليات وأُرسل الإيصال الرسمي.",
+  get UNDER_REVIEW() { return dt("رفع المتبرع إيصالًا ويحتاج إلى قرار: طابقه مع كشف الحساب ثم أكّد أو ارفض."); },
+  get AWAITING_RECEIPT() { return dt("سجّل المتبرع الطلب واختار التحويل البنكي ولم يرفع إيصالًا بعد."); },
+  get REJECTED() { return dt("رُفض الإيصال وأُبلغ المتبرع بالسبب. يمكنه رفع إيصال آخر ما دامت المحاولات متاحة."); },
+  get CONFIRMED() { return dt("طُوبق التحويل واحتُسب التبرع في الإجماليات وأُرسل الإيصال الرسمي."); },
 };
 
 export const CLAIM_STATUS_PILL: Record<ClaimStatus, string> = {
@@ -45,7 +46,8 @@ export const REJECTION_PRESETS: string[] = [
   "الإيصال لا يخص حسابًا من حساباتنا البنكية",
 ];
 
-const rtf = new Intl.RelativeTimeFormat("ar", { numeric: "auto" });
+/* Built per call: the interface language is only known once a request renders. */
+const rtf = () => new Intl.RelativeTimeFormat(dashIntl("ar"), { numeric: "auto" });
 const UNITS: [Intl.RelativeTimeFormatUnit, number][] = [
   ["year", 365 * 24 * 3600],
   ["month", 30 * 24 * 3600],
@@ -58,17 +60,17 @@ export function relativeTime(iso: string): string {
   const diff = (Date.parse(iso) - Date.now()) / 1000;
   const abs = Math.abs(diff);
   for (const [unit, secs] of UNITS) {
-    if (abs >= secs) return rtf.format(Math.round(diff / secs), unit);
+    if (abs >= secs) return rtf().format(Math.round(diff / secs), unit);
   }
-  return "الآن";
+  return dt("الآن");
 }
 
 export function absoluteDate(iso: string, style: "medium" | "long" = "medium"): string {
-  return new Date(iso).toLocaleString("ar-EG", { dateStyle: style, timeStyle: "short" });
+  return new Date(iso).toLocaleString(dashIntl("ar-EG"), { dateStyle: style, timeStyle: "short" });
 }
 
 export function dateOnly(iso: string): string {
-  return new Date(iso).toLocaleDateString("ar-EG", { dateStyle: "medium" });
+  return new Date(iso).toLocaleDateString(dashIntl("ar-EG"), { dateStyle: "medium" });
 }
 
 /** Days a receipt has been waiting; the queue's urgency signal. */

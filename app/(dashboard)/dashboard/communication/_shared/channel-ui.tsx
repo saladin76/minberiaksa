@@ -3,6 +3,7 @@
 import type { LucideIcon } from "lucide-react";
 import { CircleAlert, Eye, RefreshCw, SlashIcon, TriangleAlert } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { dt } from "@/lib/dashboard/i18n";
 
 /**
  * Visual language shared by the البريد / واتساب / SMS channel pages.
@@ -98,24 +99,22 @@ export function DeliveryStatusPill({
   if (failed) {
     return (
       <span
-        title={errorMessage ?? "فشل الإرسال"}
+        title={errorMessage ?? dt("فشل الإرسال")}
         className="inline-flex items-center gap-1.5 rounded-md border border-rose-200 bg-rose-50 px-2 py-1 text-[11px] font-semibold text-rose-700"
       >
         <TriangleAlert className="h-3.5 w-3.5 shrink-0" />
-        فشل
-      </span>
+        {dt("فشل")}</span>
     );
   }
 
   if (skipped) {
     return (
       <span
-        title={errorMessage ?? "تم تخطّي هذه الرسالة قبل الإرسال."}
+        title={errorMessage ?? dt("تم تخطّي هذه الرسالة قبل الإرسال.")}
         className="inline-flex items-center gap-1.5 rounded-md border border-slate-200 bg-slate-50 px-2 py-1 text-[11px] font-semibold text-slate-500"
       >
         <SlashIcon className="h-3.5 w-3.5 shrink-0" />
-        لم تُرسل
-      </span>
+        {dt("لم تُرسل")}</span>
     );
   }
 
@@ -131,7 +130,7 @@ export function DeliveryStatusPill({
 
   // Hovering gives back everything the pips used to show, without spending width on it.
   const tooltip = stages
-    .map((s) => `${s.label}: ${s.at ? fmtFull(s.at) : blind && !s.local ? "لا توجد بيانات" : "—"}`)
+    .map((s) => `${s.label}: ${s.at ? fmtFull(s.at) : blind && !s.local ? dt("لا توجد بيانات") : "—"}`)
     .join("\n");
 
   return (
@@ -145,19 +144,19 @@ export function DeliveryStatusPill({
     >
       <Icon className="h-3.5 w-3.5 shrink-0" />
       {stage.label}
-      {blind && <span className="text-slate-400">؟</span>}
+      {blind && <span className="text-slate-400">{dt("؟")}</span>}
     </span>
   );
 }
 
 /** Short Arabic origin labels. The raw enum ("TRIGGER") leaked English into an RTL table. */
 export const ORIGIN_LABELS: Record<string, string> = {
-  TRIGGER: "تلقائي",
-  MANUAL: "يدوي",
-  CAMPAIGN: "حملة",
-  TEST: "تجربة",
-  REACTIVATION: "إعادة تفعيل",
-  SYSTEM: "النظام",
+  get TRIGGER() { return dt("تلقائي"); },
+  get MANUAL() { return dt("يدوي"); },
+  get CAMPAIGN() { return dt("حملة"); },
+  get TEST() { return dt("تجربة"); },
+  get REACTIVATION() { return dt("إعادة تفعيل"); },
+  get SYSTEM() { return dt("النظام"); },
 };
 
 /**
@@ -199,8 +198,8 @@ export function RecipientCell({
         e.stopPropagation();
         onOpenProfile(userId);
       }}
-      title="عرض ملف المتبرّع"
-      className="group -mx-1 block max-w-[220px] cursor-pointer rounded-md px-1 py-0.5 text-right leading-tight transition-colors hover:bg-brand/8"
+      title={dt("عرض ملف المتبرّع")}
+      className="group -mx-1 block max-w-[220px] cursor-pointer rounded-md px-1 py-0.5 text-start leading-tight transition-colors hover:bg-brand/8"
     >
       {body}
     </button>
@@ -220,8 +219,8 @@ export type FunnelStep = {
 export function FunnelCard({
   steps,
   trackingLive,
-  title = "مسار الرسالة",
-  caption = "من إجمالي المقبول",
+  title = dt("مسار الرسالة"),
+  caption = dt("من إجمالي المقبول"),
 }: {
   steps: FunnelStep[];
   trackingLive: boolean;
@@ -308,15 +307,14 @@ export function RowActions({
     <div className="flex items-center justify-end gap-1">
       {row.retriedAt && (
         <span className="rounded-md border border-slate-200 bg-slate-50 px-1.5 py-0.5 text-[10px] font-semibold text-slate-500">
-          أُعيد إرساله
-        </span>
+          {dt("أُعيد إرساله")}</span>
       )}
       {retryable && (
         <button
           type="button"
           onClick={stop(onRetry)}
-          title="إعادة الإرسال"
-          aria-label="إعادة الإرسال"
+          title={dt("إعادة الإرسال")}
+          aria-label={dt("إعادة الإرسال")}
           className="inline-flex h-7 w-7 items-center justify-center rounded-md text-slate-400 transition hover:bg-brand/8 hover:text-brand"
         >
           <RefreshCw className="h-3.5 w-3.5" />
@@ -328,8 +326,7 @@ export function RowActions({
         className="inline-flex h-7 items-center gap-1.5 rounded-md px-2 text-[11px] font-semibold text-brand transition hover:bg-brand/8"
       >
         <Eye className="h-3.5 w-3.5" />
-        معاينة
-      </button>
+        {dt("معاينة")}</button>
     </div>
   );
 }

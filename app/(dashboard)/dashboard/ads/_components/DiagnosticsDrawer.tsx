@@ -25,6 +25,7 @@ import type {
   AttributionStatus,
   ReasonEntry,
 } from "@/lib/tracking/tracking-event-contract";
+import { dashDir, dashIntl, dt, dtx } from "@/lib/dashboard/i18n";
 
 interface AuditLogEntry {
   id: string;
@@ -113,7 +114,7 @@ function fmtMoney(n: number) {
 
 function fmtIstanbul(iso: string | null) {
   if (!iso) return "—";
-  return new Intl.DateTimeFormat("ar-EG", {
+  return new Intl.DateTimeFormat(dashIntl("ar-EG"), {
     timeZone: "Europe/Istanbul",
     year: "numeric",
     month: "short",
@@ -140,7 +141,7 @@ function Section({
         {Icon ? <Icon className="w-4 h-4 text-slate-500" /> : null}
         <h3 className="text-xs font-semibold text-slate-800">{title}</h3>
         {count != null ? (
-          <span className="text-[10px] rounded-full bg-slate-100 px-1.5 py-0.5 text-slate-600 mr-auto">
+          <span className="text-[10px] rounded-full bg-slate-100 px-1.5 py-0.5 text-slate-600 ms-auto">
             {count}
           </span>
         ) : null}
@@ -165,8 +166,7 @@ function EventBadge({ ok, label }: { ok: boolean | null | undefined; label: stri
   if (ok == null)
     return (
       <span className="inline-flex items-center gap-1 text-slate-500">
-        <Info className="w-3.5 h-3.5" /> {label}: غير معروف
-      </span>
+        <Info className="w-3.5 h-3.5" /> {dtx(" {0}: غير معروف", [label])}</span>
     );
   return ok ? (
     <span className="inline-flex items-center gap-1 text-emerald-700">
@@ -198,7 +198,7 @@ export function DiagnosticsDrawer({ donationId, open, onOpenChange }: Props) {
       .catch((e) => {
         if (cancelled) return;
         setError(
-          (e?.response?.data?.error as string | undefined) ?? "تعذر تحميل تفاصيل التبرع"
+          (e?.response?.data?.error as string | undefined) ?? dt("تعذر تحميل تفاصيل التبرع")
         );
       })
       .finally(() => {
@@ -211,18 +211,16 @@ export function DiagnosticsDrawer({ donationId, open, onOpenChange }: Props) {
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="left" className="w-full sm:max-w-[640px] overflow-y-auto" dir="rtl">
-        <SheetHeader className="text-right">
-          <SheetTitle>تشخيص تبرع</SheetTitle>
+      <SheetContent side="left" className="w-full sm:max-w-[640px] overflow-y-auto" dir={dashDir()}>
+        <SheetHeader className="text-start">
+          <SheetTitle>{dt("تشخيص تبرع")}</SheetTitle>
           <SheetDescription>
-            تحليل كامل لمصدر هذا التبرع  مفيد لاكتشاف ثغرات التتبع.
-          </SheetDescription>
+            {dt("تحليل كامل لمصدر هذا التبرع  مفيد لاكتشاف ثغرات التتبع.")}</SheetDescription>
         </SheetHeader>
 
         {loading && (
           <div className="flex items-center justify-center gap-2 py-12 text-slate-500 text-sm">
-            <Loader2 className="w-4 h-4 animate-spin" /> جاري تحميل التفاصيل…
-          </div>
+            <Loader2 className="w-4 h-4 animate-spin" /> {dt(" جاري تحميل التفاصيل…")}</div>
         )}
         {error && (
           <div className="mt-4 rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700">
@@ -231,7 +229,7 @@ export function DiagnosticsDrawer({ donationId, open, onOpenChange }: Props) {
         )}
         {data && (
           <div className="mt-4 space-y-3">
-            <Section title="ملخص الإسناد" icon={ShieldCheck}>
+            <Section title={dt("ملخص الإسناد")} icon={ShieldCheck}>
               <div className="flex items-center gap-2 flex-wrap">
                 <span
                   className={cn(
@@ -251,20 +249,19 @@ export function DiagnosticsDrawer({ donationId, open, onOpenChange }: Props) {
                       : "text-rose-700"
                   )}
                 >
-                  ثقة {data.attribution.confidence}%
-                </span>
-                <span className="text-[11px] text-slate-500 mr-auto">
-                  المنصة: {data.attribution.platformLabel}
+                  {dtx("ثقة {0}%", [data.attribution.confidence])}</span>
+                <span className="text-[11px] text-slate-500 ms-auto">
+                  {dtx("المنصة: {0}", [data.attribution.platformLabel])}
                 </span>
               </div>
             </Section>
 
-            <Section title="بيانات التبرع">
-              <KV label="معرف التبرع" value={data.donation.id} mono />
-              <KV label="تاريخ الدفع" value={fmtIstanbul(data.donation.paidAt)} />
-              <KV label="الحالة" value={data.donation.status} />
+            <Section title={dt("بيانات التبرع")}>
+              <KV label={dt("معرف التبرع")} value={data.donation.id} mono />
+              <KV label={dt("تاريخ الدفع")} value={fmtIstanbul(data.donation.paidAt)} />
+              <KV label={dt("الحالة")} value={data.donation.status} />
               <KV
-                label="المبلغ المدفوع"
+                label={dt("المبلغ المدفوع")}
                 value={
                   <span dir="ltr">
                     {fmtMoney(data.donation.totalAmount)} {data.donation.currency}
@@ -272,37 +269,37 @@ export function DiagnosticsDrawer({ donationId, open, onOpenChange }: Props) {
                 }
               />
               <KV
-                label="المبلغ بالدولار"
+                label={dt("المبلغ بالدولار")}
                 value={<span dir="ltr">{fmtMoney(data.donation.amountUSD)}</span>}
               />
               <KV
-                label="دولة المتبرع"
+                label={dt("دولة المتبرع")}
                 value={
                   data.donation.donorCountryCode
                     ? `${
                         getCountryDisplayNameFromCode(
                           data.donation.donorCountryCode,
-                          "ar"
+                          dashIntl("ar")
                         ) ?? data.donation.donorCountryCode
                       } (${data.donation.donorCountryCode})`
                     : null
                 }
               />
-              <KV label="مزود الدفع" value={data.donation.provider} />
-              <KV label="طريقة الدفع" value={data.donation.paymentMethod || '—'} />
+              <KV label={dt("مزود الدفع")} value={data.donation.provider} />
+              <KV label={dt("طريقة الدفع")} value={data.donation.paymentMethod || '—'} />
               <KV
-                label="اشتراك شهري"
-                value={data.donation.subscriptionId ? "نعم" : "لا"}
+                label={dt("اشتراك شهري")}
+                value={data.donation.subscriptionId ? dt("نعم") : dt("لا")}
               />
             </Section>
 
             <Section
-              title="أسباب التتبع"
+              title={dt("أسباب التتبع")}
               icon={Info}
               count={data.attribution.reasons.length}
             >
               {data.attribution.reasons.length === 0 ? (
-                <p className="text-slate-400">لا توجد أسباب مسجّلة.</p>
+                <p className="text-slate-400">{dt("لا توجد أسباب مسجّلة.")}</p>
               ) : (
                 <ul className="space-y-1">
                   {data.attribution.reasons.map((r, i) => (
@@ -325,14 +322,13 @@ export function DiagnosticsDrawer({ donationId, open, onOpenChange }: Props) {
             </Section>
 
             <Section
-              title="تحذيرات"
+              title={dt("تحذيرات")}
               icon={AlertTriangle}
               count={data.attribution.warnings.length}
             >
               {data.attribution.warnings.length === 0 ? (
                 <p className="text-emerald-700">
-                  لا تحذيرات  التتبع نظيف.
-                </p>
+                  {dt("لا تحذيرات  التتبع نظيف.")}</p>
               ) : (
                 <ul className="space-y-1">
                   {data.attribution.warnings.map((r, i) => (
@@ -345,7 +341,7 @@ export function DiagnosticsDrawer({ donationId, open, onOpenChange }: Props) {
               )}
             </Section>
 
-            <Section title="UTM / إسناد الرابط">
+            <Section title={dt("UTM / إسناد الرابط")}>
               {Object.entries(data.utm).map(([k, v]) => (
                 <KV key={k} label={k} value={v} mono />
               ))}
@@ -363,12 +359,12 @@ export function DiagnosticsDrawer({ donationId, open, onOpenChange }: Props) {
               ))}
             </Section>
 
-            <Section title="أحداث التتبع المرسلة">
+            <Section title={dt("أحداث التتبع المرسلة")}>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
                 <EventBadge ok={data.trackingEvents.metaCapiDonate} label="Meta CAPI Donate" />
                 <EventBadge
                   ok={!data.trackingEvents.metaCapiDonateFailed}
-                  label="بدون DonateFailed"
+                  label={dt("بدون DonateFailed")}
                 />
                 <EventBadge
                   ok={data.trackingEvents.metaBrowserDonate}
@@ -388,11 +384,11 @@ export function DiagnosticsDrawer({ donationId, open, onOpenChange }: Props) {
             </Section>
 
             <Section
-              title="سجل التدقيق المرتبط"
+              title={dt("سجل التدقيق المرتبط")}
               count={data.auditLogs.length}
             >
               {data.auditLogs.length === 0 ? (
-                <p className="text-slate-400">لا توجد سجلات تدقيق للتبرع.</p>
+                <p className="text-slate-400">{dt("لا توجد سجلات تدقيق للتبرع.")}</p>
               ) : (
                 <ul className="space-y-2">
                   {data.auditLogs.map((a) => (
@@ -411,12 +407,12 @@ export function DiagnosticsDrawer({ donationId, open, onOpenChange }: Props) {
               )}
             </Section>
 
-            <Section title="التشخيص + إصلاح مقترح" icon={Sparkles}>
+            <Section title={dt("التشخيص + إصلاح مقترح")} icon={Sparkles}>
               {data.diagnosis.missing.length === 0 ? (
-                <p className="text-emerald-700">لا توجد بيانات ناقصة.</p>
+                <p className="text-emerald-700">{dt("لا توجد بيانات ناقصة.")}</p>
               ) : (
                 <>
-                  <p className="text-slate-500 mb-1">البيانات الناقصة:</p>
+                  <p className="text-slate-500 mb-1">{dt("البيانات الناقصة:")}</p>
                   <ul className="space-y-0.5 mb-2">
                     {data.diagnosis.missing.map((m, i) => (
                       <li key={i} className="text-slate-700">
@@ -428,7 +424,7 @@ export function DiagnosticsDrawer({ donationId, open, onOpenChange }: Props) {
               )}
               {data.diagnosis.fixes.length > 0 && (
                 <>
-                  <p className="text-slate-500 mb-1">إصلاحات مقترحة:</p>
+                  <p className="text-slate-500 mb-1">{dt("إصلاحات مقترحة:")}</p>
                   <ul className="space-y-0.5">
                     {data.diagnosis.fixes.map((f, i) => (
                       <li key={i} className="text-emerald-700">

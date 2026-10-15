@@ -1,6 +1,7 @@
 import React from "react";
 import { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import { prisma } from "@/lib/prisma";
 import { isObjectId, pickLocaleSlug, whereByIdOrAnyLocaleSlug } from "@/lib/slug";
 import { pickTranslation } from "@/lib/i18n/translation-fallback";
@@ -76,13 +77,17 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   const t = pickTranslation(category.translations, locale);
   const name = t?.name || category.name;
-  const description = (
-    t?.heroLead ||
-    category.heroLead ||
-    t?.description ||
-    category.description ||
-    seo.campaigns.description
-  ).slice(0, 200);
+  /* The row's hero lead is Arabic; elsewhere an untranslated one becomes the
+     same localized template the page itself shows. */
+  let arabicLead = category.heroLead || category.description;
+  if (locale !== "ar" && arabicLead) {
+    const [tLanding, tCert] = await Promise.all([
+      getTranslations({ locale, namespace: "CategoryLanding" }),
+      getTranslations({ locale, namespace: "certificates" }),
+    ]);
+    arabicLead = tLanding("heroLead", { name, org: tCert("orgName") });
+  }
+  const description = (t?.heroLead || t?.description || arabicLead || seo.campaigns.description).slice(0, 200);
   const image = category.heroImage || category.image || `${SITE_URL}/og-image.jpg`;
 
   let alternates: { canonical: string; languages?: Record<string, string> };

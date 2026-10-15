@@ -16,6 +16,7 @@ import {
   localeKey,
   localeNativeLabel,
 } from './locale-form';
+import { dashDir, dt } from "@/lib/dashboard/i18n";
 
 /**
  * Language tabs for the react-hook-form pages whose translations are a few
@@ -64,7 +65,7 @@ export function LocaleFormTabs({
 
   return (
     <Tabs defaultValue="ar" value={value} onValueChange={onValueChange} className={className ?? 'w-full'}>
-      <TabsList className="mb-4 flex h-auto flex-wrap gap-1" dir="rtl">
+      <TabsList className="mb-4 flex h-auto flex-wrap gap-1" dir={dashDir()}>
         <LocaleTabTrigger locale="ar" />
         {TRANSLATION_LOCALES.map((locale) => (
           <LocaleTabTrigger
@@ -84,7 +85,7 @@ export function LocaleFormTabs({
             itemLabel={itemLabel}
             onResult={(translations, overwrite) => applyLocaleTranslations(form, fields, translations, overwrite)}
           />
-          <p className="mt-2 text-[11px] text-slate-600">تُترجم الحقول العربية أعلاه إلى كل اللغات؛ راجعها في تبويباتها ثم احفظ.</p>
+          <p className="mt-2 text-[11px] text-slate-600">{dt("تُترجم الحقول العربية أعلاه إلى كل اللغات؛ راجعها في تبويباتها ثم احفظ.")}</p>
         </div>
         {extra?.('ar')}
       </TabsContent>

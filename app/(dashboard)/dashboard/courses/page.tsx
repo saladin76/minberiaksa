@@ -15,6 +15,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { errorMessage } from '@/lib/dashboard/client-error-message';
 import { SortableTable, useReorder } from '../_components/SortableTable';
+import { dt, dtx } from "@/lib/dashboard/i18n";
 
 interface CourseRow {
   id: string;
@@ -46,7 +47,7 @@ export default function CoursesPage() {
       setRows(Array.isArray(items) ? items : []);
     } catch (e) {
       console.error(e);
-      toast.error(errorMessage(e, 'تعذّر تحميل الدورات'));
+      toast.error(errorMessage(e, dt("تعذّر تحميل الدورات")));
     } finally {
       setLoading(false);
     }
@@ -58,7 +59,7 @@ export default function CoursesPage() {
     rows,
     setRows,
     useCallback(async (payload) => { await axios.post('/api/courses/reorder', { courses: payload }); }, []),
-    useCallback((e: unknown) => { toast.error(errorMessage(e, 'تعذّر حفظ الترتيب')); fetchRows(); }, [fetchRows]),
+    useCallback((e: unknown) => { toast.error(errorMessage(e, dt("تعذّر حفظ الترتيب"))); fetchRows(); }, [fetchRows]),
   );
 
   const toggle = async (row: CourseRow, field: 'isActive' | 'isPinned', next: boolean) => {
@@ -67,7 +68,7 @@ export default function CoursesPage() {
       await axios.put(`/api/courses/${row.id}`, { [field]: next });
       setRows((prev) => prev.map((r) => (r.id === row.id ? { ...r, [field]: next } : r)));
     } catch (e) {
-      toast.error(errorMessage(e, 'تعذّر تغيير الحالة'));
+      toast.error(errorMessage(e, dt("تعذّر تغيير الحالة")));
     } finally {
       setTogglingId(null);
     }
@@ -79,10 +80,10 @@ export default function CoursesPage() {
     try {
       await axios.delete(`/api/courses/${deleteTarget.id}`);
       setRows((prev) => prev.filter((r) => r.id !== deleteTarget.id));
-      toast.success('تم حذف الدورة');
+      toast.success(dt("تم حذف الدورة"));
       setDeleteTarget(null);
     } catch (e) {
-      toast.error(errorMessage(e, 'تعذّر حذف الدورة'));
+      toast.error(errorMessage(e, dt("تعذّر حذف الدورة")));
     } finally {
       setDeleting(false);
     }
@@ -100,27 +101,24 @@ export default function CoursesPage() {
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <h1 className="text-lg font-bold">دوراتنا</h1>
+          <h1 className="text-lg font-bold">{dt("دوراتنا")}</h1>
           <p className="text-xs text-slate-500">
-            الدورة المثبّتة تتصدّر شريط الرئيسية. الترتيب هنا هو ترتيب صفحة الدورات.
-          </p>
+            {dt("الدورة المثبّتة تتصدّر شريط الرئيسية. الترتيب هنا هو ترتيب صفحة الدورات.")}</p>
         </div>
         <Button onClick={() => router.push('/dashboard/courses/new')}>
-          <Plus className="w-4 h-4 ml-1" />
-          دورة جديدة
-        </Button>
+          <Plus className="w-4 h-4 me-1" />
+          {dt("دورة جديدة")}</Button>
       </div>
 
       {rows.length === 0 ? (
         <EmptyState
           icon={GraduationCap}
-          title="لا توجد دورات"
-          description="أضف أول دورة لتظهر في صفحة الدورات."
+          title={dt("لا توجد دورات")}
+          description={dt("أضف أول دورة لتظهر في صفحة الدورات.")}
           action={
             <Button onClick={() => router.push('/dashboard/courses/new')}>
-              <Plus className="w-4 h-4 ml-1" />
-              دورة جديدة
-            </Button>
+              <Plus className="w-4 h-4 me-1" />
+              {dt("دورة جديدة")}</Button>
           }
         />
       ) : (
@@ -133,7 +131,7 @@ export default function CoursesPage() {
           isDimmed={(r) => !r.isActive}
           columns={[
             {
-              header: 'الدورة',
+              header: dt("الدورة"),
               cell: (r) => (
                 <div className="flex items-center gap-2">
                   {r.coverImage ? (
@@ -155,36 +153,35 @@ export default function CoursesPage() {
               ),
             },
             {
-              header: 'الشكل',
+              header: dt("الشكل"),
               cell: (r) => (
                 <div className="flex flex-wrap gap-1">
-                  {r.hasDetailPage ? <Badge variant="outline" className="text-[10px]">صفحة تفاصيل</Badge> : null}
+                  {r.hasDetailPage ? <Badge variant="outline" className="text-[10px]">{dt("صفحة تفاصيل")}</Badge> : null}
                   {r.isExternal ? (
                     <Badge variant="outline" className="text-[10px] gap-1">
-                      <ExternalLink className="w-3 h-3" />خارجية
-                    </Badge>
+                      <ExternalLink className="w-3 h-3" />{dt("خارجية")}</Badge>
                   ) : null}
-                  {!r.hasDetailPage && !r.isExternal ? <span className="text-xs text-slate-500">فيديو تعريفي</span> : null}
+                  {!r.hasDetailPage && !r.isExternal ? <span className="text-xs text-slate-500">{dt("فيديو تعريفي")}</span> : null}
                 </div>
               ),
             },
             {
-              header: 'المحتوى',
+              header: dt("المحتوى"),
               cell: (r) => (
                 <span className="text-xs text-slate-600">
-                  {r.videoCount} فيديو{r.unitsCount != null ? ` · ${r.unitsCount} وحدة` : ''}
+                  {dtx("{0} فيديو", [r.videoCount])}{r.unitsCount != null ? dt(" · {0} وحدة", [r.unitsCount]) : ''}
                 </span>
               ),
             },
-            { header: 'الترجمات', cell: (r) => <span className="text-xs text-slate-600">{r.translationCount}</span> },
+            { header: dt("الترجمات"), cell: (r) => <span className="text-xs text-slate-600">{r.translationCount}</span> },
             {
-              header: 'مثبّتة',
+              header: dt("مثبّتة"),
               cell: (r) => (
                 <Switch checked={r.isPinned} disabled={togglingId === r.id} onCheckedChange={(v) => toggle(r, 'isPinned', v)} />
               ),
             },
             {
-              header: 'مفعّلة',
+              header: dt("مفعّلة"),
               cell: (r) => (
                 <Switch checked={r.isActive} disabled={togglingId === r.id} onCheckedChange={(v) => toggle(r, 'isActive', v)} />
               ),
@@ -210,17 +207,15 @@ export default function CoursesPage() {
       <AlertDialog open={!!deleteTarget} onOpenChange={(o) => !o && setDeleteTarget(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>حذف الدورة</AlertDialogTitle>
+            <AlertDialogTitle>{dt("حذف الدورة")}</AlertDialogTitle>
             <AlertDialogDescription>
-              سيتم حذف «{deleteTarget?.title}» مع فيديوهاتها وكل ترجماتها نهائيًا.
-            </AlertDialogDescription>
+              {dtx("سيتم حذف «{0}» مع فيديوهاتها وكل ترجماتها نهائيًا.", [deleteTarget?.title])}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={deleting}>إلغاء</AlertDialogCancel>
+            <AlertDialogCancel disabled={deleting}>{dt("إلغاء")}</AlertDialogCancel>
             <AlertDialogAction onClick={confirmDelete} disabled={deleting}>
-              {deleting && <Loader2 className="w-4 h-4 animate-spin ml-2" />}
-              حذف
-            </AlertDialogAction>
+              {deleting && <Loader2 className="w-4 h-4 animate-spin me-2" />}
+              {dt("حذف")}</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

@@ -17,6 +17,7 @@ import { errorMessage } from '@/lib/dashboard/client-error-message';
 import { LOCALES } from '@/lib/locales';
 import { describePlacement, type BannerTone } from '@/lib/minbar/banner-placements';
 import { SortableTable, useReorder, type SortableColumn } from '../_components/SortableTable';
+import { dashIntl, dt, dtx } from "@/lib/dashboard/i18n";
 
 interface BannerRow {
   id: string;
@@ -40,16 +41,16 @@ interface BannerRow {
 
 /** Why a banner is or is not on the site right now. */
 function StatusBadge({ row }: { row: BannerRow }) {
-  if (!row.isActive) return <Badge variant="secondary">معطّل</Badge>;
-  if (row.expired) return <Badge variant="destructive">منتهٍ</Badge>;
-  if (row.pending) return <Badge variant="outline">مجدول</Badge>;
-  if (!row.placements.length) return <Badge variant="outline" className="text-amber-700 border-amber-300">بلا موضع</Badge>;
-  return <Badge className="bg-emerald-600 hover:bg-emerald-600">ظاهر</Badge>;
+  if (!row.isActive) return <Badge variant="secondary">{dt("معطّل")}</Badge>;
+  if (row.expired) return <Badge variant="destructive">{dt("منتهٍ")}</Badge>;
+  if (row.pending) return <Badge variant="outline">{dt("مجدول")}</Badge>;
+  if (!row.placements.length) return <Badge variant="outline" className="text-amber-700 border-amber-300">{dt("بلا موضع")}</Badge>;
+  return <Badge className="bg-emerald-600 hover:bg-emerald-600">{dt("ظاهر")}</Badge>;
 }
 
 function formatWindow(row: BannerRow): string {
-  if (!row.endsAt) return 'حتى الإيقاف';
-  return new Date(row.endsAt).toLocaleString('ar', { dateStyle: 'short', timeStyle: 'short' });
+  if (!row.endsAt) return dt("حتى الإيقاف");
+  return new Date(row.endsAt).toLocaleString(dashIntl("ar"), { dateStyle: 'short', timeStyle: 'short' });
 }
 
 const TONE_SWATCH: Record<BannerTone, string> = {
@@ -79,7 +80,7 @@ export default function UrgentBannersPage() {
       setRows(Array.isArray(items) ? items : []);
     } catch (e) {
       console.error(e);
-      toast.error(errorMessage(e, 'تعذّر تحميل البانرات'));
+      toast.error(errorMessage(e, dt("تعذّر تحميل البانرات")));
     } finally {
       setLoading(false);
     }
@@ -91,7 +92,7 @@ export default function UrgentBannersPage() {
     rows,
     setRows,
     useCallback(async (payload) => { await axios.post('/api/urgent-banners/reorder', { banners: payload }); }, []),
-    useCallback((e: unknown) => { toast.error(errorMessage(e, 'تعذّر حفظ الترتيب')); fetchRows(); }, [fetchRows]),
+    useCallback((e: unknown) => { toast.error(errorMessage(e, dt("تعذّر حفظ الترتيب"))); fetchRows(); }, [fetchRows]),
   );
 
   const toggleActive = async (row: BannerRow, next: boolean) => {
@@ -100,7 +101,7 @@ export default function UrgentBannersPage() {
       await axios.put(`/api/urgent-banners/${row.id}`, { isActive: next });
       setRows((prev) => prev.map((r) => (r.id === row.id ? { ...r, isActive: next } : r)));
     } catch (e) {
-      toast.error(errorMessage(e, 'تعذّر تغيير الحالة'));
+      toast.error(errorMessage(e, dt("تعذّر تغيير الحالة")));
     } finally {
       setTogglingId(null);
     }
@@ -112,10 +113,10 @@ export default function UrgentBannersPage() {
     try {
       await axios.delete(`/api/urgent-banners/${deleteTarget.id}`);
       setRows((prev) => prev.filter((r) => r.id !== deleteTarget.id));
-      toast.success('تم حذف البانر');
+      toast.success(dt("تم حذف البانر"));
       setDeleteTarget(null);
     } catch (e) {
-      toast.error(errorMessage(e, 'تعذّر حذف البانر'));
+      toast.error(errorMessage(e, dt("تعذّر حذف البانر")));
     } finally {
       setDeleting(false);
     }
@@ -123,7 +124,7 @@ export default function UrgentBannersPage() {
 
   const columns: SortableColumn<BannerRow>[] = [
     {
-      header: 'البانر',
+      header: dt("البانر"),
       cell: (r) => (
         <div className="flex items-center gap-2">
           {r.image ? (
@@ -142,7 +143,7 @@ export default function UrgentBannersPage() {
       ),
     },
     {
-      header: 'أين يظهر',
+      header: dt("أين يظهر"),
       cell: (r) =>
         r.placements.length ? (
           <div className="flex flex-wrap gap-1 max-w-[18rem]">
@@ -154,21 +155,21 @@ export default function UrgentBannersPage() {
             ))}
           </div>
         ) : (
-          <span className="text-xs text-amber-700">لم يُحدَّد  لن يظهر</span>
+          <span className="text-xs text-amber-700">{dt("لم يُحدَّد  لن يظهر")}</span>
         ),
     },
     {
-      header: 'الوجهة',
+      header: dt("الوجهة"),
       className: 'text-xs text-slate-600 max-w-[12rem] truncate',
       cell: (r) => r.campaignTitle ?? (r.ctaUrl ? <span dir="ltr">{r.ctaUrl}</span> : '—'),
     },
-    { header: 'الحالة', cell: (r) => <StatusBadge row={r} /> },
-    { header: 'ينتهي', className: 'text-xs text-slate-600', cell: (r) => formatWindow(r) },
+    { header: dt("الحالة"), cell: (r) => <StatusBadge row={r} /> },
+    { header: dt("ينتهي"), className: 'text-xs text-slate-600', cell: (r) => formatWindow(r) },
     {
-      header: 'اللغات',
+      header: dt("اللغات"),
       cell: (r) =>
         r.locales.length === 0 ? (
-          <span className="text-xs text-slate-500">الكل</span>
+          <span className="text-xs text-slate-500">{dt("الكل")}</span>
         ) : (
           <div className="flex flex-wrap gap-1">
             {r.locales.map((l) => (
@@ -180,7 +181,7 @@ export default function UrgentBannersPage() {
         ),
     },
     {
-      header: 'مفعّل',
+      header: dt("مفعّل"),
       cell: (r) => <Switch checked={r.isActive} disabled={togglingId === r.id} onCheckedChange={(v) => toggleActive(r, v)} />,
     },
     {
@@ -211,27 +212,24 @@ export default function UrgentBannersPage() {
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <h1 className="text-lg font-bold">البانرات</h1>
+          <h1 className="text-lg font-bold">{dt("البانرات")}</h1>
           <p className="text-xs text-slate-500">
-            بانرات مثل «شدّ الرحال» تضعها على أي صفحة وموضع. اسحب الصفوف لترتيبها  الأعلى هنا يظهر أولًا حيثما اجتمع بانران في موضع واحد.
-          </p>
+            {dt("بانرات مثل «شدّ الرحال» تضعها على أي صفحة وموضع. اسحب الصفوف لترتيبها  الأعلى هنا يظهر أولًا حيثما اجتمع بانران في موضع واحد.")}</p>
         </div>
         <Button onClick={() => router.push('/dashboard/urgent-banners/new')}>
-          <Plus className="w-4 h-4 ml-1" />
-          بانر جديد
-        </Button>
+          <Plus className="w-4 h-4 me-1" />
+          {dt("بانر جديد")}</Button>
       </div>
 
       {rows.length === 0 ? (
         <EmptyState
           icon={AlertTriangle}
-          title="لا توجد بانرات"
-          description="أنشئ بانرًا واختر الصفحات التي يظهر فيها."
+          title={dt("لا توجد بانرات")}
+          description={dt("أنشئ بانرًا واختر الصفحات التي يظهر فيها.")}
           action={
             <Button onClick={() => router.push('/dashboard/urgent-banners/new')}>
-              <Plus className="w-4 h-4 ml-1" />
-              بانر جديد
-            </Button>
+              <Plus className="w-4 h-4 me-1" />
+              {dt("بانر جديد")}</Button>
           }
         />
       ) : (
@@ -249,17 +247,15 @@ export default function UrgentBannersPage() {
       <AlertDialog open={!!deleteTarget} onOpenChange={(o) => !o && setDeleteTarget(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>حذف البانر</AlertDialogTitle>
+            <AlertDialogTitle>{dt("حذف البانر")}</AlertDialogTitle>
             <AlertDialogDescription>
-              سيتم حذف «{deleteTarget?.title}» وكل ترجماته نهائيًا.
-            </AlertDialogDescription>
+              {dtx("سيتم حذف «{0}» وكل ترجماته نهائيًا.", [deleteTarget?.title])}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={deleting}>إلغاء</AlertDialogCancel>
+            <AlertDialogCancel disabled={deleting}>{dt("إلغاء")}</AlertDialogCancel>
             <AlertDialogAction onClick={confirmDelete} disabled={deleting}>
-              {deleting && <Loader2 className="w-4 h-4 animate-spin ml-2" />}
-              حذف
-            </AlertDialogAction>
+              {deleting && <Loader2 className="w-4 h-4 animate-spin me-2" />}
+              {dt("حذف")}</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

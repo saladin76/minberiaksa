@@ -7,6 +7,7 @@ import { FolderKanban, Loader2, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { ArchiveCollection } from "@/lib/archive/archive-types";
 import { DEFAULT_ARCHIVE_PROJECT_OPTIONS, useArchiveProjectOptions } from "./archiveProjectOptions";
+import { dt } from "@/lib/dashboard/i18n";
 
 type FeedbackState = {
   tone: "success" | "error";
@@ -49,13 +50,13 @@ export function ArchiveProjectCreatePanel({ collections, defaultYear }: Props) {
     if (saving) return;
 
     if (!title.trim()) {
-      setFeedback({ tone: "error", message: "اكتب اسم المشروع أولًا." });
+      setFeedback({ tone: "error", message: dt("اكتب اسم المشروع أولًا.") });
       return;
     }
 
     const parsedYear = year.trim() ? Number(year) : undefined;
     if (parsedYear !== undefined && (!Number.isInteger(parsedYear) || parsedYear < 2000 || parsedYear > 2100)) {
-      setFeedback({ tone: "error", message: "اختر سنة صحيحة." });
+      setFeedback({ tone: "error", message: dt("اختر سنة صحيحة.") });
       return;
     }
 
@@ -81,7 +82,7 @@ export function ArchiveProjectCreatePanel({ collections, defaultYear }: Props) {
     setSaving(false);
 
     if (!response.ok || !result?.ok) {
-      setFeedback({ tone: "error", message: result?.error || result?.message || "تعذر حفظ المشروع" });
+      setFeedback({ tone: "error", message: result?.error || result?.message || dt("تعذر حفظ المشروع") });
       return;
     }
 
@@ -89,7 +90,7 @@ export function ArchiveProjectCreatePanel({ collections, defaultYear }: Props) {
     setYear(currentYear);
     setDescription("");
     setNotes("");
-    setFeedback({ tone: "success", message: result?.message || "تم حفظ المشروع" });
+    setFeedback({ tone: "success", message: result?.message || dt("تم حفظ المشروع") });
     router.refresh();
   }
 
@@ -98,37 +99,36 @@ export function ArchiveProjectCreatePanel({ collections, defaultYear }: Props) {
       <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
         <div>
           <div className="flex items-center gap-2 text-sm font-black text-slate-950">
-            <FolderKanban className="h-4 w-4 text-brand" /> إضافة مشروع
-          </div>
-          <p className="mt-1 text-xs leading-5 text-slate-500">أضف المشروع بسرعة، ثم أضف رابط التوثيق من صفحة المشروع.</p>
+            <FolderKanban className="h-4 w-4 text-brand" /> {dt(" إضافة مشروع")}</div>
+          <p className="mt-1 text-xs leading-5 text-slate-500">{dt("أضف المشروع بسرعة، ثم أضف رابط التوثيق من صفحة المشروع.")}</p>
         </div>
         <Button type="submit" size="sm" disabled={saving} className="h-8 gap-2 px-3 text-xs font-bold">
           {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
-          {saving ? "جاري الحفظ" : "حفظ"}
+          {saving ? dt("جاري الحفظ") : dt("حفظ")}
         </Button>
       </div>
 
       <div className="mt-3 grid gap-2 lg:grid-cols-[1fr_1.5fr_0.6fr_0.8fr_0.8fr]">
-        <Field label="المجموعة">
+        <Field label={dt("المجموعة")}>
           <select value={collectionId} onChange={(event) => setCollectionId(event.target.value)} className="h-9 rounded-md border bg-white px-2 text-xs font-semibold text-slate-900 outline-none focus:border-brand">
-            <option value="">بدون مجموعة</option>
+            <option value="">{dt("بدون مجموعة")}</option>
             {collectionOptions.map((collection) => <option key={collection.id} value={collection.id}>{collection.label}</option>)}
           </select>
         </Field>
-        <Field label="اسم المشروع">
-          <input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="مثال: غزة 2026 - توزيع مياه" className="h-9 rounded-md border bg-white px-2 text-xs font-semibold text-slate-900 outline-none focus:border-brand" />
+        <Field label={dt("اسم المشروع")}>
+          <input value={title} onChange={(event) => setTitle(event.target.value)} placeholder={dt("مثال: غزة 2026 - توزيع مياه")} className="h-9 rounded-md border bg-white px-2 text-xs font-semibold text-slate-900 outline-none focus:border-brand" />
         </Field>
-        <Field label="السنة">
+        <Field label={dt("السنة")}>
           <select value={year} onChange={(event) => setYear(event.target.value)} className="h-9 rounded-md border bg-white px-2 text-xs font-semibold text-slate-900 outline-none focus:border-brand">
             {options.years.map((option) => <option key={option} value={option}>{option}</option>)}
           </select>
         </Field>
-        <Field label="المدينة">
+        <Field label={dt("المدينة")}>
           <select value={city} onChange={(event) => setCity(event.target.value)} className="h-9 rounded-md border bg-white px-2 text-xs text-slate-900 outline-none focus:border-brand">
             {options.cities.map((option) => <option key={option} value={option}>{option}</option>)}
           </select>
         </Field>
-        <Field label="التصنيف">
+        <Field label={dt("التصنيف")}>
           <select value={theme} onChange={(event) => setTheme(event.target.value)} className="h-9 rounded-md border bg-white px-2 text-xs text-slate-900 outline-none focus:border-brand">
             {options.themes.map((option) => <option key={option} value={option}>{option}</option>)}
           </select>
@@ -136,21 +136,21 @@ export function ArchiveProjectCreatePanel({ collections, defaultYear }: Props) {
       </div>
 
       <div className="mt-2 grid gap-2 lg:grid-cols-[0.9fr_0.9fr_1fr_1fr]">
-        <Field label="البلد">
+        <Field label={dt("البلد")}>
           <select value={country} onChange={(event) => setCountry(event.target.value)} className="h-9 rounded-md border bg-white px-2 text-xs text-slate-900 outline-none focus:border-brand">
             {options.countries.map((option) => <option key={option} value={option}>{option}</option>)}
           </select>
         </Field>
-        <Field label="نوع المشروع">
+        <Field label={dt("نوع المشروع")}>
           <select value={projectType} onChange={(event) => setProjectType(event.target.value)} className="h-9 rounded-md border bg-white px-2 text-xs text-slate-900 outline-none focus:border-brand">
             {options.projectTypes.map((option) => <option key={option} value={option}>{option}</option>)}
           </select>
         </Field>
-        <Field label="الوصف">
-          <input value={description} onChange={(event) => setDescription(event.target.value)} placeholder="وصف مختصر" className="h-9 rounded-md border bg-white px-2 text-xs text-slate-900 outline-none focus:border-brand" />
+        <Field label={dt("الوصف")}>
+          <input value={description} onChange={(event) => setDescription(event.target.value)} placeholder={dt("وصف مختصر")} className="h-9 rounded-md border bg-white px-2 text-xs text-slate-900 outline-none focus:border-brand" />
         </Field>
-        <Field label="ملاحظات">
-          <input value={notes} onChange={(event) => setNotes(event.target.value)} placeholder="ملاحظات داخلية" className="h-9 rounded-md border bg-white px-2 text-xs text-slate-900 outline-none focus:border-brand" />
+        <Field label={dt("ملاحظات")}>
+          <input value={notes} onChange={(event) => setNotes(event.target.value)} placeholder={dt("ملاحظات داخلية")} className="h-9 rounded-md border bg-white px-2 text-xs text-slate-900 outline-none focus:border-brand" />
         </Field>
       </div>
 

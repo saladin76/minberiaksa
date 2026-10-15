@@ -26,6 +26,7 @@ import {
   getMinCookieExpiryDaysForEdit,
   getReferralCookieSettingsWindow,
 } from "@/lib/referral-cookie-settings";
+import { dashDir, dashIntl, dt, dtx } from "@/lib/dashboard/i18n";
 
 interface ReferralRow {
   id: string;
@@ -68,7 +69,7 @@ export default function ReferralsPage() {
       const data = await res.json();
       setList(Array.isArray(data) ? data : []);
     } catch {
-      toast.error("فشل في تحميل قائمة الإحالات");
+      toast.error(dt("فشل في تحميل قائمة الإحالات"));
       setList([]);
     } finally {
       setLoading(false);
@@ -83,7 +84,7 @@ export default function ReferralsPage() {
     e.preventDefault();
     const code = createCode.trim();
     if (!code) {
-      toast.error("أدخل رمز التتبع");
+      toast.error(dt("أدخل رمز التتبع"));
       return;
     }
     setCreating(true);
@@ -99,10 +100,10 @@ export default function ReferralsPage() {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        toast.error(data?.error || "فشل في إنشاء الرابط");
+        toast.error(data?.error || dt("فشل في إنشاء الرابط"));
         return;
       }
-      toast.success("تم إنشاء الرابط");
+      toast.success(dt("تم إنشاء الرابط"));
       setCreateCode("");
       setCreateName("");
       setCookieExpiryDays(30);
@@ -142,10 +143,10 @@ export default function ReferralsPage() {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        toast.error(typeof data?.error === "string" ? data.error : "فشل في حفظ المدة");
+        toast.error(typeof data?.error === "string" ? data.error : dt("فشل في حفظ المدة"));
         return;
       }
-      toast.success("تم تحديث مدة الكوكي");
+      toast.success(dt("تم تحديث مدة الكوكي"));
       setEditDialogOpen(false);
       setEditingReferral(null);
       fetchList();
@@ -158,23 +159,21 @@ export default function ReferralsPage() {
   const localePrefix = "/ar";
 
   return (
-    <div className="min-h-0" dir="rtl">
+    <div className="min-h-0" dir={dashDir()}>
       <div className="p-0 sm:p-4 md:p-6 lg:p-8 max-w-[1200px] mx-auto">
         <Card className="border-border shadow-sm overflow-hidden">
           {/* Table header: title + add button */}
           <div className="flex items-center justify-between gap-4 border-b border-border bg-muted/40 px-4 sm:px-6 py-4">
             <h2 className="text-base font-semibold text-foreground flex items-center gap-2">
               <Link2 className="w-4 h-4 text-muted-foreground" />
-              قائمة الروابط
-            </h2>
+              {dt("قائمة الروابط")}</h2>
             <Button
               type="button"
               onClick={() => setDialogOpen(true)}
               className="h-9 gap-2 shrink-0"
             >
               <Plus className="w-4 h-4" />
-              إضافة رابط
-            </Button>
+              {dt("إضافة رابط")}</Button>
           </div>
 
           <CardContent className="p-0">
@@ -184,7 +183,7 @@ export default function ReferralsPage() {
               </div>
             ) : list.length === 0 ? (
               <div className="py-16 text-center">
-                <p className="text-muted-foreground mb-4">لا توجد إحالات بعد.</p>
+                <p className="text-muted-foreground mb-4">{dt("لا توجد إحالات بعد.")}</p>
                 <Button
                   type="button"
                   variant="outline"
@@ -192,23 +191,21 @@ export default function ReferralsPage() {
                   className="gap-2"
                 >
                   <Plus className="w-4 h-4" />
-                  إضافة رابط
-                </Button>
+                  {dt("إضافة رابط")}</Button>
               </div>
             ) : (
               <div className="overflow-x-auto">
-                <table className="w-full text-sm" dir="rtl">
+                <table className="w-full text-sm" dir={dashDir()}>
                   <thead>
                     <tr className="border-b border-border bg-muted/30">
-                      <th className="text-right py-3.5 px-4 font-medium text-muted-foreground">الرمز</th>
-                      <th className="text-right py-3.5 px-4 font-medium text-muted-foreground">الاسم</th>
-                      <th className="text-right py-3.5 px-4 font-medium text-muted-foreground">
-                        صلاحية الكوكي / المتبقي
-                      </th>
-                      <th className="text-right py-3.5 px-4 font-medium text-muted-foreground">عدد التبرعات</th>
-                      <th className="text-right py-3.5 px-4 font-medium text-muted-foreground">التاريخ</th>
+                      <th className="text-start py-3.5 px-4 font-medium text-muted-foreground">{dt("الرمز")}</th>
+                      <th className="text-start py-3.5 px-4 font-medium text-muted-foreground">{dt("الاسم")}</th>
+                      <th className="text-start py-3.5 px-4 font-medium text-muted-foreground">
+                        {dt("صلاحية الكوكي / المتبقي")}</th>
+                      <th className="text-start py-3.5 px-4 font-medium text-muted-foreground">{dt("عدد التبرعات")}</th>
+                      <th className="text-start py-3.5 px-4 font-medium text-muted-foreground">{dt("التاريخ")}</th>
                       <th className="text-center py-3.5 px-2 font-medium text-muted-foreground w-12">
-                        <span className="sr-only">إجراءات</span>
+                        <span className="sr-only">{dt("إجراءات")}</span>
                       </th>
                     </tr>
                   </thead>
@@ -236,10 +233,9 @@ export default function ReferralsPage() {
                               {cookieDays === 0 ? (
                                 <span className="inline-flex items-center gap-1">
                                   <Infinity className="w-3.5 h-3.5" />
-                                  غير محدود
-                                </span>
+                                  {dt("غير محدود")}</span>
                               ) : (
-                                `${cookieDays} يوم`
+                                dt("{0} يوم", [cookieDays])
                               )}
                             </div>
                             {cookieDays === 0 ? (
@@ -248,12 +244,11 @@ export default function ReferralsPage() {
                               </span>
                             ) : daysLeft !== null && daysLeft > 0 ? (
                               <span className="text-xs font-medium text-brand">
-                                متبقي {daysLeft} {daysLeft === 1 ? "يوم" : "يوم"}
+                                {dtx("متبقي {0} ", [daysLeft])}{daysLeft === 1 ? dt("يوم") : dt("يوم")}
                               </span>
                             ) : (
                               <span className="text-xs text-brand-orange">
-                                انتهت صلاحية التتبع
-                              </span>
+                                {dt("انتهت صلاحية التتبع")}</span>
                             )}
                           </div>
                         </td>
@@ -261,7 +256,7 @@ export default function ReferralsPage() {
                           {r.donationsCount}
                         </td>
                         <td className="py-2 px-4 text-muted-foreground tabular-nums">
-                          {new Date(r.createdAt).toLocaleDateString("ar-EG", {
+                          {new Date(r.createdAt).toLocaleDateString(dashIntl("ar-EG"), {
                             dateStyle: "medium",
                           })}
                         </td>
@@ -274,7 +269,7 @@ export default function ReferralsPage() {
                                 size="icon"
                                 className="h-8 w-8 text-muted-foreground hover:text-foreground"
                               >
-                                <span className="sr-only">إجراءات</span>
+                                <span className="sr-only">{dt("إجراءات")}</span>
                                 <MoreHorizontal className="h-4 w-4" />
                               </Button>
                             </DropdownMenuTrigger>
@@ -287,8 +282,7 @@ export default function ReferralsPage() {
                                     "focus:text-foreground"
                                   )}
                                 >
-                                  تحليلات
-                                  <BarChart3 className="h-4 w-4 shrink-0 opacity-70" />
+                                  {dt("تحليلات")}<BarChart3 className="h-4 w-4 shrink-0 opacity-70" />
                                 </Link>
                               </DropdownMenuItem>
                               {canEditCookieExpiry && (
@@ -296,8 +290,7 @@ export default function ReferralsPage() {
                                   className="flex cursor-pointer items-center justify-end gap-2"
                                   onSelect={() => openEditCookie(r)}
                                 >
-                                  تعديل المدة
-                                  <Pencil className="h-4 w-4 shrink-0 opacity-70" />
+                                  {dt("تعديل المدة")}<Pencil className="h-4 w-4 shrink-0 opacity-70" />
                                 </DropdownMenuItem>
                               )}
                             </DropdownMenuContent>
@@ -315,27 +308,26 @@ export default function ReferralsPage() {
 
         {/* Hint below table */}
         {list.length > 0 && (
-          <p className="text-xs text-muted-foreground mt-3 text-right">
-            الرابط: أي صفحة + <code className="bg-muted px-1.5 py-0.5 rounded text-foreground/80">?ref=الرمز</code>
-            {"  "}
-            مثال: <code className="bg-muted px-1.5 py-0.5 rounded text-foreground/80 dir-ltr" >{baseUrl}{localePrefix}/?ref=ahmed</code>
+          <p className="text-xs text-muted-foreground mt-3 text-start">
+            {dt("الرابط: أي صفحة + ")}<code className="bg-muted px-1.5 py-0.5 rounded text-foreground/80">{dt("?ref=الرمز")}</code>
+            {dt("  مثال: ")}<code className="bg-muted px-1.5 py-0.5 rounded text-foreground/80 dir-ltr" >{baseUrl}{localePrefix}/?ref=ahmed</code>
           </p>
         )}
       </div>
 
       {/* Add link dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="sm:max-w-md" dir="rtl">
-          <DialogHeader className="text-right">
-            <DialogTitle className="text-right">إضافة رابط تتبع</DialogTitle>
-            <DialogDescription className="text-right">
-              أنشئ رمز تتبع جديد. الرابط سيكون: أي صفحة + <code className="bg-muted px-1 rounded">?ref=الرمز</code>
+        <DialogContent className="sm:max-w-md" dir={dashDir()}>
+          <DialogHeader className="text-start">
+            <DialogTitle className="text-start">{dt("إضافة رابط تتبع")}</DialogTitle>
+            <DialogDescription className="text-start">
+              {dt("أنشئ رمز تتبع جديد. الرابط سيكون: أي صفحة + ")}<code className="bg-muted px-1 rounded">{dt("?ref=الرمز")}</code>
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleCreate} className="grid gap-4 py-2">
-            <div className="space-y-2 text-right">
+            <div className="space-y-2 text-start">
               <label className="text-sm font-medium text-foreground">
-                رمز التتبع <span className="text-destructive">*</span>
+                {dt("رمز التتبع ")}<span className="text-destructive">*</span>
               </label>
               <Input
                 value={createCode}
@@ -344,20 +336,18 @@ export default function ReferralsPage() {
                 autoFocus
               />
             </div>
-            <div className="space-y-2 text-right">
+            <div className="space-y-2 text-start">
               <label className="text-sm font-medium text-foreground">
-                الاسم (اختياري)
-              </label>
+                {dt("الاسم (اختياري)")}</label>
               <Input
                 value={createName}
                 onChange={(e) => setCreateName(e.target.value)}
                 className="h-10 text-sm"
               />
             </div>
-            <div className="space-y-3 text-right">
+            <div className="space-y-3 text-start">
               <label className="text-sm font-medium text-foreground block">
-                مدة صلاحية الكوكي
-              </label>
+                {dt("مدة صلاحية الكوكي")}</label>
               <div className="flex flex-wrap items-center gap-3">
                 {!cookieUnlimited && (
                   <div className="flex items-center gap-2">
@@ -370,7 +360,7 @@ export default function ReferralsPage() {
                       className="h-10 w-24 text-sm"
                       dir="ltr"
                     />
-                    <span className="text-sm text-muted-foreground">يوم</span>
+                    <span className="text-sm text-muted-foreground">{dt("يوم")}</span>
                   </div>
                 )}
                                 <label className="inline-flex items-center gap-2 cursor-pointer">
@@ -380,19 +370,18 @@ export default function ReferralsPage() {
                     onChange={(e) => setCookieUnlimited(e.target.checked)}
                     className="rounded border-input"
                   />
-                  <span className="text-sm text-muted-foreground">غير محدود</span>
+                  <span className="text-sm text-muted-foreground">{dt("غير محدود")}</span>
                 </label>
               </div>
               <p className="text-xs text-muted-foreground">
-                المدة التي يبقى فيها رابط التتبع في جهاز الزائر. الافتراضي 30 يوم.
-              </p>
+                {dt("المدة التي يبقى فيها رابط التتبع في جهاز الزائر. الافتراضي 30 يوم.")}</p>
             </div>
             <DialogFooter className="gap-2 flex-row-reverse">
               <Button type="submit" disabled={creating}>
                 {creating ? (
                   <Loader2 className="w-4 h-4 animate-spin" />
                 ) : (
-                  "إنشاء"
+                  dt("إنشاء")
                 )}
               </Button>
               <Button
@@ -400,8 +389,7 @@ export default function ReferralsPage() {
                 variant="outline"
                 onClick={() => setDialogOpen(false)}
               >
-                إلغاء
-              </Button>
+                {dt("إلغاء")}</Button>
             </DialogFooter>
           </form>
         </DialogContent>
@@ -415,25 +403,21 @@ export default function ReferralsPage() {
           if (!open) setEditingReferral(null);
         }}
       >
-        <DialogContent className="sm:max-w-md" dir="rtl">
-          <DialogHeader className="text-right">
-            <DialogTitle className="text-right">تعديل مدة صلاحية الكوكي</DialogTitle>
-            <DialogDescription className="text-right">
-              الرمز:{" "}
+        <DialogContent className="sm:max-w-md" dir={dashDir()}>
+          <DialogHeader className="text-start">
+            <DialogTitle className="text-start">{dt("تعديل مدة صلاحية الكوكي")}</DialogTitle>
+            <DialogDescription className="text-start">
+              {dt("الرمز: ")}
               <code className="bg-muted px-1 rounded font-mono">{editingReferral?.code}</code>
               <br />
               <span className="text-xs mt-2 block text-muted-foreground">
-                تُحتسب نافذة التعديل من تاريخ إنشاء الرابط ولمدة مساوية لأيام الكوكي الحالية.
-                الزوار الجدد يحصلون على كوكي بالمدة التي تحفظها هنا. الحد الأدنى للمدة هو عدد
-                أيام الانقضاء منذ الإنشاء + 1 (حاليًا: {editMinCookieDays} يومًا).
-              </span>
+                {dtx("تُحتسب نافذة التعديل من تاريخ إنشاء الرابط ولمدة مساوية لأيام الكوكي الحالية. الزوار الجدد يحصلون على كوكي بالمدة التي تحفظها هنا. الحد الأدنى للمدة هو عدد أيام الانقضاء منذ الإنشاء + 1 (حاليًا: {0} يومًا).", [editMinCookieDays])}</span>
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleSaveCookieExpiry} className="grid gap-4 py-2">
-            <div className="space-y-3 text-right">
+            <div className="space-y-3 text-start">
               <label className="text-sm font-medium text-foreground block">
-                مدة صلاحية الكوكي للزوار
-              </label>
+                {dt("مدة صلاحية الكوكي للزوار")}</label>
               <div className="flex flex-wrap items-center gap-3">
                 {!editCookieUnlimited && (
                   <div className="flex items-center gap-2">
@@ -453,7 +437,7 @@ export default function ReferralsPage() {
                       className="h-10 w-24 text-sm"
                       dir="ltr"
                     />
-                    <span className="text-sm text-muted-foreground">يوم</span>
+                    <span className="text-sm text-muted-foreground">{dt("يوم")}</span>
                   </div>
                 )}
                 <label className="inline-flex items-center gap-2 cursor-pointer">
@@ -463,13 +447,13 @@ export default function ReferralsPage() {
                     onChange={(e) => setEditCookieUnlimited(e.target.checked)}
                     className="rounded border-input"
                   />
-                  <span className="text-sm text-muted-foreground">غير محدود</span>
+                  <span className="text-sm text-muted-foreground">{dt("غير محدود")}</span>
                 </label>
               </div>
             </div>
             <DialogFooter className="gap-2 flex-row-reverse">
               <Button type="submit" disabled={savingEdit}>
-                {savingEdit ? <Loader2 className="w-4 h-4 animate-spin" /> : "حفظ"}
+                {savingEdit ? <Loader2 className="w-4 h-4 animate-spin" /> : dt("حفظ")}
               </Button>
               <Button
                 type="button"
@@ -479,8 +463,7 @@ export default function ReferralsPage() {
                   setEditingReferral(null);
                 }}
               >
-                إلغاء
-              </Button>
+                {dt("إلغاء")}</Button>
             </DialogFooter>
           </form>
         </DialogContent>

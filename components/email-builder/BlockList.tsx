@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { ChevronUp, ChevronDown, GripVertical } from "lucide-react";
 import type { EmailDocument, AddableBlock } from "./types";
 import { ADDABLE_BLOCKS, getRoot, getBlock, makeBlock, setRootChildren } from "./types";
+import { dt } from "@/lib/dashboard/i18n";
 
 interface Props {
   doc: EmailDocument;
@@ -42,22 +43,21 @@ export function BlockList({ doc, selectedId, onChange, onSelect }: Props) {
         <div
           onClick={() => onSelect("root")}
           className={cn(
-            "rounded-lg border-2 px-3 py-2 cursor-pointer transition-colors text-right",
+            "rounded-lg border-2 px-3 py-2 cursor-pointer transition-colors text-start",
             selectedId === "root" || !selectedId
               ? "border-[#025EB8] bg-[#025EB8]/5"
               : "border-border hover:border-[#025EB8]/50"
           )}
         >
-          <div className="text-xs font-semibold text-slate-700">إعدادات البريد</div>
-          <div className="text-[11px] text-muted-foreground">الألوان والخط والخلفية</div>
+          <div className="text-xs font-semibold text-slate-700">{dt("إعدادات البريد")}</div>
+          <div className="text-[11px] text-muted-foreground">{dt("الألوان والخط والخلفية")}</div>
         </div>
       </div>
 
       <div className="space-y-1.5">
         {childrenIds.length === 0 && (
           <div className="text-center text-sm text-muted-foreground p-6 border-2 border-dashed border-border rounded-lg">
-            البريد فارغ  أضف كتلة من القائمة أدناه
-          </div>
+            {dt("البريد فارغ  أضف كتلة من القائمة أدناه")}</div>
         )}
         {childrenIds.map((id, idx) => {
           const block = getBlock(doc, id);
@@ -76,7 +76,7 @@ export function BlockList({ doc, selectedId, onChange, onSelect }: Props) {
               )}
             >
               <GripVertical className="w-4 h-4 text-slate-400 shrink-0" />
-              <div className="flex-1 min-w-0 text-right">
+              <div className="flex-1 min-w-0 text-start">
                 <div className="text-[11px] font-semibold text-slate-500 uppercase">{block.type}</div>
                 <div className="text-xs text-slate-700 truncate" title={summary}>{summary || "—"}</div>
               </div>
@@ -89,7 +89,7 @@ export function BlockList({ doc, selectedId, onChange, onSelect }: Props) {
                   }}
                   disabled={idx === 0}
                   className="text-slate-400 hover:text-slate-700 disabled:opacity-30 disabled:cursor-not-allowed"
-                  aria-label="نقل لأعلى"
+                  aria-label={dt("نقل لأعلى")}
                 >
                   <ChevronUp className="w-4 h-4" />
                 </button>
@@ -101,7 +101,7 @@ export function BlockList({ doc, selectedId, onChange, onSelect }: Props) {
                   }}
                   disabled={idx === childrenIds.length - 1}
                   className="text-slate-400 hover:text-slate-700 disabled:opacity-30 disabled:cursor-not-allowed"
-                  aria-label="نقل لأسفل"
+                  aria-label={dt("نقل لأسفل")}
                 >
                   <ChevronDown className="w-4 h-4" />
                 </button>
@@ -112,7 +112,7 @@ export function BlockList({ doc, selectedId, onChange, onSelect }: Props) {
       </div>
 
       <div className="border-t border-border pt-3">
-        <p className="text-[11px] font-semibold text-slate-500 mb-2">إضافة كتلة</p>
+        <p className="text-[11px] font-semibold text-slate-500 mb-2">{dt("إضافة كتلة")}</p>
         <div className="grid grid-cols-2 gap-1.5">
           {ADDABLE_BLOCKS.map((b) => (
             <Button
@@ -139,6 +139,6 @@ function blockSummary(block: { type: string; data: { props?: Record<string, unkn
   if (typeof p.text === "string") return p.text;
   if (typeof p.url === "string") return p.url;
   if (block.type === "Spacer") return `${p.height ?? 24}px`;
-  if (block.type === "Divider") return "خط فاصل";
+  if (block.type === "Divider") return dt("خط فاصل");
   return "";
 }

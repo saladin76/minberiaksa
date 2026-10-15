@@ -23,6 +23,7 @@ import {
 import { errorMessage } from '@/lib/dashboard/client-error-message';
 import { LOCALES } from '@/lib/locales';
 import { VIDEO_TYPE_LABELS } from './_components/VideoForm';
+import { dashDir, dt, dtx } from "@/lib/dashboard/i18n";
 
 interface VideoRow {
   id: string;
@@ -96,7 +97,7 @@ function DraggableVideoRow({
 /** Which locales a video is limited to  empty means every locale. */
 function LocaleScope({ localeFilter }: { localeFilter: string[] }) {
   if (localeFilter.length === 0) {
-    return <span className="text-xs text-slate-500">كل اللغات</span>;
+    return <span className="text-xs text-slate-500">{dt("كل اللغات")}</span>;
   }
   return (
     <div className="flex flex-wrap gap-1">
@@ -109,8 +110,9 @@ function LocaleScope({ localeFilter }: { localeFilter: string[] }) {
   );
 }
 
-const TABS = [{ value: 'ALL', label: 'الكل' },
-  ...Object.entries(VIDEO_TYPE_LABELS).map(([value, label]) => ({ value, label }))];
+const TABS = [{ value: 'ALL', get label() { return dt("الكل"); } },
+  /* Read per access: the labels are translated getters. */
+  ...Object.keys(VIDEO_TYPE_LABELS).map((value) => ({ value, get label() { return VIDEO_TYPE_LABELS[value as keyof typeof VIDEO_TYPE_LABELS]; } }))];
 
 export default function VideosPage() {
   const router = useRouter();
@@ -130,7 +132,7 @@ export default function VideosPage() {
       /* Surfaced rather than logged only: a failed load and "no videos yet"
          otherwise render identically and nothing says which happened. */
       console.error(e);
-      toast.error(errorMessage(e, 'تعذّر تحميل الفيديوهات'));
+      toast.error(errorMessage(e, dt("تعذّر تحميل الفيديوهات")));
     } finally {
       setLoading(false);
     }
@@ -171,7 +173,7 @@ export default function VideosPage() {
     try {
       await axios.post('/api/videos/reorder', { videos: payload });
     } catch (e) {
-      toast.error(errorMessage(e, 'تعذّر حفظ الترتيب'));
+      toast.error(errorMessage(e, dt("تعذّر حفظ الترتيب")));
       fetchVideos();
     }
   }, [fetchVideos]);
@@ -185,7 +187,7 @@ export default function VideosPage() {
       await axios.put(`/api/videos/${video.id}`, { [field]: next });
       setVideos((prev) => prev.map((v) => (v.id === video.id ? { ...v, [field]: next } : v)));
     } catch (e) {
-      toast.error(errorMessage(e, 'تعذّر تغيير الحالة'));
+      toast.error(errorMessage(e, dt("تعذّر تغيير الحالة")));
     } finally {
       setTogglingId(null);
     }
@@ -197,10 +199,10 @@ export default function VideosPage() {
     try {
       await axios.delete(`/api/videos/${deleteTarget.id}`);
       setVideos((prev) => prev.filter((v) => v.id !== deleteTarget.id));
-      toast.success('تم حذف الفيديو');
+      toast.success(dt("تم حذف الفيديو"));
       setDeleteTarget(null);
     } catch (e) {
-      toast.error(errorMessage(e, 'تعذّر حذف الفيديو'));
+      toast.error(errorMessage(e, dt("تعذّر حذف الفيديو")));
     } finally {
       setDeleting(false);
     }
@@ -219,23 +221,21 @@ export default function VideosPage() {
       <div className="space-y-4">
         <div className="flex items-center justify-between gap-3">
           <div>
-            <h1 className="text-lg font-bold">الفيديوهات</h1>
+            <h1 className="text-lg font-bold">{dt("الفيديوهات")}</h1>
             <p className="text-xs text-slate-500">
-              إنجازاتنا وتزكياتنا ومقاطع الميدان. التزكية يمكن قصرها على لغات بعينها.
-            </p>
+              {dt("إنجازاتنا وتزكياتنا ومقاطع الميدان. التزكية يمكن قصرها على لغات بعينها.")}</p>
           </div>
           <Button onClick={() => router.push('/dashboard/videos/new')}>
-            <Plus className="w-4 h-4 ml-1" />
-            فيديو جديد
-          </Button>
+            <Plus className="w-4 h-4 me-1" />
+            {dt("فيديو جديد")}</Button>
         </div>
 
-        <Tabs value={tab} onValueChange={setTab} dir="rtl">
+        <Tabs value={tab} onValueChange={setTab} dir={dashDir()}>
           <TabsList>
             {TABS.map((t) => (
               <TabsTrigger key={t.value} value={t.value}>
                 {t.label}
-                <span className="mr-1.5 text-[10px] text-slate-400">
+                <span className="ms-1.5 text-[10px] text-slate-400">
                   {t.value === 'ALL' ? videos.length : videos.filter((v) => v.type === t.value).length}
                 </span>
               </TabsTrigger>
@@ -246,13 +246,12 @@ export default function VideosPage() {
         {visible.length === 0 ? (
           <EmptyState
             icon={VideoIcon}
-            title="لا توجد فيديوهات"
-            description="أضف أول فيديو ليظهر في قسمه على الموقع."
+            title={dt("لا توجد فيديوهات")}
+            description={dt("أضف أول فيديو ليظهر في قسمه على الموقع.")}
             action={
               <Button onClick={() => router.push('/dashboard/videos/new')}>
-                <Plus className="w-4 h-4 ml-1" />
-                فيديو جديد
-              </Button>
+                <Plus className="w-4 h-4 me-1" />
+                {dt("فيديو جديد")}</Button>
             }
           />
         ) : (
@@ -261,12 +260,12 @@ export default function VideosPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-12" />
-                  <TableHead>الفيديو</TableHead>
-                  <TableHead>القسم</TableHead>
-                  <TableHead>اللغات</TableHead>
-                  <TableHead>الرئيسية</TableHead>
-                  <TableHead>الترجمات</TableHead>
-                  <TableHead>مفعّل</TableHead>
+                  <TableHead>{dt("الفيديو")}</TableHead>
+                  <TableHead>{dt("القسم")}</TableHead>
+                  <TableHead>{dt("اللغات")}</TableHead>
+                  <TableHead>{dt("الرئيسية")}</TableHead>
+                  <TableHead>{dt("الترجمات")}</TableHead>
+                  <TableHead>{dt("مفعّل")}</TableHead>
                   <TableHead className="w-24" />
                 </TableRow>
               </TableHeader>
@@ -341,17 +340,15 @@ export default function VideosPage() {
         <AlertDialog open={!!deleteTarget} onOpenChange={(o) => !o && setDeleteTarget(null)}>
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle>حذف الفيديو</AlertDialogTitle>
+              <AlertDialogTitle>{dt("حذف الفيديو")}</AlertDialogTitle>
               <AlertDialogDescription>
-                سيتم حذف «{deleteTarget?.title}» وكل ترجماته نهائيًا.
-              </AlertDialogDescription>
+                {dtx("سيتم حذف «{0}» وكل ترجماته نهائيًا.", [deleteTarget?.title])}</AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel disabled={deleting}>إلغاء</AlertDialogCancel>
+              <AlertDialogCancel disabled={deleting}>{dt("إلغاء")}</AlertDialogCancel>
               <AlertDialogAction onClick={confirmDelete} disabled={deleting}>
-                {deleting && <Loader2 className="w-4 h-4 animate-spin ml-2" />}
-                حذف
-              </AlertDialogAction>
+                {deleting && <Loader2 className="w-4 h-4 animate-spin me-2" />}
+                {dt("حذف")}</AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>

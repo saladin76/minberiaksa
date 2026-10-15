@@ -24,6 +24,7 @@
     "dashboard:schema:validate": "prisma validate --schema prisma/dashboard-foundation.schema.prisma",
     "i18n:audit": "node scripts/audit-i18n-messages.mjs",
     "i18n:audit:strict": "node scripts/audit-i18n-messages.mjs --strict",
+    "dash-i18n": "node scripts/dashboard-i18n.mjs",
     "locale:audit": "node scripts/audit-locales.mjs",
     "locale:audit:strict": "node scripts/audit-locales.mjs --strict",
     "content:audit": "node scripts/audit-content-localization.mjs",

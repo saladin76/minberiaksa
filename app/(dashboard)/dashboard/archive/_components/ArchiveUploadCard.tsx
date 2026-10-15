@@ -5,6 +5,7 @@ import { useRef, useState } from "react";
 import { FileUp, Loader2, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { uploadArchiveFile } from "./archiveUploadClient";
+import { dt } from "@/lib/dashboard/i18n";
 
 type Category = "MARKETING" | "DOCUMENTS";
 
@@ -27,7 +28,7 @@ export function ArchiveUploadCard({ category, title, description, openHref }: Pr
     const file = fileRef.current?.files?.[0];
     if (!file || saving) {
       setTone("error");
-      setMessage("اختر ملف PDF أو Excel أولًا.");
+      setMessage(dt("اختر ملف PDF أو Excel أولًا."));
       return;
     }
 
@@ -37,12 +38,12 @@ export function ArchiveUploadCard({ category, title, description, openHref }: Pr
     try {
       await uploadArchiveFile({ category, title: fileTitle.trim() || file.name, file, onProgress: setProgress });
       setTone("success");
-      setMessage("تم رفع الملف داخل الأرشيف.");
+      setMessage(dt("تم رفع الملف داخل الأرشيف."));
       setFileTitle("");
       if (fileRef.current) fileRef.current.value = "";
     } catch (error) {
       setTone("error");
-      setMessage(error instanceof Error ? error.message : "تعذر رفع الملف");
+      setMessage(error instanceof Error ? error.message : dt("تعذر رفع الملف"));
     } finally {
       setSaving(false);
     }
@@ -59,16 +60,15 @@ export function ArchiveUploadCard({ category, title, description, openHref }: Pr
       </div>
 
       <div className="mt-3 grid gap-2">
-        <input value={fileTitle} onChange={(event) => setFileTitle(event.target.value)} placeholder="اسم الملف" className="h-8 rounded-md border px-2 text-xs outline-none focus:border-brand" />
-        <input ref={fileRef} type="file" accept=".pdf,.xls,.xlsx,application/pdf,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" className="h-8 rounded-md border bg-white px-2 py-1 text-xs file:ml-2 file:rounded file:border-0 file:bg-slate-100 file:px-2 file:py-1 file:text-xs file:font-bold file:text-slate-700" />
+        <input value={fileTitle} onChange={(event) => setFileTitle(event.target.value)} placeholder={dt("اسم الملف")} className="h-8 rounded-md border px-2 text-xs outline-none focus:border-brand" />
+        <input ref={fileRef} type="file" accept=".pdf,.xls,.xlsx,application/pdf,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" className="h-8 rounded-md border bg-white px-2 py-1 text-xs file:me-2 file:rounded file:border-0 file:bg-slate-100 file:px-2 file:py-1 file:text-xs file:font-bold file:text-slate-700" />
         <div className="grid grid-cols-[1fr_auto] gap-2">
           <Button type="button" size="sm" onClick={upload} disabled={saving} className="h-8 gap-2 text-xs font-bold">
             {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
-            {saving ? `${progress}%` : "رفع"}
+            {saving ? `${progress}%` : dt("رفع")}
           </Button>
           <Link href={openHref} className="inline-flex h-8 items-center justify-center rounded-md border bg-white px-3 text-xs font-bold text-slate-800 transition hover:border-brand hover:text-brand">
-            فتح
-          </Link>
+            {dt("فتح")}</Link>
         </div>
         {saving ? <div className="h-1.5 overflow-hidden rounded-full bg-slate-100"><div className="h-full bg-brand transition-all" style={{ width: `${progress}%` }} /></div> : null}
         {message ? (

@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { cn } from "@/lib/utils";
+import { dashDir, dt, dtx } from "@/lib/dashboard/i18n";
 
 type PageKind = "home" | "campaigns" | "campaign" | "category" | "blog" | "blog_post" | "blog_post_category" | "about_us" | "contact_us" | "profile" | "success" | "success_donation" | "auth_signin";
 type LinkMode = "standard" | "marketing";
@@ -43,30 +44,30 @@ interface MarketingForm {
 }
 
 const PAGE_OPTIONS: { id: PageKind; label: string; hint?: string }[] = [
-  { id: "home", label: "الصفحة الرئيسية" },
-  { id: "campaigns", label: "قائمة المشاريع", hint: "بحث اختياري" },
-  { id: "campaign", label: "صفحة مشروع محددة" },
-  { id: "category", label: "صفحة حملة / تصنيف مشاريع" },
-  { id: "blog", label: "المدونة" },
-  { id: "blog_post", label: "مقال محدد" },
-  { id: "blog_post_category", label: "تصنيف مقالات" },
-  { id: "about_us", label: "من نحن" },
-  { id: "contact_us", label: "اتصل بنا" },
-  { id: "profile", label: "ملف المستخدم" },
-  { id: "success", label: "صفحة شكر عامة" },
-  { id: "success_donation", label: "صفحة شكر لتبرع محدد" },
-  { id: "auth_signin", label: "تسجيل الدخول" },
+  { id: "home", get label() { return dt("الصفحة الرئيسية"); } },
+  { id: "campaigns", get label() { return dt("قائمة المشاريع"); }, get hint() { return dt("بحث اختياري"); } },
+  { id: "campaign", get label() { return dt("صفحة مشروع محددة"); } },
+  { id: "category", get label() { return dt("صفحة حملة / تصنيف مشاريع"); } },
+  { id: "blog", get label() { return dt("المدونة"); } },
+  { id: "blog_post", get label() { return dt("مقال محدد"); } },
+  { id: "blog_post_category", get label() { return dt("تصنيف مقالات"); } },
+  { id: "about_us", get label() { return dt("من نحن"); } },
+  { id: "contact_us", get label() { return dt("اتصل بنا"); } },
+  { id: "profile", get label() { return dt("ملف المستخدم"); } },
+  { id: "success", get label() { return dt("صفحة شكر عامة"); } },
+  { id: "success_donation", get label() { return dt("صفحة شكر لتبرع محدد"); } },
+  { id: "auth_signin", get label() { return dt("تسجيل الدخول"); } },
 ];
 
 const PLATFORM_OPTIONS: { id: MarketingPlatform; label: string; source: string; medium: string; channel: string; hint: string }[] = [
-  { id: "meta", label: "Meta / Facebook / Instagram", source: "facebook", medium: "paid_social", channel: "meta_ads", hint: "إعلانات فيسبوك وإنستغرام" },
-  { id: "google_ads", label: "Google Ads", source: "google", medium: "paid_search", channel: "google_ads", hint: "بحث، Display، YouTube، Performance Max" },
-  { id: "tiktok", label: "TikTok Ads", source: "tiktok", medium: "paid_social", channel: "tiktok_ads", hint: "حملات تيك توك المدفوعة" },
-  { id: "x", label: "X Ads", source: "x", medium: "paid_social", channel: "x_ads", hint: "إعلانات منصة X" },
-  { id: "email", label: "Email", source: "email", medium: "email", channel: "email", hint: "حملات البريد عبر نظام التواصل" },
-  { id: "whatsapp", label: "WhatsApp", source: "whatsapp", medium: "messaging", channel: "whatsapp", hint: "حملات واتساب عبر Meta Cloud API أو روابط مشاركة" },
-  { id: "sms", label: "SMS", source: "sms", medium: "messaging", channel: "sms", hint: "حملات الرسائل النصية عبر نظام التواصل" },
-  { id: "organic", label: "Organic / مشاركة طبيعية", source: "organic", medium: "organic", channel: "organic", hint: "روابط غير مدفوعة أو مشاركة عضوية" },
+  { id: "meta", label: "Meta / Facebook / Instagram", source: "facebook", medium: "paid_social", channel: "meta_ads", get hint() { return dt("إعلانات فيسبوك وإنستغرام"); } },
+  { id: "google_ads", label: "Google Ads", source: "google", medium: "paid_search", channel: "google_ads", get hint() { return dt("بحث، Display، YouTube، Performance Max"); } },
+  { id: "tiktok", label: "TikTok Ads", source: "tiktok", medium: "paid_social", channel: "tiktok_ads", get hint() { return dt("حملات تيك توك المدفوعة"); } },
+  { id: "x", label: "X Ads", source: "x", medium: "paid_social", channel: "x_ads", get hint() { return dt("إعلانات منصة X"); } },
+  { id: "email", label: "Email", source: "email", medium: "email", channel: "email", get hint() { return dt("حملات البريد عبر نظام التواصل"); } },
+  { id: "whatsapp", label: "WhatsApp", source: "whatsapp", medium: "messaging", channel: "whatsapp", get hint() { return dt("حملات واتساب عبر Meta Cloud API أو روابط مشاركة"); } },
+  { id: "sms", label: "SMS", source: "sms", medium: "messaging", channel: "sms", get hint() { return dt("حملات الرسائل النصية عبر نظام التواصل"); } },
+  { id: "organic", get label() { return dt("Organic / مشاركة طبيعية"); }, source: "organic", medium: "organic", channel: "organic", get hint() { return dt("روابط غير مدفوعة أو مشاركة عضوية"); } },
 ];
 
 const initialMarketingForm: MarketingForm = {
@@ -115,7 +116,7 @@ function buildPath(kind: PageKind, opts: { resourceId: string; profileTab: strin
 
 function entityLabel(row: EntityRow) {
   const text = (row.title || row.name || row.id).slice(0, 96);
-  return row.published === false ? `${text} (مسودة)` : text;
+  return row.published === false ? dt("{0} (مسودة)", [text]) : text;
 }
 
 function slugifyCampaignName(value: string) {
@@ -182,13 +183,13 @@ function marketingValidation(form: MarketingForm, loc: string) {
   const values = Object.values(params).join(" ");
   const issues: { level: "ok" | "warn"; text: string }[] = [];
   const auto = form.autoPlatformData;
-  if (auto && ["meta", "google_ads", "tiktok", "x"].includes(form.platform)) issues.push({ level: "ok", text: "تم تفعيل متغيرات المنصة الديناميكية. استخدمها فقط إذا كانت المنصة ستستبدلها عند النقر." });
-  if (!auto && !form.campaignName.trim() && !form.campaignId.trim()) issues.push({ level: "warn", text: "أضف اسم الحملة أو Campaign ID حتى يسهل ربط التبرعات بالحملة." });
-  if (!auto && ["meta", "google_ads", "tiktok", "x"].includes(form.platform) && !form.campaignId.trim()) issues.push({ level: "warn", text: "الحملة المدفوعة تستفيد من Campaign ID للمطابقة مع بيانات المنصة." });
-  if (!form.targetCountry.trim()) issues.push({ level: "warn", text: "Target country اختياري لكنه مهم لتحليل الدول والميزانيات." });
-  if (!auto && hasUnresolvedMacro(values)) issues.push({ level: "warn", text: "يوجد Macro غير مستبدل؛ لا تستخدمه إلا إذا كانت المنصة ستستبدله فعلًا." });
-  if (values.includes("fbclid") || values.includes("gclid")) issues.push({ level: "warn", text: "لا تضف fbclid أو gclid يدويًا؛ المنصات تضيفها تلقائيًا." });
-  if (!issues.length) issues.push({ level: "ok", text: "الرابط جاهز للتتبع الآمن." });
+  if (auto && ["meta", "google_ads", "tiktok", "x"].includes(form.platform)) issues.push({ level: "ok", text: dt("تم تفعيل متغيرات المنصة الديناميكية. استخدمها فقط إذا كانت المنصة ستستبدلها عند النقر.") });
+  if (!auto && !form.campaignName.trim() && !form.campaignId.trim()) issues.push({ level: "warn", text: dt("أضف اسم الحملة أو Campaign ID حتى يسهل ربط التبرعات بالحملة.") });
+  if (!auto && ["meta", "google_ads", "tiktok", "x"].includes(form.platform) && !form.campaignId.trim()) issues.push({ level: "warn", text: dt("الحملة المدفوعة تستفيد من Campaign ID للمطابقة مع بيانات المنصة.") });
+  if (!form.targetCountry.trim()) issues.push({ level: "warn", text: dt("Target country اختياري لكنه مهم لتحليل الدول والميزانيات.") });
+  if (!auto && hasUnresolvedMacro(values)) issues.push({ level: "warn", text: dt("يوجد Macro غير مستبدل؛ لا تستخدمه إلا إذا كانت المنصة ستستبدله فعلًا.") });
+  if (values.includes("fbclid") || values.includes("gclid")) issues.push({ level: "warn", text: dt("لا تضف fbclid أو gclid يدويًا؛ المنصات تضيفها تلقائيًا.") });
+  if (!issues.length) issues.push({ level: "ok", text: dt("الرابط جاهز للتتبع الآمن.") });
   return issues;
 }
 
@@ -210,7 +211,7 @@ function fieldValue(value: string) {
 }
 
 function pageOptionLabel(kind: PageKind) {
-  return PAGE_OPTIONS.find((item) => item.id === kind)?.label || "رابط موقع";
+  return PAGE_OPTIONS.find((item) => item.id === kind)?.label || dt("رابط موقع");
 }
 
 export default function TrackingLinkBuilder() {
@@ -247,7 +248,7 @@ export default function TrackingLinkBuilder() {
         setReferrals(Array.isArray(rows) ? rows : []);
       }
     } catch {
-      toast.error("تعذر تحميل بيانات الروابط");
+      toast.error(dt("تعذر تحميل بيانات الروابط"));
       setBundle(null);
     } finally {
       setLoading(false);
@@ -325,15 +326,15 @@ export default function TrackingLinkBuilder() {
     if (!fullUrl) return;
     try {
       await navigator.clipboard.writeText(fullUrl);
-      toast.success("تم نسخ الرابط");
+      toast.success(dt("تم نسخ الرابط"));
     } catch {
-      toast.error("تعذر النسخ");
+      toast.error(dt("تعذر النسخ"));
     }
   }
 
   async function saveRegistryLink(copyAfter = false) {
     if (!fullUrl) {
-      toast.error("أكمل بيانات الرابط أولًا");
+      toast.error(dt("أكمل بيانات الرابط أولًا"));
       return;
     }
     setSaving(true);
@@ -407,9 +408,9 @@ export default function TrackingLinkBuilder() {
       if (copyAfter) await navigator.clipboard.writeText(fullUrl).catch(() => null);
       const updated = data.upserted === false;
       setLastSavedLink({ name: registryName, mode: linkMode, copied: copyAfter, updated });
-      toast.success(updated ? "تم تحديث رابط موجود" : "تم حفظ الرابط في سجل الحملات");
+      toast.success(updated ? dt("تم تحديث رابط موجود") : dt("تم حفظ الرابط في سجل الحملات"));
     } catch {
-      toast.error("فشل الحفظ");
+      toast.error(dt("فشل الحفظ"));
     } finally {
       setSaving(false);
     }
@@ -420,70 +421,70 @@ export default function TrackingLinkBuilder() {
   }
 
   return (
-    <div className="mx-auto max-w-4xl space-y-6 pb-12" dir="rtl">
+    <div className="mx-auto max-w-4xl space-y-6 pb-12" dir={dashDir()}>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Link href="/dashboard/marketing/attribution" className="hover:text-brand">روابط التتبع</Link>
+          <Link href="/dashboard/marketing/attribution" className="hover:text-brand">{dt("روابط التتبع")}</Link>
           <span className="opacity-40">/</span>
-          <span className="font-medium text-foreground">منشئ روابط الموقع والحملات</span>
+          <span className="font-medium text-foreground">{dt("منشئ روابط الموقع والحملات")}</span>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Link href="/dashboard/marketing/attribution#links" className="rounded-md border px-3 py-2 text-sm hover:bg-slate-50">أداء الروابط</Link>
-          <Button type="button" variant="ghost" size="sm" onClick={resetForm} className="gap-1.5 text-muted-foreground"><RotateCcw className="h-4 w-4" />مسح الكل</Button>
+          <Link href="/dashboard/marketing/attribution#links" className="rounded-md border px-3 py-2 text-sm hover:bg-slate-50">{dt("أداء الروابط")}</Link>
+          <Button type="button" variant="ghost" size="sm" onClick={resetForm} className="gap-1.5 text-muted-foreground"><RotateCcw className="h-4 w-4" />{dt("مسح الكل")}</Button>
         </div>
       </div>
 
       <Card className="overflow-hidden border-brand/15 shadow-md">
         <CardHeader className="bg-gradient-to-l from-brand/8 to-transparent pb-4">
-          <CardTitle className="flex items-center gap-2 text-xl"><Link2 className="h-6 w-6 text-brand" />منشئ روابط الموقع والحملات</CardTitle>
-          <CardDescription className="leading-relaxed">أنشئ رابط موقع عادي أو رابط حملة تسويقية، واحفظ الروابط التسويقية في Campaign Registry لتحليل الأداء لاحقًا.</CardDescription>
+          <CardTitle className="flex items-center gap-2 text-xl"><Link2 className="h-6 w-6 text-brand" />{dt("منشئ روابط الموقع والحملات")}</CardTitle>
+          <CardDescription className="leading-relaxed">{dt("أنشئ رابط موقع عادي أو رابط حملة تسويقية، واحفظ الروابط التسويقية في Campaign Registry لتحليل الأداء لاحقًا.")}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6 pt-5">
           <section className="space-y-3">
-            <Label className="text-base font-semibold">٠  نوع الرابط</Label>
+            <Label className="text-base font-semibold">{dt("٠  نوع الرابط")}</Label>
             <div className="grid gap-3 sm:grid-cols-2">
-              <button type="button" onClick={() => setLinkMode("standard")} className={cn("rounded-xl border p-4 text-right transition", linkMode === "standard" ? "border-brand bg-blue-50 text-brand" : "border-border bg-white hover:bg-muted/40")}>
-                <Link2 className="mb-2 h-5 w-5" /><div className="font-bold">رابط موقع عادي</div><p className="mt-1 text-xs text-muted-foreground">صفحة، لغة، عملة، إحالة.</p>
+              <button type="button" onClick={() => setLinkMode("standard")} className={cn("rounded-xl border p-4 text-start transition", linkMode === "standard" ? "border-brand bg-blue-50 text-brand" : "border-border bg-white hover:bg-muted/40")}>
+                <Link2 className="mb-2 h-5 w-5" /><div className="font-bold">{dt("رابط موقع عادي")}</div><p className="mt-1 text-xs text-muted-foreground">{dt("صفحة، لغة، عملة، إحالة.")}</p>
               </button>
-              <button type="button" onClick={() => setLinkMode("marketing")} className={cn("rounded-xl border p-4 text-right transition", linkMode === "marketing" ? "border-brand-orange bg-orange-50 text-[#8f3a23]" : "border-border bg-white hover:bg-muted/40")}>
-                <Megaphone className="mb-2 h-5 w-5" /><div className="font-bold">حملة تسويقية</div><p className="mt-1 text-xs text-muted-foreground">UTM + بيانات منصة + حفظ في سجل الحملات.</p>
+              <button type="button" onClick={() => setLinkMode("marketing")} className={cn("rounded-xl border p-4 text-start transition", linkMode === "marketing" ? "border-brand-orange bg-orange-50 text-[#8f3a23]" : "border-border bg-white hover:bg-muted/40")}>
+                <Megaphone className="mb-2 h-5 w-5" /><div className="font-bold">{dt("حملة تسويقية")}</div><p className="mt-1 text-xs text-muted-foreground">{dt("UTM + بيانات منصة + حفظ في سجل الحملات.")}</p>
               </button>
             </div>
           </section>
 
           <section className="grid gap-4 border-t pt-5 sm:grid-cols-2">
-            <SelectField label="١  نوع الصفحة" value={pageKind} onValueChange={(v) => { setPageKind(v as PageKind); setResourceId(""); setCampaignSearch(""); setDonationId(""); }} options={PAGE_OPTIONS.map((p) => ({ value: p.id, label: p.hint ? `${p.label}  ${p.hint}` : p.label }))} />
-            {needsResourcePick(pageKind) ? <SelectField label="٢  المحتوى" value={resourceId} onValueChange={setResourceId} options={resourceList.map((row) => ({ value: row.id, label: entityLabel(row) }))} placeholder="اختر المحتوى" /> : null}
-            {pageKind === "campaigns" ? <Field label="بحث في قائمة المشاريع" value={campaignSearch} onChange={setCampaignSearch} placeholder="يضاف كـ search" /> : null}
-            {pageKind === "success_donation" ? <Field label="معرف التبرع" value={donationId} onChange={setDonationId} placeholder="24 حرف" dir="ltr" /> : null}
-            {pageKind === "profile" ? <SelectField label="تبويب الملف" value={profileTab} onValueChange={(v) => setProfileTab(v as typeof profileTab)} options={[{ value: "account", label: "معلوماتي" }, { value: "donations", label: "التبرعات" }, { value: "support", label: "الدعم" }]} /> : null}
+            <SelectField label={dt("١  نوع الصفحة")} value={pageKind} onValueChange={(v) => { setPageKind(v as PageKind); setResourceId(""); setCampaignSearch(""); setDonationId(""); }} options={PAGE_OPTIONS.map((p) => ({ value: p.id, label: p.hint ? `${p.label}  ${p.hint}` : p.label }))} />
+            {needsResourcePick(pageKind) ? <SelectField label={dt("٢  المحتوى")} value={resourceId} onValueChange={setResourceId} options={resourceList.map((row) => ({ value: row.id, label: entityLabel(row) }))} placeholder={dt("اختر المحتوى")} /> : null}
+            {pageKind === "campaigns" ? <Field label={dt("بحث في قائمة المشاريع")} value={campaignSearch} onChange={setCampaignSearch} placeholder={dt("يضاف كـ search")} /> : null}
+            {pageKind === "success_donation" ? <Field label={dt("معرف التبرع")} value={donationId} onChange={setDonationId} placeholder={dt("24 حرف")} dir="ltr" /> : null}
+            {pageKind === "profile" ? <SelectField label={dt("تبويب الملف")} value={profileTab} onValueChange={(v) => setProfileTab(v as typeof profileTab)} options={[{ value: "account", label: dt("معلوماتي") }, { value: "donations", label: dt("التبرعات") }, { value: "support", label: dt("الدعم") }]} /> : null}
           </section>
 
           <section className="grid gap-4 border-t pt-5 sm:grid-cols-2">
-            <SelectField label="لغة الرابط" value={locale} onValueChange={setLocale} disabled={autoLocale} options={bundle.locales.map((loc) => ({ value: loc, label: loc }))} />
-            <SelectField label="العملة" value={currency} onValueChange={setCurrency} disabled={autoCurrency} options={bundle.currencies.filter((c) => c !== "DEFAULT").map((c) => ({ value: c, label: c }))} />
-            <CheckRow checked={autoLocale} onChange={setAutoLocale} title="اكتشاف اللغة تلقائيًا" hint="ينشئ الرابط بدون بادئة لغة." />
-            <CheckRow checked={autoCurrency} onChange={setAutoCurrency} title="اكتشاف العملة تلقائيًا" hint="ينشئ الرابط بدون currency." />
-            <SelectField label="رمز الإحالة" value={refCode} onValueChange={setRefCode} options={[{ value: "__none__", label: "بدون إحالة" }, ...referrals.map((r) => ({ value: r.code, label: r.name ? `${r.code}  ${r.name}` : r.code }))]} />
-            <CheckRow checked={openCartPayment} onChange={setOpenCartPayment} title="فتح حوار دفع السلة" hint="يضيف openCartPayment=1." />
+            <SelectField label={dt("لغة الرابط")} value={locale} onValueChange={setLocale} disabled={autoLocale} options={bundle.locales.map((loc) => ({ value: loc, label: loc }))} />
+            <SelectField label={dt("العملة")} value={currency} onValueChange={setCurrency} disabled={autoCurrency} options={bundle.currencies.filter((c) => c !== "DEFAULT").map((c) => ({ value: c, label: c }))} />
+            <CheckRow checked={autoLocale} onChange={setAutoLocale} title={dt("اكتشاف اللغة تلقائيًا")} hint={dt("ينشئ الرابط بدون بادئة لغة.")} />
+            <CheckRow checked={autoCurrency} onChange={setAutoCurrency} title={dt("اكتشاف العملة تلقائيًا")} hint={dt("ينشئ الرابط بدون currency.")} />
+            <SelectField label={dt("رمز الإحالة")} value={refCode} onValueChange={setRefCode} options={[{ value: "__none__", label: dt("بدون إحالة") }, ...referrals.map((r) => ({ value: r.code, label: r.name ? `${r.code}  ${r.name}` : r.code }))]} />
+            <CheckRow checked={openCartPayment} onChange={setOpenCartPayment} title={dt("فتح حوار دفع السلة")} hint={dt("يضيف openCartPayment=1.")} />
           </section>
 
           {linkMode === "marketing" ? (
             <section className="space-y-4 border-t pt-5">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
-                  <Label className="text-base font-semibold">٤  إعدادات الحملة التسويقية</Label>
-                  <p className="mt-1 text-sm text-muted-foreground">هذه البيانات تحفظ مع الرابط وتساعد صفحة أداء الروابط على مطابقة التبرعات.</p>
+                  <Label className="text-base font-semibold">{dt("٤  إعدادات الحملة التسويقية")}</Label>
+                  <p className="mt-1 text-sm text-muted-foreground">{dt("هذه البيانات تحفظ مع الرابط وتساعد صفحة أداء الروابط على مطابقة التبرعات.")}</p>
                 </div>
-                <div className={cn("rounded-full border px-3 py-1 text-sm font-bold", healthScore >= 85 ? "border-emerald-200 bg-emerald-50 text-emerald-700" : healthScore >= 65 ? "border-blue-200 bg-blue-50 text-blue-700" : "border-amber-200 bg-amber-50 text-amber-700")}>{healthScore}% جاهزية</div>
+                <div className={cn("rounded-full border px-3 py-1 text-sm font-bold", healthScore >= 85 ? "border-emerald-200 bg-emerald-50 text-emerald-700" : healthScore >= 65 ? "border-blue-200 bg-blue-50 text-blue-700" : "border-amber-200 bg-amber-50 text-amber-700")}>{dtx("{0}% جاهزية", [healthScore])}</div>
               </div>
               <div className="grid gap-4 sm:grid-cols-2">
-                <SelectField label="المنصة / القناة" value={marketingForm.platform} onValueChange={(v) => updateMarketing({ platform: v as MarketingPlatform })} options={PLATFORM_OPTIONS.map((p) => ({ value: p.id, label: p.label }))} hint={selectedPlatform.hint} />
-                <CheckRow checked={marketingForm.autoPlatformData} onChange={(checked) => updateMarketing({ autoPlatformData: checked })} title="استخدام متغيرات المنصة الديناميكية" hint="مثل Meta campaign/adset/ad وGoogle ValueTrack." />
-                <Field label="اسم الحملة" value={marketingForm.campaignName} onChange={(v) => updateMarketing({ campaignName: v })} placeholder="ramadan-gaza-donations" />
-                <Field label="Campaign ID" value={marketingForm.campaignId} onChange={(v) => updateMarketing({ campaignId: v })} placeholder="اختياري لكن مهم للمطابقة" dir="ltr" />
-                <Field label="Ad Set / Ad Group ID" value={marketingForm.adsetId} onChange={(v) => updateMarketing({ adsetId: v })} placeholder="adset أو ad group" dir="ltr" />
-                <Field label="Ad ID" value={marketingForm.adId} onChange={(v) => updateMarketing({ adId: v })} placeholder="معرف الإعلان" dir="ltr" />
+                <SelectField label={dt("المنصة / القناة")} value={marketingForm.platform} onValueChange={(v) => updateMarketing({ platform: v as MarketingPlatform })} options={PLATFORM_OPTIONS.map((p) => ({ value: p.id, label: p.label }))} hint={selectedPlatform.hint} />
+                <CheckRow checked={marketingForm.autoPlatformData} onChange={(checked) => updateMarketing({ autoPlatformData: checked })} title={dt("استخدام متغيرات المنصة الديناميكية")} hint={dt("مثل Meta campaign/adset/ad وGoogle ValueTrack.")} />
+                <Field label={dt("اسم الحملة")} value={marketingForm.campaignName} onChange={(v) => updateMarketing({ campaignName: v })} placeholder="ramadan-gaza-donations" />
+                <Field label="Campaign ID" value={marketingForm.campaignId} onChange={(v) => updateMarketing({ campaignId: v })} placeholder={dt("اختياري لكن مهم للمطابقة")} dir="ltr" />
+                <Field label="Ad Set / Ad Group ID" value={marketingForm.adsetId} onChange={(v) => updateMarketing({ adsetId: v })} placeholder={dt("adset أو ad group")} dir="ltr" />
+                <Field label="Ad ID" value={marketingForm.adId} onChange={(v) => updateMarketing({ adId: v })} placeholder={dt("معرف الإعلان")} dir="ltr" />
                 <Field label="Placement" value={marketingForm.placement} onChange={(v) => updateMarketing({ placement: v })} placeholder="facebook_feed / instagram_reels" />
                 <Field label="Target Country" value={marketingForm.targetCountry} onChange={(v) => updateMarketing({ targetCountry: v })} placeholder="TR / DE / US" dir="ltr" />
                 <Field label="Audience Segment" value={marketingForm.audienceSegment} onChange={(v) => updateMarketing({ audienceSegment: v })} placeholder="donors_30d / lookalike" />
@@ -496,14 +497,14 @@ export default function TrackingLinkBuilder() {
                 <Field label="Button Label" value={marketingForm.buttonLabel} onChange={(v) => updateMarketing({ buttonLabel: v })} />
               </div>
               <div className="space-y-2">
-                <Label className="text-sm text-muted-foreground">ملاحظات داخلية</Label>
-                <Textarea value={marketingForm.internalNotes} onChange={(event) => updateMarketing({ internalNotes: event.target.value })} placeholder="سبب إنشاء الرابط، مالك الحملة، أو ملاحظة مراجعة قبل الإطلاق." className="min-h-24 resize-y" />
+                <Label className="text-sm text-muted-foreground">{dt("ملاحظات داخلية")}</Label>
+                <Textarea value={marketingForm.internalNotes} onChange={(event) => updateMarketing({ internalNotes: event.target.value })} placeholder={dt("سبب إنشاء الرابط، مالك الحملة، أو ملاحظة مراجعة قبل الإطلاق.")} className="min-h-24 resize-y" />
               </div>
               <div className="grid gap-2">
                 {marketingIssues.map((issue, index) => (
                   <Alert key={`${issue.text}-${index}`} className={issue.level === "warn" ? "border-amber-200 bg-amber-50" : "border-emerald-200 bg-emerald-50"}>
                     <ShieldCheck className="h-4 w-4" />
-                    <AlertTitle>{issue.level === "warn" ? "تنبيه" : "جيد"}</AlertTitle>
+                    <AlertTitle>{issue.level === "warn" ? dt("تنبيه") : dt("جيد")}</AlertTitle>
                     <AlertDescription>{issue.text}</AlertDescription>
                   </Alert>
                 ))}
@@ -512,23 +513,23 @@ export default function TrackingLinkBuilder() {
           ) : null}
 
           <section className="space-y-3 border-t pt-5">
-            <Label className="text-base font-semibold">٥  الرابط النهائي</Label>
+            <Label className="text-base font-semibold">{dt("٥  الرابط النهائي")}</Label>
             <div className="rounded-xl border bg-muted/30 p-3">
-              <div dir="ltr" className="min-h-[3rem] break-all rounded-lg bg-white p-3 text-left font-mono text-sm text-slate-700">{fullUrl || "أكمل البيانات لظهور الرابط"}</div>
+              <div dir="ltr" className="min-h-[3rem] break-all rounded-lg bg-white p-3 text-left font-mono text-sm text-slate-700">{fullUrl || dt("أكمل البيانات لظهور الرابط")}</div>
             </div>
             <div className="flex flex-wrap gap-2">
-              <Button type="button" onClick={copyUrl} disabled={!fullUrl} className="gap-2"><Copy className="h-4 w-4" />نسخ الرابط</Button>
+              <Button type="button" onClick={copyUrl} disabled={!fullUrl} className="gap-2"><Copy className="h-4 w-4" />{dt("نسخ الرابط")}</Button>
               <Button type="button" onClick={() => saveRegistryLink(false)} disabled={!fullUrl || saving} variant="outline" className="gap-2">{saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}Save to Campaign Registry</Button>
-              <Button type="button" onClick={() => saveRegistryLink(true)} disabled={!fullUrl || saving} className="gap-2 bg-brand-orange hover:bg-[#c6613c]">{saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}حفظ ونسخ الرابط</Button>
-              {fullUrl ? <Button asChild type="button" variant="secondary" className="gap-2"><a href={fullUrl} target="_blank" rel="noreferrer"><ExternalLink className="h-4 w-4" />فتح</a></Button> : null}
+              <Button type="button" onClick={() => saveRegistryLink(true)} disabled={!fullUrl || saving} className="gap-2 bg-brand-orange hover:bg-[#c6613c]">{saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}{dt("حفظ ونسخ الرابط")}</Button>
+              {fullUrl ? <Button asChild type="button" variant="secondary" className="gap-2"><a href={fullUrl} target="_blank" rel="noreferrer"><ExternalLink className="h-4 w-4" />{dt("فتح")}</a></Button> : null}
             </div>
             {lastSavedLink ? (
               <Alert className="border-emerald-200 bg-emerald-50">
                 <ShieldCheck className="h-4 w-4" />
-                <AlertTitle>{lastSavedLink.updated ? "تم تحديث رابط موجود" : "تم حفظ الرابط في سجل الحملات"}</AlertTitle>
+                <AlertTitle>{lastSavedLink.updated ? dt("تم تحديث رابط موجود") : dt("تم حفظ الرابط في سجل الحملات")}</AlertTitle>
                 <AlertDescription className="space-y-2">
                   <span className="block">
-                    {lastSavedLink.name} · {lastSavedLink.mode === "marketing" ? "رابط حملة" : "رابط موقع"}{lastSavedLink.copied ? " · تم نسخه أيضًا" : ""}
+                    {lastSavedLink.name} · {lastSavedLink.mode === "marketing" ? dt("رابط حملة") : dt("رابط موقع")}{lastSavedLink.copied ? dt(" · تم نسخه أيضًا") : ""}
                   </span>
                   <Link href="/dashboard/marketing/attribution#links" className="inline-flex text-xs font-semibold text-emerald-800 underline-offset-4 hover:underline">
                     Open in Campaign Registry
@@ -547,7 +548,7 @@ function Field({ label, value, onChange, placeholder, dir }: { label: string; va
   return <div className="space-y-2"><Label className="text-sm text-muted-foreground">{label}</Label><Input value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} className={cn("h-10", dir === "ltr" && "font-mono text-sm text-left")} dir={dir || "rtl"} /></div>;
 }
 
-function SelectField({ label, value, onValueChange, options, placeholder = "اختر", disabled, hint }: { label: string; value: string; onValueChange: (value: string) => void; options: { value: string; label: string }[]; placeholder?: string; disabled?: boolean; hint?: string }) {
+function SelectField({ label, value, onValueChange, options, placeholder = dt("اختر"), disabled, hint }: { label: string; value: string; onValueChange: (value: string) => void; options: { value: string; label: string }[]; placeholder?: string; disabled?: boolean; hint?: string }) {
   return <div className="space-y-2"><Label className="text-sm text-muted-foreground">{label}</Label><Select value={value} onValueChange={onValueChange} disabled={disabled}><SelectTrigger className="h-10"><SelectValue placeholder={placeholder} /></SelectTrigger><SelectContent>{options.map((item) => <SelectItem key={item.value} value={item.value}>{item.label}</SelectItem>)}</SelectContent></Select>{hint ? <p className="text-xs text-muted-foreground">{hint}</p> : null}</div>;
 }
 

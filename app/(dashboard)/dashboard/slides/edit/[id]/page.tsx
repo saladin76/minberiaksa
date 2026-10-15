@@ -18,11 +18,12 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { errorMessage } from '@/lib/dashboard/client-error-message';
 import { validateImageFile } from '@/lib/uploads/image-file-rules';
+import { dt } from "@/lib/dashboard/i18n";
 
 const LOCALE_FIELDS: readonly LocaleFormField[] = [
-  { name: 'title', label: 'العنوان' },
-  { name: 'description', label: 'الوصف', multiline: true },
-  { name: 'buttonText', label: 'نص الزر' },
+  { name: 'title', get label() { return dt("العنوان"); } },
+  { name: 'description', get label() { return dt("الوصف"); }, multiline: true },
+  { name: 'buttonText', get label() { return dt("نص الزر"); } },
 ];
 const LOCALE_FIELD_NAMES = ['title', 'description', 'buttonText'] as const;
 type LocaleShape = { [K in `${(typeof LOCALE_FIELD_NAMES)[number]}_${TranslationLocale}`]: z.ZodOptional<z.ZodString> };
@@ -31,7 +32,7 @@ const LOCALE_SHAPE = Object.fromEntries(
 ) as LocaleShape;
 
 const schema = z.object({
-  title: z.string().min(1, 'مطلوب'),
+  title: z.string().min(1, dt("مطلوب")),
   description: z.string().optional(),
   image: z.string().optional(),
   showButton: z.boolean(),
@@ -77,7 +78,7 @@ export default function EditSlidePage() {
           ),
         });
       })
-      .catch(() => { toast.error('فشل التحميل'); router.push('/dashboard/slides'); })
+      .catch(() => { toast.error(dt("فشل التحميل")); router.push('/dashboard/slides'); })
       .finally(() => setLoading(false));
   }, [params.id, router, form]);
 
@@ -94,10 +95,10 @@ export default function EditSlidePage() {
         isActive: values.isActive,
         translations: collectLocaleTranslations(values, LOCALE_FIELDS),
       });
-      toast.success('تم التحديث');
+      toast.success(dt("تم التحديث"));
       router.push('/dashboard/slides');
     } catch (e) {
-      toast.error(errorMessage(e, 'فشل التحديث'));
+      toast.error(errorMessage(e, dt("فشل التحديث")));
     } finally {
       setSaving(false);
     }
@@ -118,9 +119,9 @@ export default function EditSlidePage() {
     try {
       const res = await axios.post('/api/upload', fd);
       form.setValue('image', res.data.url);
-      toast.success('تم رفع الصورة');
+      toast.success(dt("تم رفع الصورة"));
     } catch (err) {
-      toast.error(errorMessage(err, 'فشل الرفع'));
+      toast.error(errorMessage(err, dt("فشل الرفع")));
     } finally {
       setUploadingImage(false);
       e.target.value = '';
@@ -132,8 +133,8 @@ export default function EditSlidePage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl sm:text-2xl font-bold tracking-tight">تعديل الشريحة</h1>
-        <Button variant="outline" onClick={() => router.push('/dashboard/slides')} className="gap-2"><ArrowLeft className="w-4 h-4" /> العودة</Button>
+        <h1 className="text-xl sm:text-2xl font-bold tracking-tight">{dt("تعديل الشريحة")}</h1>
+        <Button variant="outline" onClick={() => router.push('/dashboard/slides')} className="gap-2"><ArrowLeft className="w-4 h-4" /> {dt(" العودة")}</Button>
       </div>
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
@@ -143,9 +144,9 @@ export default function EditSlidePage() {
             itemLabel="homepage hero slide"
             arabic={
               <Card className="p-6 space-y-4">
-                <FormField control={form.control} name="title" render={({ field }) => (<FormItem><FormLabel>العنوان</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
-                <FormField control={form.control} name="description" render={({ field }) => (<FormItem><FormLabel>الوصف</FormLabel><FormControl><Textarea {...field} rows={3} /></FormControl></FormItem>)} />
-                <FormField control={form.control} name="buttonText" render={({ field }) => (<FormItem><FormLabel>نص الزر</FormLabel><FormControl><Input {...field} /></FormControl></FormItem>)} />
+                <FormField control={form.control} name="title" render={({ field }) => (<FormItem><FormLabel>{dt("العنوان")}</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
+                <FormField control={form.control} name="description" render={({ field }) => (<FormItem><FormLabel>{dt("الوصف")}</FormLabel><FormControl><Textarea {...field} rows={3} /></FormControl></FormItem>)} />
+                <FormField control={form.control} name="buttonText" render={({ field }) => (<FormItem><FormLabel>{dt("نص الزر")}</FormLabel><FormControl><Input {...field} /></FormControl></FormItem>)} />
               </Card>
             }
           />
@@ -153,28 +154,28 @@ export default function EditSlidePage() {
           <Card className="p-6 space-y-4">
             <FormField control={form.control} name="image" render={({ field }) => (
               <FormItem>
-                <FormLabel>الصورة</FormLabel>
+                <FormLabel>{dt("الصورة")}</FormLabel>
                 <FormControl>
                   <div className="space-y-2">
                     {field.value ? (
                       <div className="relative w-40 h-28"><img src={field.value} alt="" className="w-full h-full object-cover rounded" />
-                        <button type="button" onClick={() => form.setValue('image', '')} className="absolute top-1 right-1 p-1 bg-red-500 text-white rounded"><X className="w-4 h-4" /></button></div>
+                        <button type="button" onClick={() => form.setValue('image', '')} className="absolute top-1 start-1 p-1 bg-red-500 text-white rounded"><X className="w-4 h-4" /></button></div>
                     ) : (
                       <label className="flex flex-col items-center justify-center w-40 h-28 border-2 border-dashed rounded cursor-pointer">
                         <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" disabled={uploadingImage} />
-                        {uploadingImage ? <Loader2 className="w-6 h-6 animate-spin" /> : <><Upload className="w-6 h-6" /><span className="text-sm">رفع صورة</span></>}
+                        {uploadingImage ? <Loader2 className="w-6 h-6 animate-spin" /> : <><Upload className="w-6 h-6" /><span className="text-sm">{dt("رفع صورة")}</span></>}
                       </label>
                     )}
                   </div>
                 </FormControl></FormItem>
             )} />
-            <FormField control={form.control} name="showButton" render={({ field }) => (<FormItem className="flex items-center justify-between"><FormLabel>إظهار الزر</FormLabel><FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl></FormItem>)} />
-            <FormField control={form.control} name="buttonLink" render={({ field }) => (<FormItem><FormLabel>رابط الزر</FormLabel><FormControl><Input {...field} /></FormControl></FormItem>)} />
-            <FormField control={form.control} name="isActive" render={({ field }) => (<FormItem className="flex items-center justify-between"><FormLabel>نشط</FormLabel><FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl></FormItem>)} />
+            <FormField control={form.control} name="showButton" render={({ field }) => (<FormItem className="flex items-center justify-between"><FormLabel>{dt("إظهار الزر")}</FormLabel><FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl></FormItem>)} />
+            <FormField control={form.control} name="buttonLink" render={({ field }) => (<FormItem><FormLabel>{dt("رابط الزر")}</FormLabel><FormControl><Input {...field} /></FormControl></FormItem>)} />
+            <FormField control={form.control} name="isActive" render={({ field }) => (<FormItem className="flex items-center justify-between"><FormLabel>{dt("نشط")}</FormLabel><FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl></FormItem>)} />
           </Card>
           <div className="flex gap-4">
-            <Button type="button" variant="outline" onClick={() => router.push('/dashboard/slides')}>إلغاء</Button>
-            <Button type="submit" disabled={saving}>{saving && <Loader2 className="w-4 h-4 ml-2 animate-spin" />} حفظ</Button>
+            <Button type="button" variant="outline" onClick={() => router.push('/dashboard/slides')}>{dt("إلغاء")}</Button>
+            <Button type="submit" disabled={saving}>{saving && <Loader2 className="w-4 h-4 me-2 animate-spin" />} {dt(" حفظ")}</Button>
           </div>
         </form>
       </Form>

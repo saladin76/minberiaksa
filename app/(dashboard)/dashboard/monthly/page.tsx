@@ -81,10 +81,12 @@ import { getCountryDisplayNameFromCode } from "@/lib/dashboard/country-display-n
 import { DashboardPieLegendByValue } from "@/components/dashboard/DashboardPieLegend";
 import { useViewUserProfile } from "@/context/ViewUserProfileContext";
 import DonationDetailsDialog, { type DonationDetailsTarget } from "@/components/dashboard/DonationDetailsDialog";
+import { DonationGatewayBadge } from "@/components/dashboard/DonationGatewayBadge";
 import { useDonationActions } from "@/components/dashboard/donations/useDonationActions";
 import { userCanEditDonations, userCanExportReports } from "@/lib/dashboard/permissions";
 import { useSession } from "next-auth/react";
 import { ExportReportDialog, EXPORT_DEFAULTS, type ExportFormState } from "@/components/dashboard/ExportReportDialog";
+import { dashDir, dashIntl, dt, dtx } from "@/lib/dashboard/i18n";
 
 interface ChartDataPoint {
   date: string;
@@ -180,7 +182,7 @@ type RecurringFrequency = "DAILY" | "FRIDAY" | "MONTHLY";
 type FrequencyFilter = "all" | RecurringFrequency;
 
 const FREQUENCIES: RecurringFrequency[] = ["DAILY", "FRIDAY", "MONTHLY"];
-const FREQUENCY_LABEL_AR: Record<string, string> = { DAILY: "يومي", FRIDAY: "أسبوعياً", MONTHLY: "شهري" };
+const FREQUENCY_LABEL_AR: Record<string, string> = { get DAILY() { return dt("يومي"); }, get FRIDAY() { return dt("أسبوعياً"); }, get MONTHLY() { return dt("شهري"); } };
 /** One hue per cadence, reused by the cards, the stacked chart and the table badges. */
 const FREQUENCY_COLOR: Record<RecurringFrequency, string> = {
   DAILY: "#2c8b5d",
@@ -194,9 +196,9 @@ const FREQUENCY_BADGE_CLASS: Record<RecurringFrequency, string> = {
 };
 /** How the frequency splits the per-charge amount into a monthly figure  shown in notes. */
 const FREQUENCY_SCALE_NOTE: Record<RecurringFrequency, string> = {
-  DAILY: "× ٣٠٫٤ دفعة شهريًا",
-  FRIDAY: "× ٤٫٣٥ دفعة شهريًا",
-  MONTHLY: "دفعة واحدة شهريًا",
+  get DAILY() { return dt("× ٣٠٫٤ دفعة شهريًا"); },
+  get FRIDAY() { return dt("× ٤٫٣٥ دفعة شهريًا"); },
+  get MONTHLY() { return dt("دفعة واحدة شهريًا"); },
 };
 
 function FrequencyBadge({ frequency }: { frequency?: RecurringFrequency | null }) {
@@ -278,13 +280,13 @@ type ChartMetric = "amount" | "teamSupport" | "fees";
 type StatCardSet = "revenue" | "overview" | "breakdown";
 
 const PERIOD_LABELS: Record<ChartPeriod, string> = {
-  day: "اليوم",
-  yesterday: "أمس",
-  week: "أسبوع",
-  month: "شهر",
-  year: "سنة",
-  all: "كل الوقت",
-  custom: "مخصص",
+  get day() { return dt("اليوم"); },
+  get yesterday() { return dt("أمس"); },
+  get week() { return dt("أسبوع"); },
+  get month() { return dt("شهر"); },
+  get year() { return dt("سنة"); },
+  get all() { return dt("كل الوقت"); },
+  get custom() { return dt("مخصص"); },
 };
 
 // See lib/dashboard/chart-theme.ts  this block was duplicated verbatim from page.tsx.
@@ -309,7 +311,7 @@ function getDonationsDateRange(
 
 export default function MonthlySubscriptionsDashboardPage() {
   const locale = useLocale() as string;
-  const thisMonthRevenueTitle = `إيرادات شهر ${formatIstanbulCalendarMonthLong(new Date(), locale || "ar")}`;
+  const thisMonthRevenueTitle = dt("إيرادات شهر {0}", [formatIstanbulCalendarMonthLong(new Date(), locale || "ar")]);
   const searchParams = useSearchParams();
   const { convertToCurrency, getSelectedCurrency } = useCurrency();
   const [stats, setStats] = useState<DashboardStats | null>(null);
@@ -437,7 +439,7 @@ export default function MonthlySubscriptionsDashboardPage() {
       const res = await axios.get(`/api/admin/subscriptions/${subscriptionId}/provider-state`);
       setProviderChecks((prev) => ({ ...prev, [subscriptionId]: { loading: false, result: res.data } }));
     } catch (e) {
-      const msg = axios.isAxiosError(e) ? (e.response?.data as { error?: string })?.error || e.message : "خطأ";
+      const msg = axios.isAxiosError(e) ? (e.response?.data as { error?: string })?.error || e.message : dt("خطأ");
       setProviderChecks((prev) => ({
         ...prev,
         [subscriptionId]: { loading: false, result: { rail: "STRIPE", providerStatus: null, providerPaused: null, inSync: false, error: msg } },
@@ -498,7 +500,7 @@ export default function MonthlySubscriptionsDashboardPage() {
         );
         const data = await res.json();
         if (!res.ok) {
-          toast.error(typeof data?.error === "string" ? data.error : "فشل البحث عن المستخدمين");
+          toast.error(typeof data?.error === "string" ? data.error : dt("فشل البحث عن المستخدمين"));
           setUsers([]);
           return;
         }
@@ -555,7 +557,7 @@ export default function MonthlySubscriptionsDashboardPage() {
       setChartData(Array.isArray(response.data) ? response.data : []);
     } catch (error) {
       console.error("Error fetching chart data:", error);
-      toast.error("فشل في تحميل بيانات التبرعات المتكررة");
+      toast.error(dt("فشل في تحميل بيانات التبرعات المتكررة"));
       setChartData([]);
     } finally {
       setChartLoading(false);
@@ -635,14 +637,14 @@ export default function MonthlySubscriptionsDashboardPage() {
       const response = await fetch(`/api/admin/subscriptions/overview/stats?${params}`);
       const data = await response.json();
       if (!response.ok) {
-        const message = data?.details || data?.error || "فشل في تحميل إحصائيات الاشتراكات";
+        const message = data?.details || data?.error || dt("فشل في تحميل إحصائيات الاشتراكات");
         toast.error(message);
         return;
       }
       setStats(data);
     } catch (error) {
       console.error("Error fetching stats:", error);
-      toast.error("فشل في تحميل إحصائيات الاشتراكات");
+      toast.error(dt("فشل في تحميل إحصائيات الاشتراكات"));
     } finally {
       setLoading(false);
     }
@@ -676,7 +678,7 @@ export default function MonthlySubscriptionsDashboardPage() {
         const res = await fetch(`/api/donations?${params}`);
         const data = await res.json();
         if (!res.ok) {
-          toast.error(data?.error || "فشل في تحميل الدفعات المتكررة");
+          toast.error(data?.error || dt("فشل في تحميل الدفعات المتكررة"));
           return;
         }
         const list = Array.isArray(data.donations) ? data.donations : [];
@@ -684,7 +686,7 @@ export default function MonthlySubscriptionsDashboardPage() {
         setDonationsTotal(data.pagination?.total ?? 0);
       } catch (error) {
         console.error("Error fetching donations:", error);
-        toast.error("فشل في تحميل الدفعات المتكررة");
+        toast.error(dt("فشل في تحميل الدفعات المتكررة"));
       } finally {
         setDonationsLoading(false);
         setDonationsFetchedOnce(true);
@@ -738,14 +740,14 @@ export default function MonthlySubscriptionsDashboardPage() {
         const res = await fetch(`/api/admin/subscriptions?${params}`);
         const data = await res.json();
         if (!res.ok) {
-          toast.error(data?.error || "فشل في تحميل الاشتراكات");
+          toast.error(data?.error || dt("فشل في تحميل الاشتراكات"));
           return;
         }
         const list = Array.isArray(data.subscriptions) ? data.subscriptions : [];
         setSubsRows((prev) => (append ? [...prev, ...list] : list));
         setSubsTotal(data.pagination?.total ?? 0);
       } catch {
-        toast.error("فشل في تحميل الاشتراكات");
+        toast.error(dt("فشل في تحميل الاشتراكات"));
       } finally {
         setSubsLoading(false);
         setSubsFetchedOnce(true);
@@ -768,7 +770,7 @@ export default function MonthlySubscriptionsDashboardPage() {
     if (!reducePlan || reduceBusy) return;
     const amount = Number(reduceAmount);
     if (!Number.isFinite(amount) || amount < 1 || amount >= reducePlan.amount || reduceEvidence.trim().length < 12) {
-      toast.error("أدخل مبلغًا أقل، مع إثبات موافقة المتبرع (12 حرفًا على الأقل)");
+      toast.error(dt("أدخل مبلغًا أقل، مع إثبات موافقة المتبرع (12 حرفًا على الأقل)"));
       return;
     }
     setReduceBusy(true);
@@ -777,7 +779,7 @@ export default function MonthlySubscriptionsDashboardPage() {
         amount, consentMethod: reduceMethod, consentEvidence: reduceEvidence.trim(),
       });
       if (!res.data?.ok) throw new Error("Reduction not confirmed");
-      toast.success("تم تخفيض المبلغ ابتداءً من الدورة القادمة وتوثيق موافقة المتبرع");
+      toast.success(dt("تم تخفيض المبلغ ابتداءً من الدورة القادمة وتوثيق موافقة المتبرع"));
       setReducePlan(null);
       setReduceEvidence("");
       setReduceAmount("");
@@ -785,7 +787,7 @@ export default function MonthlySubscriptionsDashboardPage() {
       await fetchSubscriptions(1, false);
       void fetchStats();
     } catch (error) {
-      toast.error(axios.isAxiosError(error) ? (error.response?.data?.error ?? "تعذّر التخفيض") : "تعذّر التخفيض");
+      toast.error(axios.isAxiosError(error) ? (error.response?.data?.error ?? dt("تعذّر التخفيض")) : dt("تعذّر التخفيض"));
     } finally {
       setReduceBusy(false);
     }
@@ -809,16 +811,16 @@ export default function MonthlySubscriptionsDashboardPage() {
         });
         toast.success(
           rail === "STRIPE"
-            ? "تم تحديث حالة الاشتراك وتأكيدها في Stripe"
-            : "تم تحديث حالة الاشتراك"
+            ? dt("تم تحديث حالة الاشتراك وتأكيدها في Stripe")
+            : dt("تم تحديث حالة الاشتراك")
         );
         setSubsPage(1);
         await fetchSubscriptions(1, false);
       } catch (e: unknown) {
         const msg = axios.isAxiosError(e)
           ? (e.response?.data as { error?: string })?.error || e.message
-          : "فشل تحديث حالة الاشتراك";
-        toast.error(typeof msg === "string" ? msg : "فشل تحديث حالة الاشتراك");
+          : dt("فشل تحديث حالة الاشتراك");
+        toast.error(typeof msg === "string" ? msg : dt("فشل تحديث حالة الاشتراك"));
       } finally {
         setSubsStatusUpdatingId(null);
       }
@@ -899,13 +901,13 @@ export default function MonthlySubscriptionsDashboardPage() {
 
   const revenueSplitData = [
     {
-      name: "مشاريع",
+      name: dt("مشاريع"),
       value: stats?.campaignDonationsTotal ?? 0,
       count: stats?.campaignDonationsCount ?? 0,
       color: "#295a75",
     },
     {
-      name: "فئات",
+      name: dt("فئات"),
       value: stats?.categoryDonationsTotal ?? 0,
       count: stats?.categoryDonationsCount ?? 0,
       color: "#6e818b",
@@ -914,25 +916,25 @@ export default function MonthlySubscriptionsDashboardPage() {
 
   const statusSplitData = [
     {
-      name: "نشطة",
+      name: dt("نشطة"),
       value: stats?.activeMonthlyAmountUSD ?? 0,
       count: stats?.activeMonthlyCount ?? 0,
       color: "#2c8b5d",
     },
     {
-      name: "موقوفة",
+      name: dt("موقوفة"),
       value: stats?.pausedSubscriptionAmountUSD ?? 0,
       count: stats?.pausedSubscriptionCount ?? 0,
       color: "#d39a27",
     },
     {
-      name: "ملغاة",
+      name: dt("ملغاة"),
       value: stats?.cancelledSubscriptionAmountUSD ?? 0,
       count: stats?.cancelledSubscriptionCount ?? 0,
       color: "#6e818b",
     },
     {
-      name: "تعذّر الخصم",
+      name: dt("تعذّر الخصم"),
       value: stats?.paymentFailedSubscriptionAmountUSD ?? 0,
       count: stats?.paymentFailedSubscriptionCount ?? 0,
       color: "#b04a2c",
@@ -949,30 +951,30 @@ export default function MonthlySubscriptionsDashboardPage() {
   const frequencyLabelSuffix = frequencyFilter === "all" ? "" : `  ${FREQUENCY_LABEL_AR[frequencyFilter]}`;
 
   return (
-    <div className="min-h-0" dir="rtl">
+    <div className="min-h-0" dir={dashDir()}>
       <div className="space-y-6 sm:space-y-8 p-0 sm:p-4 md:p-6 lg:p-8 max-w-[1600px] mx-auto">
         <PageHeader
-          title="التبرعات المتكررة والاشتراكات"
+          title={dt("التبرعات المتكررة والاشتراكات")}
           icon={Repeat}
           description={
             searchParams.get("userId") ? (
               <>
-                عرض الدفعات المتكررة للمستخدم:{" "}
+                {dt("عرض الدفعات المتكررة للمستخدم: ")}
                 <span className="font-medium text-slate-900 whitespace-normal break-words">
                   {users.find((u) => u.id === searchParams.get("userId"))?.name ||
                     users.find((u) => u.id === searchParams.get("userId"))?.email ||
-                    "جاري التحميل..."}
+                    dt("جاري التحميل...")}
                 </span>
               </>
             ) : (
-              "كل التبرعات المتكررة  اليومية، وأسبوعياً، والشهرية: الإيرادات، دفعات التجديد، والحالة"
+              dt("كل التبرعات المتكررة  اليومية، وأسبوعياً، والشهرية: الإيرادات، دفعات التجديد، والحالة")
             )
           }
         />
 
         {/* Cadence switch  narrows every figure, chart and table below to one kind of plan. */}
-        <div className="flex flex-wrap items-center gap-2" dir="rtl">
-          <span className="text-xs font-semibold text-slate-500">الدورية:</span>
+        <div className="flex flex-wrap items-center gap-2" dir={dashDir()}>
+          <span className="text-xs font-semibold text-slate-500">{dt("الدورية:")}</span>
           <div className="inline-flex rounded-lg border border-slate-200 bg-white p-0.5 shadow-sm" role="tablist">
             {(["all", ...FREQUENCIES] as FrequencyFilter[]).map((f) => (
               <button
@@ -993,7 +995,7 @@ export default function MonthlySubscriptionsDashboardPage() {
                     aria-hidden="true"
                   />
                 )}
-                {f === "all" ? "الكل" : FREQUENCY_LABEL_AR[f]}
+                {f === "all" ? dt("الكل") : FREQUENCY_LABEL_AR[f]}
               </button>
             ))}
           </div>
@@ -1006,27 +1008,27 @@ export default function MonthlySubscriptionsDashboardPage() {
           <div className="grid gap-4 lg:grid-cols-2">
             <MetricSummaryBand
               icon={Repeat}
-              eyebrow={`الإيراد الشهري المتكرر (MRR)${frequencyLabelSuffix}`}
-              badge="شهريًا"
+              eyebrow={dt("الإيراد الشهري المتكرر (MRR){0}", [frequencyLabelSuffix])}
+              badge={dt("شهريًا")}
               value={formatMoney(Math.round(stats?.monthlyRecurringRevenue ?? 0))}
-              note="المكافئ الشهري للاشتراكات النشطة: اليومي × ٣٠٫٤، وأسبوعياً × ٤٫٣٥، والشهري كما هو."
+              note={dt("المكافئ الشهري للاشتراكات النشطة: اليومي × ٣٠٫٤، وأسبوعياً × ٤٫٣٥، والشهري كما هو.")}
             />
             {/* ARR is MRR×12  a projection of the current book, not money collected. The note
                 says so, because a figure this size sitting beside real revenue invites being
                 read as cash in hand. */}
             <MetricSummaryBand
               icon={TrendingUp}
-              eyebrow={`الإيراد السنوي المتكرر (ARR)${frequencyLabelSuffix}`}
-              badge="سنويًا"
+              eyebrow={dt("الإيراد السنوي المتكرر (ARR){0}", [frequencyLabelSuffix])}
+              badge={dt("سنويًا")}
               value={formatMoney(Math.round((stats?.monthlyRecurringRevenue ?? 0) * 12))}
-              note="توقّع سنوي = الإيراد الشهري المتكرر × ١٢، بافتراض استمرار الاشتراكات النشطة الحالية. ليس مبلغًا محصّلًا."
+              note={dt("توقّع سنوي = الإيراد الشهري المتكرر × ١٢، بافتراض استمرار الاشتراكات النشطة الحالية. ليس مبلغًا محصّلًا.")}
             />
           </div>
         )}
 
         {/* Per-cadence cards. Each is a filter shortcut too  clicking one narrows the page. */}
         {!searchParams.get("userId") && stats?.byFrequency && (
-          <section className="grid gap-3 sm:grid-cols-3" dir="rtl">
+          <section className="grid gap-3 sm:grid-cols-3" dir={dashDir()}>
             {FREQUENCIES.map((f) => {
               const row = stats.byFrequency![f];
               const mrr = stats.byFrequency
@@ -1042,7 +1044,7 @@ export default function MonthlySubscriptionsDashboardPage() {
                   onClick={() => setFrequencyFilter(selected ? "all" : f)}
                   aria-pressed={selected}
                   className={cn(
-                    "rounded-2xl border bg-white p-4 text-right shadow-[0_1px_2px_rgba(16,24,40,0.04)] transition-all hover:-translate-y-0.5 hover:shadow-md",
+                    "rounded-2xl border bg-white p-4 text-start shadow-[0_1px_2px_rgba(16,24,40,0.04)] transition-all hover:-translate-y-0.5 hover:shadow-md",
                     selected ? "border-brand ring-2 ring-brand/20" : "border-slate-200",
                     dimmed && "opacity-60"
                   )}
@@ -1050,13 +1052,12 @@ export default function MonthlySubscriptionsDashboardPage() {
                   <div className="mb-3 flex items-center justify-between gap-2">
                     <span className="flex items-center gap-2 text-sm font-semibold text-slate-900">
                       <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: FREQUENCY_COLOR[f] }} aria-hidden="true" />
-                      {f === "DAILY" ? "التبرعات اليومية" : f === "FRIDAY" ? "تبرعات أسبوعياً" : "التبرعات الشهرية"}
+                      {f === "DAILY" ? dt("التبرعات اليومية") : f === "FRIDAY" ? dt("تبرعات أسبوعياً") : dt("التبرعات الشهرية")}
                     </span>
                     <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-semibold tabular-nums text-slate-600">
-                      {row?.activeCount ?? 0} نشط
-                    </span>
+                      {dtx("{0} نشط", [row?.activeCount ?? 0])}</span>
                   </div>
-                  <p className="text-[11px] text-slate-500">المكافئ الشهري</p>
+                  <p className="text-[11px] text-slate-500">{dt("المكافئ الشهري")}</p>
                   <p className="text-xl font-bold tabular-nums text-slate-900">
                     {formatMoney(Math.round(row?.activeMonthlyUSD ?? 0))}
                   </p>
@@ -1067,24 +1068,24 @@ export default function MonthlySubscriptionsDashboardPage() {
                   )}
                   <div className="mt-3 grid grid-cols-2 gap-2 text-[11px] text-slate-500">
                     <div>
-                      <p>قيمة الدفعات</p>
+                      <p>{dt("قيمة الدفعات")}</p>
                       <p className="font-semibold tabular-nums text-slate-800">
                         {formatMoney(row?.activeAmountPerChargeUSD ?? 0, undefined, undefined, true)}
                         <span className="font-normal text-slate-400"> {FREQUENCY_SCALE_NOTE[f]}</span>
                       </p>
                     </div>
                     <div>
-                      <p>محصّل ({chartFilterPeriodLabelAr})</p>
+                      <p>{dtx("محصّل ({0})", [chartFilterPeriodLabelAr])}</p>
                       <p className="font-semibold tabular-nums text-slate-800">
                         {formatMoney(row?.paidAmountUSD ?? 0, undefined, undefined, true)}
-                        <span className="font-normal text-slate-400"> · {row?.paidCount ?? 0} دفعة</span>
+                        <span className="font-normal text-slate-400"> {dtx(" · {0} دفعة", [row?.paidCount ?? 0])}</span>
                       </p>
                     </div>
                   </div>
                   {((row?.pausedCount ?? 0) + (row?.cancelledCount ?? 0) + (row?.paymentFailedCount ?? 0)) > 0 && (
                     <p className="mt-2 text-[11px] text-slate-400">
-                      موقوف {row?.pausedCount ?? 0} · ملغى {row?.cancelledCount ?? 0}
-                      {(row?.paymentFailedCount ?? 0) > 0 ? ` · تعذّر الخصم ${row?.paymentFailedCount}` : ""}
+                      {dtx("موقوف {0} · ملغى {1}", [row?.pausedCount ?? 0, row?.cancelledCount ?? 0])}
+                      {(row?.paymentFailedCount ?? 0) > 0 ? dt(" · تعذّر الخصم {0}", [row?.paymentFailedCount]) : ""}
                     </p>
                   )}
                 </button>
@@ -1102,8 +1103,8 @@ export default function MonthlySubscriptionsDashboardPage() {
                 <Repeat className="h-[18px] w-[18px]" />
               </span>
               <div className="min-w-0">
-                <h2 className="text-[15px] font-semibold leading-tight text-slate-900">مؤشرات الاشتراكات والدفعات</h2>
-                <p className="text-xs text-slate-500">محسوبة حسب الفترة والتصفية المختارة</p>
+                <h2 className="text-[15px] font-semibold leading-tight text-slate-900">{dt("مؤشرات الاشتراكات والدفعات")}</h2>
+                <p className="text-xs text-slate-500">{dt("محسوبة حسب الفترة والتصفية المختارة")}</p>
               </div>
             </div>
             <Tabs
@@ -1111,25 +1112,22 @@ export default function MonthlySubscriptionsDashboardPage() {
               onValueChange={(v) => setStatCardSet(v as StatCardSet)}
               className="w-auto"
             >
-              <TabsList className="bg-muted p-1 rounded-lg h-9" dir="rtl">
+              <TabsList className="bg-muted p-1 rounded-lg h-9" dir={dashDir()}>
                 <TabsTrigger
                   value="revenue"
                   className="text-xs px-3 data-[state=active]:bg-card data-[state=active]:shadow-sm"
                 >
-                  الإيرادات
-                </TabsTrigger>
+                  {dt("الإيرادات")}</TabsTrigger>
                 <TabsTrigger
                   value="overview"
                   className="text-xs px-3 data-[state=active]:bg-card data-[state=active]:shadow-sm"
                 >
-                  نظرة عامة
-                </TabsTrigger>
+                  {dt("نظرة عامة")}</TabsTrigger>
                 <TabsTrigger
                   value="breakdown"
                   className="text-xs px-3 data-[state=active]:bg-card data-[state=active]:shadow-sm"
                 >
-                  تفصيل الاشتراكات
-                </TabsTrigger>
+                  {dt("تفصيل الاشتراكات")}</TabsTrigger>
               </TabsList>
             </Tabs>
           </div>
@@ -1144,65 +1142,65 @@ export default function MonthlySubscriptionsDashboardPage() {
                   accent="emerald"
                   format="money"
                   variant="hero"
-                  subtitle="دفعات ناجحة في الشهر الحالي (UTC)"
+                  subtitle={dt("دفعات ناجحة في الشهر الحالي (UTC)")}
                 />
                 <StatsMetricCard
                   compact
-                  title={`إيرادات ناجحة (${chartFilterPeriodLabelAr})`}
+                  title={dt("إيرادات ناجحة ({0})", [chartFilterPeriodLabelAr])}
                   bankTransfers={false}
                   value={stats?.totalAmount ?? 0}
                   icon={DollarSign}
                   accent="emerald"
                   format="money"
-                  subtitle="دفعات الاشتراك المدفوعة فقط  حسب الفترة والتصفية أعلاه"
+                  subtitle={dt("دفعات الاشتراك المدفوعة فقط  حسب الفترة والتصفية أعلاه")}
                 />
                 <StatsMetricCard
                   compact
-                  title="إيرادات ناجحة (كل الوقت)"
+                  title={dt("إيرادات ناجحة (كل الوقت)")}
                   value={stats?.paidRevenueAllTimeUnfiltered ?? 0}
                   icon={DollarSign}
                   accent="emerald"
                   format="money"
-                  subtitle="كل دفعات الاشتراك الناجحة  دون تصفية الفئة أو المشروع أو الفترة"
+                  subtitle={dt("كل دفعات الاشتراك الناجحة  دون تصفية الفئة أو المشروع أو الفترة")}
                 />
                 <StatsMetricCard
                   compact
-                  title="إيرادات شهرية متكررة (MRR)"
+                  title={dt("إيرادات شهرية متكررة (MRR)")}
                   value={stats?.monthlyRecurringRevenue ?? 0}
                   icon={Repeat}
                   accent="emerald"
                   format="money"
-                  subtitle="اشتراكات نشطة  المكافئ الشهري لكل الدوريات"
+                  subtitle={dt("اشتراكات نشطة  المكافئ الشهري لكل الدوريات")}
                 />
                 <StatsMetricCard
                   compact
-                  title="دعم الفريق"
+                  title={dt("دعم الفريق")}
                   value={stats?.teamSupportTotal ?? 0}
                   icon={HandCoins}
                   accent="amber"
                   format="money"
-                  subtitle={`من الدفعات الناجحة (${chartFilterPeriodLabelAr})`}
+                  subtitle={dt("من الدفعات الناجحة ({0})", [chartFilterPeriodLabelAr])}
                 />
                 <StatsMetricCard
                   compact
-                  title="الرسوم"
+                  title={dt("الرسوم")}
                   value={stats?.feesTotal ?? 0}
                   icon={Percent}
                   accent="orange"
                   format="money"
-                  subtitle={`من الدفعات الناجحة (${chartFilterPeriodLabelAr})`}
+                  subtitle={dt("من الدفعات الناجحة ({0})", [chartFilterPeriodLabelAr])}
                 />
                 <StatsMetricCard
                   compact
-                  title="دفعات ناجحة"
+                  title={dt("دفعات ناجحة")}
                   value={stats?.paidCount ?? 0}
                   icon={Receipt}
                   accent="teal"
-                  subtitle={`إجمالي ناجح: ${formatMoney(stats?.totalAmount ?? 0, undefined, undefined, true)}`}
+                  subtitle={dt("إجمالي ناجح: {0}", [formatMoney(stats?.totalAmount ?? 0, undefined, undefined, true)])}
                 />
                 <StatsMetricCard
                   compact
-                  title="دفعات فاشلة"
+                  title={dt("دفعات فاشلة")}
                   value={stats?.failedCount ?? 0}
                   icon={Receipt}
                   accent="orange"
@@ -1214,28 +1212,28 @@ export default function MonthlySubscriptionsDashboardPage() {
               <>
                 <StatsMetricCard
                   compact
-                  title="إجمالي الاشتراكات (بالتصفية)"
+                  title={dt("إجمالي الاشتراكات (بالتصفية)")}
                   value={stats?.totalSubscriptionsMatching ?? 0}
                   icon={Repeat}
                   accent="teal"
                 />
                 <StatsMetricCard
                   compact
-                  title={`جديدة (${chartFilterPeriodLabelAr})`}
+                  title={dt("جديدة ({0})", [chartFilterPeriodLabelAr])}
                   value={stats?.newSubscriptionsInPeriod ?? 0}
                   icon={Calendar}
                   accent="indigo"
                 />
                 <StatsMetricCard
                   compact
-                  title={`دفعات متكررة (${chartFilterPeriodLabelAr})`}
+                  title={dt("دفعات متكررة ({0})", [chartFilterPeriodLabelAr])}
                   value={stats?.totalDonations ?? 0}
                   icon={Receipt}
                   accent="violet"
                 />
                 <StatsMetricCard
                   compact
-                  title="اشتراكات نشطة"
+                  title={dt("اشتراكات نشطة")}
                   value={stats?.activeMonthlyCount ?? 0}
                   icon={Heart}
                   accent="emerald"
@@ -1246,50 +1244,50 @@ export default function MonthlySubscriptionsDashboardPage() {
               <>
                 <StatsMetricCard
                   compact
-                  title="اشتراكات نشطة (عدد)"
+                  title={dt("اشتراكات نشطة (عدد)")}
                   value={stats?.activeMonthlyCount ?? 0}
                   icon={Repeat}
                   accent="teal"
                 />
                 <StatsMetricCard
                   compact
-                  title="موقوفة (عدد)"
+                  title={dt("موقوفة (عدد)")}
                   value={stats?.pausedSubscriptionCount ?? 0}
                   icon={Receipt}
                   accent="amber"
                 />
                 <StatsMetricCard
                   compact
-                  title="ملغاة (عدد)"
+                  title={dt("ملغاة (عدد)")}
                   value={stats?.cancelledSubscriptionCount ?? 0}
                   icon={Receipt}
                   accent="slate"
                 />
                 <StatsMetricCard
                   compact
-                  title="مبلغ اشتراكات نشطة"
+                  title={dt("مبلغ اشتراكات نشطة")}
                   value={stats?.activeMonthlyAmountUSD ?? 0}
                   icon={Repeat}
                   accent="emerald"
                   format="money"
-                  subtitle="مكافئ شهري"
+                  subtitle={dt("مكافئ شهري")}
                 />
                 <StatsMetricCard
                   compact
-                  title="مجموع موقوف + ملغى"
+                  title={dt("مجموع موقوف + ملغى")}
                   value={stats?.monthlyStoppedAmountUSD ?? 0}
                   icon={Repeat}
                   accent="indigo"
                   format="money"
-                  subtitle={`مكافئ شهري · موقوف: ${stats?.pausedSubscriptionCount ?? 0} · ملغى: ${stats?.cancelledSubscriptionCount ?? 0}`}
+                  subtitle={dt("مكافئ شهري · موقوف: {0} · ملغى: {1}", [stats?.pausedSubscriptionCount ?? 0, stats?.cancelledSubscriptionCount ?? 0])}
                 />
                 <StatsMetricCard
                   compact
-                  title="تعذّر الخصم (عدد)"
+                  title={dt("تعذّر الخصم (عدد)")}
                   value={stats?.paymentFailedSubscriptionCount ?? 0}
                   icon={Receipt}
                   accent="orange"
-                  subtitle="استنفدت محاولات الخصم التلقائي  تحتاج تحديث البطاقة"
+                  subtitle={dt("استنفدت محاولات الخصم التلقائي  تحتاج تحديث البطاقة")}
                 />
               </>
             )}
@@ -1301,10 +1299,10 @@ export default function MonthlySubscriptionsDashboardPage() {
         <section className="space-y-4">
           <Card className="border-border shadow-sm">
             <CardContent className="pt-6">
-              <Tabs defaultValue="time-series" className="w-full" dir="rtl">
+              <Tabs defaultValue="time-series" className="w-full" dir={dashDir()}>
 
 
-                <TabsContent value="time-series" className="mt-0" dir="rtl">
+                <TabsContent value="time-series" className="mt-0" dir={dashDir()}>
                   <div className="h-[400px] w-full">
                     {chartLoading ? (
                       <div className="h-full flex items-center justify-center bg-slate-50 rounded-lg">
@@ -1359,7 +1357,7 @@ export default function MonthlySubscriptionsDashboardPage() {
                                 return (
                                   <div className="rounded-lg border border-border bg-card px-3 py-2 shadow-sm">
                                     <p className="text-sm font-medium text-slate-700 mb-1.5">
-                                      {label ? formatIstanbulDateKeyLabel(String(label), "ar-EG", { weekday: "long", year: "numeric", month: "long", day: "numeric" }) : ""}
+                                      {label ? formatIstanbulDateKeyLabel(String(label), dashIntl("ar-EG"), { weekday: "long", year: "numeric", month: "long", day: "numeric" }) : ""}
                                     </p>
                                     {payload.map((entry) => {
                                       const dataKey = (entry as { dataKey?: string }).dataKey ?? entry.name;
@@ -1373,10 +1371,10 @@ export default function MonthlySubscriptionsDashboardPage() {
                                     {point != null && (
                                       <>
                                         <p className="text-sm font-medium text-slate-700 mt-1.5 pt-1 border-t border-slate-100">
-                                          الإجمالي: {formatMoney(Number(point.amountUSD ?? 0), undefined, undefined, true)}
+                                          {dtx("الإجمالي: {0}", [formatMoney(Number(point.amountUSD ?? 0), undefined, undefined, true)])}
                                         </p>
                                         <p className="text-sm text-slate-500 mt-0.5">
-                                          عدد الدفعات: {Math.round(Number(point.count))}
+                                          {dtx("عدد الدفعات: {0}", [Math.round(Number(point.count))])}
                                         </p>
                                       </>
                                     )}
@@ -1449,9 +1447,9 @@ export default function MonthlySubscriptionsDashboardPage() {
                               }
                               formatter={(value: number, name: string) => {
                                 if (name === "count" || name === "عدد التبرعات") return [String(Math.round(Number(value))), "عدد التبرعات"];
-                                if (chartMetric === "teamSupport") return [formatMoney(Number(value), undefined, undefined, true), "دعم الفريق"];
-                                if (chartMetric === "fees") return [formatMoney(Number(value), undefined, undefined, true), "الرسوم"];
-                                return [String(Math.round(Number(value))), "العدد"];
+                                if (chartMetric === "teamSupport") return [formatMoney(Number(value), undefined, undefined, true), dt("دعم الفريق")];
+                                if (chartMetric === "fees") return [formatMoney(Number(value), undefined, undefined, true), dt("الرسوم")];
+                                return [String(Math.round(Number(value))), dt("العدد")];
                               }}
                             />
                             <Legend />
@@ -1523,10 +1521,10 @@ export default function MonthlySubscriptionsDashboardPage() {
                             }
                             formatter={(value: number, name: string) => {
                               if (name === "count" || name === "عدد التبرعات") return [String(Math.round(Number(value))), "عدد التبرعات"];
-                              if (chartMetric === "amount") return [formatMoney(Number(value), undefined, undefined, true), "المبلغ"];
-                              if (chartMetric === "teamSupport") return [formatMoney(Number(value), undefined, undefined, true), "دعم الفريق"];
-                              if (chartMetric === "fees") return [formatMoney(Number(value), undefined, undefined, true), "الرسوم"];
-                              return [String(Math.round(Number(value))), "العدد"];
+                              if (chartMetric === "amount") return [formatMoney(Number(value), undefined, undefined, true), dt("المبلغ")];
+                              if (chartMetric === "teamSupport") return [formatMoney(Number(value), undefined, undefined, true), dt("دعم الفريق")];
+                              if (chartMetric === "fees") return [formatMoney(Number(value), undefined, undefined, true), dt("الرسوم")];
+                              return [String(Math.round(Number(value))), dt("العدد")];
                             }}
                           />
                           <Legend />
@@ -1610,10 +1608,10 @@ export default function MonthlySubscriptionsDashboardPage() {
                             }
                             formatter={(value: number, name: string) => {
                               if (name === "count" || name === "عدد التبرعات") return [String(Math.round(Number(value))), "عدد التبرعات"];
-                              if (chartMetric === "amount") return [formatMoney(Number(value), undefined, undefined, true), "المبلغ"];
-                              if (chartMetric === "teamSupport") return [formatMoney(Number(value), undefined, undefined, true), "دعم الفريق"];
-                              if (chartMetric === "fees") return [formatMoney(Number(value), undefined, undefined, true), "الرسوم"];
-                              return [String(Math.round(Number(value))), "العدد"];
+                              if (chartMetric === "amount") return [formatMoney(Number(value), undefined, undefined, true), dt("المبلغ")];
+                              if (chartMetric === "teamSupport") return [formatMoney(Number(value), undefined, undefined, true), dt("دعم الفريق")];
+                              if (chartMetric === "fees") return [formatMoney(Number(value), undefined, undefined, true), dt("الرسوم")];
+                              return [String(Math.round(Number(value))), dt("العدد")];
                             }}
                           />
                           <Legend />
@@ -1660,29 +1658,26 @@ export default function MonthlySubscriptionsDashboardPage() {
                   </div>
                 </TabsContent>
 
-                <TabsContent value="split" className="mt-0" dir="rtl">
-                  <Tabs defaultValue="frequency" className="w-full" dir="rtl">
+                <TabsContent value="split" className="mt-0" dir={dashDir()}>
+                  <Tabs defaultValue="frequency" className="w-full" dir={dashDir()}>
                     <TabsList className="bg-slate-100 p-1 rounded-lg mb-4 inline-flex flex-row-reverse">
                       <TabsTrigger
                         value="frequency"
                         className="data-[state=active]:bg-card data-[state=active]:shadow-sm text-sm"
                       >
-                        حسب الدورية
-                      </TabsTrigger>
+                        {dt("حسب الدورية")}</TabsTrigger>
                       <TabsTrigger
                         value="campaign-category"
                         className="data-[state=active]:bg-card data-[state=active]:shadow-sm text-sm"
                       >
-                        مشاريع vs فئات
-                      </TabsTrigger>
+                        {dt("مشاريع vs فئات")}</TabsTrigger>
                       <TabsTrigger
                         value="subscription-status"
                         className="data-[state=active]:bg-card data-[state=active]:shadow-sm text-sm"
                       >
-                        حالة الاشتراك
-                      </TabsTrigger>
+                        {dt("حالة الاشتراك")}</TabsTrigger>
                     </TabsList>
-                    <TabsContent value="frequency" className="mt-0" dir="rtl">
+                    <TabsContent value="frequency" className="mt-0" dir={dashDir()}>
                       <div className="h-[340px] w-full flex items-center justify-center">
                         {frequencySplitData.length > 0 ? (
                           <ResponsiveContainer width="100%" height="100%">
@@ -1706,8 +1701,8 @@ export default function MonthlySubscriptionsDashboardPage() {
                                 formatter={(value: number, _name: string, props: { payload?: { count?: number } }) => {
                                   const count = props?.payload?.count ?? 0;
                                   return [
-                                    `${formatMoney(Number(value), undefined, undefined, true)} شهريًا  ${count} اشتراك نشط`,
-                                    "المكافئ الشهري / العدد",
+                                    dt("{0} شهريًا  {1} اشتراك نشط", [formatMoney(Number(value), undefined, undefined, true), count]),
+                                    dt("المكافئ الشهري / العدد"),
                                   ];
                                 }}
                               />
@@ -1715,7 +1710,7 @@ export default function MonthlySubscriptionsDashboardPage() {
                             </PieChart>
                           </ResponsiveContainer>
                         ) : (
-                          <p className="text-slate-500">لا توجد بيانات</p>
+                          <p className="text-slate-500">{dt("لا توجد بيانات")}</p>
                         )}
                       </div>
                     </TabsContent>
@@ -1743,8 +1738,8 @@ export default function MonthlySubscriptionsDashboardPage() {
                                 formatter={(value: number, _name: string, props: { payload?: { count?: number } }) => {
                                   const count = props?.payload?.count ?? 0;
                                   return [
-                                    `${formatMoney(Number(value), undefined, undefined, true)}  عدد: ${count}`,
-                                    "المبلغ / العدد",
+                                    dt("{0}  عدد: {1}", [formatMoney(Number(value), undefined, undefined, true), count]),
+                                    dt("المبلغ / العدد"),
                                   ];
                                 }}
                               />
@@ -1752,11 +1747,11 @@ export default function MonthlySubscriptionsDashboardPage() {
                             </PieChart>
                           </ResponsiveContainer>
                         ) : (
-                          <p className="text-slate-500">لا توجد بيانات</p>
+                          <p className="text-slate-500">{dt("لا توجد بيانات")}</p>
                         )}
                       </div>
                     </TabsContent>
-                    <TabsContent value="subscription-status" className="mt-0" dir="rtl">
+                    <TabsContent value="subscription-status" className="mt-0" dir={dashDir()}>
                       <div className="h-[340px] w-full flex items-center justify-center">
                         {statusSplitData.length > 0 ? (
                           <ResponsiveContainer width="100%" height="100%">
@@ -1780,8 +1775,8 @@ export default function MonthlySubscriptionsDashboardPage() {
                                 formatter={(value: number, _name: string, props: { payload?: { count?: number } }) => {
                                   const count = props?.payload?.count ?? 0;
                                   return [
-                                    `${formatMoney(Number(value), undefined, undefined, true)}  عدد: ${count}`,
-                                    "المبلغ / العدد",
+                                    dt("{0}  عدد: {1}", [formatMoney(Number(value), undefined, undefined, true), count]),
+                                    dt("المبلغ / العدد"),
                                   ];
                                 }}
                               />
@@ -1789,7 +1784,7 @@ export default function MonthlySubscriptionsDashboardPage() {
                             </PieChart>
                           </ResponsiveContainer>
                         ) : (
-                          <p className="text-slate-500">لا توجد بيانات</p>
+                          <p className="text-slate-500">{dt("لا توجد بيانات")}</p>
                         )}
                       </div>
                     </TabsContent>
@@ -1801,15 +1796,13 @@ export default function MonthlySubscriptionsDashboardPage() {
                     className="data-[state=active]:bg-card data-[state=active]:shadow-sm gap-2"
                   >
                     <PieChartIcon className="w-4 h-4" />
-                    توزيع الإيرادات
-                  </TabsTrigger>
+                    {dt("توزيع الإيرادات")}</TabsTrigger>
                   <TabsTrigger
                     value="time-series"
                     className="data-[state=active]:bg-card data-[state=active]:shadow-sm gap-2"
                   >
                     <BarChart3 className="w-4 h-4" />
-                    الدفعات المتكررة عبر الزمن
-                  </TabsTrigger>
+                    {dt("الدفعات المتكررة عبر الزمن")}</TabsTrigger>
                 </TabsList>
               </Tabs>
             </CardContent>
@@ -1822,7 +1815,7 @@ export default function MonthlySubscriptionsDashboardPage() {
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between flex-row-reverse">
               <CardTitle className="text-sm font-semibold text-slate-700 flex items-center gap-2 justify-end">
                 <Search className="w-4 h-4 shrink-0" />
-                <span>تصفية النتائج</span>
+                <span>{dt("تصفية النتائج")}</span>
               </CardTitle>
               <DonationsFilterActions
                 canEditDonations={canEditDonations}
@@ -1832,15 +1825,14 @@ export default function MonthlySubscriptionsDashboardPage() {
               />
             </div>
           </CardHeader>
-          <CardContent className="pt-0 space-y-4" dir="rtl">
+          <CardContent className="pt-0 space-y-4" dir={dashDir()}>
 
 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
 
     {/* Period  مع من/إلى/مسح تحته عند مخصص */}
-    <div className="space-y-2 text-right">
+    <div className="space-y-2 text-start">
       <label className="text-[11px] font-semibold text-slate-600">
-        الفترة
-      </label>
+        {dt("الفترة")}</label>
       <Select
         value={chartPeriod === "custom" || (dateFrom && dateTo) ? "custom" : chartPeriod}
         onValueChange={(v) => {
@@ -1858,7 +1850,7 @@ export default function MonthlySubscriptionsDashboardPage() {
         }}
       >
         <SelectTrigger className="w-full h-10 px-3 text-[13px] rounded-lg border-slate-200 bg-white shadow-sm transition-colors hover:border-slate-300 focus:border-brand focus:ring-2 focus:ring-brand/15">
-          <SelectValue placeholder="اختر الفترة" />
+          <SelectValue placeholder={dt("اختر الفترة")} />
         </SelectTrigger>
         <SelectContent>
           {(Object.keys(PERIOD_LABELS) as ChartPeriod[]).map((p) => (
@@ -1871,7 +1863,7 @@ export default function MonthlySubscriptionsDashboardPage() {
       {chartPeriod === "custom" && (
         <div className="flex gap-2 pt-1 border-slate-100">
           <div className="space-y-1">
-            <label className="text-[11px] font-semibold text-slate-600">من</label>
+            <label className="text-[11px] font-semibold text-slate-600">{dt("من")}</label>
             <input
               type="date"
               value={dateFrom}
@@ -1880,7 +1872,7 @@ export default function MonthlySubscriptionsDashboardPage() {
             />
           </div>
           <div className="space-y-1">
-            <label className="text-[11px] font-semibold text-slate-600">إلى</label>
+            <label className="text-[11px] font-semibold text-slate-600">{dt("إلى")}</label>
             <input
               type="date"
               value={dateTo}
@@ -1893,16 +1885,15 @@ export default function MonthlySubscriptionsDashboardPage() {
     </div>
 
   {/* Category */}
-  <div className="space-y-1 text-right">
+  <div className="space-y-1 text-start">
     <label className="text-[11px] font-semibold text-slate-600">
-      الفئة
-    </label>
+      {dt("الفئة")}</label>
     <Select value={selectedCategory} onValueChange={setSelectedCategory}>
       <SelectTrigger className="w-full h-10 px-3 text-[13px] rounded-lg border-slate-200 bg-white shadow-sm transition-colors hover:border-slate-300 focus:border-brand focus:ring-2 focus:ring-brand/15">
-        <SelectValue placeholder="اختر الفئة" />
+        <SelectValue placeholder={dt("اختر الفئة")} />
       </SelectTrigger>
       <SelectContent>
-        <SelectItem value="all" className="text-xs">جميع الفئات</SelectItem>
+        <SelectItem value="all" className="text-xs">{dt("جميع الفئات")}</SelectItem>
         {categories.map((c) => (
           <SelectItem key={c.id} value={c.id} className="text-xs">
             {c.name}
@@ -1913,24 +1904,23 @@ export default function MonthlySubscriptionsDashboardPage() {
   </div>
 
   {/* Campaign */}
-  <div className="space-y-1 text-right">
+  <div className="space-y-1 text-start">
     <label className="text-[11px] font-semibold text-slate-600">
-      المشروع
-    </label>
+      {dt("المشروع")}</label>
     <Select value={selectedCampaign} onValueChange={setSelectedCampaign}>
       <SelectTrigger className="w-full h-10 px-3 text-[13px] rounded-lg border-slate-200 bg-white shadow-sm transition-colors hover:border-slate-300 focus:border-brand focus:ring-2 focus:ring-brand/15">
-        <SelectValue placeholder="اختر المشروع" />
+        <SelectValue placeholder={dt("اختر المشروع")} />
       </SelectTrigger>
       <SelectContent>
         <div className="p-2 border-b border-slate-100">
           <Input
-            placeholder="بحث..."
+            placeholder={dt("بحث...")}
             value={searchCampaign}
             onChange={(e) => setSearchCampaign(e.target.value)}
             className="w-full h-8 text-xs"
           />
         </div>
-        <SelectItem value="all" className="text-xs">جميع المشاريع</SelectItem>
+        <SelectItem value="all" className="text-xs">{dt("جميع المشاريع")}</SelectItem>
         {campaigns
           .filter((c) => {
             const ids = c.categoryIds ?? (c.categoryId ? [c.categoryId] : []);
@@ -1949,10 +1939,9 @@ export default function MonthlySubscriptionsDashboardPage() {
 
   {/* User  hidden when viewing a specific user via link (?userId=...) */}
   {!searchParams.get("userId") && (
-    <div className="space-y-1 text-right">
+    <div className="space-y-1 text-start">
       <label className="text-[11px] font-semibold text-slate-600">
-        المستخدم
-      </label>
+        {dt("المستخدم")}</label>
       <Select
         value={selectedUserId}
         onValueChange={(v) => {
@@ -1965,12 +1954,12 @@ export default function MonthlySubscriptionsDashboardPage() {
         }}
       >
         <SelectTrigger className="w-full h-10 px-3 text-[13px] rounded-lg border-slate-200 bg-white shadow-sm transition-colors hover:border-slate-300 focus:border-brand focus:ring-2 focus:ring-brand/15">
-          <SelectValue placeholder="اختر المستخدم" />
+          <SelectValue placeholder={dt("اختر المستخدم")} />
         </SelectTrigger>
         <SelectContent>
           <div className="p-2 border-b border-slate-100 flex gap-1.5 flex-row-reverse items-center">
             <Input
-              placeholder="بحث… ثم Enter أو زر البحث"
+              placeholder={dt("بحث… ثم Enter أو زر البحث")}
               value={usersSearchInput}
               onChange={(e) => setUsersSearchInput(e.target.value)}
               onKeyDown={(e) => {
@@ -1983,7 +1972,7 @@ export default function MonthlySubscriptionsDashboardPage() {
             />
             <button
               type="button"
-              title="بحث"
+              title={dt("بحث")}
               disabled={usersSearchLoading}
               onClick={(e) => {
                 e.preventDefault();
@@ -1999,7 +1988,7 @@ export default function MonthlySubscriptionsDashboardPage() {
               )}
             </button>
           </div>
-          <SelectItem value="all" className="text-xs">الكل</SelectItem>
+          <SelectItem value="all" className="text-xs">{dt("الكل")}</SelectItem>
           {users.map((u) => (
             <SelectItem key={u.id} value={u.id} className="text-xs">
               {u.name || u.email}
@@ -2011,53 +2000,50 @@ export default function MonthlySubscriptionsDashboardPage() {
   )}
 
   {/* Chart Metric */}
-  <div className="space-y-1 text-right">
+  <div className="space-y-1 text-start">
     <label className="text-[11px] font-semibold text-slate-600">
-      القيمة
-    </label>
+      {dt("القيمة")}</label>
     <Select value={chartMetric} onValueChange={(v) => setChartMetric(v as ChartMetric)}>
       <SelectTrigger className="w-full h-10 px-3 text-[13px] rounded-lg border-slate-200 bg-white shadow-sm transition-colors hover:border-slate-300 focus:border-brand focus:ring-2 focus:ring-brand/15">
-        <SelectValue placeholder="اختر القيمة" />
+        <SelectValue placeholder={dt("اختر القيمة")} />
       </SelectTrigger>
       <SelectContent>
-        <SelectItem value="amount" className="text-xs">المبلغ</SelectItem>
-        <SelectItem value="teamSupport" className="text-xs">دعم الفريق</SelectItem>
-        <SelectItem value="fees" className="text-xs">الرسوم</SelectItem>
+        <SelectItem value="amount" className="text-xs">{dt("المبلغ")}</SelectItem>
+        <SelectItem value="teamSupport" className="text-xs">{dt("دعم الفريق")}</SelectItem>
+        <SelectItem value="fees" className="text-xs">{dt("الرسوم")}</SelectItem>
       </SelectContent>
     </Select>
   </div>
 
   {/* Chart Type */}
-  <div className="space-y-1 text-right">
+  <div className="space-y-1 text-start">
     <label className="text-[11px] font-semibold text-slate-600">
-      نوع الرسم
-    </label>
+      {dt("نوع الرسم")}</label>
     <Select value={chartView} onValueChange={(v) => setChartView(v as ChartViewType)}>
       <SelectTrigger className="w-full h-10 px-3 text-[13px] rounded-lg border-slate-200 bg-white shadow-sm transition-colors hover:border-slate-300 focus:border-brand focus:ring-2 focus:ring-brand/15">
-        <SelectValue placeholder="اختر النوع" />
+        <SelectValue placeholder={dt("اختر النوع")} />
       </SelectTrigger>
       <SelectContent>
-        <SelectItem value="bar" className="text-xs">أعمدة</SelectItem>
-        <SelectItem value="line" className="text-xs">خط</SelectItem>
-        <SelectItem value="area" className="text-xs">منطقة</SelectItem>
+        <SelectItem value="bar" className="text-xs">{dt("أعمدة")}</SelectItem>
+        <SelectItem value="line" className="text-xs">{dt("خط")}</SelectItem>
+        <SelectItem value="area" className="text-xs">{dt("منطقة")}</SelectItem>
       </SelectContent>
     </Select>
   </div>
 
   {/* Donor country (الدفعات فقط) */}
-  <div className="space-y-1 text-right">
+  <div className="space-y-1 text-start">
     <label className="text-[11px] font-semibold text-slate-600">
-      الدولة (الدفعات)
-    </label>
+      {dt("الدولة (الدفعات)")}</label>
     <Select
       value={donationCountryFilter}
       onValueChange={(v) => setDonationCountryFilter(v)}
     >
       <SelectTrigger className="w-full h-10 px-3 text-[13px] rounded-lg border-slate-200 bg-white shadow-sm transition-colors hover:border-slate-300 focus:border-brand focus:ring-2 focus:ring-brand/15">
-        <SelectValue placeholder="الدولة" />
+        <SelectValue placeholder={dt("الدولة")} />
       </SelectTrigger>
       <SelectContent>
-        <SelectItem value="all" className="text-xs">كل الدول</SelectItem>
+        <SelectItem value="all" className="text-xs">{dt("كل الدول")}</SelectItem>
         {countryOptions.map((c) => (
           <SelectItem key={c.code} value={c.code} className="text-xs">
             {getCountryDisplayNameFromCode(c.code, locale || "ar")} ({c.count})
@@ -2065,26 +2051,24 @@ export default function MonthlySubscriptionsDashboardPage() {
         ))}
         {countryUnsetCount > 0 && (
           <SelectItem value="__unset" className="text-xs">
-            غير محدد ({countryUnsetCount})
-          </SelectItem>
+            {dtx("غير محدد ({0})", [countryUnsetCount])}</SelectItem>
         )}
       </SelectContent>
     </Select>
   </div>
 
   {/* Donation Status Filter */}
-  <div className="space-y-1 text-right">
+  <div className="space-y-1 text-start">
     <label className="text-[11px] font-semibold text-slate-600">
-      حالة الدفعة
-    </label>
+      {dt("حالة الدفعة")}</label>
     <Select value={donationsStatusFilter} onValueChange={(v) => setDonationsStatusFilter(v as typeof donationsStatusFilter)}>
       <SelectTrigger className="w-full h-10 px-3 text-[13px] rounded-lg border-slate-200 bg-white shadow-sm transition-colors hover:border-slate-300 focus:border-brand focus:ring-2 focus:ring-brand/15">
-        <SelectValue placeholder="الحالة" />
+        <SelectValue placeholder={dt("الحالة")} />
       </SelectTrigger>
       <SelectContent>
-        <SelectItem value="all" className="text-xs">كل الحالات</SelectItem>
-        <SelectItem value="PAID" className="text-xs">ناجح</SelectItem>
-        <SelectItem value="FAILED" className="text-xs">فاشل</SelectItem>
+        <SelectItem value="all" className="text-xs">{dt("كل الحالات")}</SelectItem>
+        <SelectItem value="PAID" className="text-xs">{dt("ناجح")}</SelectItem>
+        <SelectItem value="FAILED" className="text-xs">{dt("فاشل")}</SelectItem>
       </SelectContent>
     </Select>
   </div>
@@ -2099,16 +2083,15 @@ export default function MonthlySubscriptionsDashboardPage() {
 
         {/* الدفعات المتكررة */}
         <section className="space-y-4">
-          <h2 className="text-xs font-semibold text-slate-500 uppercase tracking-wider text-right">
-            الدفعات المتكررة{frequencyLabelSuffix}
+          <h2 className="text-xs font-semibold text-slate-500 uppercase tracking-wider text-start">
+            {dtx("الدفعات المتكررة{0}", [frequencyLabelSuffix])}
           </h2>
           <Card className="border-border shadow-sm">
             <CardHeader className="border-b border-slate-100 py-4">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 flex-row-reverse">
-                <div className="text-right space-y-1">
+                <div className="text-start space-y-1">
                   <CardTitle className="text-base font-semibold text-slate-900">
-                    أحدث الدفعات المتكررة
-                  </CardTitle>
+                    {dt("أحدث الدفعات المتكررة")}</CardTitle>
                 </div>
                 <div className="flex flex-col sm:flex-row gap-2 sm:items-center shrink-0">
                 <DonorSearchInput
@@ -2124,57 +2107,46 @@ export default function MonthlySubscriptionsDashboardPage() {
                     setDonationsSortOrder(order);
                   }}
                 >
-                  <SelectTrigger className="w-full sm:w-[200px] h-9 border-slate-200 bg-slate-50/50" dir="rtl">
-                    <SelectValue placeholder="ترتيب" />
+                  <SelectTrigger className="w-full sm:w-[200px] h-9 border-slate-200 bg-slate-50/50" dir={dashDir()}>
+                    <SelectValue placeholder={dt("ترتيب")} />
                   </SelectTrigger>
-                  <SelectContent dir="rtl">
-                    <SelectItem value="date-desc">الأحدث أولاً</SelectItem>
-                    <SelectItem value="date-asc">الأقدم أولاً</SelectItem>
-                    <SelectItem value="amount-desc">الأعلى مبلغاً</SelectItem>
-                    <SelectItem value="amount-asc">الأقل مبلغاً</SelectItem>
+                  <SelectContent dir={dashDir()}>
+                    <SelectItem value="date-desc">{dt("الأحدث أولاً")}</SelectItem>
+                    <SelectItem value="date-asc">{dt("الأقدم أولاً")}</SelectItem>
+                    <SelectItem value="amount-desc">{dt("الأعلى مبلغاً")}</SelectItem>
+                    <SelectItem value="amount-asc">{dt("الأقل مبلغاً")}</SelectItem>
                   </SelectContent>
                 </Select>
                 </div>
               </div>
             </CardHeader>
             <CardContent className="p-0">
-              <div className="overflow-x-auto" dir="rtl">
-                <table className="w-full text-xs text-right leading-snug">
+              <div className="overflow-x-auto" dir={dashDir()}>
+                <table className="w-full text-xs text-start leading-snug">
                   <thead>
                     <tr className="border-b border-slate-200 bg-slate-50">
-                      <th className="text-right py-3 px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
-                        المتبرع
-                      </th>
-                      <th className="text-right py-3 px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500 min-w-[100px] max-w-[130px]">
-                        الدولة
-                      </th>
-                      <th className="text-right py-3 px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500 whitespace-nowrap">
-                        التبرع
-                      </th>
-                      <th className="text-right py-3 px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500 whitespace-nowrap">
-                        نوع الدفعة
-                      </th>
-                      <th className="text-right py-3 px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
-                        الحالة
-                      </th>
-                      <th className="text-right py-3 px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
-                        البوابة
-                      </th>
-                      <th className="text-right py-3 px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500 whitespace-nowrap">
-                        دعم الفريق
-                      </th>
-                      <th className="text-right py-3 px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
-                        الإحالة
-                      </th>
-                      <th className="text-right py-3 px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500 whitespace-nowrap">
-                        مصدر التبرع
-                      </th>
-                      <th className="text-right py-3 px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500 max-w-[110px]">
-                        المشروع / الفئة
-                      </th>
-                      <th className="text-right py-3 px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500 whitespace-nowrap">
-                        التاريخ
-                      </th>
+                      <th className="text-start py-3 px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                        {dt("المتبرع")}</th>
+                      <th className="text-start py-3 px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500 min-w-[100px] max-w-[130px]">
+                        {dt("الدولة")}</th>
+                      <th className="text-start py-3 px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500 whitespace-nowrap">
+                        {dt("التبرع")}</th>
+                      <th className="text-start py-3 px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500 whitespace-nowrap">
+                        {dt("نوع الدفعة")}</th>
+                      <th className="text-start py-3 px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                        {dt("الحالة")}</th>
+                      <th className="text-start py-3 px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                        {dt("البوابة")}</th>
+                      <th className="text-start py-3 px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500 whitespace-nowrap">
+                        {dt("دعم الفريق")}</th>
+                      <th className="text-start py-3 px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                        {dt("الإحالة")}</th>
+                      <th className="text-start py-3 px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500 whitespace-nowrap">
+                        {dt("مصدر التبرع")}</th>
+                      <th className="text-start py-3 px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500 max-w-[110px]">
+                        {dt("المشروع / الفئة")}</th>
+                      <th className="text-start py-3 px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500 whitespace-nowrap">
+                        {dt("التاريخ")}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -2187,14 +2159,12 @@ export default function MonthlySubscriptionsDashboardPage() {
                     ) : !donationsFetchedOnce ? (
                       <tr>
                         <td colSpan={11} className="py-12 text-center text-slate-500">
-                          جاري التحميل...
-                        </td>
+                          {dt("جاري التحميل...")}</td>
                       </tr>
                     ) : donations.length === 0 ? (
                       <tr>
                         <td colSpan={11} className="py-12 text-center text-slate-500">
-                          لا توجد تبرعات تطابق التصفية
-                        </td>
+                          {dt("لا توجد تبرعات تطابق التصفية")}</td>
                       </tr>
                     ) : (
                       donations.map((d) => (
@@ -2207,7 +2177,7 @@ export default function MonthlySubscriptionsDashboardPage() {
                             <button
                               type="button"
                               onClick={() => d.donor?.id && openUserProfile(d.donor.id)}
-                              className="text-right w-full max-w-[200px] rounded-md -mx-0.5 px-0.5 py-0 hover:bg-slate-100/80 transition-colors cursor-pointer border-0 bg-transparent"
+                              className="text-start w-full max-w-[200px] rounded-md -mx-0.5 px-0.5 py-0 hover:bg-slate-100/80 transition-colors cursor-pointer border-0 bg-transparent"
                             >
                               <p className="font-medium text-slate-900">
                                 {d.donor?.name || "—"}
@@ -2222,7 +2192,7 @@ export default function MonthlySubscriptionsDashboardPage() {
                           <td className="py-2.5 px-3 align-middle max-w-[130px]">
                             <DonationTableCountryColumn countryCode={d.donorCountryCode} />
                           </td>
-                          <td className="py-2.5 px-3 font-medium text-slate-800" dir="rtl">
+                          <td className="py-2.5 px-3 font-medium text-slate-800" dir={dashDir()}>
                             <span dir="ltr">
                               {formatMoney(donationDisplayTotalLocal(d), d.currency, d.amountUSD ?? undefined)}
                             </span>
@@ -2237,20 +2207,18 @@ export default function MonthlySubscriptionsDashboardPage() {
                               d.isRecurringCharge ? (
                                 <span
                                   className="inline-flex items-center gap-1 px-1.5 py-px rounded-full text-[11px] font-medium bg-brand/10 text-brand"
-                                  title="خصم تلقائي متكرر  تم دون أي إجراء من المتبرع"
+                                  title={dt("خصم تلقائي متكرر  تم دون أي إجراء من المتبرع")}
                                 >
                                   <RefreshCw className="w-3 h-3" />
-                                  تجديد تلقائي
-                                  {d.subscriptionCycle ? ` #${d.subscriptionCycle}` : ""}
+                                  {dtx("تجديد تلقائي{0}", [d.subscriptionCycle ? ` #${d.subscriptionCycle}` : ""])}
                                 </span>
                               ) : (
                                 <span
                                   className="inline-flex items-center gap-1 px-1.5 py-px rounded-full text-[11px] font-medium bg-green-100 text-green-700"
-                                  title="أول دفعة عند إنشاء الاشتراك"
+                                  title={dt("أول دفعة عند إنشاء الاشتراك")}
                                 >
                                   <HandCoins className="w-3 h-3" />
-                                  أول دفعة
-                                </span>
+                                  {dt("أول دفعة")}</span>
                               )
                             ) : (
                               <span className="text-[11px] text-slate-400">—</span>
@@ -2262,44 +2230,22 @@ export default function MonthlySubscriptionsDashboardPage() {
                                 type="button"
                                 onClick={() => openDonationDetails("error", d)}
                                 className="inline-block px-1.5 py-px rounded-full text-[11px] font-medium bg-red-100 text-red-700 hover:bg-red-200 transition-colors cursor-pointer"
-                                title="عرض رسالة الخطأ من بوابة الدفع"
+                                title={dt("عرض رسالة الخطأ من بوابة الدفع")}
                               >
-                                فاشل
-                              </button>
+                                {dt("فاشل")}</button>
                             ) : (
                               <span
                                 className={cn("inline-block px-1.5 py-px rounded-full text-[11px] font-medium", d.status === "PAID" && (d.paidAt || d.type === "MONTHLY") ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700")}
-                                title={d.status === "PAID" && !d.paidAt && d.type !== "MONTHLY" ? "تم بدء الدفع ولم يؤكده مزود الدفع بعد  لا يُحتسب في الإيرادات" : undefined}
+                                title={d.status === "PAID" && !d.paidAt && d.type !== "MONTHLY" ? dt("تم بدء الدفع ولم يؤكده مزود الدفع بعد  لا يُحتسب في الإيرادات") : undefined}
                               >
-                                {d.status === "PAID" ? ((d.paidAt || d.type === "MONTHLY") ? "ناجح" : "قيد التأكيد") : "معلق"}
+                                {d.status === "PAID" ? ((d.paidAt || d.type === "MONTHLY") ? dt("ناجح") : dt("قيد التأكيد")) : dt("معلق")}
                               </span>
                             )}
                           </td>
                           <td className="py-2.5 px-3">
-                            {d.provider === "STRIPE" || d.provider === "PAYFOR" ? (
-                              <button
-                                type="button"
-                                onClick={() => openDonationDetails("payment", d)}
-                                className="inline-flex items-center rounded hover:opacity-80 hover:scale-[1.03] active:scale-95 transition-all"
-                                title="عرض تفاصيل بوابة الدفع"
-                              >
-                                {d.provider === "STRIPE" ? (
-                                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-semibold bg-[#635bff]/10 text-[#635bff]">Stripe</span>
-                                ) : (
-                                  <span className="inline-flex items-center">
-                                    <img
-                                      src="/ziraat.jpg"
-                                      alt="PayFor"
-                                      className="h-8 w-auto max-w-[72px] object-contain rounded"
-                                    />
-                                  </span>
-                                )}
-                              </button>
-                            ) : (
-                              <span className="text-slate-400 text-xs">—</span>
-                            )}
+                            <DonationGatewayBadge donation={d} onOpen={() => openDonationDetails("payment", d)} />
                           </td>
-                          <td className="py-2.5 px-3 font-medium text-slate-800" dir="rtl">
+                          <td className="py-2.5 px-3 font-medium text-slate-800" dir={dashDir()}>
                             {(d.teamSupport ?? 0) > 0 ? (
                               <span dir="ltr">
                                 {formatMoney(d.teamSupport ?? 0, d.currency, (d.totalAmount && (d.amountUSD != null)) ? ((d.teamSupport ?? 0) / d.totalAmount) * d.amountUSD : undefined)}
@@ -2324,8 +2270,8 @@ export default function MonthlySubscriptionsDashboardPage() {
                             <button
                               type="button"
                               onClick={() => openDonationDetails("attribution", d)}
-                              className="inline-flex max-w-full text-right rounded-md hover:opacity-80 transition-opacity cursor-pointer bg-transparent border-0 p-0"
-                              title="عرض تفاصيل الإسناد الإعلاني"
+                              className="inline-flex max-w-full text-start rounded-md hover:opacity-80 transition-opacity cursor-pointer bg-transparent border-0 p-0"
+                              title={dt("عرض تفاصيل الإسناد الإعلاني")}
                             >
                               <DonationSourceBadge
                                 attribution={d.attribution}
@@ -2364,7 +2310,7 @@ export default function MonthlySubscriptionsDashboardPage() {
                               (() => {
                                 const first = d.categories[0];
                                 const more = d.categories.length - 1;
-                                const fullList = "فئة: " + d.categories.map((c) => c.name).join(", ");
+                                const fullList = dt("فئة: {0}", [d.categories.map((c) => c.name).join(", ")]);
                                 return (
                                   <div className="flex items-center gap-1 max-w-[110px]">
                                     <Link
@@ -2374,7 +2320,7 @@ export default function MonthlySubscriptionsDashboardPage() {
                                       title={fullList}
                                       className="truncate text-slate-700 hover:text-brand hover:underline"
                                     >
-                                      فئة: {first.name}
+                                      {dtx("فئة: {0}", [first.name])}
                                     </Link>
                                     {more > 0 && (
                                       <span className="shrink-0 text-[10px] text-slate-400" title={fullList}>
@@ -2425,14 +2371,12 @@ export default function MonthlySubscriptionsDashboardPage() {
                     ) : (
                       <ChevronDown className="w-4 h-4 rotate-180" />
                     )}
-                    عرض المزيد
-                  </button>
+                    {dt("عرض المزيد")}</button>
                 </div>
               )}
               {donationsTotal > 0 && (
-                <p className="text-xs text-slate-500 px-4 py-2 border-t border-slate-100 text-right">
-                  عرض {donations.length} من {donationsTotal} تبرع
-                </p>
+                <p className="text-xs text-slate-500 px-4 py-2 border-t border-slate-100 text-start">
+                  {dtx("عرض {0} من {1} تبرع", [donations.length, donationsTotal])}</p>
               )}
             </CardContent>
           </Card>
@@ -2452,30 +2396,27 @@ export default function MonthlySubscriptionsDashboardPage() {
 
       {reducePlan && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4" role="presentation">
-          <div className="w-full max-w-md bg-white rounded-xl shadow-xl p-6 space-y-4 text-right" dir="rtl" role="dialog" aria-modal="true" aria-labelledby="reduce-sub-title">
-            <h3 id="reduce-sub-title" className="text-lg font-bold">تخفيض مبلغ التبرع الدوري</h3>
-            <p className="text-sm text-slate-600">المبلغ الحالي: {reducePlan.amount} {reducePlan.currency}. يبدأ المبلغ الجديد من دورة التجديد التالية، ولا يتم خصم مبلغ الآن.</p>
-            <label className="block text-sm font-medium">المبلغ الجديد ({reducePlan.currency})
-              <Input type="number" step="0.01" min="1" max={Math.max(1, reducePlan.amount - 0.01)} value={reduceAmount} onChange={e => setReduceAmount(e.target.value)} dir="ltr" />
+          <div className="w-full max-w-md bg-white rounded-xl shadow-xl p-6 space-y-4 text-start" dir={dashDir()} role="dialog" aria-modal="true" aria-labelledby="reduce-sub-title">
+            <h3 id="reduce-sub-title" className="text-lg font-bold">{dt("تخفيض مبلغ التبرع الدوري")}</h3>
+            <p className="text-sm text-slate-600">{dtx("المبلغ الحالي: {0} {1}. يبدأ المبلغ الجديد من دورة التجديد التالية، ولا يتم خصم مبلغ الآن.", [reducePlan.amount, reducePlan.currency])}</p>
+            <label className="block text-sm font-medium">{dtx("المبلغ الجديد ({0})", [reducePlan.currency])}<Input type="number" step="0.01" min="1" max={Math.max(1, reducePlan.amount - 0.01)} value={reduceAmount} onChange={e => setReduceAmount(e.target.value)} dir="ltr" />
             </label>
-            <label className="block text-sm font-medium">طريقة توثيق موافقة المتبرع
-              <Select value={reduceMethod} onValueChange={v => setReduceMethod(v as typeof reduceMethod)}>
+            <label className="block text-sm font-medium">{dt("طريقة توثيق موافقة المتبرع")}<Select value={reduceMethod} onValueChange={v => setReduceMethod(v as typeof reduceMethod)}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent dir="rtl">
-                  <SelectItem value="PHONE">مكالمة هاتفية</SelectItem>
-                  <SelectItem value="EMAIL">بريد إلكتروني</SelectItem>
-                  <SelectItem value="WHATSAPP">واتساب</SelectItem>
-                  <SelectItem value="SIGNED">موافقة مكتوبة موقعة</SelectItem>
+                <SelectContent dir={dashDir()}>
+                  <SelectItem value="PHONE">{dt("مكالمة هاتفية")}</SelectItem>
+                  <SelectItem value="EMAIL">{dt("بريد إلكتروني")}</SelectItem>
+                  <SelectItem value="WHATSAPP">{dt("واتساب")}</SelectItem>
+                  <SelectItem value="SIGNED">{dt("موافقة مكتوبة موقعة")}</SelectItem>
                 </SelectContent>
               </Select>
             </label>
-            <label className="block text-sm font-medium">مرجع الموافقة وتاريخها
-              <textarea className="w-full border border-gray-200 rounded-lg p-3 text-sm min-h-24" maxLength={2000} value={reduceEvidence} onChange={e => setReduceEvidence(e.target.value)} placeholder="التاريخ، وصف الموافقة، ورقم المحادثة أو مرجع المستند" />
+            <label className="block text-sm font-medium">{dt("مرجع الموافقة وتاريخها")}<textarea className="w-full border border-gray-200 rounded-lg p-3 text-sm min-h-24" maxLength={2000} value={reduceEvidence} onChange={e => setReduceEvidence(e.target.value)} placeholder={dt("التاريخ، وصف الموافقة، ورقم المحادثة أو مرجع المستند")} />
             </label>
-            <p className="text-xs text-slate-500">لا يمكن تغيير مبلغ اشتراك يقترب موعد خصمه خلال 24 ساعة أو يخضع لمحاولة تحصيل جارية. الإلغاء يظل متاحًا عبر إدارة المؤسسة.</p>
+            <p className="text-xs text-slate-500">{dt("لا يمكن تغيير مبلغ اشتراك يقترب موعد خصمه خلال 24 ساعة أو يخضع لمحاولة تحصيل جارية. الإلغاء يظل متاحًا عبر إدارة المؤسسة.")}</p>
             <div className="flex gap-2">
-              <button type="button" className="bg-brand text-white rounded-lg px-4 py-2 text-sm disabled:opacity-50" disabled={reduceBusy} onClick={() => void submitSubscriptionReduction()}>{reduceBusy ? "جارٍ الحفظ…" : "تأكيد التخفيض"}</button>
-              <button type="button" className="bg-gray-100 rounded-lg px-4 py-2 text-sm" disabled={reduceBusy} onClick={() => setReducePlan(null)}>إغلاق</button>
+              <button type="button" className="bg-brand text-white rounded-lg px-4 py-2 text-sm disabled:opacity-50" disabled={reduceBusy} onClick={() => void submitSubscriptionReduction()}>{reduceBusy ? dt("جارٍ الحفظ…") : dt("تأكيد التخفيض")}</button>
+              <button type="button" className="bg-gray-100 rounded-lg px-4 py-2 text-sm" disabled={reduceBusy} onClick={() => setReducePlan(null)}>{dt("إغلاق")}</button>
             </div>
           </div>
         </div>
@@ -2483,9 +2424,8 @@ export default function MonthlySubscriptionsDashboardPage() {
 
         {/* الاشتراكات  الجدول السفلي */}
         <section className="space-y-4">
-          <h2 className="text-xs font-semibold text-slate-500 uppercase tracking-wider text-right">
-            الاشتراكات
-          </h2>
+          <h2 className="text-xs font-semibold text-slate-500 uppercase tracking-wider text-start">
+            {dt("الاشتراكات")}</h2>
           <Card className="border border-gray-200/60 shadow-md shadow-violet-500/5 overflow-hidden bg-card">
             <CardHeader className="border-b border-brand/20 py-4 bg-brand/4">
               <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between flex-row-reverse">
@@ -2493,15 +2433,14 @@ export default function MonthlySubscriptionsDashboardPage() {
                   <div className="p-2 rounded-xl bg-brand text-white shadow-sm shrink-0">
                     <LayoutList className="w-5 h-5" />
                   </div>
-                  <div className="text-right min-w-0">
+                  <div className="text-start min-w-0">
                     <CardTitle className="text-base font-semibold text-slate-900">
-                      قائمة الاشتراكات
-                    </CardTitle>
+                      {dt("قائمة الاشتراكات")}</CardTitle>
                   </div>
                 </div>
                 <div className="flex flex-col sm:flex-row gap-3 sm:items-end flex-row-reverse shrink-0 flex-wrap">
-                  <div className="space-y-1 text-right w-full sm:w-auto">
-                    <label className="text-[11px] font-semibold text-slate-600">بحث</label>
+                  <div className="space-y-1 text-start w-full sm:w-auto">
+                    <label className="text-[11px] font-semibold text-slate-600">{dt("بحث")}</label>
                     <DonorSearchInput
                       value={subsSearch}
                       onCommit={setSubsSearch}
@@ -2509,8 +2448,8 @@ export default function MonthlySubscriptionsDashboardPage() {
                       className="sm:w-[240px]"
                     />
                   </div>
-                  <div className="space-y-1 text-right w-full sm:w-auto sm:min-w-[200px]">
-                    <label className="text-[11px] font-semibold text-slate-600">المشترك</label>
+                  <div className="space-y-1 text-start w-full sm:w-auto sm:min-w-[200px]">
+                    <label className="text-[11px] font-semibold text-slate-600">{dt("المشترك")}</label>
                     <Select
                       value={selectedUserId}
                       onValueChange={(v) => {
@@ -2523,12 +2462,12 @@ export default function MonthlySubscriptionsDashboardPage() {
                       }}
                     >
                       <SelectTrigger className="w-full sm:w-[220px] h-9 text-xs rounded-lg border-gray-200 bg-white/80 ">
-                        <SelectValue placeholder="كل المشتركين" />
+                        <SelectValue placeholder={dt("كل المشتركين")} />
                       </SelectTrigger>
-                      <SelectContent dir="rtl">
+                      <SelectContent dir={dashDir()}>
                         <div className="p-2 border-b border-slate-100 flex gap-1.5 flex-row-reverse items-center">
                           <Input
-                            placeholder="بحث… ثم Enter أو زر البحث"
+                            placeholder={dt("بحث… ثم Enter أو زر البحث")}
                             value={usersSearchInput}
                             onChange={(e) => setUsersSearchInput(e.target.value)}
                             onKeyDown={(e) => {
@@ -2541,7 +2480,7 @@ export default function MonthlySubscriptionsDashboardPage() {
                           />
                           <button
                             type="button"
-                            title="بحث"
+                            title={dt("بحث")}
                             disabled={usersSearchLoading}
                             onClick={(e) => {
                               e.preventDefault();
@@ -2558,8 +2497,7 @@ export default function MonthlySubscriptionsDashboardPage() {
                           </button>
                         </div>
                         <SelectItem value="all" className="text-xs">
-                          الكل
-                        </SelectItem>
+                          {dt("الكل")}</SelectItem>
                         {users.map((u) => (
                           <SelectItem key={u.id} value={u.id} className="text-xs">
                             {u.name || u.email}
@@ -2568,8 +2506,8 @@ export default function MonthlySubscriptionsDashboardPage() {
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="space-y-1 text-right">
-                    <label className="text-[11px] font-semibold text-slate-600">الحالة</label>
+                  <div className="space-y-1 text-start">
+                    <label className="text-[11px] font-semibold text-slate-600">{dt("الحالة")}</label>
                     <Select
                       value={subStatusFilter}
                       onValueChange={(v) => setSubStatusFilter(v as SubscriptionStatusFilter)}
@@ -2577,22 +2515,17 @@ export default function MonthlySubscriptionsDashboardPage() {
                       <SelectTrigger className="w-max h-9 text-xs rounded-lg border-gray-200 bg-white/80 ">
                         <SelectValue />
                       </SelectTrigger>
-                      <SelectContent dir="rtl">
+                      <SelectContent dir={dashDir()}>
                         <SelectItem value="ACTIVE" className="text-xs">
-                          نشطة
-                        </SelectItem>
+                          {dt("نشطة")}</SelectItem>
                         <SelectItem value="PAUSED" className="text-xs">
-                          موقوفة
-                        </SelectItem>
+                          {dt("موقوفة")}</SelectItem>
                         <SelectItem value="CANCELLED" className="text-xs">
-                          ملغاة
-                        </SelectItem>
+                          {dt("ملغاة")}</SelectItem>
                         <SelectItem value="PAYMENT_FAILED" className="text-xs">
-                          تعذّر الخصم
-                        </SelectItem>
+                          {dt("تعذّر الخصم")}</SelectItem>
                         <SelectItem value="all" className="text-xs">
-                          الكل
-                        </SelectItem>
+                          {dt("الكل")}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -2604,33 +2537,33 @@ export default function MonthlySubscriptionsDashboardPage() {
                       setSubsSortOrder(order);
                     }}
                   >
-                    <SelectTrigger className="w-full sm:w-[200px] h-9 text-xs rounded-lg border-gray-200 bg-white/80 " dir="rtl">
-                      <SelectValue placeholder="ترتيب" />
+                    <SelectTrigger className="w-full sm:w-[200px] h-9 text-xs rounded-lg border-gray-200 bg-white/80 " dir={dashDir()}>
+                      <SelectValue placeholder={dt("ترتيب")} />
                     </SelectTrigger>
-                    <SelectContent dir="rtl">
-                      <SelectItem value="date-desc">الأحدث أولاً</SelectItem>
-                      <SelectItem value="date-asc">الأقدم أولاً</SelectItem>
-                      <SelectItem value="amount-desc">الأعلى مبلغاً</SelectItem>
-                      <SelectItem value="amount-asc">الأقل مبلغاً</SelectItem>
+                    <SelectContent dir={dashDir()}>
+                      <SelectItem value="date-desc">{dt("الأحدث أولاً")}</SelectItem>
+                      <SelectItem value="date-asc">{dt("الأقدم أولاً")}</SelectItem>
+                      <SelectItem value="amount-desc">{dt("الأعلى مبلغاً")}</SelectItem>
+                      <SelectItem value="amount-asc">{dt("الأقل مبلغاً")}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
               </div>
             </CardHeader>
             <CardContent className="p-0">
-              <div className="overflow-x-auto" dir="rtl">
-                <table className="w-full text-xs text-right leading-snug">
+              <div className="overflow-x-auto" dir={dashDir()}>
+                <table className="w-full text-xs text-start leading-snug">
                   <thead>
                     <tr className="border-b border-slate-200 bg-slate-50/90 ">
-                      <th className="text-right py-3 px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">المشترك</th>
-                      <th className="text-right py-3 px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500 whitespace-nowrap">مبلغ الدفعة</th>
-                      <th className="text-right py-3 px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">الحالة</th>
-                      <th className="text-right py-3 px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500 max-w-[160px]">المشروع / الفئة</th>
-                      <th className="text-right py-3 px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">الإحالة</th>
-                      <th className="text-right py-3 px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500 whitespace-nowrap">الدورية</th>
-                      <th className="text-right py-3 px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500 whitespace-nowrap">آخر دفعة</th>
-                      <th className="text-right py-3 px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500 whitespace-nowrap">الدفعة القادمة</th>
-                      <th className="text-right py-3 px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500 whitespace-nowrap">بدء الاشتراك</th>
+                      <th className="text-start py-3 px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">{dt("المشترك")}</th>
+                      <th className="text-start py-3 px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500 whitespace-nowrap">{dt("مبلغ الدفعة")}</th>
+                      <th className="text-start py-3 px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">{dt("الحالة")}</th>
+                      <th className="text-start py-3 px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500 max-w-[160px]">{dt("المشروع / الفئة")}</th>
+                      <th className="text-start py-3 px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">{dt("الإحالة")}</th>
+                      <th className="text-start py-3 px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500 whitespace-nowrap">{dt("الدورية")}</th>
+                      <th className="text-start py-3 px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500 whitespace-nowrap">{dt("آخر دفعة")}</th>
+                      <th className="text-start py-3 px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500 whitespace-nowrap">{dt("الدفعة القادمة")}</th>
+                      <th className="text-start py-3 px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500 whitespace-nowrap">{dt("بدء الاشتراك")}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -2643,14 +2576,12 @@ export default function MonthlySubscriptionsDashboardPage() {
                     ) : !subsFetchedOnce ? (
                       <tr>
                         <td colSpan={9} className="py-14 text-center text-slate-500">
-                          جاري التحميل...
-                        </td>
+                          {dt("جاري التحميل...")}</td>
                       </tr>
                     ) : subsRows.length === 0 ? (
                       <tr>
                         <td colSpan={9} className="py-14 text-center text-slate-500">
-                          لا توجد اشتراكات تطابق التصفية
-                        </td>
+                          {dt("لا توجد اشتراكات تطابق التصفية")}</td>
                       </tr>
                     ) : (
                       subsRows.map((s) => (
@@ -2662,7 +2593,7 @@ export default function MonthlySubscriptionsDashboardPage() {
                             <button
                               type="button"
                               onClick={() => s.donor?.id && openUserProfile(s.donor.id)}
-                              className="text-right w-full max-w-[200px] rounded-md -mx-0.5 px-0.5 py-0 hover:bg-slate-100/80 transition-colors cursor-pointer border-0 bg-transparent"
+                              className="text-start w-full max-w-[200px] rounded-md -mx-0.5 px-0.5 py-0 hover:bg-slate-100/80 transition-colors cursor-pointer border-0 bg-transparent"
                             >
                               <p className="font-medium text-slate-900">{s.donor?.name || "—"}</p>
                               {s.donor?.email && (
@@ -2670,20 +2601,18 @@ export default function MonthlySubscriptionsDashboardPage() {
                               )}
                             </button>
                           </td>
-                          <td className="py-2.5 px-3 font-semibold text-slate-800 align-top" dir="rtl">
+                          <td className="py-2.5 px-3 font-semibold text-slate-800 align-top" dir={dashDir()}>
                             <span dir="ltr">
                               {formatMoney(s.amount, s.currency, s.amountUSD ?? undefined)}
                             </span>
                             {(s.status === "ACTIVE" || s.status === "PAUSED") && (
                               <button type="button" className="block mt-1 text-[11px] text-brand underline hover:text-brand/80" onClick={() => { setReducePlan(s); setReduceAmount(""); setReduceEvidence(""); }}>
-                                تخفيض مبلغ الاشتراك
-                              </button>
+                                {dt("تخفيض مبلغ الاشتراك")}</button>
                             )}
                             {/* Daily / Friday plans also show what they add up to in a month. */}
                             {s.frequency && s.frequency !== "MONTHLY" && s.monthlyEquivalentUSD != null && (
                               <span className="block text-[10px] font-normal text-slate-500">
-                                ≈ <span dir="ltr">{formatMoney(s.monthlyEquivalentUSD, undefined, undefined, true)}</span> شهريًا
-                              </span>
+                                ≈ <span dir="ltr">{formatMoney(s.monthlyEquivalentUSD, undefined, undefined, true)}</span> {dt(" شهريًا")}</span>
                             )}
                           </td>
                           <td className="py-2.5 px-3 align-top min-w-[118px]">
@@ -2710,21 +2639,17 @@ export default function MonthlySubscriptionsDashboardPage() {
                                 >
                                   <SelectValue />
                                 </SelectTrigger>
-                                <SelectContent dir="rtl">
+                                <SelectContent dir={dashDir()}>
                                   {/* Set by the scheduler when the retry ladder is exhausted;
                                       an admin moves it back to نشطة once the card is fixed. */}
                                   <SelectItem value="PAYMENT_FAILED" className="text-xs" disabled>
-                                    تعذّر الخصم
-                                  </SelectItem>
+                                    {dt("تعذّر الخصم")}</SelectItem>
                                   <SelectItem value="ACTIVE" className="text-xs">
-                                    نشطة
-                                  </SelectItem>
+                                    {dt("نشطة")}</SelectItem>
                                   <SelectItem value="PAUSED" className="text-xs">
-                                    موقوفة
-                                  </SelectItem>
+                                    {dt("موقوفة")}</SelectItem>
                                   <SelectItem value="CANCELLED" className="text-xs">
-                                    ملغاة
-                                  </SelectItem>
+                                    {dt("ملغاة")}</SelectItem>
                                 </SelectContent>
                               </Select>
                               {subsStatusUpdatingId === s.id && (
@@ -2734,32 +2659,31 @@ export default function MonthlySubscriptionsDashboardPage() {
                             {/* Local status vs the payment provider's  a mismatch is shown, never hidden. */}
                             <div className="mt-1 text-[10px] leading-4">
                               {providerChecks[s.id]?.loading ? (
-                                <span className="text-slate-400">جاري التحقق…</span>
+                                <span className="text-slate-400">{dt("جاري التحقق…")}</span>
                               ) : providerChecks[s.id]?.result ? (
                                 (() => {
                                   const r = providerChecks[s.id]!.result!;
-                                  if (r.error) return <span className="font-bold text-red-700">تعذّر التحقق: {r.error}</span>;
-                                  if (r.rail !== "STRIPE") return <span className="text-slate-500">{r.rail === "ALBARAKA" ? "جدولة داخلية (البركة)" : r.rail === "PAYPAL" ? "جدولة داخلية (PayPal)" : "لا يوجد اشتراك لدى مزوّد"}</span>;
+                                  if (r.error) return <span className="font-bold text-red-700">{dtx("تعذّر التحقق: {0}", [r.error])}</span>;
+                                  if (r.rail !== "STRIPE") return <span className="text-slate-500">{r.rail === "ALBARAKA" ? dt("جدولة داخلية (البركة)") : r.rail === "PAYPAL" ? dt("جدولة داخلية (PayPal)") : dt("لا يوجد اشتراك لدى مزوّد")}</span>;
                                   return r.inSync ? (
-                                    <span className="text-emerald-700">Stripe: {r.providerStatus}{r.providerPaused ? " (موقوف)" : ""} ✓</span>
+                                    <span className="text-emerald-700">Stripe: {r.providerStatus}{r.providerPaused ? dt(" (موقوف)") : ""} ✓</span>
                                   ) : (
                                     <span className="font-bold text-red-700">
-                                      SYNC ERROR  Stripe: {r.providerStatus}{r.providerPaused ? " (موقوف)" : ""}
+                                      SYNC ERROR  Stripe: {r.providerStatus}{r.providerPaused ? dt(" (موقوف)") : ""}
                                     </span>
                                   );
                                 })()
                               ) : (
                                 <button type="button" className="text-brand underline-offset-2 hover:underline" onClick={() => void checkProviderState(s.id)}>
-                                  تحقق من المزوّد
-                                </button>
+                                  {dt("تحقق من المزوّد")}</button>
                               )}
                             </div>
                           </td>
                           <td className="py-2.5 px-3 text-slate-600 max-w-[160px] align-top">
                             {s.campaigns?.length > 0 ? (
-                              <span>{s.campaigns.map((c) => c.title).join("، ")}</span>
+                              <span>{s.campaigns.map((c) => c.title).join(dt("، "))}</span>
                             ) : s.categories?.length > 0 ? (
-                              <span>فئة: {s.categories.map((c) => c.name).join("، ")}</span>
+                              <span>{dt("فئة: ")}{s.categories.map((c) => c.name).join(dt("، "))}</span>
                             ) : (
                               "—"
                             )}
@@ -2781,7 +2705,7 @@ export default function MonthlySubscriptionsDashboardPage() {
                           </td>
                           <td className="py-2.5 px-3 text-slate-600 align-top whitespace-nowrap">
                             {s.lastBillingDate
-                              ? new Date(s.lastBillingDate).toLocaleDateString("ar-EG", {
+                              ? new Date(s.lastBillingDate).toLocaleDateString(dashIntl("ar-EG"), {
                                   year: "numeric",
                                   month: "short",
                                   day: "numeric",
@@ -2790,7 +2714,7 @@ export default function MonthlySubscriptionsDashboardPage() {
                           </td>
                           <td className="py-2.5 px-3 text-slate-600 align-top whitespace-nowrap">
                             {s.nextBillingDate
-                              ? new Date(s.nextBillingDate).toLocaleDateString("ar-EG", {
+                              ? new Date(s.nextBillingDate).toLocaleDateString(dashIntl("ar-EG"), {
                                   year: "numeric",
                                   month: "short",
                                   day: "numeric",
@@ -2798,7 +2722,7 @@ export default function MonthlySubscriptionsDashboardPage() {
                               : "—"}
                           </td>
                           <td className="py-2.5 px-3 text-slate-500 align-top whitespace-nowrap">
-                            {new Date(s.createdAt).toLocaleDateString("ar-EG", {
+                            {new Date(s.createdAt).toLocaleDateString(dashIntl("ar-EG"), {
                               year: "numeric",
                               month: "short",
                               day: "numeric",
@@ -2823,14 +2747,12 @@ export default function MonthlySubscriptionsDashboardPage() {
                     ) : (
                       <ChevronDown className="w-4 h-4 rotate-180" />
                     )}
-                    عرض المزيد
-                  </button>
+                    {dt("عرض المزيد")}</button>
                 </div>
               )}
               {subsTotal > 0 && (
-                <p className="text-xs text-slate-500 px-4 py-2 border-t border-slate-100  text-right bg-muted/20">
-                  عرض {subsRows.length} من {subsTotal} اشتراك
-                </p>
+                <p className="text-xs text-slate-500 px-4 py-2 border-t border-slate-100  text-start bg-muted/20">
+                  {dtx("عرض {0} من {1} اشتراك", [subsRows.length, subsTotal])}</p>
               )}
             </CardContent>
           </Card>
@@ -2847,8 +2769,8 @@ export default function MonthlySubscriptionsDashboardPage() {
         open={exportOpen}
         onOpenChange={setExportOpen}
         endpoint="/api/admin/monthly/export"
-        title="تصدير تقرير التبرعات المتكررة"
-        description="يشمل التقرير الاشتراكات المتكررة (يومي، أسبوعياً، شهري) ودفعاتها مع ملخص كامل وتفصيل لكل حملة من الأعلى إلى الأدنى."
+        title={dt("تصدير تقرير التبرعات المتكررة")}
+        description={dt("يشمل التقرير الاشتراكات المتكررة (يومي، أسبوعياً، شهري) ودفعاتها مع ملخص كامل وتفصيل لكل حملة من الأعلى إلى الأدنى.")}
         defaults={(() => {
           const { start, end } = getDonationsDateRange(chartPeriod, dateFrom, dateTo);
           return {
@@ -2873,7 +2795,7 @@ export default function MonthlySubscriptionsDashboardPage() {
           campaigns: campaigns.map((c) => ({ value: c.id, label: c.title })),
           countries: countryOptions.map((c) => ({ value: c.code, label: c.code })),
           locales: [
-            { value: "ar", label: "العربية" },
+            { value: "ar", label: dt("العربية") },
             { value: "en", label: "English" },
             { value: "tr", label: "Türkçe" },
             { value: "fr", label: "Français" },
@@ -2903,7 +2825,7 @@ export default function MonthlySubscriptionsDashboardPage() {
 
 function LoadingSkeleton() {
   return (
-    <div className="space-y-6 max-w-[1600px] mx-auto" dir="rtl">
+    <div className="space-y-6 max-w-[1600px] mx-auto" dir={dashDir()}>
       <div className="h-16 rounded-lg bg-slate-200 animate-pulse" />
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
         {[1, 2, 3, 4, 5].map((i) => (

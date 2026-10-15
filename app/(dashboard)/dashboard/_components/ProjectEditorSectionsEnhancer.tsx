@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { usePathname } from "next/navigation";
+import { dashDir, dt } from "@/lib/dashboard/i18n";
 
 const SEO_PORTAL_ID = "dashboard-project-seo-workbench";
 const HEADER_CLASS = "dashboard-project-section-toggle";
@@ -28,25 +29,30 @@ function isSectionCandidate(element: HTMLElement) {
   return Boolean((element.textContent || "").trim());
 }
 
+/* The form's own headings are in the interface language, so look for either. */
+function mentions(text: string, ...words: string[]) {
+  return words.some((word) => text.includes(word) || text.includes(dt(word)));
+}
+
 function getSectionTitle(element: HTMLElement, index: number) {
-  if (element.id === SEO_PORTAL_ID) return "SEO الذكي";
+  if (element.id === SEO_PORTAL_ID) return dt("SEO الذكي");
   const heading = element.querySelector("h1, h2, h3") as HTMLElement | null;
   const headingText = (heading?.textContent || "").replace(/\s+/g, " ").trim();
   if (headingText) return headingText.slice(0, 80);
   const text = (element.textContent || "").replace(/\s+/g, " ").trim();
-  if (text.includes("المعلومات الأساسية")) return "المعلومات الأساسية";
-  if (text.includes("إعدادات المشروع")) return "إعدادات المشروع";
-  if (text.includes("صورة") || text.includes("الصور")) return "الصور والوسائط";
-  if (text.includes("التبرع") || text.includes("المبلغ")) return "إعدادات التبرع";
-  if (text.includes("تحديث") || text.includes("الأخبار")) return "تحديثات المشروع";
-  return `قسم ${index + 1}`;
+  if (mentions(text, "المعلومات الأساسية")) return dt("المعلومات الأساسية");
+  if (mentions(text, "إعدادات المشروع")) return dt("إعدادات المشروع");
+  if (mentions(text, "صورة", "الصور")) return dt("الصور والوسائط");
+  if (mentions(text, "التبرع", "المبلغ")) return dt("إعدادات التبرع");
+  if (mentions(text, "تحديث", "الأخبار")) return dt("تحديثات المشروع");
+  return dt("قسم {0}", [index + 1]);
 }
 
 function makeToggle(title: string, section: HTMLElement) {
   const button = document.createElement("button");
   button.type = "button";
-  button.dir = "rtl";
-  button.className = `${HEADER_CLASS} w-full rounded-2xl border border-blue-100 bg-white px-5 py-4 text-right shadow-sm transition hover:border-blue-200 hover:bg-sky-50/50`;
+  button.dir = dashDir();
+  button.className = `${HEADER_CLASS} w-full rounded-2xl border border-blue-100 bg-white px-5 py-4 text-start shadow-sm transition hover:border-blue-200 hover:bg-sky-50/50`;
   button.setAttribute("aria-expanded", "false");
 
   const row = document.createElement("span");
@@ -61,7 +67,7 @@ function makeToggle(title: string, section: HTMLElement) {
 
   const hintEl = document.createElement("span");
   hintEl.className = "mt-1 text-xs font-medium text-slate-500";
-  hintEl.textContent = "اضغط للفتح أو الطي يدويًا";
+  hintEl.textContent = dt("اضغط للفتح أو الطي يدويًا");
 
   const icon = document.createElement("span");
   icon.className = "flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-600";
@@ -90,7 +96,7 @@ function placeSeoAsSecondSection() {
 
   const children = Array.from(form.children).filter((child): child is HTMLElement => child instanceof HTMLElement);
   const firstSection =
-    children.find((child) => isSectionCandidate(child) && child.textContent?.includes("المعلومات الأساسية")) ||
+    children.find((child) => isSectionCandidate(child) && mentions(child.textContent || "", "المعلومات الأساسية")) ||
     children.find((child) => isSectionCandidate(child) && child.id !== SEO_PORTAL_ID);
 
   if (!firstSection) return false;

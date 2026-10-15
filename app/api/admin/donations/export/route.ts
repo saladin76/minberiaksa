@@ -32,8 +32,11 @@ import {
   type ExportFormat,
 } from "@/lib/dashboard/donation-export";
 import { istanbulDateKeysToUtcRange } from "@/lib/admin/istanbul-calendar";
+import { DASH_LOCALE_COOKIE, dt, parseDashLocale, setDashLocale } from "@/lib/dashboard/i18n";
 
 export async function GET(request: NextRequest) {
+  // Sheet names, headers and labels in the dashboard's interface language.
+  setDashLocale(parseDashLocale(request.cookies.get(DASH_LOCALE_COOKIE)?.value));
   try {
     const session = await getServerSession(authOptions);
     const denied = requireAdminOrDashboardPermission(session, "revenue");
@@ -180,14 +183,14 @@ export async function GET(request: NextRequest) {
 
     let titleSubtitle = "";
     if (startParam || endParam) {
-      titleSubtitle = `الفترة: ${startParam ?? "—"} → ${endParam ?? "—"}`;
+      titleSubtitle = dt("الفترة: {0} → {1}", [startParam ?? "—", endParam ?? "—"]);
     } else {
-      titleSubtitle = "الفترة: كل الوقت";
+      titleSubtitle = dt("الفترة: كل الوقت");
     }
 
     const out = await buildDonationExport({
       format,
-      title: "تقرير التبرعات",
+      title: dt("تقرير التبرعات"),
       subtitle: titleSubtitle,
       filters: exportFilters,
       donations: exportRows,
@@ -224,19 +227,19 @@ function collectFilterDescriptors(args: {
 }): ExportFilterDescriptor[] {
   const out: ExportFilterDescriptor[] = [];
   if (args.startParam || args.endParam) {
-    out.push({ label: "الفترة", value: `${args.startParam ?? "—"} → ${args.endParam ?? "—"}` });
+    out.push({ label: dt("الفترة"), value: `${args.startParam ?? "—"} → ${args.endParam ?? "—"}` });
   } else {
-    out.push({ label: "الفترة", value: "كل الوقت" });
+    out.push({ label: dt("الفترة"), value: dt("كل الوقت") });
   }
-  if (args.categoryId && args.categoryId !== "all") out.push({ label: "القسم", value: args.categoryId });
-  if (args.campaignId && args.campaignId !== "all") out.push({ label: "الحملة", value: args.campaignId });
-  if (args.userId && args.userId !== "all") out.push({ label: "المتبرع", value: args.userId });
-  if (args.referralId && args.referralId !== "all") out.push({ label: "الإحالة", value: args.referralId });
-  if (args.status && args.status !== "all") out.push({ label: "الحالة", value: args.status });
-  if (args.locale && args.locale !== "all") out.push({ label: "اللغة", value: args.locale });
-  if (args.country && args.country !== "all") out.push({ label: "الدولة", value: args.country });
-  if (args.subscriptionOnly) out.push({ label: "الاشتراكات فقط", value: "نعم" });
-  out.push({ label: "الفرز", value: `${args.sortBy === "amount" ? "بالقيمة" : "بالتاريخ"} • ${args.sortOrder === "asc" ? "تصاعدي" : "تنازلي"}` });
-  out.push({ label: "عدد العمليات", value: String(args.total) });
+  if (args.categoryId && args.categoryId !== "all") out.push({ label: dt("القسم"), value: args.categoryId });
+  if (args.campaignId && args.campaignId !== "all") out.push({ label: dt("الحملة"), value: args.campaignId });
+  if (args.userId && args.userId !== "all") out.push({ label: dt("المتبرع"), value: args.userId });
+  if (args.referralId && args.referralId !== "all") out.push({ label: dt("الإحالة"), value: args.referralId });
+  if (args.status && args.status !== "all") out.push({ label: dt("الحالة"), value: args.status });
+  if (args.locale && args.locale !== "all") out.push({ label: dt("اللغة"), value: args.locale });
+  if (args.country && args.country !== "all") out.push({ label: dt("الدولة"), value: args.country });
+  if (args.subscriptionOnly) out.push({ label: dt("الاشتراكات فقط"), value: dt("نعم") });
+  out.push({ label: dt("الفرز"), value: `${args.sortBy === "amount" ? dt("بالقيمة") : dt("بالتاريخ")} • ${args.sortOrder === "asc" ? dt("تصاعدي") : dt("تنازلي")}` });
+  out.push({ label: dt("عدد العمليات"), value: String(args.total) });
   return out;
 }

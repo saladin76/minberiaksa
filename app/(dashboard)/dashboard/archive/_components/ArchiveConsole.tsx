@@ -11,6 +11,7 @@ import { ArchiveProjectCreatePanel } from "./ArchiveProjectCreatePanel";
 import { ArchiveProjectManageActions } from "./ArchiveProjectManageActions";
 import { ArchiveUploadCard } from "./ArchiveUploadCard";
 import { ArchiveDailyWork, ArchivePrimaryCtas, type ArchiveWorkKey } from "./ArchiveDailyWork";
+import { dashDir, dt, dtx } from "@/lib/dashboard/i18n";
 
 type Props = {
   activeTab?: ArchiveTabKey;
@@ -57,7 +58,7 @@ export function ArchiveConsole({ snapshot, selection, work = "latest", activeTab
   const activeYear = activeProject?.year ?? getSelectedYear(activeCollection, selectedYear);
 
   return (
-    <main className="min-h-screen bg-[#FFFDF8] p-4 text-slate-950 sm:p-6" dir="rtl">
+    <main className="min-h-screen bg-[#FFFDF8] p-4 text-slate-950 sm:p-6" dir={dashDir()}>
       <Hero snapshot={snapshot} explorer={explorer} />
       <ArchiveTabBar activeTab={activeTab} tabs={snapshot.tabs} />
       <Breadcrumb collection={activeCollection?.collection} year={selectedYear} project={activeProject?.bundle.project} />
@@ -78,7 +79,7 @@ export function ArchiveConsole({ snapshot, selection, work = "latest", activeTab
 function ArchiveTabBar({ activeTab, tabs }: { activeTab: ArchiveTabKey; tabs: ArchiveSnapshot["tabs"] }) {
   if (!tabs?.length) return null;
   return (
-    <nav aria-label="أقسام الأرشيف" className="mt-3 flex flex-wrap gap-1.5">
+    <nav aria-label={dt("أقسام الأرشيف")} className="mt-3 flex flex-wrap gap-1.5">
       {tabs.map((tab) => {
         const isActive = tab.key === activeTab;
         return (
@@ -105,22 +106,20 @@ function Hero({ snapshot, explorer }: { snapshot: ArchiveSnapshot; explorer: Col
     <section className="rounded-2xl border bg-white p-4 shadow-sm sm:p-5">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold tracking-tight">الأرشيف</h1>
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight">{dt("الأرشيف")}</h1>
           <p className="mt-2 max-w-3xl text-xs leading-6 text-slate-600">
-            تصفح المواد خطوة بخطوة: المجموعة، ثم السنة، ثم المشروع، ثم جدول المواد. رابط Google Drive يضاف داخل المشروع فقط.
-          </p>
+            {dt("تصفح المواد خطوة بخطوة: المجموعة، ثم السنة، ثم المشروع، ثم جدول المواد. رابط Google Drive يضاف داخل المشروع فقط.")}</p>
           <div className="mt-3 flex flex-wrap items-center gap-2">
             <ArchivePrimaryCtas />
             <Link href="/dashboard/archive/settings" className="inline-flex h-9 items-center gap-2 rounded-md border bg-white px-3 text-xs font-bold text-slate-800 transition hover:border-brand hover:text-brand">
-              <Settings2 className="h-3.5 w-3.5" /> إعدادات الأرشيف
-            </Link>
+              <Settings2 className="h-3.5 w-3.5" /> {dt(" إعدادات الأرشيف")}</Link>
           </div>
         </div>
         <div className="grid gap-2 sm:grid-cols-4 lg:min-w-[520px]">
-          <Metric icon={<FolderOpen />} label="المجموعات" value={snapshot.summary.collections} />
-          <Metric icon={<CalendarDays />} label="السنوات" value={countYears(explorer)} />
-          <Metric icon={<Archive />} label="المشاريع" value={snapshot.summary.projects} />
-          <Metric icon={<Link2 />} label="الروابط" value={snapshot.summary.driveLinks} />
+          <Metric icon={<FolderOpen />} label={dt("المجموعات")} value={snapshot.summary.collections} />
+          <Metric icon={<CalendarDays />} label={dt("السنوات")} value={countYears(explorer)} />
+          <Metric icon={<Archive />} label={dt("المشاريع")} value={snapshot.summary.projects} />
+          <Metric icon={<Link2 />} label={dt("الروابط")} value={snapshot.summary.driveLinks} />
         </div>
       </div>
     </section>
@@ -133,26 +132,26 @@ function RootExplorer({ snapshot, explorer, work }: { snapshot: ArchiveSnapshot;
       {snapshot.assets.length > 0 ? <ArchiveDailyWork snapshot={snapshot} work={work} /> : null}
 
       <section id="new-collection" className="grid gap-3 xl:grid-cols-3">
-        <CompactPanel title="إضافة مجموعة" description="مجموعة رئيسية مثل غزة، القدس أو الوقف.">
+        <CompactPanel title={dt("إضافة مجموعة")} description={dt("مجموعة رئيسية مثل غزة، القدس أو الوقف.")}>
           <ArchiveCollectionCreatePanel />
         </CompactPanel>
         <ArchiveUploadCard
           category="MARKETING"
-          title="إضافة ملفات مشاريع تسويقية"
-          description="رفع مباشر لملفات PDF أو Excel الخاصة بالتسويق."
+          title={dt("إضافة ملفات مشاريع تسويقية")}
+          description={dt("رفع مباشر لملفات PDF أو Excel الخاصة بالتسويق.")}
           openHref="/dashboard/archive/marketing-files"
         />
         <ArchiveUploadCard
           category="DOCUMENTS"
-          title="أرشفة المستندات"
-          description="رفع مباشر للعقود، التراخيص، والملفات الرسمية."
+          title={dt("أرشفة المستندات")}
+          description={dt("رفع مباشر للعقود، التراخيص، والملفات الرسمية.")}
           openHref="/dashboard/archive/documents"
         />
       </section>
 
-      <Panel title="المجموعات" description="المجموعات المضافة داخل الأرشيف.">
+      <Panel title={dt("المجموعات")} description={dt("المجموعات المضافة داخل الأرشيف.")}>
         {explorer.length === 0 ? (
-          <EmptyState title="لا توجد مجموعات بعد" text="أضف أول مجموعة للبدء في بناء الأرشيف." />
+          <EmptyState title={dt("لا توجد مجموعات بعد")} text={dt("أضف أول مجموعة للبدء في بناء الأرشيف.")} />
         ) : (
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
             {explorer.map((item) => <CollectionCard key={item.collection.id} item={item} />)}
@@ -160,12 +159,12 @@ function RootExplorer({ snapshot, explorer, work }: { snapshot: ArchiveSnapshot;
         )}
       </Panel>
 
-      <Panel title="ملخص المواد" description="إجمالي المواد المفهرسة داخل المشاريع.">
+      <Panel title={dt("ملخص المواد")} description={dt("إجمالي المواد المفهرسة داخل المشاريع.")}>
         <div className="grid gap-2 sm:grid-cols-4">
-          <SummaryCard icon={<Image />} title="صور" value={countAssets(snapshot.assets, "IMAGE")} />
-          <SummaryCard icon={<Video />} title="فيديوهات" value={countAssets(snapshot.assets, "VIDEO")} />
-          <SummaryCard icon={<FileText />} title="تقارير ومستندات" value={countAssets(snapshot.assets, "DOCUMENT")} />
-          <SummaryCard icon={<Database />} title="مواد أخرى" value={countOtherAssets(snapshot.assets)} />
+          <SummaryCard icon={<Image />} title={dt("صور")} value={countAssets(snapshot.assets, "IMAGE")} />
+          <SummaryCard icon={<Video />} title={dt("فيديوهات")} value={countAssets(snapshot.assets, "VIDEO")} />
+          <SummaryCard icon={<FileText />} title={dt("تقارير ومستندات")} value={countAssets(snapshot.assets, "DOCUMENT")} />
+          <SummaryCard icon={<Database />} title={dt("مواد أخرى")} value={countOtherAssets(snapshot.assets)} />
         </div>
       </Panel>
     </div>
@@ -178,7 +177,7 @@ function CollectionDetail({ item, collections }: { item: CollectionBundle; colle
       <section className="rounded-xl border bg-white p-4 shadow-sm">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
           <div>
-            <p className="text-xs font-bold text-slate-500">مجموعة</p>
+            <p className="text-xs font-bold text-slate-500">{dt("مجموعة")}</p>
             <h2 className="mt-1 text-2xl font-black text-slate-950">{item.collection.name}</h2>
             {archiveText(item.collection.description) ? <p className="mt-2 text-xs leading-6 text-slate-600">{archiveText(item.collection.description)}</p> : null}
           </div>
@@ -186,17 +185,17 @@ function CollectionDetail({ item, collections }: { item: CollectionBundle; colle
         </div>
       </section>
 
-      <CompactPanel title="إضافة مشروع" description="أضف مشروعًا داخل هذه المجموعة وحدد السنة المناسبة له.">
+      <CompactPanel title={dt("إضافة مشروع")} description={dt("أضف مشروعًا داخل هذه المجموعة وحدد السنة المناسبة له.")}>
         <ArchiveProjectCreatePanel collections={collections} />
       </CompactPanel>
 
-      <Panel title="السنوات" description="اختر السنة التي تريد عرض مشاريعها.">
+      <Panel title={dt("السنوات")} description={dt("اختر السنة التي تريد عرض مشاريعها.")}>
         <div className="grid gap-2 sm:grid-cols-4 xl:grid-cols-6">
           {yearOptions(item).map((year) => (
             <Link key={year} href={archiveHref({ collectionId: item.collection.id, year })} className="rounded-lg border bg-slate-50 p-3 text-center transition hover:border-brand hover:bg-white">
-              <p className="text-[11px] font-bold text-slate-500">السنة</p>
+              <p className="text-[11px] font-bold text-slate-500">{dt("السنة")}</p>
               <p className="mt-1 text-xl font-black text-slate-950">{year}</p>
-              <p className="mt-1 text-[11px] text-slate-500">{item.years.find((itemYear) => itemYear.year === year)?.projects.length ?? 0} مشروع</p>
+              <p className="mt-1 text-[11px] text-slate-500">{item.years.find((itemYear) => itemYear.year === year)?.projects.length ?? 0} {dt(" مشروع")}</p>
             </Link>
           ))}
         </div>
@@ -211,14 +210,14 @@ function YearDetail({ collection, year, collections }: { collection: ArchiveColl
       <section className="rounded-xl border bg-white p-4 shadow-sm">
         <p className="text-xs font-bold text-slate-500">{collection.name}</p>
         <h2 className="mt-1 text-2xl font-black text-slate-950">{year.year}</h2>
-        <p className="mt-2 text-xs text-slate-600">اختر المشروع الذي تريد فتح روابطه ومواده.</p>
+        <p className="mt-2 text-xs text-slate-600">{dt("اختر المشروع الذي تريد فتح روابطه ومواده.")}</p>
       </section>
 
-      <CompactPanel title="إضافة مشروع" description="أضف مشروعًا داخل نفس المجموعة والسنة.">
+      <CompactPanel title={dt("إضافة مشروع")} description={dt("أضف مشروعًا داخل نفس المجموعة والسنة.")}>
         <ArchiveProjectCreatePanel collections={collections} defaultYear={year.year} />
       </CompactPanel>
 
-      <Panel title="المشاريع" description="مشاريع السنة المختارة.">
+      <Panel title={dt("المشاريع")} description={dt("مشاريع السنة المختارة.")}>
         <ProjectTable collection={collection} year={year} collections={collections} />
       </Panel>
     </div>
@@ -233,7 +232,7 @@ function ProjectDetail({ bundle, collections, projects }: { bundle: ProjectBundl
       <section className="rounded-xl border bg-white p-4 shadow-sm">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
           <div>
-            <p className="text-xs font-bold text-slate-500">مشروع</p>
+            <p className="text-xs font-bold text-slate-500">{dt("مشروع")}</p>
             <h2 className="mt-1 text-2xl font-black text-slate-950">{project.title}</h2>
             <p className="mt-1 text-xs leading-6 text-slate-600">{projectMeta(project)}</p>
             {archiveText(project.description) ? <p className="mt-2 text-xs leading-6 text-slate-600">{archiveText(project.description)}</p> : null}
@@ -242,14 +241,14 @@ function ProjectDetail({ bundle, collections, projects }: { bundle: ProjectBundl
         </div>
       </section>
 
-      <CompactPanel title="إضافة رابط توثيق" description="ضع رابط Google Drive الخاص بهذا المشروع فقط.">
+      <CompactPanel title={dt("إضافة رابط توثيق")} description={dt("ضع رابط Google Drive الخاص بهذا المشروع فقط.")}>
         <ArchiveDriveLinkCreatePanel projects={[project]} />
       </CompactPanel>
 
       <section className="grid gap-4 xl:grid-cols-[0.9fr_1.1fr]">
-        <Panel title="روابط التوثيق" description="الروابط التي سيتم استخدامها في المزامنة والفهرسة.">
+        <Panel title={dt("روابط التوثيق")} description={dt("الروابط التي سيتم استخدامها في المزامنة والفهرسة.")}>
           {links.length === 0 ? (
-            <EmptyState title="لا توجد روابط" text="أضف رابط Google Drive لهذا المشروع." compact />
+            <EmptyState title={dt("لا توجد روابط")} text={dt("أضف رابط Google Drive لهذا المشروع.")} compact />
           ) : (
             <div className="space-y-2">
               {links.map((link) => <DriveLinkCard key={link.id} link={link} projects={projects} />)}
@@ -257,7 +256,7 @@ function ProjectDetail({ bundle, collections, projects }: { bundle: ProjectBundl
           )}
         </Panel>
 
-        <Panel title="مستكشف المواد" description="تظهر المواد هنا بعد المزامنة والتحليل.">
+        <Panel title={dt("مستكشف المواد")} description={dt("تظهر المواد هنا بعد المزامنة والتحليل.")}>
           <MaterialSummary assets={assets} />
           <MaterialTable assets={assets} />
         </Panel>
@@ -268,7 +267,7 @@ function ProjectDetail({ bundle, collections, projects }: { bundle: ProjectBundl
 
 function ProjectTable({ collection, year, collections }: { collection: ArchiveCollection; year: YearBundle; collections: ArchiveCollection[] }) {
   if (year.projects.length === 0) {
-    return <EmptyState title="لا توجد مشاريع" text="لم يتم إنشاء مشاريع في هذه السنة بعد. أضف أول مشروع من النموذج بالأعلى." compact />;
+    return <EmptyState title={dt("لا توجد مشاريع")} text={dt("لم يتم إنشاء مشاريع في هذه السنة بعد. أضف أول مشروع من النموذج بالأعلى.")} compact />;
   }
 
   return (
@@ -276,12 +275,12 @@ function ProjectTable({ collection, year, collections }: { collection: ArchiveCo
       <table className="w-full min-w-[900px] text-sm">
         <thead className="bg-slate-50 text-xs text-slate-500">
           <tr>
-            <th className="p-3 text-right">المشروع</th>
-            <th className="p-3 text-right">المدينة</th>
-            <th className="p-3 text-right">التصنيف</th>
-            <th className="p-3 text-right">الروابط</th>
-            <th className="p-3 text-right">المواد</th>
-            <th className="p-3 text-right">الإجراءات</th>
+            <th className="p-3 text-start">{dt("المشروع")}</th>
+            <th className="p-3 text-start">{dt("المدينة")}</th>
+            <th className="p-3 text-start">{dt("التصنيف")}</th>
+            <th className="p-3 text-start">{dt("الروابط")}</th>
+            <th className="p-3 text-start">{dt("المواد")}</th>
+            <th className="p-3 text-start">{dt("الإجراءات")}</th>
           </tr>
         </thead>
         <tbody className="divide-y">
@@ -289,7 +288,7 @@ function ProjectTable({ collection, year, collections }: { collection: ArchiveCo
             <tr key={bundle.project.id} className="align-top">
               <td className="p-3">
                 <p className="font-black text-slate-950">{bundle.project.title}</p>
-                <p className="mt-1 text-xs text-slate-500">{archiveText(bundle.project.description) || "بدون وصف"}</p>
+                <p className="mt-1 text-xs text-slate-500">{archiveText(bundle.project.description) || dt("بدون وصف")}</p>
               </td>
               <td className="p-3 text-slate-700">{archiveText(bundle.project.city) || "-"}</td>
               <td className="p-3 text-slate-700">{archiveText(bundle.project.theme) || "-"}</td>
@@ -297,7 +296,7 @@ function ProjectTable({ collection, year, collections }: { collection: ArchiveCo
               <td className="p-3 font-bold text-slate-800">{bundle.assets.length}</td>
               <td className="p-3">
                 <div className="flex flex-wrap gap-2">
-                  <Link href={archiveHref({ collectionId: collection.id, year: bundle.project.year, projectId: bundle.project.id })} className="inline-flex h-8 items-center rounded-md border bg-white px-3 text-xs font-bold text-slate-800 transition hover:border-brand hover:text-brand">فتح</Link>
+                  <Link href={archiveHref({ collectionId: collection.id, year: bundle.project.year, projectId: bundle.project.id })} className="inline-flex h-8 items-center rounded-md border bg-white px-3 text-xs font-bold text-slate-800 transition hover:border-brand hover:text-brand">{dt("فتح")}</Link>
                   <ArchiveProjectManageActions project={bundle.project} collections={collections} />
                 </div>
               </td>
@@ -317,19 +316,19 @@ function CollectionCard({ item }: { item: CollectionBundle }) {
     <article className="rounded-lg border bg-white p-3 shadow-sm">
       <div className="flex items-start justify-between gap-2">
         <div>
-          <p className="text-[11px] font-bold text-slate-500">مجموعة</p>
+          <p className="text-[11px] font-bold text-slate-500">{dt("مجموعة")}</p>
           <h3 className="mt-1 text-lg font-black text-slate-950">{item.collection.name}</h3>
         </div>
         <FolderOpen className="h-4 w-4 text-brand" />
       </div>
       {description ? <p className="mt-2 line-clamp-2 text-xs leading-5 text-slate-600">{description}</p> : null}
       <div className="mt-3 grid grid-cols-3 gap-2 text-center">
-        <SmallCounter label="سنوات" value={item.years.length} />
-        <SmallCounter label="مشاريع" value={stats.projects} />
-        <SmallCounter label="روابط" value={stats.links} />
+        <SmallCounter label={dt("سنوات")} value={item.years.length} />
+        <SmallCounter label={dt("مشاريع")} value={stats.projects} />
+        <SmallCounter label={dt("روابط")} value={stats.links} />
       </div>
       <div className="mt-3 grid grid-cols-[1fr_auto] items-start gap-2">
-        <Link href={archiveHref({ collectionId: item.collection.id })} className="inline-flex h-8 items-center justify-center rounded-md border bg-white px-3 text-xs font-bold text-slate-800 transition hover:border-brand hover:text-brand">فتح</Link>
+        <Link href={archiveHref({ collectionId: item.collection.id })} className="inline-flex h-8 items-center justify-center rounded-md border bg-white px-3 text-xs font-bold text-slate-800 transition hover:border-brand hover:text-brand">{dt("فتح")}</Link>
         <ArchiveCollectionManageActions collection={item.collection} />
       </div>
     </article>
@@ -341,13 +340,13 @@ function DriveLinkCard({ link, projects }: { link: ArchiveDriveLink; projects: A
     <div className="rounded-lg border bg-slate-50 p-3">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
         <div className="min-w-0">
-          <p className="font-black text-slate-950">{archiveText(link.title) || "رابط توثيق"}</p>
+          <p className="font-black text-slate-950">{archiveText(link.title) || dt("رابط توثيق")}</p>
           <p dir="ltr" className="mt-1 truncate text-xs text-slate-500">{cleanDriveUrl(link.driveUrl)}</p>
           <div className="mt-3 flex flex-wrap gap-2">
             <Badge>{driveLinkTypeLabel(link.linkType)}</Badge>
-            <Badge>{link.totalFiles} ملف</Badge>
-            <Badge>{link.totalImages} صورة</Badge>
-            <Badge>{link.totalVideos} فيديو</Badge>
+            <Badge>{dtx("{0} ملف", [link.totalFiles])}</Badge>
+            <Badge>{dtx("{0} صورة", [link.totalImages])}</Badge>
+            <Badge>{dtx("{0} فيديو", [link.totalVideos])}</Badge>
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -362,17 +361,17 @@ function DriveLinkCard({ link, projects }: { link: ArchiveDriveLink; projects: A
 function MaterialSummary({ assets }: { assets: ArchiveAsset[] }) {
   return (
     <div className="mb-3 grid gap-2 sm:grid-cols-4">
-      <SmallCounter label="صور" value={countAssets(assets, "IMAGE")} />
-      <SmallCounter label="فيديو" value={countAssets(assets, "VIDEO")} />
-      <SmallCounter label="تقارير" value={countAssets(assets, "DOCUMENT")} />
-      <SmallCounter label="أخرى" value={countOtherAssets(assets)} />
+      <SmallCounter label={dt("صور")} value={countAssets(assets, "IMAGE")} />
+      <SmallCounter label={dt("فيديو")} value={countAssets(assets, "VIDEO")} />
+      <SmallCounter label={dt("تقارير")} value={countAssets(assets, "DOCUMENT")} />
+      <SmallCounter label={dt("أخرى")} value={countOtherAssets(assets)} />
     </div>
   );
 }
 
 function MaterialTable({ assets }: { assets: ArchiveAsset[] }) {
   if (assets.length === 0) {
-    return <p className="rounded-lg border border-dashed bg-white p-4 text-sm text-slate-600">ستظهر المواد هنا بعد مزامنة رابط التوثيق.</p>;
+    return <p className="rounded-lg border border-dashed bg-white p-4 text-sm text-slate-600">{dt("ستظهر المواد هنا بعد مزامنة رابط التوثيق.")}</p>;
   }
 
   return (
@@ -380,9 +379,9 @@ function MaterialTable({ assets }: { assets: ArchiveAsset[] }) {
       <table className="w-full text-sm">
         <thead className="bg-slate-50 text-xs text-slate-500">
           <tr>
-            <th className="p-3 text-right">النوع</th>
-            <th className="p-3 text-right">الاسم</th>
-            <th className="p-3 text-right">الرابط</th>
+            <th className="p-3 text-start">{dt("النوع")}</th>
+            <th className="p-3 text-start">{dt("الاسم")}</th>
+            <th className="p-3 text-start">{dt("الرابط")}</th>
           </tr>
         </thead>
         <tbody className="divide-y">
@@ -392,16 +391,16 @@ function MaterialTable({ assets }: { assets: ArchiveAsset[] }) {
               <td className="p-3 text-slate-700">{archiveText(asset.fileName) || asset.fileName}</td>
               <td className="p-3">
                 {asset.webViewLink ? (
-                  <a className="font-bold text-brand hover:underline" href={asset.webViewLink} target="_blank" rel="noreferrer">عرض</a>
+                  <a className="font-bold text-brand hover:underline" href={asset.webViewLink} target="_blank" rel="noreferrer">{dt("عرض")}</a>
                 ) : (
-                  <span className="text-slate-400">غير متاح</span>
+                  <span className="text-slate-400">{dt("غير متاح")}</span>
                 )}
               </td>
             </tr>
           ))}
         </tbody>
       </table>
-      {assets.length > 12 ? <p className="border-t bg-slate-50 p-3 text-xs text-slate-500">يعرض أول 12 مادة فقط.</p> : null}
+      {assets.length > 12 ? <p className="border-t bg-slate-50 p-3 text-xs text-slate-500">{dt("يعرض أول 12 مادة فقط.")}</p> : null}
     </div>
   );
 }
@@ -410,7 +409,7 @@ function Breadcrumb({ collection, year, project }: { collection?: ArchiveCollect
   if (!collection && !year && !project) return null;
   return (
     <nav className="mt-3 flex flex-wrap items-center gap-2 text-xs font-bold text-slate-600">
-      <Link href="/dashboard/archive" className="rounded-md border bg-white px-3 py-1.5 hover:border-brand">الأرشيف</Link>
+      <Link href="/dashboard/archive" className="rounded-md border bg-white px-3 py-1.5 hover:border-brand">{dt("الأرشيف")}</Link>
       {collection ? <Link href={archiveHref({ collectionId: collection.id })} className="rounded-md border bg-white px-3 py-1.5 hover:border-brand">{collection.name}</Link> : null}
       {collection && year ? <Link href={archiveHref({ collectionId: collection.id, year })} className="rounded-md border bg-white px-3 py-1.5 hover:border-brand">{year}</Link> : null}
       {collection && year && project ? <span className="rounded-md bg-slate-900 px-3 py-1.5 text-white">{project.title}</span> : null}
@@ -504,28 +503,28 @@ function archiveHref({ collectionId, year, projectId }: { collectionId?: string;
 }
 
 function projectMeta(project: ArchiveProject) {
-  return [archiveText(project.country), archiveText(project.city), archiveText(project.projectType)].filter(Boolean).join(" / ") || "بدون تفاصيل إضافية";
+  return [archiveText(project.country), archiveText(project.city), archiveText(project.projectType)].filter(Boolean).join(" / ") || dt("بدون تفاصيل إضافية");
 }
 
 function archiveText(value?: string | null) {
   if (!value) return "";
   const lower = value.toLowerCase();
-  if (lower.includes("field documentation")) return "توثيقات ميدانية وملفات إثبات ومواد قابلة للاستخدام.";
-  if (lower.includes("al-quds implementation")) return "توثيقات تنفيذية وتقارير ومواد معتمدة للقدس.";
-  if (lower.includes("waqf reports")) return "تقارير الوقف والشهادات وملفات الإثبات طويلة المدى.";
-  if (lower.includes("zakat documentation")) return "توثيقات الزكاة وملفات إثبات الاستحقاق.";
-  if (lower.includes("foundation project") || lower.includes("metadata") || lower.includes("review")) return "مشروع موثق بانتظار استكمال روابط التوثيق والمراجعة.";
-  if (lower.includes("planned al-quds")) return "مسار توثيق مخطط لمشروع القدس.";
-  if (lower.includes("gaza water folder")) return "رابط توثيق مشروع المياه";
-  if (lower.includes("emergency aid")) return "إغاثة طارئة";
-  if (lower === "palestine") return "فلسطين";
-  if (lower === "gaza") return "غزة";
-  if (lower === "al-quds") return "القدس";
+  if (lower.includes("field documentation")) return dt("توثيقات ميدانية وملفات إثبات ومواد قابلة للاستخدام.");
+  if (lower.includes("al-quds implementation")) return dt("توثيقات تنفيذية وتقارير ومواد معتمدة للقدس.");
+  if (lower.includes("waqf reports")) return dt("تقارير الوقف والشهادات وملفات الإثبات طويلة المدى.");
+  if (lower.includes("zakat documentation")) return dt("توثيقات الزكاة وملفات إثبات الاستحقاق.");
+  if (lower.includes("foundation project") || lower.includes("metadata") || lower.includes("review")) return dt("مشروع موثق بانتظار استكمال روابط التوثيق والمراجعة.");
+  if (lower.includes("planned al-quds")) return dt("مسار توثيق مخطط لمشروع القدس.");
+  if (lower.includes("gaza water folder")) return dt("رابط توثيق مشروع المياه");
+  if (lower.includes("emergency aid")) return dt("إغاثة طارئة");
+  if (lower === "palestine") return dt("فلسطين");
+  if (lower === "gaza") return dt("غزة");
+  if (lower === "al-quds") return dt("القدس");
   return value;
 }
 
 function cleanDriveUrl(value?: string | null) {
-  if (!value || !/^https?:\/\//i.test(value)) return "لم يتم إدخال رابط صالح بعد";
+  if (!value || !/^https?:\/\//i.test(value)) return dt("لم يتم إدخال رابط صالح بعد");
   return value;
 }
 
@@ -543,19 +542,19 @@ function countOtherAssets(assets: ArchiveAsset[]) {
 
 function fileTypeLabel(value: ArchiveAsset["fileType"]) {
   const labels: Record<ArchiveAsset["fileType"], string> = {
-    IMAGE: "صورة",
-    VIDEO: "فيديو",
-    DOCUMENT: "تقرير",
-    FOLDER: "مجلد",
-    OTHER: "ملف",
+    IMAGE: dt("صورة"),
+    VIDEO: dt("فيديو"),
+    DOCUMENT: dt("تقرير"),
+    FOLDER: dt("مجلد"),
+    OTHER: dt("ملف"),
   };
   return labels[value] ?? value;
 }
 
 function driveLinkTypeLabel(value: ArchiveDriveLink["linkType"]) {
-  if (value === "FOLDER") return "مجلد";
-  if (value === "FILE") return "ملف";
-  return "رابط";
+  if (value === "FOLDER") return dt("مجلد");
+  if (value === "FILE") return dt("ملف");
+  return dt("رابط");
 }
 
 function Metric({ icon, label, value }: { icon: ReactNode; label: string; value: number }) {

@@ -13,6 +13,7 @@ import { EmptyState } from "@/components/dashboard/EmptyState";
 import { cn } from "@/lib/utils";
 import { DEFAULT_PERIOD, PeriodPicker, periodParams, type Period } from "./PeriodPicker";
 import { INTENT_LABELS, LOCALE_LABELS, dateTime, num } from "./labels";
+import { dashDir, dashIntl, dt, dtx } from "@/lib/dashboard/i18n";
 
 type Result = {
   summary: string;
@@ -31,15 +32,15 @@ type Insight = { id: string; createdAt: string; createdByName: string | null; fr
 
 const ANY = "__any";
 const PRIORITY: Record<string, { label: string; cls: string }> = {
-  high: { label: "عالية", cls: "bg-rose-50 text-rose-700 ring-rose-200" },
-  medium: { label: "متوسطة", cls: "bg-amber-50 text-amber-700 ring-amber-200" },
-  low: { label: "منخفضة", cls: "bg-slate-100 text-slate-600 ring-slate-200" },
+  high: { get label() { return dt("عالية"); }, cls: "bg-rose-50 text-rose-700 ring-rose-200" },
+  medium: { get label() { return dt("متوسطة"); }, cls: "bg-amber-50 text-amber-700 ring-amber-200" },
+  low: { get label() { return dt("منخفضة"); }, cls: "bg-slate-100 text-slate-600 ring-slate-200" },
 };
-const AREA: Record<string, string> = { campaigns: "المشاريع", content: "المحتوى", ux: "تجربة الموقع", payments: "الدفع", assistant: "المساعد", support: "الدعم", other: "أخرى" };
+const AREA: Record<string, string> = { get campaigns() { return dt("المشاريع"); }, get content() { return dt("المحتوى"); }, get ux() { return dt("تجربة الموقع"); }, get payments() { return dt("الدفع"); }, get assistant() { return dt("المساعد"); }, get support() { return dt("الدعم"); }, get other() { return dt("أخرى"); } };
 const ANSWERED: Record<string, { label: string; cls: string }> = {
-  yes: { label: "يُجاب جيدًا", cls: "text-emerald-700 bg-emerald-50" },
-  partly: { label: "إجابة جزئية", cls: "text-amber-700 bg-amber-50" },
-  no: { label: "لا يُجاب", cls: "text-rose-700 bg-rose-50" },
+  yes: { get label() { return dt("يُجاب جيدًا"); }, cls: "text-emerald-700 bg-emerald-50" },
+  partly: { get label() { return dt("إجابة جزئية"); }, cls: "text-amber-700 bg-amber-50" },
+  no: { get label() { return dt("لا يُجاب"); }, cls: "text-rose-700 bg-rose-50" },
 };
 
 export function InsightsView() {
@@ -85,17 +86,17 @@ export function InsightsView() {
     setRunning(false);
     const d = r ? await r.json().catch(() => null) : null;
     if (!r?.ok || !d?.insight) {
-      toast.error(d?.error || "تعذّر تشغيل التحليل");
+      toast.error(d?.error || dt("تعذّر تشغيل التحليل"));
       return;
     }
-    if (d.insight.mode !== "llm") toast(`تحليل إحصائي فقط: ${d.warning ?? "النموذج غير متاح"}`, { icon: "ℹ️" });
-    else toast.success(`قرأ الذكاء الاصطناعي ${num(d.read)} محادثة`);
+    if (d.insight.mode !== "llm") toast(dt("تحليل إحصائي فقط: {0}", [d.warning ?? dt("النموذج غير متاح")]), { icon: "ℹ️" });
+    else toast.success(dt("قرأ الذكاء الاصطناعي {0} محادثة", [num(d.read)]));
     setSelected(d.insight);
     void loadHistory();
   };
 
   const remove = async (id: string) => {
-    if (!window.confirm("حذف هذا التحليل؟")) return;
+    if (!window.confirm(dt("حذف هذا التحليل؟"))) return;
     const r = await fetch(`/api/admin/ai/concierge/insights/${id}`, { method: "DELETE" }).catch(() => null);
     if (r?.ok) {
       if (selected?.id === id) setSelected(null);
@@ -105,12 +106,12 @@ export function InsightsView() {
 
   const addToTeamNotes = async (text: string) => {
     const r = await fetch("/api/admin/ai/concierge/settings", { cache: "no-store" }).catch(() => null);
-    if (!r?.ok) return toast.error("تعذّر قراءة الإعدادات");
+    if (!r?.ok) return toast.error(dt("تعذّر قراءة الإعدادات"));
     const { settings } = await r.json();
     const teamNotes = [settings.teamNotes?.trim(), text.trim()].filter(Boolean).join("\n").slice(0, 2000);
     const s = await fetch("/api/admin/ai/concierge/settings", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ settings: { ...settings, teamNotes } }) }).catch(() => null);
-    if (s?.ok) toast.success("أُضيفت إلى ملاحظات الفريق  راجعها واملأ أي [فراغ] من صفحة الإعدادات");
-    else toast.error("تعذّر الحفظ");
+    if (s?.ok) toast.success(dt("أُضيفت إلى ملاحظات الفريق  راجعها واملأ أي [فراغ] من صفحة الإعدادات"));
+    else toast.error(dt("تعذّر الحفظ"));
   };
 
   const res = selected?.result;
@@ -119,51 +120,49 @@ export function InsightsView() {
     <div className="grid gap-6 xl:grid-cols-[320px_1fr]">
       {/* Controls + history */}
       <div className="space-y-4">
-        <SectionCard title="تحليل جديد" description="يقرأ الذكاء الاصطناعي المحادثات المختارة ويستخرج ما يجب تحسينه" icon={Sparkles}>
+        <SectionCard title={dt("تحليل جديد")} description={dt("يقرأ الذكاء الاصطناعي المحادثات المختارة ويستخرج ما يجب تحسينه")} icon={Sparkles}>
           <div className="space-y-3">
             <div>
-              <p className="mb-1 text-[12px] font-medium text-slate-600">الفترة</p>
+              <p className="mb-1 text-[12px] font-medium text-slate-600">{dt("الفترة")}</p>
               <PeriodPicker value={period} onChange={setPeriod} />
             </div>
-            <FilterRow label="النتيجة" value={filters.outcome} onChange={(v) => setFilters((f) => ({ ...f, outcome: v }))} placeholder="كل المحادثات" options={[{ value: "none", label: "لم تنتهِ بتبرع" }, { value: "donated", label: "انتهت بتبرع" }, { value: "direct", label: "تبرع مباشر" }]} />
-            <FilterRow label="النية" value={filters.intent} onChange={(v) => setFilters((f) => ({ ...f, intent: v }))} placeholder="كل النوايا" options={Object.entries(INTENT_LABELS).map(([value, l]) => ({ value, label: l }))} />
-            <FilterRow label="اللغة" value={filters.locale} onChange={(v) => setFilters((f) => ({ ...f, locale: v }))} placeholder="كل اللغات" options={Object.entries(LOCALE_LABELS).map(([value, l]) => ({ value, label: l }))} />
+            <FilterRow label={dt("النتيجة")} value={filters.outcome} onChange={(v) => setFilters((f) => ({ ...f, outcome: v }))} placeholder={dt("كل المحادثات")} options={[{ value: "none", label: dt("لم تنتهِ بتبرع") }, { value: "donated", label: dt("انتهت بتبرع") }, { value: "direct", label: dt("تبرع مباشر") }]} />
+            <FilterRow label={dt("النية")} value={filters.intent} onChange={(v) => setFilters((f) => ({ ...f, intent: v }))} placeholder={dt("كل النوايا")} options={Object.entries(INTENT_LABELS).map(([value, l]) => ({ value, label: l }))} />
+            <FilterRow label={dt("اللغة")} value={filters.locale} onChange={(v) => setFilters((f) => ({ ...f, locale: v }))} placeholder={dt("كل اللغات")} options={Object.entries(LOCALE_LABELS).map(([value, l]) => ({ value, label: l }))} />
             <label className="flex items-center gap-2 text-[12.5px] text-slate-700">
               <input type="checkbox" checked={filters.typedOnly} onChange={(e) => setFilters((f) => ({ ...f, typedOnly: e.target.checked }))} className="accent-brand" />
-              فقط المحادثات التي كتب فيها الزائر
-            </label>
+              {dt("فقط المحادثات التي كتب فيها الزائر")}</label>
             <label className="flex items-center gap-2 text-[12.5px] text-slate-700">
               <input type="checkbox" checked={filters.needsHuman} onChange={(e) => setFilters((f) => ({ ...f, needsHuman: e.target.checked }))} className="accent-brand" />
-              فقط ما احتاج متابعة الفريق
-            </label>
+              {dt("فقط ما احتاج متابعة الفريق")}</label>
             <Button onClick={run} disabled={running} className="w-full gap-2">
               {running ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-              {running ? "يقرأ المحادثات… (قد يستغرق دقيقة)" : "لخّص واستنتج"}
+              {running ? dt("يقرأ المحادثات… (قد يستغرق دقيقة)") : dt("لخّص واستنتج")}
             </Button>
             {provider && (
               <p className={cn("rounded-lg px-2.5 py-2 text-[11.5px] leading-5", provider.ready ? "bg-emerald-50 text-emerald-800" : "bg-amber-50 text-amber-800")}>
-                {provider.ready ? `النموذج جاهز (${provider.model})` : `النموذج غير مفعّل  سيُعرض تحليل إحصائي فقط. ${provider.reason}`}
+                {provider.ready ? dt("النموذج جاهز ({0})", [provider.model]) : dt("النموذج غير مفعّل  سيُعرض تحليل إحصائي فقط. {0}", [provider.reason])}
               </p>
             )}
           </div>
         </SectionCard>
 
-        <SectionCard title="التحليلات السابقة" icon={History} flush>
+        <SectionCard title={dt("التحليلات السابقة")} icon={History} flush>
           {history.length === 0 ? (
-            <EmptyState variant="inline" title="لا تحليلات بعد" description="شغّل أول تحليل من الأعلى." />
+            <EmptyState variant="inline" title={dt("لا تحليلات بعد")} description={dt("شغّل أول تحليل من الأعلى.")} />
           ) : (
             <ul className="max-h-[420px] divide-y divide-slate-100 overflow-y-auto">
               {history.map((h) => (
                 <li key={h.id} className={cn("group flex items-start gap-2 px-4 py-2.5", selected?.id === h.id && "bg-brand-50/60")}>
                   <button type="button" onClick={() => open(h.id)} className="min-w-0 flex-1 text-start">
                     <p className="text-[12.5px] font-medium text-slate-800">
-                      {new Date(h.from).toLocaleDateString("ar-EG", { numberingSystem: "latn" })} ← {new Date(h.to).toLocaleDateString("ar-EG", { numberingSystem: "latn" })}
+                      {new Date(h.from).toLocaleDateString(dashIntl("ar-EG"), { numberingSystem: "latn" })} ← {new Date(h.to).toLocaleDateString(dashIntl("ar-EG"), { numberingSystem: "latn" })}
                     </p>
                     <p className="text-[11px] text-slate-500">
-                      {num(h.conversationCount)} محادثة · {h.mode === "llm" ? "ذكاء اصطناعي" : "إحصائي"} · {h.createdByName ?? ""} · {dateTime(h.createdAt)}
+                      {dtx("{0} محادثة · ", [num(h.conversationCount)])}{h.mode === "llm" ? dt("ذكاء اصطناعي") : dt("إحصائي")} · {h.createdByName ?? ""} · {dateTime(h.createdAt)}
                     </p>
                   </button>
-                  <button type="button" onClick={() => remove(h.id)} className="mt-0.5 rounded p-1 text-slate-300 opacity-0 hover:bg-rose-50 hover:text-rose-600 group-hover:opacity-100" aria-label="حذف">
+                  <button type="button" onClick={() => remove(h.id)} className="mt-0.5 rounded p-1 text-slate-300 opacity-0 hover:bg-rose-50 hover:text-rose-600 group-hover:opacity-100" aria-label={dt("حذف")}>
                     <Trash2 className="h-3.5 w-3.5" />
                   </button>
                 </li>
@@ -180,16 +179,15 @@ export function InsightsView() {
             <Loader2 className="h-7 w-7 animate-spin text-brand" />
           </div>
         )}
-        {!loadingOne && !res && <EmptyState icon={Lightbulb} title="اختر فترة واضغط «لخّص واستنتج»" description="سيقرأ الذكاء الاصطناعي ما كتبه الزوار ويستخرج: المشاريع التي يطلبونها ولا نملكها، الأسئلة المتكررة، المشاكل، وما يمنعهم من التبرع  مع توصيات عملية." />}
+        {!loadingOne && !res && <EmptyState icon={Lightbulb} title={dt("اختر فترة واضغط «لخّص واستنتج»")} description={dt("سيقرأ الذكاء الاصطناعي ما كتبه الزوار ويستخرج: المشاريع التي يطلبونها ولا نملكها، الأسئلة المتكررة، المشاكل، وما يمنعهم من التبرع  مع توصيات عملية.")} />}
         {!loadingOne && res && selected && (
           <>
             <section className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_1px_2px_rgba(16,24,40,0.04),0_8px_24px_-18px_rgba(2,94,184,0.35)]">
               <div aria-hidden className="pointer-events-none absolute inset-0 -z-0 bg-[radial-gradient(110%_140%_at_100%_0%,rgba(2,94,184,0.07),transparent_55%)]" />
               <div className="relative">
                 <div className="flex flex-wrap items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
-                  <Sparkles className="h-3.5 w-3.5 text-brand" /> الخلاصة
-                  <span className="rounded-full border border-brand/20 bg-brand/5 px-2 py-0.5 normal-case text-brand">{num(selected.conversationCount)} محادثة · {num(selected.messageCount)} رسالة</span>
-                  <span className="rounded-full bg-slate-100 px-2 py-0.5 normal-case text-slate-600">{selected.mode === "llm" ? `ذكاء اصطناعي${selected.model ? ` · ${selected.model}` : ""}` : "تحليل إحصائي"}</span>
+                  <Sparkles className="h-3.5 w-3.5 text-brand" /> {dt(" الخلاصة")}<span className="rounded-full border border-brand/20 bg-brand/5 px-2 py-0.5 normal-case text-brand">{dtx("{0} محادثة · {1} رسالة", [num(selected.conversationCount), num(selected.messageCount)])}</span>
+                  <span className="rounded-full bg-slate-100 px-2 py-0.5 normal-case text-slate-600">{selected.mode === "llm" ? dt("ذكاء اصطناعي{0}", [selected.model ? ` · ${selected.model}` : ""]) : dt("تحليل إحصائي")}</span>
                 </div>
                 <p className="mt-3 whitespace-pre-line text-[14.5px] leading-7 text-slate-800">{res.summary}</p>
                 {res.highlights.length > 0 && (
@@ -203,16 +201,16 @@ export function InsightsView() {
                 )}
                 {selected.mode === "llm" && (
                   <div className="mt-4 grid grid-cols-3 gap-2 text-center sm:max-w-md">
-                    <Sentiment icon={ThumbsUp} label="إيجابي" value={res.sentiment.positive} cls="text-emerald-600" />
-                    <Sentiment icon={CircleHelp} label="محايد" value={res.sentiment.neutral} cls="text-slate-500" />
-                    <Sentiment icon={ThumbsDown} label="سلبي" value={res.sentiment.negative} cls="text-rose-600" />
+                    <Sentiment icon={ThumbsUp} label={dt("إيجابي")} value={res.sentiment.positive} cls="text-emerald-600" />
+                    <Sentiment icon={CircleHelp} label={dt("محايد")} value={res.sentiment.neutral} cls="text-slate-500" />
+                    <Sentiment icon={ThumbsDown} label={dt("سلبي")} value={res.sentiment.negative} cls="text-rose-600" />
                   </div>
                 )}
               </div>
             </section>
 
             {res.recommendations.length > 0 && (
-              <SectionCard title="التوصيات" description="مرتبة حسب الأولوية" icon={ListChecks}>
+              <SectionCard title={dt("التوصيات")} description={dt("مرتبة حسب الأولوية")} icon={ListChecks}>
                 <ol className="space-y-2.5">
                   {[...res.recommendations].sort((a, b) => ["high", "medium", "low"].indexOf(a.priority) - ["high", "medium", "low"].indexOf(b.priority)).map((r, i) => (
                     <li key={i} className="rounded-xl border border-slate-200 p-3">
@@ -229,16 +227,16 @@ export function InsightsView() {
             )}
 
             <div className="grid gap-5 lg:grid-cols-2">
-              <SectionCard title="مشاريع يطلبها الناس ولا نملكها" icon={PackageSearch}>
+              <SectionCard title={dt("مشاريع يطلبها الناس ولا نملكها")} icon={PackageSearch}>
                 {res.missingCampaigns.length === 0 ? (
-                  <EmptyState variant="inline" title="لم تُرصد فجوات في المشاريع" />
+                  <EmptyState variant="inline" title={dt("لم تُرصد فجوات في المشاريع")} />
                 ) : (
                   <ul className="space-y-2.5">
                     {res.missingCampaigns.map((m, i) => (
                       <li key={i} className="rounded-xl border border-slate-200 p-3">
                         <div className="flex items-center justify-between gap-2">
                           <p className="text-[13.5px] font-semibold text-slate-900">{m.topic}</p>
-                          <span className="shrink-0 text-[11px] text-slate-500">{num(m.mentions)} محادثة</span>
+                          <span className="shrink-0 text-[11px] text-slate-500">{dtx("{0} محادثة", [num(m.mentions)])}</span>
                         </div>
                         {m.evidence && <p className="mt-1 border-s-2 border-brand/30 ps-2 text-[12.5px] italic text-slate-500">«{m.evidence}»</p>}
                         <p className="mt-1.5 text-[12.5px] text-slate-700">💡 {m.suggestion}</p>
@@ -248,9 +246,9 @@ export function InsightsView() {
                 )}
               </SectionCard>
 
-              <SectionCard title="المشاكل المتكررة" icon={AlertTriangle}>
+              <SectionCard title={dt("المشاكل المتكررة")} icon={AlertTriangle}>
                 {res.issues.length === 0 ? (
-                  <EmptyState variant="inline" title="لا مشاكل بارزة" />
+                  <EmptyState variant="inline" title={dt("لا مشاكل بارزة")} />
                 ) : (
                   <ul className="space-y-2.5">
                     {res.issues.map((it, i) => (
@@ -271,9 +269,9 @@ export function InsightsView() {
               </SectionCard>
             </div>
 
-            <SectionCard title="الأسئلة المتكررة" description="يمكن نشرها في صفحة الأسئلة الشائعة لتحسين إجابات المساعد والموقع" icon={FileQuestion} flush>
+            <SectionCard title={dt("الأسئلة المتكررة")} description={dt("يمكن نشرها في صفحة الأسئلة الشائعة لتحسين إجابات المساعد والموقع")} icon={FileQuestion} flush>
               {res.frequentQuestions.length === 0 ? (
-                <EmptyState variant="inline" title="لا أسئلة متكررة" />
+                <EmptyState variant="inline" title={dt("لا أسئلة متكررة")} />
               ) : (
                 <ul className="divide-y divide-slate-100">
                   {res.frequentQuestions.map((q, i) => (
@@ -291,19 +289,19 @@ export function InsightsView() {
             </SectionCard>
 
             <div className="grid gap-5 lg:grid-cols-2">
-              <SimpleList title="ما يمنع الزوار من التبرع" icon={TrendingDown} items={res.conversionBlockers} />
-              <SimpleList title="معلومات ناقصة في الموقع أو المساعد" icon={CircleHelp} items={res.contentGaps} />
+              <SimpleList title={dt("ما يمنع الزوار من التبرع")} icon={TrendingDown} items={res.conversionBlockers} />
+              <SimpleList title={dt("معلومات ناقصة في الموقع أو المساعد")} icon={CircleHelp} items={res.contentGaps} />
             </div>
 
             {selected.mode === "llm" && (
-              <SectionCard title={`جودة إجابات المساعد: ${res.assistantQuality.score}/10`} icon={Bot}>
+              <SectionCard title={dt("جودة إجابات المساعد: {0}/10", [res.assistantQuality.score])} icon={Bot}>
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div>
-                    <p className="mb-1 text-[12px] font-semibold text-emerald-700">نقاط القوة</p>
+                    <p className="mb-1 text-[12px] font-semibold text-emerald-700">{dt("نقاط القوة")}</p>
                     <ul className="list-disc space-y-1 ps-5 text-[12.5px] text-slate-700">{res.assistantQuality.strengths.map((s, i) => <li key={i}>{s}</li>)}</ul>
                   </div>
                   <div>
-                    <p className="mb-1 text-[12px] font-semibold text-rose-700">نقاط الضعف</p>
+                    <p className="mb-1 text-[12px] font-semibold text-rose-700">{dt("نقاط الضعف")}</p>
                     <ul className="list-disc space-y-1 ps-5 text-[12.5px] text-slate-700">{res.assistantQuality.weaknesses.map((s, i) => <li key={i}>{s}</li>)}</ul>
                   </div>
                 </div>
@@ -312,13 +310,12 @@ export function InsightsView() {
 
             {res.teamNotesSuggestion.trim() && (
               <SectionCard
-                title="ملاحظات مقترحة للمساعد"
-                description="أضفها إلى «ملاحظات الفريق» ليجيب المساعد عن هذه الفجوات  راجعها واملأ أي [فراغ] أولًا"
+                title={dt("ملاحظات مقترحة للمساعد")}
+                description={dt("أضفها إلى «ملاحظات الفريق» ليجيب المساعد عن هذه الفجوات  راجعها واملأ أي [فراغ] أولًا")}
                 icon={ClipboardPlus}
                 actions={
                   <Button size="sm" variant="outline" onClick={() => addToTeamNotes(res.teamNotesSuggestion)} className="gap-1.5">
-                    <ClipboardPlus className="h-4 w-4" /> أضف لملاحظات الفريق
-                  </Button>
+                    <ClipboardPlus className="h-4 w-4" /> {dt(" أضف لملاحظات الفريق")}</Button>
                 }
               >
                 <pre className="whitespace-pre-wrap rounded-lg bg-slate-50 p-3 font-sans text-[12.5px] leading-6 text-slate-700">{res.teamNotesSuggestion}</pre>
@@ -335,7 +332,7 @@ function FilterRow({ label: l, value, onChange, placeholder, options }: { label:
   return (
     <div>
       <p className="mb-1 text-[12px] font-medium text-slate-600">{l}</p>
-      <Select value={value ?? ANY} onValueChange={(v) => onChange(v === ANY ? null : v)} dir="rtl">
+      <Select value={value ?? ANY} onValueChange={(v) => onChange(v === ANY ? null : v)} dir={dashDir()}>
         <SelectTrigger className="h-9 bg-white text-[13px]">
           <SelectValue />
         </SelectTrigger>
@@ -364,7 +361,7 @@ function SimpleList({ title, icon, items }: { title: string; icon: typeof Bot; i
   return (
     <SectionCard title={title} icon={icon}>
       {items.length === 0 ? (
-        <EmptyState variant="inline" title="لا شيء بارز" />
+        <EmptyState variant="inline" title={dt("لا شيء بارز")} />
       ) : (
         <ul className="space-y-2">
           {items.map((it, i) => (

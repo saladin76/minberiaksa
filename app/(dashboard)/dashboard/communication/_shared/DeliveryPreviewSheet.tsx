@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { LOCALE_LABELS } from "@/lib/locales";
 import { cn } from "@/lib/utils";
 import { fmtFull, type StageBuilder } from "./channel-ui";
+import { dashDir, dt } from "@/lib/dashboard/i18n";
 
 /**
  * The معاينة sheet  one delivery, opened from a row on either channel page.
@@ -71,35 +72,35 @@ type Payload = {
 };
 
 const STATUS_META: Record<string, { bg: string; text: string; label: string; icon: typeof CheckCircle2 }> = {
-  SENT: { bg: "bg-emerald-50", text: "text-emerald-700", label: "أُرسلت", icon: CheckCircle2 },
-  SENT_TO_PROVIDER: { bg: "bg-emerald-50", text: "text-emerald-700", label: "سُلّمت للمزود", icon: CheckCircle2 },
-  DELIVERED: { bg: "bg-sky-50", text: "text-sky-700", label: "وصلت", icon: CheckCircle2 },
-  OPENED: { bg: "bg-sky-50", text: "text-sky-700", label: "فُتحت", icon: CheckCircle2 },
-  READ: { bg: "bg-sky-50", text: "text-sky-700", label: "قُرئت", icon: CheckCircle2 },
-  CLICKED: { bg: "bg-sky-50", text: "text-sky-700", label: "نُقرت", icon: CheckCircle2 },
-  REPLIED: { bg: "bg-sky-50", text: "text-sky-700", label: "ردّ عليها", icon: CheckCircle2 },
-  FAILED: { bg: "bg-rose-50", text: "text-rose-700", label: "فشلت", icon: XCircle },
-  BOUNCED: { bg: "bg-rose-50", text: "text-rose-700", label: "ارتدّت", icon: XCircle },
-  SKIPPED: { bg: "bg-amber-50", text: "text-amber-700", label: "لم تُرسل", icon: AlertTriangle },
-  RENDERED: { bg: "bg-slate-100", text: "text-slate-600", label: "جاهزة", icon: FileText },
-  QUEUED: { bg: "bg-slate-100", text: "text-slate-600", label: "في الطابور", icon: FileText },
-  DRAFT: { bg: "bg-slate-100", text: "text-slate-600", label: "مسودة", icon: FileText },
+  SENT: { bg: "bg-emerald-50", text: "text-emerald-700", get label() { return dt("أُرسلت"); }, icon: CheckCircle2 },
+  SENT_TO_PROVIDER: { bg: "bg-emerald-50", text: "text-emerald-700", get label() { return dt("سُلّمت للمزود"); }, icon: CheckCircle2 },
+  DELIVERED: { bg: "bg-sky-50", text: "text-sky-700", get label() { return dt("وصلت"); }, icon: CheckCircle2 },
+  OPENED: { bg: "bg-sky-50", text: "text-sky-700", get label() { return dt("فُتحت"); }, icon: CheckCircle2 },
+  READ: { bg: "bg-sky-50", text: "text-sky-700", get label() { return dt("قُرئت"); }, icon: CheckCircle2 },
+  CLICKED: { bg: "bg-sky-50", text: "text-sky-700", get label() { return dt("نُقرت"); }, icon: CheckCircle2 },
+  REPLIED: { bg: "bg-sky-50", text: "text-sky-700", get label() { return dt("ردّ عليها"); }, icon: CheckCircle2 },
+  FAILED: { bg: "bg-rose-50", text: "text-rose-700", get label() { return dt("فشلت"); }, icon: XCircle },
+  BOUNCED: { bg: "bg-rose-50", text: "text-rose-700", get label() { return dt("ارتدّت"); }, icon: XCircle },
+  SKIPPED: { bg: "bg-amber-50", text: "text-amber-700", get label() { return dt("لم تُرسل"); }, icon: AlertTriangle },
+  RENDERED: { bg: "bg-slate-100", text: "text-slate-600", get label() { return dt("جاهزة"); }, icon: FileText },
+  QUEUED: { bg: "bg-slate-100", text: "text-slate-600", get label() { return dt("في الطابور"); }, icon: FileText },
+  DRAFT: { bg: "bg-slate-100", text: "text-slate-600", get label() { return dt("مسودة"); }, icon: FileText },
 };
 
 const ORIGIN_LABELS: Record<string, { label: string; icon: typeof Zap }> = {
-  TRIGGER: { label: "تلقائي (مُشغِّل)", icon: Zap },
-  MANUAL: { label: "يدوي", icon: Send },
-  CAMPAIGN: { label: "حملة", icon: Megaphone },
-  TEST: { label: "تجربة", icon: FileText },
-  REACTIVATION: { label: "إعادة تفعيل", icon: RefreshCw },
-  SYSTEM: { label: "النظام", icon: FileText },
+  TRIGGER: { get label() { return dt("تلقائي (مُشغِّل)"); }, icon: Zap },
+  MANUAL: { get label() { return dt("يدوي"); }, icon: Send },
+  CAMPAIGN: { get label() { return dt("حملة"); }, icon: Megaphone },
+  TEST: { get label() { return dt("تجربة"); }, icon: FileText },
+  REACTIVATION: { get label() { return dt("إعادة تفعيل"); }, icon: RefreshCw },
+  SYSTEM: { get label() { return dt("النظام"); }, icon: FileText },
 };
 
 const PURPOSE_LABELS: Record<string, string> = {
-  TRANSACTIONAL: "تشغيلية",
-  MARKETING: "تسويقية",
-  UTILITY: "خدمية",
-  AUTHENTICATION: "تحقّق",
+  get TRANSACTIONAL() { return dt("تشغيلية"); },
+  get MARKETING() { return dt("تسويقية"); },
+  get UTILITY() { return dt("خدمية"); },
+  get AUTHENTICATION() { return dt("تحقّق"); },
 };
 
 type Props = {
@@ -130,7 +131,7 @@ export function DeliveryPreviewSheet({ id, stagesFor, trackingLive, onOpenChange
     fetch(`/api/dashboard/communication/deliveries/${id}`, { cache: "no-store" })
       .then(async (res) => {
         const json = await res.json();
-        if (!res.ok || !json.ok) throw new Error(json?.error || "تعذّر تحميل الرسالة");
+        if (!res.ok || !json.ok) throw new Error(json?.error || dt("تعذّر تحميل الرسالة"));
         if (!cancelled) setData(json);
       })
       .catch((e) => {
@@ -163,12 +164,12 @@ export function DeliveryPreviewSheet({ id, stagesFor, trackingLive, onOpenChange
 
   return (
     <Sheet open={!!id} onOpenChange={onOpenChange}>
-      <SheetContent side="left" className="w-full overflow-y-auto p-0 sm:max-w-[760px]" dir="rtl">
+      <SheetContent side="left" className="w-full overflow-y-auto p-0 sm:max-w-[760px]" dir={dashDir()}>
         <SheetHeader className="sticky top-0 z-10 border-b border-slate-200 bg-white p-5">
-          <SheetTitle className="flex items-center justify-between gap-3 text-right">
+          <SheetTitle className="flex items-center justify-between gap-3 text-start">
             <span className="flex min-w-0 items-center gap-2">
               <ChannelIcon className="h-5 w-5 shrink-0 text-brand" />
-              <span className="truncate">معاينة الرسالة</span>
+              <span className="truncate">{dt("معاينة الرسالة")}</span>
             </span>
             {statusMeta && StatusIcon && (
               <span className={cn("inline-flex shrink-0 items-center gap-1 rounded-md px-2 py-1 text-xs font-medium", statusMeta.bg, statusMeta.text)}>
@@ -190,24 +191,24 @@ export function DeliveryPreviewSheet({ id, stagesFor, trackingLive, onOpenChange
         ) : (
           <div className="space-y-5 p-5">
             <div className="grid grid-cols-1 gap-x-4 gap-y-3 text-sm sm:grid-cols-2">
-              <MetaRow label="القالب" value={row.templateName || "—"} icon={FileText} />
-              <MetaRow label="القناة" value={isEmail ? "البريد الإلكتروني" : "واتساب"} icon={ChannelIcon} />
-              <MetaRow label="المصدر" value={originMeta?.label ?? row.origin} icon={originMeta?.icon ?? FileText} />
-              <MetaRow label="الغرض" value={PURPOSE_LABELS[row.purpose] ?? row.purpose} icon={Megaphone} />
+              <MetaRow label={dt("القالب")} value={row.templateName || "—"} icon={FileText} />
+              <MetaRow label={dt("القناة")} value={isEmail ? dt("البريد الإلكتروني") : dt("واتساب")} icon={ChannelIcon} />
+              <MetaRow label={dt("المصدر")} value={originMeta?.label ?? row.origin} icon={originMeta?.icon ?? FileText} />
+              <MetaRow label={dt("الغرض")} value={PURPOSE_LABELS[row.purpose] ?? row.purpose} icon={Megaphone} />
               <MetaRow
-                label="اللغة"
+                label={dt("اللغة")}
                 value={LOCALE_LABELS[row.locale as keyof typeof LOCALE_LABELS] ?? row.locale ?? "—"}
                 icon={Globe}
               />
-              <MetaRow label="التاريخ" value={fmtFull(row.createdAt)} icon={Calendar} />
+              <MetaRow label={dt("التاريخ")} value={fmtFull(row.createdAt)} icon={Calendar} />
               {row.providerMessageId && (
-                <MetaRow label="معرّف المزود" value={row.providerMessageId} icon={FileCode} mono />
+                <MetaRow label={dt("معرّف المزود")} value={row.providerMessageId} icon={FileCode} mono />
               )}
-              {row.provider && <MetaRow label="المزوّد" value={row.provider} icon={ArrowLeftRight} />}
+              {row.provider && <MetaRow label={dt("المزوّد")} value={row.provider} icon={ArrowLeftRight} />}
             </div>
 
             <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-4">
-              <div className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-slate-500">المستلم</div>
+              <div className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-slate-500">{dt("المستلم")}</div>
               <div className="space-y-1.5 text-sm">
                 {row.recipientName && (
                   <div className="flex items-center gap-2 font-medium text-slate-900">
@@ -228,7 +229,7 @@ export function DeliveryPreviewSheet({ id, stagesFor, trackingLive, onOpenChange
                   </div>
                 )}
                 {!row.recipientName && !row.recipientEmail && !row.recipientPhone && (
-                  <span className="text-slate-400">لا يوجد عنوان مسجّل  لهذا لم تُرسل.</span>
+                  <span className="text-slate-400">{dt("لا يوجد عنوان مسجّل  لهذا لم تُرسل.")}</span>
                 )}
               </div>
             </div>
@@ -244,7 +245,7 @@ export function DeliveryPreviewSheet({ id, stagesFor, trackingLive, onOpenChange
               >
                 <div className="mb-1 flex items-center gap-2 font-semibold">
                   {row.status === "SKIPPED" ? <SlashIcon className="h-4 w-4" /> : <XCircle className="h-4 w-4" />}
-                  {row.status === "SKIPPED" ? "سبب عدم الإرسال" : "رسالة الخطأ"}
+                  {row.status === "SKIPPED" ? dt("سبب عدم الإرسال") : dt("رسالة الخطأ")}
                 </div>
                 <p className="whitespace-pre-wrap break-words text-xs" dir="ltr">{row.errorMessage}</p>
               </div>
@@ -256,28 +257,25 @@ export function DeliveryPreviewSheet({ id, stagesFor, trackingLive, onOpenChange
               <div className="rounded-xl border border-slate-200 bg-white p-4 text-sm">
                 <div className="mb-1 flex items-center gap-2 font-semibold text-slate-800">
                   <RefreshCw className="h-4 w-4 text-brand" />
-                  أُعيد إرسالها
-                </div>
+                  {dt("أُعيد إرسالها")}</div>
                 <p className="text-xs text-slate-600">
                   {data.retry.status === "SENT" || data.retry.status === "DELIVERED"
-                    ? `نجحت المحاولة الجديدة في ${fmtFull(data.retry.sentAt ?? data.retry.createdAt)}.`
-                    : `المحاولة الجديدة انتهت بحالة ${data.retry.status}${data.retry.errorMessage ? `  ${data.retry.errorMessage}` : ""}.`}
+                    ? dt("نجحت المحاولة الجديدة في {0}.", [fmtFull(data.retry.sentAt ?? data.retry.createdAt)])
+                    : dt("المحاولة الجديدة انتهت بحالة {0}{1}.", [data.retry.status, data.retry.errorMessage ? `  ${data.retry.errorMessage}` : ""])}
                 </p>
               </div>
             ) : data.retryable && onRetry ? (
               <div className="flex items-center justify-between gap-3 rounded-xl border border-brand/20 bg-brand-50/50 p-4">
                 <div className="min-w-0 text-xs text-slate-700">
-                  <b className="block text-slate-900">هذه الرسالة لم تصل المستلم</b>
-                  يمكن إعادة إرسالها الآن بنفس المحتوى المحفوظ.
-                </div>
+                  <b className="block text-slate-900">{dt("هذه الرسالة لم تصل المستلم")}</b>
+                  {dt("يمكن إعادة إرسالها الآن بنفس المحتوى المحفوظ.")}</div>
                 <Button
                   size="sm"
                   className="shrink-0 gap-1.5"
                   onClick={() => onRetry(row.id)}
                 >
                   <RefreshCw className="h-3.5 w-3.5" />
-                  إعادة الإرسال
-                </Button>
+                  {dt("إعادة الإرسال")}</Button>
               </div>
             ) : data.retryBlockedReason && (row.status === "FAILED" || row.status === "SKIPPED" || row.status === "BOUNCED") ? (
               <p className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-[11px] text-slate-500">
@@ -286,22 +284,22 @@ export function DeliveryPreviewSheet({ id, stagesFor, trackingLive, onOpenChange
             ) : null}
 
             <div>
-              <h3 className="mb-2.5 text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-400">المسار الزمني</h3>
+              <h3 className="mb-2.5 text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-400">{dt("المسار الزمني")}</h3>
               <Timeline stages={stagesFor(row)} trackingLive={trackingLive} />
             </div>
 
-            <Tabs defaultValue="preview" dir="rtl">
+            <Tabs defaultValue="preview" dir={dashDir()}>
               <TabsList className="grid w-full grid-cols-3">
-                <TabsTrigger value="preview">معاينة</TabsTrigger>
-                <TabsTrigger value="source">المصدر</TabsTrigger>
-                <TabsTrigger value="variables">المتغيرات</TabsTrigger>
+                <TabsTrigger value="preview">{dt("معاينة")}</TabsTrigger>
+                <TabsTrigger value="source">{dt("المصدر")}</TabsTrigger>
+                <TabsTrigger value="variables">{dt("المتغيرات")}</TabsTrigger>
               </TabsList>
 
               <TabsContent value="preview" className="mt-4 space-y-3">
                 {row.renderedSubject && (
                   <div>
                     <SectionLabel
-                      label="الموضوع"
+                      label={dt("الموضوع")}
                       copied={copied === "subject"}
                       onCopy={() => copy("subject", row.renderedSubject!)}
                     />
@@ -313,19 +311,18 @@ export function DeliveryPreviewSheet({ id, stagesFor, trackingLive, onOpenChange
 
                 <div>
                   <SectionLabel
-                    label={isEmail ? "نسخة البريد المُرسَلة" : "نسخة الرسالة"}
+                    label={isEmail ? dt("نسخة البريد المُرسَلة") : dt("نسخة الرسالة")}
                     copied={copied === "body"}
                     onCopy={() => copy("body", row.renderedBody ?? "")}
                   />
                   {!row.renderedBody ? (
                     <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 text-xs text-slate-500">
-                      لا توجد نسخة محفوظة من محتوى هذه الرسالة.
-                    </div>
+                      {dt("لا توجد نسخة محفوظة من محتوى هذه الرسالة.")}</div>
                   ) : isEmail ? (
                     // `sandbox=""` with no tokens: the stored HTML is rendered with scripts, forms and
                     // same-origin access all withheld, so a hostile template cannot reach the dashboard.
                     <iframe
-                      title="معاينة البريد"
+                      title={dt("معاينة البريد")}
                       sandbox=""
                       srcDoc={row.renderedBody}
                       className="h-[500px] w-full rounded-lg border border-slate-200 bg-white"
@@ -340,7 +337,7 @@ export function DeliveryPreviewSheet({ id, stagesFor, trackingLive, onOpenChange
 
               <TabsContent value="source" className="mt-4">
                 <SectionLabel
-                  label={isEmail ? "HTML الخام" : "نص الرسالة"}
+                  label={isEmail ? dt("HTML الخام") : dt("نص الرسالة")}
                   icon={FileCode}
                   copied={copied === "body"}
                   onCopy={() => copy("body", row.renderedBody ?? "")}
@@ -355,7 +352,7 @@ export function DeliveryPreviewSheet({ id, stagesFor, trackingLive, onOpenChange
 
               <TabsContent value="variables" className="mt-4">
                 <SectionLabel
-                  label="قيم المتغيرات وقت الإرسال"
+                  label={dt("قيم المتغيرات وقت الإرسال")}
                   copied={copied === "vars"}
                   onCopy={() => copy("vars", JSON.stringify(row.variables, null, 2))}
                 />
@@ -363,7 +360,7 @@ export function DeliveryPreviewSheet({ id, stagesFor, trackingLive, onOpenChange
                   dir="ltr"
                   className="max-h-[500px] overflow-auto rounded-lg border border-slate-200 bg-slate-50 p-3 text-[11px] leading-relaxed text-slate-800"
                 >
-                  {row.variables ? JSON.stringify(row.variables, null, 2) : "(لا توجد متغيرات)"}
+                  {row.variables ? JSON.stringify(row.variables, null, 2) : dt("(لا توجد متغيرات)")}
                 </pre>
               </TabsContent>
             </Tabs>
@@ -403,7 +400,7 @@ function Timeline({ stages, trackingLive }: { stages: ReturnType<StageBuilder>; 
             <div className="min-w-0 pt-0.5">
               <p className={cn("text-xs font-semibold", done ? "text-slate-900" : "text-slate-400")}>{stage.label}</p>
               <p className="text-[11px] tabular-nums text-slate-500" dir="ltr">{done ? fmtFull(stage.at) : "—"}</p>
-              {blind && <p className="text-[10px] text-amber-600">لا توجد بيانات تتبّع لهذه المرحلة</p>}
+              {blind && <p className="text-[10px] text-amber-600">{dt("لا توجد بيانات تتبّع لهذه المرحلة")}</p>}
             </div>
           </li>
         );
@@ -431,8 +428,7 @@ function SectionLabel({
       </span>
       <Button variant="ghost" size="sm" className="h-6 gap-1 px-2 text-xs" onClick={onCopy}>
         {copied ? <CheckCheck className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
-        نسخ
-      </Button>
+        {dt("نسخ")}</Button>
     </div>
   );
 }

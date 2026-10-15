@@ -1,5 +1,6 @@
 import type { MessageSubject } from "@/lib/messages/subjects";
 import type { MessageReplyChannel } from "@/lib/messages/inbox-status";
+import { dashIntl, dt } from "@/lib/dashboard/i18n";
 
 /** One row from `GET /api/admin/messages`, after the route decodes the legacy `[SUBJECT:…]` prefix. */
 export interface InboundMessage {
@@ -56,12 +57,13 @@ export function senderOf(m: InboundMessage) {
     image: m.user?.image ?? null,
     isRegistered: !!m.user,
     /** Falls back through name → email → a neutral glyph, never an empty circle. */
-    initial: (name ?? email ?? "؟").trim().charAt(0).toUpperCase() || "؟",
-    displayName: name ?? email ?? "زائر",
+    initial: (name ?? email ?? dt("؟")).trim().charAt(0).toUpperCase() || dt("؟"),
+    displayName: name ?? email ?? dt("زائر"),
   };
 }
 
-const rtf = new Intl.RelativeTimeFormat("ar", { numeric: "auto" });
+/* Built per call: the interface language is only known once a request renders. */
+const rtf = () => new Intl.RelativeTimeFormat(dashIntl("ar"), { numeric: "auto" });
 const UNITS: [Intl.RelativeTimeFormatUnit, number][] = [
   ["year", 365 * 24 * 3600],
   ["month", 30 * 24 * 3600],
@@ -84,11 +86,11 @@ export function relativeTime(iso: string): string {
   const diff = (Date.parse(iso) - Date.now()) / 1000;
   const abs = Math.abs(diff);
   for (const [unit, secs] of UNITS) {
-    if (abs >= secs) return rtf.format(Math.round(diff / secs), unit);
+    if (abs >= secs) return rtf().format(Math.round(diff / secs), unit);
   }
-  return "الآن";
+  return dt("الآن");
 }
 
 export function absoluteDate(iso: string, style: "medium" | "long" = "medium"): string {
-  return new Date(iso).toLocaleString("ar-EG", { dateStyle: style, timeStyle: "short" });
+  return new Date(iso).toLocaleString(dashIntl("ar-EG"), { dateStyle: style, timeStyle: "short" });
 }

@@ -34,6 +34,7 @@ import { SUPPORTED_LOCALES, LOCALE_LABELS, DEFAULT_LOCALE, type SupportedLocale 
 import { TemplateDialogShell, LocaleStrip, FieldLabel } from "./TemplateDialogShell";
 import { VariablePicker } from "./VariablePicker";
 import { cn } from "@/lib/utils";
+import { dt, dtx } from "@/lib/dashboard/i18n";
 
 interface Props {
   id: string | null;
@@ -108,18 +109,18 @@ const defaultAuth = (): AuthenticationDraft => ({
 });
 
 const CATEGORY_OPTIONS: Array<{ value: Category; label: string; hint: string; icon: React.ReactNode }> = [
-  { value: "MARKETING", label: "Marketing", hint: "حملات وعروض وإعادة تفاعل", icon: <Megaphone className="h-4 w-4" /> },
-  { value: "UTILITY", label: "Utility", hint: "تبرعات ومدفوعات وخدمة", icon: <Bell className="h-4 w-4" /> },
-  { value: "AUTHENTICATION", label: "Authentication", hint: "رموز OTP والتحقق", icon: <KeyRound className="h-4 w-4" /> },
+  { value: "MARKETING", label: "Marketing", get hint() { return dt("حملات وعروض وإعادة تفاعل"); }, icon: <Megaphone className="h-4 w-4" /> },
+  { value: "UTILITY", label: "Utility", get hint() { return dt("تبرعات ومدفوعات وخدمة"); }, icon: <Bell className="h-4 w-4" /> },
+  { value: "AUTHENTICATION", label: "Authentication", get hint() { return dt("رموز OTP والتحقق"); }, icon: <KeyRound className="h-4 w-4" /> },
 ];
 
 const HEADER_OPTIONS: Array<{ value: HeaderType; label: string; icon: React.ReactNode }> = [
-  { value: "NONE", label: "بدون", icon: <Type className="h-4 w-4" /> },
-  { value: "TEXT", label: "نص", icon: <Type className="h-4 w-4" /> },
-  { value: "IMAGE", label: "صورة", icon: <ImageIcon className="h-4 w-4" /> },
-  { value: "VIDEO", label: "فيديو", icon: <Video className="h-4 w-4" /> },
-  { value: "DOCUMENT", label: "مستند", icon: <FileText className="h-4 w-4" /> },
-  { value: "LOCATION", label: "موقع", icon: <MapPin className="h-4 w-4" /> },
+  { value: "NONE", get label() { return dt("بدون"); }, icon: <Type className="h-4 w-4" /> },
+  { value: "TEXT", get label() { return dt("نص"); }, icon: <Type className="h-4 w-4" /> },
+  { value: "IMAGE", get label() { return dt("صورة"); }, icon: <ImageIcon className="h-4 w-4" /> },
+  { value: "VIDEO", get label() { return dt("فيديو"); }, icon: <Video className="h-4 w-4" /> },
+  { value: "DOCUMENT", get label() { return dt("مستند"); }, icon: <FileText className="h-4 w-4" /> },
+  { value: "LOCATION", get label() { return dt("موقع"); }, icon: <MapPin className="h-4 w-4" /> },
 ];
 
 const MEDIA_SPECS = {
@@ -131,7 +132,7 @@ const MEDIA_SPECS = {
     recommended: "1125 × 600 px",
     ratio: 1125 / 600,
     ratioLabel: "1.91:1",
-    note: "ضع النص والشعار بعيدًا عن الحواف لتجنب القص داخل المحادثة.",
+    get note() { return dt("ضع النص والشعار بعيدًا عن الحواف لتجنب القص داخل المحادثة."); },
   },
   VIDEO: {
     maxBytes: 16 * 1024 * 1024,
@@ -141,7 +142,7 @@ const MEDIA_SPECS = {
     recommended: "1125 × 600 px",
     ratio: 1125 / 600,
     ratioLabel: "1.91:1",
-    note: "يفضل فيديو أفقي قصير وواضح، مع H.264 للفيديو وAAC للصوت.",
+    get note() { return dt("يفضل فيديو أفقي قصير وواضح، مع H.264 للفيديو وAAC للصوت."); },
   },
   DOCUMENT: {
     maxBytes: 100 * 1024 * 1024,
@@ -150,8 +151,8 @@ const MEDIA_SPECS = {
     formats: "PDF",
     recommended: "A4 — 210 × 297 mm",
     ratio: null,
-    ratioLabel: "بدون نسبة أبعاد إلزامية",
-    note: "استخدم اسم ملف واضح وPDF خفيف ومقروء على الهاتف.",
+    get ratioLabel() { return dt("بدون نسبة أبعاد إلزامية"); },
+    get note() { return dt("استخدم اسم ملف واضح وPDF خفيف ومقروء على الهاتف."); },
   },
 } as const;
 
@@ -318,7 +319,7 @@ export function WhatsappTemplateEditorDialog({ id, open, onOpenChange }: Props) 
         setSubmittedLocales(new Set((template?.submittedLocales ?? []).filter((locale): locale is SupportedLocale => SUPPORTED_LOCALES.includes(locale as SupportedLocale))));
         setActiveLocale(DEFAULT_LOCALE);
       })
-      .catch(() => toast.error("فشل تحميل القالب"))
+      .catch(() => toast.error(dt("فشل تحميل القالب")))
       .finally(() => setLoading(false));
   }, [id, open]);
 
@@ -344,7 +345,7 @@ export function WhatsappTemplateEditorDialog({ id, open, onOpenChange }: Props) 
 
   const removeLocale = (locale: SupportedLocale) => {
     if (locale === DEFAULT_LOCALE || submittedLocales.has(locale)) {
-      if (submittedLocales.has(locale)) toast.error("هذه اللغة أُرسلت بالفعل إلى Meta ولا يمكن حذفها من القالب.");
+      if (submittedLocales.has(locale)) toast.error(dt("هذه اللغة أُرسلت بالفعل إلى Meta ولا يمكن حذفها من القالب."));
       return;
     }
     setLocales((previous) => {
@@ -361,11 +362,11 @@ export function WhatsappTemplateEditorDialog({ id, open, onOpenChange }: Props) 
 
     const spec = MEDIA_SPECS[type];
     if (!spec.accept.includes(file.type as never)) {
-      toast.error(`الصيغة غير مدعومة. المطلوب: ${spec.formats}`);
+      toast.error(dt("الصيغة غير مدعومة. المطلوب: {0}", [spec.formats]));
       return;
     }
     if (file.size > spec.maxBytes) {
-      toast.error(`حجم الملف ${formatMegabytes(file.size)} ويتجاوز الحد ${spec.maxLabel}`);
+      toast.error(dt("حجم الملف {0} ويتجاوز الحد {1}", [formatMegabytes(file.size), spec.maxLabel]));
       return;
     }
 
@@ -418,13 +419,13 @@ export function WhatsappTemplateEditorDialog({ id, open, onOpenChange }: Props) 
       }));
 
       if (inspected.ratioOk === false) {
-        toast.success("تم الرفع، لكن نسبة الأبعاد ليست مثالية لعرض واتساب.");
+        toast.success(dt("تم الرفع، لكن نسبة الأبعاد ليست مثالية لعرض واتساب."));
       } else {
-        toast.success("تم رفع الوسائط والتحقق منها وإرسال العينة إلى Meta.");
+        toast.success(dt("تم رفع الوسائط والتحقق منها وإرسال العينة إلى Meta."));
       }
     } catch (error) {
       const detail = (error as { response?: { data?: { error?: string; detail?: string } } }).response?.data;
-      toast.error([detail?.error, detail?.detail].filter(Boolean).join(" — ") || "فشل رفع عينة الوسائط إلى Meta");
+      toast.error([detail?.error, detail?.detail].filter(Boolean).join(" — ") || dt("فشل رفع عينة الوسائط إلى Meta"));
     } finally {
       setUploadingSample(false);
     }
@@ -464,7 +465,7 @@ export function WhatsappTemplateEditorDialog({ id, open, onOpenChange }: Props) 
     const value = current.body;
     const start = element.selectionStart ?? value.length;
     const end = element.selectionEnd ?? value.length;
-    const selected = value.slice(start, end) || "نص";
+    const selected = value.slice(start, end) || dt("نص");
     setCurrent({ body: value.slice(0, start) + before + selected + after + value.slice(end) });
     requestAnimationFrame(() => element.focus());
   };
@@ -472,17 +473,17 @@ export function WhatsappTemplateEditorDialog({ id, open, onOpenChange }: Props) 
   const addButton = (type: ButtonType) => {
     if (submittedLocales.has(activeLocale)) return;
     if (current.buttons.length >= 10) {
-      toast.error("الحد الأقصى 10 أزرار");
+      toast.error(dt("الحد الأقصى 10 أزرار"));
       return;
     }
     setCurrent({
       buttons: [
         ...current.buttons,
         type === "URL"
-          ? { type, text: "زيارة الموقع", url: "https://minberiaksa.org" }
+          ? { type, text: dt("زيارة الموقع"), url: "https://minberiaksa.org" }
           : type === "PHONE_NUMBER"
-            ? { type, text: "اتصل بنا", phoneNumber: "+90" }
-            : { type, text: "رد سريع" },
+            ? { type, text: dt("اتصل بنا"), phoneNumber: "+90" }
+            : { type, text: dt("رد سريع") },
       ],
     });
   };
@@ -501,14 +502,14 @@ export function WhatsappTemplateEditorDialog({ id, open, onOpenChange }: Props) 
 
   const save = async () => {
     const arabic = locales[DEFAULT_LOCALE] ?? emptyLocale();
-    if (!name.trim()) return void toast.error("اسم القالب مطلوب");
-    if (!/^[a-z][a-z0-9_]{0,119}$/.test(name)) return void toast.error("اسم Meta يجب أن يبدأ بحرف ويحتوي حروفًا إنجليزية صغيرة وأرقامًا وشرطة سفلية فقط");
-    if (category !== "AUTHENTICATION" && !arabic.body.trim()) return void toast.error("نص القالب بالعربية مطلوب");
+    if (!name.trim()) return void toast.error(dt("اسم القالب مطلوب"));
+    if (!/^[a-z][a-z0-9_]{0,119}$/.test(name)) return void toast.error(dt("اسم Meta يجب أن يبدأ بحرف ويحتوي حروفًا إنجليزية صغيرة وأرقامًا وشرطة سفلية فقط"));
+    if (category !== "AUTHENTICATION" && !arabic.body.trim()) return void toast.error(dt("نص القالب بالعربية مطلوب"));
     if (category !== "AUTHENTICATION" && ["IMAGE", "VIDEO", "DOCUMENT"].includes(header.type) && !header.exampleHandle) {
-      return void toast.error("ارفع عينة الوسائط إلى Meta أولًا");
+      return void toast.error(dt("ارفع عينة الوسائط إلى Meta أولًا"));
     }
     if (category === "AUTHENTICATION" && authentication.otpType === "ONE_TAP" && (!authentication.packageName || !authentication.signatureHash)) {
-      return void toast.error("One Tap يحتاج Package Name وSignature Hash");
+      return void toast.error(dt("One Tap يحتاج Package Name وSignature Hash"));
     }
 
     setSaving(true);
@@ -549,14 +550,14 @@ export function WhatsappTemplateEditorDialog({ id, open, onOpenChange }: Props) 
       const unsupportedCount = publish?.unsupportedWabas?.length ?? 0;
       if (unsupportedCount > 0) {
         toast.success(
-          `تم إرسال ${publishedCount} نسخة مؤهلة إلى Meta. تم تجاوز ${unsupportedCount} WABA لأن Meta لا تسمح بإدارة القوالب عليها.`,
+          dt("تم إرسال {0} نسخة مؤهلة إلى Meta. تم تجاوز {1} WABA لأن Meta لا تسمح بإدارة القوالب عليها.", [publishedCount, unsupportedCount]),
         );
       } else if (workingId && (publish?.targets ?? 0) > 0) {
-        toast.success(`تم حفظ اللغة الجديدة وإرسالها إلى Meta للمراجعة (${publish?.targets} نسخة WABA/لغة)`);
+        toast.success(dt("تم حفظ اللغة الجديدة وإرسالها إلى Meta للمراجعة ({0} نسخة WABA/لغة)", [publish?.targets]));
       } else if (workingId) {
-        toast.success("تم حفظ القالب بدون إعادة إرسال اللغات الموجودة إلى Meta.");
+        toast.success(dt("تم حفظ القالب بدون إعادة إرسال اللغات الموجودة إلى Meta."));
       } else {
-        toast.success(`تم إنشاء القالب وإرساله إلى Meta للمراجعة${publish?.targets ? ` (${publish.targets} نسخة WABA/لغة)` : ""}`);
+        toast.success(dt("تم إنشاء القالب وإرساله إلى Meta للمراجعة{0}", [publish?.targets ? dt(" ({0} نسخة WABA/لغة)", [publish.targets]) : ""]));
       }
       onOpenChange(false);
     } catch (error) {
@@ -572,7 +573,7 @@ export function WhatsappTemplateEditorDialog({ id, open, onOpenChange }: Props) 
       }).response?.data;
       if (data?.saved && data.template?.id) setWorkingId(data.template.id);
       const provider = data?.publish?.errors?.[0];
-      toast.error([data?.error, provider?.reason, provider?.detail].filter(Boolean).join(" — ") || "فشل حفظ القالب");
+      toast.error([data?.error, provider?.reason, provider?.detail].filter(Boolean).join(" — ") || dt("فشل حفظ القالب"));
     } finally {
       setSaving(false);
     }
@@ -580,7 +581,7 @@ export function WhatsappTemplateEditorDialog({ id, open, onOpenChange }: Props) 
 
   const previewBody = React.useMemo(
     () => category === "AUTHENTICATION"
-      ? "رمز التحقق الخاص بك هو 123456\nلا تشارك هذا الرمز مع أي شخص."
+      ? dt("رمز التحقق الخاص بك هو 123456\nلا تشارك هذا الرمز مع أي شخص.")
       : mergeText(current.body, SAMPLE_TEMPLATE_CONTEXT),
     [category, current.body],
   );
@@ -593,8 +594,8 @@ export function WhatsappTemplateEditorDialog({ id, open, onOpenChange }: Props) 
     <TemplateDialogShell
       open={open}
       onOpenChange={onOpenChange}
-      title={id ? "استوديو قالب واتساب" : "إنشاء قالب واتساب"}
-      subtitle="منشئ متوافق مع Meta: يبني القالب، يرفع عينة الوسائط، وينشر تلقائيًا إلى كل WABA نشط مرتبط."
+      title={id ? dt("استوديو قالب واتساب") : dt("إنشاء قالب واتساب")}
+      subtitle={dt("منشئ متوافق مع Meta: يبني القالب، يرفع عينة الوسائط، وينشر تلقائيًا إلى كل WABA نشط مرتبط.")}
       icon={<MessageCircle className="h-4 w-4" />}
       accent="whatsapp"
       size="full"
@@ -603,7 +604,7 @@ export function WhatsappTemplateEditorDialog({ id, open, onOpenChange }: Props) 
       onSave={save}
       saving={saving}
       saveDisabled={uploadingSample}
-      saveLabel="حفظ وإرسال إلى Meta"
+      saveLabel={dt("حفظ وإرسال إلى Meta")}
       toolbar={
         <LocaleStrip
           accent="whatsapp"
@@ -650,10 +651,10 @@ export function WhatsappTemplateEditorDialog({ id, open, onOpenChange }: Props) 
                 "border-t px-4 py-2.5 text-xs",
                 mismatch ? "border-orange-200 bg-orange-50 text-orange-800" : "border-emerald-100 bg-emerald-50/60 text-emerald-700",
               )}>
-                <span className="font-semibold">تصنيف المنصة: {category}</span>
+                <span className="font-semibold">{dtx("تصنيف المنصة: {0}", [category])}</span>
                 <span className="mx-2 opacity-50">•</span>
-                <span className="font-semibold">تصنيف Meta لهذه اللغة: {actual.join(" / ")}</span>
-                {mismatch && <span className="ms-2 font-semibold">⚠ أعادت Meta تصنيف هذه اللغة</span>}
+                <span className="font-semibold">{dtx("تصنيف Meta لهذه اللغة: {0}", [actual.join(" / ")])}</span>
+                {mismatch && <span className="ms-2 font-semibold">{dt("⚠ أعادت Meta تصنيف هذه اللغة")}</span>}
               </div>
             );
           })()}
@@ -661,7 +662,7 @@ export function WhatsappTemplateEditorDialog({ id, open, onOpenChange }: Props) 
 
         <section className="grid grid-cols-1 gap-4 rounded-xl border border-border bg-white p-4 lg:grid-cols-[1fr_260px]">
           <div className="space-y-1.5">
-            <FieldLabel hint="اسم Provider ثابت بعد الإرسال">اسم القالب</FieldLabel>
+            <FieldLabel hint={dt("اسم Provider ثابت بعد الإرسال")}>{dt("اسم القالب")}</FieldLabel>
             <Input
               value={name}
               onChange={(event) => setName(event.target.value.toLowerCase().replace(/[^a-z0-9_]/g, "_"))}
@@ -670,12 +671,12 @@ export function WhatsappTemplateEditorDialog({ id, open, onOpenChange }: Props) 
               maxLength={120}
             />
             <div className="flex justify-between text-[10px] text-slate-400">
-              <span>حروف a-z وأرقام و _ فقط</span>
+              <span>{dt("حروف a-z وأرقام و _ فقط")}</span>
               <span>{name.length}/120</span>
             </div>
           </div>
           <div className="space-y-1.5">
-            <FieldLabel>اللغة الحالية</FieldLabel>
+            <FieldLabel>{dt("اللغة الحالية")}</FieldLabel>
             <div className="flex h-10 items-center rounded-md border border-border bg-slate-50 px-3 text-sm">
               {LOCALE_LABELS[activeLocale]}
             </div>
@@ -685,18 +686,17 @@ export function WhatsappTemplateEditorDialog({ id, open, onOpenChange }: Props) 
         {category === "AUTHENTICATION" ? (
           <section className="grid grid-cols-1 gap-5 lg:grid-cols-2">
             <div className="space-y-4 rounded-xl border border-border bg-white p-4">
-              <h3 className="font-semibold text-slate-800">إعدادات Authentication</h3>
+              <h3 className="font-semibold text-slate-800">{dt("إعدادات Authentication")}</h3>
               <label className="flex items-center gap-2 text-sm">
                 <input
                   type="checkbox"
                   checked={authentication.addSecurityRecommendation}
                   onChange={(event) => setAuthentication((prev) => ({ ...prev, addSecurityRecommendation: event.target.checked }))}
                 />
-                إضافة تنبيه أمني بعدم مشاركة الرمز
-              </label>
+                {dt("إضافة تنبيه أمني بعدم مشاركة الرمز")}</label>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
-                  <FieldLabel>انتهاء الرمز بالدقائق</FieldLabel>
+                  <FieldLabel>{dt("انتهاء الرمز بالدقائق")}</FieldLabel>
                   <Input
                     type="number"
                     min={1}
@@ -706,7 +706,7 @@ export function WhatsappTemplateEditorDialog({ id, open, onOpenChange }: Props) 
                   />
                 </div>
                 <div className="space-y-1">
-                  <FieldLabel>نوع زر OTP</FieldLabel>
+                  <FieldLabel>{dt("نوع زر OTP")}</FieldLabel>
                   <select
                     value={authentication.otpType}
                     onChange={(event) => setAuthentication((prev) => ({ ...prev, otpType: event.target.value as "COPY_CODE" | "ONE_TAP" }))}
@@ -718,7 +718,7 @@ export function WhatsappTemplateEditorDialog({ id, open, onOpenChange }: Props) 
                 </div>
               </div>
               <div className="space-y-1">
-                <FieldLabel>نص الزر</FieldLabel>
+                <FieldLabel>{dt("نص الزر")}</FieldLabel>
                 <Input value={authentication.buttonText} onChange={(event) => setAuthentication((prev) => ({ ...prev, buttonText: event.target.value }))} maxLength={25} />
               </div>
               {authentication.otpType === "ONE_TAP" && (
@@ -732,7 +732,7 @@ export function WhatsappTemplateEditorDialog({ id, open, onOpenChange }: Props) 
             <WhatsappPreview
               header=""
               body={previewBody}
-              footer={`ينتهي الرمز خلال ${authentication.codeExpirationMinutes} دقيقة`}
+              footer={dt("ينتهي الرمز خلال {0} دقيقة", [authentication.codeExpirationMinutes])}
               buttons={[{ type: "QUICK_REPLY", text: authentication.buttonText }]}
               headerType="NONE"
               mediaPreview={null}
@@ -744,14 +744,13 @@ export function WhatsappTemplateEditorDialog({ id, open, onOpenChange }: Props) 
               <section className="space-y-4 rounded-xl border border-border bg-white p-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <h3 className="font-semibold text-slate-800">المحتوى</h3>
-                    <p className="text-[11px] text-slate-400">Header + Body + Footer + Buttons بنفس بنية Meta</p>
+                    <h3 className="font-semibold text-slate-800">{dt("المحتوى")}</h3>
+                    <p className="text-[11px] text-slate-400">{dt("Header + Body + Footer + Buttons بنفس بنية Meta")}</p>
                   </div>
                   <div className="flex items-center gap-2">
                     {submittedLocales.has(activeLocale) && (
                       <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-semibold text-emerald-700 ring-1 ring-emerald-200">
-                        مُرسلة إلى Meta · للقراءة فقط
-                      </span>
+                        {dt("مُرسلة إلى Meta · للقراءة فقط")}</span>
                     )}
                     <span className="rounded-full bg-[#25D366]/10 px-2.5 py-1 text-[10px] font-semibold text-[#128C7E]">
                       {LOCALE_LABELS[activeLocale]}
@@ -760,7 +759,7 @@ export function WhatsappTemplateEditorDialog({ id, open, onOpenChange }: Props) 
                 </div>
 
                 <div className="space-y-2">
-                  <FieldLabel hint="اختياري">Header</FieldLabel>
+                  <FieldLabel hint={dt("اختياري")}>Header</FieldLabel>
                   <div className="grid grid-cols-3 gap-2 md:grid-cols-6">
                     {HEADER_OPTIONS.map((option) => (
                       <button
@@ -797,7 +796,7 @@ export function WhatsappTemplateEditorDialog({ id, open, onOpenChange }: Props) 
                         value={current.headerText}
                         onFocus={() => setInsertTarget("header")}
                         onChange={(event) => setCurrent({ headerText: event.target.value })}
-                        placeholder="عنوان الرسالة"
+                        placeholder={dt("عنوان الرسالة")}
                         maxLength={60}
                         dir={activeLocale === "ar" ? "rtl" : "ltr"}
                       />
@@ -810,17 +809,17 @@ export function WhatsappTemplateEditorDialog({ id, open, onOpenChange }: Props) 
                     return (
                       <div className="space-y-3">
                         <div className="grid grid-cols-2 gap-2 rounded-lg border border-slate-200 bg-slate-50 p-3 text-[11px] text-slate-600 md:grid-cols-4">
-                          <div><span className="block text-slate-400">الصيغة</span><strong>{spec.formats}</strong></div>
-                          <div><span className="block text-slate-400">الحد الأقصى</span><strong>{spec.maxLabel}</strong></div>
-                          <div><span className="block text-slate-400">المقاس الموصى به</span><strong>{spec.recommended}</strong></div>
-                          <div><span className="block text-slate-400">نسبة العرض</span><strong>{spec.ratioLabel}</strong></div>
+                          <div><span className="block text-slate-400">{dt("الصيغة")}</span><strong>{spec.formats}</strong></div>
+                          <div><span className="block text-slate-400">{dt("الحد الأقصى")}</span><strong>{spec.maxLabel}</strong></div>
+                          <div><span className="block text-slate-400">{dt("المقاس الموصى به")}</span><strong>{spec.recommended}</strong></div>
+                          <div><span className="block text-slate-400">{dt("نسبة العرض")}</span><strong>{spec.ratioLabel}</strong></div>
                           <p className="col-span-2 md:col-span-4 text-[10px] text-slate-400">{spec.note}</p>
                         </div>
 
                         <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 p-4">
                           <label className="flex cursor-pointer items-center justify-center gap-2 text-sm text-slate-600">
                             {uploadingSample ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-                            {header.exampleHandle ? `تم رفع العينة: ${header.fileName ?? "ملف"}` : "ارفع عينة إلى Meta"}
+                            {header.exampleHandle ? dt("تم رفع العينة: {0}", [header.fileName ?? dt("ملف")]) : dt("ارفع عينة إلى Meta")}
                             <input
                               type="file"
                               className="hidden"
@@ -834,8 +833,7 @@ export function WhatsappTemplateEditorDialog({ id, open, onOpenChange }: Props) 
                             />
                           </label>
                           <p className="mt-1 text-center text-[10px] text-slate-400">
-                            الرفع يتم مباشرة إلى التخزين ثم تُرسل العينة إلى Meta بدون المرور بحجم طلب Vercel.
-                          </p>
+                            {dt("الرفع يتم مباشرة إلى التخزين ثم تُرسل العينة إلى Meta بدون المرور بحجم طلب Vercel.")}</p>
                           {mediaInfo && (
                             <div className="mt-3 flex flex-wrap justify-center gap-2 text-[10px]">
                               <span className="rounded-full bg-white px-2 py-1 ring-1 ring-slate-200">{formatMegabytes(mediaInfo.size)}</span>
@@ -843,10 +841,10 @@ export function WhatsappTemplateEditorDialog({ id, open, onOpenChange }: Props) 
                                 <span className="rounded-full bg-white px-2 py-1 ring-1 ring-slate-200">{mediaInfo.width} × {mediaInfo.height}px</span>
                               )}
                               {mediaInfo.ratioOk === true && (
-                                <span className="rounded-full bg-emerald-50 px-2 py-1 text-emerald-700 ring-1 ring-emerald-200">نسبة عرض مثالية</span>
+                                <span className="rounded-full bg-emerald-50 px-2 py-1 text-emerald-700 ring-1 ring-emerald-200">{dt("نسبة عرض مثالية")}</span>
                               )}
                               {mediaInfo.ratioOk === false && (
-                                <span className="rounded-full bg-amber-50 px-2 py-1 text-amber-700 ring-1 ring-amber-200">قد يظهر قص — الأفضل {spec.ratioLabel}</span>
+                                <span className="rounded-full bg-amber-50 px-2 py-1 text-amber-700 ring-1 ring-amber-200">{dtx("قد يظهر قص — الأفضل {0}", [spec.ratioLabel])}</span>
                               )}
                             </div>
                           )}
@@ -859,7 +857,7 @@ export function WhatsappTemplateEditorDialog({ id, open, onOpenChange }: Props) 
                     <div className="grid grid-cols-1 gap-2 md:grid-cols-3">
                       <Input disabled={submittedLocales.size > 0} placeholder="Latitude" type="number" value={header.latitude ?? ""} onChange={(e) => setHeader((p) => ({ ...p, latitude: e.target.value ? Number(e.target.value) : null }))} />
                       <Input disabled={submittedLocales.size > 0} placeholder="Longitude" type="number" value={header.longitude ?? ""} onChange={(e) => setHeader((p) => ({ ...p, longitude: e.target.value ? Number(e.target.value) : null }))} />
-                      <Input disabled={submittedLocales.size > 0} placeholder="العنوان للمعاينة" value={header.address ?? ""} onChange={(e) => setHeader((p) => ({ ...p, address: e.target.value }))} />
+                      <Input disabled={submittedLocales.size > 0} placeholder={dt("العنوان للمعاينة")} value={header.address ?? ""} onChange={(e) => setHeader((p) => ({ ...p, address: e.target.value }))} />
                     </div>
                   )}
                 </div>
@@ -867,12 +865,12 @@ export function WhatsappTemplateEditorDialog({ id, open, onOpenChange }: Props) 
                 <div className="space-y-2">
                   <FieldLabel hint={`${current.body.length}/1024`}>Body</FieldLabel>
                   <div className="flex flex-wrap gap-1 rounded-t-lg border border-b-0 border-border bg-slate-50 p-1.5">
-                    <ToolbarButton title="عريض" onClick={() => wrapSelection("*")}><Bold className="h-3.5 w-3.5" /></ToolbarButton>
-                    <ToolbarButton title="مائل" onClick={() => wrapSelection("_")}><Italic className="h-3.5 w-3.5" /></ToolbarButton>
-                    <ToolbarButton title="يتوسطه خط" onClick={() => wrapSelection("~")}><Strikethrough className="h-3.5 w-3.5" /></ToolbarButton>
+                    <ToolbarButton title={dt("عريض")} onClick={() => wrapSelection("*")}><Bold className="h-3.5 w-3.5" /></ToolbarButton>
+                    <ToolbarButton title={dt("مائل")} onClick={() => wrapSelection("_")}><Italic className="h-3.5 w-3.5" /></ToolbarButton>
+                    <ToolbarButton title={dt("يتوسطه خط")} onClick={() => wrapSelection("~")}><Strikethrough className="h-3.5 w-3.5" /></ToolbarButton>
                     <ToolbarButton title="Code" onClick={() => wrapSelection("`")}><Code2 className="h-3.5 w-3.5" /></ToolbarButton>
                     <span className="mx-1 h-7 w-px bg-border" />
-                    <button type="button" onClick={() => setInsertTarget("body")} className="rounded px-2 text-[11px] text-slate-600 hover:bg-white">المتغيرات ↓</button>
+                    <button type="button" onClick={() => setInsertTarget("body")} className="rounded px-2 text-[11px] text-slate-600 hover:bg-white">{dt("المتغيرات ↓")}</button>
                   </div>
                   <Textarea
                     ref={bodyRef}
@@ -884,19 +882,19 @@ export function WhatsappTemplateEditorDialog({ id, open, onOpenChange }: Props) 
                     rows={8}
                     className="rounded-t-none resize-y font-mono text-xs leading-relaxed"
                     dir={activeLocale === "ar" ? "rtl" : "ltr"}
-                    placeholder="اكتب نص رسالة واتساب"
+                    placeholder={dt("اكتب نص رسالة واتساب")}
                   />
                   <VariablePicker onInsert={insertToken} />
                 </div>
 
                 <div className="space-y-1">
-                  <FieldLabel hint={`اختياري · ${current.footerText.length}/60`}>Footer</FieldLabel>
+                  <FieldLabel hint={dt("اختياري · {0}/60", [current.footerText.length])}>Footer</FieldLabel>
                   <Input
                     value={current.footerText}
                     disabled={submittedLocales.has(activeLocale)}
                     onChange={(event) => setCurrent({ footerText: event.target.value })}
                     maxLength={60}
-                    placeholder="سطر قصير أسفل الرسالة"
+                    placeholder={dt("سطر قصير أسفل الرسالة")}
                     dir={activeLocale === "ar" ? "rtl" : "ltr"}
                   />
                 </div>
@@ -905,29 +903,29 @@ export function WhatsappTemplateEditorDialog({ id, open, onOpenChange }: Props) 
               <section className="space-y-3 rounded-xl border border-border bg-white p-4">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div>
-                    <h3 className="font-semibold text-slate-800">الأزرار</h3>
-                    <p className="text-[11px] text-slate-400">Quick Reply / Website URL / Phone Number — حتى 10 أزرار</p>
+                    <h3 className="font-semibold text-slate-800">{dt("الأزرار")}</h3>
+                    <p className="text-[11px] text-slate-400">{dt("Quick Reply / Website URL / Phone Number — حتى 10 أزرار")}</p>
                   </div>
                   <div className="flex gap-1">
-                    <Button type="button" size="sm" variant="outline" disabled={submittedLocales.has(activeLocale)} onClick={() => addButton("QUICK_REPLY")}><Plus className="me-1 h-3.5 w-3.5" />رد سريع</Button>
-                    <Button type="button" size="sm" variant="outline" disabled={submittedLocales.has(activeLocale)} onClick={() => addButton("URL")}><Plus className="me-1 h-3.5 w-3.5" />رابط</Button>
-                    <Button type="button" size="sm" variant="outline" disabled={submittedLocales.has(activeLocale)} onClick={() => addButton("PHONE_NUMBER")}><Plus className="me-1 h-3.5 w-3.5" />هاتف</Button>
+                    <Button type="button" size="sm" variant="outline" disabled={submittedLocales.has(activeLocale)} onClick={() => addButton("QUICK_REPLY")}><Plus className="me-1 h-3.5 w-3.5" />{dt("رد سريع")}</Button>
+                    <Button type="button" size="sm" variant="outline" disabled={submittedLocales.has(activeLocale)} onClick={() => addButton("URL")}><Plus className="me-1 h-3.5 w-3.5" />{dt("رابط")}</Button>
+                    <Button type="button" size="sm" variant="outline" disabled={submittedLocales.has(activeLocale)} onClick={() => addButton("PHONE_NUMBER")}><Plus className="me-1 h-3.5 w-3.5" />{dt("هاتف")}</Button>
                   </div>
                 </div>
                 {current.buttons.length === 0 ? (
-                  <div className="rounded-lg border border-dashed border-slate-200 py-6 text-center text-xs text-slate-400">لا توجد أزرار</div>
+                  <div className="rounded-lg border border-dashed border-slate-200 py-6 text-center text-xs text-slate-400">{dt("لا توجد أزرار")}</div>
                 ) : (
                   <div className="space-y-2">
                     {current.buttons.map((button, index) => (
                       <div key={index} className="grid grid-cols-1 gap-2 rounded-lg border border-border bg-slate-50 p-3 md:grid-cols-[130px_1fr_1.5fr_36px]">
                         <div className="flex h-10 items-center gap-1 rounded-md border bg-white px-2 text-xs">{buttonIcon(button.type)}{button.type}</div>
-                        <Input disabled={submittedLocales.has(activeLocale)} value={button.text} maxLength={25} onChange={(e) => updateButton(index, { text: e.target.value })} placeholder="نص الزر" />
+                        <Input disabled={submittedLocales.has(activeLocale)} value={button.text} maxLength={25} onChange={(e) => updateButton(index, { text: e.target.value })} placeholder={dt("نص الزر")} />
                         {button.type === "URL" ? (
-                          <Input disabled={submittedLocales.has(activeLocale)} dir="ltr" value={button.url ?? ""} onChange={(e) => updateButton(index, { url: e.target.value })} placeholder="https://... أو {{variable}}" />
+                          <Input disabled={submittedLocales.has(activeLocale)} dir="ltr" value={button.url ?? ""} onChange={(e) => updateButton(index, { url: e.target.value })} placeholder={dt("https://... أو {{variable}}")} />
                         ) : button.type === "PHONE_NUMBER" ? (
                           <Input disabled={submittedLocales.has(activeLocale)} dir="ltr" value={button.phoneNumber ?? ""} onChange={(e) => updateButton(index, { phoneNumber: e.target.value })} placeholder="+905..." />
                         ) : (
-                          <div className="flex h-10 items-center rounded-md border bg-white px-3 text-xs text-slate-400">لا يحتاج قيمة إضافية</div>
+                          <div className="flex h-10 items-center rounded-md border bg-white px-3 text-xs text-slate-400">{dt("لا يحتاج قيمة إضافية")}</div>
                         )}
                         <button type="button" disabled={submittedLocales.has(activeLocale)} onClick={() => removeButton(index)} className="grid h-10 w-9 disabled:cursor-not-allowed disabled:opacity-40 place-items-center rounded-md text-red-500 hover:bg-red-50"><Trash2 className="h-4 w-4" /></button>
                       </div>
@@ -979,7 +977,7 @@ function WhatsappPreview({
 }) {
   return (
     <aside className="min-w-0 xl:sticky xl:top-0 xl:self-start">
-      <FieldLabel hint="بيانات تجريبية">المعاينة الحية</FieldLabel>
+      <FieldLabel hint={dt("بيانات تجريبية")}>{dt("المعاينة الحية")}</FieldLabel>
       <div className="mt-2 min-h-[520px] rounded-2xl border border-border bg-[#E5DDD5] p-5">
         <div className="mx-auto max-w-[360px] overflow-hidden rounded-xl bg-white shadow-sm">
           {/* Blob/data URLs are local editor previews; next/image does not support them reliably. */}
@@ -992,18 +990,18 @@ function WhatsappPreview({
             <div className="flex items-center gap-3 bg-slate-100 p-4"><FileText className="h-7 w-7 text-red-500" /><span className="truncate text-xs">{fileName ?? "document.pdf"}</span></div>
           )}
           {headerType === "LOCATION" && (
-            <div className="flex min-h-28 items-center justify-center gap-2 bg-slate-100 p-4 text-xs text-slate-600"><MapPin className="h-5 w-5" />{address || "موقع جغرافي"}</div>
+            <div className="flex min-h-28 items-center justify-center gap-2 bg-slate-100 p-4 text-xs text-slate-600"><MapPin className="h-5 w-5" />{address || dt("موقع جغرافي")}</div>
           )}
           <div className="space-y-2 p-3" dir="auto">
             {headerType === "TEXT" && header && <div className="font-semibold text-slate-900">{header}</div>}
-            <div className="whitespace-pre-wrap break-words text-sm leading-6 text-slate-800">{body || <span className="italic text-slate-400">المعاينة ستظهر هنا</span>}</div>
+            <div className="whitespace-pre-wrap break-words text-sm leading-6 text-slate-800">{body || <span className="italic text-slate-400">{dt("المعاينة ستظهر هنا")}</span>}</div>
             {footer && <div className="text-[11px] text-slate-400">{footer}</div>}
           </div>
           {buttons.length > 0 && (
             <div className="border-t border-slate-100">
               {buttons.map((button, index) => (
                 <div key={index} className="flex items-center justify-center gap-1.5 border-b border-slate-100 px-3 py-2.5 text-xs font-medium text-sky-600 last:border-b-0">
-                  {buttonIcon(button.type)}{button.text || "زر"}
+                  {buttonIcon(button.type)}{button.text || dt("زر")}
                 </div>
               ))}
             </div>

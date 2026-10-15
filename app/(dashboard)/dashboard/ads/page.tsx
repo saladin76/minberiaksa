@@ -14,6 +14,7 @@ import { AcquisitionTab } from "./_components/AcquisitionTab";
 import { DiagnosticsTab } from "./_components/DiagnosticsTab";
 import { AdGroupsTab } from "./_components/AdGroupsTab";
 import { ReconciliationTab } from "./_components/ReconciliationTab";
+import { dashDir, dt } from "@/lib/dashboard/i18n";
 
 type TabKey =
   | "overview"
@@ -28,16 +29,16 @@ type TabKey =
   | "reconciliation";
 
 const TAB_LABELS: Record<TabKey, string> = {
-  overview: "نظرة عامة",
-  platforms: "المنصات",
-  campaigns: "الحملات",
-  adGroups: "مجموعات إعلانية",
-  ads: "الإعلانات",
-  placements: "المواضع",
-  countries: "الدول",
-  acquisition: "اكتساب المتبرعين",
-  diagnostics: "تشخيص التتبع",
-  reconciliation: "تسوية المنصات",
+  get overview() { return dt("نظرة عامة"); },
+  get platforms() { return dt("المنصات"); },
+  get campaigns() { return dt("الحملات"); },
+  get adGroups() { return dt("مجموعات إعلانية"); },
+  get ads() { return dt("الإعلانات"); },
+  get placements() { return dt("المواضع"); },
+  get countries() { return dt("الدول"); },
+  get acquisition() { return dt("اكتساب المتبرعين"); },
+  get diagnostics() { return dt("تشخيص التتبع"); },
+  get reconciliation() { return dt("تسوية المنصات"); },
 };
 
 const TAB_ORDER: TabKey[] = [
@@ -83,17 +84,16 @@ export default function AdsManagementPage() {
   }, [period, dateFrom, dateTo]);
 
   return (
-    <div className="space-y-4" dir="rtl">
+    <div className="space-y-4" dir={dashDir()}>
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <div className="flex items-center gap-3">
           <span className="rounded-xl p-2 bg-brand/10 text-brand">
             <Megaphone className="w-5 h-5" />
           </span>
           <div>
-            <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">إدارة الإعلانات</h1>
+            <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">{dt("إدارة الإعلانات")}</h1>
             <p className="text-xs text-slate-500 mt-0.5">
-              مركز التحليلات الإعلاني  يربط كل تبرع بالحملة والمنصة والإعلان الذي جلبه، ويقيس سلامة التتبع وفروقات الإسناد.
-            </p>
+              {dt("مركز التحليلات الإعلاني  يربط كل تبرع بالحملة والمنصة والإعلان الذي جلبه، ويقيس سلامة التتبع وفروقات الإسناد.")}</p>
           </div>
         </div>
         <AdsFiltersBar
@@ -132,16 +132,16 @@ export default function AdsManagementPage() {
           <BreakdownTable
             filterQs={filterQs}
             dimension="platform"
-            entityHeader="المنصة"
-            emptyHint="لا توجد تبرعات في الفترة لتفصيلها حسب المنصة"
+            entityHeader={dt("المنصة")}
+            emptyHint={dt("لا توجد تبرعات في الفترة لتفصيلها حسب المنصة")}
           />
         )}
         {activeTab === "campaigns" && (
           <BreakdownTable
             filterQs={filterQs}
             dimension="campaign"
-            entityHeader="اسم الحملة (utm_campaign)"
-            emptyHint="لا توجد حملات إعلانية مُسنَدة في الفترة"
+            entityHeader={dt("اسم الحملة (utm_campaign)")}
+            emptyHint={dt("لا توجد حملات إعلانية مُسنَدة في الفترة")}
           />
         )}
         {activeTab === "adGroups" && <AdGroupsTab filterQs={filterQs} />}
@@ -149,23 +149,23 @@ export default function AdsManagementPage() {
           <BreakdownTable
             filterQs={filterQs}
             dimension="ad"
-            entityHeader="الإعلان (ad_id / utm_content)"
-            emptyHint="لا توجد إعلانات مُسنَدة في الفترة"
+            entityHeader={dt("الإعلان (ad_id / utm_content)")}
+            emptyHint={dt("لا توجد إعلانات مُسنَدة في الفترة")}
           />
         )}
         {activeTab === "placements" && (
           <BreakdownTable
             filterQs={filterQs}
             dimension="placement"
-            entityHeader="الموضع"
-            emptyHint="لا توجد بيانات placement محفوظة على التبرعات في الفترة"
+            entityHeader={dt("الموضع")}
+            emptyHint={dt("لا توجد بيانات placement محفوظة على التبرعات في الفترة")}
           />
         )}
         {activeTab === "countries" && (
           <BreakdownTable
             filterQs={filterQs}
             dimension="country"
-            entityHeader="الدولة (حسب جنسية المتبرع)"
+            entityHeader={dt("الدولة (حسب جنسية المتبرع)")}
           />
         )}
         {activeTab === "acquisition" && <AcquisitionTab filterQs={filterQs} />}

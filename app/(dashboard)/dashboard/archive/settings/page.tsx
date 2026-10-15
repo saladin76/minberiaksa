@@ -1,6 +1,7 @@
 import { ArchiveProjectOptionsSettings } from "../_components/ArchiveProjectOptionsSettings";
+import { dt } from "@/lib/dashboard/i18n";
 
-export const metadata = { title: "إعدادات الأرشيف | لوحة التحكم" };
+export const metadata = { get title() { return dt("إعدادات الأرشيف | لوحة التحكم"); } };
 export const dynamic = "force-dynamic";
 
 export default function ArchiveSettingsPage() {

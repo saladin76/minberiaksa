@@ -14,6 +14,7 @@ import {
   AlertDialogDescription,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import { dashDir, dt } from "@/lib/dashboard/i18n";
 
 export interface DeleteDonationRow {
   id: string;
@@ -57,16 +58,16 @@ export function DeleteDonationDialog({ row, onClose, onDeleted }: Props) {
     setSubmitting(true);
     try {
       await axios.delete(`/api/donations/${row.id}`);
-      toast.success("تم حذف التبرع وتحديث الإجماليات");
+      toast.success(dt("تم حذف التبرع وتحديث الإجماليات"));
       onDeleted();
       onClose();
     } catch (err) {
       if (axios.isAxiosError(err) && err.response?.status === 409) {
         setImmutable(true);
-        toast.error("لا يمكن حذف تبرع مدفوع. استخدم التعديل لتصحيحه.");
+        toast.error(dt("لا يمكن حذف تبرع مدفوع. استخدم التعديل لتصحيحه."));
       } else {
         console.error("[Donation Delete] failed:", err);
-        toast.error("فشل في حذف التبرع");
+        toast.error(dt("فشل في حذف التبرع"));
       }
     } finally {
       setSubmitting(false);
@@ -78,21 +79,18 @@ export function DeleteDonationDialog({ row, onClose, onDeleted }: Props) {
   if (immutable) {
     return (
       <AlertDialog open onOpenChange={(open) => (!open ? onClose() : null)}>
-        <AlertDialogContent className="max-w-md" dir="rtl">
-          <AlertDialogHeader className="text-right sm:text-right">
+        <AlertDialogContent className="max-w-md" dir={dashDir()}>
+          <AlertDialogHeader className="text-start sm:text-start">
             <div className="mx-auto mb-1 flex h-12 w-12 items-center justify-center rounded-full bg-amber-100 text-amber-600">
               <AlertTriangle className="h-6 w-6" />
             </div>
-            <AlertDialogTitle className="text-slate-900">لا يمكن حذف هذا التبرع</AlertDialogTitle>
+            <AlertDialogTitle className="text-slate-900">{dt("لا يمكن حذف هذا التبرع")}</AlertDialogTitle>
             <AlertDialogDescription className="text-slate-600 leading-relaxed">
-              هذا تبرع مدفوع ومسجّل ماليًا، وقد يكون صدر له إيصال أو شهادة. السجلات
-              المالية لا تُحذف. لتصحيح المبلغ أو الحالة أو المشروع استخدم «تعديل».
-            </AlertDialogDescription>
+              {dt("هذا تبرع مدفوع ومسجّل ماليًا، وقد يكون صدر له إيصال أو شهادة. السجلات المالية لا تُحذف. لتصحيح المبلغ أو الحالة أو المشروع استخدم «تعديل».")}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <Button type="button" variant="outline" onClick={onClose}>
-              إغلاق
-            </Button>
+              {dt("إغلاق")}</Button>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -101,41 +99,38 @@ export function DeleteDonationDialog({ row, onClose, onDeleted }: Props) {
 
   return (
     <AlertDialog open onOpenChange={(open) => (!open && !submitting ? onClose() : null)}>
-      <AlertDialogContent className="max-w-md" dir="rtl">
-        <AlertDialogHeader className="text-right sm:text-right">
+      <AlertDialogContent className="max-w-md" dir={dashDir()}>
+        <AlertDialogHeader className="text-start sm:text-start">
           <div className="mx-auto mb-1 flex h-12 w-12 items-center justify-center rounded-full bg-rose-100 text-rose-600">
             <AlertTriangle className="h-6 w-6" />
           </div>
           <AlertDialogTitle className="text-rose-900">
-            تأكيد حذف التبرع
-          </AlertDialogTitle>
+            {dt("تأكيد حذف التبرع")}</AlertDialogTitle>
           <AlertDialogDescription className="text-slate-600 leading-relaxed">
-            هذا الإجراء لا يمكن التراجع عنه. يُسمح بحذف التبرعات غير المدفوعة فقط
-            (محاولات دفع متروكة أو فاشلة). التبرعات المدفوعة لا تُحذف.
-          </AlertDialogDescription>
+            {dt("هذا الإجراء لا يمكن التراجع عنه. يُسمح بحذف التبرعات غير المدفوعة فقط (محاولات دفع متروكة أو فاشلة). التبرعات المدفوعة لا تُحذف.")}</AlertDialogDescription>
         </AlertDialogHeader>
 
-        <div className="space-y-3 text-right">
+        <div className="space-y-3 text-start">
           <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs space-y-1">
             <div className="flex justify-between">
-              <span className="text-slate-500">المتبرع</span>
+              <span className="text-slate-500">{dt("المتبرع")}</span>
               <span className="font-medium text-slate-800">{donor}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-slate-500">إجمالي التحصيل</span>
+              <span className="text-slate-500">{dt("إجمالي التحصيل")}</span>
               <span className="font-bold text-slate-900" dir="ltr">
                 {expected} {row.currency}
               </span>
             </div>
             <div className="flex justify-between">
-              <span className="text-slate-500">الحالة</span>
+              <span className="text-slate-500">{dt("الحالة")}</span>
               <span className="font-medium text-slate-800">{row.status}</span>
             </div>
           </div>
 
           <div className="space-y-1">
             <label className="block text-xs font-medium text-slate-700">
-              للتأكيد، اكتب قيمة التبرع تمامًا (<span dir="ltr">{expected}</span>):
+              {dt("للتأكيد، اكتب قيمة التبرع تمامًا (")}<span dir="ltr">{expected}</span>):
             </label>
             <input
               type="text"
@@ -148,7 +143,7 @@ export function DeleteDonationDialog({ row, onClose, onDeleted }: Props) {
               disabled={submitting}
             />
             {typed && !matches && (
-              <p className="text-[11px] text-rose-600">القيمة المُدخلة لا تطابق قيمة التبرع.</p>
+              <p className="text-[11px] text-rose-600">{dt("القيمة المُدخلة لا تطابق قيمة التبرع.")}</p>
             )}
           </div>
         </div>
@@ -164,15 +159,13 @@ export function DeleteDonationDialog({ row, onClose, onDeleted }: Props) {
             {submitting ? (
               <>
                 <Loader2 className="h-4 w-4 animate-spin ms-2" />
-                جاري الحذف...
-              </>
+                {dt("جاري الحذف...")}</>
             ) : (
-              "حذف نهائيًا"
+              dt("حذف نهائيًا")
             )}
           </Button>
           <Button type="button" variant="outline" onClick={onClose} disabled={submitting}>
-            إلغاء
-          </Button>
+            {dt("إلغاء")}</Button>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>

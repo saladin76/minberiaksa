@@ -15,6 +15,7 @@ import { Trash2 } from "lucide-react";
 import type { EmailDocument } from "./types";
 import { getBlock, setBlock, deleteBlock, getRoot, FONT_FAMILIES } from "./types";
 import { VARIABLE_CATALOG } from "@/lib/templates/variables";
+import { dt } from "@/lib/dashboard/i18n";
 
 interface Props {
   doc: EmailDocument;
@@ -29,7 +30,7 @@ export function BlockInspector({ doc, selectedId, onChange, onSelect }: Props) {
   }
   const block = getBlock(doc, selectedId);
   if (!block) {
-    return <div className="text-sm text-muted-foreground p-4">القالب غير موجود</div>;
+    return <div className="text-sm text-muted-foreground p-4">{dt("القالب غير موجود")}</div>;
   }
 
   const update = (patch: {
@@ -60,47 +61,46 @@ export function BlockInspector({ doc, selectedId, onChange, onSelect }: Props) {
       <div className="flex items-center justify-between border-b border-border pb-2">
         <span className="text-xs font-semibold text-muted-foreground">{block.type}</span>
         <Button variant="ghost" size="sm" onClick={handleDelete} className="text-red-600 h-7">
-          <Trash2 className="w-3.5 h-3.5 me-1" /> حذف
-        </Button>
+          <Trash2 className="w-3.5 h-3.5 me-1" /> {dt(" حذف")}</Button>
       </div>
 
       {block.type === "Heading" && (
         <>
-          <Field label="النص">
+          <Field label={dt("النص")}>
             <TextareaWithVariables
               value={String(props.text ?? "")}
               onChange={(v) => update({ props: { text: v } })}
             />
           </Field>
-          <Field label="المستوى">
+          <Field label={dt("المستوى")}>
             <Select
               value={String(props.level ?? "h2")}
               onValueChange={(v) => update({ props: { level: v } })}
             >
               <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="h1">H1  أكبر</SelectItem>
+                <SelectItem value="h1">{dt("H1  أكبر")}</SelectItem>
                 <SelectItem value="h2">H2</SelectItem>
-                <SelectItem value="h3">H3  أصغر</SelectItem>
+                <SelectItem value="h3">{dt("H3  أصغر")}</SelectItem>
               </SelectContent>
             </Select>
           </Field>
           <FontFamilyField value={style.fontFamily as string | undefined} onChange={(v) => update({ style: { fontFamily: v || undefined } })} />
-          <Field label="السمك">
+          <Field label={dt("السمك")}>
             <Select
               value={String(style.fontWeight ?? "bold")}
               onValueChange={(v) => update({ style: { fontWeight: v } })}
             >
               <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="normal">عادي</SelectItem>
-                <SelectItem value="bold">ثقيل</SelectItem>
+                <SelectItem value="normal">{dt("عادي")}</SelectItem>
+                <SelectItem value="bold">{dt("ثقيل")}</SelectItem>
               </SelectContent>
             </Select>
           </Field>
-          <ColorField label="لون النص" value={String(style.color ?? "#1F2937")} onChange={(v) => update({ style: { color: v } })} />
+          <ColorField label={dt("لون النص")} value={String(style.color ?? "#1F2937")} onChange={(v) => update({ style: { color: v } })} />
           <ColorField
-            label="لون الخلفية"
+            label={dt("لون الخلفية")}
             value={String(style.backgroundColor ?? "")}
             allowEmpty
             onChange={(v) => update({ style: { backgroundColor: v || undefined } })}
@@ -111,48 +111,48 @@ export function BlockInspector({ doc, selectedId, onChange, onSelect }: Props) {
 
       {block.type === "Text" && (
         <>
-          <Field label="النص">
+          <Field label={dt("النص")}>
             <TextareaWithVariables
               value={String(props.text ?? "")}
               onChange={(v) => update({ props: { text: v } })}
               rows={6}
             />
           </Field>
-          <Field label="تفعيل Markdown">
+          <Field label={dt("تفعيل Markdown")}>
             <Select
               value={String(props.markdown ?? "false")}
               onValueChange={(v) => update({ props: { markdown: v === "true" } })}
             >
               <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="false">نص عادي</SelectItem>
-                <SelectItem value="true">Markdown  يدعم **bold** و _italic_ و [link]()</SelectItem>
+                <SelectItem value="false">{dt("نص عادي")}</SelectItem>
+                <SelectItem value="true">{dt("Markdown  يدعم **bold** و _italic_ و [link]()")}</SelectItem>
               </SelectContent>
             </Select>
           </Field>
           <FontFamilyField value={style.fontFamily as string | undefined} onChange={(v) => update({ style: { fontFamily: v || undefined } })} />
           <NumberField
-            label="حجم الخط (px)"
+            label={dt("حجم الخط (px)")}
             value={Number(style.fontSize ?? 16)}
             min={10}
             max={48}
             onChange={(v) => update({ style: { fontSize: v } })}
           />
-          <Field label="السمك">
+          <Field label={dt("السمك")}>
             <Select
               value={String(style.fontWeight ?? "normal")}
               onValueChange={(v) => update({ style: { fontWeight: v } })}
             >
               <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="normal">عادي</SelectItem>
-                <SelectItem value="bold">ثقيل</SelectItem>
+                <SelectItem value="normal">{dt("عادي")}</SelectItem>
+                <SelectItem value="bold">{dt("ثقيل")}</SelectItem>
               </SelectContent>
             </Select>
           </Field>
-          <ColorField label="لون النص" value={String(style.color ?? "#374151")} onChange={(v) => update({ style: { color: v } })} />
+          <ColorField label={dt("لون النص")} value={String(style.color ?? "#374151")} onChange={(v) => update({ style: { color: v } })} />
           <ColorField
-            label="لون الخلفية"
+            label={dt("لون الخلفية")}
             value={String(style.backgroundColor ?? "")}
             allowEmpty
             onChange={(v) => update({ style: { backgroundColor: v || undefined } })}
@@ -163,13 +163,13 @@ export function BlockInspector({ doc, selectedId, onChange, onSelect }: Props) {
 
       {block.type === "Button" && (
         <>
-          <Field label="نص الزر">
+          <Field label={dt("نص الزر")}>
             <Input
               value={String(props.text ?? "")}
               onChange={(e) => update({ props: { text: e.target.value } })}
             />
           </Field>
-          <Field label="الرابط">
+          <Field label={dt("الرابط")}>
             <Input
               value={String(props.url ?? "")}
               onChange={(e) => update({ props: { url: e.target.value } })}
@@ -177,77 +177,77 @@ export function BlockInspector({ doc, selectedId, onChange, onSelect }: Props) {
               dir="ltr"
             />
           </Field>
-          <Field label="الشكل">
+          <Field label={dt("الشكل")}>
             <Select
               value={String(props.buttonStyle ?? "rectangle")}
               onValueChange={(v) => update({ props: { buttonStyle: v } })}
             >
               <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="rectangle">مستطيل</SelectItem>
-                <SelectItem value="rounded">دائري الزوايا</SelectItem>
-                <SelectItem value="pill">حبة دواء</SelectItem>
+                <SelectItem value="rectangle">{dt("مستطيل")}</SelectItem>
+                <SelectItem value="rounded">{dt("دائري الزوايا")}</SelectItem>
+                <SelectItem value="pill">{dt("حبة دواء")}</SelectItem>
               </SelectContent>
             </Select>
           </Field>
-          <Field label="الحجم">
+          <Field label={dt("الحجم")}>
             <Select
               value={String(props.size ?? "medium")}
               onValueChange={(v) => update({ props: { size: v } })}
             >
               <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="x-small">صغير جدًا</SelectItem>
-                <SelectItem value="small">صغير</SelectItem>
-                <SelectItem value="medium">متوسط</SelectItem>
-                <SelectItem value="large">كبير</SelectItem>
+                <SelectItem value="x-small">{dt("صغير جدًا")}</SelectItem>
+                <SelectItem value="small">{dt("صغير")}</SelectItem>
+                <SelectItem value="medium">{dt("متوسط")}</SelectItem>
+                <SelectItem value="large">{dt("كبير")}</SelectItem>
               </SelectContent>
             </Select>
           </Field>
-          <Field label="ملء العرض">
+          <Field label={dt("ملء العرض")}>
             <Select
               value={String(props.fullWidth ?? "false")}
               onValueChange={(v) => update({ props: { fullWidth: v === "true" } })}
             >
               <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="false">حسب النص</SelectItem>
-                <SelectItem value="true">ملء عرض البريد</SelectItem>
+                <SelectItem value="false">{dt("حسب النص")}</SelectItem>
+                <SelectItem value="true">{dt("ملء عرض البريد")}</SelectItem>
               </SelectContent>
             </Select>
           </Field>
           <ColorField
-            label="لون خلفية الزر"
+            label={dt("لون خلفية الزر")}
             value={String(props.buttonBackgroundColor ?? "#FA5D17")}
             onChange={(v) => update({ props: { buttonBackgroundColor: v } })}
           />
           <ColorField
-            label="لون نص الزر"
+            label={dt("لون نص الزر")}
             value={String(props.buttonTextColor ?? "#FFFFFF")}
             onChange={(v) => update({ props: { buttonTextColor: v } })}
           />
           <FontFamilyField value={style.fontFamily as string | undefined} onChange={(v) => update({ style: { fontFamily: v || undefined } })} />
           <NumberField
-            label="حجم الخط (px)"
+            label={dt("حجم الخط (px)")}
             value={Number(style.fontSize ?? 14)}
             min={10}
             max={32}
             onChange={(v) => update({ style: { fontSize: v } })}
           />
-          <Field label="سمك الخط">
+          <Field label={dt("سمك الخط")}>
             <Select
               value={String(style.fontWeight ?? "bold")}
               onValueChange={(v) => update({ style: { fontWeight: v } })}
             >
               <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="normal">عادي</SelectItem>
-                <SelectItem value="bold">ثقيل</SelectItem>
+                <SelectItem value="normal">{dt("عادي")}</SelectItem>
+                <SelectItem value="bold">{dt("ثقيل")}</SelectItem>
               </SelectContent>
             </Select>
           </Field>
           <ColorField
-            label="لون خلفية المنطقة"
+            label={dt("لون خلفية المنطقة")}
             value={String(style.backgroundColor ?? "")}
             allowEmpty
             onChange={(v) => update({ style: { backgroundColor: v || undefined } })}
@@ -258,7 +258,7 @@ export function BlockInspector({ doc, selectedId, onChange, onSelect }: Props) {
 
       {block.type === "Image" && (
         <>
-          <Field label="رابط الصورة">
+          <Field label={dt("رابط الصورة")}>
             <Input
               value={String(props.url ?? "")}
               onChange={(e) => update({ props: { url: e.target.value } })}
@@ -266,13 +266,13 @@ export function BlockInspector({ doc, selectedId, onChange, onSelect }: Props) {
               dir="ltr"
             />
           </Field>
-          <Field label="الوصف البديل (alt)">
+          <Field label={dt("الوصف البديل (alt)")}>
             <Input
               value={String(props.alt ?? "")}
               onChange={(e) => update({ props: { alt: e.target.value } })}
             />
           </Field>
-          <Field label="رابط نقر (اختياري)">
+          <Field label={dt("رابط نقر (اختياري)")}>
             <Input
               value={String(props.linkHref ?? "")}
               onChange={(e) => update({ props: { linkHref: e.target.value || undefined } })}
@@ -280,35 +280,35 @@ export function BlockInspector({ doc, selectedId, onChange, onSelect }: Props) {
               dir="ltr"
             />
           </Field>
-          <Field label="محاذاة الصورة">
+          <Field label={dt("محاذاة الصورة")}>
             <Select
               value={String(props.contentAlignment ?? "middle")}
               onValueChange={(v) => update({ props: { contentAlignment: v } })}
             >
               <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="top">أعلى</SelectItem>
-                <SelectItem value="middle">وسط</SelectItem>
-                <SelectItem value="bottom">أسفل</SelectItem>
+                <SelectItem value="top">{dt("أعلى")}</SelectItem>
+                <SelectItem value="middle">{dt("وسط")}</SelectItem>
+                <SelectItem value="bottom">{dt("أسفل")}</SelectItem>
               </SelectContent>
             </Select>
           </Field>
           <NumberField
-            label="العرض (px)  اتركه 0 للتلقائي"
+            label={dt("العرض (px)  اتركه 0 للتلقائي")}
             value={Number(props.width ?? 0)}
             min={0}
             max={1200}
             onChange={(v) => update({ props: { width: v || undefined } })}
           />
           <NumberField
-            label="الارتفاع (px)  اتركه 0 للتلقائي"
+            label={dt("الارتفاع (px)  اتركه 0 للتلقائي")}
             value={Number(props.height ?? 0)}
             min={0}
             max={1200}
             onChange={(v) => update({ props: { height: v || undefined } })}
           />
           <ColorField
-            label="لون الخلفية"
+            label={dt("لون الخلفية")}
             value={String(style.backgroundColor ?? "")}
             allowEmpty
             onChange={(v) => update({ style: { backgroundColor: v || undefined } })}
@@ -318,7 +318,7 @@ export function BlockInspector({ doc, selectedId, onChange, onSelect }: Props) {
 
       {block.type === "Avatar" && (
         <>
-          <Field label="رابط الصورة">
+          <Field label={dt("رابط الصورة")}>
             <Input
               value={String(props.imageUrl ?? "")}
               onChange={(e) => update({ props: { imageUrl: e.target.value } })}
@@ -326,27 +326,27 @@ export function BlockInspector({ doc, selectedId, onChange, onSelect }: Props) {
               dir="ltr"
             />
           </Field>
-          <Field label="الوصف البديل (alt)">
+          <Field label={dt("الوصف البديل (alt)")}>
             <Input
               value={String(props.alt ?? "")}
               onChange={(e) => update({ props: { alt: e.target.value } })}
             />
           </Field>
-          <Field label="الشكل">
+          <Field label={dt("الشكل")}>
             <Select
               value={String(props.shape ?? "circle")}
               onValueChange={(v) => update({ props: { shape: v } })}
             >
               <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="circle">دائري</SelectItem>
-                <SelectItem value="square">مربع</SelectItem>
-                <SelectItem value="rounded">دائري الزوايا</SelectItem>
+                <SelectItem value="circle">{dt("دائري")}</SelectItem>
+                <SelectItem value="square">{dt("مربع")}</SelectItem>
+                <SelectItem value="rounded">{dt("دائري الزوايا")}</SelectItem>
               </SelectContent>
             </Select>
           </Field>
           <NumberField
-            label="الحجم (px)"
+            label={dt("الحجم (px)")}
             value={Number(props.size ?? 64)}
             min={16}
             max={256}
@@ -354,7 +354,7 @@ export function BlockInspector({ doc, selectedId, onChange, onSelect }: Props) {
           />
           <AlignField value={String(style.textAlign ?? "center")} onChange={(v) => update({ style: { textAlign: v } })} />
           <ColorField
-            label="لون الخلفية"
+            label={dt("لون الخلفية")}
             value={String(style.backgroundColor ?? "")}
             allowEmpty
             onChange={(v) => update({ style: { backgroundColor: v || undefined } })}
@@ -365,19 +365,19 @@ export function BlockInspector({ doc, selectedId, onChange, onSelect }: Props) {
       {block.type === "Divider" && (
         <>
           <ColorField
-            label="لون الخط"
+            label={dt("لون الخط")}
             value={String(props.lineColor ?? "#E5E7EB")}
             onChange={(v) => update({ props: { lineColor: v } })}
           />
           <NumberField
-            label="السمك (px)"
+            label={dt("السمك (px)")}
             value={Number(props.lineHeight ?? 1)}
             min={1}
             max={20}
             onChange={(v) => update({ props: { lineHeight: v } })}
           />
           <ColorField
-            label="لون الخلفية"
+            label={dt("لون الخلفية")}
             value={String(style.backgroundColor ?? "")}
             allowEmpty
             onChange={(v) => update({ style: { backgroundColor: v || undefined } })}
@@ -387,7 +387,7 @@ export function BlockInspector({ doc, selectedId, onChange, onSelect }: Props) {
 
       {block.type === "Spacer" && (
         <NumberField
-          label="الارتفاع (px)"
+          label={dt("الارتفاع (px)")}
           value={Number(props.height ?? 24)}
           min={4}
           max={400}
@@ -397,7 +397,7 @@ export function BlockInspector({ doc, selectedId, onChange, onSelect }: Props) {
 
       {block.type === "Html" && (
         <>
-          <Field label="كود HTML">
+          <Field label={dt("كود HTML")}>
             <TextareaWithVariables
               value={String(props.contents ?? "")}
               onChange={(v) => update({ props: { contents: v } })}
@@ -406,21 +406,21 @@ export function BlockInspector({ doc, selectedId, onChange, onSelect }: Props) {
               className="font-mono text-xs"
             />
             <p className="text-[10px] text-slate-500 leading-relaxed mt-1">
-              المتغيّرات تعمل مباشرة داخل أي مكان في الكود. مثال: <code dir="ltr" className="font-mono">{"<p>مرحباً {{user.name}}</p>"}</code>
-              <br />يدعم كذلك تكرار البنود: <code dir="ltr" className="font-mono">{"{{#donation.items}}<li>{{campaignTitle}}</li>{{/donation.items}}"}</code>
+              {dt("المتغيّرات تعمل مباشرة داخل أي مكان في الكود. مثال: ")}<code dir="ltr" className="font-mono">{dt("<p>مرحباً {{user.name}}</p>")}</code>
+              <br />{dt("يدعم كذلك تكرار البنود: ")}<code dir="ltr" className="font-mono">{"{{#donation.items}}<li>{{campaignTitle}}</li>{{/donation.items}}"}</code>
             </p>
           </Field>
           <FontFamilyField value={style.fontFamily as string | undefined} onChange={(v) => update({ style: { fontFamily: v || undefined } })} />
           <NumberField
-            label="حجم الخط (px)"
+            label={dt("حجم الخط (px)")}
             value={Number(style.fontSize ?? 14)}
             min={10}
             max={48}
             onChange={(v) => update({ style: { fontSize: v } })}
           />
-          <ColorField label="لون النص" value={String(style.color ?? "#374151")} onChange={(v) => update({ style: { color: v } })} />
+          <ColorField label={dt("لون النص")} value={String(style.color ?? "#374151")} onChange={(v) => update({ style: { color: v } })} />
           <ColorField
-            label="لون الخلفية"
+            label={dt("لون الخلفية")}
             value={String(style.backgroundColor ?? "")}
             allowEmpty
             onChange={(v) => update({ style: { backgroundColor: v || undefined } })}
@@ -459,11 +459,11 @@ function RootInspector({
 
   return (
     <div className="space-y-4">
-      <p className="text-xs text-muted-foreground border-b border-border pb-2">إعدادات البريد العامة</p>
-      <ColorField label="لون الخلفية الخارجية" value={String(data.backdropColor ?? "#F8F8F8")} onChange={(v) => update({ backdropColor: v })} />
-      <ColorField label="لون البطاقة (الجسم)" value={String(data.canvasColor ?? "#FFFFFF")} onChange={(v) => update({ canvasColor: v })} />
-      <ColorField label="لون النص الافتراضي" value={String(data.textColor ?? "#242424")} onChange={(v) => update({ textColor: v })} />
-      <Field label="الخط الافتراضي">
+      <p className="text-xs text-muted-foreground border-b border-border pb-2">{dt("إعدادات البريد العامة")}</p>
+      <ColorField label={dt("لون الخلفية الخارجية")} value={String(data.backdropColor ?? "#F8F8F8")} onChange={(v) => update({ backdropColor: v })} />
+      <ColorField label={dt("لون البطاقة (الجسم)")} value={String(data.canvasColor ?? "#FFFFFF")} onChange={(v) => update({ canvasColor: v })} />
+      <ColorField label={dt("لون النص الافتراضي")} value={String(data.textColor ?? "#242424")} onChange={(v) => update({ textColor: v })} />
+      <Field label={dt("الخط الافتراضي")}>
         <Select
           value={String(data.fontFamily ?? "MODERN_SANS")}
           onValueChange={(v) => update({ fontFamily: v })}
@@ -479,14 +479,14 @@ function RootInspector({
         </Select>
       </Field>
       <NumberField
-        label="استدارة زوايا البطاقة (px)"
+        label={dt("استدارة زوايا البطاقة (px)")}
         value={Number(data.borderRadius ?? 0)}
         min={0}
         max={48}
         onChange={(v) => update({ borderRadius: v })}
       />
       <ColorField
-        label="لون حدود البطاقة"
+        label={dt("لون حدود البطاقة")}
         value={String(data.borderColor ?? "")}
         allowEmpty
         onChange={(v) => update({ borderColor: v || undefined })}
@@ -529,7 +529,7 @@ function ColorField({
           value={value}
           onChange={(e) => onChange(e.target.value)}
           className="flex-1"
-          placeholder={allowEmpty ? "اتركه فارغًا للشفاف" : undefined}
+          placeholder={allowEmpty ? dt("اتركه فارغًا للشفاف") : undefined}
           dir="ltr"
         />
         {allowEmpty && value && (
@@ -540,8 +540,7 @@ function ColorField({
             onClick={() => onChange("")}
             className="h-9 px-2 text-xs"
           >
-            مسح
-          </Button>
+            {dt("مسح")}</Button>
         )}
       </div>
     </Field>
@@ -592,12 +591,12 @@ function PaddingField({
     onChange({ ...cur, [k]: v });
   return (
     <div>
-      <label className="text-xs font-medium text-slate-600 mb-1.5 block">المسافات الداخلية (px)</label>
+      <label className="text-xs font-medium text-slate-600 mb-1.5 block">{dt("المسافات الداخلية (px)")}</label>
       <div className="grid grid-cols-2 gap-2">
-        <Input type="number" value={cur.top} onChange={(e) => update("top", Number(e.target.value) || 0)} placeholder="أعلى" dir="ltr" />
-        <Input type="number" value={cur.bottom} onChange={(e) => update("bottom", Number(e.target.value) || 0)} placeholder="أسفل" dir="ltr" />
-        <Input type="number" value={cur.right} onChange={(e) => update("right", Number(e.target.value) || 0)} placeholder="يمين" dir="ltr" />
-        <Input type="number" value={cur.left} onChange={(e) => update("left", Number(e.target.value) || 0)} placeholder="يسار" dir="ltr" />
+        <Input type="number" value={cur.top} onChange={(e) => update("top", Number(e.target.value) || 0)} placeholder={dt("أعلى")} dir="ltr" />
+        <Input type="number" value={cur.bottom} onChange={(e) => update("bottom", Number(e.target.value) || 0)} placeholder={dt("أسفل")} dir="ltr" />
+        <Input type="number" value={cur.right} onChange={(e) => update("right", Number(e.target.value) || 0)} placeholder={dt("يمين")} dir="ltr" />
+        <Input type="number" value={cur.left} onChange={(e) => update("left", Number(e.target.value) || 0)} placeholder={dt("يسار")} dir="ltr" />
       </div>
     </div>
   );
@@ -605,13 +604,13 @@ function PaddingField({
 
 function AlignField({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   return (
-    <Field label="المحاذاة">
+    <Field label={dt("المحاذاة")}>
       <Select value={value} onValueChange={onChange}>
         <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
         <SelectContent>
-          <SelectItem value="right">يمين</SelectItem>
-          <SelectItem value="center">وسط</SelectItem>
-          <SelectItem value="left">يسار</SelectItem>
+          <SelectItem value="right">{dt("يمين")}</SelectItem>
+          <SelectItem value="center">{dt("وسط")}</SelectItem>
+          <SelectItem value="left">{dt("يسار")}</SelectItem>
         </SelectContent>
       </Select>
     </Field>
@@ -626,11 +625,11 @@ function FontFamilyField({
   onChange: (v: string) => void;
 }) {
   return (
-    <Field label="الخط">
+    <Field label={dt("الخط")}>
       <Select value={value ?? "__inherit__"} onValueChange={(v) => onChange(v === "__inherit__" ? "" : v)}>
         <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
         <SelectContent>
-          <SelectItem value="__inherit__">حسب البريد العام</SelectItem>
+          <SelectItem value="__inherit__">{dt("حسب البريد العام")}</SelectItem>
           {FONT_FAMILIES.map((f) => (
             <SelectItem key={f.value} value={f.value}>
               {f.label}
@@ -683,7 +682,7 @@ function TextareaWithVariables({
         className={className ?? "font-mono text-xs"}
       />
       <details className="group">
-        <summary className="text-xs text-slate-500 cursor-pointer hover:text-slate-700">إدراج متغيّر</summary>
+        <summary className="text-xs text-slate-500 cursor-pointer hover:text-slate-700">{dt("إدراج متغيّر")}</summary>
         <div className="mt-2 max-h-44 overflow-y-auto rounded-md border border-border bg-slate-50/60 p-2 space-y-2">
           {VARIABLE_CATALOG.map((g) => (
             <div key={g.group}>

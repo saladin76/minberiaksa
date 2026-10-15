@@ -13,6 +13,7 @@ import {
   type StoryFormValues,
 } from '../../_components/StoryForm';
 import { SLIDE_TRANSLATION_FIELDS, emptySlide, type SlideRow } from '../../_components/StorySlidesEditor';
+import { dt } from "@/lib/dashboard/i18n";
 
 type ApiSlide = {
   id: string; mediaType: 'IMAGE' | 'VIDEO'; mediaUrl: string; durationSeconds: number;
@@ -62,7 +63,7 @@ export default function EditStoryPage({ params }: { params: Promise<{ id: string
       .catch((e) => {
         if (!live) return;
         setMissing(true);
-        toast.error(errorMessage(e, 'تعذّر تحميل القصة'));
+        toast.error(errorMessage(e, dt("تعذّر تحميل القصة")));
       });
     return () => {
       live = false;
@@ -70,7 +71,7 @@ export default function EditStoryPage({ params }: { params: Promise<{ id: string
   }, [id]);
 
   if (missing) {
-    return <p className="py-24 text-center text-sm text-slate-500">القصة غير موجودة.</p>;
+    return <p className="py-24 text-center text-sm text-slate-500">{dt("القصة غير موجودة.")}</p>;
   }
 
   if (!initial) {

@@ -31,6 +31,7 @@ import {
 } from '../../_components/ContentTranslationTabs';
 import { ImageUploadField } from '../../_components/ImageUploadField';
 import { LocaleChips } from '../../_components/LocaleChips';
+import { dt, dtx } from "@/lib/dashboard/i18n";
 
 /**
  * One banner, as the site draws it (`components/minbar/banners/SiteBanner.tsx`):
@@ -48,12 +49,12 @@ import { LocaleChips } from '../../_components/LocaleChips';
  */
 
 export const BANNER_TRANSLATION_FIELDS: readonly TranslationField[] = [
-  { name: 'kicker', label: 'الشريط العلوي' },
-  { name: 'title', label: 'العنوان' },
-  { name: 'description', label: 'الوصف', multiline: true },
-  { name: 'ctaLabel', label: 'نص الزر الرئيسي' },
-  { name: 'ctaSecondaryLabel', label: 'نص الزر الثانوي' },
-  { name: 'amountLabels', label: 'تسميات المبالغ (بنفس ترتيب المبالغ، مفصولة بفاصلة)' },
+  { name: 'kicker', get label() { return dt("الشريط العلوي"); } },
+  { name: 'title', get label() { return dt("العنوان"); } },
+  { name: 'description', get label() { return dt("الوصف"); }, multiline: true },
+  { name: 'ctaLabel', get label() { return dt("نص الزر الرئيسي"); } },
+  { name: 'ctaSecondaryLabel', get label() { return dt("نص الزر الثانوي"); } },
+  { name: 'amountLabels', get label() { return dt("تسميات المبالغ (بنفس ترتيب المبالغ، مفصولة بفاصلة)"); } },
 ];
 
 /** Sentinel for the select: Radix refuses an empty-string item value. */
@@ -211,10 +212,10 @@ export function UrgentBannerForm({
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!values.title.trim()) return toast.error('العنوان بالعربية مطلوب');
-    if (!values.slug.trim()) return toast.error('المعرّف (slug) مطلوب');
-    if (!values.campaignId && !values.ctaUrl.trim()) return toast.error('اربط البانر بحملة أو أدخل رابطًا للزر');
-    if (!values.placements.length) return toast.error('اختر مكانًا واحدًا على الأقل يظهر فيه البانر');
+    if (!values.title.trim()) return toast.error(dt("العنوان بالعربية مطلوب"));
+    if (!values.slug.trim()) return toast.error(dt("المعرّف (slug) مطلوب"));
+    if (!values.campaignId && !values.ctaUrl.trim()) return toast.error(dt("اربط البانر بحملة أو أدخل رابطًا للزر"));
+    if (!values.placements.length) return toast.error(dt("اختر مكانًا واحدًا على الأقل يظهر فيه البانر"));
 
     setSaving(true);
     try {
@@ -243,15 +244,15 @@ export function UrgentBannerForm({
 
       if (mode === 'create') {
         await axios.post('/api/urgent-banners', payload);
-        toast.success('تم إنشاء البانر');
+        toast.success(dt("تم إنشاء البانر"));
       } else {
         await axios.put(`/api/urgent-banners/${bannerId}`, payload);
-        toast.success('تم حفظ البانر');
+        toast.success(dt("تم حفظ البانر"));
       }
       router.push('/dashboard/urgent-banners');
       router.refresh();
     } catch (err) {
-      toast.error(errorMessage(err, mode === 'create' ? 'فشل في الإنشاء' : 'فشل في الحفظ'));
+      toast.error(errorMessage(err, mode === 'create' ? dt("فشل في الإنشاء") : dt("فشل في الحفظ")));
     } finally {
       setSaving(false);
     }
@@ -263,88 +264,87 @@ export function UrgentBannerForm({
     <form onSubmit={onSubmit} className="space-y-4">
       <div className="flex items-center gap-3">
         <Button type="button" variant="ghost" size="sm" onClick={() => router.push('/dashboard/urgent-banners')}>
-          <ArrowRight className="w-4 h-4 ml-1" />
-          رجوع
-        </Button>
-        <h1 className="text-lg font-bold">{mode === 'create' ? 'بانر جديد' : 'تعديل البانر'}</h1>
+          <ArrowRight className="w-4 h-4 me-1" />
+          {dt("رجوع")}</Button>
+        <h1 className="text-lg font-bold">{mode === 'create' ? dt("بانر جديد") : dt("تعديل البانر")}</h1>
       </div>
 
       {/* ── Copy ─────────────────────────────────────────────────────── */}
       <Card className="p-4 space-y-4">
-        <h2 className="text-sm font-bold">النص (بالعربية)</h2>
+        <h2 className="text-sm font-bold">{dt("النص (بالعربية)")}</h2>
         <div className="grid gap-4 md:grid-cols-2">
           <label className="space-y-1.5">
-            <span className="text-xs font-semibold text-slate-600">العنوان *</span>
-            <Input value={values.title} onChange={(e) => set('title', e.target.value)} placeholder="شدّ الرحال إلى الأقصى" />
+            <span className="text-xs font-semibold text-slate-600">{dt("العنوان *")}</span>
+            <Input value={values.title} onChange={(e) => set('title', e.target.value)} placeholder={dt("شدّ الرحال إلى الأقصى")} />
           </label>
           <label className="space-y-1.5">
-            <span className="text-xs font-semibold text-slate-600">المعرّف (slug) *</span>
+            <span className="text-xs font-semibold text-slate-600">{dt("المعرّف (slug) *")}</span>
             <Input dir="ltr" value={values.slug} onChange={(e) => set('slug', e.target.value)} />
           </label>
           <label className="space-y-1.5 md:col-span-2">
-            <span className="text-xs font-semibold text-slate-600">الشريط العلوي</span>
-            <Input value={values.kicker} onChange={(e) => set('kicker', e.target.value)} placeholder="آية أو حديث أو شعار قصير يظهر فوق الصورة" />
+            <span className="text-xs font-semibold text-slate-600">{dt("الشريط العلوي")}</span>
+            <Input value={values.kicker} onChange={(e) => set('kicker', e.target.value)} placeholder={dt("آية أو حديث أو شعار قصير يظهر فوق الصورة")} />
           </label>
           <label className="space-y-1.5 md:col-span-2">
-            <span className="text-xs font-semibold text-slate-600">الوصف</span>
-            <Textarea rows={2} value={values.description} onChange={(e) => set('description', e.target.value)} placeholder="سطر أو سطران تحت العنوان (اختياري)" />
+            <span className="text-xs font-semibold text-slate-600">{dt("الوصف")}</span>
+            <Textarea rows={2} value={values.description} onChange={(e) => set('description', e.target.value)} placeholder={dt("سطر أو سطران تحت العنوان (اختياري)")} />
           </label>
         </div>
       </Card>
 
       {/* ── Where it leads ──────────────────────────────────────────── */}
       <Card className="p-4 space-y-4">
-        <h2 className="text-sm font-bold">الأزرار والوجهة</h2>
+        <h2 className="text-sm font-bold">{dt("الأزرار والوجهة")}</h2>
         <div className="grid gap-4 md:grid-cols-2">
           <div className="space-y-1.5">
-            <span className="text-xs font-semibold text-slate-600">الحملة المرتبطة</span>
+            <span className="text-xs font-semibold text-slate-600">{dt("الحملة المرتبطة")}</span>
             <Select
               value={values.campaignId || NO_CAMPAIGN}
               onValueChange={(v) => set('campaignId', v === NO_CAMPAIGN ? '' : v)}
             >
-              <SelectTrigger><SelectValue placeholder="اختر حملة" /></SelectTrigger>
+              <SelectTrigger><SelectValue placeholder={dt("اختر حملة")} /></SelectTrigger>
               <SelectContent>
-                <SelectItem value={NO_CAMPAIGN}>— بدون حملة </SelectItem>
+                <SelectItem value={NO_CAMPAIGN}>{dt("— بدون حملة ")}</SelectItem>
                 {campaigns.map((c) => (
                   <SelectItem key={c.id} value={c.id}>{c.title}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
-            <span className="block text-[11px] text-slate-500">يُستخدم رابط الحملة بلغة الزائر ما لم تُدخل رابطًا يدويًا.</span>
+            <span className="block text-[11px] text-slate-500">{dt("يُستخدم رابط الحملة بلغة الزائر ما لم تُدخل رابطًا يدويًا.")}</span>
           </div>
           <label className="space-y-1.5">
-            <span className="text-xs font-semibold text-slate-600">رابط الزر الرئيسي</span>
+            <span className="text-xs font-semibold text-slate-600">{dt("رابط الزر الرئيسي")}</span>
             <Input dir="ltr" placeholder="/bagislar/gaza-emergency" value={values.ctaUrl} onChange={(e) => set('ctaUrl', e.target.value)} />
-            <span className="block text-[11px] text-slate-500">رابط نسبي يُسبق بلغة الزائر تلقائيًا، أو رابط كامل.</span>
+            <span className="block text-[11px] text-slate-500">{dt("رابط نسبي يُسبق بلغة الزائر تلقائيًا، أو رابط كامل.")}</span>
           </label>
           <label className="space-y-1.5">
-            <span className="text-xs font-semibold text-slate-600">نص الزر الرئيسي</span>
-            <Input placeholder="تبرّع الآن" value={values.ctaLabel} onChange={(e) => set('ctaLabel', e.target.value)} />
+            <span className="text-xs font-semibold text-slate-600">{dt("نص الزر الرئيسي")}</span>
+            <Input placeholder={dt("تبرّع الآن")} value={values.ctaLabel} onChange={(e) => set('ctaLabel', e.target.value)} />
           </label>
           <div className="hidden md:block" />
           <label className="space-y-1.5">
-            <span className="text-xs font-semibold text-slate-600">نص الزر الثانوي (اختياري)</span>
-            <Input placeholder="تبرّع بمقعد" value={values.ctaSecondaryLabel} onChange={(e) => set('ctaSecondaryLabel', e.target.value)} />
+            <span className="text-xs font-semibold text-slate-600">{dt("نص الزر الثانوي (اختياري)")}</span>
+            <Input placeholder={dt("تبرّع بمقعد")} value={values.ctaSecondaryLabel} onChange={(e) => set('ctaSecondaryLabel', e.target.value)} />
           </label>
           <label className="space-y-1.5">
-            <span className="text-xs font-semibold text-slate-600">رابط الزر الثانوي</span>
-            <Input dir="ltr" placeholder="يُترك فارغًا ليأخذ رابط الزر الرئيسي" value={values.ctaSecondaryUrl} onChange={(e) => set('ctaSecondaryUrl', e.target.value)} />
+            <span className="text-xs font-semibold text-slate-600">{dt("رابط الزر الثانوي")}</span>
+            <Input dir="ltr" placeholder={dt("يُترك فارغًا ليأخذ رابط الزر الرئيسي")} value={values.ctaSecondaryUrl} onChange={(e) => set('ctaSecondaryUrl', e.target.value)} />
           </label>
         </div>
       </Card>
 
       {/* ── Look ─────────────────────────────────────────────────────── */}
       <Card className="p-4 space-y-4">
-        <h2 className="text-sm font-bold">الشكل</h2>
+        <h2 className="text-sm font-bold">{dt("الشكل")}</h2>
         <ImageUploadField
-          label="الصورة (تُعرض بالأبيض والأسود خلف النص)"
+          label={dt("الصورة (تُعرض بالأبيض والأسود خلف النص)")}
           value={values.image}
           onChange={(url) => set('image', url)}
           previewClass="w-48 h-24"
         />
         <div className="grid gap-4 md:grid-cols-2">
           <div className="space-y-1.5">
-            <span className="text-xs font-semibold text-slate-600">اللون</span>
+            <span className="text-xs font-semibold text-slate-600">{dt("اللون")}</span>
             <div className="flex flex-wrap gap-2">
               {BANNER_TONES.map((t) => {
                 const on = values.tone === t.key;
@@ -364,7 +364,7 @@ export function UrgentBannerForm({
             </div>
           </div>
           <div className="space-y-1.5">
-            <span className="text-xs font-semibold text-slate-600">جهة النص</span>
+            <span className="text-xs font-semibold text-slate-600">{dt("جهة النص")}</span>
             <Select value={values.textSide} onValueChange={(v) => set('textSide', v as BannerTextSide)}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
@@ -373,16 +373,16 @@ export function UrgentBannerForm({
                 ))}
               </SelectContent>
             </Select>
-            <span className="block text-[11px] text-slate-500">المبالغ تُثبَّت في الجهة المقابلة للنص.</span>
+            <span className="block text-[11px] text-slate-500">{dt("المبالغ تُثبَّت في الجهة المقابلة للنص.")}</span>
           </div>
           <label className="space-y-1.5">
-            <span className="text-xs font-semibold text-slate-600">المبالغ (شرائح السعر، بالدولار)</span>
+            <span className="text-xs font-semibold text-slate-600">{dt("المبالغ (شرائح السعر، بالدولار)")}</span>
             <Input dir="ltr" placeholder="15, 750" value={values.suggestedAmounts} onChange={(e) => set('suggestedAmounts', e.target.value)} />
-            <span className="block text-[11px] text-slate-500">حتى 4 مبالغ. تُحوَّل لعملة الزائر. اتركها فارغة لإخفاء الشرائح.</span>
+            <span className="block text-[11px] text-slate-500">{dt("حتى 4 مبالغ. تُحوَّل لعملة الزائر. اتركها فارغة لإخفاء الشرائح.")}</span>
           </label>
           <label className="space-y-1.5">
-            <span className="text-xs font-semibold text-slate-600">تسميات المبالغ (بنفس الترتيب)</span>
-            <Input placeholder="مقعد واحد, حافلة كاملة" value={values.amountLabels} onChange={(e) => set('amountLabels', e.target.value)} />
+            <span className="text-xs font-semibold text-slate-600">{dt("تسميات المبالغ (بنفس الترتيب)")}</span>
+            <Input placeholder={dt("مقعد واحد, حافلة كاملة")} value={values.amountLabels} onChange={(e) => set('amountLabels', e.target.value)} />
           </label>
         </div>
       </Card>
@@ -390,42 +390,42 @@ export function UrgentBannerForm({
       {/* ── Where and when ──────────────────────────────────────────── */}
       <Card className="p-4 space-y-4">
         <div>
-          <h2 className="text-sm font-bold">أين يظهر *</h2>
-          <p className="text-xs text-slate-500 mt-0.5">اختر الصفحات والمواضع. «كل الصفحات» يضعه في ذلك الموضع من كل صفحة تملكه. ترتيب البانرات داخل الموضع الواحد من صفحة القائمة بالسحب.</p>
+          <h2 className="text-sm font-bold">{dt("أين يظهر *")}</h2>
+          <p className="text-xs text-slate-500 mt-0.5">{dt("اختر الصفحات والمواضع. «كل الصفحات» يضعه في ذلك الموضع من كل صفحة تملكه. ترتيب البانرات داخل الموضع الواحد من صفحة القائمة بالسحب.")}</p>
         </div>
         <PlacementPicker value={values.placements} onChange={(next) => set('placements', next)} />
 
         <div className="grid gap-4 md:grid-cols-2">
           <label className="space-y-1.5">
-            <span className="text-xs font-semibold text-slate-600">يبدأ في</span>
+            <span className="text-xs font-semibold text-slate-600">{dt("يبدأ في")}</span>
             <Input type="datetime-local" value={toLocalInput(values.startsAt)} onChange={(e) => set('startsAt', e.target.value)} />
           </label>
           <label className="space-y-1.5">
-            <span className="text-xs font-semibold text-slate-600">ينتهي في</span>
+            <span className="text-xs font-semibold text-slate-600">{dt("ينتهي في")}</span>
             <Input type="datetime-local" value={toLocalInput(values.endsAt)} onChange={(e) => set('endsAt', e.target.value)} />
-            <span className="block text-[11px] text-slate-500">اتركه فارغًا ليبقى حتى يُوقف يدويًا.</span>
+            <span className="block text-[11px] text-slate-500">{dt("اتركه فارغًا ليبقى حتى يُوقف يدويًا.")}</span>
           </label>
         </div>
 
         <div className="space-y-1.5">
-          <span className="text-xs font-semibold text-slate-600">اللغات التي يظهر فيها</span>
+          <span className="text-xs font-semibold text-slate-600">{dt("اللغات التي يظهر فيها")}</span>
           <LocaleChips
             value={values.locales}
             onChange={(next) => set('locales', next)}
-            hint="اتركها فارغة ليظهر في كل اللغات."
+            hint={dt("اتركها فارغة ليظهر في كل اللغات.")}
           />
         </div>
 
         <label className="flex items-center gap-2">
           <Switch checked={values.isActive} onCheckedChange={(v) => set('isActive', v)} />
-          <span className="text-sm">مفعّل</span>
+          <span className="text-sm">{dt("مفعّل")}</span>
         </label>
       </Card>
 
       <Card className="p-4 space-y-3">
         <div className="flex items-center justify-between">
-          <h2 className="text-sm font-bold">الترجمات</h2>
-          <span className="text-xs text-slate-500">{translated} لغة مترجمة</span>
+          <h2 className="text-sm font-bold">{dt("الترجمات")}</h2>
+          <span className="text-xs text-slate-500">{dtx("{0} لغة مترجمة", [translated])}</span>
         </div>
         <ContentTranslationTabs
           fields={BANNER_TRANSLATION_FIELDS}
@@ -446,12 +446,11 @@ export function UrgentBannerForm({
 
       <div className="flex gap-2">
         <Button type="submit" disabled={saving}>
-          {saving && <Loader2 className="w-4 h-4 animate-spin ml-2" />}
-          {mode === 'create' ? 'إنشاء' : 'حفظ'}
+          {saving && <Loader2 className="w-4 h-4 animate-spin me-2" />}
+          {mode === 'create' ? dt("إنشاء") : dt("حفظ")}
         </Button>
         <Button type="button" variant="outline" onClick={() => router.push('/dashboard/urgent-banners')}>
-          إلغاء
-        </Button>
+          {dt("إلغاء")}</Button>
       </div>
     </form>
   );

@@ -27,6 +27,7 @@ import {
   CommandList,
 } from "@/components/ui/command";
 import axios from 'axios';
+import { dt, dtx } from "@/lib/dashboard/i18n";
 
 interface Campaign {
   id: string;
@@ -102,12 +103,12 @@ export const CampaignReorderDialog = ({ onReorder }: { onReorder: () => void }) 
     if (!campaign) return;
 
     if (selectedCampaigns.length >= 12) {
-      toast.error('يمكنك اختيار 12 مشروع كحد أقصى');
+      toast.error(dt("يمكنك اختيار 12 مشروع كحد أقصى"));
       return;
     }
 
     if (selectedCampaigns.some(c => c.id === campaignId)) {
-      toast.error('هذا المشروع مضاف بالفعل');
+      toast.error(dt("هذا المشروع مضاف بالفعل"));
       return;
     }
 
@@ -138,7 +139,7 @@ export const CampaignReorderDialog = ({ onReorder }: { onReorder: () => void }) 
         campaigns: updatedCampaigns,
       });
 
-      toast.success('تم إعادة ترتيب المشاريع بنجاح');
+      toast.success(dt("تم إعادة ترتيب المشاريع بنجاح"));
       onReorder();
       setIsOpen(false);
     } catch (error) {
@@ -154,20 +155,17 @@ export const CampaignReorderDialog = ({ onReorder }: { onReorder: () => void }) 
       <DialogTrigger asChild>
         <Button variant="outline" className="gap-2">
           <Crown className="w-4 h-4" />
-          أولويات المشاريع
-        </Button>
+          {dt("أولويات المشاريع")}</Button>
       </DialogTrigger>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>إعادة ترتيب المشاريع</DialogTitle>
+          <DialogTitle>{dt("إعادة ترتيب المشاريع")}</DialogTitle>
         </DialogHeader>
         <div className="py-4">
           <p className="text-sm text-gray-500 mb-4">
-            اختر المشاريع التي تريد عرضها بالترتيب. المشروع الأولى ستظهر كمشروع مميزة بحجم أكبر. الحد الأقصى 12 مشروع.
-            <br />
+            {dt("اختر المشاريع التي تريد عرضها بالترتيب. المشروع الأولى ستظهر كمشروع مميزة بحجم أكبر. الحد الأقصى 12 مشروع.")}<br />
             <span className="text-xs mt-1 block">
-              ({selectedCampaigns.length}/12 مشاريع مختارة)
-            </span>
+              {dtx("({0}/12 مشاريع مختارة)", [selectedCampaigns.length])}</span>
           </p>
           
           <Popover open={comboOpen} onOpenChange={setComboOpen}>
@@ -178,15 +176,14 @@ export const CampaignReorderDialog = ({ onReorder }: { onReorder: () => void }) 
                 aria-expanded={comboOpen}
                 className="w-full justify-between font-normal text-muted-foreground"
               >
-                اختر مشروع لإضافتها
-                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                {dt("اختر مشروع لإضافتها")}<ChevronsUpDown className="me-2 h-4 w-4 shrink-0 opacity-50" />
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-full p-0" align="start" style={{ width: "var(--radix-popover-trigger-width)" }}>
               <Command>
-                <CommandInput placeholder="ابحث عن مشروع..." />
+                <CommandInput placeholder={dt("ابحث عن مشروع...")} />
                 <CommandList>
-                  <CommandEmpty>لا توجد نتائج</CommandEmpty>
+                  <CommandEmpty>{dt("لا توجد نتائج")}</CommandEmpty>
                   <CommandGroup>
                     {campaigns
                       .filter(c => !selectedCampaigns.some(sc => sc.id === c.id))
@@ -199,7 +196,7 @@ export const CampaignReorderDialog = ({ onReorder }: { onReorder: () => void }) 
                             setComboOpen(false);
                           }}
                         >
-                          <Check className="mr-2 h-4 w-4 opacity-0" />
+                          <Check className="ms-2 h-4 w-4 opacity-0" />
                           {campaign.title}
                         </CommandItem>
                       ))}
@@ -213,8 +210,7 @@ export const CampaignReorderDialog = ({ onReorder }: { onReorder: () => void }) 
             <div className="mt-4 space-y-2">
               {selectedCampaigns.length === 0 ? (
                 <p className="text-sm text-gray-500 text-center py-4">
-                  لم يتم اختيار أي مشاريع بعد
-                </p>
+                  {dt("لم يتم اختيار أي مشاريع بعد")}</p>
               ) : (
                 <div className="max-h-[400px] overflow-y-auto">
                   {selectedCampaigns.map((campaign, index) => (
@@ -227,7 +223,7 @@ export const CampaignReorderDialog = ({ onReorder }: { onReorder: () => void }) 
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="absolute top-2 left-2 h-6 w-6 p-0"
+                        className="absolute top-2 end-2 h-6 w-6 p-0"
                         onClick={() => removeCampaign(campaign.id)}
                       >
                         ×
@@ -245,16 +241,14 @@ export const CampaignReorderDialog = ({ onReorder }: { onReorder: () => void }) 
             variant="outline"
             onClick={() => setIsOpen(false)}
           >
-            إلغاء
-          </Button>
+            {dt("إلغاء")}</Button>
           <Button
             onClick={handleSave}
             disabled={isSubmitting || selectedCampaigns.length === 0}
             className="gap-2"
           >
             {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
-            حفظ الترتيب
-          </Button>
+            {dt("حفظ الترتيب")}</Button>
         </div>
       </DialogContent>
     </Dialog>

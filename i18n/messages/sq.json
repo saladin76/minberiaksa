@@ -2447,5 +2447,14 @@
     "givenSoFar": "{count} {unit} të dhëna deri tani",
     "chooseCount": "Zgjidh numrin e {unit}",
     "customCountPh": "Numër tjetër"
+  },
+  "CategoryLanding": {
+    "heroLead": "{org} – projektet: {name}.",
+    "ctaLabel": "Shiko projektet",
+    "projectsTitle": "Projektet: {name}",
+    "donateTitle": "Mbështet: {name}",
+    "achievementsTitle": "Arritjet tona: {name}",
+    "statDoneLabel": "Përfunduar",
+    "statGoalLabel": "Objektivi"
   }
 }

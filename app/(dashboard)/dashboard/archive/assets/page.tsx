@@ -1,8 +1,9 @@
 import { ArchiveConsole } from "../_components/ArchiveConsole";
 import { getArchiveSnapshotDbBacked } from "@/lib/archive/archive-service";
 import { getBrandCenterSnapshot } from "@/lib/brand/brand-service";
+import { dashDir, dt } from "@/lib/dashboard/i18n";
 
-export const metadata = { title: "Archive Assets Review | لوحة التحكم" };
+export const metadata = { get title() { return dt("Archive Assets Review | لوحة التحكم"); } };
 export const dynamic = "force-dynamic";
 
 export default async function ArchiveAssetsPage() {
@@ -13,16 +14,15 @@ export default async function ArchiveAssetsPage() {
   const linkedLegacyAssets = brandSnapshot.assets.filter((asset) => Boolean(asset.fileUrl));
 
   return (
-    <div className="space-y-5" dir="rtl">
+    <div className="space-y-5" dir={dashDir()}>
       <ArchiveConsole activeTab="assets" snapshot={snapshot} work="classify" />
       {linkedLegacyAssets.length > 0 ? (
         <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
           <div>
-            <p className="text-xs font-bold text-brand">الملفات والأصول / مصادر قديمة</p>
-            <h2 className="mt-1 text-xl font-black text-slate-900">أصول مرتبطة سابقًا بقسم الهوية</h2>
+            <p className="text-xs font-bold text-brand">{dt("الملفات والأصول / مصادر قديمة")}</p>
+            <h2 className="mt-1 text-xl font-black text-slate-900">{dt("أصول مرتبطة سابقًا بقسم الهوية")}</h2>
             <p className="mt-1.5 text-sm leading-6 text-slate-600">
-              عرض قراءة فقط للملفات ذات الروابط الفعلية. لم يتم نسخ الملفات أوتغيير المعرّفات أوالروابط.
-            </p>
+              {dt("عرض قراءة فقط للملفات ذات الروابط الفعلية. لم يتم نسخ الملفات أوتغيير المعرّفات أوالروابط.")}</p>
           </div>
           <div className="mt-4 grid gap-3 lg:grid-cols-2">
             {linkedLegacyAssets.map((asset) => (
@@ -36,7 +36,7 @@ export default async function ArchiveAssetsPage() {
                 </div>
                 <p className="mt-3 text-sm leading-6 text-slate-600">{asset.usage}</p>
                 <div className="mt-3 flex flex-wrap gap-2">
-                  <a href={asset.fileUrl ?? "#"} target="_blank" rel="noreferrer" className="inline-flex h-9 items-center rounded-md bg-brand px-3 text-xs font-bold text-white hover:bg-brand-700">فتح الملف</a>
+                  <a href={asset.fileUrl ?? "#"} target="_blank" rel="noreferrer" className="inline-flex h-9 items-center rounded-md bg-brand px-3 text-xs font-bold text-white hover:bg-brand-700">{dt("فتح الملف")}</a>
                   <span className="inline-flex h-9 items-center rounded-md border bg-white px-3 text-xs font-semibold text-slate-600">ID: {asset.id}</span>
                 </div>
               </article>

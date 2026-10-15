@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { dt } from "@/lib/dashboard/i18n";
 
 export type ArchiveProjectOptions = {
   years: string[];
@@ -85,7 +86,7 @@ export async function saveArchiveProjectOptions(options: ArchiveProjectOptions) 
   });
   const result = await response.json().catch(() => null);
   if (!response.ok || !result?.ok) {
-    throw new Error(result?.error || result?.message || "تعذر حفظ خيارات الأرشيف");
+    throw new Error(result?.error || result?.message || dt("تعذر حفظ خيارات الأرشيف"));
   }
 
   const saved = normalizeOptions(result.options ?? normalized);

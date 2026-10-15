@@ -13,6 +13,7 @@ import {
 import { toast } from "react-hot-toast";
 import { PageHeader } from "@/components/dashboard/PageHeader";
 import { displayActorName } from "@/lib/dashboard/audit-log-display";
+import { dashDir, dashIntl, dt } from "@/lib/dashboard/i18n";
 
 type AuditRow = {
   id: string;
@@ -31,24 +32,24 @@ type StreamMode = "all" | "TEAM" | "DONOR";
 function RoleIcon({ role }: { role: string }) {
   if (role === "ADMIN")
     return (
-      <span title="مدير" className="shrink-0">
+      <span title={dt("مدير")} className="shrink-0">
         <ShieldCheck className="w-3.5 h-3.5 text-brand" />
       </span>
     );
   if (role === "STAFF")
     return (
-      <span title="طاقم" className="shrink-0">
+      <span title={dt("طاقم")} className="shrink-0">
         <UserCog className="w-3.5 h-3.5 text-brand-orange" />
       </span>
     );
   if (role === "DONOR")
     return (
-      <span title="متبرع" className="shrink-0">
+      <span title={dt("متبرع")} className="shrink-0">
         <HandHeart className="w-3.5 h-3.5 text-rose-500" />
       </span>
     );
   return (
-    <span title="زائر" className="shrink-0">
+    <span title={dt("زائر")} className="shrink-0">
       <UserX className="w-3.5 h-3.5 text-slate-400" />
     </span>
   );
@@ -56,9 +57,9 @@ function RoleIcon({ role }: { role: string }) {
 
 function streamBadge(row: AuditRow) {
   if (row.stream === "DONOR")
-    return <span className="text-[10px] px-1.5 py-0.5 rounded bg-rose-50 text-rose-700 ms-1.5">متبرع</span>;
+    return <span className="text-[10px] px-1.5 py-0.5 rounded bg-rose-50 text-rose-700 ms-1.5">{dt("متبرع")}</span>;
   if (row.stream === "TEAM")
-    return <span className="text-[10px] px-1.5 py-0.5 rounded bg-brand/10 text-brand ms-1.5">فريق</span>;
+    return <span className="text-[10px] px-1.5 py-0.5 rounded bg-brand/10 text-brand ms-1.5">{dt("فريق")}</span>;
   return null;
 }
 
@@ -86,17 +87,17 @@ function getDateRange(preset: TimePreset, customFrom: string, customTo: string) 
 }
 
 const STREAM_TABS = [
-  { value: "all" as const, label: "الكل", icon: LayoutList },
-  { value: "TEAM" as const, label: "الفريق", icon: Users },
-  { value: "DONOR" as const, label: "المتبرعون", icon: Heart },
+  { value: "all" as const, get label() { return dt("الكل"); }, icon: LayoutList },
+  { value: "TEAM" as const, get label() { return dt("الفريق"); }, icon: Users },
+  { value: "DONOR" as const, get label() { return dt("المتبرعون"); }, icon: Heart },
 ];
 
 const TIME_PRESETS: { value: TimePreset; label: string }[] = [
-  { value: "all", label: "آخر 100" },
-  { value: "today", label: "اليوم" },
-  { value: "7d", label: "7 أيام" },
-  { value: "30d", label: "30 يوم" },
-  { value: "custom", label: "مخصص" },
+  { value: "all", get label() { return dt("آخر 100"); } },
+  { value: "today", get label() { return dt("اليوم"); } },
+  { value: "7d", get label() { return dt("7 أيام"); } },
+  { value: "30d", get label() { return dt("30 يوم"); } },
+  { value: "custom", get label() { return dt("مخصص"); } },
 ];
 
 function LogTable({
@@ -140,7 +141,7 @@ function LogTable({
         setLogs((prev) => (append ? [...prev, ...list] : list));
         setTotal(res.data?.pagination?.total ?? 0);
       } catch {
-        toast.error("تعذر تحميل السجل");
+        toast.error(dt("تعذر تحميل السجل"));
       } finally {
         setLoading(false);
         setLoadingMore(false);
@@ -173,15 +174,15 @@ function LogTable({
   const colSpan = 3;
 
   return (
-    <Card className="border-border shadow-sm" dir="rtl">
+    <Card className="border-border shadow-sm" dir={dashDir()}>
       <CardContent className="p-0">
         <div className="overflow-x-auto">
-          <table className="w-full text-sm text-right">
+          <table className="w-full text-sm text-start">
             <thead>
               <tr className="border-b border-slate-200 bg-slate-50/80">
-                <th className="py-3 px-4 font-semibold text-slate-600 whitespace-nowrap w-32">الوقت</th>
-                <th className="py-3 px-4 font-semibold text-slate-600 whitespace-nowrap w-44">الاسم</th>
-                <th className="py-3 px-4 font-semibold text-slate-600">الوصف</th>
+                <th className="py-3 px-4 font-semibold text-slate-600 whitespace-nowrap w-32">{dt("الوقت")}</th>
+                <th className="py-3 px-4 font-semibold text-slate-600 whitespace-nowrap w-44">{dt("الاسم")}</th>
+                <th className="py-3 px-4 font-semibold text-slate-600">{dt("الوصف")}</th>
               </tr>
             </thead>
             <tbody>
@@ -194,14 +195,14 @@ function LogTable({
               ) : filtered.length === 0 ? (
                 <tr>
                   <td colSpan={colSpan} className="py-12 text-center text-slate-400 text-sm">
-                    {userFilter ? "لا توجد نتائج لهذا المستخدم" : "لا توجد أحداث مسجّلة"}
+                    {userFilter ? dt("لا توجد نتائج لهذا المستخدم") : dt("لا توجد أحداث مسجّلة")}
                   </td>
                 </tr>
               ) : (
                 filtered.map((row) => (
                   <tr key={row.id} className="border-b border-slate-100 hover:bg-slate-50/60 transition-colors">
                     <td className="py-3 px-4 text-slate-400 whitespace-nowrap text-xs tabular-nums">
-                      {new Date(row.createdAt).toLocaleString("ar-EG", {
+                      {new Date(row.createdAt).toLocaleString(dashIntl("ar-EG"), {
                         dateStyle: "short",
                         timeStyle: "short",
                       })}
@@ -228,7 +229,7 @@ function LogTable({
         {hasMore && !loading && (
           <div className="p-3 border-t border-slate-100 text-center">
             <Button variant="outline" size="sm" onClick={loadMore} disabled={loadingMore}>
-              {loadingMore ? <Loader2 className="w-4 h-4 animate-spin" /> : "تحميل المزيد"}
+              {loadingMore ? <Loader2 className="w-4 h-4 animate-spin" /> : dt("تحميل المزيد")}
             </Button>
           </div>
         )}
@@ -236,13 +237,12 @@ function LogTable({
         <div className="px-4 py-2 border-t border-slate-100 flex items-center justify-between">
           <p className="text-xs text-slate-400">
             {userFilter
-              ? `${filtered.length} نتيجة من ${logs.length} محمّل`
-              : `عرض ${logs.length} من ${total} إجمالي`}
+              ? dt("{0} نتيجة من {1} محمّل", [filtered.length, logs.length])
+              : dt("عرض {0} من {1} إجمالي", [logs.length, total])}
           </p>
           {timePreset === "all" && total > 100 && (
             <p className="text-xs text-brand">
-              يُعرض آخر 100  اختر نطاقاً زمنياً لعرض المزيد
-            </p>
+              {dt("يُعرض آخر 100  اختر نطاقاً زمنياً لعرض المزيد")}</p>
           )}
         </div>
       </CardContent>
@@ -258,10 +258,10 @@ export default function DashboardLogsPage() {
   const [customTo, setCustomTo] = useState("");
 
   return (
-    <div className="min-h-0 space-y-5" dir="rtl">
+    <div className="min-h-0 space-y-5" dir={dashDir()}>
       <PageHeader
-        title="سجل النشاط"
-        description="سجل ما نفّذه الفريق والمتبرعون. الأحداث التلقائية (الجدولة، التتبّع، الرسائل الآلية) لا تظهر هنا."
+        title={dt("سجل النشاط")}
+        description={dt("سجل ما نفّذه الفريق والمتبرعون. الأحداث التلقائية (الجدولة، التتبّع، الرسائل الآلية) لا تظهر هنا.")}
         icon={ScrollText}
       />
 
@@ -316,7 +316,7 @@ export default function DashboardLogsPage() {
                 value={customFrom}
                 onChange={(e) => setCustomFrom(e.target.value)}
                 className="h-8 text-xs w-36 bg-white"
-                placeholder="من"
+                placeholder={dt("من")}
               />
               <span className="text-slate-400 text-xs">—</span>
               <Input
@@ -324,7 +324,7 @@ export default function DashboardLogsPage() {
                 value={customTo}
                 onChange={(e) => setCustomTo(e.target.value)}
                 className="h-8 text-xs w-36 bg-white"
-                placeholder="إلى"
+                placeholder={dt("إلى")}
               />
             </div>
           </>
@@ -336,7 +336,7 @@ export default function DashboardLogsPage() {
         <div className="relative flex-1 min-w-[160px] max-w-xs">
           <Search className="absolute end-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
           <Input
-            placeholder="بحث باسم المستخدم..."
+            placeholder={dt("بحث باسم المستخدم...")}
             value={userFilter}
             onChange={(e) => setUserFilter(e.target.value)}
             className="pe-8 h-8 text-xs bg-white"

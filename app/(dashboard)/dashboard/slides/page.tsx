@@ -17,6 +17,7 @@ import { toast } from 'react-hot-toast';
 import { errorMessage } from '@/lib/dashboard/client-error-message';
 import { DashboardLocaleSwitcher } from '../_components/DashboardLocaleSwitcher';
 import { ContentLocalizationAuditCard } from '../_components/ContentLocalizationAuditCard';
+import { dt, dtx } from "@/lib/dashboard/i18n";
 
 interface Slide {
   id: string;
@@ -100,7 +101,7 @@ export default function SlidesPage() {
       // Was a bare console.error, so a failed load looked identical to "no
       // slides yet"  the empty state rendered and nothing said why.
       console.error(e);
-      toast.error(errorMessage(e, 'تعذّر تحميل الشرائح'));
+      toast.error(errorMessage(e, dt("تعذّر تحميل الشرائح")));
     } finally {
       setLoading(false);
     }
@@ -134,8 +135,8 @@ export default function SlidesPage() {
       .post('/api/slides/reorder', {
         slides: snapshot.map((s, i) => ({ id: s.id, order: i })),
       })
-      .then(() => toast.success('تم تحديث الترتيب'))
-      .catch((e) => toast.error(errorMessage(e, 'فشل في حفظ الترتيب')))
+      .then(() => toast.success(dt("تم تحديث الترتيب")))
+      .catch((e) => toast.error(errorMessage(e, dt("فشل في حفظ الترتيب"))))
       .finally(() => setSavingOrder(false));
   }, []);
 
@@ -147,9 +148,9 @@ export default function SlidesPage() {
       // toggle rewrote every column from whatever the list happened to hold.
       await axios.put(`/api/slides/${slide.id}`, { isActive: nextActive });
       setSlides(prev => prev.map(s => s.id === slide.id ? { ...s, isActive: nextActive } : s));
-      toast.success(nextActive ? 'تم التفعيل' : 'تم إلغاء التفعيل');
+      toast.success(nextActive ? dt("تم التفعيل") : dt("تم إلغاء التفعيل"));
     } catch (e) {
-      toast.error(errorMessage(e, 'فشل في تحديث الحالة'));
+      toast.error(errorMessage(e, dt("فشل في تحديث الحالة")));
     } finally {
       setTogglingId(null);
     }
@@ -162,9 +163,9 @@ export default function SlidesPage() {
       await axios.delete(`/api/slides/${deleteTarget.id}`);
       setSlides(prev => prev.filter(s => s.id !== deleteTarget.id));
       setDeleteTarget(null);
-      toast.success('تم الحذف');
+      toast.success(dt("تم الحذف"));
     } catch (e) {
-      toast.error(errorMessage(e, 'فشل الحذف'));
+      toast.error(errorMessage(e, dt("فشل الحذف")));
     } finally {
       setDeleting(false);
     }
@@ -182,20 +183,19 @@ export default function SlidesPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold tracking-tight">شرائح الهيرو</h1>
-          <p className="text-muted-foreground mt-1">إدارة شرائح العرض الرئيسية</p>
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight">{dt("شرائح الهيرو")}</h1>
+          <p className="text-muted-foreground mt-1">{dt("إدارة شرائح العرض الرئيسية")}</p>
         </div>
         <div className="flex items-center gap-3">
           <DashboardLocaleSwitcher value={locale} onChange={setLocale} className="h-10 w-[190px]" />
           {savingOrder && (
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <Loader2 className="h-4 w-4 animate-spin" />
-              <span>جاري حفظ الترتيب...</span>
+              <span>{dt("جاري حفظ الترتيب...")}</span>
             </div>
           )}
           <Button onClick={() => router.push('/dashboard/slides/new')} size="lg" className="gap-2">
-            <Plus className="w-5 h-5" /> إضافة شريحة
-          </Button>
+            <Plus className="w-5 h-5" /> {dt(" إضافة شريحة")}</Button>
         </div>
       </div>
 
@@ -208,10 +208,10 @@ export default function SlidesPage() {
               <TableHeader>
                 <TableRow className="bg-muted/50">
                   <TableHead className="w-12"></TableHead>
-                  <TableHead className="w-32">الصورة</TableHead>
-                  <TableHead className="min-w-[200px]">المحتوى</TableHead>
-                  <TableHead className="w-32 text-center">الحالة</TableHead>
-                  <TableHead className="w-40 text-center">إجراءات</TableHead>
+                  <TableHead className="w-32">{dt("الصورة")}</TableHead>
+                  <TableHead className="min-w-[200px]">{dt("المحتوى")}</TableHead>
+                  <TableHead className="w-32 text-center">{dt("الحالة")}</TableHead>
+                  <TableHead className="w-40 text-center">{dt("إجراءات")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -233,8 +233,7 @@ export default function SlidesPage() {
                           />
                         ) : (
                           <div className="flex items-center justify-center h-full text-muted-foreground text-xs">
-                            لا توجد صورة
-                          </div>
+                            {dt("لا توجد صورة")}</div>
                         )}
                       </div>
                     </TableCell>
@@ -284,7 +283,7 @@ export default function SlidesPage() {
                           className="gap-1.5"
                         >
                           <Pencil className="w-4 h-4" />
-                          <span className="hidden sm:inline">تعديل</span>
+                          <span className="hidden sm:inline">{dt("تعديل")}</span>
                         </Button>
                         <Button
                           variant="outline"
@@ -293,7 +292,7 @@ export default function SlidesPage() {
                           className="gap-1.5 text-destructive hover:text-destructive"
                         >
                           <Trash2 className="w-4 h-4" />
-                          <span className="hidden sm:inline">حذف</span>
+                          <span className="hidden sm:inline">{dt("حذف")}</span>
                         </Button>
                       </div>
                     </TableCell>
@@ -308,12 +307,11 @@ export default function SlidesPage() {
           <EmptyState
             variant="inline"
             icon={ImageIcon}
-            title="لا توجد شرائح"
-            description="الشرائح تتحكم في السلايدر الظاهر على الصفحة الرئيسية للموقع. أضف أول شريحة للبدء."
+            title={dt("لا توجد شرائح")}
+            description={dt("الشرائح تتحكم في السلايدر الظاهر على الصفحة الرئيسية للموقع. أضف أول شريحة للبدء.")}
             action={
               <Button onClick={() => router.push('/dashboard/slides/new')} className="gap-2 bg-brand hover:bg-brand-dark">
-                <Plus className="w-4 h-4" /> إضافة شريحة
-              </Button>
+                <Plus className="w-4 h-4" /> {dt(" إضافة شريحة")}</Button>
             }
           />
         )}
@@ -322,19 +320,18 @@ export default function SlidesPage() {
       <AlertDialog open={!!deleteTarget} onOpenChange={() => setDeleteTarget(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>حذف الشريحة؟</AlertDialogTitle>
+            <AlertDialogTitle>{dt("حذف الشريحة؟")}</AlertDialogTitle>
             <AlertDialogDescription>
-              هل أنت متأكد من حذف الشريحة "{deleteTarget?.title}"؟ هذا الإجراء لا يمكن التراجع عنه.
-            </AlertDialogDescription>
+              {dtx("هل أنت متأكد من حذف الشريحة \"{0}\"؟ هذا الإجراء لا يمكن التراجع عنه.", [deleteTarget?.title])}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>إلغاء</AlertDialogCancel>
+            <AlertDialogCancel>{dt("إلغاء")}</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDelete}
               disabled={deleting}
               className="bg-destructive hover:bg-destructive/90"
             >
-              {deleting ? <Loader2 className="h-4 w-4 animate-spin" /> : 'حذف'}
+              {deleting ? <Loader2 className="h-4 w-4 animate-spin" /> : dt("حذف")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -6,7 +6,7 @@ import { requireAdminOrDashboardPermission } from "@/lib/dashboard/api-auth";
 import { auditActorFromDashboardSession } from "@/lib/audit-log";
 import { deleteSender, getSender, setDefaultSender, updateSender } from "@/lib/communication/sender-service";
 import { COMMUNICATION_PURPOSES } from "@/lib/communication/communication-runtime-types";
-import { publicSender } from "../route";
+import { publicSender } from "@/lib/communication/public-sender";
 
 /** Editing one sender. Channel and provider are not editable  that would silently repoint a thread. */
 const patchSchema = z.object({

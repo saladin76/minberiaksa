@@ -20,6 +20,7 @@ import { useCreateTranslations, type BufferedLocale } from "./CreateTranslations
 import { localeDir, localeNativeLabel } from "../../../_components/locale-form";
 import { AutoTranslateButton } from "../../../_components/AutoTranslateButton";
 import { SmartSeoAuditCard } from "../../../_components/SmartSeoAuditCard";
+import { dashDir, dt } from "@/lib/dashboard/i18n";
 
 /** English is the site's fallback language and the one translation it requires. */
 const metaFor = (locale: BufferedLocale) => ({ name: localeNativeLabel(locale), required: locale === "en", dir: localeDir(locale) });
@@ -63,10 +64,10 @@ export default function BlogLocaleBufferEditor({ locale }: { locale: BufferedLoc
       formData.append("file", file);
       const response = await axios.post("/api/upload", formData);
       setImage(response.data?.url ?? "");
-      toast.success("تم رفع الصورة بنجاح");
+      toast.success(dt("تم رفع الصورة بنجاح"));
     } catch (err) {
       console.error("Image upload error:", err);
-      toast.error("فشل رفع الصورة");
+      toast.error(dt("فشل رفع الصورة"));
     } finally {
       setUploading(false);
     }
@@ -93,7 +94,7 @@ export default function BlogLocaleBufferEditor({ locale }: { locale: BufferedLoc
         </CardHeader>
         <CardContent className="space-y-4">
           {ctx ? (
-            <div className="rounded-lg border border-purple-200 bg-purple-50/50 p-3" dir="rtl">
+            <div className="rounded-lg border border-purple-200 bg-purple-50/50 p-3" dir={dashDir()}>
               <AutoTranslateButton
                 source={{ title: ctx.arabic.title, description: ctx.arabic.description }}
                 richSource={{ content: ctx.arabic.content ?? "" }}
@@ -107,7 +108,7 @@ export default function BlogLocaleBufferEditor({ locale }: { locale: BufferedLoc
                   if (t.richFields.content && (overwrite || !content)) { setContent(t.richFields.content); setEditorKey((k) => k + 1); }
                 }}
               />
-              <p className="mt-2 text-[11px] text-slate-600">تُترجم هذه اللغة وحدها من مسودة التبويب العربي.</p>
+              <p className="mt-2 text-[11px] text-slate-600">{dt("تُترجم هذه اللغة وحدها من مسودة التبويب العربي.")}</p>
             </div>
           ) : null}
           <div className="space-y-2">

@@ -13,6 +13,7 @@ import { SUPPORTED_LOCALES, LOCALE_LABELS, DEFAULT_LOCALE, type SupportedLocale 
 import { cn } from "@/lib/utils";
 import { TemplateDialogShell, LocaleStrip, FieldLabel } from "./TemplateDialogShell";
 import { VariablePicker } from "./VariablePicker";
+import { dt, dtx } from "@/lib/dashboard/i18n";
 
 interface Props {
   id: string | null;
@@ -66,16 +67,15 @@ function SegmentMeter({ text }: { text: string }) {
           )}
           title={
             seg.encoding === "UCS2"
-              ? "النص يحتوي حروفًا خارج أبجدية GSM (العربية مثلًا)  المقطع ٧٠ حرفًا"
-              : "كل الحروف داخل أبجدية GSM  المقطع ١٦٠ حرفًا"
+              ? dt("النص يحتوي حروفًا خارج أبجدية GSM (العربية مثلًا)  المقطع ٧٠ حرفًا")
+              : dt("كل الحروف داخل أبجدية GSM  المقطع ١٦٠ حرفًا")
           }
         >
-          {seg.encoding === "UCS2" ? "يونيكود (عربي)" : "لاتيني GSM"}
+          {seg.encoding === "UCS2" ? dt("يونيكود (عربي)") : dt("لاتيني GSM")}
         </span>
 
         <span className="shrink-0 text-[11px] tabular-nums text-slate-500">
-          <b className="text-slate-800">{seg.units}</b> / {capacity} حرفًا
-        </span>
+          <b className="text-slate-800">{seg.units}</b> {dtx(" / {0} حرفًا", [capacity])}</span>
 
         <span
           className={cn(
@@ -84,8 +84,7 @@ function SegmentMeter({ text }: { text: string }) {
           )}
         >
           <Layers className="h-3 w-3" />
-          {seg.segments} مقطع
-        </span>
+          {dtx("{0} مقطع", [seg.segments])}</span>
       </div>
 
       <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-slate-100">
@@ -96,14 +95,12 @@ function SegmentMeter({ text }: { text: string }) {
         <p className="mt-1.5 flex items-start gap-1 text-[10px] leading-4 text-amber-800">
           <TriangleAlert className="mt-0.5 h-3 w-3 shrink-0" />
           <span className="min-w-0">
-            تُحتسب {seg.segments} مقاطع في الفاتورة  أي {seg.segments}× تكلفة الرسالة الواحدة.
-            {seg.remaining > 0 && ` احذف ${seg.remaining + 1} حرفًا للنزول مقطعًا.`}
+            {dtx("تُحتسب {0} مقاطع في الفاتورة  أي {1}× تكلفة الرسالة الواحدة.", [seg.segments, seg.segments])}{seg.remaining > 0 && dt(" احذف {0} حرفًا للنزول مقطعًا.", [seg.remaining + 1])}
           </span>
         </p>
       )}
       <p className="mt-1 text-[10px] leading-4 text-slate-400">
-        محسوب على النص بعد دمج البيانات التجريبية  الطول الفعلي يتغيّر حسب بيانات كل مستلم.
-      </p>
+        {dt("محسوب على النص بعد دمج البيانات التجريبية  الطول الفعلي يتغيّر حسب بيانات كل مستلم.")}</p>
     </div>
   );
 }
@@ -122,7 +119,7 @@ export function SmsTemplateEditorDialog({ id, open, onOpenChange, onSaved }: Pro
     if (!id) {
       setName("");
       setKind("CAMPAIGN");
-      setBodies({ [DEFAULT_LOCALE]: "شكرًا {{user.name}}! تم استلام تبرعك بمبلغ {{amount}} {{currency}}." });
+      setBodies({ [DEFAULT_LOCALE]: dt("شكرًا {{user.name}}! تم استلام تبرعك بمبلغ {{amount}} {{currency}}.") });
       setActiveLocale(DEFAULT_LOCALE);
       return;
     }
@@ -145,7 +142,7 @@ export function SmsTemplateEditorDialog({ id, open, onOpenChange, onSaved }: Pro
         setBodies(next);
         setActiveLocale(DEFAULT_LOCALE);
       })
-      .catch(() => toast.error("فشل تحميل القالب"))
+      .catch(() => toast.error(dt("فشل تحميل القالب")))
       .finally(() => setLoading(false));
   }, [id, open]);
 
@@ -187,12 +184,12 @@ export function SmsTemplateEditorDialog({ id, open, onOpenChange, onSaved }: Pro
 
   const save = async () => {
     if (!name.trim()) {
-      toast.error("اسم القالب مطلوب");
+      toast.error(dt("اسم القالب مطلوب"));
       return;
     }
     const arBody = bodies[DEFAULT_LOCALE]?.trim();
     if (!arBody) {
-      toast.error("المحتوى بالعربية مطلوب");
+      toast.error(dt("المحتوى بالعربية مطلوب"));
       return;
     }
     setSaving(true);
@@ -213,14 +210,14 @@ export function SmsTemplateEditorDialog({ id, open, onOpenChange, onSaved }: Pro
       };
       if (id) await axios.patch(`/api/templates/sms/${id}`, payload);
       else await axios.post("/api/templates/sms", payload);
-      toast.success("تم الحفظ");
+      toast.success(dt("تم الحفظ"));
       onSaved();
       onOpenChange(false);
     } catch (err) {
       /* Say what the server refused rather than a bare "failed". */
       const e = err as { response?: { data?: { error?: string; issues?: { fieldErrors?: Record<string, string[]> } } } };
       const fields = Object.keys(e.response?.data?.issues?.fieldErrors ?? {});
-      toast.error(fields.length ? `فشل الحفظ: تحقّق من ${fields.join("، ")}` : e.response?.data?.error ? `فشل الحفظ: ${e.response.data.error}` : "فشل الحفظ");
+      toast.error(fields.length ? dt("فشل الحفظ: تحقّق من {0}", [fields.join(dt("، "))]) : e.response?.data?.error ? dt("فشل الحفظ: {0}", [e.response.data.error]) : dt("فشل الحفظ"));
     } finally {
       setSaving(false);
     }
@@ -230,8 +227,8 @@ export function SmsTemplateEditorDialog({ id, open, onOpenChange, onSaved }: Pro
     <TemplateDialogShell
       open={open}
       onOpenChange={onOpenChange}
-      title={id ? "تعديل قالب الرسالة النصية" : "قالب رسالة نصية جديد"}
-      subtitle="نص فقط، بلا تنسيق  ويُحاسب بالمقطع، لذا راقب العدّاد أثناء الكتابة."
+      title={id ? dt("تعديل قالب الرسالة النصية") : dt("قالب رسالة نصية جديد")}
+      subtitle={dt("نص فقط، بلا تنسيق  ويُحاسب بالمقطع، لذا راقب العدّاد أثناء الكتابة.")}
       icon={<MessageSquare className="h-4 w-4" />}
       accent="sms"
       size="lg"
@@ -253,18 +250,18 @@ export function SmsTemplateEditorDialog({ id, open, onOpenChange, onSaved }: Pro
       <div className="space-y-4">
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div className="space-y-1.5">
-            <FieldLabel hint="لا يظهر للمتبرّع">اسم القالب</FieldLabel>
-            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="مثال: تأكيد التبرع" />
+            <FieldLabel hint={dt("لا يظهر للمتبرّع")}>{dt("اسم القالب")}</FieldLabel>
+            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder={dt("مثال: تأكيد التبرع")} />
           </div>
           <div className="space-y-1.5">
-            <FieldLabel>نوع الاستخدام</FieldLabel>
+            <FieldLabel>{dt("نوع الاستخدام")}</FieldLabel>
             <select
               value={kind}
               onChange={(e) => setKind(e.target.value as "SYSTEM" | "CAMPAIGN")}
               className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
             >
-              <option value="SYSTEM">تلقائي / خدمي / توثيق</option>
-              <option value="CAMPAIGN">حملة تسويقية</option>
+              <option value="SYSTEM">{dt("تلقائي / خدمي / توثيق")}</option>
+              <option value="CAMPAIGN">{dt("حملة تسويقية")}</option>
             </select>
           </div>
         </div>
@@ -274,7 +271,7 @@ export function SmsTemplateEditorDialog({ id, open, onOpenChange, onSaved }: Pro
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           <div className="min-w-0 space-y-2">
             <div className="space-y-1.5">
-              <FieldLabel hint={LOCALE_LABELS[activeLocale]}>المحتوى</FieldLabel>
+              <FieldLabel hint={LOCALE_LABELS[activeLocale]}>{dt("المحتوى")}</FieldLabel>
               <Textarea
                 ref={bodyRef}
                 value={currentBody}
@@ -282,7 +279,7 @@ export function SmsTemplateEditorDialog({ id, open, onOpenChange, onSaved }: Pro
                 rows={6}
                 className="resize-y font-mono text-xs leading-relaxed"
                 dir={activeLocale === "ar" ? "rtl" : "ltr"}
-                placeholder="اكتب نص الرسالة القصيرة هنا"
+                placeholder={dt("اكتب نص الرسالة القصيرة هنا")}
               />
             </div>
 
@@ -293,20 +290,20 @@ export function SmsTemplateEditorDialog({ id, open, onOpenChange, onSaved }: Pro
           </div>
 
           <div className="min-w-0 space-y-1.5">
-            <FieldLabel hint="ببيانات تجريبية">المعاينة</FieldLabel>
+            <FieldLabel hint={dt("ببيانات تجريبية")}>{dt("المعاينة")}</FieldLabel>
             {/* A plain notification bubble, not a chat thread: SMS has no delivery ticks,
                 no avatars and no rich formatting to imply. */}
             <div className="flex min-h-[260px] items-start justify-center rounded-xl border border-border bg-slate-100 p-4">
               <div className="w-full max-w-[300px] rounded-2xl bg-white p-3 shadow-sm ring-1 ring-slate-900/5">
                 <div className="mb-1.5 flex items-center justify-between gap-2 border-b border-slate-100 pb-1.5">
-                  <span className="truncate text-[10px] font-semibold text-slate-500">رسالة نصية</span>
-                  <span className="shrink-0 text-[10px] text-slate-400">الآن</span>
+                  <span className="truncate text-[10px] font-semibold text-slate-500">{dt("رسالة نصية")}</span>
+                  <span className="shrink-0 text-[10px] text-slate-400">{dt("الآن")}</span>
                 </div>
                 <p
                   className="whitespace-pre-wrap break-words text-sm leading-relaxed text-slate-900"
                   dir={activeLocale === "ar" ? "rtl" : "ltr"}
                 >
-                  {preview || <span className="italic text-muted-foreground">المعاينة ستظهر هنا</span>}
+                  {preview || <span className="italic text-muted-foreground">{dt("المعاينة ستظهر هنا")}</span>}
                 </p>
               </div>
             </div>

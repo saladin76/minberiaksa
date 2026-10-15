@@ -21,6 +21,7 @@ import {
   type GenderFilterValue,
 } from "@/components/dashboard/DemographicFilters";
 import { cn } from "@/lib/utils";
+import { dt, dtx } from "@/lib/dashboard/i18n";
 
 export type Eligibility = "ELIGIBLE" | "NEEDS_REVIEW" | "UNAVAILABLE";
 
@@ -72,9 +73,9 @@ async function readApiJson(response: Response, fallback: string): Promise<DonorA
 }
 
 const ELIGIBILITY_META: Record<Eligibility, { label: string; tone: string; icon: typeof Check }> = {
-  ELIGIBLE: { label: "يمكن مراسلته", tone: "border-emerald-200 bg-emerald-50 text-emerald-700", icon: Check },
-  NEEDS_REVIEW: { label: "يحتاج موافقة", tone: "border-amber-200 bg-amber-50 text-amber-700", icon: ShieldQuestion },
-  UNAVAILABLE: { label: "غير متاح", tone: "border-slate-200 bg-slate-100 text-slate-500", icon: TriangleAlert },
+  ELIGIBLE: { get label() { return dt("يمكن مراسلته"); }, tone: "border-emerald-200 bg-emerald-50 text-emerald-700", icon: Check },
+  NEEDS_REVIEW: { get label() { return dt("يحتاج موافقة"); }, tone: "border-amber-200 bg-amber-50 text-amber-700", icon: ShieldQuestion },
+  UNAVAILABLE: { get label() { return dt("غير متاح"); }, tone: "border-slate-200 bg-slate-100 text-slate-500", icon: TriangleAlert },
 };
 
 /**
@@ -141,10 +142,10 @@ export function DonorPicker({
     applyAgeBracketParams(params, ageBracket);
 
     fetch(`/api/communication/audience-candidates?${params}`, { cache: "no-store" })
-      .then((response) => readApiJson(response, "تعذّر تحميل المتبرعين"))
+      .then((response) => readApiJson(response, dt("تعذّر تحميل المتبرعين")))
       .then((j) => {
         if (cancelled) return;
-        if (!j.ok) throw new Error(j.error || "تعذّر تحميل المتبرعين");
+        if (!j.ok) throw new Error(j.error || dt("تعذّر تحميل المتبرعين"));
         setDonors(j.donors ?? []);
         setTotal(j.pagination?.total ?? 0);
         if (j.facets) setFacets(j.facets);
@@ -163,7 +164,7 @@ export function DonorPicker({
 
   const confirmWhatsappConsent = async (donor: DonorCandidate) => {
     if (!donor.canConfirmWhatsappOptIn || consentSavingId) return;
-    if (!window.confirm(`تأكيد وجود موافقة صريحة من ${donor.name ?? "هذا المتبرع"} لاستقبال رسائل واتساب تسويقية؟`)) return;
+    if (!window.confirm(dt("تأكيد وجود موافقة صريحة من {0} لاستقبال رسائل واتساب تسويقية؟", [donor.name ?? dt("هذا المتبرع")]))) return;
     setConsentSavingId(donor.id);
     try {
       const res = await fetch("/api/dashboard/communication/whatsapp/smart-send", {
@@ -172,8 +173,8 @@ export function DonorPicker({
         body: JSON.stringify({ userId: donor.id, whatsappOptIn: true, confirmed: true }),
       });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok || !data.ok) throw new Error(data.error || "تعذّر تسجيل الموافقة");
-      toast.success("تم تسجيل موافقة واتساب التسويقية");
+      if (!res.ok || !data.ok) throw new Error(data.error || dt("تعذّر تسجيل الموافقة"));
+      toast.success(dt("تم تسجيل موافقة واتساب التسويقية"));
       setRefreshKey((value) => value + 1);
     } catch (error) {
       toast.error((error as Error).message);
@@ -219,12 +220,12 @@ export function DonorPicker({
           ...ageBracketBody(ageBracket),
         }),
       });
-      const json = await readApiJson(res, "تعذّر التحديد");
-      if (!json.ok) throw new Error(String(json.error || "تعذّر التحديد"));
+      const json = await readApiJson(res, dt("تعذّر التحديد"));
+      if (!json.ok) throw new Error(String(json.error || dt("تعذّر التحديد")));
       const ids = json.ids ?? [];
       onChange(new Set([...selected, ...ids]));
-      if (json.truncated) toast("اكتفينا بأول ٥٠٠٠ متبرع مطابق.", { icon: "ℹ️" });
-      else toast.success(`تم تحديد ${ids.length} متبرعًا`);
+      if (json.truncated) toast(dt("اكتفينا بأول ٥٠٠٠ متبرع مطابق."), { icon: "ℹ️" });
+      else toast.success(dt("تم تحديد {0} متبرعًا", [ids.length]));
     } catch (e) {
       toast.error((e as Error).message);
     } finally {
@@ -233,13 +234,13 @@ export function DonorPicker({
   };
 
   const activeFilters = [
-    search && { key: "s", label: `بحث: ${search}`, clear: () => setSearchInput("") },
-    locale !== "all" && { key: "l", label: `اللغة: ${LOCALE_LABELS[locale as keyof typeof LOCALE_LABELS] ?? locale}`, clear: () => setLocale("all") },
-    country !== "all" && { key: "c", label: `الموقع: ${facets.countries.find((c) => c.code === country)?.name ?? country}`, clear: () => setCountry("all") },
-    badgeId !== "all" && { key: "b", label: `الشارة: ${badgeById.get(badgeId)?.name ?? badgeId}`, clear: () => setBadgeId("all") },
-    eligibility !== "all" && { key: "e", label: eligibility === "eligible" ? "المتاحون فقط" : "غير المتاحين فقط", clear: () => setEligibility("all") },
-    gender !== "all" && { key: "g", label: `الجنس: ${genderFilterLabel(gender)}`, clear: () => setGender("all") },
-    ageBracket !== "all" && { key: "a", label: `العمر: ${ageBracketLabel(ageBracket)}`, clear: () => setAgeBracket("all") },
+    search && { key: "s", label: dt("بحث: {0}", [search]), clear: () => setSearchInput("") },
+    locale !== "all" && { key: "l", label: dt("اللغة: {0}", [LOCALE_LABELS[locale as keyof typeof LOCALE_LABELS] ?? locale]), clear: () => setLocale("all") },
+    country !== "all" && { key: "c", label: dt("الموقع: {0}", [facets.countries.find((c) => c.code === country)?.name ?? country]), clear: () => setCountry("all") },
+    badgeId !== "all" && { key: "b", label: dt("الشارة: {0}", [badgeById.get(badgeId)?.name ?? badgeId]), clear: () => setBadgeId("all") },
+    eligibility !== "all" && { key: "e", label: eligibility === "eligible" ? dt("المتاحون فقط") : dt("غير المتاحين فقط"), clear: () => setEligibility("all") },
+    gender !== "all" && { key: "g", label: dt("الجنس: {0}", [genderFilterLabel(gender)]), clear: () => setGender("all") },
+    ageBracket !== "all" && { key: "a", label: dt("العمر: {0}", [ageBracketLabel(ageBracket)]), clear: () => setAgeBracket("all") },
   ].filter(Boolean) as { key: string; label: string; clear: () => void }[];
 
   const resetAll = () => {
@@ -260,20 +261,19 @@ export function DonorPicker({
       <FilterBar
         searchValue={searchInput}
         onSearchChange={setSearchInput}
-        searchPlaceholder="ابحث بالاسم أو البريد أو الهاتف…"
+        searchPlaceholder={dt("ابحث بالاسم أو البريد أو الهاتف…")}
         actions={
           <Button variant="outline" size="sm" onClick={selectAllMatching} disabled={selectingAll || loading} className="gap-1.5">
             {selectingAll ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Users className="h-3.5 w-3.5" />}
-            تحديد كل النتائج
-          </Button>
+            {dt("تحديد كل النتائج")}</Button>
         }
       >
         <Select value={locale} onValueChange={setLocale}>
-          <SelectTrigger aria-label="تصفية باللغة" className={triggerCls}>
+          <SelectTrigger aria-label={dt("تصفية باللغة")} className={triggerCls}>
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all" className="text-xs">كل اللغات</SelectItem>
+            <SelectItem value="all" className="text-xs">{dt("كل اللغات")}</SelectItem>
             {SUPPORTED_LOCALES.map((l) => (
               <SelectItem key={l} value={l} className="text-xs">{LOCALE_LABELS[l]}</SelectItem>
             ))}
@@ -283,11 +283,11 @@ export function DonorPicker({
         {/* Countries are ordered by donor count, not alphabetically  with 70+ present, the five
             that matter would otherwise be buried mid-list. */}
         <Select value={country} onValueChange={setCountry}>
-          <SelectTrigger aria-label="تصفية بالموقع" className={triggerCls}>
+          <SelectTrigger aria-label={dt("تصفية بالموقع")} className={triggerCls}>
             <SelectValue />
           </SelectTrigger>
           <SelectContent className="max-h-72">
-            <SelectItem value="all" className="text-xs">كل المواقع</SelectItem>
+            <SelectItem value="all" className="text-xs">{dt("كل المواقع")}</SelectItem>
             {facets.countries.map((c) => (
               <SelectItem key={c.code} value={c.code} className="text-xs">
                 {c.name} ({c.count})
@@ -297,11 +297,11 @@ export function DonorPicker({
         </Select>
 
         <Select value={badgeId} onValueChange={setBadgeId}>
-          <SelectTrigger aria-label="تصفية بالشارة" className={triggerCls}>
+          <SelectTrigger aria-label={dt("تصفية بالشارة")} className={triggerCls}>
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all" className="text-xs">كل الشارات</SelectItem>
+            <SelectItem value="all" className="text-xs">{dt("كل الشارات")}</SelectItem>
             {facets.badges.map((b) => (
               <SelectItem key={b.id} value={b.id} className="text-xs">
                 <span className="me-1.5 inline-block h-2 w-2 rounded-full" style={{ backgroundColor: b.color }} />
@@ -316,13 +316,13 @@ export function DonorPicker({
         <AgeFilterSelect value={ageBracket} onChange={setAgeBracket} className={triggerCls} />
 
         <Select value={eligibility} onValueChange={setEligibility}>
-          <SelectTrigger aria-label="تصفية بالأهلية" className={cn(triggerCls, "sm:basis-[10rem]")}>
+          <SelectTrigger aria-label={dt("تصفية بالأهلية")} className={cn(triggerCls, "sm:basis-[10rem]")}>
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all" className="text-xs">كل الأهليات</SelectItem>
-            <SelectItem value="eligible" className="text-xs">يمكن مراسلته فقط</SelectItem>
-            <SelectItem value="ineligible" className="text-xs">غير المتاحين فقط</SelectItem>
+            <SelectItem value="all" className="text-xs">{dt("كل الأهليات")}</SelectItem>
+            <SelectItem value="eligible" className="text-xs">{dt("يمكن مراسلته فقط")}</SelectItem>
+            <SelectItem value="ineligible" className="text-xs">{dt("غير المتاحين فقط")}</SelectItem>
           </SelectContent>
         </Select>
       </FilterBar>
@@ -341,8 +341,7 @@ export function DonorPicker({
             </button>
           ))}
           <button type="button" onClick={resetAll} className="text-[11px] text-slate-500 underline underline-offset-2 hover:text-slate-800">
-            مسح الكل
-          </button>
+            {dt("مسح الكل")}</button>
         </div>
       )}
 
@@ -353,10 +352,10 @@ export function DonorPicker({
           disabled={pageIds.length === 0}
           className="text-[11px] font-medium text-brand underline underline-offset-2 disabled:opacity-40"
         >
-          {allPageSelected ? "إلغاء تحديد هذه الصفحة" : "تحديد هذه الصفحة"}
+          {allPageSelected ? dt("إلغاء تحديد هذه الصفحة") : dt("تحديد هذه الصفحة")}
         </button>
         <span className="text-[11px] text-slate-500">
-          {total.toLocaleString("en-US")} متبرع مطابق · محدَّد {selected.size.toLocaleString("en-US")}
+          {dtx("{0} متبرع مطابق · محدَّد {1}", [total.toLocaleString("en-US"), selected.size.toLocaleString("en-US")])}
         </span>
       </div>
 
@@ -369,11 +368,11 @@ export function DonorPicker({
       ) : donors.length === 0 ? (
         <EmptyState
           icon={Users}
-          title="لا يوجد متبرع مطابق"
-          description="جرّب توسيع التصفية أو مسحها."
+          title={dt("لا يوجد متبرع مطابق")}
+          description={dt("جرّب توسيع التصفية أو مسحها.")}
           action={
             activeFilters.length > 0 ? (
-              <Button variant="outline" size="sm" onClick={resetAll}>مسح التصفية</Button>
+              <Button variant="outline" size="sm" onClick={resetAll}>{dt("مسح التصفية")}</Button>
             ) : undefined
           }
         />
@@ -381,7 +380,7 @@ export function DonorPicker({
         /* The scroll lives on this box, not the page: a wide table must never make the whole
            wizard slide sideways. */
         <div className="overflow-x-auto rounded-lg border border-slate-200">
-          <table className="w-full min-w-[720px] text-right text-sm">
+          <table className="w-full min-w-[720px] text-start text-sm">
             <thead>
               <tr className="border-b border-slate-200 bg-slate-50/80 text-slate-700">
                 <th className="w-10 px-3 py-2.5">
@@ -389,15 +388,15 @@ export function DonorPicker({
                     type="checkbox"
                     checked={allPageSelected}
                     onChange={togglePage}
-                    aria-label="تحديد كل الصفحة"
+                    aria-label={dt("تحديد كل الصفحة")}
                     className="h-4 w-4 accent-brand"
                   />
                 </th>
-                <th className="min-w-[190px] px-3 py-2.5 text-right text-xs font-semibold">المتبرع</th>
-                <th className="px-3 py-2.5 text-right text-xs font-semibold">اللغة</th>
-                <th className="min-w-[130px] px-3 py-2.5 text-right text-xs font-semibold">الموقع</th>
-                <th className="min-w-[130px] px-3 py-2.5 text-right text-xs font-semibold">الشارات</th>
-                <th className="min-w-[110px] px-3 py-2.5 text-right text-xs font-semibold">الأهلية</th>
+                <th className="min-w-[190px] px-3 py-2.5 text-start text-xs font-semibold">{dt("المتبرع")}</th>
+                <th className="px-3 py-2.5 text-start text-xs font-semibold">{dt("اللغة")}</th>
+                <th className="min-w-[130px] px-3 py-2.5 text-start text-xs font-semibold">{dt("الموقع")}</th>
+                <th className="min-w-[130px] px-3 py-2.5 text-start text-xs font-semibold">{dt("الشارات")}</th>
+                <th className="min-w-[110px] px-3 py-2.5 text-start text-xs font-semibold">{dt("الأهلية")}</th>
               </tr>
             </thead>
             <tbody>
@@ -420,7 +419,7 @@ export function DonorPicker({
                         checked={on}
                         onChange={() => toggle(d.id)}
                         onClick={(e) => e.stopPropagation()}
-                        aria-label={`تحديد ${d.name ?? "متبرع"}`}
+                        aria-label={dt("تحديد {0}", [d.name ?? dt("متبرع")])}
                         className="h-4 w-4 accent-brand"
                       />
                     </td>
@@ -430,15 +429,15 @@ export function DonorPicker({
                         <Avatar className="h-8 w-8 shrink-0 rounded-full ring-1 ring-slate-200">
                           <AvatarImage src={d.image ?? undefined} alt="" />
                           <AvatarFallback className="rounded-full bg-gradient-to-br from-slate-400 to-slate-600 text-[10px] font-bold text-white">
-                            {(d.name ?? d.email ?? "؟").charAt(0).toUpperCase()}
+                            {(d.name ?? d.email ?? dt("؟")).charAt(0).toUpperCase()}
                           </AvatarFallback>
                         </Avatar>
                         <div className="min-w-0">
-                          <p className="truncate text-[13px] font-medium text-slate-900">{d.name ?? "بلا اسم"}</p>
+                          <p className="truncate text-[13px] font-medium text-slate-900">{d.name ?? dt("بلا اسم")}</p>
                           {/* The contact THIS channel uses  an email under an SMS campaign would
                               misrepresent where the message actually goes. */}
                           <p className="truncate text-[11px] text-slate-500">
-                            {channel === "EMAIL" ? d.email ?? "بلا بريد" : d.phone ?? "بلا رقم"}
+                            {channel === "EMAIL" ? d.email ?? dt("بلا بريد") : d.phone ?? dt("بلا رقم")}
                           </p>
                         </div>
                       </div>
@@ -501,7 +500,7 @@ export function DonorPicker({
                             disabled={consentSavingId === d.id}
                             className="text-[10px] font-semibold text-brand underline underline-offset-2 disabled:opacity-50"
                           >
-                            {consentSavingId === d.id ? "جارٍ التسجيل…" : "تسجيل موافقة واتساب"}
+                            {consentSavingId === d.id ? dt("جارٍ التسجيل…") : dt("تسجيل موافقة واتساب")}
                           </button>
                         )}
                       </div>
@@ -517,14 +516,12 @@ export function DonorPicker({
       {totalPages > 1 && (
         <div className="mt-3 flex items-center justify-center gap-2">
           <Button variant="outline" size="sm" disabled={page <= 1 || loading} onClick={() => setPage((p) => p - 1)}>
-            السابق
-          </Button>
+            {dt("السابق")}</Button>
           <span className="text-[11px] tabular-nums text-slate-500">
             {page} / {totalPages}
           </span>
           <Button variant="outline" size="sm" disabled={page >= totalPages || loading} onClick={() => setPage((p) => p + 1)}>
-            التالي
-          </Button>
+            {dt("التالي")}</Button>
         </div>
       )}
     </div>

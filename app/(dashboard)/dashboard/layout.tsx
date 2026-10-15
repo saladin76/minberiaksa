@@ -1,9 +1,18 @@
 import type { Metadata } from "next";
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 import DashboardLayoutClient from "./DashboardLayoutClient";
-import ar from "../../../i18n/messages/ar.json";
+import { messagesFor } from "@/i18n/locale-messages";
+import { DASH_LOCALE_COOKIE, dt, parseDashLocale, setDashRequestLocale } from "@/lib/dashboard/i18n";
+
+/** The interface language picked in the top bar (Arabic until one is picked). */
+async function requestDashLocale() {
+  const locale = parseDashLocale((await cookies()).get(DASH_LOCALE_COOKIE)?.value);
+  setDashRequestLocale(locale);
+  return locale;
+}
 
 // The whole dashboard is behind `getServerSession` and can never be served statically.
 // Saying so explicitly makes `next build` skip the prerender attempt for every page
@@ -11,12 +20,15 @@ import ar from "../../../i18n/messages/ar.json";
 // dispatcher (`Cannot read properties of null (reading 'useContext')`).
 export const dynamic = "force-dynamic";
 
-export const metadata: Metadata = {
-  title: "لوحة التحكم",
-  description: "إدارة المشاريع والتبرعات والمستخدمين",
-  icons: { icon: "/logometaminber.avif" },
-  robots: { index: false, follow: false },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  await requestDashLocale();
+  return {
+    title: dt("لوحة التحكم"),
+    description: dt("إدارة المشاريع والتبرعات والمستخدمين"),
+    icons: { icon: "/logometaminber.avif" },
+    robots: { index: false, follow: false },
+  };
+}
 
 export default async function DashboardLayout({
   children,
@@ -37,8 +49,8 @@ export default async function DashboardLayout({
     redirect("/ar/auth/signin");
   }
 
-  const locale = "ar";
-  const messages = (ar ?? {}) as unknown as Record<string, string | Record<string, string>>;
+  const locale = await requestDashLocale();
+  const messages = messagesFor(locale) as unknown as Record<string, string | Record<string, string>>;
 
   return (
     <DashboardLayoutClient

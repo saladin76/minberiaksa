@@ -27,6 +27,7 @@ import {
 } from "@/lib/campaign/campaign-modes";
 import { parseAmountsInput } from "@/lib/campaign/suggested-donations";
 import { SUPPORTED_CURRENCY_OPTIONS } from "@/lib/supported-currencies";
+import { dashDir, dt, dtx } from "@/lib/dashboard/i18n";
 
 type PriceRow = { id: string; currency: string; priceStr: string };
 
@@ -124,11 +125,10 @@ export const SuggestedShareCountsSection = forwardRef<
   };
 
   return (
-    <div className="space-y-4" dir="rtl">
+    <div className="space-y-4" dir={dashDir()}>
       <div className="space-y-2 rounded-lg border border-border p-4 bg-muted/30">
         <Label className="text-sm font-medium">
-          أعداد الأسهم المقترحة
-        </Label>
+          {dt("أعداد الأسهم المقترحة")}</Label>
         <Input
           value={countsStr}
           onChange={(e) => setCountsStr(e.target.value)}
@@ -137,13 +137,12 @@ export const SuggestedShareCountsSection = forwardRef<
           className="font-mono text-sm"
         />
         <p className="text-xs text-muted-foreground">
-          تُعرض كلها كأزرار سريعة في صفحة المشروع. الافتراضي:{" "}
-          {DEFAULT_SUGGESTED_SHARE_COUNTS.join(", ")}
+          {dtx("تُعرض كلها كأزرار سريعة في صفحة المشروع. الافتراضي: {0}", [DEFAULT_SUGGESTED_SHARE_COUNTS.join(", ")])}
         </p>
       </div>
 
       <div className="space-y-2 rounded-lg border border-border p-4 bg-muted/30">
-        <Label className="text-sm font-medium">الأعداد الظاهرة على بطاقة المشروع (حتى {MAX_CARD_SHARE_COUNTS})</Label>
+        <Label className="text-sm font-medium">{dtx("الأعداد الظاهرة على بطاقة المشروع (حتى {0})", [MAX_CARD_SHARE_COUNTS])}</Label>
         <div className="flex flex-wrap gap-2" dir="ltr">
           {listed.map((value) => {
             const on = cardCounts.includes(value);
@@ -168,14 +167,13 @@ export const SuggestedShareCountsSection = forwardRef<
           })}
         </div>
         <p className="text-xs text-muted-foreground">
-          اختر حتى {MAX_CARD_SHARE_COUNTS} أعداد لتظهر على البطاقة بجانب خانة العدد المخصص، وتبقى البقية في صفحة
-          المشروع. بدون اختيار تُعرض {DEFAULT_CARD_SHARE_COUNTS.join("، ")}.
+          {dtx("اختر حتى {0} أعداد لتظهر على البطاقة بجانب خانة العدد المخصص، وتبقى البقية في صفحة المشروع. بدون اختيار تُعرض ", [MAX_CARD_SHARE_COUNTS])}{DEFAULT_CARD_SHARE_COUNTS.join(dt("، "))}.
         </p>
       </div>
 
       <div className="space-y-2 rounded-lg border border-border p-4 bg-muted/30">
         <div className="flex items-center justify-between gap-2 flex-wrap">
-          <Label>استثناءات سعر السهم حسب العملة (اختياري)</Label>
+          <Label>{dt("استثناءات سعر السهم حسب العملة (اختياري)")}</Label>
           <Button
             type="button"
             variant="outline"
@@ -184,14 +182,11 @@ export const SuggestedShareCountsSection = forwardRef<
             className="gap-1"
           >
             <Plus className="w-4 h-4" />
-            إضافة عملة
-          </Button>
+            {dt("إضافة عملة")}</Button>
         </div>
         {priceRows.length === 0 ? (
           <p className="text-sm text-muted-foreground">
-            بدون استثناءات، يُحوَّل سعر السهم بالدولار تلقائيًا لعملة المتبرع.
-            أضف استثناءً لتحديد سعر ثابت لعملة بعينها.
-          </p>
+            {dt("بدون استثناءات، يُحوَّل سعر السهم بالدولار تلقائيًا لعملة المتبرع. أضف استثناءً لتحديد سعر ثابت لعملة بعينها.")}</p>
         ) : (
           <div className="space-y-3">
             {priceRows.map((row) => (
@@ -200,7 +195,7 @@ export const SuggestedShareCountsSection = forwardRef<
                 className="flex flex-col sm:flex-row gap-2 sm:items-end border rounded-lg p-3 bg-white"
               >
                 <div className="flex-1 min-w-[140px]">
-                  <Label className="text-xs text-muted-foreground">العملة</Label>
+                  <Label className="text-xs text-muted-foreground">{dt("العملة")}</Label>
                   <Select
                     value={row.currency}
                     onValueChange={(v) =>
@@ -221,8 +216,7 @@ export const SuggestedShareCountsSection = forwardRef<
                 </div>
                 <div className="flex-[2]">
                   <Label className="text-xs text-muted-foreground">
-                    سعر السهم الواحد بهذه العملة
-                  </Label>
+                    {dt("سعر السهم الواحد بهذه العملة")}</Label>
                   <Input
                     type="number"
                     min={0}
@@ -233,7 +227,7 @@ export const SuggestedShareCountsSection = forwardRef<
                     onChange={(e) =>
                       updatePriceRow(row.id, { priceStr: e.target.value })
                     }
-                    placeholder="مثال: 100"
+                    placeholder={dt("مثال: 100")}
                   />
                 </div>
                 <Button
@@ -242,7 +236,7 @@ export const SuggestedShareCountsSection = forwardRef<
                   size="icon"
                   className="shrink-0 text-destructive"
                   onClick={() => removePriceRow(row.id)}
-                  aria-label="حذف الصف"
+                  aria-label={dt("حذف الصف")}
                 >
                   <Trash2 className="w-4 h-4" />
                 </Button>

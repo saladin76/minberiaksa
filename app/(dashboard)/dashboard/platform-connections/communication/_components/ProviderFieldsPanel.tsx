@@ -6,6 +6,7 @@ import type { SafeProviderConnectionTestResponse } from "@/lib/integration-setti
 import { fieldHelp, PROVIDER_UI_LABEL, safeErrorMessage, uiStatus } from "@/lib/integration-settings/ui";
 import { ActionButton, Banner, CopyableCode, InfoPanel, Stat, StatusChip } from "./panel-ui";
 import { ADVANCED_LINKS, WEBHOOKS, ROTATABLE_WEBHOOK_PROVIDERS, sourceLabel, type IntegrationUiPermissions, type IntegrationUiSnapshot, type SchedulerUiStatus } from "./model";
+import { dashIntl, dt } from "@/lib/dashboard/i18n";
 
 type Notice = { kind: "success" | "error"; text: string } | null;
 type WebhookReveal = { url: string; candidateVersion: string | null } | null;
@@ -48,12 +49,12 @@ export function ProviderFieldsPanel({
 
   async function copyAbsolutePath(path: string) {
     await navigator.clipboard.writeText(`${window.location.origin}${path}`);
-    onNotice({ kind: "success", text: "تم نسخ الرابط." });
+    onNotice({ kind: "success", text: dt("تم نسخ الرابط.") });
   }
 
   async function copyOneTimeUrl(url: string) {
     await navigator.clipboard.writeText(url);
-    onNotice({ kind: "success", text: "تم نسخ الرابط. احتفظ به الآن لأنه لن يظهر كاملًا مرة أخرى." });
+    onNotice({ kind: "success", text: dt("تم نسخ الرابط. احتفظ به الآن لأنه لن يظهر كاملًا مرة أخرى.") });
   }
 
   return (
@@ -62,10 +63,10 @@ export function ProviderFieldsPanel({
         <div className="min-w-0">
           <p className="text-[11px] font-medium text-slate-500">{PROVIDER_UI_LABEL[provider]}</p>
           <h2 className="mt-0.5 text-base font-semibold text-slate-900">
-            {isCron ? "بنية الجدولة التحتية" : "إعدادات المزود"}
+            {isCron ? dt("بنية الجدولة التحتية") : dt("إعدادات المزود")}
           </h2>
           <p className="mt-1 text-xs text-slate-500">
-            {isCron ? "يُدار CRON_SECRET داخل Vercel فقط." : `${completed}/${snapshot.fields.length} حقل مكتمل`}
+            {isCron ? dt("يُدار CRON_SECRET داخل Vercel فقط.") : dt("{0}/{1} حقل مكتمل", [completed, snapshot.fields.length])}
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-2">
@@ -77,7 +78,7 @@ export function ProviderFieldsPanel({
               onClick={onToggle}
               className="inline-flex h-9 items-center rounded-lg border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 transition-colors hover:border-slate-300 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {snapshot.enabled ? "تعطيل المزود" : "تفعيل المزود"}
+              {snapshot.enabled ? dt("تعطيل المزود") : dt("تفعيل المزود")}
             </button>
           )}
         </div>
@@ -91,10 +92,9 @@ export function ProviderFieldsPanel({
         {!isCron && encryptionBlocked && permissions.canManage && (
           <Banner
             tone="danger"
-            title="تعذّر تعديل الحقول السرية لأن مفتاح التشفير غير مضبوط على السيرفر."
+            title={dt("تعذّر تعديل الحقول السرية لأن مفتاح التشفير غير مضبوط على السيرفر.")}
           >
-            أضف متغير البيئة <code dir="ltr" className="rounded bg-white px-1.5 py-0.5 font-mono text-[11px]">INTEGRATION_SETTINGS_ENCRYPTION_KEY</code> بقيمة عشوائية آمنة طولها 32 بايت، ثم أعد نشر التطبيق. الحقول غير السرية تظل قابلة للتعديل، لكن Access Token وApp Secret وWebhook Verify Token لن تُحفظ بدون هذا المفتاح حفاظًا على الأسرار.
-          </Banner>
+            {dt("أضف متغير البيئة ")}<code dir="ltr" className="rounded bg-white px-1.5 py-0.5 font-mono text-[11px]">INTEGRATION_SETTINGS_ENCRYPTION_KEY</code> {dt(" بقيمة عشوائية آمنة طولها 32 بايت، ثم أعد نشر التطبيق. الحقول غير السرية تظل قابلة للتعديل، لكن Access Token وApp Secret وWebhook Verify Token لن تُحفظ بدون هذا المفتاح حفاظًا على الأسرار.")}</Banner>
         )}
 
         {isCron ? (
@@ -103,12 +103,11 @@ export function ProviderFieldsPanel({
           <>
             {provider === "META_WHATSAPP" && (
               <InfoPanel
-                title="إعداد مركزي لتطبيق Meta"
-                description="رمز الوصول ومفتاح التطبيق وWebhook وإصدار Graph تُحفظ هنا مرة واحدة. كل رقم واتساب حقيقي — مع WABA ID وPhone Number ID واللغات والدول والأغراض — يُدار من قسم «المُرسِلون والتوجيه» أدناه، ويمكن تعيين أحدها كمُرسِل افتراضي."
+                title={dt("إعداد مركزي لتطبيق Meta")}
+                description={dt("رمز الوصول ومفتاح التطبيق وWebhook وإصدار Graph تُحفظ هنا مرة واحدة. كل رقم واتساب حقيقي — مع WABA ID وPhone Number ID واللغات والدول والأغراض — يُدار من قسم «المُرسِلون والتوجيه» أدناه، ويمكن تعيين أحدها كمُرسِل افتراضي.")}
               >
                 <p className="text-xs text-brand-800/80">
-                  لا تحتاج إلى إدخال WABA واحد أو Phone Number ID واحد في إعداد المزود؛ المنصة تدعم عدة حسابات WhatsApp Business وعدة أرقام تحت نفس تطبيق Meta.
-                </p>
+                  {dt("لا تحتاج إلى إدخال WABA واحد أو Phone Number ID واحد في إعداد المزود؛ المنصة تدعم عدة حسابات WhatsApp Business وعدة أرقام تحت نفس تطبيق Meta.")}</p>
               </InfoPanel>
             )}
             <div className="grid gap-3 lg:grid-cols-2">
@@ -134,7 +133,7 @@ export function ProviderFieldsPanel({
                         type={field.isSecret ? "password" : "text"}
                         value={drafts[field.key] ?? ""}
                         onChange={(event) => onDraft(field.key, event.target.value)}
-                        placeholder={field.isSecret ? (field.configured ? "اتركه فارغًا للاحتفاظ بالقيمة المحفوظة" : "أدخل القيمة السرية") : "أدخل القيمة"}
+                        placeholder={field.isSecret ? (field.configured ? dt("اتركه فارغًا للاحتفاظ بالقيمة المحفوظة") : dt("أدخل القيمة السرية")) : dt("أدخل القيمة")}
                         autoComplete={field.isSecret ? "new-password" : "off"}
                         disabled={!!busy || (field.isSecret && encryptionBlocked) || isManagedWebhookField(field.key)}
                         aria-describedby={`${provider}-${field.key}-help`}
@@ -142,15 +141,15 @@ export function ProviderFieldsPanel({
                       />
                       <p id={`${provider}-${field.key}-help`} className="mt-1.5 text-[11px] text-slate-500">
                         {isManagedWebhookField(field.key)
-                          ? "يتم إنشاؤه وتدويره آليًا من السيرفر."
-                          : field.isSecret ? field.configured ? `محفوظ: ${field.maskedValue ?? "قيمة آمنة"}` : "غير محفوظ"
-                          : field.hasPendingValue ? "توجد قيمة جديدة بانتظار الاختبار أو الاعتماد."
-                          : dirty.has(field.key) ? "تم تعديل القيمة ولم تحفظ بعد." : "القيمة قابلة للعرض والتعديل."}
+                          ? dt("يتم إنشاؤه وتدويره آليًا من السيرفر.")
+                          : field.isSecret ? field.configured ? dt("محفوظ: {0}", [field.maskedValue ?? dt("قيمة آمنة")]) : dt("غير محفوظ")
+                          : field.hasPendingValue ? dt("توجد قيمة جديدة بانتظار الاختبار أو الاعتماد.")
+                          : dirty.has(field.key) ? dt("تم تعديل القيمة ولم تحفظ بعد.") : dt("القيمة قابلة للعرض والتعديل.")}
                       </p>
                     </div>
                   ) : (
                     <div className="mt-3 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">
-                      {field.isSecret ? field.configured ? `محفوظ: ${field.maskedValue}` : "غير محفوظ" : field.displayValue || "غير مضبوط"}
+                      {field.isSecret ? field.configured ? dt("محفوظ: {0}", [field.maskedValue]) : dt("غير محفوظ") : field.displayValue || dt("غير مضبوط")}
                     </div>
                   )}
 
@@ -162,8 +161,7 @@ export function ProviderFieldsPanel({
                         onClick={() => onDelete(field.key, field.labelAr)}
                         className="inline-flex items-center gap-1 text-[11px] font-semibold text-rose-600 transition-colors hover:text-rose-700 disabled:opacity-50"
                       >
-                        <Trash2 className="h-3.5 w-3.5" /> حذف الإعداد
-                      </button>
+                        <Trash2 className="h-3.5 w-3.5" /> {dt(" حذف الإعداد")}</button>
                     </div>
                   )}
                 </div>
@@ -173,7 +171,7 @@ export function ProviderFieldsPanel({
             {rotatableWebhook && (
               <InfoPanel
                 title={rotatableWebhook.title}
-                description="لا يُعرض رابط ناقص. أنشئ رابطًا محميًا من السيرفر ثم اختبر التغييرات واعتمدها ليصبح الرابط صالحًا."
+                description={dt("لا يُعرض رابط ناقص. أنشئ رابطًا محميًا من السيرفر ثم اختبر التغييرات واعتمدها ليصبح الرابط صالحًا.")}
               >
                 {webhookReveal ? (
                   <div className="rounded-lg border border-amber-200 bg-amber-50 p-3">
@@ -183,10 +181,10 @@ export function ProviderFieldsPanel({
                 ) : (
                   <p className="text-xs text-brand-800/80">
                     {snapshot.fields.find((field) => field.key === "WEBHOOK_SECRET")?.hasPendingValue
-                      ? "رابط جديد بانتظار اعتماد الإعدادات."
+                      ? dt("رابط جديد بانتظار اعتماد الإعدادات.")
                       : snapshot.fields.find((field) => field.key === "WEBHOOK_SECRET")?.configured
-                        ? "Webhook محمي ومُعد. يمكن تدوير الرابط عند الحاجة."
-                        : "Webhook غير مُعد."}
+                        ? dt("Webhook محمي ومُعد. يمكن تدوير الرابط عند الحاجة.")
+                        : dt("Webhook غير مُعد.")}
                   </p>
                 )}
                 {permissions.canManage && (
@@ -206,23 +204,23 @@ export function ProviderFieldsPanel({
             {WEBHOOKS[provider] && (
               <InfoPanel
                 title={WEBHOOKS[provider]!.label}
-                description={provider === "META_WHATSAPP" ? "استخدم Webhook Verify Token نفسه داخل Meta. التحقق منه محلي ولا يعني أن Meta اختبرته خارجيًا." : undefined}
+                description={provider === "META_WHATSAPP" ? dt("استخدم Webhook Verify Token نفسه داخل Meta. التحقق منه محلي ولا يعني أن Meta اختبرته خارجيًا.") : undefined}
               >
                 <CopyableCode value={WEBHOOKS[provider]!.path} onCopy={() => copyAbsolutePath(WEBHOOKS[provider]!.path)} />
               </InfoPanel>
             )}
 
             <div className="grid gap-3 lg:grid-cols-2">
-              <TestResult title="فحص التكوين العامل" result={lastActiveTest} fallbackAt={snapshot.activeTest.lastTestAt} fallbackResult={snapshot.activeTest.lastTestResult} failure={snapshot.activeTest.lastFailureReasonSafe} />
-              <TestResult title="اختبار التغييرات" result={lastCandidateTest} fallbackAt={snapshot.candidate.lastTestAt} fallbackResult={snapshot.candidate.lastTestResult} failure={snapshot.candidate.lastFailureReasonSafe} />
+              <TestResult title={dt("فحص التكوين العامل")} result={lastActiveTest} fallbackAt={snapshot.activeTest.lastTestAt} fallbackResult={snapshot.activeTest.lastTestResult} failure={snapshot.activeTest.lastFailureReasonSafe} />
+              <TestResult title={dt("اختبار التغييرات")} result={lastCandidateTest} fallbackAt={snapshot.candidate.lastTestAt} fallbackResult={snapshot.candidate.lastTestResult} failure={snapshot.candidate.lastFailureReasonSafe} />
             </div>
 
             <div className="flex flex-wrap gap-2 border-t border-slate-200 pt-4">
-              {permissions.canManage && <ActionButton disabled={!!busy || dirty.size === 0} loading={busy === "save"} onClick={onSave} icon={<Save className="h-4 w-4" />} label="حفظ التغييرات" variant="primary" />}
-              {permissions.canTest && activeComplete && <ActionButton disabled={!!busy} loading={busy === "test-active"} onClick={onTestActive} icon={<ShieldCheck className="h-4 w-4" />} label="فحص الإعدادات الحالية" />}
-              {permissions.canTest && snapshot.candidate.hasChanges && <ActionButton disabled={!!busy} loading={busy === "test-candidate"} onClick={onTestCandidate} icon={<TestTube2 className="h-4 w-4" />} label="اختبار التغييرات" />}
-              {permissions.canManage && snapshot.candidate.version && (snapshot.candidate.lastTestResult === "SUCCESS" || (lastCandidateTest?.success && lastCandidateTest.candidateVersion === snapshot.candidate.version)) && <ActionButton disabled={!!busy} loading={busy === "activate"} onClick={onActivate} icon={<CheckCircle2 className="h-4 w-4" />} label="اعتماد الإعدادات" variant="success" />}
-              {permissions.canManage && snapshot.candidate.hasChanges && <ActionButton disabled={!!busy} loading={busy === "discard"} onClick={onDiscard} icon={<RotateCcw className="h-4 w-4" />} label="إلغاء التغييرات" variant="danger" />}
+              {permissions.canManage && <ActionButton disabled={!!busy || dirty.size === 0} loading={busy === "save"} onClick={onSave} icon={<Save className="h-4 w-4" />} label={dt("حفظ التغييرات")} variant="primary" />}
+              {permissions.canTest && activeComplete && <ActionButton disabled={!!busy} loading={busy === "test-active"} onClick={onTestActive} icon={<ShieldCheck className="h-4 w-4" />} label={dt("فحص الإعدادات الحالية")} />}
+              {permissions.canTest && snapshot.candidate.hasChanges && <ActionButton disabled={!!busy} loading={busy === "test-candidate"} onClick={onTestCandidate} icon={<TestTube2 className="h-4 w-4" />} label={dt("اختبار التغييرات")} />}
+              {permissions.canManage && snapshot.candidate.version && (snapshot.candidate.lastTestResult === "SUCCESS" || (lastCandidateTest?.success && lastCandidateTest.candidateVersion === snapshot.candidate.version)) && <ActionButton disabled={!!busy} loading={busy === "activate"} onClick={onActivate} icon={<CheckCircle2 className="h-4 w-4" />} label={dt("اعتماد الإعدادات")} variant="success" />}
+              {permissions.canManage && snapshot.candidate.hasChanges && <ActionButton disabled={!!busy} loading={busy === "discard"} onClick={onDiscard} icon={<RotateCcw className="h-4 w-4" />} label={dt("إلغاء التغييرات")} variant="danger" />}
             </div>
           </>
         )}
@@ -249,27 +247,27 @@ export function ProviderFieldsPanel({
 function CronInfrastructure({ scheduler, busy, canTest, onTest }: { scheduler: SchedulerUiStatus; busy: string | null; canTest: boolean; onTest: () => void }) {
   return (
     <div className="space-y-4">
-      <Banner tone="pending" title="مفتاح Cron من إعدادات البنية التحتية ويُضبط مرة واحدة داخل Vercel لأن Vercel يرسله تلقائيًا مع طلبات الجدولة.">
+      <Banner tone="pending" title={dt("مفتاح Cron من إعدادات البنية التحتية ويُضبط مرة واحدة داخل Vercel لأن Vercel يرسله تلقائيًا مع طلبات الجدولة.")}>
         <code className="inline-block rounded-md border border-amber-200 bg-white px-2 py-1 text-xs" dir="ltr">CRON_SECRET</code>
       </Banner>
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        <Stat label="CRON_SECRET في السيرفر" value={scheduler.configured ? "موجود" : "غير مضبوط"} />
-        <Stat label="حماية Route" value={scheduler.configured ? "Authorization Bearer" : "غير جاهزة"} />
-        <Stat label="آخر تشغيل" value={formatDate(scheduler.lastRunAt)} />
-        <Stat label="آخر تشغيل ناجح" value={formatDate(scheduler.lastSuccessfulRunAt)} />
-        <Stat label="حملات مجدولة" value={String(scheduler.scheduledCount)} />
-        <Stat label="مستحقة الآن" value={String(scheduler.dueCount)} />
+        <Stat label={dt("CRON_SECRET في السيرفر")} value={scheduler.configured ? dt("موجود") : dt("غير مضبوط")} />
+        <Stat label={dt("حماية Route")} value={scheduler.configured ? "Authorization Bearer" : dt("غير جاهزة")} />
+        <Stat label={dt("آخر تشغيل")} value={formatDate(scheduler.lastRunAt)} />
+        <Stat label={dt("آخر تشغيل ناجح")} value={formatDate(scheduler.lastSuccessfulRunAt)} />
+        <Stat label={dt("حملات مجدولة")} value={String(scheduler.scheduledCount)} />
+        <Stat label={dt("مستحقة الآن")} value={String(scheduler.dueCount)} />
       </div>
 
-      <InfoPanel title="Route الجدولة الرسمي" description="فحص الحماية لا ينفذ الحملات المستحقة.">
+      <InfoPanel title={dt("Route الجدولة الرسمي")} description={dt("فحص الحماية لا ينفذ الحملات المستحقة.")}>
         <code className="block overflow-x-auto rounded-md border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700" dir="ltr">
           /api/cron/communication-run-due
         </code>
       </InfoPanel>
 
       {canTest && (
-        <ActionButton disabled={!!busy} loading={busy === "test-active"} onClick={onTest} icon={<ShieldCheck className="h-4 w-4" />} label="فحص حماية Route" />
+        <ActionButton disabled={!!busy} loading={busy === "test-active"} onClick={onTest} icon={<ShieldCheck className="h-4 w-4" />} label={dt("فحص حماية Route")} />
       )}
     </div>
   );
@@ -286,8 +284,8 @@ function TestResult({ title, result, fallbackAt, fallbackResult, failure }: { ti
   return (
     <Banner
       tone={success ? "success" : failed ? "danger" : "neutral"}
-      title={`${title}: ${success ? "ناجح" : failed ? "فشل" : "لم يتم"}`}
-      meta={at ? `وقت الفحص: ${formatDate(at)}` : undefined}
+      title={`${title}: ${success ? dt("ناجح") : failed ? dt("فشل") : dt("لم يتم")}`}
+      meta={at ? dt("وقت الفحص: {0}", [formatDate(at)]) : undefined}
     >
       {message}
     </Banner>
@@ -295,5 +293,5 @@ function TestResult({ title, result, fallbackAt, fallbackResult, failure }: { ti
 }
 
 function formatDate(value: string | null) {
-  return value ? new Date(value).toLocaleString("ar") : "لم يتم";
+  return value ? new Date(value).toLocaleString(dashIntl("ar")) : dt("لم يتم");
 }

@@ -10,6 +10,7 @@ import {
   type ShareLabelLocale,
   type ShareLabelsConfig,
 } from "@/lib/campaign/share-labels";
+import { dt } from "@/lib/dashboard/i18n";
 
 interface LocaleMeta {
   code: ShareLabelLocale;
@@ -21,7 +22,7 @@ interface LocaleMeta {
 
 /** Locale display names + example placeholders to nudge admins toward the right form. */
 const LOCALE_META: LocaleMeta[] = [
-  { code: "ar", name: "العربية", dir: "rtl", placeholderSingular: "مثال: خروف", placeholderPlural: "مثال: خراف" },
+  { code: "ar", get name() { return dt("العربية"); }, dir: "rtl", placeholderSingular: "مثال: خروف", placeholderPlural: "مثال: خراف" },
   { code: "en", name: "English", dir: "ltr", placeholderSingular: "e.g. sheep", placeholderPlural: "e.g. sheep" },
   { code: "fr", name: "Français", dir: "ltr", placeholderSingular: "ex. mouton", placeholderPlural: "ex. moutons" },
   { code: "tr", name: "Türkçe", dir: "ltr", placeholderSingular: "örn. koyun", placeholderPlural: "örn. koyunlar" },
@@ -77,22 +78,19 @@ export const ShareLabelsSection = forwardRef<ShareLabelsSectionRef, Props>(
     return (
       <div className="space-y-3 rounded-xl border border-slate-200 bg-slate-50/40 p-4">
         <div className="flex items-start gap-2.5 justify-end">
-          <div className="text-right flex-1 min-w-0">
+          <div className="text-start flex-1 min-w-0">
             <h3 className="text-sm font-semibold text-slate-800 flex items-center gap-1.5 justify-end">
-              تسمية الوحدة (اختياري)
-              <Tag className="w-4 h-4 text-brand-orange" />
+              {dt("تسمية الوحدة (اختياري)")}<Tag className="w-4 h-4 text-brand-orange" />
             </h3>
             <p className="text-[11px] text-slate-500 leading-relaxed mt-1">
-              غيّر كلمة «سهم/أسهم» إلى ما يناسب طبيعة المشروع (مثل خروف/خراف، وجبة/وجبات، حقيبة/حقائب).
-              اترك الحقول فارغة لاستخدام التسميات الافتراضية.
-            </p>
+              {dt("غيّر كلمة «سهم/أسهم» إلى ما يناسب طبيعة المشروع (مثل خروف/خراف، وجبة/وجبات، حقيبة/حقائب). اترك الحقول فارغة لاستخدام التسميات الافتراضية.")}</p>
           </div>
         </div>
 
-        <div className="grid grid-cols-[auto_1fr_1fr] gap-2 sm:gap-3 items-center text-right">
+        <div className="grid grid-cols-[auto_1fr_1fr] gap-2 sm:gap-3 items-center text-start">
           <span className="text-[11px] font-semibold text-slate-500" />
-          <span className="text-[11px] font-semibold text-slate-500 text-right">المفرد</span>
-          <span className="text-[11px] font-semibold text-slate-500 text-right">الجمع</span>
+          <span className="text-[11px] font-semibold text-slate-500 text-start">{dt("المفرد")}</span>
+          <span className="text-[11px] font-semibold text-slate-500 text-start">{dt("الجمع")}</span>
 
           {LOCALE_META.map((meta) => (
             <Row

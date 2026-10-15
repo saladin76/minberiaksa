@@ -15,6 +15,7 @@ import {
   type SuperCategoryFormValues,
 } from '../../_components/SuperCategoryForm';
 import { BLOCK_TRANSLATION_FIELDS, emptyBlock, type BlockRow } from '../../_components/BlocksEditor';
+import { dt } from "@/lib/dashboard/i18n";
 
 type ApiItem = { kind: string; refId: string; order: number };
 type ApiBlock = {
@@ -100,7 +101,7 @@ export default function EditSuperCategoryPage({ params }: { params: Promise<{ id
       .catch((e) => {
         if (!live) return;
         setMissing(true);
-        toast.error(errorMessage(e, 'تعذّر تحميل القسم'));
+        toast.error(errorMessage(e, dt("تعذّر تحميل القسم")));
       });
     return () => {
       live = false;
@@ -108,7 +109,7 @@ export default function EditSuperCategoryPage({ params }: { params: Promise<{ id
   }, [id]);
 
   if (missing) {
-    return <p className="py-24 text-center text-sm text-slate-500">القسم غير موجود.</p>;
+    return <p className="py-24 text-center text-sm text-slate-500">{dt("القسم غير موجود.")}</p>;
   }
 
   if (!initial) {

@@ -14,6 +14,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { dt } from "@/lib/dashboard/i18n";
 
 interface DonationSourceBadgeProps extends DetectSourceInput {
   /** Show only the tracking status when the surrounding column is already labeled. */
@@ -90,24 +91,24 @@ export function DonationSourceBadge({
         </TooltipTrigger>
         <TooltipContent
           side="top"
-          className="max-w-xs bg-white text-slate-800 border border-slate-200 shadow-md p-3 space-y-1.5 text-right"
+          className="max-w-xs bg-white text-slate-800 border border-slate-200 shadow-md p-3 space-y-1.5 text-start"
         >
           <div className="flex items-center justify-between gap-3">
             <span className="text-xs font-semibold break-words">{campaignLabel ?? platformLabel}</span>
             <span className="text-[10px] text-slate-500 shrink-0">{statusLabel}</span>
           </div>
           <div className="text-[11px] text-slate-600">
-            <span className="text-slate-400">المنصة: </span>
+            <span className="text-slate-400">{dt("المنصة: ")}</span>
             {platformLabel}
           </div>
           {result.placement ? (
             <div className="text-[11px] text-slate-600">
-              <span className="text-slate-400">الموضع: </span>
+              <span className="text-slate-400">{dt("الموضع: ")}</span>
               {result.placement}
             </div>
           ) : null}
           <div className="text-[11px] text-slate-600">
-            <span className="text-slate-400">الثقة: </span>
+            <span className="text-slate-400">{dt("الثقة: ")}</span>
             {result.confidence}%
           </div>
           {result.reasons.length > 0 ? (

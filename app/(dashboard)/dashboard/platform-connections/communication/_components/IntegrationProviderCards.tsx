@@ -6,6 +6,7 @@ import { PROVIDER_UI_LABEL, PROVIDER_USAGE, uiStatus } from "@/lib/integration-s
 import { cn } from "@/lib/utils";
 import { CompletionMeter, StatusChip } from "./panel-ui";
 import type { IntegrationUiSnapshot } from "./model";
+import { dashIntl, dt } from "@/lib/dashboard/i18n";
 
 const icons = {
   META_WHATSAPP: MessageCircle,
@@ -16,7 +17,7 @@ const icons = {
 } satisfies Record<IntegrationProvider, typeof MessageCircle>;
 
 function formatCheck(value: string | null) {
-  return value ? new Date(value).toLocaleString("ar") : "لم يتم";
+  return value ? new Date(value).toLocaleString(dashIntl("ar")) : dt("لم يتم");
 }
 
 /**
@@ -39,7 +40,7 @@ export function IntegrationProviderCards({ providers, active, onOpen }: {
     // Five providers: `xl:grid-cols-4` left a lone fifth card stranded on its own
     // row, and nothing between sm and xl meant they sat two-up and very wide
     // across the whole tablet/laptop range.
-    <section className="grid items-stretch gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5" aria-label="حالة مزودي التواصل">
+    <section className="grid items-stretch gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5" aria-label={dt("حالة مزودي التواصل")}>
       {providers.map((snapshot) => {
         const provider = snapshot.provider;
         const Icon = icons[provider];
@@ -58,7 +59,7 @@ export function IntegrationProviderCards({ providers, active, onOpen }: {
             onClick={() => onOpen(provider)}
             aria-pressed={isActive}
             className={cn(
-              "flex h-full flex-col rounded-xl border bg-white p-4 text-right shadow-sm transition-all",
+              "flex h-full flex-col rounded-xl border bg-white p-4 text-start shadow-sm transition-all",
               "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/30",
               isActive
                 ? "border-brand ring-1 ring-brand/25"
@@ -83,7 +84,7 @@ export function IntegrationProviderCards({ providers, active, onOpen }: {
             <div className="mt-4 space-y-3">
               <CompletionMeter completed={completed} total={total} />
               <p className="text-[11px] text-slate-400">
-                آخر فحص: <span className="text-slate-500">{formatCheck(snapshot.activeTest.lastTestAt)}</span>
+                {dt("آخر فحص: ")}<span className="text-slate-500">{formatCheck(snapshot.activeTest.lastTestAt)}</span>
               </p>
             </div>
 
@@ -93,8 +94,7 @@ export function IntegrationProviderCards({ providers, active, onOpen }: {
               {snapshot.candidate.hasChanges ? (
                 <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-700">
                   <span className="inline-block h-1.5 w-1.5 rounded-full bg-amber-400" aria-hidden />
-                  تغييرات بانتظار الاعتماد
-                </span>
+                  {dt("تغييرات بانتظار الاعتماد")}</span>
               ) : null}
             </div>
           </button>

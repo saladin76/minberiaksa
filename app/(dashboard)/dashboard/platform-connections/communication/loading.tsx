@@ -1,4 +1,5 @@
 import { INTEGRATION_PROVIDERS } from "@/lib/integration-settings/catalog";
+import { dashDir, dt } from "@/lib/dashboard/i18n";
 
 /**
  * Mirrors the real layout: one card per provider (the count was hard-coded to 4
@@ -7,7 +8,7 @@ import { INTEGRATION_PROVIDERS } from "@/lib/integration-settings/catalog";
  */
 export default function CommunicationConnectionsLoading() {
   return (
-    <main className="space-y-4 p-4 sm:p-6" dir="rtl" aria-busy="true" aria-label="جاري تحميل إعدادات مزودي التواصل">
+    <main className="space-y-4 p-4 sm:p-6" dir={dashDir()} aria-busy="true" aria-label={dt("جاري تحميل إعدادات مزودي التواصل")}>
       <div className="h-28 animate-pulse rounded-xl border border-slate-200 bg-white" />
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
         {INTEGRATION_PROVIDERS.map((provider) => (

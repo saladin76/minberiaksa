@@ -2447,5 +2447,14 @@
     "givenSoFar": "{count} {unit} telah diberikan setakat ini",
     "chooseCount": "Pilih bilangan {unit}",
     "customCountPh": "Bilangan lain"
+  },
+  "CategoryLanding": {
+    "heroLead": "Projek {org} di {name}.",
+    "ctaLabel": "Lihat projek",
+    "projectsTitle": "Projek {name}",
+    "donateTitle": "Sokong {name}",
+    "achievementsTitle": "Pencapaian kami di {name}",
+    "statDoneLabel": "Selesai",
+    "statGoalLabel": "Sasaran"
   }
 }

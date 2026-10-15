@@ -22,30 +22,31 @@ import { ImageUploadField } from '../../_components/ImageUploadField';
 import { LocaleChips } from '../../_components/LocaleChips';
 import { ContentPicker, type ContentOption } from './ContentPicker';
 import { BlocksEditor, emptyBlock, type BlockRow } from './BlocksEditor';
+import { dt, dtx } from "@/lib/dashboard/i18n";
 
 export const SUPER_CATEGORY_TRANSLATION_FIELDS: readonly TranslationField[] = [
-  { name: 'title', label: 'العنوان' },
-  { name: 'subtitle', label: 'العنوان الفرعي' },
-  { name: 'intro', label: 'المقدمة', multiline: true },
-  { name: 'verseTranslation', label: 'ترجمة معنى الآية', multiline: true },
-  { name: 'verseAttribution', label: 'نسبة الترجمة' },
-  { name: 'logoImage', label: 'شعار خاص بهذه اللغة (رابط)' },
-  { name: 'ctaPrimaryLabel', label: 'زر أول' },
-  { name: 'ctaSecondaryLabel', label: 'زر ثانٍ' },
-  { name: 'ctaTertiaryLabel', label: 'زر ثالث' },
-  { name: 'metaTitle', label: 'عنوان محركات البحث' },
-  { name: 'metaDescription', label: 'وصف محركات البحث', multiline: true },
+  { name: 'title', get label() { return dt("العنوان"); } },
+  { name: 'subtitle', get label() { return dt("العنوان الفرعي"); } },
+  { name: 'intro', get label() { return dt("المقدمة"); }, multiline: true },
+  { name: 'verseTranslation', get label() { return dt("ترجمة معنى الآية"); }, multiline: true },
+  { name: 'verseAttribution', get label() { return dt("نسبة الترجمة"); } },
+  { name: 'logoImage', get label() { return dt("شعار خاص بهذه اللغة (رابط)"); } },
+  { name: 'ctaPrimaryLabel', get label() { return dt("زر أول"); } },
+  { name: 'ctaSecondaryLabel', get label() { return dt("زر ثانٍ"); } },
+  { name: 'ctaTertiaryLabel', get label() { return dt("زر ثالث"); } },
+  { name: 'metaTitle', get label() { return dt("عنوان محركات البحث"); } },
+  { name: 'metaDescription', get label() { return dt("وصف محركات البحث"); }, multiline: true },
 ];
 
 /** Kinds in the order the picker shows them, with their Arabic labels. */
 export const ITEM_KINDS: ReadonlyArray<{ kind: string; label: string; hint: string }> = [
-  { kind: 'CAMPAIGN', label: 'المشاريع', hint: 'تظهر كبطاقات تبرع في قسم «المشاريع المرتبطة».' },
-  { kind: 'POST', label: 'المقالات', hint: 'مقالات المدونة المرتبطة بهذا القسم.' },
-  { kind: 'VIDEO', label: 'الفيديوهات', hint: 'من مكتبة الفيديوهات (إنجازات، تزكيات، ميدان).' },
-  { kind: 'PLAYLIST', label: 'البرامج والسلاسل', hint: 'قوائم التشغيل المرتبطة.' },
-  { kind: 'COURSE', label: 'الدورات', hint: 'الدورات والندوات المرتبطة.' },
-  { kind: 'REPORT', label: 'التقارير', hint: 'ملفات التقارير المنشورة.' },
-  { kind: 'BOOKLET', label: 'الكتيبات', hint: 'كتيبات المؤسسة.' },
+  { kind: 'CAMPAIGN', get label() { return dt("المشاريع"); }, get hint() { return dt("تظهر كبطاقات تبرع في قسم «المشاريع المرتبطة»."); } },
+  { kind: 'POST', get label() { return dt("المقالات"); }, get hint() { return dt("مقالات المدونة المرتبطة بهذا القسم."); } },
+  { kind: 'VIDEO', get label() { return dt("الفيديوهات"); }, get hint() { return dt("من مكتبة الفيديوهات (إنجازات، تزكيات، ميدان)."); } },
+  { kind: 'PLAYLIST', get label() { return dt("البرامج والسلاسل"); }, get hint() { return dt("قوائم التشغيل المرتبطة."); } },
+  { kind: 'COURSE', get label() { return dt("الدورات"); }, get hint() { return dt("الدورات والندوات المرتبطة."); } },
+  { kind: 'REPORT', get label() { return dt("التقارير"); }, get hint() { return dt("ملفات التقارير المنشورة."); } },
+  { kind: 'BOOKLET', get label() { return dt("الكتيبات"); }, get hint() { return dt("كتيبات المؤسسة."); } },
 ];
 
 export type ItemsMap = Record<string, string[]>;
@@ -129,7 +130,7 @@ export function SuperCategoryForm({
     axios
       .get('/api/super-categories/content-options')
       .then((res) => { if (live) setOptions(res.data ?? {}); })
-      .catch((e) => { if (live) toast.error(errorMessage(e, 'تعذّر تحميل قوائم المحتوى')); });
+      .catch((e) => { if (live) toast.error(errorMessage(e, dt("تعذّر تحميل قوائم المحتوى"))); });
     return () => { live = false; };
   }, []);
 
@@ -138,8 +139,8 @@ export function SuperCategoryForm({
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!values.title.trim()) return toast.error('العنوان بالعربية مطلوب');
-    if (!values.slug.trim()) return toast.error('المعرّف (slug) مطلوب');
+    if (!values.title.trim()) return toast.error(dt("العنوان بالعربية مطلوب"));
+    if (!values.slug.trim()) return toast.error(dt("المعرّف (slug) مطلوب"));
 
     setSaving(true);
     try {
@@ -157,15 +158,15 @@ export function SuperCategoryForm({
 
       if (mode === 'create') {
         await axios.post('/api/super-categories', payload);
-        toast.success('تم إنشاء القسم الكبير');
+        toast.success(dt("تم إنشاء القسم الكبير"));
       } else {
         await axios.put(`/api/super-categories/${superCategoryId}`, payload);
-        toast.success('تم حفظ القسم الكبير');
+        toast.success(dt("تم حفظ القسم الكبير"));
       }
       router.push('/dashboard/super-categories');
       router.refresh();
     } catch (err) {
-      toast.error(errorMessage(err, mode === 'create' ? 'فشل في الإنشاء' : 'فشل في الحفظ'));
+      toast.error(errorMessage(err, mode === 'create' ? dt("فشل في الإنشاء") : dt("فشل في الحفظ")));
     } finally {
       setSaving(false);
     }
@@ -178,33 +179,32 @@ export function SuperCategoryForm({
     <form onSubmit={onSubmit} className="space-y-4">
       <div className="flex items-center gap-3">
         <Button type="button" variant="ghost" size="sm" onClick={() => router.push('/dashboard/super-categories')}>
-          <ArrowRight className="ml-1 h-4 w-4" />
-          رجوع
-        </Button>
-        <h1 className="text-lg font-bold">{mode === 'create' ? 'قسم كبير جديد' : 'تعديل القسم الكبير'}</h1>
+          <ArrowRight className="me-1 h-4 w-4" />
+          {dt("رجوع")}</Button>
+        <h1 className="text-lg font-bold">{mode === 'create' ? dt("قسم كبير جديد") : dt("تعديل القسم الكبير")}</h1>
       </div>
 
       {/* ── Identity ─────────────────────────────────────────────────── */}
       <Card className="space-y-4 p-4">
-        <h2 className="text-sm font-bold">التعريف</h2>
+        <h2 className="text-sm font-bold">{dt("التعريف")}</h2>
         <div className="grid gap-4 md:grid-cols-2">
           <label className="space-y-1.5">
-            <span className="text-xs font-semibold text-slate-600">العنوان (بالعربية) *</span>
+            <span className="text-xs font-semibold text-slate-600">{dt("العنوان (بالعربية) *")}</span>
             <Input value={values.title} onChange={(e) => set('title', e.target.value)} />
           </label>
           <label className="space-y-1.5">
-            <span className="text-xs font-semibold text-slate-600">المعرّف (slug) *</span>
+            <span className="text-xs font-semibold text-slate-600">{dt("المعرّف (slug) *")}</span>
             <Input dir="ltr" value={values.slug} onChange={(e) => set('slug', e.target.value)} />
             <span className="block text-[11px] text-slate-500">
-              الصفحة تصبح على الرابط <span dir="ltr">/{'{lang}'}/المشاريع/{values.slug || 'slug'}</span>
+              {dt("الصفحة تصبح على الرابط ")}<span dir="ltr">{dtx("/{lang}/المشاريع/{0}", [values.slug || 'slug'])}</span>
             </span>
           </label>
           <label className="space-y-1.5">
-            <span className="text-xs font-semibold text-slate-600">العنوان الفرعي</span>
+            <span className="text-xs font-semibold text-slate-600">{dt("العنوان الفرعي")}</span>
             <Input value={values.subtitle} onChange={(e) => set('subtitle', e.target.value)} />
           </label>
           <label className="space-y-1.5">
-            <span className="text-xs font-semibold text-slate-600">لون القسم</span>
+            <span className="text-xs font-semibold text-slate-600">{dt("لون القسم")}</span>
             <div className="flex items-center gap-2">
               <input
                 type="color"
@@ -216,40 +216,40 @@ export function SuperCategoryForm({
             </div>
           </label>
           <label className="space-y-1.5 md:col-span-2">
-            <span className="text-xs font-semibold text-slate-600">المقدمة (بالعربية)</span>
+            <span className="text-xs font-semibold text-slate-600">{dt("المقدمة (بالعربية)")}</span>
             <Textarea rows={3} value={values.intro} onChange={(e) => set('intro', e.target.value)} />
           </label>
         </div>
 
         <label className="flex items-center gap-2">
           <Switch checked={values.isActive} onCheckedChange={(v) => set('isActive', v)} />
-          <span className="text-sm">منشور</span>
+          <span className="text-sm">{dt("منشور")}</span>
         </label>
       </Card>
 
       {/* ── Hero ─────────────────────────────────────────────────────── */}
       <Card className="space-y-4 p-4">
-        <h2 className="text-sm font-bold">الواجهة</h2>
+        <h2 className="text-sm font-bold">{dt("الواجهة")}</h2>
         <div className="grid gap-4 md:grid-cols-2">
-          <ImageUploadField label="صورة الواجهة" value={values.heroImage} onChange={(url) => set('heroImage', url)} previewClass="w-48 h-28" />
-          <ImageUploadField label="شعار المشروع" value={values.logoImage} onChange={(url) => set('logoImage', url)} previewClass="w-40 h-24" />
+          <ImageUploadField label={dt("صورة الواجهة")} value={values.heroImage} onChange={(url) => set('heroImage', url)} previewClass="w-48 h-28" />
+          <ImageUploadField label={dt("شعار المشروع")} value={values.logoImage} onChange={(url) => set('logoImage', url)} previewClass="w-40 h-24" />
         </div>
 
         <div className="grid gap-4 md:grid-cols-2">
           <label className="space-y-1.5">
-            <span className="text-xs font-semibold text-slate-600">الآية (تُعرض بالعربية دائمًا)</span>
+            <span className="text-xs font-semibold text-slate-600">{dt("الآية (تُعرض بالعربية دائمًا)")}</span>
             <Textarea dir="rtl" rows={2} value={values.verseArabic} onChange={(e) => set('verseArabic', e.target.value)} />
           </label>
           <label className="space-y-1.5">
-            <span className="text-xs font-semibold text-slate-600">ترجمة معنى الآية (للعربية تُترك فارغة)</span>
+            <span className="text-xs font-semibold text-slate-600">{dt("ترجمة معنى الآية (للعربية تُترك فارغة)")}</span>
             <Textarea rows={2} value={values.verseTranslation} onChange={(e) => set('verseTranslation', e.target.value)} />
           </label>
           <label className="space-y-1.5">
-            <span className="text-xs font-semibold text-slate-600">نسبة الترجمة</span>
+            <span className="text-xs font-semibold text-slate-600">{dt("نسبة الترجمة")}</span>
             <Input value={values.verseAttribution} onChange={(e) => set('verseAttribution', e.target.value)} />
           </label>
           <label className="space-y-1.5">
-            <span className="text-xs font-semibold text-slate-600">فيديو الواجهة (رابط أو معرّف يوتيوب)</span>
+            <span className="text-xs font-semibold text-slate-600">{dt("فيديو الواجهة (رابط أو معرّف يوتيوب)")}</span>
             <Input dir="ltr" value={values.heroVideoId} onChange={(e) => set('heroVideoId', e.target.value)} />
           </label>
         </div>
@@ -257,41 +257,39 @@ export function SuperCategoryForm({
         <LocaleChips
           value={values.heroVideoLocales}
           onChange={(next) => set('heroVideoLocales', next)}
-          hint="اللغات التي يظهر فيها فيديو الواجهة. اتركها فارغة ليظهر في كل اللغات  وحدّدها إذا كان التسجيل بلغة واحدة بلا ترجمة."
+          hint={dt("اللغات التي يظهر فيها فيديو الواجهة. اتركها فارغة ليظهر في كل اللغات  وحدّدها إذا كان التسجيل بلغة واحدة بلا ترجمة.")}
         />
 
         <div className="grid gap-4 md:grid-cols-2">
           {([
-            ['ctaPrimaryLabel', 'ctaPrimaryHref', 'الزر الأول'],
-            ['ctaSecondaryLabel', 'ctaSecondaryHref', 'الزر الثاني'],
-            ['ctaTertiaryLabel', 'ctaTertiaryHref', 'الزر الثالث'],
+            ['ctaPrimaryLabel', 'ctaPrimaryHref', dt("الزر الأول")],
+            ['ctaSecondaryLabel', 'ctaSecondaryHref', dt("الزر الثاني")],
+            ['ctaTertiaryLabel', 'ctaTertiaryHref', dt("الزر الثالث")],
           ] as const).map(([labelKey, hrefKey, title]) => (
             <div key={labelKey} className="grid grid-cols-2 gap-2">
               <label className="space-y-1.5">
-                <span className="text-xs font-semibold text-slate-600">{title}  النص</span>
+                <span className="text-xs font-semibold text-slate-600">{dtx("{0}  النص", [title])}</span>
                 <Input value={values[labelKey]} onChange={(e) => set(labelKey, e.target.value)} />
               </label>
               <label className="space-y-1.5">
-                <span className="text-xs font-semibold text-slate-600">الوجهة</span>
+                <span className="text-xs font-semibold text-slate-600">{dt("الوجهة")}</span>
                 <Input dir="ltr" placeholder="#bundle" value={values[hrefKey]} onChange={(e) => set(hrefKey, e.target.value)} />
               </label>
             </div>
           ))}
         </div>
         <p className="text-[11px] text-slate-500">
-          الوجهة يمكن أن تكون ارتساءً داخل الصفحة مثل <span dir="ltr">#bundle</span>  وهو مُعرّف الارتساء المكتوب في القسم  أو رابطًا كاملًا.
-        </p>
+          {dt("الوجهة يمكن أن تكون ارتساءً داخل الصفحة مثل ")}<span dir="ltr">#bundle</span>  {dt("  وهو مُعرّف الارتساء المكتوب في القسم  أو رابطًا كاملًا.")}</p>
       </Card>
 
       {/* ── Linked content ───────────────────────────────────────────── */}
       <Card className="space-y-3 p-4">
         <div className="flex items-center justify-between">
-          <h2 className="text-sm font-bold">المحتوى المرتبط</h2>
-          <span className="text-xs text-slate-500">{linkedTotal} عنصر</span>
+          <h2 className="text-sm font-bold">{dt("المحتوى المرتبط")}</h2>
+          <span className="text-xs text-slate-500">{dtx("{0} عنصر", [linkedTotal])}</span>
         </div>
         <p className="text-xs text-slate-500">
-          اختر المحتوى الذي يخص هذا القسم. ما يظهر منه على الصفحة  وبأي ترتيب بين الأقسام  تحدده أقسام الصفحة بالأسفل.
-        </p>
+          {dt("اختر المحتوى الذي يخص هذا القسم. ما يظهر منه على الصفحة  وبأي ترتيب بين الأقسام  تحدده أقسام الصفحة بالأسفل.")}</p>
         <div className="grid gap-3 md:grid-cols-2">
           {ITEM_KINDS.map(({ kind, label, hint }) => (
             <ContentPicker
@@ -309,12 +307,11 @@ export function SuperCategoryForm({
       {/* ── Page sections ────────────────────────────────────────────── */}
       <Card className="space-y-3 p-4">
         <div className="flex items-center justify-between">
-          <h2 className="text-sm font-bold">أقسام الصفحة</h2>
-          <span className="text-xs text-slate-500">{values.blocks.length} قسم</span>
+          <h2 className="text-sm font-bold">{dt("أقسام الصفحة")}</h2>
+          <span className="text-xs text-slate-500">{dtx("{0} قسم", [values.blocks.length])}</span>
         </div>
         <p className="text-xs text-slate-500">
-          تُعرض بالترتيب الظاهر هنا، أسفل الواجهة مباشرة.
-        </p>
+          {dt("تُعرض بالترتيب الظاهر هنا، أسفل الواجهة مباشرة.")}</p>
         <BlocksEditor
           rows={values.blocks}
           onChange={(next) => set('blocks', next)}
@@ -324,25 +321,25 @@ export function SuperCategoryForm({
 
       {/* ── SEO ──────────────────────────────────────────────────────── */}
       <Card className="space-y-4 p-4">
-        <h2 className="text-sm font-bold">محركات البحث</h2>
+        <h2 className="text-sm font-bold">{dt("محركات البحث")}</h2>
         <div className="grid gap-4 md:grid-cols-2">
           <label className="space-y-1.5">
-            <span className="text-xs font-semibold text-slate-600">عنوان الصفحة</span>
+            <span className="text-xs font-semibold text-slate-600">{dt("عنوان الصفحة")}</span>
             <Input value={values.metaTitle} onChange={(e) => set('metaTitle', e.target.value)} />
           </label>
           <label className="space-y-1.5">
-            <span className="text-xs font-semibold text-slate-600">وصف الصفحة</span>
+            <span className="text-xs font-semibold text-slate-600">{dt("وصف الصفحة")}</span>
             <Textarea rows={2} value={values.metaDescription} onChange={(e) => set('metaDescription', e.target.value)} />
           </label>
         </div>
-        <p className="text-[11px] text-slate-500">يُستخدم العنوان والمقدمة تلقائيًا عند ترك هذين الحقلين فارغين.</p>
+        <p className="text-[11px] text-slate-500">{dt("يُستخدم العنوان والمقدمة تلقائيًا عند ترك هذين الحقلين فارغين.")}</p>
       </Card>
 
       {/* ── Translations ─────────────────────────────────────────────── */}
       <Card className="space-y-3 p-4">
         <div className="flex items-center justify-between">
-          <h2 className="text-sm font-bold">الترجمات</h2>
-          <span className="text-xs text-slate-500">{translated} لغة مترجمة</span>
+          <h2 className="text-sm font-bold">{dt("الترجمات")}</h2>
+          <span className="text-xs text-slate-500">{dtx("{0} لغة مترجمة", [translated])}</span>
         </div>
         <ContentTranslationTabs
           fields={SUPER_CATEGORY_TRANSLATION_FIELDS}
@@ -356,12 +353,11 @@ export function SuperCategoryForm({
 
       <div className="flex gap-2">
         <Button type="submit" disabled={saving}>
-          {saving && <Loader2 className="ml-2 h-4 w-4 animate-spin" />}
-          {mode === 'create' ? 'إنشاء' : 'حفظ'}
+          {saving && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
+          {mode === 'create' ? dt("إنشاء") : dt("حفظ")}
         </Button>
         <Button type="button" variant="outline" onClick={() => router.push('/dashboard/super-categories')}>
-          إلغاء
-        </Button>
+          {dt("إلغاء")}</Button>
       </div>
     </form>
   );

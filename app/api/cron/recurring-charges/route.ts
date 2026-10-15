@@ -11,7 +11,8 @@ export const maxDuration = 300;
 export const preferredRegion = "sin1";
 
 /**
- * The recurring scheduler's tick (`vercel.json`, every 15 minutes).
+ * The recurring scheduler's tick, every 15 minutes: `vercel.json` on Vercel,
+ * the crontab written by `scripts/vps-cron-install.sh` on the VPS.
  *
  * Charges every Albaraka plan (stored card) and every PayPal plan (vaulted
  * wallet) whose `nextBillingDate` has passed, and advances it by the plan's

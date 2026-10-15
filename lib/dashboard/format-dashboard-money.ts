@@ -1,3 +1,4 @@
+import { dt } from "@/lib/dashboard/i18n";
 /**
  * Dashboard donation/stats money formatter: respects CurrencySelector.
  * - DEFAULT: show amounts in the row's original currency (local values).
@@ -10,12 +11,12 @@ export const DASHBOARD_DISPLAY_SYMBOLS: Record<string, string> = {
   GBP: "£",
   TRY: "₺",
   SAR: "﷼",
-  AED: "د.إ",
-  KWD: "د.ك",
+  get AED() { return dt("د.إ"); },
+  get KWD() { return dt("د.ك"); },
   EGP: "EGP ",
   QAR: "﷼",
-  BHD: "ب.د",
-  OMR: "ر.ع.‏",
+  get BHD() { return dt("ب.د"); },
+  get OMR() { return dt("ر.ع.‏"); },
 };
 
 type ConvertResult = {

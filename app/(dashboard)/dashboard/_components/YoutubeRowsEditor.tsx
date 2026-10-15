@@ -4,6 +4,7 @@ import { ArrowDown, ArrowUp, Plus, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
+import { dt } from "@/lib/dashboard/i18n";
 
 /**
  * Inline editor for a list of YouTube videos owned by a parent  playlist
@@ -85,7 +86,7 @@ export function YoutubeRowsEditor({
   return (
     <div className="space-y-3">
       {rows.length === 0 ? (
-        <p className="text-xs text-slate-500">لا توجد فيديوهات بعد.</p>
+        <p className="text-xs text-slate-500">{dt("لا توجد فيديوهات بعد.")}</p>
       ) : null}
 
       {rows.map((row, i) => (
@@ -94,9 +95,9 @@ export function YoutubeRowsEditor({
             <span className="text-xs font-semibold text-slate-500">#{i + 1}</span>
             <div className="flex items-center gap-1">
               {showActive ? (
-                <label className="flex items-center gap-1.5 ml-2">
+                <label className="flex items-center gap-1.5 me-2">
                   <Switch checked={row.isActive} onCheckedChange={(v) => update(i, { isActive: v })} />
-                  <span className="text-xs">مفعّل</span>
+                  <span className="text-xs">{dt("مفعّل")}</span>
                 </label>
               ) : null}
               <Button type="button" variant="ghost" size="icon" onClick={() => swap(i, i - 1)} disabled={i === 0}>
@@ -113,32 +114,32 @@ export function YoutubeRowsEditor({
 
           <div className="grid gap-2 md:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
             <label className="space-y-1">
-              <span className="text-[11px] font-semibold text-slate-600">معرّف يوتيوب *</span>
+              <span className="text-[11px] font-semibold text-slate-600">{dt("معرّف يوتيوب *")}</span>
               <Input
                 dir="ltr"
-                placeholder="الصق الرابط أو المعرّف"
+                placeholder={dt("الصق الرابط أو المعرّف")}
                 value={row.youtubeId}
                 onChange={(e) => setId(i, e.target.value)}
               />
             </label>
             <label className="space-y-1">
-              <span className="text-[11px] font-semibold text-slate-600">العنوان</span>
+              <span className="text-[11px] font-semibold text-slate-600">{dt("العنوان")}</span>
               <Input value={row.title} onChange={(e) => update(i, { title: e.target.value })} />
             </label>
           </div>
 
           <div className={`grid gap-2 ${showDuration ? 'md:grid-cols-[minmax(0,2fr)_minmax(0,2fr)_minmax(0,1fr)]' : 'md:grid-cols-2'}`}>
             <label className="space-y-1">
-              <span className="text-[11px] font-semibold text-slate-600">الرابط</span>
+              <span className="text-[11px] font-semibold text-slate-600">{dt("الرابط")}</span>
               <Input dir="ltr" value={row.url} onChange={(e) => update(i, { url: e.target.value })} />
             </label>
             <label className="space-y-1">
-              <span className="text-[11px] font-semibold text-slate-600">الصورة المصغّرة</span>
+              <span className="text-[11px] font-semibold text-slate-600">{dt("الصورة المصغّرة")}</span>
               <Input dir="ltr" value={row.thumbnail} onChange={(e) => update(i, { thumbnail: e.target.value })} />
             </label>
             {showDuration ? (
               <label className="space-y-1">
-                <span className="text-[11px] font-semibold text-slate-600">المدة (ثانية)</span>
+                <span className="text-[11px] font-semibold text-slate-600">{dt("المدة (ثانية)")}</span>
                 <Input
                   dir="ltr"
                   type="number"
@@ -153,7 +154,7 @@ export function YoutubeRowsEditor({
       ))}
 
       <Button type="button" variant="outline" size="sm" onClick={() => onChange([...rows, emptyYoutubeRow()])}>
-        <Plus className="w-4 h-4 ml-1" />
+        <Plus className="w-4 h-4 me-1" />
         {addLabel}
       </Button>
     </div>

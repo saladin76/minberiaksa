@@ -4,6 +4,7 @@ import * as React from "react";
 import { CheckCircle2, CircleAlert, CircleDashed, Clipboard, Loader2, XCircle } from "lucide-react";
 import { INTEGRATION_UI_STATUS_LABEL, type IntegrationUiStatus } from "@/lib/integration-settings/ui";
 import { cn } from "@/lib/utils";
+import { dt } from "@/lib/dashboard/i18n";
 
 /**
  * Shared surface primitives for مزودو التواصل والإرسال.
@@ -150,7 +151,7 @@ export function Banner({
 export function CopyableCode({
   value,
   onCopy,
-  copyLabel = "نسخ الرابط",
+  copyLabel = dt("نسخ الرابط"),
   className,
 }: {
   value: string;
@@ -194,7 +195,7 @@ export function CompletionMeter({ completed, total }: { completed: number; total
   return (
     <div>
       <div className="flex items-center justify-between text-[11px]">
-        <span className="font-medium text-slate-500">الإعدادات المكتملة</span>
+        <span className="font-medium text-slate-500">{dt("الإعدادات المكتملة")}</span>
         {/* dir="ltr" so bidi reordering can't render "1/6" as "6/1". */}
         <span className="font-semibold tabular-nums text-slate-700" dir="ltr">
           {completed}/{total}

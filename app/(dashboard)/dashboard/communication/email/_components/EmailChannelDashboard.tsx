@@ -22,6 +22,7 @@ import { DeliveryPreviewSheet } from "../../_shared/DeliveryPreviewSheet";
 import { RetryDialog } from "../../_shared/RetryDialog";
 import { useCampaignScope, CampaignScopeBanner } from "../../_shared/CampaignScope";
 import { cn } from "@/lib/utils";
+import { dashDir, dt, dtx } from "@/lib/dashboard/i18n";
 
 export type EmailRow = {
   id: string;
@@ -61,28 +62,28 @@ type Payload = {
 };
 
 const PERIODS = [
-  { value: 7, label: "٧ أيام" },
-  { value: 30, label: "٣٠ يومًا" },
-  { value: 90, label: "٩٠ يومًا" },
-  { value: 365, label: "سنة" },
+  { value: 7, get label() { return dt("٧ أيام"); } },
+  { value: 30, get label() { return dt("٣٠ يومًا"); } },
+  { value: 90, get label() { return dt("٩٠ يومًا"); } },
+  { value: 365, get label() { return dt("سنة"); } },
 ];
 
 const STATUS_FILTERS = [
-  { value: "all", label: "الكل" },
-  { value: "SENT", label: "مُرسل" },
-  { value: "opened", label: "مفتوح" },
-  { value: "clicked", label: "مُنقَر" },
-  { value: "failed", label: "فاشل" },
-  { value: "SKIPPED", label: "متخطّى" },
+  { value: "all", get label() { return dt("الكل"); } },
+  { value: "SENT", get label() { return dt("مُرسل"); } },
+  { value: "opened", get label() { return dt("مفتوح"); } },
+  { value: "clicked", get label() { return dt("مُنقَر"); } },
+  { value: "failed", get label() { return dt("فاشل"); } },
+  { value: "SKIPPED", get label() { return dt("متخطّى"); } },
 ];
 
 /** Email's rung names for the shared lifecycle strip. `sent` is our own record, never "unknown". */
 export function buildStages(row: StageSource): JourneyStage[] {
   return [
-    { key: "sent", label: "أُرسل", at: row.sentAt ?? row.createdAt, icon: Send, local: true },
-    { key: "delivered", label: "وصل", at: row.deliveredAt, icon: MailCheck },
-    { key: "opened", label: "فُتح", at: row.openedAt ?? null, icon: MailOpen },
-    { key: "clicked", label: "نُقر", at: row.clickedAt ?? null, icon: MousePointerClick },
+    { key: "sent", label: dt("أُرسل"), at: row.sentAt ?? row.createdAt, icon: Send, local: true },
+    { key: "delivered", label: dt("وصل"), at: row.deliveredAt, icon: MailCheck },
+    { key: "opened", label: dt("فُتح"), at: row.openedAt ?? null, icon: MailOpen },
+    { key: "clicked", label: dt("نُقر"), at: row.clickedAt ?? null, icon: MousePointerClick },
   ];
 }
 
@@ -111,7 +112,7 @@ export function EmailChannelDashboard() {
       if (campaignId) params.set("campaign", campaignId);
       const res = await fetch(`/api/dashboard/communication/email?${params}`, { cache: "no-store" });
       const json = await res.json();
-      if (!res.ok || !json.ok) throw new Error(json?.error || "تعذّر تحميل البيانات");
+      if (!res.ok || !json.ok) throw new Error(json?.error || dt("تعذّر تحميل البيانات"));
       setData(json);
     } catch (e) {
       setError((e as Error).message);
@@ -131,9 +132,9 @@ export function EmailChannelDashboard() {
   const retryBlockedReason = !data
     ? null
     : !data.provider.configured
-      ? "مزوّد Elastic Email غير مُعدّ بالكامل."
+      ? dt("مزوّد Elastic Email غير مُعدّ بالكامل.")
       : !data.provider.senderReady
-        ? "لا توجد هوية مُرسِل بريد مُفعّلة."
+        ? dt("لا توجد هوية مُرسِل بريد مُفعّلة.")
         : null;
 
   const chartData = useMemo(
@@ -145,12 +146,12 @@ export function EmailChannelDashboard() {
   );
 
   return (
-    <div className="min-h-0" dir="rtl">
+    <div className="min-h-0" dir={dashDir()}>
       <div className="mx-auto max-w-[1600px] space-y-4">
         <PageHeader
-          eyebrow="التواصل"
-          title="البريد الإلكتروني"
-          description="كل رسالة بريد صادرة، وما حدث لها بعد الإرسال  الوصول والفتح والنقر والفشل."
+          eyebrow={dt("التواصل")}
+          title={dt("البريد الإلكتروني")}
+          description={dt("كل رسالة بريد صادرة، وما حدث لها بعد الإرسال  الوصول والفتح والنقر والفشل.")}
           icon={Mail}
           actions={
             <div className="flex items-center gap-2">
@@ -165,8 +166,7 @@ export function EmailChannelDashboard() {
                   className="inline-flex h-9 items-center gap-2 rounded-lg bg-brand px-3 text-xs font-semibold text-white transition hover:bg-brand/90 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   <Send className="h-3.5 w-3.5" />
-                  إعادة محاولة المتعثّرة
-                  <span className="rounded-md bg-white/20 px-1.5 py-0.5 text-[10px] tabular-nums">
+                  {dt("إعادة محاولة المتعثّرة")}<span className="rounded-md bg-white/20 px-1.5 py-0.5 text-[10px] tabular-nums">
                     {data!.retryableCount.toLocaleString("en-US")}
                   </span>
                 </button>
@@ -178,8 +178,7 @@ export function EmailChannelDashboard() {
                 className="inline-flex h-9 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 transition hover:border-brand hover:text-brand disabled:opacity-50"
               >
                 <RefreshCw className={cn("h-3.5 w-3.5", loading && "animate-spin")} />
-                تحديث
-              </button>
+                {dt("تحديث")}</button>
             </div>
           }
         />
@@ -188,40 +187,36 @@ export function EmailChannelDashboard() {
 
         {data && (!data.provider.configured || !data.provider.senderReady) && (
           <TrackingBanner>
-            <b>إرسال البريد غير جاهز بالكامل.</b>{" "}
+            <b>{dt("إرسال البريد غير جاهز بالكامل.")}</b>{" "}
             {!data.provider.configured
-              ? "إعداد Elastic Email غير مكتمل."
-              : "الاتصال جاهز لكن لا توجد هوية مُرسِل بريد صالحة."}
-            {" "}تم تعطيل إعادة الإرسال حتى تُحل الجاهزية، بدل إنشاء محاولات محكوم عليها بالفشل.
-          </TrackingBanner>
+              ? dt("إعداد Elastic Email غير مكتمل.")
+              : dt("الاتصال جاهز لكن لا توجد هوية مُرسِل بريد صالحة.")}
+            {dt(" تم تعطيل إعادة الإرسال حتى تُحل الجاهزية، بدل إنشاء محاولات محكوم عليها بالفشل.")}</TrackingBanner>
         )}
 
         {/* Tracking blindness is a first-class state, not a footnote: without it every engagement
             figure below reads as an authoritative zero when it is really "we don't know". */}
         {data && !trackingLive && (
           <TrackingBanner>
-            <b>تتبّع الفتح والنقر غير مُفعّل.</b> لم يصل أي حدث من Elastic Email حتى الآن، لذلك تظهر
-            أرقام «وصل» و«فُتح» و«نُقر» فارغة  وهذا يعني «لا توجد بيانات»، وليس «لم يفتحها أحد».
-            فعّل الـwebhook في Elastic Email ليبدأ تسجيل الأحداث.
-          </TrackingBanner>
+            <b>{dt("تتبّع الفتح والنقر غير مُفعّل.")}</b> {dt(" لم يصل أي حدث من Elastic Email حتى الآن، لذلك تظهر أرقام «وصل» و«فُتح» و«نُقر» فارغة  وهذا يعني «لا توجد بيانات»، وليس «لم يفتحها أحد». فعّل الـwebhook في Elastic Email ليبدأ تسجيل الأحداث.")}</TrackingBanner>
         )}
 
         {summary && (
           <MetricSummaryBand
             icon={Mail}
-            eyebrow="رسائل البريد المرسلة"
-            badge={`آخر ${days} يومًا`}
+            eyebrow={dt("رسائل البريد المرسلة")}
+            badge={dt("آخر {0} يومًا", [days])}
             value={summary.attempted.toLocaleString("en-US")}
-            note="عدد الرسائل التي قبلها مزوّد البريد خلال الفترة. الرسائل المتخطّاة (بدون بريد أو غير مشتركة) غير محسوبة هنا."
+            note={dt("عدد الرسائل التي قبلها مزوّد البريد خلال الفترة. الرسائل المتخطّاة (بدون بريد أو غير مشتركة) غير محسوبة هنا.")}
             stats={[
-              { label: "وصلت", icon: MailCheck, value: trackingLive ? summary.delivered.toLocaleString("en-US") : "—" },
-              { label: "فُتحت", icon: MailOpen, value: trackingLive ? summary.opened.toLocaleString("en-US") : "—", hint: trackingLive ? `${summary.openRate}%` : undefined },
-              { label: "نُقرت", icon: MousePointerClick, value: trackingLive ? summary.clicked.toLocaleString("en-US") : "—", hint: trackingLive ? `${summary.clickRate}%` : undefined },
-              { label: "فشلت", icon: TriangleAlert, value: summary.failed.toLocaleString("en-US"), hint: `${summary.failedRate}%` },
+              { label: dt("وصلت"), icon: MailCheck, value: trackingLive ? summary.delivered.toLocaleString("en-US") : "—" },
+              { label: dt("فُتحت"), icon: MailOpen, value: trackingLive ? summary.opened.toLocaleString("en-US") : "—", hint: trackingLive ? `${summary.openRate}%` : undefined },
+              { label: dt("نُقرت"), icon: MousePointerClick, value: trackingLive ? summary.clicked.toLocaleString("en-US") : "—", hint: trackingLive ? `${summary.clickRate}%` : undefined },
+              { label: dt("فشلت"), icon: TriangleAlert, value: summary.failed.toLocaleString("en-US"), hint: `${summary.failedRate}%` },
               // Skipped messages are never handed to the provider, so they sit outside every rate
               // above  and they currently outnumber sent mail several times over. Leaving them
               // off the band would make the page report a healthy channel that is mostly silent.
-              { label: "متخطّاة", icon: SlashIcon, value: summary.skipped.toLocaleString("en-US") },
+              { label: dt("متخطّاة"), icon: SlashIcon, value: summary.skipped.toLocaleString("en-US") },
             ]}
           />
         )}
@@ -229,14 +224,14 @@ export function EmailChannelDashboard() {
         <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
           <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
             <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-              <h2 className="text-[13px] font-semibold text-slate-900">حركة الإرسال</h2>
+              <h2 className="text-[13px] font-semibold text-slate-900">{dt("حركة الإرسال")}</h2>
               <SegmentedControl options={PERIODS} value={days} onChange={setDays} />
             </div>
 
             {loading && !data ? (
               <div className="h-[220px] animate-pulse rounded-lg bg-slate-50" />
             ) : chartData.length === 0 ? (
-              <EmptyState title="لا توجد رسائل في هذه الفترة" description="جرّب فترة أطول." />
+              <EmptyState title={dt("لا توجد رسائل في هذه الفترة")} description={dt("جرّب فترة أطول.")} />
             ) : (
               <ResponsiveContainer width="100%" height={220}>
                 <AreaChart data={chartData} margin={{ top: 4, right: 8, left: -18, bottom: 0 }}>
@@ -264,10 +259,10 @@ export function EmailChannelDashboard() {
             <FunnelCard
               trackingLive={trackingLive}
               steps={[
-                { label: "مقبول لدى المزود", value: summary.attempted, pct: 100, tone: CHART_THEME.primary, always: true },
-                { label: "وصل", value: summary.delivered, pct: summary.deliveredRate, tone: CHART_STATUS.info },
-                { label: "فُتح", value: summary.opened, pct: summary.openRate, tone: CHART_STATUS.success },
-                { label: "نُقر", value: summary.clicked, pct: summary.clickRate, tone: CHART_THEME.secondary },
+                { label: dt("مقبول لدى المزود"), value: summary.attempted, pct: 100, tone: CHART_THEME.primary, always: true },
+                { label: dt("وصل"), value: summary.delivered, pct: summary.deliveredRate, tone: CHART_STATUS.info },
+                { label: dt("فُتح"), value: summary.opened, pct: summary.openRate, tone: CHART_STATUS.success },
+                { label: dt("نُقر"), value: summary.clicked, pct: summary.clickRate, tone: CHART_THEME.secondary },
               ]}
             />
           )}
@@ -276,7 +271,7 @@ export function EmailChannelDashboard() {
         {/* Table */}
         <section className="rounded-2xl border border-slate-200 bg-white shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
           <div className="flex flex-wrap items-center gap-2 border-b border-slate-100 px-4 py-3">
-            <h2 className="text-[13px] font-semibold text-slate-900">سجل الرسائل</h2>
+            <h2 className="text-[13px] font-semibold text-slate-900">{dt("سجل الرسائل")}</h2>
 
             <div className="ms-auto flex flex-wrap items-center gap-2">
               <SegmentedControl options={STATUS_FILTERS} value={status} onChange={setStatus} />
@@ -289,7 +284,7 @@ export function EmailChannelDashboard() {
                 <input
                   value={searchInput}
                   onChange={(e) => setSearchInput(e.target.value)}
-                  placeholder="بحث بالبريد أو الموضوع…"
+                  placeholder={dt("بحث بالبريد أو الموضوع…")}
                   className="h-8 w-56 rounded-lg border border-slate-200 bg-white pe-8 ps-3 text-xs text-slate-700 outline-none transition focus:border-brand"
                 />
               </form>
@@ -297,7 +292,7 @@ export function EmailChannelDashboard() {
           </div>
 
           {error ? (
-            <EmptyState title="تعذّر التحميل" description={error} className="m-4" />
+            <EmptyState title={dt("تعذّر التحميل")} description={error} className="m-4" />
           ) : loading && !data ? (
             <div className="space-y-2 p-4">
               {Array.from({ length: 6 }).map((_, i) => (
@@ -306,8 +301,8 @@ export function EmailChannelDashboard() {
             </div>
           ) : !data?.rows.length ? (
             <EmptyState
-              title="لا توجد رسائل"
-              description="لم تُرسل رسائل بريد مطابقة لهذه التصفية."
+              title={dt("لا توجد رسائل")}
+              description={dt("لم تُرسل رسائل بريد مطابقة لهذه التصفية.")}
               icon={Inbox}
               className="m-4"
             />
@@ -317,14 +312,14 @@ export function EmailChannelDashboard() {
                 {/* Column widths are explicit so the table cannot distribute leftover space
                     evenly and leave a gulf beside the action buttons: the subject is the only
                     greedy column, everything else hugs its content. */}
-                <table className="w-full text-right text-xs">
+                <table className="w-full text-start text-xs">
                   <thead>
                     <tr className="border-b border-slate-100 bg-slate-50/60 text-[11px] font-semibold text-slate-500">
-                      <th className="whitespace-nowrap px-3 py-2.5 text-right">المستلم</th>
-                      <th className="w-full max-w-0 px-3 py-2.5 text-right">الموضوع / القالب</th>
-                      <th className="whitespace-nowrap px-3 py-2.5 text-right">الحالة</th>
-                      <th className="whitespace-nowrap px-3 py-2.5 text-right">المصدر</th>
-                      <th className="whitespace-nowrap px-3 py-2.5 text-right">التاريخ</th>
+                      <th className="whitespace-nowrap px-3 py-2.5 text-start">{dt("المستلم")}</th>
+                      <th className="w-full max-w-0 px-3 py-2.5 text-start">{dt("الموضوع / القالب")}</th>
+                      <th className="whitespace-nowrap px-3 py-2.5 text-start">{dt("الحالة")}</th>
+                      <th className="whitespace-nowrap px-3 py-2.5 text-start">{dt("المصدر")}</th>
+                      <th className="whitespace-nowrap px-3 py-2.5 text-start">{dt("التاريخ")}</th>
                       <th className="w-px px-3 py-2.5" />
                     </tr>
                   </thead>
@@ -387,7 +382,7 @@ export function EmailChannelDashboard() {
 
               <div className="flex items-center justify-between gap-3 border-t border-slate-100 px-4 py-2.5">
                 <span className="text-[11px] text-slate-500">
-                  {data.pagination.total.toLocaleString("en-US")} رسالة · صفحة {data.pagination.page} من {data.pagination.pages}
+                  {dtx("{0} رسالة · صفحة {1} من {2}", [data.pagination.total.toLocaleString("en-US"), data.pagination.page, data.pagination.pages])}
                 </span>
                 <div className="flex gap-1">
                   <button
@@ -395,7 +390,7 @@ export function EmailChannelDashboard() {
                     disabled={page <= 1 || loading}
                     onClick={() => setPage((p) => Math.max(1, p - 1))}
                     className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-slate-200 text-slate-500 transition hover:border-brand hover:text-brand disabled:opacity-40"
-                    aria-label="السابق"
+                    aria-label={dt("السابق")}
                   >
                     <ChevronRight className="h-3.5 w-3.5" />
                   </button>
@@ -404,7 +399,7 @@ export function EmailChannelDashboard() {
                     disabled={page >= data.pagination.pages || loading}
                     onClick={() => setPage((p) => p + 1)}
                     className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-slate-200 text-slate-500 transition hover:border-brand hover:text-brand disabled:opacity-40"
-                    aria-label="التالي"
+                    aria-label={dt("التالي")}
                   >
                     <ChevronLeft className="h-3.5 w-3.5" />
                   </button>
@@ -416,8 +411,7 @@ export function EmailChannelDashboard() {
 
         {loading && data && (
           <div className="pointer-events-none fixed bottom-4 start-4 z-50 flex items-center gap-2 rounded-full bg-slate-900/90 px-3 py-1.5 text-[11px] font-semibold text-white">
-            <Loader2 className="h-3 w-3 animate-spin" /> جاري التحديث
-          </div>
+            <Loader2 className="h-3 w-3 animate-spin" /> {dt(" جاري التحديث")}</div>
         )}
       </div>
 

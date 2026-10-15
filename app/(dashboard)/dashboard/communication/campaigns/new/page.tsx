@@ -6,9 +6,10 @@ import { resolveDashboardPageAccess } from "@/lib/dashboard/page-access";
 import { PageHeader } from "@/components/dashboard/PageHeader";
 import { NewCampaignWizard } from "./_components/NewCampaignWizard";
 import { UpdateCampaignWizard } from "./_components/UpdateCampaignWizard";
+import { dashDir, dt } from "@/lib/dashboard/i18n";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "حملة جديدة | التواصل" };
+export const metadata = { get title() { return dt("حملة جديدة | التواصل"); } };
 
 /**
  * `?updateId=<Update id>` opens the campaign-update variant: an email to every
@@ -22,15 +23,15 @@ export default async function NewCampaignPage({ searchParams }: { searchParams: 
   const fromUpdate = typeof updateId === "string" && /^[0-9a-fA-F]{24}$/.test(updateId) ? updateId : null;
 
   return (
-    <div className="min-h-0" dir="rtl">
+    <div className="min-h-0" dir={dashDir()}>
       <div className="mx-auto max-w-[1100px]">
         <PageHeader
-          eyebrow="الحملات التسويقية"
-          title={fromUpdate ? "حملة بريد من تحديث المشروع" : "حملة جديدة"}
+          eyebrow={dt("الحملات التسويقية")}
+          title={fromUpdate ? dt("حملة بريد من تحديث المشروع") : dt("حملة جديدة")}
           description={
             fromUpdate
-              ? "أرسل هذا التحديث لكل من تبرّع للمشروع ليرى أثر عطائه  كل متبرع يستلمه بلغته المفضّلة."
-              : "اختر القناة، ثم القالب، ثم المتبرعين  كل متبرع يستلم القالب بلغته المفضّلة."
+              ? dt("أرسل هذا التحديث لكل من تبرّع للمشروع ليرى أثر عطائه  كل متبرع يستلمه بلغته المفضّلة.")
+              : dt("اختر القناة، ثم القالب، ثم المتبرعين  كل متبرع يستلم القالب بلغته المفضّلة.")
           }
           icon={Megaphone}
         />

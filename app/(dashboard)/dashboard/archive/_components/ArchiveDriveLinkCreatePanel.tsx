@@ -6,6 +6,7 @@ import { useMemo, useState } from "react";
 import { AlertTriangle, CheckCircle2, FileText, FolderPlus, Loader2, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { ArchiveProject } from "@/lib/archive/archive-types";
+import { dt } from "@/lib/dashboard/i18n";
 
 type FeedbackState = {
   tone: "success" | "error";
@@ -26,30 +27,30 @@ type Props = {
 function previewDriveUrl(value: string): DriveUrlPreview {
   const trimmed = value.trim();
   if (!trimmed) {
-    return { valid: false, type: "UNKNOWN", id: null, message: "أدخل رابط الملف قبل الحفظ." };
+    return { valid: false, type: "UNKNOWN", id: null, message: dt("أدخل رابط الملف قبل الحفظ.") };
   }
 
   try {
     const url = new URL(trimmed);
     const isGoogleDrive = url.hostname === "drive.google.com" || url.hostname.endsWith(".drive.google.com");
     if (!isGoogleDrive) {
-      return { valid: false, type: "UNKNOWN", id: null, message: "استخدم رابطًا صحيحًا من Google Drive." };
+      return { valid: false, type: "UNKNOWN", id: null, message: dt("استخدم رابطًا صحيحًا من Google Drive.") };
     }
 
     const folderId = url.pathname.match(/\/folders\/([^/?#]+)/)?.[1] ?? null;
     const fileId = url.pathname.match(/\/file\/d\/([^/?#]+)/)?.[1] ?? url.searchParams.get("id");
 
     if (folderId) {
-      return { valid: true, type: "FOLDER", id: folderId, message: "تم التعرف على مجلد." };
+      return { valid: true, type: "FOLDER", id: folderId, message: dt("تم التعرف على مجلد.") };
     }
 
     if (fileId) {
-      return { valid: true, type: "FILE", id: fileId, message: "تم التعرف على ملف." };
+      return { valid: true, type: "FILE", id: fileId, message: dt("تم التعرف على ملف.") };
     }
 
-    return { valid: true, type: "UNKNOWN", id: null, message: "الرابط صحيح، لكنه يحتاج مراجعة بعد الحفظ." };
+    return { valid: true, type: "UNKNOWN", id: null, message: dt("الرابط صحيح، لكنه يحتاج مراجعة بعد الحفظ.") };
   } catch {
-    return { valid: false, type: "UNKNOWN", id: null, message: "صيغة الرابط غير صحيحة." };
+    return { valid: false, type: "UNKNOWN", id: null, message: dt("صيغة الرابط غير صحيحة.") };
   }
 }
 
@@ -69,7 +70,7 @@ export function ArchiveDriveLinkCreatePanel({ projects }: Props) {
     if (saving) return;
 
     if (!projectId || !title.trim() || !driveUrl.trim()) {
-      setFeedback({ tone: "error", message: "أكمل المشروع، اسم الرابط، والرابط أولًا." });
+      setFeedback({ tone: "error", message: dt("أكمل المشروع، اسم الرابط، والرابط أولًا.") });
       return;
     }
 
@@ -90,13 +91,13 @@ export function ArchiveDriveLinkCreatePanel({ projects }: Props) {
     setSaving(false);
 
     if (!response.ok || !result?.ok) {
-      setFeedback({ tone: "error", message: result?.error || result?.message || "تعذر حفظ الرابط" });
+      setFeedback({ tone: "error", message: result?.error || result?.message || dt("تعذر حفظ الرابط") });
       return;
     }
 
     setTitle("");
     setDriveUrl("");
-    setFeedback({ tone: "success", message: result?.message || "تم حفظ الرابط" });
+    setFeedback({ tone: "success", message: result?.message || dt("تم حفظ الرابط") });
     router.refresh();
   }
 
@@ -104,9 +105,8 @@ export function ArchiveDriveLinkCreatePanel({ projects }: Props) {
     return (
       <div className="rounded-lg border border-dashed bg-white p-5 text-sm leading-6 text-slate-600">
         <div className="flex items-center gap-2 font-black text-slate-950">
-          <FolderPlus className="h-4 w-4 text-brand" /> إضافة رابط ملف
-        </div>
-        <p className="mt-2">أنشئ مشروعًا أولًا قبل إضافة روابط الملفات.</p>
+          <FolderPlus className="h-4 w-4 text-brand" /> {dt(" إضافة رابط ملف")}</div>
+        <p className="mt-2">{dt("أنشئ مشروعًا أولًا قبل إضافة روابط الملفات.")}</p>
       </div>
     );
   }
@@ -116,30 +116,26 @@ export function ArchiveDriveLinkCreatePanel({ projects }: Props) {
       <div className="flex flex-col gap-2 lg:flex-row lg:items-start lg:justify-between">
         <div>
           <div className="flex items-center gap-2 font-black text-slate-950">
-            <FolderPlus className="h-4 w-4 text-brand" /> إضافة رابط ملف
-          </div>
-          <p className="mt-1 text-sm leading-6 text-slate-600">اربط المشروع بمجلد أو ملف واضح ليسهل الوصول إليه لاحقًا.</p>
+            <FolderPlus className="h-4 w-4 text-brand" /> {dt(" إضافة رابط ملف")}</div>
+          <p className="mt-1 text-sm leading-6 text-slate-600">{dt("اربط المشروع بمجلد أو ملف واضح ليسهل الوصول إليه لاحقًا.")}</p>
         </div>
         <Button type="submit" size="sm" disabled={saving || !drivePreview.valid} className="gap-2 font-bold">
           {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-          {saving ? "جاري الحفظ" : "حفظ الرابط"}
+          {saving ? dt("جاري الحفظ") : dt("حفظ الرابط")}
         </Button>
       </div>
 
       <div className="mt-4 grid gap-3 lg:grid-cols-[0.9fr_1fr_1.6fr]">
         <label className="grid gap-1 text-xs font-bold text-slate-600">
-          المشروع
-          <select value={projectId} onChange={(event) => setProjectId(event.target.value)} className="h-10 rounded-md border bg-white px-3 text-sm font-semibold text-slate-900 outline-none focus:border-brand">
+          {dt("المشروع")}<select value={projectId} onChange={(event) => setProjectId(event.target.value)} className="h-10 rounded-md border bg-white px-3 text-sm font-semibold text-slate-900 outline-none focus:border-brand">
             {projectOptions.map((project) => <option key={project.id} value={project.id}>{project.label}</option>)}
           </select>
         </label>
         <label className="grid gap-1 text-xs font-bold text-slate-600">
-          اسم الرابط
-          <input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="مثال: ملف صور غزة 2025" className="h-10 rounded-md border bg-white px-3 text-sm font-semibold text-slate-900 outline-none focus:border-brand" />
+          {dt("اسم الرابط")}<input value={title} onChange={(event) => setTitle(event.target.value)} placeholder={dt("مثال: ملف صور غزة 2025")} className="h-10 rounded-md border bg-white px-3 text-sm font-semibold text-slate-900 outline-none focus:border-brand" />
         </label>
         <label className="grid gap-1 text-xs font-bold text-slate-600">
-          رابط الملف
-          <input dir="ltr" value={driveUrl} onChange={(event) => setDriveUrl(event.target.value)} placeholder="https://drive.google.com/..." className="h-10 rounded-md border bg-white px-3 text-left font-mono text-sm text-slate-900 outline-none focus:border-brand" />
+          {dt("رابط الملف")}<input dir="ltr" value={driveUrl} onChange={(event) => setDriveUrl(event.target.value)} placeholder="https://drive.google.com/..." className="h-10 rounded-md border bg-white px-3 text-left font-mono text-sm text-slate-900 outline-none focus:border-brand" />
         </label>
       </div>
 

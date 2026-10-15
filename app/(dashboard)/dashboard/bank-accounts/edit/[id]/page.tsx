@@ -13,6 +13,7 @@ import {
   type BankAccountFormValues,
   type CurrencyRow,
 } from '../../_components/BankAccountForm';
+import { dt } from "@/lib/dashboard/i18n";
 
 type ApiCurrency = { id: string; code: string; accountNo: string | null; extNo: string | null; iban: string | null };
 
@@ -52,7 +53,7 @@ export default function EditBankAccountPage({ params }: { params: Promise<{ id: 
       .catch((e) => {
         if (!live) return;
         setMissing(true);
-        toast.error(errorMessage(e, 'تعذّر تحميل الحساب البنكي'));
+        toast.error(errorMessage(e, dt("تعذّر تحميل الحساب البنكي")));
       });
     return () => {
       live = false;
@@ -60,7 +61,7 @@ export default function EditBankAccountPage({ params }: { params: Promise<{ id: 
   }, [id]);
 
   if (missing) {
-    return <p className="py-24 text-center text-sm text-slate-500">الحساب البنكي غير موجود.</p>;
+    return <p className="py-24 text-center text-sm text-slate-500">{dt("الحساب البنكي غير موجود.")}</p>;
   }
 
   if (!initial) {

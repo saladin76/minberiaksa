@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { errorMessage } from '@/lib/dashboard/client-error-message';
 import { SUPPORTED_LOCALES } from '@/lib/locales';
+import { dt } from "@/lib/dashboard/i18n";
 
 /**
  * "Translate into every language" for a dashboard form.
@@ -63,7 +64,7 @@ export function AutoTranslateButton({
   const targets = (locales ?? SUPPORTED_LOCALES.filter((l) => l !== 'ar')) as readonly string[];
 
   const run = async () => {
-    if (!hasSource) return toast.error('اكتب المحتوى بالعربية أولًا');
+    if (!hasSource) return toast.error(dt("اكتب المحتوى بالعربية أولًا"));
     setBusy(true);
     try {
       const res = await axios.post('/api/admin/content-localization/translate', {
@@ -81,12 +82,12 @@ export function AutoTranslateButton({
       const failed = Object.keys(errors).length;
       const warnings = Object.values(translations).flatMap((translation) => translation.warnings ?? []);
       if (done) {
-        toast.success(`تمت ترجمة ${done} لغة${failed ? `  تعذّرت ${failed}` : ""}. راجع النصوص ثم احفظ.`);
-        if (warnings.length) toast.error(`QA رفض ${warnings.length} حقلًا بسبب تغيّر متغير/رابط/رقم محمي.`);
+        toast.success(dt("تمت ترجمة {0} لغة{1}. راجع النصوص ثم احفظ.", [done, failed ? dt("  تعذّرت {0}", [failed]) : ""]));
+        if (warnings.length) toast.error(dt("QA رفض {0} حقلًا بسبب تغيّر متغير/رابط/رقم محمي.", [warnings.length]));
       }
-      else toast.error(errorMessage(null, 'لم تُنتج الترجمة أي نص'));
+      else toast.error(errorMessage(null, dt("لم تُنتج الترجمة أي نص")));
     } catch (e) {
-      toast.error(errorMessage(e, 'تعذّرت الترجمة التلقائية'));
+      toast.error(errorMessage(e, dt("تعذّرت الترجمة التلقائية")));
     } finally {
       setBusy(false);
     }
@@ -101,15 +102,14 @@ export function AutoTranslateButton({
         onClick={run}
         disabled={busy || disabled || !hasSource}
         className="gap-2 border-purple-300 text-purple-700 hover:bg-purple-50"
-        title={hasSource ? undefined : 'اكتب المحتوى بالعربية أولًا'}
+        title={hasSource ? undefined : dt("اكتب المحتوى بالعربية أولًا")}
       >
         {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <WandSparkles className="h-4 w-4" />}
-        {busy ? `جارٍ الترجمة إلى ${targets.length} لغة…` : `ترجمة تلقائية إلى ${targets.length} لغة`}
+        {busy ? dt("جارٍ الترجمة إلى {0} لغة…", [targets.length]) : dt("ترجمة تلقائية إلى {0} لغة", [targets.length])}
       </Button>
       <label className="flex items-center gap-1.5 text-[11px] text-slate-600">
         <Checkbox checked={overwrite} onCheckedChange={(v) => setOverwrite(v === true)} />
-        استبدال الترجمات الموجودة
-      </label>
+        {dt("استبدال الترجمات الموجودة")}</label>
     </div>
   );
 }

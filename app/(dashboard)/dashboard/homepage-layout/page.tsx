@@ -35,6 +35,7 @@ import {
 import { SectionList } from "./_components/SectionList";
 import { ListEditor } from "./_components/ListEditor";
 import { move } from "./_components/reorder";
+import { dashDir, dashIntl, dt, dtx } from "@/lib/dashboard/i18n";
 
 /**
  * ترتيب الصفحة الرئيسية — the homepage's arrangement, not its content.
@@ -99,7 +100,7 @@ export default function HomepageLayoutPage() {
       const res = await axios.get("/api/home-layout");
       hydrate(res.data);
     } catch (e) {
-      toast({ title: "خطأ", description: errorMessage(e, "تعذّر تحميل ترتيب الصفحة الرئيسية"), variant: "destructive" });
+      toast({ title: dt("خطأ"), description: errorMessage(e, dt("تعذّر تحميل ترتيب الصفحة الرئيسية")), variant: "destructive" });
     } finally {
       setLoading(false);
     }
@@ -131,18 +132,18 @@ export default function HomepageLayoutPage() {
     try {
       const res = await axios.put("/api/home-layout", body);
       hydrate(res.data);
-      toast({ title: "تم الحفظ", description: done });
+      toast({ title: dt("تم الحفظ"), description: done });
       return true;
     } catch (e) {
-      toast({ title: "لم يُحفظ", description: errorMessage(e, "تعذّر حفظ الترتيب"), variant: "destructive" });
+      toast({ title: dt("لم يُحفظ"), description: errorMessage(e, dt("تعذّر حفظ الترتيب")), variant: "destructive" });
       return false;
     } finally {
       setSaving(false);
     }
   };
 
-  const save = () => put({ config }, "يُطبَّق الترتيب على الصفحة الرئيسية فورًا");
-  const resetAll = () => put({ reset: true }, "عادت الصفحة الرئيسية إلى ترتيب التصميم الأصلي");
+  const save = () => put({ config }, dt("يُطبَّق الترتيب على الصفحة الرئيسية فورًا"));
+  const resetAll = () => put({ reset: true }, dt("عادت الصفحة الرئيسية إلى ترتيب التصميم الأصلي"));
 
   const stats = useMemo(() => {
     const visible = config.sections.filter((s) => s.enabled).length;
@@ -164,18 +165,17 @@ export default function HomepageLayoutPage() {
   const sectionIsDefault = meta.lists.every((id) => listIsDefault(config, id));
 
   return (
-    <div className="mx-auto max-w-7xl space-y-6 pb-24" dir="rtl">
+    <div className="mx-auto max-w-7xl space-y-6 pb-24" dir={dashDir()}>
       <PageHeader
-        title="ترتيب الصفحة الرئيسية"
-        description="رتّب أقسام الصفحة الرئيسية وأظهرها أو أخفها، واختر ما يعرضه كل قسم وبأي أولوية — يدويًا أو تلقائيًا. المحتوى نفسه يُحرَّر من صفحته الخاصة."
+        title={dt("ترتيب الصفحة الرئيسية")}
+        description={dt("رتّب أقسام الصفحة الرئيسية وأظهرها أو أخفها، واختر ما يعرضه كل قسم وبأي أولوية — يدويًا أو تلقائيًا. المحتوى نفسه يُحرَّر من صفحته الخاصة.")}
         icon={LayoutTemplate}
         actions={
           <>
             <Button variant="outline" asChild>
               <a href="/ar" target="_blank" rel="noreferrer">
                 <ExternalLink className="ms-2 h-4 w-4" />
-                عرض الصفحة
-              </a>
+                {dt("عرض الصفحة")}</a>
             </Button>
             <Button
               variant="outline"
@@ -186,45 +186,41 @@ export default function HomepageLayoutPage() {
               disabled={saving}
             >
               <RefreshCw className="ms-2 h-4 w-4" />
-              تحديث
-            </Button>
+              {dt("تحديث")}</Button>
             <AlertDialog>
               <AlertDialogTrigger asChild>
                 <Button variant="outline" disabled={saving || (!customised && matchesDefault)}>
                   <RotateCcw className="ms-2 h-4 w-4" />
-                  الترتيب الافتراضي
-                </Button>
+                  {dt("الترتيب الافتراضي")}</Button>
               </AlertDialogTrigger>
-              <AlertDialogContent dir="rtl">
+              <AlertDialogContent dir={dashDir()}>
                 <AlertDialogHeader>
-                  <AlertDialogTitle>استعادة الترتيب الافتراضي؟</AlertDialogTitle>
+                  <AlertDialogTitle>{dt("استعادة الترتيب الافتراضي؟")}</AlertDialogTitle>
                   <AlertDialogDescription>
-                    تعود كل الأقسام إلى ترتيب التصميم الأصلي وتظهر جميعها، ويعود كل شريط إلى اختياره التلقائي المعتاد. تُحذف اختياراتك اليدوية ولا يمكن التراجع.
-                  </AlertDialogDescription>
+                    {dt("تعود كل الأقسام إلى ترتيب التصميم الأصلي وتظهر جميعها، ويعود كل شريط إلى اختياره التلقائي المعتاد. تُحذف اختياراتك اليدوية ولا يمكن التراجع.")}</AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
-                  <AlertDialogCancel>إلغاء</AlertDialogCancel>
-                  <AlertDialogAction onClick={() => void resetAll()}>استعادة وحفظ</AlertDialogAction>
+                  <AlertDialogCancel>{dt("إلغاء")}</AlertDialogCancel>
+                  <AlertDialogAction onClick={() => void resetAll()}>{dt("استعادة وحفظ")}</AlertDialogAction>
                 </AlertDialogFooter>
               </AlertDialogContent>
             </AlertDialog>
             <Button onClick={() => void save()} disabled={saving || !dirty}>
               {saving ? <Loader2 className="ms-2 h-4 w-4 animate-spin" /> : <Save className="ms-2 h-4 w-4" />}
-              حفظ الترتيب
-            </Button>
+              {dt("حفظ الترتيب")}</Button>
           </>
         }
       />
 
       {/* ── Status ───────────────────────────────────────────────────────── */}
       <div className="flex flex-wrap items-center gap-2 text-sm">
-        <Badge variant={customised ? "default" : "secondary"}>{customised ? "ترتيب مخصّص" : "ترتيب التصميم الأصلي"}</Badge>
-        <Badge variant="outline" className="font-normal">{stats.visible} قسمًا ظاهرًا</Badge>
-        {stats.hidden > 0 && <Badge variant="outline" className="font-normal">{stats.hidden} مخفي</Badge>}
-        {stats.customLists > 0 && <Badge variant="outline" className="font-normal">{stats.customLists} شريط بإعدادات مخصّصة</Badge>}
+        <Badge variant={customised ? "default" : "secondary"}>{customised ? dt("ترتيب مخصّص") : dt("ترتيب التصميم الأصلي")}</Badge>
+        <Badge variant="outline" className="font-normal">{dtx("{0} قسمًا ظاهرًا", [stats.visible])}</Badge>
+        {stats.hidden > 0 && <Badge variant="outline" className="font-normal">{dtx("{0} مخفي", [stats.hidden])}</Badge>}
+        {stats.customLists > 0 && <Badge variant="outline" className="font-normal">{dtx("{0} شريط بإعدادات مخصّصة", [stats.customLists])}</Badge>}
         {updatedAt && customised && (
           <span className="text-xs text-muted-foreground">
-            آخر حفظ: {new Date(updatedAt).toLocaleString("ar-EG", { dateStyle: "medium", timeStyle: "short" })}
+            {dtx("آخر حفظ: {0}", [new Date(updatedAt).toLocaleString(dashIntl("ar-EG"), { dateStyle: "medium", timeStyle: "short" })])}
           </span>
         )}
       </div>
@@ -233,8 +229,8 @@ export default function HomepageLayoutPage() {
         {/* ── Sequence ───────────────────────────────────────────────────── */}
         <Card className="lg:sticky lg:top-4">
           <CardHeader className="pb-3">
-            <CardTitle className="text-base">تسلسل الأقسام</CardTitle>
-            <CardDescription>اسحب القسم أو استخدم الأسهم لتغيير موضعه، واختر قسمًا لضبط محتواه.</CardDescription>
+            <CardTitle className="text-base">{dt("تسلسل الأقسام")}</CardTitle>
+            <CardDescription>{dt("اسحب القسم أو استخدم الأسهم لتغيير موضعه، واختر قسمًا لضبط محتواه.")}</CardDescription>
           </CardHeader>
           <CardContent className="max-h-[calc(100vh-14rem)] overflow-y-auto">
             <SectionList layout={config} selected={selected} onSelect={setSelected} onMove={moveSection} onToggle={toggleSection} />
@@ -250,7 +246,7 @@ export default function HomepageLayoutPage() {
                   <div className="flex items-center gap-2">
                     <CardTitle>{meta.label}</CardTitle>
                     <Badge variant="outline" className="font-normal">
-                      الموضع {position + 1} من {config.sections.length}
+                      {dtx("الموضع {0} من {1}", [position + 1, config.sections.length])}
                     </Badge>
                   </div>
                   <CardDescription className="mt-1.5">{meta.description}</CardDescription>
@@ -260,7 +256,7 @@ export default function HomepageLayoutPage() {
                     <Button variant="outline" size="sm" asChild>
                       <Link href={meta.editHref}>
                         <PencilLine className="ms-2 h-4 w-4" />
-                        {meta.kind === "banners" ? "إدارة البانرات" : "تحرير المحتوى"}
+                        {meta.kind === "banners" ? dt("إدارة البانرات") : dt("تحرير المحتوى")}
                       </Link>
                     </Button>
                   )}
@@ -271,12 +267,10 @@ export default function HomepageLayoutPage() {
                       onClick={() => setConfig((prev) => ({ ...prev, lists: { ...prev.lists, ...Object.fromEntries(meta.lists.map((id) => [id, defaultListConfig(id)])) } }))}
                     >
                       <Undo2 className="ms-2 h-4 w-4" />
-                      افتراضي هذا القسم
-                    </Button>
+                      {dt("افتراضي هذا القسم")}</Button>
                   )}
                   <label className="flex cursor-pointer items-center gap-2 text-sm font-medium">
-                    إظهار القسم
-                    <Switch checked={current?.enabled ?? true} onCheckedChange={(v) => toggleSection(selected, v)} />
+                    {dt("إظهار القسم")}<Switch checked={current?.enabled ?? true} onCheckedChange={(v) => toggleSection(selected, v)} />
                   </label>
                 </div>
               </div>
@@ -287,11 +281,9 @@ export default function HomepageLayoutPage() {
                   <Info className="mt-0.5 h-4 w-4 shrink-0" />
                   {meta.kind === "banners" ? (
                     <p>
-                      هذا موضع للبانرات وليس قسمًا ثابتًا: يعرض البانرات المنشورة على الصفحة الرئيسية في هذا الموضع، ويختفي إن لم يوجد بانر.
-                      اختر موضعه هنا، وأدر البانرات نفسها من صفحة البانرات.
-                    </p>
+                      {dt("هذا موضع للبانرات وليس قسمًا ثابتًا: يعرض البانرات المنشورة على الصفحة الرئيسية في هذا الموضع، ويختفي إن لم يوجد بانر. اختر موضعه هنا، وأدر البانرات نفسها من صفحة البانرات.")}</p>
                   ) : (
-                    <p>قسم ثابت التصميم لا يعرض قائمة عناصر. يمكنك تغيير موضعه في التسلسل أو إخفاؤه، ونصوصه من ترجمات الموقع.</p>
+                    <p>{dt("قسم ثابت التصميم لا يعرض قائمة عناصر. يمكنك تغيير موضعه في التسلسل أو إخفاؤه، ونصوصه من ترجمات الموقع.")}</p>
                   )}
                 </div>
               </CardContent>
@@ -315,16 +307,14 @@ export default function HomepageLayoutPage() {
           {meta.kind === "list" && !(current?.enabled ?? true) && (
             <Card>
               <CardContent className="py-10 text-center text-sm text-muted-foreground">
-                القسم مخفي من الصفحة الرئيسية. أظهره لضبط ما يعرضه.
-              </CardContent>
+                {dt("القسم مخفي من الصفحة الرئيسية. أظهره لضبط ما يعرضه.")}</CardContent>
             </Card>
           )}
 
           {selected === "events" && (current?.enabled ?? true) && (
             <p className="flex items-start gap-2 px-1 text-xs leading-relaxed text-muted-foreground">
               <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-              لإضافة فعالية جديدة: من صفحة الفيديوهات أضف فيديو يوتيوب واختر نوعه «فعالياتنا»، ثم اختره هنا. التسجيلات الثلاثة المدمجة تبقى متاحة دائمًا.
-            </p>
+              {dt("لإضافة فعالية جديدة: من صفحة الفيديوهات أضف فيديو يوتيوب واختر نوعه «فعالياتنا»، ثم اختره هنا. التسجيلات الثلاثة المدمجة تبقى متاحة دائمًا.")}</p>
           )}
         </div>
       </div>
@@ -333,15 +323,13 @@ export default function HomepageLayoutPage() {
       {dirty && (
         <div className="fixed inset-x-0 bottom-4 z-40 flex justify-center px-4">
           <div className="flex flex-wrap items-center gap-3 rounded-2xl border bg-background/95 px-4 py-3 shadow-lg backdrop-blur">
-            <span className="text-sm font-medium">لديك تغييرات غير محفوظة</span>
+            <span className="text-sm font-medium">{dt("لديك تغييرات غير محفوظة")}</span>
             <Button variant="ghost" size="sm" onClick={() => setConfig(saved)} disabled={saving}>
               <Undo2 className="ms-2 h-4 w-4" />
-              تجاهل
-            </Button>
+              {dt("تجاهل")}</Button>
             <Button size="sm" onClick={() => void save()} disabled={saving}>
               {saving ? <Loader2 className="ms-2 h-4 w-4 animate-spin" /> : <Save className="ms-2 h-4 w-4" />}
-              حفظ الترتيب
-            </Button>
+              {dt("حفظ الترتيب")}</Button>
           </div>
         </div>
       )}

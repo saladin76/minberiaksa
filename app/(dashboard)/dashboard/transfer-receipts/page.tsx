@@ -4,6 +4,7 @@ import { Suspense } from "react";
 import { Receipt } from "lucide-react";
 import { PageHeader } from "@/components/dashboard/PageHeader";
 import { TransferReceiptsView } from "./_components/TransferReceiptsView";
+import { dashDir, dt } from "@/lib/dashboard/i18n";
 
 /**
  * إيصالات التحويل  the finance desk's queue for bank-transfer donations.
@@ -21,12 +22,12 @@ import { TransferReceiptsView } from "./_components/TransferReceiptsView";
  */
 export default function TransferReceiptsPage() {
   return (
-    <div className="min-h-0" dir="rtl">
+    <div className="min-h-0" dir={dashDir()}>
       <div className="mx-auto max-w-[1600px]">
         <PageHeader
-          eyebrow="المالية"
-          title="إيصالات التحويل"
-          description="إيصالات رفعها المتبرعون بعد اختيار «التحويل البنكي» عند الدفع. طابق كل إيصال مع كشف الحساب ثم أكّده ليُحتسب التبرع، أو ارفضه مع ذكر السبب ليتمكن المتبرع من رفع إيصال آخر."
+          eyebrow={dt("المالية")}
+          title={dt("إيصالات التحويل")}
+          description={dt("إيصالات رفعها المتبرعون بعد اختيار «التحويل البنكي» عند الدفع. طابق كل إيصال مع كشف الحساب ثم أكّده ليُحتسب التبرع، أو ارفضه مع ذكر السبب ليتمكن المتبرع من رفع إيصال آخر.")}
           icon={Receipt}
         />
         {/* `useSearchParams` in the view needs a boundary for static rendering. */}

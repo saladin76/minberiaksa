@@ -38,20 +38,21 @@ import { translationsFromRows } from '../../_components/ContentTranslationTabs';
 import type { ContentOption } from '../../super-categories/_components/ContentPicker';
 import { TRANSLATION_LOCALES, localeDefaults, localeKey, type TranslationLocale } from '../../_components/locale-form';
 import { CategoryIconPicker } from '../_components/CategoryIconPicker';
+import { dt } from "@/lib/dashboard/i18n";
 
 const LOCALE_FIELDS: readonly LocaleFormField[] = [
-  { name: 'name', label: 'اسم الحملة', maxLength: 50, requiredIn: ['en'] },
-  { name: 'description', label: 'الوصف', multiline: true, maxLength: 500 },
+  { name: 'name', get label() { return dt("اسم الحملة"); }, maxLength: 50, requiredIn: ['en'] },
+  { name: 'description', get label() { return dt("الوصف"); }, multiline: true, maxLength: 500 },
   /* The landing page's own copy. Translated like the rest, so the auto-translate
      button fills the whole page in one press. */
-  { name: 'heroLead', label: 'مقدمة الصفحة', multiline: true },
-  { name: 'ctaLabel', label: 'زر الواجهة' },
-  { name: 'statDoneLabel', label: 'وصف الرقم المُنجز' },
-  { name: 'statGoalLabel', label: 'وصف رقم الهدف' },
-  { name: 'projectsTitle', label: 'عنوان قسم المشاريع' },
-  { name: 'donateTitle', label: 'عنوان صندوق التبرع' },
-  { name: 'donateNote', label: 'ملاحظة صندوق التبرع' },
-  { name: 'achievementsTitle', label: 'عنوان قسم الإنجازات' },
+  { name: 'heroLead', get label() { return dt("مقدمة الصفحة"); }, multiline: true },
+  { name: 'ctaLabel', get label() { return dt("زر الواجهة"); } },
+  { name: 'statDoneLabel', get label() { return dt("وصف الرقم المُنجز"); } },
+  { name: 'statGoalLabel', get label() { return dt("وصف رقم الهدف"); } },
+  { name: 'projectsTitle', get label() { return dt("عنوان قسم المشاريع"); } },
+  { name: 'donateTitle', get label() { return dt("عنوان صندوق التبرع"); } },
+  { name: 'donateNote', get label() { return dt("ملاحظة صندوق التبرع"); } },
+  { name: 'achievementsTitle', get label() { return dt("عنوان قسم الإنجازات"); } },
 ];
 const LOCALE_FIELD_NAMES = ['name', 'description', 'heroLead', 'ctaLabel', 'statDoneLabel', 'statGoalLabel', 'projectsTitle', 'donateTitle', 'donateNote', 'achievementsTitle'] as const;
 type LocaleShape = { [K in `${(typeof LOCALE_FIELD_NAMES)[number]}_${TranslationLocale}`]: z.ZodOptional<z.ZodString> };
@@ -63,8 +64,8 @@ const LOCALE_SHAPE = Object.fromEntries(
 ) as LocaleShape;
 
 const formSchema = z.object({
-  name: z.string().min(1, 'اسم الحملة مطلوب').max(50, 'اسم الحملة طويل جداً'),
-  description: z.string().max(500, 'الوصف طويل جداً').optional(),
+  name: z.string().min(1, dt("اسم الحملة مطلوب")).max(50, dt("اسم الحملة طويل جداً")),
+  description: z.string().max(500, dt("الوصف طويل جداً")).optional(),
   image: z.string().optional(),
   icon: z.string().optional(),
   /* name/description per translation locale, generated from the locale list;
@@ -116,11 +117,11 @@ export default function NewCategoryPage() {
         infoCards: page.infoCards.filter((c) => c.title.trim()),
         translations: collectLocaleTranslations(values, LOCALE_FIELDS),
       });
-      toast.success('تم إنشاء الحملة بنجاح');
+      toast.success(dt("تم إنشاء الحملة بنجاح"));
       router.push('/dashboard/categories');
     } catch (error) {
       console.error('Error creating category:', error);
-      toast.error('فشل في إنشاء الحملة');
+      toast.error(dt("فشل في إنشاء الحملة"));
     } finally {
       setSaving(false);
     }
@@ -137,10 +138,10 @@ export default function NewCategoryPage() {
     try {
       const response = await axios.post('/api/upload', formData);
       form.setValue('image', response.data.url);
-      toast.success('تم رفع الصورة بنجاح');
+      toast.success(dt("تم رفع الصورة بنجاح"));
     } catch (error) {
       console.error('Error uploading image:', error);
-      toast.error('فشل في رفع الصورة');
+      toast.error(dt("فشل في رفع الصورة"));
     } finally {
       setUploadingImage(false);
     }
@@ -156,10 +157,10 @@ export default function NewCategoryPage() {
         await axios.delete(`/api/upload?publicId=${publicId}`);
       }
       form.setValue('image', '');
-      toast.success('تم حذف الصورة بنجاح');
+      toast.success(dt("تم حذف الصورة بنجاح"));
     } catch (error) {
       console.error('Error removing image:', error);
-      toast.error('فشل في حذف الصورة');
+      toast.error(dt("فشل في حذف الصورة"));
     }
   };
 
@@ -167,8 +168,8 @@ export default function NewCategoryPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">إنشاء حملة جديدة</h1>
-          <p className="text-gray-600">قم بإدخال معلومات الحملة</p>
+          <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">{dt("إنشاء حملة جديدة")}</h1>
+          <p className="text-gray-600">{dt("قم بإدخال معلومات الحملة")}</p>
         </div>
         <Button
           variant="outline"
@@ -176,8 +177,7 @@ export default function NewCategoryPage() {
           className="gap-2"
         >
           <ArrowLeft className="w-4 h-4" />
-          العودة
-        </Button>
+          {dt("العودة")}</Button>
       </div>
 
       <Form {...form}>
@@ -190,10 +190,10 @@ export default function NewCategoryPage() {
               <Card className="p-6">
                 <div className="grid gap-6">
                   <FormField control={form.control} name="name" render={({ field }) => (
-                    <FormItem><FormLabel>اسم الحملة</FormLabel><FormControl><Input {...field} placeholder="أدخل اسم الحملة" /></FormControl><FormMessage /></FormItem>
+                    <FormItem><FormLabel>{dt("اسم الحملة")}</FormLabel><FormControl><Input {...field} placeholder={dt("أدخل اسم الحملة")} /></FormControl><FormMessage /></FormItem>
                   )} />
                   <FormField control={form.control} name="description" render={({ field }) => (
-                    <FormItem><FormLabel>وصف الحملة</FormLabel><FormControl><Textarea placeholder="اكتب وصفاً للحملة..." className="resize-y" {...field} /></FormControl><FormMessage /></FormItem>
+                    <FormItem><FormLabel>{dt("وصف الحملة")}</FormLabel><FormControl><Textarea placeholder={dt("اكتب وصفاً للحملة...")} className="resize-y" {...field} /></FormControl><FormMessage /></FormItem>
                   )} />
                 </div>
               </Card>
@@ -212,7 +212,7 @@ export default function NewCategoryPage() {
                 name="image"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>صورة الحملة</FormLabel>
+                    <FormLabel>{dt("صورة الحملة")}</FormLabel>
                     <FormControl>
                       <div className="space-y-4">
                         {field.value ? (
@@ -225,7 +225,7 @@ export default function NewCategoryPage() {
                             <button
                               type="button"
                               onClick={removeImage}
-                              className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"
+                              className="absolute top-2 start-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"
                             >
                               <X className="w-4 h-4" />
                             </button>
@@ -250,8 +250,7 @@ export default function NewCategoryPage() {
                                 <>
                                   <Upload className="w-6 h-6 text-gray-400" />
                                   <span className="mt-2 text-sm text-gray-500">
-                                    اضغط لإضافة صورة
-                                  </span>
+                                    {dt("اضغط لإضافة صورة")}</span>
                                 </>
                               )}
                             </label>
@@ -260,11 +259,9 @@ export default function NewCategoryPage() {
                       </div>
                     </FormControl>
                     <FormDescription>
-                      يمكنك رفع صورة واحدة للحملة.
-                      <br />
+                      {dt("يمكنك رفع صورة واحدة للحملة.")}<br />
                       <span className="text-amber-700">
-                        الحجم المُوصى به: <strong>1200×800 px</strong> (نسبة 3:2)، صيغة JPG أو PNG، حجم الملف لا يزيد عن 2MB.
-                      </span>
+                        {dt("الحجم المُوصى به: ")}<strong>1200×800 px</strong> {dt(" (نسبة 3:2)، صيغة JPG أو PNG، حجم الملف لا يزيد عن 2MB.")}</span>
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
@@ -277,11 +274,11 @@ export default function NewCategoryPage() {
                 name="icon"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>أيقونة الحملة</FormLabel>
+                    <FormLabel>{dt("أيقونة الحملة")}</FormLabel>
                     <FormControl>
                       <CategoryIconPicker value={field.value} onChange={field.onChange} />
                     </FormControl>
-                    <FormDescription>اختر أيقونة جاهزة أو علم أي دولة.</FormDescription>
+                    <FormDescription>{dt("اختر أيقونة جاهزة أو علم أي دولة.")}</FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -296,16 +293,14 @@ export default function NewCategoryPage() {
               variant="outline"
               onClick={() => router.push('/dashboard/categories')}
             >
-              إلغاء
-            </Button>
+              {dt("إلغاء")}</Button>
             <Button
               type="submit"
               className="bg-brand hover:bg-brand-dark"
               disabled={saving}
             >
-              {saving && <Loader2 className="w-4 h-4 ml-2 animate-spin" />}
-              إنشاء الحملة
-            </Button>
+              {saving && <Loader2 className="w-4 h-4 me-2 animate-spin" />}
+              {dt("إنشاء الحملة")}</Button>
           </div>
         </form>
       </Form>

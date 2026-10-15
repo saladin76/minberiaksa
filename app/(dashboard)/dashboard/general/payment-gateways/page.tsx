@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { PageHeader } from "@/components/dashboard/PageHeader";
 import { parseMainGateway, type MainGateway } from "@/lib/payment-gateway";
+import { dashDir, dt, dtx } from "@/lib/dashboard/i18n";
 
 type SettingsResponse = {
   payforEnabled?: boolean;
@@ -36,16 +37,14 @@ const MAIN_GATEWAY_CARDS: {
   {
     value: "STRIPE",
     name: "Stripe",
-    description:
-      "البوابة العالمية. تقبل كل العملات وتدعم التبرعات الشهرية والبطاقات المحفوظة.",
+    get description() { return dt("البوابة العالمية. تقبل كل العملات وتدعم التبرعات الشهرية والبطاقات المحفوظة."); },
     icon: ShieldCheck,
     tone: "bg-indigo-50 text-indigo-700",
   },
   {
     value: "ALBARAKA",
     name: "Albaraka Türk (2D)",
-    description:
-      "بوابة بنك البركة التركي بالدفع المباشر (2D) دون تحقق 3D Secure: تُخصم البطاقة فورًا في صفحة الدفع دون تحويل المتبرع إلى صفحة البنك.",
+    get description() { return dt("بوابة بنك البركة التركي بالدفع المباشر (2D) دون تحقق 3D Secure: تُخصم البطاقة فورًا في صفحة الدفع دون تحويل المتبرع إلى صفحة البنك."); },
     icon: Landmark,
     tone: "bg-emerald-50 text-emerald-700",
   },
@@ -97,7 +96,7 @@ export default function PaymentGatewaysPage() {
    * reason (possibly empty), or null when the admin cancels. */
   const confirmPaymentChange = (what: string): string | null =>
     window.prompt(
-      `تنبيه: أنت على وشك تغيير مسار الدفع الفعلي لجميع التبرعات الجديدة.\n\n${what}\n\nاكتب سبب التغيير (اختياري) ثم اضغط «موافق» للتأكيد، أو «إلغاء» للتراجع.`,
+      dt("تنبيه: أنت على وشك تغيير مسار الدفع الفعلي لجميع التبرعات الجديدة.\n\n{0}\n\nاكتب سبب التغيير (اختياري) ثم اضغط «موافق» للتأكيد، أو «إلغاء» للتراجع.", [what]),
       ""
     );
 
@@ -105,7 +104,7 @@ export default function PaymentGatewaysPage() {
     if (next === mainGateway || savingGateway) return;
     const nextName = MAIN_GATEWAY_CARDS.find((g) => g.value === next)?.name ?? next;
     const currentName = MAIN_GATEWAY_CARDS.find((g) => g.value === mainGateway)?.name ?? mainGateway;
-    const reason = confirmPaymentChange(`البوابة الرئيسية: ${currentName} ← ${nextName}`);
+    const reason = confirmPaymentChange(dt("البوابة الرئيسية: {0} ← {1}", [currentName, nextName]));
     if (reason === null) return;
     const prev = mainGateway;
     setMainGateway(next);
@@ -114,12 +113,12 @@ export default function PaymentGatewaysPage() {
       await axios.put("/api/global-settings", { mainGateway: next, reason });
       toast.success(
         next === "ALBARAKA"
-          ? "أصبحت Albaraka هي البوابة الرئيسية"
-          : "أصبحت Stripe هي البوابة الرئيسية"
+          ? dt("أصبحت Albaraka هي البوابة الرئيسية")
+          : dt("أصبحت Stripe هي البوابة الرئيسية")
       );
     } catch (e) {
       setMainGateway(prev);
-      toast.error(errorMessage(e, "تعذّر حفظ البوابة الرئيسية"));
+      toast.error(errorMessage(e, dt("تعذّر حفظ البوابة الرئيسية")));
     } finally {
       setSavingGateway(false);
     }
@@ -128,8 +127,8 @@ export default function PaymentGatewaysPage() {
   const handleTogglePayfor = async (next: boolean) => {
     const reason = confirmPaymentChange(
       next
-        ? "تفعيل PayFor: ستمر تبرعات الليرة التركية لمرة واحدة عبر PayFor."
-        : "إيقاف PayFor: ستمر تبرعات الليرة التركية عبر البوابة الرئيسية."
+        ? dt("تفعيل PayFor: ستمر تبرعات الليرة التركية لمرة واحدة عبر PayFor.")
+        : dt("إيقاف PayFor: ستمر تبرعات الليرة التركية عبر البوابة الرئيسية.")
     );
     if (reason === null) return;
     const prev = payforEnabled;
@@ -139,12 +138,12 @@ export default function PaymentGatewaysPage() {
       await axios.put("/api/global-settings", { payforEnabled: next, reason });
       toast.success(
         next
-          ? "تم تفعيل بوابة PayFor"
-          : "تم إيقاف PayFor  ستمر تبرعات الليرة التركية عبر البوابة الرئيسية"
+          ? dt("تم تفعيل بوابة PayFor")
+          : dt("تم إيقاف PayFor  ستمر تبرعات الليرة التركية عبر البوابة الرئيسية")
       );
     } catch (e) {
       setPayforEnabled(prev);
-      toast.error(errorMessage(e, "تعذّر حفظ الإعداد"));
+      toast.error(errorMessage(e, dt("تعذّر حفظ الإعداد")));
     } finally {
       setSavingPayfor(false);
     }
@@ -153,8 +152,8 @@ export default function PaymentGatewaysPage() {
   const handleToggleAnyAmount = async (next: boolean) => {
     const reason = confirmPaymentChange(
       next
-        ? "السماح بأي مبلغ: يستطيع المتبرع التبرع بأي مبلغ بعملته كما يكتبه تمامًا (مثلًا 1 ليرة أو 1 جنيه) دون حد أدنى."
-        : "حد أدنى دولار واحد: لن تقبل السلة وصفحة الدفع أي تبرع تقل قيمته عن دولار واحد (أو ما يعادله بعملة المتبرع)."
+        ? dt("السماح بأي مبلغ: يستطيع المتبرع التبرع بأي مبلغ بعملته كما يكتبه تمامًا (مثلًا 1 ليرة أو 1 جنيه) دون حد أدنى.")
+        : dt("حد أدنى دولار واحد: لن تقبل السلة وصفحة الدفع أي تبرع تقل قيمته عن دولار واحد (أو ما يعادله بعملة المتبرع).")
     );
     if (reason === null) return;
     const prev = allowAnyAmount;
@@ -162,10 +161,10 @@ export default function PaymentGatewaysPage() {
     setSavingAnyAmount(true);
     try {
       await axios.put("/api/global-settings", { allowAnyAmount: next, reason });
-      toast.success(next ? "أصبح بإمكان المتبرعين التبرع بأي مبلغ" : "أصبح الحد الأدنى للتبرع دولارًا واحدًا");
+      toast.success(next ? dt("أصبح بإمكان المتبرعين التبرع بأي مبلغ") : dt("أصبح الحد الأدنى للتبرع دولارًا واحدًا"));
     } catch (e) {
       setAllowAnyAmount(prev);
-      toast.error(errorMessage(e, "تعذّر حفظ الإعداد"));
+      toast.error(errorMessage(e, dt("تعذّر حفظ الإعداد")));
     } finally {
       setSavingAnyAmount(false);
     }
@@ -175,33 +174,30 @@ export default function PaymentGatewaysPage() {
     MAIN_GATEWAY_CARDS.find((g) => g.value === mainGateway)?.name ?? "Stripe";
 
   return (
-    <div className="space-y-6" dir="rtl">
+    <div className="space-y-6" dir={dashDir()}>
       <PageHeader
-        title="بوابات الدفع"
-        description="اختر البوابة الرئيسية التي تمرّ عبرها التبرعات، وتحكّم في بوابة PayFor للّيرة التركية."
+        title={dt("بوابات الدفع")}
+        description={dt("اختر البوابة الرئيسية التي تمرّ عبرها التبرعات، وتحكّم في بوابة PayFor للّيرة التركية.")}
         icon={Settings}
       />
 
       {loading ? (
         <Card className="p-8 flex items-center justify-center gap-2 text-muted-foreground">
           <Loader2 className="w-4 h-4 animate-spin" />
-          <span className="text-sm">جاري التحميل...</span>
+          <span className="text-sm">{dt("جاري التحميل...")}</span>
         </Card>
       ) : (
         <div className="space-y-6">
           <section className="space-y-3">
             <div className="flex items-center gap-2">
               <h2 className="text-sm font-semibold text-gray-900">
-                البوابة الرئيسية
-              </h2>
+                {dt("البوابة الرئيسية")}</h2>
               {savingGateway && (
                 <Loader2 className="w-4 h-4 animate-spin text-gray-400" />
               )}
             </div>
             <p className="text-sm text-muted-foreground">
-              البوابة المختارة تتولّى كل حالات الدفع التي لا تمر عبر PayFor. يمكن
-              اختيار واحدة فقط، وتعمل البوابتان في نفس الحالات تمامًا.
-            </p>
+              {dt("البوابة المختارة تتولّى كل حالات الدفع التي لا تمر عبر PayFor. يمكن اختيار واحدة فقط، وتعمل البوابتان في نفس الحالات تمامًا.")}</p>
 
             <div className="grid gap-4 sm:grid-cols-2">
               {MAIN_GATEWAY_CARDS.map((gateway) => {
@@ -247,8 +243,7 @@ export default function PaymentGatewaysPage() {
                             {selected && (
                               <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 text-xs font-medium">
                                 <Check className="w-3 h-3" />
-                                البوابة الرئيسية
-                              </span>
+                                {dt("البوابة الرئيسية")}</span>
                             )}
                           </div>
                           <p className="text-sm text-muted-foreground mt-1">
@@ -258,19 +253,15 @@ export default function PaymentGatewaysPage() {
                             <p className="text-xs text-amber-700 mt-2 flex items-start gap-1.5">
                               <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-px" />
                               <span>
-                                غير مهيّأة على الخادم  أضف مفتاح التشفير
-                                <code className="mx-1 font-mono">ALBARAKA_ENC_KEY</code>
-                                من شاشة «Anahtar Yaratma» في البنك.
-                              </span>
+                                {dt("غير مهيّأة على الخادم  أضف مفتاح التشفير")}<code className="mx-1 font-mono">ALBARAKA_ENC_KEY</code>
+                                {dt("من شاشة «Anahtar Yaratma» في البنك.")}</span>
                             </p>
                           )}
                           {gateway.value === "ALBARAKA" &&
                             albarakaConfigured &&
                             albarakaUseOOS && (
                               <p className="text-xs text-muted-foreground mt-2">
-                                يجمع البنك بيانات البطاقة على صفحته الخاصة (Ortak
-                                Ödeme Sayfası).
-                              </p>
+                                {dt("يجمع البنك بيانات البطاقة على صفحته الخاصة (Ortak Ödeme Sayfası).")}</p>
                             )}
                         </div>
                       </div>
@@ -291,7 +282,7 @@ export default function PaymentGatewaysPage() {
           </section>
 
           <section className="space-y-3">
-            <h2 className="text-sm font-semibold text-gray-900">مبلغ التبرع</h2>
+            <h2 className="text-sm font-semibold text-gray-900">{dt("مبلغ التبرع")}</h2>
             <Card className="p-5 sm:p-6">
               <div className="flex items-start justify-between gap-4">
                 <div className="flex items-start gap-3">
@@ -300,18 +291,14 @@ export default function PaymentGatewaysPage() {
                   </div>
                   <div>
                     <h3 className="text-base font-semibold text-gray-900">
-                      السماح بأي مبلغ بعملة المتبرع
-                    </h3>
+                      {dt("السماح بأي مبلغ بعملة المتبرع")}</h3>
                     <p className="text-sm text-muted-foreground mt-1">
                       {allowAnyAmount
-                        ? "مفعّل: يتبرع المتبرع بأي مبلغ بعملته كما يكتبه تمامًا  1 ليرة تُعرض وتُحصَّل 1 ليرة، و1 جنيه يُحصَّل 1 جنيه، دون حد أدنى."
-                        : "معطّل: الحد الأدنى لكل تبرع دولار واحد أو ما يعادله بعملة المتبرع (مثلًا نحو 49 ليرة). ترفض البطاقات والسلة وصفحة الدفع أي مبلغ أقل، ويطلب الموقع من المتبرع رفعه."}
+                        ? dt("مفعّل: يتبرع المتبرع بأي مبلغ بعملته كما يكتبه تمامًا  1 ليرة تُعرض وتُحصَّل 1 ليرة، و1 جنيه يُحصَّل 1 جنيه، دون حد أدنى.")
+                        : dt("معطّل: الحد الأدنى لكل تبرع دولار واحد أو ما يعادله بعملة المتبرع (مثلًا نحو 49 ليرة). ترفض البطاقات والسلة وصفحة الدفع أي مبلغ أقل، ويطلب الموقع من المتبرع رفعه.")}
                     </p>
                     <p className="text-xs text-muted-foreground mt-2">
-                      في الحالتين يُحصَّل التبرع بعملة المتبرع. يُحسب ما يعادل الدولار
-                      بسعر الصرف المحدَّث كل ساعة، ولا يسري الحد الأدنى على الأوقاف
-                      لأن سعرها ثابت.
-                    </p>
+                      {dt("في الحالتين يُحصَّل التبرع بعملة المتبرع. يُحسب ما يعادل الدولار بسعر الصرف المحدَّث كل ساعة، ولا يسري الحد الأدنى على الأوقاف لأن سعرها ثابت.")}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
@@ -329,7 +316,7 @@ export default function PaymentGatewaysPage() {
           </section>
 
           <section className="space-y-3">
-            <h2 className="text-sm font-semibold text-gray-900">بوابات إضافية</h2>
+            <h2 className="text-sm font-semibold text-gray-900">{dt("بوابات إضافية")}</h2>
             <Card className="p-5 sm:p-6">
               <div className="flex items-start justify-between gap-4">
                 <div className="flex items-start gap-3">
@@ -338,13 +325,9 @@ export default function PaymentGatewaysPage() {
                   </div>
                   <div>
                     <h3 className="text-base font-semibold text-gray-900">
-                      PayFor  زراعت كاتيليم (3D Secure للّيرة التركية)
-                    </h3>
+                      {dt("PayFor  زراعت كاتيليم (3D Secure للّيرة التركية)")}</h3>
                     <p className="text-sm text-muted-foreground mt-1">
-                      يُستخدم تلقائيًا للتبرعات الفردية بالليرة التركية (TRY) عبر
-                      تدفّق 3D Secure  وهي نفس حالاته السابقة تمامًا. عند
-                      الإيقاف تتحوّل هذه التبرعات إلى {mainGatewayName}.
-                    </p>
+                      {dtx("يُستخدم تلقائيًا للتبرعات الفردية بالليرة التركية (TRY) عبر تدفّق 3D Secure  وهي نفس حالاته السابقة تمامًا. عند الإيقاف تتحوّل هذه التبرعات إلى {0}.", [mainGatewayName])}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
@@ -362,10 +345,7 @@ export default function PaymentGatewaysPage() {
           </section>
 
           <p className="text-xs text-muted-foreground leading-relaxed">
-            التبرعات الشهرية تمرّ دائمًا عبر Stripe لأنها تحتاج إلى تحصيل متكرر لا
-            توفّره بوابتا 3D Secure. كما يبقى Stripe هو المسار الاحتياطي عند فشل أي
-            عملية 3D Secure.
-          </p>
+            {dt("التبرعات الشهرية تمرّ دائمًا عبر Stripe لأنها تحتاج إلى تحصيل متكرر لا توفّره بوابتا 3D Secure. كما يبقى Stripe هو المسار الاحتياطي عند فشل أي عملية 3D Secure.")}</p>
         </div>
       )}
     </div>

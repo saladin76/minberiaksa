@@ -2447,5 +2447,14 @@
     "givenSoFar": "{count} {unit} givna hittills",
     "chooseCount": "Välj antal {unit}",
     "customCountPh": "Annat antal"
+  },
+  "CategoryLanding": {
+    "heroLead": "{org} – projekt: {name}.",
+    "ctaLabel": "Se projekt",
+    "projectsTitle": "Projekt: {name}",
+    "donateTitle": "Stöd {name}",
+    "achievementsTitle": "Våra resultat: {name}",
+    "statDoneLabel": "Slutfört",
+    "statGoalLabel": "Mål"
   }
 }

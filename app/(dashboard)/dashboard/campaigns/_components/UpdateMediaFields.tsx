@@ -6,6 +6,7 @@ import { toast } from 'react-hot-toast';
 import { Film, Link2, Loader2, Upload, X } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { validateImageFile } from '@/lib/uploads/image-file-rules';
+import { dt, dtx } from "@/lib/dashboard/i18n";
 
 /**
  * The media of a campaign update: a photo, and a video that is either
@@ -63,10 +64,10 @@ export function UpdateMediaFields({
       formData.append('file', file);
       const response = await axios.post('/api/upload', formData);
       onImageChange(response.data.url);
-      toast.success('تم رفع الصورة بنجاح');
+      toast.success(dt("تم رفع الصورة بنجاح"));
     } catch (error) {
       console.error('update image upload failed', error);
-      toast.error('فشل في رفع الصورة');
+      toast.error(dt("فشل في رفع الصورة"));
     } finally {
       setUploadingImage(false);
     }
@@ -74,11 +75,11 @@ export function UpdateMediaFields({
 
   const uploadVideo = async (file: File) => {
     if (!file.type.startsWith('video/')) {
-      toast.error('الملف المختار ليس فيديو');
+      toast.error(dt("الملف المختار ليس فيديو"));
       return;
     }
     if (file.size > MAX_VIDEO_BYTES) {
-      toast.error('حجم الفيديو أكبر من 100 ميجابايت');
+      toast.error(dt("حجم الفيديو أكبر من 100 ميجابايت"));
       return;
     }
     setVideoProgress(0);
@@ -98,10 +99,10 @@ export function UpdateMediaFields({
       const url = response.data?.secure_url as string | undefined;
       if (!url) throw new Error('no url');
       onVideoChange(url);
-      toast.success('تم رفع الفيديو بنجاح');
+      toast.success(dt("تم رفع الفيديو بنجاح"));
     } catch (error) {
       console.error('update video upload failed', error);
-      toast.error('فشل في رفع الفيديو');
+      toast.error(dt("فشل في رفع الفيديو"));
     } finally {
       setVideoProgress(null);
     }
@@ -114,7 +115,7 @@ export function UpdateMediaFields({
     <div className="space-y-5">
       {/* Photo */}
       <div className="space-y-2">
-        <label className="block text-sm font-medium text-gray-700">صورة التحديث (اختياري)</label>
+        <label className="block text-sm font-medium text-gray-700">{dt("صورة التحديث (اختياري)")}</label>
         {image ? (
           <div className="relative">
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -122,8 +123,8 @@ export function UpdateMediaFields({
             <button
               type="button"
               onClick={() => onImageChange('')}
-              className="absolute top-2 right-2 p-1 bg-red-600 text-white rounded-full hover:bg-red-700 transition-colors"
-              aria-label="إزالة الصورة"
+              className="absolute top-2 start-2 p-1 bg-red-600 text-white rounded-full hover:bg-red-700 transition-colors"
+              aria-label={dt("إزالة الصورة")}
             >
               <X className="w-4 h-4" />
             </button>
@@ -148,7 +149,7 @@ export function UpdateMediaFields({
               ) : (
                 <>
                   <Upload className="w-6 h-6 text-gray-400" />
-                  <span className="mt-2 text-sm text-gray-500">اضغط لرفع صورة</span>
+                  <span className="mt-2 text-sm text-gray-500">{dt("اضغط لرفع صورة")}</span>
                 </>
               )}
             </label>
@@ -159,12 +160,12 @@ export function UpdateMediaFields({
       {/* Video */}
       <div className="space-y-2">
         <div className="flex items-center justify-between gap-3">
-          <label className="block text-sm font-medium text-gray-700">فيديو التحديث (اختياري)</label>
+          <label className="block text-sm font-medium text-gray-700">{dt("فيديو التحديث (اختياري)")}</label>
           <div className="inline-flex rounded-lg border p-0.5 text-xs">
             {(
               [
-                { id: 'link', label: 'رابط يوتيوب / فيديو', icon: Link2 },
-                { id: 'upload', label: 'رفع فيديو', icon: Film },
+                { id: 'link', label: dt("رابط يوتيوب / فيديو"), icon: Link2 },
+                { id: 'upload', label: dt("رفع فيديو"), icon: Film },
               ] as const
             ).map((mode) => (
               <button
@@ -186,8 +187,8 @@ export function UpdateMediaFields({
             <button
               type="button"
               onClick={() => onVideoChange('')}
-              className="absolute top-2 right-2 p-1 bg-red-600 text-white rounded-full hover:bg-red-700 transition-colors"
-              aria-label="إزالة الفيديو"
+              className="absolute top-2 start-2 p-1 bg-red-600 text-white rounded-full hover:bg-red-700 transition-colors"
+              aria-label={dt("إزالة الفيديو")}
             >
               <X className="w-4 h-4" />
             </button>
@@ -210,12 +211,12 @@ export function UpdateMediaFields({
               {videoProgress !== null ? (
                 <>
                   <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
-                  <span className="mt-2 text-sm text-gray-500">جارٍ الرفع… {videoProgress}%</span>
+                  <span className="mt-2 text-sm text-gray-500">{dtx("جارٍ الرفع… {0}%", [videoProgress])}</span>
                 </>
               ) : (
                 <>
                   <Film className="w-6 h-6 text-gray-400" />
-                  <span className="mt-2 text-sm text-gray-500">اضغط لرفع فيديو (حتى 100 ميجابايت)</span>
+                  <span className="mt-2 text-sm text-gray-500">{dt("اضغط لرفع فيديو (حتى 100 ميجابايت)")}</span>
                 </>
               )}
             </label>

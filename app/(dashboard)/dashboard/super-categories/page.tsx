@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { errorMessage } from '@/lib/dashboard/client-error-message';
 import { SortableTable, useReorder } from '../_components/SortableTable';
+import { dt, dtx } from "@/lib/dashboard/i18n";
 
 interface SuperCategoryRow {
   id: string;
@@ -44,7 +45,7 @@ export default function SuperCategoriesPage() {
       setRows(Array.isArray(items) ? items : []);
     } catch (e) {
       console.error(e);
-      toast.error(errorMessage(e, 'تعذّر تحميل الأقسام الكبرى'));
+      toast.error(errorMessage(e, dt("تعذّر تحميل الأقسام الكبرى")));
     } finally {
       setLoading(false);
     }
@@ -56,7 +57,7 @@ export default function SuperCategoriesPage() {
     rows,
     setRows,
     useCallback(async (payload) => { await axios.post('/api/super-categories/reorder', { superCategories: payload }); }, []),
-    useCallback((e: unknown) => { toast.error(errorMessage(e, 'تعذّر حفظ الترتيب')); fetchRows(); }, [fetchRows]),
+    useCallback((e: unknown) => { toast.error(errorMessage(e, dt("تعذّر حفظ الترتيب"))); fetchRows(); }, [fetchRows]),
   );
 
   const toggleActive = async (row: SuperCategoryRow, next: boolean) => {
@@ -67,7 +68,7 @@ export default function SuperCategoriesPage() {
       await axios.put(`/api/super-categories/${row.id}`, { isActive: next });
       setRows((prev) => prev.map((r) => (r.id === row.id ? { ...r, isActive: next } : r)));
     } catch (e) {
-      toast.error(errorMessage(e, 'تعذّر تغيير الحالة'));
+      toast.error(errorMessage(e, dt("تعذّر تغيير الحالة")));
     } finally {
       setTogglingId(null);
     }
@@ -79,10 +80,10 @@ export default function SuperCategoriesPage() {
     try {
       await axios.delete(`/api/super-categories/${deleteTarget.id}`);
       setRows((prev) => prev.filter((r) => r.id !== deleteTarget.id));
-      toast.success('تم حذف القسم');
+      toast.success(dt("تم حذف القسم"));
       setDeleteTarget(null);
     } catch (e) {
-      toast.error(errorMessage(e, 'تعذّر حذف القسم'));
+      toast.error(errorMessage(e, dt("تعذّر حذف القسم")));
     } finally {
       setDeleting(false);
     }
@@ -100,27 +101,24 @@ export default function SuperCategoriesPage() {
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <h1 className="text-lg font-bold">الأقسام الكبرى</h1>
+          <h1 className="text-lg font-bold">{dt("الأقسام الكبرى")}</h1>
           <p className="text-xs text-slate-500">
-            صفحات برامج كاملة تجمع المشاريع والمقالات والفيديوهات والدورات والتقارير والكتيبات، بواجهة ومحتوى قابلين للتعديل.
-          </p>
+            {dt("صفحات برامج كاملة تجمع المشاريع والمقالات والفيديوهات والدورات والتقارير والكتيبات، بواجهة ومحتوى قابلين للتعديل.")}</p>
         </div>
         <Button onClick={() => router.push('/dashboard/super-categories/new')}>
-          <Plus className="ml-1 h-4 w-4" />
-          قسم جديد
-        </Button>
+          <Plus className="me-1 h-4 w-4" />
+          {dt("قسم جديد")}</Button>
       </div>
 
       {rows.length === 0 ? (
         <EmptyState
           icon={Layers}
-          title="لا توجد أقسام كبرى"
-          description="أنشئ أول قسم: صفحة برنامج بواجهتها ومحتواها."
+          title={dt("لا توجد أقسام كبرى")}
+          description={dt("أنشئ أول قسم: صفحة برنامج بواجهتها ومحتواها.")}
           action={
             <Button onClick={() => router.push('/dashboard/super-categories/new')}>
-              <Plus className="ml-1 h-4 w-4" />
-              قسم جديد
-            </Button>
+              <Plus className="me-1 h-4 w-4" />
+              {dt("قسم جديد")}</Button>
           }
         />
       ) : (
@@ -133,7 +131,7 @@ export default function SuperCategoriesPage() {
           isDimmed={(r) => !r.isActive}
           columns={[
             {
-              header: 'القسم',
+              header: dt("القسم"),
               cell: (r) => (
                 <div className="flex items-center gap-2">
                   {r.heroImage ? (
@@ -154,11 +152,11 @@ export default function SuperCategoriesPage() {
                 </div>
               ),
             },
-            { header: 'المحتوى', cell: (r) => <span className="text-xs text-slate-600">{r.itemCount}</span> },
-            { header: 'أقسام الصفحة', cell: (r) => <span className="text-xs text-slate-600">{r.blockCount}</span> },
-            { header: 'الترجمات', cell: (r) => <span className="text-xs text-slate-600">{r.translationCount}</span> },
+            { header: dt("المحتوى"), cell: (r) => <span className="text-xs text-slate-600">{r.itemCount}</span> },
+            { header: dt("أقسام الصفحة"), cell: (r) => <span className="text-xs text-slate-600">{r.blockCount}</span> },
+            { header: dt("الترجمات"), cell: (r) => <span className="text-xs text-slate-600">{r.translationCount}</span> },
             {
-              header: 'منشور',
+              header: dt("منشور"),
               cell: (r) => (
                 <Switch checked={r.isActive} disabled={togglingId === r.id} onCheckedChange={(v) => toggleActive(r, v)} />
               ),
@@ -184,18 +182,15 @@ export default function SuperCategoriesPage() {
       <AlertDialog open={!!deleteTarget} onOpenChange={(o) => !o && setDeleteTarget(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>حذف القسم الكبير</AlertDialogTitle>
+            <AlertDialogTitle>{dt("حذف القسم الكبير")}</AlertDialogTitle>
             <AlertDialogDescription>
-              سيتم حذف صفحة «{deleteTarget?.title}» بأقسامها وترجماتها نهائيًا. المشاريع والمقالات وبقية المحتوى المرتبط
-              لا تُحذف  يُحذف ارتباطها بهذه الصفحة فقط.
-            </AlertDialogDescription>
+              {dtx("سيتم حذف صفحة «{0}» بأقسامها وترجماتها نهائيًا. المشاريع والمقالات وبقية المحتوى المرتبط لا تُحذف  يُحذف ارتباطها بهذه الصفحة فقط.", [deleteTarget?.title])}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={deleting}>إلغاء</AlertDialogCancel>
+            <AlertDialogCancel disabled={deleting}>{dt("إلغاء")}</AlertDialogCancel>
             <AlertDialogAction onClick={confirmDelete} disabled={deleting}>
-              {deleting && <Loader2 className="ml-2 h-4 w-4 animate-spin" />}
-              حذف
-            </AlertDialogAction>
+              {deleting && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
+              {dt("حذف")}</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

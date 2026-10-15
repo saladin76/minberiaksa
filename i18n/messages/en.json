@@ -3493,5 +3493,14 @@
     "chooseFirst": "Choose how you would like to give first",
     "otherAmount": "Other",
     "otherCount": "Other"
+  },
+  "CategoryLanding": {
+    "heroLead": "{org} projects in {name}.",
+    "ctaLabel": "Browse projects",
+    "projectsTitle": "Projects in {name}",
+    "donateTitle": "Support {name}",
+    "achievementsTitle": "Our achievements in {name}",
+    "statDoneLabel": "Completed",
+    "statGoalLabel": "Goal"
   }
 }

@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { dashDir, dt } from "@/lib/dashboard/i18n";
 
 interface CampaignOption {
   id: string;
@@ -147,7 +148,7 @@ export function EditDonationDialog({ donationId, onClose, onSaved }: Props) {
         );
       } catch (err) {
         console.error("[Edit Donation] load failed:", err);
-        toast.error("فشل في تحميل تفاصيل التبرع");
+        toast.error(dt("فشل في تحميل تفاصيل التبرع"));
         onClose();
       } finally {
         if (!cancelled) setLoading(false);
@@ -271,13 +272,13 @@ export function EditDonationDialog({ donationId, onClose, onSaved }: Props) {
         items,
         categoryItems,
       });
-      toast.success("تم تعديل التبرع وتحديث الإجماليات");
+      toast.success(dt("تم تعديل التبرع وتحديث الإجماليات"));
       onSaved();
       onClose();
     } catch (err) {
       console.error("[Edit Donation] save failed:", err);
       const message = (err as { response?: { data?: { error?: string } } })?.response?.data?.error;
-      toast.error(message || "فشل في تعديل التبرع");
+      toast.error(message || dt("فشل في تعديل التبرع"));
     } finally {
       setSubmitting(false);
       setShowConfirm(false);
@@ -300,13 +301,11 @@ export function EditDonationDialog({ donationId, onClose, onSaved }: Props) {
 
   return (
     <Dialog open onOpenChange={(open) => (!open && !submitting ? onClose() : null)}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto" dir="rtl">
-        <DialogHeader className="text-right">
-          <DialogTitle>تعديل التبرع</DialogTitle>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto" dir={dashDir()}>
+        <DialogHeader className="text-start">
+          <DialogTitle>{dt("تعديل التبرع")}</DialogTitle>
           <DialogDescription className="text-xs leading-relaxed">
-            أي تغيير في القيمة أو الحالة سيُحدّث تلقائيًا إجماليات المشاريع
-            والحملات. تأكّد من القيم قبل الحفظ.
-          </DialogDescription>
+            {dt("أي تغيير في القيمة أو الحالة سيُحدّث تلقائيًا إجماليات المشاريع والحملات. تأكّد من القيم قبل الحفظ.")}</DialogDescription>
         </DialogHeader>
 
         {loading || !donation ? (
@@ -314,16 +313,16 @@ export function EditDonationDialog({ donationId, onClose, onSaved }: Props) {
             <Loader2 className="h-6 w-6 animate-spin text-slate-400" />
           </div>
         ) : (
-          <div className="space-y-4 text-right text-sm">
+          <div className="space-y-4 text-start text-sm">
             {/* Donor + meta */}
             <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs grid grid-cols-2 gap-y-1">
-              <span className="text-slate-500">المتبرع</span>
+              <span className="text-slate-500">{dt("المتبرع")}</span>
               <span className="font-medium text-slate-800 text-left" dir="auto">
                 {donor}
               </span>
-              <span className="text-slate-500">العملة</span>
-              <span className="font-medium text-slate-800 text-left">{donation.currency}</span>
-              <span className="text-slate-500">القيمة الحالية</span>
+              <span className="text-slate-500">{dt("العملة")}</span>
+              <span className="font-medium text-slate-800 text-end">{donation.currency}</span>
+              <span className="text-slate-500">{dt("القيمة الحالية")}</span>
               <span className="font-medium text-slate-800 text-left" dir="ltr">
                 {donation.amount} {donation.currency}
               </span>
@@ -335,7 +334,7 @@ export function EditDonationDialog({ donationId, onClose, onSaved }: Props) {
 
             {/* Status */}
             <div className="space-y-1">
-              <label className="text-xs font-medium text-slate-700">الحالة</label>
+              <label className="text-xs font-medium text-slate-700">{dt("الحالة")}</label>
               <Select
                 value={statusChoice}
                 onValueChange={(v) =>
@@ -347,35 +346,32 @@ export function EditDonationDialog({ donationId, onClose, onSaved }: Props) {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="PAID">
-                    {wasPending ? "ناجح  تأكيد الدفع الآن (PAID)" : "ناجح (PAID)"}
+                    {wasPending ? dt("ناجح  تأكيد الدفع الآن (PAID)") : dt("ناجح (PAID)")}
                   </SelectItem>
                   {wasPending && (
-                    <SelectItem value="PAID_PENDING">قيد التأكيد (PAID  بدون paidAt)</SelectItem>
+                    <SelectItem value="PAID_PENDING">{dt("قيد التأكيد (PAID  بدون paidAt)")}</SelectItem>
                   )}
-                  <SelectItem value="FAILED">فاشل (FAILED)</SelectItem>
+                  <SelectItem value="FAILED">{dt("فاشل (FAILED)")}</SelectItem>
                 </SelectContent>
               </Select>
               {statusWillRemoveContribution && (
                 <p className="text-[11px] text-rose-600 leading-relaxed">
-                  تحويل التبرع إلى «فاشل» سيخصم قيمته من إجمالي المشاريع/الحملات المرتبطة.
-                </p>
+                  {dt("تحويل التبرع إلى «فاشل» سيخصم قيمته من إجمالي المشاريع/الحملات المرتبطة.")}</p>
               )}
               {statusWillAddContribution && (
                 <p className="text-[11px] text-amber-600 leading-relaxed">
-                  تحويل التبرع إلى «ناجح» سيُسجّل تاريخ الدفع الآن ويُضيف قيمته إلى إجمالي المشاريع/الحملات المرتبطة.
-                </p>
+                  {dt("تحويل التبرع إلى «ناجح» سيُسجّل تاريخ الدفع الآن ويُضيف قيمته إلى إجمالي المشاريع/الحملات المرتبطة.")}</p>
               )}
               {wasPending && statusChoice === "PAID_PENDING" && (
                 <p className="text-[11px] text-amber-600 leading-relaxed">
-                  هذا التبرع لم يُسجّل بـ paidAt  لن يُضاف إلى الإجماليات حتى يُؤكد الدفع.
-                </p>
+                  {dt("هذا التبرع لم يُسجّل بـ paidAt  لن يُضاف إلى الإجماليات حتى يُؤكد الدفع.")}</p>
               )}
             </div>
 
             {/* Line items editor */}
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <label className="text-xs font-medium text-slate-700">عناصر التبرع</label>
+                <label className="text-xs font-medium text-slate-700">{dt("عناصر التبرع")}</label>
                 <div className="flex items-center gap-2">
                   <Button
                     type="button"
@@ -384,8 +380,7 @@ export function EditDonationDialog({ donationId, onClose, onSaved }: Props) {
                     className="h-7 px-2 text-[11px]"
                     onClick={() => addLine("campaign")}
                   >
-                    <Plus className="h-3 w-3 ms-1" /> مشروع
-                  </Button>
+                    <Plus className="h-3 w-3 ms-1" /> {dt(" مشروع")}</Button>
                   <Button
                     type="button"
                     variant="outline"
@@ -393,15 +388,13 @@ export function EditDonationDialog({ donationId, onClose, onSaved }: Props) {
                     className="h-7 px-2 text-[11px]"
                     onClick={() => addLine("category")}
                   >
-                    <Plus className="h-3 w-3 ms-1" /> حملة
-                  </Button>
+                    <Plus className="h-3 w-3 ms-1" /> {dt(" حملة")}</Button>
                 </div>
               </div>
 
               {editableItems.length === 0 ? (
                 <p className="rounded-lg border border-dashed border-slate-300 bg-slate-50 p-3 text-xs text-slate-500">
-                  لا توجد عناصر  أضف على الأقل مشروعًا أو حملة واحدة.
-                </p>
+                  {dt("لا توجد عناصر  أضف على الأقل مشروعًا أو حملة واحدة.")}</p>
               ) : (
                 <div className="space-y-2">
                   {editableItems.map((it, idx) => {
@@ -418,20 +411,19 @@ export function EditDonationDialog({ donationId, onClose, onSaved }: Props) {
                               : "bg-emerald-50 text-emerald-700"
                           }`}
                         >
-                          {it.kind === "campaign" ? "مشروع" : "حملة"}
+                          {it.kind === "campaign" ? dt("مشروع") : dt("حملة")}
                         </span>
                         <Select
                           value={it.refId || undefined}
                           onValueChange={(v) => setLineRef(idx, v)}
                         >
                           <SelectTrigger className="flex-1 h-8 text-xs">
-                            <SelectValue placeholder={it.kind === "campaign" ? "اختر مشروعًا" : "اختر حملة"} />
+                            <SelectValue placeholder={it.kind === "campaign" ? dt("اختر مشروعًا") : dt("اختر حملة")} />
                           </SelectTrigger>
                           <SelectContent>
                             {options.length === 0 ? (
                               <SelectItem value="__none" disabled>
-                                لا توجد خيارات
-                              </SelectItem>
+                                {dt("لا توجد خيارات")}</SelectItem>
                             ) : (
                               options.map((o) => (
                                 <SelectItem key={o.id} value={o.id}>
@@ -456,7 +448,7 @@ export function EditDonationDialog({ donationId, onClose, onSaved }: Props) {
                           type="button"
                           onClick={() => removeLine(idx)}
                           className="text-rose-500 hover:text-rose-700"
-                          aria-label="حذف السطر"
+                          aria-label={dt("حذف السطر")}
                         >
                           <X className="h-4 w-4" />
                         </button>
@@ -467,7 +459,7 @@ export function EditDonationDialog({ donationId, onClose, onSaved }: Props) {
               )}
 
               <div className="flex items-center justify-between rounded-lg bg-slate-100 px-3 py-2 text-xs">
-                <span className="text-slate-600">إجمالي العناصر الجديد</span>
+                <span className="text-slate-600">{dt("إجمالي العناصر الجديد")}</span>
                 <span className="font-bold text-slate-900" dir="ltr">
                   {newAmountSum} {donation.currency}
                 </span>
@@ -475,8 +467,7 @@ export function EditDonationDialog({ donationId, onClose, onSaved }: Props) {
 
               {hasDuplicateLine && (
                 <p className="text-[11px] text-rose-600">
-                  يوجد سطران للمشروع/الحملة نفسها  ادمجهما في سطر واحد.
-                </p>
+                  {dt("يوجد سطران للمشروع/الحملة نفسها  ادمجهما في سطر واحد.")}</p>
               )}
             </div>
           </div>
@@ -492,31 +483,28 @@ export function EditDonationDialog({ donationId, onClose, onSaved }: Props) {
             disabled={!canSave || !dirty}
             className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50"
           >
-            حفظ التعديلات
-          </Button>
+            {dt("حفظ التعديلات")}</Button>
           <Button type="button" variant="outline" onClick={onClose} disabled={submitting}>
-            إلغاء
-          </Button>
+            {dt("إلغاء")}</Button>
         </DialogFooter>
 
         {/* Confirmation gate  second click pattern, since edits are destructive. */}
         {showConfirm && (
           <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-4">
-            <div className="w-full max-w-sm rounded-xl bg-white p-5 shadow-2xl text-right" dir="rtl">
+            <div className="w-full max-w-sm rounded-xl bg-white p-5 shadow-2xl text-start" dir={dashDir()}>
               <div className="flex items-start gap-3">
                 <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-amber-100 text-amber-600">
                   <AlertTriangle className="h-5 w-5" />
                 </div>
                 <div className="flex-1 space-y-1">
-                  <h3 className="text-sm font-bold text-slate-900">تأكيد التعديل</h3>
+                  <h3 className="text-sm font-bold text-slate-900">{dt("تأكيد التعديل")}</h3>
                   <p className="text-xs text-slate-600 leading-relaxed">
-                    سيتم تطبيق التعديل وتحديث إجماليات المشاريع/الحملات تلقائيًا. هل أنت متأكد؟
-                  </p>
+                    {dt("سيتم تطبيق التعديل وتحديث إجماليات المشاريع/الحملات تلقائيًا. هل أنت متأكد؟")}</p>
                 </div>
               </div>
-              <div className="mt-4 space-y-1 text-right">
+              <div className="mt-4 space-y-1 text-start">
                 <label className="block text-xs font-medium text-slate-700">
-                  للتأكيد، اكتب إجمالي عناصر التبرع الجديد تمامًا (<span dir="ltr">{confirmExpected}</span>):
+                  {dt("للتأكيد، اكتب إجمالي عناصر التبرع الجديد تمامًا (")}<span dir="ltr">{confirmExpected}</span>):
                 </label>
                 <input
                   type="text"
@@ -529,7 +517,7 @@ export function EditDonationDialog({ donationId, onClose, onSaved }: Props) {
                   disabled={submitting}
                 />
                 {confirmTyped && !confirmMatches && (
-                  <p className="text-[11px] text-rose-600">القيمة المُدخلة لا تطابق إجمالي عناصر التبرع الجديد.</p>
+                  <p className="text-[11px] text-rose-600">{dt("القيمة المُدخلة لا تطابق إجمالي عناصر التبرع الجديد.")}</p>
                 )}
               </div>
               <div className="mt-4 flex justify-between gap-2">
@@ -542,10 +530,9 @@ export function EditDonationDialog({ donationId, onClose, onSaved }: Props) {
                   {submitting ? (
                     <>
                       <Loader2 className="h-3.5 w-3.5 animate-spin ms-2" />
-                      جاري الحفظ...
-                    </>
+                      {dt("جاري الحفظ...")}</>
                   ) : (
-                    "نعم، طبّق التعديل"
+                    dt("نعم، طبّق التعديل")
                   )}
                 </Button>
                 <Button
@@ -554,8 +541,7 @@ export function EditDonationDialog({ donationId, onClose, onSaved }: Props) {
                   onClick={() => setShowConfirm(false)}
                   disabled={submitting}
                 >
-                  تراجع
-                </Button>
+                  {dt("تراجع")}</Button>
               </div>
             </div>
           </div>

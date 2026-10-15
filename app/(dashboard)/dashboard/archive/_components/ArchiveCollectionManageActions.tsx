@@ -6,6 +6,7 @@ import { useState } from "react";
 import { Edit3, Loader2, Save, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { ArchiveCollection } from "@/lib/archive/archive-types";
+import { dt } from "@/lib/dashboard/i18n";
 
 type Props = { collection: ArchiveCollection };
 type Feedback = { tone: "success" | "error"; message: string } | null;
@@ -32,16 +33,16 @@ export function ArchiveCollectionManageActions({ collection }: Props) {
     const result = await response.json().catch(() => null);
     setBusy(false);
     if (!response.ok || !result?.ok) {
-      setFeedback({ tone: "error", message: result?.error || result?.message || "تعذر حفظ التعديلات" });
+      setFeedback({ tone: "error", message: result?.error || result?.message || dt("تعذر حفظ التعديلات") });
       return;
     }
-    setFeedback({ tone: "success", message: result?.message || "تم حفظ التعديلات" });
+    setFeedback({ tone: "success", message: result?.message || dt("تم حفظ التعديلات") });
     setEditing(false);
     router.refresh();
   }
 
   async function removeItem() {
-    if (busy || !window.confirm("هل تريد حذف هذه المجموعة؟")) return;
+    if (busy || !window.confirm(dt("هل تريد حذف هذه المجموعة؟"))) return;
     setBusy(true);
     setFeedback(null);
     const response = await fetch("/api/admin/archive/collections", {
@@ -52,7 +53,7 @@ export function ArchiveCollectionManageActions({ collection }: Props) {
     const result = await response.json().catch(() => null);
     setBusy(false);
     if (!response.ok || !result?.ok) {
-      setFeedback({ tone: "error", message: result?.error || result?.message || "تعذر تنفيذ الإجراء" });
+      setFeedback({ tone: "error", message: result?.error || result?.message || dt("تعذر تنفيذ الإجراء") });
       return;
     }
     router.refresh();
@@ -63,35 +64,32 @@ export function ArchiveCollectionManageActions({ collection }: Props) {
       {editing ? (
         <div className="grid gap-2">
           <div className="grid gap-2 md:grid-cols-3">
-            <Field label="اسم المجموعة">
+            <Field label={dt("اسم المجموعة")}>
               <input value={name} onChange={(event) => setName(event.target.value)} className="h-8 rounded-md border px-2 text-xs outline-none focus:border-brand" />
             </Field>
-            <Field label="النوع">
+            <Field label={dt("النوع")}>
               <input value={type} onChange={(event) => setType(event.target.value)} className="h-8 rounded-md border px-2 text-xs outline-none focus:border-brand" />
             </Field>
-            <Field label="الرابط المختصر">
+            <Field label={dt("الرابط المختصر")}>
               <input dir="ltr" value={slug} onChange={(event) => setSlug(event.target.value)} className="h-8 rounded-md border px-2 text-left font-mono text-xs outline-none focus:border-brand" />
             </Field>
           </div>
-          <Field label="الوصف">
+          <Field label={dt("الوصف")}>
             <textarea value={description} onChange={(event) => setDescription(event.target.value)} className="min-h-14 rounded-md border px-2 py-2 text-xs outline-none focus:border-brand" />
           </Field>
           <div className="flex flex-wrap gap-2">
             <Button type="button" size="sm" onClick={saveChanges} disabled={busy} className="h-8 gap-1.5 px-2.5 text-xs font-bold">
               {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
-              حفظ
-            </Button>
+              {dt("حفظ")}</Button>
             <Button type="button" size="sm" variant="outline" onClick={() => setEditing(false)} disabled={busy} className="h-8 gap-1.5 px-2.5 text-xs font-bold">
-              <X className="h-3.5 w-3.5" /> إلغاء
-            </Button>
+              <X className="h-3.5 w-3.5" /> {dt(" إلغاء")}</Button>
           </div>
         </div>
       ) : (
         <div className="flex items-center gap-2">
           <Button type="button" size="sm" variant="outline" onClick={() => setEditing(true)} className="h-8 gap-1.5 px-2.5 text-xs font-bold">
-            <Edit3 className="h-3.5 w-3.5" /> تعديل
-          </Button>
-          <Button type="button" size="sm" variant="outline" onClick={removeItem} disabled={busy} aria-label="حذف" title="حذف" className="h-8 w-8 p-0 text-rose-700">
+            <Edit3 className="h-3.5 w-3.5" /> {dt(" تعديل")}</Button>
+          <Button type="button" size="sm" variant="outline" onClick={removeItem} disabled={busy} aria-label={dt("حذف")} title={dt("حذف")} className="h-8 w-8 p-0 text-rose-700">
             <Trash2 className="h-3.5 w-3.5" />
           </Button>
         </div>

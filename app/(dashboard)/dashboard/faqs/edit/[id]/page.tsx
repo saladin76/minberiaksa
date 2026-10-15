@@ -12,6 +12,7 @@ import {
   emptyFaq,
   type FaqFormValues,
 } from '../../_components/FaqForm';
+import { dt } from "@/lib/dashboard/i18n";
 
 export default function EditFaqPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -37,7 +38,7 @@ export default function EditFaqPage({ params }: { params: Promise<{ id: string }
       .catch((e) => {
         if (!live) return;
         setMissing(true);
-        toast.error(errorMessage(e, 'تعذّر تحميل السؤال'));
+        toast.error(errorMessage(e, dt("تعذّر تحميل السؤال")));
       });
     return () => {
       live = false;
@@ -45,7 +46,7 @@ export default function EditFaqPage({ params }: { params: Promise<{ id: string }
   }, [id]);
 
   if (missing) {
-    return <p className="py-24 text-center text-sm text-slate-500">السؤال غير موجود.</p>;
+    return <p className="py-24 text-center text-sm text-slate-500">{dt("السؤال غير موجود.")}</p>;
   }
 
   if (!initial) {

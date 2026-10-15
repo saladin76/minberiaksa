@@ -14,6 +14,7 @@ import {
   type IconCatalogEntry,
   type IconSector,
 } from "./category-icon-catalog";
+import { dashIntl, dt } from "@/lib/dashboard/i18n";
 
 /**
  * ISO 3166-1 alpha-2 codes, so every country the flag CDN publishes can be
@@ -102,7 +103,7 @@ export function CategoryIconPicker({
 
   const iconResultCount = iconGroups.reduce((sum, group) => sum + group.entries.length, 0);
 
-  const names = useMemo(() => countryNames("ar"), []);
+  const names = useMemo(() => countryNames(dashIntl("ar")), []);
   const englishNames = useMemo(() => countryNames("en"), []);
 
   const visibleCodes = useMemo(() => {
@@ -138,7 +139,7 @@ export function CategoryIconPicker({
             type="button"
             onClick={() => onChange("")}
             className="text-gray-400 hover:text-red-600 transition-colors"
-            title="إزالة الأيقونة"
+            title={dt("إزالة الأيقونة")}
           >
             <X className="w-4 h-4" />
           </button>
@@ -147,8 +148,8 @@ export function CategoryIconPicker({
 
       <div className="inline-flex rounded-lg border border-gray-200 p-1">
         {([
-          { key: "icon", label: "أيقونة" },
-          { key: "flag", label: "علم دولة" },
+          { key: "icon", label: dt("أيقونة") },
+          { key: "flag", label: dt("علم دولة") },
         ] as const).map((tab) => (
           <button
             key={tab.key}
@@ -171,7 +172,7 @@ export function CategoryIconPicker({
               type="text"
               value={iconQuery}
               onChange={(event) => setIconQuery(event.target.value)}
-              placeholder="ابحث عن أيقونة (مسجد، بئر، أضحية، خيمة، يتيم...)"
+              placeholder={dt("ابحث عن أيقونة (مسجد، بئر، أضحية، خيمة، يتيم...)")}
               className="w-full rounded-lg border border-gray-200 py-2 ps-9 pe-3 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/15"
             />
           </div>
@@ -213,8 +214,7 @@ export function CategoryIconPicker({
 
             {iconResultCount === 0 && (
               <p className="py-4 text-center text-xs text-gray-400">
-                لا توجد أيقونة مطابقة.
-              </p>
+                {dt("لا توجد أيقونة مطابقة.")}</p>
             )}
           </div>
         </div>
@@ -226,7 +226,7 @@ export function CategoryIconPicker({
               type="text"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
-              placeholder="ابحث باسم الدولة أو رمزها (TR، فلسطين، Turkey)"
+              placeholder={dt("ابحث باسم الدولة أو رمزها (TR، فلسطين، Turkey)")}
               className="w-full rounded-lg border border-gray-200 py-2 ps-9 pe-3 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/15"
             />
           </div>
@@ -252,8 +252,7 @@ export function CategoryIconPicker({
             ))}
             {visibleCodes.length === 0 && (
               <p className="col-span-full py-4 text-center text-xs text-gray-400">
-                لا توجد دولة مطابقة.
-              </p>
+                {dt("لا توجد دولة مطابقة.")}</p>
             )}
           </div>
         </div>

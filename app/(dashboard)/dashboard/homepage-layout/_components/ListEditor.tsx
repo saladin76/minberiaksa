@@ -22,11 +22,12 @@ import {
   type HomeListSort,
 } from "@/lib/minbar/home-layout";
 import { move, useDragReorder } from "./reorder";
+import { dt, dtx } from "@/lib/dashboard/i18n";
 
 const MODES: Array<{ id: HomeListMode; title: string; hint: string; icon: typeof Sparkles }> = [
-  { id: "auto", title: "تلقائي", hint: "يُرتَّب حسب القاعدة ويُعرض أول عدد تحدده", icon: Sparkles },
-  { id: "manual", title: "اختيار يدوي", hint: "تختار العناصر بنفسك وترتّبها حسب الأولوية", icon: Hand },
-  { id: "pinned", title: "مثبّت + تلقائي", hint: "عناصرك المختارة أولًا، ثم تكملة تلقائية", icon: Pin },
+  { id: "auto", get title() { return dt("تلقائي"); }, get hint() { return dt("يُرتَّب حسب القاعدة ويُعرض أول عدد تحدده"); }, icon: Sparkles },
+  { id: "manual", get title() { return dt("اختيار يدوي"); }, get hint() { return dt("تختار العناصر بنفسك وترتّبها حسب الأولوية"); }, icon: Hand },
+  { id: "pinned", get title() { return dt("مثبّت + تلقائي"); }, get hint() { return dt("عناصرك المختارة أولًا، ثم تكملة تلقائية"); }, icon: Pin },
 ];
 
 const QUICK_LIMITS = [3, 4, 5, 6, 8, 12];
@@ -93,18 +94,17 @@ export function ListEditor({
               {meta.label}
               {options && config.show && (
                 <Badge variant="secondary" className="font-normal">
-                  يظهر {preview.length} من {total}
+                  {dtx("يظهر {0} من {1}", [preview.length, total])}
                 </Badge>
               )}
-              {!config.show && <Badge variant="outline" className="font-normal">مخفي</Badge>}
+              {!config.show && <Badge variant="outline" className="font-normal">{dt("مخفي")}</Badge>}
             </CardTitle>
-            <CardDescription className="mt-1">اختر طريقة اختيار العناصر وترتيبها في هذا الشريط.</CardDescription>
+            <CardDescription className="mt-1">{dt("اختر طريقة اختيار العناصر وترتيبها في هذا الشريط.")}</CardDescription>
           </div>
           {showToggle && (
             <label className="flex cursor-pointer items-center gap-2 text-sm">
               {config.show ? <Eye className="h-4 w-4 text-muted-foreground" /> : <EyeOff className="h-4 w-4 text-muted-foreground" />}
-              إظهار هذا الشريط
-              <Switch checked={config.show} onCheckedChange={(v) => set("show", v)} />
+              {dt("إظهار هذا الشريط")}<Switch checked={config.show} onCheckedChange={(v) => set("show", v)} />
             </label>
           )}
         </div>
@@ -113,7 +113,7 @@ export function ListEditor({
       {config.show && (
         <CardContent className="space-y-6">
           {/* ── Mode ─────────────────────────────────────────────────── */}
-          <div className="grid gap-2 sm:grid-cols-3" role="radiogroup" aria-label="طريقة العرض">
+          <div className="grid gap-2 sm:grid-cols-3" role="radiogroup" aria-label={dt("طريقة العرض")}>
             {MODES.map((m) => {
               const active = config.mode === m.id;
               const Icon = m.icon;
@@ -140,7 +140,7 @@ export function ListEditor({
           {usesRules && (
             <div className="grid gap-4 rounded-xl border bg-muted/30 p-4 md:grid-cols-2">
               <div className="space-y-2">
-                <Label>{config.mode === "pinned" ? "ترتيب التكملة التلقائية" : "الترتيب"}</Label>
+                <Label>{config.mode === "pinned" ? dt("ترتيب التكملة التلقائية") : dt("الترتيب")}</Label>
                 <Select value={config.sort} onValueChange={(v) => set("sort", v as HomeListSort)}>
                   <SelectTrigger>
                     <SelectValue />
@@ -155,7 +155,7 @@ export function ListEditor({
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label htmlFor={`limit-${listId}`}>{config.mode === "pinned" ? "العدد الإجمالي (مع المثبّت)" : "عدد العناصر"}</Label>
+                <Label htmlFor={`limit-${listId}`}>{config.mode === "pinned" ? dt("العدد الإجمالي (مع المثبّت)") : dt("عدد العناصر")}</Label>
                 <div className="flex flex-wrap items-center gap-1.5">
                   <Input
                     id={`limit-${listId}`}
@@ -164,7 +164,7 @@ export function ListEditor({
                     max={HOME_LIST_MAX_LIMIT}
                     className="h-9 w-20"
                     value={config.limit === 0 ? "" : config.limit}
-                    placeholder="الكل"
+                    placeholder={dt("الكل")}
                     onChange={(e) => {
                       const n = e.target.value === "" ? 0 : Math.trunc(Number(e.target.value));
                       if (Number.isFinite(n)) set("limit", Math.min(Math.max(n, 0), HOME_LIST_MAX_LIMIT));
@@ -176,11 +176,10 @@ export function ListEditor({
                     </Button>
                   ))}
                   <Button type="button" size="sm" variant={config.limit === 0 ? "default" : "outline"} className="h-9 px-3" onClick={() => set("limit", 0)}>
-                    الكل
-                  </Button>
+                    {dt("الكل")}</Button>
                 </div>
                 {meta.defaultLimit > 0 && config.limit !== meta.defaultLimit && (
-                  <p className="text-xs text-muted-foreground">العدد الافتراضي في التصميم: {meta.defaultLimit}</p>
+                  <p className="text-xs text-muted-foreground">{dtx("العدد الافتراضي في التصميم: {0}", [meta.defaultLimit])}</p>
                 )}
               </div>
             </div>
@@ -191,15 +190,14 @@ export function ListEditor({
             <div className="grid gap-4 lg:grid-cols-2">
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <Label>{config.mode === "pinned" ? "العناصر المثبّتة (بالأولوية)" : "العناصر المختارة (بالأولوية)"}</Label>
+                  <Label>{config.mode === "pinned" ? dt("العناصر المثبّتة (بالأولوية)") : dt("العناصر المختارة (بالأولوية)")}</Label>
                   <span className="text-xs text-muted-foreground">
                     {config.ids.length}/{HOME_LIST_MAX_IDS}
                   </span>
                 </div>
                 {config.ids.length === 0 ? (
                   <div className="rounded-xl border border-dashed p-6 text-center text-sm text-muted-foreground">
-                    لم تختر شيئًا بعد. أضف عناصر من القائمة المجاورة.
-                    {config.mode === "manual" && <span className="mt-1 block text-destructive">الاختيار اليدوي يحتاج عنصرًا واحدًا على الأقل.</span>}
+                    {dt("لم تختر شيئًا بعد. أضف عناصر من القائمة المجاورة.")}{config.mode === "manual" && <span className="mt-1 block text-destructive">{dt("الاختيار اليدوي يحتاج عنصرًا واحدًا على الأقل.")}</span>}
                   </div>
                 ) : (
                   <ol className="max-h-[420px] space-y-1.5 overflow-y-auto pe-1">
@@ -216,18 +214,18 @@ export function ListEditor({
                           <Thumb src={item?.image} />
                           <span className="min-w-0 flex-1">
                             <span className={`block truncate text-sm font-medium ${item ? "" : "text-destructive"}`}>
-                              {item?.title ?? (loadingOptions ? "…" : "عنصر غير متاح (محذوف أو غير مفعّل)")}
+                              {item?.title ?? (loadingOptions ? "…" : dt("عنصر غير متاح (محذوف أو غير مفعّل)"))}
                             </span>
                             {item?.subtitle && <span className="block truncate text-xs text-muted-foreground">{item.subtitle}</span>}
                           </span>
                           <div className="flex shrink-0 items-center">
-                            <Button type="button" size="icon" variant="ghost" className="h-7 w-7" disabled={index === 0} onClick={() => moveId(index, index - 1)} aria-label="أعلى">
+                            <Button type="button" size="icon" variant="ghost" className="h-7 w-7" disabled={index === 0} onClick={() => moveId(index, index - 1)} aria-label={dt("أعلى")}>
                               <ArrowUp className="h-3.5 w-3.5" />
                             </Button>
-                            <Button type="button" size="icon" variant="ghost" className="h-7 w-7" disabled={index === config.ids.length - 1} onClick={() => moveId(index, index + 1)} aria-label="أسفل">
+                            <Button type="button" size="icon" variant="ghost" className="h-7 w-7" disabled={index === config.ids.length - 1} onClick={() => moveId(index, index + 1)} aria-label={dt("أسفل")}>
                               <ArrowDown className="h-3.5 w-3.5" />
                             </Button>
-                            <Button type="button" size="icon" variant="ghost" className="h-7 w-7 text-destructive" onClick={() => set("ids", config.ids.filter((x) => x !== id))} aria-label="إزالة">
+                            <Button type="button" size="icon" variant="ghost" className="h-7 w-7 text-destructive" onClick={() => set("ids", config.ids.filter((x) => x !== id))} aria-label={dt("إزالة")}>
                               <X className="h-3.5 w-3.5" />
                             </Button>
                           </div>
@@ -239,16 +237,16 @@ export function ListEditor({
               </div>
 
               <div className="space-y-2">
-                <Label>إضافة عناصر</Label>
+                <Label>{dt("إضافة عناصر")}</Label>
                 <div className="relative">
                   <Search className="pointer-events-none absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                  <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="ابحث بالعنوان…" className="ps-9" />
+                  <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder={dt("ابحث بالعنوان…")} className="ps-9" />
                 </div>
                 <div className="max-h-[372px] space-y-1 overflow-y-auto rounded-xl border p-1.5">
                   {loadingOptions && !options ? (
-                    <p className="p-4 text-center text-sm text-muted-foreground">جارٍ التحميل…</p>
+                    <p className="p-4 text-center text-sm text-muted-foreground">{dt("جارٍ التحميل…")}</p>
                   ) : candidates.length === 0 ? (
-                    <p className="p-4 text-center text-sm text-muted-foreground">{total === 0 ? "لا توجد عناصر منشورة في هذا القسم." : "لا نتائج."}</p>
+                    <p className="p-4 text-center text-sm text-muted-foreground">{total === 0 ? dt("لا توجد عناصر منشورة في هذا القسم.") : dt("لا نتائج.")}</p>
                   ) : (
                     candidates.map((o) => (
                       <button
@@ -277,16 +275,15 @@ export function ListEditor({
             <div className="flex flex-wrap items-center justify-between gap-2">
               <Label className="flex items-center gap-1.5">
                 <Eye className="h-4 w-4 text-muted-foreground" />
-                ما سيظهر في الصفحة الرئيسية، بهذا الترتيب
-              </Label>
+                {dt("ما سيظهر في الصفحة الرئيسية، بهذا الترتيب")}</Label>
               {LOCALE_FILTERED.includes(listId) && (
-                <span className="text-xs text-muted-foreground">الفيديو المقيّد بلغة يظهر لزوار تلك اللغة فقط.</span>
+                <span className="text-xs text-muted-foreground">{dt("الفيديو المقيّد بلغة يظهر لزوار تلك اللغة فقط.")}</span>
               )}
             </div>
             {!options ? (
-              <p className="rounded-xl border p-4 text-sm text-muted-foreground">جارٍ تحميل المعاينة…</p>
+              <p className="rounded-xl border p-4 text-sm text-muted-foreground">{dt("جارٍ تحميل المعاينة…")}</p>
             ) : preview.length === 0 ? (
-              <p className="rounded-xl border border-dashed p-4 text-sm text-muted-foreground">لن يظهر شيء — وسيُخفى القسم تلقائيًا ما دام فارغًا.</p>
+              <p className="rounded-xl border border-dashed p-4 text-sm text-muted-foreground">{dt("لن يظهر شيء — وسيُخفى القسم تلقائيًا ما دام فارغًا.")}</p>
             ) : (
               <ol className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
                 {preview.map((o, index) => (
@@ -294,7 +291,7 @@ export function ListEditor({
                     <span className="w-5 shrink-0 text-center text-xs font-bold text-muted-foreground">{index + 1}</span>
                     <Thumb src={o.image} />
                     <span className="min-w-0 flex-1 truncate text-sm">{o.title}</span>
-                    {pinnedIds.has(o.id) && <Pin className="h-3.5 w-3.5 shrink-0 text-primary" aria-label="مثبّت" />}
+                    {pinnedIds.has(o.id) && <Pin className="h-3.5 w-3.5 shrink-0 text-primary" aria-label={dt("مثبّت")} />}
                   </li>
                 ))}
               </ol>

@@ -24,6 +24,7 @@ import {
   type SuggestedTeamSupportConfig,
 } from "@/lib/campaign/suggested-team-support";
 import { SUPPORTED_CURRENCY_OPTIONS } from "@/lib/supported-currencies";
+import { dashDir, dt } from "@/lib/dashboard/i18n";
 
 type Row = { id: string; currency: string; amountsStr: string };
 
@@ -118,7 +119,7 @@ export const SuggestedTeamSupportSection = forwardRef<
   };
 
   return (
-    <div className="space-y-4 md:col-span-2" dir="rtl">
+    <div className="space-y-4 md:col-span-2" dir={dashDir()}>
       <div>
         <Label htmlFor="suggested-team-support-default">{label}</Label>
         <Input
@@ -143,8 +144,7 @@ export const SuggestedTeamSupportSection = forwardRef<
             className="gap-1"
           >
             <Plus className="w-4 h-4" />
-            إضافة عملة
-          </Button>
+            {dt("إضافة عملة")}</Button>
         </div>
         {rows.length === 0 ? (
           <p className="text-sm text-muted-foreground">{exceptionsEmptyHint}</p>
@@ -156,7 +156,7 @@ export const SuggestedTeamSupportSection = forwardRef<
                 className="flex flex-col sm:flex-row gap-2 sm:items-end border rounded-lg p-3"
               >
                 <div className="flex-1 min-w-[140px]">
-                  <Label className="text-xs text-muted-foreground">العملة</Label>
+                  <Label className="text-xs text-muted-foreground">{dt("العملة")}</Label>
                   <Select
                     value={row.currency}
                     onValueChange={(v) => updateRow(row.id, { currency: v })}
@@ -175,8 +175,7 @@ export const SuggestedTeamSupportSection = forwardRef<
                 </div>
                 <div className="flex-[2]">
                   <Label className="text-xs text-muted-foreground">
-                    المبالغ لهذه العملة
-                  </Label>
+                    {dt("المبالغ لهذه العملة")}</Label>
                   <Input
                     className="mt-1 font-mono text-left"
                     dir="ltr"
@@ -184,7 +183,7 @@ export const SuggestedTeamSupportSection = forwardRef<
                     onChange={(e) =>
                       updateRow(row.id, { amountsStr: e.target.value })
                     }
-                    placeholder="مثال: 5, 10, 25, 50, 100"
+                    placeholder={dt("مثال: 5, 10, 25, 50, 100")}
                   />
                 </div>
                 <Button
@@ -193,7 +192,7 @@ export const SuggestedTeamSupportSection = forwardRef<
                   size="icon"
                   className="shrink-0 text-destructive"
                   onClick={() => removeRow(row.id)}
-                  aria-label="حذف الصف"
+                  aria-label={dt("حذف الصف")}
                 >
                   <Trash2 className="w-4 h-4" />
                 </Button>

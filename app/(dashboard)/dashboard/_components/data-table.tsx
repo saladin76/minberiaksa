@@ -26,6 +26,7 @@ import { PlusCircle, Download, Search, Calendar, X, Filter, File, FileEdit, Data
 import Link from "next/link";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
+import { dt } from "@/lib/dashboard/i18n";
 
 interface DateRange {
   from: string;
@@ -143,10 +144,10 @@ export function DataTable<TData, TValue>({
         if (type === "تاريخ") {
           const { from, to } = value as DateRange;
           if (from || to) {
-            newFilters.push(`تاريخ: ${from}${to ? ` الي ${to}` : ""}`);
+            newFilters.push(dt("تاريخ: {0}{1}", [from, to ? dt(" الي {0}", [to]) : ""]));
           }
         } else if (type === "بحث" && value.trim()) {
-          newFilters.push(`بحث: ${value}`);
+          newFilters.push(dt("بحث: {0}", [value]));
         }
       }
       return newFilters;
@@ -224,12 +225,12 @@ export function DataTable<TData, TValue>({
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="flex flex-wrap items-center gap-2">
           <div className="relative min-w-[240px]">
-            <Search className="absolute left-2 top-2.5 h-4 w-4 text-gray-500" />
+            <Search className="absolute end-2 top-2.5 h-4 w-4 text-gray-500" />
             <Input
               placeholder={searchPlaceholder}
               value={searchValue}
               onChange={handleSearch}
-              className="pl-8"
+              className="pe-8"
             />
           </div>
 
@@ -241,14 +242,13 @@ export function DataTable<TData, TValue>({
                   className="flex items-center gap-2 hover:bg-brand/8 transition-colors"
                 >
                   <Calendar className="h-4 w-4 text-black" />
-                  <span className="text-black font-medium">فلتر تاريخ</span>
+                  <span className="text-black font-medium">{dt("فلتر تاريخ")}</span>
                 </Button>
               </DialogTrigger>
               <DialogContent className="rounded-lg shadow-lg max-w-sm">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-lg font-semibold text-gray-900">
-                    حدد نطاق التاريخ
-                  </h3>
+                    {dt("حدد نطاق التاريخ")}</h3>
                   <Button
                     variant="ghost"
                     size="sm"
@@ -265,8 +265,7 @@ export function DataTable<TData, TValue>({
                 <div className="flex items-center gap-3">
                   <div className="space-y-2 flex-1">
                     <label className="text-sm font-medium text-gray-700">
-                      من تاريخ
-                    </label>
+                      {dt("من تاريخ")}</label>
                     <Input
                       type="date"
                       value={dateRange.from}
@@ -276,8 +275,7 @@ export function DataTable<TData, TValue>({
                   </div>
                   <div className="space-y-2 flex-1">
                     <label className="text-sm font-medium text-gray-700">
-                      إلى تاريخ
-                    </label>
+                      {dt("إلى تاريخ")}</label>
                     <Input
                       type="date"
                       value={dateRange.to}
@@ -293,14 +291,12 @@ export function DataTable<TData, TValue>({
                     onClick={() => setIsDateFilterOpen(false)}
                     className="flex-1 hover:bg-gray-100 transition-colors"
                   >
-                    إلغاء
-                  </Button>
+                    {dt("إلغاء")}</Button>
                   <Button
                     onClick={applyDateFilter}
                     className="flex-1 bg-black hover:bg-brand-dark text-white transition-colors"
                   >
-                    تأكيد الفلتر
-                  </Button>
+                    {dt("تأكيد الفلتر")}</Button>
                 </div>
               </DialogContent>
             </Dialog>
@@ -323,8 +319,7 @@ export function DataTable<TData, TValue>({
           className="flex items-center gap-2"
         >
           <Database className="h-4 w-4" />
-          استخراج بيانات
-        </Button>
+          {dt("استخراج بيانات")}</Button>
 </div>
       </div>
 
@@ -332,7 +327,7 @@ export function DataTable<TData, TValue>({
         <div className="flex flex-wrap items-center gap-2 pt-2">
           <div className="flex items-center gap-2">
             <Filter className="h-4 w-4 text-gray-500" />
-            <span className="text-sm text-gray-700">التصفيات المفعلة</span>
+            <span className="text-sm text-gray-700">{dt("التصفيات المفعلة")}</span>
           </div>
           <div className="flex flex-wrap gap-2">
             {activeFilters.map((filter) => (
@@ -372,7 +367,7 @@ export function DataTable<TData, TValue>({
                 {headerGroup.headers.map((header) => (
                   <TableHead
                     key={header.id}
-                    className="text-right font-semibold"
+                    className="text-start font-semibold"
                   >
                     {header.isPlaceholder
                       ? null
@@ -420,16 +415,14 @@ export function DataTable<TData, TValue>({
           onClick={() => table.previousPage()}
           disabled={!table.getCanPreviousPage()}
         >
-          السابق
-        </Button>
+          {dt("السابق")}</Button>
         <Button
           variant="outline"
           size="sm"
           onClick={() => table.nextPage()}
           disabled={!table.getCanNextPage()}
         >
-          التالي
-        </Button>
+          {dt("التالي")}</Button>
       </div>
     </div>
   );

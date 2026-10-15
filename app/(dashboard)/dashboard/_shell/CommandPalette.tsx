@@ -11,6 +11,7 @@ import {
 } from '@/components/ui/command';
 import { NAV_ICONS } from '@/lib/dashboard/nav-icons';
 import type { DashboardNavGroup } from '@/lib/dashboard/nav-config';
+import { dt } from "@/lib/dashboard/i18n";
 
 type Props = {
   open: boolean;
@@ -47,11 +48,10 @@ export function CommandPalette({ open, onOpenChange, navigation, dir }: Props) {
   return (
     <CommandDialog open={open} onOpenChange={onOpenChange}>
       <div dir={dir}>
-        <CommandInput placeholder="ابحث عن صفحة أو إجراء…" />
+        <CommandInput placeholder={dt("ابحث عن صفحة أو إجراء…")} />
         <CommandList className="max-h-[60vh]">
           <CommandEmpty className="py-8 text-center text-sm text-slate-500">
-            لا توجد نتائج مطابقة.
-          </CommandEmpty>
+            {dt("لا توجد نتائج مطابقة.")}</CommandEmpty>
 
           {navigation.map((section) => (
             <CommandGroup key={section.group} heading={section.group}>
@@ -73,14 +73,14 @@ export function CommandPalette({ open, onOpenChange, navigation, dir }: Props) {
           ))}
 
           <CommandSeparator />
-          <CommandGroup heading="إجراءات">
+          <CommandGroup heading={dt("إجراءات")}>
             <CommandItem
               value="عرض الموقع view site"
               onSelect={() => { onOpenChange(false); window.open('/', '_blank'); }}
               className="gap-2.5 cursor-pointer"
             >
               <ExternalLink className="w-4 h-4 text-slate-400 shrink-0" />
-              <span>عرض الموقع</span>
+              <span>{dt("عرض الموقع")}</span>
             </CommandItem>
             <CommandItem
               value="تسجيل الخروج logout sign out"
@@ -88,7 +88,7 @@ export function CommandPalette({ open, onOpenChange, navigation, dir }: Props) {
               className="gap-2.5 cursor-pointer text-red-600"
             >
               <LogOut className="w-4 h-4 shrink-0" />
-              <span>تسجيل الخروج</span>
+              <span>{dt("تسجيل الخروج")}</span>
             </CommandItem>
           </CommandGroup>
         </CommandList>

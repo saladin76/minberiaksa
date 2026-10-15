@@ -3,9 +3,10 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 import { resolveDashboardPageAccess } from "@/lib/dashboard/page-access";
 import { EmailChannelDashboard } from "./_components/EmailChannelDashboard";
+import { dt } from "@/lib/dashboard/i18n";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "البريد الإلكتروني | التواصل" };
+export const metadata = { get title() { return dt("البريد الإلكتروني | التواصل"); } };
 
 /**
  * Server shell: gate first, render second. The permission check lives here rather than in the

@@ -8,6 +8,7 @@ import {
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { dashDir, dt, dtx } from "@/lib/dashboard/i18n";
 
 /**
  * Re-sending messages that never went out.
@@ -43,18 +44,18 @@ type Preflight = {
 
 /** Outcome vocabulary. Every code the service can return has a row here so nothing renders raw. */
 const CODE_META: Record<string, { label: string; icon: typeof CheckCircle2; tone: string }> = {
-  SENT: { label: "أُرسلت", icon: CheckCircle2, tone: "text-emerald-600" },
-  PROVIDER_REJECTED: { label: "رفضها المزوّد", icon: XCircle, tone: "text-rose-600" },
-  CONSENT_BLOCKED: { label: "بدون موافقة", icon: ShieldOff, tone: "text-amber-600" },
-  NO_RECIPIENT: { label: "بدون عنوان", icon: MailX, tone: "text-amber-600" },
-  NO_RENDERED_BODY: { label: "بدون محتوى محفوظ", icon: FileWarning, tone: "text-amber-600" },
-  META_TEMPLATE_REQUIRED: { label: "يحتاج قالبًا معتمدًا", icon: FileWarning, tone: "text-amber-600" },
-  NO_SENDER_IDENTITY: { label: "بدون هوية مُرسِل", icon: FileWarning, tone: "text-amber-600" },
-  ALREADY_RETRIED: { label: "أُعيد إرسالها من قبل", icon: Clock, tone: "text-slate-500" },
-  NOT_RETRYABLE_BOUNCED: { label: "عنوان مرتدّ", icon: Ban, tone: "text-rose-600" },
-  NOT_RETRYABLE_STATUS: { label: "حالة غير قابلة للإعادة", icon: Ban, tone: "text-slate-500" },
-  NOT_FOUND: { label: "غير موجودة", icon: Ban, tone: "text-slate-500" },
-  ARCHIVE_FAILED: { label: "تعذّر التسجيل", icon: XCircle, tone: "text-rose-600" },
+  SENT: { get label() { return dt("أُرسلت"); }, icon: CheckCircle2, tone: "text-emerald-600" },
+  PROVIDER_REJECTED: { get label() { return dt("رفضها المزوّد"); }, icon: XCircle, tone: "text-rose-600" },
+  CONSENT_BLOCKED: { get label() { return dt("بدون موافقة"); }, icon: ShieldOff, tone: "text-amber-600" },
+  NO_RECIPIENT: { get label() { return dt("بدون عنوان"); }, icon: MailX, tone: "text-amber-600" },
+  NO_RENDERED_BODY: { get label() { return dt("بدون محتوى محفوظ"); }, icon: FileWarning, tone: "text-amber-600" },
+  META_TEMPLATE_REQUIRED: { get label() { return dt("يحتاج قالبًا معتمدًا"); }, icon: FileWarning, tone: "text-amber-600" },
+  NO_SENDER_IDENTITY: { get label() { return dt("بدون هوية مُرسِل"); }, icon: FileWarning, tone: "text-amber-600" },
+  ALREADY_RETRIED: { get label() { return dt("أُعيد إرسالها من قبل"); }, icon: Clock, tone: "text-slate-500" },
+  NOT_RETRYABLE_BOUNCED: { get label() { return dt("عنوان مرتدّ"); }, icon: Ban, tone: "text-rose-600" },
+  NOT_RETRYABLE_STATUS: { get label() { return dt("حالة غير قابلة للإعادة"); }, icon: Ban, tone: "text-slate-500" },
+  NOT_FOUND: { get label() { return dt("غير موجودة"); }, icon: Ban, tone: "text-slate-500" },
+  ARCHIVE_FAILED: { get label() { return dt("تعذّر التسجيل"); }, icon: XCircle, tone: "text-rose-600" },
 };
 
 const meta = (code: string) => CODE_META[code] ?? { label: code, icon: AlertTriangle, tone: "text-slate-500" };
@@ -104,7 +105,7 @@ export function RetryDialog({ open, channel, ids, days, onOpenChange, onFinished
     fetch(`/api/dashboard/communication/deliveries/retry?channel=${channel}&days=${days}`, { cache: "no-store" })
       .then(async (res) => {
         const json = await res.json();
-        if (!res.ok || !json.ok) throw new Error(json?.error || "تعذّر حساب الرسائل");
+        if (!res.ok || !json.ok) throw new Error(json?.error || dt("تعذّر حساب الرسائل"));
         setPreflight(json);
       })
       .catch((e) => setError((e as Error).message))
@@ -122,7 +123,7 @@ export function RetryDialog({ open, channel, ids, days, onOpenChange, onFinished
       });
       if (!res.ok || !res.body) {
         const json = await res.json().catch(() => null);
-        throw new Error(json?.error || "تعذّر بدء إعادة الإرسال");
+        throw new Error(json?.error || dt("تعذّر بدء إعادة الإرسال"));
       }
 
       // NDJSON: one JSON object per line. The tail of a chunk is usually a partial line, so it is
@@ -181,13 +182,13 @@ export function RetryDialog({ open, channel, ids, days, onOpenChange, onFinished
 
   return (
     <Dialog open={open} onOpenChange={(next) => !next && close()}>
-      <DialogContent dir="rtl" className="flex max-h-[85vh] max-w-lg flex-col gap-0 overflow-hidden p-0">
-        <DialogHeader className="border-b border-slate-100 px-5 py-4 text-right">
+      <DialogContent dir={dashDir()} className="flex max-h-[85vh] max-w-lg flex-col gap-0 overflow-hidden p-0">
+        <DialogHeader className="border-b border-slate-100 px-5 py-4 text-start">
           <DialogTitle className="flex items-center gap-2.5 text-base font-semibold text-slate-900">
             <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-brand-50 text-brand">
               <RefreshCw className={cn("h-4 w-4", phase === "running" && "animate-spin")} />
             </span>
-            {phase === "report" ? "نتيجة إعادة الإرسال" : "إعادة محاولة الرسائل"}
+            {phase === "report" ? dt("نتيجة إعادة الإرسال") : dt("إعادة محاولة الرسائل")}
           </DialogTitle>
         </DialogHeader>
 
@@ -215,12 +216,12 @@ export function RetryDialog({ open, channel, ids, days, onOpenChange, onFinished
 
         <div className="flex items-center justify-between gap-2 border-t border-slate-100 px-5 py-3.5">
           <span className="text-[11px] text-slate-400">
-            {phase === "running" ? "لا تُغلق النافذة أثناء الإرسال" : phase === "confirm" && !nothingToDo ? "لا يمكن التراجع بعد الإرسال" : ""}
+            {phase === "running" ? dt("لا تُغلق النافذة أثناء الإرسال") : phase === "confirm" && !nothingToDo ? dt("لا يمكن التراجع بعد الإرسال") : ""}
           </span>
           <div className="flex gap-2">
             {phase === "confirm" && (
               <>
-                <Button variant="ghost" size="sm" onClick={close}>إلغاء</Button>
+                <Button variant="ghost" size="sm" onClick={close}>{dt("إلغاء")}</Button>
                 <Button
                   size="sm"
                   className="gap-1.5"
@@ -228,17 +229,16 @@ export function RetryDialog({ open, channel, ids, days, onOpenChange, onFinished
                   onClick={() => void run()}
                 >
                   <RefreshCw className="h-3.5 w-3.5" />
-                  {willSend > 0 ? `إرسال ${willSend.toLocaleString("en-US")} رسالة` : "إرسال"}
+                  {willSend > 0 ? dt("إرسال {0} رسالة", [willSend.toLocaleString("en-US")]) : dt("إرسال")}
                 </Button>
               </>
             )}
             {phase === "running" && (
               <Button size="sm" disabled className="gap-1.5">
                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                جارٍ الإرسال…
-              </Button>
+                {dt("جارٍ الإرسال…")}</Button>
             )}
-            {phase === "report" && <Button size="sm" onClick={close}>تمّ</Button>}
+            {phase === "report" && <Button size="sm" onClick={close}>{dt("تمّ")}</Button>}
           </div>
         </div>
       </DialogContent>
@@ -272,11 +272,9 @@ function ConfirmStep({
     return (
       <div className="space-y-3">
         <p className="text-sm leading-6 text-slate-700">
-          سيُعاد إرسال هذه الرسالة بنفس المحتوى المحفوظ، إلى العنوان المسجّل للمستلم الآن.
-        </p>
+          {dt("سيُعاد إرسال هذه الرسالة بنفس المحتوى المحفوظ، إلى العنوان المسجّل للمستلم الآن.")}</p>
         <p className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-[11px] leading-5 text-slate-500">
-          تُنشأ محاولة جديدة مستقلة  لا يُعدَّل سجل المحاولة الفاشلة، حتى تبقى إحصاءات الفشل السابقة كما هي.
-        </p>
+          {dt("تُنشأ محاولة جديدة مستقلة  لا يُعدَّل سجل المحاولة الفاشلة، حتى تبقى إحصاءات الفشل السابقة كما هي.")}</p>
       </div>
     );
   }
@@ -285,8 +283,8 @@ function ConfirmStep({
     return (
       <div className="flex flex-col items-center gap-2 py-8 text-center">
         <CheckCircle2 className="h-9 w-9 text-emerald-500" />
-        <p className="text-sm font-semibold text-slate-800">لا توجد رسائل بحاجة لإعادة إرسال</p>
-        <p className="text-xs text-slate-500">كل رسائل هذه الفترة إمّا أُرسلت أو أُعيد إرسالها من قبل.</p>
+        <p className="text-sm font-semibold text-slate-800">{dt("لا توجد رسائل بحاجة لإعادة إرسال")}</p>
+        <p className="text-xs text-slate-500">{dt("كل رسائل هذه الفترة إمّا أُرسلت أو أُعيد إرسالها من قبل.")}</p>
       </div>
     );
   }
@@ -299,14 +297,11 @@ function ConfirmStep({
         <div className="flex items-baseline gap-2">
           <span className="text-3xl font-bold tabular-nums text-slate-900">{count.toLocaleString("en-US")}</span>
           <span className="text-sm text-slate-600">
-            رسالة {channel === "EMAIL" ? "بريد" : channel === "WHATSAPP" ? "واتساب" : "نصية"} ستُراجع الآن
-          </span>
+            {dt("رسالة ")}{channel === "EMAIL" ? dt("بريد") : channel === "WHATSAPP" ? dt("واتساب") : dt("نصية")} {dt(" ستُراجع الآن")}</span>
         </div>
         {capped && (
           <p className="mt-1.5 text-[11px] leading-5 text-slate-500">
-            من أصل {preflight.eligible.toLocaleString("en-US")} محاولة متعثّرة خلال آخر {days} يومًا.
-            تُراجع على دفعات من {preflight.cap}؛ ويُرسل فقط ما زال صالحًا بعد إعادة فحص العنوان والموافقة والقالب وهوية المُرسل.
-          </p>
+            {dtx("من أصل {0} محاولة متعثّرة خلال آخر {1} يومًا. تُراجع على دفعات من {2}؛ ويُرسل فقط ما زال صالحًا بعد إعادة فحص العنوان والموافقة والقالب وهوية المُرسل.", [preflight.eligible.toLocaleString("en-US"), days, preflight.cap])}</p>
         )}
       </div>
 
@@ -316,16 +311,13 @@ function ConfirmStep({
         <div className="flex items-start gap-2.5 rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-3">
           <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
           <div className="text-xs leading-5 text-amber-900">
-            <b>أقدم رسالة عمرها {preflight.oldestDays.toLocaleString("en-US")} يومًا.</b>{" "}
-            الرسائل التشغيلية (إيصالات التبرّع مثلًا) قد تبدو للمستلم وكأنها عن عملية جديدة. راجع
-            المحتوى بـ«معاينة» قبل الإرسال، أو جرّب رسالة واحدة أولًا.
-          </div>
+            <b>{dtx("أقدم رسالة عمرها {0} يومًا.", [preflight.oldestDays.toLocaleString("en-US")])}</b>{dt(" الرسائل التشغيلية (إيصالات التبرّع مثلًا) قد تبدو للمستلم وكأنها عن عملية جديدة. راجع المحتوى بـ«معاينة» قبل الإرسال، أو جرّب رسالة واحدة أولًا.")}</div>
         </div>
       )}
 
       {preflight.byReason.length > 0 && (
         <div>
-          <h4 className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-slate-400">سبب عدم الإرسال أصلًا</h4>
+          <h4 className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-slate-400">{dt("سبب عدم الإرسال أصلًا")}</h4>
           <div className="space-y-1">
             {preflight.byReason.slice(0, 6).map((r) => (
               <div key={r.reason} className="flex items-center justify-between gap-2 rounded-lg bg-slate-50 px-2.5 py-1.5">
@@ -340,9 +332,9 @@ function ConfirmStep({
       {(preflight.bounced > 0 || preflight.alreadyRetried > 0) && (
         <p className="text-[11px] leading-5 text-slate-500">
           {preflight.bounced > 0 && (
-            <>مستثنى: {preflight.bounced} رسالة مرتدّة (إعادة الإرسال لعنوان مرتدّ تضرّ بسمعة النطاق). </>
+            <>{dtx("مستثنى: {0} رسالة مرتدّة (إعادة الإرسال لعنوان مرتدّ تضرّ بسمعة النطاق). ", [preflight.bounced])}</>
           )}
-          {preflight.alreadyRetried > 0 && <>{preflight.alreadyRetried} رسالة أُعيد إرسالها من قبل.</>}
+          {preflight.alreadyRetried > 0 && <>{dtx("{0} رسالة أُعيد إرسالها من قبل.", [preflight.alreadyRetried])}</>}
         </p>
       )}
     </div>
@@ -373,11 +365,11 @@ function RunningStep({
           </svg>
           <div className="absolute flex flex-col items-center">
             <span className="text-lg font-bold tabular-nums text-slate-900">{done}</span>
-            <span className="text-[10px] text-slate-400">من {total}</span>
+            <span className="text-[10px] text-slate-400">{dtx("من {0}", [total])}</span>
           </div>
         </div>
         <p className="h-4 truncate text-xs text-slate-500" dir="auto">
-          {current ? `جارٍ الإرسال إلى ${current}` : "جارٍ التحضير…"}
+          {current ? dt("جارٍ الإرسال إلى {0}", [current]) : dt("جارٍ التحضير…")}
         </p>
       </div>
 
@@ -422,9 +414,9 @@ function ReportStep({
     <div className="space-y-4">
       {error && (
         <div className="rounded-xl border border-rose-200 bg-rose-50 p-3.5 text-xs leading-5 text-rose-900">
-          <b className="block">توقّفت العملية قبل اكتمالها</b>
+          <b className="block">{dt("توقّفت العملية قبل اكتمالها")}</b>
           {error}
-          {results.length > 0 && "  النتائج أدناه تخصّ ما تمّ فعلًا قبل التوقّف."}
+          {results.length > 0 && dt("  النتائج أدناه تخصّ ما تمّ فعلًا قبل التوقّف.")}
         </div>
       )}
 
@@ -436,10 +428,10 @@ function ReportStep({
         )}
         <div className="min-w-0">
           <p className="text-sm font-semibold text-slate-900">
-            {sent > 0 ? `أُرسلت ${sent.toLocaleString("en-US")} رسالة بنجاح` : "لم تُرسل أي رسالة"}
+            {sent > 0 ? dt("أُرسلت {0} رسالة بنجاح", [sent.toLocaleString("en-US")]) : dt("لم تُرسل أي رسالة")}
           </p>
           <p className="text-[11px] text-slate-500">
-            {failed > 0 ? `${failed.toLocaleString("en-US")} لم تُرسل  التفصيل بالأسفل.` : "اكتملت كل الرسائل دون مشاكل."}
+            {failed > 0 ? dt("{0} لم تُرسل  التفصيل بالأسفل.", [failed.toLocaleString("en-US")]) : dt("اكتملت كل الرسائل دون مشاكل.")}
           </p>
         </div>
       </div>
@@ -466,7 +458,7 @@ function ReportStep({
           whom, and these are exactly the rows they need to go look at next. */}
       {problems.length > 0 && (
         <div>
-          <h4 className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-slate-400">الرسائل التي لم تُرسل</h4>
+          <h4 className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-slate-400">{dt("الرسائل التي لم تُرسل")}</h4>
           <div className="max-h-52 space-y-1 overflow-auto">
             {problems.map((r, i) => {
               const m = meta(r.code);

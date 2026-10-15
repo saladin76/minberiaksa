@@ -97,6 +97,7 @@ import {
   ShareLabelsSection,
   type ShareLabelsSectionRef,
 } from '../_components/ShareLabelsSection';
+import { dashDir, dt, dtx } from "@/lib/dashboard/i18n";
 
 // ✅ Enhanced schema with translations
 /** Fields every translation locale carries on the form, as `field_locale`. */
@@ -111,19 +112,19 @@ const LOCALE_SHAPE = Object.fromEntries(
 const formSchema = z
   .object({
   title: z.string()
-    .min(1, 'العنوان مطلوب')
-    .max(100, 'العنوان طويل جداً'),
+    .min(1, dt("العنوان مطلوب"))
+    .max(100, dt("العنوان طويل جداً")),
   targetAmount: z.number().min(0).max(1000000),
   goalType: z.enum(['FIXED', 'OPEN']),
   fundraisingMode: z.enum(['AMOUNT', 'SHARES']),
   sharePriceUSD: z.number().min(0).max(1000000).optional(),
   // Many-to-many: at least one category required. A campaign can belong to
   // any number of categories  each one will list the campaign on its page.
-  categoryIds: z.array(z.string().min(1)).min(1, 'حمله واحدة على الأقل مطلوبة'),
+  categoryIds: z.array(z.string().min(1)).min(1, dt("حمله واحدة على الأقل مطلوبة")),
   isActive: z.boolean(),
   images: z.array(z.string())
-    .min(1, 'صورة واحدة على الأقل مطلوبة')
-    .max(5, 'الحد الأقصى 5 صور'),
+    .min(1, dt("صورة واحدة على الأقل مطلوبة"))
+    .max(5, dt("الحد الأقصى 5 صور")),
   videoUrl: z.string().optional(),
   currentAmount: z.number().min(0).max(1000000).optional(),
 
@@ -137,14 +138,14 @@ const formSchema = z
     if (data.goalType === 'FIXED' && (!data.targetAmount || data.targetAmount < 1)) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: 'المبلغ المستهدف مطلوب (≥ 1) عند اختيار هدف ثابت',
+        message: dt("المبلغ المستهدف مطلوب (≥ 1) عند اختيار هدف ثابت"),
         path: ['targetAmount'],
       });
     }
     if (data.fundraisingMode === 'SHARES' && (!data.sharePriceUSD || data.sharePriceUSD <= 0)) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: 'أدخل سعر السهم الواحد بالدولار الأمريكي لمشاريع السهوم',
+        message: dt("أدخل سعر السهم الواحد بالدولار الأمريكي لمشاريع السهوم"),
         path: ['sharePriceUSD'],
       });
     }
@@ -170,7 +171,7 @@ export default function NewCampaignPage() {
   const [currentAmountUnlocked, setCurrentAmountUnlocked] = useState(false);
   const [unlockDialogOpen, setUnlockDialogOpen] = useState(false);
   const [unlockConfirmText, setUnlockConfirmText] = useState('');
-  const CURRENT_AMOUNT_UNLOCK_PHRASE = 'أؤكد تعديل المبلغ';
+  const CURRENT_AMOUNT_UNLOCK_PHRASE = dt("أؤكد تعديل المبلغ");
   const suggestedDonationsRef = useRef<SuggestedDonationsSectionRef>(null);
   const suggestedShareCountsRef = useRef<SuggestedShareCountsSectionRef>(null);
   const shareLabelsRef = useRef<ShareLabelsSectionRef>(null);
@@ -232,7 +233,7 @@ export default function NewCampaignPage() {
         setCategories(response.data.items);
       } catch (error) {
         console.error('Error fetching categories:', error);
-        toast.error('فشل في تحميل الحملات');
+        toast.error(dt("فشل في تحميل الحملات"));
       } finally {
         setLoading(false);
       }
@@ -243,7 +244,7 @@ export default function NewCampaignPage() {
 
   const onSubmit = async (values: FormValues) => {
     if (isDescEmpty(descriptionAr)) {
-      toast.error('الوصف العربي مطلوب');
+      toast.error(dt("الوصف العربي مطلوب"));
       setActiveTab('ar');
       return;
     }
@@ -305,11 +306,11 @@ export default function NewCampaignPage() {
       };
 
       await axios.post('/api/campaigns', requestData);
-      toast.success('تم إنشاء المشروع بنجاح');
+      toast.success(dt("تم إنشاء المشروع بنجاح"));
       router.push('/dashboard/campaigns');
     } catch (error) {
       console.error('Error creating campaign:', error);
-      toast.error(errorMessage(error, 'فشل في إنشاء المشروع'));
+      toast.error(errorMessage(error, dt("فشل في إنشاء المشروع")));
     } finally {
       setSaving(false);
     }
@@ -341,10 +342,10 @@ export default function NewCampaignPage() {
       form.setValue(`image_${locale}` as LocaleImageKey, response.data?.url ?? '', {
         shouldDirty: true,
       });
-      toast.success('تم رفع الصورة');
+      toast.success(dt("تم رفع الصورة"));
     } catch (err) {
       console.error('Locale image upload error:', err);
-      toast.error(errorMessage(err, 'فشل رفع الصورة'));
+      toast.error(errorMessage(err, dt("فشل رفع الصورة")));
     } finally {
       setUploadingLocale(null);
     }
@@ -363,11 +364,11 @@ export default function NewCampaignPage() {
   const renderLocaleMedia = (locale: TranslationLocale) => {
     const name = localeNativeLabel(locale);
     const labels = {
-      image: `صورة الغلاف (${name})  اختيارية`,
-      imageHint: `رفع غلاف ${name}`,
-      video: `رابط الفيديو (${name})  اختياري`,
-      videoHint: `رابط فيديو خاص بهذه اللغة.`,
-      optionalNote: 'الصورة ورابط الفيديو هنا اختياريان  يحلّان محل الغلاف/الفيديو العربي فقط عند تعبئتهما. الصورة الرئيسية العربية (≥ 1) هي المطلوبة وحدها.',
+      image: dt("صورة الغلاف ({0})  اختيارية", [name]),
+      imageHint: dt("رفع غلاف {0}", [name]),
+      video: dt("رابط الفيديو ({0})  اختياري", [name]),
+      videoHint: dt("رابط فيديو خاص بهذه اللغة."),
+      optionalNote: dt("الصورة ورابط الفيديو هنا اختياريان  يحلّان محل الغلاف/الفيديو العربي فقط عند تعبئتهما. الصورة الرئيسية العربية (≥ 1) هي المطلوبة وحدها."),
     };
     const direction = 'rtl' as const;
     const imageKey = `image_${locale}` as LocaleImageKey;
@@ -462,7 +463,7 @@ export default function NewCampaignPage() {
 
     const currentImages = form.getValues('images');
     if (currentImages.length + files.length > 5) {
-      toast.error('الحد الأقصى 5 صور');
+      toast.error(dt("الحد الأقصى 5 صور"));
       return;
     }
 
@@ -483,9 +484,9 @@ export default function NewCampaignPage() {
     try {
       const uploadedUrls = await Promise.all(uploadPromises);
       form.setValue('images', [...currentImages, ...uploadedUrls]);
-      toast.success('تم رفع الصور بنجاح');
+      toast.success(dt("تم رفع الصور بنجاح"));
     } catch (error) {
-      toast.error('فشل في رفع الصور');
+      toast.error(dt("فشل في رفع الصور"));
     } finally {
       setUploadingImage(false);
     }
@@ -503,10 +504,10 @@ export default function NewCampaignPage() {
 
       const newImages = currentImages.filter((_, i) => i !== index);
       form.setValue('images', newImages);
-      toast.success('تم حذف الصورة بنجاح');
+      toast.success(dt("تم حذف الصورة بنجاح"));
     } catch (error) {
       console.error('Error removing image:', error);
-      toast.error('فشل في حذف الصورة');
+      toast.error(dt("فشل في حذف الصورة"));
     }
   };
 
@@ -518,7 +519,7 @@ export default function NewCampaignPage() {
     list.splice(to, 0, moved);
     form.setValue('images', list, { shouldValidate: true, shouldDirty: true });
     if (to === 0 && from !== 0) {
-      toast.success('تم تعيين الصورة الرئيسية');
+      toast.success(dt("تم تعيين الصورة الرئيسية"));
     }
   };
 
@@ -565,14 +566,14 @@ const getTranslationStatus = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">إنشاء مشروع جديدة</h1>
-          <p className="text-gray-600">قم بإدخال معلومات المشروع</p>
+          <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">{dt("إنشاء مشروع جديدة")}</h1>
+          <p className="text-gray-600">{dt("قم بإدخال معلومات المشروع")}</p>
           
           {/* ✅ Translation Status Badge */}
           <div className="flex items-center gap-2 mt-2">
             <Globe className="w-4 h-4 text-gray-500" />
             <span className="text-sm text-gray-600">
-              الترجمات: {translationStatus.completed}/{translationStatus.total}
+              {dtx("الترجمات: {0}/{1}", [translationStatus.completed, translationStatus.total])}
             </span>
             {TRANSLATION_LOCALES.filter((l) => translationStatus.done[l]).map((l) => (
               <span key={l} title={`${localeNativeLabel(l)} ready`}><CheckCircle2 className="w-4 h-4 text-green-600" /></span>
@@ -585,8 +586,7 @@ const getTranslationStatus = () => {
           className="gap-2"
         >
           <ArrowLeft className="w-4 h-4" />
-          العودة
-        </Button>
+          {dt("العودة")}</Button>
       </div>
 
       <Form {...form}>
@@ -595,7 +595,7 @@ const getTranslationStatus = () => {
           <Card className="p-6">
             <div className="flex items-center gap-2 mb-4">
               <Languages className="w-5 h-5 text-gray-700" />
-              <h2 className="text-lg font-semibold">المعلومات الأساسية</h2>
+              <h2 className="text-lg font-semibold">{dt("المعلومات الأساسية")}</h2>
             </div>
 
             <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)}>
@@ -625,8 +625,8 @@ const getTranslationStatus = () => {
                         field.onChange(next);
                       };
                       return (
-                        <FormItem dir="rtl">
-                          <FormLabel>الحملات *</FormLabel>
+                        <FormItem dir={dashDir()}>
+                          <FormLabel>{dt("الحملات *")}</FormLabel>
                           <Popover>
                             <PopoverTrigger asChild>
                               <FormControl>
@@ -637,9 +637,9 @@ const getTranslationStatus = () => {
                                   className="w-full justify-between font-normal"
                                 >
                                   {selectedCategories.length > 0
-                                    ? `${selectedCategories.length} حملة مختارة`
-                                    : 'اختر حملة أو أكثر'}
-                                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                    ? dt("{0} حملة مختارة", [selectedCategories.length])
+                                    : dt("اختر حملة أو أكثر")}
+                                  <ChevronsUpDown className="me-2 h-4 w-4 shrink-0 opacity-50" />
                                 </Button>
                               </FormControl>
                             </PopoverTrigger>
@@ -649,9 +649,9 @@ const getTranslationStatus = () => {
                               style={{ width: 'var(--radix-popover-trigger-width)' }}
                             >
                               <Command>
-                                <CommandInput placeholder="ابحث عن حملة..." />
+                                <CommandInput placeholder={dt("ابحث عن حملة...")} />
                                 <CommandList>
-                                  <CommandEmpty>لا توجد نتائج</CommandEmpty>
+                                  <CommandEmpty>{dt("لا توجد نتائج")}</CommandEmpty>
                                   <CommandGroup>
                                     {categories.map((category) => {
                                       const isSel = selected.includes(category.id);
@@ -662,7 +662,7 @@ const getTranslationStatus = () => {
                                           onSelect={() => toggle(category.id)}
                                         >
                                           <Check
-                                            className={`mr-2 h-4 w-4 ${
+                                            className={`ms-2 h-4 w-4 ${
                                               isSel ? 'opacity-100' : 'opacity-0'
                                             }`}
                                           />
@@ -681,14 +681,14 @@ const getTranslationStatus = () => {
                                 <Badge
                                   key={c.id}
                                   variant="secondary"
-                                  className="gap-1.5 pr-1"
+                                  className="gap-1.5 ps-1"
                                 >
                                   <span>{c.name}</span>
                                   <button
                                     type="button"
                                     onClick={() => toggle(c.id)}
                                     className="rounded-full hover:bg-black/10 p-0.5"
-                                    aria-label={`إزالة ${c.name}`}
+                                    aria-label={dt("إزالة {0}", [c.name])}
                                   >
                                     <X className="w-3 h-3" />
                                   </button>
@@ -697,9 +697,7 @@ const getTranslationStatus = () => {
                             </div>
                           )}
                           <FormDescription className="text-xs">
-                            يمكن للمشروع أن ينتمي لأكثر من حملة  سيظهر في صفحة كل
-                            حملة مختارة.
-                          </FormDescription>
+                            {dt("يمكن للمشروع أن ينتمي لأكثر من حملة  سيظهر في صفحة كل حملة مختارة.")}</FormDescription>
                           <FormMessage />
                         </FormItem>
                       );
@@ -710,10 +708,10 @@ const getTranslationStatus = () => {
                     control={form.control}
                     name="title"
                     render={({ field }) => (
-                      <FormItem dir='rtl'>
-                        <FormLabel>عنوان المشروع *</FormLabel>
+                      <FormItem dir={dashDir()}>
+                        <FormLabel>{dt("عنوان المشروع *")}</FormLabel>
                         <FormControl>
-                          <Input {...field} placeholder="أدخل عنوان المشروع" />
+                          <Input {...field} placeholder={dt("أدخل عنوان المشروع")} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -722,16 +720,15 @@ const getTranslationStatus = () => {
 
                 </div>
 
-                <FormItem dir='rtl'>
-                  <FormLabel>وصف المشروع *</FormLabel>
+                <FormItem dir={dashDir()}>
+                  <FormLabel>{dt("وصف المشروع *")}</FormLabel>
                   <WysiwygEditor
                     defaultValue={parseEditorContent(descriptionAr)}
                     onUpdate={(editor) => setDescriptionAr(JSON.stringify(editor?.getJSON()))}
                     className={editorClassName}
                   />
                   <FormDescription>
-                    قدم وصفاً شاملاً للمشروع وأهدافها
-                  </FormDescription>
+                    {dt("قدم وصفاً شاملاً للمشروع وأهدافها")}</FormDescription>
                 </FormItem>
                 <CampaignTranslateBar
                   arabic={{ title: form.watch('title') ?? '', description: descriptionAr }}
@@ -755,28 +752,27 @@ const getTranslationStatus = () => {
 
           {/* Campaign Settings */}
           <Card className="p-6">
-            <h2 className="text-lg font-semibold mb-4">إعدادات المشروع</h2>
+            <h2 className="text-lg font-semibold mb-4">{dt("إعدادات المشروع")}</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <FormField
                 control={form.control}
                 name="goalType"
                 render={({ field }) => (
-                  <FormItem dir="rtl">
-                    <FormLabel>نوع الهدف</FormLabel>
+                  <FormItem dir={dashDir()}>
+                    <FormLabel>{dt("نوع الهدف")}</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder="اختر نوع الهدف" />
+                          <SelectValue placeholder={dt("اختر نوع الهدف")} />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="FIXED">هدف محدد (شريط تقدم)</SelectItem>
-                        <SelectItem value="OPEN">هدف مفتوح (بدون هدف نهائي)</SelectItem>
+                        <SelectItem value="FIXED">{dt("هدف محدد (شريط تقدم)")}</SelectItem>
+                        <SelectItem value="OPEN">{dt("هدف مفتوح (بدون هدف نهائي)")}</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormDescription>
-                      الهدف المفتوح يخفي المبلغ المستهدف وشريط النسبة؛ يبقى إجمالي ما جُمع ظاهرًا.
-                    </FormDescription>
+                      {dt("الهدف المفتوح يخفي المبلغ المستهدف وشريط النسبة؛ يبقى إجمالي ما جُمع ظاهرًا.")}</FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -786,22 +782,21 @@ const getTranslationStatus = () => {
                 control={form.control}
                 name="fundraisingMode"
                 render={({ field }) => (
-                  <FormItem dir="rtl">
-                    <FormLabel>طريقة التبرع</FormLabel>
+                  <FormItem dir={dashDir()}>
+                    <FormLabel>{dt("طريقة التبرع")}</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder="طريقة التبرع" />
+                          <SelectValue placeholder={dt("طريقة التبرع")} />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="AMOUNT">مبلغ حر</SelectItem>
-                        <SelectItem value="SHARES">سهوم (سعر السهم × العدد)</SelectItem>
+                        <SelectItem value="AMOUNT">{dt("مبلغ حر")}</SelectItem>
+                        <SelectItem value="SHARES">{dt("سهوم (سعر السهم × العدد)")}</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormDescription>
-                      في وضع السهوم يحدد المتبرع عدد الأسهم؛ المبلغ = العدد × سعر السهم (بالدولار).
-                    </FormDescription>
+                      {dt("في وضع السهوم يحدد المتبرع عدد الأسهم؛ المبلغ = العدد × سعر السهم (بالدولار).")}</FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -812,19 +807,18 @@ const getTranslationStatus = () => {
                 control={form.control}
                 name="targetAmount"
                 render={({ field }) => (
-                  <FormItem dir='rtl'>
-                    <FormLabel>المبلغ المستهدف *</FormLabel>
+                  <FormItem dir={dashDir()}>
+                    <FormLabel>{dt("المبلغ المستهدف *")}</FormLabel>
                     <FormControl>
                       <Input
                         type="number"
                         {...field}
                         onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
-                        placeholder="أدخل المبلغ المستهدف"
+                        placeholder={dt("أدخل المبلغ المستهدف")}
                       />
                     </FormControl>
                     <FormDescription>
-                      المبلغ الإجمالي المطلوب للمشروع بالدولار
-                    </FormDescription>
+                      {dt("المبلغ الإجمالي المطلوب للمشروع بالدولار")}</FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -835,9 +829,9 @@ const getTranslationStatus = () => {
                 control={form.control}
                 name="currentAmount"
                 render={({ field }) => (
-                  <FormItem dir="rtl">
+                  <FormItem dir={dashDir()}>
                     <div className="flex items-center justify-between gap-2">
-                      <FormLabel>المبلغ الحالي عند الإنشاء (متقدم)</FormLabel>
+                      <FormLabel>{dt("المبلغ الحالي عند الإنشاء (متقدم)")}</FormLabel>
                       {!currentAmountUnlocked ? (
                         <Button
                           type="button"
@@ -849,9 +843,8 @@ const getTranslationStatus = () => {
                             setUnlockDialogOpen(true);
                           }}
                         >
-                          <AlertCircle className="w-3.5 h-3.5 ml-1" />
-                          فتح للتعديل
-                        </Button>
+                          <AlertCircle className="w-3.5 h-3.5 me-1" />
+                          {dt("فتح للتعديل")}</Button>
                       ) : (
                         <Button
                           type="button"
@@ -863,8 +856,7 @@ const getTranslationStatus = () => {
                             setCurrentAmountUnlocked(false);
                           }}
                         >
-                          إلغاء التعديل
-                        </Button>
+                          {dt("إلغاء التعديل")}</Button>
                       )}
                     </div>
                     <FormControl>
@@ -889,16 +881,11 @@ const getTranslationStatus = () => {
                       >
                         <AlertCircle className="h-4 w-4" />
                         <AlertDescription className="text-xs leading-relaxed">
-                          تعيين <strong>المبلغ الحالي</strong> يدوياً عند الإنشاء مخصّص لحالات استثنائية
-                          (مثل ترحيل مشروع قائم بمبلغ متراكم سابق). القيمة ستظهر للمتبرعين فوراً
-                          ولن يكون لها سجل تبرعات مقابل، فاحرص أن يكون التعيين مقصوداً.
-                        </AlertDescription>
+                          {dt("تعيين ")}<strong>{dt("المبلغ الحالي")}</strong> {dt(" يدوياً عند الإنشاء مخصّص لحالات استثنائية (مثل ترحيل مشروع قائم بمبلغ متراكم سابق). القيمة ستظهر للمتبرعين فوراً ولن يكون لها سجل تبرعات مقابل، فاحرص أن يكون التعيين مقصوداً.")}</AlertDescription>
                       </Alert>
                     ) : (
                       <FormDescription>
-                        افتراضياً يبدأ المشروع بمبلغ <strong>0</strong> ويُحدَّث تلقائياً مع التبرعات.
-                        تجاوز هذا يدوياً يتطلب تأكيداً صريحاً.
-                      </FormDescription>
+                        {dt("افتراضياً يبدأ المشروع بمبلغ ")}<strong>0</strong> {dt(" ويُحدَّث تلقائياً مع التبرعات. تجاوز هذا يدوياً يتطلب تأكيداً صريحاً.")}</FormDescription>
                     )}
                     <FormMessage />
                   </FormItem>
@@ -912,26 +899,23 @@ const getTranslationStatus = () => {
                   if (!open) setUnlockConfirmText('');
                 }}
               >
-                <DialogContent className="font-sans" dir="rtl">
+                <DialogContent className="font-sans" dir={dashDir()}>
                   <DialogHeader>
                     <DialogTitle className="text-red-700 flex items-center gap-2">
                       <AlertCircle className="w-5 h-5" />
-                      تأكيد تعيين مبلغ ابتدائي
-                    </DialogTitle>
+                      {dt("تأكيد تعيين مبلغ ابتدائي")}</DialogTitle>
                   </DialogHeader>
                   <div className="space-y-3 text-sm leading-relaxed text-gray-700">
                     <p>
-                      أنت على وشك تعيين <strong>المبلغ الحالي</strong> للمشروع يدوياً عند الإنشاء.
-                      الافتراضي أن يبدأ المشروع بـ 0 ويُحسب من سجل التبرعات.
-                    </p>
-                    <ul className="list-disc pr-5 space-y-1 text-xs text-gray-600">
-                      <li>القيمة الجديدة ستظهر للمتبرعين فوراً على صفحة المشروع.</li>
-                      <li>لن يقابلها سجل تبرعات في قاعدة البيانات.</li>
-                      <li>يُسجَّل هذا الإجراء في سجل التدقيق (audit log).</li>
+                      {dt("أنت على وشك تعيين ")}<strong>{dt("المبلغ الحالي")}</strong> {dt(" للمشروع يدوياً عند الإنشاء. الافتراضي أن يبدأ المشروع بـ 0 ويُحسب من سجل التبرعات.")}</p>
+                    <ul className="list-disc ps-5 space-y-1 text-xs text-gray-600">
+                      <li>{dt("القيمة الجديدة ستظهر للمتبرعين فوراً على صفحة المشروع.")}</li>
+                      <li>{dt("لن يقابلها سجل تبرعات في قاعدة البيانات.")}</li>
+                      <li>{dt("يُسجَّل هذا الإجراء في سجل التدقيق (audit log).")}</li>
                     </ul>
                     <div className="space-y-1.5 pt-2">
                       <label className="text-sm font-medium text-gray-800">
-                        اكتب الجملة التالية للمتابعة:{' '}
+                        {dt("اكتب الجملة التالية للمتابعة: ")}
                         <span className="font-mono text-red-700">
                           {CURRENT_AMOUNT_UNLOCK_PHRASE}
                         </span>
@@ -954,8 +938,7 @@ const getTranslationStatus = () => {
                         setUnlockConfirmText('');
                       }}
                     >
-                      إلغاء
-                    </Button>
+                      {dt("إلغاء")}</Button>
                     <Button
                       type="button"
                       disabled={
@@ -968,8 +951,7 @@ const getTranslationStatus = () => {
                         setUnlockConfirmText('');
                       }}
                     >
-                      تأكيد وفتح الحقل
-                    </Button>
+                      {dt("تأكيد وفتح الحقل")}</Button>
                   </div>
                 </DialogContent>
               </Dialog>
@@ -979,8 +961,8 @@ const getTranslationStatus = () => {
                   control={form.control}
                   name="sharePriceUSD"
                   render={({ field }) => (
-                    <FormItem dir="rtl">
-                      <FormLabel>سعر السهم الواحد (USD) *</FormLabel>
+                    <FormItem dir={dashDir()}>
+                      <FormLabel>{dt("سعر السهم الواحد (USD) *")}</FormLabel>
                       <FormControl>
                         <Input
                           type="number"
@@ -988,12 +970,11 @@ const getTranslationStatus = () => {
                           {...field}
                           value={field.value ?? ''}
                           onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
-                          placeholder="مثال: 100"
+                          placeholder={dt("مثال: 100")}
                         />
                       </FormControl>
                       <FormDescription>
-                        سعر كل سهم بالدولار؛ يُحوَّل تلقائيًا لعملة العرض للمتبرع.
-                      </FormDescription>
+                        {dt("سعر كل سهم بالدولار؛ يُحوَّل تلقائيًا لعملة العرض للمتبرع.")}</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -1004,17 +985,16 @@ const getTranslationStatus = () => {
                 control={form.control}
                 name="videoUrl"
                 render={({ field }) => (
-                  <FormItem dir='rtl'>
-                    <FormLabel>رابط الفيديو (اختياري)</FormLabel>
+                  <FormItem dir={dashDir()}>
+                    <FormLabel>{dt("رابط الفيديو (اختياري)")}</FormLabel>
                     <FormControl>
                       <Input
                         {...field}
-                        placeholder="أدخل رابط الفيديو (YouTube أو Facebook)"
+                        placeholder={dt("أدخل رابط الفيديو (YouTube أو Facebook)")}
                       />
                     </FormControl>
                     <FormDescription>
-                      رابط فيديو توضيحي للمشروع
-                    </FormDescription>
+                      {dt("رابط فيديو توضيحي للمشروع")}</FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -1039,8 +1019,8 @@ const getTranslationStatus = () => {
               control={form.control}
               name="images"
               render={({ field }) => (
-                <FormItem dir='rtl'>
-                  <FormLabel>صور المشروع *</FormLabel>
+                <FormItem dir={dashDir()}>
+                  <FormLabel>{dt("صور المشروع *")}</FormLabel>
                   <FormControl>
                     <div className="space-y-4">
                       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
@@ -1086,23 +1066,23 @@ const getTranslationStatus = () => {
                             >
                               <img
                                 src={url}
-                                alt={`صورة ${index + 1}`}
+                                alt={dt("صورة {0}", [index + 1])}
                                 draggable={false}
                                 className="w-full h-32 object-cover rounded-lg pointer-events-none select-none"
                               />
                               {isMain && (
                                 <div className="absolute top-0 inset-x-0 bg-gradient-to-b from-brand to-brand/0 rounded-t-lg p-2 flex items-center gap-1.5">
                                   <Star className="w-4 h-4 text-white fill-white" />
-                                  <span className="text-white text-xs font-bold drop-shadow">الصورة الرئيسية</span>
+                                  <span className="text-white text-xs font-bold drop-shadow">{dt("الصورة الرئيسية")}</span>
                                 </div>
                               )}
-                              <div className="absolute top-2 left-2 p-1 bg-black/50 text-white rounded opacity-0 group-hover:opacity-100 transition-opacity">
+                              <div className="absolute top-2 end-2 p-1 bg-black/50 text-white rounded opacity-0 group-hover:opacity-100 transition-opacity">
                                 <GripVertical className="w-4 h-4" />
                               </div>
                               <button
                                 type="button"
                                 onClick={() => removeImage(index)}
-                                className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                                className="absolute top-2 start-2 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
                               >
                                 <X className="w-4 h-4" />
                               </button>
@@ -1110,14 +1090,13 @@ const getTranslationStatus = () => {
                                 <button
                                   type="button"
                                   onClick={() => reorderImages(index, 0)}
-                                  title="تعيين كصورة رئيسية"
-                                  className="absolute bottom-2 left-2 px-2 py-1 bg-white text-brand text-xs font-semibold rounded shadow opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 hover:bg-brand hover:text-white"
+                                  title={dt("تعيين كصورة رئيسية")}
+                                  className="absolute bottom-2 end-2 px-2 py-1 bg-white text-brand text-xs font-semibold rounded shadow opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 hover:bg-brand hover:text-white"
                                 >
                                   <Star className="w-3 h-3" />
-                                  جعلها الرئيسية
-                                </button>
+                                  {dt("جعلها الرئيسية")}</button>
                               )}
-                              <div className="absolute bottom-2 right-2 px-1.5 py-0.5 bg-black/60 text-white text-[10px] rounded font-mono">
+                              <div className="absolute bottom-2 start-2 px-1.5 py-0.5 bg-black/60 text-white text-[10px] rounded font-mono">
                                 {index + 1}
                               </div>
                             </div>
@@ -1144,8 +1123,7 @@ const getTranslationStatus = () => {
                                 <>
                                   <Upload className="w-6 h-6 text-gray-400" />
                                   <span className="mt-2 text-sm text-gray-500">
-                                    اضغط لإضافة صور
-                                  </span>
+                                    {dt("اضغط لإضافة صور")}</span>
                                 </>
                               )}
                             </label>
@@ -1153,13 +1131,10 @@ const getTranslationStatus = () => {
                         )}
                       </div>
                       <FormDescription>
-                        يمكنك رفع حتى 5 صور للمشروع. <strong>الصورة الأولى</strong> ستكون الصورة الرئيسية المعروضة.
-                        <br />
-                        اسحب الصور لإعادة ترتيبها، أو اضغط زر <strong>«جعلها الرئيسية»</strong> لتغيير الصورة الرئيسية.
-                        <br />
+                        {dt("يمكنك رفع حتى 5 صور للمشروع. ")}<strong>{dt("الصورة الأولى")}</strong> {dt(" ستكون الصورة الرئيسية المعروضة.")}<br />
+                        {dt("اسحب الصور لإعادة ترتيبها، أو اضغط زر ")}<strong>{dt("«جعلها الرئيسية»")}</strong> {dt(" لتغيير الصورة الرئيسية.")}<br />
                         <span className="text-amber-700">
-                          الحجم المُوصى به: <strong>1200×900 px</strong> (نسبة 4:3)، صيغة JPG أو PNG، حجم الملف لا يزيد عن 2MB.
-                        </span>
+                          {dt("الحجم المُوصى به: ")}<strong>1200×900 px</strong> {dt(" (نسبة 4:3)، صيغة JPG أو PNG، حجم الملف لا يزيد عن 2MB.")}</span>
                       </FormDescription>
                     </div>
                   </FormControl>
@@ -1177,10 +1152,9 @@ const getTranslationStatus = () => {
               render={({ field }) => (
                 <FormItem className="flex items-center justify-between">
                   <div>
-                    <FormLabel>حالة المشروع</FormLabel>
+                    <FormLabel>{dt("حالة المشروع")}</FormLabel>
                     <FormDescription>
-                      تحديد ما إذا كانت المشروع نشطة ومرئية للمستخدمين فور الإنشاء
-                    </FormDescription>
+                      {dt("تحديد ما إذا كانت المشروع نشطة ومرئية للمستخدمين فور الإنشاء")}</FormDescription>
                   </div>
                   <FormControl>
                     <Switch
@@ -1199,12 +1173,12 @@ const getTranslationStatus = () => {
               <div className="flex items-start gap-3">
                 <Globe className="w-5 h-5 text-brand mt-0.5" />
                 <div>
-                  <h3 className="font-semibold text-brand mb-2">ملخص الترجمات</h3>
+                  <h3 className="font-semibold text-brand mb-2">{dt("ملخص الترجمات")}</h3>
                   <div className="grid gap-1 text-sm text-brand sm:grid-cols-2">
-                    <p>✓ المحتوى العربي: مكتمل (مطلوب)</p>
+                    <p>{dt("✓ المحتوى العربي: مكتمل (مطلوب)")}</p>
                     {TRANSLATION_LOCALES.map((l) => (
                       <p key={l}>
-                        {translationStatus.done[l] ? '✓' : '○'} {localeNativeLabel(l)}: {translationStatus.done[l] ? 'مكتملة' : l === 'en' ? 'غير مكتملة (مطلوبة)' : 'غير مكتملة (اختياري)'}
+                        {translationStatus.done[l] ? '✓' : '○'} {localeNativeLabel(l)}: {translationStatus.done[l] ? dt("مكتملة") : l === 'en' ? dt("غير مكتملة (مطلوبة)") : dt("غير مكتملة (اختياري)")}
                       </p>
                     ))}
                   </div>
@@ -1223,16 +1197,14 @@ const getTranslationStatus = () => {
               variant="outline"
               onClick={() => router.push('/dashboard/campaigns')}
             >
-              إلغاء
-            </Button>
+              {dt("إلغاء")}</Button>
             <Button
               type="submit"
               className="bg-brand hover:bg-brand-dark gap-2"
               disabled={saving}
             >
               {saving && <Loader2 className="w-4 h-4 animate-spin" />}
-              إنشاء المشروع
-            </Button>
+              {dt("إنشاء المشروع")}</Button>
           </div>
         </form>
       </Form>

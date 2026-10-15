@@ -5,6 +5,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { LOCALES, SUPPORTED_LOCALES, type SupportedLocale } from '@/lib/locales';
 import { AutoTranslateButton, mergeTranslations } from './AutoTranslateButton';
+import { dashDir, dt } from "@/lib/dashboard/i18n";
 
 /**
  * Locale tabs for the site-content forms.
@@ -104,7 +105,7 @@ export function ContentTranslationTabs({
         />
       </div>
     ) : null}
-    <Tabs defaultValue={OTHER_LOCALES[0]} dir="rtl">
+    <Tabs defaultValue={OTHER_LOCALES[0]} dir={dashDir()}>
       <TabsList className="flex flex-wrap h-auto gap-1">
         {OTHER_LOCALES.map((locale) => {
           const filled = (value[locale]?.[requiredField] ?? '').trim().length > 0;
@@ -126,9 +127,7 @@ export function ContentTranslationTabs({
       {OTHER_LOCALES.map((locale) => (
         <TabsContent key={locale} value={locale} className="space-y-3 pt-3">
           <p className="text-xs text-slate-500">
-            اترك حقل «{fields.find((f) => f.name === requiredField)?.label}» فارغًا لحذف ترجمة هذه
-            اللغة.
-          </p>
+            {dt("اترك حقل «")}{fields.find((f) => f.name === requiredField)?.label}{dt("» فارغًا لحذف ترجمة هذه اللغة.")}</p>
           {fields.map((field) =>
             field.multiline ? (
               <label key={field.name} className="block space-y-1.5">

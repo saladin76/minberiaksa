@@ -13,6 +13,7 @@ import { CHANNEL_META } from "../../_components/campaign-ui";
 import { SmartAudienceBuilder, type SmartAudienceDraft, type SmartAudiencePreview } from "./SmartAudienceBuilder";
 import { DonorPicker } from "./DonorPicker";
 import { campaignAudienceSelectionCount } from "@/lib/communication/campaign-audience-accounting";
+import { dashDir, dt, dtList, dtx } from "@/lib/dashboard/i18n";
 
 interface TemplateSummary {
   id: string;
@@ -36,23 +37,23 @@ interface BadgeSummary {
 }
 
 const TIMEZONE_OPTIONS = [
-  ["Europe/Istanbul", "تركيا — Istanbul"],
-  ["Asia/Riyadh", "السعودية — Riyadh"],
-  ["Asia/Dubai", "الإمارات — Dubai"],
-  ["Asia/Jerusalem", "فلسطين / القدس"],
-  ["Africa/Cairo", "مصر — Cairo"],
-  ["Europe/London", "المملكة المتحدة — London"],
-  ["Europe/Paris", "فرنسا — Paris"],
-  ["Europe/Berlin", "ألمانيا — Berlin"],
-  ["America/New_York", "أمريكا — New York"],
-  ["America/Chicago", "أمريكا — Chicago"],
-  ["America/Los_Angeles", "أمريكا — Los Angeles"],
-  ["America/Toronto", "كندا — Toronto"],
+  dtList(["Europe/Istanbul", "تركيا — Istanbul"]),
+  dtList(["Asia/Riyadh", "السعودية — Riyadh"]),
+  dtList(["Asia/Dubai", "الإمارات — Dubai"]),
+  dtList(["Asia/Jerusalem", "فلسطين / القدس"]),
+  dtList(["Africa/Cairo", "مصر — Cairo"]),
+  dtList(["Europe/London", "المملكة المتحدة — London"]),
+  dtList(["Europe/Paris", "فرنسا — Paris"]),
+  dtList(["Europe/Berlin", "ألمانيا — Berlin"]),
+  dtList(["America/New_York", "أمريكا — New York"]),
+  dtList(["America/Chicago", "أمريكا — Chicago"]),
+  dtList(["America/Los_Angeles", "أمريكا — Los Angeles"]),
+  dtList(["America/Toronto", "كندا — Toronto"]),
   ["UTC", "UTC"],
 ] as const;
 
 const CHANNEL_ORDER = ["EMAIL", "WHATSAPP", "SMS"] as const;
-const BASE_STEPS = ["القناة", "الرسالة", "الجمهور", "اللغة"] as const;
+const BASE_STEPS = dtList(["القناة", "الرسالة", "الجمهور", "اللغة"] as const);
 
 type CampaignSendControlsDraft = {
   paused: boolean;
@@ -188,7 +189,7 @@ export function NewCampaignWizard() {
   const [saving, setSaving] = React.useState(false);
 
   const steps = React.useMemo(
-    () => channel === "WHATSAPP" ? [...BASE_STEPS, "التحكم", "المراجعة"] : [...BASE_STEPS, "المراجعة"],
+    () => channel === "WHATSAPP" ? [...BASE_STEPS, dt("التحكم"), dt("المراجعة")] : [...BASE_STEPS, dt("المراجعة")],
     [channel],
   );
 
@@ -199,9 +200,9 @@ export function NewCampaignWizard() {
     setTemplatesLoading(true);
     setTemplateId("");
     fetch(`/api/communication/templates?channel=${channel}`, { cache: "no-store" })
-      .then((response) => readApiJson(response, "تعذّر تحميل القوالب"))
+      .then((response) => readApiJson(response, dt("تعذّر تحميل القوالب")))
       .then((j) => {
-        if (!j.ok) throw new Error(String(j.error || "تعذّر تحميل القوالب"));
+        if (!j.ok) throw new Error(String(j.error || dt("تعذّر تحميل القوالب")));
         setTemplates(j.templates ?? []);
       })
       .catch((e) => toast.error((e as Error).message))
@@ -217,8 +218,8 @@ export function NewCampaignWizard() {
     setBadgeId("");
     setBadgePreview(null);
     Promise.all([
-      fetch("/api/communication/audience-lists", { cache: "no-store" }).then((response) => readApiJson(response, "تعذر تحميل القوائم المحفوظة")),
-      fetch("/api/communication/audiences/facets", { cache: "no-store" }).then((response) => readApiJson(response, "تعذر تحميل الشارات")),
+      fetch("/api/communication/audience-lists", { cache: "no-store" }).then((response) => readApiJson(response, dt("تعذر تحميل القوائم المحفوظة"))),
+      fetch("/api/communication/audiences/facets", { cache: "no-store" }).then((response) => readApiJson(response, dt("تعذر تحميل الشارات"))),
     ])
       .then(([listsData, facetsData]) => {
         const lists = (listsData.lists ?? []) as AudienceListSummary[];
@@ -232,7 +233,7 @@ export function NewCampaignWizard() {
 
     if (channel === "WHATSAPP") {
       fetch("/api/communication/whatsapp/meta-capacity", { cache: "no-store" })
-        .then((response) => readApiJson(response, "تعذر قراءة حد Meta"))
+        .then((response) => readApiJson(response, dt("تعذر قراءة حد Meta")))
         .then((data) => {
           const cap = Number(data.dailyCap);
           if (Number.isFinite(cap) && cap > 0) {
@@ -260,14 +261,14 @@ export function NewCampaignWizard() {
       body: JSON.stringify({ channel, definition }),
       signal: controller.signal,
     })
-      .then((response) => readApiJson(response, "تعذر معاينة جمهور الشارة"))
+      .then((response) => readApiJson(response, dt("تعذر معاينة جمهور الشارة")))
       .then((data) => {
         if (!controller.signal.aborted) setBadgePreview(data as unknown as SmartAudiencePreview);
       })
       .catch(() => {
         if (controller.signal.aborted) return;
         setBadgePreview(null);
-        setBadgePreviewError("تعذّر حساب جمهور الشارة. أعد المحاولة؛ الأعداد غير متاحة وليست صفرًا.");
+        setBadgePreviewError(dt("تعذّر حساب جمهور الشارة. أعد المحاولة؛ الأعداد غير متاحة وليست صفرًا."));
       });
     return () => controller.abort();
   }, [audienceMode, badgeId, channel, smartAudience]);
@@ -293,18 +294,18 @@ export function NewCampaignWizard() {
 
   const create = async () => {
     if (!name.trim()) {
-      toast.error("اسم الحملة مطلوب");
+      toast.error(dt("اسم الحملة مطلوب"));
       return;
     }
     if (!audienceReady) {
       toast.error(
         audienceMode === "SMART"
-          ? (channel === "WHATSAPP" ? "اختر جمهورًا مطابقًا وانتظر اكتمال المعاينة" : "لا يوجد مستلم مؤهل ضمن شروط الجمهور الحالية")
+          ? (channel === "WHATSAPP" ? dt("اختر جمهورًا مطابقًا وانتظر اكتمال المعاينة") : dt("لا يوجد مستلم مؤهل ضمن شروط الجمهور الحالية"))
           : audienceMode === "BADGE"
-            ? (channel === "WHATSAPP" ? "اختر شارة تحتوي على جمهور وانتظر اكتمال المعاينة" : "اختر شارة تحتوي على مستلمين مؤهلين")
+            ? (channel === "WHATSAPP" ? dt("اختر شارة تحتوي على جمهور وانتظر اكتمال المعاينة") : dt("اختر شارة تحتوي على مستلمين مؤهلين"))
             : audienceMode === "SAVED"
-              ? "اختر قائمة محفوظة"
-              : "اختر متبرعًا واحدًا على الأقل",
+              ? dt("اختر قائمة محفوظة")
+              : dt("اختر متبرعًا واحدًا على الأقل"),
       );
       return;
     }
@@ -322,10 +323,10 @@ export function NewCampaignWizard() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(
             audienceMode === "SMART"
-              ? { name: `جمهور ذكي: ${name.trim()}`, channel, smartDefinition: smartAudience }
+              ? { name: dt("جمهور ذكي: {0}", [name.trim()]), channel, smartDefinition: smartAudience }
               : audienceMode === "BADGE"
                 ? {
-                    name: `جمهور الشارة: ${badges.find((badge) => badge.id === badgeId)?.name ?? name.trim()}`,
+                    name: dt("جمهور الشارة: {0}", [badges.find((badge) => badge.id === badgeId)?.name ?? name.trim()]),
                     channel,
                     smartDefinition: {
                       ...smartAudience,
@@ -333,11 +334,11 @@ export function NewCampaignWizard() {
                       filters: { ...smartAudience.filters, badgeIds: [badgeId] },
                     },
                   }
-                : { name: `جمهور: ${name.trim()}`, channel, userIds: [...selected] },
+                : { name: dt("جمهور: {0}", [name.trim()]), channel, userIds: [...selected] },
           ),
         });
-        const listJson = await readApiJson(listRes, "تعذّر إنشاء قائمة الجمهور");
-        if (!listJson.ok) throw new Error(String(listJson.error || "تعذّر إنشاء قائمة الجمهور"));
+        const listJson = await readApiJson(listRes, dt("تعذّر إنشاء قائمة الجمهور"));
+        if (!listJson.ok) throw new Error(String(listJson.error || dt("تعذّر إنشاء قائمة الجمهور")));
         audienceSegmentKey = String(listJson.audienceSegmentKey || "");
         audienceCount = audienceMode === "SMART" || audienceMode === "BADGE"
           ? Number(listJson.matched ?? activePreview?.matched ?? 0)
@@ -357,10 +358,10 @@ export function NewCampaignWizard() {
           ...(channel === "WHATSAPP" ? { sendControls } : {}),
         }),
       });
-      const json = await readApiJson(res, "تعذّر إنشاء الحملة");
-      if (!json.ok) throw new Error(String(json.error || "تعذّر إنشاء الحملة"));
+      const json = await readApiJson(res, dt("تعذّر إنشاء الحملة"));
+      if (!json.ok) throw new Error(String(json.error || dt("تعذّر إنشاء الحملة")));
 
-      toast.success(`تم إنشاء الحملة لجمهور حجمه ${audienceCount.toLocaleString("en-US")}`);
+      toast.success(dt("تم إنشاء الحملة لجمهور حجمه {0}", [audienceCount.toLocaleString("en-US")]));
       router.push("/dashboard/communication/campaigns");
     } catch (e) {
       toast.error((e as Error).message);
@@ -369,7 +370,7 @@ export function NewCampaignWizard() {
   };
 
   return (
-    <div dir="rtl">
+    <div dir={dashDir()}>
       <Stepper step={step} steps={steps} />
 
       {step === 0 && (
@@ -395,9 +396,9 @@ export function NewCampaignWizard() {
                 </span>
                 <span className="text-sm font-semibold text-slate-900">{m.label}</span>
                 <span className="text-[11px] leading-5 text-slate-500">
-                  {id === "EMAIL" && "موضوع ومحتوى كامل، ويدعم الفتح والنقر في التقارير."}
-                  {id === "WHATSAPP" && "يتطلّب قالبًا معتمدًا من Meta وموافقة صريحة من المتبرع."}
-                  {id === "SMS" && "نص فقط، ويُحاسب بالمقطع  العربية ٧٠ حرفًا للمقطع."}
+                  {id === "EMAIL" && dt("موضوع ومحتوى كامل، ويدعم الفتح والنقر في التقارير.")}
+                  {id === "WHATSAPP" && dt("يتطلّب قالبًا معتمدًا من Meta وموافقة صريحة من المتبرع.")}
+                  {id === "SMS" && dt("نص فقط، ويُحاسب بالمقطع  العربية ٧٠ حرفًا للمقطع.")}
                 </span>
               </button>
             );
@@ -416,12 +417,11 @@ export function NewCampaignWizard() {
           ) : templates.length === 0 ? (
             <EmptyState
               icon={FileText}
-              title="لا توجد قوالب لهذه القناة"
-              description="أنشئ قالبًا من صفحة «قوالب البريد والمحفّزات» أولًا، ثم عُد لإنشاء الحملة."
+              title={dt("لا توجد قوالب لهذه القناة")}
+              description={dt("أنشئ قالبًا من صفحة «قوالب البريد والمحفّزات» أولًا، ثم عُد لإنشاء الحملة.")}
               action={
                 <Button variant="outline" size="sm" onClick={() => setStep(0)}>
-                  اختر قناة أخرى
-                </Button>
+                  {dt("اختر قناة أخرى")}</Button>
               }
             />
           ) : (
@@ -463,8 +463,7 @@ export function NewCampaignWizard() {
           {chosenTemplate && chosenTemplate.availableLocales.length < 2 && (
             <p className="flex items-start gap-1.5 rounded-lg border border-amber-200 bg-amber-50 p-2.5 text-[11px] leading-5 text-amber-900">
               <TriangleAlert className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-              هذا القالب متوفّر بلغة واحدة فقط. في خطوة «اللغة» ستحدد نسخة الـFallback التي تستخدم عند غياب لغة المتبرع.
-            </p>
+              {dt("هذا القالب متوفّر بلغة واحدة فقط. في خطوة «اللغة» ستحدد نسخة الـFallback التي تستخدم عند غياب لغة المتبرع.")}</p>
           )}
         </div>
       )}
@@ -472,16 +471,16 @@ export function NewCampaignWizard() {
       {step === 2 && (
         <div className="space-y-4">
           <div className="space-y-1.5">
-            <label className="text-xs font-medium text-slate-600">اسم الحملة (داخلي)</label>
-            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="مثال: حملة رمضان — المتبرعون النشطون" />
+            <label className="text-xs font-medium text-slate-600">{dt("اسم الحملة (داخلي)")}</label>
+            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder={dt("مثال: حملة رمضان — المتبرعون النشطون")} />
           </div>
 
           <div className="grid grid-cols-2 gap-2 rounded-xl border border-slate-200 bg-slate-50 p-1 md:grid-cols-4">
             {([
-              ["SMART", "جمهور ذكي"],
-              ["BADGE", "الشارات"],
-              ["SAVED", "قائمة محفوظة"],
-              ["SPECIFIC", "أشخاص محددون"],
+              ["SMART", dt("جمهور ذكي")],
+              ["BADGE", dt("الشارات")],
+              ["SAVED", dt("قائمة محفوظة")],
+              ["SPECIFIC", dt("أشخاص محددون")],
             ] as const).map(([mode, label]) => (
               <button
                 key={mode}
@@ -508,8 +507,8 @@ export function NewCampaignWizard() {
               <div className="flex items-center gap-2">
                 <Tag className="h-4 w-4 text-brand" />
                 <div>
-                  <h3 className="text-sm font-semibold text-slate-900">جمهور من الشارات</h3>
-                  <p className="mt-1 text-xs text-slate-500" role={badgePreviewError ? "alert" : undefined}>{badgePreviewError ?? "تُحفظ كل السجلات المطابقة للشارة؛ الأهلية المبدئية لا تضمن التسليم وتُراجع عند التنفيذ."}</p>
+                  <h3 className="text-sm font-semibold text-slate-900">{dt("جمهور من الشارات")}</h3>
+                  <p className="mt-1 text-xs text-slate-500" role={badgePreviewError ? "alert" : undefined}>{badgePreviewError ?? dt("تُحفظ كل السجلات المطابقة للشارة؛ الأهلية المبدئية لا تضمن التسليم وتُراجع عند التنفيذ.")}</p>
                 </div>
               </div>
               <select
@@ -517,17 +516,17 @@ export function NewCampaignWizard() {
                 onChange={(e) => setBadgeId(e.target.value)}
                 className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm"
               >
-                <option value="">اختر شارة...</option>
+                <option value="">{dt("اختر شارة...")}</option>
                 {badges.map((badge) => (
                   <option key={badge.id} value={badge.id}>{badge.name}</option>
                 ))}
               </select>
               {badgeId && (
                 <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
-                  <div className="rounded-lg bg-slate-50 p-3 text-xs"><span className="text-slate-500">جمهور الحملة</span><strong className="mt-1 block text-lg">{badgePreview ? badgePreview.matched.toLocaleString("en-US") : "—"}</strong></div>
-                  <div className="rounded-lg bg-emerald-50 p-3 text-xs"><span className="text-emerald-700">مؤهل مبدئيًا</span><strong className="mt-1 block text-lg text-emerald-800">{badgePreview ? badgePreview.eligible.toLocaleString("en-US") : "—"}</strong></div>
-                  <div className="rounded-lg bg-slate-50 p-3 text-xs"><span className="text-slate-500">بدون وسيلة اتصال</span><strong className="mt-1 block text-lg">{badgePreview ? badgePreview.missingContact.toLocaleString("en-US") : "—"}</strong></div>
-                  <div className="rounded-lg bg-slate-50 p-3 text-xs" title={badgePreview ? `إيقاف التواصل: ${badgePreview.doNotContact}; مراجعة الموافقة: ${badgePreview.needsReview ?? 0}` : undefined}><span className="text-slate-500">تواصل موقوف / يحتاج مراجعة</span><strong className="mt-1 block text-lg">{badgePreview ? (badgePreview.doNotContact + (badgePreview.needsReview ?? 0)).toLocaleString("en-US") : "—"}</strong></div>
+                  <div className="rounded-lg bg-slate-50 p-3 text-xs"><span className="text-slate-500">{dt("جمهور الحملة")}</span><strong className="mt-1 block text-lg">{badgePreview ? badgePreview.matched.toLocaleString("en-US") : "—"}</strong></div>
+                  <div className="rounded-lg bg-emerald-50 p-3 text-xs"><span className="text-emerald-700">{dt("مؤهل مبدئيًا")}</span><strong className="mt-1 block text-lg text-emerald-800">{badgePreview ? badgePreview.eligible.toLocaleString("en-US") : "—"}</strong></div>
+                  <div className="rounded-lg bg-slate-50 p-3 text-xs"><span className="text-slate-500">{dt("بدون وسيلة اتصال")}</span><strong className="mt-1 block text-lg">{badgePreview ? badgePreview.missingContact.toLocaleString("en-US") : "—"}</strong></div>
+                  <div className="rounded-lg bg-slate-50 p-3 text-xs" title={badgePreview ? dt("إيقاف التواصل: {0}; مراجعة الموافقة: {1}", [badgePreview.doNotContact, badgePreview.needsReview ?? 0]) : undefined}><span className="text-slate-500">{dt("تواصل موقوف / يحتاج مراجعة")}</span><strong className="mt-1 block text-lg">{badgePreview ? (badgePreview.doNotContact + (badgePreview.needsReview ?? 0)).toLocaleString("en-US") : "—"}</strong></div>
                 </div>
               )}
             </div>
@@ -536,16 +535,16 @@ export function NewCampaignWizard() {
           {audienceMode === "SAVED" && (
             <div className="rounded-xl border border-slate-200 bg-white p-4">
               <label className="space-y-1.5 text-xs text-slate-600">
-                <span>اختر قائمة جمهور محفوظة</span>
+                <span>{dt("اختر قائمة جمهور محفوظة")}</span>
                 <select
                   value={savedListId}
                   onChange={(e) => setSavedListId(e.target.value)}
                   className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm"
                 >
-                  <option value="">اختر قائمة...</option>
+                  <option value="">{dt("اختر قائمة...")}</option>
                   {savedLists.filter((list) => list.type !== "TEST").map((list) => (
                     <option key={list.id} value={list.id}>
-                      {list.name}{list.type === "SMART" ? " — ذكية" : ` — ${list.membersCount.toLocaleString("en-US")} عضو`}
+                      {list.name}{list.type === "SMART" ? dt(" — ذكية") : dt(" — {0} عضو", [list.membersCount.toLocaleString("en-US")])}
                     </option>
                   ))}
                 </select>
@@ -564,19 +563,18 @@ export function NewCampaignWizard() {
           <section className="rounded-xl border border-slate-200 bg-white p-4">
             <div className="flex items-center gap-2">
               <Languages className="h-4 w-4 text-brand" />
-              <h3 className="text-sm font-semibold text-slate-900">قواعد اللغة</h3>
+              <h3 className="text-sm font-semibold text-slate-900">{dt("قواعد اللغة")}</h3>
             </div>
             <p className="mt-1 text-xs text-slate-500">
-              النظام يختار نسخة القالب حسب لغة كل متبرع تلقائيًا. لا تحتاج إلى إنشاء حملة منفصلة لكل لغة.
-            </p>
+              {dt("النظام يختار نسخة القالب حسب لغة كل متبرع تلقائيًا. لا تحتاج إلى إنشاء حملة منفصلة لكل لغة.")}</p>
 
             <div className="mt-4 grid gap-3 md:grid-cols-2">
               <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-xs text-emerald-800">
-                <p className="font-semibold">تلقائي حسب لغة المتبرع ✓</p>
-                <p className="mt-1">Arabic / Turkish / English / French وغيرها تُرسل من نفس Template Family حسب preferredLang.</p>
+                <p className="font-semibold">{dt("تلقائي حسب لغة المتبرع ✓")}</p>
+                <p className="mt-1">{dt("Arabic / Turkish / English / French وغيرها تُرسل من نفس Template Family حسب preferredLang.")}</p>
               </div>
               <label className="space-y-1 text-xs text-slate-600">
-                <span>Fallback عند عدم وجود نسخة مطابقة</span>
+                <span>{dt("Fallback عند عدم وجود نسخة مطابقة")}</span>
                 <select
                   value={smartAudience.fallbackLocale ?? "ar"}
                   onChange={(e) => setSmartAudience((current) => ({ ...current, fallbackLocale: e.target.value }))}
@@ -591,7 +589,7 @@ export function NewCampaignWizard() {
 
             {chosenTemplate && (
               <div className="mt-4">
-                <p className="text-[11px] text-slate-500">اللغات المتاحة في القالب</p>
+                <p className="text-[11px] text-slate-500">{dt("اللغات المتاحة في القالب")}</p>
                 <div className="mt-2 flex flex-wrap gap-2">
                   {chosenTemplate.availableLocales.map((locale) => (
                     <span key={locale} className="rounded-full border border-slate-200 bg-slate-50 px-2 py-1 text-[11px]">
@@ -610,16 +608,16 @@ export function NewCampaignWizard() {
           <div className="rounded-xl border border-brand/20 bg-brand-50/40 p-4">
             <div className="flex items-center gap-2">
               <Gauge className="h-4 w-4 text-brand" />
-              <h3 className="text-sm font-semibold text-slate-900">تحكم إرسال الحملة قبل الإنشاء</h3>
+              <h3 className="text-sm font-semibold text-slate-900">{dt("تحكم إرسال الحملة قبل الإنشاء")}</h3>
             </div>
-            <p className="mt-1 text-xs text-slate-500">هذه الإعدادات تُحفظ مع الحملة من البداية، ويمكن تعديلها لاحقًا من مركز التحكم.</p>
+            <p className="mt-1 text-xs text-slate-500">{dt("هذه الإعدادات تُحفظ مع الحملة من البداية، ويمكن تعديلها لاحقًا من مركز التحكم.")}</p>
           </div>
 
           <section className="space-y-3 rounded-xl border border-slate-200 bg-white p-4">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
-                <h4 className="text-sm font-semibold text-slate-900">سرعة الإرسال</h4>
-                <p className="mt-1 text-xs text-slate-500">Auto Speed هو الاختيار الموصى به، ويضبط السرعة حسب الجمهور والحد اليومي.</p>
+                <h4 className="text-sm font-semibold text-slate-900">{dt("سرعة الإرسال")}</h4>
+                <p className="mt-1 text-xs text-slate-500">{dt("Auto Speed هو الاختيار الموصى به، ويضبط السرعة حسب الجمهور والحد اليومي.")}</p>
               </div>
               <label className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-medium">
                 <input
@@ -633,10 +631,10 @@ export function NewCampaignWizard() {
             </div>
             <div className={cn("grid grid-cols-2 gap-2 md:grid-cols-4", sendControls.autoSpeed && "opacity-50")}>
               {([
-                ["SAFE", "هادئ"],
-                ["BALANCED", "متوازن"],
-                ["FAST", "سريع"],
-                ["MAX", "أقصى سرعة آمنة"],
+                ["SAFE", dt("هادئ")],
+                ["BALANCED", dt("متوازن")],
+                ["FAST", dt("سريع")],
+                ["MAX", dt("أقصى سرعة آمنة")],
               ] as const).map(([id, label]) => (
                 <button
                   key={id}
@@ -644,7 +642,7 @@ export function NewCampaignWizard() {
                   disabled={sendControls.autoSpeed}
                   onClick={() => setSendControls((current) => ({ ...current, speedMode: id }))}
                   className={cn(
-                    "rounded-xl border p-3 text-right text-xs disabled:cursor-not-allowed",
+                    "rounded-xl border p-3 text-start text-xs disabled:cursor-not-allowed",
                     sendControls.speedMode === id ? "border-brand bg-brand/5 ring-1 ring-brand/20" : "border-slate-200 hover:bg-slate-50",
                   )}
                 >
@@ -655,23 +653,23 @@ export function NewCampaignWizard() {
           </section>
 
           <section className="space-y-3 rounded-xl border border-slate-200 bg-white p-4">
-            <h4 className="text-sm font-semibold text-slate-900">أولوية الحملة</h4>
+            <h4 className="text-sm font-semibold text-slate-900">{dt("أولوية الحملة")}</h4>
             <select
               value={sendControls.priority}
               onChange={(e) => setSendControls((current) => ({ ...current, priority: e.target.value as CampaignSendControlsDraft["priority"] }))}
               className="h-10 w-full max-w-sm rounded-lg border border-slate-200 bg-white px-3 text-sm"
             >
-              <option value="LOW">منخفضة</option>
-              <option value="NORMAL">عادية</option>
-              <option value="HIGH">عالية</option>
-              <option value="URGENT">عاجلة</option>
+              <option value="LOW">{dt("منخفضة")}</option>
+              <option value="NORMAL">{dt("عادية")}</option>
+              <option value="HIGH">{dt("عالية")}</option>
+              <option value="URGENT">{dt("عاجلة")}</option>
             </select>
           </section>
 
           <section className="space-y-3 rounded-xl border border-slate-200 bg-white p-4">
             <div className="flex items-center gap-2">
               <Moon className="h-4 w-4 text-slate-500" />
-              <h4 className="text-sm font-semibold text-slate-900">ساعات عدم الإرسال</h4>
+              <h4 className="text-sm font-semibold text-slate-900">{dt("ساعات عدم الإرسال")}</h4>
             </div>
             <label className="flex items-center gap-2 text-xs text-slate-700">
               <input
@@ -679,34 +677,33 @@ export function NewCampaignWizard() {
                 checked={sendControls.quietHours.enabled}
                 onChange={(e) => setSendControls((current) => ({ ...current, quietHours: { ...current.quietHours, enabled: e.target.checked } }))}
               />
-              تفعيل ساعات عدم الإرسال
-            </label>
+              {dt("تفعيل ساعات عدم الإرسال")}</label>
             {sendControls.quietHours.enabled && (
               <div className="space-y-3">
                 <div className="grid grid-cols-2 gap-2">
                   <button
                     type="button"
                     onClick={() => setSendControls((current) => ({ ...current, quietHours: { ...current.quietHours, timezoneMode: "RECIPIENT" } }))}
-                    className={cn("rounded-lg border p-3 text-right text-xs", sendControls.quietHours.timezoneMode === "RECIPIENT" ? "border-brand bg-brand/5 ring-1 ring-brand/20" : "border-slate-200")}
+                    className={cn("rounded-lg border p-3 text-start text-xs", sendControls.quietHours.timezoneMode === "RECIPIENT" ? "border-brand bg-brand/5 ring-1 ring-brand/20" : "border-slate-200")}
                   >
-                    <strong className="block">تلقائي حسب المتبرع</strong>
-                    <span className="mt-1 block text-[11px] text-slate-500">يحدد دولة الرقم/المتبرع ويطبق الساعات على توقيته المحلي.</span>
+                    <strong className="block">{dt("تلقائي حسب المتبرع")}</strong>
+                    <span className="mt-1 block text-[11px] text-slate-500">{dt("يحدد دولة الرقم/المتبرع ويطبق الساعات على توقيته المحلي.")}</span>
                   </button>
                   <button
                     type="button"
                     onClick={() => setSendControls((current) => ({ ...current, quietHours: { ...current.quietHours, timezoneMode: "FIXED" } }))}
-                    className={cn("rounded-lg border p-3 text-right text-xs", sendControls.quietHours.timezoneMode === "FIXED" ? "border-brand bg-brand/5 ring-1 ring-brand/20" : "border-slate-200")}
+                    className={cn("rounded-lg border p-3 text-start text-xs", sendControls.quietHours.timezoneMode === "FIXED" ? "border-brand bg-brand/5 ring-1 ring-brand/20" : "border-slate-200")}
                   >
-                    <strong className="block">توقيت ثابت</strong>
-                    <span className="mt-1 block text-[11px] text-slate-500">استخدم منطقة زمنية واحدة لكل الجمهور.</span>
+                    <strong className="block">{dt("توقيت ثابت")}</strong>
+                    <span className="mt-1 block text-[11px] text-slate-500">{dt("استخدم منطقة زمنية واحدة لكل الجمهور.")}</span>
                   </button>
                 </div>
                 <div className="grid gap-3 sm:grid-cols-2">
-                  <label className="space-y-1 text-xs text-slate-600"><span>من</span><input type="time" value={sendControls.quietHours.start} onChange={(e) => setSendControls((current) => ({ ...current, quietHours: { ...current.quietHours, start: e.target.value } }))} className="h-10 w-full rounded-lg border border-slate-200 px-3" /></label>
-                  <label className="space-y-1 text-xs text-slate-600"><span>إلى</span><input type="time" value={sendControls.quietHours.end} onChange={(e) => setSendControls((current) => ({ ...current, quietHours: { ...current.quietHours, end: e.target.value } }))} className="h-10 w-full rounded-lg border border-slate-200 px-3" /></label>
+                  <label className="space-y-1 text-xs text-slate-600"><span>{dt("من")}</span><input type="time" value={sendControls.quietHours.start} onChange={(e) => setSendControls((current) => ({ ...current, quietHours: { ...current.quietHours, start: e.target.value } }))} className="h-10 w-full rounded-lg border border-slate-200 px-3" /></label>
+                  <label className="space-y-1 text-xs text-slate-600"><span>{dt("إلى")}</span><input type="time" value={sendControls.quietHours.end} onChange={(e) => setSendControls((current) => ({ ...current, quietHours: { ...current.quietHours, end: e.target.value } }))} className="h-10 w-full rounded-lg border border-slate-200 px-3" /></label>
                 </div>
                 <label className="block space-y-1 text-xs text-slate-600">
-                  <span>{sendControls.quietHours.timezoneMode === "RECIPIENT" ? "التوقيت الاحتياطي عند تعذر تحديد الدولة" : "المنطقة الزمنية"}</span>
+                  <span>{sendControls.quietHours.timezoneMode === "RECIPIENT" ? dt("التوقيت الاحتياطي عند تعذر تحديد الدولة") : dt("المنطقة الزمنية")}</span>
                   <select
                     value={sendControls.quietHours.timezone}
                     onChange={(e) => setSendControls((current) => ({ ...current, quietHours: { ...current.quietHours, timezone: e.target.value } }))}
@@ -722,7 +719,7 @@ export function NewCampaignWizard() {
           <section className="space-y-3 rounded-xl border border-slate-200 bg-white p-4">
             <div className="flex items-center gap-2">
               <ShieldCheck className="h-4 w-4 text-slate-500" />
-              <h4 className="text-sm font-semibold text-slate-900">الحد اليومي</h4>
+              <h4 className="text-sm font-semibold text-slate-900">{dt("الحد اليومي")}</h4>
             </div>
             <div className="flex flex-wrap items-center gap-3">
               <input
@@ -738,7 +735,7 @@ export function NewCampaignWizard() {
                 dir="ltr"
               />
               <span className={cn("rounded-full px-2 py-1 text-[11px]", dailyCapSource === "META" ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-600")}>
-                {dailyCapSource === "META" ? "مقروء تلقائيًا من Meta" : "قيمة احتياطية / تعديل يدوي"}
+                {dailyCapSource === "META" ? dt("مقروء تلقائيًا من Meta") : dt("قيمة احتياطية / تعديل يدوي")}
               </span>
             </div>
           </section>
@@ -749,37 +746,37 @@ export function NewCampaignWizard() {
       {((step === 4 && channel !== "WHATSAPP") || (step === 5 && channel === "WHATSAPP")) && (
         <div className="space-y-4">
           <div className="rounded-xl border border-brand/20 bg-brand-50/40 p-4">
-            <h3 className="text-sm font-semibold text-slate-900">مراجعة الحملة قبل الإنشاء</h3>
-            <p className="mt-1 text-xs text-slate-500">لن يتم الإرسال الآن. سيتم إنشاء الحملة كمسودة للمراجعة والاعتماد؛ حجم الجمهور لا يعني أن كل السجلات مؤهلة أو أن الرسائل سُلّمت.</p>
+            <h3 className="text-sm font-semibold text-slate-900">{dt("مراجعة الحملة قبل الإنشاء")}</h3>
+            <p className="mt-1 text-xs text-slate-500">{dt("لن يتم الإرسال الآن. سيتم إنشاء الحملة كمسودة للمراجعة والاعتماد؛ حجم الجمهور لا يعني أن كل السجلات مؤهلة أو أن الرسائل سُلّمت.")}</p>
           </div>
 
           <div className="grid gap-3 md:grid-cols-2">
             <section className="rounded-xl border border-slate-200 bg-white p-4">
-              <p className="text-[11px] text-slate-500">الحملة</p>
+              <p className="text-[11px] text-slate-500">{dt("الحملة")}</p>
               <p className="mt-1 text-sm font-semibold text-slate-900">{name || "—"}</p>
-              <p className="mt-2 text-xs text-slate-600">القناة: {CHANNEL_META[channel as keyof typeof CHANNEL_META]?.label ?? channel}</p>
-              <p className="mt-1 text-xs text-slate-600">القالب: {chosenTemplate?.name ?? "—"}</p>
-              <p className="mt-1 text-xs text-slate-600">نوع الجمهور: {audienceMode === "SMART" ? "جمهور ذكي" : audienceMode === "BADGE" ? "شارة" : audienceMode === "SAVED" ? "قائمة محفوظة" : "أشخاص محددون"}</p>
+              <p className="mt-2 text-xs text-slate-600">{dtx("القناة: {0}", [CHANNEL_META[channel as keyof typeof CHANNEL_META]?.label ?? channel])}</p>
+              <p className="mt-1 text-xs text-slate-600">{dtx("القالب: {0}", [chosenTemplate?.name ?? "—"])}</p>
+              <p className="mt-1 text-xs text-slate-600">{dt("نوع الجمهور: ")}{audienceMode === "SMART" ? dt("جمهور ذكي") : audienceMode === "BADGE" ? dt("شارة") : audienceMode === "SAVED" ? dt("قائمة محفوظة") : dt("أشخاص محددون")}</p>
               <p className="mt-1 text-xs text-slate-600">Fallback: {LOCALE_LABELS[(smartAudience.fallbackLocale ?? "ar") as keyof typeof LOCALE_LABELS] ?? smartAudience.fallbackLocale ?? "ar"}</p>
             </section>
 
             <section className="rounded-xl border border-slate-200 bg-white p-4">
-              <p className="text-[11px] text-slate-500">الجمهور</p>
+              <p className="text-[11px] text-slate-500">{dt("الجمهور")}</p>
               <div className="mt-2 grid grid-cols-2 gap-2">
                 <div className="rounded-lg bg-slate-50 p-3">
-                  <p className="text-[10px] text-slate-500">جمهور الحملة</p>
+                  <p className="text-[10px] text-slate-500">{dt("جمهور الحملة")}</p>
                   <p className="text-lg font-bold">{reviewMatched.toLocaleString("en-US")}</p>
                 </div>
                 <div className="rounded-lg bg-emerald-50 p-3">
-                  <p className="text-[10px] text-emerald-700">مؤهل مبدئيًا</p>
-                  <p className="text-lg font-bold text-emerald-800">{reviewEligible === null ? "يُفحص عند التنفيذ" : reviewEligible.toLocaleString("en-US")}</p>
+                  <p className="text-[10px] text-emerald-700">{dt("مؤهل مبدئيًا")}</p>
+                  <p className="text-lg font-bold text-emerald-800">{reviewEligible === null ? dt("يُفحص عند التنفيذ") : reviewEligible.toLocaleString("en-US")}</p>
                 </div>
               </div>
               {(audienceMode === "SMART" || audienceMode === "BADGE") && (
                 <div className="mt-2 space-y-1 text-[11px] text-slate-600">
-                  <p>بدون وسيلة اتصال: {(activePreview?.missingContact ?? 0).toLocaleString("en-US")}</p>
-                  <p>إيقاف التواصل: {(activePreview?.doNotContact ?? 0).toLocaleString("en-US")}؛ مراجعة الموافقة: {(activePreview?.needsReview ?? 0).toLocaleString("en-US")}</p>
-                  <p>استثناءات يدوية: {(smartAudience.excludeUserIds?.length ?? 0).toLocaleString("en-US")}</p>
+                  <p>{dtx("بدون وسيلة اتصال: {0}", [(activePreview?.missingContact ?? 0).toLocaleString("en-US")])}</p>
+                  <p>{dtx("إيقاف التواصل: {0}؛ مراجعة الموافقة: {1}", [(activePreview?.doNotContact ?? 0).toLocaleString("en-US"), (activePreview?.needsReview ?? 0).toLocaleString("en-US")])}</p>
+                  <p>{dtx("استثناءات يدوية: {0}", [(smartAudience.excludeUserIds?.length ?? 0).toLocaleString("en-US")])}</p>
                 </div>
               )}
             </section>
@@ -787,7 +784,7 @@ export function NewCampaignWizard() {
 
           {reviewLanguages.length > 0 && (
             <section className="rounded-xl border border-slate-200 bg-white p-4">
-              <h4 className="text-sm font-semibold text-slate-900">توزيع اللغات</h4>
+              <h4 className="text-sm font-semibold text-slate-900">{dt("توزيع اللغات")}</h4>
               <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
                 {reviewLanguages.map(([locale, count]) => (
                   <div key={locale} className="rounded-lg border border-slate-100 bg-slate-50 p-2.5">
@@ -801,12 +798,12 @@ export function NewCampaignWizard() {
 
           {channel === "WHATSAPP" && (
             <section className="rounded-xl border border-slate-200 bg-white p-4">
-              <h4 className="text-sm font-semibold text-slate-900">إعدادات الإرسال</h4>
+              <h4 className="text-sm font-semibold text-slate-900">{dt("إعدادات الإرسال")}</h4>
               <div className="mt-2 grid gap-2 text-xs text-slate-600 sm:grid-cols-2">
-                <p>Auto Speed: {sendControls.autoSpeed ? "مفعّل" : "متوقف"}</p>
-                <p>الأولوية: {sendControls.priority}</p>
-                <p>الحد اليومي: {sendControls.dailyCap.toLocaleString("en-US")}</p>
-                <p>ساعات عدم الإرسال: {sendControls.quietHours.enabled ? `${sendControls.quietHours.start} — ${sendControls.quietHours.end} (${sendControls.quietHours.timezoneMode === "RECIPIENT" ? "حسب المتبرع" : sendControls.quietHours.timezone})` : "غير مفعلة"}</p>
+                <p>Auto Speed: {sendControls.autoSpeed ? dt("مفعّل") : dt("متوقف")}</p>
+                <p>{dtx("الأولوية: {0}", [sendControls.priority])}</p>
+                <p>{dtx("الحد اليومي: {0}", [sendControls.dailyCap.toLocaleString("en-US")])}</p>
+                <p>{dt("ساعات عدم الإرسال: ")}{sendControls.quietHours.enabled ? `${sendControls.quietHours.start} — ${sendControls.quietHours.end} (${sendControls.quietHours.timezoneMode === "RECIPIENT" ? dt("حسب المتبرع") : sendControls.quietHours.timezone})` : dt("غير مفعلة")}</p>
               </div>
             </section>
           )}
@@ -821,40 +818,34 @@ export function NewCampaignWizard() {
           className="gap-1.5"
         >
           <ChevronLeft className="h-4 w-4 rotate-180" />
-          {step === 0 ? "إلغاء" : "السابق"}
+          {step === 0 ? dt("إلغاء") : dt("السابق")}
         </Button>
 
         {step === 1 && (
           <Button onClick={() => setStep(2)} disabled={!templateId} className="bg-brand hover:bg-brand/90">
-            التالي: اختيار الجمهور
-          </Button>
+            {dt("التالي: اختيار الجمهور")}</Button>
         )}
         {step === 2 && (
           <Button onClick={() => setStep(3)} disabled={!audienceReady || !name.trim()} className="bg-brand hover:bg-brand/90">
-            التالي: قواعد اللغة
-          </Button>
+            {dt("التالي: قواعد اللغة")}</Button>
         )}
         {step === 3 && channel === "WHATSAPP" && (
           <Button onClick={() => setStep(4)} disabled={saving} className="gap-1.5 bg-brand hover:bg-brand/90">
             <Gauge className="h-4 w-4" />
-            التالي: إعداد الإرسال
-          </Button>
+            {dt("التالي: إعداد الإرسال")}</Button>
         )}
         {step === 3 && channel !== "WHATSAPP" && (
           <Button onClick={() => setStep(4)} disabled={saving} className="bg-brand hover:bg-brand/90">
-            التالي: المراجعة
-          </Button>
+            {dt("التالي: المراجعة")}</Button>
         )}
         {step === 4 && channel === "WHATSAPP" && (
           <Button onClick={() => setStep(5)} disabled={saving} className="bg-brand hover:bg-brand/90">
-            التالي: المراجعة
-          </Button>
+            {dt("التالي: المراجعة")}</Button>
         )}
         {((step === 4 && channel !== "WHATSAPP") || (step === 5 && channel === "WHATSAPP")) && (
           <Button onClick={create} disabled={saving} className="gap-1.5 bg-brand hover:bg-brand/90">
             {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Users className="h-4 w-4" />}
-            إنشاء الحملة
-          </Button>
+            {dt("إنشاء الحملة")}</Button>
         )}
       </div>
     </div>

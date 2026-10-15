@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { X, Trash2, Loader2 } from "lucide-react";
 import { SUPPORTED_LOCALES, LOCALE_LABELS, DEFAULT_LOCALE, type SupportedLocale } from "@/lib/locales";
 import { cn } from "@/lib/utils";
+import { dashDir, dt } from "@/lib/dashboard/i18n";
 
 /**
  * The shared frame for the Template Center's editor dialogs.
@@ -108,7 +109,7 @@ export function TemplateDialogShell({
   onSave,
   saving,
   saveDisabled,
-  saveLabel = "حفظ",
+  saveLabel = dt("حفظ"),
   bodyClassName,
 }: ShellProps) {
   const a = ACCENTS[accent];
@@ -117,10 +118,10 @@ export function TemplateDialogShell({
       <DialogOverlay className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-[2px]" />
       <DialogContent
         hideCloseButton
-        dir="rtl"
+        dir={dashDir()}
         className={cn(
           // `flex` here is what displaces the base `grid`  see the note above.
-          "fixed left-1/2 top-1/2 z-50 flex w-[calc(100%-2rem)] max-h-[92vh] -translate-x-1/2 -translate-y-1/2 flex-col",
+          "fixed end-1/2 top-1/2 z-50 flex w-[calc(100%-2rem)] max-h-[92vh] -translate-x-1/2 -translate-y-1/2 flex-col",
           "overflow-hidden rounded-2xl border border-border bg-card p-0 shadow-2xl ring-1 ring-slate-900/5",
           SIZES[size],
         )}
@@ -141,7 +142,7 @@ export function TemplateDialogShell({
             type="button"
             onClick={() => onOpenChange(false)}
             className="-me-1 shrink-0 rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
-            aria-label="إغلاق"
+            aria-label={dt("إغلاق")}
           >
             <X className="h-4 w-4" />
           </button>
@@ -157,8 +158,7 @@ export function TemplateDialogShell({
         >
           {loading ? (
             <div className="flex h-full min-h-[220px] items-center justify-center text-sm text-muted-foreground">
-              <Loader2 className="me-2 h-6 w-6 animate-spin" /> جاري التحميل…
-            </div>
+              <Loader2 className="me-2 h-6 w-6 animate-spin" /> {dt(" جاري التحميل…")}</div>
           ) : (
             children
           )}
@@ -166,8 +166,7 @@ export function TemplateDialogShell({
 
         <footer className="flex shrink-0 items-center justify-end gap-2 border-t border-border bg-slate-50/80 px-5 py-3">
           <Button variant="outline" onClick={onCancel} disabled={saving}>
-            إلغاء
-          </Button>
+            {dt("إلغاء")}</Button>
           <Button onClick={onSave} disabled={saving || saveDisabled} className={a.save}>
             {saving && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
             {saveLabel}
@@ -205,7 +204,7 @@ export function LocaleStrip({
   const a = ACCENTS[accent];
   return (
     <div className="flex shrink-0 flex-wrap items-center gap-1.5 border-b border-border bg-slate-50/70 px-5 py-2.5">
-      <span className="me-1 text-[11px] font-semibold text-slate-500">اللغات</span>
+      <span className="me-1 text-[11px] font-semibold text-slate-500">{dt("اللغات")}</span>
       {SUPPORTED_LOCALES.map((loc) => {
         const has = enabled(loc);
         const active = activeLocale === loc;
@@ -227,11 +226,11 @@ export function LocaleStrip({
               type="button"
               onClick={() => (has ? onSelect(loc) : onEnable(loc))}
               className="px-2.5 py-1 text-xs font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
-              title={has ? `تحرير النسخة بـ${LOCALE_LABELS[loc]}` : `إضافة نسخة بـ${LOCALE_LABELS[loc]}`}
+              title={has ? dt("تحرير النسخة بـ{0}", [LOCALE_LABELS[loc]]) : dt("إضافة نسخة بـ{0}", [LOCALE_LABELS[loc]])}
             >
               {LOCALE_LABELS[loc]}
               {!has && <span className="ms-1">+</span>}
-              {isDefault && <span className="ms-1 text-[9px] opacity-70">افتراضي</span>}
+              {isDefault && <span className="ms-1 text-[9px] opacity-70">{dt("افتراضي")}</span>}
               {isLocked && <span className="ms-1 text-[9px] opacity-70">Meta</span>}
             </button>
             {has && !isDefault && !isLocked && (
@@ -242,8 +241,8 @@ export function LocaleStrip({
                   "pe-1.5 ps-0.5 py-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand",
                   active ? "text-white/70 hover:text-white" : "text-slate-400 hover:text-red-600",
                 )}
-                title={`حذف نسخة ${LOCALE_LABELS[loc]}`}
-                aria-label={`حذف نسخة ${LOCALE_LABELS[loc]}`}
+                title={dt("حذف نسخة {0}", [LOCALE_LABELS[loc]])}
+                aria-label={dt("حذف نسخة {0}", [LOCALE_LABELS[loc]])}
               >
                 <Trash2 className="h-3 w-3" />
               </button>

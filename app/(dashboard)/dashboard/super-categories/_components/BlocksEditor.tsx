@@ -15,6 +15,7 @@ import {
 } from '../../_components/ContentTranslationTabs';
 import { ImageUploadField } from '../../_components/ImageUploadField';
 import type { ContentOption } from './ContentPicker';
+import { dt } from "@/lib/dashboard/i18n";
 
 /**
  * The ordered sections of a super category's page.
@@ -27,16 +28,16 @@ import type { ContentOption } from './ContentPicker';
  */
 
 export const BLOCK_KIND_LABELS: Record<string, string> = {
-  CAMPAIGNS: 'المشاريع المرتبطة',
-  POSTS: 'المقالات المرتبطة',
-  VIDEOS: 'الفيديوهات المرتبطة',
-  PLAYLISTS: 'البرامج المرتبطة',
-  COURSES: 'الدورات المرتبطة',
-  REPORTS: 'التقارير المرتبطة',
-  BOOKLETS: 'الكتيبات المرتبطة',
-  TEXT: 'لوحة نصية (خبر، تعريف…)',
-  VIDEO: 'فيديو مفرد',
-  PLAYLIST_EPISODES: 'حلقات سلسلة',
+  get CAMPAIGNS() { return dt("المشاريع المرتبطة"); },
+  get POSTS() { return dt("المقالات المرتبطة"); },
+  get VIDEOS() { return dt("الفيديوهات المرتبطة"); },
+  get PLAYLISTS() { return dt("البرامج المرتبطة"); },
+  get COURSES() { return dt("الدورات المرتبطة"); },
+  get REPORTS() { return dt("التقارير المرتبطة"); },
+  get BOOKLETS() { return dt("الكتيبات المرتبطة"); },
+  get TEXT() { return dt("لوحة نصية (خبر، تعريف…)"); },
+  get VIDEO() { return dt("فيديو مفرد"); },
+  get PLAYLIST_EPISODES() { return dt("حلقات سلسلة"); },
 };
 
 /** Which optional inputs each kind actually uses. */
@@ -54,11 +55,11 @@ const FIELDS: Record<string, { heading: boolean; body: boolean; link: boolean; v
 };
 
 export const BLOCK_TRANSLATION_FIELDS: readonly TranslationField[] = [
-  { name: 'eyebrow', label: 'السطر العلوي' },
-  { name: 'title', label: 'العنوان' },
-  { name: 'subtitle', label: 'العنوان الفرعي' },
-  { name: 'body', label: 'النص', multiline: true },
-  { name: 'linkLabel', label: 'نص الرابط' },
+  { name: 'eyebrow', get label() { return dt("السطر العلوي"); } },
+  { name: 'title', get label() { return dt("العنوان"); } },
+  { name: 'subtitle', get label() { return dt("العنوان الفرعي"); } },
+  { name: 'body', get label() { return dt("النص"); }, multiline: true },
+  { name: 'linkLabel', get label() { return dt("نص الرابط"); } },
 ];
 
 export interface BlockRow {
@@ -137,12 +138,12 @@ export function BlocksEditor({
               </div>
               <label className="flex items-center gap-1.5">
                 <Switch checked={row.isActive} onCheckedChange={(v) => set(index, { isActive: v })} />
-                <span className="text-[11px]">ظاهر</span>
+                <span className="text-[11px]">{dt("ظاهر")}</span>
               </label>
-              <Button type="button" variant="ghost" size="icon" className="h-7 w-7" onClick={() => move(index, -1)} aria-label="أعلى">
+              <Button type="button" variant="ghost" size="icon" className="h-7 w-7" onClick={() => move(index, -1)} aria-label={dt("أعلى")}>
                 <ChevronUp className="h-4 w-4" />
               </Button>
-              <Button type="button" variant="ghost" size="icon" className="h-7 w-7" onClick={() => move(index, 1)} aria-label="أسفل">
+              <Button type="button" variant="ghost" size="icon" className="h-7 w-7" onClick={() => move(index, 1)} aria-label={dt("أسفل")}>
                 <ChevronDown className="h-4 w-4" />
               </Button>
               <Button
@@ -151,7 +152,7 @@ export function BlocksEditor({
                 size="icon"
                 className="h-7 w-7"
                 onClick={() => onChange(rows.filter((_, i) => i !== index))}
-                aria-label="حذف"
+                aria-label={dt("حذف")}
               >
                 <Trash2 className="h-4 w-4 text-red-600" />
               </Button>
@@ -161,15 +162,15 @@ export function BlocksEditor({
               {fields.heading ? (
                 <>
                   <label className="space-y-1">
-                    <span className="text-[11px] font-semibold text-slate-600">السطر العلوي</span>
+                    <span className="text-[11px] font-semibold text-slate-600">{dt("السطر العلوي")}</span>
                     <Input className="h-8 text-xs" value={row.eyebrow} onChange={(e) => set(index, { eyebrow: e.target.value })} />
                   </label>
                   <label className="space-y-1">
-                    <span className="text-[11px] font-semibold text-slate-600">العنوان</span>
+                    <span className="text-[11px] font-semibold text-slate-600">{dt("العنوان")}</span>
                     <Input className="h-8 text-xs" value={row.title} onChange={(e) => set(index, { title: e.target.value })} />
                   </label>
                   <label className="space-y-1 md:col-span-2">
-                    <span className="text-[11px] font-semibold text-slate-600">العنوان الفرعي</span>
+                    <span className="text-[11px] font-semibold text-slate-600">{dt("العنوان الفرعي")}</span>
                     <Input className="h-8 text-xs" value={row.subtitle} onChange={(e) => set(index, { subtitle: e.target.value })} />
                   </label>
                 </>
@@ -177,7 +178,7 @@ export function BlocksEditor({
 
               {fields.body ? (
                 <label className="space-y-1 md:col-span-2">
-                  <span className="text-[11px] font-semibold text-slate-600">النص</span>
+                  <span className="text-[11px] font-semibold text-slate-600">{dt("النص")}</span>
                   <Textarea rows={4} className="text-xs" value={row.body} onChange={(e) => set(index, { body: e.target.value })} />
                 </label>
               ) : null}
@@ -185,11 +186,11 @@ export function BlocksEditor({
               {fields.link ? (
                 <>
                   <label className="space-y-1">
-                    <span className="text-[11px] font-semibold text-slate-600">نص الرابط</span>
+                    <span className="text-[11px] font-semibold text-slate-600">{dt("نص الرابط")}</span>
                     <Input className="h-8 text-xs" value={row.linkLabel} onChange={(e) => set(index, { linkLabel: e.target.value })} />
                   </label>
                   <label className="space-y-1">
-                    <span className="text-[11px] font-semibold text-slate-600">الرابط</span>
+                    <span className="text-[11px] font-semibold text-slate-600">{dt("الرابط")}</span>
                     <Input dir="ltr" className="h-8 text-xs" placeholder="https://…" value={row.linkUrl} onChange={(e) => set(index, { linkUrl: e.target.value })} />
                   </label>
                 </>
@@ -197,16 +198,16 @@ export function BlocksEditor({
 
               {fields.video ? (
                 <label className="space-y-1">
-                  <span className="text-[11px] font-semibold text-slate-600">فيديو يوتيوب (رابط أو معرّف)</span>
+                  <span className="text-[11px] font-semibold text-slate-600">{dt("فيديو يوتيوب (رابط أو معرّف)")}</span>
                   <Input dir="ltr" className="h-8 text-xs" value={row.youtubeId} onChange={(e) => set(index, { youtubeId: e.target.value })} />
                 </label>
               ) : null}
 
               {fields.playlist ? (
                 <div className="space-y-1">
-                  <span className="text-[11px] font-semibold text-slate-600">السلسلة</span>
+                  <span className="text-[11px] font-semibold text-slate-600">{dt("السلسلة")}</span>
                   <Select value={row.refId || 'none'} onValueChange={(v) => set(index, { refId: v === 'none' ? '' : v })}>
-                    <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="اختر سلسلة" /></SelectTrigger>
+                    <SelectTrigger className="h-8 text-xs"><SelectValue placeholder={dt("اختر سلسلة")} /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="none">—</SelectItem>
                       {playlists.map((p) => (
@@ -219,7 +220,7 @@ export function BlocksEditor({
 
               {fields.max ? (
                 <label className="space-y-1">
-                  <span className="text-[11px] font-semibold text-slate-600">أقصى عدد معروض (فارغ = الكل)</span>
+                  <span className="text-[11px] font-semibold text-slate-600">{dt("أقصى عدد معروض (فارغ = الكل)")}</span>
                   <Input
                     dir="ltr"
                     inputMode="numeric"
@@ -231,7 +232,7 @@ export function BlocksEditor({
               ) : null}
 
               <label className="space-y-1">
-                <span className="text-[11px] font-semibold text-slate-600">مُعرّف الارتساء (anchor)</span>
+                <span className="text-[11px] font-semibold text-slate-600">{dt("مُعرّف الارتساء (anchor)")}</span>
                 <Input
                   dir="ltr"
                   className="h-8 text-xs"
@@ -244,7 +245,7 @@ export function BlocksEditor({
               {fields.image ? (
                 <div className="md:col-span-2">
                   <ImageUploadField
-                    label="صورة"
+                    label={dt("صورة")}
                     value={row.image}
                     onChange={(url) => set(index, { image: url })}
                     previewClass="w-40 h-24"
@@ -254,7 +255,7 @@ export function BlocksEditor({
             </div>
 
             <details className="rounded border bg-slate-50/60 p-2">
-              <summary className="cursor-pointer text-[11px] font-bold text-slate-600">ترجمات هذا القسم</summary>
+              <summary className="cursor-pointer text-[11px] font-bold text-slate-600">{dt("ترجمات هذا القسم")}</summary>
               <div className="pt-2">
                 <ContentTranslationTabs
                   fields={BLOCK_TRANSLATION_FIELDS}
@@ -271,9 +272,8 @@ export function BlocksEditor({
       })}
 
       <Button type="button" variant="outline" size="sm" onClick={() => onChange([...rows, emptyBlock()])}>
-        <Plus className="ml-1 h-4 w-4" />
-        إضافة قسم
-      </Button>
+        <Plus className="me-1 h-4 w-4" />
+        {dt("إضافة قسم")}</Button>
     </div>
   );
 }

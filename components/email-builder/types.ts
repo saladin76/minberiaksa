@@ -1,4 +1,5 @@
 import type { TReaderDocument } from "@usewaypoint/email-builder";
+import { dt } from "@/lib/dashboard/i18n";
 
 export type EmailDocument = TReaderDocument;
 
@@ -19,14 +20,14 @@ export interface AddableBlock {
 }
 
 export const ADDABLE_BLOCKS: AddableBlock[] = [
-  { type: "Heading", label: "عنوان", description: "نص بارز كرأس قسم" },
-  { type: "Text", label: "نص", description: "فقرة عادية" },
-  { type: "Button", label: "زر", description: "زر CTA قابل للنقر" },
-  { type: "Image", label: "صورة", description: "صورة من رابط" },
-  { type: "Avatar", label: "صورة دائرية", description: "Avatar / صورة مستديرة" },
-  { type: "Divider", label: "فاصل", description: "خط أفقي" },
-  { type: "Spacer", label: "مسافة", description: "مساحة فارغة" },
-  { type: "Html", label: "HTML خام", description: "إدراج كود HTML مباشر" },
+  { type: "Heading", get label() { return dt("عنوان"); }, get description() { return dt("نص بارز كرأس قسم"); } },
+  { type: "Text", get label() { return dt("نص"); }, get description() { return dt("فقرة عادية"); } },
+  { type: "Button", get label() { return dt("زر"); }, get description() { return dt("زر CTA قابل للنقر"); } },
+  { type: "Image", get label() { return dt("صورة"); }, get description() { return dt("صورة من رابط"); } },
+  { type: "Avatar", get label() { return dt("صورة دائرية"); }, get description() { return dt("Avatar / صورة مستديرة"); } },
+  { type: "Divider", get label() { return dt("فاصل"); }, get description() { return dt("خط أفقي"); } },
+  { type: "Spacer", get label() { return dt("مسافة"); }, get description() { return dt("مساحة فارغة"); } },
+  { type: "Html", get label() { return dt("HTML خام"); }, get description() { return dt("إدراج كود HTML مباشر"); } },
 ];
 
 export const FONT_FAMILIES: { value: string; label: string }[] = [
@@ -56,7 +57,7 @@ export function makeBlock(type: BlockType): { id: string; block: Record<string, 
         block: {
           type: "Heading",
           data: {
-            props: { text: "عنوان جديد", level: "h2" },
+            props: { text: dt("عنوان جديد"), level: "h2" },
             style: {
               padding: { top: 16, bottom: 16, right: 24, left: 24 },
               textAlign: "right",
@@ -72,7 +73,7 @@ export function makeBlock(type: BlockType): { id: string; block: Record<string, 
         block: {
           type: "Text",
           data: {
-            props: { text: "اكتب نص الفقرة هنا. يمكنك إدراج {{user.name}} وغيرها." },
+            props: { text: dt("اكتب نص الفقرة هنا. يمكنك إدراج {{user.name}} وغيرها.") },
             style: {
               padding: { top: 8, bottom: 8, right: 24, left: 24 },
               fontWeight: "normal",
@@ -90,7 +91,7 @@ export function makeBlock(type: BlockType): { id: string; block: Record<string, 
           type: "Button",
           data: {
             props: {
-              text: "اضغط هنا",
+              text: dt("اضغط هنا"),
               url: "https://",
               buttonStyle: "rectangle",
               size: "medium",
@@ -113,7 +114,7 @@ export function makeBlock(type: BlockType): { id: string; block: Record<string, 
         block: {
           type: "Image",
           data: {
-            props: { url: "https://placehold.co/600x200", alt: "صورة", contentAlignment: "middle" },
+            props: { url: "https://placehold.co/600x200", alt: dt("صورة"), contentAlignment: "middle" },
             style: { padding: { top: 16, bottom: 16, right: 24, left: 24 } },
           },
         },
@@ -165,7 +166,7 @@ export function makeBlock(type: BlockType): { id: string; block: Record<string, 
         block: {
           type: "Html",
           data: {
-            props: { contents: "<p style=\"text-align:center\">HTML خام</p>" },
+            props: { contents: dt("<p style=\"text-align:center\">HTML خام</p>") },
             style: {
               padding: { top: 8, bottom: 8, right: 24, left: 24 },
               color: "#374151",
@@ -195,7 +196,7 @@ export function defaultDocument(): EmailDocument {
     [greetingId]: {
       type: "Heading",
       data: {
-        props: { text: "مرحباً {{user.name}}", level: "h2" },
+        props: { text: dt("مرحباً {{user.name}}"), level: "h2" },
         style: {
           padding: { top: 24, bottom: 8, right: 24, left: 24 },
           textAlign: "right",
@@ -206,7 +207,7 @@ export function defaultDocument(): EmailDocument {
       type: "Text",
       data: {
         props: {
-          text: "شكراً لدعمك. لقد تبرعت بإجمالي {{totals.amountUSD}} USD عبر {{totals.count}} تبرع.",
+          text: dt("شكراً لدعمك. لقد تبرعت بإجمالي {{totals.amountUSD}} USD عبر {{totals.count}} تبرع."),
         },
         style: {
           padding: { top: 8, bottom: 16, right: 24, left: 24 },
@@ -217,7 +218,7 @@ export function defaultDocument(): EmailDocument {
     [ctaId]: {
       type: "Button",
       data: {
-        props: { text: "زيارة الموقع", url: "https://minberiaksa.org", buttonStyle: "rectangle" },
+        props: { text: dt("زيارة الموقع"), url: "https://minberiaksa.org", buttonStyle: "rectangle" },
         style: {
           padding: { top: 8, bottom: 32, right: 24, left: 24 },
           backgroundColor: "#FA5D17",

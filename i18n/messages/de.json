@@ -3493,5 +3493,14 @@
     "yourDonation": "Ihre Spende",
     "fileTooLarge": "Die Datei ist {size} groß – maximal erlaubt sind {max}. Komprimiere das Foto oder exportiere eine PDF und versuche es erneut.",
     "uploadFailed": "Der Upload ist fehlgeschlagen. Prüfe deine Verbindung und versuche es erneut."
+  },
+  "CategoryLanding": {
+    "heroLead": "{org}: Projekte in {name}.",
+    "ctaLabel": "Projekte ansehen",
+    "projectsTitle": "Projekte in {name}",
+    "donateTitle": "{name} unterstützen",
+    "achievementsTitle": "Unsere Erfolge in {name}",
+    "statDoneLabel": "Abgeschlossen",
+    "statGoalLabel": "Ziel"
   }
 }

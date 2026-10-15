@@ -33,14 +33,17 @@ import { TRANSFER_RECEIPTS_PENDING_EVENT } from "@/lib/donations/transfer-receip
 import { DashboardSidebar } from "./_shell/DashboardSidebar";
 import { DashboardTopbar } from "./_shell/DashboardTopbar";
 import { CommandPalette } from "./_shell/CommandPalette";
+import { DashboardTextTranslator } from "./_shell/DashboardTextTranslator";
 import { DashboardAutoEnhancements } from "./_components/DashboardAutoEnhancements";
 import { ProjectEditorSectionsEnhancer } from "./_components/ProjectEditorSectionsEnhancer";
+import { dt, parseDashLocale, setDashLocale } from "@/lib/dashboard/i18n";
 
 const COLLAPSE_STORAGE_KEY = 'dashboard-nav-collapsed';
-const DEFAULT_COLLAPSED: Record<string, boolean> = {
-  "ربط المنصات والإرسال": true,
-  "الإدارة": true,
-};
+/* Keyed by the group's displayed title, so built per language. */
+const defaultCollapsed = (): Record<string, boolean> => ({
+  [dt("ربط المنصات والإرسال")]: true,
+  [dt("الإدارة")]: true,
+});
 
 function DashboardContent({
   children,
@@ -54,8 +57,18 @@ function DashboardContent({
   const pathname = usePathname();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
-  const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>(DEFAULT_COLLAPSED);
+  const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>(defaultCollapsed);
   const dir = localeDirection(locale) as 'rtl' | 'ltr';
+
+  /* The root layout sets <html lang/dir> from the public site's language; portalled
+     dialogs and popovers inherit from it, so it follows the dashboard's while here. */
+  useEffect(() => {
+    const html = document.documentElement;
+    const previous = { lang: html.lang, dir: html.dir };
+    html.lang = locale;
+    html.dir = dir;
+    return () => { html.lang = previous.lang; html.dir = previous.dir; };
+  }, [locale, dir]);
   const hasChecked = useRef(false);
 
   // Collapse state used to live only in useState, so every full page load re-collapsed the
@@ -63,7 +76,7 @@ function DashboardContent({
   useEffect(() => {
     try {
       const stored = window.localStorage.getItem(COLLAPSE_STORAGE_KEY);
-      if (stored) setCollapsedGroups({ ...DEFAULT_COLLAPSED, ...JSON.parse(stored) });
+      if (stored) setCollapsedGroups({ ...defaultCollapsed(), ...JSON.parse(stored) });
     } catch { /* corrupt or unavailable storage  keep defaults */ }
   }, []);
 
@@ -242,6 +255,7 @@ function DashboardContent({
 
   return (
     <div className="dash-vivid min-h-screen flex bg-slate-50" dir={dir}>
+      {locale !== "ar" && <DashboardTextTranslator />}
       <DashboardAutoEnhancements />
       <ProjectEditorSectionsEnhancer />
 
@@ -298,7 +312,7 @@ const LoadingSkeleton = () => (
   <div className="min-h-screen flex items-center justify-center bg-slate-50">
     <div className="flex flex-col items-center gap-4">
       <div className="w-10 h-10 border-4 border-slate-200 border-t-brand rounded-full animate-spin" />
-      <p className="text-sm text-slate-400 font-medium">جاري التحميل...</p>
+      <p className="text-sm text-slate-400 font-medium">{dt("جاري التحميل...")}</p>
     </div>
   </div>
 );
@@ -311,6 +325,9 @@ export default function DashboardLayoutClient({
   messages: Record<string, string | Record<string, string>>;
   locale?: string;
 }) {
+  /* Before anything below renders: `dt()` reads this during SSR and in the browser. */
+  setDashLocale(parseDashLocale(locale));
+
   // Saturated accent ramps (see tailwind.config.ts). Set on <body> as well as the shell so
   // dialogs, popovers and toasts  portalled outside the shell  use the same palette.
   useEffect(() => {

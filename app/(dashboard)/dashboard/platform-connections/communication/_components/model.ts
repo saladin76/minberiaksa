@@ -1,14 +1,15 @@
 import type { IntegrationProvider } from "@/lib/integration-settings/catalog";
 import type { SafeIntegrationProviderSnapshotWithTests } from "@/lib/integration-settings/safe-snapshot";
+import { dt } from "@/lib/dashboard/i18n";
 
 export type IntegrationUiSnapshot = SafeIntegrationProviderSnapshotWithTests;
 export const PROVIDER_ORDER: IntegrationProvider[] = ["META_WHATSAPP", "ELASTIC_EMAIL", "BREVO", "NETGSM", "SYSTEM"];
 
 export const WEBHOOKS: Partial<Record<IntegrationProvider, { label: string; path: string }>> = {
-  META_WHATSAPP: { label: "رابط Meta Webhook", path: "/api/webhooks/meta/whatsapp" },
-  ELASTIC_EMAIL: { label: "رابط أحداث Elastic Email", path: "/api/webhooks/elastic-email" },
-  BREVO: { label: "رابط أحداث Brevo SMS", path: "/api/webhooks/brevo/transactional" },
-  SYSTEM: { label: "رابط Cron", path: "/api/cron/communication-run-due" },
+  META_WHATSAPP: { get label() { return dt("رابط Meta Webhook"); }, path: "/api/webhooks/meta/whatsapp" },
+  ELASTIC_EMAIL: { get label() { return dt("رابط أحداث Elastic Email"); }, path: "/api/webhooks/elastic-email" },
+  BREVO: { get label() { return dt("رابط أحداث Brevo SMS"); }, path: "/api/webhooks/brevo/transactional" },
+  SYSTEM: { get label() { return dt("رابط Cron"); }, path: "/api/cron/communication-run-due" },
 };
 
 /**
@@ -18,13 +19,13 @@ export const WEBHOOKS: Partial<Record<IntegrationProvider, { label: string; path
 export const ROTATABLE_WEBHOOK_PROVIDERS: Partial<Record<IntegrationProvider, { title: string; actionLabel: string; revealHint: string }>> = {
   ELASTIC_EMAIL: {
     title: "Elastic Email Webhook",
-    actionLabel: "إنشاء أو تدوير رابط Elastic Email Webhook",
-    revealHint: "انسخ الرابط الآن وأضفه داخل Elastic Email ضمن Settings → Notifications. لن يظهر رمز الحماية كاملًا مرة أخرى.",
+    get actionLabel() { return dt("إنشاء أو تدوير رابط Elastic Email Webhook"); },
+    get revealHint() { return dt("انسخ الرابط الآن وأضفه داخل Elastic Email ضمن Settings → Notifications. لن يظهر رمز الحماية كاملًا مرة أخرى."); },
   },
   BREVO: {
     title: "Brevo Webhook",
-    actionLabel: "إنشاء أو تدوير رابط Brevo Webhook",
-    revealHint: "انسخ الرابط الآن وأضفه داخل Brevo. لن يظهر رمز الحماية كاملًا مرة أخرى.",
+    get actionLabel() { return dt("إنشاء أو تدوير رابط Brevo Webhook"); },
+    get revealHint() { return dt("انسخ الرابط الآن وأضفه داخل Brevo. لن يظهر رمز الحماية كاملًا مرة أخرى."); },
   },
 };
 
@@ -36,7 +37,7 @@ export const ROTATABLE_WEBHOOK_PROVIDERS: Partial<Record<IntegrationProvider, { 
  * been removed too; Netgsm's send history lives on the per-channel SMS page.
  */
 export const ADVANCED_LINKS: Partial<Record<IntegrationProvider, { href: string; label: string }[]>> = {
-  NETGSM: [{ href: "/dashboard/communication/sms", label: "فتح سجل الرسائل النصية" }],
+  NETGSM: [{ href: "/dashboard/communication/sms", get label() { return dt("فتح سجل الرسائل النصية"); } }],
 };
 
 export type IntegrationUiPermissions = {
@@ -55,5 +56,5 @@ export type SchedulerUiStatus = {
 };
 
 export function sourceLabel(source: string): string {
-  return source === "DATABASE" ? "محفوظ داخل النظام" : source === "ENVIRONMENT" ? "مستخدم من إعدادات السيرفر" : "غير مضبوط";
+  return source === "DATABASE" ? dt("محفوظ داخل النظام") : source === "ENVIRONMENT" ? dt("مستخدم من إعدادات السيرفر") : dt("غير مضبوط");
 }

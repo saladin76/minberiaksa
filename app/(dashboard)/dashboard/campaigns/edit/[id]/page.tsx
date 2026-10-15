@@ -113,6 +113,7 @@ import {
 } from '../../_components/ShareLabelsSection';
 import { parseShareLabels, type ShareLabelsConfig } from '@/lib/campaign/share-labels';
 import { isRecommendedFrequencySetting } from "@/lib/minbar/recommended-frequency";
+import { dashDir, dt, dtx } from "@/lib/dashboard/i18n";
 
 // ✅ Enhanced schema with translations (limits aligned with DB / real data  not stricter than Prisma)
 /** Fields every translation locale carries on the campaign form, as `field_locale`. */
@@ -134,7 +135,7 @@ const UPDATE_LOCALE_SHAPE = Object.fromEntries(
 
 const formSchema = z
   .object({
-  title: z.string().min(1, 'العنوان مطلوب').max(2000, 'العنوان طويل جداً'),
+  title: z.string().min(1, dt("العنوان مطلوب")).max(2000, dt("العنوان طويل جداً")),
   targetAmount: z.coerce.number().min(0).max(1000000),
   goalType: z.enum(['FIXED', 'OPEN']),
   fundraisingMode: z.enum(['AMOUNT', 'SHARES']),
@@ -142,11 +143,11 @@ const formSchema = z
   recommendedFrequency: z.enum(['monthly', 'friday', 'daily', 'once', 'none']),
   sharePriceUSD: z.number().min(0).max(1000000).optional(),
   // Many-to-many: the campaign can belong to multiple categories simultaneously.
-  categoryIds: z.array(z.string().min(1)).min(1, 'حمله واحدة على الأقل مطلوبة'),
+  categoryIds: z.array(z.string().min(1)).min(1, dt("حمله واحدة على الأقل مطلوبة")),
   isActive: z.boolean(),
   images: z.array(z.string())
-    .min(1, 'صورة واحدة على الأقل مطلوبة')
-    .max(20, 'الحد الأقصى 20 صورة'),
+    .min(1, dt("صورة واحدة على الأقل مطلوبة"))
+    .max(20, dt("الحد الأقصى 20 صورة")),
   videoUrl: z.string().optional(),
   currentAmount: z.coerce.number().min(0),
   /* One title / cover / video override per translation locale; English is
@@ -160,14 +161,14 @@ const formSchema = z
     if (data.goalType === 'FIXED' && (!data.targetAmount || data.targetAmount < 1)) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: 'المبلغ المستهدف مطلوب (≥ 1) عند هدف ثابت',
+        message: dt("المبلغ المستهدف مطلوب (≥ 1) عند هدف ثابت"),
         path: ['targetAmount'],
       });
     }
     if (data.fundraisingMode === 'SHARES' && (!data.sharePriceUSD || data.sharePriceUSD <= 0)) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: 'سعر السهم بالدولار مطلوب لمشاريع السهوم',
+        message: dt("سعر السهم بالدولار مطلوب لمشاريع السهوم"),
         path: ['sharePriceUSD'],
       });
     }
@@ -175,8 +176,8 @@ const formSchema = z
 
 // ✅ Update schema with translations
 const updateSchema = z.object({
-  title: z.string().min(1, 'العنوان مطلوب'),
-  description: z.string().min(1, 'الوصف مطلوب'),
+  title: z.string().min(1, dt("العنوان مطلوب")),
+  description: z.string().min(1, dt("الوصف مطلوب")),
   videoUrl: z.string().optional(),
   
   // Translations
@@ -197,7 +198,7 @@ function firstCampaignFormErrorMessage(errors: FieldErrors<FormValues>): string 
       if (v && typeof v === 'object') stack.push(v);
     }
   }
-  return 'يرجى إكمال الحقول المطلوبة أو تصحيح القيم المرفوضة';
+  return dt("يرجى إكمال الحقول المطلوبة أو تصحيح القيم المرفوضة");
 }
 
 function tabForCampaignInvalidField(name: string): FormLocale {
@@ -257,7 +258,7 @@ export default function EditCampaignPage() {
   const [unlockDialogOpen, setUnlockDialogOpen] = useState(false);
   const [unlockConfirmText, setUnlockConfirmText] = useState('');
   const [originalCurrentAmount, setOriginalCurrentAmount] = useState<number>(0);
-  const CURRENT_AMOUNT_UNLOCK_PHRASE = 'أؤكد تعديل المبلغ';
+  const CURRENT_AMOUNT_UNLOCK_PHRASE = dt("أؤكد تعديل المبلغ");
   const [suggestedSeed, setSuggestedSeed] = useState<
     SuggestedDonationsConfig | undefined
   >(undefined);
@@ -397,7 +398,7 @@ export default function EditCampaignPage() {
         setOriginalCurrentAmount(Number(campaign.currentAmount) || 0);
       } catch (error) {
         console.error('Error fetching campaign:', error);
-        toast.error('فشل في تحميل بيانات المشروع');
+        toast.error(dt("فشل في تحميل بيانات المشروع"));
         router.push('/dashboard/campaigns');
       } finally {
         setLoading(false);
@@ -416,7 +417,7 @@ export default function EditCampaignPage() {
         setUpdates(response.data);
       } catch (error) {
         console.error('Error fetching updates:', error);
-        toast.error('فشل في تحميل الإنجازات');
+        toast.error(dt("فشل في تحميل الإنجازات"));
       }
     };
 
@@ -426,7 +427,7 @@ export default function EditCampaignPage() {
   const onSubmit = async (values: FormValues) => {
     if (!params?.id) return;
     if (isDescEmpty(descriptionAr)) {
-      toast.error('الوصف العربي مطلوب');
+      toast.error(dt("الوصف العربي مطلوب"));
       setActiveTab('ar');
       return;
     }
@@ -485,7 +486,7 @@ export default function EditCampaignPage() {
       };
 
       await axios.put(`/api/campaigns/${params.id}`, requestData);
-      toast.success('تم تحديث المشروع بنجاح');
+      toast.success(dt("تم تحديث المشروع بنجاح"));
       if (willOverrideCurrentAmount) {
         setOriginalCurrentAmount(Math.max(0, Number(values.currentAmount)));
         setCurrentAmountUnlocked(false);
@@ -493,7 +494,7 @@ export default function EditCampaignPage() {
       //router.push('/dashboard/campaigns');
     } catch (error) {
       console.error('Error updating campaign:', error);
-      toast.error(errorMessage(error, 'فشل في تحديث المشروع'));
+      toast.error(errorMessage(error, dt("فشل في تحديث المشروع")));
     } finally {
       setSaving(false);
     }
@@ -531,10 +532,10 @@ export default function EditCampaignPage() {
       form.setValue(`image_${locale}` as LocaleImageKey, response.data?.url ?? '', {
         shouldDirty: true,
       });
-      toast.success('تم رفع الصورة');
+      toast.success(dt("تم رفع الصورة"));
     } catch (err) {
       console.error('Locale image upload error:', err);
-      toast.error(errorMessage(err, 'فشل رفع الصورة'));
+      toast.error(errorMessage(err, dt("فشل رفع الصورة")));
     } finally {
       setUploadingLocale(null);
     }
@@ -553,11 +554,11 @@ export default function EditCampaignPage() {
   const renderLocaleMedia = (locale: TranslationLocale) => {
     const name = localeNativeLabel(locale);
     const labels = {
-      image: `صورة الغلاف (${name})  اختيارية`,
-      imageHint: `رفع غلاف ${name}`,
-      video: `رابط الفيديو (${name})  اختياري`,
-      videoHint: 'رابط فيديو خاص بهذه اللغة.',
-      optionalNote: 'الصورة ورابط الفيديو هنا اختياريان  يحلّان محل الغلاف/الفيديو العربي فقط عند تعبئتهما. الصورة الرئيسية العربية (≥ 1) هي المطلوبة وحدها.',
+      image: dt("صورة الغلاف ({0})  اختيارية", [name]),
+      imageHint: dt("رفع غلاف {0}", [name]),
+      video: dt("رابط الفيديو ({0})  اختياري", [name]),
+      videoHint: dt("رابط فيديو خاص بهذه اللغة."),
+      optionalNote: dt("الصورة ورابط الفيديو هنا اختياريان  يحلّان محل الغلاف/الفيديو العربي فقط عند تعبئتهما. الصورة الرئيسية العربية (≥ 1) هي المطلوبة وحدها."),
     };
     const direction = 'rtl' as const;
     const imageKey = `image_${locale}` as LocaleImageKey;
@@ -652,7 +653,7 @@ export default function EditCampaignPage() {
 
     const currentImages = form.getValues('images');
     if (currentImages.length + files.length > 20) {
-      toast.error('الحد الأقصى 20 صورة');
+      toast.error(dt("الحد الأقصى 20 صورة"));
       return;
     }
 
@@ -673,9 +674,9 @@ export default function EditCampaignPage() {
     try {
       const uploadedUrls = await Promise.all(uploadPromises);
       form.setValue('images', [...currentImages, ...uploadedUrls]);
-      toast.success('تم رفع الصور بنجاح');
+      toast.success(dt("تم رفع الصور بنجاح"));
     } catch (error) {
-      toast.error('فشل في رفع الصور');
+      toast.error(dt("فشل في رفع الصور"));
     } finally {
       setUploadingImage(false);
     }
@@ -693,10 +694,10 @@ export default function EditCampaignPage() {
 
       const newImages = currentImages.filter((_, i) => i !== index);
       form.setValue('images', newImages);
-      toast.success('تم حذف الصورة بنجاح');
+      toast.success(dt("تم حذف الصورة بنجاح"));
     } catch (error) {
       console.error('Error removing image:', error);
-      toast.error('فشل في حذف الصورة');
+      toast.error(dt("فشل في حذف الصورة"));
     }
   };
 
@@ -708,7 +709,7 @@ export default function EditCampaignPage() {
     list.splice(to, 0, moved);
     form.setValue('images', list, { shouldValidate: true, shouldDirty: true });
     if (to === 0 && from !== 0) {
-      toast.success('تم تعيين الصورة الرئيسية');
+      toast.success(dt("تم تعيين الصورة الرئيسية"));
     }
   };
 
@@ -741,10 +742,10 @@ export default function EditCampaignPage() {
         setSendUpdateAsCampaign(false);
         router.push(`/dashboard/communication/campaigns/new?updateId=${response.data.id}`);
       }
-      toast.success('تم إضافة التحديث بنجاح');
+      toast.success(dt("تم إضافة التحديث بنجاح"));
     } catch (error) {
       console.error('Error adding update:', error);
-      toast.error(errorMessage(error, 'فشل في إضافة التحديث'));
+      toast.error(errorMessage(error, dt("فشل في إضافة التحديث")));
     } finally {
       setUpdateLoading(false);
     }
@@ -775,25 +776,25 @@ export default function EditCampaignPage() {
       setSelectedUpdate(null);
       setUpdateImage('');
       setUpdateActiveTab('ar');
-      toast.success('تم تحديث التحديث بنجاح');
+      toast.success(dt("تم تحديث التحديث بنجاح"));
     } catch (error) {
       console.error('Error editing update:', error);
-      toast.error(errorMessage(error, 'فشل في تحديث التحديث'));
+      toast.error(errorMessage(error, dt("فشل في تحديث التحديث")));
     } finally {
       setUpdateLoading(false);
     }
   };
 
   const handleDeleteUpdate = async (id: string) => {
-    if (!window.confirm('هل أنت متأكد من حذف هذا التحديث؟')) return;
+    if (!window.confirm(dt("هل أنت متأكد من حذف هذا التحديث؟"))) return;
     
     try {
       await axios.delete(`/api/campaigns/${params.id}/updates/${id}`);
       setUpdates(updates.filter(update => update.id !== id));
-      toast.success('تم حذف التحديث بنجاح');
+      toast.success(dt("تم حذف التحديث بنجاح"));
     } catch (error) {
       console.error('Error deleting update:', error);
-      toast.error(errorMessage(error, 'فشل في حذف التحديث'));
+      toast.error(errorMessage(error, dt("فشل في حذف التحديث")));
     }
   };
 
@@ -876,14 +877,14 @@ export default function EditCampaignPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">تعديل المشروع</h1>
-          <p className="text-gray-600">قم بتحديث معلومات المشروع</p>
+          <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">{dt("تعديل المشروع")}</h1>
+          <p className="text-gray-600">{dt("قم بتحديث معلومات المشروع")}</p>
           
           {/* ✅ Translation Status Badge */}
           <div className="flex items-center gap-2 mt-2">
             <Globe className="w-4 h-4 text-gray-500" />
             <span className="text-sm text-gray-600">
-              الترجمات: {translationStatus.completed}/{translationStatus.total}
+              {dtx("الترجمات: {0}/{1}", [translationStatus.completed, translationStatus.total])}
             </span>
             {TRANSLATION_LOCALES.filter((l) => translationStatus.done[l]).map((l) => (
               <span key={l} title={`${localeNativeLabel(l)} available`}><CheckCircle2 className="w-4 h-4 text-green-600" /></span>
@@ -897,8 +898,7 @@ export default function EditCampaignPage() {
           className="gap-2"
         >
           <ArrowLeft className="w-4 h-4" />
-          العودة
-        </Button>
+          {dt("العودة")}</Button>
       </div>
 
       <Form {...form}>
@@ -907,7 +907,7 @@ export default function EditCampaignPage() {
           <Card className="p-6">
             <div className="flex items-center gap-2 mb-4">
               <Languages className="w-5 h-5 text-gray-700" />
-              <h2 className="text-lg font-semibold">المعلومات الأساسية</h2>
+              <h2 className="text-lg font-semibold">{dt("المعلومات الأساسية")}</h2>
             </div>
 
             <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)}>
@@ -934,8 +934,8 @@ export default function EditCampaignPage() {
                         field.onChange(next);
                       };
                       return (
-                        <FormItem dir="rtl">
-                          <FormLabel>الحملات *</FormLabel>
+                        <FormItem dir={dashDir()}>
+                          <FormLabel>{dt("الحملات *")}</FormLabel>
                           <Popover>
                             <PopoverTrigger asChild>
                               <FormControl>
@@ -946,9 +946,9 @@ export default function EditCampaignPage() {
                                   className="w-full justify-between font-normal"
                                 >
                                   {selectedCategories.length > 0
-                                    ? `${selectedCategories.length} حملة مختارة`
-                                    : 'اختر حملة أو أكثر'}
-                                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                    ? dt("{0} حملة مختارة", [selectedCategories.length])
+                                    : dt("اختر حملة أو أكثر")}
+                                  <ChevronsUpDown className="me-2 h-4 w-4 shrink-0 opacity-50" />
                                 </Button>
                               </FormControl>
                             </PopoverTrigger>
@@ -958,9 +958,9 @@ export default function EditCampaignPage() {
                               style={{ width: 'var(--radix-popover-trigger-width)' }}
                             >
                               <Command>
-                                <CommandInput placeholder="ابحث عن حملة..." />
+                                <CommandInput placeholder={dt("ابحث عن حملة...")} />
                                 <CommandList>
-                                  <CommandEmpty>لا توجد نتائج</CommandEmpty>
+                                  <CommandEmpty>{dt("لا توجد نتائج")}</CommandEmpty>
                                   <CommandGroup>
                                     {categories.map((category) => {
                                       const isSel = selected.includes(category.id);
@@ -971,7 +971,7 @@ export default function EditCampaignPage() {
                                           onSelect={() => toggle(category.id)}
                                         >
                                           <Check
-                                            className={`mr-2 h-4 w-4 ${
+                                            className={`ms-2 h-4 w-4 ${
                                               isSel ? 'opacity-100' : 'opacity-0'
                                             }`}
                                           />
@@ -990,14 +990,14 @@ export default function EditCampaignPage() {
                                 <Badge
                                   key={c.id}
                                   variant="secondary"
-                                  className="gap-1.5 pr-1"
+                                  className="gap-1.5 ps-1"
                                 >
                                   <span>{c.name}</span>
                                   <button
                                     type="button"
                                     onClick={() => toggle(c.id)}
                                     className="rounded-full hover:bg-black/10 p-0.5"
-                                    aria-label={`إزالة ${c.name}`}
+                                    aria-label={dt("إزالة {0}", [c.name])}
                                   >
                                     <X className="w-3 h-3" />
                                   </button>
@@ -1006,9 +1006,7 @@ export default function EditCampaignPage() {
                             </div>
                           )}
                           <FormDescription className="text-xs">
-                            يمكن للمشروع أن ينتمي لأكثر من حملة  سيظهر في صفحة كل
-                            حملة مختارة.
-                          </FormDescription>
+                            {dt("يمكن للمشروع أن ينتمي لأكثر من حملة  سيظهر في صفحة كل حملة مختارة.")}</FormDescription>
                           <FormMessage />
                         </FormItem>
                       );
@@ -1019,10 +1017,10 @@ export default function EditCampaignPage() {
                     control={form.control}
                     name="title"
                     render={({ field }) => (
-                      <FormItem dir='rtl'>
-                        <FormLabel>عنوان المشروع *</FormLabel>
+                      <FormItem dir={dashDir()}>
+                        <FormLabel>{dt("عنوان المشروع *")}</FormLabel>
                         <FormControl>
-                          <Input {...field} placeholder="أدخل عنوان المشروع" />
+                          <Input {...field} placeholder={dt("أدخل عنوان المشروع")} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -1031,8 +1029,8 @@ export default function EditCampaignPage() {
 
                 </div>
 
-                <FormItem dir='rtl'>
-                  <FormLabel>وصف المشروع *</FormLabel>
+                <FormItem dir={dashDir()}>
+                  <FormLabel>{dt("وصف المشروع *")}</FormLabel>
                   <WysiwygEditor
                     defaultValue={parseEditorContent(descriptionAr)}
                     onUpdate={(editor) => setDescriptionAr(JSON.stringify(editor?.getJSON()))}
@@ -1061,28 +1059,27 @@ export default function EditCampaignPage() {
 
           {/* Campaign Settings */}
           <Card className="p-6">
-            <h2 className="text-lg font-semibold mb-4">إعدادات المشروع</h2>
+            <h2 className="text-lg font-semibold mb-4">{dt("إعدادات المشروع")}</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <FormField
                 control={form.control}
                 name="goalType"
                 render={({ field }) => (
-                  <FormItem dir="rtl">
-                    <FormLabel>نوع الهدف</FormLabel>
+                  <FormItem dir={dashDir()}>
+                    <FormLabel>{dt("نوع الهدف")}</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder="اختر نوع الهدف" />
+                          <SelectValue placeholder={dt("اختر نوع الهدف")} />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="FIXED">هدف محدد (شريط تقدم)</SelectItem>
-                        <SelectItem value="OPEN">هدف مفتوح (بدون هدف نهائي)</SelectItem>
+                        <SelectItem value="FIXED">{dt("هدف محدد (شريط تقدم)")}</SelectItem>
+                        <SelectItem value="OPEN">{dt("هدف مفتوح (بدون هدف نهائي)")}</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormDescription>
-                      الهدف المفتوح يخفي المبلغ المستهدف وشريط النسبة؛ يبقى إجمالي ما جُمع ظاهرًا.
-                    </FormDescription>
+                      {dt("الهدف المفتوح يخفي المبلغ المستهدف وشريط النسبة؛ يبقى إجمالي ما جُمع ظاهرًا.")}</FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -1092,22 +1089,21 @@ export default function EditCampaignPage() {
                 control={form.control}
                 name="fundraisingMode"
                 render={({ field }) => (
-                  <FormItem dir="rtl">
-                    <FormLabel>طريقة التبرع</FormLabel>
+                  <FormItem dir={dashDir()}>
+                    <FormLabel>{dt("طريقة التبرع")}</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder="طريقة التبرع" />
+                          <SelectValue placeholder={dt("طريقة التبرع")} />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="AMOUNT">مبلغ حر</SelectItem>
-                        <SelectItem value="SHARES">سهوم (سعر السهم × العدد)</SelectItem>
+                        <SelectItem value="AMOUNT">{dt("مبلغ حر")}</SelectItem>
+                        <SelectItem value="SHARES">{dt("سهوم (سعر السهم × العدد)")}</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormDescription>
-                      في وضع السهوم يحدد المتبرع عدد الأسهم؛ المبلغ = العدد × سعر السهم (بالدولار).
-                    </FormDescription>
+                      {dt("في وضع السهوم يحدد المتبرع عدد الأسهم؛ المبلغ = العدد × سعر السهم (بالدولار).")}</FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -1117,25 +1113,24 @@ export default function EditCampaignPage() {
                 control={form.control}
                 name="recommendedFrequency"
                 render={({ field }) => (
-                  <FormItem dir="rtl">
-                    <FormLabel>طريقة التبرع الموصى بها</FormLabel>
+                  <FormItem dir={dashDir()}>
+                    <FormLabel>{dt("طريقة التبرع الموصى بها")}</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder="طريقة التبرع الموصى بها" />
+                          <SelectValue placeholder={dt("طريقة التبرع الموصى بها")} />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="monthly">شهريًا (الافتراضي)</SelectItem>
-                        <SelectItem value="friday">أسبوعياً</SelectItem>
-                        <SelectItem value="daily">يوميًا</SelectItem>
-                        <SelectItem value="once">مرة واحدة</SelectItem>
-                        <SelectItem value="none">بدون توصية</SelectItem>
+                        <SelectItem value="monthly">{dt("شهريًا (الافتراضي)")}</SelectItem>
+                        <SelectItem value="friday">{dt("أسبوعياً")}</SelectItem>
+                        <SelectItem value="daily">{dt("يوميًا")}</SelectItem>
+                        <SelectItem value="once">{dt("مرة واحدة")}</SelectItem>
+                        <SelectItem value="none">{dt("بدون توصية")}</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormDescription>
-                      الخيار الذي يظهر عليه وسم «نوصي به» عندما يختار المتبرع طريقة تبرعه من بطاقة المشروع (لا يُحدَّد أي خيار مسبقًا؛ المتبرع يختار بنفسه). «بدون توصية» لا يميّز أي خيار.
-                    </FormDescription>
+                      {dt("الخيار الذي يظهر عليه وسم «نوصي به» عندما يختار المتبرع طريقة تبرعه من بطاقة المشروع (لا يُحدَّد أي خيار مسبقًا؛ المتبرع يختار بنفسه). «بدون توصية» لا يميّز أي خيار.")}</FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -1146,8 +1141,8 @@ export default function EditCampaignPage() {
                   control={form.control}
                   name="targetAmount"
                   render={({ field }) => (
-                    <FormItem dir="rtl">
-                      <FormLabel>المبلغ المستهدف ($) *</FormLabel>
+                    <FormItem dir={dashDir()}>
+                      <FormLabel>{dt("المبلغ المستهدف ($) *")}</FormLabel>
                       <FormControl>
                         <Input
                           type="number"
@@ -1155,7 +1150,7 @@ export default function EditCampaignPage() {
                           onChange={(e) =>
                             field.onChange(parseFloat(e.target.value) || 0)
                           }
-                          placeholder="أدخل المبلغ المستهدف ($)"
+                          placeholder={dt("أدخل المبلغ المستهدف ($)")}
                         />
                       </FormControl>
                       <FormMessage />
@@ -1169,8 +1164,8 @@ export default function EditCampaignPage() {
                   control={form.control}
                   name="sharePriceUSD"
                   render={({ field }) => (
-                    <FormItem dir="rtl">
-                      <FormLabel>سعر السهم الواحد (USD) *</FormLabel>
+                    <FormItem dir={dashDir()}>
+                      <FormLabel>{dt("سعر السهم الواحد (USD) *")}</FormLabel>
                       <FormControl>
                         <Input
                           type="number"
@@ -1180,12 +1175,11 @@ export default function EditCampaignPage() {
                           onChange={(e) =>
                             field.onChange(parseFloat(e.target.value) || 0)
                           }
-                          placeholder="مثال: 100"
+                          placeholder={dt("مثال: 100")}
                         />
                       </FormControl>
                       <FormDescription>
-                        سعر كل سهم بالدولار؛ يُحوَّل تلقائيًا لعملة العرض للمتبرع.
-                      </FormDescription>
+                        {dt("سعر كل سهم بالدولار؛ يُحوَّل تلقائيًا لعملة العرض للمتبرع.")}</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -1196,9 +1190,9 @@ export default function EditCampaignPage() {
                 control={form.control}
                 name="currentAmount"
                 render={({ field }) => (
-                  <FormItem dir="rtl">
+                  <FormItem dir={dashDir()}>
                     <div className="flex items-center justify-between gap-2">
-                      <FormLabel>المبلغ الحالي</FormLabel>
+                      <FormLabel>{dt("المبلغ الحالي")}</FormLabel>
                       {!currentAmountUnlocked ? (
                         <Button
                           type="button"
@@ -1210,9 +1204,8 @@ export default function EditCampaignPage() {
                             setUnlockDialogOpen(true);
                           }}
                         >
-                          <AlertCircle className="w-3.5 h-3.5 ml-1" />
-                          فتح للتعديل
-                        </Button>
+                          <AlertCircle className="w-3.5 h-3.5 me-1" />
+                          {dt("فتح للتعديل")}</Button>
                       ) : (
                         <Button
                           type="button"
@@ -1224,8 +1217,7 @@ export default function EditCampaignPage() {
                             setCurrentAmountUnlocked(false);
                           }}
                         >
-                          إلغاء التعديل
-                        </Button>
+                          {dt("إلغاء التعديل")}</Button>
                       )}
                     </div>
                     <FormControl>
@@ -1233,7 +1225,7 @@ export default function EditCampaignPage() {
                         type="number"
                         {...field}
                         onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
-                        placeholder="المبلغ الحالي"
+                        placeholder={dt("المبلغ الحالي")}
                         disabled={!currentAmountUnlocked}
                         className={
                           currentAmountUnlocked
@@ -1249,10 +1241,7 @@ export default function EditCampaignPage() {
                       >
                         <AlertCircle className="h-4 w-4" />
                         <AlertDescription className="text-xs leading-relaxed">
-                          أنت الآن تعدّل <strong>المبلغ الحالي</strong> يدوياً. هذه قيمة حساسة تُحدَّث
-                          تلقائياً مع التبرعات؛ تجاوزها يدوياً قد يخلق فرقاً مع سجل التبرعات
-                          ويظهر للمتبرعين على صفحة المشروع. سيُطبَّق التغيير عند حفظ النموذج.
-                          {Number(field.value) !== Number(originalCurrentAmount) && (
+                          {dt("أنت الآن تعدّل ")}<strong>{dt("المبلغ الحالي")}</strong> {dt(" يدوياً. هذه قيمة حساسة تُحدَّث تلقائياً مع التبرعات؛ تجاوزها يدوياً قد يخلق فرقاً مع سجل التبرعات ويظهر للمتبرعين على صفحة المشروع. سيُطبَّق التغيير عند حفظ النموذج.")}{Number(field.value) !== Number(originalCurrentAmount) && (
                             <span className="block mt-1 font-mono">
                               {originalCurrentAmount.toLocaleString()} -{' '}
                               {Number(field.value || 0).toLocaleString()}
@@ -1262,9 +1251,7 @@ export default function EditCampaignPage() {
                       </Alert>
                     ) : (
                       <FormDescription>
-                        يُحدَّث المبلغ الحالي تلقائياً مع التبرعات. يمكن للمسؤول تجاوزه يدوياً
-                        بعد تأكيد صريح.
-                      </FormDescription>
+                        {dt("يُحدَّث المبلغ الحالي تلقائياً مع التبرعات. يمكن للمسؤول تجاوزه يدوياً بعد تأكيد صريح.")}</FormDescription>
                     )}
                   </FormItem>
                 )}
@@ -1277,27 +1264,24 @@ export default function EditCampaignPage() {
                   if (!open) setUnlockConfirmText('');
                 }}
               >
-                <DialogContent className="font-sans" dir="rtl">
+                <DialogContent className="font-sans" dir={dashDir()}>
                   <DialogHeader>
                     <DialogTitle className="text-red-700 flex items-center gap-2">
                       <AlertCircle className="w-5 h-5" />
-                      تأكيد تعديل المبلغ الحالي
-                    </DialogTitle>
+                      {dt("تأكيد تعديل المبلغ الحالي")}</DialogTitle>
                   </DialogHeader>
                   <div className="space-y-3 text-sm leading-relaxed text-gray-700">
                     <p>
-                      أنت على وشك تعديل <strong>المبلغ الحالي</strong> لهذا المشروع يدوياً.
-                      هذا الحقل يُحسب تلقائياً من سجل التبرعات الفعلية.
-                    </p>
-                    <ul className="list-disc pr-5 space-y-1 text-xs text-gray-600">
-                      <li>القيمة الجديدة ستظهر للمتبرعين فوراً على صفحة المشروع.</li>
-                      <li>قد يظهر فرق بين هذا المبلغ ومجموع التبرعات في التقارير.</li>
-                      <li>يُسجَّل هذا الإجراء في سجل التدقيق (audit log).</li>
-                      <li>المبلغ الحالي قبل التعديل: <strong>{originalCurrentAmount.toLocaleString()}</strong></li>
+                      {dt("أنت على وشك تعديل ")}<strong>{dt("المبلغ الحالي")}</strong> {dt(" لهذا المشروع يدوياً. هذا الحقل يُحسب تلقائياً من سجل التبرعات الفعلية.")}</p>
+                    <ul className="list-disc ps-5 space-y-1 text-xs text-gray-600">
+                      <li>{dt("القيمة الجديدة ستظهر للمتبرعين فوراً على صفحة المشروع.")}</li>
+                      <li>{dt("قد يظهر فرق بين هذا المبلغ ومجموع التبرعات في التقارير.")}</li>
+                      <li>{dt("يُسجَّل هذا الإجراء في سجل التدقيق (audit log).")}</li>
+                      <li>{dt("المبلغ الحالي قبل التعديل: ")}<strong>{originalCurrentAmount.toLocaleString()}</strong></li>
                     </ul>
                     <div className="space-y-1.5 pt-2">
                       <label className="text-sm font-medium text-gray-800">
-                        اكتب الجملة التالية للمتابعة:{' '}
+                        {dt("اكتب الجملة التالية للمتابعة: ")}
                         <span className="font-mono text-red-700">
                           {CURRENT_AMOUNT_UNLOCK_PHRASE}
                         </span>
@@ -1320,8 +1304,7 @@ export default function EditCampaignPage() {
                         setUnlockConfirmText('');
                       }}
                     >
-                      إلغاء
-                    </Button>
+                      {dt("إلغاء")}</Button>
                     <Button
                       type="button"
                       disabled={
@@ -1334,8 +1317,7 @@ export default function EditCampaignPage() {
                         setUnlockConfirmText('');
                       }}
                     >
-                      تأكيد وفتح الحقل
-                    </Button>
+                      {dt("تأكيد وفتح الحقل")}</Button>
                   </div>
                 </DialogContent>
               </Dialog>
@@ -1345,11 +1327,11 @@ export default function EditCampaignPage() {
                 name="videoUrl"
                 render={({ field }) => (
                   <FormItem className="md:col-span-2">
-                    <FormLabel>رابط الفيديو (اختياري)</FormLabel>
+                    <FormLabel>{dt("رابط الفيديو (اختياري)")}</FormLabel>
                     <FormControl>
                       <Input
                         {...field}
-                        placeholder="أدخل رابط الفيديو (YouTube أو Facebook)"
+                        placeholder={dt("أدخل رابط الفيديو (YouTube أو Facebook)")}
                       />
                     </FormControl>
                     <FormMessage />
@@ -1392,8 +1374,8 @@ export default function EditCampaignPage() {
               control={form.control}
               name="images"
               render={({ field }) => (
-                <FormItem dir='rtl'>
-                  <FormLabel>صور المشروع</FormLabel>
+                <FormItem dir={dashDir()}>
+                  <FormLabel>{dt("صور المشروع")}</FormLabel>
                   <FormControl>
                     <div className="space-y-4">
                       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
@@ -1439,23 +1421,23 @@ export default function EditCampaignPage() {
                             >
                               <img
                                 src={url}
-                                alt={`صورة ${index + 1}`}
+                                alt={dt("صورة {0}", [index + 1])}
                                 draggable={false}
                                 className="w-full h-32 object-cover rounded-lg pointer-events-none select-none"
                               />
                               {isMain && (
                                 <div className="absolute top-0 inset-x-0 bg-gradient-to-b from-brand to-brand/0 rounded-t-lg p-2 flex items-center gap-1.5">
                                   <Star className="w-4 h-4 text-white fill-white" />
-                                  <span className="text-white text-xs font-bold drop-shadow">الصورة الرئيسية</span>
+                                  <span className="text-white text-xs font-bold drop-shadow">{dt("الصورة الرئيسية")}</span>
                                 </div>
                               )}
-                              <div className="absolute top-2 left-2 p-1 bg-black/50 text-white rounded opacity-0 group-hover:opacity-100 transition-opacity">
+                              <div className="absolute top-2 end-2 p-1 bg-black/50 text-white rounded opacity-0 group-hover:opacity-100 transition-opacity">
                                 <GripVertical className="w-4 h-4" />
                               </div>
                               <button
                                 type="button"
                                 onClick={() => removeImage(index)}
-                                className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                                className="absolute top-2 start-2 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
                               >
                                 <X className="w-4 h-4" />
                               </button>
@@ -1463,14 +1445,13 @@ export default function EditCampaignPage() {
                                 <button
                                   type="button"
                                   onClick={() => reorderImages(index, 0)}
-                                  title="تعيين كصورة رئيسية"
-                                  className="absolute bottom-2 left-2 px-2 py-1 bg-white text-brand text-xs font-semibold rounded shadow opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 hover:bg-brand hover:text-white"
+                                  title={dt("تعيين كصورة رئيسية")}
+                                  className="absolute bottom-2 end-2 px-2 py-1 bg-white text-brand text-xs font-semibold rounded shadow opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 hover:bg-brand hover:text-white"
                                 >
                                   <Star className="w-3 h-3" />
-                                  جعلها الرئيسية
-                                </button>
+                                  {dt("جعلها الرئيسية")}</button>
                               )}
-                              <div className="absolute bottom-2 right-2 px-1.5 py-0.5 bg-black/60 text-white text-[10px] rounded font-mono">
+                              <div className="absolute bottom-2 start-2 px-1.5 py-0.5 bg-black/60 text-white text-[10px] rounded font-mono">
                                 {index + 1}
                               </div>
                             </div>
@@ -1497,8 +1478,7 @@ export default function EditCampaignPage() {
                                 <>
                                   <Upload className="w-6 h-6 text-gray-400" />
                                   <span className="mt-2 text-sm text-gray-500">
-                                    اضغط لإضافة صور
-                                  </span>
+                                    {dt("اضغط لإضافة صور")}</span>
                                 </>
                               )}
                             </label>
@@ -1506,13 +1486,10 @@ export default function EditCampaignPage() {
                         )}
                       </div>
                       <FormDescription>
-                        يمكنك رفع حتى 20 صورة للمشروع. <strong>الصورة الأولى</strong> ستكون الصورة الرئيسية المعروضة.
-                        <br />
-                        اسحب الصور لإعادة ترتيبها، أو اضغط زر <strong>«جعلها الرئيسية»</strong> لتغيير الصورة الرئيسية.
-                        <br />
+                        {dt("يمكنك رفع حتى 20 صورة للمشروع. ")}<strong>{dt("الصورة الأولى")}</strong> {dt(" ستكون الصورة الرئيسية المعروضة.")}<br />
+                        {dt("اسحب الصور لإعادة ترتيبها، أو اضغط زر ")}<strong>{dt("«جعلها الرئيسية»")}</strong> {dt(" لتغيير الصورة الرئيسية.")}<br />
                         <span className="text-amber-700">
-                          الحجم المُوصى به: <strong>1200×900 px</strong> (نسبة 4:3)، صيغة JPG أو PNG، حجم الملف لا يزيد عن 2MB.
-                        </span>
+                          {dt("الحجم المُوصى به: ")}<strong>1200×900 px</strong> {dt(" (نسبة 4:3)، صيغة JPG أو PNG، حجم الملف لا يزيد عن 2MB.")}</span>
                       </FormDescription>
                     </div>
                   </FormControl>
@@ -1530,10 +1507,9 @@ export default function EditCampaignPage() {
               render={({ field }) => (
                 <FormItem className="flex items-center justify-between">
                   <div>
-                    <FormLabel>حالة المشروع</FormLabel>
+                    <FormLabel>{dt("حالة المشروع")}</FormLabel>
                     <FormDescription>
-                      تحديد ما إذا كانت المشروع نشطة أم لا
-                    </FormDescription>
+                      {dt("تحديد ما إذا كانت المشروع نشطة أم لا")}</FormDescription>
                   </div>
                   <FormControl>
                     <Switch
@@ -1550,8 +1526,7 @@ export default function EditCampaignPage() {
             <Alert variant="destructive">
               <AlertCircle className="h-4 w-4" />
               <AlertDescription className='mt-[5px]'>
-                تحذير: المشروع غير نشطة حالياً. لن يتمكن المستخدمون من رؤيتها أو التبرع لها.
-              </AlertDescription>
+                {dt("تحذير: المشروع غير نشطة حالياً. لن يتمكن المستخدمون من رؤيتها أو التبرع لها.")}</AlertDescription>
             </Alert>
           )}
 
@@ -1567,22 +1542,20 @@ export default function EditCampaignPage() {
                 </span>
                 <div className="space-y-0.5">
                   <h2 className="flex items-center gap-2 text-lg font-semibold text-slate-900">
-                    إنجازات المشروع
-                    <span className="rounded-full bg-slate-200/70 px-2 py-0.5 text-xs font-semibold text-slate-600">{updates.length}</span>
+                    {dt("إنجازات المشروع")}<span className="rounded-full bg-slate-200/70 px-2 py-0.5 text-xs font-semibold text-slate-600">{updates.length}</span>
                   </h2>
-                  <p className="text-sm text-slate-500">منشورات من الميدان تظهر للمتبرعين في صفحة المشروع، ويمكن إرسال أيٍّ منها بالبريد لمتبرعي المشروع.</p>
+                  <p className="text-sm text-slate-500">{dt("منشورات من الميدان تظهر للمتبرعين في صفحة المشروع، ويمكن إرسال أيٍّ منها بالبريد لمتبرعي المشروع.")}</p>
                 </div>
               </div>
               <Dialog open={isUpdateDialogOpen} onOpenChange={setIsUpdateDialogOpen}>
                 <DialogTrigger asChild>
                   <Button type="button" className="shrink-0 gap-2">
                     <Plus className="w-4 h-4" />
-                    إضافة تحديث
-                  </Button>
+                    {dt("إضافة تحديث")}</Button>
                 </DialogTrigger>
                 <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
                   <DialogHeader>
-                    <DialogTitle>إضافة تحديث جديد</DialogTitle>
+                    <DialogTitle>{dt("إضافة تحديث جديد")}</DialogTitle>
                   </DialogHeader>
                   <Form {...updateForm}>
                     <form onSubmit={updateForm.handleSubmit(handleAddUpdate)} className="space-y-4">
@@ -1606,11 +1579,9 @@ export default function EditCampaignPage() {
                         <span className="space-y-1">
                           <span className="flex items-center gap-2 text-sm font-semibold text-slate-900">
                             <Mail className="w-4 h-4 text-emerald-700" />
-                            إرسال التحديث كحملة بريد للمتبرعين
-                          </span>
+                            {dt("إرسال التحديث كحملة بريد للمتبرعين")}</span>
                           <span className="block text-xs leading-5 text-slate-600">
-                            بعد الحفظ يُفتح معالج الحملات التسويقية مضبوطًا على كل من تبرّع لهذا المشروع: تختار القالب، وتُنشأ الحملة في «الحملات التسويقية» لتراجعها وترسلها.
-                          </span>
+                            {dt("بعد الحفظ يُفتح معالج الحملات التسويقية مضبوطًا على كل من تبرّع لهذا المشروع: تختار القالب، وتُنشأ الحملة في «الحملات التسويقية» لتراجعها وترسلها.")}</span>
                         </span>
                         <Switch checked={sendUpdateAsCampaign} onCheckedChange={setSendUpdateAsCampaign} />
                       </label>
@@ -1627,8 +1598,7 @@ export default function EditCampaignPage() {
                             setUpdateActiveTab('ar');
                           }}
                         >
-                          إلغاء
-                        </Button>
+                          {dt("إلغاء")}</Button>
                         <Button
                           type="submit"
                           className="gap-2"
@@ -1637,8 +1607,7 @@ export default function EditCampaignPage() {
                           {(updateLoading || updateMediaBusy) && (
                             <Loader2 className="w-4 h-4 animate-spin" />
                           )}
-                          إضافة التحديث
-                        </Button>
+                          {dt("إضافة التحديث")}</Button>
                       </div>
                     </form>
                   </Form>
@@ -1667,13 +1636,12 @@ export default function EditCampaignPage() {
                     <Newspaper className="h-6 w-6" />
                   </span>
                   <div className="space-y-1">
-                    <p className="font-semibold text-slate-800">لا توجد إنجازات بعد</p>
-                    <p className="text-sm text-slate-500">أضف أول تحديث بصورة أو فيديو ليرى المتبرعون أثر عطائهم.</p>
+                    <p className="font-semibold text-slate-800">{dt("لا توجد إنجازات بعد")}</p>
+                    <p className="text-sm text-slate-500">{dt("أضف أول تحديث بصورة أو فيديو ليرى المتبرعون أثر عطائهم.")}</p>
                   </div>
                   <Button type="button" variant="outline" className="gap-2" onClick={() => setIsUpdateDialogOpen(true)}>
                     <Plus className="w-4 h-4" />
-                    إضافة تحديث
-                  </Button>
+                    {dt("إضافة تحديث")}</Button>
                 </div>
               )}
             </div>
@@ -1686,16 +1654,14 @@ export default function EditCampaignPage() {
               variant="outline"
               onClick={() => router.push('/dashboard/campaigns')}
             >
-              إلغاء
-            </Button>
+              {dt("إلغاء")}</Button>
             <Button
               type="submit"
               className="bg-brand hover:bg-brand-dark"
               disabled={saving}
             >
-              {saving && <Loader2 className="w-4 h-4 ml-2 animate-spin" />}
-              حفظ التغييرات
-            </Button>
+              {saving && <Loader2 className="w-4 h-4 me-2 animate-spin" />}
+              {dt("حفظ التغييرات")}</Button>
           </div>
         </form>
       </Form>
@@ -1704,7 +1670,7 @@ export default function EditCampaignPage() {
       <Dialog open={isEditUpdateDialogOpen} onOpenChange={setIsEditUpdateDialogOpen}>
         <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>تعديل التحديث</DialogTitle>
+            <DialogTitle>{dt("تعديل التحديث")}</DialogTitle>
           </DialogHeader>
           {selectedUpdate && (
             <Form {...updateForm}>
@@ -1733,8 +1699,7 @@ export default function EditCampaignPage() {
                       setUpdateActiveTab('ar');
                     }}
                   >
-                    إلغاء
-                  </Button>
+                    {dt("إلغاء")}</Button>
                   <Button
                     type="submit"
                     className="gap-2"
@@ -1743,8 +1708,7 @@ export default function EditCampaignPage() {
                     {(updateLoading || updateMediaBusy) && (
                       <Loader2 className="w-4 h-4 animate-spin" />
                     )}
-                    حفظ التغييرات
-                  </Button>
+                    {dt("حفظ التغييرات")}</Button>
                 </div>
               </form>
             </Form>

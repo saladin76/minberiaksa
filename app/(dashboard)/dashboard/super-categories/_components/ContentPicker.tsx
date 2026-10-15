@@ -5,6 +5,7 @@ import { ChevronDown, ChevronUp, GripVertical, Search, X } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { dt } from "@/lib/dashboard/i18n";
 
 /**
  * Picks the rows of one content model that a super category links, and keeps
@@ -76,15 +77,15 @@ export function ContentPicker({
                 <span className="min-w-0 flex-1 truncate text-xs font-semibold">
                   {option?.title ?? id}
                   {option && !option.live ? (
-                    <span className="mr-1 text-[10px] font-normal text-amber-600"> (غير منشور)</span>
+                    <span className="ms-1 text-[10px] font-normal text-amber-600"> {dt(" (غير منشور)")}</span>
                   ) : null}
-                  {!option ? <span className="mr-1 text-[10px] font-normal text-red-600"> (محذوف)</span> : null}
+                  {!option ? <span className="ms-1 text-[10px] font-normal text-red-600"> {dt(" (محذوف)")}</span> : null}
                 </span>
                 <div className="flex shrink-0 items-center">
-                  <Button type="button" variant="ghost" size="icon" className="h-6 w-6" onClick={() => move(index, -1)} aria-label="أعلى">
+                  <Button type="button" variant="ghost" size="icon" className="h-6 w-6" onClick={() => move(index, -1)} aria-label={dt("أعلى")}>
                     <ChevronUp className="h-3.5 w-3.5" />
                   </Button>
-                  <Button type="button" variant="ghost" size="icon" className="h-6 w-6" onClick={() => move(index, 1)} aria-label="أسفل">
+                  <Button type="button" variant="ghost" size="icon" className="h-6 w-6" onClick={() => move(index, 1)} aria-label={dt("أسفل")}>
                     <ChevronDown className="h-3.5 w-3.5" />
                   </Button>
                   <Button
@@ -93,7 +94,7 @@ export function ContentPicker({
                     size="icon"
                     className="h-6 w-6"
                     onClick={() => onChange(value.filter((v) => v !== id))}
-                    aria-label="إزالة"
+                    aria-label={dt("إزالة")}
                   >
                     <X className="h-3.5 w-3.5 text-red-600" />
                   </Button>
@@ -111,13 +112,13 @@ export function ContentPicker({
             <Input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="ابحث…"
+              placeholder={dt("ابحث…")}
               className="h-8 text-xs ltr:pl-7 rtl:pr-7"
             />
           </div>
           <ul className="max-h-52 space-y-1 overflow-y-auto">
             {matches.length === 0 ? (
-              <li className="px-2 py-3 text-center text-[11px] text-slate-500">لا نتائج</li>
+              <li className="px-2 py-3 text-center text-[11px] text-slate-500">{dt("لا نتائج")}</li>
             ) : (
               matches.map((option) => (
                 <li key={option.id}>
@@ -128,20 +129,18 @@ export function ContentPicker({
                   >
                     <span className="min-w-0 flex-1 truncate text-xs">{option.title}</span>
                     {option.hint ? <span className="shrink-0 text-[10px] text-slate-400" dir="ltr">{option.hint}</span> : null}
-                    {!option.live ? <span className="shrink-0 text-[10px] text-amber-600">غير منشور</span> : null}
+                    {!option.live ? <span className="shrink-0 text-[10px] text-amber-600">{dt("غير منشور")}</span> : null}
                   </button>
                 </li>
               ))
             )}
           </ul>
           <Button type="button" variant="ghost" size="sm" className="h-7 text-xs" onClick={() => setOpen(false)}>
-            إغلاق
-          </Button>
+            {dt("إغلاق")}</Button>
         </div>
       ) : (
         <Button type="button" variant="outline" size="sm" className="h-7 text-xs" onClick={() => setOpen(true)}>
-          إضافة
-        </Button>
+          {dt("إضافة")}</Button>
       )}
     </div>
   );

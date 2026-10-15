@@ -2447,5 +2447,14 @@
     "givenSoFar": "अब तक {count} {unit} दिए गए",
     "chooseCount": "{unit} की संख्या चुनें",
     "customCountPh": "अन्य संख्या"
+  },
+  "CategoryLanding": {
+    "heroLead": "{name} में {org} की परियोजनाएँ।",
+    "ctaLabel": "परियोजनाएँ देखें",
+    "projectsTitle": "{name} की परियोजनाएँ",
+    "donateTitle": "{name} का समर्थन करें",
+    "achievementsTitle": "{name} में हमारी उपलब्धियाँ",
+    "statDoneLabel": "पूर्ण",
+    "statGoalLabel": "लक्ष्य"
   }
 }

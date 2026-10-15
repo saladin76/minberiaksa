@@ -8,6 +8,7 @@ import {
   istanbulTodayKey,
   istanbulAddCalendarDaysKey,
 } from "@/lib/dashboard/istanbul-client-date";
+import { dashDir, dt, dtx } from "@/lib/dashboard/i18n";
 
 type GroupBy =
   | "platform"
@@ -19,13 +20,13 @@ type GroupBy =
   | "channel";
 
 const GROUP_LABEL: Record<GroupBy, string> = {
-  platform: "المنصة",
-  campaign: "الحملة",
-  ad_group: "المجموعة الإعلانية",
-  ad: "الإعلان",
-  placement: "الموضع",
-  country: "الدولة",
-  channel: "قناة الرسائل",
+  get platform() { return dt("المنصة"); },
+  get campaign() { return dt("الحملة"); },
+  get ad_group() { return dt("المجموعة الإعلانية"); },
+  get ad() { return dt("الإعلان"); },
+  get placement() { return dt("الموضع"); },
+  get country() { return dt("الدولة"); },
+  get channel() { return dt("قناة الرسائل"); },
 };
 
 interface ReconcileRow {
@@ -89,7 +90,7 @@ const PERIOD_TO_DAYS: Record<string, number> = {
 };
 
 function fmt(n: number | null, opts?: { precision?: number; prefix?: string }): string {
-  if (n == null) return "غير متاح";
+  if (n == null) return dt("غير متاح");
   const p = opts?.precision ?? 0;
   return `${opts?.prefix ?? ""}${n.toLocaleString("en-US", {
     maximumFractionDigits: p,
@@ -97,7 +98,7 @@ function fmt(n: number | null, opts?: { precision?: number; prefix?: string }): 
   })}`;
 }
 function fmtMoney(n: number | null): string {
-  if (n == null) return "غير متاح";
+  if (n == null) return dt("غير متاح");
   return `$${Math.round(n).toLocaleString("en-US")}`;
 }
 
@@ -136,7 +137,7 @@ export function ReconciliationTab({ period, dateFrom, dateTo }: Props) {
       .catch((e) => {
         if (cancelled) return;
         setError(
-          (e?.response?.data?.error as string | undefined) ?? "تعذر تحميل التسوية"
+          (e?.response?.data?.error as string | undefined) ?? dt("تعذر تحميل التسوية")
         );
       })
       .finally(() => {
@@ -152,15 +153,11 @@ export function ReconciliationTab({ period, dateFrom, dateTo }: Props) {
       <div className="rounded-xl border border-sky-200 bg-sky-50 p-3 flex items-start gap-2">
         <Info className="w-4 h-4 text-sky-600 mt-0.5 shrink-0" />
         <p className="text-[12px] text-sky-900 leading-relaxed">
-          هذه الصفحة تقارن تبرعات الموقع بالتحويلات المُبلَّغة من منصات الإعلانات.
-          إذا لم تتم مزامنة المنصات بعد فستظهر أعمدة المنصة كـ
-          «غير متاح» أو «لم تتم المزامنة بعد»  والميتركس المستمدة من الموقع
-          تظل كاملة دائمًا.
-        </p>
+          {dt("هذه الصفحة تقارن تبرعات الموقع بالتحويلات المُبلَّغة من منصات الإعلانات. إذا لم تتم مزامنة المنصات بعد فستظهر أعمدة المنصة كـ «غير متاح» أو «لم تتم المزامنة بعد»  والميتركس المستمدة من الموقع تظل كاملة دائمًا.")}</p>
       </div>
 
       <div className="flex items-center gap-2 flex-wrap">
-        <span className="text-xs text-slate-500">تجميع حسب:</span>
+        <span className="text-xs text-slate-500">{dt("تجميع حسب:")}</span>
         {(Object.keys(GROUP_LABEL) as GroupBy[]).map((k) => (
           <button
             key={k}
@@ -180,8 +177,7 @@ export function ReconciliationTab({ period, dateFrom, dateTo }: Props) {
 
       {loading ? (
         <div className="rounded-xl border border-border bg-white p-6 flex items-center justify-center gap-2 text-sm text-slate-500">
-          <Loader2 className="w-4 h-4 animate-spin" /> جاري التحميل…
-        </div>
+          <Loader2 className="w-4 h-4 animate-spin" /> {dt(" جاري التحميل…")}</div>
       ) : error ? (
         <div className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">
           {error}
@@ -189,32 +185,32 @@ export function ReconciliationTab({ period, dateFrom, dateTo }: Props) {
       ) : !data || data.rows.length === 0 ? (
         <div className="rounded-xl border border-border bg-white p-8 text-center text-sm text-slate-500">
           {!data || !data.hasPlatformData
-            ? "لم تتم المزامنة بعد  اذهب إلى «ربط المنصات والحسابات» لتشغيل المزامنة."
-            : "لا توجد نتائج في الفترة المختارة."}
+            ? dt("لم تتم المزامنة بعد  اذهب إلى «ربط المنصات والحسابات» لتشغيل المزامنة.")
+            : dt("لا توجد نتائج في الفترة المختارة.")}
         </div>
       ) : (
         <>
           <div className="rounded-xl border border-border bg-white shadow-sm overflow-hidden">
-            <div className="overflow-x-auto" dir="rtl">
-              <table className="w-full text-xs text-right">
+            <div className="overflow-x-auto" dir={dashDir()}>
+              <table className="w-full text-xs text-start">
                 <thead className="bg-slate-50/80 border-b border-slate-200">
                   <tr>
-                    <th className="text-right py-2 px-3 font-semibold text-slate-700">
+                    <th className="text-start py-2 px-3 font-semibold text-slate-700">
                       {GROUP_LABEL[groupBy]}
                     </th>
-                    <th className="text-right py-2 px-3 font-semibold text-slate-700">المنصة</th>
-                    <th className="text-right py-2 px-3 font-semibold text-slate-700">تبرعات الموقع</th>
-                    <th className="text-right py-2 px-3 font-semibold text-slate-700">إيرادات الموقع</th>
-                    <th className="text-right py-2 px-3 font-semibold text-slate-700">الإنفاق</th>
-                    <th className="text-right py-2 px-3 font-semibold text-slate-700">مرات الظهور</th>
-                    <th className="text-right py-2 px-3 font-semibold text-slate-700">النقرات</th>
-                    <th className="text-right py-2 px-3 font-semibold text-slate-700">تحويلات المنصة</th>
-                    <th className="text-right py-2 px-3 font-semibold text-slate-700">قيمة تحويلات المنصة</th>
-                    <th className="text-right py-2 px-3 font-semibold text-slate-700">CPA</th>
-                    <th className="text-right py-2 px-3 font-semibold text-slate-700">ROAS الحقيقي</th>
-                    <th className="text-right py-2 px-3 font-semibold text-slate-700">ROAS المنصة</th>
-                    <th className="text-right py-2 px-3 font-semibold text-slate-700">الفرق</th>
-                    <th className="text-right py-2 px-3 font-semibold text-slate-700">السبب المحتمل</th>
+                    <th className="text-start py-2 px-3 font-semibold text-slate-700">{dt("المنصة")}</th>
+                    <th className="text-start py-2 px-3 font-semibold text-slate-700">{dt("تبرعات الموقع")}</th>
+                    <th className="text-start py-2 px-3 font-semibold text-slate-700">{dt("إيرادات الموقع")}</th>
+                    <th className="text-start py-2 px-3 font-semibold text-slate-700">{dt("الإنفاق")}</th>
+                    <th className="text-start py-2 px-3 font-semibold text-slate-700">{dt("مرات الظهور")}</th>
+                    <th className="text-start py-2 px-3 font-semibold text-slate-700">{dt("النقرات")}</th>
+                    <th className="text-start py-2 px-3 font-semibold text-slate-700">{dt("تحويلات المنصة")}</th>
+                    <th className="text-start py-2 px-3 font-semibold text-slate-700">{dt("قيمة تحويلات المنصة")}</th>
+                    <th className="text-start py-2 px-3 font-semibold text-slate-700">CPA</th>
+                    <th className="text-start py-2 px-3 font-semibold text-slate-700">{dt("ROAS الحقيقي")}</th>
+                    <th className="text-start py-2 px-3 font-semibold text-slate-700">{dt("ROAS المنصة")}</th>
+                    <th className="text-start py-2 px-3 font-semibold text-slate-700">{dt("الفرق")}</th>
+                    <th className="text-start py-2 px-3 font-semibold text-slate-700">{dt("السبب المحتمل")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -265,10 +261,10 @@ export function ReconciliationTab({ period, dateFrom, dateTo }: Props) {
                               : "text-slate-700"
                           )}
                         >
-                          {r.roas != null ? r.roas.toFixed(2) : "غير متاح"}
+                          {r.roas != null ? r.roas.toFixed(2) : dt("غير متاح")}
                         </td>
                         <td className="py-2 px-3 text-slate-700">
-                          {r.platformRoas != null ? r.platformRoas.toFixed(2) : "غير متاح"}
+                          {r.platformRoas != null ? r.platformRoas.toFixed(2) : dt("غير متاح")}
                         </td>
                         <td
                           className={cn(
@@ -309,7 +305,7 @@ export function ReconciliationTab({ period, dateFrom, dateTo }: Props) {
             <div className="rounded-xl border border-border bg-white p-4 shadow-sm">
               <div className="flex items-center gap-2 mb-3">
                 <Sparkles className="w-4 h-4 text-violet-600" />
-                <h3 className="text-sm font-semibold text-slate-700">توصيات مدفوعة + رسائل</h3>
+                <h3 className="text-sm font-semibold text-slate-700">{dt("توصيات مدفوعة + رسائل")}</h3>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                 {data.recommendations.map((rec) => (
@@ -335,7 +331,7 @@ export function ReconciliationTab({ period, dateFrom, dateTo }: Props) {
                     <p className="text-[11px] text-slate-700 leading-relaxed">{rec.body}</p>
                     {rec.target ? (
                       <p className="text-[10px] text-slate-500 mt-1 truncate" title={rec.target.label}>
-                        الهدف: {rec.target.label}
+                        {dtx("الهدف: {0}", [rec.target.label])}
                       </p>
                     ) : null}
                     {rec.metrics && rec.metrics.length > 0 ? (
@@ -359,16 +355,13 @@ export function ReconciliationTab({ period, dateFrom, dateTo }: Props) {
 
           {!data.hasPlatformData && !data.hasMessagingData ? (
             <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-[12px] text-amber-800">
-              لا توجد بيانات منصة محفوظة بعد  البيانات المعروضة مأخوذة من
-              الموقع فقط. اذهب إلى «ربط المنصات والحسابات» وشغل المزامنة لجلب
-              بيانات الإنفاق والتحويلات.
-            </div>
+              {dt("لا توجد بيانات منصة محفوظة بعد  البيانات المعروضة مأخوذة من الموقع فقط. اذهب إلى «ربط المنصات والحسابات» وشغل المزامنة لجلب بيانات الإنفاق والتحويلات.")}</div>
           ) : null}
         </>
       )}
 
       <p className="text-[10px] text-slate-500 text-center">
-        الفترة: من {range.from} إلى {range.to}
+        {dtx("الفترة: من {0} إلى {1}", [range.from, range.to])}
       </p>
     </div>
   );

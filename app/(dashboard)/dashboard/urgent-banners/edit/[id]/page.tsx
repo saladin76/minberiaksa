@@ -12,6 +12,7 @@ import {
   emptyUrgentBanner,
   type UrgentBannerFormValues,
 } from '../../_components/UrgentBannerForm';
+import { dt } from "@/lib/dashboard/i18n";
 
 export default function EditUrgentBannerPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -58,7 +59,7 @@ export default function EditUrgentBannerPage({ params }: { params: Promise<{ id:
       .catch((e) => {
         if (!live) return;
         setMissing(true);
-        toast.error(errorMessage(e, 'تعذّر تحميل البانر'));
+        toast.error(errorMessage(e, dt("تعذّر تحميل البانر")));
       });
     return () => {
       live = false;
@@ -66,7 +67,7 @@ export default function EditUrgentBannerPage({ params }: { params: Promise<{ id:
   }, [id]);
 
   if (missing) {
-    return <p className="py-24 text-center text-sm text-slate-500">البانر غير موجود.</p>;
+    return <p className="py-24 text-center text-sm text-slate-500">{dt("البانر غير موجود.")}</p>;
   }
 
   if (!initial) {

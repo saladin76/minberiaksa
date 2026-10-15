@@ -45,10 +45,11 @@ import {
 import { PageHeader } from '@/components/dashboard/PageHeader';
 import { PageHeaderSkeleton, FilterBarSkeleton, TableSkeleton } from '@/components/dashboard/skeletons';
 import { format } from 'date-fns';
-import { ar } from 'date-fns/locale';
+import { dashDateLocale } from '@/lib/dashboard/i18n/date-fns';
 import { Link, useRouter } from "@/i18n/routing";
 import { toast } from 'react-hot-toast';
 import DonationCountryFlag from '@/components/DonationCountryFlag';
+import { dt } from "@/lib/dashboard/i18n";
 
 /**
  * Sorts by one column, with absent values last in either direction.
@@ -216,7 +217,7 @@ export default function DonationsPage() {
       donation.type,
       donation.status,
       donation.paymentMethod,
-      format(new Date(donation.createdAt), 'PPP', { locale: ar }),
+      format(new Date(donation.createdAt), 'PPP', { locale: dashDateLocale() }),
       donation.donor.name,
       donation.items.map(item => item.campaign.title).join(', '), // Include campaign titles
     ]);
@@ -239,8 +240,8 @@ export default function DonationsPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="التبرعات"
-        description="إدارة تبرعات التبرع"
+        title={dt("التبرعات")}
+        description={dt("إدارة تبرعات التبرع")}
         icon={HandHeart}
         actions={
           <Button
@@ -248,8 +249,7 @@ export default function DonationsPage() {
             className="bg-brand hover:bg-brand-dark gap-2"
           >
             <Plus className="w-4 h-4" />
-            تسجيل تبرع
-          </Button>
+            {dt("تسجيل تبرع")}</Button>
         }
       />
 
@@ -258,12 +258,12 @@ export default function DonationsPage() {
         <div className="flex flex-col gap-4">
           <div className="flex gap-4">
             <div className="relative flex-1">
-              <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+              <Search className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
               <Input
-                placeholder="البحث في التبرعات..."
+                placeholder={dt("البحث في التبرعات...")}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-4 pr-10"
+                className="pe-4 ps-10"
               />
             </div>
             <Button
@@ -272,8 +272,7 @@ export default function DonationsPage() {
               onClick={exportToCSV}
             >
               <Download className="w-4 h-4" />
-              تصدير CSV
-            </Button>
+              {dt("تصدير CSV")}</Button>
           </div>
         </div>
       </Card>
@@ -297,17 +296,17 @@ export default function DonationsPage() {
                   className="w-5 h-5 rounded border border-gray-300 text-brand focus:ring-brand"
                 />
               </TableHead>
-              <TableHead className="text-right">المتبرع</TableHead>
+              <TableHead className="text-start">{dt("المتبرع")}</TableHead>
               <TableHead className="w-10 px-2 text-center">
-                <span className="sr-only">دولة المتبرع</span>
+                <span className="sr-only">{dt("دولة المتبرع")}</span>
               </TableHead>
-              <TableHead className="text-right">المبلغ</TableHead>
-              <TableHead className="text-right">العملة</TableHead>
-              <TableHead className="text-right">النوع</TableHead>
-              <TableHead className="text-right">طريقة الدفع</TableHead>
-              <TableHead className="text-right">التاريخ</TableHead>
-              <TableHead className="text-right">المشاريع</TableHead>
-              <TableHead className="text-center">الإجراءات</TableHead>
+              <TableHead className="text-start">{dt("المبلغ")}</TableHead>
+              <TableHead className="text-start">{dt("العملة")}</TableHead>
+              <TableHead className="text-start">{dt("النوع")}</TableHead>
+              <TableHead className="text-start">{dt("طريقة الدفع")}</TableHead>
+              <TableHead className="text-start">{dt("التاريخ")}</TableHead>
+              <TableHead className="text-start">{dt("المشاريع")}</TableHead>
+              <TableHead className="text-center">{dt("الإجراءات")}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -352,10 +351,10 @@ export default function DonationsPage() {
                 </TableCell>
                 <TableCell>{donation.totalAmount.toLocaleString()}</TableCell>
                 <TableCell>{donation.currency}</TableCell>
-                <TableCell>{donation.type === 'ONE_TIME' ? 'مرة واحدة' : 'شهري'}</TableCell>
+                <TableCell>{donation.type === 'ONE_TIME' ? dt("مرة واحدة") : dt("شهري")}</TableCell>
                 <TableCell>{donation.paymentMethod || '—'}</TableCell>
                 <TableCell>
-                  {format(new Date(donation.createdAt), 'PPP', { locale: ar })}
+                  {format(new Date(donation.createdAt), 'PPP', { locale: dashDateLocale() })}
                 </TableCell>
                 <TableCell>
                   <div className="flex flex-col gap-1">
@@ -376,19 +375,17 @@ export default function DonationsPage() {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuLabel>إجراءات</DropdownMenuLabel>
+                        <DropdownMenuLabel>{dt("إجراءات")}</DropdownMenuLabel>
                         <DropdownMenuItem onClick={() => router.push(`/donations/${donation.id}`)}>
-                          <Eye className="w-4 h-4 ml-2" />
-                          عرض
-                        </DropdownMenuItem>
+                          <Eye className="w-4 h-4 me-2" />
+                          {dt("عرض")}</DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem
                           className="text-red-600"
                           onClick={() => handleDelete(donation.id)}
                         >
-                          <Trash2 className="w-4 h-4 ml-2" />
-                          حذف
-                        </DropdownMenuItem>
+                          <Trash2 className="w-4 h-4 me-2" />
+                          {dt("حذف")}</DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </div>

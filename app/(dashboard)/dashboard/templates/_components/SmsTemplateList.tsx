@@ -11,6 +11,7 @@ import { mergeText } from "@/lib/templates/variables";
 import { SAMPLE_TEMPLATE_CONTEXT } from "@/lib/templates/sample-context";
 import { SUPPORTED_LOCALES, LOCALE_LABELS, DEFAULT_LOCALE, type SupportedLocale } from "@/lib/locales";
 import { SmsTemplateEditorDialog } from "./SmsTemplateEditorDialog";
+import { dashIntl, dt, dtx } from "@/lib/dashboard/i18n";
 
 interface SmsTemplateRow {
   id: string;
@@ -25,10 +26,10 @@ interface SmsTemplateRow {
 }
 
 const STATUS_PILL: Record<string, { label: string; className: string }> = {
-  READY: { label: "جاهز", className: "border-emerald-200 bg-emerald-50 text-emerald-700" },
-  DRAFT: { label: "مسودة", className: "border-slate-200 bg-slate-50 text-slate-600" },
-  NEEDS_REVIEW: { label: "بحاجة لمراجعة", className: "border-amber-200 bg-amber-50 text-amber-700" },
-  ARCHIVED: { label: "مؤرشف", className: "border-slate-200 bg-slate-100 text-slate-500" },
+  READY: { get label() { return dt("جاهز"); }, className: "border-emerald-200 bg-emerald-50 text-emerald-700" },
+  DRAFT: { get label() { return dt("مسودة"); }, className: "border-slate-200 bg-slate-50 text-slate-600" },
+  NEEDS_REVIEW: { get label() { return dt("بحاجة لمراجعة"); }, className: "border-amber-200 bg-amber-50 text-amber-700" },
+  ARCHIVED: { get label() { return dt("مؤرشف"); }, className: "border-slate-200 bg-slate-100 text-slate-500" },
 };
 
 /** Locales this template actually carries a body for  the canonical Arabic plus any override. */
@@ -52,7 +53,7 @@ export function SmsTemplateList() {
       const res = await axios.get("/api/templates/sms");
       setTemplates(res.data?.templates ?? []);
     } catch {
-      toast.error("فشل في تحميل القوالب");
+      toast.error(dt("فشل في تحميل القوالب"));
     } finally {
       setLoading(false);
     }
@@ -63,13 +64,13 @@ export function SmsTemplateList() {
   }, [fetchAll]);
 
   const handleDelete = async (id: string, name: string) => {
-    if (!window.confirm(`هل تريد حذف القالب «${name}»؟`)) return;
+    if (!window.confirm(dt("هل تريد حذف القالب «{0}»؟", [name]))) return;
     try {
       await axios.delete(`/api/templates/sms/${id}`);
-      toast.success("تم الحذف");
+      toast.success(dt("تم الحذف"));
       fetchAll();
     } catch {
-      toast.error("فشل الحذف");
+      toast.error(dt("فشل الحذف"));
     }
   };
 
@@ -89,28 +90,25 @@ export function SmsTemplateList() {
   return (
     <div className="space-y-4">
       <div className="inline-flex rounded-lg border border-slate-200 bg-slate-50 p-1">
-        <button type="button" onClick={() => setSection("CAMPAIGN")} className={`rounded-md px-3 py-1.5 text-xs font-medium ${section === "CAMPAIGN" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500"}`}>الحملات التسويقية</button>
-        <button type="button" onClick={() => setSection("SYSTEM")} className={`rounded-md px-3 py-1.5 text-xs font-medium ${section === "SYSTEM" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500"}`}>التلقائية والتوثيق</button>
+        <button type="button" onClick={() => setSection("CAMPAIGN")} className={`rounded-md px-3 py-1.5 text-xs font-medium ${section === "CAMPAIGN" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500"}`}>{dt("الحملات التسويقية")}</button>
+        <button type="button" onClick={() => setSection("SYSTEM")} className={`rounded-md px-3 py-1.5 text-xs font-medium ${section === "SYSTEM" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500"}`}>{dt("التلقائية والتوثيق")}</button>
       </div>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex flex-wrap items-center gap-2">
           <p className="text-xs text-muted-foreground">
-            {loading ? "…" : `${visibleTemplates.length} قالب رسالة نصية`}
+            {loading ? "…" : dt("{0} قالب رسالة نصية", [visibleTemplates.length])}
           </p>
           {!loading && visibleTemplates.length > 0 && (
             <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[10px] text-slate-600">
               <Layers className="h-3 w-3" />
-              {totalSegments} مقطع إجمالًا
-            </span>
+              {dtx("{0} مقطع إجمالًا", [totalSegments])}</span>
           )}
         </div>
         <div className="flex items-center gap-2">
           <Button size="sm" variant="outline" onClick={fetchAll} disabled={loading} className="gap-2">
-            <RefreshCw className="h-4 w-4" /> تحديث
-          </Button>
+            <RefreshCw className="h-4 w-4" /> {dt(" تحديث")}</Button>
           <Button size="sm" onClick={() => setEditor({ open: true, id: null })} className="gap-2">
-            <Plus className="h-4 w-4" /> قالب جديد
-          </Button>
+            <Plus className="h-4 w-4" /> {dt(" قالب جديد")}</Button>
         </div>
       </div>
 
@@ -119,22 +117,19 @@ export function SmsTemplateList() {
       <div className="flex items-start gap-2 rounded-lg border border-sky-200 bg-sky-50 p-3 text-xs leading-5 text-sky-900">
         <Info className="mt-0.5 h-4 w-4 shrink-0" />
         <div>
-          <b>الرسائل النصية تُحاسب بالمقطع، لا بالرسالة.</b> النص العربي خارج أبجدية GSM، فيصبح
-          المقطع ٧٠ حرفًا بدل ١٦٠  رسالة من ٩٠ حرفًا عربيًا تُحتسب مقطعين. المحرّر يعرض عدد
-          المقاطع أثناء الكتابة.
-        </div>
+          <b>{dt("الرسائل النصية تُحاسب بالمقطع، لا بالرسالة.")}</b> {dt(" النص العربي خارج أبجدية GSM، فيصبح المقطع ٧٠ حرفًا بدل ١٦٠  رسالة من ٩٠ حرفًا عربيًا تُحتسب مقطعين. المحرّر يعرض عدد المقاطع أثناء الكتابة.")}</div>
       </div>
 
       <div className="overflow-hidden rounded-lg border border-border">
-        <table className="w-full text-right text-sm">
+        <table className="w-full text-start text-sm">
           <thead>
             <tr className="border-b border-slate-200 bg-slate-50/80 text-slate-700">
-              <th className="whitespace-nowrap px-4 py-3 text-right font-semibold">الاسم</th>
-              <th className="w-full max-w-0 px-4 py-3 text-right font-semibold">المحتوى</th>
-              <th className="whitespace-nowrap px-4 py-3 text-right font-semibold">المقاطع</th>
-              <th className="whitespace-nowrap px-4 py-3 text-right font-semibold">اللغات</th>
-              <th className="whitespace-nowrap px-4 py-3 text-right font-semibold">الحالة</th>
-              <th className="whitespace-nowrap px-4 py-3 text-right font-semibold">آخر تحديث</th>
+              <th className="whitespace-nowrap px-4 py-3 text-start font-semibold">{dt("الاسم")}</th>
+              <th className="w-full max-w-0 px-4 py-3 text-start font-semibold">{dt("المحتوى")}</th>
+              <th className="whitespace-nowrap px-4 py-3 text-start font-semibold">{dt("المقاطع")}</th>
+              <th className="whitespace-nowrap px-4 py-3 text-start font-semibold">{dt("اللغات")}</th>
+              <th className="whitespace-nowrap px-4 py-3 text-start font-semibold">{dt("الحالة")}</th>
+              <th className="whitespace-nowrap px-4 py-3 text-start font-semibold">{dt("آخر تحديث")}</th>
               <th className="w-px px-4 py-3" />
             </tr>
           </thead>
@@ -148,8 +143,7 @@ export function SmsTemplateList() {
             ) : visibleTemplates.length === 0 ? (
               <tr>
                 <td colSpan={7} className="py-12 text-center text-slate-500">
-                  لا توجد قوالب رسائل نصية بعد  اضغط «قالب جديد» للبدء
-                </td>
+                  {dt("لا توجد قوالب رسائل نصية بعد  اضغط «قالب جديد» للبدء")}</td>
               </tr>
             ) : (
               visibleTemplates.map((t) => {
@@ -163,8 +157,7 @@ export function SmsTemplateList() {
                       <span className="font-medium text-slate-900">{t.name}</span>
                       {t.kind === "SYSTEM" && (
                         <span className="ms-1.5 inline-flex items-center rounded-full border border-violet-200 bg-violet-50 px-1.5 py-0.5 text-[10px] text-violet-700">
-                          نظامي
-                        </span>
+                          {dt("نظامي")}</span>
                       )}
                     </td>
                     <td className="max-w-0 px-4 py-3 align-middle">
@@ -174,7 +167,7 @@ export function SmsTemplateList() {
                     </td>
                     <td className="whitespace-nowrap px-4 py-3 align-middle">
                       <span
-                        title={`${seg.units} حرفًا · ${seg.encoding === "UCS2" ? "يونيكود (٧٠ للمقطع)" : "GSM (١٦٠ للمقطع)"}`}
+                        title={dt("{0} حرفًا · {1}", [seg.units, seg.encoding === "UCS2" ? dt("يونيكود (٧٠ للمقطع)") : dt("GSM (١٦٠ للمقطع)")])}
                         className={cn(
                           "inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-[10px] font-bold tabular-nums",
                           seg.segments <= 1
@@ -206,7 +199,7 @@ export function SmsTemplateList() {
                       </span>
                     </td>
                     <td className="whitespace-nowrap px-4 py-3 align-middle text-xs text-slate-500">
-                      {new Date(t.updatedAt).toLocaleDateString("ar-EG", { dateStyle: "medium" })}
+                      {new Date(t.updatedAt).toLocaleDateString(dashIntl("ar-EG"), { dateStyle: "medium" })}
                     </td>
                     <td className="w-px whitespace-nowrap px-4 py-3 align-middle">
                       <div className="flex items-center justify-end gap-1">
@@ -216,15 +209,14 @@ export function SmsTemplateList() {
                           className="h-7 gap-1 px-2 text-xs"
                           onClick={() => setEditor({ open: true, id: t.id })}
                         >
-                          <Pencil className="h-3.5 w-3.5" /> تعديل
-                        </Button>
+                          <Pencil className="h-3.5 w-3.5" /> {dt(" تعديل")}</Button>
                         <Button
                           size="sm"
                           variant="ghost"
                           className="h-7 w-7 p-0 text-slate-400 hover:text-red-600"
                           onClick={() => handleDelete(t.id, t.name)}
-                          title="حذف"
-                          aria-label="حذف"
+                          title={dt("حذف")}
+                          aria-label={dt("حذف")}
                         >
                           <Trash2 className="h-3.5 w-3.5" />
                         </Button>

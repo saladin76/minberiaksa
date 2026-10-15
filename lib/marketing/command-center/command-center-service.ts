@@ -1,6 +1,7 @@
 import { getRecommendationOverview } from "@/lib/ai/recommendations/recommendation-service";
 import { getMarketingResultsOverview } from "@/lib/marketing/results/results-service";
 import type { ProviderHealthOverview } from "@/lib/marketing/integrations/provider-health-service";
+import { dt } from "@/lib/dashboard/i18n";
 
 export type MarketingCommandActionType =
   | "CONNECT_PROVIDER"
@@ -51,10 +52,10 @@ export async function buildMarketingCommandCenterOverview(
         id: `connect-${item.provider.key}`,
         type: "CONNECT_PROVIDER",
         priority: item.provider.implementationStatus === "PARTIAL" ? "HIGH" : "MEDIUM",
-        title: `اربط منصة ${item.provider.displayName}`,
-        reason: "المنصة موجودة في كاتالوج التكاملات لكنها لا تملك اتصالًا حاليًا.",
+        title: dt("اربط منصة {0}", [item.provider.displayName]),
+        reason: dt("المنصة موجودة في كاتالوج التكاملات لكنها لا تملك اتصالًا حاليًا."),
         href: "/dashboard/marketing/connections",
-        cta: "إضافة اتصال",
+        cta: dt("إضافة اتصال"),
       });
     }
 
@@ -63,10 +64,10 @@ export async function buildMarketingCommandCenterOverview(
         id: `fix-${item.provider.key}`,
         type: "FIX_PROVIDER_CONFIG",
         priority: item.missingRequiredFields.length > 0 ? "HIGH" : "MEDIUM",
-        title: `أكمل إعداد ${item.provider.displayName}`,
+        title: dt("أكمل إعداد {0}", [item.provider.displayName]),
         reason: item.nextStep,
         href: "/dashboard/marketing/connections/catalog",
-        cta: "فتح صحة التكاملات",
+        cta: dt("فتح صحة التكاملات"),
       });
     }
   }
@@ -80,7 +81,7 @@ export async function buildMarketingCommandCenterOverview(
         title: recommendation.title,
         reason: recommendation.reason,
         href: "/dashboard/marketing/recommendations",
-        cta: "فتح التوصيات",
+        cta: dt("فتح التوصيات"),
       });
     }
   }
@@ -90,10 +91,10 @@ export async function buildMarketingCommandCenterOverview(
       id: `winner-${result.id}`,
       type: "SCALE_WINNER",
       priority: "MEDIUM",
-      title: `استثمر في المادة الرابحة: ${result.assetTitle}`,
-      reason: `حققت ROAS ${result.roas}x وإيراد ${result.revenue} مع ${result.donations} تبرعات.`,
+      title: dt("استثمر في المادة الرابحة: {0}", [result.assetTitle]),
+      reason: dt("حققت ROAS {0}x وإيراد {1} مع {2} تبرعات.", [result.roas, result.revenue, result.donations]),
       href: "/dashboard/marketing/results",
-      cta: "فتح النتائج",
+      cta: dt("فتح النتائج"),
     });
   }
 
@@ -102,10 +103,10 @@ export async function buildMarketingCommandCenterOverview(
       id: "check-results",
       type: "CHECK_RESULTS",
       priority: "LOW",
-      title: "ابدأ بتسجيل نتائج التسويق",
-      reason: "لا توجد نتائج تسويق كافية لبناء توصيات تشغيلية قوية.",
+      title: dt("ابدأ بتسجيل نتائج التسويق"),
+      reason: dt("لا توجد نتائج تسويق كافية لبناء توصيات تشغيلية قوية."),
       href: "/dashboard/marketing/results",
-      cta: "فتح نتائج التسويق",
+      cta: dt("فتح نتائج التسويق"),
     });
   }
 

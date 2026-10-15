@@ -6,6 +6,7 @@ import { toast } from 'react-hot-toast';
 import { Loader2, Upload, X } from 'lucide-react';
 import { errorMessage } from '@/lib/dashboard/client-error-message';
 import { validateImageFile } from '@/lib/uploads/image-file-rules';
+import { dt } from "@/lib/dashboard/i18n";
 
 /**
  * The single-image field the content forms share: preview with a remove
@@ -45,7 +46,7 @@ export function ImageUploadField({
       const res = await axios.post('/api/upload', fd);
       onChange(res.data.url);
     } catch (err) {
-      toast.error(errorMessage(err, 'تعذّر رفع الصورة'));
+      toast.error(errorMessage(err, dt("تعذّر رفع الصورة")));
     } finally {
       setUploading(false);
       e.target.value = '';
@@ -66,7 +67,7 @@ export function ImageUploadField({
           <button
             type="button"
             onClick={() => onChange('')}
-            className="absolute top-1 right-1 p-1 bg-red-500 text-white rounded"
+            className="absolute top-1 start-1 p-1 bg-red-500 text-white rounded"
           >
             <X className="w-4 h-4" />
           </button>
@@ -74,7 +75,7 @@ export function ImageUploadField({
       ) : (
         <label className="flex items-center gap-2 w-fit px-3 py-2 border rounded-lg cursor-pointer hover:bg-slate-50">
           {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
-          <span className="text-sm">رفع صورة</span>
+          <span className="text-sm">{dt("رفع صورة")}</span>
           <input type="file" accept="image/*" className="hidden" onChange={upload} />
         </label>
       )}

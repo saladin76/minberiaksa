@@ -18,6 +18,7 @@ import {
   type TranslationLocale,
 } from '../../_components/locale-form';
 import { AutoTranslateButton, type TranslatedLocales } from '../../_components/AutoTranslateButton';
+import { dashDir, dt, dtx } from "@/lib/dashboard/i18n";
 
 /**
  * The translation tabs of the campaign forms  one per language, driven by
@@ -89,8 +90,7 @@ export function CampaignTranslateBar({
         onResult={onTranslated}
       />
       <p className="mt-2 text-[11px] text-slate-600">
-        تُترجم من النص العربي إلى كل اللغات دفعة واحدة. راجع كل لغة قبل الحفظ  الحفظ يبقى بزر المشروع نفسه.
-      </p>
+        {dt("تُترجم من النص العربي إلى كل اللغات دفعة واحدة. راجع كل لغة قبل الحفظ  الحفظ يبقى بزر المشروع نفسه.")}</p>
     </div>
   );
 }
@@ -122,15 +122,13 @@ export function CampaignLocaleTabContents({
               <Alert>
                 <AlertCircle className="h-4 w-4" />
                 <AlertDescription className="mt-[5px]">
-                  الإنجليزية مطلوبة  يُشتق معرّف الرابط (slug) من عنوانها.
-                </AlertDescription>
+                  {dt("الإنجليزية مطلوبة  يُشتق معرّف الرابط (slug) من عنوانها.")}</AlertDescription>
               </Alert>
             ) : (
               <Alert className="flex items-center">
                 <AlertCircle className="h-4 w-4" />
                 <AlertDescription className="mt-[5px]">
-                  ترجمة {name} اختيارية؛ إن تُركت فارغة يُعرض المحتوى العربي لهذه اللغة.
-                </AlertDescription>
+                  {dtx("ترجمة {0} اختيارية؛ إن تُركت فارغة يُعرض المحتوى العربي لهذه اللغة.", [name])}</AlertDescription>
               </Alert>
             )}
 
@@ -138,9 +136,9 @@ export function CampaignLocaleTabContents({
               control={form.control}
               name={localeKey('title', locale)}
               render={({ field }) => (
-                <FormItem dir="rtl">
+                <FormItem dir={dashDir()}>
                   <FormLabel>
-                    عنوان المشروع ({name}){required ? ' *' : ''}
+                    {dtx("عنوان المشروع ({0}){1}", [name, required ? ' *' : ''])}
                   </FormLabel>
                   <FormControl>
                     <Input {...field} value={field.value ?? ''} dir={localeDir(locale)} />
@@ -150,8 +148,8 @@ export function CampaignLocaleTabContents({
               )}
             />
 
-            <FormItem dir="rtl">
-              <FormLabel>وصف المشروع ({name}){required ? ' *' : ''}</FormLabel>
+            <FormItem dir={dashDir()}>
+              <FormLabel>{dtx("وصف المشروع ({0}){1}", [name, required ? ' *' : ''])}</FormLabel>
               <div dir={localeDir(locale)}>
                 <WysiwygEditor
                   key={`${locale}-${editorVersion}`}
@@ -162,7 +160,7 @@ export function CampaignLocaleTabContents({
                 />
               </div>
               <FormDescription>
-                {required ? 'مطلوب  وصف كامل بالإنجليزية للمشروع وأهدافه.' : 'وصف كامل للمشروع وأهدافه بهذه اللغة.'}
+                {required ? dt("مطلوب  وصف كامل بالإنجليزية للمشروع وأهدافه.") : dt("وصف كامل للمشروع وأهدافه بهذه اللغة.")}
               </FormDescription>
             </FormItem>
 
@@ -205,9 +203,9 @@ export function UpdateLocaleTabs({
           control={form.control}
           name="title"
           render={({ field }) => (
-            <FormItem dir="rtl">
-              <FormLabel>عنوان التحديث *</FormLabel>
-              <FormControl><Input {...field} placeholder="أدخل عنوان التحديث" /></FormControl>
+            <FormItem dir={dashDir()}>
+              <FormLabel>{dt("عنوان التحديث *")}</FormLabel>
+              <FormControl><Input {...field} placeholder={dt("أدخل عنوان التحديث")} /></FormControl>
               <FormMessage />
             </FormItem>
           )}
@@ -216,9 +214,9 @@ export function UpdateLocaleTabs({
           control={form.control}
           name="description"
           render={({ field }) => (
-            <FormItem dir="rtl">
-              <FormLabel>وصف التحديث *</FormLabel>
-              <FormControl><Textarea {...field} placeholder="اكتب وصف التحديث..." className="min-h-[100px]" /></FormControl>
+            <FormItem dir={dashDir()}>
+              <FormLabel>{dt("وصف التحديث *")}</FormLabel>
+              <FormControl><Textarea {...field} placeholder={dt("اكتب وصف التحديث...")} className="min-h-[100px]" /></FormControl>
               <FormMessage />
             </FormItem>
           )}
@@ -238,8 +236,8 @@ export function UpdateLocaleTabs({
               control={form.control}
               name={localeKey('title', locale)}
               render={({ field }) => (
-                <FormItem dir="rtl">
-                  <FormLabel>عنوان التحديث ({name})</FormLabel>
+                <FormItem dir={dashDir()}>
+                  <FormLabel>{dtx("عنوان التحديث ({0})", [name])}</FormLabel>
                   <FormControl><Input {...field} value={field.value ?? ''} dir={localeDir(locale)} /></FormControl>
                 </FormItem>
               )}
@@ -248,8 +246,8 @@ export function UpdateLocaleTabs({
               control={form.control}
               name={localeKey('description', locale)}
               render={({ field }) => (
-                <FormItem dir="rtl">
-                  <FormLabel>وصف التحديث ({name})</FormLabel>
+                <FormItem dir={dashDir()}>
+                  <FormLabel>{dtx("وصف التحديث ({0})", [name])}</FormLabel>
                   <FormControl><Textarea {...field} value={field.value ?? ''} dir={localeDir(locale)} className="min-h-[100px]" /></FormControl>
                 </FormItem>
               )}

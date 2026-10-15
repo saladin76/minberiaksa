@@ -16,6 +16,7 @@ import {
 import { errorMessage } from '@/lib/dashboard/client-error-message';
 import { SortableTable, useReorder } from '../_components/SortableTable';
 import { PLAYLIST_KIND_LABELS } from './_components/PlaylistForm';
+import { dt, dtx } from "@/lib/dashboard/i18n";
 
 interface PlaylistRow {
   id: string;
@@ -45,7 +46,7 @@ export default function PlaylistsPage() {
       setRows(Array.isArray(items) ? items : []);
     } catch (e) {
       console.error(e);
-      toast.error(errorMessage(e, 'تعذّر تحميل قوائم التشغيل'));
+      toast.error(errorMessage(e, dt("تعذّر تحميل قوائم التشغيل")));
     } finally {
       setLoading(false);
     }
@@ -57,7 +58,7 @@ export default function PlaylistsPage() {
     rows,
     setRows,
     useCallback(async (payload) => { await axios.post('/api/playlists/reorder', { playlists: payload }); }, []),
-    useCallback((e: unknown) => { toast.error(errorMessage(e, 'تعذّر حفظ الترتيب')); fetchRows(); }, [fetchRows]),
+    useCallback((e: unknown) => { toast.error(errorMessage(e, dt("تعذّر حفظ الترتيب"))); fetchRows(); }, [fetchRows]),
   );
 
   const toggleActive = async (row: PlaylistRow, next: boolean) => {
@@ -68,7 +69,7 @@ export default function PlaylistsPage() {
       await axios.put(`/api/playlists/${row.id}`, { isActive: next });
       setRows((prev) => prev.map((r) => (r.id === row.id ? { ...r, isActive: next } : r)));
     } catch (e) {
-      toast.error(errorMessage(e, 'تعذّر تغيير الحالة'));
+      toast.error(errorMessage(e, dt("تعذّر تغيير الحالة")));
     } finally {
       setTogglingId(null);
     }
@@ -80,10 +81,10 @@ export default function PlaylistsPage() {
     try {
       await axios.delete(`/api/playlists/${deleteTarget.id}`);
       setRows((prev) => prev.filter((r) => r.id !== deleteTarget.id));
-      toast.success('تم حذف قائمة التشغيل');
+      toast.success(dt("تم حذف قائمة التشغيل"));
       setDeleteTarget(null);
     } catch (e) {
-      toast.error(errorMessage(e, 'تعذّر حذف قائمة التشغيل'));
+      toast.error(errorMessage(e, dt("تعذّر حذف قائمة التشغيل")));
     } finally {
       setDeleting(false);
     }
@@ -101,25 +102,23 @@ export default function PlaylistsPage() {
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <h1 className="text-lg font-bold">برامجنا المصورة</h1>
-          <p className="text-xs text-slate-500">قوائم التشغيل والسلاسل وحلقاتها كما تظهر على الموقع.</p>
+          <h1 className="text-lg font-bold">{dt("برامجنا المصورة")}</h1>
+          <p className="text-xs text-slate-500">{dt("قوائم التشغيل والسلاسل وحلقاتها كما تظهر على الموقع.")}</p>
         </div>
         <Button onClick={() => router.push('/dashboard/playlists/new')}>
-          <Plus className="w-4 h-4 ml-1" />
-          قائمة جديدة
-        </Button>
+          <Plus className="w-4 h-4 me-1" />
+          {dt("قائمة جديدة")}</Button>
       </div>
 
       {rows.length === 0 ? (
         <EmptyState
           icon={ListVideo}
-          title="لا توجد قوائم تشغيل"
-          description="أضف أول برنامج أو سلسلة وحلقاته."
+          title={dt("لا توجد قوائم تشغيل")}
+          description={dt("أضف أول برنامج أو سلسلة وحلقاته.")}
           action={
             <Button onClick={() => router.push('/dashboard/playlists/new')}>
-              <Plus className="w-4 h-4 ml-1" />
-              قائمة جديدة
-            </Button>
+              <Plus className="w-4 h-4 me-1" />
+              {dt("قائمة جديدة")}</Button>
           }
         />
       ) : (
@@ -132,7 +131,7 @@ export default function PlaylistsPage() {
           isDimmed={(r) => !r.isActive}
           columns={[
             {
-              header: 'القائمة',
+              header: dt("القائمة"),
               cell: (r) => (
                 <div className="flex items-center gap-2">
                   {r.coverImage ? (
@@ -150,11 +149,11 @@ export default function PlaylistsPage() {
                 </div>
               ),
             },
-            { header: 'النوع', cell: (r) => <Badge variant="outline">{PLAYLIST_KIND_LABELS[r.kind] ?? r.kind}</Badge> },
-            { header: 'الحلقات', cell: (r) => <span className="text-xs text-slate-600">{r.videoCount}</span> },
-            { header: 'الترجمات', cell: (r) => <span className="text-xs text-slate-600">{r.translationCount}</span> },
+            { header: dt("النوع"), cell: (r) => <Badge variant="outline">{PLAYLIST_KIND_LABELS[r.kind] ?? r.kind}</Badge> },
+            { header: dt("الحلقات"), cell: (r) => <span className="text-xs text-slate-600">{r.videoCount}</span> },
+            { header: dt("الترجمات"), cell: (r) => <span className="text-xs text-slate-600">{r.translationCount}</span> },
             {
-              header: 'مفعّلة',
+              header: dt("مفعّلة"),
               cell: (r) => (
                 <Switch checked={r.isActive} disabled={togglingId === r.id} onCheckedChange={(v) => toggleActive(r, v)} />
               ),
@@ -180,17 +179,15 @@ export default function PlaylistsPage() {
       <AlertDialog open={!!deleteTarget} onOpenChange={(o) => !o && setDeleteTarget(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>حذف قائمة التشغيل</AlertDialogTitle>
+            <AlertDialogTitle>{dt("حذف قائمة التشغيل")}</AlertDialogTitle>
             <AlertDialogDescription>
-              سيتم حذف «{deleteTarget?.title}» مع {deleteTarget?.videoCount ?? 0} حلقة وكل ترجماتها نهائيًا.
-            </AlertDialogDescription>
+              {dtx("سيتم حذف «{0}» مع {1} حلقة وكل ترجماتها نهائيًا.", [deleteTarget?.title, deleteTarget?.videoCount ?? 0])}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={deleting}>إلغاء</AlertDialogCancel>
+            <AlertDialogCancel disabled={deleting}>{dt("إلغاء")}</AlertDialogCancel>
             <AlertDialogAction onClick={confirmDelete} disabled={deleting}>
-              {deleting && <Loader2 className="w-4 h-4 animate-spin ml-2" />}
-              حذف
-            </AlertDialogAction>
+              {deleting && <Loader2 className="w-4 h-4 animate-spin me-2" />}
+              {dt("حذف")}</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

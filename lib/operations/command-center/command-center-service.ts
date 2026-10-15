@@ -2,6 +2,7 @@ import type { OperationsOverview } from "@/lib/operations/types";
 import { getTaskOverview } from "@/lib/operations/tasks/task-service";
 import { getProductionBoardOverview } from "@/lib/operations/production/production-service";
 import { getArchiveOverview } from "@/lib/operations/archive/archive-service";
+import { dt } from "@/lib/dashboard/i18n";
 
 export type OperationsCommandPriority = "HIGH" | "MEDIUM" | "LOW";
 
@@ -54,10 +55,10 @@ export async function buildOperationsCommandCenterOverview(
       id: `season-${season.id ?? season.title}`,
       type: "PREPARE_SEASON",
       priority: season.progress < 50 ? "HIGH" : "MEDIUM",
-      title: `جهّز محتوى موسم: ${season.title}`,
-      reason: `الموسم في حالة ${season.status} والتقدم الحالي ${season.progress}% فقط. المطلوب ${season.required} مادة والجاهز ${season.ready}.`,
+      title: dt("جهّز محتوى موسم: {0}", [season.title]),
+      reason: dt("الموسم في حالة {0} والتقدم الحالي {1}% فقط. المطلوب {2} مادة والجاهز {3}.", [season.status, season.progress, season.required, season.ready]),
       href: "/dashboard/operations/calendar",
-      cta: "فتح التقويم",
+      cta: dt("فتح التقويم"),
     });
   }
 
@@ -66,10 +67,10 @@ export async function buildOperationsCommandCenterOverview(
       id: `task-${task.id}`,
       type: "UNBLOCK_TASKS",
       priority: task.status === "BLOCKED" ? "HIGH" : "MEDIUM",
-      title: `راجع مهمة: ${task.title}`,
-      reason: `المسؤول: ${task.assignee}. الحالة: ${task.status}. مرتبطة بموسم ${task.seasonTitle}.`,
+      title: dt("راجع مهمة: {0}", [task.title]),
+      reason: dt("المسؤول: {0}. الحالة: {1}. مرتبطة بموسم {2}.", [task.assignee, task.status, task.seasonTitle]),
       href: "/dashboard/operations/tasks",
-      cta: "فتح المهام",
+      cta: dt("فتح المهام"),
     });
   }
 
@@ -80,10 +81,10 @@ export async function buildOperationsCommandCenterOverview(
         id: `production-${item.id}`,
         type: "MOVE_PRODUCTION",
         priority: "HIGH",
-        title: `حرّك مادة الإنتاج: ${item.title}`,
-        reason: `المادة عالية الأولوية وحالتها الحالية ${item.stage}. النوع: ${item.contentType}.`,
+        title: dt("حرّك مادة الإنتاج: {0}", [item.title]),
+        reason: dt("المادة عالية الأولوية وحالتها الحالية {0}. النوع: {1}.", [item.stage, item.contentType]),
         href: "/dashboard/operations/production",
-        cta: "فتح لوحة الإنتاج",
+        cta: dt("فتح لوحة الإنتاج"),
       });
     }
   }
@@ -93,10 +94,10 @@ export async function buildOperationsCommandCenterOverview(
       id: "production-ready-for-marketing",
       type: "SEND_TO_MARKETING",
       priority: "MEDIUM",
-      title: "سلّم المواد الجاهزة للتسويق",
-      reason: `يوجد ${production.summary.ready} مادة جاهزة يمكن استخدامها في الحملات أو النشر.`,
+      title: dt("سلّم المواد الجاهزة للتسويق"),
+      reason: dt("يوجد {0} مادة جاهزة يمكن استخدامها في الحملات أو النشر.", [production.summary.ready]),
       href: "/dashboard/operations/production",
-      cta: "فتح المواد الجاهزة",
+      cta: dt("فتح المواد الجاهزة"),
     });
   }
 
@@ -105,10 +106,10 @@ export async function buildOperationsCommandCenterOverview(
       id: "archive-ready-assets",
       type: "ARCHIVE_REUSABLE_ASSETS",
       priority: "LOW",
-      title: "راجع مواد الأرشيف الجاهزة لإعادة الاستخدام",
-      reason: `يوجد ${archive.summary.ready} مادة جاهزة في الأرشيف، منها ${archive.summary.videos} فيديو و${archive.summary.designs} تصميم/كاروسيل.`,
+      title: dt("راجع مواد الأرشيف الجاهزة لإعادة الاستخدام"),
+      reason: dt("يوجد {0} مادة جاهزة في الأرشيف، منها {1} فيديو و{2} تصميم/كاروسيل.", [archive.summary.ready, archive.summary.videos, archive.summary.designs]),
       href: "/dashboard/operations/archive",
-      cta: "فتح الأرشيف",
+      cta: dt("فتح الأرشيف"),
     });
   }
 
