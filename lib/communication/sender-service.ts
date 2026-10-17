@@ -1,10 +1,18 @@
 import { prisma } from "@/lib/prisma";
 import { writeAuditLog } from "@/lib/audit-log";
-import type { CommunicationSender } from "@prisma/client";
+import type { CommunicationSender, Prisma } from "@prisma/client";
 import type { CommunicationSenderConfig } from "./sender-router";
 import type { CommunicationChannel } from "./communication-types";
 import { ensureWabaWebhookSubscription, verifySenderOwnership, verifyWabaInBusinessPortfolio } from "./providers/meta-whatsapp/client";
 import { reconcilePublishedTemplatesToActiveWabas } from "./meta-template-publisher";
+import {
+  mergeVerificationMetadata,
+  planVerificationFailure,
+  planVerificationSuccess,
+  type VerificationDiagnostic,
+  type VerificationFailureInput,
+  type VerificationRecord,
+} from "./sender-verification";
 import {
   isCommunicationChannel,
   isCommunicationProvider,
@@ -41,7 +49,17 @@ export type SenderInput = {
   priority?: number;
 };
 
-export type ServiceResult<T> = { ok: true; data: T } | { ok: false; status: number; error: string };
+/**
+ * `diagnostic`, `message` and `warnings` are only filled by sender verification; every other
+ * caller reads `data` / `error` exactly as before.
+ */
+export type ServiceResult<T> =
+  | { ok: true; data: T; message?: string; warnings?: string[] }
+  | { ok: false; status: number; error: string; diagnostic?: VerificationDiagnostic };
+
+function metadataRecord(metadata: unknown): Record<string, unknown> {
+  return metadata && typeof metadata === "object" && !Array.isArray(metadata) ? (metadata as Record<string, unknown>) : {};
+}
 
 function dbUnavailable() {
   return { ok: false as const, status: 503, error: "DATABASE_URL is not configured." };
@@ -163,6 +181,11 @@ export async function updateSender(id: string, patch: Partial<SenderInput>, acto
         isDefault: patch.isDefault,
         enabled: patch.enabled,
         priority: patch.priority,
+        /* An explicit enable/disable is the operator's decision; verification reads it back so a
+           successful check never re-enables a sender someone switched off on purpose. */
+        metadata: typeof patch.enabled === "boolean"
+          ? ({ ...metadataRecord(current.metadata), adminDisabled: !patch.enabled } as Prisma.InputJsonValue)
+          : undefined,
       },
     });
     await writeAuditLog({
@@ -241,9 +264,14 @@ export async function deleteSender(id: string, actor?: Actor): Promise<ServiceRe
 }
 
 /**
- * Validate one stored WhatsApp sender against Meta and persist the health result. A sender only
- * becomes routable (ACTIVE + enabled) after Meta confirms that the Phone Number ID belongs to the
- * configured WABA under the active app credentials.
+ * Validate one stored WhatsApp sender against Meta and persist what the attempt proved.
+ *
+ * Stages run in order (configuration, Business Portfolio, phone ownership, webhook subscription)
+ * and the first failure decides the outcome through `planVerificationFailure`: a confirmed problem
+ * takes the sender out of routing with its stage and reason; a temporary one (network, Meta 5xx,
+ * throttling) or an internal state such as the provider being switched off leaves the sender as it
+ * was and records only the failed attempt. A sender becomes routable (ACTIVE + enabled) only after
+ * every stage passes, and never against an operator's deliberate disable.
  */
 export async function verifyWhatsappSender(id: string, actor?: Actor): Promise<ServiceResult<CommunicationSender>> {
   if (!process.env.DATABASE_URL) return dbUnavailable();
@@ -258,95 +286,62 @@ export async function verifyWhatsappSender(id: string, actor?: Actor): Promise<S
 
   const checkedAt = new Date();
 
-  const portfolio = await verifyWabaInBusinessPortfolio(sender.businessAccountId);
-  if (!portfolio.ok) {
-    const row = await prisma.communicationSender.update({
+  const fail = async (input: VerificationFailureInput): Promise<ServiceResult<CommunicationSender>> => {
+    const plan = planVerificationFailure(input, checkedAt);
+    const metadata = mergeVerificationMetadata(sender, plan.record, plan.senderPatch !== null) as Prisma.InputJsonValue;
+    await prisma.communicationSender.update({
       where: { id },
-      data: {
-        status: portfolio.reason === "META_BUSINESS_PORTFOLIO_NOT_CONFIGURED" ? "NOT_CONFIGURED" : "NEEDS_ATTENTION",
-        enabled: false,
-        lastHealthCheckAt: checkedAt,
-        lastError: [portfolio.reason, portfolio.detail].filter(Boolean).join(" · ").slice(0, 500),
-      },
+      data: plan.senderPatch ? { ...plan.senderPatch, metadata } : { metadata },
     });
     await writeAuditLog({
       actorId: actor?.actorId ?? undefined,
       actorName: actor?.actorName ?? undefined,
       actorRole: actor?.actorRole ?? "ADMIN",
       action: "communication.sender.verify.failed",
-      messageAr: `فشل ربط WABA بحساب الأعمال الرئيسي: ${sender.name}`,
-      messageEn: `WABA is not linked to the root Business Portfolio: ${sender.name}`,
+      messageAr: `فشل التحقق من مُرسِل واتساب (${plan.diagnostic.stage}): ${sender.name}`,
+      messageEn: `WhatsApp sender verification failed at ${plan.diagnostic.stage}: ${sender.name}`,
       entityType: "CommunicationSender",
       entityId: id,
-      metadata: { reason: portfolio.reason, externalCall: true },
+      metadata: {
+        stage: plan.diagnostic.stage,
+        reason: plan.diagnostic.reason,
+        kind: plan.kind,
+        retryable: plan.diagnostic.retryable,
+        senderStateChanged: plan.senderPatch !== null,
+        externalCall: true,
+      },
       stream: "TEAM",
     });
-    return { ok: false, status: 422, error: row.lastError ?? portfolio.reason };
-  }
+    return { ok: false, status: plan.httpStatus, error: plan.error, diagnostic: plan.diagnostic };
+  };
+
+  const portfolio = await verifyWabaInBusinessPortfolio(sender.businessAccountId);
+  if (!portfolio.ok) return fail({ stage: "BUSINESS_PORTFOLIO", reason: portfolio.reason, detail: portfolio.detail, retryable: portfolio.retryable });
 
   const verification = await verifySenderOwnership(sender.phoneNumberId, sender.businessAccountId);
-  if (!verification.ok) {
-    const status = verification.reason === "META_WHATSAPP_NOT_CONFIGURED" ? "NOT_CONFIGURED" : "NEEDS_ATTENTION";
-    const row = await prisma.communicationSender.update({
-      where: { id },
-      data: {
-        status,
-        enabled: false,
-        lastHealthCheckAt: checkedAt,
-        lastError: [verification.reason, verification.detail].filter(Boolean).join(" · ").slice(0, 500),
-      },
-    });
-    await writeAuditLog({
-      actorId: actor?.actorId ?? undefined,
-      actorName: actor?.actorName ?? undefined,
-      actorRole: actor?.actorRole ?? "ADMIN",
-      action: "communication.sender.verify.failed",
-      messageAr: `فشل التحقق من مُرسِل واتساب: ${sender.name}`,
-      messageEn: `WhatsApp sender verification failed: ${sender.name}`,
-      entityType: "CommunicationSender",
-      entityId: id,
-      metadata: { reason: verification.reason, externalCall: true },
-      stream: "TEAM",
-    });
-    return { ok: false, status: verification.reason === "META_WHATSAPP_NOT_CONFIGURED" ? 409 : 422, error: row.lastError ?? verification.reason };
-  }
+  if (!verification.ok) return fail({ stage: "PHONE_OWNERSHIP", reason: verification.reason, detail: verification.detail, retryable: verification.retryable });
 
   const subscription = await ensureWabaWebhookSubscription(sender.businessAccountId);
-  if (!subscription.ok) {
-    const row = await prisma.communicationSender.update({
-      where: { id },
-      data: {
-        status: "NEEDS_ATTENTION",
-        enabled: false,
-        lastHealthCheckAt: checkedAt,
-        lastError: ["WABA_WEBHOOK_SUBSCRIPTION_FAILED", subscription.reason, subscription.detail].filter(Boolean).join(" · ").slice(0, 500),
-      },
-    });
-    await writeAuditLog({
-      actorId: actor?.actorId ?? undefined,
-      actorName: actor?.actorName ?? undefined,
-      actorRole: actor?.actorRole ?? "ADMIN",
-      action: "communication.sender.verify.failed",
-      messageAr: `تم التحقق من الرقم لكن تعذر اشتراك WABA في Webhook: ${sender.name}`,
-      messageEn: `Phone verified but WABA webhook subscription failed: ${sender.name}`,
-      entityType: "CommunicationSender",
-      entityId: id,
-      metadata: { reason: subscription.reason, externalCall: true },
-      stream: "TEAM",
-    });
-    return { ok: false, status: 422, error: row.lastError ?? subscription.reason };
-  }
+  if (!subscription.ok) return fail({ stage: "WEBHOOK_SUBSCRIPTION", reason: subscription.reason, detail: subscription.detail, retryable: subscription.retryable });
 
+  const success = planVerificationSuccess(sender, checkedAt, verification.qualityRating);
+  const record: VerificationRecord = {
+    lastAttemptAt: checkedAt.toISOString(),
+    ok: true,
+    stage: null,
+    reason: null,
+    detail: null,
+    retryable: false,
+    webhookSubscriptionChanged: subscription.changed,
+  };
   const row = await prisma.communicationSender.update({
     where: { id },
     data: {
-      status: "ACTIVE",
-      enabled: true,
+      ...success.senderPatch,
       displayPhoneNumber: verification.displayPhoneNumber || sender.displayPhoneNumber,
       displayName: verification.verifiedName || sender.displayName,
       qualityRating: verification.qualityRating,
-      lastHealthCheckAt: checkedAt,
-      lastError: null,
+      metadata: mergeVerificationMetadata(sender, record, false) as Prisma.InputJsonValue,
     },
   });
   await writeAuditLog({
@@ -358,18 +353,30 @@ export async function verifyWhatsappSender(id: string, actor?: Actor): Promise<S
     messageEn: `WhatsApp sender verified with Meta: ${row.name}`,
     entityType: "CommunicationSender",
     entityId: id,
-    metadata: { qualityRating: row.qualityRating, businessPortfolioVerified: true, wabaRelationship: portfolio.asset.relationship, webhookSubscribed: true, subscriptionAppIds: subscription.appIds, externalCall: true },
+    metadata: {
+      qualityRating: row.qualityRating,
+      warnings: success.warnings,
+      businessPortfolioVerified: true,
+      wabaRelationship: portfolio.asset.relationship,
+      webhookSubscribed: true,
+      webhookSubscriptionChanged: subscription.changed,
+      subscriptionAppIds: subscription.appIds,
+      adminHeld: success.adminHeld,
+      externalCall: true,
+    },
     stream: "TEAM",
   });
 
-  await reconcilePublishedTemplatesToActiveWabas(actor).catch((error) => {
-    console.error("WhatsApp template reconciliation after sender activation failed", {
-      senderId: row.id,
-      error: error instanceof Error ? error.message : String(error),
+  if (row.enabled && row.status === "ACTIVE") {
+    await reconcilePublishedTemplatesToActiveWabas(actor).catch((error) => {
+      console.error("WhatsApp template reconciliation after sender activation failed", {
+        senderId: row.id,
+        error: error instanceof Error ? error.message : String(error),
+      });
     });
-  });
+  }
 
-  return { ok: true, data: row };
+  return { ok: true, data: row, message: success.message, warnings: success.warnings };
 }
 
 /** Make one sender the default for its channel (clears the flag on the channel's other senders). */

@@ -2456,5 +2456,16 @@
     "achievementsTitle": "Onze resultaten: {name}",
     "statDoneLabel": "Voltooid",
     "statGoalLabel": "Doel"
+  },
+  "SignInPage": {
+    "headline": "NOG GEEN LID?",
+    "sub": "Registreer je om je donaties te volgen en deel te nemen aan exclusieve campagnes.",
+    "donateNow": "Doneer nu",
+    "title": "Inloggen",
+    "welcome": "Welkom terug",
+    "orContinue": "doorgaan met",
+    "noAccount": "Nog geen account?",
+    "createOne": "Maak er een aan",
+    "logoAlt": "Logo"
   }
 }

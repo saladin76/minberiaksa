@@ -5,6 +5,7 @@
     "moduleResolution": "Node",
     "strict": true,
     "esModuleInterop": true,
+    "resolveJsonModule": true,
     "skipLibCheck": true,
     "outDir": ".integration-test-build",
     "rootDir": ".",
@@ -38,6 +39,10 @@
     "lib/communication/communication-runtime-types.ts",
     "lib/communication/delivery-status-progress.ts",
     "lib/communication/providers/meta-whatsapp/parameters.ts",
+    "lib/communication/providers/meta-whatsapp/errors.ts",
+    "lib/communication/providers/meta-whatsapp/graph.ts",
+    "lib/communication/providers/meta-whatsapp/subscription.ts",
+    "lib/communication/sender-verification.ts",
     "lib/communication/providers/elastic-email/errors.ts",
     "lib/communication/providers/elastic-email/payload.ts",
     "lib/communication/providers/elastic-email/types.ts",
@@ -66,6 +71,7 @@
     "lib/ai/concierge/schema.ts",
     "lib/donations/subscription-provider-rules.ts",
     "lib/content-localization/access.ts",
+    "lib/content-localization/protected-tokens.ts",
     "tests/integration-settings/**/*.ts"
   ]
 }

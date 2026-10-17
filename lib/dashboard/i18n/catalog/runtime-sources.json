@@ -26,6 +26,7 @@
   "lib/communication/meta-template-publisher.ts",
   "lib/communication/routing-rule-service.ts",
   "lib/communication/sender-service.ts",
+  "lib/communication/sender-verification.ts",
   "lib/communication/whatsapp-template-status.ts",
   "lib/communication/whatsapp-template-sync.ts",
   "lib/dashboard/audit-log-display.ts",

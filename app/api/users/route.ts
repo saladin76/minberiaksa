@@ -11,6 +11,7 @@ import {
   sessionHasDashboardPermission,
 } from '@/lib/dashboard/permissions';
 import { writeAuditLog } from '@/lib/audit-log';
+import { PAID_DONATION_FILTER } from '@/lib/dashboard/donation-usd-revenue';
 import {
   birthdateRangeForAges,
   genderQueryValues,
@@ -146,7 +147,7 @@ export async function GET(request: NextRequest) {
         if (ids.length === 0) return [];
         const gRows = await prisma.donation.groupBy({
           by: ['donorId'],
-          where: { donorId: { in: ids }, status: "PAID" },
+          where: { donorId: { in: ids }, ...PAID_DONATION_FILTER },
           _count: { id: true },
           _sum: { amountUSD: true, totalAmount: true },
         });
@@ -251,7 +252,7 @@ export async function GET(request: NextRequest) {
       userIds.length > 0
         ? await prisma.donation.groupBy({
             by: ["donorId"],
-            where: { donorId: { in: userIds }, status: "PAID" },
+            where: { donorId: { in: userIds }, ...PAID_DONATION_FILTER },
             _sum: { totalAmount: true, amountUSD: true },
             _max: { createdAt: true },
             _count: { id: true },

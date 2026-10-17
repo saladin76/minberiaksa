@@ -2456,5 +2456,16 @@
     "achievementsTitle": "Våre resultater: {name}",
     "statDoneLabel": "Fullført",
     "statGoalLabel": "Mål"
+  },
+  "SignInPage": {
+    "headline": "IKKE MEDLEM ENNÅ?",
+    "sub": "Registrer deg for å følge donasjonene dine og bli med i eksklusive kampanjer.",
+    "donateNow": "Doner nå",
+    "title": "Logg inn",
+    "welcome": "Velkommen tilbake",
+    "orContinue": "fortsett med",
+    "noAccount": "Har du ikke en konto?",
+    "createOne": "Opprett en",
+    "logoAlt": "Logo"
   }
 }

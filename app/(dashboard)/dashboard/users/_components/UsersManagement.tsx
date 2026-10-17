@@ -808,7 +808,7 @@ export default function UsersManagement({ scope }: { scope: Scope }) {
 
       <Dialog open={isDialogOpen} onOpenChange={(open) => !open && handleDialogClose()}>
         <DialogOverlay className="fixed inset-0 bg-black/50" />
-        <DialogContent className="fixed top-1/2 end-1/2 w-[calc(100%-2rem)] max-w-lg max-h-[min(90vh,640px)] overflow-y-auto p-4 sm:p-6 transform -translate-x-1/2 -translate-y-1/2 bg-card text-card-foreground border border-border rounded-lg shadow-lg" dir={dashDir()}>
+        <DialogContent className="fixed top-1/2 left-1/2 w-[calc(100%-2rem)] max-w-lg max-h-[min(90vh,640px)] overflow-y-auto p-4 sm:p-6 transform -translate-x-1/2 -translate-y-1/2 bg-card text-card-foreground border border-border rounded-lg shadow-lg" dir={dashDir()}>
           <DialogTitle className="text-lg font-bold text-foreground">{dt("تعديل الدور والصلاحيات")}</DialogTitle>
           {selectedUser && (
             <div className="space-y-4 mt-4">

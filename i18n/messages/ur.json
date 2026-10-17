@@ -2456,5 +2456,16 @@
     "achievementsTitle": "{name} میں ہماری کامیابیاں",
     "statDoneLabel": "مکمل",
     "statGoalLabel": "ہدف"
+  },
+  "SignInPage": {
+    "headline": "ابھی تک رکن نہیں ہیں؟",
+    "sub": "اپنے عطیات کا حساب رکھنے اور خصوصی مہمات میں شامل ہونے کے لیے رجسٹر کریں۔",
+    "donateNow": "ابھی عطیہ کریں",
+    "title": "سائن ان",
+    "welcome": "خوش آمدید",
+    "orContinue": "کے ساتھ جاری رکھیں",
+    "noAccount": "اکاؤنٹ نہیں ہے؟",
+    "createOne": "اکاؤنٹ بنائیں",
+    "logoAlt": "لوگو"
   }
 }

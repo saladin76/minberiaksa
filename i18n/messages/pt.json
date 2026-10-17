@@ -3502,5 +3502,16 @@
     "achievementsTitle": "Nossas conquistas: {name}",
     "statDoneLabel": "Concluído",
     "statGoalLabel": "Meta"
+  },
+  "SignInPage": {
+    "headline": "AINDA NÃO É MEMBRO?",
+    "sub": "Cadastre-se para acompanhar suas doações e participar de campanhas exclusivas.",
+    "donateNow": "Doar agora",
+    "title": "Entrar",
+    "welcome": "Bem-vindo de volta",
+    "orContinue": "continuar com",
+    "noAccount": "Não tem uma conta?",
+    "createOne": "Criar conta",
+    "logoAlt": "Logotipo"
   }
 }

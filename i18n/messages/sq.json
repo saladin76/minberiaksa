@@ -2456,5 +2456,16 @@
     "achievementsTitle": "Arritjet tona: {name}",
     "statDoneLabel": "Përfunduar",
     "statGoalLabel": "Objektivi"
+  },
+  "SignInPage": {
+    "headline": "ENDE NUK JENI ANËTAR?",
+    "sub": "Regjistrohuni për të ndjekur dhurimet tuaja dhe për t’u bashkuar në fushata ekskluzive.",
+    "donateNow": "Dhuro tani",
+    "title": "Hyr",
+    "welcome": "Mirë se u kthyet",
+    "orContinue": "vazhdo me",
+    "noAccount": "Nuk keni llogari?",
+    "createOne": "Krijo një",
+    "logoAlt": "Logoja"
   }
 }

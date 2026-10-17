@@ -1,4 +1,5 @@
 import { SUPPORTED_LOCALES, isValidLocale, type SupportedLocale } from "@/lib/locales";
+import { missingProtectedTokens } from "./protected-tokens";
 
 /**
  * Machine translation for the dashboard forms  Arabic master copy in, one
@@ -80,17 +81,10 @@ function stripCodeFence(value: string): string {
   return value.replace(/^```json\s*/i, "").replace(/^```\s*/i, "").replace(/```$/i, "").trim();
 }
 
-const PROTECTED_LITERAL_RE = /https?:\/\/[^\s<>"')]+|[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}|\{\{[^{}]+\}\}|<\/?[A-Za-z][^>]*>|\b(?:USD|EUR|TRY|SAR|AED|QAR|KWD|JOD|GBP)\b|(?:[$€£₺﷼]\s*)?\d+(?:[.,]\d+)?%?/giu;
-const ICU_VARIABLE_RE = /\{([A-Za-z0-9_.-]+)(?=[,}])/g;
-
-function protectedTokens(value: string): string[] {
-  const literals = (value.match(PROTECTED_LITERAL_RE) ?? []).map((token) => token.trim());
-  const variables = Array.from(value.matchAll(ICU_VARIABLE_RE), (match) => `{${match[1]}}`);
-  return [...literals, ...variables].sort();
-}
-
-function sameProtectedTokens(source: string, translated: string): boolean {
-  return JSON.stringify(protectedTokens(source)) === JSON.stringify(protectedTokens(translated));
+/** A warning for a field the QA gate refused, naming the protected values the translation lost. */
+function protectedTokenWarning(locale: string, key: string, missing: string[]): string {
+  const shown = missing.slice(0, 3).join(", ");
+  return `${locale}:${key} rejected because a protected value changed (${shown}${missing.length > 3 ? ", …" : ""})`;
 }
 
 function policyInstruction(policy: TranslationPolicy): string {
@@ -228,15 +222,17 @@ export async function translateItem(input: TranslateInput, targetLocale: string)
   for (const k of Object.keys(plain)) {
     const v = gotFields[k];
     if (typeof v === "string" && v.trim()) {
-      if (sameProtectedTokens(plain[k], v)) out.fields[k] = v.trim();
-      else out.warnings.push(`${targetLocale}:${k} rejected because a protected token changed`);
+      const missing = missingProtectedTokens(plain[k], v);
+      if (!missing.length) out.fields[k] = v.trim();
+      else out.warnings.push(protectedTokenWarning(targetLocale, k, missing));
     }
   }
   for (const k of Object.keys(richAsPlain)) {
     const v = gotFields[k];
     if (typeof v === "string" && v.trim()) {
-      if (sameProtectedTokens(richAsPlain[k], v)) out.richFields[k] = v.trim();
-      else out.warnings.push(`${targetLocale}:${k} rejected because a protected token changed`);
+      const missing = missingProtectedTokens(richAsPlain[k], v);
+      if (!missing.length) out.richFields[k] = v.trim();
+      else out.warnings.push(protectedTokenWarning(targetLocale, k, missing));
     }
   }
 
@@ -249,8 +245,12 @@ export async function translateItem(input: TranslateInput, targetLocale: string)
       continue;
     }
     const translatedTexts = arr as string[];
-    if (!lifted.texts.every((sourceText, index) => sameProtectedTokens(sourceText, translatedTexts[index]))) {
-      out.warnings.push(`${targetLocale}:${k} rejected because a protected token changed`);
+    /* Checked across the whole document, not fragment by fragment: fragments are cut at
+       formatting boundaries, and a translation's word order legitimately moves a number or a
+       link into the neighbouring fragment. Joined by newlines so digits never merge across a cut. */
+    const missing = missingProtectedTokens(lifted.texts.join("\n"), translatedTexts.join("\n"));
+    if (missing.length) {
+      out.warnings.push(protectedTokenWarning(targetLocale, k, missing));
       continue;
     }
     out.richFields[k] = injectTexts(structuredClone(lifted.doc), translatedTexts);

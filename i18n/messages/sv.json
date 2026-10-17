@@ -2456,5 +2456,16 @@
     "achievementsTitle": "Våra resultat: {name}",
     "statDoneLabel": "Slutfört",
     "statGoalLabel": "Mål"
+  },
+  "SignInPage": {
+    "headline": "INTE MEDLEM ÄNNU?",
+    "sub": "Registrera dig för att följa dina donationer och delta i exklusiva kampanjer.",
+    "donateNow": "Donera nu",
+    "title": "Logga in",
+    "welcome": "Välkommen tillbaka",
+    "orContinue": "fortsätt med",
+    "noAccount": "Har du inget konto?",
+    "createOne": "Skapa ett",
+    "logoAlt": "Logotyp"
   }
 }

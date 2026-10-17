@@ -170,7 +170,7 @@ export function SmartWhatsappDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className="fixed end-1/2 top-1/2 w-[calc(100%-2rem)] max-w-2xl max-h-[90vh] overflow-y-auto p-0 transform -translate-x-1/2 -translate-y-1/2 border border-border rounded-2xl shadow-2xl bg-white"
+        className="fixed left-1/2 top-1/2 w-[calc(100%-2rem)] max-w-2xl max-h-[90vh] overflow-y-auto p-0 transform -translate-x-1/2 -translate-y-1/2 border border-border rounded-2xl shadow-2xl bg-white"
         dir={dashDir()}
       >
         <div className="border-b border-slate-100 bg-slate-900 px-5 py-4 text-white">

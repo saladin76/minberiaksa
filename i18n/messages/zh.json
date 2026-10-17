@@ -2456,5 +2456,16 @@
     "achievementsTitle": "我们在{name}的成果",
     "statDoneLabel": "已完成",
     "statGoalLabel": "目标"
+  },
+  "SignInPage": {
+    "headline": "还不是会员？",
+    "sub": "注册后即可追踪您的捐款并参与专属活动。",
+    "donateNow": "立即捐款",
+    "title": "登录",
+    "welcome": "欢迎回来",
+    "orContinue": "继续使用",
+    "noAccount": "还没有账户？",
+    "createOne": "立即注册",
+    "logoAlt": "标志"
   }
 }

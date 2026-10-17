@@ -3502,5 +3502,16 @@
     "achievementsTitle": "Our achievements in {name}",
     "statDoneLabel": "Completed",
     "statGoalLabel": "Goal"
+  },
+  "SignInPage": {
+    "headline": "NOT A MEMBER YET?",
+    "sub": "Register to track your donations and join exclusive campaigns.",
+    "donateNow": "Donate Now",
+    "title": "Sign In",
+    "welcome": "Welcome back",
+    "orContinue": "continue with",
+    "noAccount": "Don't have an account?",
+    "createOne": "Create one",
+    "logoAlt": "Logo"
   }
 }

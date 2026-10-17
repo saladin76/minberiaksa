@@ -21,14 +21,25 @@ export function scrubSecrets(input: string): string {
     .replace(/access_token=[^&\s"]+/gi, "access_token=***");
 }
 
-/** Map a Meta Graph error body into a safe internal reason + short, scrubbed detail. */
-export function mapGraphError(status: number, body: unknown): { reason: string; detail: string } {
+/**
+ * Graph error codes Meta documents as temporary (unknown/service error, rate limits, throttling).
+ * A failure with one of these says nothing about whether the request itself was valid.
+ */
+const TRANSIENT_GRAPH_CODES = new Set([1, 2, 4, 17, 32, 341, 613, 80007]);
+
+/**
+ * Map a Meta Graph error body into a safe internal reason + short, scrubbed detail, plus whether the
+ * failure is temporary: 5xx, 429, a documented transient code, or Meta's own `is_transient` flag.
+ */
+export function mapGraphError(status: number, body: unknown): { reason: string; detail: string; retryable: boolean } {
   let message = "";
   let code: number | null = null;
   let subcode: number | null = null;
+  let transient = false;
   if (body && typeof body === "object") {
-    const err = (body as { error?: { message?: unknown; code?: unknown; error_subcode?: unknown; error_user_title?: unknown; error_user_msg?: unknown; error_data?: { details?: unknown } } }).error;
+    const err = (body as { error?: { message?: unknown; code?: unknown; error_subcode?: unknown; is_transient?: unknown; error_user_title?: unknown; error_user_msg?: unknown; error_data?: { details?: unknown } } }).error;
     if (err) {
+      if (err.is_transient === true) transient = true;
       if (typeof err.message === "string") message = err.message;
       if (typeof err.code === "number") code = err.code;
       if (typeof err.error_subcode === "number") subcode = err.error_subcode;
@@ -49,5 +60,7 @@ export function mapGraphError(status: number, body: unknown): { reason: string; 
       ? META_REASONS.UNAUTHORIZED
       : META_REASONS.REQUEST_FAILED;
   const detail = scrubSecrets(`${status}${code != null ? `/${code}` : ""}: ${message}`.slice(0, 300));
-  return { reason, detail };
+  const retryable = reason !== META_REASONS.UNAUTHORIZED
+    && (transient || status >= 500 || status === 429 || (code != null && TRANSIENT_GRAPH_CODES.has(code)));
+  return { reason, detail, retryable };
 }

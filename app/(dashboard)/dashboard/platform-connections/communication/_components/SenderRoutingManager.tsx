@@ -33,6 +33,26 @@ const SUPPORTED_LANGUAGES = [
 ] as const;
 
 const CHANNEL_LABELS: Record<string, string> = { get WHATSAPP() { return dt("واتساب"); }, get EMAIL() { return dt("بريد"); }, get SMS() { return dt("رسائل نصية"); } };
+/** Where a Meta verification stopped  matches `VerificationStage` in lib/communication/sender-verification.ts. */
+const VERIFY_STAGE_LABELS: Record<string, string> = {
+  get CONFIGURATION() { return dt("مرحلة الإعدادات"); },
+  get BUSINESS_PORTFOLIO() { return dt("مرحلة حساب الأعمال (Business Portfolio)"); },
+  get PHONE_OWNERSHIP() { return dt("مرحلة ملكية الرقم"); },
+  get WEBHOOK_SUBSCRIPTION() { return dt("مرحلة اشتراك Webhook"); },
+};
+
+type Notice = { tone: "ok" | "error"; text: string; lines?: string[] };
+
+/** The structured part of a failed verify response, as lines under the message. */
+function verifyFailureLines(body: { stage?: unknown; reason?: unknown; detail?: unknown; retryable?: unknown }): string[] {
+  const lines: string[] = [];
+  if (typeof body.stage === "string") lines.push(VERIFY_STAGE_LABELS[body.stage] ?? body.stage);
+  if (typeof body.reason === "string") lines.push(dt("السبب: {0}", [body.reason]));
+  if (typeof body.detail === "string" && body.detail) lines.push(dt("تفاصيل Meta: {0}", [body.detail]));
+  if (body.retryable === true) lines.push(dt("خطأ مؤقت  لم تتغير حالة المُرسِل، ويمكن إعادة المحاولة."));
+  return lines;
+}
+
 const PURPOSE_LABELS: Record<string, string> = {
   get TRANSACTIONAL() { return dt("معاملات"); }, get MARKETING() { return dt("تسويق"); }, get UTILITY() { return dt("خدمي"); }, get AUTHENTICATION() { return dt("توثيق"); },
 };
@@ -149,7 +169,7 @@ export function SenderRoutingManager() {
   const [metaAssets, setMetaAssets] = useState<MetaAssetsPayload | null>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<string | null>(null);
-  const [notice, setNotice] = useState<{ tone: "ok" | "error"; text: string } | null>(null);
+  const [notice, setNotice] = useState<Notice | null>(null);
   const [showSenderForm, setShowSenderForm] = useState(false);
   const [editingSenderId, setEditingSenderId] = useState<string | null>(null);
   const [showRuleForm, setShowRuleForm] = useState(false);
@@ -284,9 +304,14 @@ export function SenderRoutingManager() {
       </div>
 
       {notice && (
-        <p className={cn("mb-3 text-sm font-medium", notice.tone === "ok" ? "text-emerald-700" : "text-rose-700")}>
-          {notice.text}
-        </p>
+        <div className={cn("mb-3 text-sm font-medium", notice.tone === "ok" ? "text-emerald-700" : "text-rose-700")}>
+          <p>{notice.text}</p>
+          {notice.lines?.length ? (
+            <ul className="mt-1 space-y-0.5 text-xs font-normal opacity-90">
+              {notice.lines.map((line, i) => <li key={i} dir="auto" className="break-words">{line}</li>)}
+            </ul>
+          ) : null}
+        </div>
       )}
 
       {showSenderForm && (
@@ -381,11 +406,18 @@ export function SenderRoutingManager() {
                                     const res = await fetch(`/api/dashboard/communication/senders/${sender.id}/verify`, { method: "POST" });
                                     const body = await res.json().catch(() => ({}));
                                     if (!res.ok) {
-                                      setNotice({ tone: "error", text: body.error ?? dt("فشل التحقق من Meta.") });
+                                      setNotice({ tone: "error", text: body.error ?? dt("فشل التحقق من Meta."), lines: verifyFailureLines(body) });
                                       await load();
                                       return;
                                     }
-                                    setNotice({ tone: "ok", text: dt("تم التحقق من الرقم وWABA عبر Meta وتفعيل المُرسِل.") });
+                                    const warnings: unknown[] = Array.isArray(body.warnings) ? body.warnings : [];
+                                    setNotice({
+                                      tone: "ok",
+                                      text: typeof body.message === "string" ? body.message : dt("تم التحقق من الرقم وWABA عبر Meta وتفعيل المُرسِل."),
+                                      lines: warnings.includes("QUALITY_RATING_RED")
+                                        ? [dt("تنبيه: تقييم جودة الرقم لدى Meta أحمر (RED). هذا تحذير جودة ولا يؤثر على صحة الربط.")]
+                                        : undefined,
+                                    });
                                     await load();
                                   } finally {
                                     setBusy(null);

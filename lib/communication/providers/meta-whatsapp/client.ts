@@ -1,6 +1,11 @@
 import { getActiveMetaWhatsappRuntimeConfig, RUNTIME_FAILURE, type ActiveRuntimeConfig, type MetaWhatsappRuntimeValues } from "../../runtime-config";
-import { mapGraphError, META_REASONS } from "./errors";
+import { META_REASONS } from "./errors";
+import { graphFetch, type GraphErr, type GraphOk } from "./graph";
+import { ensureWabaSubscriptionForConfig, type WabaSubscriptionResult } from "./subscription";
 import type { HealthResult, MetaGraphConfig } from "./types";
+
+export { graphFetch };
+export type { WabaSubscriptionResult };
 
 export type MetaRuntimeConfig = ActiveRuntimeConfig<MetaWhatsappRuntimeValues>;
 
@@ -20,31 +25,6 @@ export function metaRuntimeFailure(runtime: MetaRuntimeConfig): string {
   if (runtime.reason === RUNTIME_FAILURE.INTEGRATION_DECRYPTION_FAILED) return "INTEGRATION_DECRYPTION_FAILED";
   if (runtime.reason === RUNTIME_FAILURE.INTEGRATION_DATABASE_UNAVAILABLE) return "INTEGRATION_DATABASE_UNAVAILABLE";
   return META_REASONS.NOT_CONFIGURED;
-}
-
-type GraphOk = { ok: true; data: unknown };
-type GraphErr = { ok: false; reason: string; detail: string };
-
-export async function graphFetch(config: MetaGraphConfig, path: string, init?: RequestInit): Promise<GraphOk | GraphErr> {
-  const url = `https://graph.facebook.com/${config.graphVersion}/${path}`;
-  try {
-    const res = await fetch(url, {
-      ...init,
-      headers: {
-        Authorization: `Bearer ${config.accessToken}`,
-        "Content-Type": "application/json",
-        ...(init?.headers ?? {}),
-      },
-    });
-    const body = await res.json().catch(() => null);
-    if (!res.ok) {
-      const { reason, detail } = mapGraphError(res.status, body);
-      return { ok: false, reason, detail };
-    }
-    return { ok: true, data: body };
-  } catch {
-    return { ok: false, reason: META_REASONS.REQUEST_FAILED, detail: "network error" };
-  }
 }
 
 export type MetaPhoneCapacityResult =
@@ -81,9 +61,10 @@ export async function getMetaPhoneCapacity(
   };
 }
 
+/** `retryable` on a failure: see GraphErr  a temporary failure proves nothing about the sender. */
 export type MetaSenderVerification =
   | { ok: true; displayPhoneNumber: string | null; qualityRating: string | null; verifiedName: string | null }
-  | { ok: false; reason: string; detail?: string };
+  | { ok: false; reason: string; detail?: string; retryable?: boolean };
 
 
 export type MetaBusinessPortfolioAsset = {
@@ -94,7 +75,7 @@ export type MetaBusinessPortfolioAsset = {
 
 export type MetaBusinessPortfolioAssetsResult =
   | { ok: true; businessId: string; businessName: string | null; wabas: MetaBusinessPortfolioAsset[] }
-  | { ok: false; reason: string; detail?: string };
+  | { ok: false; reason: string; detail?: string; retryable?: boolean };
 
 async function graphRows(config: MetaGraphConfig, path: string): Promise<GraphOk | GraphErr> {
   return graphFetch(config, path, { method: "GET" });
@@ -113,7 +94,7 @@ export async function listBusinessPortfolioWabas(runtime?: MetaRuntimeConfig): P
 
   const business = await graphRows(config, `${businessId}?fields=id,name`);
   if (!business.ok) {
-    return { ok: false, reason: "META_BUSINESS_PORTFOLIO_UNAVAILABLE", detail: business.detail };
+    return { ok: false, reason: "META_BUSINESS_PORTFOLIO_UNAVAILABLE", detail: business.detail, retryable: business.retryable };
   }
   const businessRow = business.data && typeof business.data === "object"
     ? business.data as Record<string, unknown>
@@ -121,7 +102,7 @@ export async function listBusinessPortfolioWabas(runtime?: MetaRuntimeConfig): P
 
   const owned = await graphRows(config, `${businessId}/owned_whatsapp_business_accounts?fields=id,name&limit=200`);
   if (!owned.ok) {
-    return { ok: false, reason: "META_BUSINESS_PORTFOLIO_UNAVAILABLE", detail: owned.detail };
+    return { ok: false, reason: "META_BUSINESS_PORTFOLIO_UNAVAILABLE", detail: owned.detail, retryable: owned.retryable };
   }
 
   /*
@@ -159,7 +140,7 @@ export async function listBusinessPortfolioWabas(runtime?: MetaRuntimeConfig): P
 export async function verifyWabaInBusinessPortfolio(
   businessAccountId: string,
   runtime?: MetaRuntimeConfig,
-): Promise<{ ok: true; asset: MetaBusinessPortfolioAsset } | { ok: false; reason: string; detail?: string }> {
+): Promise<{ ok: true; asset: MetaBusinessPortfolioAsset } | { ok: false; reason: string; detail?: string; retryable?: boolean }> {
   const assets = await listBusinessPortfolioWabas(runtime);
   if (!assets.ok) return assets;
   const asset = assets.wabas.find((row) => row.id === businessAccountId);
@@ -248,7 +229,7 @@ export async function verifySenderOwnership(
     `${businessAccountId}/phone_numbers?fields=id,display_phone_number,verified_name,quality_rating&limit=100`,
     { method: "GET" }
   );
-  if (!list.ok) return { ok: false, reason: list.reason, detail: list.detail };
+  if (!list.ok) return { ok: false, reason: list.reason, detail: list.detail, retryable: list.retryable };
 
   const rows = Array.isArray((list.data as { data?: unknown[] } | null)?.data)
     ? ((list.data as { data: unknown[] }).data as Array<Record<string, unknown>>)
@@ -288,75 +269,16 @@ export async function healthCheck(phoneNumberId?: string | null, runtime?: MetaR
 }
 
 
-export type WabaSubscriptionResult =
-  | { ok: true; subscribed: true; changed: boolean; appIds: string[] }
-  | { ok: false; reason: string; detail?: string };
-
 /**
- * Ensure the active Meta app is subscribed to a WABA's webhooks.
- *
- * Meta's callback URL lives on the app, but delivery/inbound events are only emitted for WABAs to
- * which the app is subscribed. A sender is therefore not considered production-ready until this
- * succeeds. The POST is idempotent from our perspective and Meta returns { success: true }.
+ * Ensure the configured Meta app is subscribed to a WABA's webhooks. Reads first and writes to
+ * Meta only when the configured App ID is missing from `subscribed_apps`; see
+ * `ensureWabaSubscriptionForConfig` for the full contract.
  */
 export async function ensureWabaWebhookSubscription(
   businessAccountId: string,
   runtime?: MetaRuntimeConfig,
 ): Promise<WabaSubscriptionResult> {
   const resolved = runtime ?? await getActiveMetaWhatsappRuntimeConfig();
-  if (!resolved.configured) return { ok: false, reason: metaRuntimeFailure(resolved) };
-  const config = resolved.values;
-
-  const current = await graphFetch(config, `${businessAccountId}/subscribed_apps`, { method: "GET" });
-  if (!current.ok) return { ok: false, reason: current.reason, detail: current.detail };
-
-  const data = Array.isArray((current.data as { data?: unknown[] } | null)?.data)
-    ? ((current.data as { data: unknown[] }).data as Array<Record<string, unknown>>)
-    : [];
-  const appIds = data
-    .map((row) => {
-      const wa = row.whatsapp_business_api_data as Record<string, unknown> | undefined;
-      return typeof wa?.id === "string" ? wa.id : null;
-    })
-    .filter((id): id is string => Boolean(id));
-
-  /*
-   * We do not know the app id independently from the access token/runtime settings, and Meta does
-   * not expose it as a required local setting. If any subscription exists, the current token has
-   * access to the subscription edge, but it could still be a different app. POSTing is cheap and
-   * idempotent, so we always ensure the active app is subscribed rather than guessing by name/id.
-   */
-  const subscribe = await graphFetch(config, `${businessAccountId}/subscribed_apps`, { method: "POST" });
-  if (!subscribe.ok) return { ok: false, reason: subscribe.reason, detail: subscribe.detail };
-  const ok = (subscribe.data as { success?: unknown } | null)?.success;
-  if (ok !== true) {
-    return { ok: false, reason: META_REASONS.INVALID_RESPONSE, detail: "Meta did not confirm WABA webhook subscription." };
-  }
-
-  const verify = await graphFetch(config, `${businessAccountId}/subscribed_apps`, { method: "GET" });
-  if (!verify.ok) return { ok: false, reason: verify.reason, detail: verify.detail };
-  const verifiedRows = Array.isArray((verify.data as { data?: unknown[] } | null)?.data)
-    ? ((verify.data as { data: unknown[] }).data as Array<Record<string, unknown>>)
-    : [];
-  const verifiedAppIds = verifiedRows
-    .map((row) => {
-      const wa = row.whatsapp_business_api_data as Record<string, unknown> | undefined;
-      const nested = typeof wa?.id === "string" ? wa.id : null;
-      const top = typeof row.id === "string" ? row.id : null;
-      return nested ?? top;
-    })
-    .filter((id): id is string => Boolean(id));
-
-  if (!verifiedRows.length) {
-    return { ok: false, reason: META_REASONS.INVALID_RESPONSE, detail: "WABA has no subscribed apps after subscription request." };
-  }
-  const expectedAppId = config.appId?.trim();
-  if (expectedAppId && !verifiedAppIds.includes(expectedAppId)) {
-    return {
-      ok: false,
-      reason: "META_WABA_APP_SUBSCRIPTION_MISMATCH",
-      detail: `The configured Meta app ${expectedAppId} is not listed in WABA subscribed_apps after the subscription request.`,
-    };
-  }
-  return { ok: true, subscribed: true, changed: true, appIds: verifiedAppIds.length ? verifiedAppIds : appIds };
+  if (!resolved.configured) return { ok: false, reason: metaRuntimeFailure(resolved), retryable: resolved.reason === RUNTIME_FAILURE.INTEGRATION_DATABASE_UNAVAILABLE };
+  return ensureWabaSubscriptionForConfig(resolved.values, businessAccountId);
 }

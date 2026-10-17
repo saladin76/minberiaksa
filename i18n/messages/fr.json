@@ -3502,5 +3502,16 @@
     "achievementsTitle": "Nos réalisations : {name}",
     "statDoneLabel": "Réalisé",
     "statGoalLabel": "Objectif"
+  },
+  "SignInPage": {
+    "headline": "PAS ENCORE MEMBRE ?",
+    "sub": "Inscrivez-vous pour suivre vos dons et rejoindre des campagnes exclusives.",
+    "donateNow": "Faire un don",
+    "title": "Connexion",
+    "welcome": "Bon retour parmi nous",
+    "orContinue": "continuer avec",
+    "noAccount": "Vous n'avez pas de compte ?",
+    "createOne": "Créer un compte",
+    "logoAlt": "Logo"
   }
 }

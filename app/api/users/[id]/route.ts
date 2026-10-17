@@ -10,6 +10,7 @@ import {
 import { requireAdminSession } from '@/lib/dashboard/api-auth';
 import { writeAuditLog } from '@/lib/audit-log';
 import { getBadgeIdsByUser } from '@/lib/badge-criteria';
+import { PAID_DONATION_FILTER } from '@/lib/dashboard/donation-usd-revenue';
 import { setProfileConsent, upsertProfileForUser } from '@/lib/communication/donor-communication-profile-service';
 
 function roleLabelAr(r: string) {
@@ -105,17 +106,9 @@ export async function GET(
     const [totalsRows, allBadges, activeSubs] = await Promise.all([
       prisma.donation.groupBy({
         by: ['donorId'],
-        where: {
-          donorId: id,
-          status: 'PAID',
-          // One-time donations need a settled paidAt to count; subscription
-          // donations count on status=PAID alone since recurring charges fire
-          // without a donor click (no abandonment moment to guard against).
-          OR: [
-            { paidAt: { not: null } },
-            { subscriptionId: { not: null } },
-          ],
-        },
+        // Successful donations only: PAID *and* settled. A PAID row with no paidAt is
+        // an abandoned or still-unconfirmed checkout, not money received.
+        where: { donorId: id, ...PAID_DONATION_FILTER },
         _sum: { totalAmount: true, amountUSD: true },
         _max: { createdAt: true },
         _count: { id: true },

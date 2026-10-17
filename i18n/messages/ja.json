@@ -2456,5 +2456,16 @@
     "achievementsTitle": "{name}での私たちの成果",
     "statDoneLabel": "完了",
     "statGoalLabel": "目標"
+  },
+  "SignInPage": {
+    "headline": "まだ会員ではありませんか？",
+    "sub": "登録すると寄付の履歴を確認したり、限定キャンペーンに参加したりできます。",
+    "donateNow": "今すぐ寄付する",
+    "title": "ログイン",
+    "welcome": "おかえりなさい",
+    "orContinue": "で続行",
+    "noAccount": "アカウントをお持ちでないですか？",
+    "createOne": "新規登録",
+    "logoAlt": "ロゴ"
   }
 }

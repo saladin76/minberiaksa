@@ -57,7 +57,7 @@ export function BlockInspector({ doc, selectedId, onChange, onSelect }: Props) {
   const style = (block.data.style ?? {}) as Record<string, unknown>;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       <div className="flex items-center justify-between border-b border-border pb-2">
         <span className="text-xs font-semibold text-muted-foreground">{block.type}</span>
         <Button variant="ghost" size="sm" onClick={handleDelete} className="text-red-600 h-7">
@@ -458,7 +458,7 @@ function RootInspector({
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       <p className="text-xs text-muted-foreground border-b border-border pb-2">{dt("إعدادات البريد العامة")}</p>
       <ColorField label={dt("لون الخلفية الخارجية")} value={String(data.backdropColor ?? "#F8F8F8")} onChange={(v) => update({ backdropColor: v })} />
       <ColorField label={dt("لون البطاقة (الجسم)")} value={String(data.canvasColor ?? "#FFFFFF")} onChange={(v) => update({ canvasColor: v })} />

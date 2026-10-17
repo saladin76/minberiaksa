@@ -90,6 +90,7 @@ const Venus = ({ size, ...props }: LucideProps) => (
   </svg>
 );
 import { DonorAttributionJourney } from "@/components/dashboard/DonorAttributionJourney";
+import { UserDonationsTable } from "@/components/dashboard/UserDonationsTable";
 
 const CLARITY_PROJECT_ID =
   process.env.NEXT_PUBLIC_CLARITY_ID?.trim() || "u614k028k2";
@@ -388,7 +389,7 @@ export function ViewUserProfileDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogOverlay className="fixed inset-0 bg-black/40" />
       <DialogContent
-        className="fixed end-1/2 top-1/2 w-[calc(100%-2rem)] max-w-2xl max-h-[90vh] p-0 transform -translate-x-1/2 -translate-y-1/2 border border-border rounded-xl shadow-2xl bg-card overflow-hidden flex flex-col"
+        className="fixed left-1/2 top-1/2 w-[calc(100%-2rem)] max-w-3xl max-h-[90vh] p-0 transform -translate-x-1/2 -translate-y-1/2 border border-border rounded-xl shadow-2xl bg-card overflow-hidden flex flex-col"
         {...({
           closeClassName:
             "left-3 top-3 right-auto text-white hover:text-white opacity-90 hover:opacity-100",
@@ -470,6 +471,9 @@ export function ViewUserProfileDialog({
                   value={user.lastDonationAt ? formatDateAr(user.lastDonationAt) : "—"}
                 />
               </div>
+
+              {/* Every donation of this donor; the default view is the successful rows «الإجمالي» sums. */}
+              <UserDonationsTable userId={user.id} formatMoney={formatMoney} />
 
               {/* Two-column info */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-2">

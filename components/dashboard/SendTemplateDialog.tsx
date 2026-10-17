@@ -164,7 +164,7 @@ export function SendTemplateDialog({ open, onOpenChange, channel, target }: Prop
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogOverlay className="fixed inset-0 bg-black/50" />
       <DialogContent
-        className="fixed end-1/2 top-1/2 w-[calc(100%-2rem)] max-w-3xl max-h-[90vh] overflow-y-auto p-6 transform -translate-x-1/2 -translate-y-1/2 border border-border rounded-xl shadow-xl bg-card"
+        className="fixed left-1/2 top-1/2 w-[calc(100%-2rem)] max-w-3xl max-h-[90vh] overflow-y-auto p-6 transform -translate-x-1/2 -translate-y-1/2 border border-border rounded-xl shadow-xl bg-card"
         dir={dashDir()}
       >
         <DialogTitle className="text-lg font-bold mb-1 flex items-center gap-2">

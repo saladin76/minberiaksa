@@ -2456,5 +2456,16 @@
     "achievementsTitle": "Pencapaian kami di {name}",
     "statDoneLabel": "Selesai",
     "statGoalLabel": "Sasaran"
+  },
+  "SignInPage": {
+    "headline": "BELUM MENJADI AHLI?",
+    "sub": "Daftar untuk menjejak derma anda dan menyertai kempen eksklusif.",
+    "donateNow": "Derma Sekarang",
+    "title": "Log Masuk",
+    "welcome": "Selamat kembali",
+    "orContinue": "teruskan dengan",
+    "noAccount": "Tiada akaun?",
+    "createOne": "Cipta akaun",
+    "logoAlt": "Logo"
   }
 }

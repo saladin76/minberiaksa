@@ -3502,5 +3502,16 @@
     "achievementsTitle": "Başarılarımız: {name}",
     "statDoneLabel": "Tamamlanan",
     "statGoalLabel": "Hedef"
+  },
+  "SignInPage": {
+    "headline": "HALA ÜYE DEĞİL MİSİNİZ?",
+    "sub": "Üye olarak bağışlarınızı takip edebilir, özel kampanyalara katılabilirsiniz.",
+    "donateNow": "Bağış Yap",
+    "title": "Giriş Yap",
+    "welcome": "Tekrar hoş geldiniz",
+    "orContinue": "ile devam et",
+    "noAccount": "Hesabınız yok mu?",
+    "createOne": "Üye ol",
+    "logoAlt": "Logo"
   }
 }

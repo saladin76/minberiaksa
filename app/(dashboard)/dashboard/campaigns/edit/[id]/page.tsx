@@ -334,9 +334,13 @@ export default function EditCampaignPage() {
         // The translations call used to run only after these two resolved, for
         // no reason: it depends on neither. Three round trips became one wait.
         const [campaignRes, categoriesRes, allTranslationsRes] = await Promise.all([
+          // Always the Arabic source, never the dashboard's UI language: this
+          // response fills the Arabic tab (other locales come from /translations),
+          // so a Turkish or English dashboard used to load  and then save  its
+          // translation over the Arabic title and description.
           axios.get(`/api/campaigns/${params.id}`, {
             params: { fresh: 1 },
-            headers: { 'x-locale': locale },
+            headers: { 'x-locale': 'ar' },
           }),
           axios.get('/api/categories', {
             headers: { 'x-locale': locale },

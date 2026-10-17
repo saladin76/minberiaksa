@@ -3502,5 +3502,16 @@
     "achievementsTitle": "Nuestros logros: {name}",
     "statDoneLabel": "Completado",
     "statGoalLabel": "Meta"
+  },
+  "SignInPage": {
+    "headline": "¿AÚN NO ERES MIEMBRO?",
+    "sub": "Regístrate para seguir tus donaciones y unirte a campañas exclusivas.",
+    "donateNow": "Donar ahora",
+    "title": "Iniciar sesión",
+    "welcome": "Bienvenido de nuevo",
+    "orContinue": "continuar con",
+    "noAccount": "¿No tienes una cuenta?",
+    "createOne": "Crear una",
+    "logoAlt": "Logotipo"
   }
 }

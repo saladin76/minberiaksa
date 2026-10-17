@@ -188,7 +188,7 @@ export function DayOfMonthRevenueGrid({ collected, expected, loading, formatMone
                 </button>
 
                 {amount > 0 && (
-                  <div className="pointer-events-none absolute bottom-full end-1/2 z-20 mb-1.5 hidden w-max max-w-[220px] -translate-x-1/2 rounded-lg bg-slate-900 px-2.5 py-1.5 text-[11px] leading-snug text-white shadow-lg group-hover:block">
+                  <div className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-1.5 hidden w-max max-w-[220px] -translate-x-1/2 rounded-lg bg-slate-900 px-2.5 py-1.5 text-[11px] leading-snug text-white shadow-lg group-hover:block">
                     <p className="font-semibold">{dtx("اليوم {0} من كل شهر", [d.day])}</p>
                     <p className="tabular-nums text-slate-200">{formatMoney(amount)}</p>
                     {mode === "collected" ? (

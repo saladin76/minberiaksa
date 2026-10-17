@@ -3500,5 +3500,16 @@
     "achievementsTitle": "إنجازاتنا في {name}",
     "statDoneLabel": "المنجز",
     "statGoalLabel": "الهدف"
+  },
+  "SignInPage": {
+    "headline": "هل أنت عضو جديد؟",
+    "sub": "سجّل للمتابعة وتتبع تبرعاتك والمشاركة في الحملات.",
+    "donateNow": "تبرع الآن",
+    "title": "تسجيل الدخول",
+    "welcome": "مرحباً بعودتك",
+    "orContinue": "تابع باستخدام",
+    "noAccount": "ليس لديك حساب؟",
+    "createOne": "أنشئ حساباً",
+    "logoAlt": "الشعار"
   }
 }

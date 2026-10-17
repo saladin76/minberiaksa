@@ -121,7 +121,7 @@ export function TemplateDialogShell({
         dir={dashDir()}
         className={cn(
           // `flex` here is what displaces the base `grid`  see the note above.
-          "fixed end-1/2 top-1/2 z-50 flex w-[calc(100%-2rem)] max-h-[92vh] -translate-x-1/2 -translate-y-1/2 flex-col",
+          "fixed left-1/2 top-1/2 z-50 flex w-[calc(100%-2rem)] max-h-[92vh] -translate-x-1/2 -translate-y-1/2 flex-col",
           "overflow-hidden rounded-2xl border border-border bg-card p-0 shadow-2xl ring-1 ring-slate-900/5",
           SIZES[size],
         )}
@@ -192,6 +192,7 @@ export function LocaleStrip({
   onRemove,
   locked,
   accent = "brand",
+  compact = false,
 }: {
   enabled: (loc: SupportedLocale) => boolean;
   activeLocale: SupportedLocale;
@@ -200,12 +201,28 @@ export function LocaleStrip({
   onRemove: (loc: SupportedLocale) => void;
   locked?: (loc: SupportedLocale) => boolean;
   accent?: DialogAccent;
+  /** One row: the languages this template has as chips, the rest behind an "add language" select. For editors that need the height. */
+  compact?: boolean;
 }) {
   const a = ACCENTS[accent];
+  const missing = SUPPORTED_LOCALES.filter((loc) => !enabled(loc));
   return (
-    <div className="flex shrink-0 flex-wrap items-center gap-1.5 border-b border-border bg-slate-50/70 px-5 py-2.5">
+    <div className={cn("flex shrink-0 flex-wrap items-center gap-1.5 border-b border-border bg-slate-50/70 px-5", compact ? "py-1.5" : "py-2.5")}>
       <span className="me-1 text-[11px] font-semibold text-slate-500">{dt("اللغات")}</span>
-      {SUPPORTED_LOCALES.map((loc) => {
+      {compact && missing.length > 0 && (
+        <select
+          value=""
+          onChange={(e) => e.target.value && onEnable(e.target.value as SupportedLocale)}
+          className="order-last h-7 rounded-md border border-dashed border-slate-300 bg-transparent px-2 text-xs text-slate-500 hover:border-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+          aria-label={dt("إضافة لغة")}
+        >
+          <option value="">{dt("+ إضافة لغة")}</option>
+          {missing.map((loc) => (
+            <option key={loc} value={loc}>{LOCALE_LABELS[loc]}</option>
+          ))}
+        </select>
+      )}
+      {SUPPORTED_LOCALES.filter((loc) => !compact || enabled(loc)).map((loc) => {
         const has = enabled(loc);
         const active = activeLocale === loc;
         const isDefault = loc === DEFAULT_LOCALE;

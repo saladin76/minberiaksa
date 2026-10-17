@@ -176,19 +176,19 @@ export function EmailTemplateEditorDialog({ id, open, onOpenChange }: Props) {
       saving={saving}
       /* The builder manages its own scrolling and wants every pixel of height, so the body
          drops the shell padding and its scroll container. */
-      bodyClassName="overflow-hidden p-3"
+      bodyClassName="overflow-hidden p-2.5"
       toolbar={
         <>
           {/* Name and subject sit above the canvas rather than inside the header: at full-screen
               width the header row was a third input-wide and the ✕ crowded it. */}
-          <div className="grid shrink-0 grid-cols-1 gap-3 border-b border-border px-5 py-3 sm:grid-cols-3">
+          <div className="grid shrink-0 grid-cols-1 gap-2 border-b border-border px-4 py-2 sm:grid-cols-3">
             <div className="min-w-0 space-y-1">
               <FieldLabel hint={dt("لا يُرسل")}>{dt("اسم القالب")}</FieldLabel>
               <Input
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder={dt("مثال: شكر التبرع الشهري")}
-                className="h-9"
+                className="h-8"
               />
             </div>
             <div className="min-w-0 space-y-1">
@@ -196,7 +196,7 @@ export function EmailTemplateEditorDialog({ id, open, onOpenChange }: Props) {
               <select
                 value={kind}
                 onChange={(e) => setKind(e.target.value as "SYSTEM" | "CAMPAIGN")}
-                className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
+                className="h-8 w-full rounded-md border border-input bg-background px-2.5 text-sm"
               >
                 <option value="SYSTEM">{dt("تلقائي / خدمي / توثيق")}</option>
                 <option value="CAMPAIGN">{dt("حملة تسويقية")}</option>
@@ -208,7 +208,7 @@ export function EmailTemplateEditorDialog({ id, open, onOpenChange }: Props) {
                 value={current?.subject ?? ""}
                 onChange={(e) => updateCurrent({ subject: e.target.value })}
                 placeholder={dt("مرحباً {{user.name}}")}
-                className="h-9 font-mono text-xs"
+                className="h-8 font-mono text-xs"
                 dir={activeLocale === "ar" ? "rtl" : "ltr"}
               />
             </div>
@@ -219,6 +219,7 @@ export function EmailTemplateEditorDialog({ id, open, onOpenChange }: Props) {
             onSelect={setActiveLocale}
             onEnable={enableLocale}
             onRemove={removeLocale}
+            compact
           />
         </>
       }

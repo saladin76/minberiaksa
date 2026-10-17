@@ -3502,5 +3502,16 @@
     "achievementsTitle": "Pencapaian kami di {name}",
     "statDoneLabel": "Selesai",
     "statGoalLabel": "Target"
+  },
+  "SignInPage": {
+    "headline": "BELUM MENJADI ANGGOTA?",
+    "sub": "Daftar untuk melacak donasi Anda dan bergabung dalam kampanye eksklusif.",
+    "donateNow": "Donasi Sekarang",
+    "title": "Masuk",
+    "welcome": "Selamat datang kembali",
+    "orContinue": "lanjutkan dengan",
+    "noAccount": "Belum punya akun?",
+    "createOne": "Buat akun",
+    "logoAlt": "Logo"
   }
 }
