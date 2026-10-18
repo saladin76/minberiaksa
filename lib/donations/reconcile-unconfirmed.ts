@@ -1,4 +1,5 @@
 import Stripe from "stripe";
+import { PAYFOR_UNVERIFIED_APPROVAL } from "@/lib/payfor";
 import { prisma } from "@/lib/prisma";
 
 /**
@@ -112,7 +113,9 @@ export async function reconcileUnconfirmedDonations(options: ReconcileOptions = 
 
   for (const donation of rows) {
     const ageHours = hoursSince(donation.createdAt);
-    if (ageHours < minAgeHours) {
+    /* A PayFor approval whose bank signature did not verify waits for a person to
+       check it against the bank report; ageing it out would hide a possible charge. */
+    if (ageHours < minAgeHours || donation.providerErrorMessage === PAYFOR_UNVERIFIED_APPROVAL) {
       summary.leftAlone++;
       continue;
     }
@@ -189,7 +192,7 @@ export async function reconcileUnconfirmedDonations(options: ReconcileOptions = 
           data: {
             status: "FAILED",
             providerTxnResult: "Abandoned",
-            providerErrorMessage: `${ABANDONED_MARKER}  لم يكمل المتبرع عملية الدفع لدى Stripe`,
+            providerErrorMessage: `${ABANDONED_MARKER}  لم يكمل المتبرع عملية الدفع لدى ${!donation.provider || donation.provider === "STRIPE" ? "Stripe" : donation.provider}`,
           },
         });
       }

@@ -60,7 +60,10 @@ const PAYFOR_CODE_MAP: Record<string, PaymentErrorKey> = {
   "00": "generic", // success  shouldn't land here, but keep mapping safe
   "01": "doNotHonor", // refer to card issuer
   "02": "doNotHonor",
-  "03": "processingError", // invalid merchant
+  /* "Invalid merchant" / İşyeri-Terminal hatası. The same terminal settles other cards in
+     the same currency, so in practice this is the issuer refusing this merchant for this
+     card (often a cross-border block): a different card, not a retry, is the fix. */
+  "03": "doNotHonor",
   "04": "lostOrStolen", // pick-up card
   "05": "cardDeclined", // do not honor
   "06": "processingError",
@@ -93,7 +96,10 @@ const PAYFOR_CODE_MAP: Record<string, PaymentErrorKey> = {
   "76": "processingError",
   "77": "processingError",
   "78": "doNotHonor",
-  "82": "invalidCvc", // CVV failure
+  /* ISO allows "CVV failure", but Albaraka sends 82 as "Politika Gereği Reddedildi"
+     (declined by policy). Telling the donor their CVV was wrong would be wrong advice. */
+  "82": "doNotHonor",
+  "83": "fraudSuspected", // Fraud/Güvenlik
   "84": "expiredCard",
   "85": "doNotHonor",
   "88": "issuerUnavailable",
@@ -104,6 +110,11 @@ const PAYFOR_CODE_MAP: Record<string, PaymentErrorKey> = {
   "94": "processingError", // duplicate transaction
   "96": "processingError", // system malfunction
   "B1": "authenticationFailed", // surcharge amount not permitted
+  "1A": "authenticationFailed", // Ek Müşteri Doğrulaması Gerekli  issuer wants strong customer authentication
+  "5C": "doNotHonor", // transaction not supported / blocked by issuer
+  /* PayFor MPI-stage codes, returned before the bank authorises anything. */
+  V034: "authenticationFailed", // 3D User Enrollment Step Fail  card not enrolled in 3-D Secure
+  V036: "processingError", // System Error
   "N7": "invalidCvc",
   "R0": "authenticationFailed",
   "R1": "authenticationFailed",
@@ -112,6 +123,12 @@ const PAYFOR_CODE_MAP: Record<string, PaymentErrorKey> = {
 
 /** Substring patterns matched (case-insensitive) against any free-text error message. */
 const TEXT_PATTERNS: Array<{ pattern: RegExp; key: PaymentErrorKey }> = [
+  // Turkish bank wording (PayFor ErrMsg, Albaraka ResponseMessage) when no code survived
+  { pattern: /limit\s*yetersiz|yetersiz\s*bakiye|bakiye\s*yetersiz/i, key: "insufficientFunds" },
+  { pattern: /para\s*[çc]ekme\s*limiti|limit\s*a[şs][ıi]ld[ıi]/i, key: "limitExceeded" },
+  { pattern: /s[ıi]n[ıi]rl[ıi]\s*kart|politika\s*gere/i, key: "doNotHonor" },
+  { pattern: /fraud|doland[ıi]r[ıi]c[ıi]l[ıi]k\s*[şs][üu]phesi/i, key: "fraudSuspected" },
+  { pattern: /cvv2?\s*do[ğg]rulama/i, key: "invalidCvc" },
   // Stripe decline codes (and the prose Stripe shows for each)
   { pattern: /insufficient[_\s]*funds|insufficient[_\s]*balance|رصيد\s*غير\s*كاف/i, key: "insufficientFunds" },
   { pattern: /expired[_\s]*card|card[_\s]*expired|carte\s+expirée|بطاقة\s*منتهية/i, key: "expiredCard" },

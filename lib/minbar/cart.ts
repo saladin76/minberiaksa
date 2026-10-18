@@ -349,6 +349,65 @@ export function clearCart(): void {
   writeTeamSupportRecurring(null);
 }
 
+// ── Last card attempt ────────────────────────────────────────────────────────
+//
+// The basket is emptied before the donor is handed to a bank's 3-D Secure page
+// (see `clearCart`). When the bank then declines, the donor lands on the
+// failure page with nothing to retry from. The basket is kept aside under the
+// order's id until then, so "try again" can put back exactly what the donor
+// chose, in their own currency, and return them to the card form.
+
+export const CART_LAST_ATTEMPT_KEY = "mia_cart_last_attempt";
+/** A declined donor retries within minutes; a day covers coming back later. */
+const LAST_ATTEMPT_TTL_MS = 24 * 60 * 60 * 1000;
+
+type LastAttempt = {
+  donationId: string;
+  at: number;
+  items: MinbarCartItem[];
+  teamSupport: number | null;
+  teamSupportRecurring: boolean | null;
+};
+
+/** Keep the basket aside for `donationId`, right before it is cleared for a payment redirect. */
+export function rememberCheckoutAttempt(donationId: string): void {
+  if (!isBrowser() || !donationId) return;
+  const attempt: LastAttempt = {
+    donationId,
+    at: Date.now(),
+    items: readCart(),
+    teamSupport: readTeamSupportChoice(),
+    teamSupportRecurring: readTeamSupportRecurring(),
+  };
+  if (!attempt.items.length) return;
+  try {
+    window.localStorage.setItem(CART_LAST_ATTEMPT_KEY, JSON.stringify(attempt));
+  } catch {
+    /* Private mode / quota: retry then falls back to starting over. */
+  }
+}
+
+/**
+ * Put back the basket kept for `donationId`. Returns false when there is none
+ * (another device, cleared storage, a different or too-old order), in which
+ * case the caller sends the donor to start a new donation.
+ */
+export function restoreCheckoutAttempt(donationId: string): boolean {
+  if (!isBrowser() || !donationId) return false;
+  try {
+    const attempt = JSON.parse(window.localStorage.getItem(CART_LAST_ATTEMPT_KEY) || "null") as LastAttempt | null;
+    if (!attempt || attempt.donationId !== donationId || !Array.isArray(attempt.items) || !attempt.items.length) return false;
+    if (Date.now() - Number(attempt.at) > LAST_ATTEMPT_TTL_MS) return false;
+    writeCart(attempt.items.map((row) => migrateItem(row as unknown as Record<string, unknown>)));
+    if (attempt.teamSupport !== null && attempt.teamSupport !== undefined) writeTeamSupport(attempt.teamSupport);
+    writeTeamSupportRecurring(attempt.teamSupportRecurring ?? null);
+    window.localStorage.removeItem(CART_LAST_ATTEMPT_KEY);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 // ── Team support ─────────────────────────────────────────────────────────────
 //
 // "Support the team" belongs to the whole order, not to a campaign: it is

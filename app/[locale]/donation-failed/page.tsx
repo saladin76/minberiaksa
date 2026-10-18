@@ -26,6 +26,8 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import BankAccountsBlock from "../bank-transfer/_components/BankAccountsBlock";
+import { restoreCheckoutAttempt } from "@/lib/minbar/cart";
+import { miaPath } from "@/lib/minbar/routes";
 import {
   resolvePaymentError,
   type PaymentErrorKey,
@@ -162,6 +164,23 @@ export default function DonationFailedPage() {
     if (!donation || retrying) return;
     setRetrying(true);
 
+    /* The 3-D Secure card rails (PayFor, Albaraka) take the card on our own
+       checkout, so a retry is the same basket back on that form. Checkout kept
+       the basket aside under this order before the bank redirect; putting it
+       back sends the donor straight to the card fields, in their own currency.
+       No clone is created here: it could never be charged from this page, and
+       every one used to be left behind as an abandoned order. */
+    const cardRail = ["PAYFOR", "ALBARAKA"].includes((donation.provider ?? "").toUpperCase());
+    if (cardRail) {
+      if (restoreCheckoutAttempt(donation.id)) {
+        window.location.assign(miaPath("checkout", locale));
+        return;
+      }
+      toast.success(t("retry.payforHint"));
+      router.push("/campaigns");
+      return;
+    }
+
     // Monthly subscriptions can't be cloned  send the donor back to the
     // campaign page where the regular dialog handles the subscribe flow.
     if (isMonthly) {
@@ -194,12 +213,6 @@ export default function DonationFailedPage() {
         window.location.href = approveUrl;
         return;
       }
-      if (provider === "PAYFOR" || provider === "ALBARAKA") {
-        toast.success(t("retry.payforHint"));
-        router.push("/campaigns");
-        return;
-      }
-
       // Stripe path  create a new Checkout Session and redirect.
       const checkout = await axios.post("/api/stripe/checkout", {
         donationId: newId,

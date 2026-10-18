@@ -3,7 +3,7 @@
 import { useLocale, useTranslations } from 'next-intl';
 import Image from 'next/image';
 import { Link } from '@/i18n/routing';
-import { Heart, ArrowRight } from 'lucide-react';
+import { Heart } from 'lucide-react';
 import GoogleSignInButton from '@/components/GoogleSignInButton';
 
 const LOGO_URL = '/logometaminber.avif';

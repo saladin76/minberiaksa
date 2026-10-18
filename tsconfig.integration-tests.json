@@ -72,6 +72,7 @@
     "lib/donations/subscription-provider-rules.ts",
     "lib/content-localization/access.ts",
     "lib/content-localization/protected-tokens.ts",
+    "lib/donations/payment-error-catalog.ts",
     "tests/integration-settings/**/*.ts"
   ]
 }

@@ -95,3 +95,53 @@ export function payForHash(params: {
   return crypto.createHash("sha1").update(raw, "utf8").digest("base64");
 }
 
+/**
+ * The bank's signature on a 3DPay callback.
+ * Formula: base64(SHA1(MerchantID + MerchantPass + OrderId + AuthCode + ProcReturnCode + ResponseRnd))
+ *
+ * Derived from production callbacks rather than a document: it reproduces the
+ * `ResponseHash` of every authorised response we hold, approved and declined.
+ * The one exception is an MPI-stage failure (V034, the card never reached
+ * authorisation), which is signed differently  and which is never a payment.
+ *
+ * Without this check the OK callback trusted whatever was POSTed to it: the
+ * order id is in the callback URL and the amount is the donor's own, so a
+ * forged "ProcReturnCode=00" could mark an unpaid donation paid.
+ */
+export function payForResponseHash(response: Record<string, unknown>, merchantPass: string): string {
+  const field = (key: string) => String(response[key] ?? "");
+  const raw =
+    field("MerchantID") +
+    merchantPass +
+    field("OrderId") +
+    field("AuthCode") +
+    field("ProcReturnCode") +
+    field("ResponseRnd");
+  return crypto.createHash("sha1").update(raw, "utf8").digest("base64");
+}
+
+/** Written to providerErrorMessage when an approval callback's ResponseHash does not verify. */
+export const PAYFOR_UNVERIFIED_APPROVAL = "ResponseHash mismatch on approval callback";
+
+/** True only when the callback carries a `ResponseHash` that matches our own computation. */
+export function verifyPayForResponseHash(
+  response: Record<string, unknown>,
+  merchantPass: string | undefined
+): boolean {
+  const provided = String(response.ResponseHash ?? "");
+  if (!provided || !merchantPass) return false;
+  const expected = payForResponseHash(response, merchantPass);
+  const a = Buffer.from(provided);
+  const b = Buffer.from(expected);
+  return a.length === b.length && crypto.timingSafeEqual(a, b);
+}
+
+/** The bank's own reason for a decline. PayFor sends it as `ErrMsg`, not `ErrorMessage`. */
+export function payForErrorMessage(response: Record<string, unknown>): string {
+  for (const key of ["ErrMsg", "ErrorMessage", "errorMessage", "ErrorData"]) {
+    const value = String(response[key] ?? "").trim();
+    if (value) return value.slice(0, 300);
+  }
+  return "";
+}
+

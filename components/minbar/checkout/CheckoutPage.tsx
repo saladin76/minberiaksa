@@ -44,7 +44,7 @@ import {
 } from "@/lib/minbar/checkout";
 import { firstChargeAfterCheckout, frequencyOfOrderType, scheduleRuleFor } from "@/lib/donations/recurring-schedule";
 import { withDonationToken } from "@/lib/donations/access-token-link";
-import { clearCart, readTeamSupport, readTeamSupportRecurring, teamSupportIsRecurring } from "@/lib/minbar/cart";
+import { clearCart, readTeamSupport, readTeamSupportRecurring, rememberCheckoutAttempt, teamSupportIsRecurring } from "@/lib/minbar/cart";
 import { fetchGlobalSettings } from "@/lib/global-settings-client";
 import { useReferralCode } from "@/hooks/useReferralCode";
 import { resolveGateway, type MainGateway } from "@/lib/payment-gateway";
@@ -417,6 +417,7 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
            the bank rails: the order exists, and a donor coming back from
            PayPal must not find it ready to be paid again. */
         const approveUrl = await startPayPalPayment(donation.id, locale, donation.accessToken);
+        rememberCheckoutAttempt(donation.id);
         clearCart();
         window.location.assign(approveUrl);
         return;
@@ -478,6 +479,9 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
       /* The basket is cleared before the redirect: the order now exists on the
          server, and a donor returning from the bank must not find it still
          sitting in their basket ready to be paid twice. */
+      /* Kept aside under this order, so a declined donor can retry the same
+         basket from the failure page. */
+      rememberCheckoutAttempt(donation.id);
       clearCart();
       submitGatewayForm(form, browserFields);
     } catch (cause) {

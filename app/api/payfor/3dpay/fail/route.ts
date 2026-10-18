@@ -4,7 +4,7 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { dispatchEvent } from "@/lib/events/dispatch";
 import { sendDonationFailedConversions } from "@/lib/tracking/donation-conversion-server";
-import { mergePayForProviderRaw, redactPayForResponse } from "@/lib/payfor";
+import { mergePayForProviderRaw, payForErrorMessage, redactPayForResponse } from "@/lib/payfor";
 
 export async function POST(req: NextRequest) {
   const origin = new URL(req.url).origin;
@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
   const orderId = String(raw.OrderId || raw.orderId || "");
   const procReturnCode = String(raw.ProcReturnCode || raw.procReturnCode || "");
   const txnResult = String(raw.TxnResult || raw.txnResult || "");
-  const errorMessage = String(raw.ErrorMessage || raw.errorMessage || "Payment failed");
+  const errorMessage = payForErrorMessage(raw) || "Payment failed";
 
   try {
     const donation = await prisma.donation.findUnique({
