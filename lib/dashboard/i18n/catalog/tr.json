@@ -6649,5 +6649,14 @@
  "تطبيق Meta المحدد في الإعدادات غير مشترك في Webhook لهذه الواجهة.": "Ayarlarda belirtilen Meta uygulaması bu WABA'nın webhook'larına abone değil.",
  "رفضت Meta طلب التحقق.": "Meta doğrulama isteğini reddetti.",
  "تعذّر التحقق مؤقتًا من Meta. لم تتغير حالة المُرسِل؛ أعد المحاولة لاحقًا.": "Meta ile doğrulama geçici olarak yapılamadı. Göndericinin durumu değiştirilmedi; daha sonra tekrar deneyin.",
- "تم التحقق من الرقم وWABA عبر Meta. بقي المُرسِل معطّلًا كما ضبطه المشرف.": "Numara ve WABA Meta üzerinden doğrulandı. Gönderici, yöneticinin ayarladığı gibi devre dışı kalmaya devam ediyor."
+ "تم التحقق من الرقم وWABA عبر Meta. بقي المُرسِل معطّلًا كما ضبطه المشرف.": "Numara ve WABA Meta üzerinden doğrulandı. Gönderici, yöneticinin ayarladığı gibi devre dışı kalmaya devam ediyor.",
+ "رمز الوصول إلى Meta غير صالح.": "Meta erişim belirteci geçersiz.",
+ "رمز الوصول مؤقت وينتهي في {0} UTC. استخدم رمز System User دائمًا.": "Erişim belirteci geçicidir ve {0} UTC'de sona eriyor. Kalıcı bir System User belirteci kullanın.",
+ "رمز الوصول لا يملك صلاحيات whatsapp_business_management وwhatsapp_business_messaging.": "Erişim belirtecinde whatsapp_business_management ve whatsapp_business_messaging izinleri yok.",
+ "تم التحقق من Access Token وApp ID وApp Secret والوصول إلى Business Portfolio الرئيسي. الرمز لا يملك صلاحية business_management، لذا لن تظهر قائمة حسابات WABA تلقائيًا عند إضافة مُرسِل؛ ملكية WABA لكل مُرسِل تُتحقق عند التحقق منه.": "Access Token, App ID, App Secret ve ana Business Portfolio erişimi doğrulandı. Belirteçte business_management izni yok; bu yüzden gönderici eklerken WABA listesi otomatik görünmez. Her göndericinin WABA sahipliği doğrulanırken kontrol edilir.",
+ "تم الوصول إلى Business Portfolio لكن تعذر قراءة حسابات WhatsApp Business التابعة له.": "Business Portfolio'ya erişildi ancak bağlı WhatsApp Business hesapları okunamadı.",
+ "تعذر الوصول إلى حساب الأعمال الرئيسي في Meta. تحقق من Business Portfolio ID ومن أن صاحب رمز الوصول عضو فيه.": "Ana Meta Business Portfolio'ya erişilemedi. Business Portfolio ID'yi ve belirteç sahibinin bu portföyün üyesi olduğunu kontrol edin.",
+ "تم الوصول إلى حساب الأعمال الرئيسي لكن تعذرت قراءة حسابات WhatsApp Business التابعة له. أعد المحاولة لاحقًا.": "Ana işletme portföyüne erişildi ancak bağlı WhatsApp Business hesapları okunamadı. Daha sonra tekrar deneyin.",
+ "رمز الوصول مؤقت وينتهي خلال أقل من 3 أيام. أنشئ رمز System User دائمًا من إعدادات أعمال Meta بصلاحيات whatsapp_business_management وwhatsapp_business_messaging وbusiness_management.": "Erişim belirteci geçicidir ve 3 günden kısa sürede sona eriyor. Meta İşletme Ayarları'nda whatsapp_business_management, whatsapp_business_messaging ve business_management izinleriyle kalıcı bir System User belirteci oluşturun.",
+ "رمز الوصول لا يملك صلاحيتي whatsapp_business_management وwhatsapp_business_messaging.": "Erişim belirtecinde whatsapp_business_management ve whatsapp_business_messaging izinleri yok."
 }

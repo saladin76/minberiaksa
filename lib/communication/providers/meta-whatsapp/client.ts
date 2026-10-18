@@ -102,7 +102,14 @@ export async function listBusinessPortfolioWabas(runtime?: MetaRuntimeConfig): P
 
   const owned = await graphRows(config, `${businessId}/owned_whatsapp_business_accounts?fields=id,name&limit=200`);
   if (!owned.ok) {
-    return { ok: false, reason: "META_BUSINESS_PORTFOLIO_UNAVAILABLE", detail: owned.detail, retryable: owned.retryable };
+    /* Listing a portfolio's WABAs needs business_management; the portfolio itself was readable. */
+    const permissionMissing = !owned.retryable && (owned.status === 403 || /business_management|#200/i.test(owned.detail));
+    return {
+      ok: false,
+      reason: permissionMissing ? BUSINESS_MANAGEMENT_PERMISSION_MISSING : "META_BUSINESS_PORTFOLIO_UNAVAILABLE",
+      detail: owned.detail,
+      retryable: owned.retryable,
+    };
   }
 
   /*
@@ -137,12 +144,45 @@ export async function listBusinessPortfolioWabas(runtime?: MetaRuntimeConfig): P
   };
 }
 
+const BUSINESS_MANAGEMENT_PERMISSION_MISSING = "META_BUSINESS_MANAGEMENT_PERMISSION_MISSING";
+
+/**
+ * The same portfolio check without business_management: a WABA names its owning business in
+ * `owner_business_info`, which whatsapp_business_management can read. This proves ownership only;
+ * a WABA merely shared with the portfolio as a client asset cannot be confirmed this way.
+ */
+async function verifyWabaOwnerDirectly(
+  config: MetaGraphConfig,
+  businessAccountId: string,
+): Promise<{ ok: true; asset: MetaBusinessPortfolioAsset } | { ok: false; reason: string; detail?: string; retryable?: boolean }> {
+  const businessId = config.businessPortfolioId?.trim() ?? "";
+  const waba = await graphRows(config, `${businessAccountId}?fields=id,name,owner_business_info`);
+  if (!waba.ok) return { ok: false, reason: waba.reason, detail: waba.detail, retryable: waba.retryable };
+  const row = (waba.data ?? {}) as Record<string, unknown>;
+  const owner = (row.owner_business_info ?? {}) as Record<string, unknown>;
+  const ownerId = owner.id == null ? "" : String(owner.id);
+  if (ownerId && ownerId === businessId) {
+    return { ok: true, asset: { id: businessAccountId, name: typeof row.name === "string" ? row.name : null, relationship: "OWNED" } };
+  }
+  return {
+    ok: false,
+    reason: "META_WABA_NOT_IN_BUSINESS_PORTFOLIO",
+    detail: ownerId
+      ? `WABA ${businessAccountId} is owned by business ${ownerId}, not Business Portfolio ${businessId}. A client (shared) WABA can only be confirmed with business_management.`
+      : `Meta did not report an owner for WABA ${businessAccountId}.`,
+  };
+}
+
 export async function verifyWabaInBusinessPortfolio(
   businessAccountId: string,
   runtime?: MetaRuntimeConfig,
 ): Promise<{ ok: true; asset: MetaBusinessPortfolioAsset } | { ok: false; reason: string; detail?: string; retryable?: boolean }> {
-  const assets = await listBusinessPortfolioWabas(runtime);
-  if (!assets.ok) return assets;
+  const resolved = runtime ?? await getActiveMetaWhatsappRuntimeConfig();
+  const assets = await listBusinessPortfolioWabas(resolved);
+  if (!assets.ok) {
+    if (assets.reason !== BUSINESS_MANAGEMENT_PERMISSION_MISSING || !resolved.configured) return assets;
+    return verifyWabaOwnerDirectly(resolved.values, businessAccountId);
+  }
   const asset = assets.wabas.find((row) => row.id === businessAccountId);
   if (!asset) {
     return {

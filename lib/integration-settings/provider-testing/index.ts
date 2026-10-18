@@ -46,6 +46,10 @@ function createAppSecretProof(accessToken: string, appSecret: string): string {
   return createHmac("sha256", appSecret).update(accessToken).digest("hex");
 }
 
+/** A token must outlive this window to be activated; anything shorter is a temporary token. */
+const TOKEN_MIN_REMAINING_MS = 72 * 60 * 60 * 1000;
+const REQUIRED_WHATSAPP_SCOPES = ["whatsapp_business_management", "whatsapp_business_messaging"];
+
 export class MetaWhatsAppConnectionTester implements IntegrationProviderTester {
   constructor(private readonly fetchImpl: ProviderFetch = fetch) {}
 
@@ -82,6 +86,38 @@ export class MetaWhatsAppConnectionTester implements IntegrationProviderTester {
         );
       }
 
+      /* What the token is, asked of Meta with the app's own credentials. A personal user token
+         that expires within days would pass every check below and then stop all WhatsApp
+         traffic when it lapses, so that is refused here; so is a token without the WhatsApp
+         permissions. If Meta will not answer this call, the checks below still decide. */
+      const tokenInfo = await providerFetch(
+        this.fetchImpl,
+        `${base}/debug_token?input_token=${encodeURIComponent(token)}`,
+        { method: "GET", headers: bearer(`${appId}|${appSecret}`) },
+      );
+      const tokenData = tokenInfo.ok && tokenInfo.body && typeof tokenInfo.body === "object"
+        ? ((tokenInfo.body as { data?: Record<string, unknown> }).data ?? null)
+        : null;
+      const scopes = Array.isArray(tokenData?.scopes) ? (tokenData!.scopes as unknown[]).map(String) : null;
+      if (tokenData) {
+        if (tokenData.is_valid === false) {
+          return failed("رمز الوصول إلى Meta غير صالح.", "META_UNAUTHORIZED");
+        }
+        const expiresAt = Number(tokenData.expires_at ?? 0);
+        if (expiresAt > 0 && expiresAt * 1000 < Date.now() + TOKEN_MIN_REMAINING_MS) {
+          return failed(
+            `رمز الوصول مؤقت وينتهي في ${new Date(expiresAt * 1000).toISOString().slice(0, 16).replace("T", " ")} UTC. استخدم رمز System User دائمًا.`,
+            "META_TOKEN_EXPIRING",
+          );
+        }
+        if (scopes && !REQUIRED_WHATSAPP_SCOPES.every((scope) => scopes.includes(scope))) {
+          return failed(
+            "رمز الوصول لا يملك صلاحيات whatsapp_business_management وwhatsapp_business_messaging.",
+            "META_TOKEN_MISSING_WHATSAPP_SCOPES",
+          );
+        }
+      }
+
       const appSecretProof = createAppSecretProof(token, appSecret);
       const identityWithProof = await providerFetch(
         this.fetchImpl,
@@ -116,9 +152,18 @@ export class MetaWhatsAppConnectionTester implements IntegrationProviderTester {
         { method: "GET", headers: bearer(token) },
       );
       if (!wabas.ok) {
+        /* Listing a portfolio's WABAs needs business_management. It is only discovery: each
+           sender's WABA is checked against this portfolio through the WABA's own
+           owner_business_info, which whatsapp_business_management can read. So a missing
+           business_management is a note, not a failure. */
+        if (wabas.status === 403 || wabas.status === 400) {
+          return connected(
+            "تم التحقق من Access Token وApp ID وApp Secret والوصول إلى Business Portfolio الرئيسي. الرمز لا يملك صلاحية business_management، لذا لن تظهر قائمة حسابات WABA تلقائيًا عند إضافة مُرسِل؛ ملكية WABA لكل مُرسِل تُتحقق عند التحقق منه.",
+          );
+        }
         return failed(
-          "تم الوصول إلى Business Portfolio لكن تعذر قراءة حسابات WhatsApp Business التابعة له. تحقق من صلاحيات business_management/WhatsApp.",
-          "META_BUSINESS_PORTFOLIO_UNAVAILABLE",
+          "تم الوصول إلى Business Portfolio لكن تعذر قراءة حسابات WhatsApp Business التابعة له.",
+          "META_BUSINESS_WABAS_UNAVAILABLE",
         );
       }
       const wabaCount = arrayFrom(wabas.body, "data").length;

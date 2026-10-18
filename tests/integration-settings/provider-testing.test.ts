@@ -53,7 +53,9 @@ test("Meta tester validates app credentials and root Business Portfolio without 
     values: metaValues,
   });
   assert.equal(result.success, true);
-  assert.equal(calls.length, 5);
+  /* identity, token debug, identity with proof, app, portfolio, owned WABAs */
+  assert.equal(calls.length, 6);
+  assert.equal(calls.some((url) => url.includes("/debug_token?input_token=")), true);
   assert.equal(calls.some((url) => url.includes("/phone_numbers")), false);
   assert.equal(calls.some((url) => url.endsWith("/messages")), false);
   assert.equal(calls.some((url) => url.includes(`/${metaValues.APP_ID}?fields=id,name`)), true);
@@ -118,7 +120,8 @@ test("Meta tester fails when app secret proof does not match a valid access toke
   });
   assert.equal(result.success, false);
   assert.equal(result.failureCode, "META_APP_SECRET_MISMATCH");
-  assert.equal(observedUrls.length, 2);
+  /* identity, token debug, identity with proof */
+  assert.equal(observedUrls.length, 3);
 });
 
 test("Meta tester rejects an invalid access token before app secret proof validation", async () => {

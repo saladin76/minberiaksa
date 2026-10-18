@@ -6649,5 +6649,14 @@
  "تطبيق Meta المحدد في الإعدادات غير مشترك في Webhook لهذه الواجهة.": "The Meta app set in the settings is not subscribed to this WABA's webhooks.",
  "رفضت Meta طلب التحقق.": "Meta rejected the verification request.",
  "تعذّر التحقق مؤقتًا من Meta. لم تتغير حالة المُرسِل؛ أعد المحاولة لاحقًا.": "Verification with Meta is temporarily unavailable. The sender's status was not changed; try again later.",
- "تم التحقق من الرقم وWABA عبر Meta. بقي المُرسِل معطّلًا كما ضبطه المشرف.": "The number and WABA were verified with Meta. The sender stays disabled, as an admin set it."
+ "تم التحقق من الرقم وWABA عبر Meta. بقي المُرسِل معطّلًا كما ضبطه المشرف.": "The number and WABA were verified with Meta. The sender stays disabled, as an admin set it.",
+ "رمز الوصول إلى Meta غير صالح.": "The Meta access token is invalid.",
+ "رمز الوصول مؤقت وينتهي في {0} UTC. استخدم رمز System User دائمًا.": "The access token is temporary and expires at {0} UTC. Use a permanent System User token.",
+ "رمز الوصول لا يملك صلاحيات whatsapp_business_management وwhatsapp_business_messaging.": "The access token lacks the whatsapp_business_management and whatsapp_business_messaging permissions.",
+ "تم التحقق من Access Token وApp ID وApp Secret والوصول إلى Business Portfolio الرئيسي. الرمز لا يملك صلاحية business_management، لذا لن تظهر قائمة حسابات WABA تلقائيًا عند إضافة مُرسِل؛ ملكية WABA لكل مُرسِل تُتحقق عند التحقق منه.": "Access Token, App ID, App Secret and access to the main Business Portfolio were verified. The token has no business_management permission, so the WABA list won't appear automatically when adding a sender; each sender's WABA ownership is checked when it is verified.",
+ "تم الوصول إلى Business Portfolio لكن تعذر قراءة حسابات WhatsApp Business التابعة له.": "The Business Portfolio was reached, but its WhatsApp Business accounts could not be read.",
+ "تعذر الوصول إلى حساب الأعمال الرئيسي في Meta. تحقق من Business Portfolio ID ومن أن صاحب رمز الوصول عضو فيه.": "Could not reach the main Meta Business Portfolio. Check the Business Portfolio ID and that the token's owner is a member of it.",
+ "تم الوصول إلى حساب الأعمال الرئيسي لكن تعذرت قراءة حسابات WhatsApp Business التابعة له. أعد المحاولة لاحقًا.": "The main Business Portfolio was reached, but its WhatsApp Business accounts could not be read. Try again later.",
+ "رمز الوصول مؤقت وينتهي خلال أقل من 3 أيام. أنشئ رمز System User دائمًا من إعدادات أعمال Meta بصلاحيات whatsapp_business_management وwhatsapp_business_messaging وbusiness_management.": "The access token is temporary and expires in under 3 days. Create a permanent System User token in Meta Business Settings with whatsapp_business_management, whatsapp_business_messaging and business_management.",
+ "رمز الوصول لا يملك صلاحيتي whatsapp_business_management وwhatsapp_business_messaging.": "The access token lacks the whatsapp_business_management and whatsapp_business_messaging permissions."
 }
