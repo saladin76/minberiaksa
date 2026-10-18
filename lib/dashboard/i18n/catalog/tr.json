@@ -6658,5 +6658,8 @@
  "تعذر الوصول إلى حساب الأعمال الرئيسي في Meta. تحقق من Business Portfolio ID ومن أن صاحب رمز الوصول عضو فيه.": "Ana Meta Business Portfolio'ya erişilemedi. Business Portfolio ID'yi ve belirteç sahibinin bu portföyün üyesi olduğunu kontrol edin.",
  "تم الوصول إلى حساب الأعمال الرئيسي لكن تعذرت قراءة حسابات WhatsApp Business التابعة له. أعد المحاولة لاحقًا.": "Ana işletme portföyüne erişildi ancak bağlı WhatsApp Business hesapları okunamadı. Daha sonra tekrar deneyin.",
  "رمز الوصول مؤقت وينتهي خلال أقل من 3 أيام. أنشئ رمز System User دائمًا من إعدادات أعمال Meta بصلاحيات whatsapp_business_management وwhatsapp_business_messaging وbusiness_management.": "Erişim belirteci geçicidir ve 3 günden kısa sürede sona eriyor. Meta İşletme Ayarları'nda whatsapp_business_management, whatsapp_business_messaging ve business_management izinleriyle kalıcı bir System User belirteci oluşturun.",
- "رمز الوصول لا يملك صلاحيتي whatsapp_business_management وwhatsapp_business_messaging.": "Erişim belirtecinde whatsapp_business_management ve whatsapp_business_messaging izinleri yok."
+ "رمز الوصول لا يملك صلاحيتي whatsapp_business_management وwhatsapp_business_messaging.": "Erişim belirtecinde whatsapp_business_management ve whatsapp_business_messaging izinleri yok.",
+ "المزوّد معطّل داخل النظام. البيانات محفوظة ولن تُستخدم حتى يُعاد تفعيله.": "Sağlayıcı bu sistemde devre dışı. Verileri kayıtlı ve yeniden etkinleştirilene kadar kullanılmayacak.",
+ "تعذرت قراءة إعدادات التكامل من قاعدة البيانات.": "Entegrasyon ayarları veritabanından okunamadı.",
+ "تعذر فك تشفير قيم محفوظة. تحقق من مفتاح تشفير الإعدادات.": "Kayıtlı değerlerin şifresi çözülemedi. Ayarların şifreleme anahtarını kontrol edin."
 }

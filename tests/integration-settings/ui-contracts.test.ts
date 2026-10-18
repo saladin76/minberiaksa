@@ -14,6 +14,7 @@ const snapshot: SafeIntegrationProviderSnapshot = {
   labelAr: "Meta WhatsApp",
   enabled: true,
   status: "READY",
+  readinessFailureCode: null,
   encryptionKeyConfigured: true,
   missingRequiredFields: [],
   candidate: { version: "11111111-1111-4111-8111-111111111111", hasChanges: true, createdAt: null, lastTestAt: null, lastTestResult: null, lastFailureReasonSafe: null },

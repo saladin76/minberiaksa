@@ -43,7 +43,8 @@ export class IntegrationSettingsService {
   clearProviderCache(provider: IntegrationProvider) { this.resolver.clearProviderCache(provider); }
   getProviderSnapshot(provider: IntegrationProvider, actor?: IntegrationSettingsActor) { return this.resolver.getProviderSnapshot(provider, actor); }
   getResolvedValue(provider: IntegrationProvider, key: string, actor?: IntegrationSettingsActor) { return this.resolver.getResolvedValue(provider, key, actor); }
-  getResolvedProviderValues(provider: IntegrationProvider, actor?: IntegrationSettingsActor) { return this.resolver.getResolvedProviderValues(provider, actor); }
+  /** The full runtime state. There is deliberately no "values only" accessor: it used to answer {} for a disabled provider, which read as every field missing. */
+  getActiveRuntimeResolution(provider: IntegrationProvider, actor?: IntegrationSettingsActor) { return this.resolver.getActiveRuntimeResolution(provider, actor); }
   getCandidateConfiguration(provider: IntegrationProvider, actor?: IntegrationSettingsActor) { return this.resolver.getCandidateConfiguration(provider, actor); }
 
   private audit(entry: IntegrationSettingsAuditEntry) { return this.auditWriter.write(entry); }
@@ -276,7 +277,12 @@ export class IntegrationSettingsService {
     if (!getFieldDefinition(provider, key)) throw new IntegrationSettingsError("UNKNOWN_FIELD", "Unknown integration setting field");
     const existing = (await this.rows(provider, actor, "INTEGRATION_SETTING_DELETE_FAILED")).find((row) => row.key === key);
     if (!existing) throw new IntegrationSettingsError("SETTING_NOT_FOUND", "Integration setting was not found");
-    await this.repository.applyMutations([{ type: "DELETE", provider, key }]);
+    const stateRow = (await this.rows(provider, actor, "INTEGRATION_SETTING_DELETE_FAILED")).find((row) => row.key === PROVIDER_STATE_KEY) ?? null;
+    await this.repository.applyMutations([
+      { type: "DELETE", provider, key },
+      /* The active configuration just changed: its last check no longer describes it. */
+      ...(stateRow ? [{ type: "UPDATE" as const, provider, key: PROVIDER_STATE_KEY, patch: { lastTestAt: null, lastTestResult: null, lastFailureReasonSafe: null } }] : []),
+    ]);
     this.clearProviderCache(provider);
     await this.audit({ ...ctx, key, action: "INTEGRATION_SETTING_DELETED", success: true, metadata: { isSecret: existing.isSecret } });
     if (trimEnvValue(this.resolver.env[getFieldDefinition(provider, key)!.envKey])) await this.audit({ ...ctx, key, action: "INTEGRATION_SETTING_SOURCE_CHANGED", success: true, metadata: { sourceBefore: "DATABASE", sourceAfter: "ENVIRONMENT" } });
@@ -289,6 +295,11 @@ export class IntegrationSettingsService {
     const existing = rows.find((row) => row.key === PROVIDER_STATE_KEY) ?? null;
     const data = this.base(ctx, PROVIDER_STATE_KEY, existing, false);
     data.enabled = enabled;
+    /* The stored "check current settings" result described the provider before this change;
+       left in place it would keep showing an outcome that no longer applies. */
+    data.lastTestAt = null;
+    data.lastTestResult = null;
+    data.lastFailureReasonSafe = null;
     await this.repository.applyMutations([existing ? { type: "UPDATE", provider, key: PROVIDER_STATE_KEY, patch: createDataToPatch(data) } : { type: "CREATE", data }]);
     this.clearProviderCache(provider);
     await this.audit({ ...ctx, action: enabled ? "INTEGRATION_PROVIDER_ENABLED" : "INTEGRATION_PROVIDER_DISABLED", success: true, metadata: { enabled } });

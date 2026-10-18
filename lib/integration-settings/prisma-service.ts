@@ -137,7 +137,20 @@ const repository = new PrismaIntegrationSettingsRepository();
 const auditWriter = new AuditLogIntegrationSettingsWriter();
 const runtimeResolver = new IntegrationSettingsResolver(repository, auditWriter, { cacheTtlMs: 30_000 });
 
-export const integrationSettingsService = new IntegrationSettingsService(repository, auditWriter, { cacheTtlMs: 30_000 });
+/**
+ * The settings service and the runtime resolver (read by sending, sender verification and
+ * webhooks) each keep a cache. Every mutation clears the service's own; it must clear the
+ * runtime one too, or a provider just enabled, re-keyed or activated keeps its previous state
+ * on the send path until the cache happens to expire.
+ */
+class PrismaIntegrationSettingsService extends IntegrationSettingsService {
+  override clearProviderCache(provider: IntegrationProvider): void {
+    super.clearProviderCache(provider);
+    runtimeResolver.clearProviderCache(provider);
+  }
+}
+
+export const integrationSettingsService = new PrismaIntegrationSettingsService(repository, auditWriter, { cacheTtlMs: 30_000 });
 
 export function getActiveIntegrationRuntimeResolution(provider: IntegrationProvider, actor?: IntegrationSettingsActor): Promise<ActiveRuntimeResolution> {
   return runtimeResolver.getActiveRuntimeResolution(provider, actor);

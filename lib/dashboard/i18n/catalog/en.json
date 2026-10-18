@@ -6658,5 +6658,8 @@
  "تعذر الوصول إلى حساب الأعمال الرئيسي في Meta. تحقق من Business Portfolio ID ومن أن صاحب رمز الوصول عضو فيه.": "Could not reach the main Meta Business Portfolio. Check the Business Portfolio ID and that the token's owner is a member of it.",
  "تم الوصول إلى حساب الأعمال الرئيسي لكن تعذرت قراءة حسابات WhatsApp Business التابعة له. أعد المحاولة لاحقًا.": "The main Business Portfolio was reached, but its WhatsApp Business accounts could not be read. Try again later.",
  "رمز الوصول مؤقت وينتهي خلال أقل من 3 أيام. أنشئ رمز System User دائمًا من إعدادات أعمال Meta بصلاحيات whatsapp_business_management وwhatsapp_business_messaging وbusiness_management.": "The access token is temporary and expires in under 3 days. Create a permanent System User token in Meta Business Settings with whatsapp_business_management, whatsapp_business_messaging and business_management.",
- "رمز الوصول لا يملك صلاحيتي whatsapp_business_management وwhatsapp_business_messaging.": "The access token lacks the whatsapp_business_management and whatsapp_business_messaging permissions."
+ "رمز الوصول لا يملك صلاحيتي whatsapp_business_management وwhatsapp_business_messaging.": "The access token lacks the whatsapp_business_management and whatsapp_business_messaging permissions.",
+ "المزوّد معطّل داخل النظام. البيانات محفوظة ولن تُستخدم حتى يُعاد تفعيله.": "The provider is disabled in this system. Its data is saved and won't be used until it is enabled again.",
+ "تعذرت قراءة إعدادات التكامل من قاعدة البيانات.": "Could not read the integration settings from the database.",
+ "تعذر فك تشفير قيم محفوظة. تحقق من مفتاح تشفير الإعدادات.": "Could not decrypt saved values. Check the settings encryption key."
 }

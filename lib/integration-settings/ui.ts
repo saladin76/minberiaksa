@@ -99,6 +99,9 @@ export const ERROR_MESSAGES_AR: Record<string, string> = {
   get ENCRYPTION_KEY_MISSING() { return dt("مفتاح تشفير إعدادات التكاملات غير مضبوط على السيرفر."); },
   get ENCRYPTION_KEY_INVALID() { return dt("مفتاح تشفير إعدادات التكاملات غير صالح."); },
   get MISSING_REQUIRED_FIELDS() { return dt("بعض البيانات المطلوبة غير مكتملة."); },
+  get PROVIDER_DISABLED() { return dt("المزوّد معطّل داخل النظام. البيانات محفوظة ولن تُستخدم حتى يُعاد تفعيله."); },
+  get INTEGRATION_DATABASE_UNAVAILABLE() { return dt("تعذرت قراءة إعدادات التكامل من قاعدة البيانات."); },
+  get INTEGRATION_DECRYPTION_FAILED() { return dt("تعذر فك تشفير قيم محفوظة. تحقق من مفتاح تشفير الإعدادات."); },
   get CANONICAL_URL_MISSING() { return dt("تعذر تحديد النطاق الرسمي للموقع من إعدادات السيرفر."); },
 };
 

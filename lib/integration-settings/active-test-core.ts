@@ -1,5 +1,6 @@
 import type { IntegrationProvider } from "./catalog";
 import { getProviderDefinition } from "./catalog";
+import { evaluateProviderReadiness, type ProviderRuntimeState } from "./runtime-policy";
 import type {
   IntegrationProviderTester,
   IntegrationSettingsActor,
@@ -8,7 +9,12 @@ import type {
 } from "./types";
 
 export type ActiveTestCoreDependencies = {
-  resolveActiveValues: (provider: IntegrationProvider, actor: IntegrationSettingsActor) => Promise<Record<string, string>>;
+  /**
+   * The full runtime state (`getActiveRuntimeResolution`), never a bare value map: a disabled
+   * provider, an unreadable database and a value that fails to decrypt must each stay
+   * distinguishable from a field that is genuinely empty.
+   */
+  resolveActiveRuntime: (provider: IntegrationProvider, actor: IntegrationSettingsActor) => Promise<ProviderRuntimeState>;
   tester: IntegrationProviderTester;
   record: (provider: IntegrationProvider, testedAt: Date, result: ProviderConnectionTestResult, actorId: string) => Promise<void>;
   env?: NodeJS.ProcessEnv;
@@ -22,6 +28,11 @@ export function evaluateCronInfrastructure(env: NodeJS.ProcessEnv): ProviderConn
   return { success: true, connectionStatus: "CONNECTED", messageAr: "حماية Route الجدولة مضبوطة داخل البنية التحتية، ولم يتم تشغيل أي حملة.", failureCode: null };
 }
 
+/**
+ * "Check current settings". Readiness comes from `evaluateProviderReadiness`  the verdict the
+ * send path and sender verification use  so this check can only pass when sending could, and
+ * fails with the same reason they would. Only a ready provider is tested against the provider.
+ */
 export async function runActiveProviderTest(
   provider: IntegrationProvider,
   actor: IntegrationSettingsActor,
@@ -34,14 +45,21 @@ export async function runActiveProviderTest(
   if (provider === "SYSTEM") {
     result = evaluateCronInfrastructure(dependencies.env ?? process.env);
   } else {
-    const values = await dependencies.resolveActiveValues(provider, actor);
-    missingRequiredFields = getProviderDefinition(provider).fields
-      .filter((field) => field.required && !values[field.key])
-      .map((field) => field.key);
-    if (missingRequiredFields.length) {
-      result = { success: false, connectionStatus: "NOT_CONFIGURED", messageAr: "بيانات التكوين العامل المطلوبة غير مكتملة.", failureCode: "MISSING_REQUIRED_FIELDS" };
+    let state: ProviderRuntimeState | null = null;
+    try {
+      state = await dependencies.resolveActiveRuntime(provider, actor);
+    } catch {
+      state = null;
+    }
+    const required = getProviderDefinition(provider).fields.filter((field) => field.required).map((field) => field.key);
+    const readiness = state
+      ? evaluateProviderReadiness(state, required)
+      : evaluateProviderReadiness({ enabled: true, databaseAvailable: false, values: {}, decryptionFailedFields: [] }, required);
+    if (!readiness.ready) {
+      missingRequiredFields = readiness.missingFields;
+      result = { success: false, connectionStatus: readiness.connectionStatus, messageAr: readiness.messageAr, failureCode: readiness.failureCode };
     } else {
-      try { result = await dependencies.tester.test({ provider, values, candidateVersion: null }); }
+      try { result = await dependencies.tester.test({ provider, values: state!.values, candidateVersion: null }); }
       catch { result = { success: false, connectionStatus: "FAILED", messageAr: "تعذر تنفيذ فحص الإعدادات الحالية.", failureCode: "PROVIDER_TEST_REQUEST_FAILED" }; }
     }
   }

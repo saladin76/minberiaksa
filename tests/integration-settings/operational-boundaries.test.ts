@@ -20,6 +20,7 @@ function brevoSnapshot(): SafeIntegrationProviderSnapshot {
     labelAr: "Brevo",
     enabled: true,
     status: "READY",
+    readinessFailureCode: null,
     encryptionKeyConfigured: true,
     missingRequiredFields: [],
     candidate: { version: "11111111-1111-4111-8111-111111111111", hasChanges: true, createdAt: null, lastTestAt: null, lastTestResult: null, lastFailureReasonSafe: null },
@@ -44,7 +45,7 @@ test("test-active receives active values only and ignores pending values", async
     },
   };
   await runActiveProviderTest("BREVO", actor, {
-    resolveActiveValues: async () => ({ API_KEY: activeToken, SMS_SENDER: "GOZBEBEK" }),
+    resolveActiveRuntime: async () => ({ enabled: true, databaseAvailable: true, decryptionFailedFields: [], values: { API_KEY: activeToken, SMS_SENDER: "GOZBEBEK" } }),
     tester,
     record: async () => {},
     now: () => new Date("2026-07-14T08:00:00.000Z"),
@@ -57,7 +58,7 @@ test("active test result persists independently and does not alter candidate tes
   const candidateState = { version: "candidate-v1", result: "SUCCESS" };
   let stored: { result: string; failure: string | null } | null = null;
   await runActiveProviderTest("BREVO", actor, {
-    resolveActiveValues: async () => ({ API_KEY: "active", SMS_SENDER: "GOZBEBEK" }),
+    resolveActiveRuntime: async () => ({ enabled: true, databaseAvailable: true, decryptionFailedFields: [], values: { API_KEY: "active", SMS_SENDER: "GOZBEBEK" } }),
     tester: { test: async () => ({ success: false, connectionStatus: "FAILED", messageAr: "failed", failureCode: "BREVO_UNAUTHORIZED" }) },
     record: async (_provider, _at, result) => { stored = { result: result.success ? "SUCCESS" : "FAILED", failure: result.failureCode }; },
   });
@@ -105,7 +106,7 @@ test("Cron uses environment bearer only and protection check does not invoke a p
   let testerCalled = false;
   const result = await runActiveProviderTest("SYSTEM", actor, {
     env,
-    resolveActiveValues: async () => { throw new Error("Cron must not resolve DB credentials"); },
+    resolveActiveRuntime: async () => { throw new Error("Cron must not resolve DB credentials"); },
     tester: { test: async () => { testerCalled = true; throw new Error("Cron must not call external tester"); } },
     record: async () => {},
   });

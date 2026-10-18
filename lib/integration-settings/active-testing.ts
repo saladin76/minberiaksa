@@ -1,7 +1,7 @@
 import type { IntegrationProvider } from "./catalog";
 import { runActiveProviderTest, type ActiveTestCoreDependencies } from "./active-test-core";
 import { PROVIDER_STATE_KEY, safeFailureCode } from "./helpers";
-import { integrationSettingsService } from "./prisma-service";
+import { clearActiveIntegrationRuntimeCache, getActiveIntegrationRuntimeResolution, integrationSettingsService } from "./prisma-service";
 import { IntegrationProviderTesterRegistry } from "./provider-testing";
 import type {
   IntegrationSettingsActor,
@@ -82,8 +82,11 @@ export async function testActiveProviderConnection(
   actor: IntegrationSettingsActor,
   dependencies: ActiveTestDependencies = {}
 ): Promise<SafeProviderConnectionTestResponse> {
+  /* The same resolver the send path and sender verification read, fresh: a check run right
+     after a settings change must see that change, not a cached state. */
+  clearActiveIntegrationRuntimeCache(provider);
   const response = await runActiveProviderTest(provider, actor, {
-    resolveActiveValues: dependencies.resolveActiveValues ?? ((p, a) => integrationSettingsService.getResolvedProviderValues(p, a)),
+    resolveActiveRuntime: dependencies.resolveActiveRuntime ?? ((p, a) => getActiveIntegrationRuntimeResolution(p, a)),
     tester: dependencies.tester ?? new IntegrationProviderTesterRegistry(),
     record: dependencies.record ?? recordActiveProviderTest,
     env: dependencies.env ?? process.env,

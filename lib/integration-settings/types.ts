@@ -158,6 +158,8 @@ export type SafeIntegrationProviderSnapshot = {
   labelAr: string;
   enabled: boolean;
   status: "READY" | "NOT_CONFIGURED" | "DISABLED" | "ERROR";
+  /** The shared readiness verdict (`evaluateProviderReadiness`): null when ready, else the same code the send path and "check current settings" report. */
+  readinessFailureCode: string | null;
   encryptionKeyConfigured: boolean;
   missingRequiredFields: string[];
   candidate: SafeIntegrationCandidate;

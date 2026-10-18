@@ -225,7 +225,7 @@ test("provider activation commits all candidate fields together", async () => {
   const version = staged.snapshot.candidate.version!;
   await service.testProviderConnection("ELASTIC_EMAIL", actor);
   await service.activateProviderCandidate("ELASTIC_EMAIL", version, actor);
-  const values = await service.getResolvedProviderValues("ELASTIC_EMAIL", actor);
+  const { values } = await service.getActiveRuntimeResolution("ELASTIC_EMAIL", actor);
   assert.equal(values.API_KEY, "xkeysib-atomic-api-key-value-123456");
   assert.equal(values.SENDER_EMAIL, "verified@example.org");
   assert.equal(values.SENDER_NAME, "Gozbebekleri");

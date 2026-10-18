@@ -8,6 +8,7 @@ import {
   maskIntegrationValue,
 } from "./crypto";
 import { DEFAULT_CACHE_TTL_MS, PROVIDER_STATE_KEY, recordHasPendingValue, trimEnvValue } from "./helpers";
+import { evaluateProviderReadiness } from "./runtime-policy";
 import type {
   IntegrationCandidateConfiguration,
   IntegrationSettingRecord,
@@ -192,14 +193,28 @@ export class IntegrationSettingsResolver {
     const resolved = await this.resolveProvider(provider, actor);
     const definition = getProviderDefinition(provider);
     const missingRequiredFields = resolved.fields.filter((field) => field.definition.required && !field.configured).map((field) => field.definition.key);
-    const hasDecryptionError = resolved.fields.some((field) => field.decryptionFailed);
+    /* Same verdict as the send path: disabled, database unreadable, decryption failure and a
+       real gap are separate states here too. */
+    const readiness = evaluateProviderReadiness(
+      {
+        enabled: resolved.enabled,
+        databaseAvailable: resolved.databaseAvailable,
+        values: Object.fromEntries(resolved.fields.filter((field) => field.configured && field.value).map((field) => [field.definition.key, field.value as string])),
+        decryptionFailedFields: resolved.fields.filter((field) => field.decryptionFailed).map((field) => field.definition.key),
+      },
+      definition.fields.filter((field) => field.required).map((field) => field.key),
+    );
     const state = resolved.stateRecord;
     const candidateVersion = state?.candidateVersion ?? null;
     return {
       provider,
       labelAr: definition.labelAr,
       enabled: resolved.enabled,
-      status: !resolved.enabled ? "DISABLED" : hasDecryptionError ? "ERROR" : missingRequiredFields.length === 0 ? "READY" : "NOT_CONFIGURED",
+      status: readiness.ready ? "READY"
+        : readiness.reason === "PROVIDER_DISABLED" ? "DISABLED"
+        : readiness.reason === "PROVIDER_NOT_CONFIGURED" ? "NOT_CONFIGURED"
+        : "ERROR",
+      readinessFailureCode: readiness.failureCode,
       encryptionKeyConfigured: integrationEncryptionKeyIsConfigured(this.encryptionKey()),
       missingRequiredFields,
       candidate: {
@@ -239,11 +254,5 @@ export class IntegrationSettingsResolver {
     const resolved = await this.resolveProvider(provider, actor);
     if (!resolved.enabled) return null;
     return resolved.fields.find((item) => item.definition.key === key)?.value ?? null;
-  }
-
-  async getResolvedProviderValues(provider: IntegrationProvider, actor?: IntegrationSettingsActor): Promise<Record<string, string>> {
-    const resolved = await this.resolveProvider(provider, actor);
-    if (!resolved.enabled) return {};
-    return Object.fromEntries(resolved.fields.filter((field) => field.configured && field.value).map((field) => [field.definition.key, field.value as string]));
   }
 }
