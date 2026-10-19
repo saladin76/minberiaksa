@@ -120,6 +120,7 @@ export async function getSmartWhatsappContext(userId: string): Promise<SmartWhat
   // Read exact rows once; do not let that unrelated account hide an available template.
   const templates = businessAccountIds.length ? await prisma.whatsappTemplate.findMany({
     where: {
+      provider: { in: ["META", "META_WHATSAPP"] },
       status: { not: "ARCHIVED" },
       wabaVariants: { some: { provider: "META_WHATSAPP", businessAccountId: { in: businessAccountIds } } },
     },
