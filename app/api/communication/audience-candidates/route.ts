@@ -7,7 +7,7 @@ import { prisma } from "@/lib/prisma";
 import { donorChannelEligibility } from "@/lib/communication/audience-service";
 import { recipientExclusionReason, RECIPIENT_REASON_LABELS } from "@/lib/communication/campaign-audience-accounting";
 import { campaignCandidateWhere, candidatePagination } from "@/lib/communication/campaign-candidate-policy";
-import { readCampaignConsentUserIds } from "@/lib/communication/campaign-consent-reader";
+import { readCampaignProfileGateUserIds } from "@/lib/communication/campaign-consent-reader";
 import { isCommunicationChannel } from "@/lib/communication/communication-runtime-types";
 import { getUserIdsMatchingBadge, getBadgeIdsByUser } from "@/lib/badge-criteria";
 import { resolveUserCountry } from "@/lib/dashboard/resolve-user-country";
@@ -104,7 +104,7 @@ async function channelEligibilityWhere(
   eligibility: string,
   signal?: AbortSignal,
 ): Promise<Prisma.UserWhereInput> {
-  const ids = eligibility === "all" ? undefined : await readCampaignConsentUserIds(channel, signal);
+  const ids = eligibility === "all" ? undefined : await readCampaignProfileGateUserIds(channel, signal);
   return campaignCandidateWhere(base, channel, eligibility, ids);
 }
 
@@ -192,3 +192,4 @@ export async function POST(request: NextRequest) {
     return reply({ ok: false, error: "تعذّر تحديد جمهور الحملة. لم يتم اعتماد قائمة بديلة؛ أعد المحاولة." }, 503);
   }
 }
+

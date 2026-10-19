@@ -32,7 +32,8 @@ for (const channel of ["EMAIL", "WHATSAPP", "SMS"] as AudienceChannel[]) {
   test(`${channel}: candidate predicates reconcile contacts with resolved profile defaults`, () => {
     for (const contact of contacts) for (const profile of profiles) {
       const donor = { id: "user", ...(contact === undefined ? {} : { email: contact, phone: contact }), role: "DONOR" };
-      const ids = recipientExclusionReason({ email: "present", phone: "present" }, channel, profile) === null ? ["user"] : [];
+      const reason = recipientExclusionReason({ email: "present", phone: "present" }, channel, profile);
+      const ids = (channel === "WHATSAPP" ? reason === "DO_NOT_CONTACT" : reason === null) ? ["user"] : [];
       const expected = recipientExclusionReason(donor, channel, profile) === null;
       assert.equal(matches(donor, campaignCandidateWhere({ role: "DONOR" }, channel, "eligible", ids) as RecordValue), expected);
       assert.equal(matches(donor, campaignCandidateWhere({ role: "DONOR" }, channel, "ineligible", ids) as RecordValue), !expected);
@@ -86,7 +87,7 @@ function harness(opts: { denied?: boolean; failedRead?: boolean; failedConsent?:
     "@/lib/communication/audience-service": { donorChannelEligibility: (donor: { phone: string }, channel: AudienceChannel, preference: typeof profile) => recipientExclusionReason(donor, channel, preference) === null ? "ELIGIBLE" : "UNAVAILABLE" },
     "@/lib/communication/campaign-audience-accounting": { recipientExclusionReason, RECIPIENT_REASON_LABELS },
     "@/lib/communication/campaign-candidate-policy": { campaignCandidateWhere, candidatePagination },
-    "@/lib/communication/campaign-consent-reader": { readCampaignConsentUserIds: async () => { consentReads++; if (opts.failedConsent) throw new Error("consent unavailable"); return ["user"]; } },
+    "@/lib/communication/campaign-consent-reader": { readCampaignProfileGateUserIds: async () => { consentReads++; if (opts.failedConsent) throw new Error("consent unavailable"); return ["user"]; } },
     "@/lib/communication/communication-runtime-types": { isCommunicationChannel: (value: string) => ["WHATSAPP", "EMAIL", "SMS"].includes(value) },
     "@/lib/badge-criteria": { getBadgeIdsByUser: async () => new Map(), getUserIdsMatchingBadge: async () => [] },
     "@/lib/dashboard/resolve-user-country": { resolveUserCountry: () => ({ code: "TR", name: "Turkey" }) },
@@ -109,14 +110,14 @@ test("candidate GET and POST authorize before any protected read", async () => {
   assert.equal((await h.route.POST(request())).status, 403);
   assert.equal(h.state().reads + h.state().consentReads, 0);
 });
-test("candidate GET labels unapproved contacts consistently and performs no consent writes", async () => {
+test("candidate GET permits WhatsApp without recorded opt-in and performs no consent writes", async () => {
   const h = harness();
   const res = await h.route.GET(request());
   assert.equal(res.status, 200);
   assert.equal(res.headers["Cache-Control"], "private, no-store");
   const donors = res.body.donors as RecordValue[];
-  assert.equal(donors[0].eligibility, "UNAVAILABLE");
-  assert.equal(donors[0].eligibilityReason, RECIPIENT_REASON_LABELS.WHATSAPP_OPT_IN_REQUIRED);
+  assert.equal(donors[0].eligibility, "ELIGIBLE");
+  assert.equal(donors[0].eligibilityReason, null);
   assert.equal(h.state().consentReads, 0);
 });
 test("candidate read failures are 503, not fabricated zero counts", async () => {
@@ -153,7 +154,7 @@ test("explicit eligibility precedes GET count/pagination and matches POST select
   assert.equal(JSON.stringify(queries[1].orderBy), JSON.stringify(queries[2].orderBy));
 });
 
-type Reader = { readCampaignConsentUserIds: (channel: AudienceChannel, signal?: AbortSignal) => Promise<string[]> };
+type Reader = { readCampaignProfileGateUserIds: (channel: AudienceChannel, signal?: AbortSignal) => Promise<string[]> };
 function consentReader(failPage = 0, repeat = false): Reader {
   let calls = 0;
   const rows = Array.from({ length: 2001 }, (_, i) => ({ id: String(i + 1).padStart(6, "0"), userId: `user-${i}`, doNotContact: i % 5 === 0, whatsappOptIn: i % 2 === 0, emailOptIn: false, smsOptIn: true }));
@@ -168,15 +169,22 @@ function consentReader(failPage = 0, repeat = false): Reader {
     } } }, "./campaign-audience-accounting": { recipientExclusionReason },
   });
 }
-test("consent reader walks bounded pages, applies DNC and never truncates at the first page", async () => {
-  const ids = await consentReader().readCampaignConsentUserIds("WHATSAPP");
-  assert.equal(ids.length, 800); assert.equal(new Set(ids).size, ids.length);
+test("WhatsApp profile gate walks bounded pages and returns only DNC exclusions", async () => {
+  const ids = await consentReader().readCampaignProfileGateUserIds("WHATSAPP");
+  assert.equal(ids.length, 401); assert.equal(new Set(ids).size, ids.length);
+  assert.equal(ids.includes("user-0"), true);
+  assert.equal(ids.includes("user-1"), false);
+});
+test("email and SMS profile gates retain their channel opt-in rules", async () => {
+  assert.equal((await consentReader().readCampaignProfileGateUserIds("EMAIL")).length, 0);
+  assert.equal((await consentReader().readCampaignProfileGateUserIds("SMS")).length, 1600);
 });
 test("consent reader rejects failed pages and repeated cursors rather than returning partial IDs", async () => {
-  await assert.rejects(consentReader(2).readCampaignConsentUserIds("WHATSAPP"), /source page failed/);
-  await assert.rejects(consentReader(0, true).readCampaignConsentUserIds("WHATSAPP"), /CURSOR_NOT_ADVANCING/);
+  await assert.rejects(consentReader(2).readCampaignProfileGateUserIds("WHATSAPP"), /source page failed/);
+  await assert.rejects(consentReader(0, true).readCampaignProfileGateUserIds("WHATSAPP"), /CURSOR_NOT_ADVANCING/);
 });
 test("cancelled consent reads do not return an empty successful filter", async () => {
   const controller = new AbortController(); controller.abort();
-  await assert.rejects(consentReader().readCampaignConsentUserIds("WHATSAPP", controller.signal));
+  await assert.rejects(consentReader().readCampaignProfileGateUserIds("WHATSAPP", controller.signal));
 });
+

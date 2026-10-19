@@ -51,12 +51,12 @@ test("retry guard accepts unchanged recipient and canonical international format
   assert.equal(result.ok, true);
   assert.equal(result.contact, donor.phone);
 });
-test("campaign retry cannot bypass the existing WhatsApp consent gate", async () => {
+test("campaign retry accepts WhatsApp without opt-in under the shared policy", async () => {
   const result = await retryHarness({ ...donor, communicationProfile: { ...approved, whatsappOptIn: false } }).checkRetryRecipient(row);
-  assert.equal(result.code, "CONSENT_BLOCKED");
+  assert.equal(result.ok, true);
 });
-test("campaign retry does not interpret an absent profile as permission", async () => {
-  assert.equal((await retryHarness({ ...donor, communicationProfile: null }).checkRetryRecipient(row)).code, "CONSENT_BLOCKED");
+test("campaign retry accepts WhatsApp without a profile and does not create consent", async () => {
+  assert.equal((await retryHarness({ ...donor, communicationProfile: null }).checkRetryRecipient(row)).ok, true);
 });
 test("manual WhatsApp retains its separate existing policy", async () => {
   assert.equal((await retryHarness({ ...donor, communicationProfile: null }).checkRetryRecipient({ ...row, campaignId: null })).ok, true);
@@ -331,3 +331,4 @@ test("retry candidates and preflight respect the explicit empty selection and ch
   assert.equal(where.id.in.length, 0);
   assert.equal(where.channel, "SMS");
 });
+

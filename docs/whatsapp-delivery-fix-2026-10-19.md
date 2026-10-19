@@ -11,9 +11,12 @@
 - Template sending rechecks approval, actual provider category and archive status. Database failures in the picker surface as failures rather than an empty successful list.
 - Opening conversation history closes both the sender dialog and the donor-profile overlay. A donor-history deep link searches across business numbers and updates an already mounted inbox; stale list responses cannot overwrite newer searches.
 - Empty template choices have an explanatory state, and switching Utility/Marketing clears the previous purpose's selection.
+- WhatsApp campaigns, previews, candidate filters and retry guards now share a policy that does not require a stored WhatsApp opt-in. Donors with no profile or `whatsappOptIn: false` are not excluded for that reason. Explicit do-not-contact, missing/invalid destinations, changed contacts and unavailable verification still block sending. No consent values are written or backfilled.
+- WhatsApp candidate eligibility uses DNC exclusions rather than an allowlist of profile holders, so missing-profile donors do not disappear from eligible filters or select-all. Email/SMS keep their existing opt-in behavior.
 
 ## Validation
 
+- After the WhatsApp opt-in policy change, 101 focused tests passed across audience accounting, candidate GET/select-all filters, saved audiences, send-time checks, retry guards, and the existing template/parameter regressions. Email/SMS opt-in, DNC precedence, destination changes, database failures and duplicate prevention remain covered.
 - 27 focused Node 24 source tests passed, including publisher-to-send button mapping, missing scoped values, legacy compatibility, mixed donation lines, all 19 fallback languages, exact WABA isolation, Meta recategorization and shared locale fallback.
 - Re-running the parameter regression suite against the previous implementation reproduces three failures; the fixed implementation passes them.
 - Focused strict TypeScript check covers the pure parameter builder, publisher component builder, project projection and locale modules.
@@ -28,4 +31,4 @@
 3. Verify one approved test recipient with a normal project donation, a category-only donation and a waqf donation. Confirm provider acceptance and delivery, and that each button points to the intended donation. Existing certificate authentication rules still apply.
 4. Historical failed/skipped rows are not rewritten or automatically resent. Old snapshots containing an empty project value need a newly rendered attempt from the corrected context before any authorized resend. Existing uncertain-outcome/duplicate protections are not bypassed.
 
-Marketing consent, opt-outs, recipient eligibility and campaign delivery controls remain unchanged. Provider category enforcement uses Meta's current exact variant and rejects unknown categories. No messages, campaigns, database writes, template publication or host deployment were executed as part of this source change.
+The internal WhatsApp opt-in prerequisite has been removed as requested. Email/SMS consent, explicit do-not-contact, duplicate protection and campaign pacing controls remain enforced. Provider category enforcement uses Meta's current exact variant and rejects unknown categories. This application change does not override provider enforcement. No messages, campaigns, database writes, template publication or host deployment were executed as part of this source change.

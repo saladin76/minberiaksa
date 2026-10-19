@@ -90,7 +90,7 @@ export async function getAudienceOverview(): Promise<AudienceOverview> {
     generatedAt: new Date().toISOString(),
     totals,
     languages,
-    consentNote: "حجم الجمهور لا يضمن التسليم. تُحترم موافقة القناة وطلبات إيقاف التواصل، وتُراجع بيانات الاتصال عند التنفيذ.",
+    consentNote: "واتساب لا يشترط موافقة مسبقة داخل النظام. تُحترم طلبات إيقاف التواصل وموافقات البريد وSMS، وتُراجع بيانات الاتصال عند التنفيذ. حجم الجمهور لا يضمن التسليم.",
   };
 }
 
@@ -110,3 +110,4 @@ export function donorChannelEligibility(
   if (reason === "NEEDS_CONSENT_REVIEW") return "NEEDS_REVIEW";
   return "UNAVAILABLE";
 }
+
