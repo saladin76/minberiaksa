@@ -2467,5 +2467,13 @@
     "noAccount": "Nuk keni llogari?",
     "createOne": "Krijo një",
     "logoAlt": "Logoja"
+  },
+  "DonationFailed": {
+    "alternate": {
+      "cta": "Dhuro tani në mënyrë të besueshme",
+      "badge": "Opsion i besueshëm",
+      "title": "Përfundo dhurimin këtu",
+      "description": "Një formular i sigurt pagese, i ndarë nga përpjekja që nuk u krye. Fut të dhënat e kartës dhe përfundo dhurimin me një hap."
+    }
   }
 }

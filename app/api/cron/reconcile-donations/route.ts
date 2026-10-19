@@ -37,8 +37,8 @@ export async function GET(request: NextRequest) {
       await writeAuditLog({
         actorRole: "SYSTEM",
         action: "DONATIONS_RECONCILED_FROM_STRIPE",
-        messageAr: `تم اعتماد ${summary.credited.length} تبرع مؤكد من Stripe لم يصل إشعارها (${summary.creditedTotalUSD.toFixed(2)} دولار)`,
-        messageEn: `Credited ${summary.credited.length} donation(s) confirmed paid at Stripe whose webhook never arrived ($${summary.creditedTotalUSD.toFixed(2)})`,
+        messageAr: `تم اعتماد ${summary.credited.length} تبرع مؤكد لدى بوابة الدفع (Stripe/PayPal) لم يصل إشعارها (${summary.creditedTotalUSD.toFixed(2)} دولار)`,
+        messageEn: `Credited ${summary.credited.length} donation(s) confirmed paid at Stripe/PayPal whose confirmation never arrived ($${summary.creditedTotalUSD.toFixed(2)})`,
         entityType: "Donation",
         metadata: { externalCall: true, donationIds: summary.credited.map((c) => c.donationId) },
         stream: "TEAM",

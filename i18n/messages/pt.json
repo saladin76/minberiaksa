@@ -157,6 +157,12 @@
         "reason": "Something stopped the payment from completing. We weren't given a specific reason.",
         "fix": "Try again, switch to a different card, or use the bank transfer option below."
       }
+    },
+    "alternate": {
+      "cta": "Doe agora de forma confiável",
+      "badge": "Opção confiável",
+      "title": "Conclua sua doação aqui",
+      "description": "Um formulário de pagamento seguro, separado da tentativa que não foi concluída. Insira seu cartão e finalize sua doação em uma única etapa."
     }
   },
   "BlogCard": {

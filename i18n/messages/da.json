@@ -2467,5 +2467,13 @@
     "noAccount": "Har du ikke en konto?",
     "createOne": "Opret en",
     "logoAlt": "Logo"
+  },
+  "DonationFailed": {
+    "alternate": {
+      "cta": "Donér nu på den pålidelige måde",
+      "badge": "Pålidelig mulighed",
+      "title": "Gennemfør din donation her",
+      "description": "En sikker betalingsformular, adskilt fra forsøget, der ikke lykkedes. Indtast dine kortoplysninger og gennemfør donationen i ét trin."
+    }
   }
 }

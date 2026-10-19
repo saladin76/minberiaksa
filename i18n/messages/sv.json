@@ -2467,5 +2467,13 @@
     "noAccount": "Har du inget konto?",
     "createOne": "Skapa ett",
     "logoAlt": "Logotyp"
+  },
+  "DonationFailed": {
+    "alternate": {
+      "cta": "Donera nu på det pålitliga sättet",
+      "badge": "Pålitligt alternativ",
+      "title": "Slutför din gåva här",
+      "description": "Ett säkert betalformulär, skilt från försöket som inte gick igenom. Ange dina kortuppgifter och slutför din gåva i ett steg."
+    }
   }
 }

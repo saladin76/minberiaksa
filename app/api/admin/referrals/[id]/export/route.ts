@@ -12,6 +12,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { donationStatusWhere } from "@/lib/dashboard/donation-usd-revenue";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 import { requireAdminOrDashboardPermission } from "@/lib/dashboard/api-auth";
@@ -80,7 +81,6 @@ export async function GET(
       ...(subscriptionOnly && { subscriptionId: { not: null } }),
       ...(donationType === "MONTHLY" && { subscriptionId: { not: null } }),
       ...(Object.keys(dateFilter).length > 0 && { createdAt: dateFilter }),
-      ...(status && ["PAID", "FAILED"].includes(status) && { status: status as "PAID" | "FAILED" }),
     };
     if (categoryId && categoryId !== "all") {
       baseWhere.OR = [
@@ -90,6 +90,9 @@ export async function GET(
     }
 
     const donationFilters: Prisma.DonationWhereInput[] = [baseWhere];
+    // ناجح / قيد التأكيد / فاشل, as the tables show them.
+    const statusWhere = donationStatusWhere(status);
+    if (statusWhere) donationFilters.push(statusWhere);
     if (locale && locale !== "all") {
       donationFilters.push(
         locale === "__unset" ? { OR: [{ locale: null }, { locale: "" }] } : { locale }

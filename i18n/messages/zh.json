@@ -2467,5 +2467,13 @@
     "noAccount": "还没有账户？",
     "createOne": "立即注册",
     "logoAlt": "标志"
+  },
+  "DonationFailed": {
+    "alternate": {
+      "cta": "立即以可靠方式捐款",
+      "badge": "可靠方式",
+      "title": "在此完成您的捐款",
+      "description": "一个安全的支付表单，与未完成的那次尝试相互独立。输入您的卡信息，一步即可完成捐款。"
+    }
   }
 }

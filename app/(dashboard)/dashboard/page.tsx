@@ -339,7 +339,7 @@ export default function DashboardPage() {
   const [donationsSortBy, setDonationsSortBy] = useState<"date" | "amount">("date");
   const [donationsSortOrder, setDonationsSortOrder] = useState<"asc" | "desc">("desc");
   const [showFailed, setShowFailed] = useState(false);
-  const [donationsStatusFilter, setDonationsStatusFilter] = useState<"all" | "PAID" | "FAILED">("all");
+  const [donationsStatusFilter, setDonationsStatusFilter] = useState<"all" | "PAID" | "PENDING" | "FAILED">("all");
   /** Applied donor search (name or email) for the أحدث التبرعات table  server-side, not a page filter. */
   const [donationsSearch, setDonationsSearch] = useState("");
   const [donationsTypeFilter, setDonationsTypeFilter] = useState<"all" | "ONE_TIME" | "MONTHLY">("all");
@@ -1868,6 +1868,7 @@ export default function DashboardPage() {
       <SelectContent>
         <SelectItem value="all" className="text-xs">{dt("كل الحالات")}</SelectItem>
         <SelectItem value="PAID" className="text-xs">{dt("ناجح")}</SelectItem>
+        <SelectItem value="PENDING" className="text-xs">{dt("قيد التأكيد")}</SelectItem>
         <SelectItem value="FAILED" className="text-xs">{dt("فاشل")}</SelectItem>
       </SelectContent>
     </Select>
@@ -2025,14 +2026,14 @@ export default function DashboardPage() {
                               <span
                                 className={cn(
                                   "inline-block px-1.5 py-px rounded-full text-[11px] font-medium w-max",
-                                  d.status === "PAID" && (d.paidAt || d.type === "MONTHLY")
+                                  d.status === "PAID" && d.paidAt
                                     ? "bg-green-100 text-green-700"
                                     : "bg-amber-100 text-amber-700"
                                 )}
-                                title={d.status === "PAID" && !d.paidAt && d.type !== "MONTHLY" ? dt("تم بدء الدفع ولم يؤكده مزود الدفع بعد  لا يُحتسب في الإيرادات") : undefined}
+                                title={d.status === "PAID" && !d.paidAt ? dt("تم بدء الدفع ولم يؤكده مزود الدفع بعد  لا يُحتسب في الإيرادات") : undefined}
                               >
                                 {d.status === "PAID"
-                                  ? (d.paidAt || d.type === "MONTHLY")
+                                  ? d.paidAt
                                     ? dt("ناجح")
                                     : dt("قيد التأكيد")
                                   : dt("معلق")}

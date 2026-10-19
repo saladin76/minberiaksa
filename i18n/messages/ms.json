@@ -2467,5 +2467,13 @@
     "noAccount": "Tiada akaun?",
     "createOne": "Cipta akaun",
     "logoAlt": "Logo"
+  },
+  "DonationFailed": {
+    "alternate": {
+      "cta": "Derma sekarang dengan cara yang boleh dipercayai",
+      "badge": "Pilihan boleh dipercayai",
+      "title": "Lengkapkan derma anda di sini",
+      "description": "Borang pembayaran selamat, berasingan daripada percubaan yang tidak berjaya. Masukkan butiran kad anda dan lengkapkan derma dalam satu langkah."
+    }
   }
 }

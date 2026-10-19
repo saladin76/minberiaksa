@@ -1,5 +1,6 @@
 import Stripe from "stripe";
 import { PAYFOR_UNVERIFIED_APPROVAL } from "@/lib/payfor";
+import { reconcilePayPalDonation } from "@/lib/donations/paypal-donation";
 import { prisma } from "@/lib/prisma";
 
 /**
@@ -93,7 +94,9 @@ export async function reconcileUnconfirmedDonations(options: ReconcileOptions = 
       NOT: { provider: "BANK_TRANSFER" },
       AND: [
         { OR: [{ paidAt: null }, { paidAt: { isSet: false } }] },
-        { OR: [{ subscriptionId: null }, { subscriptionId: { isSet: false } }] },
+        /* A PayPal plan's first instalment is a checkout like any other and
+           PayPal can answer for it; other plan rows belong to their rail. */
+        { OR: [{ subscriptionId: null }, { subscriptionId: { isSet: false } }, { paymentMethod: "PAYPAL" }] },
       ],
     },
     include: { items: true, categoryItems: true },
@@ -117,6 +120,30 @@ export async function reconcileUnconfirmedDonations(options: ReconcileOptions = 
        check it against the bank report; ageing it out would hide a possible charge. */
     if (ageHours < minAgeHours || donation.providerErrorMessage === PAYFOR_UNVERIFIED_APPROVAL) {
       summary.leftAlone++;
+      continue;
+    }
+
+    /* PayPal rows are asked of PayPal, through the same checks the return
+       route settles with (`reconcilePayPalDonation`). A dry run does not call
+       it: settling or failing is all it does. */
+    if (donation.paymentMethod === "PAYPAL") {
+      if (dryRun) {
+        summary.leftAlone++;
+        continue;
+      }
+      try {
+        const { outcome } = await reconcilePayPalDonation(donation.id, { now });
+        if (outcome === "paid") {
+          summary.credited.push({ donationId: donation.id, amountUSD: donation.amountUSD ?? 0, paidAt: now.toISOString() });
+          summary.creditedTotalUSD += donation.amountUSD ?? 0;
+        } else if (outcome === "failed") {
+          summary.markedFailed.push({ donationId: donation.id, amountUSD: donation.amountUSD ?? 0, ageDays: Math.round(ageHours / 24) });
+        } else {
+          summary.leftAlone++;
+        }
+      } catch (error) {
+        summary.errors.push({ donationId: donation.id, error: error instanceof Error ? error.message.slice(0, 200) : String(error) });
+      }
       continue;
     }
 

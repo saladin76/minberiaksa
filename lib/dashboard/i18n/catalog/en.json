@@ -6661,5 +6661,8 @@
  "رمز الوصول لا يملك صلاحيتي whatsapp_business_management وwhatsapp_business_messaging.": "The access token lacks the whatsapp_business_management and whatsapp_business_messaging permissions.",
  "المزوّد معطّل داخل النظام. البيانات محفوظة ولن تُستخدم حتى يُعاد تفعيله.": "The provider is disabled in this system. Its data is saved and won't be used until it is enabled again.",
  "تعذرت قراءة إعدادات التكامل من قاعدة البيانات.": "Could not read the integration settings from the database.",
- "تعذر فك تشفير قيم محفوظة. تحقق من مفتاح تشفير الإعدادات.": "Could not decrypt saved values. Check the settings encryption key."
+ "تعذر فك تشفير قيم محفوظة. تحقق من مفتاح تشفير الإعدادات.": "Could not decrypt saved values. Check the settings encryption key.",
+ "{0} متر وقف": "{0} waqf metre(s)",
+ "{0} سهم وقف": "{0} waqf share(s)",
+ "أسطر الوقف جزء من قيمة التبرع ولا تُعدَّل من هنا.": "Waqf lines are part of the donation amount and cannot be edited here."
 }

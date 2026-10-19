@@ -160,6 +160,12 @@
         "reason": "Something stopped the payment from completing. We weren't given a specific reason.",
         "fix": "Try again, switch to a different card, or use the bank transfer option below."
       }
+    },
+    "alternate": {
+      "cta": "Faire un don maintenant, en toute fiabilité",
+      "badge": "Option fiable",
+      "title": "Finalisez votre don ici",
+      "description": "Un formulaire de paiement sécurisé, distinct de la tentative qui n'a pas abouti. Saisissez votre carte et finalisez votre don en une seule étape."
     }
   },
   "HomePage": {

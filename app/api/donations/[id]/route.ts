@@ -13,6 +13,7 @@ import {
   auditStreamForRole,
 } from '@/lib/audit-log';
 import { reconcileStripeDonation } from "@/lib/donations/reconcile-stripe-donation";
+import { reconcilePayPalDonation } from "@/lib/donations/paypal-donation";
 import { DONATION_TOKEN_PARAM, donationTokenMatches } from "@/lib/donations/access-token";
 import {
   applyPlanStatusAtProvider,
@@ -45,6 +46,12 @@ export async function GET(
     // the donation and increment campaign totals here so the success page
     // reflects reality. Safe for guests and logged-in donors alike.
     await reconcileStripeDonation(id);
+    // PayPal is the authority on an unconfirmed PayPal row too: when staff
+    // open it (the edit dialog), ask PayPal so the status they edit is real.
+    // Not for anonymous callers, who could otherwise drive PayPal calls by id.
+    if (isRevenueDashboardUser(session) && /^[a-f0-9]{24}$/i.test(id)) {
+      await reconcilePayPalDonation(id).catch((err) => console.error("[donation GET] PayPal reconcile failed:", id, err));
+    }
 
     const donation = await prisma.donation.findUnique({
       where: { id },
@@ -100,6 +107,9 @@ export async function GET(
             },
           },
         },
+        /* Waqf shares/metres are part of `amount` too; the edit dialog lists
+           them so its line total adds up to the donation. */
+        waqfItems: { select: { id: true, unit: true, count: true, unitPrice: true, amount: true } },
       },
     });
 
@@ -502,7 +512,7 @@ export async function PATCH(
 
     const existing = await prisma.donation.findUnique({
       where: { id },
-      include: { items: true, categoryItems: true },
+      include: { items: true, categoryItems: true, waqfItems: { select: { amount: true } } },
     });
     if (!existing) {
       return NextResponse.json({ error: 'Donation not found' }, { status: 404 });
@@ -608,8 +618,11 @@ export async function PATCH(
       : null;
 
     // Derived donation-level fields (only if items/categoryItems changed).
+    // Waqf lines are not edited here, but they are part of the donation's
+    // amount: leaving them out would shrink the donation by their value.
     const newLineSum = (newItems ?? existing.items).reduce((s, i) => s + i.amount, 0)
-      + (newCatItems ?? existing.categoryItems).reduce((s, i) => s + i.amount, 0);
+      + (newCatItems ?? existing.categoryItems).reduce((s, i) => s + i.amount, 0)
+      + existing.waqfItems.reduce((s, i) => s + i.amount, 0);
 
     const newAmount = (newItems || newCatItems) ? newLineSum : existing.amount;
     // totalAmount = donation amount + teamSupport + fees(if coverFees). Preserve

@@ -250,10 +250,42 @@ export default function DonationFailedPage() {
             {t("description")}
           </p>
           <p className="mt-3 text-white/70 text-xs sm:text-sm">{t("reassurance")}</p>
+          <a
+            href="#donate-again"
+            className="mt-6 inline-flex items-center gap-2 rounded-full bg-white px-6 py-3 text-sm font-bold text-[#A5243D] shadow-lg shadow-rose-900/25 transition-transform hover:-translate-y-0.5"
+          >
+            <ShieldCheck className="w-4 h-4" />
+            {t("alternate.cta")}
+          </a>
         </div>
       </section>
 
       <div className="max-w-3xl mx-auto px-4 py-8 sm:py-10 space-y-6 sm:space-y-8">
+        {/* ───────────── Donate again: hosted card form ──────────────────── */}
+        {/* A separate, hosted payment page that does not depend on the card
+            rails that just failed  the first thing a donor sees, so trying
+            again is one step, not a hunt through the advice below. */}
+        <section
+          id="donate-again"
+          className="scroll-mt-6 rounded-2xl border-2 border-[#A5243D]/30 bg-white shadow-xl shadow-[#A5243D]/10 ring-4 ring-[#A5243D]/5 overflow-hidden"
+        >
+          <div className="bg-gradient-to-br from-[#A5243D] to-[#7D1830] px-5 py-4 sm:px-7 sm:py-5 text-white">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-white/15 border border-white/25 px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wider">
+              <ShieldCheck className="w-3.5 h-3.5" />
+              {t("alternate.badge")}
+            </span>
+            <h2 className="mt-2 text-xl sm:text-2xl font-extrabold leading-tight">{t("alternate.title")}</h2>
+            <p className="mt-1 text-sm text-white/85 leading-relaxed">{t("alternate.description")}</p>
+          </div>
+          <iframe
+            src="https://charitygiving.net/iframe/eyJpdiI6IkxubFNEQnNnbU50R2V4dG5TeHg0dVE9PSIsInZhbHVlIjoiVkkwYkdUcnpwRHFsczd4dkRLY0Z2QT09IiwibWFjIjoiYjI5NTU5ZGZmZjdhMjllNTgwMzk2NTlhNTdlYzY3MjQwYWNiMjM1MzFmNjMxYjA1NTBmZGI4MDIxYTM4ODRjMyIsInRhZyI6IiJ9"
+            title={t("alternate.title")}
+            allow="payment"
+            className="block w-full border-0 bg-white"
+            style={{ height: 760 }}
+          />
+        </section>
+
         {/* ───────────── Loading skeleton (waiting on donation fetch) ─────── */}
         {loading && (
           <Card className="p-6 flex items-center justify-center gap-3 text-gray-500">

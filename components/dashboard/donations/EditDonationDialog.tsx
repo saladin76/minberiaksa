@@ -33,13 +33,15 @@ interface DonationDetail {
   currency: string;
   status: "PAID" | "FAILED";
   paidAt: string | null;
-  // null on one-time donations; set for monthly subscription rows. Monthly
-  // donations are treated as ناجح in the UI even with paidAt=null, so the
-  // edit dialog skips the قيد التأكيد option for them.
+  // null on one-time donations; set for recurring plan rows. A plan row with
+  // paidAt=null is as unconfirmed as a one-time one (e.g. a PayPal first
+  // instalment the donor never approved), so it gets the same قيد التأكيد.
   subscriptionId?: string | null;
   donor?: { name: string | null; email: string | null } | null;
   items: { campaignId: string; amount: number; campaign: { title: string } }[];
   categoryItems: { categoryId: string; amount: number; category: { name: string } }[];
+  /** Part of `amount`, but not editable here; shown so the lines add up. */
+  waqfItems?: { id: string; unit: "SHARE" | "METER"; count: number; unitPrice: number; amount: number }[];
 }
 
 interface Props {
@@ -92,14 +94,12 @@ export function EditDonationDialog({ donationId, onClose, onSaved }: Props) {
 
         const d = donRes.data as DonationDetail;
         setDonation(d);
-        // Monthly donations are surfaced as ناجح everywhere  default the
-        // edit dialog to "PAID" so saving stamps paidAt and contributes the
-        // amount to campaign currentAmount (no قيد التأكيد middle option).
-        const isMonthly = d.subscriptionId != null;
+        // Unconfirmed (paidAt=null) opens as قيد التأكيد for every donation,
+        // one-time or recurring: "PAID" is the admin saying the money arrived.
         setStatusChoice(
           d.status === "FAILED"
             ? "FAILED"
-            : d.paidAt === null && !isMonthly
+            : d.paidAt === null
               ? "PAID_PENDING"
               : "PAID"
         );
@@ -160,9 +160,14 @@ export function EditDonationDialog({ donationId, onClose, onSaved }: Props) {
     };
   }, [donationId, onClose]);
 
+  // Waqf lines are fixed here but count towards the donation amount.
+  const waqfSum = useMemo(
+    () => (donation?.waqfItems ?? []).reduce((s, it) => s + it.amount, 0),
+    [donation]
+  );
   const newAmountSum = useMemo(
-    () => editableItems.reduce((s, it) => s + (Number(it.amount) || 0), 0),
-    [editableItems]
+    () => editableItems.reduce((s, it) => s + (Number(it.amount) || 0), 0) + waqfSum,
+    [editableItems, waqfSum]
   );
 
   const hasInvalidLine = editableItems.some(
@@ -189,11 +194,10 @@ export function EditDonationDialog({ donationId, onClose, onSaved }: Props) {
 
   const dirty = useMemo(() => {
     if (!donation) return false;
-    const isMonthly = donation.subscriptionId != null;
     const originalChoice: "PAID" | "PAID_PENDING" | "FAILED" =
       donation.status === "FAILED"
         ? "FAILED"
-        : donation.paidAt === null && !isMonthly
+        : donation.paidAt === null
           ? "PAID_PENDING"
           : "PAID";
     if (originalChoice !== statusChoice) return true;
@@ -286,13 +290,8 @@ export function EditDonationDialog({ donationId, onClose, onSaved }: Props) {
   };
 
   const donor = donation?.donor?.name?.trim() || donation?.donor?.email || "—";
-  const isMonthly = !!donation && donation.subscriptionId != null;
   const wasContributing = !!donation && donation.status === "PAID" && donation.paidAt !== null;
-  // Pending toggle only applies to one-time donations. Monthly donations are
-  // treated as ناجح in dashboards regardless of paidAt, so the dialog hides
-  // the قيد التأكيد middle option for them.
-  const wasPending =
-    !!donation && donation.status === "PAID" && donation.paidAt === null && !isMonthly;
+  const wasPending = !!donation && donation.status === "PAID" && donation.paidAt === null;
   const statusWillRemoveContribution = wasContributing && statusChoice === "FAILED";
   const statusWillAddContribution =
     !!donation &&
@@ -455,6 +454,30 @@ export function EditDonationDialog({ donationId, onClose, onSaved }: Props) {
                       </div>
                     );
                   })}
+                </div>
+              )}
+
+              {(donation.waqfItems ?? []).length > 0 && (
+                <div className="space-y-1">
+                  {(donation.waqfItems ?? []).map((w) => (
+                    <div
+                      key={w.id}
+                      className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 p-2 text-xs"
+                    >
+                      <span className="shrink-0 rounded px-1.5 py-0.5 text-[10px] font-semibold bg-amber-50 text-amber-700">
+                        {dt("وقف")}
+                      </span>
+                      <span className="flex-1 text-slate-700">
+                        {w.unit === "METER" ? dt("{0} متر وقف", [w.count]) : dt("{0} سهم وقف", [w.count])}
+                      </span>
+                      <span className="w-24 text-right font-medium text-slate-800" dir="ltr">
+                        {w.amount}
+                      </span>
+                      <span className="w-4" />
+                    </div>
+                  ))}
+                  <p className="text-[11px] text-slate-500">
+                    {dt("أسطر الوقف جزء من قيمة التبرع ولا تُعدَّل من هنا.")}</p>
                 </div>
               )}
 

@@ -368,7 +368,7 @@ export default function MonthlySubscriptionsDashboardPage() {
   const [dateTo, setDateTo] = useState("");
   const [donationsSortBy, setDonationsSortBy] = useState<"date" | "amount">("date");
   const [donationsSortOrder, setDonationsSortOrder] = useState<"asc" | "desc">("desc");
-  const [donationsStatusFilter, setDonationsStatusFilter] = useState<"all" | "PAID" | "FAILED">("all");
+  const [donationsStatusFilter, setDonationsStatusFilter] = useState<"all" | "PAID" | "PENDING" | "FAILED">("all");
   /** Applied donor search (name or email) for أحدث الدفعات المتكررة  server-side. */
   const [donationsSearch, setDonationsSearch] = useState("");
   /** Applied donor search (name or email) for قائمة الاشتراكات  server-side, independent of the table above. */
@@ -2068,6 +2068,7 @@ export default function MonthlySubscriptionsDashboardPage() {
       <SelectContent>
         <SelectItem value="all" className="text-xs">{dt("كل الحالات")}</SelectItem>
         <SelectItem value="PAID" className="text-xs">{dt("ناجح")}</SelectItem>
+        <SelectItem value="PENDING" className="text-xs">{dt("قيد التأكيد")}</SelectItem>
         <SelectItem value="FAILED" className="text-xs">{dt("فاشل")}</SelectItem>
       </SelectContent>
     </Select>
@@ -2235,10 +2236,10 @@ export default function MonthlySubscriptionsDashboardPage() {
                                 {dt("فاشل")}</button>
                             ) : (
                               <span
-                                className={cn("inline-block px-1.5 py-px rounded-full text-[11px] font-medium", d.status === "PAID" && (d.paidAt || d.type === "MONTHLY") ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700")}
-                                title={d.status === "PAID" && !d.paidAt && d.type !== "MONTHLY" ? dt("تم بدء الدفع ولم يؤكده مزود الدفع بعد  لا يُحتسب في الإيرادات") : undefined}
+                                className={cn("inline-block px-1.5 py-px rounded-full text-[11px] font-medium", d.status === "PAID" && d.paidAt ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700")}
+                                title={d.status === "PAID" && !d.paidAt ? dt("تم بدء الدفع ولم يؤكده مزود الدفع بعد  لا يُحتسب في الإيرادات") : undefined}
                               >
-                                {d.status === "PAID" ? ((d.paidAt || d.type === "MONTHLY") ? dt("ناجح") : dt("قيد التأكيد")) : dt("معلق")}
+                                {d.status === "PAID" ? (d.paidAt ? dt("ناجح") : dt("قيد التأكيد")) : dt("معلق")}
                               </span>
                             )}
                           </td>

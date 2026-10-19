@@ -92,7 +92,7 @@ export interface ExportFormState {
   end: string;
   categoryId: string;
   campaignId: string;
-  status: "all" | "PAID" | "FAILED";
+  status: "all" | "PAID" | "PENDING" | "FAILED";
   type: "all" | "ONE_TIME" | "MONTHLY";
   subStatus: "all" | "ACTIVE" | "PAUSED" | "CANCELLED" | "PAYMENT_FAILED";
   /** Recurring plan cadence. */
@@ -371,6 +371,7 @@ export function ExportReportDialog(props: ExportReportDialogProps) {
                 <SelectContent>
                   <SelectItem value="all">{dt("الكل")}</SelectItem>
                   <SelectItem value="PAID">{dt("ناجح")}</SelectItem>
+                  <SelectItem value="PENDING">{dt("قيد التأكيد")}</SelectItem>
                   <SelectItem value="FAILED">{dt("فاشل")}</SelectItem>
                 </SelectContent>
               </Select>

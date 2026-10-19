@@ -6661,5 +6661,8 @@
  "رمز الوصول لا يملك صلاحيتي whatsapp_business_management وwhatsapp_business_messaging.": "Erişim belirtecinde whatsapp_business_management ve whatsapp_business_messaging izinleri yok.",
  "المزوّد معطّل داخل النظام. البيانات محفوظة ولن تُستخدم حتى يُعاد تفعيله.": "Sağlayıcı bu sistemde devre dışı. Verileri kayıtlı ve yeniden etkinleştirilene kadar kullanılmayacak.",
  "تعذرت قراءة إعدادات التكامل من قاعدة البيانات.": "Entegrasyon ayarları veritabanından okunamadı.",
- "تعذر فك تشفير قيم محفوظة. تحقق من مفتاح تشفير الإعدادات.": "Kayıtlı değerlerin şifresi çözülemedi. Ayarların şifreleme anahtarını kontrol edin."
+ "تعذر فك تشفير قيم محفوظة. تحقق من مفتاح تشفير الإعدادات.": "Kayıtlı değerlerin şifresi çözülemedi. Ayarların şifreleme anahtarını kontrol edin.",
+ "{0} متر وقف": "{0} metre vakıf",
+ "{0} سهم وقف": "{0} vakıf hissesi",
+ "أسطر الوقف جزء من قيمة التبرع ولا تُعدَّل من هنا.": "Vakıf satırları bağış tutarının parçasıdır ve buradan düzenlenemez."
 }

@@ -336,7 +336,20 @@ export async function settlePayPalDonation(input: {
 
 // ── Failure / cancel ────────────────────────────────────────────────────────
 
-async function failDonation(donationId: string, reason: string, extra: Record<string, unknown> = {}): Promise<ReturnResult> {
+/** Same marker `lib/donations/reconcile-unconfirmed.ts` puts on an aged-out Stripe row. */
+const ABANDONED_MARKER = "ABANDONED_NEVER_COMPLETED";
+
+/**
+ * `abandoned`: the donor never approved the order and is long gone. Recorded
+ * as FAILED like any other failure, but quietly: no "your donation failed"
+ * message and no failed-conversion event a day after they left.
+ */
+async function failDonation(
+  donationId: string,
+  reason: string,
+  extra: Record<string, unknown> = {},
+  options: { abandoned?: boolean } = {}
+): Promise<ReturnResult> {
   console.error("[paypal] donation failed:", donationId, reason);
   const donation = await prisma.donation.findUnique({
     where: { id: donationId },
@@ -349,13 +362,15 @@ async function failDonation(donationId: string, reason: string, extra: Record<st
       data: {
         status: "FAILED",
         provider: "PAYPAL",
-        providerTxnResult: "Failed",
-        providerErrorMessage: reason.slice(0, 500),
+        providerTxnResult: options.abandoned ? "Abandoned" : "Failed",
+        providerErrorMessage: (options.abandoned ? `${ABANDONED_MARKER} — ${reason}` : reason).slice(0, 500),
         providerRaw: { ...providerRawObject(donation.providerRaw), ...extra } as Prisma.InputJsonValue,
       },
     });
-    runAfterResponse(() => dispatchEvent("DONATION_FAILED", { donationId }));
-    void sendDonationFailedConversions(donationId);
+    if (!options.abandoned) {
+      runAfterResponse(() => dispatchEvent("DONATION_FAILED", { donationId }));
+      void sendDonationFailedConversions(donationId);
+    }
   }
   /* A plan whose first instalment never settled was never started. */
   if (donation.subscriptionId) {
@@ -365,6 +380,101 @@ async function failDonation(donationId: string, reason: string, extra: Record<st
     });
   }
   return { kind: "failed", reason };
+}
+
+// ── Reconcile ───────────────────────────────────────────────────────────────
+
+export type PayPalReconcileOutcome =
+  /** Not a PayPal donation still waiting on PayPal. */
+  | "skipped"
+  /** PayPal had the money: settled now (or already). */
+  | "paid"
+  /** Captured, but PayPal is holding the capture for review. */
+  | "pending"
+  /** Still waiting on the donor, and recent enough that they may yet approve. */
+  | "open"
+  | "failed";
+
+/** Long past the point where an order nobody approved could still be paid. */
+const UNAPPROVED_STALE_HOURS = 24;
+
+/**
+ * Ask PayPal what happened to a donation that has no `paidAt` yet, and make
+ * the row say the same. The return route is the normal way a PayPal donation
+ * settles; this covers a donor who approved but never came back (the order is
+ * captured now), a capture whose answer was lost, and a donor who never
+ * approved (the row is failed once the order is stale, instead of sitting as
+ * if it might still be paid).
+ *
+ * Every settlement goes through the same checks as the return route, and both
+ * effects re-check `paidAt`, so this is safe to call from any page view or job.
+ */
+export async function reconcilePayPalDonation(
+  donationId: string,
+  options: { staleAfterHours?: number; now?: Date } = {}
+): Promise<{ outcome: PayPalReconcileOutcome; orderStatus: string | null }> {
+  const { staleAfterHours = UNAPPROVED_STALE_HOURS, now = new Date() } = options;
+  if (!isPayPalConfigured()) return { outcome: "skipped", orderStatus: null };
+
+  const donation = await prisma.donation.findUnique({
+    where: { id: donationId },
+    select: { id: true, paidAt: true, status: true, paymentMethod: true, paypalOrderId: true, providerRaw: true, createdAt: true },
+  });
+  if (!donation || donation.paidAt || donation.status === "FAILED" || donation.paymentMethod !== "PAYPAL") {
+    return { outcome: "skipped", orderStatus: null };
+  }
+  /* A later cycle of a plan is charged by `paypal-recurring.ts`, which keeps
+     its own request key and holds an unclear charge for staff; it is never
+     second-guessed from here. */
+  if (providerRawObject(donation.providerRaw).paypalRecurring) return { outcome: "skipped", orderStatus: null };
+
+  const stale = (now.getTime() - donation.createdAt.getTime()) / 3_600_000 > staleAfterHours;
+  const snapshot = snapshotOf(donation.providerRaw);
+  const orderId = donation.paypalOrderId ?? snapshot.orderId ?? "";
+
+  if (!orderId) {
+    // The donor never reached PayPal: no order was ever created for this row.
+    if (!stale) return { outcome: "open", orderStatus: null };
+    await failDonation(donation.id, "No PayPal order was ever created for this donation", {}, { abandoned: true });
+    return { outcome: "failed", orderStatus: null };
+  }
+
+  let order: PayPalOrder;
+  try {
+    order = await getPayPalOrder(orderId);
+  } catch (err) {
+    // PayPal forgets an order that expired unapproved.
+    if (err instanceof PayPalError && err.status === 404) {
+      if (!stale) return { outcome: "open", orderStatus: null };
+      await failDonation(donation.id, `PayPal no longer has order ${orderId} (expired unapproved)`, {}, { abandoned: true });
+      return { outcome: "failed", orderStatus: null };
+    }
+    throw err;
+  }
+
+  if (order.status === "COMPLETED") {
+    const result = await verifyAndSettle(donation.id, order, snapshot);
+    return { outcome: result.kind, orderStatus: order.status };
+  }
+  if (order.status === "APPROVED") {
+    // Approved on PayPal, but the donor never made it back to the return route.
+    const result = await completePayPalReturn({ donationId: donation.id, orderId });
+    return { outcome: result.kind, orderStatus: order.status };
+  }
+  if (order.status === "VOIDED") {
+    await failDonation(donation.id, "PayPal voided the order", { paypalOrder: paypalAuditView(order) });
+    return { outcome: "failed", orderStatus: order.status };
+  }
+
+  // CREATED / SAVED / PAYER_ACTION_REQUIRED: the donor has not approved it.
+  if (!stale) return { outcome: "open", orderStatus: order.status };
+  await failDonation(
+    donation.id,
+    `Donor did not approve the PayPal payment (order ${order.status})`,
+    { paypalOrder: paypalAuditView(order) },
+    { abandoned: true }
+  );
+  return { outcome: "failed", orderStatus: order.status };
 }
 
 /** The donor pressed "cancel" on PayPal. Only the order we created can cancel it. */

@@ -4,6 +4,7 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 import { prisma } from "@/lib/prisma";
 import { sessionHasDashboardPermission } from "@/lib/dashboard/permissions";
 import { flattenGatewayRaw } from "@/lib/donations/gateway-raw";
+import { reconcilePayPalDonation } from "@/lib/donations/paypal-donation";
 
 /**
  * What the payment gateway told us about one donation  the references a
@@ -23,6 +24,9 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
 
   const { id } = await params;
   if (!/^[a-f0-9]{24}$/i.test(id)) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+  // An unconfirmed PayPal row: ask PayPal first, so the popup shows its answer.
+  await reconcilePayPalDonation(id).catch((err) => console.error("[gateway] PayPal reconcile failed:", id, err));
 
   const donation = await prisma.donation.findUnique({
     where: { id },

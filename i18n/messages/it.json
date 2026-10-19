@@ -2467,5 +2467,13 @@
     "noAccount": "Non hai un account?",
     "createOne": "Creane uno",
     "logoAlt": "Logo"
+  },
+  "DonationFailed": {
+    "alternate": {
+      "cta": "Dona ora in modo affidabile",
+      "badge": "Opzione affidabile",
+      "title": "Completa qui la tua donazione",
+      "description": "Un modulo di pagamento sicuro, separato dal tentativo non andato a buon fine. Inserisci la carta e completa la donazione in un solo passaggio."
+    }
   }
 }

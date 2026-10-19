@@ -42,6 +42,20 @@ export const PAID_CONTRIBUTING_FILTER: Prisma.DonationWhereInput = {
   paidAt: { not: null },
 };
 
+/**
+ * The dashboards' donation status filter, the same three states the tables
+ * show: "PAID" (ناجح) is settled money, exactly `PAID_DONATION_FILTER`;
+ * "PENDING" (قيد التأكيد) is a row still waiting on its gateway; "FAILED" as
+ * stored. Anything else filters nothing. AND-compose it: the PENDING arm
+ * carries its own `OR` (Prisma+MongoDB `null` misses an unset field).
+ */
+export function donationStatusWhere(status: string | null | undefined): Prisma.DonationWhereInput | null {
+  if (status === "PAID") return PAID_DONATION_FILTER;
+  if (status === "PENDING") return { status: "PAID", OR: [{ paidAt: null }, { paidAt: { isSet: false } }] };
+  if (status === "FAILED") return { status: "FAILED" };
+  return null;
+}
+
 /** Single-row USD value for stats when `amountUSD` was never backfilled. */
 export function donationRowUsdApprox(row: {
   amountUSD: number | null;

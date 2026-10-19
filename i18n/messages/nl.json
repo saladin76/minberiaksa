@@ -2467,5 +2467,13 @@
     "noAccount": "Nog geen account?",
     "createOne": "Maak er een aan",
     "logoAlt": "Logo"
+  },
+  "DonationFailed": {
+    "alternate": {
+      "cta": "Doneer nu op de betrouwbare manier",
+      "badge": "Betrouwbare optie",
+      "title": "Rond je donatie hier af",
+      "description": "Een veilig betaalformulier, los van de poging die niet lukte. Vul je kaartgegevens in en rond je donatie in één stap af."
+    }
   }
 }

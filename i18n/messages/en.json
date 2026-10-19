@@ -128,6 +128,12 @@
         "reason": "Something stopped the payment from completing. We weren't given a specific reason.",
         "fix": "Try again, switch to a different card, or use the bank transfer option below."
       }
+    },
+    "alternate": {
+      "cta": "Donate now the reliable way",
+      "badge": "Reliable option",
+      "title": "Complete your donation here",
+      "description": "A secure payment form, separate from the attempt that didn't go through. Enter your card details and finish your donation in one step."
     }
   },
   "BlogCard": {

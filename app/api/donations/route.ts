@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { donationStatusWhere } from "@/lib/dashboard/donation-usd-revenue";
 import { isValidLocale } from "@/lib/locales";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../auth/[...nextauth]/options";
@@ -82,7 +83,6 @@ export async function GET(request: NextRequest) {
       ...(donationTypeFilter === "MONTHLY" && { subscriptionId: { not: null } }),
       ...(!isAdmin && { donorId: session.user.id }),
       ...(Object.keys(dateFilter).length > 0 && { createdAt: dateFilter }),
-      ...(statusFilter && ["PAID", "FAILED"].includes(statusFilter) && { status: statusFilter }),
     };
     if (categoryId && isAdmin) {
       baseWhere.OR = [
@@ -162,7 +162,10 @@ export async function GET(request: NextRequest) {
 
     const frequencyWhere = donationFrequencyWhere(frequencyFilter);
 
-    const extraFilters = [searchWhere, localeWhere, countryWhere, donationTypeWhere, frequencyWhere].filter(
+    // ناجح / قيد التأكيد / فاشل, as the tables show them.
+    const statusWhere = donationStatusWhere(statusFilter);
+
+    const extraFilters = [searchWhere, localeWhere, countryWhere, donationTypeWhere, frequencyWhere, statusWhere].filter(
       (w) => w != null
     );
     const where: Record<string, unknown> =
