@@ -50,6 +50,7 @@ export function SmartWhatsappDialog({
   userName,
   phone,
   initialMode,
+  onOpenConversation,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -57,6 +58,7 @@ export function SmartWhatsappDialog({
   userName?: string | null;
   phone?: string | null;
   initialMode?: "FREEFORM" | "UTILITY" | "MARKETING";
+  onOpenConversation?: () => void;
 }) {
   const [ctx, setCtx] = React.useState<SmartContext | null>(null);
   const [loading, setLoading] = React.useState(false);
@@ -156,7 +158,7 @@ export function SmartWhatsappDialog({
       title: dt("رسالة خدمة"),
       desc: ctx?.directSendEnabled ? "Direct Send · Utility + fallback" : "Utility Template fallback",
       icon: ShieldCheck,
-      disabled: Boolean(ctx?.doNotContact) || Boolean(ctx && !ctx.directSendEnabled && ctx.utilityTemplates.length === 0),
+      disabled: Boolean(ctx?.doNotContact),
     },
     {
       id: "MARKETING" as const,
@@ -217,7 +219,7 @@ export function SmartWhatsappDialog({
                       key={tab.id}
                       type="button"
                       disabled={tab.disabled}
-                      onClick={() => setMode(tab.id)}
+                      onClick={() => { setMode(tab.id); setTemplateId(""); }}
                       className={cn(
                         "rounded-xl border p-3 text-start transition",
                         active ? "border-brand bg-brand/5 ring-1 ring-brand/20" : "border-slate-200 hover:bg-slate-50",
@@ -238,6 +240,7 @@ export function SmartWhatsappDialog({
                 <div className="space-y-2">
                   <label className="text-xs font-semibold text-slate-700">{dt("القالب التسويقي المعتمد")}</label>
                   <select
+                    aria-label={dt("قالب Marketing معتمد")}
                     value={templateId}
                     onChange={(e) => setTemplateId(e.target.value)}
                     className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm"
@@ -247,6 +250,11 @@ export function SmartWhatsappDialog({
                       <option key={template.id} value={template.id}>{template.name}</option>
                     ))}
                   </select>
+                  {ctx.marketingTemplates.length === 0 && (
+                    <p role="status" className="text-xs leading-5 text-amber-800">
+                      {dt("لا توجد نسخة معتمدة من القالب لهذا الرقم/اللغة.")}
+                    </p>
+                  )}
                   <p className="text-[11px] leading-5 text-slate-500">
                     {dt("خارج نافذة 24 ساعة لا تُرسل الرسائل التسويقية كنص حر. المنصة تستخدم نسخة Meta المعتمدة المناسبة للغة والرقم التجاري.")}</p>
                 </div>
@@ -278,6 +286,7 @@ export function SmartWhatsappDialog({
                       {dt("قالب Utility الاحتياطي ")}{ctx.directSendEnabled ? dt("(موصى به)") : dt("(مطلوب)")}
                     </label>
                     <select
+                      aria-label={dt("قالب Utility الاحتياطي ")}
                       value={templateId}
                       onChange={(e) => setTemplateId(e.target.value)}
                       className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm"
@@ -287,6 +296,11 @@ export function SmartWhatsappDialog({
                         <option key={template.id} value={template.id}>{template.name}</option>
                       ))}
                     </select>
+                    {ctx.utilityTemplates.length === 0 && (
+                      <p role="status" className="text-xs leading-5 text-amber-800">
+                        {dt("لا توجد نسخة معتمدة من القالب لهذا الرقم/اللغة.")}
+                      </p>
+                    )}
                     <p className="text-[11px] leading-5 text-slate-500">
                       {dt("إذا تعذّر Direct Send، يرسل النظام القالب المعتمد بدل فقد الرسالة. محتوى القالب هو الذي سيصل عند استخدام fallback.")}</p>
                   </div>
@@ -311,7 +325,14 @@ export function SmartWhatsappDialog({
 
               <div className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 pt-4">
                 <Button variant="outline" size="sm" asChild>
-                  <Link href={`/dashboard/communication/inbox?q=${encodeURIComponent(ctx.phone ?? "")}`}>
+                  <Link
+                    href={`/dashboard/communication/inbox?q=${encodeURIComponent(ctx.phone ?? "")}`}
+                    onClick={(event) => {
+                      if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+                      onOpenChange(false);
+                      onOpenConversation?.();
+                    }}
+                  >
                     <History className="me-1.5 h-4 w-4" />
                     {dt("سجل المحادثة")}</Link>
                 </Button>
@@ -342,3 +363,4 @@ export function SmartWhatsappDialog({
     </Dialog>
   );
 }
+

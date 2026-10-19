@@ -156,10 +156,23 @@ export function WhatsappInbox() {
   const [notice, setNotice] = useState<{ tone: "ok" | "error"; text: string } | null>(null);
   const [smartOpen, setSmartOpen] = useState(false);
   const [smartInitialMode, setSmartInitialMode] = useState<"FREEFORM" | "UTILITY" | "MARKETING" | undefined>(undefined);
-  const senderSelectionReady = useRef(false);
+  const senderSelectionReady = useRef(Boolean(initialQuery.trim()));
+  const listRequest = useRef(0);
   const timelineRef = useRef<HTMLDivElement | null>(null);
 
+  // A donor-history link must not inherit a remembered business-number filter.
+  // Also handle links opened while this inbox is already mounted.
+  useEffect(() => {
+    setQuery(initialQuery);
+    if (initialQuery.trim()) {
+      senderSelectionReady.current = true;
+      setSenderId("");
+      setFilter("all");
+    }
+  }, [initialQuery]);
+
   const loadList = useCallback(async (silent = false) => {
+    const request = ++listRequest.current;
     if (!silent) setLoadingList(true);
     setListError(null);
     try {
@@ -168,6 +181,7 @@ export function WhatsappInbox() {
       if (query.trim()) params.set("q", query.trim());
       const res = await fetch(`/api/dashboard/communication/inbox?${params}`, { cache: "no-store" });
       const data = await res.json();
+      if (request !== listRequest.current) return;
       if (!res.ok || !data.ok) throw new Error(data.error ?? "load failed");
       const nextConversations = data.conversations ?? [];
       const nextSenders = data.senders ?? [];
@@ -199,13 +213,17 @@ export function WhatsappInbox() {
         );
       }
     } catch (error) {
+      if (request !== listRequest.current) return;
       setListError((error as Error).message || dt("تعذّر تحميل صندوق واتساب"));
     } finally {
-      if (!silent) setLoadingList(false);
+      if (request === listRequest.current) setLoadingList(false);
     }
   }, [filter, senderId, query]);
 
-  useEffect(() => { void loadList(); }, [loadList]);
+  useEffect(() => {
+    void loadList();
+    return () => { listRequest.current += 1; };
+  }, [loadList]);
 
   // Keep an operational inbox fresh without forcing the team to click «تحديث».
   // Silent polling preserves the current list on transient errors instead of
@@ -712,3 +730,4 @@ export function WhatsappInbox() {
     </div>
   );
 }
+

@@ -695,6 +695,7 @@ export function ViewUserProfileDialog({
             target={{ kind: "user", userId: user.id }}
           />
           <SmartWhatsappDialog
+        onOpenConversation={() => onOpenChange(false)}
             open={smartWhatsappOpen}
             onOpenChange={setSmartWhatsappOpen}
             userId={user.id}
@@ -706,3 +707,4 @@ export function ViewUserProfileDialog({
     </Dialog>
   );
 }
+
