@@ -35,7 +35,8 @@ const indexes = [
   },
 ];
 async function run() {
-  if (!process.argv.includes("--apply")) {
+ if (process.argv.includes("--production") && process.env.VERCEL_ENV !== "production") { console.log("Content editor indexes: production-only step skipped"); return; }
+  if (!process.argv.includes("--apply") && !process.argv.includes("--production")) {
     console.log(JSON.stringify({ dryRun: true, indexes }, null, 2));
     return;
   }

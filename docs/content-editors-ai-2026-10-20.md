@@ -61,3 +61,7 @@ Generate both Prisma clients. Use a replica-set-backed MongoDB database for tran
 On an isolated preview database, verify a save/read round-trip for all five kinds, conflicting edits in two sessions, one live translation, one live SEO request and actual public metadata. Confirm image descriptions and historical category redirects on the rendered pages. These authenticated host checks have not been claimed as completed locally.
 
 For rollback, revert the application commit. Optional editorial fields and new collections can remain without affecting the old application. Preserve historical category redirects if links were changed after rollout.
+
+## Production index setup
+
+Vercel production builds run the additive index setup after the application build succeeds. The `--production` mode exits without database access for non-production builds. Index failure fails the deployment before domain assignment; existing data and indexes are never deleted. Gözbebekleri also provisions lookup/unique indexes for its new category cards and values.

@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "postinstall": "prisma generate && prisma generate --schema prisma/integration-settings.schema.prisma",
-    "build": "npm run test:content-editors && npm run typecheck:content-editor-service && npm run test:integration-settings && prisma generate && prisma generate --schema prisma/integration-settings.schema.prisma && npm run typecheck:communication-runtime && npm run typecheck:integration-release && npm run typecheck:baseline && npm run lint:ci && next build",
+    "build": "npm run test:content-editors && npm run typecheck:content-editor-service && npm run test:integration-settings && prisma generate && prisma generate --schema prisma/integration-settings.schema.prisma && npm run typecheck:communication-runtime && npm run typecheck:integration-release && npm run typecheck:baseline && npm run lint:ci && next build && node --import tsx scripts/ensure-content-editor-indexes.ts --production",
     "start": "next start",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
@@ -40,7 +40,7 @@
     "blog:seed:dry": "tsx prisma/seed/seed-posts.ts --dry",
     "blog:seed": "tsx prisma/seed/seed-posts.ts",
     "blog:seed:replace": "tsx prisma/seed/seed-posts.ts --replace",
-    "build:vercel": "npm run test:content-editors && npm run typecheck:content-editor-service && npm run typecheck:communication-runtime && npm run typecheck:integration-release && next build",
+    "build:vercel": "npm run test:content-editors && npm run typecheck:content-editor-service && npm run typecheck:communication-runtime && npm run typecheck:integration-release && next build && node --import tsx scripts/ensure-content-editor-indexes.ts --production",
     "quality:ci": "npm run test:integration-settings && npm run typecheck:baseline && npm run lint:ci",
     "test:content-editors": "node --import tsx --test tests/content-editor/*.test.ts",
     "test:content-editors:browser": "node --import tsx scripts/content-editor-browser-test.mjs",
