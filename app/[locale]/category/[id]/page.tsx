@@ -1,3 +1,5 @@
+import { applyEditorialSeo,readPublicEditorialSeo } from '@/lib/content-editor/public-seo';
+import { EditorialFaq } from '@/components/content/EditorialFaq';
 import React from "react";
 import { Metadata } from "next";
 import { notFound, redirect, permanentRedirect } from "next/navigation";
@@ -55,7 +57,7 @@ async function fetchCategoryForSeo(idOrSlug: string) {
   });
 }
 
-export async function generateMetadata({ params }: Props): Promise<Metadata> {
+async function generateBaseMetadata({ params }: Props): Promise<Metadata> {
   const { id, locale } = await params;
   const seo = LOCALE_SEO[locale as Locale] ?? LOCALE_SEO.en;
   // Always anchor canonical to the requested URL so the parent layout's
@@ -189,7 +191,10 @@ export default async function CategoryPage({ params, searchParams }: Props) {
     <MinbarMessages locale={locale} namespaces={NAMESPACES}>
       <PageBanners locale={locale} page="projects" slot="top" />
       <CategoryLandingPage page={page} />
+      <EditorialFaq kind="categories" contentKey={decodeURIComponent(id)} locale={locale}/>
       <PageBanners locale={locale} page="projects" slot="bottom" />
     </MinbarMessages>
   );
 }
+
+export async function generateMetadata(args:Props):Promise<Metadata>{const {id,locale}=await args.params;const [base,extra]=await Promise.all([generateBaseMetadata(args),readPublicEditorialSeo('categories',decodeURIComponent(id),locale)]);return applyEditorialSeo(base,extra);}

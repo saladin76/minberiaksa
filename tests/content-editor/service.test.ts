@@ -15,6 +15,7 @@ import {
   documentFor,
   fingerprint,
   saveContent,
+  saveWorkspace,
   type Delegate,
   type Store,
 } from "../../lib/content-editor/service";
@@ -26,7 +27,243 @@ import {
 } from "../../lib/content-editor/urls";
 import { sessionHasDashboardPermission } from "../../lib/dashboard/permissions";
 import type { Session } from "next-auth";
+import {
+  validateWorkspaceSettings,
+  safeEditorUrl,
+} from "../../lib/content-editor/workspace-settings";
 const id = "111111111111111111111111";
+test("editor settings never accept financial totals or baseline amounts", () => {
+  for (const key of [
+    "currentAmount",
+    "baselineAmount",
+    "isDeleted",
+    "editorVersion",
+  ])
+    assert.throws(() =>
+      validateWorkspaceSettings(
+        "campaigns",
+        { goalType: "OPEN" },
+        { [key]: 100 },
+      ),
+    );
+});
+test("editing default donation presets preserves every currency override", () => {
+  const row = {
+    goalType: "OPEN",
+    suggestedDonations: {
+      amounts: [10, 20],
+      byCurrency: { TRY: [100, 200], USD: [15, 25] },
+    },
+    suggestedShareCounts: { counts: [1, 2], priceByCurrency: { TRY: 400 } },
+  };
+  const result = validateWorkspaceSettings("campaigns", row, {
+    defaultDonationAmounts: [30, 60],
+    defaultShareCounts: [3, 6],
+  });
+  assert.deepEqual(result.suggestedDonations, {
+    amounts: [30, 60],
+    byCurrency: { TRY: [100, 200], USD: [15, 25] },
+  });
+  assert.deepEqual(result.suggestedShareCounts, {
+    counts: [3, 6],
+    priceByCurrency: { TRY: 400 },
+  });
+});
+test("category page-only controls are never enabled for a model that lacks those fields", () => {
+  assert.throws(() =>
+    validateWorkspaceSettings(
+      "categories",
+      {},
+      { heroImage: "https://example.org/hero.jpg" },
+    ),
+  );
+  assert.deepEqual(
+    validateWorkspaceSettings(
+      "categories",
+      { heroImage: null },
+      { heroImage: "https://example.org/hero.jpg" },
+    ),
+    { heroImage: "https://example.org/hero.jpg" },
+  );
+  assert.throws(() =>
+    validateWorkspaceSettings(
+      "categories",
+      { statGoalValue: null },
+      { statGoalValue: 1.5 },
+    ),
+  );
+});
+test("banner settings reject unmounted placements and disabled locales", () => {
+  assert.throws(() =>
+    validateWorkspaceSettings(
+      "urgent-banners",
+      {},
+      { placements: ["madeUp:top"] },
+    ),
+  );
+  assert.throws(() =>
+    validateWorkspaceSettings(
+      "urgent-banners",
+      {},
+      { locales: ["not-a-locale"] },
+    ),
+  );
+});
+test("workspace links reject script schemes, network-relative paths and backslashes", () => {
+  for (const url of [
+    "javascript:alert(1)",
+    "//other.example",
+    "/\\other.example",
+    "https://a.example/ bad",
+  ])
+    assert.equal(safeEditorUrl(url), false);
+  for (const url of [
+    "/ar/projects",
+    "https://example.org/image.jpg",
+    "#projects",
+    "",
+  ])
+    assert.equal(safeEditorUrl(url), true);
+});
+test("advanced SEO has bounded typed values and validates FAQ structure", () => {
+  const fields = fieldsFor("blog", {});
+  assert.throws(() => validateChanges(fields, { seoNoIndex: "yes" }));
+  assert.throws(() =>
+    validateChanges(fields, { ogImage: "javascript:alert(1)" }),
+  );
+  assert.throws(() =>
+    validateChanges(fields, { faqContent: '[{"q":1,"a":"text"}]' }),
+  );
+  assert.throws(() => validateChanges(fields, { ogTitle: "x".repeat(71) }));
+  assert.deepEqual(
+    validateChanges(fields, {
+      seoNoIndex: "true",
+      faqContent: '[{"q":"Question","a":"Answer"}]',
+    }),
+    { seoNoIndex: "true", faqContent: '[{"q":"Question","a":"Answer"}]' },
+  );
+});
+test("one workspace save commits multiple language drafts and safe settings together", async () => {
+  const initial = {
+    id,
+    title: "مشروع",
+    description: "وصف",
+    goalType: "OPEN",
+    targetAmount: 0,
+    currentAmount: 742,
+    baselineAmount: 500,
+    isActive: true,
+    translations: [{ locale: "en", title: "Project", description: "Old" }],
+  };
+  const m = memory("campaigns", initial);
+  const saved = await saveWorkspace(m.store, {
+    kind: "campaigns",
+    id,
+    locale: "en",
+    revision: fingerprint(initial),
+    changes: { title: "Edited project", description: "Edited body" },
+    localeChanges: { ar: { title: "مشروع جديد", description: "وصف جديد" } },
+    settings: { isActive: false },
+  });
+  assert.equal(saved.values.ar.title, "مشروع جديد");
+  assert.equal(saved.values.en.title, "Edited project");
+  assert.equal(m.read().isActive, false);
+  assert.equal(m.read().currentAmount, 742);
+  assert.equal(m.read().baselineAmount, 500);
+});
+test("invalid later language rolls back every earlier language and all settings", async () => {
+  const initial = {
+    id,
+    title: "مشروع",
+    description: "وصف",
+    goalType: "OPEN",
+    targetAmount: 0,
+    isActive: true,
+    translations: [],
+  };
+  const m = memory("campaigns", initial);
+  await assert.rejects(() =>
+    saveWorkspace(m.store, {
+      kind: "campaigns",
+      id,
+      locale: "en",
+      revision: fingerprint(initial),
+      changes: { title: "", description: "Body" },
+      localeChanges: { ar: { title: "تغيير عربي" } },
+      settings: { isActive: false },
+    }),
+  );
+  assert.deepEqual(m.read(), initial);
+});
+test("category locale slugs leave Arabic and other languages unchanged", async () => {
+  const initial = {
+    id,
+    name: "تصنيف",
+    slug: "arabic-category",
+    translations: [
+      { locale: "en", name: "Category", slug: "old-category" },
+      { locale: "fr", name: "Catégorie", slug: "categorie" },
+    ],
+    values: [],
+    infoCards: [],
+  };
+  const m = memory("categories", initial);
+  const result = await changeCategorySlug(m.store, {
+    id,
+    revision: fingerprint(initial),
+    slug: "new-category",
+    confirmation: "new-category",
+    actor: "tester",
+    locale: "en",
+  });
+  assert.equal(m.read().slug, "arabic-category");
+  assert.equal(result.slugs.en, "new-category");
+  assert.equal(result.slugs.fr, "categorie");
+  assert.equal(result.previousSlugs[0].locale, "en");
+  assert.ok((m.read().previousSlugs as string[]).includes("old-category"));
+});
+test("an optional locale video never blocks content completion and rejects unsafe URLs", () => {
+  const row = {
+    title: "مشروع",
+    description: "نص",
+    videoUrl: "https://example.org/video",
+    translations: [{ locale: "en", title: "Project", description: "Body" }],
+  };
+  assert.equal(statuses("campaigns", row).en.complete, true);
+  assert.throws(() =>
+    validateChanges(fieldsFor("campaigns", row), {
+      videoUrl: "javascript:alert(1)",
+    }),
+  );
+  assert.deepEqual(
+    validateChanges(fieldsFor("campaigns", row), {
+      videoUrl: "https://example.org/english-video",
+    }),
+    { videoUrl: "https://example.org/english-video" },
+  );
+});
+test("technical blocks cannot be smuggled into campaign settings", async () => {
+  const initial = {
+    id,
+    title: "مشروع",
+    description: "نص",
+    goalType: "OPEN",
+    targetAmount: 0,
+    translations: [],
+  };
+  const m = memory("campaigns", initial);
+  await assert.rejects(() =>
+    saveWorkspace(m.store, {
+      kind: "campaigns",
+      id,
+      revision: fingerprint(initial),
+      locale: "ar",
+      changes: { title: "تغيير" },
+      settings: { blocks: [] },
+    }),
+  );
+  assert.deepEqual(m.read(), initial);
+});
 const rich = (value: string) =>
   JSON.stringify({
     type: "doc",
@@ -502,8 +739,9 @@ test("a copied Arabic translation is not counted as localized content", () => {
 });
 
 test("legacy settings writes compare the version loaded with the form", async () => {
-  const { contentWriteWhere } =
-    await import("../../lib/content-editor/legacy-write");
+  const { contentWriteWhere } = await import(
+    "../../lib/content-editor/legacy-write"
+  );
   assert.deepEqual(
     contentWriteWhere({ id }, { expectedEditorVersion: "loaded-version" }),
     { id, AND: [{ OR: [{ editorVersion: "loaded-version" }] }] },

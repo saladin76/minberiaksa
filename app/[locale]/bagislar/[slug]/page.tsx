@@ -16,6 +16,8 @@ import ProjectDetail from "@/components/minbar/projects/ProjectDetail";
 import SuperCategoryPage from "@/components/minbar/projects/SuperCategoryPage";
 import { getSuperCategory } from "@/lib/minbar/super-category";
 import PageBanners from "@/components/minbar/banners/PageBanners";
+import { applyEditorialSeo,readPublicEditorialSeo } from '@/lib/content-editor/public-seo';
+import { EditorialFaq } from '@/components/content/EditorialFaq';
 
 interface Props {
   params: Promise<{ locale: string; slug: string }>;
@@ -32,13 +34,13 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
      pages live under /projects/<slug> and are rows, not files. */
   const superCategory = await getSuperCategory(key, locale);
   if (superCategory) {
-    return buildPageMetadata(locale, {
+    return applyEditorialSeo(buildPageMetadata(locale, {
       title: superCategory.metaTitle || superCategory.title,
       description: (superCategory.metaDescription || superCategory.intro || superCategory.subtitle),
       path: `/${slugFor("projectDetail", locale)}/${superCategory.slug}`,
       image: superCategory.heroImage || undefined,
       imageAlt: superCategory.imageAlt,
-    });
+    }),await readPublicEditorialSeo('super-categories',key,locale));
   }
 
   const project = await getProject(key, locale);
@@ -66,7 +68,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     meta.openGraph = { ...meta.openGraph, ...(ogTitle ? { title: ogTitle } : {}), ...(ogDescription ? { description: ogDescription } : {}) };
     meta.twitter = { ...meta.twitter, ...(ogTitle ? { title: ogTitle } : {}), ...(ogDescription ? { description: ogDescription } : {}) };
   }
-  return meta;
+  return applyEditorialSeo(meta,await readPublicEditorialSeo('campaigns',project.id,locale));
 }
 
 /**
@@ -85,6 +87,7 @@ export default async function ProjectPage({ params }: Props) {
       <MinbarMessages locale={locale} namespaces={NAMESPACES}>
         <PageBanners locale={locale} page="projectDetail" slot="top" />
         <SuperCategoryPage page={superCategory} />
+        <EditorialFaq kind="super-categories" contentKey={key} locale={locale}/>
         <PageBanners locale={locale} page="projectDetail" slot="bottom" />
       </MinbarMessages>
     );
@@ -123,6 +126,7 @@ export default async function ProjectPage({ params }: Props) {
       <MinbarMessages locale={locale} namespaces={NAMESPACES}>
         <PageBanners locale={locale} page="projectDetail" slot="top" />
         <ProjectDetail project={project} updates={updates} gallery={gallery} related={related} donorCount={donorCount} comments={comments} />
+        <EditorialFaq kind="campaigns" contentKey={project.id} locale={locale}/>
         <PageBanners locale={locale} page="projectDetail" slot="bottom" />
       </MinbarMessages>
     </>

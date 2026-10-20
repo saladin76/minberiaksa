@@ -136,7 +136,7 @@ export default function CategoriesPage() {
       setCategories(normalized);
     } catch (error) {
       console.error('Error fetching categories:', error);
-      toast.error(dt("فشل في تحميل الحملات"));
+      toast.error(dt("فشل في تحميل التصنيفات"));
     } finally {
       setLoading(false);
     }
@@ -151,12 +151,12 @@ export default function CategoriesPage() {
       setCategories(prev => prev.map(c => c.id === category.id ? { ...c, isActive: nextActive } : c));
       toast.success(
         nextActive
-          ? dt("تم تفعيل الحملة وتفعيل {0} مشروع تابع", [cascaded])
-          : dt("تم تعطيل الحملة وتعطيل {0} مشروع تابع", [cascaded])
+          ? dt("تم تفعيل التصنيف وتفعيل {0} مشروع تابع", [cascaded])
+          : dt("تم تعطيل التصنيف وتعطيل {0} مشروع تابع", [cascaded])
       );
     } catch (err: any) {
-      const msg = axios.isAxiosError(err) ? err.response?.data?.error || err.message : dt("تعذّر تحديث حالة الحملة");
-      toast.error(typeof msg === 'string' ? msg : dt("تعذّر تحديث حالة الحملة"));
+      const msg = axios.isAxiosError(err) ? err.response?.data?.error || err.message : dt("تعذّر تحديث حالة التصنيف");
+      toast.error(typeof msg === 'string' ? msg : dt("تعذّر تحديث حالة التصنيف"));
     } finally {
       setActionLoading(null);
     }
@@ -166,7 +166,7 @@ export default function CategoriesPage() {
     const count = (category as any).campaignCount ?? category.campaigns.length;
     setConfirmDialog({
       open: true,
-      title: dt("تعطيل الحملة"),
+      title: dt("تعطيل التصنيف"),
       description: count > 0
         ? dt("سيتم نقل التصنيف \"{0}\" إلى الأرشيف وإخفاؤه من قوائم التصنيفات العامة. المشاريع التابعة له ({1} مشروع) ستبقى منشورة ولن تتغير حالتها.", [category.name, count])
         : dt("سيتم نقل التصنيف \"{0}\" إلى الأرشيف وإخفاؤه من قوائم التصنيفات العامة.", [category.name]),
@@ -180,7 +180,7 @@ export default function CategoriesPage() {
     const count = (category as any).campaignCount ?? category.campaigns.length;
     setConfirmDialog({
       open: true,
-      title: dt("إعادة تفعيل الحملة"),
+      title: dt("إعادة تفعيل التصنيف"),
       description: count > 0
         ? dt("سيتم إعادة التصنيف \"{0}\" إلى قوائم التصنيفات العامة. المشاريع التابعة له ({1} مشروع) لن تتغير حالتها.", [category.name, count])
         : dt("سيتم إعادة التصنيف \"{0}\" إلى قوائم التصنيفات العامة.", [category.name]),
@@ -202,26 +202,26 @@ export default function CategoriesPage() {
   const handleDelete = async (category: Category) => {
     const count = (category as any).campaignCount ?? (category.campaigns?.length ?? 0);
     if (count > 0) {
-      toast.error(dt("لا يمكن حذف حملة تحتوي على مشاريع"));
+      toast.error(dt("لا يمكن حذف تصنيف تحتوي على مشاريع"));
       return;
     }
     setCategoryToDelete(category);
   };
 
   const handleBulkDelete = async () => {
-    if (!window.confirm(dt("هل أنت متأكد من حذف {0} حملة؟", [selectedCategories.length]))) return;
+    if (!window.confirm(dt("هل أنت متأكد من حذف {0} تصنيف؟", [selectedCategories.length]))) return;
     
     setDeleteLoading(true);
     try {
       await Promise.all(
         selectedCategories.map(id => axios.delete(`/api/categories/${id}`))
       );
-      toast.success(dt("تم حذف الحملات المحددة بنجاح"));
+      toast.success(dt("تم حذف التصنيفات المحددة بنجاح"));
       fetchCategories();
       setSelectedCategories([]);
     } catch (error) {
       console.error('Error deleting categories:', error);
-      toast.error(dt("فشل في حذف الحملات"));
+      toast.error(dt("فشل في حذف التصنيفات"));
     } finally {
       setDeleteLoading(false);
     }
@@ -233,12 +233,12 @@ export default function CategoriesPage() {
     setDeleteLoading(true);
     try {
       await axios.delete(`/api/categories/${categoryToDelete.id}`);
-      toast.success(dt("تم حذف الحملة بنجاح"));
+      toast.success(dt("تم حذف التصنيف بنجاح"));
       fetchCategories();
     } catch (error) {
       console.error('Error deleting category:', error);
       // The count above skips archived/deleted campaigns; the server still refuses while any remain.
-      toast.error(axios.isAxiosError(error) && error.response?.status === 400 ? dt("لا يمكن حذف حملة تحتوي على مشاريع") : dt("فشل في حذف الحملة"));
+      toast.error(axios.isAxiosError(error) && error.response?.status === 400 ? dt("لا يمكن حذف تصنيف تحتوي على مشاريع") : dt("فشل في حذف التصنيف"));
     } finally {
       setDeleteLoading(false);
       setCategoryToDelete(null);
@@ -314,10 +314,10 @@ export default function CategoriesPage() {
 
   return (
     <div>
-      <TranslationOverview kind="categories" />
+      <TranslationOverview kind="categories" scopeIds={filteredCategories.map(c=>c.id)} />
       <PageHeader
-        title={dt("الحملات")}
-        description={dt("إدارة الحملات ومشاريعها")}
+        title={dt("التصنيفات")}
+        description={dt("إدارة التصنيفات ومشاريعها")}
         icon={Globe}
         actions={
           <>
@@ -350,7 +350,7 @@ export default function CategoriesPage() {
               className="bg-brand hover:bg-brand-dark gap-2"
             >
               <Plus className="w-4 h-4" />
-              {dt("حملة جديدة")}</Button>
+              {dt("تصنيف جديدة")}</Button>
           </>
         }
       />
@@ -362,7 +362,7 @@ export default function CategoriesPage() {
       <FilterBar
         searchValue={searchQuery}
         onSearchChange={setSearchQuery}
-        searchPlaceholder={dt("ابحث عن حملة...")}
+        searchPlaceholder={dt("ابحث عن تصنيف...")}
       >
         <Select
           value={campaignsFilter}
@@ -372,7 +372,7 @@ export default function CategoriesPage() {
             <SelectValue placeholder={dt("المشاريع")} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">{dt("جميع الحملات")}</SelectItem>
+            <SelectItem value="all">{dt("جميع التصنيفات")}</SelectItem>
             <SelectItem value="with">{dt("حملات بها مشاريع")}</SelectItem>
             <SelectItem value="without">{dt("حملات بدون مشاريع")}</SelectItem>
           </SelectContent>
@@ -396,7 +396,7 @@ export default function CategoriesPage() {
                 onClick={() => handleSort('name')}
               >
                 <div className="flex items-center gap-2">
-                  {dt("اسم الحملة")}<ArrowUpDown className="w-4 h-4" />
+                  {dt("اسم التصنيف")}<ArrowUpDown className="w-4 h-4" />
                 </div>
               </TableHead>
               <TableHead className="text-start">{dt("الوصف")}</TableHead>
@@ -438,7 +438,7 @@ export default function CategoriesPage() {
                       size="icon"
                       onClick={() => setPriorityDialog({ id: category.id, name: category.name })}
                       className="text-amber-600 hover:bg-amber-50"
-                      title={dt("أولويات المشاريع داخل الحملة")}
+                      title={dt("أولويات المشاريع داخل التصنيف")}
                     >
                       <Crown className="w-4 h-4" />
                     </Button>
@@ -484,15 +484,15 @@ export default function CategoriesPage() {
                     icon={Globe}
                     title={dt("لا توجد حملات")}
                     description={searchQuery || campaignsFilter !== 'all'
-                      ? dt("لا توجد حملة تطابق التصفية الحالية.")
-                      : dt("الحملات تجمع المشاريع تحت مظلة واحدة. أنشئ أول حملة للبدء.")}
+                      ? dt("لا توجد تصنيف تطابق التصفية الحالية.")
+                      : dt("التصنيفات تجمع المشاريع تحت مظلة واحدة. أنشئ أول تصنيف للبدء.")}
                     action={
                       <Button
                         onClick={() => router.push('/dashboard/categories/new')}
                         className="bg-brand hover:bg-brand-dark gap-2"
                       >
                         <Plus className="w-4 h-4" />
-                        {dt("إضافة حملة جديدة")}</Button>
+                        {dt("إضافة تصنيف جديدة")}</Button>
                     }
                   />
                 </TableCell>
@@ -545,7 +545,7 @@ export default function CategoriesPage() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-amber-700">
               <Archive className="w-5 h-5" />
-              {dtx("أرشيف الحملات المعطّلة ({0})", [archivedCategories.length])}</DialogTitle>
+              {dtx("أرشيف التصنيفات المعطّلة ({0})", [archivedCategories.length])}</DialogTitle>
           </DialogHeader>
 
           <div className="relative mb-3">
@@ -562,7 +562,7 @@ export default function CategoriesPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="text-start">{dt("اسم الحملة")}</TableHead>
+                  <TableHead className="text-start">{dt("اسم التصنيف")}</TableHead>
                   <TableHead className="text-start">{dt("عدد المشاريع")}</TableHead>
                   <TableHead className="text-center w-40">{dt("إجراء")}</TableHead>
                 </TableRow>
@@ -629,9 +629,9 @@ export default function CategoriesPage() {
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>{dt("هل أنت متأكد من حذف هذه الحملة؟")}</AlertDialogTitle>
+            <AlertDialogTitle>{dt("هل أنت متأكد من حذف هذه التصنيف؟")}</AlertDialogTitle>
             <AlertDialogDescription>
-              {dt("سيتم حذف الحملة نهائياً ولا يمكن التراجع عن هذا الإجراء.")}</AlertDialogDescription>
+              {dt("سيتم حذف التصنيف نهائياً ولا يمكن التراجع عن هذا الإجراء.")}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>{dt("إلغاء")}</AlertDialogCancel>
