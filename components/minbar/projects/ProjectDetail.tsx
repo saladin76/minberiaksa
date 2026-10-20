@@ -128,7 +128,7 @@ export default function ProjectDetail({ project, updates, gallery, related, dono
 
         <div id="pd-top" style={{ maxWidth: 1240, margin: "0 auto", padding: "0 24px", display: "grid", gridTemplateColumns: "minmax(0,1.32fr) minmax(330px,.68fr)", gap: 34, alignItems: "start" }}>
           <div className="pd-project-main" style={{ display: "grid", gap: 18, minWidth: 0 }}>
-            <ProjectHeroMedia images={project.images.length ? project.images : project.image ? [project.image] : []} title={project.title}>
+            <ProjectHeroMedia images={project.images.length ? project.images : project.image ? [project.image] : []} title={project.title} imageAlt={project.imageAlt}>
               {project.regionLabel ? (
                 <span style={{ position: "absolute", insetInlineStart: 16, top: 16, display: "inline-flex", alignItems: "center", gap: 7, padding: "6px 13px", borderRadius: 999, background: "rgba(16,33,43,.78)", color: "#fff", fontSize: 12, fontWeight: 900 }}>
                   <span aria-hidden="true" style={{ width: 5, height: 5, background: "var(--gold)", transform: "rotate(45deg)" }} />

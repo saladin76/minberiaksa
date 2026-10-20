@@ -455,7 +455,15 @@ model Category {
   donationItems             DonationCategoryItem[]
   subscriptionCategoryItems SubscriptionCategoryItem[]
   translations              CategoryTranslation[]
+  editorVersion String?
+  editorReviews Json?
+  imageAlt String?
+  metaTitle String?
+  metaDescription String?
+  previousSlugs String[] @default([])
+  slugChanges Json?
 }
+
 
 /// One cell of the "what this category stands on" strip  a short phrase.
 model CategoryValue {
@@ -536,6 +544,9 @@ model CategoryTranslation {
   category Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
 
   @@unique([categoryId, locale])
+  imageAlt String?
+  metaTitle String?
+  metaDescription String?
 }
 
 /**
@@ -647,6 +658,11 @@ model Campaign {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  editorVersion String?
+  editorReviews Json?
+  imageAlt String?
+  seoTitle String?
+  seoDescription String?
 }
 
 model CampaignTranslation {
@@ -669,6 +685,9 @@ model CampaignTranslation {
   campaign Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
 
   @@unique([campaignId, locale])
+  imageAlt String?
+  seoTitle String?
+  seoDescription String?
 }
 
 /**
@@ -1316,6 +1335,8 @@ model Post {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  editorVersion String?
+  editorReviews Json?
 }
 
 model PostTranslation {
@@ -2926,6 +2947,9 @@ model UrgentBanner {
   updatedAt DateTime @updatedAt
 
   @@index([isActive, priority])
+  editorVersion String?
+  editorReviews Json?
+  imageAlt String?
 }
 
 model UrgentBannerTranslation {
@@ -2942,6 +2966,7 @@ model UrgentBannerTranslation {
   urgentBanner UrgentBanner @relation(fields: [urgentBannerId], references: [id], onDelete: Cascade)
 
   @@unique([urgentBannerId, locale])
+  imageAlt String?
 }
 
 /// Frequently asked questions. `page` scopes an entry to one page; null shows it
@@ -3083,6 +3108,9 @@ model SuperCategory {
   updatedAt DateTime @updatedAt
 
   @@index([isActive, order])
+  editorVersion String?
+  editorReviews Json?
+  imageAlt String?
 }
 
 model SuperCategoryTranslation {
@@ -3108,6 +3136,7 @@ model SuperCategoryTranslation {
   superCategory SuperCategory @relation(fields: [superCategoryId], references: [id], onDelete: Cascade)
 
   @@unique([superCategoryId, locale])
+  imageAlt String?
 }
 
 /// One section of a super category's page, in the order it is rendered.

@@ -72,6 +72,7 @@ export interface SuperCategoryContent {
   verseTranslation: string;
   verseAttribution: string;
   heroImage: string;
+  imageAlt?: string;
   logoImage: string;
   accentColor: string;
   /** Empty when this edition does not carry the hero film. */
@@ -94,6 +95,7 @@ const PAGE_SELECT = {
   verseTranslation: true,
   verseAttribution: true,
   heroImage: true,
+  imageAlt: true,
   logoImage: true,
   accentColor: true,
   heroVideoId: true,
@@ -221,6 +223,7 @@ export async function getSuperCategory(
           ctaPrimaryLabel: true,
           ctaSecondaryLabel: true,
           ctaTertiaryLabel: true,
+          imageAlt: true,
           metaTitle: true,
           metaDescription: true,
         },
@@ -330,6 +333,7 @@ export async function getSuperCategory(
     verseTranslation: t?.verseTranslation || row.verseTranslation || "",
     verseAttribution: t?.verseAttribution || row.verseAttribution || "",
     heroImage: row.heroImage ?? "",
+    imageAlt: t?.imageAlt || row.imageAlt || t?.title || row.title,
     logoImage: t?.logoImage || row.logoImage || "",
     accentColor: row.accentColor || DEFAULT_ACCENT,
     heroVideoId: showHeroVideo ? row.heroVideoId ?? "" : "",

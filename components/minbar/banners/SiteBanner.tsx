@@ -39,7 +39,7 @@ export default function SiteBanner({ banner }: { banner: SiteBannerData }) {
 
         <div className="mia-bn-body" data-photo={banner.image ? "true" : "false"} data-chips={banner.chips.length ? "true" : "false"}>
           {banner.image ? (
-            <span role="img" aria-label={banner.title} className="mia-bn-photo" style={{ backgroundImage: cssImage(banner.image, 960) }} />
+            <span role="img" aria-label={banner.imageAlt || banner.title} className="mia-bn-photo" style={{ backgroundImage: cssImage(banner.image, 960) }} />
           ) : (
             <span aria-hidden="true" data-aqsa-pattern="" className="mia-bn-pattern" />
           )}

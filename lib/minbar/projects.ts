@@ -54,6 +54,7 @@ export interface MinbarProject {
    */
   body: ArticleBlock[];
   image: string | null;
+  imageAlt?: string;
   /** Category slug  the handoff's regional filter key (gaza, al-quds, …). */
   region: string | null;
   regionLabel: string | null;
@@ -116,6 +117,7 @@ function selectFor(locale: string) {
     title: true,
     description: true,
     images: true,
+    imageAlt: true,
     videoUrl: true,
     targetAmount: true,
     currentAmount: true,
@@ -139,7 +141,7 @@ function selectFor(locale: string) {
     },
     translations: {
       where: translationLocaleWhere(locale),
-      select: { locale: true, title: true, description: true, slug: true, image: true, videoUrl: true },
+      select: { locale: true, title: true, description: true, slug: true, image: true, imageAlt: true, videoUrl: true },
     },
   } as const;
 }
@@ -151,6 +153,7 @@ type CampaignRow = {
   title: string;
   description: string;
   images: string[];
+  imageAlt?: string | null;
   videoUrl: string | null;
   targetAmount: number;
   currentAmount: number;
@@ -175,6 +178,7 @@ type CampaignRow = {
     description: string;
     slug: string | null;
     image: string | null;
+    imageAlt?: string | null;
     videoUrl: string | null;
   }>;
 };
@@ -246,6 +250,7 @@ function toProject(row: CampaignRow, locale: string, detail = false): MinbarProj
     text,
     body: detail ? (body.length ? body : [{ kind: "p", text }]) : [],
     image: cover,
+    imageAlt: t?.imageAlt || row.imageAlt || t?.title || row.title,
     images,
     videoUrl: t?.videoUrl || row.videoUrl || null,
     categories: (row.categories ?? []).map((c) => ({

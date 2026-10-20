@@ -1,5 +1,6 @@
 'use client';
 
+import { TranslationOverview } from "@/components/dashboard/content-editor/TranslationOverview";
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
@@ -189,7 +190,7 @@ export default function UrgentBannersPage() {
       className: 'w-24',
       cell: (r) => (
         <div className="flex gap-1">
-          <Button variant="ghost" size="icon" onClick={() => router.push(`/dashboard/urgent-banners/edit/${r.id}`)}>
+          <Button variant="ghost" size="icon" onClick={() => router.push(`/dashboard/content/urgent-banners/${r.id}`)}>
             <Pencil className="w-4 h-4" />
           </Button>
           <Button variant="ghost" size="icon" onClick={() => setDeleteTarget(r)}>
@@ -210,6 +211,7 @@ export default function UrgentBannersPage() {
 
   return (
     <div className="space-y-4">
+      <TranslationOverview kind="urgent-banners" />
       <div className="flex items-center justify-between gap-3">
         <div>
           <h1 className="text-lg font-bold">{dt("البانرات")}</h1>

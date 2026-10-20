@@ -1,3 +1,4 @@
+import { parseIstanbulSchedule } from "@/lib/content-editor/urls";
 /**
  * Shaping for the banner write endpoints.
  *
@@ -18,7 +19,6 @@ import {
   boolDefaultTrue,
   intOr,
   localeList,
-  optionalDate,
   optionalStr,
   parseTranslations,
   str,
@@ -133,8 +133,8 @@ export function buildUrgentBannerScalars(body: Record<string, unknown>) {
     textSide: textSide(body.textSide),
     priority: intOr(body.priority, 0),
     locales: localeList(body.locales),
-    startsAt: optionalDate(body.startsAt) ?? null,
-    endsAt: optionalDate(body.endsAt) ?? null,
+    startsAt: parseIstanbulSchedule(body.startsAt) ?? null,
+    endsAt: parseIstanbulSchedule(body.endsAt) ?? null,
     isActive: boolDefaultTrue(body.isActive),
   };
 }
@@ -158,8 +158,8 @@ export function buildUrgentBannerScalarPatch(body: Record<string, unknown>) {
   if (body.textSide !== undefined) patch.textSide = textSide(body.textSide);
   if (body.priority !== undefined) patch.priority = intOr(body.priority, 0);
   if (body.locales !== undefined) patch.locales = localeList(body.locales);
-  if (body.startsAt !== undefined) patch.startsAt = optionalDate(body.startsAt) ?? null;
-  if (body.endsAt !== undefined) patch.endsAt = optionalDate(body.endsAt) ?? null;
+  if (body.startsAt !== undefined) patch.startsAt = parseIstanbulSchedule(body.startsAt) ?? null;
+  if (body.endsAt !== undefined) patch.endsAt = parseIstanbulSchedule(body.endsAt) ?? null;
   if (body.isActive !== undefined) patch.isActive = boolDefaultTrue(body.isActive);
   return patch;
 }

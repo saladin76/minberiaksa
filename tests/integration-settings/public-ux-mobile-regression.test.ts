@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
+import { digitsOnly } from "../../lib/minbar/numeric-input";
 
 const read = (path: string) => readFileSync(path, "utf8");
 
@@ -75,7 +76,11 @@ test("mobile donor layouts constrain wide content to the viewport", () => {
 
 test("guest checkout rejects an empty phone that is only a dial code", () => {
   const page = read("components/minbar/checkout/CheckoutPage.tsx");
-  assert.match(page, /const phoneDigits = phone\.replace\(\/\\D\/g, ""\)/);
+  assert.match(page, /const phoneDigits = digitsOnly\(phone\)/);
+  for (const dialCode of ["", "+90", "+٩٠", "+۹۰", "+1", "+44"]) {
+    assert.ok(digitsOnly(dialCode).length < 7, `${dialCode} is not a complete phone`);
+  }
+  assert.equal(digitsOnly("+٩٠ ٥٣٢ ١٢٣ ٤٥ ٦٧"), "905321234567");
   assert.match(page, /phoneDigits\.length < 7/);
 });
 

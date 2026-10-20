@@ -1,3 +1,4 @@
+import { contentWriteWhere, contentVersionPatch, isContentWriteConflict } from "@/lib/content-editor/legacy-write";
 // app/api/campaigns/[id]/route.ts
 // Campaign detail endpoint with GET and PUT operations
 // GET /api/campaigns/[id] - Returns one specific campaign with all details
@@ -622,8 +623,8 @@ export async function PUT(
       prisma.$transaction(
         async (tx) => {
         await tx.campaign.update({
-          where: { id },
-          data: updateData,
+          where: contentWriteWhere({ id: id }, body),
+          data: { ...updateData, ...contentVersionPatch() },
         });
 
         // Split an admin-entered total into settled donations + offline baseline so a later
@@ -800,6 +801,7 @@ export async function PUT(
     });
 
   } catch (error) {
+    if (isContentWriteConflict(error)) return NextResponse.json({ error: "تغير المحتوى لدى زميل. أعد تحميل الصفحة قبل الحفظ." }, { status: 409 });
     console.error("Error updating campaign:", error);
 
     // Handle specific Prisma errors

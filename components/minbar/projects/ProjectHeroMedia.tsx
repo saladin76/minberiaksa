@@ -8,6 +8,7 @@ interface ProjectHeroMediaProps {
   /** The campaign's photos, cover first. */
   images: string[];
   title: string;
+  imageAlt?: string;
   /** Overlays drawn on top of the picture (the region chip). */
   children?: ReactNode;
 }
@@ -19,7 +20,7 @@ interface ProjectHeroMediaProps {
  * It is a native scroll-snap track, so touch swipe, trackpads and RTL work
  * without any gesture code; the buttons and dots only scroll it.
  */
-export default function ProjectHeroMedia({ images, title, children }: ProjectHeroMediaProps) {
+export default function ProjectHeroMedia({ images, title, imageAlt, children }: ProjectHeroMediaProps) {
   const t = useTranslations("common");
   const track = useRef<HTMLDivElement>(null);
   const [active, setActive] = useState(0);
@@ -89,7 +90,7 @@ export default function ProjectHeroMedia({ images, title, children }: ProjectHer
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={src}
-                alt={index === 0 ? title : ""}
+                alt={index === 0 ? imageAlt || title : ""}
                 loading={index === 0 ? "eager" : "lazy"}
                 fetchPriority={index === 0 ? "high" : "auto"}
                 decoding="async"

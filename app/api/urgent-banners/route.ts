@@ -1,3 +1,4 @@
+import { validateSchedule } from "@/lib/content-editor/urls";
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { prisma } from "@/lib/prisma";
@@ -30,7 +31,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Invalid slot" }, { status: 400 });
     }
     const items = await listBanners(locale, page, slot);
-    return NextResponse.json({ items });
+    return NextResponse.json({ items }, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {
     console.error("Error fetching urgent banners:", error);
     return NextResponse.json({ error: "Failed to fetch urgent banners" }, { status: 500 });
@@ -45,6 +46,7 @@ export async function POST(request: NextRequest) {
 
     const data = await request.json();
     const scalars = buildUrgentBannerScalars(data);
+    if (!validateSchedule(scalars.startsAt, scalars.endsAt)) return NextResponse.json({ error: "نهاية الظهور يجب أن تكون بعد البداية" }, { status: 400 });
     if (!scalars.title) {
       return NextResponse.json({ error: "العنوان بالعربية مطلوب" }, { status: 400 });
     }

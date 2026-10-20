@@ -1,3 +1,5 @@
+import { contentWriteWhere, contentVersionPatch, isContentWriteConflict } from "@/lib/content-editor/legacy-write";
+import { validateSchedule } from "@/lib/content-editor/urls";
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { prisma } from "@/lib/prisma";
@@ -46,6 +48,9 @@ export async function PUT(
 
     const body = (await request.json()) as Record<string, unknown>;
     const patch = buildUrgentBannerScalarPatch(body);
+    const current = await prisma.urgentBanner.findUnique({ where: { id }, select: { startsAt: true, endsAt: true } });
+    if (!current) return NextResponse.json({ error: "البانر غير موجود" }, { status: 404 });
+    if (!validateSchedule(body.startsAt !== undefined ? patch.startsAt as Date | null : current.startsAt, body.endsAt !== undefined ? patch.endsAt as Date | null : current.endsAt)) return NextResponse.json({ error: "نهاية الظهور يجب أن تكون بعد البداية" }, { status: 400 });
 
     const { write, clear } =
       body.translations === undefined
@@ -53,8 +58,9 @@ export async function PUT(
         : parseUrgentBannerTranslations(body.translations);
 
     const full = await prisma.urgentBanner.update({
-      where: { id },
+      where: contentWriteWhere({ id: id }, body),
       data: {
+        ...contentVersionPatch(),
         ...patch,
         ...(write.length || clear.length
           ? {
@@ -102,6 +108,7 @@ export async function PUT(
 
     return NextResponse.json(full);
   } catch (error) {
+    if (isContentWriteConflict(error)) return NextResponse.json({ error: "تغير المحتوى لدى زميل. أعد تحميل الصفحة قبل الحفظ." }, { status: 409 });
     console.error("Error updating urgent banner:", error);
     return NextResponse.json(
       { error: writeErrorMessage(error, "تعذّر تحديث البانر") },

@@ -188,6 +188,7 @@ export function buildPageMetadata(
     description: string;
     path: string;
     image?: string;
+    imageAlt?: string;
     keywords?: string[];
     type?: "website" | "article";
     alternates?: { canonical: string; languages: Record<string, string> };
@@ -217,7 +218,7 @@ export function buildPageMetadata(
         (candidate) => OG_LOCALE_MAP[candidate],
       ),
       type: overrides.type ?? "website",
-      images: [{ url: image, width: 1200, height: 630, alt: overrides.title }],
+      images: [{ url: image, width: 1200, height: 630, alt: overrides.imageAlt || overrides.title }],
     },
     twitter: {
       card: "summary_large_image",

@@ -1,6 +1,6 @@
 import type { DashboardPermissionKey } from "./permissions";
 import type { NavIconName } from "./nav-icons";
-import { dt } from "@/lib/dashboard/i18n";
+import { dt } from "./i18n";
 
 export type DashboardNavItem = {
   key: DashboardPermissionKey;
@@ -64,7 +64,7 @@ export const DASHBOARD_NAV_GROUPS: DashboardNavGroup[] = [
       // the stories and videos below them, and splitting fifteen items across two headings
       // put related things behind different folds.
       { key: "campaigns", get title() { return dt("المشاريع"); }, href: "/dashboard/campaigns", icon: "heart", keywords: ["projects", "campaigns", "مشاريع"] },
-      { key: "categories", get title() { return dt("الحملات والدول"); }, href: "/dashboard/categories", icon: "globe", keywords: ["categories", "countries", "تصنيفات"] },
+      { key: "categories", get title() { return dt("التصنيفات"); }, href: "/dashboard/categories", icon: "globe", keywords: ["categories", "countries", "تصنيفات"] },
       { key: "blog", get title() { return dt("المدونة"); }, href: "/dashboard/blog", icon: "penLine", keywords: ["blog", "posts", "مقالات"] },
       { key: "slides", get title() { return dt("الشرائح"); }, href: "/dashboard/slides", icon: "images", keywords: ["slides", "slider", "hero"] },
       { key: "ticker", get title() { return dt("شريط التبرعات"); }, href: "/dashboard/ticker", icon: "ticket", keywords: ["ticker", "marquee"] },
@@ -207,7 +207,7 @@ export const DASHBOARD_PERMISSION_ROWS: {
   { key: "bankAccounts", get group() { return dt("الرئيسية"); }, get title() { return dt("الحسابات البنكية (IBAN)  صلاحية مالية حساسة"); } },
   { key: "donors", get group() { return dt("الرئيسية"); }, get title() { return dt("المتبرعون"); } },
   { key: "campaigns", get group() { return dt("محتوى الموقع"); }, get title() { return dt("المشاريع"); } },
-  { key: "categories", get group() { return dt("محتوى الموقع"); }, get title() { return dt("الحملات والدول"); } },
+  { key: "categories", get group() { return dt("محتوى الموقع"); }, get title() { return dt("التصنيفات"); } },
   { key: "blog", get group() { return dt("محتوى الموقع"); }, get title() { return dt("المدونة"); } },
   // P3-2: these five keys were valid in DASHBOARD_PERMISSION_KEYS and enforced by the API
   // guards, but appeared in NO grant UI  so they could never actually be granted, and a user

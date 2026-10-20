@@ -37,6 +37,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       description: (superCategory.metaDescription || superCategory.intro || superCategory.subtitle),
       path: `/${slugFor("projectDetail", locale)}/${superCategory.slug}`,
       image: superCategory.heroImage || undefined,
+      imageAlt: superCategory.imageAlt,
     });
   }
 
@@ -53,6 +54,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const title = seo.locale.seoTitle || project.title;
   const meta = buildPageMetadata(locale, {
     title,
+    imageAlt: project.imageAlt,
     description: seo.locale.seoDescription || project.text,
     path: `/${slugFor("projectDetail", locale)}/${project.slug}`,
     image: seo.locale.ogImage || project.image || seo.campaign.ogImage || undefined,

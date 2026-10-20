@@ -1,3 +1,5 @@
+import { contentWriteWhere, contentVersionPatch, isContentWriteConflict } from "@/lib/content-editor/legacy-write";
+import { validateSectionLinks } from "@/lib/content-editor/urls";
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { prisma } from "@/lib/prisma";
@@ -47,6 +49,8 @@ export async function PUT(
     if (denied) return denied;
 
     const body = (await request.json()) as Record<string, unknown>;
+    const navigationError = validateSectionLinks(body);
+    if (navigationError) return NextResponse.json({ error: navigationError }, { status: 400 });
     const patch = buildSuperCategoryScalarPatch(body);
 
     /* Absent keys touch nothing: the list page's toggle sends only `isActive`
@@ -60,8 +64,9 @@ export async function PUT(
     const blocks = parseSuperCategoryBlocks(body.blocks);
 
     const full = await prisma.superCategory.update({
-      where: { id },
+      where: contentWriteWhere({ id: id }, body),
       data: {
+        ...contentVersionPatch(),
         ...patch,
         ...(write.length || clear.length
           ? {
@@ -128,6 +133,7 @@ export async function PUT(
 
     return NextResponse.json(full);
   } catch (error) {
+    if (isContentWriteConflict(error)) return NextResponse.json({ error: "تغير المحتوى لدى زميل. أعد تحميل الصفحة قبل الحفظ." }, { status: 409 });
     console.error("Error updating super category:", error);
     return NextResponse.json(
       { error: writeErrorMessage(error, "تعذّر تحديث القسم الكبير") },

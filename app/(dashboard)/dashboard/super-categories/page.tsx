@@ -1,5 +1,6 @@
 'use client';
 
+import { TranslationOverview } from "@/components/dashboard/content-editor/TranslationOverview";
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
@@ -99,6 +100,7 @@ export default function SuperCategoriesPage() {
 
   return (
     <div className="space-y-4">
+      <TranslationOverview kind="super-categories" />
       <div className="flex items-center justify-between gap-3">
         <div>
           <h1 className="text-lg font-bold">{dt("الأقسام الكبرى")}</h1>
@@ -166,7 +168,7 @@ export default function SuperCategoriesPage() {
               className: 'w-24',
               cell: (r) => (
                 <div className="flex gap-1">
-                  <Button variant="ghost" size="icon" onClick={() => router.push(`/dashboard/super-categories/edit/${r.id}`)}>
+                  <Button variant="ghost" size="icon" onClick={() => router.push(`/dashboard/content/super-categories/${r.id}`)}>
                     <Pencil className="h-4 w-4" />
                   </Button>
                   <Button variant="ghost" size="icon" onClick={() => setDeleteTarget(r)}>

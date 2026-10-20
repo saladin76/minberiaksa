@@ -184,8 +184,11 @@ test("layouts remain defense in depth and pages use only editor data loaders", (
     "app/(dashboard)/dashboard/blog/create/page.tsx",
     "utf8",
   );
+  const entryPage = readFileSync("app/(dashboard)/dashboard/blog/create/[postId]/page.tsx", "utf8");
+  assert.match(entryPage, /await requireDashboardPagePermission\("blog"\)/);
+  assert.doesNotMatch(entryPage, /prisma\.|getPost/);
   const editPage = readFileSync(
-    "app/(dashboard)/dashboard/blog/create/[postId]/page.tsx",
+    "app/(dashboard)/dashboard/blog/settings/[postId]/page.tsx",
     "utf8",
   );
   assert.match(createPage, /loadBlogCreateEditorData\(\)/);
@@ -310,7 +313,7 @@ test("read-only localization audit retains actionable item details", () => {
   assert.match(card, /emptyFields/);
   assert.match(card, /identicalToArabicFields/);
   assert.match(card, /ملاحظات جودة العربية/);
-  assert.match(card, /label="حقول فارغة" value=\{totals\.emptyFields\}/);
+  assert.match(card, /label=\{dt\("حقول فارغة"\)\} value=\{totals\.emptyFields\}/);
   assert.doesNotMatch(card, /حقول ناقصة أوفارغة/);
 });
 
@@ -332,5 +335,9 @@ test("primary Prisma schema validates without modification", () => {
     "validate",
     "--schema",
     "prisma/schema.prisma",
-  ], { stdio: "pipe" });
+  ], {
+    stdio: "pipe",
+    // Schema validation only parses the URL; it never connects to this database.
+    env: { ...process.env, DATABASE_URL: process.env.DATABASE_URL || "mongodb://127.0.0.1:27017/schema_validation" },
+  });
 });

@@ -1,3 +1,4 @@
+import { validateSectionLinks } from "@/lib/content-editor/urls";
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { prisma } from "@/lib/prisma";
@@ -71,6 +72,8 @@ export async function POST(request: NextRequest) {
     if (denied) return denied;
 
     const data = await request.json();
+    const navigationError = validateSectionLinks(data);
+    if (navigationError) return NextResponse.json({ error: navigationError }, { status: 400 });
     const scalars = buildSuperCategoryScalars(data);
     if (!scalars.title) {
       return NextResponse.json({ error: "العنوان بالعربية مطلوب" }, { status: 400 });

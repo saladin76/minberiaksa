@@ -4,7 +4,7 @@
  * Every content model in this group has the same translation story: Arabic is
  * the master copy on the parent row, and a sibling `*Translation` keyed
  * `@@unique([<parent>Id, locale])` holds the rest. `lib/slides/slide-write.ts`
- * already solved this for one model, and its reasoning applies unchanged here 
+ * already solved this for one model, and its reasoning applies unchanged here
  * a form posts every non-Arabic locale at once, so writing them as separate
  * awaited upserts inside an interactive transaction costs ~10 round trips per
  * save and blows Prisma's 5s transaction timeout against this Atlas cluster.
