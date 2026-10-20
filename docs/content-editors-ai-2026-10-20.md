@@ -50,6 +50,10 @@ Existing programme and banner public routes remain in place. Stored project/cate
 - New tests are included in the build commands. Existing integration suites, TypeScript checks, schema validation and build compilation are recorded in the PR description with their actual results.
 - No production content, donor records, amounts or live provider requests were modified by the verification work.
 
+## Follow-up release verification
+
+The complete Minber integration suite now passes 597/597. The prior module failures came from a runtime path alias in the navigation import; the previously hidden audit assertion expected an untranslated label. Regression tests now exercise the current canonical project URL and Arabic/Persian phone digit normalization. Schema validation uses a local placeholder URL only when none is configured; it makes no connection. Full TypeScript and the existing lint ceiling pass.
+
 ## Host checks still required
 
 Generate both Prisma clients. Use a replica-set-backed MongoDB database for transactions. Run `npx tsx scripts/ensure-content-editor-indexes.ts` to inspect the additive index plan; `--apply` creates only missing indexes and never drops data or indexes. New Gözbebekleri content units need their unique/lookup indexes before concurrent editing.

@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { QUICK_DONATE_ROUTES, routeForPathname, slugFor } from "../../lib/minbar/routes";
+import { QUICK_DONATE_ROUTES, routeForPathname, slugFor, miaPath } from "../../lib/minbar/routes";
 
 /**
  * `DEPLOYED_VS_DESIGN_AUDIT.md` § P2.1  the floating quick-donation pill is
@@ -11,8 +11,8 @@ import { QUICK_DONATE_ROUTES, routeForPathname, slugFor } from "../../lib/minbar
 test("pathnames resolve to their page, including locale slugs and list/detail pairs", () => {
   assert.equal(routeForPathname("/ar"), "home");
   assert.equal(routeForPathname("/en/"), "home");
-  assert.equal(routeForPathname("/en/projects"), "projects");
-  assert.equal(routeForPathname("/en/projects/some-slug"), "projectDetail");
+  assert.equal(routeForPathname(miaPath("projects", "en")), "projects");
+  assert.equal(routeForPathname(miaPath("projectDetail", "en", "some-slug")), "projectDetail");
   assert.equal(routeForPathname("/en/blog"), "blog");
   assert.equal(routeForPathname("/en/blog/257-rural-road-repair-recovery"), "article");
   assert.equal(routeForPathname("/en/achievements-and-reports"), "reports");

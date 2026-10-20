@@ -1,6 +1,6 @@
 import type { DashboardPermissionKey } from "./permissions";
 import type { NavIconName } from "./nav-icons";
-import { dt } from "@/lib/dashboard/i18n";
+import { dt } from "./i18n";
 
 export type DashboardNavItem = {
   key: DashboardPermissionKey;

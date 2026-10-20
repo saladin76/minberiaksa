@@ -313,7 +313,7 @@ test("read-only localization audit retains actionable item details", () => {
   assert.match(card, /emptyFields/);
   assert.match(card, /identicalToArabicFields/);
   assert.match(card, /ملاحظات جودة العربية/);
-  assert.match(card, /label="حقول فارغة" value=\{totals\.emptyFields\}/);
+  assert.match(card, /label=\{dt\("حقول فارغة"\)\} value=\{totals\.emptyFields\}/);
   assert.doesNotMatch(card, /حقول ناقصة أوفارغة/);
 });
 
@@ -335,5 +335,9 @@ test("primary Prisma schema validates without modification", () => {
     "validate",
     "--schema",
     "prisma/schema.prisma",
-  ], { stdio: "pipe" });
+  ], {
+    stdio: "pipe",
+    // Schema validation only parses the URL; it never connects to this database.
+    env: { ...process.env, DATABASE_URL: process.env.DATABASE_URL || "mongodb://127.0.0.1:27017/schema_validation" },
+  });
 });
