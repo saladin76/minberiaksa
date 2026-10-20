@@ -181,11 +181,16 @@ export async function POST(request: NextRequest) {
 
     // Auto-generate slug from English name (always); admin can override.
     const requestedSlug = normalizeUserSlug(data.slug);
-    const slug = await generateUniqueSlug(
+    let slug = await generateUniqueSlug(
       prisma.category as any,
       requestedSlug ?? enName,
       { fallbackPrefix: "category" }
     );
+
+    let reservedSuffix = 2;
+    while (await prisma.category.findFirst({ where: { previousSlugs: { has: slug } }, select: { id: true } })) {
+      slug = await generateUniqueSlug(prisma.category as unknown as Parameters<typeof generateUniqueSlug>[0], `${requestedSlug || enName}-${reservedSuffix++}`, { fallbackPrefix: "category" });
+    }
 
     const category = await prisma.$transaction(async (tx) => {
       const created = await tx.category.create({

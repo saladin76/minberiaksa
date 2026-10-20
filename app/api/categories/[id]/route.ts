@@ -1,3 +1,4 @@
+import { contentWriteWhere, contentVersionPatch, isContentWriteConflict } from "@/lib/content-editor/legacy-write";
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from "@/lib/prisma";
 import {
@@ -14,7 +15,6 @@ import { requireAdminOrDashboardPermission } from "@/lib/dashboard/api-auth";
 import { writeAuditLog, auditActorFromDashboardSession } from "@/lib/audit-log";
 import { pickTranslation, translationLocaleWhere } from "@/lib/i18n/translation-fallback";
 import {
-  generateUniqueSlug,
   generateUniqueLocaleSlug,
   normalizeUserSlug,
   whereByIdOrAnyLocaleSlug,
@@ -93,8 +93,7 @@ export async function GET(
 }
 
 // PUT: admin-only; supports updating base fields and upserting translations.
-// Important: this intentionally avoids prisma.$transaction because some MongoDB
-// deployments used by the app do not support replica-set transactions.
+// The settings form and its locale writes share an atomic version-checked transaction.
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -105,6 +104,7 @@ export async function PUT(
     const denied = requireAdminOrDashboardPermission(session, 'categories');
     if (denied) return denied;
 
+    return await prisma.$transaction(async (tx) => {
     const body = await request.json();
     const { name, description, image, icon, order, translations } = body;
 
@@ -112,37 +112,24 @@ export async function PUT(
       return NextResponse.json({ error: 'Category name is required' }, { status: 400 });
     }
 
-    const existing = await prisma.category.findFirst({
+    const existing = await tx.category.findFirst({
       where: whereByIdOrSlug(idOrSlug),
-      select: { id: true, name: true },
+      select: { id: true, name: true, slug: true },
     });
     if (!existing) {
       return NextResponse.json({ error: 'Category not found' }, { status: 404 });
     }
     const id = existing.id;
 
-    let nextSlug: string | undefined;
-    if (body.slug !== undefined) {
-      const cleaned = normalizeUserSlug(body.slug);
-      let base = cleaned ?? '';
-      if (!base) {
-        const newEnName = typeof body?.translations?.en?.name === 'string' ? body.translations.en.name.trim() : '';
-        if (newEnName) {
-          base = newEnName;
-        } else {
-          const existingEn = await prisma.categoryTranslation.findFirst({
-            where: { categoryId: id, locale: 'en' },
-            select: { name: true },
-          });
-          base = existingEn?.name?.trim() || name || existing.name;
-        }
-      }
-      nextSlug = await generateUniqueSlug(prisma.category as any, base, { fallbackPrefix: 'category', currentId: id });
+    const nextSlug: string | undefined = undefined;
+    if (body.slug !== undefined && normalizeUserSlug(body.slug) !== (existing.slug || undefined)) {
+      return NextResponse.json({ error: 'غيّر الرابط من محرر المحتوى لتأكيده وحفظ سجله' }, { status: 409 });
     }
 
-    const updatedCat = await prisma.category.update({
-      where: { id },
+    const updatedCat = await tx.category.update({
+      where: contentWriteWhere({ id: id }, body),
       data: {
+        ...contentVersionPatch(),
         name: String(name).trim(),
         description: description || '',
         image: image || '',
@@ -158,7 +145,7 @@ export async function PUT(
     });
 
     /* A site page carries one category at most. */
-    await releasePageTemplateFromOthers(prisma, id, pageTemplate(body.pageTemplate));
+    await releasePageTemplateFromOthers(tx, id, pageTemplate(body.pageTemplate));
 
     if (translations && typeof translations === 'object') {
       for (const [locale, t] of Object.entries(translations)) {
@@ -172,7 +159,7 @@ export async function PUT(
         if (!translatedName && !translatedDescription && !tt.slug) continue;
         if (!translatedName) continue;
 
-        const existingTrans = await prisma.categoryTranslation.findUnique({
+        const existingTrans = await tx.categoryTranslation.findUnique({
           where: { categoryId_locale: { categoryId: id, locale } as any },
           select: { id: true, slug: true },
         });
@@ -181,14 +168,14 @@ export async function PUT(
         let localeSlug: string | null = existingTrans?.slug ?? null;
         if (Object.prototype.hasOwnProperty.call(tt, 'slug')) {
           localeSlug = requestedSlug
-            ? await generateUniqueLocaleSlug(prisma.categoryTranslation as any, requestedSlug, {
+            ? await generateUniqueLocaleSlug(tx.categoryTranslation as any, requestedSlug, {
                 locale,
                 fallbackPrefix: 'category',
                 currentTranslationId: existingTrans?.id,
               })
             : null;
         } else if (!existingTrans?.slug && translatedName) {
-          localeSlug = await generateUniqueLocaleSlug(prisma.categoryTranslation as any, translatedName, {
+          localeSlug = await generateUniqueLocaleSlug(tx.categoryTranslation as any, translatedName, {
             locale,
             fallbackPrefix: 'category',
             currentTranslationId: existingTrans?.id,
@@ -197,7 +184,7 @@ export async function PUT(
 
         const pageCopy = categoryPageTranslation(tt);
 
-        await prisma.categoryTranslation.upsert({
+        await tx.categoryTranslation.upsert({
           where: { categoryId_locale: { categoryId: id, locale } as any },
           update: {
             name: translatedName,
@@ -217,7 +204,7 @@ export async function PUT(
       }
     }
 
-    const full = await prisma.category.findUnique({
+    const full = await tx.category.findUnique({
       where: { id: updatedCat.id },
       select: {
         id: true,
@@ -241,7 +228,9 @@ export async function PUT(
     });
 
     return NextResponse.json(full);
+    }, { maxWait: 10000, timeout: 30000 });
   } catch (error: any) {
+    if (isContentWriteConflict(error)) return NextResponse.json({ error: "تغير المحتوى لدى زميل. أعد تحميل الصفحة قبل الحفظ." }, { status: 409 });
     console.error('Error updating category:', error);
     const code = error?.code || '';
     const message = String(error?.message || '');
@@ -321,7 +310,7 @@ export async function DELETE(
 
     const cat = await prisma.category.findFirst({
       where: whereByIdOrSlug(idOrSlug),
-      select: { id: true, name: true },
+      select: { id: true, name: true, slug: true },
     });
     if (!cat) {
       return NextResponse.json({ error: 'Category not found' }, { status: 404 });

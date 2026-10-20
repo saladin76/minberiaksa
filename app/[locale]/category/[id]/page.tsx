@@ -1,6 +1,6 @@
 import React from "react";
 import { Metadata } from "next";
-import { notFound, redirect } from "next/navigation";
+import { notFound, redirect, permanentRedirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { prisma } from "@/lib/prisma";
 import { isObjectId, pickLocaleSlug, whereByIdOrAnyLocaleSlug } from "@/lib/slug";
@@ -41,12 +41,15 @@ async function fetchCategoryForSeo(idOrSlug: string) {
       id: true,
       slug: true,
       name: true,
+      imageAlt: true,
+      metaTitle: true,
+      metaDescription: true,
       description: true,
       image: true,
       heroImage: true,
       heroLead: true,
       translations: {
-        select: { locale: true, name: true, description: true, slug: true, heroLead: true },
+        select: { locale: true, name: true, imageAlt: true, metaTitle: true, metaDescription: true, description: true, slug: true, heroLead: true },
       },
     },
   });
@@ -87,7 +90,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     ]);
     arabicLead = tLanding("heroLead", { name, org: tCert("orgName") });
   }
-  const description = (t?.heroLead || t?.description || arabicLead || seo.campaigns.description).slice(0, 200);
+  const description = (t?.metaDescription || (locale === "ar" ? category.metaDescription : null) || t?.heroLead || t?.description || arabicLead || seo.campaigns.description).slice(0, 200);
   const image = category.heroImage || category.image || `${SITE_URL}/og-image.jpg`;
 
   let alternates: { canonical: string; languages?: Record<string, string> };
@@ -104,7 +107,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     alternates = { canonical: requestedCanonical };
   }
 
-  const title = `${name} | ${seo.siteName}`;
+  const title = t?.metaTitle || (locale === "ar" ? category.metaTitle : null) || `${name} | ${seo.siteName}`;
 
   return {
     title,
@@ -118,7 +121,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       siteName: seo.siteName,
       locale: OG_LOCALE_MAP[locale as Locale] ?? "en_US",
       type: "website",
-      images: [{ url: image, width: 1200, height: 630, alt: name }],
+      images: [{ url: image, width: 1200, height: 630, alt: t?.imageAlt || category.imageAlt || name }],
     },
     twitter: {
       card: "summary_large_image",
@@ -141,6 +144,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
  */
 export default async function CategoryPage({ params, searchParams }: Props) {
   const [{ id, locale }, query] = await Promise.all([params, searchParams]);
+  const oldLink = await prisma.category.findFirst({ where: { previousSlugs: { has: decodeURIComponent(id) } }, select: { id: true, slug: true, translations: { select: { locale: true, slug: true } } } });
+  if (oldLink) {
+    const canonical = pickLocaleSlug(oldLink.slug, oldLink.translations, locale) || oldLink.id;
+    if (canonical !== decodeURIComponent(id)) permanentRedirect(withIncomingQuery(`/${locale}/category/${encodeURIComponent(canonical)}`, query));
+  }
+
 
   // Redirect to the canonical per-locale slug when the URL doesn't match 
   // e.g. after a language switch keeps the previous locale's slug, or when

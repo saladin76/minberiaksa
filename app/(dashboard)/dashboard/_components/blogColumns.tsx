@@ -81,7 +81,7 @@ function BlogRowActions({
           <DropdownMenuItem asChild>
             <Link
               className="flex w-full justify-end items-center text-black"
-              href={`/dashboard/blog/create/${id}`}
+              href={`/dashboard/content/blog/${id}`}
             >
               {dt("تعديل")}<Pencil className="h-4 w-4 me-2" />
             </Link>

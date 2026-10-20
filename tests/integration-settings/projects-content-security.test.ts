@@ -184,8 +184,11 @@ test("layouts remain defense in depth and pages use only editor data loaders", (
     "app/(dashboard)/dashboard/blog/create/page.tsx",
     "utf8",
   );
+  const entryPage = readFileSync("app/(dashboard)/dashboard/blog/create/[postId]/page.tsx", "utf8");
+  assert.match(entryPage, /await requireDashboardPagePermission\("blog"\)/);
+  assert.doesNotMatch(entryPage, /prisma\.|getPost/);
   const editPage = readFileSync(
-    "app/(dashboard)/dashboard/blog/create/[postId]/page.tsx",
+    "app/(dashboard)/dashboard/blog/settings/[postId]/page.tsx",
     "utf8",
   );
   assert.match(createPage, /loadBlogCreateEditorData\(\)/);

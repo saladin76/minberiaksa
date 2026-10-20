@@ -47,6 +47,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     description: (article.seoDescription || article.excerpt),
     path: `/blog/${encodeURIComponent(article.slug)}`,
     image: article.cover ?? undefined,
+    imageAlt: article.imageAlt,
     keywords: article.seoKeywords,
     type: "article",
     alternates,

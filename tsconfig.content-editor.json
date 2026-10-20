@@ -1,0 +1,22 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "target": "ES2022",
+    "incremental": false,
+    "noEmit": true
+  },
+  "include": [
+    "types/next-auth.d.ts",
+    "lib/content-editor/**/*.ts",
+    "lib/content-localization/translate.ts",
+    "app/api/admin/content-editor/**/*.ts",
+    "scripts/ensure-content-editor-indexes.ts",
+    "tests/content-editor/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "generated",
+    ".next",
+    ".integration-test-build"
+  ]
+}

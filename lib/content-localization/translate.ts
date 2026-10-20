@@ -74,7 +74,8 @@ const MAX_TEXT = 12000;
 
 function compact(value: string, max = MAX_TEXT): string {
   const t = value.trim();
-  return t.length > max ? t.slice(0, max) : t;
+  if (t.length > max) throw new Error("النص أطول من حد الطلب. قسّمه إلى أجزاء قبل الترجمة.");
+  return t;
 }
 
 function stripCodeFence(value: string): string {
@@ -138,6 +139,7 @@ async function askModel(userContent: string): Promise<Record<string, unknown>> {
 
   const response = await fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
+    signal: AbortSignal.timeout(90000),
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
     body: JSON.stringify({
       model: process.env.CONTENT_LOCALIZATION_MODEL || "gpt-4o-mini",

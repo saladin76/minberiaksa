@@ -111,11 +111,10 @@ export function emptyUrgentBanner(): UrgentBannerFormValues {
 
 /** `datetime-local` wants `YYYY-MM-DDTHH:mm` in local time, not an ISO string. */
 function toLocalInput(iso: string): string {
-  if (!iso) return '';
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return '';
-  const pad = (n: number) => String(n).padStart(2, '0');
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+ if (!iso) return '';
+ if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(iso)) return iso;
+ const date = new Date(iso); if (Number.isNaN(date.getTime())) return '';
+ return new Date(date.getTime() + 3 * 60 * 60 * 1000).toISOString().slice(0, 16);
 }
 
 type CampaignOption = { id: string; title: string };
@@ -398,11 +397,11 @@ export function UrgentBannerForm({
         <div className="grid gap-4 md:grid-cols-2">
           <label className="space-y-1.5">
             <span className="text-xs font-semibold text-slate-600">{dt("يبدأ في")}</span>
-            <Input type="datetime-local" value={toLocalInput(values.startsAt)} onChange={(e) => set('startsAt', e.target.value)} />
+            <Input aria-label="بداية الظهور بتوقيت إسطنبول" type="datetime-local" value={toLocalInput(values.startsAt)} onChange={(e) => set('startsAt', e.target.value)} />
           </label>
           <label className="space-y-1.5">
             <span className="text-xs font-semibold text-slate-600">{dt("ينتهي في")}</span>
-            <Input type="datetime-local" value={toLocalInput(values.endsAt)} onChange={(e) => set('endsAt', e.target.value)} />
+            <Input aria-label="نهاية الظهور بتوقيت إسطنبول" type="datetime-local" value={toLocalInput(values.endsAt)} onChange={(e) => set('endsAt', e.target.value)} />
             <span className="block text-[11px] text-slate-500">{dt("اتركه فارغًا ليبقى حتى يُوقف يدويًا.")}</span>
           </label>
         </div>

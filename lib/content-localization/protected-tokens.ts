@@ -38,6 +38,7 @@ const HTML_TAG_RE = /<(\/?)([A-Za-z][A-Za-z0-9]*)\b[^>]*>/gu;
 const CURRENCY_RE = /\b(?:USD|EUR|TRY|SAR|AED|QAR|KWD|JOD|GBP)\b/giu;
 /* A number with optional grouping (`,` `.` `'` thin/normal space between 3-digit groups) and an
    optional decimal part. Its value is its digits; separators are formatting. */
+const RELIGIOUS_TEXT_RE = /﴿[^﴿﴾]+﴾/gu;
 const NUMBER_RE = /\d+(?:[.,'’   ]\d{3})*(?:[.,]\d+)?/gu;
 
 /** The protected values of a text, as a sorted multiset of canonical strings. */
@@ -52,6 +53,7 @@ export function protectedTokens(value: string): string[] {
     });
   };
   /* URLs and emails first, so the digits inside them are not counted again as numbers. */
+  take(RELIGIOUS_TEXT_RE, (m) => `religious:${m[0]}`);
   take(URL_RE, (m) => `url:${m[0].replace(/[.,;:!?]+$/u, "")}`);
   take(EMAIL_RE, (m) => `email:${m[0].toLowerCase()}`);
   take(MUSTACHE_RE, (m) => `var:{{${m[1]}}}`);

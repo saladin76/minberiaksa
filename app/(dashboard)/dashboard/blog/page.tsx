@@ -1,5 +1,6 @@
 "use client"
 
+import { TranslationOverview } from "@/components/dashboard/content-editor/TranslationOverview";
 import { useState, useEffect, useMemo, useCallback } from "react"
 import axios from "axios"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -64,6 +65,7 @@ export default function BooksManagement() {
 
   return (
     <div className="space-y-4 sm:space-y-6">
+      <TranslationOverview kind="blog" />
       <BlogHealthCard />
       <ContentLocalizationAuditCard section="blog" />
 

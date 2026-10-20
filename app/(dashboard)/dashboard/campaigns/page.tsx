@@ -1,5 +1,6 @@
 'use client';
 
+import { TranslationOverview } from "@/components/dashboard/content-editor/TranslationOverview";
 import { useState, useEffect } from 'react';
 import { useLocale } from 'next-intl';
 import axios from 'axios';
@@ -404,6 +405,7 @@ export default function CampaignsPage() {
                       );
                       return (
                         <div className="space-y-1 min-w-[5rem]">
+      <TranslationOverview kind="campaigns" />
                           <div className="w-full bg-muted rounded-full h-2.5">
                             <div className="bg-brand h-2.5 rounded-full transition-all"
                               style={{ width: `${pct}%` }} />
@@ -428,7 +430,7 @@ export default function CampaignsPage() {
                           <DropdownMenuLabel>{dt("إجراءات")}</DropdownMenuLabel>
                           <DropdownMenuItem onClick={() => router.push(miaPath("projectDetail", locale, campaign.slug || campaign.id))}>
                             <Eye className="w-4 h-4 me-2" /> {dt(" عرض")}</DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => router.push(`/dashboard/campaigns/edit/${campaign.id}`)}>
+                          <DropdownMenuItem onClick={() => router.push(`/dashboard/content/campaigns/${campaign.id}`)}>
                             <Edit className="w-4 h-4 me-2" /> {dt(" تعديل")}</DropdownMenuItem>
                           <DropdownMenuSeparator />
                           <DropdownMenuItem

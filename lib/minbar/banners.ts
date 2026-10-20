@@ -1,3 +1,4 @@
+import { localizeContentHref } from "@/lib/content-editor/urls";
 import { unstable_cache } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { pickTranslation, translationLocaleWhere } from "@/lib/i18n/translation-fallback";
@@ -24,6 +25,7 @@ export interface SiteBanner {
   kicker: string;
   description: string;
   image: string;
+  imageAlt: string;
   tone: BannerTone;
   textSide: BannerTextSide;
   cta: { label: string; href: string } | null;
@@ -40,6 +42,7 @@ const SELECT = (locale: string) =>
     description: true,
     kicker: true,
     image: true,
+    imageAlt: true,
     ctaLabel: true,
     ctaUrl: true,
     ctaSecondaryLabel: true,
@@ -53,19 +56,12 @@ const SELECT = (locale: string) =>
     translations: {
       where: translationLocaleWhere(locale),
       take: 2,
-      select: { locale: true, title: true, description: true, ctaLabel: true, kicker: true, ctaSecondaryLabel: true, amountLabels: true },
+      select: { locale: true, imageAlt: true, title: true, description: true, ctaLabel: true, kicker: true, ctaSecondaryLabel: true, amountLabels: true },
     },
   }) as const;
 
 /** A relative URL gets this locale's prefix; absolute and anchored ones pass through. */
-export function localizeHref(url: string, locale: string): string {
-  const u = url.trim();
-  if (!u) return "";
-  if (/^(https?:)?\/\//i.test(u) || u.startsWith("#") || u.startsWith("mailto:") || u.startsWith("tel:")) return u;
-  const path = u.startsWith("/") ? u : `/${u}`;
-  if (new RegExp(`^/${locale}(/|$)`).test(path)) return path;
-  return `/${locale}${path}`;
-}
+export function localizeHref(url: string, locale: string): string { return localizeContentHref(url, locale); }
 
 async function readBanners(locale: string, page: string, slot: BannerSlotKey): Promise<SiteBanner[]> {
   const keys = [placementKey(page, slot), placementKey("all", slot)];
@@ -98,7 +94,7 @@ async function readBanners(locale: string, page: string, slot: BannerSlotKey): P
   const campaignIds = [...new Set(rows.map((r) => r.campaignId).filter((v): v is string => !!v))];
   const campaigns = campaignIds.length
     ? await prisma.campaign.findMany({
-        where: { id: { in: campaignIds }, isActive: true },
+        where: { id: { in: campaignIds }, isActive: true, OR: [{ isDeleted: false }, { isDeleted: { isSet: false } }] },
         select: { id: true, slug: true, translations: { where: translationLocaleWhere(locale), select: { locale: true, slug: true } } },
       })
     : [];
@@ -119,6 +115,7 @@ async function readBanners(locale: string, page: string, slot: BannerSlotKey): P
       kicker: t?.kicker || b.kicker || "",
       description: t?.description || b.description || "",
       image: b.image ?? "",
+      imageAlt: t?.imageAlt || b.imageAlt || t?.title || b.title,
       tone: b.tone as BannerTone,
       textSide: b.textSide as BannerTextSide,
       cta: primaryHref ? { label: t?.ctaLabel || b.ctaLabel || "", href: primaryHref } : null,
