@@ -1,3 +1,4 @@
+import { templateButtonProblem } from "./template-locale-media";
 import { z } from "zod";
 
 export const headerSchema = z.object({
@@ -22,6 +23,8 @@ export const buttonSchema = z.object({
   example: z.string().max(512).nullable().optional(),
 });
 
+export const templateButtonsSchema = z.array(buttonSchema).max(10).superRefine((buttons,ctx)=>{const problem=templateButtonProblem(buttons);if(problem)ctx.addIssue({code:z.ZodIssueCode.custom,message:problem});});
+
 export const authSchema = z.object({
   addSecurityRecommendation: z.boolean().default(true),
   codeExpirationMinutes: z.number().int().min(1).max(90).default(10),
@@ -37,5 +40,5 @@ export const translationSchema = z.object({
   body: z.string().max(1024).optional(),
   headerText: z.string().max(60).nullable().optional(),
   footerText: z.string().max(60).nullable().optional(),
-  buttons: z.array(buttonSchema).max(10).optional(),
+  buttons: templateButtonsSchema.optional(),
 });
