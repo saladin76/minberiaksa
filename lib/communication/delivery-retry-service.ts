@@ -1,3 +1,4 @@
+import { donationTemplateValues } from "./template-donation-links";
 import { prisma } from "@/lib/prisma";
 import { createDeliveryRecord, markDeliveryStatus } from "./delivery-log-service";
 import { sendPreparedDelivery } from "./provider-router";
@@ -159,8 +160,11 @@ export async function retryDelivery(deliveryId: string, opts: { actorId?: string
     if (!routed.sender.phoneNumberId || !routed.sender.businessAccountId) return result(deliveryId, "NO_SENDER_IDENTITY", base);
     const meta = await resolveMetaTemplate(row, routed.sender.businessAccountId);
     if (!meta) return result(deliveryId, "META_TEMPLATE_REQUIRED", base);
+    const archived=row.variables && typeof row.variables === "object" ? row.variables as {trigger?:{donationId?:string};snapshot?:{donation?:{id?:string}}} : {};
+    const prepared=await donationTemplateValues({componentsSchema:meta.componentsSchema,scopedNames:meta.scopedNames,values:storedTemplateValues(row.variables,meta.positionalNames),donationId:archived.trigger?.donationId || archived.snapshot?.donation?.id,recipientUserId:row.recipientUserId});
+    if(!prepared.ok)return result(deliveryId,prepared.reason as RetryOutcomeCode,base);
     const built = buildMetaComponents({
-      componentsSchema: meta.componentsSchema, values: storedTemplateValues(row.variables, meta.positionalNames),
+      componentsSchema: meta.componentsSchema, values: prepared.values,
       positionalNames: meta.positionalNames, scopedNames: meta.scopedNames,
       headerMediaUrl: meta.headerMediaUrl, headerMediaFilename: meta.headerMediaFilename, headerLocation: meta.headerLocation,
     });

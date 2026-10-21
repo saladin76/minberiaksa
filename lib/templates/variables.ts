@@ -1,4 +1,6 @@
+import { donationUsdAmount, formatTemplateMoney } from "./money";
 import { prisma } from "@/lib/prisma";
+import { donationProjectSummary, templateDonorName, type DonationProjectSource } from "./donation-projects";
 
 /** ---------------- types ---------------- */
 
@@ -85,14 +87,6 @@ export type { VariableEntry, VariableGroup } from "./variable-catalog";
 const formatDate = (d: Date | null | undefined): string =>
   d ? new Date(d).toISOString().slice(0, 10) : "";
 
-const formatNumber = (n: number | null | undefined, digits = 0): string =>
-  typeof n === "number"
-    ? n.toLocaleString(undefined, {
-        minimumFractionDigits: digits,
-        maximumFractionDigits: digits,
-      })
-    : "";
-
 /** ---------------- loaders ---------------- */
 
 const userSelect = {
@@ -110,6 +104,7 @@ const userSelect = {
 
 const donationSelect = {
   id: true,
+  locale: true,
   amount: true,
   amountUSD: true,
   currency: true,
@@ -124,9 +119,13 @@ const donationSelect = {
       campaign: { select: { title: true } },
     },
   },
+  waqfItems: {select:{amount:true,amountUSD:true,unit:true,count:true}},
+  categoryItems: {
+    select: { amount: true, amountUSD: true, category: { select: { name: true } } },
+  },
 } as const;
 
-type RawDonation = {
+type RawDonation = DonationProjectSource & {
   id: string;
   amount: number;
   amountUSD: number | null;
@@ -134,38 +133,33 @@ type RawDonation = {
   totalAmount: number;
   status: string;
   createdAt: Date;
-  items: {
-    amount: number;
-    amountUSD: number | null;
-    shareCount: number | null;
-    campaign: { title: string };
-  }[];
 };
 
-function donationToContext(d: RawDonation): TemplateDonation {
-  const items: TemplateDonationItem[] = d.items.map((it) => ({
-    campaignTitle: it.campaign?.title ?? "",
-    amount: formatNumber(it.amount, 0),
-    amountUSD: formatNumber(it.amountUSD ?? 0, 0),
+function donationToContext(d: RawDonation, locale?: string | null): TemplateDonation {
+  const projects = donationProjectSummary({ ...d, locale: locale || d.locale });
+  const items: TemplateDonationItem[] = projects.lines.map((it) => ({
+    campaignTitle: it.campaignTitle,
+    amount: formatTemplateMoney(it.amount, locale || d.locale, d.currency),
+    amountUSD: formatTemplateMoney(donationUsdAmount({ ...it, currency: d.currency }), locale || d.locale, "USD"),
     currency: d.currency,
     shareCount: it.shareCount != null ? String(it.shareCount) : "",
   }));
   return {
     id: d.id,
-    amount: formatNumber(d.amount, 0),
-    amountUSD: formatNumber(d.amountUSD ?? 0, 0),
+    amount: formatTemplateMoney(d.amount, locale || d.locale, d.currency),
+    amountUSD: formatTemplateMoney(donationUsdAmount(d), locale || d.locale, "USD"),
     currency: d.currency,
-    totalAmount: formatNumber(d.totalAmount, 0),
+    totalAmount: formatTemplateMoney(d.totalAmount, locale || d.locale, d.currency),
     status: d.status,
     createdAt: formatDate(d.createdAt),
-    campaignTitle: items.map((it) => it.campaignTitle).filter(Boolean).join("، "),
+    campaignTitle: projects.campaignTitle,
     itemCount: String(items.length),
     items,
   };
 }
 
-function donationsToContext(donations: RawDonation[]): TemplateDonation[] {
-  return donations.map(donationToContext);
+function donationsToContext(donations: RawDonation[], locale?: string | null): TemplateDonation[] {
+  return donations.map((donation) => donationToContext(donation, locale));
 }
 
 function userToContext(
@@ -173,7 +167,7 @@ function userToContext(
 ): TemplateUser {
   return {
     id: u.id,
-    name: u.name ?? "",
+    name: templateDonorName(u.name,u.preferredLang),
     email: u.email ?? "",
     phone: u.phone ?? "",
     countryName: u.countryName ?? u.country ?? "",
@@ -197,15 +191,16 @@ export async function loadContext(userId: string): Promise<TemplateContext | nul
     orderBy: { createdAt: "desc" },
   });
 
-  const totalUSD = donations.reduce((s, d) => s + (d.amountUSD ?? 0), 0);
+  const usd = donations.map(donationUsdAmount);
+  const totalUSD = usd.some((n) => n === null) ? null : usd.reduce<number>((s, n) => s + (n ?? 0), 0);
   const lastAt = donations[0]?.createdAt ?? null;
 
   return {
     user: userToContext(user),
-    donations: donationsToContext(donations as RawDonation[]),
+    donations: donationsToContext(donations as RawDonation[], user.preferredLang),
     totals: {
       count: String(donations.length),
-      amountUSD: formatNumber(totalUSD, 0),
+      amountUSD: formatTemplateMoney(totalUSD, user.preferredLang, "USD"),
       lastAt: formatDate(lastAt),
     },
   };
@@ -228,7 +223,7 @@ export async function loadContextForDonation(
   if (!base) return null;
   return {
     ...base,
-    donation: donationToContext(donation as RawDonation),
+    donation: donationToContext(donation as RawDonation, base.user.preferredLang),
   };
 }
 
@@ -255,14 +250,15 @@ export async function loadContextsForUserIds(
   const out = new Map<string, TemplateContext>();
   for (const u of users) {
     const ds = byDonor.get(u.id) ?? [];
-    const totalUSD = ds.reduce((s, d) => s + (d.amountUSD ?? 0), 0);
+    const usd = ds.map(donationUsdAmount);
+    const totalUSD = usd.some((n) => n === null) ? null : usd.reduce<number>((s, n) => s + (n ?? 0), 0);
     const lastAt = ds[0]?.createdAt ?? null;
     out.set(u.id, {
       user: userToContext(u),
-      donations: donationsToContext(ds),
+      donations: donationsToContext(ds, u.preferredLang),
       totals: {
         count: String(ds.length),
-        amountUSD: formatNumber(totalUSD, 0),
+        amountUSD: formatTemplateMoney(totalUSD, u.preferredLang, "USD"),
         lastAt: formatDate(lastAt),
       },
     });

@@ -1,3 +1,4 @@
+import { donationTemplateValues } from "./template-donation-links";
 import { templateLocaleHeader } from "./template-locale-media";
 import type { Prisma, MessageTriggerEvent } from "@prisma/client";
 import { createDeliveryRecord, markDeliveryStatus } from "./delivery-log-service";
@@ -317,9 +318,11 @@ export async function sendAutomaticWhatsappMessage(
      schema rather than from the local body text. A template asking for a value we cannot supply is
      skipped here instead of being sent and rejected with `#132000`. */
   const { buildMetaComponents } = await import("./providers/meta-whatsapp/parameters");
+  const prepared=await donationTemplateValues({componentsSchema:input.metaTemplate.componentsSchema,scopedNames:input.metaTemplate.scopedNames,values:input.templateValues ?? {},donationId:input.donationId,recipientUserId:input.recipientUserId});
+  if(!prepared.ok){await markDeliveryStatus(id,"SKIPPED",{errorMessage:prepared.reason});return{outcome:"SKIPPED",reason:prepared.reason};}
   const built = buildMetaComponents({
     componentsSchema: input.metaTemplate.componentsSchema,
-    values: input.templateValues ?? {},
+    values: prepared.values,
     positionalNames: input.metaTemplate.positionalNames,
     scopedNames: input.metaTemplate.scopedNames,
     headerMediaUrl: input.headerMediaUrl ?? input.metaTemplate.headerMediaUrl ?? null,
@@ -327,7 +330,7 @@ export async function sendAutomaticWhatsappMessage(
     headerLocation: input.metaTemplate.headerLocation,
   });
   if (!built.ok) {
-    await markDeliveryStatus(id, "SKIPPED", { errorMessage: built.reason });
+    await markDeliveryStatus(id, "SKIPPED", { errorMessage: `${built.reason}: ${built.detail}` });
     await mirrorSentMessage("WHATSAPP", input, "SKIPPED", { recipientPhone: input.recipientPhone, renderedBody: input.renderedBody, errorMessage: `${built.reason}: ${built.detail}` });
     return { outcome: "SKIPPED", reason: built.reason };
   }

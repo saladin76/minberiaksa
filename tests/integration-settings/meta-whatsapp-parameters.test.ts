@@ -229,3 +229,13 @@ test("old approved schemas with overlong parameter names fail locally instead of
   if (result.ok) return;
   assert.equal(result.reason, "META_TEMPLATE_PARAMETER_NAME_INVALID");
 });
+
+test("component-scoped parameters override flattened positions for donation certificate buttons",()=>{
+  const result=buildMetaComponents({componentsSchema:[{type:"BODY",text:"Hello {{1}}"},{type:"BUTTONS",buttons:[{type:"URL",text:"Certificate",url:"https://example.test/thanks/{{1}}"}]}],values:{"1":"Donor Name","user.name":"Donor Name","donation.id":"507f1f77bcf86cd799439011"},scopedNames:{"body.1":"user.name","button.0.1":"donation.id"},positionalNames:["user.name","donation.id"]});
+  assert.equal(result.ok,true);if(!result.ok)return;
+  assert.deepEqual(result.components[1],{type:"button",sub_type:"url",index:"0",parameters:[{type:"text",text:"507f1f77bcf86cd799439011"}]});
+});
+test("a missing scoped URL value cannot fall back to the donor name in global position one",()=>{
+  const result=buildMetaComponents({componentsSchema:[{type:"BUTTONS",buttons:[{type:"URL",text:"Certificate",url:"https://example.test/thanks/{{1}}"}]}],values:{"1":"Donor Name"},scopedNames:{"button.0.1":"donation.id"}});
+  assert.equal(result.ok,false);if(result.ok)return;assert.equal(result.reason,"TEMPLATE_PARAMETER_MISSING");assert.match(result.detail,/donation.id/);
+});

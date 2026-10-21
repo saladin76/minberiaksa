@@ -1,3 +1,4 @@
+import { whatsappDeliveryProgress } from "@/lib/communication/whatsapp-delivery-progress";
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { Prisma } from "@prisma/client";
@@ -72,15 +73,11 @@ export async function GET(request: NextRequest) {
     }
 
     const [
-      total, byStatus, deliveredCount, readCount, repliedCount, failedCount,
+      total, byStatus,
       allTimeTotal, rows, listTotal, bucketRows, templates, metaConfig, retryableCount, activeSenders,
     ] = await Promise.all([
       prisma.communicationDelivery.count({ where: rangeWhere }),
       prisma.communicationDelivery.groupBy({ by: ["status"], where: rangeWhere, _count: { _all: true } }),
-      prisma.communicationDelivery.count({ where: { ...rangeWhere, deliveredAt: { not: null } } }),
-      prisma.communicationDelivery.count({ where: { ...rangeWhere, readAt: { not: null } } }),
-      prisma.communicationDelivery.count({ where: { ...rangeWhere, repliedAt: { not: null } } }),
-      prisma.communicationDelivery.count({ where: { ...rangeWhere, status: { in: [...FAILED_STATUSES] } } }),
       prisma.communicationDelivery.count({ where: { channel: CHANNEL } }),
       prisma.communicationDelivery.findMany({
         where: listWhere,
@@ -97,7 +94,7 @@ export async function GET(request: NextRequest) {
       prisma.communicationDelivery.count({ where: listWhere }),
       prisma.communicationDelivery.findMany({
         where: rangeWhere,
-        select: { createdAt: true, status: true, deliveredAt: true, readAt: true },
+        select: { createdAt: true, status: true, deliveredAt: true, readAt: true, repliedAt:true, providerMessageId:true, sentAt:true },
         orderBy: { createdAt: "asc" },
       }),
       // Template readiness is the usual reason this channel is silent  see the note above.
@@ -133,20 +130,20 @@ export async function GET(request: NextRequest) {
     const statusCounts: Record<string, number> = {};
     for (const row of byStatus) statusCounts[row.status] = row._count._all;
 
-    const sentCount =
-      (statusCounts.SENT ?? 0) + (statusCounts.SENT_TO_PROVIDER ?? 0) + (statusCounts.DELIVERED ?? 0) +
-      (statusCounts.READ ?? 0) + (statusCounts.REPLIED ?? 0) + failedCount;
-    const attempted = Math.max(sentCount, 0);
-    const rate = (part: number) => (attempted > 0 ? Math.round((part / attempted) * 1000) / 10 : 0);
+    let deliveredCount=0,readCount=0,repliedCount=0,failedCount=0,attempted=0,observedAttempts=0;
+    const rate=(part:number)=>attempted>0?Math.round(part/attempted*1000)/10:0;
 
     const buckets = new Map<string, Bucket>();
     for (const row of bucketRows) {
       const key = row.createdAt.toISOString().slice(0, 10);
       const bucket = buckets.get(key) ?? { date: key, sent: 0, delivered: 0, read: 0, failed: 0 };
-      if ((FAILED_STATUSES as readonly string[]).includes(row.status)) bucket.failed++;
-      else if (!["SKIPPED", "RENDERED", "DRAFT"].includes(row.status)) bucket.sent++;
-      if (row.deliveredAt) bucket.delivered++;
-      if (row.readAt) bucket.read++;
+      const progress=whatsappDeliveryProgress(row);
+      if(progress.accepted){attempted++;bucket.sent++;}
+      if(progress.attempted)observedAttempts++;
+      if(progress.failed){failedCount++;bucket.failed++;}
+      if(progress.delivered){deliveredCount++;bucket.delivered++;}
+      if(progress.read){readCount++;bucket.read++;}
+      if(progress.replied)repliedCount++;
       buckets.set(key, bucket);
     }
 
@@ -238,7 +235,7 @@ export async function GET(request: NextRequest) {
         delivered: deliveredCount, read: readCount, replied: repliedCount,
         failed: failedCount, skipped: statusCounts.SKIPPED ?? 0,
         deliveredRate: rate(deliveredCount), readRate: rate(readCount),
-        repliedRate: rate(repliedCount), failedRate: rate(failedCount),
+        repliedRate: rate(repliedCount), failedRate: observedAttempts>0 ? Math.round(failedCount/observedAttempts*1000)/10 : 0,
       },
       trackingLive,
       retryableCount,

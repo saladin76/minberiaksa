@@ -80,7 +80,7 @@ export async function sendTriggerMessage(
     const variant = resolveEmailVariant(tpl, locale);
     const html = await renderEmailHtml(variant.document as TReaderDocument, ctx);
     const subject = renderEmailSubject(variant.subject, ctx);
-    const routed = resolveTriggerSender(config, "EMAIL", { locale, purpose: opts.purpose });
+    const routed = resolveTriggerSender(config, "EMAIL", { locale, country:ctx.user.countryCode || null, purpose: opts.purpose });
     /* A routing refusal is the answer, not a prompt to fall back to the default identity. */
     if (!routed.ok) return { channel: "EMAIL", outcome: "SKIPPED", reason: routed.reason };
     const response = await sendAutomaticEmailMessage({ triggerEvent: event, templateId: tpl.id, templateName: tpl.name, locale, recipientUserId: ctx.user.id, recipientName: ctx.user.name || null, recipientEmail: ctx.user.email ?? null, renderedSubject: subject, renderedBody: html, senderEmail: routed.sender.senderEmail, variables, donationId, purpose: opts.purpose, attachments: opts.attachments });
@@ -114,7 +114,7 @@ export async function sendTriggerMessage(
     if (!tpl) return null;
     const variant = resolveWhatsappBody(tpl, locale);
     const body = mergeText(variant.body, ctx);
-    const routed = resolveTriggerSender(config, "WHATSAPP", { locale, purpose: opts.purpose });
+    const routed = resolveTriggerSender(config, "WHATSAPP", { locale, country:ctx.user.countryCode || null, purpose: opts.purpose });
     if (!routed.ok) return { channel: "WHATSAPP", outcome: "SKIPPED", reason: routed.reason };
     const metaTemplate = await resolveMetaTemplateMapping(tpl, locale, routed.sender.businessAccountId);
     /* Meta's placeholders are positional, and the local template's variable catalog says which

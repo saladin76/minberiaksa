@@ -252,6 +252,7 @@ function engineHarness(options: EngineOptions = {}) {
       return { ok: true, providerMessageId: "provider-id", internalAccepted: false };
     } },
     "@/lib/events/dispatch": { resolveTriggerSendConfig: async () => ({}), resolveTriggerSender: () => ({ ok: true, sender: { id: "sender", senderEmail: "sender@example.test" } }) },
+    "./template-donation-links": {donationTemplateValues:async(input:{values:unknown})=>({ok:true,values:input.values})},
     "./automatic-message-dispatcher": {},
     "./providers/meta-whatsapp/parameters": {},
     "./providers/sms/client": {},
