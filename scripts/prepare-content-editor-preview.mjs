@@ -1,6 +1,6 @@
 // Isolated UI QA only. Generates static assets; never reads or writes a live database.
 import { build } from "esbuild";
-import { mkdir, writeFile, copyFile } from "node:fs/promises";
+import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { createRequire } from "node:module";
 import postcss from "postcss";

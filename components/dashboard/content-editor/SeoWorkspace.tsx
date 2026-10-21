@@ -177,7 +177,9 @@ export function SeoWorkspace({
           </section>
           <section className="overflow-hidden rounded-xl border bg-white">
             {values.ogImage ? (
-              /* eslint-disable-next-line @next/next/no-img-element */ <img
+              // User-supplied upload URLs do not have a fixed image host.
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
                 src={values.ogImage}
                 alt={values.imageAlt || ""}
                 className="h-48 w-full object-cover"
