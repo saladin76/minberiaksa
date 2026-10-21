@@ -1,3 +1,5 @@
+import { forEachTemplateSyncItem } from "./template-sync-work";
+import { templateLocaleFromLanguage } from "./template-locale-media";
 import { schemaHasInvalidMetaParameterNames } from "./meta-parameter-name";
 import "server-only";
 
@@ -22,7 +24,7 @@ export type SyncSummary = {
 };
 
 export function localeFromMetaLanguage(language: string): SupportedLocale | null {
-  const base = String(language ?? "").trim().toLowerCase().replace(/[_-].*$/, "");
+  const base = templateLocaleFromLanguage(language);
   return (SUPPORTED_LOCALES as readonly string[]).includes(base) ? (base as SupportedLocale) : null;
 }
 
@@ -72,6 +74,7 @@ async function activeWabaIds(explicit?: string | null): Promise<string[]> {
  */
 export async function syncMetaWhatsappTemplates(opts: {
   businessAccountId?: string | null;
+  templateId?: string;
   actor?: Actor;
 } = {}): Promise<SyncSummary> {
   const summary: SyncSummary = {
@@ -89,6 +92,7 @@ export async function syncMetaWhatsappTemplates(opts: {
   if (!wabas.length) return { ...summary, reason: "NO_ACTIVE_WABA", detail: "No active Meta WhatsApp sender has a WABA ID." };
 
   const locals = await prisma.whatsappTemplate.findMany({
+    ...(opts.templateId ? {where:{id:opts.templateId}} : {}),
     select: {
       id: true,
       name: true,
@@ -97,7 +101,7 @@ export async function syncMetaWhatsappTemplates(opts: {
         select: { providerTemplateName: true },
       },
     },
-  }).catch(() => []);
+  });
   const byFoldedName = new Map<string, string>();
   for (const local of locals) {
     // Once an exact provider family exists, it becomes authoritative. Keeping the local editorial
@@ -120,12 +124,12 @@ export async function syncMetaWhatsappTemplates(opts: {
     summary.fetched += remote.templates.length;
 
     const keptByTemplate = new Map<string, string[]>();
-    for (const row of remote.templates) {
-      if (!row.name || !row.language) continue;
+    await forEachTemplateSyncItem(remote.templates, 6, async row => {
+      if (!row.name || !row.language) return;
       const templateId = byFoldedName.get(foldName(row.name));
       if (!templateId) {
         unmatched.add(row.name);
-        continue;
+        return;
       }
       touchedTemplates.add(templateId);
       const kept = keptByTemplate.get(templateId) ?? [];
@@ -160,11 +164,12 @@ export async function syncMetaWhatsappTemplates(opts: {
         return null;
       });
       if (written) summary.variantsUpserted += 1;
-    }
+      else throw new Error("META_VARIANT_PERSIST_FAILED");
+    });
 
     /* Reconcile every local template for this WABA, not only templates Meta returned. Otherwise a
        template deleted/disabled remotely can leave a stale APPROVED row forever. */
-    for (const local of locals) {
+    await forEachTemplateSyncItem(locals, 6, async local => {
       const keptLanguages = keptByTemplate.get(local.id) ?? [];
       const removed = await prisma.whatsappTemplateWabaVariant.deleteMany({
         where: {
@@ -173,17 +178,17 @@ export async function syncMetaWhatsappTemplates(opts: {
           businessAccountId: waba,
           ...(keptLanguages.length ? { languageCode: { notIn: keptLanguages } } : {}),
         },
-      }).catch(() => ({ count: 0 }));
+      });
       summary.variantsRemoved += removed.count;
       if (keptLanguages.length || removed.count > 0) touchedTemplates.add(local.id);
-    }
+    });
   }
 
   summary.matchedTemplates = touchedTemplates.size;
   summary.unmatchedNames = [...unmatched].sort();
 
   // Rebuild conservative aggregate variants from exact WABA rows.
-  for (const templateId of touchedTemplates) {
+  await forEachTemplateSyncItem([...touchedTemplates], 4, async templateId => {
     const exact = await prisma.whatsappTemplateWabaVariant.findMany({
       where: { templateId, provider: META_PROVIDER, businessAccountId: { in: wabas } },
       select: {
@@ -199,7 +204,7 @@ export async function syncMetaWhatsappTemplates(opts: {
         componentsSchema: true,
         lastSyncedAt: true,
       },
-    }).catch(() => []);
+    });
 
     const byLanguage = new Map<string, typeof exact>();
     for (const row of exact) {
@@ -251,12 +256,12 @@ export async function syncMetaWhatsappTemplates(opts: {
           componentsSchema: first.componentsSchema as never,
           lastSyncedAt: now,
         },
-      }).catch((error: unknown) => console.error("aggregate variant upsert failed", error));
+      }).catch((error: unknown) => { console.error("aggregate variant upsert failed", error); throw error; });
     }
 
     const removed = await prisma.whatsappTemplateVariant.deleteMany({
       where: { templateId, provider: META_PROVIDER, languageCode: { notIn: keptLanguages } },
-    }).catch(() => ({ count: 0 }));
+    });
     summary.variantsRemoved += removed.count;
 
     // Keep the legacy parent fields useful for list views, while exact runtime truth remains
@@ -270,7 +275,7 @@ export async function syncMetaWhatsappTemplates(opts: {
         rejectionReason: true,
         lastSyncedAt: true,
       },
-    }).catch(() => []);
+    });
     const overall = deriveOverallMetaTemplateStatus(aggregate.map((row) => row.approvalStatus));
     const representative = aggregate[0] ?? null;
     await prisma.whatsappTemplate.update({
@@ -284,7 +289,7 @@ export async function syncMetaWhatsappTemplates(opts: {
         lastSyncError: aggregate.map((row) => row.rejectionReason).find(Boolean) ?? null,
       },
     }).catch((error: unknown) => console.error("template parent status update failed", error));
-  }
+  });
 
   summary.ok = true;
   await writeAuditLog({
@@ -342,11 +347,11 @@ export function resolveVariantForLocale(variants: VariantRow[], locale: string, 
   if (!variants.length) return NOT_READY;
   const approved = variants.filter((v) => v.approvalStatus === "APPROVED");
   const pool = approved.length ? approved : variants;
-  const base = String(locale ?? "").toLowerCase().replace(/[_-].*$/, "");
+  const base = templateLocaleFromLanguage(locale);
   const chosen =
     pool.find((v) => v.locale === locale) ??
     pool.find((v) => v.languageCode.toLowerCase() === locale.toLowerCase()) ??
-    pool.find((v) => v.languageCode.toLowerCase().replace(/[_-].*$/, "") === base) ??
+    pool.find((v) => templateLocaleFromLanguage(v.languageCode) === base) ??
     pool.find((v) => v.locale === fallbackLocale) ??
     pool.find((v) => v.languageCode.toLowerCase() === fallbackLocale.toLowerCase()) ??
     pool.find((v) => v.languageCode.toLowerCase().replace(/[_-].*$/, "") === fallbackLocale.toLowerCase()) ??

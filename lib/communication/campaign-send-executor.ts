@@ -1,3 +1,4 @@
+import { templateLocaleHeader } from "./template-locale-media";
 import { prisma } from "@/lib/prisma";
 import { writeAuditLog } from "@/lib/audit-log";
 import type { CommunicationCampaign } from "@prisma/client";
@@ -97,12 +98,13 @@ async function countDeferredQuietRecipients(campaignId: string): Promise<number>
 
 async function loadWhatsappTemplateTruth(templateId: string): Promise<{
   byWaba: Map<string, Parameters<typeof resolveVariantForLocale>[0]>;
+  templateMedia: { header?: unknown; translations?: unknown };
   positionalNames: string[]; scopedNames: Record<string, string>; headerMediaUrl: string | null; headerMediaFilename: string | null;
   headerLocation: { latitude: number; longitude: number; name?: string; address?: string } | null;
 }> {
   const [variants, tpl] = await Promise.all([
     prisma.whatsappTemplateWabaVariant.findMany({ where: { templateId, provider: META_PROVIDER }, select: { businessAccountId: true, languageCode: true, locale: true, approvalStatus: true, category: true, providerTemplateName: true, componentsSchema: true, rejectionReason: true, lastSyncedAt: true } }),
-    prisma.whatsappTemplate.findUnique({ where: { id: templateId }, select: { variables: true, header: true } }),
+    prisma.whatsappTemplate.findUnique({ where: { id: templateId }, select: { variables: true, header: true, translations: true } }),
   ]);
   const byWaba = new Map<string, Parameters<typeof resolveVariantForLocale>[0]>();
   for (const row of variants) { const list = byWaba.get(row.businessAccountId) ?? []; list.push(row); byWaba.set(row.businessAccountId, list); }
@@ -124,7 +126,7 @@ async function loadWhatsappTemplateTruth(templateId: string): Promise<{
   const headerMediaFilename = typeof header.fileName === "string" && header.fileName.trim() ? header.fileName.trim() : null;
   const latitude = Number(header.latitude), longitude = Number(header.longitude);
   const headerLocation = Number.isFinite(latitude) && Number.isFinite(longitude) ? { latitude, longitude, ...(typeof header.name === "string" && header.name.trim() ? { name: header.name.trim() } : {}), ...(typeof header.address === "string" && header.address.trim() ? { address: header.address.trim() } : {}) } : null;
-  return { byWaba, positionalNames, scopedNames, headerMediaUrl, headerMediaFilename, headerLocation };
+  return { byWaba, templateMedia: tpl ?? {}, positionalNames, scopedNames, headerMediaUrl, headerMediaFilename, headerLocation };
 }
 
 function templateValuesFor(names: string[], ctx: unknown): Record<string, string> {
@@ -391,7 +393,8 @@ async function executeCampaignRun(campaignId: string, opts: ExecutionOptions): P
           await markDeliveryStatus(deliveryId, "SKIPPED", { errorMessage: `${reason}: Meta=${actualMetaCategory}; expected=${expectedMetaCategory}` });
           outcome.skipped++; bump(outcome.reasons, reason); return outcome;
         }
-        const built = buildMetaComponents({ componentsSchema: readiness.componentsSchema, values: templateValuesFor(whatsapp?.positionalNames ?? [], recipientCtx), positionalNames: whatsapp?.positionalNames ?? [], scopedNames: whatsapp?.scopedNames ?? {}, headerMediaUrl: whatsapp?.headerMediaUrl ?? null, headerMediaFilename: whatsapp?.headerMediaFilename ?? null, headerLocation: whatsapp?.headerLocation ?? null });
+        const localizedHeader = templateLocaleHeader(whatsapp?.templateMedia ?? {}, readiness.locale ?? readiness.languageCode);
+        const built = buildMetaComponents({ componentsSchema: readiness.componentsSchema, values: templateValuesFor(whatsapp?.positionalNames ?? [], recipientCtx), positionalNames: whatsapp?.positionalNames ?? [], scopedNames: whatsapp?.scopedNames ?? {}, headerMediaUrl: typeof localizedHeader.mediaUrl === "string" ? localizedHeader.mediaUrl : null, headerMediaFilename: typeof localizedHeader.fileName === "string" ? localizedHeader.fileName : null, headerLocation: whatsapp?.headerLocation ?? null });
         if (!built.ok) {
           await markDeliveryStatus(deliveryId, "SKIPPED", { errorMessage: `${built.reason}  ${built.detail}` });
           outcome.skipped++; bump(outcome.reasons, built.reason); return outcome;

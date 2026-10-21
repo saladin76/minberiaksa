@@ -110,7 +110,7 @@ function storedTemplateValues(variables: unknown, names: string[]): Record<strin
 async function resolveMetaTemplate(row: DeliveryRow, businessAccountId: string | null) {
   if (!row.templateId || !businessAccountId) return null;
   const tpl = await prisma.whatsappTemplate.findUnique({
-    where: { id: row.templateId }, select: { id: true, provider: true, name: true, variables: true, header: true },
+    where: { id: row.templateId }, select: { id: true, provider: true, name: true, variables: true, header: true, translations: true },
   });
   return tpl ? resolveMetaTemplateMapping(tpl, row.locale || "ar", businessAccountId) : null;
 }

@@ -1,3 +1,4 @@
+import { templateLocaleFromLanguage } from "./template-locale-media";
 import "server-only";
 
 import { prisma } from "@/lib/prisma";
@@ -63,9 +64,9 @@ export async function hasSubmittedMetaVariant(templateId: string): Promise<boole
 
 function localeFromProviderLanguage(languageCode: string | null | undefined, locale: string | null | undefined): string | null {
   const direct = String(locale ?? "").trim().toLowerCase();
-  if (direct) return direct;
+  if (direct) return templateLocaleFromLanguage(direct);
   const code = String(languageCode ?? "").trim().toLowerCase();
-  return code ? code.replace(/[_-].*$/, "") : null;
+  return code ? templateLocaleFromLanguage(code) : null;
 }
 
 export async function submittedMetaLocales(templateId: string): Promise<Set<string>> {
