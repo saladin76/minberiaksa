@@ -96,7 +96,12 @@ export function WorkspaceSettings({
             ),
         )
         .map((f) => {
-          const value = settings[f.key];
+          const value =
+            settings[f.key] ??
+            (kind === "categories" &&
+            ["isActive", "navigationVisible"].includes(f.key)
+              ? true
+              : undefined);
           let options: { id: string; title: string }[] = [];
           if (f.key === "categoryIds") options = catalog.categories;
           if (["campaignId", "campaignIds"].includes(f.key))
