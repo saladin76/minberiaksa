@@ -326,7 +326,7 @@ export async function sendAutomaticWhatsappMessage(
     headerLocation: input.metaTemplate.headerLocation,
   });
   if (!built.ok) {
-    await markDeliveryStatus(id, "SKIPPED", { errorMessage: built.reason });
+    await markDeliveryStatus(id, "SKIPPED", { errorMessage: `${built.reason}: ${built.detail}` });
     await mirrorSentMessage("WHATSAPP", input, "SKIPPED", { recipientPhone: input.recipientPhone, renderedBody: input.renderedBody, errorMessage: `${built.reason}: ${built.detail}` });
     return { outcome: "SKIPPED", reason: built.reason };
   }
@@ -519,3 +519,4 @@ function variableBindingInfo(variables: unknown): { names: string[]; scopedNames
   }
   return { names, scopedNames };
 }
+

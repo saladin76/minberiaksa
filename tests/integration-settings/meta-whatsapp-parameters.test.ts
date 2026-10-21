@@ -4,6 +4,76 @@ import { buildMetaComponents } from "../../lib/communication/providers/meta-what
 import { buildStandardMetaComponents } from "../../lib/communication/meta-template-components";
 import { metaParameterName } from "../../lib/communication/meta-parameter-name";
 
+test("donation receipt buttons use donation id, never the body's first parameter", () => {
+  const published = buildStandardMetaComponents({
+    body: "Hello {{user.name}}, project {{donation.campaignTitle}}, reference {{donation.id}}",
+    header: { type: "NONE" }, headerText: "", footerText: "",
+    buttons: [
+      { type: "URL", text: "Certificate", url: "https://minberiaksa.org/api/certificates/thanks/{{donation.id}}" },
+      { type: "URL", text: "Receipt", url: "https://minberiaksa.org/api/receipts/{{donation.id}}" },
+    ],
+  });
+  const donationId = "65f12abc1234567890abcdef";
+  // The dispatch/retry callers also supply these legacy global numeric positions.
+  const sent = buildMetaComponents({
+    componentsSchema: published.components,
+    values: {
+      "1": "Ömer Yıldırım", "2": "Water project", "3": donationId,
+      "user.name": "Ömer Yıldırım", "donation.campaignTitle": "Water project", "donation.id": donationId,
+    },
+    positionalNames: ["user.name", "donation.campaignTitle", "donation.id"],
+    scopedNames: Object.fromEntries(published.bindings.map((b) => [`${b.scope}.${b.position}`, b.key])),
+  });
+  assert.equal(sent.ok, true);
+  if (!sent.ok) return;
+  assert.deepEqual(sent.components.filter((c) => c.type === "button"), [
+    { type: "button", sub_type: "url", index: "0", parameters: [{ type: "text", text: donationId }] },
+    { type: "button", sub_type: "url", index: "1", parameters: [{ type: "text", text: donationId }] },
+  ]);
+  assert.deepEqual(sent.components[0].parameters[0], { type: "text", text: "Ömer Yıldırım" });
+});
+
+test("missing scoped button id cannot borrow a populated body parameter", () => {
+  const result = buildMetaComponents({
+    componentsSchema: [{ type: "BUTTONS", buttons: [{ type: "URL", url: "https://example.com/{{1}}" }] }],
+    values: { "1": "Donor name", "user.name": "Donor name", "donation.id": " " },
+    positionalNames: ["user.name"],
+    scopedNames: { "button.0.1": "donation.id" },
+  });
+  assert.equal(result.ok, false);
+  if (result.ok) return;
+  assert.equal(result.reason, "TEMPLATE_PARAMETER_MISSING");
+  assert.match(result.detail, /donation\.id/);
+});
+
+test("explicit component values win and legacy unscoped templates remain supported", () => {
+  const explicit = buildMetaComponents({
+    componentsSchema: [{ type: "BODY", text: "Hello {{1}}" }],
+    values: { "body.1": "Explicit", "user.name": "Semantic", "1": "Legacy" },
+    scopedNames: { "body.1": "user.name" },
+  });
+  assert.equal(explicit.ok, true);
+  if (explicit.ok) assert.deepEqual(explicit.components[0].parameters[0], { type: "text", text: "Explicit" });
+  const legacy = buildMetaComponents({
+    componentsSchema: [{ type: "BODY", text: "Hello {{1}}" }], values: { "1": "Legacy" },
+  });
+  assert.equal(legacy.ok, true);
+  if (legacy.ok) assert.deepEqual(legacy.components[0].parameters[0], { type: "text", text: "Legacy" });
+});
+
+test("header and body bindings beat shared flat numbering", () => {
+  const result = buildMetaComponents({
+    componentsSchema: [
+      { type: "HEADER", format: "TEXT", text: "Hello {{1}}" },
+      { type: "BODY", text: "Amount {{1}}" },
+    ],
+    values: { "1": "Amina", "user.name": "Amina", "donation.amount": "25" },
+    scopedNames: { "header.1": "user.name", "body.1": "donation.amount" },
+  });
+  assert.equal(result.ok, true);
+  if (result.ok) assert.deepEqual(result.components[1].parameters[0], { type: "text", text: "25" });
+});
+
 test("Meta parameter builder maps scoped header/body variables independently", () => {
   const result = buildMetaComponents({
     componentsSchema: [
@@ -229,3 +299,4 @@ test("old approved schemas with overlong parameter names fail locally instead of
   if (result.ok) return;
   assert.equal(result.reason, "META_TEMPLATE_PARAMETER_NAME_INVALID");
 });
+

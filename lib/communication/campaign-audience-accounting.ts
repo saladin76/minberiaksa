@@ -45,10 +45,12 @@ export function recipientExclusionReason(
   // Whitespace or malformed non-empty values are validated by the send adapter.
   // This definition deliberately matches the database's null/missing/empty filter.
   if (contact == null || contact === "") return "MISSING_CONTACT";
+  // WhatsApp campaign policy does not require a stored opt-in. DNC and contact
+  // checks above still apply; no preference is created or changed by this rule.
+  if (channel === "WHATSAPP") return null;
   if (!profile) return "NEEDS_CONSENT_REVIEW";
   if (channel === "EMAIL" && profile.emailOptIn !== true) return "EMAIL_OPT_IN_REQUIRED";
   if (channel === "SMS" && profile.smsOptIn !== true) return "SMS_OPT_IN_REQUIRED";
-  if (channel === "WHATSAPP" && profile.whatsappOptIn !== true) return "WHATSAPP_OPT_IN_REQUIRED";
   return null;
 }
 
@@ -81,3 +83,4 @@ export const RECIPIENT_REASON_LABELS: Record<RecipientExclusionReason, string> =
   SMS_OPT_IN_REQUIRED: "موافقة SMS غير مؤكدة",
   WHATSAPP_OPT_IN_REQUIRED: "موافقة واتساب غير مؤكدة",
 };
+

@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { donationProjectSummary, type DonationProjectSource } from "./donation-projects";
 
 /** ---------------- types ---------------- */
 
@@ -110,6 +111,7 @@ const userSelect = {
 
 const donationSelect = {
   id: true,
+  locale: true,
   amount: true,
   amountUSD: true,
   currency: true,
@@ -124,9 +126,15 @@ const donationSelect = {
       campaign: { select: { title: true } },
     },
   },
+  categoryItems: {
+    select: { amount: true, amountUSD: true, category: { select: { name: true } } },
+  },
+  waqfItems: {
+    select: { amount: true, amountUSD: true, unit: true, count: true },
+  },
 } as const;
 
-type RawDonation = {
+type RawDonation = DonationProjectSource & {
   id: string;
   amount: number;
   amountUSD: number | null;
@@ -134,17 +142,12 @@ type RawDonation = {
   totalAmount: number;
   status: string;
   createdAt: Date;
-  items: {
-    amount: number;
-    amountUSD: number | null;
-    shareCount: number | null;
-    campaign: { title: string };
-  }[];
 };
 
-function donationToContext(d: RawDonation): TemplateDonation {
-  const items: TemplateDonationItem[] = d.items.map((it) => ({
-    campaignTitle: it.campaign?.title ?? "",
+function donationToContext(d: RawDonation, locale?: string | null): TemplateDonation {
+  const projects = donationProjectSummary({ ...d, locale: locale || d.locale });
+  const items: TemplateDonationItem[] = projects.lines.map((it) => ({
+    campaignTitle: it.campaignTitle,
     amount: formatNumber(it.amount, 0),
     amountUSD: formatNumber(it.amountUSD ?? 0, 0),
     currency: d.currency,
@@ -158,14 +161,14 @@ function donationToContext(d: RawDonation): TemplateDonation {
     totalAmount: formatNumber(d.totalAmount, 0),
     status: d.status,
     createdAt: formatDate(d.createdAt),
-    campaignTitle: items.map((it) => it.campaignTitle).filter(Boolean).join("، "),
+    campaignTitle: projects.campaignTitle,
     itemCount: String(items.length),
     items,
   };
 }
 
-function donationsToContext(donations: RawDonation[]): TemplateDonation[] {
-  return donations.map(donationToContext);
+function donationsToContext(donations: RawDonation[], locale?: string | null): TemplateDonation[] {
+  return donations.map((donation) => donationToContext(donation, locale));
 }
 
 function userToContext(
@@ -202,7 +205,7 @@ export async function loadContext(userId: string): Promise<TemplateContext | nul
 
   return {
     user: userToContext(user),
-    donations: donationsToContext(donations as RawDonation[]),
+    donations: donationsToContext(donations as RawDonation[], user.preferredLang),
     totals: {
       count: String(donations.length),
       amountUSD: formatNumber(totalUSD, 0),
@@ -228,7 +231,7 @@ export async function loadContextForDonation(
   if (!base) return null;
   return {
     ...base,
-    donation: donationToContext(donation as RawDonation),
+    donation: donationToContext(donation as RawDonation, base.user.preferredLang),
   };
 }
 
@@ -259,7 +262,7 @@ export async function loadContextsForUserIds(
     const lastAt = ds[0]?.createdAt ?? null;
     out.set(u.id, {
       user: userToContext(u),
-      donations: donationsToContext(ds),
+      donations: donationsToContext(ds, u.preferredLang),
       totals: {
         count: String(ds.length),
         amountUSD: formatNumber(totalUSD, 0),
@@ -335,3 +338,4 @@ export function mergeDocument<T>(doc: T, ctx: TemplateContext): T {
   }
   return doc;
 }
+

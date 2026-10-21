@@ -87,7 +87,7 @@ test("campaign wizard never assumes an error response is JSON", () => {
   requires("app/(dashboard)/dashboard/communication/campaigns/new/_components/NewCampaignWizard.tsx", [/async function readApiJson/, /await response\.text\(\)/, /HTTP \$\{response\.status\}/], [/const listJson = await listRes\.json\(\)/, /const json = await res\.json\(\)/]);
 });
 test("campaign picker explains the shared eligibility policy without manufacturing consent", () => {
-  requires("app/api/communication/audience-candidates/route.ts", [/eligibilityReason/, /recipientExclusionReason\(donor, channel, profile\)/, /RECIPIENT_REASON_LABELS\[reason\]/, /campaignCandidateWhere\(base, channel, eligibility, ids\)/, /await readCampaignConsentUserIds/], [/if \(channel === "WHATSAPP"\) return null/, /ensureProfilesForUsers|setProfileConsent/]);
+  requires("app/api/communication/audience-candidates/route.ts", [/eligibilityReason/, /recipientExclusionReason\(donor, channel, profile\)/, /RECIPIENT_REASON_LABELS\[reason\]/, /campaignCandidateWhere\(base, channel, eligibility, ids\)/, /await readCampaignProfileGateUserIds/], [/if \(channel === "WHATSAPP"\) return null/, /ensureProfilesForUsers|setProfileConsent/]);
   requires("app/(dashboard)/dashboard/communication/campaigns/new/_components/DonorPicker.tsx", [/eligibilityReason/, /async function readApiJson/], [/const json = await res\.json\(\)/]);
 });
 test("automatic-events list fails visibly instead of spinning forever", () => {
@@ -102,7 +102,7 @@ test("Smart WhatsApp preserves the current consent surface without adding a new 
 });
 test("campaign membership stays separate from consent and is rechecked before provider calls", () => {
   requires("lib/communication/audience-service.ts", [/recipientExclusionReason\(donor, channel, profile\)/]);
-  requires("lib/communication/campaign-audience-accounting.ts", [/const value = preview\.matched/, /profile\.whatsappOptIn !== true/, /profile\?\.doNotContact === true/]);
+  requires("lib/communication/campaign-audience-accounting.ts", [/const value = preview\.matched/, /if \(channel === "WHATSAPP"\) return null/, /profile\?\.doNotContact === true/], [/profile\.whatsappOptIn !== true/]);
   requires("lib/communication/campaign-recipient-guard.ts", [/prisma\.user\.findUnique/, /CONSENT_CHECK_UNAVAILABLE/]);
   const executor = read(executorPath);
   const checkAt = executor.indexOf("await checkCampaignRecipientBeforeSend"), sendAt = executor.indexOf("await sendPreparedDelivery");
@@ -111,3 +111,4 @@ test("campaign membership stays separate from consent and is rechecked before pr
   requires(smartDialog, [], [/تسجيل الموافقة/]);
   requires("lib/communication/delivery-retry-service.ts", [/purpose !== "MARKETING" \|\| channel === "WHATSAPP"/]);
 });
+

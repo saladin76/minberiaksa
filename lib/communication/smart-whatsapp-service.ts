@@ -15,6 +15,7 @@ import { buildWhatsappRenderedPreview } from "./whatsapp-rendered-preview";
 import { isValidLocale, type SupportedLocale } from "@/lib/locales";
 import { writeAuditLog } from "@/lib/audit-log";
 import { touchProfileCommunication } from "./donor-communication-profile-service";
+import { smartWhatsappTemplateChoices } from "./smart-whatsapp-templates";
 
 type Actor = { actorId?: string | null; actorName?: string | null; actorRole?: string | null } | null;
 export type SmartWhatsappMode = "AUTO" | "FREEFORM" | "UTILITY" | "MARKETING";
@@ -106,34 +107,44 @@ export async function getSmartWhatsappContext(userId: string): Promise<SmartWhat
       }).catch(() => null)
     : null;
 
-  const [marketingTemplates, utilityTemplates] = await Promise.all([
-    prisma.whatsappTemplate.findMany({
-      where: {
-        status: { not: "ARCHIVED" },
-        OR: [{ category: "MARKETING" }, { purpose: "MARKETING" }, { kind: "CAMPAIGN" }],
-        variants: { some: { provider: "META_WHATSAPP", approvalStatus: "APPROVED", category: "MARKETING" } },
+  const locale = isValidLocale(d.locale) ? d.locale : "ar";
+  const snapshot = await loadSenderRoutingSnapshot("WHATSAPP");
+  const utilityRoute = resolveSenderFromSnapshot(snapshot, { locale, country: d.country, purpose: "UTILITY" });
+  const marketingRoute = resolveSenderFromSnapshot(snapshot, { locale, country: d.country, purpose: "MARKETING" });
+  const wabas = {
+    UTILITY: utilityRoute.ok ? utilityRoute.sender.businessAccountId : null,
+    MARKETING: marketingRoute.ok ? marketingRoute.sender.businessAccountId : null,
+  };
+  const businessAccountIds = [...new Set(Object.values(wabas).filter((id): id is string => Boolean(id)))];
+  // The aggregate can be unapproved because a different WABA is missing this language.
+  // Read exact rows once; do not let that unrelated account hide an available template.
+  const templates = businessAccountIds.length ? await prisma.whatsappTemplate.findMany({
+    where: {
+      provider: { in: ["META", "META_WHATSAPP"] },
+      status: { not: "ARCHIVED" },
+      wabaVariants: { some: { provider: "META_WHATSAPP", businessAccountId: { in: businessAccountIds } } },
+    },
+    select: {
+      id: true,
+      name: true,
+      wabaVariants: {
+        where: { provider: "META_WHATSAPP", businessAccountId: { in: businessAccountIds } },
+        select: {
+          businessAccountId: true, languageCode: true, locale: true, approvalStatus: true,
+          category: true, providerTemplateName: true, componentsSchema: true,
+          rejectionReason: true, lastSyncedAt: true,
+        },
       },
-      select: { id: true, name: true, category: true },
-      orderBy: { updatedAt: "desc" },
-      take: 100,
-    }).catch(() => []),
-    prisma.whatsappTemplate.findMany({
-      where: {
-        status: { not: "ARCHIVED" },
-        OR: [{ category: "UTILITY" }, { purpose: "UTILITY" }, { purpose: "TRANSACTIONAL" }],
-        variants: { some: { provider: "META_WHATSAPP", approvalStatus: "APPROVED", category: "UTILITY" } },
-      },
-      select: { id: true, name: true, category: true },
-      orderBy: { updatedAt: "desc" },
-      take: 100,
-    }).catch(() => []),
-  ]);
+    },
+    orderBy: { updatedAt: "desc" },
+  }) : [];
+  const { marketingTemplates, utilityTemplates } = smartWhatsappTemplateChoices(templates, locale, wabas);
 
   return {
     userId,
     phone: d.phone,
     name: d.name,
-    locale: d.locale,
+    locale,
     country: d.country,
     doNotContact: d.doNotContact,
     whatsappOptIn: d.whatsappOptIn,
@@ -160,15 +171,15 @@ async function sendApprovedTemplateForDonor(args: {
 }): Promise<SmartWhatsappSendResult> {
   const template = await prisma.whatsappTemplate.findUnique({
     where: { id: args.templateId },
-    select: { id: true, provider: true, name: true, variables: true, header: true, category: true, purpose: true, kind: true },
+    select: { id: true, provider: true, name: true, variables: true, header: true, category: true, purpose: true, kind: true, status: true },
   });
   if (!template) return { ok: false, reason: "TEMPLATE_NOT_FOUND" };
-
-  const category = String(template.category ?? template.purpose ?? "").toUpperCase();
-  if (args.expected === "MARKETING") {
-    if (category !== "MARKETING" && template.kind !== "CAMPAIGN") return { ok: false, reason: "MARKETING_TEMPLATE_REQUIRED" };
-  } else if (!["UTILITY", "TRANSACTIONAL"].includes(category)) {
-    return { ok: false, reason: "UTILITY_TEMPLATE_REQUIRED" };
+  if (template.status === "ARCHIVED") return { ok: false, reason: "TEMPLATE_ARCHIVED" };
+  const mapping = await resolveMetaTemplateMapping(template, args.locale, args.sender.businessAccountId);
+  if (!mapping) return { ok: false, reason: "META_TEMPLATE_NOT_APPROVED_FOR_SENDER_LANGUAGE" };
+  const providerCategory = String(mapping.category ?? "").toUpperCase();
+  if (providerCategory !== args.expected) {
+    return { ok: false, reason: "META_TEMPLATE_CATEGORY_MISMATCH", detail: `Meta: ${providerCategory || "UNKNOWN"} · Expected: ${args.expected}` };
   }
 
   const contexts = await loadContextsForUserIds([args.ctx.userId]);
@@ -213,12 +224,6 @@ async function sendApprovedTemplateForDonor(args: {
   const rendered = await renderChannelTemplate("WHATSAPP", template.id, args.locale, renderCtx);
   if (!rendered) return { ok: false, reason: "TEMPLATE_RENDER_FAILED" };
 
-  const mapping = await resolveMetaTemplateMapping(template, args.locale, args.sender.businessAccountId);
-  if (!mapping) return { ok: false, reason: "META_TEMPLATE_NOT_APPROVED_FOR_SENDER_LANGUAGE" };
-  const providerCategory = String(mapping.category ?? "").toUpperCase();
-  if (providerCategory && providerCategory !== args.expected) {
-    return { ok: false, reason: "META_TEMPLATE_CATEGORY_MISMATCH", detail: `Meta: ${providerCategory} · Expected: ${args.expected}` };
-  }
   const built = buildMetaComponents({
     componentsSchema: mapping.componentsSchema,
     values: valuesFor(mapping.positionalNames, renderCtx),
@@ -440,3 +445,4 @@ export async function sendSmartWhatsapp(input: {
     actor: input.actor,
   });
 }
+

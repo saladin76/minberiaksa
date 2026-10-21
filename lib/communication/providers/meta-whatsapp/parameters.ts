@@ -122,20 +122,25 @@ export function buildMetaComponents(input: {
   const used: string[] = [];
 
   const lookup = (position: number, scope: string): { ok: true; value: string } | { ok: false; key: string } => {
-    const candidates = [`${scope}.${position}`, String(position)];
-    for (const key of candidates) {
-      const value = input.values[key];
-      if (value != null && String(value).length) return { ok: true, value: String(value) };
-    }
-    const scopedName = input.scopedNames?.[`${scope}.${position}`];
+    const scopedKey = `${scope}.${position}`;
+    const explicit = input.values[scopedKey];
+    if (explicit != null && String(explicit).trim()) return { ok: true, value: String(explicit) };
+    const scopedName = input.scopedNames?.[scopedKey];
     if (scopedName) {
       const byScopedName = input.values[scopedName];
-      if (byScopedName != null && String(byScopedName).length) return { ok: true, value: String(byScopedName) };
+      if (byScopedName != null && String(byScopedName).trim()) return { ok: true, value: String(byScopedName) };
+      // A known component binding is authoritative. In particular button {{1}} is NOT body
+      // {{1}}: falling through to the flat value can put a donor's name into a certificate URL.
+      // A missing bound value must remain missing rather than borrowing another component's data.
+      return { ok: false, key: `${scopedKey} (${scopedName})` };
     }
+    // Compatibility for imported templates without component-scoped bindings.
+    const flat = input.values[String(position)];
+    if (flat != null && String(flat).trim()) return { ok: true, value: String(flat) };
     const name = input.positionalNames?.[position - 1];
     if (name) {
       const byName = input.values[name];
-      if (byName != null && String(byName).length) return { ok: true, value: String(byName) };
+      if (byName != null && String(byName).trim()) return { ok: true, value: String(byName) };
     }
     return { ok: false, key: name ? `${position} (${name})` : String(position) };
   };
@@ -360,3 +365,4 @@ export function schemaTakesParameters(componentsSchema: unknown): boolean {
   }
   return false;
 }
+
