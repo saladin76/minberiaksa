@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import { strict as assert } from "node:assert";
 import { SUPPORTED_LOCALES } from "../../lib/locales";
-import { translationSchema } from "../../lib/communication/whatsapp-template-schema";
+import { translationSchema, templateButtonsSchema } from "../../lib/communication/whatsapp-template-schema";
 import { META_TEMPLATE_LANGUAGES, templateLocaleFromLanguage, templateLocaleHeader, unsubmittedTemplateLocales } from "../../lib/communication/template-locale-media";
 import { forEachTemplateSyncItem } from "../../lib/communication/template-sync-work";
 
@@ -62,4 +62,13 @@ test("sync write failure waits for started work and rejects before reconciliatio
   }),/DATABASE_UNAVAILABLE/);
   assert.equal(active,0);
   assert.equal(started,3);
+});
+
+test("Meta button limits reject excess URLs and phone buttons before publication",()=>{
+  const url={type:"URL",text:"Donate",url:"https://example.test"};
+  const phone={type:"PHONE_NUMBER",text:"Call",phoneNumber:"+905551112233"};
+  assert.equal(templateButtonsSchema.safeParse([url,url]).success,true);
+  assert.equal(templateButtonsSchema.safeParse([url,url,url]).success,false);
+  assert.equal(templateButtonsSchema.safeParse([phone,phone]).success,false);
+  assert.equal(translationSchema.safeParse({body:"Hello",buttons:[url,url,url,url]}).success,false);
 });

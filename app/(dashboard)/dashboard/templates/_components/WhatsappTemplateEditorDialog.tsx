@@ -1,5 +1,6 @@
 "use client";
 
+import { templateButtonProblem } from "@/lib/communication/template-locale-media";
 import * as React from "react";
 import axios from "axios";
 import { toast } from "react-hot-toast";
@@ -244,6 +245,7 @@ export function WhatsappTemplateEditorDialog({ id, open, onOpenChange }: Props) 
   const [submittedLocales, setSubmittedLocales] = React.useState<Set<SupportedLocale>>(new Set());
   const [providerCategoriesByLocale, setProviderCategoriesByLocale] = React.useState<Record<string, string[]>>({});
   const [loading, setLoading] = React.useState(false);
+  const [publishError,setPublishError]=React.useState("");
   const [saving, setSaving] = React.useState(false);
   const [uploadingSample, setUploadingSample] = React.useState(false);
   const [loadedTemplate, setLoadedTemplate] = React.useState<ApiTemplate | null>(null);
@@ -264,6 +266,7 @@ export function WhatsappTemplateEditorDialog({ id, open, onOpenChange }: Props) 
 
   React.useEffect(() => {
     if (!open) return;
+    setPublishError("");
     setWorkingId(id);
     setLoadedTemplate(null);
     setMediaInfo(null);
@@ -481,6 +484,8 @@ export function WhatsappTemplateEditorDialog({ id, open, onOpenChange }: Props) 
 
   const addButton = (type: ButtonType) => {
     if (submittedLocales.has(activeLocale)) return;
+    const buttonProblem=templateButtonProblem([...current.buttons,{type}]);
+    if(buttonProblem){setPublishError(buttonProblem);return;}
     if (current.buttons.length >= 10) {
       toast.error(dt("الحد الأقصى 10 أزرار"));
       return;
@@ -510,6 +515,9 @@ export function WhatsappTemplateEditorDialog({ id, open, onOpenChange }: Props) 
   };
 
   const save = async () => {
+    setPublishError("");
+    const invalidButtons=Object.entries(locales).find(([locale,draft])=>!submittedLocales.has(locale as SupportedLocale)&&templateButtonProblem(draft?.buttons ?? []));
+    if(invalidButtons){setPublishError(`${LOCALE_LABELS[invalidButtons[0] as SupportedLocale]}: ${templateButtonProblem(invalidButtons[1]?.buttons ?? [])}`);return;}
     const arabic = locales[DEFAULT_LOCALE] ?? emptyLocale();
     if (!name.trim()) return void toast.error(dt("اسم القالب مطلوب"));
     if (!/^[a-z][a-z0-9_]{0,119}$/.test(name)) return void toast.error(dt("اسم Meta يجب أن يبدأ بحرف ويحتوي حروفًا إنجليزية صغيرة وأرقامًا وشرطة سفلية فقط"));
@@ -602,7 +610,9 @@ export function WhatsappTemplateEditorDialog({ id, open, onOpenChange }: Props) 
         }
       }
       const provider = data?.publish?.errors?.[0];
-      toast.error([data?.error, provider?.reason, provider?.detail].filter(Boolean).join(" — ") || dt("فشل حفظ القالب"));
+      const problem=[data?.error,provider?.reason,provider?.detail].filter(Boolean).join(" — ") || dt("فشل حفظ القالب");
+      setPublishError(problem);
+      toast.error(problem);
     } finally {
       setSaving(false);
     }
@@ -646,6 +656,7 @@ export function WhatsappTemplateEditorDialog({ id, open, onOpenChange }: Props) 
         />
       }
     >
+      {publishError ? <p role="alert" className="m-4 rounded-xl border border-red-200 bg-red-50 p-4 text-sm leading-7 text-red-800">{publishError}</p> : null}
       <div className="space-y-5">
         <section className="overflow-hidden rounded-xl border border-border bg-white">
           <div className="grid grid-cols-1 md:grid-cols-3">
@@ -956,7 +967,7 @@ export function WhatsappTemplateEditorDialog({ id, open, onOpenChange }: Props) 
                         ) : (
                           <div className="flex h-10 items-center rounded-md border bg-white px-3 text-xs text-slate-400">{dt("لا يحتاج قيمة إضافية")}</div>
                         )}
-                        <button type="button" disabled={submittedLocales.has(activeLocale)} onClick={() => removeButton(index)} className="grid h-10 w-9 disabled:cursor-not-allowed disabled:opacity-40 place-items-center rounded-md text-red-500 hover:bg-red-50"><Trash2 className="h-4 w-4" /></button>
+                        <button type="button" aria-label={`حذف زر ${button.text || index+1}`} disabled={submittedLocales.has(activeLocale)} onClick={() => removeButton(index)} className="grid h-10 w-9 disabled:cursor-not-allowed disabled:opacity-40 place-items-center rounded-md text-red-500 hover:bg-red-50"><Trash2 className="h-4 w-4" /></button>
                       </div>
                     ))}
                   </div>

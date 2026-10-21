@@ -1,4 +1,4 @@
-import { headerSchema, buttonSchema, authSchema, translationSchema } from "@/lib/communication/whatsapp-template-schema";
+import { headerSchema, templateButtonsSchema, authSchema, translationSchema } from "@/lib/communication/whatsapp-template-schema";
 import { unsubmittedTemplateLocales } from "@/lib/communication/template-locale-media";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
@@ -18,7 +18,7 @@ const updateSchema = z.object({
   metaCategory: z.enum(["UTILITY", "MARKETING", "AUTHENTICATION"]).optional(),
   header: headerSchema.optional(),
   footerText: z.string().max(60).nullable().optional(),
-  buttons: z.array(buttonSchema).max(10).optional(),
+  buttons: templateButtonsSchema.optional(),
   authentication: authSchema,
 });
 
@@ -75,7 +75,7 @@ export async function PATCH(
   const parsed = updateSchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json(
-      { error: "Invalid payload", issues: parsed.error.flatten() },
+      { error: parsed.error.issues.map(issue=>issue.message).join(" · "), issues: parsed.error.flatten() },
       { status: 400 }
     );
   }

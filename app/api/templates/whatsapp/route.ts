@@ -1,4 +1,4 @@
-import { headerSchema, buttonSchema, authSchema, translationSchema } from "@/lib/communication/whatsapp-template-schema";
+import { headerSchema, templateButtonsSchema, authSchema, translationSchema } from "@/lib/communication/whatsapp-template-schema";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getServerSession } from "next-auth";
@@ -17,7 +17,7 @@ const createSchema = z.object({
   metaCategory: z.enum(["UTILITY", "MARKETING", "AUTHENTICATION"]).default("UTILITY"),
   header: headerSchema.optional(),
   footerText: z.string().max(60).nullable().optional(),
-  buttons: z.array(buttonSchema).max(10).optional(),
+  buttons: templateButtonsSchema.optional(),
   authentication: authSchema,
 });
 
@@ -93,9 +93,9 @@ export async function GET() {
       ...row,
       variants,
       wabaVariants: undefined,
-      providerApprovalStatus: derived.providerStatus,
+      providerApprovalStatus: !row.variants.length && row.lastSyncStatus === "failed" ? "NOT_SUBMITTED" : derived.providerStatus,
       internalApprovalStatus: derived.internalStatus,
-      approvalLabelAr: derived.labelAr,
+      approvalLabelAr: !row.variants.length && row.lastSyncStatus === "failed" ? "محفوظ محليًا · لم يصل إلى Meta" : derived.labelAr,
       approvalReason: row.variants.map((variant) => variant.rejectionReason).find(Boolean) ?? row.lastSyncError ?? null,
       statusUpdatedAt: row.variants
         .map((variant) => variant.lastSyncedAt)
@@ -122,7 +122,7 @@ export async function POST(request: NextRequest) {
   const parsed = createSchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json(
-      { error: "Invalid payload", issues: parsed.error.flatten() },
+      { error: parsed.error.issues.map(issue=>issue.message).join(" · "), issues: parsed.error.flatten() },
       { status: 400 }
     );
   }

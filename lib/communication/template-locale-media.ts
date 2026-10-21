@@ -25,3 +25,10 @@ export function unsubmittedTemplateLocales(translations: unknown, submitted: Set
   return ["ar", ...Object.keys(rows).filter(key => key !== "ar" && typeof rows[key]?.body === "string" && rows[key].body.trim())]
     .filter(locale => !submitted.has(locale));
 }
+
+/** Limits returned by Meta's template button validation. Preserve extra links in body copy. */
+export function templateButtonProblem(buttons:readonly {type?:string}[]):string|null {
+  if(buttons.filter(b=>b.type==="URL").length>2)return "تسمح Meta بزرّي رابط كحد أقصى لكل لغة. انقل الروابط الإضافية إلى نص الرسالة.";
+  if(buttons.filter(b=>b.type==="PHONE_NUMBER").length>1)return "تسمح Meta بزر اتصال واحد لكل لغة.";
+  return null;
+}
