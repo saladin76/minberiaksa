@@ -1,3 +1,4 @@
+import { templateLocaleHeader } from "./template-locale-media";
 import type { Prisma, MessageTriggerEvent } from "@prisma/client";
 import { createDeliveryRecord, markDeliveryStatus } from "./delivery-log-service";
 import { sendPreparedDelivery } from "./provider-router";
@@ -467,7 +468,7 @@ export type MetaTemplateMapping = {
  * legal payload to fall back to.
  */
 export async function resolveMetaTemplateMapping(
-  tpl: { id?: string | null; provider?: string | null; name?: string | null; variables?: unknown; header?: unknown },
+  tpl: { id?: string | null; provider?: string | null; name?: string | null; variables?: unknown; header?: unknown; translations?: unknown },
   locale: string,
   businessAccountId?: string | null,
 ): Promise<MetaTemplateMapping | null> {
@@ -478,7 +479,7 @@ export async function resolveMetaTemplateMapping(
   const readiness = await getTemplateReadiness(tpl.id, locale, businessAccountId);
   if (!readiness.ready || !readiness.providerTemplateName || !readiness.languageCode) return null;
   const binding = variableBindingInfo(tpl.variables);
-  const header = tpl.header && typeof tpl.header === "object" ? tpl.header as Record<string, unknown> : {};
+  const header = templateLocaleHeader(tpl, readiness.locale ?? readiness.languageCode);
   const latitude = Number(header.latitude);
   const longitude = Number(header.longitude);
   return {

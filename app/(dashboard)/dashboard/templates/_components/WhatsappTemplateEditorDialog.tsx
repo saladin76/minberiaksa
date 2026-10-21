@@ -55,6 +55,7 @@ type StudioButton = {
 };
 
 type LocaleDraft = {
+  header?: HeaderDraft;
   body: string;
   headerText: string;
   footerText: string;
@@ -236,7 +237,7 @@ export function WhatsappTemplateEditorDialog({ id, open, onOpenChange }: Props) 
   const [name, setName] = React.useState("");
   const [workingId, setWorkingId] = React.useState<string | null>(id);
   const [category, setCategory] = React.useState<Category>("UTILITY");
-  const [header, setHeader] = React.useState<HeaderDraft>({ type: "NONE" });
+  const [rootHeader, setRootHeader] = React.useState<HeaderDraft>({ type: "NONE" });
   const [locales, setLocales] = React.useState<Partial<Record<SupportedLocale, LocaleDraft>>>({});
   const [authentication, setAuthentication] = React.useState<AuthenticationDraft>(defaultAuth());
   const [activeLocale, setActiveLocale] = React.useState<SupportedLocale>(DEFAULT_LOCALE);
@@ -245,23 +246,31 @@ export function WhatsappTemplateEditorDialog({ id, open, onOpenChange }: Props) 
   const [loading, setLoading] = React.useState(false);
   const [saving, setSaving] = React.useState(false);
   const [uploadingSample, setUploadingSample] = React.useState(false);
-  const [mediaPreview, setMediaPreview] = React.useState<string | null>(null);
+  const [loadedTemplate, setLoadedTemplate] = React.useState<ApiTemplate | null>(null);
   const [mediaInfo, setMediaInfo] = React.useState<MediaInfo | null>(null);
   const [insertTarget, setInsertTarget] = React.useState<"body" | "header">("body");
   const bodyRef = React.useRef<HTMLTextAreaElement>(null);
   const headerRef = React.useRef<HTMLInputElement>(null);
 
   const current = locales[activeLocale] ?? emptyLocale();
+  const header = activeLocale === DEFAULT_LOCALE ? rootHeader : current.header ?? rootHeader;
+  const mediaPreview = header.mediaUrl ?? null;
+  const setHeader = (update: React.SetStateAction<HeaderDraft>) => {
+    const next = typeof update === "function" ? update(header) : update;
+    if (activeLocale === DEFAULT_LOCALE) setRootHeader(next);
+    else setLocales(previous => ({...previous,[activeLocale]: {...(previous[activeLocale] ?? emptyLocale()),header:next}}));
+  };
+  React.useEffect(() => { setMediaInfo(null); }, [activeLocale]);
 
   React.useEffect(() => {
     if (!open) return;
     setWorkingId(id);
-    setMediaPreview(null);
+    setLoadedTemplate(null);
     setMediaInfo(null);
     if (!id) {
       setName("");
       setCategory("UTILITY");
-      setHeader({ type: "NONE" });
+      setRootHeader({ type: "NONE" });
       setLocales({
         [DEFAULT_LOCALE]: {
           body: "مرحباً {{user.name}}، شكراً لتبرّعك!",
@@ -282,9 +291,10 @@ export function WhatsappTemplateEditorDialog({ id, open, onOpenChange }: Props) 
       .get(`/api/templates/whatsapp/${id}`)
       .then((res) => {
         const template = res.data?.template as ApiTemplate;
+        setLoadedTemplate(template);
         setName(template?.name ?? "");
         setCategory(template?.category === "MARKETING" || template?.category === "AUTHENTICATION" ? template.category : "UTILITY");
-        setHeader({
+        setRootHeader({
           type: (template?.header?.type as HeaderType) ?? "NONE",
           exampleHandle: template?.header?.exampleHandle ?? null,
           mediaUrl: template?.header?.mediaUrl ?? null,
@@ -307,6 +317,7 @@ export function WhatsappTemplateEditorDialog({ id, open, onOpenChange }: Props) 
           for (const [locale, value] of Object.entries(template.translations)) {
             if (!SUPPORTED_LOCALES.includes(locale as SupportedLocale) || locale === DEFAULT_LOCALE || !value?.body) continue;
             next[locale as SupportedLocale] = {
+              header: value.header,
               body: value.body ?? "",
               headerText: value.headerText ?? arabic.headerText,
               footerText: value.footerText ?? arabic.footerText,
@@ -323,9 +334,7 @@ export function WhatsappTemplateEditorDialog({ id, open, onOpenChange }: Props) 
       .finally(() => setLoading(false));
   }, [id, open]);
 
-  React.useEffect(() => () => {
-    if (mediaPreview?.startsWith("blob:")) URL.revokeObjectURL(mediaPreview);
-  }, [mediaPreview]);
+
 
   const setCurrent = React.useCallback((patch: Partial<LocaleDraft>) => {
     setLocales((previous) => ({
@@ -335,6 +344,7 @@ export function WhatsappTemplateEditorDialog({ id, open, onOpenChange }: Props) 
   }, [activeLocale]);
 
   const enableLocale = (locale: SupportedLocale) => {
+    if (uploadingSample || saving) return;
     setLocales((previous) => {
       if (previous[locale]) return previous;
       const source = previous[DEFAULT_LOCALE] ?? emptyLocale();
@@ -344,6 +354,7 @@ export function WhatsappTemplateEditorDialog({ id, open, onOpenChange }: Props) 
   };
 
   const removeLocale = (locale: SupportedLocale) => {
+    if (uploadingSample || saving) return;
     if (locale === DEFAULT_LOCALE || submittedLocales.has(locale)) {
       if (submittedLocales.has(locale)) toast.error(dt("هذه اللغة أُرسلت بالفعل إلى Meta ولا يمكن حذفها من القالب."));
       return;
@@ -407,8 +418,6 @@ export function WhatsappTemplateEditorDialog({ id, open, onOpenChange }: Props) 
       const handle = response.data?.handle as string | undefined;
       if (!handle) throw new Error("missing Meta media handle");
 
-      if (mediaPreview?.startsWith("blob:")) URL.revokeObjectURL(mediaPreview);
-      setMediaPreview(URL.createObjectURL(file));
       setHeader((previous) => ({
         ...previous,
         exampleHandle: handle,
@@ -505,13 +514,16 @@ export function WhatsappTemplateEditorDialog({ id, open, onOpenChange }: Props) 
     if (!name.trim()) return void toast.error(dt("اسم القالب مطلوب"));
     if (!/^[a-z][a-z0-9_]{0,119}$/.test(name)) return void toast.error(dt("اسم Meta يجب أن يبدأ بحرف ويحتوي حروفًا إنجليزية صغيرة وأرقامًا وشرطة سفلية فقط"));
     if (category !== "AUTHENTICATION" && !arabic.body.trim()) return void toast.error(dt("نص القالب بالعربية مطلوب"));
-    if (category !== "AUTHENTICATION" && ["IMAGE", "VIDEO", "DOCUMENT"].includes(header.type) && !header.exampleHandle) {
+    if (category !== "AUTHENTICATION" && Object.entries(locales).some(([locale,draft]) => { if (submittedLocales.has(locale as SupportedLocale)) return false; const h = locale === DEFAULT_LOCALE ? rootHeader : draft?.header ?? rootHeader; return ["IMAGE", "VIDEO", "DOCUMENT"].includes(h.type) && !h.exampleHandle; })) {
       return void toast.error(dt("ارفع عينة الوسائط إلى Meta أولًا"));
     }
     if (category === "AUTHENTICATION" && authentication.otpType === "ONE_TAP" && (!authentication.packageName || !authentication.signatureHash)) {
       return void toast.error(dt("One Tap يحتاج Package Name وSignature Hash"));
     }
 
+    if (category !== "AUTHENTICATION" && Object.entries(locales).some(([locale,draft]) => !submittedLocales.has(locale as SupportedLocale) && !draft?.body.trim())) {
+      return void toast.error(dt("أكمل نص كل لغة مضافة قبل الحفظ"));
+    }
     setSaving(true);
     try {
       const translations: Record<string, LocaleDraft> = {};
@@ -519,25 +531,33 @@ export function WhatsappTemplateEditorDialog({ id, open, onOpenChange }: Props) 
         if (locale === DEFAULT_LOCALE) continue;
         const draft = locales[locale];
         if (!draft) continue;
+        if (submittedLocales.has(locale) && loadedTemplate?.translations?.[locale]) {
+          translations[locale] = loadedTemplate.translations[locale] as LocaleDraft;
+          continue;
+        }
         translations[locale] = category === "AUTHENTICATION"
           ? { ...draft, body: "Authentication code" }
           : draft;
       }
 
-      const payload = {
+      const payload: Record<string, unknown> = {
         name,
-        body: category === "AUTHENTICATION" ? "Authentication code" : arabic.body.trim(),
+        body: submittedLocales.has(DEFAULT_LOCALE) && loadedTemplate ? loadedTemplate.body : category === "AUTHENTICATION" ? "Authentication code" : arabic.body.trim(),
         translations: Object.keys(translations).length ? translations : null,
         metaCategory: category,
-        header: {
-          ...header,
-          text: header.type === "TEXT" ? arabic.headerText.trim() : null,
+        header: submittedLocales.has(DEFAULT_LOCALE) && loadedTemplate ? loadedTemplate.header : {
+          ...rootHeader,
+          text: rootHeader.type === "TEXT" ? arabic.headerText.trim() : null,
         },
-        footerText: category === "AUTHENTICATION" ? null : arabic.footerText.trim() || null,
-        buttons: category === "AUTHENTICATION" ? [] : arabic.buttons,
-        authentication: category === "AUTHENTICATION" ? authentication : null,
+        footerText: submittedLocales.has(DEFAULT_LOCALE) && loadedTemplate ? loadedTemplate.footerText : category === "AUTHENTICATION" ? null : arabic.footerText.trim() || null,
+        buttons: submittedLocales.has(DEFAULT_LOCALE) && loadedTemplate ? loadedTemplate.buttons : category === "AUTHENTICATION" ? [] : arabic.buttons,
+        authentication: submittedLocales.has(DEFAULT_LOCALE) && loadedTemplate ? loadedTemplate.authentication : category === "AUTHENTICATION" ? authentication : null,
       };
 
+      // Submitted Arabic is immutable; do not rewrite its nullable/default fields while adding a language.
+      if (workingId && submittedLocales.has(DEFAULT_LOCALE)) {
+        for (const field of ["body","header","footerText","buttons","authentication"]) delete payload[field];
+      }
       const response = workingId
         ? await axios.patch(`/api/templates/whatsapp/${workingId}`, payload)
         : await axios.post("/api/templates/whatsapp", payload);
@@ -571,7 +591,16 @@ export function WhatsappTemplateEditorDialog({ id, open, onOpenChange }: Props) 
           };
         };
       }).response?.data;
-      if (data?.saved && data.template?.id) setWorkingId(data.template.id);
+      if (data?.saved && data.template?.id) {
+        setWorkingId(data.template.id);
+        // Partial publication can freeze some languages even when the overall request failed.
+        const fresh = await axios.get(`/api/templates/whatsapp/${data.template.id}`).catch(() => null);
+        if (fresh?.data?.template) {
+          const persisted = fresh.data.template as ApiTemplate;
+          setLoadedTemplate(persisted);
+          setSubmittedLocales(new Set((persisted.submittedLocales ?? []).filter((locale):locale is SupportedLocale => SUPPORTED_LOCALES.includes(locale as SupportedLocale))));
+        }
+      }
       const provider = data?.publish?.errors?.[0];
       toast.error([data?.error, provider?.reason, provider?.detail].filter(Boolean).join(" — ") || dt("فشل حفظ القالب"));
     } finally {
@@ -593,14 +622,14 @@ export function WhatsappTemplateEditorDialog({ id, open, onOpenChange }: Props) 
   return (
     <TemplateDialogShell
       open={open}
-      onOpenChange={onOpenChange}
+      onOpenChange={value => { if (!saving && !uploadingSample) onOpenChange(value); }}
       title={id ? dt("استوديو قالب واتساب") : dt("إنشاء قالب واتساب")}
       subtitle={dt("منشئ متوافق مع Meta: يبني القالب، يرفع عينة الوسائط، وينشر تلقائيًا إلى كل WABA نشط مرتبط.")}
       icon={<MessageCircle className="h-4 w-4" />}
       accent="whatsapp"
       size="full"
       loading={loading}
-      onCancel={() => onOpenChange(false)}
+      onCancel={() => { if (!saving && !uploadingSample) onOpenChange(false); }}
       onSave={save}
       saving={saving}
       saveDisabled={uploadingSample}
@@ -610,7 +639,7 @@ export function WhatsappTemplateEditorDialog({ id, open, onOpenChange }: Props) 
           accent="whatsapp"
           enabled={(locale) => Boolean(locales[locale])}
           activeLocale={activeLocale}
-          onSelect={setActiveLocale}
+          onSelect={(locale) => { if (!uploadingSample && !saving) setActiveLocale(locale); }}
           onEnable={enableLocale}
           onRemove={removeLocale}
           locked={(locale) => submittedLocales.has(locale)}
@@ -759,18 +788,18 @@ export function WhatsappTemplateEditorDialog({ id, open, onOpenChange }: Props) 
                 </div>
 
                 <div className="space-y-2">
-                  <FieldLabel hint={dt("اختياري")}>Header</FieldLabel>
+                  <FieldLabel hint={dt("اختياري · خاص باللغة الحالية")}>{dt("رأس الرسالة والوسائط")}</FieldLabel>
                   <div className="grid grid-cols-3 gap-2 md:grid-cols-6">
                     {HEADER_OPTIONS.map((option) => (
                       <button
                         key={option.value}
                         type="button"
-                        disabled={submittedLocales.size > 0}
+                        disabled={submittedLocales.has(activeLocale)}
                         onClick={() => {
                           setHeader((previous) => ({
                             ...previous,
                             type: option.value,
-                            ...(option.value === "NONE"
+                            ...(option.value !== previous.type
                               ? { exampleHandle: null, mediaUrl: null, mediaPublicId: null, fileName: null, mimeType: null }
                               : {}),
                           }));
@@ -824,7 +853,7 @@ export function WhatsappTemplateEditorDialog({ id, open, onOpenChange }: Props) 
                               type="file"
                               className="hidden"
                               accept={mediaAccept(header.type)}
-                              disabled={uploadingSample || submittedLocales.size > 0}
+                              disabled={uploadingSample || submittedLocales.has(activeLocale)}
                               onChange={(event) => {
                                 const file = event.target.files?.[0];
                                 if (file) void uploadSample(file);
@@ -855,9 +884,9 @@ export function WhatsappTemplateEditorDialog({ id, open, onOpenChange }: Props) 
 
                   {header.type === "LOCATION" && (
                     <div className="grid grid-cols-1 gap-2 md:grid-cols-3">
-                      <Input disabled={submittedLocales.size > 0} placeholder="Latitude" type="number" value={header.latitude ?? ""} onChange={(e) => setHeader((p) => ({ ...p, latitude: e.target.value ? Number(e.target.value) : null }))} />
-                      <Input disabled={submittedLocales.size > 0} placeholder="Longitude" type="number" value={header.longitude ?? ""} onChange={(e) => setHeader((p) => ({ ...p, longitude: e.target.value ? Number(e.target.value) : null }))} />
-                      <Input disabled={submittedLocales.size > 0} placeholder={dt("العنوان للمعاينة")} value={header.address ?? ""} onChange={(e) => setHeader((p) => ({ ...p, address: e.target.value }))} />
+                      <Input disabled={submittedLocales.has(activeLocale)} placeholder="Latitude" type="number" value={header.latitude ?? ""} onChange={(e) => setHeader((p) => ({ ...p, latitude: e.target.value ? Number(e.target.value) : null }))} />
+                      <Input disabled={submittedLocales.has(activeLocale)} placeholder="Longitude" type="number" value={header.longitude ?? ""} onChange={(e) => setHeader((p) => ({ ...p, longitude: e.target.value ? Number(e.target.value) : null }))} />
+                      <Input disabled={submittedLocales.has(activeLocale)} placeholder={dt("العنوان للمعاينة")} value={header.address ?? ""} onChange={(e) => setHeader((p) => ({ ...p, address: e.target.value }))} />
                     </div>
                   )}
                 </div>

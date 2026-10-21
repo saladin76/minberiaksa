@@ -160,7 +160,7 @@ async function sendApprovedTemplateForDonor(args: {
 }): Promise<SmartWhatsappSendResult> {
   const template = await prisma.whatsappTemplate.findUnique({
     where: { id: args.templateId },
-    select: { id: true, provider: true, name: true, variables: true, header: true, category: true, purpose: true, kind: true },
+    select: { id: true, provider: true, name: true, variables: true, header: true, translations: true, category: true, purpose: true, kind: true },
   });
   if (!template) return { ok: false, reason: "TEMPLATE_NOT_FOUND" };
 

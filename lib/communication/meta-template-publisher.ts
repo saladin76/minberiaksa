@@ -1,3 +1,4 @@
+import { templateLocaleHeader, META_TEMPLATE_LANGUAGES } from "./template-locale-media";
 import "server-only";
 
 import { prisma } from "@/lib/prisma";
@@ -21,11 +22,7 @@ import {
 
 type Actor = { actorId?: string | null; actorName?: string | null; actorRole?: string | null } | null;
 
-const META_LANGUAGE: Record<string, string> = {
-  ar: "ar", tr: "tr", en: "en_US", fr: "fr", de: "de", es: "es", id: "id",
-  pt: "pt_BR", ur: "ur", sq: "sq", it: "it", nl: "nl", sv: "sv", no: "nb",
-  da: "da", ms: "ms", ja: "ja", zh: "zh_CN", hi: "hi",
-};
+
 
 const SECTION_RE = /\{\{\s*[#/]\s*([a-zA-Z0-9_.]+)\s*\}\}/;
 
@@ -87,7 +84,7 @@ export async function publishWhatsappTemplateToMeta(
     return summary;
   }
 
-  type TranslationDraft = { body?: string; headerText?: string | null; footerText?: string | null; buttons?: ButtonDraft[] };
+  type TranslationDraft = { header?: HeaderDraft; body?: string; headerText?: string | null; footerText?: string | null; buttons?: ButtonDraft[] };
   const header = (template.header && typeof template.header === "object" ? template.header : { type: "NONE" }) as HeaderDraft;
   const rootButtons = (Array.isArray(template.buttons) ? template.buttons : []) as ButtonDraft[];
   const auth = (template.authentication && typeof template.authentication === "object" ? template.authentication : {}) as AuthDraft;
@@ -211,7 +208,7 @@ export async function publishWhatsappTemplateToMeta(
     let templateManagementBlocked = false;
     for (const [locale, variant] of variants) {
       if (templateManagementBlocked) break;
-      const language = META_LANGUAGE[locale] ?? locale;
+      const language = META_TEMPLATE_LANGUAGES[locale] ?? locale;
       summary.targets += 1;
       let components: unknown[];
       let parameterFormat: "named" | "positional" | undefined;
@@ -227,7 +224,7 @@ export async function publishWhatsappTemplateToMeta(
         } else {
           const built = buildStandardMetaComponents({
             body: variant.body ?? "",
-            header,
+            header: templateLocaleHeader(template, locale) as HeaderDraft,
             headerText: variant.headerText ?? String(header.text ?? ""),
             footerText: variant.footerText ?? template.footerText ?? "",
             buttons: variant.buttons ?? rootButtons,
@@ -317,6 +314,8 @@ export async function publishWhatsappTemplateToMeta(
           lastSyncedAt: new Date(),
         },
       }).catch((error: unknown) => {
+        summary.failed += 1;
+        summary.errors.push({ businessAccountId:waba, language, reason:"PROVIDER_VARIANT_PERSIST_FAILED", detail:"وصلت النسخة إلى Meta لكن تعذر حفظ الربط المحلي. أعد المحاولة لمزامنتها." });
         console.error("Persisting Meta WABA/language variant after publish failed", {
           templateId,
           businessAccountId: waba,
@@ -362,7 +361,7 @@ export async function publishWhatsappTemplateToMeta(
   });
 
   if (summary.canonicalWabaId) {
-    await syncMetaWhatsappTemplates({ actor }).catch(() => null);
+    await syncMetaWhatsappTemplates({ actor, templateId }).catch(() => null);
   }
 
   /* Unsupported WABAs are not counted as provider failures: Meta has declared that account unable

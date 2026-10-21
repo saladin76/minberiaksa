@@ -1,3 +1,4 @@
+import { templateLocaleHeader } from "../../lib/communication/template-locale-media";
 import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
@@ -55,6 +56,7 @@ function engineHarness(options: Options = {}) {
     quietHours: { enabled: !!options.quiet, timezoneMode: "RECIPIENT", timezone: "Europe/Istanbul" } });
   const counter = isolated<{ computeFinalStatus: (total: number, sent: number, skipped: number, failed: number) => string }>("lib/communication/campaign-counter-service.ts", { "@/lib/prisma": { prisma: {} } });
   const engine = isolated<Engine>("lib/communication/campaign-send-executor.ts", {
+    "./template-locale-media": { templateLocaleHeader },
     "@/lib/prisma": { prisma: {
       communicationCampaignDeferredRecipient: {
         count: async () => { if (options.failQueueCount) throw new Error("QUEUE_READ_FAILED"); return queue.length; },
