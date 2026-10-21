@@ -1,4 +1,6 @@
 import { SUPPORTED_LOCALES } from "../locales";
+import { ADVANCED_SEO_FIELDS } from "./workspace";
+import { safeEditorUrl } from "./urls";
 import type { DashboardPermissionKey } from "../dashboard/permissions";
 
 export const CONTENT_KINDS = [
@@ -17,6 +19,7 @@ export type ContentField = {
   rich?: boolean;
   locked?: boolean;
   required?: boolean;
+  optional?: boolean;
 };
 export type ContentRecord = Record<string, unknown>;
 export const CONFIG: Record<
@@ -37,6 +40,13 @@ export const CONFIG: Record<
     parentKey: "campaignId",
     permission: "campaigns",
     fields: [
+      {
+        key: "videoUrl",
+        label: "فيديو هذه اللغة (فارغ = الفيديو الافتراضي)",
+        group: "content",
+        locked: true,
+        optional: true,
+      },
       { key: "title", label: "العنوان", group: "content", required: true },
       {
         key: "description",
@@ -218,10 +228,14 @@ export function fieldsFor(
     group: "seo",
     required: Boolean(
       row.image ||
-      row.heroImage ||
-      (Array.isArray(row.images) && row.images.length),
+        row.heroImage ||
+        (Array.isArray(row.images) && row.images.length),
     ),
   });
+  if (kind !== "urgent-banners")
+    fields.push(
+      ...ADVANCED_SEO_FIELDS.map((f) => ({ ...f, group: "seo" as const })),
+    );
   const groups =
     kind === "categories"
       ? ([
@@ -238,8 +252,9 @@ export function fieldsFor(
       for (const key of keys)
         fields.push({
           key: `${group}.${child.id}.${key}`,
-          label: `${group === "blocks" ? "قسم" : group === "values" ? "قيمة" : "بطاقة"} ${index + 1} · ${key}`,
+          label: `${group === "blocks" ? "قسم" : group === "values" ? "قيمة" : "بطاقة"} ${index + 1} · ${{ eyebrow: "السطر العلوي", title: "العنوان", subtitle: "العنوان الفرعي", body: "المحتوى", linkLabel: "نص الرابط", label: "النص" }[key] || key}`,
           group: "content",
+          optional: group === "blocks" && child.isActive === false,
         });
   return fields;
 }
@@ -274,6 +289,7 @@ export function localeStatus(
   const required = fields.filter(
     (f) =>
       f.group === "content" &&
+      !f.optional &&
       (f.required ||
         (hasText(source[f.key]) && !(f.locked && f.key === "kicker"))),
   );
@@ -288,7 +304,10 @@ export function localeStatus(
     )
     .map((f) => f.key);
   const seoFields = fields.filter(
-    (f) => f.group === "seo" && (f.key !== "imageAlt" || f.required),
+    (f) =>
+      f.group === "seo" &&
+      !ADVANCED_SEO_FIELDS.some((a) => a.key === f.key) &&
+      (f.key !== "imageAlt" || f.required),
   );
   return {
     complete: required.length > 0 && !missing.length,
@@ -314,14 +333,57 @@ export function validateChanges(
     throw new Error("حقول غير صالحة");
   const allowed = new Set(fields.map((f) => f.key));
   const limit = (key: string) =>
-    /(?:meta|seo)Title$/.test(key)
+    /(?:meta|seo|og)Title$/.test(key)
       ? 70
-      : /(?:meta|seo)Description$/.test(key)
+      : /(?:meta|seo|og)Description$/.test(key)
         ? 170
         : key === "imageAlt"
           ? 200
-          : 200000;
+          : key === "seoKeyword"
+            ? 200
+            : ["ogImage", "videoUrl"].includes(key)
+              ? 2048
+              : 200000;
   const entries = Object.entries(value);
+  for (const [key, val] of entries) {
+    if (
+      key === "videoUrl" &&
+      typeof val === "string" &&
+      val &&
+      (!/^https?:\/\//.test(val) || !safeEditorUrl(val))
+    )
+      throw new Error("استخدم رابط فيديو http أو https صالحًا");
+    if (key === "seoNoIndex" && val !== "" && val !== "true" && val !== "false")
+      throw new Error("حالة الفهرسة غير صالحة");
+    if (
+      key === "ogImage" &&
+      typeof val === "string" &&
+      val &&
+      (!/^(https?:\/\/|\/[^/])/.test(val) || !safeEditorUrl(val))
+    )
+      throw new Error("رابط صورة المشاركة غير صالح");
+    if (key === "faqContent" && val) {
+      let faq;
+      try {
+        faq = JSON.parse(String(val));
+      } catch {
+        throw new Error("الأسئلة الشائعة غير صالحة");
+      }
+      if (
+        !Array.isArray(faq) ||
+        faq.length > 30 ||
+        faq.some(
+          (x) =>
+            !x ||
+            typeof x.q !== "string" ||
+            typeof x.a !== "string" ||
+            x.q.length > 500 ||
+            x.a.length > 5000,
+        )
+      )
+        throw new Error("الأسئلة الشائعة غير صالحة");
+    }
+  }
   if (
     !entries.length ||
     entries.some(

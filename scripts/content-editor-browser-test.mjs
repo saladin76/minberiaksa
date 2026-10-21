@@ -82,6 +82,18 @@ const server = createServer((req, res) => {
     res.setHeader("Content-Type", "application/javascript");
     res.end(bundle.outputFiles[0].text);
   } else if (req.url?.startsWith("/api/admin/content-editor/")) {
+    if (req.url.endsWith("/catalog")) {
+      res.setHeader("Content-Type", "application/json");
+      res.end(
+        JSON.stringify({
+          categories: [],
+          campaigns: [],
+          postCategories: [],
+          linked: {},
+        }),
+      );
+      return;
+    }
     let body = "";
     req.on("data", (chunk) => (body += chunk));
     req.on("end", async () => {
@@ -117,6 +129,8 @@ const server = createServer((req, res) => {
           return;
         }
         const input = JSON.parse(body);
+        Object.assign(stored.values, input.localeChanges || {});
+        Object.assign(stored.settings, input.settings || {});
         stored.values[input.locale] = {
           ...stored.values[input.locale],
           ...input.changes,
@@ -151,7 +165,7 @@ try {
   page.on("pageerror", (e) => errors.push(e.message));
   await page.goto(origin);
   await page
-    .getByRole("heading", { name: "اختبار التصنيف", exact: true })
+    .getByRole("heading", { name: "اختبار التصنيف", exact: true, level: 1 })
     .waitFor();
   await page.getByRole("button", { name: /Français/ }).click();
   const title = page.getByLabel("اسم التصنيف", { exact: true });
@@ -170,7 +184,7 @@ try {
   assert.equal(saves, 0);
   failedSave = true;
   await page
-    .getByRole("button", { name: "حفظ هذه اللغة", exact: true })
+    .getByRole("button", { name: "حفظ التغييرات", exact: true })
     .click();
   await page
     .getByRole("status")
@@ -179,7 +193,7 @@ try {
   assert.equal(await title.inputValue(), "Titre proposé");
   failedSave = false;
   await page
-    .getByRole("button", { name: "حفظ هذه اللغة", exact: true })
+    .getByRole("button", { name: "حفظ التغييرات", exact: true })
     .click();
   await page
     .getByRole("status")
@@ -204,6 +218,7 @@ try {
   page.once("dialog", (dialog) => dialog.accept());
   await page.getByRole("button", { name: "التراجع", exact: true }).click();
   assert.equal(await title.inputValue(), "Titre proposé");
+  await page.getByRole("button", { name: /الرابط وسجل التغييرات/ }).click();
   await page.getByRole("button", { name: "تعديل الرابط", exact: true }).click();
   await page.getByRole("dialog").waitFor();
   assert.equal(
@@ -214,15 +229,14 @@ try {
   );
   await page.getByRole("button", { name: "إلغاء", exact: true }).click();
   assert.equal(saves, 2);
+  await page.getByRole("button", { name: /التعريف والظهور/ }).click();
   await title.fill("Unsaved edit");
   let warned = false;
   page.once("dialog", async (dialog) => {
     warned = true;
     await dialog.dismiss();
   });
-  await page
-    .getByRole("link", { name: "إعدادات العنصر والوسائط", exact: true })
-    .click();
+  await page.getByRole("link", { name: "العودة", exact: true }).click();
   assert.equal(warned, true);
   assert.equal(await title.inputValue(), "Unsaved edit");
   await page.setViewportSize({ width: 390, height: 844 });

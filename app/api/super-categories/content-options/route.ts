@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { prisma } from "@/lib/prisma";
 import { authOptions } from "../../auth/[...nextauth]/options";
 import { sessionHasDashboardPermission } from "@/lib/dashboard/permissions";
+import { campaignWorkspaceWhere } from '@/lib/content-editor/site-capabilities';
 
 /**
  * GET /api/super-categories/content-options  everything a super category can
@@ -26,6 +27,7 @@ export async function GET() {
 
     const [campaigns, posts, videos, playlists, courses, reports, booklets] = await Promise.all([
       prisma.campaign.findMany({
+        where:campaignWorkspaceWhere(),
         orderBy: { createdAt: "desc" },
         take: 400,
         select: { id: true, title: true, slug: true, isActive: true },

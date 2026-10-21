@@ -56,6 +56,9 @@ export async function POST(
       const selected = fields.filter(
         (f) =>
           !f.locked &&
+          !["seoNoIndex", "ogImage", "faqContent", "videoUrl"].includes(
+            f.key,
+          ) &&
           hasText(source[f.key]) &&
           (!Array.isArray(body.keys) || body.keys.includes(f.key)),
       );
@@ -110,7 +113,11 @@ export async function POST(
     if (body.action !== "seo" || !isValidLocale(body.locale))
       return NextResponse.json({ error: "طلب غير صالح" }, { status: 400 });
     const values = valuesFor(kind, row, body.locale),
-      seoFields = fields.filter((f) => f.group === "seo"),
+      seoFields = fields.filter(
+        (f) =>
+          f.group === "seo" &&
+          !["seoNoIndex", "ogImage", "faqContent"].includes(f.key),
+      ),
       key = process.env.OPENAI_API_KEY;
     if (!key)
       return NextResponse.json(

@@ -1,4 +1,17 @@
 import { SUPPORTED_LOCALES } from "../locales";
+export function safeEditorUrl(value: string): boolean {
+  if (!value) return true;
+  if (/[\s\\]/.test(value)) return false;
+  if (value.startsWith("/")) return !value.startsWith("//");
+  if (/^#[A-Za-z][\w-]*$/.test(value)) return true;
+  if (!/^https?:\/\//.test(value)) return false;
+  try {
+    const url = new URL(value);
+    return Boolean(url.hostname) && !url.username && !url.password;
+  } catch {
+    return false;
+  }
+}
 export function localizeContentHref(url: string, locale: string): string {
   const value = url.trim();
   if (!value || /^(?:javascript|data|vbscript):/i.test(value)) return "";

@@ -462,6 +462,13 @@ model Category {
   metaDescription String?
   previousSlugs String[] @default([])
   slugChanges Json?
+  seoKeyword String?
+  ogTitle String?
+  ogDescription String?
+  ogImage String?
+  seoNoIndex String?
+  faqContent String?
+  navigationVisible Boolean? @default(true)
 }
 
 
@@ -547,6 +554,12 @@ model CategoryTranslation {
   imageAlt String?
   metaTitle String?
   metaDescription String?
+  seoKeyword String?
+  ogTitle String?
+  ogDescription String?
+  ogImage String?
+  seoNoIndex String?
+  faqContent String?
 }
 
 /**
@@ -609,6 +622,8 @@ model Campaign {
   /// receipts, and audit trails stay intact. Pre-existing rows may have the
   /// field unset entirely  treat unset as not deleted when filtering.
   isDeleted      Boolean? @default(false)
+  /// Editorial archive is separate from temporarily disabling donations.
+  editorArchived Boolean? @default(false)
   priority       Int?
 
   /// { "amounts": number[], "byCurrency"?: Record<string, number[]> }  quick-pick donation amounts; omit/null uses app defaults
@@ -663,6 +678,12 @@ model Campaign {
   imageAlt String?
   seoTitle String?
   seoDescription String?
+  seoKeyword String?
+  ogTitle String?
+  ogDescription String?
+  ogImage String?
+  seoNoIndex String?
+  faqContent String?
 }
 
 model CampaignTranslation {
@@ -688,6 +709,12 @@ model CampaignTranslation {
   imageAlt String?
   seoTitle String?
   seoDescription String?
+  seoKeyword String?
+  ogTitle String?
+  ogDescription String?
+  ogImage String?
+  seoNoIndex String?
+  faqContent String?
 }
 
 /**
@@ -1337,6 +1364,12 @@ model Post {
   updatedAt DateTime @updatedAt
   editorVersion String?
   editorReviews Json?
+  seoKeyword String?
+  ogTitle String?
+  ogDescription String?
+  ogImage String?
+  seoNoIndex String?
+  faqContent String?
 }
 
 model PostTranslation {
@@ -1362,6 +1395,12 @@ model PostTranslation {
   post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
 
   @@unique([postId, locale])
+  seoKeyword String?
+  ogTitle String?
+  ogDescription String?
+  ogImage String?
+  seoNoIndex String?
+  faqContent String?
 }
 
 model LiveDonationTicker {
@@ -3111,6 +3150,12 @@ model SuperCategory {
   editorVersion String?
   editorReviews Json?
   imageAlt String?
+  seoKeyword String?
+  ogTitle String?
+  ogDescription String?
+  ogImage String?
+  seoNoIndex String?
+  faqContent String?
 }
 
 model SuperCategoryTranslation {
@@ -3137,6 +3182,12 @@ model SuperCategoryTranslation {
 
   @@unique([superCategoryId, locale])
   imageAlt String?
+  seoKeyword String?
+  ogTitle String?
+  ogDescription String?
+  ogImage String?
+  seoNoIndex String?
+  faqContent String?
 }
 
 /// One section of a super category's page, in the order it is rendered.

@@ -8,7 +8,7 @@ import {
   changeCategorySlug,
   documentFor,
   readContent,
-  saveContent,
+  saveWorkspace,
 } from "@/lib/content-editor/service";
 import { contentStore } from "@/lib/content-editor/store";
 import { isValidLocale } from "@/lib/locales";
@@ -78,16 +78,26 @@ export async function PUT(request: NextRequest, ctx: Context) {
         slug: String(body.slug || ""),
         confirmation: String(body.confirmation || ""),
         actor: String(session?.user?.id || ""),
+        locale: isValidLocale(body.locale) ? body.locale : "ar",
       });
     else {
       if (!isValidLocale(body.locale)) throw new ContentError("لغة غير صالحة");
-      result = await saveContent(contentStore, {
+      if (
+        body.localeChanges &&
+        (typeof body.localeChanges !== "object" ||
+          Array.isArray(body.localeChanges) ||
+          Object.keys(body.localeChanges).some((l) => !isValidLocale(l)))
+      )
+        throw new ContentError("لغات غير صالحة");
+      result = await saveWorkspace(contentStore, {
         kind,
         id,
         locale: body.locale,
         revision: body.revision,
         changes: body.changes,
         reviewed: body.reviewed === true,
+        settings: body.settings,
+        localeChanges: body.localeChanges,
       });
     }
     const actor = auditActorFromDashboardSession(session!);

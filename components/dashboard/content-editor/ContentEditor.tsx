@@ -3,7 +3,30 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
-import { BannerPreview } from "./BannerPreview";
+import { EditorModal } from "./EditorModal";
+import { ProgrammeWorkspace } from "./ProgrammeWorkspace";
+import { WorkspacePreview } from "./WorkspacePreview";
+import { WorkspaceSettings, useEditorCatalog } from "./WorkspaceSettings";
+import { SeoWorkspace } from "./SeoWorkspace";
+import { EDITOR_SECTIONS, settingsFor } from "@/lib/content-editor/workspace";
+import type { ContentRecord } from "@/lib/content-editor/contracts";
+import {
+  FileText,
+  Wallet,
+  Image as ImageIcon,
+  Search,
+  History,
+  Grid2X2,
+  Link2,
+  CheckCircle2,
+  Heart,
+  Settings,
+  Eye,
+  Save,
+  ArrowRight,
+  Globe2,
+  Undo2,
+} from "lucide-react";
 import { LOCALES, SUPPORTED_LOCALES } from "@/lib/locales";
 import {
   CONFIG,
@@ -13,6 +36,13 @@ import {
   type TextValues,
 } from "@/lib/content-editor/contracts";
 import type { documentFor } from "@/lib/content-editor/service";
+const CategoryOrderDialog = dynamic(
+  () =>
+    import(
+      "@/app/(dashboard)/dashboard/categories/_components/CategoryCampaignPriorityDialog"
+    ).then((m) => m.CategoryCampaignPriorityDialog),
+  { ssr: false },
+);
 const RichEditor = dynamic(
   () => import("@/app/[locale]/blog/_components/wysiwyg/wysiwyg-editor"),
   { ssr: false, loading: () => <p>تحميل المحرر…</p> },
@@ -79,6 +109,18 @@ export function ContentEditor({ kind, id }: { kind: ContentKind; id: string }) {
   const [slug, setSlug] = useState("");
   const [confirmation, setConfirmation] = useState("");
   const [slugOpen, setSlugOpen] = useState(false);
+  const [section, setSection] = useState("content");
+  const [settingsDraft, setSettingsDraft] = useState<ContentRecord>({});
+  const [languageReview, setLanguageReview] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [uploads, setUploads] = useState(0);
+  const onUploadingChange = useCallback(
+    (uploading: boolean) =>
+      setUploads((count) => Math.max(0, count + (uploading ? 1 : -1))),
+    [],
+  );
+  const [categoryOrderOpen, setCategoryOrderOpen] = useState(false);
+  const { catalog, error: catalogError } = useEditorCatalog(kind);
   const valuesRef = useRef(values);
   valuesRef.current = values;
   const requestRef = useRef(0);
@@ -89,13 +131,14 @@ export function ContentEditor({ kind, id }: { kind: ContentKind; id: string }) {
       if (number !== requestRef.current) return;
       setDocument(data);
       setValues(data.values);
+      setSettingsDraft(settingsFor(kind, data.settings));
       setSelected(data.fields.filter((f) => !f.locked).map((f) => f.key));
       setMessage("");
     } catch (error) {
       if (number === requestRef.current)
         setMessage(error instanceof Error ? error.message : "تعذر التحميل");
     }
-  }, [url]);
+  }, [url, kind]);
   const invalidateRequests = useCallback(() => {
     requestRef.current++;
   }, []);
@@ -104,7 +147,10 @@ export function ContentEditor({ kind, id }: { kind: ContentKind; id: string }) {
     return invalidateRequests;
   }, [initialLoad, invalidateRequests]);
   const dirty = document
-    ? JSON.stringify(values) !== JSON.stringify(document.values)
+    ? JSON.stringify(values) !== JSON.stringify(document.values) ||
+      JSON.stringify(settingsDraft) !==
+        JSON.stringify(settingsFor(kind, document.settings)) ||
+      uploads > 0
     : false;
   useEffect(() => {
     if (!dirty) return;
@@ -136,6 +182,10 @@ export function ContentEditor({ kind, id }: { kind: ContentKind; id: string }) {
   };
   const save = async () => {
     if (!document) return;
+    if (uploads) {
+      setMessage("انتظر اكتمال رفع الصور قبل الحفظ");
+      return;
+    }
     const captured = { ...values[locale] },
       target = locale;
     setBusy("save");
@@ -148,6 +198,19 @@ export function ContentEditor({ kind, id }: { kind: ContentKind; id: string }) {
           locale: target,
           changes: captured,
           reviewed,
+          localeChanges: Object.fromEntries(
+            Object.entries(values).filter(
+              ([code, v]) =>
+                JSON.stringify(v) !== JSON.stringify(document.values[code]),
+            ),
+          ),
+          settings: Object.fromEntries(
+            Object.entries(settingsDraft).filter(
+              ([key, v]) =>
+                JSON.stringify(v) !==
+                JSON.stringify(settingsFor(kind, document.settings)[key]),
+            ),
+          ),
         }),
       });
       const read = await api<Document>(url);
@@ -156,7 +219,8 @@ export function ContentEditor({ kind, id }: { kind: ContentKind; id: string }) {
           "تغيرت النسخة بعد الحفظ. احتفظ بتعديلاتك ثم أعد تحميلها للمراجعة.",
         );
       setDocument(read);
-      setValues((prev) => ({ ...prev, [target]: read.values[target] }));
+      setValues(read.values);
+      setSettingsDraft(settingsFor(kind, read.settings));
       setProposal(null);
       setReviewed(false);
       setMessage("تم الحفظ والتحقق من النسخة المحفوظة");
@@ -253,6 +317,7 @@ export function ContentEditor({ kind, id }: { kind: ContentKind; id: string }) {
         method: "PUT",
         body: JSON.stringify({
           action: "slug",
+          locale,
           revision: document.revision,
           slug,
           confirmation,
@@ -286,10 +351,72 @@ export function ContentEditor({ kind, id }: { kind: ContentKind; id: string }) {
     (l) => l !== "ar" && document.statuses[l].complete,
   ).length;
   const isBanner = kind === "urgent-banners";
-  const settingsHref =
-    kind === "blog"
-      ? `/dashboard/blog/settings/${id}`
-      : `/dashboard/${kind}/settings/${id}`;
+  const liveSettings = {
+    ...document.settings,
+    ...settingsDraft,
+    blocks: Array.isArray(settingsDraft.blocks)
+      ? settingsDraft.blocks.map((item: ContentRecord) => {
+          const key = `blocks.${item.id}.`;
+          return {
+            ...item,
+            title:
+              current[key + "title"] || source[key + "title"] || item.title,
+            body: current[key + "body"] || source[key + "body"],
+          };
+        })
+      : document.settings.blocks,
+  };
+  const sectionIcons = {
+    file: FileText,
+    wallet: Wallet,
+    image: ImageIcon,
+    search: Search,
+    history: History,
+    grid: Grid2X2,
+    link: Link2,
+    check: CheckCircle2,
+    heart: Heart,
+    settings: Settings,
+  };
+  const setSetting = (key: string, value: unknown) => {
+    setSettingsDraft((prev) => ({ ...prev, [key]: value }));
+    setProposal(null);
+  };
+  const resetDraft = () => {
+    if (!dirty || window.confirm("التراجع عن كل التعديلات غير المحفوظة؟")) {
+      setValues(document.values);
+      setSettingsDraft(settingsFor(kind, document.settings));
+      setProposal(null);
+      setReviewed(false);
+    }
+  };
+  const languageButtons = (
+    <nav
+      aria-label="لغات المحتوى"
+      className="flex flex-wrap gap-1.5 rounded-xl border bg-white p-3"
+    >
+      {SUPPORTED_LOCALES.map((code) => (
+        <button
+          type="button"
+          key={code}
+          aria-label={LOCALES[code].nativeLabel}
+          title={LOCALES[code].nativeLabel}
+          disabled={Boolean(busy)}
+          onClick={() => {
+            setLocale(code);
+            setReviewed(false);
+          }}
+          aria-pressed={locale === code}
+          className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-xs ${locale === code ? "border-brand bg-brand/5 font-bold text-brand" : "text-slate-500"}`}
+        >
+          <span
+            className={`h-1.5 w-1.5 rounded-full ${document.statuses[code].reviewed ? "bg-emerald-600" : document.statuses[code].complete ? "bg-amber-500" : "bg-slate-300"}`}
+          />
+          {code.toUpperCase()}
+        </button>
+      ))}
+    </nav>
+  );
   const renderField = (field: ContentField) => (
     <section
       key={field.key}
@@ -382,61 +509,82 @@ export function ContentEditor({ kind, id }: { kind: ContentKind; id: string }) {
     </section>
   );
   return (
-    <div dir="rtl" className="mx-auto max-w-7xl space-y-5 pb-12">
+    <div
+      dir="rtl"
+      className="mx-auto max-w-[1500px] space-y-6 pb-12 text-slate-800"
+    >
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <Link className="text-sm text-slate-500" href={`/dashboard/${kind}`}>
             {CONFIG[kind].label}
           </Link>
-          <h1 className="mt-2 text-2xl font-bold">{document.title}</h1>
+          <h1 className="mt-2 text-2xl font-bold">
+            {current.title || current.name || document.title}
+          </h1>
+          <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-slate-500">
+            <span>{dirty ? "تعديلات غير محفوظة" : "محفوظ"}</span>
+            <span>
+              {done} / {SUPPORTED_LOCALES.length - 1} ترجمات مكتملة
+            </span>
+            <span>{SUPPORTED_LOCALES.length - 1 - done} تحتاج ترجمة</span>
+          </div>
         </div>
-        <Link className={button} href={settingsHref}>
-          إعدادات العنصر والوسائط
-        </Link>
-      </header>
-      <div className="flex flex-wrap justify-between gap-4 rounded-xl border bg-white p-4">
-        <span>
-          الترجمات المحفوظة المكتملة: {done} / {SUPPORTED_LOCALES.length - 1}
-        </span>
-        <span>تحتاج ترجمة: {SUPPORTED_LOCALES.length - 1 - done}</span>
-        <span>{dirty ? "تعديلات غير محفوظة" : "النسخة المحفوظة"}</span>
-      </div>
-      <nav aria-label="لغات المحتوى" className="flex flex-wrap gap-2">
-        {SUPPORTED_LOCALES.map((code) => (
+        <div className="flex flex-wrap gap-2">
           <button
             type="button"
-            key={code}
-            disabled={busy === "save" || busy === "slug"}
-            onClick={() => {
-              setLocale(code);
-              setReviewed(false);
-            }}
-            aria-pressed={locale === code}
-            className={`${button} ${locale === code ? "bg-slate-900 text-white hover:bg-slate-800" : "bg-white"}`}
+            className={button + " flex items-center gap-2 bg-white"}
+            onClick={() => setLanguageReview(true)}
           >
-            {LOCALES[code].nativeLabel} ·{" "}
-            {document.statuses[code].complete ? "مكتمل" : "ناقص"}
-            {document.statuses[code].reviewed ? " · مراجع" : ""}
-            {JSON.stringify(values[code]) !==
-            JSON.stringify(document.values[code])
-              ? " *"
-              : ""}
+            <Globe2 size={16} />
+            اللغات والمراجعة
           </button>
-        ))}
-      </nav>
-      <div className="sticky top-0 z-10 flex flex-wrap items-center gap-2 rounded-xl border bg-white p-3 shadow-sm">
-        <button
-          type="button"
-          className={button + " bg-brand text-white hover:bg-brand-dark"}
-          disabled={Boolean(busy)}
-          onClick={save}
-        >
-          {busy === "save" ? "جار الحفظ…" : "حفظ هذه اللغة"}
-        </button>
+          <button
+            type="button"
+            className={button + " flex items-center gap-2"}
+            disabled={!dirty || Boolean(busy) || uploads > 0}
+            onClick={resetDraft}
+          >
+            <Undo2 size={16} />
+            التراجع
+          </button>
+          <Link
+            className={button + " flex items-center gap-2"}
+            href={`/dashboard/${kind}`}
+          >
+            <ArrowRight size={16} />
+            العودة
+          </Link>
+          <button
+            type="button"
+            className={button + " flex items-center gap-2 bg-white"}
+            onClick={() => setPreviewOpen(true)}
+          >
+            <Eye size={16} />
+            {kind === "campaigns" ? "معاينة المشروع" : "معاينة الصفحة"}
+          </button>
+          <button
+            type="button"
+            className={
+              button +
+              " flex items-center gap-2 bg-brand text-white hover:bg-brand-dark"
+            }
+            disabled={Boolean(busy) || uploads > 0}
+            onClick={save}
+          >
+            <Save size={16} />
+            {uploads
+              ? "جار رفع الصور…"
+              : busy === "save"
+                ? "جار الحفظ…"
+                : "حفظ التغييرات"}
+          </button>
+        </div>
+      </header>
+      <div className="flex flex-wrap items-center gap-2 rounded-xl border bg-white p-3">
         <button
           type="button"
           className={button}
-          disabled={Boolean(busy)}
+          disabled={Boolean(busy) || uploads > 0}
           onClick={() => {
             if (
               !dirty ||
@@ -446,20 +594,6 @@ export function ContentEditor({ kind, id }: { kind: ContentKind; id: string }) {
           }}
         >
           تحميل النسخة المحفوظة
-        </button>
-        <button
-          type="button"
-          className={button}
-          disabled={Boolean(busy) || !dirty}
-          onClick={() => {
-            if (window.confirm("التراجع عن كل التعديلات غير المحفوظة؟")) {
-              setValues(document.values);
-              setProposal(null);
-              setReviewed(false);
-            }
-          }}
-        >
-          التراجع
         </button>
         <button
           type="button"
@@ -597,100 +731,257 @@ export function ContentEditor({ kind, id }: { kind: ContentKind; id: string }) {
           ))}
         </section>
       ) : null}
-      <main
+      <div
         inert={busy === "save" || busy === "slug"}
-        className="grid gap-5 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]"
+        className="grid items-start gap-5 xl:grid-cols-[190px_minmax(0,1fr)_280px]"
       >
-        <div className="space-y-4">
+        <nav
+          aria-label="أقسام المحرر"
+          className="flex gap-1 overflow-x-auto rounded-xl border bg-white p-2 xl:sticky xl:top-5 xl:flex-col xl:overflow-visible"
+        >
+          {EDITOR_SECTIONS[kind].map((item, index) => {
+            const Icon = sectionIcons[item.icon as keyof typeof sectionIcons];
+            return (
+              <button
+                key={item.id}
+                type="button"
+                aria-current={section === item.id ? "page" : undefined}
+                className={`flex shrink-0 items-center gap-2 rounded-lg px-3 py-4 text-start text-sm ${section === item.id ? "bg-brand/5 font-bold text-brand" : "text-slate-500 hover:bg-slate-50"}`}
+                onClick={() => setSection(item.id)}
+              >
+                <Icon size={17} />
+                <span className="flex-1">{item.label}</span>
+                <small className="text-[10px] opacity-50">
+                  {String(index + 1).padStart(2, "0")}
+                </small>
+              </button>
+            );
+          })}
+          <p className="hidden px-3 py-5 text-xs leading-6 text-slate-400 xl:block">
+            كل الأقسام تخص العنصر نفسه. راجع التغييرات ثم احفظها من الشريط
+            العلوي.
+          </p>
+        </nav>
+        <div className="min-w-0 space-y-5">
           <h2 className="text-lg font-bold">
-            المحتوى · {LOCALES[locale as keyof typeof LOCALES]?.nativeLabel}
+            {EDITOR_SECTIONS[kind].find((s) => s.id === section)?.label}{" "}
+            <small className="font-normal text-slate-400">
+              · {LOCALES[locale as keyof typeof LOCALES]?.nativeLabel}
+            </small>
           </h2>
-          {document.fields
-            .filter(
-              (f) =>
-                f.group === "content" &&
-                [
-                  "name",
-                  "title",
-                  "description",
-                  "content",
-                  "subtitle",
-                  "intro",
-                ].includes(f.key),
-            )
-            .map(renderField)}
-          {document.fields.some(
-            (f) =>
-              f.group === "content" &&
-              ![
-                "name",
-                "title",
-                "description",
-                "content",
-                "subtitle",
-                "intro",
-              ].includes(f.key),
-          ) ? (
-            <details className="space-y-3 rounded-xl border p-4">
-              <summary className="cursor-pointer font-semibold">
-                {kind === "categories"
-                  ? "نصوص صفحة التصنيف والبطاقات"
-                  : kind === "super-categories"
-                    ? "الأزرار وأقسام الصفحة والنص الديني"
-                    : "الأزرار وتسميات المبالغ"}
-              </summary>
-              <div className="mt-4 space-y-4">
-                {document.fields
-                  .filter(
-                    (f) =>
-                      f.group === "content" &&
-                      ![
-                        "name",
-                        "title",
-                        "description",
-                        "content",
-                        "subtitle",
-                        "intro",
-                      ].includes(f.key),
-                  )
-                  .map(renderField)}
-              </div>
-            </details>
+          {["content", "seo", "page", "layout", "links", "media"].includes(
+            section,
+          )
+            ? languageButtons
+            : null}
+          {catalogError ? (
+            <p role="alert" className="text-sm text-red-700">
+              {catalogError}
+            </p>
           ) : null}
-        </div>
-        <aside className="space-y-4">
-          {isBanner ? (
-            <BannerPreview
-              values={current}
-              source={source}
-              settings={document.settings}
+          {kind === "super-categories" &&
+          section === "content" &&
+          Boolean(document.settings.verseArabic) ? (
+            <section className="rounded-xl border bg-amber-50 p-5">
+              <h3 className="text-sm font-semibold">
+                النص العربي المحفوظ · للقراءة فقط
+              </h3>
+              <p lang="ar" dir="rtl" className="mt-4 text-xl leading-10">
+                {String(document.settings.verseArabic)}
+              </p>
+              <p className="mt-3 text-xs text-slate-500">
+                لا يُرسل إلى خدمة الترجمة ولا تغيّره تعديلات الصفحة.
+              </p>
+            </section>
+          ) : null}
+          {["content", "page", "layout", "links", "media"].includes(section) ? (
+            <>
+              {document.fields
+                .filter((f) => {
+                  if (section === "media")
+                    return f.key === "imageAlt" || f.key === "videoUrl";
+                  if (f.group !== "content" || f.key === "videoUrl")
+                    return false;
+                  if (section === "layout")
+                    return (
+                      f.key.startsWith("blocks.") &&
+                      Array.isArray(settingsDraft.blocks) &&
+                      settingsDraft.blocks.some((b: ContentRecord) =>
+                        f.key.startsWith(`blocks.${b.id}.`),
+                      )
+                    );
+                  if (section === "links")
+                    return kind === "urgent-banners" && f.key.startsWith("cta");
+                  if (section === "page")
+                    return (
+                      kind === "categories" &&
+                      !["name", "description"].includes(f.key)
+                    );
+                  if (kind === "urgent-banners")
+                    return !f.key.startsWith("cta") && f.key !== "amountLabels";
+                  if (kind === "categories")
+                    return ["name", "description"].includes(f.key);
+                  return !f.key.startsWith("blocks.");
+                })
+                .map(renderField)}
+              {kind === "urgent-banners" && section === "media"
+                ? document.fields
+                    .filter((f) => f.key === "amountLabels")
+                    .map(renderField)
+                : null}
+            </>
+          ) : null}
+          <WorkspaceSettings
+            onUploadingChange={onUploadingChange}
+            kind={kind}
+            section={section}
+            settings={{ ...settingsDraft, id }}
+            onChange={setSetting}
+            catalog={catalog}
+          />
+          {kind === "super-categories" ? (
+            <ProgrammeWorkspace
+              section={section}
+              settings={settingsDraft}
+              onChange={setSetting}
+              catalog={catalog}
               locale={locale}
             />
           ) : null}
-          <h2 className="text-lg font-bold">
-            {isBanner ? "الصورة وإمكانية الوصول" : "البحث والمشاركة"}
-          </h2>
-          {isBanner ? (
-            <p className="text-sm text-slate-500">
-              البانر جزء من الصفحة التي يظهر فيها؛ وصفه لا ينشئ عنوان بحث
-              مستقلًا.
-            </p>
+          {kind === "categories" && section === "library" ? (
+            <section className="space-y-4 rounded-xl border bg-white p-5">
+              <h3 className="font-bold">المشاريع المرتبطة بهذا التصنيف</h3>
+              <button
+                type="button"
+                className={button}
+                disabled={dirty}
+                onClick={() => setCategoryOrderOpen(true)}
+              >
+                ترتيب المشاريع داخل التصنيف
+              </button>
+              <p className="text-xs text-slate-500">
+                ترتيب التصنيف مستقل عن الترتيب العام؛ يُحفظ من نافذة الترتيب
+                نفسها.
+              </p>
+              <p className="text-sm text-slate-500">
+                تعديل عضوية المشروع متاح من محرر المشروع، دون حذف بيانات
+                التبرعات.
+              </p>
+              {catalog.campaigns
+                .filter((c) => c.categoryIds?.includes(id))
+                .sort((a, b) => (a.priority || 0) - (b.priority || 0))
+                .map((c) => (
+                  <Link
+                    key={c.id}
+                    href={`/dashboard/campaigns/edit/${c.id}`}
+                    className="flex items-center justify-between rounded-lg border p-3 text-sm"
+                  >
+                    <span>{c.title}</span>
+                    <span className="text-brand">تحرير المشروع ←</span>
+                  </Link>
+                ))}
+            </section>
           ) : null}
-          {document.fields.filter((f) => f.group === "seo").map(renderField)}
-          {!isBanner ? (
-            <section className="rounded-xl border bg-white p-4">
-              <h3 className="mb-3 text-sm font-semibold">معاينة البحث</h3>
-              <p className="text-lg text-blue-800">
-                {current.metaTitle ||
-                  current.seoTitle ||
-                  current.title ||
-                  current.name}
+          {section === "seo" ? (
+            <SeoWorkspace
+              onUploadingChange={onUploadingChange}
+              values={current}
+              fields={document.fields}
+              renderField={renderField}
+              onChange={edit}
+              locale={locale}
+            />
+          ) : null}
+          {section === "donation" ? (
+            <section className="rounded-xl border bg-white p-5">
+              <h3 className="font-bold">المبلغ المحصّل</h3>
+              <p className="my-3 text-2xl font-bold" dir="ltr">
+                $
+                {Number(document.settings.currentAmount || 0).toLocaleString(
+                  "en-US",
+                )}
               </p>
-              <p className="mt-2 text-sm text-slate-600">
-                {current.metaDescription ||
-                  current.seoDescription ||
-                  "أضف وصف البحث"}
+              <p className="text-sm leading-7 text-slate-500">
+                للعرض فقط؛ يُحتسب من سجل التبرعات. تعديل المحتوى أو الهدف لا
+                يغيّر المبلغ المحصّل.
               </p>
+            </section>
+          ) : null}
+          {(kind === "campaigns" &&
+            ["donation", "history"].includes(section)) ||
+          (kind === "categories" && section === "page") ? (
+            <details className="rounded-xl border bg-white p-4">
+              <summary className="cursor-pointer text-sm font-semibold">
+                الأدوات المتخصصة والإعدادات المتقدمة
+              </summary>
+              <p className="my-3 text-xs leading-6 text-slate-500">
+                تخصيصات العملات، وإدارة الإنجازات والبطاقات التفصيلية متاحة في
+                الأدوات الأصلية. احفظ مسودة المحرر أولًا قبل الانتقال.
+              </p>
+              <Link
+                className={button + " inline-block"}
+                href={`/dashboard/${kind}/settings/${id}`}
+              >
+                فتح الإعدادات المتقدمة
+              </Link>
+            </details>
+          ) : null}
+          {section === "history" ? (
+            <section className="space-y-3 rounded-xl border bg-white p-5">
+              <h3 className="font-bold">الإنجازات والتحديثات</h3>
+              {Array.isArray(document.settings.updates) &&
+              document.settings.updates.length ? (
+                document.settings.updates.map((item: ContentRecord) => (
+                  <article key={String(item.id)} className="rounded border p-4">
+                    <h4 className="font-bold">
+                      {String(item.title || "تحديث المشروع")}
+                    </h4>
+                    <p className="mt-2 text-sm">
+                      {previewText(String(item.description || ""))}
+                    </p>
+                    <time className="text-xs text-slate-400">
+                      {String(item.createdAt || "")}
+                    </time>
+                  </article>
+                ))
+              ) : (
+                <p className="text-sm text-slate-500">
+                  لا توجد تحديثات منشورة لهذا المشروع.
+                </p>
+              )}
+            </section>
+          ) : null}
+          {section === "review" ? (
+            <section className="space-y-4 rounded-xl border bg-white p-5">
+              <h3 className="font-bold">المراجعة قبل النشر</h3>
+              {document.fields
+                .filter((f) => f.required)
+                .map((f) => (
+                  <p key={f.key} className="flex justify-between border-b pb-3">
+                    <span>{f.label}</span>
+                    <span
+                      className={
+                        current[f.key] ? "text-emerald-700" : "text-amber-700"
+                      }
+                    >
+                      {current[f.key] ? "موجود" : "ناقص"}
+                    </span>
+                  </p>
+                ))}
+              <button
+                type="button"
+                className={button}
+                onClick={() => setLanguageReview(true)}
+              >
+                مراجعة جميع اللغات
+              </button>
+              <button
+                type="button"
+                className={button}
+                onClick={() => setPreviewOpen(true)}
+              >
+                معاينة قبل الحفظ
+              </button>
             </section>
           ) : null}
           <section className="rounded-xl border bg-white p-4">
@@ -705,61 +996,194 @@ export function ContentEditor({ kind, id }: { kind: ContentKind; id: string }) {
                 : "إعدادات البحث تحتاج استكمالًا"}
             </p>
           </section>
-          {kind === "categories" ? (
+          {kind === "categories" && section === "links" ? (
             <section className="space-y-3 rounded-xl border bg-white p-4">
               <h3 className="font-semibold">الرابط وسجل التغييرات</h3>
               <p dir="ltr" className="break-all text-sm">
-                /category/{document.slug}
+                /{locale}/category/{document.slugs[locale]}
               </p>
               <button
                 type="button"
                 className={button}
                 disabled={Boolean(busy) || dirty}
                 onClick={() => {
-                  setSlug(document.slug);
+                  setSlug(document.slugs[locale]);
                   setConfirmation("");
                   setSlugOpen(true);
                 }}
               >
                 تعديل الرابط
               </button>
-              {document.previousSlugs.map((entry, i) => (
-                <div className="rounded-lg border p-2 text-xs" key={i}>
-                  <p dir="ltr">
-                    {String(entry.from)} → {String(entry.to)}
-                  </p>
-                  <p>{String(entry.at)}</p>
-                  <button
-                    type="button"
-                    className={button}
-                    onClick={() => {
-                      setSlug(String(entry.from));
-                      setConfirmation("");
-                      setSlugOpen(true);
-                    }}
-                  >
-                    استعادة الرابط السابق
-                  </button>
-                </div>
-              ))}
+              {document.previousSlugs
+                .filter((entry) => (entry.locale || "ar") === locale)
+                .map((entry, i) => (
+                  <div className="rounded-lg border p-2 text-xs" key={i}>
+                    <p dir="ltr">
+                      {String(entry.from)} → {String(entry.to)}
+                    </p>
+                    <p>{String(entry.at)}</p>
+                    <button
+                      type="button"
+                      className={button}
+                      onClick={() => {
+                        setSlug(String(entry.from));
+                        setConfirmation("");
+                        setSlugOpen(true);
+                      }}
+                    >
+                      استعادة الرابط السابق
+                    </button>
+                  </div>
+                ))}
             </section>
           ) : null}
+        </div>
+        <aside className="min-w-0 space-y-4 xl:sticky xl:top-5">
+          <WorkspacePreview
+            kind={kind}
+            values={current}
+            source={source}
+            settings={liveSettings}
+            locale={locale}
+          />
+          <button
+            type="button"
+            className={button + " w-full bg-white"}
+            onClick={() => setPreviewOpen(true)}
+          >
+            عرض الصفحة كاملة
+          </button>
         </aside>
-      </main>
+      </div>
+      {languageReview ? (
+        <EditorModal
+          title="اللغات والمراجعة"
+          onClose={() => setLanguageReview(false)}
+        >
+          <section className="max-h-[85vh] w-full max-w-5xl overflow-auto rounded-2xl bg-white p-6">
+            <div className="mb-5 flex items-center justify-between">
+              <h2 id="language-review-heading" className="text-xl font-bold">
+                اللغات والمراجعة
+              </h2>
+              <button
+                type="button"
+                className={button}
+                onClick={() => setLanguageReview(false)}
+              >
+                إغلاق
+              </button>
+            </div>
+            <p className="mb-4 text-sm text-slate-500">
+              النص البديل عند غياب الترجمة لا يُحسب ترجمة محفوظة.
+            </p>
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b text-start">
+                  <th className="p-3 text-start">اللغة</th>
+                  <th>المحتوى</th>
+                  <th>البحث والمشاركة</th>
+                  <th>المراجعة</th>
+                  <th>التعديل</th>
+                </tr>
+              </thead>
+              <tbody>
+                {SUPPORTED_LOCALES.map((code) => {
+                  const s = document.statuses[code];
+                  return (
+                    <tr key={code} className="border-b">
+                      <td className="p-3">{LOCALES[code].nativeLabel}</td>
+                      <td className="text-center">
+                        {s.complete ? "مكتمل" : "ناقص"}
+                      </td>
+                      <td className="text-center">
+                        {s.seoComplete ? "متاح" : "غير مكتمل"}
+                      </td>
+                      <td className="text-center">
+                        {s.reviewed ? "مراجع" : "مسودة"}
+                      </td>
+                      <td className="text-center">
+                        <button
+                          type="button"
+                          className="p-2 text-brand"
+                          onClick={() => {
+                            setLocale(code);
+                            setSection("content");
+                            setLanguageReview(false);
+                          }}
+                        >
+                          النص
+                        </button>
+                        {!isBanner ? (
+                          <button
+                            type="button"
+                            className="p-2 text-brand"
+                            onClick={() => {
+                              setLocale(code);
+                              setSection("seo");
+                              setLanguageReview(false);
+                            }}
+                          >
+                            SEO
+                          </button>
+                        ) : null}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </section>
+        </EditorModal>
+      ) : null}
+      {previewOpen ? (
+        <EditorModal
+          title="معاينة الصفحة"
+          onClose={() => setPreviewOpen(false)}
+        >
+          <section className="max-h-[90vh] w-full max-w-4xl overflow-auto rounded-2xl bg-slate-50 p-6">
+            <div className="mb-5 flex items-center justify-between">
+              <h2 id="content-preview-heading" className="text-xl font-bold">
+                معاينة الصفحة
+              </h2>
+              <button
+                type="button"
+                className={button}
+                onClick={() => setPreviewOpen(false)}
+              >
+                إغلاق
+              </button>
+            </div>
+            <WorkspacePreview
+              kind={kind}
+              values={current}
+              source={source}
+              settings={liveSettings}
+              locale={locale}
+              expanded
+            />
+          </section>
+        </EditorModal>
+      ) : null}
+      {categoryOrderOpen && kind === "categories" ? (
+        <CategoryOrderDialog
+          open
+          onOpenChange={setCategoryOrderOpen}
+          categoryId={id}
+          categoryName={document.title}
+        />
+      ) : null}
       {slugOpen ? (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="slug-heading"
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+        <EditorModal
+          title="مراجعة تغيير الرابط"
+          onClose={() => setSlugOpen(false)}
         >
           <div className="w-full max-w-lg space-y-4 rounded-xl bg-white p-6">
             <h2 id="slug-heading" className="text-xl font-bold">
               مراجعة تغيير الرابط
             </h2>
             <p className="text-sm">
-              الرابط الحالي: <span dir="ltr">{document.slug}</span>. ستبقى
-              الروابط السابقة محوّلة مباشرة إلى الرابط المعتمد.
+              الرابط الحالي: <span dir="ltr">{document.slugs[locale]}</span>.
+              ستبقى الروابط السابقة محوّلة مباشرة إلى الرابط المعتمد.
             </p>
             <label className="block space-y-2">
               <span>الرابط الجديد</span>
@@ -801,7 +1225,7 @@ export function ContentEditor({ kind, id }: { kind: ContentKind; id: string }) {
               </button>
             </div>
           </div>
-        </div>
+        </EditorModal>
       ) : null}
     </div>
   );

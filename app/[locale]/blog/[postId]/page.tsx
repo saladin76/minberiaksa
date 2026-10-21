@@ -1,3 +1,5 @@
+import { applyEditorialSeo,readPublicEditorialSeo } from '@/lib/content-editor/public-seo';
+import { EditorialFaq } from '@/components/content/EditorialFaq';
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { buildLocalizedAlternates, buildPageMetadata, SITE_URL } from "@/lib/seo";
@@ -18,7 +20,7 @@ const NAMESPACES = ["blog", "homepage"] as const;
 /** Articles change when an editor publishes, not per request. */
 export const revalidate = 60;
 
-export async function generateMetadata({ params }: Props): Promise<Metadata> {
+async function generateBaseMetadata({ params }: Props): Promise<Metadata> {
   const { locale, postId } = await params;
   const article = await getArticle(decodeURIComponent(postId), locale);
 
@@ -95,7 +97,10 @@ export default async function Article({ params }: Props) {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
       <ArticleDetail article={article} ctaKey={ctaKey} />
+      <EditorialFaq kind="blog" contentKey={article.id} locale={locale}/>
       <PageBanners locale={locale} page="article" slot="bottom" />
     </MinbarMessages>
   );
 }
+
+export async function generateMetadata(args:Props):Promise<Metadata>{const {postId,locale}=await args.params;const [base,extra]=await Promise.all([generateBaseMetadata(args),readPublicEditorialSeo('blog',decodeURIComponent(postId),locale)]);return applyEditorialSeo(base,extra);}

@@ -5,6 +5,7 @@ import { requireAdminOrDashboardPermission } from "@/lib/dashboard/api-auth";
 import { CONFIG, parseKind } from "@/lib/content-editor/contracts";
 import { contentStore } from "@/lib/content-editor/store";
 import { documentFor, includeFor } from "@/lib/content-editor/service";
+import { campaignWorkspaceWhere } from "@/lib/content-editor/site-capabilities";
 export const dynamic = "force-dynamic";
 export async function GET(
   request: NextRequest,
@@ -23,18 +24,13 @@ export async function GET(
     const cursor = request.nextUrl.searchParams.get("cursor");
     if (cursor && !/^[a-f0-9]{24}$/i.test(cursor))
       return NextResponse.json({ error: "Invalid cursor" }, { status: 400 });
-    const items = await contentStore
-      .model(CONFIG[kind].model)
-      .findMany({
-        where:
-          kind === "campaigns"
-            ? { OR: [{ isDeleted: false }, { isDeleted: { isSet: false } }] }
-            : {},
-        include: includeFor(kind),
-        orderBy: { id: "asc" },
-        take: 51,
-        ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
-      });
+    const items = await contentStore.model(CONFIG[kind].model).findMany({
+      where: kind === "campaigns" ? campaignWorkspaceWhere() : {},
+      include: includeFor(kind),
+      orderBy: { id: "asc" },
+      take: 51,
+      ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
+    });
     return NextResponse.json(
       {
         items: items.slice(0, 50).map((row) => {

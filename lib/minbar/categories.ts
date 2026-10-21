@@ -18,6 +18,7 @@ import { CATEGORY_ACTIVE_OR_UNSET, NOT_SOFT_DELETED } from "@/lib/campaign/soft-
  */
 
 export interface MinbarCategory {
+  navigationVisible?: boolean;
   id: string;
   slug: string;
   href: string;
@@ -47,6 +48,7 @@ async function readCategories(locale: string): Promise<MinbarCategory[]> {
       heroImage: true,
       icon: true,
       order: true,
+      navigationVisible: true,
       translations: {
         where: translationLocaleWhere(locale),
         take: 2,
@@ -71,6 +73,7 @@ async function readCategories(locale: string): Promise<MinbarCategory[]> {
     const slug = t?.slug || row.slug || row.id;
     return {
       id: row.id,
+      navigationVisible: row.navigationVisible !== false,
       slug,
       href: `/${locale}/category/${encodeURIComponent(slug)}`,
       name: t?.name || row.name,

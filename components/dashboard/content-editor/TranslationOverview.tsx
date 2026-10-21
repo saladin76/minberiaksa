@@ -10,7 +10,13 @@ type Status = {
   reviewed: boolean;
 };
 type Row = { id: string; title: string; statuses: Record<string, Status> };
-export function TranslationOverview({ kind }: { kind: ContentKind }) {
+export function TranslationOverview({
+  kind,
+  scopeIds,
+}: {
+  kind: ContentKind;
+  scopeIds?: string[];
+}) {
   const [items, setItems] = useState<Row[]>([]),
     [error, setError] = useState(""),
     [loading, setLoading] = useState(true),
@@ -22,6 +28,7 @@ export function TranslationOverview({ kind }: { kind: ContentKind }) {
     try {
       let cursor: string | null = null;
       const all: Row[] = [];
+      const seen = new Set<string>();
       do {
         const res: Response = await fetch(
           `/api/admin/content-editor/${kind}${cursor ? "?cursor=" + encodeURIComponent(cursor) : ""}`,
@@ -35,6 +42,11 @@ export function TranslationOverview({ kind }: { kind: ContentKind }) {
         if (!res.ok) throw new Error(data.error || "تعذر التحميل");
         all.push(...data.items);
         cursor = data.nextCursor;
+        if (cursor) {
+          if (seen.has(cursor) || seen.size >= 500)
+            throw new Error("تعذر استكمال إحصاءات المحتوى؛ أعد المحاولة");
+          seen.add(cursor);
+        }
       } while (cursor);
       setItems(all);
     } catch (e) {
@@ -52,16 +64,20 @@ export function TranslationOverview({ kind }: { kind: ContentKind }) {
       .replace(/[\u064b-\u065f\u0670ـ]/g, "")
       .replace(/[أإآ]/g, "ا")
       .toLowerCase();
-  const visible = items.filter((row) =>
-    normalize(row.title).includes(normalize(filter)),
+  const visible = items.filter(
+    (row) =>
+      (!scopeIds || scopeIds.includes(row.id)) &&
+      normalize(row.title).includes(normalize(filter)),
   );
-  const complete = items.filter(
+  const complete = visible.filter(
     (row) => row.statuses[language]?.complete,
   ).length;
-  const reviewed = items.filter(
+  const reviewed = visible.filter(
     (row) => row.statuses[language]?.reviewed,
   ).length;
-  const seo = items.filter((row) => row.statuses[language]?.seoComplete).length;
+  const seo = visible.filter(
+    (row) => row.statuses[language]?.seoComplete,
+  ).length;
   return (
     <section dir="rtl" className="space-y-4 rounded-xl border bg-white p-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -119,7 +135,7 @@ export function TranslationOverview({ kind }: { kind: ContentKind }) {
           <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
             {[
               ["مكتمل", complete],
-              ["يحتاج ترجمة", items.length - complete],
+              ["يحتاج ترجمة", visible.length - complete],
               ["راجعه الفريق", reviewed],
               [
                 kind === "urgent-banners" ? "وصف الصورة مكتمل" : "SEO مكتمل",

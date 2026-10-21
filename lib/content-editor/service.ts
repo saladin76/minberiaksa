@@ -1,4 +1,9 @@
 import { createHash, randomUUID } from "node:crypto";
+import { validateWorkspaceSettings } from "./workspace-settings";
+import { saveWorkspaceRelations } from "./workspace-relations";
+import { SUPPORTED_LOCALES } from "../locales";
+import { pickLocaleSlug } from "../slug";
+import { HAS_IMPACT_BACKING_CAMPAIGNS } from "./site-capabilities";
 import {
   CONFIG,
   fieldsFor,
@@ -20,6 +25,7 @@ export interface Delegate {
   update(args: object): Promise<ContentRecord>;
   create(args: object): Promise<ContentRecord>;
   upsert(args: object): Promise<ContentRecord>;
+  deleteMany?(args: object): Promise<unknown>;
 }
 export interface Store {
   model(name: string): Delegate;
@@ -52,6 +58,17 @@ export function fingerprint(value: unknown): string {
 export function includeFor(kind: ContentKind) {
   return {
     translations: true,
+    ...(kind === "campaigns" && HAS_IMPACT_BACKING_CAMPAIGNS
+      ? { impactCampaign: { select: { id: true } } }
+      : {}),
+    ...(kind === "campaigns"
+      ? {
+          updates: {
+            include: { translations: true },
+            orderBy: { createdAt: "desc" },
+          },
+        }
+      : {}),
     ...(kind === "categories"
       ? {
           values: { include: { translations: true } },
@@ -74,6 +91,8 @@ export async function readContent(db: Store, kind: ContentKind, id: string) {
     .model(CONFIG[kind].model)
     .findUnique({ where: { id }, include: includeFor(kind) });
   if (!row) throw new ContentError("المحتوى غير موجود", 404);
+  if (kind === "campaigns" && row.impactCampaign)
+    throw new ContentError("مشاريع تسوية الأثر تُدار من محرر الأثر المتخصص");
   return row;
 }
 export function documentFor(kind: ContentKind, row: ContentRecord) {
@@ -88,6 +107,16 @@ export function documentFor(kind: ContentKind, row: ContentRecord) {
     kind,
     title: text(row.title || row.name),
     slug: text(row.slug),
+    slugs: Object.fromEntries(
+      SUPPORTED_LOCALES.map((locale) => [
+        locale,
+        pickLocaleSlug(
+          text(row.slug),
+          rows(row.translations) as { locale: string; slug?: string | null }[],
+          locale,
+        ) || text(row.id),
+      ]),
+    ),
     revision: fingerprint(row),
     fields: fieldsFor(kind, row),
     source: base,
@@ -134,6 +163,7 @@ export async function saveContent(
     revision: string;
     changes: unknown;
     reviewed?: boolean;
+    settings?: unknown;
   },
 ) {
   return db.transaction(async (tx) => {
@@ -145,9 +175,61 @@ export async function saveContent(
         "عدّل زميل هذا المحتوى. احتفظ بتعديلاتك ثم أعد تحميل النسخة الحالية.",
         409,
       );
-    const changes = validateChanges(fieldsFor(kind, row), input.changes);
+    let changes: TextValues, settings: ContentRecord;
+    try {
+      changes = validateChanges(fieldsFor(kind, row), input.changes);
+      settings = validateWorkspaceSettings(kind, row, input.settings);
+    } catch (error) {
+      throw new ContentError(
+        error instanceof Error ? error.message : "حقول غير صالحة",
+      );
+    }
+    const categorySet = settings.categories as
+      | { set: { id: string }[] }
+      | undefined;
+    if (categorySet) {
+      const found = await tx
+        .model("category")
+        .findMany({ where: { id: { in: categorySet.set.map((x) => x.id) } } });
+      if (found.length !== categorySet.set.length)
+        throw new ContentError("أحد التصنيفات غير موجود");
+    }
     const current = valuesFor(kind, row, locale),
       next = { ...current, ...changes };
+    for (const [key, model] of [
+      ["categoryId", "postCategory"],
+      ["campaignId", "campaign"],
+      ["donateCampaignId", "campaign"],
+    ]) {
+      if (settings[key]) {
+        const linked = await tx
+          .model(model)
+          .findUnique({ where: { id: settings[key] } });
+        if (!linked || linked.isDeleted)
+          throw new ContentError("المحتوى المرتبط غير موجود");
+        if (
+          key === "donateCampaignId" &&
+          (!Array.isArray(linked.categoryIds) ||
+            !linked.categoryIds.includes(id))
+        )
+          throw new ContentError("مشروع التبرع يجب أن ينتمي لهذا التصنيف");
+      }
+    }
+    for (const [key, model] of [
+      ["campaignIds", "campaign"],
+      ["achievementVideoIds", "video"],
+    ]) {
+      if (Array.isArray(settings[key]) && (settings[key] as unknown[]).length) {
+        const found = await tx
+          .model(model)
+          .findMany({ where: { id: { in: settings[key] } } });
+        if (
+          found.length !== (settings[key] as unknown[]).length ||
+          found.some((r) => r.isDeleted)
+        )
+          throw new ContentError("أحد عناصر المحتوى المرتبط غير موجود");
+      }
+    }
     const titleKey = kind === "categories" ? "name" : "title";
     if (!hasText(next[titleKey]))
       throw new ContentError("العنوان مطلوب قبل الحفظ");
@@ -166,35 +248,32 @@ export async function saveContent(
     const parentChanges = Object.fromEntries(
       Object.entries(changes).filter(([key]) => !key.includes(".")),
     );
-    await tx
-      .model(cfg.model)
-      .update({
-        where: { id },
-        data: {
-          editorVersion: randomUUID(),
-          editorReviews: reviews,
-          ...(locale === "ar" ? dataFor(parentChanges) : {}),
-        },
-      });
+    await tx.model(cfg.model).update({
+      where: { id },
+      data: {
+        editorVersion: randomUUID(),
+        editorReviews: reviews,
+        ...settings,
+        ...(locale === "ar" ? dataFor(parentChanges) : {}),
+      },
+    });
     if (locale !== "ar" && Object.keys(parentChanges).length) {
       const key = `${cfg.parentKey}_locale`,
         where = { [key]: { [cfg.parentKey]: id, locale } };
       const data = dataFor(parentChanges);
-      await tx
-        .model(cfg.translationModel)
-        .upsert({
-          where,
-          create: {
-            [cfg.parentKey]: id,
-            locale,
-            [titleKey]: next[titleKey],
-            ...(kind === "campaigns"
-              ? { description: next.description || "" }
-              : {}),
-            ...data,
-          },
-          update: data,
-        });
+      await tx.model(cfg.translationModel).upsert({
+        where,
+        create: {
+          [cfg.parentKey]: id,
+          locale,
+          [titleKey]: next[titleKey],
+          ...(kind === "campaigns"
+            ? { description: next.description || "" }
+            : {}),
+          ...data,
+        },
+        update: data,
+      });
     }
     const childModels: Record<string, [string, string, string]> = {
       values: ["categoryValue", "categoryValueTranslation", "valueId"],
@@ -227,19 +306,26 @@ export async function saveContent(
         );
         if (required && !hasText(full[required]))
           throw new ContentError("أكمل عنوان البطاقة أو القيمة قبل الحفظ");
-        await tx
-          .model(translationModel)
-          .upsert({
-            where: {
-              [`${foreignKey}_locale`]: { [foreignKey]: childId, locale },
-            },
-            create: { [foreignKey]: childId, locale, ...full },
-            update: data,
-          });
+        await tx.model(translationModel).upsert({
+          where: {
+            [`${foreignKey}_locale`]: { [foreignKey]: childId, locale },
+          },
+          create: { [foreignKey]: childId, locale, ...full },
+          update: data,
+        });
       }
     }
+    await saveWorkspaceRelations(tx, kind, id, row, input.settings);
     const saved = await readContent(tx, kind, id),
       actual = valuesFor(kind, saved, locale);
+    for (const [key, value] of Object.entries(settings)) {
+      if (key === "categories") continue;
+      if (fingerprint(saved[key] ?? null) !== fingerprint(value ?? null))
+        throw new ContentError(
+          "لم تُحفظ إعدادات العنصر كاملة. لم يُعتمد التعديل.",
+          500,
+        );
+    }
     if (
       Object.keys(changes).some((key) =>
         key === "amountLabels"
@@ -251,6 +337,64 @@ export async function saveContent(
     return documentFor(kind, saved);
   });
 }
+export async function saveWorkspace(
+  db: Store,
+  input: {
+    kind: ContentKind;
+    id: string;
+    revision: string;
+    locale: string;
+    changes: unknown;
+    reviewed?: boolean;
+    settings?: unknown;
+    localeChanges?: Record<string, unknown>;
+  },
+) {
+  return db.transaction(async (tx) => {
+    const original = await readContent(tx, input.kind, input.id);
+    let revision = input.revision;
+    const locales = { ...input.localeChanges, [input.locale]: input.changes };
+    const scalarSettings =
+      input.kind === "super-categories" &&
+      input.settings &&
+      typeof input.settings === "object" &&
+      !Array.isArray(input.settings)
+        ? Object.fromEntries(
+            Object.entries(input.settings).filter(
+              ([key]) => !["blocks", "items"].includes(key),
+            ),
+          )
+        : input.settings;
+    let saved: ReturnType<typeof documentFor> | undefined;
+    for (const [locale, changes] of Object.entries(locales).sort(([a], [b]) =>
+      a === "ar" ? -1 : b === "ar" ? 1 : 0,
+    )) {
+      saved = await saveContent(tx, {
+        ...input,
+        locale,
+        changes,
+        revision,
+        reviewed: locale === input.locale && input.reviewed,
+        settings: saved ? undefined : scalarSettings,
+      });
+      revision = saved.revision;
+    }
+    try {
+      await saveWorkspaceRelations(
+        tx,
+        input.kind,
+        input.id,
+        original,
+        input.settings,
+      );
+    } catch (error) {
+      throw new ContentError(
+        error instanceof Error ? error.message : "علاقات محتوى غير صالحة",
+      );
+    }
+    return documentFor(input.kind, await readContent(tx, input.kind, input.id));
+  });
+}
 export async function changeCategorySlug(
   db: Store,
   input: {
@@ -259,9 +403,13 @@ export async function changeCategorySlug(
     slug: string;
     confirmation: string;
     actor: string;
+    locale?: string;
   },
 ) {
   const slug = input.slug.trim();
+  const locale = input.locale || "ar";
+  if (!(SUPPORTED_LOCALES as readonly string[]).includes(locale))
+    throw new ContentError("لغة غير صالحة");
   if (
     !/^[\p{L}\p{N}]+(?:-[\p{L}\p{N}]+)*$/u.test(slug) ||
     slug.length > 150 ||
@@ -274,44 +422,60 @@ export async function changeCategorySlug(
     const row = await readContent(tx, "categories", input.id);
     if (fingerprint(row) !== input.revision)
       throw new ContentError("تغير التصنيف. أعد تحميله أولًا.", 409);
-    if (row.slug === slug) return documentFor("categories", row);
-    const collision = await tx
-      .model("category")
-      .findFirst({
-        where: {
-          id: { not: input.id },
-          OR: [
-            { slug },
-            { previousSlugs: { has: slug } },
-            { translations: { some: { slug } } },
-          ],
-        },
-      });
+    const current =
+      pickLocaleSlug(
+        text(row.slug),
+        rows(row.translations) as { locale: string; slug?: string | null }[],
+        locale,
+      ) || "";
+    if (current === slug) return documentFor("categories", row);
+    if (locale !== "ar" && !hasText(valuesFor("categories", row, locale).name))
+      throw new ContentError("احفظ عنوان هذه اللغة قبل تخصيص رابطها");
+    const collision = await tx.model("category").findFirst({
+      where: {
+        id: { not: input.id },
+        OR: [
+          { slug },
+          { previousSlugs: { has: slug } },
+          { translations: { some: { slug } } },
+        ],
+      },
+    });
     if (collision)
       throw new ContentError("هذا الرابط مستخدم أو محفوظ لتصنيف آخر", 409);
     const previous = Array.isArray(row.previousSlugs)
       ? row.previousSlugs.filter((v): v is string => typeof v === "string")
       : [];
-    if (row.slug) previous.push(text(row.slug));
+    if (current) previous.push(current);
     const history = [
       ...rows(row.slugChanges),
       {
-        from: text(row.slug),
+        from: current,
         to: slug,
+        locale,
         at: new Date().toISOString(),
         actor: input.actor,
       },
     ];
-    await tx
-      .model("category")
-      .update({
-        where: { id: input.id },
-        data: {
+    await tx.model("category").update({
+      where: { id: input.id },
+      data: {
+        ...(locale === "ar" ? { slug } : {}),
+        previousSlugs: [...new Set(previous)].filter((v) => v !== slug),
+        slugChanges: history,
+        editorVersion: randomUUID(),
+      },
+    });
+    if (locale !== "ar")
+      await tx.model("categoryTranslation").upsert({
+        where: { categoryId_locale: { categoryId: input.id, locale } },
+        create: {
+          categoryId: input.id,
+          locale,
+          name: valuesFor("categories", row, locale).name,
           slug,
-          previousSlugs: [...new Set(previous)].filter((v) => v !== slug),
-          slugChanges: history,
-          editorVersion: randomUUID(),
         },
+        update: { slug },
       });
     return documentFor(
       "categories",

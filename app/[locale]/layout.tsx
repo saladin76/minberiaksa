@@ -132,7 +132,7 @@ export default async function Rootlayout({
     listCategories(locale),
     listNavSuperCategories(locale),
   ]);
-  const navCategories: NavCategory[] = categories.map(({ id, href, name, image, projectCount }) => ({ id, href, name, image, projectCount }));
+  const navCategories: NavCategory[] = categories.filter(c=>c.navigationVisible!==false).map(({ id, href, name, image, projectCount }) => ({ id, href, name, image, projectCount }));
   const localeFont = LOCALE_FONT_STYLESHEETS[locale];
 
   // Phones hide the hero pattern (styles/minbar/minbar.css), so only wider screens need it early.
