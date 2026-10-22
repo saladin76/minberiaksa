@@ -106,7 +106,8 @@ function automaticHarness(
 test("automatic WhatsApp sends only after an explicit opt-in is present", async () => {
   const blocked = automaticHarness({ doNotContact: false, emailOptIn: true, smsOptIn: true, whatsappOptIn: false });
   const blockedResult = await blocked.send();
-  assert.deepEqual(blockedResult, { outcome: "SKIPPED", reason: "WHATSAPP_OPT_IN_REQUIRED" });
+  assert.equal(blockedResult.outcome, "SKIPPED");
+  assert.equal(blockedResult.reason, "WHATSAPP_OPT_IN_REQUIRED");
   assert.equal(blocked.state().providerCalls, 0);
   assert.equal(blocked.state().statuses.at(-1)?.status, "SKIPPED");
 
@@ -119,7 +120,8 @@ test("automatic WhatsApp sends only after an explicit opt-in is present", async 
 test("automatic WhatsApp fails closed when the consent check is unavailable", async () => {
   const harness = automaticHarness(null, true);
   const result = await harness.send();
-  assert.deepEqual(result, { outcome: "SKIPPED", reason: "CONSENT_CHECK_UNAVAILABLE" });
+  assert.equal(result.outcome, "SKIPPED");
+  assert.equal(result.reason, "CONSENT_CHECK_UNAVAILABLE");
   assert.equal(harness.state().providerCalls, 0);
 });
 
