@@ -19,12 +19,20 @@ export async function POST(_request: NextRequest, { params }: { params: Promise<
   if (denied) return denied;
   const { id } = await params;
 
-  const result = await verifyWhatsappSender(id, auditActorFromDashboardSession(session!));
-  if (!result.ok) return NextResponse.json(verificationErrorBody(result.error, result.diagnostic), { status: result.status });
-  return NextResponse.json({
-    ok: true,
-    sender: publicSender(result.data),
-    message: result.message ?? null,
-    warnings: result.warnings ?? [],
-  });
+  try {
+    const result = await verifyWhatsappSender(id, auditActorFromDashboardSession(session!));
+    if (!result.ok) return NextResponse.json(verificationErrorBody(result.error, result.diagnostic), { status: result.status });
+    return NextResponse.json({
+      ok: true,
+      sender: publicSender(result.data),
+      message: result.message ?? null,
+      warnings: result.warnings ?? [],
+    });
+  } catch (error) {
+    console.error("WhatsApp sender Meta verification route failed", { senderId: id, error });
+    return NextResponse.json(
+      { error: "تعذّر إكمال التحقق أو تسجيل نتيجته. حدّث الصفحة وافحص حالة المُرسِل قبل إعادة المحاولة." },
+      { status: 500 },
+    );
+  }
 }

@@ -14,7 +14,7 @@ import { getGa4ServerCredentialsFromSettings } from "@/lib/tracking/tracking-set
 import { donationFieldEmpty } from "@/lib/donations/mongo-null";
 
 type Attribution = Record<string, string>;
-export type DonationConversionSyncOptions = { force?: boolean };
+export type DonationConversionSyncOptions = { force?: boolean; includeGa4?: boolean };
 
 function getStr(j: unknown, k: string): string | undefined {
   if (!j || typeof j !== "object") return undefined;
@@ -130,7 +130,9 @@ export async function sendDonationServerConversions(donationId: string, options:
     if (metaResult.ok) {
       await prisma.donation.update({ where: { id: row.id }, data: { conversionEventsSentAt: new Date() } });
     }
-    await sendGa4Purchase(row, amount, currency, contentName, eventTime, eventId);
+    if (options.includeGa4 !== false) {
+      await sendGa4Purchase(row, amount, currency, contentName, eventTime, eventId);
+    }
 
     if (!metaResult.ok && !metaResult.skipped) console.error("[conversion] Donate send failed and donation was not marked sent:", row.id, metaResult.error, metaResult.fbtrace_id);
     return metaResult;

@@ -402,4 +402,6 @@ test("the verify route returns the structured diagnostic and the dashboard shows
   assert.match(ui, /verifyFailureLines\(body\)/);
   for (const field of ["body.stage", "body.reason", "body.detail", "body.retryable"]) assert.ok(ui.includes(field), field);
   assert.match(ui, /QUALITY_RATING_RED/);
+  assert.match(ui, /تعذّر الاتصال بالخادم للتحقق من Meta/);
+  assert.match(ui, /جارٍ التحقق من Meta/);
 });

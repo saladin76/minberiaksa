@@ -1,3 +1,4 @@
+import { classifyEventTemplates } from "@/lib/communication/template-event-classification";
 import { headerSchema, templateButtonsSchema, authSchema, translationSchema } from "@/lib/communication/whatsapp-template-schema";
 import { unsubmittedTemplateLocales } from "@/lib/communication/template-locale-media";
 import { NextRequest, NextResponse } from "next/server";
@@ -10,6 +11,7 @@ import { prisma } from "@/lib/prisma";
 import { auditActorFromDashboardSession, writeAuditLog } from "@/lib/audit-log";
 import { deleteOrArchiveWhatsappTemplate, rejectDisallowedTemplateEdit, submittedMetaLocales } from "@/lib/communication/whatsapp-template-guard";
 import { publishWhatsappTemplateToMeta } from "@/lib/communication/meta-template-publisher";
+import { hasWhatsappUnsubscribeQuickReply } from "@/lib/communication/whatsapp-template-unsubscribe";
 
 const updateSchema = z.object({
   name: z.string().min(1).max(120).optional(),
@@ -54,7 +56,9 @@ export async function GET(
     providerCategoriesByLocale[locale] = [...new Set([...(providerCategoriesByLocale[locale] ?? []), category])];
   }
   const templateData = { ...template, variants: undefined, wabaVariants: undefined };
-  return NextResponse.json({ template: { ...templateData, submittedLocales, providerCategoriesByLocale } });
+  return NextResponse.json({
+    template: { ...(await classifyEventTemplates("WHATSAPP", [templateData]))[0], submittedLocales, providerCategoriesByLocale },
+  });
 }
 
 export async function PATCH(
@@ -88,17 +92,49 @@ export async function PATCH(
 
   // Languages are separate Meta variants under the same provider template name. For an existing
   // template, publish only newly-added locales; do not resubmit already-approved/in-review variants.
-  const currentTemplate = await prisma.whatsappTemplate.findUnique({where:{id},select:{translations:true}});
+  const currentTemplate = await prisma.whatsappTemplate.findUnique({
+    where: { id },
+    select: { translations: true, category: true, kind: true, purpose: true, buttons: true },
+  });
   const newlyAddedLocales = unsubmittedTemplateLocales(
     editable.translations === undefined ? currentTemplate?.translations : editable.translations,
     submittedBefore,
   );
+  const nextCategory = metaCategory ?? currentTemplate?.category;
+  if (nextCategory === "MARKETING") {
+    const rootButtons = editable.buttons ?? currentTemplate?.buttons;
+    if (!submittedBefore.has("ar") && !hasWhatsappUnsubscribeQuickReply(rootButtons)) {
+      return NextResponse.json({
+        error: "القالب التسويقي يحتاج زرًا واضحًا لإيقاف الرسائل.",
+        code: "WHATSAPP_MARKETING_UNSUBSCRIBE_REQUIRED",
+        locale: "ar",
+      }, { status: 400 });
+    }
+    const translations = editable.translations === undefined
+      ? (currentTemplate?.translations as Record<string, { buttons?: unknown }> | null)
+      : editable.translations;
+    for (const locale of newlyAddedLocales) {
+      const translation = translations && typeof translations === "object" ? translations[locale] : undefined;
+      if (!hasWhatsappUnsubscribeQuickReply(translation?.buttons)) {
+        return NextResponse.json({
+          error: `القالب التسويقي يحتاج زرًا واضحًا لإيقاف الرسائل في نسخة اللغة ${locale}.`,
+          code: "WHATSAPP_MARKETING_UNSUBSCRIBE_REQUIRED",
+          locale,
+        }, { status: 400 });
+      }
+    }
+  }
 
   const data: Prisma.WhatsappTemplateUpdateInput = {};
-  if (metaCategory) {
+  if (metaCategory && metaCategory !== currentTemplate?.category) {
     data.category = metaCategory;
     data.purpose = metaCategory;
-    data.kind = metaCategory === "MARKETING" ? "CAMPAIGN" : "SYSTEM";
+    const linked = await prisma.messageTrigger.count({ where: { channel: "WHATSAPP", templateId: id } }) > 0;
+    const nextKind = linked || metaCategory !== "MARKETING" ? "SYSTEM" : "CAMPAIGN";
+    if (nextKind === "SYSTEM" && await prisma.communicationCampaign.count({ where: { channel: "WHATSAPP", templateGroupId: id } }) > 0) {
+      return NextResponse.json({ error: "TEMPLATE_IN_USE" }, { status: 409 });
+    }
+    data.kind = nextKind;
   }
   if (editable.name != null) data.name = editable.name;
   if (editable.body != null) data.body = editable.body;
@@ -165,7 +201,10 @@ export async function PATCH(
   }
   const fresh = await prisma.whatsappTemplate.findUnique({ where: { id: updated.id } });
   const submittedLocales = Array.from(await submittedMetaLocales(updated.id)).sort();
-  return NextResponse.json({ template: { ...(fresh ?? updated), submittedLocales }, publish });
+  return NextResponse.json({
+    template: { ...(await classifyEventTemplates("WHATSAPP", [fresh ?? updated]))[0], submittedLocales },
+    publish,
+  });
 }
 
 export async function DELETE(

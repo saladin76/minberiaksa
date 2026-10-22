@@ -15,6 +15,7 @@ import { buildWhatsappRenderedPreview } from "./whatsapp-rendered-preview";
 import { isValidLocale, type SupportedLocale } from "@/lib/locales";
 import { writeAuditLog } from "@/lib/audit-log";
 import { touchProfileCommunication } from "./donor-communication-profile-service";
+import { classifyEventTemplates } from "./template-event-classification";
 import { isWhatsappExplicitlyUnsubscribed } from "./campaign-audience-accounting";
 import { retryDefinitelyNotSent } from "./retry-recipient-guard";
 import {
@@ -130,7 +131,7 @@ export async function getSmartWhatsappContext(userId: string): Promise<SmartWhat
       }).catch(() => null)
     : null;
 
-  const [marketingTemplates, utilityTemplates] = await Promise.all([
+  const [marketingRows, utilityRows] = await Promise.all([
     prisma.whatsappTemplate.findMany({
       where: {
         status: { not: "ARCHIVED" },
@@ -152,6 +153,16 @@ export async function getSmartWhatsappContext(userId: string): Promise<SmartWhat
       take: 100,
     }).catch(() => []),
   ]);
+  const [classifiedMarketing, classifiedUtility] = await Promise.all([
+    classifyEventTemplates("WHATSAPP", marketingRows),
+    classifyEventTemplates("WHATSAPP", utilityRows),
+  ]);
+  const marketingTemplates = classifiedMarketing
+    .filter((template) => template.kind === "CAMPAIGN")
+    .map(({ id, name, category }) => ({ id, name, category }));
+  const utilityTemplates = classifiedUtility
+    .filter((template) => template.kind === "SYSTEM")
+    .map(({ id, name, category }) => ({ id, name, category }));
 
   return {
     userId,
@@ -185,9 +196,13 @@ async function sendApprovedTemplateForDonor(args: {
 }): Promise<SmartWhatsappSendResult> {
   const template = await prisma.whatsappTemplate.findUnique({
     where: { id: args.templateId },
-    select: { id: true, provider: true, name: true, variables: true, header: true, translations: true, category: true, purpose: true, kind: true },
+    select: { id: true, provider: true, name: true, variables: true, header: true, translations: true, category: true, purpose: true, kind: true, status: true },
   });
   if (!template) return { ok: false, reason: "TEMPLATE_NOT_FOUND" };
+  const classified = (await classifyEventTemplates("WHATSAPP", [template]))[0];
+  const expectedKind = args.expected === "MARKETING" ? "CAMPAIGN" : "SYSTEM";
+  if (classified.kind !== expectedKind) return { ok: false, reason: "TEMPLATE_USAGE_MISMATCH" };
+  if (template.status === "ARCHIVED") return { ok: false, reason: "TEMPLATE_ARCHIVED" };
 
   const category = String(template.category ?? template.purpose ?? "").toUpperCase();
   if (args.expected === "MARKETING") {
@@ -235,7 +250,7 @@ async function sendApprovedTemplateForDonor(args: {
     }
   }
 
-  const rendered = await renderChannelTemplate("WHATSAPP", template.id, args.locale, renderCtx);
+  const rendered = await renderChannelTemplate("WHATSAPP", template.id, args.locale, renderCtx, "ar", expectedKind);
   if (!rendered) return { ok: false, reason: "TEMPLATE_RENDER_FAILED" };
 
   const mapping = await resolveMetaTemplateMapping(template, args.locale, args.sender.businessAccountId);

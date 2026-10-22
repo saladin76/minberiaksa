@@ -287,6 +287,42 @@ function retryScope(filter: RetryCandidateFilter) {
     AND: [rootDelivery],
   };
 }
+export type RetryCandidateCursor = { id: string; createdAt: Date };
+
+function retryCandidatePageWhere(filter: RetryCandidateFilter, after: RetryCandidateCursor | null) {
+  const scope = retryScope(filter);
+  return {
+    ...scope,
+    status: { in: [...RETRYABLE_STATUSES] },
+    AND: [
+      ...scope.AND,
+      { OR: [{ retriedAt: null }, { retriedAt: { isSet: false } }] },
+      ...(after ? [{
+        OR: [
+          { createdAt: { gt: after.createdAt } },
+          { createdAt: after.createdAt, id: { gt: after.id } },
+        ],
+      }] : []),
+    ],
+  };
+}
+
+/** Stable keyset pages let one operator action walk the whole backlog without repeating a blocked row. */
+export async function listRetryCandidatePage(
+  filter: RetryCandidateFilter,
+  after: RetryCandidateCursor | null = null,
+  take = RETRY_BATCH_CAP,
+): Promise<RetryCandidateCursor[]> {
+  const limit = Number.isFinite(take) ? Math.max(1, Math.min(RETRY_BATCH_CAP, Math.floor(take))) : RETRY_BATCH_CAP;
+  const rows = await prisma.communicationDelivery.findMany({
+    where: retryCandidatePageWhere(filter, after),
+    orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+    take: limit,
+    select: { id: true, createdAt: true },
+  });
+  return rows.map((record) => ({ id: record.id, createdAt: record.createdAt }));
+}
+
 export async function listRetryCandidates(filter: RetryCandidateFilter, take = RETRY_BATCH_CAP): Promise<string[]> {
   const limit = Number.isFinite(take) ? Math.max(1, Math.min(RETRY_BATCH_CAP, Math.floor(take))) : RETRY_BATCH_CAP;
   const rows = await prisma.communicationDelivery.findMany({

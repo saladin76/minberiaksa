@@ -419,13 +419,19 @@ export function SenderRoutingManager() {
                                         : undefined,
                                     });
                                     await load();
+                                  } catch {
+                                    setNotice({
+                                      tone: "error",
+                                      text: dt("تعذّر الاتصال بالخادم للتحقق من Meta. تحقّق من الاتصال ثم أعد المحاولة."),
+                                    });
                                   } finally {
                                     setBusy(null);
                                   }
                                 })()}
                                 className="rounded-lg border border-sky-200 px-2 py-1 text-xs font-medium text-sky-700 hover:bg-sky-50 disabled:opacity-40"
                               >
-                                {dt("تحقق من Meta")}</button>
+                                {busy === sender.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ShieldCheck className="h-3.5 w-3.5" />}
+                                {busy === sender.id ? dt("جارٍ التحقق من Meta…") : dt("تحقق من Meta")}</button>
                             )}
                             <button
                               type="button"

@@ -1,3 +1,4 @@
+import { findClassifiedTemplate } from "./template-usage";
 import { prisma } from "@/lib/prisma";
 import { writeAuditLog } from "@/lib/audit-log";
 import type { CommunicationCampaign, Prisma } from "@prisma/client";
@@ -21,7 +22,7 @@ export type CampaignInput = {
   templateGroupId?: string | null;
   senderRoutingMode?: string;
   /**
-   * Initial metadata. Used to link a campaign to what it announces 
+   * Initial metadata. Used to link a campaign to what it announces
    * `{ sourceUpdate: { updateId, campaignId } }` for a campaign-update email,
    * which the send executor reads to fill the `{{update.*}}` variables.
    */
@@ -63,6 +64,10 @@ export async function createCampaign(input: CampaignInput, actor?: Actor): Promi
   if (!isCommunicationChannel(input.channel)) return { ok: false, status: 400, error: "Invalid channel." };
   if (!input.name?.trim()) return { ok: false, status: 400, error: "Name is required." };
   try {
+    if (input.templateGroupId) {
+      const template = await findClassifiedTemplate(input.channel, input.templateGroupId);
+      if (!template || template.kind !== "CAMPAIGN" || template.status === "ARCHIVED") return { ok: false, status: 409, error: "اختر قالبًا تسويقيًا متاحًا لهذه القناة." };
+    }
     const row = await prisma.communicationCampaign.create({
       data: {
         name: input.name.trim(),
@@ -107,7 +112,7 @@ export type CampaignUpdate = {
 export async function updateCampaign(id: string, patch: CampaignUpdate, actor?: Actor): Promise<ServiceResult<CommunicationCampaign>> {
   if (!process.env.DATABASE_URL) return dbUnavailable();
   try {
-    const current = await prisma.communicationCampaign.findUnique({ where: { id }, select: { status: true, metadata: true } });
+    const current = await prisma.communicationCampaign.findUnique({ where: { id }, select: { status: true, metadata: true, channel: true } });
     if (!current) return { ok: false, status: 404, error: "Campaign not found." };
 
     // Core fields (audience / template / language decisions) that change what would be sent.
@@ -128,6 +133,12 @@ export async function updateCampaign(id: string, patch: CampaignUpdate, actor?: 
       }
     } else {
       return { ok: false, status: 409, error: "لا يمكن تعديل هذه الحملة في حالتها الحالية." };
+    }
+
+    if (patch.templateGroupId) {
+      if (!isCommunicationChannel(current.channel)) return { ok: false, status: 400, error: "Invalid channel." };
+      const template = await findClassifiedTemplate(current.channel, patch.templateGroupId);
+      if (!template || template.kind !== "CAMPAIGN" || template.status === "ARCHIVED") return { ok: false, status: 409, error: "اختر قالبًا تسويقيًا متاحًا لهذه القناة." };
     }
 
     // An approved campaign whose core changed drops back to REVIEW (approval cleared).

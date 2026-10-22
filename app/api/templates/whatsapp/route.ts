@@ -1,3 +1,4 @@
+import { classifyEventTemplates } from "@/lib/communication/template-event-classification";
 import { headerSchema, templateButtonsSchema, authSchema, translationSchema } from "@/lib/communication/whatsapp-template-schema";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
@@ -9,6 +10,7 @@ import { prisma } from "@/lib/prisma";
 import { auditActorFromDashboardSession, writeAuditLog } from "@/lib/audit-log";
 import { publishWhatsappTemplateToMeta } from "@/lib/communication/meta-template-publisher";
 import { deriveOverallMetaTemplateStatus } from "@/lib/communication/whatsapp-template-status";
+import { hasWhatsappUnsubscribeQuickReply } from "@/lib/communication/whatsapp-template-unsubscribe";
 
 const createSchema = z.object({
   name: z.string().min(1).max(120),
@@ -103,7 +105,7 @@ export async function GET() {
     };
   });
   return NextResponse.json({
-    templates,
+    templates: await classifyEventTemplates("WHATSAPP", templates),
     directSendEnabled: process.env.META_WHATSAPP_DIRECT_SEND_ENABLED === "true",
   });
 }
@@ -125,6 +127,18 @@ export async function POST(request: NextRequest) {
       { error: parsed.error.issues.map(issue=>issue.message).join(" · "), issues: parsed.error.flatten() },
       { status: 400 }
     );
+  }
+  if (parsed.data.metaCategory === "MARKETING") {
+    const missingLocale = [
+      ["ar", parsed.data.buttons],
+      ...Object.entries(parsed.data.translations ?? {}).map(([locale, value]) => [locale, value.buttons] as const),
+    ].find(([, buttons]) => !hasWhatsappUnsubscribeQuickReply(buttons));
+    if (missingLocale) {
+      return NextResponse.json({
+        error: `كل نسخة لغة في قالب واتساب التسويقي تحتاج زرًا واضحًا لإيقاف الرسائل (اللغة: ${missingLocale[0]}).`,
+        code: "WHATSAPP_MARKETING_UNSUBSCRIBE_REQUIRED",
+      }, { status: 400 });
+    }
   }
 
   const actor = auditActorFromDashboardSession(session!);

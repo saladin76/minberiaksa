@@ -29,6 +29,7 @@ import {
   Copy,
   ExternalLink,
   Loader2,
+  RefreshCw,
 } from "lucide-react";
 import { toast } from "react-hot-toast";
 import { cn } from "@/lib/utils";
@@ -198,13 +199,62 @@ const STATUS_DOT_BANNER: Record<DonationSourceStatus, string> = {
   organic: "bg-slate-300",
 };
 
-function SourceSummary({ donation }: { donation: DonationDetailsTarget }) {
+function SourceSummary({
+  donation,
+  onMetaDonateSent,
+}: {
+  donation: DonationDetailsTarget;
+  onMetaDonateSent: (sentAt: string) => void;
+}) {
+  const [retryingMetaDonate, setRetryingMetaDonate] = useState(false);
+  const [retryError, setRetryError] = useState<string | null>(null);
+  const [localSentAt, setLocalSentAt] = useState<string | null>(donation.conversionEventsSentAt ?? null);
+
+  useEffect(() => {
+    setLocalSentAt(donation.conversionEventsSentAt ?? null);
+    setRetryError(null);
+  }, [donation.id, donation.conversionEventsSentAt]);
+
   const result = detectDonationSource({
     attribution: donation.attribution,
-    conversionEventsSentAt: donation.conversionEventsSentAt,
+    conversionEventsSentAt: localSentAt,
     conversionFailedEventsSentAt: donation.conversionFailedEventsSentAt,
     status: donation.status,
   });
+
+  const retryMetaDonate = async () => {
+    if (retryingMetaDonate || donation.status !== "PAID" || result.platform !== "meta" || localSentAt) return;
+    const confirmed = window.confirm(dt("سيُعاد إرسال حدث Donate إلى Meta فقط، باستخدام معرف الحدث الأصلي لمنع احتساب التبرع مرتين. هل تريد المتابعة؟"));
+    if (!confirmed) return;
+
+    setRetryingMetaDonate(true);
+    setRetryError(null);
+    try {
+      const response = await fetch(`/api/admin/ads/donation-detail/${encodeURIComponent(donation.id)}/retry-meta`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+      const payload = await response.json().catch(() => ({})) as {
+        ok?: boolean;
+        error?: string;
+        eventId?: string | null;
+      };
+      if (!response.ok || payload.ok !== true) {
+        throw new Error(payload.error || dt("تعذّرت إعادة الإرسال إلى Meta."));
+      }
+      const sentAt = new Date().toISOString();
+      setLocalSentAt(sentAt);
+      onMetaDonateSent(sentAt);
+      toast.success(dt("تم إرسال حدث Donate إلى Meta بنجاح"));
+    } catch (error) {
+      const message = error instanceof Error ? error.message : dt("حدث خطأ غير متوقع.");
+      setRetryError(message);
+      toast.error(dt("تعذّرت إعادة الإرسال إلى Meta."));
+    } finally {
+      setRetryingMetaDonate(false);
+    }
+  };
+
   return (
     <div className={cn("rounded-xl border px-3.5 py-3 mb-3", STATUS_BANNER_CLASS[result.status])}>
       <div className="flex items-center justify-between gap-3 mb-2">
@@ -222,11 +272,38 @@ function SourceSummary({ donation }: { donation: DonationDetailsTarget }) {
           ))}
         </ul>
       )}
+      {donation.status === "PAID" && result.platform === "meta" && !localSentAt ? (
+        <div className="mt-3 border-t border-current/10 pt-3">
+          <button
+            type="button"
+            onClick={retryMetaDonate}
+            disabled={retryingMetaDonate}
+            className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-[#1877F2] px-3.5 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-[#1464cc] disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {retryingMetaDonate ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+            {retryingMetaDonate ? dt("جارٍ إعادة الإرسال إلى Meta…") : dt("إعادة إرسال Donate إلى Meta (CAPI)")}
+          </button>
+          <p className="mt-1.5 text-[10px] leading-relaxed opacity-75">
+            {dt("متاح للتبرعات الناجحة فقط. سيُعاد استخدام معرف الحدث الأصلي، ولن يُعاد إرسال شراء GA4.")}
+          </p>
+          {retryError ? <p role="alert" className="mt-2 text-xs font-medium text-red-700">{retryError}</p> : null}
+        </div>
+      ) : donation.status === "PAID" && result.platform === "meta" && localSentAt ? (
+        <p className="mt-3 border-t border-current/10 pt-3 text-xs font-semibold">
+          {dt("تم تسجيل إرسال Donate إلى Meta لهذا التبرع.")}
+        </p>
+      ) : null}
     </div>
   );
 }
 
-function AttributionView({ donation }: { donation: DonationDetailsTarget }) {
+function AttributionView({
+  donation,
+  onMetaDonateSent,
+}: {
+  donation: DonationDetailsTarget;
+  onMetaDonateSent: (sentAt: string) => void;
+}) {
   const attr = (donation.attribution ?? {}) as Record<string, unknown>;
 
   const visibleEntries = useMemo(() => {
@@ -259,7 +336,7 @@ function AttributionView({ donation }: { donation: DonationDetailsTarget }) {
   if (visibleEntries.length === 0) {
     return (
       <div>
-        <SourceSummary donation={donation} />
+        <SourceSummary donation={donation} onMetaDonateSent={onMetaDonateSent} />
         <div className="py-10 text-center">
           <Megaphone className="w-10 h-10 text-slate-300 mx-auto mb-2" />
           <p className="text-sm text-slate-500">
@@ -273,7 +350,7 @@ function AttributionView({ donation }: { donation: DonationDetailsTarget }) {
 
   return (
     <div>
-      <SourceSummary donation={donation} />
+      <SourceSummary donation={donation} onMetaDonateSent={onMetaDonateSent} />
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
         {visibleEntries.map(({ def, value }) => (
           <FieldCard key={def.key} def={def} value={value} />
@@ -619,6 +696,13 @@ const TITLES: Record<Mode, { title: string; description: string }> = {
 
 export default function DonationDetailsDialog({ open, onOpenChange, mode, donation }: Props) {
   const meta = TITLES[mode];
+  const [manualMetaSentAt, setManualMetaSentAt] = useState<Record<string, string>>({});
+  const displayDonation = donation
+    ? {
+        ...donation,
+        conversionEventsSentAt: donation.conversionEventsSentAt ?? manualMetaSentAt[donation.id] ?? null,
+      }
+    : null;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -645,14 +729,17 @@ export default function DonationDetailsDialog({ open, onOpenChange, mode, donati
           </DialogDescription>
         </DialogHeader>
         <div className="px-5 sm:px-6 py-4 max-h-[70vh] overflow-y-auto bg-slate-50/30">
-          {donation == null ? (
+          {displayDonation == null ? (
             <p className="text-sm text-slate-500 text-center py-8">{dt("لا توجد بيانات")}</p>
           ) : mode === "attribution" ? (
-            <AttributionView donation={donation} />
+            <AttributionView
+              donation={displayDonation}
+              onMetaDonateSent={(sentAt) => setManualMetaSentAt((current) => ({ ...current, [displayDonation.id]: sentAt }))}
+            />
           ) : mode === "payment" ? (
-            <PaymentView donation={donation} />
+            <PaymentView donation={displayDonation} />
           ) : (
-            <ErrorView donation={donation} />
+            <ErrorView donation={displayDonation} />
           )}
         </div>
       </DialogContent>

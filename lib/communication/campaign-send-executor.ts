@@ -359,7 +359,7 @@ async function executeCampaignRun(campaignId: string, opts: ExecutionOptions): P
         await recordSkippedDelivery({ channel, campaignId, templateId, recipientUserId: recipient.userId, locale: recipient.locale, purpose, origin }, "CONTEXT_LOAD_FAILED");
         outcome.skipped++; bump(outcome.reasons, "CONTEXT_LOAD_FAILED"); return outcome;
       }
-      const rendered = await renderChannelTemplate(channel, templateId, recipient.locale, recipientCtx, fallbackLocale);
+      const rendered = await renderChannelTemplate(channel, templateId, recipient.locale, recipientCtx, fallbackLocale, "CAMPAIGN");
       if (!rendered) {
         await recordSkippedDelivery({ channel, campaignId, templateId, recipientUserId: recipient.userId, locale: recipient.locale, purpose, origin }, "TEMPLATE_RENDER_FAILED");
         outcome.skipped++; bump(outcome.reasons, "TEMPLATE_RENDER_FAILED"); return outcome;

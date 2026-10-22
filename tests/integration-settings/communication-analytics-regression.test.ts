@@ -24,11 +24,13 @@ test("campaign analytics surfaces delivery engagement and attributed outcomes", 
   assert.match(list, /إيراد منسوب/);
 });
 
-test("campaign outcome attribution is exact and never channel-fallback in comparison view", () => {
+test("campaign outcomes resolve exact IDs or unique registered UTMs without channel fallback", () => {
   const source = read("lib/communication/campaign-attribution-service.ts");
   assert.match(source, /getCampaignOutcomeMetrics/);
   assert.match(source, /utm_campaign/);
-  assert.match(source, /ids\.has\(campaignId\)/);
+  assert.match(source, /buildUniqueCampaignUtmAliases/);
+  assert.match(source, /resolveCommunicationCampaignId/);
+  assert.doesNotMatch(source, /donations\.filter\(\(d\) => source &&/);
   assert.match(source, /donation\.status === "PAID"/);
 });
 
