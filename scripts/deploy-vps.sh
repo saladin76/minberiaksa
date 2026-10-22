@@ -1,14 +1,12 @@
 #!/usr/bin/env bash
-# Deploy on the VPS without serving a half-built site.
+# Deploy on the VPS without changing the live build or dependencies while it builds.
 #
 #   bash scripts/deploy-vps.sh            (from the app folder, e.g. /root/minberiaksa)
 #
-# `next build` straight into `.next` rewrites the folder the running server
-# reads. Until pm2 restarts, the old process mixes both builds: "Failed to load
-# external module @prisma/client-<hash>", "client reference manifest ... does
-# not exist", missing 500.html. So the build goes to `.next-build`
-# (NEXT_DIST_DIR, see next.config.ts); only when it succeeds is it swapped in
-# and pm2 reloaded. A failed build leaves the live site untouched.
+# Next builds into `.next-build`; only a successful build is swapped into `.next`.
+# If the installed direct dependencies differ from package-lock.json, a detached
+# worktree gets a clean `npm ci` so the running app's node_modules stay untouched
+# until the build is ready to activate.
 #
 # Env: PM2_APP (default: minberiaksa), BRANCH (default: main).
 set -euo pipefail
@@ -16,32 +14,111 @@ set -euo pipefail
 APP="${PM2_APP:-minberiaksa}"
 BRANCH="${BRANCH:-main}"
 cd "$(dirname "$0")/.."
+ROOT="$PWD"
 
 lock_before="$(sha1sum package-lock.json | cut -d' ' -f1)"
 git pull --ff-only origin "$BRANCH"
 lock_after="$(sha1sum package-lock.json | cut -d' ' -f1)"
+DEPLOY_SHA="$(git rev-parse HEAD)"
 
-# `npm ci` deletes node_modules, which the live server still loads from, so it
-# only runs when the dependencies actually changed.
-if [ "$lock_before" != "$lock_after" ] || [ ! -d node_modules ]; then
-  echo "▶ dependencies changed  npm ci"
-  npm ci
+dependencies_match_lock() {
+  node <<'NODE'
+const fs = require('node:fs');
+const path = require('node:path');
+const manifest = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+const lock = JSON.parse(fs.readFileSync('package-lock.json', 'utf8'));
+const names = [...Object.keys(manifest.dependencies || {}), ...Object.keys(manifest.devDependencies || {})];
+let mismatches = 0;
+for (const name of names) {
+  const expected = lock.packages?.[`node_modules/${name}`]?.version;
+  let actual = '<missing>';
+  try {
+    actual = JSON.parse(fs.readFileSync(path.join('node_modules', name, 'package.json'), 'utf8')).version;
+  } catch {}
+  if (!expected || actual !== expected) {
+    console.error(`  ${name}: installed ${actual}, lockfile ${expected || '<missing>'}`);
+    mismatches++;
+  }
+}
+process.exitCode = mismatches ? 1 : 0;
+NODE
+}
+
+STAGE_ROOT=""
+STAGE_APP=""
+cleanup() {
+  if [[ -n "$STAGE_APP" && -d "$STAGE_APP" ]]; then
+    git -C "$ROOT" worktree remove --force "$STAGE_APP" >/dev/null 2>&1 || true
+  fi
+  if [[ -n "$STAGE_ROOT" && -d "$STAGE_ROOT" ]]; then
+    rm -rf "$STAGE_ROOT"
+  fi
+}
+trap cleanup EXIT
+
+BUILD_ROOT="$ROOT"
+STAGED_DEPENDENCIES=0
+if [[ "$lock_before" != "$lock_after" || ! -d "$ROOT/node_modules" ]] || ! (cd "$ROOT" && dependencies_match_lock); then
+  STAGED_DEPENDENCIES=1
+  STAGE_ROOT="$(mktemp -d "$(dirname "$ROOT")/.$(basename "$ROOT").deploy.XXXXXX")"
+  STAGE_APP="$STAGE_ROOT/app"
+  echo "▶ dependency versions differ from package-lock.json; preparing an isolated clean install"
+  git worktree add --detach "$STAGE_APP" "$DEPLOY_SHA"
+  for env_file in .env .env.local .env.production .env.production.local; do
+    if [[ -f "$ROOT/$env_file" ]]; then cp -p "$ROOT/$env_file" "$STAGE_APP/$env_file"; fi
+  done
+  echo "▶ npm ci in the isolated release worktree"
+  (cd "$STAGE_APP" && npm ci)
+  BUILD_ROOT="$STAGE_APP"
 fi
 
 echo "▶ building into .next-build"
-rm -rf .next-build
-NEXT_DIST_DIR=.next-build npm run build
+rm -rf "$BUILD_ROOT/.next-build"
+(
+  cd "$BUILD_ROOT"
+  NODE_OPTIONS="${NODE_OPTIONS:+$NODE_OPTIONS }--max-old-space-size=6144" NEXT_DIST_DIR=.next-build npm run build
+)
+
+if [[ "$STAGED_DEPENDENCIES" == "1" ]]; then
+  echo "▶ activating lockfile-matched dependencies"
+  rm -rf "$ROOT/.node_modules-previous"
+  if [[ -d "$ROOT/node_modules" ]]; then mv "$ROOT/node_modules" "$ROOT/.node_modules-previous"; fi
+  if ! mv "$STAGE_APP/node_modules" "$ROOT/node_modules"; then
+    if [[ -d "$ROOT/.node_modules-previous" ]]; then mv "$ROOT/.node_modules-previous" "$ROOT/node_modules"; fi
+    exit 1
+  fi
+fi
 
 echo "▶ swapping builds"
-rm -rf .next-previous
-if [ -d .next ]; then mv .next .next-previous; fi
-mv .next-build .next
+rm -rf "$ROOT/.next-previous"
+if [[ -d "$ROOT/.next" ]]; then mv "$ROOT/.next" "$ROOT/.next-previous"; fi
+if ! mv "$BUILD_ROOT/.next-build" "$ROOT/.next"; then
+  if [[ -d "$ROOT/.next-previous" ]]; then mv "$ROOT/.next-previous" "$ROOT/.next"; fi
+  if [[ "$STAGED_DEPENDENCIES" == "1" && -d "$ROOT/.node_modules-previous" ]]; then
+    rm -rf "$ROOT/node_modules"
+    mv "$ROOT/.node_modules-previous" "$ROOT/node_modules"
+  fi
+  exit 1
+fi
 
 echo "▶ reloading pm2 app '$APP'"
-pm2 reload "$APP" --update-env || pm2 restart "$APP" --update-env
+if ! pm2 reload "$APP" --update-env && ! pm2 restart "$APP" --update-env; then
+  echo "✗ PM2 reload failed; restoring the previous build and dependencies"
+  rm -rf "$ROOT/.next"
+  if [[ -d "$ROOT/.next-previous" ]]; then mv "$ROOT/.next-previous" "$ROOT/.next"; fi
+  if [[ "$STAGED_DEPENDENCIES" == "1" && -d "$ROOT/.node_modules-previous" ]]; then
+    rm -rf "$ROOT/node_modules"
+    mv "$ROOT/.node_modules-previous" "$ROOT/node_modules"
+  fi
+  pm2 restart "$APP" --update-env || true
+  exit 1
+fi
 
 # vercel.json crons never fire off Vercel; schedule them in this crontab.
-echo "▶ installing crons"
-bash scripts/vps-cron-install.sh
+bash "$ROOT/scripts/vps-cron-install.sh"
 
-echo "✓ deployed $(git rev-parse --short HEAD). Roll back: mv .next .next-broken && mv .next-previous .next && pm2 reload $APP"
+if [[ "$STAGED_DEPENDENCIES" == "1" ]]; then
+  echo "✓ deployed ${DEPLOY_SHA:0:7}. Previous dependencies: .node_modules-previous; previous build: .next-previous"
+else
+  echo "✓ deployed ${DEPLOY_SHA:0:7}. Previous build: .next-previous"
+fi
