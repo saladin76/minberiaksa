@@ -27,6 +27,7 @@ export type SmartWhatsappContext = {
   country: string | null;
   doNotContact: boolean;
   whatsappOptIn: boolean;
+  consentCheckUnavailable: boolean;
   directSendEnabled: boolean;
   conversationId: string | null;
   replyWindow: Awaited<ReturnType<typeof replyWindowFor>>;
@@ -56,7 +57,7 @@ function valuesFor(names: string[], ctx: unknown): Record<string, string> {
 }
 
 async function donor(userId: string) {
-  const [user, profile] = await Promise.all([
+  const [user, profileResult] = await Promise.all([
     prisma.user.findUnique({
       where: { id: userId },
       select: { id: true, name: true, phone: true, preferredLang: true, countryCode: true },
@@ -64,9 +65,10 @@ async function donor(userId: string) {
     prisma.donorCommunicationProfile.findUnique({
       where: { userId },
       select: { phone: true, preferredLocale: true, countryCode: true, doNotContact: true, whatsappOptIn: true },
-    }).catch(() => null),
+    }).then((value) => ({ value, unavailable: false })).catch(() => ({ value: null, unavailable: true })),
   ]);
   if (!user) return null;
+  const profile = profileResult.value;
   return {
     id: user.id,
     name: user.name,
@@ -75,6 +77,7 @@ async function donor(userId: string) {
     country: profile?.countryCode ?? user.countryCode ?? null,
     doNotContact: profile?.doNotContact ?? false,
     whatsappOptIn: profile?.whatsappOptIn ?? false,
+    consentCheckUnavailable: profileResult.unavailable,
   };
 }
 
@@ -137,6 +140,7 @@ export async function getSmartWhatsappContext(userId: string): Promise<SmartWhat
     country: d.country,
     doNotContact: d.doNotContact,
     whatsappOptIn: d.whatsappOptIn,
+    consentCheckUnavailable: d.consentCheckUnavailable,
     directSendEnabled: process.env.META_WHATSAPP_DIRECT_SEND_ENABLED === "true",
     conversationId: convId,
     replyWindow,
@@ -322,6 +326,10 @@ export async function sendSmartWhatsapp(input: {
   // A platform-level do-not-contact block applies to every outbound path,
   // including free-form replies inside Meta's 24-hour window.
   if (ctx.doNotContact) return { ok: false, reason: "DO_NOT_CONTACT" };
+  if (ctx.consentCheckUnavailable) return { ok: false, reason: "CONSENT_CHECK_UNAVAILABLE" };
+  // Free-form replies are permitted only inside the open customer-service window. Any
+  // business-initiated utility or marketing send requires recorded WhatsApp opt-in.
+  if (mode !== "FREEFORM" && !ctx.whatsappOptIn) return { ok: false, reason: "WHATSAPP_OPT_IN_REQUIRED" };
 
   if (mode === "FREEFORM") {
     if (!ctx.conversationId || !ctx.replyWindow.open) return { ok: false, reason: "REPLY_WINDOW_CLOSED" };
