@@ -27,8 +27,9 @@ import { PdfRendererUnavailableError } from "./pdf";
  * nothing: it is an identifier that ends up in history, referrers and
  * forwarded mail, not a secret (`DEPLOYED_VS_DESIGN_AUDIT.md` § P1.2).
  */
-export async function authorizeDonationAccess(donationId: string, request: NextRequest): Promise<NextResponse | null> {
-  const access = await donationAccess(donationId, request.nextUrl.searchParams.get(DONATION_TOKEN_PARAM));
+export async function authorizeDonationAccess(donationId: string, request: NextRequest, pathToken?: string | null): Promise<NextResponse | null> {
+  const presentedToken = pathToken ?? request.nextUrl.searchParams.get(DONATION_TOKEN_PARAM);
+  const access = await donationAccess(donationId, presentedToken);
   return access.allowed ? null : NextResponse.json({ error: "Forbidden" }, { status: 403 });
 }
 

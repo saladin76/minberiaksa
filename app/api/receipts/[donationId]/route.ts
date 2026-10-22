@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { parseDonationDocumentPathToken } from "@/lib/donations/access-token-link";
 import { assetBaseUrl, authorizeDonationAccess, documentsOrError, isErrorResponse, pdfErrorResponse, pdfResponse } from "@/lib/certificates/http";
 import { generateReceiptPdf } from "@/lib/certificates/generate";
 
@@ -18,12 +19,14 @@ export const maxDuration = 60;
 export const dynamic = "force-dynamic";
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ donationId: string }> }) {
-  const { donationId } = await params;
+  const { donationId: rawDonationId } = await params;
+  const documentPath = parseDonationDocumentPathToken(rawDonationId);
+  if (!documentPath) return NextResponse.json({ error: "Donation not found" }, { status: 404 });
   try {
-    const docs = await documentsOrError(donationId);
+    const docs = await documentsOrError(documentPath.donationId);
     if (isErrorResponse(docs)) return docs;
 
-    const denied = await authorizeDonationAccess(docs.donationId, request);
+    const denied = await authorizeDonationAccess(docs.donationId, request, documentPath.token);
     if (denied) return denied;
 
     const { pdf, filename } = await generateReceiptPdf(docs, await assetBaseUrl());

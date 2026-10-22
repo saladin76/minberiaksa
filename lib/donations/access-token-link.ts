@@ -15,3 +15,17 @@ export function withDonationToken(path: string, token: string | null | undefined
   const joiner = base.includes("?") ? "&" : "?";
   return `${base}${joiner}${DONATION_TOKEN_PARAM}=${encodeURIComponent(token)}${hash ? `#${hash}` : ""}`;
 }
+
+/** Meta URL button parameters are appended to the approved URL path, so keep them URL-safe. */
+export function donationDocumentPathToken(donationId: string, token: string | null | undefined): string | null {
+  if (!/^[0-9a-f]{24}$/i.test(donationId) || !token || !/^[0-9a-f]{48}$/i.test(token)) return null;
+  return `${donationId}-${token}`;
+}
+
+/** Plain IDs remain valid for existing query-token links. */
+export function parseDonationDocumentPathToken(value: string): { donationId: string; token: string | null } | null {
+  const composite = /^([0-9a-f]{24})-([0-9a-f]{48})$/i.exec(value);
+  if (composite) return { donationId: composite[1], token: composite[2] };
+  if (/^[0-9a-f]{24}$/i.test(value)) return { donationId: value, token: null };
+  return null;
+}

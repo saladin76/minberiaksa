@@ -19,7 +19,9 @@ export type RetryOutcomeCode = RetryRecipientCode
   | "ALREADY_RETRIED" | "NO_RENDERED_BODY" | "META_TEMPLATE_REQUIRED"
   | "NO_SENDER_IDENTITY" | "TEMPLATE_PARAMETER_MISSING" | "TEMPLATE_HEADER_MEDIA_MISSING"
   | "ARCHIVE_FAILED" | "PROVIDER_REJECTED" | "RETRY_ORIGINAL_REQUIRED"
-  | "DELIVERY_OUTCOME_UNCERTAIN" | "ACCEPTED_UNRECORDED";
+  | "DELIVERY_OUTCOME_UNCERTAIN" | "ACCEPTED_UNRECORDED"
+  | "DONATION_WAQF_LINK_REQUIRES_CERTIFICATE_ID" | "DONATION_DOCUMENT_CONTEXT_MISSING"
+  | "DONATION_DOCUMENT_RECIPIENT_MISMATCH" | "DONATION_DOCUMENT_ACCESS_TOKEN_UNAVAILABLE";
 export type RetryResult = {
   deliveryId: string; code: RetryOutcomeCode; ok: boolean; message: string;
   detail?: string | null; recipient?: string | null;
@@ -38,6 +40,10 @@ const MESSAGES: Record<RetryOutcomeCode, string> = {
   NO_SENDER_IDENTITY: "لا توجد هوية مُرسِل مُفعّلة",
   TEMPLATE_PARAMETER_MISSING: "القالب يطلب متغيّرًا لا توجد له قيمة محفوظة",
   TEMPLATE_HEADER_MEDIA_MISSING: "القالب يطلب صورة أو ملفًا في الترويسة ولا يوجد",
+  DONATION_WAQF_LINK_REQUIRES_CERTIFICATE_ID: "زر شهادة الوقف يحتاج رقم الشهادة المرتبط بالتبرع؛ لم تُطلب إعادة الإرسال",
+  DONATION_DOCUMENT_CONTEXT_MISSING: "تعذّر تحديد التبرع المرتبط بزر المستند؛ لم تُطلب إعادة الإرسال",
+  DONATION_DOCUMENT_RECIPIENT_MISMATCH: "المستند لا يخص مستلم الرسالة؛ لم تُطلب إعادة الإرسال",
+  DONATION_DOCUMENT_ACCESS_TOKEN_UNAVAILABLE: "رابط المستند الآمن غير متاح؛ لم تُطلب إعادة الإرسال",
   ARCHIVE_FAILED: "تعذّر تسجيل المحاولة؛ لم يُطلب الإرسال",
   PROVIDER_REJECTED: "لم تُرسل الرسالة؛ راجع سبب الرفض",
   RECIPIENT_NOT_FOUND: "المستلم لم يعد موجودًا؛ لم تُستخدم بياناته القديمة",
