@@ -97,8 +97,8 @@ test("campaign audience badge evaluation stays scoped to visible donors", () => 
   requires("lib/badge-criteria.ts", [/candidateUserIds\?: string\[\]/, /donorId: \{ in: candidateUserIds \}/, /getUserIdsMatchingBadge\(badge\.criteria, userIds\)/]);
 });
 test("WhatsApp opt-in capture records a verified source and requires operator attestation", () => {
-  requires("app/api/dashboard/communication/whatsapp/smart-send/route.ts", [/consentSourceSchema/, /A verified consent source is required/, /dashboard-whatsapp-opt-in:/, /setProfileConsent/]);
-  requires(smartDialog, [/whatsappOptIn/, /consentCheckUnavailable/, /consentSource/, /consentConfirmed/, /أؤكد أن المتبرع وافق صراحة/, /تسجيل الموافقة/]);
+  requires("app/api/dashboard/communication/whatsapp/smart-send/route.ts", [/consentSourceSchema/, /consentEvidenceSchema/, /A verified consent source is required/, /A consent evidence reference is required/, /dashboard-whatsapp-opt-in:/, /setProfileConsent/]);
+  requires(smartDialog, [/whatsappOptIn/, /consentCheckUnavailable/, /consentSource/, /consentEvidence/, /consentConfirmed/, /أؤكد أن المتبرع وافق صراحة/, /تسجيل الموافقة/]);
 });
 test("campaign membership stays separate from consent and is rechecked before provider calls", () => {
   requires("lib/communication/audience-service.ts", [/recipientExclusionReason\(donor, channel, profile\)/]);
