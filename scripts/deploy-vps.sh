@@ -21,6 +21,15 @@ git pull --ff-only origin "$BRANCH"
 lock_after="$(sha1sum package-lock.json | cut -d' ' -f1)"
 DEPLOY_SHA="$(git rev-parse HEAD)"
 
+# A local npm install can rewrite package-lock.json on the VPS. Comparing the
+# installed modules only to that working-tree lock would then bless the drift.
+# The deploy must use the package manifest and lockfile committed at DEPLOY_SHA.
+PACKAGE_FILES_DIRTY=0
+if ! git diff --quiet "$DEPLOY_SHA" -- package.json package-lock.json; then
+  PACKAGE_FILES_DIRTY=1
+  echo "⚠ package.json or package-lock.json differs from the release commit; the build will use the committed dependency set"
+fi
+
 dependencies_match_lock() {
   node <<'NODE'
 const fs = require('node:fs');
@@ -58,7 +67,7 @@ trap cleanup EXIT
 
 BUILD_ROOT="$ROOT"
 STAGED_DEPENDENCIES=0
-if [[ "$lock_before" != "$lock_after" || ! -d "$ROOT/node_modules" ]] || ! (cd "$ROOT" && dependencies_match_lock); then
+if [[ "$lock_before" != "$lock_after" || ! -d "$ROOT/node_modules" || "$PACKAGE_FILES_DIRTY" == "1" ]] || ! (cd "$ROOT" && dependencies_match_lock); then
   STAGED_DEPENDENCIES=1
   STAGE_ROOT="$(mktemp -d "$(dirname "$ROOT")/.$(basename "$ROOT").deploy.XXXXXX")"
   STAGE_APP="$STAGE_ROOT/app"
