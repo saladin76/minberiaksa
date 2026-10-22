@@ -10,13 +10,13 @@ import * as status from "../../lib/communication/whatsapp-template-status";
 
 function harness(failRead=false) {
   let active=0, peak=0, deletes=0, exactWrites=0;
-  const rows:Array<Record<string,any>>=[];
+  const rows:unknown[]=[];
   const wait=async()=>{active++;peak=Math.max(peak,active);await new Promise(resolve=>setImmediate(resolve));active--;};
   const prisma={
     communicationSender:{findMany:async()=>[{businessAccountId:"waba"}]},
     whatsappTemplate:{findMany:async()=>[{id:"template",name:"family",wabaVariants:[]}],update:async()=>({})},
     whatsappTemplateWabaVariant:{
-      upsert:async({create}:any)=>{await wait();rows.push(create);exactWrites++;return create;},
+      upsert:async({create}:{create:unknown})=>{await wait();rows.push(create);exactWrites++;return create;},
       findMany:async()=>{if(failRead)throw new Error("DB_READ_FAILED");return rows;},
       deleteMany:async()=>{deletes++;return{count:0};},
     },
@@ -29,9 +29,10 @@ function harness(failRead=false) {
     "./providers/meta-whatsapp/templates":{listAllTemplates:async()=>({ok:true,templates:SUPPORTED_LOCALES.map(locale=>({name:"family",id:`id-${locale}`,language:localeMedia.META_TEMPLATE_LANGUAGES[locale],status:"APPROVED",category:"UTILITY",rejectedReason:null,qualityScore:null,components:[]}))})},
   };
   const output=ts.transpileModule(fs.readFileSync("lib/communication/whatsapp-template-sync.ts","utf8"),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;
-  const loaded={exports:{} as Record<string,any>};
+  const loaded={exports:{} as Record<string,unknown>};
   new vm.Script(output).runInNewContext({module:loaded,exports:loaded.exports,Date,Set,Map,console,process:{env:{DATABASE_URL:"test"}},require:(id:string)=>{if(!(id in dependencies))throw new Error(`Unexpected dependency ${id}`);return dependencies[id];}});
-  return {run:()=>loaded.exports.syncMetaWhatsappTemplates(),stats:()=>({peak,active,deletes,exactWrites})};
+  const syncMetaWhatsappTemplates=loaded.exports.syncMetaWhatsappTemplates as ()=>Promise<{ok:boolean;variantsUpserted?:number}>;
+  return {run:()=>syncMetaWhatsappTemplates(),stats:()=>({peak,active,deletes,exactWrites})};
 }
 
 test("real sync persists all 19 languages with bounded database parallelism",async()=>{
