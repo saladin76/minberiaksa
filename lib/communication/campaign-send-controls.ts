@@ -125,6 +125,71 @@ export function autoSpeedMode(input: {
 }
 
 const GLOBAL_CONTROL_ID = "000000000000000000000001";
+export const DEFAULT_WHATSAPP_MARKETING_COOLDOWN_DAYS = 7;
+export const MIN_WHATSAPP_MARKETING_COOLDOWN_DAYS = 1;
+export const MAX_WHATSAPP_MARKETING_COOLDOWN_DAYS = 365;
+
+export type CampaignGlobalControls = {
+  emergencyStop: boolean;
+  whatsappMarketingCooldownDays: number;
+};
+
+export async function readCampaignGlobalControls():
+  Promise<{ ok: true; controls: CampaignGlobalControls } | { ok: false }> {
+  try {
+    const row = await prisma.communicationGlobalControl.findUnique({
+      where: { id: GLOBAL_CONTROL_ID },
+      select: { emergencyStop: true, whatsappMarketingCooldownDays: true },
+    });
+    const days = row?.whatsappMarketingCooldownDays ?? DEFAULT_WHATSAPP_MARKETING_COOLDOWN_DAYS;
+    if (!Number.isInteger(days) || days < MIN_WHATSAPP_MARKETING_COOLDOWN_DAYS || days > MAX_WHATSAPP_MARKETING_COOLDOWN_DAYS) {
+      return { ok: false };
+    }
+    return {
+      ok: true,
+      controls: {
+        emergencyStop:
+          String(process.env.COMMUNICATION_CAMPAIGN_EMERGENCY_STOP ?? "").toLowerCase() === "true" ||
+          row?.emergencyStop === true,
+        whatsappMarketingCooldownDays: days,
+      },
+    };
+  } catch {
+    return { ok: false };
+  }
+}
+
+export async function setCampaignGlobalControls(
+  patch: Partial<CampaignGlobalControls>,
+  updatedBy?: string | null,
+): Promise<CampaignGlobalControls | null> {
+  if (patch.whatsappMarketingCooldownDays !== undefined &&
+      (!Number.isInteger(patch.whatsappMarketingCooldownDays) ||
+       patch.whatsappMarketingCooldownDays < MIN_WHATSAPP_MARKETING_COOLDOWN_DAYS ||
+       patch.whatsappMarketingCooldownDays > MAX_WHATSAPP_MARKETING_COOLDOWN_DAYS)) return null;
+  try {
+    const row = await prisma.communicationGlobalControl.upsert({
+      where: { id: GLOBAL_CONTROL_ID },
+      create: {
+        id: GLOBAL_CONTROL_ID,
+        emergencyStop: patch.emergencyStop ?? false,
+        whatsappMarketingCooldownDays: patch.whatsappMarketingCooldownDays ?? DEFAULT_WHATSAPP_MARKETING_COOLDOWN_DAYS,
+        updatedBy: updatedBy ?? null,
+      },
+      update: { ...patch, updatedBy: updatedBy ?? null },
+      select: { emergencyStop: true, whatsappMarketingCooldownDays: true },
+    });
+    return {
+      emergencyStop:
+        String(process.env.COMMUNICATION_CAMPAIGN_EMERGENCY_STOP ?? "").toLowerCase() === "true" ||
+        row.emergencyStop,
+      whatsappMarketingCooldownDays:
+        row.whatsappMarketingCooldownDays ?? DEFAULT_WHATSAPP_MARKETING_COOLDOWN_DAYS,
+    };
+  } catch {
+    return null;
+  }
+}
 
 export async function campaignEmergencyStopEnabled(): Promise<boolean> {
   if (String(process.env.COMMUNICATION_CAMPAIGN_EMERGENCY_STOP ?? "").toLowerCase() === "true") return true;
@@ -136,12 +201,7 @@ export async function campaignEmergencyStopEnabled(): Promise<boolean> {
 }
 
 export async function setCampaignEmergencyStop(enabled: boolean, updatedBy?: string | null): Promise<boolean> {
-  const row = await prisma.communicationGlobalControl.upsert({
-    where: { id: GLOBAL_CONTROL_ID },
-    create: { id: GLOBAL_CONTROL_ID, emergencyStop: enabled, updatedBy: updatedBy ?? null },
-    update: { emergencyStop: enabled, updatedBy: updatedBy ?? null },
-    select: { emergencyStop: true },
-  }).catch(() => null);
+  const row = await setCampaignGlobalControls({ emergencyStop: enabled }, updatedBy);
   return row?.emergencyStop === enabled;
 }
 

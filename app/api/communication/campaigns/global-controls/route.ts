@@ -4,22 +4,32 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 import { requireAdminSession } from "@/lib/dashboard/api-auth";
 import { auditActorFromDashboardSession, writeAuditLog } from "@/lib/audit-log";
-import { campaignEmergencyStopEnabled, setCampaignEmergencyStop } from "@/lib/communication/campaign-send-controls";
+import {
+  readCampaignGlobalControls,
+  setCampaignGlobalControls,
+  MIN_WHATSAPP_MARKETING_COOLDOWN_DAYS,
+  MAX_WHATSAPP_MARKETING_COOLDOWN_DAYS,
+} from "@/lib/communication/campaign-send-controls";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const schema = z.object({ emergencyStop: z.boolean() });
+const schema = z.object({
+  emergencyStop: z.boolean().optional(),
+  whatsappMarketingCooldownDays: z.number().int()
+    .min(MIN_WHATSAPP_MARKETING_COOLDOWN_DAYS)
+    .max(MAX_WHATSAPP_MARKETING_COOLDOWN_DAYS)
+    .optional(),
+}).refine((value) => value.emergencyStop !== undefined || value.whatsappMarketingCooldownDays !== undefined);
 
 export async function GET() {
   const session = await getServerSession(authOptions);
   const denied = requireAdminSession(session);
   if (denied) return denied;
 
-  return NextResponse.json({
-    ok: true,
-    emergencyStop: await campaignEmergencyStopEnabled(),
-  });
+  const result = await readCampaignGlobalControls();
+  if (!result.ok) return NextResponse.json({ ok: false, error: "تعذّر تحميل إعدادات الإرسال العامة." }, { status: 503 });
+  return NextResponse.json({ ok: true, ...result.controls });
 }
 
 export async function PATCH(request: NextRequest) {
@@ -48,29 +58,43 @@ export async function PATCH(request: NextRequest) {
   }
 
   const actor = auditActorFromDashboardSession(session!);
-  const saved = await setCampaignEmergencyStop(parsed.data.emergencyStop, actor.actorId ?? null);
+  const saved = await setCampaignGlobalControls(parsed.data, actor.actorId ?? null);
   if (!saved) {
-    return NextResponse.json({ ok: false, error: "تعذّر حفظ إيقاف الطوارئ." }, { status: 500 });
+    return NextResponse.json({ ok: false, error: "تعذّر حفظ إعدادات الإرسال العامة." }, { status: 500 });
   }
 
+  const emergencyStopChanged = parsed.data.emergencyStop !== undefined;
+  const cooldownChanged = parsed.data.whatsappMarketingCooldownDays !== undefined;
   await writeAuditLog({
     actorId: actor.actorId ?? undefined,
     actorName: actor.actorName ?? undefined,
     actorRole: actor.actorRole ?? "ADMIN",
-    action: parsed.data.emergencyStop
-      ? "communication.campaign.emergency-stop.enabled"
-      : "communication.campaign.emergency-stop.disabled",
-    messageAr: parsed.data.emergencyStop
-      ? "تم تفعيل إيقاف الطوارئ العام لجميع حملات التواصل"
-      : "تم إلغاء إيقاف الطوارئ العام لحملات التواصل",
-    messageEn: parsed.data.emergencyStop
-      ? "Global communication campaign emergency stop enabled"
-      : "Global communication campaign emergency stop disabled",
+    action: emergencyStopChanged
+      ? (parsed.data.emergencyStop
+          ? "communication.campaign.emergency-stop.enabled"
+          : "communication.campaign.emergency-stop.disabled")
+      : "communication.campaign.whatsapp-marketing-cooldown.updated",
+    messageAr: emergencyStopChanged
+      ? (parsed.data.emergencyStop
+          ? "تم تفعيل إيقاف الطوارئ العام لجميع حملات التواصل"
+          : "تم إلغاء إيقاف الطوارئ العام لحملات التواصل")
+      : `تم ضبط الفاصل بين الرسائل التسويقية عبر واتساب إلى ${saved.whatsappMarketingCooldownDays} يومًا`,
+    messageEn: emergencyStopChanged
+      ? (parsed.data.emergencyStop
+          ? "Global communication campaign emergency stop enabled"
+          : "Global communication campaign emergency stop disabled")
+      : `WhatsApp marketing message interval set to ${saved.whatsappMarketingCooldownDays} days`,
     entityType: "CommunicationGlobalControl",
     entityId: "global",
-    metadata: { emergencyStop: parsed.data.emergencyStop, externalCall: false },
+    metadata: {
+      emergencyStop: saved.emergencyStop,
+      whatsappMarketingCooldownDays: saved.whatsappMarketingCooldownDays,
+      changedEmergencyStop: emergencyStopChanged,
+      changedMarketingCooldown: cooldownChanged,
+      externalCall: false,
+    },
     stream: "TEAM",
   });
 
-  return NextResponse.json({ ok: true, emergencyStop: parsed.data.emergencyStop });
+  return NextResponse.json({ ok: true, ...saved });
 }

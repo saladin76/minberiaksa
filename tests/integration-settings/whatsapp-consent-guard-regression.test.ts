@@ -157,19 +157,21 @@ function inboundWebhookHarness(options: { failProfileRead?: boolean; profileCoun
     },
   };
   const service = isolated<WebhookService>("lib/communication/webhook-service.ts", dependencies);
-  const event = (text: string) => ({
+  const event = (text: string, buttonReply?: { title: string; id: string }) => ({
     kind: "inbound",
     providerMessageId: "inbound-message",
     from: "+905551112233",
     profileName: "Donor",
     phoneNumberId: "phone-number",
     text,
-    messageType: "text",
+    messageType: buttonReply ? "interactive" : "text",
+    buttonReply,
     timestamp: 1,
     idempotencyKey: "inbound-idempotency",
   });
   return {
-    process: (message: string) => service.processWhatsappEvents([event(message)]),
+    process: (message: string, buttonReply?: { title: string; id: string }) =>
+      service.processWhatsappEvents([event(message, buttonReply)]),
     state: () => ({ consentUpdates, eventWrites }),
   };
 }
@@ -184,6 +186,17 @@ test("clear WhatsApp STOP requests revoke channel consent before the event is ac
     assert.equal(update.whatsappOptIn, false);
     assert.equal(update.consentSource, "meta-whatsapp-inbound-opt-out");
     assert.equal(harness.state().eventWrites.length, 1);
+  }
+});
+
+test("localized marketing unsubscribe quick replies revoke WhatsApp consent", async () => {
+  for (const title of ["Stop", "إيقاف", "Dur"]) {
+    const harness = inboundWebhookHarness();
+    const result = await harness.process("", { title, id: "" });
+    assert.equal(result.persistenceErrors, 0);
+    const update = harness.state().consentUpdates[0]?.data as Record<string, unknown>;
+    assert.equal(update.whatsappOptIn, false);
+    assert.equal(update.consentSource, "meta-whatsapp-inbound-opt-out");
   }
 });
 

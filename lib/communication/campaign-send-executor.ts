@@ -23,6 +23,12 @@ import { mergeCampaignMetadata, mutateCampaignMetadata } from "./campaign-metada
 import { phoneMatchVariants } from "./phone";
 import { normalizeCampaignContact } from "./campaign-contact-validation";
 import { checkCampaignRecipientBeforeSend } from "./campaign-recipient-guard";
+import { retryDefinitelyNotSent } from "./retry-recipient-guard";
+import {
+  reserveWhatsappMarketingSend,
+  releaseWhatsappMarketingReservation,
+  type WhatsAppMarketingReservation,
+} from "./whatsapp-marketing-frequency";
 import { DEFAULT_LOCALE, isValidLocale, type SupportedLocale } from "@/lib/locales";
 import { recipientTimeZone } from "./recipient-timezone";
 
@@ -402,8 +408,26 @@ async function executeCampaignRun(campaignId: string, opts: ExecutionOptions): P
         metaName = readiness.providerTemplateName; metaLanguage = readiness.languageCode; metaComponents = built.components;
         await updateDeliveryVariables(deliveryId, { snapshot, whatsappPreview: buildWhatsappRenderedPreview({ componentsSchema: readiness.componentsSchema, builtComponents: built.components, fallbackBody: rendered.body, providerTemplateName: readiness.providerTemplateName, languageCode: readiness.languageCode }) });
       }
+      let frequencyReservation: WhatsAppMarketingReservation | null = null;
+      if (channel === "WHATSAPP" && purpose === "MARKETING") {
+        const frequency = await reserveWhatsappMarketingSend(recipient.userId);
+        if (!frequency.ok) {
+          await markDeliveryStatus(
+            deliveryId,
+            frequency.reason === "WHATSAPP_MARKETING_COOLDOWN" ? "SKIPPED" : "FAILED",
+            { errorMessage: frequency.reason },
+          );
+          if (frequency.reason === "WHATSAPP_MARKETING_COOLDOWN") outcome.skipped++;
+          else outcome.failed++;
+          bump(outcome.reasons, frequency.reason);
+          return outcome;
+        }
+        frequencyReservation = frequency.reservation;
+      }
+      // Keep the live consent/contact check immediately adjacent to the provider call.
       const executionCheck = await checkCampaignRecipientBeforeSend(channel, recipient.userId, to);
       if (!executionCheck.ok) {
+        if (frequencyReservation) await releaseWhatsappMarketingReservation(frequencyReservation);
         await markDeliveryStatus(deliveryId, executionCheck.unavailable ? "FAILED" : "SKIPPED", { errorMessage: executionCheck.reason });
         if (executionCheck.unavailable) outcome.failed++; else outcome.skipped++;
         bump(outcome.reasons, executionCheck.reason); return outcome;
@@ -418,6 +442,9 @@ async function executeCampaignRun(campaignId: string, opts: ExecutionOptions): P
         outcome.failed++; bump(outcome.reasons, "DELIVERY_OUTCOME_UNCERTAIN"); return outcome;
       }
       if (!result.ok) {
+        if (frequencyReservation && retryDefinitelyNotSent(result.reason)) {
+          await releaseWhatsappMarketingReservation(frequencyReservation);
+        }
         const terminal = result.reason.endsWith("_NOT_CONFIGURED") || result.reason.endsWith("_NOT_IMPLEMENTED") || result.reason === "EMAIL_SUPPRESSED" || result.reason.includes("SENDER_MISSING") || result.reason === "PROVIDER_DISABLED" || result.reason === "INTEGRATION_DECRYPTION_FAILED" || result.reason === "INTEGRATION_DATABASE_UNAVAILABLE";
         await markDeliveryStatus(deliveryId, terminal ? "SKIPPED" : "FAILED", { errorMessage: result.detail ? `${result.reason}  ${result.detail}` : result.reason });
         if (terminal) outcome.skipped++; else outcome.failed++;

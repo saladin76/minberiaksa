@@ -15,6 +15,12 @@ import { buildWhatsappRenderedPreview } from "./whatsapp-rendered-preview";
 import { isValidLocale, type SupportedLocale } from "@/lib/locales";
 import { writeAuditLog } from "@/lib/audit-log";
 import { touchProfileCommunication } from "./donor-communication-profile-service";
+import { retryDefinitelyNotSent } from "./retry-recipient-guard";
+import {
+  reserveWhatsappMarketingSend,
+  releaseWhatsappMarketingReservation,
+  type WhatsAppMarketingReservation,
+} from "./whatsapp-marketing-frequency";
 
 type Actor = { actorId?: string | null; actorName?: string | null; actorRole?: string | null } | null;
 export type SmartWhatsappMode = "AUTO" | "FREEFORM" | "UTILITY" | "MARKETING";
@@ -262,17 +268,59 @@ async function sendApprovedTemplateForDonor(args: {
   });
   if (!created.ok) return { ok: false, reason: "ARCHIVE_FAILED" };
 
+  let frequencyReservation: WhatsAppMarketingReservation | null = null;
+  if (args.expected === "MARKETING") {
+    const frequency = await reserveWhatsappMarketingSend(args.ctx.userId);
+    if (!frequency.ok) {
+      await markDeliveryStatus(
+        created.data.id,
+        frequency.reason === "WHATSAPP_MARKETING_COOLDOWN" ? "SKIPPED" : "FAILED",
+        { errorMessage: frequency.reason },
+      );
+      return { ok: false, reason: frequency.reason };
+    }
+    frequencyReservation = frequency.reservation;
+  }
+  if (frequencyReservation) {
+    let liveProfile: { doNotContact: boolean; whatsappOptIn: boolean } | null;
+    try {
+      liveProfile = await prisma.donorCommunicationProfile.findUnique({
+        where: { userId: args.ctx.userId },
+        select: { doNotContact: true, whatsappOptIn: true },
+      });
+    } catch {
+      await releaseWhatsappMarketingReservation(frequencyReservation);
+      await markDeliveryStatus(created.data.id, "FAILED", { errorMessage: "CONSENT_CHECK_UNAVAILABLE" });
+      return { ok: false, reason: "CONSENT_CHECK_UNAVAILABLE" };
+    }
+    if (!liveProfile || liveProfile.doNotContact || liveProfile.whatsappOptIn !== true) {
+      await releaseWhatsappMarketingReservation(frequencyReservation);
+      const reason = !liveProfile ? "CONSENT_CHECK_UNAVAILABLE" : liveProfile.doNotContact ? "DO_NOT_CONTACT" : "WHATSAPP_OPT_IN_REQUIRED";
+      await markDeliveryStatus(created.data.id, reason === "CONSENT_CHECK_UNAVAILABLE" ? "FAILED" : "SKIPPED", { errorMessage: reason });
+      return { ok: false, reason };
+    }
+  }
+
   const { sendTemplateMessage } = await import("./providers/meta-whatsapp/messages");
   const runtime = await getActiveMetaWhatsappRuntimeConfig();
-  const sent = await sendTemplateMessage({
-    phoneNumberId: args.sender.phoneNumberId!,
-    to: args.ctx.phone!,
-    templateName: mapping.name,
-    languageCode: mapping.language,
-    components: built.components,
-  }, runtime);
+  let sent: Awaited<ReturnType<typeof sendTemplateMessage>>;
+  try {
+    sent = await sendTemplateMessage({
+      phoneNumberId: args.sender.phoneNumberId!,
+      to: args.ctx.phone!,
+      templateName: mapping.name,
+      languageCode: mapping.language,
+      components: built.components,
+    }, runtime);
+  } catch {
+    await markDeliveryStatus(created.data.id, "FAILED", { errorMessage: "DELIVERY_OUTCOME_UNCERTAIN" });
+    return { ok: false, reason: "DELIVERY_OUTCOME_UNCERTAIN" };
+  }
 
   if (!sent.ok) {
+    if (frequencyReservation && retryDefinitelyNotSent(sent.reason)) {
+      await releaseWhatsappMarketingReservation(frequencyReservation);
+    }
     await markDeliveryStatus(created.data.id, "FAILED", { errorMessage: sent.detail ? `${sent.reason}  ${sent.detail}` : sent.reason });
     return { ok: false, reason: sent.reason, detail: sent.detail ?? null };
   }
