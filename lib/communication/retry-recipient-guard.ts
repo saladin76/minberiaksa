@@ -26,6 +26,7 @@ export async function checkRetryRecipient(row: RetryRecipientInput, plannedConta
     }
     if (!row.recipientUserId) {
       if (row.campaignId) return { ok: false, code: "RECIPIENT_CHECK_UNAVAILABLE" };
+      if (channel === "WHATSAPP") return { ok: false, code: "CONSENT_BLOCKED" };
       const contact = normalizeCampaignContact(channel, stored);
       if (!contact) return { ok: false, code: stored ? "INVALID_CONTACT" : "NO_RECIPIENT" };
       if (plannedContact !== undefined && normalizeCampaignContact(channel, plannedContact) !== contact) return { ok: false, code: "RECIPIENT_CONTACT_CHANGED" };
@@ -38,6 +39,7 @@ export async function checkRetryRecipient(row: RetryRecipientInput, plannedConta
     if (!donor) return { ok: false, code: "RECIPIENT_NOT_FOUND" };
     const profile = donor.communicationProfile;
     if (profile?.doNotContact === true) return { ok: false, code: "CONSENT_BLOCKED" };
+    if (channel === "WHATSAPP" && profile?.whatsappOptIn !== true) return { ok: false, code: "CONSENT_BLOCKED" };
     if (row.campaignId) {
       const reason = recipientExclusionReason(donor, channel, profile);
       if (reason) return { ok: false, code: reason === "MISSING_CONTACT" ? "NO_RECIPIENT" : "CONSENT_BLOCKED" };
