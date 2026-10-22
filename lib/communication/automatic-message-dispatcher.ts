@@ -66,16 +66,28 @@ function deliveryVariables(input: CommonInput): Record<string, unknown> {
 
 async function automaticConsentBlock(
   userId: string,
-  channel: "EMAIL" | "SMS",
+  channel: "EMAIL" | "SMS" | "WHATSAPP",
   purpose: CommunicationPurposeId | undefined,
 ): Promise<string | null> {
-  await ensureProfilesForUsers([userId]);
-  const profile = await prisma.donorCommunicationProfile.findUnique({
-    where: { userId },
-    select: { doNotContact: true, emailOptIn: true, smsOptIn: true },
-  }).catch(() => null);
+  let profile: {
+    doNotContact: boolean;
+    emailOptIn: boolean;
+    smsOptIn: boolean;
+    whatsappOptIn: boolean;
+  } | null;
+  try {
+    await ensureProfilesForUsers([userId]);
+    profile = await prisma.donorCommunicationProfile.findUnique({
+      where: { userId },
+      select: { doNotContact: true, emailOptIn: true, smsOptIn: true, whatsappOptIn: true },
+    });
+  } catch {
+    return "CONSENT_CHECK_UNAVAILABLE";
+  }
 
   if (profile?.doNotContact) return "DO_NOT_CONTACT";
+  // Meta requires prior opt-in for business-initiated WhatsApp messages, including utility notices.
+  if (channel === "WHATSAPP" && profile?.whatsappOptIn !== true) return "WHATSAPP_OPT_IN_REQUIRED";
   if (channel === "SMS" && profile?.smsOptIn !== true) return "SMS_OPT_IN_REQUIRED";
   if (channel === "EMAIL" && purpose === "MARKETING" && profile?.emailOptIn !== true) return "EMAIL_MARKETING_OPT_IN_REQUIRED";
   return null;
@@ -235,6 +247,18 @@ export async function sendAutomaticWhatsappMessage(
     if (created.ok) await markDeliveryStatus(created.data.id, "SKIPPED", { errorMessage: "NO_RECIPIENT_PHONE" });
     await mirrorSentMessage("WHATSAPP", input, "SKIPPED", { recipientPhone: null, renderedBody: input.renderedBody, errorMessage: "Recipient has no phone number" });
     return { outcome: "SKIPPED", reason: "NO_RECIPIENT_PHONE" };
+  }
+
+  const consentBlock = await automaticConsentBlock(input.recipientUserId, "WHATSAPP", input.purpose);
+  if (consentBlock) {
+    const skipped = await createDeliveryRecord({ ...base, recipientPhone: input.recipientPhone, status: "RENDERED" });
+    if (skipped.ok) await markDeliveryStatus(skipped.data.id, "SKIPPED", { errorMessage: consentBlock });
+    await mirrorSentMessage("WHATSAPP", input, "SKIPPED", {
+      recipientPhone: input.recipientPhone,
+      renderedBody: input.renderedBody,
+      errorMessage: consentBlock,
+    });
+    return { outcome: "SKIPPED", reason: consentBlock };
   }
 
   const created = await createDeliveryRecord({ ...base, recipientPhone: input.recipientPhone, status: "RENDERED" });
