@@ -263,6 +263,10 @@ function engineHarness(options: EngineOptions = {}) {
     "./automatic-message-dispatcher": {},
     "./providers/meta-whatsapp/parameters": {},
     "./providers/sms/client": {},
+    "./whatsapp-marketing-frequency": {
+      reserveWhatsappMarketingSend: async () => ({ ok: true, reservation: { userId: "donor", reservedAt: new Date(), previousAt: null } }),
+      releaseWhatsappMarketingReservation: async () => undefined,
+    },
     "./retry-recipient-guard": {
       checkRetryRecipient: async () => {
         guardCalls += 1; events.push("guard");

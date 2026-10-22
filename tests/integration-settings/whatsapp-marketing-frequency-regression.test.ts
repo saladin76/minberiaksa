@@ -110,8 +110,8 @@ function harness(options: {
       },
     },
   };
-  const module = loadFrequencyModule(dependencies);
-  return { module, calls, current: () => lastAt };
+  const frequencyModule = loadFrequencyModule(dependencies);
+  return { module: frequencyModule, calls, current: () => lastAt };
 }
 
 test("a WhatsApp marketing reservation atomically admits only one concurrent send per donor", async () => {

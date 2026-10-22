@@ -103,6 +103,11 @@ function engineHarness(options: Options = {}) {
     "./phone": { phoneMatchVariants: (phone: string) => [phone] },
     "./campaign-contact-validation": { normalizeCampaignContact },
     "./campaign-recipient-guard": { checkCampaignRecipientBeforeSend: async (_channel: string, _id: string, contact: string) => { events.push("guard"); return options.guardBlocks ? { ok: false, reason: "DO_NOT_CONTACT" } : { ok: true, contact }; } },
+    "./retry-recipient-guard": { retryDefinitelyNotSent: () => false },
+    "./whatsapp-marketing-frequency": {
+      reserveWhatsappMarketingSend: async () => ({ ok: true, reservation: { userId: "donor", reservedAt: new Date(), previousAt: null } }),
+      releaseWhatsappMarketingReservation: async () => undefined,
+    },
     "@/lib/locales": { DEFAULT_LOCALE: "ar", isValidLocale: (value: string) => ["ar", "en"].includes(value) },
     "./recipient-timezone": { recipientTimeZone: () => "Europe/Istanbul" },
   }, "\nexports.__test = { mapWithConcurrency };\n");
