@@ -17,6 +17,8 @@ type SmartContext = {
   locale: string;
   country: string | null;
   doNotContact: boolean;
+  whatsappOptIn: boolean;
+  consentCheckUnavailable: boolean;
   directSendEnabled: boolean;
   conversationId: string | null;
   replyWindow: ReplyWindow;
@@ -38,6 +40,8 @@ const ERROR_LABELS: Record<string, string> = {
   get UTILITY_TEMPLATE_REQUIRED() { return dt("اختر قالب Utility معتمد كمسار احتياطي."); },
 
   get DO_NOT_CONTACT() { return dt("هذا المتبرع موقوف عن التواصل المباشر."); },
+  get WHATSAPP_OPT_IN_REQUIRED() { return dt("لا يمكن بدء رسالة واتساب قبل تسجيل موافقة المستلم."); },
+  get CONSENT_CHECK_UNAVAILABLE() { return dt("تعذّر التحقق من حالة الموافقة. لم يُرسل شيء؛ أعد المحاولة بعد استعادة الاتصال."); },
   get NO_RECIPIENT_PHONE() { return dt("لا يوجد رقم واتساب صالح لهذا المتبرع."); },
   get MARKETING_TEMPLATE_REQUIRED() { return dt("اختر قالب Marketing معتمد."); },
   get META_TEMPLATE_NOT_APPROVED_FOR_SENDER_LANGUAGE() { return dt("لا توجد نسخة معتمدة من القالب لهذا الرقم/اللغة."); },
@@ -64,6 +68,9 @@ export function SmartWhatsappDialog({
   const [mode, setMode] = React.useState<"FREEFORM" | "UTILITY" | "MARKETING">("UTILITY");
   const [body, setBody] = React.useState("");
   const [templateId, setTemplateId] = React.useState("");
+  const [consentConfirmed, setConsentConfirmed] = React.useState(false);
+  const [consentSource, setConsentSource] = React.useState("");
+  const [consentSaving, setConsentSaving] = React.useState(false);
 
   const load = React.useCallback(async () => {
     setLoading(true);
@@ -73,6 +80,8 @@ export function SmartWhatsappDialog({
       if (!res.ok || !data.ok) throw new Error(data.error ?? "load failed");
       const next = data.context as SmartContext;
       setCtx(next);
+      setConsentConfirmed(false);
+      setConsentSource("");
       const preferred = initialMode ?? (next.replyWindow.open ? "FREEFORM" : "UTILITY");
       if (preferred === "FREEFORM" && !next.replyWindow.open) setMode("UTILITY");
       else setMode(preferred);
@@ -93,6 +102,14 @@ export function SmartWhatsappDialog({
 
   const send = async () => {
     if (!ctx) return;
+    if (ctx.consentCheckUnavailable) {
+      toast.error(ERROR_LABELS.CONSENT_CHECK_UNAVAILABLE);
+      return;
+    }
+    if (mode !== "FREEFORM" && !ctx.whatsappOptIn) {
+      toast.error(ERROR_LABELS.WHATSAPP_OPT_IN_REQUIRED);
+      return;
+    }
     if (mode === "FREEFORM" && !body.trim()) {
       toast.error(dt("اكتب الرسالة أولًا."));
       return;
@@ -143,27 +160,49 @@ export function SmartWhatsappDialog({
     }
   };
 
+  const recordConsent = async () => {
+    if (!ctx || !consentConfirmed || !consentSource) return;
+    setConsentSaving(true);
+    try {
+      const res = await fetch("/api/dashboard/communication/whatsapp/smart-send", {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ userId, whatsappOptIn: true, confirmed: true, consentSource }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.ok) throw new Error(data.error ?? "consent update failed");
+      setCtx(data.context as SmartContext);
+      setConsentConfirmed(false);
+      setConsentSource("");
+      toast.success(dt("تم تسجيل الموافقة ومصدرها في سجل المتبرع."));
+    } catch {
+      toast.error(dt("تعذّر تسجيل الموافقة. لم تتغير حالة المتبرع."));
+    } finally {
+      setConsentSaving(false);
+    }
+  };
+
   const tabs = [
     {
       id: "FREEFORM" as const,
       title: dt("رد مباشر"),
       desc: dt("نص حر داخل نافذة 24 ساعة"),
       icon: MessageCircle,
-      disabled: Boolean(ctx?.doNotContact) || !ctx?.replyWindow.open,
+      disabled: Boolean(ctx?.doNotContact) || Boolean(ctx?.consentCheckUnavailable) || !ctx?.replyWindow.open,
     },
     {
       id: "UTILITY" as const,
       title: dt("رسالة خدمة"),
       desc: ctx?.directSendEnabled ? "Direct Send · Utility + fallback" : "Utility Template fallback",
       icon: ShieldCheck,
-      disabled: Boolean(ctx?.doNotContact) || Boolean(ctx && !ctx.directSendEnabled && ctx.utilityTemplates.length === 0),
+      disabled: Boolean(ctx?.doNotContact) || Boolean(ctx?.consentCheckUnavailable) || Boolean(ctx && !ctx.whatsappOptIn) || Boolean(ctx && !ctx.directSendEnabled && ctx.utilityTemplates.length === 0),
     },
     {
       id: "MARKETING" as const,
       title: dt("رسالة تسويقية"),
       desc: dt("قالب Marketing معتمد"),
       icon: Megaphone,
-      disabled: false,
+      disabled: Boolean(ctx?.consentCheckUnavailable) || Boolean(ctx && !ctx.whatsappOptIn),
     },
   ];
 
@@ -207,6 +246,55 @@ export function SmartWhatsappDialog({
               {ctx.doNotContact && (
                 <div className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700">
                   {dt("المتبرع مفعّل عليه «عدم التواصل». الإرسال متوقف على كل مسارات واتساب حتى تُعدّل حالة التواصل.")}</div>
+              )}
+              {ctx.consentCheckUnavailable && (
+                <div role="alert" className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700">
+                  {ERROR_LABELS.CONSENT_CHECK_UNAVAILABLE}
+                </div>
+              )}
+              {!ctx.whatsappOptIn && !ctx.consentCheckUnavailable && (
+                <div className="space-y-3 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
+                  <p className="leading-5">
+                    {dt("لا تبدأ رسالة خدمة أو تسويق قبل أن يوافق المتبرع صراحة على تلقي رسائل واتساب. تسجيل التبرع أو وجود رقم هاتف لا يُعد موافقة.")}
+                  </p>
+                  <label className="block space-y-1.5 font-semibold">
+                    <span>{dt("مصدر الموافقة الموثقة")}</span>
+                    <select
+                      value={consentSource}
+                      onChange={(event) => setConsentSource(event.target.value)}
+                      className="h-9 w-full rounded-lg border border-amber-300 bg-white px-2 text-xs"
+                    >
+                      <option value="">{dt("اختر المصدر")}</option>
+                      <option value="WEB_FORM">{dt("نموذج إلكتروني يتضمن موافقة واتساب صريحة")}</option>
+                      <option value="PAPER_FORM">{dt("نموذج ورقي")}</option>
+                      <option value="PHONE_OR_IN_PERSON">{dt("تأكيد هاتفي أو مباشر موثق")}</option>
+                      <option value="OTHER_VERIFIED_SOURCE">{dt("مصدر آخر موثق")}</option>
+                    </select>
+                  </label>
+                  <label className="flex items-start gap-2 leading-5">
+                    <input
+                      type="checkbox"
+                      checked={consentConfirmed}
+                      onChange={(event) => setConsentConfirmed(event.target.checked)}
+                      className="mt-0.5"
+                    />
+                    <span>{dt("أؤكد أن المتبرع وافق صراحة على تلقي رسائل واتساب على هذا الرقم، وأن الموافقة لم تُسحب.")}</span>
+                  </label>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={recordConsent}
+                    disabled={!consentConfirmed || !consentSource || consentSaving || sending}
+                  >
+                    {consentSaving && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
+                    {dt("تسجيل الموافقة")}
+                  </Button>
+                </div>
+              )}
+              {ctx.whatsappOptIn && (
+                <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-800">
+                  {dt("توجد موافقة واتساب مسجلة؛ يمكن بدء رسائل الخدمة أو التسويق وفق تفضيلات المتبرع.")}
+                </div>
               )}
               <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
                 {tabs.map((tab) => {
@@ -322,6 +410,8 @@ export function SmartWhatsappDialog({
                     disabled={
                       sending ||
                       Boolean(ctx.doNotContact) ||
+                      Boolean(ctx.consentCheckUnavailable) ||
+                      (mode !== "FREEFORM" && !ctx.whatsappOptIn) ||
                       (mode === "FREEFORM" && !body.trim()) ||
                       (mode === "MARKETING" && !templateId) ||
                       (mode === "UTILITY" && ctx.directSendEnabled && !body.trim()) ||
