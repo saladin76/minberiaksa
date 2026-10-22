@@ -122,3 +122,81 @@ test("automatic WhatsApp fails closed when the consent check is unavailable", as
   assert.deepEqual(result, { outcome: "SKIPPED", reason: "CONSENT_CHECK_UNAVAILABLE" });
   assert.equal(harness.state().providerCalls, 0);
 });
+
+
+type WebhookSummary = { persistenceErrors: number; inbound: number };
+type WebhookService = {
+  processWhatsappEvents: (events: Array<Record<string, unknown>>) => Promise<WebhookSummary>;
+};
+
+function inboundWebhookHarness(options: { failProfileRead?: boolean; profileCount?: number } = {}) {
+  const consentUpdates: Array<Record<string, unknown>> = [];
+  const eventWrites: Array<Record<string, unknown>> = [];
+  const dependencies: Record<string, unknown> = {
+    "./delivery-log-service": { markDeliveryStatus: async () => ({ ok: true }) },
+    "./delivery-status-progress": { shouldApplyDeliveryStatus: () => true },
+    "./phone": {
+      normalizePhoneE164: (value: string | null) => value,
+      phoneMatchVariants: (value: string | null) => value ? [value] : [],
+    },
+    "@/lib/prisma": {
+      prisma: {
+        communicationSender: { findFirst: async () => ({ id: "sender" }) },
+        communicationProviderEvent: { create: async (args: Record<string, unknown>) => { eventWrites.push(args); return {}; } },
+        communicationDelivery: { findFirst: async () => null },
+        donorCommunicationProfile: {
+          findMany: async () => {
+            if (options.failProfileRead) throw new Error("profile read failed");
+            return Array.from({ length: options.profileCount ?? 1 }, (_, index) => ({ userId: "donor-" + index }));
+          },
+          updateMany: async (args: Record<string, unknown>) => { consentUpdates.push(args); return { count: consentUpdates.length }; },
+        },
+      },
+    },
+  };
+  const service = isolated<WebhookService>("lib/communication/webhook-service.ts", dependencies);
+  const event = (text: string) => ({
+    kind: "inbound",
+    providerMessageId: "inbound-message",
+    from: "+905551112233",
+    profileName: "Donor",
+    phoneNumberId: "phone-number",
+    text,
+    messageType: "text",
+    timestamp: 1,
+    idempotencyKey: "inbound-idempotency",
+  });
+  return {
+    process: (message: string) => service.processWhatsappEvents([event(message)]),
+    state: () => ({ consentUpdates, eventWrites }),
+  };
+}
+
+test("clear WhatsApp STOP requests revoke channel consent before the event is acknowledged", async () => {
+  for (const message of [" STOP! ", "إيقاف", "İPTAL"]) {
+    const harness = inboundWebhookHarness({ profileCount: 2 });
+    const result = await harness.process(message);
+    assert.equal(result.persistenceErrors, 0);
+    assert.equal(harness.state().consentUpdates.length, 1);
+    const update = harness.state().consentUpdates[0].data as Record<string, unknown>;
+    assert.equal(update.whatsappOptIn, false);
+    assert.equal(update.consentSource, "meta-whatsapp-inbound-opt-out");
+    assert.equal(harness.state().eventWrites.length, 1);
+  }
+});
+
+test("ordinary inbound WhatsApp text does not change consent", async () => {
+  const harness = inboundWebhookHarness();
+  const result = await harness.process("Thank you for the receipt");
+  assert.equal(result.persistenceErrors, 0);
+  assert.equal(harness.state().consentUpdates.length, 0);
+  assert.equal(harness.state().eventWrites.length, 1);
+});
+
+test("WhatsApp STOP is not acknowledged when the consent update cannot be stored", async () => {
+  const harness = inboundWebhookHarness({ failProfileRead: true });
+  const result = await harness.process("STOP");
+  assert.equal(result.persistenceErrors, 1);
+  assert.equal(harness.state().consentUpdates.length, 0);
+  assert.equal(harness.state().eventWrites.length, 0);
+});
