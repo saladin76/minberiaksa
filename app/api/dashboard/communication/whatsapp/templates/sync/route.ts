@@ -5,6 +5,11 @@ import { sessionHasDashboardPermission } from "@/lib/dashboard/permissions";
 import { auditActorFromDashboardSession } from "@/lib/audit-log";
 import { syncMetaWhatsappTemplates } from "@/lib/communication/whatsapp-template-sync";
 
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+/** Meta pagination and exact per-WABA writes may take longer than the short request default. */
+export const maxDuration = 300;
+
 /**
  * Pull the template catalogue from Meta.
  *
@@ -27,7 +32,16 @@ export async function POST() {
     return NextResponse.json({ ok: false, error: "Forbidden" }, { status: 403 });
   }
 
-  const summary = await syncMetaWhatsappTemplates({ actor: auditActorFromDashboardSession(session!) });
+  let summary: Awaited<ReturnType<typeof syncMetaWhatsappTemplates>>;
+  try {
+    summary = await syncMetaWhatsappTemplates({ actor: auditActorFromDashboardSession(session!) });
+  } catch (error) {
+    console.error("WhatsApp template sync route failed", error);
+    return NextResponse.json(
+      { ok: false, error: "تعذّر إكمال تحديث حالات القوالب من Meta. أعد المحاولة." },
+      { status: 500 },
+    );
+  }
   if (!summary.ok) {
     return NextResponse.json({ ok: false, error: summary.reason, detail: summary.detail, summary }, { status: 502 });
   }

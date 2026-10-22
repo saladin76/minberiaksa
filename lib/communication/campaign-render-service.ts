@@ -20,7 +20,7 @@ function channelOf(campaign: CommunicationCampaign): CommunicationChannelId | nu
 export async function previewCampaignLocale(campaign: CommunicationCampaign, locale: string): Promise<RenderedTemplate | null> {
   const channel = channelOf(campaign);
   if (!channel || !campaign.templateGroupId || !isValidLocale(locale)) return null;
-  return renderChannelTemplate(channel, campaign.templateGroupId, locale);
+  return renderChannelTemplate(channel, campaign.templateGroupId, locale, undefined, "ar", "CAMPAIGN");
 }
 
 export type TestDeliveryResult =
@@ -41,7 +41,7 @@ export async function createTestDelivery(
   if (!campaign.templateGroupId) return { ok: false, status: 400, error: "Select a template first." };
   const locale = (isValidLocale(opts.locale) ? opts.locale : "ar") as SupportedLocale;
 
-  const rendered = await renderChannelTemplate(channel, campaign.templateGroupId, locale);
+  const rendered = await renderChannelTemplate(channel, campaign.templateGroupId, locale, undefined, "ar", "CAMPAIGN");
   if (!rendered) return { ok: false, status: 404, error: "Template not found." };
 
   const base = {

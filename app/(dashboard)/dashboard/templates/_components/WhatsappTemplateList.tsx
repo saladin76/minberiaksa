@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { resolveTemplateKind } from "@/lib/communication/template-kind";
 import axios from "axios";
 import { toast } from "react-hot-toast";
 import { Button } from "@/components/ui/button";
@@ -101,6 +102,7 @@ const APPROVAL_LABEL: Record<string, string> = {
 };
 
 export function WhatsappTemplateList() {
+  const [search, setSearch] = React.useState("");
   const [templates, setTemplates] = React.useState<WhatsappTemplateRow[]>([]);
   const [directSendEnabled, setDirectSendEnabled] = React.useState(false);
   const [loading, setLoading] = React.useState(true);
@@ -136,15 +138,11 @@ export function WhatsappTemplateList() {
   }, [fetchAll]);
 
   const visibleTemplates = templates.filter((template) => {
-    const category = String(template.category ?? template.purpose ?? "").toUpperCase();
-    const isSystem =
-      category === "UTILITY" ||
-      category === "TRANSACTIONAL" ||
-      category === "AUTHENTICATION" ||
-      template.kind === "SYSTEM";
-    const bucket = isSystem ? "SYSTEM" : "CAMPAIGN";
+    const bucket = resolveTemplateKind(template);
     const archived = String(template.status ?? "").toUpperCase() === "ARCHIVED";
-    return bucket === section && (archiveView === "ARCHIVED" ? archived : !archived);
+    return bucket === section &&
+      template.name.toLocaleLowerCase().includes(search.trim().toLocaleLowerCase()) &&
+      (archiveView === "ARCHIVED" ? archived : !archived);
   });
 
   const archivedCount = templates.filter((template) => String(template.status ?? "").toUpperCase() === "ARCHIVED").length;
@@ -161,8 +159,14 @@ export function WhatsappTemplateList() {
       );
       await fetchAll();
     } catch (error) {
-      const data = (error as { response?: { data?: { error?: string; detail?: string } } }).response?.data;
-      toast.error([data?.error, data?.detail].filter(Boolean).join(" — ") || dt("فشل تحديث حالات Meta"));
+      const requestError = error as { response?: { data?: { error?: string; detail?: string } } };
+      const data = requestError.response?.data;
+      toast.error(
+        [data?.error, data?.detail].filter(Boolean).join(" — ") ||
+          (requestError.response
+            ? dt("فشل تحديث حالات Meta")
+            : dt("تعذّر الاتصال بالخادم أثناء تحديث القوالب من Meta. تحقّق من الاتصال ثم أعد المحاولة.")),
+      );
     } finally {
       setSyncingMeta(false);
     }
@@ -219,10 +223,17 @@ export function WhatsappTemplateList() {
 
   return (
     <div className="space-y-4">
+      <input
+        aria-label={dt("البحث في القوالب")}
+        placeholder={dt("البحث في القوالب")}
+        value={search}
+        onChange={(event) => setSearch(event.target.value)}
+        className="h-10 w-full rounded-md border px-3 text-sm"
+      />
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="inline-flex rounded-lg border border-slate-200 bg-slate-50 p-1">
-          <button type="button" onClick={() => setSection("CAMPAIGN")} className={`rounded-md px-3 py-1.5 text-xs font-medium ${section === "CAMPAIGN" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500"}`}>{dt("الحملات التسويقية")}</button>
-          <button type="button" onClick={() => setSection("SYSTEM")} className={`rounded-md px-3 py-1.5 text-xs font-medium ${section === "SYSTEM" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500"}`}>{dt("التلقائية والتوثيق")}</button>
+          <button type="button" aria-pressed={section === "CAMPAIGN"} onClick={() => setSection("CAMPAIGN")} className={`rounded-md px-3 py-1.5 text-xs font-medium ${section === "CAMPAIGN" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500"}`}>{dt("الحملات التسويقية")} ({templates.filter((template) => resolveTemplateKind(template) === "CAMPAIGN").length})</button>
+          <button type="button" aria-pressed={section === "SYSTEM"} onClick={() => setSection("SYSTEM")} className={`rounded-md px-3 py-1.5 text-xs font-medium ${section === "SYSTEM" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500"}`}>{dt("التلقائية والتوثيق")} ({templates.filter((template) => resolveTemplateKind(template) === "SYSTEM").length})</button>
         </div>
         <div className="inline-flex rounded-lg border border-slate-200 bg-white p-1">
           <button type="button" onClick={() => setArchiveView("ACTIVE")} className={`rounded-md px-3 py-1.5 text-xs font-medium ${archiveView === "ACTIVE" ? "bg-slate-900 text-white shadow-sm" : "text-slate-500"}`}>{dt("النشطة")}</button>
@@ -266,7 +277,7 @@ export function WhatsappTemplateList() {
             title={dt("جلب أحدث حالات اعتماد القوالب من Meta")}
           >
             {syncingMeta ? <Loader2 className="w-4 h-4 animate-spin" /> : <DownloadCloud className="w-4 h-4" />}
-            {dt("تحديث من Meta")}</Button>
+            {syncingMeta ? dt("جارٍ التحديث من Meta…") : dt("تحديث من Meta")}</Button>
           <Button
             size="sm"
             variant="outline"
@@ -526,6 +537,7 @@ export function WhatsappTemplateList() {
 
       {editor.open && (
         <WhatsappTemplateEditorDialog
+          initialKind={section}
           id={editor.id}
           open={editor.open}
           onOpenChange={(open) => {

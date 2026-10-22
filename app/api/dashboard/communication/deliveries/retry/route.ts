@@ -7,8 +7,9 @@ import { resolveTriggerSendConfig } from "@/lib/events/dispatch";
 import {
   retryDelivery,
   retryPreflight,
-  listRetryCandidates,
+  listRetryCandidatePage,
   RETRY_BATCH_CAP,
+  type RetryCandidateCursor,
   type RetryResult,
 } from "@/lib/communication/delivery-retry-service";
 import { isCommunicationChannel } from "@/lib/communication/communication-runtime-types";
@@ -18,9 +19,20 @@ export const dynamic = "force-dynamic";
 /** Sends run one at a time; the cap keeps the worst case inside the platform's function ceiling. */
 export const maxDuration = 300;
 
-function parseRange(days: number | undefined): { from?: Date; to?: Date } {
-  if (!days || days <= 0) return {};
-  return { from: new Date(Date.now() - days * 86_400_000), to: new Date() };
+type RetryDateRange = { from?: Date; to: Date };
+
+function parseRange(days: number | undefined, now = new Date()): RetryDateRange {
+  return { ...(days && days > 0 ? { from: new Date(now.getTime() - days * 86_400_000) } : {}), to: now };
+}
+
+function parsePostedRange(value: unknown, days: number | undefined): RetryDateRange | null {
+  if (value === undefined) return parseRange(days);
+  if (!value || typeof value !== "object") return null;
+  const range = value as { from?: unknown; to?: unknown };
+  const to = typeof range.to === "string" ? new Date(range.to) : new Date(Number.NaN);
+  const from = range.from == null ? undefined : typeof range.from === "string" ? new Date(range.from) : new Date(Number.NaN);
+  if (!Number.isFinite(to.getTime()) || (from && !Number.isFinite(from.getTime())) || (from && from > to)) return null;
+  return { ...(from ? { from } : {}), to };
 }
 
 /** What a bulk retry would do  read by the confirmation step before anything is sent. */
@@ -37,8 +49,13 @@ export async function GET(request: NextRequest) {
     const daysParam = request.nextUrl.searchParams.get("days");
     const days = daysParam ? parseInt(daysParam) : undefined;
 
-    const preflight = await retryPreflight({ channel, ...parseRange(days) });
-    return NextResponse.json({ ok: true, ...preflight });
+    const range = parseRange(days);
+    const preflight = await retryPreflight({ channel, ...range });
+    return NextResponse.json({
+      ok: true,
+      ...preflight,
+      range: { from: range.from?.toISOString() ?? null, to: range.to.toISOString() },
+    });
   } catch (error) {
     console.error("retry preflight failed", error);
     return NextResponse.json({ ok: false, error: "تعذّر حساب الرسائل القابلة لإعادة الإرسال" }, { status: 500 });
@@ -59,7 +76,7 @@ export async function POST(request: NextRequest) {
   const denied = requireAdminOrDashboardPermission(session, "messages");
   if (denied) return denied;
 
-  let body: { channel?: string; ids?: string[]; days?: number };
+  let body: { channel?: string; ids?: string[]; days?: number; after?: unknown; range?: unknown };
   try {
     body = await request.json();
   } catch {
@@ -71,10 +88,28 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: false, error: "قناة غير معروفة" }, { status: 400 });
   }
 
-  const ids = await listRetryCandidates(
-    { channel, ids: body.ids, ...parseRange(body.days) },
+  const range = parsePostedRange(body.range, body.days);
+  if (!range) return NextResponse.json({ ok: false, error: "فترة إعادة الإرسال غير صالحة" }, { status: 400 });
+
+  let after: RetryCandidateCursor | null = null;
+  if (body.after !== undefined && body.after !== null) {
+    if (!body.after || typeof body.after !== "object") {
+      return NextResponse.json({ ok: false, error: "مؤشر الدفعة غير صالح" }, { status: 400 });
+    }
+    const candidate = body.after as { id?: unknown; createdAt?: unknown };
+    const createdAt = typeof candidate.createdAt === "string" ? new Date(candidate.createdAt) : new Date(Number.NaN);
+    if (typeof candidate.id !== "string" || candidate.id.length === 0 || candidate.id.length > 128 || !Number.isFinite(createdAt.getTime())) {
+      return NextResponse.json({ ok: false, error: "مؤشر الدفعة غير صالح" }, { status: 400 });
+    }
+    after = { id: candidate.id, createdAt };
+  }
+
+  const candidates = await listRetryCandidatePage(
+    { channel, ids: body.ids, ...range },
+    after,
     RETRY_BATCH_CAP,
   );
+  const ids = candidates.map((candidate) => candidate.id);
 
   const actor = session ? auditActorFromDashboardSession(session) : null;
   const encoder = new TextEncoder();
@@ -132,7 +167,14 @@ export async function POST(request: NextRequest) {
           });
         }
 
-        send({ type: "done", summary, results });
+        const last = candidates.at(-1);
+        send({
+          type: "done",
+          summary,
+          results,
+          nextCursor: last ? { id: last.id, createdAt: last.createdAt.toISOString() } : null,
+          hasMore: candidates.length === RETRY_BATCH_CAP,
+        });
       } catch (error) {
         console.error("retry batch failed", error);
         send({ type: "error", error: "تعذّر إكمال إعادة الإرسال" });

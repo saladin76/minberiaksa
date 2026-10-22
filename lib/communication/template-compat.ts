@@ -1,3 +1,5 @@
+import { resolveTemplateKind } from "./template-kind";
+import { findClassifiedTemplate } from "./template-usage";
 import type { TReaderDocument } from "@usewaypoint/email-builder";
 import { prisma } from "@/lib/prisma";
 import { DEFAULT_LOCALE, isValidLocale, type SupportedLocale } from "@/lib/locales";
@@ -43,10 +45,10 @@ function localesFromTranslations(base: SupportedLocale, translations: unknown): 
  * a shared handle only typechecks behind a cast that would drop the `select` checking entirely.
  * Email is absent by design  it has a document, not a body.
  */
-type TextTemplateSummary = { id: string; name: string; translations: unknown; kind: string | null };
+type TextTemplateSummary = { id: string; name: string; translations: unknown; kind: string | null; purpose?: string | null };
 
 async function listTextTemplates(channel: CommunicationChannelId): Promise<TextTemplateSummary[] | null> {
-  const query = { where: { status: { not: "ARCHIVED" } }, select: { id: true, name: true, translations: true, kind: true }, orderBy: { createdAt: "desc" }, take: 200 } as const;
+  const query = { where: { status: { not: "ARCHIVED" } }, select: { id: true, name: true, translations: true, kind: true, purpose: true }, orderBy: { createdAt: "desc" }, take: 200 } as const;
   if (channel === "WHATSAPP") return prisma.whatsappTemplate.findMany(query);
   if (channel === "SMS") return prisma.smsTemplate.findMany(query);
   return null;
@@ -66,9 +68,9 @@ async function findTextTemplate(
  * Ids of templates that are SYSTEM (platform-event) templates  either flagged `kind = "SYSTEM"`
  * or referenced by a MessageTrigger. Campaign Builder must not offer these by default.
  */
-async function systemTemplateIds(): Promise<Set<string>> {
+async function systemTemplateIds(channel: CommunicationChannelId): Promise<Set<string>> {
   const ids = new Set<string>();
-  const triggers = await prisma.messageTrigger.findMany({ select: { templateId: true } }).catch(() => []);
+  const triggers = await prisma.messageTrigger.findMany({ where: { channel }, select: { templateId: true } });
   for (const t of triggers) ids.add(t.templateId);
   return ids;
 }
@@ -83,9 +85,9 @@ export async function listChannelTemplates(
 ): Promise<ChannelTemplateSummary[]> {
   if (!process.env.DATABASE_URL) return [];
   try {
-    const systemIds = opts.includeSystem ? new Set<string>() : await systemTemplateIds();
-    const keep = (row: { id: string; kind?: string | null }) =>
-      opts.includeSystem || (row.kind !== "SYSTEM" && !systemIds.has(row.id));
+    const systemIds = opts.includeSystem ? new Set<string>() : await systemTemplateIds(channel);
+    const keep = (row: { id: string; kind?: string | null; purpose?: string | null; category?: string | null }) =>
+      opts.includeSystem || resolveTemplateKind(row, systemIds.has(row.id)) === "CAMPAIGN";
 
     if (channel === "WHATSAPP") {
       // WhatsApp campaign coverage is provider truth: only Meta-approved aggregate variants count.
@@ -96,6 +98,8 @@ export async function listChannelTemplates(
           id: true,
           name: true,
           kind: true,
+          purpose: true,
+          category: true,
           variants: {
             where: { provider: "META_WHATSAPP", approvalStatus: "APPROVED" },
             select: { locale: true, languageCode: true },
@@ -123,7 +127,7 @@ export async function listChannelTemplates(
     }
     const rows = await prisma.emailTemplate.findMany({
       where: { status: { not: "ARCHIVED" } },
-      select: { id: true, name: true, translations: true, kind: true },
+      select: { id: true, name: true, translations: true, kind: true, purpose: true },
       orderBy: { createdAt: "desc" },
       take: 200,
     });
@@ -170,9 +174,14 @@ export async function renderChannelTemplate(
   locale: SupportedLocale,
   ctx?: TemplateContext | null,
   fallbackLocale: SupportedLocale = DEFAULT_LOCALE,
+  expectedKind?: "SYSTEM" | "CAMPAIGN",
 ): Promise<RenderedTemplate | null> {
   if (!process.env.DATABASE_URL) return null;
   try {
+    if (expectedKind) {
+      const classified = await findClassifiedTemplate(channel, templateId);
+      if (!classified || classified.kind !== expectedKind || classified.status === "ARCHIVED") return null;
+    }
     if (channel === "WHATSAPP" || channel === "SMS") {
       const tpl = await findTextTemplate(channel, templateId);
       if (!tpl) return null;

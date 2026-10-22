@@ -20,6 +20,8 @@ import { dashDir, dt, dtx } from "@/lib/dashboard/i18n";
  */
 
 type Phase = "confirm" | "running" | "report";
+type RetryCursor = { id: string; createdAt: string };
+const MAX_REPORTED_FAILURES = 200;
 
 type RetryResult = {
   deliveryId: string;
@@ -40,6 +42,7 @@ type Preflight = {
   cap: number;
   oldestDays: number | null;
   byReason: Array<{ reason: string; count: number }>;
+  range: { from: string | null; to: string };
 };
 
 /** Outcome vocabulary. Every code the service can return has a row here so nothing renders raw. */
@@ -80,6 +83,7 @@ export function RetryDialog({ open, channel, ids, days, onOpenChange, onFinished
   const [total, setTotal] = useState(0);
   const [current, setCurrent] = useState<string | null>(null);
   const [results, setResults] = useState<RetryResult[]>([]);
+  const [recentResults, setRecentResults] = useState<RetryResult[]>([]);
   const [summary, setSummary] = useState<Summary | null>(null);
   const sentAnything = useRef(false);
 
@@ -94,6 +98,7 @@ export function RetryDialog({ open, channel, ids, days, onOpenChange, onFinished
     setTotal(0);
     setCurrent(null);
     setResults([]);
+    setRecentResults([]);
     setSummary(null);
     sentAnything.current = false;
 
@@ -115,60 +120,107 @@ export function RetryDialog({ open, channel, ids, days, onOpenChange, onFinished
   const run = useCallback(async () => {
     setPhase("running");
     setError(null);
+    setDone(0);
+    setTotal(isBulk ? preflight?.eligible ?? 0 : 0);
+    setCurrent(null);
+    setResults([]);
+    setRecentResults([]);
+    const aggregate: Summary = { total: 0, sent: 0, failed: 0, byCode: {} };
+
     try {
-      const res = await fetch("/api/dashboard/communication/deliveries/retry", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ channel, ids: ids ?? undefined, days: isBulk ? days : undefined }),
-      });
-      if (!res.ok || !res.body) {
-        const json = await res.json().catch(() => null);
-        throw new Error(json?.error || dt("تعذّر بدء إعادة الإرسال"));
-      }
-
-      // NDJSON: one JSON object per line. The tail of a chunk is usually a partial line, so it is
-      // carried over rather than parsed  dropping it would silently lose whole results.
-      const reader = res.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = "";
-
+      let cursor: RetryCursor | null = null;
       for (;;) {
-        const { done: streamDone, value } = await reader.read();
-        if (streamDone) break;
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split("\n");
-        buffer = lines.pop() ?? "";
-        for (const line of lines) {
-          if (!line.trim()) continue;
-          let event: Record<string, unknown>;
-          try {
-            event = JSON.parse(line);
-          } catch {
-            continue;
-          }
+        const res = await fetch("/api/dashboard/communication/deliveries/retry", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            channel,
+            ids: ids ?? undefined,
+            days: isBulk ? days : undefined,
+            range: isBulk ? preflight?.range : undefined,
+            ...(cursor ? { after: cursor } : {}),
+          }),
+        });
+        if (!res.ok || !res.body) {
+          const json = await res.json().catch(() => null);
+          throw new Error(json?.error || dt("تعذّر بدء إعادة الإرسال"));
+        }
+
+        // Each request stays bounded; the cursor advances even if a message is blocked, so one
+        // unchanged failed row cannot trap the automatic walk at the front of the queue.
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = "";
+        let batchCount = 0;
+        let batchComplete = false;
+        let batchHasMore = false;
+        let nextCursor: RetryCursor | null = null;
+
+        const consume = (line: string) => {
+          if (!line.trim()) return;
+          const event = JSON.parse(line) as Record<string, unknown>;
           if (event.type === "start") {
-            setTotal(Number(event.total) || 0);
+            if (!isBulk) setTotal(Number(event.total) || 0);
           } else if (event.type === "progress") {
             const result = event.result as RetryResult;
-            setDone(Number(event.index) || 0);
+            batchCount += 1;
+            aggregate.total += 1;
+            if (result.ok) {
+              aggregate.sent += 1;
+              sentAnything.current = true;
+            } else {
+              aggregate.failed += 1;
+              aggregate.byCode[result.code] = (aggregate.byCode[result.code] ?? 0) + 1;
+              setResults((prev) => prev.length < MAX_REPORTED_FAILURES ? [result, ...prev] : prev);
+            }
+            if (result.ok) aggregate.byCode[result.code] = (aggregate.byCode[result.code] ?? 0) + 1;
+            setDone((prev) => prev + 1);
             setCurrent(result.recipientName || result.recipient || null);
-            setResults((prev) => [result, ...prev]);
-            if (result.ok) sentAnything.current = true;
+            setRecentResults((prev) => [result, ...prev].slice(0, 8));
           } else if (event.type === "done") {
-            setSummary(event.summary as Summary);
-            setPhase("report");
+            const batchSummary = event.summary as Summary | undefined;
+            if (!batchSummary || Number(batchSummary.total) !== batchCount) {
+              throw new Error(dt("لم يكتمل تسجيل نتائج دفعة إعادة الإرسال."));
+            }
+            batchHasMore = event.hasMore === true;
+            const next = event.nextCursor as RetryCursor | null;
+            if (next !== null && (!next || typeof next.id !== "string" || typeof next.createdAt !== "string")) {
+              throw new Error(dt("تعذّر متابعة دفعات إعادة الإرسال."));
+            }
+            nextCursor = next;
+            batchComplete = true;
           } else if (event.type === "error") {
             throw new Error(String(event.error));
           }
+        };
+
+        for (;;) {
+          const { done: streamDone, value } = await reader.read();
+          if (streamDone) break;
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split("\n");
+          buffer = lines.pop() ?? "";
+          for (const line of lines) consume(line);
         }
+        buffer += decoder.decode();
+        if (buffer.trim()) consume(buffer);
+        if (!batchComplete) throw new Error(dt("انقطع الاتصال قبل تأكيد اكتمال الدفعة."));
+        if (batchHasMore && !nextCursor) throw new Error(dt("تعذّر متابعة دفعات إعادة الإرسال."));
+
+        cursor = nextCursor;
+        if (!isBulk || !batchHasMore) break;
       }
-      // A stream that ends without a `done` event means the run was cut short mid-flight.
-      setPhase((p) => (p === "running" ? "report" : p));
+
+      setTotal(aggregate.total);
+      setDone(aggregate.total);
+      setSummary({ ...aggregate, byCode: { ...aggregate.byCode } });
+      setPhase("report");
     } catch (e) {
       setError((e as Error).message);
+      setSummary(aggregate.total > 0 ? { ...aggregate, byCode: { ...aggregate.byCode } } : null);
       setPhase("report");
     }
-  }, [channel, ids, days, isBulk]);
+  }, [channel, ids, days, isBulk, preflight]);
 
   const close = useCallback(() => {
     if (phase === "running") return; // a send in flight must not be orphaned by a stray click
@@ -178,7 +230,7 @@ export function RetryDialog({ open, channel, ids, days, onOpenChange, onFinished
 
   const pct = total > 0 ? Math.round((done / total) * 100) : 0;
   const nothingToDo = isBulk && preflight != null && preflight.eligible === 0;
-  const willSend = isBulk ? Math.min(preflight?.eligible ?? 0, preflight?.cap ?? 25) : ids?.length ?? 0;
+  const willSend = isBulk ? preflight?.eligible ?? 0 : ids?.length ?? 0;
 
   return (
     <Dialog open={open} onOpenChange={(next) => !next && close()}>
@@ -198,7 +250,6 @@ export function RetryDialog({ open, channel, ids, days, onOpenChange, onFinished
               isBulk={isBulk}
               count={willSend}
               channel={channel}
-              days={days}
               preflight={preflight}
               loading={loadingPreflight}
               error={error}
@@ -206,7 +257,7 @@ export function RetryDialog({ open, channel, ids, days, onOpenChange, onFinished
           )}
 
           {phase === "running" && (
-            <RunningStep pct={pct} done={done} total={total} current={current} results={results} />
+            <RunningStep pct={pct} done={done} total={total} current={current} results={recentResults} />
           )}
 
           {phase === "report" && (
@@ -247,12 +298,11 @@ export function RetryDialog({ open, channel, ids, days, onOpenChange, onFinished
 }
 
 function ConfirmStep({
-  isBulk, count, channel, days, preflight, loading, error,
+  isBulk, count, channel, preflight, loading, error,
 }: {
   isBulk: boolean;
   count: number;
   channel: string;
-  days: number;
   preflight: Preflight | null;
   loading: boolean;
   error: string | null;
@@ -289,7 +339,7 @@ function ConfirmStep({
     );
   }
 
-  const capped = preflight.eligible > preflight.cap;
+  const paged = preflight.eligible > preflight.cap;
 
   return (
     <div className="space-y-4">
@@ -299,9 +349,9 @@ function ConfirmStep({
           <span className="text-sm text-slate-600">
             {dt("رسالة ")}{channel === "EMAIL" ? dt("بريد") : channel === "WHATSAPP" ? dt("واتساب") : dt("نصية")} {dt(" ستُراجع الآن")}</span>
         </div>
-        {capped && (
+        {paged && (
           <p className="mt-1.5 text-[11px] leading-5 text-slate-500">
-            {dtx("من أصل {0} محاولة متعثّرة خلال آخر {1} يومًا. تُراجع على دفعات من {2}؛ ويُرسل فقط ما زال صالحًا بعد إعادة فحص العنوان والموافقة والقالب وهوية المُرسل.", [preflight.eligible.toLocaleString("en-US"), days, preflight.cap])}</p>
+            {dtx("ستُعالج كل {0} محاولة تلقائيًا على دفعات متتابعة من {1} رسالة حتى تنتهي القائمة. يُرسل فقط ما يظل صالحًا بعد إعادة فحص المستلم والقالب وهوية المُرسل.", [preflight.eligible.toLocaleString("en-US"), preflight.cap])}</p>
         )}
       </div>
 
@@ -403,12 +453,12 @@ function ReportStep({
   error: string | null;
 }) {
   const sent = summary?.sent ?? results.filter((r) => r.ok).length;
-  const failed = summary?.failed ?? results.filter((r) => !r.ok).length;
+  const failed = summary?.failed ?? results.length;
   const byCode = summary?.byCode ?? results.reduce<Record<string, number>>((acc, r) => {
     acc[r.code] = (acc[r.code] ?? 0) + 1;
     return acc;
   }, {});
-  const problems = results.filter((r) => !r.ok);
+  const problems = results;
 
   return (
     <div className="space-y-4">
@@ -459,6 +509,11 @@ function ReportStep({
       {problems.length > 0 && (
         <div>
           <h4 className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-slate-400">{dt("الرسائل التي لم تُرسل")}</h4>
+          {failed > problems.length && (
+            <p className="mb-2 text-[11px] text-slate-500">
+              {dtx("يظهر أول {0} من {1} حالة تعذّر إرسال؛ راجع السجل للتفاصيل الكاملة.", [problems.length.toLocaleString("en-US"), failed.toLocaleString("en-US")])}
+            </p>
+          )}
           <div className="max-h-52 space-y-1 overflow-auto">
             {problems.map((r, i) => {
               const m = meta(r.code);
