@@ -27,7 +27,7 @@ const locales = {
 const policy = isolated<Record<string, unknown>>("lib/communication/campaign-audience-accounting.ts", {});
 const validation = isolated<Record<string, unknown>>("lib/communication/campaign-contact-validation.ts", {});
 const approved = { doNotContact: false, whatsappOptIn: true, emailOptIn: true, smsOptIn: true };
-type Donor = { email: string | null; phone: string | null; communicationProfile: typeof approved | null };
+type Donor = { email: string | null; phone: string | null; communicationProfile: (typeof approved & { consentSource?: string | null }) | null };
 type RetryRow = { channel: string; purpose: string; campaignId: string | null; recipientUserId: string | null; recipientEmail: string | null; recipientPhone: string | null };
 type Guard = {
   checkRetryRecipient: (row: RetryRow, planned?: string) => Promise<{ ok: boolean; contact?: string; code?: string }>;
@@ -36,12 +36,16 @@ type Guard = {
 const row: RetryRow = { channel: "WHATSAPP", purpose: "MARKETING", campaignId: "campaign", recipientUserId: "user", recipientEmail: "donor@example.test", recipientPhone: "+905551112233" };
 function retryHarness(donor: Donor | null, failure = false): Guard {
   return isolated<Guard>("lib/communication/retry-recipient-guard.ts", {
-    "@/lib/prisma": { prisma: { user: { findUnique: async () => {
-      if (failure) throw new Error("database unavailable");
-      return donor;
-    } } } },
+    "@/lib/prisma": { prisma: {
+      user: { findUnique: async () => {
+        if (failure) throw new Error("database unavailable");
+        return donor;
+      } },
+      donorCommunicationProfile: { findMany: async () => [] },
+    } },
     "./campaign-audience-accounting": policy,
     "./campaign-contact-validation": validation,
+    "./phone": { phoneMatchVariants: (phone: string) => [phone] },
   });
 }
 const donor: Donor = { email: "donor@example.test", phone: "+905551112233", communicationProfile: approved };
@@ -51,22 +55,23 @@ test("retry guard accepts unchanged recipient and canonical international format
   assert.equal(result.ok, true);
   assert.equal(result.contact, donor.phone);
 });
-test("campaign retry cannot bypass the existing WhatsApp consent gate", async () => {
+test("campaign retry ignores internal opt-in values", async () => {
   const result = await retryHarness({ ...donor, communicationProfile: { ...approved, whatsappOptIn: false } }).checkRetryRecipient(row);
-  assert.equal(result.code, "CONSENT_BLOCKED");
+  assert.equal(result.ok, true);
 });
-test("campaign retry does not interpret an absent profile as permission", async () => {
-  assert.equal((await retryHarness({ ...donor, communicationProfile: null }).checkRetryRecipient(row)).code, "CONSENT_BLOCKED");
+test("campaign retry allows an absent profile but still blocks explicit STOP", async () => {
+  assert.equal((await retryHarness({ ...donor, communicationProfile: null }).checkRetryRecipient(row)).ok, true);
+  assert.equal((await retryHarness({ ...donor, communicationProfile: { ...approved, doNotContact: false, consentSource: "meta-whatsapp-inbound-opt-out" } }).checkRetryRecipient(row)).code, "CONSENT_BLOCKED");
 });
-test("manual WhatsApp retry requires explicit opt-in even for a transactional message", async () => {
+test("manual WhatsApp retry does not require internal opt-in for transactional or marketing sends", async () => {
   const noProfile = await retryHarness({ ...donor, communicationProfile: null }).checkRetryRecipient({ ...row, purpose: "TRANSACTIONAL", campaignId: null });
   const optedOut = await retryHarness({ ...donor, communicationProfile: { ...approved, whatsappOptIn: false } }).checkRetryRecipient({ ...row, purpose: "TRANSACTIONAL", campaignId: null });
-  assert.equal(noProfile.code, "CONSENT_BLOCKED");
-  assert.equal(optedOut.code, "CONSENT_BLOCKED");
+  assert.equal(noProfile.ok, true);
+  assert.equal(optedOut.ok, true);
 });
-test("unlinked manual WhatsApp retry cannot use a stored phone without a donor consent record", async () => {
+test("unlinked manual WhatsApp retry can use its saved phone unless that number explicitly opted out", async () => {
   const result = await retryHarness(donor).checkRetryRecipient({ ...row, campaignId: null, recipientUserId: null });
-  assert.equal(result.code, "CONSENT_BLOCKED");
+  assert.equal(result.ok, true);
 });
 test("transactional email remains independent of marketing opt-in", async () => {
   assert.equal((await retryHarness({ ...donor, communicationProfile: null }).checkRetryRecipient({ ...row, channel: "EMAIL", purpose: "TRANSACTIONAL", campaignId: null })).ok, true);
@@ -264,7 +269,7 @@ function engineHarness(options: EngineOptions = {}) {
     "./providers/meta-whatsapp/parameters": {},
     "./providers/sms/client": {},
     "./whatsapp-marketing-frequency": {
-      reserveWhatsappMarketingSend: async () => ({ ok: true, reservation: { userId: "donor", reservedAt: new Date(), previousAt: null } }),
+      reserveWhatsappMarketingSend: async () => ({ ok: true, reservation: { userId: "donor", reservedAt: new Date(), previousAt: null, reserved: true } }),
       releaseWhatsappMarketingReservation: async () => undefined,
     },
     "./retry-recipient-guard": {

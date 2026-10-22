@@ -11,8 +11,8 @@ type Actor = { actorId?: string | null; actorName?: string | null; actorRole?: s
  *
  * Compatibility, not replacement: consent is derived from the existing User fields
  * (`preferredLang`, `emailNotifications`, `smsNotifications`) plus donation signals.
- * WhatsApp has no explicit consent field on User, so `whatsappOptIn` stays false until a
- * human confirms it  donors are never silently marketing-eligible on WhatsApp.
+ * WhatsApp's legacy `whatsappOptIn` preference is retained for reporting and admin
+ * records. It is not a send gate; WhatsApp sends are suppressed for explicit STOP requests.
  *
  * This package provides the profile upsert only. It does NOT auto-run on paid donation
  * (that wiring into the donation flow is a later, separate step)  the donation flow is

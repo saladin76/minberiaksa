@@ -29,7 +29,7 @@ type Dispatcher = {
 };
 
 function automaticHarness(
-  profile: { doNotContact: boolean; emailOptIn: boolean; smsOptIn: boolean; whatsappOptIn: boolean } | null,
+  profile: { doNotContact: boolean; emailOptIn: boolean; smsOptIn: boolean; whatsappOptIn?: boolean; consentSource?: string | null } | null,
   failConsentRead = false,
 ) {
   let providerCalls = 0;
@@ -66,6 +66,11 @@ function automaticHarness(
       },
     },
     "./donor-communication-profile-service": { ensureProfilesForUsers: async () => undefined },
+    "./retry-recipient-guard": { retryDefinitelyNotSent: () => false },
+    "./whatsapp-marketing-frequency": {
+      reserveWhatsappMarketingSend: async () => ({ ok: true, reservation: { userId: "donor", reservedAt: new Date(), previousAt: null, reserved: false } }),
+      releaseWhatsappMarketingReservation: async () => undefined,
+    },
     "./providers/meta-whatsapp/parameters": {
       buildMetaComponents: () => ({ ok: true, components: [] }),
     },
@@ -103,18 +108,27 @@ function automaticHarness(
   };
 }
 
-test("automatic WhatsApp sends only after an explicit opt-in is present", async () => {
-  const blocked = automaticHarness({ doNotContact: false, emailOptIn: true, smsOptIn: true, whatsappOptIn: false });
-  const blockedResult = await blocked.send();
-  assert.equal(blockedResult.outcome, "SKIPPED");
-  assert.equal(blockedResult.reason, "WHATSAPP_OPT_IN_REQUIRED");
-  assert.equal(blocked.state().providerCalls, 0);
-  assert.equal(blocked.state().statuses.at(-1)?.status, "SKIPPED");
+test("automatic WhatsApp ignores internal opt-in but honors explicit STOP and DNC", async () => {
+  for (const profile of [
+    { doNotContact: false, emailOptIn: false, smsOptIn: false, whatsappOptIn: false },
+    null,
+  ]) {
+    const allowed = automaticHarness(profile);
+    const result = await allowed.send();
+    assert.equal(result.outcome, "SENT");
+    assert.equal(allowed.state().providerCalls, 1);
+  }
 
-  const allowed = automaticHarness({ doNotContact: false, emailOptIn: true, smsOptIn: true, whatsappOptIn: true });
-  const allowedResult = await allowed.send();
-  assert.equal(allowedResult.outcome, "SENT");
-  assert.equal(allowed.state().providerCalls, 1);
+  for (const profile of [
+    { doNotContact: false, emailOptIn: false, smsOptIn: false, consentSource: "meta-whatsapp-inbound-opt-out" },
+    { doNotContact: true, emailOptIn: false, smsOptIn: false, consentSource: null },
+  ]) {
+    const blocked = automaticHarness(profile);
+    const result = await blocked.send();
+    assert.equal(result.outcome, "SKIPPED");
+    assert.equal(result.reason, "DO_NOT_CONTACT");
+    assert.equal(blocked.state().providerCalls, 0);
+  }
 });
 
 test("automatic WhatsApp fails closed when the consent check is unavailable", async () => {

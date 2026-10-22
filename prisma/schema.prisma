@@ -2360,7 +2360,8 @@ model CommunicationCampaign {
 model CommunicationGlobalControl {
   id            String   @id @map("_id") @db.ObjectId
   emergencyStop Boolean  @default(false)
-  whatsappMarketingCooldownDays Int? @default(7)
+  whatsappMarketingCooldownDays Int? @default(0)
+  whatsappMarketingCooldownConfigured Boolean @default(false)
   updatedBy     String?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt

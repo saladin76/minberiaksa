@@ -125,8 +125,8 @@ export function autoSpeedMode(input: {
 }
 
 const GLOBAL_CONTROL_ID = "000000000000000000000001";
-export const DEFAULT_WHATSAPP_MARKETING_COOLDOWN_DAYS = 7;
-export const MIN_WHATSAPP_MARKETING_COOLDOWN_DAYS = 1;
+export const DEFAULT_WHATSAPP_MARKETING_COOLDOWN_DAYS = 0;
+export const MIN_WHATSAPP_MARKETING_COOLDOWN_DAYS = 0;
 export const MAX_WHATSAPP_MARKETING_COOLDOWN_DAYS = 365;
 
 export type CampaignGlobalControls = {
@@ -139,9 +139,11 @@ export async function readCampaignGlobalControls():
   try {
     const row = await prisma.communicationGlobalControl.findUnique({
       where: { id: GLOBAL_CONTROL_ID },
-      select: { emergencyStop: true, whatsappMarketingCooldownDays: true },
+      select: { emergencyStop: true, whatsappMarketingCooldownDays: true, whatsappMarketingCooldownConfigured: true },
     });
-    const days = row?.whatsappMarketingCooldownDays ?? DEFAULT_WHATSAPP_MARKETING_COOLDOWN_DAYS;
+    const days = row?.whatsappMarketingCooldownConfigured === true
+      ? row.whatsappMarketingCooldownDays ?? DEFAULT_WHATSAPP_MARKETING_COOLDOWN_DAYS
+      : DEFAULT_WHATSAPP_MARKETING_COOLDOWN_DAYS;
     if (!Number.isInteger(days) || days < MIN_WHATSAPP_MARKETING_COOLDOWN_DAYS || days > MAX_WHATSAPP_MARKETING_COOLDOWN_DAYS) {
       return { ok: false };
     }
@@ -174,17 +176,23 @@ export async function setCampaignGlobalControls(
         id: GLOBAL_CONTROL_ID,
         emergencyStop: patch.emergencyStop ?? false,
         whatsappMarketingCooldownDays: patch.whatsappMarketingCooldownDays ?? DEFAULT_WHATSAPP_MARKETING_COOLDOWN_DAYS,
+        whatsappMarketingCooldownConfigured: patch.whatsappMarketingCooldownDays !== undefined,
         updatedBy: updatedBy ?? null,
       },
-      update: { ...patch, updatedBy: updatedBy ?? null },
-      select: { emergencyStop: true, whatsappMarketingCooldownDays: true },
+      update: {
+        ...patch,
+        ...(patch.whatsappMarketingCooldownDays !== undefined ? { whatsappMarketingCooldownConfigured: true } : {}),
+        updatedBy: updatedBy ?? null,
+      },
+      select: { emergencyStop: true, whatsappMarketingCooldownDays: true, whatsappMarketingCooldownConfigured: true },
     });
     return {
       emergencyStop:
         String(process.env.COMMUNICATION_CAMPAIGN_EMERGENCY_STOP ?? "").toLowerCase() === "true" ||
         row.emergencyStop,
-      whatsappMarketingCooldownDays:
-        row.whatsappMarketingCooldownDays ?? DEFAULT_WHATSAPP_MARKETING_COOLDOWN_DAYS,
+      whatsappMarketingCooldownDays: row.whatsappMarketingCooldownConfigured === true
+        ? row.whatsappMarketingCooldownDays ?? DEFAULT_WHATSAPP_MARKETING_COOLDOWN_DAYS
+        : DEFAULT_WHATSAPP_MARKETING_COOLDOWN_DAYS,
     };
   } catch {
     return null;

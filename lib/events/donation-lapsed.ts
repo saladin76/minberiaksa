@@ -219,7 +219,7 @@ export async function runDonationLapsedReminders(
     const donorById = new Map(donors.map((d) => [d.id, d]));
 
     const profiles = await prisma.donorCommunicationProfile
-      .findMany({ where: { userId: { in: batchIds } }, select: { userId: true, whatsappOptIn: true, emailOptIn: true, smsOptIn: true, doNotContact: true } })
+      .findMany({ where: { userId: { in: batchIds } }, select: { userId: true, emailOptIn: true, smsOptIn: true, doNotContact: true, consentSource: true } })
       .catch(() => []);
     const profileById = new Map(profiles.map((p) => [p.userId, p]));
 
@@ -230,7 +230,8 @@ export async function runDonationLapsedReminders(
       const donor = donorById.get(donorId);
       if (!donor) { row.skipped += 1; summary.skipped += 1; bump(row.reasons, "DONOR_NOT_FOUND"); continue; }
 
-      // Re-engagement is marketing, not a receipt  consent is mandatory.
+      // Re-engagement is marketing. WhatsApp follows explicit STOP and the shared frequency limit;
+      // email and SMS continue to follow their channel preferences.
       const eligibility = donorChannelEligibility(
         { email: donor.email, phone: donor.phone, emailNotifications: donor.emailNotifications, smsNotifications: donor.smsNotifications },
         channel,

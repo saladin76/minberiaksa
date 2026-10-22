@@ -1,13 +1,12 @@
 import { prisma } from "@/lib/prisma";
 import { recipientExclusionReason, type AudienceChannel } from "./campaign-audience-accounting";
 
-type ConsentRow = { id: string; userId: string; doNotContact: boolean; emailOptIn: boolean; smsOptIn: boolean; whatsappOptIn: boolean };
+type ConsentRow = { id: string; userId: string; doNotContact: boolean; emailOptIn: boolean; smsOptIn: boolean; consentSource: string | null };
 
 /**
- * Resolve only consent, not contact readiness. Required Boolean fields receive
- * Prisma's model defaults on read, including legacy missing fields. This avoids
- * unsupported BoolFilter.isSet and does not manufacture or update preferences.
- * Used only when an operator explicitly selects a readiness filter.
+ * Resolve channel readiness without writing preferences. Missing WhatsApp profiles remain eligible;
+ * explicit STOP profiles and platform-wide blocks do not. Used only when an operator selects a
+ * readiness filter.
  */
 export async function readCampaignConsentUserIds(channel: AudienceChannel, signal?: AbortSignal): Promise<string[]> {
   signal?.throwIfAborted();
@@ -20,7 +19,7 @@ export async function readCampaignConsentUserIds(channel: AudienceChannel, signa
     const rows: ConsentRow[] = await prisma.donorCommunicationProfile.findMany({
       where: { id: { lte: last.id, ...(cursor ? { gt: cursor } : {}) } },
       orderBy: { id: "asc" }, take: 1000,
-      select: { id: true, userId: true, doNotContact: true, emailOptIn: true, smsOptIn: true, whatsappOptIn: true },
+      select: { id: true, userId: true, doNotContact: true, emailOptIn: true, smsOptIn: true, consentSource: true },
     });
     if (!rows.length) break;
     for (const profile of rows) {
@@ -32,6 +31,28 @@ export async function readCampaignConsentUserIds(channel: AudienceChannel, signa
     if (cursor && next <= cursor) throw new Error("CONSENT_CURSOR_NOT_ADVANCING");
     cursor = next;
     if (rows.length < 1000) break;
+  }
+  if (channel === "WHATSAPP") {
+    let userCursor: string | null = null;
+    while (true) {
+      signal?.throwIfAborted();
+      const users: Array<{ id: string }> = await prisma.user.findMany({
+        where: {
+          role: "DONOR",
+          communicationProfile: null,
+          ...(userCursor ? { id: { gt: userCursor } } : {}),
+        },
+        orderBy: { id: "asc" },
+        take: 1000,
+        select: { id: true },
+      });
+      if (!users.length) break;
+      for (const user of users) ids.add(user.id);
+      const next = users[users.length - 1].id;
+      if (userCursor && next <= userCursor) throw new Error("AUDIENCE_CURSOR_NOT_ADVANCING");
+      userCursor = next;
+      if (users.length < 1000) break;
+    }
   }
   signal?.throwIfAborted();
   return [...ids];

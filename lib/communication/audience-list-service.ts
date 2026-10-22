@@ -284,7 +284,7 @@ export async function loadListMembers(listId: string): Promise<ResolvedListMembe
     : [];
   const dMap = new Map(donors.map((d) => [d.id, d]));
   const profiles = donorIds.length
-    ? await prisma.donorCommunicationProfile.findMany({ where: { userId: { in: donorIds } }, select: { userId: true, whatsappOptIn: true, emailOptIn: true, smsOptIn: true, doNotContact: true } }).catch(() => [])
+    ? await prisma.donorCommunicationProfile.findMany({ where: { userId: { in: donorIds } }, select: { userId: true, emailOptIn: true, smsOptIn: true, doNotContact: true, consentSource: true } }).catch(() => [])
     : [];
   const pMap = new Map(profiles.map((p) => [p.userId, p]));
 
@@ -351,8 +351,8 @@ export async function loadListMembersPage(
   return { members, nextCursor, exhausted };
 }
 
-/** Channel eligibility for a resolved member (donors use consent; test contacts just need contact info). */
-export function memberEligibleForChannel(m: ResolvedListMember, channel: CommunicationChannelId, profile?: { doNotContact?: boolean; emailOptIn?: boolean; smsOptIn?: boolean; whatsappOptIn?: boolean } | null): boolean {
+/** Donors use channel preferences, with WhatsApp STOP suppression; test contacts need contact info. */
+export function memberEligibleForChannel(m: ResolvedListMember, channel: CommunicationChannelId, profile?: { doNotContact?: boolean; emailOptIn?: boolean; smsOptIn?: boolean; whatsappOptIn?: boolean; consentSource?: string | null } | null): boolean {
   if (m.contactType === "TEST_CONTACT") {
     if (channel === "EMAIL") return !!m.email;
     return !!m.phone; // WHATSAPP / SMS

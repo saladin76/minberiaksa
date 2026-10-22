@@ -61,7 +61,7 @@ export function CampaignControlsDialog({
     emergencyStop: boolean;
     whatsappMarketingCooldownDays: number;
     canManage: boolean;
-  }>({ emergencyStop: false, whatsappMarketingCooldownDays: 7, canManage: false });
+  }>({ emergencyStop: false, whatsappMarketingCooldownDays: 0, canManage: false });
   const [loading, setLoading] = React.useState(false);
   const [saving, setSaving] = React.useState(false);
   const [savingCooldown, setSavingCooldown] = React.useState(false);
@@ -75,7 +75,7 @@ export function CampaignControlsDialog({
         if (!res.ok || !data.ok) throw new Error(data.error ?? "load failed");
         setControls(data.controls);
         setUsage(data.usage ?? null);
-        setGlobalState(data.global ?? { emergencyStop: false, whatsappMarketingCooldownDays: 7, canManage: false });
+        setGlobalState(data.global ?? { emergencyStop: false, whatsappMarketingCooldownDays: 0, canManage: false });
       })
       .catch(() => toast.error(dt("تعذّر تحميل إعدادات الإرسال")))
       .finally(() => setLoading(false));
@@ -233,18 +233,19 @@ export function CampaignControlsDialog({
                   <p className="mt-1 text-xs text-slate-500">
                     {dt("لا تُرسل للمتبرع رسالة تسويقية جديدة قبل مرور هذه المدة من آخر رسالة تسويقية. لا يشمل الإيصالات والردود على من بدأ المحادثة.")}
                   </p>
+                  <p className="mt-1 text-xs font-medium text-brand">{dt("اجعلها 0 للسماح بالإرسال دون فاصل، أو حدّد عدد الأيام الذي تريده.")}</p>
                 </div>
                 <div className="flex items-center gap-2">
                   <label className="flex items-center gap-2 text-xs text-slate-600">
                     <input
                       type="number"
-                      min={1}
+                      min={0}
                       max={365}
                       value={globalState.whatsappMarketingCooldownDays}
                       disabled={!globalState.canManage || savingCooldown}
                       onChange={(event) => setGlobalState((current) => ({
                         ...current,
-                        whatsappMarketingCooldownDays: Math.min(365, Math.max(1, Number(event.target.value) || 1)),
+                        whatsappMarketingCooldownDays: Math.min(365, Math.max(0, Number(event.target.value) || 0)),
                       }))}
                       className="h-10 w-24 rounded-lg border border-slate-200 px-3 text-sm"
                       dir="ltr"

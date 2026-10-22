@@ -40,7 +40,7 @@ function breakdownFromPreview(channel: CommunicationChannelId, preview: SmartAud
 async function profilesFor(ids: string[]) {
   return ids.length ? prisma.donorCommunicationProfile.findMany({
     where: { userId: { in: [...new Set(ids)] } },
-    select: { userId: true, whatsappOptIn: true, emailOptIn: true, smsOptIn: true, doNotContact: true },
+    select: { userId: true, emailOptIn: true, smsOptIn: true, doNotContact: true, consentSource: true },
   }) : [];
 }
 
@@ -60,7 +60,7 @@ export async function getRecipientBreakdown(
     while (true) {
       const page: Awaited<ReturnType<typeof readCampaignListPage>> = await readCampaignListPage(listId, { limit: 1000, cursorId: cursor });
       const ids = page.members.filter((member) => !member.missingDonor).map((member) => member.userId);
-      // Preserve the existing email/SMS bootstrap. Never infer WhatsApp consent.
+      // Preview stays read-only for WhatsApp; no opt-in is inferred or profile written.
       if (channel !== "WHATSAPP" && ids.length) await ensureProfilesForUsers(ids);
       const byUser = new Map((await profilesFor(ids)).map((profile) => [profile.userId, profile]));
       for (const member of page.members) {
@@ -158,7 +158,7 @@ export async function loadCampaignRecipients(
     nextCursor = users.length ? users[users.length - 1].id : cursor;
   }
   const ids = members.filter((member) => !member.missingDonor).map((member) => member.userId);
-  if (bootstrapLegacy && channel !== "WHATSAPP" && ids.length) await ensureProfilesForUsers(ids);
+  if (bootstrapLegacy && ids.length) await ensureProfilesForUsers(ids);
   const byUser = new Map((await profilesFor(ids)).map((profile) => [profile.userId, profile]));
   const recipients: CampaignRecipient[] = [];
   const skipped: RecipientLoadResult["skipped"] = [];

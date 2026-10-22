@@ -22,10 +22,10 @@ function loadFrequencyModule(dependencies: Record<string, unknown>) {
   });
   return loaded.exports as {
     reserveWhatsappMarketingSend: (userId: string | null, now?: Date) => Promise<
-      | { ok: true; reservation: { userId: string; reservedAt: Date; previousAt: Date | null } }
+      | { ok: true; reservation: { userId: string | null; reservedAt: Date; previousAt: Date | null; reserved: boolean } }
       | { ok: false; reason: string }
     >;
-    releaseWhatsappMarketingReservation: (reservation: { userId: string; reservedAt: Date; previousAt: Date | null }) => Promise<void>;
+    releaseWhatsappMarketingReservation: (reservation: { userId: string | null; reservedAt: Date; previousAt: Date | null; reserved: boolean }) => Promise<void>;
   };
 }
 
@@ -66,6 +66,7 @@ function harness(options: {
           },
         },
         donorCommunicationProfile: {
+          upsert: async () => ({ userId: "donor" }),
           findUnique: async () => {
             if (options.failProfileRead) throw new Error("unavailable");
             return { lastWhatsappMarketingAt: lastAt };
@@ -101,12 +102,12 @@ function harness(options: {
       },
     },
     "./campaign-send-controls": {
-      DEFAULT_WHATSAPP_MARKETING_COOLDOWN_DAYS: 7,
-      MIN_WHATSAPP_MARKETING_COOLDOWN_DAYS: 1,
+      DEFAULT_WHATSAPP_MARKETING_COOLDOWN_DAYS: 0,
+      MIN_WHATSAPP_MARKETING_COOLDOWN_DAYS: 0,
       MAX_WHATSAPP_MARKETING_COOLDOWN_DAYS: 365,
       readCampaignGlobalControls: async () => {
         if (options.failGlobalRead) return { ok: false };
-        return { ok: true, controls: { emergencyStop: false, whatsappMarketingCooldownDays: options.cooldownDays ?? 7 } };
+        return { ok: true, controls: { emergencyStop: false, whatsappMarketingCooldownDays: options.cooldownDays ?? 0 } };
       },
     },
   };
@@ -116,7 +117,7 @@ function harness(options: {
 
 test("a WhatsApp marketing reservation atomically admits only one concurrent send per donor", async () => {
   const now = new Date("2026-10-22T12:00:00.000Z");
-  const h = harness();
+  const h = harness({ cooldownDays: 7 });
   const results = await Promise.all([
     h.module.reserveWhatsappMarketingSend("donor", now),
     h.module.reserveWhatsappMarketingSend("donor", now),
@@ -128,7 +129,7 @@ test("a WhatsApp marketing reservation atomically admits only one concurrent sen
 
 test("a recent legacy marketing delivery blocks a send before the new profile timestamp is populated", async () => {
   const now = new Date("2026-10-22T12:00:00.000Z");
-  const h = harness({ historicalSendAt: new Date(now.getTime() - 6 * 24 * 60 * 60 * 1000) });
+  const h = harness({ cooldownDays: 7, historicalSendAt: new Date(now.getTime() - 6 * 24 * 60 * 60 * 1000) });
   const result = await h.module.reserveWhatsappMarketingSend("donor", now);
   assert.equal(result.ok, false);
   if (!result.ok) assert.equal(result.reason, "WHATSAPP_MARKETING_COOLDOWN");
@@ -144,10 +145,29 @@ test("the admin-configured cooldown duration controls eligibility", async () => 
   assert.equal(h.current()?.getTime(), new Date(now.getTime() - 4 * 24 * 60 * 60 * 1000).getTime());
 });
 
+test("zero cooldown disables the frequency gate even when recent marketing sends exist", async () => {
+  const now = new Date("2026-10-22T12:00:00.000Z");
+  const recent = new Date(now.getTime() - 60 * 60 * 1000);
+  const h = harness({ cooldownDays: 0, initialAt: recent, historicalSendAt: recent });
+  const result = await h.module.reserveWhatsappMarketingSend("donor", now);
+  assert.equal(result.ok, true);
+  assert.equal(h.calls.reservations, 0);
+  assert.equal(h.calls.historyChecks, 0);
+  assert.equal(h.current()?.getTime(), recent.getTime());
+  if (result.ok) await h.module.releaseWhatsappMarketingReservation(result.reservation);
+  assert.equal(h.current()?.getTime(), recent.getTime());
+});
+
+test("zero cooldown also permits an unlinked recipient", async () => {
+  const h = harness({ cooldownDays: 0 });
+  const result = await h.module.reserveWhatsappMarketingSend(null);
+  assert.equal(result.ok, true);
+});
+
 test("frequency configuration or profile read failures fail closed", async () => {
   const now = new Date("2026-10-22T12:00:00.000Z");
   const globalFailure = harness({ failGlobalRead: true });
-  const profileFailure = harness({ failProfileRead: true });
+  const profileFailure = harness({ failProfileRead: true, cooldownDays: 7 });
   const globalResult = await globalFailure.module.reserveWhatsappMarketingSend("donor", now);
   const profileResult = await profileFailure.module.reserveWhatsappMarketingSend("donor", now);
   assert.equal(globalResult.ok, false);

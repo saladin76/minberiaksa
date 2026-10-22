@@ -260,14 +260,14 @@ export async function previewSmartAudience(
       // Explicit result type breaks Prisma's recursive cursor inference (TS7022).
       const page: Array<SmartUserRow & {
         communicationProfile: Prisma.DonorCommunicationProfileGetPayload<{
-          select: { doNotContact: true; emailOptIn: true; smsOptIn: true; whatsappOptIn: true };
+          select: { doNotContact: true; emailOptIn: true; smsOptIn: true; consentSource: true };
         }> | null;
       }> = await prisma.user.findMany({
         where: { AND: [where, { id: { lte: last.id, ...(cursor ? { gt: cursor } : {}) } }] },
         select: {
           id: true, name: true, email: true, phone: true,
           preferredLang: true, countryCode: true, emailNotifications: true, smsNotifications: true,
-          communicationProfile: { select: { doNotContact: true, emailOptIn: true, smsOptIn: true, whatsappOptIn: true } },
+          communicationProfile: { select: { doNotContact: true, emailOptIn: true, smsOptIn: true, consentSource: true } },
         },
         orderBy: { id: "asc" },
         take: 1000,

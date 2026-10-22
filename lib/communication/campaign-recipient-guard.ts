@@ -22,7 +22,7 @@ export async function checkCampaignRecipientBeforeSend(
       where: { id: userId },
       select: {
         email: true, phone: true,
-        communicationProfile: { select: { doNotContact: true, emailOptIn: true, smsOptIn: true, whatsappOptIn: true } },
+        communicationProfile: { select: { doNotContact: true, emailOptIn: true, smsOptIn: true, consentSource: true } },
       },
     });
     if (!donor) return { ok: false, reason: "RECIPIENT_NOT_FOUND" };

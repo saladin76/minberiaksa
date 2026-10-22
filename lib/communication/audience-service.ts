@@ -7,8 +7,8 @@ import { previewSmartAudience } from "./smart-audience";
 
 /**
  * Dynamic audiences computed from donors, not manually maintained channel lists.
- * Membership and permission to send are separate. The communication profile is
- * authoritative; no missing preference is turned into an opt-in by this module.
+ * Email and SMS preferences are checked from the communication profile. WhatsApp
+ * candidates are checked for contact details and explicit STOP requests.
  * Read-only: no writes, no sends, no provider calls.
  */
 export type ChannelEligibility = "ELIGIBLE" | "NEEDS_REVIEW" | "UNAVAILABLE";
@@ -103,6 +103,7 @@ export function donorChannelEligibility(
     emailOptIn?: boolean;
     smsOptIn?: boolean;
     whatsappOptIn?: boolean;
+    consentSource?: string | null;
   } | null
 ): ChannelEligibility {
   const reason = recipientExclusionReason(donor, channel, profile);

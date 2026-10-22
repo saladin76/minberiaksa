@@ -9,6 +9,12 @@ import type { CommunicationPurposeId } from "./communication-runtime-types";
 import { getActiveMetaWhatsappRuntimeConfig } from "./runtime-config";
 import { prisma } from "@/lib/prisma";
 import { ensureProfilesForUsers } from "./donor-communication-profile-service";
+import { retryDefinitelyNotSent } from "./retry-recipient-guard";
+import {
+  reserveWhatsappMarketingSend,
+  releaseWhatsappMarketingReservation,
+  type WhatsAppMarketingReservation,
+} from "./whatsapp-marketing-frequency";
 
 /**
  * Automatic (trigger-fired) message dispatcher for the Communication Center.
@@ -73,21 +79,20 @@ async function automaticConsentBlock(
     doNotContact: boolean;
     emailOptIn: boolean;
     smsOptIn: boolean;
-    whatsappOptIn: boolean;
+    consentSource: string | null;
   } | null;
   try {
     await ensureProfilesForUsers([userId]);
     profile = await prisma.donorCommunicationProfile.findUnique({
       where: { userId },
-      select: { doNotContact: true, emailOptIn: true, smsOptIn: true, whatsappOptIn: true },
+      select: { doNotContact: true, emailOptIn: true, smsOptIn: true, consentSource: true },
     });
   } catch {
     return "CONSENT_CHECK_UNAVAILABLE";
   }
 
   if (profile?.doNotContact) return "DO_NOT_CONTACT";
-  // Meta requires prior opt-in for business-initiated WhatsApp messages, including utility notices.
-  if (channel === "WHATSAPP" && profile?.whatsappOptIn !== true) return "WHATSAPP_OPT_IN_REQUIRED";
+  if (channel === "WHATSAPP" && profile?.consentSource === "meta-whatsapp-inbound-opt-out") return "DO_NOT_CONTACT";
   if (channel === "SMS" && profile?.smsOptIn !== true) return "SMS_OPT_IN_REQUIRED";
   if (channel === "EMAIL" && purpose === "MARKETING" && profile?.emailOptIn !== true) return "EMAIL_MARKETING_OPT_IN_REQUIRED";
   return null;
@@ -267,6 +272,15 @@ export async function sendAutomaticWhatsappMessage(
     return { outcome: "FAILED", reason: "ARCHIVE_FAILED" };
   }
   const id = created.data.id;
+  const skipForRecipientPreference = async (reason: string): Promise<AutomaticResult> => {
+    await markDeliveryStatus(id, "SKIPPED", { errorMessage: reason });
+    await mirrorSentMessage("WHATSAPP", input, "SKIPPED", {
+      recipientPhone: input.recipientPhone,
+      renderedBody: input.renderedBody,
+      errorMessage: reason,
+    });
+    return { outcome: "SKIPPED", reason };
+  };
 
   if (!input.sender?.phoneNumberId) {
     await markDeliveryStatus(id, "SKIPPED", { errorMessage: "META_SENDER_MISSING_PHONE_NUMBER_ID" });
@@ -290,6 +304,8 @@ export async function sendAutomaticWhatsappMessage(
         ? "utility"
         : null;
   if (directCategory && process.env.META_WHATSAPP_DIRECT_SEND_ENABLED === "true") {
+    const liveBlock = await automaticConsentBlock(input.recipientUserId, "WHATSAPP", input.purpose);
+    if (liveBlock) return skipForRecipientPreference(liveBlock);
     const runtime = await getActiveMetaWhatsappRuntimeConfig();
     const { sendDirectTextMessage } = await import("./providers/meta-whatsapp/messages");
     const direct = await sendDirectTextMessage(
@@ -359,6 +375,27 @@ export async function sendAutomaticWhatsappMessage(
     return { outcome: "SKIPPED", reason: built.reason };
   }
 
+  let frequencyReservation: WhatsAppMarketingReservation | null = null;
+  if (input.purpose === "MARKETING") {
+    const liveBlock = await automaticConsentBlock(input.recipientUserId, "WHATSAPP", input.purpose);
+    if (liveBlock) return skipForRecipientPreference(liveBlock);
+    const frequency = await reserveWhatsappMarketingSend(input.recipientUserId);
+    if (!frequency.ok) {
+      const failed = frequency.reason === "WHATSAPP_FREQUENCY_CHECK_UNAVAILABLE";
+      await markDeliveryStatus(id, failed ? "FAILED" : "SKIPPED", { errorMessage: frequency.reason });
+      await mirrorSentMessage("WHATSAPP", input, failed ? "FAILED" : "SKIPPED", {
+        recipientPhone: input.recipientPhone,
+        renderedBody: input.renderedBody,
+        errorMessage: frequency.reason,
+      });
+      return { outcome: failed ? "FAILED" : "SKIPPED", reason: frequency.reason };
+    }
+    frequencyReservation = frequency.reservation;
+  } else {
+    const liveBlock = await automaticConsentBlock(input.recipientUserId, "WHATSAPP", input.purpose);
+    if (liveBlock) return skipForRecipientPreference(liveBlock);
+  }
+
   const res = await sendPreparedDelivery({
     channel: "WHATSAPP",
     sender: { provider: "META_WHATSAPP", phoneNumberId: input.sender.phoneNumberId },
@@ -372,6 +409,9 @@ export async function sendAutomaticWhatsappMessage(
   if (!res.ok) {
     const terminal = isTerminalConfigReason(res.reason);
     const errorMessage = res.detail ? `${res.reason}  ${res.detail}` : res.reason;
+    if (frequencyReservation && retryDefinitelyNotSent(res.reason)) {
+      await releaseWhatsappMarketingReservation(frequencyReservation);
+    }
     await markDeliveryStatus(id, terminal ? "SKIPPED" : "FAILED", { errorMessage });
     await mirrorSentMessage("WHATSAPP", input, terminal ? "SKIPPED" : "FAILED", {
       recipientPhone: input.recipientPhone,
