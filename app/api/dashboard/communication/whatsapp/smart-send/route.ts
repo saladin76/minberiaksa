@@ -18,7 +18,7 @@ const sendSchema = z.object({
 });
 
 const consentSourceSchema = z.enum(["DONOR_WHATSAPP_MESSAGE", "WEB_FORM", "PAPER_FORM", "PHONE_OR_IN_PERSON", "OTHER_VERIFIED_SOURCE"]);
-const consentEvidenceSchema = z.string().trim().min(3).max(100).regex(/^[A-Za-z0-9_.:/#-]+$/);
+const consentEvidenceSchema = z.string().trim().min(3).max(100).regex(/^[A-Za-z0-9_.:\/#-]+$/);
 const consentSchema = z.object({
   userId: z.string().min(1),
   whatsappOptIn: z.boolean(),
