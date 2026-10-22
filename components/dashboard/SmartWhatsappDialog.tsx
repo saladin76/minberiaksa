@@ -70,6 +70,7 @@ export function SmartWhatsappDialog({
   const [templateId, setTemplateId] = React.useState("");
   const [consentConfirmed, setConsentConfirmed] = React.useState(false);
   const [consentSource, setConsentSource] = React.useState("");
+  const [consentEvidence, setConsentEvidence] = React.useState("");
   const [consentSaving, setConsentSaving] = React.useState(false);
 
   const load = React.useCallback(async () => {
@@ -82,6 +83,7 @@ export function SmartWhatsappDialog({
       setCtx(next);
       setConsentConfirmed(false);
       setConsentSource("");
+      setConsentEvidence("");
       const preferred = initialMode ?? (next.replyWindow.open ? "FREEFORM" : "UTILITY");
       if (preferred === "FREEFORM" && !next.replyWindow.open) setMode("UTILITY");
       else setMode(preferred);
@@ -167,14 +169,15 @@ export function SmartWhatsappDialog({
       const res = await fetch("/api/dashboard/communication/whatsapp/smart-send", {
         method: "PATCH",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ userId, whatsappOptIn: true, confirmed: true, consentSource }),
+        body: JSON.stringify({ userId, whatsappOptIn: true, confirmed: true, consentSource, consentEvidence }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok || !data.ok) throw new Error(data.error ?? "consent update failed");
       setCtx(data.context as SmartContext);
       setConsentConfirmed(false);
       setConsentSource("");
-      toast.success(dt("تم تسجيل الموافقة ومصدرها في سجل المتبرع."));
+      setConsentEvidence("");
+      toast.success(dt("تم تسجيل الموافقة ومصدرها ومرجعها في سجل المتبرع."));
     } catch {
       toast.error(dt("تعذّر تسجيل الموافقة. لم تتغير حالة المتبرع."));
     } finally {
@@ -255,7 +258,7 @@ export function SmartWhatsappDialog({
               {!ctx.whatsappOptIn && !ctx.consentCheckUnavailable && (
                 <div className="space-y-3 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
                   <p className="leading-5">
-                    {dt("لا تبدأ رسالة خدمة أو تسويق قبل أن يوافق المتبرع صراحة على تلقي رسائل واتساب. تسجيل التبرع أو وجود رقم هاتف لا يُعد موافقة.")}
+                    {dt("لا تبدأ رسالة خدمة أو تسويق قبل أن يوافق المتبرع صراحة على تلقي رسائل واتساب. تسجيل التبرع أو وجود رقم هاتف لا يُعد موافقة. سجّل الموافقة فقط عند وجود مرجع يمكن مراجعته، ومن دون إدخال بيانات شخصية هنا.")}
                   </p>
                   <label className="block space-y-1.5 font-semibold">
                     <span>{dt("مصدر الموافقة الموثقة")}</span>
@@ -265,11 +268,22 @@ export function SmartWhatsappDialog({
                       className="h-9 w-full rounded-lg border border-amber-300 bg-white px-2 text-xs"
                     >
                       <option value="">{dt("اختر المصدر")}</option>
+                      <option value="DONOR_WHATSAPP_MESSAGE">{dt("رسالة واتساب واردة من المتبرع تتضمن الموافقة")}</option>
                       <option value="WEB_FORM">{dt("نموذج إلكتروني يتضمن موافقة واتساب صريحة")}</option>
                       <option value="PAPER_FORM">{dt("نموذج ورقي")}</option>
                       <option value="PHONE_OR_IN_PERSON">{dt("تأكيد هاتفي أو مباشر موثق")}</option>
                       <option value="OTHER_VERIFIED_SOURCE">{dt("مصدر آخر موثق")}</option>
                     </select>
+                  </label>
+                  <label className="block space-y-1.5 font-semibold">
+                    <span>{dt("معرّف مرجع الموافقة (من دون بيانات شخصية)")}</span>
+                    <input
+                      value={consentEvidence}
+                      onChange={(event) => setConsentEvidence(event.target.value)}
+                      maxLength={100}
+                      placeholder={dt("مثال: CONSENT-1042")}
+                      className="h-9 w-full rounded-lg border border-amber-300 bg-white px-2 text-xs"
+                    />
                   </label>
                   <label className="flex items-start gap-2 leading-5">
                     <input
@@ -284,7 +298,7 @@ export function SmartWhatsappDialog({
                     size="sm"
                     variant="outline"
                     onClick={recordConsent}
-                    disabled={!consentConfirmed || !consentSource || consentSaving || sending}
+                    disabled={!consentConfirmed || !consentSource || consentEvidence.trim().length < 3 || consentSaving || sending}
                   >
                     {consentSaving && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
                     {dt("تسجيل الموافقة")}
