@@ -91,7 +91,9 @@ async function applyWhatsappOptOut(from: string | null): Promise<boolean> {
     });
     return true;
   } catch (error) {
-    console.error("WhatsApp inbound opt-out update failed", { from, error });
+    console.error("WhatsApp inbound opt-out update failed", {
+      errorName: error instanceof Error ? error.name : "UNKNOWN",
+    });
     return false;
   }
 }
