@@ -6,7 +6,7 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 import { requireAdminOrDashboardPermission } from "@/lib/dashboard/api-auth";
 import { auditActorFromDashboardSession, writeAuditLog } from "@/lib/audit-log";
 import { getCampaign } from "@/lib/communication/campaign-service";
-import { campaignEmergencyStopEnabled, campaignSendControls, isValidTimeZone, whatsappSentLast24Hours } from "@/lib/communication/campaign-send-controls";
+import { campaignSendControls, isValidTimeZone, readCampaignGlobalControls, whatsappSentLast24Hours } from "@/lib/communication/campaign-send-controls";
 import { mutateCampaignMetadata } from "@/lib/communication/campaign-metadata-store";
 
 export const runtime = "nodejs";
@@ -48,6 +48,10 @@ export async function GET(_: NextRequest, { params }: { params: Promise<{ id: st
   const campaign = await getCampaign(id);
   if (!campaign) return NextResponse.json({ ok: false, error: "Not found" }, { status: 404 });
   const controls = campaignSendControls(campaign);
+  const globalControls = await readCampaignGlobalControls();
+  if (!globalControls.ok) {
+    return NextResponse.json({ ok: false, error: "تعذّر تحميل إعدادات الإرسال العامة." }, { status: 503 });
+  }
   const usedLast24h = campaign.channel === "WHATSAPP" ? await whatsappSentLast24Hours() : 0;
   return NextResponse.json({
     ok: true,
@@ -57,7 +61,7 @@ export async function GET(_: NextRequest, { params }: { params: Promise<{ id: st
       remaining: campaign.channel === "WHATSAPP" ? Math.max(controls.dailyCap - usedLast24h, 0) : null,
     },
     global: {
-      emergencyStop: await campaignEmergencyStopEnabled(),
+      ...globalControls.controls,
       canManage: session?.user?.role === "ADMIN",
     },
   });

@@ -15,6 +15,12 @@ import { buildWhatsappRenderedPreview } from "./whatsapp-rendered-preview";
 import { isValidLocale, type SupportedLocale } from "@/lib/locales";
 import { writeAuditLog } from "@/lib/audit-log";
 import { touchProfileCommunication } from "./donor-communication-profile-service";
+import { retryDefinitelyNotSent } from "./retry-recipient-guard";
+import {
+  reserveWhatsappMarketingSend,
+  releaseWhatsappMarketingReservation,
+  type WhatsAppMarketingReservation,
+} from "./whatsapp-marketing-frequency";
 
 type Actor = { actorId?: string | null; actorName?: string | null; actorRole?: string | null } | null;
 export type SmartWhatsappMode = "AUTO" | "FREEFORM" | "UTILITY" | "MARKETING";
@@ -27,6 +33,7 @@ export type SmartWhatsappContext = {
   country: string | null;
   doNotContact: boolean;
   whatsappOptIn: boolean;
+  consentCheckUnavailable: boolean;
   directSendEnabled: boolean;
   conversationId: string | null;
   replyWindow: Awaited<ReturnType<typeof replyWindowFor>>;
@@ -56,7 +63,7 @@ function valuesFor(names: string[], ctx: unknown): Record<string, string> {
 }
 
 async function donor(userId: string) {
-  const [user, profile] = await Promise.all([
+  const [user, profileResult] = await Promise.all([
     prisma.user.findUnique({
       where: { id: userId },
       select: { id: true, name: true, phone: true, preferredLang: true, countryCode: true },
@@ -64,9 +71,10 @@ async function donor(userId: string) {
     prisma.donorCommunicationProfile.findUnique({
       where: { userId },
       select: { phone: true, preferredLocale: true, countryCode: true, doNotContact: true, whatsappOptIn: true },
-    }).catch(() => null),
+    }).then((value) => ({ value, unavailable: false })).catch(() => ({ value: null, unavailable: true })),
   ]);
   if (!user) return null;
+  const profile = profileResult.value;
   return {
     id: user.id,
     name: user.name,
@@ -75,6 +83,7 @@ async function donor(userId: string) {
     country: profile?.countryCode ?? user.countryCode ?? null,
     doNotContact: profile?.doNotContact ?? false,
     whatsappOptIn: profile?.whatsappOptIn ?? false,
+    consentCheckUnavailable: profileResult.unavailable,
   };
 }
 
@@ -137,6 +146,7 @@ export async function getSmartWhatsappContext(userId: string): Promise<SmartWhat
     country: d.country,
     doNotContact: d.doNotContact,
     whatsappOptIn: d.whatsappOptIn,
+    consentCheckUnavailable: d.consentCheckUnavailable,
     directSendEnabled: process.env.META_WHATSAPP_DIRECT_SEND_ENABLED === "true",
     conversationId: convId,
     replyWindow,
@@ -258,17 +268,59 @@ async function sendApprovedTemplateForDonor(args: {
   });
   if (!created.ok) return { ok: false, reason: "ARCHIVE_FAILED" };
 
+  let frequencyReservation: WhatsAppMarketingReservation | null = null;
+  if (args.expected === "MARKETING") {
+    const frequency = await reserveWhatsappMarketingSend(args.ctx.userId);
+    if (!frequency.ok) {
+      await markDeliveryStatus(
+        created.data.id,
+        frequency.reason === "WHATSAPP_MARKETING_COOLDOWN" ? "SKIPPED" : "FAILED",
+        { errorMessage: frequency.reason },
+      );
+      return { ok: false, reason: frequency.reason };
+    }
+    frequencyReservation = frequency.reservation;
+  }
+  if (frequencyReservation) {
+    let liveProfile: { doNotContact: boolean; whatsappOptIn: boolean } | null;
+    try {
+      liveProfile = await prisma.donorCommunicationProfile.findUnique({
+        where: { userId: args.ctx.userId },
+        select: { doNotContact: true, whatsappOptIn: true },
+      });
+    } catch {
+      await releaseWhatsappMarketingReservation(frequencyReservation);
+      await markDeliveryStatus(created.data.id, "FAILED", { errorMessage: "CONSENT_CHECK_UNAVAILABLE" });
+      return { ok: false, reason: "CONSENT_CHECK_UNAVAILABLE" };
+    }
+    if (!liveProfile || liveProfile.doNotContact || liveProfile.whatsappOptIn !== true) {
+      await releaseWhatsappMarketingReservation(frequencyReservation);
+      const reason = !liveProfile ? "CONSENT_CHECK_UNAVAILABLE" : liveProfile.doNotContact ? "DO_NOT_CONTACT" : "WHATSAPP_OPT_IN_REQUIRED";
+      await markDeliveryStatus(created.data.id, reason === "CONSENT_CHECK_UNAVAILABLE" ? "FAILED" : "SKIPPED", { errorMessage: reason });
+      return { ok: false, reason };
+    }
+  }
+
   const { sendTemplateMessage } = await import("./providers/meta-whatsapp/messages");
   const runtime = await getActiveMetaWhatsappRuntimeConfig();
-  const sent = await sendTemplateMessage({
-    phoneNumberId: args.sender.phoneNumberId!,
-    to: args.ctx.phone!,
-    templateName: mapping.name,
-    languageCode: mapping.language,
-    components: built.components,
-  }, runtime);
+  let sent: Awaited<ReturnType<typeof sendTemplateMessage>>;
+  try {
+    sent = await sendTemplateMessage({
+      phoneNumberId: args.sender.phoneNumberId!,
+      to: args.ctx.phone!,
+      templateName: mapping.name,
+      languageCode: mapping.language,
+      components: built.components,
+    }, runtime);
+  } catch {
+    await markDeliveryStatus(created.data.id, "FAILED", { errorMessage: "DELIVERY_OUTCOME_UNCERTAIN" });
+    return { ok: false, reason: "DELIVERY_OUTCOME_UNCERTAIN" };
+  }
 
   if (!sent.ok) {
+    if (frequencyReservation && retryDefinitelyNotSent(sent.reason)) {
+      await releaseWhatsappMarketingReservation(frequencyReservation);
+    }
     await markDeliveryStatus(created.data.id, "FAILED", { errorMessage: sent.detail ? `${sent.reason}  ${sent.detail}` : sent.reason });
     return { ok: false, reason: sent.reason, detail: sent.detail ?? null };
   }
@@ -322,6 +374,10 @@ export async function sendSmartWhatsapp(input: {
   // A platform-level do-not-contact block applies to every outbound path,
   // including free-form replies inside Meta's 24-hour window.
   if (ctx.doNotContact) return { ok: false, reason: "DO_NOT_CONTACT" };
+  if (ctx.consentCheckUnavailable) return { ok: false, reason: "CONSENT_CHECK_UNAVAILABLE" };
+  // Free-form replies are permitted only inside the open customer-service window. Any
+  // business-initiated utility or marketing send requires recorded WhatsApp opt-in.
+  if (mode !== "FREEFORM" && !ctx.whatsappOptIn) return { ok: false, reason: "WHATSAPP_OPT_IN_REQUIRED" };
 
   if (mode === "FREEFORM") {
     if (!ctx.conversationId || !ctx.replyWindow.open) return { ok: false, reason: "REPLY_WINDOW_CLOSED" };

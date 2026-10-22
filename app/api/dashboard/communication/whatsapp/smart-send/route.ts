@@ -17,10 +17,21 @@ const sendSchema = z.object({
   templateId: z.string().min(1).nullable().optional(),
 });
 
+const consentSourceSchema = z.enum(["DONOR_WHATSAPP_MESSAGE", "WEB_FORM", "PAPER_FORM", "PHONE_OR_IN_PERSON", "OTHER_VERIFIED_SOURCE"]);
+const consentEvidenceSchema = z.string().trim().min(3).max(100).regex(/^[A-Za-z0-9_.:\/#-]+$/);
 const consentSchema = z.object({
   userId: z.string().min(1),
   whatsappOptIn: z.boolean(),
   confirmed: z.literal(true),
+  consentSource: consentSourceSchema.optional(),
+  consentEvidence: consentEvidenceSchema.optional(),
+}).superRefine((value, context) => {
+  if (value.whatsappOptIn && !value.consentSource) {
+    context.addIssue({ code: "custom", path: ["consentSource"], message: "A verified consent source is required." });
+  }
+  if (value.whatsappOptIn && !value.consentEvidence) {
+    context.addIssue({ code: "custom", path: ["consentEvidence"], message: "A consent evidence reference is required." });
+  }
 });
 
 export async function GET(request: NextRequest) {
@@ -59,7 +70,8 @@ export async function POST(request: NextRequest) {
   if (!result.ok) {
     const status =
       result.reason === "REPLY_WINDOW_CLOSED" ? 409
-      : result.reason === "DO_NOT_CONTACT" ? 403
+      : result.reason === "DO_NOT_CONTACT" || result.reason === "WHATSAPP_OPT_IN_REQUIRED" ? 403
+      : result.reason === "CONSENT_CHECK_UNAVAILABLE" ? 503
       : result.reason.includes("NOT_FOUND") ? 404
       : 422;
     return NextResponse.json({ ok: false, error: result.reason, detail: result.detail ?? null }, { status });
@@ -84,8 +96,8 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ ok: false, error: "Invalid payload", issues: parsed.error.flatten() }, { status: 400 });
   }
 
-  // A failed/paid donation proves that the phone is reachable; it does not prove marketing consent.
-  // This endpoint is therefore an explicit human-confirmation action and is audit stamped.
+  // A donation proves that the phone is reachable; it does not prove WhatsApp opt-in.
+  // The operator must attest that the donor explicitly opted in and record where that consent was received.
   const synced = await upsertProfileForUser(parsed.data.userId);
   if (!synced.ok) {
     return NextResponse.json({ ok: false, error: synced.error }, { status: synced.status });
@@ -96,7 +108,9 @@ export async function PATCH(request: NextRequest) {
     parsed.data.userId,
     {
       whatsappOptIn: parsed.data.whatsappOptIn,
-      consentSource: parsed.data.whatsappOptIn ? "dashboard-manual-whatsapp-confirmation" : "dashboard-manual-whatsapp-revocation",
+      consentSource: parsed.data.whatsappOptIn
+        ? `dashboard-whatsapp-opt-in:${parsed.data.consentSource}:${parsed.data.consentEvidence}`
+        : "dashboard-manual-whatsapp-revocation",
     },
     actor,
   );

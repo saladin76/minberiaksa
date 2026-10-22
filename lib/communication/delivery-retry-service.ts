@@ -8,6 +8,11 @@ import { buildMetaComponents } from "./providers/meta-whatsapp/parameters";
 import { resolveSmsProvider } from "./providers/sms/client";
 import { checkRetryRecipient, retryDefinitelyNotSent, type RetryRecipientCode } from "./retry-recipient-guard";
 import {
+  reserveWhatsappMarketingSend,
+  releaseWhatsappMarketingReservation,
+  type WhatsAppMarketingReservation,
+} from "./whatsapp-marketing-frequency";
+import {
   RETRYABLE_STATUSES, NON_RETRYABLE_TERMINAL, isCommunicationChannel,
   type CommunicationChannelId, type CommunicationProviderId,
   type CommunicationPurposeId, type DeliveryOriginId,
@@ -20,6 +25,7 @@ export type RetryOutcomeCode = RetryRecipientCode
   | "NO_SENDER_IDENTITY" | "TEMPLATE_PARAMETER_MISSING" | "TEMPLATE_HEADER_MEDIA_MISSING"
   | "ARCHIVE_FAILED" | "PROVIDER_REJECTED" | "RETRY_ORIGINAL_REQUIRED"
   | "DELIVERY_OUTCOME_UNCERTAIN" | "ACCEPTED_UNRECORDED"
+  | "WHATSAPP_MARKETING_COOLDOWN" | "WHATSAPP_FREQUENCY_CHECK_UNAVAILABLE"
   | "DONATION_WAQF_LINK_REQUIRES_CERTIFICATE_ID" | "DONATION_DOCUMENT_CONTEXT_MISSING"
   | "DONATION_DOCUMENT_RECIPIENT_MISMATCH" | "DONATION_DOCUMENT_ACCESS_TOKEN_UNAVAILABLE";
 export type RetryResult = {
@@ -53,6 +59,8 @@ const MESSAGES: Record<RetryOutcomeCode, string> = {
   RETRY_ORIGINAL_REQUIRED: "أعد المحاولة من الرسالة الأصلية، وليس من سجل محاولة فرعية",
   DELIVERY_OUTCOME_UNCERTAIN: "نتيجة المزوّد غير مؤكدة؛ راجعها قبل السماح بمحاولة جديدة",
   ACCEPTED_UNRECORDED: "قبل المزوّد الرسالة لكن تعذّر تحديث سجلها؛ لا تُعد إرسالها",
+  WHATSAPP_MARKETING_COOLDOWN: "لم تُرسل الرسالة؛ لم يمرّ الفاصل المحدد منذ آخر رسالة تسويقية لهذا المتبرع",
+  WHATSAPP_FREQUENCY_CHECK_UNAVAILABLE: "تعذّر التحقق من الفاصل بين الرسائل؛ لم يُطلب الإرسال",
 };
 function result(deliveryId: string, code: RetryOutcomeCode, extra: Partial<RetryResult> = {}): RetryResult {
   return { deliveryId, code, ok: code === "SENT", message: MESSAGES[code], ...extra };
@@ -221,8 +229,24 @@ export async function retryDelivery(deliveryId: string, opts: { actorId?: string
     await releaseClaim();
     return result(deliveryId, "ARCHIVE_FAILED", { ...base, newDeliveryId: newId });
   }
+  let frequencyReservation: WhatsAppMarketingReservation | null = null;
+  if (row.channel === "WHATSAPP" && row.purpose === "MARKETING") {
+    const frequency = await reserveWhatsappMarketingSend(row.recipientUserId);
+    if (!frequency.ok) {
+      await markDeliveryStatus(
+        newId,
+        frequency.reason === "WHATSAPP_MARKETING_COOLDOWN" ? "SKIPPED" : "FAILED",
+        { errorMessage: frequency.reason },
+      );
+      await releaseClaim();
+      return result(deliveryId, frequency.reason, { ...base, newDeliveryId: newId });
+    }
+    frequencyReservation = frequency.reservation;
+  }
+  // Recipient status, consent, and contact are rechecked after reserving the slot.
   const live = await checkRetryRecipient(row, recipient);
   if (!live.ok) {
+    if (frequencyReservation) await releaseWhatsappMarketingReservation(frequencyReservation);
     await markDeliveryStatus(newId, live.code === "CONSENT_BLOCKED" ? "SKIPPED" : "FAILED", { errorMessage: live.code });
     await releaseClaim();
     return result(deliveryId, live.code, { ...base, newDeliveryId: newId });
@@ -240,6 +264,9 @@ export async function retryDelivery(deliveryId: string, opts: { actorId?: string
   if (!response.ok) {
     const detail = response.detail ? `${response.reason}  ${response.detail}` : response.reason;
     const knownUnsent = retryDefinitelyNotSent(response.reason);
+    if (knownUnsent && frequencyReservation) {
+      await releaseWhatsappMarketingReservation(frequencyReservation);
+    }
     await markDeliveryStatus(newId, "FAILED", { errorMessage: knownUnsent ? detail : `DELIVERY_OUTCOME_UNCERTAIN: ${detail}` });
     if (knownUnsent) await releaseClaim();
     return result(deliveryId, knownUnsent ? "PROVIDER_REJECTED" : "DELIVERY_OUTCOME_UNCERTAIN", { ...base, detail, newDeliveryId: newId });

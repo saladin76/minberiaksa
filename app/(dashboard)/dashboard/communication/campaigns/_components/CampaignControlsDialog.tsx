@@ -57,9 +57,14 @@ export function CampaignControlsDialog({
 }) {
   const [controls, setControls] = React.useState<Controls | null>(null);
   const [usage, setUsage] = React.useState<{ usedLast24h: number; remaining: number | null } | null>(null);
-  const [globalState, setGlobalState] = React.useState<{ emergencyStop: boolean; canManage: boolean }>({ emergencyStop: false, canManage: false });
+  const [globalState, setGlobalState] = React.useState<{
+    emergencyStop: boolean;
+    whatsappMarketingCooldownDays: number;
+    canManage: boolean;
+  }>({ emergencyStop: false, whatsappMarketingCooldownDays: 7, canManage: false });
   const [loading, setLoading] = React.useState(false);
   const [saving, setSaving] = React.useState(false);
+  const [savingCooldown, setSavingCooldown] = React.useState(false);
 
   React.useEffect(() => {
     if (!open) return;
@@ -70,7 +75,7 @@ export function CampaignControlsDialog({
         if (!res.ok || !data.ok) throw new Error(data.error ?? "load failed");
         setControls(data.controls);
         setUsage(data.usage ?? null);
-        setGlobalState(data.global ?? { emergencyStop: false, canManage: false });
+        setGlobalState(data.global ?? { emergencyStop: false, whatsappMarketingCooldownDays: 7, canManage: false });
       })
       .catch(() => toast.error(dt("تعذّر تحميل إعدادات الإرسال")))
       .finally(() => setLoading(false));
@@ -91,11 +96,40 @@ export function CampaignControlsDialog({
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok || !data.ok) throw new Error(data.error ?? dt("تعذّر تحديث إيقاف الطوارئ"));
-      setGlobalState((current) => ({ ...current, emergencyStop: Boolean(data.emergencyStop) }));
+      setGlobalState((current) => ({
+        ...current,
+        emergencyStop: Boolean(data.emergencyStop),
+        whatsappMarketingCooldownDays: Number(data.whatsappMarketingCooldownDays ?? current.whatsappMarketingCooldownDays),
+      }));
       toast.success(next ? dt("تم إيقاف جميع الحملات") : dt("تم إلغاء إيقاف الطوارئ"));
       onChanged();
     } catch (error) {
       toast.error((error as Error).message);
+    }
+  };
+
+  const saveMarketingCooldown = async () => {
+    if (!globalState.canManage) return;
+    setSavingCooldown(true);
+    try {
+      const res = await fetch("/api/communication/campaigns/global-controls", {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ whatsappMarketingCooldownDays: globalState.whatsappMarketingCooldownDays }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.ok) throw new Error(data.error ?? dt("تعذّر حفظ مدة التكرار"));
+      setGlobalState((current) => ({
+        ...current,
+        emergencyStop: Boolean(data.emergencyStop),
+        whatsappMarketingCooldownDays: Number(data.whatsappMarketingCooldownDays),
+      }));
+      toast.success(dt("تم حفظ مدة التكرار"));
+      onChanged();
+    } catch (error) {
+      toast.error((error as Error).message);
+    } finally {
+      setSavingCooldown(false);
     }
   };
 
@@ -189,6 +223,43 @@ export function CampaignControlsDialog({
                 ) : (
                   <span className="text-[11px] text-slate-400">{dt("متاح للمدير فقط")}</span>
                 )}
+              </div>
+            </section>
+
+            <section className="space-y-3 rounded-xl border border-slate-200 p-4">
+              <div className="flex flex-wrap items-end justify-between gap-3">
+                <div className="max-w-2xl">
+                  <h3 className="text-sm font-semibold text-slate-900">{dt("الفاصل بين الرسائل التسويقية عبر واتساب")}</h3>
+                  <p className="mt-1 text-xs text-slate-500">
+                    {dt("لا تُرسل للمتبرع رسالة تسويقية جديدة قبل مرور هذه المدة من آخر رسالة تسويقية. لا يشمل الإيصالات والردود على من بدأ المحادثة.")}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <label className="flex items-center gap-2 text-xs text-slate-600">
+                    <input
+                      type="number"
+                      min={1}
+                      max={365}
+                      value={globalState.whatsappMarketingCooldownDays}
+                      disabled={!globalState.canManage || savingCooldown}
+                      onChange={(event) => setGlobalState((current) => ({
+                        ...current,
+                        whatsappMarketingCooldownDays: Math.min(365, Math.max(1, Number(event.target.value) || 1)),
+                      }))}
+                      className="h-10 w-24 rounded-lg border border-slate-200 px-3 text-sm"
+                      dir="ltr"
+                    />
+                    {dt("يومًا")}
+                  </label>
+                  {globalState.canManage ? (
+                    <Button type="button" variant="outline" onClick={() => void saveMarketingCooldown()} disabled={savingCooldown}>
+                      {savingCooldown && <Loader2 className="me-1.5 h-4 w-4 animate-spin" />}
+                      {dt("حفظ المدة")}
+                    </Button>
+                  ) : (
+                    <span className="text-[11px] text-slate-400">{dt("متاح للمدير فقط")}</span>
+                  )}
+                </div>
               </div>
             </section>
 

@@ -2300,6 +2300,7 @@ model DonorCommunicationProfile {
   totalDonations      Int       @default(0)
   lastCommunicationAt DateTime?
   lastWhatsappAt      DateTime?
+  lastWhatsappMarketingAt DateTime?
   lastEmailAt         DateTime?
   lastSmsAt           DateTime?
   metadata            Json?
@@ -2359,6 +2360,7 @@ model CommunicationCampaign {
 model CommunicationGlobalControl {
   id            String   @id @map("_id") @db.ObjectId
   emergencyStop Boolean  @default(false)
+  whatsappMarketingCooldownDays Int? @default(7)
   updatedBy     String?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt

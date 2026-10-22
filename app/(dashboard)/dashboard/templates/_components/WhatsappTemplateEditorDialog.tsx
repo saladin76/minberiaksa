@@ -36,6 +36,7 @@ import { TemplateDialogShell, LocaleStrip, FieldLabel } from "./TemplateDialogSh
 import { VariablePicker } from "./VariablePicker";
 import { cn } from "@/lib/utils";
 import { dt, dtx } from "@/lib/dashboard/i18n";
+import { isWhatsappUnsubscribeQuickReply, whatsappUnsubscribeCopy } from "@/lib/communication/whatsapp-template-unsubscribe";
 
 interface Props {
   id: string | null;
@@ -100,6 +101,25 @@ interface ApiTemplate {
 }
 
 const emptyLocale = (): LocaleDraft => ({ body: "", headerText: "", footerText: "", buttons: [] });
+
+function addMarketingUnsubscribe(draft: LocaleDraft, locale: SupportedLocale): LocaleDraft {
+  const copy = whatsappUnsubscribeCopy(locale);
+  const buttons = draft.buttons.map((button) =>
+    button.type === "QUICK_REPLY" && isWhatsappUnsubscribeQuickReply(button.text)
+      ? { ...button, text: copy.button }
+      : button,
+  );
+  const hasButton = buttons.some(
+    (button) => button.type === "QUICK_REPLY" && isWhatsappUnsubscribeQuickReply(button.text),
+  );
+  const arabicDefaultFooter = whatsappUnsubscribeCopy(DEFAULT_LOCALE).footer;
+  const footerText = draft.footerText.trim();
+  return {
+    ...draft,
+    footerText: !footerText || footerText === arabicDefaultFooter ? copy.footer : footerText,
+    buttons: hasButton ? buttons : [...buttons, { type: "QUICK_REPLY", text: copy.button }],
+  };
+}
 const defaultAuth = (): AuthenticationDraft => ({
   addSecurityRecommendation: true,
   codeExpirationMinutes: 10,
@@ -328,9 +348,22 @@ export function WhatsappTemplateEditorDialog({ id, open, onOpenChange }: Props) 
             };
           }
         }
-        setLocales(next);
+        const nextSubmittedLocales = new Set(
+          (template?.submittedLocales ?? []).filter((locale): locale is SupportedLocale =>
+            SUPPORTED_LOCALES.includes(locale as SupportedLocale),
+          ),
+        );
+        const preparedLocales = template?.category === "MARKETING"
+          ? Object.fromEntries(Object.entries(next).map(([locale, draft]) => [
+              locale,
+              draft && !nextSubmittedLocales.has(locale as SupportedLocale)
+                ? addMarketingUnsubscribe(draft, locale as SupportedLocale)
+                : draft,
+            ])) as Partial<Record<SupportedLocale, LocaleDraft>>
+          : next;
+        setLocales(preparedLocales);
         setAuthentication({ ...defaultAuth(), ...(template?.authentication ?? {}) });
-        setSubmittedLocales(new Set((template?.submittedLocales ?? []).filter((locale): locale is SupportedLocale => SUPPORTED_LOCALES.includes(locale as SupportedLocale))));
+        setSubmittedLocales(nextSubmittedLocales);
         setActiveLocale(DEFAULT_LOCALE);
       })
       .catch(() => toast.error(dt("فشل تحميل القالب")))
@@ -338,6 +371,35 @@ export function WhatsappTemplateEditorDialog({ id, open, onOpenChange }: Props) 
   }, [id, open]);
 
 
+
+  const changeCategory = (next: Category) => {
+    const previousCategory = category;
+    setCategory(next);
+    if (next === "MARKETING") {
+      setLocales((previous) => Object.fromEntries(
+        Object.entries(previous).map(([locale, draft]) => [
+          locale,
+          draft && !submittedLocales.has(locale as SupportedLocale)
+            ? addMarketingUnsubscribe(draft, locale as SupportedLocale)
+            : draft,
+        ]),
+      ) as Partial<Record<SupportedLocale, LocaleDraft>>);
+    } else if (previousCategory === "MARKETING") {
+      setLocales((previous) => Object.fromEntries(
+        Object.entries(previous).map(([locale, draft]) => {
+          if (!draft || submittedLocales.has(locale as SupportedLocale)) return [locale, draft];
+          const copy = whatsappUnsubscribeCopy(locale);
+          return [locale, {
+            ...draft,
+            footerText: draft.footerText === copy.footer ? "" : draft.footerText,
+            buttons: draft.buttons.filter(
+              (button) => !(button.type === "QUICK_REPLY" && isWhatsappUnsubscribeQuickReply(button.text)),
+            ),
+          }];
+        }),
+      ) as Partial<Record<SupportedLocale, LocaleDraft>>);
+    }
+  };
 
   const setCurrent = React.useCallback((patch: Partial<LocaleDraft>) => {
     setLocales((previous) => ({
@@ -351,7 +413,13 @@ export function WhatsappTemplateEditorDialog({ id, open, onOpenChange }: Props) 
     setLocales((previous) => {
       if (previous[locale]) return previous;
       const source = previous[DEFAULT_LOCALE] ?? emptyLocale();
-      return { ...previous, [locale]: { ...source, buttons: cloneButtons(source.buttons) } };
+      const cloned = { ...source, buttons: cloneButtons(source.buttons) };
+      return {
+        ...previous,
+        [locale]: category === "MARKETING" && !submittedLocales.has(locale)
+          ? addMarketingUnsubscribe(cloned, locale)
+          : cloned,
+      };
     });
     setActiveLocale(locale);
   };
@@ -519,6 +587,16 @@ export function WhatsappTemplateEditorDialog({ id, open, onOpenChange }: Props) 
     const invalidButtons=Object.entries(locales).find(([locale,draft])=>!submittedLocales.has(locale as SupportedLocale)&&templateButtonProblem(draft?.buttons ?? []));
     if(invalidButtons){setPublishError(`${LOCALE_LABELS[invalidButtons[0] as SupportedLocale]}: ${templateButtonProblem(invalidButtons[1]?.buttons ?? [])}`);return;}
     const arabic = locales[DEFAULT_LOCALE] ?? emptyLocale();
+    if (category === "MARKETING") {
+      const missingOptOut = Object.entries(locales).find(([locale, draft]) =>
+        !submittedLocales.has(locale as SupportedLocale) &&
+        !draft?.buttons.some((button) => button.type === "QUICK_REPLY" && isWhatsappUnsubscribeQuickReply(button.text)),
+      );
+      if (missingOptOut) {
+        setPublishError(dt("يجب أن يحتوي كل قالب تسويقي جديد على زر واضح لإيقاف الرسائل."));
+        return;
+      }
+    }
     if (!name.trim()) return void toast.error(dt("اسم القالب مطلوب"));
     if (!/^[a-z][a-z0-9_]{0,119}$/.test(name)) return void toast.error(dt("اسم Meta يجب أن يبدأ بحرف ويحتوي حروفًا إنجليزية صغيرة وأرقامًا وشرطة سفلية فقط"));
     if (category !== "AUTHENTICATION" && !arabic.body.trim()) return void toast.error(dt("نص القالب بالعربية مطلوب"));
@@ -658,6 +736,11 @@ export function WhatsappTemplateEditorDialog({ id, open, onOpenChange }: Props) 
     >
       {publishError ? <p role="alert" className="m-4 rounded-xl border border-red-200 bg-red-50 p-4 text-sm leading-7 text-red-800">{publishError}</p> : null}
       <div className="space-y-5">
+        {category === "MARKETING" && id && submittedLocales.size > 0 ? (
+          <p className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs leading-6 text-amber-900">
+            {dt("القوالب التسويقية المعتمدة سابقًا لا يتغير محتواها. أنشئ قالبًا جديدًا وأرسله إلى Meta لاعتماد زر إيقاف الرسائل.")}
+          </p>
+        ) : null}
         <section className="overflow-hidden rounded-xl border border-border bg-white">
           <div className="grid grid-cols-1 md:grid-cols-3">
             {CATEGORY_OPTIONS.map((option) => (
@@ -665,7 +748,7 @@ export function WhatsappTemplateEditorDialog({ id, open, onOpenChange }: Props) 
                 key={option.value}
                 type="button"
                 disabled={submittedLocales.size > 0}
-                onClick={() => setCategory(option.value)}
+                onClick={() => changeCategory(option.value)}
                 className={cn(
                   "flex items-center justify-center gap-2 border-b p-3 text-sm transition-colors md:border-b-0 md:border-e",
                   category === option.value

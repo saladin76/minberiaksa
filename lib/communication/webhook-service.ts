@@ -45,6 +45,59 @@ export type WebhookProcessSummary = {
 
 type RecordOutcome = "INSERTED" | "DUPLICATE" | "ERROR";
 
+const WHATSAPP_OPTOUT_TERMS = new Set([
+  "stop", "unsubscribe", "cancel", "end", "quit", "opt out", "optout",
+  "dur", "iptal", "ايقاف", "وقف", "توقف", "الغاء", "انهاء",
+  "لا ترسل", "لا ترسلوا", "لا تراسلني", "لا تتواصل معي",
+]);
+
+function normalizeOptOutText(value: string): string {
+  return value
+    .normalize("NFKD")
+    .replace(/\p{M}/gu, "")
+    .normalize("NFKC")
+    .replace(/[إأآٱ]/g, "ا")
+    .toLowerCase()
+    .replace(/^[\p{P}\p{S}\s]+|[\p{P}\p{S}\s]+$/gu, "")
+    .replace(/\s+/g, " ");
+}
+
+function isWhatsappOptOut(event: NormalizedWebhookEvent): event is Extract<NormalizedWebhookEvent, { kind: "inbound" }> {
+  if (event.kind !== "inbound") return false;
+  return [event.text, event.buttonReply?.title, event.buttonReply?.id]
+    .filter((value): value is string => Boolean(value))
+    .some((value) => WHATSAPP_OPTOUT_TERMS.has(normalizeOptOutText(value)));
+}
+
+/** Apply a donor's clear STOP request before acknowledging the inbound webhook event. */
+async function applyWhatsappOptOut(from: string | null): Promise<boolean> {
+  if (!from) return true;
+  const variants = phoneMatchVariants(from);
+  if (!variants.length) return true;
+  try {
+    const profiles = await prisma.donorCommunicationProfile.findMany({
+      where: { phone: { in: variants } },
+      select: { userId: true },
+    });
+    const userIds = [...new Set(profiles.map((profile) => profile.userId).filter(Boolean))];
+    if (!userIds.length) return true;
+    await prisma.donorCommunicationProfile.updateMany({
+      where: { userId: { in: userIds } },
+      data: {
+        whatsappOptIn: false,
+        consentSource: "meta-whatsapp-inbound-opt-out",
+        lastConsentAt: new Date(),
+      },
+    });
+    return true;
+  } catch (error) {
+    console.error("WhatsApp inbound opt-out update failed", {
+      errorName: error instanceof Error ? error.name : "UNKNOWN",
+    });
+    return false;
+  }
+}
+
 async function senderIdForPhoneNumber(
   phoneNumberId: string | null,
 ): Promise<{ ok: true; senderId: string | null } | { ok: false }> {
@@ -121,6 +174,12 @@ export async function processWhatsappEvents(events: NormalizedWebhookEvent[]): P
       continue;
     }
     const senderId = senderLookup.senderId;
+
+    // Run before event idempotency recording so a retry can complete the opt-out if the profile write failed.
+    if (isWhatsappOptOut(event) && !(await applyWhatsappOptOut(event.from))) {
+      summary.persistenceErrors += 1;
+      continue;
+    }
 
     if (event.kind === "status") {
       let delivery: { id: string; status: string } | null = null;
