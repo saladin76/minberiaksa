@@ -20,8 +20,8 @@ test("automatic Utility/Auth WhatsApp keeps Direct Send primary with approved-te
   const direct = source.indexOf("sendDirectTextMessage"), fallback = source.indexOf("input.metaTemplate");
   assert.ok(direct >= 0 && fallback >= 0 && direct < fallback);
 });
-test("one-to-one WhatsApp preserves the 24h free-form path and separates Utility from Marketing", () => {
-  requires("lib/communication/smart-whatsapp-service.ts", [/replyWindow\.open/, /FREEFORM/, /UTILITY/, /MARKETING/, /UTILITY_TEMPLATE_FALLBACK/, /MARKETING_TEMPLATE/], [/WHATSAPP_MARKETING_OPT_IN_REQUIRED/]);
+test("one-to-one WhatsApp keeps inbound-window replies and requires opt-in for business-initiated sends", () => {
+  requires("lib/communication/smart-whatsapp-service.ts", [/replyWindow\.open/, /FREEFORM/, /UTILITY/, /MARKETING/, /WHATSAPP_OPT_IN_REQUIRED/, /consentCheckUnavailable/]);
 });
 test("smart WhatsApp remains an extension of the existing conversation and sender-routing stack", () => {
   requires("lib/communication/smart-whatsapp-service.ts", [/sendConversationReply/, /replyWindowFor/, /loadSenderRoutingSnapshot/, /resolveSenderFromSnapshot/, /createDeliveryRecord/, /markDeliveryStatus/, /writeAuditLog/]);
@@ -96,9 +96,9 @@ test("automatic-events list fails visibly instead of spinning forever", () => {
 test("campaign audience badge evaluation stays scoped to visible donors", () => {
   requires("lib/badge-criteria.ts", [/candidateUserIds\?: string\[\]/, /donorId: \{ in: candidateUserIds \}/, /getUserIdsMatchingBadge\(badge\.criteria, userIds\)/]);
 });
-test("Smart WhatsApp preserves the current consent surface without adding a new operator flow", () => {
-  requires("app/api/dashboard/communication/whatsapp/smart-send/route.ts", [/consentSchema/, /dashboard-manual-whatsapp-confirmation/, /setProfileConsent/]);
-  requires(smartDialog, [], [/تسجيل الموافقة/, /setMarketingConsent/]);
+test("WhatsApp opt-in capture records a verified source and requires operator attestation", () => {
+  requires("app/api/dashboard/communication/whatsapp/smart-send/route.ts", [/consentSourceSchema/, /A verified consent source is required/, /dashboard-whatsapp-opt-in:/, /setProfileConsent/]);
+  requires(smartDialog, [/whatsappOptIn/, /consentCheckUnavailable/, /consentSource/, /consentConfirmed/, /أؤكد أن المتبرع وافق صراحة/, /تسجيل الموافقة/]);
 });
 test("campaign membership stays separate from consent and is rechecked before provider calls", () => {
   requires("lib/communication/audience-service.ts", [/recipientExclusionReason\(donor, channel, profile\)/]);
@@ -107,7 +107,7 @@ test("campaign membership stays separate from consent and is rechecked before pr
   const executor = read(executorPath);
   const checkAt = executor.indexOf("await checkCampaignRecipientBeforeSend"), sendAt = executor.indexOf("await sendPreparedDelivery");
   assert.ok(checkAt >= 0 && sendAt > checkAt);
-  requires("lib/communication/smart-whatsapp-service.ts", [], [/WHATSAPP_MARKETING_OPT_IN_REQUIRED/]);
-  requires(smartDialog, [], [/تسجيل الموافقة/]);
-  requires("lib/communication/delivery-retry-service.ts", [/purpose !== "MARKETING" \|\| channel === "WHATSAPP"/]);
+  requires("lib/communication/smart-whatsapp-service.ts", [/mode !== "FREEFORM" && !ctx\.whatsappOptIn/]);
+  requires(smartDialog, [/mode !== "FREEFORM" && !ctx\.whatsappOptIn/]);
+  requires("lib/communication/retry-recipient-guard.ts", [/channel === "WHATSAPP" && profile\?\.whatsappOptIn !== true/]);
 });
