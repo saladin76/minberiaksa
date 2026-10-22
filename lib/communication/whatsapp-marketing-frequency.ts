@@ -2,7 +2,6 @@ import "server-only";
 
 import { prisma } from "@/lib/prisma";
 import {
-  DEFAULT_WHATSAPP_MARKETING_COOLDOWN_DAYS,
   MAX_WHATSAPP_MARKETING_COOLDOWN_DAYS,
   MIN_WHATSAPP_MARKETING_COOLDOWN_DAYS,
   readCampaignGlobalControls,

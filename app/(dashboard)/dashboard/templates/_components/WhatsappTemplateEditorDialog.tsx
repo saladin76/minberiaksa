@@ -383,7 +383,7 @@ export function WhatsappTemplateEditorDialog({ id, open, onOpenChange }: Props) 
             ? addMarketingUnsubscribe(draft, locale as SupportedLocale)
             : draft,
         ]),
-      ));
+      ) as Partial<Record<SupportedLocale, LocaleDraft>>);
     } else if (previousCategory === "MARKETING") {
       setLocales((previous) => Object.fromEntries(
         Object.entries(previous).map(([locale, draft]) => {
@@ -397,7 +397,7 @@ export function WhatsappTemplateEditorDialog({ id, open, onOpenChange }: Props) 
             ),
           }];
         }),
-      ));
+      ) as Partial<Record<SupportedLocale, LocaleDraft>>);
     }
   };
 
