@@ -8,6 +8,7 @@ export type RecipientConsent = {
   emailOptIn?: boolean;
   smsOptIn?: boolean;
   whatsappOptIn?: boolean;
+  consentSource?: string | null;
 };
 
 export type RecipientExclusionReason =
@@ -15,13 +16,18 @@ export type RecipientExclusionReason =
   | "MISSING_CONTACT"
   | "NEEDS_CONSENT_REVIEW"
   | "EMAIL_OPT_IN_REQUIRED"
-  | "SMS_OPT_IN_REQUIRED"
-  | "WHATSAPP_OPT_IN_REQUIRED";
+  | "SMS_OPT_IN_REQUIRED";
+
+/** WhatsApp opt-in is not required internally; only a recipient's explicit STOP is. */
+export function isWhatsappExplicitlyUnsubscribed(profile?: Pick<RecipientConsent, "consentSource"> | null): boolean {
+  return profile?.consentSource === "meta-whatsapp-inbound-opt-out";
+}
 
 /**
  * Apply the same legacy donor notification flags that ensureProfilesForUsers
  * uses at send time, without writing records during preview. An existing
- * communication profile always wins; WhatsApp consent is NEVER inferred.
+ * communication profile always wins. WhatsApp uses explicit unsubscribe state,
+ * not an internal opt-in gate.
  */
 export function previewConsentForLegacyDonor(
   donor: { email?: string | null; phone?: string | null; emailNotifications?: boolean | null; smsNotifications?: boolean | null },
@@ -45,10 +51,10 @@ export function recipientExclusionReason(
   // Whitespace or malformed non-empty values are validated by the send adapter.
   // This definition deliberately matches the database's null/missing/empty filter.
   if (contact == null || contact === "") return "MISSING_CONTACT";
+  if (channel === "WHATSAPP") return isWhatsappExplicitlyUnsubscribed(profile) ? "DO_NOT_CONTACT" : null;
   if (!profile) return "NEEDS_CONSENT_REVIEW";
   if (channel === "EMAIL" && profile.emailOptIn !== true) return "EMAIL_OPT_IN_REQUIRED";
   if (channel === "SMS" && profile.smsOptIn !== true) return "SMS_OPT_IN_REQUIRED";
-  if (channel === "WHATSAPP" && profile.whatsappOptIn !== true) return "WHATSAPP_OPT_IN_REQUIRED";
   return null;
 }
 
@@ -61,8 +67,7 @@ export type AudiencePreviewCounts = {
 
 /**
  * The operator selects a database audience, not a pre-authorised subset.
- * Selection never authorises a send; consent and contact are checked individually
- * by the executor. This policy is identical for EMAIL, SMS and WHATSAPP.
+ * The executor checks contact and channel-specific preferences immediately before send.
  */
 export function campaignAudienceSelectionCount(
   _channel: string,
@@ -79,5 +84,4 @@ export const RECIPIENT_REASON_LABELS: Record<RecipientExclusionReason, string> =
   NEEDS_CONSENT_REVIEW: "موافقة التواصل غير موثقة",
   EMAIL_OPT_IN_REQUIRED: "موافقة البريد غير مؤكدة",
   SMS_OPT_IN_REQUIRED: "موافقة SMS غير مؤكدة",
-  WHATSAPP_OPT_IN_REQUIRED: "موافقة واتساب غير مؤكدة",
 };

@@ -15,6 +15,7 @@ import { buildWhatsappRenderedPreview } from "./whatsapp-rendered-preview";
 import { isValidLocale, type SupportedLocale } from "@/lib/locales";
 import { writeAuditLog } from "@/lib/audit-log";
 import { touchProfileCommunication } from "./donor-communication-profile-service";
+import { isWhatsappExplicitlyUnsubscribed } from "./campaign-audience-accounting";
 import { retryDefinitelyNotSent } from "./retry-recipient-guard";
 import {
   reserveWhatsappMarketingSend,
@@ -32,7 +33,7 @@ export type SmartWhatsappContext = {
   locale: string;
   country: string | null;
   doNotContact: boolean;
-  whatsappOptIn: boolean;
+  whatsappUnsubscribed: boolean;
   consentCheckUnavailable: boolean;
   directSendEnabled: boolean;
   conversationId: string | null;
@@ -62,6 +63,20 @@ function valuesFor(names: string[], ctx: unknown): Record<string, string> {
   return values;
 }
 
+/** Recheck platform-wide blocks and an explicit WhatsApp STOP just before sending. */
+async function checkWhatsappRecipientStop(userId: string): Promise<"DO_NOT_CONTACT" | "CONSENT_CHECK_UNAVAILABLE" | null> {
+  try {
+    const profile = await prisma.donorCommunicationProfile.findUnique({
+      where: { userId },
+      select: { doNotContact: true, consentSource: true },
+    });
+    if (!profile) return "CONSENT_CHECK_UNAVAILABLE";
+    return profile.doNotContact || isWhatsappExplicitlyUnsubscribed(profile) ? "DO_NOT_CONTACT" : null;
+  } catch {
+    return "CONSENT_CHECK_UNAVAILABLE";
+  }
+}
+
 async function donor(userId: string) {
   const [user, profileResult] = await Promise.all([
     prisma.user.findUnique({
@@ -70,7 +85,7 @@ async function donor(userId: string) {
     }),
     prisma.donorCommunicationProfile.findUnique({
       where: { userId },
-      select: { phone: true, preferredLocale: true, countryCode: true, doNotContact: true, whatsappOptIn: true },
+      select: { phone: true, preferredLocale: true, countryCode: true, doNotContact: true, consentSource: true },
     }).then((value) => ({ value, unavailable: false })).catch(() => ({ value: null, unavailable: true })),
   ]);
   if (!user) return null;
@@ -82,7 +97,7 @@ async function donor(userId: string) {
     locale: profile?.preferredLocale ?? user.preferredLang ?? "ar",
     country: profile?.countryCode ?? user.countryCode ?? null,
     doNotContact: profile?.doNotContact ?? false,
-    whatsappOptIn: profile?.whatsappOptIn ?? false,
+    whatsappUnsubscribed: isWhatsappExplicitlyUnsubscribed(profile),
     consentCheckUnavailable: profileResult.unavailable,
   };
 }
@@ -145,7 +160,7 @@ export async function getSmartWhatsappContext(userId: string): Promise<SmartWhat
     locale: d.locale,
     country: d.country,
     doNotContact: d.doNotContact,
-    whatsappOptIn: d.whatsappOptIn,
+    whatsappUnsubscribed: d.whatsappUnsubscribed,
     consentCheckUnavailable: d.consentCheckUnavailable,
     directSendEnabled: process.env.META_WHATSAPP_DIRECT_SEND_ENABLED === "true",
     conversationId: convId,
@@ -281,24 +296,11 @@ async function sendApprovedTemplateForDonor(args: {
     }
     frequencyReservation = frequency.reservation;
   }
-  if (frequencyReservation) {
-    let liveProfile: { doNotContact: boolean; whatsappOptIn: boolean } | null;
-    try {
-      liveProfile = await prisma.donorCommunicationProfile.findUnique({
-        where: { userId: args.ctx.userId },
-        select: { doNotContact: true, whatsappOptIn: true },
-      });
-    } catch {
-      await releaseWhatsappMarketingReservation(frequencyReservation);
-      await markDeliveryStatus(created.data.id, "FAILED", { errorMessage: "CONSENT_CHECK_UNAVAILABLE" });
-      return { ok: false, reason: "CONSENT_CHECK_UNAVAILABLE" };
-    }
-    if (!liveProfile || liveProfile.doNotContact || liveProfile.whatsappOptIn !== true) {
-      await releaseWhatsappMarketingReservation(frequencyReservation);
-      const reason = !liveProfile ? "CONSENT_CHECK_UNAVAILABLE" : liveProfile.doNotContact ? "DO_NOT_CONTACT" : "WHATSAPP_OPT_IN_REQUIRED";
-      await markDeliveryStatus(created.data.id, reason === "CONSENT_CHECK_UNAVAILABLE" ? "FAILED" : "SKIPPED", { errorMessage: reason });
-      return { ok: false, reason };
-    }
+  const stopCheck = await checkWhatsappRecipientStop(args.ctx.userId);
+  if (stopCheck) {
+    if (frequencyReservation) await releaseWhatsappMarketingReservation(frequencyReservation);
+    await markDeliveryStatus(created.data.id, stopCheck === "CONSENT_CHECK_UNAVAILABLE" ? "FAILED" : "SKIPPED", { errorMessage: stopCheck });
+    return { ok: false, reason: stopCheck };
   }
 
   const { sendTemplateMessage } = await import("./providers/meta-whatsapp/messages");
@@ -361,6 +363,18 @@ export async function sendSmartWhatsapp(input: {
   templateId?: string | null;
   actor?: Actor;
 }): Promise<SmartWhatsappSendResult> {
+  try {
+    // Create only the profile row needed to persist future STOP requests and frequency state.
+    // Preference fields retain their schema defaults; no WhatsApp opt-in is written.
+    await prisma.donorCommunicationProfile.upsert({
+      where: { userId: input.userId },
+      create: { userId: input.userId },
+      update: {},
+      select: { userId: true },
+    });
+  } catch {
+    return { ok: false, reason: "CONSENT_CHECK_UNAVAILABLE" };
+  }
   const ctx = await getSmartWhatsappContext(input.userId);
   if (!ctx) return { ok: false, reason: "DONOR_NOT_FOUND" };
   if (!ctx.phone) return { ok: false, reason: "NO_RECIPIENT_PHONE" };
@@ -374,14 +388,14 @@ export async function sendSmartWhatsapp(input: {
   // A platform-level do-not-contact block applies to every outbound path,
   // including free-form replies inside Meta's 24-hour window.
   if (ctx.doNotContact) return { ok: false, reason: "DO_NOT_CONTACT" };
+  if (ctx.whatsappUnsubscribed) return { ok: false, reason: "DO_NOT_CONTACT" };
   if (ctx.consentCheckUnavailable) return { ok: false, reason: "CONSENT_CHECK_UNAVAILABLE" };
-  // Free-form replies are permitted only inside the open customer-service window. Any
-  // business-initiated utility or marketing send requires recorded WhatsApp opt-in.
-  if (mode !== "FREEFORM" && !ctx.whatsappOptIn) return { ok: false, reason: "WHATSAPP_OPT_IN_REQUIRED" };
 
   if (mode === "FREEFORM") {
     if (!ctx.conversationId || !ctx.replyWindow.open) return { ok: false, reason: "REPLY_WINDOW_CLOSED" };
     if (!body) return { ok: false, reason: "EMPTY_BODY" };
+    const stopCheck = await checkWhatsappRecipientStop(ctx.userId);
+    if (stopCheck) return { ok: false, reason: stopCheck };
     const sent = await sendConversationReply(ctx.conversationId, body, input.actor);
     return sent.ok
       ? { ok: true, transport: "FREEFORM", deliveryId: sent.deliveryId, providerMessageId: sent.providerMessageId }
@@ -419,6 +433,12 @@ export async function sendSmartWhatsapp(input: {
         status: "RENDERED",
       });
       if (!created.ok) return { ok: false, reason: "ARCHIVE_FAILED" };
+
+      const stopCheck = await checkWhatsappRecipientStop(ctx.userId);
+      if (stopCheck) {
+        await markDeliveryStatus(created.data.id, stopCheck === "CONSENT_CHECK_UNAVAILABLE" ? "FAILED" : "SKIPPED", { errorMessage: stopCheck });
+        return { ok: false, reason: stopCheck };
+      }
 
       const runtime = await getActiveMetaWhatsappRuntimeConfig();
       const { sendDirectTextMessage } = await import("./providers/meta-whatsapp/messages");

@@ -70,7 +70,7 @@ export async function POST(request: NextRequest) {
   if (!result.ok) {
     const status =
       result.reason === "REPLY_WINDOW_CLOSED" ? 409
-      : result.reason === "DO_NOT_CONTACT" || result.reason === "WHATSAPP_OPT_IN_REQUIRED" ? 403
+      : result.reason === "DO_NOT_CONTACT" ? 403
       : result.reason === "CONSENT_CHECK_UNAVAILABLE" ? 503
       : result.reason.includes("NOT_FOUND") ? 404
       : 422;
@@ -96,8 +96,8 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ ok: false, error: "Invalid payload", issues: parsed.error.flatten() }, { status: 400 });
   }
 
-  // A donation proves that the phone is reachable; it does not prove WhatsApp opt-in.
-  // The operator must attest that the donor explicitly opted in and record where that consent was received.
+  // This endpoint records optional preference history; the legacy whatsappOptIn flag
+  // does not determine whether a WhatsApp message can be sent.
   const synced = await upsertProfileForUser(parsed.data.userId);
   if (!synced.ok) {
     return NextResponse.json({ ok: false, error: synced.error }, { status: synced.status });

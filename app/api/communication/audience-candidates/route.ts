@@ -24,7 +24,7 @@ const SELECT_ALL_CEILING = AUDIENCE_SELECTION_MAX;
 const donorSelect = {
   id: true, name: true, email: true, phone: true, image: true, preferredLang: true,
   country: true, countryCode: true, countryName: true,
-  communicationProfile: { select: { doNotContact: true, emailOptIn: true, smsOptIn: true, whatsappOptIn: true } },
+  communicationProfile: { select: { doNotContact: true, emailOptIn: true, smsOptIn: true, consentSource: true } },
 } satisfies Prisma.UserSelect;
 type DonorRow = Prisma.UserGetPayload<{ select: typeof donorSelect }>;
 type FilterInput = {
@@ -89,7 +89,7 @@ async function buildWhere(f: FilterInput): Promise<Prisma.UserWhereInput> {
   return where;
 }
 
-type ConsentProfile = { doNotContact: boolean; emailOptIn: boolean; smsOptIn: boolean; whatsappOptIn: boolean };
+type ConsentProfile = { doNotContact: boolean; emailOptIn: boolean; smsOptIn: boolean; consentSource: string | null };
 function eligibilityReason(
   donor: { email?: string | null; phone?: string | null },
   channel: "EMAIL" | "WHATSAPP" | "SMS",
@@ -146,7 +146,6 @@ export async function GET(request: NextRequest) {
         countryCode: resolved.code, countryName: resolved.name, badgeIds: badgeIdsByUser.get(user.id) ?? [],
         eligibility: donorChannelEligibility(user, channel, profile),
         eligibilityReason: eligibilityReason(user, channel, profile),
-        canConfirmWhatsappOptIn: false,
       };
     });
     const countryGroups = await prisma.user.groupBy({

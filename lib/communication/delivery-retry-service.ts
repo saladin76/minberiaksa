@@ -84,7 +84,7 @@ const SELECT = {
 async function consentBlockReason(userId: string | null, channel: CommunicationChannelId, purpose: string): Promise<string | null> {
   if (!userId) return null;
   const profile = await prisma.donorCommunicationProfile.findUnique({
-    where: { userId }, select: { doNotContact: true, emailOptIn: true, whatsappOptIn: true, smsOptIn: true },
+    where: { userId }, select: { doNotContact: true, emailOptIn: true, smsOptIn: true },
   });
   if (!profile) return channel === "WHATSAPP" ? null : (purpose === "MARKETING" ? "لا توجد موافقة مسجلة لهذا المستلم" : null);
   if (profile.doNotContact) return "المستلم مفعّل عليه عدم التواصل";

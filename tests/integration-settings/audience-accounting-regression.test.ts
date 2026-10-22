@@ -32,11 +32,18 @@ function row(id: number, patch: Partial<AudienceAccountingRow> = {}): AudienceAc
 async function* rows(values: AudienceAccountingRow[]) { yield* values; }
 
 for (const channel of ["WHATSAPP", "EMAIL", "SMS"] as const) {
-  test(`${channel}: explicit consent is required and DNC takes precedence`, () => {
+  test(`${channel}: channel preferences and explicit stop state are applied consistently`, () => {
     assert.equal(recipientExclusionReason(contact, channel, allowed), null);
     assert.equal(recipientExclusionReason(contact, channel, { ...allowed, doNotContact: true }), "DO_NOT_CONTACT");
-    assert.equal(recipientExclusionReason(contact, channel, null), "NEEDS_CONSENT_REVIEW");
-    assert.equal(recipientExclusionReason(contact, channel, {}), `${channel === "WHATSAPP" ? "WHATSAPP" : channel}_OPT_IN_REQUIRED`);
+    if (channel === "WHATSAPP") {
+      assert.equal(recipientExclusionReason(contact, channel, null), null);
+      assert.equal(recipientExclusionReason(contact, channel, {}), null);
+      assert.equal(recipientExclusionReason(contact, channel, { ...allowed, whatsappOptIn: false }), null);
+      assert.equal(recipientExclusionReason(contact, channel, { consentSource: "meta-whatsapp-inbound-opt-out" }), "DO_NOT_CONTACT");
+    } else {
+      assert.equal(recipientExclusionReason(contact, channel, null), "NEEDS_CONSENT_REVIEW");
+      assert.equal(recipientExclusionReason(contact, channel, {}), `${channel}_OPT_IN_REQUIRED`);
+    }
   });
 }
 
@@ -63,11 +70,11 @@ test("all selected rows reconcile once, including per-language exclusions", asyn
     row(6, { locale: "en" }),
   ]), "WHATSAPP");
   assert.equal(result.matched, 6);
-  assert.equal(result.eligible, 2);
+  assert.equal(result.eligible, 4);
   assert.equal(result.missingContact, 1);
   assert.equal(result.doNotContact, 1);
-  assert.equal(result.needsReview, 2);
-  assert.equal(result.unavailable, 4);
+  assert.equal(result.needsReview, 0);
+  assert.equal(result.unavailable, 2);
   for (const bucket of Object.values(result.localeBreakdown)) {
     assert.equal(bucket.total, bucket.eligible + bucket.missingContact + bucket.doNotContact + bucket.needsReview);
   }
@@ -115,8 +122,9 @@ type GuardModule = { checkCampaignRecipientBeforeSend: (channel: AudienceChannel
 const guardCases: Array<{ name: string; donor: unknown; planned?: string; throws?: boolean; expected: string | null }> = [
   { name: "current consent permits the unchanged destination", donor: { ...contact, communicationProfile: allowed }, expected: null },
   { name: "withdrawal after planning blocks the provider", donor: { ...contact, communicationProfile: { ...allowed, doNotContact: true } }, expected: "DO_NOT_CONTACT" },
-  { name: "missing profile is not consent", donor: { ...contact, communicationProfile: null }, expected: "NEEDS_CONSENT_REVIEW" },
-  { name: "unconfirmed WhatsApp consent stays blocked", donor: { ...contact, communicationProfile: { ...allowed, whatsappOptIn: false } }, expected: "WHATSAPP_OPT_IN_REQUIRED" },
+  { name: "missing profile does not block WhatsApp", donor: { ...contact, communicationProfile: null }, expected: null },
+  { name: "a false internal WhatsApp opt-in field does not block sending", donor: { ...contact, communicationProfile: { ...allowed, whatsappOptIn: false } }, expected: null },
+  { name: "an explicit WhatsApp STOP still blocks sending", donor: { ...contact, communicationProfile: { doNotContact: false, consentSource: "meta-whatsapp-inbound-opt-out" } }, expected: "DO_NOT_CONTACT" },
   { name: "changed contact is never silently retargeted", donor: { ...contact, phone: "+905559998877", communicationProfile: allowed }, expected: "RECIPIENT_CONTACT_CHANGED" },
   { name: "invalid contact is rejected at execution", donor: { ...contact, phone: "wrong-number", communicationProfile: allowed }, expected: "INVALID_PHONE_FORMAT" },
   { name: "deleted donor is not sent", donor: null, expected: "RECIPIENT_NOT_FOUND" },
@@ -138,11 +146,11 @@ for (const scenario of guardCases) {
   });
 }
 
-test("preview and bootstrap agree for missing legacy email/SMS profiles, never infer WhatsApp consent", () => {
+test("preview keeps WhatsApp opt-out separate from email/SMS preferences", () => {
   const legacy = { email: "legacy@example.test", phone: "+905551112233", emailNotifications: true, smsNotifications: true };
   assert.equal(recipientExclusionReason(legacy, "EMAIL", previewConsentForLegacyDonor(legacy, "EMAIL", null)), null);
   assert.equal(recipientExclusionReason(legacy, "SMS", previewConsentForLegacyDonor(legacy, "SMS", null)), null);
-  assert.equal(recipientExclusionReason(legacy, "WHATSAPP", previewConsentForLegacyDonor(legacy, "WHATSAPP", null)), "NEEDS_CONSENT_REVIEW");
+  assert.equal(recipientExclusionReason(legacy, "WHATSAPP", previewConsentForLegacyDonor(legacy, "WHATSAPP", null)), null);
   const legacyOptedOut = { ...legacy, emailNotifications: false };
   assert.equal(recipientExclusionReason(legacyOptedOut, "EMAIL", previewConsentForLegacyDonor(legacyOptedOut, "EMAIL", null)), "EMAIL_OPT_IN_REQUIRED");
   assert.equal(recipientExclusionReason(legacy, "EMAIL", previewConsentForLegacyDonor(legacy, "EMAIL", { doNotContact: true, emailOptIn: true })), "DO_NOT_CONTACT");

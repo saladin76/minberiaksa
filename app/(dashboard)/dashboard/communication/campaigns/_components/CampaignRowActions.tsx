@@ -187,7 +187,18 @@ export function CampaignRowActions({
   };
 
   return (
-    <>
+    <div className="flex items-center justify-end gap-1.5">
+      {canControl && (
+        <button
+          type="button"
+          onClick={(event) => { event.stopPropagation(); setControlsOpen(true); }}
+          aria-label={dt("إعدادات الإرسال")}
+          className="inline-flex h-8 items-center gap-1 rounded-md border border-emerald-200 bg-emerald-50 px-2 text-xs font-semibold text-emerald-800 transition-colors hover:bg-emerald-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
+        >
+          <Settings2 className="h-3.5 w-3.5" />
+          <span>{dt("إعدادات الإرسال")}</span>
+        </button>
+      )}
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <button
@@ -270,6 +281,6 @@ export function CampaignRowActions({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </>
+    </div>
   );
 }

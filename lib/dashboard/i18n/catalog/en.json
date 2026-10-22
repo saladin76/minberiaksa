@@ -6683,6 +6683,7 @@
   "تسجيل الموافقة": "Record consent",
   "توجد موافقة واتساب مسجلة؛ يمكن بدء رسائل الخدمة أو التسويق وفق تفضيلات المتبرع.": "WhatsApp consent is on record; service or marketing messages may be started according to the donor's preferences.",
   "الفاصل بين الرسائل التسويقية عبر واتساب": "WhatsApp marketing message interval",
+  "اجعلها 0 للسماح بالإرسال دون فاصل، أو حدّد عدد الأيام الذي تريده.": "Set to 0 to allow sending without an interval, or choose the number of days you want.",
   "لا تُرسل للمتبرع رسالة تسويقية جديدة قبل مرور هذه المدة من آخر رسالة تسويقية. لا يشمل الإيصالات والردود على من بدأ المحادثة.": "Do not send a new marketing message to a donor until this interval has passed since their last marketing message. Receipts and replies to donor-initiated conversations are excluded.",
   "يومًا": "days",
   "حفظ المدة": "Save interval",

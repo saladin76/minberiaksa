@@ -17,7 +17,7 @@ type SmartContext = {
   locale: string;
   country: string | null;
   doNotContact: boolean;
-  whatsappOptIn: boolean;
+  whatsappUnsubscribed: boolean;
   consentCheckUnavailable: boolean;
   directSendEnabled: boolean;
   conversationId: string | null;
@@ -40,7 +40,6 @@ const ERROR_LABELS: Record<string, string> = {
   get UTILITY_TEMPLATE_REQUIRED() { return dt("اختر قالب Utility معتمد كمسار احتياطي."); },
 
   get DO_NOT_CONTACT() { return dt("هذا المتبرع موقوف عن التواصل المباشر."); },
-  get WHATSAPP_OPT_IN_REQUIRED() { return dt("لا يمكن بدء رسالة واتساب قبل تسجيل موافقة المستلم."); },
   get CONSENT_CHECK_UNAVAILABLE() { return dt("تعذّر التحقق من حالة الموافقة. لم يُرسل شيء؛ أعد المحاولة بعد استعادة الاتصال."); },
   get NO_RECIPIENT_PHONE() { return dt("لا يوجد رقم واتساب صالح لهذا المتبرع."); },
   get MARKETING_TEMPLATE_REQUIRED() { return dt("اختر قالب Marketing معتمد."); },
@@ -68,10 +67,6 @@ export function SmartWhatsappDialog({
   const [mode, setMode] = React.useState<"FREEFORM" | "UTILITY" | "MARKETING">("UTILITY");
   const [body, setBody] = React.useState("");
   const [templateId, setTemplateId] = React.useState("");
-  const [consentConfirmed, setConsentConfirmed] = React.useState(false);
-  const [consentSource, setConsentSource] = React.useState("");
-  const [consentEvidence, setConsentEvidence] = React.useState("");
-  const [consentSaving, setConsentSaving] = React.useState(false);
 
   const load = React.useCallback(async () => {
     setLoading(true);
@@ -81,9 +76,6 @@ export function SmartWhatsappDialog({
       if (!res.ok || !data.ok) throw new Error(data.error ?? "load failed");
       const next = data.context as SmartContext;
       setCtx(next);
-      setConsentConfirmed(false);
-      setConsentSource("");
-      setConsentEvidence("");
       const preferred = initialMode ?? (next.replyWindow.open ? "FREEFORM" : "UTILITY");
       if (preferred === "FREEFORM" && !next.replyWindow.open) setMode("UTILITY");
       else setMode(preferred);
@@ -108,8 +100,8 @@ export function SmartWhatsappDialog({
       toast.error(ERROR_LABELS.CONSENT_CHECK_UNAVAILABLE);
       return;
     }
-    if (mode !== "FREEFORM" && !ctx.whatsappOptIn) {
-      toast.error(ERROR_LABELS.WHATSAPP_OPT_IN_REQUIRED);
+    if (ctx.doNotContact || ctx.whatsappUnsubscribed) {
+      toast.error(ctx.doNotContact ? ERROR_LABELS.DO_NOT_CONTACT : dt("طلب إيقاف التواصل"));
       return;
     }
     if (mode === "FREEFORM" && !body.trim()) {
@@ -162,50 +154,27 @@ export function SmartWhatsappDialog({
     }
   };
 
-  const recordConsent = async () => {
-    if (!ctx || !consentConfirmed || !consentSource) return;
-    setConsentSaving(true);
-    try {
-      const res = await fetch("/api/dashboard/communication/whatsapp/smart-send", {
-        method: "PATCH",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ userId, whatsappOptIn: true, confirmed: true, consentSource, consentEvidence }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok || !data.ok) throw new Error(data.error ?? "consent update failed");
-      setCtx(data.context as SmartContext);
-      setConsentConfirmed(false);
-      setConsentSource("");
-      setConsentEvidence("");
-      toast.success(dt("تم تسجيل الموافقة ومصدرها ومرجعها في سجل المتبرع."));
-    } catch {
-      toast.error(dt("تعذّر تسجيل الموافقة. لم تتغير حالة المتبرع."));
-    } finally {
-      setConsentSaving(false);
-    }
-  };
-
   const tabs = [
     {
       id: "FREEFORM" as const,
       title: dt("رد مباشر"),
       desc: dt("نص حر داخل نافذة 24 ساعة"),
       icon: MessageCircle,
-      disabled: Boolean(ctx?.doNotContact) || Boolean(ctx?.consentCheckUnavailable) || !ctx?.replyWindow.open,
+      disabled: Boolean(ctx?.doNotContact) || Boolean(ctx?.whatsappUnsubscribed) || Boolean(ctx?.consentCheckUnavailable) || !ctx?.replyWindow.open,
     },
     {
       id: "UTILITY" as const,
       title: dt("رسالة خدمة"),
       desc: ctx?.directSendEnabled ? "Direct Send · Utility + fallback" : "Utility Template fallback",
       icon: ShieldCheck,
-      disabled: Boolean(ctx?.doNotContact) || Boolean(ctx?.consentCheckUnavailable) || Boolean(ctx && !ctx.whatsappOptIn) || Boolean(ctx && !ctx.directSendEnabled && ctx.utilityTemplates.length === 0),
+      disabled: Boolean(ctx?.doNotContact) || Boolean(ctx?.whatsappUnsubscribed) || Boolean(ctx?.consentCheckUnavailable) || Boolean(ctx && !ctx.directSendEnabled && ctx.utilityTemplates.length === 0),
     },
     {
       id: "MARKETING" as const,
       title: dt("رسالة تسويقية"),
       desc: dt("قالب Marketing معتمد"),
       icon: Megaphone,
-      disabled: Boolean(ctx?.consentCheckUnavailable) || Boolean(ctx && !ctx.whatsappOptIn),
+      disabled: Boolean(ctx?.doNotContact) || Boolean(ctx?.whatsappUnsubscribed) || Boolean(ctx?.consentCheckUnavailable),
     },
   ];
 
@@ -250,64 +219,14 @@ export function SmartWhatsappDialog({
                 <div className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700">
                   {dt("المتبرع مفعّل عليه «عدم التواصل». الإرسال متوقف على كل مسارات واتساب حتى تُعدّل حالة التواصل.")}</div>
               )}
+              {ctx.whatsappUnsubscribed && !ctx.doNotContact && (
+                <div role="alert" className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700">
+                  {dt("طلب إيقاف التواصل")}
+                </div>
+              )}
               {ctx.consentCheckUnavailable && (
                 <div role="alert" className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700">
                   {ERROR_LABELS.CONSENT_CHECK_UNAVAILABLE}
-                </div>
-              )}
-              {!ctx.whatsappOptIn && !ctx.consentCheckUnavailable && (
-                <div className="space-y-3 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
-                  <p className="leading-5">
-                    {dt("لا تبدأ رسالة خدمة أو تسويق قبل أن يوافق المتبرع صراحة على تلقي رسائل واتساب. تسجيل التبرع أو وجود رقم هاتف لا يُعد موافقة. سجّل الموافقة فقط عند وجود مرجع يمكن مراجعته، ومن دون إدخال بيانات شخصية هنا.")}
-                  </p>
-                  <label className="block space-y-1.5 font-semibold">
-                    <span>{dt("مصدر الموافقة الموثقة")}</span>
-                    <select
-                      value={consentSource}
-                      onChange={(event) => setConsentSource(event.target.value)}
-                      className="h-9 w-full rounded-lg border border-amber-300 bg-white px-2 text-xs"
-                    >
-                      <option value="">{dt("اختر المصدر")}</option>
-                      <option value="DONOR_WHATSAPP_MESSAGE">{dt("رسالة واتساب واردة من المتبرع تتضمن الموافقة")}</option>
-                      <option value="WEB_FORM">{dt("نموذج إلكتروني يتضمن موافقة واتساب صريحة")}</option>
-                      <option value="PAPER_FORM">{dt("نموذج ورقي")}</option>
-                      <option value="PHONE_OR_IN_PERSON">{dt("تأكيد هاتفي أو مباشر موثق")}</option>
-                      <option value="OTHER_VERIFIED_SOURCE">{dt("مصدر آخر موثق")}</option>
-                    </select>
-                  </label>
-                  <label className="block space-y-1.5 font-semibold">
-                    <span>{dt("معرّف مرجع الموافقة (من دون بيانات شخصية)")}</span>
-                    <input
-                      value={consentEvidence}
-                      onChange={(event) => setConsentEvidence(event.target.value)}
-                      maxLength={100}
-                      placeholder={dt("مثال: CONSENT-1042")}
-                      className="h-9 w-full rounded-lg border border-amber-300 bg-white px-2 text-xs"
-                    />
-                  </label>
-                  <label className="flex items-start gap-2 leading-5">
-                    <input
-                      type="checkbox"
-                      checked={consentConfirmed}
-                      onChange={(event) => setConsentConfirmed(event.target.checked)}
-                      className="mt-0.5"
-                    />
-                    <span>{dt("أؤكد أن المتبرع وافق صراحة على تلقي رسائل واتساب على هذا الرقم، وأن الموافقة لم تُسحب.")}</span>
-                  </label>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={recordConsent}
-                    disabled={!consentConfirmed || !consentSource || consentEvidence.trim().length < 3 || consentSaving || sending}
-                  >
-                    {consentSaving && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
-                    {dt("تسجيل الموافقة")}
-                  </Button>
-                </div>
-              )}
-              {ctx.whatsappOptIn && (
-                <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-800">
-                  {dt("توجد موافقة واتساب مسجلة؛ يمكن بدء رسائل الخدمة أو التسويق وفق تفضيلات المتبرع.")}
                 </div>
               )}
               <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
@@ -424,8 +343,8 @@ export function SmartWhatsappDialog({
                     disabled={
                       sending ||
                       Boolean(ctx.doNotContact) ||
+                      Boolean(ctx.whatsappUnsubscribed) ||
                       Boolean(ctx.consentCheckUnavailable) ||
-                      (mode !== "FREEFORM" && !ctx.whatsappOptIn) ||
                       (mode === "FREEFORM" && !body.trim()) ||
                       (mode === "MARKETING" && !templateId) ||
                       (mode === "UTILITY" && ctx.directSendEnabled && !body.trim()) ||

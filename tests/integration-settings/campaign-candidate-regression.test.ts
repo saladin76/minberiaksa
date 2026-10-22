@@ -27,6 +27,7 @@ const contacts = [undefined, null, "", " ", "+905551112233"];
 const profiles = [null, {}, { doNotContact: true }, { whatsappOptIn: true, emailOptIn: true, smsOptIn: true },
   { doNotContact: false, whatsappOptIn: true, emailOptIn: true, smsOptIn: true },
   { doNotContact: false, whatsappOptIn: false, emailOptIn: false, smsOptIn: false },
+  { doNotContact: false, whatsappOptIn: false, emailOptIn: false, smsOptIn: false, consentSource: "meta-whatsapp-inbound-opt-out" },
   { doNotContact: true, whatsappOptIn: true, emailOptIn: true, smsOptIn: true }];
 for (const channel of ["EMAIL", "WHATSAPP", "SMS"] as AudienceChannel[]) {
   test(`${channel}: candidate predicates reconcile contacts with resolved profile defaults`, () => {
@@ -44,6 +45,22 @@ test("all candidates adds no hidden gate; an unresolved explicit gate throws ins
   const base = { role: "DONOR" as const, preferredLang: "ar" };
   assert.equal(campaignCandidateWhere(base, "WHATSAPP", "all"), base);
   assert.throws(() => campaignCandidateWhere(base, "WHATSAPP", "eligible"), /NOT_RESOLVED/);
+});
+test("WhatsApp readiness includes donors without a profile and excludes an explicit STOP", async () => {
+  const reader = isolated<{ readCampaignConsentUserIds: (channel: AudienceChannel) => Promise<string[]> }>("lib/communication/campaign-consent-reader.ts", {
+    "@/lib/prisma": { prisma: {
+      donorCommunicationProfile: {
+        findFirst: async () => ({ id: "p2" }),
+        findMany: async () => [
+          { id: "p1", userId: "profiled", doNotContact: false, emailOptIn: false, smsOptIn: false, consentSource: null },
+          { id: "p2", userId: "stopped", doNotContact: false, emailOptIn: false, smsOptIn: false, consentSource: "meta-whatsapp-inbound-opt-out" },
+        ],
+      },
+      user: { findMany: async (args: { where: { id?: { gt?: string } } }) => args.where.id?.gt ? [] : [{ id: "legacy" }] },
+    } },
+    "./campaign-audience-accounting": { recipientExclusionReason },
+  });
+  assert.deepEqual(Array.from(await reader.readCampaignConsentUserIds("WHATSAPP")), ["profiled", "legacy"]);
 });
 test("pagination rejects malformed numeric inputs before reaching the database", () => {
   assert.deepEqual(candidatePagination(null, null), { page: 1, limit: 25 });
@@ -109,14 +126,14 @@ test("candidate GET and POST authorize before any protected read", async () => {
   assert.equal((await h.route.POST(request())).status, 403);
   assert.equal(h.state().reads + h.state().consentReads, 0);
 });
-test("candidate GET labels unapproved contacts consistently and performs no consent writes", async () => {
+test("candidate GET treats account holders as WhatsApp-eligible unless they opted out", async () => {
   const h = harness();
   const res = await h.route.GET(request());
   assert.equal(res.status, 200);
   assert.equal(res.headers["Cache-Control"], "private, no-store");
   const donors = res.body.donors as RecordValue[];
-  assert.equal(donors[0].eligibility, "UNAVAILABLE");
-  assert.equal(donors[0].eligibilityReason, RECIPIENT_REASON_LABELS.WHATSAPP_OPT_IN_REQUIRED);
+  assert.equal(donors[0].eligibility, "ELIGIBLE");
+  assert.equal(donors[0].eligibilityReason, null);
   assert.equal(h.state().consentReads, 0);
 });
 test("candidate read failures are 503, not fabricated zero counts", async () => {
@@ -158,19 +175,22 @@ function consentReader(failPage = 0, repeat = false): Reader {
   let calls = 0;
   const rows = Array.from({ length: 2001 }, (_, i) => ({ id: String(i + 1).padStart(6, "0"), userId: `user-${i}`, doNotContact: i % 5 === 0, whatsappOptIn: i % 2 === 0, emailOptIn: false, smsOptIn: true }));
   return isolated<Reader>("lib/communication/campaign-consent-reader.ts", {
-    "@/lib/prisma": { prisma: { donorCommunicationProfile: {
-      findFirst: async () => ({ id: "002001" }),
-      findMany: async (args: { where: { id: { gt?: string; lte: string } }; take: number }) => {
-        calls++; if (calls === failPage) throw new Error("source page failed");
-        assert.equal(args.take, 1000);
-        return rows.filter((row) => repeat || !args.where.id.gt || row.id > args.where.id.gt).slice(0, args.take);
+    "@/lib/prisma": { prisma: {
+      donorCommunicationProfile: {
+        findFirst: async () => ({ id: "002001" }),
+        findMany: async (args: { where: { id: { gt?: string; lte: string } }; take: number }) => {
+          calls++; if (calls === failPage) throw new Error("source page failed");
+          assert.equal(args.take, 1000);
+          return rows.filter((row) => repeat || !args.where.id.gt || row.id > args.where.id.gt).slice(0, args.take);
+        },
       },
-    } } }, "./campaign-audience-accounting": { recipientExclusionReason },
+      user: { findMany: async () => [] },
+    } }, "./campaign-audience-accounting": { recipientExclusionReason },
   });
 }
 test("consent reader walks bounded pages, applies DNC and never truncates at the first page", async () => {
   const ids = await consentReader().readCampaignConsentUserIds("WHATSAPP");
-  assert.equal(ids.length, 800); assert.equal(new Set(ids).size, ids.length);
+  assert.equal(ids.length, 1600); assert.equal(new Set(ids).size, ids.length);
 });
 test("consent reader rejects failed pages and repeated cursors rather than returning partial IDs", async () => {
   await assert.rejects(consentReader(2).readCampaignConsentUserIds("WHATSAPP"), /source page failed/);

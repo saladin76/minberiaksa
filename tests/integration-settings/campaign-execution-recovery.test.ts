@@ -105,7 +105,7 @@ function engineHarness(options: Options = {}) {
     "./campaign-recipient-guard": { checkCampaignRecipientBeforeSend: async (_channel: string, _id: string, contact: string) => { events.push("guard"); return options.guardBlocks ? { ok: false, reason: "DO_NOT_CONTACT" } : { ok: true, contact }; } },
     "./retry-recipient-guard": { retryDefinitelyNotSent: () => false },
     "./whatsapp-marketing-frequency": {
-      reserveWhatsappMarketingSend: async () => ({ ok: true, reservation: { userId: "donor", reservedAt: new Date(), previousAt: null } }),
+      reserveWhatsappMarketingSend: async () => ({ ok: true, reservation: { userId: "donor", reservedAt: new Date(), previousAt: null, reserved: true } }),
       releaseWhatsappMarketingReservation: async () => undefined,
     },
     "@/lib/locales": { DEFAULT_LOCALE: "ar", isValidLocale: (value: string) => ["ar", "en"].includes(value) },
@@ -247,6 +247,7 @@ for (const code of ["DELIVERY_OUTCOME_UNCERTAIN", "SEND_THREW  socket", "NETWORK
     const guard = isolated<{ checkRetryRecipient: (input: Dict) => Promise<{ ok: boolean; code?: string }> }>("lib/communication/retry-recipient-guard.ts", {
       "@/lib/prisma": { prisma: { communicationDelivery: { findUnique: async () => ({ errorMessage: code }) }, user: { findUnique: async () => { throw new Error("must not read donor after uncertain evidence"); } } } },
       "./campaign-audience-accounting": { recipientExclusionReason }, "./campaign-contact-validation": { normalizeCampaignContact },
+      "./phone": { phoneMatchVariants: (phone: string) => [phone] },
     });
     const result = await guard.checkRetryRecipient({ id: "delivery", channel: "EMAIL", purpose: "MARKETING", campaignId: "campaign", recipientUserId: "user", recipientEmail: "u@example.test", recipientPhone: null });
     assert.equal(result.code, "DELIVERY_OUTCOME_UNCERTAIN");
