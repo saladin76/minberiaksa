@@ -17,15 +17,20 @@ const sendSchema = z.object({
   templateId: z.string().min(1).nullable().optional(),
 });
 
-const consentSourceSchema = z.enum(["WEB_FORM", "PAPER_FORM", "PHONE_OR_IN_PERSON", "OTHER_VERIFIED_SOURCE"]);
+const consentSourceSchema = z.enum(["DONOR_WHATSAPP_MESSAGE", "WEB_FORM", "PAPER_FORM", "PHONE_OR_IN_PERSON", "OTHER_VERIFIED_SOURCE"]);
+const consentEvidenceSchema = z.string().trim().min(3).max(100).regex(/^[A-Za-z0-9_.:/#-]+$/);
 const consentSchema = z.object({
   userId: z.string().min(1),
   whatsappOptIn: z.boolean(),
   confirmed: z.literal(true),
   consentSource: consentSourceSchema.optional(),
+  consentEvidence: consentEvidenceSchema.optional(),
 }).superRefine((value, context) => {
   if (value.whatsappOptIn && !value.consentSource) {
     context.addIssue({ code: "custom", path: ["consentSource"], message: "A verified consent source is required." });
+  }
+  if (value.whatsappOptIn && !value.consentEvidence) {
+    context.addIssue({ code: "custom", path: ["consentEvidence"], message: "A consent evidence reference is required." });
   }
 });
 
@@ -104,7 +109,7 @@ export async function PATCH(request: NextRequest) {
     {
       whatsappOptIn: parsed.data.whatsappOptIn,
       consentSource: parsed.data.whatsappOptIn
-        ? `dashboard-whatsapp-opt-in:${parsed.data.consentSource}`
+        ? `dashboard-whatsapp-opt-in:${parsed.data.consentSource}:${parsed.data.consentEvidence}`
         : "dashboard-manual-whatsapp-revocation",
     },
     actor,
