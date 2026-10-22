@@ -58,8 +58,15 @@ test("campaign retry cannot bypass the existing WhatsApp consent gate", async ()
 test("campaign retry does not interpret an absent profile as permission", async () => {
   assert.equal((await retryHarness({ ...donor, communicationProfile: null }).checkRetryRecipient(row)).code, "CONSENT_BLOCKED");
 });
-test("manual WhatsApp retains its separate existing policy", async () => {
-  assert.equal((await retryHarness({ ...donor, communicationProfile: null }).checkRetryRecipient({ ...row, campaignId: null })).ok, true);
+test("manual WhatsApp retry requires explicit opt-in even for a transactional message", async () => {
+  const noProfile = await retryHarness({ ...donor, communicationProfile: null }).checkRetryRecipient({ ...row, purpose: "TRANSACTIONAL", campaignId: null });
+  const optedOut = await retryHarness({ ...donor, communicationProfile: { ...approved, whatsappOptIn: false } }).checkRetryRecipient({ ...row, purpose: "TRANSACTIONAL", campaignId: null });
+  assert.equal(noProfile.code, "CONSENT_BLOCKED");
+  assert.equal(optedOut.code, "CONSENT_BLOCKED");
+});
+test("unlinked manual WhatsApp retry cannot use a stored phone without a donor consent record", async () => {
+  const result = await retryHarness(donor).checkRetryRecipient({ ...row, campaignId: null, recipientUserId: null });
+  assert.equal(result.code, "CONSENT_BLOCKED");
 });
 test("transactional email remains independent of marketing opt-in", async () => {
   assert.equal((await retryHarness({ ...donor, communicationProfile: null }).checkRetryRecipient({ ...row, channel: "EMAIL", purpose: "TRANSACTIONAL", campaignId: null })).ok, true);
