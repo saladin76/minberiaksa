@@ -1,4 +1,8 @@
+import { loadEnvConfig } from "@next/env";
 import { PrismaClient } from "@prisma/client";
+
+loadEnvConfig(process.cwd(), process.env.NODE_ENV === "development");
+
 const indexes = [
   { collection: "Category", key: { previousSlugs: 1 }, unique: false },
   { collection: "SuperCategory", key: { slug: 1 }, unique: true },
@@ -34,13 +38,22 @@ const indexes = [
     unique: true,
   },
 ];
+
 async function run() {
- if (process.argv.includes("--production") && process.env.VERCEL_ENV !== "production") { console.log("Content editor indexes: production-only step skipped"); return; }
-  if (!process.argv.includes("--apply") && !process.argv.includes("--production")) {
+  const checkOnly = process.argv.includes("--check");
+  const production = process.argv.includes("--production");
+
+  if (production && process.env.VERCEL_ENV !== "production") {
+    console.log("Content editor indexes: production-only step skipped");
+    return;
+  }
+  if (!process.argv.includes("--apply") && !production && !checkOnly) {
     console.log(JSON.stringify({ dryRun: true, indexes }, null, 2));
     return;
   }
+
   const prisma = new PrismaClient();
+  let missing = 0;
   try {
     for (const spec of indexes) {
       const collection = await prisma.$runCommandRaw({
@@ -63,14 +76,27 @@ async function run() {
       const matching = existing.find(
         (index) => JSON.stringify(index.key) === JSON.stringify(spec.key),
       );
+
       if (matching) {
-        if (spec.unique && !matching.unique)
-          throw new Error(
-            `Non-unique index already exists for ${spec.collection}; inspect it before creating a unique index`,
-          );
+        if (spec.unique && !matching.unique) {
+          const message = `Non-unique index already exists for ${spec.collection}; inspect it before creating a unique index`;
+          if (checkOnly) {
+            console.error(message);
+            missing += 1;
+            continue;
+          }
+          throw new Error(message);
+        }
         console.log(`${spec.collection}: index exists`);
         continue;
       }
+
+      if (checkOnly) {
+        console.error(`${spec.collection}: expected index is missing`);
+        missing += 1;
+        continue;
+      }
+
       await prisma.$runCommandRaw({
         createIndexes: spec.collection,
         indexes: [
@@ -83,10 +109,18 @@ async function run() {
       });
       console.log(`${spec.collection}: index created`);
     }
+
+    if (checkOnly && missing > 0) {
+      console.error(`Content editor indexes: ${missing} issue(s) need review`);
+      process.exitCode = 1;
+    } else if (checkOnly) {
+      console.log("Content editor indexes: all expected indexes are present");
+    }
   } finally {
     await prisma.$disconnect();
   }
 }
+
 run().catch((error) => {
   console.error(error instanceof Error ? error.message : "Index setup failed");
   process.exitCode = 1;
