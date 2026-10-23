@@ -37,11 +37,13 @@ test("dashboard table search uses a global row filter", () => {
 test("donation search is server-side and current API page is not sliced again", () => {
   const page = read("app/(dashboard)/dashboard/donations/page.tsx");
   const api = read("app/api/donations/route.ts");
+  const search = read("lib/dashboard/donation-search.ts");
   assert.match(page, /search: debouncedSearch/);
   assert.match(page, /const paginatedDonations = filteredDonations/);
   assert.doesNotMatch(page, /filteredDonations\.slice/);
   assert.match(api, /providerOrderId/);
-  assert.match(api, /phone: \{ contains: search/);
+  assert.match(search, /phone: \{ contains: term/);
+  assert.match(search, /donationWhereForIds\(matchingDonationIds\)/);
   assert.match(api, /items:/);
   assert.match(api, /categoryItems:/);
 });

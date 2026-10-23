@@ -15,15 +15,12 @@ import {
   Repeat,
   Calendar,
   Receipt,
-  Target,
-  Layers,
   BarChart3,
   PieChart as PieChartIcon,
   Search,
   ChevronDown,
   Loader2,
   HandCoins,
-  Percent,
   Landmark,
   LayoutDashboard,
 } from "lucide-react";
@@ -45,7 +42,6 @@ import {
   BarChart,
   Bar,
   Line,
-  AreaChart,
   Area,
   PieChart,
   Pie,
@@ -355,6 +351,7 @@ export default function DashboardPage() {
   const [donationsTotal, setDonationsTotal] = useState(0);
   const [donationsLoading, setDonationsLoading] = useState(false);
   const [donationsFetchedOnce, setDonationsFetchedOnce] = useState(false);
+  const donationsRequestId = useRef(0);
   const [searchCampaign, setSearchCampaign] = useState("");
   const [donationDetails, setDonationDetails] = useState<{
     open: boolean;
@@ -495,7 +492,6 @@ export default function DashboardPage() {
       if (selectedCategory !== "all") params.append("categoryId", selectedCategory);
       if (selectedCampaign !== "all") params.append("campaignId", selectedCampaign);
       if (effectiveUserId !== "all") params.append("userId", effectiveUserId);
-      if (showFailed) params.set("showFailed", "true");
       if (donationLocaleFilter !== "all") params.set("locale", donationLocaleFilter);
       if (donationCountryFilter !== "all") params.set("country", donationCountryFilter);
       const response = await axios.get(`/api/admin/donations/chart?${params}`);
@@ -507,7 +503,7 @@ export default function DashboardPage() {
     } finally {
       setChartLoading(false);
     }
-  }, [selectedCategory, selectedCampaign, selectedUserId, searchParams, chartPeriod, dateFrom, dateTo, showFailed, donationLocaleFilter, donationCountryFilter]);
+  }, [selectedCategory, selectedCampaign, selectedUserId, searchParams, chartPeriod, dateFrom, dateTo, donationLocaleFilter, donationCountryFilter]);
 
   useEffect(() => {
     fetchChartData();
@@ -550,6 +546,13 @@ export default function DashboardPage() {
   // Donations list  uses تصفية النتائج + chart time span (period + from/to) + sort
   const fetchDonations = useCallback(
     async (page: number, append: boolean) => {
+      const requestId = ++donationsRequestId.current;
+      if (!append) {
+        // Do not leave rows from the previous filter visible while the new
+        // query is loading, or after it fails.
+        setDonations([]);
+        setDonationsTotal(0);
+      }
       setDonationsLoading(true);
       try {
         const { start, end } = getDonationsDateRange(chartPeriod, dateFrom, dateTo);
@@ -570,6 +573,7 @@ export default function DashboardPage() {
         if (donationsSearch) params.set("search", donationsSearch);
         const res = await fetch(`/api/donations?${params}`);
         const data = await res.json();
+        if (requestId !== donationsRequestId.current) return;
         if (!res.ok) {
           toast.error(data?.error || dt("فشل في تحميل التبرعات"));
           return;
@@ -578,11 +582,14 @@ export default function DashboardPage() {
         setDonations((prev) => (append ? [...prev, ...list] : list));
         setDonationsTotal(data.pagination?.total ?? 0);
       } catch (error) {
+        if (requestId !== donationsRequestId.current) return;
         console.error("Error fetching donations:", error);
         toast.error(dt("فشل في تحميل التبرعات"));
       } finally {
-        setDonationsLoading(false);
-        setDonationsFetchedOnce(true);
+        if (requestId === donationsRequestId.current) {
+          setDonationsLoading(false);
+          setDonationsFetchedOnce(true);
+        }
       }
     },
     [
@@ -1662,7 +1669,19 @@ export default function DashboardPage() {
   <div className="space-y-1 text-start">
     <label className="text-[11px] font-semibold text-slate-600">
       {dt("الفئة")}</label>
-    <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+    <Select
+      value={selectedCategory}
+      onValueChange={(categoryId) => {
+        setSelectedCategory(categoryId);
+        if (categoryId !== "all" && selectedCampaign !== "all") {
+          const campaign = campaigns.find((item) => item.id === selectedCampaign);
+          const categoryIds = campaign?.categoryIds ?? (campaign?.categoryId ? [campaign.categoryId] : []);
+          if (campaign && !categoryIds.includes(categoryId)) {
+            setSelectedCampaign("all");
+          }
+        }
+      }}
+    >
       <SelectTrigger className="w-full h-10 px-3 text-[13px] rounded-lg border-slate-200 bg-white shadow-sm transition-colors hover:border-slate-300 focus:border-brand focus:ring-2 focus:ring-brand/15">
         <SelectValue placeholder={dt("اختر الفئة")} />
       </SelectTrigger>

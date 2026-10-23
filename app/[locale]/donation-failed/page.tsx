@@ -37,28 +37,6 @@ import {
 // User-provided donation form. It is independent of the original checkout attempt.
 const CHARITY_GIVING_IFRAME_URL = "https://charitygiving.net/iframe/eyJpdiI6IkxubFNEQnNnbU50R2V4dG5TeHg0dVE9PSIsInZhbHVlIjoiVkkwYkdUcnpwRHFsczd4dkRLY0Z2QT09IiwibWFjIjoiYjI5NTU5ZGZmZjdhMjllNTgwMzk2NTlhNTdlYzY3MjQwYWNiMjM1MzFmNjMxYjA1NTBmZGI4MDIxYTM4ODRjMyIsInRhZyI6IiJ9";
 
-const CHARITY_GIVING_NOTICES: Record<string, string> = {
-  "ar": "هذا نموذج تبرع عبر CharityGiving. إذا ظهر خصم سابق من حسابك، تحقّق من حالته قبل الدفع مجددًا.",
-  "en": "This donation form is provided by CharityGiving. If a previous charge appears on your account, check its status before paying again.",
-  "tr": "Bu bağış formu CharityGiving tarafından sağlanmaktadır. Hesabınızda önceki bir ödeme görünüyorsa yeniden ödeme yapmadan önce durumunu kontrol edin.",
-  "fr": "Ce formulaire de don est fourni par CharityGiving. Si un débit précédent apparaît sur votre compte, vérifiez son statut avant de payer à nouveau.",
-  "de": "Dieses Spendenformular wird von CharityGiving bereitgestellt. Falls eine frühere Abbuchung auf Ihrem Konto erscheint, prüfen Sie deren Status, bevor Sie erneut bezahlen.",
-  "es": "Este formulario de donación es de CharityGiving. Si aparece un cargo anterior en su cuenta, compruebe su estado antes de volver a pagar.",
-  "id": "Formulir donasi ini disediakan oleh CharityGiving. Jika ada tagihan sebelumnya di rekening Anda, periksa statusnya sebelum membayar lagi.",
-  "pt": "Este formulário de donativo é fornecido pela CharityGiving. Se aparecer uma cobrança anterior na sua conta, verifique o estado antes de pagar novamente.",
-  "ur": "یہ عطیہ فارم CharityGiving فراہم کرتا ہے۔ اگر آپ کے اکاؤنٹ سے پہلے رقم کٹی ہے تو دوبارہ ادائیگی سے پہلے اس کی حالت معلوم کریں۔",
-  "sq": "Ky formular dhurimi ofrohet nga CharityGiving. Nëse në llogarinë tuaj shfaqet një pagesë e mëparshme, kontrolloni gjendjen e saj përpara se të paguani përsëri.",
-  "it": "Questo modulo di donazione è fornito da CharityGiving. Se sul conto compare un addebito precedente, verificane lo stato prima di pagare di nuovo.",
-  "nl": "Dit donatieformulier wordt aangeboden door CharityGiving. Als er een eerdere afschrijving op uw rekening staat, controleer dan de status voordat u opnieuw betaalt.",
-  "sv": "Det här donationsformuläret tillhandahålls av CharityGiving. Om en tidigare debitering visas på ditt konto, kontrollera dess status innan du betalar igen.",
-  "no": "Dette donasjonsskjemaet leveres av CharityGiving. Hvis en tidligere belastning vises på kontoen din, må du kontrollere statusen før du betaler på nytt.",
-  "da": "Denne donationsformular leveres af CharityGiving. Hvis der vises en tidligere hævning på din konto, skal du kontrollere dens status, før du betaler igen.",
-  "ms": "Borang sumbangan ini disediakan oleh CharityGiving. Jika terdapat caj terdahulu dalam akaun anda, semak statusnya sebelum membuat bayaran semula.",
-  "ja": "この寄付フォームはCharityGivingが提供しています。口座に以前の請求が表示されている場合は、再度支払う前に状況を確認してください。",
-  "zh": "此捐赠表单由 CharityGiving 提供。如果您的账户显示先前的扣款，请先核实其状态，再决定是否重新付款。",
-  "hi": "यह दान फ़ॉर्म CharityGiving द्वारा प्रदान किया गया है। यदि आपके खाते में पहले की कोई कटौती दिखाई देती है, तो दोबारा भुगतान करने से पहले उसकी स्थिति जाँच लें।"
-};
-
 const CURRENCY_SYMBOLS: Record<string, string> = {
   USD: "$",
   EUR: "€",
@@ -209,7 +187,6 @@ export default function DonationFailedPage() {
     // Monthly subscriptions can't be cloned  send the donor back to the
     // campaign page where the regular dialog handles the subscribe flow.
     if (isMonthly) {
-      const firstCampaignId = donation.items?.[0]?.campaign ? null : null;
       // Fallback to /campaigns since we don't have the campaign id stored
       router.push("/campaigns");
       return;
@@ -303,7 +280,7 @@ export default function DonationFailedPage() {
             <p className="mt-1 text-sm text-white/85 leading-relaxed">{t("alternate.description")}</p>
           </div>
           <iframe
-            src="https://charitygiving.net/iframe/eyJpdiI6IkxubFNEQnNnbU50R2V4dG5TeHg0dVE9PSIsInZhbHVlIjoiVkkwYkdUcnpwRHFsczd4dkRLY0Z2QT09IiwibWFjIjoiYjI5NTU5ZGZmZjdhMjllNTgwMzk2NTlhNTdlYzY3MjQwYWNiMjM1MzFmNjMxYjA1NTBmZGI4MDIxYTM4ODRjMyIsInRhZyI6IiJ9"
+            src={CHARITY_GIVING_IFRAME_URL}
             title={t("alternate.title")}
             allow="payment"
             className="block w-full border-0 bg-white"
@@ -400,40 +377,6 @@ export default function DonationFailedPage() {
                 </div>
               </details>
             )}
-          </Card>
-        )}
-
-        {/* Alternative donation form, also available from a message without a donationId. */}
-        {!loading && donation?.status !== "PAID" && (
-          <Card className="p-5 sm:p-7 border-2 border-[#A5243D]/20 bg-white">
-            <h2 className="text-lg sm:text-xl font-bold text-gray-900 mb-3">
-              {t("retry.title")} · CharityGiving
-            </h2>
-            <p className="text-sm text-gray-600 leading-relaxed mb-5">
-              {CHARITY_GIVING_NOTICES[locale] ?? CHARITY_GIVING_NOTICES.en}
-            </p>
-            <div className="mx-auto w-full max-w-[400px] overflow-hidden rounded-xl border border-gray-200">
-              <iframe
-                src={CHARITY_GIVING_IFRAME_URL}
-                title="CharityGiving"
-                allow="payment"
-                loading="lazy"
-                referrerPolicy="strict-origin-when-cross-origin"
-                width="400"
-                height="700"
-                className="block w-full min-w-0 border-0"
-              />
-            </div>
-            <div className="mt-4 text-center">
-              <a
-                href={CHARITY_GIVING_IFRAME_URL}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 text-[#A5243D] hover:text-[#7D1830] text-sm font-semibold underline underline-offset-4"
-              >
-                CharityGiving <Arrow className="w-4 h-4" />
-              </a>
-            </div>
           </Card>
         )}
 
