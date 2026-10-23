@@ -352,7 +352,10 @@ export default function TrackingPixels({ children }: { children: React.ReactNode
           // this same function object, and a rest parameter would not preserve the shape it expects.
           // eslint-disable-next-line prefer-rest-params -- see the two lines above
           if (n.callMethod) n.callMethod(...arguments);
-          else n.queue.push(arguments);
+          else {
+            // eslint-disable-next-line prefer-rest-params -- Meta's loader queues the original Arguments object.
+            n.queue.push(arguments);
+          }
         } as FbqFn;
         b.fbq = n;
         if (!(b as Window & { _fbq?: FbqFn })._fbq) (b as Window & { _fbq?: FbqFn })._fbq = n;
