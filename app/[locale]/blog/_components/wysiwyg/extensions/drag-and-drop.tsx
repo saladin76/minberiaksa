@@ -204,7 +204,7 @@ function DragHandle(options: DragHandleOptions) {
   });
 }
 
-interface DragAndDropOptions {}
+type DragAndDropOptions = Record<string, never>;
 
 const DragAndDrop = Extension.create<DragAndDropOptions>({
   name: "dragAndDrop",

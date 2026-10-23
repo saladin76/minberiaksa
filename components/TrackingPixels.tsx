@@ -351,7 +351,8 @@ export default function TrackingPixels({ children }: { children: React.ReactNode
           // Verbatim from Meta's pixel snippet: the loader forwards an unknown argument list through
           // this same function object, and a rest parameter would not preserve the shape it expects.
           // eslint-disable-next-line prefer-rest-params -- see the two lines above
-          n.callMethod ? n.callMethod(...arguments) : n.queue.push(arguments);
+          if (n.callMethod) n.callMethod(...arguments);
+          else n.queue.push(arguments);
         } as FbqFn;
         b.fbq = n;
         if (!(b as Window & { _fbq?: FbqFn })._fbq) (b as Window & { _fbq?: FbqFn })._fbq = n;
@@ -373,10 +374,10 @@ export default function TrackingPixels({ children }: { children: React.ReactNode
     if (config.gaMeasurementId) {
       const id = config.gaMeasurementId;
       window.dataLayer = window.dataLayer || [];
-      function gtag(..._args: unknown[]) {
-        // eslint-disable-next-line prefer-rest-params
+      const gtag: (...args: unknown[]) => void = function () {
+        // eslint-disable-next-line prefer-rest-params -- preserve the Arguments object expected by the data layer.
         window.dataLayer?.push(arguments);
-      }
+      };
       (window as unknown as { gtag: (...a: unknown[]) => void }).gtag = gtag;
       gtag("js", new Date());
       gtag("config", id, { send_page_view: true });

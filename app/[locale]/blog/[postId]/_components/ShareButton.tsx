@@ -21,7 +21,7 @@ export default function ShareButton({ label = "Share", copiedMessage = "Link cop
         await navigator.clipboard.writeText(shareUrl);
         toast.success(copiedMessage);
       }
-    } catch (err) {
+    } catch {
       toast.error("Failed to share");
     }
   };

@@ -36,7 +36,7 @@ export function BankTransfersUploadsPanel() {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const active = pathname === "/dashboard/bank-transfers" || pathname.startsWith("/dashboard/bank-transfers/");
-  const ids = uploads.map((u) => u.id).filter((id): id is string => Boolean(id));
+  const ids = useMemo(() => uploads.map((u) => u.id).filter((id): id is string => Boolean(id)), [uploads]);
   const allSelected = ids.length > 0 && ids.every((id) => selected.has(id));
 
   async function loadUploads() {
@@ -46,11 +46,11 @@ export function BankTransfersUploadsPanel() {
     finally { setLoading(false); }
   }
   useEffect(() => { if (!active) { setNode(null); return; } const refresh = () => setNode(ensureNode()); refresh(); const timer = window.setInterval(refresh, 700); void loadUploads(); return () => window.clearInterval(timer); }, [active, pathname]);
-  useEffect(() => { setSelected((prev) => new Set([...prev].filter((id) => ids.includes(id)))); }, [uploads.length]);
+  useEffect(() => { setSelected((prev) => new Set([...prev].filter((id) => ids.includes(id)))); }, [ids]);
 
   const totals = useMemo(() => uploads.reduce((acc, item) => { acc.imported += item.importedCount || 0; acc.duplicate += item.duplicateCount || 0; acc.excluded += item.excludedCount || 0; return acc; }, { imported: 0, duplicate: 0, excluded: 0 }), [uploads]);
-  function toggleOne(id: string) { setSelected((prev) => { const next = new Set(prev); next.has(id) ? next.delete(id) : next.add(id); return next; }); }
-  function toggleAll() { setSelected((prev) => { const next = new Set(prev); allSelected ? ids.forEach((id) => next.delete(id)) : ids.forEach((id) => next.add(id)); return next; }); }
+  function toggleOne(id: string) { setSelected((prev) => { const next = new Set(prev); if (next.has(id)) next.delete(id); else next.add(id); return next; }); }
+  function toggleAll() { setSelected((prev) => { const next = new Set(prev); if (allSelected) ids.forEach((id) => next.delete(id)); else ids.forEach((id) => next.add(id)); return next; }); }
   async function deleteSelected() {
     const selectedIds = [...selected]; if (!selectedIds.length) return;
     setDeleting(true);

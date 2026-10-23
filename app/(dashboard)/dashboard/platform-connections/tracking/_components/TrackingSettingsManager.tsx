@@ -202,7 +202,8 @@ export default function TrackingSettingsManager({ canManage, canTest }: { canMan
     try {
       const res = await axios.post<{ message: string; status: string }>("/api/admin/tracking/test", { platform });
       setLastTest((s) => ({ ...s, [platform]: `${res.data.message}  ${new Date().toLocaleString(dashIntl("ar-EG"))}` }));
-      res.data.status === "success" ? toast.success(res.data.message) : toast(res.data.message);
+      if (res.data.status === "success") toast.success(res.data.message);
+      else toast(res.data.message);
       await loadDiagnostics();
     } catch (e) {
       const message = axios.isAxiosError(e) && typeof e.response?.data?.message === "string" ? e.response.data.message : dt("فشل اختبار التتبع");

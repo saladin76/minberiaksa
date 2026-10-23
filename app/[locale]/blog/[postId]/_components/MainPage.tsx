@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import axios from "axios";
 import Image from "next/image";
 import { Link } from "@/i18n/routing";
@@ -32,11 +32,6 @@ interface ExtendedPost extends PrismaPost {
   category?: Partial<PrismaCategory> | null;
 }
 
-interface BlogPostProps {
-  params: {
-    postId: string;
-  };
-}
 
 const MainPage: React.FC<{ id: string }> = ({ id }) => {
   const locale = useLocale(); // Get the current locale (ar or en)
@@ -49,23 +44,23 @@ const MainPage: React.FC<{ id: string }> = ({ id }) => {
   const router = useRouter();
 
   // Fetch post data
-  const fetchPostData = async () => {
+  const fetchPostData = useCallback(async () => {
     setLoading(true);
     try {
       const response = await axios.get(`/api/posts/${id}`, { params: { locale } });
       console.log(response.data);
       setPost(response.data.post);
       setSimilarPosts(response.data.similarPosts);
-    } catch (error) {
+    } catch {
       router.push("/404");
     } finally {
       setLoading(false);
     }
-  };
+  }, [id, locale, router]);
 
   useEffect(() => {
-    fetchPostData();
-  }, [id, locale, router]);
+    void fetchPostData();
+  }, [fetchPostData]);
 
   // Scroll progress tracking
   useEffect(() => {
@@ -178,9 +173,6 @@ const MainPage: React.FC<{ id: string }> = ({ id }) => {
                         ? JSON.parse(post.content)
                         : defaultEditorContent
                     }
-                    onDebouncedUpdate={(editor) => {
-                      console.log("لا اله الا الله");
-                    }}
                     isEditable={false}
                   />
                 )}
@@ -208,7 +200,7 @@ const MainPage: React.FC<{ id: string }> = ({ id }) => {
                     {similarPosts.map((similarPost) => (
                       <Link
                         key={similarPost.id}
-                        href={`/blog/${(similarPost as any).slug || similarPost.id}`}
+                        href={`/blog/${similarPost.slug || similarPost.id}`}
                         className="block"
                       >
                         <div className="group relative overflow-hidden rounded-lg">

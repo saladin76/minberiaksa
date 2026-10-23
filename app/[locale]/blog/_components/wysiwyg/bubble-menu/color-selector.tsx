@@ -135,12 +135,13 @@ export const ColorSelector: FC<ColorSelectorProps> = ({
               key={index}
               onClick={() => {
                 editor.commands.unsetColor();
-                name !== "Default" &&
+                if (name !== "Default") {
                   editor
                     .chain()
                     .focus()
                     .setColor(color || "")
                     .run();
+                }
                 setIsOpen(false);
               }}
               className="flex items-center justify-between rounded-sm px-2 py-1 text-sm text-stone-600 hover:bg-stone-100"
@@ -170,7 +171,7 @@ export const ColorSelector: FC<ColorSelectorProps> = ({
               key={index}
               onClick={() => {
                 editor.commands.unsetHighlight();
-                name !== "Default" && editor.commands.setHighlight({ color });
+                if (name !== "Default") editor.commands.setHighlight({ color });
                 setIsOpen(false);
               }}
               className="flex items-center justify-between rounded-sm px-2 py-1 text-sm text-stone-600 hover:bg-stone-100"

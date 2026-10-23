@@ -20,8 +20,8 @@ export const LinkSelector: FC<LinkSelectorProps> = ({
 
   // Autofocus on input by default
   useEffect(() => {
-    inputRef.current && inputRef.current?.focus();
-  });
+    inputRef.current?.focus();
+  }, []);
 
   const handleLinkSubmission = () => {
     const url = getUrlFromString(inputRef.current?.value || "");

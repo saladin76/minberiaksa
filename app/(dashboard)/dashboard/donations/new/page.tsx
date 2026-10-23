@@ -135,7 +135,7 @@ export default function NewCampaignPage() {
       const uploadedUrls = await Promise.all(uploadPromises);
       form.setValue('images', [...currentImages, ...uploadedUrls]);
       toast.success(dt("تم رفع الصور بنجاح"));
-    } catch (error) {
+    } catch {
       toast.error(dt("فشل في رفع الصور"));
     } finally {
       setUploadingImage(false);

@@ -1,8 +1,8 @@
 "use client";
 
-import { cn, getUrlFromString } from "@/lib/utils";
+import { getUrlFromString } from "@/lib/utils";
 import { Editor } from "@tiptap/core";
-import { Check, ImageIcon, Trash } from "lucide-react";
+import { Check, ImageIcon } from "lucide-react";
 import { Dispatch, FC, SetStateAction, useEffect, useRef } from "react";
 
 interface ImageSelectorProps {
@@ -20,8 +20,8 @@ export const ImageSelector: FC<ImageSelectorProps> = ({
 
   // Autofocus on input by default
   useEffect(() => {
-    inputRef.current && inputRef.current?.focus();
-  });
+    inputRef.current?.focus();
+  }, []);
 
   const handleLinkSubmission = () => {
     const url = getUrlFromString(inputRef.current?.value || "");

@@ -23,7 +23,7 @@ import {
   useRef,
   useState,
 } from "react";
-import tippy from "tippy.js";
+import tippy, { type Instance } from "tippy.js";
 
 interface CommandItemProps {
   title: string;
@@ -34,6 +34,11 @@ interface CommandItemProps {
 interface CommandProps {
   editor: Editor;
   range: Range;
+}
+
+interface SlashCommandItem extends CommandItemProps {
+  searchTerms: string[];
+  command: (props: CommandProps) => void;
 }
 
 const Command = Extension.create({
@@ -49,7 +54,7 @@ const Command = Extension.create({
         }: {
           editor: Editor;
           range: Range;
-          props: any;
+          props: Pick<SlashCommandItem, "command">;
         }) => {
           props.command({ editor, range });
         },
@@ -254,8 +259,8 @@ const CommandList = ({
   items,
   command,
 }: {
-  items: CommandItemProps[];
-  command: any;
+  items: SlashCommandItem[];
+  command: (item: SlashCommandItem) => void;
 }) => {
   const [selectedIndex, setSelectedIndex] = useState(0);
 
@@ -315,7 +320,7 @@ const CommandList = ({
       ref={commandListContainer}
       className="z-50 h-auto max-h-[330px] w-72 overflow-y-auto rounded-md border border-stone-200 bg-white px-1 py-2 font-sans shadow-md transition-all"
     >
-      {items.map((item: CommandItemProps, index: number) => {
+      {items.map((item: SlashCommandItem, index: number) => {
         return (
           <button
             className={`flex w-full items-center space-x-2 rounded-md px-2 py-1 text-left text-sm text-stone-900 hover:bg-stone-100 ${
@@ -340,7 +345,7 @@ const CommandList = ({
 
 const renderItems = () => {
   let component: ReactRenderer | null = null;
-  let popup: any | null = null;
+  let popup: Instance | null = null;
 
   return {
     onStart: (props: { editor: Editor; clientRect: DOMRect }) => {
@@ -349,9 +354,8 @@ const renderItems = () => {
         editor: props.editor,
       });
 
-      // @ts-ignore
-      popup = tippy("body", {
-        getReferenceClientRect: props.clientRect,
+      popup = tippy(document.body, {
+        getReferenceClientRect: () => props.clientRect,
         appendTo: () => document.body,
         content: component.element,
         showOnCreate: true,
@@ -363,23 +367,20 @@ const renderItems = () => {
     onUpdate: (props: { editor: Editor; clientRect: DOMRect }) => {
       component?.updateProps(props);
 
-      popup &&
-        popup[0].setProps({
-          getReferenceClientRect: props.clientRect,
-        });
+      popup?.setProps({
+        getReferenceClientRect: () => props.clientRect,
+      });
     },
-    onKeyDown: (props: { event: KeyboardEvent }) => {
-      if (props.event.key === "Escape") {
-        popup?.[0].hide();
-
+    onKeyDown: ({ event }: { event: KeyboardEvent }) => {
+      if (event.key === "Escape") {
+        popup?.hide();
         return true;
       }
 
-      // @ts-ignore
-      return component?.ref?.onKeyDown(props);
+      return false;
     },
     onExit: () => {
-      popup?.[0].destroy();
+      popup?.destroy();
       component?.destroy();
     },
   };

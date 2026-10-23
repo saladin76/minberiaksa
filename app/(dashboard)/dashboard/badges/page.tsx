@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import axios from "axios";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -23,7 +23,6 @@ import {
 import { toast } from "react-hot-toast";
 import { Award, Pencil, Trash2, Plus, Loader2 } from "lucide-react";
 import { PageHeader } from "@/components/dashboard/PageHeader";
-import { cn } from "@/lib/utils";
 import type { BadgeCriteriaType } from "@/lib/badge-criteria";
 import { LOCALE_OPTIONS } from "@/lib/locales";
 import { dashDir, dt } from "@/lib/dashboard/i18n";
@@ -154,7 +153,7 @@ export default function BadgesPage() {
         translations,
       });
       setDialogOpen(true);
-    } catch (err) {
+    } catch {
       toast.error(dt("فشل في تحميل الشارة"));
     }
   };
@@ -202,7 +201,7 @@ export default function BadgesPage() {
       await axios.delete(`/api/admin/badges/${id}`);
       toast.success(dt("تم حذف الشارة"));
       loadBadges();
-    } catch (err) {
+    } catch {
       toast.error(dt("فشل في الحذف"));
     } finally {
       setDeletingId(null);

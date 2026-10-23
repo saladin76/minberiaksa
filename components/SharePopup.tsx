@@ -52,7 +52,7 @@ const SharePopup = ({
       await navigator.clipboard.writeText(url);
       toast.success(t("linkCopied"));
       try { track("share_campaign", { platform: "copy_link", title: title.slice(0, 250) }); } catch {}
-    } catch (err) {
+    } catch {
       toast.error(t("linkCopyFailed"));
     }
   };

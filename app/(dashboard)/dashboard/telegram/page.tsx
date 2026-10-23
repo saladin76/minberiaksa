@@ -38,7 +38,7 @@ export default function TelegramAdminPage() {
       const res = await fetch("/api/telegram/setup");
       const data = (await res.json()) as SetupResponse;
       setStatus(data);
-    } catch (e) {
+    } catch {
       toast.error(dt("تعذّر تحميل حالة البوت"));
     } finally {
       setLoading(false);
@@ -62,7 +62,7 @@ export default function TelegramAdminPage() {
       } else {
         toast.error(data.error || data?.telegram?.description || dt("فشل تسجيل الـ webhook"));
       }
-    } catch (e) {
+    } catch {
       toast.error(dt("خطأ في الشبكة"));
     } finally {
       setBusy(null);

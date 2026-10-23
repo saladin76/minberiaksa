@@ -17,7 +17,7 @@ export const ImageResizer = ({ editor }: { editor: Editor }) => {
   return (
     <>
       <Moveable
-        target={document.querySelector(".ProseMirror-selectednode") as any}
+        target={document.querySelector(".ProseMirror-selectednode") as HTMLElement | null}
         container={null}
         origin={false}
         /* Resize event edges */
@@ -29,18 +29,9 @@ export const ImageResizer = ({ editor }: { editor: Editor }) => {
         /* Only one of resizable, scalable, warpable can be used. */
         resizable={true}
         throttleResize={0}
-        onResize={({
-          target,
-          width,
-          height,
-          // dist,
-          delta,
-        }: // direction,
-        // clientX,
-        // clientY,
-        any) => {
-          delta[0] && (target!.style.width = `${width}px`);
-          delta[1] && (target!.style.height = `${height}px`);
+        onResize={({ target, width, height, delta }) => {
+          if (delta[0]) target.style.width = `${width}px`;
+          if (delta[1]) target.style.height = `${height}px`;
         }}
         // { target, isDrag, clientX, clientY }: any
         onResizeEnd={() => {
@@ -52,16 +43,8 @@ export const ImageResizer = ({ editor }: { editor: Editor }) => {
         throttleScale={0}
         /* Set the direction of resizable */
         renderDirections={["w", "e"]}
-        onScale={({
-          target,
-          // scale,
-          // dist,
-          // delta,
-          transform,
-        }: // clientX,
-        // clientY,
-        any) => {
-          target!.style.transform = transform;
+        onScale={({ target, transform }) => {
+          target.style.transform = transform;
         }}
       />
     </>

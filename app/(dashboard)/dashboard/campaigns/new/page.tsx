@@ -1,6 +1,4 @@
 'use client';
-import ReactCountryFlag from 'react-country-flag';
-
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
@@ -49,8 +47,6 @@ import { Check, ChevronsUpDown } from 'lucide-react';
 import {
   Tabs,
   TabsContent,
-  TabsList,
-  TabsTrigger,
 } from "@/components/ui/tabs";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
@@ -485,7 +481,7 @@ export default function NewCampaignPage() {
       const uploadedUrls = await Promise.all(uploadPromises);
       form.setValue('images', [...currentImages, ...uploadedUrls]);
       toast.success(dt("تم رفع الصور بنجاح"));
-    } catch (error) {
+    } catch {
       toast.error(dt("فشل في رفع الصور"));
     } finally {
       setUploadingImage(false);
@@ -598,7 +594,7 @@ const getTranslationStatus = () => {
               <h2 className="text-lg font-semibold">{dt("المعلومات الأساسية")}</h2>
             </div>
 
-            <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)}>
+            <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as FormLocale)}>
               <CampaignLocaleTabTriggers
                 done={translationStatus.done}
                 leadingTrigger={<LocaleTabTrigger locale="ar" required />}
