@@ -46,7 +46,11 @@ export function CommandPalette({ open, onOpenChange, navigation, dir }: Props) {
   };
 
   return (
-    <CommandDialog open={open} onOpenChange={onOpenChange}>
+    <CommandDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      title={dt("ابحث عن صفحة أو إجراء…")}
+    >
       <div dir={dir}>
         <CommandInput placeholder={dt("ابحث عن صفحة أو إجراء…")} />
         <CommandList className="max-h-[60vh]">

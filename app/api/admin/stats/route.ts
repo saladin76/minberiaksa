@@ -12,6 +12,11 @@ import {
 } from '@/lib/dashboard/donation-usd-revenue';
 import { istanbulDateKeysToUtcRange } from '@/lib/admin/istanbul-calendar';
 import { donationFieldEmpty, donationWhereAll } from '@/lib/donations/mongo-null';
+import { donationWhereForIds } from '@/lib/dashboard/donation-search';
+import {
+  resolveDonationRelationFilterIds,
+  resolveSubscriptionRelationFilterIds,
+} from '@/lib/dashboard/donation-relation-filters';
 
 function getDateRange(period: string, startParam?: string | null, endParam?: string | null) {
   let endDate: Date;
@@ -40,33 +45,35 @@ function buildDonationWhere(
   startDate: Date,
   endDate: Date,
   categoryId: string | null,
-  campaignId: string | null
+  campaignId: string | null,
+  relationIds: Awaited<ReturnType<typeof resolveDonationRelationFilterIds>>
 ) {
-  const dateFilter = { createdAt: { gte: startDate, lte: endDate } };
-  const base: Record<string, unknown> = { ...dateFilter };
+  const filters: Record<string, unknown>[] = [
+    { createdAt: { gte: startDate, lte: endDate } },
+  ];
   if (campaignId && campaignId !== 'all') {
-    base.items = { some: { campaignId } };
-  } else if (categoryId && categoryId !== 'all') {
-    base.OR = [
-      { items: { some: { campaign: { categoryIds: { has: categoryId } } } } },
-      { categoryItems: { some: { categoryId } } },
-    ];
+    filters.push(donationWhereForIds(relationIds.campaignDonationIds ?? []));
   }
-  return base;
+  if (categoryId && categoryId !== 'all') {
+    filters.push(donationWhereForIds(relationIds.categoryDonationIds ?? []));
+  }
+  return filters.length === 1 ? filters[0] : { AND: filters };
 }
 
 /** Same filters as buildDonationWhere but no date  all-time إيرادات (donation amountUSD sum) */
-function buildDonationWhereAllTime(categoryId: string | null, campaignId: string | null) {
-  const base: Record<string, unknown> = {};
+function buildDonationWhereAllTime(
+  categoryId: string | null,
+  campaignId: string | null,
+  relationIds: Awaited<ReturnType<typeof resolveDonationRelationFilterIds>>
+) {
+  const filters: Record<string, unknown>[] = [];
   if (campaignId && campaignId !== 'all') {
-    base.items = { some: { campaignId } };
-  } else if (categoryId && categoryId !== 'all') {
-    base.OR = [
-      { items: { some: { campaign: { categoryIds: { has: categoryId } } } } },
-      { categoryItems: { some: { categoryId } } },
-    ];
+    filters.push(donationWhereForIds(relationIds.campaignDonationIds ?? []));
   }
-  return base;
+  if (categoryId && categoryId !== 'all') {
+    filters.push(donationWhereForIds(relationIds.categoryDonationIds ?? []));
+  }
+  return filters.length === 0 ? {} : filters.length === 1 ? filters[0] : { AND: filters };
 }
 
 function mergeLocaleFilter(where: Record<string, unknown>, locale: string | null): Record<string, unknown> {
@@ -98,7 +105,7 @@ function mergeFilters(
 function buildDonationItemWhere(
   startDate: Date,
   endDate: Date,
-  categoryId: string | null,
+  categoryCampaignIds: string[] | null,
   campaignId: string | null,
   locale: string | null,
   country: string | null
@@ -112,8 +119,8 @@ function buildDonationItemWhere(
   };
   if (campaignId && campaignId !== 'all') {
     base.campaignId = campaignId;
-  } else if (categoryId && categoryId !== 'all') {
-    base.campaign = { categoryIds: { has: categoryId } };
+  } else if (categoryCampaignIds !== null) {
+    base.campaignId = { in: categoryCampaignIds };
   }
   return base;
 }
@@ -154,13 +161,14 @@ export async function GET(request: NextRequest) {
     const country = searchParams.get('country')?.trim() ?? null;
 
     const { startDate, endDate } = getDateRange(period, startParam, endParam);
+    const relationIds = await resolveDonationRelationFilterIds({ campaignId, categoryId });
     const donationWhere = mergeFilters(
-      buildDonationWhere(startDate, endDate, categoryId, campaignId),
+      buildDonationWhere(startDate, endDate, categoryId, campaignId, relationIds),
       locale,
       country
     );
     const donationWhereAllTime = mergeFilters(
-      buildDonationWhereAllTime(categoryId, campaignId),
+      buildDonationWhereAllTime(categoryId, campaignId, relationIds),
       locale,
       country
     );
@@ -184,20 +192,33 @@ export async function GET(request: NextRequest) {
 
     const { monthStart, monthEnd } = getCurrentCalendarMonthIstanbulRange();
     const thisMonthDonationWhere = mergeFilters(
-      buildDonationWhere(monthStart, monthEnd, categoryId, campaignId),
+      buildDonationWhere(monthStart, monthEnd, categoryId, campaignId, relationIds),
       locale,
       country
     );
     const thisMonthPaidWhere = donationWhereAll(thisMonthDonationWhere, PAID_DONATION_FILTER);
 
     const subscriptionWhere: Record<string, unknown> = { status: 'ACTIVE' };
+    const subscriptionRelationIds = await resolveSubscriptionRelationFilterIds({
+      campaignId,
+      categoryId,
+      categoryCampaignIds: relationIds.categoryCampaignIds,
+    });
+    const subscriptionRelationFilters: Record<string, unknown>[] = [];
     if (campaignId && campaignId !== 'all') {
-      subscriptionWhere.items = { some: { campaignId } };
-    } else if (categoryId && categoryId !== 'all') {
-      subscriptionWhere.OR = [
-        { items: { some: { campaign: { categoryIds: { has: categoryId } } } } },
-        { categoryItems: { some: { categoryId } } },
-      ];
+      subscriptionRelationFilters.push({
+        id: {
+          in: subscriptionRelationIds.campaignSubscriptionIds ?? [],
+        },
+      });
+    }
+    if (categoryId && categoryId !== 'all') {
+      subscriptionRelationFilters.push({
+        id: { in: subscriptionRelationIds.categorySubscriptionIds ?? [] },
+      });
+    }
+    if (subscriptionRelationFilters.length > 0) {
+      subscriptionWhere.AND = subscriptionRelationFilters;
     }
     // ACTIVE subscription without any settled charge isn't really earning revenue 
     // exclude it from MRR / "التبرعات الشهرية الناشطة" so a failed-only sub doesn't inflate the totals.
@@ -210,7 +231,6 @@ export async function GET(request: NextRequest) {
       totalDonations,
       paidCount,
       failedCount,
-      totalAmountResult,
       oneTimeCount,
       fromSubscriptionCount,
       oneTimeAllCount,
@@ -234,10 +254,6 @@ export async function GET(request: NextRequest) {
       prisma.donation.count({ where: donationWhere }),
       prisma.donation.count({ where: paidWhere }),
       prisma.donation.count({ where: failedWhere }),
-      prisma.donation.aggregate({
-        _sum: { amountUSD: true },
-        where: paidWhere,
-      }),
       prisma.donation.count({ where: oneTimeWhere }),
       prisma.donation.count({ where: fromSubscriptionWhere }),
       prisma.donation.count({ where: oneTimeAllWhere }),
@@ -277,7 +293,14 @@ export async function GET(request: NextRequest) {
       prisma.donationItem.aggregate({
         _sum: { amountUSD: true, amount: true },
         _count: { id: true },
-        where: buildDonationItemWhere(startDate, endDate, categoryId, campaignId, locale, country),
+        where: buildDonationItemWhere(
+          startDate,
+          endDate,
+          categoryId && categoryId !== 'all' ? relationIds.categoryCampaignIds : null,
+          campaignId,
+          locale,
+          country
+        ),
       }),
       prisma.donationCategoryItem.aggregate({
         _sum: { amountUSD: true, amount: true },

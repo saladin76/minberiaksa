@@ -4,6 +4,8 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/app/api/auth/[...nextauth]/options';
 import { requireAdminOrDashboardPermission } from '@/lib/dashboard/api-auth';
 import { donationRowUsdApprox } from '@/lib/dashboard/donation-usd-revenue';
+import { donationWhereForIds } from '@/lib/dashboard/donation-search';
+import { resolveDonationRelationFilterIds } from '@/lib/dashboard/donation-relation-filters';
 import {
   eachIstanbulDateKey,
   formatIstanbulDateKey,
@@ -42,7 +44,6 @@ export async function GET(request: NextRequest) {
     const period = searchParams.get('period') || 'month';
     const startParam = searchParams.get('start');
     const endParam = searchParams.get('end');
-    const showFailed = searchParams.get('showFailed') === 'true';
     const locale = searchParams.get('locale')?.trim() ?? null;
     const country = searchParams.get('country')?.trim() ?? null;
 
@@ -71,20 +72,24 @@ export async function GET(request: NextRequest) {
       innerWhere.donorId = userId;
     }
 
+    const relationIds = await resolveDonationRelationFilterIds({ campaignId, categoryId });
+    const relationFilters: Record<string, unknown>[] = [];
     if (campaignId && campaignId !== 'all') {
-      innerWhere.AND = [{ items: { some: { campaignId } } }];
-    } else if (categoryId && categoryId !== 'all') {
-      innerWhere.AND = [
-        {
-          OR: [
-            { items: { some: { campaign: { categoryIds: { has: categoryId } } } } },
-            { categoryItems: { some: { categoryId } } },
-          ],
-        },
-      ];
+      relationFilters.push(
+        donationWhereForIds(relationIds.campaignDonationIds ?? [])
+      );
+    }
+    if (categoryId && categoryId !== 'all') {
+      relationFilters.push(
+        donationWhereForIds(relationIds.categoryDonationIds ?? [])
+      );
     }
 
-    const baseWhere = mergeCountryFilter(mergeLocaleFilter(innerWhere, locale), country);
+    const queryWhere =
+      relationFilters.length > 0
+        ? { AND: [innerWhere, ...relationFilters] }
+        : innerWhere;
+    const baseWhere = mergeCountryFilter(mergeLocaleFilter(queryWhere, locale), country);
 
     // Always fetch both paid and failed donations
     const donations = await prisma.donation.findMany({

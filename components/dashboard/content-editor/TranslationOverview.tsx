@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { LOCALES, SUPPORTED_LOCALES } from "@/lib/locales";
 import { CONFIG, type ContentKind } from "@/lib/content-editor/contracts";
+import { dashDir, dt } from "@/lib/dashboard/i18n";
 type Status = {
   complete: boolean;
   missing: string[];
@@ -39,18 +40,18 @@ export function TranslationOverview({
           nextCursor: string | null;
           error?: string;
         } = await res.json();
-        if (!res.ok) throw new Error(data.error || "تعذر التحميل");
+        if (!res.ok) throw new Error(data.error || dt("تعذر التحميل"));
         all.push(...data.items);
         cursor = data.nextCursor;
         if (cursor) {
           if (seen.has(cursor) || seen.size >= 500)
-            throw new Error("تعذر استكمال إحصاءات المحتوى؛ أعد المحاولة");
+            throw new Error(dt("تعذر استكمال إحصاءات المحتوى؛ أعد المحاولة"));
           seen.add(cursor);
         }
       } while (cursor);
       setItems(all);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "تعذر التحميل");
+      setError(e instanceof Error ? e.message : dt("تعذر التحميل"));
     } finally {
       setLoading(false);
     }
@@ -78,11 +79,12 @@ export function TranslationOverview({
   const seo = visible.filter(
     (row) => row.statuses[language]?.seoComplete,
   ).length;
+  const kindLabel = dt(CONFIG[kind].label);
   return (
-    <section dir="rtl" className="space-y-4 rounded-xl border bg-white p-5">
+    <section dir={dashDir()} className="space-y-4 rounded-xl border bg-white p-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-lg font-bold">
-          اللغات والمراجعة · {CONFIG[kind].label}
+          {dt("اللغات والمراجعة")} · {kindLabel}
         </h2>
         <button
           type="button"
@@ -90,18 +92,17 @@ export function TranslationOverview({
           disabled={loading}
           onClick={load}
         >
-          تحديث الإحصاءات
+          {dt("تحديث الإحصاءات")}
         </button>
       </div>
       {kind === "categories" ? (
         <p className="text-sm text-slate-500">
-          التصنيفات تجمع المشاريع وترتبها. الأقسام الكبرى صفحات برامج تضم مشاريع
-          ومقالات ومواد أخرى.
+          {dt("التصنيفات تجمع المشاريع وترتبها. الأقسام الكبرى صفحات برامج تضم مشاريع ومقالات ومواد أخرى.")}
         </p>
       ) : null}
       <div className="flex flex-wrap gap-3">
         <label className="space-x-2">
-          <span className="ml-2 text-sm">اللغة</span>
+          <span className="ms-2 text-sm">{dt("اللغة")}</span>
           <select
             value={language}
             onChange={(e) => setLanguage(e.target.value)}
@@ -115,9 +116,10 @@ export function TranslationOverview({
           </select>
         </label>
         <label>
-          <span className="sr-only">البحث في المحتوى</span>
+          <span className="sr-only">{dt("البحث في المحتوى")}</span>
           <input
-            placeholder="ابحث بالعنوان"
+            aria-label={dt("البحث في المحتوى")}
+            placeholder={dt("ابحث بالعنوان")}
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
             className="rounded border p-2"
@@ -129,16 +131,16 @@ export function TranslationOverview({
           {error}
         </p>
       ) : loading ? (
-        <p role="status">تحميل الإحصاءات…</p>
+        <p role="status">{dt("تحميل الإحصاءات…")}</p>
       ) : (
         <>
           <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
             {[
-              ["مكتمل", complete],
-              ["يحتاج ترجمة", visible.length - complete],
-              ["راجعه الفريق", reviewed],
+              [dt("مكتمل"), complete],
+              [dt("يحتاج ترجمة"), visible.length - complete],
+              [dt("راجعه الفريق"), reviewed],
               [
-                kind === "urgent-banners" ? "وصف الصورة مكتمل" : "SEO مكتمل",
+                kind === "urgent-banners" ? dt("وصف الصورة مكتمل") : dt("SEO مكتمل"),
                 seo,
               ],
             ].map(([label, count]) => (
@@ -150,18 +152,18 @@ export function TranslationOverview({
           </div>
           <details>
             <summary className="cursor-pointer text-sm font-semibold">
-              تفاصيل العناصر وفتح المحرر ({visible.length})
+              {dt("تفاصيل العناصر وفتح المحرر ({0})", [visible.length])}
             </summary>
             <div className="mt-3 max-h-96 overflow-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b text-right">
-                    <th className="p-2">العنصر</th>
-                    <th>الترجمات</th>
+                  <tr className="border-b text-start">
+                    <th className="p-2">{dt("العنصر")}</th>
+                    <th>{dt("الترجمات")}</th>
                     <th>
                       {LOCALES[language as keyof typeof LOCALES]?.nativeLabel}
                     </th>
-                    <th>المراجعة</th>
+                    <th>{dt("المراجعة")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -172,7 +174,7 @@ export function TranslationOverview({
                           className="text-blue-800 underline"
                           href={`/dashboard/content/${kind}/${row.id}`}
                         >
-                          {row.title || "دون عنوان"}
+                          {row.title || dt("دون عنوان")}
                         </Link>
                       </td>
                       <td>
@@ -185,19 +187,19 @@ export function TranslationOverview({
                       </td>
                       <td>
                         {row.statuses[language]?.complete
-                          ? "مكتمل"
-                          : `ناقص (${row.statuses[language]?.missing.length || 0})`}
+                          ? dt("مكتمل")
+                          : dt("ناقص ({0})", [row.statuses[language]?.missing.length || 0])}
                       </td>
                       <td>
                         {row.statuses[language]?.reviewed
-                          ? "مراجع"
-                          : "بحاجة للمراجعة"}
+                          ? dt("مراجع")
+                          : dt("بحاجة للمراجعة")}
                       </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
-              {!visible.length ? <p className="p-3">لا توجد نتائج</p> : null}
+              {!visible.length ? <p className="p-3">{dt("لا توجد نتائج")}</p> : null}
             </div>
           </details>
         </>

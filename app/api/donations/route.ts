@@ -26,6 +26,16 @@ import {
   loadSubscriptionFrequencies,
   parseFrequencyParam,
 } from "@/lib/dashboard/recurring-frequency-filter";
+import {
+  campaignWhereForDonationSearch,
+  campaignTranslationWhereForDonationSearch,
+  categoryWhereForDonationSearch,
+  categoryTranslationWhereForDonationSearch,
+  donationWhereForIds,
+  donationWhereForDonorSearch,
+  userWhereForDonorSearch,
+} from "@/lib/dashboard/donation-search";
+import { resolveDonationRelationFilterIds } from "@/lib/dashboard/donation-relation-filters";
 
 // GET /api/donations - Get all donations (admin) or user's donations
 export async function GET(request: NextRequest) {
@@ -76,7 +86,6 @@ export async function GET(request: NextRequest) {
     const frequencyFilter = isAdmin ? parseFrequencyParam(searchParams.get("frequency")) : null;
 
     const baseWhere: Record<string, unknown> = {
-      ...(campaignId && { items: { some: { campaignId } } }),
       ...(userId && { donorId: userId }),
       ...(referralId && isAdmin && { referralId }),
       ...(subscriptionOnly && { subscriptionId: { not: null } }),
@@ -84,60 +93,102 @@ export async function GET(request: NextRequest) {
       ...(!isAdmin && { donorId: session.user.id }),
       ...(Object.keys(dateFilter).length > 0 && { createdAt: dateFilter }),
     };
-    if (categoryId && isAdmin) {
-      baseWhere.OR = [
-        { items: { some: { campaign: { categoryIds: { has: categoryId } } } } },
-        { categoryItems: { some: { categoryId } } },
-      ];
+
+    // Resolve project/category links using their scalar ObjectId columns first.
+    // This keeps the main donation query on Donation fields and avoids a slow
+    // nested relation traversal on the high-volume dashboard listing.
+    const relatedFilters: Record<string, unknown>[] = [];
+    const relationIds = await resolveDonationRelationFilterIds({
+      campaignId,
+      categoryId: isAdmin ? categoryId : null,
+    });
+    if (campaignId && campaignId !== "all") {
+      const donationIds = relationIds.campaignDonationIds ?? [];
+      relatedFilters.push(donationWhereForIds(donationIds));
     }
 
-    // Free-text donor search (name OR email), admin-only. Kept OUT of `baseWhere`
-    // and AND-composed below because `baseWhere.OR` is already taken by the
-    // category filter  putting a second OR there would silently overwrite it.
-    const searchWhere =
-      search && isAdmin
-        ? {
-            OR: [
-              { id: { contains: search, mode: "insensitive" as const } },
-              { providerOrderId: { contains: search, mode: "insensitive" as const } },
-              {
-                donor: {
-                  is: {
-                    OR: [
-                      { name: { contains: search, mode: "insensitive" as const } },
-                      { email: { contains: search, mode: "insensitive" as const } },
-                      { phone: { contains: search, mode: "insensitive" as const } },
-                    ],
-                  },
-                },
-              },
-              {
-                items: {
-                  some: {
-                    campaign: {
-                      OR: [
-                        { title: { contains: search, mode: "insensitive" as const } },
-                        { translations: { some: { title: { contains: search, mode: "insensitive" as const } } } },
-                      ],
-                    },
-                  },
-                },
-              },
-              {
-                categoryItems: {
-                  some: {
-                    category: {
-                      OR: [
-                        { name: { contains: search, mode: "insensitive" as const } },
-                        { translations: { some: { name: { contains: search, mode: "insensitive" as const } } } },
-                      ],
-                    },
-                  },
-                },
-              },
-            ],
-          }
-        : null;
+    if (categoryId && categoryId !== "all" && isAdmin) {
+      relatedFilters.push(donationWhereForIds(relationIds.categoryDonationIds ?? []));
+    }
+
+    // Search donor/project/category fields in their owning collections first,
+    // then join back through scalar IDs. The old mixed OR also applied
+    // `contains` to the ObjectId-backed donation id, which made every non-empty
+    // search fail on MongoDB.
+    let searchWhere: Record<string, unknown> | null = null;
+    if (search && isAdmin) {
+      const [
+        matchingDonors,
+        matchingDonations,
+        matchingCampaigns,
+        matchingCampaignTranslations,
+        matchingCategories,
+        matchingCategoryTranslations,
+      ] = await Promise.all([
+        prisma.user.findMany({
+          where: userWhereForDonorSearch(search),
+          select: { id: true },
+        }),
+        prisma.donation.findMany({
+          where: { providerOrderId: { contains: search, mode: "insensitive" } },
+          select: { id: true },
+        }),
+        prisma.campaign.findMany({
+          where: campaignWhereForDonationSearch(search),
+          select: { id: true },
+        }),
+        prisma.campaignTranslation.findMany({
+          where: campaignTranslationWhereForDonationSearch(search),
+          select: { campaignId: true },
+        }),
+        prisma.category.findMany({
+          where: categoryWhereForDonationSearch(search),
+          select: { id: true },
+        }),
+        prisma.categoryTranslation.findMany({
+          where: categoryTranslationWhereForDonationSearch(search),
+          select: { categoryId: true },
+        }),
+      ]);
+      const donorIds = matchingDonors.map(({ id }) => id);
+      const campaignIds = [...new Set([
+        ...matchingCampaigns.map(({ id }) => id),
+        ...matchingCampaignTranslations.map(({ campaignId }) => campaignId),
+      ])];
+      const categoryIds = [...new Set([
+        ...matchingCategories.map(({ id }) => id),
+        ...matchingCategoryTranslations.map(({ categoryId }) => categoryId),
+      ])];
+      const [campaignDonationLinks, categoryDonationLinks] = await Promise.all([
+        campaignIds.length > 0
+          ? prisma.donationItem.findMany({
+              where: { campaignId: { in: campaignIds } },
+              select: { donationId: true },
+            })
+          : Promise.resolve([]),
+        categoryIds.length > 0
+          ? prisma.donationCategoryItem.findMany({
+              where: { categoryId: { in: categoryIds } },
+              select: { donationId: true },
+            })
+          : Promise.resolve([]),
+      ]);
+      const matchingDonationIds = [
+        ...new Set([
+          ...matchingDonations.map(({ id }) => id),
+          ...campaignDonationLinks.map(({ donationId }) => donationId),
+          ...categoryDonationLinks.map(({ donationId }) => donationId),
+          ...(/^[a-f0-9]{24}$/i.test(search) ? [search] : []),
+        ]),
+      ];
+      if (donorIds.length === 0 && matchingDonationIds.length === 0) {
+        return NextResponse.json({
+          donations: [],
+          pagination: { total: 0, pages: 0, page, limit },
+        });
+      }
+      searchWhere = donationWhereForDonorSearch(donorIds, matchingDonationIds);
+    }
 
     const localeWhere =
       localeFilter && localeFilter !== "all"
@@ -165,7 +216,7 @@ export async function GET(request: NextRequest) {
     // ناجح / قيد التأكيد / فاشل, as the tables show them.
     const statusWhere = donationStatusWhere(statusFilter);
 
-    const extraFilters = [searchWhere, localeWhere, countryWhere, donationTypeWhere, frequencyWhere, statusWhere].filter(
+    const extraFilters = [...relatedFilters, searchWhere, localeWhere, countryWhere, donationTypeWhere, frequencyWhere, statusWhere].filter(
       (w) => w != null
     );
     const where: Record<string, unknown> =
