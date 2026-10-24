@@ -119,6 +119,27 @@ export default function proxy(req: NextRequest) {
 
   const response = intl(req) ?? NextResponse.next();
 
+  // RADORE_INTERNAL_LOCALE_REWRITE
+  // next-intl can rewrite an already-localized URL to itself. Continue locally
+  // in that case, retaining its locale request headers and cookies. Other
+  // internal rewrites must keep the origin Next received behind the VPS proxy.
+  const rewrite = response.headers.get('x-middleware-rewrite');
+  if (rewrite) {
+    const current = new URL(req.url);
+    const target = new URL(rewrite, current);
+    if (
+      target.pathname === current.pathname &&
+      target.search === current.search
+    ) {
+      response.headers.delete('x-middleware-rewrite');
+      response.headers.set('x-middleware-next', '1');
+    } else {
+      target.protocol = current.protocol;
+      target.host = current.host;
+      response.headers.set('x-middleware-rewrite', target.toString());
+    }
+  }
+
   if (normalized) {
     response.cookies.set('currency', normalized, {
       maxAge: CURRENCY_COOKIE_MAX_AGE,
