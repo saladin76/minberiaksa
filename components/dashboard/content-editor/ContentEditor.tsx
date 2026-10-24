@@ -398,7 +398,7 @@ export function ContentEditor({ kind, id }: { kind: ContentKind; id: string }) {
     (l) => l !== "ar" && document.statuses[l].complete,
   ).length;
   const isBanner = kind === "urgent-banners";
-  const liveSettings = {
+  const liveSettings: ContentRecord = {
     ...document.settings,
     ...settingsDraft,
     blocks: Array.isArray(settingsDraft.blocks)
