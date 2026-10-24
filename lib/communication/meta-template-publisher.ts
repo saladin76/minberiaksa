@@ -1,5 +1,6 @@
 import { templateLocaleHeader, META_TEMPLATE_LANGUAGES } from "./template-locale-media";
 import "server-only";
+import { localizeDonationFailureDraft } from "@/lib/templates/localize-donation-failure-link";
 
 import { prisma } from "@/lib/prisma";
 import { writeAuditLog } from "@/lib/audit-log";
@@ -222,8 +223,12 @@ export async function publishWhatsappTemplateToMeta(
             ];
           }
         } else {
-          const built = buildStandardMetaComponents({
+          const localized = localizeDonationFailureDraft({
             body: variant.body ?? "",
+            buttons: localized.buttons ?? rootButtons,
+          }, locale);
+          const built = buildStandardMetaComponents({
+            body: localized.body,
             header: templateLocaleHeader(template, locale) as HeaderDraft,
             headerText: variant.headerText ?? String(header.text ?? ""),
             footerText: variant.footerText ?? template.footerText ?? "",

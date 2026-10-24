@@ -1,3 +1,4 @@
+import { localizeDonationFailureDraft } from "@/lib/templates/localize-donation-failure-link";
 import { classifyEventTemplates } from "@/lib/communication/template-event-classification";
 import { headerSchema, templateButtonsSchema, authSchema, translationSchema } from "@/lib/communication/whatsapp-template-schema";
 import { NextRequest, NextResponse } from "next/server";
@@ -14,6 +15,7 @@ import { hasWhatsappUnsubscribeQuickReply } from "@/lib/communication/whatsapp-t
 
 const createSchema = z.object({
   name: z.string().min(1).max(120),
+  kind: z.enum(["SYSTEM", "CAMPAIGN"]).optional(),
   body: z.string().min(1).max(1024),
   translations: z.record(translationSchema).nullable().optional(),
   metaCategory: z.enum(["UTILITY", "MARKETING", "AUTHENTICATION"]).default("UTILITY"),
@@ -145,17 +147,17 @@ export async function POST(request: NextRequest) {
   const created = await prisma.whatsappTemplate.create({
     data: {
       name: parsed.data.name,
-      body: parsed.data.body,
+      body: localizeDonationFailureDraft({ body: parsed.data.body }, "ar").body,
       translations: parsed.data.translations
-        ? (parsed.data.translations as Prisma.InputJsonValue)
+        ? (Object.fromEntries(Object.entries(parsed.data.translations).map(([locale, draft]) => [locale, localizeDonationFailureDraft({ ...draft, body: draft.body ?? "" }, locale)])) as Prisma.InputJsonValue)
         : undefined,
       category: parsed.data.metaCategory,
       purpose: parsed.data.metaCategory,
-      kind: parsed.data.metaCategory === "MARKETING" ? "CAMPAIGN" : "SYSTEM",
+      kind: parsed.data.kind ?? (parsed.data.metaCategory === "MARKETING" ? "CAMPAIGN" : "SYSTEM"),
       status: "READY",
       header: parsed.data.header ? (parsed.data.header as Prisma.InputJsonValue) : undefined,
       footerText: parsed.data.footerText ?? null,
-      buttons: parsed.data.buttons ? (parsed.data.buttons as Prisma.InputJsonValue) : undefined,
+      buttons: parsed.data.buttons ? (localizeDonationFailureDraft({ body: parsed.data.body, buttons: parsed.data.buttons }, "ar").buttons as Prisma.InputJsonValue) : undefined,
       authentication: parsed.data.authentication ? (parsed.data.authentication as Prisma.InputJsonValue) : undefined,
       provider: "MANUAL",
       channel: "WHATSAPP",
