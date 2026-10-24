@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { filterManagedPageSitemap } from "../../lib/content-editor/page-seo-sitemap";
+import { filterManagedPageSitemap, filterPageSeoLanguages } from "../../lib/content-editor/page-seo-sitemap";
 import { MANAGED_SEO_PAGES, managedPagePath } from "../../lib/content-editor/page-seo-registry";
 test("every managed page has one stable identity and a localized path", () => {
   assert.equal(new Set(MANAGED_SEO_PAGES.map((page) => page.key)).size, MANAGED_SEO_PAGES.length);
@@ -17,4 +17,9 @@ test("page noindex removes only the chosen locale and its reciprocal sitemap alt
 test("unconfigured pages and other locales keep their existing sitemap links", () => {
   const entries = [{ loc: "https://example.org/en", alternates: { en: "https://example.org/en" } }];
   assert.equal(filterManagedPageSitemap(entries, [], "https://example.org")[0].loc, entries[0].loc);
+});
+
+test("metadata alternates exclude a hidden language on every other edition too", () => {
+  assert.deepEqual(filterPageSeoLanguages({ ar: "/ar", en: "/en", fr: "/fr", "x-default": "/en" }, { en: { seoNoIndex: "true" } }), { ar: "/ar", fr: "/fr", "x-default": "/ar" });
+  assert.deepEqual(filterPageSeoLanguages({ ar: "/ar", "x-default": "/ar" }, { ar: { seoNoIndex: "true" } }), {});
 });

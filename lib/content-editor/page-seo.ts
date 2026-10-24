@@ -1,9 +1,10 @@
+import { filterPageSeoLanguages } from "./page-seo-sitemap";
 import "server-only";
 import { randomUUID } from "node:crypto";
 import { cache } from "react";
 import { prisma } from "../prisma";
 import { messagesFor } from "../../i18n/locale-messages";
-import { buildPageMetadata, LOCALE_SEO, type Locale } from "../seo";
+import { buildHreflang, buildPageMetadata, LOCALE_SEO, type Locale } from "../seo";
 import { SUPPORTED_LOCALES } from "../locales";
 import { applyEditorialSeo } from "./public-seo";
 import { fieldsFor, validateChanges } from "./contracts";
@@ -54,15 +55,17 @@ export async function savePageSeoDocument(key: string, revision: string | null, 
   }
   return readPageSeoDocument(key);
 }
-export const readManagedPageValues = cache(async (key: string, locale: string): Promise<PageSeoValues | null> => {
-  try {
-    const row = await prisma.managedPageSeo.findUnique({ where: { key } });
-    return (row?.overrides as PageSeoLocales | null)?.[locale] || null;
-  } catch { console.error("Unable to read managed page metadata"); return null; }
+export const readManagedPageOverrides = cache(async (key: string): Promise<PageSeoLocales | null> => {
+  try { const row = await prisma.managedPageSeo.findUnique({ where: { key } }); return (row?.overrides as PageSeoLocales | null) || null; }
+  catch { console.error("Unable to read managed page metadata"); return null; }
 });
+export const readManagedPageValues = cache(async (key: string, locale: string): Promise<PageSeoValues | null> => (await readManagedPageOverrides(key))?.[locale] || null);
 export async function buildManagedPageMetadata(key: string, locale: string, input: Parameters<typeof buildPageMetadata>[1]) {
-  const values = await readManagedPageValues(key, locale);
-  if (!values) return buildPageMetadata(locale, input);
-  const base = buildPageMetadata(locale, { ...input, title: values.metaTitle || input.title, description: values.metaDescription || input.description, imageAlt: values.imageAlt || input.imageAlt });
+  const overrides = await readManagedPageOverrides(key);
+  if (!overrides) return buildPageMetadata(locale, input);
+  const values = overrides[locale] || {};
+  const originalAlternates = input.alternates || buildHreflang(input.path, locale);
+  const alternates = { ...originalAlternates, languages: filterPageSeoLanguages(originalAlternates.languages, overrides) };
+  const base = buildPageMetadata(locale, { ...input, alternates, title: values.metaTitle || input.title, description: values.metaDescription || input.description, imageAlt: values.imageAlt || input.imageAlt });
   return applyEditorialSeo(base, { seoKeyword: values.seoKeyword || null, ogTitle: values.ogTitle || null, ogDescription: values.ogDescription || null, ogImage: values.ogImage || null, seoNoIndex: values.seoNoIndex || null, faqContent: null });
 }

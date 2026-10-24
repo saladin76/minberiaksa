@@ -19,3 +19,10 @@ export function filterManagedPageSitemap<T extends { loc: string; alternates: Re
     return { ...entry, alternates };
   });
 }
+
+export function filterPageSeoLanguages(languages: Record<string, string>, overrides: PageSeoLocales) {
+  const hidden = new Set(Object.entries(overrides).filter(([, value]) => value.seoNoIndex === "true").map(([locale]) => languages[locale]).filter(Boolean));
+  const allowed = Object.fromEntries(Object.entries(languages).filter(([, url]) => !hidden.has(url)));
+  if (!allowed["x-default"]) { const fallback = allowed.ar || allowed.en || Object.values(allowed)[0]; if (fallback) allowed["x-default"] = fallback; }
+  return allowed;
+}

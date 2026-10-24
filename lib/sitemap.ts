@@ -1,3 +1,4 @@
+import { hasText } from "@/lib/content-editor/contracts";
 import { filterManagedPageSitemap } from "@/lib/content-editor/page-seo-sitemap";
 import { prisma } from "@/lib/prisma";
 import { SITE_URL, LOCALES } from "@/lib/seo";
@@ -21,6 +22,8 @@ import { NOINDEX_ROUTES, SLUGS, slugFor, type MinbarRoute } from "@/lib/minbar/r
 
 /** 100 entities -> ~1,900 <url> blocks -> roughly 5 MB, a wide margin. */
 const SHARD_SIZE = 100;
+const CAMPAIGN_SITEMAP_WHERE = { isActive: true, OR: [{ isDeleted: false }, { isDeleted: { isSet: false } }] };
+const CATEGORY_SITEMAP_WHERE = { AND: [{ OR: [{ pageTemplate: null }, { pageTemplate: "" }, { pageTemplate: { isSet: false } }] }, { OR: [{ isActive: true }, { isActive: null }, { isActive: { isSet: false } }] }] };
 
 export type SitemapEntry = {
   loc: string;
@@ -138,8 +141,8 @@ export async function listShardIds(): Promise<string[]> {
   const ids = ["static"];
   try {
     const [campaigns, categories, posts] = await Promise.all([
-      prisma.campaign.count({ where: { isActive: true } }),
-      prisma.category.count({ where: { pageTemplate: null } }),
+      prisma.campaign.count({ where: CAMPAIGN_SITEMAP_WHERE }),
+      prisma.category.count({ where: CATEGORY_SITEMAP_WHERE }),
       prisma.post.count({ where: { published: true } }),
     ]);
     const push = (name: string, total: number) => {
@@ -194,7 +197,7 @@ export async function buildShard(id: string): Promise<SitemapEntry[] | null> {
 
   if (group === "campaigns") {
     const rows = await prisma.campaign.findMany({
-      where: { isActive: true },
+      where: CAMPAIGN_SITEMAP_WHERE,
       select: { id: true, slug: true, updatedAt: true, seoNoIndex: true, translations: { select: { locale: true, slug: true, title: true, description: true, seoNoIndex: true } } },
       orderBy: { updatedAt: "desc" },
       skip,
@@ -204,7 +207,7 @@ export async function buildShard(id: string): Promise<SitemapEntry[] | null> {
       const availableLocales = Array.from(new Set([
         ...(c.seoNoIndex === "true" ? [] : ["ar"]),
         ...c.translations
-          .filter((translation) => translation.seoNoIndex !== "true" && Boolean(translation.title?.trim()) && Boolean(translation.description?.trim()))
+          .filter((translation) => translation.seoNoIndex !== "true" && hasText(translation.title) && hasText(translation.description))
           .map((translation) => translation.locale),
       ]));
       const alternates = entityAlternates("/" + slugFor("projectDetail", "ar"), c.slug, c.translations, c.id, availableLocales);
@@ -216,7 +219,7 @@ export async function buildShard(id: string): Promise<SitemapEntry[] | null> {
     /* A category bound to one of the site's own pages 301s there, and that
        page is already in the static shard. */
     const rows = await prisma.category.findMany({
-      where: { pageTemplate: null },
+      where: CATEGORY_SITEMAP_WHERE,
       select: { id: true, slug: true, seoNoIndex: true, translations: { select: { locale: true, slug: true, name: true, seoNoIndex: true } } },
       orderBy: { id: "asc" },
       skip,
@@ -227,7 +230,7 @@ export async function buildShard(id: string): Promise<SitemapEntry[] | null> {
       const availableLocales = Array.from(new Set([
         "ar",
         ...c.translations
-          .filter((translation) => translation.seoNoIndex !== "true" && Boolean(translation.name?.trim()))
+          .filter((translation) => translation.seoNoIndex !== "true" && hasText(translation.name))
           .map((translation) => translation.locale),
       ]));
       const alternates = entityAlternates("/category", c.slug, c.translations, c.id, availableLocales);
@@ -241,8 +244,10 @@ export async function buildShard(id: string): Promise<SitemapEntry[] | null> {
       id: true,
       slug: true,
       updatedAt: true,
+      title: true,
+      content: true,
       seoNoIndex: true,
-      translations: { select: { locale: true, slug: true, content: true, seoNoIndex: true } },
+      translations: { select: { locale: true, slug: true, title: true, content: true, seoNoIndex: true } },
     },
     orderBy: { updatedAt: "desc" },
     skip,
@@ -251,9 +256,9 @@ export async function buildShard(id: string): Promise<SitemapEntry[] | null> {
   return rows.flatMap((p) => {
     const availableLocales = Array.from(
       new Set([
-        ...(p.seoNoIndex === "true" ? [] : ["ar"]),
+        ...(p.seoNoIndex === "true" || !hasText(p.title) || !hasText(p.content) ? [] : ["ar"]),
         ...p.translations
-          .filter((translation) => translation.seoNoIndex !== "true" && Boolean(translation.content?.trim()))
+          .filter((translation) => translation.seoNoIndex !== "true" && hasText(translation.title) && hasText(translation.content))
           .map((translation) => translation.locale),
       ])
     );
