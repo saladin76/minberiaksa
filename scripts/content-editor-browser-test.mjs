@@ -382,7 +382,7 @@ try {
       await view.screenshot({path:path.join(temp,prefix+"-desktop.png"),fullPage:true,animations:"disabled"});
       await view.setViewportSize({width:390,height:844});
       assert.ok(await view.evaluate(() => document.documentElement.scrollWidth <= innerWidth+1),prefix+" mobile overflow");
-      if (surface === "planner") { const box = await view.getByRole("dialog").boundingBox(); assert.ok(box && box.x >= -1 && box.x + box.width <= 391, "review dialog must stay within the mobile viewport"); }
+      if (surface === "planner") { await view.waitForFunction(() => { const box = document.querySelector('[role="dialog"]')?.getBoundingClientRect(); return box && box.x >= -1 && box.right <= innerWidth + 1; }, undefined, {timeout:5000}); const box = await view.getByRole("dialog").boundingBox(); assert.ok(box && box.x >= -1 && box.x + box.width <= 391, "review dialog must stay within the mobile viewport: " + JSON.stringify(box)); }
       await view.screenshot({path:path.join(temp,prefix+"-mobile.png"),fullPage:true,animations:"disabled"});
       workflowScreens.push(prefix);
     } finally {
