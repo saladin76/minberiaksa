@@ -15,7 +15,9 @@ APP_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 BEGIN="# BEGIN minberiaksa crons (managed by scripts/vps-cron-install.sh)"
 END="# END minberiaksa crons"
 
-LINES="$(node -e '
+# Bash updates LINES to the terminal height after commands in a TTY.
+# Keep schedule data in an application-specific variable instead.
+CRON_ENTRIES="$(node -e '
   const crons = require(process.argv[1]).crons || [];
   for (const c of crons) {
     if (!/^\/api\/cron\/[\w-]+$/.test(c.path) || !/^[\d*\/,\- ]+$/.test(c.schedule)) {
@@ -26,7 +28,7 @@ LINES="$(node -e '
   }
 ' "$APP_DIR/vercel.json" "$APP_DIR")"
 
-if [ -z "$LINES" ]; then
+if [ -z "$CRON_ENTRIES" ]; then
   echo "✗ no crons found in vercel.json" >&2
   exit 1
 fi
@@ -35,12 +37,12 @@ fi
   crontab -l 2>/dev/null | sed "/^# BEGIN minberiaksa crons/,/^# END minberiaksa crons/d" || true
   echo "$BEGIN"
   [ -n "${CRON_BASE_URL:-}" ] && echo "CRON_BASE_URL=$CRON_BASE_URL"
-  echo "$LINES"
+  echo "$CRON_ENTRIES"
   echo "$END"
 } | crontab -
 
-echo "✓ installed $(printf '%s\n' "$LINES" | wc -l) cron(s):"
-printf '%s\n' "$LINES" | sed 's/^/    /'
+echo "✓ installed $(printf '%s\n' "$CRON_ENTRIES" | wc -l) cron(s):"
+printf '%s\n' "$CRON_ENTRIES" | sed 's/^/    /'
 if [ "$(date +%Z)" != "UTC" ]; then
   echo "! server timezone is $(date +%Z), not UTC — fixed-hour crons (reminders, reconcile) run on local time"
 fi

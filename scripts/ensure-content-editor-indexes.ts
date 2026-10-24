@@ -49,7 +49,9 @@ async function run() {
   const checkOnly = process.argv.includes("--check");
   const production = process.argv.includes("--production");
 
-  if (production && process.env.VERCEL_ENV !== "production") {
+  // --production is also used by VPS releases, which have no Vercel variables.
+  // Only a known non-production Vercel deployment should skip this step.
+  if (production && process.env.VERCEL && process.env.VERCEL_ENV !== "production") {
     console.log("Content editor indexes: production-only step skipped");
     return;
   }
