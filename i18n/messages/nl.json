@@ -563,7 +563,8 @@
       }
     },
     "categoriesTitle": "Categorieën",
-    "loadMore": "Meer tonen"
+    "loadMore": "Meer tonen",
+    "unavailableTranslationNotice": "Dit artikel is nog niet beschikbaar in deze taal. De beschikbare tekst staat hieronder."
   },
   "cart": {
     "title": "Donatiemand",
@@ -661,7 +662,7 @@
     "emptyCart": "Je Winkelwagen is Leeg",
     "itemsHeading": "Je Donaties",
     "recurringNudge": "Herhaal deze donatie maandelijks met één klik",
-    "recurringNudgeText": "Doe mee aan automatisch doneren  altijd opzegbaar",
+    "recurringNudgeText": "Doneer automatisch. Neem contact op met de stichting om je plan te wijzigen of te stoppen.",
     "recurringNudgeEyebrow": "Maak uw Impact Blijvend",
     "dataAccuracyNote": "Controleer of uw gegevens kloppen zodat bewijs en donatiecertificaat u bereiken",
     "orFillManually": "Of Vul Handmatig in",
@@ -1188,7 +1189,7 @@
     "docsLibrary": "Documentbibliotheek",
     "docsLibraryText": "Uw bonnen en certificaten, klaar om te downloaden.",
     "givingPlans": "Giftplannen",
-    "givingPlansText": "Wijzig of stop uw periodieke plan wanneer u wilt.",
+    "givingPlansText": "Neem contact op met de stichting om je periodieke donatie te wijzigen of te stoppen.",
     "faq1Q": "Is de calculator een religieus advies?",
     "faq1A": "Nee. Het is een schatting op basis van uw invoer. Raadpleeg een betrouwbare religieuze autoriteit ter bevestiging.",
     "faq2Q": "Blijft Zakat gescheiden van andere giften?",

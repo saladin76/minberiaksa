@@ -4,7 +4,7 @@ import { useMemo } from "react";
 import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
 import { miaPath } from "@/lib/minbar/routes";
-import { localeDirection } from "@/lib/locales";
+import { localeDirection, LOCALES, type SupportedLocale } from "@/lib/locales";
 import type { MinbarArticleDetail } from "@/lib/minbar/posts";
 import { contentToBlocks } from "@/lib/blog/rich-text";
 import ArticleCta from "./ArticleCta";
@@ -205,7 +205,13 @@ export default function ArticleDetail({ article, ctaKey }: ArticleDetailProps) {
             </span>
           ) : null}
 
+          {!article.isLocalized && article.contentLocale && article.contentLocale !== locale ? <aside role="status" className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm leading-7">
+            <p>{t("unavailableTranslationNotice")}</p>
+            <Link href={miaPath("article", article.contentLocale, article.id)} className="font-bold underline">{LOCALES[article.contentLocale as SupportedLocale]?.nativeLabel || article.contentLocale}</Link>
+          </aside> : null}
           <div
+            lang={article.contentLocale || locale}
+            dir={localeDirection(article.contentLocale || locale)}
             className="art-in art-in-3"
             style={{
               display: "grid",

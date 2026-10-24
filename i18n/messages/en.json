@@ -1602,7 +1602,8 @@
       }
     },
     "categoriesTitle": "Categories",
-    "loadMore": "Show More"
+    "loadMore": "Show More",
+    "unavailableTranslationNotice": "This article is not yet available in this language. The available text is shown below."
   },
   "cart": {
     "title": "Donation Cart",
@@ -1700,7 +1701,7 @@
     "emptyCart": "Your Cart is Empty",
     "itemsHeading": "Your Donation Items",
     "recurringNudge": "Repeat this donation monthly with one tap",
-    "recurringNudgeText": "Join automatic giving  cancel anytime",
+    "recurringNudgeText": "Give automatically. Contact the foundation to change or stop your plan.",
     "recurringNudgeEyebrow": "Make Your Impact Ongoing",
     "dataAccuracyNote": "Make sure your details are correct so your receipt and donation certificate reach you",
     "orFillManually": "Or Fill in Manually",
@@ -2227,7 +2228,7 @@
     "docsLibrary": "Document Library",
     "docsLibraryText": "Your receipts and certificates, ready to download.",
     "givingPlans": "Giving Plans",
-    "givingPlansText": "Change or stop your recurring plan at any time.",
+    "givingPlansText": "Contact the foundation to change or stop your recurring donation.",
     "faq1Q": "Is the calculator a religious ruling?",
     "faq1A": "No. It is an estimate based on the values you enter. Consult a trusted religious authority to confirm whether Zakat is due and how much.",
     "faq2Q": "Does Zakat stay separate from other donations?",

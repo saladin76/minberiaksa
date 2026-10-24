@@ -563,7 +563,8 @@
       }
     },
     "categoriesTitle": "分类",
-    "loadMore": "显示更多"
+    "loadMore": "显示更多",
+    "unavailableTranslationNotice": "本文暂未提供此语言版本，以下显示现有文本。"
   },
   "cart": {
     "title": "捐赠清单",
@@ -661,7 +662,7 @@
     "emptyCart": "您的购物车是空的",
     "itemsHeading": "您的捐赠项目",
     "recurringNudge": "一键设为每月捐赠",
-    "recurringNudgeText": "加入自动捐赠——随时可取消",
+    "recurringNudgeText": "自动捐赠。如需更改或停止捐赠计划，请联系基金会。",
     "recurringNudgeEyebrow": "让您的善行持续",
     "dataAccuracyNote": "请确保信息填写正确，以便收据和捐赠证书送达",
     "orFillManually": "或手动填写",
@@ -1188,7 +1189,7 @@
     "docsLibrary": "文件库",
     "docsLibraryText": "您的收据与证书随时可下载。",
     "givingPlans": "捐赠计划",
-    "givingPlansText": "查看并管理您的定期捐赠。",
+    "givingPlansText": "如需更改或停止定期捐赠，请联系基金会。",
     "faq1Q": "我如何知道捐赠已送达？",
     "faq1A": "您会收到电子邮件收据，项目进展经审定后会在项目页面发布。",
     "faq2Q": "我可以指定捐给某个项目吗？",

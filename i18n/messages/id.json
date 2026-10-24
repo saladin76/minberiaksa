@@ -1602,7 +1602,8 @@
       }
     },
     "categoriesTitle": "Kategori",
-    "loadMore": "Tampilkan Lebih Banyak"
+    "loadMore": "Tampilkan Lebih Banyak",
+    "unavailableTranslationNotice": "Artikel ini belum tersedia dalam bahasa ini. Teks yang tersedia ditampilkan di bawah."
   },
   "cart": {
     "title": "Keranjang Donasi",
@@ -1700,7 +1701,7 @@
     "emptyCart": "Keranjang Anda Kosong",
     "itemsHeading": "Item Donasi Anda",
     "recurringNudge": "Ulangi donasi ini tiap bulan sekali klik",
-    "recurringNudgeText": "Ikut donasi otomatis  bisa dihentikan kapan saja",
+    "recurringNudgeText": "Berdonasi secara otomatis. Hubungi yayasan untuk mengubah atau menghentikan rencana Anda.",
     "recurringNudgeEyebrow": "Jadikan Dampak Anda Berkelanjutan",
     "dataAccuracyNote": "Pastikan data Anda benar agar kuitansi dan sertifikat donasi sampai kepada Anda",
     "orFillManually": "Atau Isi Manual",
@@ -2227,7 +2228,7 @@
     "docsLibrary": "Perpustakaan Dokumen",
     "docsLibraryText": "Kuitansi dan sertifikat anda siap diunduh.",
     "givingPlans": "Rencana Donasi",
-    "givingPlansText": "Ubah atau hentikan rencana berkala anda kapan saja.",
+    "givingPlansText": "Hubungi yayasan untuk mengubah atau menghentikan donasi rutin Anda.",
     "faq1Q": "Apakah kalkulator ini fatwa?",
     "faq1A": "Tidak. Ini perkiraan berdasarkan nilai yang Anda masukkan. Rujuk otoritas syariah terpercaya untuk memastikannya.",
     "faq2Q": "Apakah Zakat tetap terpisah dari donasi lain?",

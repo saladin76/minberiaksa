@@ -1602,7 +1602,8 @@
       }
     },
     "categoriesTitle": "Kategorien",
-    "loadMore": "Mehr anzeigen"
+    "loadMore": "Mehr anzeigen",
+    "unavailableTranslationNotice": "Dieser Artikel ist noch nicht in dieser Sprache verfügbar. Der verfügbare Text wird unten angezeigt."
   },
   "cart": {
     "title": "Spendenkorb",
@@ -1700,7 +1701,7 @@
     "emptyCart": "Ihr Warenkorb Ist Leer",
     "itemsHeading": "Ihre Spendenposten",
     "recurringNudge": "Diese Spende mit einem Klick monatlich wiederholen",
-    "recurringNudgeText": "Automatisches Spenden aktivieren  jederzeit kündbar",
+    "recurringNudgeText": "Spenden Sie automatisch. Kontaktieren Sie die Stiftung, um Ihren Spendenplan zu ändern oder zu beenden.",
     "recurringNudgeEyebrow": "Lassen Sie Ihre Wirkung Fortbestehen",
     "dataAccuracyNote": "Achten Sie auf korrekte Angaben, damit Quittung und Spendenurkunde Sie erreichen",
     "orFillManually": "Oder Manuell Ausfüllen",
@@ -2227,7 +2228,7 @@
     "docsLibrary": "Dokumentenbibliothek",
     "docsLibraryText": "Ihre Belege und Urkunden zum Herunterladen.",
     "givingPlans": "Spendenpläne",
-    "givingPlansText": "Ändern oder beenden Sie Ihren Dauerauftrag jederzeit.",
+    "givingPlansText": "Kontaktieren Sie die Stiftung, um Ihre regelmäßige Spende zu ändern oder zu beenden.",
     "faq1Q": "Ist der Rechner ein religiöses Gutachten?",
     "faq1A": "Nein. Es ist eine Schätzung auf Basis Ihrer Eingaben. Wenden Sie sich an eine vertrauenswürdige religiöse Instanz zur Bestätigung.",
     "faq2Q": "Bleibt Zakat von anderen Spenden getrennt?",

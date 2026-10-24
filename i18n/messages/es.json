@@ -1602,7 +1602,8 @@
       }
     },
     "categoriesTitle": "Categorías",
-    "loadMore": "Mostrar más"
+    "loadMore": "Mostrar más",
+    "unavailableTranslationNotice": "Este artículo aún no está disponible en este idioma. A continuación se muestra el texto disponible."
   },
   "cart": {
     "title": "Carrito de Donaciones",
@@ -1700,7 +1701,7 @@
     "emptyCart": "Tu Carrito Está Vacío",
     "itemsHeading": "Tus Donativos",
     "recurringNudge": "Repite este donativo cada mes con un clic",
-    "recurringNudgeText": "Activa la donación automática  cancela cuando quieras",
+    "recurringNudgeText": "Realiza donaciones automáticas. Contacta con la fundación para cambiar o detener tu plan.",
     "recurringNudgeEyebrow": "Haz Que tu Impacto Continúe",
     "dataAccuracyNote": "Comprueba que tus datos sean correctos para recibir tu recibo y certificado de donación",
     "orFillManually": "O Rellénalos Manualmente",
@@ -2227,7 +2228,7 @@
     "docsLibrary": "Biblioteca de Documentos",
     "docsLibraryText": "Tus recibos y certificados, listos para descargar.",
     "givingPlans": "Planes de Donación",
-    "givingPlansText": "Modifica o detén tu plan periódico en cualquier momento.",
+    "givingPlansText": "Contacta con la fundación para cambiar o detener tu donación periódica.",
     "faq1Q": "¿La calculadora es un dictamen religioso?",
     "faq1A": "No. Es una estimación basada en los valores que introduces. Consulta a una autoridad religiosa de confianza para confirmarlo.",
     "faq2Q": "¿El Zakat se mantiene separado de otras donaciones?",

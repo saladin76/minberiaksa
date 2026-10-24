@@ -563,7 +563,8 @@
       }
     },
     "categoriesTitle": "Kategorier",
-    "loadMore": "Vis Flere"
+    "loadMore": "Vis Flere",
+    "unavailableTranslationNotice": "Denne artikel er endnu ikke oversat til dette sprog. Den tilgængelige tekst vises nedenfor."
   },
   "cart": {
     "title": "Kurv",
@@ -661,7 +662,7 @@
     "emptyCart": "Din Kurv er Tom",
     "itemsHeading": "Dine Gaver",
     "recurringNudge": "Gentag gaven hver måned med ét klik",
-    "recurringNudgeText": "Aktivér automatisk gave  opsig når som helst",
+    "recurringNudgeText": "Donér automatisk. Kontakt fonden for at ændre eller stoppe din aftale.",
     "recurringNudgeEyebrow": "Lad Din Indsats Fortsætte",
     "dataAccuracyNote": "Tjek at dine oplysninger er korrekte, så kvittering og gavebevis når dig",
     "orFillManually": "Eller Udfyld Manuelt",
@@ -1188,7 +1189,7 @@
     "docsLibrary": "Dokumentbibliotek",
     "docsLibraryText": "Dine kvitteringer og certifikater klar til download.",
     "givingPlans": "Donationsplaner",
-    "givingPlansText": "Se og styr dine faste donationer.",
+    "givingPlansText": "Kontakt fonden for at ændre eller stoppe din faste donation.",
     "faq1Q": "Hvordan ved jeg at min donation kom frem?",
     "faq1A": "Du får kvittering på e-mail, og opdateringerne offentliggøres på projektsiden når de er godkendt.",
     "faq2Q": "Kan jeg øremærke donationen til et bestemt projekt?",
