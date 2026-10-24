@@ -1,6 +1,7 @@
 "use client";
 import { dt } from "@/lib/dashboard/i18n";
 import { useEffect, useState } from "react";
+import { DocumentUploadField } from "./DocumentUploadField";
 import { ImageUploadField } from "@/app/(dashboard)/dashboard/_components/ImageUploadField";
 import { BANNER_PAGES } from "@/lib/minbar/banner-placements";
 import { LOCALES, SUPPORTED_LOCALES } from "@/lib/locales";
@@ -121,6 +122,11 @@ export function WorkspaceSettings({
                 title: `${p.label} · ${dt(s.label)}`,
               })),
             );
+          if (f.key === "fileUrl")
+            return <section key={f.key} className="space-y-2 rounded-xl border bg-white p-5">
+              <p className="font-semibold">{dt(f.label)}</p>
+              <DocumentUploadField value={String(value || "")} onChange={(url) => onChange(f.key, url)} onUploadingChange={onUploadingChange} />
+            </section>;
           if (f.type === "image")
             return (
               <section key={f.key} className="rounded-xl border bg-white p-5">

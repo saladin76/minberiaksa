@@ -10,6 +10,7 @@ import { slugify } from "@/lib/slug";
 import { slugFor } from "@/lib/minbar/routes";
 import dynamic from "next/dynamic";
 import { EditorModal } from "./EditorModal";
+import { DocumentUploadField } from "./DocumentUploadField";
 import { ProgrammeWorkspace } from "./ProgrammeWorkspace";
 import { WorkspacePreview } from "./WorkspacePreview";
 import { WorkspaceSettings, useEditorCatalog } from "./WorkspaceSettings";
@@ -473,7 +474,9 @@ export function ContentEditor({ kind, id }: { kind: ContentKind; id: string }) {
           <span className="text-xs text-slate-500">{dt("مراجعة يدوية")}</span>
         )}
       </div>
-      {field.rich ? (
+      {field.key === "fileUrl" && ["reports", "booklets"].includes(kind) ? (
+        <DocumentUploadField value={current[field.key] || ""} onChange={(url) => edit(field.key, url)} onUploadingChange={onUploadingChange} disabled={Boolean(busy)} />
+      ) : field.rich ? (
         <div
           id={`content-${locale}-${field.key}`}
           aria-label={dt(field.label)}
@@ -544,7 +547,7 @@ export function ContentEditor({ kind, id }: { kind: ContentKind; id: string }) {
             {dt(CONFIG[kind].label)}
           </Link>
           <h1 className="mt-2 text-2xl font-bold">
-            {current.title || current.name || document.title}
+            {current.title || current.name || current.question || document.title}
           </h1>
           <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-slate-500">
             <span>{dirty ? dt("تعديلات غير محفوظة") : dt("محفوظ")}</span>
