@@ -3473,3 +3473,36 @@ model ManagedPageSeo {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
+
+model EditorialJob {
+  priority Int @default(10)
+  id String @id @default(auto()) @map("_id") @db.ObjectId
+  key String @unique
+  kind String
+  status String @default("QUEUED")
+  locale String @default("ar")
+  sourceId String? @db.ObjectId
+  sourceRevision String?
+  targetRevision String?
+  fields Json?
+  result Json?
+  error String?
+  version String @default(uuid())
+  creationKey String @default(uuid())
+  resultContentId String? @db.ObjectId
+  attempts Int @default(0)
+  leaseToken String?
+  leaseUntil DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@index([status, priority, createdAt])
+  @@index([sourceId, locale])
+}
+model EditorialSettings {
+  leaseToken String?
+  leaseUntil DateTime?
+  id String @id @map("_id")
+  weeklyEnabled Boolean @default(true)
+  market String @default("")
+  updatedAt DateTime @updatedAt
+}
