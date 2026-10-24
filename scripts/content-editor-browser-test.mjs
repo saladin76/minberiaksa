@@ -1,7 +1,7 @@
 import { build } from "esbuild";
 import { chromium } from "@playwright/test";
 import { createServer } from "node:http";
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, writeFile, readFile } from "node:fs/promises";
 import path from "node:path";
 import assert from "node:assert/strict";
 import { createRequire } from "node:module";
@@ -16,13 +16,28 @@ const ui = (locale, text) => locale === "ar" ? text : ({en,tr}[locale][text] || 
 const editorialFixture = {id:"222222222222222222222222",kind:"ARTICLE",status:"REVIEW",locale:"ar",title:"مقال للمراجعة",version:"review-1",createdAt:"2026-10-24T07:00:00.000Z",attempts:1,result:{values:{title:"عنوان للمراجعة",description:"ملخص للمراجعة",content:JSON.stringify({type:"doc",content:[{type:"paragraph",content:[{type:"text",text:"نص للمراجعة"}]}]})},research:{summary:"مصادر اختبار قابلة للمراجعة",sources:[{url:"https://example.org/source-one",title:"مصدر أول"},{url:"https://example.org/source-two",title:"مصدر ثان"}]}}};
 let editorialWrites = 0;
 const seoFixture = {key:"home",revision:"seo-1",overrides:{},defaults:{ar:{metaTitle:"الصفحة الرئيسية",metaDescription:"وصف افتراضي"}}};
-const css = (
+let css = (
   await postcss([
     tailwindcss({ ...require("../tailwind.config.ts").default, content: ["components/dashboard/content-editor/*.tsx", "app/(dashboard)/dashboard/campaigns/_components/*.tsx", "components/ui/*.tsx"] }),
   ]).process("@tailwind base; @tailwind components; @tailwind utilities;", {
     from: undefined,
   })
 ).css;
+const fontFiles = {
+  "/fixture-cairo-ar.woff2": "public/fonts/cairo/cairo-200-1000-arabic-714d40cf.woff2",
+  "/fixture-cairo-latin.woff2": "public/fonts/cairo/cairo-200-1000-latin-caa2f572.woff2",
+  "/fixture-cairo-ext.woff2": "public/fonts/cairo/cairo-200-1000-latin-ext-cceb6a73.woff2",
+  "/fixture-montserrat.woff2": "public/fonts/montserrat/montserrat-100-900-latin-a5ec5492.woff2",
+};
+const fonts = Object.fromEntries(await Promise.all(Object.entries(fontFiles).map(async ([url,file]) => [url,await readFile(file)])));
+css += `
+@font-face{font-family:FixtureCairo;src:url("/fixture-cairo-ar.woff2") format("woff2");font-weight:200 1000;unicode-range:U+0600-06FF,U+0750-077F,U+08A0-08FF,U+FB50-FDFF,U+FE70-FEFF;}
+@font-face{font-family:FixtureCairo;src:url("/fixture-cairo-latin.woff2") format("woff2");font-weight:200 1000;unicode-range:U+0000-00FF;}
+@font-face{font-family:FixtureCairo;src:url("/fixture-cairo-ext.woff2") format("woff2");font-weight:200 1000;unicode-range:U+0100-02AF,U+1E00-1EFF;}
+@font-face{font-family:FixtureMontserrat;src:url("/fixture-montserrat.woff2") format("woff2");font-weight:100 900;}
+:root{--radius:.5rem;--font-cairo:FixtureCairo;--font-montserrat:FixtureMontserrat;}
+body{font-family:var(--font-cairo),var(--font-montserrat),system-ui,sans-serif;}
+`;
 const id = "111111111111111111111111";
 const fixture = {
   id,
@@ -87,7 +102,8 @@ const bundle = await build({
   ],
 });
 const server = createServer((req, res) => {
-  if (req.url?.startsWith("/api/admin/page-seo/")) {
+  if (fonts[req.url]) {res.setHeader("Content-Type","font/woff2");res.end(fonts[req.url]);
+  } else if (req.url?.startsWith("/api/admin/page-seo/")) {
     res.setHeader("Content-Type","application/json");
     let body = "";req.on("data",chunk => body+=chunk);req.on("end",() => {
       if (req.method === "POST") res.end(JSON.stringify({values:{metaTitle:"عنوان مقترح قابل للتحرير",metaDescription:"وصف مقترح"},research:{summary:"مراجعة مصادر الاختبار",sources:[{url:"https://example.org/research",title:"مصدر البحث"}]}}));
@@ -172,7 +188,7 @@ const server = createServer((req, res) => {
   } else {
     res.setHeader("Content-Type", "text/html; charset=utf-8");
     res.end(
-      '<!doctype html><html dir="rtl"><head><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/test.css"></head><body style="margin:0;background:#f8fafc;padding:16px;font-family:Arial,sans-serif"><div id="root"></div><script src="/bundle.js"></script></body></html>',
+      '<!doctype html><html dir="rtl"><head><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/test.css"></head><body style="margin:0;background:#f8fafc;padding:16px"><div id="root"></div><script src="/bundle.js"></script></body></html>',
     );
   }
 });

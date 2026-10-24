@@ -123,7 +123,7 @@ export function EditorialPlanner({ initialArticleId = "" }: { initialArticleId?:
       {message ? <p role="status" className="rounded border p-3">{message}</p> : null}
       {Object.entries(values).map(([field, value]) => <label key={field} className="block space-y-2 text-sm"><span className="font-semibold">{dt(LABELS[field] || field)}</span>
         {field === "content" ? <RichEditor key={review.id} isEditable={review.status === "REVIEW" && busy !== "apply"} defaultValue={richValue(value)} onUpdate={(editor) => { if (editor) setValues((previous) => ({ ...previous, content: JSON.stringify(editor.getJSON()) })); }} className="min-h-64 rounded border p-3" />
-          : <textarea disabled={review.status !== "REVIEW" || busy === "apply"} value={value} onChange={(event) => setValues((previous) => ({ ...previous, [field]: event.target.value }))} className="min-h-20 w-full rounded border p-3" />}
+          : <textarea aria-label={dt(LABELS[field] || field)} disabled={review.status !== "REVIEW" || busy === "apply"} value={value} onChange={(event) => setValues((previous) => ({ ...previous, [field]: event.target.value }))} className="min-h-20 w-full rounded border p-3" />}
       </label>)}
       {review.result?.notes?.map((note, index) => <p key={index} className="text-sm text-amber-800">{note}</p>)}
       <p className="text-sm">{review.result?.research?.summary}</p><ul className="list-disc ps-5 text-sm">{review.result?.research?.sources?.filter((source) => /^https?:\/\//.test(source.url)).map((source) => <li key={source.url}><a href={source.url} target="_blank" rel="noopener noreferrer" className="text-brand">{source.title || source.url}</a></li>)}</ul>
