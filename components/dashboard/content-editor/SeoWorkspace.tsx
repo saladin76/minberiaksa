@@ -2,7 +2,7 @@
 import { useState, type ReactNode } from "react";
 import type { ContentField, TextValues } from "@/lib/content-editor/contracts";
 import { ImageUploadField } from "@/app/(dashboard)/dashboard/_components/ImageUploadField";
-type Faq = { q: string; a: string };
+type Faq = { q: string; a: string; structuredData?: boolean };
 export function SeoWorkspace({
   values,
   fields,
@@ -146,6 +146,12 @@ export function SeoWorkspace({
                       )
                     }
                   />
+                </label>
+                <label className="flex items-center gap-2 text-sm">
+                  <input type="checkbox" checked={item.structuredData !== false} onChange={(event) =>
+                    writeFaq(faq.map((value, index) => index === i ? { ...value, structuredData: event.target.checked } : value))
+                  } />
+                  تضمين هذا السؤال في البيانات المنظمة لمحركات البحث
                 </label>
                 <button
                   type="button"

@@ -101,7 +101,7 @@ export function applyEditorialSeo(
 }
 export function publicFaq(
   value: string | null | undefined,
-): { q: string; a: string }[] {
+): { q: string; a: string; structuredData?: boolean }[] {
   try {
     const rows = JSON.parse(value || "[]");
     return Array.isArray(rows)

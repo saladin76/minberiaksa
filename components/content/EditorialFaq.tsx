@@ -17,7 +17,7 @@ export async function EditorialFaq({
   const schema = {
     "@context": "https://schema.org",
     "@type": "FAQPage",
-    mainEntity: faq.map((item) => ({
+    mainEntity: faq.filter((item) => item.structuredData !== false).map((item) => ({
       "@type": "Question",
       name: item.q,
       acceptedAnswer: { "@type": "Answer", text: item.a },
@@ -37,12 +37,12 @@ export async function EditorialFaq({
           <p className="mt-4 whitespace-pre-wrap leading-8">{item.a}</p>
         </details>
       ))}
-      <script
+      {schema.mainEntity.length ? <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
           __html: JSON.stringify(schema).replace(/</g, "\\u003c"),
         }}
-      />
+      /> : null}
     </section>
   );
 }

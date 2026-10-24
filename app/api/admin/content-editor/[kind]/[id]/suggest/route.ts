@@ -1,3 +1,4 @@
+import { faqTranslationFields, translatedFaq } from "@/lib/content-editor/faq";
 import { generateResearchedSeo, SeoResearchError } from "@/lib/content-editor/seo-research";
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
@@ -57,7 +58,7 @@ export async function POST(
       const selected = fields.filter(
         (f) =>
           !f.locked &&
-          !["seoNoIndex", "ogImage", "faqContent", "videoUrl"].includes(
+          !["seoNoIndex", "ogImage", "videoUrl"].includes(
             f.key,
           ) &&
           hasText(source[f.key]) &&
@@ -70,9 +71,10 @@ export async function POST(
         );
       const result = await translateToLocales(
         {
-          fields: Object.fromEntries(
-            selected.filter((f) => !f.rich).map((f) => [f.key, source[f.key]]),
-          ),
+          fields: {
+            ...Object.fromEntries(selected.filter((f) => !f.rich && f.key !== "faqContent").map((f) => [f.key, source[f.key]])),
+            ...(selected.some((field) => field.key === "faqContent") ? faqTranslationFields(source.faqContent) : {}),
+          },
           richFields: Object.fromEntries(
             selected.filter((f) => f.rich).map((f) => [f.key, source[f.key]]),
           ),
@@ -91,12 +93,17 @@ export async function POST(
             Object.entries(result.translations).map(([locale, t]) => [
               locale,
               {
-                values: { ...t.fields, ...t.richFields },
+                values: {
+                  ...Object.fromEntries(Object.entries(t.fields).filter(([key]) => !key.startsWith("__faq_"))),
+                  ...t.richFields,
+                  ...(selected.some((field) => field.key === "faqContent") && translatedFaq(source.faqContent, t.fields)
+                    ? { faqContent: translatedFaq(source.faqContent, t.fields)! } : {}),
+                },
                 warnings: [
                   ...t.warnings,
                   ...selected
                     .filter(
-                      (f) => !(f.key in t.fields) && !(f.key in t.richFields),
+                      (f) => f.key === "faqContent" ? !translatedFaq(source.faqContent, t.fields) : !(f.key in t.fields) && !(f.key in t.richFields),
                     )
                     .map(
                       (f) =>
@@ -147,8 +154,8 @@ export async function POST(
   } catch (error) {
     console.error("content-editor suggestions", error);
     return NextResponse.json(
-      { error: "تعذر إكمال الاقتراح. لم يتغير المحتوى المحفوظ." },
-      { status: 502 },
+      { error: error instanceof SeoResearchError ? error.message : "تعذر إكمال الاقتراح. لم يتغير المحتوى المحفوظ." },
+      { status: error instanceof SeoResearchError ? error.status : 502 },
     );
   }
 }
