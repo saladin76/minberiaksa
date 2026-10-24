@@ -119,15 +119,16 @@ export function buildLocalizedAlternates(args: {
   const url = (loc: string): string =>
     `${SITE_URL}/${loc}${basePath}/${encodeURIComponent(slugFor(loc))}`;
 
-  const allowed = availableLocales?.length
+  const allowed = availableLocales
     ? LOCALES.filter((locale) => availableLocales.includes(locale))
     : LOCALES;
   const languages: Record<string, string> = {};
   for (const locale of allowed) languages[locale] = url(locale);
-  languages["x-default"] = url("ar");
+  const fallbackLocale = allowed.includes("ar") ? "ar" : allowed[0];
+  if (fallbackLocale) languages["x-default"] = url(fallbackLocale);
   const canonicalLocale = allowed.includes(currentLocale as Locale)
     ? currentLocale
-    : "ar";
+    : fallbackLocale || currentLocale;
   return { canonical: url(canonicalLocale), languages };
 }
 

@@ -1,3 +1,5 @@
+import { contentStore } from "./store";
+import { CONFIG, hasText, rows, text } from "./contracts";
 import "server-only";
 import { cache } from "react";
 import type { Metadata } from "next";
@@ -120,3 +122,20 @@ export function publicFaq(
     return [];
   }
 }
+
+export const readPublicEditorialUrls = cache(async (kind: Kind, key: string) => {
+  const titleKey = kind === "categories" ? "name" : "title", bodyKey = kind === "blog" ? "content" : kind === "super-categories" ? "intro" : "description";
+  const visible = kind === "campaigns" ? { isActive: true, OR: [{ isDeleted: false }, { isDeleted: { isSet: false } }] } : kind === "blog" ? { published: true } : kind === "categories" ? { OR: [{ isActive: true }, { isActive: null }, { isActive: { isSet: false } }] } : { isActive: true };
+  try {
+    const row = await contentStore.model(CONFIG[kind].model).findFirst({
+      where: { AND: [whereByIdOrAnyLocaleSlug(key, "translations", true), visible] },
+      select: { id: true, slug: true, [titleKey]: true, [bodyKey]: true, seoNoIndex: true, translations: { select: { locale: true, slug: true, [titleKey]: true, [bodyKey]: true, seoNoIndex: true } } },
+    });
+    if (!row) return null;
+    const bodyRequired = ["campaigns", "blog"].includes(kind) || hasText(row[bodyKey]);
+    const complete = (entry: Record<string, unknown>) => hasText(entry[titleKey]) && (!bodyRequired || hasText(entry[bodyKey])) && entry.seoNoIndex !== "true";
+    const translations = rows(row.translations);
+    return { id: text(row.id), baseSlug: text(row.slug), translations: translations.map((entry) => ({ locale: text(entry.locale), slug: text(entry.slug) || null })),
+      availableLocales: [...(complete(row) ? ["ar"] : []), ...translations.filter(complete).map((entry) => text(entry.locale))] };
+  } catch { console.error("Unable to read editorial locale URLs"); return null; }
+});

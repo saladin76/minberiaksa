@@ -1,3 +1,4 @@
+import { hasText } from "@/lib/content-editor/contracts";
 import { prisma } from "@/lib/prisma";
 import { pickLocaleSlug, whereByIdOrAnyLocaleSlug } from "@/lib/slug";
 import { pickTranslation, translationLocaleWhere } from "@/lib/i18n/translation-fallback";
@@ -45,6 +46,7 @@ export interface MinbarArticleDetail extends MinbarArticle {
   imageAlt: string;
   /** Arabic is canonical; other locales are indexable only with their own body. */
   isLocalized: boolean;
+  contentLocale?: string;
   availableLocales: string[];
   localizations: Array<{ locale: string; slug: string | null; hasContent: boolean }>;
 }
@@ -179,6 +181,7 @@ export async function getArticle(slugOrId: string, locale: string): Promise<Minb
       select: {
         id: true,
         slug: true,
+        seoNoIndex: true,
         title: true,
         description: true,
         content: true,
@@ -205,6 +208,7 @@ export async function getArticle(slugOrId: string, locale: string): Promise<Minb
         translations: {
           select: {
             locale: true,
+            seoNoIndex: true,
             title: true,
             description: true,
             content: true,
@@ -234,20 +238,23 @@ export async function getArticle(slugOrId: string, locale: string): Promise<Minb
     };
     const article = toArticle(baseCard, locale);
 
-    const localizedBody = localized?.content?.trim() || "";
-    const isLocalized = locale === "ar" || Boolean(localizedBody);
+    const exact = row.translations.find((entry) => entry.locale === locale);
+    const localizedBody = hasText(exact?.content) ? exact!.content!.trim() : hasText(localized?.content) ? localized!.content!.trim() : "";
+    const isLocalized = locale === "ar" ? hasText(row.content) : hasText(exact?.content);
+    const contentLocale = locale === "ar" ? "ar" : hasText(exact?.content) ? locale : hasText(localized?.content) ? localized!.locale : "ar";
     const availableLocales = Array.from(
       new Set([
-        "ar",
+        ...(hasText(row.content) && row.seoNoIndex !== "true" ? ["ar"] : []),
         ...row.translations
-          .filter((translation) => Boolean(translation.content?.trim()))
+          .filter((translation) => hasText(translation.content) && translation.seoNoIndex !== "true")
           .map((translation) => translation.locale),
       ])
     );
 
     return {
       ...article,
-      content: localizedBody || row.content || "",
+      content: locale === "ar" ? row.content || "" : localizedBody || row.content || "",
+      contentLocale,
       campaignIds: row.campaignIds ?? [],
       baseSlug: row.slug ?? null,
       updatedAt: row.updatedAt.toISOString(),

@@ -16,7 +16,7 @@ import ProjectDetail from "@/components/minbar/projects/ProjectDetail";
 import SuperCategoryPage from "@/components/minbar/projects/SuperCategoryPage";
 import { getSuperCategory } from "@/lib/minbar/super-category";
 import PageBanners from "@/components/minbar/banners/PageBanners";
-import { applyEditorialSeo,readPublicEditorialSeo } from '@/lib/content-editor/public-seo';
+import { applyEditorialSeo,readPublicEditorialSeo,readPublicEditorialUrls } from '@/lib/content-editor/public-seo';
 import { EditorialFaq } from '@/components/content/EditorialFaq';
 import { withIncomingQuery, type IncomingSearchParams } from '@/lib/minbar/redirect-query';
 
@@ -56,13 +56,15 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
      then the localised title, description and cover. A campaign-level OG
      image is the last resort for the picture only  another language's title
      would be wrong here. */
-  const seo = await getProjectSeo(project.id, locale);
+  const [seo, urls] = await Promise.all([getProjectSeo(project.id, locale), readPublicEditorialUrls("campaigns", project.id)]);
   const title = seo.locale.seoTitle || project.title;
   const meta = buildPageMetadata(locale, {
     title,
     imageAlt: project.imageAlt,
     description: seo.locale.seoDescription || project.text,
     path: `/${slugFor("projectDetail", locale)}/${project.slug}`,
+    alternates: urls ? buildLocalizedAlternates({ basePath: "/" + slugFor("projectDetail", locale), ...urls, fallback: project.id, currentLocale: locale }) : undefined,
+    robots: !urls?.availableLocales.includes(locale) ? { index: false, follow: true } : undefined,
     image: seo.locale.ogImage || project.image || seo.campaign.ogImage || undefined,
     type: "article",
   });

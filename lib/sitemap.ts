@@ -123,12 +123,13 @@ function expand(
 }
 
 /** A super category lives at `/{locale}/{projects slug}/{slug}`. */
-function superCategoryAlternates(slug: string): Record<string, string> {
+function superCategoryAlternates(slug: string, translations: Translation[] = [], availableLocales: readonly string[] = LOCALES): Record<string, string> {
   const url = (locale: string) =>
-    `${SITE_URL}/${locale}/${encodeURIComponent(slugFor("projectDetail", locale))}/${encodeURIComponent(slug)}`;
+    `${SITE_URL}/${locale}/${encodeURIComponent(slugFor("projectDetail", locale))}/${encodeURIComponent(pickSlugFor(locale, slug, translations, slug))}`;
   const languages: Record<string, string> = {};
-  for (const locale of LOCALES) languages[locale] = url(locale);
-  languages["x-default"] = url("ar");
+  for (const locale of LOCALES) if (availableLocales.includes(locale)) languages[locale] = url(locale);
+  const fallback = languages.ar || languages.en || Object.values(languages)[0];
+  if (fallback) languages["x-default"] = fallback;
   return languages;
 }
 
@@ -166,10 +167,13 @@ export async function buildShard(id: string): Promise<SitemapEntry[] | null> {
     try {
       const rows = await prisma.superCategory.findMany({
         where: { isActive: true },
-        select: { slug: true, updatedAt: true },
+        select: { slug: true, updatedAt: true, intro: true, seoNoIndex: true, translations: { select: { locale: true, slug: true, title: true, intro: true, seoNoIndex: true } } },
         orderBy: { order: "asc" },
       });
-      supers = rows.flatMap((row) => expand(superCategoryAlternates(row.slug), row.updatedAt, "weekly", 0.85));
+      supers = rows.flatMap((row) => {
+        const available = [...(row.seoNoIndex === "true" ? [] : ["ar"]), ...row.translations.filter((entry) => entry.seoNoIndex !== "true" && entry.title.trim() && (!row.intro?.trim() || entry.intro?.trim())).map((entry) => entry.locale)];
+        return expand(superCategoryAlternates(row.slug, row.translations, available), row.updatedAt, "weekly", 0.85, available);
+      });
     } catch {
       // Same reasoning as listShardIds: a database blip must not empty the shard.
     }
@@ -203,7 +207,7 @@ export async function buildShard(id: string): Promise<SitemapEntry[] | null> {
           .filter((translation) => translation.seoNoIndex !== "true" && Boolean(translation.title?.trim()) && Boolean(translation.description?.trim()))
           .map((translation) => translation.locale),
       ]));
-      const alternates = entityAlternates("/campaign", c.slug, c.translations, c.id, availableLocales);
+      const alternates = entityAlternates("/" + slugFor("projectDetail", "ar"), c.slug, c.translations, c.id, availableLocales);
       return expand(alternates, c.updatedAt, "weekly", 0.85, availableLocales);
     });
   }
