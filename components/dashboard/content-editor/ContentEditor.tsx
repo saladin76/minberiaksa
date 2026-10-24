@@ -1063,7 +1063,7 @@ export function ContentEditor({ kind, id }: { kind: ContentKind; id: string }) {
                 : dt("إعدادات البحث تحتاج استكمالًا")}
             </p>
           </section>
-          {["campaigns", "categories", "blog"].includes(kind) && section === "links" ? (
+          {["campaigns", "categories", "blog", "super-categories"].includes(kind) && section === "links" ? (
             <section className="space-y-3 rounded-xl border bg-white p-4">
               <h3 className="font-semibold">{dt("الرابط وسجل التغييرات")}</h3>
               <p dir="ltr" className="break-all text-sm">

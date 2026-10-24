@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { CONFIG, fieldsFor, hasText, titleKeyFor, validateChanges, type ContentKind, type ContentRecord } from "./contracts";
-import { ContentError, documentFor, fingerprint, generateEditorialSlug, readContent, saveWorkspace, type Store } from "./service";
+import { ContentError, documentFor, fingerprint, generateEditorialSlug, reserveEditorialSlug, readContent, saveWorkspace, type Store } from "./service";
 import { validateWorkspaceSettings } from "./workspace-settings";
 import { parseCampaignCreatePayload } from "../campaign/admin-create-core";
 import { generateUniqueSlug } from "../slug";
@@ -50,7 +50,7 @@ export async function createWorkspace(db: Store, input: {
     if (["reports", "booklets"].includes(kind)) source.fileUrl = String(data.fileUrl || "");
     if ("amountLabels" in data) data.amountLabels = String(data.amountLabels || "").split("\n").filter(Boolean);
     const titleKey = titleKeyFor(kind);
-    const slug = ["campaigns", "categories", "blog"].includes(kind)
+    const slug = ["campaigns", "categories", "blog", "super-categories"].includes(kind)
       ? await generateEditorialSlug(tx, kind, String(data[titleKey]), "000000000000000000000000")
       : kind === "faqs" ? undefined : await generateUniqueSlug({ findFirst: async (args) => { const found = await tx.model(cfg.model).findFirst(args); return found ? { id: String(found.id) } : null; } }, String(data[titleKey]));
     if (slug) data.slug = slug;
@@ -72,6 +72,7 @@ export async function createWorkspace(db: Store, input: {
     if (kind === "urgent-banners" && (!Array.isArray(data.placements) || !data.placements.length)) throw new ContentError("اختر مكانًا واحدًا على الأقل يظهر فيه البانر");
     const created = await tx.model(cfg.model).create({ data });
     const id = String(created.id);
+    if (slug && ["campaigns", "categories", "blog", "super-categories"].includes(kind)) await reserveEditorialSlug(tx, kind, slug, id);
     const row = await readContent(tx, kind, id);
     const saved = await saveWorkspace(tx, {
       kind, id, revision: fingerprint(row), locale: input.locale, changes: input.locale === "ar" ? source : input.changes,

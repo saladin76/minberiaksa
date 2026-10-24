@@ -265,8 +265,9 @@ export async function saveContent(
         where = { [key]: { [cfg.parentKey]: id, locale } };
       const data = dataFor(parentChanges);
       const existingTranslation = rows(row.translations).find((entry) => entry.locale === locale);
-      if (["campaigns", "categories", "blog"].includes(kind) && !text(existingTranslation?.slug)) {
+      if (["campaigns", "categories", "blog", "super-categories"].includes(kind) && !text(existingTranslation?.slug)) {
         data.slug = await generateEditorialSlug(tx, kind, next[titleKey], id);
+        await reserveEditorialSlug(tx, kind, String(data.slug), id);
       }
       await tx.model(cfg.translationModel).upsert({
         where,
@@ -450,6 +451,8 @@ export async function changeCategorySlug(
     });
     if (collision)
       throw new ContentError("هذا الرابط مستخدم أو محفوظ لتصنيف آخر", 409);
+    await reserveEditorialSlug(tx, "categories", slug, input.id);
+    if (current) await reserveEditorialSlug(tx, "categories", current, input.id);
     const previous = Array.isArray(row.previousSlugs)
       ? row.previousSlugs.filter((v): v is string => typeof v === "string")
       : [];
@@ -499,10 +502,13 @@ export async function generateEditorialSlug(db: Store, kind: ContentKind, title:
     const collision = await db.model(CONFIG[kind].model).findFirst({
       where: { id: { not: id }, OR: [{ slug }, { previousSlugs: { has: slug } }, { translations: { some: { slug } } }] },
     });
-    const alias = kind === "campaigns"
-      ? await db.model("campaignSlugRedirect").findFirst({ where: { slug, campaignId: { not: id } } })
-      : null;
-    if (!collision && !alias) return slug;
+    const sharedPath = ["campaigns", "super-categories"].includes(kind);
+    const other = sharedPath ? await db.model(kind === "campaigns" ? "superCategory" : "campaign").findFirst({ where: { OR: [{ slug }, { previousSlugs: { has: slug } }, { translations: { some: { slug } } }] } }) : null;
+    const alias = sharedPath ? await db.model("campaignSlugRedirect").findFirst({ where: { slug, ...(kind === "campaigns" ? { campaignId: { not: id } } : {}) } }) : null;
+    const namespace = sharedPath ? "projects" : kind;
+    const reservation = await db.model("contentRouteReservation").findUnique({ where: { id: namespace + ":" + slug } });
+    const reserved = reservation && (reservation.kind !== kind || reservation.contentId !== id);
+    if (!collision && !alias && !other && !reserved) return slug;
   }
   throw new ContentError("تعذر إنشاء رابط فريد", 409);
 }
@@ -512,7 +518,7 @@ export async function changeEditorialSlug(
   input: { kind: ContentKind; id: string; revision: string; locale: string; slug: string; confirmation: string; actor: string },
 ) {
   if (input.kind === "categories") return changeCategorySlug(db, input);
-  if (!["campaigns", "blog"].includes(input.kind)) throw new ContentError("هذا المحتوى لا يملك رابطًا مستقلًا");
+  if (!["campaigns", "blog", "super-categories"].includes(input.kind)) throw new ContentError("هذا المحتوى لا يملك رابطًا مستقلًا");
   const { kind, id, locale } = input, slug = input.slug.trim();
   if (!(SUPPORTED_LOCALES as readonly string[]).includes(locale) || !/^[\p{L}\p{N}]+(?:-[\p{L}\p{N}]+)*$/u.test(slug) || slug.length > 150 || /^[a-f0-9]{24}$/i.test(slug))
     throw new ContentError("استخدم حروفًا وأرقامًا وشرطات للرابط");
@@ -526,6 +532,8 @@ export async function changeEditorialSlug(
     if (current === slug) return documentFor(kind, row);
     const available = await generateEditorialSlug(tx, kind, slug, id);
     if (available !== slug) throw new ContentError("هذا الرابط مستخدم أو محفوظ لمحتوى آخر", 409);
+    await reserveEditorialSlug(tx, kind, slug, id);
+    if (current) await reserveEditorialSlug(tx, kind, current, id);
     const previous = Array.isArray(row.previousSlugs) ? row.previousSlugs.filter((v): v is string => typeof v === "string") : [];
     if (current) previous.push(current);
     await tx.model(CONFIG[kind].model).update({ where: { id }, data: {
@@ -549,4 +557,12 @@ export async function changeEditorialSlug(
     }
     return documentFor(kind, await readContent(tx, kind, id));
   });
+}
+
+export async function reserveEditorialSlug(db: Store, kind: ContentKind, slug: string, contentId: string) {
+  const namespace = ["campaigns", "super-categories"].includes(kind) ? "projects" : kind;
+  const id = namespace + ":" + slug, model = db.model("contentRouteReservation");
+  const current = await model.findUnique({ where: { id } });
+  if (current && (current.kind !== kind || current.contentId !== contentId)) throw new ContentError("هذا الرابط محفوظ لمحتوى آخر", 409);
+  if (!current) await model.create({ data: { id, kind, contentId } });
 }

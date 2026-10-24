@@ -2,7 +2,7 @@ import "server-only";
 import { cache } from "react";
 import type { Metadata } from "next";
 import { prisma } from "@/lib/prisma";
-import { whereByIdOrAnyLocaleSlug, whereByIdOrSlug } from "@/lib/slug";
+import { whereByIdOrAnyLocaleSlug } from "@/lib/slug";
 type Kind = "campaigns" | "categories" | "blog" | "super-categories";
 type Extra = {
   seoKeyword: string | null;
@@ -59,7 +59,7 @@ export const readPublicEditorialSeo = cache(
               ? await prisma.post.findFirst(args)
               : await prisma.superCategory.findFirst({
                   ...args,
-                  where: { ...whereByIdOrSlug(key), isActive: true },
+                  where: { AND: [whereByIdOrAnyLocaleSlug(key, "translations", true), { isActive: true }] },
                 });
       if (!row) return null;
       // Do not display another language's FAQ or indexing override as this locale's copy.

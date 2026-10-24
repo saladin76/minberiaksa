@@ -34,6 +34,7 @@ export const EDITOR_SECTIONS: Record<ContentKind, EditorSection[]> = {
     { id: "review", label: "النشر والمراجعة", icon: "check" },
   ],
   "super-categories": [
+    { id: "links", label: "الرابط وسجل التغييرات", icon: "link" },
     { id: "content", label: "التعريف واللغات", icon: "file" },
     { id: "media", label: "الواجهة والوسائط", icon: "image" },
     { id: "library", label: "المحتوى المرتبط", icon: "heart" },

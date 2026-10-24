@@ -3319,6 +3319,10 @@ model SuperCategory {
   faqContent    String?
 
   @@index([isActive, order])
+  previousSlugs String[] @default([])
+  slugChanges Json?
+  @@index([previousSlugs])
+
 }
 
 model SuperCategoryTranslation {
@@ -3351,6 +3355,8 @@ model SuperCategoryTranslation {
   faqContent    String?
 
   @@unique([superCategoryId, locale])
+  slug String?
+
 }
 
 /// One section of a super category's page, in the order it is rendered.
@@ -3505,4 +3511,11 @@ model EditorialSettings {
   weeklyEnabled Boolean @default(true)
   market String @default("")
   updatedAt DateTime @updatedAt
+}
+
+model ContentRouteReservation {
+  id String @id @map("_id")
+  kind String
+  contentId String @db.ObjectId
+  createdAt DateTime @default(now())
 }
