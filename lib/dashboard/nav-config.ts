@@ -65,6 +65,7 @@ export const DASHBOARD_NAV_GROUPS: DashboardNavGroup[] = [
   {
     get group() { return dt("المحتوى التحريري"); },
     items: [
+      { key: "blog", get title() { return dt("خطة المقالات والترجمات"); }, href: "/dashboard/editorial-planner", icon: "lightbulb", keywords: ["editorial", "weekly", "translation", "مقال", "ترجمة", "أسبوعي"] },
       { key: "blog", get title() { return dt("المدونة"); }, href: "/dashboard/blog", icon: "penLine", keywords: ["blog", "posts", "مقالات"] },
       { key: "siteContent", get title() { return dt("شريط القصص"); }, href: "/dashboard/stories", icon: "images", keywords: ["stories", "قصص", "rail", "highlights"] },
       { key: "siteContent", get title() { return dt("الفيديوهات"); }, href: "/dashboard/videos", icon: "video", keywords: ["videos", "فيديو", "achievements", "endorsements", "إنجازات", "تزكيات"] },

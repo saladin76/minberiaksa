@@ -90,6 +90,7 @@ export async function runEditorialJobs(signal?: AbortSignal, maximum = 2) {
   try {
   const candidates = await prisma.editorialJob.findMany({ where: { OR: [{ status: "QUEUED" }, { status: "RUNNING", leaseUntil: { lt: now } }] }, orderBy: [{ priority: "asc" }, { createdAt: "asc" }], take: Math.max(1, Math.min(maximum, 2)) });
   const settings = await editorialSettings();
+  if (!settings.configured) return [];
   return await Promise.all(candidates.map(async (candidate) => {
     const leaseToken = randomUUID(), version = randomUUID();
     const claim = await prisma.editorialJob.updateMany({ where: { id: candidate.id, version: candidate.version, OR: [{ status: "QUEUED" }, { status: "RUNNING", leaseUntil: { lt: now } }] }, data: { status: "RUNNING", leaseToken, leaseUntil: new Date(now.getTime() + 15 * 60000), attempts: { increment: 1 }, error: null, version } });
@@ -163,7 +164,7 @@ export async function applyEditorialJob(id: string, version: string, input: unkn
 export async function changeEditorialJob(id: string, version: string, action: "retry" | "cancel") {
   const job = await prisma.editorialJob.findUnique({ where: { id } });
   if (!job || job.version !== version) throw new ContentError("تغيرت المهمة. أعد تحميل القائمة.", 409);
-  if (action === "retry" && job.status !== "FAILED") throw new ContentError("تُعاد محاولة المهام التي فشلت فقط");
+  if (action === "retry" && !["FAILED", "CANCELLED"].includes(job.status)) throw new ContentError("تُعاد محاولة المهام التي فشلت فقط");
   if (action === "cancel" && !["QUEUED", "RUNNING", "FAILED", "REVIEW"].includes(job.status)) throw new ContentError("لا يمكن إلغاء هذه المهمة");
   const result = await prisma.editorialJob.updateMany({ where: { id, version }, data: { status: action === "retry" ? "QUEUED" : "CANCELLED", error: null, leaseToken: null, leaseUntil: null, version: randomUUID() } });
   if (!result.count) throw new ContentError("تغيرت المهمة. أعد تحميل القائمة.", 409);

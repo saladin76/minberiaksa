@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/options";
@@ -38,6 +39,11 @@ export async function POST(request: NextRequest) {
     if (body.action === "improve") {
       if (typeof body.id !== "string" || !/^[a-f0-9]{24}$/i.test(body.id)) throw new ContentError("معرّف مقال غير صالح");
       return NextResponse.json({ created: await enqueueArticleImprovement(body.id) });
+    }
+    if (body.action === "retry-failed") {
+      const settings = await editorialSettings(); if (!settings.configured) throw new ContentError("خدمة بحث المحتوى غير مهيأة");
+      const updated = await prisma.editorialJob.updateMany({ where: { status: "FAILED" }, data: { status: "QUEUED", error: null, leaseToken: null, leaseUntil: null, version: randomUUID() } });
+      return NextResponse.json({ count: updated.count });
     }
     if (body.action === "run") return NextResponse.json({ jobs: await runEditorialJobs(request.signal, 2) });
     throw new ContentError("عملية غير صالحة");

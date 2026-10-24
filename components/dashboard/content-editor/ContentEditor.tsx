@@ -1017,6 +1017,7 @@ export function ContentEditor({ kind, id }: { kind: ContentKind; id: string }) {
               )}
             </section>
           ) : null}
+          {kind === "blog" && section === "review" && id !== "new" ? <Link href={`/dashboard/editorial-planner?improve=${id}`} className={button}>{dt("تجهيز تحسين المقال والبحث عن مصادره")}</Link> : null}
           {section === "review" ? (
             <section className="space-y-4 rounded-xl border bg-white p-5">
               <h3 className="font-bold">{dt("المراجعة قبل النشر")}</h3>
