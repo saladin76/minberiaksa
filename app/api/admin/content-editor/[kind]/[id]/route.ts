@@ -5,7 +5,7 @@ import { requireAdminOrDashboardPermission } from "@/lib/dashboard/api-auth";
 import { CONFIG, parseKind } from "@/lib/content-editor/contracts";
 import {
   ContentError,
-  changeCategorySlug,
+  changeEditorialSlug,
   documentFor,
   readContent,
   saveWorkspace,
@@ -71,8 +71,9 @@ export async function PUT(request: NextRequest, ctx: Context) {
     if (typeof body.revision !== "string")
       throw new ContentError("أعد تحميل المحتوى قبل الحفظ");
     let result;
-    if (body.action === "slug" && kind === "categories")
-      result = await changeCategorySlug(contentStore, {
+    if (body.action === "slug")
+      result = await changeEditorialSlug(contentStore, {
+        kind,
         id,
         revision: body.revision,
         slug: String(body.slug || ""),

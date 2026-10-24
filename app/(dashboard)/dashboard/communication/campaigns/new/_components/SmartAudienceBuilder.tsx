@@ -3,6 +3,7 @@
 import * as React from "react";
 import { Loader2, Search, X, Users, ShieldCheck } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { LOCALE_LABELS, SUPPORTED_LOCALES } from "@/lib/locales";
 import { RECIPIENT_REASON_LABELS, type RecipientExclusionReason } from "@/lib/communication/campaign-audience-accounting";
 import { dt, dtx } from "@/lib/dashboard/i18n";

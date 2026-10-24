@@ -6,6 +6,8 @@ import { useDashboardUnsavedChanges } from "@/hooks/useDashboardUnsavedChanges";
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { slugify } from "@/lib/slug";
+import { slugFor } from "@/lib/minbar/routes";
 import dynamic from "next/dynamic";
 import { EditorModal } from "./EditorModal";
 import { ProgrammeWorkspace } from "./ProgrammeWorkspace";
@@ -1047,11 +1049,11 @@ export function ContentEditor({ kind, id }: { kind: ContentKind; id: string }) {
                 : dt("إعدادات البحث تحتاج استكمالًا")}
             </p>
           </section>
-          {kind === "categories" && section === "links" ? (
+          {["campaigns", "categories", "blog"].includes(kind) && section === "links" ? (
             <section className="space-y-3 rounded-xl border bg-white p-4">
               <h3 className="font-semibold">{dt("الرابط وسجل التغييرات")}</h3>
               <p dir="ltr" className="break-all text-sm">
-                /{locale}/category/{document.slugs[locale]}
+                /{locale}/{kind === "categories" ? "category" : slugFor(kind === "blog" ? "article" : "projectDetail", locale)}/{document.slugs[locale]}
               </p>
               <button
                 type="button"
@@ -1065,6 +1067,10 @@ export function ContentEditor({ kind, id }: { kind: ContentKind; id: string }) {
               >
                 {dt("تعديل الرابط")}
               </button>
+              <button type="button" className={button} disabled={Boolean(busy) || dirty} onClick={() => {
+                setSlug(slugify(current[kind === "categories" ? "name" : "title"] || ""));
+                setConfirmation(""); setSlugOpen(true);
+              }}>{dt("توليد الرابط من العنوان")}</button>
               {document.previousSlugs
                 .filter((entry) => (entry.locale || "ar") === locale)
                 .map((entry, i) => (

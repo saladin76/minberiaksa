@@ -683,6 +683,10 @@ model Campaign {
   ogImage        String?
   seoNoIndex     String?
   faqContent     String?
+  previousSlugs String[] @default([])
+  slugChanges Json?
+  @@index([previousSlugs])
+
 }
 
 model CampaignTranslation {
@@ -1387,6 +1391,10 @@ model Post {
   ogImage       String?
   seoNoIndex    String?
   faqContent    String?
+  previousSlugs String[] @default([])
+  slugChanges Json?
+  @@index([previousSlugs])
+
 }
 
 model PostTranslation {

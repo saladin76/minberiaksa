@@ -8,6 +8,7 @@ export const EDITOR_SECTIONS: Record<ContentKind, EditorSection[]> = {
     { id: "donation", label: "إعدادات التبرع", icon: "wallet" },
     { id: "media", label: "الصور والفيديو", icon: "image" },
     { id: "seo", label: "SEO والمشاركة", icon: "search" },
+    { id: "links", label: "الرابط وسجل التغييرات", icon: "link" },
     { id: "history", label: "الإنجازات والسجل", icon: "history" },
   ],
   categories: [
@@ -22,6 +23,7 @@ export const EDITOR_SECTIONS: Record<ContentKind, EditorSection[]> = {
     { id: "content", label: "المعلومات والمحتوى", icon: "file" },
     { id: "media", label: "الصورة والوسائط", icon: "image" },
     { id: "seo", label: "SEO والمشاركة", icon: "search" },
+    { id: "links", label: "الرابط وسجل التغييرات", icon: "link" },
     { id: "review", label: "النشر والمراجعة", icon: "check" },
   ],
   "super-categories": [

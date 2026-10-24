@@ -2,7 +2,7 @@ import { createHash, randomUUID } from "node:crypto";
 import { validateWorkspaceSettings } from "./workspace-settings";
 import { saveWorkspaceRelations } from "./workspace-relations";
 import { SUPPORTED_LOCALES } from "../locales";
-import { pickLocaleSlug } from "../slug";
+import { pickLocaleSlug, slugify } from "../slug";
 import { HAS_IMPACT_BACKING_CAMPAIGNS } from "./site-capabilities";
 import {
   CONFIG,
@@ -261,6 +261,10 @@ export async function saveContent(
       const key = `${cfg.parentKey}_locale`,
         where = { [key]: { [cfg.parentKey]: id, locale } };
       const data = dataFor(parentChanges);
+      const existingTranslation = rows(row.translations).find((entry) => entry.locale === locale);
+      if (["campaigns", "categories", "blog"].includes(kind) && !text(existingTranslation?.slug)) {
+        data.slug = await generateEditorialSlug(tx, kind, next[titleKey], id);
+      }
       await tx.model(cfg.translationModel).upsert({
         where,
         create: {
@@ -481,5 +485,65 @@ export async function changeCategorySlug(
       "categories",
       await readContent(tx, "categories", input.id),
     );
+  });
+}
+
+/** Locale slugs share one namespace per kind because public URLs accept any locale's slug. */
+export async function generateEditorialSlug(db: Store, kind: ContentKind, title: string, id: string) {
+  const base = slugify(title) || "content";
+  for (let suffix = 1; suffix <= 1000; suffix++) {
+    const slug = suffix === 1 ? base : base + "-" + suffix;
+    const collision = await db.model(CONFIG[kind].model).findFirst({
+      where: { id: { not: id }, OR: [{ slug }, { previousSlugs: { has: slug } }, { translations: { some: { slug } } }] },
+    });
+    const alias = kind === "campaigns"
+      ? await db.model("campaignSlugRedirect").findFirst({ where: { slug, campaignId: { not: id } } })
+      : null;
+    if (!collision && !alias) return slug;
+  }
+  throw new ContentError("تعذر إنشاء رابط فريد", 409);
+}
+
+export async function changeEditorialSlug(
+  db: Store,
+  input: { kind: ContentKind; id: string; revision: string; locale: string; slug: string; confirmation: string; actor: string },
+) {
+  if (input.kind === "categories") return changeCategorySlug(db, input);
+  if (!["campaigns", "blog"].includes(input.kind)) throw new ContentError("هذا المحتوى لا يملك رابطًا مستقلًا");
+  const { kind, id, locale } = input, slug = input.slug.trim();
+  if (!(SUPPORTED_LOCALES as readonly string[]).includes(locale) || !/^[\p{L}\p{N}]+(?:-[\p{L}\p{N}]+)*$/u.test(slug) || slug.length > 150 || /^[a-f0-9]{24}$/i.test(slug))
+    throw new ContentError("استخدم حروفًا وأرقامًا وشرطات للرابط");
+  if (input.confirmation !== slug) throw new ContentError("اكتب الرابط الجديد لتأكيد التغيير");
+  return db.transaction(async (tx) => {
+    const row = await readContent(tx, kind, id);
+    if (fingerprint(row) !== input.revision) throw new ContentError("تغير المحتوى. أعد تحميله أولًا.", 409);
+    const own = valuesFor(kind, row, locale);
+    if (!hasText(own.title)) throw new ContentError("احفظ عنوان هذه اللغة قبل تخصيص رابطها");
+    const current = pickLocaleSlug(text(row.slug), rows(row.translations) as { locale: string; slug?: string | null }[], locale) || "";
+    if (current === slug) return documentFor(kind, row);
+    const available = await generateEditorialSlug(tx, kind, slug, id);
+    if (available !== slug) throw new ContentError("هذا الرابط مستخدم أو محفوظ لمحتوى آخر", 409);
+    const previous = Array.isArray(row.previousSlugs) ? row.previousSlugs.filter((v): v is string => typeof v === "string") : [];
+    if (current) previous.push(current);
+    await tx.model(CONFIG[kind].model).update({ where: { id }, data: {
+      ...(locale === "ar" ? { slug } : {}),
+      previousSlugs: [...new Set(previous)].filter((value) => value !== slug),
+      slugChanges: [...rows(row.slugChanges), { from: current, to: slug, locale, at: new Date().toISOString(), actor: input.actor }],
+      editorVersion: randomUUID(),
+    } });
+    if (kind === "campaigns" && current) {
+      const alias = await tx.model("campaignSlugRedirect").findFirst({ where: { locale, slug: current } });
+      if (alias && alias.campaignId !== id) throw new ContentError("تعارض في سجل الروابط", 409);
+      if (!alias) await tx.model("campaignSlugRedirect").create({ data: { campaignId: id, locale, slug: current } });
+    }
+    if (locale !== "ar") {
+      const cfg = CONFIG[kind];
+      await tx.model(cfg.translationModel).upsert({
+        where: { [cfg.parentKey + "_locale"]: { [cfg.parentKey]: id, locale } },
+        create: { [cfg.parentKey]: id, locale, title: own.title, ...(kind === "campaigns" ? { description: own.description || "" } : {}), slug },
+        update: { slug },
+      });
+    }
+    return documentFor(kind, await readContent(tx, kind, id));
   });
 }
