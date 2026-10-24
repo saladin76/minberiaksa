@@ -53,3 +53,21 @@ test("trigger and campaign template renderers localize stored body links", () =>
   assert.equal((dispatch.match(/localizeDonationFailureLinks\(mergeText\(variant\.body, ctx\), locale\)/g) ?? []).length, 2);
   assert.match(retry, /localizeDonationFailureLinks\(row\.renderedBody, row\.locale \|\| "ar"\)/);
 });
+
+test("authored body and static Meta URL buttons use the same language in every locale", () => {
+  const normalize = loaded.exports.localizeDonationFailureDraft as <T extends { body: string; buttons: Array<{ url?: string; text: string }> }>(value: T, locale: string) => T;
+  for (const locale of SUPPORTED_LOCALES) {
+    const original = {
+      body: "Retry https://minberiaksa.org/ar/donation-failed?donationId={{donation.id}}",
+      buttons: [
+        { text: "Retry", url: "https://minberiaksa.org/ar/donation-failed?token={{token}}" },
+        { text: "Contact", url: "https://example.org/ar/contact" },
+      ],
+    };
+    const value = normalize(original, locale);
+    assert.equal(value.body, `Retry https://minberiaksa.org/${locale}/donation-failed?donationId={{donation.id}}`);
+    assert.equal(value.buttons[0].url, `https://minberiaksa.org/${locale}/donation-failed?token={{token}}`);
+    assert.equal(value.buttons[1].url, original.buttons[1].url);
+    assert.equal(original.buttons[0].url, "https://minberiaksa.org/ar/donation-failed?token={{token}}");
+  }
+});

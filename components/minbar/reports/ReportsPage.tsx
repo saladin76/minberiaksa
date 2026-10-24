@@ -2,7 +2,7 @@
 
 import type { ReactNode } from "react";
 import { useLocale, useTranslations } from "next-intl";
-import { localeDirection } from "@/lib/locales";
+import { localeDirection, LOCALES, type SupportedLocale } from "@/lib/locales";
 import { miaPath } from "@/lib/minbar/routes";
 import { drive } from "@/lib/minbar/content/media";
 import { ORG_WHATSAPP } from "@/lib/minbar/org";
@@ -404,6 +404,7 @@ export default function ReportsPage({ reports }: { reports: CmsDocument[] }) {
               <a
                 key={report.id}
                 href={report.fileUrl}
+                hrefLang={report.fileLocale || undefined}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="rp-report"
@@ -412,7 +413,7 @@ export default function ReportsPage({ reports }: { reports: CmsDocument[] }) {
                 <span style={{ display: "grid", gap: 4, minWidth: 0 }}>
                   <b style={{ fontSize: 17.5, lineHeight: 1.45, color: "#fff" }}>{report.title}</b>
                   <span style={{ color: "rgba(255,255,255,.55)", fontSize: 13 }}>
-                    PDF{report.year ? ` · ${report.year}` : ""}{report.description ? ` · ${report.description}` : ""}
+                    PDF{report.fileLocale ? ` · ${LOCALES[report.fileLocale as SupportedLocale]?.nativeLabel || report.fileLocale}` : ""}{report.year ? ` · ${report.year}` : ""}{report.description ? ` · ${report.description}` : ""}
                   </span>
                 </span>
                 <span style={{ marginInlineStart: "auto", flex: "0 0 auto", padding: "6px 12px", borderRadius: 999, background: "rgba(255,255,255,.07)", border: "1px solid rgba(255,255,255,.16)", color: "rgba(255,255,255,.66)", fontSize: 12, fontWeight: 900, whiteSpace: "nowrap" }}>

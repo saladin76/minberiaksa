@@ -1,5 +1,6 @@
+import { buildManagedPageMetadata } from "@/lib/content-editor/page-seo";
 import type { Metadata } from "next";
-import { buildPageMetadata, LOCALE_SEO, type Locale } from "@/lib/seo";
+import { LOCALE_SEO, type Locale } from "@/lib/seo";
 
 /**
  * Partial by design: the lookup below already falls back to `en`, and the
@@ -53,7 +54,7 @@ export async function generateMetadata({ params }: Pick<Props, "params">): Promi
   const locale = (rawLocale in LOCALE_SEO ? rawLocale : "en") as Locale;
   const seo = BANK_TRANSFER_SEO[locale] ?? BANK_TRANSFER_SEO.en;
 
-  return buildPageMetadata(locale, {
+  return buildManagedPageMetadata("legacyBankTransfer", locale, {
     title: seo.title,
     description: seo.description,
     path: "/bank-transfer",

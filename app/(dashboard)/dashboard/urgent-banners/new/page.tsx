@@ -1,7 +1,4 @@
-'use client';
-
-import { UrgentBannerForm, emptyUrgentBanner } from '../_components/UrgentBannerForm';
-
-export default function NewUrgentBannerPage() {
-  return <UrgentBannerForm mode="create" initial={emptyUrgentBanner()} />;
-}
+import { ContentEditor } from "@/components/dashboard/content-editor/ContentEditor";
+import { CONFIG } from "@/lib/content-editor/contracts";
+import { requireDashboardPagePermission } from "@/lib/dashboard/require-page-permission";
+export default async function Page() { await requireDashboardPagePermission(CONFIG["urgent-banners"].permission); return <ContentEditor kind="urgent-banners" id="new" />; }

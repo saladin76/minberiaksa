@@ -414,7 +414,7 @@ export async function getProject(slug: string, locale: string): Promise<MinbarPr
      key actually looks like one. */
   let row = (await prisma.campaign.findFirst({
     where: {
-      AND: [{ isActive: true }, NOT_SOFT_DELETED, whereByIdOrAnyLocaleSlug(slug)],
+      AND: [{ isActive: true }, NOT_SOFT_DELETED, whereByIdOrAnyLocaleSlug(slug, "translations", true)],
     },
     select: selectFor(locale),
   })) as unknown as CampaignRow | null;

@@ -1,6 +1,7 @@
+import { buildManagedPageMetadata } from "@/lib/content-editor/page-seo";
 import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
-import { buildPageMetadata } from "@/lib/seo";
+
 import { slugFor } from "@/lib/minbar/routes";
 import MinbarMessages from "@/components/minbar/MinbarMessages";
 import ZakatCalculator from "@/components/minbar/zakat/ZakatCalculator";
@@ -15,7 +16,7 @@ const NAMESPACES = ["zakat", "homepage", "quran"] as const;
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale } = await params;
   const t = await getTranslations({ locale, namespace: "zakat" });
-  return buildPageMetadata(locale, {
+  return buildManagedPageMetadata("zakatCalculator", locale, {
     title: t("calcTitle"),
     description: t("calcLead"),
     path: `/${slugFor("zakatCalculator", locale)}`,

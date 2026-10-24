@@ -1,5 +1,7 @@
 "use client";
+import { dt } from "@/lib/dashboard/i18n";
 import { useEffect, useState } from "react";
+import { DocumentUploadField } from "./DocumentUploadField";
 import { ImageUploadField } from "@/app/(dashboard)/dashboard/_components/ImageUploadField";
 import { BANNER_PAGES } from "@/lib/minbar/banner-placements";
 import { LOCALES, SUPPORTED_LOCALES } from "@/lib/locales";
@@ -44,14 +46,14 @@ export function useEditorCatalog(kind: ContentKind) {
           const linked = await fetch("/api/super-categories/content-options", {
             signal: controller.signal,
           });
-          if (!linked.ok) throw new Error("تعذر تحميل مكتبة المحتوى");
+          if (!linked.ok) throw new Error(dt("تعذر تحميل مكتبة المحتوى"));
           data.linked = await linked.json();
         }
         setCatalog(data);
       })
       .catch((e) => {
         if (!controller.signal.aborted)
-          setError(e.message || "تعذر تحميل القوائم");
+          setError(e.message || dt("تعذر تحميل القوائم"));
       });
     return () => controller.abort();
   }, [kind]);
@@ -108,7 +110,7 @@ export function WorkspaceSettings({
           if (f.key === "achievementVideoIds")
             options = catalog.linked.VIDEO || [];
           if (f.key === "categoryId") options = catalog.postCategories;
-          if (["locales", "heroVideoLocales"].includes(f.key))
+          if (["locales", "heroVideoLocales", "localeFilter"].includes(f.key))
             options = SUPPORTED_LOCALES.map((id) => ({
               id,
               title: LOCALES[id].nativeLabel,
@@ -117,9 +119,14 @@ export function WorkspaceSettings({
             options = BANNER_PAGES.flatMap((p) =>
               p.slots.map((s) => ({
                 id: `${p.key}:${s.key}`,
-                title: `${p.label} · ${s.label}`,
+                title: `${p.label} · ${dt(s.label)}`,
               })),
             );
+          if (f.key === "fileUrl")
+            return <section key={f.key} className="space-y-2 rounded-xl border bg-white p-5">
+              <p className="font-semibold">{dt(f.label)}</p>
+              <DocumentUploadField value={String(value || "")} onChange={(url) => onChange(f.key, url)} onUploadingChange={onUploadingChange} />
+            </section>;
           if (f.type === "image")
             return (
               <section key={f.key} className="rounded-xl border bg-white p-5">
@@ -131,7 +138,7 @@ export function WorkspaceSettings({
                   previewClass="w-full h-48"
                 />
                 <label className="mt-3 block text-xs text-slate-500">
-                  أو رابط صورة
+                  {dt("أو رابط صورة")}
                   <input
                     className={inputClass + " mt-2"}
                     value={String(value || "")}
@@ -150,14 +157,14 @@ export function WorkspaceSettings({
               >
                 <h3 className="font-bold">{f.label}</h3>
                 <p className="text-xs text-slate-500">
-                  الصورة الأولى رئيسية. غيّر ترتيب الصور أو أضف صورة جديدة.
+                  {dt("الصورة الأولى رئيسية. غيّر ترتيب الصور أو أضف صورة جديدة.")}
                 </p>
                 <div className="grid gap-3 sm:grid-cols-2">
                   {list.map((url, i) => (
                     <div key={url + i} className="space-y-2 rounded border p-3">
                       <ImageUploadField
                         onUploadingChange={onUploadingChange}
-                        label={i === 0 ? "الصورة الرئيسية" : `الصورة ${i + 1}`}
+                        label={i === 0 ? dt("الصورة الرئيسية") : `الصورة ${i + 1}`}
                         value={url}
                         onChange={(next) =>
                           onChange(
@@ -179,7 +186,7 @@ export function WorkspaceSettings({
                             onChange(f.key, next);
                           }}
                         >
-                          تقديم
+                          {dt("تقديم")}
                         </button>
                         <button
                           type="button"
@@ -191,7 +198,7 @@ export function WorkspaceSettings({
                             onChange(f.key, next);
                           }}
                         >
-                          تأخير
+                          {dt("تأخير")}
                         </button>
                       </div>
                     </div>
@@ -199,7 +206,7 @@ export function WorkspaceSettings({
                 </div>
                 <ImageUploadField
                   onUploadingChange={onUploadingChange}
-                  label="إضافة صورة"
+                  label={dt("إضافة صورة")}
                   value=""
                   onChange={(url) => {
                     if (url) onChange(f.key, [...list, url]);
@@ -221,7 +228,7 @@ export function WorkspaceSettings({
                 {list.map((amount, index) => (
                   <label key={index} className="flex items-center gap-2">
                     <span className="w-20 text-xs text-slate-500">
-                      القيمة {index + 1}
+                      {dt("القيمة")} {index + 1}
                     </span>
                     <input
                       aria-label={`${f.label} ${index + 1}`}
@@ -248,7 +255,7 @@ export function WorkspaceSettings({
                         )
                       }
                     >
-                      إزالة
+                      {dt("إزالة")}
                     </button>
                   </label>
                 ))}
@@ -263,17 +270,15 @@ export function WorkspaceSettings({
                     ])
                   }
                 >
-                  إضافة قيمة
+                  {dt("إضافة قيمة")}
                 </button>
                 {kind === "campaigns" ? (
                   <p className="text-xs leading-6 text-slate-500">
-                    تُحفظ تخصيصات العملات الأخرى كما هي. لا تتغير المبالغ
-                    المحصّلة.
+                    {dt("تُحفظ تخصيصات العملات الأخرى كما هي. لا تتغير المبالغ المحصّلة.")}
                   </p>
                 ) : (
                   <p className="text-xs leading-6 text-amber-700">
-                    راجع تسميات هذه المبالغ في جميع اللغات عند تغيير قيمها أو
-                    ترتيبها.
+                    {dt("راجع تسميات هذه المبالغ في جميع اللغات عند تغيير قيمها أو ترتيبها.")}
                   </p>
                 )}
               </fieldset>
@@ -328,7 +333,7 @@ export function WorkspaceSettings({
                 </div>
                 {!options.length ? (
                   <p className="text-sm text-slate-500">
-                    لا توجد خيارات متاحة.
+                    {dt("لا توجد خيارات متاحة.")}
                   </p>
                 ) : null}
               </fieldset>
@@ -345,7 +350,7 @@ export function WorkspaceSettings({
                   value={String(value ?? "")}
                   onChange={(e) => onChange(f.key, e.target.value)}
                 >
-                  <option value="">بدون اختيار</option>
+                  <option value="">{dt("بدون اختيار")}</option>
                   {(f.options || options.map((o) => [o.id, o.title])).map(
                     ([key, label]) => (
                       <option key={key} value={key}>

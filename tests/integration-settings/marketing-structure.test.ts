@@ -85,8 +85,14 @@ test("dashboard navigation permissions stay aligned with protected routes", () =
   assert.equal(pathToDashboardPermission("/dashboard/telegram"), "platformConnectionsAdmin");
   assert.equal(pathToDashboardPermission("/dashboard/archive/collections"), "archive");
 
-  const content = DASHBOARD_NAV_GROUPS.find((group) => group.group === "محتوى الموقع");
-  assert.equal(content?.items.find((item) => item.href === "/dashboard/cart-settings")?.key, "campaigns");
+  const items = DASHBOARD_NAV_GROUPS.flatMap((group) => group.items);
+  assert.equal(items.find((item) => item.href === "/dashboard/cart-settings")?.key, "campaigns");
+  for (const href of ["/dashboard/campaigns", "/dashboard/categories", "/dashboard/blog", "/dashboard/videos", "/dashboard/ticker"]) {
+    assert.equal(items.filter((item) => item.href === href).length, 1, href);
+  }
+  for (const item of items) {
+    assert.equal(pathToDashboardPermission(item.href), item.key, item.href);
+  }
 
   const connections = DASHBOARD_NAV_GROUPS.find((group) => group.group === "ربط المنصات والإرسال");
   const telegram = connections?.items.find((item) => item.href === "/dashboard/telegram");

@@ -42,6 +42,7 @@ jobs:
         run: |
           npm run typecheck:communication-runtime
           npm run typecheck:integration-release
+          npm run typecheck:content-editor-service
       - name: Whole-repo typecheck (ratchet)
         # The baseline file is empty, so this is now simply "no type errors at all". It stays a
         # ratchet rather than a bare `tsc` so that a deliberately accepted error, if one is ever
@@ -79,6 +80,8 @@ jobs:
       - run: npx prisma generate
       - run: npx prisma generate --schema prisma/integration-settings.schema.prisma
       - run: npm run test:integration-settings
+      - name: Content editor and audit regressions
+        run: npm run test:content-editors
 
   audits:
     name: i18n and locale audits

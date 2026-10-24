@@ -1,9 +1,18 @@
 "use client";
+import { toast } from "react-hot-toast";
+import { dashDir, dt } from "@/lib/dashboard/i18n";
+import { readFaqDraft } from "@/lib/content-editor/faq";
+import { useDashboardUnsavedChanges } from "@/hooks/useDashboardUnsavedChanges";
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { slugify } from "@/lib/slug";
+import { slugFor } from "@/lib/minbar/routes";
 import dynamic from "next/dynamic";
 import { EditorModal } from "./EditorModal";
+import { DocumentUploadField } from "./DocumentUploadField";
+import { MediaCollectionEditor } from "./MediaCollectionEditor";
 import { ProgrammeWorkspace } from "./ProgrammeWorkspace";
 import { WorkspacePreview } from "./WorkspacePreview";
 import { WorkspaceSettings, useEditorCatalog } from "./WorkspaceSettings";
@@ -45,7 +54,7 @@ const CategoryOrderDialog = dynamic(
 );
 const RichEditor = dynamic(
   () => import("@/app/[locale]/blog/_components/wysiwyg/wysiwyg-editor"),
-  { ssr: false, loading: () => <p>تحميل المحرر…</p> },
+  { ssr: false, loading: () => <p>{dt("تحميل المحرر…")}</p> },
 );
 type Document = ReturnType<typeof documentFor>;
 type Proposal = {
@@ -53,7 +62,7 @@ type Proposal = {
   kind: ContentKind;
   revision: string;
   action: string;
-  proposals: Record<string, { values: TextValues; warnings: string[] }>;
+  proposals: Record<string, { values: TextValues; warnings: string[]; research?: { summary: string; sources: { title: string; url: string }[]; accessedAt: string; locale: string } }>;
   errors: Record<string, string>;
 };
 async function api<T>(url: string, options?: RequestInit): Promise<T> {
@@ -63,7 +72,7 @@ async function api<T>(url: string, options?: RequestInit): Promise<T> {
     headers: { "Content-Type": "application/json", ...options?.headers },
   });
   const body = await res.json();
-  if (!res.ok) throw new Error(body.error || "تعذر إكمال الطلب");
+  if (!res.ok) throw new Error(body.error || dt("تعذر إكمال الطلب"));
   return body;
 }
 function previewText(value: string): string {
@@ -97,6 +106,8 @@ function parseRich(value: string) {
 const button =
   "rounded-lg border px-4 py-2 text-sm disabled:opacity-50 hover:bg-slate-50";
 export function ContentEditor({ kind, id }: { kind: ContentKind; id: string }) {
+  const router = useRouter();
+  const creationKey = useRef(crypto.randomUUID());
   const url = `/api/admin/content-editor/${kind}/${id}`;
   const [document, setDocument] = useState<Document | null>(null);
   const [values, setValues] = useState<Record<string, TextValues>>({});
@@ -104,6 +115,8 @@ export function ContentEditor({ kind, id }: { kind: ContentKind; id: string }) {
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState("");
   const [proposal, setProposal] = useState<Proposal | null>(null);
+  const [generationProgress, setGenerationProgress] = useState<{ done: number; total: number } | null>(null);
+  const generationAbort = useRef<AbortController | null>(null);
   const [selected, setSelected] = useState<string[]>([]);
   const [reviewed, setReviewed] = useState(false);
   const [slug, setSlug] = useState("");
@@ -136,10 +149,11 @@ export function ContentEditor({ kind, id }: { kind: ContentKind; id: string }) {
       setMessage("");
     } catch (error) {
       if (number === requestRef.current)
-        setMessage(error instanceof Error ? error.message : "تعذر التحميل");
+        setMessage(error instanceof Error ? error.message : dt("تعذر التحميل"));
     }
   }, [url, kind]);
   const invalidateRequests = useCallback(() => {
+    generationAbort.current?.abort();
     requestRef.current++;
   }, []);
   useEffect(() => {
@@ -152,38 +166,36 @@ export function ContentEditor({ kind, id }: { kind: ContentKind; id: string }) {
         JSON.stringify(settingsFor(kind, document.settings)) ||
       uploads > 0
     : false;
+  useDashboardUnsavedChanges(dirty);
   useEffect(() => {
     if (!dirty) return;
-    const unload = (e: BeforeUnloadEvent) => {
-      e.preventDefault();
-    };
     const navigation = (e: MouseEvent) => {
       const link = (e.target as Element).closest?.("a[href]");
-      if (link && !window.confirm("توجد تعديلات غير محفوظة. مغادرة المحرر؟")) {
+      if (link && !window.confirm(dt("توجد تعديلات غير محفوظة. مغادرة المحرر؟"))) {
         e.preventDefault();
         e.stopPropagation();
       }
     };
-    window.addEventListener("beforeunload", unload);
     window.document.addEventListener("click", navigation, true);
     return () => {
-      window.removeEventListener("beforeunload", unload);
       window.document.removeEventListener("click", navigation, true);
     };
   }, [dirty]);
   const edit = (key: string, value: string) => {
     if (busy === "save" || busy === "slug") return;
+    if (key === "fileUrl" && locale === "ar" && ["reports", "booklets"].includes(kind)) setSettingsDraft((previous) => ({ ...previous, fileUrl: value }));
     setValues((prev) => ({
       ...prev,
       [locale]: { ...prev[locale], [key]: value },
     }));
+    generationAbort.current?.abort();
     setProposal(null);
     setReviewed(false);
   };
   const save = async () => {
     if (!document) return;
     if (uploads) {
-      setMessage("انتظر اكتمال رفع الصور قبل الحفظ");
+      setMessage(dt("انتظر اكتمال رفع الصور قبل الحفظ"));
       return;
     }
     const captured = { ...values[locale] },
@@ -195,6 +207,7 @@ export function ContentEditor({ kind, id }: { kind: ContentKind; id: string }) {
         method: "PUT",
         body: JSON.stringify({
           revision: document.revision,
+          creationKey: creationKey.current,
           locale: target,
           changes: captured,
           reviewed,
@@ -213,71 +226,93 @@ export function ContentEditor({ kind, id }: { kind: ContentKind; id: string }) {
           ),
         }),
       });
-      const read = await api<Document>(url);
+      const read = await api<Document>(id === "new" ? `/api/admin/content-editor/${kind}/${saved.id}` : url);
       if (read.revision !== saved.revision)
         throw new Error(
-          "تغيرت النسخة بعد الحفظ. احتفظ بتعديلاتك ثم أعد تحميلها للمراجعة.",
+          dt("تغيرت النسخة بعد الحفظ. احتفظ بتعديلاتك ثم أعد تحميلها للمراجعة."),
         );
       setDocument(read);
       setValues(read.values);
       setSettingsDraft(settingsFor(kind, read.settings));
       setProposal(null);
       setReviewed(false);
-      setMessage("تم الحفظ والتحقق من النسخة المحفوظة");
+      setMessage(dt("تم الحفظ والتحقق من النسخة المحفوظة"));
+      toast.success(dt("تم الحفظ والتحقق من النسخة المحفوظة"));
+      if (id === "new") router.replace(`/dashboard/content/${kind}/${saved.id}`);
     } catch (error) {
       setMessage(
         error instanceof Error
           ? error.message
-          : "تعذر تأكيد الحفظ. احتفظ بتعديلاتك وأعد المحاولة.",
+          : dt("تعذر تأكيد الحفظ. احتفظ بتعديلاتك وأعد المحاولة."),
       );
     } finally {
       setBusy("");
     }
   };
-  const suggest = async (action: "seo" | "translate", all = false) => {
-    if (!document || dirty) {
-      setMessage("احفظ التعديلات أولًا لطلب اقتراح مرتبط بالنسخة الحالية");
+  const suggest = async (action: "seo" | "translate" | "faq", all = false) => {
+    if (!document || dirty || id === "new") {
+      setMessage(dt("احفظ التعديلات أولًا لطلب اقتراح مرتبط بالنسخة الحالية"));
       return;
     }
-    const snapshot = JSON.stringify(valuesRef.current),
-      revision = document.revision;
+    const targets = action === "translate"
+      ? all ? SUPPORTED_LOCALES.filter((code) => code !== "ar" && !document.statuses[code].complete) : [locale]
+      : all ? [...SUPPORTED_LOCALES] : [locale];
+    if (!targets.length || (action === "translate" && targets.includes("ar"))) {
+      setMessage(dt("اختر لغة أخرى أو لغة تحتاج ترجمة"));
+      return;
+    }
+    const snapshot = JSON.stringify(valuesRef.current), revision = document.revision;
+    const controller = new AbortController();
+    generationAbort.current?.abort();
+    generationAbort.current = controller;
     setBusy(action);
     setMessage("");
     setProposal(null);
+    setGenerationProgress({ done: 0, total: targets.length });
+    const combined: Proposal = { id, kind, revision, action, proposals: {}, errors: {} };
+    let cursor = 0, done = 0;
     try {
-      const targets = all
-        ? SUPPORTED_LOCALES.filter(
-            (l) => l !== "ar" && !document.statuses[l].complete,
-          )
-        : [locale];
-      if (action === "translate" && (targets.includes("ar") || !targets.length))
-        throw new Error("اختر لغة أخرى أو لغة تحتاج ترجمة");
-      const result = await api<Proposal>(url + "/suggest", {
-        method: "POST",
-        body: JSON.stringify({
-          action,
-          locale,
-          locales: targets,
-          keys: selected,
-          revision,
-        }),
-      });
+      await Promise.all(Array.from({ length: Math.min(2, targets.length) }, async () => {
+        while (cursor < targets.length && !controller.signal.aborted) {
+          const target = targets[cursor++];
+          try {
+            const result = await api<Proposal>(url + "/suggest", {
+              method: "POST",
+              signal: controller.signal,
+              body: JSON.stringify({ action, locale: target, locales: [target], keys: selected, revision }),
+            });
+            if (result.id !== id || result.kind !== kind || result.revision !== revision)
+              throw new Error(dt("الاقتراح لا يطابق المحتوى الجاري تحريره"));
+            Object.assign(combined.proposals, result.proposals);
+            Object.assign(combined.errors, result.errors);
+          } catch (error) {
+            if (!controller.signal.aborted) combined.errors[target] = error instanceof Error ? error.message : dt("تعذر إعداد الاقتراح");
+          } finally {
+            done++;
+            setGenerationProgress({ done, total: targets.length });
+          }
+        }
+      }));
       if (snapshot !== JSON.stringify(valuesRef.current))
-        throw new Error("تغير النص أثناء الطلب. اطلب اقتراحًا جديدًا.");
-      if (
-        result.id !== id ||
-        result.kind !== kind ||
-        result.revision !== revision
-      )
-        throw new Error("الاقتراح لا يطابق المحتوى الجاري تحريره");
-      setProposal(result);
+        throw new Error(dt("تغير النص أثناء الطلب. اطلب اقتراحًا جديدًا."));
+      if (Object.keys(combined.proposals).length || Object.keys(combined.errors).length) setProposal(combined);
+      if (controller.signal.aborted) setMessage(dt("أُوقف الطلب. الاقتراحات المكتملة متاحة للمراجعة."));
     } catch (error) {
-      setMessage(
-        error instanceof Error ? error.message : "تعذر إعداد الاقتراح",
-      );
+      setMessage(error instanceof Error ? error.message : dt("تعذر إعداد الاقتراح"));
     } finally {
-      setBusy("");
+      if (generationAbort.current === controller) {
+        generationAbort.current = null;
+        setGenerationProgress(null);
+        setBusy("");
+      }
     }
+  };
+  const reviseProposal = (target: string, key: string, value: string) => {
+    setProposal((previous) => previous ? {
+      ...previous, proposals: { ...previous.proposals, [target]: {
+        ...previous.proposals[target], values: { ...previous.proposals[target].values, [key]: value },
+      } },
+    } : null);
   };
   const apply = (target: string, key: string, value: string) => {
     if (
@@ -292,23 +327,21 @@ export function ContentEditor({ kind, id }: { kind: ContentKind; id: string }) {
       [target]: { ...prev[target], [key]: value },
     }));
     setReviewed(false);
-    setProposal((prev) => {
-      if (!prev) return null;
-      const pending = { ...prev.proposals[target].values };
+    setProposal((previous) => {
+      if (!previous?.proposals[target]) return previous;
+      const pending = { ...previous.proposals[target].values };
       delete pending[key];
-      return {
-        ...prev,
-        proposals: {
-          ...prev.proposals,
-          [target]: { ...prev.proposals[target], values: pending },
-        },
-      };
+      const proposals = { ...previous.proposals };
+      if (Object.keys(pending).length) proposals[target] = { ...proposals[target], values: pending };
+      else delete proposals[target];
+      return Object.keys(proposals).length ? { ...previous, proposals } : null;
     });
-    setMessage("أضيف الاقتراح إلى المسودة. احفظ اللغة بعد المراجعة.");
+    const warning = proposal && Object.keys(proposal.errors).length ? " · " + Object.keys(proposal.errors).join(", ") : "";
+    setMessage(dt("أضيف الاقتراح إلى المسودة. احفظ جميع التغييرات بعد المراجعة.") + warning);
   };
   const changeSlug = async () => {
     if (!document || dirty) {
-      setMessage("احفظ تعديلات المحتوى قبل تغيير الرابط");
+      setMessage(dt("احفظ تعديلات المحتوى قبل تغيير الرابط"));
       return;
     }
     setBusy("slug");
@@ -328,19 +361,19 @@ export function ContentEditor({ kind, id }: { kind: ContentKind; id: string }) {
       setSlugOpen(false);
       setConfirmation("");
       setProposal(null);
-      setMessage("تم تغيير الرابط وحفظ الرابط السابق في السجل");
+      setMessage(dt("تم تغيير الرابط وحفظ الرابط السابق في السجل"));
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "تعذر تغيير الرابط");
+      setMessage(error instanceof Error ? error.message : dt("تعذر تغيير الرابط"));
     } finally {
       setBusy("");
     }
   };
   if (!document)
     return (
-      <div dir="rtl" className="rounded-xl border p-6" role="status">
-        {message || "تحميل المحتوى…"}
+      <div dir={dashDir()} className="rounded-xl border p-6" role="status">
+        {message || dt("تحميل المحتوى…")}
         <button type="button" className={button} onClick={initialLoad}>
-          إعادة المحاولة
+          {dt("إعادة المحاولة")}
         </button>
       </div>
     );
@@ -383,7 +416,7 @@ export function ContentEditor({ kind, id }: { kind: ContentKind; id: string }) {
     setProposal(null);
   };
   const resetDraft = () => {
-    if (!dirty || window.confirm("التراجع عن كل التعديلات غير المحفوظة؟")) {
+    if (!dirty || window.confirm(dt("التراجع عن كل التعديلات غير المحفوظة؟"))) {
       setValues(document.values);
       setSettingsDraft(settingsFor(kind, document.settings));
       setProposal(null);
@@ -392,7 +425,7 @@ export function ContentEditor({ kind, id }: { kind: ContentKind; id: string }) {
   };
   const languageButtons = (
     <nav
-      aria-label="لغات المحتوى"
+      aria-label={dt("لغات المحتوى")}
       className="flex flex-wrap gap-1.5 rounded-xl border bg-white p-3"
     >
       {SUPPORTED_LOCALES.map((code) => (
@@ -427,7 +460,7 @@ export function ContentEditor({ kind, id }: { kind: ContentKind; id: string }) {
           htmlFor={`content-${locale}-${field.key}`}
           className="font-semibold text-sm"
         >
-          {field.label}
+          {dt(field.label)}
         </label>
         {!field.locked ? (
           <label className="flex items-center gap-2 text-xs">
@@ -442,16 +475,18 @@ export function ContentEditor({ kind, id }: { kind: ContentKind; id: string }) {
                 )
               }
             />
-            ترجمة
+            {dt("ترجمة")}
           </label>
         ) : (
-          <span className="text-xs text-slate-500">مراجعة يدوية</span>
+          <span className="text-xs text-slate-500">{dt("مراجعة يدوية")}</span>
         )}
       </div>
-      {field.rich ? (
+      {field.key === "fileUrl" && ["reports", "booklets"].includes(kind) ? (
+        <DocumentUploadField value={current[field.key] || ""} onChange={(url) => edit(field.key, url)} onUploadingChange={onUploadingChange} disabled={Boolean(busy)} />
+      ) : field.rich ? (
         <div
           id={`content-${locale}-${field.key}`}
-          aria-label={field.label}
+          aria-label={dt(field.label)}
           dir={LOCALES[locale as keyof typeof LOCALES]?.direction || "ltr"}
         >
           <RichEditor
@@ -485,7 +520,7 @@ export function ContentEditor({ kind, id }: { kind: ContentKind; id: string }) {
       )}
       {locale !== "ar" && source[field.key] ? (
         <details className="text-xs text-slate-500">
-          <summary>النص العربي</summary>
+          <summary>{dt("النص العربي")}</summary>
           <p className="whitespace-pre-wrap break-words pt-2">
             {previewText(source[field.key])}
           </p>
@@ -503,30 +538,30 @@ export function ContentEditor({ kind, id }: { kind: ContentKind; id: string }) {
       ) : null}
       {status.missing.includes(field.key) ? (
         <p className="text-xs text-amber-700">
-          هذا الحقل مطلوب لاكتمال الترجمة
+          {dt("هذا الحقل مطلوب لاكتمال الترجمة")}
         </p>
       ) : null}
     </section>
   );
   return (
     <div
-      dir="rtl"
+      dir={dashDir()}
       className="mx-auto max-w-[1500px] space-y-6 pb-12 text-slate-800"
     >
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <Link className="text-sm text-slate-500" href={`/dashboard/${kind}`}>
-            {CONFIG[kind].label}
+            {dt(CONFIG[kind].label)}
           </Link>
           <h1 className="mt-2 text-2xl font-bold">
-            {current.title || current.name || document.title}
+            {current.title || current.name || current.question || document.title}
           </h1>
           <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-slate-500">
-            <span>{dirty ? "تعديلات غير محفوظة" : "محفوظ"}</span>
+            <span>{dirty ? dt("تعديلات غير محفوظة") : dt("محفوظ")}</span>
             <span>
-              {done} / {SUPPORTED_LOCALES.length - 1} ترجمات مكتملة
+              {done} / {SUPPORTED_LOCALES.length - 1} {dt("ترجمات مكتملة")}
             </span>
-            <span>{SUPPORTED_LOCALES.length - 1 - done} تحتاج ترجمة</span>
+            <span>{SUPPORTED_LOCALES.length - 1 - done} {dt("تحتاج ترجمة")}</span>
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -536,7 +571,7 @@ export function ContentEditor({ kind, id }: { kind: ContentKind; id: string }) {
             onClick={() => setLanguageReview(true)}
           >
             <Globe2 size={16} />
-            اللغات والمراجعة
+            {dt("اللغات والمراجعة")}
           </button>
           <button
             type="button"
@@ -545,14 +580,14 @@ export function ContentEditor({ kind, id }: { kind: ContentKind; id: string }) {
             onClick={resetDraft}
           >
             <Undo2 size={16} />
-            التراجع
+            {dt("التراجع")}
           </button>
           <Link
             className={button + " flex items-center gap-2"}
             href={`/dashboard/${kind}`}
           >
             <ArrowRight size={16} />
-            العودة
+            {dt("العودة")}
           </Link>
           <button
             type="button"
@@ -560,7 +595,7 @@ export function ContentEditor({ kind, id }: { kind: ContentKind; id: string }) {
             onClick={() => setPreviewOpen(true)}
           >
             <Eye size={16} />
-            {kind === "campaigns" ? "معاينة المشروع" : "معاينة الصفحة"}
+            {kind === "campaigns" ? dt("معاينة المشروع") : dt("معاينة الصفحة")}
           </button>
           <button
             type="button"
@@ -573,10 +608,10 @@ export function ContentEditor({ kind, id }: { kind: ContentKind; id: string }) {
           >
             <Save size={16} />
             {uploads
-              ? "جار رفع الصور…"
+              ? dt("جار رفع الصور…")
               : busy === "save"
-                ? "جار الحفظ…"
-                : "حفظ التغييرات"}
+                ? dt("جار الحفظ…")
+                : dt("حفظ التغييرات")}
           </button>
         </div>
       </header>
@@ -588,12 +623,12 @@ export function ContentEditor({ kind, id }: { kind: ContentKind; id: string }) {
           onClick={() => {
             if (
               !dirty ||
-              window.confirm("تحميل النسخة المحفوظة وإلغاء تعديلات المسودة؟")
+              window.confirm(dt("تحميل النسخة المحفوظة وإلغاء تعديلات المسودة؟"))
             )
               void initialLoad();
           }}
         >
-          تحميل النسخة المحفوظة
+          {dt("تحميل النسخة المحفوظة")}
         </button>
         <button
           type="button"
@@ -601,7 +636,7 @@ export function ContentEditor({ kind, id }: { kind: ContentKind; id: string }) {
           disabled={Boolean(busy) || locale === "ar" || dirty}
           onClick={() => suggest("translate")}
         >
-          ترجمة الحقول المحددة
+          {dt("ترجمة الحقول المحددة")}
         </button>
         <button
           type="button"
@@ -609,7 +644,7 @@ export function ContentEditor({ kind, id }: { kind: ContentKind; id: string }) {
           disabled={Boolean(busy) || dirty}
           onClick={() => suggest("translate", true)}
         >
-          ترجمة اللغات الناقصة
+          {dt("ترجمة اللغات الناقصة")}
         </button>
         <button
           type="button"
@@ -617,28 +652,41 @@ export function ContentEditor({ kind, id }: { kind: ContentKind; id: string }) {
           disabled={Boolean(busy) || dirty}
           onClick={() => suggest("seo")}
         >
-          {isBanner ? "اقتراح وصف الصورة" : "اقتراح SEO"}
+          {isBanner ? dt("اقتراح وصف الصورة") : dt("اقتراح SEO")}
         </button>
+        {!isBanner ? <>
+          <button type="button" className={button} disabled={Boolean(busy) || dirty} onClick={() => suggest("seo", true)}>
+            {dt("اقتراح SEO لكل اللغات")}
+          </button>
+          <button type="button" className={button} disabled={Boolean(busy) || dirty} onClick={() => suggest("faq")}>
+            {dt("اقتراح أسئلة لهذه اللغة")}
+          </button>
+        </> : null}
         <label className="flex items-center gap-2 text-sm">
           <input
             type="checkbox"
             checked={reviewed}
             onChange={(e) => setReviewed(e.target.checked)}
           />
-          راجعت نص هذه اللغة
+          {dt("راجعت نص هذه اللغة")}
         </label>
         {busy && busy !== "save" ? (
           <span role="status" className="text-sm">
-            جار إعداد{" "}
+            {dt("جار إعداد")}{" "}
             {busy === "seo"
-              ? "الاقتراح"
+              ? dt("الاقتراح")
               : busy === "slug"
-                ? "الرابط"
-                : "الترجمة"}
+                ? dt("الرابط")
+                : dt("الترجمة")}
             …
           </span>
         ) : null}
       </div>
+      {generationProgress ? <div role="status" className="flex flex-wrap items-center gap-3 rounded-xl border bg-sky-50 p-4">
+        <span>{dt("اكتمل {0} من {1} لغة", [generationProgress.done, generationProgress.total])}</span>
+        <progress max={generationProgress.total} value={generationProgress.done} aria-label={dt("تقدم الاقتراحات")} />
+        <button type="button" className={button} onClick={() => generationAbort.current?.abort()}>{dt("إيقاف الطلب")}</button>
+      </div> : null}
       {message ? (
         <p
           role="status"
@@ -650,13 +698,17 @@ export function ContentEditor({ kind, id }: { kind: ContentKind; id: string }) {
       {proposal ? (
         <section className="space-y-3 rounded-xl border border-sky-200 bg-sky-50 p-4">
           <div className="flex justify-between">
-            <h2 className="font-bold">مراجعة الاقتراحات</h2>
+            <h2 className="font-bold">{dt("مراجعة الاقتراحات")}</h2>
+            <button type="button" className={button} onClick={() => {
+              for (const [target, item] of Object.entries(proposal.proposals))
+                for (const [key, value] of Object.entries(item.values)) apply(target, key, value);
+            }}>{dt("تطبيق جميع الاقتراحات على المسودة")}</button>
             <button
               type="button"
               className={button}
               onClick={() => setProposal(null)}
             >
-              إغلاق
+              {dt("إغلاق")}
             </button>
           </div>
           {Object.entries(proposal.errors).map(([code, error]) => (
@@ -679,7 +731,7 @@ export function ContentEditor({ kind, id }: { kind: ContentKind; id: string }) {
                         apply(code, key, value);
                   }}
                 >
-                  ملء الحقول الفارغة في المسودة
+                  {dt("ملء الحقول الفارغة في المسودة")}
                 </button>
                 <button
                   type="button"
@@ -687,16 +739,21 @@ export function ContentEditor({ kind, id }: { kind: ContentKind; id: string }) {
                   onClick={() => {
                     if (
                       window.confirm(
-                        "استبدال حقول هذه اللغة بالاقتراحات المعروضة في المسودة؟",
+                        dt("استبدال حقول هذه اللغة بالاقتراحات المعروضة في المسودة؟"),
                       )
                     )
                       for (const [key, value] of Object.entries(item.values))
                         apply(code, key, value);
                   }}
                 >
-                  استخدام اقتراحات هذه اللغة
+                  {dt("استخدام اقتراحات هذه اللغة")}
                 </button>
               </div>
+              {item.research ? <aside className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm">
+                <b>{dt("أساس البحث ومصادره")}</b>
+                <p>{item.research.summary}</p>
+                <ul>{item.research.sources.map((source) => <li key={source.url}><a className="text-blue-700 underline" href={source.url} target="_blank" rel="noopener noreferrer">{source.title}</a></li>)}</ul>
+              </aside> : null}
               {item.warnings.map((warning, i) => (
                 <p key={i} className="text-amber-800 text-sm">
                   {warning}
@@ -709,13 +766,24 @@ export function ContentEditor({ kind, id }: { kind: ContentKind; id: string }) {
                   </b>
                   <div className="mt-2 grid gap-3 md:grid-cols-2">
                     <div className="whitespace-pre-wrap break-words text-sm text-slate-500">
-                      {previewText(values[code]?.[key] || "فارغ")}
+                      {previewText(values[code]?.[key] || dt("فارغ"))}
                     </div>
-                    <div
-                      dir="auto"
-                      className="whitespace-pre-wrap break-words text-sm"
-                    >
-                      {previewText(value)}
+                    <div dir={LOCALES[code as keyof typeof LOCALES]?.direction || "ltr"} className="space-y-3">
+                      {key === "faqContent" ? readFaqDraft(value).map((question, index, questions) => (
+                        <fieldset key={index} className="space-y-2 rounded border p-3">
+                          <input aria-label={dt("السؤال {0}", [index + 1])} className="w-full rounded border p-2" value={question.q} onChange={(event) =>
+                            reviseProposal(code, key, JSON.stringify(questions.map((item, position) => position === index ? { ...item, q: event.target.value } : item)))
+                          } />
+                          <textarea aria-label={dt("الإجابة {0}", [index + 1])} className="w-full rounded border p-2" rows={3} value={question.a} onChange={(event) =>
+                            reviseProposal(code, key, JSON.stringify(questions.map((item, position) => position === index ? { ...item, a: event.target.value } : item)))
+                          } />
+                        </fieldset>
+                      )) : document.fields.find((field) => field.key === key)?.rich ? (
+                        <RichEditor defaultValue={parseRich(value)} onUpdate={(editor) => { if (editor) reviseProposal(code, key, JSON.stringify(editor.getJSON())); }}
+                          className="rounded border bg-white [&_.ProseMirror]:min-h-40 [&_.ProseMirror]:p-3" />
+                      ) : (
+                        <textarea aria-label={dt("الاقتراح: {0}", [key])} className="w-full rounded border bg-white p-3" rows={4} value={value} onChange={(event) => reviseProposal(code, key, event.target.value)} />
+                      )}
                     </div>
                   </div>
                   <button
@@ -723,7 +791,7 @@ export function ContentEditor({ kind, id }: { kind: ContentKind; id: string }) {
                     className={button + " mt-3"}
                     onClick={() => apply(code, key, value)}
                   >
-                    استخدام في المسودة
+                    {dt("استخدام في المسودة")}
                   </button>
                 </article>
               ))}
@@ -736,7 +804,7 @@ export function ContentEditor({ kind, id }: { kind: ContentKind; id: string }) {
         className="grid items-start gap-5 xl:grid-cols-[190px_minmax(0,1fr)_280px]"
       >
         <nav
-          aria-label="أقسام المحرر"
+          aria-label={dt("أقسام المحرر")}
           className="flex gap-1 overflow-x-auto rounded-xl border bg-white p-2 xl:sticky xl:top-5 xl:flex-col xl:overflow-visible"
         >
           {EDITOR_SECTIONS[kind].map((item, index) => {
@@ -758,8 +826,7 @@ export function ContentEditor({ kind, id }: { kind: ContentKind; id: string }) {
             );
           })}
           <p className="hidden px-3 py-5 text-xs leading-6 text-slate-400 xl:block">
-            كل الأقسام تخص العنصر نفسه. راجع التغييرات ثم احفظها من الشريط
-            العلوي.
+            {dt("كل الأقسام تخص العنصر نفسه. راجع التغييرات ثم احفظها من الشريط العلوي.")}
           </p>
         </nav>
         <div className="min-w-0 space-y-5">
@@ -784,13 +851,13 @@ export function ContentEditor({ kind, id }: { kind: ContentKind; id: string }) {
           Boolean(document.settings.verseArabic) ? (
             <section className="rounded-xl border bg-amber-50 p-5">
               <h3 className="text-sm font-semibold">
-                النص العربي المحفوظ · للقراءة فقط
+                {dt("النص العربي المحفوظ · للقراءة فقط")}
               </h3>
-              <p lang="ar" dir="rtl" className="mt-4 text-xl leading-10">
+              <p lang="ar" dir={dashDir()} className="mt-4 text-xl leading-10">
                 {String(document.settings.verseArabic)}
               </p>
               <p className="mt-3 text-xs text-slate-500">
-                لا يُرسل إلى خدمة الترجمة ولا تغيّره تعديلات الصفحة.
+                {dt("لا يُرسل إلى خدمة الترجمة ولا تغيّره تعديلات الصفحة.")}
               </p>
             </section>
           ) : null}
@@ -850,22 +917,20 @@ export function ContentEditor({ kind, id }: { kind: ContentKind; id: string }) {
           ) : null}
           {kind === "categories" && section === "library" ? (
             <section className="space-y-4 rounded-xl border bg-white p-5">
-              <h3 className="font-bold">المشاريع المرتبطة بهذا التصنيف</h3>
+              <h3 className="font-bold">{dt("المشاريع المرتبطة بهذا التصنيف")}</h3>
               <button
                 type="button"
                 className={button}
                 disabled={dirty}
                 onClick={() => setCategoryOrderOpen(true)}
               >
-                ترتيب المشاريع داخل التصنيف
+                {dt("ترتيب المشاريع داخل التصنيف")}
               </button>
               <p className="text-xs text-slate-500">
-                ترتيب التصنيف مستقل عن الترتيب العام؛ يُحفظ من نافذة الترتيب
-                نفسها.
+                {dt("ترتيب التصنيف مستقل عن الترتيب العام؛ يُحفظ من نافذة الترتيب نفسها.")}
               </p>
               <p className="text-sm text-slate-500">
-                تعديل عضوية المشروع متاح من محرر المشروع، دون حذف بيانات
-                التبرعات.
+                {dt("تعديل عضوية المشروع متاح من محرر المشروع، دون حذف بيانات التبرعات.")}
               </p>
               {catalog.campaigns
                 .filter((c) => c.categoryIds?.includes(id))
@@ -877,10 +942,13 @@ export function ContentEditor({ kind, id }: { kind: ContentKind; id: string }) {
                     className="flex items-center justify-between rounded-lg border p-3 text-sm"
                   >
                     <span>{c.title}</span>
-                    <span className="text-brand">تحرير المشروع ←</span>
+                    <span className="text-brand">{dt("تحرير المشروع ←")}</span>
                   </Link>
                 ))}
             </section>
+          ) : null}
+          {["playlists", "courses"].includes(kind) && section === "media" ? (
+            <MediaCollectionEditor kind={kind as "playlists" | "courses"} values={Array.isArray(settingsDraft.videos) ? settingsDraft.videos as ContentRecord[] : []} onChange={(videos) => setSettingsDraft((previous) => ({ ...previous, videos }))} />
           ) : null}
           {section === "seo" ? (
             <SeoWorkspace
@@ -894,7 +962,7 @@ export function ContentEditor({ kind, id }: { kind: ContentKind; id: string }) {
           ) : null}
           {section === "donation" ? (
             <section className="rounded-xl border bg-white p-5">
-              <h3 className="font-bold">المبلغ المحصّل</h3>
+              <h3 className="font-bold">{dt("المبلغ المحصّل")}</h3>
               <p className="my-3 text-2xl font-bold" dir="ltr">
                 $
                 {Number(document.settings.currentAmount || 0).toLocaleString(
@@ -902,39 +970,37 @@ export function ContentEditor({ kind, id }: { kind: ContentKind; id: string }) {
                 )}
               </p>
               <p className="text-sm leading-7 text-slate-500">
-                للعرض فقط؛ يُحتسب من سجل التبرعات. تعديل المحتوى أو الهدف لا
-                يغيّر المبلغ المحصّل.
+                {dt("للعرض فقط؛ يُحتسب من سجل التبرعات. تعديل المحتوى أو الهدف لا يغيّر المبلغ المحصّل.")}
               </p>
             </section>
           ) : null}
           {(kind === "campaigns" &&
             ["donation", "history"].includes(section)) ||
-          (kind === "categories" && section === "page") ? (
+          (kind === "categories" && section === "page") || (["videos", "playlists", "courses", "reports", "booklets", "faqs"].includes(kind) && section === "review") ? (
             <details className="rounded-xl border bg-white p-4">
               <summary className="cursor-pointer text-sm font-semibold">
-                الأدوات المتخصصة والإعدادات المتقدمة
+                {dt("الأدوات المتخصصة والإعدادات المتقدمة")}
               </summary>
               <p className="my-3 text-xs leading-6 text-slate-500">
-                تخصيصات العملات، وإدارة الإنجازات والبطاقات التفصيلية متاحة في
-                الأدوات الأصلية. احفظ مسودة المحرر أولًا قبل الانتقال.
+                {dt("تخصيصات العملات، وإدارة الإنجازات والبطاقات التفصيلية متاحة في الأدوات الأصلية. احفظ مسودة المحرر أولًا قبل الانتقال.")}
               </p>
               <Link
                 className={button + " inline-block"}
                 href={`/dashboard/${kind}/settings/${id}`}
               >
-                فتح الإعدادات المتقدمة
+                {dt("فتح الإعدادات المتقدمة")}
               </Link>
             </details>
           ) : null}
           {section === "history" ? (
             <section className="space-y-3 rounded-xl border bg-white p-5">
-              <h3 className="font-bold">الإنجازات والتحديثات</h3>
+              <h3 className="font-bold">{dt("الإنجازات والتحديثات")}</h3>
               {Array.isArray(document.settings.updates) &&
               document.settings.updates.length ? (
                 document.settings.updates.map((item: ContentRecord) => (
                   <article key={String(item.id)} className="rounded border p-4">
                     <h4 className="font-bold">
-                      {String(item.title || "تحديث المشروع")}
+                      {String(item.title || dt("تحديث المشروع"))}
                     </h4>
                     <p className="mt-2 text-sm">
                       {previewText(String(item.description || ""))}
@@ -946,14 +1012,15 @@ export function ContentEditor({ kind, id }: { kind: ContentKind; id: string }) {
                 ))
               ) : (
                 <p className="text-sm text-slate-500">
-                  لا توجد تحديثات منشورة لهذا المشروع.
+                  {dt("لا توجد تحديثات منشورة لهذا المشروع.")}
                 </p>
               )}
             </section>
           ) : null}
+          {kind === "blog" && section === "review" && id !== "new" ? <Link href={`/dashboard/editorial-planner?improve=${id}`} className={button}>{dt("تجهيز تحسين المقال والبحث عن مصادره")}</Link> : null}
           {section === "review" ? (
             <section className="space-y-4 rounded-xl border bg-white p-5">
-              <h3 className="font-bold">المراجعة قبل النشر</h3>
+              <h3 className="font-bold">{dt("المراجعة قبل النشر")}</h3>
               {document.fields
                 .filter((f) => f.required)
                 .map((f) => (
@@ -964,7 +1031,7 @@ export function ContentEditor({ kind, id }: { kind: ContentKind; id: string }) {
                         current[f.key] ? "text-emerald-700" : "text-amber-700"
                       }
                     >
-                      {current[f.key] ? "موجود" : "ناقص"}
+                      {current[f.key] ? dt("موجود") : dt("ناقص")}
                     </span>
                   </p>
                 ))}
@@ -973,34 +1040,34 @@ export function ContentEditor({ kind, id }: { kind: ContentKind; id: string }) {
                 className={button}
                 onClick={() => setLanguageReview(true)}
               >
-                مراجعة جميع اللغات
+                {dt("مراجعة جميع اللغات")}
               </button>
               <button
                 type="button"
                 className={button}
                 onClick={() => setPreviewOpen(true)}
               >
-                معاينة قبل الحفظ
+                {dt("معاينة قبل الحفظ")}
               </button>
             </section>
           ) : null}
           <section className="rounded-xl border bg-white p-4">
-            <h3 className="font-semibold">حالة اللغة</h3>
+            <h3 className="font-semibold">{dt("حالة اللغة")}</h3>
             <p className="mt-2 text-sm">
               {status.complete
-                ? "المحتوى مكتمل"
+                ? dt("المحتوى مكتمل")
                 : `حقول ناقصة: ${status.missing.length}`}{" "}
               ·{" "}
               {status.seoComplete
-                ? "إعدادات البحث مكتملة"
-                : "إعدادات البحث تحتاج استكمالًا"}
+                ? dt("إعدادات البحث مكتملة")
+                : dt("إعدادات البحث تحتاج استكمالًا")}
             </p>
           </section>
-          {kind === "categories" && section === "links" ? (
+          {["campaigns", "categories", "blog", "super-categories"].includes(kind) && section === "links" ? (
             <section className="space-y-3 rounded-xl border bg-white p-4">
-              <h3 className="font-semibold">الرابط وسجل التغييرات</h3>
+              <h3 className="font-semibold">{dt("الرابط وسجل التغييرات")}</h3>
               <p dir="ltr" className="break-all text-sm">
-                /{locale}/category/{document.slugs[locale]}
+                /{locale}/{kind === "categories" ? "category" : slugFor(kind === "blog" ? "article" : "projectDetail", locale)}/{document.slugs[locale]}
               </p>
               <button
                 type="button"
@@ -1012,8 +1079,12 @@ export function ContentEditor({ kind, id }: { kind: ContentKind; id: string }) {
                   setSlugOpen(true);
                 }}
               >
-                تعديل الرابط
+                {dt("تعديل الرابط")}
               </button>
+              <button type="button" className={button} disabled={Boolean(busy) || dirty} onClick={() => {
+                setSlug(slugify(current[kind === "categories" ? "name" : "title"] || ""));
+                setConfirmation(""); setSlugOpen(true);
+              }}>{dt("توليد الرابط من العنوان")}</button>
               {document.previousSlugs
                 .filter((entry) => (entry.locale || "ar") === locale)
                 .map((entry, i) => (
@@ -1031,7 +1102,7 @@ export function ContentEditor({ kind, id }: { kind: ContentKind; id: string }) {
                         setSlugOpen(true);
                       }}
                     >
-                      استعادة الرابط السابق
+                      {dt("استعادة الرابط السابق")}
                     </button>
                   </div>
                 ))}
@@ -1051,39 +1122,39 @@ export function ContentEditor({ kind, id }: { kind: ContentKind; id: string }) {
             className={button + " w-full bg-white"}
             onClick={() => setPreviewOpen(true)}
           >
-            عرض الصفحة كاملة
+            {dt("عرض الصفحة كاملة")}
           </button>
         </aside>
       </div>
       {languageReview ? (
         <EditorModal
-          title="اللغات والمراجعة"
+          title={dt("اللغات والمراجعة")}
           onClose={() => setLanguageReview(false)}
         >
           <section className="max-h-[85vh] w-full max-w-5xl overflow-auto rounded-2xl bg-white p-6">
             <div className="mb-5 flex items-center justify-between">
               <h2 id="language-review-heading" className="text-xl font-bold">
-                اللغات والمراجعة
+                {dt("اللغات والمراجعة")}
               </h2>
               <button
                 type="button"
                 className={button}
                 onClick={() => setLanguageReview(false)}
               >
-                إغلاق
+                {dt("إغلاق")}
               </button>
             </div>
             <p className="mb-4 text-sm text-slate-500">
-              النص البديل عند غياب الترجمة لا يُحسب ترجمة محفوظة.
+              {dt("النص البديل عند غياب الترجمة لا يُحسب ترجمة محفوظة.")}
             </p>
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b text-start">
-                  <th className="p-3 text-start">اللغة</th>
-                  <th>المحتوى</th>
-                  <th>البحث والمشاركة</th>
-                  <th>المراجعة</th>
-                  <th>التعديل</th>
+                  <th className="p-3 text-start">{dt("اللغة")}</th>
+                  <th>{dt("المحتوى")}</th>
+                  <th>{dt("البحث والمشاركة")}</th>
+                  <th>{dt("المراجعة")}</th>
+                  <th>{dt("التعديل")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -1093,13 +1164,13 @@ export function ContentEditor({ kind, id }: { kind: ContentKind; id: string }) {
                     <tr key={code} className="border-b">
                       <td className="p-3">{LOCALES[code].nativeLabel}</td>
                       <td className="text-center">
-                        {s.complete ? "مكتمل" : "ناقص"}
+                        {s.complete ? dt("مكتمل") : dt("ناقص")}
                       </td>
                       <td className="text-center">
-                        {s.seoComplete ? "متاح" : "غير مكتمل"}
+                        {s.seoComplete ? dt("متاح") : dt("غير مكتمل")}
                       </td>
                       <td className="text-center">
-                        {s.reviewed ? "مراجع" : "مسودة"}
+                        {s.reviewed ? dt("مراجع") : dt("مسودة")}
                       </td>
                       <td className="text-center">
                         <button
@@ -1111,7 +1182,7 @@ export function ContentEditor({ kind, id }: { kind: ContentKind; id: string }) {
                             setLanguageReview(false);
                           }}
                         >
-                          النص
+                          {dt("النص")}
                         </button>
                         {!isBanner ? (
                           <button
@@ -1137,20 +1208,20 @@ export function ContentEditor({ kind, id }: { kind: ContentKind; id: string }) {
       ) : null}
       {previewOpen ? (
         <EditorModal
-          title="معاينة الصفحة"
+          title={dt("معاينة الصفحة")}
           onClose={() => setPreviewOpen(false)}
         >
           <section className="max-h-[90vh] w-full max-w-4xl overflow-auto rounded-2xl bg-slate-50 p-6">
             <div className="mb-5 flex items-center justify-between">
               <h2 id="content-preview-heading" className="text-xl font-bold">
-                معاينة الصفحة
+                {dt("معاينة الصفحة")}
               </h2>
               <button
                 type="button"
                 className={button}
                 onClick={() => setPreviewOpen(false)}
               >
-                إغلاق
+                {dt("إغلاق")}
               </button>
             </div>
             <WorkspacePreview
@@ -1174,19 +1245,18 @@ export function ContentEditor({ kind, id }: { kind: ContentKind; id: string }) {
       ) : null}
       {slugOpen ? (
         <EditorModal
-          title="مراجعة تغيير الرابط"
+          title={dt("مراجعة تغيير الرابط")}
           onClose={() => setSlugOpen(false)}
         >
           <div className="w-full max-w-lg space-y-4 rounded-xl bg-white p-6">
             <h2 id="slug-heading" className="text-xl font-bold">
-              مراجعة تغيير الرابط
+              {dt("مراجعة تغيير الرابط")}
             </h2>
             <p className="text-sm">
-              الرابط الحالي: <span dir="ltr">{document.slugs[locale]}</span>.
-              ستبقى الروابط السابقة محوّلة مباشرة إلى الرابط المعتمد.
+              {dt("الرابط الحالي:")} <span dir="ltr">{document.slugs[locale]}</span>{dt(". ستبقى الروابط السابقة محوّلة مباشرة إلى الرابط المعتمد.")}
             </p>
             <label className="block space-y-2">
-              <span>الرابط الجديد</span>
+              <span>{dt("الرابط الجديد")}</span>
               <input
                 autoFocus
                 dir="ltr"
@@ -1199,7 +1269,7 @@ export function ContentEditor({ kind, id }: { kind: ContentKind; id: string }) {
               />
             </label>
             <label className="block space-y-2">
-              <span>اكتب الرابط الجديد مرة أخرى للتأكيد</span>
+              <span>{dt("اكتب الرابط الجديد مرة أخرى للتأكيد")}</span>
               <input
                 dir="ltr"
                 value={confirmation}
@@ -1214,14 +1284,14 @@ export function ContentEditor({ kind, id }: { kind: ContentKind; id: string }) {
                 disabled={Boolean(busy) || !slug || slug !== confirmation}
                 onClick={changeSlug}
               >
-                حفظ الرابط
+                {dt("حفظ الرابط")}
               </button>
               <button
                 type="button"
                 className={button}
                 onClick={() => setSlugOpen(false)}
               >
-                إلغاء
+                {dt("إلغاء")}
               </button>
             </div>
           </div>

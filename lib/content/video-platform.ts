@@ -44,9 +44,12 @@ export function describeVideoSource(input: {
   const maybeBareId = !raw.includes("://") && YOUTUBE_ID.test(raw) ? raw : null;
   const parsed = raw ? safeHttpUrl(raw) : null;
   const youtubeId = maybeBareId ?? (parsed ? youtubeIdFrom(parsed) : null);
-  const start = Number.isFinite(input.startSeconds) && Number(input.startSeconds) > 0
-    ? Math.floor(Number(input.startSeconds))
-    : null;
+  const explicitStart = Number.isFinite(input.startSeconds) && Number(input.startSeconds) > 0 ? Math.floor(Number(input.startSeconds)) : null;
+  const time = parsed?.searchParams.get("start") || parsed?.searchParams.get("t") || parsed?.hash.match(/^#t=(.+)$/)?.[1] || "";
+  const parts = /^(\d+)h(?:(\d+)m)?(?:(\d+)s)?$|^(?:(\d+)m)?(\d+)s$/.exec(time);
+  const parsedStart = /^\d+$/.test(time) ? Number(time)
+    : parts ? Number(parts[1] || 0) * 3600 + Number(parts[2] || parts[4] || 0) * 60 + Number(parts[3] || parts[5] || 0) : 0;
+  const start = explicitStart || (Number.isSafeInteger(parsedStart) && parsedStart > 0 ? parsedStart : null);
 
   if (youtubeId) {
     const query = start ? `?start=${start}` : "";

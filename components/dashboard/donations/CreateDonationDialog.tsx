@@ -465,7 +465,8 @@ export function CreateDonationDialog({ onClose, onCreated }: Props) {
                 value={provider}
                 onValueChange={(v) => setProvider(v as ManualDonationProvider)}
               >
-                <SelectTrigger className="h-8 text-xs">
+                <SelectTrigger className="h-8 text-xs" aria-label={dt("مصدر التبرع")}>
+                  <SelectValue>
                   <span className="flex min-w-0 max-w-full items-center gap-2 overflow-hidden">
                     {selectedProvider.logo ? (
                       <Image
@@ -481,7 +482,7 @@ export function CreateDonationDialog({ onClose, onCreated }: Props) {
                       {selectedProvider.value === "BANK" ? dt(selectedProvider.label) : selectedProvider.label}
                     </span>
                   </span>
-                  <SelectValue className="sr-only" />
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   {MANUAL_PROVIDER_OPTIONS.map((option) => (

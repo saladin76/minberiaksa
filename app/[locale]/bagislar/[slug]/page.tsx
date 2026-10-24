@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { notFound, permanentRedirect } from "next/navigation";
-import { SITE_URL, buildPageMetadata, clipSeoDescription } from "@/lib/seo";
+import { SITE_URL, buildPageMetadata, buildLocalizedAlternates, clipSeoDescription } from "@/lib/seo";
 import {
   getProject,
   getProjectDonorCount,
@@ -42,6 +42,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       path: `/${slugFor("projectDetail", locale)}/${superCategory.slug}`,
       image: superCategory.heroImage || undefined,
       imageAlt: superCategory.imageAlt,
+      alternates: buildLocalizedAlternates({ basePath: "/" + slugFor("projectDetail", locale), baseSlug: superCategory.baseSlug || superCategory.slug, translations: superCategory.localizations, fallback: superCategory.id, currentLocale: locale, availableLocales: superCategory.availableLocales }),
+      robots: superCategory.availableLocales?.includes(locale) === false ? { index: false, follow: true } : undefined,
     }),await readPublicEditorialSeo('super-categories',key,locale));
   }
 
@@ -85,6 +87,7 @@ export default async function ProjectPage({ params, searchParams }: Props) {
 
   const superCategory = await getSuperCategory(key, locale);
   if (superCategory) {
+    if (key !== superCategory.slug) permanentRedirect(withIncomingQuery(miaPath("projectDetail", locale, encodeURIComponent(superCategory.slug)), query));
     return (
       <MinbarMessages locale={locale} namespaces={NAMESPACES}>
         <PageBanners locale={locale} page="projectDetail" slot="top" />

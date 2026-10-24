@@ -1,13 +1,21 @@
 import type { ContentKind, ContentRecord } from "./contracts";
+import { LOCALES, SUPPORTED_LOCALES } from "../locales";
 import { parseSuggestedDonations } from "../campaign/suggested-donations";
 import { parseSuggestedShareCounts } from "../campaign/campaign-modes";
 export type EditorSection = { id: string; label: string; icon: string };
 export const EDITOR_SECTIONS: Record<ContentKind, EditorSection[]> = {
+  "videos": [{"id":"content","label":"المعلومات والمحتوى","icon":"file"},{"id":"media","label":"الصور والفيديو","icon":"image"},{"id":"seo","label":"SEO والمشاركة","icon":"search"},{"id":"review","label":"النشر والمراجعة","icon":"check"}],
+  "playlists": [{"id":"content","label":"المعلومات والمحتوى","icon":"file"},{"id":"media","label":"الصور والفيديو","icon":"image"},{"id":"seo","label":"SEO والمشاركة","icon":"search"},{"id":"review","label":"النشر والمراجعة","icon":"check"}],
+  "courses": [{"id":"content","label":"المعلومات والمحتوى","icon":"file"},{"id":"media","label":"الصور والفيديو","icon":"image"},{"id":"seo","label":"SEO والمشاركة","icon":"search"},{"id":"review","label":"النشر والمراجعة","icon":"check"}],
+  "reports": [{"id":"content","label":"المعلومات والمحتوى","icon":"file"},{"id":"media","label":"الصور والفيديو","icon":"image"},{"id":"seo","label":"SEO والمشاركة","icon":"search"},{"id":"review","label":"النشر والمراجعة","icon":"check"}],
+  "booklets": [{"id":"content","label":"المعلومات والمحتوى","icon":"file"},{"id":"media","label":"الصور والفيديو","icon":"image"},{"id":"seo","label":"SEO والمشاركة","icon":"search"},{"id":"review","label":"النشر والمراجعة","icon":"check"}],
+  "faqs": [{"id":"content","label":"المعلومات والمحتوى","icon":"file"},{"id":"media","label":"الصور والفيديو","icon":"image"},{"id":"seo","label":"SEO والمشاركة","icon":"search"},{"id":"review","label":"النشر والمراجعة","icon":"check"}],
   campaigns: [
     { id: "content", label: "المعلومات والمحتوى", icon: "file" },
     { id: "donation", label: "إعدادات التبرع", icon: "wallet" },
     { id: "media", label: "الصور والفيديو", icon: "image" },
     { id: "seo", label: "SEO والمشاركة", icon: "search" },
+    { id: "links", label: "الرابط وسجل التغييرات", icon: "link" },
     { id: "history", label: "الإنجازات والسجل", icon: "history" },
   ],
   categories: [
@@ -22,9 +30,11 @@ export const EDITOR_SECTIONS: Record<ContentKind, EditorSection[]> = {
     { id: "content", label: "المعلومات والمحتوى", icon: "file" },
     { id: "media", label: "الصورة والوسائط", icon: "image" },
     { id: "seo", label: "SEO والمشاركة", icon: "search" },
+    { id: "links", label: "الرابط وسجل التغييرات", icon: "link" },
     { id: "review", label: "النشر والمراجعة", icon: "check" },
   ],
   "super-categories": [
+    { id: "links", label: "الرابط وسجل التغييرات", icon: "link" },
     { id: "content", label: "التعريف واللغات", icon: "file" },
     { id: "media", label: "الواجهة والوسائط", icon: "image" },
     { id: "library", label: "المحتوى المرتبط", icon: "heart" },
@@ -65,6 +75,33 @@ const field = (
   options?: [string, string][],
 ): SettingField => ({ key, label, section, type, options });
 export const SETTING_FIELDS: Record<ContentKind, SettingField[]> = {
+  videos: [
+    field("type", "نوع الفيديو", "content", "select", [["ACHIEVEMENT", "إنجازات"], ["ENDORSEMENT", "تزكيات"], ["FIELD", "من الميدان"], ["EVENT", "فعالياتنا"]]),
+    field("url", "رابط الفيديو (YouTube / Vimeo / MP4)", "media", "url"),
+    field("youtubeId", "معرّف فيديو YouTube", "media"),
+    field("thumbnail", "الصورة المصغرة", "media", "image"),
+    field("startSeconds", "بداية المقطع بالثواني", "media", "number"),
+    field("regionKey", "المنطقة", "content", "select", [["", "دون منطقة"], ["regionGaza", "غزة"], ["regionQuds", "القدس"], ["regionAqsa", "الأقصى"], ["regionField", "من الميدان"], ["tagTezkiye", "تزكيات"]]),
+    field("localeFilter", "لغات عرض الفيديو (فارغ = جميع اللغات)", "review", "ids"),
+    field("showOnHome", "إظهار في الرئيسية", "review", "boolean"),
+    field("isActive", "نشط", "review", "boolean"), field("order", "الترتيب", "review", "number"),
+  ],
+  playlists: [
+    field("youtubePlaylistUrl", "رابط قائمة YouTube", "media", "url"), field("coverImage", "صورة الغلاف", "media", "image"),
+    field("kind", "نوع البرنامج", "content", "select", [["PROGRAM", "برنامج"], ["SERIES", "سلسلة"]]),
+    field("isActive", "نشط", "review", "boolean"), field("order", "الترتيب", "review", "number"),
+  ],
+  courses: [
+    field("kind", "نوع الدورة", "content", "select", [["COURSE", "دورة"], ["SEMINAR", "ندوة"]]),
+    field("coverImage", "صورة الغلاف", "media", "image"), field("introVideoUrl", "رابط الفيديو التعريفي", "media", "url"), field("introVideoId", "معرّف فيديو YouTube", "media"),
+    field("unitsCount", "عدد الوحدات", "content", "number"),
+    field("isPinned", "تثبيت في الرئيسية", "review", "boolean"), field("isExternal", "دورة خارجية", "review", "boolean"), field("externalUrl", "رابط الدورة الخارجية", "review", "url"),
+    field("hasDetailPage", "صفحة تفاصيل", "review", "boolean"), field("isActive", "نشط", "review", "boolean"), field("order", "الترتيب", "review", "number"),
+  ],
+  reports: [field("fileUrl", "رابط الملف الافتراضي", "media", "url"), field("fileLocale", "لغة الملف الافتراضي", "media", "select", SUPPORTED_LOCALES.map((code) => [code, LOCALES[code].nativeLabel])), field("coverImage", "صورة الغلاف", "media", "image"), field("year", "السنة", "content", "number"), field("isPublished", "منشور", "review", "boolean"), field("order", "الترتيب", "review", "number")],
+  booklets: [field("fileUrl", "رابط الملف الافتراضي", "media", "url"), field("fileLocale", "لغة الملف الافتراضي", "media", "select", SUPPORTED_LOCALES.map((code) => [code, LOCALES[code].nativeLabel])), field("coverImage", "صورة الغلاف", "media", "image"), field("author", "المؤلف", "content"), field("isPublished", "منشور", "review", "boolean"), field("order", "الترتيب", "review", "number")],
+  faqs: [field("page", "الصفحة", "content"), field("isActive", "نشط", "review", "boolean"), field("order", "الترتيب", "review", "number")],
+
   campaigns: [
     field("categoryIds", "التصنيفات", "content", "ids"),
     field("isActive", "المشروع نشط ويستقبل التبرعات", "content", "boolean"),
@@ -205,6 +242,7 @@ export function settingsFor(
       ? row.items.map((i) => ({ kind: i.kind, refId: i.refId, order: i.order }))
       : [];
   }
+  if (["playlists", "courses"].includes(kind)) result.videos = Array.isArray(row.videos) ? row.videos : [];
   return result;
 }
 const CATEGORY_PAGE_SETTINGS: SettingField[] = [

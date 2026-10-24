@@ -12,6 +12,7 @@ import {
 } from "../../lib/content-editor/contracts";
 import {
   changeCategorySlug,
+  changeEditorialSlug,
   documentFor,
   fingerprint,
   saveContent,
@@ -749,3 +750,37 @@ test("legacy settings writes compare the version loaded with the form", async ()
   assert.deepEqual(contentWriteWhere({ id }, {}), { id });
   assert.throws(() => contentWriteWhere({ id }, { expectedEditorVersion: 1 }));
 });
+
+test("localized article slug changes preserve earlier URLs and record the actor", async () => {
+  const initial = article(), db = memory("blog", initial);
+  const saved = await changeEditorialSlug(db.store, {
+    kind: "blog", id, locale: "en", revision: fingerprint(initial), slug: "localized-title",
+    confirmation: "localized-title", actor: "editor",
+  });
+  assert.equal(saved.slugs.en, "localized-title");
+  assert.equal(saved.slugs.ar, "stable");
+  assert.deepEqual(db.read().previousSlugs, ["stable"]);
+  assert.equal((db.read().slugChanges as ContentRecord[])[0].actor, "editor");
+});
+test("slug changes reject collisions, missing confirmation and stale revisions", async () => {
+  const initial = article(), db = memory("blog", initial);
+  const input = { kind: "blog" as const, id, locale: "en", revision: fingerprint(initial), slug: "changed", confirmation: "changed", actor: "editor" };
+  await assert.rejects(() => changeEditorialSlug(db.store, { ...input, confirmation: "" }), /تأكيد/);
+  await assert.rejects(() => changeEditorialSlug(db.store, { ...input, revision: "stale" }), /تغير المحتوى/);
+  db.collision();
+  await assert.rejects(() => changeEditorialSlug(db.store, input), /فريد|مستخدم/);
+  assert.equal(db.read().slug, "stable");
+});
+
+for (const kind of ["videos", "playlists", "courses", "reports", "booklets", "faqs"] as const) {
+  test(kind + ": common editor saves an exact language without overwriting Arabic or media", async () => {
+    const titleKey = kind === "faqs" ? "question" : "title";
+    const initial = { id, [titleKey]: "المحتوى الأصلي", ...(kind === "faqs" ? { answer: "الجواب" } : {}), fileUrl: "https://example.org/original.pdf", translations: [] };
+    const db = memory(kind, initial);
+    const changes = { [titleKey]: "Localized title", ...(kind === "faqs" ? { answer: "Localized answer" } : {}) };
+    const saved = await saveWorkspace(db.store, { kind, id, revision: fingerprint(initial), locale: "en", changes });
+    assert.equal(saved.values.en[titleKey], "Localized title");
+    assert.equal(saved.values.ar[titleKey], "المحتوى الأصلي");
+    assert.equal(db.read().fileUrl, initial.fileUrl);
+  });
+}

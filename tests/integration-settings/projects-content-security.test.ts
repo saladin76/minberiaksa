@@ -170,7 +170,7 @@ test("admin and staff with blog permission can load blog editor data", async () 
   }
 });
 
-test("layouts remain defense in depth and pages use only editor data loaders", () => {
+test("layouts and shared editor pages preserve section permissions before data access", () => {
   for (const permission of protectedSections) {
     const layout = readFileSync(
       `app/(dashboard)/dashboard/${permission}/layout.tsx`,
@@ -191,7 +191,13 @@ test("layouts remain defense in depth and pages use only editor data loaders", (
     "app/(dashboard)/dashboard/blog/settings/[postId]/page.tsx",
     "utf8",
   );
-  assert.match(createPage, /loadBlogCreateEditorData\(\)/);
+  assert.match(createPage, /await requireDashboardPagePermission\(CONFIG\["blog"\]\.permission\)/);
+  assert.match(createPage, /<ContentEditor kind="blog" id="new"/);
+  const sharedApi = readFileSync("app/api/admin/content-editor/[kind]/[id]/route.ts", "utf8");
+  assert.match(sharedApi, /requireAdminOrDashboardPermission\(session, CONFIG\[kind\]\.permission\)/);
+  assert.ok(sharedApi.indexOf("await access(ctx)") < sharedApi.indexOf("documentFor(kind, id ==="));
+  const catalogApi = readFileSync("app/api/admin/content-editor/[kind]/catalog/route.ts", "utf8");
+  assert.ok(catalogApi.indexOf("if (denied) return denied") < catalogApi.indexOf("prisma.category.findMany"));
   assert.match(editPage, /loadBlogEditEditorData\(postId\)/);
   assert.doesNotMatch(createPage, /prisma\.|getPost|loadDashboardPageData/);
   assert.doesNotMatch(editPage, /prisma\.|getPost|loadDashboardPageData/);

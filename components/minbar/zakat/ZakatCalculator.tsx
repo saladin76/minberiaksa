@@ -1,12 +1,13 @@
 "use client";
 
-import { decimalAmount, parseAmount } from "@/lib/minbar/numeric-input";
+import { decimalAmount } from "@/lib/minbar/numeric-input";
 import { useMemo, useState, type CSSProperties, type ReactElement } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { Button } from "@/components/minbar/ds";
 import { miaPath } from "@/lib/minbar/routes";
 import { useMinbarMoney } from "@/hooks/useMinbarMoney";
 import TravelBanner from "@/components/minbar/banners/TravelBanner";
+import { calculateZakat } from "@/lib/minbar/zakat-calculation";
 
 /**
  * Zakat calculator  ported from `Minbar/حاسبة الزكاة.dc.html`.
@@ -32,11 +33,7 @@ import TravelBanner from "@/components/minbar/banners/TravelBanner";
 
 type NisabMode = "gold" | "silver";
 
-/** Nisāb thresholds in grams. */
-const GOLD_GRAMS = 85;
-const SILVER_GRAMS = 595;
-/** The zakat rate on wealth. */
-const ZAKAT_RATE = 0.025;
+const EMPTY_VALUES: Record<string, string> = {};
 
 /** Field ids, grouped as the design groups them. */
 const FIELDS = {
@@ -101,47 +98,29 @@ export default function ZakatCalculator({ rates, guidePdfHref, whatsappNumber = 
   const locale = useLocale();
   const t = useTranslations("zakat");
   const tCommon = useTranslations("common");
-  const { format } = useMinbarMoney();
+  const { formatLocal: format, code, symbol, rate } = useMinbarMoney();
 
   const [mode, setMode] = useState<NisabMode>("gold");
-  const [goldRate, setGoldRate] = useState(rates?.gold ? String(rates.gold) : "");
-  const [silverRate, setSilverRate] = useState(rates?.silver ? String(rates.silver) : "");
-  const [values, setValues] = useState<Record<string, string>>({});
+  // Keep a separate draft for each currency. Switching the selector must not
+  // reinterpret an amount already entered in another currency.
+  const [prices, setPrices] = useState<Record<string, { gold?: string; silver?: string }>>({});
+  const [amounts, setAmounts] = useState<Record<string, Record<string, string>>>({});
+  const values = amounts[code] ?? EMPTY_VALUES;
+  const goldRate = prices[code]?.gold ?? (rates?.gold && rate ? String(rates.gold * rate) : "");
+  const silverRate = prices[code]?.silver ?? (rates?.silver && rate ? String(rates.silver * rate) : "");
   const [target, setTarget] = useState<string>(TARGETS[0]);
   const [openFaq, setOpenFaq] = useState(0);
 
-  /** Tolerant parse: an empty or malformed field contributes zero, not NaN. */
-  const num = (x: string | undefined) => {
-    const v = parseAmount(x);
-    return Number.isFinite(v) ? v : 0;
-  };
-  const n = (key: string) => num(values[key]);
-
-  const totals = useMemo(() => {
-    const gold = num(goldRate);
-    const silver = num(silverRate);
-
-    const cash = n("cash") + n("bank") + n("savings") + n("loansOut");
-    // Karat weighted by purity  21k is 21/24 fine, 18k is 18/24.
-    const metals = (n("gold24") + n("gold21") * (21 / 24) + n("gold18") * (18 / 24)) * gold + n("silver") * silver;
-    const invest = n("shares") + n("funds") + n("pension") + n("rentIncome");
-    const trade = n("stock") + n("receivables") + n("cashBiz");
-    const liabilities = n("debts") + n("bills") + n("salaries");
-
-    const assets = cash + metals + invest + trade;
-    const net = Math.max(0, assets - liabilities);
-    const nisab = mode === "gold" ? gold * GOLD_GRAMS : silver * SILVER_GRAMS;
-    // Zero nisāb means no rate has been entered  not "everything is due".
-    const due = nisab > 0 && net >= nisab ? net * ZAKAT_RATE : 0;
-
-    return { cash, metals, invest, trade, liabilities, net, nisab, due };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [values, goldRate, silverRate, mode]);
-
+  const totals = useMemo(
+    () => calculateZakat(values, goldRate, silverRate, mode),
+    [values, goldRate, silverRate, mode],
+  );
   const aboveNisab = totals.nisab > 0 && totals.net >= totals.nisab;
-
   const setField = (key: string, raw: string) =>
-    setValues((v) => ({ ...v, [key]: decimalAmount(raw, 12) }));
+    setAmounts((previous) => ({
+      ...previous,
+      [code]: { ...previous[code], [key]: decimalAmount(raw, 12) },
+    }));
 
   const groups: Array<{ id: string; icon: keyof typeof GROUP_ICONS; titleKey: string; hintKey: string; accent: string; total: number; fields: readonly string[]; unitKey?: string }> = [
     { id: "wallet", icon: "wallet", titleKey: "grpWallet", hintKey: "grpWalletSub", accent: "var(--deep)", total: totals.cash, fields: FIELDS.cash },
@@ -168,6 +147,7 @@ export default function ZakatCalculator({ rates, guidePdfHref, whatsappNumber = 
           <h1 style={{ margin: 0, fontSize: "clamp(30px,3.6vw,48px)", lineHeight: 1.35, fontWeight: 900 }}>{t("calcTitle")}</h1>
           <div style={{ width: 110, height: 2, background: "var(--gold)" }} />
           <p style={{ margin: 0, maxWidth: "64ch", fontSize: 17, lineHeight: 1.9, color: "var(--muted)" }}>{t("calcLead")}</p>
+          <b dir="ltr" style={{ fontSize: 15 }}>{code} · {symbol}</b>
         </div>
       </section>
 
@@ -197,8 +177,10 @@ export default function ZakatCalculator({ rates, guidePdfHref, whatsappNumber = 
               value={mode === "gold" ? goldRate : silverRate}
               onChange={(e) => {
                 const val = decimalAmount(e.target.value, 12);
-                if (mode === "gold") setGoldRate(val);
-                else setSilverRate(val);
+                setPrices((previous) => ({
+                  ...previous,
+                  [code]: { ...previous[code], [mode]: val },
+                }));
               }}
               inputMode="decimal"
               style={{ width: 130, height: 40, border: "1px solid var(--border)", background: "#fff", padding: "0 12px", fontFamily: "inherit", fontWeight: 800, fontSize: 15, color: "var(--deep)" }}
@@ -242,7 +224,7 @@ export default function ZakatCalculator({ rates, guidePdfHref, whatsappNumber = 
                       <span style={{ fontSize: 13, fontWeight: 800 }}>{t(`fld_${field}_label`)}</span>
                       <span style={{ display: "flex", alignItems: "stretch", border: "1px solid var(--border)", background: "#fff" }}>
                         <span style={{ display: "grid", placeItems: "center", width: 40, flex: "0 0 40px", background: "var(--sand)", color: "var(--muted)", fontSize: 13, fontWeight: 900, borderInlineEnd: "1px solid var(--border)" }}>
-                          {group.unitKey ? t(group.unitKey) : "$"}
+                          {group.unitKey ? t(group.unitKey) : symbol}
                         </span>
                         <input
                           value={values[field] ?? ""}
@@ -265,7 +247,10 @@ export default function ZakatCalculator({ rates, guidePdfHref, whatsappNumber = 
               <span style={{ flex: "1 1 320px", minWidth: 0, color: "var(--muted)", fontSize: 14, lineHeight: 1.8 }}>{t("calcDisclaimer")}</span>
               <button
                 type="button"
-                onClick={() => setValues({})}
+                onClick={() => {
+                  setAmounts((previous) => ({ ...previous, [code]: {} }));
+                  setPrices((previous) => ({ ...previous, [code]: { gold: "", silver: "" } }));
+                }}
                 style={{ display: "inline-flex", alignItems: "center", gap: 8, height: 42, padding: "0 16px", background: "#fff", border: "1px solid var(--border)", color: "var(--muted)", fontFamily: "inherit", fontWeight: 800, fontSize: 13, cursor: "pointer" }}
               >
                 {t("resetFieldsBtn")}

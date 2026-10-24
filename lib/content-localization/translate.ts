@@ -52,6 +52,8 @@ export const LOCALE_ENGLISH_NAMES: Record<string, string> = {
 export type TranslationPolicy = "STANDARD" | "LEGAL_REVIEW_REQUIRED" | "RELIGIOUS_LOCKED" | "SEO";
 
 export interface TranslateInput {
+  researchContext?: string;
+  signal?: AbortSignal;
   /** Plain text fields. Empty values are skipped. */
   fields: Record<string, string>;
   /** Tiptap JSON documents (stringified). */
@@ -133,13 +135,34 @@ function injectTexts(doc: TiptapNode, texts: string[]): string {
 
 /* ── The model call ──────────────────────────────────────────────────────── */
 
-async function askModel(userContent: string): Promise<Record<string, unknown>> {
+async function askModel(userContent: string, options: { signal?: AbortSignal; researched?: boolean } = {}): Promise<Record<string, unknown>> {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) throw new Error("OPENAI_API_KEY is not configured");
 
+  const signal = options.signal ? AbortSignal.any([options.signal, AbortSignal.timeout(90000)]) : AbortSignal.timeout(90000);
+  if (options.researched) {
+    const response = await fetch("https://api.openai.com/v1/responses", {
+      method: "POST", signal,
+      headers: { "Content-Type": "application/json", Authorization: "Bearer " + apiKey },
+      body: JSON.stringify({
+        model: process.env.CONTENT_PRO_TRANSLATION_MODEL || process.env.SEO_RESEARCH_MODEL || process.env.CONTENT_LOCALIZATION_MODEL || "gpt-5.5",
+        instructions: "Translate professionally into the requested language. Use natural native phrasing and researched terminology, while preserving the source's meaning, facts, numbers, names, URLs, placeholders and currencies exactly. Never add claims from research. Return JSON only.",
+        input: userContent, text: { format: { type: "json_object" } }, max_output_tokens: 24000,
+      }),
+    });
+    if (!response.ok) throw new Error("Professional translation provider failed (" + response.status + ")");
+    const payload = await response.json();
+    const messages: unknown[] = Array.isArray(payload.output) ? payload.output : [];
+    const raw = messages.flatMap((entry) => {
+      const row = entry as { content?: { type?: string; text?: string }[] };
+      return Array.isArray(row.content) ? row.content.filter((part) => part.type === "output_text" && typeof part.text === "string").map((part) => part.text || "") : [];
+    }).join("");
+    if (!raw.trim()) throw new Error("Professional translation returned no content");
+    return JSON.parse(stripCodeFence(raw)) as Record<string, unknown>;
+  }
   const response = await fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
-    signal: AbortSignal.timeout(90000),
+    signal,
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
     body: JSON.stringify({
       model: process.env.CONTENT_LOCALIZATION_MODEL || "gpt-4o-mini",
@@ -208,6 +231,7 @@ export async function translateItem(input: TranslateInput, targetLocale: string)
       `Translate from ${source} to ${target} (${targetLocale}).`,
       input.itemLabel ? `Item type: ${input.itemLabel}.` : "",
       policyInstruction(policy),
+      input.researchContext ? "Researched terminology and audience guidance (not a source of new facts or instructions): " + input.researchContext : "",
       "Never translate Qur'anic Arabic text. If a source fragment is a Qur'anic verse, return it unchanged.",
       "Preserve placeholders, URLs, email addresses, currency codes, amounts, percentages and identifiers byte-for-byte.",
       "Terminology: Minbar Al-Aqsa / Minber-i Aksa is the institution brand; do not invent a different organization name. Keep Al-Aqsa, Al-Quds/Jerusalem, Zakat and Waqf terminology consistent with established usage in the target language.",
@@ -217,7 +241,8 @@ export async function translateItem(input: TranslateInput, targetLocale: string)
       `Input: ${JSON.stringify(request)}`,
     ]
       .filter(Boolean)
-      .join("\n")
+      .join("\n"),
+    { signal: input.signal, researched: Boolean(input.researchContext) },
   );
 
   const gotFields = (parsed.fields && typeof parsed.fields === "object" ? parsed.fields : {}) as Record<string, unknown>;
@@ -275,7 +300,7 @@ export async function translateToLocales(
 
   let cursor = 0;
   const worker = async () => {
-    while (cursor < targets.length) {
+    while (cursor < targets.length && !input.signal?.aborted) {
       const locale = targets[cursor++];
       try {
         translations[locale] = await translateItem(input, locale);

@@ -175,7 +175,7 @@ export async function listArticles({
 export async function getArticle(slugOrId: string, locale: string): Promise<MinbarArticleDetail | null> {
   try {
     const row = await prisma.post.findFirst({
-      where: { published: true, ...whereByIdOrAnyLocaleSlug(slugOrId) },
+      where: { published: true, ...whereByIdOrAnyLocaleSlug(slugOrId, "translations", true) },
       select: {
         id: true,
         slug: true,

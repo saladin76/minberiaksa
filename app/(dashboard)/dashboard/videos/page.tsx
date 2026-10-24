@@ -297,7 +297,7 @@ export default function VideosPage() {
                     <TableCell className="text-xs">
                       {VIDEO_TYPE_LABELS[video.type] ?? video.type}
                       {video.regionKey ? (
-                        <div className="text-[10px] text-slate-400" dir="ltr">{video.regionKey}</div>
+                        <div className="text-[10px] text-slate-400" dir="ltr">{({ regionGaza: dt("غزة"), regionQuds: dt("القدس"), regionAqsa: dt("المسجد الأقصى"), regionField: dt("الميدان"), tagTezkiye: dt("تزكية") } as Record<string, string>)[video.regionKey] || dt(video.regionKey)}</div>
                       ) : null}
                     </TableCell>
                     <TableCell><LocaleScope localeFilter={video.localeFilter} /></TableCell>
@@ -319,13 +319,14 @@ export default function VideosPage() {
                     <TableCell>
                       <div className="flex gap-1">
                         <Button
+                          aria-label={dt("تعديل")} title={dt("تعديل")}
                           variant="ghost"
                           size="icon"
                           onClick={() => router.push(`/dashboard/videos/edit/${video.id}`)}
                         >
                           <Pencil className="w-4 h-4" />
                         </Button>
-                        <Button variant="ghost" size="icon" onClick={() => setDeleteTarget(video)}>
+                        <Button aria-label={dt("حذف")} title={dt("حذف")} variant="ghost" size="icon" onClick={() => setDeleteTarget(video)}>
                           <Trash2 className="w-4 h-4 text-red-600" />
                         </Button>
                       </div>

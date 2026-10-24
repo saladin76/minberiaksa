@@ -1,5 +1,6 @@
+import { buildManagedPageMetadata } from "@/lib/content-editor/page-seo";
 import type { Metadata } from "next";
-import { LOCALE_SEO, buildPageMetadata } from "@/lib/seo";
+import { LOCALE_SEO } from "@/lib/seo";
 import type { Locale } from "@/lib/seo";
 import CampaignsPageContent from "../_components/CampaignsPageContent";
 import {
@@ -16,7 +17,7 @@ export const revalidate = 60; // cache initial HTML for 60s
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale } = await params;
   const seo = LOCALE_SEO[locale as Locale] ?? LOCALE_SEO.en;
-  return buildPageMetadata(locale, {
+  return buildManagedPageMetadata("legacyCampaigns", locale, {
     title: seo.campaigns.title,
     description: seo.campaigns.description,
     path: "/campaigns",

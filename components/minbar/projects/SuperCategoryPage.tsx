@@ -1,4 +1,5 @@
 "use client";
+import { describeVideoSource } from "@/lib/content/video-platform";
 
 import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
@@ -308,9 +309,9 @@ function Block({
             </div>
 
             <div className="prg-eps" style={{ display: "grid", gridTemplateColumns: "repeat(3,minmax(0,1fr))", gap: 16 }}>
-              {series.episodes.map((episode) => (
+              {series.episodes.map((episode, index) => (
                 <a
-                  key={episode.youtubeId}
+                  key={`${episode.url || episode.youtubeId}-${index}`}
                   href={episode.url || youtubeWatch(episode.youtubeId)}
                   className="prg-ep"
                   aria-label={episode.title || series.title}
@@ -318,14 +319,14 @@ function Block({
                   onClick={(event) => {
                     if (event.metaKey || event.ctrlKey || event.shiftKey || event.button !== 0) return;
                     event.preventDefault();
-                    onPlay(youtubeEmbed(episode.youtubeId, { autoplay: true }));
+                    onPlay(episode.url || youtubeEmbed(episode.youtubeId, { autoplay: true }));
                   }}
                 >
                   <span style={{ position: "relative", display: "block", aspectRatio: "16/9", borderRadius: 8, overflow: "hidden", background: "var(--navy)" }}>
                     <span
                       aria-hidden="true"
                       className="prg-thumb"
-                      style={{ position: "absolute", inset: 0, backgroundImage: `url('${episode.thumbnail || youtubeThumb(episode.youtubeId)}')`, backgroundSize: "cover", backgroundPosition: "center" }}
+                      style={{ position: "absolute", inset: 0, backgroundImage: `url('${episode.thumbnail || (episode.youtubeId ? youtubeThumb(episode.youtubeId) : "")}')`, backgroundSize: "cover", backgroundPosition: "center" }}
                     />
                     <span aria-hidden="true" style={{ position: "absolute", inset: 0, display: "grid", placeItems: "center" }}>
                       <span className="prg-play" style={{ width: 48, height: 48, borderRadius: "50%", background: "rgba(16,33,43,.55)", display: "grid", placeItems: "center", border: "1.5px solid rgba(255,255,255,.6)" }}>
@@ -385,7 +386,7 @@ function Block({
                 key={v.id}
                 type="button"
                 className="prg-ep"
-                onClick={() => onPlay(youtubeEmbed(v.youtubeId, { autoplay: true, start: v.startSeconds ?? undefined }))}
+                onClick={() => onPlay(describeVideoSource({ url: v.url || undefined, youtubeId: v.youtubeId, startSeconds: v.startSeconds }).embedUrl || v.url || youtubeEmbed(v.youtubeId))}
                 style={{ display: "grid", gap: 8, padding: 0, border: 0, background: "none", cursor: "pointer", font: "inherit", textAlign: "start" }}
               >
                 <span style={{ position: "relative", display: "block", aspectRatio: "16/9", borderRadius: 10, overflow: "hidden", background: "var(--navy)" }}>

@@ -1,8 +1,9 @@
+import { buildManagedPageMetadata } from "@/lib/content-editor/page-seo";
 import type { Metadata } from "next";
 import { getServerSession } from "next-auth";
 import { getTranslations } from "next-intl/server";
 import { authOptions } from "@/app/api/auth/[...nextauth]/options";
-import { buildPageMetadata } from "@/lib/seo";
+
 import { slugFor } from "@/lib/minbar/routes";
 import MinbarMessages from "@/components/minbar/MinbarMessages";
 import WaqfPage from "@/components/minbar/waqf/WaqfPage";
@@ -18,7 +19,7 @@ const NAMESPACES = ["waqf", "certificates", "zakat", "homepage", "quran"] as con
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale } = await params;
   const t = await getTranslations({ locale, namespace: "waqf" });
-  return buildPageMetadata(locale, {
+  return buildManagedPageMetadata("waqf", locale, {
     title: t("qudsWaqfProjects"),
     description: t("meterIntro"),
     path: `/${slugFor("waqf", locale)}`,

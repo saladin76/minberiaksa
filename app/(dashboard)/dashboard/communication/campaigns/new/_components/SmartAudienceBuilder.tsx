@@ -3,6 +3,7 @@
 import * as React from "react";
 import { Loader2, Search, X, Users, ShieldCheck } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { LOCALE_LABELS, SUPPORTED_LOCALES } from "@/lib/locales";
 import { RECIPIENT_REASON_LABELS, type RecipientExclusionReason } from "@/lib/communication/campaign-audience-accounting";
 import { dt, dtx } from "@/lib/dashboard/i18n";
@@ -79,6 +80,7 @@ export function SmartAudienceBuilder({
   const [facets, setFacets] = React.useState<Facets>({ countries: [], projects: [] });
   const [preview, setPreview] = React.useState<SmartAudiencePreview | null>(null);
   const [loading, setLoading] = React.useState(false);
+  const [previewAttempt, setPreviewAttempt] = React.useState(0);
   const [previewError, setPreviewError] = React.useState<string | null>(null);
   const [excludeQuery, setExcludeQuery] = React.useState("");
   const [excludeResults, setExcludeResults] = React.useState<DonorSearchResult[]>([]);
@@ -125,7 +127,7 @@ export function SmartAudienceBuilder({
       clearTimeout(timer);
       controller.abort();
     };
-  }, [channel, value, onPreview]);
+  }, [channel, value, onPreview, previewAttempt]);
 
   React.useEffect(() => {
     const timer = setTimeout(() => {
@@ -168,6 +170,7 @@ export function SmartAudienceBuilder({
   return (
     <div className="space-y-4">
       <section className="rounded-xl border border-slate-200 bg-white p-4">
+        {previewError ? <Button type="button" variant="outline" onClick={() => setPreviewAttempt((attempt) => attempt + 1)} disabled={loading}>{dt("إعادة المحاولة")}</Button> : null}
         <div className="mb-3">
           <h3 className="text-sm font-semibold text-slate-900">{dt("من تريد أن تصل إليه الحملة؟")}</h3>
           <p className="mt-1 text-xs text-slate-500" role={previewError ? "alert" : undefined}>{previewError ?? dt("تُحفظ كل السجلات المطابقة كجمهور للحملة. تُراجع بيانات الاتصال والموافقة عند التنفيذ؛ الأهلية المبدئية ليست ضمانًا للتسليم.")}</p>

@@ -29,6 +29,7 @@ import {
   Phone,
   Reply,
 } from "lucide-react";
+import { localizeDonationFailureDraft } from "@/lib/templates/localize-donation-failure-link";
 import { mergeText } from "@/lib/templates/variables";
 import { SAMPLE_TEMPLATE_CONTEXT } from "@/lib/templates/sample-context";
 import { SUPPORTED_LOCALES, LOCALE_LABELS, DEFAULT_LOCALE, type SupportedLocale } from "@/lib/locales";
@@ -629,6 +630,7 @@ export function WhatsappTemplateEditorDialog({ initialKind, id, open, onOpenChan
 
       const payload: Record<string, unknown> = {
         name,
+        kind: initialKind,
         body: submittedLocales.has(DEFAULT_LOCALE) && loadedTemplate ? loadedTemplate.body : category === "AUTHENTICATION" ? "Authentication code" : arabic.body.trim(),
         translations: Object.keys(translations).length ? translations : null,
         metaCategory: category,
@@ -697,6 +699,22 @@ export function WhatsappTemplateEditorDialog({ initialKind, id, open, onOpenChan
     }
   };
 
+  const incorrectFailureLocales = Object.entries(locales)
+    .filter(([locale, draft]) => draft && JSON.stringify(localizeDonationFailureDraft(draft, locale)) !== JSON.stringify(draft))
+    .map(([locale]) => locale);
+  const createLocalizedCopy = () => {
+    setLocales((previous) => Object.fromEntries(Object.entries(previous).map(([locale, draft]) => [
+      locale, draft ? localizeDonationFailureDraft(draft, locale) : draft,
+    ])) as Partial<Record<SupportedLocale, LocaleDraft>>);
+    setWorkingId(null);
+    setLoadedTemplate(null);
+    setSubmittedLocales(new Set());
+    setProviderCategoriesByLocale({});
+    setName((previous) => previous.replace(/_links_v2$/, "").slice(0, 110) + "_links_v2");
+    setPublishError("");
+    toast.success(dt("أُعدت نسخة بروابط اللغات الصحيحة للمراجعة. لم تُرسل إلى Meta بعد."));
+  };
+
   const previewBody = React.useMemo(
     () => category === "AUTHENTICATION"
       ? dt("رمز التحقق الخاص بك هو 123456\nلا تشارك هذا الرمز مع أي شخص.")
@@ -737,6 +755,15 @@ export function WhatsappTemplateEditorDialog({ initialKind, id, open, onOpenChan
     >
       {publishError ? <p role="alert" className="m-4 rounded-xl border border-red-200 bg-red-50 p-4 text-sm leading-7 text-red-800">{publishError}</p> : null}
       <div className="space-y-5">
+        {incorrectFailureLocales.length > 0 && submittedLocales.size > 0 ? (
+          <section role="alert" className="space-y-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm">
+            <p>{dt("روابط إعادة محاولة التبرع لا تطابق لغة بعض النسخ المعتمدة. يلزم اعتماد نسخة مصححة لدى Meta.")}</p>
+            <p dir="ltr">{incorrectFailureLocales.join(" · ")}</p>
+            <Button type="button" variant="outline" disabled={saving || uploadingSample} onClick={createLocalizedCopy}>
+              {dt("إنشاء نسخة بروابط مصححة للمراجعة")}
+            </Button>
+          </section>
+        ) : null}
         {category === "MARKETING" && id && submittedLocales.size > 0 ? (
           <p className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs leading-6 text-amber-900">
             {dt("القوالب التسويقية المعتمدة سابقًا لا يتغير محتواها. أنشئ قالبًا جديدًا وأرسله إلى Meta لاعتماد زر إيقاف الرسائل.")}

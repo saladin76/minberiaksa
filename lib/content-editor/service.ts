@@ -2,10 +2,11 @@ import { createHash, randomUUID } from "node:crypto";
 import { validateWorkspaceSettings } from "./workspace-settings";
 import { saveWorkspaceRelations } from "./workspace-relations";
 import { SUPPORTED_LOCALES } from "../locales";
-import { pickLocaleSlug } from "../slug";
+import { pickLocaleSlug, slugify } from "../slug";
 import { HAS_IMPACT_BACKING_CAMPAIGNS } from "./site-capabilities";
 import {
   CONFIG,
+  titleKeyFor,
   fieldsFor,
   hasText,
   rows,
@@ -58,6 +59,7 @@ export function fingerprint(value: unknown): string {
 export function includeFor(kind: ContentKind) {
   return {
     translations: true,
+    ...(["playlists", "courses"].includes(kind) ? { videos: { orderBy: { order: "asc" } } } : {}),
     ...(kind === "campaigns" && HAS_IMPACT_BACKING_CAMPAIGNS
       ? { impactCampaign: { select: { id: true } } }
       : {}),
@@ -105,7 +107,7 @@ export function documentFor(kind: ContentKind, row: ContentRecord) {
   return {
     id: text(row.id),
     kind,
-    title: text(row.title || row.name),
+    title: text(row.title || row.name || row.question),
     slug: text(row.slug),
     slugs: Object.fromEntries(
       SUPPORTED_LOCALES.map((locale) => [
@@ -179,6 +181,7 @@ export async function saveContent(
     try {
       changes = validateChanges(fieldsFor(kind, row), input.changes);
       settings = validateWorkspaceSettings(kind, row, input.settings);
+      if (locale === "ar" && ["reports", "booklets"].includes(kind) && "fileUrl" in settings) changes.fileUrl = String(settings.fileUrl);
     } catch (error) {
       throw new ContentError(
         error instanceof Error ? error.message : "حقول غير صالحة",
@@ -230,7 +233,7 @@ export async function saveContent(
           throw new ContentError("أحد عناصر المحتوى المرتبط غير موجود");
       }
     }
-    const titleKey = kind === "categories" ? "name" : "title";
+    const titleKey = titleKeyFor(kind);
     if (!hasText(next[titleKey]))
       throw new ContentError("العنوان مطلوب قبل الحفظ");
     // Touch the parent in the same transaction as every translation/child write.
@@ -261,6 +264,11 @@ export async function saveContent(
       const key = `${cfg.parentKey}_locale`,
         where = { [key]: { [cfg.parentKey]: id, locale } };
       const data = dataFor(parentChanges);
+      const existingTranslation = rows(row.translations).find((entry) => entry.locale === locale);
+      if (["campaigns", "categories", "blog", "super-categories"].includes(kind) && !text(existingTranslation?.slug)) {
+        data.slug = await generateEditorialSlug(tx, kind, next[titleKey], id);
+        await reserveEditorialSlug(tx, kind, String(data.slug), id);
+      }
       await tx.model(cfg.translationModel).upsert({
         where,
         create: {
@@ -355,13 +363,13 @@ export async function saveWorkspace(
     let revision = input.revision;
     const locales = { ...input.localeChanges, [input.locale]: input.changes };
     const scalarSettings =
-      input.kind === "super-categories" &&
+      ["super-categories", "playlists", "courses"].includes(input.kind) &&
       input.settings &&
       typeof input.settings === "object" &&
       !Array.isArray(input.settings)
         ? Object.fromEntries(
             Object.entries(input.settings).filter(
-              ([key]) => !["blocks", "items"].includes(key),
+              ([key]) => !["blocks", "items", "videos"].includes(key),
             ),
           )
         : input.settings;
@@ -443,6 +451,8 @@ export async function changeCategorySlug(
     });
     if (collision)
       throw new ContentError("هذا الرابط مستخدم أو محفوظ لتصنيف آخر", 409);
+    await reserveEditorialSlug(tx, "categories", slug, input.id);
+    if (current) await reserveEditorialSlug(tx, "categories", current, input.id);
     const previous = Array.isArray(row.previousSlugs)
       ? row.previousSlugs.filter((v): v is string => typeof v === "string")
       : [];
@@ -482,4 +492,77 @@ export async function changeCategorySlug(
       await readContent(tx, "categories", input.id),
     );
   });
+}
+
+/** Locale slugs share one namespace per kind because public URLs accept any locale's slug. */
+export async function generateEditorialSlug(db: Store, kind: ContentKind, title: string, id: string) {
+  const base = slugify(title) || "content";
+  for (let suffix = 1; suffix <= 1000; suffix++) {
+    const slug = suffix === 1 ? base : base + "-" + suffix;
+    const collision = await db.model(CONFIG[kind].model).findFirst({
+      where: { id: { not: id }, OR: [{ slug }, { previousSlugs: { has: slug } }, { translations: { some: { slug } } }] },
+    });
+    const sharedPath = ["campaigns", "super-categories"].includes(kind);
+    const other = sharedPath ? await db.model(kind === "campaigns" ? "superCategory" : "campaign").findFirst({ where: { OR: [{ slug }, { previousSlugs: { has: slug } }, { translations: { some: { slug } } }] } }) : null;
+    const alias = sharedPath ? await db.model("campaignSlugRedirect").findFirst({ where: { slug, ...(kind === "campaigns" ? { campaignId: { not: id } } : {}) } }) : null;
+    const namespace = sharedPath ? "projects" : kind;
+    const reservation = await db.model("contentRouteReservation").findUnique({ where: { id: namespace + ":" + slug } });
+    const reserved = reservation && (reservation.kind !== kind || reservation.contentId !== id);
+    if (!collision && !alias && !other && !reserved) return slug;
+  }
+  throw new ContentError("تعذر إنشاء رابط فريد", 409);
+}
+
+export async function changeEditorialSlug(
+  db: Store,
+  input: { kind: ContentKind; id: string; revision: string; locale: string; slug: string; confirmation: string; actor: string },
+) {
+  if (input.kind === "categories") return changeCategorySlug(db, input);
+  if (!["campaigns", "blog", "super-categories"].includes(input.kind)) throw new ContentError("هذا المحتوى لا يملك رابطًا مستقلًا");
+  const { kind, id, locale } = input, slug = input.slug.trim();
+  if (!(SUPPORTED_LOCALES as readonly string[]).includes(locale) || !/^[\p{L}\p{N}]+(?:-[\p{L}\p{N}]+)*$/u.test(slug) || slug.length > 150 || /^[a-f0-9]{24}$/i.test(slug))
+    throw new ContentError("استخدم حروفًا وأرقامًا وشرطات للرابط");
+  if (input.confirmation !== slug) throw new ContentError("اكتب الرابط الجديد لتأكيد التغيير");
+  return db.transaction(async (tx) => {
+    const row = await readContent(tx, kind, id);
+    if (fingerprint(row) !== input.revision) throw new ContentError("تغير المحتوى. أعد تحميله أولًا.", 409);
+    const own = valuesFor(kind, row, locale);
+    if (!hasText(own.title)) throw new ContentError("احفظ عنوان هذه اللغة قبل تخصيص رابطها");
+    const current = pickLocaleSlug(text(row.slug), rows(row.translations) as { locale: string; slug?: string | null }[], locale) || "";
+    if (current === slug) return documentFor(kind, row);
+    const available = await generateEditorialSlug(tx, kind, slug, id);
+    if (available !== slug) throw new ContentError("هذا الرابط مستخدم أو محفوظ لمحتوى آخر", 409);
+    await reserveEditorialSlug(tx, kind, slug, id);
+    if (current) await reserveEditorialSlug(tx, kind, current, id);
+    const previous = Array.isArray(row.previousSlugs) ? row.previousSlugs.filter((v): v is string => typeof v === "string") : [];
+    if (current) previous.push(current);
+    await tx.model(CONFIG[kind].model).update({ where: { id }, data: {
+      ...(locale === "ar" ? { slug } : {}),
+      previousSlugs: [...new Set(previous)].filter((value) => value !== slug),
+      slugChanges: [...rows(row.slugChanges), { from: current, to: slug, locale, at: new Date().toISOString(), actor: input.actor }],
+      editorVersion: randomUUID(),
+    } });
+    if (kind === "campaigns" && current) {
+      const alias = await tx.model("campaignSlugRedirect").findFirst({ where: { locale, slug: current } });
+      if (alias && alias.campaignId !== id) throw new ContentError("تعارض في سجل الروابط", 409);
+      if (!alias) await tx.model("campaignSlugRedirect").create({ data: { campaignId: id, locale, slug: current } });
+    }
+    if (locale !== "ar") {
+      const cfg = CONFIG[kind];
+      await tx.model(cfg.translationModel).upsert({
+        where: { [cfg.parentKey + "_locale"]: { [cfg.parentKey]: id, locale } },
+        create: { [cfg.parentKey]: id, locale, title: own.title, ...(kind === "campaigns" ? { description: own.description || "" } : {}), slug },
+        update: { slug },
+      });
+    }
+    return documentFor(kind, await readContent(tx, kind, id));
+  });
+}
+
+export async function reserveEditorialSlug(db: Store, kind: ContentKind, slug: string, contentId: string) {
+  const namespace = ["campaigns", "super-categories"].includes(kind) ? "projects" : kind;
+  const id = namespace + ":" + slug, model = db.model("contentRouteReservation");
+  const current = await model.findUnique({ where: { id } });
+  if (current && (current.kind !== kind || current.contentId !== contentId)) throw new ContentError("هذا الرابط محفوظ لمحتوى آخر", 409);
+  if (!current) await model.create({ data: { id, kind, contentId } });
 }

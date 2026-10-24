@@ -9,6 +9,7 @@ export const CONTENT_KINDS = [
   "blog",
   "super-categories",
   "urgent-banners",
+  "videos", "playlists", "courses", "reports", "booklets", "faqs",
 ] as const;
 export type ContentKind = (typeof CONTENT_KINDS)[number];
 export type TextValues = Record<string, string>;
@@ -33,6 +34,12 @@ export const CONFIG: Record<
     fields: ContentField[];
   }
 > = {
+  "videos": {"label":"الفيديوهات","model":"video","translationModel":"videoTranslation","parentKey":"videoId","permission":"siteContent","fields":[{"key":"title","label":"العنوان","group":"content","required":true}]},
+  "playlists": {"label":"برامجنا المصورة","model":"videoPlaylist","translationModel":"playlistTranslation","parentKey":"playlistId","permission":"siteContent","fields":[{"key":"title","label":"العنوان","group":"content","required":true},{"key":"description","label":"الوصف","group":"content"}]},
+  "courses": {"label":"دوراتنا","model":"course","translationModel":"courseTranslation","parentKey":"courseId","permission":"siteContent","fields":[{"key":"title","label":"العنوان","group":"content","required":true},{"key":"description","label":"الوصف","group":"content"}]},
+  "reports": {"label":"التقارير","model":"report","translationModel":"reportTranslation","parentKey":"reportId","permission":"siteContent","fields":[{"key":"title","label":"العنوان","group":"content","required":true},{"key":"description","label":"الوصف","group":"content"},{"key":"fileUrl","label":"رابط ملف هذه اللغة (فارغ = الملف الافتراضي)","group":"content","optional":true,"locked":true}]},
+  "booklets": {"label":"الكتيبات","model":"booklet","translationModel":"bookletTranslation","parentKey":"bookletId","permission":"siteContent","fields":[{"key":"title","label":"العنوان","group":"content","required":true},{"key":"description","label":"الوصف","group":"content"},{"key":"fileUrl","label":"رابط ملف هذه اللغة (فارغ = الملف الافتراضي)","group":"content","optional":true,"locked":true}]},
+  "faqs": {"label":"الأسئلة الشائعة","model":"faq","translationModel":"faqTranslation","parentKey":"faqId","permission":"siteContent","fields":[{"key":"question","label":"السؤال","group":"content","required":true},{"key":"answer","label":"الإجابة","group":"content","required":true}]},
   campaigns: {
     label: "المشاريع",
     model: "campaign",
@@ -228,6 +235,8 @@ export function fieldsFor(
     group: "seo",
     required: Boolean(
       row.image ||
+        row.coverImage ||
+        row.thumbnail ||
         row.heroImage ||
         (Array.isArray(row.images) && row.images.length),
     ),
@@ -347,7 +356,7 @@ export function validateChanges(
   const entries = Object.entries(value);
   for (const [key, val] of entries) {
     if (
-      key === "videoUrl" &&
+      ["videoUrl", "fileUrl"].includes(key) &&
       typeof val === "string" &&
       val &&
       (!/^https?:\/\//.test(val) || !safeEditorUrl(val))
@@ -377,6 +386,7 @@ export function validateChanges(
             !x ||
             typeof x.q !== "string" ||
             typeof x.a !== "string" ||
+            (x.structuredData !== undefined && typeof x.structuredData !== "boolean") ||
             x.q.length > 500 ||
             x.a.length > 5000,
         )
@@ -394,3 +404,5 @@ export function validateChanges(
     throw new Error("حقول غير صالحة");
   return Object.fromEntries(entries) as TextValues;
 }
+
+export function titleKeyFor(kind: ContentKind): string { return kind === "categories" ? "name" : kind === "faqs" ? "question" : "title"; }
