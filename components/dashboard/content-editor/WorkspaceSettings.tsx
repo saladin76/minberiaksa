@@ -122,7 +122,7 @@ export function WorkspaceSettings({
             options = BANNER_PAGES.flatMap((p) =>
               p.slots.map((s) => ({
                 id: `${p.key}:${s.key}`,
-                title: `${p.label} · ${dt(s.label)}`,
+                title: `${dt(p.label)} · ${dt(s.label)}`,
               })),
             );
           if (kind === "categories" && f.key === "icon") return <section key={f.key} className="space-y-2"><p className="text-sm font-semibold">{dt(f.label)}</p><CategoryIconPicker value={String(value || "")} onChange={(icon) => onChange(f.key, icon)} /></section>;
@@ -136,7 +136,7 @@ export function WorkspaceSettings({
               <section key={f.key} className="rounded-xl border bg-white p-5">
                 <ImageUploadField
                   onUploadingChange={onUploadingChange}
-                  label={f.label}
+                  label={dt(f.label)}
                   value={String(value || "")}
                   onChange={(url) => onChange(f.key, url)}
                   previewClass="w-full h-48"
@@ -159,7 +159,7 @@ export function WorkspaceSettings({
                 key={f.key}
                 className="space-y-4 rounded-xl border bg-white p-5"
               >
-                <h3 className="font-bold">{f.label}</h3>
+                <h3 className="font-bold">{dt(f.label)}</h3>
                 <p className="text-xs text-slate-500">
                   {dt("الصورة الأولى رئيسية. غيّر ترتيب الصور أو أضف صورة جديدة.")}
                 </p>
@@ -227,7 +227,7 @@ export function WorkspaceSettings({
                 className="space-y-3 rounded-xl border bg-white p-5"
               >
                 <legend className="px-2 text-sm font-semibold">
-                  {f.label}
+                  {dt(f.label)}
                 </legend>
                 {list.map((amount, index) => (
                   <label key={index} className="flex items-center gap-2">
@@ -235,7 +235,7 @@ export function WorkspaceSettings({
                       {dt("القيمة")} {index + 1}
                     </span>
                     <input
-                      aria-label={`${f.label} ${index + 1}`}
+                      aria-label={`${dt(f.label)} ${index + 1}`}
                       type="number"
                       min="1"
                       className={inputClass + " flex-1"}
@@ -294,7 +294,7 @@ export function WorkspaceSettings({
                 key={f.key}
                 className="flex items-center justify-between gap-3 rounded-xl border bg-white p-5"
               >
-                <span className="font-semibold">{f.label}</span>
+                <span className="font-semibold">{dt(f.label)}</span>
                 <input
                   type="checkbox"
                   role="switch"
@@ -311,7 +311,7 @@ export function WorkspaceSettings({
                 className="space-y-3 rounded-xl border bg-white p-5"
               >
                 <legend className="px-2 text-sm font-semibold">
-                  {f.label}
+                  {dt(f.label)}
                 </legend>
                 <div className="grid max-h-72 gap-2 overflow-auto sm:grid-cols-2">
                   {options.map((o) => (
@@ -347,7 +347,7 @@ export function WorkspaceSettings({
               key={f.key}
               className="block space-y-2 rounded-xl border bg-white p-5"
             >
-              <span className="text-sm font-semibold">{f.label}</span>
+              <span className="text-sm font-semibold">{dt(f.label)}</span>
               {f.type === "select" || f.type === "ids" ? (
                 <select
                   className={inputClass}
@@ -358,7 +358,7 @@ export function WorkspaceSettings({
                   {(f.options || options.map((o) => [o.id, o.title])).map(
                     ([key, label]) => (
                       <option key={key} value={key}>
-                        {label}
+                        {f.options ? dt(label) : label}
                       </option>
                     ),
                   )}

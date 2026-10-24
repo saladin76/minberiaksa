@@ -11,6 +11,11 @@ const require = createRequire(import.meta.url);
 const { documentFor } = require("../lib/content-editor/service.ts");
 const { CONTENT_KINDS } = require("../lib/content-editor/contracts.ts");
 const { EDITOR_SECTIONS } = require("../lib/content-editor/workspace.ts");
+const en = require("../lib/dashboard/i18n/catalog/en.json"), tr = require("../lib/dashboard/i18n/catalog/tr.json");
+const ui = (locale, text) => locale === "ar" ? text : ({en,tr}[locale][text] || text);
+const editorialFixture = {id:"222222222222222222222222",kind:"ARTICLE",status:"REVIEW",locale:"ar",title:"مقال للمراجعة",version:"review-1",createdAt:"2026-10-24T07:00:00.000Z",attempts:1,result:{values:{title:"عنوان للمراجعة",description:"ملخص للمراجعة",content:JSON.stringify({type:"doc",content:[{type:"paragraph",content:[{type:"text",text:"نص للمراجعة"}]}]})},research:{summary:"مصادر اختبار قابلة للمراجعة",sources:[{url:"https://example.org/source-one",title:"مصدر أول"},{url:"https://example.org/source-two",title:"مصدر ثان"}]}}};
+let editorialWrites = 0;
+const seoFixture = {key:"home",revision:"seo-1",overrides:{},defaults:{ar:{metaTitle:"الصفحة الرئيسية",metaDescription:"وصف افتراضي"}}};
 const css = (
   await postcss([
     tailwindcss({ ...require("../tailwind.config.ts").default, content: ["components/dashboard/content-editor/*.tsx", "app/(dashboard)/dashboard/campaigns/_components/*.tsx", "components/ui/*.tsx"] }),
@@ -38,7 +43,7 @@ const temp = path.resolve(process.env.CONTENT_EDITOR_ARTIFACTS || ".artifacts/co
 await mkdir(temp, { recursive: true });
 const bundle = await build({
   stdin: {
-    contents: `import React from "react"; import {createRoot} from "react-dom/client"; import {ContentEditor} from "./components/dashboard/content-editor/ContentEditor"; createRoot(document.getElementById("root")).render(<ContentEditor kind={new URLSearchParams(location.search).get("kind") || "categories"} id="${id}"/>);`,
+    contents: `import React from "react"; import {createRoot} from "react-dom/client"; import {ContentEditor} from "./components/dashboard/content-editor/ContentEditor"; import {PageSeoEditor} from "./components/dashboard/content-editor/PageSeoEditor"; import {EditorialPlanner} from "./components/dashboard/content-editor/EditorialPlanner"; const surface = new URLSearchParams(location.search).get("surface"); createRoot(document.getElementById("root")).render(surface === "seo" ? <PageSeoEditor/> : surface === "planner" ? <EditorialPlanner/> : <ContentEditor kind={new URLSearchParams(location.search).get("kind") || "categories"} id="${id}"/>);`,
     resolveDir: process.cwd(),
     loader: "tsx",
   },
@@ -82,7 +87,18 @@ const bundle = await build({
   ],
 });
 const server = createServer((req, res) => {
-  if (req.url?.startsWith("/api/super-categories/content-options")) {
+  if (req.url?.startsWith("/api/admin/page-seo/")) {
+    res.setHeader("Content-Type","application/json");
+    let body = "";req.on("data",chunk => body+=chunk);req.on("end",() => {
+      if (req.method === "POST") res.end(JSON.stringify({values:{metaTitle:"عنوان مقترح قابل للتحرير",metaDescription:"وصف مقترح"},research:{summary:"مراجعة مصادر الاختبار",sources:[{url:"https://example.org/research",title:"مصدر البحث"}]}}));
+      else res.end(JSON.stringify(seoFixture));
+    });
+  } else if (req.url?.startsWith("/api/admin/editorial-jobs")) {
+    res.setHeader("Content-Type","application/json");
+    if (req.method !== "GET") editorialWrites++;
+    const detail = req.url.split("?")[0].endsWith("/"+editorialFixture.id);
+    res.end(JSON.stringify(detail ? editorialFixture : {jobs:[editorialFixture],nextCursor:null,counts:[{status:"REVIEW",_count:1}],settings:{weeklyEnabled:true,market:"",configured:true}}));
+  } else if (req.url?.startsWith("/api/super-categories/content-options")) {
     res.setHeader("Content-Type","application/json");
     res.end(JSON.stringify({CAMPAIGN:[],POST:[],VIDEO:[],PLAYLIST:[],COURSE:[],REPORT:[],BOOKLET:[]}));
   } else if (req.url === "/test.css") {
@@ -297,6 +313,7 @@ try {
           }
         }
         await nav.nth(0).click();
+        if (locale !== "ar" && kind === "videos") { await nav.nth(0).click(); await view.getByText(ui(locale,"نوع الفيديو"),{exact:true}).waitFor(); assert.equal(await view.getByText("نوع الفيديو",{exact:true}).count(),0); }
         if (locale !== "ar") assert.equal(await view.getByRole("button", {name:"حفظ التغييرات",exact:true}).count(),0, "save control must be translated");
         if (locale === "ar") {
           // Also capture the section unique to each content kind.
@@ -317,13 +334,50 @@ try {
       }
     }
   }
-  await writeFile(path.join(temp,"verification.json"),JSON.stringify({snapshots,errors,saves,scope:"Real React editor, 11 content kinds × 3 interface languages × desktop/mobile. HTTP and Next routing/dynamic rich-editor integrations mocked; no production writes."},null,2));
+
+  const workflowScreens = [];
+  for (const locale of ["ar","en","tr"]) for (const surface of ["seo","planner"]) {
+    const view = await browser.newPage({viewport:{width:1440,height:1000}});
+    await view.context().addCookies([{name:"dash-locale",value:locale,url:origin}]);
+    view.on("pageerror",e => errors.push(surface + ": " + e.message));
+    try {
+      await view.goto(origin+"/?surface="+surface);
+      await view.getByRole("heading",{level:1}).waitFor();
+      if (surface === "seo") {
+        await view.getByRole("button",{name:ui(locale,"اقتراح SEO للغة الحالية"),exact:true}).click();
+        await view.getByRole("heading",{name:ui(locale,"مراجعة الاقتراح"),exact:true}).waitFor();
+        const proposed = view.getByLabel(ui(locale,"عنوان البحث"),{exact:true}).last();
+        await proposed.fill("عنوان اقتراح تمت مراجعته");
+        await view.getByRole("button",{name:ui(locale,"تطبيق الجميع في المسودة"),exact:true}).click();
+        assert.equal(await view.getByLabel(ui(locale,"عنوان البحث"),{exact:true}).first().inputValue(),"عنوان اقتراح تمت مراجعته");
+        assert.equal(await view.getByRole("heading",{name:ui(locale,"مراجعة الاقتراح"),exact:true}).count(),0);
+        assert.equal(await view.evaluate(() => !window.dispatchEvent(new Event("dashboard:check-unsaved-draft",{cancelable:true}))),true);
+      } else {
+        await view.getByRole("button",{name:ui(locale,"فتح المراجعة"),exact:true}).click();
+        await view.getByRole("dialog").waitFor();
+        const title = view.getByRole("dialog").getByLabel(ui(locale,"العنوان"),{exact:true});
+        await title.fill("عنوان بعد المراجعة");
+        assert.equal(editorialWrites,0,"opening and editing a review must never write content");
+      }
+      const prefix = locale+"-"+surface;
+      await view.screenshot({path:path.join(temp,prefix+"-desktop.png"),fullPage:true});
+      await view.setViewportSize({width:390,height:844});
+      assert.ok(await view.evaluate(() => document.documentElement.scrollWidth <= innerWidth+1),prefix+" mobile overflow");
+      await view.screenshot({path:path.join(temp,prefix+"-mobile.png"),fullPage:true});
+      workflowScreens.push(prefix);
+    } finally {
+      await view.screenshot({path:path.join(temp,"workflow-last-state.png"),fullPage:true}).catch(()=>{});
+      await view.close();
+    }
+  }
+
+  await writeFile(path.join(temp,"verification.json"),JSON.stringify({snapshots,workflowScreens,errors,saves,editorialWrites,scope:"Real React editor, 11 content kinds × 3 interface languages × desktop/mobile. HTTP and Next routing/dynamic rich-editor integrations mocked; no production writes."},null,2));
 
   assert.deepEqual(errors, []);
   console.log(
     JSON.stringify({
       checks: 16,
-      snapshots: snapshots.length * 2,
+      snapshots: (snapshots.length + workflowScreens.length) * 2,
       passed: true,
       screenshots: temp,
       scope:
