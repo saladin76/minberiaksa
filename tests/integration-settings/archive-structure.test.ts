@@ -18,5 +18,7 @@ test("archive APIs remain protected and the retired dashboard UI is removed", ()
   const api = readFileSync("app/api/admin/archive/uploaded-files/route.ts", "utf8");
   assert.match(api, /requireArchiveUploadedFileListAccess/);
   assert.match(api, /requireArchiveActionAccess\("archiveUpload"\)/);
-  assert.deepEqual(readdirSync("app/(dashboard)/dashboard/archive/_components"), []);
+  const retiredComponents = "app/(dashboard)/dashboard/archive/_components";
+  // Git omits empty directories, so a clean checkout has no directory here.
+  assert.deepEqual(existsSync(retiredComponents) ? readdirSync(retiredComponents) : [], []);
 });
