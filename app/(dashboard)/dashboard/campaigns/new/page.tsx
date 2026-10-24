@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useDashboardUnsavedChanges } from '@/hooks/useDashboardUnsavedChanges';
 import axios from 'axios';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
@@ -230,6 +231,12 @@ export default function NewCampaignPage() {
       ...localeDefaults(LOCALE_FIELDS),
     },
   });
+
+  useDashboardUnsavedChanges(
+    form.formState.isDirty ||
+    !isDescEmpty(descriptionAr) ||
+    Object.values(descriptions).some((value) => !isDescEmpty(value)),
+  );
 
   useEffect(() => {
     const fetchCategories = async () => {
@@ -771,7 +778,7 @@ const getTranslationStatus = () => {
 
                 </div>
 
-                <FormItem dir={dashDir()}>
+                <FormItem dir="rtl">
                   <FormLabel>{dt("وصف المشروع *")}</FormLabel>
                   <WysiwygEditor
                     defaultValue={parseEditorContent(descriptionAr)}

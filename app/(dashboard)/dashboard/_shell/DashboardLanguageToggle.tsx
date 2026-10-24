@@ -1,6 +1,8 @@
 'use client';
 
 import { Languages } from 'lucide-react';
+import { toast } from 'react-hot-toast';
+import { CHECK_DASHBOARD_DRAFT } from '@/hooks/useDashboardUnsavedChanges';
 
 import { cn } from '@/lib/utils';
 import { DASH_LOCALE_COOKIE, dt, getDashLocale, type DashLocale } from '@/lib/dashboard/i18n';
@@ -22,6 +24,11 @@ export function DashboardLanguageToggle() {
 
   const choose = (locale: DashLocale) => {
     if (locale === active) return;
+    const check = new Event(CHECK_DASHBOARD_DRAFT, { cancelable: true });
+    if (!window.dispatchEvent(check)) {
+      toast.error(dt('توجد تعديلات غير محفوظة. احفظها أو تراجع عنها قبل تغيير لغة لوحة التحكم.'));
+      return;
+    }
     document.cookie = `${DASH_LOCALE_COOKIE}=${locale}; path=/; max-age=31536000; samesite=lax`;
     window.location.reload();
   };

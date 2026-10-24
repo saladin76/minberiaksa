@@ -1,4 +1,5 @@
 "use client";
+import { useDashboardUnsavedChanges } from "@/hooks/useDashboardUnsavedChanges";
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
@@ -152,11 +153,9 @@ export function ContentEditor({ kind, id }: { kind: ContentKind; id: string }) {
         JSON.stringify(settingsFor(kind, document.settings)) ||
       uploads > 0
     : false;
+  useDashboardUnsavedChanges(dirty);
   useEffect(() => {
     if (!dirty) return;
-    const unload = (e: BeforeUnloadEvent) => {
-      e.preventDefault();
-    };
     const navigation = (e: MouseEvent) => {
       const link = (e.target as Element).closest?.("a[href]");
       if (link && !window.confirm("توجد تعديلات غير محفوظة. مغادرة المحرر؟")) {
@@ -164,10 +163,8 @@ export function ContentEditor({ kind, id }: { kind: ContentKind; id: string }) {
         e.stopPropagation();
       }
     };
-    window.addEventListener("beforeunload", unload);
     window.document.addEventListener("click", navigation, true);
     return () => {
-      window.removeEventListener("beforeunload", unload);
       window.document.removeEventListener("click", navigation, true);
     };
   }, [dirty]);
