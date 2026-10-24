@@ -1,4 +1,5 @@
 "use client";
+import { dt } from "@/lib/dashboard/i18n";
 import { useState, type ReactNode } from "react";
 import type { ContentField, TextValues } from "@/lib/content-editor/contracts";
 import { ImageUploadField } from "@/app/(dashboard)/dashboard/_components/ImageUploadField";
@@ -31,11 +32,11 @@ export function SeoWorkspace({
   const writeFaq = (next: Faq[]) =>
     onChange("faqContent", JSON.stringify(next));
   const checks = [
-    ["عنوان البحث", Boolean(values.seoTitle || values.metaTitle)],
-    ["وصف البحث", Boolean(description)],
-    ["وصف الصورة", Boolean(values.imageAlt)],
+    [dt("عنوان البحث"), Boolean(values.seoTitle || values.metaTitle)],
+    [dt("وصف البحث"), Boolean(description)],
+    [dt("وصف الصورة"), Boolean(values.imageAlt)],
     [
-      "العبارة المستهدفة",
+      dt("العبارة المستهدفة"),
       Boolean(
         values.seoKeyword &&
           [title, description].join(" ").includes(values.seoKeyword),
@@ -45,13 +46,13 @@ export function SeoWorkspace({
   return (
     <div className="space-y-5">
       <nav
-        aria-label="أقسام SEO"
+        aria-label={dt("أقسام SEO")}
         className="flex flex-wrap gap-2 rounded-xl border bg-white p-2"
       >
         {[
-          ["search", "محركات البحث"],
-          ["share", "المشاركة الاجتماعية"],
-          ["audit", "الفحوص والجاهزية"],
+          ["search", dt("محركات البحث")],
+          ["share", dt("المشاركة الاجتماعية")],
+          ["audit", dt("الفحوص والجاهزية")],
         ].map(([id, label]) => (
           <button
             type="button"
@@ -67,7 +68,7 @@ export function SeoWorkspace({
       {tab === "search" ? (
         <>
           <label className="block space-y-2 rounded-xl border bg-white p-5">
-            <span className="font-semibold">العبارة الرئيسية المستهدفة</span>
+            <span className="font-semibold">{dt("العبارة الرئيسية المستهدفة")}</span>
             <input
               className="w-full rounded-lg border p-3"
               value={values.seoKeyword || ""}
@@ -83,15 +84,15 @@ export function SeoWorkspace({
             .map(renderField)}
           <section className="rounded-xl border bg-white p-5">
             <h3 className="mb-4 font-semibold">
-              معاينة Google · {locale.toUpperCase()}
+              {dt("معاينة Google ·")} {locale.toUpperCase()}
             </h3>
             <p className="text-xl text-blue-800">{title}</p>
             <p className="mt-2 text-sm leading-7 text-slate-600">
-              {description || "أضف وصف نتيجة البحث"}
+              {description || dt("أضف وصف نتيجة البحث")}
             </p>
           </section>
           <label className="flex items-center justify-between gap-3 rounded-xl border bg-white p-5">
-            <span>السماح لمحركات البحث بفهرسة هذه اللغة</span>
+            <span>{dt("السماح لمحركات البحث بفهرسة هذه اللغة")}</span>
             <input
               type="checkbox"
               role="switch"
@@ -103,23 +104,22 @@ export function SeoWorkspace({
           </label>
           <section className="space-y-4 rounded-xl border bg-white p-5">
             <div className="flex justify-between">
-              <h3 className="font-semibold">الأسئلة الشائعة</h3>
+              <h3 className="font-semibold">{dt("الأسئلة الشائعة")}</h3>
               <button
                 type="button"
                 className="rounded border px-3 py-2 text-sm"
                 onClick={() => writeFaq([...faq, { q: "", a: "" }])}
               >
-                إضافة سؤال
+                {dt("إضافة سؤال")}
               </button>
             </div>
             <p className="text-xs leading-6 text-slate-500">
-              تُعرض الأسئلة المحفوظة في الصفحة، وتطابقها البيانات المنظمة. راجع
-              الحقائق قبل الحفظ.
+              {dt("تُعرض الأسئلة المحفوظة في الصفحة، وتطابقها البيانات المنظمة. راجع الحقائق قبل الحفظ.")}
             </p>
             {faq.map((item, i) => (
               <fieldset key={i} className="space-y-2 rounded-lg border p-3">
                 <label className="block text-sm">
-                  السؤال {i + 1}
+                  {dt("السؤال")} {i + 1}
                   <input
                     className="mt-2 w-full rounded border p-3"
                     value={item.q}
@@ -133,7 +133,7 @@ export function SeoWorkspace({
                   />
                 </label>
                 <label className="block text-sm">
-                  الإجابة
+                  {dt("الإجابة")}
                   <textarea
                     className="mt-2 w-full rounded border p-3"
                     rows={3}
@@ -151,14 +151,14 @@ export function SeoWorkspace({
                   <input type="checkbox" checked={item.structuredData !== false} onChange={(event) =>
                     writeFaq(faq.map((value, index) => index === i ? { ...value, structuredData: event.target.checked } : value))
                   } />
-                  تضمين هذا السؤال في البيانات المنظمة لمحركات البحث
+                  {dt("تضمين هذا السؤال في البيانات المنظمة لمحركات البحث")}
                 </label>
                 <button
                   type="button"
                   className="text-sm text-red-700"
                   onClick={() => writeFaq(faq.filter((_, n) => n !== i))}
                 >
-                  حذف السؤال من المسودة
+                  {dt("حذف السؤال من المسودة")}
                 </button>
               </fieldset>
             ))}
@@ -168,7 +168,7 @@ export function SeoWorkspace({
       {tab === "share" ? (
         <>
           <p className="rounded-xl bg-sky-50 p-4 text-sm">
-            عند ترك حقول المشاركة فارغة، تُستخدم إعدادات البحث لهذه اللغة.
+            {dt("عند ترك حقول المشاركة فارغة، تُستخدم إعدادات البحث لهذه اللغة.")}
           </p>
           {fields
             .filter((f) => ["ogTitle", "ogDescription"].includes(f.key))
@@ -176,7 +176,7 @@ export function SeoWorkspace({
           <section className="rounded-xl border bg-white p-5">
             <ImageUploadField
               onUploadingChange={onUploadingChange}
-              label="صورة المشاركة لهذه اللغة"
+              label={dt("صورة المشاركة لهذه اللغة")}
               value={values.ogImage || ""}
               onChange={(url) => onChange("ogImage", url)}
             />
@@ -193,7 +193,7 @@ export function SeoWorkspace({
             ) : null}
             <div className="space-y-2 p-5">
               <small className="text-slate-500">
-                معاينة Facebook وWhatsApp
+                {dt("معاينة Facebook وWhatsApp")}
               </small>
               <h3 className="font-bold">{values.ogTitle || title}</h3>
               <p className="text-sm text-slate-600">
@@ -205,21 +205,21 @@ export function SeoWorkspace({
       ) : null}
       {tab === "audit" ? (
         <section className="space-y-4 rounded-xl border bg-white p-5">
-          <h3 className="font-semibold">جاهزية تقنية وجودة تحريرية</h3>
+          <h3 className="font-semibold">{dt("جاهزية تقنية وجودة تحريرية")}</h3>
           <p className="text-sm text-slate-500">
-            اكتمال الحقول لا يضمن ترتيبًا في محركات البحث. راجع النص والمصادر.
+            {dt("اكتمال الحقول لا يضمن ترتيبًا في محركات البحث. راجع النص والمصادر.")}
           </p>
           {checks.map(([label, ok]) => (
             <div key={label} className="flex justify-between border-b py-3">
               <span>{label}</span>
               <span className={ok ? "text-emerald-700" : "text-amber-700"}>
-                {ok ? "متاح" : "يحتاج مراجعة"}
+                {ok ? dt("متاح") : dt("يحتاج مراجعة")}
               </span>
             </div>
           ))}
           <p className="text-sm">
-            عنوان البحث: {[...title].length} حرفًا · الوصف:{" "}
-            {[...description].length} حرفًا
+            {dt("عنوان البحث:")} {[...title].length} {dt("حرفًا · الوصف:")}{" "}
+            {[...description].length} {dt("حرفًا")}
           </p>
         </section>
       ) : null}

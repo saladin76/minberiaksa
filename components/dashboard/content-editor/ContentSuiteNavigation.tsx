@@ -25,6 +25,11 @@ const GROUPS = [
       { href: "/dashboard/blog", get label() { return dt("المقالات"); } },
       { href: "/dashboard/videos", get label() { return dt("الفيديوهات"); } },
       { href: "/dashboard/stories", get label() { return dt("القصص"); } },
+      { href: "/dashboard/playlists", get label() { return dt("برامجنا المصورة"); } },
+      { href: "/dashboard/courses", get label() { return dt("دوراتنا"); } },
+      { href: "/dashboard/reports", get label() { return dt("التقارير"); } },
+      { href: "/dashboard/booklets", get label() { return dt("الكتيبات"); } },
+      { href: "/dashboard/faqs", get label() { return dt("الأسئلة الشائعة"); } },
     ],
   },
   {
@@ -43,12 +48,12 @@ const GROUPS = [
 
 function groupForPath(pathname: string) {
   if (pathname.startsWith("/dashboard/campaigns") || pathname.startsWith("/dashboard/categories") || pathname.startsWith("/dashboard/super-categories")) return GROUPS[0];
-  if (pathname.startsWith("/dashboard/blog") || pathname.startsWith("/dashboard/videos") || pathname.startsWith("/dashboard/stories")) return GROUPS[1];
+  if (pathname.startsWith("/dashboard/blog") || pathname.startsWith("/dashboard/videos") || pathname.startsWith("/dashboard/stories") || ["/dashboard/playlists", "/dashboard/courses", "/dashboard/reports", "/dashboard/booklets", "/dashboard/faqs"].some((path) => pathname.startsWith(path))) return GROUPS[1];
   return GROUPS[2];
 }
 
 export function ContentSuiteNavigation() {
-  const pathname = usePathname();
+  const pathname = usePathname().replace(/^\/dashboard\/content\/([^/]+)\/.*$/, "/dashboard/$1");
   const group = groupForPath(pathname);
   const GroupIcon = group.icon;
 
