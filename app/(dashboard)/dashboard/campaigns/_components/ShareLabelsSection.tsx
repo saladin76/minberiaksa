@@ -38,6 +38,8 @@ export type ShareLabelsSectionRef = {
 };
 
 interface Props {
+  onDirty?: () => void;
+  activeLocale?: ShareLabelLocale;
   initialConfig?: ShareLabelsConfig | null;
 }
 
@@ -56,7 +58,7 @@ function buildInitialRows(cfg: ShareLabelsConfig | null | undefined): RowState {
 }
 
 export const ShareLabelsSection = forwardRef<ShareLabelsSectionRef, Props>(
-  function ShareLabelsSection({ initialConfig }, ref) {
+  function ShareLabelsSection({ initialConfig, onDirty, activeLocale }, ref) {
     const [rows, setRows] = useState<RowState>(() => buildInitialRows(initialConfig));
 
     const stableKey = useMemo(() => JSON.stringify(initialConfig ?? null), [initialConfig]);
@@ -71,6 +73,7 @@ export const ShareLabelsSection = forwardRef<ShareLabelsSectionRef, Props>(
     }));
 
     const update = (locale: ShareLabelLocale, key: "singular" | "plural", value: string) => {
+      onDirty?.();
       setRows((prev) => ({ ...prev, [locale]: { ...prev[locale], [key]: value } }));
     };
 
@@ -91,7 +94,7 @@ export const ShareLabelsSection = forwardRef<ShareLabelsSectionRef, Props>(
           <span className="text-[11px] font-semibold text-slate-500 text-start">{dt("المفرد")}</span>
           <span className="text-[11px] font-semibold text-slate-500 text-start">{dt("الجمع")}</span>
 
-          {LOCALE_META.map((meta) => (
+          {LOCALE_META.filter((meta) => !activeLocale || meta.code === activeLocale).map((meta) => (
             <Row
               key={meta.code}
               meta={meta}

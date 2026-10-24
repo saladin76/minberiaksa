@@ -784,3 +784,15 @@ for (const kind of ["videos", "playlists", "courses", "reports", "booklets", "fa
     assert.equal(db.read().fileUrl, initial.fileUrl);
   });
 }
+
+test("shared editor accepts native currency presets without accepting financial totals", () => {
+  const settings = validateWorkspaceSettings("campaigns", { goalType: "OPEN" }, {
+    suggestedDonations: { amounts: [20, 40], byCurrency: { TRY: [200, 400] }, cardAmounts: [20], defaultAmountUSD: 20 },
+    suggestedShareCounts: { counts: [1, 3], cardCounts: [1], priceByCurrency: { TRY: 500 } },
+    shareLabels: { ar: { singular: "وجبة", plural: "وجبات" }, en: { singular: "meal", plural: "meals" } },
+  });
+  assert.deepEqual((settings.suggestedDonations as ContentRecord).byCurrency, { TRY: [200, 400] });
+  assert.deepEqual((settings.suggestedShareCounts as ContentRecord).priceByCurrency, { TRY: 500 });
+  assert.equal((settings.shareLabels as Record<string, ContentRecord>).en.singular, "meal");
+  assert.throws(() => validateWorkspaceSettings("campaigns", { goalType: "OPEN" }, { currentAmount: 900 }));
+});

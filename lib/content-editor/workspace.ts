@@ -1,6 +1,7 @@
 import type { ContentKind, ContentRecord } from "./contracts";
 import { LOCALES, SUPPORTED_LOCALES } from "../locales";
 import { parseSuggestedDonations } from "../campaign/suggested-donations";
+import { parseShareLabels } from "../campaign/share-labels";
 import { parseSuggestedShareCounts } from "../campaign/campaign-modes";
 export type EditorSection = { id: string; label: string; icon: string };
 export const EDITOR_SECTIONS: Record<ContentKind, EditorSection[]> = {
@@ -64,7 +65,8 @@ export type SettingField = {
     | "numbers"
     | "ids"
     | "date"
-    | "select";
+    | "select"
+    | "custom";
   options?: [string, string][];
 };
 const field = (
@@ -103,6 +105,10 @@ export const SETTING_FIELDS: Record<ContentKind, SettingField[]> = {
   faqs: [field("page", "الصفحة", "content"), field("isActive", "نشط", "review", "boolean"), field("order", "الترتيب", "review", "number")],
 
   campaigns: [
+    field("suggestedDonations", "المبالغ حسب العملة", "donation", "custom"),
+    field("suggestedShareCounts", "الأسهم حسب العملة", "donation", "custom"),
+    field("shareLabels", "تسمية الوحدة", "donation", "custom"),
+    field("recommendedFrequency", "وتيرة التبرع المقترحة", "donation", "select", [["", "الافتراضي"], ["none", "بدون توصية"], ["once", "مرة واحدة"], ["monthly", "شهري"], ["friday", "كل جمعة"], ["daily", "يومي"]]),
     field("categoryIds", "التصنيفات", "content", "ids"),
     field("isActive", "المشروع نشط ويستقبل التبرعات", "content", "boolean"),
     field("goalType", "نوع الهدف", "donation", "select", [
@@ -209,6 +215,9 @@ export function settingsFor(
     ]),
   );
   if (kind === "campaigns") {
+    result.suggestedDonations = parseSuggestedDonations(row.suggestedDonations);
+    result.suggestedShareCounts = parseSuggestedShareCounts(row.suggestedShareCounts);
+    result.shareLabels = parseShareLabels(row.shareLabels) || {};
     result.defaultDonationAmounts = parseSuggestedDonations(
       row.suggestedDonations,
     ).amounts;

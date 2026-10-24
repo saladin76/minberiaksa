@@ -1,6 +1,12 @@
 "use client";
 import { toast } from "react-hot-toast";
 import { dashDir, dt } from "@/lib/dashboard/i18n";
+import { SuggestedDonationsSection, type SuggestedDonationsSectionRef } from "@/app/(dashboard)/dashboard/campaigns/_components/SuggestedDonationsSection";
+import { SuggestedShareCountsSection, type SuggestedShareCountsSectionRef } from "@/app/(dashboard)/dashboard/campaigns/_components/SuggestedShareCountsSection";
+import { ShareLabelsSection, type ShareLabelsSectionRef } from "@/app/(dashboard)/dashboard/campaigns/_components/ShareLabelsSection";
+import { parseSuggestedDonations } from "@/lib/campaign/suggested-donations";
+import { parseSuggestedShareCounts } from "@/lib/campaign/campaign-modes";
+import { parseShareLabels } from "@/lib/campaign/share-labels";
 import { readFaqDraft } from "@/lib/content-editor/faq";
 import { useDashboardUnsavedChanges } from "@/hooks/useDashboardUnsavedChanges";
 
@@ -108,6 +114,12 @@ const button =
 export function ContentEditor({ kind, id }: { kind: ContentKind; id: string }) {
   const router = useRouter();
   const creationKey = useRef(crypto.randomUUID());
+  const donationPresets = useRef<SuggestedDonationsSectionRef>(null);
+  const sharePresets = useRef<SuggestedShareCountsSectionRef>(null);
+  const unitLabels = useRef<ShareLabelsSectionRef>(null);
+  const [presetsDirty, setPresetsDirty] = useState(false);
+  const [presetEpoch, setPresetEpoch] = useState(0);
+  const markPresetsDirty = useCallback(() => setPresetsDirty(true), []);
   const url = `/api/admin/content-editor/${kind}/${id}`;
   const [document, setDocument] = useState<Document | null>(null);
   const [values, setValues] = useState<Record<string, TextValues>>({});
@@ -145,6 +157,7 @@ export function ContentEditor({ kind, id }: { kind: ContentKind; id: string }) {
       setDocument(data);
       setValues(data.values);
       setSettingsDraft(settingsFor(kind, data.settings));
+      setPresetsDirty(false); setPresetEpoch((epoch) => epoch + 1);
       setSelected(data.fields.filter((f) => !f.locked).map((f) => f.key));
       setMessage("");
     } catch (error) {
@@ -164,7 +177,7 @@ export function ContentEditor({ kind, id }: { kind: ContentKind; id: string }) {
     ? JSON.stringify(values) !== JSON.stringify(document.values) ||
       JSON.stringify(settingsDraft) !==
         JSON.stringify(settingsFor(kind, document.settings)) ||
-      uploads > 0
+      uploads > 0 || presetsDirty
     : false;
   useDashboardUnsavedChanges(dirty);
   useEffect(() => {
@@ -217,13 +230,13 @@ export function ContentEditor({ kind, id }: { kind: ContentKind; id: string }) {
                 JSON.stringify(v) !== JSON.stringify(document.values[code]),
             ),
           ),
-          settings: Object.fromEntries(
+          settings: { ...Object.fromEntries(
             Object.entries(settingsDraft).filter(
               ([key, v]) =>
                 JSON.stringify(v) !==
                 JSON.stringify(settingsFor(kind, document.settings)[key]),
             ),
-          ),
+          ), ...(kind === "campaigns" && presetsDirty ? { suggestedDonations: donationPresets.current?.getPayload(), suggestedShareCounts: sharePresets.current?.getPayload(), shareLabels: unitLabels.current?.getPayload() } : {}) },
         }),
       });
       const read = await api<Document>(id === "new" ? `/api/admin/content-editor/${kind}/${saved.id}` : url);
@@ -234,6 +247,7 @@ export function ContentEditor({ kind, id }: { kind: ContentKind; id: string }) {
       setDocument(read);
       setValues(read.values);
       setSettingsDraft(settingsFor(kind, read.settings));
+      setPresetsDirty(false); setPresetEpoch((epoch) => epoch + 1);
       setProposal(null);
       setReviewed(false);
       setMessage(dt("تم الحفظ والتحقق من النسخة المحفوظة"));
@@ -419,6 +433,7 @@ export function ContentEditor({ kind, id }: { kind: ContentKind; id: string }) {
     if (!dirty || window.confirm(dt("التراجع عن كل التعديلات غير المحفوظة؟"))) {
       setValues(document.values);
       setSettingsDraft(settingsFor(kind, document.settings));
+                setPresetsDirty(false); setPresetEpoch((epoch) => epoch + 1);
       setProposal(null);
       setReviewed(false);
     }
@@ -960,6 +975,13 @@ export function ContentEditor({ kind, id }: { kind: ContentKind; id: string }) {
               locale={locale}
             />
           ) : null}
+          {kind === "campaigns" ? <div hidden={section !== "donation"} inert={busy === "save" || busy === "slug"} className="space-y-5">
+            <div hidden={liveSettings.fundraisingMode === "SHARES"}><SuggestedDonationsSection key={"donations-" + presetEpoch} ref={donationPresets} initialConfig={parseSuggestedDonations(document.settings.suggestedDonations)} onDirty={markPresetsDirty} /></div>
+            <div hidden={liveSettings.fundraisingMode !== "SHARES"} className="space-y-5">
+              <SuggestedShareCountsSection key={"shares-" + presetEpoch} ref={sharePresets} initialConfig={parseSuggestedShareCounts(document.settings.suggestedShareCounts)} onDirty={markPresetsDirty} />
+              <ShareLabelsSection key={"units-" + presetEpoch} ref={unitLabels} initialConfig={parseShareLabels(document.settings.shareLabels)} onDirty={markPresetsDirty} activeLocale={locale as keyof typeof LOCALES} />
+            </div>
+          </div> : null}
           {section === "donation" ? (
             <section className="rounded-xl border bg-white p-5">
               <h3 className="font-bold">{dt("المبلغ المحصّل")}</h3>

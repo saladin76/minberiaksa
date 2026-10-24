@@ -1,3 +1,6 @@
+import { parseSuggestedDonations } from "../campaign/suggested-donations";
+import { parseSuggestedShareCounts } from "../campaign/campaign-modes";
+import { parseShareLabels } from "../campaign/share-labels";
 import { settingsFields } from "./workspace";
 import { SUPPORTED_LOCALES } from "../locales";
 import { parseIstanbulSchedule, validateSchedule, safeEditorUrl } from "./urls";
@@ -15,6 +18,11 @@ export function validateWorkspaceSettings(
   const result: ContentRecord = {};
   for (const [key, value] of Object.entries(input)) {
     const spec = settingsFields(kind, row).find((f) => f.key === key);
+    if (kind === "campaigns" && ["suggestedDonations", "suggestedShareCounts", "shareLabels"].includes(key)) {
+      if (!value || typeof value !== "object" || Array.isArray(value) || JSON.stringify(value).length > 16000) throw new Error("إعدادات المبالغ أو الوحدات غير صالحة");
+      result[key] = key === "suggestedDonations" ? parseSuggestedDonations(value) : key === "suggestedShareCounts" ? parseSuggestedShareCounts(value) : parseShareLabels(value) || {};
+      continue;
+    }
     if ((["playlists", "courses"].includes(kind) && key === "videos") || (kind === "super-categories" && ["blocks", "items"].includes(key)))
       continue;
     if (!spec) throw new Error("إعداد غير مسموح: " + key);

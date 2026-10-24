@@ -51,13 +51,14 @@ export type SuggestedShareCountsSectionRef = {
 };
 
 type Props = {
+  onDirty?: () => void;
   initialConfig?: SuggestedShareCountsConfig | null;
 };
 
 export const SuggestedShareCountsSection = forwardRef<
   SuggestedShareCountsSectionRef,
   Props
->(function SuggestedShareCountsSection({ initialConfig }, ref) {
+>(function SuggestedShareCountsSection({ initialConfig, onDirty }, ref) {
   const [countsStr, setCountsStr] = useState(
     () => DEFAULT_SUGGESTED_SHARE_COUNTS.join(", ")
   );
@@ -131,7 +132,7 @@ export const SuggestedShareCountsSection = forwardRef<
           {dt("أعداد الأسهم المقترحة")}</Label>
         <Input
           value={countsStr}
-          onChange={(e) => setCountsStr(e.target.value)}
+          onChange={(e) => {onDirty?.(); return (setCountsStr(e.target.value));}}
           placeholder="1, 5, 10, 25, 50"
           dir="ltr"
           className="font-mono text-sm"
@@ -151,7 +152,7 @@ export const SuggestedShareCountsSection = forwardRef<
               <button
                 key={value}
                 type="button"
-                onClick={() => toggleCard(value)}
+                onClick={() => {onDirty?.(); return (toggleCard(value));}}
                 disabled={full}
                 aria-pressed={on}
                 className={[
@@ -178,7 +179,7 @@ export const SuggestedShareCountsSection = forwardRef<
             type="button"
             variant="outline"
             size="sm"
-            onClick={addPriceRow}
+            onClick={() => { onDirty?.(); addPriceRow(); }}
             className="gap-1"
           >
             <Plus className="w-4 h-4" />
@@ -199,7 +200,7 @@ export const SuggestedShareCountsSection = forwardRef<
                   <Select
                     value={row.currency}
                     onValueChange={(v) =>
-                      updatePriceRow(row.id, { currency: v })
+                      {onDirty?.(); return (updatePriceRow(row.id, { currency: v }));}
                     }
                   >
                     <SelectTrigger className="mt-1" dir="ltr">
@@ -225,7 +226,7 @@ export const SuggestedShareCountsSection = forwardRef<
                     dir="ltr"
                     value={row.priceStr}
                     onChange={(e) =>
-                      updatePriceRow(row.id, { priceStr: e.target.value })
+                      {onDirty?.(); return (updatePriceRow(row.id, { priceStr: e.target.value }));}
                     }
                     placeholder={dt("مثال: 100")}
                   />
@@ -235,7 +236,7 @@ export const SuggestedShareCountsSection = forwardRef<
                   variant="ghost"
                   size="icon"
                   className="shrink-0 text-destructive"
-                  onClick={() => removePriceRow(row.id)}
+                  onClick={() => {onDirty?.(); return (removePriceRow(row.id));}}
                   aria-label={dt("حذف الصف")}
                 >
                   <Trash2 className="w-4 h-4" />

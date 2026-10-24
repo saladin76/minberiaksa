@@ -88,6 +88,8 @@ export function WorkspaceSettings({
         .filter(
           (f) =>
             f.section === section &&
+            f.type !== "custom" &&
+            !(kind === "campaigns" && ["defaultDonationAmounts", "defaultShareCounts"].includes(f.key)) &&
             !(
               kind === "campaigns" &&
               ((settings.goalType === "OPEN" && f.key === "targetAmount") ||
