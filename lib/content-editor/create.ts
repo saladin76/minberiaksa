@@ -76,7 +76,7 @@ export async function createWorkspace(db: Store, input: {
     const saved = await saveWorkspace(tx, {
       kind, id, revision: fingerprint(row), locale: input.locale, changes: input.locale === "ar" ? source : input.changes,
       localeChanges: { ...input.localeChanges, ar: source },
-      ...(kind === "super-categories" ? { settings: input.settings } : {}),
+      ...(["super-categories", "playlists", "courses"].includes(kind) ? { settings: input.settings } : {}),
     });
     await tx.model("contentCreationRequest").create({ data: { id: input.creationKey, kind, contentId: id, fingerprint: requestFingerprint } });
     return saved;

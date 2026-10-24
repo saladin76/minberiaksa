@@ -12,6 +12,7 @@ import { slugFor } from "@/lib/minbar/routes";
 import dynamic from "next/dynamic";
 import { EditorModal } from "./EditorModal";
 import { DocumentUploadField } from "./DocumentUploadField";
+import { MediaCollectionEditor } from "./MediaCollectionEditor";
 import { ProgrammeWorkspace } from "./ProgrammeWorkspace";
 import { WorkspacePreview } from "./WorkspacePreview";
 import { WorkspaceSettings, useEditorCatalog } from "./WorkspaceSettings";
@@ -945,6 +946,9 @@ export function ContentEditor({ kind, id }: { kind: ContentKind; id: string }) {
                   </Link>
                 ))}
             </section>
+          ) : null}
+          {["playlists", "courses"].includes(kind) && section === "media" ? (
+            <MediaCollectionEditor kind={kind as "playlists" | "courses"} values={Array.isArray(settingsDraft.videos) ? settingsDraft.videos as ContentRecord[] : []} onChange={(videos) => setSettingsDraft((previous) => ({ ...previous, videos }))} />
           ) : null}
           {section === "seo" ? (
             <SeoWorkspace

@@ -241,6 +241,7 @@ export function settingsFor(
       ? row.items.map((i) => ({ kind: i.kind, refId: i.refId, order: i.order }))
       : [];
   }
+  if (["playlists", "courses"].includes(kind)) result.videos = Array.isArray(row.videos) ? row.videos : [];
   return result;
 }
 const CATEGORY_PAGE_SETTINGS: SettingField[] = [

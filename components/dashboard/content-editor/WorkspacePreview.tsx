@@ -1,6 +1,8 @@
 "use client";
 import Image from "next/image";
 import { useState } from "react";
+import { dt } from "@/lib/dashboard/i18n";
+import { describeVideoSource } from "@/lib/content/video-platform";
 import type {
   ContentKind,
   ContentRecord,
@@ -35,9 +37,10 @@ export function WorkspacePreview({
   expanded?: boolean;
 }) {
   const [mobile, setMobile] = useState(false);
-  const title = values.title || values.name || source.title || source.name;
+  const title = values.title || values.name || values.question || source.title || source.name || source.question;
   const body = plain(
-    values.description ||
+    values.answer ||
+      values.description ||
       values.intro ||
       values.content ||
       source.description ||
@@ -47,7 +50,7 @@ export function WorkspacePreview({
   const image = String(
     (Array.isArray(settings.images)
       ? settings.images[0]
-      : settings.heroImage || settings.image) || "",
+      : settings.heroImage || settings.image || settings.coverImage || settings.thumbnail) || "",
   );
   if (kind === "urgent-banners")
     return (
@@ -59,6 +62,7 @@ export function WorkspacePreview({
         expanded={expanded}
       />
     );
+  const media = describeVideoSource({ url: String(settings.url || settings.youtubeId || settings.introVideoUrl || settings.introVideoId || "") });
   const goal = Number(settings.targetAmount || 0),
     raised = Number(settings.currentAmount || 0),
     open = settings.goalType === "OPEN" || goal <= 0;
@@ -116,6 +120,7 @@ export function WorkspacePreview({
           >
             {body || "أضف وصفًا لهذه اللغة"}
           </p>
+          {media.embedUrl ? <iframe title={title || dt("معاينة الفيديو")} src={media.embedUrl} allowFullScreen loading="lazy" referrerPolicy="strict-origin-when-cross-origin" className="aspect-video w-full rounded-lg border-0" /> : media.directVideo && media.watchUrl ? <video src={media.watchUrl} controls preload="metadata" className="aspect-video w-full rounded-lg" /> : media.watchUrl ? <a href={media.watchUrl} target="_blank" rel="noopener noreferrer">{dt("معاينة الفيديو")}</a> : null}
           {kind === "campaigns" ? (
             <>
               <div className="flex justify-between gap-2 border-t pt-4">

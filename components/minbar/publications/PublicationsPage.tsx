@@ -2,7 +2,7 @@
 
 import { useLocale, useTranslations } from "next-intl";
 import type { CmsDocument } from "@/lib/minbar/cms";
-import { localeDirection } from "@/lib/locales";
+import { localeDirection, LOCALES, type SupportedLocale } from "@/lib/locales";
 
 /**
  * Our publications  ported from `Minbar/كتيبات المؤسسة.dc.html`.
@@ -67,18 +67,19 @@ export default function PublicationsPage({ booklets }: { booklets: CmsDocument[]
                 </span>
                 {/* A book title and an author's name keep their own script and
                     direction whatever language the page is read in. */}
-                <b dir="rtl" style={{ fontSize: 15, lineHeight: 1.5, unicodeBidi: "isolate" }}>{booklet.title}</b>
+                <b dir={dir} style={{ fontSize: 15, lineHeight: 1.5, unicodeBidi: "isolate" }}>{booklet.title}</b>
                 {booklet.author ? <span dir="rtl" style={{ color: "var(--gold)", fontSize: 13, fontWeight: 800, unicodeBidi: "isolate" }}>{booklet.author}</span> : null}
                 {booklet.description ? <span style={{ color: "var(--muted)", fontSize: 13, lineHeight: 1.8 }}>{booklet.description}</span> : null}
 
                 <span style={{ display: "flex", alignItems: "center", gap: 14, fontSize: 12.5, color: "var(--muted)", fontWeight: 700, paddingTop: 10, borderTop: "1px solid var(--border)" }}>
                   <span>{t("bookletFormatPdf")}</span>
-                  <span style={{ marginInlineStart: "auto" }}>{t("bookletLanguageArabic")}</span>
+                  <span style={{ marginInlineStart: "auto" }}>{booklet.fileLocale ? LOCALES[booklet.fileLocale as SupportedLocale]?.nativeLabel || booklet.fileLocale : ""}</span>
                 </span>
 
                 <span style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
                   <a
                     href={booklet.fileUrl}
+                    hrefLang={booklet.fileLocale || undefined}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="bk-read"
@@ -92,6 +93,7 @@ export default function PublicationsPage({ booklets }: { booklets: CmsDocument[]
                   </a>
                   <a
                     href={booklet.fileUrl}
+                    hrefLang={booklet.fileLocale || undefined}
                     download
                     className="bk-dl"
                     style={{ flex: "0 0 auto", height: 40, padding: "0 13px", display: "inline-flex", alignItems: "center", gap: 7, borderRadius: 10, border: "1px solid var(--border)", fontWeight: 800, fontSize: 13, color: "var(--deep)" }}

@@ -59,6 +59,7 @@ export function fingerprint(value: unknown): string {
 export function includeFor(kind: ContentKind) {
   return {
     translations: true,
+    ...(["playlists", "courses"].includes(kind) ? { videos: { orderBy: { order: "asc" } } } : {}),
     ...(kind === "campaigns" && HAS_IMPACT_BACKING_CAMPAIGNS
       ? { impactCampaign: { select: { id: true } } }
       : {}),
@@ -361,13 +362,13 @@ export async function saveWorkspace(
     let revision = input.revision;
     const locales = { ...input.localeChanges, [input.locale]: input.changes };
     const scalarSettings =
-      input.kind === "super-categories" &&
+      ["super-categories", "playlists", "courses"].includes(input.kind) &&
       input.settings &&
       typeof input.settings === "object" &&
       !Array.isArray(input.settings)
         ? Object.fromEntries(
             Object.entries(input.settings).filter(
-              ([key]) => !["blocks", "items"].includes(key),
+              ([key]) => !["blocks", "items", "videos"].includes(key),
             ),
           )
         : input.settings;

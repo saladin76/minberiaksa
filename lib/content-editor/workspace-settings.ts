@@ -15,7 +15,7 @@ export function validateWorkspaceSettings(
   const result: ContentRecord = {};
   for (const [key, value] of Object.entries(input)) {
     const spec = settingsFields(kind, row).find((f) => f.key === key);
-    if (kind === "super-categories" && ["blocks", "items"].includes(key))
+    if ((["playlists", "courses"].includes(kind) && key === "videos") || (kind === "super-categories" && ["blocks", "items"].includes(key)))
       continue;
     if (!spec) throw new Error("إعداد غير مسموح: " + key);
     if (spec.type === "boolean") {
