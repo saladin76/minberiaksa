@@ -869,6 +869,9 @@ model Donation {
   /// The documents issued for this donation once payment was confirmed.
   certificates      Certificate[]
   receipt           DonationReceipt?
+
+  @@index([donorId, status, paidAt])
+  @@index([status, paidAt, donorId])
 }
 
 model Subscription {
@@ -950,6 +953,7 @@ model Subscription {
   items         SubscriptionItem[]
   categoryItems SubscriptionCategoryItem[]
   donations     Donation[]
+  @@index([donorId, status])
 }
 
 model SubscriptionItem {
@@ -1019,6 +1023,8 @@ model DonationItem {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  @@index([donationId, campaignId])
+  @@index([campaignId, donationId])
 }
 
 model DonationCategoryItem {

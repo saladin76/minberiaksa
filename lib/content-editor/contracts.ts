@@ -377,6 +377,7 @@ export function validateChanges(
             !x ||
             typeof x.q !== "string" ||
             typeof x.a !== "string" ||
+            (x.structuredData !== undefined && typeof x.structuredData !== "boolean") ||
             x.q.length > 500 ||
             x.a.length > 5000,
         )

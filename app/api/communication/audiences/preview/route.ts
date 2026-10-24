@@ -10,6 +10,7 @@ import {
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+export const maxDuration = 120;
 
 export async function POST(request: NextRequest) {
   const session = await getServerSession(authOptions);
@@ -39,7 +40,10 @@ export async function POST(request: NextRequest) {
     const definition = normalizeSmartAudienceDefinition(body.definition ?? body, channel);
     const preview = await previewSmartAudience(definition, 50, request.signal);
     return NextResponse.json({ ok: true, definition, ...preview });
-  } catch {
+  } catch (error) {
+    // Database codes aid diagnosis without exposing donor data or connection URLs.
+    const code = error && typeof error === "object" && "code" in error ? String(error.code) : "UNKNOWN";
+    console.error("audience-preview-read-failed", { code, aborted: request.signal.aborted });
     return NextResponse.json(
       { ok: false, error: "تعذّر حساب الجمهور. أعد المحاولة؛ لم يتم إرجاع أعداد ناقصة أو استبعاد أي سجل بسبب خطأ القراءة." },
       { status: 503 },
