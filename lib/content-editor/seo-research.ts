@@ -144,6 +144,7 @@ export async function generateResearchedSeo(input: {
       "You are a senior SEO strategist and humanitarian fundraising copywriter.",
       "Research the web first, then create professional SEO suggestions for a nonprofit donation website.",
       "Use natural human wording. Do not mention AI, models, generation, or automation.",
+      "Do not claim measured search volumes, rankings, trends, or most-searched keywords. Provide qualitative intent guidance unless verified metric data is supplied.",
       `Write every suggested human-facing field in ${languageName}. Do not return English copy unless the target language is English or a proper noun genuinely requires it.`,
       `Use the requested language and market context (${market}); do not infer a country if the market was not specified. Localize search intent; do not translate keywords word-for-word.`,
       "Use web research to discover relevant terminology, user questions, and trustworthy context. Return a concise researchSummary, evidence-backed searchQueries, and questionsOnlyWhenSupported.",

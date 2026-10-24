@@ -13,9 +13,9 @@ import {
 } from "@/lib/content-editor/contracts";
 import { contentStore } from "@/lib/content-editor/store";
 import { fingerprint, readContent } from "@/lib/content-editor/service";
-import { translateToLocales } from "@/lib/content-localization/translate";
+import { translateResearchedItem } from "@/lib/content-localization/research-translate";
 import { isValidLocale } from "@/lib/locales";
-export const maxDuration = 120;
+export const maxDuration = 300;
 export const dynamic = "force-dynamic";
 export async function POST(
   request: NextRequest,
@@ -45,7 +45,7 @@ export async function POST(
       if (
         !Array.isArray(body.locales) ||
         !body.locales.length ||
-        body.locales.length > 18 ||
+        body.locales.length !== 1 ||
         body.locales.some(
           (l: unknown) =>
             typeof l !== "string" || !isValidLocale(l) || l === "ar",
@@ -69,7 +69,8 @@ export async function POST(
           { error: "لا يوجد نص قابل للترجمة" },
           { status: 400 },
         );
-      const result = await translateToLocales(
+      const target = body.locales[0] as string;
+      const researched = await translateResearchedItem(
         {
           fields: {
             ...Object.fromEntries(selected.filter((f) => !f.rich && f.key !== "faqContent").map((f) => [f.key, source[f.key]])),
@@ -81,8 +82,11 @@ export async function POST(
           itemLabel: CONFIG[kind].label,
           sourceLocale: "ar",
         },
-        [...new Set(body.locales as string[])],
+        target,
+        request.signal,
+        typeof body.market === "string" ? body.market : undefined,
       );
+      const result = { translations: { [target]: researched.translation }, errors: {} };
       return NextResponse.json(
         {
           id,
@@ -99,6 +103,7 @@ export async function POST(
                   ...(selected.some((field) => field.key === "faqContent") && translatedFaq(source.faqContent, t.fields)
                     ? { faqContent: translatedFaq(source.faqContent, t.fields)! } : {}),
                 },
+                research: researched.research,
                 warnings: [
                   ...t.warnings,
                   ...selected
@@ -131,7 +136,7 @@ export async function POST(
     const generated = await generateResearchedSeo({
       type: kind === "blog" ? "blog" : kind === "categories" || kind === "super-categories" ? "category" : "campaign",
       locale: body.locale,
-      title: values.title || values.name || "",
+      title: values.title || values.name || values.question || "",
       description: context.map((field) => values[field.key]).join("\n"),
       keywords: values.seoKeyword ? [values.seoKeyword] : [],
     }, request.signal);
