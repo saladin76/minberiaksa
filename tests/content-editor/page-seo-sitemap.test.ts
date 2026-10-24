@@ -23,3 +23,11 @@ test("metadata alternates exclude a hidden language on every other edition too",
   assert.deepEqual(filterPageSeoLanguages({ ar: "/ar", en: "/en", fr: "/fr", "x-default": "/en" }, { en: { seoNoIndex: "true" } }), { ar: "/ar", fr: "/fr", "x-default": "/ar" });
   assert.deepEqual(filterPageSeoLanguages({ ar: "/ar", "x-default": "/ar" }, { ar: { seoNoIndex: "true" } }), {});
 });
+
+
+test("an explicitly empty locale list never falls back to all public languages", async () => {
+  const { buildLocalizedAlternates } = await import("../../lib/seo");
+  const result = buildLocalizedAlternates({basePath:"/blog",baseSlug:"article",fallback:"id",currentLocale:"en",availableLocales:[]});
+  assert.deepEqual(result.languages,{});
+  assert.ok(result.canonical.endsWith("/en/blog/article"));
+});

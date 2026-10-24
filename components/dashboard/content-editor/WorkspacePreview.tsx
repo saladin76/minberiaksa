@@ -62,7 +62,7 @@ export function WorkspacePreview({
         expanded={expanded}
       />
     );
-  const media = describeVideoSource({ url: String(settings.url || settings.youtubeId || settings.introVideoUrl || settings.introVideoId || "") });
+  const media = describeVideoSource({ url: String(values.videoUrl || source.videoUrl || settings.videoUrl || settings.url || settings.youtubeId || settings.introVideoUrl || settings.introVideoId || settings.heroVideoYoutubeId || ""), startSeconds: Number(settings.startSeconds || 0) });
   const goal = Number(settings.targetAmount || 0),
     raised = Number(settings.currentAmount || 0),
     open = settings.goalType === "OPEN" || goal <= 0;
@@ -120,7 +120,7 @@ export function WorkspacePreview({
           >
             {body || dt("أضف وصفًا لهذه اللغة")}
           </p>
-          {media.embedUrl ? <iframe title={title || dt("معاينة الفيديو")} src={media.embedUrl} allowFullScreen loading="lazy" referrerPolicy="strict-origin-when-cross-origin" className="aspect-video w-full rounded-lg border-0" /> : media.directVideo && media.watchUrl ? <video src={media.watchUrl} controls preload="metadata" className="aspect-video w-full rounded-lg" /> : media.watchUrl ? <a href={media.watchUrl} target="_blank" rel="noopener noreferrer">{dt("معاينة الفيديو")}</a> : null}
+          {media.directVideo && media.watchUrl ? <video src={media.watchUrl} controls preload="metadata" className="aspect-video w-full rounded-lg" /> : media.embedUrl ? <iframe title={title || dt("معاينة الفيديو")} src={media.embedUrl} allowFullScreen loading="lazy" referrerPolicy="strict-origin-when-cross-origin" className="aspect-video w-full rounded-lg border-0" /> : media.watchUrl ? <a href={media.watchUrl} target="_blank" rel="noopener noreferrer">{dt("معاينة الفيديو")}</a> : null}
           {kind === "campaigns" ? (
             <>
               <div className="flex justify-between gap-2 border-t pt-4">

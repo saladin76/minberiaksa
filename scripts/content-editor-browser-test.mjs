@@ -82,7 +82,10 @@ const bundle = await build({
   ],
 });
 const server = createServer((req, res) => {
-  if (req.url === "/test.css") {
+  if (req.url?.startsWith("/api/super-categories/content-options")) {
+    res.setHeader("Content-Type","application/json");
+    res.end(JSON.stringify({CAMPAIGN:[],POST:[],VIDEO:[],PLAYLIST:[],COURSE:[],REPORT:[],BOOKLET:[]}));
+  } else if (req.url === "/test.css") {
     res.setHeader("Content-Type", "text/css");
     res.end(css);
   } else if (req.url === "/bundle.js") {
@@ -281,6 +284,7 @@ try {
       try {
         await view.goto(origin + "/?kind=" + kind);
         await view.getByRole("heading", {level:1}).waitFor();
+        if (kind === "videos") { assert.equal(await view.locator("video").count(),1,"MP4 must use the native video player"); assert.equal(await view.locator("iframe").count(),0); }
         const nav = view.locator("nav:has(button[aria-current]) > button");
         for (let i=0; i<EDITOR_SECTIONS[kind].length; i++) {
           await nav.nth(i).click();
@@ -300,6 +304,7 @@ try {
           const index = EDITOR_SECTIONS[kind].findIndex((x) => x.id === target);
           if (index >= 0) await nav.nth(index).click();
         }
+        assert.equal(await view.getByRole("alert").count(),0, locale + "/" + kind + " unexpected error");
         const prefix = locale + "-" + kind;
         await view.screenshot({path:path.join(temp,prefix+"-desktop.png"),fullPage:true});
         await view.setViewportSize({width:390,height:844});

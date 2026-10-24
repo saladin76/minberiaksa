@@ -575,7 +575,7 @@ export function ContentEditor({ kind, id }: { kind: ContentKind; id: string }) {
           <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-slate-500">
             <span>{dirty ? dt("تعديلات غير محفوظة") : dt("محفوظ")}</span>
             <span>
-              {done} / {SUPPORTED_LOCALES.length - 1} {dt("ترجمات مكتملة")}
+              <bdi>{done} / {SUPPORTED_LOCALES.length - 1}</bdi> {dt("ترجمات مكتملة")}
             </span>
             <span>{SUPPORTED_LOCALES.length - 1 - done} {dt("تحتاج ترجمة")}</span>
           </div>
@@ -859,7 +859,7 @@ export function ContentEditor({ kind, id }: { kind: ContentKind; id: string }) {
             : null}
           {catalogError ? (
             <p role="alert" className="text-sm text-red-700">
-              {catalogError}
+              {dtMaybe(catalogError)}
             </p>
           ) : null}
           {kind === "super-categories" &&

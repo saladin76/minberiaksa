@@ -1,6 +1,6 @@
 "use client";
 import { CategoryIconPicker } from "@/app/(dashboard)/dashboard/categories/_components/CategoryIconPicker";
-import { dt } from "@/lib/dashboard/i18n";
+import { dt, dtMaybe } from "@/lib/dashboard/i18n";
 import { useEffect, useState } from "react";
 import { DocumentUploadField } from "./DocumentUploadField";
 import { ImageUploadField } from "@/app/(dashboard)/dashboard/_components/ImageUploadField";
@@ -54,7 +54,7 @@ export function useEditorCatalog(kind: ContentKind) {
       })
       .catch((e) => {
         if (!controller.signal.aborted)
-          setError(e.message || dt("تعذر تحميل القوائم"));
+          setError(dtMaybe(e.message || dt("تعذر تحميل القوائم")));
       });
     return () => controller.abort();
   }, [kind]);
