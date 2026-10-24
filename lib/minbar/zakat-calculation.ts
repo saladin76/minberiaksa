@@ -15,6 +15,9 @@ export function calculateZakat(
   mode: "gold" | "silver",
 ) {
   const amount = (raw: string | undefined) => {
+    // The general amount parser removes punctuation, including a minus sign.
+    // Negative assets must not become positive before clamping.
+    if (/^\s*[-−]/.test(raw ?? "")) return 0;
     const value = parseAmount(raw ?? "");
     return Number.isFinite(value) ? Math.max(0, value) : 0;
   };
