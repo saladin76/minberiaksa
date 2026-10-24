@@ -29,7 +29,7 @@ export function CategoryStructureEditor({ settings, locale, values, onChange, on
       <h3 className="font-bold">{dt(group === "values" ? "قيم التصنيف" : "البطاقات التعريفية")}</h3>
       {list(group).map((item, index) => {
         const rowKey = String(item.id || item.draftKey || index);
-        const translation = locale === "ar" ? item : item.id ? {} : (item.translations as Record<string, ContentRecord> || {})[locale] || {};
+        const translation: ContentRecord = locale === "ar" ? item : item.id ? {} : (item.translations as Record<string, ContentRecord> || {})[locale] || {};
         return <fieldset key={rowKey} className="space-y-3 rounded border p-4" dir={LOCALES[locale as SupportedLocale]?.direction || "rtl"}>
           <legend className="px-2 text-sm">{index + 1}</legend>
           {(group === "values" ? ["label"] : ["title", "body"]).map((field) => <label key={field} className="block space-y-1 text-sm"><span>{dt(field === "label" ? "النص" : field === "title" ? "العنوان" : "المحتوى")}</span>

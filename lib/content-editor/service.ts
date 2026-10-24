@@ -362,6 +362,7 @@ export async function saveWorkspace(
     const original = await readContent(tx, input.kind, input.id);
     let revision = input.revision;
     const locales = { ...input.localeChanges, [input.locale]: input.changes };
+    const relationKeys = input.kind === "super-categories" ? ["blocks", "items"] : input.kind === "categories" ? ["values", "infoCards"] : ["videos"];
     const scalarSettings =
       ["super-categories", "playlists", "courses", "categories"].includes(input.kind) &&
       input.settings &&
@@ -369,7 +370,7 @@ export async function saveWorkspace(
       !Array.isArray(input.settings)
         ? Object.fromEntries(
             Object.entries(input.settings).filter(
-              ([key]) => !["blocks", "items", "videos", "values", "infoCards"].includes(key),
+              ([key]) => !relationKeys.includes(key),
             ),
           )
         : input.settings;
