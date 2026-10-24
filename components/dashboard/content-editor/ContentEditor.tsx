@@ -6,6 +6,7 @@ import { useDashboardUnsavedChanges } from "@/hooks/useDashboardUnsavedChanges";
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { slugify } from "@/lib/slug";
 import { slugFor } from "@/lib/minbar/routes";
 import dynamic from "next/dynamic";
@@ -104,6 +105,8 @@ function parseRich(value: string) {
 const button =
   "rounded-lg border px-4 py-2 text-sm disabled:opacity-50 hover:bg-slate-50";
 export function ContentEditor({ kind, id }: { kind: ContentKind; id: string }) {
+  const router = useRouter();
+  const creationKey = useRef(crypto.randomUUID());
   const url = `/api/admin/content-editor/${kind}/${id}`;
   const [document, setDocument] = useState<Document | null>(null);
   const [values, setValues] = useState<Record<string, TextValues>>({});
@@ -179,6 +182,7 @@ export function ContentEditor({ kind, id }: { kind: ContentKind; id: string }) {
   }, [dirty]);
   const edit = (key: string, value: string) => {
     if (busy === "save" || busy === "slug") return;
+    if (key === "fileUrl" && locale === "ar" && ["reports", "booklets"].includes(kind)) setSettingsDraft((previous) => ({ ...previous, fileUrl: value }));
     setValues((prev) => ({
       ...prev,
       [locale]: { ...prev[locale], [key]: value },
@@ -202,6 +206,7 @@ export function ContentEditor({ kind, id }: { kind: ContentKind; id: string }) {
         method: "PUT",
         body: JSON.stringify({
           revision: document.revision,
+          creationKey: creationKey.current,
           locale: target,
           changes: captured,
           reviewed,
@@ -220,7 +225,7 @@ export function ContentEditor({ kind, id }: { kind: ContentKind; id: string }) {
           ),
         }),
       });
-      const read = await api<Document>(url);
+      const read = await api<Document>(id === "new" ? `/api/admin/content-editor/${kind}/${saved.id}` : url);
       if (read.revision !== saved.revision)
         throw new Error(
           dt("تغيرت النسخة بعد الحفظ. احتفظ بتعديلاتك ثم أعد تحميلها للمراجعة."),
@@ -232,6 +237,7 @@ export function ContentEditor({ kind, id }: { kind: ContentKind; id: string }) {
       setReviewed(false);
       setMessage(dt("تم الحفظ والتحقق من النسخة المحفوظة"));
       toast.success(dt("تم الحفظ والتحقق من النسخة المحفوظة"));
+      if (id === "new") router.replace(`/dashboard/content/${kind}/${saved.id}`);
     } catch (error) {
       setMessage(
         error instanceof Error
@@ -243,7 +249,7 @@ export function ContentEditor({ kind, id }: { kind: ContentKind; id: string }) {
     }
   };
   const suggest = async (action: "seo" | "translate" | "faq", all = false) => {
-    if (!document || dirty) {
+    if (!document || dirty || id === "new") {
       setMessage(dt("احفظ التعديلات أولًا لطلب اقتراح مرتبط بالنسخة الحالية"));
       return;
     }

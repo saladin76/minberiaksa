@@ -3456,3 +3456,12 @@ model TelegramBotSetting {
   notificationsEnabled   Boolean  @default(true)
   updatedAt              DateTime @updatedAt
 }
+
+/// Idempotent editor creation requests are committed with the content in one transaction.
+model ContentCreationRequest {
+  id String @id @map("_id")
+  kind String
+  contentId String @db.ObjectId
+  fingerprint String
+  createdAt DateTime @default(now())
+}

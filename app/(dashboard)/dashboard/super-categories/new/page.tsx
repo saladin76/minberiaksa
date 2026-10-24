@@ -1,7 +1,4 @@
-'use client';
-
-import { SuperCategoryForm, emptySuperCategory } from '../_components/SuperCategoryForm';
-
-export default function NewSuperCategoryPage() {
-  return <SuperCategoryForm mode="create" initial={emptySuperCategory()} />;
-}
+import { ContentEditor } from "@/components/dashboard/content-editor/ContentEditor";
+import { CONFIG } from "@/lib/content-editor/contracts";
+import { requireDashboardPagePermission } from "@/lib/dashboard/require-page-permission";
+export default async function Page() { await requireDashboardPagePermission(CONFIG["super-categories"].permission); return <ContentEditor kind="super-categories" id="new" />; }

@@ -1,7 +1,4 @@
-'use client';
-
-import { VideoForm, emptyVideo } from '../_components/VideoForm';
-
-export default function NewVideoPage() {
-  return <VideoForm mode="create" initial={emptyVideo()} />;
-}
+import { ContentEditor } from "@/components/dashboard/content-editor/ContentEditor";
+import { CONFIG } from "@/lib/content-editor/contracts";
+import { requireDashboardPagePermission } from "@/lib/dashboard/require-page-permission";
+export default async function Page() { await requireDashboardPagePermission(CONFIG["videos"].permission); return <ContentEditor kind="videos" id="new" />; }

@@ -180,6 +180,7 @@ export async function saveContent(
     try {
       changes = validateChanges(fieldsFor(kind, row), input.changes);
       settings = validateWorkspaceSettings(kind, row, input.settings);
+      if (locale === "ar" && ["reports", "booklets"].includes(kind) && "fileUrl" in settings) changes.fileUrl = String(settings.fileUrl);
     } catch (error) {
       throw new ContentError(
         error instanceof Error ? error.message : "حقول غير صالحة",

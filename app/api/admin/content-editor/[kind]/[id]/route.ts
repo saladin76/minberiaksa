@@ -11,6 +11,7 @@ import {
   saveWorkspace,
 } from "@/lib/content-editor/service";
 import { contentStore } from "@/lib/content-editor/store";
+import { createWorkspace, emptyWorkspace } from "@/lib/content-editor/create";
 import { isValidLocale } from "@/lib/locales";
 import { queueAuditLog, auditActorFromDashboardSession } from "@/lib/audit-log";
 import { revalidatePath } from "next/cache";
@@ -19,7 +20,7 @@ type Context = { params: Promise<{ kind: string; id: string }> };
 async function access(ctx: Context) {
   const params = await ctx.params,
     kind = parseKind(params.kind);
-  if (!kind || !/^[a-f0-9]{24}$/i.test(params.id))
+  if (!kind || (params.id !== "new" && !/^[a-f0-9]{24}$/i.test(params.id)))
     throw new ContentError("المحتوى غير موجود", 404);
   const session = await getServerSession(authOptions);
   return {
@@ -56,7 +57,7 @@ export async function GET(_request: NextRequest, ctx: Context) {
     const { kind, id, denied } = await access(ctx);
     if (denied) return denied;
     return NextResponse.json(
-      documentFor(kind, await readContent(contentStore, kind, id)),
+      documentFor(kind, id === "new" ? emptyWorkspace(kind) : await readContent(contentStore, kind, id)),
       { headers: { "Cache-Control": "no-store" } },
     );
   } catch (error) {
@@ -71,7 +72,11 @@ export async function PUT(request: NextRequest, ctx: Context) {
     if (typeof body.revision !== "string")
       throw new ContentError("أعد تحميل المحتوى قبل الحفظ");
     let result;
-    if (body.action === "slug")
+    if (id === "new") {
+      if (!isValidLocale(body.locale) || (body.localeChanges && (typeof body.localeChanges !== "object" || Array.isArray(body.localeChanges) || Object.keys(body.localeChanges).some((locale) => !isValidLocale(locale))))) throw new ContentError("لغات غير صالحة");
+      result = await createWorkspace(contentStore, { kind, creationKey: String(body.creationKey || ""), locale: body.locale, changes: body.changes, localeChanges: body.localeChanges, settings: body.settings });
+    }
+    else if (body.action === "slug")
       result = await changeEditorialSlug(contentStore, {
         kind,
         id,
@@ -107,7 +112,7 @@ export async function PUT(request: NextRequest, ctx: Context) {
       action:
         body.action === "slug" ? "CONTENT_SLUG_CHANGE" : "CONTENT_EDITOR_SAVE",
       entityType: CONFIG[kind].model,
-      entityId: id,
+      entityId: result.id,
       messageAr: `حفظ محتوى ${CONFIG[kind].label}`,
       metadata: {
         locale: body.locale || "ar",
