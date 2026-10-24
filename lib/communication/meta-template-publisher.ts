@@ -225,14 +225,14 @@ export async function publishWhatsappTemplateToMeta(
         } else {
           const localized = localizeDonationFailureDraft({
             body: variant.body ?? "",
-            buttons: localized.buttons ?? rootButtons,
+            buttons: variant.buttons ?? rootButtons,
           }, locale);
           const built = buildStandardMetaComponents({
             body: localized.body,
             header: templateLocaleHeader(template, locale) as HeaderDraft,
             headerText: variant.headerText ?? String(header.text ?? ""),
             footerText: variant.footerText ?? template.footerText ?? "",
-            buttons: variant.buttons ?? rootButtons,
+            buttons: localized.buttons ?? rootButtons,
           });
           components = built.components;
           parameterFormat = built.parameterFormat;
