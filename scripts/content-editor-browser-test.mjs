@@ -298,11 +298,13 @@ try {
   await page.screenshot({
     path: path.join(temp, "editor-mobile.png"),
     fullPage: true,
+    animations: "disabled",
   });
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.screenshot({
     path: path.join(temp, "editor-desktop.png"),
     fullPage: true,
+    animations: "disabled",
   });
 
   // Mount every supported editor and its actual section controls without production data.
@@ -339,13 +341,13 @@ try {
         }
         assert.equal(await view.getByRole("alert").count(),0, locale + "/" + kind + " unexpected error");
         const prefix = locale + "-" + kind;
-        await view.screenshot({path:path.join(temp,prefix+"-desktop.png"),fullPage:true});
+        await view.screenshot({path:path.join(temp,prefix+"-desktop.png"),fullPage:true,animations:"disabled"});
         await view.setViewportSize({width:390,height:844});
         assert.ok(await view.evaluate(() => document.documentElement.scrollWidth <= innerWidth+1), prefix + " mobile layout overflows");
-        await view.screenshot({path:path.join(temp,prefix+"-mobile.png"),fullPage:true});
+        await view.screenshot({path:path.join(temp,prefix+"-mobile.png"),fullPage:true,animations:"disabled"});
         snapshots.push(prefix);
       } finally {
-        await view.screenshot({path:path.join(temp,"last-state.png"),fullPage:true}).catch(()=>{});
+        await view.screenshot({path:path.join(temp,"last-state.png"),fullPage:true,animations:"disabled"}).catch(()=>{});
         await view.close();
       }
     }
@@ -371,18 +373,20 @@ try {
       } else {
         await view.getByRole("button",{name:ui(locale,"فتح المراجعة"),exact:true}).click();
         await view.getByRole("dialog").waitFor();
+        await view.getByRole("dialog").evaluate((node) => { for (const animation of node.getAnimations({subtree:true})) animation.finish(); });
         const title = view.getByRole("dialog").getByLabel(ui(locale,"العنوان"),{exact:true});
         await title.fill("عنوان بعد المراجعة");
         assert.equal(editorialWrites,0,"opening and editing a review must never write content");
       }
       const prefix = locale+"-"+surface;
-      await view.screenshot({path:path.join(temp,prefix+"-desktop.png"),fullPage:true});
+      await view.screenshot({path:path.join(temp,prefix+"-desktop.png"),fullPage:true,animations:"disabled"});
       await view.setViewportSize({width:390,height:844});
       assert.ok(await view.evaluate(() => document.documentElement.scrollWidth <= innerWidth+1),prefix+" mobile overflow");
-      await view.screenshot({path:path.join(temp,prefix+"-mobile.png"),fullPage:true});
+      if (surface === "planner") { const box = await view.getByRole("dialog").boundingBox(); assert.ok(box && box.x >= -1 && box.x + box.width <= 391, "review dialog must stay within the mobile viewport"); }
+      await view.screenshot({path:path.join(temp,prefix+"-mobile.png"),fullPage:true,animations:"disabled"});
       workflowScreens.push(prefix);
     } finally {
-      await view.screenshot({path:path.join(temp,"workflow-last-state.png"),fullPage:true}).catch(()=>{});
+      await view.screenshot({path:path.join(temp,"workflow-last-state.png"),fullPage:true,animations:"disabled"}).catch(()=>{});
       await view.close();
     }
   }
@@ -401,7 +405,7 @@ try {
     }),
   );
 } finally {
-  if (page) await page.screenshot({path:path.join(temp,"draft-flow-last-state.png"),fullPage:true}).catch(()=>{});
+  if (page) await page.screenshot({path:path.join(temp,"draft-flow-last-state.png"),fullPage:true,animations:"disabled"}).catch(()=>{});
   if (browser) await browser.close();
   await new Promise((resolve) => server.close(resolve));
 }
